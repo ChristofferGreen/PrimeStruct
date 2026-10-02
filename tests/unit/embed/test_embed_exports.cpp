@@ -449,4 +449,106 @@ TEST_CASE("the original module is untouched by string calls") {
   CHECK(before == after);
 }
 
+namespace {
+const char *StringResultLibrary = R"(
+[host return<string>]
+host_greeting([i32] n) {
+}
+
+[return<string>]
+echo([string] text) {
+  return(text)
+}
+
+[return<string>]
+greet([i32] n) {
+  return(host_greeting(n))
+}
+
+[return<string>]
+literal() {
+  return("fixed")
+}
+
+[return<int>]
+first_byte([string] text) {
+  return(convert<i32>(text[0i32]))
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+
+Script compileStringResultLibrary() {
+  ScriptEngine engine;
+  engine.exportFunction<std::string(std::string_view)>("echo");
+  engine.exportFunction<std::string(int32_t)>("greet");
+  engine.exportFunction<std::string()>("literal");
+  engine.exportFunction<int32_t(std::string_view)>("first_byte");
+  auto script = engine.compileSource("/exports_string_results.prime", StringResultLibrary);
+  REQUIRE_MESSAGE(script.valid(), script.diagnostics());
+  return script;
+}
+} // namespace
+
+TEST_CASE("exports return strings as std::string") {
+  const auto script = compileStringResultLibrary();
+  const auto literal = script.call<std::string>("literal");
+  REQUIRE_MESSAGE(literal.ok, literal.diagnostics);
+  CHECK(literal.value == "fixed");
+  const auto echoed = script.call<std::string>("echo", "round trip");
+  REQUIRE_MESSAGE(echoed.ok, echoed.diagnostics);
+  CHECK(echoed.value == "round trip");
+}
+
+TEST_CASE("exported string arguments can be indexed") {
+  const auto script = compileStringResultLibrary();
+  const auto result = script.call<int32_t>("first_byte", "Axe");
+  REQUIRE_MESSAGE(result.ok, result.diagnostics);
+  CHECK(result.value == 65);
+}
+
+TEST_CASE("string results handle empty, binary, unicode and large text") {
+  const auto script = compileStringResultLibrary();
+  CHECK(script.call<std::string>("echo", "").value.empty());
+  const std::string withNul("a\0b\0", 4);
+  CHECK(script.call<std::string>("echo", withNul).value == withNul);
+  CHECK(script.call<std::string>("echo", "héllo").value == "héllo");
+  const std::string big(300000, 'y');
+  const auto result = script.call<std::string>("echo", big);
+  REQUIRE_MESSAGE(result.ok, result.diagnostics);
+  CHECK(result.value == big);
+}
+
+TEST_CASE("host functions can return dynamic strings to the script") {
+  auto script = compileStringResultLibrary();
+  script.bind("host_greeting", [](int32_t n) { return std::string("hello #") + std::to_string(n); });
+  const auto result = script.call<std::string>("greet", 7);
+  REQUIRE_MESSAGE(result.ok, result.diagnostics);
+  CHECK(result.value == "hello #7");
+  const std::string big = [] { return std::string(100000, 'g'); }();
+  script.bind("host_greeting", [&big](int32_t) { return std::string_view(big); });
+  CHECK(script.call<std::string>("greet", 0).value == big);
+  const auto unbound = compileStringResultLibrary().call<std::string>("greet", 1);
+  CHECK_FALSE(unbound.ok);
+}
+
+TEST_CASE("a thousand string-returning calls keep working") {
+  auto script = compileStringResultLibrary();
+  script.bind("host_greeting", [](int32_t n) { return std::string(static_cast<size_t>(n % 50), 'k'); });
+  for (int i = 0; i < 1000; ++i) {
+    const auto result = script.call<std::string>("greet", i);
+    REQUIRE(result.ok);
+    REQUIRE(result.value.size() == static_cast<size_t>(i % 50));
+  }
+}
+
+TEST_CASE("string result calls reject a mismatched result type") {
+  const auto script = compileStringResultLibrary();
+  const auto wrong = script.call<int32_t>("echo", "x");
+  CHECK_FALSE(wrong.ok);
+}
+
 TEST_SUITE_END();

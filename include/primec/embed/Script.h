@@ -25,7 +25,8 @@ template <> struct HostTypeOf<uint64_t> { static constexpr HostType value = Host
 template <> struct HostTypeOf<float> { static constexpr HostType value = HostType::F32; };
 template <> struct HostTypeOf<double> { static constexpr HostType value = HostType::F64; };
 template <> struct HostTypeOf<bool> { static constexpr HostType value = HostType::Bool; };
-// Strings are accepted as host function parameters only.
+// Strings are host function parameters and results and exported function
+// arguments and results (results are returned as std::string).
 template <> struct HostTypeOf<std::string_view> { static constexpr HostType value = HostType::String; };
 template <> struct HostTypeOf<std::string> { static constexpr HostType value = HostType::String; };
 template <> struct HostTypeOf<const char *> { static constexpr HostType value = HostType::String; };
@@ -101,12 +102,15 @@ template <class R, class... A> struct CallableTraits<R (*)(A...)> {
 class HostBindings {
 public:
   using RawInvoke = std::function<bool(const uint64_t *args, uint64_t &result, std::string &error)>;
+  // For string-returning host functions: the text is stored as a VM-owned string.
+  using RawStringInvoke = std::function<bool(const uint64_t *args, std::string &result, std::string &error)>;
 
   struct Entry {
     std::string name;
     std::vector<HostType> parameters;
     HostType returnType = HostType::Void;
     RawInvoke invoke;
+    RawStringInvoke invokeString;
   };
 
   template <class F> void bind(std::string name, F callable) {
@@ -116,18 +120,34 @@ public:
   }
 
   void bindRaw(std::string name, std::vector<HostType> parameters, HostType returnType, RawInvoke invoke);
+  void bindRawString(std::string name, std::vector<HostType> parameters, RawStringInvoke invoke);
   const std::vector<Entry> &entries() const { return entries_; }
 
 private:
   template <class F, class... A, class R>
   void bindTyped(std::string name, F callable, std::tuple<A...> *, R *) {
-    static_assert(detail::HostTypeOf<R>::value != HostType::String,
-                  "host functions cannot return strings; the VM cannot create strings at run time");
-    RawInvoke invoke = [callable = std::move(callable)](const uint64_t *args, uint64_t &result, std::string &) mutable {
-      return call<R, A...>(callable, args, result, std::index_sequence_for<A...>{});
-    };
-    bindRaw(std::move(name), {detail::HostTypeOf<std::remove_cvref_t<A>>::value...}, detail::HostTypeOf<R>::value,
-            std::move(invoke));
+    if constexpr (detail::HostTypeOf<R>::value == HostType::String) {
+      static_assert(std::is_same_v<R, std::string> || std::is_same_v<R, std::string_view>,
+                    "string host function results must be std::string or std::string_view");
+      RawStringInvoke invoke = [callable = std::move(callable)](const uint64_t *args, std::string &result,
+                                                                std::string &) mutable {
+        return callString<A...>(callable, args, result, std::index_sequence_for<A...>{});
+      };
+      bindRawString(std::move(name), {detail::HostTypeOf<std::remove_cvref_t<A>>::value...}, std::move(invoke));
+    } else {
+      RawInvoke invoke = [callable = std::move(callable)](const uint64_t *args, uint64_t &result,
+                                                          std::string &) mutable {
+        return call<R, A...>(callable, args, result, std::index_sequence_for<A...>{});
+      };
+      bindRaw(std::move(name), {detail::HostTypeOf<std::remove_cvref_t<A>>::value...}, detail::HostTypeOf<R>::value,
+              std::move(invoke));
+    }
+  }
+
+  template <class... A, class F, size_t... I>
+  static bool callString(F &callable, const uint64_t *args, std::string &result, std::index_sequence<I...>) {
+    result = std::string(callable(detail::fromSlot<std::remove_cvref_t<A>>(args[I])...));
+    return true;
   }
 
   template <class R, class... A, class F, size_t... I>
@@ -193,7 +213,7 @@ public:
   //   engine.exportFunction<double(int32_t, double)>("scale");
   //   auto r = script.call<double>("scale", 3, 2.5);   // r.ok, r.value
   // String arguments (std::string_view, std::string, const char *) are copied
-  // into the call; results cannot be strings.
+  // into the call, and `call<std::string>` returns a string result.
   template <class R, class... A> CallResult<R> call(std::string_view name, A... args) const;
 
   // Exports available for `call`, rendered like "scale(i32, f64) -> f64".
@@ -239,6 +259,7 @@ private:
                const std::vector<std::string> &strings,
                HostType returnType,
                uint64_t &result,
+               std::string &stringResult,
                std::string &error) const;
 
   std::shared_ptr<const Module> module_;
@@ -249,14 +270,20 @@ private:
 };
 
 template <class R, class... A> CallResult<R> Script::call(std::string_view name, A... args) const {
-  static_assert(detail::HostTypeOf<R>::value != HostType::String, "exported functions cannot return strings");
+  static_assert(!detail::IsStringLike<R> || std::is_same_v<R, std::string>,
+                "exported functions return strings as std::string");
   CallResult<R> out;
   std::vector<std::string> strings;
   const std::vector<HostType> types{detail::HostTypeOf<std::remove_cvref_t<A>>::value...};
   const std::vector<uint64_t> slots{detail::callArgumentSlot(args, strings)...};
   uint64_t result = 0;
-  out.ok = callRaw(name, types, slots, strings, detail::HostTypeOf<R>::value, result, out.diagnostics);
-  if constexpr (!std::is_void_v<R>) {
+  std::string stringResult;
+  out.ok = callRaw(name, types, slots, strings, detail::HostTypeOf<R>::value, result, stringResult, out.diagnostics);
+  if constexpr (std::is_same_v<R, std::string>) {
+    if (out.ok) {
+      out.value = std::move(stringResult);
+    }
+  } else if constexpr (!std::is_void_v<R>) {
     if (out.ok) {
       out.value = detail::fromSlot<R>(result);
     }

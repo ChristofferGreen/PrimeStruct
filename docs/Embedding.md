@@ -74,19 +74,20 @@ that `loadBytecode` restores in the runtime-only library, which can `call` the
 exports without a compiler. `Script::call` is safe to use from several threads
 on one `Script`.
 
-String arguments (`std::string_view`, `std::string`, `const char *`) are copied into
-the call: the VM cannot create strings, so each call runs against a copy of the
-export's module whose string table has the arguments appended (the original
-module is never modified). The VM represents strings as table indices, so inside
-the script an argument string can be measured (`text.count()`), printed, and
-forwarded to host functions, but not indexed (`text.at(i)` needs a string whose
-bytes are known at compile time). String results are not supported.
+Strings cross the boundary as VM-owned strings: arguments (`std::string_view`,
+`std::string`, `const char *`) are copied into the call and handed to the script
+through the reserved `__psarg_string` host function, and `call<std::string>`
+returns a string result. Inside the script an argument string behaves like any
+other string: `text.count()`, `text[i]`, printing, and forwarding to host
+functions all work. Empty, NUL-containing, UTF-8 and large strings are fine. The
+compiled module is shared and never copied per call, and the VM frees each
+call's strings when it returns.
 
 ## Calling the host from a script
 
 Bind C++ callables by name; signatures come from the callable's primitive
-parameter types (`int32_t`, `int64_t`, `uint64_t`, `float`, `double`, `bool`;
-`void` or one of those as the result):
+parameter types (`int32_t`, `int64_t`, `uint64_t`, `float`, `double`, `bool`,
+strings; `void`, one of those, or `std::string`/`std::string_view` as the result):
 
 ```cpp
 script.bind("host_add", [](int32_t a, int32_t b) { return a + b; });

@@ -205,7 +205,7 @@ TEST_CASE("host declaration rejects mut and default parameters") {
 
 TEST_CASE("host declaration rejects non primitive return types and generics") {
   const std::string stringError =
-      compileError("[host return<string>]\nhost_f([i32] a) {\n}\n\n[return<int>]\nmain() {\n  return(1i32)\n}\n");
+      compileError("[host return<array<i32>>]\nhost_f([i32] a) {\n}\n\n[return<int>]\nmain() {\n  return(1i32)\n}\n");
   CHECK(stringError.find("host definition return type must be") != std::string::npos);
   const std::string genericError =
       compileError("[host return<int>]\nhost_f<T>([i32] a) {\n}\n\n[return<int>]\nmain() {\n  return(1i32)\n}\n");
@@ -311,12 +311,6 @@ TEST_CASE("host string versus integer signature mismatch is diagnosed") {
   CHECK_FALSE(result.ok);
   CHECK(result.diagnostics.find("script declares (string) -> void") != std::string::npos);
   CHECK(result.diagnostics.find("host bound (i32) -> void") != std::string::npos);
-}
-
-TEST_CASE("host definitions cannot return strings") {
-  const std::string error =
-      compileError("[host return<string>]\nhost_name([i32] a) {\n}\n\n[return<int>]\nmain() {\n  return(1i32)\n}\n");
-  CHECK(error.find("host definition return type must be") != std::string::npos);
 }
 
 #ifdef PRIMESTRUCT_TEST_PRIMEC_PATH

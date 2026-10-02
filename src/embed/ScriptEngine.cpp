@@ -100,7 +100,7 @@ std::string exportWrapperSource(const std::string &name, const ExportSignature &
     seen.push_back(type);
     const std::string spelling = detail::hostTypeSpelling(type);
     source += "[host return<" + spelling + ">]\n" + detail::ExportArgPrefix + spelling + "([i32] index) {\n}\n\n";
-    // (string arguments: the host returns the index of a per-call appended string)
+    // (string arguments come back as VM-owned strings, so they can be indexed)
   }
   const std::string returnSpelling = detail::hostTypeSpelling(signature.returnType);
   if (signature.returnType != HostType::Void) {

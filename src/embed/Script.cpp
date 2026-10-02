@@ -12,13 +12,33 @@
 namespace primec::embed {
 
 void HostBindings::bindRaw(std::string name, std::vector<HostType> parameters, HostType returnType, RawInvoke invoke) {
+  Entry fresh;
+  fresh.name = std::move(name);
+  fresh.parameters = std::move(parameters);
+  fresh.returnType = returnType;
+  fresh.invoke = std::move(invoke);
   for (Entry &entry : entries_) {
-    if (entry.name == name) {
-      entry = Entry{std::move(name), std::move(parameters), returnType, std::move(invoke)};
+    if (entry.name == fresh.name) {
+      entry = std::move(fresh);
       return;
     }
   }
-  entries_.push_back(Entry{std::move(name), std::move(parameters), returnType, std::move(invoke)});
+  entries_.push_back(std::move(fresh));
+}
+
+void HostBindings::bindRawString(std::string name, std::vector<HostType> parameters, RawStringInvoke invoke) {
+  Entry fresh;
+  fresh.name = std::move(name);
+  fresh.parameters = std::move(parameters);
+  fresh.returnType = HostType::String;
+  fresh.invokeString = std::move(invoke);
+  for (Entry &entry : entries_) {
+    if (entry.name == fresh.name) {
+      entry = std::move(fresh);
+      return;
+    }
+  }
+  entries_.push_back(std::move(fresh));
 }
 
 namespace detail {
@@ -81,6 +101,11 @@ VmHostFunctions toVmHostFunctions(const HostBindings &bindings) {
     }
     binding.returnKind = toIrKind(entry.returnType);
     binding.invoke = entry.invoke;
+    if (entry.invokeString) {
+      binding.invokeString = [invoke = entry.invokeString](const uint64_t *args, std::string &result, std::string &error) {
+        return invoke(args, result, error);
+      };
+    }
     functions.bind(entry.name, std::move(binding));
   }
   return functions;
@@ -119,9 +144,12 @@ VmHostFunctions functionsForVerification(const HostBindings &bindings, const IrM
   VmHostFunctions functions = toVmHostFunctions(bindings);
   for (const IrHostImport &import : module.hostImports) {
     if (isEngineGeneratedImport(import.name)) {
-      functions.bind(import.name,
-                     VmHostBinding{import.parameters, import.returnKind,
-                                   [](const uint64_t *, uint64_t &, std::string &) { return true; }});
+      VmHostBinding stub{import.parameters, import.returnKind,
+                         [](const uint64_t *, uint64_t &, std::string &) { return true; }};
+      if (import.returnKind == IrHostValueKind::String) {
+        stub.invokeString = [](const uint64_t *, std::string &, std::string &) { return true; };
+      }
+      functions.bind(import.name, std::move(stub));
     }
   }
   return functions;
@@ -213,6 +241,7 @@ bool Script::callRaw(std::string_view name,
                      const std::vector<std::string> &strings,
                      HostType returnType,
                      uint64_t &result,
+                     std::string &stringResult,
                      std::string &error) const {
   if (!valid()) {
     error = diagnostics_.empty() ? "script was not compiled successfully" : diagnostics_;
@@ -237,31 +266,39 @@ bool Script::callRaw(std::string_view name,
     return false;
   }
 
-  // String arguments live in a per-call copy of the module whose string table
-  // has them appended; the argument slot becomes the string's index there.
-  std::vector<uint64_t> arguments = argumentSlots;
-  IrModule patched;
+  // String arguments are served from `strings` through the reserved __psarg_string
+  // host function, which hands the VM a run-time string per fetch; the compiled
+  // module is shared and never copied per call.
+  const std::vector<uint64_t> &arguments = argumentSlots;
   const IrModule *moduleToRun = &entry->module->ir;
   for (size_t i = 0; i < argumentTypes.size(); ++i) {
-    if (argumentTypes[i] != HostType::String) {
-      continue;
-    }
-    if (arguments[i] >= strings.size()) {
+    if (argumentTypes[i] == HostType::String && arguments[i] >= strings.size()) {
       error = "internal error: string argument out of range";
       return false;
     }
-    if (moduleToRun != &patched) {
-      patched = entry->module->ir;
-      moduleToRun = &patched;
-    }
-    arguments[i] = patched.stringTable.size();
-    patched.stringTable.push_back(strings[static_cast<size_t>(argumentSlots[i])]);
   }
 
   VmHostFunctions functions = toVmHostFunctions(hostBindings_);
   uint64_t captured = 0;
+  std::string capturedString;
   for (const HostType type : entry->signature.parameters) {
     const std::string importName = std::string(detail::ExportArgPrefix) + detail::hostTypeSpelling(type);
+    if (type == HostType::String) {
+      VmHostBinding binding;
+      binding.parameters = {IrHostValueKind::I32};
+      binding.returnKind = IrHostValueKind::String;
+      binding.invokeString = [&arguments, &strings](const uint64_t *args, std::string &out, std::string &err) {
+        const auto index = static_cast<uint64_t>(static_cast<uint32_t>(args[0]));
+        if (index >= arguments.size() || arguments[static_cast<size_t>(index)] >= strings.size()) {
+          err = "argument index out of range";
+          return false;
+        }
+        out = strings[static_cast<size_t>(arguments[static_cast<size_t>(index)])];
+        return true;
+      };
+      functions.bind(importName, std::move(binding));
+      continue;
+    }
     functions.bind(importName,
                    VmHostBinding{{IrHostValueKind::I32}, toIrKind(type),
                                  [&arguments](const uint64_t *args, uint64_t &out, std::string &err) {
@@ -277,8 +314,14 @@ bool Script::callRaw(std::string_view name,
   if (returnType != HostType::Void) {
     const std::string importName = std::string(detail::ExportResultPrefix) + detail::hostTypeSpelling(returnType);
     functions.bind(importName, VmHostBinding{{toIrKind(returnType)}, IrHostValueKind::Void,
-                                              [&captured](const uint64_t *args, uint64_t &, std::string &) {
-                                                captured = args[0];
+                                              [&captured, &capturedString, returnType](const uint64_t *args, uint64_t &,
+                                                                                       std::string &) {
+                                                if (returnType == HostType::String) {
+                                                  capturedString = *reinterpret_cast<const std::string *>(
+                                                      static_cast<uintptr_t>(args[0]));
+                                                } else {
+                                                  captured = args[0];
+                                                }
                                                 return true;
                                               }});
   }
@@ -291,6 +334,7 @@ bool Script::callRaw(std::string_view name,
     return false;
   }
   result = captured;
+  stringResult = std::move(capturedString);
   return true;
 }
 

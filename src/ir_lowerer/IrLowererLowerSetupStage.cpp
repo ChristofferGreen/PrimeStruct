@@ -44,6 +44,7 @@ bool runLowerSetupStage(const LowerSetupStageInput &input,
   stateOut.hasMathImport = false;
   stateOut.inferenceSetupBootstrap = {};
   stateOut.expandedSource = input.expandedSource;
+  stateOut.allowDynamicStrings = input.validationTarget == IrValidationTarget::Vm;
   stateOut.realCallEligibleOrder.clear();
   stateOut.realCallReservationIndex.clear();
   {

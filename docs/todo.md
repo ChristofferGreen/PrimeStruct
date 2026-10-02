@@ -102,7 +102,6 @@ of sync with them.
 | --- | --- | --- | --- |
 | TODO-5374 | Typed collection family/helper enum replacing string-tagged family checks | deferred | collection-resolution |
 | TODO-5356 | Collapse near-duplicate ir_pipeline validation tests into table-driven suites | deferred | test-infrastructure |
-| TODO-5365 | Embed API: string results and indexable string arguments | ready | vm-strings |
 | TODO-5368 | Split docs/PrimeStruct.md into stable spec sections | deferred | docs-hygiene |
 | TODO-5348 | Verify the iOS embed build and XCFramework packaging on macOS | deferred | embedding-ios |
 
@@ -110,13 +109,11 @@ of sync with them.
 
 - TODO-5384 (track: semantics-structure): Split the multi-function src/semantics files over 1,200 lines (pure moves).
 - TODO-5385 (track: semantics-structure): Decompose the ~3,500-line rewriteExpr in TemplateMonomorphExpressionRewrite.cpp.
-- TODO-5365 (track: vm-strings): Embed API: string results and indexable string arguments.
 
 ### Immediate Next 10
 
 1. TODO-5384 - Split the multi-function src/semantics files over 1,200 lines (pure moves).
 2. TODO-5385 - Decompose the ~3,500-line rewriteExpr in TemplateMonomorphExpressionRewrite.cpp.
-3. TODO-5365 - Embed API: string results and indexable string arguments.
 
 ### Priority Lanes
 
@@ -125,7 +122,6 @@ of sync with them.
 - Semantics structure: TODO-5384, TODO-5385
 - Test infrastructure: TODO-5356 (deferred)
 - IR/VM structure: TODO-5361 -> 5362
-- VM strings: TODO-5365
 - Docs hygiene: TODO-5368 (deferred)
 
 ### Execution Queue
@@ -206,25 +202,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - files and lines removed, suite runtime before/after in the result note.
   - stop_rule: stop if coverage cannot be shown equivalent for a group; leave that group as
     is.
-
-- [ ] TODO-5365: Embed API: string results and indexable string arguments
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-01
-  - phase: Language/VM
-  - parallel_track: vm-strings
-  - scope: Use the VM string heap in the embedding layer: host functions may return
-    `std::string`, exported functions may return strings, `text.at(i)` works
-    on argument strings, and the per-call module copy in `Script::call` goes
-    away.
-  - acceptance:
-    - `CallResult<std::string>` and host callables returning strings work,
-      with tests for empty/NUL/UTF-8/large strings.
-    - `first_byte`-style exports (indexing an argument string) compile and
-      run; the `__psarg_string` special case and per-call module copy
-      are deleted.
-    - lifetime test: no growth over 1000 string-returning calls.
-  - stop_rule: strings only; structs and arrays across the boundary remain out of scope.
 
 - [ ] TODO-5368: Split docs/PrimeStruct.md into stable spec sections
   - owner: ai

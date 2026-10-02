@@ -620,7 +620,7 @@
                 size_t &lengthOut) {
               return resolveStringTableTarget(targetExpr, localMap, stringIndexOut, lengthOut);
             },
-            stringTable.size(),
+            stringTable.size() | (setupStage.allowDynamicStrings ? ir_lowerer::DynamicStringTableFlag : size_t{0}),
             [&](const Expr &valueExpr, const ir_lowerer::LocalMap &localMap) {
               return emitExpr(valueExpr, localMap);
             },

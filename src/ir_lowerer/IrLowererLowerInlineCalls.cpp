@@ -168,10 +168,6 @@ bool emitInlineDefinitionCallImpl(
           error = "host definition return type is not a primitive: " + callee.fullPath;
           return false;
         }
-        if (*returnKind == IrHostValueKind::String && !isEngineArgumentHostName(callee.name)) {
-          error = "host definition cannot return string: " + callee.fullPath;
-          return false;
-        }
         import.returnKind = *returnKind;
       }
       std::vector<Expr> hostParams;

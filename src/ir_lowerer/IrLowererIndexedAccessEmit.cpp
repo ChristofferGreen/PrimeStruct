@@ -147,7 +147,9 @@ DynamicStringAccessEmitResult tryEmitDynamicStringAccessLoad(
         inferExprKind(targetExpr, localsIn) == LocalInfo::ValueKind::String;
   }
 
-  if (!isRuntimeStringTarget || stringTableCount == 0) {
+  const bool dynamicStrings = (stringTableCount & DynamicStringTableFlag) != 0;
+  stringTableCount &= ~DynamicStringTableFlag;
+  if (!isRuntimeStringTarget || (stringTableCount == 0 && !dynamicStrings)) {
     return DynamicStringAccessEmitResult::NotHandled;
   }
 
@@ -185,6 +187,22 @@ DynamicStringAccessEmitResult tryEmitDynamicStringAccessLoad(
     jumpToEnd.push_back(jumpEnd);
   }
 
+  if (dynamicStrings) {
+    // Not a module-table index: a dynamic (VM-owned) string has bit 63 set, i.e.
+    // is negative as a signed value.
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(stringLocal));
+    emitInstruction(IrOpcode::PushI64, 0);
+    emitInstruction(IrOpcode::CmpLtI64, 0);
+    const size_t jumpNotDynamic = instructionCount();
+    emitInstruction(IrOpcode::JumpIfZero, 0);
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(stringLocal));
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal));
+    emitInstruction(IrOpcode::LoadStringByteDynamic, 0);
+    const size_t jumpEnd = instructionCount();
+    emitInstruction(IrOpcode::Jump, 0);
+    jumpToEnd.push_back(jumpEnd);
+    patchInstructionImm(jumpNotDynamic, static_cast<uint64_t>(instructionCount()));
+  }
   emitStringIndexOutOfBounds();
   const size_t endIndex = instructionCount();
   for (size_t jumpIndex : jumpToEnd) {

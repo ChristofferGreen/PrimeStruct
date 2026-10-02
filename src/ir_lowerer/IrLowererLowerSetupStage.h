@@ -29,6 +29,8 @@ struct LowerSetupStageInput {
 };
 
 struct LowerSetupStageState {
+  // Lowering for the VM target: string accesses may use LoadStringByteDynamic.
+  bool allowDynamicStrings = false;
   const Definition *entryDef = nullptr;
   std::unordered_map<std::string, const Definition *> defMap;
   std::unordered_set<std::string> structNames;

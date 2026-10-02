@@ -16,6 +16,12 @@
 
 namespace primec::ir_lowerer {
 
+// `stringTableCount` arguments of the string-access emitters may carry this flag
+// (set when lowering for the VM target): runtime string indices that are not
+// module-table entries then fall back to LoadStringByteDynamic instead of
+// faulting (TODO-5365).
+inline constexpr size_t DynamicStringTableFlag = size_t{1} << 62;
+
 using ResolveExprPathFn = std::function<std::string(const Expr &)>;
 using ResolveDefinitionCallFn = std::function<const Definition *(const Expr &)>;
 using IsTailCallCandidateFn = std::function<bool(const Expr &)>;
