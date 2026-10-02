@@ -1324,12 +1324,12 @@ std::string normalizeCollectionBindingTypeName(const std::string &name) {
       isExperimentalCollectionTypeName(name, "map", "Map")) {
     return "map";
   }
-  if (name == "soa" || name == collection_helpers::kRootedSoa ||
+  if (name == "soa" || collection_helpers::isCollectionFamilyRoot(name, collection_helpers::CollectionFamily::Soa) ||
       name.rfind("soa<", 0) == 0 || name.rfind("/soa<", 0) == 0 ||
       name == "std/collections/soa" || name == collection_helpers::kCanonicalSoa ||
       name.rfind("std/collections/soa<", 0) == 0 ||
       name.rfind("/std/collections/soa<", 0) == 0 ||
-      name == collection_helpers::kRootedSoa || name == "std/collections/soa" ||
+      collection_helpers::isCollectionFamilyRoot(name, collection_helpers::CollectionFamily::Soa) || name == "std/collections/soa" ||
       name == collection_helpers::kCanonicalSoa || name == "SoaVector" ||
       name == "/SoaVector" ||
       name == collection_paths::memberPathBare(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName) ||
@@ -1361,7 +1361,7 @@ bool typeTextUsesRawBuiltinSoaVectorLayout(const std::string &typeText) {
   std::string arg;
   if (splitTemplateTypeName(normalized, base, arg)) {
     const std::string trimmedBase = trimTemplateTypeText(base);
-    if (trimmedBase == "soa" || trimmedBase == collection_helpers::kRootedSoa ||
+    if (trimmedBase == "soa" || collection_helpers::isCollectionFamilyRoot(trimmedBase, collection_helpers::CollectionFamily::Soa) ||
         trimmedBase == "std/collections/soa" ||
         trimmedBase == collection_helpers::kCanonicalSoa) {
       return true;
@@ -1378,7 +1378,7 @@ bool typeTextUsesRawBuiltinSoaVectorLayout(const std::string &typeText) {
     }
     return false;
   }
-  return normalized == "soa" || normalized == collection_helpers::kRootedSoa ||
+  return normalized == "soa" || collection_helpers::isCollectionFamilyRoot(normalized, collection_helpers::CollectionFamily::Soa) ||
          normalized == "std/collections/soa" ||
          normalized == collection_helpers::kCanonicalSoa;
 }

@@ -231,11 +231,11 @@ bool SemanticsValidator::validateExprCountCapacityBuiltins(
       if (normalizedName == collection_helpers::kRootedSoaCountRef) {
         return true;
       }
-      return (normalizedNamespacePrefix == collection_helpers::kRootedSoa ||
+      return (collection_helpers::isCollectionFamilyRoot(normalizedNamespacePrefix, collection_helpers::CollectionFamily::Soa) ||
               normalizedNamespacePrefix == "soa") &&
              (collection_helpers::isCountHelperName(expr.name));
     }
-    return normalizedNamespacePrefix == collection_helpers::kRootedSoa &&
+    return collection_helpers::isCollectionFamilyRoot(normalizedNamespacePrefix, collection_helpers::CollectionFamily::Soa) &&
            (collection_helpers::isCountHelperName(expr.name));
   };
   const auto validateVectorCountBuiltinCall = [&]() -> bool {

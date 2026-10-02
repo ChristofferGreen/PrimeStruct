@@ -43,7 +43,7 @@ std::string SemanticsValidator::normalizeEffectFreeCollectionMethodName(
   if (!methodName.empty() && methodName.front() == '/') {
     methodName.erase(methodName.begin());
   }
-  if (receiverPath == collection_helpers::kRootedVector || receiverPath == collection_helpers::kRootedArray) {
+  if (collection_helpers::isCollectionFamilyRoot(receiverPath, collection_helpers::CollectionFamily::Vector) || collection_helpers::isCollectionFamilyRoot(receiverPath, collection_helpers::CollectionFamily::Array)) {
     const std::string arrayPrefix = "array/";
     const std::string stdVectorPrefix =
         unrootedCanonicalVectorCompatibilityPrefixOrFallback() + "/";
@@ -57,7 +57,7 @@ std::string SemanticsValidator::normalizeEffectFreeCollectionMethodName(
       return methodName.substr(stdVectorPrefix.size());
     }
   }
-  if (receiverPath == collection_helpers::kRootedMap) {
+  if (collection_helpers::isCollectionFamilyRoot(receiverPath, collection_helpers::CollectionFamily::Map)) {
     const std::string stdKeyValueHelperPrefix =
         unrootedCanonicalKeyValueHelperPrefixLocal();
     if (!stdKeyValueHelperPrefix.empty() &&
@@ -71,21 +71,21 @@ std::string SemanticsValidator::normalizeEffectFreeCollectionMethodName(
 std::vector<std::string> SemanticsValidator::effectFreeMethodPathCandidatesForReceiver(
     const std::string &receiverPath,
     const std::string &methodName) const {
-  if (receiverPath == collection_helpers::kRootedVector) {
+  if (collection_helpers::isCollectionFamilyRoot(receiverPath, collection_helpers::CollectionFamily::Vector)) {
     if (methodName == "count") {
       return {canonicalVectorCompatibilityHelperPathOrFallback(methodName)};
     }
     return {canonicalVectorCompatibilityHelperPathOrFallback(methodName),
             collection_helpers::kRootedArrayPrefix + methodName};
   }
-  if (receiverPath == collection_helpers::kRootedArray) {
+  if (collection_helpers::isCollectionFamilyRoot(receiverPath, collection_helpers::CollectionFamily::Array)) {
     if (methodName == "count") {
       return {collection_helpers::kRootedArrayPrefix + methodName};
     }
     return {collection_helpers::kRootedArrayPrefix + methodName,
             canonicalVectorCompatibilityHelperPathOrFallback(methodName)};
   }
-  if (receiverPath == collection_helpers::kRootedMap) {
+  if (collection_helpers::isCollectionFamilyRoot(receiverPath, collection_helpers::CollectionFamily::Map)) {
     return {canonicalKeyValueHelperPathLocal(methodName)};
   }
   return {receiverPath + "/" + methodName};
@@ -272,11 +272,11 @@ std::string SemanticsValidator::resolveEffectFreeBareMapCallPath(const Expr &cal
     const Expr &receiver = callExpr.args[index];
     if (receiver.kind == Expr::Kind::Name) {
       auto it = ctx.locals.find(receiver.name);
-      if (it != ctx.locals.end() && effectFreeCollectionPathFromBinding(it->second) == collection_helpers::kRootedMap) {
+      if (it != ctx.locals.end() && collection_helpers::isCollectionFamilyRoot(effectFreeCollectionPathFromBinding(it->second), collection_helpers::CollectionFamily::Map)) {
         return true;
       }
     }
-    return effectFreeCollectionPathFromCallExpr(receiver) == collection_helpers::kRootedMap;
+    return collection_helpers::isCollectionFamilyRoot(effectFreeCollectionPathFromCallExpr(receiver), collection_helpers::CollectionFamily::Map);
   };
   if (hasNamedArguments(callExpr.argNames)) {
     bool foundValues = false;

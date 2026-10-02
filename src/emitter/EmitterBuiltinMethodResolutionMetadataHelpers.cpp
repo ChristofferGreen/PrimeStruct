@@ -405,10 +405,10 @@ bool extractCollectionElementTypeFromReturnType(const std::string &typeName, std
 }
 
 std::string normalizeCollectionReceiverType(const std::string &typePath) {
-  if (typePath == collection_helpers::kRootedArray || typePath == "array") {
+  if (collection_helpers::isCollectionFamilyRoot(typePath, collection_helpers::CollectionFamily::Array) || typePath == "array") {
     return "array";
   }
-  if (typePath == collection_helpers::kRootedVector || typePath == "vector") {
+  if (collection_helpers::isCollectionFamilyRoot(typePath, collection_helpers::CollectionFamily::Vector) || typePath == "vector") {
     return "vector";
   }
   if (typePath == "soa" ||

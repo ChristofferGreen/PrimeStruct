@@ -1143,7 +1143,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
        normalizedMethodName == "at" || normalizedMethodName == "at_unsafe")) {
     std::string receiverCollectionTypePath;
     if (resolveCallCollectionTypePath(receiver, params, locals, receiverCollectionTypePath) &&
-        receiverCollectionTypePath == collection_helpers::kRootedVector) {
+        collection_helpers::isCollectionFamilyRoot(receiverCollectionTypePath, collection_helpers::CollectionFamily::Vector)) {
       if (normalizedMethodName == "count") {
         return setCollectionMethodTarget(canonicalVectorHelperTarget("count"));
       }

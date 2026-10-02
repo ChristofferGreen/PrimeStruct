@@ -355,7 +355,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
   if (hasIndexedArgsPackKeyValueMethodTarget) {
   } else if (isVectorCompatibilityMethod &&
       expr.namespacePrefix != "vector" &&
-      expr.namespacePrefix != collection_helpers::kRootedVector &&
+      !collection_helpers::isCollectionFamilyRoot(expr.namespacePrefix, collection_helpers::CollectionFamily::Vector) &&
       !isCanonicalVectorCompatibilityNamespace(expr.namespacePrefix) &&
       resolveVectorHelperMethodTarget(params, locals, expr.args.front(), normalizedMethodName,
                                       vectorMethodTarget)) {
@@ -517,7 +517,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     auto resolveInferredKeyValueMethodFallback = [&]() -> bool {
       const std::string helperName = expr.name;
       const bool requestsExplicitVectorHelperNamespace =
-          expr.namespacePrefix == "vector" || expr.namespacePrefix == collection_helpers::kRootedVector ||
+          expr.namespacePrefix == "vector" || collection_helpers::isCollectionFamilyRoot(expr.namespacePrefix, collection_helpers::CollectionFamily::Vector) ||
           isCanonicalVectorCompatibilityNamespace(expr.namespacePrefix) ||
           isRootedVectorHelperPath(helperName) ||
           isCanonicalVectorCompatibilityPath(helperName);

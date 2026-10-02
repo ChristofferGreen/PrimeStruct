@@ -34,7 +34,7 @@ void SemanticsValidator::populateBuiltinCollectionDispatchStringResolver(
 
     std::string collectionTypePath;
     if (resolveCallCollectionTypePath(target, params, locals, collectionTypePath) &&
-        collectionTypePath == collection_helpers::kRootedString) {
+        collection_helpers::isCollectionFamilyRoot(collectionTypePath, collection_helpers::CollectionFamily::String)) {
       return true;
     }
     if (target.isMethodCall && target.name == "why" && !target.args.empty()) {

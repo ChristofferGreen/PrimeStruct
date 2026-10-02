@@ -175,7 +175,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     return prefix + "/" + callExpr.name;
   };
   auto isRootKeyValueAliasPath = [](const std::string &path) {
-    return path == collection_helpers::kRootedMap ||
+    return collection_helpers::isCollectionFamilyRoot(path, collection_helpers::CollectionFamily::Map) ||
            path.rfind(collection_helpers::kRootedMapSpecialized, 0) == 0;
   };
   auto isLocalRootKeyValueAliasCall = [&](const Expr &candidate) {
@@ -206,9 +206,9 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     if (candidate.kind == Expr::Kind::Call) {
       std::string collectionTypePath;
       if (resolveCallCollectionTypePath(candidate, params, locals, collectionTypePath) &&
-          (collectionTypePath == collection_helpers::kRootedVector ||
+          (collection_helpers::isCollectionFamilyRoot(collectionTypePath, collection_helpers::CollectionFamily::Vector) ||
            isInternalSoaCollectionTypePath(collectionTypePath) ||
-           collectionTypePath == collection_helpers::kRootedMap)) {
+           collection_helpers::isCollectionFamilyRoot(collectionTypePath, collection_helpers::CollectionFamily::Map))) {
         return false;
       }
       auto defIt = defMap_.find(resolveCalleePath(candidate));
@@ -255,9 +255,9 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     if (candidate.kind == Expr::Kind::Call) {
       std::string collectionTypePath;
       if (resolveCallCollectionTypePath(candidate, params, locals, collectionTypePath) &&
-          (collectionTypePath == collection_helpers::kRootedVector ||
+          (collection_helpers::isCollectionFamilyRoot(collectionTypePath, collection_helpers::CollectionFamily::Vector) ||
            isInternalSoaCollectionTypePath(collectionTypePath) ||
-           collectionTypePath == collection_helpers::kRootedMap)) {
+           collection_helpers::isCollectionFamilyRoot(collectionTypePath, collection_helpers::CollectionFamily::Map))) {
         return false;
       }
       auto defIt = defMap_.find(resolveCalleePath(candidate));
@@ -409,7 +409,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
        normalizedHelperName == "push" || normalizedHelperName == "reserve")) {
     std::string collectionTypePath;
     if (resolveCallCollectionTypePath(receiver, params, locals, collectionTypePath)) {
-      if (collectionTypePath == collection_helpers::kRootedVector) {
+      if (collection_helpers::isCollectionFamilyRoot(collectionTypePath, collection_helpers::CollectionFamily::Vector)) {
         if (tryResolveVectorReceiverSamePathSoaHelper(normalizedHelperName)) {
           return true;
         }
@@ -426,7 +426,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
                                                       internalSoaCollectionTypePath(true));
         return true;
       }
-      if (collectionTypePath == collection_helpers::kRootedMap &&
+      if (collection_helpers::isCollectionFamilyRoot(collectionTypePath, collection_helpers::CollectionFamily::Map) &&
           !isLocalRootKeyValueAliasCall(receiver) &&
           (collection_helpers::isContainsHelperName(normalizedHelperName) ||
            collection_helpers::isTryAtHelperName(normalizedHelperName) ||
@@ -501,11 +501,11 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     const bool receiverHasKeyValueTrait =
         typeHasCollectionCategoryTrait(typeName, receiver.namespacePrefix,
                                        "KeyValue");
-    if (resolvedType == collection_helpers::kRootedVector &&
+    if (collection_helpers::isCollectionFamilyRoot(resolvedType, collection_helpers::CollectionFamily::Vector) &&
         tryResolveVectorReceiverSamePathSoaHelper(normalizedHelperName)) {
       return true;
     }
-    if ((resolvedType == collection_helpers::kRootedMap || receiverHasKeyValueTrait) &&
+    if ((collection_helpers::isCollectionFamilyRoot(resolvedType, collection_helpers::CollectionFamily::Map) || receiverHasKeyValueTrait) &&
         (collection_helpers::isCountHelperName(normalizedHelperName) ||
          normalizedHelperName == "size" ||
          collection_helpers::isContainsHelperName(normalizedHelperName) ||
@@ -516,7 +516,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
       resolvedOut = preferredBareKeyValueHelperTarget(normalizedHelperName);
       return true;
     }
-    if (resolvedType == collection_helpers::kRootedVector &&
+    if (collection_helpers::isCollectionFamilyRoot(resolvedType, collection_helpers::CollectionFamily::Vector) &&
         isVectorCompatibilityHelperName(normalizedHelperName)) {
       resolvedOut = preferredBareVectorHelperTarget(normalizedHelperName);
       return true;
@@ -543,7 +543,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     // preferredSoaHelperTargetForCurrentImports keeps a genuine user
     // same-path /soa/<helper> shadow first and canonicalizes to the public
     // /std/collections/soa/<helper> surface otherwise.
-    if ((resolvedType == collection_helpers::kRootedSoa || normalizedTypeName == "soa" ||
+    if ((collection_helpers::isCollectionFamilyRoot(resolvedType, collection_helpers::CollectionFamily::Soa) || normalizedTypeName == "soa" ||
          normalizedTypeName.rfind("soa<", 0) == 0) &&
         isSupportedCompatibilitySoaHelperName(normalizedHelperName)) {
       resolvedOut =
@@ -594,7 +594,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
       // Same public-soa gap as the Name-receiver branch above: a call
       // returning soa<T> otherwise falls into the generic fallback and
       // fabricates a definition-less "/soa/<helper>" path.
-      if (resolvedType == collection_helpers::kRootedSoa &&
+      if (collection_helpers::isCollectionFamilyRoot(resolvedType, collection_helpers::CollectionFamily::Soa) &&
           isSupportedCompatibilitySoaHelperName(normalizedHelperName)) {
         resolvedOut =
             preferredSoaHelperTargetForCurrentImports(normalizedHelperName);
@@ -984,7 +984,7 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
   if (resolvedVectorHelperDefinitionMissing) {
     const bool requestsExplicitCollectionHelperNamespace =
         expr.namespacePrefix == "vector" ||
-        expr.namespacePrefix == collection_helpers::kRootedVector ||
+        collection_helpers::isCollectionFamilyRoot(expr.namespacePrefix, collection_helpers::CollectionFamily::Vector) ||
         isCompatibilitySoaSurfaceNamespace(expr.namespacePrefix) ||
         isRootedVectorHelperPath(expr.name) ||
         splitSoaSurfaceHelperPath(expr.name, nullptr, nullptr) ||

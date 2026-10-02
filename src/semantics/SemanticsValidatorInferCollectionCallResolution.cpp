@@ -364,7 +364,7 @@ bool SemanticsValidator::resolveCallCollectionTemplateArgs(const Expr &target,
     return true;
   };
   auto isRootKeyValueAliasPath = [](const std::string &path) {
-    return path == collection_helpers::kRootedMap ||
+    return collection_helpers::isCollectionFamilyRoot(path, collection_helpers::CollectionFamily::Map) ||
            path.rfind(collection_helpers::kRootedMapTemplateSpecialized, 0) == 0 ||
            path.rfind(collection_helpers::kRootedMapOverloadSpecialized, 0) == 0;
   };

@@ -399,9 +399,9 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
       !initializer.isMethodCall &&
       initializer.templateArgs.size() == 1 &&
       (isResolvedExperimentalVectorConstructorPath(canonicalResolvedInitializerPath) ||
-       canonicalResolvedInitializerPath == collection_helpers::kRootedVector ||
+       collection_helpers::isCollectionFamilyRoot(canonicalResolvedInitializerPath, collection_helpers::CollectionFamily::Vector) ||
        isBareImportedExperimentalVectorConstructor)) {
-    if (canonicalResolvedInitializerPath == collection_helpers::kRootedVector &&
+    if (collection_helpers::isCollectionFamilyRoot(canonicalResolvedInitializerPath, collection_helpers::CollectionFamily::Vector) &&
         !hasDirectExperimentalVectorImport()) {
       bindingOut.typeName = "vector";
       bindingOut.typeTemplateArg = initializer.templateArgs.front();

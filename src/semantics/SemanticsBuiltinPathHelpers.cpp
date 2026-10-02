@@ -397,7 +397,7 @@ bool isExplicitRemovedCollectionMethodAlias(const std::string &receiverPath, std
     return !helperName.empty() && isRemovedBorrowedSoaCompatibilityHelper(helperName);
   }
 
-  const bool isVectorFamilyReceiver = receiverPath == collection_helpers::kRootedArray || receiverPath == collection_helpers::kRootedVector;
+  const bool isVectorFamilyReceiver = collection_helpers::isCollectionFamilyRoot(receiverPath, collection_helpers::CollectionFamily::Array) || collection_helpers::isCollectionFamilyRoot(receiverPath, collection_helpers::CollectionFamily::Vector);
   if (isVectorFamilyReceiver) {
     if (rawMethodName.rfind("array/", 0) == 0) {
       helperName = std::string_view(rawMethodName).substr(std::string_view("array/").size());
@@ -410,7 +410,7 @@ bool isExplicitRemovedCollectionMethodAlias(const std::string &receiverPath, std
     return !helperName.empty() && isRemovedVectorCompatibilityHelper(helperName);
   }
 
-  if (receiverPath != collection_helpers::kRootedMap) {
+  if (!collection_helpers::isCollectionFamilyRoot(receiverPath, collection_helpers::CollectionFamily::Map)) {
     return false;
   }
   std::string resolvedKeyValueHelperName;

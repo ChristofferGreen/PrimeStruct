@@ -119,7 +119,7 @@ bool SemanticsValidator::isMapLikeBareAccessReceiver(
     return false;
   }
   const std::string resolvedCandidatePath = resolveCalleePath(candidate);
-  if ((resolvedCandidatePath == collection_helpers::kRootedMap ||
+  if ((collection_helpers::isCollectionFamilyRoot(resolvedCandidatePath, collection_helpers::CollectionFamily::Map) ||
        resolvedCandidatePath.rfind(collection_helpers::kRootedMapSpecialized, 0) == 0) &&
       hasDeclaredDefinitionPath(collection_helpers::kRootedMap)) {
     return false;

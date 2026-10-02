@@ -1038,17 +1038,17 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
           normalizedBase == "Pointer" || normalizedBase == "/Pointer") {
         const std::string normalizedArg = trimTemplateTypeText(argText);
         return normalizedArg == "soa" ||
-               normalizedArg == collection_helpers::kRootedSoa ||
+               collection_helpers::isCollectionFamilyRoot(normalizedArg, collection_helpers::CollectionFamily::Soa) ||
                normalizedArg == "std/collections/soa" ||
                normalizedArg == collection_helpers::kCanonicalSoa;
       }
       return normalizedBase == "soa" ||
-             normalizedBase == collection_helpers::kRootedSoa ||
+             collection_helpers::isCollectionFamilyRoot(normalizedBase, collection_helpers::CollectionFamily::Soa) ||
              normalizedBase == "std/collections/soa" ||
              normalizedBase == collection_helpers::kCanonicalSoa;
     }
     return normalizedTypeText == "soa" ||
-           normalizedTypeText == collection_helpers::kRootedSoa ||
+           collection_helpers::isCollectionFamilyRoot(normalizedTypeText, collection_helpers::CollectionFamily::Soa) ||
            normalizedTypeText == "std/collections/soa" ||
            normalizedTypeText == collection_helpers::kCanonicalSoa;
   };
@@ -1189,17 +1189,17 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
           normalizedBase == "Pointer" || normalizedBase == "/Pointer") {
         return isInlineCollectionAccessTypeText(argText);
       }
-      return normalizedBase == "array" || normalizedBase == collection_helpers::kRootedArray ||
-             normalizedBase == "vector" || normalizedBase == collection_helpers::kRootedVector ||
+      return normalizedBase == "array" || collection_helpers::isCollectionFamilyRoot(normalizedBase, collection_helpers::CollectionFamily::Array) ||
+             normalizedBase == "vector" || collection_helpers::isCollectionFamilyRoot(normalizedBase, collection_helpers::CollectionFamily::Vector) ||
              normalizedBase == "Array" || normalizedBase == "/Array" ||
              matchesCollectionTypeText(normalizedBase, "vector") ||
              isInlineExperimentalVectorTypeName(normalizedBase);
     }
     const std::string normalizedTypeText = trimTemplateTypeText(typeText);
-    return normalizedTypeText == "string" || normalizedTypeText == collection_helpers::kRootedString ||
+    return normalizedTypeText == "string" || collection_helpers::isCollectionFamilyRoot(normalizedTypeText, collection_helpers::CollectionFamily::String) ||
            normalizedTypeText == "String" || normalizedTypeText == "/String" ||
-           normalizedTypeText == "array" || normalizedTypeText == collection_helpers::kRootedArray ||
-           normalizedTypeText == "vector" || normalizedTypeText == collection_helpers::kRootedVector ||
+           normalizedTypeText == "array" || collection_helpers::isCollectionFamilyRoot(normalizedTypeText, collection_helpers::CollectionFamily::Array) ||
+           normalizedTypeText == "vector" || collection_helpers::isCollectionFamilyRoot(normalizedTypeText, collection_helpers::CollectionFamily::Vector) ||
            normalizedTypeText == "Array" || normalizedTypeText == "/Array" ||
            matchesCollectionTypeText(normalizedTypeText, "vector") ||
            isInlineExperimentalVectorTypeName(normalizedTypeText);
@@ -1236,9 +1236,9 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
       const std::string collectionFamily =
           resolveInlineSemanticTypeText(collectionFact->collectionFamilyId,
                                         collectionFact->collectionFamily);
-      return collectionFamily == "array" || collectionFamily == collection_helpers::kRootedArray ||
-             collectionFamily == "vector" || collectionFamily == collection_helpers::kRootedVector ||
-             collectionFamily == "string" || collectionFamily == collection_helpers::kRootedString ||
+      return collectionFamily == "array" || collection_helpers::isCollectionFamilyRoot(collectionFamily, collection_helpers::CollectionFamily::Array) ||
+             collectionFamily == "vector" || collection_helpers::isCollectionFamilyRoot(collectionFamily, collection_helpers::CollectionFamily::Vector) ||
+             collectionFamily == "string" || collection_helpers::isCollectionFamilyRoot(collectionFamily, collection_helpers::CollectionFamily::String) ||
              matchesCollectionTypeText(collectionFamily, "vector") ||
              isInlineExperimentalVectorTypeName(collectionFamily)
                  ? InlineCollectionAccessTargetFact::CollectionAccess
@@ -1511,8 +1511,8 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
         const std::string bindingType =
             trimTemplateTypeText(resolveInlineSemanticTypeText(
                 queryFact->bindingTypeTextId, queryFact->bindingTypeText));
-        return queryType == "string" || queryType == collection_helpers::kRootedString ||
-               bindingType == "string" || bindingType == collection_helpers::kRootedString;
+        return queryType == "string" || collection_helpers::isCollectionFamilyRoot(queryType, collection_helpers::CollectionFamily::String) ||
+               bindingType == "string" || collection_helpers::isCollectionFamilyRoot(bindingType, collection_helpers::CollectionFamily::String);
       };
       if (keyValueTargetInfo.isKeyValueTarget && !isCanonicalStdKeyValueHelperCall &&
           (expr.sourceIsMethodCall || isRewrittenSlashMethodKeyValueAccess() ||

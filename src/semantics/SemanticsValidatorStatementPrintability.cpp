@@ -108,9 +108,9 @@ bool SemanticsValidator::isStringStatementExpr(const Expr &arg,
     if (target.kind == Expr::Kind::Call) {
       std::string collectionTypePath;
       if (resolveCallCollectionTypePath(target, params, locals, collectionTypePath) &&
-          (collectionTypePath == collection_helpers::kRootedArray || collectionTypePath == collection_helpers::kRootedVector)) {
+          (collection_helpers::isCollectionFamilyRoot(collectionTypePath, collection_helpers::CollectionFamily::Array) || collection_helpers::isCollectionFamilyRoot(collectionTypePath, collection_helpers::CollectionFamily::Vector))) {
         std::vector<std::string> templateArgs;
-        const std::string expectedBase = collectionTypePath == collection_helpers::kRootedArray ? "array" : "vector";
+        const std::string expectedBase = collection_helpers::isCollectionFamilyRoot(collectionTypePath, collection_helpers::CollectionFamily::Array) ? "array" : "vector";
         if (resolveCallCollectionTemplateArgs(target, expectedBase, params, locals, templateArgs) &&
             templateArgs.size() == 1) {
           elemTypeOut = templateArgs.front();

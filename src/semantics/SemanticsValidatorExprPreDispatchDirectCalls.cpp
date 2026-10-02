@@ -824,7 +824,7 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
     if (expr.args.front().kind == Expr::Kind::Call &&
         resolveCallCollectionTypePath(expr.args.front(), params, locals,
                                       receiverCollectionTypePath) &&
-        receiverCollectionTypePath == collection_helpers::kRootedVector) {
+        collection_helpers::isCollectionFamilyRoot(receiverCollectionTypePath, collection_helpers::CollectionFamily::Vector)) {
       if ((expr.name == "count" || expr.name == "capacity") &&
           expr.templateArgs.empty() && !expr.hasBodyArguments &&
           expr.bodyArguments.empty()) {

@@ -141,7 +141,7 @@ bool SemanticsValidator::isCanonicalKeyValueReceiver(
   }
   std::string collectionTypePath;
   if (resolveCallCollectionTypePath(receiverExpr, params, locals, collectionTypePath) &&
-      collectionTypePath == collection_helpers::kRootedMap) {
+      collection_helpers::isCollectionFamilyRoot(collectionTypePath, collection_helpers::CollectionFamily::Map)) {
     return true;
   }
   const std::string resolvedTarget = resolveCalleePath(receiverExpr);
@@ -337,7 +337,7 @@ bool SemanticsValidator::resolveKeyValueTarget(
     }
     std::string collectionTypePath;
     if (resolveCallCollectionTypePath(target, params, locals, collectionTypePath) &&
-        collectionTypePath == collection_helpers::kRootedMap) {
+        collection_helpers::isCollectionFamilyRoot(collectionTypePath, collection_helpers::CollectionFamily::Map)) {
       std::vector<std::string> args;
       if (resolveCallCollectionTemplateArgs(target, "map", params, locals, args) &&
           args.size() == 2) {
@@ -397,7 +397,7 @@ bool SemanticsValidator::resolveMethodTargetKeyValueValueType(
     }
     std::string collectionTypePath;
     if (!resolveCallCollectionTypePath(target, params, locals, collectionTypePath) ||
-        collectionTypePath != collection_helpers::kRootedMap) {
+        !collection_helpers::isCollectionFamilyRoot(collectionTypePath, collection_helpers::CollectionFamily::Map)) {
       return false;
     }
     std::vector<std::string> args;

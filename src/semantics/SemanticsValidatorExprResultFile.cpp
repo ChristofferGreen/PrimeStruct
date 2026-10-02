@@ -67,7 +67,7 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
     std::string collectionTypePath;
     return arg.kind == Expr::Kind::Call &&
            resolveCallCollectionTypePath(arg, params, locals, collectionTypePath) &&
-           collectionTypePath == collection_helpers::kRootedString;
+           collection_helpers::isCollectionFamilyRoot(collectionTypePath, collection_helpers::CollectionFamily::String);
   };
   auto isStringExpr = [&](const Expr &arg) -> bool {
     return context.isStringExpr != nullptr ? context.isStringExpr(arg)

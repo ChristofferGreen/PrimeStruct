@@ -186,7 +186,7 @@ void SemanticsValidator::prepareExprDispatchBootstrap(
            isPointerLikeBinding(inferredReturn);
   };
   auto isRootKeyValueAliasPath = [](const std::string &path) {
-    return path == collection_helpers::kRootedMap || path.rfind(collection_helpers::kRootedMapSpecialized, 0) == 0;
+    return collection_helpers::isCollectionFamilyRoot(path, collection_helpers::CollectionFamily::Map) || path.rfind(collection_helpers::kRootedMapSpecialized, 0) == 0;
   };
   auto explicitCallPath = [&](const Expr &candidate) {
     if (candidate.name.empty() || candidate.name.front() == '/') {

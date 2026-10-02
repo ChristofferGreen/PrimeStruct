@@ -114,10 +114,10 @@ void SemanticsValidator::prepareExprLateFallbackBuiltinContext(
           return false;
         }
         const std::string receiverPath = targetPath.substr(0, slash);
-        if (receiverPath == collection_helpers::kRootedArray || receiverPath == collection_helpers::kRootedVector ||
+        if (collection_helpers::isCollectionFamilyRoot(receiverPath, collection_helpers::CollectionFamily::Array) || collection_helpers::isCollectionFamilyRoot(receiverPath, collection_helpers::CollectionFamily::Vector) ||
             receiverPath == canonicalVectorCompatibilityPrefixOrFallback() ||
-            receiverPath == collection_helpers::kRootedSoa || receiverPath == collection_helpers::kRootedMap ||
-            receiverPath == collection_helpers::kRootedString) {
+            collection_helpers::isCollectionFamilyRoot(receiverPath, collection_helpers::CollectionFamily::Soa) || collection_helpers::isCollectionFamilyRoot(receiverPath, collection_helpers::CollectionFamily::Map) ||
+            collection_helpers::isCollectionFamilyRoot(receiverPath, collection_helpers::CollectionFamily::String)) {
           return false;
         }
         return structNames_.count(receiverPath) > 0;

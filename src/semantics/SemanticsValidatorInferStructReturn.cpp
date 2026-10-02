@@ -325,11 +325,11 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
       const bool preservesExplicitRemovedMethodPath =
           !explicitRemovedMethodPath.empty() &&
           hasDefinitionPath(explicitRemovedMethodPath) &&
-          (receiverStruct == collection_helpers::kRootedVector || receiverStruct == collection_helpers::kRootedArray);
+          (collection_helpers::isCollectionFamilyRoot(receiverStruct, collection_helpers::CollectionFamily::Vector) || collection_helpers::isCollectionFamilyRoot(receiverStruct, collection_helpers::CollectionFamily::Array));
       const bool blocksBuiltinVectorAccessStructReturnForwarding =
           methodName == "at" || methodName == "at_unsafe";
       if (blocksBuiltinVectorAccessStructReturnForwarding &&
-          (receiverStruct == collection_helpers::kRootedVector || receiverStruct == collection_helpers::kRootedArray)) {
+          (collection_helpers::isCollectionFamilyRoot(receiverStruct, collection_helpers::CollectionFamily::Vector) || collection_helpers::isCollectionFamilyRoot(receiverStruct, collection_helpers::CollectionFamily::Array))) {
         return "";
       }
       std::string explicitKeyValueHelperName;
@@ -353,13 +353,13 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
       if (preservesExplicitRemovedMethodPath) {
         appendMethodCandidate(explicitRemovedMethodPath);
       }
-      if (receiverStruct == collection_helpers::kRootedVector) {
+      if (collection_helpers::isCollectionFamilyRoot(receiverStruct, collection_helpers::CollectionFamily::Vector)) {
         appendMethodCandidate(
             canonicalVectorCompatibilityHelperPathOrFallback(methodName));
         if (methodName != "count" && !blocksBuiltinVectorAccessStructReturnForwarding) {
           appendMethodCandidate(collection_helpers::kRootedArrayPrefix + methodName);
         }
-      } else if (receiverStruct == collection_helpers::kRootedArray) {
+      } else if (collection_helpers::isCollectionFamilyRoot(receiverStruct, collection_helpers::CollectionFamily::Array)) {
         appendMethodCandidate(collection_helpers::kRootedArrayPrefix + methodName);
         if (methodName != "count") {
           if (!blocksBuiltinVectorAccessStructReturnForwarding) {
@@ -367,7 +367,7 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
                 canonicalVectorCompatibilityHelperPathOrFallback(methodName));
           }
         }
-      } else if (receiverStruct == collection_helpers::kRootedMap) {
+      } else if (collection_helpers::isCollectionFamilyRoot(receiverStruct, collection_helpers::CollectionFamily::Map)) {
         if (!isExplicitKeyValueAccessStructReturnMethod) {
           appendMethodCandidate(metadataBackedCanonicalKeyValueHelperPath(methodName));
         }
@@ -408,7 +408,7 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
         }
         return {};
       };
-      if (receiverStruct == collection_helpers::kRootedMap) {
+      if (collection_helpers::isCollectionFamilyRoot(receiverStruct, collection_helpers::CollectionFamily::Map)) {
         for (const auto &candidate : methodCandidates) {
           std::string candidateKeyValueHelperName;
           if (!resolveCanonicalCompatibilityKeyValueHelperNameFromResolvedPath(
@@ -630,7 +630,7 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
       }
       std::string collectionTypePath;
       if (resolveCallCollectionTypePath(expr, params, locals, collectionTypePath) &&
-          collectionTypePath == collection_helpers::kRootedMap) {
+          collection_helpers::isCollectionFamilyRoot(collectionTypePath, collection_helpers::CollectionFamily::Map)) {
         const std::string resolvedCollectionPath = resolveStructReturnCallTarget(expr);
         std::string normalizedCollectionPath = normalizeBindingTypeName(resolvedCollectionPath);
         if (!normalizedCollectionPath.empty() && normalizedCollectionPath.front() != '/') {

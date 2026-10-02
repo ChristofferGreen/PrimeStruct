@@ -521,7 +521,7 @@ bool TailDispatchContext::rewriteCanonicalKeyValueHelperForExperimentalReceiverE
 bool TailDispatchContext::isVectorStructPath(const std::string &structPath) {
           const std::string vectorTypePath = collection_paths::memberPath(
               collection_paths::kVectorFolder, collection_paths::kVectorTypeName);
-          return structPath == collection_helpers::kRootedVector ||
+          return collection_helpers::isCollectionFamilyRoot(structPath, collection_helpers::CollectionFamily::Vector) ||
                  structPath == vectorTypePath ||
                  structPath.rfind(vectorTypePath + "__", 0) == 0;
         };
@@ -563,8 +563,8 @@ bool TailDispatchContext::publishedKeyValueAccessHelperReturnsString(std::string
           const std::string bindingType =
               resolveReturnTypeText(returnFact->bindingTypeText,
                                     returnFact->bindingTypeTextId);
-          return structPath == "string" || structPath == collection_helpers::kRootedString ||
-                 bindingType == "string" || bindingType == collection_helpers::kRootedString;
+          return structPath == "string" || collection_helpers::isCollectionFamilyRoot(structPath, collection_helpers::CollectionFamily::String) ||
+                 bindingType == "string" || collection_helpers::isCollectionFamilyRoot(bindingType, collection_helpers::CollectionFamily::String);
         };
 
 

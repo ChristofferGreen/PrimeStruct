@@ -95,7 +95,7 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
     std::string collectionTypePath;
     return resolveCallCollectionTypePath(target, params, locals,
                                          collectionTypePath) &&
-           (collectionTypePath == collection_helpers::kRootedVector || collectionTypePath == collection_helpers::kRootedArray);
+           (collection_helpers::isCollectionFamilyRoot(collectionTypePath, collection_helpers::CollectionFamily::Vector) || collection_helpers::isCollectionFamilyRoot(collectionTypePath, collection_helpers::CollectionFamily::Array));
   };
 
   auto hasActiveBorrowForBinding =

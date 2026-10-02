@@ -220,7 +220,7 @@ std::string inferBuiltinCollectionReceiverPath(
 std::vector<std::string> collectionMethodPathCandidates(const std::string &receiverStruct,
                                                         const std::string &methodName,
                                                         const std::string &rawMethodName) {
-  if (receiverStruct == collection_helpers::kRootedVector) {
+  if (collection_helpers::isCollectionFamilyRoot(receiverStruct, collection_helpers::CollectionFamily::Vector)) {
     std::vector<std::string> candidates = {
         stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::CollectionsManifestSurface0, methodName)};
     if (allowsArrayVectorCompatibilitySuffix(methodName)) {
@@ -228,7 +228,7 @@ std::vector<std::string> collectionMethodPathCandidates(const std::string &recei
     }
     return candidates;
   }
-  if (receiverStruct == collection_helpers::kRootedArray) {
+  if (collection_helpers::isCollectionFamilyRoot(receiverStruct, collection_helpers::CollectionFamily::Array)) {
     std::vector<std::string> candidates = {
         collection_helpers::kRootedArrayPrefix + methodName,
     };
@@ -238,7 +238,7 @@ std::vector<std::string> collectionMethodPathCandidates(const std::string &recei
     }
     return candidates;
   }
-  if (receiverStruct == collection_helpers::kRootedMap) {
+  if (collection_helpers::isCollectionFamilyRoot(receiverStruct, collection_helpers::CollectionFamily::Map)) {
     std::string normalizedRawMethodName = rawMethodName;
     if (!normalizedRawMethodName.empty() && normalizedRawMethodName.front() == '/') {
       normalizedRawMethodName.erase(normalizedRawMethodName.begin());
@@ -529,7 +529,7 @@ std::string inferStructReturnPathFromExprInternal(
     }
     const std::string methodName = normalizeCollectionMethodName(expr.name);
     std::vector<std::string> candidates = collectionMethodPathCandidates(receiverStruct, methodName, rawMethodName);
-    if ((receiverStruct == collection_helpers::kRootedVector || receiverStruct == collection_helpers::kRootedArray || receiverStruct == collection_helpers::kRootedString) &&
+    if ((collection_helpers::isCollectionFamilyRoot(receiverStruct, collection_helpers::CollectionFamily::Vector) || collection_helpers::isCollectionFamilyRoot(receiverStruct, collection_helpers::CollectionFamily::Array) || collection_helpers::isCollectionFamilyRoot(receiverStruct, collection_helpers::CollectionFamily::String)) &&
         (methodName == "at" || methodName == "at_unsafe")) {
       const std::string canonicalCandidate =
           stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::CollectionsManifestSurface0, methodName);
@@ -600,7 +600,7 @@ std::string inferStructReturnPathFromExprInternal(
                                                                    defMap,
                                                                    visitedDefs);
           }
-          if (receiverStruct == collection_helpers::kRootedVector || receiverStruct == collection_helpers::kRootedArray || receiverStruct == collection_helpers::kRootedString) {
+          if (collection_helpers::isCollectionFamilyRoot(receiverStruct, collection_helpers::CollectionFamily::Vector) || collection_helpers::isCollectionFamilyRoot(receiverStruct, collection_helpers::CollectionFamily::Array) || collection_helpers::isCollectionFamilyRoot(receiverStruct, collection_helpers::CollectionFamily::String)) {
             const std::string canonicalCandidate =
                 stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::CollectionsManifestSurface0, suffix);
             for (auto it = resolvedCandidates.begin(); it != resolvedCandidates.end();) {

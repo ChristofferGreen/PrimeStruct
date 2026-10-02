@@ -55,11 +55,11 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
           if (expr.name == samePath || expr.name == "soa/" + helper) {
             return true;
           }
-          return (expr.namespacePrefix == collection_helpers::kRootedSoa ||
+          return (collection_helpers::isCollectionFamilyRoot(expr.namespacePrefix, collection_helpers::CollectionFamily::Soa) ||
                   expr.namespacePrefix == "soa") &&
                  expr.name == helper;
         }
-        return (expr.namespacePrefix == collection_helpers::kRootedSoa ||
+        return (collection_helpers::isCollectionFamilyRoot(expr.namespacePrefix, collection_helpers::CollectionFamily::Soa) ||
                 expr.namespacePrefix == "soa") &&
                expr.name == helper;
       };
@@ -492,7 +492,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
       !expr.isMethodCall &&
       (collection_helpers::isRootedSoaPath(expr.name) ||
        expr.name.rfind("soa/", 0) == 0 ||
-       expr.namespacePrefix == collection_helpers::kRootedSoa ||
+       collection_helpers::isCollectionFamilyRoot(expr.namespacePrefix, collection_helpers::CollectionFamily::Soa) ||
        expr.namespacePrefix == "soa");
   if ((resolvedMethod || resolvedMissing ||
        hasExplicitSoaAccessSpelling ||

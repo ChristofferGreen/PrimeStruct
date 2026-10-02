@@ -137,8 +137,8 @@ bool SemanticsValidator::resolveLeadingNonCollectionAccessReceiverPath(
     return false;
   }
   const std::string resolvedReceiverPath = resolveCalleePath(receiverExpr);
-  if (resolvedReceiverPath == collection_helpers::kRootedArray || resolvedReceiverPath == collection_helpers::kRootedVector ||
-      isRootMapCollectionReceiverPath(resolvedReceiverPath) || resolvedReceiverPath == collection_helpers::kRootedSoa) {
+  if (collection_helpers::isCollectionFamilyRoot(resolvedReceiverPath, collection_helpers::CollectionFamily::Array) || collection_helpers::isCollectionFamilyRoot(resolvedReceiverPath, collection_helpers::CollectionFamily::Vector) ||
+      isRootMapCollectionReceiverPath(resolvedReceiverPath) || collection_helpers::isCollectionFamilyRoot(resolvedReceiverPath, collection_helpers::CollectionFamily::Soa)) {
     return false;
   }
   auto defIt = defMap_.find(resolvedReceiverPath);

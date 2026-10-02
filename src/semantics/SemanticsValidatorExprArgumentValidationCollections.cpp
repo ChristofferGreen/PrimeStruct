@@ -91,7 +91,7 @@ bool getCanonicalKeyValueAccessBuiltinName(const Expr &candidate,
 bool isBuiltinSoaVectorTypeBaseForArgumentValidation(const std::string &base) {
   const std::string normalizedBase = normalizeBindingTypeName(base);
   return normalizedBase == "soa" ||
-         normalizedBase == collection_helpers::kRootedSoa ||
+         collection_helpers::isCollectionFamilyRoot(normalizedBase, collection_helpers::CollectionFamily::Soa) ||
          normalizedBase == "std/collections/soa" ||
          normalizedBase == collection_helpers::kCanonicalSoa ||
          isExperimentalSoaVectorTypePath(normalizedBase);

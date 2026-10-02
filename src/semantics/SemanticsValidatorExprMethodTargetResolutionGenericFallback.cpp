@@ -97,12 +97,12 @@ bool SemanticsValidator::resolveMethodTargetGenericFallback(
     }
   }
   if (normalizedMethodName == "to_soa" &&
-      normalizedCollectionTypePath == collection_helpers::kRootedVector) {
+      collection_helpers::isCollectionFamilyRoot(normalizedCollectionTypePath, collection_helpers::CollectionFamily::Vector)) {
     return setCollectionMethodTarget("/to_soa");
   }
   if ((collection_helpers::isToAosHelperName(normalizedMethodName)) &&
       (isInternalSoaCollectionTypePath(normalizedCollectionTypePath) ||
-       normalizedCollectionTypePath == collection_helpers::kRootedVector)) {
+       collection_helpers::isCollectionFamilyRoot(normalizedCollectionTypePath, collection_helpers::CollectionFamily::Vector))) {
     return setCollectionMethodTarget(
         preferredSoaHelperTargetForCollectionType(
             normalizedMethodName,
@@ -186,7 +186,7 @@ bool SemanticsValidator::resolveMethodTargetGenericFallback(
         collection_helpers::isGetHelperName(canonicalCollectionHelperName) ||
         collection_helpers::isRefHelperName(canonicalCollectionHelperName) ||
         collection_helpers::isToAosHelperName(canonicalCollectionHelperName);
-    if (normalizedPointeeCollectionTypePath == collection_helpers::kRootedMap &&
+    if (collection_helpers::isCollectionFamilyRoot(normalizedPointeeCollectionTypePath, collection_helpers::CollectionFamily::Map) &&
         (normalizedMethodName == "count" ||
          normalizedMethodName == "contains" ||
          normalizedMethodName == "tryAt" ||
@@ -219,7 +219,7 @@ bool SemanticsValidator::resolveMethodTargetGenericFallback(
                                               isBuiltinOut);
     }
     if (typeName == "Reference" &&
-        normalizedPointeeCollectionTypePath == collection_helpers::kRootedVector) {
+        collection_helpers::isCollectionFamilyRoot(normalizedPointeeCollectionTypePath, collection_helpers::CollectionFamily::Vector)) {
       // TODO-5375: a borrowed vector resolves the vector helper spellings to
       // the canonical borrowed-vector helpers.
       const std::string_view leaf =
@@ -284,7 +284,7 @@ bool SemanticsValidator::resolveMethodTargetGenericFallback(
   // receivers (e.g. string) return earlier via the branch just below, so
   // this same guard needs to run here too.
   if (normalizedMethodName == "capacity" &&
-      normalizedCollectionTypePath != collection_helpers::kRootedVector &&
+      !collection_helpers::isCollectionFamilyRoot(normalizedCollectionTypePath, collection_helpers::CollectionFamily::Vector) &&
       isCanonicalVectorCompatibilityPath(explicitVectorHelperPath) &&
       !hasDeclaredDefinitionPath(explicitVectorHelperPath) &&
       !hasImportedDefinitionPath(explicitVectorHelperPath)) {
@@ -338,7 +338,7 @@ bool SemanticsValidator::resolveMethodTargetGenericFallback(
     }
     return setCollectionMethodTarget(canonicalVectorHelperTarget(normalizedMethodName));
   }
-  if (normalizedCollectionTypePath == collection_helpers::kRootedVector &&
+  if (collection_helpers::isCollectionFamilyRoot(normalizedCollectionTypePath, collection_helpers::CollectionFamily::Vector) &&
       normalizedMethodName != "count" &&
       normalizedMethodName != "capacity" &&
       normalizedMethodName != "at" &&
@@ -370,7 +370,7 @@ bool SemanticsValidator::resolveMethodTargetGenericFallback(
   // explicit path the caller wrote and producing a misleading "unknown
   // method: /<receiver type>/capacity" diagnostic.
   if (normalizedMethodName == "capacity" &&
-      normalizedCollectionTypePath != collection_helpers::kRootedVector &&
+      !collection_helpers::isCollectionFamilyRoot(normalizedCollectionTypePath, collection_helpers::CollectionFamily::Vector) &&
       isCanonicalVectorCompatibilityPath(explicitVectorHelperPath) &&
       !hasDeclaredDefinitionPath(explicitVectorHelperPath) &&
       !hasImportedDefinitionPath(explicitVectorHelperPath)) {

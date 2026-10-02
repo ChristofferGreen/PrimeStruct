@@ -185,15 +185,15 @@ bool isTemplateMonomorphMapEntryConstructorPath(std::string path) {
 
 
 std::string normalizeBuiltinCollectionTemplateBase(const std::string &name) {
-  if (name == "array" || name == collection_helpers::kRootedArray) {
+  if (name == "array" || collection_helpers::isCollectionFamilyRoot(name, collection_helpers::CollectionFamily::Array)) {
     return "array";
   }
-  if (name == "vector" || name == collection_helpers::kRootedVector ||
+  if (name == "vector" || collection_helpers::isCollectionFamilyRoot(name, collection_helpers::CollectionFamily::Vector) ||
       semantics::trimLeadingSlash(name) ==
           semantics::trimLeadingSlash(semantics::canonicalVectorCompatibilityPrefixOrFallback())) {
     return "vector";
   }
-  if (name == "soa" || name == collection_helpers::kRootedSoa ||
+  if (name == "soa" || collection_helpers::isCollectionFamilyRoot(name, collection_helpers::CollectionFamily::Soa) ||
       name == semantics::publicSoaHelperTargetPath("") ||
       name == semantics::trimLeadingSlash(semantics::publicSoaHelperTargetPath(""))) {
     return templateMonomorphSoaReceiverTypeName();

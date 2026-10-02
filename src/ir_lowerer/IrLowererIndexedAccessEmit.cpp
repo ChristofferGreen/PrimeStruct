@@ -19,7 +19,7 @@ bool isCollectionVectorRecordPath(const std::string &structPath) {
 
 bool usesCollectionVectorValueStorage(const ArrayVectorAccessTargetInfo &targetInfo) {
   return targetInfo.isVectorTarget &&
-         (targetInfo.structTypeName.empty() || targetInfo.structTypeName == collection_helpers::kRootedVector ||
+         (targetInfo.structTypeName.empty() || collection_helpers::isCollectionFamilyRoot(targetInfo.structTypeName, collection_helpers::CollectionFamily::Vector) ||
           isCollectionVectorRecordPath(targetInfo.structTypeName));
 }
 

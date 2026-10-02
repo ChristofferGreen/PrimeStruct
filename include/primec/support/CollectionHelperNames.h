@@ -232,6 +232,11 @@ constexpr std::string_view formatCollectionFamily(CollectionFamily family) {
   return {};
 }
 
+// True when `path` is exactly the root spelling of `family`.
+constexpr bool isCollectionFamilyRoot(std::string_view path, CollectionFamily family) {
+  return family != CollectionFamily::None && path == formatCollectionFamily(family);
+}
+
 static_assert(parseCollectionFamily(kRootedVector) == CollectionFamily::Vector);
 static_assert(parseCollectionFamily(kRootedVectorCount) == CollectionFamily::None);
 static_assert(formatCollectionFamily(parseCollectionFamily(kRootedMap)) == kRootedMap);

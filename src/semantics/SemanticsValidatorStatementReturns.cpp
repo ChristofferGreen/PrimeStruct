@@ -1014,23 +1014,23 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
                     "/" + normalizedTypePath)) {
               return collection_helpers::kRootedVector;
             }
-            if (typePath == collection_helpers::kRootedArray || typePath == "array") {
+            if (collection_helpers::isCollectionFamilyRoot(typePath, collection_helpers::CollectionFamily::Array) || typePath == "array") {
               return collection_helpers::kRootedArray;
             }
-            if (typePath == collection_helpers::kRootedVector || typePath == "vector" ||
+            if (collection_helpers::isCollectionFamilyRoot(typePath, collection_helpers::CollectionFamily::Vector) || typePath == "vector" ||
                 trimLeadingSlash(typePath) ==
                     trimLeadingSlash(
                         canonicalVectorCompatibilityPrefixOrFallback())) {
               return collection_helpers::kRootedVector;
             }
-            if (typePath == collection_helpers::kRootedSoa || typePath == "soa") {
+            if (collection_helpers::isCollectionFamilyRoot(typePath, collection_helpers::CollectionFamily::Soa) || typePath == "soa") {
               return collection_helpers::kRootedSoa;
             }
             if (isKeyValueSurfaceTypeName(typePath) || typePath == keyValueCollectionMarker ||
                 typePath == collectionTypePathLocal("map")) {
               return keyValueCollectionMarker;
             }
-            if (typePath == collection_helpers::kRootedString || typePath == "string") {
+            if (collection_helpers::isCollectionFamilyRoot(typePath, collection_helpers::CollectionFamily::String) || typePath == "string") {
               return collection_helpers::kRootedString;
             }
               return "";
@@ -1101,9 +1101,9 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
                    (resolvedExpectedStruct.empty() || resolvedExpectedStruct != resolvedActualStruct)) &&
                   (normalizedExpectedStruct.empty() || normalizedExpectedStruct != normalizedActualStruct)))) {
               std::string expectedType = structIt->second;
-              if (expectedType == collection_helpers::kRootedArray || expectedType == collection_helpers::kRootedVector ||
+              if (collection_helpers::isCollectionFamilyRoot(expectedType, collection_helpers::CollectionFamily::Array) || collection_helpers::isCollectionFamilyRoot(expectedType, collection_helpers::CollectionFamily::Vector) ||
                   expectedType == keyValueCollectionMarkerPathLocal() ||
-                  expectedType == collection_helpers::kRootedString) {
+                  collection_helpers::isCollectionFamilyRoot(expectedType, collection_helpers::CollectionFamily::String)) {
               expectedType.erase(0, 1);
             }
             return failReturnDiagnostic(returnTypeMismatchDiagnostic(structIt->second, actualStruct, expectedType));

@@ -59,7 +59,7 @@ bool SemanticsValidator::inferCollectionBindingFromExpr(const Expr &expr,
       [&](std::string resolvedPath) {
         resolvedPath = canonicalizeResolvedPath(std::move(resolvedPath));
         return isResolvedExperimentalVectorConstructorPath(resolvedPath) ||
-               (resolvedPath == collection_helpers::kRootedVector &&
+               (collection_helpers::isCollectionFamilyRoot(resolvedPath, collection_helpers::CollectionFamily::Vector) &&
                 hasDirectExperimentalVectorImport());
       };
   auto copyNamedBinding = [&](const std::string &name) -> bool {

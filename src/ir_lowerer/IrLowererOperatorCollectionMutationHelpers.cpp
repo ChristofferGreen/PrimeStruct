@@ -45,7 +45,7 @@ bool matchesGeneratedSpecializedPath(std::string_view text,
 
 bool isVectorStructPath(const std::string &structPath) {
   const std::string vectorTypePath = localExperimentalCollectionTypePath("vector", "Vector");
-  return structPath == collection_helpers::kRootedVector || structPath == vectorTypePath ||
+  return collection_helpers::isCollectionFamilyRoot(structPath, collection_helpers::CollectionFamily::Vector) || structPath == vectorTypePath ||
          matchesGeneratedSpecializedPath(structPath, vectorTypePath);
 }
 
@@ -859,9 +859,9 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
       }
       if (!targetInfo.isArrayOrVectorTarget && !hasSemanticArrayVectorFact) {
         const std::string collectionPath = inferStructExprPath(collectionTarget, localsIn);
-        if (collectionPath == collection_helpers::kRootedArray || collectionPath == collection_helpers::kRootedVector) {
+        if (collection_helpers::isCollectionFamilyRoot(collectionPath, collection_helpers::CollectionFamily::Array) || collection_helpers::isCollectionFamilyRoot(collectionPath, collection_helpers::CollectionFamily::Vector)) {
           targetInfo.isArrayOrVectorTarget = true;
-          targetInfo.isVectorTarget = (collectionPath == collection_helpers::kRootedVector);
+          targetInfo.isVectorTarget = (collection_helpers::isCollectionFamilyRoot(collectionPath, collection_helpers::CollectionFamily::Vector));
         }
       }
       if (!targetInfo.isArrayOrVectorTarget && !hasSemanticArrayVectorFact &&

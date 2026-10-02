@@ -633,7 +633,7 @@ bool resolveMethodCallPath(const Expr &call,
   const bool isConcreteSoaWrapperReceiver =
       isConcreteExperimentalSoaVectorStructPath(resolvedType) &&
       isCanonicalSoaWrapperMethodName(normalizedMethodName);
-  if (resolvedType == collection_helpers::kRootedVector || resolvedType == "vector") {
+  if (collection_helpers::isCollectionFamilyRoot(resolvedType, collection_helpers::CollectionFamily::Vector) || resolvedType == "vector") {
     const bool isCountLikeMethod = normalizedMethodName == "count";
     const bool isCapacityLikeMethod = normalizedMethodName == "capacity";
     if (isCountLikeMethod || isCapacityLikeMethod) {
@@ -657,7 +657,7 @@ bool resolveMethodCallPath(const Expr &call,
       return true;
     }
   }
-  if (isConcreteSoaWrapperReceiver || resolvedType == collection_helpers::kRootedSoa ||
+  if (isConcreteSoaWrapperReceiver || collection_helpers::isCollectionFamilyRoot(resolvedType, collection_helpers::CollectionFamily::Soa) ||
       resolvedType == "soa") {
     const std::string helperName =
         borrowedSoaReceiver ? borrowedSoaMethodName(normalizedMethodName)

@@ -176,10 +176,10 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
       if (resolveCallCollectionTypePath(receiverExpr, params, locals,
                                         receiverCollectionTypePath)) {
         matchedCollectionTypePath = receiverCollectionTypePath;
-        hasCollectionReceiver = receiverCollectionTypePath == collection_helpers::kRootedVector ||
-                                receiverCollectionTypePath == collection_helpers::kRootedArray ||
-                                receiverCollectionTypePath == collection_helpers::kRootedString ||
-                                receiverCollectionTypePath == collection_helpers::kRootedSoa;
+        hasCollectionReceiver = collection_helpers::isCollectionFamilyRoot(receiverCollectionTypePath, collection_helpers::CollectionFamily::Vector) ||
+                                collection_helpers::isCollectionFamilyRoot(receiverCollectionTypePath, collection_helpers::CollectionFamily::Array) ||
+                                collection_helpers::isCollectionFamilyRoot(receiverCollectionTypePath, collection_helpers::CollectionFamily::String) ||
+                                collection_helpers::isCollectionFamilyRoot(receiverCollectionTypePath, collection_helpers::CollectionFamily::Soa);
       }
       if (!hasCollectionReceiver) {
         std::string receiverTypeText;
@@ -188,10 +188,10 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
           const std::string normalizedCollectionType =
               normalizeCollectionTypePath(receiverTypeText);
           matchedCollectionTypePath = normalizedCollectionType;
-          hasCollectionReceiver = normalizedCollectionType == collection_helpers::kRootedVector ||
-                                  normalizedCollectionType == collection_helpers::kRootedArray ||
-                                  normalizedCollectionType == collection_helpers::kRootedString ||
-                                  normalizedCollectionType == collection_helpers::kRootedSoa;
+          hasCollectionReceiver = collection_helpers::isCollectionFamilyRoot(normalizedCollectionType, collection_helpers::CollectionFamily::Vector) ||
+                                  collection_helpers::isCollectionFamilyRoot(normalizedCollectionType, collection_helpers::CollectionFamily::Array) ||
+                                  collection_helpers::isCollectionFamilyRoot(normalizedCollectionType, collection_helpers::CollectionFamily::String) ||
+                                  collection_helpers::isCollectionFamilyRoot(normalizedCollectionType, collection_helpers::CollectionFamily::Soa);
         }
       }
       if (!hasCollectionReceiver) {
@@ -219,7 +219,7 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
         // vector-family receivers use the preferred vector helper
         // (TODO-5371).
         rewrittenVectorMethodCall.name =
-            matchedCollectionTypePath == collection_helpers::kRootedArray
+            collection_helpers::isCollectionFamilyRoot(matchedCollectionTypePath, collection_helpers::CollectionFamily::Array)
                 ? normalizedMethodName
                 : preferredBareVectorHelperTarget(normalizedMethodName);
         handledOut = true;
@@ -291,8 +291,8 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
         std::string collectionTypePath;
         if (resolveCallCollectionTypePath(receiverExpr, params, locals,
                                           collectionTypePath)) {
-          if (collectionTypePath == collection_helpers::kRootedVector ||
-              collectionTypePath == collection_helpers::kRootedSoa) {
+          if (collection_helpers::isCollectionFamilyRoot(collectionTypePath, collection_helpers::CollectionFamily::Vector) ||
+              collection_helpers::isCollectionFamilyRoot(collectionTypePath, collection_helpers::CollectionFamily::Soa)) {
             return true;
           }
         }
@@ -305,8 +305,8 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
             normalizeBindingTypeName(receiverTypeText);
         const std::string directCollectionType =
             normalizeCollectionTypePath(normalizedReceiverType);
-        if (directCollectionType == collection_helpers::kRootedVector ||
-            directCollectionType == collection_helpers::kRootedSoa) {
+        if (collection_helpers::isCollectionFamilyRoot(directCollectionType, collection_helpers::CollectionFamily::Vector) ||
+            collection_helpers::isCollectionFamilyRoot(directCollectionType, collection_helpers::CollectionFamily::Soa)) {
           return true;
         }
         std::string base;
@@ -316,8 +316,8 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
              normalizeBindingTypeName(base) == "Pointer")) {
           const std::string pointeeCollectionType =
               normalizeCollectionTypePath(argText);
-          return pointeeCollectionType == collection_helpers::kRootedVector ||
-                 pointeeCollectionType == collection_helpers::kRootedSoa;
+          return collection_helpers::isCollectionFamilyRoot(pointeeCollectionType, collection_helpers::CollectionFamily::Vector) ||
+                 collection_helpers::isCollectionFamilyRoot(pointeeCollectionType, collection_helpers::CollectionFamily::Soa);
         }
         return false;
       };

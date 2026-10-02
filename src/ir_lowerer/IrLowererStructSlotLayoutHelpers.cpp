@@ -24,7 +24,7 @@ bool isBuiltinVectorTypeName(const std::string &typeName) {
 }
 
 bool isBuiltinSoaVectorTypeName(const std::string &typeName) {
-  return typeName == "soa" || typeName == collection_helpers::kRootedSoa ||
+  return typeName == "soa" || collection_helpers::isCollectionFamilyRoot(typeName, collection_helpers::CollectionFamily::Soa) ||
          typeName == "std/collections/soa" || typeName == collection_helpers::kCanonicalSoa;
 }
 

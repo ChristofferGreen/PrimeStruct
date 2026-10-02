@@ -635,17 +635,16 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       const bool receiverIsVector =
           inferQueryExprTypeText(expr.args.front(), params, locals,
                                  receiverTypeText) &&
-          inferMethodCollectionTypePathFromTypeText(receiverTypeText) ==
-              collection_helpers::kRootedVector;
+          collection_helpers::isCollectionFamilyRoot(inferMethodCollectionTypePathFromTypeText(receiverTypeText), collection_helpers::CollectionFamily::Vector);
       if (receiverIsVector) {
         const std::string helperName = normalizeCollectionMethodName(expr.name);
         const bool explicitArrayNamespace =
             expr.namespacePrefix == "array" ||
-            expr.namespacePrefix == collection_helpers::kRootedArray ||
+            collection_helpers::isCollectionFamilyRoot(expr.namespacePrefix, collection_helpers::CollectionFamily::Array) ||
             collection_helpers::isRootedArrayPath(expr.name);
         const bool explicitVectorNamespace =
             expr.namespacePrefix == "vector" ||
-            expr.namespacePrefix == collection_helpers::kRootedVector ||
+            collection_helpers::isCollectionFamilyRoot(expr.namespacePrefix, collection_helpers::CollectionFamily::Vector) ||
             expr.name.rfind(rootedVectorHelperPathPrefix, 0) == 0;
         if (explicitArrayNamespace) {
           return failExprRootDiagnostic("unknown method: /array/" + helperName);
@@ -700,9 +699,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
                                    receiverTypeText)) {
           const std::string receiverCollectionType =
               inferMethodCollectionTypePathFromTypeText(receiverTypeText);
-          if (receiverCollectionType == collection_helpers::kRootedArray ||
-              receiverCollectionType == collection_helpers::kRootedString ||
-              receiverCollectionType == collection_helpers::kRootedMap) {
+          if (collection_helpers::isCollectionFamilyRoot(receiverCollectionType, collection_helpers::CollectionFamily::Array) ||
+              collection_helpers::isCollectionFamilyRoot(receiverCollectionType, collection_helpers::CollectionFamily::String) ||
+              collection_helpers::isCollectionFamilyRoot(receiverCollectionType, collection_helpers::CollectionFamily::Map)) {
             return failExprRootDiagnostic(
                 normalizedMutatorMethodName + " requires vector binding");
           }
@@ -756,8 +755,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
              inferQueryExprTypeText(expr.args.front(), params, locals,
                                     receiverTypeText)) &&
             ([&]() {
-              if (inferMethodCollectionTypePathFromTypeText(receiverTypeText) ==
-                  collection_helpers::kRootedVector) {
+              if (collection_helpers::isCollectionFamilyRoot(inferMethodCollectionTypePathFromTypeText(receiverTypeText), collection_helpers::CollectionFamily::Vector)) {
                 return true;
               }
               BindingInfo receiverBinding;

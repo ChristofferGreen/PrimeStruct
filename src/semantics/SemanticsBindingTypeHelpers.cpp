@@ -215,7 +215,7 @@ std::string normalizeBindingTypeNameUncached(const std::string &name) {
   if (name == "float") {
     return "f32";
   }
-  if (name == "soa" || name == collection_helpers::kRootedSoa || name == "std/collections/soa" ||
+  if (name == "soa" || collection_helpers::isCollectionFamilyRoot(name, collection_helpers::CollectionFamily::Soa) || name == "std/collections/soa" ||
       name == collection_helpers::kCanonicalSoa) {
     return "soa";
   }

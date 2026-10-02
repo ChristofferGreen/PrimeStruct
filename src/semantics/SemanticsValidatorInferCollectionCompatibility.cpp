@@ -41,17 +41,17 @@ std::string SemanticsValidator::normalizeCollectionTypePath(const std::string &t
         splitTopLevelTemplateArgs(argText, args) && args.size() == 1) {
       return collection_helpers::kRootedSoa;
     }
-    if ((isKeyValueSurfaceTypeName(base) || base == collection_helpers::kRootedMap ||
+    if ((isKeyValueSurfaceTypeName(base) || collection_helpers::isCollectionFamilyRoot(base, collection_helpers::CollectionFamily::Map) ||
          isCanonicalMapCollectionTypeRootLocal(base)) &&
         splitTopLevelTemplateArgs(argText, args) && args.size() == 2) {
       return collection_helpers::kRootedMap;
     }
     normalizedType = base;
   }
-  if (normalizedType == collection_helpers::kRootedArray || normalizedType == "array") {
+  if (collection_helpers::isCollectionFamilyRoot(normalizedType, collection_helpers::CollectionFamily::Array) || normalizedType == "array") {
     return collection_helpers::kRootedArray;
   }
-  if (normalizedType == collection_helpers::kRootedVector || normalizedType == "vector" ||
+  if (collection_helpers::isCollectionFamilyRoot(normalizedType, collection_helpers::CollectionFamily::Vector) || normalizedType == "vector" ||
       trimLeadingSlash(normalizedType) ==
           trimLeadingSlash(canonicalVectorCompatibilityPrefixOrFallback())) {
     return collection_helpers::kRootedVector;
@@ -68,7 +68,7 @@ std::string SemanticsValidator::normalizeCollectionTypePath(const std::string &t
       normalizedType.rfind("std/gfx/experimental/Buffer__", 0) == 0) {
     return "/Buffer";
   }
-  if (normalizedType == collection_helpers::kRootedSoa || normalizedType == "soa" ||
+  if (collection_helpers::isCollectionFamilyRoot(normalizedType, collection_helpers::CollectionFamily::Soa) || normalizedType == "soa" ||
       normalizedType == "SoaVector" ||
       normalizedType == collection_paths::memberPath(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName) ||
       normalizedType == collection_paths::memberPathBare(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName)) {
@@ -79,14 +79,14 @@ std::string SemanticsValidator::normalizeCollectionTypePath(const std::string &t
     return collection_helpers::kRootedSoa;
   }
   if (isKeyValueSurfaceTypeName(normalizedType) ||
-      normalizedType == collection_helpers::kRootedMap ||
+      collection_helpers::isCollectionFamilyRoot(normalizedType, collection_helpers::CollectionFamily::Map) ||
       isCanonicalMapCollectionTypeRootLocal(normalizedType)) {
     return collection_helpers::kRootedMap;
   }
   if (isSpecializedExperimentalKeyValueBackingPath(normalizedType)) {
     return collection_helpers::kRootedMap;
   }
-  if (normalizedType == collection_helpers::kRootedString || normalizedType == "string") {
+  if (collection_helpers::isCollectionFamilyRoot(normalizedType, collection_helpers::CollectionFamily::String) || normalizedType == "string") {
     return collection_helpers::kRootedString;
   }
   return "";

@@ -333,8 +333,8 @@ bool isStringReturningKeyValueAccessAlias(
           ? semanticProgramResolveCallTargetString(*semanticProgram,
                                                    queryFact->bindingTypeTextId)
           : std::string_view(queryFact->bindingTypeText)));
-  return queryType == "string" || queryType == collection_helpers::kRootedString ||
-         bindingType == "string" || bindingType == collection_helpers::kRootedString;
+  return queryType == "string" || collection_helpers::isCollectionFamilyRoot(queryType, collection_helpers::CollectionFamily::String) ||
+         bindingType == "string" || collection_helpers::isCollectionFamilyRoot(bindingType, collection_helpers::CollectionFamily::String);
 }
 
 bool hasExplicitStdKeyValueSourceSpelling(const Expr &expr) {

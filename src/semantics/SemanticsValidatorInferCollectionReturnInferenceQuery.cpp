@@ -549,7 +549,7 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
           resolvedPath = canonicalizeResolvedPath(std::move(resolvedPath));
           return resolvedPath ==
                      legacyExperimentalVectorCompatibilityConstructorPath() ||
-                 (resolvedPath == collection_helpers::kRootedVector &&
+                 (collection_helpers::isCollectionFamilyRoot(resolvedPath, collection_helpers::CollectionFamily::Vector) &&
                   hasDirectExperimentalVectorImport());
         };
     const bool prefersImportedExperimentalVectorConstructor =
@@ -618,7 +618,7 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       }
       return preferredBareKeyValueHelperTarget(helperName);
     };
-    if (canonicalResolvedCandidate == collection_helpers::kRootedVector &&
+    if (collection_helpers::isCollectionFamilyRoot(canonicalResolvedCandidate, collection_helpers::CollectionFamily::Vector) &&
         !hasDirectExperimentalVectorImport() &&
         candidate.templateArgs.size() == 1) {
       currentTypeTextOut = "vector<" + candidate.templateArgs.front() + ">";

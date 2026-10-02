@@ -310,7 +310,7 @@ void SemanticsValidator::collectExecutionIntraBodyCallDiagnostics(
       const std::string actualStructPath = inferStructReturnPath(arg, executionParams, executionLocals);
       if (!actualStructPath.empty()) {
         if (actualStructPath != expectedStructPath) {
-          if (actualStructPath == collection_helpers::kRootedVector &&
+          if (collection_helpers::isCollectionFamilyRoot(actualStructPath, collection_helpers::CollectionFamily::Vector) &&
               isLegacyExperimentalVectorCompatibilityTypePath(expectedStructPath)) {
             return;
           }

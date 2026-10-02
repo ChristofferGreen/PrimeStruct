@@ -24,7 +24,7 @@ namespace publicationBuilders {
 
 std::string normalizeCollectionSpecializationTypeName(std::string typeName) {
   typeName = normalizeBindingTypeName(typeName);
-  if (typeName == collection_helpers::kRootedVector ||
+  if (collection_helpers::isCollectionFamilyRoot(typeName, collection_helpers::CollectionFamily::Vector) ||
       typeName == collectionTypeRootForPublication("vector") ||
       typeName == collectionTypeRootForPublication("vector", true) ||
       typeName == "Vector" ||
@@ -37,7 +37,7 @@ std::string normalizeCollectionSpecializationTypeName(std::string typeName) {
       isUnspecializedExperimentalKeyValueBackingTypeForPublication(typeName)) {
     return "map";
   }
-  if (typeName == collection_helpers::kRootedSoa ||
+  if (collection_helpers::isCollectionFamilyRoot(typeName, collection_helpers::CollectionFamily::Soa) ||
       typeName == collection_paths::moduleRootBare(collection_paths::kLegacySoaVectorFolder) ||
       typeName == collection_paths::moduleRoot(collection_paths::kLegacySoaVectorFolder) ||
       typeName == collection_paths::kSoaVectorTypeName || typeName == "/SoaVector" ||

@@ -858,8 +858,8 @@ bool isSourceMethodStringKeyValueAccessTarget(
       trimTemplateTypeText(std::string(resolveSemanticProductText(
           *semanticProgram, queryFact->bindingTypeTextId,
           queryFact->bindingTypeText)));
-  if (queryType != "string" && queryType != collection_helpers::kRootedString &&
-      bindingType != "string" && bindingType != collection_helpers::kRootedString) {
+  if (queryType != "string" && !collection_helpers::isCollectionFamilyRoot(queryType, collection_helpers::CollectionFamily::String) &&
+      bindingType != "string" && !collection_helpers::isCollectionFamilyRoot(bindingType, collection_helpers::CollectionFamily::String)) {
     return false;
   }
   if (accessNameOut != nullptr) {
@@ -894,8 +894,8 @@ bool publishedKeyValueAccessHelperReturnsString(const SemanticProgram *semanticP
       resolveSemanticProductText(*semanticProgram,
                                  returnFact->bindingTypeTextId,
                                  returnFact->bindingTypeText)));
-  return structPath == collection_helpers::kRootedString || structPath == "string" ||
-         bindingType == collection_helpers::kRootedString || bindingType == "string";
+  return collection_helpers::isCollectionFamilyRoot(structPath, collection_helpers::CollectionFamily::String) || structPath == "string" ||
+         collection_helpers::isCollectionFamilyRoot(bindingType, collection_helpers::CollectionFamily::String) || bindingType == "string";
 }
 
 bool hasExplicitStdKeyValueSourceSpelling(const Expr &expr) {
@@ -2213,7 +2213,7 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
         if (getBuiltinCollectionName(accessTarget, collection) && collection == "map" &&
             accessTarget.templateArgs.size() == 2) {
           stringKeyValueAccess =
-              accessTarget.templateArgs[1] == "string" || accessTarget.templateArgs[1] == collection_helpers::kRootedString;
+              accessTarget.templateArgs[1] == "string" || collection_helpers::isCollectionFamilyRoot(accessTarget.templateArgs[1], collection_helpers::CollectionFamily::String);
         }
       }
       if (stringKeyValueAccess) {

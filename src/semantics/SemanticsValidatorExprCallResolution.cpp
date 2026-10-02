@@ -449,7 +449,7 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
       }
       const std::string collectionPath =
           inferMethodCollectionTypePathFromTypeText(collectionTypeText);
-      if ((collectionPath == collection_helpers::kRootedArray || collectionPath == collection_helpers::kRootedString) &&
+      if ((collection_helpers::isCollectionFamilyRoot(collectionPath, collection_helpers::CollectionFamily::Array) || collection_helpers::isCollectionFamilyRoot(collectionPath, collection_helpers::CollectionFamily::String)) &&
           (expr.name == "count" || expr.name == "capacity" ||
            expr.name == "at" || expr.name == "at_unsafe")) {
         const std::string collectionHelperPath = collectionPath + "/" + expr.name;

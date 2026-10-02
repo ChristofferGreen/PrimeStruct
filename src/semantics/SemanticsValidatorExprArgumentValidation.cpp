@@ -901,7 +901,7 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
     };
     if (param.name == "entries" &&
         stripGeneratedSuffix(diagnosticResolved) == collection_helpers::kCanonicalMapContains &&
-        (actualStructPath == collection_helpers::kRootedMap ||
+        (collection_helpers::isCollectionFamilyRoot(actualStructPath, collection_helpers::CollectionFamily::Map) ||
          actualStructPath == collection_helpers::kCanonicalMap ||
          actualStructPath.rfind("/std/collections/map<", 0) == 0)) {
       return failArgumentValidation(
@@ -909,7 +909,7 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
     }
     if (param.name == "entries" &&
         stripGeneratedSuffix(diagnosticResolved) == collection_helpers::kCanonicalMapTryAt &&
-        (actualStructPath == collection_helpers::kRootedMap ||
+        (collection_helpers::isCollectionFamilyRoot(actualStructPath, collection_helpers::CollectionFamily::Map) ||
          actualStructPath == collection_helpers::kCanonicalMap ||
          actualStructPath.rfind("/std/collections/map<", 0) == 0)) {
       return true;

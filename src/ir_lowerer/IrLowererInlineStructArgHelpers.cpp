@@ -21,12 +21,12 @@ std::string experimentalCollectionTypePath(std::string_view collectionName,
 
 bool isVectorStructPath(const std::string &structPath) {
   const std::string vectorTypePath = experimentalCollectionTypePath("vector", "Vector");
-  return structPath == collection_helpers::kRootedVector || structPath == vectorTypePath ||
+  return collection_helpers::isCollectionFamilyRoot(structPath, collection_helpers::CollectionFamily::Vector) || structPath == vectorTypePath ||
          structPath.rfind(vectorTypePath + "__", 0) == 0;
 }
 
 bool isSoaVectorStructPath(const std::string &structPath) {
-  return structPath == collection_helpers::kRootedSoa ||
+  return collection_helpers::isCollectionFamilyRoot(structPath, collection_helpers::CollectionFamily::Soa) ||
          structPath == "std/collections/soa" ||
          structPath == collection_helpers::kCanonicalSoa ||
          structPath == "SoaVector" ||

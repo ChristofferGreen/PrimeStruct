@@ -125,8 +125,8 @@ bool SemanticsValidator::prepareExprMethodCompatibilitySetup(
     }
     const std::string receiverPath =
         resolvedPath.substr(0, resolvedPath.size() - suffix.size());
-    if (receiverPath == collection_helpers::kRootedArray || receiverPath == collection_helpers::kRootedVector ||
-        receiverPath == collection_helpers::kRootedMap || receiverPath == collection_helpers::kRootedString) {
+    if (collection_helpers::isCollectionFamilyRoot(receiverPath, collection_helpers::CollectionFamily::Array) || collection_helpers::isCollectionFamilyRoot(receiverPath, collection_helpers::CollectionFamily::Vector) ||
+        collection_helpers::isCollectionFamilyRoot(receiverPath, collection_helpers::CollectionFamily::Map) || collection_helpers::isCollectionFamilyRoot(receiverPath, collection_helpers::CollectionFamily::String)) {
       return false;
     }
     return structNames_.count(receiverPath) > 0;

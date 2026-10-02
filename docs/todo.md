@@ -100,8 +100,6 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5386 | Migrate the remaining string-tagged collection family comparisons to CollectionFamily | deferred | collection-resolution |
-| TODO-5387 | Express the three lowerer receiver-family predicates as table rows | deferred | collection-resolution |
 | TODO-5356 | Collapse near-duplicate ir_pipeline validation tests into table-driven suites | deferred | test-infrastructure |
 | TODO-5348 | Verify the iOS embed build and XCFramework packaging on macOS | deferred | embedding-ios |
 
@@ -116,7 +114,6 @@ of sync with them.
 ### Priority Lanes
 
 - Embedding (must support iOS): TODO-5348 (needs macOS)
-- Collection resolution: TODO-5386 -> 5387 (deferred)
 - Semantics structure: TODO-5385
 - Test infrastructure: TODO-5356 (deferred)
 - IR/VM structure: TODO-5361 -> 5362
@@ -186,27 +183,3 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - files and lines removed, suite runtime before/after in the result note.
   - stop_rule: stop if coverage cannot be shown equivalent for a group; leave that group as
     is.
-
-- [ ] TODO-5386: Migrate the remaining string-tagged collection family comparisons to CollectionFamily
-  - owner: ai
-  - status: deferred
-  - created_at: 2026-10-02
-  - phase: Compiler structure
-  - parallel_track: collection-resolution
-  - scope: `collection_helpers::CollectionFamily` / `parseCollectionFamily` / `formatCollectionFamily` exist (TODO-5374 slice) and `scripts/check_collection_family_compares.py` ratchets the 224 remaining `== kRooted<Family>` comparisons (`--list` prints per-file counts; largest: `SemanticsValidatorExprMethodTargetResolution.cpp`, `...ExprLateUnknownTargetFallbacks.cpp`, `IrLowererInlineNativeCallDispatch.cpp`, `...ExprVectorHelpers.cpp`). Migrate one file per commit (parse once at the top of the function, compare enum values) and lower the ratchet baseline in the same commit.
-  - acceptance:
-    - baseline reaches 0 and the script's baseline logic is replaced by a zero audit.
-    - collection parity matrix and the full release gate unchanged.
-  - stop_rule: if a comparison needs a non-exact family match (prefix/specialized), keep the string form and document it as an exception in docs/CollectionHelperTargets.md.
-
-- [ ] TODO-5387: Express the three lowerer receiver-family predicates as table rows
-  - owner: ai
-  - status: deferred
-  - created_at: 2026-10-02
-  - phase: Compiler structure
-  - parallel_track: collection-resolution
-  - depends_on: TODO-5386
-  - scope: `routesExplicitVectorCountMethodThroughArgsPackCount`, `directTargetKeepsSyntheticCollectionFallback`, and `allowsReceiverResolvedVectorMetadataFallback` in `IrLowererSetupTypeMethodCallResolution.cpp` become lookups into a (family x helper x receiver kind -> routing) table.
-  - acceptance:
-    - the three predicates are deleted or reduced to table lookups; parity matrix and full release gate unchanged.
-  - stop_rule: record predicates that depend on state the table cannot carry as documented routing exceptions in docs/CollectionHelperTargets.md.

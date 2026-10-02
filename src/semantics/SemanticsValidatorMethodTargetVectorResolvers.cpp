@@ -334,7 +334,7 @@ bool SemanticsValidator::resolveVectorTarget(
     }
     std::string collectionTypePath;
     if (resolveCallCollectionTypePath(target, params, locals, collectionTypePath) &&
-        collectionTypePath == collection_helpers::kRootedVector) {
+        collection_helpers::isCollectionFamilyRoot(collectionTypePath, collection_helpers::CollectionFamily::Vector)) {
       std::vector<std::string> args;
       if (resolveCallCollectionTemplateArgs(target, "vector", params, locals, args) &&
           args.size() == 1) {
@@ -647,9 +647,9 @@ bool SemanticsValidator::resolveArrayTarget(
     }
     std::string collectionTypePath;
     if (resolveCallCollectionTypePath(target, params, locals, collectionTypePath) &&
-        (collectionTypePath == collection_helpers::kRootedArray || collectionTypePath == collection_helpers::kRootedVector)) {
+        (collection_helpers::isCollectionFamilyRoot(collectionTypePath, collection_helpers::CollectionFamily::Array) || collection_helpers::isCollectionFamilyRoot(collectionTypePath, collection_helpers::CollectionFamily::Vector))) {
       std::vector<std::string> args;
-      const std::string expectedBase = collectionTypePath == collection_helpers::kRootedVector ? "vector" : "array";
+      const std::string expectedBase = collection_helpers::isCollectionFamilyRoot(collectionTypePath, collection_helpers::CollectionFamily::Vector) ? "vector" : "array";
       if (resolveCallCollectionTemplateArgs(target, expectedBase, params, locals, args) &&
           args.size() == 1) {
         elemType = args.front();

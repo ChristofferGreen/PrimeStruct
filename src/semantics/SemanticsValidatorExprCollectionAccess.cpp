@@ -27,7 +27,7 @@ bool isSoaAccessHelperName(const std::string &helperName) {
 }
 
 bool isSoaReceiverStructPath(const std::string &structPath) {
-  return structPath == collection_helpers::kRootedSoa ||
+  return collection_helpers::isCollectionFamilyRoot(structPath, collection_helpers::CollectionFamily::Soa) ||
          structPath == collection_helpers::kCanonicalSoa ||
          structPath.rfind(collection_paths::specializedTypePrefix(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName), 0) == 0;
 }
@@ -157,12 +157,12 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
       return false;
     }
     const std::string resolvedCandidate = resolveCalleePath(candidate);
-    if (resolvedCandidate == collection_helpers::kRootedMap ||
+    if (collection_helpers::isCollectionFamilyRoot(resolvedCandidate, collection_helpers::CollectionFamily::Map) ||
         resolvedCandidate.rfind(collection_helpers::kRootedMapSpecialized, 0) == 0) {
       return true;
     }
     const std::string explicitCandidate = explicitCallPath(candidate);
-    return explicitCandidate == collection_helpers::kRootedMap ||
+    return collection_helpers::isCollectionFamilyRoot(explicitCandidate, collection_helpers::CollectionFamily::Map) ||
            explicitCandidate.rfind(collection_helpers::kRootedMapSpecialized, 0) == 0;
   };
 
