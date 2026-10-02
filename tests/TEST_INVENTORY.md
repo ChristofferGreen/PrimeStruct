@@ -8121,7 +8121,7 @@ Total: 9515 test cases across 508 files.
 - public Map wrapper method-call sugar validates
 - canonical map Ref helper calls validate
 - public stdlib map Ref wrappers validate
-- canonical map borrowed method-call sugar rejects missing ref template inference
+- canonical map borrowed method-call sugar infers ref template arguments
 - canonical map insert helpers validate
 - canonical map ownership-sensitive values validate
 - canonical namespaced map insert on public Map wrapper validates

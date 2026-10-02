@@ -408,7 +408,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("canonical map borrowed method-call sugar rejects missing ref template inference") {
+TEST_CASE("canonical map borrowed method-call sugar infers ref template arguments") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -420,9 +420,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("canonical map insert helpers validate") {

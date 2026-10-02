@@ -68,10 +68,11 @@ change. `Reference<...>` rows (`(Reference)` forms) cover borrowed receivers and
 | vector | `at` | bare(Reference) | semantic error |  | at requires array, vector, map, or string target **TODO-5375** |
 | vector | `push` | method(Reference) | semantic error |  | unknown method target for push **TODO-5375** |
 | vector | `push` | bare(Reference) | semantic error |  | argument type mismatch for /std/collections/vector/push **TODO-5375** |
-| map | `count` | method(Reference) | semantic error |  | unknown call target: /std/collections/map/count_ref **TODO-5376** |
-| map | `count` | bare(Reference) | semantic error |  | unknown call target: /std/collections/map/count **TODO-5376** |
-| map | `count_ref` | canonical(Reference) | semantic error |  | unknown call target: /std/collections/map/count_ref **TODO-5376** |
-| map | `contains` | method(Reference) | semantic error |  | unknown call target: /std/collections/map/contains_ref **TODO-5376** |
+| map | `count` | method(Reference) | ok (2) | `/std/collections/map/map`<br>`/std/collections/map/entry`<br>`/std/collections/map/entry`<br>`/std/collections/map/count_ref`<br>`/std/collections/map/count_ref` |  |
+| map | `count` | bare(Reference) | ok (2) | `/std/collections/map/map`<br>`/std/collections/map/entry`<br>`/std/collections/map/entry`<br>`/std/collections/map/count_ref`<br>`/std/collections/map/count_ref` |  |
+| map | `count_ref` | canonical(Reference) | ok (2) | `/std/collections/map/map`<br>`/std/collections/map/entry`<br>`/std/collections/map/entry`<br>`/std/collections/map/count_ref`<br>`/std/collections/map/count_ref` |  |
+| map | `contains` | method(Reference) | ok (1) | `/std/collections/map/map`<br>`/std/collections/map/entry`<br>`/std/collections/map/entry`<br>`/std/collections/map/contains_ref`<br>`/std/collections/map/contains_ref` |  |
+| map | `contains` | bare(Reference) | ok (1) | `/std/collections/map/map`<br>`/std/collections/map/entry`<br>`/std/collections/map/entry`<br>`/std/collections/map/contains_ref`<br>`/std/collections/map/contains_ref` |  |
 | map | `at` | method(Reference) | ok (200) | `/std/collections/map/map`<br>`/std/collections/map/entry`<br>`/std/collections/map/entry`<br>`/std/collections/map/at_ref`<br>`/std/collections/map/at_ref` |  |
 | map | `at` | bare(Reference) | ok (200) | `/std/collections/map/map`<br>`/std/collections/map/entry`<br>`/std/collections/map/entry`<br>`/std/collections/map/at_ref`<br>`/std/collections/map/at_ref` |  |
 | map | `at_ref` | canonical(Reference) | ok (200) | `/std/collections/map/map`<br>`/std/collections/map/entry`<br>`/std/collections/map/entry`<br>`/std/collections/map/at_ref`<br>`/std/collections/map/at_ref` |  |
@@ -82,4 +83,4 @@ change. `Reference<...>` rows (`(Reference)` forms) cover borrowed receivers and
 | soa | `get` | method(Reference) | ok (7) | `/std/collections/soa/get_ref`<br>`/std/collections/soa/get_ref`<br>`/std/collections/soa/soaVectorSingle` |  |
 | soa | `get` | bare(Reference) | ok (7) | `/std/collections/soa/soaVectorSingle`<br>`/std/collections/soa/get_ref`<br>`/std/collections/soa/get_ref` |  |
 | soa | `ref` | method(Reference) | ok (7) | `/std/collections/soa/ref_ref`<br>`/std/collections/soa/ref_ref`<br>`/std/collections/soa/soaVectorSingle` |  |
-| soa | `push` | method(Reference) | semantic error |  | argument count mismatch for builtin to_aos_ref **TODO-5377** |
+| soa | `push` | method(Reference) | semantic error |  | unknown call target: push |

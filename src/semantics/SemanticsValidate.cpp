@@ -756,14 +756,19 @@ void rewriteBuiltinKeyValueInsertExpr(
       methodReadHelper == "at" || methodReadHelper == "at_unsafe";
   // Bare `contains(m, k)` takes the same canonical-helper rewrite as the
   // method spelling (TODO-5370); a user-defined root `/contains` keeps the
-  // call.
+  // call. Bare `count(r)` on a borrowed map takes it too (TODO-5376): by-value
+  // map counts keep their existing resolution.
+  const bool isBareBorrowedCountCandidate =
+      !expr.isMethodCall && expr.namespacePrefix.empty() && expr.name == "count" &&
+      expr.args.size() == 1 && expr.templateArgs.empty() &&
+      directReadHelper == "count" && definitionMap.count("/count") == 0;
   const bool matchesBuiltinBareReadCall =
       !expr.isMethodCall && expr.namespacePrefix.empty() &&
       expr.name.find('/') == std::string::npos &&
-      expr.args.size() == 2 && expr.templateArgs.empty() &&
-      collection_helpers::isContainsHelperName(directReadHelper) &&
-      directReadHelper == expr.name &&
-      definitionMap.count("/" + expr.name) == 0;
+      ((expr.args.size() == 2 && expr.templateArgs.empty() &&
+        collection_helpers::isContainsHelperName(directReadHelper) &&
+        directReadHelper == expr.name && definitionMap.count("/" + expr.name) == 0) ||
+       isBareBorrowedCountCandidate);
   auto isStdlibOwnedDefinitionNamespace = [](const std::string &path) {
     if (path.rfind("/std/", 0) == 0) {
       return true;
@@ -818,6 +823,9 @@ void rewriteBuiltinKeyValueInsertExpr(
     }
     const bool receiverIsReference =
         isBuiltinKeyValueReferenceBinding(*receiverBinding);
+    if (isBareBorrowedCountCandidate && !receiverIsReference) {
+      return;
+    }
     std::string helperName(
         resolveBuiltinKeyValueReadSurfaceMemberName(scopedExprName));
     if (helperName.empty() && hasBuiltinIndexedAccess) {

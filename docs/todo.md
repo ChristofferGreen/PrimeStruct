@@ -95,8 +95,6 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5377 | `r.push(x)` on `Reference<SoaVector<T>>` fails with a to_aos_ref diagnostic | ready | collection-defects |
-| TODO-5376 | Borrowed `Reference<map<K,V>>` count/contains fail while at/insert work | ready | collection-defects |
 | TODO-5375 | Borrowed `Reference<vector<T>>` receivers reject every collection helper spelling | ready | collection-defects |
 | TODO-5374 | Typed collection family/helper enum replacing string-tagged family checks | deferred | collection-resolution |
 | TODO-5352 | Measure and cut semantics header fan-out (SemanticsValidator.h) | ready | semantics-structure |
@@ -504,30 +502,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - scope: the six `vector ... (Reference)` rows pin that `r.count()`, `count(r)`, `r.at(i)`, `at(r, i)`, `r.push(x)` and `push(r, x)` on a `[Reference<vector<i32>> mut] r{location(v)}` local all fail semantics (`unknown method target`, `at requires array, vector, map, or string target`, push argument mismatch), although `Reference<vector<T>>` is accepted as a parameter/field type. Decide whether borrowed vectors are a supported helper receiver (then resolve to the vector helpers) or document and diagnose it uniformly.
   - acceptance:
     - either the six rows run (`ok`) and publish the vector helpers, or docs state borrowed vectors are unsupported helper receivers and all spellings emit one consistent diagnostic; rows updated accordingly.
-    - the parity suite and the full release gate stay green.
-  - stop_rule: fix only the pinned rows' behavior; anything else found goes to its own leaf.
-
-- [ ] TODO-5376: Borrowed `Reference<map<K,V>>` count/contains fail while at/insert work
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-02
-  - phase: Compiler structure
-  - parallel_track: collection-defects
-  - scope: `r.count()`, `count(r)`, `/std/collections/map/count_ref(r)` fail with `unknown call target: /std/collections/map/count_ref` / `count`, and `r.contains(k)` with `unknown call target: /std/collections/map/contains_ref`, although `at`, `at_ref` and `insert` on the same receiver work and `count_ref`/`contains_ref` exist in stdlib/std/collections/map.prime. Likely the same retired-alias check that TODO-5369 touched.
-  - acceptance:
-    - the four map `(Reference)` rows flip to `ok` and publish `/std/collections/map/count_ref` / `contains_ref`.
-    - the parity suite and the full release gate stay green.
-  - stop_rule: fix only the pinned rows' behavior; anything else found goes to its own leaf.
-
-- [ ] TODO-5377: `r.push(x)` on `Reference<SoaVector<T>>` fails with `argument count mismatch for builtin to_aos_ref`
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-02
-  - phase: Compiler structure
-  - parallel_track: collection-defects
-  - scope: pushing through a borrowed soa vector reports a to_aos_ref diagnostic, i.e. the push call is mis-routed to the borrowed conversion helper. Pinned by the `soa push method(Reference)` row.
-  - acceptance:
-    - the row runs (`ok`, count 2) or fails with a diagnostic that names push.
     - the parity suite and the full release gate stay green.
   - stop_rule: fix only the pinned rows' behavior; anything else found goes to its own leaf.
 

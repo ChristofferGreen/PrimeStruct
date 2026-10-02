@@ -57472,3 +57472,31 @@ TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph 
     metrics dumps and record the limit.
   - finished_at: 2026-10-02
   - result: Done. `primec::testing::stripDumpTimings` now lives in `include/primec/testing/DumpNormalization.h` and also blanks the `*_over=true|false` budget flags (they are derived from the same wall-clock timings, so they could flip on a slow run). Every raw dump comparison in test_compile_run_text_filters_dumps.cpp (4 sites) is normalized. `scripts/check_dump_comparisons.py` (ctest `PrimeStruct_dump_comparison_audit`, negative tests in `tests/scripts/test_check_dump_comparisons.py`) fails on a `CHECK(a == b)` of two dump/file contents in a `--dump-stage` test file without `stripDumpTimings`; it flags exactly those 4 sites on the pre-fix source and has no false positives on the tree. A doctest (`primestruct.dumps.normalization`) pins the full type-graph metrics field set. `ctest --repeat until-fail:3` over the text_filters and dumps suites passed.
+
+- [x] TODO-5376: Borrowed `Reference<map<K,V>>` count/contains fail while at/insert work
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-02
+  - phase: Compiler structure
+  - parallel_track: collection-defects
+  - scope: `r.count()`, `count(r)`, `/std/collections/map/count_ref(r)` fail with `unknown call target: /std/collections/map/count_ref` / `count`, and `r.contains(k)` with `unknown call target: /std/collections/map/contains_ref`, although `at`, `at_ref` and `insert` on the same receiver work and `count_ref`/`contains_ref` exist in stdlib/std/collections/map.prime. Likely the same retired-alias check that TODO-5369 touched.
+  - acceptance:
+    - the four map `(Reference)` rows flip to `ok` and publish `/std/collections/map/count_ref` / `contains_ref`.
+    - the parity suite and the full release gate stay green.
+  - stop_rule: fix only the pinned rows' behavior; anything else found goes to its own leaf.
+  - finished_at: 2026-10-02
+  - result: Fixed. Implicit key/value template inference ignored `Reference`/`Pointer` receivers, so `count_ref`/`contains_ref` calls on a borrowed `Reference<map<K, V>>` stayed unspecialized and fell through to `unknown call target`; the inference now reads K/V from the pointee. Bare `count(r)` on a borrowed map also takes the canonical `count_ref` rewrite (by-value map counts are unchanged). All four map `(Reference)` rows are `ok` and a `contains bare(Reference)` row was added.
+
+- [x] TODO-5377: `r.push(x)` on `Reference<SoaVector<T>>` fails with `argument count mismatch for builtin to_aos_ref`
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-02
+  - phase: Compiler structure
+  - parallel_track: collection-defects
+  - scope: pushing through a borrowed soa vector reports a to_aos_ref diagnostic, i.e. the push call is mis-routed to the borrowed conversion helper. Pinned by the `soa push method(Reference)` row.
+  - acceptance:
+    - the row runs (`ok`, count 2) or fails with a diagnostic that names push.
+    - the parity suite and the full release gate stay green.
+  - stop_rule: fix only the pinned rows' behavior; anything else found goes to its own leaf.
+  - finished_at: 2026-10-02
+  - result: Fixed the misleading diagnostic; borrowed push stays unsupported. The soa borrowed-method rewrite mapped every non-count/get/ref surface member (push, reserve) on a `Reference<SoaVector<T>>` receiver to `to_aos_ref`, producing `argument count mismatch for builtin to_aos_ref`. Only count/get/ref/to_aos have `_ref` wrapper helpers (stdlib soa.prime has no `push_ref`), so other members are now left alone and report `unknown call target: push`. Making borrowed push work would need a `push_ref` helper and is not planned here.
