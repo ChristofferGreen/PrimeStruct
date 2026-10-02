@@ -282,15 +282,21 @@ TEST_CASE("collection parity regenerates pins and doc when asked") {
   std::ofstream(std::string(root) + "/docs/CollectionHelperTargets.md") << doc.str();
 }
 
-void checkFamily(const std::string &family) {
+// `part`/`parts` split a family's rows (every parts-th row) so the big families
+// run as parallel CTest shards (TODO-5357).
+void checkFamily(const std::string &family, size_t part = 0, size_t parts = 1) {
   const std::regex explicitPath(R"((/std/collections/[a-z_]+/[A-Za-z_]+)(__[A-Za-z0-9_]+)?\()");
   const auto &rows = collectionRows();
   const auto &pinned = collectionRowPublishedTargets();
   REQUIRE_MESSAGE(pinned.size() == rows.size(), "regenerate the pins (see the file header)");
   size_t checked = 0;
+  size_t familyRowIndex = 0;
   for (size_t i = 0; i < rows.size(); ++i) {
     const CollectionRow &row = rows[i];
     if (family != row.family) {
+      continue;
+    }
+    if (familyRowIndex++ % parts != part) {
       continue;
     }
     ++checked;
@@ -321,11 +327,14 @@ void checkFamily(const std::string &family) {
   CHECK_MESSAGE(checked > 0, "no rows for family " << family);
 }
 
-TEST_CASE("collection parity vector rows") { checkFamily("vector"); }
+TEST_CASE("collection parity vector rows part 1 of 2") { checkFamily("vector", 0, 2); }
+TEST_CASE("collection parity vector rows part 2 of 2") { checkFamily("vector", 1, 2); }
 TEST_CASE("collection parity array rows") { checkFamily("array"); }
 TEST_CASE("collection parity string rows") { checkFamily("string"); }
-TEST_CASE("collection parity map rows") { checkFamily("map"); }
-TEST_CASE("collection parity soa rows") { checkFamily("soa"); }
+TEST_CASE("collection parity map rows part 1 of 2") { checkFamily("map", 0, 2); }
+TEST_CASE("collection parity map rows part 2 of 2") { checkFamily("map", 1, 2); }
+TEST_CASE("collection parity soa rows part 1 of 2") { checkFamily("soa", 0, 2); }
+TEST_CASE("collection parity soa rows part 2 of 2") { checkFamily("soa", 1, 2); }
 
 TEST_CASE("every helper family and call form is represented in the matrix") {
   std::set<std::string> families;

@@ -30,7 +30,7 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.smoke"
                                   SOURCE_FILE "*test_compile_run_smoke_core_*.cpp"
                                   RANGE_FIRST 63
                                   RANGE_LAST 129
-                                  CASES_PER_SHARD 10)
+                                  CASES_PER_SHARD 3)
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.smoke"
                                   TIMEOUT 30

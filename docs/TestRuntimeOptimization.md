@@ -1862,3 +1862,53 @@ execution queue — keep them in sync when a TODO's scope or status changes.
   outcome. Verified via `./scripts/compile.sh --release` (single
   invocation, this repo's convention): **100% tests passed, 0 tests
   failed out of 1881**.
+
+## TODO-5357: gate wall time re-measured (2026-10-02)
+
+Reference box: 4 cores, `ctest --parallel 8` via `scripts/compile.sh --release`
+(`Total Test time`, 1690 tests before / 1752 after).
+
+| change | dev-loop gate (primec relinked) |
+| --- | --- |
+| before (fixture cache keyed on the primec binary) | 622-630 s |
+| emitted-C++ fixture cache keyed on the generated C++ + host compiler | 543 s (-13%) |
+| + smaller shards for the three 10-case "newly exposed" groups, parity families split in two | 542 s (no further change) |
+
+What the measurements showed:
+
+- `CTestCostData.txt` is a rolling average and was misleading for the
+  `emitters_cpp_collection_access_and_alias_forwarding` shards: standalone they
+  take 0.03 s. In a gate they took 126-190 s each because the emitted-C++ fixture
+  cache (`.primec_test_cache`) was salted with the primec binary's size/mtime, so
+  *every* relink of primec forced all seven UI/image/result fixtures to be
+  recompiled with the host compiler (~100 s each at `-O0`), while the other shards
+  that needed them sat in the cache lock. The key is now the emitted C++ text plus
+  `c++ --version`, so an unrelated compiler change reuses the cached executables
+  (verified: 97 s cold, 5 s after `touch primec`). A cold checkout still pays the
+  host compile once.
+- Shard scheduling is already near-optimal: an LPT simulation over the measured
+  per-test costs gives a makespan equal to total/slots. The remaining wall time is
+  total CPU: about 3,700 s of summed shard time, dominated by compile-run shards
+  that start a `primec` process per case (`imports_operations_and_collections`,
+  `vm_collections_*`, `smoke_core_paths_*`, `semantics_calls_flow_collections`).
+- Two deliberately serial benchmark tests
+  (`PrimeStruct_semantic_memory_definition_worker_parity` ~70 s,
+  `PrimeStruct_semantic_memory_benchmark` ~22 s) run alone; they measure wall time
+  and RSS and are locked to `RUN_SERIAL` by the benchmark-harness guard tests.
+- The 20% target was not reached by registration changes alone; the follow-up is
+  TODO-5378 (per-case process cost, benchmark overlap).
+
+Shards still over 30 s in a loaded gate, with their reason (standalone times in
+parentheses, quiet box):
+
+| shard | why it is long |
+| --- | --- |
+| `reflection_codegen_reflection_codegen_23_23` (37 s) | one case that emits and host-compiles a large reflection fixture |
+| `imports_operations_and_collections_127_128`, `_89_90` (28 s) | two map-conformance cases that compile and run on vm/native/exe |
+| `compile_run_benchmark_harness` (24 s) | runs the benchmark scripts end to end |
+| `vm_collections_collections_newly_exposed_*` (33 s per 10 cases, now 4-case shards) | per-case `primec` process cost, ~3 s/case under load |
+| `smoke_core_paths_newly_exposed_*` (53 s per 10 cases, now 3-case shards) | same, plus native exe emission |
+| `vm_maps_map_helpers`, `vm_maps_map_wrapper` (17 s) | map-heavy VM programs, one process per case |
+| `collection_parity_*_part_N_of_2` (15-20 s) | each row is two in-process pipeline runs (TODO-5349 design) |
+| `semantic_memory_*` | deliberate serial benchmarks, see above |
+

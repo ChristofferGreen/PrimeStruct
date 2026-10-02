@@ -32,14 +32,31 @@ std::string hex64(uint64_t value) {
   return out.str();
 }
 
-std::string emittedCppCacheSalt() {
-  constexpr std::string_view CacheVersion = "emitted-cpp-cache-v1";
-  const std::filesystem::path primecPath = std::filesystem::current_path() / "primec";
+// TODO-5357: the cache key is the emitted C++ text plus the host compiler
+// identity, not the primec binary. Relinking primec for an unrelated change
+// used to invalidate every fixture and force the (minutes-long) host compile
+// again; the executable only depends on the C++ it is built from.
+std::string hostCompilerCommand() {
+  if (runCommand("c++ --version > /dev/null 2>&1") == 0) {
+    return "c++";
+  }
+  if (runCommand("clang++ --version > /dev/null 2>&1") == 0) {
+    return "clang++";
+  }
+  return {};
+}
+
+std::string hostCompilerIdentity(const std::string &cxx) {
+  const std::filesystem::path versionPath =
+      std::filesystem::current_path() / ".primec_test_cache" / ("compiler_version_" + std::to_string(::getpid()) + ".txt");
+  std::filesystem::create_directories(versionPath.parent_path());
+  std::string identity = cxx;
+  if (runCommand(cxx + " --version > " + quoteShellArg(versionPath.string()) + " 2>&1") == 0) {
+    identity += "|" + readFile(versionPath.string());
+  }
   std::error_code ec;
-  const auto primecSize = std::filesystem::file_size(primecPath, ec);
-  const auto primecMtime = std::filesystem::last_write_time(primecPath, ec).time_since_epoch().count();
-  return std::string(CacheVersion) + "|" + std::to_string(primecSize) + "|" +
-         std::to_string(static_cast<long long>(primecMtime));
+  std::filesystem::remove(versionPath, ec);
+  return identity;
 }
 
 bool acquireCacheBuildLock(const std::filesystem::path &lockDir, const std::filesystem::path &artifactPath) {
@@ -78,22 +95,13 @@ std::filesystem::path emittedCppFixtureCacheDir() {
 }
 } // namespace
 
-bool buildEmittedCppExecutableAtO0(const std::string &srcPath,
-                                   const std::string &cppPath,
-                                   const std::string &exePath) {
-  std::string cxx = "clang++";
-  if (runCommand("c++ --version > /dev/null 2>&1") == 0) {
-    cxx = "c++";
-  } else if (runCommand("clang++ --version > /dev/null 2>&1") != 0) {
-    return false;
-  }
-
+static bool emitCppFixtureSource(const std::string &srcPath, const std::string &cppPath) {
   const std::string emitCppCmd =
       "./primec --emit=cpp " + quoteShellArg(srcPath) + " -o " + quoteShellArg(cppPath) + " --entry /main";
-  if (runCommand(emitCppCmd) != 0) {
-    return false;
-  }
+  return runCommand(emitCppCmd) == 0;
+}
 
+static bool compileEmittedCppAtO0(const std::string &cxx, const std::string &cppPath, const std::string &exePath) {
   // Compile to a temp path in the same directory and rename into place only
   // once the executable is fully written. Other processes racing on the
   // same cache key (see buildCachedEmittedCppExecutableAtO0's exists()
@@ -128,9 +136,26 @@ bool buildEmittedCppExecutableAtO0(const std::string &srcPath,
 bool buildCachedEmittedCppExecutableAtO0(const std::string &fixtureName,
                                          const std::string &source,
                                          std::string &exePathOut) {
-  const std::string cacheKey = fixtureName + "_" + hex64(fnv1a64(emittedCppCacheSalt() + "\n" + source));
+  const std::string cxx = hostCompilerCommand();
+  if (cxx.empty()) {
+    return false;
+  }
   const std::filesystem::path cacheDir = emittedCppFixtureCacheDir();
-  const std::filesystem::path srcPath = cacheDir / (cacheKey + ".prime");
+  // Emit first (cheap) so the cache key can follow the generated C++.
+  const std::string sourceKey = fixtureName + "_" + hex64(fnv1a64(source));
+  const std::filesystem::path srcPath = cacheDir / (sourceKey + ".prime");
+  const std::filesystem::path emittedPath =
+      cacheDir / (sourceKey + ".emit." + std::to_string(::getpid()) + ".cpp");
+  writeTextFile(srcPath, source);
+  if (!emitCppFixtureSource(srcPath.string(), emittedPath.string())) {
+    return false;
+  }
+  const std::string cppText = readFile(emittedPath.string());
+  std::error_code removeEc;
+  std::filesystem::remove(emittedPath, removeEc);
+
+  const std::string cacheKey =
+      fixtureName + "_" + hex64(fnv1a64("emitted-cpp-cache-v2\n" + hostCompilerIdentity(cxx) + "\n" + cppText));
   const std::filesystem::path cppPath = cacheDir / (cacheKey + ".cpp");
   const std::filesystem::path exePath = cacheDir / cacheKey;
   const std::filesystem::path lockDir = cacheDir / (cacheKey + ".lock");
@@ -149,6 +174,6 @@ bool buildCachedEmittedCppExecutableAtO0(const std::string &fixtureName,
     return true;
   }
 
-  writeTextFile(srcPath, source);
-  return buildEmittedCppExecutableAtO0(srcPath.string(), cppPath.string(), exePath.string());
+  writeTextFile(cppPath, cppText);
+  return compileEmittedCppAtO0(cxx, cppPath.string(), exePath.string());
 }

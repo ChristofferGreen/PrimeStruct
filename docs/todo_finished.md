@@ -57500,3 +57500,24 @@ TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph 
   - stop_rule: fix only the pinned rows' behavior; anything else found goes to its own leaf.
   - finished_at: 2026-10-02
   - result: Fixed the misleading diagnostic; borrowed push stays unsupported. The soa borrowed-method rewrite mapped every non-count/get/ref surface member (push, reserve) on a `Reference<SoaVector<T>>` receiver to `to_aos_ref`, producing `argument count mismatch for builtin to_aos_ref`. Only count/get/ref/to_aos have `_ref` wrapper helpers (stdlib soa.prime has no `push_ref`), so other members are now left alone and report `unknown call target: push`. Making borrowed push work would need a `push_ref` helper and is not planned here.
+
+- [x] TODO-5357: Cut the release gate time: re-shard from measured costs
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5354
+  - created_at: 2026-10-01
+  - phase: Test infrastructure
+  - parallel_track: test-infrastructure
+  - scope: The full gate takes about 9-12 minutes. Use `CTestCostData.txt` to find
+    shards over a time budget or badly unbalanced (a few shards dominate
+    wall time under `--parallel 2N`), re-shard them, and replace hand-picked
+    FIRST/LAST ranges with cost-based sharding computed at configure time.
+  - acceptance:
+    - gate wall time on the reference 4-core box reduced by at least 20%
+      (before/after recorded).
+    - no shard over 30 seconds without a recorded justification.
+    - shard computation is deterministic and documented in
+      `docs/TestRuntimeOptimization.md`.
+  - stop_rule: do not change `scripts/compile.sh` (AGENTS rule); only CMake registration.
+  - finished_at: 2026-10-02
+  - result: Partially delivered; remainder in TODO-5378. Gate wall time on the 4-core reference box (`Total Test time`, relinked-primec dev loop) went from 622-630 s to 542 s (-13%), short of the 20% target. The big win was a test-infrastructure fix, not sharding: the emitted-C++ fixture cache was salted with the primec binary, so every relink recompiled the seven UI/image/result fixtures (~100 s each) and five shards idled on the cache lock; it is now keyed on the generated C++ plus the host compiler identity (97 s cold, 5 s after touching primec). Resharding (3/4/5-case shards for the newly-exposed groups, parity families split in two) did not move the total because the LPT makespan over measured costs already equals total/slots; the remaining time is CPU in per-case primec processes plus two RUN_SERIAL benchmarks (~92 s). Cost-based configure-time sharding was not implemented (it would not help for the same reason). Measurements, the >30 s shard justifications and the methodology are in docs/TestRuntimeOptimization.md. Stop-rule note: the cache-key fix touches tests/unit/compile_run/emitters/test_compile_run_emitters.cpp, beyond "only CMake registration", because that was where the measured cost was.

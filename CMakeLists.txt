@@ -850,14 +850,24 @@ if(PRIMESTRUCT_BUILD_TESTS)
   # One shard per helper family (each row costs two pipeline runs, so a family
   # takes tens of seconds; running them in parallel keeps the gate short), plus
   # the structure/doc checks.
-  foreach(parityFamily vector array string map soa)
+  foreach(parityShard "vector;1 of 2" "vector;2 of 2" "array;" "string;" "map;1 of 2" "map;2 of 2" "soa;1 of 2" "soa;2 of 2")
+    list(GET parityShard 0 parityFamily)
+    list(GET parityShard 1 parityPart)
+    if (parityPart)
+      set(parityTestName "PrimeStruct_collection_parity_${parityFamily}_part_${parityPart}")
+      string(REPLACE " " "_" parityTestName "${parityTestName}")
+      set(parityCaseName "collection parity ${parityFamily} rows part ${parityPart}")
+    else()
+      set(parityTestName "PrimeStruct_collection_parity_${parityFamily}")
+      set(parityCaseName "collection parity ${parityFamily} rows")
+    endif()
     add_test(
-      NAME PrimeStruct_collection_parity_${parityFamily}
+      NAME ${parityTestName}
       COMMAND $<TARGET_FILE:PrimeStruct_collection_parity_tests>
               "--test-suite=primestruct.collection_parity"
-              "--test-case=collection parity ${parityFamily} rows"
+              "--test-case=${parityCaseName}"
     )
-    set_tests_properties(PrimeStruct_collection_parity_${parityFamily}
+    set_tests_properties(${parityTestName}
                          PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   endforeach()
   add_test(
