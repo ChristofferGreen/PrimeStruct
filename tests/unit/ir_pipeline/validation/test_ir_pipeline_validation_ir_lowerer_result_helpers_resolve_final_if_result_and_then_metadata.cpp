@@ -1,4 +1,4 @@
-#include "test_ir_pipeline_validation_helpers.h"
+#include "test_ir_pipeline_validation_callback_factories.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
@@ -83,13 +83,11 @@ TEST_CASE("ir lowerer result helpers resolve final-if Result.and_then metadata")
   andThenExpr.name = "and_then";
   andThenExpr.args = {resultName, sourceResultExpr, andThenLambdaExpr};
 
-  auto resolveMethodCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
-    return nullptr;
-  };
-  auto resolveDefinitionCall = [](const primec::Expr &) -> const primec::Definition * {
-    return nullptr;
-  };
-  auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return false; };
+  auto resolveMethodCall = primec::validation_test_support::noMethodDefinition;
+
+  auto resolveDefinitionCall = primec::validation_test_support::noDefinitionCall;
+
+  auto lookupReturnInfo = primec::validation_test_support::noReturnInfo;
   auto inferExprKind = [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &localsIn) {
     if (expr.kind == primec::Expr::Kind::Name) {
       auto localIt = localsIn.find(expr.name);
@@ -357,13 +355,11 @@ TEST_CASE("ir lowerer result helpers resolve packed error struct Result combinat
   map2Expr.name = "map2";
   map2Expr.args = {resultName, leftResultExpr, rightResultExpr, map2LambdaExpr};
 
-  auto resolveMethodCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
-    return nullptr;
-  };
-  auto resolveDefinitionCall = [](const primec::Expr &) -> const primec::Definition * {
-    return nullptr;
-  };
-  auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return false; };
+  auto resolveMethodCall = primec::validation_test_support::noMethodDefinition;
+
+  auto resolveDefinitionCall = primec::validation_test_support::noDefinitionCall;
+
+  auto lookupReturnInfo = primec::validation_test_support::noReturnInfo;
   auto inferExprKind = [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &localsIn) {
     if (expr.kind == primec::Expr::Kind::Name) {
       auto localIt = localsIn.find(expr.name);
@@ -508,13 +504,11 @@ TEST_CASE("ir lowerer result helpers resolve parser-shaped packed error struct R
   map2Expr.name = "map2";
   map2Expr.args = {resultName, leftResultExpr, rightResultExpr, map2LambdaExpr};
 
-  auto resolveMethodCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
-    return nullptr;
-  };
-  auto resolveDefinitionCall = [](const primec::Expr &) -> const primec::Definition * {
-    return nullptr;
-  };
-  auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return false; };
+  auto resolveMethodCall = primec::validation_test_support::noMethodDefinition;
+
+  auto resolveDefinitionCall = primec::validation_test_support::noDefinitionCall;
+
+  auto lookupReturnInfo = primec::validation_test_support::noReturnInfo;
   auto inferExprKind = [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &localsIn) {
     if (expr.kind == primec::Expr::Kind::Name) {
       auto localIt = localsIn.find(expr.name);

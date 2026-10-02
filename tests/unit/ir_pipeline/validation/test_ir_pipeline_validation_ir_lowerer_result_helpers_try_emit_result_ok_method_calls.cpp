@@ -1,4 +1,4 @@
-#include "test_ir_pipeline_validation_helpers.h"
+#include "test_ir_pipeline_validation_callback_factories.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
@@ -1306,11 +1306,11 @@ TEST_CASE("ir lowerer result helpers resolve direct Result.ok comparison payload
   okExpr.name = "ok";
   okExpr.args = {resultName, comparisonExpr};
 
-  auto resolveMethodCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
-    return nullptr;
-  };
-  auto resolveDefinitionCall = [](const primec::Expr &) -> const primec::Definition * { return nullptr; };
-  auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return false; };
+  auto resolveMethodCall = primec::validation_test_support::noMethodDefinition;
+
+  auto resolveDefinitionCall = primec::validation_test_support::noDefinitionCall;
+
+  auto lookupReturnInfo = primec::validation_test_support::noReturnInfo;
   auto inferExprKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
     return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   };
@@ -1665,13 +1665,11 @@ TEST_CASE("ir lowerer result helpers resolve Result.map struct payload metadata"
   mapExpr.name = "map";
   mapExpr.args = {resultName, sourceExpr, lambdaExpr};
 
-  auto resolveMethodCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
-    return nullptr;
-  };
-  auto resolveDefinitionCall = [](const primec::Expr &) -> const primec::Definition * {
-    return nullptr;
-  };
-  auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return false; };
+  auto resolveMethodCall = primec::validation_test_support::noMethodDefinition;
+
+  auto resolveDefinitionCall = primec::validation_test_support::noDefinitionCall;
+
+  auto lookupReturnInfo = primec::validation_test_support::noReturnInfo;
   auto inferExprKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
     return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   };

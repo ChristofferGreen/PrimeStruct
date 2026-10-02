@@ -1918,6 +1918,7 @@ are left unarchived.
 | TODO-5391 | Convert ir_pipeline validation statement_binding / conversions / on_error tests | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
 | TODO-5392 | Convert ir_pipeline validation inline_param_helper variadic-pack tests | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
 | TODO-5393 | Convert ir_pipeline validation setup_type_helper tests | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
+| TODO-5394 | Convert ir_pipeline validation result_helpers / count_access / inline_struct_arg tests | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
 
 <!-- INDEX-END -->
 

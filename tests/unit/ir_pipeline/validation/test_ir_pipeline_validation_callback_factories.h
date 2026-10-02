@@ -287,4 +287,12 @@ inline const primec::Definition *resolveMethodCallNoClassifiers(
 
 #undef PS_NO_CLASSIFIER_ARGS
 
+// Resolvers that find nothing, for result/call resolution setups that only
+// exercise local and semantic-fact paths.
+inline const primec::Definition *noMethodDefinition(const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+  return nullptr;
+}
+inline const primec::Definition *noDefinitionCall(const primec::Expr &) { return nullptr; }
+inline bool noReturnInfo(const std::string &, primec::ir_lowerer::ReturnInfo &) { return false; }
+
 } // namespace primec::validation_test_support
