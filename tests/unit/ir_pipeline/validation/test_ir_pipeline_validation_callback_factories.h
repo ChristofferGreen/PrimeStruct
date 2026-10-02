@@ -176,4 +176,48 @@ inline bool inferCallParameterLocalInfoWithStructHook(
       error);
 }
 
+// emitInlineDefinitionCallParameters with the callbacks the inline-parameter cases share: nothing is a string binding, string
+// values/struct layouts resolve, expressions emit successfully unless
+// `emitExpr` says otherwise, temp locals are 0 and instructions are collected.
+inline bool emitInlineParamsInert(
+    const std::vector<primec::Expr> &callParams,
+    const std::vector<const primec::Expr *> &orderedArgs,
+    const std::vector<const primec::Expr *> &packedArgs,
+    size_t packedParamIndex,
+    const primec::ir_lowerer::LocalMap &callerLocals,
+    int32_t &nextLocal,
+    primec::ir_lowerer::LocalMap &calleeLocals,
+    const primec::ir_lowerer::InferInlineParameterLocalInfoFn &inferCallParameterLocalInfo,
+    std::vector<primec::IrInstruction> &instructions,
+    std::string &error,
+    const primec::ir_lowerer::EmitInlineParameterExprFn &emitExpr =
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; }) {
+  return primec::ir_lowerer::emitInlineDefinitionCallParameters(
+      callParams,
+      orderedArgs,
+      packedArgs,
+      packedParamIndex,
+      callerLocals,
+      nextLocal,
+      calleeLocals,
+      inferCallParameterLocalInfo,
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &,
+         const primec::ir_lowerer::LocalMap &,
+         primec::ir_lowerer::LocalInfo::StringSource &,
+         int32_t &,
+         bool &) { return true; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
+      emitExpr,
+      [](int32_t, int32_t, int32_t) { return true; },
+      []() { return 0; },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      [](int32_t) {},
+      error);
+}
+
 } // namespace primec::validation_test_support

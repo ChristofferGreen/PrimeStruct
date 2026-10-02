@@ -1,4 +1,4 @@
-#include "test_ir_pipeline_validation_helpers.h"
+#include "test_ir_pipeline_validation_callback_factories.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
@@ -29,7 +29,7 @@ TEST_CASE("ir lowerer inline param helper rejects borrowed vector variadic alias
   std::vector<primec::IrInstruction> instructions;
   std::string error;
 
-  CHECK_FALSE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
+  CHECK_FALSE(primec::validation_test_support::emitInlineParamsInert(
       {valuesParam},
       {nullptr},
       {&spreadArg},
@@ -45,22 +45,7 @@ TEST_CASE("ir lowerer inline param helper rejects borrowed vector variadic alias
         infoOut.referenceToVector = true;
         return true;
       },
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &,
-         const primec::ir_lowerer::LocalMap &,
-         primec::ir_lowerer::LocalInfo::StringSource &,
-         int32_t &,
-         bool &) { return true; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-      },
-      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
-      [](int32_t, int32_t, int32_t) { return true; },
-      []() { return 0; },
-      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-      [](int32_t) {},
+      instructions,
       error));
 
   CHECK(error == "variadic parameter type mismatch");
@@ -96,7 +81,7 @@ TEST_CASE("ir lowerer inline param helper rejects borrowed soa variadic alias ty
   std::vector<primec::IrInstruction> instructions;
   std::string error;
 
-  CHECK_FALSE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
+  CHECK_FALSE(primec::validation_test_support::emitInlineParamsInert(
       {valuesParam},
       {nullptr},
       {&spreadArg},
@@ -112,22 +97,7 @@ TEST_CASE("ir lowerer inline param helper rejects borrowed soa variadic alias ty
         infoOut.referenceToVector = true;
         return true;
       },
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &,
-         const primec::ir_lowerer::LocalMap &,
-         primec::ir_lowerer::LocalInfo::StringSource &,
-         int32_t &,
-         bool &) { return true; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-      },
-      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
-      [](int32_t, int32_t, int32_t) { return true; },
-      []() { return 0; },
-      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-      [](int32_t) {},
+      instructions,
       error));
 
   CHECK(error == "variadic parameter type mismatch");
@@ -165,7 +135,7 @@ TEST_CASE("ir lowerer inline param helper preserves borrowed soa spread struct m
   std::vector<primec::IrInstruction> instructions;
   std::string error;
 
-  REQUIRE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
+  REQUIRE(primec::validation_test_support::emitInlineParamsInert(
       {valuesParam},
       {nullptr},
       {&spreadArg},
@@ -182,22 +152,7 @@ TEST_CASE("ir lowerer inline param helper preserves borrowed soa spread struct m
         infoOut.isSoaVector = true;
         return true;
       },
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &,
-         const primec::ir_lowerer::LocalMap &,
-         primec::ir_lowerer::LocalInfo::StringSource &,
-         int32_t &,
-         bool &) { return true; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-      },
-      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
-      [](int32_t, int32_t, int32_t) { return true; },
-      []() { return 0; },
-      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-      [](int32_t) {},
+      instructions,
       error));
 
   CHECK(error.empty());
@@ -246,7 +201,7 @@ TEST_CASE("ir lowerer inline param helper materializes struct pointer variadic a
   std::vector<primec::IrInstruction> instructions;
   std::string error;
 
-  REQUIRE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
+  REQUIRE(primec::validation_test_support::emitInlineParamsInert(
       {valuesParam},
       {nullptr},
       {&firstArg, &secondArg},
@@ -262,17 +217,8 @@ TEST_CASE("ir lowerer inline param helper materializes struct pointer variadic a
         infoOut.structTypeName = "/pkg/Pair";
         return true;
       },
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &,
-         const primec::ir_lowerer::LocalMap &,
-         primec::ir_lowerer::LocalInfo::StringSource &,
-         int32_t &,
-         bool &) { return true; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-      },
-      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
+      instructions,
+      error,
       [&](const primec::Expr &arg, const primec::ir_lowerer::LocalMap &locals) {
         auto it = locals.find(arg.name);
         if (it == locals.end()) {
@@ -280,12 +226,7 @@ TEST_CASE("ir lowerer inline param helper materializes struct pointer variadic a
         }
         instructions.push_back({primec::IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
         return true;
-      },
-      [](int32_t, int32_t, int32_t) { return true; },
-      []() { return 0; },
-      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-      [](int32_t) {},
-      error));
+      }));
 
   CHECK(error.empty());
   CHECK(nextLocal == 7);
@@ -340,7 +281,7 @@ TEST_CASE("ir lowerer inline param helper aliases pure struct pointer variadic f
   std::vector<primec::IrInstruction> instructions;
   std::string error;
 
-  REQUIRE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
+  REQUIRE(primec::validation_test_support::emitInlineParamsInert(
       {valuesParam},
       {nullptr},
       {&spreadArg},
@@ -356,22 +297,7 @@ TEST_CASE("ir lowerer inline param helper aliases pure struct pointer variadic f
         infoOut.structTypeName = "/pkg/Pair";
         return true;
       },
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &,
-         const primec::ir_lowerer::LocalMap &,
-         primec::ir_lowerer::LocalInfo::StringSource &,
-         int32_t &,
-         bool &) { return true; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-      },
-      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
-      [](int32_t, int32_t, int32_t) { return true; },
-      []() { return 0; },
-      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-      [](int32_t) {},
+      instructions,
       error));
 
   CHECK(error.empty());
@@ -571,7 +497,7 @@ TEST_CASE("ir lowerer inline param helper rejects borrowed array variadic alias 
   std::vector<primec::IrInstruction> instructions;
   std::string error;
 
-  CHECK_FALSE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
+  CHECK_FALSE(primec::validation_test_support::emitInlineParamsInert(
       {valuesParam},
       {nullptr},
       {&spreadArg},
@@ -586,22 +512,7 @@ TEST_CASE("ir lowerer inline param helper rejects borrowed array variadic alias 
         infoOut.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
         return true;
       },
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &,
-         const primec::ir_lowerer::LocalMap &,
-         primec::ir_lowerer::LocalInfo::StringSource &,
-         int32_t &,
-         bool &) { return true; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-      },
-      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
-      [](int32_t, int32_t, int32_t) { return true; },
-      []() { return 0; },
-      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-      [](int32_t) {},
+      instructions,
       error));
 
   CHECK(error == "variadic parameter type mismatch");
@@ -635,7 +546,7 @@ TEST_CASE("ir lowerer inline param helper rejects array variadic alias type mism
   std::vector<primec::IrInstruction> instructions;
   std::string error;
 
-  CHECK_FALSE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
+  CHECK_FALSE(primec::validation_test_support::emitInlineParamsInert(
       {valuesParam},
       {nullptr},
       {&spreadArg},
@@ -650,22 +561,7 @@ TEST_CASE("ir lowerer inline param helper rejects array variadic alias type mism
         infoOut.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Array;
         return true;
       },
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &,
-         const primec::ir_lowerer::LocalMap &,
-         primec::ir_lowerer::LocalInfo::StringSource &,
-         int32_t &,
-         bool &) { return true; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-      },
-      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
-      [](int32_t, int32_t, int32_t) { return true; },
-      []() { return 0; },
-      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-      [](int32_t) {},
+      instructions,
       error));
 
   CHECK(error == "variadic parameter type mismatch");
@@ -691,7 +587,7 @@ TEST_CASE("ir lowerer inline param helper materializes map variadic args packs")
   std::vector<primec::IrInstruction> instructions;
   std::string error;
 
-  REQUIRE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
+  REQUIRE(primec::validation_test_support::emitInlineParamsInert(
       {valuesParam},
       {nullptr},
       {&firstArg, &secondArg},
@@ -708,27 +604,13 @@ TEST_CASE("ir lowerer inline param helper materializes map variadic args packs")
         infoOut.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Value;
         return true;
       },
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &,
-         const primec::ir_lowerer::LocalMap &,
-         primec::ir_lowerer::LocalInfo::StringSource &,
-         int32_t &,
-         bool &) { return true; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-      },
-      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
+      instructions,
+      error,
       [&](const primec::Expr &arg, const primec::ir_lowerer::LocalMap &) {
         instructions.push_back(
             {primec::IrOpcode::LoadLocal, static_cast<uint64_t>(arg.name == "left" ? 21 : 22)});
         return true;
-      },
-      [](int32_t, int32_t, int32_t) { return true; },
-      []() { return 0; },
-      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-      [](int32_t) {},
-      error));
+      }));
 
   CHECK(error.empty());
   CHECK(nextLocal == 7);
