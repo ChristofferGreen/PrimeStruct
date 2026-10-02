@@ -1,5 +1,7 @@
 #include "test_parser_basic_helpers.h"
 
+TEST_SUITE_BEGIN("primestruct.parser.basic");
+
 TEST_CASE("parses hex integer literals") {
   const std::string source = R"(
 [return<int>]
@@ -639,3 +641,5 @@ main() {
   CHECK(stmt.args[0].kind == primec::Expr::Kind::StringLiteral);
   CHECK(stmt.args[0].stringValue == std::string("\"hello\\\\q\"utf8"));
 }
+
+TEST_SUITE_END();

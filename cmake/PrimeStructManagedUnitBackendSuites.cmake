@@ -35,11 +35,21 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.serialization"
   CASES_PER_SHARD 4
 )
 
+# TODO-5354: cases 105-110 were never registered.
+addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.serialization"
+  TARGET PrimeStruct_backend_ir_tests
+  LABEL "parallel-safe"
+  TIMEOUT 30
+  RANGE_FIRST 105
+  RANGE_LAST 110
+  CASES_PER_SHARD 3
+)
+
 addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.pointers"
   TARGET PrimeStruct_backend_ir_tests
   LABEL "parallel-safe"
   TIMEOUT 30
-  TOTAL_CASES 32
+  TOTAL_CASES 29
   CASES_PER_SHARD 3
 )
 
@@ -105,7 +115,7 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
   TIMEOUT 600
   SOURCE_FILE "*test_ir_pipeline_conversions_variadic_file_errors.cpp"
   SHARD_PREFIX "variadic_file_errors"
-  TOTAL_CASES 6
+  TOTAL_CASES 4
   CASES_PER_SHARD 6
 )
 
@@ -115,7 +125,7 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
   TIMEOUT 600
   SOURCE_FILE "*test_ir_pipeline_conversions_variadic_file_handles.cpp"
   SHARD_PREFIX "variadic_file_handles"
-  TOTAL_CASES 1
+  TOTAL_CASES 3
   CASES_PER_SHARD 1
 )
 
@@ -125,7 +135,7 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
   TIMEOUT 600
   SOURCE_FILE "*test_ir_pipeline_conversions_variadic_borrowed_vectors.cpp"
   SHARD_PREFIX "variadic_borrowed_vectors"
-  TOTAL_CASES 8
+  TOTAL_CASES 4
   CASES_PER_SHARD 8
 )
 
@@ -135,7 +145,7 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
   TIMEOUT 600
   SOURCE_FILE "*test_ir_pipeline_conversions_variadic_collection_refs.cpp"
   SHARD_PREFIX "variadic_collection_refs"
-  TOTAL_CASES 9
+  TOTAL_CASES 7
   CASES_PER_SHARD 9
 )
 
@@ -145,7 +155,7 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
   TIMEOUT 600
   SOURCE_FILE "*test_ir_pipeline_conversions_variadic_pointer_refs.cpp"
   SHARD_PREFIX "variadic_pointer_refs"
-  TOTAL_CASES 8
+  TOTAL_CASES 3
   CASES_PER_SHARD 8
 )
 
@@ -155,7 +165,7 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
   TIMEOUT 600
   SOURCE_FILE "*test_ir_pipeline_conversions_variadic_field_refs_and_maps.cpp"
   SHARD_PREFIX "variadic_field_refs_and_maps"
-  TOTAL_CASES 7
+  TOTAL_CASES 5
   CASES_PER_SHARD 7
 )
 
@@ -165,7 +175,7 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
   TIMEOUT 600
   SOURCE_FILE "*test_ir_pipeline_conversions_variadic_pointer_maps.cpp"
   SHARD_PREFIX "variadic_pointer_maps"
-  TOTAL_CASES 4
+  TOTAL_CASES 3
   CASES_PER_SHARD 4
 )
 
@@ -175,7 +185,7 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
   TIMEOUT 600
   SOURCE_FILE "*test_ir_pipeline_conversions_variadic_pointer_vectors.cpp"
   SHARD_PREFIX "variadic_pointer_vectors"
-  TOTAL_CASES 7
+  TOTAL_CASES 4
   CASES_PER_SHARD 7
 )
 
@@ -191,7 +201,7 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.to_glsl"
   TARGET PrimeStruct_backend_runtime_tests
   LABEL "parallel-safe"
   TIMEOUT 30
-  TOTAL_CASES 58
+  TOTAL_CASES 53
   CASES_PER_SHARD 10
 )
 
@@ -199,7 +209,7 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.validation"
   TARGET PrimeStruct_backend_ir_tests
   LABEL "parallel-safe"
   TIMEOUT 60
-  TOTAL_CASES 1389
+  TOTAL_CASES 1345
   CASES_PER_SHARD 10
 )
 

@@ -24,4 +24,6 @@
 #include "primec/testing/IrLowererHelpers.h"
 
 #include "test_ir_pipeline_backends_helpers.h"
+TEST_SUITE_BEGIN("primestruct.ir.pipeline.backends.registry");
 #include "test_ir_pipeline_backends_architecture.h"
+TEST_SUITE_END();

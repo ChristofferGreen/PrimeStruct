@@ -189,6 +189,20 @@ build and layout solidify.
   - one positive parse + IR test
   - one negative/diagnostic test
 - **Doctest size guardrail:** split a doctest case by default once it grows beyond 10 `SUBCASE` blocks or equivalent subtests; prefer multiple focused `TEST_CASE`s or suite shards over one oversized umbrella case.
+- **Test registration guard:** every doctest case must run under a CTest entry.
+  `scripts/check_test_registration.py` (ctest `PrimeStruct_test_registration`)
+  compares each doctest binary's `--list-test-cases` with the union of the
+  registered shards (`cmake/PrimeStructManaged*.cmake`), checks that shard
+  ranges tile the real case count (no gaps, no empty shards), and that every
+  `tests/unit/` file with a `TEST_CASE` is part of a built target. A new test
+  file needs a `TEST_SUITE_BEGIN("...")` whose suite is registered, and
+  `TOTAL_CASES`/`RANGE_LAST` must match the real count. After adding or
+  removing test cases run `scripts/generate_test_inventory.py`; ctest
+  `PrimeStruct_test_inventory` fails when `tests/TEST_INVENTORY.md` is stale.
+- **Dump comparisons:** dump output can contain wall-clock values (`*_ms=`,
+  `*_over=`). A test that compares two `--dump-stage` outputs must wrap both
+  sides in `primec::testing::stripDumpTimings` (`primec/testing/DumpNormalization.h`);
+  ctest `PrimeStruct_dump_comparison_audit` fails on a raw comparison.
 - **Doctest runtime guardrail:** if a doctest case with multiple subcases takes more than 5 seconds in routine release validation, split it into smaller focused cases; if a single-focus doctest still takes more than 5 seconds, optimize it or add a brief justification in the test source or nearby registration.
 
 ## TODO slicing workflow

@@ -1,5 +1,7 @@
 #include "test_parser_basic_helpers.h"
 
+TEST_SUITE_BEGIN("primestruct.parser.basic");
+
 TEST_CASE("parses statement call with block arguments") {
   const std::string source = R"(
 [return<int>]
@@ -703,3 +705,5 @@ main() {
   CHECK(*call.argNames[0] == "hue");
   CHECK(*call.argNames[1] == "value");
 }
+
+TEST_SUITE_END();

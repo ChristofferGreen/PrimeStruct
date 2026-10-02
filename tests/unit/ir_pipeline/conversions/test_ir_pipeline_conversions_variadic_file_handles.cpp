@@ -244,7 +244,6 @@ TEST_CASE("ir lowerer materializes variadic File handle packs with indexed file 
   CHECK(result == 411);
 }
 
-TEST_SUITE_END();
 TEST_CASE("ir lowerer materializes variadic borrowed File handle packs with indexed dereference file methods") {
   auto escape = [](const std::string &text) {
     std::string out;
@@ -578,3 +577,5 @@ TEST_CASE("ir lowerer materializes variadic pointer File handle packs with index
   CHECK(readFile(pathC1) == "omega\n");
   CHECK(readFile(pathExtra) == "alpha\n");
 }
+
+TEST_SUITE_END();

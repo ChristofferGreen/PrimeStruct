@@ -366,7 +366,6 @@ main() {
   CHECK(transforms[0].arguments[0] == "at(fetch_values(1i32).count(), 2i32)");
 }
 
-TEST_SUITE_END();
 
 TEST_CASE("parses semantic transform indexing full form on method call") {
   const std::string source = R"(
@@ -397,3 +396,5 @@ main() {
   REQUIRE(transforms[0].arguments.size() == 1);
   CHECK(transforms[0].arguments[0] == "at(fetch_values(1i32).count(), 2i32)");
 }
+
+TEST_SUITE_END();

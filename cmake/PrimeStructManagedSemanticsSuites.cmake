@@ -81,7 +81,7 @@ addPrimeStructManagedDoctestSuite(
   ${PrimeStructManagedSemanticsCommon}
   SOURCE_FILE "*test_semantics_entry_operators.cpp"
   RANGE_FIRST 16
-  RANGE_LAST 29
+  RANGE_LAST 27
   CASES_PER_SHARD 5
   SHARD_PREFIX "scalar_and_mixed_numeric_rules"
 )
@@ -91,7 +91,7 @@ addPrimeStructManagedDoctestSuite(
   TARGET PrimeStruct_semantics_tests
   TIMEOUT 30
   LABEL "parallel-safe"
-  TOTAL_CASES 39
+  TOTAL_CASES 32
   CASES_PER_SHARD 4
   SHARD_PREFIX "math_imports"
 )
@@ -99,14 +99,14 @@ addPrimeStructManagedDoctestSuite(
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.tags"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 17
+  TOTAL_CASES 16
   SHARD_PREFIX "tags"
 )
 
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.builtins_numeric"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 22
+  TOTAL_CASES 15
   CASES_PER_SHARD 5
   SHARD_PREFIX "builtins_numeric"
 )
@@ -114,14 +114,14 @@ addPrimeStructManagedDoctestSuite(
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.executions"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 26
+  TOTAL_CASES 23
   SHARD_PREFIX "executions"
 )
 
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.transforms"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 51
+  TOTAL_CASES 50
   SHARD_PREFIX "transforms"
 )
 
@@ -136,56 +136,56 @@ addPrimeStructManagedDoctestSuite(
   # documented for SoaColumnsN in TODO-4706/TODO-4713
   # (docs/TestRuntimeOptimization.md), not a hang or test bug.
   TIMEOUT 30
-  TOTAL_CASES 116
+  TOTAL_CASES 115
   SHARD_PREFIX "effects"
 )
 
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.struct_transforms"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 57
+  TOTAL_CASES 51
   SHARD_PREFIX "struct_transforms"
 )
 
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.builtin_calls"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 35
+  TOTAL_CASES 26
   SHARD_PREFIX "builtin_calls"
 )
 
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.bindings.core"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 65
+  TOTAL_CASES 63
   SHARD_PREFIX "bindings_core"
 )
 
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.bindings.pointers"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 86
+  TOTAL_CASES 85
   SHARD_PREFIX "bindings_pointers"
 )
 
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.bindings.assignments"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 28
+  TOTAL_CASES 27
   SHARD_PREFIX "bindings_assignments"
 )
 
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.bindings.control_flow"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 44
+  TOTAL_CASES 39
   SHARD_PREFIX "bindings_control_flow"
 )
 
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.bindings.struct_defaults"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 28
+  TOTAL_CASES 30
   SHARD_PREFIX "bindings_struct_defaults"
 )
 
@@ -194,7 +194,7 @@ addPrimeStructManagedDoctestSuite(
   TARGET PrimeStruct_semantics_tests
   TIMEOUT 30
   LABEL "parallel-safe"
-  TOTAL_CASES 114
+  TOTAL_CASES 111
   CASES_PER_SHARD 2
   SHARD_PREFIX "result_helpers"
 )
@@ -202,7 +202,7 @@ addPrimeStructManagedDoctestSuite(
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.calls_flow.control"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 102
+  TOTAL_CASES 85
   SHARD_PREFIX "calls_flow_control"
 )
 
@@ -223,14 +223,14 @@ addPrimeStructManagedDoctestSuite(
   # cross-test-case pollution is fixed) is the better long-term fix for
   # this blanket override applying to hundreds of otherwise-fast shards.
   TIMEOUT 30
-  TOTAL_CASES 1305
+  TOTAL_CASES 1218
   SHARD_PREFIX "calls_flow_collections"
 )
 
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.calls_flow.access"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 51
+  TOTAL_CASES 46
   SHARD_PREFIX "calls_flow_access"
 )
 
@@ -244,7 +244,7 @@ addPrimeStructManagedDoctestSuite(
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.calls_flow.numeric_builtins"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 33
+  TOTAL_CASES 30
   CASES_PER_SHARD 5
   SHARD_PREFIX "calls_flow_numeric_builtins"
 )
@@ -252,14 +252,14 @@ addPrimeStructManagedDoctestSuite(
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.calls_flow.comparisons_literals"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 40
+  TOTAL_CASES 34
   SHARD_PREFIX "calls_flow_comparisons_literals"
 )
 
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.calls_flow.effects"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 129
+  TOTAL_CASES 120
   SHARD_PREFIX "calls_flow_effects"
 )
 
@@ -268,7 +268,7 @@ addPrimeStructManagedDoctestSuite(
   TARGET PrimeStruct_semantics_tests
   TIMEOUT 30
   LABEL "parallel-safe"
-  TOTAL_CASES 87
+  TOTAL_CASES 82
   CASES_PER_SHARD 1
   SHARD_PREFIX "imports"
 )
@@ -290,6 +290,6 @@ addPrimeStructManagedDoctestSuite(
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.type_resolution_graph"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 177
+  TOTAL_CASES 169
   SHARD_PREFIX "type_resolution_graph"
 )

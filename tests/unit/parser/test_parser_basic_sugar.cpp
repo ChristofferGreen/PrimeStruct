@@ -2,6 +2,8 @@
 
 #include "primec/ast/AstPrinter.h"
 
+TEST_SUITE_BEGIN("primestruct.parser.basic");
+
 TEST_CASE("normalizes string literals with double-quoted escapes") {
   const std::string source = R"(
 [return<void>]

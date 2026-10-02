@@ -48,6 +48,8 @@
 namespace {
 } // namespace
 
+TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
+
 TEST_CASE("ir preparation stops unresolved generic semantic facts before lowering") {
   const std::string unsatisfiedRequirement = R"(
 [return<i32> require(N > 0)]
@@ -129,3 +131,5 @@ main() {
   CHECK_FALSE(accepted.output.semanticProgram.requirementPredicateFacts.empty());
   CHECK_FALSE(accepted.ir.functions.empty());
 }
+
+TEST_SUITE_END();

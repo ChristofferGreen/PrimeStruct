@@ -828,6 +828,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/semantics/manual/test_semantics_manual.cpp
     tests/unit/parser/test_lexer.cpp
     tests/unit/misc/test_diagnostics_codes.cpp
+    tests/unit/misc/test_dump_normalization.cpp
     tests/unit/misc/test_support_stdlib_collection_struct_annotation_detection.cpp
   )
   target_include_directories(PrimeStruct_misc_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
@@ -1627,6 +1628,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.stdlib.map_ownership
     primestruct.ir_printer
     primestruct.diagnostics.codes
+    primestruct.dumps.normalization
     primestruct.stdlib.collection_struct_annotation_detection
     primestruct.stdlib.collection_registry_dynamic_discovery
   )
@@ -1703,6 +1705,10 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.semantics.symbol_interner
     primestruct.semantics.type_packs
     primestruct.semantics.type_resolution_return_solver
+    primestruct.semantics.builtin_array_access_name_classifier
+    primestruct.semantics.collection_spelling_classifier
+    primestruct.semantics.receiver_element_family_classifier
+    primestruct.semantics.trait_wrapper_helpers
   )
 
   set(PrimeStructTextFilterTestSuites
@@ -2697,11 +2703,51 @@ if(PRIMESTRUCT_BUILD_TESTS)
     ${PrimeStructParserTestSuites}
   )
   addPrimeStructSuiteRegistration(
+    PrimeStruct_semantics_suite_registration
+    PrimeStruct_semantics_tests
+    expected_semantics_doctest_suites.txt
+    ${PrimeStructSemanticsTestSuites}
+  )
+  addPrimeStructSuiteRegistration(
     PrimeStruct_text_filter_suite_registration
     PrimeStruct_text_filter_tests
     expected_text_filter_doctest_suites.txt
     ${PrimeStructTextFilterTestSuites}
   )
+
+  # TODO-5354: guard CTest registration of the doctest binaries and keep the
+  # generated test inventory current.
+  add_test(
+    NAME PrimeStruct_test_registration
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/check_test_registration.py
+            --build-dir ${CMAKE_BINARY_DIR} --root ${CMAKE_SOURCE_DIR} --ctest ${CMAKE_CTEST_COMMAND}
+  )
+  set_tests_properties(PrimeStruct_test_registration PROPERTIES TIMEOUT 300)
+  add_test(
+    NAME PrimeStruct_test_registration_self_test
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/scripts/test_check_test_registration.py
+            --repo-root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_test_registration_self_test PROPERTIES TIMEOUT 60)
+  # TODO-5355: dump comparisons must normalize wall-clock values.
+  add_test(
+    NAME PrimeStruct_dump_comparison_audit
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/check_dump_comparisons.py
+            --root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_dump_comparison_audit PROPERTIES TIMEOUT 60)
+  add_test(
+    NAME PrimeStruct_dump_comparison_audit_self_test
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/scripts/test_check_dump_comparisons.py
+            --repo-root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_dump_comparison_audit_self_test PROPERTIES TIMEOUT 60)
+  add_test(
+    NAME PrimeStruct_test_inventory
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/generate_test_inventory.py
+            --root ${CMAKE_SOURCE_DIR} --check
+  )
+  set_tests_properties(PrimeStruct_test_inventory PROPERTIES TIMEOUT 60)
 
   # Attach each CTest test name to its environment so helper wrappers can
   # attribute runtime/memory observations to the owning CTest registration.

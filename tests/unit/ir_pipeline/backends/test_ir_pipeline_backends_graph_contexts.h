@@ -136,10 +136,10 @@ TEST_CASE("semantic-product consumer coverage matrix stays source locked") {
       readRepoFile("tests/unit/compile_time/test_compile_time_evaluation_facade.cpp");
 
   const std::size_t familiesStart =
-      semanticProductSource.find("static const std::vector<SemanticProgramFactFamilyInfo> Families = {");
+      semanticProductSource.find("static const std::vector<SemanticProgramFactFamilyInfo> Families =");
   REQUIRE(familiesStart != std::string::npos);
   const std::size_t familiesEnd =
-      semanticProductSource.find("  };\n  return Families;", familiesStart);
+      semanticProductSource.find("      };\n      });\n  return Families;", familiesStart);
   REQUIRE(familiesEnd != std::string::npos);
   const std::string familiesBlock =
       semanticProductSource.substr(familiesStart, familiesEnd - familiesStart);
@@ -172,6 +172,9 @@ TEST_CASE("semantic-product consumer coverage matrix stays source locked") {
                            const std::string &positiveSource,
                            const std::string &staleOrMissingTest,
                            const std::string &staleOrMissingSource) {
+    CAPTURE(factFamily);
+    CAPTURE(positiveTest);
+    CAPTURE(staleOrMissingTest);
     const std::string rowPrefix = "| `" + factFamily + "` |";
     const std::size_t rowStart = matrix.find(rowPrefix);
     REQUIRE(rowStart != std::string::npos);
@@ -194,8 +197,8 @@ TEST_CASE("semantic-product consumer coverage matrix stays source locked") {
       "ir lowerer rejects stale semantic-product direct-call metadata",
       registryTests);
   checkCoverage("bindingFacts",
-                "for-condition auto bindings use semantic-product binding facts",
-                registryTests,
+                "semantic product binding facts carry interned text ids",
+                snapshotTests,
                 "ir lowerer rejects missing semantic-product binding facts",
                 registryTests);
   checkCoverage("arrayExtentFacts",
@@ -204,7 +207,7 @@ TEST_CASE("semantic-product consumer coverage matrix stays source locked") {
                 "ir lowerer rejects missing semantic-product array extent facts",
                 registryTests);
   checkCoverage("queryFacts",
-                "native Result combinator sources use semantic-product query facts",
+                "native pick call target sum resolution uses query facts",
                 registryTests,
                 "ir lowerer rejects stale semantic-product query facts",
                 registryTests);

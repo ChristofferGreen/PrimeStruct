@@ -1,5 +1,7 @@
 #include "test_parser_basic_helpers.h"
 
+TEST_SUITE_BEGIN("primestruct.parser.basic");
+
 TEST_CASE("parses loop form with count and body") {
   const std::string source = R"(
 [return<int>]
@@ -645,3 +647,5 @@ data() {
   CHECK(program.definitions[0].statements[0].isBinding);
 }
 
+
+TEST_SUITE_END();

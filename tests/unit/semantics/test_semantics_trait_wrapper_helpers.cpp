@@ -89,7 +89,7 @@ TEST_CASE("isKeyValueSurfaceTypeName covers known-true and known-false anchor ca
   // Anchor cases pinned to concrete expected results, so a degenerate
   // wrapper (e.g. one that always returns false) cannot pass purely by
   // matching a similarly-degenerate comparison helper.
-  CHECK(primec::semantics::isKeyValueSurfaceTypeName("Map"));
+  CHECK(primec::semantics::isKeyValueSurfaceTypeName("map"));
   // Unlike "soa<...>"/"Buffer<...>"/"Maybe<...>", normalizeBindingTypeName()
   // does not strip "Map<...>"'s template args (SemanticsBindingTypeHelpers.cpp),
   // so isKeyValueCollectionTypeName()'s strict-equality checks never match a

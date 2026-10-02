@@ -2,6 +2,8 @@
 
 #include "primec/testing/ParserHelpers.h"
 
+TEST_SUITE_BEGIN("primestruct.parser.basic");
+
 TEST_CASE("parser helper recognizes core builtin names") {
   CHECK(primec::parser::isBuiltinName("assign", false));
   CHECK(primec::parser::isBuiltinName("take", false));
@@ -528,3 +530,5 @@ TEST_CASE("parser helper handles mixed transform list without explicit type") {
   CHECK_FALSE(primec::parser::hasExplicitBindingTypeTransform(transforms));
   CHECK(primec::parser::isBindingTransformList(transforms));
 }
+
+TEST_SUITE_END();

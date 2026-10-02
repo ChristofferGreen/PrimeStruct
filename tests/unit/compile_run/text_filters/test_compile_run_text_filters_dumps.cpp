@@ -4,38 +4,9 @@ TEST_SUITE_BEGIN("primestruct.compile.run.text_filters");
 
 #include "primec/testing/CompilePipelineDumpHelpers.h"
 
-namespace {
-// Dump metrics lines carry wall-clock `*_ms=N` timings that differ between runs;
-// blank the numbers so only deterministic content is compared.
-std::string stripDumpTimings(const std::string &text) {
-  std::string out;
-  size_t i = 0;
-  while (i < text.size()) {
-    const size_t eq = text.find("_ms", i);
-    if (eq == std::string::npos) {
-      out.append(text, i, std::string::npos);
-      break;
-    }
-    size_t j = eq + 3;
-    if (text.compare(j, 4, "_max") == 0) {
-      j += 4;
-    }
-    if (j < text.size() && text[j] == '=') {
-      out.append(text, i, j + 1 - i);
-      ++j;
-      while (j < text.size() && text[j] >= '0' && text[j] <= '9') {
-        ++j;
-      }
-      out += "N";
-      i = j;
-    } else {
-      out.append(text, i, j - i);
-      i = j;
-    }
-  }
-  return out;
-}
-} // namespace
+#include "primec/testing/DumpNormalization.h"
+
+using primec::testing::stripDumpTimings;
 
 TEST_CASE("dump pre_ast shows imports and text filters") {
   const std::string libPath =
@@ -2283,7 +2254,7 @@ main() {
   CHECK(runCommand(underscoreCmd) == 0);
 
   const std::string hyphenDump = readFile(hyphenOut);
-  CHECK(hyphenDump == readFile(underscoreOut));
+  CHECK(stripDumpTimings(hyphenDump) == stripDumpTimings(readFile(underscoreOut)));
   CHECK(hyphenDump.find("full_path=\"/id__") != std::string::npos);
 }
 
@@ -2342,7 +2313,7 @@ TEST_CASE("primec and primevm dump pre_ast match") {
       "./primevm " + quoteShellArg(srcPath) + " --dump-stage pre_ast > " + quoteShellArg(primevmOut);
   CHECK(runCommand(primecCmd) == 0);
   CHECK(runCommand(primevmCmd) == 0);
-  CHECK(readFile(primecOut) == readFile(primevmOut));
+  CHECK(stripDumpTimings(readFile(primecOut)) == stripDumpTimings(readFile(primevmOut)));
 }
 
 TEST_CASE("primec and primevm dump ast-semantic match") {
@@ -2370,7 +2341,7 @@ main() {
       "./primevm " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(primevmOut);
   CHECK(runCommand(primecCmd) == 0);
   CHECK(runCommand(primevmCmd) == 0);
-  CHECK(readFile(primecOut) == readFile(primevmOut));
+  CHECK(stripDumpTimings(readFile(primecOut)) == stripDumpTimings(readFile(primevmOut)));
 }
 
 TEST_CASE("primec and primevm dump type-graph match") {
@@ -2434,7 +2405,7 @@ main() {
                                  quoteShellArg(primevmOut) + " 2> " + quoteShellArg(primevmErrPath);
   CHECK(runCommand(primecCmd) == 0);
   CHECK(runCommand(primevmCmd) == 0);
-  CHECK(readFile(primecOut) == readFile(primevmOut));
+  CHECK(stripDumpTimings(readFile(primecOut)) == stripDumpTimings(readFile(primevmOut)));
 }
 
 TEST_CASE("semantic-product dump keeps provenance handles while ast-semantic keeps syntax") {

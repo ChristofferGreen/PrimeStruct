@@ -1,5 +1,7 @@
 #include "test_parser_basic_helpers.h"
 
+TEST_SUITE_BEGIN("primestruct.parser.basic");
+
 TEST_CASE("parses if with block arguments") {
   const std::string source = R"(
 [return<int>]
@@ -71,3 +73,5 @@ main() {
   CHECK(stmt.args[1].bodyArguments[0].name == "return");
   CHECK(stmt.args[2].bodyArguments[0].name == "return");
 }
+
+TEST_SUITE_END();

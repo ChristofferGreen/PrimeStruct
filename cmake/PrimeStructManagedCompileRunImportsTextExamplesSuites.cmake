@@ -12,11 +12,19 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.imports"
                                   SOURCE_FILE "*test_compile_run_imports_versions.cpp"
                                   TOTAL_CASES 14
                                   CASES_PER_SHARD 1)
+# TODO-5354: the archive-import cases live in a header included by the
+# versions file, so the *_versions.cpp SOURCE_FILE glob never matched them.
+addPrimeStructManagedDoctestSuite("primestruct.compile.run.imports"
+                                  TIMEOUT 30
+                                  SHARD_PREFIX "versioned_archive_imports"
+                                  SOURCE_FILE "*test_compile_run_imports_versions_archive.h"
+                                  TOTAL_CASES 8
+                                  CASES_PER_SHARD 2)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.imports"
                                   TIMEOUT 30
                                   SHARD_PREFIX "block_and_operator_rewrites"
                                   SOURCE_FILE "*test_compile_run_imports_blocks.cpp"
-                                  TOTAL_CASES 25
+                                  TOTAL_CASES 26
                                   CASES_PER_SHARD 1)
 # The map conformance shards (roughly 83-132) compile and run real programs on
 # vm/native/exe; a 2-case shard takes up to ~30s alone and doubles under
@@ -25,7 +33,7 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.imports"
                                   TIMEOUT 120
                                   SHARD_PREFIX "operations_and_collections"
                                   SOURCE_FILE "*test_compile_run_imports_operations.cpp"
-                                  TOTAL_CASES 201
+                                  TOTAL_CASES 189
                                   CASES_PER_SHARD 2)
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.text_filters"
@@ -57,7 +65,7 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.text_filters"
                                   SHARD_PREFIX "misc_language_and_diagnostics_extended"
                                   SOURCE_FILE "*test_compile_run_text_filters_misc.cpp"
                                   RANGE_FIRST 19
-                                  RANGE_LAST 35
+                                  RANGE_LAST 30
                                   CASES_PER_SHARD 2)
 
 # These text_filters files were compiled into the compile-run binary but never
@@ -93,7 +101,7 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.text_filters"
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.bindings"
                                   TIMEOUT 900
                                   SHARD_PREFIX "bindings"
-                                  TOTAL_CASES 12
+                                  TOTAL_CASES 11
                                   CASES_PER_SHARD 1)
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.examples"
@@ -156,14 +164,7 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.examples"
                                   SHARD_PREFIX "metal_pipeline_and_borrow_checker"
                                   SOURCE_FILE "*test_compile_run_examples_*.cpp"
                                   RANGE_FIRST 85
-                                  RANGE_LAST 100
-                                  CASES_PER_SHARD 1)
-addPrimeStructManagedDoctestSuite("primestruct.compile.run.examples"
-                                  TIMEOUT 60
-                                  SHARD_PREFIX "examples_newly_exposed_2026_07_16"
-                                  SOURCE_FILE "*test_compile_run_examples_*.cpp"
-                                  RANGE_FIRST 101
-                                  RANGE_LAST 130
+                                  RANGE_LAST 86
                                   CASES_PER_SHARD 1)
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.math_conformance"
@@ -393,5 +394,5 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.math_conformance"
                                   SHARD_PREFIX "policy_and_edge_cases"
                                   SOURCE_FILE "*test_compile_run_math_conformance.cpp"
                                   RANGE_FIRST 45
-                                  RANGE_LAST 49
+                                  RANGE_LAST 47
                                   CASES_PER_SHARD 1)

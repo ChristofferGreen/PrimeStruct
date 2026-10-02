@@ -45,14 +45,14 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.smoke"
                                   SHARD_PREFIX "collective_paths_extended"
                                   SOURCE_FILE "*test_compile_run_smoke_collective.cpp"
                                   RANGE_FIRST 12
-                                  RANGE_LAST 23
+                                  RANGE_LAST 19
                                   CASES_PER_SHARD 1)
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.smoke"
                                   TIMEOUT 30
                                   SHARD_PREFIX "argv_and_cli"
                                   SOURCE_FILE "*test_compile_run_smoke_argv.cpp"
-                                  TOTAL_CASES 25
+                                  TOTAL_CASES 21
                                   CASES_PER_SHARD 1)
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.smoke"
