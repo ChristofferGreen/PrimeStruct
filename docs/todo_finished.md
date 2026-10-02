@@ -1890,6 +1890,7 @@ are left unarchived.
 | TODO-5373 | Extend the collection parity matrix to Reference receivers and the borrowed `_ref` helpers | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5376 | Borrowed `Reference<map<K,V>>` count/contains fail while at/insert work | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
 | TODO-5377 | `r.push(x)` on `Reference<SoaVector<T>>` fails with `argument count mismatch for builtin to_aos_ref` | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
+| TODO-5378 | Cut per-case primec process cost in compile-run shards and overlap the serial benchmarks | [2026-10.md](todo_archive/2026-10.md) | - |
 
 <!-- INDEX-END -->
 

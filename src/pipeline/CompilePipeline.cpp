@@ -638,6 +638,26 @@ bool sourceReferencesNonBuiltinMathSymbols(const std::string &source) {
   return false;
 }
 
+// True when `text` contains `needle` (lowercase ASCII) in any letter case, e.g.
+// "soa" matches every soa spelling. Conservative on
+// purpose: a false positive only keeps the module in the compile.
+bool sourceMentionsCaseInsensitive(const std::string &text, std::string_view needle) {
+  if (needle.empty() || text.size() < needle.size()) {
+    return false;
+  }
+  for (std::size_t i = 0; i + needle.size() <= text.size(); ++i) {
+    std::size_t k = 0;
+    while (k < needle.size() &&
+           (text[i + k] | 0x20) == needle[k]) {
+      ++k;
+    }
+    if (k == needle.size()) {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool shouldSkipMathWildcardStdlibModule(const std::vector<std::string> &sourceImports,
                                         const std::string &source) {
   bool hasMathWildcardImport = false;
@@ -696,6 +716,18 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
   // program textually mentions math symbols itself).
   std::unordered_map<std::string, std::string> fallbackKeyOf;
   const bool skipMathWildcardStdlibModule = shouldSkipMathWildcardStdlibModule(sourceImports, source);
+  // TODO-5378: the base `/std/collections/*` wildcard scans the whole directory,
+  // which includes soa.prime and the 237KB generated soa_storage.prime - about
+  // 85% of the collections source and ~0.27s of every compile. No other stdlib
+  // module depends on them, so when the user's own text never mentions "soa"
+  // (any case, which covers every soa spelling) the wildcard does not
+  // need to splice them. Decided once from the user's source, before any stdlib
+  // text is appended.
+  const bool skipSoaInCollectionsWildcard = !sourceMentionsCaseInsensitive(source, "soa");
+  // Same for map.prime (nothing else in the stdlib imports it): skipped when the
+  // user's text never mentions "map" in any case.
+  const bool skipMapInCollectionsWildcard = !sourceMentionsCaseInsensitive(source, "map");
+  const bool skipRingBufferInCollectionsWildcard = !sourceMentionsCaseInsensitive(source, "ring");
   auto queueKeyChain = [&](const std::vector<std::string> &keys, const std::string &importPath,
                            bool applyMathSkip) {
     for (std::size_t i = 0; i + 1 < keys.size(); ++i) {
@@ -815,13 +847,20 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
         }
       }
 
-      auto appendFile = [&](const std::filesystem::path &filePath) -> bool {
+      // `importsOnly`: splice just the file's `import` lines (see
+      // skipSoaInCollectionsWildcard above). A merged stdlib file's own imports
+      // are visible to the whole program ("known architectural gap", locked by
+      // tests such as the bare vector-count import test), so skipping a
+      // module's definitions must not change which import paths are in scope.
+      // Imports of soa_storage are dropped when soa is skipped, since that
+      // module is not loaded either.
+      auto appendFile = [&](const std::filesystem::path &filePath, bool importsOnly = false) -> bool {
         std::filesystem::path absolute = std::filesystem::absolute(filePath, ec);
         if (ec) {
           absolute = filePath;
         }
         const std::string absoluteText = absolute.string();
-        if (!seenFiles.insert(absoluteText).second) {
+        if (!seenFiles.insert(importsOnly ? absoluteText + "#imports" : absoluteText).second) {
           return true;
         }
         std::ifstream file(absoluteText);
@@ -831,7 +870,24 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
         }
         std::ostringstream buffer;
         buffer << file.rdbuf();
-        const std::string contents = buffer.str();
+        std::string contents = buffer.str();
+        if (importsOnly) {
+          std::string kept;
+          std::istringstream lines(contents);
+          std::string line;
+          while (std::getline(lines, line)) {
+            const std::size_t first = line.find_first_not_of(" \t");
+            if (first == std::string::npos || line.compare(first, 7, "import ") != 0) {
+              continue;
+            }
+            if (skipSoaInCollectionsWildcard && line.find("/soa_storage/") != std::string::npos) {
+              continue;
+            }
+            kept += line;
+            kept += '\n';
+          }
+          contents = std::move(kept);
+        }
         if (sourceBuilder.has_value()) {
           sourceBuilder->appendGenerated("\n", "<stdlib-separator>");
           const std::size_t unitId =
@@ -893,6 +949,16 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
         if (skipExperimentalCollectionsInBaseWildcard) {
           const std::string stem = entry.path().stem().string();
           if (stem.rfind(collection_paths::kExperimentalFolderPrefix, 0) == 0) {
+            continue;
+          }
+          const bool skipThisFile =
+              (skipSoaInCollectionsWildcard && (stem == "soa" || stem == "soa_storage")) ||
+              (skipMapInCollectionsWildcard && stem == "map") ||
+              (skipRingBufferInCollectionsWildcard && stem == "ring_buffer");
+          if (skipThisFile) {
+            if (!appendFile(entry.path(), /*importsOnly=*/true)) {
+              return false;
+            }
             continue;
           }
         }

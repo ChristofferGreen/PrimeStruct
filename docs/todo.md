@@ -101,7 +101,7 @@ of sync with them.
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
 | TODO-5375 | Borrowed `Reference<vector<T>>` receivers reject every collection helper spelling | ready | collection-defects |
-| TODO-5378 | Cut per-case primec process cost in compile-run shards and overlap the serial benchmarks | ready | test-infrastructure |
+| TODO-5379 | Close the remaining gate-time gap after wildcard pruning | ready | test-infrastructure |
 | TODO-5374 | Typed collection family/helper enum replacing string-tagged family checks | deferred | collection-resolution |
 | TODO-5352 | Measure and cut semantics header fan-out (SemanticsValidator.h) | ready | semantics-structure |
 | TODO-5353 | Split TemplateMonomorphExpressionRewrite.cpp into focused units | ready | semantics-structure |
@@ -124,11 +124,11 @@ of sync with them.
 - TODO-5358 (track: compiler-state): Inventory compiler global state and design a per-compilation context.
 - TODO-5361 (track: ir-vm-structure): Single opcode descriptor table for IR (stack effect, targets, serialization).
 - TODO-5363 (track: vm-strings): Spec: VM-owned dynamic strings (design decision).
-- TODO-5378 (track: test-infrastructure): Cut per-case primec process cost in compile-run shards and overlap the serial benchmarks.
+- TODO-5379 (track: test-infrastructure): Close the remaining gate-time gap after wildcard pruning.
 
 ### Immediate Next 10
 
-1. TODO-5378 - Cut per-case primec process cost in compile-run shards and overlap the serial benchmarks.
+1. TODO-5379 - Close the remaining gate-time gap after wildcard pruning.
 2. TODO-5361 - Single opcode descriptor table for IR (stack effect, targets, serialization).
 3. TODO-5358 - Inventory compiler global state and design a per-compilation context.
 4. TODO-5352 - Measure and cut semantics header fan-out (SemanticsValidator.h).
@@ -141,7 +141,7 @@ of sync with them.
 - Embedding (must support iOS): TODO-5348 (needs macOS)
 - Collection resolution: defects 5375-5377; typed family enum TODO-5374 (deferred)
 - Semantics structure: TODO-5352, TODO-5353
-- Test infrastructure: TODO-5378, TODO-5356 (deferred)
+- Test infrastructure: TODO-5379, TODO-5356 (deferred)
 - Compiler state: TODO-5358 -> 5359 -> 5360
 - IR/VM structure: TODO-5361 -> 5362
 - VM strings: TODO-5363 -> 5364 -> 5365
@@ -448,28 +448,23 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - the parity suite and the full release gate stay green.
   - stop_rule: fix only the pinned rows' behavior; anything else found goes to its own leaf.
 
-- [ ] TODO-5378: Cut per-case primec process cost in compile-run shards and overlap the serial benchmarks
+- [ ] TODO-5379: Close the remaining gate-time gap after wildcard pruning (478.7 s vs 434 s target)
   - owner: ai
   - status: ready
   - created_at: 2026-10-02
   - phase: Test infrastructure
   - parallel_track: test-infrastructure
-  - scope: after TODO-5357 the gate is CPU-bound: ~3,700 s of summed shard time, mostly
-    compile-run cases that each spawn `./primec` (and often a VM/native run).
-    Measure the per-invocation floor (stdlib import/parse/semantics before the
-    program's own work), then reduce it for the test path (shared parsed-stdlib
-    cache across invocations, or in-process pipeline calls for the cases that
-    only compare dump/diagnostic text), and decide whether the two
-    `RUN_SERIAL` semantic-memory benchmarks (~92 s alone) can overlap other
-    shards without invalidating their wall-time/RSS measurements.
+  - scope: after TODO-5378 the gate is 478.7 s; ~92 s is the serial semantic-memory
+    benchmarks. Profile the remaining top shards (`imports_operations_and_collections`,
+    `vm_collections_*`, `smoke_core_paths_*`) for per-invocation cost that is not
+    stdlib import (text filter `applyPerEnvelope`, VM startup), and decide whether
+    the serial benchmarks can be split or scheduled so they overlap without
+    invalidating RSS/wall measurements.
   - acceptance:
-    - gate `Total Test time` on the 4-core reference box (relinked-primec dev
-      loop) at least 20% below the 542 s recorded in
-      docs/TestRuntimeOptimization.md, before/after recorded.
-    - the benchmark-harness RUN_SERIAL guard tests are updated, not deleted, if
-      the serial policy changes.
-  - stop_rule: do not change `scripts/compile.sh`; if per-case cost cannot be
-    reduced without changing what the cases assert, record the measured floor and stop.
+    - gate `Total Test time` (relinked-primec dev loop, 4-core box) <= 434 s, before/after
+      recorded in docs/TestRuntimeOptimization.md.
+  - stop_rule: do not change `scripts/compile.sh`; if no further reduction is possible
+    without changing what cases assert, record the measured floor and stop.
 
 - [ ] TODO-5374: Typed collection family/helper enum replacing string-tagged family checks
   - owner: ai

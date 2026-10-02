@@ -45,6 +45,26 @@ static inline std::string readRepoShardsConcat(const std::filesystem::path &dire
   return combined;
 }
 
+// docs/todo_finished.md is an index; finished blocks live in docs/todo_archive/*.md.
+static inline std::string readTodoFinishedWithArchive(const std::string &todoFinishedPath) {
+  std::string combined = readFile(todoFinishedPath);
+  const std::filesystem::path archiveDir =
+      std::filesystem::path(todoFinishedPath).parent_path() / "todo_archive";
+  std::vector<std::filesystem::path> files;
+  if (std::filesystem::is_directory(archiveDir)) {
+    for (const auto &entry : std::filesystem::directory_iterator(archiveDir)) {
+      if (entry.is_regular_file() && entry.path().extension() == ".md") {
+        files.push_back(entry.path());
+      }
+    }
+  }
+  std::sort(files.begin(), files.end());
+  for (const auto &path : files) {
+    combined += readFile(path.string());
+  }
+  return combined;
+}
+
 static inline std::vector<std::filesystem::path> filesWithRetainedDoctestSkips(
     const std::filesystem::path &testsPath) {
   std::vector<std::filesystem::path> paths;
@@ -174,7 +194,7 @@ static inline DocsLocksTodoQueueFixture loadDocsLocksTodoQueueFixture() {
 
   DocsLocksTodoQueueFixture fixture;
   fixture.todo = readFile(todoPath.string());
-  fixture.todoFinished = readFile(todoFinishedPath.string());
+  fixture.todoFinished = readTodoFinishedWithArchive(todoFinishedPath.string());
   fixture.vmMath = readFile(vmMathPath.string());
   fixture.vmMaps = readFile(vmMapsPath.string());
   fixture.examplesDocs = readFile(examplesDocsPath.string());

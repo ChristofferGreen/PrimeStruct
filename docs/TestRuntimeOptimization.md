@@ -1912,3 +1912,25 @@ parentheses, quiet box):
 | `collection_parity_*_part_N_of_2` (15-20 s) | each row is two in-process pipeline runs (TODO-5349 design) |
 | `semantic_memory_*` | deliberate serial benchmarks, see above |
 
+
+## TODO-5378: stdlib wildcard-import pruning (2026-10-02)
+
+Measured floor: `primec --emit=vm` on a program that only imports
+`/std/collections/*` cost ~0.29 s per invocation, 62% in semantics validation
+and ~31% in text filtering, almost all of it spent on stdlib modules the
+program never uses (`soa_storage.prime` alone is 237 KB). `appendStdlibModuleSources`
+now skips `soa`/`soa_storage`, `map` and `ring_buffer` definitions in the base
+wildcard scan when the program text never mentions `soa`, `map` or `ring`
+(case-insensitive). Skipped files still contribute their own `import` lines, so
+the import-visibility surface (including the leaked-import gap locked by tests)
+is unchanged. Per-invocation cost dropped to ~0.11 s.
+
+| change | dev-loop gate (primec relinked) |
+| --- | --- |
+| TODO-5357 result | 542 s |
+| + wildcard stdlib pruning (imports-only splice) | 478.7 s (-11.7%) |
+
+The 20% target (<= 434 s) was not reached. Remaining cost is the
+`RUN_SERIAL` semantic-memory benchmarks (~92 s, unchanged: they measure wall time
+and RSS and must not overlap) and per-case VM/native execution; follow-up
+TODO-5379 covers what is left.

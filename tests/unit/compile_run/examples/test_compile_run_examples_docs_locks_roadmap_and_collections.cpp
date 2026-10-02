@@ -103,7 +103,7 @@ TEST_CASE("vector dynamic-storage docs lock completed first slice") {
   const std::string primeStructDoc = readFile(primeStructPath.string());
   const std::string syntaxSpecDoc = readFile(syntaxSpecPath.string());
   const std::string todo = readFile(todoPath.string());
-  const std::string todoFinished = readFile(todoFinishedPath.string());
+  const std::string todoFinished = readTodoFinishedWithArchive(todoFinishedPath.string());
   const std::string vmVectorLimits = readFile(vmVectorLimitsPath.string());
   const std::string nativeVectorLimits = readFile(nativeVectorLimitsPath.string());
 
@@ -260,7 +260,7 @@ TEST_CASE("soa public collection docs stay source locked") {
   const std::string primeStructDoc = readFile(primeStructPath.string());
   const std::string syntaxSpecDoc = readFile(syntaxSpecPath.string());
   const std::string todo = readFile(todoPath.string());
-  const std::string todoFinished = readFile(todoFinishedPath.string());
+  const std::string todoFinished = readTodoFinishedWithArchive(todoFinishedPath.string());
   const std::string soaStdlib = readFile(soaPath.string());
   const std::string soaExample = readFile(soaExamplePath.string());
   const std::string cppCompatTest = readFile(cppCompatTestPath.string());
@@ -475,7 +475,7 @@ TEST_CASE("generic soa substrate boundary stays source locked") {
   const std::string primeStructDoc = readFile(primeStructPath.string());
   const std::string syntaxSpecDoc = readFile(syntaxSpecPath.string());
   const std::string todo = readFile(todoPath.string());
-  const std::string todoFinished = readFile(todoFinishedPath.string());
+  const std::string todoFinished = readTodoFinishedWithArchive(todoFinishedPath.string());
   const std::string internalStorage = readFile(soaStoragePath.string());
   const std::string reflectionRuntime = readFile(reflectionRuntimePath.string());
 
