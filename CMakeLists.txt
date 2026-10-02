@@ -2793,6 +2793,20 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_failing_tests_doc_self_test PROPERTIES TIMEOUT 60)
 
+  # TODO-5353: src/semantics files stay under 1200 lines (allowlist only shrinks).
+  add_test(
+    NAME PrimeStruct_source_file_sizes
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/check_source_file_sizes.py
+            --root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_source_file_sizes PROPERTIES TIMEOUT 60)
+  add_test(
+    NAME PrimeStruct_source_file_sizes_self_test
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/scripts/test_check_source_file_sizes.py
+            --repo-root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_source_file_sizes_self_test PROPERTIES TIMEOUT 60)
+
   # TODO-5354: guard CTest registration of the doctest binaries and keep the
   # generated test inventory current.
   add_test(

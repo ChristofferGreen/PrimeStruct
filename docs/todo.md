@@ -101,7 +101,6 @@ of sync with them.
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
 | TODO-5374 | Typed collection family/helper enum replacing string-tagged family checks | deferred | collection-resolution |
-| TODO-5353 | Split TemplateMonomorphExpressionRewrite.cpp into focused units | ready | semantics-structure |
 | TODO-5356 | Collapse near-duplicate ir_pipeline validation tests into table-driven suites | deferred | test-infrastructure |
 | TODO-5361 | Single opcode descriptor table for IR (stack effect, targets, serialization) | ready | ir-vm-structure |
 | TODO-5362 | Unify the VM execution kernel and the debug session interpreter | blocked | ir-vm-structure |
@@ -113,22 +112,23 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5353 (track: semantics-structure): Split TemplateMonomorphExpressionRewrite.cpp into focused units.
+- TODO-5384 (track: semantics-structure): Split the multi-function src/semantics files over 1,200 lines (pure moves).
+- TODO-5385 (track: semantics-structure): Decompose the ~3,500-line rewriteExpr in TemplateMonomorphExpressionRewrite.cpp.
 - TODO-5361 (track: ir-vm-structure): Single opcode descriptor table for IR (stack effect, targets, serialization).
 - TODO-5363 (track: vm-strings): Spec: VM-owned dynamic strings (design decision).
 
 ### Immediate Next 10
 
-1. TODO-5383 - Migrate the remaining compiler state into CompileContext.
-2. TODO-5361 - Single opcode descriptor table for IR (stack effect, targets, serialization).
-3. TODO-5353 - Split TemplateMonomorphExpressionRewrite.cpp into focused units.
+1. TODO-5361 - Single opcode descriptor table for IR (stack effect, targets, serialization).
+2. TODO-5384 - Split the multi-function src/semantics files over 1,200 lines (pure moves).
+3. TODO-5385 - Decompose the ~3,500-line rewriteExpr in TemplateMonomorphExpressionRewrite.cpp.
 4. TODO-5363 - Spec: VM-owned dynamic strings (design decision).
 
 ### Priority Lanes
 
 - Embedding (must support iOS): TODO-5348 (needs macOS)
 - Collection resolution: typed family enum TODO-5374 (deferred)
-- Semantics structure: TODO-5353
+- Semantics structure: TODO-5384, TODO-5385
 - Test infrastructure: TODO-5356 (deferred)
 - IR/VM structure: TODO-5361 -> 5362
 - VM strings: TODO-5363 -> 5364 -> 5365
@@ -166,24 +166,29 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     the runtime-only XCFramework and record the gap rather than widening the
     scope.
 
-- [ ] TODO-5353: Split TemplateMonomorphExpressionRewrite.cpp into focused units
+- [ ] TODO-5384: Split the multi-function src/semantics files over 1,200 lines (pure moves)
   - owner: ai
   - status: ready
-  - created_at: 2026-10-01
+  - created_at: 2026-10-02
   - phase: Compiler structure
   - parallel_track: semantics-structure
-  - scope: `src/semantics/TemplateMonomorphExpressionRewrite.cpp` is 3,800 lines, the
-    largest source file; `SemanticsValidatorSnapshots.cpp`,
-    `...ExprMethodTargetResolution.cpp`, and `...StatementBindings.cpp` are
-    2,200-2,600. Split each by responsibility into units of at most about
-    1,000 lines with explicit headers, no logic changes.
+  - scope: scripts/source_file_size_allowlist.txt lists 19 multi-function files (largest: `SemanticsValidatorSnapshots.cpp` 2,628, `...ExprMethodTargetResolution.cpp` 2,314, `...StatementBindings.cpp` 2,222, `SemanticPublicationBuilders.cpp` 2,139). Split each by responsibility into units of at most ~1,000 lines with explicit headers; one commit per file, deleting its allowlist entry in that commit.
   - acceptance:
-    - no file under `src/semantics` exceeds 1,200 lines (a ctest script check,
-      allowlisting any exception with a reason).
-    - full release gate green; semantic-product goldens byte-identical.
-    - commit per file split so each is bisectable.
-  - stop_rule: pure moves only: if splitting needs a logic change, do it in a separate leaf
-    first.
+    - allowlist shrinks to only TemplateMonomorphExpressionRewrite.cpp (TODO-5385); each split is its own commit.
+    - full release gate green; semantic-product dumps byte-identical (compare old/new `primec` on the examples).
+  - stop_rule: pure moves only; if a split needs a logic change, do that in a separate leaf first.
+
+- [ ] TODO-5385: Decompose the ~3,500-line rewriteExpr in TemplateMonomorphExpressionRewrite.cpp
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-02
+  - phase: Compiler structure
+  - parallel_track: semantics-structure
+  - scope: `rewriteExpr` is one function (lines ~319-3876) whose branches share many local lambdas; it cannot be split by moving code. Extract the branches (name-expression rewrites, method-call rewrites, bare-call rewrites, collection helper rewrites) into functions over an explicit shared-state struct, then move them into focused units.
+  - acceptance:
+    - `TemplateMonomorphExpressionRewrite.cpp` and the new units are each under 1,200 lines and its allowlist entry is gone.
+    - full release gate green; semantic-product dumps byte-identical (compare old/new `primec` on the examples).
+  - stop_rule: behavior-preserving extraction only; stop and record if a branch depends on control flow that cannot be expressed without a logic change.
 
 - [ ] TODO-5356: Collapse near-duplicate ir_pipeline validation tests into table-driven suites
   - owner: ai
