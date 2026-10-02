@@ -102,7 +102,6 @@ of sync with them.
 | --- | --- | --- | --- |
 | TODO-5374 | Typed collection family/helper enum replacing string-tagged family checks | deferred | collection-resolution |
 | TODO-5356 | Collapse near-duplicate ir_pipeline validation tests into table-driven suites | deferred | test-infrastructure |
-| TODO-5361 | Single opcode descriptor table for IR (stack effect, targets, serialization) | ready | ir-vm-structure |
 | TODO-5362 | Unify the VM execution kernel and the debug session interpreter | blocked | ir-vm-structure |
 | TODO-5363 | Spec: VM-owned dynamic strings (design decision) | ready | vm-strings |
 | TODO-5364 | VM string heap: dynamic string indices in the interpreter | blocked | vm-strings |
@@ -114,15 +113,13 @@ of sync with them.
 
 - TODO-5384 (track: semantics-structure): Split the multi-function src/semantics files over 1,200 lines (pure moves).
 - TODO-5385 (track: semantics-structure): Decompose the ~3,500-line rewriteExpr in TemplateMonomorphExpressionRewrite.cpp.
-- TODO-5361 (track: ir-vm-structure): Single opcode descriptor table for IR (stack effect, targets, serialization).
 - TODO-5363 (track: vm-strings): Spec: VM-owned dynamic strings (design decision).
 
 ### Immediate Next 10
 
-1. TODO-5361 - Single opcode descriptor table for IR (stack effect, targets, serialization).
-2. TODO-5384 - Split the multi-function src/semantics files over 1,200 lines (pure moves).
-3. TODO-5385 - Decompose the ~3,500-line rewriteExpr in TemplateMonomorphExpressionRewrite.cpp.
-4. TODO-5363 - Spec: VM-owned dynamic strings (design decision).
+1. TODO-5384 - Split the multi-function src/semantics files over 1,200 lines (pure moves).
+2. TODO-5385 - Decompose the ~3,500-line rewriteExpr in TemplateMonomorphExpressionRewrite.cpp.
+3. TODO-5363 - Spec: VM-owned dynamic strings (design decision).
 
 ### Priority Lanes
 
@@ -212,29 +209,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - files and lines removed, suite runtime before/after in the result note.
   - stop_rule: stop if coverage cannot be shown equivalent for a group; leave that group as
     is.
-
-- [ ] TODO-5361: Single opcode descriptor table for IR (stack effect, targets, serialization)
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-01
-  - phase: Compiler structure
-  - parallel_track: ir-vm-structure
-  - scope: Adding `CallHost` required edits in the enum, validator allowlists,
-    serializer bounds (whose upper bound was wrong and could not load
-    `FileWriteStringDynamic`), VM kernel, debug session, and about a dozen
-    switches. Introduce one table in `include/primec/ir/` describing each
-    opcode: name, immediate kind, stack pops/pushes, allowed validation
-    targets, and whether the VM kernel handles it. Generate or check the
-    validator, serializer range, and VM dispatch coverage from it.
-  - acceptance:
-    - a ctest check proves every opcode has a table row and that
-      serializer/validator/VM coverage matches its row (negative test:
-      add an opcode without a row fails).
-    - the validator per-target allowlists and `MinOpcode/MaxOpcode` constants
-      are derived from the table.
-    - no serialized-IR change (golden fixture byte-identical).
-  - stop_rule: do not change opcode numbering or semantics; if a switch cannot be derived,
-    check it against the table instead.
 
 - [ ] TODO-5362: Unify the VM execution kernel and the debug session interpreter
   - owner: ai

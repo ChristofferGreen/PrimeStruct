@@ -1,4 +1,5 @@
 #include "primec/ir/IrSerializer.h"
+#include "primec/ir/IrOpcodeTable.h"
 
 #include <cstring>
 #include <limits>
@@ -448,8 +449,8 @@ bool deserializeIr(const std::vector<uint8_t> &data, IrModule &out, std::string 
       }
       IrInstruction inst;
       const uint8_t opcodeValue = data[offset];
-      const uint8_t minOpcode = static_cast<uint8_t>(IrOpcode::PushI32);
-      const uint8_t maxOpcode = static_cast<uint8_t>(IrOpcode::CallHost);
+      const uint8_t minOpcode = IrOpcodeMin;
+      const uint8_t maxOpcode = IrOpcodeMax;
       if (opcodeValue < minOpcode || opcodeValue > maxOpcode) {
         error = "unsupported IR opcode";
         return false;

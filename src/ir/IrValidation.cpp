@@ -1,5 +1,7 @@
 #include "primec/ir/IrValidation.h"
 
+#include "primec/ir/IrOpcodeTable.h"
+
 #include <cstdint>
 #include <limits>
 #include <sstream>
@@ -9,8 +11,8 @@
 namespace primec {
 namespace {
 
-constexpr uint8_t MinOpcode = static_cast<uint8_t>(IrOpcode::PushI32);
-constexpr uint8_t MaxOpcode = static_cast<uint8_t>(IrOpcode::CallHost);
+constexpr uint8_t MinOpcode = IrOpcodeMin;
+constexpr uint8_t MaxOpcode = IrOpcodeMax;
 constexpr uint64_t MaxGlslLocalIndex = 1023;
 constexpr uint32_t MaxCallParameterCount = 4096;
 constexpr uint64_t KnownEffectMask = EffectIoOut | EffectIoErr | EffectHeapAlloc | EffectPathSpaceNotify |
@@ -36,274 +38,18 @@ const char *wasmTargetName(IrValidationTarget target) {
   return "wasm";
 }
 
+// Both predicates read the per-target flags of the opcode table (TODO-5361).
 bool isGlslOpcodeAllowed(IrOpcode op) {
-  switch (op) {
-    case IrOpcode::PushI32:
-    case IrOpcode::PushI64:
-    case IrOpcode::LoadLocal:
-    case IrOpcode::StoreLocal:
-    case IrOpcode::AddressOfLocal:
-    case IrOpcode::LoadIndirect:
-    case IrOpcode::StoreIndirect:
-    case IrOpcode::Dup:
-    case IrOpcode::Pop:
-    case IrOpcode::AddI32:
-    case IrOpcode::SubI32:
-    case IrOpcode::MulI32:
-    case IrOpcode::DivI32:
-    case IrOpcode::NegI32:
-    case IrOpcode::AddI64:
-    case IrOpcode::SubI64:
-    case IrOpcode::MulI64:
-    case IrOpcode::DivI64:
-    case IrOpcode::DivU64:
-    case IrOpcode::NegI64:
-    case IrOpcode::CmpEqI32:
-    case IrOpcode::CmpNeI32:
-    case IrOpcode::CmpLtI32:
-    case IrOpcode::CmpLeI32:
-    case IrOpcode::CmpGtI32:
-    case IrOpcode::CmpGeI32:
-    case IrOpcode::CmpEqI64:
-    case IrOpcode::CmpNeI64:
-    case IrOpcode::CmpLtI64:
-    case IrOpcode::CmpLeI64:
-    case IrOpcode::CmpGtI64:
-    case IrOpcode::CmpGeI64:
-    case IrOpcode::CmpLtU64:
-    case IrOpcode::CmpLeU64:
-    case IrOpcode::CmpGtU64:
-    case IrOpcode::CmpGeU64:
-    case IrOpcode::JumpIfZero:
-    case IrOpcode::Jump:
-    case IrOpcode::ReturnVoid:
-    case IrOpcode::ReturnI32:
-    case IrOpcode::ReturnI64:
-    case IrOpcode::PrintI32:
-    case IrOpcode::PrintI64:
-    case IrOpcode::PrintU64:
-    case IrOpcode::PrintString:
-    case IrOpcode::PushArgc:
-    case IrOpcode::PrintArgv:
-    case IrOpcode::PrintArgvUnsafe:
-    case IrOpcode::LoadStringByte:
-    case IrOpcode::LoadStringLength:
-    case IrOpcode::FileOpenRead:
-    case IrOpcode::FileOpenWrite:
-    case IrOpcode::FileOpenAppend:
-    case IrOpcode::FileOpenReadDynamic:
-    case IrOpcode::FileOpenWriteDynamic:
-    case IrOpcode::FileOpenAppendDynamic:
-    case IrOpcode::FileClose:
-    case IrOpcode::FileFlush:
-    case IrOpcode::FileWriteI32:
-    case IrOpcode::FileWriteI64:
-    case IrOpcode::FileWriteU64:
-    case IrOpcode::FileWriteString:
-    case IrOpcode::FileWriteStringDynamic:
-    case IrOpcode::FileWriteByte:
-    case IrOpcode::FileWriteNewline:
-    case IrOpcode::PushF32:
-    case IrOpcode::PushF64:
-    case IrOpcode::AddF32:
-    case IrOpcode::SubF32:
-    case IrOpcode::MulF32:
-    case IrOpcode::DivF32:
-    case IrOpcode::NegF32:
-    case IrOpcode::AddF64:
-    case IrOpcode::SubF64:
-    case IrOpcode::MulF64:
-    case IrOpcode::DivF64:
-    case IrOpcode::NegF64:
-    case IrOpcode::CmpEqF32:
-    case IrOpcode::CmpNeF32:
-    case IrOpcode::CmpLtF32:
-    case IrOpcode::CmpLeF32:
-    case IrOpcode::CmpGtF32:
-    case IrOpcode::CmpGeF32:
-    case IrOpcode::CmpEqF64:
-    case IrOpcode::CmpNeF64:
-    case IrOpcode::CmpLtF64:
-    case IrOpcode::CmpLeF64:
-    case IrOpcode::CmpGtF64:
-    case IrOpcode::CmpGeF64:
-    case IrOpcode::ConvertI32ToF32:
-    case IrOpcode::ConvertI32ToF64:
-    case IrOpcode::ConvertI64ToF32:
-    case IrOpcode::ConvertI64ToF64:
-    case IrOpcode::ConvertU64ToF32:
-    case IrOpcode::ConvertU64ToF64:
-    case IrOpcode::ConvertF32ToI32:
-    case IrOpcode::ConvertF32ToI64:
-    case IrOpcode::ConvertF32ToU64:
-    case IrOpcode::ConvertF64ToI32:
-    case IrOpcode::ConvertF64ToI64:
-    case IrOpcode::ConvertF64ToU64:
-    case IrOpcode::ConvertF32ToF64:
-    case IrOpcode::ConvertF64ToF32:
-    case IrOpcode::ReturnF32:
-    case IrOpcode::ReturnF64:
-    case IrOpcode::PrintStringDynamic:
-    case IrOpcode::Call:
-    case IrOpcode::CallVoid:
-      return true;
-    default:
-      return false;
-  }
-}
-
-bool isWasmOpcodeAllowedWasi(IrOpcode op) {
-  switch (op) {
-    case IrOpcode::PushI32:
-    case IrOpcode::PushI64:
-    case IrOpcode::LoadLocal:
-    case IrOpcode::StoreLocal:
-    case IrOpcode::Dup:
-    case IrOpcode::Pop:
-    case IrOpcode::AddI32:
-    case IrOpcode::SubI32:
-    case IrOpcode::MulI32:
-    case IrOpcode::DivI32:
-    case IrOpcode::NegI32:
-    case IrOpcode::AddI64:
-    case IrOpcode::SubI64:
-    case IrOpcode::MulI64:
-    case IrOpcode::DivI64:
-    case IrOpcode::DivU64:
-    case IrOpcode::NegI64:
-    case IrOpcode::CmpEqI32:
-    case IrOpcode::CmpNeI32:
-    case IrOpcode::CmpLtI32:
-    case IrOpcode::CmpLeI32:
-    case IrOpcode::CmpGtI32:
-    case IrOpcode::CmpGeI32:
-    case IrOpcode::CmpEqI64:
-    case IrOpcode::CmpNeI64:
-    case IrOpcode::CmpLtI64:
-    case IrOpcode::CmpLeI64:
-    case IrOpcode::CmpGtI64:
-    case IrOpcode::CmpGeI64:
-    case IrOpcode::CmpLtU64:
-    case IrOpcode::CmpLeU64:
-    case IrOpcode::CmpGtU64:
-    case IrOpcode::CmpGeU64:
-    case IrOpcode::PushF32:
-    case IrOpcode::PushF64:
-    case IrOpcode::AddF32:
-    case IrOpcode::SubF32:
-    case IrOpcode::MulF32:
-    case IrOpcode::DivF32:
-    case IrOpcode::NegF32:
-    case IrOpcode::AddF64:
-    case IrOpcode::SubF64:
-    case IrOpcode::MulF64:
-    case IrOpcode::DivF64:
-    case IrOpcode::NegF64:
-    case IrOpcode::CmpEqF32:
-    case IrOpcode::CmpNeF32:
-    case IrOpcode::CmpLtF32:
-    case IrOpcode::CmpLeF32:
-    case IrOpcode::CmpGtF32:
-    case IrOpcode::CmpGeF32:
-    case IrOpcode::CmpEqF64:
-    case IrOpcode::CmpNeF64:
-    case IrOpcode::CmpLtF64:
-    case IrOpcode::CmpLeF64:
-    case IrOpcode::CmpGtF64:
-    case IrOpcode::CmpGeF64:
-    case IrOpcode::ConvertI32ToF32:
-    case IrOpcode::ConvertI32ToF64:
-    case IrOpcode::ConvertI64ToF32:
-    case IrOpcode::ConvertI64ToF64:
-    case IrOpcode::ConvertU64ToF32:
-    case IrOpcode::ConvertU64ToF64:
-    case IrOpcode::ConvertF32ToI32:
-    case IrOpcode::ConvertF32ToI64:
-    case IrOpcode::ConvertF32ToU64:
-    case IrOpcode::ConvertF64ToI32:
-    case IrOpcode::ConvertF64ToI64:
-    case IrOpcode::ConvertF64ToU64:
-    case IrOpcode::ConvertF32ToF64:
-    case IrOpcode::ConvertF64ToF32:
-    case IrOpcode::PrintI32:
-    case IrOpcode::PrintI64:
-    case IrOpcode::PrintU64:
-    case IrOpcode::PushArgc:
-    case IrOpcode::PrintString:
-    case IrOpcode::PrintStringDynamic:
-    case IrOpcode::PrintArgv:
-    case IrOpcode::PrintArgvUnsafe:
-    case IrOpcode::FileOpenRead:
-    case IrOpcode::FileOpenWrite:
-    case IrOpcode::FileOpenAppend:
-    case IrOpcode::FileOpenReadDynamic:
-    case IrOpcode::FileOpenWriteDynamic:
-    case IrOpcode::FileOpenAppendDynamic:
-    case IrOpcode::FileReadByte:
-    case IrOpcode::FileClose:
-    case IrOpcode::FileFlush:
-    case IrOpcode::FileWriteI32:
-    case IrOpcode::FileWriteI64:
-    case IrOpcode::FileWriteU64:
-    case IrOpcode::FileWriteString:
-    case IrOpcode::FileWriteStringDynamic:
-    case IrOpcode::FileWriteByte:
-    case IrOpcode::FileWriteNewline:
-    case IrOpcode::JumpIfZero:
-    case IrOpcode::Jump:
-    case IrOpcode::Call:
-    case IrOpcode::CallVoid:
-    case IrOpcode::ReturnVoid:
-    case IrOpcode::ReturnI32:
-    case IrOpcode::ReturnI64:
-    case IrOpcode::ReturnF32:
-    case IrOpcode::ReturnF64:
-      return true;
-    default:
-      return false;
-  }
-}
-
-bool isWasiOnlyOpcode(IrOpcode op) {
-  switch (op) {
-    case IrOpcode::PrintI32:
-    case IrOpcode::PrintI64:
-    case IrOpcode::PrintU64:
-    case IrOpcode::PushArgc:
-    case IrOpcode::PrintString:
-    case IrOpcode::PrintStringDynamic:
-    case IrOpcode::PrintArgv:
-    case IrOpcode::PrintArgvUnsafe:
-    case IrOpcode::FileOpenRead:
-    case IrOpcode::FileOpenWrite:
-    case IrOpcode::FileOpenAppend:
-    case IrOpcode::FileOpenReadDynamic:
-    case IrOpcode::FileOpenWriteDynamic:
-    case IrOpcode::FileOpenAppendDynamic:
-    case IrOpcode::FileReadByte:
-    case IrOpcode::FileClose:
-    case IrOpcode::FileFlush:
-    case IrOpcode::FileWriteI32:
-    case IrOpcode::FileWriteI64:
-    case IrOpcode::FileWriteU64:
-    case IrOpcode::FileWriteString:
-    case IrOpcode::FileWriteStringDynamic:
-    case IrOpcode::FileWriteByte:
-    case IrOpcode::FileWriteNewline:
-      return true;
-    default:
-      return false;
-  }
+  const IrOpcodeInfo *info = irOpcodeInfo(op);
+  return info != nullptr && info->glsl;
 }
 
 bool isWasmOpcodeAllowedForTarget(IrOpcode op, IrValidationTarget target) {
-  if (!isWasmOpcodeAllowedWasi(op)) {
+  const IrOpcodeInfo *info = irOpcodeInfo(op);
+  if (info == nullptr) {
     return false;
   }
-  if (target == IrValidationTarget::WasmBrowser && isWasiOnlyOpcode(op)) {
-    return false;
-  }
-  return true;
+  return target == IrValidationTarget::WasmBrowser ? info->wasmBrowser : info->wasm;
 }
 
 bool failFunction(size_t functionIndex,
