@@ -153,6 +153,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - created_at: 2026-10-01
   - phase: Test infrastructure
   - parallel_track: test-infrastructure
+  - progress: measured with `scripts/measure_test_duplication.py` (103 files, 94,620 lines): 26.5% of 6-line windows are duplicates. The top clusters are lowerer-helper callback boilerplate (`[](const primec::Expr &) { return false; }, [](const primec::Expr &, const LocalMap &, LocalInfo::StringSource &, int32_t &, bool &) { return true; }, ...`) repeated 100+ times across 11 files. First leaf: replace that boilerplate with shared test-helper factories (in a `primec/testing` or tests-local header) one file at a time; each converted file must keep its test count and pass a documented mutation check (remove a lowerer branch, expect a failing case).
   - scope: `tests/unit/ir_pipeline/validation/` has hundreds of single-purpose files
     with 100+ character names (several over 3,000 lines, e.g.
     `..._call_helpers_source_delegation_stays_stable.cpp`). Needs scoping:
