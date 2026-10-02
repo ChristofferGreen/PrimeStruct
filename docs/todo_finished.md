@@ -1878,6 +1878,7 @@ are left unarchived.
 | TODO-5349 | Collection helper target table: inventory and parity guard | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5350 | Route semantics and dump rewrites through one collection target table | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5351 | Route lowerer builtin-classification exemptions through the collection target table | [2026-10.md](todo_archive/2026-10.md) | - |
+| TODO-5352 | Measure and cut semantics header fan-out (SemanticsValidator.h) | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5354 | Guard test registration: generated shards and an unregistered-test check | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5355 | Ban wall-clock comparisons in tests | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5357 | Cut the release gate time: re-shard from measured costs | [2026-10.md](todo_archive/2026-10.md) | - |

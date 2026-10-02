@@ -1997,3 +1997,26 @@ Gate (`./scripts/compile.sh --release`, 4-core box, relinked primec): 392.3 s,
 Remaining top costs in that profile: monomorphization `rewriteExpr` (13%), text filter
 `applyPerEnvelope` (8%), `resolveStdlibSurfaceMemberName` (10%, 70 K cheap calls),
 `resolveCalleePath` (16%).
+
+## TODO-5352: SemanticsValidator.h fan-out (2026-10-02)
+
+Measure: `touch src/semantics/SemanticsValidator.h` + `cmake --build build-release --target primec -j4`
+(4 cores, release): **125 translation units, 102 s**. A TU that only includes the header costs
+~1.4 s to parse of a typical ~4.4 s unit (about a third of all rebuild CPU). Because every one of
+those units implements a member of the single `SemanticsValidator` class, splitting the class would
+not reduce how many units need its definition; the lever is the per-unit parse cost.
+
+Attempt 1: `PRIMESTRUCT_SEMANTICS_PCH` (default ON) precompiles `SemanticsValidator.h` for exactly
+the frontend units that include it (the others skip the PCH; detected from the sources at configure
+time). Touch-rebuild: **102 s -> ~69 s (-32%)**. GCC 13 reports `-Warray-bounds` /
+`-Wstringop-overflow` false positives inside `std::string` operator+ chains once the header is
+precompiled (the same code is clean without the PCH), so those two warnings are disabled for
+`primec_frontend_lib` on GCC.
+
+Attempt 2: also precompile the most common secondary headers (`CollectionHelperNames.h`,
+`StdlibSurfaceRegistry.h`, `StdlibCollectionPaths.h`, `<algorithm>`, `<sstream>`, `<cctype>`) via
+`src/semantics/SemanticsPch.h`: no further gain (69 s), kept for tidiness.
+
+The 40% target was not reached; the recorded stop_rule threshold (under 20% after two attempts) was
+not hit either. The remaining time is the per-unit body compile at -O3 (~2.2 s x 125), which only
+fewer or lighter units would reduce. Full gate with the PCH build: 1757/1757.

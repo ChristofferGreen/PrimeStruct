@@ -232,10 +232,14 @@ build and layout solidify.
   definition; build a prepass when parent metadata is needed (struct/helper relationships, etc).
 - **Semantic rewrites:** `Semantics::validate` mutates the AST in-place (enum expansion, loop
   desugaring, omitted struct initializers), so backend passes should assume canonicalized forms.
-- **Implementation layout:** semantics is still composed from `.h` fragments included into a
-  single `.cpp`; IR lowerer is being migrated toward compileable units under `src/ir_lowerer/`
-  (for example `IrLowererLowerEffects.{h,cpp}`). Prefer adding new reusable lowering logic as
-  explicit `.h/.cpp` units with clear interfaces instead of adding new include-only fragments.
+- **Implementation layout:** semantics is ~200 `.cpp` translation units under `src/semantics/`
+  that implement one class, `SemanticsValidator` (declared in `SemanticsValidator.h`, whose
+  four `SemanticsValidatorPrivate*.h` files are member-declaration fragments included inside
+  the class body); the IR lowerer is likewise compileable units under `src/ir_lowerer/`
+  (for example `IrLowererLowerEffects.{h,cpp}`). Touching `SemanticsValidator.h` rebuilds
+  every unit that includes it (~125); `PRIMESTRUCT_SEMANTICS_PCH` (default ON) precompiles it
+  for those units. Prefer adding new reusable logic as explicit `.h/.cpp` units with clear
+  interfaces instead of adding new member-declaration or include-only fragments.
 - **CMake subsystem layout:** place new build sources in the narrowest library that fits:
   `primec_support_lib` (shared utilities), `primec_frontend_lib` (import/parser/semantics/text
   filtering), `primec_ir_lib` (IR preparation/lowering/validation tooling),

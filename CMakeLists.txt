@@ -31,6 +31,9 @@ option(PRIMESTRUCT_ENABLE_TSAN_SEMANTICS_SMOKE
 # flag) and deliberately makes CompileArena::reset() abandon+poison memory
 # instead of reusing it, so it also defeats the arena's whole performance
 # purpose - do not combine with Release perf measurement.
+option(PRIMESTRUCT_SEMANTICS_PCH
+       "Precompile SemanticsValidator.h for the semantics translation units that include it (faster rebuilds)"
+       ON)
 option(PRIMESTRUCT_ARENA_POISON_AUDIT
        "TODO-5235 diagnostic only: ASan-poison arena memory on reset instead of reusing it, to audit for magic-static/reset corruption. Never enable for a shipped build."
        OFF)
@@ -643,6 +646,32 @@ target_include_directories(primec_frontend_lib PUBLIC
   $<INSTALL_INTERFACE:include>)
 target_link_libraries(primec_frontend_lib PUBLIC primec_support_lib)
 primestructEnableWarnings(primec_frontend_lib)
+
+# TODO-5352: SemanticsValidator.h (and the standard headers it pulls in) is
+# about a third of the compile time of each of the ~120 translation units that
+# include it. Precompile it for exactly those units; every other frontend unit
+# skips the precompiled header. Detected from the sources so a new unit that
+# includes the header is picked up without editing this block.
+if(PRIMESTRUCT_SEMANTICS_PCH)
+  # With the precompiled header GCC 13 changes inlining enough to report
+  # -Warray-bounds/-Wstringop-overflow false positives inside std::string operator+ chains (the
+  # memcpy "bounds" are the temporaries' own SSO buffers); the same code builds
+  # clean without the PCH. Scoped to this library and GCC only.
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_compile_options(primec_frontend_lib PRIVATE -Wno-array-bounds -Wno-stringop-overflow)
+  endif()
+  target_precompile_headers(primec_frontend_lib PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/semantics/SemanticsPch.h")
+  foreach(_primestruct_frontend_source IN LISTS PRIMESTRUCT_FRONTEND_SOURCES)
+    file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/${_primestruct_frontend_source}"
+         _primestruct_includes_validator
+         REGEX "^#include \"SemanticsValidator\\.h\"")
+    if(NOT _primestruct_includes_validator)
+      set_source_files_properties("${_primestruct_frontend_source}"
+        PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+    endif()
+  endforeach()
+endif()
 
 # IR container pieces a runtime-only host needs: bytecode (de)serialization and
 # VM-target validation. Deliberately free of parser/semantics/lowerer code.

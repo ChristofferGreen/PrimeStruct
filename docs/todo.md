@@ -101,7 +101,6 @@ of sync with them.
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
 | TODO-5374 | Typed collection family/helper enum replacing string-tagged family checks | deferred | collection-resolution |
-| TODO-5352 | Measure and cut semantics header fan-out (SemanticsValidator.h) | ready | semantics-structure |
 | TODO-5353 | Split TemplateMonomorphExpressionRewrite.cpp into focused units | ready | semantics-structure |
 | TODO-5356 | Collapse near-duplicate ir_pipeline validation tests into table-driven suites | deferred | test-infrastructure |
 | TODO-5361 | Single opcode descriptor table for IR (stack effect, targets, serialization) | ready | ir-vm-structure |
@@ -114,7 +113,6 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5352 (track: semantics-structure): Measure and cut semantics header fan-out (SemanticsValidator.h).
 - TODO-5353 (track: semantics-structure): Split TemplateMonomorphExpressionRewrite.cpp into focused units.
 - TODO-5361 (track: ir-vm-structure): Single opcode descriptor table for IR (stack effect, targets, serialization).
 - TODO-5363 (track: vm-strings): Spec: VM-owned dynamic strings (design decision).
@@ -123,15 +121,14 @@ of sync with them.
 
 1. TODO-5383 - Migrate the remaining compiler state into CompileContext.
 2. TODO-5361 - Single opcode descriptor table for IR (stack effect, targets, serialization).
-3. TODO-5352 - Measure and cut semantics header fan-out (SemanticsValidator.h).
-4. TODO-5353 - Split TemplateMonomorphExpressionRewrite.cpp into focused units.
-5. TODO-5363 - Spec: VM-owned dynamic strings (design decision).
+3. TODO-5353 - Split TemplateMonomorphExpressionRewrite.cpp into focused units.
+4. TODO-5363 - Spec: VM-owned dynamic strings (design decision).
 
 ### Priority Lanes
 
 - Embedding (must support iOS): TODO-5348 (needs macOS)
 - Collection resolution: typed family enum TODO-5374 (deferred)
-- Semantics structure: TODO-5352, TODO-5353
+- Semantics structure: TODO-5353
 - Test infrastructure: TODO-5356 (deferred)
 - IR/VM structure: TODO-5361 -> 5362
 - VM strings: TODO-5363 -> 5364 -> 5365
@@ -168,29 +165,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - stop_rule: if an API used by the full compiler is unavailable on iOS, ship
     the runtime-only XCFramework and record the gap rather than widening the
     scope.
-
-- [ ] TODO-5352: Measure and cut semantics header fan-out (SemanticsValidator.h)
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-01
-  - phase: Compiler structure
-  - parallel_track: semantics-structure
-  - scope: `src/semantics` is now 197 translation units (the include-only fragment
-    migration noted in AGENTS.md is mostly done - update that note), but
-    `SemanticsValidator.h` is included by about 300 includes and is a very
-    large class header, so touching it rebuilds most of semantics. Measure:
-    time `touch SemanticsValidator.h` + incremental release build
-    before/after. Then split the class into focused headers (per-pass
-    interfaces) so each translation unit includes only what it uses.
-  - acceptance:
-    - baseline and result incremental-rebuild times recorded in the result
-      note (target: at least 40% faster after touching the main
-      validator header).
-    - no behavior change: full release gate green, `Semantics::validate` pass
-      manifest unchanged.
-    - AGENTS.md 'Implementation layout' note corrected to the real state.
-  - stop_rule: stop after two attempts if the measured improvement is under 20%, and record
-    why (this leaf is archived as low-value per the TODO rules).
 
 - [ ] TODO-5353: Split TemplateMonomorphExpressionRewrite.cpp into focused units
   - owner: ai
