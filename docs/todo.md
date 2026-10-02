@@ -98,7 +98,6 @@ of sync with them.
 | TODO-5374 | Typed collection family/helper enum replacing string-tagged family checks | deferred | collection-resolution |
 | TODO-5373 | Extend the collection parity matrix to Reference receivers and the borrowed `_ref` helpers | ready | collection-defects |
 | TODO-5372 | `soa<T>` method spellings publish internal `soaVector*` helper targets instead of the public helper | ready | collection-defects |
-| TODO-5371 | array `.at(i)` method resolves to the vector helper and fails argument type checking | ready | collection-defects |
 | TODO-5370 | map bare `contains(m, k)` passes semantics but fails VM lowering while `m.contains(k)` works | ready | collection-defects |
 | TODO-5369 | map `.at()` and `.at_unsafe()` method calls fail with `unknown call target /map/at` | ready | collection-defects |
 | TODO-5352 | Measure and cut semantics header fan-out (SemanticsValidator.h) | ready | semantics-structure |
@@ -577,22 +576,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - acceptance:
     - `contains(m, k)` returns the same value as `m.contains(k)` in the VM and
       native backends; row flipped to `ok`.
-    - the parity suite and the full release gate stay green.
-  - stop_rule: fix only this row's behavior; anything else found goes to its own leaf.
-
-- [ ] TODO-5371: array `.at(i)` method resolves to the vector helper and fails argument type checking
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-01
-  - phase: Compiler structure
-  - parallel_track: collection-defects
-  - scope: `a.at(1i32)` on `array<i32>` fails with `argument type mismatch for
-    /std/collections/vector/at`, while bare `at(a, 1i32)` publishes
-    `/array/at` and works. The method form on an array should publish
-    `/array/at` like the bare form. Pinned by the `array at method` row.
-  - acceptance:
-    - `a.at(i)` and `a.at_unsafe(i)` on arrays publish and lower `/array/at` /
-      `/array/at_unsafe`; row flipped to `ok`.
     - the parity suite and the full release gate stay green.
   - stop_rule: fix only this row's behavior; anything else found goes to its own leaf.
 

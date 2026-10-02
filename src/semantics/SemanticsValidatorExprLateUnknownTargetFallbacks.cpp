@@ -172,9 +172,11 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
         return validateExpr(params, locals, rewrittenVectorMethodCall);
       }
       bool hasCollectionReceiver = false;
+      std::string matchedCollectionTypePath;
       std::string receiverCollectionTypePath;
       if (resolveCallCollectionTypePath(receiverExpr, params, locals,
                                         receiverCollectionTypePath)) {
+        matchedCollectionTypePath = receiverCollectionTypePath;
         hasCollectionReceiver = receiverCollectionTypePath == collection_helpers::kRootedVector ||
                                 receiverCollectionTypePath == collection_helpers::kRootedArray ||
                                 receiverCollectionTypePath == collection_helpers::kRootedString ||
@@ -186,6 +188,7 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
                                    receiverTypeText)) {
           const std::string normalizedCollectionType =
               normalizeCollectionTypePath(receiverTypeText);
+          matchedCollectionTypePath = normalizedCollectionType;
           hasCollectionReceiver = normalizedCollectionType == collection_helpers::kRootedVector ||
                                   normalizedCollectionType == collection_helpers::kRootedArray ||
                                   normalizedCollectionType == collection_helpers::kRootedString ||
@@ -213,8 +216,13 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
         Expr rewrittenVectorMethodCall = expr;
         rewrittenVectorMethodCall.isMethodCall = false;
         rewrittenVectorMethodCall.namespacePrefix.clear();
+        // array receivers keep the builtin bare array helper; only
+        // vector-family receivers use the preferred vector helper
+        // (TODO-5371).
         rewrittenVectorMethodCall.name =
-            preferredBareVectorHelperTarget(normalizedMethodName);
+            matchedCollectionTypePath == collection_helpers::kRootedArray
+                ? normalizedMethodName
+                : preferredBareVectorHelperTarget(normalizedMethodName);
         handledOut = true;
         return validateExpr(params, locals, rewrittenVectorMethodCall);
       }

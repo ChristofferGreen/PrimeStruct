@@ -57324,3 +57324,20 @@ TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph 
   - finished_at: 2026-10-01
   - result: partially delivered, remainder moved to TODO-5374. Done: every string-literal exemption in `IrLowererSetupTypeMethodCallResolution.cpp`, `IrLowererInlineNativeCallDispatch.cpp`, `IrLowererHelpers.cpp` and the other lowerer/emitter files now uses `collection_helpers` constants/predicates (enforced by the literal check), and the shared `isBuiltinClassifiedMethodCallTarget` already holds the target-name-only classification. The invariant 'a published collection helper target lowers or is a pinned defect' is enforced by the TODO-5349 parity matrix (every Ok row lowers and runs in the VM; a regression flips a row and fails its family shard) rather than a separate module-walking pass, because most helper calls are inlined and leave no lowered function to walk, so a pass could only re-check what lowering already hard-fails per call (`semantic-product method-call target missing lowered definition`). Not done: the three receiver-type-dependent predicates (`routesExplicitVectorCountMethodThroughArgsPackCount`, `directTargetKeepsSyntheticCollectionFallback`, `allowsReceiverResolvedVectorMetadataFallback`) still exist - they encode routing that needs the typed family/helper table of TODO-5374.
 
+- [x] TODO-5371: array `.at(i)` method resolves to the vector helper and fails argument type checking
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-01
+  - phase: Compiler structure
+  - parallel_track: collection-defects
+  - scope: `a.at(1i32)` on `array<i32>` fails with `argument type mismatch for
+    /std/collections/vector/at`, while bare `at(a, 1i32)` publishes
+    `/array/at` and works. The method form on an array should publish
+    `/array/at` like the bare form. Pinned by the `array at method` row.
+  - acceptance:
+    - `a.at(i)` and `a.at_unsafe(i)` on arrays publish and lower `/array/at` /
+      `/array/at_unsafe`; row flipped to `ok`.
+    - the parity suite and the full release gate stay green.
+  - stop_rule: fix only this row's behavior; anything else found goes to its own leaf.
+  - finished_at: 2026-10-02
+  - result: Fixed. The late unknown-target fallback rewrote every method call on a vector/array/string/soa receiver to the preferred vector helper, so `a.at(i)` on an `array<i32>` became `/std/collections/vector/at` and failed argument type checking. Array receivers now rewrite to the bare builtin array helper and publish `/array/at` / `/array/at_unsafe` like the bare spelling. The `array at method` row is now `ok` and a new `array at_unsafe method` row pins the same behavior.

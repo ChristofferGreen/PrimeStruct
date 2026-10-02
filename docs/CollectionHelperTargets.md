@@ -29,7 +29,8 @@ change. `Reference<...>` receivers and the borrowed `_ref` helpers are not cover
 | vector | `remove_swap` | method | ok (30) | `/std/collections/vector/vector`<br>`/std/collections/vector/remove_swap`<br>`/std/collections/vector/at`<br>`/std/collections/vector/at` |  |
 | array | `count` | method | ok (2) | `/array`<br>`/array/count`<br>`/array/count` |  |
 | array | `count` | bare | ok (2) | `/array`<br>`/array/count`<br>`/array/count` |  |
-| array | `at` | method | semantic error |  | argument type mismatch for /std/collections/vector/at **TODO-5371** |
+| array | `at` | method | ok (6) | `/array`<br>`/array/at`<br>`/array/at` |  |
+| array | `at_unsafe` | method | ok (5) | `/array`<br>`/array/at_unsafe`<br>`/array/at_unsafe` |  |
 | array | `at` | bare | ok (6) | `/array`<br>`/array/at`<br>`/array/at` |  |
 | array | `at_unsafe` | bare | ok (5) | `/array`<br>`/array/at_unsafe`<br>`/array/at_unsafe` |  |
 | string | `count` | method | ok (4) | `/string/count`<br>`/string/count` |  |
