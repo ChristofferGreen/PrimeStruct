@@ -83,8 +83,7 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
   // the receiver, so pointer-identity dedup can't catch the cycle). Bound
   // the recursion so a misclassification fails closed with a diagnostic
   // instead of an unbounded stack recursion / hang.
-  static thread_local int rewriteRecursionDepth = 0;
-  if (rewriteRecursionDepth >= 32) {
+  if (lateUnknownTargetRewriteDepth_ >= 32) {
     return failLateUnknownTargetDiagnostic(
         "unknown call target: " + resolveCalleePath(expr));
   }
@@ -92,7 +91,7 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
     int &depth;
     RecursionGuard(int &d) : depth(d) { ++depth; }
     ~RecursionGuard() { --depth; }
-  } recursionGuard(rewriteRecursionDepth);
+  } recursionGuard(lateUnknownTargetRewriteDepth_);
   const std::string resolvedTarget =
       resolveExprConcreteCallPath(params, locals, expr, resolveCalleePath(expr));
   if (hasDefinitionFamilyPath(resolvedTarget)) {

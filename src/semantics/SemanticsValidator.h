@@ -622,6 +622,8 @@ private:
   };
   std::unordered_map<CallSnapshotMemoKey, CallSnapshotMemoEntry, CallSnapshotMemoKeyHash> callSnapshotMemo_;
   int callSnapshotMemoDepth_ = 0;
+  // Recursion bound of validateExprLateUnknownTargetFallbacks (TODO-4610/5383).
+  int lateUnknownTargetRewriteDepth_ = 0;
 
   class CallSnapshotMemoScope {
   public:

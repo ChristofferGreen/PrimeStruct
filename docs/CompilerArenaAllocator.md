@@ -1144,3 +1144,20 @@ performs no migration.
 - Not changed: `rewriteRecursionDepth`, benchmark knob, `g_resolvedPathCache` and
   the registry view, branch counters (items 3-5), and the reset-callback registry
   itself (item 6, TODO-5360; one callback remains, for `g_resolvedPathCache`).
+
+### TODO-5383 progress (2026-10-02): items 3-5 settled
+
+- `rewriteRecursionDepth` (thread-local static) -> `SemanticsValidator::lateUnknownTargetRewriteDepth_`,
+  a per-validator member (the bound is a property of one validation stack).
+- Benchmark allocator-relief knob (thread-local bool) -> `CompileContext::disableSemanticAllocatorRelief`;
+  `ScopedSemanticAllocatorReliefDisable` keeps a pointer to the context it was created in.
+- `g_resolvedPathCache` (thread-local + reset callback) -> `CompileContext::resolvedStdlibSurfacePaths`.
+  This was the last user of `registerArenaResetCallback` outside `CompileArena.cpp`.
+- **Verdict: stays process-global** - the legacy collection branch counters
+  (`IrLowererLegacyCollectionBranchCounters.cpp`): an env-driven diagnostic aggregated at process exit
+  (`atexit`) across all compilations by design; never feeds output.
+- **Verdict: stays process-global** - the stdlib surface registry view
+  (`StdlibSurfaceRegistry.cpp` statics): immutable after first use and read from the stdlib directory found
+  at that time. A per-compilation stdlib root only matters once an embedding host wants two roots in one
+  process; not needed today.
+- TSAN embed and semantics smokes stay clean; gate 1757/1757 at 386 s.

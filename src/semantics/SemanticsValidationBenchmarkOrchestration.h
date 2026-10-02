@@ -4,6 +4,10 @@
 
 #include <cstdint>
 
+namespace primec {
+class CompileContext;
+}
+
 namespace primec::semantics {
 
 struct ProcessAllocationSample {
@@ -41,6 +45,7 @@ public:
   ~ScopedSemanticAllocatorReliefDisable();
 
 private:
+  CompileContext *context_ = nullptr;
   bool previous_ = false;
 };
 

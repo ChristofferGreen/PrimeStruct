@@ -8,6 +8,8 @@
 
 namespace primec {
 
+struct StdlibSurfaceMetadata;
+
 // State owned by one compilation (TODO-5359; design in
 // docs/CompilerArenaAllocator.md, "TODO-5358: compiler global state inventory
 // and CompileContext design"). Compilation entry points install a context with
@@ -31,6 +33,15 @@ public:
   };
 
   TypeNameCaches typeNames;
+
+  // Memo of findStdlibSurfaceMetadataByResolvedPath: resolved path -> metadata of
+  // the (process-wide, immutable) stdlib surface registry. Inserted under a
+  // SystemHeapScope.
+  std::unordered_map<std::string, const StdlibSurfaceMetadata *> resolvedStdlibSurfacePaths;
+
+  // Benchmark option: skip allocator pressure relief between semantic phases
+  // (ScopedSemanticAllocatorReliefDisable).
+  bool disableSemanticAllocatorRelief = false;
 
   CompileContext() = default;
   CompileContext(const CompileContext &) = delete;

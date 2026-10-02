@@ -1,5 +1,6 @@
 // collection-surface-audit: exempt
 #include "primec/support/StdlibSurfaceRegistry.h"
+#include "primec/support/CompileContext.h"
 
 #include "primec/support/CompileArena.h"
 
@@ -1595,26 +1596,12 @@ const StdlibSurfaceMetadata *findStdlibSurfaceMetadataByResolvedPathUncached(std
 
 }  // namespace
 
-namespace {
-thread_local std::unordered_map<std::string, const StdlibSurfaceMetadata *>
-    g_resolvedPathCache;
-
-// TODO-5235: this cache is thread_local and intentionally persists across
-// many calls within one compile scope, but its entries may be
-// arena-allocated during that scope. Register a reset callback that clears
-// it on every arena reset (i.e. every TEST_CASE boundary in the doctest
-// binaries) so no cached entry can dangle into memory the reset just
-// reclaimed - see docs/CompilerArenaAllocator.md.
-void clearResolvedPathCache() {
-  g_resolvedPathCache.clear();
-}
-
-[[maybe_unused]] const bool kResolvedPathCacheRegistered =
-    (registerArenaResetCallback(&clearResolvedPathCache), true);
-}  // namespace
-
 const StdlibSurfaceMetadata *findStdlibSurfaceMetadataByResolvedPath(std::string_view path) {
-  std::unordered_map<std::string, const StdlibSurfaceMetadata *> &cache = g_resolvedPathCache;
+  // Memoized in the current compilation context (TODO-5383); entries point into
+  // the process-wide registry and are inserted under a SystemHeapScope, so no
+  // reset callback is needed.
+  std::unordered_map<std::string, const StdlibSurfaceMetadata *> &cache =
+      CompileContext::current().resolvedStdlibSurfacePaths;
   const std::string key(path);
   if (const auto it = cache.find(key); it != cache.end()) {
     return it->second;

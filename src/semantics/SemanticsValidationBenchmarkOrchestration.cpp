@@ -1,5 +1,7 @@
 #include "SemanticsValidationBenchmarkOrchestration.h"
 
+#include "primec/support/CompileContext.h"
+
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
@@ -15,8 +17,6 @@
 
 namespace primec::semantics {
 namespace {
-
-thread_local bool gDisableSemanticAllocatorReliefForBenchmark = false;
 
 void relieveSemanticAllocatorPressure() {
 #if defined(__APPLE__)
@@ -61,14 +61,15 @@ SemanticValidationBenchmarkRuntime makeSemanticValidationBenchmarkRuntime(
 }
 
 ScopedSemanticAllocatorReliefDisable::ScopedSemanticAllocatorReliefDisable(bool enabled)
-    : previous_(gDisableSemanticAllocatorReliefForBenchmark) {
+    : context_(&CompileContext::current()),
+      previous_(context_->disableSemanticAllocatorRelief) {
   if (enabled) {
-    gDisableSemanticAllocatorReliefForBenchmark = true;
+    context_->disableSemanticAllocatorRelief = true;
   }
 }
 
 ScopedSemanticAllocatorReliefDisable::~ScopedSemanticAllocatorReliefDisable() {
-  gDisableSemanticAllocatorReliefForBenchmark = previous_;
+  context_->disableSemanticAllocatorRelief = previous_;
 }
 
 SemanticValidationBenchmarkPhase::SemanticValidationBenchmarkPhase(
@@ -149,7 +150,7 @@ void SemanticValidatorLifetimeBenchmark::captureAfterDestroyAndReport() {
 }
 
 void maybeRelieveSemanticAllocatorPressure() {
-  if (gDisableSemanticAllocatorReliefForBenchmark) {
+  if (CompileContext::current().disableSemanticAllocatorRelief) {
     return;
   }
   if (std::getenv("PRIMEC_DISABLE_SEMANTIC_ALLOCATOR_RELIEF") != nullptr) {
