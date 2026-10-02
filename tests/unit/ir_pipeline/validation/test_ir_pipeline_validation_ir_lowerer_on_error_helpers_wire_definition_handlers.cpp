@@ -1,4 +1,4 @@
-#include "test_ir_pipeline_validation_helpers.h"
+#include "test_ir_pipeline_validation_callback_factories.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
@@ -140,44 +140,8 @@ TEST_CASE("ir lowerer on_error helpers prefer semantic-product metadata") {
   auto definitionExists = [](const std::string &path) { return path == "/handler" || path == "/main"; };
 
   primec::SemanticProgram semanticProgram;
-  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
-      .isExecution = false,
-      .returnKind = "void",
-      .isCompute = false,
-      .isUnsafe = false,
-      .activeEffects = {},
-      .activeCapabilities = {},
-      .hasResultType = false,
-      .resultTypeHasValue = false,
-      .resultValueType = "",
-      .resultErrorType = "",
-      .hasOnError = false,
-      .onErrorHandlerPath = "",
-      .onErrorErrorType = "",
-      .onErrorBoundArgCount = 0,
-      .semanticNodeId = 21,
-      .provenanceHandle = 0,
-      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/handler"),
-  });
-  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
-      .isExecution = false,
-      .returnKind = "void",
-      .isCompute = false,
-      .isUnsafe = false,
-      .activeEffects = {},
-      .activeCapabilities = {},
-      .hasResultType = false,
-      .resultTypeHasValue = false,
-      .resultValueType = "",
-      .resultErrorType = "",
-      .hasOnError = true,
-      .onErrorHandlerPath = "/handler",
-      .onErrorErrorType = "FileError",
-      .onErrorBoundArgCount = 1,
-      .semanticNodeId = 22,
-      .provenanceHandle = 0,
-      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
-  });
+  primec::validation_test_support::addVoidCallableSummary(semanticProgram, "/handler", 21);
+  primec::validation_test_support::addVoidCallableSummary(semanticProgram, "/main", 22, "/handler", "FileError", 1);
   publishCallableSummariesByPath(semanticProgram);
   semanticProgram.onErrorFacts.push_back(primec::SemanticProgramOnErrorFact{
       .definitionPath = "/semantic/main",
@@ -251,44 +215,8 @@ TEST_CASE("ir lowerer on_error helpers skip semantic-product sum definitions") {
   };
 
   primec::SemanticProgram semanticProgram;
-  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
-      .isExecution = false,
-      .returnKind = "void",
-      .isCompute = false,
-      .isUnsafe = false,
-      .activeEffects = {},
-      .activeCapabilities = {},
-      .hasResultType = false,
-      .resultTypeHasValue = false,
-      .resultValueType = "",
-      .resultErrorType = "",
-      .hasOnError = false,
-      .onErrorHandlerPath = "",
-      .onErrorErrorType = "",
-      .onErrorBoundArgCount = 0,
-      .semanticNodeId = 21,
-      .provenanceHandle = 0,
-      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/handler"),
-  });
-  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
-      .isExecution = false,
-      .returnKind = "void",
-      .isCompute = false,
-      .isUnsafe = false,
-      .activeEffects = {},
-      .activeCapabilities = {},
-      .hasResultType = false,
-      .resultTypeHasValue = false,
-      .resultValueType = "",
-      .resultErrorType = "",
-      .hasOnError = false,
-      .onErrorHandlerPath = "",
-      .onErrorErrorType = "",
-      .onErrorBoundArgCount = 0,
-      .semanticNodeId = 23,
-      .provenanceHandle = 0,
-      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
-  });
+  primec::validation_test_support::addVoidCallableSummary(semanticProgram, "/handler", 21);
+  primec::validation_test_support::addVoidCallableSummary(semanticProgram, "/main", 23);
   publishCallableSummariesByPath(semanticProgram);
   semanticProgram.typeMetadata.push_back(primec::SemanticProgramTypeMetadata{
       .fullPath = generatedResultDef.fullPath,
@@ -341,44 +269,8 @@ TEST_CASE("ir lowerer on_error helpers reject missing semantic bound arg ids") {
   auto definitionExists = [](const std::string &path) { return path == "/handler" || path == "/main"; };
 
   primec::SemanticProgram semanticProgram;
-  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
-      .isExecution = false,
-      .returnKind = "void",
-      .isCompute = false,
-      .isUnsafe = false,
-      .activeEffects = {},
-      .activeCapabilities = {},
-      .hasResultType = false,
-      .resultTypeHasValue = false,
-      .resultValueType = "",
-      .resultErrorType = "",
-      .hasOnError = false,
-      .onErrorHandlerPath = "",
-      .onErrorErrorType = "",
-      .onErrorBoundArgCount = 0,
-      .semanticNodeId = 21,
-      .provenanceHandle = 0,
-      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/handler"),
-  });
-  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
-      .isExecution = false,
-      .returnKind = "void",
-      .isCompute = false,
-      .isUnsafe = false,
-      .activeEffects = {},
-      .activeCapabilities = {},
-      .hasResultType = false,
-      .resultTypeHasValue = false,
-      .resultValueType = "",
-      .resultErrorType = "",
-      .hasOnError = true,
-      .onErrorHandlerPath = "/handler",
-      .onErrorErrorType = "FileError",
-      .onErrorBoundArgCount = 1,
-      .semanticNodeId = 22,
-      .provenanceHandle = 0,
-      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
-  });
+  primec::validation_test_support::addVoidCallableSummary(semanticProgram, "/handler", 21);
+  primec::validation_test_support::addVoidCallableSummary(semanticProgram, "/main", 22, "/handler", "FileError", 1);
   publishCallableSummariesByPath(semanticProgram);
   semanticProgram.onErrorFacts.push_back(primec::SemanticProgramOnErrorFact{
       .definitionPath = "/semantic/main",
@@ -426,44 +318,8 @@ TEST_CASE("ir lowerer on_error helpers require definition semantic ids for seman
   auto definitionExists = [](const std::string &path) { return path == "/handler" || path == "/main"; };
 
   primec::SemanticProgram semanticProgram;
-  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
-      .isExecution = false,
-      .returnKind = "void",
-      .isCompute = false,
-      .isUnsafe = false,
-      .activeEffects = {},
-      .activeCapabilities = {},
-      .hasResultType = false,
-      .resultTypeHasValue = false,
-      .resultValueType = "",
-      .resultErrorType = "",
-      .hasOnError = false,
-      .onErrorHandlerPath = "",
-      .onErrorErrorType = "",
-      .onErrorBoundArgCount = 0,
-      .semanticNodeId = 21,
-      .provenanceHandle = 0,
-      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/handler"),
-  });
-  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
-      .isExecution = false,
-      .returnKind = "void",
-      .isCompute = false,
-      .isUnsafe = false,
-      .activeEffects = {},
-      .activeCapabilities = {},
-      .hasResultType = false,
-      .resultTypeHasValue = false,
-      .resultValueType = "",
-      .resultErrorType = "",
-      .hasOnError = true,
-      .onErrorHandlerPath = "/handler",
-      .onErrorErrorType = "FileError",
-      .onErrorBoundArgCount = 1,
-      .semanticNodeId = 22,
-      .provenanceHandle = 0,
-      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
-  });
+  primec::validation_test_support::addVoidCallableSummary(semanticProgram, "/handler", 21);
+  primec::validation_test_support::addVoidCallableSummary(semanticProgram, "/main", 22, "/handler", "FileError", 1);
   publishCallableSummariesByPath(semanticProgram);
   semanticProgram.onErrorFacts.push_back(primec::SemanticProgramOnErrorFact{
       .definitionPath = "/main",
@@ -507,44 +363,8 @@ TEST_CASE("ir lowerer on_error helpers reject definition-path fallback facts") {
   auto definitionExists = [](const std::string &path) { return path == "/handler" || path == "/main"; };
 
   primec::SemanticProgram semanticProgram;
-  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
-      .isExecution = false,
-      .returnKind = "void",
-      .isCompute = false,
-      .isUnsafe = false,
-      .activeEffects = {},
-      .activeCapabilities = {},
-      .hasResultType = false,
-      .resultTypeHasValue = false,
-      .resultValueType = "",
-      .resultErrorType = "",
-      .hasOnError = false,
-      .onErrorHandlerPath = "",
-      .onErrorErrorType = "",
-      .onErrorBoundArgCount = 0,
-      .semanticNodeId = 21,
-      .provenanceHandle = 0,
-      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/handler"),
-  });
-  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
-      .isExecution = false,
-      .returnKind = "void",
-      .isCompute = false,
-      .isUnsafe = false,
-      .activeEffects = {},
-      .activeCapabilities = {},
-      .hasResultType = false,
-      .resultTypeHasValue = false,
-      .resultValueType = "",
-      .resultErrorType = "",
-      .hasOnError = true,
-      .onErrorHandlerPath = "/handler",
-      .onErrorErrorType = "FileError",
-      .onErrorBoundArgCount = 1,
-      .semanticNodeId = 22,
-      .provenanceHandle = 0,
-      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
-  });
+  primec::validation_test_support::addVoidCallableSummary(semanticProgram, "/handler", 21);
+  primec::validation_test_support::addVoidCallableSummary(semanticProgram, "/main", 22, "/handler", "FileError", 1);
   publishCallableSummariesByPath(semanticProgram);
   semanticProgram.onErrorFacts.push_back(primec::SemanticProgramOnErrorFact{
       .definitionPath = "/legacy/main",
@@ -597,63 +417,9 @@ TEST_CASE("ir lowerer on_error helpers use semantic-id facts without definition-
   };
 
   primec::SemanticProgram semanticProgram;
-  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
-      .isExecution = false,
-      .returnKind = "void",
-      .isCompute = false,
-      .isUnsafe = false,
-      .activeEffects = {},
-      .activeCapabilities = {},
-      .hasResultType = false,
-      .resultTypeHasValue = false,
-      .resultValueType = "",
-      .resultErrorType = "",
-      .hasOnError = false,
-      .onErrorHandlerPath = "",
-      .onErrorErrorType = "",
-      .onErrorBoundArgCount = 0,
-      .semanticNodeId = 221,
-      .provenanceHandle = 0,
-      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/handler_semantic"),
-  });
-  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
-      .isExecution = false,
-      .returnKind = "void",
-      .isCompute = false,
-      .isUnsafe = false,
-      .activeEffects = {},
-      .activeCapabilities = {},
-      .hasResultType = false,
-      .resultTypeHasValue = false,
-      .resultValueType = "",
-      .resultErrorType = "",
-      .hasOnError = false,
-      .onErrorHandlerPath = "",
-      .onErrorErrorType = "",
-      .onErrorBoundArgCount = 0,
-      .semanticNodeId = 223,
-      .provenanceHandle = 0,
-      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/handler_fallback"),
-  });
-  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
-      .isExecution = false,
-      .returnKind = "void",
-      .isCompute = false,
-      .isUnsafe = false,
-      .activeEffects = {},
-      .activeCapabilities = {},
-      .hasResultType = false,
-      .resultTypeHasValue = false,
-      .resultValueType = "",
-      .resultErrorType = "",
-      .hasOnError = true,
-      .onErrorHandlerPath = "/handler_semantic",
-      .onErrorErrorType = "FileError",
-      .onErrorBoundArgCount = 1,
-      .semanticNodeId = 222,
-      .provenanceHandle = 0,
-      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
-  });
+  primec::validation_test_support::addVoidCallableSummary(semanticProgram, "/handler_semantic", 221);
+  primec::validation_test_support::addVoidCallableSummary(semanticProgram, "/handler_fallback", 223);
+  primec::validation_test_support::addVoidCallableSummary(semanticProgram, "/main", 222, "/handler_semantic", "FileError", 1);
   publishCallableSummariesByPath(semanticProgram);
   semanticProgram.onErrorFacts.push_back(primec::SemanticProgramOnErrorFact{
       .definitionPath = "/semantic/main",
@@ -822,44 +588,8 @@ TEST_CASE("ir lowerer on_error entry setup validates semantic bound arg counts")
   const std::unordered_map<std::string, std::string> importAliases = {};
 
   primec::SemanticProgram semanticProgram;
-  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
-      .isExecution = false,
-      .returnKind = "void",
-      .isCompute = false,
-      .isUnsafe = false,
-      .activeEffects = {},
-      .activeCapabilities = {},
-      .hasResultType = false,
-      .resultTypeHasValue = false,
-      .resultValueType = "",
-      .resultErrorType = "",
-      .hasOnError = false,
-      .onErrorHandlerPath = "",
-      .onErrorErrorType = "",
-      .onErrorBoundArgCount = 0,
-      .semanticNodeId = 31,
-      .provenanceHandle = 0,
-      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/handler"),
-  });
-  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
-      .isExecution = false,
-      .returnKind = "void",
-      .isCompute = false,
-      .isUnsafe = false,
-      .activeEffects = {},
-      .activeCapabilities = {},
-      .hasResultType = false,
-      .resultTypeHasValue = false,
-      .resultValueType = "",
-      .resultErrorType = "",
-      .hasOnError = true,
-      .onErrorHandlerPath = "/handler",
-      .onErrorErrorType = "FileError",
-      .onErrorBoundArgCount = 2,
-      .semanticNodeId = 32,
-      .provenanceHandle = 0,
-      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
-  });
+  primec::validation_test_support::addVoidCallableSummary(semanticProgram, "/handler", 31);
+  primec::validation_test_support::addVoidCallableSummary(semanticProgram, "/main", 32, "/handler", "FileError", 2);
   publishCallableSummariesByPath(semanticProgram);
   semanticProgram.onErrorFacts.push_back(primec::SemanticProgramOnErrorFact{
       .definitionPath = "/semantic/main",

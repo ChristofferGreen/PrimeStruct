@@ -100,8 +100,7 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5391 | Convert ir_pipeline validation statement_binding / conversions / on_error tests | ready | test-infrastructure |
-| TODO-5392 | Convert ir_pipeline validation inline_param_helper variadic-pack tests | deferred | test-infrastructure |
+| TODO-5392 | Convert ir_pipeline validation inline_param_helper variadic-pack tests | ready | test-infrastructure |
 | TODO-5393 | Convert ir_pipeline validation setup_type_helper tests | deferred | test-infrastructure |
 | TODO-5394 | Convert ir_pipeline validation result_helpers / count_access / inline_struct_arg tests | deferred | test-infrastructure |
 | TODO-5395 | Replace source-text delegation checks in ir_pipeline validation tests with a table | deferred | test-infrastructure |
@@ -109,11 +108,11 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5391 (track: test-infrastructure): Convert ir_pipeline validation statement_binding / conversions / on_error tests.
+- TODO-5392 (track: test-infrastructure): Convert ir_pipeline validation inline_param_helper variadic-pack tests.
 
 ### Immediate Next 10
 
-1. TODO-5391 - Convert ir_pipeline validation statement_binding / conversions / on_error tests.
+1. TODO-5392 - Convert ir_pipeline validation inline_param_helper variadic-pack tests.
 
 ### Priority Lanes
 
@@ -153,21 +152,9 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     the runtime-only XCFramework and record the gap rather than widening the
     scope.
 
-- [ ] TODO-5391: Convert ir_pipeline validation statement_binding / conversions / on_error tests
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-02
-  - phase: Test infrastructure
-  - parallel_track: test-infrastructure
-  - scope: Using the TODO-5388 factories, convert `..._statement_binding_helper_classifies_variadic_struct_reference_parameters.cpp`, `..._conversions_helper_rejects_immutable_assign_target.cpp`, `..._on_error_helpers_wire_definition_handlers.cpp` into table-driven cases that keep per-row failure messages.
-  - acceptance:
-    - each converted file keeps its TEST_CASE count (or merges only identical-assertion cases), and a documented mutation check (a removed lowerer branch) still fails a case.
-    - `python3 scripts/measure_test_duplication.py` excess for the converted files drops, with before/after in the result note; full release gate green.
-  - stop_rule: stop and leave the file unconverted if a mutation check (remove one lowerer branch the file covers) no longer fails some case after conversion; record the file in the leaf note.
-
 - [ ] TODO-5392: Convert ir_pipeline validation inline_param_helper variadic-pack tests
   - owner: ai
-  - status: deferred
+  - status: ready
   - created_at: 2026-10-02
   - phase: Test infrastructure
   - parallel_track: test-infrastructure

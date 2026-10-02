@@ -1,4 +1,4 @@
-#include "test_ir_pipeline_validation_helpers.h"
+#include "test_ir_pipeline_validation_callback_factories.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
@@ -165,25 +165,7 @@ TEST_CASE("ir lowerer statement binding helper classifies variadic borrowed File
   primec::ir_lowerer::LocalInfo info;
   info.index = 12;
   std::string error;
-  REQUIRE(primec::ir_lowerer::inferCallParameterLocalInfo(
-      param,
-      {},
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &) { return true; },
-      [](const primec::Expr &expr) { return primec::ir_lowerer::bindingKindFromTransforms(expr); },
-      [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo::Kind kind) {
-        return primec::ir_lowerer::bindingValueKindFromTransforms(expr, kind);
-      },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-      },
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &) { return false; },
-      info,
-      error));
+  REQUIRE(primec::validation_test_support::inferCallParameterLocalInfoWithStructHook(param, [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {}, info, error));
   CHECK(error.empty());
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Array);
   CHECK(info.isArgsPack);
@@ -203,25 +185,7 @@ TEST_CASE("ir lowerer statement binding helper classifies variadic pointer File 
   primec::ir_lowerer::LocalInfo info;
   info.index = 13;
   std::string error;
-  REQUIRE(primec::ir_lowerer::inferCallParameterLocalInfo(
-      param,
-      {},
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &) { return true; },
-      [](const primec::Expr &expr) { return primec::ir_lowerer::bindingKindFromTransforms(expr); },
-      [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo::Kind kind) {
-        return primec::ir_lowerer::bindingValueKindFromTransforms(expr, kind);
-      },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-      },
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &) { return false; },
-      info,
-      error));
+  REQUIRE(primec::validation_test_support::inferCallParameterLocalInfoWithStructHook(param, [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {}, info, error));
   CHECK(error.empty());
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Array);
   CHECK(info.isArgsPack);
@@ -241,25 +205,7 @@ TEST_CASE("ir lowerer statement binding helper classifies variadic borrowed File
   primec::ir_lowerer::LocalInfo info;
   info.index = 11;
   std::string error;
-  REQUIRE(primec::ir_lowerer::inferCallParameterLocalInfo(
-      param,
-      {},
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &) { return true; },
-      [](const primec::Expr &expr) { return primec::ir_lowerer::bindingKindFromTransforms(expr); },
-      [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo::Kind kind) {
-        return primec::ir_lowerer::bindingValueKindFromTransforms(expr, kind);
-      },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-      },
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &) { return false; },
-      info,
-      error));
+  REQUIRE(primec::validation_test_support::inferCallParameterLocalInfoWithStructHook(param, [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {}, info, error));
   CHECK(error.empty());
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Array);
   CHECK(info.isArgsPack);
@@ -279,25 +225,7 @@ TEST_CASE("ir lowerer statement binding helper classifies variadic pointer FileE
   primec::ir_lowerer::LocalInfo info;
   info.index = 12;
   std::string error;
-  REQUIRE(primec::ir_lowerer::inferCallParameterLocalInfo(
-      param,
-      {},
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &) { return true; },
-      [](const primec::Expr &expr) { return primec::ir_lowerer::bindingKindFromTransforms(expr); },
-      [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo::Kind kind) {
-        return primec::ir_lowerer::bindingValueKindFromTransforms(expr, kind);
-      },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-      },
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &) { return false; },
-      info,
-      error));
+  REQUIRE(primec::validation_test_support::inferCallParameterLocalInfoWithStructHook(param, [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {}, info, error));
   CHECK(error.empty());
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Array);
   CHECK(info.isArgsPack);
@@ -317,25 +245,7 @@ TEST_CASE("ir lowerer statement binding helper classifies variadic borrowed Resu
   primec::ir_lowerer::LocalInfo info;
   info.index = 12;
   std::string error;
-  REQUIRE(primec::ir_lowerer::inferCallParameterLocalInfo(
-      param,
-      {},
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &) { return true; },
-      [](const primec::Expr &expr) { return primec::ir_lowerer::bindingKindFromTransforms(expr); },
-      [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo::Kind kind) {
-        return primec::ir_lowerer::bindingValueKindFromTransforms(expr, kind);
-      },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-      },
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &) { return false; },
-      info,
-      error));
+  REQUIRE(primec::validation_test_support::inferCallParameterLocalInfoWithStructHook(param, [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {}, info, error));
   CHECK(error.empty());
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Array);
   CHECK(info.isArgsPack);
@@ -358,25 +268,7 @@ TEST_CASE("ir lowerer statement binding helper classifies variadic pointer Resul
   primec::ir_lowerer::LocalInfo info;
   info.index = 12;
   std::string error;
-  REQUIRE(primec::ir_lowerer::inferCallParameterLocalInfo(
-      param,
-      {},
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &) { return true; },
-      [](const primec::Expr &expr) { return primec::ir_lowerer::bindingKindFromTransforms(expr); },
-      [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo::Kind kind) {
-        return primec::ir_lowerer::bindingValueKindFromTransforms(expr, kind);
-      },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-      },
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &) { return false; },
-      info,
-      error));
+  REQUIRE(primec::validation_test_support::inferCallParameterLocalInfoWithStructHook(param, [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {}, info, error));
   CHECK(error.empty());
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Array);
   CHECK(info.isArgsPack);
@@ -399,25 +291,7 @@ TEST_CASE("ir lowerer statement binding helper classifies variadic vector parame
   primec::ir_lowerer::LocalInfo info;
   info.index = 10;
   std::string error;
-  REQUIRE(primec::ir_lowerer::inferCallParameterLocalInfo(
-      param,
-      {},
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &) { return true; },
-      [](const primec::Expr &expr) { return primec::ir_lowerer::bindingKindFromTransforms(expr); },
-      [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo::Kind kind) {
-        return primec::ir_lowerer::bindingValueKindFromTransforms(expr, kind);
-      },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-      },
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &) { return false; },
-      info,
-      error));
+  REQUIRE(primec::validation_test_support::inferCallParameterLocalInfoWithStructHook(param, [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {}, info, error));
   CHECK(error.empty());
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Array);
   CHECK(info.isArgsPack);
@@ -436,25 +310,7 @@ TEST_CASE("ir lowerer statement binding helper classifies variadic array paramet
   primec::ir_lowerer::LocalInfo info;
   info.index = 11;
   std::string error;
-  REQUIRE(primec::ir_lowerer::inferCallParameterLocalInfo(
-      param,
-      {},
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &) { return true; },
-      [](const primec::Expr &expr) { return primec::ir_lowerer::bindingKindFromTransforms(expr); },
-      [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo::Kind kind) {
-        return primec::ir_lowerer::bindingValueKindFromTransforms(expr, kind);
-      },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-      },
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &) { return false; },
-      info,
-      error));
+  REQUIRE(primec::validation_test_support::inferCallParameterLocalInfoWithStructHook(param, [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {}, info, error));
   CHECK(error.empty());
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Array);
   CHECK(info.isArgsPack);
@@ -473,25 +329,7 @@ TEST_CASE("ir lowerer statement binding helper classifies variadic borrowed arra
   primec::ir_lowerer::LocalInfo info;
   info.index = 12;
   std::string error;
-  REQUIRE(primec::ir_lowerer::inferCallParameterLocalInfo(
-      param,
-      {},
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &) { return true; },
-      [](const primec::Expr &expr) { return primec::ir_lowerer::bindingKindFromTransforms(expr); },
-      [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo::Kind kind) {
-        return primec::ir_lowerer::bindingValueKindFromTransforms(expr, kind);
-      },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-      },
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &) { return false; },
-      info,
-      error));
+  REQUIRE(primec::validation_test_support::inferCallParameterLocalInfoWithStructHook(param, [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {}, info, error));
   CHECK(error.empty());
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Array);
   CHECK(info.isArgsPack);
@@ -511,25 +349,7 @@ TEST_CASE("ir lowerer statement binding helper classifies variadic pointer array
   primec::ir_lowerer::LocalInfo info;
   info.index = 12;
   std::string error;
-  REQUIRE(primec::ir_lowerer::inferCallParameterLocalInfo(
-      param,
-      {},
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &) { return true; },
-      [](const primec::Expr &expr) { return primec::ir_lowerer::bindingKindFromTransforms(expr); },
-      [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo::Kind kind) {
-        return primec::ir_lowerer::bindingValueKindFromTransforms(expr, kind);
-      },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-      },
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &) { return false; },
-      info,
-      error));
+  REQUIRE(primec::validation_test_support::inferCallParameterLocalInfoWithStructHook(param, [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {}, info, error));
   CHECK(error.empty());
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Array);
   CHECK(info.isArgsPack);
@@ -549,25 +369,7 @@ TEST_CASE("ir lowerer statement binding helper classifies variadic Buffer parame
   primec::ir_lowerer::LocalInfo info;
   info.index = 12;
   std::string error;
-  REQUIRE(primec::ir_lowerer::inferCallParameterLocalInfo(
-      param,
-      {},
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &) { return true; },
-      [](const primec::Expr &expr) { return primec::ir_lowerer::bindingKindFromTransforms(expr); },
-      [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo::Kind kind) {
-        return primec::ir_lowerer::bindingValueKindFromTransforms(expr, kind);
-      },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-      },
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &) { return false; },
-      info,
-      error));
+  REQUIRE(primec::validation_test_support::inferCallParameterLocalInfoWithStructHook(param, [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {}, info, error));
   CHECK(error.empty());
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Array);
   CHECK(info.isArgsPack);
@@ -586,25 +388,7 @@ TEST_CASE("ir lowerer statement binding helper classifies variadic borrowed Buff
   primec::ir_lowerer::LocalInfo info;
   info.index = 12;
   std::string error;
-  REQUIRE(primec::ir_lowerer::inferCallParameterLocalInfo(
-      param,
-      {},
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &) { return true; },
-      [](const primec::Expr &expr) { return primec::ir_lowerer::bindingKindFromTransforms(expr); },
-      [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo::Kind kind) {
-        return primec::ir_lowerer::bindingValueKindFromTransforms(expr, kind);
-      },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-      },
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &) { return false; },
-      info,
-      error));
+  REQUIRE(primec::validation_test_support::inferCallParameterLocalInfoWithStructHook(param, [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {}, info, error));
   CHECK(error.empty());
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Array);
   CHECK(info.isArgsPack);
@@ -624,25 +408,7 @@ TEST_CASE("ir lowerer statement binding helper classifies variadic pointer Buffe
   primec::ir_lowerer::LocalInfo info;
   info.index = 12;
   std::string error;
-  REQUIRE(primec::ir_lowerer::inferCallParameterLocalInfo(
-      param,
-      {},
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &) { return true; },
-      [](const primec::Expr &expr) { return primec::ir_lowerer::bindingKindFromTransforms(expr); },
-      [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo::Kind kind) {
-        return primec::ir_lowerer::bindingValueKindFromTransforms(expr, kind);
-      },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-      },
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &) { return false; },
-      info,
-      error));
+  REQUIRE(primec::validation_test_support::inferCallParameterLocalInfoWithStructHook(param, [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {}, info, error));
   CHECK(error.empty());
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Array);
   CHECK(info.isArgsPack);
@@ -662,25 +428,7 @@ TEST_CASE("ir lowerer statement binding helper classifies variadic scalar refere
   primec::ir_lowerer::LocalInfo info;
   info.index = 13;
   std::string error;
-  REQUIRE(primec::ir_lowerer::inferCallParameterLocalInfo(
-      param,
-      {},
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &) { return true; },
-      [](const primec::Expr &expr) { return primec::ir_lowerer::bindingKindFromTransforms(expr); },
-      [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo::Kind kind) {
-        return primec::ir_lowerer::bindingValueKindFromTransforms(expr, kind);
-      },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-      },
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
-      [](const primec::Expr &) { return false; },
-      info,
-      error));
+  REQUIRE(primec::validation_test_support::inferCallParameterLocalInfoWithStructHook(param, [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {}, info, error));
   CHECK(error.empty());
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Array);
   CHECK(info.isArgsPack);

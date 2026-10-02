@@ -1915,6 +1915,7 @@ are left unarchived.
 | TODO-5388 | Shared lowerer-callback test factories for ir_pipeline validation tests | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5389 | Convert ir_pipeline validation inference_expr_kind / call_return_setup / get_return_info tests | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
 | TODO-5390 | Convert ir_pipeline validation statement_call_helper_buffer_store tests | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
+| TODO-5391 | Convert ir_pipeline validation statement_binding / conversions / on_error tests | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
 
 <!-- INDEX-END -->
 

@@ -1,4 +1,4 @@
-#include "test_ir_pipeline_validation_helpers.h"
+#include "test_ir_pipeline_validation_callback_factories.h"
 
 #include <algorithm>
 
@@ -28,7 +28,7 @@ TEST_CASE("ir lowerer conversions helper rejects immutable assign target") {
   std::string error;
   bool handled = false;
   int32_t nextLocal = 0;
-  const bool ok = primec::ir_lowerer::emitConversionsAndCallsOperatorExpr(
+  const bool ok = primec::validation_test_support::emitConversionsOperatorExprWithInertTail(
       expr,
       locals,
       nextLocal,
@@ -39,19 +39,6 @@ TEST_CASE("ir lowerer conversions helper rejects immutable assign target") {
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
         return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
       },
-      [](primec::ir_lowerer::LocalInfo::ValueKind, bool) { return true; },
-      [&]() { return nextLocal++; },
-      []() {},
-      []() {},
-      []() {},
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
-      [](const std::string &) { return primec::ir_lowerer::LocalInfo::ValueKind::Unknown; },
-      [](const std::string &, std::string &) { return false; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-      [](const std::string &, const std::string &, std::string &) { return false; },
-      [](const std::string &, int32_t &) { return false; },
-      [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) { return false; },
-      [](int32_t, int32_t, int32_t) { return false; },
       instructions,
       handled,
       error);
@@ -587,7 +574,7 @@ TEST_CASE("ir lowerer conversions helper ignores unrelated call names") {
   std::string error;
   bool handled = true;
   int32_t nextLocal = 0;
-  const bool ok = primec::ir_lowerer::emitConversionsAndCallsOperatorExpr(
+  const bool ok = primec::validation_test_support::emitConversionsOperatorExprWithInertTail(
       expr,
       {},
       nextLocal,
@@ -595,19 +582,6 @@ TEST_CASE("ir lowerer conversions helper ignores unrelated call names") {
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
         return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
       },
-      [](primec::ir_lowerer::LocalInfo::ValueKind, bool) { return true; },
-      [&]() { return nextLocal++; },
-      []() {},
-      []() {},
-      []() {},
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
-      [](const std::string &) { return primec::ir_lowerer::LocalInfo::ValueKind::Unknown; },
-      [](const std::string &, std::string &) { return false; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-      [](const std::string &, const std::string &, std::string &) { return false; },
-      [](const std::string &, int32_t &) { return false; },
-      [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) { return false; },
-      [](int32_t, int32_t, int32_t) { return false; },
       instructions,
       handled,
       error);
