@@ -1161,3 +1161,20 @@ performs no migration.
   at that time. A per-compilation stdlib root only matters once an embedding host wants two roots in one
   process; not needed today.
 - TSAN embed and semantics smokes stay clean; gate 1757/1757 at 386 s.
+
+### TODO-5360 final design (2026-10-02): reset callbacks removed, `systemHeapValue` stays
+
+- `registerArenaResetCallback`, the callback registry and the reset-time callback run are
+  deleted (no registrants remained after TODO-5359/5383). Persistent state lives in the
+  per-compilation `CompileContext` (or in the `ExpandedSource`), so a reset has nothing to
+  clear.
+- `systemHeapValue` is **kept**, and the stop_rule applies: per-`TEST_CASE` arena reset is live
+  for `PrimeStruct_backend_ir_tests` and `PrimeStruct_semantics_tests` (without it those
+  binaries would grow for the whole run), and a magic static first initialized inside such a
+  scope would otherwise dangle after the reset. Deleting the ~70 wrappers would require
+  dropping per-scope resets (or turning every static into a literal); the arena stays because
+  the CLI and those test binaries benefit from it.
+- Embed API: the embedding libraries do not install a `ScopedCompileArena`, so results are never
+  arena memory. Letting a host opt into a per-compile arena scope safely would additionally
+  need `Script`/bytecode outputs to be allocated outside the arena (SystemHeapScope at the API
+  boundary); not done, since nothing needs it today.

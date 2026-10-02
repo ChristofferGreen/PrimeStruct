@@ -18,7 +18,7 @@
 //     values a few TEST_CASEs later, falling back to never entering a
 //     compile scope in any test binary at all.
 //   - TODO-5235 built a general escape hatch for that (SystemHeapScope /
-//     systemHeapValue / registerArenaResetCallback in
+//     systemHeapValue in
 //     primec/CompileArena.h) and re-attempted the same per-TEST_CASE reset
 //     wiring under it. Many rounds of "fix the magic statics/thread_local
 //     hazards a poison-audit crash found, rebuild, rerun the full suite"

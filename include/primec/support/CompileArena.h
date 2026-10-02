@@ -2,7 +2,7 @@
 
 // TODO-5233/TODO-5234/TODO-5235: scoped, resettable arena allocator used by
 // the CLI binaries (primec/primevm). TODO-5235 built the general escape
-// hatch below (SystemHeapScope / systemHeapValue / registerArenaResetCallback)
+// hatch below (SystemHeapScope / systemHeapValue)
 // so that resets *could* also be made safe inside the long-lived doctest
 // test binaries (semantics/ir_pipeline/etc.), but that per-TEST_CASE reset
 // wiring has NOT shipped as of this writing - see
@@ -16,7 +16,7 @@
 // See docs/CompilerArenaAllocator.md for the full design writeup: the
 // allocation survey, an earlier "reset per compile" design that turned out
 // to be unsafe (magic-static corruption), and the general escape hatch
-// (SystemHeapScope / systemHeapValue / registerArenaResetCallback) that
+// (SystemHeapScope / systemHeapValue) that
 // TODO-5235 added to make resets safe *when nothing arena-allocates a
 // process-lifetime value*. Summary of the public contract:
 //
@@ -29,8 +29,7 @@
 //     Nesting is supported via a thread_local depth counter; when the
 //     outermost scope on a thread ends, that thread's arena is reset (bump
 //     cursor and free lists rewound to empty - the chunks themselves are
-//     kept and reused, not unmapped) and every callback registered via
-//     registerArenaResetCallback() runs on that thread.
+//     kept and reused, not unmapped).
 //   - While at least one ScopedCompileArena is alive on a thread, that
 //     thread's small (<=4096-byte), default-alignment heap allocations are
 //     served from a thread-local bump/free-list arena instead of glibc
@@ -51,13 +50,11 @@
 //     Every known instance of this pattern under src/semantics,
 //     src/ir_lowerer, and src/parser has been wrapped this way; wrap any
 //     new one the same way rather than inventing a bespoke fix.
-//   - registerArenaResetCallback() is the matching escape hatch for
-//     thread_local *caches* that intentionally persist across many calls
-//     within a scope (unlike magic statics, these are known, enumerable,
-//     and already required explicit invalidation handling per TODO-5233's
-//     original design) - register a callback that clears the cache, and it
-//     runs automatically every time that thread's arena resets, so no
-//     cache entry can dangle into memory the reset just reclaimed.
+//   - Persistent caches (TODO-5359/5383): state that outlives a single call
+//     lives in the per-compilation CompileContext (primec/support/CompileContext.h),
+//     which is destroyed with the compilation, so no cache entry can dangle
+//     into memory an arena reset reclaimed. There is no reset-callback registry
+//     any more.
 //   - operator delete is always safe to call on any pointer, regardless of
 //     which thread freed it or whether an arena is currently active on that
 //     thread: every allocation carries a small header identifying how (and,
@@ -69,8 +66,7 @@ namespace primec {
 // RAII guard marking "the arena is active for this scope." Construct one
 // per compile (CLI: once near the top of main(), for the whole process;
 // test binaries: once per TEST_CASE). When the outermost instance on a
-// thread is destroyed, that thread's arena resets and all registered reset
-// callbacks run - see the file comment above.
+// thread is destroyed, that thread's arena resets - see the file comment above.
 class ScopedCompileArena {
 public:
   ScopedCompileArena();
@@ -109,15 +105,5 @@ auto systemHeapValue(F &&f) -> decltype(f()) {
   SystemHeapScope guard;
   return f();
 }
-
-// Registers a callback that runs on a thread every time that thread's
-// arena resets (i.e. every time the outermost ScopedCompileArena on that
-// thread is destroyed). Intended for thread_local caches whose entries may
-// have been arena-allocated during the scope that's ending; the callback
-// must clear the cache so nothing dangles into reclaimed memory. Call this
-// from a namespace-scope static initializer (i.e. before main()) - the
-// registry is a fixed-capacity array and never allocates, so there is no
-// static-initialization-order or reentrancy hazard in doing so.
-void registerArenaResetCallback(void (*callback)());
 
 } // namespace primec

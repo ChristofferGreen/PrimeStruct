@@ -47,15 +47,11 @@
 //     static under src/semantics, src/ir_lowerer, and src/parser now builds
 //     its value inside one of these, so its backing memory is never arena
 //     memory in the first place and a reset can never invalidate it.
-//   - registerArenaResetCallback(): for the handful of *known*,
-//     intentionally-persistent thread_local caches (as opposed to
-//     unenumerable magic statics) - normalizeBindingTypeName's cache,
-//     findStdlibSurfaceMetadataByResolvedPath's cache, SourceLocationMapper's
-//     cached-mapper-by-address - registers a callback that clears the cache
-//     on every reset, so no cached entry can dangle into memory the reset
-//     just reclaimed.
+//   - Persistent caches live in the per-compilation CompileContext
+//     (TODO-5359/5383) and are destroyed with the compilation; there is no
+//     reset-callback registry any more (TODO-5360).
 //
-// With both in place, resets are safe again: the arena now resets whenever
+// With these in place, resets are safe: the arena now resets whenever
 // the outermost ScopedCompileArena on a thread is destroyed, which CLI
 // binaries do once (at process exit - a no-op in practice) and test
 // binaries do once per TEST_CASE (see tests/unit/test_main.cpp's listener).
@@ -125,9 +121,8 @@ public:
   // thousands of TEST_CASEs from re-doing the malloc/free-family chunk
   // growth work each time. Safe to call only when nothing still alive
   // references arena memory from the scope that's ending - see
-  // SystemHeapScope/registerArenaResetCallback in the header for how the
-  // two remaining hazard classes (magic statics, persistent thread_local
-  // caches) are kept out of arena memory in the first place.
+  // SystemHeapScope in the header for how magic statics are kept out of
+  // arena memory, and CompileContext for where persistent caches live.
   void reset() {
 #if defined(PRIMEC_ARENA_POISON_AUDIT)
     // Diagnostic-only exhaustiveness audit (never compiled into a shipped
@@ -245,24 +240,6 @@ thread_local int tls_scopeDepth = 0;
 // tls_scopeDepth - see the file comment and CompileArena.h for why this
 // exists (the general escape hatch for magic statics).
 thread_local int tls_forceSystemHeap = 0;
-
-// Fixed-capacity registry of reset callbacks (see registerArenaResetCallback
-// in the header). A plain array, not a std::vector: registrations happen
-// from namespace-scope static initializers, i.e. before main() and
-// certainly before any ScopedCompileArena exists, but using any container
-// that itself allocates would reintroduce exactly the kind of
-// static-initialization-order/bootstrapping hazard this file already works
-// around elsewhere (see currentThreadArena()'s comment). The known
-// registrants (three, as of TODO-5235) are far below this capacity.
-constexpr int kMaxArenaResetCallbacks = 32;
-void (*g_arenaResetCallbacks[kMaxArenaResetCallbacks])() = {};
-int g_arenaResetCallbackCount = 0;
-
-void runArenaResetCallbacks() {
-  for (int i = 0; i < g_arenaResetCallbackCount; ++i) {
-    g_arenaResetCallbacks[i]();
-  }
-}
 
 CompileArena &currentThreadArena() {
   if (tls_arena == nullptr) {
@@ -414,13 +391,9 @@ ScopedCompileArena::ScopedCompileArena() {
 ScopedCompileArena::~ScopedCompileArena() {
   --tls_scopeDepth;
   if (tls_scopeDepth == 0 && tls_arena != nullptr) {
-    // Order matters: clear the registered thread_local caches first (their
-    // destructors/clear() calls may still touch arena memory from the scope
-    // that's ending), then rewind the arena itself. Nothing else may still
-    // reference arena memory from this scope at this point - magic statics
-    // never lived in arena memory to begin with (SystemHeapScope), and
-    // these are the only other known class of cross-scope-persistent state.
-    runArenaResetCallbacks();
+    // Nothing may still reference arena memory from this scope at this point:
+    // magic statics never lived in arena memory (SystemHeapScope), and
+    // cross-call caches live in the per-compilation CompileContext.
     tls_arena->reset();
   }
 }
@@ -431,12 +404,6 @@ SystemHeapScope::SystemHeapScope() {
 
 SystemHeapScope::~SystemHeapScope() {
   --tls_forceSystemHeap;
-}
-
-void registerArenaResetCallback(void (*callback)()) {
-  if (g_arenaResetCallbackCount < kMaxArenaResetCallbacks) {
-    g_arenaResetCallbacks[g_arenaResetCallbackCount++] = callback;
-  }
 }
 
 } // namespace primec

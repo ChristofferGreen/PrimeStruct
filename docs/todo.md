@@ -104,7 +104,6 @@ of sync with them.
 | TODO-5352 | Measure and cut semantics header fan-out (SemanticsValidator.h) | ready | semantics-structure |
 | TODO-5353 | Split TemplateMonomorphExpressionRewrite.cpp into focused units | ready | semantics-structure |
 | TODO-5356 | Collapse near-duplicate ir_pipeline validation tests into table-driven suites | deferred | test-infrastructure |
-| TODO-5360 | Remove ScopedCompileArena reset callbacks and the arena magic-static workarounds | ready | compiler-state |
 | TODO-5361 | Single opcode descriptor table for IR (stack effect, targets, serialization) | ready | ir-vm-structure |
 | TODO-5362 | Unify the VM execution kernel and the debug session interpreter | blocked | ir-vm-structure |
 | TODO-5363 | Spec: VM-owned dynamic strings (design decision) | ready | vm-strings |
@@ -119,7 +118,6 @@ of sync with them.
 - TODO-5353 (track: semantics-structure): Split TemplateMonomorphExpressionRewrite.cpp into focused units.
 - TODO-5361 (track: ir-vm-structure): Single opcode descriptor table for IR (stack effect, targets, serialization).
 - TODO-5363 (track: vm-strings): Spec: VM-owned dynamic strings (design decision).
-- TODO-5360 (track: compiler-state): Remove ScopedCompileArena reset callbacks and the arena magic-static workarounds.
 
 ### Immediate Next 10
 
@@ -135,7 +133,6 @@ of sync with them.
 - Collection resolution: typed family enum TODO-5374 (deferred)
 - Semantics structure: TODO-5352, TODO-5353
 - Test infrastructure: TODO-5356 (deferred)
-- Compiler state: TODO-5360
 - IR/VM structure: TODO-5361 -> 5362
 - VM strings: TODO-5363 -> 5364 -> 5365
 - Docs hygiene: TODO-5368 (deferred)
@@ -235,25 +232,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - files and lines removed, suite runtime before/after in the result note.
   - stop_rule: stop if coverage cannot be shown equivalent for a group; leave that group as
     is.
-
-- [ ] TODO-5360: Remove ScopedCompileArena reset callbacks and the arena magic-static workarounds
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-01
-  - phase: Compiler structure
-  - parallel_track: compiler-state
-  - scope: Once state is per-compilation (TODO-5359), delete
-    `registerArenaResetCallback`, the `systemHeapValue` wrappers on magic
-    statics, and the poison-audit plumbing that exist only to make resets
-    safe; keep the arena allocator itself if benchmarks justify it.
-  - acceptance:
-    - `registerArenaResetCallback` and `systemHeapValue` have no remaining
-      callers and are deleted.
-    - embed API can optionally use a per-compile arena scope without dangling
-      results (test).
-    - docs/CompilerArenaAllocator.md updated to the final design.
-  - stop_rule: if the arena cannot be made safe to reset per compile without the
-    workarounds, record that and stop.
 
 - [ ] TODO-5361: Single opcode descriptor table for IR (stack effect, targets, serialization)
   - owner: ai
