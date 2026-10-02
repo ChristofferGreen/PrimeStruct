@@ -1021,3 +1021,103 @@ the TODO-5234 arena) - this is what's shipped. Reasoning:
     per this leaf's own stop_rule, extending scope beyond what was
     actually measured is exactly the kind of unverified claim the rest of
     this investigation chain has consistently avoided making.
+
+## TODO-5358: compiler global state inventory and `CompileContext` design
+
+Inventory of every `thread_local` and every non-constant / lazily-initialised
+static under `src/` (2026-10-02). Verdicts:
+
+- **pure cache**: result depends only on the key; a stale or missing entry
+  can change speed, never output.
+- **stateful**: output can depend on earlier compiles or on thread layout
+  unless the state is reset or keyed correctly.
+- **process-global (keep)**: immutable after first use and identical for every
+  compilation; no migration needed.
+
+### Mutable / thread-local state
+
+| Item | Where | Writers | Verdict | Notes |
+| --- | --- | --- | --- | --- |
+| `tls_arena`, `tls_scopeDepth`, `tls_forceSystemHeap` | `src/support/CompileArena.cpp:240-247` | `CompileArenaScope`, `SystemHeapScope` | stateful (per-thread, scoped) | The arena itself is the existing per-compilation lifetime; it is bound to the thread, not to an object. First candidate to hang off `CompileContext`. |
+| `g_arenaResetCallbacks[32]`, `g_arenaResetCallbackCount` | `CompileArena.cpp:258-438` | static-init registration of thread_local cache clearers | stateful (process-global registry) | Fixed capacity 32 and registration order = static-init order. Disappears once caches are owned by the context. |
+| `g_cachedSource/Generation/UnitCount/SegmentCount/Mapper` | `src/support/SourceLocationMapper.cpp:431-438` | `SourceLocationMapper` lookup | stateful | Keyed by the address of the `ExpandedSource`; address reuse caused the stale-mapping bug (TODO-5340). Generation counter is the band-aid. Output-affecting. |
+| `g_normalizeBindingTypeNameCache`, `g_splitTemplateTypeNameCache`, `g_splitTopLevelTemplateArgsCache` | `src/semantics/SemanticsBindingTypeHelpers.cpp:31-35` | binding type helpers (pure string functions) | pure cache | Cleared by an arena reset callback only to avoid dangling arena memory, not for correctness. |
+| `g_resolvedPathCache` | `src/support/StdlibSurfaceRegistry.cpp:1599` | `findStdlibSurfaceMetadataByResolvedPath` | pure cache | Key is a resolved path, value points into the immutable registry. |
+| `rewriteRecursionDepth` | `SemanticsValidatorExprLateUnknownTargetFallbacks.cpp:86` | recursion guard, RAII-like inc/dec | stateful (scoped counter) | Must return to 0 on every exit path; an exception/early return leak would change later compiles on that thread. Move into validator state. |
+| `gDisableSemanticAllocatorReliefForBenchmark` | `SemanticsValidationBenchmarkOrchestration.cpp:19` | benchmark scope guard | stateful (test/benchmark knob) | Does not affect output; becomes a `CompileContext` option. |
+| `StdlibSurfaceRegistry` storage / index / path sets (`systemHeapValue` statics) | `StdlibSurfaceRegistry.cpp:1024,1067,1099` | first use (reads stdlib files from disk) | process-global, environment-dependent | Depends on the stdlib directory found at first use, so two compiles with different `--stdlib` roots in one process would share the first root's registry. Embedding with multiple stdlib roots is unsupported until this is context-owned. |
+| `LegacyCollectionBranchCounters` instance, env flag, log path, `registered` | `IrLowererLegacyCollectionBranchCounters.cpp:39-74` | lowering diagnostics counters | stateful (diagnostic only) | Counters accumulate across compiles; never feed output. Move to context diagnostics. |
+| `TempPaths` root + counter | `src/support/TempPaths.cpp:67,86` | temp path allocation | process-global (keep) | Atomic counter, unique names; per-process by design. |
+| `main.cpp` counter | `src/bin/main.cpp:74` | CLI only | process-global (keep) | |
+
+### Immutable lazily-built statics (process-global, keep)
+
+Backend registry objects (`IrBackends.cpp:521-529`), pass/phase manifests
+(`SemanticValidationPlan.cpp`, `IrPreparation.cpp`, `TypeResolutionGraph.cpp`
+contracts, `SemanticProduct.cpp` families), `TransformRegistry` default,
+`SystemProcessRunner`, helper-suffix tables
+(`HelperSuffixInfo` arrays in semantics/emitter files), prefix strings wrapped in
+`systemHeapValue`, and the many `static const` empty-map sentinels in the IR
+lowerer and SoA semantics files. All are read-only after construction, are
+independent of the program being compiled, and are wrapped in `systemHeapValue`
+where they must outlive an arena scope. They need no migration; the only rule
+is that new statics of this kind stay `const` and `systemHeapValue`-wrapped.
+
+### Findings
+
+1. Only two items can change *output* depending on history: the
+   `SourceLocationMapper` cache (fixed by a generation counter, but still
+   keyed by address) and the process-wide stdlib registry (environment-
+   dependent). Everything else is a pure cache, a diagnostic counter, or a
+   scoped guard.
+2. The reset-callback registry exists purely because pure caches live in
+   `thread_local` storage but hold arena memory. Per-context ownership removes
+   both the registry and the 32-slot limit.
+3. The property test `tests/unit/embed/test_embed_order_independence.cpp`
+   (ctest `PrimeStruct_embed_order_independence`) compiles every embed fixture
+   (all `embedPrograms()` plus the exports bundle) in forward, reversed and
+   shuffled orders on one engine, with a fresh engine per compile, on one worker
+   thread, one thread per fixture and shuffled work lists across threads, and
+   asserts byte-identical serialized IR against a fresh-engine reference. It
+   passes today and is the regression net for the migration.
+
+### `CompileContext` design
+
+One `CompileContext` is created per top-level compilation (one `primec`
+invocation, one `ScriptEngine::compile*` call, one test case) and owns:
+
+- the compile arena and its scope (replacing `tls_arena`/`tls_scopeDepth`),
+- a `SourceLocationCache` (keyed by a context-unique `ExpandedSource` id, not an
+  address),
+- a `TypeNameCache` holding the three binding-type caches,
+- a `StdlibSurfaceView` (the registry for the stdlib root of this compilation;
+  the process-global registry stays as the default root),
+- a `DiagnosticCounters` block for legacy collection branch counters, and the
+  benchmark/relief options.
+
+Access: a context pointer is stored in a single `thread_local` slot installed by
+a `CompileContext::Scope` RAII object (so deep helpers that cannot take a new
+parameter, such as `normalizeBindingTypeName`, keep their signatures during
+migration) and passed explicitly into the semantics validator and IR lowerer
+constructors. Worker threads in the opt-in parallel semantics path receive the
+parent's context pointer; caches that were `thread_local` for lock avoidance
+become per-worker members of the context. A function that needs a context and
+finds none installed falls back to a lazily created thread-default context, so
+no caller breaks during the migration; the fallback is removed at the end.
+
+### Migration order
+
+1. **`SourceLocationMapper` cache** (output-affecting; fixes the TODO-5340
+   class by construction): key by context-unique id, own it in the context.
+2. **Binding-type helper caches**: move the three caches into the context and
+   delete the arena reset callback for them.
+3. `rewriteRecursionDepth` into validator state; benchmark knob into context options.
+4. `g_resolvedPathCache` and the stdlib registry view (enables per-compilation
+   stdlib roots).
+5. Legacy branch counters into context diagnostics.
+6. Delete the arena reset-callback registry, the thread-default fallback, and
+   `tls_arena` in favour of the context-owned arena.
+
+The first two items to move are therefore (1) the `SourceLocationMapper` cache
+and (2) the binding-type helper caches; they are tracked by TODO-5359. This leaf
+performs no migration.

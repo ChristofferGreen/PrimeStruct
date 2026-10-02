@@ -923,6 +923,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/embed/test_embed_host_language.cpp
     tests/unit/embed/test_embed_exports.cpp
     tests/unit/embed/test_embed_lifetime.cpp
+    tests/unit/embed/test_embed_order_independence.cpp
     tests/unit/embed/test_embed_no_process.cpp
   )
   target_include_directories(PrimeStruct_embed_tests PRIVATE third_party ${CMAKE_SOURCE_DIR} tests/unit/embed)
@@ -988,6 +989,14 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_embed_lifetime
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+  add_test(
+    NAME PrimeStruct_embed_order_independence
+    COMMAND $<TARGET_FILE:PrimeStruct_embed_tests>
+            "--test-suite=primestruct.embed.order_independence"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_embed_order_independence
+                       PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
   add_test(
     NAME PrimeStruct_embed_no_process
     COMMAND $<TARGET_FILE:PrimeStruct_embed_tests>

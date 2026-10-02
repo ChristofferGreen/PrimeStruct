@@ -106,8 +106,7 @@ of sync with them.
 | TODO-5352 | Measure and cut semantics header fan-out (SemanticsValidator.h) | ready | semantics-structure |
 | TODO-5353 | Split TemplateMonomorphExpressionRewrite.cpp into focused units | ready | semantics-structure |
 | TODO-5356 | Collapse near-duplicate ir_pipeline validation tests into table-driven suites | deferred | test-infrastructure |
-| TODO-5358 | Inventory compiler global state and design a per-compilation context | ready | compiler-state |
-| TODO-5359 | Move compiler caches into a per-compilation context | blocked | compiler-state |
+| TODO-5359 | Move compiler caches into a per-compilation context | ready | compiler-state |
 | TODO-5360 | Remove ScopedCompileArena reset callbacks and the arena magic-static workarounds | blocked | compiler-state |
 | TODO-5361 | Single opcode descriptor table for IR (stack effect, targets, serialization) | ready | ir-vm-structure |
 | TODO-5362 | Unify the VM execution kernel and the debug session interpreter | blocked | ir-vm-structure |
@@ -121,16 +120,16 @@ of sync with them.
 
 - TODO-5352 (track: semantics-structure): Measure and cut semantics header fan-out (SemanticsValidator.h).
 - TODO-5353 (track: semantics-structure): Split TemplateMonomorphExpressionRewrite.cpp into focused units.
-- TODO-5358 (track: compiler-state): Inventory compiler global state and design a per-compilation context.
 - TODO-5361 (track: ir-vm-structure): Single opcode descriptor table for IR (stack effect, targets, serialization).
 - TODO-5363 (track: vm-strings): Spec: VM-owned dynamic strings (design decision).
 - TODO-5379 (track: test-infrastructure): Close the remaining gate-time gap after wildcard pruning.
+- TODO-5359 (track: compiler-state): Move compiler caches into a per-compilation context.
 
 ### Immediate Next 10
 
 1. TODO-5379 - Close the remaining gate-time gap after wildcard pruning.
-2. TODO-5361 - Single opcode descriptor table for IR (stack effect, targets, serialization).
-3. TODO-5358 - Inventory compiler global state and design a per-compilation context.
+2. TODO-5359 - Move compiler caches into a per-compilation context.
+3. TODO-5361 - Single opcode descriptor table for IR (stack effect, targets, serialization).
 4. TODO-5352 - Measure and cut semantics header fan-out (SemanticsValidator.h).
 5. TODO-5353 - Split TemplateMonomorphExpressionRewrite.cpp into focused units.
 6. TODO-5363 - Spec: VM-owned dynamic strings (design decision).
@@ -142,7 +141,7 @@ of sync with them.
 - Collection resolution: defects 5375-5377; typed family enum TODO-5374 (deferred)
 - Semantics structure: TODO-5352, TODO-5353
 - Test infrastructure: TODO-5379, TODO-5356 (deferred)
-- Compiler state: TODO-5358 -> 5359 -> 5360
+- Compiler state: TODO-5359 -> 5360
 - IR/VM structure: TODO-5361 -> 5362
 - VM strings: TODO-5363 -> 5364 -> 5365
 - Docs hygiene: TODO-5368 (deferred)
@@ -243,40 +242,17 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - stop_rule: stop if coverage cannot be shown equivalent for a group; leave that group as
     is.
 
-- [ ] TODO-5358: Inventory compiler global state and design a per-compilation context
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-01
-  - phase: Compiler structure
-  - parallel_track: compiler-state
-  - scope: Process-global and thread-local state (compile arena, `thread_local` caches
-    in `SourceLocationMapper`, `SemanticsBindingTypeHelpers`,
-    `StdlibSurfaceRegistry`, function-local statics wrapped in
-    `systemHeapValue`, arena reset callbacks) caused the TODO-5233/5234/5235
-    hazards and, in embedding, the stale `SourceLocationMapper` cache
-    (TODO-5340). Produce the inventory (every `thread_local`/non-trivial
-    static under `src/`, who writes it, whether results depend on prior
-    compiles) and a design for a `CompileContext` owned by one compilation,
-    in `docs/CompilerArenaAllocator.md`.
-  - acceptance:
-    - inventory table committed with a per-item verdict: pure cache / stateful
-      / must be process-global.
-    - a property test compiles the same program set in different orders and
-      thread layouts and asserts identical IR bytes, run for all
-      fixtures in `tests/unit/embed/`.
-    - design names the migration order and the first two items to move.
-  - stop_rule: design and inventory only; no migration in this leaf.
-
 - [ ] TODO-5359: Move compiler caches into a per-compilation context
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5358
+  - status: ready
   - created_at: 2026-10-01
   - phase: Compiler structure
   - parallel_track: compiler-state
   - scope: Implement the TODO-5358 design for the stateful items: caches become members
     of a context passed through the pipeline (or owned by it), so nothing
     leaks between compiles or threads and no reset callbacks are needed.
+    Order per docs/CompilerArenaAllocator.md: SourceLocationMapper cache first, then the
+    binding-type helper caches.
   - acceptance:
     - each migrated cache's `thread_local`/static is deleted and its arena
       reset callback removed.
