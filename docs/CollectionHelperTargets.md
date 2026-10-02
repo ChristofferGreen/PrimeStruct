@@ -75,6 +75,9 @@ change. `Reference<...>` rows (`(Reference)` forms) cover borrowed receivers and
 | vector | `remove_at` | method(Reference) | ok (20) | `/std/collections/vector/vector`<br>`/std/collections/vector/vectorRemoveAtRef`<br>`/std/collections/vector/at`<br>`/std/collections/vector/at` |  |
 | vector | `remove_swap` | method(Reference) | ok (30) | `/std/collections/vector/vector`<br>`/std/collections/vector/vectorRemoveSwapRef`<br>`/std/collections/vector/at`<br>`/std/collections/vector/at` |  |
 | vector | `reserve` | method(Reference) | ok (10) | `/std/collections/vector/vector`<br>`/std/collections/vector/vectorReserveRef`<br>`/std/collections/vector/capacity`<br>`/std/collections/vector/capacity` |  |
+| vector | `count` | method(dereference) | ok (3) | `/std/collections/vector/vector`<br>`/std/collections/vector/vectorCountRef`<br>`/std/collections/vector/vectorCountRef` |  |
+| vector | `count` | bare(dereference) | ok (3) | `/std/collections/vector/vector`<br>`/std/collections/vector/vectorCountRef`<br>`/std/collections/vector/vectorCountRef` |  |
+| vector | `push` | call(Reference param) | ok (42) | `/std/collections/vector/vector`<br>`/std/collections/vector/count`<br>`/std/collections/vector/count`<br>`/std/collections/vector/at`<br>`/std/collections/vector/at` |  |
 | map | `count` | method(Reference) | ok (2) | `/std/collections/map/map`<br>`/std/collections/map/entry`<br>`/std/collections/map/entry`<br>`/std/collections/map/count_ref`<br>`/std/collections/map/count_ref` |  |
 | map | `count` | bare(Reference) | ok (2) | `/std/collections/map/map`<br>`/std/collections/map/entry`<br>`/std/collections/map/entry`<br>`/std/collections/map/count_ref`<br>`/std/collections/map/count_ref` |  |
 | map | `count_ref` | canonical(Reference) | ok (2) | `/std/collections/map/map`<br>`/std/collections/map/entry`<br>`/std/collections/map/entry`<br>`/std/collections/map/count_ref`<br>`/std/collections/map/count_ref` |  |

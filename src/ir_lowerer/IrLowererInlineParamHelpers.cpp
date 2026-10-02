@@ -1017,11 +1017,21 @@ bool emitInlineDefinitionCallParameters(
         return false;
       }
       std::string argStruct = inferStructExprPath(*orderedArg, callerLocals);
+      // TODO-5380: a `Reference<vector<T>>` parameter is typed as the builtin
+      // vector spelling; bind it to the argument's canonical Vector record.
+      const bool borrowedVectorParam =
+          paramInfo.referenceToVector && !paramInfo.isSoaVector &&
+          normalizeCollectionBindingTypeName(paramInfo.structTypeName) == "vector" &&
+          isCollectionVectorRecordPath(argStruct);
       if (argStruct.empty() ||
-          !isStructParamMatch(calleePath, paramInfo.structTypeName, argStruct)) {
+          (!borrowedVectorParam &&
+           !isStructParamMatch(calleePath, paramInfo.structTypeName, argStruct))) {
         error = "struct parameter type mismatch: expected " + paramInfo.structTypeName + ", got " +
                 (argStruct.empty() ? std::string("<unknown>") : argStruct);
         return false;
+      }
+      if (borrowedVectorParam) {
+        paramInfo.structTypeName = argStruct;
       }
       const Expr &argExpr = *orderedArg;
       auto emitStructReference = [&](const Expr &arg) -> bool {

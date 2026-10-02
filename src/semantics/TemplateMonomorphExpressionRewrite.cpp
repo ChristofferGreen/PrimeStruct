@@ -229,6 +229,47 @@ bool rewriteKeyValueWrapperHelperCallToMethod(Expr &expr,
   return true;
 }
 
+// TODO-5381: `count(dereference(r))` / `dereference(r).count()` where `r` is a
+// `Reference<vector<T>>` means the borrowed helper applied to `r` itself;
+// unwrap the dereference so the borrowed-vector routing below applies.
+void unwrapDereferencedBorrowedVectorReceiver(Expr &expr,
+                                              const std::vector<ParameterInfo> &params,
+                                              const LocalTypeMap &locals,
+                                              bool allowMathBare,
+                                              Context &ctx) {
+  if (expr.kind != Expr::Kind::Call || expr.isBinding || expr.isFieldAccess || expr.args.empty() ||
+      hasNamedCallArguments(expr) || !expr.templateArgs.empty()) {
+    return;
+  }
+  std::string helperName = expr.name;
+  if (!helperName.empty() && helperName.front() == '/') {
+    helperName.erase(helperName.begin());
+  }
+  if (collection_helpers::borrowedVectorHelperLeaf(helperName).empty()) {
+    return;
+  }
+  const Expr &receiver = expr.args.front();
+  if (receiver.kind != Expr::Kind::Call || receiver.isMethodCall || receiver.isBinding ||
+      receiver.args.size() != 1 || !isSimpleCallName(receiver, "dereference")) {
+    return;
+  }
+  BindingInfo pointerInfo;
+  if (!inferBindingTypeForMonomorph(receiver.args.front(), params, locals, allowMathBare, ctx,
+                                    pointerInfo) ||
+      normalizeBindingTypeName(pointerInfo.typeName) != "Reference") {
+    return;
+  }
+  std::string vectorBase;
+  std::string elementType;
+  if (!splitTemplateTypeName(normalizeBindingTypeName(pointerInfo.typeTemplateArg), vectorBase,
+                             elementType) ||
+      normalizeBindingTypeName(vectorBase) != "vector") {
+    return;
+  }
+  Expr unwrapped = receiver.args.front();
+  expr.args.front() = std::move(unwrapped);
+}
+
 // TODO-5375: bare `count(r)` / `push(r, x)` / ... where `r` is a
 // `Reference<vector<T>>` routes to the canonical borrowed-vector helper with
 // the element type as its template argument (method sugar does the same via
@@ -2684,6 +2725,9 @@ bool rewriteExpr(Expr &expr,
         }
       }
     }
+    if (!expr.isMethodCall) {
+      unwrapDereferencedBorrowedVectorReceiver(expr, params, locals, allowMathBare, ctx);
+    }
     if (rewriteBorrowedVectorBareHelperCall(expr, params, locals, allowMathBare, ctx)) {
       allConcrete = true;
       resolvedPath = resolveCalleePath(expr, namespacePrefix, ctx, &locals, &params);
@@ -3425,6 +3469,7 @@ bool rewriteExpr(Expr &expr,
         return false;
       }
     }
+    unwrapDereferencedBorrowedVectorReceiver(expr, params, locals, allowMathBare, ctx);
     const bool methodCallSyntax = expr.isMethodCall;
     std::string methodPath;
     if (resolveMethodCallTemplateTarget(expr, locals, ctx, methodPath)) {

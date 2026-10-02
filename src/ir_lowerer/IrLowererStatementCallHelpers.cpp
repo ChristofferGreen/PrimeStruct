@@ -2,6 +2,7 @@
 
 #include "IrLowererCallHelpers.h"
 #include "IrLowererHelpers.h"
+#include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererLowerEffects.h"
 #include "IrLowererSemanticProductTargetAdapters.h"
@@ -88,6 +89,15 @@ bool buildCallableDefinitionCallContext(
     }
     if (info.structTypeName.empty() || info.structSlotCount > 0) {
       return true;
+    }
+    // TODO-5380: a borrowed `Reference<vector<T>>` / `Pointer<vector<T>>` binding
+    // carries the builtin vector spelling; use the canonical Vector record.
+    if ((info.referenceToVector || info.pointerToVector) && !info.isSoaVector &&
+        normalizeCollectionBindingTypeName(info.structTypeName) == "vector") {
+      const std::string elementType = typeNameForValueKind(info.valueKind);
+      if (!elementType.empty()) {
+        info.structTypeName = specializedCollectionVectorRecordPathForElementType(elementType);
+      }
     }
     StructSlotLayoutInfo layout;
     if (!resolveStructSlotLayout(info.structTypeName, layout)) {

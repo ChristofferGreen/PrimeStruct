@@ -100,8 +100,6 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5380 | Borrowed `Reference<vector<T>>` function parameters fail VM/native lowering | ready | collection-defects |
-| TODO-5381 | `count(dereference(r))` on a borrowed vector silently returns 0 | ready | collection-defects |
 | TODO-5379 | Close the remaining gate-time gap after wildcard pruning | ready | test-infrastructure |
 | TODO-5374 | Typed collection family/helper enum replacing string-tagged family checks | deferred | collection-resolution |
 | TODO-5352 | Measure and cut semantics header fan-out (SemanticsValidator.h) | ready | semantics-structure |
@@ -134,13 +132,11 @@ of sync with them.
 4. TODO-5352 - Measure and cut semantics header fan-out (SemanticsValidator.h).
 5. TODO-5353 - Split TemplateMonomorphExpressionRewrite.cpp into focused units.
 6. TODO-5363 - Spec: VM-owned dynamic strings (design decision).
-7. TODO-5380 - Borrowed `Reference<vector<T>>` function parameters fail VM/native lowering.
-8. TODO-5381 - `count(dereference(r))` on a borrowed vector silently returns 0.
 
 ### Priority Lanes
 
 - Embedding (must support iOS): TODO-5348 (needs macOS)
-- Collection resolution: defects 5376-5377, 5380-5381; typed family enum TODO-5374 (deferred)
+- Collection resolution: typed family enum TODO-5374 (deferred)
 - Semantics structure: TODO-5352, TODO-5353
 - Test infrastructure: TODO-5379, TODO-5356 (deferred)
 - Compiler state: TODO-5359 -> 5360
@@ -150,7 +146,7 @@ of sync with them.
 
 ### Execution Queue
 
-Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight, TODO-5380/5381 (defect leaves) wait for a slot.
+Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 ### Task Blocks
 
@@ -413,30 +409,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
       (diff-checked).
   - stop_rule: no semantic edits to spec text; if a section's classification is unclear,
     leave it in the index file.
-
-- [ ] TODO-5380: Borrowed `Reference<vector<T>>` function parameters fail VM/native lowering
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-02
-  - phase: Compiler structure
-  - parallel_track: collection-defects
-  - scope: passing `location(v)` to `[Reference<vector<i32>> mut] r` (even a no-op function) fails with `struct parameter type mismatch: expected /vector, got /std/collections/vector/Vector__t...` in `isStructParamMatch` (`src/ir_lowerer/IrLowererInlineParamHelpers.cpp`): the builtin vector record is not matched against the canonical Vector record. Found while closing TODO-5375 (locals work, parameters do not).
-  - acceptance:
-    - a function taking `Reference<vector<T>>` can be called with `location(v)` and use count/at/push on it on VM and native; add a compile-run test.
-    - the parity suite and the full release gate stay green.
-  - stop_rule: fix only the pinned behavior; anything else found goes to its own leaf.
-
-- [ ] TODO-5381: `count(dereference(r))` on a borrowed vector silently returns 0
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-02
-  - phase: Compiler structure
-  - parallel_track: collection-defects
-  - scope: `dereference(r).count()` and `count(dereference(r))` with `r` a `Reference<vector<i32>>` over a 3-element vector compile and return 0 (`at`/`capacity` through the same expression are correct). The semantic product resolves `/std/collections/vector/count`, so the inline count lowering mishandles a dereference receiver. Silent wrong result; found while closing TODO-5375.
-  - acceptance:
-    - `dereference(r).count()` returns the real count (or is rejected with a diagnostic); add a compile-run regression test.
-    - the parity suite and the full release gate stay green.
-  - stop_rule: fix only the pinned behavior; anything else found goes to its own leaf.
 
 - [ ] TODO-5379: Close the remaining gate-time gap after wildcard pruning (478.7 s vs 434 s target)
   - owner: ai
