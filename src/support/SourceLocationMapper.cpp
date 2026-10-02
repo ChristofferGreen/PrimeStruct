@@ -413,67 +413,39 @@ const SourceLocationMapperLookupStats &SourceLocationMapper::lookupStats()
   return lookupStats_;
 }
 
+SourceLocationMapperCache::SourceLocationMapperCache() = default;
+SourceLocationMapperCache::SourceLocationMapperCache(const SourceLocationMapperCache &) {}
+SourceLocationMapperCache::SourceLocationMapperCache(SourceLocationMapperCache &&) noexcept {}
+SourceLocationMapperCache &SourceLocationMapperCache::operator=(const SourceLocationMapperCache &) {
+  const std::lock_guard<std::mutex> lock(mutex);
+  mapper.reset();
+  return *this;
+}
+SourceLocationMapperCache &SourceLocationMapperCache::operator=(SourceLocationMapperCache &&) noexcept {
+  const std::lock_guard<std::mutex> lock(mutex);
+  mapper.reset();
+  return *this;
+}
+SourceLocationMapperCache::~SourceLocationMapperCache() = default;
+
 namespace {
 
-// Building a SourceLocationMapper sorts every segment in the (fully
-// import-expanded) source, which for a program importing large stdlib
-// surfaces like /std/collections/* can be thousands of segments. The two
-// free functions below are called once per emitted instruction's source
-// span (see IrLowererLowerReturnEmitStage.cpp's appendInstructionSourceRange
-// and IrLowererLowerSetupStage.cpp), so rebuilding the mapper from scratch
-// on every call turned an O(segments log segments) cost into an
-// O(instructions * segments log segments) one - the dominant cost behind
-// TODO-4757's ~6.5s/call pathology, confirmed via gdb landing repeatedly in
-// std::__introsort_loop over SegmentLineCandidate here. All call sites pass
-// the same single ExpandedSource - built once and threaded by pointer
-// through the whole compile - so a mapper cached by that address is safe to
-// reuse across calls within one compilation.
-thread_local const ExpandedSource *g_cachedSource = nullptr;
-// Also keyed by the source's generation and size: without a compile arena scope
-// (embedding hosts), a new ExpandedSource can be allocated at the address of a
-// destroyed one, and an address-only key would then serve the old mapper.
-thread_local std::uint64_t g_cachedGeneration = 0;
-thread_local std::size_t g_cachedUnitCount = 0;
-thread_local std::size_t g_cachedSegmentCount = 0;
-thread_local std::optional<SourceLocationMapper> g_cachedMapper;
-
-// TODO-5235: this cache is thread_local and intentionally persists across
-// many calls within one compile scope, but its entries may be
-// arena-allocated during that scope. Register a reset callback that clears
-// it on every arena reset (i.e. every TEST_CASE boundary in the doctest
-// binaries) so no cached entry can dangle into memory the reset just
-// reclaimed - see docs/CompilerArenaAllocator.md. This also incidentally
-// closes a pre-existing, unrelated staleness risk: without this, a new
-// compile's ExpandedSource could in principle be allocated at the same
-// address as a previous compile's (now-destroyed) one, causing a false
-// cache hit; resetting on every compile scope boundary means that can never
-// happen either.
-void clearSourceLocationMapperCache() {
-  g_cachedMapper.reset();
-  g_cachedSource = nullptr;
-  g_cachedGeneration = 0;
-}
-
-[[maybe_unused]] const bool kSourceLocationMapperCacheRegistered =
-    (registerArenaResetCallback(&clearSourceLocationMapperCache), true);
-
+// The mapper is cached on the source itself (see SourceLocationMapperCache);
+// the unit/segment counts guard against a source that grew after the first
+// lookup. The caller holds `cache.mutex`.
 const SourceLocationMapper &cachedMapperFor(const ExpandedSource &source) {
-  if (g_cachedSource != &source || g_cachedGeneration != source.generation ||
-      g_cachedUnitCount != source.units.size() || g_cachedSegmentCount != source.segments.size() ||
-      !g_cachedMapper.has_value()) {
-    // TODO-5235: SystemHeapScope around the mutation, not just at
-    // declaration - the cached mapper's own internal buffers must never be
-    // arena memory, since this cache intentionally survives across many
-    // calls within (and, via the reset callback above, across) a compile
-    // scope. See docs/CompilerArenaAllocator.md.
+  SourceLocationMapperCache &cache = source.mapperCache;
+  if (cache.mapper == nullptr || cache.unitCount != source.units.size() ||
+      cache.segmentCount != source.segments.size()) {
+    // The mapper's own buffers must never be compile-arena memory: the cache
+    // can outlive the compile scope it was built in (see
+    // docs/CompilerArenaAllocator.md).
     SystemHeapScope systemHeapGuard;
-    g_cachedMapper.emplace(source);
-    g_cachedSource = &source;
-    g_cachedGeneration = source.generation;
-    g_cachedUnitCount = source.units.size();
-    g_cachedSegmentCount = source.segments.size();
+    cache.mapper = std::make_unique<SourceLocationMapper>(source);
+    cache.unitCount = source.units.size();
+    cache.segmentCount = source.segments.size();
   }
-  return *g_cachedMapper;
+  return *cache.mapper;
 }
 
 } // namespace
@@ -482,28 +454,33 @@ std::optional<SourceUnitLocation> mapExpandedSourceLocation(
     const ExpandedSource &source,
     int flattenedLine,
     int flattenedColumn) {
+  const std::lock_guard<std::mutex> lock(source.mapperCache.mutex);
   return cachedMapperFor(source).mapExpandedSourceLocation(flattenedLine, flattenedColumn);
 }
 
 DiagnosticSpan mapDiagnosticSpanToSourceUnit(const ExpandedSource &source,
                                              const DiagnosticSpan &span) {
+  const std::lock_guard<std::mutex> lock(source.mapperCache.mutex);
   return cachedMapperFor(source).mapDiagnosticSpanToSourceUnit(span);
 }
 
 void mapDiagnosticRecordSpansToSourceUnits(const ExpandedSource &source,
                                            DiagnosticSinkRecord &record) {
+  const std::lock_guard<std::mutex> lock(source.mapperCache.mutex);
   cachedMapperFor(source).mapDiagnosticRecordSpansToSourceUnits(record);
 }
 
 void mapAndSortDiagnosticRecordsToSourceUnits(
     const ExpandedSource &source,
     std::vector<DiagnosticSinkRecord> &records) {
+  const std::lock_guard<std::mutex> lock(source.mapperCache.mutex);
   cachedMapperFor(source).mapAndSortDiagnosticRecordsToSourceUnits(records);
 }
 
 void mapAndSortDiagnosticReportSpansToSourceUnits(
     const ExpandedSource &source,
     DiagnosticSinkReport &report) {
+  const std::lock_guard<std::mutex> lock(source.mapperCache.mutex);
   cachedMapperFor(source).mapAndSortDiagnosticReportSpansToSourceUnits(report);
 }
 

@@ -1040,8 +1040,8 @@ static under `src/` (2026-10-02). Verdicts:
 | --- | --- | --- | --- | --- |
 | `tls_arena`, `tls_scopeDepth`, `tls_forceSystemHeap` | `src/support/CompileArena.cpp:240-247` | `CompileArenaScope`, `SystemHeapScope` | stateful (per-thread, scoped) | The arena itself is the existing per-compilation lifetime; it is bound to the thread, not to an object. First candidate to hang off `CompileContext`. |
 | `g_arenaResetCallbacks[32]`, `g_arenaResetCallbackCount` | `CompileArena.cpp:258-438` | static-init registration of thread_local cache clearers | stateful (process-global registry) | Fixed capacity 32 and registration order = static-init order. Disappears once caches are owned by the context. |
-| `g_cachedSource/Generation/UnitCount/SegmentCount/Mapper` | `src/support/SourceLocationMapper.cpp:431-438` | `SourceLocationMapper` lookup | stateful | Keyed by the address of the `ExpandedSource`; address reuse caused the stale-mapping bug (TODO-5340). Generation counter is the band-aid. Output-affecting. |
-| `g_normalizeBindingTypeNameCache`, `g_splitTemplateTypeNameCache`, `g_splitTopLevelTemplateArgsCache` | `src/semantics/SemanticsBindingTypeHelpers.cpp:31-35` | binding type helpers (pure string functions) | pure cache | Cleared by an arena reset callback only to avoid dangling arena memory, not for correctness. |
+| ~~`g_cachedSource/Generation/UnitCount/SegmentCount/Mapper`~~ (migrated, TODO-5359) | `src/support/SourceLocationMapper.cpp` | `SourceLocationMapper` lookup | stateful | Keyed by the address of the `ExpandedSource`; address reuse caused the stale-mapping bug (TODO-5340). Generation counter is the band-aid. Output-affecting. |
+| ~~`g_normalizeBindingTypeNameCache`, `g_splitTemplateTypeNameCache`, `g_splitTopLevelTemplateArgsCache`~~ (migrated, TODO-5359) | `src/semantics/SemanticsBindingTypeHelpers.cpp` | binding type helpers (pure string functions) | pure cache | Cleared by an arena reset callback only to avoid dangling arena memory, not for correctness. |
 | `g_resolvedPathCache` | `src/support/StdlibSurfaceRegistry.cpp:1599` | `findStdlibSurfaceMetadataByResolvedPath` | pure cache | Key is a resolved path, value points into the immutable registry. |
 | `rewriteRecursionDepth` | `SemanticsValidatorExprLateUnknownTargetFallbacks.cpp:86` | recursion guard, RAII-like inc/dec | stateful (scoped counter) | Must return to 0 on every exit path; an exception/early return leak would change later compiles on that thread. Move into validator state. |
 | `gDisableSemanticAllocatorReliefForBenchmark` | `SemanticsValidationBenchmarkOrchestration.cpp:19` | benchmark scope guard | stateful (test/benchmark knob) | Does not affect output; becomes a `CompileContext` option. |
@@ -1121,3 +1121,26 @@ no caller breaks during the migration; the fallback is removed at the end.
 The first two items to move are therefore (1) the `SourceLocationMapper` cache
 and (2) the binding-type helper caches; they are tracked by TODO-5359. This leaf
 performs no migration.
+
+### TODO-5359 progress (2026-10-02): first two items migrated
+
+- **`SourceLocationMapper` cache -> owned by the source.** The cache moved into
+  `ExpandedSource::mapperCache` (`SourceLocationMapperCache`, guarded by a mutex
+  because a mapper keeps lookup statistics). It is built lazily, dies with the
+  source, is never shared between sources, and a copied/moved source starts empty
+  (the mapper refers to the source it was built from). The address-keyed
+  thread-locals, the generation key and the arena reset callback are gone; the
+  TODO-5340 stale-mapping class cannot occur because there is no cross-source
+  cache. This is simpler than the design's "context-unique id": the source already
+  is the per-compilation object.
+- **Binding-type caches -> `CompileContext::typeNames`.** `CompileContext`
+  (`include/primec/support/CompileContext.h`) is installed by
+  `runCompilePipeline` through `CompileContext::Scope`; the three caches live in
+  it and their thread-locals and reset callback are deleted. A thread without an
+  installed context (unit tests calling a single stage, semantic definition
+  workers) uses a per-thread default context, which is the design's temporary
+  fallback. Entries are inserted under a `SystemHeapScope`, so none is arena
+  memory.
+- Not changed: `rewriteRecursionDepth`, benchmark knob, `g_resolvedPathCache` and
+  the registry view, branch counters (items 3-5), and the reset-callback registry
+  itself (item 6, TODO-5360; one callback remains, for `g_resolvedPathCache`).

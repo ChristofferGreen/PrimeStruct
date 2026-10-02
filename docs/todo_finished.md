@@ -1882,6 +1882,7 @@ are left unarchived.
 | TODO-5355 | Ban wall-clock comparisons in tests | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5357 | Cut the release gate time: re-shard from measured costs | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5358 | Inventory compiler global state and design a per-compilation context | [2026-10.md](todo_archive/2026-10.md) | - |
+| TODO-5359 | Move compiler caches into a per-compilation context | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5366 | Archive docs/todo_finished.md and keep a greppable index | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5367 | Trim docs/failing_tests.md to current failures only | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5369 | map `.at()` and `.at_unsafe()` method calls fail with `unknown call target /map/at` | [2026-10.md](todo_archive/2026-10.md) | - |

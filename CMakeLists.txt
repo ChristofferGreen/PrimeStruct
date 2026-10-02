@@ -151,6 +151,7 @@ set(PRIMESTRUCT_SUPPORT_SOURCES
   src/support/BuiltinArrayAccessNameClassifier.cpp
   src/support/CollectionSpellingClassifier.cpp
   src/support/CompileArena.cpp
+  src/support/CompileContext.cpp
   src/support/Diagnostics.cpp
   src/support/EmitKind.cpp
   src/support/OptionsParser.cpp

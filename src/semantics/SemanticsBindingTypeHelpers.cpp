@@ -3,6 +3,7 @@
 
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "primec/support/CompileArena.h"
+#include "primec/support/CompileContext.h"
 #include "primec/ir/StdlibCollectionPaths.h"
 #include "primec/support/CollectionHelperNames.h"
 
@@ -22,36 +23,21 @@ namespace {
 // external mutable state) but were previously invoked from scratch on every
 // binding lookup/inference pass, re-splitting and re-allocating substrings
 // of the exact same type-name strings (e.g. "vector<i32>") thousands of
-// times per compile. Memoize them with per-thread caches: definition
-// validation runs multiple SemanticsValidator instances concurrently via
-// std::async (see SemanticsValidatorPassesDefinitions.cpp), so a shared
-// cache would need locking; a thread_local cache instead gives each worker
-// its own memo table with zero synchronization overhead and is trivially
-// safe since the functions are pure.
-thread_local std::unordered_map<std::string, std::string> g_normalizeBindingTypeNameCache;
-thread_local std::unordered_map<std::string, std::tuple<bool, std::string, std::string>>
-    g_splitTemplateTypeNameCache;
-thread_local std::unordered_map<std::string, std::pair<bool, std::vector<std::string>>>
-    g_splitTopLevelTemplateArgsCache;
+// times per compile. They are memoized in the current CompileContext
+// (TODO-5359): definition validation runs multiple SemanticsValidator
+// instances concurrently via std::async (see
+// SemanticsValidatorPassesDefinitions.cpp), and a worker thread without an
+// installed context uses its own per-thread default context, so no cache is
+// shared between threads and no locking is needed. Every insert runs under a
+// SystemHeapScope, so entries are never compile-arena memory and need no
+// reset callback.
+CompileContext::TypeNameCaches &typeNameCaches() {
+  return CompileContext::current().typeNames;
+}
 
 std::string normalizeBindingTypeNameUncached(const std::string &name);
 bool splitTemplateTypeNameUncached(const std::string &text, std::string &base, std::string &arg);
 bool splitTopLevelTemplateArgsUncached(const std::string &text, std::vector<std::string> &out);
-
-// TODO-5235: these caches are thread_local and intentionally persist across
-// many calls within one compile scope, but their entries may be
-// arena-allocated during that scope. Register a reset callback that clears
-// them on every arena reset (i.e. every TEST_CASE boundary in the doctest
-// binaries) so no cached entry can dangle into memory the reset just
-// reclaimed - see docs/CompilerArenaAllocator.md.
-void clearBindingTypeHelperCaches() {
-  g_normalizeBindingTypeNameCache.clear();
-  g_splitTemplateTypeNameCache.clear();
-  g_splitTopLevelTemplateArgsCache.clear();
-}
-
-[[maybe_unused]] const bool kBindingTypeHelperCachesRegistered =
-    (primec::registerArenaResetCallback(&clearBindingTypeHelperCaches), true);
 
 }  // namespace
 
@@ -287,8 +273,9 @@ std::string normalizeBindingTypeNameUncached(const std::string &name) {
 }  // namespace
 
 std::string normalizeBindingTypeName(const std::string &name) {
-  auto it = g_normalizeBindingTypeNameCache.find(name);
-  if (it != g_normalizeBindingTypeNameCache.end()) {
+  auto &normalizeBindingTypeNameCache = typeNameCaches().normalizeBindingTypeName;
+  auto it = normalizeBindingTypeNameCache.find(name);
+  if (it != normalizeBindingTypeNameCache.end()) {
     return it->second;
   }
   std::string result = normalizeBindingTypeNameUncached(name);
@@ -302,7 +289,7 @@ std::string normalizeBindingTypeName(const std::string &name) {
     // still end up in arena memory that a later reset reclaims out from
     // under it. See docs/CompilerArenaAllocator.md.
     primec::SystemHeapScope systemHeapGuard;
-    g_normalizeBindingTypeNameCache.emplace(name, result);
+    normalizeBindingTypeNameCache.emplace(name, result);
   }
   return result;
 }
@@ -606,8 +593,9 @@ bool splitTemplateTypeNameUncached(const std::string &text, std::string &base, s
 }  // namespace
 
 bool splitTopLevelTemplateArgs(const std::string &text, std::vector<std::string> &out) {
-  auto it = g_splitTopLevelTemplateArgsCache.find(text);
-  if (it != g_splitTopLevelTemplateArgsCache.end()) {
+  auto &splitTopLevelTemplateArgsCache = typeNameCaches().splitTopLevelTemplateArgs;
+  auto it = splitTopLevelTemplateArgsCache.find(text);
+  if (it != splitTopLevelTemplateArgsCache.end()) {
     out = it->second.second;
     return it->second.first;
   }
@@ -617,14 +605,15 @@ bool splitTopLevelTemplateArgs(const std::string &text, std::vector<std::string>
     // the cache's own bucket-array buffer needs system-heap allocation on
     // every mutation, not just at declaration.
     primec::SystemHeapScope systemHeapGuard;
-    g_splitTopLevelTemplateArgsCache.emplace(text, std::make_pair(ok, out));
+    splitTopLevelTemplateArgsCache.emplace(text, std::make_pair(ok, out));
   }
   return ok;
 }
 
 bool splitTemplateTypeName(const std::string &text, std::string &base, std::string &arg) {
-  auto it = g_splitTemplateTypeNameCache.find(text);
-  if (it != g_splitTemplateTypeNameCache.end()) {
+  auto &splitTemplateTypeNameCache = typeNameCaches().splitTemplateTypeName;
+  auto it = splitTemplateTypeNameCache.find(text);
+  if (it != splitTemplateTypeNameCache.end()) {
     base = std::get<1>(it->second);
     arg = std::get<2>(it->second);
     return std::get<0>(it->second);
@@ -635,7 +624,7 @@ bool splitTemplateTypeName(const std::string &text, std::string &base, std::stri
     // the cache's own bucket-array buffer needs system-heap allocation on
     // every mutation, not just at declaration.
     primec::SystemHeapScope systemHeapGuard;
-    g_splitTemplateTypeNameCache.emplace(text, std::make_tuple(ok, base, arg));
+    splitTemplateTypeNameCache.emplace(text, std::make_tuple(ok, base, arg));
   }
   return ok;
 }

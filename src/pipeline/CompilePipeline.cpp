@@ -1,4 +1,5 @@
 #include "primec/pipeline/CompilePipeline.h"
+#include "primec/support/CompileContext.h"
 
 #include "../frontend/ExpandedSourceBuilder.h"
 
@@ -1698,6 +1699,9 @@ bool runCompilePipeline(const Options &options,
                         CompilePipelineErrorStage &errorStage,
                         std::string &error,
                         CompilePipelineDiagnosticInfo *diagnosticInfo) {
+  // One compilation, one context (TODO-5359).
+  CompileContext compileContext;
+  const CompileContext::Scope compileContextScope(compileContext);
   errorStage = CompilePipelineErrorStage::None;
   output = {};
   error.clear();
