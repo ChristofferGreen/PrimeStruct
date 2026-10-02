@@ -100,8 +100,7 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5388 | Shared lowerer-callback test factories for ir_pipeline validation tests | ready | test-infrastructure |
-| TODO-5389 | Convert ir_pipeline validation inference_expr_kind / call_return_setup / get_return_info tests | deferred | test-infrastructure |
+| TODO-5389 | Convert ir_pipeline validation inference_expr_kind / call_return_setup / get_return_info tests | ready | test-infrastructure |
 | TODO-5390 | Convert ir_pipeline validation statement_call_helper_buffer_store tests | deferred | test-infrastructure |
 | TODO-5391 | Convert ir_pipeline validation statement_binding / conversions / on_error tests | deferred | test-infrastructure |
 | TODO-5392 | Convert ir_pipeline validation inline_param_helper variadic-pack tests | deferred | test-infrastructure |
@@ -112,11 +111,11 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5388 (track: test-infrastructure): Shared lowerer-callback test factories for ir_pipeline validation tests.
+- TODO-5389 (track: test-infrastructure): Convert ir_pipeline validation inference_expr_kind / call_return_setup / get_return_info tests.
 
 ### Immediate Next 10
 
-1. TODO-5388 - Shared lowerer-callback test factories for ir_pipeline validation tests.
+1. TODO-5389 - Convert ir_pipeline validation inference_expr_kind / call_return_setup / get_return_info tests.
 
 ### Priority Lanes
 
@@ -156,26 +155,12 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     the runtime-only XCFramework and record the gap rather than widening the
     scope.
 
-- [ ] TODO-5388: Shared lowerer-callback test factories for ir_pipeline validation tests
+- [ ] TODO-5389: Convert ir_pipeline validation inference_expr_kind / call_return_setup / get_return_info tests
   - owner: ai
   - status: ready
   - created_at: 2026-10-02
   - phase: Test infrastructure
   - parallel_track: test-infrastructure
-  - scope: Measured by `scripts/measure_test_duplication.py` (26.5% duplicated windows), the top clusters are the repeated lowerer-helper callback lists (`[](const primec::Expr &) { return false; }, [](const primec::Expr &, const LocalMap &, LocalInfo::StringSource &, int32_t &, bool &) { return true; }, ...`, 100+ repeats in 11 files). Add one tests-local header of named factories for the common callback sets (always-false predicates, always-true string-source resolvers, no-op emitters) and convert exactly one file (`..._inference_expr_kind_call_base_setup_infers_try_from_indexed_borrowed_and_po.cpp`, the largest duplicator) as the pattern.
-  - acceptance:
-    - factories header committed with a doc comment per factory; the converted file passes unchanged assertions.
-    - each converted file keeps its TEST_CASE count (or merges only identical-assertion cases), and a documented mutation check (a removed lowerer branch) still fails a case.
-    - `python3 scripts/measure_test_duplication.py` excess for the converted files drops, with before/after in the result note; full release gate green.
-  - stop_rule: stop and leave the file unconverted if a mutation check (remove one lowerer branch the file covers) no longer fails some case after conversion; record the file in the leaf note.
-
-- [ ] TODO-5389: Convert ir_pipeline validation inference_expr_kind / call_return_setup / get_return_info tests
-  - owner: ai
-  - status: deferred
-  - created_at: 2026-10-02
-  - phase: Test infrastructure
-  - parallel_track: test-infrastructure
-  - depends_on: TODO-5388
   - scope: Using the TODO-5388 factories, convert `..._inference_expr_kind_dispatch_infers_try_from_indexed_map_tryat_args_pack_lo.cpp`, `..._inference_call_return_setup_resolves_namespaced_capacity_definition_directl.cpp`, `..._inference_get_return_info_step_reports_missing_definitions.cpp` into table-driven cases that keep per-row failure messages.
   - acceptance:
     - each converted file keeps its TEST_CASE count (or merges only identical-assertion cases), and a documented mutation check (a removed lowerer branch) still fails a case.
@@ -188,7 +173,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - created_at: 2026-10-02
   - phase: Test infrastructure
   - parallel_track: test-infrastructure
-  - depends_on: TODO-5388
   - scope: Using the TODO-5388 factories, convert the four `..._statement_call_helper_buffer_store_direct_calls_helper_lowerer_*.cpp` files and `..._statement_call_helper_validates_function_table_diagnostics.cpp` into table-driven cases that keep per-row failure messages.
   - acceptance:
     - each converted file keeps its TEST_CASE count (or merges only identical-assertion cases), and a documented mutation check (a removed lowerer branch) still fails a case.
@@ -201,7 +185,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - created_at: 2026-10-02
   - phase: Test infrastructure
   - parallel_track: test-infrastructure
-  - depends_on: TODO-5388
   - scope: Using the TODO-5388 factories, convert `..._statement_binding_helper_classifies_variadic_struct_reference_parameters.cpp`, `..._conversions_helper_rejects_immutable_assign_target.cpp`, `..._on_error_helpers_wire_definition_handlers.cpp` into table-driven cases that keep per-row failure messages.
   - acceptance:
     - each converted file keeps its TEST_CASE count (or merges only identical-assertion cases), and a documented mutation check (a removed lowerer branch) still fails a case.
@@ -214,7 +197,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - created_at: 2026-10-02
   - phase: Test infrastructure
   - parallel_track: test-infrastructure
-  - depends_on: TODO-5388
   - scope: Using the TODO-5388 factories, convert the `..._inline_param_helper_*variadic*.cpp` files (borrowed/pointer vector, array, result, fileerror and map packs): these are near-identical per carrier type and fit one table keyed by carrier into table-driven cases that keep per-row failure messages.
   - acceptance:
     - each converted file keeps its TEST_CASE count (or merges only identical-assertion cases), and a documented mutation check (a removed lowerer branch) still fails a case.
@@ -227,7 +209,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - created_at: 2026-10-02
   - phase: Test infrastructure
   - parallel_track: test-infrastructure
-  - depends_on: TODO-5388
   - scope: Using the TODO-5388 factories, convert the `..._setup_type_helper_*.cpp` files (count/capacity probing, wrapper string slash access, canonical map helper rejects, indexed args-pack pointer map receivers) into table-driven cases that keep per-row failure messages.
   - acceptance:
     - each converted file keeps its TEST_CASE count (or merges only identical-assertion cases), and a documented mutation check (a removed lowerer branch) still fails a case.
@@ -240,7 +221,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - created_at: 2026-10-02
   - phase: Test infrastructure
   - parallel_track: test-infrastructure
-  - depends_on: TODO-5388
   - scope: Using the TODO-5388 factories, convert `..._result_helpers_*.cpp`, `..._count_access_helpers_emit_count_access_calls.cpp`, `..._inline_struct_arg_helper_reports_diagnostics.cpp` into table-driven cases that keep per-row failure messages.
   - acceptance:
     - each converted file keeps its TEST_CASE count (or merges only identical-assertion cases), and a documented mutation check (a removed lowerer branch) still fails a case.

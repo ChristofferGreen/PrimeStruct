@@ -1912,6 +1912,7 @@ are left unarchived.
 | TODO-5385 | Decompose the ~3,500-line rewriteExpr in TemplateMonomorphExpressionRewrite.cpp | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
 | TODO-5386 | Migrate the remaining string-tagged collection family comparisons to CollectionFamily | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
 | TODO-5387 | Express the three lowerer receiver-family predicates as table rows | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
+| TODO-5388 | Shared lowerer-callback test factories for ir_pipeline validation tests | [2026-10.md](todo_archive/2026-10.md) | - |
 
 <!-- INDEX-END -->
 

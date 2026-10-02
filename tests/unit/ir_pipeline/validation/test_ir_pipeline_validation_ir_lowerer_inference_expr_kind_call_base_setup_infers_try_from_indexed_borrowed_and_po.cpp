@@ -1,4 +1,4 @@
-#include "test_ir_pipeline_validation_helpers.h"
+#include "test_ir_pipeline_validation_callback_factories.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
@@ -6,19 +6,7 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup infers try from indexe
   primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
   std::string error;
   CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallBaseSetup(
-      {
-          .inferStructExprPath = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-          .resolveStructFieldSlot =
-              [](const std::string &, const std::string &, primec::ir_lowerer::StructSlotFieldInfo &) { return false; },
-          .resolveUninitializedStorage =
-              [](const primec::Expr &,
-                 const primec::ir_lowerer::LocalMap &,
-                 primec::ir_lowerer::UninitializedStorageAccessInfo &,
-                 bool &resolved) {
-                resolved = false;
-                return true;
-              },
-      },
+      primec::validation_test_support::defaultCallBaseSetupInput(),
       state,
       error));
   CHECK(error.empty());
@@ -131,19 +119,7 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic query fa
 
   std::string error;
   CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallBaseSetup(
-      {
-          .inferStructExprPath = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-          .resolveStructFieldSlot =
-              [](const std::string &, const std::string &, primec::ir_lowerer::StructSlotFieldInfo &) { return false; },
-          .resolveUninitializedStorage =
-              [](const primec::Expr &,
-                 const primec::ir_lowerer::LocalMap &,
-                 primec::ir_lowerer::UninitializedStorageAccessInfo &,
-                 bool &resolved) {
-                resolved = false;
-                return true;
-              },
-      },
+      primec::validation_test_support::defaultCallBaseSetupInput(),
       state,
       error));
   CHECK(error.empty());
@@ -1247,19 +1223,7 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic Result.o
 
   std::string error;
   CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallBaseSetup(
-      {
-          .inferStructExprPath = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-          .resolveStructFieldSlot =
-              [](const std::string &, const std::string &, primec::ir_lowerer::StructSlotFieldInfo &) { return false; },
-          .resolveUninitializedStorage =
-              [](const primec::Expr &,
-                 const primec::ir_lowerer::LocalMap &,
-                 primec::ir_lowerer::UninitializedStorageAccessInfo &,
-                 bool &resolved) {
-                resolved = false;
-                return true;
-              },
-      },
+      primec::validation_test_support::defaultCallBaseSetupInput(),
       state,
       error));
   CHECK(error.empty());
@@ -1325,19 +1289,7 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup does not infer missing
 
   std::string error;
   CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallBaseSetup(
-      {
-          .inferStructExprPath = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-          .resolveStructFieldSlot =
-              [](const std::string &, const std::string &, primec::ir_lowerer::StructSlotFieldInfo &) { return false; },
-          .resolveUninitializedStorage =
-              [](const primec::Expr &,
-                 const primec::ir_lowerer::LocalMap &,
-                 primec::ir_lowerer::UninitializedStorageAccessInfo &,
-                 bool &resolved) {
-                resolved = false;
-                return true;
-              },
-      },
+      primec::validation_test_support::defaultCallBaseSetupInput(),
       state,
       error));
   CHECK(error.empty());
@@ -1392,19 +1344,7 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup keeps syntax Result me
   primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
   std::string error;
   CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallBaseSetup(
-      {
-          .inferStructExprPath = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-          .resolveStructFieldSlot =
-              [](const std::string &, const std::string &, primec::ir_lowerer::StructSlotFieldInfo &) { return false; },
-          .resolveUninitializedStorage =
-              [](const primec::Expr &,
-                 const primec::ir_lowerer::LocalMap &,
-                 primec::ir_lowerer::UninitializedStorageAccessInfo &,
-                 bool &resolved) {
-                resolved = false;
-                return true;
-              },
-      },
+      primec::validation_test_support::defaultCallBaseSetupInput(),
       state,
       error));
   CHECK(error.empty());
@@ -1951,19 +1891,7 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup does not infer missing
 
   std::string error;
   CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallBaseSetup(
-      {
-          .inferStructExprPath = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-          .resolveStructFieldSlot =
-              [](const std::string &, const std::string &, primec::ir_lowerer::StructSlotFieldInfo &) { return false; },
-          .resolveUninitializedStorage =
-              [](const primec::Expr &,
-                 const primec::ir_lowerer::LocalMap &,
-                 primec::ir_lowerer::UninitializedStorageAccessInfo &,
-                 bool &resolved) {
-                resolved = false;
-                return true;
-              },
-      },
+      primec::validation_test_support::defaultCallBaseSetupInput(),
       state,
       error));
   CHECK(error.empty());
@@ -2031,19 +1959,7 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic try fact
 
   std::string error;
   CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallBaseSetup(
-      {
-          .inferStructExprPath = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-          .resolveStructFieldSlot =
-              [](const std::string &, const std::string &, primec::ir_lowerer::StructSlotFieldInfo &) { return false; },
-          .resolveUninitializedStorage =
-              [](const primec::Expr &,
-                 const primec::ir_lowerer::LocalMap &,
-                 primec::ir_lowerer::UninitializedStorageAccessInfo &,
-                 bool &resolved) {
-                resolved = false;
-                return true;
-              },
-      },
+      primec::validation_test_support::defaultCallBaseSetupInput(),
       state,
       error));
   CHECK(error.empty());
@@ -2085,19 +2001,7 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup does not infer missing
 
   std::string error;
   CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallBaseSetup(
-      {
-          .inferStructExprPath = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-          .resolveStructFieldSlot =
-              [](const std::string &, const std::string &, primec::ir_lowerer::StructSlotFieldInfo &) { return false; },
-          .resolveUninitializedStorage =
-              [](const primec::Expr &,
-                 const primec::ir_lowerer::LocalMap &,
-                 primec::ir_lowerer::UninitializedStorageAccessInfo &,
-                 bool &resolved) {
-                resolved = false;
-                return true;
-              },
-      },
+      primec::validation_test_support::defaultCallBaseSetupInput(),
       state,
       error));
   CHECK(error.empty());
@@ -2361,19 +2265,7 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup leaves builtin compari
   primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
   std::string error;
   CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallBaseSetup(
-      {
-          .inferStructExprPath = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-          .resolveStructFieldSlot =
-              [](const std::string &, const std::string &, primec::ir_lowerer::StructSlotFieldInfo &) { return false; },
-          .resolveUninitializedStorage =
-              [](const primec::Expr &,
-                 const primec::ir_lowerer::LocalMap &,
-                 primec::ir_lowerer::UninitializedStorageAccessInfo &,
-                 bool &resolved) {
-                resolved = false;
-                return true;
-              },
-      },
+      primec::validation_test_support::defaultCallBaseSetupInput(),
       state,
       error));
   CHECK(error.empty());
