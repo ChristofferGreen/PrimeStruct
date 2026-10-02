@@ -1059,6 +1059,7 @@ void SemanticsValidator::collectDefinitionPublicationFactsForStableRange(
     definitionPaths.insert(program_.definitions[stableIndex].fullPath);
   }
 
+  const CallSnapshotMemoScope callSnapshotMemoScope(*this);
   skipLocalAwareCallRefinement_ = true;
   collectPilotRoutingSemanticProductFacts();
   skipLocalAwareCallRefinement_ = false;
@@ -1548,6 +1549,8 @@ void SemanticsValidator::collectPilotRoutingSemanticProductFacts() {
   if (pilotRoutingSemanticCollectorsValid_) {
     return;
   }
+  // Runs after validation, so the AST is stable (TODO-5382).
+  const CallSnapshotMemoScope callSnapshotMemoScope(*this);
   if (mergedWorkerPublicationFactsValid_) {
     rebindMergedWorkerPublicationFactSemanticNodeIds();
   }
@@ -1847,6 +1850,7 @@ SemanticsValidator::takeCollectedCallableSummariesForSemanticProduct() {
 SemanticPublicationSurface
 SemanticsValidator::takeSemanticPublicationSurfaceForSemanticProduct(
     const SemanticProductBuildConfig *buildConfig) {
+  const CallSnapshotMemoScope callSnapshotMemoScope(*this);
   SemanticPublicationSurface surface;
   if (mergedWorkerPublicationFactsValid_) {
     rebindMergedWorkerPublicationFactSemanticNodeIds();

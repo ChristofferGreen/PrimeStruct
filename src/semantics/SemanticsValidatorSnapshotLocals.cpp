@@ -4,7 +4,9 @@
 #include "primec/support/CollectionHelperNames.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <functional>
+#include <string_view>
 
 namespace primec::semantics {
 
@@ -90,10 +92,76 @@ bool SemanticsValidator::inferQuerySnapshotData(const std::vector<ParameterInfo>
          !out.receiverBinding.typeName.empty();
 }
 
+namespace {
+
+void mixHash(uint64_t &hash, uint64_t value) {
+  hash ^= value + 0x9e3779b97f4a7c15ULL + (hash << 6) + (hash >> 2);
+}
+
+void mixHash(uint64_t &hash, std::string_view text) {
+  mixHash(hash, static_cast<uint64_t>(std::hash<std::string_view>{}(text)));
+}
+
+uint64_t bindingFingerprint(const BindingInfo &binding) {
+  uint64_t hash = 0;
+  mixHash(hash, binding.typeName);
+  mixHash(hash, binding.typeTemplateArg);
+  mixHash(hash, binding.typeCapabilityArg);
+  mixHash(hash, binding.referenceRoot);
+  mixHash(hash, static_cast<uint64_t>(binding.isMutable) |
+                    (static_cast<uint64_t>(binding.isEntryArgString) << 1) |
+                    (static_cast<uint64_t>(binding.isUnsafeReference) << 2) |
+                    (static_cast<uint64_t>(binding.isInferredKeyValueConstructorResult) << 3));
+  return hash;
+}
+
+} // namespace
+
+// TODO-5382: inside a CallSnapshotMemoScope (semantic-product publication, AST
+// stable) the answer is memoized per expression and environment fingerprint;
+// the same call is otherwise re-inferred once per enclosing call and per
+// snapshot pass.
 bool SemanticsValidator::inferCallSnapshotData(const std::vector<ParameterInfo> &defParams,
                                                const std::unordered_map<std::string, BindingInfo> &activeLocals,
                                                const Expr &expr,
                                                CallSnapshotData &out) {
+  if (callSnapshotMemoDepth_ == 0) {
+    return inferCallSnapshotDataUncached(defParams, activeLocals, expr, out);
+  }
+  CallSnapshotMemoKey key;
+  key.expr = &expr;
+  key.definitionOwner = currentDefinitionContext_;
+  key.executionOwner = currentExecutionContext_;
+  uint64_t environment = defParams.size();
+  for (const ParameterInfo &param : defParams) {
+    mixHash(environment, param.name);
+    mixHash(environment, bindingFingerprint(param.binding));
+    mixHash(environment, static_cast<uint64_t>(reinterpret_cast<std::uintptr_t>(param.defaultExpr)));
+  }
+  // Order-independent combination: the local map's iteration order is not
+  // part of its content.
+  uint64_t localsHash = activeLocals.size();
+  for (const auto &[name, binding] : activeLocals) {
+    uint64_t entry = 0;
+    mixHash(entry, name);
+    mixHash(entry, bindingFingerprint(binding));
+    localsHash += entry * 0x9e3779b97f4a7c15ULL;
+  }
+  mixHash(environment, localsHash);
+  key.environmentHash = environment;
+  if (const auto it = callSnapshotMemo_.find(key); it != callSnapshotMemo_.end()) {
+    out = it->second.data;
+    return it->second.ok;
+  }
+  const bool ok = inferCallSnapshotDataUncached(defParams, activeLocals, expr, out);
+  callSnapshotMemo_.emplace(key, CallSnapshotMemoEntry{ok, out});
+  return ok;
+}
+
+bool SemanticsValidator::inferCallSnapshotDataUncached(const std::vector<ParameterInfo> &defParams,
+                                                       const std::unordered_map<std::string, BindingInfo> &activeLocals,
+                                                       const Expr &expr,
+                                                       CallSnapshotData &out) {
   out = {};
 
   auto withPreservedError = [&](const std::function<bool()> &fn) {

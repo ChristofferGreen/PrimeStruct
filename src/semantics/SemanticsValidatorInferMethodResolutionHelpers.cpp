@@ -394,6 +394,11 @@ std::string SemanticsValidator::preferredImageErrorHelperTarget(std::string_view
 }
 
 std::string SemanticsValidator::preferredContainerErrorHelperTarget(std::string_view helperName) const {
+  const std::string key(helperName);
+  if (const auto cached = containerErrorHelperTargetCache_.find(key);
+      cached != containerErrorHelperTargetCache_.end()) {
+    return cached->second;
+  }
   const StdlibSurfaceMetadata *metadata =
       findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsContainerErrorHelpers);
   if (metadata == nullptr) {
@@ -402,9 +407,11 @@ std::string SemanticsValidator::preferredContainerErrorHelperTarget(std::string_
   std::vector<std::string> helperPaths;
   appendSurfaceHelperPaths(helperPaths, *metadata, helperName);
   appendSurfaceExactHelperFallbacks(helperPaths, *metadata, helperName);
-  return firstMatchingPath(helperPaths, [&](const std::string &candidate) {
+  std::string target = firstMatchingPath(helperPaths, [&](const std::string &candidate) {
     return hasDefinitionFamilyPath(candidate);
   });
+  containerErrorHelperTargetCache_.emplace(key, target);
+  return target;
 }
 
 std::string SemanticsValidator::preferredGfxErrorHelperTarget(

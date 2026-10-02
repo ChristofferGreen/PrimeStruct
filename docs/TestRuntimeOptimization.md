@@ -1962,3 +1962,38 @@ types recursively; the rest is a flat tail of string building/hashing
 `resolveCalleePath` ~9% inclusive). Gate wall time is CPU-bound (about 3,400 summed
 test-seconds on 4 cores), so the remaining reduction has to come from the compiler:
 see TODO-5382.
+
+## TODO-5382: semantic-product publication memo (2026-10-02)
+
+Callgrind of `primec --emit=vm` on a vector-only program (`import /std/collections/*`,
+one `vector<i32>` local):
+
+| change | instructions | wall per invocation |
+| --- | --- | --- |
+| before | 772.9 M | 0.107 s |
+| + `inferCallSnapshotData` memo during publication | 482.9 M | 0.078 s |
+| + `preferredContainerErrorHelperTarget` memo | 448.3 M (-42%) | 0.068 s |
+
+What changed:
+
+- `inferCallSnapshotData` was called 755 times for 151 distinct expressions (every
+  enclosing call and every snapshot pass re-inferred its children, ~1.2 M instructions
+  per distinct expression). Inside a `CallSnapshotMemoScope` (semantic-product
+  publication and `collectPilotRoutingSemanticProductFacts`, where the AST is stable)
+  the answer is memoized per expression, definition/execution owner and a content
+  fingerprint of the parameters and active locals (order-independent).
+- `preferredContainerErrorHelperTarget` (2,744 calls from `resolveCalleePath` inside
+  the collections error module, 35 M instructions) is memoized per helper name, the
+  same invariant as the existing `definitionFamilyPathAnswerCache_`.
+
+Verification: `--dump-stage=semantic-product` and `ast_semantic` output was compared
+byte for byte (timings stripped) between the previous and new `primec` for 68 programs
+(examples, benchmarks, the parity probes): 0 differences. The collection parity matrix
+(pinned published targets) and the embed order-independence test pass.
+
+Gate (`./scripts/compile.sh --release`, 4-core box, relinked primec): 392.3 s,
+1757/1757 passed (was 458-543 s). The 434 s target is met.
+
+Remaining top costs in that profile: monomorphization `rewriteExpr` (13%), text filter
+`applyPerEnvelope` (8%), `resolveStdlibSurfaceMemberName` (10%, 70 K cheap calls),
+`resolveCalleePath` (16%).

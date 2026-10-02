@@ -167,6 +167,10 @@
                              const std::unordered_map<std::string, BindingInfo> &activeLocals,
                              const Expr &expr,
                              CallSnapshotData &out);
+  bool inferCallSnapshotDataUncached(const std::vector<ParameterInfo> &defParams,
+                                     const std::unordered_map<std::string, BindingInfo> &activeLocals,
+                                     const Expr &expr,
+                                     CallSnapshotData &out);
   bool inferTrySnapshotData(const Definition &def,
                             const std::vector<ParameterInfo> &defParams,
                             const std::unordered_map<std::string, BindingInfo> &activeLocals,

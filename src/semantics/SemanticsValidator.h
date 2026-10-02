@@ -526,6 +526,9 @@ private:
   // (SemanticsValidatorPassesDefinitions.cpp), so there is no shared mutable
   // state across threads.
   mutable std::unordered_map<std::string, bool> definitionFamilyPathAnswerCache_;
+  // TODO-5382: preferredContainerErrorHelperTarget answers depend only on the
+  // helper name and defMap_ (immutable for the pass, like the cache above).
+  mutable std::unordered_map<std::string, std::string> containerErrorHelperTargetCache_;
   std::unordered_set<std::string> overloadFamilyBasePaths_;
   std::unordered_map<std::string, std::string> uniqueSpecializationPathByBase_;
   std::unordered_set<std::string> ambiguousSpecializationBasePaths_;
@@ -588,6 +591,54 @@ private:
   std::unordered_map<StructFieldReturnKindMemoKey, ReturnKind, StructFieldReturnKindMemoKeyHash>
       structFieldReturnKindMemo_;
   mutable CallTargetResolutionScratch callTargetResolutionScratch_;
+
+  // TODO-5382: memo for inferCallSnapshotData during semantic-product
+  // publication. The AST is stable in that phase, so the answer is a pure
+  // function of the expression, its definition/execution owner and the
+  // environment (parameters and active locals), which is fingerprinted by
+  // content. Enabled only while a CallSnapshotMemoScope is alive.
+  struct CallSnapshotMemoKey {
+    const Expr *expr = nullptr;
+    const Definition *definitionOwner = nullptr;
+    const Execution *executionOwner = nullptr;
+    uint64_t environmentHash = 0;
+    bool operator==(const CallSnapshotMemoKey &other) const {
+      return expr == other.expr && definitionOwner == other.definitionOwner &&
+             executionOwner == other.executionOwner && environmentHash == other.environmentHash;
+    }
+  };
+  struct CallSnapshotMemoKeyHash {
+    std::size_t operator()(const CallSnapshotMemoKey &key) const {
+      std::size_t hash = std::hash<const Expr *>{}(key.expr);
+      hash ^= std::hash<uint64_t>{}(key.environmentHash) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+      hash ^= std::hash<const Definition *>{}(key.definitionOwner) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+      hash ^= std::hash<const Execution *>{}(key.executionOwner) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+      return hash;
+    }
+  };
+  struct CallSnapshotMemoEntry {
+    bool ok = false;
+    CallSnapshotData data;
+  };
+  std::unordered_map<CallSnapshotMemoKey, CallSnapshotMemoEntry, CallSnapshotMemoKeyHash> callSnapshotMemo_;
+  int callSnapshotMemoDepth_ = 0;
+
+  class CallSnapshotMemoScope {
+  public:
+    explicit CallSnapshotMemoScope(SemanticsValidator &validator) : validator_(validator) {
+      ++validator_.callSnapshotMemoDepth_;
+    }
+    ~CallSnapshotMemoScope() {
+      if (--validator_.callSnapshotMemoDepth_ == 0) {
+        validator_.callSnapshotMemo_.clear();
+      }
+    }
+    CallSnapshotMemoScope(const CallSnapshotMemoScope &) = delete;
+    CallSnapshotMemoScope &operator=(const CallSnapshotMemoScope &) = delete;
+
+  private:
+    SemanticsValidator &validator_;
+  };
 
   void observeCallVisited();
   void observeLocalMapSize(std::size_t size);

@@ -1897,6 +1897,7 @@ are left unarchived.
 | TODO-5379 | Close the remaining gate-time gap after wildcard pruning (478.7 s vs 434 s target) | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5380 | Borrowed `Reference<vector<T>>` function parameters fail VM/native lowering | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
 | TODO-5381 | `count(dereference(r))` on a borrowed vector silently returns 0 | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
+| TODO-5382 | Cut semantic-product publication cost (inferCallSnapshotData recursion) | [2026-10.md](todo_archive/2026-10.md) | - |
 
 <!-- INDEX-END -->
 

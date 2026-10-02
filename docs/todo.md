@@ -120,24 +120,22 @@ of sync with them.
 - TODO-5353 (track: semantics-structure): Split TemplateMonomorphExpressionRewrite.cpp into focused units.
 - TODO-5361 (track: ir-vm-structure): Single opcode descriptor table for IR (stack effect, targets, serialization).
 - TODO-5363 (track: vm-strings): Spec: VM-owned dynamic strings (design decision).
-- TODO-5382 (track: test-infrastructure): Cut semantic-product publication cost (inferCallSnapshotData recursion).
 - TODO-5383 (track: compiler-state): Migrate the remaining compiler state into CompileContext.
 
 ### Immediate Next 10
 
-1. TODO-5382 - Cut semantic-product publication cost (inferCallSnapshotData recursion).
-2. TODO-5383 - Migrate the remaining compiler state into CompileContext.
-3. TODO-5361 - Single opcode descriptor table for IR (stack effect, targets, serialization).
-4. TODO-5352 - Measure and cut semantics header fan-out (SemanticsValidator.h).
-5. TODO-5353 - Split TemplateMonomorphExpressionRewrite.cpp into focused units.
-6. TODO-5363 - Spec: VM-owned dynamic strings (design decision).
+1. TODO-5383 - Migrate the remaining compiler state into CompileContext.
+2. TODO-5361 - Single opcode descriptor table for IR (stack effect, targets, serialization).
+3. TODO-5352 - Measure and cut semantics header fan-out (SemanticsValidator.h).
+4. TODO-5353 - Split TemplateMonomorphExpressionRewrite.cpp into focused units.
+5. TODO-5363 - Spec: VM-owned dynamic strings (design decision).
 
 ### Priority Lanes
 
 - Embedding (must support iOS): TODO-5348 (needs macOS)
 - Collection resolution: typed family enum TODO-5374 (deferred)
 - Semantics structure: TODO-5352, TODO-5353
-- Test infrastructure: TODO-5382, TODO-5356 (deferred)
+- Test infrastructure: TODO-5356 (deferred)
 - Compiler state: TODO-5383 -> 5360
 - IR/VM structure: TODO-5361 -> 5362
 - VM strings: TODO-5363 -> 5364 -> 5365
@@ -406,26 +404,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
       (diff-checked).
   - stop_rule: no semantic edits to spec text; if a section's classification is unclear,
     leave it in the index file.
-
-- [ ] TODO-5382: Cut semantic-product publication cost (inferCallSnapshotData recursion)
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-02
-  - phase: Compiler performance
-  - parallel_track: test-infrastructure
-  - scope: callgrind of `primec --emit=vm` on a vector-only program (0.77 G instr) shows 63% in
-    `SemanticsValidator::inferCallSnapshotData` / `inferBindingTypeFromInitializer` /
-    `inferCallInitializerBinding` (semantic-product publication) and a flat tail of string
-    building (`appendSurfaceBasePaths`, `findStdlibSurfaceMetadataByCanonicalPath`,
-    `resolveCalleePath`). Memoize the recursive call-snapshot inference per expression and
-    cache the pure stdlib-surface path tables, keeping output byte-identical.
-  - acceptance:
-    - instruction count of that program (callgrind) drops by at least 25%, recorded in
-      docs/TestRuntimeOptimization.md; semantic product dumps unchanged for the parity
-      matrix and the embed order-independence test.
-    - gate `Total Test time` (relinked-primec dev loop) <= 434 s, before/after recorded.
-  - stop_rule: no behavior or published-fact changes; if memoization cannot be made
-    exact for a call shape, leave that shape uncached and record it.
 
 - [ ] TODO-5374: Typed collection family/helper enum replacing string-tagged family checks
   - owner: ai
