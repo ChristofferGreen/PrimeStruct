@@ -761,7 +761,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("stdlib canonical map insert method reaches unavailable at helper") {
+TEST_CASE("stdlib canonical map insert method reaches at method helper") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -775,12 +775,11 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  INFO(error);
-  CHECK(error.find("unknown call target: /map/at") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("stdlib canonical map direct insert reaches unavailable at helper") {
+TEST_CASE("stdlib canonical map direct insert reaches at method helper") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -794,9 +793,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  INFO(error);
-  CHECK(error.find("unknown call target: /map/at") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("stdlib canonical map insert accepts non-local and borrowed receivers before at") {
@@ -820,9 +818,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  INFO(error);
-  CHECK(error.find("unknown call target: /map/at") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("stdlib canonical map insert accepts nested and helper-return borrowed receivers before at") {
@@ -856,9 +853,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  INFO(error);
-  CHECK(error.find("unknown call target: /map/at") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("stdlib canonical map insert accepts helper-return borrowed method receivers before at") {
@@ -886,9 +882,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  INFO(error);
-  CHECK(error.find("unknown call target: /map/at") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("stdlib canonical map helper validates method-call sugar for slash return type") {

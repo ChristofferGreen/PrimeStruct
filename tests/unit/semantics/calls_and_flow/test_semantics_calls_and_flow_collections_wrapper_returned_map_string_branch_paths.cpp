@@ -317,9 +317,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  INFO(error);
-  CHECK(error.find("unknown call target: /map/at") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("wrapper-returned canonical map method access count keeps string receiver typing") {

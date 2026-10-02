@@ -2569,7 +2569,7 @@ TEST_CASE("rejects native builtin canonical map repeated-growth inserts") {
   expectBuiltinCanonicalMapInsertRepeatedGrowthConformance("native");
 }
 
-TEST_CASE("rejects native builtin canonical map insert overwrites") {
+TEST_CASE("native builtin canonical map insert overwrites") {
   expectBuiltinCanonicalMapInsertOverwriteConformance("native");
 }
 

@@ -57360,3 +57360,26 @@ TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph 
   - stop_rule: fix only this row's behavior; anything else found goes to its own leaf.
   - finished_at: 2026-10-02
   - result: Fixed. The mutating key/value rewrite (`rewriteBuiltinKeyValueInsertExpr` in SemanticsValidate.cpp) rewrote the method spelling `m.contains(k)` to the canonical `/std/collections/map/contains` call but left the bare spelling as an unresolved builtin that no backend lowered (VM lowering error, call=/contains). Bare `contains(m, k)` with a map receiver now takes the same canonical rewrite (a user-defined root `/contains` keeps the call). The `map contains bare` row is now `ok` (VM) and publishes `/std/collections/map/contains`; native also returns the same value.
+
+- [x] TODO-5369: map `.at()` and `.at_unsafe()` method calls fail with `unknown call target /map/at`
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-01
+  - phase: Compiler structure
+  - parallel_track: collection-defects
+  - scope: docs/PrimeStruct.md (stdlib reference, map section) lists
+    `.at()`/`.at_unsafe()` as supported map methods, but `[map<i32, i32>]
+    m{...}` `m.at(2i32)` fails semantics with `unknown call target: /map/at`
+    while bare `at(m, 2i32)` works. Pinned by the `map at method` and `map
+    at_unsafe method` rows of docs/CollectionHelperTargets.md.
+  - acceptance:
+    - either make the method forms resolve to the same published target as the
+      bare forms (`/std/collections/map/at`,
+      `/std/collections/map/at_unsafe`) and flip the two rows to `ok`,
+      or, if the methods are intentionally unsupported, correct
+      docs/PrimeStruct.md and replace the diagnostic with one that names
+      the supported spelling.
+    - the parity suite and the full release gate stay green.
+  - stop_rule: fix only this row's behavior; anything else found goes to its own leaf.
+  - finished_at: 2026-10-02
+  - result: Fixed: the method spellings were chosen over making them unsupported, because docs/PrimeStruct.md documents `.at()`/`.at_unsafe()` on maps. The mutating key/value rewrite only canonicalized the bare at/at_unsafe call, so the method form degraded to a bare `at` call that the validator then rejected as the retired `/map/at` alias. `m.at(k)` / `m.at_unsafe(k)` now take the same canonical rewrite and publish `/std/collections/map/at` / `at_unsafe` like the bare spelling; both parity rows are now `ok`.

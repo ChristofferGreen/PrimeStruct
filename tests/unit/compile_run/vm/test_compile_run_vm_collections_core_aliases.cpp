@@ -654,7 +654,8 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("Semantic error: unknown call target: /map/at") !=
+  CHECK(readFile(outPath).find(
+            "Semantic error: argument type mismatch for /std/collections/map/at parameter key") !=
         std::string::npos);
 }
 

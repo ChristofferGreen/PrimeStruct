@@ -740,9 +740,20 @@ void rewriteBuiltinKeyValueInsertExpr(
   std::string builtinAccessHelper;
   const bool hasBuiltinIndexedAccess =
       !expr.isMethodCall && semantics::getBuiltinArrayAccessName(expr, builtinAccessHelper);
+  // The `m.at(k)` / `m.at_unsafe(k)` method spellings take the same canonical
+  // access rewrite as the bare call (TODO-5369).
+  const bool isPlainAccessMethodSpelling =
+      expr.isMethodCall && expr.namespacePrefix.empty() &&
+      (expr.name == "at" || expr.name == "at_unsafe") &&
+      expr.args.size() == 2 && expr.templateArgs.empty() &&
+      !expr.hasBodyArguments && expr.bodyArguments.empty() &&
+      !semantics::hasNamedArguments(expr.argNames);
+  const std::string methodReadHelper =
+      isPlainAccessMethodSpelling ? expr.name : std::string{};
   const bool matchesBuiltinAccessCall =
       directReadHelper == "at" || directReadHelper == "at_unsafe" ||
-      builtinAccessHelper == "at" || builtinAccessHelper == "at_unsafe";
+      builtinAccessHelper == "at" || builtinAccessHelper == "at_unsafe" ||
+      methodReadHelper == "at" || methodReadHelper == "at_unsafe";
   // Bare `contains(m, k)` takes the same canonical-helper rewrite as the
   // method spelling (TODO-5370); a user-defined root `/contains` keeps the
   // call.

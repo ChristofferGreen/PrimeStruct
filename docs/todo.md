@@ -98,7 +98,6 @@ of sync with them.
 | TODO-5374 | Typed collection family/helper enum replacing string-tagged family checks | deferred | collection-resolution |
 | TODO-5373 | Extend the collection parity matrix to Reference receivers and the borrowed `_ref` helpers | ready | collection-defects |
 | TODO-5372 | `soa<T>` method spellings publish internal `soaVector*` helper targets instead of the public helper | ready | collection-defects |
-| TODO-5369 | map `.at()` and `.at_unsafe()` method calls fail with `unknown call target /map/at` | ready | collection-defects |
 | TODO-5352 | Measure and cut semantics header fan-out (SemanticsValidator.h) | ready | semantics-structure |
 | TODO-5353 | Split TemplateMonomorphExpressionRewrite.cpp into focused units | ready | semantics-structure |
 | TODO-5354 | Guard test registration: generated shards and an unregistered-test check | ready | test-infrastructure |
@@ -539,27 +538,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
       (diff-checked).
   - stop_rule: no semantic edits to spec text; if a section's classification is unclear,
     leave it in the index file.
-
-- [ ] TODO-5369: map `.at()` and `.at_unsafe()` method calls fail with `unknown call target /map/at`
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-01
-  - phase: Compiler structure
-  - parallel_track: collection-defects
-  - scope: docs/PrimeStruct.md (stdlib reference, map section) lists
-    `.at()`/`.at_unsafe()` as supported map methods, but `[map<i32, i32>]
-    m{...}` `m.at(2i32)` fails semantics with `unknown call target: /map/at`
-    while bare `at(m, 2i32)` works. Pinned by the `map at method` and `map
-    at_unsafe method` rows of docs/CollectionHelperTargets.md.
-  - acceptance:
-    - either make the method forms resolve to the same published target as the
-      bare forms (`/std/collections/map/at`,
-      `/std/collections/map/at_unsafe`) and flip the two rows to `ok`,
-      or, if the methods are intentionally unsupported, correct
-      docs/PrimeStruct.md and replace the diagnostic with one that names
-      the supported spelling.
-    - the parity suite and the full release gate stay green.
-  - stop_rule: fix only this row's behavior; anything else found goes to its own leaf.
 
 - [ ] TODO-5372: `soa<T>` method spellings publish internal `soaVector*` helper targets instead of the public helper
   - owner: ai

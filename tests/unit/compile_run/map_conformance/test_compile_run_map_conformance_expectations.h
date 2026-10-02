@@ -468,18 +468,12 @@ inline void expectBuiltinCanonicalMapInsertTwentiethGrowthConformance(const std:
 }
 
 inline void expectBuiltinCanonicalMapInsertOverwriteConformance(const std::string &emitMode) {
-  if (emitMode == "native") {
-    expectMapConformanceCompileReject(makeBuiltinCanonicalMapInsertOverwriteConformanceSource(),
-                                      "map_builtin_canonical_insert_overwrite_" + emitMode,
-                                      emitMode,
-                                      "unknown call target: /map/at [PSC1005]");
-    return;
-  }
-
-  expectMapConformanceCompileReject(makeBuiltinCanonicalMapInsertOverwriteConformanceSource(),
-                                    "map_builtin_canonical_insert_overwrite_" + emitMode,
-                                    emitMode,
-                                    "unknown call target: /map/at");
+  // count (2) + at(1) after overwrite (9) + at_unsafe(2) after overwrite (11);
+  // the map `.at()` / `.at_unsafe()` method spellings run (TODO-5369).
+  expectMapConformanceProgramRuns(makeBuiltinCanonicalMapInsertOverwriteConformanceSource(),
+                                  "map_builtin_canonical_insert_overwrite_" + emitMode,
+                                  emitMode,
+                                  22);
 }
 
 inline void expectBuiltinCanonicalMapInsertNonLocalGrowthConformance(const std::string &emitMode) {

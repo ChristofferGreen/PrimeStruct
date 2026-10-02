@@ -40,9 +40,9 @@ change. `Reference<...>` receivers and the borrowed `_ref` helpers are not cover
 | map | `count` | canonical | ok (2) | `/std/collections/map/map`<br>`/std/collections/map/entry`<br>`/std/collections/map/entry`<br>`/std/collections/map/count`<br>`/std/collections/map/count` |  |
 | map | `contains` | method | ok (1) | `/std/collections/map/map`<br>`/std/collections/map/entry`<br>`/std/collections/map/entry`<br>`/std/collections/map/contains`<br>`/std/collections/map/contains` |  |
 | map | `contains` | bare | ok (1) | `/std/collections/map/map`<br>`/std/collections/map/entry`<br>`/std/collections/map/entry`<br>`/std/collections/map/contains`<br>`/std/collections/map/contains` |  |
-| map | `at` | method | semantic error |  | unknown call target: /map/at **TODO-5369** |
+| map | `at` | method | ok (200) | `/std/collections/map/map`<br>`/std/collections/map/entry`<br>`/std/collections/map/entry`<br>`/std/collections/map/at`<br>`/std/collections/map/at` |  |
 | map | `at` | bare | ok (100) | `/std/collections/map/map`<br>`/std/collections/map/entry`<br>`/std/collections/map/entry`<br>`/std/collections/map/at`<br>`/std/collections/map/at` |  |
-| map | `at_unsafe` | method | semantic error |  | unknown call target: /map/at_unsafe **TODO-5369** |
+| map | `at_unsafe` | method | ok (100) | `/std/collections/map/map`<br>`/std/collections/map/entry`<br>`/std/collections/map/entry`<br>`/std/collections/map/at_unsafe`<br>`/std/collections/map/at_unsafe` |  |
 | map | `insert` | method | ok (3) | `/std/collections/map/map`<br>`/std/collections/map/entry`<br>`/std/collections/map/entry`<br>`/std/collections/map/insert`<br>`/std/collections/map/count`<br>`/std/collections/map/count` |  |
 | map | `insert` | bare | ok (3) | `/std/collections/map/map`<br>`/std/collections/map/entry`<br>`/std/collections/map/entry`<br>`/std/collections/map/insert`<br>`/std/collections/map/count`<br>`/std/collections/map/count` |  |
 | soa | `count` | method(SoaVector) | ok (1) | `/std/collections/soa/soaVectorSingle`<br>`/std/collections/soa/count`<br>`/std/collections/soa/count` |  |

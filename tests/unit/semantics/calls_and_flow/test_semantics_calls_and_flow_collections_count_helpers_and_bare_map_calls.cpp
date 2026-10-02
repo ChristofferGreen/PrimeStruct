@@ -567,7 +567,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("canonical map value methods report retired insert diagnostics") {
+TEST_CASE("canonical map value methods accept at method access") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -615,8 +615,8 @@ main() {
   std::string error;
   const bool ok = validateProgram(source, "/main", error);
   INFO(error);
-  CHECK_FALSE(ok);
-  CHECK(error.find("unknown call target: /map/at") != std::string::npos);
+  CHECK(ok);
+  CHECK(error.empty());
 }
 
 TEST_CASE("canonical map borrowed helper calls validate") {
