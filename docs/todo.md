@@ -105,16 +105,13 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5385 (track: semantics-structure): Decompose the ~3,500-line rewriteExpr in TemplateMonomorphExpressionRewrite.cpp.
 
 ### Immediate Next 10
 
-1. TODO-5385 - Decompose the ~3,500-line rewriteExpr in TemplateMonomorphExpressionRewrite.cpp.
 
 ### Priority Lanes
 
 - Embedding (must support iOS): TODO-5348 (needs macOS)
-- Semantics structure: TODO-5385
 - Test infrastructure: TODO-5356 (deferred)
 - IR/VM structure: TODO-5361 -> 5362
 
@@ -149,18 +146,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - stop_rule: if an API used by the full compiler is unavailable on iOS, ship
     the runtime-only XCFramework and record the gap rather than widening the
     scope.
-
-- [ ] TODO-5385: Decompose the ~3,500-line rewriteExpr in TemplateMonomorphExpressionRewrite.cpp
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-02
-  - phase: Compiler structure
-  - parallel_track: semantics-structure
-  - scope: (also covers the other single-giant-function files left on the allowlist: `SemanticsValidatorStatementBindings.cpp` validateBindingStatement ~2,150 lines, `SemanticsValidatorExpr.cpp` validateExpr ~1,870, `TemplateMonomorphImplicitTemplateInference.cpp` inferImplicitTemplateArgs ~1,430. `SemanticsValidatorStatementReturns.cpp`, `...InferMethodResolution.cpp` and `...InferCollectionReturnInference.cpp` were brought under 1,200 lines by moving helpers and sibling functions out. Measured: lambdas are only ~500/3,500 lines of rewriteExpr and ~0 of validateExpr, so lambda extraction alone is not enough; the straight-line if-chains need an explicit shared-state struct and phase functions.) `rewriteExpr` is one function (lines ~319-3876) whose branches share many local lambdas; it cannot be split by moving code. Extract the branches (name-expression rewrites, method-call rewrites, bare-call rewrites, collection helper rewrites) into functions over an explicit shared-state struct, then move them into focused units.
-  - acceptance:
-    - `TemplateMonomorphExpressionRewrite.cpp` and the other files named above are each split under 1,200 lines and the size allowlist is empty.
-    - full release gate green; semantic-product dumps byte-identical (compare old/new `primec` on the examples).
-  - stop_rule: behavior-preserving extraction only; stop and record if a branch depends on control flow that cannot be expressed without a logic change.
 
 - [ ] TODO-5356: Collapse near-duplicate ir_pipeline validation tests into table-driven suites
   - owner: ai

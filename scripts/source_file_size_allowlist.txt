@@ -1,7 +1,2 @@
 # Files under src/semantics larger than 1200 lines (TODO-5385). Format: <path> <max lines> <reason>.
 # The list may only shrink: split a file, then delete its entry.
-
-src/semantics/TemplateMonomorphExpressionRewrite.cpp 3876 one ~3,500-line rewriteExpr function; needs restructuring (not a pure move) before it can be split
-src/semantics/SemanticsValidatorStatementBindings.cpp 2222 one ~2,150-line validateBindingStatement; needs decomposition (TODO-5385)
-src/semantics/SemanticsValidatorExpr.cpp 1885 one ~1,870-line validateExpr; needs decomposition (TODO-5385)
-src/semantics/TemplateMonomorphImplicitTemplateInference.cpp 1575 one giant function; needs decomposition (TODO-5385)

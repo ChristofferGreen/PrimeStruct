@@ -9,70 +9,11 @@
 #include <unordered_set>
 #include "primec/ir/StdlibCollectionPaths.h"
 #include "primec/support/CollectionHelperNames.h"
+#include "SemanticsValidatorStatementBindingsHelpers.h"
+#include "SemanticsValidatorStatementBindingsState.h"
 
 namespace primec::semantics {
-namespace {
-
-bool isSoaFieldViewBindingType(const BindingInfo &binding) {
-  return isSoaFieldViewTypePath(binding.typeName);
-}
-
-bool isBorrowTrackedBindingType(const BindingInfo &binding) {
-  return binding.typeName == "Reference" || isSoaFieldViewBindingType(binding) ||
-         (binding.typeName == "auto" && !binding.referenceRoot.empty());
-}
-
-bool isExperimentalSoaColumnBindingType(const BindingInfo &binding) {
-  std::string normalized = normalizeBindingTypeName(binding.typeName);
-  if (normalized.empty()) {
-    return false;
-  }
-  std::string base;
-  std::string arg;
-  if (splitTemplateTypeName(normalized, base, arg)) {
-    normalized = normalizeBindingTypeName(base);
-  }
-  if (!normalized.empty() && normalized.front() == '/') {
-    normalized.erase(normalized.begin());
-  }
-  return normalized == "SoaColumn" ||
-         normalized == collection_paths::memberPathBare(collection_paths::kInternalSoaStorageFolder, collection_paths::kSoaColumnTypeName) ||
-         normalized.rfind(
-             collection_paths::specializedTypePrefixBare(collection_paths::kInternalSoaStorageFolder, collection_paths::kSoaColumnTypeName), 0) == 0;
-}
-
-std::string referenceRootForBorrowBinding(const std::string &bindingName, const BindingInfo &binding) {
-  if (!isBorrowTrackedBindingType(binding)) {
-    return "";
-  }
-  if (!binding.referenceRoot.empty()) {
-    return binding.referenceRoot;
-  }
-  return bindingName;
-}
-
-std::string bindingTypeTextForTypeof(const BindingInfo &binding) {
-  if (binding.typeTemplateArg.empty()) {
-    return binding.typeName;
-  }
-  return binding.typeName + "<" + binding.typeTemplateArg + ">";
-}
-
-std::string formatPathListForTypeof(const std::vector<std::string> &paths) {
-  std::string out;
-  for (size_t index = 0; index < paths.size(); ++index) {
-    if (index == 0) {
-      out += paths[index];
-    } else if (index + 1 == paths.size()) {
-      out += " and " + paths[index];
-    } else {
-      out += ", " + paths[index];
-    }
-  }
-  return out;
-}
-
-} // namespace
+using namespace statementBindingsHelpers;
 
 bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInfo> &params,
                                                   std::unordered_map<std::string, BindingInfo> &locals,
@@ -81,61 +22,91 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
                                                   const std::string &namespacePrefix,
                                                   bool allowCompileTimeTypeBindings,
                                                   bool &handled) {
+    ValidateBindingState st;
+    st.allowBindings = allowBindings;
+    st.allowCompileTimeTypeBindings = allowCompileTimeTypeBindings;
+    if (validateBindingPhase1(params, locals, stmt, namespacePrefix, handled, st) == PhaseStatus::Done) {
+      return st.result;
+    }
+    if (validateBindingPhase2(params, locals, stmt, namespacePrefix, handled, st) == PhaseStatus::Done) {
+      return st.result;
+    }
+    if (validateBindingPhase3(params, locals, stmt, namespacePrefix, handled, st) == PhaseStatus::Done) {
+      return st.result;
+    }
+    if (validateBindingPhase4(params, locals, stmt, namespacePrefix, handled, st) == PhaseStatus::Done) {
+      return st.result;
+    }
+    if (validateBindingPhase5(params, locals, stmt, namespacePrefix, handled, st) == PhaseStatus::Done) {
+      return st.result;
+    }
+    if (validateBindingPhase6(params, locals, stmt, namespacePrefix, handled, st) == PhaseStatus::Done) {
+      return st.result;
+    }
+    if (validateBindingPhase7(params, locals, stmt, namespacePrefix, handled, st) == PhaseStatus::Done) {
+      return st.result;
+    }
+    return st.result;
+}
+
+PhaseStatus SemanticsValidator::validateBindingPhase1([[maybe_unused]] const std::vector<ParameterInfo> &params, [[maybe_unused]] std::unordered_map<std::string, BindingInfo> &locals, [[maybe_unused]] const Expr &stmt, [[maybe_unused]] const std::string &namespacePrefix, [[maybe_unused]] bool &handled, ValidateBindingState &st) {
+  [[maybe_unused]] auto &allowBindings = st.allowBindings;
+  [[maybe_unused]] auto &allowCompileTimeTypeBindings = st.allowCompileTimeTypeBindings;
   handled = false;
   if (!stmt.isBinding) {
-    return true;
+    return st.done(true);
   }
-
   handled = true;
-  auto failBindingDiagnostic = [&](std::string message) -> bool {
+  st.failBindingDiagnostic = [&](std::string message) -> bool {
     return failExprDiagnostic(stmt, std::move(message));
   };
-  const std::vector<std::string> *definitionTemplateArgs = nullptr;
+  [[maybe_unused]] auto &failBindingDiagnostic = st.failBindingDiagnostic;
+  st.definitionTemplateArgs = nullptr;
+  [[maybe_unused]] auto &definitionTemplateArgs = st.definitionTemplateArgs;
   auto currentDefIt = defMap_.find(currentValidationState_.context.definitionPath);
   if (currentDefIt != defMap_.end() && currentDefIt->second != nullptr) {
     definitionTemplateArgs = &currentDefIt->second->templateArgs;
   }
-  const std::string bindingLookupNamespace =
-      !currentValidationState_.context.definitionPath.empty()
+  st.bindingLookupNamespace = !currentValidationState_.context.definitionPath.empty()
           ? currentValidationState_.context.definitionPath
           : namespacePrefix;
-
+  [[maybe_unused]] auto &bindingLookupNamespace = st.bindingLookupNamespace;
   if (!allowBindings) {
-    return failBindingDiagnostic("binding not allowed in execution body");
+    return st.done(failBindingDiagnostic("binding not allowed in execution body"));
   }
   if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
-    return failBindingDiagnostic("binding does not accept block arguments");
+    return st.done(failBindingDiagnostic("binding does not accept block arguments"));
   }
   if (isCompileTimeTypeBinding(stmt)) {
     if (!allowCompileTimeTypeBindings) {
-      return failBindingDiagnostic("type bindings are only supported in definition bodies");
+      return st.done(failBindingDiagnostic("type bindings are only supported in definition bodies"));
     }
     if (isParam(params, stmt.name) || locals.count(stmt.name) > 0 ||
         currentValidationState_.compileTimeTypeLocals.count(stmt.name) > 0) {
-      return failBindingDiagnostic("duplicate binding name: " + stmt.name);
+      return st.done(failBindingDiagnostic("duplicate binding name: " + stmt.name));
     }
     bool sawTypeTransform = false;
     for (const auto &transform : stmt.transforms) {
       if (transform.name == "type") {
         if (sawTypeTransform) {
-          return failBindingDiagnostic("duplicate type transform on binding");
+          return st.done(failBindingDiagnostic("duplicate type transform on binding"));
         }
         sawTypeTransform = true;
         if (!transform.templateArgs.empty() || !transform.arguments.empty()) {
-          return failBindingDiagnostic("type binding transform does not take arguments");
+          return st.done(failBindingDiagnostic("type binding transform does not take arguments"));
         }
         continue;
       }
       if (isBindingAuxTransformName(transform.name)) {
-        return failBindingDiagnostic("type binding does not accept binding qualifier: " + transform.name);
+        return st.done(failBindingDiagnostic("type binding does not accept binding qualifier: " + transform.name));
       }
-      return failBindingDiagnostic("type binding requires only the type transform");
+      return st.done(failBindingDiagnostic("type binding requires only the type transform"));
     }
     if (!sawTypeTransform) {
-      return failBindingDiagnostic("type binding requires type transform");
+      return st.done(failBindingDiagnostic("type binding requires type transform"));
     }
     if (stmt.args.size() != 1) {
-      return failBindingDiagnostic("type binding requires exactly one initializer");
+      return st.done(failBindingDiagnostic("type binding requires exactly one initializer"));
     }
     const Expr *typeExpr = &stmt.args.front();
     const Expr &initializer = stmt.args.front();
@@ -143,12 +114,12 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
         initializer.hasBodyArguments && initializer.args.empty() &&
         initializer.templateArgs.empty() && !hasNamedArguments(initializer.argNames)) {
       if (initializer.bodyArguments.size() != 1) {
-        return failBindingDiagnostic("type binding initializer must be a single type expression");
+        return st.done(failBindingDiagnostic("type binding initializer must be a single type expression"));
       }
       typeExpr = &initializer.bodyArguments.front();
     } else if (initializer.hasBodyArguments || !initializer.bodyArguments.empty() ||
                hasNamedArguments(stmt.argNames)) {
-      return failBindingDiagnostic("type binding initializer must be a single type expression");
+      return st.done(failBindingDiagnostic("type binding initializer must be a single type expression"));
     }
     auto resolveNamedConcreteType = [&](const Expr &namedType,
                                         std::string &resolvedTypeOut) -> bool {
@@ -284,14 +255,14 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     std::string resolvedType;
     if (typeExpr->kind == Expr::Kind::Call && typeExpr->name == "typeof") {
       if (!resolveTypeofSymbol(*typeExpr, resolvedType)) {
-        return false;
+        return st.done(false);
       }
     } else if (!resolveNamedConcreteType(*typeExpr, resolvedType)) {
-      return failBindingDiagnostic(
-          "type binding initializer requires a concrete type");
+      return st.done(failBindingDiagnostic(
+          "type binding initializer requires a concrete type"));
     }
     currentValidationState_.compileTimeTypeLocals.emplace(stmt.name, std::move(resolvedType));
-    return true;
+    return st.done(true);
   }
   if (stmt.transforms.empty() && !stmt.args.empty()) {
     const std::string lookupNamespace =
@@ -305,14 +276,14 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
       constructorExpr.name = structPath;
       constructorExpr.namespacePrefix.clear();
       if (!validateExpr(params, locals, constructorExpr)) {
-        return false;
+        return st.done(false);
       }
-      return true;
+      return st.done(true);
     }
   }
   if (isParam(params, stmt.name) || locals.count(stmt.name) > 0 ||
       currentValidationState_.compileTimeTypeLocals.count(stmt.name) > 0) {
-    return failBindingDiagnostic("duplicate binding name: " + stmt.name);
+    return st.done(failBindingDiagnostic("duplicate binding name: " + stmt.name));
   }
   for (const auto &transform : stmt.transforms) {
     if (!isInternalSoaCollectionTypeName(transform.name) ||
@@ -323,28 +294,38 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
       break;
     }
     if (!validateSoaVectorElementFieldEnvelopes(transform.templateArgs.front(), namespacePrefix)) {
-      return false;
+      return st.done(false);
     }
     break;
   }
-
-  BindingInfo info;
-  std::optional<std::string> restrictType;
+  [[maybe_unused]] auto &info = st.info;
+  [[maybe_unused]] auto &restrictType = st.restrictType;
   if (currentDefIt != defMap_.end() && currentDefIt->second != nullptr &&
       structNames_.count(currentValidationState_.context.definitionPath) > 0) {
     if (!resolveStructFieldBinding(*currentDefIt->second, stmt, info)) {
-      return false;
+      return st.done(false);
     }
     if (stmt.args.size() == 1 && stmt.args.front().kind == Expr::Kind::Call &&
         isIfCall(stmt.args.front()) && !validateIfExpr(params, locals, stmt.args.front())) {
-      return false;
+      return st.done(false);
     }
     if (!validateBuiltinComparableKeyType(info, definitionTemplateArgs, error_)) {
-      return false;
+      return st.done(false);
     }
     insertLocalBinding(locals, stmt.name, std::move(info));
-    return true;
+    return st.done(true);
   }
+  return PhaseStatus::Continue;
+}
+
+PhaseStatus SemanticsValidator::validateBindingPhase2([[maybe_unused]] const std::vector<ParameterInfo> &params, [[maybe_unused]] std::unordered_map<std::string, BindingInfo> &locals, [[maybe_unused]] const Expr &stmt, [[maybe_unused]] const std::string &namespacePrefix, [[maybe_unused]] bool &handled, ValidateBindingState &st) {
+  [[maybe_unused]] auto &allowBindings = st.allowBindings;
+  [[maybe_unused]] auto &allowCompileTimeTypeBindings = st.allowCompileTimeTypeBindings;
+  [[maybe_unused]] auto &failBindingDiagnostic = st.failBindingDiagnostic;
+  [[maybe_unused]] auto &definitionTemplateArgs = st.definitionTemplateArgs;
+  [[maybe_unused]] auto &bindingLookupNamespace = st.bindingLookupNamespace;
+  [[maybe_unused]] auto &info = st.info;
+  [[maybe_unused]] auto &restrictType = st.restrictType;
   if (!parseBindingInfo(stmt,
                         bindingLookupNamespace,
                         structNames_,
@@ -358,7 +339,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
                         // non-parameter context being extended real
                         // Reference/Pointer/Slice capability support.
                         /*allowCapabilityArg=*/true)) {
-    return false;
+    return st.done(false);
   }
   std::string parsedSoaElementType;
   if (extractExperimentalSoaVectorElementType(info, parsedSoaElementType) &&
@@ -368,51 +349,50 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
                                    importAliases_) &&
       !validateSoaVectorElementFieldEnvelopes(parsedSoaElementType,
                                               namespacePrefix)) {
-    return false;
+    return st.done(false);
   }
-
-  const bool hasExplicitType = hasExplicitBindingTypeTransform(stmt);
-  const bool explicitAutoType = hasExplicitType && normalizeBindingTypeName(info.typeName) == "auto";
+  st.hasExplicitType = hasExplicitBindingTypeTransform(stmt);
+  [[maybe_unused]] auto &hasExplicitType = st.hasExplicitType;
+  st.explicitAutoType = hasExplicitType && normalizeBindingTypeName(info.typeName) == "auto";
+  [[maybe_unused]] auto &explicitAutoType = st.explicitAutoType;
   if (stmt.args.size() == 1 && stmt.args.front().isLambda && (!hasExplicitType || explicitAutoType)) {
     info.typeName = "lambda";
     info.typeTemplateArg.clear();
   }
-
   if (stmt.args.empty()) {
     if (structNames_.count(currentValidationState_.context.definitionPath) > 0) {
       if (restrictType.has_value()) {
         const bool hasTemplate = !info.typeTemplateArg.empty();
         if (!restrictMatchesBinding(*restrictType, info.typeName, info.typeTemplateArg, hasTemplate, namespacePrefix)) {
-          return failBindingDiagnostic("restrict type does not match binding type");
+          return st.done(failBindingDiagnostic("restrict type does not match binding type"));
         }
       }
       if (!validateBuiltinComparableKeyType(info, definitionTemplateArgs, error_)) {
-        return false;
+        return st.done(false);
       }
       insertLocalBinding(locals, stmt.name, std::move(info));
-      return true;
+      return st.done(true);
     }
     if (!validateOmittedBindingInitializer(stmt, info, namespacePrefix)) {
-      return false;
+      return st.done(false);
     }
     if (restrictType.has_value()) {
       const bool hasTemplate = !info.typeTemplateArg.empty();
       if (!restrictMatchesBinding(*restrictType, info.typeName, info.typeTemplateArg, hasTemplate, namespacePrefix)) {
-        return failBindingDiagnostic("restrict type does not match binding type");
+        return st.done(failBindingDiagnostic("restrict type does not match binding type"));
       }
     }
     if (!validateBuiltinComparableKeyType(info, definitionTemplateArgs, error_)) {
-      return false;
+      return st.done(false);
     }
     insertLocalBinding(locals, stmt.name, std::move(info));
-    return true;
+    return st.done(true);
   }
-
   if (stmt.args.size() != 1) {
-    return failBindingDiagnostic("binding requires exactly one argument");
+    return st.done(failBindingDiagnostic("binding requires exactly one argument"));
   }
-
-  const Expr &initializer = stmt.args.front();
+  st.initializer = &(stmt.args.front());
+  [[maybe_unused]] const Expr &initializer = *st.initializer;
   if (initializer.kind == Expr::Kind::Call && !initializer.isMethodCall) {
     const bool explicitOldGetRef =
         initializer.name == samePathSoaHelperTargetPath(collection_helpers::kGetRef) ||
@@ -422,7 +402,7 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     if (explicitOldGetRef &&
         !hasVisibleDefinitionPathForCurrentImports(
             samePathSoaHelperTargetPath(collection_helpers::kGetRef))) {
-      return failBindingDiagnostic("get_ref is only supported as a statement");
+      return st.done(failBindingDiagnostic("get_ref is only supported as a statement"));
     }
   }
   auto isEmptyBuiltinBlockInitializer = [&](const Expr &candidate) -> bool {
@@ -434,32 +414,30 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     }
     return isBuiltinBlockCall(candidate);
   };
-
   const std::string normalizedBindingType = normalizeBindingTypeName(info.typeName);
   if (explicitAutoType && initializer.kind == Expr::Kind::Call &&
       initializer.isBraceConstructor && hasNamedArguments(initializer.argNames) &&
       normalizeBindingTypeName(initializer.name) == "auto") {
-    return failBindingDiagnostic("sum construction requires target sum type");
+    return st.done(failBindingDiagnostic("sum construction requires target sum type"));
   }
   if ((normalizedBindingType == "vector" ||
        isInternalSoaCollectionTypeName(normalizedBindingType)) &&
       isEmptyBuiltinBlockInitializer(initializer)) {
     if (!validateOmittedBindingInitializer(stmt, info, namespacePrefix)) {
-      return false;
+      return st.done(false);
     }
     if (restrictType.has_value()) {
       const bool hasTemplate = !info.typeTemplateArg.empty();
       if (!restrictMatchesBinding(*restrictType, info.typeName, info.typeTemplateArg, hasTemplate, namespacePrefix)) {
-        return failBindingDiagnostic("restrict type does not match binding type");
+        return st.done(failBindingDiagnostic("restrict type does not match binding type"));
       }
     }
     if (!validateBuiltinComparableKeyType(info, definitionTemplateArgs, error_)) {
-      return false;
+      return st.done(false);
     }
     insertLocalBinding(locals, stmt.name, std::move(info));
-    return true;
+    return st.done(true);
   }
-
   auto isUnsupportedRootSoaToAosBindingInitializer = [&]() {
     if (initializer.kind != Expr::Kind::Call || initializer.args.size() != 1) {
       return false;
@@ -535,17 +513,17 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
   };
   if (normalizedBindingType == "vector" &&
       isUnsupportedRootSoaToAosBindingInitializer()) {
-    return failBindingDiagnostic("binding initializer type mismatch");
+    return st.done(failBindingDiagnostic("binding initializer type mismatch"));
   }
-
-  const bool entryArgInit = isEntryArgsAccess(initializer);
-  const bool entryArgStringInit = isEntryArgStringBinding(locals, initializer);
-  std::optional<EntryArgStringScope> entryArgScope;
+  st.entryArgInit = isEntryArgsAccess(initializer);
+  [[maybe_unused]] auto &entryArgInit = st.entryArgInit;
+  st.entryArgStringInit = isEntryArgStringBinding(locals, initializer);
+  [[maybe_unused]] auto &entryArgStringInit = st.entryArgStringInit;
+  [[maybe_unused]] auto &entryArgScope = st.entryArgScope;
   if (entryArgInit || entryArgStringInit) {
     entryArgScope.emplace(*this, true);
   }
-
-  auto isStandaloneSoaFieldViewInitializer = [&]() {
+  st.isStandaloneSoaFieldViewInitializer = [&]() {
     if (const auto pendingPath =
             builtinSoaDirectPendingHelperPath(initializer, params, locals)) {
       std::string pendingFieldName;
@@ -564,8 +542,8 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     }
     return false;
   };
-
-  auto validateAndRecordTargetTypedSumInitializer = [&]() -> std::optional<bool> {
+  [[maybe_unused]] auto &isStandaloneSoaFieldViewInitializer = st.isStandaloneSoaFieldViewInitializer;
+  st.validateAndRecordTargetTypedSumInitializer = [&]() -> std::optional<bool> {
     if (!hasExplicitType || explicitAutoType) {
       return std::nullopt;
     }
@@ -595,8 +573,8 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     insertLocalBinding(locals, stmt.name, std::move(info));
     return true;
   };
-
-  auto isTargetTypedSumInitializerSyntax = [&]() {
+  [[maybe_unused]] auto &validateAndRecordTargetTypedSumInitializer = st.validateAndRecordTargetTypedSumInitializer;
+  st.isTargetTypedSumInitializerSyntax = [&]() {
     if (initializer.kind == Expr::Kind::Call &&
         isSimpleCallName(initializer, "move")) {
       return false;
@@ -620,1603 +598,8 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
            resolveSumDefinitionForTypeText(expectedBindingTypeText(info),
                                            namespacePrefix) != nullptr;
   };
-
-  if (isTargetTypedSumInitializerSyntax()) {
-    if (std::optional<bool> handled = validateAndRecordTargetTypedSumInitializer()) {
-      return *handled;
-    }
-  }
-
-  const bool isMoveInitializer =
-      initializer.kind == Expr::Kind::Call && !initializer.isMethodCall &&
-      !initializer.isFieldAccess && isSimpleCallName(initializer, "move");
-
-  if (initializer.kind == Expr::Kind::Call && isIfCall(initializer) &&
-      !validateIfExpr(params, locals, initializer)) {
-    return false;
-  }
-
-  BindingInfo prevalidatedComparableInfo = info;
-  if (!hasExplicitType || explicitAutoType) {
-    (void)inferBindingTypeFromInitializer(
-        initializer, params, locals, prevalidatedComparableInfo, &stmt);
-  }
-  if (!validateBuiltinComparableKeyType(
-          prevalidatedComparableInfo, definitionTemplateArgs, error_)) {
-    return false;
-  }
-  auto validateMapConstructorInitializerRelocation = [&]() -> bool {
-    std::string keyType;
-    std::string valueType;
-    if (!extractKeyValueCollectionTypesFromTypeText(
-            expectedBindingTypeText(info), keyType, valueType) ||
-        initializer.kind != Expr::Kind::Call || initializer.args.empty()) {
-      return true;
-    }
-    std::string builtinCollectionName;
-    bool isMapConstructorInitializer =
-        getBuiltinCollectionName(initializer, builtinCollectionName) &&
-        builtinCollectionName == "map";
-    if (!isMapConstructorInitializer) {
-      std::string resolvedInitializerPath =
-          preferredCollectionHelperResolvedPath(initializer);
-      if (resolvedInitializerPath.empty()) {
-        resolvedInitializerPath = resolveCalleePath(initializer);
-      }
-      isMapConstructorInitializer =
-          isResolvedKeyValueConstructorPath(resolvedInitializerPath);
-    }
-    if (!isMapConstructorInitializer) {
-      return true;
-    }
-    std::unordered_set<std::string> visitingStructs;
-    if (isRelocationTrivialContainerElementType(
-            valueType, namespacePrefix, definitionTemplateArgs,
-            visitingStructs)) {
-      return true;
-    }
-    return failBindingDiagnostic(
-        std::string("map ") +
-        "literal requires relocation-trivial map value type until container "
-        "move/reallocation semantics are implemented: " +
-        valueType);
-  };
-  if (!validateMapConstructorInitializerRelocation()) {
-    return false;
-  }
-
-  if (!validateExpr(params, locals, initializer)) {
-    if (isStandaloneSoaFieldViewInitializer() && !initializer.args.empty()) {
-      error_.clear();
-      if (!validateExpr(params, locals, initializer.args.front())) {
-        return false;
-      }
-    } else {
-      if (const auto pendingPath =
-              builtinSoaDirectPendingHelperPath(initializer, params, locals)) {
-        return failBindingDiagnostic(
-            soaUnavailableMethodDiagnostic(*pendingPath));
-      }
-      if (error_.empty()) {
-        return failBindingDiagnostic("binding initializer validateExpr failed");
-      }
-      return false;
-    }
-  }
-  if (const auto pendingPath =
-          builtinSoaDirectPendingHelperPath(initializer, params, locals)) {
-    std::string pendingFieldName;
-    std::string resolvedInitializerPath = preferredCollectionHelperResolvedPath(initializer);
-    if (resolvedInitializerPath.empty()) {
-      resolvedInitializerPath = resolveCalleePath(initializer);
-    }
-    if (splitSoaFieldViewHelperPath(*pendingPath, &pendingFieldName) &&
-        (isBuiltinSoaFieldViewExpr(initializer, params, locals, nullptr) ||
-         isExperimentalSoaFieldViewHelperPath(resolvedInitializerPath))) {
-      // Field-view bindings are handled below so borrow roots and invalidation
-      // diagnostics remain tied to the binding lifetime.
-    } else {
-      return failBindingDiagnostic(
-          soaUnavailableMethodDiagnostic(*pendingPath));
-    }
-  }
-  if (isMoveInitializer && hasExplicitType && !explicitAutoType) {
-    const Expr &moveTarget = initializer.args.front();
-    const BindingInfo *movedBinding = nullptr;
-    if (moveTarget.kind == Expr::Kind::Name) {
-      movedBinding = findParamBinding(params, moveTarget.name);
-      if (movedBinding == nullptr) {
-        auto localIt = locals.find(moveTarget.name);
-        if (localIt != locals.end()) {
-          movedBinding = &localIt->second;
-        }
-      }
-    }
-    if (movedBinding == nullptr ||
-        !errorTypesMatch(expectedBindingTypeText(info),
-                         bindingTypeText(*movedBinding),
-                         namespacePrefix)) {
-      return failBindingDiagnostic("binding initializer type mismatch");
-    }
-    if (restrictType.has_value()) {
-      const bool hasTemplate = !info.typeTemplateArg.empty();
-      if (!restrictMatchesBinding(*restrictType, info.typeName,
-                                  info.typeTemplateArg, hasTemplate,
-                                  namespacePrefix)) {
-        return failBindingDiagnostic("restrict type does not match binding type");
-      }
-    }
-    if (!validateBuiltinComparableKeyType(info, definitionTemplateArgs, error_)) {
-      return false;
-    }
-    insertLocalBinding(locals, stmt.name, std::move(info));
-    return true;
-  }
-  if (!isMoveInitializer) {
-    if (std::optional<bool> handled = validateAndRecordTargetTypedSumInitializer()) {
-      return *handled;
-    }
-  }
-
-  ReturnKind initKind = inferExprReturnKind(initializer, params, locals);
-  if (initKind == ReturnKind::Void && !isStructConstructorValueExpr(initializer)) {
-    BindingInfo recoveredInitializerBinding;
-    const bool recoveredInitializerValueBinding =
-        inferBindingTypeFromInitializer(initializer,
-                                        params,
-                                        locals,
-                                        recoveredInitializerBinding,
-                                        &stmt) &&
-        !(recoveredInitializerBinding.typeName.empty() ||
-          (recoveredInitializerBinding.typeName == "array" &&
-           recoveredInitializerBinding.typeTemplateArg.empty()));
-    if (!recoveredInitializerValueBinding) {
-      return failBindingDiagnostic("binding initializer requires a value");
-    }
-    initKind = returnKindForTypeName(
-        normalizeBindingTypeName(recoveredInitializerBinding.typeName));
-  }
-
-  auto isSoftwareNumericBindingCompatible = [](ReturnKind expectedKind, ReturnKind actualKind) -> bool {
-    switch (expectedKind) {
-      case ReturnKind::Integer:
-        return actualKind == ReturnKind::Int || actualKind == ReturnKind::Int64 || actualKind == ReturnKind::UInt64 ||
-               actualKind == ReturnKind::Bool || actualKind == ReturnKind::Integer;
-      case ReturnKind::Decimal:
-        return actualKind == ReturnKind::Int || actualKind == ReturnKind::Int64 || actualKind == ReturnKind::UInt64 ||
-               actualKind == ReturnKind::Bool || actualKind == ReturnKind::Float32 ||
-               actualKind == ReturnKind::Float64 || actualKind == ReturnKind::Integer ||
-               actualKind == ReturnKind::Decimal;
-      case ReturnKind::Complex:
-        return actualKind == ReturnKind::Int || actualKind == ReturnKind::Int64 || actualKind == ReturnKind::UInt64 ||
-               actualKind == ReturnKind::Bool || actualKind == ReturnKind::Float32 ||
-               actualKind == ReturnKind::Float64 || actualKind == ReturnKind::Integer ||
-               actualKind == ReturnKind::Decimal || actualKind == ReturnKind::Complex;
-      default:
-        return false;
-    }
-  };
-
-  auto isFloatBindingCompatible = [](ReturnKind expectedKind, ReturnKind actualKind) -> bool {
-    if (expectedKind != ReturnKind::Float32 && expectedKind != ReturnKind::Float64) {
-      return false;
-    }
-    return actualKind == ReturnKind::Float32 || actualKind == ReturnKind::Float64;
-  };
-  auto isStringExpr = [&](const Expr &candidate,
-                          const std::vector<ParameterInfo> &paramsIn,
-                          const std::unordered_map<std::string, BindingInfo> &localsIn) -> bool {
-    if (candidate.kind == Expr::Kind::StringLiteral) {
-      return true;
-    }
-    if (candidate.kind == Expr::Kind::Name) {
-      if (const BindingInfo *paramBinding = findParamBinding(paramsIn, candidate.name)) {
-        return paramBinding->typeName == "string";
-      }
-      auto it = localsIn.find(candidate.name);
-      return it != localsIn.end() && it->second.typeName == "string";
-    }
-    return inferExprReturnKind(candidate, paramsIn, localsIn) == ReturnKind::String;
-  };
-  auto collectionRepresentation = [&](const std::string &typeName,
-                                      const std::string &typeTemplateArg) -> std::string {
-    std::string normalizedType = normalizeBindingTypeName(typeName);
-    std::string base = normalizedType;
-    std::string argText = typeTemplateArg;
-    if (argText.empty()) {
-      std::string splitBase;
-      std::string splitArgText;
-      if (splitTemplateTypeName(normalizedType, splitBase, splitArgText)) {
-        base = normalizeBindingTypeName(splitBase);
-        argText = splitArgText;
-      }
-    }
-    if (base == "vector") {
-      return "builtin_vector";
-    }
-    if (base == "Vector" ||
-        isLegacyExperimentalVectorCompatibilityTypePath(base) ||
-        isLegacyExperimentalVectorCompatibilityTypePath("/" + base)) {
-      return legacyExperimentalVectorCompatibilityFamilyName();
-    }
-    return {};
-  };
-  auto collectionRepresentationsCompatible =
-      [](const std::string &expectedRepresentation,
-         const std::string &actualRepresentation) {
-        if (expectedRepresentation == actualRepresentation) {
-          return true;
-        }
-        const bool isVectorRepresentationPair =
-            (expectedRepresentation == "builtin_vector" &&
-             actualRepresentation ==
-                 legacyExperimentalVectorCompatibilityFamilyName()) ||
-            (expectedRepresentation ==
-                 legacyExperimentalVectorCompatibilityFamilyName() &&
-             actualRepresentation == "builtin_vector");
-        return isVectorRepresentationPair;
-      };
-
-  if (!hasExplicitType || explicitAutoType) {
-    (void)inferBindingTypeFromInitializer(initializer, params, locals, info, &stmt);
-  } else {
-    const std::string expectedType = normalizeBindingTypeName(info.typeName);
-    const std::string expectedRepresentation =
-        collectionRepresentation(info.typeName, info.typeTemplateArg);
-    ResultTypeInfo resultInfo;
-    if (expectedType != "Result" &&
-        resolveResultTypeForExpr(initializer, params, locals, resultInfo) &&
-        resultInfo.isResult) {
-      return failBindingDiagnostic("binding initializer type mismatch");
-    }
-    if (expectedType == "Task") {
-      BindingInfo initializerBindingInfo;
-      if (!inferTaskSpawnBinding(initializer, params, locals,
-                                 initializerBindingInfo) ||
-          !errorTypesMatch(info.typeTemplateArg,
-                           initializerBindingInfo.typeTemplateArg,
-                           namespacePrefix)) {
-        return failBindingDiagnostic("binding initializer type mismatch");
-      }
-    } else if (expectedType == "string") {
-      if (!isStringExpr(initializer, params, locals)) {
-        return failBindingDiagnostic("binding initializer type mismatch");
-      }
-    } else {
-      BindingInfo initializerBindingInfo;
-      const bool hasInitializerBindingInfo =
-          inferBindingTypeFromInitializer(initializer, params, locals, initializerBindingInfo, &stmt);
-      std::string initializerTypeText;
-      const bool hasInitializerTypeText =
-          inferQueryExprTypeText(initializer, params, locals, initializerTypeText);
-      if (hasInitializerTypeText) {
-        std::string actualRepresentation =
-            collectionRepresentation(initializerTypeText, {});
-        const std::string initializerBindingRepresentation =
-            hasInitializerBindingInfo
-                ? collectionRepresentation(initializerBindingInfo.typeName, initializerBindingInfo.typeTemplateArg)
-                : std::string{};
-        if (actualRepresentation.empty()) {
-          actualRepresentation = initializerBindingRepresentation;
-        } else if (!expectedRepresentation.empty() &&
-                   !initializerBindingRepresentation.empty() &&
-                   initializerBindingRepresentation == expectedRepresentation) {
-          actualRepresentation = initializerBindingRepresentation;
-        }
-        if (!expectedRepresentation.empty() &&
-            !actualRepresentation.empty() &&
-            !collectionRepresentationsCompatible(expectedRepresentation,
-                                                 actualRepresentation)) {
-          return failBindingDiagnostic("binding initializer type mismatch");
-        }
-      } else if (hasInitializerBindingInfo) {
-        const std::string actualRepresentation =
-            collectionRepresentation(initializerBindingInfo.typeName, initializerBindingInfo.typeTemplateArg);
-        if (!expectedRepresentation.empty() &&
-            !actualRepresentation.empty() &&
-            !collectionRepresentationsCompatible(expectedRepresentation,
-                                                 actualRepresentation)) {
-          return failBindingDiagnostic("binding initializer type mismatch");
-        }
-      }
-      const ReturnKind expectedKind = returnKindForTypeName(expectedType);
-      if (expectedKind != ReturnKind::Unknown && initKind != ReturnKind::Unknown) {
-        if (!isSoftwareNumericBindingCompatible(expectedKind, initKind) &&
-            !isFloatBindingCompatible(expectedKind, initKind) &&
-            initKind != expectedKind) {
-          return failBindingDiagnostic("binding initializer type mismatch");
-        }
-      }
-      const std::string expectedStruct =
-          resolveStructTypePath(expectedType, namespacePrefix, structNames_);
-      // The `map<K, V>(...)` literal spelling (builtin or its rewritten stdlib
-      // constructor) intentionally initializes the public `Map` wrapper.
-      std::string builtinCollectionName;
-      std::string initializerBase = initializer.name.substr(
-          initializer.name.find_last_of('/') == std::string::npos
-              ? 0
-              : initializer.name.find_last_of('/') + 1);
-      initializerBase = initializerBase.substr(0, initializerBase.find("__"));
-      if (!expectedStruct.empty() && initializerBase != "map" &&
-          !getBuiltinCollectionName(initializer, builtinCollectionName)) {
-        const std::string actualStruct =
-            inferStructReturnPath(initializer, params, locals);
-        if (structNames_.count(actualStruct) > 0 &&
-            actualStruct.substr(0, actualStruct.find("__t")) !=
-                expectedStruct.substr(0, expectedStruct.find("__t"))) {
-          return failBindingDiagnostic("binding initializer type mismatch");
-        }
-      }
-    }
-  }
-
-  if (info.typeName == "uninitialized") {
-    if (info.typeTemplateArg.empty()) {
-      return failBindingDiagnostic("uninitialized requires exactly one template argument");
-    }
-    if (initializer.kind != Expr::Kind::Call || initializer.isMethodCall || initializer.isBinding) {
-      return failBindingDiagnostic("uninitialized bindings require uninitialized<T>() initializer");
-    }
-    if (initializer.name != "uninitialized" && initializer.name != "/uninitialized") {
-      return failBindingDiagnostic("uninitialized bindings require uninitialized<T>() initializer");
-    }
-    if (initializer.hasBodyArguments || !initializer.bodyArguments.empty() || !initializer.args.empty()) {
-      return failBindingDiagnostic("uninitialized does not accept arguments");
-    }
-    if (initializer.templateArgs.size() != 1 ||
-        !errorTypesMatch(info.typeTemplateArg, initializer.templateArgs.front(), namespacePrefix)) {
-      return failBindingDiagnostic("uninitialized initializer type mismatch");
-    }
-  }
-
-  if (restrictType.has_value()) {
-    const bool hasTemplate = !info.typeTemplateArg.empty();
-    if (!restrictMatchesBinding(*restrictType, info.typeName, info.typeTemplateArg, hasTemplate, namespacePrefix)) {
-      return failBindingDiagnostic("restrict type does not match binding type");
-    }
-  }
-
-  if (entryArgInit || entryArgStringInit) {
-    if (normalizeBindingTypeName(info.typeName) != "string") {
-      return failBindingDiagnostic("entry argument strings require string bindings");
-    }
-    info.isEntryArgString = true;
-  }
-
-  auto pointerAliasRootForBinding = [&](const std::string &bindingName, const BindingInfo &binding) -> std::string {
-    std::string referenceRoot = referenceRootForBorrowBinding(bindingName, binding);
-    if (!referenceRoot.empty()) {
-      return referenceRoot;
-    }
-    if (binding.typeName == "Pointer" && !binding.referenceRoot.empty()) {
-      return binding.referenceRoot;
-    }
-    return "";
-  };
-
-  auto resolveNamedBinding = [&](const std::string &name) -> const BindingInfo * {
-    if (const BindingInfo *paramBinding = findParamBinding(params, name)) {
-      return paramBinding;
-    }
-    auto it = locals.find(name);
-    if (it == locals.end()) {
-      return nullptr;
-    }
-    return &it->second;
-  };
-
-  std::function<bool(const Expr &, std::string &)> resolveStorageRootExpr;
-  std::function<bool(const Expr &, std::string &)> resolvePointerRoot;
-  resolveStorageRootExpr = [&](const Expr &expr, std::string &rootOut) -> bool {
-    if (expr.kind == Expr::Kind::Name) {
-      const BindingInfo *binding = resolveNamedBinding(expr.name);
-      if (binding == nullptr) {
-        return false;
-      }
-      std::string aliasRoot = pointerAliasRootForBinding(expr.name, *binding);
-      if (!aliasRoot.empty()) {
-        rootOut = std::move(aliasRoot);
-      } else {
-        rootOut = expr.name;
-      }
-      return true;
-    }
-    if (expr.kind != Expr::Kind::Call) {
-      return false;
-    }
-    std::string builtinName;
-    if (getBuiltinPointerName(expr, builtinName) && builtinName == "dereference" && expr.args.size() == 1) {
-      return resolvePointerRoot(expr.args.front(), rootOut);
-    }
-    if (expr.isFieldAccess && expr.args.size() == 1) {
-      std::string receiverRoot;
-      if (!resolveStorageRootExpr(expr.args.front(), receiverRoot) || receiverRoot.empty()) {
-        return false;
-      }
-      rootOut = receiverRoot + "." + expr.name;
-      return true;
-    }
-    return false;
-  };
-  resolvePointerRoot = [&](const Expr &expr, std::string &rootOut) -> bool {
-    if (expr.kind == Expr::Kind::Name) {
-      const BindingInfo *binding = resolveNamedBinding(expr.name);
-      if (binding == nullptr) {
-        return false;
-      }
-      rootOut = pointerAliasRootForBinding(expr.name, *binding);
-      if (rootOut.empty() && binding->typeName == "Pointer") {
-        rootOut = expr.name;
-      }
-      return !rootOut.empty();
-    }
-    if (expr.kind != Expr::Kind::Call) {
-      return false;
-    }
-    std::string builtinName;
-    if (getBuiltinPointerName(expr, builtinName) && builtinName == "location" && expr.args.size() == 1) {
-      const Expr &target = expr.args.front();
-      if (target.kind == Expr::Kind::Name) {
-        const BindingInfo *binding = resolveNamedBinding(target.name);
-        if (binding != nullptr) {
-          std::string root = pointerAliasRootForBinding(target.name, *binding);
-          if (!root.empty()) {
-            rootOut = std::move(root);
-          } else {
-            rootOut = target.name;
-          }
-          return true;
-        }
-        return false;
-      }
-      return resolvePointerRoot(target, rootOut);
-    }
-    if (expr.isFieldAccess && expr.args.size() == 1) {
-      std::string receiverRoot;
-      if (!resolvePointerRoot(expr.args.front(), receiverRoot) || receiverRoot.empty()) {
-        return false;
-      }
-      rootOut = receiverRoot + "." + expr.name;
-      return true;
-    }
-    std::string opName;
-    if (getBuiltinOperatorName(expr, opName) && (opName == "plus" || opName == "minus") && expr.args.size() == 2) {
-      if (isPointerLikeExpr(expr.args[1], params, locals)) {
-        return false;
-      }
-      return resolvePointerRoot(expr.args[0], rootOut);
-    }
-    std::string resolvedCallPath = preferredCollectionHelperResolvedPath(expr);
-    if (resolvedCallPath.empty()) {
-      resolvedCallPath = resolveCalleePath(expr);
-    }
-    if (const std::string concreteResolvedCallPath =
-            resolveExprConcreteCallPath(params, locals, expr, resolvedCallPath);
-        !concreteResolvedCallPath.empty()) {
-      resolvedCallPath = concreteResolvedCallPath;
-    }
-    const bool isSoaColumnSlotUnsafe =
-        isExperimentalSoaColumnSlotHelperPath(resolvedCallPath);
-    const bool isVectorSlotUnsafe =
-        resolvedCallPath.rfind(
-            legacyExperimentalVectorCompatibilityPrefix() +
-                std::string("vector") + "SlotUnsafe",
-            0) == 0;
-    auto isCanonicalVectorSlotUnsafe = [](std::string path) {
-      const size_t specializationSuffix = path.find("__");
-      if (specializationSuffix != std::string::npos) {
-        path.erase(specializationSuffix);
-      }
-      return path.rfind(collection_paths::memberPath(collection_paths::kVectorFolder,
-                                                    "vectorSlotUnsafe"),
-                        0) == 0;
-    };
-    if ((isSoaColumnSlotUnsafe || isVectorSlotUnsafe ||
-         isCanonicalVectorSlotUnsafe(resolvedCallPath)) &&
-        !expr.args.empty()) {
-      std::string storageRoot;
-      if (!resolveStorageRootExpr(expr.args.front(), storageRoot) || storageRoot.empty()) {
-        return false;
-      }
-      rootOut = storageRoot + ".data";
-      return true;
-    }
-    auto isPointerRootPreservingCall = [](const std::string &name) {
-      std::string normalizedName = name;
-      if (const auto slash = normalizedName.find_last_of('/'); slash != std::string::npos) {
-        normalizedName = normalizedName.substr(slash + 1);
-      }
-      if (const auto generatedSuffix = normalizedName.find("__");
-          generatedSuffix != std::string::npos) {
-        normalizedName = normalizedName.substr(0, generatedSuffix);
-      }
-      return normalizedName == "at" || normalizedName == "at_unsafe" ||
-             normalizedName == "reinterpret" ||
-             normalizedName == "bufferOffsetUnsafe" ||
-             normalizedName == "bufferOffsetChecked" ||
-             normalizedName == "bufferReinterpret" ||
-             normalizedName == "bufferReinterpretBytes" ||
-             normalizedName == "bufferOffsetBytesUnsafe" ||
-             normalizedName == "bufferOffsetBytesChecked" ||
-             normalizedName == "bufferReinterpretFromBytes";
-    };
-    if (isPointerRootPreservingCall(resolvedCallPath) && !expr.args.empty()) {
-      return resolvePointerRoot(expr.args.front(), rootOut);
-    }
-    auto defIt = defMap_.find(resolvedCallPath);
-    if (defIt == defMap_.end() || defIt->second == nullptr) {
-      return false;
-    }
-    bool returnsPointer = false;
-    for (const auto &transform : defIt->second->transforms) {
-      if (transform.name != "return" || transform.templateArgs.size() != 1) {
-        continue;
-      }
-      std::string base;
-      std::string arg;
-      if (!splitTemplateTypeName(normalizeBindingTypeName(transform.templateArgs.front()), base, arg)) {
-        continue;
-      }
-      if (normalizeBindingTypeName(base) == "Pointer" && !arg.empty()) {
-        returnsPointer = true;
-        break;
-      }
-    }
-    if (!returnsPointer) {
-      return false;
-    }
-    const auto paramsIt = paramsByDef_.find(resolvedCallPath);
-    if (paramsIt == paramsByDef_.end()) {
-      return false;
-    }
-    const auto &nestedParams = paramsIt->second;
-    std::string nestedArgError;
-    std::vector<const Expr *> nestedOrderedArgs;
-    if (!buildOrderedArguments(nestedParams, expr.args, expr.argNames,
-                               nestedOrderedArgs, nestedArgError)) {
-      return false;
-    }
-    const Expr *returnedValueExpr = nullptr;
-    const Definition &nestedDef = *defIt->second;
-    for (const auto &stmtExpr : nestedDef.statements) {
-      if (isReturnCall(stmtExpr) && stmtExpr.args.size() == 1) {
-        returnedValueExpr = &stmtExpr.args.front();
-      }
-    }
-    if (nestedDef.returnExpr.has_value()) {
-      returnedValueExpr = &*nestedDef.returnExpr;
-    }
-    if (returnedValueExpr == nullptr) {
-      return false;
-    }
-    auto resolveNestedArgPointerRoot = [&](const Expr &nestedArg,
-                                           std::string &nestedRootOut) {
-      if (nestedArg.kind == Expr::Kind::Name) {
-        for (size_t index = 0;
-             index < nestedParams.size() && index < nestedOrderedArgs.size();
-             ++index) {
-          if (nestedParams[index].name == nestedArg.name &&
-              nestedOrderedArgs[index] != nullptr) {
-            return resolvePointerRoot(*nestedOrderedArgs[index], nestedRootOut);
-          }
-        }
-      }
-      return resolvePointerRoot(nestedArg, nestedRootOut);
-    };
-    if (returnedValueExpr->kind == Expr::Kind::Name) {
-      return resolveNestedArgPointerRoot(*returnedValueExpr, rootOut);
-    }
-    if (returnedValueExpr->kind != Expr::Kind::Call) {
-      return false;
-    }
-    std::string returnedOpName;
-    if (getBuiltinOperatorName(*returnedValueExpr, returnedOpName) &&
-        (returnedOpName == "plus" || returnedOpName == "minus") &&
-        returnedValueExpr->args.size() == 2) {
-      return resolveNestedArgPointerRoot(returnedValueExpr->args.front(), rootOut);
-    }
-    std::string returnedCallPath = preferredCollectionHelperResolvedPath(*returnedValueExpr);
-    if (returnedCallPath.empty()) {
-      returnedCallPath = resolveCalleePath(*returnedValueExpr);
-    }
-    if (isPointerRootPreservingCall(returnedCallPath) && !returnedValueExpr->args.empty()) {
-      return resolveNestedArgPointerRoot(returnedValueExpr->args.front(), rootOut);
-    }
-    return false;
-  };
-
-  if (isExperimentalSoaColumnBindingType(info) && info.referenceRoot.empty()) {
-    std::string storageRoot;
-    if (resolveStorageRootExpr(initializer, storageRoot) && !storageRoot.empty()) {
-      info.referenceRoot = std::move(storageRoot);
-    }
-  }
-
-  if (info.typeName == "Pointer") {
-    std::string pointerRoot;
-    if (resolvePointerRoot(initializer, pointerRoot)) {
-      info.referenceRoot = std::move(pointerRoot);
-    }
-    if (!validateBuiltinComparableKeyType(info, definitionTemplateArgs, error_)) {
-      return false;
-    }
-    insertLocalBinding(locals, stmt.name, std::move(info));
-    return true;
-  }
-
-  if (info.typeName == "Reference") {
-    const Expr &init = initializer;
-    auto formatBindingType = [](const BindingInfo &binding) -> std::string {
-      if (binding.typeTemplateArg.empty()) {
-        return binding.typeName;
-      }
-      return binding.typeName + "<" + binding.typeTemplateArg + ">";
-    };
-    auto isStandaloneBorrowStorageExpr = [&](const Expr &candidate) {
-      if (candidate.kind == Expr::Kind::Name) {
-        return true;
-      }
-      std::string builtinName;
-      if (candidate.kind == Expr::Kind::Call && getBuiltinPointerName(candidate, builtinName) &&
-          builtinName == "dereference" && candidate.args.size() == 1) {
-        return true;
-      }
-      return candidate.kind == Expr::Kind::Call && candidate.isFieldAccess && candidate.args.size() == 1;
-    };
-    auto resolveDirectBorrowStorageTargetType = [&](const Expr &expr, std::string &targetOut) -> bool {
-      if (expr.kind != Expr::Kind::Call || expr.isMethodCall || !isSimpleCallName(expr, "borrow") ||
-          expr.args.size() != 1) {
-        return false;
-      }
-      const Expr &storage = expr.args.front();
-      if (!isStandaloneBorrowStorageExpr(storage)) {
-        return false;
-      }
-      BindingInfo binding;
-      bool resolved = false;
-      if (!resolveUninitializedStorageBinding(params, locals, storage, binding, resolved)) {
-        return false;
-      }
-      if (!resolved || binding.typeName != "uninitialized" || binding.typeTemplateArg.empty()) {
-        return false;
-      }
-      targetOut = binding.typeTemplateArg;
-      return true;
-    };
-
-	    std::function<bool(const Expr &, std::string &)> resolvePointerTargetType;
-	    resolvePointerTargetType = [&](const Expr &expr, std::string &targetOut) -> bool {
-	      if (expr.kind == Expr::Kind::Name) {
-	        const BindingInfo *binding = resolveNamedBinding(expr.name);
-        if (binding == nullptr) {
-          return false;
-        }
-        if ((binding->typeName == "Pointer" || binding->typeName == "Reference") &&
-            !binding->typeTemplateArg.empty()) {
-          targetOut = binding->typeTemplateArg;
-          return true;
-        }
-        return false;
-      }
-      if (expr.kind != Expr::Kind::Call) {
-        return false;
-      }
-      std::string builtinName;
-      if (getBuiltinPointerName(expr, builtinName) && builtinName == "location" && expr.args.size() == 1) {
-        const Expr &target = expr.args.front();
-        if (target.kind == Expr::Kind::Name) {
-          const BindingInfo *binding = resolveNamedBinding(target.name);
-          if (binding == nullptr) {
-            return false;
-          }
-          if (binding->typeName == "Reference" && !binding->typeTemplateArg.empty()) {
-            targetOut = binding->typeTemplateArg;
-          } else {
-            targetOut = formatBindingType(*binding);
-          }
-          return true;
-        }
-        BindingInfo inferredBinding;
-        if (!inferBindingTypeFromInitializer(target, params, locals, inferredBinding)) {
-          return false;
-        }
-        if (inferredBinding.typeName == "Reference" && !inferredBinding.typeTemplateArg.empty()) {
-          targetOut = inferredBinding.typeTemplateArg;
-        } else {
-          targetOut = formatBindingType(inferredBinding);
-	        }
-	        return true;
-	      }
-	      if (expr.kind == Expr::Kind::Call && expr.isFieldAccess && expr.args.size() == 1) {
-	        std::string receiverTargetType;
-	        if (!resolvePointerTargetType(expr.args.front(), receiverTargetType)) {
-	          return false;
-	        }
-	        BindingInfo inferredBinding;
-	        if (!inferBindingTypeFromInitializer(expr, params, locals, inferredBinding)) {
-	          return false;
-	        }
-	        if (inferredBinding.typeName == "Reference" && !inferredBinding.typeTemplateArg.empty()) {
-	          targetOut = inferredBinding.typeTemplateArg;
-	        } else {
-	          targetOut = formatBindingType(inferredBinding);
-	        }
-	        return !targetOut.empty();
-	      }
-	      std::string opName;
-	      if (getBuiltinOperatorName(expr, opName) && (opName == "plus" || opName == "minus") && expr.args.size() == 2) {
-	        if (isPointerLikeExpr(expr.args[1], params, locals)) {
-	          return false;
-	        }
-        return resolvePointerTargetType(expr.args[0], targetOut);
-      }
-      auto resolveImplicitSoaRefTargetType = [&](std::string &targetOut) -> bool {
-        if (expr.args.size() != 2) {
-          return false;
-        }
-        const std::string normalizedName =
-            !expr.name.empty() && expr.name.front() == '/'
-                ? expr.name.substr(1)
-                : expr.name;
-        std::string resolvedPath = preferredCollectionHelperResolvedPath(expr);
-        if (resolvedPath.empty()) {
-          resolvedPath = resolveCalleePath(expr);
-        }
-        if (const std::string concreteResolvedPath =
-                resolveExprConcreteCallPath(params, locals, expr, resolvedPath);
-            !concreteResolvedPath.empty()) {
-          resolvedPath = concreteResolvedPath;
-        }
-        const std::string resolvedPathCanonical =
-            canonicalizeLegacySoaRefHelperPath(resolvedPath);
-        const bool resolvedCanonicalRefLike =
-            isCanonicalSoaRefLikeHelperPath(resolvedPathCanonical);
-        const bool resolvedExperimentalRefLike =
-            isExperimentalSoaRefLikeHelperPath(resolvedPathCanonical);
-        const auto soaAccessHelper = builtinSoaAccessHelperName(expr, params, locals);
-        const bool helperResolvedRefLike =
-            soaAccessHelper.has_value() &&
-            (*soaAccessHelper == "ref" || *soaAccessHelper == collection_helpers::kRefRef);
-        const bool isMethodRefLike =
-            expr.isMethodCall &&
-            (collection_helpers::isRefHelperName(normalizedName) ||
-             helperResolvedRefLike || resolvedCanonicalRefLike ||
-             resolvedExperimentalRefLike);
-        const bool isHelperRefLike =
-            !expr.isMethodCall &&
-            (isSimpleCallName(expr, "ref") || isSimpleCallName(expr, collection_helpers::kRefRef) ||
-             helperResolvedRefLike || resolvedCanonicalRefLike ||
-             resolvedExperimentalRefLike);
-        if (!isMethodRefLike && !isHelperRefLike) {
-          return false;
-        }
-        std::string elemType;
-        const Expr &receiver = expr.args.front();
-        if (receiver.kind == Expr::Kind::Name) {
-          const BindingInfo *binding = resolveNamedBinding(receiver.name);
-          if (binding == nullptr ||
-              !extractExperimentalSoaVectorElementType(*binding, elemType)) {
-            return false;
-          }
-          targetOut = elemType;
-          return true;
-        }
-        BindingInfo receiverBinding;
-        std::string receiverTypeText;
-        if (!resolvePointerTargetType(receiver, receiverTypeText) &&
-            !inferQueryExprTypeText(receiver, params, locals, receiverTypeText)) {
-          return false;
-        }
-        std::string base;
-        std::string argText;
-        const std::string normalizedType = normalizeBindingTypeName(receiverTypeText);
-        if (splitTemplateTypeName(normalizedType, base, argText)) {
-          receiverBinding.typeName = normalizeBindingTypeName(base);
-          receiverBinding.typeTemplateArg = argText;
-        } else {
-          receiverBinding.typeName = normalizedType;
-          receiverBinding.typeTemplateArg.clear();
-        }
-        if (!extractExperimentalSoaVectorElementType(receiverBinding, elemType)) {
-          return false;
-        }
-        targetOut = elemType;
-        return true;
-      };
-      if (resolveImplicitSoaRefTargetType(targetOut)) {
-        return true;
-      }
-      std::string resolvedPath = preferredCollectionHelperResolvedPath(expr);
-      if (resolvedPath.empty()) {
-        resolvedPath = resolveCalleePath(expr);
-      }
-      if (expr.isMethodCall) {
-        if (expr.args.empty()) {
-          return false;
-        }
-        bool isBuiltin = false;
-        if (!resolveMethodTarget(params,
-                                 locals,
-                                 expr.namespacePrefix,
-                                 expr.args.front(),
-                                 expr.name,
-                                 resolvedPath,
-                                 isBuiltin)) {
-          return false;
-        }
-      }
-      if (const std::string concreteResolvedPath =
-              resolveExprConcreteCallPath(params, locals, expr, resolvedPath);
-          !concreteResolvedPath.empty()) {
-        resolvedPath = concreteResolvedPath;
-      }
-      auto defIt = defMap_.find(resolvedPath);
-      if (defIt == defMap_.end() || defIt->second == nullptr) {
-        return false;
-      }
-      for (const auto &transform : defIt->second->transforms) {
-        if (transform.name != "return" || transform.templateArgs.size() != 1) {
-          continue;
-        }
-        std::string base;
-        std::string arg;
-        if (!splitTemplateTypeName(transform.templateArgs.front(), base, arg)) {
-          continue;
-        }
-        if (base != "Reference" && base != "Pointer") {
-          continue;
-        }
-        std::vector<std::string> args;
-        if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
-          return false;
-        }
-        targetOut = args.front();
-        return true;
-      }
-      return false;
-    };
-    auto resolveBorrowRoot = [&](const std::string &targetName, std::string &rootOut) -> bool {
-      if (const BindingInfo *paramBinding = findParamBinding(params, targetName)) {
-        if (paramBinding->typeName == "Reference" ||
-            isSoaFieldViewBindingType(*paramBinding)) {
-          rootOut = referenceRootForBorrowBinding(targetName, *paramBinding);
-        } else {
-          rootOut = targetName;
-        }
-        return true;
-      }
-      auto it = locals.find(targetName);
-      if (it == locals.end()) {
-        return false;
-      }
-      if (it->second.typeName == "Reference" ||
-          isSoaFieldViewBindingType(it->second)) {
-        rootOut = referenceRootForBorrowBinding(it->first, it->second);
-      } else {
-        rootOut = targetName;
-      }
-      return true;
-    };
-    using ExprSubstitutions = std::vector<std::pair<std::string, const Expr *>>;
-    auto findSubstitutedExpr = [&](const ExprSubstitutions &substitutions,
-                                   const std::string &name,
-                                   size_t *matchedIndexOut = nullptr) -> const Expr * {
-      for (size_t index = substitutions.size(); index > 0; --index) {
-        if (substitutions[index - 1].first == name) {
-          if (matchedIndexOut != nullptr) {
-            *matchedIndexOut = index - 1;
-          }
-          return substitutions[index - 1].second;
-        }
-      }
-      return nullptr;
-    };
-    auto removeSubstitutionAt = [&](const ExprSubstitutions &substitutions,
-                                    size_t indexToSkip) {
-      ExprSubstitutions reduced;
-      reduced.reserve(substitutions.size());
-      for (size_t index = 0; index < substitutions.size(); ++index) {
-        if (index == indexToSkip) {
-          continue;
-        }
-        reduced.push_back(substitutions[index]);
-      }
-      return reduced;
-    };
-    auto appendCallSubstitutions =
-        [&](const Expr &callExpr,
-            const ExprSubstitutions &baseSubstitutions,
-            ExprSubstitutions &extendedSubstitutions,
-            const Expr *&returnedValueExprOut) -> bool {
-          returnedValueExprOut = nullptr;
-          std::string resolvedCallPath =
-              preferredCollectionHelperResolvedPath(callExpr);
-          if (resolvedCallPath.empty()) {
-            resolvedCallPath = resolveCalleePath(callExpr);
-          }
-          if (callExpr.isMethodCall) {
-            if (callExpr.args.empty()) {
-              return false;
-            }
-            bool isBuiltin = false;
-            if (!resolveMethodTarget(params,
-                                     locals,
-                                     callExpr.namespacePrefix,
-                                     callExpr.args.front(),
-                                     callExpr.name,
-                                     resolvedCallPath,
-                                     isBuiltin)) {
-              return false;
-            }
-          }
-          if (const std::string concreteResolvedCallPath =
-                  resolveExprConcreteCallPath(
-                      params, locals, callExpr, resolvedCallPath);
-              !concreteResolvedCallPath.empty()) {
-            resolvedCallPath = concreteResolvedCallPath;
-          }
-          auto defIt = defMap_.find(resolvedCallPath);
-          if (defIt == defMap_.end() || defIt->second == nullptr) {
-            return false;
-          }
-          const auto paramsIt = paramsByDef_.find(resolvedCallPath);
-          if (paramsIt == paramsByDef_.end()) {
-            return false;
-          }
-          const auto &nestedParams = paramsIt->second;
-          std::string nestedArgError;
-          std::vector<const Expr *> nestedOrderedArgs;
-          if (!buildOrderedArguments(nestedParams, callExpr.args, callExpr.argNames,
-                                     nestedOrderedArgs, nestedArgError)) {
-            return false;
-          }
-          const Definition &nestedDef = *defIt->second;
-          for (const auto &stmtExpr : nestedDef.statements) {
-            if (isReturnCall(stmtExpr) && stmtExpr.args.size() == 1) {
-              returnedValueExprOut = &stmtExpr.args.front();
-            }
-          }
-          if (nestedDef.returnExpr.has_value()) {
-            returnedValueExprOut = &*nestedDef.returnExpr;
-          }
-          if (returnedValueExprOut == nullptr) {
-            return false;
-          }
-          extendedSubstitutions = baseSubstitutions;
-          for (size_t nestedIndex = 0;
-               nestedIndex < nestedParams.size() && nestedIndex < nestedOrderedArgs.size();
-               ++nestedIndex) {
-            const Expr *nestedArg = nestedOrderedArgs[nestedIndex];
-            if (nestedArg == nullptr) {
-              continue;
-            }
-            extendedSubstitutions.emplace_back(nestedParams[nestedIndex].name, nestedArg);
-          }
-          return true;
-        };
-    auto resolveConcreteCallPath = [&](const Expr &callExpr,
-                                       std::string &resolvedPathOut) -> bool {
-      resolvedPathOut = preferredCollectionHelperResolvedPath(callExpr);
-      if (resolvedPathOut.empty()) {
-        resolvedPathOut = resolveCalleePath(callExpr);
-      }
-      if (callExpr.kind != Expr::Kind::Call) {
-        return !resolvedPathOut.empty();
-      }
-      if (callExpr.isMethodCall) {
-        if (callExpr.args.empty()) {
-          return false;
-        }
-        bool isBuiltin = false;
-        if (!resolveMethodTarget(params,
-                                 locals,
-                                 callExpr.namespacePrefix,
-                                 callExpr.args.front(),
-                                 callExpr.name,
-                                 resolvedPathOut,
-                                 isBuiltin)) {
-          return false;
-        }
-      }
-      if (const std::string concreteResolvedPathOut =
-              resolveExprConcreteCallPath(
-                  params, locals, callExpr, resolvedPathOut);
-          !concreteResolvedPathOut.empty()) {
-        resolvedPathOut = concreteResolvedPathOut;
-      }
-      return !resolvedPathOut.empty();
-    };
-    std::function<bool(const Expr &, const ExprSubstitutions &, std::string &)>
-        resolveReceiverRootExpr;
-    std::function<bool(const Expr &, const ExprSubstitutions &, std::string &)>
-        resolveStandaloneRefRootExpr;
-    auto isStandaloneRefCall = [&](const Expr &expr) -> bool {
-      if (expr.kind != Expr::Kind::Call || expr.args.size() != 2) {
-        return false;
-      }
-      std::string resolvedPath = preferredCollectionHelperResolvedPath(expr);
-      if (resolvedPath.empty()) {
-        resolvedPath = resolveCalleePath(expr);
-      }
-      (void)resolveConcreteCallPath(expr, resolvedPath);
-      const std::string resolvedPathCanonical =
-          canonicalizeLegacySoaRefHelperPath(resolvedPath);
-      const bool resolvedCanonicalRefLike =
-          isCanonicalSoaRefLikeHelperPath(resolvedPathCanonical);
-      const bool resolvedExperimentalRefLike =
-          isExperimentalSoaRefLikeHelperPath(resolvedPathCanonical);
-      if (expr.isMethodCall) {
-        return expr.name == "ref" ||
-               resolvedCanonicalRefLike || resolvedExperimentalRefLike;
-      }
-      return isSimpleCallName(expr, "ref") ||
-             resolvedCanonicalRefLike || resolvedExperimentalRefLike;
-    };
-    auto hasBorrowConflictForRoot =
-        [&](const std::string &borrowRoot, bool requestMutable) -> bool {
-          if (borrowRoot.empty() ||
-              currentValidationState_.context.definitionIsUnsafe) {
-            return false;
-          }
-          bool sawMutableBorrow = false;
-          bool sawImmutableBorrow = false;
-          auto referenceRootForBorrowBinding =
-              [&](const std::string &bindingName,
-                  const BindingInfo &binding) -> std::string {
-            if (!isBorrowTrackedBindingType(binding)) {
-              return "";
-            }
-            if (!binding.referenceRoot.empty()) {
-              return binding.referenceRoot;
-            }
-            return bindingName;
-          };
-          auto observeBorrow = [&](const std::string &bindingName,
-                                   const BindingInfo &binding) {
-            if (currentValidationState_.endedReferenceBorrows.count(bindingName) > 0) {
-              return;
-            }
-            const std::string root =
-                referenceRootForBorrowBinding(bindingName, binding);
-            if (root.empty() || root != borrowRoot) {
-              return;
-            }
-            if (binding.isMutable) {
-              sawMutableBorrow = true;
-            } else {
-              sawImmutableBorrow = true;
-            }
-          };
-          for (const auto &param : params) {
-            observeBorrow(param.name, param.binding);
-          }
-          for (const auto &entry : locals) {
-            observeBorrow(entry.first, entry.second);
-          }
-          return requestMutable ? (sawMutableBorrow || sawImmutableBorrow)
-                                : sawMutableBorrow;
-        };
-    auto isMutableRootBinding = [&](const std::string &borrowRoot) -> bool {
-      if (borrowRoot.empty()) {
-        return false;
-      }
-      if (const BindingInfo *paramBinding = findParamBinding(params, borrowRoot)) {
-        return paramBinding->isMutable;
-      }
-      auto it = locals.find(borrowRoot);
-      return it != locals.end() && it->second.isMutable;
-    };
-    resolveReceiverRootExpr =
-        [&](const Expr &expr,
-            const ExprSubstitutions &substitutions,
-            std::string &rootOut) -> bool {
-          if (expr.kind == Expr::Kind::Name) {
-            size_t matchedIndex = 0;
-            if (const Expr *substitutedExpr =
-                    findSubstitutedExpr(substitutions, expr.name, &matchedIndex)) {
-              const ExprSubstitutions reducedSubstitutions =
-                  removeSubstitutionAt(substitutions, matchedIndex);
-              return resolveReceiverRootExpr(*substitutedExpr,
-                                            reducedSubstitutions,
-                                            rootOut);
-            }
-            return resolveBorrowRoot(expr.name, rootOut);
-          }
-          if (expr.kind != Expr::Kind::Call) {
-            return false;
-          }
-          std::string builtinName;
-          if (getBuiltinPointerName(expr, builtinName) && expr.args.size() == 1) {
-            if (builtinName == "location" || builtinName == "dereference") {
-              return resolveReceiverRootExpr(expr.args.front(),
-                                            substitutions,
-                                            rootOut);
-            }
-          }
-          ExprSubstitutions nestedSubstitutions;
-          const Expr *returnedValueExpr = nullptr;
-          if (!appendCallSubstitutions(expr, substitutions, nestedSubstitutions,
-                                       returnedValueExpr)) {
-            return false;
-          }
-          return resolveReceiverRootExpr(*returnedValueExpr,
-                                        nestedSubstitutions,
-                                        rootOut);
-        };
-    resolveStandaloneRefRootExpr =
-        [&](const Expr &expr,
-            const ExprSubstitutions &substitutions,
-            std::string &rootOut) -> bool {
-          if (expr.kind == Expr::Kind::Name) {
-            size_t matchedIndex = 0;
-            if (const Expr *substitutedExpr =
-                    findSubstitutedExpr(substitutions, expr.name, &matchedIndex)) {
-              const ExprSubstitutions reducedSubstitutions =
-                  removeSubstitutionAt(substitutions, matchedIndex);
-              return resolveStandaloneRefRootExpr(*substitutedExpr,
-                                                 reducedSubstitutions,
-                                                 rootOut);
-            }
-            return false;
-          }
-          if (expr.kind == Expr::Kind::Call && expr.args.size() == 2) {
-            std::string resolvedPath =
-                preferredCollectionHelperResolvedPath(expr);
-            if (resolvedPath.empty()) {
-              resolvedPath = resolveCalleePath(expr);
-            }
-            (void)resolveConcreteCallPath(expr, resolvedPath);
-            const std::string resolvedPathCanonical =
-                canonicalizeLegacySoaRefHelperPath(resolvedPath);
-            const bool resolvedCanonicalRefLike =
-                isCanonicalSoaRefLikeHelperPath(resolvedPathCanonical);
-            const bool resolvedExperimentalRefLike =
-                isExperimentalSoaRefLikeHelperPath(resolvedPathCanonical);
-            const bool isMethodRefCall =
-                expr.isMethodCall &&
-                (expr.name == "ref" ||
-                 resolvedCanonicalRefLike || resolvedExperimentalRefLike);
-            const bool isHelperRefCall =
-                !expr.isMethodCall &&
-                (isSimpleCallName(expr, "ref") ||
-                 resolvedCanonicalRefLike || resolvedExperimentalRefLike);
-            if ((isMethodRefCall || isHelperRefCall) &&
-                resolveReceiverRootExpr(expr.args.front(),
-                                       substitutions,
-                                       rootOut)) {
-              return !rootOut.empty();
-            }
-          }
-          if (expr.kind != Expr::Kind::Call) {
-            return false;
-          }
-          ExprSubstitutions nestedSubstitutions;
-          const Expr *returnedValueExpr = nullptr;
-          if (!appendCallSubstitutions(expr, substitutions, nestedSubstitutions,
-                                       returnedValueExpr)) {
-            return false;
-          }
-          return resolveStandaloneRefRootExpr(*returnedValueExpr,
-                                             nestedSubstitutions,
-                                             rootOut);
-        };
-
-	    std::string pointerName;
-	    const bool initIsLocation =
-	        init.kind == Expr::Kind::Call && getBuiltinPointerName(init, pointerName) && pointerName == "location" &&
-	        init.args.size() == 1;
-	    std::string safeTargetType;
-	    const bool initIsDirectBorrowStorage = resolveDirectBorrowStorageTargetType(init, safeTargetType);
-	    const bool initIsPointerLike = resolvePointerTargetType(init, safeTargetType);
-	    const bool initIsBorrowedFieldAccess =
-	        init.kind == Expr::Kind::Call && init.isFieldAccess && init.args.size() == 1 &&
-	        initIsPointerLike;
-	    if (!initIsLocation && !initIsDirectBorrowStorage && !initIsPointerLike &&
-	        !currentValidationState_.context.definitionIsUnsafe) {
-	      return failBindingDiagnostic("Reference bindings require location(...)");
-	    }
-	    if (initIsLocation || initIsDirectBorrowStorage ||
-	        (!currentValidationState_.context.definitionIsUnsafe && initIsPointerLike)) {
-      if (!errorTypesMatch(safeTargetType, info.typeTemplateArg, namespacePrefix)) {
-        return failBindingDiagnostic("Reference binding type mismatch");
-      }
-    }
-	    if (!initIsLocation && !initIsDirectBorrowStorage &&
-	        !initIsBorrowedFieldAccess &&
-	        !currentValidationState_.context.definitionIsUnsafe) {
-	      std::string borrowRoot;
-	      const ExprSubstitutions substitutions;
-	      const bool resolvedStandaloneRoot =
-	          resolveStandaloneRefRootExpr(init, substitutions, borrowRoot);
-      if (isStandaloneRefCall(init) &&
-          (!resolvedStandaloneRoot || borrowRoot.empty())) {
-        return failBindingDiagnostic("Reference binding requires borrow root");
-      }
-      if (resolvedStandaloneRoot && !borrowRoot.empty()) {
-        if (hasBorrowConflictForRoot(borrowRoot, info.isMutable)) {
-          return failBindingDiagnostic(
-              "borrow conflict: " + borrowRoot + " (root: " + borrowRoot +
-              ", sink: " + stmt.name + ")");
-        }
-        if (info.isMutable && !isMutableRootBinding(borrowRoot)) {
-          return failBindingDiagnostic("Reference binding requires mutable root: " +
-                                       borrowRoot);
-        }
-        info.referenceRoot = std::move(borrowRoot);
-      }
-      if (!validateBuiltinComparableKeyType(info, definitionTemplateArgs, error_)) {
-        return false;
-      }
-      insertLocalBinding(locals, stmt.name, std::move(info));
-      return true;
-    }
-    if (!initIsLocation && currentValidationState_.context.definitionIsUnsafe) {
-      std::string pointerTargetType;
-      if (!resolvePointerTargetType(init, pointerTargetType)) {
-        return failBindingDiagnostic("unsafe Reference bindings require pointer-like initializer");
-      }
-      if (!errorTypesMatch(pointerTargetType, info.typeTemplateArg, namespacePrefix)) {
-        return failBindingDiagnostic("unsafe Reference binding type mismatch");
-      }
-      std::string borrowRoot;
-      if (resolvePointerRoot(init, borrowRoot)) {
-        info.referenceRoot = std::move(borrowRoot);
-      }
-      info.isUnsafeReference = true;
-      if (!validateBuiltinComparableKeyType(info, definitionTemplateArgs, error_)) {
-        return false;
-      }
-      insertLocalBinding(locals, stmt.name, std::move(info));
-      return true;
-    }
-
-	    const Expr &target = (initIsLocation || initIsDirectBorrowStorage)
-	                             ? init.args.front()
-	                             : init;
-    std::function<bool(const Expr &, std::string &)> resolveBorrowRootExpr;
-    resolveBorrowRootExpr = [&](const Expr &targetExpr, std::string &rootOut) -> bool {
-      if (targetExpr.kind == Expr::Kind::Name) {
-        return resolveBorrowRoot(targetExpr.name, rootOut);
-      }
-      std::string builtinName;
-      if (targetExpr.kind == Expr::Kind::Call && getBuiltinPointerName(targetExpr, builtinName) &&
-          builtinName == "dereference" && targetExpr.args.size() == 1) {
-        return resolvePointerRoot(targetExpr.args.front(), rootOut);
-      }
-      if (targetExpr.kind == Expr::Kind::Call && targetExpr.isFieldAccess && targetExpr.args.size() == 1) {
-        std::string receiverRoot;
-        if (!resolveBorrowRootExpr(targetExpr.args.front(), receiverRoot) || receiverRoot.empty()) {
-          return false;
-        }
-        rootOut = receiverRoot + "." + targetExpr.name;
-        return true;
-      }
-      return false;
-    };
-
-    std::string borrowRoot;
-    if (!resolveBorrowRootExpr(target, borrowRoot) || borrowRoot.empty()) {
-      return failBindingDiagnostic("Reference bindings require location(...)");
-    }
-    bool sawMutableBorrow = false;
-    bool sawImmutableBorrow = false;
-    auto observeBorrow = [&](const std::string &bindingName, const BindingInfo &binding) {
-      if (currentValidationState_.endedReferenceBorrows.count(bindingName) > 0) {
-        return;
-      }
-      const std::string root = referenceRootForBorrowBinding(bindingName, binding);
-      if (root.empty() || root != borrowRoot) {
-        return;
-      }
-      if (binding.isMutable) {
-        sawMutableBorrow = true;
-      } else {
-        sawImmutableBorrow = true;
-      }
-    };
-    for (const auto &param : params) {
-      observeBorrow(param.name, param.binding);
-    }
-    for (const auto &entry : locals) {
-      observeBorrow(entry.first, entry.second);
-    }
-    const bool conflict = info.isMutable ? (sawMutableBorrow || sawImmutableBorrow) : sawMutableBorrow;
-    if (conflict && !currentValidationState_.context.definitionIsUnsafe) {
-      return failBindingDiagnostic("borrow conflict: " + borrowRoot + " (root: " + borrowRoot +
-                                   ", sink: " + stmt.name + ")");
-    }
-    info.referenceRoot = std::move(borrowRoot);
-    info.isUnsafeReference = currentValidationState_.context.definitionIsUnsafe;
-  }
-
-  BindingInfo fieldViewBinding = info;
-  if ((!hasExplicitType || explicitAutoType) && info.typeName != "Reference") {
-    BindingInfo inferredBinding;
-    if (inferBindingTypeFromInitializer(initializer, params, locals, inferredBinding, &stmt)) {
-      fieldViewBinding = std::move(inferredBinding);
-    }
-  }
-  if (isSoaFieldViewBindingType(fieldViewBinding) ||
-      isStandaloneSoaFieldViewInitializer()) {
-    auto hasBorrowConflictForRoot =
-        [&](const std::string &borrowRoot, bool requestMutable) -> bool {
-          if (borrowRoot.empty() ||
-              currentValidationState_.context.definitionIsUnsafe) {
-            return false;
-          }
-          bool sawMutableBorrow = false;
-          bool sawImmutableBorrow = false;
-          auto observeBorrow = [&](const std::string &bindingName,
-                                   const BindingInfo &binding) {
-            if (currentValidationState_.endedReferenceBorrows.count(bindingName) > 0) {
-              return;
-            }
-            const std::string root =
-                referenceRootForBorrowBinding(bindingName, binding);
-            if (root.empty() || root != borrowRoot) {
-              return;
-            }
-            if (binding.isMutable) {
-              sawMutableBorrow = true;
-            } else {
-              sawImmutableBorrow = true;
-            }
-          };
-          for (const auto &param : params) {
-            observeBorrow(param.name, param.binding);
-          }
-          for (const auto &entry : locals) {
-            observeBorrow(entry.first, entry.second);
-          }
-          return requestMutable ? (sawMutableBorrow || sawImmutableBorrow)
-                                : sawMutableBorrow;
-        };
-    auto isMutableRootBinding = [&](const std::string &borrowRoot) -> bool {
-      if (borrowRoot.empty()) {
-        return false;
-      }
-      if (const BindingInfo *paramBinding = findParamBinding(params, borrowRoot)) {
-        return paramBinding->isMutable;
-      }
-      auto it = locals.find(borrowRoot);
-      return it != locals.end() && it->second.isMutable;
-    };
-    auto resolveBorrowRootName = [&](const std::string &name,
-                                     std::string &rootOut) -> bool {
-      if (const BindingInfo *paramBinding = findParamBinding(params, name)) {
-        if (isBorrowTrackedBindingType(*paramBinding)) {
-          rootOut = referenceRootForBorrowBinding(name, *paramBinding);
-        } else {
-          rootOut = name;
-        }
-        return true;
-      }
-      auto it = locals.find(name);
-      if (it == locals.end()) {
-        return false;
-      }
-      if (isBorrowTrackedBindingType(it->second)) {
-        rootOut = referenceRootForBorrowBinding(it->first, it->second);
-      } else {
-        rootOut = name;
-      }
-      return true;
-    };
-    using ExprSubstitutions = std::vector<std::pair<std::string, const Expr *>>;
-    auto findSubstitutedExpr = [&](const ExprSubstitutions &substitutions,
-                                   const std::string &name,
-                                   size_t *matchedIndexOut = nullptr) -> const Expr * {
-      for (size_t index = substitutions.size(); index > 0; --index) {
-        if (substitutions[index - 1].first == name) {
-          if (matchedIndexOut != nullptr) {
-            *matchedIndexOut = index - 1;
-          }
-          return substitutions[index - 1].second;
-        }
-      }
-      return nullptr;
-    };
-    auto removeSubstitutionAt = [&](const ExprSubstitutions &substitutions,
-                                    size_t indexToSkip) {
-      ExprSubstitutions reduced;
-      reduced.reserve(substitutions.size());
-      for (size_t index = 0; index < substitutions.size(); ++index) {
-        if (index == indexToSkip) {
-          continue;
-        }
-        reduced.push_back(substitutions[index]);
-      }
-      return reduced;
-    };
-    auto appendCallSubstitutions =
-        [&](const Expr &callExpr,
-            const ExprSubstitutions &baseSubstitutions,
-            ExprSubstitutions &extendedSubstitutions,
-            const Expr *&returnedValueExprOut) -> bool {
-          returnedValueExprOut = nullptr;
-          std::string resolvedCallPath =
-              preferredCollectionHelperResolvedPath(callExpr);
-          if (resolvedCallPath.empty()) {
-            resolvedCallPath = resolveCalleePath(callExpr);
-          }
-          if (callExpr.isMethodCall) {
-            if (callExpr.args.empty()) {
-              return false;
-            }
-            bool isBuiltin = false;
-            if (!resolveMethodTarget(params,
-                                     locals,
-                                     callExpr.namespacePrefix,
-                                     callExpr.args.front(),
-                                     callExpr.name,
-                                     resolvedCallPath,
-                                     isBuiltin)) {
-              return false;
-            }
-          }
-          if (const std::string concreteResolvedCallPath =
-                  resolveExprConcreteCallPath(
-                      params, locals, callExpr, resolvedCallPath);
-              !concreteResolvedCallPath.empty()) {
-            resolvedCallPath = concreteResolvedCallPath;
-          }
-          auto defIt = defMap_.find(resolvedCallPath);
-          if (defIt == defMap_.end() || defIt->second == nullptr) {
-            return false;
-          }
-          const auto paramsIt = paramsByDef_.find(resolvedCallPath);
-          if (paramsIt == paramsByDef_.end()) {
-            return false;
-          }
-          const auto &nestedParams = paramsIt->second;
-          std::string nestedArgError;
-          std::vector<const Expr *> nestedOrderedArgs;
-          if (!buildOrderedArguments(nestedParams, callExpr.args, callExpr.argNames,
-                                     nestedOrderedArgs, nestedArgError)) {
-            return false;
-          }
-          const Definition &nestedDef = *defIt->second;
-          for (const auto &stmtExpr : nestedDef.statements) {
-            if (isReturnCall(stmtExpr) && stmtExpr.args.size() == 1) {
-              returnedValueExprOut = &stmtExpr.args.front();
-            }
-          }
-          if (nestedDef.returnExpr.has_value()) {
-            returnedValueExprOut = &*nestedDef.returnExpr;
-          }
-          if (returnedValueExprOut == nullptr) {
-            return false;
-          }
-          extendedSubstitutions = baseSubstitutions;
-          for (size_t nestedIndex = 0;
-               nestedIndex < nestedParams.size() && nestedIndex < nestedOrderedArgs.size();
-               ++nestedIndex) {
-            const Expr *nestedArg = nestedOrderedArgs[nestedIndex];
-            if (nestedArg == nullptr) {
-              continue;
-            }
-            extendedSubstitutions.emplace_back(nestedParams[nestedIndex].name, nestedArg);
-          }
-          return true;
-        };
-    std::function<bool(const Expr &, const ExprSubstitutions &, std::string &)>
-        resolveReceiverRootExpr;
-    std::function<bool(const Expr &, const ExprSubstitutions &, std::string &)>
-        resolveStandaloneFieldViewRootExpr;
-    resolveReceiverRootExpr =
-        [&](const Expr &expr,
-            const ExprSubstitutions &substitutions,
-            std::string &rootOut) -> bool {
-          if (expr.kind == Expr::Kind::Name) {
-            size_t matchedIndex = 0;
-            if (const Expr *substitutedExpr =
-                    findSubstitutedExpr(substitutions, expr.name, &matchedIndex)) {
-              const ExprSubstitutions reducedSubstitutions =
-                  removeSubstitutionAt(substitutions, matchedIndex);
-              return resolveReceiverRootExpr(*substitutedExpr,
-                                            reducedSubstitutions,
-                                            rootOut);
-            }
-            return resolveBorrowRootName(expr.name, rootOut);
-          }
-          if (expr.kind != Expr::Kind::Call) {
-            return false;
-          }
-          std::string builtinName;
-          if (getBuiltinPointerName(expr, builtinName) && expr.args.size() == 1) {
-            if (builtinName == "location" || builtinName == "dereference") {
-              return resolveReceiverRootExpr(expr.args.front(),
-                                            substitutions,
-                                            rootOut);
-            }
-          }
-          ExprSubstitutions nestedSubstitutions;
-          const Expr *returnedValueExpr = nullptr;
-          if (!appendCallSubstitutions(expr, substitutions, nestedSubstitutions,
-                                       returnedValueExpr)) {
-            return false;
-          }
-          return resolveReceiverRootExpr(*returnedValueExpr,
-                                        nestedSubstitutions,
-                                        rootOut);
-        };
-    resolveStandaloneFieldViewRootExpr =
-        [&](const Expr &expr,
-            const ExprSubstitutions &substitutions,
-            std::string &rootOut) -> bool {
-          if (expr.kind == Expr::Kind::Name) {
-            size_t matchedIndex = 0;
-            if (const Expr *substitutedExpr =
-                    findSubstitutedExpr(substitutions, expr.name, &matchedIndex)) {
-              const ExprSubstitutions reducedSubstitutions =
-                  removeSubstitutionAt(substitutions, matchedIndex);
-              return resolveStandaloneFieldViewRootExpr(*substitutedExpr,
-                                                       reducedSubstitutions,
-                                                       rootOut);
-            }
-            const BindingInfo *binding = findParamBinding(params, expr.name);
-            if (binding == nullptr) {
-              auto localIt = locals.find(expr.name);
-              if (localIt != locals.end()) {
-                binding = &localIt->second;
-              }
-            }
-            if (binding != nullptr && isBorrowTrackedBindingType(*binding)) {
-              rootOut = referenceRootForBorrowBinding(expr.name, *binding);
-              return !rootOut.empty();
-            }
-            return false;
-          }
-          if (expr.kind == Expr::Kind::Call && expr.args.size() >= 1) {
-            std::string resolvedFieldViewPath =
-                preferredCollectionHelperResolvedPath(expr);
-            if (resolvedFieldViewPath.empty()) {
-              resolvedFieldViewPath = resolveCalleePath(expr);
-            }
-            if (isBuiltinSoaFieldViewExpr(expr, params, locals, nullptr) ||
-                isExperimentalSoaFieldViewHelperPath(resolvedFieldViewPath)) {
-              const Expr *receiverExpr = &expr.args.front();
-              if (resolveReceiverRootExpr(*receiverExpr, substitutions, rootOut)) {
-                return !rootOut.empty();
-              }
-            }
-          }
-          if (expr.kind != Expr::Kind::Call) {
-            return false;
-          }
-          ExprSubstitutions nestedSubstitutions;
-          const Expr *returnedValueExpr = nullptr;
-          if (!appendCallSubstitutions(expr, substitutions, nestedSubstitutions,
-                                       returnedValueExpr)) {
-            return false;
-          }
-          return resolveStandaloneFieldViewRootExpr(*returnedValueExpr,
-                                                    nestedSubstitutions,
-                                                    rootOut);
-        };
-
-    std::string borrowRoot;
-    const ExprSubstitutions substitutions;
-    if (!resolveStandaloneFieldViewRootExpr(initializer, substitutions, borrowRoot) ||
-        borrowRoot.empty()) {
-      return failBindingDiagnostic("field-view binding requires borrow root");
-    }
-    if (hasBorrowConflictForRoot(borrowRoot, info.isMutable)) {
-      return failBindingDiagnostic("borrow conflict: " + borrowRoot + " (root: " +
-                                   borrowRoot + ", sink: " + stmt.name + ")");
-    }
-    if (info.isMutable && !isMutableRootBinding(borrowRoot)) {
-      return failBindingDiagnostic("field-view binding requires mutable root: " +
-                                   borrowRoot);
-    }
-    info.referenceRoot = std::move(borrowRoot);
-  }
-
-  if (!validateBuiltinComparableKeyType(info, definitionTemplateArgs, error_)) {
-    return false;
-  }
-  insertLocalBinding(locals, stmt.name, std::move(info));
-  return true;
+  [[maybe_unused]] auto &isTargetTypedSumInitializerSyntax = st.isTargetTypedSumInitializerSyntax;
+  return PhaseStatus::Continue;
 }
 
 } // namespace primec::semantics

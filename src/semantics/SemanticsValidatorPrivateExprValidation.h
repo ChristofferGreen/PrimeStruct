@@ -966,3 +966,14 @@
                                                 bool &usedMethodTarget,
                                                 bool &hasMethodReceiverIndex,
                                                 size_t &methodReceiverIndex);
+
+  // Phase functions of validateExpr (TODO-5385).
+  friend struct ValidateExprCallState;
+  PhaseStatus validateExprCallPhase1(const std::vector<ParameterInfo> &params, const std::unordered_map<std::string, BindingInfo> &locals, const Expr &expr, ValidateExprCallState &st);
+  PhaseStatus validateExprCallPhase2(const std::vector<ParameterInfo> &params, const std::unordered_map<std::string, BindingInfo> &locals, const Expr &expr, ValidateExprCallState &st);
+  PhaseStatus validateExprCallPhase3(const std::vector<ParameterInfo> &params, const std::unordered_map<std::string, BindingInfo> &locals, const Expr &expr, ValidateExprCallState &st);
+  PhaseStatus validateExprCallPhase4(const std::vector<ParameterInfo> &params, const std::unordered_map<std::string, BindingInfo> &locals, const Expr &expr, ValidateExprCallState &st);
+  PhaseStatus validateExprCallPhase5(const std::vector<ParameterInfo> &params, const std::unordered_map<std::string, BindingInfo> &locals, const Expr &expr, ValidateExprCallState &st);
+  PhaseStatus validateExprCallPhase6(const std::vector<ParameterInfo> &params, const std::unordered_map<std::string, BindingInfo> &locals, const Expr &expr, ValidateExprCallState &st);
+  PhaseStatus validateExprCallPhase7(const std::vector<ParameterInfo> &params, const std::unordered_map<std::string, BindingInfo> &locals, const Expr &expr, ValidateExprCallState &st);
+  PhaseStatus validateExprCallPhase8(const std::vector<ParameterInfo> &params, const std::unordered_map<std::string, BindingInfo> &locals, const Expr &expr, ValidateExprCallState &st);

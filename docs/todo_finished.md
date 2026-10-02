@@ -1909,6 +1909,7 @@ are left unarchived.
 | TODO-5382 | Cut semantic-product publication cost (inferCallSnapshotData recursion) | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5383 | Migrate the remaining compiler state into CompileContext | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5384 | Split the multi-function src/semantics files over 1,200 lines (pure moves) | [2026-10.md](todo_archive/2026-10.md) | - |
+| TODO-5385 | Decompose the ~3,500-line rewriteExpr in TemplateMonomorphExpressionRewrite.cpp | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
 | TODO-5386 | Migrate the remaining string-tagged collection family comparisons to CollectionFamily | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
 | TODO-5387 | Express the three lowerer receiver-family predicates as table rows | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
 

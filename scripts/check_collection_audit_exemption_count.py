@@ -71,7 +71,9 @@ _EXEMPT_MARKERS = (
 # TODO-5384: splitting already-exempt semantics files into smaller units left
 # eight units that still spell collection helper literals and need the marker
 # (the other split units carry none): 84 -> 92.
-BASELINE_EXEMPT_FILE_COUNT = 92
+# TODO-5385: decomposing the giant validateExpr / rewriteExpr functions into phase
+# units left three more units that spell collection helper literals: 92 -> 95.
+BASELINE_EXEMPT_FILE_COUNT = 95
 
 
 def _is_exempt(text: str) -> bool:

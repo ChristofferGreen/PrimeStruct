@@ -231,7 +231,13 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/TemplateMonomorphDefinitionRewrites.cpp
   src/semantics/TemplateMonomorphTemplateSpecialization.cpp
   src/semantics/TemplateMonomorphImplicitTemplateInference.cpp
+  src/semantics/TemplateMonomorphImplicitTemplateInferencePacks.cpp
+  src/semantics/TemplateMonomorphImplicitTemplateInferenceSoa.cpp
   src/semantics/TemplateMonomorphExpressionRewrite.cpp
+  src/semantics/TemplateMonomorphExpressionRewritePhasesA.cpp
+  src/semantics/TemplateMonomorphExpressionRewritePhasesB.cpp
+  src/semantics/TemplateMonomorphExpressionRewritePhasesC.cpp
+  src/semantics/TemplateMonomorphExpressionRewritePhasesD.cpp
   src/semantics/TemplateMonomorphFinalOrchestration.cpp
   src/semantics/CondensationDag.cpp
   src/semantics/StronglyConnectedComponents.cpp
@@ -359,6 +365,8 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorExprVectorHelpers.cpp
   src/semantics/SemanticsValidatorExprCallResolution.cpp
   src/semantics/SemanticsValidatorExpr.cpp
+  src/semantics/SemanticsValidatorExprCallPhasesA.cpp
+  src/semantics/SemanticsValidatorExprCallPhasesB.cpp
   src/semantics/SemanticsValidatorInferCollectionCompatibility.cpp
   src/semantics/SemanticsValidatorInferCollectionCompatibilityDirects.cpp
   src/semantics/SemanticsValidatorInferCollectionCallResolution.cpp
@@ -396,6 +404,9 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorPassesUninitialized.cpp
   src/semantics/SemanticsValidatorPasses.cpp
   src/semantics/SemanticsValidatorStatementBindings.cpp
+  src/semantics/SemanticsValidatorStatementBindingsPhasesA.cpp
+  src/semantics/SemanticsValidatorStatementBindingsPhasesB.cpp
+  src/semantics/SemanticsValidatorStatementBindingsPhasesC.cpp
   src/semantics/SemanticsValidatorStatementBodyArguments.cpp
   src/semantics/SemanticsValidatorStatementBuiltins.cpp
   src/semantics/SemanticsValidatorStatementContainerHelpers.cpp
