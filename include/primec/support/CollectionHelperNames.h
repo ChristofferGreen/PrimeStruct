@@ -188,4 +188,53 @@ constexpr bool isBorrowedHelperName(std::string_view name) {
          name == kToAosRef || name == kTryAtRef || name == kContainsRef || name == kInsertRef;
 }
 
+// --- Typed collection family (TODO-5374) ---
+// The rooted family root spellings as an enum, so callers compare a family
+// instead of a string. `parseCollectionFamily` accepts exactly a family root
+// (`/vector`, not `/vector/count`); anything else is None.
+enum class CollectionFamily { None, Array, Vector, Map, Soa, String };
+
+constexpr CollectionFamily parseCollectionFamily(std::string_view rootedPath) {
+  if (rootedPath == kRootedVector) {
+    return CollectionFamily::Vector;
+  }
+  if (rootedPath == kRootedMap) {
+    return CollectionFamily::Map;
+  }
+  if (rootedPath == kRootedSoa) {
+    return CollectionFamily::Soa;
+  }
+  if (rootedPath == kRootedArray) {
+    return CollectionFamily::Array;
+  }
+  if (rootedPath == kRootedString) {
+    return CollectionFamily::String;
+  }
+  return CollectionFamily::None;
+}
+
+// The family root spelling; empty for None.
+constexpr std::string_view formatCollectionFamily(CollectionFamily family) {
+  switch (family) {
+  case CollectionFamily::Array:
+    return kRootedArray;
+  case CollectionFamily::Vector:
+    return kRootedVector;
+  case CollectionFamily::Map:
+    return kRootedMap;
+  case CollectionFamily::Soa:
+    return kRootedSoa;
+  case CollectionFamily::String:
+    return kRootedString;
+  case CollectionFamily::None:
+    break;
+  }
+  return {};
+}
+
+static_assert(parseCollectionFamily(kRootedVector) == CollectionFamily::Vector);
+static_assert(parseCollectionFamily(kRootedVectorCount) == CollectionFamily::None);
+static_assert(formatCollectionFamily(parseCollectionFamily(kRootedMap)) == kRootedMap);
+static_assert(formatCollectionFamily(CollectionFamily::None).empty());
+
 } // namespace primec::collection_helpers

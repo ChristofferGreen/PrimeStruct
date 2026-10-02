@@ -2871,6 +2871,20 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_spec_docs_self_test PROPERTIES TIMEOUT 60)
 
+  # TODO-5374: string-tagged collection family comparisons may only shrink.
+  add_test(
+    NAME PrimeStruct_collection_family_compares
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/check_collection_family_compares.py
+            --root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_collection_family_compares PROPERTIES TIMEOUT 60)
+  add_test(
+    NAME PrimeStruct_collection_family_compares_self_test
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/scripts/test_check_collection_family_compares.py
+            --repo-root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_collection_family_compares_self_test PROPERTIES TIMEOUT 60)
+
   # TODO-5354: guard CTest registration of the doctest binaries and keep the
   # generated test inventory current.
   add_test(

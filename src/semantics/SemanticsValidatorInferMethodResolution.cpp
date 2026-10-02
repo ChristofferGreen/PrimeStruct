@@ -282,55 +282,57 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     callTargetResolutionScratch_.methodTargetMemoCache.insert_or_assign(*key, resolvedOut);
   };
   auto resolveCollectionMethodFromTypePath = [&](const std::string &collectionTypePath) -> bool {
+    const collection_helpers::CollectionFamily collectionFamily =
+        collection_helpers::parseCollectionFamily(collectionTypePath);
     if (!explicitRemovedMethodPath.empty() && hasDefinitionPath(explicitRemovedMethodPath)) {
       if (((normalizedMethodName == "count" &&
-            (collectionTypePath == collection_helpers::kRootedVector || collectionTypePath == collection_helpers::kRootedArray ||
-             collectionTypePath == collection_helpers::kRootedSoa || collectionTypePath == collection_helpers::kRootedString)) ||
+            (collectionFamily == collection_helpers::CollectionFamily::Vector || collectionFamily == collection_helpers::CollectionFamily::Array ||
+             collectionFamily == collection_helpers::CollectionFamily::Soa || collectionFamily == collection_helpers::CollectionFamily::String)) ||
            (normalizedMethodName == collection_helpers::kCountRef &&
-            (collectionTypePath == collection_helpers::kRootedSoa || collectionTypePath == collection_helpers::kRootedMap)))) {
+            (collectionFamily == collection_helpers::CollectionFamily::Soa || collectionFamily == collection_helpers::CollectionFamily::Map)))) {
         resolvedOut = explicitRemovedMethodPath;
         return true;
       }
       if (normalizedMethodName == "capacity" &&
-          (collectionTypePath == collection_helpers::kRootedVector || collectionTypePath == collection_helpers::kRootedSoa)) {
+          (collectionFamily == collection_helpers::CollectionFamily::Vector || collectionFamily == collection_helpers::CollectionFamily::Soa)) {
         resolvedOut = explicitRemovedMethodPath;
         return true;
       }
       if (isValueSurfaceAccessMethodName(normalizedMethodName) &&
-          (collectionTypePath == collection_helpers::kRootedVector || collectionTypePath == collection_helpers::kRootedArray ||
-           collectionTypePath == collection_helpers::kRootedString)) {
+          (collectionFamily == collection_helpers::CollectionFamily::Vector || collectionFamily == collection_helpers::CollectionFamily::Array ||
+           collectionFamily == collection_helpers::CollectionFamily::String)) {
         resolvedOut = explicitRemovedMethodPath;
         return true;
       }
     }
     if (collection_helpers::isCountHelperName(normalizedMethodName)) {
-      if (collectionTypePath == collection_helpers::kRootedArray) {
+      if (collectionFamily == collection_helpers::CollectionFamily::Array) {
         if (normalizedMethodName == collection_helpers::kCountRef) {
           return false;
         }
         resolvedOut = preferVectorStdlibHelperPath(collection_helpers::kRootedArrayCount);
         return true;
       }
-      if (collectionTypePath == collection_helpers::kRootedVector &&
+      if (collectionFamily == collection_helpers::CollectionFamily::Vector &&
           usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, collection_helpers::kRootedVector)) {
         resolvedOut =
             preferredSoaHelperTargetForCollectionType(normalizedMethodName, collection_helpers::kRootedVector);
         return true;
       }
-      if (collectionTypePath == collection_helpers::kRootedVector && normalizedMethodName == "count") {
+      if (collectionFamily == collection_helpers::CollectionFamily::Vector && normalizedMethodName == "count") {
         resolvedOut = canonicalVectorCompatibilityHelperPathOrFallback("count");
         return true;
       }
-      if (collectionTypePath == collection_helpers::kRootedSoa) {
+      if (collectionFamily == collection_helpers::CollectionFamily::Soa) {
         resolvedOut = preferredSoaHelperTargetForCollectionType(normalizedMethodName,
                                                                 collection_helpers::kRootedSoa);
         return true;
       }
-      if (collectionTypePath == collection_helpers::kRootedString && normalizedMethodName == "count") {
+      if (collectionFamily == collection_helpers::CollectionFamily::String && normalizedMethodName == "count") {
         resolvedOut = collection_helpers::kRootedStringCount;
         return true;
       }
-      if (collectionTypePath == collection_helpers::kRootedMap &&
+      if (collectionFamily == collection_helpers::CollectionFamily::Map &&
           (collection_helpers::isCountHelperName(normalizedMethodName))) {
         resolvedOut = preferredKeyValueMethodTargetForCall(params, locals, receiver,
                                                       normalizedMethodName);
@@ -341,7 +343,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
         return !resolvedOut.empty();
       }
     }
-    if (normalizedMethodName == "capacity" && collectionTypePath == collection_helpers::kRootedVector) {
+    if (normalizedMethodName == "capacity" && collectionFamily == collection_helpers::CollectionFamily::Vector) {
       resolvedOut =
           canonicalVectorCompatibilityHelperPathOrFallback("capacity");
       return true;
@@ -353,41 +355,41 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       resolvedOut = preferredBufferMethodTargetForCall(params, locals, receiver, normalizedMethodName);
       return !resolvedOut.empty();
     }
-    if (normalizedMethodName == "contains" && collectionTypePath == collection_helpers::kRootedMap) {
+    if (normalizedMethodName == "contains" && collectionFamily == collection_helpers::CollectionFamily::Map) {
       resolvedOut = preferredKeyValueMethodTargetForCall(params, locals, receiver, "contains");
       return true;
     }
-    if (normalizedMethodName == "tryAt" && collectionTypePath == collection_helpers::kRootedMap) {
+    if (normalizedMethodName == "tryAt" && collectionFamily == collection_helpers::CollectionFamily::Map) {
       resolvedOut = preferredKeyValueMethodTargetForCall(params, locals, receiver, "tryAt");
       return true;
     }
-    if (normalizedMethodName == "insert" && collectionTypePath == collection_helpers::kRootedMap) {
+    if (normalizedMethodName == "insert" && collectionFamily == collection_helpers::CollectionFamily::Map) {
       resolvedOut = preferredKeyValueMethodTargetForCall(params, locals, receiver, "insert");
       return true;
     }
-    if (normalizedMethodName == "size" && collectionTypePath == collection_helpers::kRootedMap) {
+    if (normalizedMethodName == "size" && collectionFamily == collection_helpers::CollectionFamily::Map) {
       resolvedOut = preferredKeyValueMethodTargetForCall(params, locals, receiver, "size");
       return true;
     }
     if (isValueSurfaceAccessMethodName(normalizedMethodName)) {
-      if (collectionTypePath == collection_helpers::kRootedArray) {
+      if (collectionFamily == collection_helpers::CollectionFamily::Array) {
         resolvedOut = preferVectorStdlibHelperPath(collection_helpers::kRootedArrayPrefix + normalizedMethodName);
         return true;
       }
-      if (collectionTypePath == collection_helpers::kRootedVector) {
+      if (collectionFamily == collection_helpers::CollectionFamily::Vector) {
         resolvedOut =
             preferVectorStdlibHelperPath(
                 canonicalVectorCompatibilityHelperPathOrFallback(
                     normalizedMethodName));
         return true;
       }
-      if (collectionTypePath == collection_helpers::kRootedString) {
+      if (collectionFamily == collection_helpers::CollectionFamily::String) {
         resolvedOut = collection_helpers::kRootedStringPrefix + normalizedMethodName;
         return true;
       }
     }
     if (isCanonicalKeyValueAccessMethodName(normalizedMethodName) &&
-        collectionTypePath == collection_helpers::kRootedMap) {
+        collectionFamily == collection_helpers::CollectionFamily::Map) {
       resolvedOut = preferredKeyValueMethodTargetForCall(params, locals, receiver, normalizedMethodName);
       return true;
     }
@@ -412,42 +414,42 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       return !resolvedOut.empty();
     }
     if ((collection_helpers::isGetHelperName(normalizedMethodName)) &&
-        (collectionTypePath == collection_helpers::kRootedSoa ||
-         (collectionTypePath == collection_helpers::kRootedVector &&
+        (collectionFamily == collection_helpers::CollectionFamily::Soa ||
+         (collectionFamily == collection_helpers::CollectionFamily::Vector &&
           usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, collection_helpers::kRootedVector)))) {
       resolvedOut = preferredSoaHelperTargetForCollectionType(
           normalizedMethodName,
-          collectionTypePath == collection_helpers::kRootedSoa ? collection_helpers::kRootedSoa : collection_helpers::kRootedVector);
+          collectionFamily == collection_helpers::CollectionFamily::Soa ? collection_helpers::kRootedSoa : collection_helpers::kRootedVector);
       return true;
     }
     if ((collection_helpers::isRefHelperName(normalizedMethodName)) &&
-        (collectionTypePath == collection_helpers::kRootedSoa ||
-         (collectionTypePath == collection_helpers::kRootedVector &&
+        (collectionFamily == collection_helpers::CollectionFamily::Soa ||
+         (collectionFamily == collection_helpers::CollectionFamily::Vector &&
           usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, collection_helpers::kRootedVector)))) {
       resolvedOut = preferredSoaHelperTargetForCollectionType(
           normalizedMethodName,
-          collectionTypePath == collection_helpers::kRootedSoa ? collection_helpers::kRootedSoa : collection_helpers::kRootedVector);
+          collectionFamily == collection_helpers::CollectionFamily::Soa ? collection_helpers::kRootedSoa : collection_helpers::kRootedVector);
       return true;
     }
     if ((normalizedMethodName == "push" || normalizedMethodName == "reserve") &&
-        (collectionTypePath == collection_helpers::kRootedSoa ||
-         (collectionTypePath == collection_helpers::kRootedVector &&
+        (collectionFamily == collection_helpers::CollectionFamily::Soa ||
+         (collectionFamily == collection_helpers::CollectionFamily::Vector &&
           usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName,
                                                        collection_helpers::kRootedVector)))) {
       resolvedOut = preferredSoaHelperTargetForCollectionType(
           normalizedMethodName,
-          collectionTypePath == collection_helpers::kRootedSoa ? collection_helpers::kRootedSoa : collection_helpers::kRootedVector);
+          collectionFamily == collection_helpers::CollectionFamily::Soa ? collection_helpers::kRootedSoa : collection_helpers::kRootedVector);
       return true;
     }
-    if (normalizedMethodName == "to_soa" && collectionTypePath == collection_helpers::kRootedVector) {
+    if (normalizedMethodName == "to_soa" && collectionFamily == collection_helpers::CollectionFamily::Vector) {
       resolvedOut = "/to_soa";
       return true;
     }
     if ((collection_helpers::isToAosHelperName(normalizedMethodName)) &&
-        (collectionTypePath == collection_helpers::kRootedSoa || collectionTypePath == collection_helpers::kRootedVector)) {
+        (collectionFamily == collection_helpers::CollectionFamily::Soa || collectionFamily == collection_helpers::CollectionFamily::Vector)) {
       resolvedOut = preferredSoaHelperTargetForCollectionType(
           normalizedMethodName,
-          collectionTypePath == collection_helpers::kRootedSoa ? collection_helpers::kRootedSoa : collection_helpers::kRootedVector);
+          collectionFamily == collection_helpers::CollectionFamily::Soa ? collection_helpers::kRootedSoa : collection_helpers::kRootedVector);
       return true;
     }
     return false;

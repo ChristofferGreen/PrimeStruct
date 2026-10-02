@@ -100,7 +100,8 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5374 | Typed collection family/helper enum replacing string-tagged family checks | deferred | collection-resolution |
+| TODO-5386 | Migrate the remaining string-tagged collection family comparisons to CollectionFamily | deferred | collection-resolution |
+| TODO-5387 | Express the three lowerer receiver-family predicates as table rows | deferred | collection-resolution |
 | TODO-5356 | Collapse near-duplicate ir_pipeline validation tests into table-driven suites | deferred | test-infrastructure |
 | TODO-5348 | Verify the iOS embed build and XCFramework packaging on macOS | deferred | embedding-ios |
 
@@ -115,7 +116,7 @@ of sync with them.
 ### Priority Lanes
 
 - Embedding (must support iOS): TODO-5348 (needs macOS)
-- Collection resolution: typed family enum TODO-5374 (deferred)
+- Collection resolution: TODO-5386 -> 5387 (deferred)
 - Semantics structure: TODO-5385
 - Test infrastructure: TODO-5356 (deferred)
 - IR/VM structure: TODO-5361 -> 5362
@@ -186,31 +187,26 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - stop_rule: stop if coverage cannot be shown equivalent for a group; leave that group as
     is.
 
-- [ ] TODO-5374: Typed collection family/helper enum replacing string-tagged family checks
+- [ ] TODO-5386: Migrate the remaining string-tagged collection family comparisons to CollectionFamily
   - owner: ai
   - status: deferred
-  - created_at: 2026-10-01
+  - created_at: 2026-10-02
   - phase: Compiler structure
   - parallel_track: collection-resolution
-  - depends_on: TODO-5350
-  - scope: TODO-5350 centralized every collection helper spelling and replaced
-    the duplicated base-or-borrowed and rooted-prefix chains with named
-    predicates (`include/primec/support/CollectionHelperNames.h`), but family
-    identity is still a string tag compared in about 200 places
-    (`x == collection_helpers::kRootedVector`, `/map`, `/soa`, `/array`,
-    `/string`) and the receiver-type-dependent lowerer predicates in
-    `IrLowererSetupTypeMethodCallResolution.cpp`
-    (`routesExplicitVectorCountMethodThroughArgsPackCount`,
-    `directTargetKeepsSyntheticCollectionFallback`,
-    `allowsReceiverResolvedVectorMetadataFallback`) encode behavior that a
-    string table cannot express. Needs scoping: introduce
-    `enum class CollectionFamily` and `CollectionHelper` with a registry-backed
-    parse/format API, migrate function signatures that pass family strings
-    (start with `src/semantics` receiver-family helpers), and express the three
-    lowerer predicates as rows (family x helper x receiver kind -> routing).
+  - scope: `collection_helpers::CollectionFamily` / `parseCollectionFamily` / `formatCollectionFamily` exist (TODO-5374 slice) and `scripts/check_collection_family_compares.py` ratchets the 224 remaining `== kRooted<Family>` comparisons (`--list` prints per-file counts; largest: `SemanticsValidatorExprMethodTargetResolution.cpp`, `...ExprLateUnknownTargetFallbacks.cpp`, `IrLowererInlineNativeCallDispatch.cpp`, `...ExprVectorHelpers.cpp`). Migrate one file per commit (parse once at the top of the function, compare enum values) and lower the ratchet baseline in the same commit.
   - acceptance:
-    - family tags are an enum in semantics and the lowerer; no `== kRooted<Family>` string comparisons remain outside the enum's parse/format functions (ctest audit).
-    - the three named lowerer predicates are deleted or reduced to lookups into the family/helper table.
+    - baseline reaches 0 and the script's baseline logic is replaced by a zero audit.
     - collection parity matrix and the full release gate unchanged.
-  - stop_rule: if a predicate depends on state the table cannot carry, record it as a documented routing exception in docs/CollectionHelperTargets.md instead of keeping an undocumented predicate.
+  - stop_rule: if a comparison needs a non-exact family match (prefix/specialized), keep the string form and document it as an exception in docs/CollectionHelperTargets.md.
 
+- [ ] TODO-5387: Express the three lowerer receiver-family predicates as table rows
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-10-02
+  - phase: Compiler structure
+  - parallel_track: collection-resolution
+  - depends_on: TODO-5386
+  - scope: `routesExplicitVectorCountMethodThroughArgsPackCount`, `directTargetKeepsSyntheticCollectionFallback`, and `allowsReceiverResolvedVectorMetadataFallback` in `IrLowererSetupTypeMethodCallResolution.cpp` become lookups into a (family x helper x receiver kind -> routing) table.
+  - acceptance:
+    - the three predicates are deleted or reduced to table lookups; parity matrix and full release gate unchanged.
+  - stop_rule: record predicates that depend on state the table cannot carry as documented routing exceptions in docs/CollectionHelperTargets.md.
