@@ -220,4 +220,71 @@ inline bool emitInlineParamsInert(
       error);
 }
 
+// resolveMethodCallDefinitionFromExpr with no array-count, vector-capacity or
+// entry-args classification, no import aliases and no struct names; the remaining
+// arguments are the case's own. One wrapper per library overload, same tails.
+using ReceiverKindFn = primec::ir_lowerer::InferReceiverExprKindFn;
+using ReceiverPathFn = primec::ir_lowerer::ResolveReceiverExprPathFn;
+using DefMap = std::unordered_map<std::string, const primec::Definition *>;
+
+#define PS_NO_CLASSIFIER_ARGS                                                                              \
+  [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },                       \
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },                   \
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; }, {}, {}
+
+inline const primec::Definition *resolveMethodCallNoClassifiers(const primec::Expr &callExpr,
+                                                                const primec::ir_lowerer::LocalMap &locals,
+                                                                const ReceiverKindFn &inferExprKind,
+                                                                const ReceiverPathFn &resolveExprPath,
+                                                                const DefMap &defMap,
+                                                                std::string &error) {
+  return primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+      callExpr, locals, PS_NO_CLASSIFIER_ARGS, inferExprKind, resolveExprPath, defMap, error);
+}
+
+inline const primec::Definition *resolveMethodCallNoClassifiers(const primec::Expr &callExpr,
+                                                                const primec::ir_lowerer::LocalMap &locals,
+                                                                const ReceiverKindFn &inferExprKind,
+                                                                const ReceiverPathFn &resolveExprPath,
+                                                                const primec::SemanticProgram *semanticProgram,
+                                                                const DefMap &defMap,
+                                                                std::string &error) {
+  return primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+      callExpr, locals, PS_NO_CLASSIFIER_ARGS, inferExprKind, resolveExprPath, semanticProgram, defMap, error);
+}
+
+inline const primec::Definition *resolveMethodCallNoClassifiers(
+    const primec::Expr &callExpr,
+    const primec::ir_lowerer::LocalMap &locals,
+    const ReceiverKindFn &inferExprKind,
+    const ReceiverPathFn &resolveExprPath,
+    const primec::ir_lowerer::GetReturnInfoForPathFn &getReturnInfo,
+    const DefMap &defMap,
+    std::string &error) {
+  return primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+      callExpr, locals, PS_NO_CLASSIFIER_ARGS, inferExprKind, resolveExprPath, getReturnInfo, defMap, error);
+}
+
+inline const primec::Definition *resolveMethodCallNoClassifiers(
+    const primec::Expr &callExpr,
+    const primec::ir_lowerer::LocalMap &locals,
+    const ReceiverKindFn &inferExprKind,
+    const ReceiverPathFn &resolveExprPath,
+    const primec::SemanticProgram *semanticProgram,
+    const primec::ir_lowerer::GetReturnInfoForPathFn &getReturnInfo,
+    const DefMap &defMap,
+    std::string &error) {
+  return primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(callExpr,
+                                                                 locals,
+                                                                 PS_NO_CLASSIFIER_ARGS,
+                                                                 inferExprKind,
+                                                                 resolveExprPath,
+                                                                 semanticProgram,
+                                                                 getReturnInfo,
+                                                                 defMap,
+                                                                 error);
+}
+
+#undef PS_NO_CLASSIFIER_ARGS
+
 } // namespace primec::validation_test_support

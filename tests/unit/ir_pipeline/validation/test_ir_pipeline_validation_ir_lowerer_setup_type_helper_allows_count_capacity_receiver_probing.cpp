@@ -1,4 +1,4 @@
-#include "test_ir_pipeline_validation_helpers.h"
+#include "test_ir_pipeline_validation_callback_factories.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
@@ -114,14 +114,9 @@ TEST_CASE("ir lowerer setup type helper resolves method call definitions from ex
   locals.emplace("items", itemsLocal);
 
   std::string error;
-  const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+  const primec::Definition *resolved = primec::validation_test_support::resolveMethodCallNoClassifiers(
       methodCall,
       locals,
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-      {},
-      {},
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
         return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
       },
@@ -165,15 +160,10 @@ TEST_CASE("ir lowerer setup type helper prefers canonical bare vector count and 
     methodCall.args = {receiverExpr};
 
     std::string error;
-    const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
-        methodCall,
-        locals,
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-        {},
-        {},
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+    const primec::Definition *resolved = primec::validation_test_support::resolveMethodCallNoClassifiers(
+      methodCall,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
           return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
         },
         [](const primec::Expr &) { return std::string(); },
@@ -225,15 +215,10 @@ TEST_CASE("ir lowerer setup type helper prefers canonical bare vector access met
     methodCall.args = {receiverExpr, indexExpr};
 
     std::string error;
-    const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
-        methodCall,
-        locals,
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-        {},
-        {},
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+    const primec::Definition *resolved = primec::validation_test_support::resolveMethodCallNoClassifiers(
+      methodCall,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
           return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
         },
         [](const primec::Expr &) { return std::string(); },
@@ -288,15 +273,10 @@ TEST_CASE("ir lowerer setup type helper resolves parser-shaped canonical vector 
     methodCall.args = args;
 
     std::string error;
-    const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
-        methodCall,
-        locals,
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-        {},
-        {},
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+    const primec::Definition *resolved = primec::validation_test_support::resolveMethodCallNoClassifiers(
+      methodCall,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
           return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
         },
         [](const primec::Expr &expr) {
@@ -386,15 +366,10 @@ TEST_CASE("ir lowerer setup type helper prefers canonical bare vector mutator me
     methodCall.args = args;
 
     std::string error;
-    const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
-        methodCall,
-        locals,
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-        {},
-        {},
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+    const primec::Definition *resolved = primec::validation_test_support::resolveMethodCallNoClassifiers(
+      methodCall,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
           return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
         },
         [](const primec::Expr &) { return std::string(); },
@@ -473,15 +448,10 @@ TEST_CASE("ir lowerer setup type helper rejects explicit rooted vector slash met
     methodCall.args = args;
 
     std::string error;
-    const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
-        methodCall,
-        locals,
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-        {},
-        {},
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+    const primec::Definition *resolved = primec::validation_test_support::resolveMethodCallNoClassifiers(
+      methodCall,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
           return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
         },
         [](const primec::Expr &) { return std::string(); },
@@ -498,15 +468,10 @@ TEST_CASE("ir lowerer setup type helper rejects explicit rooted vector slash met
     methodCall.args = args;
 
     std::string error;
-    const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
-        methodCall,
-        locals,
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-        {},
-        {},
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+    const primec::Definition *resolved = primec::validation_test_support::resolveMethodCallNoClassifiers(
+      methodCall,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
           return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
         },
         [](const primec::Expr &) { return std::string(); },
@@ -523,14 +488,9 @@ TEST_CASE("ir lowerer setup type helper rejects explicit rooted vector slash met
   arrayCountCall.args = {receiverExpr};
 
   std::string error;
-  const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+  const primec::Definition *resolved = primec::validation_test_support::resolveMethodCallNoClassifiers(
       arrayCountCall,
       locals,
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-      {},
-      {},
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
         return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
       },
@@ -597,15 +557,10 @@ TEST_CASE("ir lowerer setup type helper rejects slash-path map methods from expr
     methodCall.args = args;
 
     std::string error;
-    const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
-        methodCall,
-        locals,
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-        {},
-        {},
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+    const primec::Definition *resolved = primec::validation_test_support::resolveMethodCallNoClassifiers(
+      methodCall,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
           return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
         },
         [](const primec::Expr &) { return std::string(); },
@@ -667,15 +622,10 @@ TEST_CASE("ir lowerer setup type helper rejects canonical fallback for explicit 
     methodCall.args = {receiverExpr, keyExpr};
 
     std::string error;
-    const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
-        methodCall,
-        locals,
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-        {},
-        {},
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+    const primec::Definition *resolved = primec::validation_test_support::resolveMethodCallNoClassifiers(
+      methodCall,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
           return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
         },
         [](const primec::Expr &) { return std::string(); },
@@ -729,15 +679,10 @@ TEST_CASE("ir lowerer setup type helper rejects bare map contains and tryAt meth
     methodCall.args = {receiverExpr, keyExpr};
 
     std::string error;
-    const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
-        methodCall,
-        locals,
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-        {},
-        {},
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+    const primec::Definition *resolved = primec::validation_test_support::resolveMethodCallNoClassifiers(
+      methodCall,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
           return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
         },
         [](const primec::Expr &) { return std::string(); },
@@ -789,15 +734,10 @@ TEST_CASE("ir lowerer setup type helper rejects explicit map contains and tryAt 
     methodCall.args = {receiverExpr, keyExpr};
 
     std::string error;
-    const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
-        methodCall,
-        locals,
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-        {},
-        {},
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+    const primec::Definition *resolved = primec::validation_test_support::resolveMethodCallNoClassifiers(
+      methodCall,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
           return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
         },
         [](const primec::Expr &) { return std::string(); },

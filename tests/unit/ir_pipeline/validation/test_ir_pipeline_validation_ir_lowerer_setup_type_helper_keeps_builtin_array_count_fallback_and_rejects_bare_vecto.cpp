@@ -1,4 +1,4 @@
-#include "test_ir_pipeline_validation_helpers.h"
+#include "test_ir_pipeline_validation_callback_factories.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
@@ -89,15 +89,10 @@ TEST_CASE("ir lowerer setup type helper keeps builtin array count fallback and r
   indexArg.literalValue = 1;
   methodCall.args = {vectorReceiverExpr, indexArg};
   error = "stale";
-  CHECK(primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
-            methodCall,
-            vectorLocals,
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            {},
-            {},
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+  CHECK(primec::validation_test_support::resolveMethodCallNoClassifiers(
+      methodCall,
+      vectorLocals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
             },
             [](const primec::Expr &) { return std::string(); },
@@ -108,15 +103,10 @@ TEST_CASE("ir lowerer setup type helper keeps builtin array count fallback and r
   methodCall.name = "at_unsafe";
   methodCall.args = {vectorReceiverExpr, indexArg};
   error = "stale";
-  CHECK(primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
-            methodCall,
-            vectorLocals,
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            {},
-            {},
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+  CHECK(primec::validation_test_support::resolveMethodCallNoClassifiers(
+      methodCall,
+      vectorLocals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
             },
             [](const primec::Expr &) { return std::string(); },
@@ -128,15 +118,10 @@ TEST_CASE("ir lowerer setup type helper keeps builtin array count fallback and r
     methodCall.name = methodName;
     methodCall.args = args;
     error = "stale";
-    CHECK(primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
-              methodCall,
-              vectorLocals,
-              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-              {},
-              {},
-              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+    CHECK(primec::validation_test_support::resolveMethodCallNoClassifiers(
+      methodCall,
+      vectorLocals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
                 return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
               },
               [](const primec::Expr &) { return std::string(); },
@@ -155,15 +140,10 @@ TEST_CASE("ir lowerer setup type helper keeps builtin array count fallback and r
   methodCall.name = "at";
   methodCall.args = {receiverExpr, indexArg};
   error = "stale";
-  CHECK(primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
-            methodCall,
-            locals,
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            {},
-            {},
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+  CHECK(primec::validation_test_support::resolveMethodCallNoClassifiers(
+      methodCall,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
             },
             [](const primec::Expr &) { return std::string(); },
@@ -218,15 +198,10 @@ TEST_CASE("ir lowerer setup type helper reports unknown vector mutators when no 
   locals.emplace("values", valuesLocal);
 
   std::string error = "stale";
-  CHECK(primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
-            methodCall,
-            locals,
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            {},
-            {},
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+  CHECK(primec::validation_test_support::resolveMethodCallNoClassifiers(
+      methodCall,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
             },
             [](const primec::Expr &) { return std::string(); },
@@ -237,15 +212,10 @@ TEST_CASE("ir lowerer setup type helper reports unknown vector mutators when no 
   methodCall.name = "pop";
   methodCall.args = {receiverExpr};
   error = "stale";
-  CHECK(primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
-            methodCall,
-            locals,
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            {},
-            {},
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+  CHECK(primec::validation_test_support::resolveMethodCallNoClassifiers(
+      methodCall,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
             },
             [](const primec::Expr &) { return std::string(); },
@@ -402,15 +372,10 @@ TEST_CASE("ir lowerer setup type helper requires semantic vector method ids befo
   auto resolveMethod = [&](const primec::Expr &methodCall,
                            const primec::ir_lowerer::LocalMap &locals,
                            std::string &error) {
-    return primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
-        methodCall,
-        locals,
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-        {},
-        {},
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+    return primec::validation_test_support::resolveMethodCallNoClassifiers(
+      methodCall,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
           return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
         },
         [](const primec::Expr &) { return std::string(); },

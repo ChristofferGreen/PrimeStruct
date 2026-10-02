@@ -100,18 +100,17 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5393 | Convert ir_pipeline validation setup_type_helper tests | ready | test-infrastructure |
-| TODO-5394 | Convert ir_pipeline validation result_helpers / count_access / inline_struct_arg tests | deferred | test-infrastructure |
+| TODO-5394 | Convert ir_pipeline validation result_helpers / count_access / inline_struct_arg tests | ready | test-infrastructure |
 | TODO-5395 | Replace source-text delegation checks in ir_pipeline validation tests with a table | deferred | test-infrastructure |
 | TODO-5348 | Verify the iOS embed build and XCFramework packaging on macOS | deferred | embedding-ios |
 
 ### Ready Now
 
-- TODO-5393 (track: test-infrastructure): Convert ir_pipeline validation setup_type_helper tests.
+- TODO-5394 (track: test-infrastructure): Convert ir_pipeline validation result_helpers / count_access / inline_struct_arg tests.
 
 ### Immediate Next 10
 
-1. TODO-5393 - Convert ir_pipeline validation setup_type_helper tests.
+1. TODO-5394 - Convert ir_pipeline validation result_helpers / count_access / inline_struct_arg tests.
 
 ### Priority Lanes
 
@@ -151,21 +150,9 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     the runtime-only XCFramework and record the gap rather than widening the
     scope.
 
-- [ ] TODO-5393: Convert ir_pipeline validation setup_type_helper tests
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-02
-  - phase: Test infrastructure
-  - parallel_track: test-infrastructure
-  - scope: Using the TODO-5388 factories, convert the `..._setup_type_helper_*.cpp` files (count/capacity probing, wrapper string slash access, canonical map helper rejects, indexed args-pack pointer map receivers) into table-driven cases that keep per-row failure messages.
-  - acceptance:
-    - each converted file keeps its TEST_CASE count (or merges only identical-assertion cases), and a documented mutation check (a removed lowerer branch) still fails a case.
-    - `python3 scripts/measure_test_duplication.py` excess for the converted files drops, with before/after in the result note; full release gate green.
-  - stop_rule: stop and leave the file unconverted if a mutation check (remove one lowerer branch the file covers) no longer fails some case after conversion; record the file in the leaf note.
-
 - [ ] TODO-5394: Convert ir_pipeline validation result_helpers / count_access / inline_struct_arg tests
   - owner: ai
-  - status: deferred
+  - status: ready
   - created_at: 2026-10-02
   - phase: Test infrastructure
   - parallel_track: test-infrastructure
