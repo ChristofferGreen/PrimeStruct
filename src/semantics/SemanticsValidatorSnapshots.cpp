@@ -1,4 +1,3 @@
-// soa-surface-audit: exempt
 // Snapshots for tests, callable summaries / on-error collection and the semantic-product publication surface.
 #include "SemanticsValidatorSnapshotHelpers.h"
 

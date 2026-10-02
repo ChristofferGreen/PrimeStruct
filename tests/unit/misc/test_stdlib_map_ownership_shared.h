@@ -258,6 +258,10 @@ inline MapOwnershipSources loadMapOwnershipSources() {
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprMethodTargetResolution.cpp") +
       readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorExprMethodTargetResolutionGenericFallback.cpp") +
+      readText(repoRoot() / "src" / "semantics" /
+               "SemanticsValidatorExprMethodTargetResolutionResolve.cpp") +
+      readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorMethodTargetKeyValueResolvers.cpp") +
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorMethodTargetResolutionDetail.cpp") +

@@ -65,7 +65,10 @@ _EXEMPT_MARKERS = (
 # TODO-5350: moving the helper spellings into include/primec/support/
 # CollectionHelperNames.h made 52 files literal-free, so their exemption markers
 # were dropped and the baseline ratcheted down from 134 to 83.
-BASELINE_EXEMPT_FILE_COUNT = 83
+# TODO-5384: splitting SemanticsValidatorExprMethodTargetResolution.cpp left one
+# unit (the resolve step, which spells the "to_aos" helper literal) that still
+# needs its marker next to the original one: 83 -> 84.
+BASELINE_EXEMPT_FILE_COUNT = 84
 
 
 def _is_exempt(text: str) -> bool:

@@ -1,4 +1,3 @@
-// soa-surface-audit: exempt
 // Per-family semantic-product fact snapshots (types, bindings, array extents, returns, queries).
 #include "SemanticsValidatorSnapshotHelpers.h"
 

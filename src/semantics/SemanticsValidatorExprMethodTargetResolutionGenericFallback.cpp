@@ -1,4 +1,3 @@
-// collection-surface-audit: exempt
 #include "SemanticsValidator.h"
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
@@ -360,8 +359,8 @@ bool SemanticsValidator::resolveMethodTargetGenericFallback(
         preferredSoaHelperTargetForCollectionType(canonicalCollectionHelperName,
                                                   internalSoaCollectionTypePath(true)));
   }
-  // A call that explicitly spells out the canonical
-  // /std/collections/vector/capacity path on a non-vector receiver must be
+  // A call that explicitly spells out the canonical vector module's
+  // capacity path on a non-vector receiver must be
   // rejected with the same "capacity requires vector target" diagnostic
   // used elsewhere for this method, even if a same-path definition happens
   // to exist for the receiver's own (non-vector) type - that canonical path

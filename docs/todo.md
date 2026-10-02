@@ -172,7 +172,8 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - created_at: 2026-10-02
   - phase: Compiler structure
   - parallel_track: semantics-structure
-  - scope: scripts/source_file_size_allowlist.txt lists 19 multi-function files (largest: `SemanticsValidatorSnapshots.cpp` 2,628, `...ExprMethodTargetResolution.cpp` 2,314, `...StatementBindings.cpp` 2,222, `SemanticPublicationBuilders.cpp` 2,139). Split each by responsibility into units of at most ~1,000 lines with explicit headers; one commit per file, deleting its allowlist entry in that commit.
+  - progress: `SemanticsValidatorSnapshots.cpp` (-> 4 units + `SemanticsValidatorSnapshotHelpers.h`) and `SemanticsValidatorExprMethodTargetResolution.cpp` (-> 3 units) are split. Files whose size is one giant function (`SemanticsValidatorStatementBindings.cpp` validateBindingStatement ~2,150 lines, `SemanticsValidatorExpr.cpp` ~1,870, `TemplateMonomorphImplicitTemplateInference.cpp` ~1,440, `SemanticsValidatorInferCollectionReturnInference.cpp` ~1,250, `SemanticsValidatorStatementReturns.cpp`, `SemanticsValidatorInferMethodResolution.cpp`) cannot be split by moves and belong with TODO-5385. `SemanticPublicationBuilders.cpp` and `RequirementPredicateFacts.cpp` are almost entirely one anonymous namespace and need a dependency-aware split. `SemanticsValidate.cpp` can split at the manifest runner once 7 helpers move out of the anonymous namespace.
+  - scope: scripts/source_file_size_allowlist.txt lists the remaining multi-function files (largest: `SemanticsValidatorSnapshots.cpp` 2,628, `...ExprMethodTargetResolution.cpp` 2,314, `...StatementBindings.cpp` 2,222, `SemanticPublicationBuilders.cpp` 2,139). Split each by responsibility into units of at most ~1,000 lines with explicit headers; one commit per file, deleting its allowlist entry in that commit.
   - acceptance:
     - allowlist shrinks to only TemplateMonomorphExpressionRewrite.cpp (TODO-5385); each split is its own commit.
     - full release gate green; semantic-product dumps byte-identical (compare old/new `primec` on the examples).
@@ -184,7 +185,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - created_at: 2026-10-02
   - phase: Compiler structure
   - parallel_track: semantics-structure
-  - scope: `rewriteExpr` is one function (lines ~319-3876) whose branches share many local lambdas; it cannot be split by moving code. Extract the branches (name-expression rewrites, method-call rewrites, bare-call rewrites, collection helper rewrites) into functions over an explicit shared-state struct, then move them into focused units.
+  - scope: (also covers the other single-giant-function files named in TODO-5384's progress note.) `rewriteExpr` is one function (lines ~319-3876) whose branches share many local lambdas; it cannot be split by moving code. Extract the branches (name-expression rewrites, method-call rewrites, bare-call rewrites, collection helper rewrites) into functions over an explicit shared-state struct, then move them into focused units.
   - acceptance:
     - `TemplateMonomorphExpressionRewrite.cpp` and the new units are each under 1,200 lines and its allowlist entry is gone.
     - full release gate green; semantic-product dumps byte-identical (compare old/new `primec` on the examples).

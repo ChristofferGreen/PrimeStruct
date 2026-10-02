@@ -1,3 +1,4 @@
+// soa-surface-audit: exempt
 #pragma once
 
 // Internal helpers shared by the SemanticsValidatorSnapshots*.cpp units (split

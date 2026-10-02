@@ -1,4 +1,3 @@
-// soa-surface-audit: exempt
 // Definition publication facts, worker-fact rebinding and pilot routing collection.
 #include "SemanticsValidatorSnapshotHelpers.h"
 
