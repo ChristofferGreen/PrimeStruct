@@ -1,4 +1,4 @@
-#include "test_ir_pipeline_validation_helpers.h"
+#include "test_ir_pipeline_validation_callback_factories.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
@@ -41,12 +41,7 @@ TEST_CASE("ir lowerer inference call-return setup resolves namespaced capacity d
 
   std::string error;
   CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallReturnSetup(
-      {
-          .defMap = &defMap,
-          .resolveExprPath = [](const primec::Expr &expr) { return expr.name; },
-          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-      },
+      primec::validation_test_support::defaultCallReturnSetupInput(defMap),
       state,
       error));
   CHECK(error.empty());
@@ -113,12 +108,7 @@ TEST_CASE("ir lowerer inference call-return setup resolves namespaced access def
 
   std::string error;
   CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallReturnSetup(
-      {
-          .defMap = &defMap,
-          .resolveExprPath = [](const primec::Expr &expr) { return expr.name; },
-          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-      },
+      primec::validation_test_support::defaultCallReturnSetupInput(defMap),
       state,
       error));
   CHECK(error.empty());
@@ -179,12 +169,7 @@ TEST_CASE("ir lowerer inference call-return setup rejects bare semantic access r
 
   std::string error;
   CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallReturnSetup(
-      {
-          .defMap = &defMap,
-          .resolveExprPath = [](const primec::Expr &expr) { return expr.name; },
-          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-      },
+      primec::validation_test_support::defaultCallReturnSetupInput(defMap),
       state,
       error));
   CHECK(error.empty());
@@ -256,12 +241,7 @@ TEST_CASE("ir lowerer inference call-return setup rejects bare semantic access r
 
   std::string error;
   CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallReturnSetup(
-      {
-          .defMap = &defMap,
-          .resolveExprPath = [](const primec::Expr &expr) { return expr.name; },
-          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-      },
+      primec::validation_test_support::defaultCallReturnSetupInput(defMap),
       state,
       error));
   CHECK(error.empty());
@@ -357,12 +337,7 @@ TEST_CASE("ir lowerer inference call-return setup rejects bare semantic access s
 
   std::string error;
   CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallReturnSetup(
-      {
-          .defMap = &defMap,
-          .resolveExprPath = [](const primec::Expr &expr) { return expr.name; },
-          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-      },
+      primec::validation_test_support::defaultCallReturnSetupInput(defMap),
       state,
       error));
   CHECK(error.empty());
@@ -478,12 +453,7 @@ TEST_CASE("ir lowerer inference call-return setup uses semantic contains receive
 
   std::string error;
   CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallReturnSetup(
-      {
-          .defMap = &defMap,
-          .resolveExprPath = [](const primec::Expr &expr) { return expr.name; },
-          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-      },
+      primec::validation_test_support::defaultCallReturnSetupInput(defMap),
       state,
       error));
   CHECK(error.empty());
@@ -599,12 +569,7 @@ TEST_CASE("ir lowerer inference call-return setup uses semantic count receiver f
 
   std::string error;
   CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallReturnSetup(
-      {
-          .defMap = &defMap,
-          .resolveExprPath = [](const primec::Expr &expr) { return expr.name; },
-          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-      },
+      primec::validation_test_support::defaultCallReturnSetupInput(defMap),
       state,
       error));
   CHECK(error.empty());
@@ -697,12 +662,7 @@ TEST_CASE("ir lowerer inference call-return setup uses semantic count tail facts
 
   std::string error;
   CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallReturnSetup(
-      {
-          .defMap = &defMap,
-          .resolveExprPath = [](const primec::Expr &expr) { return expr.name; },
-          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-      },
+      primec::validation_test_support::defaultCallReturnSetupInput(defMap),
       state,
       error));
   CHECK(error.empty());
@@ -772,12 +732,7 @@ TEST_CASE("ir lowerer inference call-return setup uses semantic method access re
 
   std::string error;
   CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallReturnSetup(
-      {
-          .defMap = &defMap,
-          .resolveExprPath = [](const primec::Expr &expr) { return expr.name; },
-          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-      },
+      primec::validation_test_support::defaultCallReturnSetupInput(defMap),
       state,
       error));
   CHECK(error.empty());
@@ -849,12 +804,7 @@ TEST_CASE("ir lowerer inference call-return setup uses semantic unresolved built
 
   std::string error;
   CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallReturnSetup(
-      {
-          .defMap = &defMap,
-          .resolveExprPath = [](const primec::Expr &expr) { return expr.name; },
-          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-      },
+      primec::validation_test_support::defaultCallReturnSetupInput(defMap),
       state,
       error));
   CHECK(error.empty());
@@ -966,12 +916,7 @@ TEST_CASE("ir lowerer inference call-return setup uses semantic vector mutator r
 
   std::string error;
   CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallReturnSetup(
-      {
-          .defMap = &defMap,
-          .resolveExprPath = [](const primec::Expr &expr) { return expr.name; },
-          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-      },
+      primec::validation_test_support::defaultCallReturnSetupInput(defMap),
       state,
       error));
   CHECK(error.empty());
@@ -1063,12 +1008,7 @@ TEST_CASE("ir lowerer inference call-return setup uses semantic capacity receive
 
   std::string error;
   CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallReturnSetup(
-      {
-          .defMap = &defMap,
-          .resolveExprPath = [](const primec::Expr &expr) { return expr.name; },
-          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-      },
+      primec::validation_test_support::defaultCallReturnSetupInput(defMap),
       state,
       error));
   CHECK(error.empty());
@@ -1145,12 +1085,7 @@ TEST_CASE("ir lowerer inference call-return setup rejects vector compatibility a
 
   std::string error;
   CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallReturnSetup(
-      {
-          .defMap = &defMap,
-          .resolveExprPath = [](const primec::Expr &expr) { return expr.name; },
-          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-      },
+      primec::validation_test_support::defaultCallReturnSetupInput(defMap),
       state,
       error));
   CHECK(error.empty());
@@ -1222,12 +1157,7 @@ TEST_CASE("ir lowerer inference call-return setup resolves namespaced at unsafe 
 
   std::string error;
   CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallReturnSetup(
-      {
-          .defMap = &defMap,
-          .resolveExprPath = [](const primec::Expr &expr) { return expr.name; },
-          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-      },
+      primec::validation_test_support::defaultCallReturnSetupInput(defMap),
       state,
       error));
   CHECK(error.empty());
@@ -1298,12 +1228,7 @@ TEST_CASE("ir lowerer inference call-return setup resolves canonical namespaced 
 
   std::string error;
   CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallReturnSetup(
-      {
-          .defMap = &defMap,
-          .resolveExprPath = [](const primec::Expr &expr) { return expr.name; },
-          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-      },
+      primec::validation_test_support::defaultCallReturnSetupInput(defMap),
       state,
       error));
   CHECK(error.empty());
@@ -1421,12 +1346,7 @@ TEST_CASE("ir lowerer inference call-return setup keeps unresolved compatibility
 
   std::string error;
   CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallReturnSetup(
-      {
-          .defMap = &defMap,
-          .resolveExprPath = [](const primec::Expr &expr) { return expr.name; },
-          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-      },
+      primec::validation_test_support::defaultCallReturnSetupInput(defMap),
       state,
       error));
   CHECK(error.empty());
@@ -1495,12 +1415,7 @@ TEST_CASE("ir lowerer inference call-return setup rejects explicit map aliases a
 
   std::string error;
   CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallReturnSetup(
-      {
-          .defMap = &defMap,
-          .resolveExprPath = [](const primec::Expr &expr) { return expr.name; },
-          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-      },
+      primec::validation_test_support::defaultCallReturnSetupInput(defMap),
       state,
       error));
   CHECK(error.empty());

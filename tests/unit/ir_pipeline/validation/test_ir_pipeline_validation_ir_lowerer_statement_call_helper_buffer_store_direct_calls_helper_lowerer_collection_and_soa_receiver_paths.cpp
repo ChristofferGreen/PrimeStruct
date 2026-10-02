@@ -14,15 +14,8 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
   inlineCalls = 0;
   instructions.clear();
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+  CHECK(tryEmitDirectCallStatementNoCounts(
             f.mapInsertArgsPackNonLocalReceiverInferredStmt,
-            {},
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
-              return nullptr;
-            },
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.name == "/map/at") {
                 return &f.mapAtArgsPackDef;
@@ -111,15 +104,8 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
   inlineCalls = 0;
   instructions.clear();
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+  CHECK(tryEmitDirectCallStatementNoCounts(
             f.mapInsertArgsPackUnsafeNonLocalReceiverInferredStmt,
-            {},
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
-              return nullptr;
-            },
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.name == "/map/at_unsafe") {
                 return &f.mapAtArgsPackUnsafeDef;
@@ -208,15 +194,8 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
   inlineCalls = 0;
   instructions.clear();
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+  CHECK(tryEmitDirectCallStatementNoCounts(
             f.mapInsertArgsPackAtRefDirectNonLocalReceiverInferredStmt,
-            {},
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
-              return nullptr;
-            },
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.name == "/map/at_ref") {
                 return &f.mapAtArgsPackRefDef;
@@ -305,15 +284,8 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
   inlineCalls = 0;
   instructions.clear();
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+  CHECK(tryEmitDirectCallStatementNoCounts(
             f.mapInsertArgsPackAtUnsafeRefDirectNonLocalReceiverInferredStmt,
-            {},
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
-              return nullptr;
-            },
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.name == "/map/at_unsafe_ref") {
                 return &f.mapAtArgsPackUnsafeRefDef;
@@ -402,15 +374,8 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
   inlineCalls = 0;
   instructions.clear();
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+  CHECK(tryEmitDirectCallStatementNoCounts(
             f.mapInsertArgsPackAtUnsafeRefGeneratedAliasNonLocalReceiverInferredStmt,
-            {},
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
-              return nullptr;
-            },
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.name == "/std/collections/mapAtUnsafeRef__generated") {
                 return &f.mapAtUnsafeRefAliasArgsPackDef;
@@ -499,15 +464,8 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
   inlineCalls = 0;
   instructions.clear();
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+  CHECK(tryEmitDirectCallStatementNoCounts(
             f.mapInsertArgsPackAtRefBareNonLocalReceiverInferredStmt,
-            {},
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
-              return nullptr;
-            },
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.name == "at_ref") {
                 return &f.mapAtRefAliasArgsPackDef;
@@ -596,15 +554,8 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
   inlineCalls = 0;
   instructions.clear();
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+  CHECK(tryEmitDirectCallStatementNoCounts(
             f.mapInsertArgsPackMapAtUnsafeRefGeneratedBareNonLocalReceiverInferredStmt,
-            {},
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
-              return nullptr;
-            },
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.name == "mapAtUnsafeRef__generated") {
                 return &f.mapAtUnsafeRefAliasArgsPackDef;
@@ -701,15 +652,8 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
   inlineCalls = 0;
   instructions.clear();
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+  CHECK(tryEmitDirectCallStatementNoCounts(
             f.mapInsertArgsPackMapAtUnsafeRefGeneratedBareNonLocalReceiverGeneratedInsertStmt,
-            {},
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
-              return nullptr;
-            },
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.name == "mapAtUnsafeRef__generated") {
                 return &f.mapAtUnsafeRefAliasArgsPackDef;
@@ -748,15 +692,8 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
   inlineCalls = 0;
   instructions.clear();
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+  CHECK(tryEmitDirectCallStatementNoCounts(
             f.mapInsertArgsPackMapAtUnsafeRefGeneratedBareNonLocalReceiverGeneratedMapInsertStmt,
-            {},
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
-              return nullptr;
-            },
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.name == "mapAtUnsafeRef__generated") {
                 return &f.mapAtUnsafeRefAliasArgsPackDef;
@@ -795,15 +732,8 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
   inlineCalls = 0;
   instructions.clear();
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+  CHECK(tryEmitDirectCallStatementNoCounts(
             f.mapInsertArgsPackAliasNonLocalReceiverInferredStmt,
-            {},
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
-              return nullptr;
-            },
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.name == "/std/collections/mapAt") {
                 return &f.mapAtAliasArgsPackDef;
@@ -892,15 +822,8 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
   inlineCalls = 0;
   instructions.clear();
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+  CHECK(tryEmitDirectCallStatementNoCounts(
             f.mapInsertArgsPackUnsafeAliasNonLocalReceiverInferredStmt,
-            {},
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
-              return nullptr;
-            },
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.name == "/std/collections/mapAtUnsafe") {
                 return &f.mapAtUnsafeAliasArgsPackDef;
@@ -989,15 +912,8 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
   inlineCalls = 0;
   instructions.clear();
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+  CHECK(tryEmitDirectCallStatementNoCounts(
             f.mapInsertArgsPackMethodAliasNonLocalReceiverInferredStmt,
-            {},
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
-              return nullptr;
-            },
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.isMethodCall && callExpr.name == "at" && callExpr.args.size() == 2) {
                 return &f.mapAtAliasArgsPackDef;
@@ -1086,15 +1002,8 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
   inlineCalls = 0;
   instructions.clear();
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+  CHECK(tryEmitDirectCallStatementNoCounts(
             f.mapInsertArgsPackUnsafeMethodAliasNonLocalReceiverInferredStmt,
-            {},
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
-              return nullptr;
-            },
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.isMethodCall && callExpr.name == "at_unsafe" && callExpr.args.size() == 2) {
                 return &f.mapAtUnsafeAliasArgsPackDef;
@@ -1183,15 +1092,8 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
   inlineCalls = 0;
   instructions.clear();
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+  CHECK(tryEmitDirectCallStatementNoCounts(
             f.mapInsertArgsPackAtPascalMethodAliasNonLocalReceiverInferredStmt,
-            {},
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
-              return nullptr;
-            },
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.isMethodCall && callExpr.name == "At" && callExpr.args.size() == 2) {
                 return &f.mapAtAliasArgsPackDef;

@@ -1208,3 +1208,32 @@ inline DirectCallStatementFixtures loadDirectCallStatementFixtures() {
   result.mapInsertDerefFieldAccessMethodStmt = mapInsertDerefFieldAccessMethodStmt;
   return result;
 }
+
+// Direct-call statement emission with an empty local map, no array/string count
+// or vector-capacity calls, and no method-call definition (the setup most
+// direct-call cases share; TODO-5390). Remaining arguments are the case's own.
+inline primec::ir_lowerer::DirectCallStatementEmitResult tryEmitDirectCallStatementNoCounts(
+    const primec::Expr &stmt,
+    const std::function<const primec::Definition *(const primec::Expr &)> &resolveDefinitionCall,
+    const std::function<bool(const std::string &, primec::ir_lowerer::ReturnInfo &)> &getReturnInfo,
+    const std::function<bool(const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &, bool)>
+        &emitInlineDefinitionCall,
+    std::vector<primec::IrInstruction> &instructions,
+    std::string &error,
+    const primec::SemanticProgram *semanticProgram = nullptr,
+    const primec::ir_lowerer::SemanticProductIndex *semanticIndex = nullptr) {
+  return primec::ir_lowerer::tryEmitDirectCallStatement(
+      stmt,
+      primec::ir_lowerer::LocalMap{},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * { return nullptr; },
+      resolveDefinitionCall,
+      getReturnInfo,
+      emitInlineDefinitionCall,
+      instructions,
+      error,
+      semanticProgram,
+      semanticIndex);
+}

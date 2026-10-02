@@ -1,4 +1,4 @@
-#include "test_ir_pipeline_validation_helpers.h"
+#include "test_ir_pipeline_validation_callback_factories.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
@@ -60,11 +60,7 @@ TEST_CASE("ir lowerer inference expr-kind dispatch infers try from indexed map t
   std::string inferenceError;
   std::string error;
   CHECK(primec::ir_lowerer::runLowerInferenceExprKindDispatchSetup(
-      {
-          .defMap = &defMap,
-          .resolveExprPath = [](const primec::Expr &expr) { return "/" + expr.name; },
-          .error = &inferenceError,
-      },
+      primec::validation_test_support::defaultDispatchSetupInput(defMap, inferenceError),
       state,
       error));
   CHECK(error.empty());
@@ -261,13 +257,7 @@ TEST_CASE("ir lowerer inference expr-kind dispatch rejects stale indexed map val
   std::unordered_map<std::string, const primec::Definition *> defMap;
   std::string inferenceError;
   CHECK(primec::ir_lowerer::runLowerInferenceExprKindDispatchSetup(
-      {
-          .defMap = &defMap,
-          .resolveExprPath = [](const primec::Expr &expr) {
-            return "/" + expr.name;
-          },
-          .error = &inferenceError,
-      },
+      primec::validation_test_support::defaultDispatchSetupInput(defMap, inferenceError),
       state,
       error));
   CHECK(error.empty());
@@ -437,11 +427,7 @@ TEST_CASE("ir lowerer inference expr-kind dispatch uses semantic map receiver fa
     };
     std::string setupError;
     CHECK(primec::ir_lowerer::runLowerInferenceExprKindDispatchSetup(
-        {
-            .defMap = &defMap,
-            .resolveExprPath = [](const primec::Expr &expr) { return "/" + expr.name; },
-            .error = &inferenceError,
-        },
+        primec::validation_test_support::defaultDispatchSetupInput(defMap, inferenceError),
         state,
         setupError));
     CHECK(setupError.empty());
@@ -676,11 +662,7 @@ TEST_CASE("ir lowerer inference expr-kind dispatch uses semantic try operand Res
     };
     std::string setupError;
     CHECK(primec::ir_lowerer::runLowerInferenceExprKindDispatchSetup(
-        {
-            .defMap = &defMap,
-            .resolveExprPath = [](const primec::Expr &expr) { return "/" + expr.name; },
-            .error = &inferenceError,
-        },
+        primec::validation_test_support::defaultDispatchSetupInput(defMap, inferenceError),
         state,
         setupError));
     CHECK(setupError.empty());
@@ -960,11 +942,7 @@ TEST_CASE("ir lowerer inference expr-kind dispatch uses semantic name facts befo
     };
     std::string setupError;
     CHECK(primec::ir_lowerer::runLowerInferenceExprKindDispatchSetup(
-        {
-            .defMap = &defMap,
-            .resolveExprPath = [](const primec::Expr &expr) { return "/" + expr.name; },
-            .error = &inferenceError,
-        },
+        primec::validation_test_support::defaultDispatchSetupInput(defMap, inferenceError),
         state,
         setupError));
     CHECK(setupError.empty());
@@ -1123,11 +1101,7 @@ TEST_CASE("ir lowerer inference expr-kind dispatch uses semantic method receiver
     };
     std::string setupError;
     CHECK(primec::ir_lowerer::runLowerInferenceExprKindDispatchSetup(
-        {
-            .defMap = &defMap,
-            .resolveExprPath = [](const primec::Expr &expr) { return "/" + expr.name; },
-            .error = &inferenceError,
-        },
+        primec::validation_test_support::defaultDispatchSetupInput(defMap, inferenceError),
         state,
         setupError));
     CHECK(setupError.empty());
@@ -1384,11 +1358,7 @@ TEST_CASE("ir lowerer inference expr-kind dispatch uses semantic File call facts
     };
     std::string setupError;
     CHECK(primec::ir_lowerer::runLowerInferenceExprKindDispatchSetup(
-        {
-            .defMap = &defMap,
-            .resolveExprPath = [](const primec::Expr &expr) { return "/" + expr.name; },
-            .error = &inferenceError,
-        },
+        primec::validation_test_support::defaultDispatchSetupInput(defMap, inferenceError),
         state,
         setupError));
     CHECK(setupError.empty());
@@ -1533,11 +1503,7 @@ TEST_CASE("ir lowerer inference expr-kind dispatch uses semantic Result method f
     };
     std::string setupError;
     CHECK(primec::ir_lowerer::runLowerInferenceExprKindDispatchSetup(
-        {
-            .defMap = &defMap,
-            .resolveExprPath = [](const primec::Expr &expr) { return "/" + expr.name; },
-            .error = &inferenceError,
-        },
+        primec::validation_test_support::defaultDispatchSetupInput(defMap, inferenceError),
         state,
         setupError));
     CHECK(setupError.empty());

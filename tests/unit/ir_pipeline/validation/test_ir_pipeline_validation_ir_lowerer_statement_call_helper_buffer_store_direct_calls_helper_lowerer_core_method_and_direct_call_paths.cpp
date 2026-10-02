@@ -69,15 +69,8 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: core method and 
   inlineCalls = 0;
   instructions.clear();
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+  CHECK(tryEmitDirectCallStatementNoCounts(
             f.mapInsertStmt,
-            {},
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
-              return nullptr;
-            },
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.name == "/main/makeValues") {
                 return &f.mapValuesFactoryDef;
@@ -114,15 +107,8 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: core method and 
   inlineCalls = 0;
   instructions.clear();
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+  CHECK(tryEmitDirectCallStatementNoCounts(
             f.namespacedMapInsertStmt,
-            {},
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
-              return nullptr;
-            },
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.name == "/main/makeValues") {
                 return &f.mapValuesFactoryDef;
@@ -159,15 +145,8 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: core method and 
   inlineCalls = 0;
   instructions.clear();
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+  CHECK(tryEmitDirectCallStatementNoCounts(
             f.mapInsertMethodStmt,
-            {},
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
-              return nullptr;
-            },
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.name == "/main/makeValues") {
                 return &f.mapValuesFactoryDef;
@@ -204,15 +183,8 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: core method and 
   inlineCalls = 0;
   instructions.clear();
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+  CHECK(tryEmitDirectCallStatementNoCounts(
             f.mapInsertFieldAccessStmt,
-            {},
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
-              return nullptr;
-            },
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.name == "/std/collections/map/insert") {
                 return &f.mapInsertMethodDef;
@@ -249,15 +221,8 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: core method and 
   inlineCalls = 0;
   instructions.clear();
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+  CHECK(tryEmitDirectCallStatementNoCounts(
             f.mapInsertFieldAccessInferredStmt,
-            {},
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
-              return nullptr;
-            },
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.name == "/std/collections/map/insert") {
                 return &f.mapInsertMethodDef;
@@ -296,15 +261,8 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: core method and 
   inlineCalls = 0;
   instructions.clear();
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+  CHECK(tryEmitDirectCallStatementNoCounts(
             f.mapInsertFieldAccessAliasInferredStmt,
-            {},
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
-              return nullptr;
-            },
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.name == "/std/collections/mapInsert") {
                 return &f.mapInsertAliasDef;
@@ -343,15 +301,8 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: core method and 
   inlineCalls = 0;
   instructions.clear();
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+  CHECK(tryEmitDirectCallStatementNoCounts(
             f.mapInsertFieldAccessGeneratedPascalAliasPathInferredStmt,
-            {},
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
-              return nullptr;
-            },
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.name == "/std/collections/MapInsert__generated") {
                 return &f.mapInsertGeneratedPascalAliasBareDef;
@@ -390,15 +341,8 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: core method and 
   inlineCalls = 0;
   instructions.clear();
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+  CHECK(tryEmitDirectCallStatementNoCounts(
             f.mapInsertFieldAccessGeneratedPascalRefAliasPathInferredStmt,
-            {},
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
-              return nullptr;
-            },
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.name == "/std/collections/MapInsertRef__generated") {
                 return &f.mapInsertGeneratedPascalRefAliasBareDef;
@@ -437,15 +381,8 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: core method and 
   inlineCalls = 0;
   instructions.clear();
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+  CHECK(tryEmitDirectCallStatementNoCounts(
             f.mapInsertFieldAccessGeneratedBareInferredStmt,
-            {},
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
-              return nullptr;
-            },
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.name == "insert__generated") {
                 return &f.mapInsertGeneratedBareDef;
@@ -484,15 +421,8 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: core method and 
   inlineCalls = 0;
   instructions.clear();
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+  CHECK(tryEmitDirectCallStatementNoCounts(
             f.mapInsertFieldAccessGeneratedAliasBareInferredStmt,
-            {},
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
-              return nullptr;
-            },
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.name == "mapInsert__generated") {
                 return &f.mapInsertGeneratedAliasBareDef;
@@ -531,15 +461,8 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: core method and 
   inlineCalls = 0;
   instructions.clear();
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+  CHECK(tryEmitDirectCallStatementNoCounts(
             f.mapInsertFieldAccessGeneratedPascalAliasBareInferredStmt,
-            {},
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
-              return nullptr;
-            },
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.name == "MapInsert__generated") {
                 return &f.mapInsertGeneratedPascalAliasBareDef;
@@ -578,15 +501,8 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: core method and 
   inlineCalls = 0;
   instructions.clear();
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+  CHECK(tryEmitDirectCallStatementNoCounts(
             f.mapInsertFieldAccessGeneratedPascalRefAliasBareInferredStmt,
-            {},
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
-              return nullptr;
-            },
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.name == "MapInsertRef__generated") {
                 return &f.mapInsertGeneratedPascalRefAliasBareDef;

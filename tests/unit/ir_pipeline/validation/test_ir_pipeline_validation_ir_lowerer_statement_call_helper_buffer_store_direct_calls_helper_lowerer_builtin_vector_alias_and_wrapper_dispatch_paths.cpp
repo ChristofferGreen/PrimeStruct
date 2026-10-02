@@ -14,15 +14,8 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: builtin vector a
   inlineCalls = 0;
   instructions.clear();
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+  CHECK(tryEmitDirectCallStatementNoCounts(
             f.mapInsertLocationFieldAccessInferredStmt,
-            {},
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
-              return nullptr;
-            },
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.name == "/std/collections/map/insert") {
                 return &f.mapInsertMethodDef;
@@ -108,15 +101,8 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: builtin vector a
   inlineCalls = 0;
   instructions.clear();
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+  CHECK(tryEmitDirectCallStatementNoCounts(
             f.mapInsertNestedLocationDerefHelperStmt,
-            {},
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
-              return nullptr;
-            },
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.name == "/main/makeValuesRef") {
                 return &f.mapValuesRefFactoryDef;
@@ -205,15 +191,8 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: builtin vector a
   inlineCalls = 0;
   instructions.clear();
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+  CHECK(tryEmitDirectCallStatementNoCounts(
             f.mapInsertDerefHelperStmt,
-            {},
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
-              return nullptr;
-            },
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.name == "/main/makeValuesRef") {
                 return &f.mapValuesRefFactoryDef;
@@ -302,15 +281,8 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: builtin vector a
   inlineCalls = 0;
   instructions.clear();
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+  CHECK(tryEmitDirectCallStatementNoCounts(
             f.mapInsertNestedLocationDerefFieldAccessStmt,
-            {},
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
-              return nullptr;
-            },
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.name == "/std/collections/map/insert") {
                 return &f.mapInsertMethodDef;
@@ -396,15 +368,8 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: builtin vector a
   inlineCalls = 0;
   instructions.clear();
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+  CHECK(tryEmitDirectCallStatementNoCounts(
             f.mapInsertDerefFieldAccessInferredStmt,
-            {},
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
-              return nullptr;
-            },
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.name == "/std/collections/map/insert") {
                 return &f.mapInsertMethodDef;

@@ -1913,6 +1913,8 @@ are left unarchived.
 | TODO-5386 | Migrate the remaining string-tagged collection family comparisons to CollectionFamily | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
 | TODO-5387 | Express the three lowerer receiver-family predicates as table rows | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
 | TODO-5388 | Shared lowerer-callback test factories for ir_pipeline validation tests | [2026-10.md](todo_archive/2026-10.md) | - |
+| TODO-5389 | Convert ir_pipeline validation inference_expr_kind / call_return_setup / get_return_info tests | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
+| TODO-5390 | Convert ir_pipeline validation statement_call_helper_buffer_store tests | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
 
 <!-- INDEX-END -->
 
