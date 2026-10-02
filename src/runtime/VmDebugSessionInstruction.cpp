@@ -1,15 +1,83 @@
 #include "primec/runtime/Vm.h"
 
-#include "VmControlFlowOpcodeShared.h"
+#include "VmExecution.h"
 #include "VmHeapHelpers.h"
 #include "VmIoHelpers.h"
-#include "VmDebugSessionInstructionNumeric.h"
 
 namespace primec {
 
+namespace {
+
+// Serves one kernel step from the session's own heap, argv and host bindings,
+// so debug sessions run exactly the dispatch `Vm::execute` runs.
+class DebugSessionKernelHost final : public vm_detail::VmKernelHost {
+public:
+  DebugSessionKernelHost(uint64_t argCount,
+                         const std::vector<std::string_view> *args,
+                         const VmHostFunctions *hostFunctions,
+                         std::vector<uint64_t> &heapSlots,
+                         std::vector<VmDebugSession::HeapAllocation> &heapAllocations)
+      : argCount_(argCount),
+        args_(args),
+        hostFunctions_(hostFunctions),
+        heapSlots_(heapSlots),
+        heapAllocations_(heapAllocations) {}
+
+  uint64_t argumentCount() const override { return argCount_; }
+  uint64_t slotBytes() const override { return IrSlotBytes; }
+  size_t maxCallDepth() const override { return 4096; }
+
+  bool resolveIndirectAddress(uint64_t address,
+                              std::vector<uint64_t> &locals,
+                              uint64_t *&slot,
+                              std::string &error) override {
+    return vm_detail::resolveIndirectAddress(
+        address, slotBytes(), locals, heapSlots_, heapAllocations_, slot, error);
+  }
+  bool allocateHeapSlots(uint64_t slotCount, uint64_t &address, std::string &error) override {
+    return vm_detail::allocateVmHeapSlots(slotCount, slotBytes(), heapSlots_, heapAllocations_, address, error);
+  }
+  bool freeHeapSlots(uint64_t address, std::string &error) override {
+    return vm_detail::freeVmHeapSlots(address, slotBytes(), heapSlots_, heapAllocations_, error);
+  }
+  bool reallocHeapSlots(uint64_t address,
+                        uint64_t slotCount,
+                        uint64_t &newAddress,
+                        std::string &error) override {
+    return vm_detail::reallocVmHeapSlots(
+        address, slotCount, slotBytes(), heapSlots_, heapAllocations_, newAddress, error);
+  }
+  bool handlePrintInstruction(const IrModule &module,
+                              const IrInstruction &inst,
+                              std::vector<uint64_t> &stack,
+                              std::string &error) override {
+    return vm_detail::handlePrintOpcode(module, inst, stack, args_, error);
+  }
+  bool handleFileInstruction(const IrModule &module,
+                             const IrInstruction &inst,
+                             std::vector<uint64_t> &stack,
+                             std::vector<uint64_t> &locals,
+                             std::string &error) override {
+    return vm_detail::handleFileOpcode(module, inst, stack, locals, error);
+  }
+  bool handleHostCall(const IrModule &module,
+                      const IrInstruction &inst,
+                      std::vector<uint64_t> &stack,
+                      std::string &error) override {
+    return vm_detail::handleVmHostCall(hostFunctions_, module, inst, stack, error);
+  }
+
+private:
+  uint64_t argCount_ = 0;
+  const std::vector<std::string_view> *args_ = nullptr;
+  const VmHostFunctions *hostFunctions_ = nullptr;
+  std::vector<uint64_t> &heapSlots_;
+  std::vector<VmDebugSession::HeapAllocation> &heapAllocations_;
+};
+
+} // namespace
+
 VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) {
-  constexpr uint64_t kSlotBytes = IrSlotBytes;
-  constexpr size_t MaxCallDepth = 4096;
   if (!module_) {
     error = "debug session has no active module";
     return StepOutcome::Fault;
@@ -18,11 +86,9 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
     error = "debug session has no active frame";
     return StepOutcome::Fault;
   }
-  Frame &frame = frames_.back();
+  const Frame &frame = frames_.back();
   const IrFunction &fn = *frame.function;
-  std::vector<uint64_t> &locals = frame.locals;
-  size_t &ip = frame.ip;
-  if (ip >= fn.instructions.size()) {
+  if (frame.ip >= fn.instructions.size()) {
     if (frames_.size() == 1) {
       error = "missing return in IR";
     } else {
@@ -31,7 +97,7 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
     appendMappedStackTrace(error);
     return StepOutcome::Fault;
   }
-  const IrInstruction &inst = fn.instructions[ip];
+  const IrInstruction &inst = fn.instructions[frame.ip];
   auto emitInstructionHook = [&](VmDebugInstructionHook hook) {
     if (!hook) {
       return;
@@ -72,398 +138,29 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
     return StepOutcome::Fault;
   };
   emitInstructionHook(hooks_.beforeInstruction);
-  const auto numericResult = vm_debug_detail::handleVmDebugNumericOpcode(inst, stack_, error);
-  if (numericResult != vm_debug_detail::OpcodeBlockResult::NotHandled) {
-    if (numericResult == vm_debug_detail::OpcodeBlockResult::Fault) {
+
+  DebugSessionKernelHost host(argCount_,
+                              argvViews_,
+                              hostFunctions_ ? &*hostFunctions_ : nullptr,
+                              heapSlots_,
+                              heapAllocations_);
+  vm_detail::VmKernelStepEvent event;
+  switch (vm_detail::stepVmKernel(*module_, host, stack_, frames_, localCounts_, result_, event, error)) {
+    case vm_detail::VmKernelStepOutcome::Fault:
       return finishFault();
-    }
-    ip += 1;
-    return finishStep(StepOutcome::Continue);
+    case vm_detail::VmKernelStepOutcome::Exit:
+      frames_.clear();
+      emitCallHook(hooks_.callPop, event.functionIndex, event.returnsValueToCaller);
+      return finishStep(StepOutcome::Exit);
+    case vm_detail::VmKernelStepOutcome::Continue:
+      break;
   }
-  const auto controlFlowOutcome = vm_detail::handleSharedVmControlFlowOpcode(inst,
-                                                                             stack_,
-                                                                             fn.instructions.size(),
-                                                                             module_ ? module_->functions.size() : 0,
-                                                                             frames_.size(),
-                                                                             MaxCallDepth,
-                                                                             frame.returnValueToCaller,
-                                                                             ip,
-                                                                             error);
-  if (controlFlowOutcome.result == vm_detail::VmControlFlowOpcodeResult::Fault) {
-    return finishFault();
+  if (event.kind == vm_detail::VmKernelStepKind::Call) {
+    emitCallHook(hooks_.callPush, event.functionIndex, event.returnsValueToCaller);
+  } else if (event.kind == vm_detail::VmKernelStepKind::Return) {
+    emitCallHook(hooks_.callPop, event.functionIndex, event.returnsValueToCaller);
   }
-  if (controlFlowOutcome.result == vm_detail::VmControlFlowOpcodeResult::Continue) {
-    return finishStep(StepOutcome::Continue);
-  }
-  if (controlFlowOutcome.result == vm_detail::VmControlFlowOpcodeResult::Call) {
-    Frame calleeFrame;
-    calleeFrame.functionIndex = controlFlowOutcome.targetFunctionIndex;
-    calleeFrame.function = &module_->functions[controlFlowOutcome.targetFunctionIndex];
-    calleeFrame.locals.assign(localCounts_[controlFlowOutcome.targetFunctionIndex], 0);
-    calleeFrame.returnValueToCaller = controlFlowOutcome.returnValueToCaller;
-    frames_.push_back(std::move(calleeFrame));
-    emitCallHook(hooks_.callPush,
-                 controlFlowOutcome.targetFunctionIndex,
-                 controlFlowOutcome.returnValueToCaller);
-    return finishStep(StepOutcome::Continue);
-  }
-  if (controlFlowOutcome.result == vm_detail::VmControlFlowOpcodeResult::Exit) {
-    const size_t poppedFunctionIndex = frame.functionIndex;
-    result_ = controlFlowOutcome.returnValue;
-    frames_.clear();
-    emitCallHook(hooks_.callPop,
-                 poppedFunctionIndex,
-                 controlFlowOutcome.returnValueToCaller);
-    return finishStep(StepOutcome::Exit);
-  }
-  if (controlFlowOutcome.result == vm_detail::VmControlFlowOpcodeResult::Return) {
-    const size_t poppedFunctionIndex = frame.functionIndex;
-    frames_.pop_back();
-    if (controlFlowOutcome.returnValueToCaller) {
-      stack_.push_back(controlFlowOutcome.returnValue);
-    }
-    emitCallHook(hooks_.callPop,
-                 poppedFunctionIndex,
-                 controlFlowOutcome.returnValueToCaller);
-    return finishStep(StepOutcome::Continue);
-  }
-  switch (inst.op) {
-    case IrOpcode::PushI32:
-      stack_.push_back(static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(inst.imm))));
-      ip += 1;
-      return finishStep(StepOutcome::Continue);
-    case IrOpcode::PushI64:
-      stack_.push_back(inst.imm);
-      ip += 1;
-      return finishStep(StepOutcome::Continue);
-    case IrOpcode::PushF32:
-    case IrOpcode::PushF64:
-      stack_.push_back(inst.imm);
-      ip += 1;
-      return finishStep(StepOutcome::Continue);
-    case IrOpcode::PushArgc: {
-      const int32_t count32 = static_cast<int32_t>(argCount_);
-      stack_.push_back(static_cast<uint64_t>(static_cast<int64_t>(count32)));
-      ip += 1;
-      return finishStep(StepOutcome::Continue);
-    }
-    case IrOpcode::LoadLocal: {
-      if (static_cast<size_t>(inst.imm) >= locals.size()) {
-        error = "invalid local index in IR";
-        return finishFault();
-      }
-      stack_.push_back(locals[static_cast<size_t>(inst.imm)]);
-      ip += 1;
-      return finishStep(StepOutcome::Continue);
-    }
-    case IrOpcode::StoreLocal: {
-      if (static_cast<size_t>(inst.imm) >= locals.size()) {
-        error = "invalid local index in IR";
-        return finishFault();
-      }
-      if (stack_.empty()) {
-        error = "IR stack underflow on store";
-        return finishFault();
-      }
-      locals[static_cast<size_t>(inst.imm)] = stack_.back();
-      stack_.pop_back();
-      ip += 1;
-      return finishStep(StepOutcome::Continue);
-    }
-    case IrOpcode::AddressOfLocal: {
-      if (static_cast<size_t>(inst.imm) >= locals.size()) {
-        error = "invalid local index in IR";
-        return finishFault();
-      }
-      stack_.push_back(static_cast<uint64_t>(inst.imm) * kSlotBytes);
-      ip += 1;
-      return finishStep(StepOutcome::Continue);
-    }
-    case IrOpcode::LoadIndirect: {
-      if (stack_.empty()) {
-        error = "IR stack underflow on load indirect";
-        return finishFault();
-      }
-      const uint64_t address = stack_.back();
-      stack_.pop_back();
-      uint64_t *slot = nullptr;
-      if (!vm_detail::resolveIndirectAddress(address, kSlotBytes, locals, heapSlots_, heapAllocations_, slot, error)) {
-        return finishFault();
-      }
-      stack_.push_back(*slot);
-      ip += 1;
-      return finishStep(StepOutcome::Continue);
-    }
-    case IrOpcode::StoreIndirect: {
-      if (stack_.size() < 2) {
-        error = "IR stack underflow on store indirect";
-        return finishFault();
-      }
-      const uint64_t value = stack_.back();
-      stack_.pop_back();
-      const uint64_t address = stack_.back();
-      stack_.pop_back();
-      uint64_t *slot = nullptr;
-      if (!vm_detail::resolveIndirectAddress(address, kSlotBytes, locals, heapSlots_, heapAllocations_, slot, error)) {
-        return finishFault();
-      }
-      *slot = value;
-      stack_.push_back(value);
-      ip += 1;
-      return finishStep(StepOutcome::Continue);
-    }
-    case IrOpcode::HeapAlloc: {
-      if (stack_.empty()) {
-        error = "IR stack underflow on heap alloc";
-        return finishFault();
-      }
-      const uint64_t slotCount = stack_.back();
-      stack_.pop_back();
-      uint64_t address = 0;
-      if (!vm_detail::allocateVmHeapSlots(slotCount, kSlotBytes, heapSlots_, heapAllocations_, address, error)) {
-        return finishFault();
-      }
-      stack_.push_back(address);
-      ip += 1;
-      return finishStep(StepOutcome::Continue);
-    }
-    case IrOpcode::HeapFree: {
-      if (stack_.empty()) {
-        error = "IR stack underflow on heap free";
-        return finishFault();
-      }
-      const uint64_t address = stack_.back();
-      stack_.pop_back();
-      if (!vm_detail::freeVmHeapSlots(address, kSlotBytes, heapSlots_, heapAllocations_, error)) {
-        return finishFault();
-      }
-      ip += 1;
-      return finishStep(StepOutcome::Continue);
-    }
-    case IrOpcode::HeapRealloc: {
-      if (stack_.size() < 2) {
-        error = "IR stack underflow on heap realloc";
-        return finishFault();
-      }
-      const uint64_t slotCount = stack_.back();
-      stack_.pop_back();
-      const uint64_t address = stack_.back();
-      stack_.pop_back();
-      uint64_t newAddress = 0;
-      if (!vm_detail::reallocVmHeapSlots(address,
-                                         slotCount,
-                                         kSlotBytes,
-                                         heapSlots_,
-                                         heapAllocations_,
-                                         newAddress,
-                                         error)) {
-        return finishFault();
-      }
-      stack_.push_back(newAddress);
-      ip += 1;
-      return finishStep(StepOutcome::Continue);
-    }
-    case IrOpcode::Dup: {
-      if (stack_.empty()) {
-        error = "IR stack underflow on dup";
-        return finishFault();
-      }
-      stack_.push_back(stack_.back());
-      ip += 1;
-      return finishStep(StepOutcome::Continue);
-    }
-    case IrOpcode::Pop: {
-      if (stack_.empty()) {
-        error = "IR stack underflow on pop";
-        return finishFault();
-      }
-      stack_.pop_back();
-      ip += 1;
-      return finishStep(StepOutcome::Continue);
-    }
-    case IrOpcode::PrintI32: {
-      if (!vm_detail::handlePrintOpcode(*module_, inst, stack_, argvViews_, error)) {
-        return finishFault();
-      }
-      ip += 1;
-      return finishStep(StepOutcome::Continue);
-    }
-    case IrOpcode::PrintI64: {
-      if (!vm_detail::handlePrintOpcode(*module_, inst, stack_, argvViews_, error)) {
-        return finishFault();
-      }
-      ip += 1;
-      return finishStep(StepOutcome::Continue);
-    }
-    case IrOpcode::PrintU64: {
-      if (!vm_detail::handlePrintOpcode(*module_, inst, stack_, argvViews_, error)) {
-        return finishFault();
-      }
-      ip += 1;
-      return finishStep(StepOutcome::Continue);
-    }
-    case IrOpcode::PrintString: {
-      if (!vm_detail::handlePrintOpcode(*module_, inst, stack_, argvViews_, error)) {
-        return finishFault();
-      }
-      ip += 1;
-      return finishStep(StepOutcome::Continue);
-    }
-    case IrOpcode::PrintStringDynamic: {
-      if (!vm_detail::handlePrintOpcode(*module_, inst, stack_, argvViews_, error)) {
-        return finishFault();
-      }
-      ip += 1;
-      return finishStep(StepOutcome::Continue);
-    }
-    case IrOpcode::PrintArgv: {
-      if (!vm_detail::handlePrintOpcode(*module_, inst, stack_, argvViews_, error)) {
-        return finishFault();
-      }
-      ip += 1;
-      return finishStep(StepOutcome::Continue);
-    }
-    case IrOpcode::PrintArgvUnsafe: {
-      if (!vm_detail::handlePrintOpcode(*module_, inst, stack_, argvViews_, error)) {
-        return finishFault();
-      }
-      ip += 1;
-      return finishStep(StepOutcome::Continue);
-    }
-    case IrOpcode::FileOpenRead:
-    case IrOpcode::FileOpenWrite:
-    case IrOpcode::FileOpenAppend: {
-      if (!vm_detail::handleFileOpcode(*module_, inst, stack_, locals, error)) {
-        return finishFault();
-      }
-      ip += 1;
-      return finishStep(StepOutcome::Continue);
-    }
-    case IrOpcode::FileOpenReadDynamic:
-    case IrOpcode::FileOpenWriteDynamic:
-    case IrOpcode::FileOpenAppendDynamic: {
-      if (!vm_detail::handleFileOpcode(*module_, inst, stack_, locals, error)) {
-        return finishFault();
-      }
-      ip += 1;
-      return finishStep(StepOutcome::Continue);
-    }
-    case IrOpcode::FileClose: {
-      if (!vm_detail::handleFileOpcode(*module_, inst, stack_, locals, error)) {
-        return finishFault();
-      }
-      ip += 1;
-      return finishStep(StepOutcome::Continue);
-    }
-    case IrOpcode::FileReadByte: {
-      if (!vm_detail::handleFileOpcode(*module_, inst, stack_, locals, error)) {
-        return finishFault();
-      }
-      ip += 1;
-      return finishStep(StepOutcome::Continue);
-    }
-    case IrOpcode::FileFlush: {
-      if (!vm_detail::handleFileOpcode(*module_, inst, stack_, locals, error)) {
-        return finishFault();
-      }
-      ip += 1;
-      return finishStep(StepOutcome::Continue);
-    }
-    case IrOpcode::FileWriteI32: {
-      if (!vm_detail::handleFileOpcode(*module_, inst, stack_, locals, error)) {
-        return finishFault();
-      }
-      ip += 1;
-      return finishStep(StepOutcome::Continue);
-    }
-    case IrOpcode::FileWriteI64: {
-      if (!vm_detail::handleFileOpcode(*module_, inst, stack_, locals, error)) {
-        return finishFault();
-      }
-      ip += 1;
-      return finishStep(StepOutcome::Continue);
-    }
-    case IrOpcode::FileWriteU64: {
-      if (!vm_detail::handleFileOpcode(*module_, inst, stack_, locals, error)) {
-        return finishFault();
-      }
-      ip += 1;
-      return finishStep(StepOutcome::Continue);
-    }
-    case IrOpcode::FileWriteString: {
-      if (!vm_detail::handleFileOpcode(*module_, inst, stack_, locals, error)) {
-        return finishFault();
-      }
-      ip += 1;
-      return finishStep(StepOutcome::Continue);
-    }
-    case IrOpcode::FileWriteStringDynamic: {
-      if (!vm_detail::handleFileOpcode(*module_, inst, stack_, locals, error)) {
-        return finishFault();
-      }
-      ip += 1;
-      return finishStep(StepOutcome::Continue);
-    }
-    case IrOpcode::FileWriteByte: {
-      if (!vm_detail::handleFileOpcode(*module_, inst, stack_, locals, error)) {
-        return finishFault();
-      }
-      ip += 1;
-      return finishStep(StepOutcome::Continue);
-    }
-    case IrOpcode::FileWriteNewline: {
-      if (!vm_detail::handleFileOpcode(*module_, inst, stack_, locals, error)) {
-        return finishFault();
-      }
-      ip += 1;
-      return finishStep(StepOutcome::Continue);
-    }
-    case IrOpcode::LoadStringByte: {
-      if (stack_.empty()) {
-        error = "IR stack underflow on string index";
-        return finishFault();
-      }
-      const uint64_t indexRaw = stack_.back();
-      stack_.pop_back();
-      const uint64_t stringIndex = inst.imm;
-      if (stringIndex >= module_->stringTable.size()) {
-        error = "invalid string index in IR";
-        return finishFault();
-      }
-      const std::string &text = module_->stringTable[static_cast<size_t>(stringIndex)];
-      const size_t index = static_cast<size_t>(indexRaw);
-      if (index >= text.size()) {
-        error = "string index out of bounds in IR";
-        return finishFault();
-      }
-      const uint8_t byte = static_cast<uint8_t>(text[index]);
-      stack_.push_back(static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(byte))));
-      ip += 1;
-      return finishStep(StepOutcome::Continue);
-    }
-    case IrOpcode::LoadStringLength: {
-      if (stack_.empty()) {
-        error = "IR stack underflow on string index";
-        return finishFault();
-      }
-      const uint64_t stringIndex = stack_.back();
-      stack_.pop_back();
-      if (stringIndex >= module_->stringTable.size()) {
-        error = "invalid string index in IR";
-        return finishFault();
-      }
-      stack_.push_back(
-          static_cast<uint64_t>(module_->stringTable[static_cast<size_t>(stringIndex)].size()));
-      ip += 1;
-      return finishStep(StepOutcome::Continue);
-    }
-    case IrOpcode::CallHost:
-      error = "host calls are not supported in VM debug sessions";
-      return finishFault();
-    default:
-      error = "unknown IR opcode";
-      return finishFault();
-  }
+  return finishStep(StepOutcome::Continue);
 }
 
 } // namespace primec

@@ -5,16 +5,6 @@
 namespace primec {
 namespace {
 
-size_t vmDebugLocalCount(const IrFunction &function) {
-  size_t localCount = 0;
-  for (const auto &inst : function.instructions) {
-    if (inst.op == IrOpcode::LoadLocal || inst.op == IrOpcode::StoreLocal || inst.op == IrOpcode::AddressOfLocal) {
-      localCount = std::max(localCount, static_cast<size_t>(inst.imm) + 1);
-    }
-  }
-  return localCount;
-}
-
 void copyOwnedArgv(const std::vector<std::string_view> &args,
                    std::vector<std::string> &ownedArgStorage,
                    std::vector<std::string_view> &ownedArgViews) {
@@ -49,7 +39,7 @@ bool VmDebugSession::initFromModule(const IrModule &module,
   breakpoints_.clear();
   nextHookSequence_ = 0;
   for (size_t i = 0; i < module.functions.size(); ++i) {
-    localCounts_[i] = vmDebugLocalCount(module.functions[i]);
+    localCounts_[i] = vm_detail::computeVmKernelLocalCount(module.functions[i]);
   }
 
   Frame entryFrame;
@@ -79,6 +69,7 @@ bool VmDebugSession::start(const IrModule &module, std::string &error, uint64_t 
   }
   ownedArgStorage_.clear();
   ownedArgViews_.clear();
+  hostFunctions_.reset();
   if (!initFromModule(module, argCount, nullptr)) {
     error = "failed to initialize debug session";
     return false;
@@ -93,11 +84,26 @@ bool VmDebugSession::start(const IrModule &module,
     error = "invalid IR entry index";
     return false;
   }
+  hostFunctions_.reset();
   copyOwnedArgv(args, ownedArgStorage_, ownedArgViews_);
   if (!initFromModule(module, static_cast<uint64_t>(ownedArgViews_.size()), &ownedArgViews_)) {
     error = "failed to initialize debug session";
     return false;
   }
+  return true;
+}
+
+bool VmDebugSession::start(const IrModule &module,
+                          std::string &error,
+                          const std::vector<std::string_view> &args,
+                          const VmHostFunctions &hostFunctions) {
+  if (!hostFunctions.verify(module, error)) {
+    return false;
+  }
+  if (!start(module, error, args)) {
+    return false;
+  }
+  hostFunctions_ = hostFunctions;
   return true;
 }
 

@@ -617,7 +617,6 @@ set(PRIMESTRUCT_RUNTIME_SOURCES
   src/runtime/VmDebugHelpers.cpp
   src/runtime/VmDebugSession.cpp
   src/runtime/VmDebugSessionInstruction.cpp
-  src/runtime/VmDebugSessionInstructionNumeric.cpp
   src/runtime/VmDebugSessionSetup.cpp
   src/runtime/VmControlFlowOpcodeShared.cpp
   src/runtime/VmExecution.cpp

@@ -11,25 +11,6 @@ namespace primec::vm_detail {
 
 namespace {
 
-struct VmKernelFrame {
-  const IrFunction *function = nullptr;
-  size_t functionIndex = 0;
-  std::vector<uint64_t> locals;
-  size_t ip = 0;
-  bool returnValueToCaller = false;
-};
-
-size_t computeVmKernelLocalCount(const IrFunction &function) {
-  size_t localCount = 0;
-  for (const auto &inst : function.instructions) {
-    if (inst.op == IrOpcode::LoadLocal || inst.op == IrOpcode::StoreLocal ||
-        inst.op == IrOpcode::AddressOfLocal) {
-      localCount = std::max(localCount, static_cast<size_t>(inst.imm) + 1);
-    }
-  }
-  return localCount;
-}
-
 bool isVmKernelNumericOpcode(IrOpcode op) {
   return vm_kernel::isPureNumericOpcode(op);
 }
@@ -75,6 +56,331 @@ bool isVmKernelFileOpcode(IrOpcode op) {
   }
 }
 
+size_t computeVmKernelLocalCount(const IrFunction &function) {
+  size_t localCount = 0;
+  for (const auto &inst : function.instructions) {
+    if (inst.op == IrOpcode::LoadLocal || inst.op == IrOpcode::StoreLocal ||
+        inst.op == IrOpcode::AddressOfLocal) {
+      localCount = std::max(localCount, static_cast<size_t>(inst.imm) + 1);
+    }
+  }
+  return localCount;
+}
+
+namespace {
+
+// The single dispatch implementation: `executeVmKernel` loops over it and
+// debug sessions call it through `stepVmKernel`. Defined in this unit so the
+// run loop can inline it.
+// `TrackEvents` is false for plain runs, which skip filling the step event.
+template <bool TrackEvents>
+[[gnu::always_inline]] inline VmKernelStepOutcome stepImpl(const IrModule &module,
+                                                           VmKernelHost &host,
+                                                           std::vector<uint64_t> &stack,
+                                                           std::vector<VmKernelFrame> &frames,
+                                                           const std::vector<size_t> &localCounts,
+                                                           uint64_t &result,
+                                                           VmKernelStepEvent &event,
+                                                           std::string &error) {
+  if constexpr (TrackEvents) {
+    event = {};
+  }
+  VmKernelFrame &frame = frames.back();
+  const IrFunction &fn = *frame.function;
+  std::vector<uint64_t> &locals = frame.locals;
+  size_t &ip = frame.ip;
+  if (ip >= fn.instructions.size()) {
+    if (frames.size() == 1) {
+      error = "missing return in IR";
+    } else {
+      error = "missing return in IR function " + fn.name;
+    }
+    return VmKernelStepOutcome::Fault;
+  }
+  const auto &inst = fn.instructions[ip];
+  const auto controlFlowOutcome =
+      handleSharedVmControlFlowOpcode(inst,
+                                      stack,
+                                      fn.instructions.size(),
+                                      module.functions.size(),
+                                      frames.size(),
+                                      host.maxCallDepth(),
+                                      frame.returnValueToCaller,
+                                      ip,
+                                      error);
+  if (controlFlowOutcome.result == VmControlFlowOpcodeResult::Fault) {
+    return VmKernelStepOutcome::Fault;
+  }
+  if (controlFlowOutcome.result == VmControlFlowOpcodeResult::Continue) {
+    return VmKernelStepOutcome::Continue;
+  }
+  if (controlFlowOutcome.result == VmControlFlowOpcodeResult::Call) {
+    VmKernelFrame calleeFrame;
+    calleeFrame.functionIndex = controlFlowOutcome.targetFunctionIndex;
+    calleeFrame.function = &module.functions[controlFlowOutcome.targetFunctionIndex];
+    calleeFrame.locals.assign(localCounts[controlFlowOutcome.targetFunctionIndex], 0);
+    calleeFrame.returnValueToCaller = controlFlowOutcome.returnValueToCaller;
+    frames.push_back(std::move(calleeFrame));
+    if constexpr (TrackEvents) {
+      event.kind = VmKernelStepKind::Call;
+      event.functionIndex = controlFlowOutcome.targetFunctionIndex;
+      event.returnsValueToCaller = controlFlowOutcome.returnValueToCaller;
+    }
+    return VmKernelStepOutcome::Continue;
+  }
+  if (controlFlowOutcome.result == VmControlFlowOpcodeResult::Exit) {
+    result = controlFlowOutcome.returnValue;
+    if constexpr (TrackEvents) {
+      event.kind = VmKernelStepKind::Exit;
+      event.functionIndex = frame.functionIndex;
+      event.returnsValueToCaller = controlFlowOutcome.returnValueToCaller;
+    }
+    return VmKernelStepOutcome::Exit;
+  }
+  if (controlFlowOutcome.result == VmControlFlowOpcodeResult::Return) {
+    const bool returnToCaller = controlFlowOutcome.returnValueToCaller;
+    if constexpr (TrackEvents) {
+      event.kind = VmKernelStepKind::Return;
+      event.functionIndex = frame.functionIndex;
+      event.returnsValueToCaller = returnToCaller;
+    }
+    frames.pop_back();
+    if (returnToCaller) {
+      stack.push_back(controlFlowOutcome.returnValue);
+    }
+    return VmKernelStepOutcome::Continue;
+  }
+  switch (inst.op) {
+  case IrOpcode::PushI32:
+    stack.push_back(static_cast<uint64_t>(
+        static_cast<int64_t>(static_cast<int32_t>(inst.imm))));
+    ip += 1;
+    return VmKernelStepOutcome::Continue;
+  case IrOpcode::PushI64:
+  case IrOpcode::PushF32:
+  case IrOpcode::PushF64:
+    stack.push_back(inst.imm);
+    ip += 1;
+    return VmKernelStepOutcome::Continue;
+  case IrOpcode::PushArgc: {
+    const int32_t count32 = static_cast<int32_t>(host.argumentCount());
+    stack.push_back(static_cast<uint64_t>(static_cast<int64_t>(count32)));
+    ip += 1;
+    return VmKernelStepOutcome::Continue;
+  }
+  case IrOpcode::LoadLocal: {
+    if (static_cast<size_t>(inst.imm) >= locals.size()) {
+      error = "invalid local index in IR";
+      return VmKernelStepOutcome::Fault;
+    }
+    stack.push_back(locals[static_cast<size_t>(inst.imm)]);
+    ip += 1;
+    return VmKernelStepOutcome::Continue;
+  }
+  case IrOpcode::StoreLocal: {
+    if (static_cast<size_t>(inst.imm) >= locals.size()) {
+      error = "invalid local index in IR";
+      return VmKernelStepOutcome::Fault;
+    }
+    if (stack.empty()) {
+      error = "IR stack underflow on store";
+      return VmKernelStepOutcome::Fault;
+    }
+    locals[static_cast<size_t>(inst.imm)] = stack.back();
+    stack.pop_back();
+    ip += 1;
+    return VmKernelStepOutcome::Continue;
+  }
+  case IrOpcode::AddressOfLocal: {
+    if (static_cast<size_t>(inst.imm) >= locals.size()) {
+      error = "invalid local index in IR";
+      return VmKernelStepOutcome::Fault;
+    }
+    stack.push_back(static_cast<uint64_t>(inst.imm) * host.slotBytes());
+    ip += 1;
+    return VmKernelStepOutcome::Continue;
+  }
+  case IrOpcode::LoadIndirect: {
+    if (stack.empty()) {
+      error = "IR stack underflow on load indirect";
+      return VmKernelStepOutcome::Fault;
+    }
+    const uint64_t address = stack.back();
+    stack.pop_back();
+    uint64_t *slot = nullptr;
+    if (!host.resolveIndirectAddress(address, locals, slot, error)) {
+      return VmKernelStepOutcome::Fault;
+    }
+    stack.push_back(*slot);
+    ip += 1;
+    return VmKernelStepOutcome::Continue;
+  }
+  case IrOpcode::StoreIndirect: {
+    if (stack.size() < 2) {
+      error = "IR stack underflow on store indirect";
+      return VmKernelStepOutcome::Fault;
+    }
+    const uint64_t value = stack.back();
+    stack.pop_back();
+    const uint64_t address = stack.back();
+    stack.pop_back();
+    uint64_t *slot = nullptr;
+    if (!host.resolveIndirectAddress(address, locals, slot, error)) {
+      return VmKernelStepOutcome::Fault;
+    }
+    *slot = value;
+    stack.push_back(value);
+    ip += 1;
+    return VmKernelStepOutcome::Continue;
+  }
+  case IrOpcode::HeapAlloc: {
+    if (stack.empty()) {
+      error = "IR stack underflow on heap alloc";
+      return VmKernelStepOutcome::Fault;
+    }
+    const uint64_t slotCount = stack.back();
+    stack.pop_back();
+    uint64_t address = 0;
+    if (!host.allocateHeapSlots(slotCount, address, error)) {
+      return VmKernelStepOutcome::Fault;
+    }
+    stack.push_back(address);
+    ip += 1;
+    return VmKernelStepOutcome::Continue;
+  }
+  case IrOpcode::HeapFree: {
+    if (stack.empty()) {
+      error = "IR stack underflow on heap free";
+      return VmKernelStepOutcome::Fault;
+    }
+    const uint64_t address = stack.back();
+    stack.pop_back();
+    if (!host.freeHeapSlots(address, error)) {
+      return VmKernelStepOutcome::Fault;
+    }
+    ip += 1;
+    return VmKernelStepOutcome::Continue;
+  }
+  case IrOpcode::HeapRealloc: {
+    if (stack.size() < 2) {
+      error = "IR stack underflow on heap realloc";
+      return VmKernelStepOutcome::Fault;
+    }
+    const uint64_t slotCount = stack.back();
+    stack.pop_back();
+    const uint64_t address = stack.back();
+    stack.pop_back();
+    uint64_t newAddress = 0;
+    if (!host.reallocHeapSlots(address, slotCount, newAddress, error)) {
+      return VmKernelStepOutcome::Fault;
+    }
+    stack.push_back(newAddress);
+    ip += 1;
+    return VmKernelStepOutcome::Continue;
+  }
+  case IrOpcode::Dup:
+    if (stack.empty()) {
+      error = "IR stack underflow on dup";
+      return VmKernelStepOutcome::Fault;
+    }
+    stack.push_back(stack.back());
+    ip += 1;
+    return VmKernelStepOutcome::Continue;
+  case IrOpcode::Pop:
+    if (stack.empty()) {
+      error = "IR stack underflow on pop";
+      return VmKernelStepOutcome::Fault;
+    }
+    stack.pop_back();
+    ip += 1;
+    return VmKernelStepOutcome::Continue;
+  case IrOpcode::LoadStringByte: {
+    if (stack.empty()) {
+      error = "IR stack underflow on string index";
+      return VmKernelStepOutcome::Fault;
+    }
+    const uint64_t indexRaw = stack.back();
+    stack.pop_back();
+    const uint64_t stringIndex = inst.imm;
+    if (stringIndex >= module.stringTable.size()) {
+      error = "invalid string index in IR";
+      return VmKernelStepOutcome::Fault;
+    }
+    const std::string &text = module.stringTable[static_cast<size_t>(stringIndex)];
+    const size_t index = static_cast<size_t>(indexRaw);
+    if (index >= text.size()) {
+      error = "string index out of bounds in IR";
+      return VmKernelStepOutcome::Fault;
+    }
+    const uint8_t byte = static_cast<uint8_t>(text[index]);
+    stack.push_back(static_cast<uint64_t>(
+        static_cast<int64_t>(static_cast<int32_t>(byte))));
+    ip += 1;
+    return VmKernelStepOutcome::Continue;
+  }
+  case IrOpcode::LoadStringLength: {
+    if (stack.empty()) {
+      error = "IR stack underflow on string index";
+      return VmKernelStepOutcome::Fault;
+    }
+    const uint64_t stringIndex = stack.back();
+    stack.pop_back();
+    if (stringIndex >= module.stringTable.size()) {
+      error = "invalid string index in IR";
+      return VmKernelStepOutcome::Fault;
+    }
+    stack.push_back(static_cast<uint64_t>(
+        module.stringTable[static_cast<size_t>(stringIndex)].size()));
+    ip += 1;
+    return VmKernelStepOutcome::Continue;
+  }
+  default:
+    if (isVmKernelNumericOpcode(inst.op)) {
+      if (!handleVmNumericOpcode(inst, stack, error)) {
+        return VmKernelStepOutcome::Fault;
+      }
+      ip += 1;
+      return VmKernelStepOutcome::Continue;
+    }
+    if (isVmKernelPrintOpcode(inst.op)) {
+      if (!host.handlePrintInstruction(module, inst, stack, error)) {
+        return VmKernelStepOutcome::Fault;
+      }
+      ip += 1;
+      return VmKernelStepOutcome::Continue;
+    }
+    if (isVmKernelFileOpcode(inst.op)) {
+      if (!host.handleFileInstruction(module, inst, stack, locals, error)) {
+        return VmKernelStepOutcome::Fault;
+      }
+      ip += 1;
+      return VmKernelStepOutcome::Continue;
+    }
+    if (inst.op == IrOpcode::CallHost) {
+      if (!host.handleHostCall(module, inst, stack, error)) {
+        return VmKernelStepOutcome::Fault;
+      }
+      ip += 1;
+      return VmKernelStepOutcome::Continue;
+    }
+    error = "unknown IR opcode";
+    return VmKernelStepOutcome::Fault;
+  }
+}
+
+} // namespace
+
+VmKernelStepOutcome stepVmKernel(const IrModule &module,
+                                 VmKernelHost &host,
+                                 std::vector<uint64_t> &stack,
+                                 std::vector<VmKernelFrame> &frames,
+                                 const std::vector<size_t> &localCounts,
+                                 uint64_t &result,
+                                 VmKernelStepEvent &event,
+                                 std::string &error) {
+  return stepImpl<true>(module, host, stack, frames, localCounts, result, event, error);
+}
+
 bool executeVmKernel(const IrModule &module,
                      VmKernelHost &host,
                      uint64_t &result,
@@ -99,273 +405,14 @@ bool executeVmKernel(const IrModule &module,
   entryFrame.locals.assign(localCounts[entryFrame.functionIndex], 0);
   frames.push_back(std::move(entryFrame));
 
+  VmKernelStepEvent event;
   while (!frames.empty()) {
-    VmKernelFrame &frame = frames.back();
-    const IrFunction &fn = *frame.function;
-    std::vector<uint64_t> &locals = frame.locals;
-    size_t &ip = frame.ip;
-    if (ip >= fn.instructions.size()) {
-      if (frames.size() == 1) {
-        error = "missing return in IR";
-      } else {
-        error = "missing return in IR function " + fn.name;
-      }
-      return false;
-    }
-
-    const auto &inst = fn.instructions[ip];
-    const auto controlFlowOutcome =
-        handleSharedVmControlFlowOpcode(inst,
-                                        stack,
-                                        fn.instructions.size(),
-                                        module.functions.size(),
-                                        frames.size(),
-                                        host.maxCallDepth(),
-                                        frame.returnValueToCaller,
-                                        ip,
-                                        error);
-    if (controlFlowOutcome.result == VmControlFlowOpcodeResult::Fault) {
-      return false;
-    }
-    if (controlFlowOutcome.result == VmControlFlowOpcodeResult::Continue) {
-      continue;
-    }
-    if (controlFlowOutcome.result == VmControlFlowOpcodeResult::Call) {
-      VmKernelFrame calleeFrame;
-      calleeFrame.functionIndex = controlFlowOutcome.targetFunctionIndex;
-      calleeFrame.function = &module.functions[controlFlowOutcome.targetFunctionIndex];
-      calleeFrame.locals.assign(localCounts[controlFlowOutcome.targetFunctionIndex], 0);
-      calleeFrame.returnValueToCaller = controlFlowOutcome.returnValueToCaller;
-      frames.push_back(std::move(calleeFrame));
-      continue;
-    }
-    if (controlFlowOutcome.result == VmControlFlowOpcodeResult::Exit) {
-      result = controlFlowOutcome.returnValue;
+    switch (stepImpl<false>(module, host, stack, frames, localCounts, result, event, error)) {
+    case VmKernelStepOutcome::Continue:
+      break;
+    case VmKernelStepOutcome::Exit:
       return true;
-    }
-    if (controlFlowOutcome.result == VmControlFlowOpcodeResult::Return) {
-      const bool returnToCaller = controlFlowOutcome.returnValueToCaller;
-      frames.pop_back();
-      if (returnToCaller) {
-        stack.push_back(controlFlowOutcome.returnValue);
-      }
-      continue;
-    }
-
-    switch (inst.op) {
-    case IrOpcode::PushI32:
-      stack.push_back(static_cast<uint64_t>(
-          static_cast<int64_t>(static_cast<int32_t>(inst.imm))));
-      ip += 1;
-      break;
-    case IrOpcode::PushI64:
-    case IrOpcode::PushF32:
-    case IrOpcode::PushF64:
-      stack.push_back(inst.imm);
-      ip += 1;
-      break;
-    case IrOpcode::PushArgc: {
-      const int32_t count32 = static_cast<int32_t>(host.argumentCount());
-      stack.push_back(static_cast<uint64_t>(static_cast<int64_t>(count32)));
-      ip += 1;
-      break;
-    }
-    case IrOpcode::LoadLocal: {
-      if (static_cast<size_t>(inst.imm) >= locals.size()) {
-        error = "invalid local index in IR";
-        return false;
-      }
-      stack.push_back(locals[static_cast<size_t>(inst.imm)]);
-      ip += 1;
-      break;
-    }
-    case IrOpcode::StoreLocal: {
-      if (static_cast<size_t>(inst.imm) >= locals.size()) {
-        error = "invalid local index in IR";
-        return false;
-      }
-      if (stack.empty()) {
-        error = "IR stack underflow on store";
-        return false;
-      }
-      locals[static_cast<size_t>(inst.imm)] = stack.back();
-      stack.pop_back();
-      ip += 1;
-      break;
-    }
-    case IrOpcode::AddressOfLocal: {
-      if (static_cast<size_t>(inst.imm) >= locals.size()) {
-        error = "invalid local index in IR";
-        return false;
-      }
-      stack.push_back(static_cast<uint64_t>(inst.imm) * host.slotBytes());
-      ip += 1;
-      break;
-    }
-    case IrOpcode::LoadIndirect: {
-      if (stack.empty()) {
-        error = "IR stack underflow on load indirect";
-        return false;
-      }
-      const uint64_t address = stack.back();
-      stack.pop_back();
-      uint64_t *slot = nullptr;
-      if (!host.resolveIndirectAddress(address, locals, slot, error)) {
-        return false;
-      }
-      stack.push_back(*slot);
-      ip += 1;
-      break;
-    }
-    case IrOpcode::StoreIndirect: {
-      if (stack.size() < 2) {
-        error = "IR stack underflow on store indirect";
-        return false;
-      }
-      const uint64_t value = stack.back();
-      stack.pop_back();
-      const uint64_t address = stack.back();
-      stack.pop_back();
-      uint64_t *slot = nullptr;
-      if (!host.resolveIndirectAddress(address, locals, slot, error)) {
-        return false;
-      }
-      *slot = value;
-      stack.push_back(value);
-      ip += 1;
-      break;
-    }
-    case IrOpcode::HeapAlloc: {
-      if (stack.empty()) {
-        error = "IR stack underflow on heap alloc";
-        return false;
-      }
-      const uint64_t slotCount = stack.back();
-      stack.pop_back();
-      uint64_t address = 0;
-      if (!host.allocateHeapSlots(slotCount, address, error)) {
-        return false;
-      }
-      stack.push_back(address);
-      ip += 1;
-      break;
-    }
-    case IrOpcode::HeapFree: {
-      if (stack.empty()) {
-        error = "IR stack underflow on heap free";
-        return false;
-      }
-      const uint64_t address = stack.back();
-      stack.pop_back();
-      if (!host.freeHeapSlots(address, error)) {
-        return false;
-      }
-      ip += 1;
-      break;
-    }
-    case IrOpcode::HeapRealloc: {
-      if (stack.size() < 2) {
-        error = "IR stack underflow on heap realloc";
-        return false;
-      }
-      const uint64_t slotCount = stack.back();
-      stack.pop_back();
-      const uint64_t address = stack.back();
-      stack.pop_back();
-      uint64_t newAddress = 0;
-      if (!host.reallocHeapSlots(address, slotCount, newAddress, error)) {
-        return false;
-      }
-      stack.push_back(newAddress);
-      ip += 1;
-      break;
-    }
-    case IrOpcode::Dup:
-      if (stack.empty()) {
-        error = "IR stack underflow on dup";
-        return false;
-      }
-      stack.push_back(stack.back());
-      ip += 1;
-      break;
-    case IrOpcode::Pop:
-      if (stack.empty()) {
-        error = "IR stack underflow on pop";
-        return false;
-      }
-      stack.pop_back();
-      ip += 1;
-      break;
-    case IrOpcode::LoadStringByte: {
-      if (stack.empty()) {
-        error = "IR stack underflow on string index";
-        return false;
-      }
-      const uint64_t indexRaw = stack.back();
-      stack.pop_back();
-      const uint64_t stringIndex = inst.imm;
-      if (stringIndex >= module.stringTable.size()) {
-        error = "invalid string index in IR";
-        return false;
-      }
-      const std::string &text = module.stringTable[static_cast<size_t>(stringIndex)];
-      const size_t index = static_cast<size_t>(indexRaw);
-      if (index >= text.size()) {
-        error = "string index out of bounds in IR";
-        return false;
-      }
-      const uint8_t byte = static_cast<uint8_t>(text[index]);
-      stack.push_back(static_cast<uint64_t>(
-          static_cast<int64_t>(static_cast<int32_t>(byte))));
-      ip += 1;
-      break;
-    }
-    case IrOpcode::LoadStringLength: {
-      if (stack.empty()) {
-        error = "IR stack underflow on string index";
-        return false;
-      }
-      const uint64_t stringIndex = stack.back();
-      stack.pop_back();
-      if (stringIndex >= module.stringTable.size()) {
-        error = "invalid string index in IR";
-        return false;
-      }
-      stack.push_back(static_cast<uint64_t>(
-          module.stringTable[static_cast<size_t>(stringIndex)].size()));
-      ip += 1;
-      break;
-    }
-    default:
-      if (isVmKernelNumericOpcode(inst.op)) {
-        if (!handleVmNumericOpcode(inst, stack, error)) {
-          return false;
-        }
-        ip += 1;
-        break;
-      }
-      if (isVmKernelPrintOpcode(inst.op)) {
-        if (!host.handlePrintInstruction(module, inst, stack, error)) {
-          return false;
-        }
-        ip += 1;
-        break;
-      }
-      if (isVmKernelFileOpcode(inst.op)) {
-        if (!host.handleFileInstruction(module, inst, stack, locals, error)) {
-          return false;
-        }
-        ip += 1;
-        break;
-      }
-      if (inst.op == IrOpcode::CallHost) {
-        if (!host.handleHostCall(module, inst, stack, error)) {
-          return false;
-        }
-        ip += 1;
-        break;
-      }
-      error = "unknown IR opcode";
+    case VmKernelStepOutcome::Fault:
       return false;
     }
   }

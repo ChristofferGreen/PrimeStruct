@@ -11,6 +11,78 @@
 
 namespace primec::vm_detail {
 
+bool handleVmHostCall(const VmHostFunctions *hostFunctions,
+                      const IrModule &module,
+                      const IrInstruction &inst,
+                      std::vector<uint64_t> &stack,
+                      std::string &error) {
+  if (inst.imm >= module.hostImports.size()) {
+    error = "invalid host import index in IR";
+    return false;
+  }
+  const IrHostImport &import = module.hostImports[static_cast<size_t>(inst.imm)];
+  const VmHostBinding *binding = hostFunctions != nullptr ? hostFunctions->find(import.name) : nullptr;
+  if (binding == nullptr || !binding->invoke) {
+    error = "unbound host function: " + import.name;
+    return false;
+  }
+  const size_t argCount = import.parameters.size();
+  if (stack.size() < argCount) {
+    error = "IR stack underflow on host call " + import.name;
+    return false;
+  }
+  const size_t base = stack.size() - argCount;
+  for (size_t i = 0; i < argCount; ++i) {
+    if (import.parameters[i] == IrHostValueKind::String) {
+      uint64_t &slot = stack[base + i];
+      if (slot >= module.stringTable.size()) {
+        error = "invalid string index passed to host function " + import.name;
+        return false;
+      }
+      slot = static_cast<uint64_t>(reinterpret_cast<uintptr_t>(&module.stringTable[static_cast<size_t>(slot)]));
+    }
+  }
+  uint64_t result = 0;
+  std::string hostError;
+  bool ok = false;
+  try {
+    ok = binding->invoke(stack.data() + base, result, hostError);
+  } catch (const std::exception &exception) {
+    hostError = std::string("exception: ") + exception.what();
+  } catch (...) {
+    hostError = "unknown exception";
+  }
+  if (!ok) {
+    error = "host function " + import.name + " failed" + (hostError.empty() ? "" : ": " + hostError);
+    return false;
+  }
+  if (import.returnKind == IrHostValueKind::String && result >= module.stringTable.size()) {
+    error = "host function " + import.name + " returned an invalid string index";
+    return false;
+  }
+  stack.resize(base);
+  switch (import.returnKind) {
+  case IrHostValueKind::Void:
+    break;
+  case IrHostValueKind::I32:
+    stack.push_back(static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(result))));
+    break;
+  case IrHostValueKind::Bool:
+    stack.push_back(result != 0 ? 1u : 0u);
+    break;
+  case IrHostValueKind::I64:
+  case IrHostValueKind::U64:
+  case IrHostValueKind::F64:
+  case IrHostValueKind::String:
+    stack.push_back(result);
+    break;
+  case IrHostValueKind::F32:
+    stack.push_back(result & 0xFFFFFFFFull);
+    break;
+  }
+  return true;
+}
+
 namespace {
 
 class RuntimeVmKernelHost final : public VmKernelHost {
@@ -90,71 +162,7 @@ public:
                       const IrInstruction &inst,
                       std::vector<uint64_t> &stack,
                       std::string &error) override {
-    if (inst.imm >= module.hostImports.size()) {
-      error = "invalid host import index in IR";
-      return false;
-    }
-    const IrHostImport &import = module.hostImports[static_cast<size_t>(inst.imm)];
-    const VmHostBinding *binding = hostFunctions_ != nullptr ? hostFunctions_->find(import.name) : nullptr;
-    if (binding == nullptr || !binding->invoke) {
-      error = "unbound host function: " + import.name;
-      return false;
-    }
-    const size_t argCount = import.parameters.size();
-    if (stack.size() < argCount) {
-      error = "IR stack underflow on host call " + import.name;
-      return false;
-    }
-    const size_t base = stack.size() - argCount;
-    for (size_t i = 0; i < argCount; ++i) {
-      if (import.parameters[i] == IrHostValueKind::String) {
-        uint64_t &slot = stack[base + i];
-        if (slot >= module.stringTable.size()) {
-          error = "invalid string index passed to host function " + import.name;
-          return false;
-        }
-        slot = static_cast<uint64_t>(reinterpret_cast<uintptr_t>(&module.stringTable[static_cast<size_t>(slot)]));
-      }
-    }
-    uint64_t result = 0;
-    std::string hostError;
-    bool ok = false;
-    try {
-      ok = binding->invoke(stack.data() + base, result, hostError);
-    } catch (const std::exception &exception) {
-      hostError = std::string("exception: ") + exception.what();
-    } catch (...) {
-      hostError = "unknown exception";
-    }
-    if (!ok) {
-      error = "host function " + import.name + " failed" + (hostError.empty() ? "" : ": " + hostError);
-      return false;
-    }
-    if (import.returnKind == IrHostValueKind::String && result >= module.stringTable.size()) {
-      error = "host function " + import.name + " returned an invalid string index";
-      return false;
-    }
-    stack.resize(base);
-    switch (import.returnKind) {
-    case IrHostValueKind::Void:
-      break;
-    case IrHostValueKind::I32:
-      stack.push_back(static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(result))));
-      break;
-    case IrHostValueKind::Bool:
-      stack.push_back(result != 0 ? 1u : 0u);
-      break;
-    case IrHostValueKind::I64:
-    case IrHostValueKind::U64:
-    case IrHostValueKind::F64:
-    case IrHostValueKind::String:
-      stack.push_back(result);
-      break;
-    case IrHostValueKind::F32:
-      stack.push_back(result & 0xFFFFFFFFull);
-      break;
-    }
-    return true;
+    return handleVmHostCall(hostFunctions_, module, inst, stack, error);
   }
 
 private:

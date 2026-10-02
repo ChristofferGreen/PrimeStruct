@@ -102,7 +102,6 @@ of sync with them.
 | --- | --- | --- | --- |
 | TODO-5374 | Typed collection family/helper enum replacing string-tagged family checks | deferred | collection-resolution |
 | TODO-5356 | Collapse near-duplicate ir_pipeline validation tests into table-driven suites | deferred | test-infrastructure |
-| TODO-5362 | Unify the VM execution kernel and the debug session interpreter | blocked | ir-vm-structure |
 | TODO-5363 | Spec: VM-owned dynamic strings (design decision) | ready | vm-strings |
 | TODO-5364 | VM string heap: dynamic string indices in the interpreter | blocked | vm-strings |
 | TODO-5365 | Embed API: string results and indexable string arguments | blocked | vm-strings |
@@ -209,28 +208,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - files and lines removed, suite runtime before/after in the result note.
   - stop_rule: stop if coverage cannot be shown equivalent for a group; leave that group as
     is.
-
-- [ ] TODO-5362: Unify the VM execution kernel and the debug session interpreter
-  - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5361
-  - created_at: 2026-10-01
-  - phase: Compiler structure
-  - parallel_track: ir-vm-structure
-  - scope: `VmExecutionKernel` and `VmDebugSession::stepInstruction` interpret the same
-    opcodes twice (`src/runtime/VmDebugSessionInstruction.cpp` repeats cases
-    the kernel has), so every opcode and host-call change must be made
-    twice, and debug sessions already lack host calls. Make the debug
-    session drive the kernel one instruction at a time through the existing
-    `VmKernelHost` boundary with debug hooks.
-  - acceptance:
-    - debug session and normal run share one dispatch implementation; the
-      duplicated opcode cases are deleted.
-    - DAP, breakpoint, and step tests unchanged and green; host calls work in
-      debug sessions with bindings supplied.
-    - `VmDebugSessionInstruction.cpp` reduced by at least half.
-  - stop_rule: if single-step cost makes `Vm::execute` more than 5% slower on the VM
-    benchmarks, keep a fast path for non-debug runs.
 
 - [ ] TODO-5363: Spec: VM-owned dynamic strings (design decision)
   - owner: ai

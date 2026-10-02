@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "primec/ir/Ir.h"
+#include "primec/runtime/VmExecutionKernel.h"
 #include "primec/runtime/VmHost.h"
 
 namespace primec {
@@ -201,6 +202,13 @@ class VmDebugSession {
 public:
   bool start(const IrModule &module, std::string &error, uint64_t argCount = 0);
   bool start(const IrModule &module, std::string &error, const std::vector<std::string_view> &args);
+  // Like start(), with host functions bound for IrOpcode::CallHost (copied into
+  // the session). Every host import of `module` must be bound, as for
+  // Vm::execute.
+  bool start(const IrModule &module,
+             std::string &error,
+             const std::vector<std::string_view> &args,
+             const VmHostFunctions &hostFunctions);
   bool step(VmDebugStopReason &stopReason, std::string &error);
   bool continueExecution(VmDebugStopReason &stopReason, std::string &error);
   bool pause(std::string &error);
@@ -224,13 +232,9 @@ public:
   };
 
 private:
-  struct Frame {
-    const IrFunction *function = nullptr;
-    size_t functionIndex = 0;
-    std::vector<uint64_t> locals;
-    size_t ip = 0;
-    bool returnValueToCaller = false;
-  };
+  // The session steps the shared VM kernel (VmExecutionKernel.h), so its frames
+  // are the kernel's.
+  using Frame = vm_detail::VmKernelFrame;
 
   enum class StepOutcome { Continue, Exit, Fault };
 
@@ -250,6 +254,7 @@ private:
   std::vector<uint64_t> heapSlots_;
   std::vector<HeapAllocation> heapAllocations_;
   std::vector<Frame> frames_;
+  std::optional<VmHostFunctions> hostFunctions_;
   VmDebugSessionState state_ = VmDebugSessionState::Idle;
   uint64_t result_ = 0;
   bool pauseRequested_ = false;

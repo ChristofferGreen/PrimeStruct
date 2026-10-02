@@ -257,7 +257,7 @@ TEST_CASE("vm passes string parameters as pointers into the module string table"
   CHECK(error.find("invalid string index passed to host function measure") != std::string::npos);
 }
 
-TEST_CASE("debug sessions refuse host calls with a diagnostic") {
+TEST_CASE("debug sessions fault on a host call that has no bindings") {
   VmDebugSession session;
   std::string error;
   REQUIRE(session.start(addModule(), error));
@@ -267,7 +267,24 @@ TEST_CASE("debug sessions refuse host calls with a diagnostic") {
     ok = session.step(reason, error);
   }
   CHECK_FALSE(ok);
-  CHECK(error.find("host calls are not supported in VM debug sessions") != std::string::npos);
+  CHECK(error.find("unbound host function: host_add") != std::string::npos);
+}
+
+TEST_CASE("debug sessions run host calls with bindings supplied") {
+  VmHostFunctions hosts;
+  hosts.bind("host_add", addBinding());
+  VmDebugSession session;
+  std::string error;
+  REQUIRE_MESSAGE(session.start(addModule(), error, std::vector<std::string_view>{"prog"}, hosts), error);
+  VmDebugStopReason reason = VmDebugStopReason::Step;
+  REQUIRE_MESSAGE(session.continueExecution(reason, error), error);
+  CHECK(reason == VmDebugStopReason::Exit);
+  CHECK(static_cast<int32_t>(session.snapshot().result) == 42);
+
+  VmHostFunctions none;
+  VmDebugSession unbound;
+  CHECK_FALSE(unbound.start(addModule(), error, std::vector<std::string_view>{"prog"}, none));
+  CHECK(error.find("unbound host function: host_add") != std::string::npos);
 }
 
 namespace {

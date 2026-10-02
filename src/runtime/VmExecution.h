@@ -16,4 +16,12 @@ bool executeVmModule(const IrModule &module,
                      const std::vector<std::string_view> *args,
                      const VmHostFunctions *hostFunctions = nullptr);
 
+// Executes IrOpcode::CallHost against `hostFunctions` (null = nothing bound):
+// pops the import's parameters, invokes the binding and pushes its result.
+bool handleVmHostCall(const VmHostFunctions *hostFunctions,
+                      const IrModule &module,
+                      const IrInstruction &inst,
+                      std::vector<uint64_t> &stack,
+                      std::string &error);
+
 } // namespace primec::vm_detail
