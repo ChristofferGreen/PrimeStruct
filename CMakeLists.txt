@@ -2725,6 +2725,32 @@ if(PRIMESTRUCT_BUILD_TESTS)
     ${PrimeStructTextFilterTestSuites}
   )
 
+  # TODO-5366 / TODO-5367: finished-TODO index and failing-tests registry hygiene.
+  add_test(
+    NAME PrimeStruct_todo_finished_index
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/archive_todo_finished.py
+            --root ${CMAKE_SOURCE_DIR} --check
+  )
+  set_tests_properties(PrimeStruct_todo_finished_index PROPERTIES TIMEOUT 60)
+  add_test(
+    NAME PrimeStruct_todo_finished_index_self_test
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/scripts/test_archive_todo_finished.py
+            --repo-root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_todo_finished_index_self_test PROPERTIES TIMEOUT 60)
+  add_test(
+    NAME PrimeStruct_failing_tests_doc
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/check_failing_tests_doc.py
+            --build-dir ${CMAKE_BINARY_DIR} --root ${CMAKE_SOURCE_DIR} --ctest ${CMAKE_CTEST_COMMAND}
+  )
+  set_tests_properties(PrimeStruct_failing_tests_doc PROPERTIES TIMEOUT 120)
+  add_test(
+    NAME PrimeStruct_failing_tests_doc_self_test
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/scripts/test_check_failing_tests_doc.py
+            --repo-root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_failing_tests_doc_self_test PROPERTIES TIMEOUT 60)
+
   # TODO-5354: guard CTest registration of the doctest binaries and keep the
   # generated test inventory current.
   add_test(

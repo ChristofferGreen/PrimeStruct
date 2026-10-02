@@ -207,7 +207,10 @@ build and layout solidify.
 
 ## TODO slicing workflow
 - Follow `docs/todo.md` as the canonical open-work log; keep only `[ ]`/`[~]` tasks
-  in that file and move completed tasks to `docs/todo_finished.md`.
+  in that file and move completed tasks below the marker in `docs/todo_finished.md`,
+  then run `python3 scripts/archive_todo_finished.py` (files the block verbatim under
+  `docs/todo_archive/` and regenerates the index; ctest `PrimeStruct_todo_finished_index`
+  fails otherwise).
 - Use stable `TODO-XXXX` IDs and keep `Ready Now`, `Immediate Next 10`,
   `Priority Lanes`, and `Execution Queue` synchronized with task blocks.
 - Every active leaf must include explicit `scope`, `acceptance`, and `stop_rule`,
@@ -343,10 +346,11 @@ these steps when a release run fails:
      targeted release-mode rerun before fixing or reporting them as current.
 
 2. Record failures
-   - Immediately add every failing case to `docs/failing_tests.md` with the
-     test location, test case name and the command that exposed it. Keep the
-     file up-to-date: remove an entry only after the fix is verified in a
-     release-mode run.
+   - Immediately add every failing case under "Open Failures" in
+     `docs/failing_tests.md` (``- `<exact ctest name>`: location, command, note``).
+     Keep only current failures there; history lives in `docs/todo_archive/`.
+     Remove an entry only after the fix is verified in a release-mode run
+     (ctest `PrimeStruct_failing_tests_doc` fails on a listed test that passes).
 
 3. Create a focused triage plan (use the agent TODO tool)
    - Use the repository agent's task tracker (or `/memories/session/` plan) to
