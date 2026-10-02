@@ -743,6 +743,16 @@ void rewriteBuiltinKeyValueInsertExpr(
   const bool matchesBuiltinAccessCall =
       directReadHelper == "at" || directReadHelper == "at_unsafe" ||
       builtinAccessHelper == "at" || builtinAccessHelper == "at_unsafe";
+  // Bare `contains(m, k)` takes the same canonical-helper rewrite as the
+  // method spelling (TODO-5370); a user-defined root `/contains` keeps the
+  // call.
+  const bool matchesBuiltinBareReadCall =
+      !expr.isMethodCall && expr.namespacePrefix.empty() &&
+      expr.name.find('/') == std::string::npos &&
+      expr.args.size() == 2 && expr.templateArgs.empty() &&
+      collection_helpers::isContainsHelperName(directReadHelper) &&
+      directReadHelper == expr.name &&
+      definitionMap.count("/" + expr.name) == 0;
   auto isStdlibOwnedDefinitionNamespace = [](const std::string &path) {
     if (path.rfind("/std/", 0) == 0) {
       return true;
@@ -787,7 +797,7 @@ void rewriteBuiltinKeyValueInsertExpr(
       definitionMap.count(explicitRemovedKeyValueCompatibilityReadPath) == 0) {
     return;
   }
-  if (matchesBuiltinReadMethod || matchesBuiltinAccessCall) {
+  if (matchesBuiltinReadMethod || matchesBuiltinBareReadCall || matchesBuiltinAccessCall) {
     const Expr &receiver = expr.args.front();
     auto receiverBinding = resolveBuiltinKeyValueInsertReceiverBinding(
         receiver, bindings, definitionMap, structPaths, definitionNamespace);
@@ -836,14 +846,15 @@ void rewriteBuiltinKeyValueInsertExpr(
     }
     expr.isMethodCall = false;
     expr.isFieldAccess = false;
-    if (matchesBuiltinReadMethod && isCanonicalKeyValueReadHelper &&
-        receiverIsReference) {
+    if ((matchesBuiltinReadMethod || matchesBuiltinBareReadCall) &&
+        isCanonicalKeyValueReadHelper && receiverIsReference) {
       helperName += "_ref";
     }
     if (matchesBuiltinAccessCall && receiverIsReference) {
       helperName += "_ref";
     }
-    if (matchesBuiltinReadMethod && isCanonicalKeyValueReadHelper) {
+    if ((matchesBuiltinReadMethod || matchesBuiltinBareReadCall) &&
+        isCanonicalKeyValueReadHelper) {
       helperName = metadataBackedCanonicalKeyValueHelperPath(helperName);
     }
     if (matchesBuiltinAccessCall) {

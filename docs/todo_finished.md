@@ -57341,3 +57341,22 @@ TODO-4751 closed on 2026-09-29 (public `Map<K, V>` wrapper, semantics/monomorph 
   - stop_rule: fix only this row's behavior; anything else found goes to its own leaf.
   - finished_at: 2026-10-02
   - result: Fixed. The late unknown-target fallback rewrote every method call on a vector/array/string/soa receiver to the preferred vector helper, so `a.at(i)` on an `array<i32>` became `/std/collections/vector/at` and failed argument type checking. Array receivers now rewrite to the bare builtin array helper and publish `/array/at` / `/array/at_unsafe` like the bare spelling. The `array at method` row is now `ok` and a new `array at_unsafe method` row pins the same behavior.
+
+- [x] TODO-5370: map bare `contains(m, k)` passes semantics but fails VM lowering while `m.contains(k)` works
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-01
+  - phase: Compiler structure
+  - parallel_track: collection-defects
+  - scope: bare `contains(m, 2i32)` publishes `/std/collections/map/contains` yet
+    lowering fails with `only supports arithmetic/comparison/clamp/...`
+    (call=/contains); the method form of the same helper lowers and runs.
+    Pinned by the `map contains bare` row. This is the canonical 'published
+    target has no lowered definition' class from TODO-4737.
+  - acceptance:
+    - `contains(m, k)` returns the same value as `m.contains(k)` in the VM and
+      native backends; row flipped to `ok`.
+    - the parity suite and the full release gate stay green.
+  - stop_rule: fix only this row's behavior; anything else found goes to its own leaf.
+  - finished_at: 2026-10-02
+  - result: Fixed. The mutating key/value rewrite (`rewriteBuiltinKeyValueInsertExpr` in SemanticsValidate.cpp) rewrote the method spelling `m.contains(k)` to the canonical `/std/collections/map/contains` call but left the bare spelling as an unresolved builtin that no backend lowered (VM lowering error, call=/contains). Bare `contains(m, k)` with a map receiver now takes the same canonical rewrite (a user-defined root `/contains` keeps the call). The `map contains bare` row is now `ok` (VM) and publishes `/std/collections/map/contains`; native also returns the same value.

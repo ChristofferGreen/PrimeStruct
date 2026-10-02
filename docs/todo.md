@@ -98,7 +98,6 @@ of sync with them.
 | TODO-5374 | Typed collection family/helper enum replacing string-tagged family checks | deferred | collection-resolution |
 | TODO-5373 | Extend the collection parity matrix to Reference receivers and the borrowed `_ref` helpers | ready | collection-defects |
 | TODO-5372 | `soa<T>` method spellings publish internal `soaVector*` helper targets instead of the public helper | ready | collection-defects |
-| TODO-5370 | map bare `contains(m, k)` passes semantics but fails VM lowering while `m.contains(k)` works | ready | collection-defects |
 | TODO-5369 | map `.at()` and `.at_unsafe()` method calls fail with `unknown call target /map/at` | ready | collection-defects |
 | TODO-5352 | Measure and cut semantics header fan-out (SemanticsValidator.h) | ready | semantics-structure |
 | TODO-5353 | Split TemplateMonomorphExpressionRewrite.cpp into focused units | ready | semantics-structure |
@@ -559,23 +558,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
       or, if the methods are intentionally unsupported, correct
       docs/PrimeStruct.md and replace the diagnostic with one that names
       the supported spelling.
-    - the parity suite and the full release gate stay green.
-  - stop_rule: fix only this row's behavior; anything else found goes to its own leaf.
-
-- [ ] TODO-5370: map bare `contains(m, k)` passes semantics but fails VM lowering while `m.contains(k)` works
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-01
-  - phase: Compiler structure
-  - parallel_track: collection-defects
-  - scope: bare `contains(m, 2i32)` publishes `/std/collections/map/contains` yet
-    lowering fails with `only supports arithmetic/comparison/clamp/...`
-    (call=/contains); the method form of the same helper lowers and runs.
-    Pinned by the `map contains bare` row. This is the canonical 'published
-    target has no lowered definition' class from TODO-4737.
-  - acceptance:
-    - `contains(m, k)` returns the same value as `m.contains(k)` in the VM and
-      native backends; row flipped to `ok`.
     - the parity suite and the full release gate stay green.
   - stop_rule: fix only this row's behavior; anything else found goes to its own leaf.
 

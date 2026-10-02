@@ -213,7 +213,7 @@ inline const std::vector<CollectionRow> &collectionRows() {
        "",
        "[map<i32, i32> mut] m{map<i32, i32>(1i32, 100i32, 2i32, 200i32)}",
        "convert<i32>(contains(m, 2i32))",
-       CollectionRowOutcome::LoweringError, 1, "only supports arithmetic/comparison/clamp", "TODO-5370"},
+       CollectionRowOutcome::Ok, 1, "", ""},
       {"map", "at", "method",
        "import /std/collections/*\n\n",
        "",

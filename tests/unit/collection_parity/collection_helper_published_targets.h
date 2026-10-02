@@ -37,7 +37,7 @@ inline const std::vector<std::vector<std::string>> &collectionRowPublishedTarget
       {"/std/collections/map/map", "/std/collections/map/entry", "/std/collections/map/entry", "/std/collections/map/count", "/std/collections/map/count"},
       {"/std/collections/map/map", "/std/collections/map/entry", "/std/collections/map/entry", "/std/collections/map/count", "/std/collections/map/count"},
       {"/std/collections/map/map", "/std/collections/map/entry", "/std/collections/map/entry", "/std/collections/map/contains", "/std/collections/map/contains"},
-      {"/std/collections/map/map", "/std/collections/map/entry", "/std/collections/map/entry"},
+      {"/std/collections/map/map", "/std/collections/map/entry", "/std/collections/map/entry", "/std/collections/map/contains", "/std/collections/map/contains"},
       {},
       {"/std/collections/map/map", "/std/collections/map/entry", "/std/collections/map/entry", "/std/collections/map/at", "/std/collections/map/at"},
       {},
