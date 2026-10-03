@@ -16,7 +16,7 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.argv"
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.control"
                                   TIMEOUT 30
                                   SHARD_PREFIX "control"
-                                  TOTAL_CASES 31
+                                  TOTAL_CASES 9
                                   CASES_PER_SHARD 4)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.pointers"
                                   TIMEOUT 30

@@ -5,8 +5,9 @@ TEST_SUITE_BEGIN("primestruct.program_matrix.control");
 // The programs of tests/unit/compile_run/native_backend/test_compile_run_native_backend_control.cpp
 // that only check an exit code and stdout, run through every execution config
 // (VM step kernel and flat loop, native, and with PRIMESTRUCT_MATRIX_CONFIGS=all
-// optexe and the old C++ emitter). The original suite still runs them on native
-// alone; deleting its copies is TODO-5466.
+// optexe and the old C++ emitter). They replaced their native-only copies in
+// tests/unit/compile_run/native_backend/test_compile_run_native_backend_control.cpp
+// (TODO-5466, batch 1).
 
 TEST_CASE("native void executable") {
   program_matrix::ProgramCase program;
