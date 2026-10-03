@@ -379,6 +379,8 @@ class X64Emitter {
   // needed by the compute core, but required for scratch-buffer digit
   // writing, string-byte access, and single-byte file I/O below.
   void emitLoadMemByte(uint8_t rd, uint8_t base, int32_t disp);
+  // movzx rd, byte [base + index]
+  void emitLoadMemByteIndexed(uint8_t rd, uint8_t base, uint8_t index);
   void emitStoreMemByte(uint8_t base, int32_t disp, uint8_t rs);
   void emitCmpRegImm32(uint8_t reg, int32_t imm);
 

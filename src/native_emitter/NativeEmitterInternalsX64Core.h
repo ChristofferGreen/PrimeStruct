@@ -457,6 +457,17 @@ inline void X64Emitter::emitLoadMemByte(uint8_t rd, uint8_t base, int32_t disp) 
   emitModRmBaseDisp32(rd, base, disp);
 }
 
+inline void X64Emitter::emitLoadMemByteIndexed(uint8_t rd, uint8_t base, uint8_t index) {
+  // REX.W + R=rd.high, X=index.high, B=base.high; modrm mod=00 rm=100 selects a SIB
+  // byte (scale 1). base must not be rbp/r13 (mod=00 would mean disp32) and index must
+  // not be rsp; the callers use rcx as the base.
+  emitByte(static_cast<uint8_t>(0x48 | ((rd >> 3) << 2) | ((index >> 3) << 1) | (base >> 3)));
+  emitByte(0x0F);
+  emitByte(0xB6); // MOVZX r64, r/m8
+  emitByte(static_cast<uint8_t>(((rd & 7) << 3) | 0x04));
+  emitByte(static_cast<uint8_t>(((index & 7) << 3) | (base & 7)));
+}
+
 inline void X64Emitter::emitStoreMemByte(uint8_t base, int32_t disp, uint8_t rs) {
   // Always emit a REX prefix (even with no bits set) so rsp/rbp/rsi/rdi's
   // low-byte forms are addressable here - see emitSetccReg's identical

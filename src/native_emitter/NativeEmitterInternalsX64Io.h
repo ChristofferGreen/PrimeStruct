@@ -368,6 +368,32 @@ inline void X64Emitter::emitFileFlush() {
 }
 
 inline size_t X64Emitter::emitLoadStringBytePlaceholder() {
+  if (deferOperands_) {
+    // The index stays in its register (or immediate) and the byte is loaded straight
+    // into a cache register: lea rcx, [string]; movzx dst, byte [rcx + index].
+    counters_.valueStackPopCount += 1;
+    counters_.valueStackPushCount += 1;
+    uint32_t used = 0;
+    const PendingOperand index = popOperand(used);
+    uint8_t dst = 0;
+    if (index.kind == PendingOperand::Kind::Reg) {
+      dst = index.reg; // the index dies here
+    } else {
+      dst = allocPendingReg(used);
+    }
+    uint8_t indexReg = index.reg;
+    if (index.kind == PendingOperand::Kind::Imm) {
+      emitMovRegImm64(0, index.imm);
+      indexReg = 0;
+    }
+    const size_t fixup = emitLeaRipPlaceholder(1); // rcx = string base
+    emitLoadMemByteIndexed(dst, 1, indexReg);
+    PendingOperand result;
+    result.kind = PendingOperand::Kind::Reg;
+    result.reg = dst;
+    pushPendingOperand(result);
+    return fixup;
+  }
   emitPopReg(0); // index
   const size_t fixupIndex = emitLeaRipPlaceholder(1); // reg1 = string base
   emitAddRegReg(1, 0);
