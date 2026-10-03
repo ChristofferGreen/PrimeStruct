@@ -677,6 +677,19 @@ void runProgramMatrix(const ProgramCase &program, std::span<const ExecutionConfi
   `ExecutionConfig` names (`BENCH_CONFIGS=vm:O0,vm:O2,native:O2`) so the perf
   gate and the correctness matrix describe configurations the same way.
 
+Status (2026-10-03): the runner exists as `tests/unit/program_matrix/program_matrix.h` (TODO-5465). It differs from the
+in-process design above in one respect: every config runs through the built `primevm`/`primec` (as the compile-run
+suites do), so no VM output sink is needed (TODO-5464 is deferred). A `ProgramCase` carries the source, the expected exit
+code and stdout, per-family stderr, extra flags and skip/only lists; `runProgramMatrix` runs it on `vm-step-O0`, `vm-O0`,
+`vm-O2`, `native-O0`, `native-O2` and, with `PRIMESTRUCT_MATRIX_CONFIGS=all`, `optexe-O2` and `exe`. With no expected exit
+code the configs must agree with the first (the checked VM step kernel). `primestruct.program_matrix.control` holds the 22
+mechanical cases of the native control suite and `primestruct.program_matrix.optimizer` eight programs with the shapes the
+optimizer and the optimizing backends work on (short-circuit conditions, loops, calls, recursion, strings, floats, heap
+collections, output inside loops); all pass on all seven configs. The migration of the duplicated vm/native cases is
+TODO-5466. Other differential checks that already exist: `scripts/differential_opt_check.py` (850-program corpus against
+optexe, native and the step kernel), `primestruct.ir.vm_fast_kernel`, `primestruct.ir.optexe` and
+`primestruct.ir.native_codegen` (IR-level programs against the VM).
+
 ### 8.3 Migrating the existing tests
 
 1. Land `ProgramMatrix.h` and port one small suite by hand (for example

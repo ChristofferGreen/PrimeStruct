@@ -954,6 +954,19 @@ if(PRIMESTRUCT_BUILD_TESTS)
   target_link_libraries(PrimeStruct_ir_optimizer_tests PRIVATE primec_ir_lib primec_backend_registry_lib primec_backend_emitters_lib primec_support_lib primec_runtime_lib)
   primestructEnableWarnings(PrimeStruct_ir_optimizer_tests)
 
+  # One program, many execution forms: each case runs through the VM kernels,
+  # the native backend and (opt-in) the C++ emitters via the built primec/primevm.
+  add_executable(PrimeStruct_program_matrix_tests
+    tests/unit/test_main.cpp
+    tests/unit/program_matrix/test_program_matrix_control.cpp
+    tests/unit/program_matrix/test_program_matrix_optimizer.cpp
+  )
+  target_include_directories(PrimeStruct_program_matrix_tests PRIVATE third_party ${CMAKE_SOURCE_DIR}
+                             tests/unit/program_matrix)
+  target_link_libraries(PrimeStruct_program_matrix_tests PRIVATE primec_support_lib)
+  add_dependencies(PrimeStruct_program_matrix_tests primec primevm)
+  primestructEnableWarnings(PrimeStruct_program_matrix_tests)
+
   # Collection helper target parity matrix (TODO-5349): dump spelling vs published
   # semantic-product targets vs lowering/VM behavior for every helper call shape.
   add_executable(PrimeStruct_collection_parity_tests
@@ -2975,6 +2988,22 @@ if(PRIMESTRUCT_BUILD_TESTS)
     PrimeStruct_ir_optimizer_tests
     expected_ir_optimizer_doctest_suites.txt
     ${PrimeStructIrOptimizerTestSuites}
+  )
+  set(PrimeStructProgramMatrixTestSuites
+    primestruct.program_matrix.control
+    primestruct.program_matrix.optimizer
+  )
+  foreach(suite IN LISTS PrimeStructProgramMatrixTestSuites)
+    string(REPLACE "." "_" suiteId "${suite}")
+    set(testName "PrimeStruct_${suiteId}")
+    add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_program_matrix_tests> "--test-suite=${suite}")
+    set_tests_properties("${testName}" PROPERTIES TIMEOUT 300)
+  endforeach()
+  addPrimeStructSuiteRegistration(
+    PrimeStruct_program_matrix_suite_registration
+    PrimeStruct_program_matrix_tests
+    expected_program_matrix_doctest_suites.txt
+    ${PrimeStructProgramMatrixTestSuites}
   )
   addPrimeStructSuiteRegistration(
     PrimeStruct_backend_ir_suite_registration
