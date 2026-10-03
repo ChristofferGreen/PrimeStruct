@@ -22,29 +22,32 @@ IrLocalEscapeInfo analyzeIrLocalEscape(const IrFunction &function) {
   IrLocalEscapeInfo info;
   std::vector<uint32_t> fileReadTargets;
 
-  const auto noteSlot = [&info](uint32_t slot) { info.localCount = std::max<uint32_t>(info.localCount, slot + 1); };
+  const auto noteSlot = [&info](uint32_t slot) {
+    info.localCount = std::max<uint32_t>(info.localCount, slot + 1);
+  };
 
   for (const IrInstruction &instruction : function.instructions) {
     switch (instruction.op) {
-      case IrOpcode::LoadLocal:
-      case IrOpcode::StoreLocal:
-        noteSlot(clampSlot(instruction.imm));
-        break;
-      case IrOpcode::AddressOfLocal: {
-        const uint32_t slot = clampSlot(instruction.imm);
-        noteSlot(slot);
-        info.lowestAddressedSlot = info.addressTaken ? std::min(info.lowestAddressedSlot, slot) : slot;
-        info.addressTaken = true;
-        break;
-      }
-      case IrOpcode::FileReadByte: {
-        const uint32_t slot = clampSlot(instruction.imm);
-        noteSlot(slot);
-        fileReadTargets.push_back(slot);
-        break;
-      }
-      default:
-        break;
+    case IrOpcode::LoadLocal:
+    case IrOpcode::StoreLocal:
+      noteSlot(clampSlot(instruction.imm));
+      break;
+    case IrOpcode::AddressOfLocal: {
+      const uint32_t slot = clampSlot(instruction.imm);
+      noteSlot(slot);
+      info.lowestAddressedSlot =
+          info.addressTaken ? std::min(info.lowestAddressedSlot, slot) : slot;
+      info.addressTaken = true;
+      break;
+    }
+    case IrOpcode::FileReadByte: {
+      const uint32_t slot = clampSlot(instruction.imm);
+      noteSlot(slot);
+      fileReadTargets.push_back(slot);
+      break;
+    }
+    default:
+      break;
     }
   }
 
@@ -57,7 +60,8 @@ IrLocalEscapeInfo analyzeIrLocalEscape(const IrFunction &function) {
   }
   info.pinnedSlots = std::move(fileReadTargets);
   std::sort(info.pinnedSlots.begin(), info.pinnedSlots.end());
-  info.pinnedSlots.erase(std::unique(info.pinnedSlots.begin(), info.pinnedSlots.end()), info.pinnedSlots.end());
+  info.pinnedSlots.erase(std::unique(info.pinnedSlots.begin(), info.pinnedSlots.end()),
+                         info.pinnedSlots.end());
   return info;
 }
 

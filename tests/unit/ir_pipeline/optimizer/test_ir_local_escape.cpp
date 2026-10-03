@@ -150,7 +150,8 @@ main() {
     CAPTURE(program.name);
     PreparedCompilePipelineIrForTesting prepared;
     std::string error;
-    REQUIRE_MESSAGE(prepareIrThroughCompilePipeline(program.source, "/main", "vm", prepared, error), error);
+    REQUIRE_MESSAGE(prepareIrThroughCompilePipeline(program.source, "/main", "vm", prepared, error),
+                    error);
     bool sawAddressTaken = false;
     for (const IrFunction &function : prepared.ir.functions) {
       const auto info = primec::analyzeIrLocalEscape(function);

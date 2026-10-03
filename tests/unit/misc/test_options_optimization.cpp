@@ -83,7 +83,8 @@ TEST_CASE("optimization level flags select the level and the last one wins") {
     CAPTURE(level);
     primec::Options options;
     std::string error;
-    REQUIRE(parsePrimec({"primec", "-O" + std::to_string(level), "/tmp/input.prime"}, options, error));
+    REQUIRE(
+        parsePrimec({"primec", "-O" + std::to_string(level), "/tmp/input.prime"}, options, error));
     CHECK(options.optimization.level == level);
     CHECK(options.optimization.levelSpecified);
   }
@@ -105,7 +106,8 @@ TEST_CASE("unsupported optimization levels fail with a precise message") {
     primec::Options options;
     std::string error;
     CHECK_FALSE(parsePrimec({"primec", flag, "/tmp/input.prime"}, options, error));
-    CHECK(error == std::string("unsupported optimization level: ") + flag + " (expected -O0|-O1|-O2|-O3)");
+    CHECK(error ==
+          std::string("unsupported optimization level: ") + flag + " (expected -O0|-O1|-O2|-O3)");
 
     primec::Options vmOptions;
     std::string vmError;
@@ -142,7 +144,8 @@ TEST_CASE("optimization pass flags reject missing and malformed names") {
       {{"primec", "/tmp/input.prime", "--no-opt-pass"}, "--no-opt-pass requires a value"},
       {{"primec", "--opt-pass=", "/tmp/input.prime"}, "invalid --opt-pass value: "},
       {{"primec", "--no-opt-pass=", "/tmp/input.prime"}, "invalid --no-opt-pass value: "},
-      {{"primec", "--opt-pass=Const-Fold", "/tmp/input.prime"}, "invalid --opt-pass value: Const-Fold"},
+      {{"primec", "--opt-pass=Const-Fold", "/tmp/input.prime"},
+       "invalid --opt-pass value: Const-Fold"},
       {{"primec", "--no-opt-pass=a b", "/tmp/input.prime"}, "invalid --no-opt-pass value: a b"},
       {{"primec", "--opt-pass", "../x", "/tmp/input.prime"}, "invalid --opt-pass value: ../x"},
   };
@@ -158,13 +161,16 @@ TEST_CASE("optimization pass flags reject missing and malformed names") {
 TEST_CASE("optimization report and verify flags work for primec and primevm") {
   primec::Options options;
   std::string error;
-  REQUIRE(parsePrimec({"primec", "--opt-report", "--opt-verify-each", "/tmp/input.prime"}, options, error));
+  REQUIRE(parsePrimec(
+      {"primec", "--opt-report", "--opt-verify-each", "/tmp/input.prime"}, options, error));
   CHECK(options.optimization.report);
   CHECK(options.optimization.verifyEachPass);
 
   primec::Options vmOptions;
   REQUIRE(parsePrimevm(
-      {"primevm", "-O2", "--opt-report", "--opt-pass=cse", "--ir-inline", "/tmp/input.prime"}, vmOptions, error));
+      {"primevm", "-O2", "--opt-report", "--opt-pass=cse", "--ir-inline", "/tmp/input.prime"},
+      vmOptions,
+      error));
   CHECK(vmOptions.optimization.level == 2);
   CHECK(vmOptions.optimization.report);
   CHECK_FALSE(vmOptions.optimization.verifyEachPass);
@@ -175,7 +181,8 @@ TEST_CASE("optimization report and verify flags work for primec and primevm") {
 TEST_CASE("optimization flags after the program-args separator belong to the program") {
   primec::Options options;
   std::string error;
-  REQUIRE(parsePrimevm({"primevm", "/tmp/input.prime", "--", "-O3", "--opt-report"}, options, error));
+  REQUIRE(
+      parsePrimevm({"primevm", "/tmp/input.prime", "--", "-O3", "--opt-report"}, options, error));
   CHECK_FALSE(options.optimization.levelSpecified);
   CHECK_FALSE(options.optimization.report);
   CHECK(options.programArgs == std::vector<std::string>{"-O3", "--opt-report"});

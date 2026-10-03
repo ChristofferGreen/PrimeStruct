@@ -15,7 +15,8 @@ namespace {
 constexpr size_t NoProducer = std::numeric_limits<size_t>::max();
 
 bool isConstantPush(IrOpcode op) {
-  return op == IrOpcode::PushI32 || op == IrOpcode::PushI64 || op == IrOpcode::PushF32 || op == IrOpcode::PushF64;
+  return op == IrOpcode::PushI32 || op == IrOpcode::PushI64 || op == IrOpcode::PushF32 ||
+         op == IrOpcode::PushF64;
 }
 
 // The 64-bit slot the VM leaves on the stack for a constant push.
@@ -44,64 +45,64 @@ bool fitsInt32(uint64_t slot) {
 // pattern depends on the host that computed them).
 bool foldedPush(IrOpcode op, uint64_t result, IrOpcode &pushOp, uint64_t &imm) {
   switch (op) {
-    case IrOpcode::AddI32:
-    case IrOpcode::SubI32:
-    case IrOpcode::MulI32:
-    case IrOpcode::DivI32:
-    case IrOpcode::NegI32:
-    case IrOpcode::ConvertF32ToI32:
-    case IrOpcode::ConvertF64ToI32:
-      if (!fitsInt32(result)) {
-        return false;
-      }
-      pushOp = IrOpcode::PushI32;
-      imm = static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(result)));
-      return true;
-    case IrOpcode::AddI64:
-    case IrOpcode::SubI64:
-    case IrOpcode::MulI64:
-    case IrOpcode::DivI64:
-    case IrOpcode::DivU64:
-    case IrOpcode::NegI64:
-    case IrOpcode::ConvertF32ToI64:
-    case IrOpcode::ConvertF64ToI64:
-    case IrOpcode::ConvertF32ToU64:
-    case IrOpcode::ConvertF64ToU64:
-      pushOp = IrOpcode::PushI64;
-      imm = result;
-      return true;
-    case IrOpcode::AddF32:
-    case IrOpcode::SubF32:
-    case IrOpcode::MulF32:
-    case IrOpcode::DivF32:
-    case IrOpcode::NegF32:
-    case IrOpcode::ConvertI32ToF32:
-    case IrOpcode::ConvertI64ToF32:
-    case IrOpcode::ConvertU64ToF32:
-    case IrOpcode::ConvertF64ToF32:
-      if (isNanF32(result)) {
-        return false;
-      }
-      pushOp = IrOpcode::PushF32;
-      imm = result;
-      return true;
-    case IrOpcode::AddF64:
-    case IrOpcode::SubF64:
-    case IrOpcode::MulF64:
-    case IrOpcode::DivF64:
-    case IrOpcode::NegF64:
-    case IrOpcode::ConvertI32ToF64:
-    case IrOpcode::ConvertI64ToF64:
-    case IrOpcode::ConvertU64ToF64:
-    case IrOpcode::ConvertF32ToF64:
-      if (isNanF64(result)) {
-        return false;
-      }
-      pushOp = IrOpcode::PushF64;
-      imm = result;
-      return true;
-    default:
-      break;
+  case IrOpcode::AddI32:
+  case IrOpcode::SubI32:
+  case IrOpcode::MulI32:
+  case IrOpcode::DivI32:
+  case IrOpcode::NegI32:
+  case IrOpcode::ConvertF32ToI32:
+  case IrOpcode::ConvertF64ToI32:
+    if (!fitsInt32(result)) {
+      return false;
+    }
+    pushOp = IrOpcode::PushI32;
+    imm = static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(result)));
+    return true;
+  case IrOpcode::AddI64:
+  case IrOpcode::SubI64:
+  case IrOpcode::MulI64:
+  case IrOpcode::DivI64:
+  case IrOpcode::DivU64:
+  case IrOpcode::NegI64:
+  case IrOpcode::ConvertF32ToI64:
+  case IrOpcode::ConvertF64ToI64:
+  case IrOpcode::ConvertF32ToU64:
+  case IrOpcode::ConvertF64ToU64:
+    pushOp = IrOpcode::PushI64;
+    imm = result;
+    return true;
+  case IrOpcode::AddF32:
+  case IrOpcode::SubF32:
+  case IrOpcode::MulF32:
+  case IrOpcode::DivF32:
+  case IrOpcode::NegF32:
+  case IrOpcode::ConvertI32ToF32:
+  case IrOpcode::ConvertI64ToF32:
+  case IrOpcode::ConvertU64ToF32:
+  case IrOpcode::ConvertF64ToF32:
+    if (isNanF32(result)) {
+      return false;
+    }
+    pushOp = IrOpcode::PushF32;
+    imm = result;
+    return true;
+  case IrOpcode::AddF64:
+  case IrOpcode::SubF64:
+  case IrOpcode::MulF64:
+  case IrOpcode::DivF64:
+  case IrOpcode::NegF64:
+  case IrOpcode::ConvertI32ToF64:
+  case IrOpcode::ConvertI64ToF64:
+  case IrOpcode::ConvertU64ToF64:
+  case IrOpcode::ConvertF32ToF64:
+    if (isNanF64(result)) {
+      return false;
+    }
+    pushOp = IrOpcode::PushF64;
+    imm = result;
+    return true;
+  default:
+    break;
   }
   if (irPureOpcodeArity(op) == 2) {
     // The remaining binary opcodes are the comparisons: a 0/1 boolean.

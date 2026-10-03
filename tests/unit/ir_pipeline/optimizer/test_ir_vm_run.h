@@ -28,7 +28,8 @@ struct Outcome {
   std::string output;
 
   bool operator==(const Outcome &other) const {
-    return ok == other.ok && result == other.result && error == other.error && output == other.output;
+    return ok == other.ok && result == other.result && error == other.error &&
+           output == other.output;
   }
 };
 

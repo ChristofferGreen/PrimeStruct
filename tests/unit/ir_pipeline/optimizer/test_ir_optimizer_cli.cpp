@@ -35,11 +35,13 @@ std::string readText(const std::filesystem::path &path) {
 }
 
 CommandResult run(const std::string &command) {
-  const std::filesystem::path outPath = primec::testing::testScratchPath("optimizer_cli/stdout.txt");
-  const std::filesystem::path errPath = primec::testing::testScratchPath("optimizer_cli/stderr.txt");
+  const std::filesystem::path outPath =
+      primec::testing::testScratchPath("optimizer_cli/stdout.txt");
+  const std::filesystem::path errPath =
+      primec::testing::testScratchPath("optimizer_cli/stderr.txt");
   std::filesystem::create_directories(outPath.parent_path());
-  const int status =
-      std::system((command + " > '" + outPath.string() + "' 2> '" + errPath.string() + "'").c_str());
+  const int status = std::system(
+      (command + " > '" + outPath.string() + "' 2> '" + errPath.string() + "'").c_str());
   CommandResult result;
 #if defined(__unix__) || defined(__APPLE__)
   result.exitCode = WIFEXITED(status) ? WEXITSTATUS(status) : -1;
@@ -102,7 +104,8 @@ TEST_CASE("unknown pass names and unsupported targets are diagnosed") {
 
   CommandResult result = run("./primevm " + source + " --opt-pass=nope");
   CHECK(result.exitCode == 2);
-  CHECK(contains(result.err, "IR optimization error: unknown optimization pass: nope (see --opt-list)"));
+  CHECK(contains(result.err,
+                 "IR optimization error: unknown optimization pass: nope (see --opt-list)"));
 
   result = run("./primec --emit=vm " + source + " --no-opt-pass=nope");
   CHECK(result.exitCode == 2);
@@ -144,19 +147,19 @@ TEST_CASE("opt-report describes the selected passes and what changed") {
   CHECK(contains(result.err, "instructions_before=14\ninstructions_after=14\n"));
 
   // --no-opt-pass wins over the level.
-  result = run("./primevm " + source + " -O1 --no-opt-pass=const-fold --no-opt-pass=dead-store --opt-report");
+  result = run("./primevm " + source +
+               " -O1 --no-opt-pass=const-fold --no-opt-pass=dead-store --opt-report");
   CHECK(contains(result.err, "selected_passes=cfg-simplify,peephole\n"));
 }
 
 TEST_CASE("dump-stage prints the lowered module before and after optimization") {
   const std::string source = writeSource("fold_dump.prime", FoldableProgram);
-  const std::string header =
-      "ir_module_v1 schema=26\n"
-      "entry=/main (function 0)\n"
-      "string_table: 0\n"
-      "host_imports: 0\n"
-      "struct_layouts: 0\n"
-      "functions: 1\n";
+  const std::string header = "ir_module_v1 schema=26\n"
+                             "entry=/main (function 0)\n"
+                             "string_table: 0\n"
+                             "host_imports: 0\n"
+                             "struct_layouts: 0\n"
+                             "functions: 1\n";
 
   const CommandResult lowered = run("./primec --dump-stage ir-lowered " + source);
   CHECK(lowered.exitCode == 0);
@@ -220,8 +223,10 @@ TEST_CASE("serialized output is unchanged at -O0 and shrinks at -O1 with the sam
 
 TEST_CASE("optexe and optcpp emit kinds produce a fast executable and C++ source") {
   const std::string source = writeSource("fold_optexe.prime", FoldableProgram);
-  const std::string exePath = primec::testing::testScratchPath("optimizer_cli/fold_optexe").string();
-  const std::string cppPath = primec::testing::testScratchPath("optimizer_cli/fold_optcpp.cpp").string();
+  const std::string exePath =
+      primec::testing::testScratchPath("optimizer_cli/fold_optexe").string();
+  const std::string cppPath =
+      primec::testing::testScratchPath("optimizer_cli/fold_optcpp.cpp").string();
 
   // The default host level is -O2; the IR level only changes what the emitter sees.
   for (const char *level : {"", "-O0", "-O3"}) {
@@ -234,7 +239,7 @@ TEST_CASE("optexe and optcpp emit kinds produce a fast executable and C++ source
 
   REQUIRE(run("./primec --emit=optcpp " + source + " -O1 -o " + cppPath).exitCode == 0);
   const std::string generated = readText(cppPath);
-  CHECK(contains(generated, "goto L") == false);  // straight-line program
+  CHECK(contains(generated, "goto L") == false); // straight-line program
   CHECK(contains(generated, "int main(int argc, char **argv)"));
   CHECK(contains(generated, "VM error: "));
   // Folding happened before emission: the constant 10 is in the source, the

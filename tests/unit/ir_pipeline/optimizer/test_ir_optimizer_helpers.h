@@ -56,7 +56,8 @@ inline std::vector<primec::IrInstruction> assemble(std::initializer_list<const c
   return out;
 }
 
-inline primec::IrModule moduleOf(std::vector<primec::IrInstruction> instructions, uint32_t parameterCount = 0) {
+inline primec::IrModule moduleOf(std::vector<primec::IrInstruction> instructions,
+                                 uint32_t parameterCount = 0) {
   primec::IrModule module;
   module.entryIndex = 0;
   primec::IrFunction function;

@@ -39,7 +39,9 @@ struct IrLocalEscapeInfo {
 
   bool isPinned(uint32_t slot) const;
   // True when no slot is pinned: every local may live in a register.
-  bool canPromoteAll() const { return pinnedSlots.empty(); }
+  bool canPromoteAll() const {
+    return pinnedSlots.empty();
+  }
 };
 
 IrLocalEscapeInfo analyzeIrLocalEscape(const IrFunction &function);

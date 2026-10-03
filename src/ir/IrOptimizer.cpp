@@ -27,20 +27,20 @@ uint64_t countInstructions(const IrModule &module) {
 
 std::string targetName(IrValidationTarget target) {
   switch (target) {
-    case IrValidationTarget::Any:
-      return "any";
-    case IrValidationTarget::Serialized:
-      return "serialized";
-    case IrValidationTarget::Vm:
-      return "vm";
-    case IrValidationTarget::Native:
-      return "native";
-    case IrValidationTarget::Glsl:
-      return "glsl";
-    case IrValidationTarget::Wasm:
-      return "wasm";
-    case IrValidationTarget::WasmBrowser:
-      return "wasm-browser";
+  case IrValidationTarget::Any:
+    return "any";
+  case IrValidationTarget::Serialized:
+    return "serialized";
+  case IrValidationTarget::Vm:
+    return "vm";
+  case IrValidationTarget::Native:
+    return "native";
+  case IrValidationTarget::Glsl:
+    return "glsl";
+  case IrValidationTarget::Wasm:
+    return "wasm";
+  case IrValidationTarget::WasmBrowser:
+    return "wasm-browser";
   }
   return "?";
 }
@@ -62,11 +62,15 @@ const std::vector<IrOptimizationPass> &irOptimizationPasses() {
   const SystemHeapScope systemHeapGuardForPassTable;
   static const std::vector<IrOptimizationPass> Passes = {
       {{"cfg-simplify",
-        "fold constant branches, thread jumps, drop jumps to the next instruction and unreachable code",
+        "fold constant branches, thread jumps, drop jumps to the next instruction and unreachable "
+        "code",
         1,
         IrTargetsUnstructured},
        &ir_opt::runCfgSimplifyPass},
-      {{"const-fold", "evaluate pure arithmetic, comparisons and conversions of constants", 1, IrTargetsNoGpu},
+      {{"const-fold",
+        "evaluate pure arithmetic, comparisons and conversions of constants",
+        1,
+        IrTargetsNoGpu},
        &ir_opt::runConstFoldPass},
       {{"peephole",
         "remove dead push/pop pairs, x+0, x*1, x/1 and double negation",
@@ -96,9 +100,13 @@ std::string formatIrOptimizationPassList() {
     }
     out << '\t';
     bool first = true;
-    for (const IrValidationTarget target :
-         {IrValidationTarget::Any, IrValidationTarget::Serialized, IrValidationTarget::Vm, IrValidationTarget::Native,
-          IrValidationTarget::Wasm, IrValidationTarget::WasmBrowser, IrValidationTarget::Glsl}) {
+    for (const IrValidationTarget target : {IrValidationTarget::Any,
+                                            IrValidationTarget::Serialized,
+                                            IrValidationTarget::Vm,
+                                            IrValidationTarget::Native,
+                                            IrValidationTarget::Wasm,
+                                            IrValidationTarget::WasmBrowser,
+                                            IrValidationTarget::Glsl}) {
       if (passSupportsTarget(pass, target)) {
         out << (first ? "" : ",") << targetName(target);
         first = false;
@@ -136,7 +144,8 @@ bool selectIrOptimizationPasses(const std::vector<IrOptimizationPass> &registry,
       return false;
     }
     if (!passSupportsTarget(registry[static_cast<size_t>(index)], target)) {
-      error = "optimization pass " + name + " does not support the " + targetName(target) + " target";
+      error =
+          "optimization pass " + name + " does not support the " + targetName(target) + " target";
       return false;
     }
     enabled[static_cast<size_t>(index)] = true;
@@ -157,7 +166,9 @@ bool selectIrOptimizationPasses(const std::vector<IrOptimizationPass> &registry,
   return true;
 }
 
-bool verifyIrModuleForOptimization(const IrModule &module, IrValidationTarget target, std::string &error) {
+bool verifyIrModuleForOptimization(const IrModule &module,
+                                   IrValidationTarget target,
+                                   std::string &error) {
   if (!validateIrModule(module, target, error)) {
     return false;
   }
@@ -167,7 +178,8 @@ bool verifyIrModuleForOptimization(const IrModule &module, IrValidationTarget ta
     if (!buildIrCfg(function, module, cfg, cfgError)) {
       const IrOpcodeInfo *info = irOpcodeInfo(cfgError.opcode);
       error = "inconsistent operand stack in " + function.name + " at instruction " +
-              std::to_string(cfgError.instructionIndex) + " (" + (info != nullptr ? info->name : "?") + ")";
+              std::to_string(cfgError.instructionIndex) + " (" +
+              (info != nullptr ? info->name : "?") + ")";
       return false;
     }
   }
@@ -178,7 +190,7 @@ bool irOptimizationIsNoOp(const OptimizationOptions &options, IrValidationTarget
   std::vector<size_t> selected;
   std::string error;
   if (!selectIrOptimizationPasses(irOptimizationPasses(), options, target, selected, error)) {
-    return false;  // let optimizeIrModule report the error
+    return false; // let optimizeIrModule report the error
   }
   return selected.empty();
 }
@@ -195,8 +207,8 @@ std::string IrOptimizationReport::format(bool includeTimings) const {
   out << "instructions_before=" << instructionsBefore << "\n";
   out << "instructions_after=" << instructionsAfter << "\n";
   for (const IrOptimizationPassReport &run : runs) {
-    out << "round " << run.round << " " << run.name << ": " << run.instructionsBefore << " -> " << run.instructionsAfter
-        << (run.changed ? " changed" : " unchanged");
+    out << "round " << run.round << " " << run.name << ": " << run.instructionsBefore << " -> "
+        << run.instructionsAfter << (run.changed ? " changed" : " unchanged");
     if (includeTimings) {
       out << " time_us=" << run.microseconds;
     }
@@ -237,8 +249,10 @@ bool optimizeIrModuleWithPasses(IrModule &module,
       bool changed = false;
       std::string passError;
       const bool ok = pass.run(module, context, changed, passError);
-      run.microseconds = static_cast<uint64_t>(
-          std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - started).count());
+      run.microseconds =
+          static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::microseconds>(
+                                    std::chrono::steady_clock::now() - started)
+                                    .count());
       run.instructionsAfter = countInstructions(module);
       run.changed = changed;
       report.runs.push_back(run);

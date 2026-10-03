@@ -40,12 +40,13 @@
 namespace primec {
 namespace compile_pipeline_detail {
 
-
 enum class DumpStage {
   None,
   PreAst,
   Ast,
   Ir,
+  IrLowered,
+  IrOptimized,
   AstSemantic,
   SemanticProduct,
   TypeGraph,

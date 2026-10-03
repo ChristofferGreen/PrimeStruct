@@ -54,6 +54,12 @@ DumpStage parseDumpStage(const std::string &dumpStage) {
   if (dumpStage == "ir") {
     return DumpStage::Ir;
   }
+  if (dumpStage == "ir-lowered" || dumpStage == "ir_lowered") {
+    return DumpStage::IrLowered;
+  }
+  if (dumpStage == "ir-optimized" || dumpStage == "ir_optimized") {
+    return DumpStage::IrOptimized;
+  }
   if (dumpStage == "ast_semantic" || dumpStage == "ast-semantic") {
     return DumpStage::AstSemantic;
   }

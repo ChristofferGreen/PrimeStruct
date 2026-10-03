@@ -87,7 +87,8 @@ main() {
   const std::string optFlags =
       " -O3 --opt-pass=const-fold --no-opt-pass=peephole --opt-report --opt-verify-each";
   const std::string optExePath = (testScratchPath("") / "primec_opt_flags_exe").string();
-  CHECK(runCommand("./primec --emit=native " + srcPath + " -o " + optExePath + " --entry /main" + optFlags) == 0);
+  CHECK(runCommand("./primec --emit=native " + srcPath + " -o " + optExePath + " --entry /main" +
+                   optFlags) == 0);
   CHECK(runCommand(optExePath) == 7);
   CHECK(runCommand("./primevm " + srcPath + " --entry /main" + optFlags) == 7);
 }

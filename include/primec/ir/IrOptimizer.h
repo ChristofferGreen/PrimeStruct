@@ -23,20 +23,23 @@ constexpr uint32_t irValidationTargetBit(IrValidationTarget target) {
   return 1u << static_cast<uint32_t>(target);
 }
 
-constexpr uint32_t IrTargetsAll =
-    irValidationTargetBit(IrValidationTarget::Any) | irValidationTargetBit(IrValidationTarget::Serialized) |
-    irValidationTargetBit(IrValidationTarget::Vm) | irValidationTargetBit(IrValidationTarget::Native) |
-    irValidationTargetBit(IrValidationTarget::Glsl) | irValidationTargetBit(IrValidationTarget::Wasm) |
-    irValidationTargetBit(IrValidationTarget::WasmBrowser);
+constexpr uint32_t IrTargetsAll = irValidationTargetBit(IrValidationTarget::Any) |
+                                  irValidationTargetBit(IrValidationTarget::Serialized) |
+                                  irValidationTargetBit(IrValidationTarget::Vm) |
+                                  irValidationTargetBit(IrValidationTarget::Native) |
+                                  irValidationTargetBit(IrValidationTarget::Glsl) |
+                                  irValidationTargetBit(IrValidationTarget::Wasm) |
+                                  irValidationTargetBit(IrValidationTarget::WasmBrowser);
 // Everything except the structured-control-flow targets (wasm, glsl).
-constexpr uint32_t IrTargetsUnstructured =
-    irValidationTargetBit(IrValidationTarget::Any) | irValidationTargetBit(IrValidationTarget::Serialized) |
-    irValidationTargetBit(IrValidationTarget::Vm) | irValidationTargetBit(IrValidationTarget::Native);
+constexpr uint32_t IrTargetsUnstructured = irValidationTargetBit(IrValidationTarget::Any) |
+                                           irValidationTargetBit(IrValidationTarget::Serialized) |
+                                           irValidationTargetBit(IrValidationTarget::Vm) |
+                                           irValidationTargetBit(IrValidationTarget::Native);
 // The unstructured targets plus wasm; GLSL/SPIR-V are excluded because their
 // emitters reconstruct shader control flow and literal limits from the IR.
-constexpr uint32_t IrTargetsNoGpu =
-    IrTargetsUnstructured | irValidationTargetBit(IrValidationTarget::Wasm) |
-    irValidationTargetBit(IrValidationTarget::WasmBrowser);
+constexpr uint32_t IrTargetsNoGpu = IrTargetsUnstructured |
+                                    irValidationTargetBit(IrValidationTarget::Wasm) |
+                                    irValidationTargetBit(IrValidationTarget::WasmBrowser);
 
 struct IrOptimizationPassInfo {
   std::string_view name;
@@ -56,7 +59,10 @@ struct IrOptimizationPass {
   IrOptimizationPassInfo info;
   // Rewrites the module. Sets `changed` when it modified anything; returns
   // false with `error` set only for an internal failure.
-  bool (*run)(IrModule &module, const IrPassContext &context, bool &changed, std::string &error) = nullptr;
+  bool (*run)(IrModule &module,
+              const IrPassContext &context,
+              bool &changed,
+              std::string &error) = nullptr;
 };
 
 struct IrOptimizationPassReport {
@@ -121,6 +127,8 @@ bool irOptimizationIsNoOp(const OptimizationOptions &options, IrValidationTarget
 // Checks the structural invariants every pass must preserve: the module
 // validates for `target` and every function's reachable code has a consistent
 // operand-stack depth. Used by --opt-verify-each after each pass.
-bool verifyIrModuleForOptimization(const IrModule &module, IrValidationTarget target, std::string &error);
+bool verifyIrModuleForOptimization(const IrModule &module,
+                                   IrValidationTarget target,
+                                   std::string &error);
 
 } // namespace primec

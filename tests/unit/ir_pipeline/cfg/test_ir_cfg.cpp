@@ -137,7 +137,8 @@ TEST_CASE("cfg entry block starts at the function's parameter count") {
   CHECK(cfg.maxStackDepth == 2);
 
   // The same body without declared parameters underflows at the first store.
-  const IrModule noParams = makeModule(makeFunction({{IrOpcode::StoreLocal, 0}, {IrOpcode::ReturnVoid, 0}}));
+  const IrModule noParams =
+      makeModule(makeFunction({{IrOpcode::StoreLocal, 0}, {IrOpcode::ReturnVoid, 0}}));
   CHECK_FALSE(build(noParams, cfg, error));
   CHECK(error.kind == IrCfgErrorKind::StackUnderflow);
   CHECK(error.instructionIndex == 0);
@@ -174,7 +175,8 @@ TEST_CASE("cfg reports structured errors with the offending instruction") {
   IrCfgError error;
 
   SUBCASE("jump target past the end") {
-    const IrModule module = makeModule(makeFunction({{IrOpcode::Jump, 9}, {IrOpcode::ReturnVoid, 0}}));
+    const IrModule module =
+        makeModule(makeFunction({{IrOpcode::Jump, 9}, {IrOpcode::ReturnVoid, 0}}));
     CHECK_FALSE(build(module, cfg, error));
     CHECK(error.kind == IrCfgErrorKind::InvalidJumpTarget);
     CHECK(error.instructionIndex == 0);
@@ -192,7 +194,8 @@ TEST_CASE("cfg reports structured errors with the offending instruction") {
     CHECK(error.opcode == IrOpcode::AddI32);
   }
   SUBCASE("dup with nothing to read") {
-    const IrModule module = makeModule(makeFunction({{IrOpcode::Dup, 0}, {IrOpcode::ReturnVoid, 0}}));
+    const IrModule module =
+        makeModule(makeFunction({{IrOpcode::Dup, 0}, {IrOpcode::ReturnVoid, 0}}));
     CHECK_FALSE(build(module, cfg, error));
     CHECK(error.kind == IrCfgErrorKind::InvalidDup);
     CHECK(error.instructionIndex == 0);

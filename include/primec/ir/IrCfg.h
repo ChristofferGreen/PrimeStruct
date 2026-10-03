@@ -22,7 +22,9 @@ struct IrStackEffect {
 // `module`. A call target or host import index that is out of range yields an
 // effect of zero here; IR validation is what rejects such modules.
 // Returns false only for an opcode value outside the table.
-bool computeIrStackEffect(const IrInstruction &instruction, const IrModule &module, IrStackEffect &out);
+bool computeIrStackEffect(const IrInstruction &instruction,
+                          const IrModule &module,
+                          IrStackEffect &out);
 
 enum class IrCfgErrorKind : uint8_t {
   None = 0,

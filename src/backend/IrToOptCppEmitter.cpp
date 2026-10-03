@@ -75,188 +75,188 @@ bool pureExpression(IrOpcode op, const std::string &a, const std::string &b, std
     expr = "ps_slot_f64(ps_f64(" + a + ") " + oper + " ps_f64(" + b + "))";
   };
   switch (op) {
-    case IrOpcode::AddI32:
-    case IrOpcode::AddI64:
-      expr = "(" + a + " + " + b + ")";
-      return true;
-    case IrOpcode::SubI32:
-    case IrOpcode::SubI64:
-      expr = "(" + a + " - " + b + ")";
-      return true;
-    case IrOpcode::MulI32:
-    case IrOpcode::MulI64:
-      expr = "(" + a + " * " + b + ")";
-      return true;
-    case IrOpcode::DivI32:
-    case IrOpcode::DivI64:
-      expr = "ps_div_s64(" + a + ", " + b + ")";
-      return true;
-    case IrOpcode::DivU64:
-      expr = "ps_div_u64(" + a + ", " + b + ")";
-      return true;
-    case IrOpcode::NegI32:
-    case IrOpcode::NegI64:
-      expr = "(uint64_t{0} - " + a + ")";
-      return true;
-    case IrOpcode::AddF32:
-      f32bin("+");
-      return true;
-    case IrOpcode::SubF32:
-      f32bin("-");
-      return true;
-    case IrOpcode::MulF32:
-      f32bin("*");
-      return true;
-    case IrOpcode::DivF32:
-      f32bin("/");
-      return true;
-    case IrOpcode::NegF32:
-      expr = "ps_slot_f32(-ps_f32(" + a + "))";
-      return true;
-    case IrOpcode::AddF64:
-      f64bin("+");
-      return true;
-    case IrOpcode::SubF64:
-      f64bin("-");
-      return true;
-    case IrOpcode::MulF64:
-      f64bin("*");
-      return true;
-    case IrOpcode::DivF64:
-      f64bin("/");
-      return true;
-    case IrOpcode::NegF64:
-      expr = "ps_slot_f64(-ps_f64(" + a + "))";
-      return true;
-    case IrOpcode::CmpEqI32:
-    case IrOpcode::CmpEqI64:
-      cmp("==", false);
-      return true;
-    case IrOpcode::CmpNeI32:
-    case IrOpcode::CmpNeI64:
-      cmp("!=", false);
-      return true;
-    case IrOpcode::CmpLtI32:
-    case IrOpcode::CmpLtI64:
-      cmp("<", true);
-      return true;
-    case IrOpcode::CmpLeI32:
-    case IrOpcode::CmpLeI64:
-      cmp("<=", true);
-      return true;
-    case IrOpcode::CmpGtI32:
-    case IrOpcode::CmpGtI64:
-      cmp(">", true);
-      return true;
-    case IrOpcode::CmpGeI32:
-    case IrOpcode::CmpGeI64:
-      cmp(">=", true);
-      return true;
-    case IrOpcode::CmpLtU64:
-      cmp("<", false);
-      return true;
-    case IrOpcode::CmpLeU64:
-      cmp("<=", false);
-      return true;
-    case IrOpcode::CmpGtU64:
-      cmp(">", false);
-      return true;
-    case IrOpcode::CmpGeU64:
-      cmp(">=", false);
-      return true;
-    case IrOpcode::CmpEqF32:
-      f32cmp("==");
-      return true;
-    case IrOpcode::CmpNeF32:
-      f32cmp("!=");
-      return true;
-    case IrOpcode::CmpLtF32:
-      f32cmp("<");
-      return true;
-    case IrOpcode::CmpLeF32:
-      f32cmp("<=");
-      return true;
-    case IrOpcode::CmpGtF32:
-      f32cmp(">");
-      return true;
-    case IrOpcode::CmpGeF32:
-      f32cmp(">=");
-      return true;
-    case IrOpcode::CmpEqF64:
-      f64cmp("==");
-      return true;
-    case IrOpcode::CmpNeF64:
-      f64cmp("!=");
-      return true;
-    case IrOpcode::CmpLtF64:
-      f64cmp("<");
-      return true;
-    case IrOpcode::CmpLeF64:
-      f64cmp("<=");
-      return true;
-    case IrOpcode::CmpGtF64:
-      f64cmp(">");
-      return true;
-    case IrOpcode::CmpGeF64:
-      f64cmp(">=");
-      return true;
-    case IrOpcode::ConvertI32ToF32:
-      expr = "ps_slot_f32(static_cast<float>(static_cast<int32_t>(" + a + ")))";
-      return true;
-    case IrOpcode::ConvertI64ToF32:
-      expr = "ps_slot_f32(static_cast<float>(ps_s64(" + a + ")))";
-      return true;
-    case IrOpcode::ConvertU64ToF32:
-      expr = "ps_slot_f32(static_cast<float>(" + a + "))";
-      return true;
-    case IrOpcode::ConvertI32ToF64:
-      expr = "ps_slot_f64(static_cast<double>(static_cast<int32_t>(" + a + ")))";
-      return true;
-    case IrOpcode::ConvertI64ToF64:
-      expr = "ps_slot_f64(static_cast<double>(ps_s64(" + a + ")))";
-      return true;
-    case IrOpcode::ConvertU64ToF64:
-      expr = "ps_slot_f64(static_cast<double>(" + a + "))";
-      return true;
-    case IrOpcode::ConvertF32ToI32:
-      expr = "static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(ps_f32(" + a + "))))";
-      return true;
-    case IrOpcode::ConvertF32ToI64:
-      expr = "static_cast<uint64_t>(static_cast<int64_t>(ps_f32(" + a + ")))";
-      return true;
-    case IrOpcode::ConvertF32ToU64:
-      expr = "static_cast<uint64_t>(ps_f32(" + a + "))";
-      return true;
-    case IrOpcode::ConvertF64ToI32:
-      expr = "static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(ps_f64(" + a + "))))";
-      return true;
-    case IrOpcode::ConvertF64ToI64:
-      expr = "static_cast<uint64_t>(static_cast<int64_t>(ps_f64(" + a + ")))";
-      return true;
-    case IrOpcode::ConvertF64ToU64:
-      expr = "static_cast<uint64_t>(ps_f64(" + a + "))";
-      return true;
-    case IrOpcode::ConvertF32ToF64:
-      expr = "ps_slot_f64(static_cast<double>(ps_f32(" + a + ")))";
-      return true;
-    case IrOpcode::ConvertF64ToF32:
-      expr = "ps_slot_f32(static_cast<float>(ps_f64(" + a + ")))";
-      return true;
-    default:
-      return false;
+  case IrOpcode::AddI32:
+  case IrOpcode::AddI64:
+    expr = "(" + a + " + " + b + ")";
+    return true;
+  case IrOpcode::SubI32:
+  case IrOpcode::SubI64:
+    expr = "(" + a + " - " + b + ")";
+    return true;
+  case IrOpcode::MulI32:
+  case IrOpcode::MulI64:
+    expr = "(" + a + " * " + b + ")";
+    return true;
+  case IrOpcode::DivI32:
+  case IrOpcode::DivI64:
+    expr = "ps_div_s64(" + a + ", " + b + ")";
+    return true;
+  case IrOpcode::DivU64:
+    expr = "ps_div_u64(" + a + ", " + b + ")";
+    return true;
+  case IrOpcode::NegI32:
+  case IrOpcode::NegI64:
+    expr = "(uint64_t{0} - " + a + ")";
+    return true;
+  case IrOpcode::AddF32:
+    f32bin("+");
+    return true;
+  case IrOpcode::SubF32:
+    f32bin("-");
+    return true;
+  case IrOpcode::MulF32:
+    f32bin("*");
+    return true;
+  case IrOpcode::DivF32:
+    f32bin("/");
+    return true;
+  case IrOpcode::NegF32:
+    expr = "ps_slot_f32(-ps_f32(" + a + "))";
+    return true;
+  case IrOpcode::AddF64:
+    f64bin("+");
+    return true;
+  case IrOpcode::SubF64:
+    f64bin("-");
+    return true;
+  case IrOpcode::MulF64:
+    f64bin("*");
+    return true;
+  case IrOpcode::DivF64:
+    f64bin("/");
+    return true;
+  case IrOpcode::NegF64:
+    expr = "ps_slot_f64(-ps_f64(" + a + "))";
+    return true;
+  case IrOpcode::CmpEqI32:
+  case IrOpcode::CmpEqI64:
+    cmp("==", false);
+    return true;
+  case IrOpcode::CmpNeI32:
+  case IrOpcode::CmpNeI64:
+    cmp("!=", false);
+    return true;
+  case IrOpcode::CmpLtI32:
+  case IrOpcode::CmpLtI64:
+    cmp("<", true);
+    return true;
+  case IrOpcode::CmpLeI32:
+  case IrOpcode::CmpLeI64:
+    cmp("<=", true);
+    return true;
+  case IrOpcode::CmpGtI32:
+  case IrOpcode::CmpGtI64:
+    cmp(">", true);
+    return true;
+  case IrOpcode::CmpGeI32:
+  case IrOpcode::CmpGeI64:
+    cmp(">=", true);
+    return true;
+  case IrOpcode::CmpLtU64:
+    cmp("<", false);
+    return true;
+  case IrOpcode::CmpLeU64:
+    cmp("<=", false);
+    return true;
+  case IrOpcode::CmpGtU64:
+    cmp(">", false);
+    return true;
+  case IrOpcode::CmpGeU64:
+    cmp(">=", false);
+    return true;
+  case IrOpcode::CmpEqF32:
+    f32cmp("==");
+    return true;
+  case IrOpcode::CmpNeF32:
+    f32cmp("!=");
+    return true;
+  case IrOpcode::CmpLtF32:
+    f32cmp("<");
+    return true;
+  case IrOpcode::CmpLeF32:
+    f32cmp("<=");
+    return true;
+  case IrOpcode::CmpGtF32:
+    f32cmp(">");
+    return true;
+  case IrOpcode::CmpGeF32:
+    f32cmp(">=");
+    return true;
+  case IrOpcode::CmpEqF64:
+    f64cmp("==");
+    return true;
+  case IrOpcode::CmpNeF64:
+    f64cmp("!=");
+    return true;
+  case IrOpcode::CmpLtF64:
+    f64cmp("<");
+    return true;
+  case IrOpcode::CmpLeF64:
+    f64cmp("<=");
+    return true;
+  case IrOpcode::CmpGtF64:
+    f64cmp(">");
+    return true;
+  case IrOpcode::CmpGeF64:
+    f64cmp(">=");
+    return true;
+  case IrOpcode::ConvertI32ToF32:
+    expr = "ps_slot_f32(static_cast<float>(static_cast<int32_t>(" + a + ")))";
+    return true;
+  case IrOpcode::ConvertI64ToF32:
+    expr = "ps_slot_f32(static_cast<float>(ps_s64(" + a + ")))";
+    return true;
+  case IrOpcode::ConvertU64ToF32:
+    expr = "ps_slot_f32(static_cast<float>(" + a + "))";
+    return true;
+  case IrOpcode::ConvertI32ToF64:
+    expr = "ps_slot_f64(static_cast<double>(static_cast<int32_t>(" + a + ")))";
+    return true;
+  case IrOpcode::ConvertI64ToF64:
+    expr = "ps_slot_f64(static_cast<double>(ps_s64(" + a + ")))";
+    return true;
+  case IrOpcode::ConvertU64ToF64:
+    expr = "ps_slot_f64(static_cast<double>(" + a + "))";
+    return true;
+  case IrOpcode::ConvertF32ToI32:
+    expr = "static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(ps_f32(" + a + "))))";
+    return true;
+  case IrOpcode::ConvertF32ToI64:
+    expr = "static_cast<uint64_t>(static_cast<int64_t>(ps_f32(" + a + ")))";
+    return true;
+  case IrOpcode::ConvertF32ToU64:
+    expr = "static_cast<uint64_t>(ps_f32(" + a + "))";
+    return true;
+  case IrOpcode::ConvertF64ToI32:
+    expr = "static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(ps_f64(" + a + "))))";
+    return true;
+  case IrOpcode::ConvertF64ToI64:
+    expr = "static_cast<uint64_t>(static_cast<int64_t>(ps_f64(" + a + ")))";
+    return true;
+  case IrOpcode::ConvertF64ToU64:
+    expr = "static_cast<uint64_t>(ps_f64(" + a + "))";
+    return true;
+  case IrOpcode::ConvertF32ToF64:
+    expr = "ps_slot_f64(static_cast<double>(ps_f32(" + a + ")))";
+    return true;
+  case IrOpcode::ConvertF64ToF32:
+    expr = "ps_slot_f32(static_cast<float>(ps_f64(" + a + ")))";
+    return true;
+  default:
+    return false;
   }
 }
 
 const char *fileOpenMode(IrOpcode op) {
   switch (op) {
-    case IrOpcode::FileOpenWrite:
-    case IrOpcode::FileOpenWriteDynamic:
-      return "1";
-    case IrOpcode::FileOpenAppend:
-    case IrOpcode::FileOpenAppendDynamic:
-      return "2";
-    default:
-      return "0";
+  case IrOpcode::FileOpenWrite:
+  case IrOpcode::FileOpenWriteDynamic:
+    return "1";
+  case IrOpcode::FileOpenAppend:
+  case IrOpcode::FileOpenAppendDynamic:
+    return "2";
+  default:
+    return "0";
   }
 }
 
@@ -276,26 +276,29 @@ std::string parameterList(uint32_t count, bool withTypes) {
 class FunctionEmitter {
 public:
   FunctionEmitter(const IrModule &module, size_t index, std::ostringstream &out)
-      : module_(module), index_(index), function_(module.functions[index]), out_(out) {}
+      : module_(module), index_(index), function_(module.functions[index]), out_(out) {
+  }
 
   bool emit(std::string &error) {
     IrCfg cfg;
     IrCfgError cfgError;
     if (!buildIrCfg(function_, module_, cfg, cfgError)) {
-      error = "optexe cannot analyze " + function_.name + " at instruction " + std::to_string(cfgError.instructionIndex) +
-              " (" + opcodeName(cfgError.opcode) + "): inconsistent or underflowing operand stack";
+      error = "optexe cannot analyze " + function_.name + " at instruction " +
+              std::to_string(cfgError.instructionIndex) + " (" + opcodeName(cfgError.opcode) +
+              "): inconsistent or underflowing operand stack";
       return false;
     }
 
-    out_ << "uint64_t " << functionSymbol(index_) << "(" << parameterList(function_.parameterCount, true)
-         << ") {\n";
+    out_ << "uint64_t " << functionSymbol(index_) << "("
+         << parameterList(function_.parameterCount, true) << ") {\n";
     // The arguments are the callee's initial stack: first pushed is slot 0.
     const int64_t slotCount = cfg.maxStackDepth;
     if (slotCount > 0) {
       out_ << "  uint64_t ";
       for (int64_t slot = 0; slot < slotCount; ++slot) {
         out_ << (slot == 0 ? "" : ", ") << "s" << slot << " = "
-             << (slot < static_cast<int64_t>(function_.parameterCount) ? "a" + std::to_string(slot) : "0");
+             << (slot < static_cast<int64_t>(function_.parameterCount) ? "a" + std::to_string(slot)
+                                                                       : "0");
       }
       out_ << ";\n";
     }
@@ -306,20 +309,20 @@ public:
     frameMode_ = false;
     for (const IrInstruction &instruction : function_.instructions) {
       switch (instruction.op) {
-        case IrOpcode::LoadLocal:
-        case IrOpcode::StoreLocal:
-          localCount_ = std::max<uint32_t>(localCount_, static_cast<uint32_t>(instruction.imm) + 1);
-          break;
-        case IrOpcode::AddressOfLocal:
-          localCount_ = std::max<uint32_t>(localCount_, static_cast<uint32_t>(instruction.imm) + 1);
-          frameMode_ = true;
-          break;
-        case IrOpcode::LoadIndirect:
-        case IrOpcode::StoreIndirect:
-          frameMode_ = true;
-          break;
-        default:
-          break;
+      case IrOpcode::LoadLocal:
+      case IrOpcode::StoreLocal:
+        localCount_ = std::max<uint32_t>(localCount_, static_cast<uint32_t>(instruction.imm) + 1);
+        break;
+      case IrOpcode::AddressOfLocal:
+        localCount_ = std::max<uint32_t>(localCount_, static_cast<uint32_t>(instruction.imm) + 1);
+        frameMode_ = true;
+        break;
+      case IrOpcode::LoadIndirect:
+      case IrOpcode::StoreIndirect:
+        frameMode_ = true;
+        break;
+      default:
+        break;
       }
     }
     if (frameMode_) {
@@ -397,192 +400,207 @@ private:
       return true;
     }
     switch (op) {
-      case IrOpcode::PushI32:
-      case IrOpcode::PushI64:
-      case IrOpcode::PushF32:
-      case IrOpcode::PushF64:
-        line(slot(depth) + " = " + hex(pushedSlot(instruction)) + ";");
-        return true;
-      case IrOpcode::PushArgc:
-        line(slot(depth) + " = static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(rt.argc)));");
-        return true;
-      case IrOpcode::LoadLocal:
-        line(slot(depth) + " = " + local(instruction.imm) + ";");
-        return true;
-      case IrOpcode::StoreLocal:
-        line(local(instruction.imm) + " = " + slot(depth - 1) + ";");
-        return true;
-      case IrOpcode::Dup:
-        line(slot(depth) + " = " + slot(depth - 1) + ";");
-        return true;
-      case IrOpcode::Pop:
-        return true;
-      case IrOpcode::Jump:
-        line("goto " + label(instruction.imm) + ";");
-        return true;
-      case IrOpcode::JumpIfZero:
-        line("if (" + slot(depth - 1) + " == 0) goto " + label(instruction.imm) + ";");
-        return true;
-      case IrOpcode::ReturnVoid:
-        emitReturn("0");
-        return true;
-      case IrOpcode::ReturnI32:
-        emitReturn("static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(" + slot(depth - 1) + ")))");
-        return true;
-      case IrOpcode::ReturnI64:
-      case IrOpcode::ReturnF64:
-        emitReturn(slot(depth - 1));
-        return true;
-      case IrOpcode::ReturnF32:
-        emitReturn("static_cast<uint64_t>(static_cast<uint32_t>(" + slot(depth - 1) + "))");
-        return true;
-      case IrOpcode::Call:
-      case IrOpcode::CallVoid: {
-        if (instruction.imm >= module_.functions.size()) {
-          error = "optexe found an invalid call target in " + function_.name;
-          return false;
-        }
-        const IrFunction &callee = module_.functions[static_cast<size_t>(instruction.imm)];
-        std::string call = functionSymbol(static_cast<size_t>(instruction.imm)) + "(rt";
-        for (uint32_t i = 0; i < callee.parameterCount; ++i) {
-          call += ", " + slot(depth - static_cast<int64_t>(callee.parameterCount) + i);
-        }
-        call += ")";
-        if (op == IrOpcode::Call) {
-          line(slot(depth - static_cast<int64_t>(callee.parameterCount)) + " = " + call + ";");
-        } else {
-          line(call + ";");
-        }
-        return true;
-      }
-      case IrOpcode::PrintI32:
-        line("ps_emit(std::to_string(static_cast<int32_t>(" + slot(depth - 1) + ")), " +
-             std::to_string(decodePrintFlags(instruction.imm)) + ");");
-        return true;
-      case IrOpcode::PrintI64:
-        line("ps_emit(std::to_string(ps_s64(" + slot(depth - 1) + ")), " +
-             std::to_string(decodePrintFlags(instruction.imm)) + ");");
-        return true;
-      case IrOpcode::PrintU64:
-        line("ps_emit(std::to_string(" + slot(depth - 1) + "), " + std::to_string(decodePrintFlags(instruction.imm)) +
-             ");");
-        return true;
-      case IrOpcode::PrintString: {
-        const uint64_t stringIndex = decodePrintStringIndex(instruction.imm);
-        if (stringIndex >= module_.stringTable.size()) {
-          line("ps_fault(\"invalid string index in IR\");");
-          return true;
-        }
-        const std::string &text = module_.stringTable[static_cast<size_t>(stringIndex)];
-        line("ps_emit(" + quote(text) + ", " + std::to_string(text.size()) + ", " +
-             std::to_string(decodePrintFlags(instruction.imm)) + ");");
-        return true;
-      }
-      case IrOpcode::AddressOfLocal:
-        line(slot(depth) + " = UINT64_C(" + std::to_string(instruction.imm * IrSlotBytes) + ");");
-        return true;
-      case IrOpcode::LoadIndirect:
-        line(slot(depth - 1) + " = *ps_resolve(rt, frame, " + std::to_string(localCount_) + ", " + slot(depth - 1) + ");");
-        return true;
-      case IrOpcode::StoreIndirect:
-        line("*ps_resolve(rt, frame, " + std::to_string(localCount_) + ", " + slot(depth - 2) + ") = " + slot(depth - 1) +
-             ";");
-        line(slot(depth - 2) + " = " + slot(depth - 1) + ";");
-        return true;
-      case IrOpcode::HeapAlloc:
-        line(slot(depth - 1) + " = ps_heap_alloc(rt, " + slot(depth - 1) + ");");
-        return true;
-      case IrOpcode::HeapFree:
-        line("ps_heap_free(rt, " + slot(depth - 1) + ");");
-        return true;
-      case IrOpcode::HeapRealloc:
-        line(slot(depth - 2) + " = ps_heap_realloc(rt, " + slot(depth - 2) + ", " + slot(depth - 1) + ");");
-        return true;
-      case IrOpcode::LoadStringByte:
-      case IrOpcode::LoadStringByteDynamic: {
-        const bool dynamic = op == IrOpcode::LoadStringByteDynamic;
-        const std::string position = slot(depth - 1);
-        const std::string stringIndex = dynamic ? slot(depth - 2) : std::to_string(instruction.imm);
-        line("{");
-        line("  const PsString &text = " + stringRef(stringIndex) + ";");
-        line("  if (" + position + " >= text.size) {\n    ps_fault(\"string index out of bounds in IR\");\n  }");
-        line("  " + slot(dynamic ? depth - 2 : depth - 1) + " = static_cast<uint64_t>(static_cast<uint8_t>(text.data[" +
-             position + "]));");
-        line("}");
-        return true;
-      }
-      case IrOpcode::LoadStringLength:
-        line(slot(depth - 1) + " = static_cast<uint64_t>(" + stringRef(slot(depth - 1)) + ".size);");
-        return true;
-      case IrOpcode::PrintStringDynamic: {
-        line("{");
-        line("  const PsString &text = " + stringRef(slot(depth - 1)) + ";");
-        line("  ps_emit(text.data, text.size, " + std::to_string(decodePrintFlags(instruction.imm)) + ");");
-        line("}");
-        return true;
-      }
-      case IrOpcode::PrintArgv:
-      case IrOpcode::PrintArgvUnsafe:
-        line("ps_print_argv(rt, " + slot(depth - 1) + ", " + std::to_string(decodePrintFlags(instruction.imm)) + ", " +
-             (op == IrOpcode::PrintArgvUnsafe ? "true" : "false") + ");");
-        return true;
-      case IrOpcode::FileOpenRead:
-      case IrOpcode::FileOpenWrite:
-      case IrOpcode::FileOpenAppend:
-        line(slot(depth) + " = ps_file_open(" + stringRef(std::to_string(instruction.imm)) + ", " + fileOpenMode(op) + ");");
-        return true;
-      case IrOpcode::FileOpenReadDynamic:
-      case IrOpcode::FileOpenWriteDynamic:
-      case IrOpcode::FileOpenAppendDynamic:
-        line(slot(depth - 1) + " = ps_file_open(" + stringRef(slot(depth - 1)) + ", " + fileOpenMode(op) + ");");
-        return true;
-      case IrOpcode::FileClose:
-        line(slot(depth - 1) + " = ps_file_close(" + slot(depth - 1) + ");");
-        return true;
-      case IrOpcode::FileFlush:
-        line(slot(depth - 1) + " = ps_file_flush(" + slot(depth - 1) + ");");
-        return true;
-      case IrOpcode::FileReadByte:
-        // The VM sizes its locals from Load/Store/AddressOf only, so a read
-        // target beyond them is its "invalid local index" fault.
-        if (instruction.imm >= localCount_) {
-          line("ps_fault(\"invalid local index in IR\");");
-        } else {
-          line(slot(depth - 1) + " = ps_file_read_byte(" + slot(depth - 1) + ", " + local(instruction.imm) + ");");
-        }
-        return true;
-      case IrOpcode::FileWriteI32:
-        line(slot(depth - 2) + " = ps_file_write_text(" + slot(depth - 2) + ", std::to_string(static_cast<int32_t>(" +
-             slot(depth - 1) + ")));");
-        return true;
-      case IrOpcode::FileWriteI64:
-        line(slot(depth - 2) + " = ps_file_write_text(" + slot(depth - 2) + ", std::to_string(ps_s64(" + slot(depth - 1) +
-             ")));");
-        return true;
-      case IrOpcode::FileWriteU64:
-        line(slot(depth - 2) + " = ps_file_write_text(" + slot(depth - 2) + ", std::to_string(" + slot(depth - 1) + "));");
-        return true;
-      case IrOpcode::FileWriteString:
-        line("{");
-        line("  const PsString &text = " + stringRef(std::to_string(instruction.imm)) + ";");
-        line("  " + slot(depth - 1) + " = ps_write_all(" + slot(depth - 1) + ", text.data, text.size);");
-        line("}");
-        return true;
-      case IrOpcode::FileWriteStringDynamic:
-        line("{");
-        line("  const PsString &text = " + stringRef(slot(depth - 1)) + ";");
-        line("  " + slot(depth - 2) + " = ps_write_all(" + slot(depth - 2) + ", text.data, text.size);");
-        line("}");
-        return true;
-      case IrOpcode::FileWriteByte:
-        line(slot(depth - 2) + " = ps_file_write_byte(" + slot(depth - 2) + ", " + slot(depth - 1) + ");");
-        return true;
-      case IrOpcode::FileWriteNewline:
-        line(slot(depth - 1) + " = ps_file_write_newline(" + slot(depth - 1) + ");");
-        return true;
-      default:
-        error = "optexe does not support opcode " + opcodeName(op) + " yet (in " + function_.name + ")";
+    case IrOpcode::PushI32:
+    case IrOpcode::PushI64:
+    case IrOpcode::PushF32:
+    case IrOpcode::PushF64:
+      line(slot(depth) + " = " + hex(pushedSlot(instruction)) + ";");
+      return true;
+    case IrOpcode::PushArgc:
+      line(slot(depth) +
+           " = static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(rt.argc)));");
+      return true;
+    case IrOpcode::LoadLocal:
+      line(slot(depth) + " = " + local(instruction.imm) + ";");
+      return true;
+    case IrOpcode::StoreLocal:
+      line(local(instruction.imm) + " = " + slot(depth - 1) + ";");
+      return true;
+    case IrOpcode::Dup:
+      line(slot(depth) + " = " + slot(depth - 1) + ";");
+      return true;
+    case IrOpcode::Pop:
+      return true;
+    case IrOpcode::Jump:
+      line("goto " + label(instruction.imm) + ";");
+      return true;
+    case IrOpcode::JumpIfZero:
+      line("if (" + slot(depth - 1) + " == 0) goto " + label(instruction.imm) + ";");
+      return true;
+    case IrOpcode::ReturnVoid:
+      emitReturn("0");
+      return true;
+    case IrOpcode::ReturnI32:
+      emitReturn("static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(" +
+                 slot(depth - 1) + ")))");
+      return true;
+    case IrOpcode::ReturnI64:
+    case IrOpcode::ReturnF64:
+      emitReturn(slot(depth - 1));
+      return true;
+    case IrOpcode::ReturnF32:
+      emitReturn("static_cast<uint64_t>(static_cast<uint32_t>(" + slot(depth - 1) + "))");
+      return true;
+    case IrOpcode::Call:
+    case IrOpcode::CallVoid: {
+      if (instruction.imm >= module_.functions.size()) {
+        error = "optexe found an invalid call target in " + function_.name;
         return false;
+      }
+      const IrFunction &callee = module_.functions[static_cast<size_t>(instruction.imm)];
+      std::string call = functionSymbol(static_cast<size_t>(instruction.imm)) + "(rt";
+      for (uint32_t i = 0; i < callee.parameterCount; ++i) {
+        call += ", " + slot(depth - static_cast<int64_t>(callee.parameterCount) + i);
+      }
+      call += ")";
+      if (op == IrOpcode::Call) {
+        line(slot(depth - static_cast<int64_t>(callee.parameterCount)) + " = " + call + ";");
+      } else {
+        line(call + ";");
+      }
+      return true;
+    }
+    case IrOpcode::PrintI32:
+      line("ps_emit(std::to_string(static_cast<int32_t>(" + slot(depth - 1) + ")), " +
+           std::to_string(decodePrintFlags(instruction.imm)) + ");");
+      return true;
+    case IrOpcode::PrintI64:
+      line("ps_emit(std::to_string(ps_s64(" + slot(depth - 1) + ")), " +
+           std::to_string(decodePrintFlags(instruction.imm)) + ");");
+      return true;
+    case IrOpcode::PrintU64:
+      line("ps_emit(std::to_string(" + slot(depth - 1) + "), " +
+           std::to_string(decodePrintFlags(instruction.imm)) + ");");
+      return true;
+    case IrOpcode::PrintString: {
+      const uint64_t stringIndex = decodePrintStringIndex(instruction.imm);
+      if (stringIndex >= module_.stringTable.size()) {
+        line("ps_fault(\"invalid string index in IR\");");
+        return true;
+      }
+      const std::string &text = module_.stringTable[static_cast<size_t>(stringIndex)];
+      line("ps_emit(" + quote(text) + ", " + std::to_string(text.size()) + ", " +
+           std::to_string(decodePrintFlags(instruction.imm)) + ");");
+      return true;
+    }
+    case IrOpcode::AddressOfLocal:
+      line(slot(depth) + " = UINT64_C(" + std::to_string(instruction.imm * IrSlotBytes) + ");");
+      return true;
+    case IrOpcode::LoadIndirect:
+      line(slot(depth - 1) + " = *ps_resolve(rt, frame, " + std::to_string(localCount_) + ", " +
+           slot(depth - 1) + ");");
+      return true;
+    case IrOpcode::StoreIndirect:
+      line("*ps_resolve(rt, frame, " + std::to_string(localCount_) + ", " + slot(depth - 2) +
+           ") = " + slot(depth - 1) + ";");
+      line(slot(depth - 2) + " = " + slot(depth - 1) + ";");
+      return true;
+    case IrOpcode::HeapAlloc:
+      line(slot(depth - 1) + " = ps_heap_alloc(rt, " + slot(depth - 1) + ");");
+      return true;
+    case IrOpcode::HeapFree:
+      line("ps_heap_free(rt, " + slot(depth - 1) + ");");
+      return true;
+    case IrOpcode::HeapRealloc:
+      line(slot(depth - 2) + " = ps_heap_realloc(rt, " + slot(depth - 2) + ", " + slot(depth - 1) +
+           ");");
+      return true;
+    case IrOpcode::LoadStringByte:
+    case IrOpcode::LoadStringByteDynamic: {
+      const bool dynamic = op == IrOpcode::LoadStringByteDynamic;
+      const std::string position = slot(depth - 1);
+      const std::string stringIndex = dynamic ? slot(depth - 2) : std::to_string(instruction.imm);
+      line("{");
+      line("  const PsString &text = " + stringRef(stringIndex) + ";");
+      line("  if (" + position +
+           " >= text.size) {\n    ps_fault(\"string index out of bounds in IR\");\n  }");
+      line("  " + slot(dynamic ? depth - 2 : depth - 1) +
+           " = static_cast<uint64_t>(static_cast<uint8_t>(text.data[" + position + "]));");
+      line("}");
+      return true;
+    }
+    case IrOpcode::LoadStringLength:
+      line(slot(depth - 1) + " = static_cast<uint64_t>(" + stringRef(slot(depth - 1)) + ".size);");
+      return true;
+    case IrOpcode::PrintStringDynamic: {
+      line("{");
+      line("  const PsString &text = " + stringRef(slot(depth - 1)) + ";");
+      line("  ps_emit(text.data, text.size, " + std::to_string(decodePrintFlags(instruction.imm)) +
+           ");");
+      line("}");
+      return true;
+    }
+    case IrOpcode::PrintArgv:
+    case IrOpcode::PrintArgvUnsafe:
+      line("ps_print_argv(rt, " + slot(depth - 1) + ", " +
+           std::to_string(decodePrintFlags(instruction.imm)) + ", " +
+           (op == IrOpcode::PrintArgvUnsafe ? "true" : "false") + ");");
+      return true;
+    case IrOpcode::FileOpenRead:
+    case IrOpcode::FileOpenWrite:
+    case IrOpcode::FileOpenAppend:
+      line(slot(depth) + " = ps_file_open(" + stringRef(std::to_string(instruction.imm)) + ", " +
+           fileOpenMode(op) + ");");
+      return true;
+    case IrOpcode::FileOpenReadDynamic:
+    case IrOpcode::FileOpenWriteDynamic:
+    case IrOpcode::FileOpenAppendDynamic:
+      line(slot(depth - 1) + " = ps_file_open(" + stringRef(slot(depth - 1)) + ", " +
+           fileOpenMode(op) + ");");
+      return true;
+    case IrOpcode::FileClose:
+      line(slot(depth - 1) + " = ps_file_close(" + slot(depth - 1) + ");");
+      return true;
+    case IrOpcode::FileFlush:
+      line(slot(depth - 1) + " = ps_file_flush(" + slot(depth - 1) + ");");
+      return true;
+    case IrOpcode::FileReadByte:
+      // The VM sizes its locals from Load/Store/AddressOf only, so a read
+      // target beyond them is its "invalid local index" fault.
+      if (instruction.imm >= localCount_) {
+        line("ps_fault(\"invalid local index in IR\");");
+      } else {
+        line(slot(depth - 1) + " = ps_file_read_byte(" + slot(depth - 1) + ", " +
+             local(instruction.imm) + ");");
+      }
+      return true;
+    case IrOpcode::FileWriteI32:
+      line(slot(depth - 2) + " = ps_file_write_text(" + slot(depth - 2) +
+           ", std::to_string(static_cast<int32_t>(" + slot(depth - 1) + ")));");
+      return true;
+    case IrOpcode::FileWriteI64:
+      line(slot(depth - 2) + " = ps_file_write_text(" + slot(depth - 2) +
+           ", std::to_string(ps_s64(" + slot(depth - 1) + ")));");
+      return true;
+    case IrOpcode::FileWriteU64:
+      line(slot(depth - 2) + " = ps_file_write_text(" + slot(depth - 2) + ", std::to_string(" +
+           slot(depth - 1) + "));");
+      return true;
+    case IrOpcode::FileWriteString:
+      line("{");
+      line("  const PsString &text = " + stringRef(std::to_string(instruction.imm)) + ";");
+      line("  " + slot(depth - 1) + " = ps_write_all(" + slot(depth - 1) +
+           ", text.data, text.size);");
+      line("}");
+      return true;
+    case IrOpcode::FileWriteStringDynamic:
+      line("{");
+      line("  const PsString &text = " + stringRef(slot(depth - 1)) + ";");
+      line("  " + slot(depth - 2) + " = ps_write_all(" + slot(depth - 2) +
+           ", text.data, text.size);");
+      line("}");
+      return true;
+    case IrOpcode::FileWriteByte:
+      line(slot(depth - 2) + " = ps_file_write_byte(" + slot(depth - 2) + ", " + slot(depth - 1) +
+           ");");
+      return true;
+    case IrOpcode::FileWriteNewline:
+      line(slot(depth - 1) + " = ps_file_write_newline(" + slot(depth - 1) + ");");
+      return true;
+    default:
+      error =
+          "optexe does not support opcode " + opcodeName(op) + " yet (in " + function_.name + ")";
+      return false;
     }
   }
 
@@ -596,7 +614,9 @@ private:
 
 } // namespace
 
-bool IrToOptCppEmitter::emitSource(const IrModule &module, std::string &out, std::string &error) const {
+bool IrToOptCppEmitter::emitSource(const IrModule &module,
+                                   std::string &out,
+                                   std::string &error) const {
   error.clear();
   if (module.entryIndex < 0 || static_cast<size_t>(module.entryIndex) >= module.functions.size()) {
     error = "invalid IR entry index";
@@ -618,8 +638,8 @@ bool IrToOptCppEmitter::emitSource(const IrModule &module, std::string &out, std
   }
   source << "};\nconstexpr size_t PsStringCount = " << module.stringTable.size() << ";\n\n";
   for (size_t i = 0; i < module.functions.size(); ++i) {
-    source << "uint64_t " << functionSymbol(i) << "(" << parameterList(module.functions[i].parameterCount, true)
-           << ");\n";
+    source << "uint64_t " << functionSymbol(i) << "("
+           << parameterList(module.functions[i].parameterCount, true) << ");\n";
   }
   source << "\n";
   for (size_t i = 0; i < module.functions.size(); ++i) {
@@ -631,8 +651,8 @@ bool IrToOptCppEmitter::emitSource(const IrModule &module, std::string &out, std
   source << "} // namespace\n\n";
   source << "int main(int argc, char **argv) {\n";
   source << "  Rt rt{argc, argv, 0};\n";
-  source << "  return static_cast<int>(static_cast<int32_t>(" << functionSymbol(static_cast<size_t>(module.entryIndex))
-         << "(rt)));\n";
+  source << "  return static_cast<int>(static_cast<int32_t>("
+         << functionSymbol(static_cast<size_t>(module.entryIndex)) << "(rt)));\n";
   source << "}\n";
   out = source.str();
   return true;

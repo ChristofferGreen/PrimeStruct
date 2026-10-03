@@ -398,7 +398,9 @@ bool parseBenchmarkSemanticFactFamilies(const std::string &text,
 
 // -O0..-O3. Anything else starting with "-O" is an error rather than an
 // unknown option so a typo like -O4 or -O fails with a precise message.
-bool parseOptimizationLevelFlag(const std::string &arg, OptimizationOptions &out, std::string &error) {
+bool parseOptimizationLevelFlag(const std::string &arg,
+                                OptimizationOptions &out,
+                                std::string &error) {
   if (arg.size() == 3 && arg[2] >= '0' && arg[2] <= '3') {
     out.level = static_cast<uint8_t>(arg[2] - '0');
     out.levelSpecified = true;
@@ -871,12 +873,15 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
       error = "--opt-pass requires a value";
       return false;
     } else if (arg.rfind("--opt-pass=", 0) == 0) {
-      if (!addOptimizationPass(
-              arg.substr(std::string("--opt-pass=").size()), "--opt-pass", out.optimization.enabledPasses, error)) {
+      if (!addOptimizationPass(arg.substr(std::string("--opt-pass=").size()),
+                               "--opt-pass",
+                               out.optimization.enabledPasses,
+                               error)) {
         return false;
       }
     } else if (arg == "--no-opt-pass" && i + 1 < argc) {
-      if (!addOptimizationPass(argv[++i], "--no-opt-pass", out.optimization.disabledPasses, error)) {
+      if (!addOptimizationPass(
+              argv[++i], "--no-opt-pass", out.optimization.disabledPasses, error)) {
         return false;
       }
     } else if (arg == "--no-opt-pass") {

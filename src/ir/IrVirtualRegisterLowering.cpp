@@ -13,20 +13,20 @@ namespace {
 // IrCfg.h; this file only assigns virtual registers on top of it.
 std::string formatCfgError(const IrCfgError &cfgError) {
   switch (cfgError.kind) {
-    case IrCfgErrorKind::InvalidJumpTarget:
-      return "virtual-register lowering found invalid jump target";
-    case IrCfgErrorKind::UnsupportedOpcode:
-      return "unsupported opcode in virtual-register lowering";
-    case IrCfgErrorKind::StackUnderflow:
-      return "virtual-register lowering found stack underflow at instruction " +
-             std::to_string(cfgError.instructionIndex);
-    case IrCfgErrorKind::InvalidDup:
-      return "virtual-register lowering found invalid dup at instruction " +
-             std::to_string(cfgError.instructionIndex);
-    case IrCfgErrorKind::InconsistentDepth:
-      return "virtual-register lowering found inconsistent stack depth at block boundary";
-    case IrCfgErrorKind::None:
-      break;
+  case IrCfgErrorKind::InvalidJumpTarget:
+    return "virtual-register lowering found invalid jump target";
+  case IrCfgErrorKind::UnsupportedOpcode:
+    return "unsupported opcode in virtual-register lowering";
+  case IrCfgErrorKind::StackUnderflow:
+    return "virtual-register lowering found stack underflow at instruction " +
+           std::to_string(cfgError.instructionIndex);
+  case IrCfgErrorKind::InvalidDup:
+    return "virtual-register lowering found invalid dup at instruction " +
+           std::to_string(cfgError.instructionIndex);
+  case IrCfgErrorKind::InconsistentDepth:
+    return "virtual-register lowering found inconsistent stack depth at block boundary";
+  case IrCfgErrorKind::None:
+    break;
   }
   return "virtual-register lowering failed";
 }

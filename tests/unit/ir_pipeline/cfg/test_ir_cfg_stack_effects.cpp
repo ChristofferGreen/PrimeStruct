@@ -103,18 +103,21 @@ constexpr uint64_t ScratchPathString = 1;
 
 std::vector<EffectCase> buildCases() {
   std::vector<EffectCase> cases;
-  const auto add = [&](IrOpcode op, uint64_t imm, std::vector<IrInstruction> setup, const char *label = "") {
-    const primec::IrOpcodeInfo *info = primec::irOpcodeInfo(op);
-    std::string name = info != nullptr ? info->name : "?";
-    if (label[0] != '\0') {
-      name += std::string(" ") + label;
-    }
-    cases.push_back({std::move(name), op, imm, std::move(setup)});
-  };
+  const auto add =
+      [&](IrOpcode op, uint64_t imm, std::vector<IrInstruction> setup, const char *label = "") {
+        const primec::IrOpcodeInfo *info = primec::irOpcodeInfo(op);
+        std::string name = info != nullptr ? info->name : "?";
+        if (label[0] != '\0') {
+          name += std::string(" ") + label;
+        }
+        cases.push_back({std::move(name), op, imm, std::move(setup)});
+      };
 
   const std::vector<IrInstruction> intOperands = {pushI32(7), pushI32(3)};
-  const std::vector<IrInstruction> f32Operands = {pushF32(F32TwoPointFive), pushF32(F32OnePointFive)};
-  const std::vector<IrInstruction> f64Operands = {pushF64(F64TwoPointFive), pushF64(F64OnePointFive)};
+  const std::vector<IrInstruction> f32Operands = {pushF32(F32TwoPointFive),
+                                                  pushF32(F32OnePointFive)};
+  const std::vector<IrInstruction> f64Operands = {pushF64(F64TwoPointFive),
+                                                  pushF64(F64OnePointFive)};
 
   // Pushes, locals, stack shuffling.
   add(IrOpcode::PushI32, 5, {});
@@ -132,42 +135,65 @@ std::vector<EffectCase> buildCases() {
   add(IrOpcode::StoreIndirect, 0, {{IrOpcode::AddressOfLocal, 0}, pushI32(5)});
 
   // Integer arithmetic and comparisons.
-  for (const IrOpcode op : {IrOpcode::AddI32, IrOpcode::SubI32, IrOpcode::MulI32, IrOpcode::DivI32,
-                            IrOpcode::AddI64, IrOpcode::SubI64, IrOpcode::MulI64, IrOpcode::DivI64,
-                            IrOpcode::DivU64, IrOpcode::CmpEqI32, IrOpcode::CmpNeI32, IrOpcode::CmpLtI32,
-                            IrOpcode::CmpLeI32, IrOpcode::CmpGtI32, IrOpcode::CmpGeI32, IrOpcode::CmpEqI64,
-                            IrOpcode::CmpNeI64, IrOpcode::CmpLtI64, IrOpcode::CmpLeI64, IrOpcode::CmpGtI64,
-                            IrOpcode::CmpGeI64, IrOpcode::CmpLtU64, IrOpcode::CmpLeU64, IrOpcode::CmpGtU64,
-                            IrOpcode::CmpGeU64}) {
+  for (const IrOpcode op :
+       {IrOpcode::AddI32,   IrOpcode::SubI32,   IrOpcode::MulI32,   IrOpcode::DivI32,
+        IrOpcode::AddI64,   IrOpcode::SubI64,   IrOpcode::MulI64,   IrOpcode::DivI64,
+        IrOpcode::DivU64,   IrOpcode::CmpEqI32, IrOpcode::CmpNeI32, IrOpcode::CmpLtI32,
+        IrOpcode::CmpLeI32, IrOpcode::CmpGtI32, IrOpcode::CmpGeI32, IrOpcode::CmpEqI64,
+        IrOpcode::CmpNeI64, IrOpcode::CmpLtI64, IrOpcode::CmpLeI64, IrOpcode::CmpGtI64,
+        IrOpcode::CmpGeI64, IrOpcode::CmpLtU64, IrOpcode::CmpLeU64, IrOpcode::CmpGtU64,
+        IrOpcode::CmpGeU64}) {
     add(op, 0, intOperands);
   }
   add(IrOpcode::NegI32, 0, {pushI32(5)});
   add(IrOpcode::NegI64, 0, {pushI32(5)});
 
   // Float arithmetic and comparisons.
-  for (const IrOpcode op : {IrOpcode::AddF32, IrOpcode::SubF32, IrOpcode::MulF32, IrOpcode::DivF32,
-                            IrOpcode::CmpEqF32, IrOpcode::CmpNeF32, IrOpcode::CmpLtF32, IrOpcode::CmpLeF32,
-                            IrOpcode::CmpGtF32, IrOpcode::CmpGeF32}) {
+  for (const IrOpcode op : {IrOpcode::AddF32,
+                            IrOpcode::SubF32,
+                            IrOpcode::MulF32,
+                            IrOpcode::DivF32,
+                            IrOpcode::CmpEqF32,
+                            IrOpcode::CmpNeF32,
+                            IrOpcode::CmpLtF32,
+                            IrOpcode::CmpLeF32,
+                            IrOpcode::CmpGtF32,
+                            IrOpcode::CmpGeF32}) {
     add(op, 0, f32Operands);
   }
-  for (const IrOpcode op : {IrOpcode::AddF64, IrOpcode::SubF64, IrOpcode::MulF64, IrOpcode::DivF64,
-                            IrOpcode::CmpEqF64, IrOpcode::CmpNeF64, IrOpcode::CmpLtF64, IrOpcode::CmpLeF64,
-                            IrOpcode::CmpGtF64, IrOpcode::CmpGeF64}) {
+  for (const IrOpcode op : {IrOpcode::AddF64,
+                            IrOpcode::SubF64,
+                            IrOpcode::MulF64,
+                            IrOpcode::DivF64,
+                            IrOpcode::CmpEqF64,
+                            IrOpcode::CmpNeF64,
+                            IrOpcode::CmpLtF64,
+                            IrOpcode::CmpLeF64,
+                            IrOpcode::CmpGtF64,
+                            IrOpcode::CmpGeF64}) {
     add(op, 0, f64Operands);
   }
   add(IrOpcode::NegF32, 0, {pushF32(F32TwoPointFive)});
   add(IrOpcode::NegF64, 0, {pushF64(F64TwoPointFive)});
 
   // Conversions.
-  for (const IrOpcode op : {IrOpcode::ConvertI32ToF32, IrOpcode::ConvertI32ToF64, IrOpcode::ConvertI64ToF32,
-                            IrOpcode::ConvertI64ToF64, IrOpcode::ConvertU64ToF32, IrOpcode::ConvertU64ToF64}) {
+  for (const IrOpcode op : {IrOpcode::ConvertI32ToF32,
+                            IrOpcode::ConvertI32ToF64,
+                            IrOpcode::ConvertI64ToF32,
+                            IrOpcode::ConvertI64ToF64,
+                            IrOpcode::ConvertU64ToF32,
+                            IrOpcode::ConvertU64ToF64}) {
     add(op, 0, {pushI32(5)});
   }
-  for (const IrOpcode op : {IrOpcode::ConvertF32ToI32, IrOpcode::ConvertF32ToI64, IrOpcode::ConvertF32ToU64,
+  for (const IrOpcode op : {IrOpcode::ConvertF32ToI32,
+                            IrOpcode::ConvertF32ToI64,
+                            IrOpcode::ConvertF32ToU64,
                             IrOpcode::ConvertF32ToF64}) {
     add(op, 0, {pushF32(F32TwoPointFive)});
   }
-  for (const IrOpcode op : {IrOpcode::ConvertF64ToI32, IrOpcode::ConvertF64ToI64, IrOpcode::ConvertF64ToU64,
+  for (const IrOpcode op : {IrOpcode::ConvertF64ToI32,
+                            IrOpcode::ConvertF64ToI64,
+                            IrOpcode::ConvertF64ToU64,
                             IrOpcode::ConvertF64ToF32}) {
     add(op, 0, {pushF64(F64TwoPointFive)});
   }
@@ -213,7 +239,8 @@ std::vector<EffectCase> buildCases() {
   add(IrOpcode::FileOpenRead, ScratchPathString, {});
   add(IrOpcode::FileOpenWrite, ScratchPathString, {});
   add(IrOpcode::FileOpenAppend, ScratchPathString, {});
-  const auto dynamicPath = std::vector<IrInstruction>{pushI32(static_cast<int32_t>(ScratchPathString))};
+  const auto dynamicPath =
+      std::vector<IrInstruction>{pushI32(static_cast<int32_t>(ScratchPathString))};
   add(IrOpcode::FileOpenReadDynamic, 0, dynamicPath);
   add(IrOpcode::FileOpenWriteDynamic, 0, dynamicPath);
   add(IrOpcode::FileOpenAppendDynamic, 0, dynamicPath);
@@ -260,10 +287,8 @@ primec::IrModule makeModule(const EffectCase &testCase, const std::string &scrat
   primec::IrFunction twoParameters;
   twoParameters.name = "/two";
   twoParameters.parameterCount = 2;
-  twoParameters.instructions = {{IrOpcode::StoreLocal, 1},
-                                {IrOpcode::StoreLocal, 0},
-                                pushI32(9),
-                                {IrOpcode::ReturnI32, 0}};
+  twoParameters.instructions = {
+      {IrOpcode::StoreLocal, 1}, {IrOpcode::StoreLocal, 0}, pushI32(9), {IrOpcode::ReturnI32, 0}};
   module.functions.push_back(std::move(twoParameters));
 
   primec::IrFunction oneParameterVoid;
@@ -365,7 +390,8 @@ bool measure(const EffectCase &testCase,
 } // namespace
 
 TEST_CASE("stack effect table matches the VM for every opcode") {
-  const std::filesystem::path scratch = primec::testing::testScratchPath("ir_cfg/stack_effect_file.txt");
+  const std::filesystem::path scratch =
+      primec::testing::testScratchPath("ir_cfg/stack_effect_file.txt");
   std::filesystem::create_directories(scratch.parent_path());
   {
     std::ofstream file(scratch);
@@ -400,11 +426,18 @@ TEST_CASE("stack effect table matches the VM for every opcode") {
     }
     const primec::IrModule module = makeModule(outcome.testCase, scratch.string());
     primec::IrStackEffect effect;
-    REQUIRE(primec::computeIrStackEffect({outcome.testCase.op, outcome.testCase.imm}, module, effect));
+    REQUIRE(
+        primec::computeIrStackEffect({outcome.testCase.op, outcome.testCase.imm}, module, effect));
     CHECK_MESSAGE(effect.pops == outcome.measured.pops,
-                  "table pops ", effect.pops, " but the VM popped ", outcome.measured.pops);
+                  "table pops ",
+                  effect.pops,
+                  " but the VM popped ",
+                  outcome.measured.pops);
     CHECK_MESSAGE(effect.pushes == outcome.measured.pushes,
-                  "table pushes ", effect.pushes, " but the VM pushed ", outcome.measured.pushes);
+                  "table pushes ",
+                  effect.pushes,
+                  " but the VM pushed ",
+                  outcome.measured.pushes);
   }
 }
 
@@ -417,10 +450,12 @@ TEST_CASE("every opcode has a stack effect case and a table entry") {
   for (const primec::IrOpcodeInfo &info : primec::IrOpcodeTable) {
     CAPTURE(info.name);
     CHECK_MESSAGE(covered.count(static_cast<uint8_t>(info.op)) == 1,
-                  "add a VM cross-check case for ", info.name);
+                  "add a VM cross-check case for ",
+                  info.name);
     primec::IrStackEffect effect;
     CHECK_MESSAGE(primec::computeIrStackEffect({info.op, 0}, module, effect),
-                  "computeIrStackEffect has no entry for ", info.name);
+                  "computeIrStackEffect has no entry for ",
+                  info.name);
   }
 }
 

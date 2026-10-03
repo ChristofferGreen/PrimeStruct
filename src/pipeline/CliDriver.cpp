@@ -307,7 +307,13 @@ int runIrModuleDump(std::ostream &out,
   }
   IrModule ir;
   IrPreparationFailure failure;
-  if (!prepareIrModule(program, semanticProgram, prepareOptions, IrValidationTarget::Any, ir, failure, expandedSource)) {
+  if (!prepareIrModule(program,
+                       semanticProgram,
+                       prepareOptions,
+                       IrValidationTarget::Any,
+                       ir,
+                       failure,
+                       expandedSource)) {
     // The listing is backend-neutral, so describe failures with generic IR
     // prefixes rather than a backend's own.
     IrBackendDiagnostics diagnostics;

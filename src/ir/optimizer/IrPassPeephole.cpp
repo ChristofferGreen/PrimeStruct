@@ -11,16 +11,16 @@ namespace {
 // Instructions that only push a value and have no other effect.
 bool isPurePush(IrOpcode op) {
   switch (op) {
-    case IrOpcode::PushI32:
-    case IrOpcode::PushI64:
-    case IrOpcode::PushF32:
-    case IrOpcode::PushF64:
-    case IrOpcode::PushArgc:
-    case IrOpcode::LoadLocal:
-    case IrOpcode::AddressOfLocal:
-      return true;
-    default:
-      return false;
+  case IrOpcode::PushI32:
+  case IrOpcode::PushI64:
+  case IrOpcode::PushF32:
+  case IrOpcode::PushF64:
+  case IrOpcode::PushArgc:
+  case IrOpcode::LoadLocal:
+  case IrOpcode::AddressOfLocal:
+    return true;
+  default:
+    return false;
   }
 }
 
@@ -73,7 +73,8 @@ bool isIntegerConstant(const IrInstruction &instruction, int64_t value) {
 }
 
 bool isAddOrSub(IrOpcode op) {
-  return op == IrOpcode::AddI32 || op == IrOpcode::AddI64 || op == IrOpcode::SubI32 || op == IrOpcode::SubI64;
+  return op == IrOpcode::AddI32 || op == IrOpcode::AddI64 || op == IrOpcode::SubI32 ||
+         op == IrOpcode::SubI64;
 }
 
 bool isMulOrDivU(IrOpcode op) {
@@ -86,13 +87,13 @@ bool isMulOrDivU(IrOpcode op) {
 bool sweep(IrFunction &function) {
   std::vector<bool> targets = jumpTargetMask(function);
   InstructionRewriter rewriter(function);
-  size_t prev = function.instructions.size();  // none
-  bool carryTarget = false;                     // an erased join point hands its status to the next survivor
+  size_t prev = function.instructions.size(); // none
+  bool carryTarget = false; // an erased join point hands its status to the next survivor
 
   for (size_t i = 0; i < function.instructions.size(); ++i) {
     const bool isTarget = targets[i] || carryTarget;
     carryTarget = false;
-    targets[i] = isTarget;  // remember inherited join points for later rules
+    targets[i] = isTarget; // remember inherited join points for later rules
     const IrInstruction cur = rewriter.current(i);
     if (prev != function.instructions.size() && !isTarget) {
       const IrInstruction p = rewriter.current(prev);
@@ -113,7 +114,7 @@ bool sweep(IrFunction &function) {
             rewriter.erase(dup);
             rewriter.erase(i);
             if (dupWasTarget) {
-              targets[prev] = true;  // jumps into the dup now land on the store
+              targets[prev] = true; // jumps into the dup now land on the store
             }
             continue;
           }
@@ -146,11 +147,11 @@ bool sweep(IrFunction &function) {
           removePair = true;
         }
       } else if (isIntegerConstant(p, 0) && isAddOrSub(cur.op)) {
-        removePair = true;  // x + 0, x - 0
+        removePair = true; // x + 0, x - 0
       } else if (isIntegerConstant(p, 1) && isMulOrDivU(cur.op)) {
-        removePair = true;  // x * 1, x / 1
+        removePair = true; // x * 1, x / 1
       } else if ((cur.op == IrOpcode::NegI32 || cur.op == IrOpcode::NegI64) && p.op == cur.op) {
-        removePair = true;  // -(-x)
+        removePair = true; // -(-x)
       }
       if (removePair) {
         const bool prevWasTarget = targets[prev];

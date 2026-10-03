@@ -140,7 +140,8 @@ TEST_CASE("portability check rejects host-defined float conversions and division
   CHECK_FALSE(primec::irPureEvalIsPortable(IrOpcode::ConvertF32ToU64, f32Bits(-5.0f), 0));
   CHECK(primec::irPureEvalIsPortable(IrOpcode::ConvertF32ToU64, f32Bits(-0.5f), 0));
   CHECK_FALSE(primec::irPureEvalIsPortable(IrOpcode::ConvertF64ToI64, f64Bits(9.3e18), 0));
-  CHECK(primec::irPureEvalIsPortable(IrOpcode::ConvertF64ToI64, f64Bits(-9223372036854775808.0), 0));
+  CHECK(
+      primec::irPureEvalIsPortable(IrOpcode::ConvertF64ToI64, f64Bits(-9223372036854775808.0), 0));
   CHECK_FALSE(primec::irPureEvalIsPortable(IrOpcode::DivI64, 5, 0));
   CHECK(primec::irPureEvalIsPortable(IrOpcode::DivI64, 5, 2));
   CHECK(primec::irPureEvalIsPortable(IrOpcode::AddF32, f32Bits(1.0f), f32Bits(2.0f)));

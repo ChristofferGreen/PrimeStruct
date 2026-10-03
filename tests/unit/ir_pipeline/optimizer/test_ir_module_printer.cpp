@@ -60,7 +60,9 @@ TEST_CASE("calls, host imports, strings and print flags are named") {
   primec::IrFunction entry;
   entry.name = "/main";
   entry.instructions = assemble({"PushI32 1", "CallVoid 1", "CallHost 0", "ReturnVoid"});
-  entry.instructions.push_back({primec::IrOpcode::PrintString, primec::encodePrintStringImm(1, primec::PrintFlagNewline | primec::PrintFlagStderr)});
+  entry.instructions.push_back(
+      {primec::IrOpcode::PrintString,
+       primec::encodePrintStringImm(1, primec::PrintFlagNewline | primec::PrintFlagStderr)});
   entry.instructions.push_back({primec::IrOpcode::FileOpenRead, 0});
   module.functions.push_back(std::move(entry));
   module.functions.push_back(std::move(callee));
@@ -90,9 +92,11 @@ TEST_CASE("every opcode formats to its own name without crashing") {
 
 TEST_CASE("non-finite floats print by name and invalid references are marked") {
   const primec::IrModule module;
-  CHECK(primec::formatIrInstruction(module, {primec::IrOpcode::PushF32, 0x7fc00000u}) == "PushF32 0x7fc00000 (nan)");
+  CHECK(primec::formatIrInstruction(module, {primec::IrOpcode::PushF32, 0x7fc00000u}) ==
+        "PushF32 0x7fc00000 (nan)");
   CHECK(primec::formatIrInstruction(module, {primec::IrOpcode::PushF64, 0xfff0000000000000ull}) ==
         "PushF64 0xfff0000000000000 (-inf)");
-  CHECK(primec::formatIrInstruction(module, {primec::IrOpcode::FileOpenRead, 3}) == "FileOpenRead #3 <invalid>");
+  CHECK(primec::formatIrInstruction(module, {primec::IrOpcode::FileOpenRead, 3}) ==
+        "FileOpenRead #3 <invalid>");
   CHECK(primec::formatIrInstruction(module, {primec::IrOpcode::Call, 9}) == "Call 9");
 }

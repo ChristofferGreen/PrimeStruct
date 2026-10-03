@@ -619,7 +619,8 @@ public:
     }
 
     const ProcessRunner &processRunner = systemProcessRunner();
-    if (!compileCppExecutableOptimized(processRunner, cppPath, outputPath, options.hostOptimizationLevel)) {
+    if (!compileCppExecutableOptimized(
+            processRunner, cppPath, outputPath, options.hostOptimizationLevel)) {
       error = "Failed to compile output executable";
       return false;
     }

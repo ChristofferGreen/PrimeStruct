@@ -23,16 +23,16 @@ std::string cfgErrorMessage(const IrCfgError &cfgError) {
   const IrOpcodeInfo *info = irOpcodeInfo(cfgError.opcode);
   const std::string opcodeName = info != nullptr ? info->name : "Unknown";
   switch (cfgError.kind) {
-    case IrCfgErrorKind::InvalidJumpTarget:
-      return "native backend detected invalid jump target";
-    case IrCfgErrorKind::InconsistentDepth:
-      return "native backend detected inconsistent stack depth at instruction " +
-             std::to_string(cfgError.instructionIndex) + " (" + opcodeName + ")";
-    case IrCfgErrorKind::None:
-    case IrCfgErrorKind::UnsupportedOpcode:
-    case IrCfgErrorKind::StackUnderflow:
-    case IrCfgErrorKind::InvalidDup:
-      break;
+  case IrCfgErrorKind::InvalidJumpTarget:
+    return "native backend detected invalid jump target";
+  case IrCfgErrorKind::InconsistentDepth:
+    return "native backend detected inconsistent stack depth at instruction " +
+           std::to_string(cfgError.instructionIndex) + " (" + opcodeName + ")";
+  case IrCfgErrorKind::None:
+  case IrCfgErrorKind::UnsupportedOpcode:
+  case IrCfgErrorKind::StackUnderflow:
+  case IrCfgErrorKind::InvalidDup:
+    break;
   }
   return "native backend detected invalid stack usage at instruction " +
          std::to_string(cfgError.instructionIndex) + " (" + opcodeName + ")";

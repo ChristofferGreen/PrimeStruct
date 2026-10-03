@@ -1951,6 +1951,23 @@ are left unarchived.
 | TODO-5424 | Collapse the removed vector/array/map call-form spelling diagnostics | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
 | TODO-5425 | Probe and prune the legacy SoA helper path canonicalizers | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
 | TODO-5426 | Bring IrLowererCallHelpers.h under 100 std::function mentions | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
+| TODO-5460 | Add -O0..-O3 and --opt-* flags to primec and primevm (parse only) | [2026-10.md](todo_archive/2026-10.md) | - |
+| TODO-5461 | IR optimization pass manager and manifest with no passes | [2026-10.md](todo_archive/2026-10.md) | - |
+| TODO-5462 | Dump the lowered IrModule as text (--dump-stage=ir-lowered) | [2026-10.md](todo_archive/2026-10.md) | - |
+| TODO-5463 | Benchmark vm and Linux native in scripts/benchmark.sh | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
+| TODO-5465 | ProgramMatrix runner and port the native_backend.control suite | [2026-10.md](todo_archive/2026-10.md) | - |
+| TODO-5467 | Extract shared IR CFG utilities (leaders, successors, reachability, stack depth) | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
+| TODO-5468 | Validate stack balance and consistent block depths in validateIrModule | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
+| TODO-5469 | Share pure-opcode semantics between the VM, constant folding, and C++ emitters | [2026-10.md](todo_archive/2026-10.md) | - |
+| TODO-5470 | Add per-function local escape analysis (pinned locals) | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
+| TODO-5472 | optexe/optcpp emit kinds: register-form C++ emitter for scalar programs | [2026-10.md](todo_archive/2026-10.md) | - |
+| TODO-5473 | optexe: calls, recursion, floats and conversions | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
+| TODO-5474 | optexe: memory model (pinned frames, indirect access, heap with O(1) owner lookup) | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
+| TODO-5475 | optexe: strings, print, file I/O and entry arguments | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
+| TODO-5476 | Run the corpus and benchmarks through optexe; gate compile time | [2026-10.md](todo_archive/2026-10.md) | - |
+| TODO-5479 | Fast VM execution loop for plain runs | [2026-10.md](todo_archive/2026-10.md) | - |
+| TODO-5480 | IR passes for the patterns lowering leaves behind | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
+| TODO-5482 | Triage the corpus programs where native differs from the VM | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
 
 <!-- INDEX-END -->
 

@@ -18,12 +18,12 @@ namespace {
 bool eliminateDeadStores(IrFunction &function, const IrModule &module) {
   const IrLocalEscapeInfo escape = analyzeIrLocalEscape(function);
   if (escape.localCount == 0 || escape.pinnedSlots.size() == escape.localCount) {
-    return false;  // nothing trackable
+    return false; // nothing trackable
   }
   IrCfg cfg;
   IrCfgError cfgError;
   if (!buildIrCfg(function, module, cfg, cfgError)) {
-    return false;  // malformed or inconsistent code: leave it alone
+    return false; // malformed or inconsistent code: leave it alone
   }
 
   const size_t locals = escape.localCount;

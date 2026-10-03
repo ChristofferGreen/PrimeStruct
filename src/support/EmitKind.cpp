@@ -3,11 +3,25 @@
 namespace primec {
 namespace {
 
-constexpr std::string_view PrimecEmitKinds[] = {
-    "cpp",     "cpp-ir", "exe",      "exe-ir",   "native",    "ir",         "vm",
-    "glsl",    "spirv",  "wasm",     "glsl-ir",  "spirv-ir",  "optcpp",     "optcpp-ir",
-    "optexe",  "optexe-ir"};
-constexpr std::string_view PrimecEmitKindsUsage = "cpp|cpp-ir|exe|exe-ir|native|ir|vm|glsl|spirv|wasm|glsl-ir|spirv-ir|optcpp|optcpp-ir|optexe|optexe-ir";
+constexpr std::string_view PrimecEmitKinds[] = {"cpp",
+                                                "cpp-ir",
+                                                "exe",
+                                                "exe-ir",
+                                                "native",
+                                                "ir",
+                                                "vm",
+                                                "glsl",
+                                                "spirv",
+                                                "wasm",
+                                                "glsl-ir",
+                                                "spirv-ir",
+                                                "optcpp",
+                                                "optcpp-ir",
+                                                "optexe",
+                                                "optexe-ir"};
+constexpr std::string_view PrimecEmitKindsUsage =
+    "cpp|cpp-ir|exe|exe-ir|native|ir|vm|glsl|spirv|wasm|glsl-ir|spirv-ir|optcpp|optcpp-ir|optexe|"
+    "optexe-ir";
 
 } // namespace
 
