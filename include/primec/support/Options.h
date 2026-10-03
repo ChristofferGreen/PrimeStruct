@@ -10,6 +10,23 @@
 namespace primec {
 enum class DebugJsonSnapshotMode { None, Stop, All };
 
+// IR optimization controls (docs/OptimizingBackendsPlan.md). Parsed from
+// -O0..-O3 and --opt-* flags; nothing consumes them until the IR optimizer
+// exists (TODO-5424), so every combination currently behaves like -O0.
+struct OptimizationOptions {
+  // 0..3; the value of the last -O<n> flag on the command line.
+  uint8_t level = 0;
+  // True when a -O<n> flag was given, so a later default flip can tell an
+  // explicit -O0 from no flag at all.
+  bool levelSpecified = false;
+  // Pass names in command-line order. Names are checked against the pass
+  // manifest by the optimizer, not by the parser.
+  std::vector<std::string> enabledPasses;
+  std::vector<std::string> disabledPasses;
+  bool verifyEachPass = false;
+  bool report = false;
+};
+
 struct Options {
   std::string emitKind;
   std::string wasmProfile = "wasi";
@@ -30,6 +47,7 @@ struct Options {
   std::string outDir = ".";
   std::string entryPath = "/main";
   bool inlineIrCalls = false;
+  OptimizationOptions optimization;
   std::string dumpStage;
   std::vector<std::string> textFilters = {"collections", "operators", "implicit-utf8", "implicit-i32"};
   std::vector<TextTransformRule> textTransformRules;

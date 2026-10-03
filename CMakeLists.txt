@@ -911,6 +911,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/parser/test_lexer.cpp
     tests/unit/misc/test_diagnostics_codes.cpp
     tests/unit/misc/test_dump_normalization.cpp
+    tests/unit/misc/test_options_optimization.cpp
     tests/unit/misc/test_support_stdlib_collection_struct_annotation_detection.cpp
   )
   target_include_directories(PrimeStruct_misc_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
@@ -1752,6 +1753,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.ir_printer
     primestruct.diagnostics.codes
     primestruct.dumps.normalization
+    primestruct.options.optimization
     primestruct.stdlib.collection_struct_annotation_detection
     primestruct.stdlib.collection_registry_dynamic_discovery
   )

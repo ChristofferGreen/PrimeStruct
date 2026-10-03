@@ -396,6 +396,45 @@ bool parseBenchmarkSemanticFactFamilies(const std::string &text,
   return true;
 }
 
+// -O0..-O3. Anything else starting with "-O" is an error rather than an
+// unknown option so a typo like -O4 or -O fails with a precise message.
+bool parseOptimizationLevelFlag(const std::string &arg, OptimizationOptions &out, std::string &error) {
+  if (arg.size() == 3 && arg[2] >= '0' && arg[2] <= '3') {
+    out.level = static_cast<uint8_t>(arg[2] - '0');
+    out.levelSpecified = true;
+    return true;
+  }
+  error = "unsupported optimization level: " + arg + " (expected -O0|-O1|-O2|-O3)";
+  return false;
+}
+
+// Pass names are lower-case words joined by '-' or '_' (for example
+// "const-fold"); the optimizer checks them against its manifest later.
+bool isValidOptimizationPassName(const std::string &name) {
+  if (name.empty()) {
+    return false;
+  }
+  for (const char c : name) {
+    const bool ok = (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-' || c == '_';
+    if (!ok) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool addOptimizationPass(const std::string &name,
+                         const char *optionName,
+                         std::vector<std::string> &list,
+                         std::string &error) {
+  if (!isValidOptimizationPassName(name)) {
+    error = std::string("invalid ") + optionName + " value: " + name;
+    return false;
+  }
+  list.push_back(name);
+  return true;
+}
+
 bool parsePositiveUint32(const std::string &text, uint32_t &out, std::string &error, const char *optionName) {
   const std::string normalized = trimWhitespace(text);
   if (normalized.empty()) {
@@ -795,6 +834,40 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
       out.benchmarkIrLowererLegacyCollectionBranchCounters = true;
     } else if (arg == "--ir-inline") {
       out.inlineIrCalls = true;
+    } else if (arg.rfind("-O", 0) == 0) {
+      if (!parseOptimizationLevelFlag(arg, out.optimization, error)) {
+        return false;
+      }
+    } else if (arg == "--opt-pass" && i + 1 < argc) {
+      if (!addOptimizationPass(argv[++i], "--opt-pass", out.optimization.enabledPasses, error)) {
+        return false;
+      }
+    } else if (arg == "--opt-pass") {
+      error = "--opt-pass requires a value";
+      return false;
+    } else if (arg.rfind("--opt-pass=", 0) == 0) {
+      if (!addOptimizationPass(
+              arg.substr(std::string("--opt-pass=").size()), "--opt-pass", out.optimization.enabledPasses, error)) {
+        return false;
+      }
+    } else if (arg == "--no-opt-pass" && i + 1 < argc) {
+      if (!addOptimizationPass(argv[++i], "--no-opt-pass", out.optimization.disabledPasses, error)) {
+        return false;
+      }
+    } else if (arg == "--no-opt-pass") {
+      error = "--no-opt-pass requires a value";
+      return false;
+    } else if (arg.rfind("--no-opt-pass=", 0) == 0) {
+      if (!addOptimizationPass(arg.substr(std::string("--no-opt-pass=").size()),
+                               "--no-opt-pass",
+                               out.optimization.disabledPasses,
+                               error)) {
+        return false;
+      }
+    } else if (arg == "--opt-report") {
+      out.optimization.report = true;
+    } else if (arg == "--opt-verify-each") {
+      out.optimization.verifyEachPass = true;
     } else if (!arg.empty() && arg[0] == '-') {
       error = "unknown option: " + arg;
       return false;

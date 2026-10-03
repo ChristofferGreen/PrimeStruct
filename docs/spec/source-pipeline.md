@@ -39,6 +39,10 @@ Pipeline operating rules:
 - Use `--no-text-transforms`, `--no-semantic-transforms`, or `--no-transforms` to disable transforms and require
   canonical syntax.
 - `--ir-inline` enables a post-validation IR inlining optimization pass before VM/native/IR emission.
+- `-O0`, `-O1`, `-O2`, `-O3` select an optimization level (default `-O0`; the last flag wins), and
+  `--opt-pass <name>`, `--no-opt-pass <name>`, `--opt-report`, `--opt-verify-each` refine it. They are accepted by
+  `primec` and `primevm` but no optimization passes exist yet, so every combination currently behaves like `-O0`.
+  The plan and pass catalogue are in `docs/OptimizingBackendsPlan.md`.
 - Release validation failures are tracked in `docs/failing_tests.md`. Every
   release test run must record newly failing doctest cases there before new
   implementation work starts, and the TODO queue must prioritize fixing those

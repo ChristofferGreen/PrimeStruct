@@ -36,6 +36,11 @@ TEST_CASE("primec and primevm usage prefer text transforms and import flags") {
   CHECK(primecErr.find("--wasm-profile wasi|browser") != std::string::npos);
   CHECK(primecErr.find("--text-transforms <list>") != std::string::npos);
   CHECK(primecErr.find("--ir-inline") != std::string::npos);
+  CHECK(primecErr.find("-O0|-O1|-O2|-O3") != std::string::npos);
+  CHECK(primecErr.find("--opt-pass <name>") != std::string::npos);
+  CHECK(primecErr.find("--no-opt-pass <name>") != std::string::npos);
+  CHECK(primecErr.find("--opt-report") != std::string::npos);
+  CHECK(primecErr.find("--opt-verify-each") != std::string::npos);
   CHECK(primecErr.find("--text-filters <list>") == std::string::npos);
 
   CHECK(runCommand("./primevm --unknown-option 2> " + quoteShellArg(primevmErrPath)) == 2);
@@ -44,6 +49,11 @@ TEST_CASE("primec and primevm usage prefer text transforms and import flags") {
   CHECK(primevmErr.find("--import-path <dir>, -I <dir>") != std::string::npos);
   CHECK(primevmErr.find("--text-transforms <list>") != std::string::npos);
   CHECK(primevmErr.find("--ir-inline") != std::string::npos);
+  CHECK(primevmErr.find("-O0|-O1|-O2|-O3") != std::string::npos);
+  CHECK(primevmErr.find("--opt-pass <name>") != std::string::npos);
+  CHECK(primevmErr.find("--no-opt-pass <name>") != std::string::npos);
+  CHECK(primevmErr.find("--opt-report") != std::string::npos);
+  CHECK(primevmErr.find("--opt-verify-each") != std::string::npos);
   CHECK(primevmErr.find("--debug-json") != std::string::npos);
   CHECK(primevmErr.find("--debug-json-snapshots [none|stop|all]") != std::string::npos);
   CHECK(primevmErr.find("--debug-trace <path>") != std::string::npos);
@@ -69,6 +79,14 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 7);
   CHECK(runCommand(runVmCmd) == 7);
+
+  // Optimization flags are accepted and, until passes exist, change nothing.
+  const std::string optFlags =
+      " -O3 --opt-pass=const-fold --no-opt-pass=peephole --opt-report --opt-verify-each";
+  const std::string optExePath = (testScratchPath("") / "primec_opt_flags_exe").string();
+  CHECK(runCommand("./primec --emit=native " + srcPath + " -o " + optExePath + " --entry /main" + optFlags) == 0);
+  CHECK(runCommand(optExePath) == 7);
+  CHECK(runCommand("./primevm " + srcPath + " --entry /main" + optFlags) == 7);
 }
 
 TEST_CASE("primevm accepts explicit emit vm compatibility flag") {
