@@ -354,8 +354,11 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
           if (stem.rfind(collection_paths::kExperimentalFolderPrefix, 0) == 0) {
             continue;
           }
+          // soa_storage.prime plus the files of the soa_storage/ directory form one module.
+          const bool inSoaStorageDirectory = entry.path().parent_path().filename() == "soa_storage";
           const bool skipThisFile =
-              (skipSoaInCollectionsWildcard && (stem == "soa" || stem == "soa_storage")) ||
+              (skipSoaInCollectionsWildcard &&
+               (stem == "soa" || stem == "soa_storage" || inSoaStorageDirectory)) ||
               (skipMapInCollectionsWildcard && stem == "map") ||
               (skipRingBufferInCollectionsWildcard && stem == "ring_buffer");
           if (skipThisFile) {

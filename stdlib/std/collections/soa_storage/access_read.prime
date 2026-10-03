@@ -1,0 +1,1075 @@
+import /std/collections/buffer_checked/*
+import /std/collections/buffer_unchecked/*
+import /std/panic/*
+
+namespace std {
+  namespace collections {
+  namespace soa_storage {
+  [public return<T>]
+  soaColumnRead<T>([SoaColumn<T>] values, [i32] index) {
+    soaColumnCheckIndex<T>(values, index)
+    return(*(soaColumnBorrowSlot<T>(values, index)))
+  }
+
+  [public return<T0>]
+  soaColumns2ReadFirst<T0, T1>([Reference<SoaColumns2<T0, T1>>] values, [i32] index) {
+    soaColumns2CheckShape<T0, T1>(values)
+    [Reference<SoaColumn<T0>>] first{values.first}
+    return(soaColumnRead<T0>(first, index))
+  }
+
+  [public return<T1>]
+  soaColumns2ReadSecond<T0, T1>([Reference<SoaColumns2<T0, T1>>] values, [i32] index) {
+    soaColumns2CheckShape<T0, T1>(values)
+    [Reference<SoaColumn<T1>>] second{values.second}
+    return(soaColumnRead<T1>(second, index))
+  }
+
+  [public return<T0>]
+  soaColumns3ReadFirst<T0, T1, T2>([Reference<SoaColumns3<T0, T1, T2>>] values, [i32] index) {
+    soaColumns3CheckShape<T0, T1, T2>(values)
+    [Reference<SoaColumn<T0>>] first{values.first}
+    return(soaColumnRead<T0>(first, index))
+  }
+
+  [public return<T1>]
+  soaColumns3ReadSecond<T0, T1, T2>([Reference<SoaColumns3<T0, T1, T2>>] values, [i32] index) {
+    soaColumns3CheckShape<T0, T1, T2>(values)
+    [Reference<SoaColumn<T1>>] second{values.second}
+    return(soaColumnRead<T1>(second, index))
+  }
+
+  [public return<T2>]
+  soaColumns3ReadThird<T0, T1, T2>([Reference<SoaColumns3<T0, T1, T2>>] values, [i32] index) {
+    soaColumns3CheckShape<T0, T1, T2>(values)
+    [Reference<SoaColumn<T2>>] third{values.third}
+    return(soaColumnRead<T2>(third, index))
+  }
+
+  [public return<T0>]
+  soaColumns4ReadFirst<T0, T1, T2, T3>([Reference<SoaColumns4<T0, T1, T2, T3>>] values, [i32] index) {
+    soaColumns4CheckShape<T0, T1, T2, T3>(values)
+    [Reference<SoaColumn<T0>>] first{values.first}
+    return(soaColumnRead<T0>(first, index))
+  }
+
+  [public return<T1>]
+  soaColumns4ReadSecond<T0, T1, T2, T3>([Reference<SoaColumns4<T0, T1, T2, T3>>] values, [i32] index) {
+    soaColumns4CheckShape<T0, T1, T2, T3>(values)
+    [Reference<SoaColumn<T1>>] second{values.second}
+    return(soaColumnRead<T1>(second, index))
+  }
+
+  [public return<T2>]
+  soaColumns4ReadThird<T0, T1, T2, T3>([Reference<SoaColumns4<T0, T1, T2, T3>>] values, [i32] index) {
+    soaColumns4CheckShape<T0, T1, T2, T3>(values)
+    [Reference<SoaColumn<T2>>] third{values.third}
+    return(soaColumnRead<T2>(third, index))
+  }
+
+  [public return<T3>]
+  soaColumns4ReadFourth<T0, T1, T2, T3>([Reference<SoaColumns4<T0, T1, T2, T3>>] values, [i32] index) {
+    soaColumns4CheckShape<T0, T1, T2, T3>(values)
+    [Reference<SoaColumn<T3>>] fourth{values.fourth}
+    return(soaColumnRead<T3>(fourth, index))
+  }
+
+  [public return<T0>]
+  soaColumns5ReadFirst<T0, T1, T2, T3, T4>([Reference<SoaColumns5<T0, T1, T2, T3, T4>>] values, [i32] index) {
+    soaColumns5CheckShape<T0, T1, T2, T3, T4>(values)
+    [Reference<SoaColumn<T0>>] first{values.first}
+    return(soaColumnRead<T0>(first, index))
+  }
+
+  [public return<T1>]
+  soaColumns5ReadSecond<T0, T1, T2, T3, T4>([Reference<SoaColumns5<T0, T1, T2, T3, T4>>] values, [i32] index) {
+    soaColumns5CheckShape<T0, T1, T2, T3, T4>(values)
+    [Reference<SoaColumn<T1>>] second{values.second}
+    return(soaColumnRead<T1>(second, index))
+  }
+
+  [public return<T2>]
+  soaColumns5ReadThird<T0, T1, T2, T3, T4>([Reference<SoaColumns5<T0, T1, T2, T3, T4>>] values, [i32] index) {
+    soaColumns5CheckShape<T0, T1, T2, T3, T4>(values)
+    [Reference<SoaColumn<T2>>] third{values.third}
+    return(soaColumnRead<T2>(third, index))
+  }
+
+  [public return<T3>]
+  soaColumns5ReadFourth<T0, T1, T2, T3, T4>([Reference<SoaColumns5<T0, T1, T2, T3, T4>>] values, [i32] index) {
+    soaColumns5CheckShape<T0, T1, T2, T3, T4>(values)
+    [Reference<SoaColumn<T3>>] fourth{values.fourth}
+    return(soaColumnRead<T3>(fourth, index))
+  }
+
+  [public return<T4>]
+  soaColumns5ReadFifth<T0, T1, T2, T3, T4>([Reference<SoaColumns5<T0, T1, T2, T3, T4>>] values, [i32] index) {
+    soaColumns5CheckShape<T0, T1, T2, T3, T4>(values)
+    [Reference<SoaColumn<T4>>] fifth{values.fifth}
+    return(soaColumnRead<T4>(fifth, index))
+  }
+
+  [public return<T0>]
+  soaColumns6ReadFirst<T0, T1, T2, T3, T4, T5>([Reference<SoaColumns6<T0, T1, T2, T3, T4, T5>>] values, [i32] index) {
+    soaColumns6CheckShape<T0, T1, T2, T3, T4, T5>(values)
+    [Reference<SoaColumn<T0>>] first{values.first}
+    return(soaColumnRead<T0>(first, index))
+  }
+
+  [public return<T1>]
+  soaColumns6ReadSecond<T0, T1, T2, T3, T4, T5>([Reference<SoaColumns6<T0, T1, T2, T3, T4, T5>>] values, [i32] index) {
+    soaColumns6CheckShape<T0, T1, T2, T3, T4, T5>(values)
+    [Reference<SoaColumn<T1>>] second{values.second}
+    return(soaColumnRead<T1>(second, index))
+  }
+
+  [public return<T2>]
+  soaColumns6ReadThird<T0, T1, T2, T3, T4, T5>([Reference<SoaColumns6<T0, T1, T2, T3, T4, T5>>] values, [i32] index) {
+    soaColumns6CheckShape<T0, T1, T2, T3, T4, T5>(values)
+    [Reference<SoaColumn<T2>>] third{values.third}
+    return(soaColumnRead<T2>(third, index))
+  }
+
+  [public return<T3>]
+  soaColumns6ReadFourth<T0, T1, T2, T3, T4, T5>([Reference<SoaColumns6<T0, T1, T2, T3, T4, T5>>] values, [i32] index) {
+    soaColumns6CheckShape<T0, T1, T2, T3, T4, T5>(values)
+    [Reference<SoaColumn<T3>>] fourth{values.fourth}
+    return(soaColumnRead<T3>(fourth, index))
+  }
+
+  [public return<T4>]
+  soaColumns6ReadFifth<T0, T1, T2, T3, T4, T5>([Reference<SoaColumns6<T0, T1, T2, T3, T4, T5>>] values, [i32] index) {
+    soaColumns6CheckShape<T0, T1, T2, T3, T4, T5>(values)
+    [Reference<SoaColumn<T4>>] fifth{values.fifth}
+    return(soaColumnRead<T4>(fifth, index))
+  }
+
+  [public return<T5>]
+  soaColumns6ReadSixth<T0, T1, T2, T3, T4, T5>([Reference<SoaColumns6<T0, T1, T2, T3, T4, T5>>] values, [i32] index) {
+    soaColumns6CheckShape<T0, T1, T2, T3, T4, T5>(values)
+    [Reference<SoaColumn<T5>>] sixth{values.sixth}
+    return(soaColumnRead<T5>(sixth, index))
+  }
+
+  [public return<T0>]
+  soaColumns7ReadFirst<T0, T1, T2, T3, T4, T5, T6>([Reference<SoaColumns7<T0, T1, T2, T3, T4, T5, T6>>] values,
+                                                    [i32] index) {
+    soaColumns7CheckShape<T0, T1, T2, T3, T4, T5, T6>(values)
+    [Reference<SoaColumn<T0>>] first{values.first}
+    return(soaColumnRead<T0>(first, index))
+  }
+
+  [public return<T1>]
+  soaColumns7ReadSecond<T0, T1, T2, T3, T4, T5, T6>([Reference<SoaColumns7<T0, T1, T2, T3, T4, T5, T6>>] values,
+                                                     [i32] index) {
+    soaColumns7CheckShape<T0, T1, T2, T3, T4, T5, T6>(values)
+    [Reference<SoaColumn<T1>>] second{values.second}
+    return(soaColumnRead<T1>(second, index))
+  }
+
+  [public return<T2>]
+  soaColumns7ReadThird<T0, T1, T2, T3, T4, T5, T6>([Reference<SoaColumns7<T0, T1, T2, T3, T4, T5, T6>>] values,
+                                                    [i32] index) {
+    soaColumns7CheckShape<T0, T1, T2, T3, T4, T5, T6>(values)
+    [Reference<SoaColumn<T2>>] third{values.third}
+    return(soaColumnRead<T2>(third, index))
+  }
+
+  [public return<T3>]
+  soaColumns7ReadFourth<T0, T1, T2, T3, T4, T5, T6>([Reference<SoaColumns7<T0, T1, T2, T3, T4, T5, T6>>] values,
+                                                     [i32] index) {
+    soaColumns7CheckShape<T0, T1, T2, T3, T4, T5, T6>(values)
+    [Reference<SoaColumn<T3>>] fourth{values.fourth}
+    return(soaColumnRead<T3>(fourth, index))
+  }
+
+  [public return<T4>]
+  soaColumns7ReadFifth<T0, T1, T2, T3, T4, T5, T6>([Reference<SoaColumns7<T0, T1, T2, T3, T4, T5, T6>>] values,
+                                                    [i32] index) {
+    soaColumns7CheckShape<T0, T1, T2, T3, T4, T5, T6>(values)
+    [Reference<SoaColumn<T4>>] fifth{values.fifth}
+    return(soaColumnRead<T4>(fifth, index))
+  }
+
+  [public return<T5>]
+  soaColumns7ReadSixth<T0, T1, T2, T3, T4, T5, T6>([Reference<SoaColumns7<T0, T1, T2, T3, T4, T5, T6>>] values,
+                                                    [i32] index) {
+    soaColumns7CheckShape<T0, T1, T2, T3, T4, T5, T6>(values)
+    [Reference<SoaColumn<T5>>] sixth{values.sixth}
+    return(soaColumnRead<T5>(sixth, index))
+  }
+
+  [public return<T6>]
+  soaColumns7ReadSeventh<T0, T1, T2, T3, T4, T5, T6>([Reference<SoaColumns7<T0, T1, T2, T3, T4, T5, T6>>] values,
+                                                      [i32] index) {
+    soaColumns7CheckShape<T0, T1, T2, T3, T4, T5, T6>(values)
+    [Reference<SoaColumn<T6>>] seventh{values.seventh}
+    return(soaColumnRead<T6>(seventh, index))
+  }
+
+  [public return<T0>]
+  soaColumns8ReadFirst<T0, T1, T2, T3, T4, T5, T6, T7>([Reference<SoaColumns8<T0, T1, T2, T3, T4, T5, T6, T7>>] values,
+                                                        [i32] index) {
+    soaColumns8CheckShape<T0, T1, T2, T3, T4, T5, T6, T7>(values)
+    [Reference<SoaColumn<T0>>] first{values.first}
+    return(soaColumnRead<T0>(first, index))
+  }
+
+  [public return<T1>]
+  soaColumns8ReadSecond<T0, T1, T2, T3, T4, T5, T6, T7>([Reference<SoaColumns8<T0, T1, T2, T3, T4, T5, T6, T7>>] values,
+                                                         [i32] index) {
+    soaColumns8CheckShape<T0, T1, T2, T3, T4, T5, T6, T7>(values)
+    [Reference<SoaColumn<T1>>] second{values.second}
+    return(soaColumnRead<T1>(second, index))
+  }
+
+  [public return<T2>]
+  soaColumns8ReadThird<T0, T1, T2, T3, T4, T5, T6, T7>([Reference<SoaColumns8<T0, T1, T2, T3, T4, T5, T6, T7>>] values,
+                                                        [i32] index) {
+    soaColumns8CheckShape<T0, T1, T2, T3, T4, T5, T6, T7>(values)
+    [Reference<SoaColumn<T2>>] third{values.third}
+    return(soaColumnRead<T2>(third, index))
+  }
+
+  [public return<T3>]
+  soaColumns8ReadFourth<T0, T1, T2, T3, T4, T5, T6, T7>([Reference<SoaColumns8<T0, T1, T2, T3, T4, T5, T6, T7>>] values,
+                                                         [i32] index) {
+    soaColumns8CheckShape<T0, T1, T2, T3, T4, T5, T6, T7>(values)
+    [Reference<SoaColumn<T3>>] fourth{values.fourth}
+    return(soaColumnRead<T3>(fourth, index))
+  }
+
+  [public return<T4>]
+  soaColumns8ReadFifth<T0, T1, T2, T3, T4, T5, T6, T7>([Reference<SoaColumns8<T0, T1, T2, T3, T4, T5, T6, T7>>] values,
+                                                        [i32] index) {
+    soaColumns8CheckShape<T0, T1, T2, T3, T4, T5, T6, T7>(values)
+    [Reference<SoaColumn<T4>>] fifth{values.fifth}
+    return(soaColumnRead<T4>(fifth, index))
+  }
+
+  [public return<T5>]
+  soaColumns8ReadSixth<T0, T1, T2, T3, T4, T5, T6, T7>([Reference<SoaColumns8<T0, T1, T2, T3, T4, T5, T6, T7>>] values,
+                                                        [i32] index) {
+    soaColumns8CheckShape<T0, T1, T2, T3, T4, T5, T6, T7>(values)
+    [Reference<SoaColumn<T5>>] sixth{values.sixth}
+    return(soaColumnRead<T5>(sixth, index))
+  }
+
+  [public return<T6>]
+  soaColumns8ReadSeventh<T0, T1, T2, T3, T4, T5, T6, T7>([Reference<SoaColumns8<T0, T1, T2, T3, T4, T5, T6, T7>>] values,
+                                                          [i32] index) {
+    soaColumns8CheckShape<T0, T1, T2, T3, T4, T5, T6, T7>(values)
+    [Reference<SoaColumn<T6>>] seventh{values.seventh}
+    return(soaColumnRead<T6>(seventh, index))
+  }
+
+  [public return<T7>]
+  soaColumns8ReadEighth<T0, T1, T2, T3, T4, T5, T6, T7>([Reference<SoaColumns8<T0, T1, T2, T3, T4, T5, T6, T7>>] values,
+                                                         [i32] index) {
+    soaColumns8CheckShape<T0, T1, T2, T3, T4, T5, T6, T7>(values)
+    [Reference<SoaColumn<T7>>] eighth{values.eighth}
+    return(soaColumnRead<T7>(eighth, index))
+  }
+
+  [public return<T0>]
+  soaColumns9ReadFirst<T0, T1, T2, T3, T4, T5, T6, T7, T8>([Reference<SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8>>] values,
+                                                            [i32] index) {
+    soaColumns9CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8>(values)
+    [Reference<SoaColumn<T0>>] first{values.first}
+    return(soaColumnRead<T0>(first, index))
+  }
+
+  [public return<T1>]
+  soaColumns9ReadSecond<T0, T1, T2, T3, T4, T5, T6, T7, T8>([Reference<SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8>>] values,
+                                                             [i32] index) {
+    soaColumns9CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8>(values)
+    [Reference<SoaColumn<T1>>] second{values.second}
+    return(soaColumnRead<T1>(second, index))
+  }
+
+  [public return<T2>]
+  soaColumns9ReadThird<T0, T1, T2, T3, T4, T5, T6, T7, T8>([Reference<SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8>>] values,
+                                                            [i32] index) {
+    soaColumns9CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8>(values)
+    [Reference<SoaColumn<T2>>] third{values.third}
+    return(soaColumnRead<T2>(third, index))
+  }
+
+  [public return<T3>]
+  soaColumns9ReadFourth<T0, T1, T2, T3, T4, T5, T6, T7, T8>([Reference<SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8>>] values,
+                                                             [i32] index) {
+    soaColumns9CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8>(values)
+    [Reference<SoaColumn<T3>>] fourth{values.fourth}
+    return(soaColumnRead<T3>(fourth, index))
+  }
+
+  [public return<T4>]
+  soaColumns9ReadFifth<T0, T1, T2, T3, T4, T5, T6, T7, T8>([Reference<SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8>>] values,
+                                                            [i32] index) {
+    soaColumns9CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8>(values)
+    [Reference<SoaColumn<T4>>] fifth{values.fifth}
+    return(soaColumnRead<T4>(fifth, index))
+  }
+
+  [public return<T5>]
+  soaColumns9ReadSixth<T0, T1, T2, T3, T4, T5, T6, T7, T8>([Reference<SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8>>] values,
+                                                            [i32] index) {
+    soaColumns9CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8>(values)
+    [Reference<SoaColumn<T5>>] sixth{values.sixth}
+    return(soaColumnRead<T5>(sixth, index))
+  }
+
+  [public return<T6>]
+  soaColumns9ReadSeventh<T0, T1, T2, T3, T4, T5, T6, T7, T8>([Reference<SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8>>] values,
+                                                              [i32] index) {
+    soaColumns9CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8>(values)
+    [Reference<SoaColumn<T6>>] seventh{values.seventh}
+    return(soaColumnRead<T6>(seventh, index))
+  }
+
+  [public return<T7>]
+  soaColumns9ReadEighth<T0, T1, T2, T3, T4, T5, T6, T7, T8>([Reference<SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8>>] values,
+                                                             [i32] index) {
+    soaColumns9CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8>(values)
+    [Reference<SoaColumn<T7>>] eighth{values.eighth}
+    return(soaColumnRead<T7>(eighth, index))
+  }
+
+  [public return<T8>]
+  soaColumns9ReadNinth<T0, T1, T2, T3, T4, T5, T6, T7, T8>([Reference<SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8>>] values,
+                                                            [i32] index) {
+    soaColumns9CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8>(values)
+    [Reference<SoaColumn<T8>>] ninth{values.ninth}
+    return(soaColumnRead<T8>(ninth, index))
+  }
+
+  [public return<T0>]
+  soaColumns10ReadFirst<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>([Reference<SoaColumns10<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>>] values,
+                                                                 [i32] index) {
+    soaColumns10CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(values)
+    [Reference<SoaColumn<T0>>] first{values.first}
+    return(soaColumnRead<T0>(first, index))
+  }
+
+  [public return<T1>]
+  soaColumns10ReadSecond<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>([Reference<SoaColumns10<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>>] values,
+                                                                  [i32] index) {
+    soaColumns10CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(values)
+    [Reference<SoaColumn<T1>>] second{values.second}
+    return(soaColumnRead<T1>(second, index))
+  }
+
+  [public return<T2>]
+  soaColumns10ReadThird<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>([Reference<SoaColumns10<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>>] values,
+                                                                 [i32] index) {
+    soaColumns10CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(values)
+    [Reference<SoaColumn<T2>>] third{values.third}
+    return(soaColumnRead<T2>(third, index))
+  }
+
+  [public return<T3>]
+  soaColumns10ReadFourth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>([Reference<SoaColumns10<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>>] values,
+                                                                  [i32] index) {
+    soaColumns10CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(values)
+    [Reference<SoaColumn<T3>>] fourth{values.fourth}
+    return(soaColumnRead<T3>(fourth, index))
+  }
+
+  [public return<T4>]
+  soaColumns10ReadFifth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>([Reference<SoaColumns10<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>>] values,
+                                                                 [i32] index) {
+    soaColumns10CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(values)
+    [Reference<SoaColumn<T4>>] fifth{values.fifth}
+    return(soaColumnRead<T4>(fifth, index))
+  }
+
+  [public return<T5>]
+  soaColumns10ReadSixth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>([Reference<SoaColumns10<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>>] values,
+                                                                 [i32] index) {
+    soaColumns10CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(values)
+    [Reference<SoaColumn<T5>>] sixth{values.sixth}
+    return(soaColumnRead<T5>(sixth, index))
+  }
+
+  [public return<T6>]
+  soaColumns10ReadSeventh<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>([Reference<SoaColumns10<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>>] values,
+                                                                   [i32] index) {
+    soaColumns10CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(values)
+    [Reference<SoaColumn<T6>>] seventh{values.seventh}
+    return(soaColumnRead<T6>(seventh, index))
+  }
+
+  [public return<T7>]
+  soaColumns10ReadEighth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>([Reference<SoaColumns10<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>>] values,
+                                                                  [i32] index) {
+    soaColumns10CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(values)
+    [Reference<SoaColumn<T7>>] eighth{values.eighth}
+    return(soaColumnRead<T7>(eighth, index))
+  }
+
+  [public return<T8>]
+  soaColumns10ReadNinth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>([Reference<SoaColumns10<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>>] values,
+                                                                 [i32] index) {
+    soaColumns10CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(values)
+    [Reference<SoaColumn<T8>>] ninth{values.ninth}
+    return(soaColumnRead<T8>(ninth, index))
+  }
+
+  [public return<T9>]
+  soaColumns10ReadTenth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>([Reference<SoaColumns10<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>>] values,
+                                                                 [i32] index) {
+    soaColumns10CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(values)
+    [Reference<SoaColumn<T9>>] tenth{values.tenth}
+    return(soaColumnRead<T9>(tenth, index))
+  }
+
+  [public return<T0>]
+  soaColumns11ReadFirst<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>([Reference<SoaColumns11<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>>] values,
+                                                                      [i32] index) {
+    soaColumns11CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(values)
+    [Reference<SoaColumn<T0>>] first{values.first}
+    return(soaColumnRead<T0>(first, index))
+  }
+
+  [public return<T1>]
+  soaColumns11ReadSecond<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>([Reference<SoaColumns11<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>>] values,
+                                                                       [i32] index) {
+    soaColumns11CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(values)
+    [Reference<SoaColumn<T1>>] second{values.second}
+    return(soaColumnRead<T1>(second, index))
+  }
+
+  [public return<T2>]
+  soaColumns11ReadThird<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>([Reference<SoaColumns11<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>>] values,
+                                                                      [i32] index) {
+    soaColumns11CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(values)
+    [Reference<SoaColumn<T2>>] third{values.third}
+    return(soaColumnRead<T2>(third, index))
+  }
+
+  [public return<T3>]
+  soaColumns11ReadFourth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>([Reference<SoaColumns11<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>>] values,
+                                                                       [i32] index) {
+    soaColumns11CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(values)
+    [Reference<SoaColumn<T3>>] fourth{values.fourth}
+    return(soaColumnRead<T3>(fourth, index))
+  }
+
+  [public return<T4>]
+  soaColumns11ReadFifth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>([Reference<SoaColumns11<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>>] values,
+                                                                      [i32] index) {
+    soaColumns11CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(values)
+    [Reference<SoaColumn<T4>>] fifth{values.fifth}
+    return(soaColumnRead<T4>(fifth, index))
+  }
+
+  [public return<T5>]
+  soaColumns11ReadSixth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>([Reference<SoaColumns11<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>>] values,
+                                                                      [i32] index) {
+    soaColumns11CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(values)
+    [Reference<SoaColumn<T5>>] sixth{values.sixth}
+    return(soaColumnRead<T5>(sixth, index))
+  }
+
+  [public return<T6>]
+  soaColumns11ReadSeventh<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>([Reference<SoaColumns11<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>>] values,
+                                                                        [i32] index) {
+    soaColumns11CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(values)
+    [Reference<SoaColumn<T6>>] seventh{values.seventh}
+    return(soaColumnRead<T6>(seventh, index))
+  }
+
+  [public return<T7>]
+  soaColumns11ReadEighth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>([Reference<SoaColumns11<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>>] values,
+                                                                       [i32] index) {
+    soaColumns11CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(values)
+    [Reference<SoaColumn<T7>>] eighth{values.eighth}
+    return(soaColumnRead<T7>(eighth, index))
+  }
+
+  [public return<T8>]
+  soaColumns11ReadNinth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>([Reference<SoaColumns11<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>>] values,
+                                                                      [i32] index) {
+    soaColumns11CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(values)
+    [Reference<SoaColumn<T8>>] ninth{values.ninth}
+    return(soaColumnRead<T8>(ninth, index))
+  }
+
+  [public return<T9>]
+  soaColumns11ReadTenth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>([Reference<SoaColumns11<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>>] values,
+                                                                      [i32] index) {
+    soaColumns11CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(values)
+    [Reference<SoaColumn<T9>>] tenth{values.tenth}
+    return(soaColumnRead<T9>(tenth, index))
+  }
+
+  [public return<T10>]
+  soaColumns11ReadEleventh<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>([Reference<SoaColumns11<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>>] values,
+                                                                         [i32] index) {
+    soaColumns11CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(values)
+    [Reference<SoaColumn<T10>>] eleventh{values.eleventh}
+    return(soaColumnRead<T10>(eleventh, index))
+  }
+
+  [public return<T0>]
+  soaColumns12ReadFirst<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>([Reference<SoaColumns12<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>>] values,
+                                                                            [i32] index) {
+    soaColumns12CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(values)
+    [Reference<SoaColumn<T0>>] first{values.first}
+    return(soaColumnRead<T0>(first, index))
+  }
+
+  [public return<T1>]
+  soaColumns12ReadSecond<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>([Reference<SoaColumns12<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>>] values,
+                                                                             [i32] index) {
+    soaColumns12CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(values)
+    [Reference<SoaColumn<T1>>] second{values.second}
+    return(soaColumnRead<T1>(second, index))
+  }
+
+  [public return<T2>]
+  soaColumns12ReadThird<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>([Reference<SoaColumns12<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>>] values,
+                                                                            [i32] index) {
+    soaColumns12CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(values)
+    [Reference<SoaColumn<T2>>] third{values.third}
+    return(soaColumnRead<T2>(third, index))
+  }
+
+  [public return<T3>]
+  soaColumns12ReadFourth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>([Reference<SoaColumns12<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>>] values,
+                                                                             [i32] index) {
+    soaColumns12CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(values)
+    [Reference<SoaColumn<T3>>] fourth{values.fourth}
+    return(soaColumnRead<T3>(fourth, index))
+  }
+
+  [public return<T4>]
+  soaColumns12ReadFifth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>([Reference<SoaColumns12<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>>] values,
+                                                                            [i32] index) {
+    soaColumns12CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(values)
+    [Reference<SoaColumn<T4>>] fifth{values.fifth}
+    return(soaColumnRead<T4>(fifth, index))
+  }
+
+  [public return<T5>]
+  soaColumns12ReadSixth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>([Reference<SoaColumns12<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>>] values,
+                                                                            [i32] index) {
+    soaColumns12CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(values)
+    [Reference<SoaColumn<T5>>] sixth{values.sixth}
+    return(soaColumnRead<T5>(sixth, index))
+  }
+
+  [public return<T6>]
+  soaColumns12ReadSeventh<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>([Reference<SoaColumns12<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>>] values,
+                                                                              [i32] index) {
+    soaColumns12CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(values)
+    [Reference<SoaColumn<T6>>] seventh{values.seventh}
+    return(soaColumnRead<T6>(seventh, index))
+  }
+
+  [public return<T7>]
+  soaColumns12ReadEighth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>([Reference<SoaColumns12<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>>] values,
+                                                                             [i32] index) {
+    soaColumns12CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(values)
+    [Reference<SoaColumn<T7>>] eighth{values.eighth}
+    return(soaColumnRead<T7>(eighth, index))
+  }
+
+  [public return<T8>]
+  soaColumns12ReadNinth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>([Reference<SoaColumns12<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>>] values,
+                                                                            [i32] index) {
+    soaColumns12CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(values)
+    [Reference<SoaColumn<T8>>] ninth{values.ninth}
+    return(soaColumnRead<T8>(ninth, index))
+  }
+
+  [public return<T9>]
+  soaColumns12ReadTenth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>([Reference<SoaColumns12<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>>] values,
+                                                                            [i32] index) {
+    soaColumns12CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(values)
+    [Reference<SoaColumn<T9>>] tenth{values.tenth}
+    return(soaColumnRead<T9>(tenth, index))
+  }
+
+  [public return<T10>]
+  soaColumns12ReadEleventh<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>([Reference<SoaColumns12<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>>] values,
+                                                                               [i32] index) {
+    soaColumns12CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(values)
+    [Reference<SoaColumn<T10>>] eleventh{values.eleventh}
+    return(soaColumnRead<T10>(eleventh, index))
+  }
+
+  [public return<T11>]
+  soaColumns12ReadTwelfth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>([Reference<SoaColumns12<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>>] values,
+                                                                              [i32] index) {
+    soaColumns12CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(values)
+    [Reference<SoaColumn<T11>>] twelfth{values.twelfth}
+    return(soaColumnRead<T11>(twelfth, index))
+  }
+
+  [public return<T0>]
+  soaColumns13ReadFirst<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>([Reference<SoaColumns13<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>>] values,
+                                                                                  [i32] index) {
+    soaColumns13CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(values)
+    [Reference<SoaColumn<T0>>] first{values.first}
+    return(soaColumnRead<T0>(first, index))
+  }
+
+  [public return<T1>]
+  soaColumns13ReadSecond<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>([Reference<SoaColumns13<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>>] values,
+                                                                                   [i32] index) {
+    soaColumns13CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(values)
+    [Reference<SoaColumn<T1>>] second{values.second}
+    return(soaColumnRead<T1>(second, index))
+  }
+
+  [public return<T2>]
+  soaColumns13ReadThird<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>([Reference<SoaColumns13<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>>] values,
+                                                                                  [i32] index) {
+    soaColumns13CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(values)
+    [Reference<SoaColumn<T2>>] third{values.third}
+    return(soaColumnRead<T2>(third, index))
+  }
+
+  [public return<T3>]
+  soaColumns13ReadFourth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>([Reference<SoaColumns13<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>>] values,
+                                                                                   [i32] index) {
+    soaColumns13CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(values)
+    [Reference<SoaColumn<T3>>] fourth{values.fourth}
+    return(soaColumnRead<T3>(fourth, index))
+  }
+
+  [public return<T4>]
+  soaColumns13ReadFifth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>([Reference<SoaColumns13<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>>] values,
+                                                                                  [i32] index) {
+    soaColumns13CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(values)
+    [Reference<SoaColumn<T4>>] fifth{values.fifth}
+    return(soaColumnRead<T4>(fifth, index))
+  }
+
+  [public return<T5>]
+  soaColumns13ReadSixth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>([Reference<SoaColumns13<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>>] values,
+                                                                                  [i32] index) {
+    soaColumns13CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(values)
+    [Reference<SoaColumn<T5>>] sixth{values.sixth}
+    return(soaColumnRead<T5>(sixth, index))
+  }
+
+  [public return<T6>]
+  soaColumns13ReadSeventh<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>([Reference<SoaColumns13<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>>] values,
+                                                                                    [i32] index) {
+    soaColumns13CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(values)
+    [Reference<SoaColumn<T6>>] seventh{values.seventh}
+    return(soaColumnRead<T6>(seventh, index))
+  }
+
+  [public return<T7>]
+  soaColumns13ReadEighth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>([Reference<SoaColumns13<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>>] values,
+                                                                                   [i32] index) {
+    soaColumns13CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(values)
+    [Reference<SoaColumn<T7>>] eighth{values.eighth}
+    return(soaColumnRead<T7>(eighth, index))
+  }
+
+  [public return<T8>]
+  soaColumns13ReadNinth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>([Reference<SoaColumns13<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>>] values,
+                                                                                  [i32] index) {
+    soaColumns13CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(values)
+    [Reference<SoaColumn<T8>>] ninth{values.ninth}
+    return(soaColumnRead<T8>(ninth, index))
+  }
+
+  [public return<T9>]
+  soaColumns13ReadTenth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>([Reference<SoaColumns13<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>>] values,
+                                                                                  [i32] index) {
+    soaColumns13CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(values)
+    [Reference<SoaColumn<T9>>] tenth{values.tenth}
+    return(soaColumnRead<T9>(tenth, index))
+  }
+
+  [public return<T10>]
+  soaColumns13ReadEleventh<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>([Reference<SoaColumns13<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>>] values,
+                                                                                     [i32] index) {
+    soaColumns13CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(values)
+    [Reference<SoaColumn<T10>>] eleventh{values.eleventh}
+    return(soaColumnRead<T10>(eleventh, index))
+  }
+
+  [public return<T11>]
+  soaColumns13ReadTwelfth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>([Reference<SoaColumns13<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>>] values,
+                                                                                    [i32] index) {
+    soaColumns13CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(values)
+    [Reference<SoaColumn<T11>>] twelfth{values.twelfth}
+    return(soaColumnRead<T11>(twelfth, index))
+  }
+
+  [public return<T12>]
+  soaColumns13ReadThirteenth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>([Reference<SoaColumns13<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>>] values,
+                                                                                       [i32] index) {
+    soaColumns13CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(values)
+    [Reference<SoaColumn<T12>>] thirteenth{values.thirteenth}
+    return(soaColumnRead<T12>(thirteenth, index))
+  }
+
+  [public return<T0>]
+  soaColumns14ReadFirst<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>([Reference<SoaColumns14<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>>] values,
+                                                                                       [i32] index) {
+    soaColumns14CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(values)
+    [Reference<SoaColumn<T0>>] first{values.first}
+    return(soaColumnRead<T0>(first, index))
+  }
+
+  [public return<T1>]
+  soaColumns14ReadSecond<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>([Reference<SoaColumns14<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>>] values,
+                                                                                        [i32] index) {
+    soaColumns14CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(values)
+    [Reference<SoaColumn<T1>>] second{values.second}
+    return(soaColumnRead<T1>(second, index))
+  }
+
+  [public return<T2>]
+  soaColumns14ReadThird<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>([Reference<SoaColumns14<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>>] values,
+                                                                                       [i32] index) {
+    soaColumns14CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(values)
+    [Reference<SoaColumn<T2>>] third{values.third}
+    return(soaColumnRead<T2>(third, index))
+  }
+
+  [public return<T3>]
+  soaColumns14ReadFourth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>([Reference<SoaColumns14<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>>] values,
+                                                                                        [i32] index) {
+    soaColumns14CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(values)
+    [Reference<SoaColumn<T3>>] fourth{values.fourth}
+    return(soaColumnRead<T3>(fourth, index))
+  }
+
+  [public return<T4>]
+  soaColumns14ReadFifth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>([Reference<SoaColumns14<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>>] values,
+                                                                                       [i32] index) {
+    soaColumns14CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(values)
+    [Reference<SoaColumn<T4>>] fifth{values.fifth}
+    return(soaColumnRead<T4>(fifth, index))
+  }
+
+  [public return<T5>]
+  soaColumns14ReadSixth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>([Reference<SoaColumns14<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>>] values,
+                                                                                       [i32] index) {
+    soaColumns14CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(values)
+    [Reference<SoaColumn<T5>>] sixth{values.sixth}
+    return(soaColumnRead<T5>(sixth, index))
+  }
+
+  [public return<T6>]
+  soaColumns14ReadSeventh<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>([Reference<SoaColumns14<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>>] values,
+                                                                                         [i32] index) {
+    soaColumns14CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(values)
+    [Reference<SoaColumn<T6>>] seventh{values.seventh}
+    return(soaColumnRead<T6>(seventh, index))
+  }
+
+  [public return<T7>]
+  soaColumns14ReadEighth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>([Reference<SoaColumns14<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>>] values,
+                                                                                        [i32] index) {
+    soaColumns14CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(values)
+    [Reference<SoaColumn<T7>>] eighth{values.eighth}
+    return(soaColumnRead<T7>(eighth, index))
+  }
+
+  [public return<T8>]
+  soaColumns14ReadNinth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>([Reference<SoaColumns14<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>>] values,
+                                                                                       [i32] index) {
+    soaColumns14CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(values)
+    [Reference<SoaColumn<T8>>] ninth{values.ninth}
+    return(soaColumnRead<T8>(ninth, index))
+  }
+
+  [public return<T9>]
+  soaColumns14ReadTenth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>([Reference<SoaColumns14<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>>] values,
+                                                                                       [i32] index) {
+    soaColumns14CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(values)
+    [Reference<SoaColumn<T9>>] tenth{values.tenth}
+    return(soaColumnRead<T9>(tenth, index))
+  }
+
+  [public return<T10>]
+  soaColumns14ReadEleventh<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>([Reference<SoaColumns14<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>>] values,
+                                                                                          [i32] index) {
+    soaColumns14CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(values)
+    [Reference<SoaColumn<T10>>] eleventh{values.eleventh}
+    return(soaColumnRead<T10>(eleventh, index))
+  }
+
+  [public return<T11>]
+  soaColumns14ReadTwelfth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>([Reference<SoaColumns14<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>>] values,
+                                                                                         [i32] index) {
+    soaColumns14CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(values)
+    [Reference<SoaColumn<T11>>] twelfth{values.twelfth}
+    return(soaColumnRead<T11>(twelfth, index))
+  }
+
+  [public return<T12>]
+  soaColumns14ReadThirteenth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>([Reference<SoaColumns14<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>>] values,
+                                                                                            [i32] index) {
+    soaColumns14CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(values)
+    [Reference<SoaColumn<T12>>] thirteenth{values.thirteenth}
+    return(soaColumnRead<T12>(thirteenth, index))
+  }
+
+  [public return<T13>]
+  soaColumns14ReadFourteenth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>([Reference<SoaColumns14<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>>] values,
+                                                                                            [i32] index) {
+    soaColumns14CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(values)
+    [Reference<SoaColumn<T13>>] fourteenth{values.fourteenth}
+    return(soaColumnRead<T13>(fourteenth, index))
+  }
+
+  [public return<T0>]
+  soaColumns15ReadFirst<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>([Reference<SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>>] values,
+                                                                                            [i32] index) {
+    soaColumns15CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(values)
+    [Reference<SoaColumn<T0>>] first{values.first}
+    return(soaColumnRead<T0>(first, index))
+  }
+
+  [public return<T1>]
+  soaColumns15ReadSecond<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>([Reference<SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>>] values,
+                                                                                             [i32] index) {
+    soaColumns15CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(values)
+    [Reference<SoaColumn<T1>>] second{values.second}
+    return(soaColumnRead<T1>(second, index))
+  }
+
+  [public return<T2>]
+  soaColumns15ReadThird<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>([Reference<SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>>] values,
+                                                                                            [i32] index) {
+    soaColumns15CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(values)
+    [Reference<SoaColumn<T2>>] third{values.third}
+    return(soaColumnRead<T2>(third, index))
+  }
+
+  [public return<T3>]
+  soaColumns15ReadFourth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>([Reference<SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>>] values,
+                                                                                             [i32] index) {
+    soaColumns15CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(values)
+    [Reference<SoaColumn<T3>>] fourth{values.fourth}
+    return(soaColumnRead<T3>(fourth, index))
+  }
+
+  [public return<T4>]
+  soaColumns15ReadFifth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>([Reference<SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>>] values,
+                                                                                            [i32] index) {
+    soaColumns15CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(values)
+    [Reference<SoaColumn<T4>>] fifth{values.fifth}
+    return(soaColumnRead<T4>(fifth, index))
+  }
+
+  [public return<T5>]
+  soaColumns15ReadSixth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>([Reference<SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>>] values,
+                                                                                            [i32] index) {
+    soaColumns15CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(values)
+    [Reference<SoaColumn<T5>>] sixth{values.sixth}
+    return(soaColumnRead<T5>(sixth, index))
+  }
+
+  [public return<T6>]
+  soaColumns15ReadSeventh<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>([Reference<SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>>] values,
+                                                                                              [i32] index) {
+    soaColumns15CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(values)
+    [Reference<SoaColumn<T6>>] seventh{values.seventh}
+    return(soaColumnRead<T6>(seventh, index))
+  }
+
+  [public return<T7>]
+  soaColumns15ReadEighth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>([Reference<SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>>] values,
+                                                                                             [i32] index) {
+    soaColumns15CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(values)
+    [Reference<SoaColumn<T7>>] eighth{values.eighth}
+    return(soaColumnRead<T7>(eighth, index))
+  }
+
+  [public return<T8>]
+  soaColumns15ReadNinth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>([Reference<SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>>] values,
+                                                                                            [i32] index) {
+    soaColumns15CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(values)
+    [Reference<SoaColumn<T8>>] ninth{values.ninth}
+    return(soaColumnRead<T8>(ninth, index))
+  }
+
+  [public return<T9>]
+  soaColumns15ReadTenth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>([Reference<SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>>] values,
+                                                                                            [i32] index) {
+    soaColumns15CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(values)
+    [Reference<SoaColumn<T9>>] tenth{values.tenth}
+    return(soaColumnRead<T9>(tenth, index))
+  }
+
+  [public return<T10>]
+  soaColumns15ReadEleventh<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>([Reference<SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>>] values,
+                                                                                                [i32] index) {
+    soaColumns15CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(values)
+    [Reference<SoaColumn<T10>>] eleventh{values.eleventh}
+    return(soaColumnRead<T10>(eleventh, index))
+  }
+
+  [public return<T11>]
+  soaColumns15ReadTwelfth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>([Reference<SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>>] values,
+                                                                                               [i32] index) {
+    soaColumns15CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(values)
+    [Reference<SoaColumn<T11>>] twelfth{values.twelfth}
+    return(soaColumnRead<T11>(twelfth, index))
+  }
+
+  [public return<T12>]
+  soaColumns15ReadThirteenth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>([Reference<SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>>] values,
+                                                                                                  [i32] index) {
+    soaColumns15CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(values)
+    [Reference<SoaColumn<T12>>] thirteenth{values.thirteenth}
+    return(soaColumnRead<T12>(thirteenth, index))
+  }
+
+  [public return<T13>]
+  soaColumns15ReadFourteenth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>([Reference<SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>>] values,
+                                                                                                  [i32] index) {
+    soaColumns15CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(values)
+    [Reference<SoaColumn<T13>>] fourteenth{values.fourteenth}
+    return(soaColumnRead<T13>(fourteenth, index))
+  }
+
+  [public return<T14>]
+  soaColumns15ReadFifteenth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>([Reference<SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>>] values,
+                                                                                                 [i32] index) {
+    soaColumns15CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(values)
+    [Reference<SoaColumn<T14>>] fifteenth{values.fifteenth}
+    return(soaColumnRead<T14>(fifteenth, index))
+  }
+
+  [public return<T0>]
+  soaColumns16ReadFirst<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>([Reference<SoaColumns16<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>>] values,
+                                                                                                  [i32] index) {
+    soaColumns16CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(values)
+    [Reference<SoaColumn<T0>>] first{values.first}
+    return(soaColumnRead<T0>(first, index))
+  }
+
+  [public return<T1>]
+  soaColumns16ReadSecond<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>([Reference<SoaColumns16<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>>] values,
+                                                                                                  [i32] index) {
+    soaColumns16CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(values)
+    [Reference<SoaColumn<T1>>] second{values.second}
+    return(soaColumnRead<T1>(second, index))
+  }
+
+  [public return<T2>]
+  soaColumns16ReadThird<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>([Reference<SoaColumns16<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>>] values,
+                                                                                                  [i32] index) {
+    soaColumns16CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(values)
+    [Reference<SoaColumn<T2>>] third{values.third}
+    return(soaColumnRead<T2>(third, index))
+  }
+
+  [public return<T3>]
+  soaColumns16ReadFourth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>([Reference<SoaColumns16<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>>] values,
+                                                                                                  [i32] index) {
+    soaColumns16CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(values)
+    [Reference<SoaColumn<T3>>] fourth{values.fourth}
+    return(soaColumnRead<T3>(fourth, index))
+  }
+
+  [public return<T4>]
+  soaColumns16ReadFifth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>([Reference<SoaColumns16<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>>] values,
+                                                                                                  [i32] index) {
+    soaColumns16CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(values)
+    [Reference<SoaColumn<T4>>] fifth{values.fifth}
+    return(soaColumnRead<T4>(fifth, index))
+  }
+
+  [public return<T5>]
+  soaColumns16ReadSixth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>([Reference<SoaColumns16<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>>] values,
+                                                                                                  [i32] index) {
+    soaColumns16CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(values)
+    [Reference<SoaColumn<T5>>] sixth{values.sixth}
+    return(soaColumnRead<T5>(sixth, index))
+  }
+
+  [public return<T6>]
+  soaColumns16ReadSeventh<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>([Reference<SoaColumns16<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>>] values,
+                                                                                                  [i32] index) {
+    soaColumns16CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(values)
+    [Reference<SoaColumn<T6>>] seventh{values.seventh}
+    return(soaColumnRead<T6>(seventh, index))
+  }
+
+  [public return<T7>]
+  soaColumns16ReadEighth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>([Reference<SoaColumns16<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>>] values,
+                                                                                                  [i32] index) {
+    soaColumns16CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(values)
+    [Reference<SoaColumn<T7>>] eighth{values.eighth}
+    return(soaColumnRead<T7>(eighth, index))
+  }
+
+  [public return<T8>]
+  soaColumns16ReadNinth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>([Reference<SoaColumns16<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>>] values,
+                                                                                                  [i32] index) {
+    soaColumns16CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(values)
+    [Reference<SoaColumn<T8>>] ninth{values.ninth}
+    return(soaColumnRead<T8>(ninth, index))
+  }
+
+  [public return<T9>]
+  soaColumns16ReadTenth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>([Reference<SoaColumns16<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>>] values,
+                                                                                                  [i32] index) {
+    soaColumns16CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(values)
+    [Reference<SoaColumn<T9>>] tenth{values.tenth}
+    return(soaColumnRead<T9>(tenth, index))
+  }
+
+  [public return<T10>]
+  soaColumns16ReadEleventh<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>([Reference<SoaColumns16<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>>] values,
+                                                                                                  [i32] index) {
+    soaColumns16CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(values)
+    [Reference<SoaColumn<T10>>] eleventh{values.eleventh}
+    return(soaColumnRead<T10>(eleventh, index))
+  }
+
+  [public return<T11>]
+  soaColumns16ReadTwelfth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>([Reference<SoaColumns16<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>>] values,
+                                                                                                  [i32] index) {
+    soaColumns16CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(values)
+    [Reference<SoaColumn<T11>>] twelfth{values.twelfth}
+    return(soaColumnRead<T11>(twelfth, index))
+  }
+
+  [public return<T12>]
+  soaColumns16ReadThirteenth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>([Reference<SoaColumns16<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>>] values,
+                                                                                                  [i32] index) {
+    soaColumns16CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(values)
+    [Reference<SoaColumn<T12>>] thirteenth{values.thirteenth}
+    return(soaColumnRead<T12>(thirteenth, index))
+  }
+
+  [public return<T13>]
+  soaColumns16ReadFourteenth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>([Reference<SoaColumns16<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>>] values,
+                                                                                                  [i32] index) {
+    soaColumns16CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(values)
+    [Reference<SoaColumn<T13>>] fourteenth{values.fourteenth}
+    return(soaColumnRead<T13>(fourteenth, index))
+  }
+
+  [public return<T14>]
+  soaColumns16ReadFifteenth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>([Reference<SoaColumns16<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>>] values,
+                                                                                                  [i32] index) {
+    soaColumns16CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(values)
+    [Reference<SoaColumn<T14>>] fifteenth{values.fifteenth}
+    return(soaColumnRead<T14>(fifteenth, index))
+  }
+
+  [public return<T15>]
+  soaColumns16ReadSixteenth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>([Reference<SoaColumns16<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>>] values,
+                                                                                                  [i32] index) {
+    soaColumns16CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(values)
+    [Reference<SoaColumn<T15>>] sixteenth{values.sixteenth}
+    return(soaColumnRead<T15>(sixteenth, index))
+  }
+  }
+  }
+}

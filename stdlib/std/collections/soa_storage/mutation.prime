@@ -1,0 +1,1174 @@
+import /std/collections/buffer_checked/*
+import /std/collections/buffer_unchecked/*
+import /std/panic/*
+
+namespace std {
+  namespace collections {
+  namespace soa_storage {
+  [public effects(heap_alloc), return<void>]
+  soaColumns16Push<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>([SoaColumns16<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> mut] values,
+                                                                                       [T0] firstValue,
+                                                                                       [T1] secondValue,
+                                                                                       [T2] thirdValue,
+                                                                                       [T3] fourthValue,
+                                                                                       [T4] fifthValue,
+                                                                                       [T5] sixthValue,
+                                                                                       [T6] seventhValue,
+                                                                                       [T7] eighthValue,
+                                                                                       [T8] ninthValue,
+                                                                                       [T9] tenthValue,
+                                                                                       [T10] eleventhValue,
+                                                                                       [T11] twelfthValue,
+                                                                                       [T12] thirteenthValue,
+                                                                                       [T13] fourteenthValue,
+                                                                                       [T14] fifteenthValue,
+                                                                                       [T15] sixteenthValue) {
+    soaColumns16CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(values)
+    [Reference<SoaColumn<T0>>] first{location(values.first)}
+    [Reference<SoaColumn<T1>>] second{location(values.second)}
+    [Reference<SoaColumn<T2>>] third{location(values.third)}
+    [Reference<SoaColumn<T3>>] fourth{location(values.fourth)}
+    [Reference<SoaColumn<T4>>] fifth{location(values.fifth)}
+    [Reference<SoaColumn<T5>>] sixth{location(values.sixth)}
+    [Reference<SoaColumn<T6>>] seventh{location(values.seventh)}
+    [Reference<SoaColumn<T7>>] eighth{location(values.eighth)}
+    [Reference<SoaColumn<T8>>] ninth{location(values.ninth)}
+    [Reference<SoaColumn<T9>>] tenth{location(values.tenth)}
+    [Reference<SoaColumn<T10>>] eleventh{location(values.eleventh)}
+    [Reference<SoaColumn<T11>>] twelfth{location(values.twelfth)}
+    [Reference<SoaColumn<T12>>] thirteenth{location(values.thirteenth)}
+    [Reference<SoaColumn<T13>>] fourteenth{location(values.fourteenth)}
+    [Reference<SoaColumn<T14>>] fifteenth{location(values.fifteenth)}
+    [Reference<SoaColumn<T15>>] sixteenth{location(values.sixteenth)}
+    if(soaColumnCount<T0>(first) == soaColumnCapacity<T0>(first)) {
+      [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
+      if(nextCapacity == 0i32) {
+        nextCapacity = 1i32
+      } else {
+        if(nextCapacity > 536870911i32) {
+          nextCapacity = 1073741824i32
+        } else {
+          nextCapacity = nextCapacity + nextCapacity
+        }
+      }
+      soaColumnReserve<T0>(first, nextCapacity)
+      soaColumnReserve<T1>(second, nextCapacity)
+      soaColumnReserve<T2>(third, nextCapacity)
+      soaColumnReserve<T3>(fourth, nextCapacity)
+      soaColumnReserve<T4>(fifth, nextCapacity)
+      soaColumnReserve<T5>(sixth, nextCapacity)
+      soaColumnReserve<T6>(seventh, nextCapacity)
+      soaColumnReserve<T7>(eighth, nextCapacity)
+      soaColumnReserve<T8>(ninth, nextCapacity)
+      soaColumnReserve<T9>(tenth, nextCapacity)
+      soaColumnReserve<T10>(eleventh, nextCapacity)
+      soaColumnReserve<T11>(twelfth, nextCapacity)
+      soaColumnReserve<T12>(thirteenth, nextCapacity)
+      soaColumnReserve<T13>(fourteenth, nextCapacity)
+      soaColumnReserve<T14>(fifteenth, nextCapacity)
+      soaColumnReserve<T15>(sixteenth, nextCapacity)
+    }
+    soaColumnPush<T0>(first, firstValue)
+    soaColumnPush<T1>(second, secondValue)
+    soaColumnPush<T2>(third, thirdValue)
+    soaColumnPush<T3>(fourth, fourthValue)
+    soaColumnPush<T4>(fifth, fifthValue)
+    soaColumnPush<T5>(sixth, sixthValue)
+    soaColumnPush<T6>(seventh, seventhValue)
+    soaColumnPush<T7>(eighth, eighthValue)
+    soaColumnPush<T8>(ninth, ninthValue)
+    soaColumnPush<T9>(tenth, tenthValue)
+    soaColumnPush<T10>(eleventh, eleventhValue)
+    soaColumnPush<T11>(twelfth, twelfthValue)
+    soaColumnPush<T12>(thirteenth, thirteenthValue)
+    soaColumnPush<T13>(fourteenth, fourteenthValue)
+    soaColumnPush<T14>(fifteenth, fifteenthValue)
+    soaColumnPush<T15>(sixteenth, sixteenthValue)
+  }
+
+  [public effects(heap_alloc), return<void>]
+  soaColumnPush<T>([SoaColumn<T> mut] values, [T] value) {
+    soaColumnCheckShape<T>(values)
+    if(values.field_count() == values.field_capacity()) {
+      [i32 mut] nextCapacity{values.field_capacity()}
+      if(nextCapacity == 0i32) {
+        nextCapacity = 1i32
+      } else {
+        if(nextCapacity > 536870911i32) {
+          nextCapacity = 1073741824i32
+        } else {
+          nextCapacity = nextCapacity + nextCapacity
+        }
+      }
+      soaColumnReserve<T>(values, nextCapacity)
+    }
+    soaColumnInitSlot<T>(values, values.field_count(), value)
+    values.set_field_count(values.field_count() + 1i32)
+  }
+
+  [public effects(heap_alloc), return<void>]
+  soaColumns2Push<T0, T1>([SoaColumns2<T0, T1> mut] values, [T0] firstValue, [T1] secondValue) {
+    soaColumns2CheckShape<T0, T1>(values)
+    [Reference<SoaColumn<T0>>] first{location(values.first)}
+    [Reference<SoaColumn<T1>>] second{location(values.second)}
+    if(soaColumnCount<T0>(first) == soaColumnCapacity<T0>(first)) {
+      [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
+      if(nextCapacity == 0i32) {
+        nextCapacity = 1i32
+      } else {
+        if(nextCapacity > 536870911i32) {
+          nextCapacity = 1073741824i32
+        } else {
+          nextCapacity = nextCapacity + nextCapacity
+        }
+      }
+      soaColumnReserve<T0>(first, nextCapacity)
+      soaColumnReserve<T1>(second, nextCapacity)
+    }
+    soaColumnPush<T0>(first, firstValue)
+    soaColumnPush<T1>(second, secondValue)
+  }
+
+  [public effects(heap_alloc), return<void>]
+  soaColumns3Push<T0, T1, T2>([SoaColumns3<T0, T1, T2> mut] values,
+                              [T0] firstValue,
+                              [T1] secondValue,
+                              [T2] thirdValue) {
+    soaColumns3CheckShape<T0, T1, T2>(values)
+    [Reference<SoaColumn<T0>>] first{location(values.first)}
+    [Reference<SoaColumn<T1>>] second{location(values.second)}
+    [Reference<SoaColumn<T2>>] third{location(values.third)}
+    if(soaColumnCount<T0>(first) == soaColumnCapacity<T0>(first)) {
+      [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
+      if(nextCapacity == 0i32) {
+        nextCapacity = 1i32
+      } else {
+        if(nextCapacity > 536870911i32) {
+          nextCapacity = 1073741824i32
+        } else {
+          nextCapacity = nextCapacity + nextCapacity
+        }
+      }
+      soaColumnReserve<T0>(first, nextCapacity)
+      soaColumnReserve<T1>(second, nextCapacity)
+      soaColumnReserve<T2>(third, nextCapacity)
+    }
+    soaColumnPush<T0>(first, firstValue)
+    soaColumnPush<T1>(second, secondValue)
+    soaColumnPush<T2>(third, thirdValue)
+  }
+
+  [public effects(heap_alloc), return<void>]
+  soaColumns4Push<T0, T1, T2, T3>([SoaColumns4<T0, T1, T2, T3> mut] values,
+                                  [T0] firstValue,
+                                  [T1] secondValue,
+                                  [T2] thirdValue,
+                                  [T3] fourthValue) {
+    soaColumns4CheckShape<T0, T1, T2, T3>(values)
+    [Reference<SoaColumn<T0>>] first{location(values.first)}
+    [Reference<SoaColumn<T1>>] second{location(values.second)}
+    [Reference<SoaColumn<T2>>] third{location(values.third)}
+    [Reference<SoaColumn<T3>>] fourth{location(values.fourth)}
+    if(soaColumnCount<T0>(first) == soaColumnCapacity<T0>(first)) {
+      [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
+      if(nextCapacity == 0i32) {
+        nextCapacity = 1i32
+      } else {
+        if(nextCapacity > 536870911i32) {
+          nextCapacity = 1073741824i32
+        } else {
+          nextCapacity = nextCapacity + nextCapacity
+        }
+      }
+      soaColumnReserve<T0>(first, nextCapacity)
+      soaColumnReserve<T1>(second, nextCapacity)
+      soaColumnReserve<T2>(third, nextCapacity)
+      soaColumnReserve<T3>(fourth, nextCapacity)
+    }
+    soaColumnPush<T0>(first, firstValue)
+    soaColumnPush<T1>(second, secondValue)
+    soaColumnPush<T2>(third, thirdValue)
+    soaColumnPush<T3>(fourth, fourthValue)
+  }
+
+  [public effects(heap_alloc), return<void>]
+  soaColumns5Push<T0, T1, T2, T3, T4>([SoaColumns5<T0, T1, T2, T3, T4> mut] values,
+                                      [T0] firstValue,
+                                      [T1] secondValue,
+                                      [T2] thirdValue,
+                                      [T3] fourthValue,
+                                      [T4] fifthValue) {
+    soaColumns5CheckShape<T0, T1, T2, T3, T4>(values)
+    [Reference<SoaColumn<T0>>] first{location(values.first)}
+    [Reference<SoaColumn<T1>>] second{location(values.second)}
+    [Reference<SoaColumn<T2>>] third{location(values.third)}
+    [Reference<SoaColumn<T3>>] fourth{location(values.fourth)}
+    [Reference<SoaColumn<T4>>] fifth{location(values.fifth)}
+    if(soaColumnCount<T0>(first) == soaColumnCapacity<T0>(first)) {
+      [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
+      if(nextCapacity == 0i32) {
+        nextCapacity = 1i32
+      } else {
+        if(nextCapacity > 536870911i32) {
+          nextCapacity = 1073741824i32
+        } else {
+          nextCapacity = nextCapacity + nextCapacity
+        }
+      }
+      soaColumnReserve<T0>(first, nextCapacity)
+      soaColumnReserve<T1>(second, nextCapacity)
+      soaColumnReserve<T2>(third, nextCapacity)
+      soaColumnReserve<T3>(fourth, nextCapacity)
+      soaColumnReserve<T4>(fifth, nextCapacity)
+    }
+    soaColumnPush<T0>(first, firstValue)
+    soaColumnPush<T1>(second, secondValue)
+    soaColumnPush<T2>(third, thirdValue)
+    soaColumnPush<T3>(fourth, fourthValue)
+    soaColumnPush<T4>(fifth, fifthValue)
+  }
+
+  [public effects(heap_alloc), return<void>]
+  soaColumns6Push<T0, T1, T2, T3, T4, T5>([SoaColumns6<T0, T1, T2, T3, T4, T5> mut] values,
+                                          [T0] firstValue,
+                                          [T1] secondValue,
+                                          [T2] thirdValue,
+                                          [T3] fourthValue,
+                                          [T4] fifthValue,
+                                          [T5] sixthValue) {
+    soaColumns6CheckShape<T0, T1, T2, T3, T4, T5>(values)
+    [Reference<SoaColumn<T0>>] first{location(values.first)}
+    [Reference<SoaColumn<T1>>] second{location(values.second)}
+    [Reference<SoaColumn<T2>>] third{location(values.third)}
+    [Reference<SoaColumn<T3>>] fourth{location(values.fourth)}
+    [Reference<SoaColumn<T4>>] fifth{location(values.fifth)}
+    [Reference<SoaColumn<T5>>] sixth{location(values.sixth)}
+    if(soaColumnCount<T0>(first) == soaColumnCapacity<T0>(first)) {
+      [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
+      if(nextCapacity == 0i32) {
+        nextCapacity = 1i32
+      } else {
+        if(nextCapacity > 536870911i32) {
+          nextCapacity = 1073741824i32
+        } else {
+          nextCapacity = nextCapacity + nextCapacity
+        }
+      }
+      soaColumnReserve<T0>(first, nextCapacity)
+      soaColumnReserve<T1>(second, nextCapacity)
+      soaColumnReserve<T2>(third, nextCapacity)
+      soaColumnReserve<T3>(fourth, nextCapacity)
+      soaColumnReserve<T4>(fifth, nextCapacity)
+      soaColumnReserve<T5>(sixth, nextCapacity)
+    }
+    soaColumnPush<T0>(first, firstValue)
+    soaColumnPush<T1>(second, secondValue)
+    soaColumnPush<T2>(third, thirdValue)
+    soaColumnPush<T3>(fourth, fourthValue)
+    soaColumnPush<T4>(fifth, fifthValue)
+    soaColumnPush<T5>(sixth, sixthValue)
+  }
+
+  [public effects(heap_alloc), return<void>]
+  soaColumns7Push<T0, T1, T2, T3, T4, T5, T6>([SoaColumns7<T0, T1, T2, T3, T4, T5, T6> mut] values,
+                                              [T0] firstValue,
+                                              [T1] secondValue,
+                                              [T2] thirdValue,
+                                              [T3] fourthValue,
+                                              [T4] fifthValue,
+                                              [T5] sixthValue,
+                                              [T6] seventhValue) {
+    soaColumns7CheckShape<T0, T1, T2, T3, T4, T5, T6>(values)
+    [Reference<SoaColumn<T0>>] first{location(values.first)}
+    [Reference<SoaColumn<T1>>] second{location(values.second)}
+    [Reference<SoaColumn<T2>>] third{location(values.third)}
+    [Reference<SoaColumn<T3>>] fourth{location(values.fourth)}
+    [Reference<SoaColumn<T4>>] fifth{location(values.fifth)}
+    [Reference<SoaColumn<T5>>] sixth{location(values.sixth)}
+    [Reference<SoaColumn<T6>>] seventh{location(values.seventh)}
+    if(soaColumnCount<T0>(first) == soaColumnCapacity<T0>(first)) {
+      [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
+      if(nextCapacity == 0i32) {
+        nextCapacity = 1i32
+      } else {
+        if(nextCapacity > 536870911i32) {
+          nextCapacity = 1073741824i32
+        } else {
+          nextCapacity = nextCapacity + nextCapacity
+        }
+      }
+      soaColumnReserve<T0>(first, nextCapacity)
+      soaColumnReserve<T1>(second, nextCapacity)
+      soaColumnReserve<T2>(third, nextCapacity)
+      soaColumnReserve<T3>(fourth, nextCapacity)
+      soaColumnReserve<T4>(fifth, nextCapacity)
+      soaColumnReserve<T5>(sixth, nextCapacity)
+      soaColumnReserve<T6>(seventh, nextCapacity)
+    }
+    soaColumnPush<T0>(first, firstValue)
+    soaColumnPush<T1>(second, secondValue)
+    soaColumnPush<T2>(third, thirdValue)
+    soaColumnPush<T3>(fourth, fourthValue)
+    soaColumnPush<T4>(fifth, fifthValue)
+    soaColumnPush<T5>(sixth, sixthValue)
+    soaColumnPush<T6>(seventh, seventhValue)
+  }
+
+  [public effects(heap_alloc), return<void>]
+  soaColumns8Push<T0, T1, T2, T3, T4, T5, T6, T7>([SoaColumns8<T0, T1, T2, T3, T4, T5, T6, T7> mut] values,
+                                                   [T0] firstValue,
+                                                   [T1] secondValue,
+                                                   [T2] thirdValue,
+                                                   [T3] fourthValue,
+                                                   [T4] fifthValue,
+                                                   [T5] sixthValue,
+                                                   [T6] seventhValue,
+                                                   [T7] eighthValue) {
+    soaColumns8CheckShape<T0, T1, T2, T3, T4, T5, T6, T7>(values)
+    [Reference<SoaColumn<T0>>] first{location(values.first)}
+    [Reference<SoaColumn<T1>>] second{location(values.second)}
+    [Reference<SoaColumn<T2>>] third{location(values.third)}
+    [Reference<SoaColumn<T3>>] fourth{location(values.fourth)}
+    [Reference<SoaColumn<T4>>] fifth{location(values.fifth)}
+    [Reference<SoaColumn<T5>>] sixth{location(values.sixth)}
+    [Reference<SoaColumn<T6>>] seventh{location(values.seventh)}
+    [Reference<SoaColumn<T7>>] eighth{location(values.eighth)}
+    if(soaColumnCount<T0>(first) == soaColumnCapacity<T0>(first)) {
+      [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
+      if(nextCapacity == 0i32) {
+        nextCapacity = 1i32
+      } else {
+        if(nextCapacity > 536870911i32) {
+          nextCapacity = 1073741824i32
+        } else {
+          nextCapacity = nextCapacity + nextCapacity
+        }
+      }
+      soaColumnReserve<T0>(first, nextCapacity)
+      soaColumnReserve<T1>(second, nextCapacity)
+      soaColumnReserve<T2>(third, nextCapacity)
+      soaColumnReserve<T3>(fourth, nextCapacity)
+      soaColumnReserve<T4>(fifth, nextCapacity)
+      soaColumnReserve<T5>(sixth, nextCapacity)
+      soaColumnReserve<T6>(seventh, nextCapacity)
+      soaColumnReserve<T7>(eighth, nextCapacity)
+    }
+    soaColumnPush<T0>(first, firstValue)
+    soaColumnPush<T1>(second, secondValue)
+    soaColumnPush<T2>(third, thirdValue)
+    soaColumnPush<T3>(fourth, fourthValue)
+    soaColumnPush<T4>(fifth, fifthValue)
+    soaColumnPush<T5>(sixth, sixthValue)
+    soaColumnPush<T6>(seventh, seventhValue)
+    soaColumnPush<T7>(eighth, eighthValue)
+  }
+
+  [public effects(heap_alloc), return<void>]
+  soaColumns9Push<T0, T1, T2, T3, T4, T5, T6, T7, T8>([SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8> mut] values,
+                                                       [T0] firstValue,
+                                                       [T1] secondValue,
+                                                       [T2] thirdValue,
+                                                       [T3] fourthValue,
+                                                       [T4] fifthValue,
+                                                       [T5] sixthValue,
+                                                       [T6] seventhValue,
+                                                       [T7] eighthValue,
+                                                       [T8] ninthValue) {
+    soaColumns9CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8>(values)
+    [Reference<SoaColumn<T0>>] first{location(values.first)}
+    [Reference<SoaColumn<T1>>] second{location(values.second)}
+    [Reference<SoaColumn<T2>>] third{location(values.third)}
+    [Reference<SoaColumn<T3>>] fourth{location(values.fourth)}
+    [Reference<SoaColumn<T4>>] fifth{location(values.fifth)}
+    [Reference<SoaColumn<T5>>] sixth{location(values.sixth)}
+    [Reference<SoaColumn<T6>>] seventh{location(values.seventh)}
+    [Reference<SoaColumn<T7>>] eighth{location(values.eighth)}
+    [Reference<SoaColumn<T8>>] ninth{location(values.ninth)}
+    if(soaColumnCount<T0>(first) == soaColumnCapacity<T0>(first)) {
+      [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
+      if(nextCapacity == 0i32) {
+        nextCapacity = 1i32
+      } else {
+        if(nextCapacity > 536870911i32) {
+          nextCapacity = 1073741824i32
+        } else {
+          nextCapacity = nextCapacity + nextCapacity
+        }
+      }
+      soaColumnReserve<T0>(first, nextCapacity)
+      soaColumnReserve<T1>(second, nextCapacity)
+      soaColumnReserve<T2>(third, nextCapacity)
+      soaColumnReserve<T3>(fourth, nextCapacity)
+      soaColumnReserve<T4>(fifth, nextCapacity)
+      soaColumnReserve<T5>(sixth, nextCapacity)
+      soaColumnReserve<T6>(seventh, nextCapacity)
+      soaColumnReserve<T7>(eighth, nextCapacity)
+      soaColumnReserve<T8>(ninth, nextCapacity)
+    }
+    soaColumnPush<T0>(first, firstValue)
+    soaColumnPush<T1>(second, secondValue)
+    soaColumnPush<T2>(third, thirdValue)
+    soaColumnPush<T3>(fourth, fourthValue)
+    soaColumnPush<T4>(fifth, fifthValue)
+    soaColumnPush<T5>(sixth, sixthValue)
+    soaColumnPush<T6>(seventh, seventhValue)
+    soaColumnPush<T7>(eighth, eighthValue)
+    soaColumnPush<T8>(ninth, ninthValue)
+  }
+
+  [public effects(heap_alloc), return<void>]
+  soaColumns10Push<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>([SoaColumns10<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> mut] values,
+                                                            [T0] firstValue,
+                                                            [T1] secondValue,
+                                                            [T2] thirdValue,
+                                                            [T3] fourthValue,
+                                                            [T4] fifthValue,
+                                                            [T5] sixthValue,
+                                                            [T6] seventhValue,
+                                                            [T7] eighthValue,
+                                                            [T8] ninthValue,
+                                                            [T9] tenthValue) {
+    soaColumns10CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(values)
+    [Reference<SoaColumn<T0>>] first{location(values.first)}
+    [Reference<SoaColumn<T1>>] second{location(values.second)}
+    [Reference<SoaColumn<T2>>] third{location(values.third)}
+    [Reference<SoaColumn<T3>>] fourth{location(values.fourth)}
+    [Reference<SoaColumn<T4>>] fifth{location(values.fifth)}
+    [Reference<SoaColumn<T5>>] sixth{location(values.sixth)}
+    [Reference<SoaColumn<T6>>] seventh{location(values.seventh)}
+    [Reference<SoaColumn<T7>>] eighth{location(values.eighth)}
+    [Reference<SoaColumn<T8>>] ninth{location(values.ninth)}
+    [Reference<SoaColumn<T9>>] tenth{location(values.tenth)}
+    if(soaColumnCount<T0>(first) == soaColumnCapacity<T0>(first)) {
+      [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
+      if(nextCapacity == 0i32) {
+        nextCapacity = 1i32
+      } else {
+        if(nextCapacity > 536870911i32) {
+          nextCapacity = 1073741824i32
+        } else {
+          nextCapacity = nextCapacity + nextCapacity
+        }
+      }
+      soaColumnReserve<T0>(first, nextCapacity)
+      soaColumnReserve<T1>(second, nextCapacity)
+      soaColumnReserve<T2>(third, nextCapacity)
+      soaColumnReserve<T3>(fourth, nextCapacity)
+      soaColumnReserve<T4>(fifth, nextCapacity)
+      soaColumnReserve<T5>(sixth, nextCapacity)
+      soaColumnReserve<T6>(seventh, nextCapacity)
+      soaColumnReserve<T7>(eighth, nextCapacity)
+      soaColumnReserve<T8>(ninth, nextCapacity)
+      soaColumnReserve<T9>(tenth, nextCapacity)
+    }
+    soaColumnPush<T0>(first, firstValue)
+    soaColumnPush<T1>(second, secondValue)
+    soaColumnPush<T2>(third, thirdValue)
+    soaColumnPush<T3>(fourth, fourthValue)
+    soaColumnPush<T4>(fifth, fifthValue)
+    soaColumnPush<T5>(sixth, sixthValue)
+    soaColumnPush<T6>(seventh, seventhValue)
+    soaColumnPush<T7>(eighth, eighthValue)
+    soaColumnPush<T8>(ninth, ninthValue)
+    soaColumnPush<T9>(tenth, tenthValue)
+  }
+
+  [public effects(heap_alloc), return<void>]
+  soaColumns11Push<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>([SoaColumns11<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> mut] values,
+                                                                 [T0] firstValue,
+                                                                 [T1] secondValue,
+                                                                 [T2] thirdValue,
+                                                                 [T3] fourthValue,
+                                                                 [T4] fifthValue,
+                                                                 [T5] sixthValue,
+                                                                 [T6] seventhValue,
+                                                                 [T7] eighthValue,
+                                                                 [T8] ninthValue,
+                                                                 [T9] tenthValue,
+                                                                 [T10] eleventhValue) {
+    soaColumns11CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(values)
+    [Reference<SoaColumn<T0>>] first{location(values.first)}
+    [Reference<SoaColumn<T1>>] second{location(values.second)}
+    [Reference<SoaColumn<T2>>] third{location(values.third)}
+    [Reference<SoaColumn<T3>>] fourth{location(values.fourth)}
+    [Reference<SoaColumn<T4>>] fifth{location(values.fifth)}
+    [Reference<SoaColumn<T5>>] sixth{location(values.sixth)}
+    [Reference<SoaColumn<T6>>] seventh{location(values.seventh)}
+    [Reference<SoaColumn<T7>>] eighth{location(values.eighth)}
+    [Reference<SoaColumn<T8>>] ninth{location(values.ninth)}
+    [Reference<SoaColumn<T9>>] tenth{location(values.tenth)}
+    [Reference<SoaColumn<T10>>] eleventh{location(values.eleventh)}
+    if(soaColumnCount<T0>(first) == soaColumnCapacity<T0>(first)) {
+      [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
+      if(nextCapacity == 0i32) {
+        nextCapacity = 1i32
+      } else {
+        if(nextCapacity > 536870911i32) {
+          nextCapacity = 1073741824i32
+        } else {
+          nextCapacity = nextCapacity + nextCapacity
+        }
+      }
+      soaColumnReserve<T0>(first, nextCapacity)
+      soaColumnReserve<T1>(second, nextCapacity)
+      soaColumnReserve<T2>(third, nextCapacity)
+      soaColumnReserve<T3>(fourth, nextCapacity)
+      soaColumnReserve<T4>(fifth, nextCapacity)
+      soaColumnReserve<T5>(sixth, nextCapacity)
+      soaColumnReserve<T6>(seventh, nextCapacity)
+      soaColumnReserve<T7>(eighth, nextCapacity)
+      soaColumnReserve<T8>(ninth, nextCapacity)
+      soaColumnReserve<T9>(tenth, nextCapacity)
+      soaColumnReserve<T10>(eleventh, nextCapacity)
+    }
+    soaColumnPush<T0>(first, firstValue)
+    soaColumnPush<T1>(second, secondValue)
+    soaColumnPush<T2>(third, thirdValue)
+    soaColumnPush<T3>(fourth, fourthValue)
+    soaColumnPush<T4>(fifth, fifthValue)
+    soaColumnPush<T5>(sixth, sixthValue)
+    soaColumnPush<T6>(seventh, seventhValue)
+    soaColumnPush<T7>(eighth, eighthValue)
+    soaColumnPush<T8>(ninth, ninthValue)
+    soaColumnPush<T9>(tenth, tenthValue)
+    soaColumnPush<T10>(eleventh, eleventhValue)
+  }
+
+  [public effects(heap_alloc), return<void>]
+  soaColumns12Push<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>([SoaColumns12<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> mut] values,
+                                                                       [T0] firstValue,
+                                                                       [T1] secondValue,
+                                                                       [T2] thirdValue,
+                                                                       [T3] fourthValue,
+                                                                       [T4] fifthValue,
+                                                                       [T5] sixthValue,
+                                                                       [T6] seventhValue,
+                                                                       [T7] eighthValue,
+                                                                       [T8] ninthValue,
+                                                                       [T9] tenthValue,
+                                                                       [T10] eleventhValue,
+                                                                       [T11] twelfthValue) {
+    soaColumns12CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(values)
+    [Reference<SoaColumn<T0>>] first{location(values.first)}
+    [Reference<SoaColumn<T1>>] second{location(values.second)}
+    [Reference<SoaColumn<T2>>] third{location(values.third)}
+    [Reference<SoaColumn<T3>>] fourth{location(values.fourth)}
+    [Reference<SoaColumn<T4>>] fifth{location(values.fifth)}
+    [Reference<SoaColumn<T5>>] sixth{location(values.sixth)}
+    [Reference<SoaColumn<T6>>] seventh{location(values.seventh)}
+    [Reference<SoaColumn<T7>>] eighth{location(values.eighth)}
+    [Reference<SoaColumn<T8>>] ninth{location(values.ninth)}
+    [Reference<SoaColumn<T9>>] tenth{location(values.tenth)}
+    [Reference<SoaColumn<T10>>] eleventh{location(values.eleventh)}
+    [Reference<SoaColumn<T11>>] twelfth{location(values.twelfth)}
+    if(soaColumnCount<T0>(first) == soaColumnCapacity<T0>(first)) {
+      [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
+      if(nextCapacity == 0i32) {
+        nextCapacity = 1i32
+      } else {
+        if(nextCapacity > 536870911i32) {
+          nextCapacity = 1073741824i32
+        } else {
+          nextCapacity = nextCapacity + nextCapacity
+        }
+      }
+      soaColumnReserve<T0>(first, nextCapacity)
+      soaColumnReserve<T1>(second, nextCapacity)
+      soaColumnReserve<T2>(third, nextCapacity)
+      soaColumnReserve<T3>(fourth, nextCapacity)
+      soaColumnReserve<T4>(fifth, nextCapacity)
+      soaColumnReserve<T5>(sixth, nextCapacity)
+      soaColumnReserve<T6>(seventh, nextCapacity)
+      soaColumnReserve<T7>(eighth, nextCapacity)
+      soaColumnReserve<T8>(ninth, nextCapacity)
+      soaColumnReserve<T9>(tenth, nextCapacity)
+      soaColumnReserve<T10>(eleventh, nextCapacity)
+      soaColumnReserve<T11>(twelfth, nextCapacity)
+    }
+    soaColumnPush<T0>(first, firstValue)
+    soaColumnPush<T1>(second, secondValue)
+    soaColumnPush<T2>(third, thirdValue)
+    soaColumnPush<T3>(fourth, fourthValue)
+    soaColumnPush<T4>(fifth, fifthValue)
+    soaColumnPush<T5>(sixth, sixthValue)
+    soaColumnPush<T6>(seventh, seventhValue)
+    soaColumnPush<T7>(eighth, eighthValue)
+    soaColumnPush<T8>(ninth, ninthValue)
+    soaColumnPush<T9>(tenth, tenthValue)
+    soaColumnPush<T10>(eleventh, eleventhValue)
+    soaColumnPush<T11>(twelfth, twelfthValue)
+  }
+
+  [public effects(heap_alloc), return<void>]
+  soaColumns13Push<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>([SoaColumns13<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> mut] values,
+                                                                             [T0] firstValue,
+                                                                             [T1] secondValue,
+                                                                             [T2] thirdValue,
+                                                                             [T3] fourthValue,
+                                                                             [T4] fifthValue,
+                                                                             [T5] sixthValue,
+                                                                             [T6] seventhValue,
+                                                                             [T7] eighthValue,
+                                                                             [T8] ninthValue,
+                                                                             [T9] tenthValue,
+                                                                             [T10] eleventhValue,
+                                                                             [T11] twelfthValue,
+                                                                             [T12] thirteenthValue) {
+    soaColumns13CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(values)
+    [Reference<SoaColumn<T0>>] first{location(values.first)}
+    [Reference<SoaColumn<T1>>] second{location(values.second)}
+    [Reference<SoaColumn<T2>>] third{location(values.third)}
+    [Reference<SoaColumn<T3>>] fourth{location(values.fourth)}
+    [Reference<SoaColumn<T4>>] fifth{location(values.fifth)}
+    [Reference<SoaColumn<T5>>] sixth{location(values.sixth)}
+    [Reference<SoaColumn<T6>>] seventh{location(values.seventh)}
+    [Reference<SoaColumn<T7>>] eighth{location(values.eighth)}
+    [Reference<SoaColumn<T8>>] ninth{location(values.ninth)}
+    [Reference<SoaColumn<T9>>] tenth{location(values.tenth)}
+    [Reference<SoaColumn<T10>>] eleventh{location(values.eleventh)}
+    [Reference<SoaColumn<T11>>] twelfth{location(values.twelfth)}
+    [Reference<SoaColumn<T12>>] thirteenth{location(values.thirteenth)}
+    if(soaColumnCount<T0>(first) == soaColumnCapacity<T0>(first)) {
+      [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
+      if(nextCapacity == 0i32) {
+        nextCapacity = 1i32
+      } else {
+        if(nextCapacity > 536870911i32) {
+          nextCapacity = 1073741824i32
+        } else {
+          nextCapacity = nextCapacity + nextCapacity
+        }
+      }
+      soaColumnReserve<T0>(first, nextCapacity)
+      soaColumnReserve<T1>(second, nextCapacity)
+      soaColumnReserve<T2>(third, nextCapacity)
+      soaColumnReserve<T3>(fourth, nextCapacity)
+      soaColumnReserve<T4>(fifth, nextCapacity)
+      soaColumnReserve<T5>(sixth, nextCapacity)
+      soaColumnReserve<T6>(seventh, nextCapacity)
+      soaColumnReserve<T7>(eighth, nextCapacity)
+      soaColumnReserve<T8>(ninth, nextCapacity)
+      soaColumnReserve<T9>(tenth, nextCapacity)
+      soaColumnReserve<T10>(eleventh, nextCapacity)
+      soaColumnReserve<T11>(twelfth, nextCapacity)
+      soaColumnReserve<T12>(thirteenth, nextCapacity)
+    }
+    soaColumnPush<T0>(first, firstValue)
+    soaColumnPush<T1>(second, secondValue)
+    soaColumnPush<T2>(third, thirdValue)
+    soaColumnPush<T3>(fourth, fourthValue)
+    soaColumnPush<T4>(fifth, fifthValue)
+    soaColumnPush<T5>(sixth, sixthValue)
+    soaColumnPush<T6>(seventh, seventhValue)
+    soaColumnPush<T7>(eighth, eighthValue)
+    soaColumnPush<T8>(ninth, ninthValue)
+    soaColumnPush<T9>(tenth, tenthValue)
+    soaColumnPush<T10>(eleventh, eleventhValue)
+    soaColumnPush<T11>(twelfth, twelfthValue)
+    soaColumnPush<T12>(thirteenth, thirteenthValue)
+  }
+
+  [public effects(heap_alloc), return<void>]
+  soaColumns14Push<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>([SoaColumns14<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> mut] values,
+                                                                                  [T0] firstValue,
+                                                                                  [T1] secondValue,
+                                                                                  [T2] thirdValue,
+                                                                                  [T3] fourthValue,
+                                                                                  [T4] fifthValue,
+                                                                                  [T5] sixthValue,
+                                                                                  [T6] seventhValue,
+                                                                                  [T7] eighthValue,
+                                                                                  [T8] ninthValue,
+                                                                                  [T9] tenthValue,
+                                                                                  [T10] eleventhValue,
+                                                                                  [T11] twelfthValue,
+                                                                                  [T12] thirteenthValue,
+                                                                                  [T13] fourteenthValue) {
+    soaColumns14CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(values)
+    [Reference<SoaColumn<T0>>] first{location(values.first)}
+    [Reference<SoaColumn<T1>>] second{location(values.second)}
+    [Reference<SoaColumn<T2>>] third{location(values.third)}
+    [Reference<SoaColumn<T3>>] fourth{location(values.fourth)}
+    [Reference<SoaColumn<T4>>] fifth{location(values.fifth)}
+    [Reference<SoaColumn<T5>>] sixth{location(values.sixth)}
+    [Reference<SoaColumn<T6>>] seventh{location(values.seventh)}
+    [Reference<SoaColumn<T7>>] eighth{location(values.eighth)}
+    [Reference<SoaColumn<T8>>] ninth{location(values.ninth)}
+    [Reference<SoaColumn<T9>>] tenth{location(values.tenth)}
+    [Reference<SoaColumn<T10>>] eleventh{location(values.eleventh)}
+    [Reference<SoaColumn<T11>>] twelfth{location(values.twelfth)}
+    [Reference<SoaColumn<T12>>] thirteenth{location(values.thirteenth)}
+    [Reference<SoaColumn<T13>>] fourteenth{location(values.fourteenth)}
+    if(soaColumnCount<T0>(first) == soaColumnCapacity<T0>(first)) {
+      [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
+      if(nextCapacity == 0i32) {
+        nextCapacity = 1i32
+      } else {
+        if(nextCapacity > 536870911i32) {
+          nextCapacity = 1073741824i32
+        } else {
+          nextCapacity = nextCapacity + nextCapacity
+        }
+      }
+      soaColumnReserve<T0>(first, nextCapacity)
+      soaColumnReserve<T1>(second, nextCapacity)
+      soaColumnReserve<T2>(third, nextCapacity)
+      soaColumnReserve<T3>(fourth, nextCapacity)
+      soaColumnReserve<T4>(fifth, nextCapacity)
+      soaColumnReserve<T5>(sixth, nextCapacity)
+      soaColumnReserve<T6>(seventh, nextCapacity)
+      soaColumnReserve<T7>(eighth, nextCapacity)
+      soaColumnReserve<T8>(ninth, nextCapacity)
+      soaColumnReserve<T9>(tenth, nextCapacity)
+      soaColumnReserve<T10>(eleventh, nextCapacity)
+      soaColumnReserve<T11>(twelfth, nextCapacity)
+      soaColumnReserve<T12>(thirteenth, nextCapacity)
+      soaColumnReserve<T13>(fourteenth, nextCapacity)
+    }
+    soaColumnPush<T0>(first, firstValue)
+    soaColumnPush<T1>(second, secondValue)
+    soaColumnPush<T2>(third, thirdValue)
+    soaColumnPush<T3>(fourth, fourthValue)
+    soaColumnPush<T4>(fifth, fifthValue)
+    soaColumnPush<T5>(sixth, sixthValue)
+    soaColumnPush<T6>(seventh, seventhValue)
+    soaColumnPush<T7>(eighth, eighthValue)
+    soaColumnPush<T8>(ninth, ninthValue)
+    soaColumnPush<T9>(tenth, tenthValue)
+    soaColumnPush<T10>(eleventh, eleventhValue)
+    soaColumnPush<T11>(twelfth, twelfthValue)
+    soaColumnPush<T12>(thirteenth, thirteenthValue)
+    soaColumnPush<T13>(fourteenth, fourteenthValue)
+  }
+
+  [public effects(heap_alloc), return<void>]
+  soaColumns15Push<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>([SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> mut] values,
+                                                                                       [T0] firstValue,
+                                                                                       [T1] secondValue,
+                                                                                       [T2] thirdValue,
+                                                                                       [T3] fourthValue,
+                                                                                       [T4] fifthValue,
+                                                                                       [T5] sixthValue,
+                                                                                       [T6] seventhValue,
+                                                                                       [T7] eighthValue,
+                                                                                       [T8] ninthValue,
+                                                                                       [T9] tenthValue,
+                                                                                       [T10] eleventhValue,
+                                                                                       [T11] twelfthValue,
+                                                                                       [T12] thirteenthValue,
+                                                                                       [T13] fourteenthValue,
+                                                                                       [T14] fifteenthValue) {
+    soaColumns15CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(values)
+    [Reference<SoaColumn<T0>>] first{location(values.first)}
+    [Reference<SoaColumn<T1>>] second{location(values.second)}
+    [Reference<SoaColumn<T2>>] third{location(values.third)}
+    [Reference<SoaColumn<T3>>] fourth{location(values.fourth)}
+    [Reference<SoaColumn<T4>>] fifth{location(values.fifth)}
+    [Reference<SoaColumn<T5>>] sixth{location(values.sixth)}
+    [Reference<SoaColumn<T6>>] seventh{location(values.seventh)}
+    [Reference<SoaColumn<T7>>] eighth{location(values.eighth)}
+    [Reference<SoaColumn<T8>>] ninth{location(values.ninth)}
+    [Reference<SoaColumn<T9>>] tenth{location(values.tenth)}
+    [Reference<SoaColumn<T10>>] eleventh{location(values.eleventh)}
+    [Reference<SoaColumn<T11>>] twelfth{location(values.twelfth)}
+    [Reference<SoaColumn<T12>>] thirteenth{location(values.thirteenth)}
+    [Reference<SoaColumn<T13>>] fourteenth{location(values.fourteenth)}
+    [Reference<SoaColumn<T14>>] fifteenth{location(values.fifteenth)}
+    if(soaColumnCount<T0>(first) == soaColumnCapacity<T0>(first)) {
+      [i32 mut] nextCapacity{soaColumnCapacity<T0>(first)}
+      if(nextCapacity == 0i32) {
+        nextCapacity = 1i32
+      } else {
+        if(nextCapacity > 536870911i32) {
+          nextCapacity = 1073741824i32
+        } else {
+          nextCapacity = nextCapacity + nextCapacity
+        }
+      }
+      soaColumnReserve<T0>(first, nextCapacity)
+      soaColumnReserve<T1>(second, nextCapacity)
+      soaColumnReserve<T2>(third, nextCapacity)
+      soaColumnReserve<T3>(fourth, nextCapacity)
+      soaColumnReserve<T4>(fifth, nextCapacity)
+      soaColumnReserve<T5>(sixth, nextCapacity)
+      soaColumnReserve<T6>(seventh, nextCapacity)
+      soaColumnReserve<T7>(eighth, nextCapacity)
+      soaColumnReserve<T8>(ninth, nextCapacity)
+      soaColumnReserve<T9>(tenth, nextCapacity)
+      soaColumnReserve<T10>(eleventh, nextCapacity)
+      soaColumnReserve<T11>(twelfth, nextCapacity)
+      soaColumnReserve<T12>(thirteenth, nextCapacity)
+      soaColumnReserve<T13>(fourteenth, nextCapacity)
+      soaColumnReserve<T14>(fifteenth, nextCapacity)
+    }
+    soaColumnPush<T0>(first, firstValue)
+    soaColumnPush<T1>(second, secondValue)
+    soaColumnPush<T2>(third, thirdValue)
+    soaColumnPush<T3>(fourth, fourthValue)
+    soaColumnPush<T4>(fifth, fifthValue)
+    soaColumnPush<T5>(sixth, sixthValue)
+    soaColumnPush<T6>(seventh, seventhValue)
+    soaColumnPush<T7>(eighth, eighthValue)
+    soaColumnPush<T8>(ninth, ninthValue)
+    soaColumnPush<T9>(tenth, tenthValue)
+    soaColumnPush<T10>(eleventh, eleventhValue)
+    soaColumnPush<T11>(twelfth, twelfthValue)
+    soaColumnPush<T12>(thirteenth, thirteenthValue)
+    soaColumnPush<T13>(fourteenth, fourteenthValue)
+    soaColumnPush<T14>(fifteenth, fifteenthValue)
+  }
+
+  [public effects(heap_alloc), return<void>]
+  soaColumns16Clear<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>([SoaColumns16<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> mut] values) {
+    soaColumns16CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(values)
+    [Reference<SoaColumn<T0>>] first{location(values.first)}
+    [Reference<SoaColumn<T1>>] second{location(values.second)}
+    [Reference<SoaColumn<T2>>] third{location(values.third)}
+    [Reference<SoaColumn<T3>>] fourth{location(values.fourth)}
+    [Reference<SoaColumn<T4>>] fifth{location(values.fifth)}
+    [Reference<SoaColumn<T5>>] sixth{location(values.sixth)}
+    [Reference<SoaColumn<T6>>] seventh{location(values.seventh)}
+    [Reference<SoaColumn<T7>>] eighth{location(values.eighth)}
+    [Reference<SoaColumn<T8>>] ninth{location(values.ninth)}
+    [Reference<SoaColumn<T9>>] tenth{location(values.tenth)}
+    [Reference<SoaColumn<T10>>] eleventh{location(values.eleventh)}
+    [Reference<SoaColumn<T11>>] twelfth{location(values.twelfth)}
+    [Reference<SoaColumn<T12>>] thirteenth{location(values.thirteenth)}
+    [Reference<SoaColumn<T13>>] fourteenth{location(values.fourteenth)}
+    [Reference<SoaColumn<T14>>] fifteenth{location(values.fifteenth)}
+    [Reference<SoaColumn<T15>>] sixteenth{location(values.sixteenth)}
+    soaColumnClear<T0>(first)
+    soaColumnClear<T1>(second)
+    soaColumnClear<T2>(third)
+    soaColumnClear<T3>(fourth)
+    soaColumnClear<T4>(fifth)
+    soaColumnClear<T5>(sixth)
+    soaColumnClear<T6>(seventh)
+    soaColumnClear<T7>(eighth)
+    soaColumnClear<T8>(ninth)
+    soaColumnClear<T9>(tenth)
+    soaColumnClear<T10>(eleventh)
+    soaColumnClear<T11>(twelfth)
+    soaColumnClear<T12>(thirteenth)
+    soaColumnClear<T13>(fourteenth)
+    soaColumnClear<T14>(fifteenth)
+    soaColumnClear<T15>(sixteenth)
+  }
+
+  [public effects(heap_alloc), return<void>]
+  soaColumnClear<T>([SoaColumn<T> mut] values) {
+    soaColumnCheckShape<T>(values)
+    soaColumnDropRange<T>(values, values.field_count())
+    values.set_field_count(0i32)
+  }
+
+  [public effects(heap_alloc), return<void>]
+  soaColumns2Clear<T0, T1>([SoaColumns2<T0, T1> mut] values) {
+    soaColumns2CheckShape<T0, T1>(values)
+    [Reference<SoaColumn<T0>>] first{location(values.first)}
+    [Reference<SoaColumn<T1>>] second{location(values.second)}
+    soaColumnClear<T0>(first)
+    soaColumnClear<T1>(second)
+  }
+
+  [public effects(heap_alloc), return<void>]
+  soaColumns3Clear<T0, T1, T2>([SoaColumns3<T0, T1, T2> mut] values) {
+    soaColumns3CheckShape<T0, T1, T2>(values)
+    [Reference<SoaColumn<T0>>] first{location(values.first)}
+    [Reference<SoaColumn<T1>>] second{location(values.second)}
+    [Reference<SoaColumn<T2>>] third{location(values.third)}
+    soaColumnClear<T0>(first)
+    soaColumnClear<T1>(second)
+    soaColumnClear<T2>(third)
+  }
+
+  [public effects(heap_alloc), return<void>]
+  soaColumns4Clear<T0, T1, T2, T3>([SoaColumns4<T0, T1, T2, T3> mut] values) {
+    soaColumns4CheckShape<T0, T1, T2, T3>(values)
+    [Reference<SoaColumn<T0>>] first{location(values.first)}
+    [Reference<SoaColumn<T1>>] second{location(values.second)}
+    [Reference<SoaColumn<T2>>] third{location(values.third)}
+    [Reference<SoaColumn<T3>>] fourth{location(values.fourth)}
+    soaColumnClear<T0>(first)
+    soaColumnClear<T1>(second)
+    soaColumnClear<T2>(third)
+    soaColumnClear<T3>(fourth)
+  }
+
+  [public effects(heap_alloc), return<void>]
+  soaColumns5Clear<T0, T1, T2, T3, T4>([SoaColumns5<T0, T1, T2, T3, T4> mut] values) {
+    soaColumns5CheckShape<T0, T1, T2, T3, T4>(values)
+    [Reference<SoaColumn<T0>>] first{location(values.first)}
+    [Reference<SoaColumn<T1>>] second{location(values.second)}
+    [Reference<SoaColumn<T2>>] third{location(values.third)}
+    [Reference<SoaColumn<T3>>] fourth{location(values.fourth)}
+    [Reference<SoaColumn<T4>>] fifth{location(values.fifth)}
+    soaColumnClear<T0>(first)
+    soaColumnClear<T1>(second)
+    soaColumnClear<T2>(third)
+    soaColumnClear<T3>(fourth)
+    soaColumnClear<T4>(fifth)
+  }
+
+  [public effects(heap_alloc), return<void>]
+  soaColumns6Clear<T0, T1, T2, T3, T4, T5>([SoaColumns6<T0, T1, T2, T3, T4, T5> mut] values) {
+    soaColumns6CheckShape<T0, T1, T2, T3, T4, T5>(values)
+    [Reference<SoaColumn<T0>>] first{location(values.first)}
+    [Reference<SoaColumn<T1>>] second{location(values.second)}
+    [Reference<SoaColumn<T2>>] third{location(values.third)}
+    [Reference<SoaColumn<T3>>] fourth{location(values.fourth)}
+    [Reference<SoaColumn<T4>>] fifth{location(values.fifth)}
+    [Reference<SoaColumn<T5>>] sixth{location(values.sixth)}
+    soaColumnClear<T0>(first)
+    soaColumnClear<T1>(second)
+    soaColumnClear<T2>(third)
+    soaColumnClear<T3>(fourth)
+    soaColumnClear<T4>(fifth)
+    soaColumnClear<T5>(sixth)
+  }
+
+  [public effects(heap_alloc), return<void>]
+  soaColumns7Clear<T0, T1, T2, T3, T4, T5, T6>([SoaColumns7<T0, T1, T2, T3, T4, T5, T6> mut] values) {
+    soaColumns7CheckShape<T0, T1, T2, T3, T4, T5, T6>(values)
+    [Reference<SoaColumn<T0>>] first{location(values.first)}
+    [Reference<SoaColumn<T1>>] second{location(values.second)}
+    [Reference<SoaColumn<T2>>] third{location(values.third)}
+    [Reference<SoaColumn<T3>>] fourth{location(values.fourth)}
+    [Reference<SoaColumn<T4>>] fifth{location(values.fifth)}
+    [Reference<SoaColumn<T5>>] sixth{location(values.sixth)}
+    [Reference<SoaColumn<T6>>] seventh{location(values.seventh)}
+    soaColumnClear<T0>(first)
+    soaColumnClear<T1>(second)
+    soaColumnClear<T2>(third)
+    soaColumnClear<T3>(fourth)
+    soaColumnClear<T4>(fifth)
+    soaColumnClear<T5>(sixth)
+    soaColumnClear<T6>(seventh)
+  }
+
+  [public effects(heap_alloc), return<void>]
+  soaColumns8Clear<T0, T1, T2, T3, T4, T5, T6, T7>([SoaColumns8<T0, T1, T2, T3, T4, T5, T6, T7> mut] values) {
+    soaColumns8CheckShape<T0, T1, T2, T3, T4, T5, T6, T7>(values)
+    [Reference<SoaColumn<T0>>] first{location(values.first)}
+    [Reference<SoaColumn<T1>>] second{location(values.second)}
+    [Reference<SoaColumn<T2>>] third{location(values.third)}
+    [Reference<SoaColumn<T3>>] fourth{location(values.fourth)}
+    [Reference<SoaColumn<T4>>] fifth{location(values.fifth)}
+    [Reference<SoaColumn<T5>>] sixth{location(values.sixth)}
+    [Reference<SoaColumn<T6>>] seventh{location(values.seventh)}
+    [Reference<SoaColumn<T7>>] eighth{location(values.eighth)}
+    soaColumnClear<T0>(first)
+    soaColumnClear<T1>(second)
+    soaColumnClear<T2>(third)
+    soaColumnClear<T3>(fourth)
+    soaColumnClear<T4>(fifth)
+    soaColumnClear<T5>(sixth)
+    soaColumnClear<T6>(seventh)
+    soaColumnClear<T7>(eighth)
+  }
+
+  [public effects(heap_alloc), return<void>]
+  soaColumns9Clear<T0, T1, T2, T3, T4, T5, T6, T7, T8>([SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8> mut] values) {
+    soaColumns9CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8>(values)
+    [Reference<SoaColumn<T0>>] first{location(values.first)}
+    [Reference<SoaColumn<T1>>] second{location(values.second)}
+    [Reference<SoaColumn<T2>>] third{location(values.third)}
+    [Reference<SoaColumn<T3>>] fourth{location(values.fourth)}
+    [Reference<SoaColumn<T4>>] fifth{location(values.fifth)}
+    [Reference<SoaColumn<T5>>] sixth{location(values.sixth)}
+    [Reference<SoaColumn<T6>>] seventh{location(values.seventh)}
+    [Reference<SoaColumn<T7>>] eighth{location(values.eighth)}
+    [Reference<SoaColumn<T8>>] ninth{location(values.ninth)}
+    soaColumnClear<T0>(first)
+    soaColumnClear<T1>(second)
+    soaColumnClear<T2>(third)
+    soaColumnClear<T3>(fourth)
+    soaColumnClear<T4>(fifth)
+    soaColumnClear<T5>(sixth)
+    soaColumnClear<T6>(seventh)
+    soaColumnClear<T7>(eighth)
+    soaColumnClear<T8>(ninth)
+  }
+
+  [public effects(heap_alloc), return<void>]
+  soaColumns10Clear<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>([SoaColumns10<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> mut] values) {
+    soaColumns10CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(values)
+    [Reference<SoaColumn<T0>>] first{location(values.first)}
+    [Reference<SoaColumn<T1>>] second{location(values.second)}
+    [Reference<SoaColumn<T2>>] third{location(values.third)}
+    [Reference<SoaColumn<T3>>] fourth{location(values.fourth)}
+    [Reference<SoaColumn<T4>>] fifth{location(values.fifth)}
+    [Reference<SoaColumn<T5>>] sixth{location(values.sixth)}
+    [Reference<SoaColumn<T6>>] seventh{location(values.seventh)}
+    [Reference<SoaColumn<T7>>] eighth{location(values.eighth)}
+    [Reference<SoaColumn<T8>>] ninth{location(values.ninth)}
+    [Reference<SoaColumn<T9>>] tenth{location(values.tenth)}
+    soaColumnClear<T0>(first)
+    soaColumnClear<T1>(second)
+    soaColumnClear<T2>(third)
+    soaColumnClear<T3>(fourth)
+    soaColumnClear<T4>(fifth)
+    soaColumnClear<T5>(sixth)
+    soaColumnClear<T6>(seventh)
+    soaColumnClear<T7>(eighth)
+    soaColumnClear<T8>(ninth)
+    soaColumnClear<T9>(tenth)
+  }
+
+  [public effects(heap_alloc), return<void>]
+  soaColumns11Clear<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>([SoaColumns11<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> mut] values) {
+    soaColumns11CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(values)
+    [Reference<SoaColumn<T0>>] first{location(values.first)}
+    [Reference<SoaColumn<T1>>] second{location(values.second)}
+    [Reference<SoaColumn<T2>>] third{location(values.third)}
+    [Reference<SoaColumn<T3>>] fourth{location(values.fourth)}
+    [Reference<SoaColumn<T4>>] fifth{location(values.fifth)}
+    [Reference<SoaColumn<T5>>] sixth{location(values.sixth)}
+    [Reference<SoaColumn<T6>>] seventh{location(values.seventh)}
+    [Reference<SoaColumn<T7>>] eighth{location(values.eighth)}
+    [Reference<SoaColumn<T8>>] ninth{location(values.ninth)}
+    [Reference<SoaColumn<T9>>] tenth{location(values.tenth)}
+    [Reference<SoaColumn<T10>>] eleventh{location(values.eleventh)}
+    soaColumnClear<T0>(first)
+    soaColumnClear<T1>(second)
+    soaColumnClear<T2>(third)
+    soaColumnClear<T3>(fourth)
+    soaColumnClear<T4>(fifth)
+    soaColumnClear<T5>(sixth)
+    soaColumnClear<T6>(seventh)
+    soaColumnClear<T7>(eighth)
+    soaColumnClear<T8>(ninth)
+    soaColumnClear<T9>(tenth)
+    soaColumnClear<T10>(eleventh)
+  }
+
+  [public effects(heap_alloc), return<void>]
+  soaColumns12Clear<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>([SoaColumns12<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> mut] values) {
+    soaColumns12CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(values)
+    [Reference<SoaColumn<T0>>] first{location(values.first)}
+    [Reference<SoaColumn<T1>>] second{location(values.second)}
+    [Reference<SoaColumn<T2>>] third{location(values.third)}
+    [Reference<SoaColumn<T3>>] fourth{location(values.fourth)}
+    [Reference<SoaColumn<T4>>] fifth{location(values.fifth)}
+    [Reference<SoaColumn<T5>>] sixth{location(values.sixth)}
+    [Reference<SoaColumn<T6>>] seventh{location(values.seventh)}
+    [Reference<SoaColumn<T7>>] eighth{location(values.eighth)}
+    [Reference<SoaColumn<T8>>] ninth{location(values.ninth)}
+    [Reference<SoaColumn<T9>>] tenth{location(values.tenth)}
+    [Reference<SoaColumn<T10>>] eleventh{location(values.eleventh)}
+    [Reference<SoaColumn<T11>>] twelfth{location(values.twelfth)}
+    soaColumnClear<T0>(first)
+    soaColumnClear<T1>(second)
+    soaColumnClear<T2>(third)
+    soaColumnClear<T3>(fourth)
+    soaColumnClear<T4>(fifth)
+    soaColumnClear<T5>(sixth)
+    soaColumnClear<T6>(seventh)
+    soaColumnClear<T7>(eighth)
+    soaColumnClear<T8>(ninth)
+    soaColumnClear<T9>(tenth)
+    soaColumnClear<T10>(eleventh)
+    soaColumnClear<T11>(twelfth)
+  }
+
+  [public effects(heap_alloc), return<void>]
+  soaColumns13Clear<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>([SoaColumns13<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> mut] values) {
+    soaColumns13CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(values)
+    [Reference<SoaColumn<T0>>] first{location(values.first)}
+    [Reference<SoaColumn<T1>>] second{location(values.second)}
+    [Reference<SoaColumn<T2>>] third{location(values.third)}
+    [Reference<SoaColumn<T3>>] fourth{location(values.fourth)}
+    [Reference<SoaColumn<T4>>] fifth{location(values.fifth)}
+    [Reference<SoaColumn<T5>>] sixth{location(values.sixth)}
+    [Reference<SoaColumn<T6>>] seventh{location(values.seventh)}
+    [Reference<SoaColumn<T7>>] eighth{location(values.eighth)}
+    [Reference<SoaColumn<T8>>] ninth{location(values.ninth)}
+    [Reference<SoaColumn<T9>>] tenth{location(values.tenth)}
+    [Reference<SoaColumn<T10>>] eleventh{location(values.eleventh)}
+    [Reference<SoaColumn<T11>>] twelfth{location(values.twelfth)}
+    [Reference<SoaColumn<T12>>] thirteenth{location(values.thirteenth)}
+    soaColumnClear<T0>(first)
+    soaColumnClear<T1>(second)
+    soaColumnClear<T2>(third)
+    soaColumnClear<T3>(fourth)
+    soaColumnClear<T4>(fifth)
+    soaColumnClear<T5>(sixth)
+    soaColumnClear<T6>(seventh)
+    soaColumnClear<T7>(eighth)
+    soaColumnClear<T8>(ninth)
+    soaColumnClear<T9>(tenth)
+    soaColumnClear<T10>(eleventh)
+    soaColumnClear<T11>(twelfth)
+    soaColumnClear<T12>(thirteenth)
+  }
+
+  [public effects(heap_alloc), return<void>]
+  soaColumns14Clear<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>([SoaColumns14<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> mut] values) {
+    soaColumns14CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(values)
+    [Reference<SoaColumn<T0>>] first{location(values.first)}
+    [Reference<SoaColumn<T1>>] second{location(values.second)}
+    [Reference<SoaColumn<T2>>] third{location(values.third)}
+    [Reference<SoaColumn<T3>>] fourth{location(values.fourth)}
+    [Reference<SoaColumn<T4>>] fifth{location(values.fifth)}
+    [Reference<SoaColumn<T5>>] sixth{location(values.sixth)}
+    [Reference<SoaColumn<T6>>] seventh{location(values.seventh)}
+    [Reference<SoaColumn<T7>>] eighth{location(values.eighth)}
+    [Reference<SoaColumn<T8>>] ninth{location(values.ninth)}
+    [Reference<SoaColumn<T9>>] tenth{location(values.tenth)}
+    [Reference<SoaColumn<T10>>] eleventh{location(values.eleventh)}
+    [Reference<SoaColumn<T11>>] twelfth{location(values.twelfth)}
+    [Reference<SoaColumn<T12>>] thirteenth{location(values.thirteenth)}
+    [Reference<SoaColumn<T13>>] fourteenth{location(values.fourteenth)}
+    soaColumnClear<T0>(first)
+    soaColumnClear<T1>(second)
+    soaColumnClear<T2>(third)
+    soaColumnClear<T3>(fourth)
+    soaColumnClear<T4>(fifth)
+    soaColumnClear<T5>(sixth)
+    soaColumnClear<T6>(seventh)
+    soaColumnClear<T7>(eighth)
+    soaColumnClear<T8>(ninth)
+    soaColumnClear<T9>(tenth)
+    soaColumnClear<T10>(eleventh)
+    soaColumnClear<T11>(twelfth)
+    soaColumnClear<T12>(thirteenth)
+    soaColumnClear<T13>(fourteenth)
+  }
+
+  [public effects(heap_alloc), return<void>]
+  soaColumns15Clear<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>([SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> mut] values) {
+    soaColumns15CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(values)
+    [Reference<SoaColumn<T0>>] first{location(values.first)}
+    [Reference<SoaColumn<T1>>] second{location(values.second)}
+    [Reference<SoaColumn<T2>>] third{location(values.third)}
+    [Reference<SoaColumn<T3>>] fourth{location(values.fourth)}
+    [Reference<SoaColumn<T4>>] fifth{location(values.fifth)}
+    [Reference<SoaColumn<T5>>] sixth{location(values.sixth)}
+    [Reference<SoaColumn<T6>>] seventh{location(values.seventh)}
+    [Reference<SoaColumn<T7>>] eighth{location(values.eighth)}
+    [Reference<SoaColumn<T8>>] ninth{location(values.ninth)}
+    [Reference<SoaColumn<T9>>] tenth{location(values.tenth)}
+    [Reference<SoaColumn<T10>>] eleventh{location(values.eleventh)}
+    [Reference<SoaColumn<T11>>] twelfth{location(values.twelfth)}
+    [Reference<SoaColumn<T12>>] thirteenth{location(values.thirteenth)}
+    [Reference<SoaColumn<T13>>] fourteenth{location(values.fourteenth)}
+    [Reference<SoaColumn<T14>>] fifteenth{location(values.fifteenth)}
+    soaColumnClear<T0>(first)
+    soaColumnClear<T1>(second)
+    soaColumnClear<T2>(third)
+    soaColumnClear<T3>(fourth)
+    soaColumnClear<T4>(fifth)
+    soaColumnClear<T5>(sixth)
+    soaColumnClear<T6>(seventh)
+    soaColumnClear<T7>(eighth)
+    soaColumnClear<T8>(ninth)
+    soaColumnClear<T9>(tenth)
+    soaColumnClear<T10>(eleventh)
+    soaColumnClear<T11>(twelfth)
+    soaColumnClear<T12>(thirteenth)
+    soaColumnClear<T13>(fourteenth)
+    soaColumnClear<T14>(fifteenth)
+  }
+  }
+  }
+}

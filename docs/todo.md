@@ -100,7 +100,6 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5415 | Split stdlib/std/collections/soa_storage.prime by concern | deferred | stdlib |
 | TODO-5348 | Verify the iOS embed build and XCFramework packaging on macOS | deferred | embedding-ios |
 
 ### Ready Now
@@ -114,8 +113,6 @@ of sync with them.
 - Embedding (must support iOS): TODO-5348 (needs macOS)
 - Lowerer structure: TODO-5426
 - Collection resolution: TODO-5424, TODO-5425
-- Tooling:  (needs approval)
-- Stdlib: TODO-5415
 
 ### Execution Queue
 
@@ -158,18 +155,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - every legacy SoA spelling has a matrix row (ok or rejected); rejected ones no longer appear in src/
     - full gate green
   - stop_rule: a spelling the matrix shows as `ok` stays and gets a note, not a deletion.
-
-- [ ] TODO-5415: Split stdlib/std/collections/soa_storage.prime by concern
-  - owner: ai
-  - status: deferred
-  - created_at: 2026-10-03
-  - phase: Standard library
-  - parallel_track: stdlib
-  - scope: `soa_storage.prime` is 4,518 lines and ~1,200 definitions in one file, the internal SoA substrate. Split into storage, column, conversion and helper files under `stdlib/std/collections/internal_soa_*.prime` with the same namespace, keeping it classified as internal/bridge code per docs/CodeExamples.md.
-  - acceptance:
-    - no stdlib file over 1,500 lines; collection parity matrix and `docs/CollectionHelperTargets.md` byte-identical
-    - full gate green
-  - stop_rule: pure moves; if the import manifest needs new entries, update `docs/spec/type-system.md`'s inclusion manifest in the same commit.
 
 - [ ] TODO-5348: Verify the iOS embed build and XCFramework packaging on macOS
   - owner: human
