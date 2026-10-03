@@ -165,116 +165,6 @@ UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(
     const LocalMap &localsIn,
     const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
     std::string &error);
-NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
-    const Expr &expr,
-    const LocalMap &localsIn,
-    const std::function<bool(const Expr &, std::string &)> &tryGetMathBuiltinName,
-    const std::function<bool(const std::string &)> &isSupportedMathBuiltinName,
-    const std::function<bool(const Expr &, const LocalMap &)> &isArrayCountCall,
-    const std::function<bool(const Expr &, const LocalMap &)> &isVectorCapacityCall,
-    const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCall,
-    const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
-    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
-    size_t stringTableCount,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const ResolveCallCollectionPairTypeInfoFn &resolveCallCollectionPairTypeInfo,
-    const ResolveCallArrayVectorAccessTargetInfoFn &resolveCallArrayVectorAccessTargetInfo,
-    const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<void()> &emitStringIndexOutOfBounds,
-    const std::function<void()> &emitMapKeyNotFound,
-    const std::function<void()> &emitArrayIndexOutOfBounds,
-    const std::function<size_t()> &instructionCount,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
-    std::string &error,
-    const SemanticProgram *semanticProgram = nullptr,
-    const SemanticProductIndex *semanticIndex = nullptr);
-NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
-    const Expr &expr,
-    const LocalMap &localsIn,
-    const std::function<bool(const Expr &, std::string &)> &tryGetMathBuiltinName,
-    const std::function<bool(const std::string &)> &isSupportedMathBuiltinName,
-    const std::function<bool(const Expr &, const LocalMap &)> &isArrayCountCall,
-    const std::function<bool(const Expr &, const LocalMap &)> &isVectorCapacityCall,
-    const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCall,
-    const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
-    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const ResolveCallCollectionPairTypeInfoFn &resolveCallCollectionPairTypeInfo,
-    const ResolveCallArrayVectorAccessTargetInfoFn &resolveCallArrayVectorAccessTargetInfo,
-    const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<void()> &emitStringIndexOutOfBounds,
-    const std::function<void()> &emitMapKeyNotFound,
-    const std::function<void()> &emitArrayIndexOutOfBounds,
-    const std::function<size_t()> &instructionCount,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
-    std::string &error,
-    const SemanticProgram *semanticProgram = nullptr,
-    const SemanticProductIndex *semanticIndex = nullptr);
-NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
-    const Expr &expr,
-    const LocalMap &localsIn,
-    const std::function<bool(const Expr &, std::string &)> &tryGetMathBuiltinName,
-    const std::function<bool(const std::string &)> &isSupportedMathBuiltinName,
-    const std::function<bool(const Expr &, const LocalMap &)> &isArrayCountCall,
-    const std::function<bool(const Expr &, const LocalMap &)> &isVectorCapacityCall,
-    const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCall,
-    const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
-    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
-    size_t stringTableCount,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<void()> &emitStringIndexOutOfBounds,
-    const std::function<void()> &emitMapKeyNotFound,
-    const std::function<void()> &emitArrayIndexOutOfBounds,
-    const std::function<size_t()> &instructionCount,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
-    std::string &error,
-    const SemanticProgram *semanticProgram = nullptr,
-    const SemanticProductIndex *semanticIndex = nullptr);
-// TODO-5304: test-only. This overload has neither a
-// resolveCallCollectionPairTypeInfo/resolveCallArrayVectorAccessTargetInfo
-// classifier nor a stringTableCount, so it always dispatches with an empty
-// classifier - a call shape no production caller ever produces. The sole
-// production dispatch site (IrLowererLowerEmitExprTailDispatch.h) always
-// calls tryEmitNativeCallTailDispatchWithLocals with a real classifier, a
-// real stringTable.size(), and a real semanticProgram (IrLowererLower.cpp
-// hard-errors before lowering starts when the semantic product is null, so
-// a null-semanticProgram call can never happen in a real compiled program
-// either). Kept only so the shared dispatch logic can be unit-tested in
-// isolation from that plumbing. Do not add a production call site for this
-// overload; add one for tryEmitNativeCallTailDispatchWithLocals instead.
-NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
-    const Expr &expr,
-    const LocalMap &localsIn,
-    const std::function<bool(const Expr &, std::string &)> &tryGetMathBuiltinName,
-    const std::function<bool(const std::string &)> &isSupportedMathBuiltinName,
-    const std::function<bool(const Expr &, const LocalMap &)> &isArrayCountCall,
-    const std::function<bool(const Expr &, const LocalMap &)> &isVectorCapacityCall,
-    const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCall,
-    const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
-    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<void()> &emitStringIndexOutOfBounds,
-    const std::function<void()> &emitMapKeyNotFound,
-    const std::function<void()> &emitArrayIndexOutOfBounds,
-    const std::function<size_t()> &instructionCount,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
-    std::string &error,
-    const SemanticProgram *semanticProgram = nullptr,
-    const SemanticProductIndex *semanticIndex = nullptr);
 BufferBuiltinDispatchResult tryEmitBufferBuiltinDispatchWithLocals(
     const Expr &expr,
     const LocalMap &localsIn,
@@ -286,101 +176,41 @@ BufferBuiltinDispatchResult tryEmitBufferBuiltinDispatchWithLocals(
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     std::string &error,
     const SemanticProductTargetAdapter *semanticProductTargets = nullptr);
+// Callbacks the native tail dispatch needs from the lowerer. Members a caller does not
+// need stay empty (the classifiers) or zero (stringTableCount). The production caller is
+// IrLowererLowerEmitExprTailDispatch.h; tests fill only what a case exercises.
+struct NativeCallTailDispatchHooks {
+  std::function<bool(const Expr &, std::string &)> tryGetMathBuiltinName;
+  std::function<bool(const std::string &)> isSupportedMathBuiltinName;
+  std::function<bool(const Expr &, const LocalMap &)> isArrayCountCall;
+  std::function<bool(const Expr &, const LocalMap &)> isVectorCapacityCall;
+  std::function<bool(const Expr &, const LocalMap &)> isStringCountCall;
+  std::function<bool(const Expr &, const LocalMap &)> isEntryArgsName;
+  std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> resolveStringTableTarget;
+  size_t stringTableCount = 0;
+  std::function<bool(const Expr &, const LocalMap &)> emitExpr;
+  ResolveCallCollectionPairTypeInfoFn resolveCallCollectionPairTypeInfo{};
+  ResolveCallArrayVectorAccessTargetInfoFn resolveCallArrayVectorAccessTargetInfo{};
+  std::function<bool(const Expr &, std::string &)> tryGetPrintBuiltinName;
+  std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferExprKind;
+  std::function<int32_t()> allocTempLocal;
+  std::function<void()> emitStringIndexOutOfBounds;
+  std::function<void()> emitMapKeyNotFound;
+  std::function<void()> emitArrayIndexOutOfBounds;
+  std::function<size_t()> instructionCount;
+  std::function<void(IrOpcode, uint64_t)> emitInstruction;
+  std::function<void(size_t, uint64_t)> patchInstructionImm;
+};
+// The semanticProgram default of nullptr exists only so unit tests can exercise the shared
+// dispatch logic without semantic-product plumbing; the production caller always supplies a
+// real semantic product (IrLowererLower.cpp hard-errors before lowering when it is absent).
 NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
     const Expr &expr,
     const LocalMap &localsIn,
-    const std::function<bool(const Expr &, std::string &)> &tryGetMathBuiltinName,
-    const std::function<bool(const std::string &)> &isSupportedMathBuiltinName,
-    const std::function<bool(const Expr &, const LocalMap &)> &isArrayCountCall,
-    const std::function<bool(const Expr &, const LocalMap &)> &isVectorCapacityCall,
-    const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCall,
-    const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
-    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
-    size_t stringTableCount,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const ResolveCallCollectionPairTypeInfoFn &resolveCallCollectionPairTypeInfo,
-    const ResolveCallArrayVectorAccessTargetInfoFn &resolveCallArrayVectorAccessTargetInfo,
-    const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<void()> &emitStringIndexOutOfBounds,
-    const std::function<void()> &emitMapKeyNotFound,
-    const std::function<void()> &emitArrayIndexOutOfBounds,
-    const std::function<size_t()> &instructionCount,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    const NativeCallTailDispatchHooks &hooks,
     std::string &error,
     const SemanticProgram *semanticProgram = nullptr,
     const SemanticProductIndex *semanticIndex = nullptr);
-NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
-    const Expr &expr,
-    const LocalMap &localsIn,
-    const std::function<bool(const Expr &, std::string &)> &tryGetMathBuiltinName,
-    const std::function<bool(const std::string &)> &isSupportedMathBuiltinName,
-    const std::function<bool(const Expr &, const LocalMap &)> &isArrayCountCall,
-    const std::function<bool(const Expr &, const LocalMap &)> &isVectorCapacityCall,
-    const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCall,
-    const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
-    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const ResolveCallCollectionPairTypeInfoFn &resolveCallCollectionPairTypeInfo,
-    const ResolveCallArrayVectorAccessTargetInfoFn &resolveCallArrayVectorAccessTargetInfo,
-    const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<void()> &emitStringIndexOutOfBounds,
-    const std::function<void()> &emitMapKeyNotFound,
-    const std::function<void()> &emitArrayIndexOutOfBounds,
-    const std::function<size_t()> &instructionCount,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
-    std::string &error,
-    const SemanticProgram *semanticProgram = nullptr);
-NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
-    const Expr &expr,
-    const LocalMap &localsIn,
-    const std::function<bool(const Expr &, std::string &)> &tryGetMathBuiltinName,
-    const std::function<bool(const std::string &)> &isSupportedMathBuiltinName,
-    const std::function<bool(const Expr &, const LocalMap &)> &isArrayCountCall,
-    const std::function<bool(const Expr &, const LocalMap &)> &isVectorCapacityCall,
-    const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCall,
-    const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
-    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
-    size_t stringTableCount,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<void()> &emitStringIndexOutOfBounds,
-    const std::function<void()> &emitMapKeyNotFound,
-    const std::function<void()> &emitArrayIndexOutOfBounds,
-    const std::function<size_t()> &instructionCount,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
-    std::string &error,
-    const SemanticProgram *semanticProgram = nullptr);
-NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
-    const Expr &expr,
-    const LocalMap &localsIn,
-    const std::function<bool(const Expr &, std::string &)> &tryGetMathBuiltinName,
-    const std::function<bool(const std::string &)> &isSupportedMathBuiltinName,
-    const std::function<bool(const Expr &, const LocalMap &)> &isArrayCountCall,
-    const std::function<bool(const Expr &, const LocalMap &)> &isVectorCapacityCall,
-    const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCall,
-    const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
-    const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<void()> &emitStringIndexOutOfBounds,
-    const std::function<void()> &emitMapKeyNotFound,
-    const std::function<void()> &emitArrayIndexOutOfBounds,
-    const std::function<size_t()> &instructionCount,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
-    std::string &error,
-    const SemanticProgram *semanticProgram = nullptr);
 CollectionPairTypeInfo resolveCollectionPairTypeInfo(const Expr &target,
                                                const LocalMap &localsIn,
                                                const ResolveCallCollectionPairTypeInfoFn &resolveCallCollectionPairTypeInfo,

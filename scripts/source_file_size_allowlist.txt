@@ -8,7 +8,6 @@ src/ir_lowerer/IrLowererBindingTypeHelpers.cpp 1738 one oversized function or co
 src/support/StdlibSurfaceRegistry.cpp 1631 seeded by the src/ and include/ extension; split with the phase/helper patterns
 src/ir_lowerer/IrLowererLowerStatementsBindings.h 1500 seeded by the src/ and include/ extension; split with the phase/helper patterns
 src/frontend/CompileTimeEvaluation.cpp 1449 seeded by the src/ and include/ extension; split with the phase/helper patterns
-src/ir_lowerer/IrLowererNativeTailDispatch.cpp 1419 seeded by the src/ and include/ extension; split with the phase/helper patterns
 src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp 1350 seeded by the src/ and include/ extension; split with the phase/helper patterns
 src/ir_lowerer/IrLowererLowerInferenceDispatchSetup.cpp 1334 seeded by the src/ and include/ extension; split with the phase/helper patterns
 src/ir_lowerer/IrLowererLowerEmitExpr.h 1325 seeded by the src/ and include/ extension; split with the phase/helper patterns

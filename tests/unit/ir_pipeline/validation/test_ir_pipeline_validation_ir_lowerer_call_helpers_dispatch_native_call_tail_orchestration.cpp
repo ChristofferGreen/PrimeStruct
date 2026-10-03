@@ -63,34 +63,31 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration") {
   primec::Expr mathCall;
   mathCall.kind = primec::Expr::Kind::Call;
   mathCall.name = "sin";
-  CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatch(
-            mathCall,
-            locals,
-            [](const primec::Expr &, std::string &mathName) {
+  CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatchWithLocals(mathCall, locals, primec::ir_lowerer::NativeCallTailDispatchHooks{
+          .tryGetMathBuiltinName = [](const primec::Expr &, std::string &mathName) {
               mathName = "sin";
               return true;
             },
-            [](const std::string &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+          .isSupportedMathBuiltinName = [](const std::string &) { return false; },
+          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isVectorCapacityCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isEntryArgsName = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .resolveStringTableTarget = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
               return false;
             },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
-            [](const primec::Expr &, std::string &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          .emitExpr = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+          .tryGetPrintBuiltinName = [](const primec::Expr &, std::string &) { return false; },
+          .inferExprKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               return LocalInfo::ValueKind::Int32;
             },
-            [&]() { return nextLocal++; },
-            []() {},
-            []() {},
-            []() {},
-            instructionCount,
-            emitInstruction,
-            patchInstructionImm,
-            error) == Result::Error);
+          .allocTempLocal = [&]() { return nextLocal++; },
+          .emitStringIndexOutOfBounds = []() {},
+          .emitMapKeyNotFound = []() {},
+          .emitArrayIndexOutOfBounds = []() {},
+          .instructionCount = instructionCount,
+          .emitInstruction = emitInstruction,
+          .patchInstructionImm = patchInstructionImm}, error) == Result::Error);
   CHECK(error == "native backend does not support math builtin: sin");
 
   primec::Expr countCall;
@@ -99,33 +96,30 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration") {
   countCall.args = {arrName};
   instructions.clear();
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatch(
-            countCall,
-            locals,
-            [](const primec::Expr &, std::string &) { return false; },
-            [](const std::string &) { return true; },
-            [](const primec::Expr &callExpr, const primec::ir_lowerer::LocalMap &) {
+  CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatchWithLocals(countCall, locals, primec::ir_lowerer::NativeCallTailDispatchHooks{
+          .tryGetMathBuiltinName = [](const primec::Expr &, std::string &) { return false; },
+          .isSupportedMathBuiltinName = [](const std::string &) { return true; },
+          .isArrayCountCall = [](const primec::Expr &callExpr, const primec::ir_lowerer::LocalMap &) {
               return callExpr.name == "count";
             },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+          .isVectorCapacityCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isEntryArgsName = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .resolveStringTableTarget = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
               return false;
             },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
-            [](const primec::Expr &, std::string &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          .emitExpr = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+          .tryGetPrintBuiltinName = [](const primec::Expr &, std::string &) { return false; },
+          .inferExprKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               return LocalInfo::ValueKind::Int32;
             },
-            [&]() { return nextLocal++; },
-            []() {},
-            []() {},
-            []() {},
-            instructionCount,
-            emitInstruction,
-            patchInstructionImm,
-            error) == Result::Emitted);
+          .allocTempLocal = [&]() { return nextLocal++; },
+          .emitStringIndexOutOfBounds = []() {},
+          .emitMapKeyNotFound = []() {},
+          .emitArrayIndexOutOfBounds = []() {},
+          .instructionCount = instructionCount,
+          .emitInstruction = emitInstruction,
+          .patchInstructionImm = patchInstructionImm}, error) == Result::Emitted);
   CHECK(error.empty());
   CHECK_FALSE(instructions.empty());
 
@@ -135,33 +129,30 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration") {
   soaCountCall.args = {soaName};
   instructions.clear();
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatch(
-            soaCountCall,
-            locals,
-            [](const primec::Expr &, std::string &) { return false; },
-            [](const std::string &) { return true; },
-            [](const primec::Expr &callExpr, const primec::ir_lowerer::LocalMap &callLocals) {
+  CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatchWithLocals(soaCountCall, locals, primec::ir_lowerer::NativeCallTailDispatchHooks{
+          .tryGetMathBuiltinName = [](const primec::Expr &, std::string &) { return false; },
+          .isSupportedMathBuiltinName = [](const std::string &) { return true; },
+          .isArrayCountCall = [](const primec::Expr &callExpr, const primec::ir_lowerer::LocalMap &callLocals) {
               return primec::ir_lowerer::isArrayCountCall(callExpr, callLocals, false, "argv");
             },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+          .isVectorCapacityCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isEntryArgsName = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .resolveStringTableTarget = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
               return false;
             },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
-            [](const primec::Expr &, std::string &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          .emitExpr = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+          .tryGetPrintBuiltinName = [](const primec::Expr &, std::string &) { return false; },
+          .inferExprKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               return LocalInfo::ValueKind::Int32;
             },
-            [&]() { return nextLocal++; },
-            []() {},
-            []() {},
-            []() {},
-            instructionCount,
-            emitInstruction,
-            patchInstructionImm,
-            error) == Result::Emitted);
+          .allocTempLocal = [&]() { return nextLocal++; },
+          .emitStringIndexOutOfBounds = []() {},
+          .emitMapKeyNotFound = []() {},
+          .emitArrayIndexOutOfBounds = []() {},
+          .instructionCount = instructionCount,
+          .emitInstruction = emitInstruction,
+          .patchInstructionImm = patchInstructionImm}, error) == Result::Emitted);
   CHECK(error.empty());
   CHECK_FALSE(instructions.empty());
 
@@ -176,35 +167,32 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration") {
   soaPackIndexedCountCall.args = {soaPackAccess};
   instructions.clear();
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatch(
-            soaPackIndexedCountCall,
-            locals,
-            [](const primec::Expr &, std::string &) { return false; },
-            [](const std::string &) { return true; },
-            [](const primec::Expr &callExpr, const primec::ir_lowerer::LocalMap &callLocals) {
+  CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatchWithLocals(soaPackIndexedCountCall, locals, primec::ir_lowerer::NativeCallTailDispatchHooks{
+          .tryGetMathBuiltinName = [](const primec::Expr &, std::string &) { return false; },
+          .isSupportedMathBuiltinName = [](const std::string &) { return true; },
+          .isArrayCountCall = [](const primec::Expr &callExpr, const primec::ir_lowerer::LocalMap &callLocals) {
               return primec::ir_lowerer::isArrayCountCall(callExpr, callLocals, false, "argv");
             },
-            [](const primec::Expr &callExpr, const primec::ir_lowerer::LocalMap &callLocals) {
+          .isVectorCapacityCall = [](const primec::Expr &callExpr, const primec::ir_lowerer::LocalMap &callLocals) {
               return primec::ir_lowerer::isVectorCapacityCall(callExpr, callLocals);
             },
-            [](const primec::Expr &callExpr, const primec::ir_lowerer::LocalMap &callLocals) {
+          .isStringCountCall = [](const primec::Expr &callExpr, const primec::ir_lowerer::LocalMap &callLocals) {
               return primec::ir_lowerer::isStringCountCall(callExpr, callLocals);
             },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
-            [](const primec::Expr &, std::string &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          .isEntryArgsName = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .resolveStringTableTarget = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
+          .emitExpr = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+          .tryGetPrintBuiltinName = [](const primec::Expr &, std::string &) { return false; },
+          .inferExprKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               return LocalInfo::ValueKind::Int32;
             },
-            [&]() { return nextLocal++; },
-            []() {},
-            []() {},
-            []() {},
-            instructionCount,
-            emitInstruction,
-            patchInstructionImm,
-            error) == Result::Emitted);
+          .allocTempLocal = [&]() { return nextLocal++; },
+          .emitStringIndexOutOfBounds = []() {},
+          .emitMapKeyNotFound = []() {},
+          .emitArrayIndexOutOfBounds = []() {},
+          .instructionCount = instructionCount,
+          .emitInstruction = emitInstruction,
+          .patchInstructionImm = patchInstructionImm}, error) == Result::Emitted);
   CHECK(error.empty());
   CHECK_FALSE(instructions.empty());
 
@@ -212,33 +200,30 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration") {
   soaVectorAliasCountCall.name = "/vector/count";
   instructions.clear();
   error = "stale";
-  CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatch(
-            soaVectorAliasCountCall,
-            locals,
-            [](const primec::Expr &, std::string &) { return false; },
-            [](const std::string &) { return true; },
-            [](const primec::Expr &callExpr, const primec::ir_lowerer::LocalMap &callLocals) {
+  CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatchWithLocals(soaVectorAliasCountCall, locals, primec::ir_lowerer::NativeCallTailDispatchHooks{
+          .tryGetMathBuiltinName = [](const primec::Expr &, std::string &) { return false; },
+          .isSupportedMathBuiltinName = [](const std::string &) { return true; },
+          .isArrayCountCall = [](const primec::Expr &callExpr, const primec::ir_lowerer::LocalMap &callLocals) {
               return primec::ir_lowerer::isArrayCountCall(callExpr, callLocals, false, "argv");
             },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+          .isVectorCapacityCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isEntryArgsName = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .resolveStringTableTarget = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
               return false;
             },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
-            [](const primec::Expr &, std::string &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          .emitExpr = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+          .tryGetPrintBuiltinName = [](const primec::Expr &, std::string &) { return false; },
+          .inferExprKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               return LocalInfo::ValueKind::Int32;
             },
-            [&]() { return nextLocal++; },
-            []() {},
-            []() {},
-            []() {},
-            instructionCount,
-            emitInstruction,
-            patchInstructionImm,
-            error) == Result::NotHandled);
+          .allocTempLocal = [&]() { return nextLocal++; },
+          .emitStringIndexOutOfBounds = []() {},
+          .emitMapKeyNotFound = []() {},
+          .emitArrayIndexOutOfBounds = []() {},
+          .instructionCount = instructionCount,
+          .emitInstruction = emitInstruction,
+          .patchInstructionImm = patchInstructionImm}, error) == Result::NotHandled);
   CHECK(error == "stale");
   CHECK(instructions.empty());
 
@@ -246,33 +231,30 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration") {
   soaStdlibAliasCountCall.name = "/std/collections/vector/count";
   instructions.clear();
   error = "stale";
-  CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatch(
-            soaStdlibAliasCountCall,
-            locals,
-            [](const primec::Expr &, std::string &) { return false; },
-            [](const std::string &) { return true; },
-            [](const primec::Expr &callExpr, const primec::ir_lowerer::LocalMap &callLocals) {
+  CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatchWithLocals(soaStdlibAliasCountCall, locals, primec::ir_lowerer::NativeCallTailDispatchHooks{
+          .tryGetMathBuiltinName = [](const primec::Expr &, std::string &) { return false; },
+          .isSupportedMathBuiltinName = [](const std::string &) { return true; },
+          .isArrayCountCall = [](const primec::Expr &callExpr, const primec::ir_lowerer::LocalMap &callLocals) {
               return primec::ir_lowerer::isArrayCountCall(callExpr, callLocals, false, "argv");
             },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+          .isVectorCapacityCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isEntryArgsName = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .resolveStringTableTarget = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
               return false;
             },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
-            [](const primec::Expr &, std::string &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          .emitExpr = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+          .tryGetPrintBuiltinName = [](const primec::Expr &, std::string &) { return false; },
+          .inferExprKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               return LocalInfo::ValueKind::Int32;
             },
-            [&]() { return nextLocal++; },
-            []() {},
-            []() {},
-            []() {},
-            instructionCount,
-            emitInstruction,
-            patchInstructionImm,
-            error) == Result::NotHandled);
+          .allocTempLocal = [&]() { return nextLocal++; },
+          .emitStringIndexOutOfBounds = []() {},
+          .emitMapKeyNotFound = []() {},
+          .emitArrayIndexOutOfBounds = []() {},
+          .instructionCount = instructionCount,
+          .emitInstruction = emitInstruction,
+          .patchInstructionImm = patchInstructionImm}, error) == Result::NotHandled);
   CHECK(error == "stale");
   CHECK(instructions.empty());
 
@@ -282,31 +264,28 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration") {
   soaGetCall.args = {soaName, idxName};
   instructions.clear();
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatch(
-            soaGetCall,
-            locals,
-            [](const primec::Expr &, std::string &) { return false; },
-            [](const std::string &) { return true; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+  CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatchWithLocals(soaGetCall, locals, primec::ir_lowerer::NativeCallTailDispatchHooks{
+          .tryGetMathBuiltinName = [](const primec::Expr &, std::string &) { return false; },
+          .isSupportedMathBuiltinName = [](const std::string &) { return true; },
+          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isVectorCapacityCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isEntryArgsName = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .resolveStringTableTarget = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
               return false;
             },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
-            [](const primec::Expr &, std::string &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          .emitExpr = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+          .tryGetPrintBuiltinName = [](const primec::Expr &, std::string &) { return false; },
+          .inferExprKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               return LocalInfo::ValueKind::Int32;
             },
-            [&]() { return nextLocal++; },
-            []() {},
-            []() {},
-            []() {},
-            instructionCount,
-            emitInstruction,
-            patchInstructionImm,
-            error) == Result::NotHandled);
+          .allocTempLocal = [&]() { return nextLocal++; },
+          .emitStringIndexOutOfBounds = []() {},
+          .emitMapKeyNotFound = []() {},
+          .emitArrayIndexOutOfBounds = []() {},
+          .instructionCount = instructionCount,
+          .emitInstruction = emitInstruction,
+          .patchInstructionImm = patchInstructionImm}, error) == Result::NotHandled);
   CHECK(error.empty());
 
   primec::Expr soaRefCall;
@@ -315,65 +294,59 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration") {
   soaRefCall.args = {soaName, idxName};
   instructions.clear();
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatch(
-            soaRefCall,
-            locals,
-            [](const primec::Expr &, std::string &) { return false; },
-            [](const std::string &) { return true; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+  CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatchWithLocals(soaRefCall, locals, primec::ir_lowerer::NativeCallTailDispatchHooks{
+          .tryGetMathBuiltinName = [](const primec::Expr &, std::string &) { return false; },
+          .isSupportedMathBuiltinName = [](const std::string &) { return true; },
+          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isVectorCapacityCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isEntryArgsName = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .resolveStringTableTarget = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
               return false;
             },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
-            [](const primec::Expr &, std::string &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          .emitExpr = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+          .tryGetPrintBuiltinName = [](const primec::Expr &, std::string &) { return false; },
+          .inferExprKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               return LocalInfo::ValueKind::Int32;
             },
-            [&]() { return nextLocal++; },
-            []() {},
-            []() {},
-            []() {},
-            instructionCount,
-            emitInstruction,
-            patchInstructionImm,
-            error) == Result::NotHandled);
+          .allocTempLocal = [&]() { return nextLocal++; },
+          .emitStringIndexOutOfBounds = []() {},
+          .emitMapKeyNotFound = []() {},
+          .emitArrayIndexOutOfBounds = []() {},
+          .instructionCount = instructionCount,
+          .emitInstruction = emitInstruction,
+          .patchInstructionImm = patchInstructionImm}, error) == Result::NotHandled);
   CHECK(error.empty());
 
   primec::Expr printCall;
   printCall.kind = primec::Expr::Kind::Call;
   printCall.name = "print";
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatch(
-            printCall,
-            locals,
-            [](const primec::Expr &, std::string &) { return false; },
-            [](const std::string &) { return true; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+  CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatchWithLocals(printCall, locals, primec::ir_lowerer::NativeCallTailDispatchHooks{
+          .tryGetMathBuiltinName = [](const primec::Expr &, std::string &) { return false; },
+          .isSupportedMathBuiltinName = [](const std::string &) { return true; },
+          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isVectorCapacityCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isEntryArgsName = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .resolveStringTableTarget = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
               return false;
             },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
-            [](const primec::Expr &, std::string &builtinName) {
+          .emitExpr = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+          .tryGetPrintBuiltinName = [](const primec::Expr &, std::string &builtinName) {
               builtinName = "print";
               return true;
             },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          .inferExprKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               return LocalInfo::ValueKind::Int32;
             },
-            [&]() { return nextLocal++; },
-            []() {},
-            []() {},
-            []() {},
-            instructionCount,
-            emitInstruction,
-            patchInstructionImm,
-            error) == Result::Error);
+          .allocTempLocal = [&]() { return nextLocal++; },
+          .emitStringIndexOutOfBounds = []() {},
+          .emitMapKeyNotFound = []() {},
+          .emitArrayIndexOutOfBounds = []() {},
+          .instructionCount = instructionCount,
+          .emitInstruction = emitInstruction,
+          .patchInstructionImm = patchInstructionImm}, error) == Result::Error);
   CHECK(error == "print is only supported as a statement in the native backend");
 
   primec::Expr badAccessCall;
@@ -381,31 +354,28 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration") {
   badAccessCall.name = "at";
   badAccessCall.args = {arrName};
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatch(
-            badAccessCall,
-            locals,
-            [](const primec::Expr &, std::string &) { return false; },
-            [](const std::string &) { return true; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+  CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatchWithLocals(badAccessCall, locals, primec::ir_lowerer::NativeCallTailDispatchHooks{
+          .tryGetMathBuiltinName = [](const primec::Expr &, std::string &) { return false; },
+          .isSupportedMathBuiltinName = [](const std::string &) { return true; },
+          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isVectorCapacityCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isEntryArgsName = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .resolveStringTableTarget = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
               return false;
             },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
-            [](const primec::Expr &, std::string &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          .emitExpr = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+          .tryGetPrintBuiltinName = [](const primec::Expr &, std::string &) { return false; },
+          .inferExprKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               return LocalInfo::ValueKind::Int32;
             },
-            [&]() { return nextLocal++; },
-            []() {},
-            []() {},
-            []() {},
-            instructionCount,
-            emitInstruction,
-            patchInstructionImm,
-            error) == Result::NotHandled);
+          .allocTempLocal = [&]() { return nextLocal++; },
+          .emitStringIndexOutOfBounds = []() {},
+          .emitMapKeyNotFound = []() {},
+          .emitArrayIndexOutOfBounds = []() {},
+          .instructionCount = instructionCount,
+          .emitInstruction = emitInstruction,
+          .patchInstructionImm = patchInstructionImm}, error) == Result::NotHandled);
   CHECK(error.empty());
 
   primec::Expr accessCall;
@@ -414,34 +384,31 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration") {
   accessCall.args = {arrName, idxName};
   instructions.clear();
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatch(
-            accessCall,
-            locals,
-            [](const primec::Expr &, std::string &) { return false; },
-            [](const std::string &) { return true; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+  CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatchWithLocals(accessCall, locals, primec::ir_lowerer::NativeCallTailDispatchHooks{
+          .tryGetMathBuiltinName = [](const primec::Expr &, std::string &) { return false; },
+          .isSupportedMathBuiltinName = [](const std::string &) { return true; },
+          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isVectorCapacityCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isEntryArgsName = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .resolveStringTableTarget = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
               return false;
             },
-            [&](const primec::Expr &valueExpr, const primec::ir_lowerer::LocalMap &) {
+          .emitExpr = [&](const primec::Expr &valueExpr, const primec::ir_lowerer::LocalMap &) {
               emitInstruction(primec::IrOpcode::LoadLocal, valueExpr.name == "arr" ? 9 : 3);
               return true;
             },
-            [](const primec::Expr &, std::string &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          .tryGetPrintBuiltinName = [](const primec::Expr &, std::string &) { return false; },
+          .inferExprKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               return LocalInfo::ValueKind::Int32;
             },
-            [&]() { return nextLocal++; },
-            []() {},
-            []() {},
-            []() {},
-            instructionCount,
-            emitInstruction,
-            patchInstructionImm,
-            error) == Result::NotHandled);
+          .allocTempLocal = [&]() { return nextLocal++; },
+          .emitStringIndexOutOfBounds = []() {},
+          .emitMapKeyNotFound = []() {},
+          .emitArrayIndexOutOfBounds = []() {},
+          .instructionCount = instructionCount,
+          .emitInstruction = emitInstruction,
+          .patchInstructionImm = patchInstructionImm}, error) == Result::NotHandled);
   CHECK(error.empty());
   CHECK(instructions.empty());
 
@@ -449,31 +416,28 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration") {
   plainCall.kind = primec::Expr::Kind::Call;
   plainCall.name = "plain";
   error.clear();
-  CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatch(
-            plainCall,
-            locals,
-            [](const primec::Expr &, std::string &) { return false; },
-            [](const std::string &) { return true; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+  CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatchWithLocals(plainCall, locals, primec::ir_lowerer::NativeCallTailDispatchHooks{
+          .tryGetMathBuiltinName = [](const primec::Expr &, std::string &) { return false; },
+          .isSupportedMathBuiltinName = [](const std::string &) { return true; },
+          .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isVectorCapacityCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .isEntryArgsName = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+          .resolveStringTableTarget = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
               return false;
             },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
-            [](const primec::Expr &, std::string &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          .emitExpr = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+          .tryGetPrintBuiltinName = [](const primec::Expr &, std::string &) { return false; },
+          .inferExprKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               return LocalInfo::ValueKind::Int32;
             },
-            [&]() { return nextLocal++; },
-            []() {},
-            []() {},
-            []() {},
-            instructionCount,
-            emitInstruction,
-            patchInstructionImm,
-            error) == Result::NotHandled);
+          .allocTempLocal = [&]() { return nextLocal++; },
+          .emitStringIndexOutOfBounds = []() {},
+          .emitMapKeyNotFound = []() {},
+          .emitArrayIndexOutOfBounds = []() {},
+          .instructionCount = instructionCount,
+          .emitInstruction = emitInstruction,
+          .patchInstructionImm = patchInstructionImm}, error) == Result::NotHandled);
 }
 
 TEST_CASE("ir lowerer native unsupported count diagnostics prefer semantic facts") {
@@ -538,32 +502,28 @@ TEST_CASE("ir lowerer native unsupported count diagnostics prefer semantic facts
   auto dispatch = [&](const primec::Expr &expr) {
     instructions.clear();
     error.clear();
-    return primec::ir_lowerer::tryEmitNativeCallTailDispatch(
-        expr,
-        locals,
-        [](const primec::Expr &, std::string &) { return false; },
-        [](const std::string &) { return true; },
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+    return primec::ir_lowerer::tryEmitNativeCallTailDispatchWithLocals(expr, locals, primec::ir_lowerer::NativeCallTailDispatchHooks{
+            .tryGetMathBuiltinName = [](const primec::Expr &, std::string &) { return false; },
+            .isSupportedMathBuiltinName = [](const std::string &) { return true; },
+            .isArrayCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            .isVectorCapacityCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            .isStringCountCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            .isEntryArgsName = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            .resolveStringTableTarget = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
           return false;
         },
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
-        [](const primec::Expr &, std::string &) { return false; },
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+            .emitExpr = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            .tryGetPrintBuiltinName = [](const primec::Expr &, std::string &) { return false; },
+            .inferExprKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
           return LocalInfo::ValueKind::Int32;
         },
-        [&]() { return nextLocal++; },
-        []() {},
-        []() {},
-        []() {},
-        instructionCount,
-        emitInstruction,
-        patchInstructionImm,
-        error,
-        &semanticProgram);
+            .allocTempLocal = [&]() { return nextLocal++; },
+            .emitStringIndexOutOfBounds = []() {},
+            .emitMapKeyNotFound = []() {},
+            .emitArrayIndexOutOfBounds = []() {},
+            .instructionCount = instructionCount,
+            .emitInstruction = emitInstruction,
+            .patchInstructionImm = patchInstructionImm}, error, &semanticProgram);
   };
 
   const primec::Expr semanticScalar = makeSemanticName("scalarTarget", 8101);

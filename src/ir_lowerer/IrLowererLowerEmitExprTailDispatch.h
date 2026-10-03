@@ -580,16 +580,14 @@
           return *metadataResult;
         }
 
-        const auto nativeTailResult = ir_lowerer::tryEmitNativeCallTailDispatchWithLocals(
-            nativeTailExpr,
-            localsIn,
-            [&](const Expr &callExpr, std::string &mathBuiltinName) {
+        const auto nativeTailResult = ir_lowerer::tryEmitNativeCallTailDispatchWithLocals(nativeTailExpr, localsIn, NativeCallTailDispatchHooks{
+                .tryGetMathBuiltinName = [&](const Expr &callExpr, std::string &mathBuiltinName) {
               return tailDispatchHelpers.resolveCanonicalMathBuiltinName(callExpr, mathBuiltinName);
             },
-            [&](const std::string &mathBuiltinName) {
+                .isSupportedMathBuiltinName = [&](const std::string &mathBuiltinName) {
               return ir_lowerer::isSupportedMathBuiltinName(mathBuiltinName);
             },
-            [&](const Expr &callExpr, const ir_lowerer::LocalMap &localMap) {
+                .isArrayCountCall = [&](const Expr &callExpr, const ir_lowerer::LocalMap &localMap) {
               return primec::ir_lowerer::isArrayCountCall(callExpr,
                                                           localMap,
                                                           hasEntryArgs,
@@ -597,32 +595,32 @@
                                                           semanticProgram,
                                                           tailDispatchSemanticIndexPtr);
             },
-            [&](const Expr &callExpr, const ir_lowerer::LocalMap &localMap) {
+                .isVectorCapacityCall = [&](const Expr &callExpr, const ir_lowerer::LocalMap &localMap) {
               return primec::ir_lowerer::isVectorCapacityCall(callExpr,
                                                               localMap,
                                                               semanticProgram,
                                                               tailDispatchSemanticIndexPtr);
             },
-            [&](const Expr &callExpr, const ir_lowerer::LocalMap &localMap) {
+                .isStringCountCall = [&](const Expr &callExpr, const ir_lowerer::LocalMap &localMap) {
               return primec::ir_lowerer::isStringCountCall(callExpr,
                                                            localMap,
                                                            semanticProgram,
                                                            tailDispatchSemanticIndexPtr);
             },
-            [&](const Expr &targetExpr, const ir_lowerer::LocalMap &localMap) {
+                .isEntryArgsName = [&](const Expr &targetExpr, const ir_lowerer::LocalMap &localMap) {
               return isEntryArgsName(targetExpr, localMap);
             },
-            [&](const Expr &targetExpr,
+                .resolveStringTableTarget = [&](const Expr &targetExpr,
                 const ir_lowerer::LocalMap &localMap,
                 int32_t &stringIndexOut,
                 size_t &lengthOut) {
               return resolveStringTableTarget(targetExpr, localMap, stringIndexOut, lengthOut);
             },
-            stringTable.size() | (setupStage.allowDynamicStrings ? ir_lowerer::DynamicStringTableFlag : size_t{0}),
-            [&](const Expr &valueExpr, const ir_lowerer::LocalMap &localMap) {
+                .stringTableCount = stringTable.size() | (setupStage.allowDynamicStrings ? ir_lowerer::DynamicStringTableFlag : size_t{0}),
+                .emitExpr = [&](const Expr &valueExpr, const ir_lowerer::LocalMap &localMap) {
               return emitExpr(valueExpr, localMap);
             },
-            [&](const Expr &targetCallExpr, ir_lowerer::CollectionPairTypeInfo &targetInfoOut) {
+                .resolveCallCollectionPairTypeInfo = [&](const Expr &targetCallExpr, ir_lowerer::CollectionPairTypeInfo &targetInfoOut) {
               targetInfoOut = ir_lowerer::resolveCollectionPairTypeInfo(
                   targetCallExpr,
                   localsIn,
@@ -634,7 +632,7 @@
                   tailDispatchKeyValueSemanticIndexPtr);
               return targetInfoOut.isKeyValueTarget;
             },
-            [&](const Expr &targetCallExpr, ir_lowerer::ArrayVectorAccessTargetInfo &targetInfoOut) {
+                .resolveCallArrayVectorAccessTargetInfo = [&](const Expr &targetCallExpr, ir_lowerer::ArrayVectorAccessTargetInfo &targetInfoOut) {
               targetInfoOut = {};
               auto resolveSpecializedVectorElementKind = [&](const std::string &typeText,
                                                             ir_lowerer::LocalInfo::ValueKind &elemKindOut) {
@@ -954,7 +952,7 @@
               }
               return true;
             },
-            [&](const Expr &callExpr, std::string &builtinName) {
+                .tryGetPrintBuiltinName = [&](const Expr &callExpr, std::string &builtinName) {
               PrintBuiltin printBuiltin;
               if (!getPrintBuiltin(callExpr, printBuiltin)) {
                 return false;
@@ -962,19 +960,16 @@
               builtinName = printBuiltin.name;
               return true;
             },
-            [&](const Expr &lookupKeyExpr, const ir_lowerer::LocalMap &localMap) {
+                .inferExprKind = [&](const Expr &lookupKeyExpr, const ir_lowerer::LocalMap &localMap) {
               return inferExprKind(lookupKeyExpr, localMap);
             },
-            [&]() { return allocTempLocal(); },
-            [&]() { emitStringIndexOutOfBounds(); },
-            [&]() { emitMapKeyNotFound(); },
-            [&]() { emitArrayIndexOutOfBounds(); },
-            [&]() { return function.instructions.size(); },
-            [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
-            [&](size_t instructionIndex, uint64_t imm) { function.instructions[instructionIndex].imm = imm; },
-            error,
-            semanticProgram,
-            tailDispatchSemanticIndexPtr);
+                .allocTempLocal = [&]() { return allocTempLocal(); },
+                .emitStringIndexOutOfBounds = [&]() { emitStringIndexOutOfBounds(); },
+                .emitMapKeyNotFound = [&]() { emitMapKeyNotFound(); },
+                .emitArrayIndexOutOfBounds = [&]() { emitArrayIndexOutOfBounds(); },
+                .instructionCount = [&]() { return function.instructions.size(); },
+                .emitInstruction = [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+                .patchInstructionImm = [&](size_t instructionIndex, uint64_t imm) { function.instructions[instructionIndex].imm = imm; }}, error, semanticProgram, tailDispatchSemanticIndexPtr);
         if (nativeTailResult == ir_lowerer::NativeCallTailDispatchResult::Emitted) {
           return true;
         }

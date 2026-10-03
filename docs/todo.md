@@ -100,7 +100,6 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5402 | Replace the 17-callback native tail dispatch signatures with a hooks struct | deferred | lowerer-structure |
 | TODO-5403 | Extend the source-file-size guard beyond src/semantics | deferred | lowerer-structure |
 | TODO-5415 | Split stdlib/std/collections/soa_storage.prime by concern | deferred | stdlib |
 | TODO-5421 | Keep the release gate from dirtying docs/failing_tests.md | deferred | tooling |
@@ -111,13 +110,12 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5402 - Replace the 17-callback native tail dispatch signatures with a hooks struct.
-2. TODO-5403 - Extend the source-file-size guard beyond src/semantics.
+1. TODO-5403 - Extend the source-file-size guard beyond src/semantics.
 
 ### Priority Lanes
 
 - Embedding (must support iOS): TODO-5348 (needs macOS)
-- Lowerer structure: TODO-5402 -> TODO-5403
+- Lowerer structure: TODO-5426 -> TODO-5403
 - Collection resolution: TODO-5424, TODO-5425
 - Tooling: TODO-5421 (needs approval)
 - Stdlib: TODO-5415
@@ -140,17 +138,17 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - a green gate leaves `git status` clean; failures still land under Open Failures
   - stop_rule: do not start without explicit approval to change scripts/compile.sh.
 
-- [ ] TODO-5402: Replace the 17-callback native tail dispatch signatures with a hooks struct
+- [ ] TODO-5426: Bring IrLowererCallHelpers.h under 100 std::function mentions
   - owner: ai
   - status: deferred
   - created_at: 2026-10-03
   - phase: Compiler structure
   - parallel_track: lowerer-structure
-  - scope: `src/ir_lowerer/IrLowererCallHelpers.h` holds 306 `std::function` parameters; `tryEmitNativeCallTailDispatch` and `...WithLocals` each take 17 callbacks across 4 overloads. Introduce `NativeCallTailDispatchHooks` (the pattern `CallResolutionAdapters` already uses), pass it by const reference, and delete the overloads that only differ by omitted callbacks.
+  - scope: after the native tail dispatch moved to `NativeCallTailDispatchHooks` (TODO-5402), `include/primec/ir_lowerer/IrLowererCallHelpers.h` still has about 195 `std::function` mentions; the big remaining ones are `emitBuiltinArrayAccess` (40), `emitArrayVectorIndexedAccess` (14), `tryEmitInlineCallWithCountFallbacks` (13), `tryEmitStringTableAccessLoad` (8) and the `emitKeyValueLookup*` family (about 40). Give each a small hooks struct the same way (designated-initializer call sites, one entry point each).
   - acceptance:
-    - one struct, one function per entry point; `IrLowererCallHelpers.h` std::function count below 100
+    - the header has fewer than 100 `std::function` mentions; no overload pair that differs only by omitted callbacks
     - validation tests converted with case counts unchanged; full gate green
-  - stop_rule: if a callback is only ever passed as a constant lambda, make it a struct default rather than a parameter.
+  - stop_rule: a callback that is only ever a constant lambda becomes a struct default instead of a parameter.
 
 - [ ] TODO-5403: Extend the source-file-size guard beyond src/semantics
   - owner: ai
