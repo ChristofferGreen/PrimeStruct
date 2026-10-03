@@ -402,8 +402,8 @@ steps, all on from `-O1` (`NativeEmitterOptions::promoteLocals` / `deferOperands
 IR level; the arm64 emitter is untouched):
 
 1. Register-resident locals (`NativeEmitterPromotion.h`): the most used locals that no memory access can reach
-   (`IrLocalEscape`; uses in loops count ten times per nesting level) live in rsi, rdi, r8, r10 and r11 for the whole
-   function. Instructions whose templates clobber those registers (printing, file and heap operations, string table
+   (`IrLocalEscape`; uses in loops count ten times per nesting level) live in rsi, rdi, r8, r10 and r11 (plus r12 and r13 when no
+   function reads argc/argv) for the whole function. Instructions whose templates clobber those registers (printing, file and heap operations, string table
    lookups, calls) get the locals written to their frame slots before and reloaded after.
 2. Deferred operands: the emitter tracks the top of the operand stack at compile time. Constants and register locals
    are pushed lazily, `add`/`sub`/`mul`/compare/`neg`/`dup`/`pop` work on registers and immediates directly, and the

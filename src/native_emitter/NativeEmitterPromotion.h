@@ -22,6 +22,10 @@ struct PromotedLocal {
 // operand cache, r15 the operand stack pointer.)
 inline constexpr uint8_t X64PromotionPool[] = {6, 7, 8, 10, 11};
 
+// The pool for a module that never reads argc/argv: r12 and r13 then hold nothing
+// after the entry prologue and join the promotion pool.
+inline constexpr uint8_t X64PromotionPoolWithArgRegs[] = {6, 7, 8, 10, 11, 12, 13};
+
 // True for opcodes whose template uses only rax, rcx, rdx, xmm registers, the
 // operand cache and flags. Every other opcode (printing, file and heap
 // operations, string table lookups, calls) runs syscalls or helper sequences

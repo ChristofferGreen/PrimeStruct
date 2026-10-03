@@ -23,6 +23,15 @@ bool emitNativeFunctions(const IrModule &module,
                          NativeEmitterInstrumentation *instrumentation,
                          std::string &error) {
   constexpr bool kIsArm64 = std::is_same_v<EmitterT, Arm64Emitter>;
+  // x86_64 keeps argc/argv in r12/r13 for the whole program, but only functions
+  // whose layout asks for them read them; without any, the registers are free.
+  bool argRegsFree = true;
+  for (const NativeEmitterFunctionLayout &layout : layouts) {
+    if (layout.needsArgc || layout.needsArgv) {
+      argRegsFree = false;
+      break;
+    }
+  }
   for (size_t functionIndex : emitOrder) {
     const auto countersBefore = emitter.instrumentationCounters();
     const IrFunction &fn = module.functions[functionIndex];
@@ -47,7 +56,7 @@ bool emitNativeFunctions(const IrModule &module,
     if (!emitter.beginFunction(frameSize, isEntryFunction, error)) {
       return false;
     }
-    if (isEntryFunction) {
+    if (isEntryFunction && (kIsArm64 || !argRegsFree)) {
       emitter.emitCaptureEntryArgs();
     }
     if constexpr (kIsArm64) {
@@ -77,8 +86,10 @@ bool emitNativeFunctions(const IrModule &module,
       emitter.clearPromotedLocals();
       if (emitter.localPromotionEnabled()) {
         std::vector<X64Emitter::PromotedLocalSlot> promoted;
-        for (const PromotedLocal &local :
-             planPromotedLocals(fn, X64PromotionPool, sizeof(X64PromotionPool))) {
+        const uint8_t *pool = argRegsFree ? X64PromotionPoolWithArgRegs : X64PromotionPool;
+        const size_t poolSize =
+            argRegsFree ? sizeof(X64PromotionPoolWithArgRegs) : sizeof(X64PromotionPool);
+        for (const PromotedLocal &local : planPromotedLocals(fn, pool, poolSize)) {
           promoted.push_back({local.index, local.reg});
         }
         emitter.setPromotedLocals(promoted);
