@@ -189,7 +189,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - created_at: 2026-10-03
   - phase: Tooling
   - parallel_track: tooling
-  - progress: the edit is drafted (uncommitted `scripts/compile.sh` diff: on a green run the report goes to `$BUILD_DIR/failing_tests.last.md` and the tracked doc is only rewritten when it must change). It has not been run: the auto-mode classifier blocked executing the modified gate script, so it needs the maintainer to review the diff and run `./scripts/compile.sh --release` once.
+  - progress: a draft was written and then backed out unrun. In `update_failing_tests_doc`, replace the unconditional `replace_managed_failing_tests_block "$replacement_file"` with: if `ctest_status` is 0 and the doc already contains `- Result: no failing CTest cases.`, `cp "$replacement_file" "$BUILD_DIR/failing_tests.last.md"`, else call `replace_managed_failing_tests_block`. The auto-mode classifier refused to execute the modified gate script, so the change needs the maintainer's approval and one `./scripts/compile.sh --release` run to verify.
   - scope: `scripts/compile.sh` rewrites the tracked `docs/failing_tests.md` (new timestamp) on every run, so every validated change leaves a dirty tree that must be checked out before committing. Write the 'no failures' report only to the build dir and touch the tracked file only when there are failures. This edits `compile.sh`, which AGENTS.md freezes absent an explicit request, so it needs the maintainer's go-ahead before any work.
   - acceptance:
     - a green gate leaves `git status` clean; failures still land under Open Failures
