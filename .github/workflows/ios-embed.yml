@@ -5,6 +5,8 @@ on:
     branches: [master]
     paths:
       - "scripts/build_ios_embed.sh"
+      - "examples/ios/**"
+      - ".github/workflows/ios-embed.yml"
       - "src/embed/**"
       - "include/primec/embed/**"
       - "CMakeLists.txt"
@@ -32,6 +34,21 @@ jobs:
 
       - name: Library sizes
         run: du -sh build-ios/*.xcframework
+
+      - name: Run smoke test on the iOS simulator
+        run: |
+          set -euo pipefail
+          SDK="$(xcrun --sdk iphonesimulator --show-sdk-path)"
+          xcrun --sdk iphonesimulator clang++ -std=c++23 -arch arm64 \
+            -target arm64-apple-ios15.0-simulator -isysroot "$SDK" \
+            -Ibuild-ios/headers examples/ios/ios_smoke.cpp \
+            build-ios/simulator/libPrimeStructEmbed-runtime.a -lc++ -o build-ios/ios_smoke
+          RUNTIME="$(xcrun simctl list runtimes available -j | python3 -c 'import json,sys; print([r["identifier"] for r in json.load(sys.stdin)["runtimes"] if r["platform"]=="iOS"][-1])')"
+          DEVICE_TYPE="$(xcrun simctl list devicetypes -j | python3 -c 'import json,sys; print([d["identifier"] for d in json.load(sys.stdin)["devicetypes"] if "iPhone" in d["name"]][-1])')"
+          UDID="$(xcrun simctl create primestruct-smoke "$DEVICE_TYPE" "$RUNTIME")"
+          xcrun simctl boot "$UDID"
+          xcrun simctl spawn "$UDID" "$PWD/build-ios/ios_smoke"
+          xcrun simctl shutdown "$UDID"
 
       - name: Upload XCFrameworks
         uses: actions/upload-artifact@v4

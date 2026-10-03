@@ -1,0 +1,8 @@
+[host return<int>]
+host_add([i32] a, [i32] b) {
+}
+
+[return<int>]
+main() {
+  return(host_add(40i32, 2i32) + 1i32)
+}
