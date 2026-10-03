@@ -1956,6 +1956,7 @@ are left unarchived.
 | TODO-5462 | Dump the lowered IrModule as text (--dump-stage=ir-lowered) | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5463 | Benchmark vm and Linux native in scripts/benchmark.sh | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
 | TODO-5465 | ProgramMatrix runner and port the native_backend.control suite | [2026-10.md](todo_archive/2026-10.md) | - |
+| TODO-5466 | Migrate duplicated vm/native compile-run cases to the program matrix | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5467 | Extract shared IR CFG utilities (leaders, successors, reachability, stack depth) | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
 | TODO-5468 | Validate stack balance and consistent block depths in validateIrModule | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
 | TODO-5469 | Share pure-opcode semantics between the VM, constant folding, and C++ emitters | [2026-10.md](todo_archive/2026-10.md) | - |

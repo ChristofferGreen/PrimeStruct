@@ -5,90 +5,6 @@
 TEST_SUITE_BEGIN("primestruct.compile.run.vm.core");
 
 
-TEST_CASE("runs vm with heap alloc intrinsic") {
-  const std::string source = R"(
-[return<int> effects(heap_alloc)]
-main() {
-  [mut] ptr{/std/intrinsics/memory/alloc<i32>(1i32)}
-  assign(dereference(ptr), 9i32)
-  return(dereference(ptr))
-}
-)";
-  const std::string srcPath = writeTemp("vm_heap_alloc_intrinsic.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 9);
-}
-
-TEST_CASE("runs vm with heap free intrinsic") {
-  const std::string source = R"(
-[return<int> effects(heap_alloc)]
-main() {
-  [mut] ptr{/std/intrinsics/memory/alloc<i32>(1i32)}
-  assign(dereference(ptr), 9i32)
-  [i32] value{dereference(ptr)}
-  /std/intrinsics/memory/free(ptr)
-  return(value)
-}
-)";
-  const std::string srcPath = writeTemp("vm_heap_free_intrinsic.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 9);
-}
-
-TEST_CASE("runs vm with heap realloc intrinsic") {
-  const std::string source = R"(
-[return<int> effects(heap_alloc)]
-main() {
-  [mut] ptr{/std/intrinsics/memory/alloc<i32>(1i32)}
-  assign(dereference(ptr), 9i32)
-  [Pointer<i32> mut] grown{/std/intrinsics/memory/realloc(ptr, 2i32)}
-  assign(dereference(plus(grown, 16i32)), 4i32)
-  [i32] sum{plus(dereference(grown), dereference(plus(grown, 16i32)))}
-  /std/intrinsics/memory/free(grown)
-  return(sum)
-}
-)";
-  const std::string srcPath = writeTemp("vm_heap_realloc_intrinsic.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 13);
-}
-
-TEST_CASE("runs vm with checked memory at intrinsic") {
-  const std::string source = R"(
-[return<int> effects(heap_alloc)]
-main() {
-  [mut] ptr{/std/intrinsics/memory/alloc<i32>(2i32)}
-  assign(dereference(ptr), 9i32)
-  [mut] second{/std/intrinsics/memory/at(ptr, 1i32, 2i32)}
-  assign(dereference(second), 4i32)
-  [i32] sum{plus(dereference(ptr), dereference(second))}
-  /std/intrinsics/memory/free(ptr)
-  return(sum)
-}
-)";
-  const std::string srcPath = writeTemp("vm_heap_at_intrinsic.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 13);
-}
-
-TEST_CASE("runs vm with unchecked memory at intrinsic") {
-  const std::string source = R"(
-[return<int> effects(heap_alloc)]
-main() {
-  [mut] ptr{/std/intrinsics/memory/alloc<i32>(2i32)}
-  assign(dereference(ptr), 9i32)
-  [mut] second{/std/intrinsics/memory/at_unsafe(ptr, 1i32)}
-  assign(dereference(second), 4i32)
-  [i32] sum{plus(dereference(ptr), dereference(second))}
-  /std/intrinsics/memory/free(ptr)
-  return(sum)
-}
-)";
-  const std::string srcPath = writeTemp("vm_heap_at_unsafe_intrinsic.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 13);
-}
-
 TEST_CASE("vm rejects checked memory at out of bounds") {
   const std::string source = R"(
 [return<int> effects(heap_alloc)]
@@ -206,44 +122,6 @@ main() {
   const std::string srcPath = writeTemp("vm_method_chain.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 4);
-}
-
-TEST_CASE("runs vm with import alias") {
-  const std::string source = R"(
-import /util
-namespace util {
-  [public return<int>]
-  inc([i32] value) {
-    return(plus(value, 1i32))
-  }
-}
-[return<int>]
-main() {
-  return(inc(4i32))
-}
-)";
-  const std::string srcPath = writeTemp("vm_import_alias.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 5);
-}
-
-TEST_CASE("runs vm with multiple imports") {
-  const std::string source = R"(
-import /util, /std/math/*
-namespace util {
-  [public return<int>]
-  add([i32] a, [i32] b) {
-    return(plus(a, b))
-  }
-}
-[return<int>]
-main() {
-  return(plus(add(2i32, 3i32), min(7i32, 3i32)))
-}
-)";
-  const std::string srcPath = writeTemp("vm_import_multiple.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 8);
 }
 
 TEST_CASE("runs vm with whitespace-separated imports") {

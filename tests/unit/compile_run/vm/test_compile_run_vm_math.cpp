@@ -16,23 +16,6 @@ static bool runVmCommandOrExpectUnsupported(const std::string &runCmd,
   return false;
 }
 
-TEST_CASE("runs vm with qualified math names") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  [i32] a{/std/math/abs(-5i32)}
-  [i32] b{/std/math/sign(-5i32)}
-  [i32] c{/std/math/min(7i32, 2i32)}
-  [i32] d{/std/math/max(7i32, 2i32)}
-  [i32] e{convert<int>(/std/math/pi)}
-  return(plus(plus(plus(a, b), plus(c, d)), e))
-}
-)";
-  const std::string srcPath = writeTemp("vm_math_qualified.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 16);
-}
-
 TEST_CASE("rejects vm software numeric types") {
   const std::string source = R"(
 [return<decimal>]

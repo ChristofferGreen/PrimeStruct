@@ -960,6 +960,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_main.cpp
     tests/unit/program_matrix/test_program_matrix_control.cpp
     tests/unit/program_matrix/test_program_matrix_optimizer.cpp
+    tests/unit/program_matrix/test_program_matrix_shared_programs.cpp
   )
   target_include_directories(PrimeStruct_program_matrix_tests PRIVATE third_party ${CMAKE_SOURCE_DIR}
                              tests/unit/program_matrix)
@@ -2203,6 +2204,13 @@ if(PRIMESTRUCT_BUILD_TESTS)
   set_tests_properties(PrimeStruct_vector_surface_trace_checker_self_test PROPERTIES TIMEOUT 60)
 
   add_test(
+    NAME PrimeStruct_migrate_compile_run_cases_self_test
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/scripts/test_migrate_compile_run_cases.py
+            --repo-root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_migrate_compile_run_cases_self_test PROPERTIES TIMEOUT 60)
+
+  add_test(
     NAME PrimeStruct_map_adapter_traces
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/check_map_adapter_traces.py
             --root ${CMAKE_SOURCE_DIR}
@@ -2992,6 +3000,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   set(PrimeStructProgramMatrixTestSuites
     primestruct.program_matrix.control
     primestruct.program_matrix.optimizer
+    primestruct.program_matrix.shared_programs
   )
   foreach(suite IN LISTS PrimeStructProgramMatrixTestSuites)
     string(REPLACE "." "_" suiteId "${suite}")

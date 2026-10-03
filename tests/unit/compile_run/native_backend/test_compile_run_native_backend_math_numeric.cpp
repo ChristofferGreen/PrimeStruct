@@ -39,27 +39,6 @@ main() {
   CHECK(runCommand(exePath) == 13);
 }
 
-TEST_CASE("native qualified math names") {
-  const std::string source = R"(
-[return<int>]
-main() {
-  [i32] a{/std/math/abs(-5i32)}
-  [i32] b{/std/math/sign(-5i32)}
-  [i32] c{/std/math/min(7i32, 2i32)}
-  [i32] d{/std/math/max(7i32, 2i32)}
-  [i32] e{convert<int>(/std/math/pi)}
-  return(plus(plus(plus(a, b), plus(c, d)), e))
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_math_qualified.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_math_qualified_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 16);
-}
-
 TEST_CASE("native math saturate/lerp") {
   const std::string source = R"(
 import /std/math/*

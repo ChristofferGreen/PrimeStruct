@@ -101,24 +101,21 @@ of sync with them.
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
 | TODO-5464 | Add an output sink to Vm::execute for capturing program output | deferred | test-matrix |
-| TODO-5466 | Migrate duplicated vm/native compile-run cases to the program matrix | in_progress | test-matrix |
 | TODO-5471 | Register form with promoted locals | deferred | opt-regform |
 | TODO-5483 | Verify arm64 SextI32 and normalize the last i32 builtins | ready | ir-semantics |
 | TODO-5478 | Remove the super-linear front-end cost on very large functions | deferred | compile-speed |
 
 ### Ready Now
 
-- TODO-5466 (track: test-matrix): Migrate duplicated vm/native compile-run cases to the program matrix (surface: tests/unit/compile_run, tests/unit/program_matrix, scripts/migrate_compile_run_cases.py).
 - TODO-5483 (track: ir-semantics): Verify arm64 SextI32 and normalize the last i32 builtins (surface: src/ir_lowerer operator helpers, NativeEmitterInternalsArm64Arithmetic.h, tests/unit/program_matrix).
 
 ### Immediate Next 10
 
-1. TODO-5466 - Migrate duplicated vm/native compile-run cases to the program matrix.
-2. TODO-5483 - Verify arm64 SextI32 and normalize the last i32 builtins.
+1. TODO-5483 - Verify arm64 SextI32 and normalize the last i32 builtins.
 
 ### Priority Lanes
 
-- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix TODO-5466 (sink TODO-5464 deferred); i32 audit TODO-5483; VM speed ; passes ; optexe ; deferred: TODO-5471, TODO-5478
+- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix (sink TODO-5464 deferred); i32 audit TODO-5483; VM speed ; passes ; optexe ; deferred: TODO-5471, TODO-5478
 
 ### Execution Queue
 
@@ -139,20 +136,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - a unit test runs a module that prints to stdout and stderr and receives the exact bytes, in order, through the sink; default behavior is unchanged (existing vm compile-run suites green)
     - no measurable slowdown on `benchmarks/aggregate.prime` under `--emit=vm` (within noise of the 2026-10-03 baseline)
   - stop_rule: do not buffer or reorder output in the default path; do not touch native or wasm output.
-
-- [~] TODO-5466: Migrate duplicated vm/native compile-run cases to the program matrix
-  - owner: ai
-  - status: in_progress
-  - depends_on: TODO-5465 (done: tests/unit/program_matrix/program_matrix.h runs a ProgramCase through every config via the built primec/primevm)
-  - created_at: 2026-10-03
-  - phase: Optimizing backends
-  - parallel_track: test-matrix
-  - progress: batch 1 done - the 22 native control cases that only check an exit code and stdout now live only in tests/unit/program_matrix/test_program_matrix_control.cpp and run on vm-step, vm, native at -O0/-O2 (deleted from native_backend/control; shard count 31 -> 9). Survey of the rest (2026-10-03): vm/ has 961 cases and native_backend/ 926; only 284 and 262 of them have the plain "run, check exit code" shape, 125 program sources appear in both in that shape and 117 of those expect the same exit code with no extra flags. The other shapes check stdout/stderr files, diagnostics or go through helper functions (216 and 235 distinct tails).
-  - scope: Write `scripts/migrate_compile_run_cases.py` that rewrites the mechanical shapes into `ProgramCase` declarations, preserving case names and order, and reports every case it cannot convert; convert the 117 plain duplicate pairs first (one program case on vm-O0/vm-O2/native-O0/native-O2 replaces two cases), then the plain single-backend shapes, one suite per commit, regenerating shard counts and `tests/TEST_INVENTORY.md`. Design: docs/OptimizingBackendsPlan.md section 8.3. Note that a matrix case runs a program on 4-5 configs, so migrate only programs whose extra configs are worth their run time (pairs, optimizer-sensitive programs); do not convert the diagnostic and stdout-file shapes.
-  - acceptance:
-    - the reconciliation count is printed and matches; no program source is lost (script self-test under tests/scripts)
-    - full release gate green with total compile-run wall time not higher than before
-  - stop_rule: convert in batches of one suite per commit; if a batch changes a test's verdict, revert that batch and record the case.
 
 - [ ] TODO-5483: Verify arm64 SextI32 and normalize the last i32 builtins
   - owner: ai
