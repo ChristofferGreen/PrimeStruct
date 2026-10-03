@@ -136,8 +136,8 @@ Rules:
   modulo 2^64, identically on the VM, native, `optexe`, wasm, GLSL and `--emit=exe` (TODO-5477). Lowering implements the
   `i32` rule with the `SextI32` IR opcode after each `i32` operation. `i32` division of `-2147483648` by `-1` wraps to
   `-2147483648` on the VM and native backends; `--emit=exe` inherits the C++ trap there. `increment`, `decrement`, `abs`
-  and `pow` wrap the same way; other builtins that can leave the `i32` range (for example integer `lerp`) are tracked
-  in TODO-5483.
+  and `pow` wrap the same way, and `lerp`, `clamp`, `min`, `max` and `sign` agree at the `i32` limits on every backend
+  (the arm64 emitter's `SextI32` is unverified: TODO-5483).
 - **`greater_than(left, right)`, `less_than(left, right)`, `greater_equal(left, right)`, `less_equal(left, right)`,
   `equal(left, right)`, `not_equal(left, right)`, `and(left, right)`, `or(left, right)`, `not(value)`:** comparison
   wrappers used after operator/control-flow desugaring. Comparisons respect operand signedness (`u64` uses unsigned

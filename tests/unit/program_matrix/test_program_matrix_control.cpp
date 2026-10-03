@@ -461,3 +461,31 @@ main() {
       "vm-step-O0", "vm-O0", "vm-O2", "native-O0", "native-O2", "optexe-O2", "exe"};
   program_matrix::runProgramMatrix(program);
 }
+
+TEST_CASE("i32 lerp, saturate, clamp, min, max and sign agree at the limits") {
+  program_matrix::ProgramCase program;
+  program.name = "i32_limit_builtins";
+  program.source = R"(
+import /std/math/*
+
+[return<int> effects(io_out)]
+main() {
+  [i32] big{2147483647i32}
+  [i32] low{minus(negate(2147483647i32), 1i32)}
+  print_line(lerp(low, big, 1i32))
+  print_line(if(less_than(lerp(low, big, 2i32), 0i32), then() { 1i32 }, else() { 0i32 }))
+  print_line(saturate(big))
+  print_line(clamp(big, low, big))
+  print_line(min(big, low))
+  print_line(max(big, low))
+  print_line(sign(low))
+  print_line(abs(big))
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "2147483647\n0\n1\n2147483647\n-2147483648\n2147483647\n-1\n2147483647\n";
+  program.onlyConfigs = {
+      "vm-step-O0", "vm-O0", "vm-O2", "native-O0", "native-O2", "optexe-O2", "exe"};
+  program_matrix::runProgramMatrix(program);
+}

@@ -102,20 +102,18 @@ of sync with them.
 | --- | --- | --- | --- |
 | TODO-5464 | Add an output sink to Vm::execute for capturing program output | deferred | test-matrix |
 | TODO-5471 | Register form with promoted locals | deferred | opt-regform |
-| TODO-5483 | Verify arm64 SextI32 and normalize the last i32 builtins | ready | ir-semantics |
+| TODO-5483 | Verify arm64 SextI32 on a macOS machine | deferred | ir-semantics |
 | TODO-5478 | Remove the super-linear front-end cost on very large functions | deferred | compile-speed |
 
 ### Ready Now
 
-- TODO-5483 (track: ir-semantics): Verify arm64 SextI32 and normalize the last i32 builtins (surface: src/ir_lowerer operator helpers, NativeEmitterInternalsArm64Arithmetic.h, tests/unit/program_matrix).
 
 ### Immediate Next 10
 
-1. TODO-5483 - Verify arm64 SextI32 and normalize the last i32 builtins.
 
 ### Priority Lanes
 
-- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix (sink TODO-5464 deferred); i32 audit TODO-5483; VM speed ; passes ; optexe ; deferred: TODO-5471, TODO-5478
+- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix (sink TODO-5464 deferred); arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe ; deferred: TODO-5471, TODO-5478
 
 ### Execution Queue
 
@@ -137,16 +135,16 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - no measurable slowdown on `benchmarks/aggregate.prime` under `--emit=vm` (within noise of the 2026-10-03 baseline)
   - stop_rule: do not buffer or reorder output in the default path; do not touch native or wasm output.
 
-- [ ] TODO-5483: Verify arm64 SextI32 and normalize the last i32 builtins
+- [ ] TODO-5483: Verify arm64 SextI32 on a macOS machine
   - owner: ai
-  - status: ready
+  - status: deferred
+  - deferred_reason: needs an arm64 macOS machine; the Linux x86_64 session cannot run `Arm64Emitter` output.
   - created_at: 2026-10-03
   - phase: Optimizing backends
   - parallel_track: ir-semantics
-  - scope: TODO-5477 made user-level i32 `plus`/`minus`/`multiply`/`divide`/`negate` wrap through the `SextI32` opcode. Two gaps remain. (1) `Arm64Emitter::emitSextI32` (SXTW x0, w0) was written from the encoding and never executed: run the native conformance and matrix cases on an arm64 macOS machine and add an encoding test. (2) `increment`, `decrement`, `abs` and `pow` now emit SextI32 (matrix case `i32_wrap_builtins`); builtins that can still leave the i32 range without going through the arithmetic helper (integer `lerp`, `saturate`, `round`) need the same treatment and a matrix case each.
+  - scope: `Arm64Emitter::emitSextI32` (SXTW x0, w0, encoded 0x93407C00) was written from the encoding and never executed. The i32 builtins audit is done: increment, decrement, abs and pow emit SextI32, and integer lerp, saturate, clamp, min, max and sign already agree at the limits on every backend (matrix cases `i32_wrap_builtins` and `i32_limit_builtins`; lerp and clamp go through plus/minus/multiply, which wrap).
   - acceptance:
-    - the `i32 arithmetic wraps` matrix cases pass on arm64 macOS native; an encoding unit test pins the SXTW bytes
-    - each remaining builtin (integer `lerp`, `saturate`, `round`) either has a matrix case showing identical output on vm, native, optexe and exe for overflowing input, or a comment explaining why its result cannot overflow
+    - the `i32` matrix cases (`i32_wrap_basic`, `i32_wrap_loops`, `i32_wrap_builtins`, `i32_limit_builtins`) pass on arm64 macOS native; an encoding unit test pins the SXTW bytes
   - stop_rule: do not change i64/u64 behavior or the I32 arithmetic opcodes themselves; lowering also uses them for address arithmetic.
 
 - [ ] TODO-5471: Register form with promoted locals
