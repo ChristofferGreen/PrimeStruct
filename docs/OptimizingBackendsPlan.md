@@ -284,9 +284,25 @@ Pass catalogue:
 
 ## 5. Phases
 
-Each numbered item is intended to become one `TODO-XXXX` leaf in
-`docs/todo.md` with its own scope, acceptance and stop rule when the plan is
-approved. Order within a phase is a dependency order unless stated.
+Each numbered item becomes one `TODO-XXXX` leaf in `docs/todo.md` with its
+own scope, acceptance and stop rule. Order within a phase is a dependency
+order unless stated. Leaves filed so far (2026-10-03) cover Phase 0, the
+analysis prerequisites, and the `optexe` slice; the optimizer passes of
+Phases 1-2 and the native code generator of Phase 3 are not filed yet and
+should be split into leaves once `optexe` has validated the register form.
+
+| Plan item | Leaf |
+| --- | --- |
+| 0.1 flags | TODO-5423 |
+| 0.2 pass manager | TODO-5424 |
+| 0.3 IR dumps | TODO-5425 (`ir-lowered`), TODO-5424 (`ir-optimized`) |
+| 0.4 benchmarks | TODO-5426 |
+| 0.5 matrix runner | TODO-5427 (VM output sink), TODO-5428 (runner), TODO-5429 (migration) |
+| 1.1 shared CFG, stack-balance check | TODO-5430, TODO-5431 |
+| 1.3 shared pure-opcode semantics | TODO-5432 |
+| 1.4 local escape analysis | TODO-5433 |
+| 2.1 register form with promoted locals | TODO-5434 |
+| 2.1b / section 9 `optexe` | TODO-5435 (skeleton), TODO-5436 (calls, floats), TODO-5437 (memory), TODO-5438 (I/O), TODO-5439 (matrix, benchmarks, compile-time gate) |
 
 ### Phase 0: measurement and control surface (no behaviour change)
 
