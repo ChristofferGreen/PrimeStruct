@@ -455,8 +455,10 @@ bool SemanticsValidator::run() {
     return false;
   }
   dumpValidatorState("validateEntry");
-  collectPilotRoutingSemanticProductFacts();
-  dumpValidatorState("collectPilotRoutingSemanticProductFacts");
+  // The routing facts are collected lazily by the semantic-product take*
+  // functions. Collecting them here as well was wasted work in the pipeline:
+  // node-id assignment runs next and invalidates them, so the product pays for
+  // a second full collection (about 30% of primec time on benchmarks/json_parse).
   return true;
 }
 
