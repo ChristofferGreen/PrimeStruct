@@ -1,5 +1,7 @@
 #include "primec/ir/IrOptimizer.h"
 
+#include "primec/support/CompileArena.h"
+
 #include "optimizer/IrPassUtil.h"
 #include "primec/ir/IrCfg.h"
 #include "primec/ir/IrOpcodeTable.h"
@@ -54,6 +56,10 @@ const std::vector<IrOptimizationPass> &irOptimizationPasses() {
   // later passes see straight-line code; dead-store runs after folding so it
   // sees the simplified stores, and its leftover pops are swept by the next
   // round's peephole.
+  // The table is built on first use, which can happen while a compile arena is
+  // active; its storage must come from the system heap because it is destroyed
+  // at process exit (see CompileArena.h).
+  const SystemHeapScope systemHeapGuardForPassTable;
   static const std::vector<IrOptimizationPass> Passes = {
       {{"cfg-simplify",
         "fold constant branches, thread jumps, drop jumps to the next instruction and unreachable code",

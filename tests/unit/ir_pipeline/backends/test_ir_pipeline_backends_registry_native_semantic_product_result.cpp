@@ -5,8 +5,16 @@
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.backends.registry");
 
 TEST_CASE("ir backend registry reports deterministic order and lookup") {
-  const std::vector<std::string_view> expectedKinds = {
-      "vm", "native", "ir", "wasm", "glsl-ir", "spirv-ir", "cpp-ir", "exe-ir"};
+  const std::vector<std::string_view> expectedKinds = {"vm",
+                                                       "native",
+                                                       "ir",
+                                                       "wasm",
+                                                       "glsl-ir",
+                                                       "spirv-ir",
+                                                       "cpp-ir",
+                                                       "exe-ir",
+                                                       "optcpp-ir",
+                                                       "optexe-ir"};
   CHECK(primec::listIrBackendKinds() == expectedKinds);
 
   for (std::string_view kind : expectedKinds) {
@@ -85,6 +93,10 @@ TEST_CASE("backend capability registry describes runtime capability availability
       "cpp-ir:-:cpp-ir:graphics-runtime,runtime-reflection",
       "exe:-:exe:graphics-runtime,runtime-reflection",
       "exe-ir:-:exe-ir:graphics-runtime,runtime-reflection",
+      "optcpp:-:optcpp:graphics-runtime,runtime-reflection",
+      "optcpp-ir:-:optcpp-ir:graphics-runtime,runtime-reflection",
+      "optexe:-:optexe:graphics-runtime,runtime-reflection",
+      "optexe-ir:-:optexe-ir:graphics-runtime,runtime-reflection",
   };
 
   CHECK(actual == expected);
@@ -240,12 +252,28 @@ TEST_CASE("ir preparation rejects stale semantic-product lowerer preflight runti
 }
 
 TEST_CASE("all production primec emit kinds route through ir backend resolution") {
-  const std::vector<std::string_view> expectedKinds = {
-      "cpp", "cpp-ir", "exe", "exe-ir", "native", "ir", "vm", "glsl", "spirv", "wasm", "glsl-ir", "spirv-ir"};
+  const std::vector<std::string_view> expectedKinds = {"cpp",
+                                                       "cpp-ir",
+                                                       "exe",
+                                                       "exe-ir",
+                                                       "native",
+                                                       "ir",
+                                                       "vm",
+                                                       "glsl",
+                                                       "spirv",
+                                                       "wasm",
+                                                       "glsl-ir",
+                                                       "spirv-ir",
+                                                       "optcpp",
+                                                       "optcpp-ir",
+                                                       "optexe",
+                                                       "optexe-ir"};
 
   const std::span<const std::string_view> emitKinds = primec::listPrimecEmitKinds();
   CHECK(std::vector<std::string_view>(emitKinds.begin(), emitKinds.end()) == expectedKinds);
-  CHECK(primec::primecEmitKindsUsage() == "cpp|cpp-ir|exe|exe-ir|native|ir|vm|glsl|spirv|wasm|glsl-ir|spirv-ir");
+  CHECK(primec::primecEmitKindsUsage() ==
+        "cpp|cpp-ir|exe|exe-ir|native|ir|vm|glsl|spirv|wasm|glsl-ir|spirv-ir|optcpp|optcpp-ir|optexe|"
+        "optexe-ir");
 
   for (const std::string_view emitKind : emitKinds) {
     CAPTURE(emitKind);
@@ -259,7 +287,7 @@ TEST_CASE("all production primec emit kinds route through ir backend resolution"
 
 TEST_CASE("ir preparation phase manifest pins ordered handoffs") {
   const auto &manifest = primec::irPreparationPhaseManifest();
-  REQUIRE(manifest.size() == 6);
+  REQUIRE(manifest.size() == 8);
 
   std::vector<std::string_view> names;
   names.reserve(manifest.size());
@@ -276,6 +304,8 @@ TEST_CASE("ir preparation phase manifest pins ordered handoffs") {
       "validate-lowered-ir",
       "inline-ir-calls",
       "validate-inlined-ir",
+      "optimize-ir",
+      "validate-optimized-ir",
       "release-lowered-ast-bodies",
   };
   CHECK(names == expectedNames);
