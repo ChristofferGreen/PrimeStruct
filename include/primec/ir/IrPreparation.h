@@ -3,6 +3,7 @@
 #include "primec/ast/Ast.h"
 #include "primec/support/Diagnostics.h"
 #include "primec/ir/Ir.h"
+#include "primec/ir/IrOptimizer.h"
 #include "primec/frontend/SemanticProduct.h"
 #include "primec/ir/IrValidation.h"
 #include "primec/support/Options.h"
@@ -20,6 +21,7 @@ enum class IrPreparationPhaseOwnership {
   IrPreparationLoweredIr,
   IrPreparationValidatedIr,
   IrPreparationInlinedIr,
+  IrPreparationOptimizedIr,
   CompilerAstStorage,
 };
 
@@ -48,6 +50,7 @@ enum class IrPreparationFailureStage {
   Lowering,
   Validation,
   Inlining,
+  Optimization,
 };
 
 struct IrPreparationFailure {
@@ -64,6 +67,7 @@ bool prepareIrModule(Program &program,
                      IrValidationTarget validationTarget,
                      IrModule &ir,
                      IrPreparationFailure &failure,
-                     const ExpandedSource *expandedSource = nullptr);
+                     const ExpandedSource *expandedSource = nullptr,
+                     IrOptimizationReport *optimizationReport = nullptr);
 
 } // namespace primec

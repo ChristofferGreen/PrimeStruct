@@ -429,11 +429,12 @@ int main(int argc, char **argv) {
       flagLine("--debug-replay-sequence <n>", "Stop replay at trace sequence number <n>");
       std::cerr << "\n";
 
-      std::cerr << "Optimization (accepted now; no passes are registered yet):\n";
+      std::cerr << "Optimization:\n";
       flagLine("-O0|-O1|-O2|-O3", "Optimization level (default: -O0)");
       flagLine("--opt-pass <name>", "Enable one optimization pass");
       flagLine("--no-opt-pass <name>", "Disable one optimization pass");
-      flagLine("--opt-report", "Print a per-pass report");
+      flagLine("--opt-list", "List optimization passes and exit");
+      flagLine("--opt-report", "Print a per-pass report on stderr");
       flagLine("--opt-verify-each", "Re-validate the IR after every pass");
       std::cerr << "\n";
 
@@ -441,7 +442,8 @@ int main(int argc, char **argv) {
       flagLine("--default-effects <list>", "Default effect set for definitions without one");
       flagLine("--ir-inline", "Inline eligible calls during IR lowering");
       flagLine("--dump-stage <stage>", "Dump a compiler stage and exit; one of:");
-      flagLine("", "pre_ast, ast, ast-semantic, semantic-product, type-graph, ir");
+      flagLine("", "pre_ast, ast, ast-semantic, semantic-product, type-graph, ir,");
+      flagLine("", "ir-lowered, ir-optimized");
       flagLine("", "(lowering-facing dumps include semantic-product between");
       flagLine("", "ast-semantic and ir)");
       std::cerr << "\n";
@@ -452,6 +454,10 @@ int main(int argc, char **argv) {
   }
   if (options.listTransforms) {
     primec::printTransformList(std::cout);
+    return 0;
+  }
+  if (options.listOptimizationPasses) {
+    std::cout << primec::formatIrOptimizationPassList();
     return 0;
   }
   const primec::IrBackendDiagnostics &vmDiagnostics = primec::vmIrBackendDiagnostics();
@@ -529,16 +535,26 @@ int main(int argc, char **argv) {
   primec::Program &program = pipelineOutput.program;
   const primec::SemanticProgram *semanticProgram =
       pipelineOutput.hasSemanticProgram ? &pipelineOutput.semanticProgram : nullptr;
+  if (primec::isIrModuleDumpStage(options)) {
+    return primec::runIrModuleDump(
+        std::cout, std::cerr, program, semanticProgram, &pipelineOutput.expandedSource, options);
+  }
 
   primec::IrModule ir;
   primec::IrPreparationFailure irFailure;
-  if (!primec::prepareIrModule(program,
-                               semanticProgram,
-                               options,
-                               primec::IrValidationTarget::Vm,
-                               ir,
-                               irFailure,
-                               &pipelineOutput.expandedSource)) {
+  primec::IrOptimizationReport optimizationReport;
+  const bool irPrepared = primec::prepareIrModule(program,
+                                                  semanticProgram,
+                                                  options,
+                                                  primec::IrValidationTarget::Vm,
+                                                  ir,
+                                                  irFailure,
+                                                  &pipelineOutput.expandedSource,
+                                                  &optimizationReport);
+  if (options.optimization.report) {
+    std::cerr << optimizationReport.format(true);
+  }
+  if (!irPrepared) {
     return primec::emitCliFailure(
         std::cerr,
         options,

@@ -20,7 +20,8 @@
 Pipeline operating rules:
 - Each stage halts on error and exposes `--dump-stage=<name>` so tooling/tests can capture the text/tree output just
   before failure.
-- The current dump surface is `pre_ast`, `ast`, `ast-semantic`, `semantic-product`, and `ir`. `semantic-product`
+- The current dump surface is `pre_ast`, `ast`, `ast-semantic`, `semantic-product`, `ir` (an AST rendering), and the
+  lowered-module stages `ir-lowered` and `ir-optimized`. `semantic-product`
   is the lowering-facing inspection surface between `ast-semantic` and `ir`, so tooling can inspect resolved semantic
   facts without forcing users to infer them from the canonicalized AST or from lowered IR.
 - `--collect-diagnostics` enables stable multi-error reporting for parse-stage failures, semantic build-map failures
@@ -39,10 +40,27 @@ Pipeline operating rules:
 - Use `--no-text-transforms`, `--no-semantic-transforms`, or `--no-transforms` to disable transforms and require
   canonical syntax.
 - `--ir-inline` enables a post-validation IR inlining optimization pass before VM/native/IR emission.
-- `-O0`, `-O1`, `-O2`, `-O3` select an optimization level (default `-O0`; the last flag wins), and
-  `--opt-pass <name>`, `--no-opt-pass <name>`, `--opt-report`, `--opt-verify-each` refine it. They are accepted by
-  `primec` and `primevm` but no optimization passes exist yet, so every combination currently behaves like `-O0`.
-  The plan and pass catalogue are in `docs/OptimizingBackendsPlan.md`.
+- `-O0`, `-O1`, `-O2`, `-O3` select an optimization level (default `-O0`; the last flag wins). The optimizer runs on
+  the validated IR in `prepareIrModule`, after the optional `--ir-inline` phase and before backend emission, and the
+  module is re-validated afterwards; it is shared by every backend (VM, native, C++, wasm, serialized IR).
+  - Passes run in a fixed order (the manifest, printed by `--opt-list`) and the whole sequence repeats until nothing
+    changes, at most four rounds. Current passes, all enabled from `-O1`: `cfg-simplify` (constant branches, jump
+    threading, no-op jumps, unreachable code), `const-fold` (pure arithmetic, comparisons and conversions of
+    constants, with the VM's exact semantics), `peephole` (dead push/pop pairs, `dup; store; pop`, `x+0`, `x*1`,
+    `x/1`, double negation), and `dead-store` (stores to locals that are never read, for locals not reachable through
+    memory). `-O2` and `-O3` currently select the same passes as `-O1`.
+  - `--opt-pass <name>` enables a pass regardless of level, `--no-opt-pass <name>` disables one (a disable wins), and
+    unknown names are errors. A pass that does not support the target (control-flow rewriting is skipped for wasm and
+    GLSL/SPIR-V; GLSL/SPIR-V run no passes) is skipped when selected by level and is an error when named explicitly.
+  - `--opt-report` prints the selected passes and per-pass instruction counts on stderr, `--opt-list` lists the
+    manifest and exits, and `--opt-verify-each` re-validates the module and its operand-stack consistency after every
+    pass that changed it. Optimization never changes observable behavior; `scripts/differential_opt_check.py`
+    compares `-O0` against optimized runs over the VM test corpus.
+  - Debug sessions and traces should use `-O0`: removed instructions change instruction pointers and local contents.
+  The plan, pass catalogue and roadmap are in `docs/OptimizingBackendsPlan.md`.
+- `--dump-stage=ir-lowered` and `--dump-stage=ir-optimized` print the lowered IR module as text (`ir_module_v1`: string
+  table, host imports, struct layouts, and one numbered instruction per line). `ir-lowered` is the module as lowering
+  produced it; `ir-optimized` applies the selected `-O` level and passes first. Both work with `primec` and `primevm`.
 - Release validation failures are tracked in `docs/failing_tests.md`. Every
   release test run must record newly failing doctest cases there before new
   implementation work starts, and the TODO queue must prioritize fixing those

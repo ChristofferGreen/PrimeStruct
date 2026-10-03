@@ -31,6 +31,7 @@ struct Options {
   std::string emitKind;
   std::string wasmProfile = "wasi";
   bool listTransforms = false;
+  bool listOptimizationPasses = false;
   bool emitDiagnostics = false;
   bool debugJson = false;
   bool debugDap = false;

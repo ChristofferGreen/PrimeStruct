@@ -1,5 +1,6 @@
 #include "primec/pipeline/CliDriver.h"
 
+#include "primec/ir/IrModulePrinter.h"
 #include "primec/support/Diagnostics.h"
 
 #include <algorithm>
@@ -206,6 +207,11 @@ CliFailure describeIrPreparationFailure(const IrPreparationFailure &failure, con
       cliFailure.plainPrefix = diagnostics.inliningErrorPrefix;
       cliFailure.notes = makeIrBackendNotes(diagnostics, "ir-inline");
       break;
+    case IrPreparationFailureStage::Optimization:
+      cliFailure.code = diagnostics.validationDiagnosticCode;
+      cliFailure.plainPrefix = "IR optimization error: ";
+      cliFailure.notes = makeIrBackendNotes(diagnostics, "ir-optimize");
+      break;
     case IrPreparationFailureStage::Lowering:
     case IrPreparationFailureStage::None:
     default:
@@ -251,6 +257,11 @@ CliFailure describeIrPreparationFailure(const IrPreparationFailure &failure,
       cliFailure.plainPrefix = diagnostics.inliningErrorPrefix;
       cliFailure.notes = makeIrBackendNotes(diagnostics, "ir-inline");
       break;
+    case IrPreparationFailureStage::Optimization:
+      cliFailure.code = diagnostics.validationDiagnosticCode;
+      cliFailure.plainPrefix = "IR optimization error: ";
+      cliFailure.notes = makeIrBackendNotes(diagnostics, "ir-optimize");
+      break;
     case IrPreparationFailureStage::Lowering:
     case IrPreparationFailureStage::None:
     default:
@@ -275,6 +286,39 @@ CliFailure describeIrPreparationFailure(const IrPreparationFailure &failure,
   cliFailure.diagnosticInfo = failure.diagnosticInfo;
 
   return cliFailure;
+}
+
+bool isIrModuleDumpStage(const Options &options) {
+  return options.dumpStage == "ir-lowered" || options.dumpStage == "ir_lowered" ||
+         options.dumpStage == "ir-optimized" || options.dumpStage == "ir_optimized";
+}
+
+int runIrModuleDump(std::ostream &out,
+                    std::ostream &err,
+                    Program &program,
+                    const SemanticProgram *semanticProgram,
+                    const ExpandedSource *expandedSource,
+                    const Options &options) {
+  Options prepareOptions = options;
+  const bool optimized = options.dumpStage == "ir-optimized" || options.dumpStage == "ir_optimized";
+  if (!optimized) {
+    // The lowered listing is what lowering produced: no optimization phase.
+    prepareOptions.optimization = OptimizationOptions{};
+  }
+  IrModule ir;
+  IrPreparationFailure failure;
+  if (!prepareIrModule(program, semanticProgram, prepareOptions, IrValidationTarget::Any, ir, failure, expandedSource)) {
+    // The listing is backend-neutral, so describe failures with generic IR
+    // prefixes rather than a backend's own.
+    IrBackendDiagnostics diagnostics;
+    diagnostics.loweringErrorPrefix = "IR lowering error: ";
+    diagnostics.validationErrorPrefix = "IR validation error: ";
+    diagnostics.inliningErrorPrefix = "IR inlining error: ";
+    diagnostics.backendTag = "ir";
+    return emitCliFailure(err, options, describeIrPreparationFailure(failure, diagnostics));
+  }
+  out << formatIrModule(ir);
+  return 0;
 }
 
 } // namespace primec

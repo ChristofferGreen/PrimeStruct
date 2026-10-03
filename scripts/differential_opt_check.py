@@ -1,0 +1,148 @@
+#!/usr/bin/env python3
+"""Differential check of the IR optimizer on real programs.
+
+Extracts every PrimeStruct program embedded as a raw string in the VM
+compile-run tests (plus benchmarks/*.prime and the checked-in examples that have
+a `main`), runs each with `primevm` at -O0 and at each requested optimization
+level with --opt-verify-each, and reports any program whose exit code, stdout or
+stderr differs. A program that behaves differently between two -O0 runs is
+reported as unstable and skipped.
+
+    python3 scripts/differential_opt_check.py --build-dir build-release [--levels 1,2,3]
+                                              [--jobs 4] [--limit N] [--keep-dir DIR]
+
+Run from anywhere; `primevm` is executed with the build directory as its working
+directory, as the compile-run tests do. Exit status 0 when every program
+matches, 1 when any differs.
+"""
+
+from __future__ import annotations
+
+import argparse
+import concurrent.futures
+import hashlib
+import re
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+RAW_STRING_RE = re.compile(r'R"\((.*?)\)"', re.DOTALL)
+MAIN_RE = re.compile(r"\bmain\s*\(")
+TIMEOUT_SECONDS = 30
+
+
+def collect_sources(root: Path) -> list[tuple[str, str]]:
+    """Returns (label, source) pairs, de-duplicated by content, in a stable order."""
+    seen: set[str] = set()
+    sources: list[tuple[str, str]] = []
+
+    def add(label: str, text: str) -> None:
+        if not MAIN_RE.search(text):
+            return
+        digest = hashlib.sha1(text.encode("utf-8")).hexdigest()
+        if digest in seen:
+            return
+        seen.add(digest)
+        sources.append((label, text))
+
+    for path in sorted((root / "tests" / "unit" / "compile_run" / "vm").glob("*.cpp")):
+        text = path.read_text(encoding="utf-8", errors="replace")
+        for index, match in enumerate(RAW_STRING_RE.finditer(text)):
+            add(f"{path.name}#{index}", match.group(1))
+    for path in sorted((root / "benchmarks").glob("*.prime")):
+        add(path.name, path.read_text(encoding="utf-8", errors="replace"))
+    for path in sorted((root / "examples").rglob("*.prime")):
+        add(str(path.relative_to(root)), path.read_text(encoding="utf-8", errors="replace"))
+    return sources
+
+
+def run_vm(build_dir: Path, source_path: Path, flags: list[str]) -> tuple[int, str, str]:
+    try:
+        completed = subprocess.run(
+            [str(build_dir / "primevm"), str(source_path), "--entry", "/main", *flags],
+            cwd=build_dir,
+            capture_output=True,
+            timeout=TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired:
+        return (-999, "", "timeout")
+    return (
+        completed.returncode,
+        completed.stdout.decode("utf-8", errors="replace"),
+        completed.stderr.decode("utf-8", errors="replace"),
+    )
+
+
+def check_one(args: tuple[str, str, Path, Path, list[int]]) -> tuple[str, str, str]:
+    """Returns (label, status, detail); status is ok, unstable, or DIFF."""
+    label, text, build_dir, work_dir, levels = args
+    digest = hashlib.sha1(text.encode("utf-8")).hexdigest()[:12]
+    source_path = work_dir / f"{digest}.prime"
+    source_path.write_text(text, encoding="utf-8")
+
+    baseline = run_vm(build_dir, source_path, [])
+    again = run_vm(build_dir, source_path, [])
+    if baseline != again:
+        return (label, "unstable", "two -O0 runs differ")
+    if baseline[0] == -999:
+        return (label, "unstable", "timeout at -O0")
+
+    for level in levels:
+        result = run_vm(build_dir, source_path, [f"-O{level}", "--opt-verify-each"])
+        if result != baseline:
+            detail = [f"-O{level} differs from -O0 (source kept as {source_path.name})"]
+            if result[0] != baseline[0]:
+                detail.append(f"  exit code: {baseline[0]} -> {result[0]}")
+            if result[1] != baseline[1]:
+                detail.append(f"  stdout: {baseline[1][:200]!r} -> {result[1][:200]!r}")
+            if result[2] != baseline[2]:
+                detail.append(f"  stderr: {baseline[2][:300]!r} -> {result[2][:300]!r}")
+            return (label, "DIFF", "\n".join(detail))
+    source_path.unlink()
+    return (label, "ok", "")
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--build-dir", type=Path, default=Path("build-release"))
+    parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument("--levels", default="1", help="comma-separated -O levels to compare against -O0")
+    parser.add_argument("--jobs", type=int, default=4)
+    parser.add_argument("--limit", type=int, default=0, help="check only the first N programs")
+    parser.add_argument("--keep-dir", type=Path, default=None, help="directory for programs that differ")
+    args = parser.parse_args()
+
+    build_dir = args.build_dir.resolve()
+    if not (build_dir / "primevm").exists():
+        print(f"error: {build_dir / 'primevm'} not found; build first", file=sys.stderr)
+        return 2
+    levels = [int(part) for part in args.levels.split(",") if part]
+    sources = collect_sources(args.root)
+    if args.limit > 0:
+        sources = sources[: args.limit]
+
+    work_root = args.keep_dir if args.keep_dir else Path(tempfile.mkdtemp(prefix="primec_diff_"))
+    work_root.mkdir(parents=True, exist_ok=True)
+    jobs = [(label, text, build_dir, work_root, levels) for label, text in sources]
+
+    counts = {"ok": 0, "unstable": 0, "DIFF": 0}
+    failures: list[str] = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, args.jobs)) as pool:
+        for label, status, detail in pool.map(check_one, jobs):
+            counts[status] += 1
+            if status == "DIFF":
+                failures.append(f"{label}: {detail}")
+
+    print(f"programs checked: {len(sources)}  ok: {counts['ok']}  unstable (skipped): {counts['unstable']}  "
+          f"differing: {counts['DIFF']}  levels: {levels}")
+    for failure in failures:
+        print(failure)
+    if failures:
+        print(f"differing programs are kept in {work_root}")
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

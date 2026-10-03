@@ -1,7 +1,11 @@
 # Optimizing Native Backend and VM: Plan
 
-Status: proposal (2026-10-03). Nothing in this document is implemented yet.
-It records what the direct native backend (`--emit=native`) and the PrimeScript
+Status: in progress (2026-10-03). Implemented so far: the `-O` and `--opt-*` flags, the pass manager and manifest,
+the `ir-lowered`/`ir-optimized` dumps, shared CFG utilities and opcode semantics, local escape analysis, and four
+-O1 passes (see `docs/spec/source-pipeline.md` for the user-facing description). The register form, `optexe`, the
+native code generator and the fast VM kernel are not started.
+
+This document records what the direct native backend (`--emit=native`) and the PrimeScript
 VM (`--emit=vm`, `primevm`) do today, why they are slow, and a phased plan to
 turn the shared IR path into an optimizing compiler with GCC-style `-O` levels
 and individually selectable passes. The C++-emitting path (`--emit=exe`,
@@ -417,13 +421,13 @@ should be split into leaves once `optexe` has validated the register form.
   VM's implementation) and the folder calls the same functions. Float folding
   uses the host's IEEE operations exactly as the VM does; `NaN` comparisons
   follow the VM. Differential tests at every level are the gate.
-- **`AddressOfLocal` aliasing.** v1 rule: if a function contains any
-  `AddressOfLocal`, every local with index >= the smallest addressed index is
-  pinned (addresses only grow via `+ k*IrSlotBytes`). If a pointer value can
-  flow into `StoreIndirect`/`LoadIndirect` from outside the function (heap
-  addresses are tagged, frame addresses are not), treat all locals as pinned.
-  Later refinement: the lowerer emits a per-local extent table (struct slot
-  count) in a schema bump so only the addressed aggregate is pinned.
+- **`AddressOfLocal` aliasing.** Implemented in `IrLocalEscape.h`. A pointer to a slot of a function's own frame can
+  only come from an `AddressOfLocal` in that function, but user code may add negative byte offsets
+  (`plus(location(v), 8i32)` is legal and the VM resolves whichever slot the sum names), so the v1 rule is: if a
+  function takes any local's address, every slot of that function is pinned; otherwise nothing is, except the slot a
+  `FileReadByte` writes. The analysis records the lowest addressed slot so a later pass that can prove offsets are
+  non-negative constants can relax the rule. Measured effect: scalar loops (the benchmarks) pin nothing; functions
+  using structs or `location(...)` pin everything.
 - **Determinism.** Passes iterate in instruction, block, or function index
   order; no unordered containers decide output; the manifest fixes pass
   order; `--opt-report` output is sorted.

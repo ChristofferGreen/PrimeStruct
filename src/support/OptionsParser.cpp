@@ -864,6 +864,8 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
                                error)) {
         return false;
       }
+    } else if (arg == "--opt-list") {
+      out.listOptimizationPasses = true;
     } else if (arg == "--opt-report") {
       out.optimization.report = true;
     } else if (arg == "--opt-verify-each") {
@@ -883,7 +885,7 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
   applyNoTransformFlags(out, noTransforms, noTextTransforms, noSemanticTransforms);
   normalizeEntryPath(out);
 
-  if (out.listTransforms) {
+  if (out.listTransforms || out.listOptimizationPasses) {
     return true;
   }
   if (out.inputPath.empty()) {

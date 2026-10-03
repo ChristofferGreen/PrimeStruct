@@ -107,6 +107,22 @@ const std::vector<IrPreparationPhaseManifestEntry> &irPreparationPhaseManifest()
        "inlined IR module and selected IR validation target",
        "failure keeps inlined IR from reaching backend consumers",
        "backend emitters after inline-ir-calls"},
+      {"optimize-ir",
+       IrPreparationPhaseOwnership::IrPreparationValidatedIr,
+       IrPreparationPhaseOwnership::IrPreparationOptimizedIr,
+       IrPreparationPhaseAction::MutatesOutput,
+       true,
+       "validated IR module, Options::optimization (level and pass lists), and the validation target",
+       "optimization mutates the IR module and invalidates the prior validation result; unknown pass names fail this phase",
+       "validate-optimized-ir"},
+      {"validate-optimized-ir",
+       IrPreparationPhaseOwnership::IrPreparationOptimizedIr,
+       IrPreparationPhaseOwnership::IrPreparationValidatedIr,
+       IrPreparationPhaseAction::ValidatesOnly,
+       true,
+       "optimized IR module and selected IR validation target",
+       "failure keeps optimized IR from reaching backend consumers",
+       "backend emitters after optimize-ir"},
       {"release-lowered-ast-bodies",
        IrPreparationPhaseOwnership::CompilerAstStorage,
        IrPreparationPhaseOwnership::IrPreparationValidatedIr,
@@ -126,7 +142,8 @@ bool prepareIrModule(Program &program,
                      IrValidationTarget validationTarget,
                      IrModule &ir,
                      IrPreparationFailure &failure,
-                     const ExpandedSource *expandedSource) {
+                     const ExpandedSource *expandedSource,
+                     IrOptimizationReport *optimizationReport) {
   failure = {};
   std::string error;
   DiagnosticSink diagnosticSink(&failure.diagnosticInfo);
@@ -176,6 +193,26 @@ bool prepareIrModule(Program &program,
       return false;
     }
     if (!validateIrModule(ir, validationTarget, error)) {
+      failure.stage = IrPreparationFailureStage::Validation;
+      failure.message = std::move(error);
+      diagnosticSink.setSummary(failure.message);
+      return false;
+    }
+  }
+
+  // Run the phase when passes are selected, or when the caller asked for a
+  // report (so it describes this run even if no pass applies). Only a module a
+  // pass could have changed needs re-validating.
+  if (optimizationReport != nullptr || !irOptimizationIsNoOp(options.optimization, validationTarget)) {
+    IrOptimizationReport localReport;
+    IrOptimizationReport &report = optimizationReport != nullptr ? *optimizationReport : localReport;
+    if (!optimizeIrModule(ir, options.optimization, validationTarget, report, error)) {
+      failure.stage = IrPreparationFailureStage::Optimization;
+      failure.message = std::move(error);
+      diagnosticSink.setSummary(failure.message);
+      return false;
+    }
+    if (!report.selectedPasses.empty() && !validateIrModule(ir, validationTarget, error)) {
       failure.stage = IrPreparationFailureStage::Validation;
       failure.message = std::move(error);
       diagnosticSink.setSummary(failure.message);

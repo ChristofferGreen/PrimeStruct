@@ -346,6 +346,8 @@ Inspect the pipeline stages directly:
 ./build-release/primec --dump-stage=ast-semantic examples/0.Concrete/hello_world.prime
 ./build-release/primec --dump-stage=semantic-product examples/0.Concrete/hello_world.prime
 ./build-release/primec --dump-stage=ir examples/0.Concrete/hello_world.prime
+./build-release/primec --dump-stage=ir-lowered examples/0.Concrete/hello_world.prime
+./build-release/primec --dump-stage=ir-optimized -O1 examples/0.Concrete/hello_world.prime
 ```
 
 Run the architecture triage dashboard when source-locks, include-layer
@@ -380,8 +382,10 @@ python3 scripts/architecture_health_dashboard.py --root .
   produce a native executable
 - imports are expanded before semantics, so compilation works over one
   flattened unit by default
-- `--dump-stage=pre_ast|ast|ast-semantic|semantic-product|ir` exposes the main
-  compiler stages for debugging and tooling
+- `--dump-stage=pre_ast|ast|ast-semantic|semantic-product|ir|ir-lowered|ir-optimized`
+  exposes the main compiler stages for debugging and tooling
+- `-O1` enables the shared IR optimizer (`--opt-list` shows the passes,
+  `--opt-report` what they did); `-O0` is the default
 - Release builds live in `build-release/`
 - Debug builds live in `build-debug/`
 

@@ -32,6 +32,9 @@ TEST_CASE("primec and primevm usage prefer text transforms and import flags") {
   CHECK(primecErr.find("Usage: primec") != std::string::npos);
   CHECK(primecErr.find("--emit=cpp|cpp-ir|exe|exe-ir|native|ir|vm|glsl|spirv|wasm|glsl-ir|spirv-ir") !=
         std::string::npos);
+  CHECK(primecErr.find("Output kind (default: native)") != std::string::npos);
+  CHECK(primecErr.find("--opt-list") != std::string::npos);
+  CHECK(primecErr.find("ir-lowered, ir-optimized") != std::string::npos);
   CHECK(primecErr.find("--import-path <dir>, -I <dir>") != std::string::npos);
   CHECK(primecErr.find("--wasm-profile wasi|browser") != std::string::npos);
   CHECK(primecErr.find("--text-transforms <list>") != std::string::npos);

@@ -204,7 +204,13 @@ bool runIrBackend(const primec::IrBackend &backend,
   const primec::IrValidationTarget validationTarget = backend.validationTarget(options);
   primec::IrModule ir;
   primec::IrPreparationFailure prepFailure;
-  if (!primec::prepareIrModule(program, semanticProgram, options, validationTarget, ir, prepFailure, expandedSource)) {
+  primec::IrOptimizationReport optimizationReport;
+  const bool prepared = primec::prepareIrModule(
+      program, semanticProgram, options, validationTarget, ir, prepFailure, expandedSource, &optimizationReport);
+  if (options.optimization.report) {
+    std::cerr << optimizationReport.format(true);
+  }
+  if (!prepared) {
     failure.cliFailure = primec::describeIrPreparationFailure(prepFailure, backend);
     return false;
   }
@@ -264,7 +270,7 @@ int main(int argc, char **argv) {
       std::cerr << "Usage: primec [options] <input.prime> [-- <program args...>]\n\n";
 
       std::cerr << "Output:\n";
-      flagLine(std::string("--emit=") + std::string(primec::primecEmitKindsUsage()), "Output kind (default: exe)");
+      flagLine(std::string("--emit=") + std::string(primec::primecEmitKindsUsage()), "Output kind (default: native)");
       flagLine("-o <output>", "Output file path");
       flagLine("--out-dir <dir>", "Output directory");
       flagLine("--entry /path", "Entry point definition path");
@@ -292,11 +298,12 @@ int main(int argc, char **argv) {
       flagLine("--collect-diagnostics", "Collect diagnostics instead of stopping at the first error");
       std::cerr << "\n";
 
-      std::cerr << "Optimization (accepted now; no passes are registered yet):\n";
+      std::cerr << "Optimization:\n";
       flagLine("-O0|-O1|-O2|-O3", "Optimization level (default: -O0)");
       flagLine("--opt-pass <name>", "Enable one optimization pass");
       flagLine("--no-opt-pass <name>", "Disable one optimization pass");
-      flagLine("--opt-report", "Print a per-pass report");
+      flagLine("--opt-list", "List optimization passes and exit");
+      flagLine("--opt-report", "Print a per-pass report on stderr");
       flagLine("--opt-verify-each", "Re-validate the IR after every pass");
       std::cerr << "\n";
 
@@ -304,7 +311,8 @@ int main(int argc, char **argv) {
       flagLine("--default-effects <list>", "Default effect set for definitions without one");
       flagLine("--ir-inline", "Inline eligible calls during IR lowering");
       flagLine("--dump-stage <stage>", "Dump a compiler stage and exit; one of:");
-      flagLine("", "pre_ast, ast, ast-semantic, semantic-product, type-graph, ir");
+      flagLine("", "pre_ast, ast, ast-semantic, semantic-product, type-graph, ir,");
+      flagLine("", "ir-lowered, ir-optimized");
       flagLine("", "(lowering-facing dumps include semantic-product between");
       flagLine("", "ast-semantic and ir)");
       std::cerr << "\n";
@@ -333,6 +341,10 @@ int main(int argc, char **argv) {
       options.benchmarkIrLowererLegacyCollectionBranchCounters);
   if (options.listTransforms) {
     primec::printTransformList(std::cout);
+    return 0;
+  }
+  if (options.listOptimizationPasses) {
+    std::cout << primec::formatIrOptimizationPassList();
     return 0;
   }
   const std::string_view irBackendKind = primec::resolveIrBackendEmitKind(options.emitKind);
@@ -421,6 +433,14 @@ int main(int argc, char **argv) {
   }
 
   primec::Program &program = pipelineOutput.program;
+  if (primec::isIrModuleDumpStage(options)) {
+    return primec::runIrModuleDump(std::cout,
+                                   std::cerr,
+                                   program,
+                                   pipelineOutput.hasSemanticProgram ? &pipelineOutput.semanticProgram : nullptr,
+                                   &pipelineOutput.expandedSource,
+                                   options);
+  }
 
   if (irBackend != nullptr && irBackend->requiresOutputPath() && !options.outputPath.empty()) {
     if (options.outputPath == "/dev/null") {

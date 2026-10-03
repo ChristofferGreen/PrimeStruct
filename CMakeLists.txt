@@ -452,6 +452,11 @@ set(PRIMESTRUCT_IR_SOURCES
   src/pipeline/CompilePipelineStages.cpp
   src/ir/IrBackendProfiles.cpp
   src/ir/IrInliner.cpp
+  src/ir/IrOptimizer.cpp
+  src/ir/optimizer/IrPassCfgSimplify.cpp
+  src/ir/optimizer/IrPassConstFold.cpp
+  src/ir/optimizer/IrPassDeadStore.cpp
+  src/ir/optimizer/IrPassPeephole.cpp
   src/ir/IrPrinterHelpers.cpp
   src/ir/IrPreparation.cpp
   src/ir/IrPrinter.cpp
@@ -725,7 +730,7 @@ endif()
 
 # IR container pieces a runtime-only host needs: bytecode (de)serialization and
 # VM-target validation. Deliberately free of parser/semantics/lowerer code.
-add_library(primec_ir_core_lib src/ir/IrCfg.cpp src/ir/IrLocalEscape.cpp src/ir/IrSerializer.cpp src/ir/IrValidation.cpp)
+add_library(primec_ir_core_lib src/ir/IrCfg.cpp src/ir/IrLocalEscape.cpp src/ir/IrModulePrinter.cpp src/ir/IrSerializer.cpp src/ir/IrValidation.cpp)
 target_include_directories(primec_ir_core_lib PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
@@ -933,6 +938,10 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_main.cpp
     tests/unit/ir_pipeline/optimizer/test_ir_pure_semantics.cpp
     tests/unit/ir_pipeline/optimizer/test_ir_local_escape.cpp
+    tests/unit/ir_pipeline/optimizer/test_ir_module_printer.cpp
+    tests/unit/ir_pipeline/optimizer/test_ir_passes.cpp
+    tests/unit/ir_pipeline/optimizer/test_ir_optimizer_random.cpp
+    tests/unit/ir_pipeline/optimizer/test_ir_optimizer_cli.cpp
   )
   target_include_directories(PrimeStruct_ir_optimizer_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
   target_link_libraries(PrimeStruct_ir_optimizer_tests PRIVATE primec_ir_lib primec_backend_registry_lib primec_runtime_lib)
@@ -2940,6 +2949,10 @@ if(PRIMESTRUCT_BUILD_TESTS)
   set(PrimeStructIrOptimizerTestSuites
     primestruct.ir.pure_semantics
     primestruct.ir.local_escape
+    primestruct.ir.module_printer
+    primestruct.ir.passes
+    primestruct.ir.optimizer_random
+    primestruct.ir.optimizer_cli
   )
   foreach(suite IN LISTS PrimeStructIrOptimizerTestSuites)
     string(REPLACE "." "_" suiteId "${suite}")

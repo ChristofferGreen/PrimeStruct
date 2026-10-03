@@ -45,4 +45,20 @@ CliFailure describeIrPreparationFailure(const IrPreparationFailure &failure,
 
 std::vector<std::string> makeIrBackendNotes(const IrBackendDiagnostics &diagnostics, std::string_view stage = {});
 
+// True for `--dump-stage=ir-lowered` and `--dump-stage=ir-optimized`, which
+// print the lowered IrModule (see formatIrModule) instead of an AST dump. The
+// compile pipeline runs normally for these stages; the CLI front ends call
+// runIrModuleDump afterwards instead of emitting a backend's output.
+bool isIrModuleDumpStage(const Options &options);
+
+// Lowers and validates like a backend would (the optimization phase runs only
+// for ir-optimized) and prints the listing to `out`. Returns the process exit
+// code; failures are reported to `err` in the usual CLI format.
+int runIrModuleDump(std::ostream &out,
+                    std::ostream &err,
+                    Program &program,
+                    const SemanticProgram *semanticProgram,
+                    const ExpandedSource *expandedSource,
+                    const Options &options);
+
 } // namespace primec
