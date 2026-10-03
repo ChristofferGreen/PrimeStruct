@@ -502,7 +502,7 @@ PhaseStatus rewriteExprPhase4([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
         return samePathVectorHelper;
       }
     }
-    // Map twin of the vector same-path branch above (TODO-4809): a rooted
+    // Map twin of the vector same-path branch above: a rooted
     // `/map/count` / `/map/count_ref` user shadow wins for bare
     // `count(m)` / `count_ref(m)` on a map receiver, exactly like
     // `/vector/count` / `/vector/capacity` do for vector receivers.
@@ -540,7 +540,7 @@ PhaseStatus rewriteExprPhase4([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
     }
     // A public soa<T> receiver reports family "soa" rather than the
     // internal soa_vector name; it must still reach a same-path
-    // /soa/<helper> shadow for the access helpers (TODO-5295).
+    // /soa/<helper> shadow for the access helpers.
     const bool receiverIsPublicSoa = receiverFamily == "soa";
     if (collection_helpers::isGetHelperName(helperName)) {
       const std::string samePathGetHelper =

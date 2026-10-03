@@ -3,8 +3,8 @@
 // Canonical owner of every /std/collections module spelling used by the
 // compiler. All production code must route collection module roots, member
 // paths, and mangled-type prefixes through these helpers instead of repeating
-// path literals (TODO-4624 through TODO-4627); later collection renames then
-// become single-constant flips (TODO-4628 through TODO-4634).
+// path literals; later collection renames then
+// become single-constant flips.
 #pragma once
 
 #include <string>
@@ -106,8 +106,8 @@ inline std::string experimentalFolder(std::string_view collectionName) {
 }
 
 // Folder that owns a collection's canonical type identity. The Vector
-// identity lives in the canonical vector module (TODO-4628) and the
-// SoaVector identity lives in the canonical soa module (TODO-4629); the Map
+// identity lives in the canonical vector module and the
+// SoaVector identity lives in the canonical soa module; the Map
 // identity still lives in its experimental_* module until TODO-4630/4632.
 inline std::string typeIdentityFolder(std::string_view collectionName) {
   if (collectionName == kVectorFolder) {

@@ -1,7 +1,6 @@
 #pragma once
 
 // Free-function forms of lambdas that used to live inside inferImplicitTemplateArgs
-// (TODO-5385).
 #include "TemplateMonomorphImplicitTemplateInference.h"
 
 namespace primec {

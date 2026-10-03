@@ -180,7 +180,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
           arg, "unknown call target: /std/collections/mapPair");
     }
   }
-  // Deleted (TODO-4681): a `removedRootMapMethodDiagnostic(expr)` check
+  // Deleted: a `removedRootMapMethodDiagnostic(expr)` check
   // used to live here, duplicating the identical check already performed
   // unconditionally in SemanticsValidator::validateExpr
   // (SemanticsValidatorExpr.cpp) before this function is ever reached, on
@@ -315,7 +315,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                !resolvedBuiltinMethod &&
                defMap_.find(resolvedMethodTarget) != defMap_.end();
       };
-  // Deleted (TODO-4681): a second, identical
+  // Deleted: a second, identical
   // `isResolvedCountOrCapacityHelperInstantiation()` early-return used to
   // live here, duplicating the check a few lines above (kept). Nothing
   // between the two call sites mutates `expr`, `resolved`, or `defMap_`

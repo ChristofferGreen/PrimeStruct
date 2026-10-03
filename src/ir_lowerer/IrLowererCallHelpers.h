@@ -19,7 +19,7 @@ namespace primec::ir_lowerer {
 // `stringTableCount` arguments of the string-access emitters may carry this flag
 // (set when lowering for the VM target): runtime string indices that are not
 // module-table entries then fall back to LoadStringByteDynamic instead of
-// faulting (TODO-5365).
+// faulting.
 inline constexpr size_t DynamicStringTableFlag = size_t{1} << 62;
 
 using ResolveExprPathFn = std::function<std::string(const Expr &)>;
@@ -129,7 +129,7 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
     std::string &error);
 // The semanticProgram default of nullptr exists only so unit tests can
 // exercise this function's LocalMap-based dispatch logic in isolation from
-// semantic-product plumbing (TODO-5304). The sole production call site (in
+// semantic-product plumbing. The sole production call site (in
 // IrLowererLowerEmitExprTailDispatch.h) always supplies a real, non-null
 // semantic product - IrLowererLower.cpp hard-errors before lowering starts
 // when one is absent, so a null-semanticProgram call can never happen in a

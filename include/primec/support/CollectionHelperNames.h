@@ -3,7 +3,7 @@
 // vector-surface-audit: exempt
 // map-surface-audit: exempt
 // Canonical owner of every collection helper spelling the compiler matches on
-// (TODO-5350): the borrowed `_ref` helper names, the rooted same-namespace paths
+// the borrowed `_ref` helper names, the rooted same-namespace paths
 // (`/vector/...`, `/soa/...`, `/map/...`, `/array/...`, `/string/...`), and the
 // canonical `/std/collections/...` member paths. Production code must use these
 // constants instead of repeating the literals, so a rename is a one-constant
@@ -143,7 +143,7 @@ constexpr bool isTryAtHelperName(std::string_view name) { return name == "tryAt"
 constexpr bool isContainsHelperName(std::string_view name) { return name == "contains" || name == kContainsRef; }
 constexpr bool isInsertHelperName(std::string_view name) { return name == "insert" || name == kInsertRef; }
 
-// Borrowed-vector helper leaf for a `Reference<vector<T>>` receiver (TODO-5375):
+// Borrowed-vector helper leaf for a `Reference<vector<T>>` receiver:
 // `count` -> `vectorCountRef`, ... Empty when `name` is not a vector helper.
 constexpr std::string_view borrowedVectorHelperLeaf(std::string_view name) {
   if (name == "count") return "vectorCountRef";
@@ -188,7 +188,7 @@ constexpr bool isBorrowedHelperName(std::string_view name) {
          name == kToAosRef || name == kTryAtRef || name == kContainsRef || name == kInsertRef;
 }
 
-// --- Typed collection family (TODO-5374) ---
+// --- Typed collection family ---
 // The rooted family root spellings as an enum, so callers compare a family
 // instead of a string. `parseCollectionFamily` accepts exactly a family root
 // (`/vector`, not `/vector/count`); anything else is None.

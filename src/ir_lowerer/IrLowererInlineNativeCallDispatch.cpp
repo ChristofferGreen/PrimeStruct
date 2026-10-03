@@ -650,7 +650,7 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacksImpl(
     // (IrLowererCountAccessHelpers.cpp) nor the statement-expression
     // key-value count path recognizes it, so deferring it left an explicit
     // `/std/collections/map/count_ref<K, V>(location(values))` call with no
-    // emitter at all (TODO-4801). It inline-emits its stdlib definition
+    // emitter at all. It inline-emits its stdlib definition
     // below, like its `contains_ref`/`tryAt_ref` siblings.
     if (isSamePathKeyValueCountLikeCall &&
         samePathKeyValueHelperName == "count") {

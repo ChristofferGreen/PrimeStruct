@@ -204,7 +204,7 @@
   bool isOutsideEffectFreeStatement(const Expr &stmt, EffectFreeContext &ctx, bool &writesThis);
   bool isOutsideEffectFreeExpr(const Expr &expr, EffectFreeContext &ctx, bool &writesThis);
 
-  // Phase functions of validateBindingStatement (TODO-5385).
+  // Phase functions of validateBindingStatement.
   friend struct ValidateBindingState;
   PhaseStatus validateBindingPhase1(const std::vector<ParameterInfo> &params, std::unordered_map<std::string, BindingInfo> &locals, const Expr &stmt, const std::string &namespacePrefix, bool &handled, ValidateBindingState &st);
   PhaseStatus validateBindingPhase2(const std::vector<ParameterInfo> &params, std::unordered_map<std::string, BindingInfo> &locals, const Expr &stmt, const std::string &namespacePrefix, bool &handled, ValidateBindingState &st);

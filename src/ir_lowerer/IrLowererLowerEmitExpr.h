@@ -171,7 +171,7 @@
           // Vector access helpers forwarding a helper-returned vector are
           // only a struct mismatch when the helper actually yields a
           // struct; a declared scalar/string return is a valid `count(...)`
-          // operand (TODO-4806).
+          // operand.
           auto isVectorAccessPath = [](std::string path) {
             path = normalizeCollectionHelperPath(std::move(path));
             return path.rfind("/" + std::string("vector") + "/", 0) == 0 ||

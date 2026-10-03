@@ -169,7 +169,7 @@ inline bool isCanonicalSoaRefLikeHelperPath(std::string_view path) {
 
 inline bool isExperimentalSoaRefLikeHelperPath(std::string_view path) {
   const std::string canonicalPath = stripGeneratedSpecializationSuffix(path);
-  // TODO-5244: same fix as the soa_paths helpers above (TODO-5243) - these
+  // TODO-5244: same fix as the soa_paths helpers above - these
   // three comparison targets are compile-time constants, precompute once
   // instead of rebuilding them (two collectionPath() concatenations plus a
   // memberPath() concatenation) on every single call.
@@ -187,7 +187,7 @@ inline bool isExperimentalSoaRefLikeHelperPath(std::string_view path) {
 
 inline bool isExperimentalColumnarVectorSpecializedTypePath(std::string_view path) {
   // TODO-5244: same fix as isLegacyOrCanonicalSoaHelperPath()/etc. above
-  // (TODO-5243) - these three prefixes are compile-time constants, but this
+  // - these three prefixes are compile-time constants, but this
   // function is called from the same broad "is this a SoA-related path"
   // classification fan-out as its already-fixed siblings and was rebuilding
   // all three via allocation+concatenation on every call (1.00% of total

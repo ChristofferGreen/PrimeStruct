@@ -188,7 +188,7 @@ void rewriteExperimentalSoaSamePathHelperMethodExpr(
   // and routes the same way: to a user `/soa/<helper>` shadow when one is
   // visible, otherwise to the canonical /std/collections/soa/<helper>
   // wrapper. Without the soa surface in scope the no-import helper rule
-  // (TODO-5318) rejects it instead, so leave it untouched here.
+  // rejects it instead, so leave it untouched here.
   if (!expr.isMethodCall) {
     const std::string rootedPath =
         expr.namespacePrefix.empty() || expr.namespacePrefix == "/"

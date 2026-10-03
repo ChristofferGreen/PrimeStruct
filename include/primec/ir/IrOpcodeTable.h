@@ -8,7 +8,7 @@
 
 namespace primec {
 
-// Single table of IR opcodes (TODO-5361). One row per IrOpcode enumerator, in
+// Single table of IR opcodes. One row per IrOpcode enumerator, in
 // enum order: X(Name, glsl, wasm, wasmBrowser) where the flags say whether the
 // validator accepts the opcode for that target (`wasm` is the WASI profile;
 // `wasmBrowser` excludes the WASI-only I/O opcodes). The enum in Ir.h keeps

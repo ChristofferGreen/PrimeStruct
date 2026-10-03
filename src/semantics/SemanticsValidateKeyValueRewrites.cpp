@@ -620,7 +620,7 @@ void rewriteBuiltinKeyValueInsertExpr(
   const bool hasBuiltinIndexedAccess =
       !expr.isMethodCall && semantics::getBuiltinArrayAccessName(expr, builtinAccessHelper);
   // The `m.at(k)` / `m.at_unsafe(k)` method spellings take the same canonical
-  // access rewrite as the bare call (TODO-5369).
+  // access rewrite as the bare call.
   const bool isPlainAccessMethodSpelling =
       expr.isMethodCall && expr.namespacePrefix.empty() &&
       (expr.name == "at" || expr.name == "at_unsafe") &&
@@ -634,8 +634,8 @@ void rewriteBuiltinKeyValueInsertExpr(
       builtinAccessHelper == "at" || builtinAccessHelper == "at_unsafe" ||
       methodReadHelper == "at" || methodReadHelper == "at_unsafe";
   // Bare `contains(m, k)` takes the same canonical-helper rewrite as the
-  // method spelling (TODO-5370); a user-defined root `/contains` keeps the
-  // call. Bare `count(r)` on a borrowed map takes it too (TODO-5376): by-value
+  // method spelling; a user-defined root `/contains` keeps the
+  // call. Bare `count(r)` on a borrowed map takes it too: by-value
   // map counts keep their existing resolution.
   const bool isBareBorrowedCountCandidate =
       !expr.isMethodCall && expr.namespacePrefix.empty() && expr.name == "count" &&

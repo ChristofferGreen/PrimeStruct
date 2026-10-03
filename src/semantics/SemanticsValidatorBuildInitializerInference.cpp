@@ -118,7 +118,7 @@ std::string SemanticsValidator::preferredCollectionHelperResolvedPath(
   // A call already spelled as a user same-path `/soa/<helper>` shadow
   // (TODO-5295 rewrites builtin soa<T> access calls onto it) is typed by
   // that shadow's own declared return, not the canonical helper's
-  // (TODO-5307). The classifier canonicalizes bare /soa/ spellings
+  // The classifier canonicalizes bare /soa/ spellings
   // shadow-blind, so short-circuit before consulting it.
   if (collection_helpers::isRootedSoaPath(rooted) && defMap_.count(rooted) > 0) {
     return {};

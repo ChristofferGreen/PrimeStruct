@@ -217,7 +217,6 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
         rewrittenVectorMethodCall.namespacePrefix.clear();
         // array receivers keep the builtin bare array helper; only
         // vector-family receivers use the preferred vector helper
-        // (TODO-5371).
         rewrittenVectorMethodCall.name =
             collection_helpers::isCollectionFamilyRoot(matchedCollectionTypePath, collection_helpers::CollectionFamily::Array)
                 ? normalizedMethodName

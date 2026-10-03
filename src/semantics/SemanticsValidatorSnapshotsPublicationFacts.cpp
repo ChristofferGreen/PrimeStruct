@@ -516,7 +516,7 @@ void SemanticsValidator::collectPilotRoutingSemanticProductFacts() {
   if (pilotRoutingSemanticCollectorsValid_) {
     return;
   }
-  // Runs after validation, so the AST is stable (TODO-5382).
+  // Runs after validation, so the AST is stable.
   const CallSnapshotMemoScope callSnapshotMemoScope(*this);
   if (mergedWorkerPublicationFactsValid_) {
     rebindMergedWorkerPublicationFactSemanticNodeIds();

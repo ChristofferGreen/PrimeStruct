@@ -21,7 +21,7 @@ namespace primec {
 using VmHostInvoke = std::function<bool(const uint64_t *args, uint64_t &result, std::string &error)>;
 
 // Like VmHostInvoke for a function whose return kind is `string`: the host
-// returns the text and the VM stores it as a run-time string (TODO-5364).
+// returns the text and the VM stores it as a run-time string.
 using VmHostStringInvoke = std::function<bool(const uint64_t *args, std::string &result, std::string &error)>;
 
 struct VmHostBinding {

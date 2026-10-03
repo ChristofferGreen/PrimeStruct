@@ -118,7 +118,7 @@ CompatSpellingDecision classifyCollectionHelperSpelling(
   // surfaced by ordinary type checking rather than silently preferred.
   // The semantics validator's preferredCollectionHelperResolvedPath()
   // no longer asks this classifier when a call is already spelled as an
-  // existing /soa/<helper> shadow (TODO-5307): such a call runs the
+  // existing /soa/<helper> shadow: such a call runs the
   // shadow, so its result is typed by the shadow's declared return.
   // Method-shape shadow handling stays shadow-first: that is
   // Mechanism B's visible-same-path escape (pinned by :4059).

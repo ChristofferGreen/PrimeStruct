@@ -293,7 +293,7 @@ struct ScannedFunctionRecord {
 
 // Walks up from a starting directory looking for stdlib/std/collections.
 // Shared so file discovery has exactly one "where is the collections
-// directory" implementation (TODO-4685).
+// directory" implementation.
 std::optional<std::filesystem::path> findStdlibCollectionsDirectory() {
   const std::filesystem::path relativeDir =
       std::filesystem::path("stdlib") / "std" / "collections";
@@ -1597,7 +1597,7 @@ const StdlibSurfaceMetadata *findStdlibSurfaceMetadataByResolvedPathUncached(std
 }  // namespace
 
 const StdlibSurfaceMetadata *findStdlibSurfaceMetadataByResolvedPath(std::string_view path) {
-  // Memoized in the current compilation context (TODO-5383); entries point into
+  // Memoized in the current compilation context; entries point into
   // the process-wide registry and are inserted under a SystemHeapScope, so no
   // reset callback is needed.
   std::unordered_map<std::string, const StdlibSurfaceMetadata *> &cache =

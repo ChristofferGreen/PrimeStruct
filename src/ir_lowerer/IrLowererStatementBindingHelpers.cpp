@@ -1065,7 +1065,7 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
       if ((normalizedExplicitTypeName == "Reference" || normalizedExplicitTypeName == "Pointer" ||
            normalizedExplicitTypeName == "array") &&
           explicitTemplateArgs.size() > 1) {
-        // "array" here also catches Slice<T, Capability> (TODO-5250), which
+        // "array" here also catches Slice<T, Capability>, which
         // normalizes to "array" but keeps its raw AST transform name
         // "Slice" - normalizeCollectionBindingTypeName maps it before this
         // check runs.

@@ -24,7 +24,7 @@ namespace {
 // binding lookup/inference pass, re-splitting and re-allocating substrings
 // of the exact same type-name strings (e.g. "vector<i32>") thousands of
 // times per compile. They are memoized in the current CompileContext
-// (TODO-5359): definition validation runs multiple SemanticsValidator
+// definition validation runs multiple SemanticsValidator
 // instances concurrently via std::async (see
 // SemanticsValidatorPassesDefinitions.cpp), and a worker thread without an
 // installed context uses its own per-thread default context, so no cache is

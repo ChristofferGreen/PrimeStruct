@@ -164,7 +164,7 @@ bool SemanticsValidator::buildImportAliases() {
     // recorded diagnostic, and the records are published together by
     // finalizeCollectedStructuredDiagnostics() at the end. Returning false
     // here aborted the loop on the first record and dropped the whole
-    // record list (TODO-5305).
+    // record list.
     return true;
   };
 

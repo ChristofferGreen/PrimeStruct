@@ -25,7 +25,7 @@
 #endif
 
 // TODO-5233/TODO-5234/TODO-5235: see docs/CompilerArenaAllocator.md for the
-// full design history. Short version: an earlier iteration (TODO-5234)
+// full design history. Short version: an earlier iteration
 // reset the arena's free lists/bump cursor at every new compile scope (so a
 // long-lived test binary's arena wouldn't grow across thousands of
 // TEST_CASEs), and that reset step reproducibly corrupted function-local
@@ -49,7 +49,7 @@
 //     memory in the first place and a reset can never invalidate it.
 //   - Persistent caches live in the per-compilation CompileContext
 //     (TODO-5359/5383) and are destroyed with the compilation; there is no
-//     reset-callback registry any more (TODO-5360).
+//     reset-callback registry any more.
 //
 // With these in place, resets are safe: the arena now resets whenever
 // the outermost ScopedCompileArena on a thread is destroyed, which CLI

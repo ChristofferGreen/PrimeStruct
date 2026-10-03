@@ -2896,6 +2896,20 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_collection_family_compares_self_test PROPERTIES TIMEOUT 60)
 
+  # TODO-5396: TODO-id citations in production comments must resolve.
+  add_test(
+    NAME PrimeStruct_todo_references
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/check_todo_references.py
+            --root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_todo_references PROPERTIES TIMEOUT 60)
+  add_test(
+    NAME PrimeStruct_todo_references_self_test
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/scripts/test_check_todo_references.py
+            --repo-root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_todo_references_self_test PROPERTIES TIMEOUT 60)
+
   # TODO-5354: guard CTest registration of the doctest binaries and keep the
   # generated test inventory current.
   add_test(

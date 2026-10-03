@@ -87,7 +87,7 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn, std::vecto
   for (const auto &transform : def.transforms) {
     if (transform.name == "host") {
       // Host declarations have no body to return from; semantics requires it
-      // to be empty and the signature to be primitive (TODO-5345).
+      // to be empty and the signature to be primitive.
       allowNoReturn = true;
       if (!def.templateArgs.empty()) {
         return fail("host definition cannot be generic");

@@ -800,7 +800,7 @@ bool resolveExperimentalKeyValueReceiverTemplateArgs(const Expr *receiverExpr,
       return true;
     }
   }
-  // A borrowed `Reference<map<K, V>>` receiver (TODO-5376): the `_ref` helpers
+  // A borrowed `Reference<map<K, V>>` receiver: the `_ref` helpers
   // take the key/value types from the pointee.
   if (normalizeBindingTypeName(receiverInfo.typeName) == "Reference" ||
       normalizeBindingTypeName(receiverInfo.typeName) == "Pointer") {

@@ -146,7 +146,7 @@ struct ArrayVectorAccessTargetInfo {
   // definition of this same primec::ir_lowerer type: both headers declare the
   // SAME type in the SAME namespace, so any member that exists in only one of
   // them is an ODR violation, not a harmless mirror drift. This member
-  // (TODO-4628) was added to the src-side struct only, leaving this copy 56
+  // was added to the src-side struct only, leaving this copy 56
   // bytes where the library's is 64 - so every test that declared this type by
   // value and called a real lowerer function that returns it wrote 8 bytes past
   // its own stack slot. Found by TODO-5235's ASan poison audit as a

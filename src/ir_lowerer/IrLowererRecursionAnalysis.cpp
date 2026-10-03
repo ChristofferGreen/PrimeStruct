@@ -358,7 +358,7 @@ std::unordered_set<std::string> computeRealCallEligibleDefinitionPaths(const Pro
   // buildInlineCallParameterList. hasOnlyScalarParameters cannot see it,
   // and the real-call body lowering only binds `def.parameters`, so such a
   // helper lowered as a real Call fails with "does not know identifier:
-  // this" (TODO-5316). Keep them on the inline path, matching the existing
+  // this". Keep them on the inline path, matching the existing
   // scalar-parameters-only real-call rule; `static` helpers have no `this`.
   std::unordered_set<std::string> structNames;
   for (const Definition &def : program.definitions) {

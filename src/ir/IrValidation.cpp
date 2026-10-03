@@ -38,7 +38,7 @@ const char *wasmTargetName(IrValidationTarget target) {
   return "wasm";
 }
 
-// Both predicates read the per-target flags of the opcode table (TODO-5361).
+// Both predicates read the per-target flags of the opcode table.
 bool isGlslOpcodeAllowed(IrOpcode op) {
   const IrOpcodeInfo *info = irOpcodeInfo(op);
   return info != nullptr && info->glsl;

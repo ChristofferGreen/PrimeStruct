@@ -19,7 +19,7 @@ struct StdlibSurfaceMetadata;
 // When no context is installed, current() returns a per-thread default context,
 // so helpers keep working for callers that never install one (unit tests,
 // embedding hosts calling single stages). The default is removed at the end of
-// the migration (TODO-5360).
+// the migration.
 class CompileContext {
 public:
   // Memoized pure functions of their string argument (binding type names).

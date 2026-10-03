@@ -678,7 +678,7 @@ std::string inferStructPathFromNameExpr(const Expr &expr, const LocalMap &locals
         // (mangleTemplateTypeArgsSuffix); the unprefixed
         // templateSpecializationSuffixForStructType hash never names a real
         // key/value storage specialization, so args<Reference<map<K, V>>> pack
-        // elements failed struct-parameter matching (TODO-4801).
+        // elements failed struct-parameter matching.
         return storageRoot + mangleTemplateTypeArgsSuffix({keyType, valueType});
       }
     }

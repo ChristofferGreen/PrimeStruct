@@ -327,11 +327,11 @@ bool parseBindingInfo(const Expr &expr,
     if (transformName == "Slice") {
       // TODO-5250: Slice<T, Capability> desugars to array<T> - it has the
       // exact same physical representation slice(...) already produces
-      // (TODO-4608), so every existing array<T> consumer needs no
+      // so every existing array<T> consumer needs no
       // Slice-specific handling (see normalizeBindingTypeName/
       // normalizeCollectionBindingTypeName's "Slice" -> "array" mapping).
       // Capability is tracked the same way as Reference<T, Capability>
-      // (TODO-5249). TODO-5251 extended real support to local bindings
+      // TODO-5251 extended real support to local bindings
       // (verified end to end, both backends); struct fields and return
       // types remain unaudited.
       if (!allowCapabilityArg) {

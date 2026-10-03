@@ -967,7 +967,7 @@
                                                 bool &hasMethodReceiverIndex,
                                                 size_t &methodReceiverIndex);
 
-  // Phase functions of validateExpr (TODO-5385).
+  // Phase functions of validateExpr.
   friend struct ValidateExprCallState;
   PhaseStatus validateExprCallPhase1(const std::vector<ParameterInfo> &params, const std::unordered_map<std::string, BindingInfo> &locals, const Expr &expr, ValidateExprCallState &st);
   PhaseStatus validateExprCallPhase2(const std::vector<ParameterInfo> &params, const std::unordered_map<std::string, BindingInfo> &locals, const Expr &expr, ValidateExprCallState &st);

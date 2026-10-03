@@ -30,7 +30,7 @@ namespace primec::semantics {
 struct TypeResolutionGraph;
 struct TypeResolutionGraphNode;
 
-// Result of a phase function of a split giant validation function (TODO-5385).
+// Result of a phase function of a split giant validation function.
 enum class PhaseStatus { Continue, Done };
 struct ValidateExprCallState;
 

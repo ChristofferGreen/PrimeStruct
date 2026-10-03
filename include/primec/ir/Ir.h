@@ -128,7 +128,7 @@ enum class IrOpcode : uint8_t {
   // import's parameters, pushes its result unless it returns void. VM only.
   CallHost,
   // Pops a byte position, then a string index (module table or dynamic VM
-  // string), and pushes the byte at that position. VM only (TODO-5364).
+  // string), and pushes the byte at that position. VM only.
   LoadStringByteDynamic,
 };
 

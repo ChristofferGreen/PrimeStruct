@@ -113,7 +113,7 @@ bool hasVisibleExperimentalSoaSamePathHelper(const Program &program,
     }
     // A shadow declared over the public soa<T> surface counts too;
     // otherwise method sugar on a soa<T> receiver bypasses it and is
-    // rewritten to the canonical templated helper (TODO-5295).
+    // rewritten to the canonical templated helper.
     const Expr &receiverParam = def.parameters.front();
     if (extractExperimentalSoaVectorBinding(receiverParam).has_value()) {
       return true;

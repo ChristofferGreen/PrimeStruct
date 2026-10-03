@@ -1699,7 +1699,7 @@ bool runCompilePipeline(const Options &options,
                         CompilePipelineErrorStage &errorStage,
                         std::string &error,
                         CompilePipelineDiagnosticInfo *diagnosticInfo) {
-  // One compilation, one context (TODO-5359).
+  // One compilation, one context.
   CompileContext compileContext;
   const CompileContext::Scope compileContextScope(compileContext);
   errorStage = CompilePipelineErrorStage::None;

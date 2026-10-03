@@ -100,7 +100,6 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5396 | Retire stale TODO-id references in source comments | ready | docs-hygiene |
 | TODO-5398 | Archive or fold the orphaned long-form docs | deferred | docs-hygiene |
 | TODO-5400 | Table-drive the builtin math-name classifiers | ready | lowerer-structure |
 | TODO-5401 | Collapse duplicate std::function callback aliases | ready | lowerer-structure |
@@ -122,7 +121,6 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5396 (track: docs-hygiene): Retire stale TODO-id references in source comments (surface: src/include comments).
 - TODO-5400 (track: lowerer-structure): Table-drive the builtin math-name classifiers (surface: IrLowererBuiltinNameHelpers.cpp).
 - TODO-5401 (track: lowerer-structure): Collapse duplicate std::function callback aliases (surface: *Fn alias headers).
 - TODO-5407 (track: diagnostics): Route benchmark instrumentation through one sink.
@@ -131,7 +129,6 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5396 - Retire stale TODO-id references in source comments.
 4. TODO-5400 - Table-drive the builtin math-name classifiers.
 5. TODO-5401 - Collapse duplicate std::function callback aliases.
 6. TODO-5407 - Route benchmark instrumentation through one sink.
@@ -143,7 +140,7 @@ of sync with them.
 ### Priority Lanes
 
 - Embedding (must support iOS): TODO-5348 (needs macOS)
-- Docs hygiene: TODO-5396 -> TODO-5398
+- Docs hygiene: TODO-5398
 - Lowerer structure: TODO-5400, TODO-5401 -> TODO-5402 -> TODO-5403 -> TODO-5404
 - Collection resolution: TODO-5405 -> TODO-5406
 - Diagnostics: TODO-5407 -> TODO-5408
@@ -157,18 +154,6 @@ of sync with them.
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 ### Task Blocks
-
-- [ ] TODO-5396: Retire stale TODO-id references in source comments
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-03
-  - phase: Code hygiene
-  - parallel_track: docs-hygiene
-  - scope: 413 comment lines under src/ and include/ cite TODO ids that are closed (TODO-5235 x33, TODO-4724 x23, TODO-5293 x14, TODO-5302 x13, ...). A reader cannot tell a live plan from history. Rewrite each as a plain explanation of the current behavior (or `see docs/todo_archive/<month>.md` when the history matters) and add `scripts/check_todo_references.py` (ctest) that fails when a comment cites an id not present in `docs/todo.md`, with an allowlist for deliberate archive citations.
-  - acceptance:
-    - zero closed-id citations outside the allowlist; the audit script has a self-test
-    - no behavior change; full release gate green
-  - stop_rule: do not delete a comment whose explanation is only the TODO id; rewrite it or cite the archive.
 
 - [ ] TODO-5398: Archive or fold the orphaned long-form docs
   - owner: ai

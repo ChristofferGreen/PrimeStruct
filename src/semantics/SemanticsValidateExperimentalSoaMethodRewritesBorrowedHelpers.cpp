@@ -459,7 +459,6 @@ bool normalizeExperimentalSoaBorrowedHelperMethodCall(
       borrowedReceiver.has_value()) {
     // Only count/get/ref/to_aos have borrowed (`_ref`) wrapper helpers; other
     // surface members (push, reserve) must not be mapped to to_aos_ref
-    // (TODO-5377).
     if (!collection_helpers::isCountHelperName(normalizedMethodName) &&
         !collection_helpers::isGetHelperName(normalizedMethodName) &&
         !collection_helpers::isRefHelperName(normalizedMethodName) &&

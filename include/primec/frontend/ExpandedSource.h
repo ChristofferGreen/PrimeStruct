@@ -70,7 +70,7 @@ inline std::uint64_t nextExpandedSourceGeneration() {
 
 class SourceLocationMapper;
 
-// Per-source cache of the SourceLocationMapper (TODO-5359). Building a mapper
+// Per-source cache of the SourceLocationMapper. Building a mapper
 // sorts every segment of the import-expanded source, and the free mapping
 // functions are called once per emitted instruction, so the mapper is built
 // once per source and reused. The cache is owned by the source it describes:
