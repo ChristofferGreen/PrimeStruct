@@ -1,11 +1,13 @@
 #include "SemanticsValidationBenchmarkOrchestration.h"
 
+#include "primec/support/BenchmarkSink.h"
 #include "primec/support/CompileContext.h"
 
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <limits>
+#include <sstream>
 
 #if defined(__APPLE__)
 #include <mach/mach.h>
@@ -13,8 +15,6 @@
 #elif defined(__linux__)
 #include <malloc.h>
 #include <unistd.h>
-#include <sstream>
-#include "primec/support/BenchmarkSink.h"
 #endif
 
 namespace primec::semantics {
