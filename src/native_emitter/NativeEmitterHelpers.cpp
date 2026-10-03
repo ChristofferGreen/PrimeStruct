@@ -1,5 +1,8 @@
 #include "NativeEmitterInternals.h"
 
+#include "primec/ir/IrCfg.h"
+#include "primec/ir/IrOpcodeTable.h"
+
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
@@ -14,460 +17,46 @@
 #endif
 
 namespace primec::native_emitter {
+namespace {
+
+std::string cfgErrorMessage(const IrCfgError &cfgError) {
+  const IrOpcodeInfo *info = irOpcodeInfo(cfgError.opcode);
+  const std::string opcodeName = info != nullptr ? info->name : "Unknown";
+  switch (cfgError.kind) {
+    case IrCfgErrorKind::InvalidJumpTarget:
+      return "native backend detected invalid jump target";
+    case IrCfgErrorKind::InconsistentDepth:
+      return "native backend detected inconsistent stack depth at instruction " +
+             std::to_string(cfgError.instructionIndex) + " (" + opcodeName + ")";
+    case IrCfgErrorKind::None:
+    case IrCfgErrorKind::UnsupportedOpcode:
+    case IrCfgErrorKind::StackUnderflow:
+    case IrCfgErrorKind::InvalidDup:
+      break;
+  }
+  return "native backend detected invalid stack usage at instruction " +
+         std::to_string(cfgError.instructionIndex) + " (" + opcodeName + ")";
+}
+
+} // namespace
+
+// The entry block starts at fn.parameterCount: a function reached through a
+// real Call/CallVoid finds its arguments already on the shared value stack and
+// its first instructions are StoreLocals that pop them (see the Call handling in
+// NativeEmitterFunctionEmit.cpp). Block structure and depth propagation live in
+// the shared CFG (primec/ir/IrCfg.h).
 bool computeMaxStackDepth(const IrFunction &fn, const IrModule &module, int64_t &maxDepth, std::string &error) {
   if (fn.instructions.empty()) {
     error = "native backend requires at least one instruction";
     return false;
   }
-  auto opcodeName = [](IrOpcode op) -> const char * {
-    switch (op) {
-      case IrOpcode::PushI32:
-        return "PushI32";
-      case IrOpcode::PushI64:
-        return "PushI64";
-      case IrOpcode::PushArgc:
-        return "PushArgc";
-      case IrOpcode::LoadLocal:
-        return "LoadLocal";
-      case IrOpcode::StoreLocal:
-        return "StoreLocal";
-      case IrOpcode::AddressOfLocal:
-        return "AddressOfLocal";
-      case IrOpcode::LoadIndirect:
-        return "LoadIndirect";
-      case IrOpcode::StoreIndirect:
-        return "StoreIndirect";
-      case IrOpcode::Dup:
-        return "Dup";
-      case IrOpcode::Pop:
-        return "Pop";
-      case IrOpcode::AddI32:
-        return "AddI32";
-      case IrOpcode::SubI32:
-        return "SubI32";
-      case IrOpcode::MulI32:
-        return "MulI32";
-      case IrOpcode::DivI32:
-        return "DivI32";
-      case IrOpcode::NegI32:
-        return "NegI32";
-      case IrOpcode::AddI64:
-        return "AddI64";
-      case IrOpcode::SubI64:
-        return "SubI64";
-      case IrOpcode::MulI64:
-        return "MulI64";
-      case IrOpcode::DivI64:
-        return "DivI64";
-      case IrOpcode::DivU64:
-        return "DivU64";
-      case IrOpcode::NegI64:
-        return "NegI64";
-      case IrOpcode::CmpEqI32:
-        return "CmpEqI32";
-      case IrOpcode::CmpNeI32:
-        return "CmpNeI32";
-      case IrOpcode::CmpLtI32:
-        return "CmpLtI32";
-      case IrOpcode::CmpLeI32:
-        return "CmpLeI32";
-      case IrOpcode::CmpGtI32:
-        return "CmpGtI32";
-      case IrOpcode::CmpGeI32:
-        return "CmpGeI32";
-      case IrOpcode::CmpEqI64:
-        return "CmpEqI64";
-      case IrOpcode::CmpNeI64:
-        return "CmpNeI64";
-      case IrOpcode::CmpLtI64:
-        return "CmpLtI64";
-      case IrOpcode::CmpLeI64:
-        return "CmpLeI64";
-      case IrOpcode::CmpGtI64:
-        return "CmpGtI64";
-      case IrOpcode::CmpGeI64:
-        return "CmpGeI64";
-      case IrOpcode::CmpLtU64:
-        return "CmpLtU64";
-      case IrOpcode::CmpLeU64:
-        return "CmpLeU64";
-      case IrOpcode::CmpGtU64:
-        return "CmpGtU64";
-      case IrOpcode::CmpGeU64:
-        return "CmpGeU64";
-      case IrOpcode::JumpIfZero:
-        return "JumpIfZero";
-      case IrOpcode::Jump:
-        return "Jump";
-      case IrOpcode::ReturnVoid:
-        return "ReturnVoid";
-      case IrOpcode::ReturnI32:
-        return "ReturnI32";
-      case IrOpcode::ReturnI64:
-        return "ReturnI64";
-      case IrOpcode::ReturnF32:
-        return "ReturnF32";
-      case IrOpcode::ReturnF64:
-        return "ReturnF64";
-      case IrOpcode::PrintI32:
-        return "PrintI32";
-      case IrOpcode::PrintI64:
-        return "PrintI64";
-      case IrOpcode::PrintU64:
-        return "PrintU64";
-      case IrOpcode::PrintString:
-        return "PrintString";
-      case IrOpcode::PrintStringDynamic:
-        return "PrintStringDynamic";
-      case IrOpcode::PrintArgv:
-        return "PrintArgv";
-      case IrOpcode::PrintArgvUnsafe:
-        return "PrintArgvUnsafe";
-      case IrOpcode::LoadStringByte:
-        return "LoadStringByte";
-      case IrOpcode::LoadStringLength:
-        return "LoadStringLength";
-      case IrOpcode::FileOpenRead:
-        return "FileOpenRead";
-      case IrOpcode::FileOpenWrite:
-        return "FileOpenWrite";
-      case IrOpcode::FileOpenAppend:
-        return "FileOpenAppend";
-      case IrOpcode::FileOpenReadDynamic:
-        return "FileOpenReadDynamic";
-      case IrOpcode::FileOpenWriteDynamic:
-        return "FileOpenWriteDynamic";
-      case IrOpcode::FileOpenAppendDynamic:
-        return "FileOpenAppendDynamic";
-      case IrOpcode::FileReadByte:
-        return "FileReadByte";
-      case IrOpcode::FileClose:
-        return "FileClose";
-      case IrOpcode::FileFlush:
-        return "FileFlush";
-      case IrOpcode::FileWriteI32:
-        return "FileWriteI32";
-      case IrOpcode::FileWriteI64:
-        return "FileWriteI64";
-      case IrOpcode::FileWriteU64:
-        return "FileWriteU64";
-      case IrOpcode::FileWriteString:
-        return "FileWriteString";
-      case IrOpcode::FileWriteStringDynamic:
-        return "FileWriteStringDynamic";
-      case IrOpcode::FileWriteByte:
-        return "FileWriteByte";
-      case IrOpcode::FileWriteNewline:
-        return "FileWriteNewline";
-      case IrOpcode::Call:
-        return "Call";
-      case IrOpcode::CallVoid:
-        return "CallVoid";
-      case IrOpcode::HeapAlloc:
-        return "HeapAlloc";
-      case IrOpcode::HeapFree:
-        return "HeapFree";
-      case IrOpcode::HeapRealloc:
-        return "HeapRealloc";
-      case IrOpcode::PushF32:
-        return "PushF32";
-      case IrOpcode::PushF64:
-        return "PushF64";
-      case IrOpcode::AddF32:
-        return "AddF32";
-      case IrOpcode::SubF32:
-        return "SubF32";
-      case IrOpcode::MulF32:
-        return "MulF32";
-      case IrOpcode::DivF32:
-        return "DivF32";
-      case IrOpcode::NegF32:
-        return "NegF32";
-      case IrOpcode::AddF64:
-        return "AddF64";
-      case IrOpcode::SubF64:
-        return "SubF64";
-      case IrOpcode::MulF64:
-        return "MulF64";
-      case IrOpcode::DivF64:
-        return "DivF64";
-      case IrOpcode::NegF64:
-        return "NegF64";
-      case IrOpcode::CmpEqF32:
-        return "CmpEqF32";
-      case IrOpcode::CmpNeF32:
-        return "CmpNeF32";
-      case IrOpcode::CmpLtF32:
-        return "CmpLtF32";
-      case IrOpcode::CmpLeF32:
-        return "CmpLeF32";
-      case IrOpcode::CmpGtF32:
-        return "CmpGtF32";
-      case IrOpcode::CmpGeF32:
-        return "CmpGeF32";
-      case IrOpcode::CmpEqF64:
-        return "CmpEqF64";
-      case IrOpcode::CmpNeF64:
-        return "CmpNeF64";
-      case IrOpcode::CmpLtF64:
-        return "CmpLtF64";
-      case IrOpcode::CmpLeF64:
-        return "CmpLeF64";
-      case IrOpcode::CmpGtF64:
-        return "CmpGtF64";
-      case IrOpcode::CmpGeF64:
-        return "CmpGeF64";
-      case IrOpcode::ConvertI32ToF32:
-        return "ConvertI32ToF32";
-      case IrOpcode::ConvertI32ToF64:
-        return "ConvertI32ToF64";
-      case IrOpcode::ConvertI64ToF32:
-        return "ConvertI64ToF32";
-      case IrOpcode::ConvertI64ToF64:
-        return "ConvertI64ToF64";
-      case IrOpcode::ConvertU64ToF32:
-        return "ConvertU64ToF32";
-      case IrOpcode::ConvertU64ToF64:
-        return "ConvertU64ToF64";
-      case IrOpcode::ConvertF32ToI32:
-        return "ConvertF32ToI32";
-      case IrOpcode::ConvertF32ToI64:
-        return "ConvertF32ToI64";
-      case IrOpcode::ConvertF32ToU64:
-        return "ConvertF32ToU64";
-      case IrOpcode::ConvertF64ToI32:
-        return "ConvertF64ToI32";
-      case IrOpcode::ConvertF64ToI64:
-        return "ConvertF64ToI64";
-      case IrOpcode::ConvertF64ToU64:
-        return "ConvertF64ToU64";
-      case IrOpcode::ConvertF32ToF64:
-        return "ConvertF32ToF64";
-      case IrOpcode::ConvertF64ToF32:
-        return "ConvertF64ToF32";
-      default:
-        return "Unknown";
-    }
-  };
-  auto stackDelta = [&module](const IrInstruction &inst) -> int32_t {
-    const IrOpcode op = inst.op;
-    switch (op) {
-      case IrOpcode::PushI32:
-      case IrOpcode::PushI64:
-      case IrOpcode::PushF32:
-      case IrOpcode::PushF64:
-      case IrOpcode::PushArgc:
-      case IrOpcode::LoadLocal:
-      case IrOpcode::AddressOfLocal:
-        return 1;
-      case IrOpcode::StoreLocal:
-      case IrOpcode::Pop:
-        return -1;
-      case IrOpcode::LoadIndirect:
-      case IrOpcode::HeapAlloc:
-        return 0;
-      case IrOpcode::HeapRealloc:
-        return -1;
-      case IrOpcode::HeapFree:
-        return -1;
-      case IrOpcode::StoreIndirect:
-        return -1;
-      case IrOpcode::Dup:
-        return 1;
-      case IrOpcode::AddI32:
-      case IrOpcode::SubI32:
-      case IrOpcode::MulI32:
-      case IrOpcode::DivI32:
-      case IrOpcode::AddI64:
-      case IrOpcode::SubI64:
-      case IrOpcode::MulI64:
-      case IrOpcode::DivI64:
-      case IrOpcode::DivU64:
-      case IrOpcode::AddF32:
-      case IrOpcode::SubF32:
-      case IrOpcode::MulF32:
-      case IrOpcode::DivF32:
-      case IrOpcode::AddF64:
-      case IrOpcode::SubF64:
-      case IrOpcode::MulF64:
-      case IrOpcode::DivF64:
-      case IrOpcode::CmpEqI32:
-      case IrOpcode::CmpNeI32:
-      case IrOpcode::CmpLtI32:
-      case IrOpcode::CmpLeI32:
-      case IrOpcode::CmpGtI32:
-      case IrOpcode::CmpGeI32:
-      case IrOpcode::CmpEqI64:
-      case IrOpcode::CmpNeI64:
-      case IrOpcode::CmpLtI64:
-      case IrOpcode::CmpLeI64:
-      case IrOpcode::CmpGtI64:
-      case IrOpcode::CmpGeI64:
-      case IrOpcode::CmpLtU64:
-      case IrOpcode::CmpLeU64:
-      case IrOpcode::CmpGtU64:
-      case IrOpcode::CmpGeU64:
-      case IrOpcode::CmpEqF32:
-      case IrOpcode::CmpNeF32:
-      case IrOpcode::CmpLtF32:
-      case IrOpcode::CmpLeF32:
-      case IrOpcode::CmpGtF32:
-      case IrOpcode::CmpGeF32:
-      case IrOpcode::CmpEqF64:
-      case IrOpcode::CmpNeF64:
-      case IrOpcode::CmpLtF64:
-      case IrOpcode::CmpLeF64:
-      case IrOpcode::CmpGtF64:
-      case IrOpcode::CmpGeF64:
-        return -1;
-      case IrOpcode::NegI32:
-      case IrOpcode::NegI64:
-      case IrOpcode::NegF32:
-      case IrOpcode::NegF64:
-      case IrOpcode::ConvertI32ToF32:
-      case IrOpcode::ConvertI32ToF64:
-      case IrOpcode::ConvertI64ToF32:
-      case IrOpcode::ConvertI64ToF64:
-      case IrOpcode::ConvertU64ToF32:
-      case IrOpcode::ConvertU64ToF64:
-      case IrOpcode::ConvertF32ToI32:
-      case IrOpcode::ConvertF32ToI64:
-      case IrOpcode::ConvertF32ToU64:
-      case IrOpcode::ConvertF64ToI32:
-      case IrOpcode::ConvertF64ToI64:
-      case IrOpcode::ConvertF64ToU64:
-      case IrOpcode::ConvertF32ToF64:
-      case IrOpcode::ConvertF64ToF32:
-        return 0;
-      case IrOpcode::JumpIfZero:
-        return -1;
-      case IrOpcode::Jump:
-        return 0;
-      case IrOpcode::ReturnVoid:
-        return 0;
-      case IrOpcode::ReturnI32:
-      case IrOpcode::ReturnI64:
-      case IrOpcode::ReturnF32:
-      case IrOpcode::ReturnF64:
-        return -1;
-      case IrOpcode::PrintI32:
-      case IrOpcode::PrintI64:
-      case IrOpcode::PrintU64:
-        return -1;
-      case IrOpcode::PrintString:
-        return 0;
-      case IrOpcode::PrintStringDynamic:
-        return -1;
-      case IrOpcode::PrintArgv:
-      case IrOpcode::PrintArgvUnsafe:
-        return -1;
-      case IrOpcode::LoadStringByte:
-      case IrOpcode::LoadStringLength:
-        return 0;
-      case IrOpcode::FileOpenRead:
-      case IrOpcode::FileOpenWrite:
-      case IrOpcode::FileOpenAppend:
-        return 1;
-      case IrOpcode::FileOpenReadDynamic:
-      case IrOpcode::FileOpenWriteDynamic:
-      case IrOpcode::FileOpenAppendDynamic:
-        return 0;
-      case IrOpcode::FileReadByte:
-        return 0;
-      case IrOpcode::FileClose:
-      case IrOpcode::FileFlush:
-        return 0;
-      case IrOpcode::FileWriteString:
-      case IrOpcode::FileWriteNewline:
-        return 0;
-      case IrOpcode::FileWriteI32:
-      case IrOpcode::FileWriteI64:
-      case IrOpcode::FileWriteU64:
-      case IrOpcode::FileWriteStringDynamic:
-      case IrOpcode::FileWriteByte:
-        return -1;
-      case IrOpcode::Call:
-      case IrOpcode::CallVoid: {
-        int64_t consumed = 0;
-        if (inst.imm < module.functions.size()) {
-          consumed = static_cast<int64_t>(module.functions[static_cast<size_t>(inst.imm)].parameterCount);
-        }
-        const int64_t produced = (op == IrOpcode::Call) ? 1 : 0;
-        return static_cast<int32_t>(produced - consumed);
-      }
-      default:
-        return 0;
-    }
-  };
-  const int64_t kUnset = std::numeric_limits<int64_t>::min();
-  std::vector<int64_t> depth(fn.instructions.size(), kUnset);
-  std::vector<size_t> worklist;
-  // A function reached via a real Call/CallVoid is entered with its
-  // parameters already sitting on the shared value stack - the caller
-  // pushes them via ordinary expression evaluation before `call`, and the
-  // callee's own first instructions are StoreLocal ops that pop them off
-  // (see NativeEmitterFunctionEmit.cpp's Call/CallVoid and StoreLocal
-  // handling). Seeding the simulated stack at 0 regardless of
-  // parameterCount made this checker reject every real-called
-  // parameterized function's entry StoreLocal as an underflow.
-  depth[0] = static_cast<int64_t>(fn.parameterCount);
-  worklist.push_back(0);
-  maxDepth = 0;
-
-  while (!worklist.empty()) {
-    size_t index = worklist.back();
-    worklist.pop_back();
-    int64_t currentDepth = depth[index];
-    maxDepth = std::max(maxDepth, currentDepth);
-    const auto &inst = fn.instructions[index];
-    int64_t nextDepth = currentDepth + stackDelta(inst);
-    if (nextDepth < 0) {
-      error = "native backend detected invalid stack usage at instruction " + std::to_string(index) + " (" +
-              opcodeName(inst.op) + ")";
-      return false;
-    }
-    maxDepth = std::max(maxDepth, nextDepth);
-
-    auto pushSuccessor = [&](size_t nextIndex) -> bool {
-      if (nextIndex >= fn.instructions.size()) {
-        return true;
-      }
-      if (depth[nextIndex] == kUnset) {
-        depth[nextIndex] = nextDepth;
-        worklist.push_back(nextIndex);
-        return true;
-      }
-      if (depth[nextIndex] != nextDepth) {
-        error = "native backend detected inconsistent stack depth at instruction " + std::to_string(nextIndex) + " (" +
-                opcodeName(fn.instructions[nextIndex].op) + ")";
-        return false;
-      }
-      return true;
-    };
-
-    if (inst.op == IrOpcode::ReturnVoid || inst.op == IrOpcode::ReturnI32 || inst.op == IrOpcode::ReturnI64 ||
-        inst.op == IrOpcode::ReturnF32 || inst.op == IrOpcode::ReturnF64) {
-      continue;
-    }
-    if (inst.op == IrOpcode::Jump || inst.op == IrOpcode::JumpIfZero) {
-      if (static_cast<size_t>(inst.imm) > fn.instructions.size()) {
-        error = "native backend detected invalid jump target";
-        return false;
-      }
-      if (!pushSuccessor(static_cast<size_t>(inst.imm))) {
-        return false;
-      }
-      if (inst.op == IrOpcode::JumpIfZero) {
-        if (!pushSuccessor(index + 1)) {
-          return false;
-        }
-      }
-      continue;
-    }
-    if (!pushSuccessor(index + 1)) {
-      return false;
-    }
+  IrCfg cfg;
+  IrCfgError cfgError;
+  if (!buildIrCfg(fn, module, cfg, cfgError)) {
+    error = cfgErrorMessage(cfgError);
+    return false;
   }
+  maxDepth = cfg.maxStackDepth;
   return true;
 }
 

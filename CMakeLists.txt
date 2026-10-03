@@ -727,7 +727,7 @@ endif()
 
 # IR container pieces a runtime-only host needs: bytecode (de)serialization and
 # VM-target validation. Deliberately free of parser/semantics/lowerer code.
-add_library(primec_ir_core_lib src/ir/IrSerializer.cpp src/ir/IrValidation.cpp)
+add_library(primec_ir_core_lib src/ir/IrCfg.cpp src/ir/IrSerializer.cpp src/ir/IrValidation.cpp)
 target_include_directories(primec_ir_core_lib PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
@@ -743,7 +743,7 @@ primestructEnableWarnings(primec_runtime_lib)
 
 add_library(primec_backend_emitters_lib ${PRIMESTRUCT_CODEGEN_SOURCES})
 target_include_directories(primec_backend_emitters_lib PUBLIC include)
-target_link_libraries(primec_backend_emitters_lib PUBLIC primec_frontend_lib primec_support_lib)
+target_link_libraries(primec_backend_emitters_lib PUBLIC primec_ir_core_lib primec_frontend_lib primec_support_lib)
 primestructEnableWarnings(primec_backend_emitters_lib)
 
 add_library(primec_codegen_lib INTERFACE)
@@ -917,6 +917,17 @@ if(PRIMESTRUCT_BUILD_TESTS)
   target_include_directories(PrimeStruct_misc_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
   target_link_libraries(PrimeStruct_misc_tests PRIVATE primec_ir_lib)
   primestructEnableWarnings(PrimeStruct_misc_tests)
+
+  # Shared IR CFG utilities and the stack-effect table (TODO-5430): structure
+  # tests plus a cross-check of every opcode's stack effect against the VM.
+  add_executable(PrimeStruct_ir_cfg_tests
+    tests/unit/test_main.cpp
+    tests/unit/ir_pipeline/cfg/test_ir_cfg.cpp
+    tests/unit/ir_pipeline/cfg/test_ir_cfg_stack_effects.cpp
+  )
+  target_include_directories(PrimeStruct_ir_cfg_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
+  target_link_libraries(PrimeStruct_ir_cfg_tests PRIVATE primec_ir_lib primec_runtime_lib)
+  primestructEnableWarnings(PrimeStruct_ir_cfg_tests)
 
   # Collection helper target parity matrix (TODO-5349): dump spelling vs published
   # semantic-product targets vs lowering/VM behavior for every helper call shape.
@@ -2900,6 +2911,22 @@ if(PRIMESTRUCT_BUILD_TESTS)
     PrimeStruct_misc_tests
     expected_misc_doctest_suites.txt
     ${PrimeStructMiscTestSuites}
+  )
+  set(PrimeStructIrCfgTestSuites
+    primestruct.ir.cfg
+    primestruct.ir.cfg.stack_effects
+  )
+  foreach(suite IN LISTS PrimeStructIrCfgTestSuites)
+    string(REPLACE "." "_" suiteId "${suite}")
+    set(testName "PrimeStruct_${suiteId}")
+    add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_ir_cfg_tests> "--test-suite=${suite}")
+    set_tests_properties("${testName}" PROPERTIES TIMEOUT 120)
+  endforeach()
+  addPrimeStructSuiteRegistration(
+    PrimeStruct_ir_cfg_suite_registration
+    PrimeStruct_ir_cfg_tests
+    expected_ir_cfg_doctest_suites.txt
+    ${PrimeStructIrCfgTestSuites}
   )
   addPrimeStructSuiteRegistration(
     PrimeStruct_backend_ir_suite_registration

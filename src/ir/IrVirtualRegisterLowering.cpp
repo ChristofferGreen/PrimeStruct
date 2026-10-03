@@ -1,338 +1,34 @@
 #include "primec/ir/IrVirtualRegisterLowering.h"
 
-#include <algorithm>
-#include <array>
-#include <limits>
-#include <string_view>
+#include "primec/ir/IrCfg.h"
+
+#include <string>
 #include <utility>
 #include <vector>
 
 namespace primec {
 namespace {
 
-struct StackEffect {
-  uint8_t pops = 0;
-  uint8_t pushes = 0;
-  uint8_t readsWithoutPop = 0;
-};
-
-struct BlockBuildInfo {
-  size_t start = 0;
-  size_t end = 0;
-  std::vector<size_t> successors;
-  std::vector<size_t> predecessors;
-  int64_t entryDepth = std::numeric_limits<int64_t>::min();
-  int64_t exitDepth = std::numeric_limits<int64_t>::min();
-};
-
-bool isReturnOpcode(IrOpcode op) {
-  return op == IrOpcode::ReturnVoid || op == IrOpcode::ReturnI32 || op == IrOpcode::ReturnI64 ||
-         op == IrOpcode::ReturnF32 || op == IrOpcode::ReturnF64;
-}
-
-bool isTerminatorOpcode(IrOpcode op) {
-  return op == IrOpcode::Jump || op == IrOpcode::JumpIfZero || isReturnOpcode(op);
-}
-
-bool stackEffectForOpcode(const IrInstruction &inst, const IrModule &module, StackEffect &out, std::string &error) {
-  error.clear();
-  const IrOpcode op = inst.op;
-  switch (op) {
-    case IrOpcode::PushI32:
-    case IrOpcode::PushI64:
-    case IrOpcode::PushF32:
-    case IrOpcode::PushF64:
-    case IrOpcode::PushArgc:
-    case IrOpcode::LoadLocal:
-    case IrOpcode::AddressOfLocal:
-    case IrOpcode::FileOpenRead:
-    case IrOpcode::FileOpenWrite:
-    case IrOpcode::FileOpenAppend:
-      out = {0, 1, 0};
-      return true;
-    case IrOpcode::FileOpenReadDynamic:
-    case IrOpcode::FileOpenWriteDynamic:
-    case IrOpcode::FileOpenAppendDynamic:
-      out = {1, 1, 0};
-      return true;
-    case IrOpcode::StoreLocal:
-    case IrOpcode::Pop:
-    case IrOpcode::HeapFree:
-    case IrOpcode::PrintI32:
-    case IrOpcode::PrintI64:
-    case IrOpcode::PrintU64:
-    case IrOpcode::PrintStringDynamic:
-    case IrOpcode::PrintArgv:
-    case IrOpcode::PrintArgvUnsafe:
-    case IrOpcode::JumpIfZero:
-    case IrOpcode::ReturnI32:
-    case IrOpcode::ReturnI64:
-    case IrOpcode::ReturnF32:
-    case IrOpcode::ReturnF64:
-      out = {1, 0, 0};
-      return true;
-    case IrOpcode::LoadIndirect:
-    case IrOpcode::HeapAlloc:
-    case IrOpcode::HeapRealloc:
-    case IrOpcode::NegI32:
-    case IrOpcode::NegI64:
-    case IrOpcode::NegF32:
-    case IrOpcode::NegF64:
-    case IrOpcode::ConvertI32ToF32:
-    case IrOpcode::ConvertI32ToF64:
-    case IrOpcode::ConvertI64ToF32:
-    case IrOpcode::ConvertI64ToF64:
-    case IrOpcode::ConvertU64ToF32:
-    case IrOpcode::ConvertU64ToF64:
-    case IrOpcode::ConvertF32ToI32:
-    case IrOpcode::ConvertF32ToI64:
-    case IrOpcode::ConvertF32ToU64:
-    case IrOpcode::ConvertF64ToI32:
-    case IrOpcode::ConvertF64ToI64:
-    case IrOpcode::ConvertF64ToU64:
-    case IrOpcode::ConvertF32ToF64:
-    case IrOpcode::ConvertF64ToF32:
-    case IrOpcode::FileClose:
-    case IrOpcode::FileFlush:
-    case IrOpcode::FileReadByte:
-    case IrOpcode::FileWriteString:
-    case IrOpcode::FileWriteNewline:
-    case IrOpcode::LoadStringByte:
-    case IrOpcode::LoadStringLength:
-      out = {1, 1, 0};
-      return true;
-    case IrOpcode::StoreIndirect:
-    case IrOpcode::AddI32:
-    case IrOpcode::SubI32:
-    case IrOpcode::MulI32:
-    case IrOpcode::DivI32:
-    case IrOpcode::AddI64:
-    case IrOpcode::SubI64:
-    case IrOpcode::MulI64:
-    case IrOpcode::DivI64:
-    case IrOpcode::DivU64:
-    case IrOpcode::AddF32:
-    case IrOpcode::SubF32:
-    case IrOpcode::MulF32:
-    case IrOpcode::DivF32:
-    case IrOpcode::AddF64:
-    case IrOpcode::SubF64:
-    case IrOpcode::MulF64:
-    case IrOpcode::DivF64:
-    case IrOpcode::CmpEqI32:
-    case IrOpcode::CmpNeI32:
-    case IrOpcode::CmpLtI32:
-    case IrOpcode::CmpLeI32:
-    case IrOpcode::CmpGtI32:
-    case IrOpcode::CmpGeI32:
-    case IrOpcode::CmpEqI64:
-    case IrOpcode::CmpNeI64:
-    case IrOpcode::CmpLtI64:
-    case IrOpcode::CmpLeI64:
-    case IrOpcode::CmpGtI64:
-    case IrOpcode::CmpGeI64:
-    case IrOpcode::CmpLtU64:
-    case IrOpcode::CmpLeU64:
-    case IrOpcode::CmpGtU64:
-    case IrOpcode::CmpGeU64:
-    case IrOpcode::CmpEqF32:
-    case IrOpcode::CmpNeF32:
-    case IrOpcode::CmpLtF32:
-    case IrOpcode::CmpLeF32:
-    case IrOpcode::CmpGtF32:
-    case IrOpcode::CmpGeF32:
-    case IrOpcode::CmpEqF64:
-    case IrOpcode::CmpNeF64:
-    case IrOpcode::CmpLtF64:
-    case IrOpcode::CmpLeF64:
-    case IrOpcode::CmpGtF64:
-    case IrOpcode::CmpGeF64:
-    case IrOpcode::FileWriteI32:
-    case IrOpcode::FileWriteI64:
-    case IrOpcode::FileWriteU64:
-    case IrOpcode::FileWriteStringDynamic:
-    case IrOpcode::FileWriteByte:
-      out = {2, 1, 0};
-      return true;
-    case IrOpcode::Dup:
-      out = {0, 1, 1};
-      return true;
-    case IrOpcode::Jump:
-    case IrOpcode::ReturnVoid:
-    case IrOpcode::PrintString:
-      out = {0, 0, 0};
-      return true;
-    case IrOpcode::Call:
-    case IrOpcode::CallVoid: {
-      uint32_t parameterCount = 0;
-      if (inst.imm < module.functions.size()) {
-        parameterCount = module.functions[static_cast<size_t>(inst.imm)].parameterCount;
-      }
-      if (parameterCount > std::numeric_limits<uint8_t>::max()) {
-        error = "virtual-register lowering does not support call targets with more than 255 parameters";
-        return false;
-      }
-      out = {static_cast<uint8_t>(parameterCount), static_cast<uint8_t>(op == IrOpcode::Call ? 1 : 0), 0};
-      return true;
-    }
-    default:
-      error = "unsupported opcode in virtual-register lowering";
-      return false;
+// Block structure, reachability and stack depths come from the shared CFG in
+// IrCfg.h; this file only assigns virtual registers on top of it.
+std::string formatCfgError(const IrCfgError &cfgError) {
+  switch (cfgError.kind) {
+    case IrCfgErrorKind::InvalidJumpTarget:
+      return "virtual-register lowering found invalid jump target";
+    case IrCfgErrorKind::UnsupportedOpcode:
+      return "unsupported opcode in virtual-register lowering";
+    case IrCfgErrorKind::StackUnderflow:
+      return "virtual-register lowering found stack underflow at instruction " +
+             std::to_string(cfgError.instructionIndex);
+    case IrCfgErrorKind::InvalidDup:
+      return "virtual-register lowering found invalid dup at instruction " +
+             std::to_string(cfgError.instructionIndex);
+    case IrCfgErrorKind::InconsistentDepth:
+      return "virtual-register lowering found inconsistent stack depth at block boundary";
+    case IrCfgErrorKind::None:
+      break;
   }
-}
-
-std::vector<size_t> computeBlockLeaders(const IrFunction &function, std::string &error) {
-  std::vector<size_t> leaders;
-  if (function.instructions.empty()) {
-    return leaders;
-  }
-
-  leaders.push_back(0);
-  const size_t instructionCount = function.instructions.size();
-  for (size_t index = 0; index < instructionCount; ++index) {
-    const IrInstruction &inst = function.instructions[index];
-    if (inst.op == IrOpcode::Jump || inst.op == IrOpcode::JumpIfZero) {
-      if (inst.imm > instructionCount) {
-        error = "virtual-register lowering found invalid jump target";
-        return {};
-      }
-      if (inst.imm < instructionCount) {
-        leaders.push_back(static_cast<size_t>(inst.imm));
-      }
-    }
-    if (isTerminatorOpcode(inst.op) && index + 1 < instructionCount) {
-      leaders.push_back(index + 1);
-    }
-  }
-
-  std::sort(leaders.begin(), leaders.end());
-  leaders.erase(std::unique(leaders.begin(), leaders.end()), leaders.end());
-  return leaders;
-}
-
-size_t findBlockIndexForInstruction(const std::vector<size_t> &leaders, size_t instructionIndex) {
-  const auto it = std::upper_bound(leaders.begin(), leaders.end(), instructionIndex);
-  if (it == leaders.begin()) {
-    return 0;
-  }
-  return static_cast<size_t>(std::distance(leaders.begin(), it - 1));
-}
-
-void addSuccessorUnique(BlockBuildInfo &block, size_t successor) {
-  if (std::find(block.successors.begin(), block.successors.end(), successor) == block.successors.end()) {
-    block.successors.push_back(successor);
-  }
-}
-
-bool buildBlockGraph(const IrFunction &function,
-                     const std::vector<size_t> &leaders,
-                     std::vector<BlockBuildInfo> &blocks,
-                     std::string &error) {
-  error.clear();
-  blocks.clear();
-  if (leaders.empty()) {
-    return true;
-  }
-
-  blocks.resize(leaders.size());
-  for (size_t blockIndex = 0; blockIndex < leaders.size(); ++blockIndex) {
-    BlockBuildInfo &block = blocks[blockIndex];
-    block.start = leaders[blockIndex];
-    block.end = (blockIndex + 1 < leaders.size()) ? leaders[blockIndex + 1] : function.instructions.size();
-  }
-
-  for (size_t blockIndex = 0; blockIndex < blocks.size(); ++blockIndex) {
-    BlockBuildInfo &block = blocks[blockIndex];
-    if (block.start == block.end) {
-      if (blockIndex + 1 < blocks.size()) {
-        addSuccessorUnique(block, blockIndex + 1);
-      }
-      continue;
-    }
-
-    const IrInstruction &lastInst = function.instructions[block.end - 1];
-    if (lastInst.op == IrOpcode::Jump || lastInst.op == IrOpcode::JumpIfZero) {
-      if (lastInst.imm > function.instructions.size()) {
-        error = "virtual-register lowering found invalid jump target";
-        return false;
-      }
-      if (lastInst.imm < function.instructions.size()) {
-        addSuccessorUnique(block, findBlockIndexForInstruction(leaders, static_cast<size_t>(lastInst.imm)));
-      }
-      if (lastInst.op == IrOpcode::JumpIfZero && blockIndex + 1 < blocks.size()) {
-        addSuccessorUnique(block, blockIndex + 1);
-      }
-      continue;
-    }
-
-    if (!isReturnOpcode(lastInst.op) && blockIndex + 1 < blocks.size()) {
-      addSuccessorUnique(block, blockIndex + 1);
-    }
-  }
-
-  for (size_t blockIndex = 0; blockIndex < blocks.size(); ++blockIndex) {
-    for (size_t successor : blocks[blockIndex].successors) {
-      blocks[successor].predecessors.push_back(blockIndex);
-    }
-  }
-
-  return true;
-}
-
-bool propagateReachableStackDepths(const IrFunction &function,
-                                   const IrModule &module,
-                                   std::vector<BlockBuildInfo> &blocks,
-                                   std::string &error) {
-  error.clear();
-  if (blocks.empty()) {
-    return true;
-  }
-
-  std::vector<size_t> worklist;
-  blocks[0].entryDepth = 0;
-  worklist.push_back(0);
-
-  while (!worklist.empty()) {
-    const size_t blockIndex = worklist.back();
-    worklist.pop_back();
-
-    BlockBuildInfo &block = blocks[blockIndex];
-    int64_t depth = block.entryDepth;
-    if (depth < 0) {
-      continue;
-    }
-
-    for (size_t instructionIndex = block.start; instructionIndex < block.end; ++instructionIndex) {
-      StackEffect effect;
-      if (!stackEffectForOpcode(function.instructions[instructionIndex], module, effect, error)) {
-        return false;
-      }
-      if (static_cast<int64_t>(effect.pops) > depth) {
-        error = "virtual-register lowering found stack underflow at instruction " + std::to_string(instructionIndex);
-        return false;
-      }
-      if (effect.readsWithoutPop > 0 && depth < static_cast<int64_t>(effect.readsWithoutPop)) {
-        error = "virtual-register lowering found invalid dup at instruction " + std::to_string(instructionIndex);
-        return false;
-      }
-      depth -= static_cast<int64_t>(effect.pops);
-      depth += static_cast<int64_t>(effect.pushes);
-    }
-    block.exitDepth = depth;
-
-    for (size_t successor : block.successors) {
-      BlockBuildInfo &successorBlock = blocks[successor];
-      if (successorBlock.entryDepth == std::numeric_limits<int64_t>::min()) {
-        successorBlock.entryDepth = depth;
-        worklist.push_back(successor);
-      } else if (successorBlock.entryDepth != depth) {
-        error = "virtual-register lowering found inconsistent stack depth at block boundary";
-        return false;
-      }
-    }
-  }
-
-  return true;
+  return "virtual-register lowering failed";
 }
 
 bool lowerFunctionToVirtualRegisters(const IrFunction &function,
@@ -348,28 +44,22 @@ bool lowerFunctionToVirtualRegisters(const IrFunction &function,
     return true;
   }
 
-  std::vector<size_t> leaders = computeBlockLeaders(function, error);
-  if (!error.empty()) {
+  IrCfg cfg;
+  IrCfgError cfgError;
+  if (!buildIrCfg(function, module, cfg, cfgError)) {
+    error = formatCfgError(cfgError);
     return false;
   }
 
-  std::vector<BlockBuildInfo> blockInfo;
-  if (!buildBlockGraph(function, leaders, blockInfo, error)) {
-    return false;
-  }
-  if (!propagateReachableStackDepths(function, module, blockInfo, error)) {
-    return false;
-  }
-
-  out.blocks.resize(blockInfo.size());
+  out.blocks.resize(cfg.blocks.size());
 
   uint32_t nextRegisterId = 0;
-  for (size_t blockIndex = 0; blockIndex < blockInfo.size(); ++blockIndex) {
-    const BlockBuildInfo &inBlock = blockInfo[blockIndex];
+  for (size_t blockIndex = 0; blockIndex < cfg.blocks.size(); ++blockIndex) {
+    const IrCfgBlock &inBlock = cfg.blocks[blockIndex];
     IrVirtualRegisterBlock &outBlock = out.blocks[blockIndex];
     outBlock.startInstructionIndex = inBlock.start;
     outBlock.endInstructionIndex = inBlock.end;
-    outBlock.reachable = inBlock.entryDepth != std::numeric_limits<int64_t>::min();
+    outBlock.reachable = inBlock.reachable;
 
     if (outBlock.reachable) {
       const size_t entrySize = static_cast<size_t>(inBlock.entryDepth);
@@ -380,8 +70,8 @@ bool lowerFunctionToVirtualRegisters(const IrFunction &function,
     }
   }
 
-  for (size_t blockIndex = 0; blockIndex < blockInfo.size(); ++blockIndex) {
-    const BlockBuildInfo &inBlock = blockInfo[blockIndex];
+  for (size_t blockIndex = 0; blockIndex < cfg.blocks.size(); ++blockIndex) {
+    const IrCfgBlock &inBlock = cfg.blocks[blockIndex];
     IrVirtualRegisterBlock &outBlock = out.blocks[blockIndex];
     std::vector<uint32_t> stack = outBlock.entryRegisters;
 
@@ -395,26 +85,21 @@ bool lowerFunctionToVirtualRegisters(const IrFunction &function,
         continue;
       }
 
-      StackEffect effect;
-      if (!stackEffectForOpcode(loweredInstruction.instruction, module, effect, error)) {
-        return false;
-      }
-      if (stack.size() < static_cast<size_t>(effect.pops)) {
-        error = "virtual-register lowering found stack underflow at instruction " + std::to_string(instructionIndex);
-        return false;
-      }
-      if (effect.readsWithoutPop > 0 && stack.size() < static_cast<size_t>(effect.readsWithoutPop)) {
-        error = "virtual-register lowering found invalid dup at instruction " + std::to_string(instructionIndex);
+      // The CFG already proved the depths consistent, so the effect exists and
+      // the stack holds every operand it needs.
+      IrStackEffect effect;
+      if (!computeIrStackEffect(loweredInstruction.instruction, module, effect)) {
+        error = "unsupported opcode in virtual-register lowering";
         return false;
       }
 
-      for (uint8_t read = 0; read < effect.readsWithoutPop; ++read) {
+      for (uint32_t read = 0; read < effect.readsWithoutPop; ++read) {
         loweredInstruction.useRegisters.push_back(stack[stack.size() - static_cast<size_t>(read) - 1]);
       }
 
       std::vector<uint32_t> poppedRegisters;
       poppedRegisters.reserve(effect.pops);
-      for (uint8_t pop = 0; pop < effect.pops; ++pop) {
+      for (uint32_t pop = 0; pop < effect.pops; ++pop) {
         poppedRegisters.push_back(stack.back());
         stack.pop_back();
       }
@@ -423,7 +108,7 @@ bool lowerFunctionToVirtualRegisters(const IrFunction &function,
       }
 
       loweredInstruction.defRegisters.reserve(effect.pushes);
-      for (uint8_t push = 0; push < effect.pushes; ++push) {
+      for (uint32_t push = 0; push < effect.pushes; ++push) {
         const uint32_t reg = nextRegisterId++;
         loweredInstruction.defRegisters.push_back(reg);
         stack.push_back(reg);
