@@ -108,8 +108,8 @@ bool emitNativeFunctions(const IrModule &module,
       if constexpr (!kIsArm64) {
         if (deferOperands) {
           // A comparison feeding a branch becomes one compare-and-branch.
-          if (index + 1 < fn.instructions.size() && fn.instructions[index + 1].op == IrOpcode::JumpIfZero &&
-              !branchTargets[index + 1]) {
+          if (index + 1 < fn.instructions.size() &&
+              fn.instructions[index + 1].op == IrOpcode::JumpIfZero && !branchTargets[index + 1]) {
             size_t fixupIndex = 0;
             if (emitter.tryEmitCompareBranch(inst.op, fixupIndex)) {
               NativeEmitterBranchFixup fixup;
@@ -126,8 +126,8 @@ bool emitNativeFunctions(const IrModule &module,
           // `local = local OP (local | constant)` on a register-resident local
           // becomes one instruction on that register.
           if (inst.op == IrOpcode::LoadLocal && index + 3 < fn.instructions.size() &&
-              emitter.isLocalPromoted(static_cast<uint32_t>(inst.imm)) && !branchTargets[index + 1] &&
-              !branchTargets[index + 2] && !branchTargets[index + 3]) {
+              emitter.isLocalPromoted(static_cast<uint32_t>(inst.imm)) &&
+              !branchTargets[index + 1] && !branchTargets[index + 2] && !branchTargets[index + 3]) {
             const IrInstruction &operand = fn.instructions[index + 1];
             const IrInstruction &arithmetic = fn.instructions[index + 2];
             const IrInstruction &store = fn.instructions[index + 3];
@@ -139,11 +139,13 @@ bool emitNativeFunctions(const IrModule &module,
             } else if (arithmetic.op == IrOpcode::MulI32 || arithmetic.op == IrOpcode::MulI64) {
               kind = 2;
             }
-            const bool operandIsConstant = operand.op == IrOpcode::PushI32 || operand.op == IrOpcode::PushI64;
+            const bool operandIsConstant =
+                operand.op == IrOpcode::PushI32 || operand.op == IrOpcode::PushI64;
             if (kind >= 0 && store.op == IrOpcode::StoreLocal && store.imm == inst.imm &&
                 (operandIsConstant || operand.op == IrOpcode::LoadLocal)) {
               const uint64_t constant = operand.op == IrOpcode::PushI32
-                                            ? static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(operand.imm)))
+                                            ? static_cast<uint64_t>(static_cast<int64_t>(
+                                                  static_cast<int32_t>(operand.imm)))
                                             : operand.imm;
               emitter.emitPromotedLocalUpdate(static_cast<uint32_t>(inst.imm),
                                               kind,

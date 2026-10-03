@@ -268,7 +268,8 @@ inline void X64Emitter::emitFloatCompareAndPush(bool isF64, CondCode cc) {
 inline void X64Emitter::emitAdd() {
   if (deferOperands_) {
     emitBinaryDeferred([&](uint8_t dst, const PendingOperand &b) {
-      if (b.kind == PendingOperand::Kind::Imm && static_cast<int64_t>(b.imm) == static_cast<int32_t>(b.imm)) {
+      if (b.kind == PendingOperand::Kind::Imm &&
+          static_cast<int64_t>(b.imm) == static_cast<int32_t>(b.imm)) {
         emitAddRegImm32(dst, static_cast<int32_t>(b.imm));
         return;
       }
@@ -290,7 +291,8 @@ inline void X64Emitter::emitAdd() {
 inline void X64Emitter::emitSub() {
   if (deferOperands_) {
     emitBinaryDeferred([&](uint8_t dst, const PendingOperand &b) {
-      if (b.kind == PendingOperand::Kind::Imm && static_cast<int64_t>(b.imm) == static_cast<int32_t>(b.imm)) {
+      if (b.kind == PendingOperand::Kind::Imm &&
+          static_cast<int64_t>(b.imm) == static_cast<int32_t>(b.imm)) {
         emitSubRegImm32(dst, static_cast<int32_t>(b.imm));
         return;
       }

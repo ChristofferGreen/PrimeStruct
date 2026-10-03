@@ -52,12 +52,9 @@ inline void X64Emitter::emitPrintUnsignedInternal(uint32_t scratchOffset,
                                                    uint8_t signReg,
                                                    bool newline,
                                                    uint64_t fd) {
-  (void)scratchBytes; // emitLoadFrameOffset already yields the buffer's
-                      // outer boundary directly in this backend's
-                      // addressing scheme (see its declaration comment);
-                      // scratchBytes is kept only for interface parity
-                      // with Arm64Emitter.
-  emitLoadFrameOffset(1, scratchOffset); // reg1 = outer boundary (fixed)
+  // reg1 = outer boundary (fixed): the end of the scratch area, which the digits
+  // are written below, as in Arm64Emitter.
+  emitLoadFrameOffset(1, scratchOffset + scratchBytes);
   emitMovRegReg(9, 1);                    // reg9 = write cursor
   if (newline) {
     emitSubRegImm32(9, 1);
@@ -98,8 +95,7 @@ inline void X64Emitter::emitPrintUnsignedInternalReg(uint32_t scratchOffset,
                                                       uint8_t signReg,
                                                       bool newline,
                                                       uint8_t fdReg) {
-  (void)scratchBytes;
-  emitLoadFrameOffset(1, scratchOffset);
+  emitLoadFrameOffset(1, scratchOffset + scratchBytes);
   emitMovRegReg(9, 1);
   if (newline) {
     emitSubRegImm32(9, 1);
@@ -310,7 +306,7 @@ inline size_t X64Emitter::emitFileWriteStringDynamicPlaceholder(uint64_t offsetT
 inline void X64Emitter::emitFileWriteByte(uint32_t scratchOffset) {
   emitPopReg(0); // byte value
   emitPopReg(3); // fd
-  emitLoadFrameOffset(1, scratchOffset + 1);
+  emitLoadFrameOffset(1, scratchOffset);
   emitStoreMemByte(1, 0, 0);
   emitMovRegImm64(2, 1);
   emitWriteSyscallReg(3, 1, 2);
@@ -320,7 +316,7 @@ inline void X64Emitter::emitFileWriteByte(uint32_t scratchOffset) {
 
 inline void X64Emitter::emitFileReadByte(uint32_t localIndex, uint32_t scratchOffset) {
   emitPopReg(3); // fd
-  emitLoadFrameOffset(1, scratchOffset + 1);
+  emitLoadFrameOffset(1, scratchOffset);
   emitMovRegImm64(2, 1);
   emitReadSyscallReg(3, 1, 2); // reg0 = bytes read, or a negative errno
 
@@ -332,7 +328,7 @@ inline void X64Emitter::emitFileReadByte(uint32_t localIndex, uint32_t scratchOf
   const size_t afterError = emitJumpPlaceholderRaw();
 
   patchCondJumpHere(successBranch);
-  emitLoadFrameOffset(1, scratchOffset + 1);
+  emitLoadFrameOffset(1, scratchOffset);
   emitLoadMemByte(2, 1, 0);
   emitStoreLocalFromReg(localIndex, 2);
   emitMovRegImm64(0, 0);

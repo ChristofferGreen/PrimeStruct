@@ -473,9 +473,12 @@ inline void X64Emitter::emitCmpRegImm32(uint8_t reg, int32_t imm) {
   emitU32(static_cast<uint32_t>(imm));
 }
 
+// Address `offsetBytes` above the bottom of the frame (the post-prologue rsp),
+// like Arm64Emitter's x27-relative version: locals and the print scratch area
+// are laid out from the bottom (see NativeEmitterFunctionLayout).
 inline void X64Emitter::emitLoadFrameOffset(uint8_t rd, uint32_t offsetBytes) {
   emitMovRegReg(rd, 5); // rd = rbp
-  emitSubRegImm32(rd, static_cast<int32_t>(offsetBytes));
+  emitSubRegImm32(rd, static_cast<int32_t>(frameSize_ - offsetBytes));
 }
 
 inline size_t X64Emitter::emitLeaRipPlaceholder(uint8_t rd) {
@@ -509,7 +512,7 @@ inline void X64Emitter::emitReadSyscallReg(uint8_t fdReg, uint8_t bufferReg, uin
 }
 
 inline void X64Emitter::emitWriteNewline(uint64_t fd, uint32_t scratchOffset) {
-  emitLoadFrameOffset(1, scratchOffset + 1);
+  emitLoadFrameOffset(1, scratchOffset);
   emitMovRegImm64(3, '\n');
   emitStoreMemByte(1, 0, 3);
   emitMovRegImm64(2, 1);
@@ -517,7 +520,7 @@ inline void X64Emitter::emitWriteNewline(uint64_t fd, uint32_t scratchOffset) {
 }
 
 inline void X64Emitter::emitWriteNewlineReg(uint8_t fdReg, uint32_t scratchOffset) {
-  emitLoadFrameOffset(1, scratchOffset + 1);
+  emitLoadFrameOffset(1, scratchOffset);
   emitMovRegImm64(3, '\n');
   emitStoreMemByte(1, 0, 3);
   emitMovRegImm64(2, 1);

@@ -200,8 +200,7 @@ inline void X64Emitter::emitPopDeferred() {
   pending_.pop_back();
 }
 
-template <typename Op>
-inline void X64Emitter::emitBinaryDeferred(Op &&op) {
+template <typename Op> inline void X64Emitter::emitBinaryDeferred(Op &&op) {
   counters_.valueStackPopCount += 2;
   counters_.valueStackPushCount += 1;
   uint32_t used = 0;
@@ -249,7 +248,8 @@ inline void X64Emitter::emitCompareDeferred(CondCode cc) {
     emitMovRegImm64(0, a.imm);
     left = 0;
   }
-  if (b.kind == PendingOperand::Kind::Imm && static_cast<int64_t>(b.imm) == static_cast<int32_t>(b.imm)) {
+  if (b.kind == PendingOperand::Kind::Imm &&
+      static_cast<int64_t>(b.imm) == static_cast<int32_t>(b.imm)) {
     emitCmpRegImm32(left, static_cast<int32_t>(b.imm));
   } else {
     uint8_t right = b.reg;
@@ -347,7 +347,8 @@ inline bool X64Emitter::tryEmitCompareBranch(IrOpcode compareOp, size_t &fixupIn
     emitMovRegImm64(0, a.imm);
     left = 0;
   }
-  if (b.kind == PendingOperand::Kind::Imm && static_cast<int64_t>(b.imm) == static_cast<int32_t>(b.imm)) {
+  if (b.kind == PendingOperand::Kind::Imm &&
+      static_cast<int64_t>(b.imm) == static_cast<int32_t>(b.imm)) {
     emitCmpRegImm32(left, static_cast<int32_t>(b.imm));
   } else {
     uint8_t right = b.reg;
@@ -375,11 +376,8 @@ inline void X64Emitter::endComplexOp() {
   emitReloadPromotedLocals();
 }
 
-inline void X64Emitter::emitPromotedLocalUpdate(uint32_t local,
-                                                int kind,
-                                                bool operandIsImm,
-                                                uint64_t imm,
-                                                uint32_t operandLocal) {
+inline void X64Emitter::emitPromotedLocalUpdate(
+    uint32_t local, int kind, bool operandIsImm, uint64_t imm, uint32_t operandLocal) {
   counters_.valueStackPopCount += 1;
   const uint8_t target = static_cast<uint8_t>(promotedRegister(local));
   flushPendingForAlias(local);
@@ -409,4 +407,3 @@ inline void X64Emitter::emitPromotedLocalUpdate(uint32_t local,
     emitImulRegReg(target, source);
   }
 }
-

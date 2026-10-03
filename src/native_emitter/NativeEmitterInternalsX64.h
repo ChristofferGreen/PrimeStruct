@@ -78,32 +78,33 @@ class X64Emitter {
      return localPromotionEnabled_;
    }
    // Deferred operands (optimized native code): pushes of constants and promoted
-  // locals emit nothing until an instruction consumes them, and arithmetic works
-  // on registers and immediates directly. Operands wait in `pending_`; the
-  // memory-backed value stack holds everything below them. Off unless the backend
-  // enables it for -O1 and above.
-  void setOperandDeferralEnabled(bool enabled) {
-    deferOperands_ = enabled;
-  }
-  bool operandDeferralEnabled() const {
-    return deferOperands_;
-  }
-  // Brackets an instruction whose template clobbers the registers deferred
-  // operands live in (everything outside the simple opcode set): pending operands
-  // go to the memory stack first, and the promoted locals are saved and restored.
-  void beginComplexOp();
-  void endComplexOp();
-  // `a CMP b; JumpIfZero` as one compare and branch. Returns false when
-  // `compareOp` is not an integer comparison; otherwise returns the branch fixup.
-  bool tryEmitCompareBranch(IrOpcode compareOp, size_t &fixupIndex);
-  bool isLocalPromoted(uint32_t index) const {
-    return promotedRegister(index) >= 0;
-  }
-  // `local = local OP operand` for a promoted local, where the operand is another
-  // local or a constant: add, sub or mul (kind 0, 1, 2).
-  void emitPromotedLocalUpdate(uint32_t local, int kind, bool operandIsImm, uint64_t imm, uint32_t operandLocal);
+   // locals emit nothing until an instruction consumes them, and arithmetic works
+   // on registers and immediates directly. Operands wait in `pending_`; the
+   // memory-backed value stack holds everything below them. Off unless the backend
+   // enables it for -O1 and above.
+   void setOperandDeferralEnabled(bool enabled) {
+     deferOperands_ = enabled;
+   }
+   bool operandDeferralEnabled() const {
+     return deferOperands_;
+   }
+   // Brackets an instruction whose template clobbers the registers deferred
+   // operands live in (everything outside the simple opcode set): pending operands
+   // go to the memory stack first, and the promoted locals are saved and restored.
+   void beginComplexOp();
+   void endComplexOp();
+   // `a CMP b; JumpIfZero` as one compare and branch. Returns false when
+   // `compareOp` is not an integer comparison; otherwise returns the branch fixup.
+   bool tryEmitCompareBranch(IrOpcode compareOp, size_t &fixupIndex);
+   bool isLocalPromoted(uint32_t index) const {
+     return promotedRegister(index) >= 0;
+   }
+   // `local = local OP operand` for a promoted local, where the operand is another
+   // local or a constant: add, sub or mul (kind 0, 1, 2).
+   void emitPromotedLocalUpdate(
+       uint32_t local, int kind, bool operandIsImm, uint64_t imm, uint32_t operandLocal);
 
-  void setPromotedLocals(const std::vector<PromotedLocalSlot> &locals);
+   void setPromotedLocals(const std::vector<PromotedLocalSlot> &locals);
    void clearPromotedLocals();
    bool hasPromotedLocals() const {
      return !promotedLocals_.empty();
@@ -439,8 +440,8 @@ class X64Emitter {
   struct PendingOperand {
     enum class Kind : uint8_t { Reg, Imm, Local };
     Kind kind = Kind::Imm;
-    uint8_t reg = 0;      // Reg: the cache register; Local: the promoted local's register
-    uint32_t local = 0;   // Local: the promoted local's index
+    uint8_t reg = 0;    // Reg: the cache register; Local: the promoted local's register
+    uint32_t local = 0; // Local: the promoted local's index
     uint64_t imm = 0;
   };
   bool deferOperands_ = false;
@@ -461,8 +462,7 @@ class X64Emitter {
   void flushPendingForAlias(uint32_t local);
   void emitStoreImm64Mem(uint8_t base, int32_t disp, uint64_t imm);
   void emitTestRegReg(uint8_t reg);
-  template <typename Op>
-  void emitBinaryDeferred(Op &&op);
+  template <typename Op> void emitBinaryDeferred(Op &&op);
   void emitCompareDeferred(CondCode cc);
   void emitNegDeferred();
   void emitDupDeferred();

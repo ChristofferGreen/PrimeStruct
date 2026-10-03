@@ -1,9 +1,11 @@
 # Optimizing Native Backend and VM: Plan
 
-Status: in progress (2026-10-03). Implemented so far: the `-O` and `--opt-*` flags, the pass manager and manifest,
-the `ir-lowered`/`ir-optimized` dumps, shared CFG utilities and opcode semantics, local escape analysis, four
--O1 passes (see `docs/spec/source-pipeline.md` for the user-facing description), and the `optexe`/`optcpp` emit kinds
-(section 9.1). The register form, the native code generator and the fast VM kernel are not started.
+Status: in progress (2026-10-03). Implemented so far: the `-O` and `--opt-*` flags (default `-O2` for runs and
+executables), the pass manager and manifest, the `ir-lowered`/`ir-optimized` dumps, shared CFG utilities and opcode
+semantics, local escape analysis, five passes (see `docs/spec/source-pipeline.md` for the user-facing description),
+the `optexe`/`optcpp` emit kinds (section 9.1), the flat VM kernel with fused instructions (Phase 4), and register
+locals plus deferred operands in the x86_64 native emitter (Phase 3, first steps). Not started: the register form,
+a full register-allocating native code generator, and arm64 versions of the native steps.
 
 This document records what the direct native backend (`--emit=native`) and the PrimeScript
 VM (`--emit=vm`, `primevm`) do today, why they are slow, and a phased plan to
@@ -394,6 +396,30 @@ addresses; `dead-store` then drops the unread copies. Two peepholes came from th
 3.7 Enable the Linux-excluded native suites where the exclusion reason no
     longer holds, so x86_64 gets the same coverage as arm64.
 
+Status (2026-10-03): the template emitter's biggest costs are gone on x86_64 without a new code generator, in three
+steps, all on from `-O1` (`NativeEmitterOptions::promoteLocals` / `deferOperands`, set by the native backend from the
+IR level; the arm64 emitter is untouched):
+
+1. Register-resident locals (`NativeEmitterPromotion.h`): the most used locals that no memory access can reach
+   (`IrLocalEscape`; uses in loops count ten times per nesting level) live in rsi, rdi, r8, r10 and r11 for the whole
+   function. Instructions whose templates clobber those registers (printing, file and heap operations, string table
+   lookups, calls) get the locals written to their frame slots before and reloaded after.
+2. Deferred operands: the emitter tracks the top of the operand stack at compile time. Constants and register locals
+   are pushed lazily, `add`/`sub`/`mul`/compare/`neg`/`dup`/`pop` work on registers and immediates directly, and the
+   rbx/r9/r14 cache registers hold computed values; operands reach the memory stack only at branch targets, in front of
+   jumps and calls, before opcodes that clobber the cache registers, and when more than three are live. A
+   comparison feeding `JumpIfZero` becomes one `cmp` and `jcc`, and `local = local OP (local|constant)` becomes one
+   instruction on the register.
+3. A fix found on the way: the print scratch area was placed relative to `rbp` instead of the frame bottom, so a
+   print in a called function overwrote that function's locals and a print under a deep operand stack overwrote
+   operands (`print_in_callee`, `print_with_deep_stack`).
+
+Verification: the full release gate (every native compile-run suite) passes with both on;
+`primestruct.ir.native_codegen` compares 60 random programs, the fused-form grid, calls and recursion, deep operand
+stacks, aliased locals and prints against the VM in plain and optimized mode; `scripts/differential_opt_check.py
+--native` checks native `-O0` against native `-O2` and the VM over the corpus (492 programs identical; 22 differ from
+the VM identically at both levels, TODO-5482).
+
 ### Phase 4: VM interpreter engineering (independent of IR passes)
 
 4.1 Fast kernel: one dispatch switch (computed goto where the compiler
@@ -455,14 +481,14 @@ numbers below (median of 3; executable rows list run time and, in brackets, the 
 | vm step kernel -O0 | 1.27 s | 2.22 s | 1.45 s |
 | vm -O0 (flat loop) | 103 ms | 272 ms | 161 ms |
 | vm -O2 | 94 ms | 234 ms | 99 ms |
-| native -O0 | 30 ms (+12) | 49 ms (+77) | 32 ms (+22) |
-| native -O2 | 32 ms (+12) | 42 ms (+72) | 26 ms (+21) |
+| native -O0 (template expansion) | 30 ms (+11) | 50 ms (+111) | 33 ms (+23) |
+| native -O2 (register locals, deferred operands) | 4.2 ms (+11) | 22 ms (+71) | 11 ms (+22) |
 | optexe -O2 | 2.0 ms (+618) | 10 ms (+602) | 9.2 ms (+584) |
 | exe (old C++ emitter, clang -O0) | 4.14 s (+341) | 6.95 s (+450) | 4.06 s (+404) |
 | C reference, cc -O3 | 4.8 ms (+115) | 8.3 ms (+66) | 3.5 ms (+55) |
 
-The direct native backend is now the slowest of the fast paths: 4x to 15x behind optexe and C, and the IR passes
-barely move it (its template expansion keeps every local and every operand in memory), which is the case for Phase 3.
+Before the Phase 3 work below, native -O2 was 22 to 32 ms (4x to 15x behind C) because its template expansion kept
+every local and every operand in memory; the IR passes barely moved it.
 
 ## 6. Constraints, risks, and how each is handled
 

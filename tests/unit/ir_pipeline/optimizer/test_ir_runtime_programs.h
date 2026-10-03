@@ -4,6 +4,7 @@
 
 #include "test_ir_optimizer_helpers.h"
 
+#include <cstdint>
 #include <string>
 #include <utility>
 #include <vector>
@@ -286,6 +287,124 @@ inline std::vector<FaultProgram> faultPrograms() {
     programs.push_back({testCase.name, std::move(module)});
   }
   return programs;
+}
+
+// The loop fuses sequences such as `LoadLocal a; Push c; Cmp; JumpIfZero` into
+// single instructions. This module exercises every fused form over operands
+// with the signs and widths that tell the comparisons and constant widths apart,
+// printing 0/1 for each branch so any wrong fusion shows up as different output.
+inline primec::IrModule fusedFormsProgram() {
+  using primec::IrInstruction;
+  using primec::IrOpcode;
+  const std::vector<uint64_t> values = {0,
+                                        1,
+                                        static_cast<uint64_t>(-1),
+                                        5,
+                                        static_cast<uint64_t>(-5),
+                                        0x7FFFFFFFull,
+                                        0x80000000ull,
+                                        0x8000000000000000ull,
+                                        0x7FFFFFFFFFFFFFFFull};
+  const std::vector<IrOpcode> comparisons = {IrOpcode::CmpEqI32,
+                                             IrOpcode::CmpNeI32,
+                                             IrOpcode::CmpLtI32,
+                                             IrOpcode::CmpLeI32,
+                                             IrOpcode::CmpGtI32,
+                                             IrOpcode::CmpGeI64,
+                                             IrOpcode::CmpLtI64};
+  std::vector<IrInstruction> code;
+  const auto emit = [&](IrOpcode op, uint64_t imm = 0) {
+    code.push_back({op, imm});
+    return code.size() - 1;
+  };
+  // Branches print 1 when the comparison holds and 0 otherwise.
+  const auto printBranch = [&](size_t jumpIfZeroIndex) {
+    emit(IrOpcode::PushI32, 1);
+    emit(IrOpcode::PrintI32, primec::PrintFlagNewline);
+    const size_t skip = emit(IrOpcode::Jump);
+    code[jumpIfZeroIndex].imm = code.size();
+    emit(IrOpcode::PushI32, 0);
+    emit(IrOpcode::PrintI32, primec::PrintFlagNewline);
+    code[skip].imm = code.size();
+  };
+  for (const uint64_t lhs : values) {
+    for (const uint64_t rhs : values) {
+      for (const IrOpcode cmp : comparisons) {
+        emit(IrOpcode::PushI64, lhs);
+        emit(IrOpcode::StoreLocal, 0);
+        emit(IrOpcode::PushI64, rhs);
+        emit(IrOpcode::StoreLocal, 1);
+        // local, constant (PushI32 sign-extends, PushI64 does not)
+        emit(IrOpcode::LoadLocal, 0);
+        emit(IrOpcode::PushI32, rhs);
+        emit(cmp);
+        printBranch(emit(IrOpcode::JumpIfZero));
+        emit(IrOpcode::LoadLocal, 0);
+        emit(IrOpcode::PushI64, rhs);
+        emit(cmp);
+        printBranch(emit(IrOpcode::JumpIfZero));
+        // local, local
+        emit(IrOpcode::LoadLocal, 0);
+        emit(IrOpcode::LoadLocal, 1);
+        emit(cmp);
+        printBranch(emit(IrOpcode::JumpIfZero));
+        // two stack values from computed operands
+        emit(IrOpcode::LoadLocal, 0);
+        emit(IrOpcode::PushI64, 0);
+        emit(IrOpcode::AddI64);
+        emit(IrOpcode::LoadLocal, 1);
+        emit(cmp);
+        printBranch(emit(IrOpcode::JumpIfZero));
+      }
+      // Arithmetic with a local and a constant or a second local, stored back.
+      emit(IrOpcode::PushI64, lhs);
+      emit(IrOpcode::StoreLocal, 0);
+      emit(IrOpcode::PushI64, rhs);
+      emit(IrOpcode::StoreLocal, 1);
+      for (const IrOpcode arithmetic : {IrOpcode::AddI64, IrOpcode::SubI32, IrOpcode::MulI64}) {
+        emit(IrOpcode::LoadLocal, 0);
+        emit(IrOpcode::PushI32, rhs);
+        emit(arithmetic);
+        emit(IrOpcode::PrintI64, primec::PrintFlagNewline);
+        emit(IrOpcode::LoadLocal, 0);
+        emit(IrOpcode::LoadLocal, 1);
+        emit(arithmetic);
+        emit(IrOpcode::PrintI64, primec::PrintFlagNewline);
+      }
+      emit(IrOpcode::LoadLocal, 0);
+      emit(IrOpcode::PushI32, rhs);
+      emit(IrOpcode::AddI32);
+      emit(IrOpcode::StoreLocal, 2);
+      emit(IrOpcode::LoadLocal, 1);
+      emit(IrOpcode::PushI64, lhs);
+      emit(IrOpcode::SubI64);
+      emit(IrOpcode::StoreLocal, 3);
+      emit(IrOpcode::LoadLocal, 2);
+      emit(IrOpcode::PrintI64, primec::PrintFlagNewline);
+      emit(IrOpcode::LoadLocal, 3);
+      emit(IrOpcode::PrintI64, primec::PrintFlagNewline);
+      // Constant stores, copies, the assignment idiom and branch on a local.
+      emit(IrOpcode::PushI32, rhs);
+      emit(IrOpcode::StoreLocal, 4);
+      emit(IrOpcode::LoadLocal, 4);
+      emit(IrOpcode::StoreLocal, 5);
+      emit(IrOpcode::LoadLocal, 5);
+      emit(IrOpcode::PushI64, 3);
+      emit(IrOpcode::AddI64);
+      emit(IrOpcode::Dup);
+      emit(IrOpcode::StoreLocal, 6);
+      emit(IrOpcode::Pop);
+      emit(IrOpcode::LoadLocal, 6);
+      emit(IrOpcode::PrintI64, primec::PrintFlagNewline);
+      emit(IrOpcode::LoadLocal, 5);
+      printBranch(emit(IrOpcode::JumpIfZero));
+    }
+  }
+  emit(IrOpcode::PushI32, 0);
+  emit(IrOpcode::ReturnI32);
+  primec::IrModule module = optimizer_test::moduleOf(std::move(code));
+  module.functions[0].metadata.effectMask = primec::EffectIoOut;
+  return module;
 }
 
 } // namespace optimizer_test
