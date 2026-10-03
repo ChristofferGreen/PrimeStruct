@@ -20,6 +20,8 @@
 #elif defined(__linux__)
 #include <unistd.h>
 #include <fstream>
+#include <sstream>
+#include "primec/support/BenchmarkSink.h"
 #if defined(__GLIBC__)
 #include <malloc.h>
 #endif
@@ -308,7 +310,8 @@ bool SemanticsValidator::run() {
     for (const auto &entry : paramsByDef_) {
       parameterCount += entry.second.size();
     }
-    std::cerr << "[benchmark-semantic-validator-state] {\"stage\":\""
+    std::ostringstream line;
+    line << "[benchmark-semantic-validator-state] {\"stage\":\""
               << stageName
               << "\",\"definitions\":" << defMap_.size()
               << ",\"definition_buckets\":" << defMap_.bucket_count()
@@ -396,7 +399,8 @@ bool SemanticsValidator::run() {
               << ",\"call_cache_receiver_alias\":" << callTargetResolutionScratch_.canonicalReceiverAliasPathCache.size()
               << ",\"allocated_bytes\":" << captureCurrentAllocatedBytes()
               << ",\"rss_bytes\":" << captureCurrentResidentBytes()
-              << "}" << std::endl;
+              << "}";
+    primec::support::emitBenchmarkLine(line.str());
   };
   auto runStage = [&](const char *stageName, auto &&fn) {
     try {

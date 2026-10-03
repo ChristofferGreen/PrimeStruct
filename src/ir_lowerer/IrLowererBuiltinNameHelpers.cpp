@@ -4,6 +4,7 @@
 #include <array>
 #include <cassert>
 #include <cstdlib>
+#include <initializer_list>
 #include <iostream>
 #include <string_view>
 
@@ -237,207 +238,105 @@ bool parseMathName(const std::string &name, std::string &out, bool allowBare) {
   return true;
 }
 
+// Accepted spellings per builtin math family; every classifier shares one lookup.
+using MathNameSet = std::initializer_list<std::string_view>;
+
+bool classifyMathName(const Expr &expr, std::string &out, bool allowBare, MathNameSet names) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  if (!parseMathName(resolveMathExprName(expr), out, allowBare)) {
+    return false;
+  }
+  for (const std::string_view candidate : names) {
+    if (out == candidate) {
+      return true;
+    }
+  }
+  return false;
+}
+
 } // namespace
 
 bool getBuiltinClampName(const Expr &expr, bool allowBare) {
-  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
-    return false;
-  }
   std::string name;
-  if (!parseMathName(resolveMathExprName(expr), name, allowBare)) {
-    return false;
-  }
-  return name == "clamp";
+  return classifyMathName(expr, name, allowBare, {"clamp"});
 }
 
 bool getBuiltinMinMaxName(const Expr &expr, std::string &out, bool allowBare) {
-  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
-    return false;
-  }
-  if (!parseMathName(resolveMathExprName(expr), out, allowBare)) {
-    return false;
-  }
-  return out == "min" || out == "max";
+  return classifyMathName(expr, out, allowBare, {"min", "max"});
 }
 
 bool getBuiltinLerpName(const Expr &expr, std::string &out, bool allowBare) {
-  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
-    return false;
-  }
-  if (!parseMathName(resolveMathExprName(expr), out, allowBare)) {
-    return false;
-  }
-  return out == "lerp";
+  return classifyMathName(expr, out, allowBare, {"lerp"});
 }
 
 bool getBuiltinFmaName(const Expr &expr, std::string &out, bool allowBare) {
-  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
-    return false;
-  }
-  if (!parseMathName(resolveMathExprName(expr), out, allowBare)) {
-    return false;
-  }
-  return out == "fma";
+  return classifyMathName(expr, out, allowBare, {"fma"});
 }
 
 bool getBuiltinHypotName(const Expr &expr, std::string &out, bool allowBare) {
-  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
-    return false;
-  }
-  if (!parseMathName(resolveMathExprName(expr), out, allowBare)) {
-    return false;
-  }
-  return out == "hypot";
+  return classifyMathName(expr, out, allowBare, {"hypot"});
 }
 
 bool getBuiltinCopysignName(const Expr &expr, std::string &out, bool allowBare) {
-  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
-    return false;
-  }
-  if (!parseMathName(resolveMathExprName(expr), out, allowBare)) {
-    return false;
-  }
-  return out == "copysign";
+  return classifyMathName(expr, out, allowBare, {"copysign"});
 }
 
 bool getBuiltinAngleName(const Expr &expr, std::string &out, bool allowBare) {
-  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
-    return false;
-  }
-  if (!parseMathName(resolveMathExprName(expr), out, allowBare)) {
-    return false;
-  }
-  return out == "radians" || out == "degrees";
+  return classifyMathName(expr, out, allowBare, {"radians", "degrees"});
 }
 
 bool getBuiltinTrigName(const Expr &expr, std::string &out, bool allowBare) {
-  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
-    return false;
-  }
-  if (!parseMathName(resolveMathExprName(expr), out, allowBare)) {
-    return false;
-  }
-  return out == "sin" || out == "cos" || out == "tan";
+  return classifyMathName(expr, out, allowBare, {"sin", "cos", "tan"});
 }
 
 bool getBuiltinTrig2Name(const Expr &expr, std::string &out, bool allowBare) {
-  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
-    return false;
-  }
-  if (!parseMathName(resolveMathExprName(expr), out, allowBare)) {
-    return false;
-  }
-  return out == "atan2";
+  return classifyMathName(expr, out, allowBare, {"atan2"});
 }
 
 bool getBuiltinArcTrigName(const Expr &expr, std::string &out, bool allowBare) {
-  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
-    return false;
-  }
-  if (!parseMathName(resolveMathExprName(expr), out, allowBare)) {
-    return false;
-  }
-  return out == "asin" || out == "acos" || out == "atan";
+  return classifyMathName(expr, out, allowBare, {"asin", "acos", "atan"});
 }
 
 bool getBuiltinHyperbolicName(const Expr &expr, std::string &out, bool allowBare) {
-  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
-    return false;
-  }
-  if (!parseMathName(resolveMathExprName(expr), out, allowBare)) {
-    return false;
-  }
-  return out == "sinh" || out == "cosh" || out == "tanh";
+  return classifyMathName(expr, out, allowBare, {"sinh", "cosh", "tanh"});
 }
 
 bool getBuiltinArcHyperbolicName(const Expr &expr, std::string &out, bool allowBare) {
-  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
-    return false;
-  }
-  if (!parseMathName(resolveMathExprName(expr), out, allowBare)) {
-    return false;
-  }
-  return out == "asinh" || out == "acosh" || out == "atanh";
+  return classifyMathName(expr, out, allowBare, {"asinh", "acosh", "atanh"});
 }
 
 bool getBuiltinExpName(const Expr &expr, std::string &out, bool allowBare) {
-  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
-    return false;
-  }
-  if (!parseMathName(resolveMathExprName(expr), out, allowBare)) {
-    return false;
-  }
-  return out == "exp" || out == "exp2";
+  return classifyMathName(expr, out, allowBare, {"exp", "exp2"});
 }
 
 bool getBuiltinLogName(const Expr &expr, std::string &out, bool allowBare) {
-  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
-    return false;
-  }
-  if (!parseMathName(resolveMathExprName(expr), out, allowBare)) {
-    return false;
-  }
-  return out == "log" || out == "log2" || out == "log10";
+  return classifyMathName(expr, out, allowBare, {"log", "log2", "log10"});
 }
 
 bool getBuiltinAbsSignName(const Expr &expr, std::string &out, bool allowBare) {
-  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
-    return false;
-  }
-  if (!parseMathName(resolveMathExprName(expr), out, allowBare)) {
-    return false;
-  }
-  return out == "abs" || out == "sign";
+  return classifyMathName(expr, out, allowBare, {"abs", "sign"});
 }
 
 bool getBuiltinSaturateName(const Expr &expr, std::string &out, bool allowBare) {
-  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
-    return false;
-  }
-  if (!parseMathName(resolveMathExprName(expr), out, allowBare)) {
-    return false;
-  }
-  return out == "saturate";
+  return classifyMathName(expr, out, allowBare, {"saturate"});
 }
 
 bool getBuiltinPowName(const Expr &expr, std::string &out, bool allowBare) {
-  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
-    return false;
-  }
-  if (!parseMathName(resolveMathExprName(expr), out, allowBare)) {
-    return false;
-  }
-  return out == "pow";
+  return classifyMathName(expr, out, allowBare, {"pow"});
 }
 
 bool getBuiltinMathPredicateName(const Expr &expr, std::string &out, bool allowBare) {
-  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
-    return false;
-  }
-  if (!parseMathName(resolveMathExprName(expr), out, allowBare)) {
-    return false;
-  }
-  return out == "is_nan" || out == "is_inf" || out == "is_finite";
+  return classifyMathName(expr, out, allowBare, {"is_nan", "is_inf", "is_finite"});
 }
 
 bool getBuiltinRoundingName(const Expr &expr, std::string &out, bool allowBare) {
-  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
-    return false;
-  }
-  if (!parseMathName(resolveMathExprName(expr), out, allowBare)) {
-    return false;
-  }
-  return out == "floor" || out == "ceil" || out == "round" || out == "trunc" || out == "fract";
+  return classifyMathName(expr, out, allowBare, {"floor", "ceil", "round", "trunc", "fract"});
 }
 
 bool getBuiltinRootName(const Expr &expr, std::string &out, bool allowBare) {
-  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
-    return false;
-  }
-  if (!parseMathName(resolveMathExprName(expr), out, allowBare)) {
-    return false;
-  }
-  return out == "sqrt" || out == "cbrt";
+  return classifyMathName(expr, out, allowBare, {"sqrt", "cbrt"});
 }
 
 bool getBuiltinConvertName(const Expr &expr) {

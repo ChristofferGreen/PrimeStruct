@@ -34,6 +34,7 @@
 #include <string_view>
 #include <unordered_map>
 #include <unordered_set>
+#include "primec/support/BenchmarkSink.h"
 
 namespace primec {
 namespace {
@@ -236,7 +237,8 @@ bool isIgnorableImportToken(TokenKind kind) {
 void emitProgramHeapEstimate(const Program &program,
                              std::string_view stage) {
   const ProgramHeapEstimateStats stats = estimateProgramHeap(program);
-  std::cerr << "[benchmark-ast-heap-estimate] "
+  std::ostringstream line;
+  line << "[benchmark-ast-heap-estimate] "
             << "{\"stage\":\"" << stage
             << "\",\"definitions\":" << stats.definitions
             << ",\"executions\":" << stats.executions
@@ -244,7 +246,8 @@ void emitProgramHeapEstimate(const Program &program,
             << ",\"transforms\":" << stats.transforms
             << ",\"strings\":" << stats.strings
             << ",\"dynamic_bytes\":" << stats.dynamicBytes
-            << "}\n";
+            << "}";
+  primec::support::emitBenchmarkLine(line.str());
 }
 
 std::vector<std::string> collectImportPaths(const std::string &source, bool stdOnly) {

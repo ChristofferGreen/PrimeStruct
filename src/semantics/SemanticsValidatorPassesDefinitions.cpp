@@ -23,6 +23,8 @@
 #include <fstream>
 #if defined(__GLIBC__)
 #include <malloc.h>
+#include <sstream>
+#include "primec/support/BenchmarkSink.h"
 #endif
 #endif
 
@@ -504,14 +506,15 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
                 return left.wallNanos > right.wallNanos;
               });
     const size_t limit = std::min<size_t>(10, sortedRecords.size());
-    std::cerr << "[benchmark-semantic-definition-rss-top] {\"count\":"
+    std::ostringstream line;
+    line << "[benchmark-semantic-definition-rss-top] {\"count\":"
               << definitionRssRecords.size() << ",\"top\":[";
     for (size_t i = 0; i < limit; ++i) {
       if (i > 0) {
-        std::cerr << ",";
+        line << ",";
       }
       const DefinitionRssRecord &record = sortedRecords[i];
-      std::cerr << "{\"path\":\"" << record.fullPath
+      line << "{\"path\":\"" << record.fullPath
                 << "\",\"rss_before\":" << record.rssBefore
                 << ",\"rss_after\":" << record.rssAfter
                 << ",\"rss_delta\":" << record.rssDelta
@@ -519,7 +522,8 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
                 << ",\"ok\":" << (record.ok ? "true" : "false")
                 << "}";
     }
-    std::cerr << "]}" << std::endl;
+    line << "]}";
+    primec::support::emitBenchmarkLine(line.str());
   }
 
   if (!finalizeCollectedStructuredDiagnostics(collectedRecords)) {

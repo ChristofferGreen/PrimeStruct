@@ -101,17 +101,14 @@ of sync with them.
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
 | TODO-5398 | Archive or fold the orphaned long-form docs | deferred | docs-hygiene |
-| TODO-5400 | Table-drive the builtin math-name classifiers | ready | lowerer-structure |
 | TODO-5401 | Collapse duplicate std::function callback aliases | ready | lowerer-structure |
 | TODO-5402 | Replace the 17-callback native tail dispatch signatures with a hooks struct | deferred | lowerer-structure |
 | TODO-5403 | Extend the source-file-size guard beyond src/semantics | deferred | lowerer-structure |
 | TODO-5404 | Remove the hand-maintained src/ir_lowerer header mirrors | deferred | lowerer-structure |
 | TODO-5405 | Inventory and schedule deletion of compatibility spellings | deferred | collection-resolution |
 | TODO-5406 | Delete or justify the legacy collection branch counters | deferred | collection-resolution |
-| TODO-5407 | Route benchmark instrumentation through one sink | ready | diagnostics |
 | TODO-5408 | Turn stdlib registry startup throws into diagnostics | deferred | diagnostics |
 | TODO-5409 | Add clang-format configuration and a changed-files format check | deferred | tooling |
-| TODO-5410 | Add self-tests for the nine unguarded check scripts | ready | tooling |
 | TODO-5411 | Add a CI workflow for the release gate | deferred | tooling |
 | TODO-5412 | Share CLI argument parsing between primec and primevm | deferred | tooling |
 | TODO-5413 | Re-baseline benchmarks after the structural refactors | ready | performance |
@@ -122,30 +119,24 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5400 (track: lowerer-structure): Table-drive the builtin math-name classifiers (surface: IrLowererBuiltinNameHelpers.cpp).
 - TODO-5401 (track: lowerer-structure): Collapse duplicate std::function callback aliases (surface: *Fn alias headers).
-- TODO-5407 (track: diagnostics): Route benchmark instrumentation through one sink.
-- TODO-5410 (track: tooling): Add self-tests for the nine unguarded check scripts.
 - TODO-5413 (track: performance): Re-baseline benchmarks after the structural refactors.
 
 ### Immediate Next 10
 
 1. TODO-5413 - Re-baseline benchmarks after the structural refactors.
-2. TODO-5400 - Table-drive the builtin math-name classifiers.
-3. TODO-5401 - Collapse duplicate std::function callback aliases.
-4. TODO-5407 - Route benchmark instrumentation through one sink.
-5. TODO-5410 - Add self-tests for the nine unguarded check scripts.
-6. TODO-5402 - Replace the 17-callback native tail dispatch signatures with a hooks struct.
-7. TODO-5403 - Extend the source-file-size guard beyond src/semantics.
+2. TODO-5401 - Collapse duplicate std::function callback aliases.
+3. TODO-5402 - Replace the 17-callback native tail dispatch signatures with a hooks struct.
+4. TODO-5403 - Extend the source-file-size guard beyond src/semantics.
 
 ### Priority Lanes
 
 - Embedding (must support iOS): TODO-5348 (needs macOS)
 - Docs hygiene: TODO-5398
-- Lowerer structure: TODO-5400, TODO-5401 -> TODO-5402 -> TODO-5403 -> TODO-5404
+- Lowerer structure: TODO-5401 -> TODO-5402 -> TODO-5403 -> TODO-5404
 - Collection resolution: TODO-5405 -> TODO-5406
-- Diagnostics: TODO-5407 -> TODO-5408
-- Tooling: TODO-5410 -> TODO-5409, TODO-5411, TODO-5412; TODO-5421 (needs approval)
+- Diagnostics: TODO-5408
+- Tooling: TODO-5409, TODO-5411, TODO-5412; TODO-5421 (needs approval)
 - Performance: TODO-5413
 - Test infrastructure: TODO-5414
 - Stdlib: TODO-5415
@@ -179,18 +170,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - the three files are gone or reduced to a short pointer; every surviving fact lives in a document the index or AGENTS links to
     - `scripts/check_spec_docs.py` and the todo index ctests pass
   - stop_rule: if an entry's truth cannot be verified against the code, drop it rather than carry it forward.
-
-- [ ] TODO-5400: Table-drive the builtin math-name classifiers
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-03
-  - phase: Compiler structure
-  - parallel_track: lowerer-structure
-  - scope: `src/ir_lowerer/IrLowererBuiltinNameHelpers.cpp` repeats the prologue `if (expr.kind != Call || name.empty()) return false; if (!parseMathName(resolveMathExprName(expr), out, allowBare)) ...` 19 times, once per math builtin family. Replace with one classifier over a (family, accepted names) table.
-  - acceptance:
-    - the 19 near-identical functions become table rows plus one lookup; IR dumps for `examples/` are byte-identical before/after
-    - full release gate green
-  - stop_rule: if two families differ in more than the name set, keep them as separate rows with an explicit predicate column, not separate functions.
 
 - [ ] TODO-5401: Collapse duplicate std::function callback aliases
   - owner: ai
@@ -264,18 +243,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - full gate green
   - stop_rule: a branch with non-zero hits stays; document it, do not delete it.
 
-- [ ] TODO-5407: Route benchmark instrumentation through one sink
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-03
-  - phase: Compiler structure
-  - parallel_track: diagnostics
-  - scope: Five production files write `[benchmark-...]` JSON lines straight to std::cerr (SemanticsValidator.cpp, SemanticsValidatorPassesDefinitions.cpp, CompilePipeline.cpp, SemanticsValidationBenchmarkOrchestration.cpp, IrLowererLegacyCollectionBranchCounters.cpp). AGENTS.md asks for a centralized logger `(to be defined)`. Define `primec::support::BenchmarkSink` (default: stderr; tests: capture) and make these the only callers; add a ctest that no non-bin src file names std::cerr/std::cout (the two IrToCpp emitter files generate C++ text and are allowlisted).
-  - acceptance:
-    - zero std::cerr/std::cout uses in production src outside the allowlist; audit script with self-test
-    - `scripts/benchmark.sh` output unchanged; full gate green
-  - stop_rule: do not change the JSON line format; downstream scripts parse it.
-
 - [ ] TODO-5408: Turn stdlib registry startup throws into diagnostics
   - owner: ai
   - status: deferred
@@ -299,17 +266,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - .clang-format committed; the check passes on HEAD; AGENTS.md documents the command
     - no mass reformat in this leaf
   - stop_rule: if no config reproduces the current style within a few percent of lines, pick the closest and record the diff as a follow-up instead of reformatting everything.
-
-- [ ] TODO-5410: Add self-tests for the nine unguarded check scripts
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-03
-  - phase: Test infrastructure
-  - parallel_track: tooling
-  - scope: Nine `scripts/check_*.py` audits have no `tests/scripts/test_*.py` self-test (check_benchmark_report, check_graph_budget, check_include_layers, check_semantic_memory_budget, check_semantic_memory_phase_one_success, check_semantic_memory_trend, check_test_duration_budget, check_test_suite_naming, check_testing_mirror_structs), so a broken audit passes silently. Add one self-test each with a passing and a failing fixture and register them in CMakeLists.txt next to their audit.
-  - acceptance:
-    - each listed script has a registered self-test; `scripts/check_test_registration.py` passes
-  - stop_rule: if an audit cannot be exercised with a small fixture, refactor it to expose a `find_problems(...)` function first.
 
 - [ ] TODO-5411: Add a CI workflow for the release gate
   - owner: ai

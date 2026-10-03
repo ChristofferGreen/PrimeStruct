@@ -13,6 +13,8 @@
 #elif defined(__linux__)
 #include <malloc.h>
 #include <unistd.h>
+#include <sstream>
+#include "primec/support/BenchmarkSink.h"
 #endif
 
 namespace primec::semantics {
@@ -138,7 +140,8 @@ void SemanticValidatorLifetimeBenchmark::captureAfterDestroyAndReport() {
   }
   allocationAfterDestroy_ = captureProcessAllocationSample();
   rssAfterDestroy_ = captureProcessRssSample();
-  std::cerr << "[benchmark-semantic-validator-lifetime] "
+  std::ostringstream line;
+  line << "[benchmark-semantic-validator-lifetime] "
             << "{\"schema\":\"primestruct_semantic_validator_lifetime_v1\""
             << ",\"allocation_before_bytes\":" << allocationBefore_.allocatedBytes
             << ",\"allocation_after_run_bytes\":" << allocationAfterRun_.allocatedBytes
@@ -146,7 +149,8 @@ void SemanticValidatorLifetimeBenchmark::captureAfterDestroyAndReport() {
             << ",\"rss_before_bytes\":" << rssBefore_.residentBytes
             << ",\"rss_after_run_bytes\":" << rssAfterRun_.residentBytes
             << ",\"rss_after_destroy_bytes\":" << rssAfterDestroy_.residentBytes
-            << "}" << std::endl;
+            << "}";
+  primec::support::emitBenchmarkLine(line.str());
 }
 
 void maybeRelieveSemanticAllocatorPressure() {

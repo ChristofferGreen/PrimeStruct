@@ -9,6 +9,8 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <sstream>
+#include "primec/support/BenchmarkSink.h"
 
 namespace primec {
 namespace {
@@ -19,7 +21,8 @@ void emitPostIrPreparationAstHeapEstimate(const Program &program) {
   }
 
   const ProgramHeapEstimateStats stats = estimateProgramHeap(program);
-  std::cerr << "[benchmark-ast-heap-estimate] "
+  std::ostringstream line;
+  line << "[benchmark-ast-heap-estimate] "
             << "{\"stage\":\"post-ir-preparation-release\""
             << ",\"definitions\":" << stats.definitions
             << ",\"executions\":" << stats.executions
@@ -27,7 +30,8 @@ void emitPostIrPreparationAstHeapEstimate(const Program &program) {
             << ",\"transforms\":" << stats.transforms
             << ",\"strings\":" << stats.strings
             << ",\"dynamic_bytes\":" << stats.dynamicBytes
-            << "}\n";
+            << "}";
+  primec::support::emitBenchmarkLine(line.str());
 }
 
 bool validateRuntimeReflectionBackendSupport(const SemanticProgram &semanticProgram,

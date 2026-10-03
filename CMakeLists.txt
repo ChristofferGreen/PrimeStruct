@@ -159,6 +159,7 @@ set(PRIMESTRUCT_SUPPORT_SOURCES
   src/support/EmitKind.cpp
   src/support/OptionsParser.cpp
   src/support/ProcessRunner.cpp
+  src/support/BenchmarkSink.cpp
   src/support/ReceiverElementFamilyClassifier.cpp
   src/support/SourceLocationMapper.cpp
   src/support/StdlibSurfaceRegistry.cpp
@@ -2232,6 +2233,83 @@ if(PRIMESTRUCT_BUILD_TESTS)
             --repo-root ${CMAKE_SOURCE_DIR}
   )
   set_tests_properties(PrimeStruct_collection_audit_exemption_count_ratchet_self_test PROPERTIES TIMEOUT 60)
+
+  add_test(
+    NAME PrimeStruct_benchmark_report_self_test
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/scripts/test_check_benchmark_report.py
+            --repo-root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_benchmark_report_self_test PROPERTIES TIMEOUT 120)
+
+  add_test(
+    NAME PrimeStruct_graph_budget_self_test
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/scripts/test_check_graph_budget.py
+            --repo-root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_graph_budget_self_test PROPERTIES TIMEOUT 120)
+
+  add_test(
+    NAME PrimeStruct_include_layers_self_test
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/scripts/test_check_include_layers.py
+            --repo-root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_include_layers_self_test PROPERTIES TIMEOUT 120)
+
+  add_test(
+    NAME PrimeStruct_semantic_memory_budget_self_test
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/scripts/test_check_semantic_memory_budget.py
+            --repo-root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_semantic_memory_budget_self_test PROPERTIES TIMEOUT 120)
+
+  add_test(
+    NAME PrimeStruct_semantic_memory_phase_one_success_self_test
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/scripts/test_check_semantic_memory_phase_one_success.py
+            --repo-root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_semantic_memory_phase_one_success_self_test PROPERTIES TIMEOUT 120)
+
+  add_test(
+    NAME PrimeStruct_semantic_memory_trend_self_test
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/scripts/test_check_semantic_memory_trend.py
+            --repo-root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_semantic_memory_trend_self_test PROPERTIES TIMEOUT 120)
+
+  add_test(
+    NAME PrimeStruct_test_duration_budget_self_test
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/scripts/test_check_test_duration_budget.py
+            --repo-root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_test_duration_budget_self_test PROPERTIES TIMEOUT 120)
+
+  add_test(
+    NAME PrimeStruct_test_suite_naming_self_test
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/scripts/test_check_test_suite_naming.py
+            --repo-root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_test_suite_naming_self_test PROPERTIES TIMEOUT 120)
+
+  add_test(
+    NAME PrimeStruct_testing_mirror_structs_self_test
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/scripts/test_check_testing_mirror_structs.py
+            --repo-root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_testing_mirror_structs_self_test PROPERTIES TIMEOUT 120)
+
+  add_test(
+    NAME PrimeStruct_no_direct_stdio_audit
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/check_no_direct_stdio.py
+            --root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_no_direct_stdio_audit PROPERTIES TIMEOUT 60)
+
+  add_test(
+    NAME PrimeStruct_no_direct_stdio_audit_self_test
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/scripts/test_check_no_direct_stdio.py
+            --repo-root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_no_direct_stdio_audit_self_test PROPERTIES TIMEOUT 60)
 
   add_test(
     NAME PrimeStruct_new_collection_zero_cpp_gate_self_test

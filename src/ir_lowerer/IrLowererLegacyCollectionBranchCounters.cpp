@@ -7,6 +7,8 @@
 
 #include <fcntl.h>
 #include <unistd.h>
+#include <sstream>
+#include "primec/support/BenchmarkSink.h"
 
 namespace primec::ir_lowerer {
 
@@ -218,7 +220,7 @@ void recordLegacyCollectionBranchStructSlotLayoutDivergence(
                       "\"generic_resolved\":" + (genericResolved ? "true" : "false") + ","
                       "\"generic_struct_path\":\"" + jsonEscape(genericStructPath) + "\","
                       "\"generic_slot_count\":" + std::to_string(genericSlotCount) + "}";
-  std::cerr << line << "\n";
+  primec::support::emitBenchmarkLine(line);
   appendLineToLogFileSink(line);
 }
 
@@ -246,7 +248,7 @@ void emitLegacyCollectionBranchCountersReport() {
       "\"collection_vector_owner_path_receiver_type_site_hits\":" +
       std::to_string(c.collectionVectorOwnerPathReceiverTypeSiteHits) + ","
       "\"struct_slot_layout_divergence_count\":" + std::to_string(c.structSlotLayoutDivergenceCount) + "}";
-  std::cerr << line << "\n";
+  primec::support::emitBenchmarkLine(line);
   appendLineToLogFileSink(line);
 }
 
