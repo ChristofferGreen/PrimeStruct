@@ -274,6 +274,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
       if (kind == LocalInfo::ValueKind::Int32) {
         instructions.push_back({IrOpcode::PushI32, 1});
         instructions.push_back({isIncrement ? IrOpcode::AddI32 : IrOpcode::SubI32, 0});
+        instructions.push_back({IrOpcode::SextI32, 0}); // i32 wraps at 32 bits
         return true;
       }
       if (kind == LocalInfo::ValueKind::Int64 || kind == LocalInfo::ValueKind::UInt64) {

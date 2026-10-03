@@ -342,6 +342,9 @@ OperatorPowAbsSignEmitResult emitPowAbsSignOperatorExpr(const Expr &expr,
           instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
           instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempBase)});
           instructions.push_back({mulOp, 0});
+          if (mulOp == IrOpcode::MulI32) {
+            instructions.push_back({IrOpcode::SextI32, 0}); // i32 wraps at 32 bits
+          }
           instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
 
           instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempExp)});
@@ -435,6 +438,9 @@ OperatorPowAbsSignEmitResult emitPowAbsSignOperatorExpr(const Expr &expr,
             instructions.push_back({IrOpcode::JumpIfZero, 0});
             instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
             instructions.push_back({negOp, 0});
+            if (negOp == IrOpcode::NegI32) {
+              instructions.push_back({IrOpcode::SextI32, 0}); // abs(i32 min) wraps
+            }
             instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
             size_t jumpToEnd = instructions.size();
             instructions.push_back({IrOpcode::Jump, 0});

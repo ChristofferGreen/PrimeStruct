@@ -103,19 +103,19 @@ of sync with them.
 | TODO-5464 | Add an output sink to Vm::execute for capturing program output | deferred | test-matrix |
 | TODO-5466 | Migrate duplicated vm/native compile-run cases to the program matrix | in_progress | test-matrix |
 | TODO-5471 | Register form with promoted locals | deferred | opt-regform |
-| TODO-5483 | Verify arm64 SextI32 and normalize the remaining i32 builtins | ready | ir-semantics |
+| TODO-5483 | Verify arm64 SextI32 and normalize the last i32 builtins | ready | ir-semantics |
 | TODO-5478 | Remove the super-linear front-end cost on very large functions | deferred | compile-speed |
 | TODO-5481 | Gate vm, native and optexe rows in the benchmark baseline | deferred | opt-bench |
 
 ### Ready Now
 
 - TODO-5466 (track: test-matrix): Migrate duplicated vm/native compile-run cases to the program matrix (surface: tests/unit/compile_run, tests/unit/program_matrix, scripts/migrate_compile_run_cases.py).
-- TODO-5483 (track: ir-semantics): Verify arm64 SextI32 and normalize the remaining i32 builtins (surface: src/ir_lowerer operator helpers, NativeEmitterInternalsArm64Arithmetic.h, tests/unit/program_matrix).
+- TODO-5483 (track: ir-semantics): Verify arm64 SextI32 and normalize the last i32 builtins (surface: src/ir_lowerer operator helpers, NativeEmitterInternalsArm64Arithmetic.h, tests/unit/program_matrix).
 
 ### Immediate Next 10
 
 1. TODO-5466 - Migrate duplicated vm/native compile-run cases to the program matrix.
-2. TODO-5483 - Verify arm64 SextI32 and normalize the remaining i32 builtins.
+2. TODO-5483 - Verify arm64 SextI32 and normalize the last i32 builtins.
 
 ### Priority Lanes
 
@@ -155,16 +155,16 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - full release gate green with total compile-run wall time not higher than before
   - stop_rule: convert in batches of one suite per commit; if a batch changes a test's verdict, revert that batch and record the case.
 
-- [ ] TODO-5483: Verify arm64 SextI32 and normalize the remaining i32 builtins
+- [ ] TODO-5483: Verify arm64 SextI32 and normalize the last i32 builtins
   - owner: ai
   - status: ready
   - created_at: 2026-10-03
   - phase: Optimizing backends
   - parallel_track: ir-semantics
-  - scope: TODO-5477 made user-level i32 `plus`/`minus`/`multiply`/`divide`/`negate` wrap through the `SextI32` opcode. Two gaps remain. (1) `Arm64Emitter::emitSextI32` (SXTW x0, w0) was written from the encoding and never executed: run the native conformance and matrix cases on an arm64 macOS machine and add an encoding test. (2) Builtins that compute i32 values in lowering without going through the arithmetic helper (`abs`, `pow`, `clamp`, `saturate`, `round`, `increment`/`decrement` helpers, `sign`) still leave unnormalized slots on overflow; emit SextI32 where an i32 result can leave the 32-bit range and add a matrix case per builtin.
+  - scope: TODO-5477 made user-level i32 `plus`/`minus`/`multiply`/`divide`/`negate` wrap through the `SextI32` opcode. Two gaps remain. (1) `Arm64Emitter::emitSextI32` (SXTW x0, w0) was written from the encoding and never executed: run the native conformance and matrix cases on an arm64 macOS machine and add an encoding test. (2) `increment`, `decrement`, `abs` and `pow` now emit SextI32 (matrix case `i32_wrap_builtins`); builtins that can still leave the i32 range without going through the arithmetic helper (integer `lerp`, `saturate`, `round`) need the same treatment and a matrix case each.
   - acceptance:
     - the `i32 arithmetic wraps` matrix cases pass on arm64 macOS native; an encoding unit test pins the SXTW bytes
-    - each audited builtin either has a matrix case showing identical output on vm, native, optexe and exe for overflowing input, or a comment explaining why its result cannot overflow
+    - each remaining builtin (integer `lerp`, `saturate`, `round`) either has a matrix case showing identical output on vm, native, optexe and exe for overflowing input, or a comment explaining why its result cannot overflow
   - stop_rule: do not change i64/u64 behavior or the I32 arithmetic opcodes themselves; lowering also uses them for address arithmetic.
 
 - [ ] TODO-5471: Register form with promoted locals

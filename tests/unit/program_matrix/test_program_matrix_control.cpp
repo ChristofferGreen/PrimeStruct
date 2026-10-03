@@ -431,3 +431,33 @@ main() {
       "vm-step-O0", "vm-O0", "vm-O2", "native-O0", "native-O2", "optexe-O2", "exe"};
   program_matrix::runProgramMatrix(program);
 }
+
+TEST_CASE("i32 increment, decrement, abs and pow wrap like plus and multiply") {
+  program_matrix::ProgramCase program;
+  program.name = "i32_wrap_builtins";
+  program.source = R"(
+import /std/math/*
+
+[return<int> effects(io_out)]
+main() {
+  [i32] lowest{minus(negate(2147483647i32), 1i32)}
+  [i32 mut] up{2147483647i32}
+  increment(up)
+  print_line(up)
+  print_line(if(less_than(up, 0i32), then() { 1i32 }, else() { 0i32 }))
+  [i32 mut] down{lowest}
+  decrement(down)
+  print_line(down)
+  print_line(if(less_than(down, 0i32), then() { 1i32 }, else() { 0i32 }))
+  print_line(if(less_than(abs(lowest), 0i32), then() { 1i32 }, else() { 0i32 }))
+  print_line(pow(3i32, 23i32))
+  print_line(if(less_than(pow(3i32, 23i32), 0i32), then() { 1i32 }, else() { 0i32 }))
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "-2147483648\n1\n2147483647\n0\n1\n-346101685\n1\n";
+  program.onlyConfigs = {
+      "vm-step-O0", "vm-O0", "vm-O2", "native-O0", "native-O2", "optexe-O2", "exe"};
+  program_matrix::runProgramMatrix(program);
+}
