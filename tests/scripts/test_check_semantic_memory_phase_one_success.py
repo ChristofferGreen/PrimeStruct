@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Self-test for scripts/check_semantic_memory_phase_one_success.py (TODO-5410)."""
+"""Self-test for scripts/check_semantic_memory_phase_one_success.py."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from audit_selftest_support import Checks, run, write_json  # noqa: E402
 

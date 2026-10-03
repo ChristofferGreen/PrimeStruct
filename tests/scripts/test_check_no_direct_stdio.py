@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Self-test for scripts/check_no_direct_stdio.py (TODO-5407)."""
+"""Self-test for scripts/check_no_direct_stdio.py"""
 
 from __future__ import annotations
 

@@ -21,3 +21,5 @@ test_conformance*.cpp
 test_conformance*.psir
 test_alias_capacity.psir
 test_map_helper.psir
+__pycache__/
+*.pyc

@@ -1,4 +1,4 @@
-"""Shared helpers for the subprocess-style audit self-tests (TODO-5410)."""
+"""Shared helpers for the subprocess-style audit self-tests."""
 
 from __future__ import annotations
 

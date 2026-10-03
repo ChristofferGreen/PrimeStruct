@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Self-test for scripts/check_graph_budget.py (TODO-5410).
+"""Self-test for scripts/check_graph_budget.py.
 
 Uses a fake `primec` shell stand-in that prints a canned type-graph metrics line.
 """
@@ -14,6 +14,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from audit_selftest_support import Checks, run, write, write_json  # noqa: E402
 

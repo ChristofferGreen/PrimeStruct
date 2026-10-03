@@ -7,7 +7,7 @@
 namespace primec::support {
 
 // Single destination for `[benchmark-...] {json}` instrumentation lines
-// (TODO-5407). Production code never writes to the standard streams directly; it formats
+//. Production code never writes to the standard streams directly; it formats
 // one line (without trailing newline) and calls emitBenchmarkLine. The line
 // format is parsed by scripts/benchmark*.sh and must not change.
 void emitBenchmarkLine(std::string_view line);

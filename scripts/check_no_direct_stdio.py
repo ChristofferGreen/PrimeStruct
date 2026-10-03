@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail when production sources write to std::cerr / std::cout (TODO-5407).
+"""Fail when production sources write to std::cerr / std::cout.
 
 Instrumentation goes through primec::support::emitBenchmarkLine; src/bin
 (the CLI front ends) may print. The IrToCpp emitters generate C++ text that
