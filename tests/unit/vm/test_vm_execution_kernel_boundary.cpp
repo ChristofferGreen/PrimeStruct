@@ -205,21 +205,21 @@ TEST_CASE("vm execution kernel avoids runtime-only dependencies") {
       repoRoot / "include" / "primec" / "runtime" / "VmExecutionKernel.h";
   const std::filesystem::path sourcePath =
       repoRoot / "src" / "runtime" / "VmExecutionKernel.cpp";
-  const std::filesystem::path numericSharedPath =
-      repoRoot / "src" / "runtime" / "VmNumericOpcodeShared.cpp";
+  const std::filesystem::path pureSemanticsPath =
+      repoRoot / "include" / "primec" / "ir" / "IrPureSemantics.h";
   const std::filesystem::path kernelBoundaryHeaderPath =
       repoRoot / "include" / "primec" / "runtime" / "VmKernelBoundary.h";
   const std::filesystem::path kernelBoundarySourcePath =
       repoRoot / "src" / "runtime" / "VmKernelBoundary.cpp";
   REQUIRE(std::filesystem::exists(headerPath));
   REQUIRE(std::filesystem::exists(sourcePath));
-  REQUIRE(std::filesystem::exists(numericSharedPath));
+  REQUIRE(std::filesystem::exists(pureSemanticsPath));
   REQUIRE(std::filesystem::exists(kernelBoundaryHeaderPath));
   REQUIRE(std::filesystem::exists(kernelBoundarySourcePath));
 
   const std::string header = readText(headerPath);
   const std::string source = readText(sourcePath);
-  const std::string numericShared = readText(numericSharedPath);
+  const std::string pureSemantics = readText(pureSemanticsPath);
   const std::string kernelBoundaryHeader = readText(kernelBoundaryHeaderPath);
   const std::string kernelBoundarySource = readText(kernelBoundarySourcePath);
   CHECK(header.find("primec/runtime/Vm.h") == std::string::npos);
@@ -229,21 +229,19 @@ TEST_CASE("vm execution kernel avoids runtime-only dependencies") {
   CHECK(source.find("primevm_main") == std::string::npos);
   CHECK(source.find("#include \"primec/runtime/VmKernelBoundary.h\"") !=
         std::string::npos);
-  CHECK(source.find("vm_kernel::isPureNumericOpcode(op)") !=
-        std::string::npos);
+  // The kernel runs arithmetic through the shared pure-opcode semantics and
+  // carries no opcode-by-opcode numeric implementation of its own.
+  CHECK(source.find("#include \"primec/ir/IrPureSemantics.h\"") != std::string::npos);
+  CHECK(source.find("evalPureOpcode(") != std::string::npos);
   CHECK(source.find("handleSharedVmControlFlowOpcode(") != std::string::npos);
-  CHECK(source.find("handleVmNumericOpcode(") != std::string::npos);
-  CHECK(numericShared.find("#include \"primec/runtime/VmKernelBoundary.h\"") !=
-        std::string::npos);
-  CHECK(numericShared.find("executePureNumericOpcode(inst, stack, error)") !=
-        std::string::npos);
-  CHECK(numericShared.find("case IrOpcode::AddI32:") == std::string::npos);
+  CHECK(source.find("case IrOpcode::AddI32:") == std::string::npos);
+  CHECK(source.find("case IrOpcode::CmpGtU64:") == std::string::npos);
   CHECK(kernelBoundaryHeader.find("enum class PureOpcodeResult") !=
         std::string::npos);
-  CHECK(kernelBoundarySource.find("case IrOpcode::AddI32:") !=
-        std::string::npos);
-  CHECK(kernelBoundarySource.find("case IrOpcode::CmpGtU64:") !=
-        std::string::npos);
+  CHECK(kernelBoundarySource.find("evalPureOpcode(") != std::string::npos);
+  CHECK(kernelBoundarySource.find("case IrOpcode::CmpGtU64:") == std::string::npos);
+  CHECK(pureSemantics.find("case IrOpcode::AddI32:") != std::string::npos);
+  CHECK(pureSemantics.find("case IrOpcode::CmpGtU64:") != std::string::npos);
 }
 
 TEST_SUITE_END();

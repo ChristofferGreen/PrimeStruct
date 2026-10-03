@@ -1,7 +1,7 @@
 #include "primec/runtime/VmExecutionKernel.h"
 
 #include "VmControlFlowOpcodeShared.h"
-#include "VmExecutionNumeric.h"
+#include "primec/ir/IrPureSemantics.h"
 #include "primec/runtime/VmStringHeap.h"
 #include "primec/runtime/VmKernelBoundary.h"
 
@@ -11,10 +11,6 @@
 namespace primec::vm_detail {
 
 namespace {
-
-bool isVmKernelNumericOpcode(IrOpcode op) {
-  return vm_kernel::isPureNumericOpcode(op);
-}
 
 } // namespace
 
@@ -342,10 +338,28 @@ template <bool TrackEvents>
     return VmKernelStepOutcome::Continue;
   }
   default:
-    if (isVmKernelNumericOpcode(inst.op)) {
-      if (!handleVmNumericOpcode(inst, stack, error)) {
+    // Arithmetic, comparisons and conversions: operands are read in place and
+    // the result overwrites the lower operand, with the value semantics shared
+    // with constant folding and the C++ emitters (IrPureSemantics.h).
+    if (const size_t arity = IrPureOpcodeArityTable[static_cast<uint8_t>(inst.op)]; arity != 0) {
+      const size_t size = stack.size();
+      if (size < arity) {
+        error = vm_kernel::pureOpcodeUnderflowMessage(inst.op);
         return VmKernelStepOutcome::Fault;
       }
+      const uint64_t rhs = stack[size - 1];
+      const uint64_t lhs = arity == 2 ? stack[size - 2] : rhs;
+      uint64_t result = 0;
+      if (evalPureOpcode(inst.op, lhs, rhs, result) != IrPureEval::Ok) {
+        // The only fault a pure opcode has; the operands are consumed.
+        stack.resize(size - arity);
+        error = "division by zero in IR";
+        return VmKernelStepOutcome::Fault;
+      }
+      if (arity == 2) {
+        stack.pop_back();
+      }
+      stack.back() = result;
       ip += 1;
       return VmKernelStepOutcome::Continue;
     }

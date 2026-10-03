@@ -669,8 +669,6 @@ set(PRIMESTRUCT_RUNTIME_SOURCES
   src/runtime/VmControlFlowOpcodeShared.cpp
   src/runtime/VmExecution.cpp
   src/runtime/VmExecutionKernel.cpp
-  src/runtime/VmExecutionNumeric.cpp
-  src/runtime/VmNumericOpcodeShared.cpp
   src/runtime/VmHeapHelpers.cpp
   src/runtime/VmStringHeap.cpp
   src/runtime/VmIoHelpers.cpp
@@ -727,7 +725,7 @@ endif()
 
 # IR container pieces a runtime-only host needs: bytecode (de)serialization and
 # VM-target validation. Deliberately free of parser/semantics/lowerer code.
-add_library(primec_ir_core_lib src/ir/IrCfg.cpp src/ir/IrSerializer.cpp src/ir/IrValidation.cpp)
+add_library(primec_ir_core_lib src/ir/IrCfg.cpp src/ir/IrLocalEscape.cpp src/ir/IrSerializer.cpp src/ir/IrValidation.cpp)
 target_include_directories(primec_ir_core_lib PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
@@ -928,6 +926,17 @@ if(PRIMESTRUCT_BUILD_TESTS)
   target_include_directories(PrimeStruct_ir_cfg_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
   target_link_libraries(PrimeStruct_ir_cfg_tests PRIVATE primec_ir_lib primec_runtime_lib)
   primestructEnableWarnings(PrimeStruct_ir_cfg_tests)
+
+  # IR optimizer building blocks (TODO-5432, TODO-5433 and the passes after them):
+  # shared opcode semantics, local escape analysis, and later the pass tests.
+  add_executable(PrimeStruct_ir_optimizer_tests
+    tests/unit/test_main.cpp
+    tests/unit/ir_pipeline/optimizer/test_ir_pure_semantics.cpp
+    tests/unit/ir_pipeline/optimizer/test_ir_local_escape.cpp
+  )
+  target_include_directories(PrimeStruct_ir_optimizer_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
+  target_link_libraries(PrimeStruct_ir_optimizer_tests PRIVATE primec_ir_lib primec_backend_registry_lib primec_runtime_lib)
+  primestructEnableWarnings(PrimeStruct_ir_optimizer_tests)
 
   # Collection helper target parity matrix (TODO-5349): dump spelling vs published
   # semantic-product targets vs lowering/VM behavior for every helper call shape.
@@ -2927,6 +2936,22 @@ if(PRIMESTRUCT_BUILD_TESTS)
     PrimeStruct_ir_cfg_tests
     expected_ir_cfg_doctest_suites.txt
     ${PrimeStructIrCfgTestSuites}
+  )
+  set(PrimeStructIrOptimizerTestSuites
+    primestruct.ir.pure_semantics
+    primestruct.ir.local_escape
+  )
+  foreach(suite IN LISTS PrimeStructIrOptimizerTestSuites)
+    string(REPLACE "." "_" suiteId "${suite}")
+    set(testName "PrimeStruct_${suiteId}")
+    add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_ir_optimizer_tests> "--test-suite=${suite}")
+    set_tests_properties("${testName}" PROPERTIES TIMEOUT 120)
+  endforeach()
+  addPrimeStructSuiteRegistration(
+    PrimeStruct_ir_optimizer_suite_registration
+    PrimeStruct_ir_optimizer_tests
+    expected_ir_optimizer_doctest_suites.txt
+    ${PrimeStructIrOptimizerTestSuites}
   )
   addPrimeStructSuiteRegistration(
     PrimeStruct_backend_ir_suite_registration
