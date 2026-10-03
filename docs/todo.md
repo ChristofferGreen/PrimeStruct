@@ -188,6 +188,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - phase: Optimizing backends
   - parallel_track: compile-speed
   - scope: `primec`/`primevm` take 3.3 s for a 2,000-statement `main`, 6.5 s for 4,000, 17 s for 8,000 and 84 s for 20,000 (185,739 IR instructions), all before any emitter or the host compiler runs (host clang is ~1 s of that at every size for foldable programs). Profile semantics validation and lowering on that shape and remove the super-linear step. Reproducer generator: docs/OptimizingBackendsPlan.md section 9.1.
+  - profile_note: a callgrind profile of `primec --emit=ir benchmarks/json_parse.prime` (4 KB of source, 445M instructions, about 100 ms; the VM run is another 120 ms at -O2) puts 79% in `Semantics::validate`, of which 57% is `collectPilotRoutingSemanticProductFacts` re-inferring every call through `inferCallSnapshotDataUncached`/`inferBindingTypeFromInitializer` after validation has finished; the self time is spread over string building (`operator+`, `operator==(string, const char*)`, `findStdlibSurfaceMetadataByCanonicalPath`), so no single hotspot. For short scripts this is now the largest share of `primevm` wall time; a first cut is to collect those facts during validation instead of in a second walk.
   - acceptance:
     - the 20,000-statement reproducer compiles at least 4x faster with identical IR output
   - stop_rule: if the cost is inherent to a data structure shared with the semantic product, record the profile and stop.
