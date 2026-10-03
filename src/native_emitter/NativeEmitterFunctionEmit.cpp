@@ -457,6 +457,9 @@ bool emitNativeFunctions(const IrModule &module,
         emitter.emitReturnVoidWithFrameAndLink(layout.framePointerLocalIndex, layout.linkLocalIndex);
         break;
       case IrOpcode::ReturnI32:
+        if constexpr (!kIsArm64) {
+          emitter.emitSignExtendTop32();
+        }
         emitter.emitReturnWithFrameAndLink(layout.framePointerLocalIndex, layout.linkLocalIndex);
         break;
       case IrOpcode::ReturnI64:
@@ -469,6 +472,9 @@ bool emitNativeFunctions(const IrModule &module,
         emitter.emitReturnWithFrameAndLink(layout.framePointerLocalIndex, layout.linkLocalIndex);
         break;
       case IrOpcode::PrintI32: {
+        if constexpr (!kIsArm64) {
+          emitter.emitSignExtendTop32();
+        }
         uint64_t flags = decodePrintFlags(inst.imm);
         bool newline = (flags & PrintFlagNewline) != 0;
         uint64_t fd = (flags & PrintFlagStderr) ? 2 : 1;
@@ -567,6 +573,9 @@ bool emitNativeFunctions(const IrModule &module,
         emitter.emitFileFlush();
         break;
       case IrOpcode::FileWriteI32:
+        if constexpr (!kIsArm64) {
+          emitter.emitSignExtendTop32();
+        }
         emitter.emitFileWriteI32(layout.scratchOffset, layout.scratchBytes);
         break;
       case IrOpcode::FileWriteI64:

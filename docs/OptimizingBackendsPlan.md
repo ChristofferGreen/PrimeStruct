@@ -299,17 +299,17 @@ should be split into leaves once `optexe` has validated the register form.
 
 | Plan item | Leaf |
 | --- | --- |
-| 0.1 flags | TODO-5423 |
-| 0.2 pass manager | TODO-5424 |
-| 0.3 IR dumps | TODO-5425 (`ir-lowered`), TODO-5424 (`ir-optimized`) |
-| 0.4 benchmarks | TODO-5426 |
-| 0.5 matrix runner | TODO-5427 (VM output sink), TODO-5428 (runner), TODO-5429 (migration) |
-| 1.1 shared CFG, stack-balance check | TODO-5430, TODO-5431 |
-| 1.3 shared pure-opcode semantics | TODO-5432 |
-| 1.4 local escape analysis | TODO-5433 |
-| 2.1 register form with promoted locals | TODO-5434 (deferred: only the native generator needs it) |
-| 2.1b / section 9 `optexe` | TODO-5435..5438 (done), TODO-5439 (matrix, benchmarks) |
-| found while testing | TODO-5440 (i32 overflow semantics), TODO-5441 (front-end cost on huge functions, deferred) |
+| 0.1 flags | TODO-5460 |
+| 0.2 pass manager | TODO-5461 |
+| 0.3 IR dumps | TODO-5462 (`ir-lowered`), TODO-5461 (`ir-optimized`) |
+| 0.4 benchmarks | TODO-5463 |
+| 0.5 matrix runner | TODO-5464 (VM output sink), TODO-5465 (runner), TODO-5466 (migration) |
+| 1.1 shared CFG, stack-balance check | TODO-5467, TODO-5468 |
+| 1.3 shared pure-opcode semantics | TODO-5469 |
+| 1.4 local escape analysis | TODO-5470 |
+| 2.1 register form with promoted locals | TODO-5471 (deferred: only the native generator needs it) |
+| 2.1b / section 9 `optexe` | TODO-5472..5475 (done), TODO-5476 (matrix, benchmarks) |
+| found while testing | TODO-5477 (i32 overflow semantics), TODO-5478 (front-end cost on huge functions, deferred) |
 
 ### Phase 0: measurement and control surface (no behaviour change)
 
@@ -823,17 +823,19 @@ Run time on this machine (seconds; `exe` is the old emitter at `clang++ -O0`):
 | json_parse | 2.23 | 1.95 | 6.94 | 0.0122 |
 
 These benchmarks have constant inputs, so clang folds much of the work at compile time; the table shows the
-ceiling, not what data-dependent programs will see. TODO-5426/5439 add non-foldable rows.
+ceiling, not what data-dependent programs will see. TODO-5463/5476 add non-foldable rows.
 
 Compile time: for an `n`-statement `main` of arithmetic and branches, clang on the optexe source takes
 0.8-1.0 s at n=2,000 and 1.2-1.4 s at n=8,000 at every `-O` level (1.1 MB of C++), against 2.8 s and 8.9 s for the
 old emitter at `-O0`. The cost that grows is `primec` itself, before any emitter runs: 3.3 s, 6.5 s, 17 s and 84 s at
-n=2,000, 4,000, 8,000 and 20,000 (TODO-5441). The reproducer is a `main` of lines like
+n=2,000, 4,000, 8,000 and 20,000 (TODO-5478). The reproducer is a `main` of lines like
 `assign(total, plus(multiply(total, 3i32), K))`, with an `if` on every seventh line.
 
-Finding (TODO-5440): the backends disagree on i32 overflow. For `total = 2147483647i32; total = total + 1i32`, the
+Finding (TODO-5477): the backends disagreed on i32 overflow. For `total = 2147483647i32; total = total + 1i32`, the
 VM keeps the 64-bit slot (so `total < 0` is false) and prints -2147483648, `exe` wraps in `int32_t` (compare true,
-prints -2147483648), and `native` keeps 64 bits and prints 2147483648. `optexe` follows the VM, the oracle.
+prints -2147483648), and `native` kept 64 bits and printed 2147483648. `optexe` follows the VM, the oracle, and native
+x86_64 now reads the low 32 bits for `PrintI32`, `FileWriteI32` and `ReturnI32` like the VM; `exe` still differs on the
+comparison.
 
 Suggested order: Phase 0.1-0.3 (flags, pass manager, dumps), Phase 1.1
 (shared CFG), then this emitter (done), then the matrix runner (0.5) to run the corpus through it. Phase 3

@@ -152,6 +152,9 @@ class X64Emitter {
   void emitDiv();
   void emitDivU();
   void emitNeg();
+  // Replaces the top operand by its low 32 bits sign-extended, which is how the VM
+  // reads an i32 slot for printing, file writes and returns.
+  void emitSignExtendTop32();
   void emitAddF32();
   void emitSubF32();
   void emitMulF32();

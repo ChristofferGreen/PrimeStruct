@@ -203,6 +203,23 @@ TEST_CASE("printing does not clobber locals or operands, in the entry function o
   expectNativeMatchesVm(deepPrintModule, "print_with_deep_stack");
 }
 
+TEST_CASE("i32 slots print and return as 32-bit values, as in the VM") {
+  // 2147483647 + 1 stays 2147483648 in the 64-bit slot; the VM reads the low 32
+  // bits when printing, writing to a file and returning.
+  primec::IrModule module = optimizer_test::moduleOf(optimizer_test::assemble({"PushI32 2147483647",
+                                                                               "PushI32 1",
+                                                                               "AddI32",
+                                                                               "Dup",
+                                                                               "PrintI32 1",
+                                                                               "PushI64 -4294967296",
+                                                                               "AddI64",
+                                                                               "PrintI32 1",
+                                                                               "PushI64 4294967297",
+                                                                               "ReturnI32"}));
+  module.functions[0].metadata.effectMask = primec::EffectIoOut;
+  expectNativeMatchesVm(module, "i32_widths");
+}
+
 #else
 
 TEST_CASE("optimized native code is only built on Linux x86_64") {

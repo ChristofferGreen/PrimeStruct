@@ -345,6 +345,14 @@ inline void X64Emitter::emitDivU() {
   emitPushReg(0);
 }
 
+inline void X64Emitter::emitSignExtendTop32() {
+  emitPopReg(0);
+  emitRex(true, 0, 0);
+  emitByte(0x63); // movsxd rax, eax
+  emitModRmReg(0, 0);
+  emitPushReg(0);
+}
+
 inline void X64Emitter::emitNeg() {
   if (deferOperands_) {
     emitNegDeferred();
