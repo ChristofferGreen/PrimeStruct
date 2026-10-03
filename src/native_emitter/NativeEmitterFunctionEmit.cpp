@@ -1,4 +1,5 @@
 #include "NativeEmitterEmitInternal.h"
+#include "NativeEmitterPromotion.h"
 
 #include <fcntl.h>
 #include <type_traits>
@@ -69,6 +70,22 @@ bool emitNativeFunctions(const IrModule &module,
         emitter.emitStoreLocalFromReg(layout.argvLocalIndex, 13);
       }
     }
+    // Keep the hottest unaddressed locals in registers (x86_64 only). Everything
+    // else about the function is emitted exactly as without promotion.
+    bool hasPromotedLocals = false;
+    if constexpr (!kIsArm64) {
+      emitter.clearPromotedLocals();
+      if (emitter.localPromotionEnabled()) {
+        std::vector<X64Emitter::PromotedLocalSlot> promoted;
+        for (const PromotedLocal &local :
+             planPromotedLocals(fn, X64PromotionPool, sizeof(X64PromotionPool))) {
+          promoted.push_back({local.index, local.reg});
+        }
+        emitter.setPromotedLocals(promoted);
+        emitter.emitInitPromotedLocals();
+        hasPromotedLocals = emitter.hasPromotedLocals();
+      }
+    }
     instOffsets[functionIndex].assign(fn.instructions.size() + 1, 0);
     std::vector<bool> branchTargets(fn.instructions.size() + 1, false);
     for (const auto &inst : fn.instructions) {
@@ -84,6 +101,14 @@ bool emitNativeFunctions(const IrModule &module,
       }
       const auto &inst = fn.instructions[index];
       instOffsets[functionIndex][index] = emitter.currentWordIndex();
+      // Instructions whose templates clobber the promoted registers get the
+      // locals written to their frame slots first and reloaded afterwards.
+      const bool bracketPromoted = hasPromotedLocals && !opcodeKeepsPromotedRegisters(inst.op);
+      if constexpr (!kIsArm64) {
+        if (bracketPromoted) {
+          emitter.emitSpillPromotedLocals();
+        }
+      }
       switch (inst.op) {
       case IrOpcode::PushI32:
         emitter.emitPushI32(static_cast<int32_t>(inst.imm));
@@ -542,6 +567,14 @@ bool emitNativeFunctions(const IrModule &module,
         error = "unsupported IR opcode for native backend";
         return false;
       }
+      if constexpr (!kIsArm64) {
+        if (bracketPromoted) {
+          emitter.emitReloadPromotedLocals();
+        }
+      }
+    }
+    if constexpr (!kIsArm64) {
+      emitter.clearPromotedLocals();
     }
 
     instOffsets[functionIndex][fn.instructions.size()] = emitter.currentWordIndex();

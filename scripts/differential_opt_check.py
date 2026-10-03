@@ -10,12 +10,14 @@ reported as unstable and skipped.
 
     python3 scripts/differential_opt_check.py --build-dir build-release [--levels 1,2,3]
                                               [--jobs 4] [--limit N] [--keep-dir DIR]
-                                              [--optexe [--optexe-levels 0,2]] [--baseline-kernel step]
+                                              [--optexe [--optexe-levels 0,2]] [--native [--native-levels 0,2]]
+                                              [--baseline-kernel step]
 
 With --optexe each program is also compiled with `primec --emit=optexe` (at each
 --optexe-levels host optimization level, via `-O<n>`) and the resulting binary is
-compared against the -O0 VM run. Programs the optexe emitter rejects as using an
-unsupported opcode are counted separately and skipped.
+compared against the -O0 VM run; --native does the same for `primec --emit=native`
+executables (Linux x86_64 and macOS arm64). Programs a backend rejects are counted
+separately and skipped.
 
 Run from anywhere; `primevm` is executed with the build directory as its working
 directory, as the compile-run tests do. Exit status 0 when every program
@@ -85,14 +87,15 @@ def run_vm(build_dir: Path, source_path: Path, flags: list[str], kernel: str = "
     )
 
 
-def run_optexe(build_dir: Path, source_path: Path, level: int) -> tuple[int, str, str] | str:
-    """Compiles with the optexe emit kind and runs the binary. Returns the run
-    result, or a string naming why it could not be compared (`unsupported` when
-    the emitter rejects the program, `frontend` for any other compile failure)."""
-    binary = source_path.with_suffix(f".optexe{level}")
+def run_emitted(build_dir: Path, source_path: Path, kind: str, level: int) -> tuple[int, str, str] | str:
+    """Compiles with the given emit kind (optexe or native) and runs the binary.
+    Returns the run result, or a string naming why it could not be compared
+    (`unsupported` when the backend rejects the program, `frontend` for any other
+    compile failure)."""
+    binary = source_path.with_suffix(f".{kind}{level}")
     try:
         compiled = subprocess.run(
-            [str(build_dir / "primec"), str(source_path), "--emit=optexe", f"-O{level}", "--entry", "/main",
+            [str(build_dir / "primec"), str(source_path), f"--emit={kind}", f"-O{level}", "--entry", "/main",
              "-o", str(binary)],
             cwd=build_dir,
             capture_output=True,
@@ -102,7 +105,8 @@ def run_optexe(build_dir: Path, source_path: Path, level: int) -> tuple[int, str
         return "frontend"
     if compiled.returncode != 0:
         message = compiled.stderr.decode("utf-8", errors="replace")
-        return "unsupported" if "optexe does not support" in message else "frontend"
+        rejected = "optexe does not support" in message or "native backend" in message or "IR lowering error" in message
+        return "unsupported" if rejected else "frontend"
     try:
         completed = subprocess.run([str(binary)], cwd=build_dir, capture_output=True, timeout=TIMEOUT_SECONDS)
     except subprocess.TimeoutExpired:
@@ -116,9 +120,9 @@ def run_optexe(build_dir: Path, source_path: Path, level: int) -> tuple[int, str
     )
 
 
-def check_one(args: tuple[str, str, Path, Path, list[int], list[int], str]) -> tuple[str, str, str]:
+def check_one(args: tuple[str, str, Path, Path, list[int], list[int], list[int], str]) -> tuple[str, str, str]:
     """Returns (label, status, detail); status is ok, unstable, unsupported, or DIFF."""
-    label, text, build_dir, work_dir, levels, optexe_levels, baseline_kernel = args
+    label, text, build_dir, work_dir, levels, optexe_levels, native_levels, baseline_kernel = args
     digest = hashlib.sha1(text.encode("utf-8")).hexdigest()[:12]
     source_path = work_dir / f"{digest}.prime"
     # The tests substitute a scratch path for this placeholder; give each program
@@ -145,16 +149,17 @@ def check_one(args: tuple[str, str, Path, Path, list[int], list[int], str]) -> t
                 detail.append(f"  stderr: {baseline[2][:300]!r} -> {result[2][:300]!r}")
             return (label, "DIFF", "\n".join(detail))
     unsupported = False
-    for level in optexe_levels:
-        result = run_optexe(build_dir, source_path, level)
+    emitted = [("optexe", level) for level in optexe_levels] + [("native", level) for level in native_levels]
+    for kind, level in emitted:
+        result = run_emitted(build_dir, source_path, kind, level)
         if isinstance(result, str):
             if result == "frontend" and baseline[0] == 0:
-                return (label, "DIFF", f"optexe -O{level} failed to compile a program the VM runs "
+                return (label, "DIFF", f"{kind} -O{level} failed to compile a program the VM runs "
                                        f"(source kept as {source_path.name})")
             unsupported = True
-            break
+            continue
         if result != baseline:
-            detail = [f"optexe -O{level} differs from the -O0 VM (source kept as {source_path.name})"]
+            detail = [f"{kind} -O{level} differs from the -O0 VM (source kept as {source_path.name})"]
             if result[0] != baseline[0]:
                 detail.append(f"  exit code: {baseline[0]} -> {result[0]}")
             if result[1] != baseline[1]:
@@ -173,6 +178,8 @@ def main() -> int:
     parser.add_argument("--levels", default="1", help="comma-separated -O levels to compare against -O0")
     parser.add_argument("--optexe", action="store_true", help="also compare optexe binaries against the -O0 VM")
     parser.add_argument("--optexe-levels", default="2", help="comma-separated host -O levels for --optexe")
+    parser.add_argument("--native", action="store_true", help="also compare native executables against the -O0 VM")
+    parser.add_argument("--native-levels", default="0,2", help="comma-separated -O levels for --native")
     parser.add_argument("--baseline-kernel", default="", choices=["", "step"],
                         help="run the -O0 baseline on the step kernel (PRIMEVM_KERNEL=step) to compare it with the fast kernel")
     parser.add_argument("--jobs", type=int, default=4)
@@ -186,13 +193,14 @@ def main() -> int:
         return 2
     levels = [int(part) for part in args.levels.split(",") if part]
     optexe_levels = [int(part) for part in args.optexe_levels.split(",") if part] if args.optexe else []
+    native_levels = [int(part) for part in args.native_levels.split(",") if part] if args.native else []
     sources = collect_sources(args.root)
     if args.limit > 0:
         sources = sources[: args.limit]
 
     work_root = args.keep_dir if args.keep_dir else Path(tempfile.mkdtemp(prefix="primec_diff_"))
     work_root.mkdir(parents=True, exist_ok=True)
-    jobs = [(label, text, build_dir, work_root, levels, optexe_levels, args.baseline_kernel) for label, text in sources]
+    jobs = [(label, text, build_dir, work_root, levels, optexe_levels, native_levels, args.baseline_kernel) for label, text in sources]
 
     counts = {"ok": 0, "unstable": 0, "unsupported": 0, "DIFF": 0}
     failures: list[str] = []
@@ -203,7 +211,7 @@ def main() -> int:
                 failures.append(f"{label}: {detail}")
 
     print(f"programs checked: {len(sources)}  ok: {counts['ok']}  unstable (skipped): {counts['unstable']}  "
-          f"optexe-unsupported: {counts['unsupported']}  differing: {counts['DIFF']}  levels: {levels}")
+          f"emit-unsupported: {counts['unsupported']}  differing: {counts['DIFF']}  levels: {levels}")
     for failure in failures:
         print(failure)
     if failures:

@@ -43,6 +43,10 @@ struct NativeEmitterOptimizationInstrumentation {
 
 struct NativeEmitterOptions {
   bool enableRegisterCache = true;
+  // x86_64 only: keep the hottest locals that no memory access can reach in
+  // machine registers (docs/OptimizingBackendsPlan.md, Phase 3). Off unless the
+  // backend turns it on for -O1 and above.
+  bool promoteLocals = false;
 };
 
 class NativeEmitter {

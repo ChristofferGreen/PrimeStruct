@@ -193,7 +193,9 @@ public:
             IrBackendEmitResult & /*result*/,
             std::string &error) const override {
     NativeEmitter nativeEmitter;
-    return nativeEmitter.emitExecutable(module, options.outputPath, error);
+    NativeEmitterOptions emitterOptions;
+    emitterOptions.promoteLocals = options.optimizationLevel >= 1;
+    return nativeEmitter.emitExecutable(module, options.outputPath, error, nullptr, emitterOptions);
   }
 };
 

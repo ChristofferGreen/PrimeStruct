@@ -282,11 +282,56 @@ inline void X64Emitter::emitPushF64(uint64_t bits) {
 // for the simpler `rbp - localOffset(N)` this backend used originally
 // (addresses decreasing with index), which silently walked off into
 // unrelated stack memory for any multi-field struct's non-first field.
+inline void X64Emitter::setPromotedLocals(const std::vector<PromotedLocalSlot> &locals) {
+  clearPromotedLocals();
+  promotedLocals_ = locals;
+  for (const PromotedLocalSlot &local : locals) {
+    if (promotedRegByLocal_.size() <= local.index) {
+      promotedRegByLocal_.resize(static_cast<size_t>(local.index) + 1, -1);
+    }
+    promotedRegByLocal_[local.index] = static_cast<int8_t>(local.reg);
+  }
+}
+
+inline void X64Emitter::clearPromotedLocals() {
+  promotedLocals_.clear();
+  promotedRegByLocal_.clear();
+}
+
+// Locals start at zero, as in the VM, whichever register they got.
+inline void X64Emitter::emitInitPromotedLocals() {
+  for (const PromotedLocalSlot &local : promotedLocals_) {
+    emitMovRegImm64(local.reg, 0);
+  }
+}
+
+inline void X64Emitter::emitSpillPromotedLocals() {
+  for (const PromotedLocalSlot &local : promotedLocals_) {
+    emitStoreMem(5, -static_cast<int32_t>(frameSize_ - localOffset(local.index)), local.reg);
+  }
+}
+
+inline void X64Emitter::emitReloadPromotedLocals() {
+  for (const PromotedLocalSlot &local : promotedLocals_) {
+    emitLoadMem(local.reg, 5, -static_cast<int32_t>(frameSize_ - localOffset(local.index)));
+  }
+}
+
 inline void X64Emitter::emitLoadLocalToReg(uint8_t reg, uint32_t index) {
+  if (const int promoted = promotedRegister(index); promoted >= 0) {
+    if (promoted != reg) {
+      emitMovRegReg(reg, static_cast<uint8_t>(promoted));
+    }
+    return;
+  }
   emitLoadMem(reg, 5, -static_cast<int32_t>(frameSize_ - localOffset(index)));
 }
 
 inline void X64Emitter::emitLoadLocal(uint32_t index) {
+  if (const int promoted = promotedRegister(index); promoted >= 0) {
+    emitPushReg(static_cast<uint8_t>(promoted));
+    return;
+  }
   emitLoadLocalToReg(0, index);
   emitPushReg(0);
 }
@@ -298,10 +343,20 @@ inline void X64Emitter::emitAddressOfLocal(uint32_t index) {
 }
 
 inline void X64Emitter::emitStoreLocalFromReg(uint32_t index, uint8_t reg) {
+  if (const int promoted = promotedRegister(index); promoted >= 0) {
+    if (promoted != reg) {
+      emitMovRegReg(static_cast<uint8_t>(promoted), reg);
+    }
+    return;
+  }
   emitStoreMem(5, -static_cast<int32_t>(frameSize_ - localOffset(index)), reg);
 }
 
 inline void X64Emitter::emitStoreLocal(uint32_t index) {
+  if (const int promoted = promotedRegister(index); promoted >= 0) {
+    emitPopReg(static_cast<uint8_t>(promoted));
+    return;
+  }
   emitPopReg(0);
   emitStoreLocalFromReg(index, 0);
 }

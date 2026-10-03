@@ -30,6 +30,9 @@ struct IrBackendEmitOptions {
   std::vector<std::string> programArgs;
   // Optimization level (0..3) the optexe kinds pass to the host C++ compiler.
   int hostOptimizationLevel = 2;
+  // IR optimization level the module was prepared at; the native backend keeps
+  // locals in registers from -O1.
+  int optimizationLevel = 0;
 };
 
 struct IrBackendEmitResult {

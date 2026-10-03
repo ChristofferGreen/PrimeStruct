@@ -62,6 +62,30 @@ struct X64InstrumentationCounters {
 // offset math, never interpret the unit directly.
 class X64Emitter {
  public:
+  // A local held in a register for the whole function; see
+  // NativeEmitterPromotion.h. The emitter maps its loads and stores to register
+  // moves and can write the registers to the frame slots and back around
+  // instructions whose templates clobber them.
+  struct PromotedLocalSlot {
+    uint32_t index = 0;
+    uint8_t reg = 0;
+  };
+
+  void setLocalPromotionEnabled(bool enabled) {
+    localPromotionEnabled_ = enabled;
+  }
+  bool localPromotionEnabled() const {
+    return localPromotionEnabled_;
+  }
+  void setPromotedLocals(const std::vector<PromotedLocalSlot> &locals);
+  void clearPromotedLocals();
+  bool hasPromotedLocals() const {
+    return !promotedLocals_.empty();
+  }
+  void emitInitPromotedLocals();
+  void emitSpillPromotedLocals();
+  void emitReloadPromotedLocals();
+
   void setValueStackCacheEnabled(bool enabled) {
     valueStackCacheEnabled_ = enabled;
     if (!valueStackCacheEnabled_) {
@@ -383,6 +407,14 @@ class X64Emitter {
   // calls properly), so `ret` there would jump to garbage - the entry
   // function's Return* opcodes must exit_group(value) instead.
   bool isEntryFunction_ = false;
+  bool localPromotionEnabled_ = false;
+  std::vector<PromotedLocalSlot> promotedLocals_;
+  // Register of each promoted local by index, -1 for locals kept in the frame.
+  std::vector<int8_t> promotedRegByLocal_;
+
+  int promotedRegister(uint32_t index) const {
+    return index < promotedRegByLocal_.size() ? promotedRegByLocal_[index] : -1;
+  }
 };
 
 #include "NativeEmitterInternalsX64Core.h"

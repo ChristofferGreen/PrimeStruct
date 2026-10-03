@@ -6,6 +6,7 @@
 #include "primec/backend/IrBackends.h"
 #include "primec/ir/IrPreparation.h"
 #include "primec/ir_lowerer/IrLowererLegacyCollectionBranchCounters.h"
+#include "primec/pipeline/CliUsage.h"
 #include "primec/support/Options.h"
 #include "primec/support/OptionsParser.h"
 
@@ -205,8 +206,14 @@ bool runIrBackend(const primec::IrBackend &backend,
   primec::IrModule ir;
   primec::IrPreparationFailure prepFailure;
   primec::IrOptimizationReport optimizationReport;
-  const bool prepared = primec::prepareIrModule(
-      program, semanticProgram, options, validationTarget, ir, prepFailure, expandedSource, &optimizationReport);
+  const bool prepared = primec::prepareIrModule(program,
+                                                semanticProgram,
+                                                options,
+                                                validationTarget,
+                                                ir,
+                                                prepFailure,
+                                                expandedSource,
+                                                &optimizationReport);
   if (options.optimization.report) {
     std::cerr << optimizationReport.format(true);
   }
@@ -228,12 +235,14 @@ bool runIrBackend(const primec::IrBackend &backend,
   emitOptions.programArgs = options.programArgs;
   // The optexe kinds hand generated C++ to the host compiler; an explicit -O
   // level carries over, and the default is -O2.
-  emitOptions.hostOptimizationLevel = options.optimization.levelSpecified ? options.optimization.level : 2;
+  emitOptions.optimizationLevel = options.optimization.level;
+  emitOptions.hostOptimizationLevel =
+      options.optimization.levelSpecified ? options.optimization.level : 2;
   if (!backend.emit(ir, emitOptions, result, error)) {
     const std::string_view backendTag = diagnostics.backendTag;
     const bool outputWriteFailure =
-        (backendTag == "ir" || backendTag == "wasm" || backendTag == "cpp-ir" || backendTag == "optcpp-ir" ||
-         backendTag == "glsl-ir") &&
+        (backendTag == "ir" || backendTag == "wasm" || backendTag == "cpp-ir" ||
+         backendTag == "optcpp-ir" || backendTag == "glsl-ir") &&
         error == options.outputPath;
     failure.stage = outputWriteFailure ? IrBackendRunFailureStage::OutputWrite : IrBackendRunFailureStage::Emit;
     failure.message = std::move(error);
@@ -245,134 +254,12 @@ bool runIrBackend(const primec::IrBackend &backend,
 
 } // namespace
 
-int main(int argc, char **argv) {
-  primec::Options options;
-  std::string argError;
-  if (!primec::parseOptions(argc, argv, primec::OptionsParserMode::Primec, options, argError)) {
-    if (options.emitDiagnostics) {
-      if (argError.empty()) {
-        argError = "invalid arguments";
-      }
-      const primec::DiagnosticRecord diagnostic =
-          primec::makeDiagnosticRecord(primec::DiagnosticCode::ArgumentError, argError, options.inputPath);
-      std::cerr << primec::encodeDiagnosticsJson({diagnostic}) << "\n";
-    } else {
-      if (!argError.empty()) {
-        std::cerr << "Argument error: " << argError << "\n";
-      }
-      constexpr int kFlagCol = 40;
-      auto flagLine = [&](std::string_view flag, std::string_view desc) {
-        if (desc.empty()) {
-          std::cerr << "  " << flag << "\n";
-        } else if (static_cast<int>(flag.size()) >= kFlagCol - 2) {
-          std::cerr << "  " << flag << "\n" << std::string(kFlagCol + 2, ' ') << desc << "\n";
-        } else {
-          std::cerr << "  " << std::left << std::setw(kFlagCol) << std::string(flag) << desc << "\n";
-        }
-      };
-      auto flagOnly = [&](std::string_view flag) { std::cerr << "  " << flag << "\n"; };
-      std::cerr << "Usage: primec [options] <input.prime> [-- <program args...>]\n\n";
-
-      std::cerr << "Output:\n";
-      flagLine(std::string("--emit=") + std::string(primec::primecEmitKindsUsage()), "Output kind (default: native)");
-      flagLine("-o <output>", "Output file path");
-      flagLine("--out-dir <dir>", "Output directory");
-      flagLine("--entry /path", "Entry point definition path");
-      flagLine("--wasm-profile wasi|browser", "Wasm host profile (with --emit=wasm)");
-      std::cerr << "\n";
-
-      std::cerr << "Imports:\n";
-      flagLine("--import-path <dir>, -I <dir>", "Add an import search directory");
-      std::cerr << "\n";
-
-      std::cerr << "Transforms:\n";
-      flagLine("--text-transforms <list>", "Enable specific text transforms");
-      flagLine("--text-transform-rules <rules>", "Text transform rule overrides");
-      flagLine("--semantic-transforms <list>", "Enable specific semantic transforms");
-      flagLine("--semantic-transform-rules <rules>", "Semantic transform rule overrides");
-      flagLine("--transform-list <list>", "Enable transforms by name (text + semantic)");
-      flagLine("--no-text-transforms", "Disable all text transforms");
-      flagLine("--no-semantic-transforms", "Disable all semantic transforms");
-      flagLine("--no-transforms", "Disable all transforms");
-      flagLine("--list-transforms", "List available transforms and exit");
-      std::cerr << "\n";
-
-      std::cerr << "Diagnostics:\n";
-      flagLine("--emit-diagnostics", "Emit machine-readable JSON diagnostics on stderr");
-      flagLine("--collect-diagnostics", "Collect diagnostics instead of stopping at the first error");
-      std::cerr << "\n";
-
-      std::cerr << "Optimization:\n";
-      flagLine("-O0|-O1|-O2|-O3", "Optimization level (default: -O0)");
-      flagLine("--opt-pass <name>", "Enable one optimization pass");
-      flagLine("--no-opt-pass <name>", "Disable one optimization pass");
-      flagLine("--opt-list", "List optimization passes and exit");
-      flagLine("--opt-report", "Print a per-pass report on stderr");
-      flagLine("--opt-verify-each", "Re-validate the IR after every pass");
-      std::cerr << "\n";
-
-      std::cerr << "Effects / IR:\n";
-      flagLine("--default-effects <list>", "Default effect set for definitions without one");
-      flagLine("--ir-inline", "Inline eligible calls during IR lowering");
-      flagLine("--dump-stage <stage>", "Dump a compiler stage and exit; one of:");
-      flagLine("", "pre_ast, ast, ast-semantic, semantic-product, type-graph, ir,");
-      flagLine("", "ir-lowered, ir-optimized");
-      flagLine("", "(lowering-facing dumps include semantic-product between");
-      flagLine("", "ast-semantic and ir)");
-      std::cerr << "\n";
-
-      std::cerr << "Benchmarking (semantic phase):\n";
-      flagOnly("--benchmark-semantic-phase-counters");
-      flagOnly("--benchmark-semantic-allocation-counters");
-      flagOnly("--benchmark-semantic-rss-checkpoints");
-      flagOnly("--benchmark-semantic-disable-method-target-memoization");
-      flagOnly("--benchmark-semantic-graph-local-auto-legacy-key-shadow");
-      flagOnly("--benchmark-semantic-graph-local-auto-legacy-side-channel-shadow");
-      flagOnly("--benchmark-semantic-disable-graph-local-auto-dependency-scratch-pmr");
-      flagOnly("--benchmark-semantic-definition-validation-workers <n>");
-      flagOnly("--benchmark-semantic-repeat-count <n>");
-      std::cerr << "\n";
-
-      std::cerr << "Benchmarking (IR lowerer, TODO-4699):\n";
-      flagOnly("--benchmark-ir-lowerer-legacy-collection-branch-counters");
-      std::cerr << "\n";
-
-      std::cerr << "Everything after `--` is passed through as program args at runtime.\n";
-    }
-    return 2;
-  }
-  primec::ir_lowerer::setLegacyCollectionBranchCountersEnabled(
-      options.benchmarkIrLowererLegacyCollectionBranchCounters);
-  if (options.listTransforms) {
-    primec::printTransformList(std::cout);
-    return 0;
-  }
-  if (options.listOptimizationPasses) {
-    std::cout << primec::formatIrOptimizationPassList();
-    return 0;
-  }
-  const std::string_view irBackendKind = primec::resolveIrBackendEmitKind(options.emitKind);
-  const primec::IrBackend *irBackend = primec::findIrBackend(irBackendKind);
-  if (irBackend == nullptr && options.dumpStage.empty()) {
-    options.skipSemanticProductForNonConsumingPath = true;
-  }
+// Runs the compile pipeline --benchmark-semantic-repeat-count times (once by default) and
+// leaves the final run's output in `pipelineOutput`. Returns an exit code only on failure.
+static std::optional<int> runCompileRepeats(primec::Options &options,
+                                     primec::CompilePipelineOutput &pipelineOutput,
+                                     BenchmarkSemanticRepeatLeakCheck &repeatLeakCheck) {
   std::string error;
-  primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
-
-  // TODO-5233/TODO-5234: one process-lifetime ScopedCompileArena, entered
-  // once here and never reset - see docs/CompilerArenaAllocator.md for why
-  // it's never reset. For --benchmark-semantic-repeat-count > 1 (a
-  // diagnostic-only flag), this means each repeat's allocations accumulate
-  // in the arena rather than being reclaimed between repeats, so the
-  // RSS-checkpoint machinery below will show memory growing across
-  // repeats for arena-covered allocations - this is expected under a
-  // "never free until process exit" allocator (the same characterization
-  // this design always used to justify the CLI-only scope), not a leak,
-  // and is called out explicitly here since it's the one place in this
-  // binary where that trade-off is directly observable.
-  primec::ScopedCompileArena compileArenaScope;
-  primec::CompilePipelineOutput pipelineOutput;
-  BenchmarkSemanticRepeatLeakCheck repeatLeakCheck;
   const uint32_t repeatCount = options.benchmarkSemanticRepeatCompileCount.value_or(1u);
   repeatLeakCheck.enabled = options.benchmarkSemanticRepeatCompileCount.has_value();
   repeatLeakCheck.requestedRuns = repeatCount;
@@ -429,21 +316,23 @@ int main(int argc, char **argv) {
                                       static_cast<int64_t>(repeatLeakCheck.rssBeforeBytes);
     }
   }
-  emitBenchmarkSemanticPhaseCounters(std::cerr, pipelineOutput);
-  emitBenchmarkSemanticRepeatLeakCheck(std::cerr, repeatLeakCheck);
-  if (pipelineOutput.hasDumpOutput) {
-    std::cout << pipelineOutput.dumpOutput;
-    return 0;
-  }
+  return std::nullopt;
+}
 
+// Writes the compiled program through the selected IR backend (or reports why it cannot).
+static int emitCompiledProgram(primec::Options &options,
+                        const primec::IrBackend *irBackend,
+                        primec::CompilePipelineOutput &pipelineOutput) {
+  std::string error;
   primec::Program &program = pipelineOutput.program;
   if (primec::isIrModuleDumpStage(options)) {
-    return primec::runIrModuleDump(std::cout,
-                                   std::cerr,
-                                   program,
-                                   pipelineOutput.hasSemanticProgram ? &pipelineOutput.semanticProgram : nullptr,
-                                   &pipelineOutput.expandedSource,
-                                   options);
+    return primec::runIrModuleDump(
+        std::cout,
+        std::cerr,
+        program,
+        pipelineOutput.hasSemanticProgram ? &pipelineOutput.semanticProgram : nullptr,
+        &pipelineOutput.expandedSource,
+        options);
   }
 
   if (irBackend != nullptr && irBackend->requiresOutputPath() && !options.outputPath.empty()) {
@@ -513,4 +402,54 @@ int main(int argc, char **argv) {
   emitFailure.plainPrefix = "Emit error: ";
   emitFailure.message = "no backend available for emit kind " + options.emitKind;
   return primec::emitCliFailure(std::cerr, options, emitFailure);
+}
+
+int main(int argc, char **argv) {
+  primec::Options options;
+  std::string argError;
+  if (!primec::parseOptions(argc, argv, primec::OptionsParserMode::Primec, options, argError)) {
+    return primec::reportArgumentError(std::cerr, options, argError, primec::OptionsParserMode::Primec);
+  }
+  primec::ir_lowerer::setLegacyCollectionBranchCountersEnabled(
+      options.benchmarkIrLowererLegacyCollectionBranchCounters);
+  if (options.listTransforms) {
+    primec::printTransformList(std::cout);
+    return 0;
+  }
+  if (options.listOptimizationPasses) {
+    std::cout << primec::formatIrOptimizationPassList();
+    return 0;
+  }
+  const std::string_view irBackendKind = primec::resolveIrBackendEmitKind(options.emitKind);
+  const primec::IrBackend *irBackend = primec::findIrBackend(irBackendKind);
+  if (irBackend == nullptr && options.dumpStage.empty()) {
+    options.skipSemanticProductForNonConsumingPath = true;
+  }
+  primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+
+  // TODO-5233/TODO-5234: one process-lifetime ScopedCompileArena, entered
+  // once here and never reset - see docs/CompilerArenaAllocator.md for why
+  // it's never reset. For --benchmark-semantic-repeat-count > 1 (a
+  // diagnostic-only flag), this means each repeat's allocations accumulate
+  // in the arena rather than being reclaimed between repeats, so the
+  // RSS-checkpoint machinery below will show memory growing across
+  // repeats for arena-covered allocations - this is expected under a
+  // "never free until process exit" allocator (the same characterization
+  // this design always used to justify the CLI-only scope), not a leak,
+  // and is called out explicitly here since it's the one place in this
+  // binary where that trade-off is directly observable.
+  primec::ScopedCompileArena compileArenaScope;
+  primec::CompilePipelineOutput pipelineOutput;
+  BenchmarkSemanticRepeatLeakCheck repeatLeakCheck;
+  if (const std::optional<int> failureCode = runCompileRepeats(options, pipelineOutput, repeatLeakCheck)) {
+    return *failureCode;
+  }
+  emitBenchmarkSemanticPhaseCounters(std::cerr, pipelineOutput);
+  emitBenchmarkSemanticRepeatLeakCheck(std::cerr, repeatLeakCheck);
+  if (pipelineOutput.hasDumpOutput) {
+    std::cout << pipelineOutput.dumpOutput;
+    return 0;
+  }
+
+  return emitCompiledProgram(options, irBackend, pipelineOutput);
 }
