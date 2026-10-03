@@ -4,8 +4,8 @@
 
 ## Runtime Stack Model
 - **Frames:** VM and native execution both support dynamic call frames for `Call`/`CallVoid` when callable IR opcodes
-  are present. Lowering still inlines source-level definition calls, so entry-lowered source programs typically use one
-  frame unless callable IR is emitted directly. Locals live in fixed 16-byte slots; `location(...)` yields a byte offset
+  are present. Lowering inlines small source-level definitions and emits real `Call`/`CallVoid` targets for the rest
+  (recursive and larger functions), so a program uses one frame per active call. Locals live in fixed 16-byte slots; `location(...)` yields a byte offset
   into this slot space and `dereference` uses `LoadIndirect`/`StoreIndirect`.
 - **Deterministic evaluation:** arguments evaluate left-to-right; boolean `and`/`or` short-circuit; `return(value)`
   unwinds the current definition. In value blocks, `return(value)` exits the block and yields its value. Implicit
@@ -31,6 +31,12 @@
   may treat this as a tail-call hint; no backend currently requires it.
 
 ### Native Allocator & Scheduler (IR Optimization Path)
+> **Status:** the block virtual-register pipeline below (`IrVirtualRegister*`) is implemented and tested but is **not**
+> wired into any backend; the native emitter does not use it. What `--emit=native` does at `-O1` and above on x86_64 is
+> described in `docs/OptimizingBackendsPlan.md` (Phase 3): the most-used unaddressed locals live in registers, and the
+> top of the operand stack is tracked at compile time so arithmetic and compare-and-branch run on registers and
+> immediates. The arm64 emitter is still pure template expansion.
+
 - **Pipeline shape:** stack-form IR is lowered to block-local virtual registers, then processed in deterministic order:
   liveness intervals, linear-scan allocation, spill/reload insertion, block-local scheduling, and verifier checks.
 - **Linear-scan allocator design:** each virtual register interval uses one `startPosition`/`endPosition` pair derived

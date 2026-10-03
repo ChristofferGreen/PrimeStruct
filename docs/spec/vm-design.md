@@ -21,8 +21,8 @@
   `FileWriteString`, `FileWriteByte`, `FileWriteNewline`, `PrintStringDynamic`, `Call`, `CallVoid`, `HeapAlloc`,
   `HeapFree`, `HeapRealloc`.
 - **Call-opcode status:** `Call` and `CallVoid` are serialized/validated and execute in both VM and native backends with
-  frame/call-stack semantics. Current lowering still inlines source-level definition calls and does not emit call
-  opcodes yet.
+  frame/call-stack semantics. Lowering inlines small source-level definitions and emits call opcodes for the rest
+  (recursive and larger functions), including recursion up to the VM's call-depth limit.
 - **GLSL note:** GLSL/SPIR-V emission routes through canonical IR (`glsl-ir`/`spirv-ir`) and `IrValidationTarget::Glsl`;
   these modes emit backend output directly without requiring PSIR serialization.
 - **PSIR versioning:** current portable IR is PSIR v23 (adds a per-function `parameter_count` field on top of v22’s
@@ -43,8 +43,8 @@
   kernel for comparison (see `docs/OptimizingBackendsPlan.md`, Phase 4).
 - **Module layout:** `IrModule` bundles functions, string table, and struct layouts; lowering emits entry instructions
   plus reachable non-entry callable function bodies so function names/metadata and executable IR survive serialization.
-  VM/native execution starts from `entryIndex`; lowering currently still inlines source-level calls, so recursion
-  remains rejected in lowered source programs even though callable IR call opcodes support recursive execution.
+  VM/native execution starts from `entryIndex`; recursive source functions lower to callable IR and run on every
+  backend (the program matrix has a recursive `fib` case).
 - **Strings & IO:** string values are indices into the module string table; `PrintString`/`LoadStringByte` read from it.
   File operations use OS descriptors stored as `i64` values and must be explicitly closed or they close on scope end via
   lowering.

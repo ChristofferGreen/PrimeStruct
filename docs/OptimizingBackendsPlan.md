@@ -473,7 +473,10 @@ Measured wall time of `primevm` including the 13-70 ms compile (seconds):
 5.3 Perf gates: baseline JSON entries per backend and level; regression
     ratio checks in `scripts/check_benchmark_report.py`.
 
-Status (2026-10-03): 5.1 is done. `parseOptions` picks `-O2` when no level is given for `primevm` and for
+Status (2026-10-03): 5.2 is partly done: the stale "lowering never emits Call/CallVoid" statements in `Ir.h`,
+`architecture.md`, `runtime-model.md` and `vm-design.md` are corrected (lowering emits real calls for functions it does
+not inline), and the "Native Allocator & Scheduler" section now says the `IrVirtualRegister*` pipeline is not wired into
+any backend. `backend-type-support.md` and a levels/passes page in the integration doc are still open. 5.1 is done. `parseOptions` picks `-O2` when no level is given for `primevm` and for
 `--emit=vm`, `native`, `optexe` and `optcpp`; dumps, debug sessions (`--debug-json`, `--debug-dap`, `--debug-trace`,
 `--debug-replay`) and the other emit kinds stay at `-O0`, and an explicit `-O` always wins. The full release gate
 passes with it, including every native compile-run suite on x86_64. `scripts/benchmark_backends.py` records the

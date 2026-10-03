@@ -247,11 +247,12 @@ struct IrInstructionSourceMapEntry {
 struct IrFunction {
   std::string name;
   IrExecutionMetadata metadata;
-  // Number of leading local slots populated from caller-pushed arguments at
-  // call time. Static-analysis passes (native emitter stack-depth checker,
-  // the register scheduler, the wasm emitter's function-type signature)
-  // need this to reason about a callee without executing it. Always 0 today
-  // because lowering never emits real Call/CallVoid targets yet.
+  // Number of arguments the caller leaves on the operand stack for this
+  // function: they are the callee's initial stack (the callee stores them into
+  // locals itself). Static-analysis passes (the shared CFG, the native emitter's
+  // stack-depth checker, the wasm emitter's function-type signature) need this
+  // to reason about a callee without executing it. Lowering emits real
+  // Call/CallVoid targets for definitions it does not inline.
   uint32_t parameterCount = 0;
   std::vector<IrLocalDebugSlot> localDebugSlots;
   std::vector<IrInstruction> instructions;

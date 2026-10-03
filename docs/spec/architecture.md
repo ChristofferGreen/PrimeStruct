@@ -116,8 +116,9 @@
   - **Function:** `{ name, metadata, parameter_count, local_debug_slots, instructions }` where instructions are
     linear, stack-based ops with immediates and debug IDs. `parameter_count` declares how many leading local slots
     a callee expects the caller to have populated at call time; it exists for static-analysis passes (stack-depth
-    checkers, the wasm function-type signature) that need to reason about a callee without executing it. Always 0
-    today because lowering still inlines every call rather than emitting `Call`/`CallVoid` targets.
+    checkers, the shared CFG, the wasm function-type signature) that need to reason about a callee without executing
+    it. Lowering inlines small definitions and emits real `Call`/`CallVoid` targets for the rest (recursive and
+    larger functions), whose arguments are the callee's initial operand stack.
   - **Metadata:** `{ effect_mask, capability_mask, scheduling_scope, instrumentation_flags }` (see PSIR binary layout).
   - **Instruction:** `{ op, imm, debug_id }`; `op` is an `IrOpcode`, `imm` is a 64-bit immediate payload whose meaning
     depends on `op`, and `debug_id` is a deterministic per-instruction identifier used for source-map linkage.
