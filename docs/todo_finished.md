@@ -1922,6 +1922,7 @@ are left unarchived.
 | TODO-5395 | Replace source-text delegation checks in ir_pipeline validation tests with a table | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
 | TODO-5396 | Retire stale TODO-id references in source comments | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
 | TODO-5397 | Fix stale string-model statements in AGENTS.md and the VM spec | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
+| TODO-5398 | Archive or fold the orphaned long-form docs | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
 | TODO-5399 | Hoist the duplicated TemplateMonomorph using-block into one header | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
 | TODO-5400 | Table-drive the builtin math-name classifiers | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
 | TODO-5401 | Collapse duplicate std::function callback aliases | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |

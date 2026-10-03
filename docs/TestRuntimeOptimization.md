@@ -138,7 +138,7 @@ by the normal queue rather than living only as prose in this doc:
 - **TODO-4709 — RESOLVED (audit) 2026-08-09; migration explicitly not
   pursued**: audited `compile_run` for cases whose assertions only check
   pass/fail rather than actual program output. 1,470 candidates
-  identified (full list in `docs/TODO4709CompileRunAudit.md`). A pilot
+  identified (full list in the TODO-4709 compile-run audit (removed by TODO-5398; see git history)). A pilot
   migration attempt found the classification isn't reliably automatable
   (a message that looks semantics-owned can still only manifest via a
   later pipeline stage in practice) and, more importantly, measured that
@@ -460,7 +460,7 @@ execution queue — keep them in sync when a TODO's scope or status changes.
     `test_compile_run_examples_docs_locks.cpp` source-inventory-lock
     cases that don't fit this axis).
   Full file:line lists for all three buckets are in the new
-  `docs/TODO4709CompileRunAudit.md`. **This is a heuristic triage list,
+  the TODO-4709 compile-run audit (removed by TODO-5398; see git history). **This is a heuristic triage list,
   not a certified-safe migration list** - every SAFE-bucket entry still
   needs an individual read before migrating, since a single-exit-code
   pattern match can't fully rule out an edge case the heuristic didn't
@@ -505,7 +505,7 @@ execution queue — keep them in sync when a TODO's scope or status changes.
   as TODO-4708/TODO-4712 (a plausible-sounding optimization target that,
   once actually measured, turns out to be a rounding error), compounded
   here by real reliability risk in the automated classification itself.
-  The audit (`docs/TODO4709CompileRunAudit.md`) stays useful as a
+  The TODO-4709 audit (removed by TODO-5398; see git history) was useful as a
   reference for anyone who wants to hand-migrate a handful of specific
   tests for non-performance reasons (e.g. reducing external-process
   flakiness), but this is closed out as a runtime-optimization lever.

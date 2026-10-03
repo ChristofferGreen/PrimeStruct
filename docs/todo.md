@@ -100,7 +100,6 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5398 | Archive or fold the orphaned long-form docs | deferred | docs-hygiene |
 | TODO-5402 | Replace the 17-callback native tail dispatch signatures with a hooks struct | deferred | lowerer-structure |
 | TODO-5403 | Extend the source-file-size guard beyond src/semantics | deferred | lowerer-structure |
 | TODO-5404 | Remove the hand-maintained src/ir_lowerer header mirrors | deferred | lowerer-structure |
@@ -123,7 +122,6 @@ of sync with them.
 ### Priority Lanes
 
 - Embedding (must support iOS): TODO-5348 (needs macOS)
-- Docs hygiene: TODO-5398
 - Lowerer structure: TODO-5402 -> TODO-5403 -> TODO-5404
 - Collection resolution: TODO-5405 -> TODO-5406
 - Tooling: TODO-5412; TODO-5421 (needs approval)
@@ -147,18 +145,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - acceptance:
     - a green gate leaves `git status` clean; failures still land under Open Failures
   - stop_rule: do not start without explicit approval to change scripts/compile.sh.
-
-- [ ] TODO-5398: Archive or fold the orphaned long-form docs
-  - owner: ai
-  - status: deferred
-  - created_at: 2026-10-03
-  - phase: Documentation
-  - parallel_track: docs-hygiene
-  - scope: `docs/memories.md` (1,812 lines, 69 entries, last updated 2026-05-28, referenced by nothing), `docs/ReceiverTargetResolutionConsolidation.md` (7,524 lines, a Step-1/Step-2 migration log) and `docs/TODO4709CompileRunAudit.md` (4,009 lines, cited only from the todo archive) are history, not reference. Classify each entry: still-true rule -> AGENTS.md or the right `docs/spec/*.md` part; completed plan -> `docs/todo_archive/`; otherwise delete.
-  - acceptance:
-    - the three files are gone or reduced to a short pointer; every surviving fact lives in a document the index or AGENTS links to
-    - `scripts/check_spec_docs.py` and the todo index ctests pass
-  - stop_rule: if an entry's truth cannot be verified against the code, drop it rather than carry it forward.
 
 - [ ] TODO-5402: Replace the 17-callback native tail dispatch signatures with a hooks struct
   - owner: ai
