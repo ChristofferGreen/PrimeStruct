@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 
 SCAN_DIRS = ("src", "include")
-BASELINE_CLOSED_CITATIONS = 265
+BASELINE_CLOSED_CITATIONS = 315
 ID_RE = re.compile(r"TODO-(\d+)")
 
 
