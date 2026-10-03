@@ -150,8 +150,17 @@ def check_one(args: tuple[str, str, Path, Path, list[int], list[int], list[int],
             return (label, "DIFF", "\n".join(detail))
     unsupported = False
     emitted = [("optexe", level) for level in optexe_levels] + [("native", level) for level in native_levels]
+    first_by_kind: dict[str, tuple[int, tuple[int, str, str]]] = {}
     for kind, level in emitted:
         result = run_emitted(build_dir, source_path, kind, level)
+        if not isinstance(result, str):
+            # An executable must behave the same at every level even where it
+            # differs from the VM (known backend gaps): compare against the
+            # first level of the same kind before comparing against the VM.
+            if kind in first_by_kind and result != first_by_kind[kind][1]:
+                return (label, "DIFF", f"{kind} -O{level} differs from {kind} -O{first_by_kind[kind][0]} "
+                                       f"(source kept as {source_path.name})")
+            first_by_kind.setdefault(kind, (level, result))
         if isinstance(result, str):
             if result == "frontend" and baseline[0] == 0:
                 return (label, "DIFF", f"{kind} -O{level} failed to compile a program the VM runs "

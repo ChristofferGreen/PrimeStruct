@@ -160,6 +160,13 @@ inline void X64Emitter::emitReloadReg(uint8_t reg) {
 }
 
 inline void X64Emitter::flushValueStackCache() {
+  if (deferOperands_) {
+    for (const PendingOperand &entry : pending_) {
+      spillPendingEntry(entry);
+    }
+    pending_.clear();
+    return;
+  }
   if (!hasValueStackCache_) {
     return;
   }
@@ -169,6 +176,17 @@ inline void X64Emitter::flushValueStackCache() {
 
 inline void X64Emitter::emitPushReg(uint8_t reg) {
   counters_.valueStackPushCount += 1;
+  if (deferOperands_) {
+    const uint8_t cache = allocPendingReg(0);
+    if (cache != reg) {
+      emitMovRegReg(cache, reg);
+    }
+    PendingOperand entry;
+    entry.kind = PendingOperand::Kind::Reg;
+    entry.reg = cache;
+    pending_.push_back(entry);
+    return;
+  }
   if (!valueStackCacheEnabled_) {
     emitSpillReg(reg);
     return;
@@ -184,6 +202,16 @@ inline void X64Emitter::emitPushReg(uint8_t reg) {
 
 inline void X64Emitter::emitPopReg(uint8_t reg) {
   counters_.valueStackPopCount += 1;
+  if (deferOperands_) {
+    if (pending_.empty()) {
+      emitReloadReg(reg);
+      return;
+    }
+    const PendingOperand entry = pending_.back();
+    pending_.pop_back();
+    materializePending(entry, reg);
+    return;
+  }
   if (!valueStackCacheEnabled_) {
     emitReloadReg(reg);
     return;
@@ -204,6 +232,8 @@ inline bool X64Emitter::beginFunction(uint64_t frameSize, bool resetValueStack, 
     return false;
   }
   hasValueStackCache_ = false;
+  pending_.clear();
+  inComplexOp_ = false;
   frameSize_ = frameSize;
   // `resetValueStack` is only ever passed true for the entry function
   // (NativeEmitterFunctionEmit.cpp: `beginFunction(frameSize,
@@ -251,21 +281,37 @@ inline void X64Emitter::emitMovRegPublic(uint8_t rd, uint8_t rn) {
 }
 
 inline void X64Emitter::emitPushI32(int32_t value) {
+  if (deferOperands_) {
+    emitPushImmDeferred(static_cast<uint64_t>(static_cast<int64_t>(value)));
+    return;
+  }
   emitMovRegImm64(0, static_cast<uint64_t>(static_cast<int64_t>(value)));
   emitPushReg(0);
 }
 
 inline void X64Emitter::emitPushI64(uint64_t value) {
+  if (deferOperands_) {
+    emitPushImmDeferred(value);
+    return;
+  }
   emitMovRegImm64(0, value);
   emitPushReg(0);
 }
 
 inline void X64Emitter::emitPushF32(uint32_t bits) {
+  if (deferOperands_) {
+    emitPushImmDeferred(bits);
+    return;
+  }
   emitMovRegImm64(0, bits);
   emitPushReg(0);
 }
 
 inline void X64Emitter::emitPushF64(uint64_t bits) {
+  if (deferOperands_) {
+    emitPushImmDeferred(bits);
+    return;
+  }
   emitMovRegImm64(0, bits);
   emitPushReg(0);
 }
@@ -328,6 +374,10 @@ inline void X64Emitter::emitLoadLocalToReg(uint8_t reg, uint32_t index) {
 }
 
 inline void X64Emitter::emitLoadLocal(uint32_t index) {
+  if (deferOperands_) {
+    emitLoadLocalDeferred(index);
+    return;
+  }
   if (const int promoted = promotedRegister(index); promoted >= 0) {
     emitPushReg(static_cast<uint8_t>(promoted));
     return;
@@ -353,6 +403,10 @@ inline void X64Emitter::emitStoreLocalFromReg(uint32_t index, uint8_t reg) {
 }
 
 inline void X64Emitter::emitStoreLocal(uint32_t index) {
+  if (deferOperands_) {
+    emitStoreLocalDeferred(index);
+    return;
+  }
   if (const int promoted = promotedRegister(index); promoted >= 0) {
     emitPopReg(static_cast<uint8_t>(promoted));
     return;
@@ -379,12 +433,20 @@ inline void X64Emitter::emitPushReg0() {
 }
 
 inline void X64Emitter::emitDup() {
+  if (deferOperands_) {
+    emitDupDeferred();
+    return;
+  }
   emitPopReg(0);
   emitPushReg(0);
   emitPushReg(0);
 }
 
 inline void X64Emitter::emitPop() {
+  if (deferOperands_) {
+    emitPopDeferred();
+    return;
+  }
   emitPopReg(0);
 }
 
@@ -719,6 +781,9 @@ inline size_t X64Emitter::emitCallPlaceholder() {
 }
 
 inline size_t X64Emitter::emitJumpIfZeroPlaceholder() {
+  if (deferOperands_) {
+    return emitJumpIfZeroDeferred();
+  }
   // Condition (0 or 1) is popped into rax and tested; `jz` branches when
   // the popped value was zero, matching IrOpcode::JumpIfZero exactly (no
   // inversion needed, unlike the TODO-4748 wasm bug this session already

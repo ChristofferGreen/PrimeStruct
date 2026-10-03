@@ -47,6 +47,10 @@ struct NativeEmitterOptions {
   // machine registers (docs/OptimizingBackendsPlan.md, Phase 3). Off unless the
   // backend turns it on for -O1 and above.
   bool promoteLocals = false;
+  // x86_64 only: defer pushes of constants and register-resident locals and
+  // compute on registers and immediates, writing operands to the memory stack
+  // only where they must outlive an instruction sequence.
+  bool deferOperands = false;
 };
 
 class NativeEmitter {

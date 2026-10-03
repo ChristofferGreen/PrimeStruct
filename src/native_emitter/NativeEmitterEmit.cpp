@@ -148,6 +148,7 @@ bool NativeEmitter::emitExecutable(const IrModule &module,
   emitter.setValueStackCacheEnabled(options.enableRegisterCache);
 #if !(defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__)))
   emitter.setLocalPromotionEnabled(options.promoteLocals);
+  emitter.setOperandDeferralEnabled(options.deferOperands);
 #endif
   std::vector<NativeEmitterBranchFixup> branchFixups;
   std::vector<NativeEmitterCallFixup> callFixups;

@@ -132,6 +132,10 @@ inline void X64Emitter::patchJumpHere(size_t fixupIndex) {
 }
 
 inline void X64Emitter::emitCompareAndPush(CondCode cc) {
+  if (deferOperands_) {
+    emitCompareDeferred(cc);
+    return;
+  }
   emitPopReg(1); // b
   emitPopReg(0); // a
   emitCmpRegReg(0, 1); // flags = a - b
@@ -262,6 +266,21 @@ inline void X64Emitter::emitFloatCompareAndPush(bool isF64, CondCode cc) {
 }
 
 inline void X64Emitter::emitAdd() {
+  if (deferOperands_) {
+    emitBinaryDeferred([&](uint8_t dst, const PendingOperand &b) {
+      if (b.kind == PendingOperand::Kind::Imm && static_cast<int64_t>(b.imm) == static_cast<int32_t>(b.imm)) {
+        emitAddRegImm32(dst, static_cast<int32_t>(b.imm));
+        return;
+      }
+      uint8_t source = b.reg;
+      if (b.kind == PendingOperand::Kind::Imm) {
+        emitMovRegImm64(0, b.imm);
+        source = 0;
+      }
+      emitAddRegReg(dst, source);
+    });
+    return;
+  }
   emitPopReg(1);
   emitPopReg(0);
   emitAddRegReg(0, 1);
@@ -269,6 +288,21 @@ inline void X64Emitter::emitAdd() {
 }
 
 inline void X64Emitter::emitSub() {
+  if (deferOperands_) {
+    emitBinaryDeferred([&](uint8_t dst, const PendingOperand &b) {
+      if (b.kind == PendingOperand::Kind::Imm && static_cast<int64_t>(b.imm) == static_cast<int32_t>(b.imm)) {
+        emitSubRegImm32(dst, static_cast<int32_t>(b.imm));
+        return;
+      }
+      uint8_t source = b.reg;
+      if (b.kind == PendingOperand::Kind::Imm) {
+        emitMovRegImm64(0, b.imm);
+        source = 0;
+      }
+      emitSubRegReg(dst, source);
+    });
+    return;
+  }
   emitPopReg(1);
   emitPopReg(0);
   emitSubRegReg(0, 1);
@@ -276,6 +310,17 @@ inline void X64Emitter::emitSub() {
 }
 
 inline void X64Emitter::emitMul() {
+  if (deferOperands_) {
+    emitBinaryDeferred([&](uint8_t dst, const PendingOperand &b) {
+      uint8_t source = b.reg;
+      if (b.kind == PendingOperand::Kind::Imm) {
+        emitMovRegImm64(0, b.imm);
+        source = 0;
+      }
+      emitImulRegReg(dst, source);
+    });
+    return;
+  }
   emitPopReg(1);
   emitPopReg(0);
   emitImulRegReg(0, 1);
@@ -299,6 +344,10 @@ inline void X64Emitter::emitDivU() {
 }
 
 inline void X64Emitter::emitNeg() {
+  if (deferOperands_) {
+    emitNegDeferred();
+    return;
+  }
   emitPopReg(0);
   emitNegReg(0);
   emitPushReg(0);

@@ -95,18 +95,78 @@ bool emitNativeFunctions(const IrModule &module,
       }
     }
 
+    bool deferOperands = false;
+    if constexpr (!kIsArm64) {
+      deferOperands = emitter.operandDeferralEnabled();
+    }
     for (size_t index = 0; index < fn.instructions.size(); ++index) {
       if (branchTargets[index]) {
         emitter.flushValueStackCachePublic();
       }
       const auto &inst = fn.instructions[index];
       instOffsets[functionIndex][index] = emitter.currentWordIndex();
-      // Instructions whose templates clobber the promoted registers get the
-      // locals written to their frame slots first and reloaded afterwards.
-      const bool bracketPromoted = hasPromotedLocals && !opcodeKeepsPromotedRegisters(inst.op);
       if constexpr (!kIsArm64) {
-        if (bracketPromoted) {
-          emitter.emitSpillPromotedLocals();
+        if (deferOperands) {
+          // A comparison feeding a branch becomes one compare-and-branch.
+          if (index + 1 < fn.instructions.size() && fn.instructions[index + 1].op == IrOpcode::JumpIfZero &&
+              !branchTargets[index + 1]) {
+            size_t fixupIndex = 0;
+            if (emitter.tryEmitCompareBranch(inst.op, fixupIndex)) {
+              NativeEmitterBranchFixup fixup;
+              fixup.codeIndex = fixupIndex;
+              fixup.functionIndex = functionIndex;
+              fixup.targetInst = static_cast<size_t>(fn.instructions[index + 1].imm);
+              fixup.isConditional = true;
+              branchFixups.push_back(fixup);
+              ++index;
+              instOffsets[functionIndex][index] = emitter.currentWordIndex();
+              continue;
+            }
+          }
+          // `local = local OP (local | constant)` on a register-resident local
+          // becomes one instruction on that register.
+          if (inst.op == IrOpcode::LoadLocal && index + 3 < fn.instructions.size() &&
+              emitter.isLocalPromoted(static_cast<uint32_t>(inst.imm)) && !branchTargets[index + 1] &&
+              !branchTargets[index + 2] && !branchTargets[index + 3]) {
+            const IrInstruction &operand = fn.instructions[index + 1];
+            const IrInstruction &arithmetic = fn.instructions[index + 2];
+            const IrInstruction &store = fn.instructions[index + 3];
+            int kind = -1;
+            if (arithmetic.op == IrOpcode::AddI32 || arithmetic.op == IrOpcode::AddI64) {
+              kind = 0;
+            } else if (arithmetic.op == IrOpcode::SubI32 || arithmetic.op == IrOpcode::SubI64) {
+              kind = 1;
+            } else if (arithmetic.op == IrOpcode::MulI32 || arithmetic.op == IrOpcode::MulI64) {
+              kind = 2;
+            }
+            const bool operandIsConstant = operand.op == IrOpcode::PushI32 || operand.op == IrOpcode::PushI64;
+            if (kind >= 0 && store.op == IrOpcode::StoreLocal && store.imm == inst.imm &&
+                (operandIsConstant || operand.op == IrOpcode::LoadLocal)) {
+              const uint64_t constant = operand.op == IrOpcode::PushI32
+                                            ? static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(operand.imm)))
+                                            : operand.imm;
+              emitter.emitPromotedLocalUpdate(static_cast<uint32_t>(inst.imm),
+                                              kind,
+                                              operandIsConstant,
+                                              constant,
+                                              static_cast<uint32_t>(operand.imm));
+              for (size_t skipped = 1; skipped <= 3; ++skipped) {
+                instOffsets[functionIndex][index + skipped] = emitter.currentWordIndex();
+              }
+              index += 3;
+              continue;
+            }
+          }
+        }
+      }
+      // Instructions whose templates clobber the promoted or cache registers get
+      // the promoted locals written to their frame slots (and the deferred
+      // operands to the memory stack) first, and the locals reloaded afterwards.
+      const bool bracketComplex =
+          (hasPromotedLocals || deferOperands) && !opcodeKeepsPromotedRegisters(inst.op);
+      if constexpr (!kIsArm64) {
+        if (bracketComplex) {
+          emitter.beginComplexOp();
         }
       }
       switch (inst.op) {
@@ -568,8 +628,8 @@ bool emitNativeFunctions(const IrModule &module,
         return false;
       }
       if constexpr (!kIsArm64) {
-        if (bracketPromoted) {
-          emitter.emitReloadPromotedLocals();
+        if (bracketComplex) {
+          emitter.endComplexOp();
         }
       }
     }

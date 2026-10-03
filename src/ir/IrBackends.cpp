@@ -195,6 +195,7 @@ public:
     NativeEmitter nativeEmitter;
     NativeEmitterOptions emitterOptions;
     emitterOptions.promoteLocals = options.optimizationLevel >= 1;
+    emitterOptions.deferOperands = options.optimizationLevel >= 1;
     return nativeEmitter.emitExecutable(module, options.outputPath, error, nullptr, emitterOptions);
   }
 };

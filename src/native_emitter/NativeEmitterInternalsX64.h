@@ -77,7 +77,33 @@ class X64Emitter {
    bool localPromotionEnabled() const {
      return localPromotionEnabled_;
    }
-   void setPromotedLocals(const std::vector<PromotedLocalSlot> &locals);
+   // Deferred operands (optimized native code): pushes of constants and promoted
+  // locals emit nothing until an instruction consumes them, and arithmetic works
+  // on registers and immediates directly. Operands wait in `pending_`; the
+  // memory-backed value stack holds everything below them. Off unless the backend
+  // enables it for -O1 and above.
+  void setOperandDeferralEnabled(bool enabled) {
+    deferOperands_ = enabled;
+  }
+  bool operandDeferralEnabled() const {
+    return deferOperands_;
+  }
+  // Brackets an instruction whose template clobbers the registers deferred
+  // operands live in (everything outside the simple opcode set): pending operands
+  // go to the memory stack first, and the promoted locals are saved and restored.
+  void beginComplexOp();
+  void endComplexOp();
+  // `a CMP b; JumpIfZero` as one compare and branch. Returns false when
+  // `compareOp` is not an integer comparison; otherwise returns the branch fixup.
+  bool tryEmitCompareBranch(IrOpcode compareOp, size_t &fixupIndex);
+  bool isLocalPromoted(uint32_t index) const {
+    return promotedRegister(index) >= 0;
+  }
+  // `local = local OP operand` for a promoted local, where the operand is another
+  // local or a constant: add, sub or mul (kind 0, 1, 2).
+  void emitPromotedLocalUpdate(uint32_t local, int kind, bool operandIsImm, uint64_t imm, uint32_t operandLocal);
+
+  void setPromotedLocals(const std::vector<PromotedLocalSlot> &locals);
    void clearPromotedLocals();
    bool hasPromotedLocals() const {
      return !promotedLocals_.empty();
@@ -91,7 +117,7 @@ class X64Emitter {
      if (!valueStackCacheEnabled_) {
        hasValueStackCache_ = false;
      }
-  }
+   }
 
   void flushValueStackCachePublic() {
     flushValueStackCache();
@@ -408,6 +434,44 @@ class X64Emitter {
   // function's Return* opcodes must exit_group(value) instead.
   bool isEntryFunction_ = false;
   bool localPromotionEnabled_ = false;
+
+  // An operand waiting to be materialized (see setOperandDeferralEnabled).
+  struct PendingOperand {
+    enum class Kind : uint8_t { Reg, Imm, Local };
+    Kind kind = Kind::Imm;
+    uint8_t reg = 0;      // Reg: the cache register; Local: the promoted local's register
+    uint32_t local = 0;   // Local: the promoted local's index
+    uint64_t imm = 0;
+  };
+  bool deferOperands_ = false;
+  bool inComplexOp_ = false;
+  std::vector<PendingOperand> pending_;
+  // Registers that hold pending Reg operands: r14 first (the only one inside a
+  // complex template, as in the single-cache design), then rbx and r9, which the
+  // simple opcodes' templates never touch.
+  static constexpr uint8_t PendingRegs[3] = {14, 3, 9};
+
+  bool pendingRegBusy(uint8_t reg) const;
+  uint8_t allocPendingReg(uint32_t excludeMask);
+  void spillPendingEntry(const PendingOperand &entry);
+  void spillFrontPending();
+  void materializePending(const PendingOperand &entry, uint8_t reg);
+  PendingOperand popOperand(uint32_t &usedMask);
+  void pushPendingOperand(const PendingOperand &entry);
+  void flushPendingForAlias(uint32_t local);
+  void emitStoreImm64Mem(uint8_t base, int32_t disp, uint64_t imm);
+  void emitTestRegReg(uint8_t reg);
+  template <typename Op>
+  void emitBinaryDeferred(Op &&op);
+  void emitCompareDeferred(CondCode cc);
+  void emitNegDeferred();
+  void emitDupDeferred();
+  void emitPopDeferred();
+  void emitLoadLocalDeferred(uint32_t index);
+  void emitStoreLocalDeferred(uint32_t index);
+  void emitPushImmDeferred(uint64_t imm);
+  size_t emitJumpIfZeroDeferred();
+  bool compareCondition(IrOpcode op, CondCode &cc) const;
   std::vector<PromotedLocalSlot> promotedLocals_;
   // Register of each promoted local by index, -1 for locals kept in the frame.
   std::vector<int8_t> promotedRegByLocal_;
@@ -420,6 +484,7 @@ class X64Emitter {
 #include "NativeEmitterInternalsX64Core.h"
 #include "NativeEmitterInternalsX64Arithmetic.h"
 #include "NativeEmitterInternalsX64Io.h"
+#include "NativeEmitterInternalsX64Deferred.h"
 
 uint32_t computeElfCodeOffset();
 bool buildElf(const std::vector<uint8_t> &code, std::vector<uint8_t> &image, std::string &error);
