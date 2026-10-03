@@ -102,7 +102,6 @@ of sync with them.
 | --- | --- | --- | --- |
 | TODO-5403 | Extend the source-file-size guard beyond src/semantics | deferred | lowerer-structure |
 | TODO-5415 | Split stdlib/std/collections/soa_storage.prime by concern | deferred | stdlib |
-| TODO-5421 | Keep the release gate from dirtying docs/failing_tests.md | deferred | tooling |
 | TODO-5348 | Verify the iOS embed build and XCFramework packaging on macOS | deferred | embedding-ios |
 
 ### Ready Now
@@ -117,7 +116,7 @@ of sync with them.
 - Embedding (must support iOS): TODO-5348 (needs macOS)
 - Lowerer structure: TODO-5426 -> TODO-5403
 - Collection resolution: TODO-5424, TODO-5425
-- Tooling: TODO-5421 (needs approval)
+- Tooling:  (needs approval)
 - Stdlib: TODO-5415
 
 ### Execution Queue
@@ -125,18 +124,6 @@ of sync with them.
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 ### Task Blocks
-
-- [ ] TODO-5421: Keep the release gate from dirtying docs/failing_tests.md
-  - owner: ai
-  - status: deferred
-  - created_at: 2026-10-03
-  - phase: Tooling
-  - parallel_track: tooling
-  - progress: a draft was written and then backed out unrun. In `update_failing_tests_doc`, replace the unconditional `replace_managed_failing_tests_block "$replacement_file"` with: if `ctest_status` is 0 and the doc already contains `- Result: no failing CTest cases.`, `cp "$replacement_file" "$BUILD_DIR/failing_tests.last.md"`, else call `replace_managed_failing_tests_block`. The auto-mode classifier refused to execute the modified gate script, so the change needs the maintainer's approval and one `./scripts/compile.sh --release` run to verify.
-  - scope: `scripts/compile.sh` rewrites the tracked `docs/failing_tests.md` (new timestamp) on every run, so every validated change leaves a dirty tree that must be checked out before committing. Write the 'no failures' report only to the build dir and touch the tracked file only when there are failures. This edits `compile.sh`, which AGENTS.md freezes absent an explicit request, so it needs the maintainer's go-ahead before any work.
-  - acceptance:
-    - a green gate leaves `git status` clean; failures still land under Open Failures
-  - stop_rule: do not start without explicit approval to change scripts/compile.sh.
 
 - [ ] TODO-5426: Bring IrLowererCallHelpers.h under 100 std::function mentions
   - owner: ai

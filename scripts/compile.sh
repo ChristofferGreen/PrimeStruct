@@ -141,7 +141,14 @@ update_failing_tests_doc() {
     fi
   } > "$replacement_file"
 
-  replace_managed_failing_tests_block "$replacement_file"
+  # A green run only rewrites the tracked doc when it does not already say "no failures";
+  # otherwise the new timestamp would dirty the tree on every passing gate. The fresh report
+  # still lands in the build dir.
+  if [[ "$ctest_status" -eq 0 ]] && grep -q -- '- Result: no failing CTest cases\.' "$FAILING_TESTS_DOC"; then
+    cp "$replacement_file" "$BUILD_DIR/failing_tests.last.md"
+  else
+    replace_managed_failing_tests_block "$replacement_file"
+  fi
   rm -f "$replacement_file"
 }
 

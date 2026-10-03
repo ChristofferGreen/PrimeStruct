@@ -1943,6 +1943,7 @@ are left unarchived.
 | TODO-5418 | Commit the refactoring helpers used for the semantics splits | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
 | TODO-5419 | Split the largest remaining phase functions | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
 | TODO-5420 | Replace using-declarations in TemplateMonomorphUsings.h with qualified names | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
+| TODO-5421 | Keep the release gate from dirtying docs/failing_tests.md | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
 | TODO-5422 | Convert the remaining validation-test clusters measured after TODO-5388..5395 | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
 
 <!-- INDEX-END -->
