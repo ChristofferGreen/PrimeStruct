@@ -66,6 +66,21 @@ def collect_sources(root: Path) -> list[tuple[str, str]]:
     return sources
 
 
+# Corpus programs on which the native backend differs from the VM by design
+# (checked at both -O0 and -O2 first: they must still agree with each other).
+KNOWN_NATIVE_GAPS = {
+    "test_compile_run_vm_bounds.cpp#23": "expects the VM's `unaligned indirect address` fault; native does not check addresses",
+    "test_compile_run_vm_core_runtime.cpp#6": "use after free: the VM faults, native reads freed memory",
+    "test_compile_run_vm_core_results_structs.cpp#6": "needs the gfx host runtime, which only the VM provides",
+    "test_compile_run_vm_outputs.cpp#4": "std/image reads go through VM host imports",
+    "test_compile_run_vm_outputs.cpp#8": "std/image reads go through VM host imports",
+    "test_compile_run_vm_outputs.cpp#14": "std/image reads go through VM host imports",
+    "test_compile_run_vm_outputs.cpp#15": "std/image reads go through VM host imports",
+    "test_compile_run_vm_outputs.cpp#18": "std/image reads go through VM host imports",
+    "test_compile_run_vm_outputs.cpp#21": "std/image reads go through VM host imports",
+}
+
+
 def run_vm(build_dir: Path, source_path: Path, flags: list[str], kernel: str = "") -> tuple[int, str, str]:
     env = dict(os.environ)
     if kernel:
@@ -165,6 +180,9 @@ def check_one(args: tuple[str, str, Path, Path, list[int], list[int], list[int],
             if result == "frontend" and baseline[0] == 0:
                 return (label, "DIFF", f"{kind} -O{level} failed to compile a program the VM runs "
                                        f"(source kept as {source_path.name})")
+            unsupported = True
+            continue
+        if result != baseline and kind == "native" and label in KNOWN_NATIVE_GAPS:
             unsupported = True
             continue
         if result != baseline:

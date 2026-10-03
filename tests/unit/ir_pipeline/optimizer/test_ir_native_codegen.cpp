@@ -203,6 +203,24 @@ TEST_CASE("printing does not clobber locals or operands, in the entry function o
   expectNativeMatchesVm(deepPrintModule, "print_with_deep_stack");
 }
 
+TEST_CASE("native heap realloc keeps the common prefix when shrinking and growing") {
+  // The block is shrunk from 100 slots to 10 and grown to 1000; the old code
+  // lost the new size to the mmap syscall's register clobber and copied the old,
+  // larger size into the smaller block.
+  primec::IrModule module = optimizer_test::moduleOf(optimizer_test::assemble(
+      {"PushI64 100",   "HeapAlloc",     "StoreLocal 0", "LoadLocal 0",  "PushI64 11",
+       "StoreIndirect", "Pop",           "LoadLocal 0",  "PushI64 144",  "AddI64",
+       "PushI64 22",    "StoreIndirect", "Pop",          "LoadLocal 0",  "PushI64 10",
+       "HeapRealloc",   "StoreLocal 0",  "LoadLocal 0",  "LoadIndirect", "PrintI64 1",
+       "LoadLocal 0",   "PushI64 144",   "AddI64",       "LoadIndirect", "PrintI64 1",
+       "LoadLocal 0",   "PushI64 1000",  "HeapRealloc",  "StoreLocal 0", "LoadLocal 0",
+       "LoadIndirect",  "PrintI64 1",    "LoadLocal 0",  "PushI64 144",  "AddI64",
+       "LoadIndirect",  "PrintI64 1",    "LoadLocal 0",  "HeapFree",     "PushI32 0",
+       "ReturnI32"}));
+  module.functions[0].metadata.effectMask = primec::EffectIoOut;
+  expectNativeMatchesVm(module, "heap_realloc");
+}
+
 TEST_CASE("i32 slots print and return as 32-bit values, as in the VM") {
   // 2147483647 + 1 stays 2147483648 in the 64-bit slot; the VM reads the low 32
   // bits when printing, writing to a file and returning.

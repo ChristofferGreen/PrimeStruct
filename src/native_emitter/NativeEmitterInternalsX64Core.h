@@ -633,16 +633,19 @@ inline void X64Emitter::emitHeapRealloc() {
   const size_t jumpInvalidAddress = emitCondJumpPlaceholder(CondCode::Ne);
   emitLoadMem(3, 2, 8); // reg3 = old mmap length
 
-  // reg1 (newSlotCount) survives emitHeapAllocFromSlotCountReg untouched
-  // (it only ever reads its slotCountReg parameter); oldAddr and
-  // oldMmapLength don't survive the mmap syscall inside that call, so
-  // save them on the real value stack first.
+  // The mmap syscall inside emitHeapAllocFromSlotCountReg clobbers rcx (and
+  // r11), so newSlotCount (reg1) does not survive it either; oldAddr and
+  // oldMmapLength don't survive the syscall. Save all three on the real value
+  // stack first (a clobbered newSlotCount made every shrinking realloc copy the
+  // old, larger size into the smaller block).
   emitPushReg(0); // save oldAddr
   emitPushReg(3); // save oldMmapLength
+  emitPushReg(1); // save newSlotCount
   emitHeapAllocFromSlotCountReg(1, 0); // reg0 = newPtr or 0
   emitCmpRegImm32(0, 0);
   const size_t jumpAllocSucceeded = emitCondJumpPlaceholder(CondCode::Ne);
-  // Alloc failed: discard the 2 saved temporaries, return null.
+  // Alloc failed: discard the 3 saved temporaries, return null.
+  emitPopReg(3);
   emitPopReg(3);
   emitPopReg(3);
   emitPushReg(0);
@@ -650,7 +653,8 @@ inline void X64Emitter::emitHeapRealloc() {
 
   patchCondJumpHere(jumpAllocSucceeded);
   emitMovRegReg(2, 0); // reg2 = newPtr
-  emitPopReg(3);       // reg3 = oldMmapLength (LIFO: pushed last, popped first)
+  emitPopReg(1);       // reg1 = newSlotCount (LIFO: pushed last, popped first)
+  emitPopReg(3);       // reg3 = oldMmapLength
   emitPopReg(0);       // reg0 = oldAddr
   // reg0=oldAddr, reg1=newSlotCount, reg2=newPtr, reg3=oldMmapLength - move
   // oldAddr/newPtr somewhere that survives the division below (which uses

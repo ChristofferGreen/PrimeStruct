@@ -417,8 +417,11 @@ IR level; the arm64 emitter is untouched):
 Verification: the full release gate (every native compile-run suite) passes with both on;
 `primestruct.ir.native_codegen` compares 60 random programs, the fused-form grid, calls and recursion, deep operand
 stacks, aliased locals and prints against the VM in plain and optimized mode; `scripts/differential_opt_check.py
---native` checks native `-O0` against native `-O2` and the VM over the corpus (492 programs identical; 22 differ from
-the VM identically at both levels, TODO-5482).
+--native` checks native `-O0` against native `-O2` and the VM over the corpus: 505 programs identical, 336 rejected by the
+native-profile lowering, and nine that differ from the VM by design (VM-only faults and host imports, listed in the
+script). Checking it also found a native bug that predates this work: `HeapRealloc` kept the new size in rcx across the
+mmap syscall, which clobbers rcx, so every shrinking realloc overran the new block (eight corpus programs segfaulted);
+fixed, with `heap_realloc` as the regression.
 
 ### Phase 4: VM interpreter engineering (independent of IR passes)
 
