@@ -100,7 +100,6 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5403 | Extend the source-file-size guard beyond src/semantics | deferred | lowerer-structure |
 | TODO-5415 | Split stdlib/std/collections/soa_storage.prime by concern | deferred | stdlib |
 | TODO-5348 | Verify the iOS embed build and XCFramework packaging on macOS | deferred | embedding-ios |
 
@@ -109,12 +108,11 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5403 - Extend the source-file-size guard beyond src/semantics.
 
 ### Priority Lanes
 
 - Embedding (must support iOS): TODO-5348 (needs macOS)
-- Lowerer structure: TODO-5426 -> TODO-5403
+- Lowerer structure: TODO-5426
 - Collection resolution: TODO-5424, TODO-5425
 - Tooling:  (needs approval)
 - Stdlib: TODO-5415
@@ -136,19 +134,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - the header has fewer than 100 `std::function` mentions; no overload pair that differs only by omitted callbacks
     - validation tests converted with case counts unchanged; full gate green
   - stop_rule: a callback that is only ever a constant lambda becomes a struct default instead of a parameter.
-
-- [ ] TODO-5403: Extend the source-file-size guard beyond src/semantics
-  - owner: ai
-  - status: ready
-  - progress: the guard scans src/ and include/ with an allowlist (now 8 .cpp and 4 .h entries). Split so far: SemanticProduct, CountAccessHelpers, CompilePipeline, ResultHelpers, LowerInferenceBaseKindHelpers, AccessTargetResolution, LowerSumHelpers (three parts), and eight more via file-local helper headers (StatementBindingHelpers, CompileTimeEvaluation, SetupTypeReturnKindHelpers, LowerInferenceDispatchSetup, SetupTypeMethodCallResolution, OperatorCollectionMutationHelpers, AccessLoadHelpers, ResultMetadataHelpers). Remaining entries are in scripts/source_file_size_allowlist.txt; InlineNativeCallDispatch and LowerInlineCalls each hide one 1,200+ line function (phase extraction), BindingTypeHelpers has two anonymous namespaces, and the three LowerStatements*/LowerEmitExpr headers are fragment includes.
-  - created_at: 2026-10-03
-  - phase: Compiler structure
-  - parallel_track: lowerer-structure
-  - scope: `scripts/check_source_file_sizes.py` only scans src/semantics. Twenty files elsewhere exceed 1,200 lines (IrLowererLowerSumHelpers.cpp 2,949, IrLowererCountAccessHelpers.cpp 2,327, frontend/SemanticProduct.cpp 2,068, IrLowererInlineNativeCallDispatch.cpp 2,029, pipeline/CompilePipeline.cpp 1,987, ...). Scan src/ and include/ entirely, seed the allowlist with the current offenders, then split them one per commit using the phase/helper patterns from TODO-5384/5385.
-  - acceptance:
-    - allowlist seeded and only shrinking; the five largest files split under 1,200 lines
-    - full gate green; dumps byte-identical
-  - stop_rule: pure moves and phase extraction only; a split that needs a logic change gets its own leaf.
 
 - [ ] TODO-5424: Collapse the removed vector/array/map call-form spelling diagnostics
   - owner: ai

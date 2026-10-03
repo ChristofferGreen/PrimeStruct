@@ -163,6 +163,7 @@ set(PRIMESTRUCT_SUPPORT_SOURCES
   src/support/ReceiverElementFamilyClassifier.cpp
   src/support/SourceLocationMapper.cpp
   src/support/StdlibSurfaceRegistry.cpp
+  src/support/StdlibSurfaceScan.cpp
   src/frontend/SymbolInterner.cpp
   src/support/TempPaths.cpp
   src/support/TransformRules.cpp

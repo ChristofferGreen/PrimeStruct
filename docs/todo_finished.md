@@ -1927,6 +1927,7 @@ are left unarchived.
 | TODO-5400 | Table-drive the builtin math-name classifiers | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
 | TODO-5401 | Collapse duplicate std::function callback aliases | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
 | TODO-5402 | Replace the 17-callback native tail dispatch signatures with a hooks struct | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
+| TODO-5403 | Extend the source-file-size guard beyond src/semantics | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5404 | Remove the hand-maintained src/ir_lowerer header mirrors | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
 | TODO-5405 | Inventory and schedule deletion of compatibility spellings | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
 | TODO-5406 | Delete or justify the legacy collection branch counters | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |

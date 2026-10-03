@@ -247,11 +247,13 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
   };
 
 #include "IrLowererLowerEmitExpr.h"
+#include "IrLowererLowerEmitExprContinued.h"
 #include "IrLowererLowerOperators.h"
 
   ir_lowerer::StatementsExprContext statementsExprHelpers(setupStage, stateOut, callResolutionAdapters, error);
 
 #include "IrLowererLowerStatementsExpr.h"
+#include "IrLowererLowerStatementsExprContinued.h"
 
   emitPrintArg = [&](const Expr &printArgExpr, const LocalMap &printArgLocals,
                      const PrintBuiltin &printBuiltin) -> bool {
@@ -260,6 +262,7 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
   };
 
 #include "IrLowererLowerStatementsBindings.h"
+#include "IrLowererLowerStatementsBindingsContinued.h"
 #include "IrLowererLowerStatementsLoops.h"
     const bool lowered = ir_lowerer::runLowerStatementsCallsStep(
         {

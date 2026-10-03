@@ -866,7 +866,9 @@ TEST_CASE("ir lowerer vector record materialization uses layout helpers") {
                "IrLowererOperatorCollectionMutationHelpers.cpp");
   const std::string inlineCalls =
       readText(repoRoot / "src" / "ir_lowerer" /
-               "IrLowererLowerInlineCalls.cpp");
+               "IrLowererLowerInlineCalls.cpp") +
+      readText(repoRoot / "src" / "ir_lowerer" /
+               "IrLowererLowerInlineCallsBody.h");
 
   CHECK(collectionMutation.find("nextLocal += 8") == std::string::npos);
   CHECK(inlineCalls.find("nextLocal += 4") == std::string::npos);

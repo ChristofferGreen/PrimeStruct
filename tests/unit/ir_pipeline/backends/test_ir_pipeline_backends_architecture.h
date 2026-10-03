@@ -37,7 +37,9 @@ TEST_CASE("stdlib surface registry stays source locked") {
 
   const std::string cmake = readTextFile(cmakePath);
   const std::string header = readTextFile(headerPath);
-  const std::string source = readTextFile(sourcePath);
+  const std::string source = readTextFile(sourcePath) +
+                             readTextFile(sourcePath.parent_path() / "StdlibSurfaceTables.h") +
+                             readTextFile(sourcePath.parent_path() / "StdlibSurfaceScan.cpp");
 
   CHECK(cmake.find("src/support/StdlibSurfaceRegistry.cpp") != std::string::npos);
 

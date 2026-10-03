@@ -35,6 +35,7 @@ SCANNED_ROOTS = ("src", "include")
 OWNERS = {
     "include/primec/support/CollectionHelperNames.h",
     "src/support/StdlibSurfaceRegistry.cpp",
+    "src/support/StdlibSurfaceTables.h",
     "src/support/CollectionSpellingClassifier.cpp",
 }
 

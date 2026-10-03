@@ -102,3 +102,8 @@ src/semantics/TemplateMonomorphExpressionRewritePhasesCInnerPhasesA.cpp soa
 src/semantics/TemplateMonomorphExpressionRewritePhasesCInnerPhasesB.cpp soa
 src/ir_lowerer/IrLowererCountAccessHelpersEmit.cpp collection,soa
 src/ir_lowerer/IrLowererSetupTypeMethodCallResolutionFileLocal.h soa
+src/ir_lowerer/IrLowererInlineNativeCallDispatchBody.h collection,soa
+src/ir_lowerer/IrLowererLowerStatementsExprContinued.h collection
+src/ir_lowerer/IrLowererAccessLoadHelpersFileLocal.h collection
+src/support/StdlibSurfaceScan.cpp collection
+src/support/StdlibSurfaceTables.h collection

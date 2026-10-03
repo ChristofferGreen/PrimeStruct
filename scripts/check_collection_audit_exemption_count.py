@@ -71,8 +71,9 @@ SCANNED_SUFFIXES = {".h", ".hpp", ".cpp", ".cc", ".cxx"}
 # units left four more units that spell collection helper literals: 92 -> 96.
 # TODO-5419: the nested rewriteExprPhase6 split added two more such units: 96 -> 98.
 # TODO-5403: splitting IrLowererCountAccessHelpers.cpp added one unit that spells both literals: 98 -> 99.
-# TODO-5403: the file-local helper header split out of IrLowererSetupTypeMethodCallResolution.cpp: 99 -> 100.
-BASELINE_EXEMPT_FILE_COUNT = 100
+# TODO-5403: the file-local helper header split out of IrLowererSetupTypeMethodCallResolution.cpp: 99 -> 100;
+# the size-guard splits of InlineNativeCallDispatch, LowerStatementsExpr, AccessLoadHelpers and StdlibSurfaceRegistry add five more units: 100 -> 105.
+BASELINE_EXEMPT_FILE_COUNT = 105
 
 
 def _is_exempt(root: Path, rel_path: str, text: str) -> bool:

@@ -1,10 +1,2 @@
 # Files under src/ or include/ larger than 1200 lines (TODO-5403). Format: <path> <max lines> <reason>.
 # The list may only shrink: split a file, then delete its entry.
-src/ir_lowerer/IrLowererInlineNativeCallDispatch.cpp 2027 one oversized function or constructor body; needs phase or lambda extraction
-src/ir_lowerer/IrLowererLowerStatementsExpr.h 1764 one oversized function or constructor body; needs phase or lambda extraction
-src/ir_lowerer/IrLowererBindingTypeHelpers.cpp 1738 one oversized function or constructor body; needs phase or lambda extraction
-src/support/StdlibSurfaceRegistry.cpp 1631 seeded by the src/ and include/ extension; split with the phase/helper patterns
-src/ir_lowerer/IrLowererLowerStatementsBindings.h 1500 seeded by the src/ and include/ extension; split with the phase/helper patterns
-src/ir_lowerer/IrLowererLowerEmitExpr.h 1325 seeded by the src/ and include/ extension; split with the phase/helper patterns
-src/ir_lowerer/IrLowererLowerEmitExprTryHelpers.cpp 1314 seeded by the src/ and include/ extension; split with the phase/helper patterns
-src/ir_lowerer/IrLowererLowerInlineCalls.cpp 1289 seeded by the src/ and include/ extension; split with the phase/helper patterns
