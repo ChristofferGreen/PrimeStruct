@@ -5,11 +5,15 @@
 #include "primec/frontend/Lexer.h"
 #include "primec/frontend/Parser.h"
 
+#include "primec/support/BenchmarkSink.h"
+
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
 #include <functional>
+#include <fstream>
 #include <iostream>
+#include <sstream>
 #include <string_view>
 #include <unordered_map>
 #include <utility>
@@ -19,9 +23,6 @@
 #include <malloc/malloc.h>
 #elif defined(__linux__)
 #include <unistd.h>
-#include <fstream>
-#include <sstream>
-#include "primec/support/BenchmarkSink.h"
 #if defined(__GLIBC__)
 #include <malloc.h>
 #endif

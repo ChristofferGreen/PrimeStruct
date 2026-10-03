@@ -4,13 +4,17 @@
 #include "primec/semantics/HostDefinitions.h"
 #include "primec/semantics/SemanticsDefinitionPartitioner.h"
 
+#include "primec/support/BenchmarkSink.h"
+
 #include <algorithm>
 #include <chrono>
 #include <cstdlib>
 #include <functional>
 #include <future>
 #include <iterator>
+#include <fstream>
 #include <iostream>
+#include <sstream>
 #include <optional>
 #include <utility>
 #include <vector>
@@ -20,11 +24,8 @@
 #include <malloc/malloc.h>
 #elif defined(__linux__)
 #include <unistd.h>
-#include <fstream>
 #if defined(__GLIBC__)
 #include <malloc.h>
-#include <sstream>
-#include "primec/support/BenchmarkSink.h"
 #endif
 #endif
 
