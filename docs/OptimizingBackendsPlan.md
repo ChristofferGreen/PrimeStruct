@@ -850,14 +850,15 @@ ceiling, not what data-dependent programs will see. TODO-5463/5476 add non-folda
 Compile time: for an `n`-statement `main` of arithmetic and branches, clang on the optexe source takes
 0.8-1.0 s at n=2,000 and 1.2-1.4 s at n=8,000 at every `-O` level (1.1 MB of C++), against 2.8 s and 8.9 s for the
 old emitter at `-O0`. The cost that grows is `primec` itself, before any emitter runs: 3.3 s, 6.5 s, 17 s and 84 s at
-n=2,000, 4,000, 8,000 and 20,000 (TODO-5478). The reproducer is a `main` of lines like
+n=2,000, 4,000, 8,000 and 20,000 when this was first measured; after removing a discarded second fact collection and
+memoizing the name classifiers it is 1.6 s and 3.6 s at n=2,000 and 4,000 (TODO-5478). The reproducer is a `main` of lines like
 `assign(total, plus(multiply(total, 3i32), K))`, with an `if` on every seventh line.
 
-Finding (TODO-5477): the backends disagreed on i32 overflow. For `total = 2147483647i32; total = total + 1i32`, the
-VM keeps the 64-bit slot (so `total < 0` is false) and prints -2147483648, `exe` wraps in `int32_t` (compare true,
-prints -2147483648), and `native` kept 64 bits and printed 2147483648. `optexe` follows the VM, the oracle, and native
-x86_64 now reads the low 32 bits for `PrintI32`, `FileWriteI32` and `ReturnI32` like the VM; `exe` still differs on the
-comparison.
+Resolved (TODO-5477): the backends used to disagree on i32 overflow. For `total = 2147483647i32; total = total + 1i32`
+the VM kept the 64-bit slot (so `total < 0` was false), `exe` wrapped in `int32_t`, and `native` printed 2147483648.
+The language rule is now wrapping i32: lowering emits the pure `SextI32` opcode (schema v27) after user-level i32
+add/sub/mul/div/negate (and increment, decrement, abs, pow), and every backend implements it, so the reproducer prints
+`-2147483648 1 0 1 -2147483648 -2147483648` on vm, native, optexe and exe (program-matrix cases `i32_wrap_*`).
 
 Suggested order: Phase 0.1-0.3 (flags, pass manager, dumps), Phase 1.1
 (shared CFG), then this emitter (done), then the matrix runner (0.5) to run the corpus through it. Phase 3
@@ -870,11 +871,10 @@ Suggested order: Phase 0.1-0.3 (flags, pass manager, dumps), Phase 1.1
   (2026-10-03, implemented).
 - The `optexe` C++ emitter is the first consumer of the middle end
   (section 9); it works on the stack form with the shared CFG, no register form (2026-10-03).
-- This work is developed on the branch `claude/native-instruction-optimization-rc4qu6`,
-  not directly on `master` (2026-10-03, maintainer decision; it overrides the
-  `AGENTS.md` default for this programme only). Keep the branch current by
-  merging `master` into it rather than rebasing, and land finished leaves back
-  on `master` by merge or cherry-pick when the maintainer asks.
+- This work was developed on the branch `claude/native-instruction-optimization-rc4qu6`
+  (2026-10-03, maintainer decision). Later the same day the maintainer asked for the branch to be
+  rebased onto `master` and pushed there, and since then finished work lands on `master` directly
+  per `AGENTS.md`; the branch only mirrors `master`.
 
 ## 11. Open decisions for the maintainer
 
