@@ -181,6 +181,8 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/frontend/ImportResolverHelpers.cpp
   src/frontend/Lexer.cpp
   src/frontend/SemanticProduct.cpp
+  src/frontend/SemanticProductLookups.cpp
+  src/frontend/SemanticProductFormat.cpp
   src/parser/ParserCore.cpp
   src/parser/ParserCoreBodyStatements.cpp
   src/parser/ParserCoreDefinitionBodies.cpp
@@ -443,6 +445,9 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ast/AstMemory.cpp
   src/pipeline/CliDriver.cpp
   src/pipeline/CompilePipeline.cpp
+  src/pipeline/CompilePipelineSource.cpp
+  src/pipeline/CompilePipelineStdlib.cpp
+  src/pipeline/CompilePipelineStages.cpp
   src/ir/IrBackendProfiles.cpp
   src/ir/IrInliner.cpp
   src/ir/IrPrinterHelpers.cpp
@@ -467,6 +472,8 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ir_lowerer/IrLowererBindingTypeHelpers.cpp
   src/ir_lowerer/IrLowererCountAccessClassifiers.cpp
   src/ir_lowerer/IrLowererCountAccessHelpers.cpp
+  src/ir_lowerer/IrLowererCountAccessHelpersClassify.cpp
+  src/ir_lowerer/IrLowererCountAccessHelpersEmit.cpp
   src/ir_lowerer/IrLowererFileWriteHelpers.cpp
   src/ir_lowerer/IrLowererFlowBufferHelpers.cpp
   src/ir_lowerer/IrLowererFlowControlHelpers.cpp

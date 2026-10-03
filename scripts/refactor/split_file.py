@@ -7,7 +7,7 @@ src=sys.argv[1]; helpers=sys.argv[2]; ns=sys.argv[3]; specs=sys.argv[4:]
 lines=open(src).read().split('\n')
 if lines and lines[-1]=='': lines.pop()
 # prologue
-pi=next(i for i,l in enumerate(lines) if l.startswith('namespace primec::semantics {') or l.startswith('namespace primec {') )
+pi=next(i for i,l in enumerate(lines) if re.match(r'^namespace primec[\w:]* \{\s*$', l) )
 prologue=lines[:pi+1]
 # trailing close
 ti=max(i for i,l in enumerate(lines) if l.startswith('}') and 'namespace' in l)
@@ -20,7 +20,7 @@ j=0
 while j<len(body) and body[j].strip()=='' : j+=1
 bodystart=pi+1+j
 ja=next((x for x,l in enumerate(body) if l.startswith('namespace {')),None)
-if ja is not None and all((not l.strip()) or l.startswith(('using ','//','#')) for l in body[:ja]):
+if ja is not None and all((not l.strip()) or l.startswith(('using ','//','#')) or l.startswith(('bool ','void ','std::')) or l.startswith((' ',')')) or l.rstrip().endswith((',',';')) for l in body[:ja]):
     pre=body[:ja]; j=ja
 if j<len(body) and body[j].startswith('namespace {'):
     k=j

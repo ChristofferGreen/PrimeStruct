@@ -70,7 +70,8 @@ SCANNED_SUFFIXES = {".h", ".hpp", ".cpp", ".cc", ".cxx"}
 # TODO-5385: decomposing the giant validateExpr / rewriteExpr functions into phase
 # units left four more units that spell collection helper literals: 92 -> 96.
 # TODO-5419: the nested rewriteExprPhase6 split added two more such units: 96 -> 98.
-BASELINE_EXEMPT_FILE_COUNT = 98
+# TODO-5403: splitting IrLowererCountAccessHelpers.cpp added one unit that spells both literals: 98 -> 99.
+BASELINE_EXEMPT_FILE_COUNT = 99
 
 
 def _is_exempt(root: Path, rel_path: str, text: str) -> bool:

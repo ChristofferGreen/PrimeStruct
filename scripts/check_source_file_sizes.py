@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Keep src/semantics source files small (TODO-5353).
+"""Keep source files small (TODO-5353).
 
-No `.cpp`/`.h` under src/semantics may exceed MAX_LINES unless it is listed in
+No `.cpp`/`.h` under src/ or include/ may exceed MAX_LINES unless it is listed in
 scripts/source_file_size_allowlist.txt (`<path> <max lines> <reason>` per line).
 An allowlisted file may not grow past its recorded limit, and an entry whose
 file is back under MAX_LINES (or gone) is stale and must be removed, so the
@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 
 MAX_LINES = 1200
-SCAN_DIR = "src/semantics"
+SCAN_DIRS = ("src", "include")
 ALLOWLIST = "scripts/source_file_size_allowlist.txt"
 
 
@@ -50,9 +50,11 @@ def find_violations(sizes: dict[str, int], allowlist: dict[str, tuple[int, str]]
 
 def collect_sizes(root: Path) -> dict[str, int]:
     sizes: dict[str, int] = {}
-    for path in sorted((root / SCAN_DIR).rglob("*")):
-        if path.suffix in {".cpp", ".h"} and path.is_file():
-            sizes[path.relative_to(root).as_posix()] = len(path.read_text(encoding="utf-8", errors="replace").splitlines())
+    for scan_dir in SCAN_DIRS:
+        for path in sorted((root / scan_dir).rglob("*")):
+            if path.suffix in {".cpp", ".h"} and path.is_file():
+                sizes[path.relative_to(root).as_posix()] = len(
+                    path.read_text(encoding="utf-8", errors="replace").splitlines())
     return sizes
 
 
