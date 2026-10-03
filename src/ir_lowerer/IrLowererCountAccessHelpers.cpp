@@ -1044,17 +1044,17 @@ CountAccessClassifiers makeCountAccessClassifiers(bool hasEntryArgs,
   return classifiers;
 }
 
-IsEntryArgsNameFn makeIsEntryArgsName(bool hasEntryArgs, const std::string &entryArgsName) {
+ExprLocalsPredicateFn makeIsEntryArgsName(bool hasEntryArgs, const std::string &entryArgsName) {
   return [=](const Expr &expr, const LocalMap &localsIn) {
     return isEntryArgsName(expr, localsIn, hasEntryArgs, entryArgsName);
   };
 }
 
-IsArrayCountCallFn makeIsArrayCountCall(bool hasEntryArgs, const std::string &entryArgsName) {
+ExprLocalsPredicateFn makeIsArrayCountCall(bool hasEntryArgs, const std::string &entryArgsName) {
   return makeIsArrayCountCall(hasEntryArgs, entryArgsName, nullptr);
 }
 
-IsArrayCountCallFn makeIsArrayCountCall(bool hasEntryArgs,
+ExprLocalsPredicateFn makeIsArrayCountCall(bool hasEntryArgs,
                                         const std::string &entryArgsName,
                                         const SemanticProgram *semanticProgram) {
   auto semanticIndex = semanticProgram == nullptr
@@ -1071,11 +1071,11 @@ IsArrayCountCallFn makeIsArrayCountCall(bool hasEntryArgs,
   };
 }
 
-IsVectorCapacityCallFn makeIsVectorCapacityCall() {
+ExprLocalsPredicateFn makeIsVectorCapacityCall() {
   return makeIsVectorCapacityCall(nullptr);
 }
 
-IsVectorCapacityCallFn makeIsVectorCapacityCall(const SemanticProgram *semanticProgram) {
+ExprLocalsPredicateFn makeIsVectorCapacityCall(const SemanticProgram *semanticProgram) {
   auto semanticIndex = semanticProgram == nullptr
                            ? std::shared_ptr<SemanticProductIndex>{}
                            : std::make_shared<SemanticProductIndex>(
@@ -1085,11 +1085,11 @@ IsVectorCapacityCallFn makeIsVectorCapacityCall(const SemanticProgram *semanticP
   };
 }
 
-IsStringCountCallFn makeIsStringCountCall() {
+ExprLocalsPredicateFn makeIsStringCountCall() {
   return makeIsStringCountCall(nullptr);
 }
 
-IsStringCountCallFn makeIsStringCountCall(const SemanticProgram *semanticProgram) {
+ExprLocalsPredicateFn makeIsStringCountCall(const SemanticProgram *semanticProgram) {
   auto semanticIndex = semanticProgram == nullptr
                            ? std::shared_ptr<SemanticProductIndex>{}
                            : std::make_shared<SemanticProductIndex>(

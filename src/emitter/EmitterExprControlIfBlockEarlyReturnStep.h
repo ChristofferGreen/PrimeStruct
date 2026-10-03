@@ -4,11 +4,10 @@
 #include <string>
 
 #include "primec/ast/Ast.h"
+#include "primec/support/CallbackTypes.h"
 
 namespace primec::emitter {
 
-using EmitterExprControlIfBlockEarlyReturnIsReturnCallFn = std::function<bool(const Expr &)>;
-using EmitterExprControlIfBlockEarlyReturnEmitExprFn = std::function<std::string(const Expr &)>;
 
 struct EmitterExprControlIfBlockEarlyReturnStepResult {
   bool handled = false;
@@ -18,7 +17,7 @@ struct EmitterExprControlIfBlockEarlyReturnStepResult {
 EmitterExprControlIfBlockEarlyReturnStepResult runEmitterExprControlIfBlockEarlyReturnStep(
     const Expr &stmt,
     bool isLast,
-    const EmitterExprControlIfBlockEarlyReturnIsReturnCallFn &isReturnCall,
-    const EmitterExprControlIfBlockEarlyReturnEmitExprFn &emitExpr);
+    const ExprPredicateFn &isReturnCall,
+    const ExprStringFn &emitExpr);
 
 } // namespace primec::emitter

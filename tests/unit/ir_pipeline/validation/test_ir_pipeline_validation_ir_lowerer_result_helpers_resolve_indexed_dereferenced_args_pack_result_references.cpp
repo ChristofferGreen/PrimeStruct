@@ -39,7 +39,7 @@ TEST_CASE("ir lowerer result helpers resolve indexed dereferenced args-pack Resu
   auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) {
     return false;
   };
-  const primec::ir_lowerer::InferExprKindWithLocalsFn inferExprKind = {};
+  const primec::ir_lowerer::ExprLocalsValueKindFn inferExprKind = {};
 
   primec::ir_lowerer::ResultExprInfo out;
   CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
@@ -87,7 +87,7 @@ TEST_CASE("ir lowerer result helpers resolve indexed dereferenced args-pack Resu
   auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) {
     return false;
   };
-  const primec::ir_lowerer::InferExprKindWithLocalsFn inferExprKind = {};
+  const primec::ir_lowerer::ExprLocalsValueKindFn inferExprKind = {};
 
   primec::ir_lowerer::ResultExprInfo out;
   CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
@@ -108,7 +108,7 @@ TEST_CASE("ir lowerer result helpers resolve direct File constructor Results") {
   auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) {
     return false;
   };
-  const primec::ir_lowerer::InferExprKindWithLocalsFn inferExprKind = {};
+  const primec::ir_lowerer::ExprLocalsValueKindFn inferExprKind = {};
 
   primec::Expr fileCtorExpr;
   fileCtorExpr.kind = primec::Expr::Kind::Call;

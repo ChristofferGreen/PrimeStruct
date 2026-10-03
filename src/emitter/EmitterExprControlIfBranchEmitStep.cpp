@@ -12,14 +12,14 @@ EmitterExprControlIfBranchEmitStepResult runEmitterExprControlIfBranchEmitStep(
     bool allowMathBare,
     const std::unordered_map<std::string, std::string> &importAliases,
     const std::unordered_map<std::string, std::string> &structTypeMap,
-    const EmitterExprControlIfBranchEmitIsEnvelopeFn &isIfBlockEnvelope,
-    const EmitterExprControlIfBranchEmitIsReturnCallFn &isReturnCall,
+    const ExprPredicateFn &isIfBlockEnvelope,
+    const ExprPredicateFn &isReturnCall,
     const EmitterExprControlIfBranchEmitGetBindingInfoFn &getBindingInfo,
-    const EmitterExprControlIfBranchEmitHasExplicitTypeFn &hasExplicitBindingTypeTransform,
+    const ExprPredicateFn &hasExplicitBindingTypeTransform,
     const EmitterExprControlIfBranchEmitInferReturnKindFn &inferPrimitiveReturnKind,
     const EmitterExprControlIfBranchEmitTypeNameForReturnKindFn &typeNameForReturnKind,
     const EmitterExprControlIfBranchEmitIsReferenceCandidateFn &isReferenceCandidate,
-    const EmitterExprControlIfBranchEmitEmitExprFn &emitExpr) {
+    const ExprStringFn &emitExpr) {
   if (!isIfBlockEnvelope || !isReturnCall || !getBindingInfo ||
       !hasExplicitBindingTypeTransform || !inferPrimitiveReturnKind ||
       !typeNameForReturnKind || !isReferenceCandidate || !emitExpr) {

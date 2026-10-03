@@ -76,7 +76,7 @@ private:
   const std::function<bool(const Expr &, const LocalMap &)> &emitExpr;
   const std::function<int32_t()> &allocTempLocal;
   const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath;
-  const ResolveExprPathFn &resolveExprPath;
+  const ExprStringFn &resolveExprPath;
   const ResolveDefinitionCallFn &resolveDefinitionCall;
   const ResolveStructTypeNameFn &resolveStructTypeName;
 };

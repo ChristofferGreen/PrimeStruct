@@ -7,8 +7,8 @@ namespace primec::emitter {
 
 EmitterExprControlIfBranchValueStepResult runEmitterExprControlIfBranchValueStep(
     const Expr &candidate,
-    const EmitterExprControlIfBranchValueIsEnvelopeFn &isIfBlockEnvelope,
-    const EmitterExprControlIfBranchValueEmitExprFn &emitExpr,
+    const ExprPredicateFn &isIfBlockEnvelope,
+    const ExprStringFn &emitExpr,
     const EmitterExprControlIfBranchValueEmitStatementFn &emitStatement) {
   if (!isIfBlockEnvelope || !emitExpr || !emitStatement) {
     return {};

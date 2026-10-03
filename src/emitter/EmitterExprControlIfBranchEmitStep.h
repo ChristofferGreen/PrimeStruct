@@ -9,13 +9,13 @@
 
 namespace primec::emitter {
 
-using EmitterExprControlIfBranchEmitIsEnvelopeFn =
+using ExprPredicateFn =
     std::function<bool(const Expr &)>;
-using EmitterExprControlIfBranchEmitIsReturnCallFn =
+using ExprPredicateFn =
     std::function<bool(const Expr &)>;
 using EmitterExprControlIfBranchEmitGetBindingInfoFn =
     std::function<Emitter::BindingInfo(const Expr &)>;
-using EmitterExprControlIfBranchEmitHasExplicitTypeFn =
+using ExprPredicateFn =
     std::function<bool(const Expr &)>;
 using EmitterExprControlIfBranchEmitInferReturnKindFn =
     std::function<Emitter::ReturnKind(const Expr &,
@@ -26,7 +26,7 @@ using EmitterExprControlIfBranchEmitTypeNameForReturnKindFn =
     std::function<std::string(Emitter::ReturnKind)>;
 using EmitterExprControlIfBranchEmitIsReferenceCandidateFn =
     std::function<bool(const Emitter::BindingInfo &)>;
-using EmitterExprControlIfBranchEmitEmitExprFn =
+using ExprStringFn =
     std::function<std::string(const Expr &)>;
 
 struct EmitterExprControlIfBranchEmitStepResult {
@@ -41,13 +41,13 @@ EmitterExprControlIfBranchEmitStepResult runEmitterExprControlIfBranchEmitStep(
     bool allowMathBare,
     const std::unordered_map<std::string, std::string> &importAliases,
     const std::unordered_map<std::string, std::string> &structTypeMap,
-    const EmitterExprControlIfBranchEmitIsEnvelopeFn &isIfBlockEnvelope,
-    const EmitterExprControlIfBranchEmitIsReturnCallFn &isReturnCall,
+    const ExprPredicateFn &isIfBlockEnvelope,
+    const ExprPredicateFn &isReturnCall,
     const EmitterExprControlIfBranchEmitGetBindingInfoFn &getBindingInfo,
-    const EmitterExprControlIfBranchEmitHasExplicitTypeFn &hasExplicitBindingTypeTransform,
+    const ExprPredicateFn &hasExplicitBindingTypeTransform,
     const EmitterExprControlIfBranchEmitInferReturnKindFn &inferPrimitiveReturnKind,
     const EmitterExprControlIfBranchEmitTypeNameForReturnKindFn &typeNameForReturnKind,
     const EmitterExprControlIfBranchEmitIsReferenceCandidateFn &isReferenceCandidate,
-    const EmitterExprControlIfBranchEmitEmitExprFn &emitExpr);
+    const ExprStringFn &emitExpr);
 
 } // namespace primec::emitter

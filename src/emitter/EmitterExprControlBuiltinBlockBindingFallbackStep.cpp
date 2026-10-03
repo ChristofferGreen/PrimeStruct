@@ -9,7 +9,7 @@ EmitterExprControlBuiltinBlockBindingFallbackStepResult runEmitterExprControlBui
     bool hasExplicitType,
     bool needsConst,
     bool useRef,
-    const EmitterExprControlBuiltinBlockBindingFallbackEmitExprFn &emitExpr) {
+    const ExprStringFn &emitExpr) {
   if (hasExplicitType) {
     return {};
   }

@@ -127,7 +127,7 @@ inline bool emitConversionsOperatorExprWithInertTail(
     const primec::Expr &expr,
     const primec::ir_lowerer::LocalMap &locals,
     int32_t &nextLocal,
-    const primec::ir_lowerer::EmitConversionsAndCallsExprWithLocalsFn &emitExpr,
+    const primec::ir_lowerer::ExprLocalsPredicateFn &emitExpr,
     const primec::ir_lowerer::InferConversionsAndCallsExprKindWithLocalsFn &inferExprKind,
     std::vector<primec::IrInstruction> &instructions,
     bool &handled,
@@ -200,7 +200,7 @@ inline bool emitInlineParamsInertKind(
     const primec::ir_lowerer::InferInlineParameterLocalInfoFn &inferCallParameterLocalInfo,
     std::vector<primec::IrInstruction> &instructions,
     std::string &error,
-    const primec::ir_lowerer::EmitInlineParameterExprFn &emitExpr =
+    const primec::ir_lowerer::ExprLocalsPredicateFn &emitExpr =
         [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; }) {
   return primec::ir_lowerer::emitInlineDefinitionCallParameters(
       callParams,
@@ -240,7 +240,7 @@ inline bool emitInlineParamsInert(
     const primec::ir_lowerer::InferInlineParameterLocalInfoFn &inferCallParameterLocalInfo,
     std::vector<primec::IrInstruction> &instructions,
     std::string &error,
-    const primec::ir_lowerer::EmitInlineParameterExprFn &emitExpr =
+    const primec::ir_lowerer::ExprLocalsPredicateFn &emitExpr =
         [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; }) {
   return emitInlineParamsInertKind(primec::ir_lowerer::LocalInfo::ValueKind::Unknown,
                                    callParams,
@@ -259,8 +259,8 @@ inline bool emitInlineParamsInert(
 // resolveMethodCallDefinitionFromExpr with no array-count, vector-capacity or
 // entry-args classification, no import aliases and no struct names; the remaining
 // arguments are the case's own. One wrapper per library overload, same tails.
-using ReceiverKindFn = primec::ir_lowerer::InferReceiverExprKindFn;
-using ReceiverPathFn = primec::ir_lowerer::ResolveReceiverExprPathFn;
+using ReceiverKindFn = primec::ir_lowerer::ExprLocalsValueKindFn;
+using ReceiverPathFn = primec::ExprStringFn;
 using DefMap = std::unordered_map<std::string, const primec::Definition *>;
 
 #define PS_NO_CLASSIFIER_ARGS                                                                              \

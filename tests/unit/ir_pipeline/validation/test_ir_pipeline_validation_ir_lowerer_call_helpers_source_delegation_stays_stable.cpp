@@ -532,7 +532,7 @@ TEST_CASE("ir lowerer call helpers reject missing definition path resolver") {
   directCall.name = "callee";
 
   CHECK(primec::ir_lowerer::resolveDefinitionCall(
-            directCall, defMap, primec::ir_lowerer::ResolveExprPathFn{}) == nullptr);
+            directCall, defMap, primec::ExprStringFn{}) == nullptr);
 }
 
 TEST_CASE("ir lowerer call helpers build definition call resolver") {
@@ -3647,7 +3647,7 @@ TEST_CASE("ir lowerer call helpers reject missing tail-call resolver") {
   callExpr.name = "callee";
 
   CHECK_FALSE(primec::ir_lowerer::isTailCallCandidate(
-      callExpr, defMap, primec::ir_lowerer::ResolveExprPathFn{}));
+      callExpr, defMap, primec::ExprStringFn{}));
 }
 
 TEST_CASE("ir lowerer call helpers build tail-call and definition-exists adapters") {
@@ -3718,7 +3718,7 @@ TEST_CASE("ir lowerer call helpers detect tail execution candidates from stateme
   CHECK(primec::ir_lowerer::hasTailExecutionCandidate(statements, true, isTailCandidate));
   CHECK_FALSE(primec::ir_lowerer::hasTailExecutionCandidate(statements, false, isTailCandidate));
   CHECK_FALSE(primec::ir_lowerer::hasTailExecutionCandidate(
-      statements, true, primec::ir_lowerer::IsTailCallCandidateFn{}));
+      statements, true, primec::ExprPredicateFn{}));
 
   primec::Expr returnCall;
   returnCall.kind = primec::Expr::Kind::Call;

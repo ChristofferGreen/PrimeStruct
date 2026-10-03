@@ -10,9 +10,9 @@ OperatorArcHyperbolicEmitResult emitExpOperatorExpr(
     const Expr &expr,
     const LocalMap &localsIn,
     bool hasMathImport,
-    const EmitArcHyperbolicExprWithLocalsFn &emitExpr,
+    const ExprLocalsPredicateFn &emitExpr,
     const InferArcHyperbolicExprKindWithLocalsFn &inferExprKind,
-    const AllocArcHyperbolicTempLocalFn &allocTempLocal,
+    const Int32ProviderFn &allocTempLocal,
     std::vector<IrInstruction> &instructions,
     std::string &error) {
   std::string expName;
@@ -111,9 +111,9 @@ OperatorArcHyperbolicEmitResult emitLogOperatorExpr(
     const Expr &expr,
     const LocalMap &localsIn,
     bool hasMathImport,
-    const EmitArcHyperbolicExprWithLocalsFn &emitExpr,
+    const ExprLocalsPredicateFn &emitExpr,
     const InferArcHyperbolicExprKindWithLocalsFn &inferExprKind,
-    const AllocArcHyperbolicTempLocalFn &allocTempLocal,
+    const Int32ProviderFn &allocTempLocal,
     std::vector<IrInstruction> &instructions,
     std::string &error) {
   std::string logName;
@@ -303,9 +303,9 @@ OperatorArcHyperbolicEmitResult emitHyperbolicOperatorExpr(
     const Expr &expr,
     const LocalMap &localsIn,
     bool hasMathImport,
-    const EmitArcHyperbolicExprWithLocalsFn &emitExpr,
+    const ExprLocalsPredicateFn &emitExpr,
     const InferArcHyperbolicExprKindWithLocalsFn &inferExprKind,
-    const AllocArcHyperbolicTempLocalFn &allocTempLocal,
+    const Int32ProviderFn &allocTempLocal,
     std::vector<IrInstruction> &instructions,
     std::string &error) {
   std::string hyperName;
@@ -446,9 +446,9 @@ OperatorArcHyperbolicEmitResult emitArcHyperbolicBuiltinExpr(
     const Expr &expr,
     const LocalMap &localsIn,
     bool hasMathImport,
-    const EmitArcHyperbolicExprWithLocalsFn &emitExpr,
+    const ExprLocalsPredicateFn &emitExpr,
     const InferArcHyperbolicExprKindWithLocalsFn &inferExprKind,
-    const AllocArcHyperbolicTempLocalFn &allocTempLocal,
+    const Int32ProviderFn &allocTempLocal,
     std::vector<IrInstruction> &instructions,
     std::string &error) {
   std::string arcHyperName;

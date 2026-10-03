@@ -141,9 +141,9 @@ bool inferReceiverTypeFromDeclaredReturn(const Definition &definition, std::stri
 
 bool resolveMethodCallReceiverExpr(const Expr &callExpr,
                                    const LocalMap &localsIn,
-                                   const IsMethodCallClassifierFn &isArrayCountCall,
-                                   const IsMethodCallClassifierFn &isVectorCapacityCall,
-                                   const IsMethodCallClassifierFn &isEntryArgsName,
+                                   const ExprLocalsPredicateFn &isArrayCountCall,
+                                   const ExprLocalsPredicateFn &isVectorCapacityCall,
+                                   const ExprLocalsPredicateFn &isEntryArgsName,
                                    const Expr *&receiverOut,
                                    std::string &errorOut) {
   receiverOut = nullptr;
@@ -316,7 +316,7 @@ bool resolveReceiverType(const LocalInfo &localInfo, CanonicalReceiverType &out)
 
 std::string resolveMethodReceiverTypeNameFromCallExpr(const Expr &receiverCallExpr,
                                                       LocalInfo::ValueKind inferredKind,
-                                                      const ResolveReceiverExprPathFn &resolveExprPath) {
+                                                      const ExprStringFn &resolveExprPath) {
   auto isBufferConstructorCall = [&](const Expr &candidate) {
     const std::string scopedName = resolveExprPath ? resolveExprPath(candidate) : std::string();
     return scopedName == "Buffer" || scopedName == "/std/gfx/Buffer" ||
@@ -351,8 +351,8 @@ std::string resolveMethodReceiverTypeNameFromCallExpr(const Expr &receiverCallEx
 
 bool inferBuiltinAccessReceiverResultKind(const Expr &receiverCallExpr,
                                           const LocalMap &localsIn,
-                                          const InferReceiverExprKindFn &inferExprKind,
-                                          const ResolveReceiverExprPathFn &resolveExprPath,
+                                          const ExprLocalsValueKindFn &inferExprKind,
+                                          const ExprStringFn &resolveExprPath,
                                           const GetReturnInfoForPathFn &getReturnInfo,
                                           const std::unordered_map<std::string, const Definition *> &defMap,
                                           LocalInfo::ValueKind &kindOut) {
@@ -593,8 +593,8 @@ bool resolveMethodReceiverTypeFromNameExpr(const Expr &receiverNameExpr,
 // removed along with that old inline cascade.
 bool resolveReceiverTypeFromCallExpr(const Expr &receiverExpr,
                                      const LocalMap &localsIn,
-                                     const InferReceiverExprKindFn &inferExprKind,
-                                     const ResolveReceiverExprPathFn &resolveExprPath,
+                                     const ExprLocalsValueKindFn &inferExprKind,
+                                     const ExprStringFn &resolveExprPath,
                                      const std::unordered_map<std::string, std::string> &importAliases,
                                      const std::unordered_set<std::string> &structNames,
                                      const SemanticProgram *semanticProgram,
@@ -816,7 +816,7 @@ bool resolveReceiverTypeFromCallExpr(const Expr &receiverExpr,
 // branches (RT3a/RT2, RT3b, RT3c) are single-production-path.
 bool resolveReceiverTypeFromFallbackExpr(const Expr &receiverExpr,
                                          const LocalMap &localsIn,
-                                         const InferReceiverExprKindFn &inferExprKind,
+                                         const ExprLocalsValueKindFn &inferExprKind,
                                          CanonicalReceiverType &out) {
   out.collectionBaseName = inferExprKind ? typeNameForValueKind(inferExprKind(receiverExpr, localsIn)) : "";
   return true;
@@ -827,8 +827,8 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
                                  const std::string &methodName,
                                  const std::unordered_map<std::string, std::string> &importAliases,
                                  const std::unordered_set<std::string> &structNames,
-                                 const InferReceiverExprKindFn &inferExprKind,
-                                 const ResolveReceiverExprPathFn &resolveExprPath,
+                                 const ExprLocalsValueKindFn &inferExprKind,
+                                 const ExprStringFn &resolveExprPath,
                                  std::string &typeNameOut,
                                  std::string &resolvedTypePathOut,
                                  std::string &errorOut,

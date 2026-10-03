@@ -281,7 +281,7 @@ bool buildSetupMathTypeStructAndUninitializedResolutionSetup(
     std::size_t structReserveHint,
     const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields,
     const std::unordered_map<std::string, const Definition *> &defMap,
-    const InferStructExprPathFn &resolveExprPath,
+    const ExprStringFn &resolveExprPath,
     SetupMathTypeStructAndUninitializedResolutionSetup &out,
     std::string &error) {
   return buildSetupMathTypeStructAndUninitializedResolutionSetup(hasMathImport,
@@ -304,7 +304,7 @@ bool buildSetupMathTypeStructAndUninitializedResolutionSetup(
     std::size_t structReserveHint,
     const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields,
     const std::unordered_map<std::string, const Definition *> &defMap,
-    const InferStructExprPathFn &resolveExprPath,
+    const ExprStringFn &resolveExprPath,
     SetupMathTypeStructAndUninitializedResolutionSetup &out,
     std::string &error) {
   out.setupMathAndBindingAdapters = makeSetupMathAndBindingAdapters(hasMathImport, semanticProgram);
@@ -328,7 +328,7 @@ bool buildSetupTypeStructAndUninitializedResolutionSetup(
     std::size_t structReserveHint,
     const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields,
     const std::unordered_map<std::string, const Definition *> &defMap,
-    const InferStructExprPathFn &resolveExprPath,
+    const ExprStringFn &resolveExprPath,
     SetupTypeStructAndUninitializedResolutionSetup &out,
     std::string &error) {
   return buildSetupTypeStructAndUninitializedResolutionSetup(nullptr,
@@ -349,7 +349,7 @@ bool buildSetupTypeStructAndUninitializedResolutionSetup(
     std::size_t structReserveHint,
     const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields,
     const std::unordered_map<std::string, const Definition *> &defMap,
-    const InferStructExprPathFn &resolveExprPath,
+    const ExprStringFn &resolveExprPath,
     SetupTypeStructAndUninitializedResolutionSetup &out,
     std::string &error) {
   out.setupTypeAndStructTypeAdapters = makeSetupTypeAndStructTypeAdapters(structNames, importAliases);
@@ -374,7 +374,7 @@ bool buildStructAndUninitializedResolutionSetup(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const ResolveStructTypeNameFn &resolveStructTypeName,
     const ValueKindFromTypeNameFn &valueKindFromTypeName,
-    const InferStructExprPathFn &resolveExprPath,
+    const ExprStringFn &resolveExprPath,
     StructAndUninitializedResolutionSetup &out,
     std::string &error) {
   return buildStructAndUninitializedResolutionSetup(nullptr,
@@ -395,7 +395,7 @@ bool buildStructAndUninitializedResolutionSetup(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const ResolveStructTypeNameFn &resolveStructTypeName,
     const ValueKindFromTypeNameFn &valueKindFromTypeName,
-    const InferStructExprPathFn &resolveExprPath,
+    const ExprStringFn &resolveExprPath,
     StructAndUninitializedResolutionSetup &out,
     std::string &error) {
   out.fieldIndexes =
@@ -419,7 +419,7 @@ bool buildStructAndUninitializedResolutionSetup(
 
 UninitializedResolutionAdapters makeUninitializedResolutionAdapters(
     const ResolveStructTypeNameFn &resolveStructTypePath,
-    const InferStructExprPathFn &resolveExprPath,
+    const ExprStringFn &resolveExprPath,
     const UninitializedFieldBindingIndex &fieldIndex,
     const std::unordered_map<std::string, const Definition *> &defMap,
     const ResolveStructFieldSlotFn &resolveStructFieldSlot,
@@ -436,7 +436,7 @@ UninitializedResolutionAdapters makeUninitializedResolutionAdapters(
 UninitializedResolutionAdapters makeUninitializedResolutionAdapters(
     const SemanticProgram *semanticProgram,
     const ResolveStructTypeNameFn &resolveStructTypePath,
-    const InferStructExprPathFn &resolveExprPath,
+    const ExprStringFn &resolveExprPath,
     const UninitializedFieldBindingIndex &fieldIndex,
     const std::unordered_map<std::string, const Definition *> &defMap,
     const ResolveStructFieldSlotFn &resolveStructFieldSlot,

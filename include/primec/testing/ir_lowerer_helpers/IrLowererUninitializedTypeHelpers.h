@@ -164,7 +164,7 @@ bool buildSetupMathTypeStructAndUninitializedResolutionSetup(
     std::size_t structReserveHint,
     const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields,
     const std::unordered_map<std::string, const Definition *> &defMap,
-    const InferStructExprPathFn &resolveExprPath,
+    const ExprStringFn &resolveExprPath,
     SetupMathTypeStructAndUninitializedResolutionSetup &out,
     std::string &error);
 bool buildSetupTypeStructAndUninitializedResolutionSetup(
@@ -173,7 +173,7 @@ bool buildSetupTypeStructAndUninitializedResolutionSetup(
     std::size_t structReserveHint,
     const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields,
     const std::unordered_map<std::string, const Definition *> &defMap,
-    const InferStructExprPathFn &resolveExprPath,
+    const ExprStringFn &resolveExprPath,
     SetupTypeStructAndUninitializedResolutionSetup &out,
     std::string &error);
 bool buildSetupTypeStructAndUninitializedResolutionSetup(
@@ -183,7 +183,7 @@ bool buildSetupTypeStructAndUninitializedResolutionSetup(
     std::size_t structReserveHint,
     const EnumerateStructLayoutFieldsFn &enumerateStructLayoutFields,
     const std::unordered_map<std::string, const Definition *> &defMap,
-    const InferStructExprPathFn &resolveExprPath,
+    const ExprStringFn &resolveExprPath,
     SetupTypeStructAndUninitializedResolutionSetup &out,
     std::string &error);
 bool buildStructAndUninitializedResolutionSetup(
@@ -192,7 +192,7 @@ bool buildStructAndUninitializedResolutionSetup(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const ResolveStructTypeNameFn &resolveStructTypeName,
     const ValueKindFromTypeNameFn &valueKindFromTypeName,
-    const InferStructExprPathFn &resolveExprPath,
+    const ExprStringFn &resolveExprPath,
     StructAndUninitializedResolutionSetup &out,
     std::string &error);
 bool buildStructAndUninitializedResolutionSetup(
@@ -202,12 +202,12 @@ bool buildStructAndUninitializedResolutionSetup(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const ResolveStructTypeNameFn &resolveStructTypeName,
     const ValueKindFromTypeNameFn &valueKindFromTypeName,
-    const InferStructExprPathFn &resolveExprPath,
+    const ExprStringFn &resolveExprPath,
     StructAndUninitializedResolutionSetup &out,
     std::string &error);
 UninitializedResolutionAdapters makeUninitializedResolutionAdapters(
     const ResolveStructTypeNameFn &resolveStructTypePath,
-    const InferStructExprPathFn &resolveExprPath,
+    const ExprStringFn &resolveExprPath,
     const UninitializedFieldBindingIndex &fieldIndex,
     const std::unordered_map<std::string, const Definition *> &defMap,
     const ResolveStructFieldSlotFn &resolveStructFieldSlot,
@@ -215,7 +215,7 @@ UninitializedResolutionAdapters makeUninitializedResolutionAdapters(
 UninitializedResolutionAdapters makeUninitializedResolutionAdapters(
     const SemanticProgram *semanticProgram,
     const ResolveStructTypeNameFn &resolveStructTypePath,
-    const InferStructExprPathFn &resolveExprPath,
+    const ExprStringFn &resolveExprPath,
     const UninitializedFieldBindingIndex &fieldIndex,
     const std::unordered_map<std::string, const Definition *> &defMap,
     const ResolveStructFieldSlotFn &resolveStructFieldSlot,
@@ -250,12 +250,12 @@ bool hasUninitializedFieldBindingsForStructPath(const UninitializedFieldBindingI
                                                 const std::string &structPath);
 std::string inferStructPathFromCallTargetWithFieldBindingIndex(
     const Expr &expr,
-    const InferStructExprPathFn &resolveExprPath,
+    const ExprStringFn &resolveExprPath,
     const UninitializedFieldBindingIndex &fieldIndex,
     const InferDefinitionStructReturnPathFn &inferDefinitionStructReturnPath);
 std::string inferStructPathFromCallTargetWithFieldBindingIndexAndVisited(
     const Expr &expr,
-    const InferStructExprPathFn &resolveExprPath,
+    const ExprStringFn &resolveExprPath,
     const UninitializedFieldBindingIndex &fieldIndex,
     const InferDefinitionStructReturnPathWithVisitedFn &inferDefinitionStructReturnPath,
     std::unordered_set<std::string> &visitedDefs);
@@ -274,21 +274,21 @@ std::string inferStructReturnPathFromDefinitionMapByCallTargetWithFieldIndexWith
     const std::string &defPath,
     const std::unordered_map<std::string, const Definition *> &defMap,
     const ResolveStructTypeNameFn &resolveStructTypeName,
-    const InferStructExprPathFn &resolveExprPath,
+    const ExprStringFn &resolveExprPath,
     const UninitializedFieldBindingIndex &fieldIndex,
     std::unordered_set<std::string> &visitedDefs);
 std::string inferStructReturnPathFromDefinitionMapByCallTargetWithFieldIndex(
     const std::string &defPath,
     const std::unordered_map<std::string, const Definition *> &defMap,
     const ResolveStructTypeNameFn &resolveStructTypeName,
-    const InferStructExprPathFn &resolveExprPath,
+    const ExprStringFn &resolveExprPath,
     const UninitializedFieldBindingIndex &fieldIndex);
 std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
     const Expr &expr,
     const LocalMap &localsIn,
     const std::unordered_map<std::string, const Definition *> &defMap,
     const ResolveStructTypeNameFn &resolveStructTypeName,
-    const InferStructExprPathFn &resolveExprPath,
+    const ExprStringFn &resolveExprPath,
     const UninitializedFieldBindingIndex &fieldIndex,
     const ResolveStructFieldSlotFn &resolveStructFieldSlot);
 std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
@@ -296,7 +296,7 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
     const LocalMap &localsIn,
     const std::unordered_map<std::string, const Definition *> &defMap,
     const ResolveStructTypeNameFn &resolveStructTypeName,
-    const InferStructExprPathFn &resolveExprPath,
+    const ExprStringFn &resolveExprPath,
     const UninitializedFieldBindingIndex &fieldIndex,
     const ResolveStructFieldSlotFn &resolveStructFieldSlot,
     const SemanticProgram *semanticProgram,
@@ -304,13 +304,13 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
 InferStructExprWithLocalsFn makeInferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const ResolveStructTypeNameFn &resolveStructTypeName,
-    const InferStructExprPathFn &resolveExprPath,
+    const ExprStringFn &resolveExprPath,
     const UninitializedFieldBindingIndex &fieldIndex,
     const ResolveStructFieldSlotFn &resolveStructFieldSlot);
 InferStructExprWithLocalsFn makeInferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const ResolveStructTypeNameFn &resolveStructTypeName,
-    const InferStructExprPathFn &resolveExprPath,
+    const ExprStringFn &resolveExprPath,
     const UninitializedFieldBindingIndex &fieldIndex,
     const ResolveStructFieldSlotFn &resolveStructFieldSlot,
     const SemanticProgram *semanticProgram);

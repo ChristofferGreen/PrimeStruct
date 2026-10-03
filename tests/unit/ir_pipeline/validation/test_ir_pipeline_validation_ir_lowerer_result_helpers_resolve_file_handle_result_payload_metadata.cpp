@@ -271,7 +271,7 @@ TEST_CASE("ir lowerer result helpers preserve semantic-id file handle payload me
     return false;
   };
   bool fallbackCalled = false;
-  const primec::ir_lowerer::InferExprKindWithLocalsFn inferExprKind =
+  const primec::ir_lowerer::ExprLocalsValueKindFn inferExprKind =
       [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
     fallbackCalled = true;
     return ValueKind::Unknown;

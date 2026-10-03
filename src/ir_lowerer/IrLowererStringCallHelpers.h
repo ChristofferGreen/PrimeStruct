@@ -8,6 +8,7 @@
 #include "IrLowererSharedTypes.h"
 #include "primec/ast/Ast.h"
 #include "primec/ir/Ir.h"
+#include "primec/support/CallbackTypes.h"
 
 namespace primec::ir_lowerer {
 
@@ -36,12 +37,8 @@ using InternStringFn = std::function<int32_t(const std::string &)>;
 using EmitInstructionFn = std::function<void(IrOpcode, uint64_t)>;
 using LookupStringBindingFn = std::function<StringBindingInfo(const std::string &)>;
 using ResolveArrayAccessNameFn = std::function<bool(const Expr &, std::string &)>;
-using IsStringCallEntryArgsNameFn = std::function<bool(const Expr &)>;
 using ResolveStringIndexOpsFn = std::function<bool(const Expr &, const std::string &, StringIndexOps &, std::string &)>;
-using EmitExprFn = std::function<bool(const Expr &)>;
-using InferCallReturnsStringFn = std::function<bool(const Expr &)>;
 using InferCallValueKindFn = std::function<LocalInfo::ValueKind(const Expr &)>;
-using AllocTempLocalFn = std::function<int32_t()>;
 using EmitArrayIndexOutOfBoundsFn = std::function<void()>;
 using GetInstructionCountFn = std::function<size_t()>;
 using PatchInstructionImmFn = std::function<void(size_t, int32_t)>;
@@ -57,11 +54,11 @@ StringCallEmitResult emitLiteralOrBindingStringCallValue(const Expr &arg,
 
 StringCallEmitResult emitCallStringCallValue(const Expr &arg,
                                              const ResolveArrayAccessNameFn &resolveArrayAccessName,
-                                             const IsStringCallEntryArgsNameFn &isEntryArgsName,
+                                             const ExprPredicateFn &isEntryArgsName,
                                              const ResolveStringIndexOpsFn &resolveStringIndexOps,
-                                             const EmitExprFn &emitExpr,
-                                             const InferCallReturnsStringFn &inferCallReturnsString,
-                                             const AllocTempLocalFn &allocTempLocal,
+                                             const ExprPredicateFn &emitExpr,
+                                             const ExprPredicateFn &inferCallReturnsString,
+                                             const Int32ProviderFn &allocTempLocal,
                                              const EmitInstructionFn &emitInstruction,
                                              const GetInstructionCountFn &getInstructionCount,
                                              const PatchInstructionImmFn &patchInstructionImm,
@@ -74,12 +71,12 @@ bool emitStringValueForCallFromLocals(const Expr &arg,
                                       const InternStringFn &internString,
                                       const EmitInstructionFn &emitInstruction,
                                       const ResolveArrayAccessNameFn &resolveArrayAccessName,
-                                      const IsStringCallEntryArgsNameFn &isEntryArgsName,
+                                      const ExprPredicateFn &isEntryArgsName,
                                       const ResolveStringIndexOpsFn &resolveStringIndexOps,
-                                      const EmitExprFn &emitExpr,
-                                      const InferCallReturnsStringFn &inferCallReturnsString,
+                                      const ExprPredicateFn &emitExpr,
+                                      const ExprPredicateFn &inferCallReturnsString,
                                       const InferCallValueKindFn &inferCallValueKind,
-                                      const AllocTempLocalFn &allocTempLocal,
+                                      const Int32ProviderFn &allocTempLocal,
                                       const GetInstructionCountFn &getInstructionCount,
                                       const PatchInstructionImmFn &patchInstructionImm,
                                       const EmitArrayIndexOutOfBoundsFn &emitArrayIndexOutOfBounds,
@@ -92,11 +89,11 @@ bool emitStringValueForCallFromLocals(const Expr &arg,
                                       const InternStringFn &internString,
                                       const EmitInstructionFn &emitInstruction,
                                       const ResolveArrayAccessNameFn &resolveArrayAccessName,
-                                      const IsStringCallEntryArgsNameFn &isEntryArgsName,
+                                      const ExprPredicateFn &isEntryArgsName,
                                       const ResolveStringIndexOpsFn &resolveStringIndexOps,
-                                      const EmitExprFn &emitExpr,
-                                      const InferCallReturnsStringFn &inferCallReturnsString,
-                                      const AllocTempLocalFn &allocTempLocal,
+                                      const ExprPredicateFn &emitExpr,
+                                      const ExprPredicateFn &inferCallReturnsString,
+                                      const Int32ProviderFn &allocTempLocal,
                                       const GetInstructionCountFn &getInstructionCount,
                                       const PatchInstructionImmFn &patchInstructionImm,
                                       const EmitArrayIndexOutOfBoundsFn &emitArrayIndexOutOfBounds,

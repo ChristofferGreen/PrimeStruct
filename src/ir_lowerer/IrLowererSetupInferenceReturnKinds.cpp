@@ -85,7 +85,7 @@ MathBuiltinReturnKindResolution inferMathBuiltinReturnKind(
     const Expr &expr,
     const LocalMap &localsIn,
     bool hasMathImport,
-    const InferSetupInferenceValueKindFn &inferExprKind,
+    const ExprLocalsValueKindFn &inferExprKind,
     const SetupInferenceCombineNumericKindsFn &combineNumericKinds,
     LocalInfo::ValueKind &kindOut) {
   kindOut = LocalInfo::ValueKind::Unknown;
@@ -156,8 +156,8 @@ MathBuiltinReturnKindResolution inferMathBuiltinReturnKind(
 NonMathScalarCallReturnKindResolution inferNonMathScalarCallReturnKind(
     const Expr &expr,
     const LocalMap &localsIn,
-    const InferSetupInferenceValueKindFn &inferExprKind,
-    const InferSetupInferenceValueKindFn &inferPointerTargetKind,
+    const ExprLocalsValueKindFn &inferExprKind,
+    const ExprLocalsValueKindFn &inferPointerTargetKind,
     LocalInfo::ValueKind &kindOut) {
   kindOut = LocalInfo::ValueKind::Unknown;
 
@@ -217,9 +217,9 @@ NonMathScalarCallReturnKindResolution inferNonMathScalarCallReturnKind(
 ControlFlowCallReturnKindResolution inferControlFlowCallReturnKind(
     const Expr &expr,
     const LocalMap &localsIn,
-    const ResolveSetupInferenceExprPathFn &resolveExprPath,
+    const ExprStringFn &resolveExprPath,
     const LowerSetupInferenceMatchToIfFn &lowerMatchToIf,
-    const InferSetupInferenceValueKindFn &inferExprKind,
+    const ExprLocalsValueKindFn &inferExprKind,
     const SetupInferenceCombineNumericKindsFn &combineNumericKinds,
     const InferSetupInferenceBodyValueKindFn &inferBodyValueKind,
     const IsSetupInferenceKnownDefinitionPathFn &isKnownDefinitionPath,
@@ -286,7 +286,7 @@ ControlFlowCallReturnKindResolution inferControlFlowCallReturnKind(
 PointerBuiltinCallReturnKindResolution inferPointerBuiltinCallReturnKind(
     const Expr &expr,
     const LocalMap &localsIn,
-    const InferSetupInferenceValueKindFn &inferPointerTargetKind,
+    const ExprLocalsValueKindFn &inferPointerTargetKind,
     LocalInfo::ValueKind &kindOut) {
   kindOut = LocalInfo::ValueKind::Unknown;
 
@@ -327,7 +327,7 @@ PointerBuiltinCallReturnKindResolution inferPointerBuiltinCallReturnKind(
 ComparisonOperatorCallReturnKindResolution inferComparisonOperatorCallReturnKind(
     const Expr &expr,
     const LocalMap &localsIn,
-    const InferSetupInferenceValueKindFn &inferExprKind,
+    const ExprLocalsValueKindFn &inferExprKind,
     const SetupInferenceCombineNumericKindsFn &combineNumericKinds,
     LocalInfo::ValueKind &kindOut) {
   kindOut = LocalInfo::ValueKind::Unknown;
@@ -362,7 +362,7 @@ ComparisonOperatorCallReturnKindResolution inferComparisonOperatorCallReturnKind
 GpuBufferCallReturnKindResolution inferGpuBufferCallReturnKind(
     const Expr &expr,
     const LocalMap &localsIn,
-    const InferSetupInferenceValueKindFn &inferBufferElementKind,
+    const ExprLocalsValueKindFn &inferBufferElementKind,
     LocalInfo::ValueKind &kindOut) {
   kindOut = LocalInfo::ValueKind::Unknown;
 
@@ -389,9 +389,9 @@ GpuBufferCallReturnKindResolution inferGpuBufferCallReturnKind(
 CountCapacityCallReturnKindResolution inferCountCapacityCallReturnKind(
     const Expr &expr,
     const LocalMap &localsIn,
-    const IsSetupInferenceMethodCountLikeCallFn &isArrayCountCall,
-    const IsSetupInferenceMethodCountLikeCallFn &isStringCountCall,
-    const IsSetupInferenceMethodCountLikeCallFn &isVectorCapacityCall,
+    const ExprLocalsPredicateFn &isArrayCountCall,
+    const ExprLocalsPredicateFn &isStringCountCall,
+    const ExprLocalsPredicateFn &isVectorCapacityCall,
     LocalInfo::ValueKind &kindOut) {
   kindOut = LocalInfo::ValueKind::Unknown;
 

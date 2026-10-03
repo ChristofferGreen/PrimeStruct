@@ -8,7 +8,7 @@
 
 namespace primec::emitter {
 
-using EmitterExprControlIfBranchBodyStatementEmitExprFn =
+using ExprStringFn =
     std::function<std::string(const Expr &)>;
 
 struct EmitterExprControlIfBranchBodyStatementStepResult {
@@ -19,6 +19,6 @@ struct EmitterExprControlIfBranchBodyStatementStepResult {
 EmitterExprControlIfBranchBodyStatementStepResult
 runEmitterExprControlIfBranchBodyStatementStep(
     const Expr &stmt,
-    const EmitterExprControlIfBranchBodyStatementEmitExprFn &emitExpr);
+    const ExprStringFn &emitExpr);
 
 } // namespace primec::emitter

@@ -10,7 +10,7 @@ struct SetupLocalsOrchestration {
   StructArrayInfoAdapters structArrayInfoAdapters{};
   StructSlotResolutionAdapters structSlotResolutionAdapters{};
   UninitializedResolutionAdapters uninitializedResolutionAdapters{};
-  ApplyStructValueInfoFn applyStructValueInfo{};
+  ExprLocalInfoVisitorFn applyStructValueInfo{};
 };
 
 void populateSetupLocalsOrchestration(

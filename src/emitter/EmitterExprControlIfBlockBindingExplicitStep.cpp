@@ -15,7 +15,7 @@ EmitterExprControlIfBlockBindingExplicitStepResult runEmitterExprControlIfBlockB
     const std::string &namespacePrefix,
     const std::unordered_map<std::string, std::string> &importAliases,
     const std::unordered_map<std::string, std::string> &structTypeMap,
-    const EmitterExprControlIfBlockBindingExplicitEmitExprFn &emitExpr) {
+    const ExprStringFn &emitExpr) {
   if (!hasExplicitType) {
     return {};
   }

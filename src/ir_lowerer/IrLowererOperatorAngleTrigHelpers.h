@@ -8,9 +8,9 @@ OperatorClampMinMaxTrigEmitResult emitAngleTrigOperatorExpr(
     const Expr &expr,
     const LocalMap &localsIn,
     bool hasMathImport,
-    const EmitClampMinMaxTrigExprWithLocalsFn &emitExpr,
+    const ExprLocalsPredicateFn &emitExpr,
     const InferClampMinMaxTrigExprKindWithLocalsFn &inferExprKind,
-    const AllocClampMinMaxTrigTempLocalFn &allocTempLocal,
+    const Int32ProviderFn &allocTempLocal,
     std::vector<IrInstruction> &instructions,
     std::string &error);
 

@@ -8,9 +8,9 @@
 
 namespace primec::emitter {
 
-using EmitterExprControlIfBranchValueIsEnvelopeFn =
+using ExprPredicateFn =
     std::function<bool(const Expr &)>;
-using EmitterExprControlIfBranchValueEmitExprFn =
+using ExprStringFn =
     std::function<std::string(const Expr &)>;
 using EmitterExprControlIfBranchValueEmitStatementFn =
     std::function<EmitterExprControlIfBranchBodyEmitResult(const Expr &, bool isLast)>;
@@ -22,8 +22,8 @@ struct EmitterExprControlIfBranchValueStepResult {
 
 EmitterExprControlIfBranchValueStepResult runEmitterExprControlIfBranchValueStep(
     const Expr &candidate,
-    const EmitterExprControlIfBranchValueIsEnvelopeFn &isIfBlockEnvelope,
-    const EmitterExprControlIfBranchValueEmitExprFn &emitExpr,
+    const ExprPredicateFn &isIfBlockEnvelope,
+    const ExprStringFn &emitExpr,
     const EmitterExprControlIfBranchValueEmitStatementFn &emitStatement);
 
 } // namespace primec::emitter

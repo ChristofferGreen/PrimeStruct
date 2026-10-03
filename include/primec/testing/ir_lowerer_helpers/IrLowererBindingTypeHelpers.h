@@ -3,20 +3,17 @@
 
 
 using BindingKindFromTransformsFn = std::function<LocalInfo::Kind(const Expr &)>;
-using IsBindingMutableFn = std::function<bool(const Expr &)>;
-using IsBindingTypeFn = std::function<bool(const Expr &)>;
 using BindingValueKindFromTransformsFn =
     std::function<LocalInfo::ValueKind(const Expr &, LocalInfo::Kind)>;
-using SetReferenceArrayInfoFn = std::function<void(const Expr &, LocalInfo &)>;
 
 struct BindingTypeAdapters {
   BindingKindFromTransformsFn bindingKind{};
-  IsBindingMutableFn isBindingMutable{};
-  IsBindingTypeFn hasExplicitBindingTypeTransform{};
-  IsBindingTypeFn isStringBinding{};
-  IsBindingTypeFn isFileErrorBinding{};
+  ExprPredicateFn isBindingMutable{};
+  ExprPredicateFn hasExplicitBindingTypeTransform{};
+  ExprPredicateFn isStringBinding{};
+  ExprPredicateFn isFileErrorBinding{};
   BindingValueKindFromTransformsFn bindingValueKind{};
-  SetReferenceArrayInfoFn setReferenceArrayInfo{};
+  ExprLocalInfoVisitorFn setReferenceArrayInfo{};
 };
 
 bool validateSemanticProductBindingCoverage(const Program &program,

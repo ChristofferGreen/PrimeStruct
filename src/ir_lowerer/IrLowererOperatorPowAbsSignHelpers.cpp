@@ -9,10 +9,10 @@ namespace primec::ir_lowerer {
 OperatorPowAbsSignEmitResult emitPowAbsSignOperatorExpr(const Expr &expr,
                                                         const LocalMap &localsIn,
                                                         bool hasMathImport,
-                                                        const EmitPowAbsSignExprWithLocalsFn &emitExpr,
-                                                        const InferPowAbsSignExprKindWithLocalsFn &inferExprKind,
+                                                        const ExprLocalsPredicateFn &emitExpr,
+                                                        const ExprLocalsValueKindFn &inferExprKind,
                                                         const CombinePowAbsSignNumericKindsFn &combineNumericKinds,
-                                                        const AllocPowAbsSignTempLocalFn &allocTempLocal,
+                                                        const Int32ProviderFn &allocTempLocal,
                                                         const EmitPowNegativeExponentFn &emitPowNegativeExponent,
                                                         std::vector<IrInstruction> &instructions,
                                                         std::string &error) {

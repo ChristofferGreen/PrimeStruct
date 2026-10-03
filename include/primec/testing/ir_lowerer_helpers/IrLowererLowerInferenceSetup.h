@@ -55,20 +55,20 @@ struct LowerInferenceSetupBootstrapInput {
   const ::primec::SemanticProgram *semanticProgram = nullptr;
   const SemanticProductIndex *semanticIndex = nullptr;
 
-  IsArrayCountCallFn isArrayCountCall = {};
-  IsVectorCapacityCallFn isVectorCapacityCall = {};
-  IsEntryArgsNameFn isEntryArgsName = {};
-  ResolveExprPathFn resolveExprPath = {};
+  ExprLocalsPredicateFn isArrayCountCall = {};
+  ExprLocalsPredicateFn isVectorCapacityCall = {};
+  ExprLocalsPredicateFn isEntryArgsName = {};
+  ExprStringFn resolveExprPath = {};
   GetSetupInferenceBuiltinOperatorNameFn getBuiltinOperatorName = {};
 };
 
 struct LowerInferenceArrayKindSetupInput {
   const std::unordered_map<std::string, const ::primec::Definition *> *defMap = nullptr;
 
-  ResolveExprPathFn resolveExprPath = {};
+  ExprStringFn resolveExprPath = {};
   ResolveStructArrayTypeInfoFn resolveStructArrayInfoFromPath = {};
-  IsArrayCountCallFn isArrayCountCall = {};
-  IsStringCountCallFn isStringCountCall = {};
+  ExprLocalsPredicateFn isArrayCountCall = {};
+  ExprLocalsPredicateFn isStringCountCall = {};
 };
 
 struct LowerInferenceExprKindBaseSetupInput {
@@ -84,18 +84,18 @@ struct LowerInferenceExprKindCallBaseSetupInput {
 struct LowerInferenceExprKindCallReturnSetupInput {
   const std::unordered_map<std::string, const ::primec::Definition *> *defMap = nullptr;
 
-  ResolveExprPathFn resolveExprPath = {};
-  IsArrayCountCallFn isArrayCountCall = {};
-  IsStringCountCallFn isStringCountCall = {};
+  ExprStringFn resolveExprPath = {};
+  ExprLocalsPredicateFn isArrayCountCall = {};
+  ExprLocalsPredicateFn isStringCountCall = {};
 };
 struct LowerInferenceExprKindCallFallbackSetupInput {
   const std::unordered_map<std::string, const ::primec::Definition *> *defMap = nullptr;
 
-  ResolveExprPathFn resolveExprPath = {};
-  IsArrayCountCallFn isArrayCountCall = {};
-  IsStringCountCallFn isStringCountCall = {};
-  IsVectorCapacityCallFn isVectorCapacityCall = {};
-  IsEntryArgsNameFn isEntryArgsName = {};
+  ExprStringFn resolveExprPath = {};
+  ExprLocalsPredicateFn isArrayCountCall = {};
+  ExprLocalsPredicateFn isStringCountCall = {};
+  ExprLocalsPredicateFn isVectorCapacityCall = {};
+  ExprLocalsPredicateFn isEntryArgsName = {};
   InferSetupInferenceStructExprPathFn inferStructExprPath = {};
   ResolveStructFieldSlotFn resolveStructFieldSlot = {};
 };
@@ -107,39 +107,39 @@ struct LowerInferenceExprKindCallControlFlowFallbackSetupInput {
   const std::unordered_map<std::string, const ::primec::Definition *> *defMap = nullptr;
   const ::primec::SemanticProgram *semanticProgram = nullptr;
   const SemanticProductIndex *semanticIndex = nullptr;
-  ResolveSetupInferenceExprPathFn resolveExprPath = {};
+  ExprStringFn resolveExprPath = {};
   LowerSetupInferenceMatchToIfFn lowerMatchToIf = {};
   SetupInferenceCombineNumericKindsFn combineNumericKinds = {};
-  IsSetupInferenceBindingMutableFn isBindingMutable = {};
+  ExprPredicateFn isBindingMutable = {};
   SetupInferenceBindingKindFn bindingKind = {};
-  HasSetupInferenceExplicitBindingTypeTransformFn hasExplicitBindingTypeTransform = {};
+  ExprPredicateFn hasExplicitBindingTypeTransform = {};
   SetupInferenceBindingValueKindFn bindingValueKind = {};
-  ApplySetupInferenceStructInfoFn applyStructArrayInfo = {};
-  ApplySetupInferenceStructInfoFn applyStructValueInfo = {};
+  ExprLocalInfoVisitorFn applyStructArrayInfo = {};
+  ExprLocalInfoVisitorFn applyStructValueInfo = {};
   InferSetupInferenceStructExprPathFn inferStructExprPath = {};
 };
 struct LowerInferenceExprKindCallPointerFallbackSetupInput {};
 struct LowerInferenceExprKindDispatchSetupInput {
   const std::unordered_map<std::string, const ::primec::Definition *> *defMap = nullptr;
-  ResolveExprPathFn resolveExprPath = {};
+  ExprStringFn resolveExprPath = {};
   std::string *error = nullptr;
 };
 
 struct LowerInferenceReturnInfoSetupInput {
   ResolveStructTypeNameForReturnFn resolveStructTypeName = {};
   ResolveStructArrayInfoForReturnFn resolveStructArrayInfoFromPath = {};
-  IsBindingMutableForInferenceFn isBindingMutable = {};
+  ExprPredicateFn isBindingMutable = {};
   BindingKindForInferenceFn bindingKind = {};
-  HasExplicitBindingTypeTransformForInferenceFn hasExplicitBindingTypeTransform = {};
+  ExprPredicateFn hasExplicitBindingTypeTransform = {};
   BindingValueKindForInferenceFn bindingValueKind = {};
-  InferValueKindFromLocalsFn inferExprKind = {};
-  IsFileErrorBindingForInferenceFn isFileErrorBinding = {};
-  SetReferenceArrayInfoForInferenceFn setReferenceArrayInfo = {};
-  ApplyStructInfoForInferenceFn applyStructArrayInfo = {};
-  ApplyStructInfoForInferenceFn applyStructValueInfo = {};
+  ExprLocalsValueKindFn inferExprKind = {};
+  ExprPredicateFn isFileErrorBinding = {};
+  ExprLocalInfoVisitorFn setReferenceArrayInfo = {};
+  ExprLocalInfoVisitorFn applyStructArrayInfo = {};
+  ExprLocalInfoVisitorFn applyStructValueInfo = {};
   InferStructExprPathFromLocalsFn inferStructExprPath = {};
-  IsStringBindingForInferenceFn isStringBinding = {};
-  InferValueKindFromLocalsFn inferArrayElementKind = {};
+  ExprPredicateFn isStringBinding = {};
+  ExprLocalsValueKindFn inferArrayElementKind = {};
   ExpandMatchToIfFn lowerMatchToIf = {};
 };
 struct LowerInferenceGetReturnInfoStepInput {
@@ -168,18 +168,18 @@ struct LowerInferenceGetReturnInfoSetupInput {
   const SemanticProductIndex *semanticIndex = nullptr;
   ResolveStructTypeNameForReturnFn resolveStructTypeName = {};
   ResolveStructArrayInfoForReturnFn resolveStructArrayInfoFromPath = {};
-  IsBindingMutableForInferenceFn isBindingMutable = {};
+  ExprPredicateFn isBindingMutable = {};
   BindingKindForInferenceFn bindingKind = {};
-  HasExplicitBindingTypeTransformForInferenceFn hasExplicitBindingTypeTransform = {};
+  ExprPredicateFn hasExplicitBindingTypeTransform = {};
   BindingValueKindForInferenceFn bindingValueKind = {};
-  InferValueKindFromLocalsFn inferExprKind = {};
-  IsFileErrorBindingForInferenceFn isFileErrorBinding = {};
-  SetReferenceArrayInfoForInferenceFn setReferenceArrayInfo = {};
-  ApplyStructInfoForInferenceFn applyStructArrayInfo = {};
-  ApplyStructInfoForInferenceFn applyStructValueInfo = {};
+  ExprLocalsValueKindFn inferExprKind = {};
+  ExprPredicateFn isFileErrorBinding = {};
+  ExprLocalInfoVisitorFn setReferenceArrayInfo = {};
+  ExprLocalInfoVisitorFn applyStructArrayInfo = {};
+  ExprLocalInfoVisitorFn applyStructValueInfo = {};
   InferStructExprPathFromLocalsFn inferStructExprPath = {};
-  IsStringBindingForInferenceFn isStringBinding = {};
-  InferValueKindFromLocalsFn inferArrayElementKind = {};
+  ExprPredicateFn isStringBinding = {};
+  ExprLocalsValueKindFn inferArrayElementKind = {};
   ExpandMatchToIfFn lowerMatchToIf = {};
   std::string *error = nullptr;
 };
@@ -191,11 +191,11 @@ struct LowerInferenceSetupInput {
   const ::primec::SemanticProgram *semanticProgram = nullptr;
   const SemanticProductIndex *semanticIndex = nullptr;
 
-  IsArrayCountCallFn isArrayCountCall = {};
-  IsStringCountCallFn isStringCountCall = {};
-  IsVectorCapacityCallFn isVectorCapacityCall = {};
-  IsEntryArgsNameFn isEntryArgsName = {};
-  ResolveExprPathFn resolveExprPath = {};
+  ExprLocalsPredicateFn isArrayCountCall = {};
+  ExprLocalsPredicateFn isStringCountCall = {};
+  ExprLocalsPredicateFn isVectorCapacityCall = {};
+  ExprLocalsPredicateFn isEntryArgsName = {};
+  ExprStringFn resolveExprPath = {};
   GetSetupInferenceBuiltinOperatorNameFn getBuiltinOperatorName = {};
   ResolveStructArrayTypeInfoFn resolveStructArrayInfoFromPath = {};
   InferStructExprWithLocalsFn inferStructExprPath = {};
@@ -207,15 +207,15 @@ struct LowerInferenceSetupInput {
   GetSetupMathConstantNameFn getMathConstantName = {};
 
   ResolveStructTypeNameForReturnFn resolveStructTypeName = {};
-  IsBindingMutableForInferenceFn isBindingMutable = {};
+  ExprPredicateFn isBindingMutable = {};
   BindingKindForInferenceFn bindingKind = {};
-  HasExplicitBindingTypeTransformForInferenceFn hasExplicitBindingTypeTransform = {};
+  ExprPredicateFn hasExplicitBindingTypeTransform = {};
   BindingValueKindForInferenceFn bindingValueKind = {};
-  IsFileErrorBindingForInferenceFn isFileErrorBinding = {};
-  SetReferenceArrayInfoForInferenceFn setReferenceArrayInfo = {};
-  ApplyStructInfoForInferenceFn applyStructArrayInfo = {};
-  ApplyStructInfoForInferenceFn applyStructValueInfo = {};
-  IsStringBindingForInferenceFn isStringBinding = {};
+  ExprPredicateFn isFileErrorBinding = {};
+  ExprLocalInfoVisitorFn setReferenceArrayInfo = {};
+  ExprLocalInfoVisitorFn applyStructArrayInfo = {};
+  ExprLocalInfoVisitorFn applyStructValueInfo = {};
+  ExprPredicateFn isStringBinding = {};
   ExpandMatchToIfFn lowerMatchToIf = {};
 };
 

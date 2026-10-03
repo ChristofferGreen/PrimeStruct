@@ -11,9 +11,9 @@ OperatorArcHyperbolicEmitResult emitArcHyperbolicOperatorExpr(
     const Expr &expr,
     const LocalMap &localsIn,
     bool hasMathImport,
-    const EmitArcHyperbolicExprWithLocalsFn &emitExpr,
+    const ExprLocalsPredicateFn &emitExpr,
     const InferArcHyperbolicExprKindWithLocalsFn &inferExprKind,
-    const AllocArcHyperbolicTempLocalFn &allocTempLocal,
+    const Int32ProviderFn &allocTempLocal,
     std::vector<IrInstruction> &instructions,
     std::string &error) {
   std::string arcName;

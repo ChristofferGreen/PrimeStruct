@@ -4,10 +4,10 @@
 #include <string>
 
 #include "primec/ast/Ast.h"
+#include "primec/support/CallbackTypes.h"
 
 namespace primec::emitter {
 
-using EmitterExprControlIfBlockBindingFallbackEmitExprFn = std::function<std::string(const Expr &)>;
 
 struct EmitterExprControlIfBlockBindingFallbackStepResult {
   bool handled = false;
@@ -19,6 +19,6 @@ EmitterExprControlIfBlockBindingFallbackStepResult runEmitterExprControlIfBlockB
     bool hasExplicitType,
     bool needsConst,
     bool useRef,
-    const EmitterExprControlIfBlockBindingFallbackEmitExprFn &emitExpr);
+    const ExprStringFn &emitExpr);
 
 } // namespace primec::emitter

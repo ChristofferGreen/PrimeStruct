@@ -6,10 +6,10 @@
 
 #include "primec/ast/Ast.h"
 #include "primec/backend/Emitter.h"
+#include "primec/support/CallbackTypes.h"
 
 namespace primec::emitter {
 
-using EmitterExprControlBuiltinBlockBindingExplicitEmitExprFn = std::function<std::string(const Expr &)>;
 
 struct EmitterExprControlBuiltinBlockBindingExplicitStepResult {
   bool handled = false;
@@ -25,6 +25,6 @@ EmitterExprControlBuiltinBlockBindingExplicitStepResult runEmitterExprControlBui
     const std::string &namespacePrefix,
     const std::unordered_map<std::string, std::string> &importAliases,
     const std::unordered_map<std::string, std::string> &structTypeMap,
-    const EmitterExprControlBuiltinBlockBindingExplicitEmitExprFn &emitExpr);
+    const ExprStringFn &emitExpr);
 
 } // namespace primec::emitter

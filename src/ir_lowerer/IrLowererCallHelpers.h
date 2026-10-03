@@ -13,6 +13,7 @@
 #include "IrLowererSharedTypes.h"
 #include "primec/ir/Ir.h"
 #include "primec/ast/Ast.h"
+#include "primec/support/CallbackTypes.h"
 
 namespace primec::ir_lowerer {
 
@@ -22,14 +23,12 @@ namespace primec::ir_lowerer {
 // faulting.
 inline constexpr size_t DynamicStringTableFlag = size_t{1} << 62;
 
-using ResolveExprPathFn = std::function<std::string(const Expr &)>;
 using ResolveDefinitionCallFn = std::function<const Definition *(const Expr &)>;
-using IsTailCallCandidateFn = std::function<bool(const Expr &)>;
 using DefinitionExistsFn = std::function<bool(const std::string &)>;
 
 struct CallResolutionAdapters {
-  ResolveExprPathFn resolveExprPath{};
-  IsTailCallCandidateFn isTailCallCandidate{};
+  ExprStringFn resolveExprPath{};
+  ExprPredicateFn isTailCallCandidate{};
   DefinitionExistsFn definitionExists{};
   const SemanticProgram *semanticProgram = nullptr;
   SemanticProductTargetAdapter semanticProductTargets{};
@@ -41,11 +40,11 @@ struct EntryCallResolutionSetup {
 
 const Definition *resolveDefinitionCall(const Expr &callExpr,
                                         const std::unordered_map<std::string, const Definition *> &defMap,
-                                        const ResolveExprPathFn &resolveExprPath,
+                                        const ExprStringFn &resolveExprPath,
                                         const SemanticProgram *semanticProgram = nullptr);
 ResolveDefinitionCallFn makeResolveDefinitionCall(
     const std::unordered_map<std::string, const Definition *> &defMap,
-    const ResolveExprPathFn &resolveExprPath,
+    const ExprStringFn &resolveExprPath,
     const SemanticProgram *semanticProgram = nullptr);
 
 CallResolutionAdapters makeCallResolutionAdapters(
@@ -75,16 +74,16 @@ EntryCallResolutionSetup buildEntryCallResolutionSetup(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::unordered_map<std::string, std::string> &importAliases,
     const SemanticProgram *semanticProgram = nullptr);
-ResolveExprPathFn makeResolveCallPathFromScope(
+ExprStringFn makeResolveCallPathFromScope(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::unordered_map<std::string, std::string> &importAliases);
-ResolveExprPathFn makeResolveCallPathFromScope(
+ExprStringFn makeResolveCallPathFromScope(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::unordered_map<std::string, std::string> &importAliases,
     const SemanticProgram *semanticProgram = nullptr);
-IsTailCallCandidateFn makeIsTailCallCandidate(
+ExprPredicateFn makeIsTailCallCandidate(
     const std::unordered_map<std::string, const Definition *> &defMap,
-    const ResolveExprPathFn &resolveExprPath);
+    const ExprStringFn &resolveExprPath);
 DefinitionExistsFn makeDefinitionExistsByPath(
     const std::unordered_map<std::string, const Definition *> &defMap);
 
@@ -95,12 +94,12 @@ std::string resolveCallPathFromScope(
 
 bool isTailCallCandidate(const Expr &expr,
                          const std::unordered_map<std::string, const Definition *> &defMap,
-                         const ResolveExprPathFn &resolveExprPath);
+                         const ExprStringFn &resolveExprPath);
 bool isKeyValueStorageStructPath(std::string_view path);
 
 bool hasTailExecutionCandidate(const std::vector<Expr> &statements,
                                bool definitionReturnsVoid,
-                               const IsTailCallCandidateFn &isTailCallCandidate);
+                               const ExprPredicateFn &isTailCallCandidate);
 ResolvedInlineCallResult emitResolvedInlineDefinitionCall(
     const Expr &callExpr,
     const Definition *callee,

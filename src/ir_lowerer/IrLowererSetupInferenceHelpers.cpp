@@ -128,7 +128,7 @@ LocalInfo::ValueKind inferPointerTargetValueKind(
 LocalInfo::ValueKind inferBufferElementValueKind(
     const Expr &expr,
     const LocalMap &localsIn,
-    const InferSetupInferenceValueKindFn &inferArrayElementKind) {
+    const ExprLocalsValueKindFn &inferArrayElementKind) {
   if (expr.kind == Expr::Kind::Name) {
     auto it = localsIn.find(expr.name);
     if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Buffer) {
@@ -171,8 +171,8 @@ LocalInfo::ValueKind inferBufferElementValueKind(
 LocalInfo::ValueKind inferArrayElementValueKind(
     const Expr &expr,
     const LocalMap &localsIn,
-    const InferSetupInferenceValueKindFn &inferBufferElementKind,
-    const ResolveSetupInferenceExprPathFn &resolveExprPath,
+    const ExprLocalsValueKindFn &inferBufferElementKind,
+    const ExprStringFn &resolveExprPath,
     const ResolveSetupInferenceArrayElementKindByPathFn &resolveStructArrayElementKindByPath,
     const ResolveSetupInferenceArrayReturnKindFn &resolveDirectCallArrayReturnKind,
     const ResolveSetupInferenceArrayReturnKindFn &resolveCountMethodArrayReturnKind,
@@ -301,14 +301,14 @@ CallExpressionReturnKindResolution resolveCallExpressionReturnKind(
 ArrayKeyValueAccessElementKindResolution resolveArrayKeyValueAccessElementKind(
     const Expr &expr,
     const LocalMap &localsIn,
-    const IsSetupInferenceEntryArgsNameFn &isEntryArgsName,
+    const ExprLocalsPredicateFn &isEntryArgsName,
     LocalInfo::ValueKind &kindOut,
     const ResolveSetupInferenceCallCollectionAccessValueKindFn &resolveCallCollectionAccessValueKind,
-    const InferSetupInferenceValueKindFn &inferExprKind) {
+    const ExprLocalsValueKindFn &inferExprKind) {
   kindOut = LocalInfo::ValueKind::Unknown;
-  const IsSetupInferenceEntryArgsNameFn noopIsEntryArgsName =
+  const ExprLocalsPredicateFn noopIsEntryArgsName =
       [](const Expr &, const LocalMap &) { return false; };
-  const IsSetupInferenceEntryArgsNameFn &isEntryArgsNameFn =
+  const ExprLocalsPredicateFn &isEntryArgsNameFn =
       isEntryArgsName ? isEntryArgsName : noopIsEntryArgsName;
   const auto inferExprKindOrUnknown = [&](const Expr &candidate) {
     return inferExprKind ? inferExprKind(candidate, localsIn) : LocalInfo::ValueKind::Unknown;
@@ -510,45 +510,45 @@ ArrayKeyValueAccessElementKindResolution resolveArrayKeyValueAccessElementKind(
 LocalInfo::ValueKind inferBodyValueKindWithLocalsScaffolding(
     const std::vector<Expr> &bodyExpressions,
     const LocalMap &localsBase,
-    const InferSetupInferenceValueKindFn &inferExprKind,
-    const IsSetupInferenceBindingMutableFn &isBindingMutable,
+    const ExprLocalsValueKindFn &inferExprKind,
+    const ExprPredicateFn &isBindingMutable,
     const SetupInferenceBindingKindFn &bindingKind,
-    const HasSetupInferenceExplicitBindingTypeTransformFn &hasExplicitBindingTypeTransform,
+    const ExprPredicateFn &hasExplicitBindingTypeTransform,
     const SetupInferenceBindingValueKindFn &bindingValueKind,
-    const ApplySetupInferenceStructInfoFn &applyStructArrayInfo,
-    const ApplySetupInferenceStructInfoFn &applyStructValueInfo,
+    const ExprLocalInfoVisitorFn &applyStructArrayInfo,
+    const ExprLocalInfoVisitorFn &applyStructValueInfo,
     const InferSetupInferenceStructExprPathFn &inferStructExprPath,
     const ResolveSetupInferenceDefinitionCallFn &resolveDefinitionCall,
     const SemanticProgram *semanticProgram,
     const SemanticProductIndex *semanticIndex) {
-  const InferSetupInferenceValueKindFn noopInferExprKind =
+  const ExprLocalsValueKindFn noopInferExprKind =
       [](const Expr &, const LocalMap &) { return LocalInfo::ValueKind::Unknown; };
-  const IsSetupInferenceBindingMutableFn noopIsBindingMutable =
+  const ExprPredicateFn noopIsBindingMutable =
       [](const Expr &) { return false; };
   const SetupInferenceBindingKindFn noopBindingKind =
       [](const Expr &) { return LocalInfo::Kind::Value; };
-  const HasSetupInferenceExplicitBindingTypeTransformFn noopHasExplicitBindingTypeTransform =
+  const ExprPredicateFn noopHasExplicitBindingTypeTransform =
       [](const Expr &) { return false; };
   const SetupInferenceBindingValueKindFn noopBindingValueKind =
       [](const Expr &, LocalInfo::Kind) { return LocalInfo::ValueKind::Unknown; };
-  const ApplySetupInferenceStructInfoFn noopApplyStructInfo =
+  const ExprLocalInfoVisitorFn noopApplyStructInfo =
       [](const Expr &, LocalInfo &) {};
   const InferSetupInferenceStructExprPathFn noopInferStructExprPath =
       [](const Expr &, const LocalMap &) { return std::string{}; };
-  const InferSetupInferenceValueKindFn &inferExprKindFn =
+  const ExprLocalsValueKindFn &inferExprKindFn =
       inferExprKind ? inferExprKind : noopInferExprKind;
-  const IsSetupInferenceBindingMutableFn &isBindingMutableFn =
+  const ExprPredicateFn &isBindingMutableFn =
       isBindingMutable ? isBindingMutable : noopIsBindingMutable;
   const SetupInferenceBindingKindFn &bindingKindFn =
       bindingKind ? bindingKind : noopBindingKind;
-  const HasSetupInferenceExplicitBindingTypeTransformFn &hasExplicitBindingTypeTransformFn =
+  const ExprPredicateFn &hasExplicitBindingTypeTransformFn =
       hasExplicitBindingTypeTransform ? hasExplicitBindingTypeTransform
                                       : noopHasExplicitBindingTypeTransform;
   const SetupInferenceBindingValueKindFn &bindingValueKindFn =
       bindingValueKind ? bindingValueKind : noopBindingValueKind;
-  const ApplySetupInferenceStructInfoFn &applyStructArrayInfoFn =
+  const ExprLocalInfoVisitorFn &applyStructArrayInfoFn =
       applyStructArrayInfo ? applyStructArrayInfo : noopApplyStructInfo;
-  const ApplySetupInferenceStructInfoFn &applyStructValueInfoFn =
+  const ExprLocalInfoVisitorFn &applyStructValueInfoFn =
       applyStructValueInfo ? applyStructValueInfo : noopApplyStructInfo;
   const InferSetupInferenceStructExprPathFn &inferStructExprPathFn =
       inferStructExprPath ? inferStructExprPath : noopInferStructExprPath;
@@ -629,13 +629,13 @@ LocalInfo::ValueKind inferBodyValueKindWithLocalsScaffolding(
 LocalInfo::ValueKind inferBodyValueKindWithLocalsScaffolding(
     const std::vector<Expr> &bodyExpressions,
     const LocalMap &localsBase,
-    const InferSetupInferenceValueKindFn &inferExprKind,
-    const IsSetupInferenceBindingMutableFn &isBindingMutable,
+    const ExprLocalsValueKindFn &inferExprKind,
+    const ExprPredicateFn &isBindingMutable,
     const SetupInferenceBindingKindFn &bindingKind,
-    const HasSetupInferenceExplicitBindingTypeTransformFn &hasExplicitBindingTypeTransform,
+    const ExprPredicateFn &hasExplicitBindingTypeTransform,
     const SetupInferenceBindingValueKindFn &bindingValueKind,
-    const ApplySetupInferenceStructInfoFn &applyStructArrayInfo,
-    const ApplySetupInferenceStructInfoFn &applyStructValueInfo,
+    const ExprLocalInfoVisitorFn &applyStructArrayInfo,
+    const ExprLocalInfoVisitorFn &applyStructValueInfo,
     const InferSetupInferenceStructExprPathFn &inferStructExprPath,
     const ResolveSetupInferenceDefinitionCallFn &resolveDefinitionCall,
     const SemanticProductTargetAdapter *semanticProductTargets) {

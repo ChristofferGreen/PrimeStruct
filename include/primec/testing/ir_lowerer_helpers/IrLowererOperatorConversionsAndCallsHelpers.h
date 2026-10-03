@@ -5,14 +5,12 @@
 struct LayoutFieldBinding;
 struct SemanticProductTargetAdapter;
 
-using EmitConversionsAndCallsExprWithLocalsFn = std::function<bool(const Expr &, const LocalMap &)>;
 using EmitConversionsAndCallsStatementWithLocalsFn = std::function<bool(const Expr &, LocalMap &)>;
 using InferConversionsAndCallsExprKindWithLocalsFn =
     std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)>;
 using CombineConversionsAndCallsNumericKindsFn =
     std::function<LocalInfo::ValueKind(LocalInfo::ValueKind, LocalInfo::ValueKind)>;
 using EmitConversionsAndCallsCompareToZeroFn = std::function<bool(LocalInfo::ValueKind, bool)>;
-using AllocConversionsAndCallsTempLocalFn = std::function<int32_t()>;
 using EmitConversionsAndCallsFloatToIntNonFiniteFn = std::function<void()>;
 using EmitConversionsAndCallsPointerIndexOutOfBoundsFn = std::function<void()>;
 using EmitConversionsAndCallsArrayIndexOutOfBoundsFn = std::function<void()>;
@@ -32,29 +30,20 @@ using EmitConversionsAndCallsStructCopyFromPtrsFn = std::function<bool(int32_t, 
 using HasConversionsAndCallsNamedArgumentsFn =
     std::function<bool(const std::vector<std::optional<std::string>> &)>;
 using ResolveConversionsAndCallsDefinitionCallFn = std::function<const Definition *(const Expr &)>;
-using ResolveConversionsAndCallsExprPathFn = std::function<std::string(const Expr &)>;
 using LowerConversionsAndCallsMatchToIfFn = std::function<bool(const Expr &, Expr &, std::string &)>;
-using IsConversionsAndCallsBindingMutableFn = std::function<bool(const Expr &)>;
 using ConversionsAndCallsBindingKindFn = std::function<LocalInfo::Kind(const Expr &)>;
-using HasConversionsAndCallsExplicitBindingTypeTransformFn = std::function<bool(const Expr &)>;
 using ConversionsAndCallsBindingValueKindFn = std::function<LocalInfo::ValueKind(const Expr &, LocalInfo::Kind)>;
-using ApplyConversionsAndCallsStructArrayInfoFn = std::function<void(const Expr &, LocalInfo &)>;
-using ApplyConversionsAndCallsStructValueInfoFn = std::function<void(const Expr &, LocalInfo &)>;
 using EnterConversionsAndCallsScopedBlockFn = std::function<void()>;
 using ExitConversionsAndCallsScopedBlockFn = std::function<void()>;
-using IsConversionsAndCallsReturnCallFn = std::function<bool(const Expr &)>;
-using IsConversionsAndCallsBlockCallFn = std::function<bool(const Expr &)>;
-using IsConversionsAndCallsMatchCallFn = std::function<bool(const Expr &)>;
-using IsConversionsAndCallsIfCallFn = std::function<bool(const Expr &)>;
 
 bool emitConversionsAndCallsOperatorExpr(
     const Expr &expr,
     const LocalMap &localsIn,
     int32_t &nextLocal,
-    const EmitConversionsAndCallsExprWithLocalsFn &emitExpr,
+    const ExprLocalsPredicateFn &emitExpr,
     const InferConversionsAndCallsExprKindWithLocalsFn &inferExprKind,
     const EmitConversionsAndCallsCompareToZeroFn &emitCompareToZero,
-    const AllocConversionsAndCallsTempLocalFn &allocTempLocal,
+    const Int32ProviderFn &allocTempLocal,
     const EmitConversionsAndCallsFloatToIntNonFiniteFn &emitFloatToIntNonFinite,
     const EmitConversionsAndCallsPointerIndexOutOfBoundsFn &emitPointerIndexOutOfBounds,
     const EmitConversionsAndCallsArrayIndexOutOfBoundsFn &emitArrayIndexOutOfBounds,
@@ -78,10 +67,10 @@ bool emitConversionsAndCallsOperatorExpr(
     const Expr &expr,
     const LocalMap &localsIn,
     int32_t &nextLocal,
-    const EmitConversionsAndCallsExprWithLocalsFn &emitExpr,
+    const ExprLocalsPredicateFn &emitExpr,
     const InferConversionsAndCallsExprKindWithLocalsFn &inferExprKind,
     const EmitConversionsAndCallsCompareToZeroFn &emitCompareToZero,
-    const AllocConversionsAndCallsTempLocalFn &allocTempLocal,
+    const Int32ProviderFn &allocTempLocal,
     const EmitConversionsAndCallsFloatToIntNonFiniteFn &emitFloatToIntNonFinite,
     const EmitConversionsAndCallsPointerIndexOutOfBoundsFn &emitPointerIndexOutOfBounds,
     const EmitConversionsAndCallsArrayIndexOutOfBoundsFn &emitArrayIndexOutOfBounds,
@@ -100,27 +89,27 @@ bool emitConversionsAndCallsOperatorExpr(
 bool emitConversionsAndCallsControlExprTail(
     const Expr &expr,
     const LocalMap &localsIn,
-    const EmitConversionsAndCallsExprWithLocalsFn &emitExpr,
+    const ExprLocalsPredicateFn &emitExpr,
     const EmitConversionsAndCallsStatementWithLocalsFn &emitStatement,
     const InferConversionsAndCallsExprKindWithLocalsFn &inferExprKind,
     const CombineConversionsAndCallsNumericKindsFn &combineNumericKinds,
     const HasConversionsAndCallsNamedArgumentsFn &hasNamedArguments,
     const ResolveConversionsAndCallsDefinitionCallFn &resolveDefinitionCall,
-    const ResolveConversionsAndCallsExprPathFn &resolveExprPath,
+    const ExprStringFn &resolveExprPath,
     const LowerConversionsAndCallsMatchToIfFn &lowerMatchToIf,
-    const IsConversionsAndCallsBindingMutableFn &isBindingMutable,
+    const ExprPredicateFn &isBindingMutable,
     const ConversionsAndCallsBindingKindFn &bindingKind,
-    const HasConversionsAndCallsExplicitBindingTypeTransformFn &hasExplicitBindingTypeTransform,
+    const ExprPredicateFn &hasExplicitBindingTypeTransform,
     const ConversionsAndCallsBindingValueKindFn &bindingValueKind,
     const InferConversionsAndCallsStructExprPathFn &inferStructExprPath,
-    const ApplyConversionsAndCallsStructArrayInfoFn &applyStructArrayInfo,
-    const ApplyConversionsAndCallsStructValueInfoFn &applyStructValueInfo,
+    const ExprLocalInfoVisitorFn &applyStructArrayInfo,
+    const ExprLocalInfoVisitorFn &applyStructValueInfo,
     const EnterConversionsAndCallsScopedBlockFn &enterScopedBlock,
     const ExitConversionsAndCallsScopedBlockFn &exitScopedBlock,
-    const IsConversionsAndCallsReturnCallFn &isReturnCall,
-    const IsConversionsAndCallsBlockCallFn &isBlockCall,
-    const IsConversionsAndCallsMatchCallFn &isMatchCall,
-    const IsConversionsAndCallsIfCallFn &isIfCall,
+    const ExprPredicateFn &isReturnCall,
+    const ExprPredicateFn &isBlockCall,
+    const ExprPredicateFn &isMatchCall,
+    const ExprPredicateFn &isIfCall,
     std::vector<IrInstruction> &instructions,
     bool &handled,
     std::string &error);

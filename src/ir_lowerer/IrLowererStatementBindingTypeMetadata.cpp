@@ -247,7 +247,7 @@ bool isExplicitPackedResultReturnExpr(const Expr &expr) {
 bool inferCallParameterDefaultResultInfo(
     const Expr &expr,
     const LocalMap &localsForKindInference,
-    const InferBindingExprKindFn &inferExprKind,
+    const ExprLocalsValueKindFn &inferExprKind,
     const std::function<const Definition *(const Expr &, const LocalMap &)> &resolveMethodCallDefinition,
     const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
     const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
@@ -599,8 +599,8 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
 
 void applyArgsPackElementStructMetadata(const Expr &param,
                                         const std::string &elementTypeText,
-                                        const ApplyStructBindingInfoFn &applyStructArrayInfo,
-                                        const ApplyStructBindingInfoFn &applyStructValueInfo,
+                                        const ExprLocalInfoVisitorFn &applyStructArrayInfo,
+                                        const ExprLocalInfoVisitorFn &applyStructValueInfo,
                                         LocalInfo &infoOut) {
   if (elementTypeText.empty() || !infoOut.structTypeName.empty()) {
     return;
@@ -671,7 +671,7 @@ void applyArgsPackElementStructMetadata(const Expr &param,
 
 LocalInfo::ValueKind inferPointerMemoryIntrinsicValueKind(const Expr &expr,
                                                           const LocalMap &localsIn,
-                                                          const InferBindingExprKindFn &inferExprKind) {
+                                                          const ExprLocalsValueKindFn &inferExprKind) {
   std::string builtinName;
   if (expr.kind != Expr::Kind::Call || !getBuiltinMemoryName(expr, builtinName)) {
     return LocalInfo::ValueKind::Unknown;

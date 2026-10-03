@@ -18,6 +18,7 @@
 #include "IrLowererStatementBindingHelpers.h"
 #include "IrLowererStringCallHelpers.h"
 #include "primec/support/Diagnostics.h"
+#include "primec/support/CallbackTypes.h"
 
 namespace primec::ir_lowerer {
 
@@ -30,9 +31,7 @@ struct LowerReturnEmitInlineContext {
   std::vector<size_t> returnJumps;
 };
 
-using LowerReturnEmitExprFn = std::function<bool(const Expr &, const LocalMap &)>;
 using LowerReturnEmitStatementFn = std::function<bool(const Expr &, LocalMap &)>;
-using LowerReturnEmitAllocTempLocalFn = std::function<int32_t()>;
 using LowerReturnEmitStructCopyFn = std::function<bool(int32_t, int32_t, int32_t)>;
 using LowerReturnEmitFileScopeCleanupFn = std::function<void(const std::vector<int32_t> &)>;
 using LowerReturnEmitSimpleFn = std::function<void()>;
@@ -74,10 +73,10 @@ struct LowerReturnEmitStageState {
   LowerReturnEmitStringValueForCallFn emitStringValueForCall;
   EmitPrintArgForStatementFn emitPrintArg;
 
-  LowerReturnEmitExprFn emitExpr;
+  ExprLocalsPredicateFn emitExpr;
   LowerReturnEmitStatementFn emitStatement;
   LowerReturnEmitInlineDefinitionCallFn emitInlineDefinitionCall;
-  LowerReturnEmitAllocTempLocalFn allocTempLocal;
+  Int32ProviderFn allocTempLocal;
   LowerReturnEmitStructCopyFn emitStructCopyFromPtrs;
   LowerReturnEmitStructCopyFn emitStructCopySlots;
   LowerReturnEmitFileScopeCleanupFn emitFileScopeCleanup;

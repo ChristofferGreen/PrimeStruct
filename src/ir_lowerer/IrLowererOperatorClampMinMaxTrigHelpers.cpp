@@ -11,10 +11,10 @@ OperatorClampMinMaxTrigEmitResult emitClampMinMaxTrigOperatorExpr(
     const Expr &expr,
     const LocalMap &localsIn,
     bool hasMathImport,
-    const EmitClampMinMaxTrigExprWithLocalsFn &emitExpr,
+    const ExprLocalsPredicateFn &emitExpr,
     const InferClampMinMaxTrigExprKindWithLocalsFn &inferExprKind,
     const CombineClampMinMaxTrigNumericKindsFn &combineNumericKinds,
-    const AllocClampMinMaxTrigTempLocalFn &allocTempLocal,
+    const Int32ProviderFn &allocTempLocal,
     std::vector<IrInstruction> &instructions,
     std::string &error) {
         if (getBuiltinClampName(expr, hasMathImport)) {

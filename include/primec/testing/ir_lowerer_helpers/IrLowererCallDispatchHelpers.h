@@ -1,14 +1,12 @@
 struct SemanticProductIndex;
 struct SemanticProductTargetAdapter;
 
-using ResolveExprPathFn = std::function<std::string(const Expr &)>;
 using ResolveDefinitionCallFn = std::function<const Definition *(const Expr &)>;
-using IsTailCallCandidateFn = std::function<bool(const Expr &)>;
 using DefinitionExistsFn = std::function<bool(const std::string &)>;
 
 struct CallResolutionAdapters {
-  ResolveExprPathFn resolveExprPath{};
-  IsTailCallCandidateFn isTailCallCandidate{};
+  ExprStringFn resolveExprPath{};
+  ExprPredicateFn isTailCallCandidate{};
   DefinitionExistsFn definitionExists{};
   const SemanticProgram *semanticProgram = nullptr;
   SemanticProductTargetAdapter semanticProductTargets{};
@@ -20,11 +18,11 @@ struct EntryCallResolutionSetup {
 
 const Definition *resolveDefinitionCall(const Expr &callExpr,
                                         const std::unordered_map<std::string, const Definition *> &defMap,
-                                        const ResolveExprPathFn &resolveExprPath,
+                                        const ExprStringFn &resolveExprPath,
                                         const SemanticProgram *semanticProgram = nullptr);
 ResolveDefinitionCallFn makeResolveDefinitionCall(
     const std::unordered_map<std::string, const Definition *> &defMap,
-    const ResolveExprPathFn &resolveExprPath,
+    const ExprStringFn &resolveExprPath,
     const SemanticProgram *semanticProgram = nullptr);
 
 CallResolutionAdapters makeCallResolutionAdapters(
@@ -54,16 +52,16 @@ EntryCallResolutionSetup buildEntryCallResolutionSetup(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::unordered_map<std::string, std::string> &importAliases,
     const SemanticProgram *semanticProgram);
-ResolveExprPathFn makeResolveCallPathFromScope(
+ExprStringFn makeResolveCallPathFromScope(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::unordered_map<std::string, std::string> &importAliases);
-ResolveExprPathFn makeResolveCallPathFromScope(
+ExprStringFn makeResolveCallPathFromScope(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::unordered_map<std::string, std::string> &importAliases,
     const SemanticProgram *semanticProgram);
-IsTailCallCandidateFn makeIsTailCallCandidate(
+ExprPredicateFn makeIsTailCallCandidate(
     const std::unordered_map<std::string, const Definition *> &defMap,
-    const ResolveExprPathFn &resolveExprPath);
+    const ExprStringFn &resolveExprPath);
 DefinitionExistsFn makeDefinitionExistsByPath(
     const std::unordered_map<std::string, const Definition *> &defMap);
 
@@ -74,11 +72,11 @@ std::string resolveCallPathFromScope(
 
 bool isTailCallCandidate(const Expr &expr,
                          const std::unordered_map<std::string, const Definition *> &defMap,
-                         const ResolveExprPathFn &resolveExprPath);
+                         const ExprStringFn &resolveExprPath);
 
 bool hasTailExecutionCandidate(const std::vector<Expr> &statements,
                                bool definitionReturnsVoid,
-                               const IsTailCallCandidateFn &isTailCallCandidate);
+                               const ExprPredicateFn &isTailCallCandidate);
 enum class CountMethodFallbackResult {
   NotHandled,
   NoCallee,

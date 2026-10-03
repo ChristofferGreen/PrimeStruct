@@ -129,7 +129,7 @@ private:
   const ResolveDefinitionCallFn &resolveDefinitionCall;
   const std::function<bool(const std::string &, const std::string &, std::string &)> &resolveStructTypeName;
   const std::function<bool(const std::string &, StructSlotLayout &)> &resolveStructSlotLayout;
-  const ResolveExprPathFn &resolveExprPath;
+  const ExprStringFn &resolveExprPath;
   const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind;
   const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath;
   const std::function<bool(int32_t, int32_t, int32_t)> &emitStructCopyFromPtrs;

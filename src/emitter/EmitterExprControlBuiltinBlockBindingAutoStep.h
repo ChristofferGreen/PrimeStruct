@@ -5,10 +5,10 @@
 
 #include "primec/ast/Ast.h"
 #include "primec/backend/Emitter.h"
+#include "primec/support/CallbackTypes.h"
 
 namespace primec::emitter {
 
-using EmitterExprControlBuiltinBlockBindingAutoEmitExprFn = std::function<std::string(const Expr &)>;
 
 struct EmitterExprControlBuiltinBlockBindingAutoStepResult {
   bool handled = false;
@@ -19,6 +19,6 @@ EmitterExprControlBuiltinBlockBindingAutoStepResult runEmitterExprControlBuiltin
     const Expr &stmt,
     const Emitter::BindingInfo &binding,
     bool useAuto,
-    const EmitterExprControlBuiltinBlockBindingAutoEmitExprFn &emitExpr);
+    const ExprStringFn &emitExpr);
 
 } // namespace primec::emitter

@@ -631,7 +631,7 @@ void applyStructArrayInfoFromBindingWithLayoutFieldIndex(
       info);
 }
 
-ApplyStructArrayInfoFn makeApplyStructArrayInfoFromBindingWithLayoutFieldIndex(
+ExprLocalInfoVisitorFn makeApplyStructArrayInfoFromBindingWithLayoutFieldIndex(
     const ResolveStructTypeNameFn &resolveStructTypeName,
     const StructLayoutFieldIndex &fieldIndex,
     const ValueKindFromTypeNameFn &valueKindFromTypeName) {

@@ -7,10 +7,10 @@ namespace primec::ir_lowerer {
 struct ConversionsAndCallsOperatorContext {
   const LocalMap &localsIn;
   int32_t &nextLocal;
-  const EmitConversionsAndCallsExprWithLocalsFn &emitExpr;
+  const ExprLocalsPredicateFn &emitExpr;
   const InferConversionsAndCallsExprKindWithLocalsFn &inferExprKind;
   const EmitConversionsAndCallsCompareToZeroFn &emitCompareToZero;
-  const AllocConversionsAndCallsTempLocalFn &allocTempLocal;
+  const Int32ProviderFn &allocTempLocal;
   const EmitConversionsAndCallsFloatToIntNonFiniteFn &emitFloatToIntNonFinite;
   const EmitConversionsAndCallsPointerIndexOutOfBoundsFn &emitPointerIndexOutOfBounds;
   const EmitConversionsAndCallsArrayIndexOutOfBoundsFn &emitArrayIndexOutOfBounds;

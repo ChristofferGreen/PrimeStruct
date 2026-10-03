@@ -462,7 +462,7 @@ std::string resolveSemanticExprStructPath(const Expr &expr,
 
 std::string inferStructPathFromCallTargetWithFieldBindingIndex(
     const Expr &expr,
-    const InferStructExprPathFn &resolveExprPath,
+    const ExprStringFn &resolveExprPath,
     const UninitializedFieldBindingIndex &fieldIndex,
     const InferDefinitionStructReturnPathFn &inferDefinitionStructReturnPath) {
   return inferStructPathFromCallTarget(
@@ -476,7 +476,7 @@ std::string inferStructPathFromCallTargetWithFieldBindingIndex(
 
 std::string inferStructPathFromCallTargetWithFieldBindingIndexAndVisited(
     const Expr &expr,
-    const InferStructExprPathFn &resolveExprPath,
+    const ExprStringFn &resolveExprPath,
     const UninitializedFieldBindingIndex &fieldIndex,
     const InferDefinitionStructReturnPathWithVisitedFn &inferDefinitionStructReturnPath,
     std::unordered_set<std::string> &visitedDefs) {
@@ -525,7 +525,7 @@ std::string inferStructReturnPathFromDefinitionMapByCallTargetWithFieldIndexWith
     const std::string &defPath,
     const std::unordered_map<std::string, const Definition *> &defMap,
     const ResolveStructTypeNameFn &resolveStructTypeName,
-    const InferStructExprPathFn &resolveExprPath,
+    const ExprStringFn &resolveExprPath,
     const UninitializedFieldBindingIndex &fieldIndex,
     std::unordered_set<std::string> &visitedDefs) {
   return inferStructReturnPathFromDefinitionMapWithVisited(
@@ -550,7 +550,7 @@ std::string inferStructReturnPathFromDefinitionMapByCallTargetWithFieldIndex(
     const std::string &defPath,
     const std::unordered_map<std::string, const Definition *> &defMap,
     const ResolveStructTypeNameFn &resolveStructTypeName,
-    const InferStructExprPathFn &resolveExprPath,
+    const ExprStringFn &resolveExprPath,
     const UninitializedFieldBindingIndex &fieldIndex) {
   std::unordered_set<std::string> visitedDefs;
   return inferStructReturnPathFromDefinitionMapByCallTargetWithFieldIndexWithVisited(
@@ -562,7 +562,7 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
     const LocalMap &localsIn,
     const std::unordered_map<std::string, const Definition *> &defMap,
     const ResolveStructTypeNameFn &resolveStructTypeName,
-    const InferStructExprPathFn &resolveExprPath,
+    const ExprStringFn &resolveExprPath,
     const UninitializedFieldBindingIndex &fieldIndex,
     const ResolveStructFieldSlotFn &resolveStructFieldSlot) {
   return inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
@@ -582,7 +582,7 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
     const LocalMap &localsIn,
     const std::unordered_map<std::string, const Definition *> &defMap,
     const ResolveStructTypeNameFn &resolveStructTypeName,
-    const InferStructExprPathFn &resolveExprPath,
+    const ExprStringFn &resolveExprPath,
     const UninitializedFieldBindingIndex &fieldIndex,
     const ResolveStructFieldSlotFn &resolveStructFieldSlot,
     const SemanticProgram *semanticProgram,
@@ -1057,7 +1057,7 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
 InferStructExprWithLocalsFn makeInferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const ResolveStructTypeNameFn &resolveStructTypeName,
-    const InferStructExprPathFn &resolveExprPath,
+    const ExprStringFn &resolveExprPath,
     const UninitializedFieldBindingIndex &fieldIndex,
     const ResolveStructFieldSlotFn &resolveStructFieldSlot) {
   return makeInferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
@@ -1072,7 +1072,7 @@ InferStructExprWithLocalsFn makeInferStructExprPathFromDefinitionMapByCallTarget
 InferStructExprWithLocalsFn makeInferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const ResolveStructTypeNameFn &resolveStructTypeName,
-    const InferStructExprPathFn &resolveExprPath,
+    const ExprStringFn &resolveExprPath,
     const UninitializedFieldBindingIndex &fieldIndex,
     const ResolveStructFieldSlotFn &resolveStructFieldSlot,
     const SemanticProgram *semanticProgram) {

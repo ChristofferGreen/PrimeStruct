@@ -786,7 +786,7 @@ StructLayoutResolutionAdapters makeStructLayoutResolutionAdaptersWithOwnedSlotSt
   return adapters;
 }
 
-ApplyStructValueInfoFn makeApplyStructValueInfoFromBinding(
+ExprLocalInfoVisitorFn makeApplyStructValueInfoFromBinding(
     const ResolveStructTypeNameFn &resolveStructTypeName) {
   return [resolveStructTypeName](const Expr &expr, LocalInfo &info) {
     applyStructValueInfoFromBinding(expr, resolveStructTypeName, info);
@@ -866,7 +866,7 @@ void applyStructValueInfoFromBinding(const Expr &expr,
 std::string inferStructReturnPathFromDefinition(
     const Definition &def,
     const ResolveStructTypeNameFn &resolveStructTypeName,
-    const InferStructExprPathFn &inferStructExprPath) {
+    const ExprStringFn &inferStructExprPath) {
   std::function<std::string(const Expr &, const std::unordered_map<std::string, std::string> &)> inferValueStructPath;
   auto inferBindingStructPath = [&](const Expr &bindingExpr,
                                     const std::unordered_map<std::string, std::string> &knownBindings) {
@@ -1017,7 +1017,7 @@ std::string inferStructReturnPathFromDefinition(
 
 std::string inferStructPathFromCallTarget(
     const Expr &expr,
-    const InferStructExprPathFn &resolveExprPath,
+    const ExprStringFn &resolveExprPath,
     const IsKnownStructPathFn &isKnownStructPath,
     const InferDefinitionStructReturnPathFn &inferDefinitionStructReturnPath) {
   if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.isFieldAccess) {

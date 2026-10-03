@@ -4,8 +4,8 @@ namespace primec::emitter {
 
 EmitterExprControlIfBranchPreludeStepResult runEmitterExprControlIfBranchPreludeStep(
     const Expr &candidate,
-    const EmitterExprControlIfBranchPreludeIsBlockEnvelopeFn &isBlockEnvelope,
-    const EmitterExprControlIfBranchPreludeEmitExprFn &emitExpr) {
+    const ExprPredicateFn &isBlockEnvelope,
+    const ExprStringFn &emitExpr) {
   if (!isBlockEnvelope || !emitExpr) {
     return {};
   }

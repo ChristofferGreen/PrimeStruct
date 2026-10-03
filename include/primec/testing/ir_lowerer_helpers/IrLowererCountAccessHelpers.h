@@ -1,16 +1,12 @@
 
 
 
-using IsEntryArgsNameFn = std::function<bool(const Expr &, const LocalMap &)>;
-using IsArrayCountCallFn = std::function<bool(const Expr &, const LocalMap &)>;
-using IsVectorCapacityCallFn = std::function<bool(const Expr &, const LocalMap &)>;
-using IsStringCountCallFn = std::function<bool(const Expr &, const LocalMap &)>;
 
 struct CountAccessClassifiers {
-  IsEntryArgsNameFn isEntryArgsName{};
-  IsArrayCountCallFn isArrayCountCall{};
-  IsVectorCapacityCallFn isVectorCapacityCall{};
-  IsStringCountCallFn isStringCountCall{};
+  ExprLocalsPredicateFn isEntryArgsName{};
+  ExprLocalsPredicateFn isArrayCountCall{};
+  ExprLocalsPredicateFn isVectorCapacityCall{};
+  ExprLocalsPredicateFn isStringCountCall{};
 };
 
 struct EntryCountAccessSetup {
@@ -47,15 +43,15 @@ CountAccessClassifiers makeCountAccessClassifiers(bool hasEntryArgs, const std::
 CountAccessClassifiers makeCountAccessClassifiers(bool hasEntryArgs,
                                                   const std::string &entryArgsName,
                                                   const SemanticProgram *semanticProgram);
-IsEntryArgsNameFn makeIsEntryArgsName(bool hasEntryArgs, const std::string &entryArgsName);
-IsArrayCountCallFn makeIsArrayCountCall(bool hasEntryArgs, const std::string &entryArgsName);
-IsArrayCountCallFn makeIsArrayCountCall(bool hasEntryArgs,
+ExprLocalsPredicateFn makeIsEntryArgsName(bool hasEntryArgs, const std::string &entryArgsName);
+ExprLocalsPredicateFn makeIsArrayCountCall(bool hasEntryArgs, const std::string &entryArgsName);
+ExprLocalsPredicateFn makeIsArrayCountCall(bool hasEntryArgs,
                                         const std::string &entryArgsName,
                                         const SemanticProgram *semanticProgram);
-IsVectorCapacityCallFn makeIsVectorCapacityCall();
-IsVectorCapacityCallFn makeIsVectorCapacityCall(const SemanticProgram *semanticProgram);
-IsStringCountCallFn makeIsStringCountCall();
-IsStringCountCallFn makeIsStringCountCall(const SemanticProgram *semanticProgram);
+ExprLocalsPredicateFn makeIsVectorCapacityCall();
+ExprLocalsPredicateFn makeIsVectorCapacityCall(const SemanticProgram *semanticProgram);
+ExprLocalsPredicateFn makeIsStringCountCall();
+ExprLocalsPredicateFn makeIsStringCountCall(const SemanticProgram *semanticProgram);
 bool isEntryArgsName(const Expr &expr, const LocalMap &localsIn, bool hasEntryArgs, const std::string &entryArgsName);
 bool isArrayCountCall(const Expr &expr, const LocalMap &localsIn, bool hasEntryArgs, const std::string &entryArgsName);
 bool isArrayCountCall(const Expr &expr,

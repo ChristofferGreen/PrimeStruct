@@ -40,7 +40,7 @@ std::optional<std::string> runEmitterExprControlCountRewriteStep(
     const EmitterExprControlCountRewriteIsCountLikeCallFn &isArrayCountCall,
     const EmitterExprControlCountRewriteIsCountLikeCallFn &isStringCountCall,
     const EmitterExprControlCountRewriteResolveMethodPathFn &resolveMethodPath,
-    const EmitterExprControlCountRewriteIsCollectionAccessReceiverFn &isCollectionAccessReceiverExpr) {
+    const ExprPredicateFn &isCollectionAccessReceiverExpr) {
   (void)localTypes;
   (void)isArrayCountCall;
   (void)isStringCountCall;

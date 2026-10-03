@@ -61,7 +61,7 @@ private:
   [[maybe_unused]] std::string &error;
   const SemanticProgram *const &semanticProgram;
   std::unordered_map<std::string, const Definition *> &defMap;
-  const ResolveExprPathFn &resolveExprPath;
+  const ExprStringFn &resolveExprPath;
   const ResolveDefinitionCallFn &resolveDefinitionCall;
   const GetSetupMathBuiltinNameFn &getMathBuiltinName;
   const ResolveMethodCallDefinitionFn &resolveMethodCallDefinition;

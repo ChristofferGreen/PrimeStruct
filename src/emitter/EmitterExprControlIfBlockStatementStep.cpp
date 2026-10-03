@@ -4,7 +4,7 @@ namespace primec::emitter {
 
 EmitterExprControlIfBlockStatementStepResult runEmitterExprControlIfBlockStatementStep(
     const Expr &stmt,
-    const EmitterExprControlIfBlockStatementEmitExprFn &emitExpr) {
+    const ExprStringFn &emitExpr) {
   if (!emitExpr) {
     return {};
   }

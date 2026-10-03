@@ -10,7 +10,7 @@
 
 namespace primec::emitter {
 
-using EmitterExprControlIfBranchBodyHandlersIsReturnCallFn =
+using ExprPredicateFn =
     std::function<bool(const Expr &)>;
 using EmitterExprControlIfBranchBodyHandlersGetBindingInfoFn =
     std::function<Emitter::BindingInfo(const Expr &)>;
@@ -25,7 +25,7 @@ using EmitterExprControlIfBranchBodyHandlersTypeNameForReturnKindFn =
     std::function<std::string(Emitter::ReturnKind)>;
 using EmitterExprControlIfBranchBodyHandlersIsReferenceCandidateFn =
     std::function<bool(const Emitter::BindingInfo &)>;
-using EmitterExprControlIfBranchBodyHandlersEmitExprFn =
+using ExprStringFn =
     std::function<std::string(const Expr &)>;
 
 struct EmitterExprControlIfBranchBodyHandlersStepResult {
@@ -42,12 +42,12 @@ runEmitterExprControlIfBranchBodyHandlersStep(
     bool allowMathBare,
     const std::unordered_map<std::string, std::string> &importAliases,
     const std::unordered_map<std::string, std::string> &structTypeMap,
-    const EmitterExprControlIfBranchBodyHandlersIsReturnCallFn &isReturnCall,
+    const ExprPredicateFn &isReturnCall,
     const EmitterExprControlIfBranchBodyHandlersGetBindingInfoFn &getBindingInfo,
     const EmitterExprControlIfBranchBodyHandlersHasExplicitTypeFn &hasExplicitBindingTypeTransform,
     const EmitterExprControlIfBranchBodyHandlersInferReturnKindFn &inferPrimitiveReturnKind,
     const EmitterExprControlIfBranchBodyHandlersTypeNameForReturnKindFn &typeNameForReturnKind,
     const EmitterExprControlIfBranchBodyHandlersIsReferenceCandidateFn &isReferenceCandidate,
-    const EmitterExprControlIfBranchBodyHandlersEmitExprFn &emitExpr);
+    const ExprStringFn &emitExpr);
 
 } // namespace primec::emitter

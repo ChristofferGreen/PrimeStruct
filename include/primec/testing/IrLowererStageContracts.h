@@ -1,5 +1,6 @@
 #pragma once
 
+#include "primec/support/CallbackTypes.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererLowerInferenceSetup.h"
 
 namespace primec::ir_lowerer {

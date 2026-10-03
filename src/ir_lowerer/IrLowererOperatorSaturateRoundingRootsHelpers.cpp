@@ -10,9 +10,9 @@ OperatorSaturateRoundingRootsEmitResult emitSaturateRoundingRootsOperatorExpr(
     const Expr &expr,
     const LocalMap &localsIn,
     bool hasMathImport,
-    const EmitSaturateExprWithLocalsFn &emitExpr,
-    const InferSaturateExprKindWithLocalsFn &inferExprKind,
-    const AllocSaturateTempLocalFn &allocTempLocal,
+    const ExprLocalsPredicateFn &emitExpr,
+    const ExprLocalsValueKindFn &inferExprKind,
+    const Int32ProviderFn &allocTempLocal,
     std::vector<IrInstruction> &instructions,
     std::string &error) {
         std::string saturateName;

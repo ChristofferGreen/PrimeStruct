@@ -150,7 +150,7 @@ bool parseTransformArgumentExpr(const std::string &text,
 bool parseOnErrorTransform(const std::vector<Transform> &transforms,
                            const std::string &namespacePrefix,
                            const std::string &context,
-                           const ResolveExprPathFn &resolveExprPath,
+                           const ExprStringFn &resolveExprPath,
                            const DefinitionExistsFn &definitionExists,
                            std::optional<OnErrorHandler> &out,
                            std::string &error) {
@@ -197,7 +197,7 @@ bool parseOnErrorTransform(const std::vector<Transform> &transforms,
 }
 
 bool buildOnErrorByDefinition(const Program &program,
-                              const ResolveExprPathFn &resolveExprPath,
+                              const ExprStringFn &resolveExprPath,
                               const DefinitionExistsFn &definitionExists,
                               OnErrorByDefinition &out,
                               std::string &error) {
@@ -206,7 +206,7 @@ bool buildOnErrorByDefinition(const Program &program,
 
 bool buildOnErrorByDefinition(const Program &program,
                               const SemanticProgram *semanticProgram,
-                              const ResolveExprPathFn &resolveExprPath,
+                              const ExprStringFn &resolveExprPath,
                               const DefinitionExistsFn &definitionExists,
                               OnErrorByDefinition &out,
                               std::string &error) {

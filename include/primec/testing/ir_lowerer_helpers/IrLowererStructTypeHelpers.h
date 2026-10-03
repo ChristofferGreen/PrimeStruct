@@ -6,7 +6,6 @@ struct LayoutFieldBinding;
 
 using ResolveStructTypeNameFn = std::function<bool(const std::string &, const std::string &, std::string &)>;
 using ValueKindFromTypeNameFn = std::function<LocalInfo::ValueKind(const std::string &)>;
-using InferStructExprPathFn = std::function<std::string(const Expr &)>;
 using InferStructExprWithLocalsFn = std::function<std::string(const Expr &, const LocalMap &)>;
 using IsKnownStructPathFn = std::function<bool(const std::string &)>;
 using InferDefinitionStructReturnPathFn = std::function<std::string(const std::string &)>;
@@ -24,13 +23,11 @@ struct StructArrayTypeInfo {
 };
 
 using ResolveStructArrayTypeInfoFn = std::function<bool(const std::string &, StructArrayTypeInfo &)>;
-using ApplyStructArrayInfoFn = std::function<void(const Expr &, LocalInfo &)>;
-using ApplyStructValueInfoFn = std::function<void(const Expr &, LocalInfo &)>;
 using CollectStructArrayFieldsFn = std::function<bool(const std::string &, std::vector<StructArrayFieldInfo> &)>;
 
 struct StructTypeResolutionAdapters {
   ResolveStructTypeNameFn resolveStructTypeName{};
-  ApplyStructValueInfoFn applyStructValueInfo{};
+  ExprLocalInfoVisitorFn applyStructValueInfo{};
 };
 using SetupCombineNumericKindsFn =
     std::function<LocalInfo::ValueKind(LocalInfo::ValueKind, LocalInfo::ValueKind)>;
@@ -42,7 +39,7 @@ struct SetupTypeAndStructTypeAdapters {
 
 struct StructArrayInfoAdapters {
   ResolveStructArrayTypeInfoFn resolveStructArrayTypeInfoFromPath{};
-  ApplyStructArrayInfoFn applyStructArrayInfo{};
+  ExprLocalInfoVisitorFn applyStructArrayInfo{};
 };
 
 struct StructSlotFieldInfo {
@@ -180,7 +177,7 @@ void applyStructArrayInfoFromBindingWithLayoutFieldIndex(
     const StructLayoutFieldIndex &fieldIndex,
     const ValueKindFromTypeNameFn &valueKindFromTypeName,
     LocalInfo &info);
-ApplyStructArrayInfoFn makeApplyStructArrayInfoFromBindingWithLayoutFieldIndex(
+ExprLocalInfoVisitorFn makeApplyStructArrayInfoFromBindingWithLayoutFieldIndex(
     const ResolveStructTypeNameFn &resolveStructTypeName,
     const StructLayoutFieldIndex &fieldIndex,
     const ValueKindFromTypeNameFn &valueKindFromTypeName);
@@ -269,7 +266,7 @@ StructLayoutResolutionAdapters makeStructLayoutResolutionAdaptersWithOwnedSlotSt
     const ResolveStructTypeNameFn &resolveStructTypeName,
     const ValueKindFromTypeNameFn &valueKindFromTypeName,
     std::string &error);
-ApplyStructValueInfoFn makeApplyStructValueInfoFromBinding(
+ExprLocalInfoVisitorFn makeApplyStructValueInfoFromBinding(
     const ResolveStructTypeNameFn &resolveStructTypeName);
 void applyStructValueInfoFromBinding(const Expr &expr,
                                      const ResolveStructTypeNameFn &resolveStructTypeName,
@@ -277,10 +274,10 @@ void applyStructValueInfoFromBinding(const Expr &expr,
 std::string inferStructReturnPathFromDefinition(
     const Definition &def,
     const ResolveStructTypeNameFn &resolveStructTypeName,
-    const InferStructExprPathFn &inferStructExprPath);
+    const ExprStringFn &inferStructExprPath);
 std::string inferStructPathFromCallTarget(
     const Expr &expr,
-    const InferStructExprPathFn &resolveExprPath,
+    const ExprStringFn &resolveExprPath,
     const IsKnownStructPathFn &isKnownStructPath,
     const InferDefinitionStructReturnPathFn &inferDefinitionStructReturnPath);
 std::string inferStructPathFromNameExpr(const Expr &expr, const LocalMap &localsIn);

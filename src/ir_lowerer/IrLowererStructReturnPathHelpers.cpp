@@ -316,7 +316,7 @@ std::string inferStructReturnPathFromExprInternal(
     const std::unordered_map<std::string, LayoutFieldBinding> &knownFields,
     const std::unordered_set<std::string> &structNames,
     const ResolveStructTypePathFn &resolveStructTypePath,
-    const ResolveStructLayoutExprPathFn &resolveStructLayoutExprPath,
+    const ExprStringFn &resolveStructLayoutExprPath,
     const std::unordered_map<std::string, const Definition *> &defMap,
     std::unordered_set<std::string> &visitedDefs);
 
@@ -324,7 +324,7 @@ std::string inferStructReturnPathFromDefinitionInternal(
     const std::string &defPath,
     const std::unordered_set<std::string> &structNames,
     const ResolveStructTypePathFn &resolveStructTypePath,
-    const ResolveStructLayoutExprPathFn &resolveStructLayoutExprPath,
+    const ExprStringFn &resolveStructLayoutExprPath,
     const std::unordered_map<std::string, const Definition *> &defMap,
     std::unordered_set<std::string> &visitedDefs) {
   if (defPath.empty()) {
@@ -452,7 +452,7 @@ std::string inferStructReturnPathFromExprInternal(
     const std::unordered_map<std::string, LayoutFieldBinding> &knownFields,
     const std::unordered_set<std::string> &structNames,
     const ResolveStructTypePathFn &resolveStructTypePath,
-    const ResolveStructLayoutExprPathFn &resolveStructLayoutExprPath,
+    const ExprStringFn &resolveStructLayoutExprPath,
     const std::unordered_map<std::string, const Definition *> &defMap,
     std::unordered_set<std::string> &visitedDefs) {
   if (expr.kind == Expr::Kind::Name) {
@@ -648,7 +648,7 @@ std::string inferStructReturnPathFromDefinition(
     const std::string &defPath,
     const std::unordered_set<std::string> &structNames,
     const ResolveStructTypePathFn &resolveStructTypePath,
-    const ResolveStructLayoutExprPathFn &resolveStructLayoutExprPath,
+    const ExprStringFn &resolveStructLayoutExprPath,
     const std::unordered_map<std::string, const Definition *> &defMap) {
   std::unordered_set<std::string> visitedDefs;
   return inferStructReturnPathFromDefinitionInternal(
@@ -660,7 +660,7 @@ std::string inferStructReturnPathFromExpr(
     const std::unordered_map<std::string, LayoutFieldBinding> &knownFields,
     const std::unordered_set<std::string> &structNames,
     const ResolveStructTypePathFn &resolveStructTypePath,
-    const ResolveStructLayoutExprPathFn &resolveStructLayoutExprPath,
+    const ExprStringFn &resolveStructLayoutExprPath,
     const std::unordered_map<std::string, const Definition *> &defMap) {
   std::unordered_set<std::string> visitedDefs;
   return inferStructReturnPathFromExprInternal(

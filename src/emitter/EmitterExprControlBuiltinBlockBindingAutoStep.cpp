@@ -8,7 +8,7 @@ EmitterExprControlBuiltinBlockBindingAutoStepResult runEmitterExprControlBuiltin
     const Expr &stmt,
     const Emitter::BindingInfo &binding,
     bool useAuto,
-    const EmitterExprControlBuiltinBlockBindingAutoEmitExprFn &emitExpr) {
+    const ExprStringFn &emitExpr) {
   if (!useAuto) {
     return {};
   }

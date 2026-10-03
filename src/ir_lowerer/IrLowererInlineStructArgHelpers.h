@@ -10,16 +10,14 @@
 #include "IrLowererStructTypeHelpers.h"
 #include "primec/ast/Ast.h"
 #include "primec/ir/Ir.h"
+#include "primec/support/CallbackTypes.h"
 
 namespace primec::ir_lowerer {
 
 using ResolveInlineStructSlotLayoutFn = std::function<bool(const std::string &, StructSlotLayoutInfo &)>;
-using InferInlineStructExprKindFn = std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)>;
 using InferInlineStructExprPathFn = std::function<std::string(const Expr &, const LocalMap &)>;
-using EmitInlineStructExprFn = std::function<bool(const Expr &, const LocalMap &)>;
 using InferInlineStructFieldLocalInfoFn = std::function<bool(const Expr &, const LocalMap &, LocalInfo &, std::string &)>;
 using EmitInlineStructCopySlotsFn = std::function<bool(int32_t, int32_t, int32_t)>;
-using AllocInlineStructTempLocalFn = std::function<int32_t()>;
 using EmitInlineStructInstructionFn = std::function<void(IrOpcode, uint64_t)>;
 
 bool emitInlineStructDefinitionArguments(const std::string &calleePath,
@@ -29,12 +27,12 @@ bool emitInlineStructDefinitionArguments(const std::string &calleePath,
                                          bool requireValue,
                                          int32_t &nextLocal,
                                          const ResolveInlineStructSlotLayoutFn &resolveStructSlotLayout,
-                                         const InferInlineStructExprKindFn &inferExprKind,
+                                         const ExprLocalsValueKindFn &inferExprKind,
                                          const InferInlineStructExprPathFn &inferStructExprPath,
-                                         const EmitInlineStructExprFn &emitExpr,
+                                         const ExprLocalsPredicateFn &emitExpr,
                                          const InferInlineStructFieldLocalInfoFn &inferFieldLocalInfo,
                                          const EmitInlineStructCopySlotsFn &emitStructCopySlots,
-                                         const AllocInlineStructTempLocalFn &allocTempLocal,
+                                         const Int32ProviderFn &allocTempLocal,
                                          const EmitInlineStructInstructionFn &emitInstruction,
                                          std::string &error,
                                          std::optional<int32_t> destBaseLocal = std::nullopt);
@@ -45,11 +43,11 @@ bool emitInlineStructDefinitionArguments(const std::string &calleePath,
                                          bool requireValue,
                                          int32_t &nextLocal,
                                          const ResolveInlineStructSlotLayoutFn &resolveStructSlotLayout,
-                                         const InferInlineStructExprKindFn &inferExprKind,
+                                         const ExprLocalsValueKindFn &inferExprKind,
                                          const InferInlineStructExprPathFn &inferStructExprPath,
-                                         const EmitInlineStructExprFn &emitExpr,
+                                         const ExprLocalsPredicateFn &emitExpr,
                                          const EmitInlineStructCopySlotsFn &emitStructCopySlots,
-                                         const AllocInlineStructTempLocalFn &allocTempLocal,
+                                         const Int32ProviderFn &allocTempLocal,
                                          const EmitInlineStructInstructionFn &emitInstruction,
                                          std::string &error);
 

@@ -1,8 +1,11 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <string>
 #include <unordered_map>
+
+#include "primec/ast/Ast.h"
 
 namespace primec::ir_lowerer {
 
@@ -91,6 +94,12 @@ inline bool isSingleSlotPointerStyleKeyValueStorage(int32_t elemSlotCount) {
 }
 
 using LocalMap = std::unordered_map<std::string, LocalInfo>;
+
+// Canonical lowerer callback aliases for signatures that mention LocalMap or
+// LocalInfo; the Expr-only ones live in primec/support/CallbackTypes.h.
+using ExprLocalsPredicateFn = std::function<bool(const Expr &, const LocalMap &)>;
+using ExprLocalInfoVisitorFn = std::function<void(const Expr &, LocalInfo &)>;
+using ExprLocalsValueKindFn = std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)>;
 
 struct ReturnInfo {
   bool returnsVoid = false;

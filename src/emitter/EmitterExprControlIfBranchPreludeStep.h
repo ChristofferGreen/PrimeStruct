@@ -4,11 +4,10 @@
 #include <string>
 
 #include "primec/ast/Ast.h"
+#include "primec/support/CallbackTypes.h"
 
 namespace primec::emitter {
 
-using EmitterExprControlIfBranchPreludeIsBlockEnvelopeFn = std::function<bool(const Expr &)>;
-using EmitterExprControlIfBranchPreludeEmitExprFn = std::function<std::string(const Expr &)>;
 
 struct EmitterExprControlIfBranchPreludeStepResult {
   bool handled = false;
@@ -17,7 +16,7 @@ struct EmitterExprControlIfBranchPreludeStepResult {
 
 EmitterExprControlIfBranchPreludeStepResult runEmitterExprControlIfBranchPreludeStep(
     const Expr &candidate,
-    const EmitterExprControlIfBranchPreludeIsBlockEnvelopeFn &isBlockEnvelope,
-    const EmitterExprControlIfBranchPreludeEmitExprFn &emitExpr);
+    const ExprPredicateFn &isBlockEnvelope,
+    const ExprStringFn &emitExpr);
 
 } // namespace primec::emitter

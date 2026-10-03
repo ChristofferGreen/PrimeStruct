@@ -7,7 +7,7 @@ namespace primec::emitter {
 EmitterExprControlIfBranchBodyStatementStepResult
 runEmitterExprControlIfBranchBodyStatementStep(
     const Expr &stmt,
-    const EmitterExprControlIfBranchBodyStatementEmitExprFn &emitExpr) {
+    const ExprStringFn &emitExpr) {
   if (const auto statementStep = runEmitterExprControlIfBlockStatementStep(
           stmt, emitExpr);
       statementStep.handled) {

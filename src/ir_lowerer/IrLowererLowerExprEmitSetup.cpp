@@ -11,7 +11,7 @@ bool runLowerExprEmitSetup(const LowerExprEmitSetupInput &,
                                            bool rejectMethodCalls) -> LowerExprEmitUnaryPassthroughCallFn {
     return [callName, rejectMethodCalls](const Expr &expr,
                                          const LocalMap &localsIn,
-                                         const EmitExprWithLocalsFn &emitExpr,
+                                         const ExprLocalsPredicateFn &emitExpr,
                                          std::string &emitErrorOut) -> UnaryPassthroughCallResult {
       if (!emitExpr) {
         emitErrorOut = "native backend missing expr emit setup dependency: emitExpr";
@@ -38,7 +38,7 @@ UnaryPassthroughCallResult runLowerExprEmitMovePassthroughStep(
     const Expr &expr,
     const LocalMap &localsIn,
     const LowerExprEmitMovePassthroughCallFn &emitMovePassthroughCall,
-    const EmitExprWithLocalsFn &emitExpr,
+    const ExprLocalsPredicateFn &emitExpr,
     std::string &errorOut) {
   if (!emitMovePassthroughCall) {
     errorOut = "native backend missing expr emit setup dependency: emitMovePassthroughCall";
@@ -56,7 +56,7 @@ UnaryPassthroughCallResult runLowerExprEmitUploadReadbackPassthroughStep(
     const LocalMap &localsIn,
     const LowerExprEmitUploadPassthroughCallFn &emitUploadPassthroughCall,
     const LowerExprEmitReadbackPassthroughCallFn &emitReadbackPassthroughCall,
-    const EmitExprWithLocalsFn &emitExpr,
+    const ExprLocalsPredicateFn &emitExpr,
     std::string &errorOut) {
   if (!emitUploadPassthroughCall) {
     errorOut = "native backend missing expr emit setup dependency: emitUploadPassthroughCall";

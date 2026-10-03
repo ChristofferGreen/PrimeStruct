@@ -60,7 +60,7 @@ LocalInfo::ValueKind inferBaseSetupSimpleExprKind(const Expr &expr,
                                                   const LookupReturnInfoFn *lookupReturnInfo,
                                                   const SemanticProgram *semanticProgram,
                                                   const SemanticProductIndex *semanticIndex,
-                                                  const InferExprKindWithLocalsFn *fallbackInferExprKind);
+                                                  const ExprLocalsValueKindFn *fallbackInferExprKind);
 
 bool resolveBaseSetupResultExprInfo(const Expr &expr,
                                     const LocalMap &localsIn,
@@ -69,7 +69,7 @@ bool resolveBaseSetupResultExprInfo(const Expr &expr,
                                     const LookupReturnInfoFn *lookupReturnInfo,
                                     const SemanticProgram *semanticProgram,
                                     const SemanticProductIndex *semanticIndex,
-                                    const InferExprKindWithLocalsFn *fallbackInferExprKind,
+                                    const ExprLocalsValueKindFn *fallbackInferExprKind,
                                     ResultExprInfo &out);
 
 bool hasSemanticProductResultMethodFactContext(const Expr &expr,
@@ -83,7 +83,7 @@ bool inferBaseSetupResultTypeCallKind(const Expr &expr,
                                       const LookupReturnInfoFn *lookupReturnInfo,
                                       const SemanticProgram *semanticProgram,
                                       const SemanticProductIndex *semanticIndex,
-                                      const InferExprKindWithLocalsFn *fallbackInferExprKind,
+                                      const ExprLocalsValueKindFn *fallbackInferExprKind,
                                       LocalInfo::ValueKind &kindOut) {
   kindOut = LocalInfo::ValueKind::Unknown;
   if (!isBaseSetupResultTypeMethodCall(expr)) {
@@ -781,7 +781,7 @@ bool resolveBaseSetupResultExprInfo(const Expr &expr,
                                     const LookupReturnInfoFn *lookupReturnInfo,
                                     const SemanticProgram *semanticProgram,
                                     const SemanticProductIndex *semanticIndex,
-                                    const InferExprKindWithLocalsFn *fallbackInferExprKind,
+                                    const ExprLocalsValueKindFn *fallbackInferExprKind,
                                     ResultExprInfo &out) {
   const ResolveMethodCallWithLocalsFn noopResolveMethodCall =
       [](const Expr &, const LocalMap &) -> const Definition * { return nullptr; };
@@ -823,7 +823,7 @@ LocalInfo::ValueKind inferBaseSetupSimpleExprKind(const Expr &expr,
                                                   const LookupReturnInfoFn *lookupReturnInfo,
                                                   const SemanticProgram *semanticProgram,
                                                   const SemanticProductIndex *semanticIndex,
-                                                  const InferExprKindWithLocalsFn *fallbackInferExprKind) {
+                                                  const ExprLocalsValueKindFn *fallbackInferExprKind) {
   switch (expr.kind) {
     case Expr::Kind::Literal:
       if (expr.isUnsigned) {
@@ -1177,7 +1177,7 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
                                const LookupReturnInfoFn *lookupReturnInfo,
                                const SemanticProgram *semanticProgram,
                                const SemanticProductIndex *semanticIndex,
-                               const InferExprKindWithLocalsFn *fallbackInferExprKind,
+                               const ExprLocalsValueKindFn *fallbackInferExprKind,
                                LocalInfo::ValueKind &kindOut) {
   kindOut = LocalInfo::ValueKind::Unknown;
   if (expr.kind != Expr::Kind::Call) {

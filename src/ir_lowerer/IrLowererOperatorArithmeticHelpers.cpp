@@ -96,7 +96,7 @@ void rewriteHelperCall(const Expr &expr, const std::string &helperPath, Expr &re
 
 bool rewriteMathArithmeticCall(const Expr &expr,
                                const LocalMap &localsIn,
-                               const InferExprKindWithLocalsFn &inferExprKind,
+                               const ExprLocalsValueKindFn &inferExprKind,
                                const InferStructExprPathWithLocalsFn &inferStructExprPath,
                                Expr &rewrittenExpr) {
   std::string builtin;
@@ -227,8 +227,8 @@ bool rewriteMathArithmeticCall(const Expr &expr,
 
 OperatorArithmeticEmitResult emitArithmeticOperatorExpr(const Expr &expr,
                                                         const LocalMap &localsIn,
-                                                        const EmitExprWithLocalsFn &emitExpr,
-                                                        const InferExprKindWithLocalsFn &inferExprKind,
+                                                        const ExprLocalsPredicateFn &emitExpr,
+                                                        const ExprLocalsValueKindFn &inferExprKind,
                                                         const InferStructExprPathWithLocalsFn &inferStructExprPath,
                                                         const CombineNumericKindsFn &combineNumericKinds,
                                                         const EmitInstructionFn &emitInstruction,

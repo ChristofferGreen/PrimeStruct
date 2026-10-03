@@ -16,13 +16,13 @@ runEmitterExprControlIfBranchBodyHandlersStep(
     bool allowMathBare,
     const std::unordered_map<std::string, std::string> &importAliases,
     const std::unordered_map<std::string, std::string> &structTypeMap,
-    const EmitterExprControlIfBranchBodyHandlersIsReturnCallFn &isReturnCall,
+    const ExprPredicateFn &isReturnCall,
     const EmitterExprControlIfBranchBodyHandlersGetBindingInfoFn &getBindingInfo,
     const EmitterExprControlIfBranchBodyHandlersHasExplicitTypeFn &hasExplicitBindingTypeTransform,
     const EmitterExprControlIfBranchBodyHandlersInferReturnKindFn &inferPrimitiveReturnKind,
     const EmitterExprControlIfBranchBodyHandlersTypeNameForReturnKindFn &typeNameForReturnKind,
     const EmitterExprControlIfBranchBodyHandlersIsReferenceCandidateFn &isReferenceCandidate,
-    const EmitterExprControlIfBranchBodyHandlersEmitExprFn &emitExpr) {
+    const ExprStringFn &emitExpr) {
   const auto dispatchStep = runEmitterExprControlIfBranchBodyDispatchStep(
       stmt,
       isLast,

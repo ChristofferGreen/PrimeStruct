@@ -44,7 +44,7 @@ TEST_CASE("ir lowerer setup inference helpers tolerate missing callbacks") {
   CHECK(primec::ir_lowerer::resolveArrayKeyValueAccessElementKind(
             accessCall,
             {},
-            primec::ir_lowerer::IsSetupInferenceEntryArgsNameFn{},
+            primec::ir_lowerer::ExprLocalsPredicateFn{},
             kindOut) == primec::ir_lowerer::ArrayKeyValueAccessElementKindResolution::NotMatched);
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 
@@ -55,13 +55,13 @@ TEST_CASE("ir lowerer setup inference helpers tolerate missing callbacks") {
   CHECK(primec::ir_lowerer::inferBodyValueKindWithLocalsScaffolding(
             {returnCall},
             {},
-            primec::ir_lowerer::InferSetupInferenceValueKindFn{},
-            primec::ir_lowerer::IsSetupInferenceBindingMutableFn{},
+            primec::ir_lowerer::ExprLocalsValueKindFn{},
+            primec::ExprPredicateFn{},
             primec::ir_lowerer::SetupInferenceBindingKindFn{},
-            primec::ir_lowerer::HasSetupInferenceExplicitBindingTypeTransformFn{},
+            primec::ExprPredicateFn{},
             primec::ir_lowerer::SetupInferenceBindingValueKindFn{},
-            primec::ir_lowerer::ApplySetupInferenceStructInfoFn{},
-            primec::ir_lowerer::ApplySetupInferenceStructInfoFn{},
+            primec::ir_lowerer::ExprLocalInfoVisitorFn{},
+            primec::ir_lowerer::ExprLocalInfoVisitorFn{},
             primec::ir_lowerer::InferSetupInferenceStructExprPathFn{}) ==
         primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }

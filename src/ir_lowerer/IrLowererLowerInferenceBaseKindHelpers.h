@@ -40,7 +40,7 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
                                const LookupReturnInfoFn *lookupReturnInfo,
                                const SemanticProgram *semanticProgram,
                                const SemanticProductIndex *semanticIndex,
-                               const InferExprKindWithLocalsFn *fallbackInferExprKind,
+                               const ExprLocalsValueKindFn *fallbackInferExprKind,
                                LocalInfo::ValueKind &kindOut);
 
 } // namespace primec::ir_lowerer

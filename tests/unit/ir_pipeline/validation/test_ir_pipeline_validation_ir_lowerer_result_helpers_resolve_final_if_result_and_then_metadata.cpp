@@ -690,7 +690,7 @@ TEST_CASE("ir lowerer result helpers build locals-aware resolver adapters") {
   auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) {
     return false;
   };
-  const primec::ir_lowerer::InferExprKindWithLocalsFn inferExprKind = {};
+  const primec::ir_lowerer::ExprLocalsValueKindFn inferExprKind = {};
 
   const auto resolveResultExprInfo = primec::ir_lowerer::makeResolveResultExprInfoFromLocals(
       resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind);
@@ -738,7 +738,7 @@ TEST_CASE("ir lowerer result helpers resolve indexed args-pack Result expression
   auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) {
     return false;
   };
-  const primec::ir_lowerer::InferExprKindWithLocalsFn inferExprKind = {};
+  const primec::ir_lowerer::ExprLocalsValueKindFn inferExprKind = {};
 
   primec::ir_lowerer::ResultExprInfo out;
   CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
@@ -849,7 +849,7 @@ TEST_CASE("ir lowerer result helpers use semantic local Result source facts") {
   auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) {
     return false;
   };
-  const primec::ir_lowerer::InferExprKindWithLocalsFn inferExprKind = {};
+  const primec::ir_lowerer::ExprLocalsValueKindFn inferExprKind = {};
 
   primec::SemanticProgram semanticProgram;
   addBindingFact(semanticProgram, 8901, "status", "Result<bool, FileError>");
@@ -1105,7 +1105,7 @@ TEST_CASE("ir lowerer result helpers use semantic indexed args-pack Result facts
   auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) {
     return false;
   };
-  const primec::ir_lowerer::InferExprKindWithLocalsFn inferExprKind = {};
+  const primec::ir_lowerer::ExprLocalsValueKindFn inferExprKind = {};
 
   primec::SemanticProgram semanticProgram;
   addQueryResultFact(semanticProgram, 8801, "bool", "FileError");
@@ -1265,7 +1265,7 @@ TEST_CASE("ir lowerer result helpers resolve indexed args-pack file handle metho
   auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) {
     return false;
   };
-  const primec::ir_lowerer::InferExprKindWithLocalsFn inferExprKind = {};
+  const primec::ir_lowerer::ExprLocalsValueKindFn inferExprKind = {};
 
   primec::ir_lowerer::ResultExprInfo out;
   CHECK_FALSE(primec::ir_lowerer::resolveResultExprInfoFromLocals(
@@ -1330,7 +1330,7 @@ TEST_CASE("ir lowerer result helpers resolve indexed borrowed args-pack file han
   auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) {
     return false;
   };
-  const primec::ir_lowerer::InferExprKindWithLocalsFn inferExprKind = {};
+  const primec::ir_lowerer::ExprLocalsValueKindFn inferExprKind = {};
 
   primec::ir_lowerer::ResultExprInfo out;
   CHECK_FALSE(primec::ir_lowerer::resolveResultExprInfoFromLocals(

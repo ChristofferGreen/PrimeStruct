@@ -18,12 +18,12 @@ bool emitStringStatementBindingInitializer(const Expr &stmt,
                                            LocalMap &localsIn,
                                            int32_t &nextLocal,
                                            std::vector<IrInstruction> &instructions,
-                                           const IsBindingMutableFn &isBindingMutable,
+                                           const ExprPredicateFn &isBindingMutable,
                                            const std::function<int32_t(const std::string &)> &internString,
-                                           const EmitExprForBindingFn &emitExpr,
-                                           const InferBindingExprKindFn &inferExprKind,
+                                           const ExprLocalsPredicateFn &emitExpr,
+                                           const ExprLocalsValueKindFn &inferExprKind,
                                            const std::function<int32_t()> &allocTempLocal,
-                                           const IsEntryArgsNameFn &isEntryArgsName,
+                                           const ExprLocalsPredicateFn &isEntryArgsName,
                                            const std::function<void()> &emitArrayIndexOutOfBounds,
                                            std::string &error) {
   int32_t index = -1;
@@ -94,7 +94,7 @@ UninitializedStorageInitDropEmitResult tryEmitUninitializedStorageInitDropStatem
     LocalMap &localsIn,
     std::vector<IrInstruction> &instructions,
     const ResolveUninitializedStorageForStatementFn &resolveUninitializedStorage,
-    const EmitExprForBindingFn &emitExpr,
+    const ExprLocalsPredicateFn &emitExpr,
     const ResolveStructSlotLayoutForStatementFn &resolveStructSlotLayout,
     const std::function<int32_t()> &allocTempLocal,
     const EmitStructCopyFromPtrsForStatementFn &emitStructCopyFromPtrs,
@@ -318,7 +318,7 @@ UninitializedStorageTakeEmitResult tryEmitUninitializedStorageTakeStatement(
     const LocalMap &localsIn,
     std::vector<IrInstruction> &instructions,
     const ResolveUninitializedStorageForStatementFn &resolveUninitializedStorage,
-    const EmitExprForBindingFn &emitExpr) {
+    const ExprLocalsPredicateFn &emitExpr) {
   if (stmt.kind != Expr::Kind::Call || stmt.isMethodCall || !isSimpleCallName(stmt, "take") || stmt.args.size() != 1) {
     return UninitializedStorageTakeEmitResult::NotMatched;
   }
@@ -343,7 +343,7 @@ StatementPrintPathSpaceEmitResult tryEmitPrintPathSpaceStatementBuiltin(
     const LocalMap &localsIn,
     const EmitPrintArgForStatementFn &emitPrintArg,
     const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,
-    const EmitExprForBindingFn &emitExpr,
+    const ExprLocalsPredicateFn &emitExpr,
     std::vector<IrInstruction> &instructions,
     std::string &error) {
   PrintBuiltin printBuiltin;
@@ -401,8 +401,8 @@ ReturnStatementEmitResult tryEmitReturnStatement(
     const std::optional<ResultReturnInfo> &resultReturnInfo,
     bool definitionReturnsVoid,
     bool &sawReturn,
-    const EmitExprForBindingFn &emitExpr,
-    const InferBindingExprKindFn &inferExprKind,
+    const ExprLocalsPredicateFn &emitExpr,
+    const ExprLocalsValueKindFn &inferExprKind,
     const ResolveResultExprInfoWithLocalsFn &resolveResultExprInfo,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferArrayElementKind,
     const std::function<void()> &emitFileScopeCleanupAll,
@@ -678,8 +678,8 @@ ReturnStatementEmitResult tryEmitReturnStatement(
     const std::optional<ResultReturnInfo> &resultReturnInfo,
     bool definitionReturnsVoid,
     bool &sawReturn,
-    const EmitExprForBindingFn &emitExpr,
-    const InferBindingExprKindFn &inferExprKind,
+    const ExprLocalsPredicateFn &emitExpr,
+    const ExprLocalsValueKindFn &inferExprKind,
     const ResolveResultExprInfoWithLocalsFn &resolveResultExprInfo,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferArrayElementKind,
     const std::function<void()> &emitFileScopeCleanupAll,
@@ -702,8 +702,8 @@ ReturnStatementEmitResult tryEmitReturnStatement(
 
 StatementMatchIfEmitResult tryEmitMatchIfStatement(const Expr &stmt,
                                                    LocalMap &localsIn,
-                                                   const EmitExprForBindingFn &emitExpr,
-                                                   const InferBindingExprKindFn &inferExprKind,
+                                                   const ExprLocalsPredicateFn &emitExpr,
+                                                   const ExprLocalsValueKindFn &inferExprKind,
                                                    const EmitBlockForBindingFn &emitBlock,
                                                    const EmitStatementForBindingFn &emitStatement,
                                                    std::vector<IrInstruction> &instructions,

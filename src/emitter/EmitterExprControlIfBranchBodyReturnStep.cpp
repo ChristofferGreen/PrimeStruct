@@ -9,8 +9,8 @@ EmitterExprControlIfBranchBodyReturnStepResult
 runEmitterExprControlIfBranchBodyReturnStep(
     const Expr &stmt,
     bool isLast,
-    const EmitterExprControlIfBranchBodyReturnIsReturnCallFn &isReturnCall,
-    const EmitterExprControlIfBranchBodyReturnEmitExprFn &emitExpr) {
+    const ExprPredicateFn &isReturnCall,
+    const ExprStringFn &emitExpr) {
   if (!isReturnCall || !emitExpr) {
     return {};
   }

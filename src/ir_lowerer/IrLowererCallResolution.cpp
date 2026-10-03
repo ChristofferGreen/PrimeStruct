@@ -222,7 +222,7 @@ std::string resolveCallPathWithoutSemanticFallbackProbes(const Expr &expr) {
 
 const Definition *resolveDefinitionCall(const Expr &callExpr,
                                         const std::unordered_map<std::string, const Definition *> &defMap,
-                                        const ResolveExprPathFn &resolveExprPath,
+                                        const ExprStringFn &resolveExprPath,
                                         const SemanticProgram *semanticProgram) {
   (void)semanticProgram;
   if (callExpr.kind != Expr::Kind::Call || callExpr.isBinding || callExpr.isMethodCall ||
@@ -275,7 +275,7 @@ const Definition *resolveDefinitionCall(const Expr &callExpr,
 
 ResolveDefinitionCallFn makeResolveDefinitionCall(
     const std::unordered_map<std::string, const Definition *> &defMap,
-    const ResolveExprPathFn &resolveExprPath,
+    const ExprStringFn &resolveExprPath,
     const SemanticProgram *semanticProgram) {
   return [defMap, resolveExprPath, semanticProgram](const Expr &expr) {
     return resolveDefinitionCall(expr, defMap, resolveExprPath, semanticProgram);
@@ -770,13 +770,13 @@ EntryCallResolutionSetup buildEntryCallResolutionSetup(
   return setup;
 }
 
-ResolveExprPathFn makeResolveCallPathFromScope(
+ExprStringFn makeResolveCallPathFromScope(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::unordered_map<std::string, std::string> &importAliases) {
   return makeResolveCallPathFromScope(defMap, importAliases, nullptr);
 }
 
-ResolveExprPathFn makeResolveCallPathFromScope(
+ExprStringFn makeResolveCallPathFromScope(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::unordered_map<std::string, std::string> &importAliases,
     const SemanticProgram *semanticProgram) {
@@ -835,9 +835,9 @@ ResolveExprPathFn makeResolveCallPathFromScope(
   };
 }
 
-IsTailCallCandidateFn makeIsTailCallCandidate(
+ExprPredicateFn makeIsTailCallCandidate(
     const std::unordered_map<std::string, const Definition *> &defMap,
-    const ResolveExprPathFn &resolveExprPath) {
+    const ExprStringFn &resolveExprPath) {
   return [defMap, resolveExprPath](const Expr &expr) {
     return isTailCallCandidate(expr, defMap, resolveExprPath);
   };
@@ -885,7 +885,7 @@ std::string resolveCallPathFromScope(
 
 bool isTailCallCandidate(const Expr &expr,
                          const std::unordered_map<std::string, const Definition *> &defMap,
-                         const ResolveExprPathFn &resolveExprPath) {
+                         const ExprStringFn &resolveExprPath) {
   if (expr.kind != Expr::Kind::Call || expr.isMethodCall || !resolveExprPath) {
     return false;
   }
@@ -895,7 +895,7 @@ bool isTailCallCandidate(const Expr &expr,
 
 bool hasTailExecutionCandidate(const std::vector<Expr> &statements,
                                bool definitionReturnsVoid,
-                               const IsTailCallCandidateFn &isTailCallCandidateFn) {
+                               const ExprPredicateFn &isTailCallCandidateFn) {
   if (statements.empty() || !isTailCallCandidateFn) {
     return false;
   }

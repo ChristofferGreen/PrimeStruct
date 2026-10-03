@@ -8,26 +8,25 @@
 #include "IrLowererSharedTypes.h"
 #include "primec/ast/Ast.h"
 #include "primec/ir/Ir.h"
+#include "primec/support/CallbackTypes.h"
 
 namespace primec::ir_lowerer {
 
 enum class OperatorClampMinMaxTrigEmitResult { Handled, NotHandled, Error };
 
-using EmitClampMinMaxTrigExprWithLocalsFn = std::function<bool(const Expr &, const LocalMap &)>;
 using InferClampMinMaxTrigExprKindWithLocalsFn =
     std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)>;
 using CombineClampMinMaxTrigNumericKindsFn =
     std::function<LocalInfo::ValueKind(LocalInfo::ValueKind, LocalInfo::ValueKind)>;
-using AllocClampMinMaxTrigTempLocalFn = std::function<int32_t()>;
 
 OperatorClampMinMaxTrigEmitResult emitClampMinMaxTrigOperatorExpr(
     const Expr &expr,
     const LocalMap &localsIn,
     bool hasMathImport,
-    const EmitClampMinMaxTrigExprWithLocalsFn &emitExpr,
+    const ExprLocalsPredicateFn &emitExpr,
     const InferClampMinMaxTrigExprKindWithLocalsFn &inferExprKind,
     const CombineClampMinMaxTrigNumericKindsFn &combineNumericKinds,
-    const AllocClampMinMaxTrigTempLocalFn &allocTempLocal,
+    const Int32ProviderFn &allocTempLocal,
     std::vector<IrInstruction> &instructions,
     std::string &error);
 

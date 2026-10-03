@@ -83,8 +83,8 @@ FileConstructorCallEmitResult tryEmitFileConstructorCall(
     const LocalMap &localsIn,
     const ResolveStringTableTargetWithLocalsForWriteFn &resolveStringTableTarget,
     const InferExprKindWithLocalsForWriteFn &inferExprKind,
-    const EmitExprWithLocalsForWriteFn &emitExpr,
-    const IsEntryArgsNameWithLocalsForWriteFn &isEntryArgsName,
+    const ExprLocalsPredicateFn &emitExpr,
+    const ExprLocalsPredicateFn &isEntryArgsName,
     const EmitInstructionForWriteFn &emitInstruction,
     std::string &error) {
   const std::string directPath = resolveScopedExprPath(expr);
@@ -206,7 +206,7 @@ bool emitFileWriteStep(const Expr &arg,
                        int32_t errorLocal,
                        const ResolveStringTableTargetForWriteFn &resolveStringTableTarget,
                        const InferExprKindForWriteFn &inferExprKind,
-                       const EmitExprForWriteFn &emitExpr,
+                       const ExprPredicateFn &emitExpr,
                        const EmitInstructionForWriteFn &emitInstruction,
                        std::string &error) {
   if (arg.kind == Expr::Kind::StringLiteral) {
@@ -260,7 +260,7 @@ bool emitFileWriteStep(const Expr &arg,
 bool emitFileWriteCall(const Expr &expr,
                        int32_t handleIndex,
                        const EmitFileWriteStepFn &emitWriteStep,
-                       const AllocTempLocalForWriteFn &allocTempLocal,
+                       const Int32ProviderFn &allocTempLocal,
                        const EmitInstructionForWriteFn &emitInstruction,
                        const GetInstructionCountForWriteFn &getInstructionCount,
                        const PatchInstructionImmForWriteFn &patchInstructionImm) {
@@ -297,7 +297,7 @@ bool emitFileWriteCall(const Expr &expr,
 
 bool emitFileWriteByteCall(const Expr &expr,
                            int32_t handleIndex,
-                           const EmitExprForWriteFn &emitExpr,
+                           const ExprPredicateFn &emitExpr,
                            const EmitInstructionForWriteFn &emitInstruction,
                            std::string &error) {
   if (expr.args.size() != 2) {
@@ -315,7 +315,7 @@ bool emitFileWriteByteCall(const Expr &expr,
 bool emitFileReadByteCall(const Expr &expr,
                           const LocalMap &localsIn,
                           int32_t handleIndex,
-                          const AllocTempLocalForWriteFn &allocTempLocal,
+                          const Int32ProviderFn &allocTempLocal,
                           const EmitInstructionForWriteFn &emitInstruction,
                           const GetInstructionCountForWriteFn &getInstructionCount,
                           const PatchInstructionImmForWriteFn &patchInstructionImm,
@@ -385,8 +385,8 @@ bool emitFileReadByteCall(const Expr &expr,
 
 bool emitFileWriteBytesCall(const Expr &expr,
                             int32_t handleIndex,
-                            const EmitExprForWriteFn &emitExpr,
-                            const AllocTempLocalForWriteFn &allocTempLocal,
+                            const ExprPredicateFn &emitExpr,
+                            const Int32ProviderFn &allocTempLocal,
                             const EmitInstructionForWriteFn &emitInstruction,
                             const GetInstructionCountForWriteFn &getInstructionCount,
                             const PatchInstructionImmForWriteFn &patchInstructionImm,
@@ -406,8 +406,8 @@ bool emitFileWriteBytesCall(const Expr &expr,
 
 bool emitFileWriteBytesLoop(const Expr &bytesExpr,
                             int32_t handleIndex,
-                            const EmitExprForWriteFn &emitExpr,
-                            const AllocTempLocalForWriteFn &allocTempLocal,
+                            const ExprPredicateFn &emitExpr,
+                            const Int32ProviderFn &allocTempLocal,
                             const EmitInstructionForWriteFn &emitInstruction,
                             const GetInstructionCountForWriteFn &getInstructionCount,
                             const PatchInstructionImmForWriteFn &patchInstructionImm) {
@@ -467,11 +467,11 @@ bool emitFileWriteBytesLoop(const Expr &bytesExpr,
 FileHandleMethodCallEmitResult tryEmitFileHandleMethodCall(
     const Expr &expr,
     const LocalMap &localsIn,
-    const ShouldBypassBuiltinFileMethodWithLocalsFn &shouldBypassBuiltin,
+    const ExprLocalsPredicateFn &shouldBypassBuiltin,
     const ResolveStringTableTargetWithLocalsForWriteFn &resolveStringTableTarget,
     const InferExprKindWithLocalsForWriteFn &inferExprKind,
-    const EmitExprWithLocalsForWriteFn &emitExpr,
-    const AllocTempLocalForWriteFn &allocTempLocal,
+    const ExprLocalsPredicateFn &emitExpr,
+    const Int32ProviderFn &allocTempLocal,
     const EmitInstructionForWriteFn &emitInstruction,
     const GetInstructionCountForWriteFn &getInstructionCount,
     const PatchInstructionImmForWriteFn &patchInstructionImm,
@@ -629,7 +629,7 @@ void emitFileFlushCall(int32_t handleIndex, const EmitInstructionForWriteFn &emi
 }
 
 void emitFileCloseCall(int32_t handleIndex,
-                       const AllocTempLocalForWriteFn &allocTempLocal,
+                       const Int32ProviderFn &allocTempLocal,
                        const EmitInstructionForWriteFn &emitInstruction) {
   const int32_t errorLocal = allocTempLocal();
   emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(handleIndex));

@@ -30,7 +30,7 @@ std::optional<bool> tryLowerEmitExprCollectionHelpers(
     const std::function<int32_t()> &allocTempLocal,
     const std::function<bool(int32_t, int32_t, int32_t)> &emitStructCopySlots,
     const ResolveDefinitionCallFn &resolveDefinitionCall,
-    const ResolveExprPathFn &resolveExprPath,
+    const ExprStringFn &resolveExprPath,
     const ResolveInlineParameterStructSlotLayoutFn &resolveStructSlotLayout,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
     const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath,

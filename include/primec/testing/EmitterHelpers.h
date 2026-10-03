@@ -8,6 +8,7 @@
 
 #include "primec/ast/Ast.h"
 #include "primec/backend/Emitter.h"
+#include "primec/support/CallbackTypes.h"
 
 namespace primec::emitter {
 
@@ -146,11 +147,10 @@ std::optional<std::string> runEmitterExprControlIntegerLiteralStep(const Expr &e
 std::optional<std::string> runEmitterExprControlBoolLiteralStep(const Expr &expr);
 std::optional<std::string> runEmitterExprControlStringLiteralStep(const Expr &expr);
 
-using EmitFieldAccessReceiverFn = std::function<std::string(const Expr &)>;
 using ResolveFieldAccessStaticReceiverFn = std::function<std::optional<std::string>(const Expr &)>;
 std::optional<std::string> runEmitterExprControlFieldAccessStep(
     const Expr &expr,
-    const EmitFieldAccessReceiverFn &emitReceiverExpr,
+    const ExprStringFn &emitReceiverExpr,
     const ResolveFieldAccessStaticReceiverFn &resolveStaticReceiverExpr);
 
 std::optional<std::string> runEmitterExprControlCallPathStep(
@@ -172,7 +172,6 @@ std::optional<std::string> runEmitterExprControlMethodPathStep(
 using EmitterExprControlCountRewriteIsCountLikeCallFn =
     std::function<bool(const Expr &, const std::unordered_map<std::string, Emitter::BindingInfo> &)>;
 using EmitterExprControlCountRewriteResolveMethodPathFn = std::function<bool(const Expr &, std::string &)>;
-using EmitterExprControlCountRewriteIsCollectionAccessReceiverFn = std::function<bool(const Expr &)>;
 std::optional<std::string> runEmitterExprControlCountRewriteStep(
     const Expr &expr,
     const std::string &resolvedPath,
@@ -181,7 +180,7 @@ std::optional<std::string> runEmitterExprControlCountRewriteStep(
     const EmitterExprControlCountRewriteIsCountLikeCallFn &isArrayCountCall,
     const EmitterExprControlCountRewriteIsCountLikeCallFn &isStringCountCall,
     const EmitterExprControlCountRewriteResolveMethodPathFn &resolveMethodPath,
-    const EmitterExprControlCountRewriteIsCollectionAccessReceiverFn &isCollectionAccessReceiverExpr = {});
+    const ExprPredicateFn &isCollectionAccessReceiverExpr = {});
 
 using EmitterExprControlBuiltinBlockPreludeIsBuiltinBlockFn =
     std::function<bool(const Expr &, const std::unordered_map<std::string, std::string> &)>;
@@ -197,8 +196,6 @@ EmitterExprControlBuiltinBlockPreludeStepResult runEmitterExprControlBuiltinBloc
     const EmitterExprControlBuiltinBlockPreludeIsBuiltinBlockFn &isBuiltinBlock,
     const EmitterExprControlBuiltinBlockPreludeHasNamedArgumentsFn &hasNamedArguments);
 
-using EmitterExprControlBuiltinBlockEarlyReturnIsReturnCallFn = std::function<bool(const Expr &)>;
-using EmitterExprControlBuiltinBlockEarlyReturnEmitExprFn = std::function<std::string(const Expr &)>;
 struct EmitterExprControlBuiltinBlockEarlyReturnStepResult {
   bool handled = false;
   std::string emittedStatement;
@@ -206,11 +203,9 @@ struct EmitterExprControlBuiltinBlockEarlyReturnStepResult {
 EmitterExprControlBuiltinBlockEarlyReturnStepResult runEmitterExprControlBuiltinBlockEarlyReturnStep(
     const Expr &stmt,
     bool isLast,
-    const EmitterExprControlBuiltinBlockEarlyReturnIsReturnCallFn &isReturnCall,
-    const EmitterExprControlBuiltinBlockEarlyReturnEmitExprFn &emitExpr);
+    const ExprPredicateFn &isReturnCall,
+    const ExprStringFn &emitExpr);
 
-using EmitterExprControlBuiltinBlockFinalValueIsReturnCallFn = std::function<bool(const Expr &)>;
-using EmitterExprControlBuiltinBlockFinalValueEmitExprFn = std::function<std::string(const Expr &)>;
 struct EmitterExprControlBuiltinBlockFinalValueStepResult {
   bool handled = false;
   std::string emittedStatement;
@@ -218,8 +213,8 @@ struct EmitterExprControlBuiltinBlockFinalValueStepResult {
 EmitterExprControlBuiltinBlockFinalValueStepResult runEmitterExprControlBuiltinBlockFinalValueStep(
     const Expr &stmt,
     bool isLast,
-    const EmitterExprControlBuiltinBlockFinalValueIsReturnCallFn &isReturnCall,
-    const EmitterExprControlBuiltinBlockFinalValueEmitExprFn &emitExpr);
+    const ExprPredicateFn &isReturnCall,
+    const ExprStringFn &emitExpr);
 
 using EmitterExprControlBuiltinBlockBindingPreludeGetBindingInfoFn =
     std::function<Emitter::BindingInfo(const Expr &)>;
@@ -260,7 +255,6 @@ EmitterExprControlBuiltinBlockBindingQualifiersStepResult runEmitterExprControlB
     bool hasInitializer,
     const EmitterExprControlBuiltinBlockBindingQualifiersIsReferenceCandidateFn &isReferenceCandidate);
 
-using EmitterExprControlBuiltinBlockBindingAutoEmitExprFn = std::function<std::string(const Expr &)>;
 struct EmitterExprControlBuiltinBlockBindingAutoStepResult {
   bool handled = false;
   std::string emittedStatement;
@@ -269,9 +263,8 @@ EmitterExprControlBuiltinBlockBindingAutoStepResult runEmitterExprControlBuiltin
     const Expr &stmt,
     const Emitter::BindingInfo &binding,
     bool useAuto,
-    const EmitterExprControlBuiltinBlockBindingAutoEmitExprFn &emitExpr);
+    const ExprStringFn &emitExpr);
 
-using EmitterExprControlBuiltinBlockBindingExplicitEmitExprFn = std::function<std::string(const Expr &)>;
 struct EmitterExprControlBuiltinBlockBindingExplicitStepResult {
   bool handled = false;
   std::string emittedStatement;
@@ -285,9 +278,8 @@ EmitterExprControlBuiltinBlockBindingExplicitStepResult runEmitterExprControlBui
     const std::string &namespacePrefix,
     const std::unordered_map<std::string, std::string> &importAliases,
     const std::unordered_map<std::string, std::string> &structTypeMap,
-    const EmitterExprControlBuiltinBlockBindingExplicitEmitExprFn &emitExpr);
+    const ExprStringFn &emitExpr);
 
-using EmitterExprControlBuiltinBlockBindingFallbackEmitExprFn = std::function<std::string(const Expr &)>;
 struct EmitterExprControlBuiltinBlockBindingFallbackStepResult {
   bool handled = false;
   std::string emittedStatement;
@@ -297,30 +289,26 @@ EmitterExprControlBuiltinBlockBindingFallbackStepResult runEmitterExprControlBui
     bool hasExplicitType,
     bool needsConst,
     bool useRef,
-    const EmitterExprControlBuiltinBlockBindingFallbackEmitExprFn &emitExpr);
+    const ExprStringFn &emitExpr);
 
-using EmitterExprControlBuiltinBlockStatementEmitExprFn = std::function<std::string(const Expr &)>;
 struct EmitterExprControlBuiltinBlockStatementStepResult {
   bool handled = false;
   std::string emittedStatement;
 };
 EmitterExprControlBuiltinBlockStatementStepResult runEmitterExprControlBuiltinBlockStatementStep(
     const Expr &stmt,
-    const EmitterExprControlBuiltinBlockStatementEmitExprFn &emitExpr);
+    const ExprStringFn &emitExpr);
 
 using EmitterExprControlBodyWrapperIsBuiltinBlockFn =
     std::function<bool(const Expr &, const std::unordered_map<std::string, std::string> &)>;
-using EmitterExprControlBodyWrapperEmitExprFn = std::function<std::string(const Expr &)>;
 std::optional<std::string> runEmitterExprControlBodyWrapperStep(
     const Expr &expr,
     const std::unordered_map<std::string, std::string> &nameMap,
     const EmitterExprControlBodyWrapperIsBuiltinBlockFn &isBuiltinBlock,
-    const EmitterExprControlBodyWrapperEmitExprFn &emitExpr);
+    const ExprStringFn &emitExpr);
 
 bool runEmitterExprControlIfBlockEnvelopeStep(const Expr &candidate);
 
-using EmitterExprControlIfBlockEarlyReturnIsReturnCallFn = std::function<bool(const Expr &)>;
-using EmitterExprControlIfBlockEarlyReturnEmitExprFn = std::function<std::string(const Expr &)>;
 struct EmitterExprControlIfBlockEarlyReturnStepResult {
   bool handled = false;
   std::string emittedStatement;
@@ -328,11 +316,9 @@ struct EmitterExprControlIfBlockEarlyReturnStepResult {
 EmitterExprControlIfBlockEarlyReturnStepResult runEmitterExprControlIfBlockEarlyReturnStep(
     const Expr &stmt,
     bool isLast,
-    const EmitterExprControlIfBlockEarlyReturnIsReturnCallFn &isReturnCall,
-    const EmitterExprControlIfBlockEarlyReturnEmitExprFn &emitExpr);
+    const ExprPredicateFn &isReturnCall,
+    const ExprStringFn &emitExpr);
 
-using EmitterExprControlIfBlockFinalValueIsReturnCallFn = std::function<bool(const Expr &)>;
-using EmitterExprControlIfBlockFinalValueEmitExprFn = std::function<std::string(const Expr &)>;
 struct EmitterExprControlIfBlockFinalValueStepResult {
   bool handled = false;
   std::string emittedStatement;
@@ -340,8 +326,8 @@ struct EmitterExprControlIfBlockFinalValueStepResult {
 EmitterExprControlIfBlockFinalValueStepResult runEmitterExprControlIfBlockFinalValueStep(
     const Expr &stmt,
     bool isLast,
-    const EmitterExprControlIfBlockFinalValueIsReturnCallFn &isReturnCall,
-    const EmitterExprControlIfBlockFinalValueEmitExprFn &emitExpr);
+    const ExprPredicateFn &isReturnCall,
+    const ExprStringFn &emitExpr);
 
 using EmitterExprControlIfBlockBindingPreludeGetBindingInfoFn =
     std::function<Emitter::BindingInfo(const Expr &)>;
@@ -382,7 +368,6 @@ EmitterExprControlIfBlockBindingQualifiersStepResult runEmitterExprControlIfBloc
     bool hasInitializer,
     const EmitterExprControlIfBlockBindingQualifiersIsReferenceCandidateFn &isReferenceCandidate);
 
-using EmitterExprControlIfBlockBindingAutoEmitExprFn = std::function<std::string(const Expr &)>;
 struct EmitterExprControlIfBlockBindingAutoStepResult {
   bool handled = false;
   std::string emittedStatement;
@@ -391,9 +376,8 @@ EmitterExprControlIfBlockBindingAutoStepResult runEmitterExprControlIfBlockBindi
     const Expr &stmt,
     const Emitter::BindingInfo &binding,
     bool useAuto,
-    const EmitterExprControlIfBlockBindingAutoEmitExprFn &emitExpr);
+    const ExprStringFn &emitExpr);
 
-using EmitterExprControlIfBlockBindingExplicitEmitExprFn = std::function<std::string(const Expr &)>;
 struct EmitterExprControlIfBlockBindingExplicitStepResult {
   bool handled = false;
   std::string emittedStatement;
@@ -407,9 +391,8 @@ EmitterExprControlIfBlockBindingExplicitStepResult runEmitterExprControlIfBlockB
     const std::string &namespacePrefix,
     const std::unordered_map<std::string, std::string> &importAliases,
     const std::unordered_map<std::string, std::string> &structTypeMap,
-    const EmitterExprControlIfBlockBindingExplicitEmitExprFn &emitExpr);
+    const ExprStringFn &emitExpr);
 
-using EmitterExprControlIfBlockBindingFallbackEmitExprFn = std::function<std::string(const Expr &)>;
 struct EmitterExprControlIfBlockBindingFallbackStepResult {
   bool handled = false;
   std::string emittedStatement;
@@ -419,16 +402,15 @@ EmitterExprControlIfBlockBindingFallbackStepResult runEmitterExprControlIfBlockB
     bool hasExplicitType,
     bool needsConst,
     bool useRef,
-    const EmitterExprControlIfBlockBindingFallbackEmitExprFn &emitExpr);
+    const ExprStringFn &emitExpr);
 
-using EmitterExprControlIfBlockStatementEmitExprFn = std::function<std::string(const Expr &)>;
 struct EmitterExprControlIfBlockStatementStepResult {
   bool handled = false;
   std::string emittedStatement;
 };
 EmitterExprControlIfBlockStatementStepResult runEmitterExprControlIfBlockStatementStep(
     const Expr &stmt,
-    const EmitterExprControlIfBlockStatementEmitExprFn &emitExpr);
+    const ExprStringFn &emitExpr);
 
 struct EmitterExprControlIfBranchBodyEmitResult {
   bool handled = false;
@@ -445,16 +427,14 @@ EmitterExprControlIfBranchBodyStepResult runEmitterExprControlIfBranchBodyStep(
     const Expr &candidate,
     const EmitterExprControlIfBranchBodyEmitStatementFn &emitStatement);
 
-using EmitterExprControlIfBranchPreludeIsBlockEnvelopeFn = std::function<bool(const Expr &)>;
-using EmitterExprControlIfBranchPreludeEmitExprFn = std::function<std::string(const Expr &)>;
 struct EmitterExprControlIfBranchPreludeStepResult {
   bool handled = false;
   std::string emittedExpr;
 };
 EmitterExprControlIfBranchPreludeStepResult runEmitterExprControlIfBranchPreludeStep(
     const Expr &candidate,
-    const EmitterExprControlIfBranchPreludeIsBlockEnvelopeFn &isBlockEnvelope,
-    const EmitterExprControlIfBranchPreludeEmitExprFn &emitExpr);
+    const ExprPredicateFn &isBlockEnvelope,
+    const ExprStringFn &emitExpr);
 
 using EmitterExprControlIfBranchWrapperEmitBodyFn = std::function<std::string()>;
 struct EmitterExprControlIfBranchWrapperStepResult {
@@ -464,8 +444,6 @@ struct EmitterExprControlIfBranchWrapperStepResult {
 EmitterExprControlIfBranchWrapperStepResult runEmitterExprControlIfBranchWrapperStep(
     const EmitterExprControlIfBranchWrapperEmitBodyFn &emitBody);
 
-using EmitterExprControlIfBranchBodyReturnIsReturnCallFn = std::function<bool(const Expr &)>;
-using EmitterExprControlIfBranchBodyReturnEmitExprFn = std::function<std::string(const Expr &)>;
 struct EmitterExprControlIfBranchBodyReturnStepResult {
   bool handled = false;
   EmitterExprControlIfBranchBodyEmitResult emitted;
@@ -473,8 +451,8 @@ struct EmitterExprControlIfBranchBodyReturnStepResult {
 EmitterExprControlIfBranchBodyReturnStepResult runEmitterExprControlIfBranchBodyReturnStep(
     const Expr &stmt,
     bool isLast,
-    const EmitterExprControlIfBranchBodyReturnIsReturnCallFn &isReturnCall,
-    const EmitterExprControlIfBranchBodyReturnEmitExprFn &emitExpr);
+    const ExprPredicateFn &isReturnCall,
+    const ExprStringFn &emitExpr);
 
 using EmitterExprControlIfBranchBodyBindingGetBindingInfoFn =
     std::function<Emitter::BindingInfo(const Expr &)>;
@@ -526,7 +504,6 @@ EmitterExprControlIfBranchBodyDispatchStepResult runEmitterExprControlIfBranchBo
     const EmitterExprControlIfBranchBodyDispatchBindingFn &emitBinding,
     const EmitterExprControlIfBranchBodyDispatchStatementFn &emitStatement);
 
-using EmitterExprControlIfBranchBodyHandlersIsReturnCallFn = std::function<bool(const Expr &)>;
 using EmitterExprControlIfBranchBodyHandlersGetBindingInfoFn =
     std::function<Emitter::BindingInfo(const Expr &)>;
 using EmitterExprControlIfBranchBodyHandlersHasExplicitTypeFn =
@@ -540,7 +517,6 @@ using EmitterExprControlIfBranchBodyHandlersTypeNameForReturnKindFn =
     std::function<std::string(Emitter::ReturnKind)>;
 using EmitterExprControlIfBranchBodyHandlersIsReferenceCandidateFn =
     std::function<bool(const Emitter::BindingInfo &)>;
-using EmitterExprControlIfBranchBodyHandlersEmitExprFn = std::function<std::string(const Expr &)>;
 struct EmitterExprControlIfBranchBodyHandlersStepResult {
   bool handled = false;
   EmitterExprControlIfBranchBodyEmitResult emitted;
@@ -553,16 +529,14 @@ EmitterExprControlIfBranchBodyHandlersStepResult runEmitterExprControlIfBranchBo
     bool allowMathBare,
     const std::unordered_map<std::string, std::string> &importAliases,
     const std::unordered_map<std::string, std::string> &structTypeMap,
-    const EmitterExprControlIfBranchBodyHandlersIsReturnCallFn &isReturnCall,
+    const ExprPredicateFn &isReturnCall,
     const EmitterExprControlIfBranchBodyHandlersGetBindingInfoFn &getBindingInfo,
     const EmitterExprControlIfBranchBodyHandlersHasExplicitTypeFn &hasExplicitBindingTypeTransform,
     const EmitterExprControlIfBranchBodyHandlersInferReturnKindFn &inferPrimitiveReturnKind,
     const EmitterExprControlIfBranchBodyHandlersTypeNameForReturnKindFn &typeNameForReturnKind,
     const EmitterExprControlIfBranchBodyHandlersIsReferenceCandidateFn &isReferenceCandidate,
-    const EmitterExprControlIfBranchBodyHandlersEmitExprFn &emitExpr);
+    const ExprStringFn &emitExpr);
 
-using EmitterExprControlIfBranchValueIsEnvelopeFn = std::function<bool(const Expr &)>;
-using EmitterExprControlIfBranchValueEmitExprFn = std::function<std::string(const Expr &)>;
 using EmitterExprControlIfBranchValueEmitStatementFn =
     std::function<EmitterExprControlIfBranchBodyEmitResult(const Expr &, bool isLast)>;
 struct EmitterExprControlIfBranchValueStepResult {
@@ -571,14 +545,11 @@ struct EmitterExprControlIfBranchValueStepResult {
 };
 EmitterExprControlIfBranchValueStepResult runEmitterExprControlIfBranchValueStep(
     const Expr &candidate,
-    const EmitterExprControlIfBranchValueIsEnvelopeFn &isIfBlockEnvelope,
-    const EmitterExprControlIfBranchValueEmitExprFn &emitExpr,
+    const ExprPredicateFn &isIfBlockEnvelope,
+    const ExprStringFn &emitExpr,
     const EmitterExprControlIfBranchValueEmitStatementFn &emitStatement);
 
-using EmitterExprControlIfBranchEmitIsEnvelopeFn = std::function<bool(const Expr &)>;
-using EmitterExprControlIfBranchEmitIsReturnCallFn = std::function<bool(const Expr &)>;
 using EmitterExprControlIfBranchEmitGetBindingInfoFn = std::function<Emitter::BindingInfo(const Expr &)>;
-using EmitterExprControlIfBranchEmitHasExplicitTypeFn = std::function<bool(const Expr &)>;
 using EmitterExprControlIfBranchEmitInferReturnKindFn =
     std::function<Emitter::ReturnKind(const Expr &,
                                       const std::unordered_map<std::string, Emitter::BindingInfo> &,
@@ -588,7 +559,6 @@ using EmitterExprControlIfBranchEmitTypeNameForReturnKindFn =
     std::function<std::string(Emitter::ReturnKind)>;
 using EmitterExprControlIfBranchEmitIsReferenceCandidateFn =
     std::function<bool(const Emitter::BindingInfo &)>;
-using EmitterExprControlIfBranchEmitEmitExprFn = std::function<std::string(const Expr &)>;
 struct EmitterExprControlIfBranchEmitStepResult {
   bool handled = false;
   std::string emittedExpr;
@@ -600,23 +570,22 @@ EmitterExprControlIfBranchEmitStepResult runEmitterExprControlIfBranchEmitStep(
     bool allowMathBare,
     const std::unordered_map<std::string, std::string> &importAliases,
     const std::unordered_map<std::string, std::string> &structTypeMap,
-    const EmitterExprControlIfBranchEmitIsEnvelopeFn &isIfBlockEnvelope,
-    const EmitterExprControlIfBranchEmitIsReturnCallFn &isReturnCall,
+    const ExprPredicateFn &isIfBlockEnvelope,
+    const ExprPredicateFn &isReturnCall,
     const EmitterExprControlIfBranchEmitGetBindingInfoFn &getBindingInfo,
-    const EmitterExprControlIfBranchEmitHasExplicitTypeFn &hasExplicitBindingTypeTransform,
+    const ExprPredicateFn &hasExplicitBindingTypeTransform,
     const EmitterExprControlIfBranchEmitInferReturnKindFn &inferPrimitiveReturnKind,
     const EmitterExprControlIfBranchEmitTypeNameForReturnKindFn &typeNameForReturnKind,
     const EmitterExprControlIfBranchEmitIsReferenceCandidateFn &isReferenceCandidate,
-    const EmitterExprControlIfBranchEmitEmitExprFn &emitExpr);
+    const ExprStringFn &emitExpr);
 
-using EmitterExprControlIfBranchBodyStatementEmitExprFn = std::function<std::string(const Expr &)>;
 struct EmitterExprControlIfBranchBodyStatementStepResult {
   bool handled = false;
   EmitterExprControlIfBranchBodyEmitResult emitted;
 };
 EmitterExprControlIfBranchBodyStatementStepResult runEmitterExprControlIfBranchBodyStatementStep(
     const Expr &stmt,
-    const EmitterExprControlIfBranchBodyStatementEmitExprFn &emitExpr);
+    const ExprStringFn &emitExpr);
 
 using EmitterExprControlIfTernaryEmitConditionFn = std::function<std::string()>;
 using EmitterExprControlIfTernaryEmitThenFn = std::function<std::string()>;

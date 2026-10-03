@@ -21,8 +21,8 @@ namespace {
 // parameter, runtime-computed) instead of re-deriving it here.
 bool emitStringEqualityComparison(const Expr &expr,
                                   const LocalMap &localsIn,
-                                  const EmitComparisonExprWithLocalsFn &emitExpr,
-                                  const ComparisonAllocTempLocalFn &allocTempLocal,
+                                  const ExprLocalsPredicateFn &emitExpr,
+                                  const Int32ProviderFn &allocTempLocal,
                                   const EmitComparisonToZeroFn &emitCompareToZero,
                                   bool negate,
                                   std::vector<IrInstruction> &instructions) {
@@ -162,11 +162,11 @@ bool emitStringEqualityComparison(const Expr &expr,
 
 OperatorComparisonEmitResult emitComparisonOperatorExpr(const Expr &expr,
                                                         const LocalMap &localsIn,
-                                                        const EmitComparisonExprWithLocalsFn &emitExpr,
-                                                        const InferComparisonExprKindWithLocalsFn &inferExprKind,
+                                                        const ExprLocalsPredicateFn &emitExpr,
+                                                        const ExprLocalsValueKindFn &inferExprKind,
                                                         const ComparisonKindFn &comparisonKind,
                                                         const EmitComparisonToZeroFn &emitCompareToZero,
-                                                        const ComparisonAllocTempLocalFn &allocTempLocal,
+                                                        const Int32ProviderFn &allocTempLocal,
                                                         std::vector<IrInstruction> &instructions,
                                                         std::string &error) {
   auto inferConditionKind = [&](const Expr &candidate) {

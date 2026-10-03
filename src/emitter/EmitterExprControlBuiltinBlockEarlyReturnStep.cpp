@@ -5,8 +5,8 @@ namespace primec::emitter {
 EmitterExprControlBuiltinBlockEarlyReturnStepResult runEmitterExprControlBuiltinBlockEarlyReturnStep(
     const Expr &stmt,
     bool isLast,
-    const EmitterExprControlBuiltinBlockEarlyReturnIsReturnCallFn &isReturnCall,
-    const EmitterExprControlBuiltinBlockEarlyReturnEmitExprFn &emitExpr) {
+    const ExprPredicateFn &isReturnCall,
+    const ExprStringFn &emitExpr) {
   if (isLast || !isReturnCall || !isReturnCall(stmt)) {
     return {};
   }

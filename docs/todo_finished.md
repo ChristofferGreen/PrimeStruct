@@ -1924,6 +1924,7 @@ are left unarchived.
 | TODO-5397 | Fix stale string-model statements in AGENTS.md and the VM spec | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
 | TODO-5399 | Hoist the duplicated TemplateMonomorph using-block into one header | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
 | TODO-5400 | Table-drive the builtin math-name classifiers | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
+| TODO-5401 | Collapse duplicate std::function callback aliases | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
 | TODO-5407 | Route benchmark instrumentation through one sink | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
 | TODO-5410 | Add self-tests for the nine unguarded check scripts | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
 | TODO-5416 | Make ratchet audits tolerate improvement instead of demanding exact counts | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |

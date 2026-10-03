@@ -893,7 +893,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
                                      const ResolveMethodCallWithLocalsFn &resolveMethodCall,
                                      const ResolveCallDefinitionFn &resolveDefinitionCall,
                                      const LookupReturnInfoFn &lookupReturnInfo,
-                                     const InferExprKindWithLocalsFn &inferExprKind,
+                                     const ExprLocalsValueKindFn &inferExprKind,
                                      ResultExprInfo &out,
                                      const SemanticProgram *semanticProgram,
                                      const SemanticProductIndex *semanticIndex,
@@ -905,7 +905,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
       [](const Expr &) -> const Definition * { return nullptr; };
   const LookupReturnInfoFn noopLookupReturnInfo =
       [](const std::string &, ReturnInfo &) { return false; };
-  const InferExprKindWithLocalsFn noopInferExprKind =
+  const ExprLocalsValueKindFn noopInferExprKind =
       [](const Expr &, const LocalMap &) { return LocalInfo::ValueKind::Unknown; };
   const ResolveMethodCallWithLocalsFn &resolveMethodCallFn =
       resolveMethodCall ? resolveMethodCall : noopResolveMethodCall;
@@ -913,7 +913,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
       resolveDefinitionCall ? resolveDefinitionCall : noopResolveDefinitionCall;
   const LookupReturnInfoFn &lookupReturnInfoFn =
       lookupReturnInfo ? lookupReturnInfo : noopLookupReturnInfo;
-  const InferExprKindWithLocalsFn &inferExprKindFn =
+  const ExprLocalsValueKindFn &inferExprKindFn =
       inferExprKind ? inferExprKind : noopInferExprKind;
   // Note: this function previously special-cased a method call (write,
   // write_line, write_byte, read_byte, write_bytes, flush, close) whose
@@ -1446,7 +1446,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
                                      const ResolveMethodCallWithLocalsFn &resolveMethodCall,
                                      const ResolveCallDefinitionFn &resolveDefinitionCall,
                                      const LookupReturnInfoFn &lookupReturnInfo,
-                                     const InferExprKindWithLocalsFn &inferExprKind,
+                                     const ExprLocalsValueKindFn &inferExprKind,
                                      ResultExprInfo &out,
                                      const SemanticProductTargetAdapter *semanticProductTargets,
                                      std::string *errorOut) {
@@ -1467,7 +1467,7 @@ ResolveResultExprInfoWithLocalsFn makeResolveResultExprInfoFromLocals(
     const ResolveMethodCallWithLocalsFn &resolveMethodCall,
     const ResolveCallDefinitionFn &resolveDefinitionCall,
     const LookupReturnInfoFn &lookupReturnInfo,
-    const InferExprKindWithLocalsFn &inferExprKind,
+    const ExprLocalsValueKindFn &inferExprKind,
     const SemanticProgram *semanticProgram,
     const SemanticProductIndex *semanticIndex,
     std::string *errorOut) {
@@ -1491,7 +1491,7 @@ ResolveResultExprInfoWithLocalsFn makeResolveResultExprInfoFromLocals(
     const ResolveMethodCallWithLocalsFn &resolveMethodCall,
     const ResolveCallDefinitionFn &resolveDefinitionCall,
     const LookupReturnInfoFn &lookupReturnInfo,
-    const InferExprKindWithLocalsFn &inferExprKind,
+    const ExprLocalsValueKindFn &inferExprKind,
     const SemanticProductTargetAdapter *semanticProductTargets,
     std::string *errorOut) {
   return makeResolveResultExprInfoFromLocals(

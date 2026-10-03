@@ -11,15 +11,13 @@
 
 #include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererSharedTypes.h"
+#include "primec/support/CallbackTypes.h"
 
 namespace primec::ir_lowerer {
 
 using ValueKindFromTypeNameFn = std::function<LocalInfo::ValueKind(const std::string &)>;
 using CombineNumericKindsFn =
     std::function<LocalInfo::ValueKind(LocalInfo::ValueKind, LocalInfo::ValueKind)>;
-using InferReceiverExprKindFn = std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)>;
-using ResolveReceiverExprPathFn = std::function<std::string(const Expr &)>;
-using IsMethodCallClassifierFn = std::function<bool(const Expr &, const LocalMap &)>;
 using GetReturnInfoForPathFn = std::function<bool(const std::string &, ReturnInfo &)>;
 using ResolveMethodCallDefinitionFn = std::function<const Definition *(const Expr &, const LocalMap &)>;
 using ResolveDefinitionCallFn = std::function<const Definition *(const Expr &)>;
@@ -44,9 +42,9 @@ bool inferDeclaredReturnCollection(const Definition &definition,
 bool inferReceiverTypeFromDeclaredReturn(const Definition &definition, std::string &typeNameOut);
 bool resolveMethodCallReceiverExpr(const Expr &callExpr,
                                    const LocalMap &localsIn,
-                                   const IsMethodCallClassifierFn &isArrayCountCall,
-                                   const IsMethodCallClassifierFn &isVectorCapacityCall,
-                                   const IsMethodCallClassifierFn &isEntryArgsName,
+                                   const ExprLocalsPredicateFn &isArrayCountCall,
+                                   const ExprLocalsPredicateFn &isVectorCapacityCall,
+                                   const ExprLocalsPredicateFn &isEntryArgsName,
                                    const Expr *&receiverOut,
                                    std::string &errorOut);
 // Step 1c/Step 2 (docs/ReceiverTargetResolutionConsolidation.md): the
@@ -69,8 +67,8 @@ bool resolveReceiverType(const LocalInfo &localInfo, CanonicalReceiverType &out)
 // matching RT3b's own "never fails" behavior for Call-kind receivers.
 bool resolveReceiverTypeFromCallExpr(const Expr &receiverExpr,
                                      const LocalMap &localsIn,
-                                     const InferReceiverExprKindFn &inferExprKind,
-                                     const ResolveReceiverExprPathFn &resolveExprPath,
+                                     const ExprLocalsValueKindFn &inferExprKind,
+                                     const ExprStringFn &resolveExprPath,
                                      const std::unordered_map<std::string, std::string> &importAliases,
                                      const std::unordered_set<std::string> &structNames,
                                      const SemanticProgram *semanticProgram,
@@ -85,11 +83,11 @@ bool resolveReceiverTypeFromCallExpr(const Expr &receiverExpr,
 // matching RT3c's own "never fails" behavior.
 bool resolveReceiverTypeFromFallbackExpr(const Expr &receiverExpr,
                                          const LocalMap &localsIn,
-                                         const InferReceiverExprKindFn &inferExprKind,
+                                         const ExprLocalsValueKindFn &inferExprKind,
                                          CanonicalReceiverType &out);
 std::string resolveMethodReceiverTypeNameFromCallExpr(const Expr &receiverCallExpr,
                                                       LocalInfo::ValueKind inferredKind,
-                                                      const ResolveReceiverExprPathFn &resolveExprPath = {});
+                                                      const ExprStringFn &resolveExprPath = {});
 std::string resolveMethodReceiverStructTypePathFromCallExpr(
     const Expr &receiverCallExpr,
     const std::string &resolvedReceiverPath,
@@ -118,21 +116,21 @@ bool resolveMethodCallReturnKind(const Expr &methodCallExpr,
 bool getNamespacedCollectionHelperName(const Expr &expr, std::string &collectionOut, std::string &helperOut);
 bool resolveDefinitionCallReturnKind(const Expr &callExpr,
                                      const std::unordered_map<std::string, const Definition *> &defMap,
-                                     const ResolveReceiverExprPathFn &resolveExprPath,
+                                     const ExprStringFn &resolveExprPath,
                                      const GetReturnInfoForPathFn &getReturnInfo,
                                      bool requireArrayReturn,
                                      LocalInfo::ValueKind &kindOut,
                                      bool *definitionMatchedOut = nullptr);
 bool resolveCountMethodCallReturnKind(const Expr &callExpr,
                                       const LocalMap &localsIn,
-                                      const IsMethodCallClassifierFn &isArrayCountCall,
-                                      const IsMethodCallClassifierFn &isStringCountCall,
+                                      const ExprLocalsPredicateFn &isArrayCountCall,
+                                      const ExprLocalsPredicateFn &isStringCountCall,
                                       const ResolveMethodCallDefinitionFn &resolveMethodCallDefinition,
                                       const GetReturnInfoForPathFn &getReturnInfo,
                                       bool requireArrayReturn,
                                       LocalInfo::ValueKind &kindOut,
                                       bool *methodResolvedOut = nullptr,
-                                      const InferReceiverExprKindFn &inferExprKind = {},
+                                      const ExprLocalsValueKindFn &inferExprKind = {},
                                       const SemanticProgram *semanticProgram = nullptr,
                                       const SemanticProductIndex *semanticIndex = nullptr);
 bool resolveCapacityMethodCallReturnKind(const Expr &callExpr,
@@ -147,51 +145,51 @@ bool resolveCapacityMethodCallReturnKind(const Expr &callExpr,
 const Definition *resolveMethodCallDefinitionFromExpr(
     const Expr &callExpr,
     const LocalMap &localsIn,
-    const IsMethodCallClassifierFn &isArrayCountCall,
-    const IsMethodCallClassifierFn &isVectorCapacityCall,
-    const IsMethodCallClassifierFn &isEntryArgsName,
+    const ExprLocalsPredicateFn &isArrayCountCall,
+    const ExprLocalsPredicateFn &isVectorCapacityCall,
+    const ExprLocalsPredicateFn &isEntryArgsName,
     const std::unordered_map<std::string, std::string> &importAliases,
     const std::unordered_set<std::string> &structNames,
-    const InferReceiverExprKindFn &inferExprKind,
-    const ResolveReceiverExprPathFn &resolveExprPath,
+    const ExprLocalsValueKindFn &inferExprKind,
+    const ExprStringFn &resolveExprPath,
     const std::unordered_map<std::string, const Definition *> &defMap,
     std::string &errorOut);
 const Definition *resolveMethodCallDefinitionFromExpr(
     const Expr &callExpr,
     const LocalMap &localsIn,
-    const IsMethodCallClassifierFn &isArrayCountCall,
-    const IsMethodCallClassifierFn &isVectorCapacityCall,
-    const IsMethodCallClassifierFn &isEntryArgsName,
+    const ExprLocalsPredicateFn &isArrayCountCall,
+    const ExprLocalsPredicateFn &isVectorCapacityCall,
+    const ExprLocalsPredicateFn &isEntryArgsName,
     const std::unordered_map<std::string, std::string> &importAliases,
     const std::unordered_set<std::string> &structNames,
-    const InferReceiverExprKindFn &inferExprKind,
-    const ResolveReceiverExprPathFn &resolveExprPath,
+    const ExprLocalsValueKindFn &inferExprKind,
+    const ExprStringFn &resolveExprPath,
     const SemanticProgram *semanticProgram,
     const std::unordered_map<std::string, const Definition *> &defMap,
     std::string &errorOut);
 const Definition *resolveMethodCallDefinitionFromExpr(
     const Expr &callExpr,
     const LocalMap &localsIn,
-    const IsMethodCallClassifierFn &isArrayCountCall,
-    const IsMethodCallClassifierFn &isVectorCapacityCall,
-    const IsMethodCallClassifierFn &isEntryArgsName,
+    const ExprLocalsPredicateFn &isArrayCountCall,
+    const ExprLocalsPredicateFn &isVectorCapacityCall,
+    const ExprLocalsPredicateFn &isEntryArgsName,
     const std::unordered_map<std::string, std::string> &importAliases,
     const std::unordered_set<std::string> &structNames,
-    const InferReceiverExprKindFn &inferExprKind,
-    const ResolveReceiverExprPathFn &resolveExprPath,
+    const ExprLocalsValueKindFn &inferExprKind,
+    const ExprStringFn &resolveExprPath,
     const GetReturnInfoForPathFn &getReturnInfo,
     const std::unordered_map<std::string, const Definition *> &defMap,
     std::string &errorOut);
 const Definition *resolveMethodCallDefinitionFromExpr(
     const Expr &callExpr,
     const LocalMap &localsIn,
-    const IsMethodCallClassifierFn &isArrayCountCall,
-    const IsMethodCallClassifierFn &isVectorCapacityCall,
-    const IsMethodCallClassifierFn &isEntryArgsName,
+    const ExprLocalsPredicateFn &isArrayCountCall,
+    const ExprLocalsPredicateFn &isVectorCapacityCall,
+    const ExprLocalsPredicateFn &isEntryArgsName,
     const std::unordered_map<std::string, std::string> &importAliases,
     const std::unordered_set<std::string> &structNames,
-    const InferReceiverExprKindFn &inferExprKind,
-    const ResolveReceiverExprPathFn &resolveExprPath,
+    const ExprLocalsValueKindFn &inferExprKind,
+    const ExprStringFn &resolveExprPath,
     const SemanticProgram *semanticProgram,
     const GetReturnInfoForPathFn &getReturnInfo,
     const std::unordered_map<std::string, const Definition *> &defMap,
@@ -207,8 +205,8 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
                                  const std::string &methodName,
                                  const std::unordered_map<std::string, std::string> &importAliases,
                                  const std::unordered_set<std::string> &structNames,
-                                 const InferReceiverExprKindFn &inferExprKind,
-                                 const ResolveReceiverExprPathFn &resolveExprPath,
+                                 const ExprLocalsValueKindFn &inferExprKind,
+                                 const ExprStringFn &resolveExprPath,
                                  std::string &typeNameOut,
                                  std::string &resolvedTypePathOut,
                                  std::string &errorOut,

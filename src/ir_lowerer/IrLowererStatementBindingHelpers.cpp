@@ -692,7 +692,7 @@ bool populateBindingTypeInfoFromSemanticTryFact(
 
 bool inferExprBindingTypeInfo(const Expr &expr,
                               const LocalMap &localsIn,
-                              const InferBindingExprKindFn &inferExprKind,
+                              const ExprLocalsValueKindFn &inferExprKind,
                               const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,
                               const SemanticProgram *semanticProgram,
                               const SemanticProductIndex *semanticIndex,
@@ -885,10 +885,10 @@ bool resolveSpecializedKeyValueStorageStructPathForBindingType(
 StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
                                                        const Expr &init,
                                                        const LocalMap &localsIn,
-                                                       const HasExplicitBindingTypeTransformFn &hasExplicitBindingTypeTransform,
+                                                       const ExprPredicateFn &hasExplicitBindingTypeTransform,
                                                        const BindingKindFn &bindingKind,
                                                        const BindingValueKindFn &bindingValueKind,
-                                                       const InferBindingExprKindFn &inferExprKind,
+                                                       const ExprLocalsValueKindFn &inferExprKind,
                                                        const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,
                                                        const SemanticProgram *semanticProgram,
                                                        const SemanticProductIndex *semanticIndex) {
@@ -1241,10 +1241,10 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
 StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
                                                        const Expr &init,
                                                        const LocalMap &localsIn,
-                                                       const HasExplicitBindingTypeTransformFn &hasExplicitBindingTypeTransform,
+                                                       const ExprPredicateFn &hasExplicitBindingTypeTransform,
                                                        const BindingKindFn &bindingKind,
                                                        const BindingValueKindFn &bindingValueKind,
-                                                       const InferBindingExprKindFn &inferExprKind,
+                                                       const ExprLocalsValueKindFn &inferExprKind,
                                                        const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,
                                                        const SemanticProductTargetAdapter *semanticProductTargets) {
   return inferStatementBindingTypeInfo(
@@ -1262,16 +1262,16 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
 
 bool inferCallParameterLocalInfo(const Expr &param,
                                  const LocalMap &localsForKindInference,
-                                 const IsBindingMutableFn &isBindingMutable,
-                                 const HasExplicitBindingTypeTransformFn &hasExplicitBindingTypeTransform,
+                                 const ExprPredicateFn &isBindingMutable,
+                                 const ExprPredicateFn &hasExplicitBindingTypeTransform,
                                  const BindingKindFn &bindingKind,
                                  const BindingValueKindFn &bindingValueKind,
-                                 const InferBindingExprKindFn &inferExprKind,
-                                 const IsFileErrorBindingFn &isFileErrorBinding,
-                                 const SetReferenceArrayInfoForBindingFn &setReferenceArrayInfo,
-                                 const ApplyStructBindingInfoFn &applyStructArrayInfo,
-                                 const ApplyStructBindingInfoFn &applyStructValueInfo,
-                                 const IsStringBindingFn &isStringBinding,
+                                 const ExprLocalsValueKindFn &inferExprKind,
+                                 const ExprPredicateFn &isFileErrorBinding,
+                                 const ExprLocalInfoVisitorFn &setReferenceArrayInfo,
+                                 const ExprLocalInfoVisitorFn &applyStructArrayInfo,
+                                 const ExprLocalInfoVisitorFn &applyStructValueInfo,
+                                 const ExprPredicateFn &isStringBinding,
                                  LocalInfo &infoOut,
                                  std::string &error,
                                  const std::function<const Definition *(const Expr &, const LocalMap &)>
@@ -1280,44 +1280,44 @@ bool inferCallParameterLocalInfo(const Expr &param,
                                  const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
                                  const SemanticProgram *semanticProgram,
                                  const SemanticProductIndex *semanticIndex) {
-  const IsBindingMutableFn noopIsBindingMutable = [](const Expr &) { return false; };
-  const HasExplicitBindingTypeTransformFn noopHasExplicitBindingTypeTransform =
+  const ExprPredicateFn noopIsBindingMutable = [](const Expr &) { return false; };
+  const ExprPredicateFn noopHasExplicitBindingTypeTransform =
       [](const Expr &) { return false; };
   const BindingKindFn noopBindingKind = [](const Expr &) { return LocalInfo::Kind::Value; };
   const BindingValueKindFn noopBindingValueKind =
       [](const Expr &, LocalInfo::Kind) { return LocalInfo::ValueKind::Unknown; };
-  const InferBindingExprKindFn noopInferExprKind =
+  const ExprLocalsValueKindFn noopInferExprKind =
       [](const Expr &, const LocalMap &) { return LocalInfo::ValueKind::Unknown; };
-  const IsFileErrorBindingFn noopIsFileErrorBinding = [](const Expr &) { return false; };
-  const SetReferenceArrayInfoForBindingFn noopSetReferenceArrayInfo =
+  const ExprPredicateFn noopIsFileErrorBinding = [](const Expr &) { return false; };
+  const ExprLocalInfoVisitorFn noopSetReferenceArrayInfo =
       [](const Expr &, LocalInfo &) {};
-  const ApplyStructBindingInfoFn noopApplyStructInfo = [](const Expr &, LocalInfo &) {};
-  const IsStringBindingFn noopIsStringBinding = [](const Expr &) { return false; };
+  const ExprLocalInfoVisitorFn noopApplyStructInfo = [](const Expr &, LocalInfo &) {};
+  const ExprPredicateFn noopIsStringBinding = [](const Expr &) { return false; };
   const std::function<const Definition *(const Expr &, const LocalMap &)> noopResolveMethodCall =
       [](const Expr &, const LocalMap &) -> const Definition * { return nullptr; };
   const std::function<const Definition *(const Expr &)> noopResolveDefinitionCall =
       [](const Expr &) -> const Definition * { return nullptr; };
   const std::function<bool(const std::string &, ReturnInfo &)> noopGetReturnInfo =
       [](const std::string &, ReturnInfo &) { return false; };
-  const IsBindingMutableFn &isBindingMutableFn =
+  const ExprPredicateFn &isBindingMutableFn =
       isBindingMutable ? isBindingMutable : noopIsBindingMutable;
-  const HasExplicitBindingTypeTransformFn &hasExplicitBindingTypeTransformFn =
+  const ExprPredicateFn &hasExplicitBindingTypeTransformFn =
       hasExplicitBindingTypeTransform ? hasExplicitBindingTypeTransform
                                       : noopHasExplicitBindingTypeTransform;
   const BindingKindFn &bindingKindFn = bindingKind ? bindingKind : noopBindingKind;
   const BindingValueKindFn &bindingValueKindFn =
       bindingValueKind ? bindingValueKind : noopBindingValueKind;
-  const InferBindingExprKindFn &inferExprKindFn =
+  const ExprLocalsValueKindFn &inferExprKindFn =
       inferExprKind ? inferExprKind : noopInferExprKind;
-  const IsFileErrorBindingFn &isFileErrorBindingFn =
+  const ExprPredicateFn &isFileErrorBindingFn =
       isFileErrorBinding ? isFileErrorBinding : noopIsFileErrorBinding;
-  const SetReferenceArrayInfoForBindingFn &setReferenceArrayInfoFn =
+  const ExprLocalInfoVisitorFn &setReferenceArrayInfoFn =
       setReferenceArrayInfo ? setReferenceArrayInfo : noopSetReferenceArrayInfo;
-  const ApplyStructBindingInfoFn &applyStructArrayInfoFn =
+  const ExprLocalInfoVisitorFn &applyStructArrayInfoFn =
       applyStructArrayInfo ? applyStructArrayInfo : noopApplyStructInfo;
-  const ApplyStructBindingInfoFn &applyStructValueInfoFn =
+  const ExprLocalInfoVisitorFn &applyStructValueInfoFn =
       applyStructValueInfo ? applyStructValueInfo : noopApplyStructInfo;
-  const IsStringBindingFn &isStringBindingFn =
+  const ExprPredicateFn &isStringBindingFn =
       isStringBinding ? isStringBinding : noopIsStringBinding;
   const std::function<const Definition *(const Expr &, const LocalMap &)> &resolveMethodCallDefinitionFn =
       resolveMethodCallDefinition ? resolveMethodCallDefinition : noopResolveMethodCall;
@@ -1727,16 +1727,16 @@ bool inferCallParameterLocalInfo(const Expr &param,
 
 bool inferCallParameterLocalInfo(const Expr &param,
                                  const LocalMap &localsForKindInference,
-                                 const IsBindingMutableFn &isBindingMutable,
-                                 const HasExplicitBindingTypeTransformFn &hasExplicitBindingTypeTransform,
+                                 const ExprPredicateFn &isBindingMutable,
+                                 const ExprPredicateFn &hasExplicitBindingTypeTransform,
                                  const BindingKindFn &bindingKind,
                                  const BindingValueKindFn &bindingValueKind,
-                                 const InferBindingExprKindFn &inferExprKind,
-                                 const IsFileErrorBindingFn &isFileErrorBinding,
-                                 const SetReferenceArrayInfoForBindingFn &setReferenceArrayInfo,
-                                 const ApplyStructBindingInfoFn &applyStructArrayInfo,
-                                 const ApplyStructBindingInfoFn &applyStructValueInfo,
-                                 const IsStringBindingFn &isStringBinding,
+                                 const ExprLocalsValueKindFn &inferExprKind,
+                                 const ExprPredicateFn &isFileErrorBinding,
+                                 const ExprLocalInfoVisitorFn &setReferenceArrayInfo,
+                                 const ExprLocalInfoVisitorFn &applyStructArrayInfo,
+                                 const ExprLocalInfoVisitorFn &applyStructValueInfo,
+                                 const ExprPredicateFn &isStringBinding,
                                  LocalInfo &infoOut,
                                  std::string &error,
                                  const std::function<const Definition *(const Expr &, const LocalMap &)>

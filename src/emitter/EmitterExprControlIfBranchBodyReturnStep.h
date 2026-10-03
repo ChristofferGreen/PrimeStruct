@@ -8,9 +8,9 @@
 
 namespace primec::emitter {
 
-using EmitterExprControlIfBranchBodyReturnIsReturnCallFn =
+using ExprPredicateFn =
     std::function<bool(const Expr &)>;
-using EmitterExprControlIfBranchBodyReturnEmitExprFn =
+using ExprStringFn =
     std::function<std::string(const Expr &)>;
 
 struct EmitterExprControlIfBranchBodyReturnStepResult {
@@ -22,7 +22,7 @@ EmitterExprControlIfBranchBodyReturnStepResult
 runEmitterExprControlIfBranchBodyReturnStep(
     const Expr &stmt,
     bool isLast,
-    const EmitterExprControlIfBranchBodyReturnIsReturnCallFn &isReturnCall,
-    const EmitterExprControlIfBranchBodyReturnEmitExprFn &emitExpr);
+    const ExprPredicateFn &isReturnCall,
+    const ExprStringFn &emitExpr);
 
 } // namespace primec::emitter

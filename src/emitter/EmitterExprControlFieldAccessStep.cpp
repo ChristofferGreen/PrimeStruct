@@ -3,7 +3,7 @@
 namespace primec::emitter {
 
 std::optional<std::string> runEmitterExprControlFieldAccessStep(const Expr &expr,
-                                                                const EmitFieldAccessReceiverFn &emitReceiverExpr,
+                                                                const ExprStringFn &emitReceiverExpr,
                                                                 const ResolveFieldAccessStaticReceiverFn &resolveStaticReceiverExpr) {
   if (expr.kind != Expr::Kind::Call || !expr.isFieldAccess || expr.args.empty()) {
     return std::nullopt;

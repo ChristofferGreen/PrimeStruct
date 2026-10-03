@@ -512,7 +512,7 @@ TEST_CASE("ir lowerer result helpers resolve from locals and return-info lookups
     info.resultErrorType = "MethodError";
     return true;
   };
-  const primec::ir_lowerer::InferExprKindWithLocalsFn inferExprKind = {};
+  const primec::ir_lowerer::ExprLocalsValueKindFn inferExprKind = {};
 
   primec::ir_lowerer::ResultExprInfo out;
   CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
@@ -550,7 +550,7 @@ TEST_CASE("ir lowerer result helpers require semantic query facts for generic ca
   const auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) {
     return false;
   };
-  const primec::ir_lowerer::InferExprKindWithLocalsFn inferExprKind = {};
+  const primec::ir_lowerer::ExprLocalsValueKindFn inferExprKind = {};
 
   primec::SemanticProgram semanticProgram;
   semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
@@ -667,7 +667,7 @@ TEST_CASE("ir lowerer result helpers use semantic query facts for direct Result 
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
 
   bool fallbackCalled = false;
-  const primec::ir_lowerer::InferExprKindWithLocalsFn inferExprKind =
+  const primec::ir_lowerer::ExprLocalsValueKindFn inferExprKind =
       [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
         fallbackCalled = true;
         return ValueKind::Int64;
@@ -757,7 +757,7 @@ TEST_CASE("ir lowerer result helpers infer syntax-owned direct Result ok payload
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
 
   int fallbackCalls = 0;
-  const primec::ir_lowerer::InferExprKindWithLocalsFn inferExprKind =
+  const primec::ir_lowerer::ExprLocalsValueKindFn inferExprKind =
       [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
         ++fallbackCalls;
         CHECK(expr.name == "plus");
@@ -837,7 +837,7 @@ TEST_CASE("ir lowerer result helpers use semantic binding facts for direct Resul
   const primec::ir_lowerer::LocalMap locals{{"payload", localPayload}};
 
   bool fallbackCalled = false;
-  const primec::ir_lowerer::InferExprKindWithLocalsFn inferExprKind =
+  const primec::ir_lowerer::ExprLocalsValueKindFn inferExprKind =
       [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
         fallbackCalled = true;
         return ValueKind::Int64;
@@ -892,7 +892,7 @@ TEST_CASE("ir lowerer result helpers reject resolved-path semantic query fallbac
   const auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) {
     return false;
   };
-  const primec::ir_lowerer::InferExprKindWithLocalsFn inferExprKind = {};
+  const primec::ir_lowerer::ExprLocalsValueKindFn inferExprKind = {};
 
   primec::SemanticProgram semanticProgram;
   semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
@@ -1272,7 +1272,7 @@ TEST_CASE("ir lowerer result helpers resolve direct Result.ok struct payload met
     return nullptr;
   };
   auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return false; };
-  const primec::ir_lowerer::InferExprKindWithLocalsFn inferExprKind = {};
+  const primec::ir_lowerer::ExprLocalsValueKindFn inferExprKind = {};
 
   primec::ir_lowerer::ResultExprInfo out;
   CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(

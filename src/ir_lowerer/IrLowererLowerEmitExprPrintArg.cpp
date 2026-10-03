@@ -18,7 +18,7 @@ bool emitPrintArgImpl(
     std::string &error) {
   IrFunction &function = setupStageIn.function;
   const SemanticProgram *const &semanticProgram = callResolutionAdaptersIn.semanticProgram;
-  const ResolveExprPathFn &resolveExprPath = callResolutionAdaptersIn.resolveExprPath;
+  const ExprStringFn &resolveExprPath = callResolutionAdaptersIn.resolveExprPath;
   const auto &inferExprKind = setupStageIn.inferenceSetupBootstrap.inferExprKind;
   const auto &allocTempLocal = stateOutIn.allocTempLocal;
   const auto &emitExpr = stateOutIn.emitExpr;

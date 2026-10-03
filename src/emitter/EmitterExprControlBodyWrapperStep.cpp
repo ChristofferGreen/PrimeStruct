@@ -8,7 +8,7 @@ std::optional<std::string> runEmitterExprControlBodyWrapperStep(
     const Expr &expr,
     const std::unordered_map<std::string, std::string> &nameMap,
     const EmitterExprControlBodyWrapperIsBuiltinBlockFn &isBuiltinBlock,
-    const EmitterExprControlBodyWrapperEmitExprFn &emitExpr) {
+    const ExprStringFn &emitExpr) {
   if (!(expr.hasBodyArguments || !expr.bodyArguments.empty())) {
     return std::nullopt;
   }
