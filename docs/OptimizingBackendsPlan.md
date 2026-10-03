@@ -330,6 +330,14 @@ approved. Order within a phase is a dependency order unless stated.
 2.1 Extend the register form: promote non-escaping locals to virtual
     registers, edge moves for locals and stack values, per-function
     "pinned local" set. Verifier updated.
+2.1b First consumer: a register-form C++ emitter for `--emit=exe`/`cpp` at
+    `-O1` and above (section 9). One C++ scalar per virtual register and
+    per promoted local, labelled basic blocks with `goto`, pinned locals in
+    a `uint64_t frame[]`. The host C++ compiler then supplies register
+    allocation and instruction selection, which makes this the cheapest way
+    to prove the register form on the whole corpus and gives the speed
+    oracle section 7 lacks. The existing `switch (pc)` emitter stays as the
+    `-O0` form.
 2.2 `copy-prop`, `cse`, algebraic simplification on the register form.
 2.3 Loop analysis and `licm`; `tail-self-loop`.
 2.4 General `inline` with budgets; interaction with the lowerer's
@@ -592,13 +600,72 @@ every available backend by default, new programs are written once, and the
 total test wall time goes down because the dominant cost (a `primec` process
 per case) is paid once per program instead of once per backend.
 
-## 9. Open decisions for the maintainer
+## 9. Starting with the C++ emitter
 
-1. Default level after Phase 5: `-O2` for native and vm (proposed), or keep
-   `-O0` and opt in.
-2. Scope of Phase 3: register-form codegen (proposed) versus peepholes on the
+`IrToCppEmitter` (`src/backend/IrToCppEmitter*.cpp`, about 1,600 lines) emits
+a stack machine in C++: every function is `while (true) { switch (pc) { case
+N: ... } }`, one `case` per IR instruction, with the operand stack in a
+`std::deque`-backed `PsStack`, locals in a `std::vector<uint64_t>`, a
+`psEnsureStack` underflow guard before every pop, and functions split into
+1,024-instruction chunks so clang can compile the switch. The `pc` variable is
+loop-carried and the deque is opaque, so clang cannot recover the loop
+structure; the result is the 3.4 to 5.8 second `exe` column in section 7.
+
+Doing the register form here first is attractive:
+
+- It is the same `IrModule -> CFG -> virtual registers -> emit` pipeline the
+  native backend needs, minus register allocation and instruction selection,
+  which clang does. Each basic block becomes a label, each pure instruction
+  becomes `uint64_t vN = <expr>;`, `JumpIfZero` becomes `if (vK == 0) goto
+  L_M;`, promoted locals are C++ scalars, pinned locals stay in a
+  `uint64_t frame[N]` so `AddressOfLocal` arithmetic and `LoadIndirect` keep
+  their byte-offset semantics. No `pc`, no operand stack, no underflow guards
+  (validation proves balance), no chunking (clang handles large structured
+  functions; a fallback to the `-O0` emitter above a size threshold is cheap).
+- It validates `mem2reg`, the escape rule, edge moves, and the pass pipeline
+  on the whole compile-run corpus with an independent consumer before any
+  native register allocator exists. Bugs in the register form show up as
+  `exe` parity failures in the matrix.
+- It produces the missing speed oracle: how fast this IR can run with a
+  mature backend. If `exe -O2` still trails the C reference, the gap is IR
+  quality (Phases 1-2); if it matches, the remaining native gap is codegen
+  (Phase 3).
+- The print, file, heap and string helpers in the generated preamble are
+  reusable as functions taking values instead of popping a stack. The heap
+  owner scan (`psResolveHeapSlot`) needs the same O(1) fix as the VM.
+
+Things to settle while doing it:
+
+- Semantics parity. The current C++ emitter computes `AddI64` as
+  `int64_t left + right` and `DivI64` as `left / right`, which is undefined
+  behaviour on overflow and on zero or `INT64_MIN / -1`, while the VM wraps
+  in `uint64_t` and faults on a zero divisor. The register-form emitter should
+  use the shared pure-opcode semantics (Phase 1.3) so all four execution
+  forms agree bit for bit, and divisor checks must stay explicit.
+- `i32` opcodes. `emitBinaryI32` narrows to 32 bits where the VM and native
+  operate on the 64-bit slot; the differential matrix will expose any
+  program where that differs, and the shared semantics table decides which
+  is right.
+- Chunking. Functions above a size threshold fall back to the `-O0` emitter
+  rather than splitting labelled code across functions.
+
+Suggested order: Phase 0.1-0.3 (flags, pass manager, dumps), Phase 1.1
+(shared CFG), Phase 2.1 (register form with promoted locals), then this
+emitter, then the matrix runner (0.5) to run the corpus through it. Phase 3
+then ports the proven form to the native emitter.
+
+## 10. Decisions taken
+
+- Default level after Phase 5 is `-O2` for `--emit=native`, `--emit=vm` and
+  `primevm`, `-O0` under any debug session or trace (2026-10-03).
+- The register-form C++ emitter is the first consumer of the middle end
+  (section 9) (2026-10-03).
+
+## 11. Open decisions for the maintainer
+
+1. Scope of Phase 3: register-form codegen (proposed) versus peepholes on the
    template emitter only (cheaper, caps out around 2x).
-3. Whether a VM JIT that reuses the Phase 3 codegen is wanted later.
-4. Whether a PSIR v27 (local extents, shift/bitwise opcodes) is acceptable, or
+2. Whether a VM JIT that reuses the Phase 3 codegen is wanted later.
+3. Whether a PSIR v27 (local extents, shift/bitwise opcodes) is acceptable, or
    the schema must stay frozen for this work.
-5. Access to a macOS arm64 machine for Phase 3.6 validation.
+4. Access to a macOS arm64 machine for Phase 3.6 validation.
