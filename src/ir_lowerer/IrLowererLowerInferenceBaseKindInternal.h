@@ -2,13 +2,13 @@
 
 // Helpers shared by the IrLowererLowerInferenceBaseKindHelpers*.cpp units (split out of
 // IrLowererLowerInferenceBaseKindHelpers.cpp without changes, ticket).
-#include "IrLowererLowerInferenceBaseKindHelpers.h"
-#include "IrLowererHelpers.h"
-#include "IrLowererResultHelpers.h"
-#include "IrLowererSemanticProductTargetAdapters.h"
-#include "IrLowererSetupTypeCollectionHelpers.h"
-#include "IrLowererSetupTypeHelpers.h"
-#include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/ir_lowerer/IrLowererLowerInferenceBaseKindHelpers.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererResultHelpers.h"
+#include "primec/ir_lowerer/IrLowererSemanticProductTargetAdapters.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeCollectionHelpers.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
 #include <vector>
 
 namespace primec::ir_lowerer {

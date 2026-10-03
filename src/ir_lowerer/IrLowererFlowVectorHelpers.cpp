@@ -1,4 +1,4 @@
-#include "IrLowererFlowHelpers.h"
+#include "primec/ir_lowerer/IrLowererFlowHelpers.h"
 
 namespace primec::ir_lowerer {
 

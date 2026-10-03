@@ -3,12 +3,12 @@
 #include <algorithm>
 
 #include "IrLowererCountAccessClassifiers.h"
-#include "IrLowererFlowHelpers.h"
-#include "IrLowererHelpers.h"
-#include "IrLowererSetupTypeCollectionHelpers.h"
-#include "IrLowererSetupTypeHelpers.h"
-#include "IrLowererStructLayoutHelpers.h"
-#include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/ir_lowerer/IrLowererFlowHelpers.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeCollectionHelpers.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererStructLayoutHelpers.h"
+#include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
 #include "primec/ir/StdlibCollectionPaths.h"
 
 namespace primec::ir_lowerer {

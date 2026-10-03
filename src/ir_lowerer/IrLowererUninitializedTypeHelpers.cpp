@@ -1,14 +1,14 @@
-#include "IrLowererUninitializedTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererUninitializedTypeHelpers.h"
 
 #include <vector>
 
-#include "IrLowererBindingTransformHelpers.h"
-#include "IrLowererBindingTypeHelpers.h"
-#include "IrLowererCallHelpers.h"
-#include "IrLowererHelpers.h"
-#include "IrLowererSetupTypeHelpers.h"
-#include "IrLowererStructTypeHelpers.h"
-#include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/ir_lowerer/IrLowererBindingTransformHelpers.h"
+#include "primec/ir_lowerer/IrLowererBindingTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererCallHelpers.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererStructTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
 #include "primec/ir/StdlibCollectionPaths.h"
 
 namespace primec::ir_lowerer {

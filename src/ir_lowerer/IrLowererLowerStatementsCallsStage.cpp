@@ -1,14 +1,14 @@
-#include "IrLowererLowerStatementsCallsStage.h"
+#include "primec/ir_lowerer/IrLowererLowerStatementsCallsStage.h"
 
-#include "IrLowererCallHelpers.h"
-#include "IrLowererLowerEffects.h"
-#include "IrLowererLowerStatementsCallsStep.h"
-#include "IrLowererLowerStatementsEntryExecutionStep.h"
-#include "IrLowererLowerStatementsEntryStatementStep.h"
-#include "IrLowererLowerStatementsFunctionTableStep.h"
+#include "primec/ir_lowerer/IrLowererCallHelpers.h"
+#include "primec/ir_lowerer/IrLowererLowerEffects.h"
+#include "primec/ir_lowerer/IrLowererLowerStatementsCallsStep.h"
+#include "primec/ir_lowerer/IrLowererLowerStatementsEntryExecutionStep.h"
+#include "primec/ir_lowerer/IrLowererLowerStatementsEntryStatementStep.h"
+#include "primec/ir_lowerer/IrLowererLowerStatementsFunctionTableStep.h"
 #include "IrLowererRecursionAnalysis.h"
-#include "IrLowererSemanticProductTargetAdapters.h"
-#include "IrLowererSetupTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererSemanticProductTargetAdapters.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeHelpers.h"
 
 namespace primec::ir_lowerer {
 

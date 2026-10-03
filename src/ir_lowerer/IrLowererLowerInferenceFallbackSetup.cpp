@@ -1,9 +1,9 @@
-#include "IrLowererLowerInferenceSetup.h"
+#include "primec/ir_lowerer/IrLowererLowerInferenceSetup.h"
 
-#include "IrLowererHelpers.h"
-#include "IrLowererLowerInferenceBaseKindHelpers.h"
-#include "IrLowererSetupTypeCollectionHelpers.h"
-#include "IrLowererSetupTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererLowerInferenceBaseKindHelpers.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeCollectionHelpers.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeHelpers.h"
 
 namespace primec::ir_lowerer {
 

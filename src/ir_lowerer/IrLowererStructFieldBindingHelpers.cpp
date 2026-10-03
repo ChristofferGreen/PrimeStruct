@@ -1,14 +1,14 @@
-#include "IrLowererStructFieldBindingHelpers.h"
+#include "primec/ir_lowerer/IrLowererStructFieldBindingHelpers.h"
 
 #include <functional>
 
-#include "IrLowererBindingTypeHelpers.h"
-#include "IrLowererCallHelpers.h"
-#include "IrLowererHelpers.h"
-#include "IrLowererSetupTypeCollectionHelpers.h"
-#include "IrLowererStructLayoutHelpers.h"
-#include "IrLowererStructReturnPathHelpers.h"
-#include "IrLowererStructTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererBindingTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererCallHelpers.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeCollectionHelpers.h"
+#include "primec/ir_lowerer/IrLowererStructLayoutHelpers.h"
+#include "primec/ir_lowerer/IrLowererStructReturnPathHelpers.h"
+#include "primec/ir_lowerer/IrLowererStructTypeHelpers.h"
 #include "primec/ir/StdlibCollectionPaths.h"
 
 namespace primec::ir_lowerer {

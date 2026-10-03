@@ -21,7 +21,7 @@
 #include "primec/support/ProcessRunner.h"
 #include "primec/semantics/Semantics.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
-#include "primec/testing/IrLowererHelpers.h"
+#include "primec/testing/IrLowererTestHelpers.h"
 
 #include "test_ir_pipeline_backends_helpers.h"
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.backends.registry");

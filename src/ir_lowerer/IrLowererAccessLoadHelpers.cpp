@@ -1,7 +1,7 @@
-#include "IrLowererCallHelpers.h"
+#include "primec/ir_lowerer/IrLowererCallHelpers.h"
 
-#include "IrLowererIndexKindHelpers.h"
-#include "IrLowererSetupTypeCollectionHelpers.h"
+#include "primec/ir_lowerer/IrLowererIndexKindHelpers.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeCollectionHelpers.h"
 #include "primec/ir/StdlibCollectionPaths.h"
 
 namespace primec::ir_lowerer {

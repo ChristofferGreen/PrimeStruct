@@ -1,6 +1,6 @@
-#include "IrLowererFlowHelpers.h"
+#include "primec/ir_lowerer/IrLowererFlowHelpers.h"
 
-#include "IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
 
 #include <cstdlib>
 #include <cstring>

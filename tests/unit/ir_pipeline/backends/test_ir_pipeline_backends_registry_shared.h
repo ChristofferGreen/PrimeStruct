@@ -27,7 +27,7 @@
 #include "primec/semantic_product/DirectCallFacts.h"
 #include "primec/semantic_product/MethodCallFacts.h"
 #include "primec/testing/CompilePipelineDumpHelpers.h"
-#include "primec/testing/IrLowererHelpers.h"
+#include "primec/testing/IrLowererTestHelpers.h"
 
 #include "test_ir_pipeline_backends_helpers.h"
 #include "../test_ir_pipeline_helpers.h"

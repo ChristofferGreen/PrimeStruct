@@ -1,13 +1,13 @@
-#include "IrLowererLowerStatementsCallsStep.h"
+#include "primec/ir_lowerer/IrLowererLowerStatementsCallsStep.h"
 
 #include <cstdint>
 #include <limits>
 #include <string_view>
 
-#include "IrLowererCallHelpers.h"
-#include "IrLowererFlowHelpers.h"
-#include "IrLowererHelpers.h"
-#include "IrLowererSetupTypeCollectionHelpers.h"
+#include "primec/ir_lowerer/IrLowererCallHelpers.h"
+#include "primec/ir_lowerer/IrLowererFlowHelpers.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeCollectionHelpers.h"
 
 namespace primec::ir_lowerer {
 

@@ -1,7 +1,7 @@
-#include "IrLowererOperatorArcHyperbolicHelpers.h"
+#include "primec/ir_lowerer/IrLowererOperatorArcHyperbolicHelpers.h"
 #include "IrLowererOperatorExpLogHyperbolicHelpers.h"
 
-#include "IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
 
 #include <cstring>
 

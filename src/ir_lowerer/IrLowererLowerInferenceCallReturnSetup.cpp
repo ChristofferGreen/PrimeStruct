@@ -1,6 +1,6 @@
-#include "IrLowererLowerInferenceSetup.h"
+#include "primec/ir_lowerer/IrLowererLowerInferenceSetup.h"
 
-#include "IrLowererSetupTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeHelpers.h"
 #include "primec/support/CollectionHelperNames.h"
 
 namespace primec::ir_lowerer {

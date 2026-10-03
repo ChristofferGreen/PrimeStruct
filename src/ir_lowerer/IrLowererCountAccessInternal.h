@@ -2,7 +2,7 @@
 
 // Helpers shared by the IrLowererCountAccessHelpers*.cpp units (split out of
 // IrLowererCountAccessHelpers.cpp without changes, ticket).
-#include "IrLowererCountAccessHelpers.h"
+#include "primec/ir_lowerer/IrLowererCountAccessHelpers.h"
 #include "IrLowererCountAccessClassifiers.h"
 #include <algorithm>
 #include <cctype>
@@ -13,13 +13,13 @@
 #include <string_view>
 #include <utility>
 #include <vector>
-#include "IrLowererBindingTypeHelpers.h"
-#include "IrLowererBindingTransformHelpers.h"
-#include "IrLowererHelpers.h"
-#include "IrLowererSemanticProductTargetAdapters.h"
-#include "IrLowererSetupTypeCollectionHelpers.h"
-#include "IrLowererSetupTypeHelpers.h"
-#include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/ir_lowerer/IrLowererBindingTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererBindingTransformHelpers.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererSemanticProductTargetAdapters.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeCollectionHelpers.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
 #include "primec/frontend/SemanticProduct.h"
 #include "primec/ir/SoaPathHelpers.h"
 #include "primec/support/StdlibSurfaceRegistry.h"

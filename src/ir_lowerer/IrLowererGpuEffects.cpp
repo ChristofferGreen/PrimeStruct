@@ -1,6 +1,6 @@
-#include "IrLowererGpuEffects.h"
+#include "primec/ir_lowerer/IrLowererGpuEffects.h"
 
-#include "IrLowererLowerEffects.h"
+#include "primec/ir_lowerer/IrLowererLowerEffects.h"
 
 namespace primec::ir_lowerer {
 

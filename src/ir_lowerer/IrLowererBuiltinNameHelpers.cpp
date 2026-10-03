@@ -1,4 +1,4 @@
-#include "IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
 
 #include <algorithm>
 #include <array>

@@ -1,6 +1,6 @@
-#include "IrLowererOperatorSaturateRoundingRootsHelpers.h"
+#include "primec/ir_lowerer/IrLowererOperatorSaturateRoundingRootsHelpers.h"
 
-#include "IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
 
 #include <cstring>
 

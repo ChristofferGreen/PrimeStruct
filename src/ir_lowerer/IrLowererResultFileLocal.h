@@ -3,12 +3,12 @@
 // Helpers shared by the IrLowererResultHelpers*.cpp units (split out of
 // IrLowererResultHelpers.cpp without changes, ticket).
 #include "IrLowererResultInternal.h"
-#include "IrLowererCallHelpers.h"
-#include "IrLowererHelpers.h"
-#include "IrLowererLowerInferenceBaseKindHelpers.h"
-#include "IrLowererSemanticProductTargetAdapters.h"
-#include "IrLowererSetupTypeHelpers.h"
-#include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/ir_lowerer/IrLowererCallHelpers.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererLowerInferenceBaseKindHelpers.h"
+#include "primec/ir_lowerer/IrLowererSemanticProductTargetAdapters.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
 #include <algorithm>
 #include <optional>

@@ -1,10 +1,10 @@
-#include "IrLowererStructReturnPathHelpers.h"
+#include "primec/ir_lowerer/IrLowererStructReturnPathHelpers.h"
 
-#include "IrLowererHelpers.h"
-#include "IrLowererSetupTypeCollectionHelpers.h"
-#include "IrLowererSetupTypeHelpers.h"
-#include "IrLowererStructFieldBindingHelpers.h"
-#include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeCollectionHelpers.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererStructFieldBindingHelpers.h"
+#include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
 #include "primec/support/CollectionHelperNames.h"
 
 #include <string_view>

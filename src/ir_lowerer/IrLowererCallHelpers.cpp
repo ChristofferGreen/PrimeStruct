@@ -1,16 +1,16 @@
-#include "IrLowererCallHelpers.h"
+#include "primec/ir_lowerer/IrLowererCallHelpers.h"
 
 #include <algorithm>
 #include <cctype>
 #include <string_view>
 #include <utility>
 
-#include "IrLowererBindingTransformHelpers.h"
-#include "IrLowererCountAccessHelpers.h"
-#include "IrLowererFlowHelpers.h"
-#include "IrLowererHelpers.h"
-#include "IrLowererSetupTypeCollectionHelpers.h"
-#include "IrLowererSetupTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererBindingTransformHelpers.h"
+#include "primec/ir_lowerer/IrLowererCountAccessHelpers.h"
+#include "primec/ir_lowerer/IrLowererFlowHelpers.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeCollectionHelpers.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeHelpers.h"
 #include <cstdio>
 #include "primec/support/StdlibSurfaceRegistry.h"
 #include "primec/ir/StdlibCollectionPaths.h"
@@ -453,7 +453,7 @@ bool buildOrderedCallArguments(const Expr &callExpr,
       ++positionalIndex;
     }
     if (positionalIndex >= ordered.size()) {
-      error = "argument count mismatch for " + callName; std::fprintf(stderr, "[acm-1]\n");
+      error = "argument count mismatch for " + callName;
       return false;
     }
     ordered[positionalIndex] = &callExpr.args[i];
@@ -468,7 +468,7 @@ bool buildOrderedCallArguments(const Expr &callExpr,
       ordered[i] = &params[i].args.front();
       continue;
     }
-    error = "argument count mismatch for " + callName; std::fprintf(stderr, "[acm-2]\n");
+    error = "argument count mismatch for " + callName;
     return false;
   }
   return true;
@@ -535,7 +535,7 @@ bool buildOrderedCallArgumentsWithPackedArgs(const Expr &callExpr,
       continue;
     }
     if (positionalIndex >= params.size()) {
-      error = "argument count mismatch for " + callName; std::fprintf(stderr, "[acm-3]\n");
+      error = "argument count mismatch for " + callName;
       return false;
     }
     ordered[positionalIndex] = &callExpr.args[i];
@@ -553,7 +553,7 @@ bool buildOrderedCallArgumentsWithPackedArgs(const Expr &callExpr,
       ordered[i] = &params[i].args.front();
       continue;
     }
-    error = "argument count mismatch for " + callName; std::fprintf(stderr, "[acm-4]\n");
+    error = "argument count mismatch for " + callName;
     return false;
   }
 

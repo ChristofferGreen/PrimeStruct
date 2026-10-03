@@ -1,4 +1,4 @@
-#include "IrLowererLowerStatementsSourceMapStep.h"
+#include "primec/ir_lowerer/IrLowererLowerStatementsSourceMapStep.h"
 
 #include <algorithm>
 #include <limits>

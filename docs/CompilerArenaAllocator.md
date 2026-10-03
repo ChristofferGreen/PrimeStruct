@@ -699,13 +699,13 @@ Running the sharded audit anyway (to check for other hazards) surfaced a
 different, genuine bug: an ODR violation causing a real stack-buffer-
 overflow. `include/primec/testing/ir_lowerer_helpers/*.h` fragments are
 `#include`d *inside* `namespace primec::ir_lowerer { ... }` by
-`include/primec/testing/IrLowererHelpers.h`, so a struct declared there is
+`include/primec/testing/IrLowererTestHelpers.h`, so a struct declared there is
 the SAME type as its identically-named `src/ir_lowerer/` counterpart, not
 an independent testing copy. `ArrayVectorAccessTargetInfo` gained a
 `bool isStructBoxedRecordTarget` member on the `src/` side (TODO-4628) that
 was never mirrored into the testing-header copy - 56 bytes vs. the real
 struct's 64 - so every test declaring this type by value and calling the
-real lowerer wrote 8 bytes past its own stack slot. This is
+real lowerer wrote 8 bytes past its own stack slot. (The mirror headers were later removed by TODO-5404: the one real copy of each lowerer header now lives in `include/primec/ir_lowerer/`.) This is
 build-configuration-independent silent UB present in ordinary (non-ASan)
 release test builds too; ASan classified it as `unknown-crash` rather than
 `use-after-poison` (the first byte written is addressable; only the tail

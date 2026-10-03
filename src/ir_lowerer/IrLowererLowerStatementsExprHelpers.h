@@ -6,11 +6,11 @@
 #include <string_view>
 #include <unordered_map>
 
-#include "IrLowererCallHelpers.h"
-#include "IrLowererCallHelperTypes.h"
-#include "IrLowererLowerReturnEmitStage.h"
-#include "IrLowererSetupTypeCollectionHelpers.h"
-#include "IrLowererStructTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererCallHelpers.h"
+#include "primec/ir_lowerer/IrLowererCallHelperTypes.h"
+#include "primec/ir_lowerer/IrLowererLowerReturnEmitStage.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeCollectionHelpers.h"
+#include "primec/ir_lowerer/IrLowererStructTypeHelpers.h"
 #include "primec/ast/Ast.h"
 #include "primec/frontend/SemanticProduct.h"
 #include "primec/support/StdlibSurfaceRegistry.h"

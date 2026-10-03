@@ -1,6 +1,6 @@
-#include "IrLowererRuntimeErrorHelpers.h"
+#include "primec/ir_lowerer/IrLowererRuntimeErrorHelpers.h"
 
-#include "IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
 
 #include <cerrno>
 #include <unordered_set>

@@ -1,10 +1,10 @@
-#include "IrLowererOperatorConversionsAndCallsHelpers.h"
+#include "primec/ir_lowerer/IrLowererOperatorConversionsAndCallsHelpers.h"
 
 #include "IrLowererOperatorConversionsAndCallsInternal.h"
 
-#include "IrLowererCallHelpers.h"
-#include "IrLowererHelpers.h"
-#include "IrLowererIndexKindHelpers.h"
+#include "primec/ir_lowerer/IrLowererCallHelpers.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererIndexKindHelpers.h"
 
 #include <cstring>
 #include <utility>

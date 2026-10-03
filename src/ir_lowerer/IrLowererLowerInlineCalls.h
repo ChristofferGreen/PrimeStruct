@@ -1,8 +1,8 @@
 #pragma once
 
-#include "IrLowererCallHelpers.h"
-#include "IrLowererLowerReturnEmitStage.h"
-#include "IrLowererOnErrorHelpers.h"
+#include "primec/ir_lowerer/IrLowererCallHelpers.h"
+#include "primec/ir_lowerer/IrLowererLowerReturnEmitStage.h"
+#include "primec/ir_lowerer/IrLowererOnErrorHelpers.h"
 #include "primec/ast/Ast.h"
 #include "primec/frontend/SemanticProduct.h"
 #include "primec/support/Diagnostics.h"

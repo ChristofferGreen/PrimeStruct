@@ -1,7 +1,7 @@
-#include "IrLowererOperatorClampMinMaxTrigHelpers.h"
+#include "primec/ir_lowerer/IrLowererOperatorClampMinMaxTrigHelpers.h"
 #include "IrLowererOperatorAngleTrigHelpers.h"
 
-#include "IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
 
 #include <cstring>
 

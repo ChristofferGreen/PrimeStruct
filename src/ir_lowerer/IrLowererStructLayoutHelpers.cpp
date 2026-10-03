@@ -1,15 +1,15 @@
-#include "IrLowererStructLayoutHelpers.h"
+#include "primec/ir_lowerer/IrLowererStructLayoutHelpers.h"
 
 #include <algorithm>
 #include <cctype>
 #include <limits>
 
-#include "IrLowererBindingTypeHelpers.h"
-#include "IrLowererCallHelpers.h"
-#include "IrLowererHelpers.h"
-#include "IrLowererSetupTypeCollectionHelpers.h"
-#include "IrLowererStructTypeHelpers.h"
-#include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/ir_lowerer/IrLowererBindingTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererCallHelpers.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeCollectionHelpers.h"
+#include "primec/ir_lowerer/IrLowererStructTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
 #include "primec/frontend/SemanticProduct.h"
 
 namespace primec::ir_lowerer {

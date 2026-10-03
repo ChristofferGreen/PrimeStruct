@@ -1,6 +1,6 @@
-#include "IrLowererOperatorComparisonHelpers.h"
+#include "primec/ir_lowerer/IrLowererOperatorComparisonHelpers.h"
 
-#include "IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
 
 namespace primec::ir_lowerer {
 

@@ -1,19 +1,19 @@
-#include "IrLowererLowerEntrySetup.h"
+#include "primec/ir_lowerer/IrLowererLowerEntrySetup.h"
 
 #include <array>
 #include <string_view>
 
-#include "IrLowererBindingTypeHelpers.h"
-#include "IrLowererCallHelpers.h"
-#include "IrLowererCountAccessHelpers.h"
-#include "IrLowererGpuEffects.h"
-#include "IrLowererLowerEffects.h"
-#include "IrLowererNativeEffects.h"
+#include "primec/ir_lowerer/IrLowererBindingTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererCallHelpers.h"
+#include "primec/ir_lowerer/IrLowererCountAccessHelpers.h"
+#include "primec/ir_lowerer/IrLowererGpuEffects.h"
+#include "primec/ir_lowerer/IrLowererLowerEffects.h"
+#include "primec/ir_lowerer/IrLowererNativeEffects.h"
 #include "IrLowererRequirementContractHelpers.h"
-#include "IrLowererResultHelpers.h"
-#include "IrLowererStructLayoutHelpers.h"
-#include "IrLowererStructTypeHelpers.h"
-#include "IrLowererVmEffects.h"
+#include "primec/ir_lowerer/IrLowererResultHelpers.h"
+#include "primec/ir_lowerer/IrLowererStructLayoutHelpers.h"
+#include "primec/ir_lowerer/IrLowererStructTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererVmEffects.h"
 
 namespace primec::ir_lowerer {
 

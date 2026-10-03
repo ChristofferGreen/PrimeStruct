@@ -1,6 +1,6 @@
-#include "IrLowererSetupTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeHelpers.h"
 
-#include "IrLowererSetupTypeCollectionHelpers.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeCollectionHelpers.h"
 #include "primec/ir/StdlibCollectionPaths.h"
 #include "primec/support/CollectionHelperNames.h"
 

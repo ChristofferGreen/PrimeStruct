@@ -1,4 +1,4 @@
-#include "IrLowererLowerInlineCallCleanupStep.h"
+#include "primec/ir_lowerer/IrLowererLowerInlineCallCleanupStep.h"
 
 namespace primec::ir_lowerer {
 

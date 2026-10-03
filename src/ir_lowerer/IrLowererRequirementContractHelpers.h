@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "IrLowererRuntimeErrorHelpers.h"
+#include "primec/ir_lowerer/IrLowererRuntimeErrorHelpers.h"
 #include "primec/ast/Ast.h"
 #include "primec/ir/Ir.h"
 

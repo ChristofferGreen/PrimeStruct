@@ -1,0 +1,243 @@
+#pragma once
+
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <optional>
+#include <string>
+#include <vector>
+
+#include "primec/ir_lowerer/IrLowererFlowHelpers.h"
+#include "primec/ir_lowerer/IrLowererSharedTypes.h"
+#include "primec/ir_lowerer/IrLowererResultHelpers.h"
+#include "primec/ast/Ast.h"
+#include "primec/ir/Ir.h"
+#include "primec/support/CallbackTypes.h"
+
+namespace primec::ir_lowerer {
+
+struct StructSlotLayoutInfo;
+struct SemanticProductIndex;
+struct SemanticProductTargetAdapter;
+struct UninitializedStorageAccessInfo;
+struct PrintBuiltin;
+
+using BindingKindFn = std::function<LocalInfo::Kind(const Expr &)>;
+using BindingValueKindFn = std::function<LocalInfo::ValueKind(const Expr &, LocalInfo::Kind)>;
+using EmitStatementForBindingFn = std::function<bool(const Expr &, LocalMap &)>;
+using EmitBlockForBindingFn = std::function<bool(const Expr &, LocalMap &)>;
+using ResolveUninitializedStorageForStatementFn =
+    std::function<bool(const Expr &, const LocalMap &, UninitializedStorageAccessInfo &, bool &)>;
+using ResolveStructSlotLayoutForStatementFn = std::function<bool(const std::string &, StructSlotLayoutInfo &)>;
+using EmitStructCopyFromPtrsForStatementFn = std::function<bool(int32_t, int32_t, int32_t)>;
+// For non-local storage, valuePtrLocal == -1 is an interest probe before pointer emission.
+using EmitUninitializedStorageDropFromPtrForStatementFn =
+    std::function<bool(const UninitializedStorageAccessInfo &, int32_t, bool &)>;
+using EmitPrintArgForStatementFn = std::function<bool(const Expr &, const LocalMap &, const PrintBuiltin &)>;
+using ResolveDefinitionCallForStatementFn = std::function<const Definition *(const Expr &)>;
+
+enum class UninitializedStorageInitDropEmitResult {
+  NotMatched,
+  Emitted,
+  Error,
+};
+enum class UninitializedStorageTakeEmitResult {
+  NotMatched,
+  Emitted,
+  Error,
+};
+enum class StatementPrintPathSpaceEmitResult {
+  NotMatched,
+  Emitted,
+  Error,
+};
+enum class ReturnStatementEmitResult {
+  NotMatched,
+  Emitted,
+  Error,
+};
+enum class StatementMatchIfEmitResult {
+  NotMatched,
+  Emitted,
+  Error,
+};
+
+struct ReturnStatementInlineContext {
+  bool returnsVoid = false;
+  bool returnsArray = false;
+  LocalInfo::ValueKind returnKind = LocalInfo::ValueKind::Unknown;
+  int32_t returnLocal = -1;
+  std::vector<size_t> *returnJumps = nullptr;
+};
+
+struct StatementBindingTypeInfo {
+  LocalInfo::Kind kind = LocalInfo::Kind::Value;
+  LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
+  LocalInfo::ValueKind keyValueKeyKind = LocalInfo::ValueKind::Unknown;
+  LocalInfo::ValueKind keyValueValueKind = LocalInfo::ValueKind::Unknown;
+  std::string structTypeName;
+  bool referenceToArray = false;
+  bool pointerToArray = false;
+  bool referenceToVector = false;
+  bool pointerToVector = false;
+  bool referenceToBuffer = false;
+  bool pointerToBuffer = false;
+  bool isSoaVector = false;
+  bool usesBuiltinCollectionLayout = false;
+};
+
+bool resolveSpecializedExperimentalMapTypeKindsForBindingType(
+    const std::string &typeText,
+    const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,
+    LocalInfo::ValueKind &keyKindOut,
+    LocalInfo::ValueKind &valueKindOut);
+bool resolveSpecializedKeyValueStorageStructPathForBindingType(
+    const std::string &typeText,
+    std::string &structPathOut);
+
+StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
+                                                       const Expr &init,
+                                                       const LocalMap &localsIn,
+                                                       const ExprPredicateFn &hasExplicitBindingTypeTransform,
+                                                       const BindingKindFn &bindingKind,
+                                                       const BindingValueKindFn &bindingValueKind,
+                                                       const ExprLocalsValueKindFn &inferExprKind,
+                                                       const ResolveDefinitionCallForStatementFn &resolveDefinitionCall = {},
+                                                       const SemanticProgram *semanticProgram = nullptr,
+                                                       const SemanticProductIndex *semanticIndex = nullptr);
+StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
+                                                       const Expr &init,
+                                                       const LocalMap &localsIn,
+                                                       const ExprPredicateFn &hasExplicitBindingTypeTransform,
+                                                       const BindingKindFn &bindingKind,
+                                                       const BindingValueKindFn &bindingValueKind,
+                                                       const ExprLocalsValueKindFn &inferExprKind,
+                                                       const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,
+                                                       const SemanticProductTargetAdapter *semanticProductTargets);
+bool isPointerMemoryIntrinsicCall(const Expr &expr);
+bool inferPointerMemoryIntrinsicTargetsUninitializedStorage(const Expr &expr, const LocalMap &localsIn);
+
+bool selectUninitializedStorageZeroInstruction(LocalInfo::Kind kind,
+                                               LocalInfo::ValueKind valueKind,
+                                               const std::string &bindingName,
+                                               IrOpcode &zeroOp,
+                                               uint64_t &zeroImm,
+                                               std::string &error);
+bool inferCallParameterLocalInfo(const Expr &param,
+                                 const LocalMap &localsForKindInference,
+                                 const ExprPredicateFn &isBindingMutable,
+                                 const ExprPredicateFn &hasExplicitBindingTypeTransform,
+                                 const BindingKindFn &bindingKind,
+                                 const BindingValueKindFn &bindingValueKind,
+                                 const ExprLocalsValueKindFn &inferExprKind,
+                                 const ExprPredicateFn &isFileErrorBinding,
+                                 const ExprLocalInfoVisitorFn &setReferenceArrayInfo,
+                                 const ExprLocalInfoVisitorFn &applyStructArrayInfo,
+                                 const ExprLocalInfoVisitorFn &applyStructValueInfo,
+                                 const ExprPredicateFn &isStringBinding,
+                                 LocalInfo &infoOut,
+                                 std::string &error,
+                                 const std::function<const Definition *(const Expr &, const LocalMap &)>
+                                     &resolveMethodCallDefinition = {},
+                                 const std::function<const Definition *(const Expr &)> &resolveDefinitionCall = {},
+                                 const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo = {},
+                                 const SemanticProgram *semanticProgram = nullptr,
+                                 const SemanticProductIndex *semanticIndex = nullptr);
+bool inferCallParameterLocalInfo(const Expr &param,
+                                 const LocalMap &localsForKindInference,
+                                 const ExprPredicateFn &isBindingMutable,
+                                 const ExprPredicateFn &hasExplicitBindingTypeTransform,
+                                 const BindingKindFn &bindingKind,
+                                 const BindingValueKindFn &bindingValueKind,
+                                 const ExprLocalsValueKindFn &inferExprKind,
+                                 const ExprPredicateFn &isFileErrorBinding,
+                                 const ExprLocalInfoVisitorFn &setReferenceArrayInfo,
+                                 const ExprLocalInfoVisitorFn &applyStructArrayInfo,
+                                 const ExprLocalInfoVisitorFn &applyStructValueInfo,
+                                 const ExprPredicateFn &isStringBinding,
+                                 LocalInfo &infoOut,
+                                 std::string &error,
+                                 const std::function<const Definition *(const Expr &, const LocalMap &)>
+                                     &resolveMethodCallDefinition,
+                                 const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
+                                 const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
+                                 const SemanticProductTargetAdapter *semanticProductTargets);
+bool emitStringStatementBindingInitializer(const Expr &stmt,
+                                           const Expr &init,
+                                           LocalMap &localsIn,
+                                           int32_t &nextLocal,
+                                           std::vector<IrInstruction> &instructions,
+                                           const ExprPredicateFn &isBindingMutable,
+                                           const std::function<int32_t(const std::string &)> &internString,
+                                           const ExprLocalsPredicateFn &emitExpr,
+                                           const ExprLocalsValueKindFn &inferExprKind,
+                                           const std::function<int32_t()> &allocTempLocal,
+                                           const ExprLocalsPredicateFn &isEntryArgsName,
+                                           const std::function<void()> &emitArrayIndexOutOfBounds,
+                                           std::string &error);
+UninitializedStorageInitDropEmitResult tryEmitUninitializedStorageInitDropStatement(
+    const Expr &stmt,
+    LocalMap &localsIn,
+    std::vector<IrInstruction> &instructions,
+    const ResolveUninitializedStorageForStatementFn &resolveUninitializedStorage,
+    const ExprLocalsPredicateFn &emitExpr,
+    const ResolveStructSlotLayoutForStatementFn &resolveStructSlotLayout,
+    const std::function<int32_t()> &allocTempLocal,
+    const EmitStructCopyFromPtrsForStatementFn &emitStructCopyFromPtrs,
+    const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,
+    std::string &error,
+    const EmitUninitializedStorageDropFromPtrForStatementFn &emitDropFromPtr = {});
+UninitializedStorageTakeEmitResult tryEmitUninitializedStorageTakeStatement(
+    const Expr &stmt,
+    const LocalMap &localsIn,
+    std::vector<IrInstruction> &instructions,
+    const ResolveUninitializedStorageForStatementFn &resolveUninitializedStorage,
+    const ExprLocalsPredicateFn &emitExpr);
+StatementPrintPathSpaceEmitResult tryEmitPrintPathSpaceStatementBuiltin(
+    const Expr &stmt,
+    const LocalMap &localsIn,
+    const EmitPrintArgForStatementFn &emitPrintArg,
+    const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,
+    const ExprLocalsPredicateFn &emitExpr,
+    std::vector<IrInstruction> &instructions,
+    std::string &error);
+ReturnStatementEmitResult tryEmitReturnStatement(
+    const Expr &stmt,
+    const LocalMap &localsIn,
+    std::vector<IrInstruction> &instructions,
+    const std::optional<ReturnStatementInlineContext> &inlineContext,
+    bool declaredReturnIsReferenceHandle,
+    const std::optional<ResultReturnInfo> &resultReturnInfo,
+    bool definitionReturnsVoid,
+    bool &sawReturn,
+    const ExprLocalsPredicateFn &emitExpr,
+    const ExprLocalsValueKindFn &inferExprKind,
+    const ResolveResultExprInfoWithLocalsFn &resolveResultExprInfo,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferArrayElementKind,
+    const std::function<void()> &emitFileScopeCleanupAll,
+    std::string &error);
+ReturnStatementEmitResult tryEmitReturnStatement(
+    const Expr &stmt,
+    const LocalMap &localsIn,
+    std::vector<IrInstruction> &instructions,
+    const std::optional<ReturnStatementInlineContext> &inlineContext,
+    const std::optional<ResultReturnInfo> &resultReturnInfo,
+    bool definitionReturnsVoid,
+    bool &sawReturn,
+    const ExprLocalsPredicateFn &emitExpr,
+    const ExprLocalsValueKindFn &inferExprKind,
+    const ResolveResultExprInfoWithLocalsFn &resolveResultExprInfo,
+    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferArrayElementKind,
+    const std::function<void()> &emitFileScopeCleanupAll,
+    std::string &error);
+StatementMatchIfEmitResult tryEmitMatchIfStatement(
+    const Expr &stmt,
+    LocalMap &localsIn,
+    const ExprLocalsPredicateFn &emitExpr,
+    const ExprLocalsValueKindFn &inferExprKind,
+    const EmitBlockForBindingFn &emitBlock,
+    const EmitStatementForBindingFn &emitStatement,
+    std::vector<IrInstruction> &instructions,
+    std::string &error);
+
+} // namespace primec::ir_lowerer

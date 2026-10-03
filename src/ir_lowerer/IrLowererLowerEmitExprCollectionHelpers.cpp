@@ -1,11 +1,11 @@
 #include "IrLowererLowerEmitExprCollectionHelpers.h"
 
 #include "IrLowererCountAccessClassifiers.h"
-#include "IrLowererFlowHelpers.h"
-#include "IrLowererHelpers.h"
-#include "IrLowererSetupTypeCollectionHelpers.h"
-#include "IrLowererSetupTypeHelpers.h"
-#include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/ir_lowerer/IrLowererFlowHelpers.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeCollectionHelpers.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
 #include "primec/ir/StdlibCollectionPaths.h"
 #include "primec/support/CollectionHelperNames.h"
 

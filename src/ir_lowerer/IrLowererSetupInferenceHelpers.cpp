@@ -1,10 +1,10 @@
-#include "IrLowererSetupInferenceHelpers.h"
+#include "primec/ir_lowerer/IrLowererSetupInferenceHelpers.h"
 
 #include <algorithm>
 
-#include "IrLowererHelpers.h"
-#include "IrLowererSetupTypeHelpers.h"
-#include "IrLowererStatementBindingHelpers.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererStatementBindingHelpers.h"
 
 namespace primec::ir_lowerer {
 namespace {

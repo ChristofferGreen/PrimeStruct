@@ -1,6 +1,6 @@
 #pragma once
 
-#include "IrLowererOperatorArcHyperbolicHelpers.h"
+#include "primec/ir_lowerer/IrLowererOperatorArcHyperbolicHelpers.h"
 
 namespace primec::ir_lowerer {
 

@@ -1,4 +1,4 @@
-#include "IrLowererLowerExprEmitSetup.h"
+#include "primec/ir_lowerer/IrLowererLowerExprEmitSetup.h"
 
 namespace primec::ir_lowerer {
 

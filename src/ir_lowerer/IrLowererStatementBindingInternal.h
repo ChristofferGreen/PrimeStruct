@@ -1,6 +1,6 @@
 #pragma once
 
-#include "IrLowererStatementBindingHelpers.h"
+#include "primec/ir_lowerer/IrLowererStatementBindingHelpers.h"
 
 namespace primec {
 struct SemanticProgram;

@@ -1,11 +1,11 @@
-#include "IrLowererCallHelpers.h"
+#include "primec/ir_lowerer/IrLowererCallHelpers.h"
 
 #include <memory>
 #include <optional>
 #include <string_view>
 
-#include "IrLowererHelpers.h"
-#include "IrLowererSetupTypeCollectionHelpers.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeCollectionHelpers.h"
 #include "primec/ir/SoaPathHelpers.h"
 #include "primec/ir/StdlibCollectionPaths.h"
 

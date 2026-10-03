@@ -1,0 +1,43 @@
+#pragma once
+
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
+
+#include "primec/ast/Ast.h"
+#include "primec/ir/Ir.h"
+#include "primec/frontend/SemanticProduct.h"
+
+#include "primec/ir_lowerer/IrLowererSetupLocalsHelpers.h"
+#include "primec/ir_lowerer/IrLowererStructFieldBindingHelpers.h"
+
+namespace primec::ir_lowerer {
+
+bool runLowerLocalsSetup(
+    std::vector<std::string> &stringTable,
+    IrFunction &function,
+    const Program &program,
+    const Definition &entryDef,
+    const std::string &entryPath,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::unordered_map<std::string, std::string> &importAliases,
+    const std::unordered_set<std::string> &structNames,
+    const std::unordered_map<std::string, std::vector<LayoutFieldBinding>> &structFieldInfoByName,
+    SetupLocalsOrchestration &setupLocalsOrchestrationOut,
+    std::string &errorOut);
+bool runLowerLocalsSetup(
+    std::vector<std::string> &stringTable,
+    IrFunction &function,
+    const Program &program,
+    const SemanticProgram *semanticProgram,
+    const Definition &entryDef,
+    const std::string &entryPath,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::unordered_map<std::string, std::string> &importAliases,
+    const std::unordered_set<std::string> &structNames,
+    const std::unordered_map<std::string, std::vector<LayoutFieldBinding>> &structFieldInfoByName,
+    SetupLocalsOrchestration &setupLocalsOrchestrationOut,
+    std::string &errorOut);
+
+} // namespace primec::ir_lowerer

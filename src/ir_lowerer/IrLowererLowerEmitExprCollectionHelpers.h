@@ -6,8 +6,8 @@
 #include <string>
 #include <unordered_map>
 
-#include "IrLowererCallHelpers.h"
-#include "IrLowererInlineParamHelpers.h"
+#include "primec/ir_lowerer/IrLowererCallHelpers.h"
+#include "primec/ir_lowerer/IrLowererInlineParamHelpers.h"
 #include "primec/ast/Ast.h"
 #include "primec/frontend/SemanticProduct.h"
 #include "primec/ir/Ir.h"

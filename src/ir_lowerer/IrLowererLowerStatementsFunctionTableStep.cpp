@@ -1,4 +1,4 @@
-#include "IrLowererLowerStatementsFunctionTableStep.h"
+#include "primec/ir_lowerer/IrLowererLowerStatementsFunctionTableStep.h"
 
 namespace primec::ir_lowerer {
 

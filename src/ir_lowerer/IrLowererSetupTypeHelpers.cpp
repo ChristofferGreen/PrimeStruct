@@ -1,8 +1,8 @@
-#include "IrLowererSetupTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeHelpers.h"
 
-#include "IrLowererBindingTypeHelpers.h"
-#include "IrLowererHelpers.h"
-#include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/ir_lowerer/IrLowererBindingTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
 
 namespace primec::ir_lowerer {
 

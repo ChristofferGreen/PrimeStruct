@@ -3,7 +3,7 @@
 #include <string>
 #include <string_view>
 
-#include "IrLowererSharedTypes.h"
+#include "primec/ir_lowerer/IrLowererSharedTypes.h"
 #include "primec/ast/Ast.h"
 
 namespace primec::ir_lowerer::count_access_detail {

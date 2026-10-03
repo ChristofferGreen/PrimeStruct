@@ -1,9 +1,9 @@
-#include "IrLowererLowerInferenceSetup.h"
+#include "primec/ir_lowerer/IrLowererLowerInferenceSetup.h"
 
-#include "IrLowererResultHelpers.h"
-#include "IrLowererSemanticProductTargetAdapters.h"
-#include "IrLowererSetupTypeHelpers.h"
-#include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/ir_lowerer/IrLowererResultHelpers.h"
+#include "primec/ir_lowerer/IrLowererSemanticProductTargetAdapters.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
 #include "primec/semantics/SemanticReturnDependencyOrder.h"
 
 #include <algorithm>

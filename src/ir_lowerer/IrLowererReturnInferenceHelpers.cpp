@@ -1,12 +1,12 @@
-#include "IrLowererReturnInferenceHelpers.h"
+#include "primec/ir_lowerer/IrLowererReturnInferenceHelpers.h"
 
-#include "IrLowererBindingTransformHelpers.h"
-#include "IrLowererBindingTypeHelpers.h"
-#include "IrLowererHelpers.h"
-#include "IrLowererResultHelpers.h"
-#include "IrLowererSemanticProductTargetAdapters.h"
-#include "IrLowererSetupTypeHelpers.h"
-#include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/ir_lowerer/IrLowererBindingTransformHelpers.h"
+#include "primec/ir_lowerer/IrLowererBindingTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererResultHelpers.h"
+#include "primec/ir_lowerer/IrLowererSemanticProductTargetAdapters.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
 
 #include <functional>
 #include <memory>

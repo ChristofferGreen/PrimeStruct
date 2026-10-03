@@ -1,6 +1,6 @@
-#include "IrLowererSemanticProductTargetAdapters.h"
+#include "primec/ir_lowerer/IrLowererSemanticProductTargetAdapters.h"
 
-#include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
 
 #include <optional>
 

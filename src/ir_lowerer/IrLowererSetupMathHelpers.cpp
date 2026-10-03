@@ -1,4 +1,4 @@
-#include "IrLowererSetupMathHelpers.h"
+#include "primec/ir_lowerer/IrLowererSetupMathHelpers.h"
 
 namespace primec::ir_lowerer {
 

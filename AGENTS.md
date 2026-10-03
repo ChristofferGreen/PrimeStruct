@@ -272,7 +272,7 @@ build and layout solidify.
   declarations under `include/primec/testing/` and move tests to that header before allowlisting a
   new `tests -> src/` include. When adding lowerer validation tests, prefer narrow
   `primec/testing/IrLowerer*Contracts.h` headers over the full
-  `primec/testing/IrLowererHelpers.h` umbrella whenever the shard only needs one contract family.
+  `primec/testing/IrLowererTestHelpers.h` umbrella whenever the shard only needs one contract family.
 - **Visibility transforms:** `public`/`private` are valid on definitions (controls import
   visibility) and bindings (field visibility). Executions still reject them.
 - **VM/native strings:** string values are `u64` indices. Module-table strings (bit 63

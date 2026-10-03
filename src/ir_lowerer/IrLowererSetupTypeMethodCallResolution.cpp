@@ -1,16 +1,16 @@
-#include "IrLowererSetupTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeHelpers.h"
 
 #include <cctype>
 #include <functional>
 #include <string_view>
 #include <utility>
 
-#include "IrLowererCallHelpers.h"
-#include "IrLowererHelpers.h"
-#include "IrLowererSetupTypeCollectionHelpers.h"
+#include "primec/ir_lowerer/IrLowererCallHelpers.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeReceiverTargetHelpers.h"
-#include "IrLowererStructTypeHelpers.h"
-#include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/ir_lowerer/IrLowererStructTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
 #include "primec/ir/StdlibCollectionPaths.h"
 #include "primec/ir_lowerer/IrLowererLegacyCollectionBranchCounters.h"
 #include "primec/support/CollectionHelperNames.h"

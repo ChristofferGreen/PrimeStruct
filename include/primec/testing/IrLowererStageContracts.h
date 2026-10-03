@@ -1,13 +1,9 @@
 #pragma once
 
 #include "primec/support/CallbackTypes.h"
-#include "primec/testing/ir_lowerer_helpers/IrLowererLowerInferenceSetup.h"
+#include "primec/ir_lowerer/IrLowererLowerInferenceSetup.h"
 
-namespace primec::ir_lowerer {
+#include "primec/ir_lowerer/IrLowererLowerSetupStage.h"
+#include "primec/ir_lowerer/IrLowererLowerReturnEmitStage.h"
+#include "primec/ir_lowerer/IrLowererLowerStatementsCallsStage.h"
 
-#include "primec/testing/ir_lowerer_helpers/IrLowererLowerInferenceSetup.h"
-#include "primec/testing/ir_lowerer_helpers/IrLowererLowerSetupStage.h"
-#include "primec/testing/ir_lowerer_helpers/IrLowererLowerReturnEmitStage.h"
-#include "primec/testing/ir_lowerer_helpers/IrLowererLowerStatementsCallsStage.h"
-
-} // namespace primec::ir_lowerer

@@ -1,8 +1,8 @@
-#include "IrLowererLowerEffects.h"
+#include "primec/ir_lowerer/IrLowererLowerEffects.h"
 
-#include "IrLowererCallHelpers.h"
-#include "IrLowererHelpers.h"
-#include "IrLowererSemanticProductTargetAdapters.h"
+#include "primec/ir_lowerer/IrLowererCallHelpers.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererSemanticProductTargetAdapters.h"
 #include "primec/ir/Ir.h"
 #include "primec/frontend/SemanticProduct.h"
 

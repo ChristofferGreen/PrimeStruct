@@ -1,9 +1,9 @@
-#include "IrLowererLowerImportsStructsSetup.h"
+#include "primec/ir_lowerer/IrLowererLowerImportsStructsSetup.h"
 
 #include <functional>
 
-#include "IrLowererStructLayoutHelpers.h"
-#include "IrLowererStructTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererStructLayoutHelpers.h"
+#include "primec/ir_lowerer/IrLowererStructTypeHelpers.h"
 #include "primec/frontend/FrontendSyntax.h"
 
 namespace primec::ir_lowerer {

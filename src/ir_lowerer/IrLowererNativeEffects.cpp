@@ -1,6 +1,6 @@
-#include "IrLowererNativeEffects.h"
+#include "primec/ir_lowerer/IrLowererNativeEffects.h"
 
-#include "IrLowererLowerEffects.h"
+#include "primec/ir_lowerer/IrLowererLowerEffects.h"
 
 namespace primec::ir_lowerer {
 

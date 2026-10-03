@@ -1,6 +1,6 @@
 #pragma once
 
-#include "IrLowererOperatorClampMinMaxTrigHelpers.h"
+#include "primec/ir_lowerer/IrLowererOperatorClampMinMaxTrigHelpers.h"
 
 namespace primec::ir_lowerer {
 

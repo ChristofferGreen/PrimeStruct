@@ -1,16 +1,16 @@
-#include "IrLowererUninitializedTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererUninitializedTypeHelpers.h"
 
 #include <algorithm>
 #include <cctype>
 #include <functional>
 #include <unordered_set>
 
-#include "IrLowererHelpers.h"
-#include "IrLowererBindingTransformHelpers.h"
-#include "IrLowererSemanticProductTargetAdapters.h"
-#include "IrLowererSetupTypeCollectionHelpers.h"
-#include "IrLowererStructFieldBindingHelpers.h"
-#include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererBindingTransformHelpers.h"
+#include "primec/ir_lowerer/IrLowererSemanticProductTargetAdapters.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeCollectionHelpers.h"
+#include "primec/ir_lowerer/IrLowererStructFieldBindingHelpers.h"
+#include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
 #include "primec/ir/SoaPathHelpers.h"
 #include "primec/ir/StdlibCollectionPaths.h"
 #include "primec/support/CollectionHelperNames.h"

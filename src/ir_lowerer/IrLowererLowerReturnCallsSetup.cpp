@@ -1,4 +1,4 @@
-#include "IrLowererLowerReturnCallsSetup.h"
+#include "primec/ir_lowerer/IrLowererLowerReturnCallsSetup.h"
 
 #include "primec/ir/Ir.h"
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "IrLowererResultHelpers.h"
+#include "primec/ir_lowerer/IrLowererResultHelpers.h"
 
 namespace primec::ir_lowerer {
 

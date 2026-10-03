@@ -1,9 +1,9 @@
-#include "IrLowererCallHelpers.h"
+#include "primec/ir_lowerer/IrLowererCallHelpers.h"
 
 #include <limits>
 
-#include "IrLowererHelpers.h"
-#include "IrLowererSetupTypeCollectionHelpers.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeCollectionHelpers.h"
 #include "primec/support/CollectionHelperNames.h"
 
 namespace primec::ir_lowerer {

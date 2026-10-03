@@ -1,6 +1,6 @@
-#include "IrLowererOperatorPowAbsSignHelpers.h"
+#include "primec/ir_lowerer/IrLowererOperatorPowAbsSignHelpers.h"
 
-#include "IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
 
 #include <cstring>
 

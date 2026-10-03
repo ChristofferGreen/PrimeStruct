@@ -1,9 +1,9 @@
 #include "IrLowererLowerEmitExprPrintArg.h"
 
-#include "IrLowererCountAccessHelpers.h"
-#include "IrLowererIndexKindHelpers.h"
-#include "IrLowererSemanticProductTargetAdapters.h"
-#include "IrLowererStringLiteralHelpers.h"
+#include "primec/ir_lowerer/IrLowererCountAccessHelpers.h"
+#include "primec/ir_lowerer/IrLowererIndexKindHelpers.h"
+#include "primec/ir_lowerer/IrLowererSemanticProductTargetAdapters.h"
+#include "primec/ir_lowerer/IrLowererStringLiteralHelpers.h"
 #include "primec/ir/Ir.h"
 
 namespace primec::ir_lowerer {

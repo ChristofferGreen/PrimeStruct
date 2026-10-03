@@ -11,14 +11,11 @@
 #include "primec/ir/Ir.h"
 #include "primec/frontend/SemanticProduct.h"
 #include "primec/support/CallbackTypes.h"
-#include "primec/testing/ir_lowerer_helpers/IrLowererSemanticProductTargetAdapters.h"
-
-namespace primec::ir_lowerer {
+#include "primec/ir_lowerer/IrLowererSemanticProductTargetAdapters.h"
 
 // Focused count/access lowerer contracts for validation tests. Keep this
 // surface narrower than the full IrLowererHelpers umbrella.
-#include "primec/testing/ir_lowerer_helpers/IrLowererSharedTypes.h"
-#include "primec/testing/ir_lowerer_helpers/IrLowererCountAccessHelpers.h"
-#include "primec/testing/ir_lowerer_helpers/IrLowererCallDispatchHelpers.h"
+#include "primec/ir_lowerer/IrLowererSharedTypes.h"
+#include "primec/ir_lowerer/IrLowererCountAccessHelpers.h"
+#include "primec/ir_lowerer/IrLowererCallHelpers.h"
 
-} // namespace primec::ir_lowerer

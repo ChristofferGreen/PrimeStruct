@@ -7,11 +7,8 @@
 #include "primec/frontend/SemanticProduct.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
 
-namespace primec::ir_lowerer {
-
 // Focused collection-surface lowerer contracts for validation tests. Keep this
 // surface narrower than the full IrLowererHelpers umbrella.
 #include "primec/support/CallbackTypes.h"
-#include "primec/testing/ir_lowerer_helpers/IrLowererSetupTypeCollectionHelpers.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeCollectionHelpers.h"
 
-} // namespace primec::ir_lowerer

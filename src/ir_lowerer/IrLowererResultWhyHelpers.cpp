@@ -1,11 +1,11 @@
 #include "IrLowererResultInternal.h"
 
-#include "IrLowererBindingTransformHelpers.h"
-#include "IrLowererBindingTypeHelpers.h"
-#include "IrLowererHelpers.h"
-#include "IrLowererRuntimeErrorHelpers.h"
-#include "IrLowererSemanticProductTargetAdapters.h"
-#include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/ir_lowerer/IrLowererBindingTransformHelpers.h"
+#include "primec/ir_lowerer/IrLowererBindingTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererRuntimeErrorHelpers.h"
+#include "primec/ir_lowerer/IrLowererSemanticProductTargetAdapters.h"
+#include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
 
 namespace primec::ir_lowerer {
 

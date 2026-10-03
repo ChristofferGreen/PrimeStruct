@@ -2,8 +2,8 @@
 
 #include <string_view>
 
-#include "IrLowererHelpers.h"
-#include "IrLowererSetupTypeCollectionHelpers.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeCollectionHelpers.h"
 #include "primec/ast/AstCallPathHelpers.h"
 #include "primec/ir/SoaPathHelpers.h"
 #include "primec/ir/StdlibCollectionPaths.h"

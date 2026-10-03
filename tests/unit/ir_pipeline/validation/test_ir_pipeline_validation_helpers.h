@@ -38,19 +38,17 @@
 #include "primec/backend/WasmEmitter.h"
 #include "primec/testing/SemanticsControlFlowProbes.h"
 #include "primec/testing/EmitterHelpers.h"
-#include "primec/testing/IrLowererHelpers.h"
+#include "primec/testing/IrLowererTestHelpers.h"
 #include "primec/testing/IrLowererStageContracts.h"
 #include "primec/testing/SemanticsValidationHelpers.h"
 #include "primec/testing/TestScratch.h"
 #include "../test_ir_pipeline_helpers.h"
 
-namespace primec::ir_lowerer {
-#include "primec/testing/ir_lowerer_helpers/IrLowererLowerStatementsCallsStep.h"
-#include "primec/testing/ir_lowerer_helpers/IrLowererLowerStatementsEntryExecutionStep.h"
-#include "primec/testing/ir_lowerer_helpers/IrLowererLowerStatementsEntryStatementStep.h"
-#include "primec/testing/ir_lowerer_helpers/IrLowererLowerStatementsFunctionTableStep.h"
-#include "primec/testing/ir_lowerer_helpers/IrLowererLowerStatementsSourceMapStep.h"
-}
+#include "primec/ir_lowerer/IrLowererLowerStatementsCallsStep.h"
+#include "primec/ir_lowerer/IrLowererLowerStatementsEntryExecutionStep.h"
+#include "primec/ir_lowerer/IrLowererLowerStatementsEntryStatementStep.h"
+#include "primec/ir_lowerer/IrLowererLowerStatementsFunctionTableStep.h"
+#include "primec/ir_lowerer/IrLowererLowerStatementsSourceMapStep.h"
 
 #if defined(__unix__) || defined(__APPLE__)
 #include <sys/wait.h>

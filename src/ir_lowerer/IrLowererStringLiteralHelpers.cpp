@@ -1,10 +1,10 @@
-#include "IrLowererStringLiteralHelpers.h"
+#include "primec/ir_lowerer/IrLowererStringLiteralHelpers.h"
 
 #include <memory>
 #include <utility>
 
-#include "IrLowererCallHelpers.h"
-#include "IrLowererSemanticProductTargetAdapters.h"
+#include "primec/ir_lowerer/IrLowererCallHelpers.h"
+#include "primec/ir_lowerer/IrLowererSemanticProductTargetAdapters.h"
 #include "primec/frontend/StringLiteral.h"
 
 namespace primec::ir_lowerer {

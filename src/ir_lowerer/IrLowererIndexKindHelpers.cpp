@@ -1,4 +1,4 @@
-#include "IrLowererIndexKindHelpers.h"
+#include "primec/ir_lowerer/IrLowererIndexKindHelpers.h"
 
 namespace primec::ir_lowerer {
 

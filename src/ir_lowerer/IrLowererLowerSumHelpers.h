@@ -8,9 +8,9 @@
 #include <unordered_set>
 #include <vector>
 
-#include "IrLowererCallHelpers.h"
-#include "IrLowererLowerReturnEmitStage.h"
-#include "IrLowererStructTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererCallHelpers.h"
+#include "primec/ir_lowerer/IrLowererLowerReturnEmitStage.h"
+#include "primec/ir_lowerer/IrLowererStructTypeHelpers.h"
 #include "primec/ast/Ast.h"
 #include "primec/frontend/SemanticProduct.h"
 

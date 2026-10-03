@@ -2118,11 +2118,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_include_layers PROPERTIES TIMEOUT 60)
 
-  # TODO-5235: include/primec/testing/ir_lowerer_helpers/*.h fragments are
-  # included inside namespace primec::ir_lowerer, so they declare the SAME
-  # types as their src/ir_lowerer counterparts. A member present in only one
-  # copy is an ODR violation with a real stack-buffer-overflow consequence,
-  # not a cosmetic mirror drift - see docs/CompilerArenaAllocator.md.
+  # The lowerer helper headers live once under include/primec/ir_lowerer; this fails if a
+  # second copy of one appears (the old hand-kept mirrors caused an ODR bug).
   add_test(
     NAME PrimeStruct_testing_mirror_structs
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/check_testing_mirror_structs.py

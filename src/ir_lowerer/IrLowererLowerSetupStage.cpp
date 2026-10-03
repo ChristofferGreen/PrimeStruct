@@ -1,12 +1,12 @@
-#include "IrLowererLowerSetupStage.h"
+#include "primec/ir_lowerer/IrLowererLowerSetupStage.h"
 
-#include "IrLowererHelpers.h"
-#include "IrLowererBindingTransformHelpers.h"
-#include "IrLowererLowerEntrySetup.h"
-#include "IrLowererLowerImportsStructsSetup.h"
-#include "IrLowererLowerLocalsSetup.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererBindingTransformHelpers.h"
+#include "primec/ir_lowerer/IrLowererLowerEntrySetup.h"
+#include "primec/ir_lowerer/IrLowererLowerImportsStructsSetup.h"
+#include "primec/ir_lowerer/IrLowererLowerLocalsSetup.h"
 #include "IrLowererRecursionAnalysis.h"
-#include "IrLowererSetupMathHelpers.h"
+#include "primec/ir_lowerer/IrLowererSetupMathHelpers.h"
 #include "primec/support/SourceLocationMapper.h"
 
 #include <algorithm>

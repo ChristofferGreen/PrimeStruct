@@ -1,12 +1,12 @@
-#include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
 
 #include <algorithm>
 #include <cctype>
 #include <cstdint>
 #include <sstream>
 
-#include "IrLowererHelpers.h"
-#include "IrLowererSetupTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeHelpers.h"
 
 namespace primec::ir_lowerer {
 

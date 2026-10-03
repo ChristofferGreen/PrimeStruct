@@ -1,6 +1,6 @@
-#include "IrLowererOperatorConversionsAndCallsHelpers.h"
-#include "IrLowererStatementBindingHelpers.h"
-#include "IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererOperatorConversionsAndCallsHelpers.h"
+#include "primec/ir_lowerer/IrLowererStatementBindingHelpers.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
 
 namespace primec::ir_lowerer {
 

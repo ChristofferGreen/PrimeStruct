@@ -1,10 +1,10 @@
 #include "IrLowererRecursionAnalysis.h"
 
-#include "IrLowererBindingTransformHelpers.h"
-#include "IrLowererCallHelpers.h"
-#include "IrLowererSetupTypeHelpers.h"
-#include "IrLowererSharedTypes.h"
-#include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/ir_lowerer/IrLowererBindingTransformHelpers.h"
+#include "primec/ir_lowerer/IrLowererCallHelpers.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererSharedTypes.h"
+#include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
 #include "primec/support/CollectionHelperNames.h"
 
 #include <unordered_map>

@@ -1,13 +1,13 @@
 #include "IrLowererStatementBindingInternal.h"
 
-#include "IrLowererBindingTypeHelpers.h"
-#include "IrLowererCallHelpers.h"
-#include "IrLowererHelpers.h"
-#include "IrLowererIndexKindHelpers.h"
-#include "IrLowererSetupTypeHelpers.h"
-#include "IrLowererStringCallHelpers.h"
-#include "IrLowererStringLiteralHelpers.h"
-#include "IrLowererUninitializedTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererBindingTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererCallHelpers.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererIndexKindHelpers.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererStringCallHelpers.h"
+#include "primec/ir_lowerer/IrLowererStringLiteralHelpers.h"
+#include "primec/ir_lowerer/IrLowererUninitializedTypeHelpers.h"
 
 #include <optional>
 

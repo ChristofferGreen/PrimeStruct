@@ -1,11 +1,11 @@
-#include "IrLowererFlowHelpers.h"
+#include "primec/ir_lowerer/IrLowererFlowHelpers.h"
 
-#include "IrLowererBindingTypeHelpers.h"
-#include "IrLowererHelpers.h"
-#include "IrLowererIndexKindHelpers.h"
-#include "IrLowererSemanticProductTargetAdapters.h"
-#include "IrLowererSetupTypeHelpers.h"
-#include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/ir_lowerer/IrLowererBindingTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererIndexKindHelpers.h"
+#include "primec/ir_lowerer/IrLowererSemanticProductTargetAdapters.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
 
 #include <limits>
 #include <optional>

@@ -658,7 +658,7 @@ Planned testing-helper migration contract:
   separate testing-only semantic snapshot transport layer remains; the helper migration cleanup is complete and the remaining public
   backend-oriented helpers
   (`primec/testing/CompilePipelineDumpHelpers.h`, `primec/testing/EmitterHelpers.h`, and
-  `primec/testing/IrLowererHelpers.h`) are now pinned as intentional stable testing APIs rather than temporary
+  `primec/testing/IrLowererTestHelpers.h`) are now pinned as intentional stable testing APIs rather than temporary
   compatibility wrappers.
 - `primec/testing/SemanticsValidationHelpers.h` and related helpers should migrate in this order:
   - move lowering-facing assertions onto semantic-product dump helpers or pipeline-facing conformance helpers

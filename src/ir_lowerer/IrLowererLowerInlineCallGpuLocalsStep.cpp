@@ -1,6 +1,6 @@
-#include "IrLowererLowerInlineCallGpuLocalsStep.h"
+#include "primec/ir_lowerer/IrLowererLowerInlineCallGpuLocalsStep.h"
 
-#include "IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
 
 namespace primec::ir_lowerer {
 

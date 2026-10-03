@@ -1,4 +1,4 @@
-#include "IrLowererOnErrorHelpers.h"
+#include "primec/ir_lowerer/IrLowererOnErrorHelpers.h"
 
 #include "primec/frontend/Lexer.h"
 #include "primec/frontend/Parser.h"

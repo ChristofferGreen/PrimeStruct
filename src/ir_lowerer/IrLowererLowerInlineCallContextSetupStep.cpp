@@ -1,4 +1,4 @@
-#include "IrLowererLowerInlineCallContextSetupStep.h"
+#include "primec/ir_lowerer/IrLowererLowerInlineCallContextSetupStep.h"
 
 namespace primec::ir_lowerer {
 

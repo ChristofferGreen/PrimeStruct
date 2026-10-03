@@ -1,4 +1,4 @@
-#include "IrLowererStringCallHelpers.h"
+#include "primec/ir_lowerer/IrLowererStringCallHelpers.h"
 
 #include "primec/frontend/StringLiteral.h"
 

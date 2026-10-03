@@ -2,10 +2,10 @@
 
 #include <algorithm>
 
-#include "IrLowererBindingTypeHelpers.h"
-#include "IrLowererHelpers.h"
-#include "IrLowererSemanticProductTargetAdapters.h"
-#include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/ir_lowerer/IrLowererBindingTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererSemanticProductTargetAdapters.h"
+#include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
 #include "primec/ir/StdlibCollectionPaths.h"
 #include "primec/support/CollectionHelperNames.h"
 

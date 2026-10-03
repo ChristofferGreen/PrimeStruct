@@ -1,6 +1,6 @@
-#include "IrLowererInlineStructArgHelpers.h"
+#include "primec/ir_lowerer/IrLowererInlineStructArgHelpers.h"
 
-#include "IrLowererFlowHelpers.h"
+#include "primec/ir_lowerer/IrLowererFlowHelpers.h"
 
 #include <limits>
 #include <string_view>

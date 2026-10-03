@@ -1,9 +1,9 @@
-#include "IrLowererSetupTypeCollectionHelpers.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeCollectionHelpers.h"
 
 #include <algorithm>
 #include <optional>
-#include "IrLowererHelpers.h"
-#include "IrLowererSemanticProductTargetAdapters.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererSemanticProductTargetAdapters.h"
 #include "primec/support/CollectionSpellingClassifier.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
 #include "primec/ir/StdlibCollectionPaths.h"

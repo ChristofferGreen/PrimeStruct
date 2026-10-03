@@ -1,4 +1,4 @@
-#include "IrLowererLowerStatementsEntryExecutionStep.h"
+#include "primec/ir_lowerer/IrLowererLowerStatementsEntryExecutionStep.h"
 
 namespace primec::ir_lowerer {
 

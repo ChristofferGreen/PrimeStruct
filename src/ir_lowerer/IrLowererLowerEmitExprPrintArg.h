@@ -2,9 +2,9 @@
 
 #include <string>
 
-#include "IrLowererCallHelpers.h"
-#include "IrLowererHelpers.h"
-#include "IrLowererLowerReturnEmitStage.h"
+#include "primec/ir_lowerer/IrLowererCallHelpers.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererLowerReturnEmitStage.h"
 #include "primec/ast/Ast.h"
 #include "primec/frontend/SemanticProduct.h"
 

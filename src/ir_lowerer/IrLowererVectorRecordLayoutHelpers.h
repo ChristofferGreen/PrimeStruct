@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-#include "IrLowererStructTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererStructTypeHelpers.h"
 #include "primec/ir/Ir.h"
 #include "primec/ir/StdlibCollectionPaths.h"
 

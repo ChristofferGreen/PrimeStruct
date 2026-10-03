@@ -1,4 +1,4 @@
-#include "IrLowererSetupLocalsHelpers.h"
+#include "primec/ir_lowerer/IrLowererSetupLocalsHelpers.h"
 
 namespace primec::ir_lowerer {
 

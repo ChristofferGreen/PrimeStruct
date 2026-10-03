@@ -1,8 +1,8 @@
-#include "IrLowererLowerLocalsSetup.h"
+#include "primec/ir_lowerer/IrLowererLowerLocalsSetup.h"
 
 #include <memory>
 
-#include "IrLowererUninitializedTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererUninitializedTypeHelpers.h"
 
 namespace primec::ir_lowerer {
 

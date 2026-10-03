@@ -1,13 +1,13 @@
 #include "IrLowererOperatorConversionsAndCallsInternal.h"
 
-#include "IrLowererCallHelpers.h"
-#include "IrLowererBindingTransformHelpers.h"
-#include "IrLowererBindingTypeHelpers.h"
-#include "IrLowererHelpers.h"
-#include "IrLowererIndexKindHelpers.h"
-#include "IrLowererSemanticProductTargetAdapters.h"
-#include "IrLowererStructFieldBindingHelpers.h"
-#include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/ir_lowerer/IrLowererCallHelpers.h"
+#include "primec/ir_lowerer/IrLowererBindingTransformHelpers.h"
+#include "primec/ir_lowerer/IrLowererBindingTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererIndexKindHelpers.h"
+#include "primec/ir_lowerer/IrLowererSemanticProductTargetAdapters.h"
+#include "primec/ir_lowerer/IrLowererStructFieldBindingHelpers.h"
+#include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
 
 #include <algorithm>
 #include <string_view>

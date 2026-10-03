@@ -323,7 +323,7 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
   std::filesystem::path scriptPath = cwd / "scripts" / "check_include_layers.py";
   std::filesystem::path allowlistPath = cwd / "scripts" / "include_layer_allowlist.txt";
   std::filesystem::path emitterTestApiPath = cwd / "include" / "primec" / "testing" / "EmitterHelpers.h";
-  std::filesystem::path irLowererTestApiPath = cwd / "include" / "primec" / "testing" / "IrLowererHelpers.h";
+  std::filesystem::path irLowererTestApiPath = cwd / "include" / "primec" / "testing" / "IrLowererTestHelpers.h";
   std::filesystem::path irLowererCountAccessContractsApiPath =
       cwd / "include" / "primec" / "testing" / "IrLowererCountAccessContracts.h";
   std::filesystem::path irLowererStageContractsApiPath =
@@ -351,7 +351,7 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
     scriptPath = cwd.parent_path() / "scripts" / "check_include_layers.py";
     allowlistPath = cwd.parent_path() / "scripts" / "include_layer_allowlist.txt";
     emitterTestApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "EmitterHelpers.h";
-    irLowererTestApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "IrLowererHelpers.h";
+    irLowererTestApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "IrLowererTestHelpers.h";
     irLowererCountAccessContractsApiPath =
         cwd.parent_path() / "include" / "primec" / "testing" / "IrLowererCountAccessContracts.h";
     irLowererStageContractsApiPath =
@@ -442,55 +442,53 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
       readTextFile(irLowererCountAccessContractsApiPath);
   const std::string irLowererStageContractsApi = readTextFile(irLowererStageContractsApiPath);
   CHECK(irLowererTestApi.find("namespace primec::ir_lowerer") != std::string::npos);
-  CHECK(irLowererTestApi.find("#include \"primec/testing/ir_lowerer_helpers/IrLowererSharedTypes.h\"") !=
+  CHECK(irLowererTestApi.find("#include \"primec/ir_lowerer/IrLowererSharedTypes.h\"") !=
         std::string::npos);
-  CHECK(irLowererTestApi.find("#include \"primec/testing/ir_lowerer_helpers/IrLowererFlowHelpers.h\"") !=
+  CHECK(irLowererTestApi.find("#include \"primec/ir_lowerer/IrLowererFlowHelpers.h\"") !=
         std::string::npos);
-  CHECK(irLowererTestApi.find("#include \"primec/testing/ir_lowerer_helpers/IrLowererStringCallHelpers.h\"") !=
+  CHECK(irLowererTestApi.find("#include \"primec/ir_lowerer/IrLowererStringCallHelpers.h\"") !=
         std::string::npos);
-  CHECK(irLowererTestApi.find("#include \"primec/testing/ir_lowerer_helpers/IrLowererUninitializedTypeHelpers.h\"") !=
+  CHECK(irLowererTestApi.find("#include \"primec/ir_lowerer/IrLowererUninitializedTypeHelpers.h\"") !=
         std::string::npos);
-  CHECK(irLowererTestApi.find("#include \"primec/testing/ir_lowerer_helpers/IrLowererLowerInferenceSetup.h\"") ==
+  CHECK(irLowererTestApi.find("#include \"primec/ir_lowerer/IrLowererLowerInferenceSetup.h\"") ==
         std::string::npos);
-  CHECK(irLowererTestApi.find("#include \"primec/testing/ir_lowerer_helpers/IrLowererLowerSetupStage.h\"") ==
+  CHECK(irLowererTestApi.find("#include \"primec/ir_lowerer/IrLowererLowerSetupStage.h\"") ==
         std::string::npos);
-  CHECK(irLowererTestApi.find("#include \"primec/testing/ir_lowerer_helpers/IrLowererLowerReturnEmitStage.h\"") ==
+  CHECK(irLowererTestApi.find("#include \"primec/ir_lowerer/IrLowererLowerReturnEmitStage.h\"") ==
         std::string::npos);
-  CHECK(irLowererTestApi.find("#include \"primec/testing/ir_lowerer_helpers/IrLowererLowerStatementsCallsStage.h\"") ==
+  CHECK(irLowererTestApi.find("#include \"primec/ir_lowerer/IrLowererLowerStatementsCallsStage.h\"") ==
         std::string::npos);
-  CHECK(irLowererTestApi.find("#include \"primec/testing/ir_lowerer_helpers/IrLowererLowerStatementsCallsStep.h\"") ==
+  CHECK(irLowererTestApi.find("#include \"primec/ir_lowerer/IrLowererLowerStatementsCallsStep.h\"") ==
         std::string::npos);
-  CHECK(irLowererTestApi.find("#include \"primec/testing/ir_lowerer_helpers/IrLowererLowerStatementsEntryExecutionStep.h\"") ==
+  CHECK(irLowererTestApi.find("#include \"primec/ir_lowerer/IrLowererLowerStatementsEntryExecutionStep.h\"") ==
         std::string::npos);
-  CHECK(irLowererTestApi.find("#include \"primec/testing/ir_lowerer_helpers/IrLowererLowerStatementsEntryStatementStep.h\"") ==
+  CHECK(irLowererTestApi.find("#include \"primec/ir_lowerer/IrLowererLowerStatementsEntryStatementStep.h\"") ==
         std::string::npos);
-  CHECK(irLowererTestApi.find("#include \"primec/testing/ir_lowerer_helpers/IrLowererLowerStatementsFunctionTableStep.h\"") ==
+  CHECK(irLowererTestApi.find("#include \"primec/ir_lowerer/IrLowererLowerStatementsFunctionTableStep.h\"") ==
         std::string::npos);
-  CHECK(irLowererTestApi.find("#include \"primec/testing/ir_lowerer_helpers/IrLowererLowerStatementsSourceMapStep.h\"") ==
+  CHECK(irLowererTestApi.find("#include \"primec/ir_lowerer/IrLowererLowerStatementsSourceMapStep.h\"") ==
         std::string::npos);
 
-  CHECK(irLowererCountAccessContractsApi.find("namespace primec::ir_lowerer") !=
-        std::string::npos);
   CHECK(irLowererCountAccessContractsApi.find("IrLowererCountAccessHelpers.h") !=
         std::string::npos);
-  CHECK(irLowererCountAccessContractsApi.find("IrLowererCallDispatchHelpers.h") !=
+  CHECK(irLowererCountAccessContractsApi.find("IrLowererCallHelpers.h") !=
         std::string::npos);
   CHECK(irLowererCountAccessContractsApi.find("IrLowererSharedTypes.h") !=
         std::string::npos);
-  CHECK(irLowererCountAccessContractsApi.find("primec/testing/IrLowererHelpers.h") ==
+  CHECK(irLowererCountAccessContractsApi.find("primec/testing/IrLowererTestHelpers.h") ==
         std::string::npos);
   CHECK(irLowererCountAccessContractsApi.find("IrLowererFlowHelpers.h") ==
         std::string::npos);
   CHECK(irLowererCountAccessContractsApi.find("IrLowererUninitializedTypeHelpers.h") ==
         std::string::npos);
 
-  CHECK(irLowererStageContractsApi.find("#include \"primec/testing/ir_lowerer_helpers/IrLowererLowerInferenceSetup.h\"") !=
+  CHECK(irLowererStageContractsApi.find("#include \"primec/ir_lowerer/IrLowererLowerInferenceSetup.h\"") !=
         std::string::npos);
-  CHECK(irLowererStageContractsApi.find("#include \"primec/testing/ir_lowerer_helpers/IrLowererLowerSetupStage.h\"") !=
+  CHECK(irLowererStageContractsApi.find("#include \"primec/ir_lowerer/IrLowererLowerSetupStage.h\"") !=
         std::string::npos);
-  CHECK(irLowererStageContractsApi.find("#include \"primec/testing/ir_lowerer_helpers/IrLowererLowerReturnEmitStage.h\"") !=
+  CHECK(irLowererStageContractsApi.find("#include \"primec/ir_lowerer/IrLowererLowerReturnEmitStage.h\"") !=
         std::string::npos);
-  CHECK(irLowererStageContractsApi.find("#include \"primec/testing/ir_lowerer_helpers/IrLowererLowerStatementsCallsStage.h\"") !=
+  CHECK(irLowererStageContractsApi.find("#include \"primec/ir_lowerer/IrLowererLowerStatementsCallsStage.h\"") !=
         std::string::npos);
   CHECK(irLowererStageContractsApi.find("IrLowererLowerStatementsCallsStep.h") ==
         std::string::npos);
@@ -578,7 +576,7 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
   const std::string validationHelpersTest = readTextFile(validationHelpersTestPath);
   const std::string countAccessValidationTest = readTextFile(countAccessValidationTestPath);
   CHECK(irPipelineTest.find("#include \"primec/testing/EmitterHelpers.h\"") != std::string::npos);
-  CHECK(irPipelineTest.find("#include \"primec/testing/IrLowererHelpers.h\"") != std::string::npos);
+  CHECK(irPipelineTest.find("#include \"primec/testing/IrLowererTestHelpers.h\"") != std::string::npos);
   CHECK(irPipelineTest.find("#include \"primec/testing/SemanticsValidationHelpers.h\"") != std::string::npos);
   CHECK(irPipelineTest.find("#include \"src/emitter/") == std::string::npos);
   CHECK(irPipelineTest.find("#include \"src/ir_lowerer/") == std::string::npos);
@@ -586,7 +584,7 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
         std::string::npos);
   CHECK(irPipelineTest.find("#include \"src/semantics/SemanticsValidatorStatementLoopCountStep.h\"") ==
         std::string::npos);
-  CHECK(validationHelpersTest.find("#include \"primec/testing/IrLowererHelpers.h\"") != std::string::npos);
+  CHECK(validationHelpersTest.find("#include \"primec/testing/IrLowererTestHelpers.h\"") != std::string::npos);
   CHECK(validationHelpersTest.find("#include \"primec/testing/IrLowererStageContracts.h\"") !=
         std::string::npos);
   CHECK(validationHelpersTest.find("#include \"primec/testing/SemanticsControlFlowProbes.h\"") !=
@@ -595,7 +593,7 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
         std::string::npos);
   CHECK(countAccessValidationTest.find("#include \"test_ir_pipeline_validation_helpers.h\"") ==
         std::string::npos);
-  CHECK(countAccessValidationTest.find("#include \"primec/testing/IrLowererHelpers.h\"") ==
+  CHECK(countAccessValidationTest.find("#include \"primec/testing/IrLowererTestHelpers.h\"") ==
         std::string::npos);
 }
 

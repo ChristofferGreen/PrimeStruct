@@ -102,7 +102,6 @@ of sync with them.
 | --- | --- | --- | --- |
 | TODO-5402 | Replace the 17-callback native tail dispatch signatures with a hooks struct | deferred | lowerer-structure |
 | TODO-5403 | Extend the source-file-size guard beyond src/semantics | deferred | lowerer-structure |
-| TODO-5404 | Remove the hand-maintained src/ir_lowerer header mirrors | deferred | lowerer-structure |
 | TODO-5415 | Split stdlib/std/collections/soa_storage.prime by concern | deferred | stdlib |
 | TODO-5421 | Keep the release gate from dirtying docs/failing_tests.md | deferred | tooling |
 | TODO-5348 | Verify the iOS embed build and XCFramework packaging on macOS | deferred | embedding-ios |
@@ -118,7 +117,7 @@ of sync with them.
 ### Priority Lanes
 
 - Embedding (must support iOS): TODO-5348 (needs macOS)
-- Lowerer structure: TODO-5402 -> TODO-5403 -> TODO-5404
+- Lowerer structure: TODO-5402 -> TODO-5403
 - Collection resolution: TODO-5424, TODO-5425
 - Tooling: TODO-5421 (needs approval)
 - Stdlib: TODO-5415
@@ -165,18 +164,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - allowlist seeded and only shrinking; the five largest files split under 1,200 lines
     - full gate green; dumps byte-identical
   - stop_rule: pure moves and phase extraction only; a split that needs a logic change gets its own leaf.
-
-- [ ] TODO-5404: Remove the hand-maintained src/ir_lowerer header mirrors
-  - owner: ai
-  - status: deferred
-  - created_at: 2026-10-03
-  - phase: Compiler structure
-  - parallel_track: lowerer-structure
-  - scope: 40 headers exist twice: `src/ir_lowerer/X.h` and `include/primec/testing/ir_lowerer_helpers/X.h`, kept in sync by hand and guarded by `check_testing_mirror_structs.py` after a real ODR bug (TODO-5235). Make the testing umbrella include the one real declaration (move shared declarations to `include/primec/ir_lowerer/` or install the src headers for tests) and delete the mirrors and the mirror check.
-  - acceptance:
-    - zero duplicated header basenames; `check_testing_mirror_structs.py` deleted or reduced to a no-duplicates assertion
-    - full gate green; include-layer check passes without new allowlist entries
-  - stop_rule: if a mirror exists to hide private members from tests, split the header into public/private parts instead of keeping two copies.
 
 - [ ] TODO-5424: Collapse the removed vector/array/map call-form spelling diagnostics
   - owner: ai

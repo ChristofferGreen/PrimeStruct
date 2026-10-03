@@ -1,8 +1,8 @@
-#include "IrLowererInlineCallContextHelpers.h"
+#include "primec/ir_lowerer/IrLowererInlineCallContextHelpers.h"
 
 #include <string_view>
 
-#include "IrLowererSetupTypeCollectionHelpers.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeCollectionHelpers.h"
 #include "primec/ir/StdlibCollectionPaths.h"
 #include "primec/support/CollectionHelperNames.h"
 
