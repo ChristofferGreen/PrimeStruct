@@ -1,4 +1,3 @@
-// soa-surface-audit: exempt
 #include "TemplateMonomorphAssignmentTargetResolution.h"
 #include "TemplateMonomorphBindingBlockInference.h"
 #include "TemplateMonomorphBindingCallInference.h"

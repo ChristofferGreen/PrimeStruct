@@ -1,4 +1,3 @@
-// soa-surface-audit: exempt
 #include "SemanticsValidateBuiltinSoaRewrites.h"
 
 #include "SemanticsHelpers.h"

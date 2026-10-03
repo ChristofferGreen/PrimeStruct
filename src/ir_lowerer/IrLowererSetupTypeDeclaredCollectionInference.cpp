@@ -1,4 +1,3 @@
-// soa-surface-audit: exempt
 #include "IrLowererSetupTypeHelpers.h"
 
 #include <functional>

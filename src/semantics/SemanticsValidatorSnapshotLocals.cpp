@@ -1,4 +1,3 @@
-// collection-surface-audit: exempt
 #include "primec/ir/StdlibCollectionPaths.h"
 #include "SemanticsValidator.h"
 #include "primec/support/CollectionHelperNames.h"

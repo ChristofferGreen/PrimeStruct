@@ -1,4 +1,3 @@
-// collection-surface-audit: exempt
 #include "IrLowererCallHelpers.h"
 
 #include "IrLowererIndexKindHelpers.h"

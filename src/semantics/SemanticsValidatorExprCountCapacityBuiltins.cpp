@@ -1,4 +1,3 @@
-// collection-surface-audit: exempt
 #include "SemanticsValidator.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "primec/support/CollectionHelperNames.h"

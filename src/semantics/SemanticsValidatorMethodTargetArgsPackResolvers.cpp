@@ -1,4 +1,3 @@
-// collection-surface-audit: exempt
 #include "SemanticsValidator.h"
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"

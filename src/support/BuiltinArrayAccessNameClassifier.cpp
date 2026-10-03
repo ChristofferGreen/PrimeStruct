@@ -1,4 +1,3 @@
-// collection-surface-audit: exempt
 #include "primec/support/BuiltinArrayAccessNameClassifier.h"
 #include "primec/support/CollectionHelperNames.h"
 

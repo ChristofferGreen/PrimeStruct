@@ -1,6 +1,4 @@
 #include "primec/support/CollectionHelperNames.h"
-        // soa-surface-audit: exempt
-        // collection-surface-audit: exempt
         if (!expr.isMethodCall) {
           const std::string rawPath = statementsExprHelpers.resolveDirectHelperPath(expr);
           std::string experimentalVectorElementType;

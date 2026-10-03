@@ -8,6 +8,9 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import surface_audit_exemptions  # noqa: E402
+
 
 SCANNED_SUFFIXES = {".h", ".hpp", ".cpp", ".cc", ".cxx"}
 
@@ -56,17 +59,9 @@ TRACE_PATTERNS = [
     ),
 ]
 
-_EXEMPT_MARKERS = (
-    "vector-surface-audit: exempt",
-    "collection-surface-audit: exempt",
-)
 
-
-def _is_exempt(text: str) -> bool:
-    for line in text.splitlines()[:10]:
-        if any(marker in line for marker in _EXEMPT_MARKERS):
-            return True
-    return False
+def _is_exempt(root: Path, rel_path: str, text: str) -> bool:
+    return surface_audit_exemptions.is_exempt(root, rel_path, text, ['vector'])
 
 
 def parse_args() -> argparse.Namespace:
@@ -110,7 +105,7 @@ def collect_counts(root: Path) -> dict[tuple[str, str], int]:
             text = path.read_text(encoding="utf-8")
         except UnicodeDecodeError as exc:
             raise SystemExit(f"Unable to read {rel_path} as UTF-8: {exc}") from exc
-        if _is_exempt(text):
+        if _is_exempt(root, rel_path, text):
             continue
         for line in text.splitlines():
             for pattern in TRACE_PATTERNS:

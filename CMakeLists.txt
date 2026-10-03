@@ -2910,6 +2910,20 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_todo_references_self_test PROPERTIES TIMEOUT 60)
 
+  # TODO-5418: refactor helpers and the finish-TODO flow have fixture tests.
+  add_test(
+    NAME PrimeStruct_finish_todo_self_test
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/scripts/test_finish_todo.py
+            --repo-root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_finish_todo_self_test PROPERTIES TIMEOUT 60)
+  add_test(
+    NAME PrimeStruct_refactor_tools_self_test
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/scripts/test_refactor_tools.py
+            --repo-root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_refactor_tools_self_test PROPERTIES TIMEOUT 60)
+
   # TODO-5354: guard CTest registration of the doctest binaries and keep the
   # generated test inventory current.
   add_test(

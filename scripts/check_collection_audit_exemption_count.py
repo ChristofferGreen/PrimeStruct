@@ -27,6 +27,9 @@ import argparse
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import surface_audit_exemptions  # noqa: E402
+
 
 SCANNED_SUFFIXES = {".h", ".hpp", ".cpp", ".cc", ".cxx"}
 
@@ -34,13 +37,6 @@ SCANNED_SUFFIXES = {".h", ".hpp", ".cpp", ".cc", ".cxx"}
 # per-collection surface-trace checkers in this directory as of this
 # script's introduction. Kept as a single shared list here so this ratchet
 # counts a file exempted by ANY collection-surface audit, not just one.
-_EXEMPT_MARKERS = (
-    "vector-surface-audit: exempt",
-    "soa-surface-audit: exempt",
-    "map-surface-audit: exempt",
-    "collection-surface-audit: exempt",
-)
-
 # Real measured count of exempt files under include/ and src/ as of
 # 2026-08-21, when this ratchet was introduced. NOTE: the TODO-4704 scope
 # text's "115 files as of 2026-07-06" figure is stale -- extensive
@@ -76,11 +72,8 @@ _EXEMPT_MARKERS = (
 BASELINE_EXEMPT_FILE_COUNT = 96
 
 
-def _is_exempt(text: str) -> bool:
-    for line in text.splitlines()[:10]:
-        if any(marker in line for marker in _EXEMPT_MARKERS):
-            return True
-    return False
+def _is_exempt(root: Path, rel_path: str, text: str) -> bool:
+    return surface_audit_exemptions.is_exempt(root, rel_path, text, ['map', 'soa', 'vector'])
 
 
 def parse_args() -> argparse.Namespace:
@@ -124,14 +117,31 @@ def collect_exempt_files(root: Path) -> list[str]:
             text = path.read_text(encoding="utf-8")
         except UnicodeDecodeError as exc:
             raise SystemExit(f"Unable to read {rel_path} as UTF-8: {exc}") from exc
-        if _is_exempt(text):
+        if _is_exempt(root, rel_path, text):
             exempt.append(rel_path)
     return exempt
+
+
+def collect_inline_markers(root: Path) -> list[str]:
+    inline: list[str] = []
+    for path in iter_sources(root):
+        text = path.read_text(encoding="utf-8", errors="replace")
+        if surface_audit_exemptions.inline_markers(text):
+            inline.append(normalize_path(path.relative_to(root)))
+    return inline
 
 
 def main() -> int:
     args = parse_args()
     root = args.root.resolve()
+    if surface_audit_exemptions.has_data_file(root):
+        inline = collect_inline_markers(root)
+        if inline:
+            print("Surface-audit exemptions live in scripts/surface_audit_exemptions.txt (TODO-5417); "
+                  "remove the in-file marker from:")
+            for rel in inline:
+                print(f"  - {rel}")
+            return 1
     exempt_files = collect_exempt_files(root)
     count = len(exempt_files)
 

@@ -1,5 +1,3 @@
-// soa-surface-audit: exempt
-// collection-surface-audit: exempt
 #include "IrLowererLowerEmitExprTailDispatchHelpers.h"
 
 #include <algorithm>

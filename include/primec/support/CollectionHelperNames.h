@@ -1,7 +1,3 @@
-// soa-surface-audit: exempt
-// collection-surface-audit: exempt
-// vector-surface-audit: exempt
-// map-surface-audit: exempt
 // Canonical owner of every collection helper spelling the compiler matches on
 // the borrowed `_ref` helper names, the rooted same-namespace paths
 // (`/vector/...`, `/soa/...`, `/map/...`, `/array/...`, `/string/...`), and the

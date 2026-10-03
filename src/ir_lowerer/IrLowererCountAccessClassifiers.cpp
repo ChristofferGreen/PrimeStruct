@@ -1,4 +1,3 @@
-// soa-surface-audit: exempt
 #include "IrLowererCountAccessClassifiers.h"
 
 #include <string_view>

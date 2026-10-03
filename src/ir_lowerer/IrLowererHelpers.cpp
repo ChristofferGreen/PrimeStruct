@@ -1,4 +1,3 @@
-// collection-surface-audit: exempt
 #include "IrLowererHelpers.h"
 
 #include <cctype>

@@ -1,4 +1,3 @@
-// soa-surface-audit: exempt
 #include "IrLowererStructFieldBindingHelpers.h"
 
 #include <functional>

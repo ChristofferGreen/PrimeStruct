@@ -9,6 +9,9 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import surface_audit_exemptions  # noqa: E402
+
 
 SCANNED_SUFFIXES = {".h", ".hpp", ".cpp", ".cc", ".cxx"}
 
@@ -81,17 +84,9 @@ PATTERN_BY_ID = {pattern.id: pattern for pattern in TRACE_PATTERNS}
 # Counts are maxima. The final map-surface gate allows no production C++ traces.
 CURRENT_ALLOWED_COUNTS: dict[tuple[str, str], int] = {}
 
-_EXEMPT_MARKERS = (
-    "map-surface-audit: exempt",
-    "collection-surface-audit: exempt",
-)
 
-
-def _is_exempt(text: str) -> bool:
-    for line in text.splitlines()[:10]:
-        if any(marker in line for marker in _EXEMPT_MARKERS):
-            return True
-    return False
+def _is_exempt(root: Path, rel_path: str, text: str) -> bool:
+    return surface_audit_exemptions.is_exempt(root, rel_path, text, ['map'])
 
 
 def parse_args() -> argparse.Namespace:
@@ -177,7 +172,7 @@ def collect_traces(root: Path) -> list[Trace]:
             text = path.read_text(encoding="utf-8")
         except UnicodeDecodeError as exc:
             raise SystemExit(f"Unable to read {rel_path} as UTF-8: {exc}") from exc
-        if _is_exempt(text):
+        if _is_exempt(root, rel_path, text):
             continue
         for line_number, line in enumerate(text.splitlines(), start=1):
             for pattern in TRACE_PATTERNS:

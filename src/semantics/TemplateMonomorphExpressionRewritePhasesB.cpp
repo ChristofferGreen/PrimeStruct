@@ -1,6 +1,3 @@
-// map-surface-audit: exempt
-// vector-surface-audit: exempt
-// soa-surface-audit: exempt
 #include "TemplateMonomorphAssignmentTargetResolution.h"
 #include "TemplateMonomorphBindingBlockInference.h"
 #include "TemplateMonomorphBindingCallInference.h"

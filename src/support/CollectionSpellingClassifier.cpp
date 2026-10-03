@@ -1,4 +1,3 @@
-// collection-surface-audit: exempt
 #include "primec/support/CollectionSpellingClassifier.h"
 
 #include "primec/support/StdlibSurfaceRegistry.h"

@@ -1,4 +1,3 @@
-// soa-surface-audit: exempt
 #include "primec/support/CollectionHelperNames.h"
   auto allowsArrayVectorCompatibilitySuffix = [](const std::string &suffix) {
     return suffix != "count" && suffix != "capacity" && suffix != "at" && suffix != "at_unsafe" &&

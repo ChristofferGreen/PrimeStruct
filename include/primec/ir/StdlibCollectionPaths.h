@@ -1,5 +1,3 @@
-// soa-surface-audit: exempt
-// collection-surface-audit: exempt
 // Canonical owner of every /std/collections module spelling used by the
 // compiler. All production code must route collection module roots, member
 // paths, and mangled-type prefixes through these helpers instead of repeating

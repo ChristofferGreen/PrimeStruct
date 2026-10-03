@@ -1,4 +1,3 @@
-// soa-surface-audit: exempt
 #include "IrLowererCallHelpers.h"
 
 #include <memory>

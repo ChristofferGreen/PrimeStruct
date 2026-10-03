@@ -1,4 +1,3 @@
-// soa-surface-audit: exempt
 #include "SemanticPublicationBuilders.h"
 
 #include "RequirementPredicateFacts.h"

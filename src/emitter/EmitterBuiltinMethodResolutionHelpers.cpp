@@ -1,4 +1,3 @@
-// soa-surface-audit: exempt
 #include "EmitterBuiltinCallPathHelpersInternal.h"
 #include "EmitterBuiltinMethodResolutionTypeInferenceInternal.h"
 #include "EmitterCollectionSurfaceMetadata.h"

@@ -1,4 +1,3 @@
-// soa-surface-audit: exempt
 #pragma once
 
 #include "primec/support/CompileArena.h"

@@ -1,4 +1,3 @@
-// collection-surface-audit: exempt
 #include "primec/support/StdlibSurfaceRegistry.h"
 #include "primec/support/CompileContext.h"
 

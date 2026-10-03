@@ -1,4 +1,3 @@
-// soa-surface-audit: exempt
 #include "TemplateMonomorphCollectionCompatibilityPaths.h"
 
 #include <vector>

@@ -18,7 +18,6 @@
 
 namespace primec {
 
-// collection-surface-audit: exempt
 bool isCompileTimeTypeofPredicateArg(const std::string &arg);
 
 bool rewriteCompileTimePredicateExpr(Expr &expr,

@@ -1,4 +1,3 @@
-// soa-surface-audit: exempt
 #include "IrLowererBindingTypeHelpers.h"
 
 #include "IrLowererBindingTransformHelpers.h"

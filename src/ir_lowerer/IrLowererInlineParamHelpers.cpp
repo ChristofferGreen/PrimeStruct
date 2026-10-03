@@ -1,4 +1,3 @@
-// soa-surface-audit: exempt
 #include "IrLowererInlineParamHelpers.h"
 #include "IrLowererInlinePackedArgs.h"
 
