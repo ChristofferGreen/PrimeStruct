@@ -1875,6 +1875,7 @@ are left unarchived.
 | TODO-5345 | Host function declaration surface - `[host]` definitions lower to `CallHost` | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5346 | Strings across the host boundary - script-to-host `[string]` parameters | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5347 | C++ to script string arguments for exported functions | [2026-10.md](todo_archive/2026-10.md) | - |
+| TODO-5348 | Verify the iOS embed build and XCFramework packaging on macOS | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5349 | Collection helper target table: inventory and parity guard | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5350 | Route semantics and dump rewrites through one collection target table | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5351 | Route lowerer builtin-classification exemptions through the collection target table | [2026-10.md](todo_archive/2026-10.md) | - |

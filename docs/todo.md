@@ -100,7 +100,6 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5348 | Verify the iOS embed build and XCFramework packaging on macOS | deferred | embedding-ios |
 
 ### Ready Now
 
@@ -110,37 +109,11 @@ of sync with them.
 
 ### Priority Lanes
 
-- Embedding (must support iOS): TODO-5348 (needs macOS)
+- Embedding (must support iOS):  (needs macOS)
 
 ### Execution Queue
 
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 ### Task Blocks
-
-- [ ] TODO-5348: Verify the iOS embed build and XCFramework packaging on macOS
-  - owner: human
-  - status: deferred
-  - created_at: 2026-10-01
-  - phase: Embedding
-  - parallel_track: embedding-ios
-  - scope: split from TODO-5343, which finished everything verifiable on Linux
-    (process spawning compiled out via `PRIMESTRUCT_EMBED_NO_PROCESS`,
-    `PRIMESTRUCT_EMBED_ONLY`, forbidden-symbol scan, `scripts/check_embed_no_process.sh`,
-    iOS section in docs/Embedding.md). What remains needs macOS + Xcode, which
-    this repository's CI and agent sandboxes do not have: run
-    `scripts/build_ios_embed.sh`, fix any toolchain errors it exposes (iOS SDK
-    availability of APIs used under `__APPLE__`, e.g. `mach/mach.h` task_info in
-    the semantics validator, `std::filesystem` deployment target), link the
-    runtime XCFramework into a sample iOS app target that loads bytecode and
-    calls a bound host function on device and simulator, and add a macOS CI job
-    running the script (done: `.github/workflows/ios-embed.yml`, not yet run).
-  - acceptance:
-    - `scripts/build_ios_embed.sh` succeeds on macOS for device and simulator
-      and produces both XCFrameworks.
-    - a sample app runs `Script::loadBytecode` + `bind` + `run` on the simulator.
-    - result (Xcode version, deployment target, library sizes) recorded here.
-  - stop_rule: if an API used by the full compiler is unavailable on iOS, ship
-    the runtime-only XCFramework and record the gap rather than widening the
-    scope.
 
