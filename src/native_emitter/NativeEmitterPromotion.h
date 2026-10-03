@@ -121,9 +121,8 @@ inline bool opcodeKeepsPromotedRegisters(IrOpcode op) {
 // a candidate when no memory access can reach it (see IrLocalEscape.h); the most
 // used ones win, with uses inside loops counting ten times per nesting level
 // (loops are the backward jumps).
-inline std::vector<PromotedLocal> planPromotedLocals(const IrFunction &function,
-                                                     const uint8_t *pool,
-                                                     size_t poolSize) {
+inline std::vector<PromotedLocal>
+planPromotedLocals(const IrFunction &function, const uint8_t *pool, size_t poolSize) {
   std::vector<PromotedLocal> plan;
   const IrLocalEscapeInfo escape = analyzeIrLocalEscape(function);
   if (escape.localCount == 0 || poolSize == 0) {
@@ -134,7 +133,8 @@ inline std::vector<PromotedLocal> planPromotedLocals(const IrFunction &function,
   std::vector<int32_t> delta(count + 1, 0);
   for (size_t i = 0; i < count; ++i) {
     const IrInstruction &instruction = function.instructions[i];
-    if ((instruction.op == IrOpcode::Jump || instruction.op == IrOpcode::JumpIfZero) && instruction.imm <= i) {
+    if ((instruction.op == IrOpcode::Jump || instruction.op == IrOpcode::JumpIfZero) &&
+        instruction.imm <= i) {
       delta[static_cast<size_t>(instruction.imm)] += 1;
       delta[i + 1] -= 1;
     }
@@ -163,7 +163,8 @@ inline std::vector<PromotedLocal> planPromotedLocals(const IrFunction &function,
       order.push_back(local);
     }
   }
-  std::stable_sort(order.begin(), order.end(), [&](uint32_t a, uint32_t b) { return weight[a] > weight[b]; });
+  std::stable_sort(
+      order.begin(), order.end(), [&](uint32_t a, uint32_t b) { return weight[a] > weight[b]; });
   for (size_t i = 0; i < order.size() && i < poolSize; ++i) {
     plan.push_back({order[i], pool[i]});
   }

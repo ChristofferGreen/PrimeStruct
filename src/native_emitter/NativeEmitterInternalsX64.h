@@ -62,35 +62,35 @@ struct X64InstrumentationCounters {
 // offset math, never interpret the unit directly.
 class X64Emitter {
  public:
-  // A local held in a register for the whole function; see
-  // NativeEmitterPromotion.h. The emitter maps its loads and stores to register
-  // moves and can write the registers to the frame slots and back around
-  // instructions whose templates clobber them.
-  struct PromotedLocalSlot {
-    uint32_t index = 0;
-    uint8_t reg = 0;
-  };
+   // A local held in a register for the whole function; see
+   // NativeEmitterPromotion.h. The emitter maps its loads and stores to register
+   // moves and can write the registers to the frame slots and back around
+   // instructions whose templates clobber them.
+   struct PromotedLocalSlot {
+     uint32_t index = 0;
+     uint8_t reg = 0;
+   };
 
-  void setLocalPromotionEnabled(bool enabled) {
-    localPromotionEnabled_ = enabled;
-  }
-  bool localPromotionEnabled() const {
-    return localPromotionEnabled_;
-  }
-  void setPromotedLocals(const std::vector<PromotedLocalSlot> &locals);
-  void clearPromotedLocals();
-  bool hasPromotedLocals() const {
-    return !promotedLocals_.empty();
-  }
-  void emitInitPromotedLocals();
-  void emitSpillPromotedLocals();
-  void emitReloadPromotedLocals();
+   void setLocalPromotionEnabled(bool enabled) {
+     localPromotionEnabled_ = enabled;
+   }
+   bool localPromotionEnabled() const {
+     return localPromotionEnabled_;
+   }
+   void setPromotedLocals(const std::vector<PromotedLocalSlot> &locals);
+   void clearPromotedLocals();
+   bool hasPromotedLocals() const {
+     return !promotedLocals_.empty();
+   }
+   void emitInitPromotedLocals();
+   void emitSpillPromotedLocals();
+   void emitReloadPromotedLocals();
 
-  void setValueStackCacheEnabled(bool enabled) {
-    valueStackCacheEnabled_ = enabled;
-    if (!valueStackCacheEnabled_) {
-      hasValueStackCache_ = false;
-    }
+   void setValueStackCacheEnabled(bool enabled) {
+     valueStackCacheEnabled_ = enabled;
+     if (!valueStackCacheEnabled_) {
+       hasValueStackCache_ = false;
+     }
   }
 
   void flushValueStackCachePublic() {
