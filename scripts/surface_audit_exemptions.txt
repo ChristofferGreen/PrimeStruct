@@ -101,3 +101,4 @@ src/support/StdlibSurfaceRegistry.cpp collection
 src/semantics/TemplateMonomorphExpressionRewritePhasesCInnerPhasesA.cpp soa
 src/semantics/TemplateMonomorphExpressionRewritePhasesCInnerPhasesB.cpp soa
 src/ir_lowerer/IrLowererCountAccessHelpersEmit.cpp collection,soa
+src/ir_lowerer/IrLowererSetupTypeMethodCallResolutionFileLocal.h soa

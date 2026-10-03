@@ -493,6 +493,8 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ir_lowerer/IrLowererLowerInlineCalls.cpp
   src/ir_lowerer/IrLowererLowerEmitExprTryHelpers.cpp
   src/ir_lowerer/IrLowererLowerSumHelpers.cpp
+  src/ir_lowerer/IrLowererLowerSumHelpersConstructEmit.cpp
+  src/ir_lowerer/IrLowererLowerSumHelpersPickAndDiagnostics.cpp
   src/ir_lowerer/IrLowererLowerStatementsExprHelpers.cpp
   src/ir_lowerer/IrLowererLowerEmitExprPrintArg.cpp
   src/ir_lowerer/IrLowererLowerEmitExprTailDispatchHelpers.cpp

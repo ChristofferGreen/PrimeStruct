@@ -517,7 +517,8 @@ TEST_CASE("compile-time VM facade stays source locked to compiler-host boundary"
   }
 
   const std::string compileTimeSource =
-      readSourceFile(repoRoot / "src" / "frontend" / "CompileTimeEvaluation.cpp");
+      readSourceFile(repoRoot / "src" / "frontend" / "CompileTimeEvaluation.cpp") +
+      readSourceFile(repoRoot / "src" / "frontend" / "CompileTimeEvaluationFileLocal.h");
   const std::string kernelBoundaryHeader =
       readSourceFile(repoRoot / "include" / "primec" / "runtime" / "VmKernelBoundary.h");
   CHECK(compileTimeSource.find("#include \"primec/runtime/VmKernelBoundary.h\"") !=

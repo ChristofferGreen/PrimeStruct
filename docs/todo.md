@@ -140,7 +140,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 - [ ] TODO-5403: Extend the source-file-size guard beyond src/semantics
   - owner: ai
   - status: ready
-  - progress: the guard now scans src/ and include/ with an 18-file allowlist. Split so far: SemanticProduct.cpp, IrLowererCountAccessHelpers.cpp, CompilePipeline.cpp, IrLowererResultHelpers.cpp, IrLowererLowerInferenceBaseKindHelpers.cpp, IrLowererAccessTargetResolution.cpp (scripts/refactor/split_plain.py added). Remaining entries are listed in scripts/source_file_size_allowlist.txt; the three largest hide one giant function or constructor (LowerSumHelpers 2,900-line constructor, InlineNativeCallDispatch 1,200-line function, StatementBindingHelpers 930-line function) and need phase or lambda extraction.
+  - progress: the guard scans src/ and include/ with an allowlist (now 8 .cpp and 4 .h entries). Split so far: SemanticProduct, CountAccessHelpers, CompilePipeline, ResultHelpers, LowerInferenceBaseKindHelpers, AccessTargetResolution, LowerSumHelpers (three parts), and eight more via file-local helper headers (StatementBindingHelpers, CompileTimeEvaluation, SetupTypeReturnKindHelpers, LowerInferenceDispatchSetup, SetupTypeMethodCallResolution, OperatorCollectionMutationHelpers, AccessLoadHelpers, ResultMetadataHelpers). Remaining entries are in scripts/source_file_size_allowlist.txt; InlineNativeCallDispatch and LowerInlineCalls each hide one 1,200+ line function (phase extraction), BindingTypeHelpers has two anonymous namespaces, and the three LowerStatements*/LowerEmitExpr headers are fragment includes.
   - created_at: 2026-10-03
   - phase: Compiler structure
   - parallel_track: lowerer-structure

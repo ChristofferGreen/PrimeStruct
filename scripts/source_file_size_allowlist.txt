@@ -1,19 +1,10 @@
 # Files under src/ or include/ larger than 1200 lines (TODO-5403). Format: <path> <max lines> <reason>.
 # The list may only shrink: split a file, then delete its entry.
-src/ir_lowerer/IrLowererLowerSumHelpers.cpp 2949 one oversized function or constructor body; needs phase or lambda extraction
 src/ir_lowerer/IrLowererInlineNativeCallDispatch.cpp 2027 one oversized function or constructor body; needs phase or lambda extraction
-src/ir_lowerer/IrLowererStatementBindingHelpers.cpp 1807 one oversized function or constructor body; needs phase or lambda extraction
 src/ir_lowerer/IrLowererLowerStatementsExpr.h 1764 one oversized function or constructor body; needs phase or lambda extraction
 src/ir_lowerer/IrLowererBindingTypeHelpers.cpp 1738 one oversized function or constructor body; needs phase or lambda extraction
 src/support/StdlibSurfaceRegistry.cpp 1631 seeded by the src/ and include/ extension; split with the phase/helper patterns
 src/ir_lowerer/IrLowererLowerStatementsBindings.h 1500 seeded by the src/ and include/ extension; split with the phase/helper patterns
-src/frontend/CompileTimeEvaluation.cpp 1449 seeded by the src/ and include/ extension; split with the phase/helper patterns
-src/ir_lowerer/IrLowererSetupTypeReturnKindHelpers.cpp 1350 seeded by the src/ and include/ extension; split with the phase/helper patterns
-src/ir_lowerer/IrLowererLowerInferenceDispatchSetup.cpp 1334 seeded by the src/ and include/ extension; split with the phase/helper patterns
 src/ir_lowerer/IrLowererLowerEmitExpr.h 1325 seeded by the src/ and include/ extension; split with the phase/helper patterns
 src/ir_lowerer/IrLowererLowerEmitExprTryHelpers.cpp 1314 seeded by the src/ and include/ extension; split with the phase/helper patterns
-src/ir_lowerer/IrLowererSetupTypeMethodCallResolution.cpp 1294 seeded by the src/ and include/ extension; split with the phase/helper patterns
 src/ir_lowerer/IrLowererLowerInlineCalls.cpp 1289 seeded by the src/ and include/ extension; split with the phase/helper patterns
-src/ir_lowerer/IrLowererOperatorCollectionMutationHelpers.cpp 1229 seeded by the src/ and include/ extension; split with the phase/helper patterns
-src/ir_lowerer/IrLowererAccessLoadHelpers.cpp 1225 seeded by the src/ and include/ extension; split with the phase/helper patterns
-src/ir_lowerer/IrLowererResultMetadataHelpers.cpp 1212 seeded by the src/ and include/ extension; split with the phase/helper patterns
