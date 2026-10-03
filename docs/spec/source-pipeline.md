@@ -40,7 +40,9 @@ Pipeline operating rules:
 - Use `--no-text-transforms`, `--no-semantic-transforms`, or `--no-transforms` to disable transforms and require
   canonical syntax.
 - `--ir-inline` enables a post-validation IR inlining optimization pass before VM/native/IR emission.
-- `-O0`, `-O1`, `-O2`, `-O3` select an optimization level (default `-O0`; the last flag wins). The optimizer runs on
+- `-O0`, `-O1`, `-O2`, `-O3` select an optimization level (the last flag wins). Without a flag `primevm`, `--emit=vm`, `--emit=native` and
+  `--emit=optexe`/`optcpp` use `-O2`; dumps, debug sessions and traces (`--debug-json`, `--debug-dap`, `--debug-trace`,
+  `--debug-replay`) and every other emit kind (serialized IR, wasm, GLSL, SPIR-V, C++, exe) use `-O0`. The optimizer runs on
   the validated IR in `prepareIrModule`, after the optional `--ir-inline` phase and before backend emission, and the
   module is re-validated afterwards; it is shared by every backend (VM, native, C++, wasm, serialized IR).
   - Passes run in a fixed order (the manifest, printed by `--opt-list`) and the whole sequence repeats until nothing

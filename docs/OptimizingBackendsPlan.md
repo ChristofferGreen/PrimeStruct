@@ -444,6 +444,26 @@ Measured wall time of `primevm` including the 13-70 ms compile (seconds):
 5.3 Perf gates: baseline JSON entries per backend and level; regression
     ratio checks in `scripts/check_benchmark_report.py`.
 
+Status (2026-10-03): 5.1 is done. `parseOptions` picks `-O2` when no level is given for `primevm` and for
+`--emit=vm`, `native`, `optexe` and `optcpp`; dumps, debug sessions (`--debug-json`, `--debug-dap`, `--debug-trace`,
+`--debug-replay`) and the other emit kinds stay at `-O0`, and an explicit `-O` always wins. The full release gate
+passes with it, including every native compile-run suite on x86_64. `scripts/benchmark_backends.py` records the
+numbers below (median of 3; executable rows list run time and, in brackets, the compile time):
+
+| config | aggregate | json_parse | json_scan |
+| --- | --- | --- | --- |
+| vm step kernel -O0 | 1.27 s | 2.22 s | 1.45 s |
+| vm -O0 (flat loop) | 103 ms | 272 ms | 161 ms |
+| vm -O2 | 94 ms | 234 ms | 99 ms |
+| native -O0 | 30 ms (+12) | 49 ms (+77) | 32 ms (+22) |
+| native -O2 | 32 ms (+12) | 42 ms (+72) | 26 ms (+21) |
+| optexe -O2 | 2.0 ms (+618) | 10 ms (+602) | 9.2 ms (+584) |
+| exe (old C++ emitter, clang -O0) | 4.14 s (+341) | 6.95 s (+450) | 4.06 s (+404) |
+| C reference, cc -O3 | 4.8 ms (+115) | 8.3 ms (+66) | 3.5 ms (+55) |
+
+The direct native backend is now the slowest of the fast paths: 4x to 15x behind optexe and C, and the IR passes
+barely move it (its template expansion keeps every local and every operand in memory), which is the case for Phase 3.
+
 ## 6. Constraints, risks, and how each is handled
 
 - **Exact semantics.** Every pure opcode's semantics is defined once (the
@@ -795,8 +815,9 @@ Suggested order: Phase 0.1-0.3 (flags, pass manager, dumps), Phase 1.1
 
 ## 10. Decisions taken
 
-- Default level after Phase 5 is `-O2` for `--emit=native`, `--emit=vm` and
-  `primevm`, `-O0` under any debug session or trace (2026-10-03).
+- Default level is `-O2` for `--emit=native`, `--emit=vm`, `--emit=optexe`/`optcpp` and
+  `primevm`, `-O0` under any debug session or trace, for dumps and for the other emit kinds
+  (2026-10-03, implemented).
 - The `optexe` C++ emitter is the first consumer of the middle end
   (section 9); it works on the stack form with the shared CFG, no register form (2026-10-03).
 - This work is developed on the branch `claude/native-instruction-optimization-rc4qu6`,

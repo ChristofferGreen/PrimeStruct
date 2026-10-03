@@ -32,10 +32,10 @@ bool parsePrimevm(std::vector<std::string> args, primec::Options &options, std::
 
 } // namespace
 
-TEST_CASE("optimization options default to level zero with nothing set") {
+TEST_CASE("optimization options have no passes or reports set by default") {
   primec::Options options;
   std::string error;
-  REQUIRE(parsePrimec({"primec", "/tmp/input.prime"}, options, error));
+  REQUIRE(parsePrimec({"primec", "--emit=ir", "/tmp/input.prime"}, options, error));
   CHECK(error.empty());
   CHECK(options.optimization.level == 0);
   CHECK_FALSE(options.optimization.levelSpecified);
@@ -43,6 +43,39 @@ TEST_CASE("optimization options default to level zero with nothing set") {
   CHECK(options.optimization.disabledPasses.empty());
   CHECK_FALSE(options.optimization.verifyEachPass);
   CHECK_FALSE(options.optimization.report);
+}
+
+TEST_CASE("runs and executables default to -O2, everything else to -O0") {
+  const auto levelFor = [](std::vector<std::string> args, bool primevm) {
+    primec::Options options;
+    std::string error;
+    const bool ok = primevm ? parsePrimevm(std::move(args), options, error)
+                            : parsePrimec(std::move(args), options, error);
+    REQUIRE_MESSAGE(ok, error);
+    return options.optimization.level;
+  };
+  // Optimized by default.
+  CHECK(levelFor({"primevm", "/tmp/input.prime"}, true) == 2);
+  CHECK(levelFor({"primec", "/tmp/input.prime"}, false) == 2); // native by default
+  for (const char *kind : {"native", "vm", "optexe", "optexe-ir", "optcpp", "optcpp-ir"}) {
+    CAPTURE(kind);
+    CHECK(levelFor({"primec", std::string("--emit=") + kind, "/tmp/input.prime"}, false) == 2);
+  }
+  // Not optimized by default.
+  for (const char *kind :
+       {"ir", "wasm", "glsl", "glsl-ir", "spirv", "cpp", "cpp-ir", "exe", "exe-ir"}) {
+    CAPTURE(kind);
+    CHECK(levelFor({"primec", std::string("--emit=") + kind, "/tmp/input.prime"}, false) == 0);
+  }
+  // Dumps show the stage the flags select, and debug sessions need every instruction.
+  CHECK(levelFor({"primec", "--dump-stage", "ir-optimized", "/tmp/input.prime"}, false) == 0);
+  CHECK(levelFor({"primevm", "--dump-stage", "ir-optimized", "/tmp/input.prime"}, true) == 0);
+  CHECK(levelFor({"primevm", "--debug-json", "/tmp/input.prime"}, true) == 0);
+  CHECK(levelFor({"primevm", "--debug-dap", "/tmp/input.prime"}, true) == 0);
+  CHECK(levelFor({"primevm", "--debug-trace", "/tmp/trace.json", "/tmp/input.prime"}, true) == 0);
+  // An explicit level always wins, including -O0.
+  CHECK(levelFor({"primevm", "-O0", "/tmp/input.prime"}, true) == 0);
+  CHECK(levelFor({"primec", "--emit=ir", "-O3", "/tmp/input.prime"}, false) == 3);
 }
 
 TEST_CASE("optimization level flags select the level and the last one wins") {

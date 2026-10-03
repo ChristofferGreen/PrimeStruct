@@ -129,8 +129,16 @@ TEST_CASE("opt-report describes the selected passes and what changed") {
   CHECK(contains(result.err, "instructions_before=14\ninstructions_after=6\n"));
   CHECK(contains(result.err, "round 1 const-fold: "));
 
-  // At -O0 nothing is selected, but the report is still produced on request.
+  // primevm optimizes at -O2 when no level is given.
   result = run("./primevm " + source + " --opt-report");
+  CHECK(result.exitCode == 0);
+  CHECK(result.out == "10\n");
+  CHECK(
+      contains(result.err,
+               "level=2\nselected_passes=cfg-simplify,const-fold,peephole,copy-prop,dead-store\n"));
+
+  // At -O0 nothing is selected, but the report is still produced on request.
+  result = run("./primevm " + source + " -O0 --opt-report");
   CHECK(result.exitCode == 0);
   CHECK(contains(result.err, "level=0\nselected_passes=\n"));
   CHECK(contains(result.err, "instructions_before=14\ninstructions_after=14\n"));

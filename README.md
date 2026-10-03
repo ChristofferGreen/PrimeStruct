@@ -389,8 +389,10 @@ python3 scripts/architecture_health_dashboard.py --root .
   flattened unit by default
 - `--dump-stage=pre_ast|ast|ast-semantic|semantic-product|ir|ir-lowered|ir-optimized`
   exposes the main compiler stages for debugging and tooling
-- `-O1` enables the shared IR optimizer (`--opt-list` shows the passes,
-  `--opt-report` what they did); `-O0` is the default
+- the shared IR optimizer runs at `-O2` by default for `primevm` and the VM,
+  native and optexe outputs (`--opt-list` shows the passes, `--opt-report`
+  what they did); `-O0` turns it off and is the default for dumps, debug
+  sessions and the other output kinds
 - Release builds live in `build-release/`
 - Debug builds live in `build-debug/`
 

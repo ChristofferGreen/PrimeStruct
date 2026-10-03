@@ -48,12 +48,26 @@ void printDiagnosticsSection(std::ostream &err) {
   blankLine(err);
 }
 
+void printOptimizationSection(std::ostream &err) {
+  err << "Optimization:\n";
+  flagLine(err,
+           "-O0|-O1|-O2|-O3",
+           "Optimization level (default: -O2 for runs and executables, -O0 otherwise)");
+  flagLine(err, "--opt-pass <name>", "Enable one optimization pass");
+  flagLine(err, "--no-opt-pass <name>", "Disable one optimization pass");
+  flagLine(err, "--opt-list", "List optimization passes and exit");
+  flagLine(err, "--opt-report", "Print a per-pass report on stderr");
+  flagLine(err, "--opt-verify-each", "Re-validate the IR after every pass");
+  blankLine(err);
+}
+
 void printEffectsAndIrSection(std::ostream &err) {
   err << "Effects / IR:\n";
   flagLine(err, "--default-effects <list>", "Default effect set for definitions without one");
   flagLine(err, "--ir-inline", "Inline eligible calls during IR lowering");
   flagLine(err, "--dump-stage <stage>", "Dump a compiler stage and exit; one of:");
-  flagLine(err, "", "pre_ast, ast, ast-semantic, semantic-product, type-graph, ir");
+  flagLine(err, "", "pre_ast, ast, ast-semantic, semantic-product, type-graph, ir,");
+  flagLine(err, "", "ir-lowered, ir-optimized");
   flagLine(err, "", "(lowering-facing dumps include semantic-product between");
   flagLine(err, "", "ast-semantic and ir)");
   blankLine(err);
@@ -67,7 +81,9 @@ void printPrimecUsage(std::ostream &err) {
   err << "Usage: primec [options] <input.prime> [-- <program args...>]\n\n";
 
   err << "Output:\n";
-  flagLine(err, std::string("--emit=") + std::string(primecEmitKindsUsage()), "Output kind (default: exe)");
+  flagLine(err,
+           std::string("--emit=") + std::string(primecEmitKindsUsage()),
+           "Output kind (default: native)");
   flagLine(err, "-o <output>", "Output file path");
   flagLine(err, "--out-dir <dir>", "Output directory");
   flagLine(err, "--entry /path", "Entry point definition path");
@@ -80,6 +96,7 @@ void printPrimecUsage(std::ostream &err) {
 
   printTransformsSection(err);
   printDiagnosticsSection(err);
+  printOptimizationSection(err);
   printEffectsAndIrSection(err);
 
   err << "Benchmarking (semantic phase):\n";
@@ -121,6 +138,7 @@ void printPrimevmUsage(std::ostream &err) {
   flagLine(err, "--debug-replay-sequence <n>", "Stop replay at trace sequence number <n>");
   blankLine(err);
 
+  printOptimizationSection(err);
   printEffectsAndIrSection(err);
   printPassThroughNote(err);
 }

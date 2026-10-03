@@ -12,12 +12,14 @@ enum class DebugJsonSnapshotMode { None, Stop, All };
 
 // IR optimization controls (docs/OptimizingBackendsPlan.md). Parsed from
 // -O0..-O3 and --opt-* flags; optimizeIrModule (primec/ir/IrOptimizer.h) reads
-// them, and the default (no flag) is -O0.
+// them. With no -O flag, parseOptions picks -O2 for primevm and for the VM,
+// native and optexe/optcpp outputs, and -O0 for everything else (dumps, debug
+// sessions, serialized IR, wasm, GLSL, C++).
 struct OptimizationOptions {
-  // 0..3; the value of the last -O<n> flag on the command line.
+  // 0..3; the value of the last -O<n> flag on the command line, or the default
+  // parseOptions picked for this output.
   uint8_t level = 0;
-  // True when a -O<n> flag was given, so a later default flip can tell an
-  // explicit -O0 from no flag at all.
+  // True when a -O<n> flag was given, to tell an explicit -O0 from the default.
   bool levelSpecified = false;
   // Pass names in command-line order. Names are checked against the pass
   // manifest by the optimizer, not by the parser.

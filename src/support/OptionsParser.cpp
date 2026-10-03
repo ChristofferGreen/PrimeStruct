@@ -489,6 +489,9 @@ void normalizeEntryPath(Options &out) {
   }
 }
 
+// Level used when none is given and the output is optimized by default.
+constexpr uint8_t DefaultOptimizationLevel = 2;
+
 bool applyPrimecOutputDefaults(Options &out) {
   if (!out.dumpStage.empty()) {
     return true;
@@ -518,6 +521,27 @@ bool applyPrimecOutputDefaults(Options &out) {
     }
   }
   return !out.emitKind.empty() && !out.outputPath.empty();
+}
+
+// Plain runs and executables are optimized unless the user chose a level:
+// primevm, and primec for the VM, native and optexe/optcpp outputs. Dumps keep
+// -O0 (a dump shows the stage the flags select), as do debug sessions and
+// traces, which need every instruction and local the source produced. The other
+// emit kinds (serialized IR, wasm, GLSL/SPIR-V, C++/exe) stay at -O0.
+void applyOptimizationDefaults(Options &out, bool isPrimecMode) {
+  if (out.optimization.levelSpecified || !out.dumpStage.empty()) {
+    return;
+  }
+  if (out.debugJson || out.debugDap || !out.debugTracePath.empty() ||
+      !out.debugReplayPath.empty()) {
+    return;
+  }
+  const bool optimizedOutput = !isPrimecMode || out.emitKind == "native" || out.emitKind == "vm" ||
+                               out.emitKind == "optexe" || out.emitKind == "optexe-ir" ||
+                               out.emitKind == "optcpp" || out.emitKind == "optcpp-ir";
+  if (optimizedOutput) {
+    out.optimization.level = DefaultOptimizationLevel;
+  }
 }
 
 } // namespace
@@ -926,9 +950,14 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
       error = "--debug-json-snapshots requires --debug-json";
       return false;
     }
+    applyOptimizationDefaults(out, false);
     return true;
   }
-  return applyPrimecOutputDefaults(out);
+  if (!applyPrimecOutputDefaults(out)) {
+    return false;
+  }
+  applyOptimizationDefaults(out, true);
+  return true;
 }
 
 } // namespace primec
