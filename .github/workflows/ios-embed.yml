@@ -43,8 +43,14 @@ jobs:
             -target arm64-apple-ios15.0-simulator -isysroot "$SDK" \
             -Ibuild-ios/headers examples/ios/ios_smoke.cpp \
             build-ios/simulator/libPrimeStructEmbed-runtime.a -lc++ -o build-ios/ios_smoke
-          RUNTIME="$(xcrun simctl list runtimes available -j | python3 -c 'import json,sys; print([r["identifier"] for r in json.load(sys.stdin)["runtimes"] if r["platform"]=="iOS"][-1])')"
-          DEVICE_TYPE="$(xcrun simctl list devicetypes -j | python3 -c 'import json,sys; print([d["identifier"] for d in json.load(sys.stdin)["devicetypes"] if "iPhone" in d["name"]][-1])')"
+          read -r RUNTIME DEVICE_TYPE < <(xcrun simctl list runtimes available -j | python3 -c '
+          import json, sys
+          runtimes = [r for r in json.load(sys.stdin)["runtimes"] if r["platform"] == "iOS"]
+          runtime = runtimes[-1]
+          phones = [d["identifier"] for d in runtime["supportedDeviceTypes"] if "iPhone" in d["name"]]
+          print(runtime["identifier"], phones[-1])
+          ')
+          echo "runtime=$RUNTIME device=$DEVICE_TYPE"
           UDID="$(xcrun simctl create primestruct-smoke "$DEVICE_TYPE" "$RUNTIME")"
           xcrun simctl boot "$UDID"
           xcrun simctl spawn "$UDID" "$PWD/build-ios/ios_smoke"
