@@ -35,7 +35,6 @@
 #include <sstream>
 
 #include "primec/support/CompileArena.h"
-#include "TemplateMonomorphUsings.h"
 
 namespace primec {
 
@@ -44,7 +43,7 @@ std::string canonicalizeExperimentalCollectionResolvedPath(std::string path) {
 }
 
 bool isExperimentalMapEntryArgument(const Expr &argExpr,
-                                    const std::vector<ParameterInfo> &params,
+                                    const std::vector<semantics::ParameterInfo> &params,
                                     const LocalTypeMap &locals,
                                     bool allowMathBare,
                                     const std::string &namespacePrefix,
@@ -57,7 +56,7 @@ bool isExperimentalMapEntryArgument(const Expr &argExpr,
   if (isExperimentalKeyValueConstructorMemberPathLocal(resolvedArgPath, "entry")) {
     return true;
   }
-  BindingInfo argInfo;
+  semantics::BindingInfo argInfo;
   if (!inferBindingTypeForMonomorph(argExpr, params, locals, allowMathBare, ctx, argInfo)) {
     return false;
   }
@@ -65,7 +64,7 @@ bool isExperimentalMapEntryArgument(const Expr &argExpr,
   if (!argInfo.typeTemplateArg.empty()) {
     argTypeText += "<" + argInfo.typeTemplateArg + ">";
   }
-  std::string normalizedArgType = normalizeBindingTypeName(argTypeText);
+  std::string normalizedArgType = semantics::normalizeBindingTypeName(argTypeText);
   if (!normalizedArgType.empty() && normalizedArgType.front() == '/') {
     normalizedArgType.erase(normalizedArgType.begin());
   }
@@ -76,7 +75,7 @@ bool inferExperimentalCollectionConstructorTemplateArgs(const std::string &origi
                                                         const std::string &helperPath,
                                                         Expr &valueExpr,
                                                         const LocalTypeMap &locals,
-                                                        const std::vector<ParameterInfo> &params,
+                                                        const std::vector<semantics::ParameterInfo> &params,
                                                         const SubstMap &mapping,
                                                         const std::unordered_set<std::string> &allowedParams,
                                                         const std::string &namespacePrefix,
@@ -137,7 +136,7 @@ bool isCanonicalMapConstructorRewriteSourcePath(std::string_view originalPath) {
 
 bool rewriteCanonicalExperimentalKeyValueConstructorExpr(Expr &valueExpr,
                                                          const LocalTypeMap &locals,
-                                                         const std::vector<ParameterInfo> &params,
+                                                         const std::vector<semantics::ParameterInfo> &params,
                                                          const SubstMap &mapping,
                                                          const std::unordered_set<std::string> &allowedParams,
                                                          const std::string &namespacePrefix,
@@ -179,7 +178,7 @@ bool rewriteCanonicalExperimentalKeyValueConstructorExpr(Expr &valueExpr,
 
 bool rewriteCanonicalExperimentalVectorConstructorExpr(Expr &valueExpr,
                                                        const LocalTypeMap &locals,
-                                                       const std::vector<ParameterInfo> &params,
+                                                       const std::vector<semantics::ParameterInfo> &params,
                                                        const SubstMap &mapping,
                                                        const std::unordered_set<std::string> &allowedParams,
                                                        const std::string &namespacePrefix,

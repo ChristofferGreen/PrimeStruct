@@ -188,7 +188,8 @@ inline bool inferCallParameterLocalInfoWithStructHook(
 // emitInlineDefinitionCallParameters with the callbacks the inline-parameter cases share: nothing is a string binding, string
 // values/struct layouts resolve, expressions emit successfully unless
 // `emitExpr` says otherwise, temp locals are 0 and instructions are collected.
-inline bool emitInlineParamsInert(
+inline bool emitInlineParamsInertKind(
+    primec::ir_lowerer::LocalInfo::ValueKind exprKind,
     const std::vector<primec::Expr> &callParams,
     const std::vector<const primec::Expr *> &orderedArgs,
     const std::vector<const primec::Expr *> &packedArgs,
@@ -217,9 +218,7 @@ inline bool emitInlineParamsInert(
          int32_t &,
          bool &) { return true; },
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-      },
+      [exprKind](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return exprKind; },
       [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
       emitExpr,
       [](int32_t, int32_t, int32_t) { return true; },
@@ -227,6 +226,34 @@ inline bool emitInlineParamsInert(
       [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
       [](int32_t) {},
       error);
+}
+
+// Same, with every expression inferring to Unknown.
+inline bool emitInlineParamsInert(
+    const std::vector<primec::Expr> &callParams,
+    const std::vector<const primec::Expr *> &orderedArgs,
+    const std::vector<const primec::Expr *> &packedArgs,
+    size_t packedParamIndex,
+    const primec::ir_lowerer::LocalMap &callerLocals,
+    int32_t &nextLocal,
+    primec::ir_lowerer::LocalMap &calleeLocals,
+    const primec::ir_lowerer::InferInlineParameterLocalInfoFn &inferCallParameterLocalInfo,
+    std::vector<primec::IrInstruction> &instructions,
+    std::string &error,
+    const primec::ir_lowerer::EmitInlineParameterExprFn &emitExpr =
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; }) {
+  return emitInlineParamsInertKind(primec::ir_lowerer::LocalInfo::ValueKind::Unknown,
+                                   callParams,
+                                   orderedArgs,
+                                   packedArgs,
+                                   packedParamIndex,
+                                   callerLocals,
+                                   nextLocal,
+                                   calleeLocals,
+                                   inferCallParameterLocalInfo,
+                                   instructions,
+                                   error,
+                                   emitExpr);
 }
 
 // resolveMethodCallDefinitionFromExpr with no array-count, vector-capacity or
@@ -303,5 +330,23 @@ inline const primec::Definition *noMethodDefinition(const primec::Expr &, const 
 }
 inline const primec::Definition *noDefinitionCall(const primec::Expr &) { return nullptr; }
 inline bool noReturnInfo(const std::string &, primec::ir_lowerer::ReturnInfo &) { return false; }
+
+// A parameter binding named `name` (a plain Name expression flagged as a binding).
+inline primec::Expr makeBindingNameExpr(const std::string &name) {
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Name;
+  expr.isBinding = true;
+  expr.name = name;
+  return expr;
+}
+
+// A spread argument `name...` (a Name expression flagged as spread).
+inline primec::Expr makeSpreadNameExpr(const std::string &name) {
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Name;
+  expr.name = name;
+  expr.isSpread = true;
+  return expr;
+}
 
 } // namespace primec::validation_test_support

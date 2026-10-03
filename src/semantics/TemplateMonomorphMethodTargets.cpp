@@ -70,8 +70,8 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
       if (candidate.rfind(arrayPrefix, 0) == 0) {
         return candidate.substr(arrayPrefix.size());
       }
-      if (isUnrootedCanonicalVectorCompatibilityPath(candidate)) {
-        return std::string(stripUnrootedCanonicalVectorCompatibilityPrefix(candidate));
+      if (semantics::isUnrootedCanonicalVectorCompatibilityPath(candidate)) {
+        return std::string(semantics::stripUnrootedCanonicalVectorCompatibilityPrefix(candidate));
       }
       std::string helperName;
       if (stripTemplateMonomorphSoaHelperPrefix(candidate, helperName, false)) {
@@ -154,7 +154,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     return std::string(resolvedType.substr(nameStart, nameEnd - nameStart));
   };
   auto soaCanonicalMethodPath = [](const std::string &helperNameString) {
-    return compatibilitySoaHelperTargetPath(helperNameString);
+    return semantics::compatibilitySoaHelperTargetPath(helperNameString);
   };
   auto preferredSamePathSoaMethodTarget =
       [&](std::string_view helperName, std::string_view samePathPrefix) {
@@ -204,8 +204,8 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   auto resolveIndexedArgsPackMapMethodTarget = [&]() -> bool {
     if (receiver.kind != Expr::Kind::Call || receiver.isBinding ||
         receiver.isMethodCall || receiver.args.size() != 2 ||
-        (!isSimpleCallName(receiver, "at") &&
-         !isSimpleCallName(receiver, "at_unsafe"))) {
+        (!semantics::isSimpleCallName(receiver, "at") &&
+         !semantics::isSimpleCallName(receiver, "at_unsafe"))) {
       return false;
     }
     const Expr &packReceiver = receiver.args.front();
@@ -222,17 +222,17 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     }
     std::string keyType;
     std::string valueType;
-    if (!extractKeyValueCollectionTypesFromTypeText(elemType, keyType, valueType)) {
+    if (!semantics::extractKeyValueCollectionTypesFromTypeText(elemType, keyType, valueType)) {
       return false;
     }
     std::string helperName = normalizeCollectionMethodName("map", methodName);
     std::string base;
     std::string argText;
     const bool receiverIsWrapped =
-        splitTemplateTypeName(normalizeBindingTypeName(elemType), base,
+        semantics::splitTemplateTypeName(semantics::normalizeBindingTypeName(elemType), base,
                               argText) &&
-        (normalizeBindingTypeName(base) == "Reference" ||
-         normalizeBindingTypeName(base) == "Pointer");
+        (semantics::normalizeBindingTypeName(base) == "Reference" ||
+         semantics::normalizeBindingTypeName(base) == "Pointer");
     if (receiverIsWrapped) {
       if (helperName == "count") {
         helperName = collection_helpers::kCountRef;
@@ -254,7 +254,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   };
   bool isBorrowedSoaReceiver = false;
   std::string wrappedReceiverTypeName;
-  if (receiver.kind == Expr::Kind::Name && normalizeBindingTypeName(receiver.name) == "FileError") {
+  if (receiver.kind == Expr::Kind::Name && semantics::normalizeBindingTypeName(receiver.name) == "FileError") {
     if (methodName == "result") {
       pathOut = selectStaticHelperOverloadPath("/std/file/FileError/result");
       return true;
@@ -325,7 +325,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   if (!expr.templateArgs.empty() && !wrappedReceiverTypeName.empty()) {
     std::string wrapperBase;
     std::string wrapperArgText;
-    if (splitTemplateTypeName(normalizeBindingTypeName(wrappedReceiverTypeName),
+    if (semantics::splitTemplateTypeName(semantics::normalizeBindingTypeName(wrappedReceiverTypeName),
                               wrapperBase,
                               wrapperArgText)) {
       wrapperBase = normalizeCollectionReceiverTypeName(wrapperBase);
@@ -453,7 +453,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     // path formula).
     if (family == ReceiverElementFamily::Primitive ||
         family == ReceiverElementFamily::String) {
-      pathOut = selectHelperOverloadPath(expr, "/" + normalizeBindingTypeName(typeName) + "/" + normalizedMethodName, ctx);
+      pathOut = selectHelperOverloadPath(expr, "/" + semantics::normalizeBindingTypeName(typeName) + "/" + normalizedMethodName, ctx);
       return true;
     }
   }
@@ -634,7 +634,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
         expr, preferredSamePathSoaRefMethodTarget(helperName), ctx);
     return true;
   }
-  std::string resolvedType = resolveTypePath(typeName, receiver.namespacePrefix);
+  std::string resolvedType = semantics::resolveTypePath(typeName, receiver.namespacePrefix);
   // TODO-5294 Step 2, monomorphization stage: F13/F13b/F13c's collection-
   // family membership test (per
   // docs/ReceiverTargetResolutionConsolidation.md's Step 0 Row F table) now
@@ -690,7 +690,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     // spellings to the canonical borrowed-vector helpers.
     std::string wrapperBase;
     std::string wrapperArgText;
-    if (splitTemplateTypeName(normalizeBindingTypeName(wrappedReceiverTypeName),
+    if (semantics::splitTemplateTypeName(semantics::normalizeBindingTypeName(wrappedReceiverTypeName),
                               wrapperBase, wrapperArgText) &&
         normalizeCollectionReceiverTypeName(wrapperBase) == "Reference") {
       const std::string_view leaf =

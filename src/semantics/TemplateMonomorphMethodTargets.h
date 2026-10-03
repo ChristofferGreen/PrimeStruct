@@ -14,7 +14,6 @@
 #include "primec/support/StdlibSurfaceRegistry.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "TemplateMonomorphExperimentalCollectionReturnSetup.h"
-#include "TemplateMonomorphUsings.h"
 
 namespace primec {
 

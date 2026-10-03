@@ -35,7 +35,6 @@
 #include <sstream>
 
 #include "primec/support/CompileArena.h"
-#include "TemplateMonomorphUsings.h"
 
 namespace primec {
 
@@ -45,7 +44,7 @@ bool isBuiltinResultOkPayloadCall(const Expr &candidate) {
     return false;
   }
   const Expr &receiver = candidate.args.front();
-  return receiver.kind == Expr::Kind::Name && normalizeBindingTypeName(receiver.name) == "Result";
+  return receiver.kind == Expr::Kind::Name && semantics::normalizeBindingTypeName(receiver.name) == "Result";
 }
 
 } // namespace primec

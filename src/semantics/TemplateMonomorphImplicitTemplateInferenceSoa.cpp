@@ -37,35 +37,34 @@
 
 #include "primec/support/CompileArena.h"
 #include "primec/support/CollectionHelperNames.h"
-#include "TemplateMonomorphUsings.h"
 
 namespace primec {
 
 bool extractBuiltinSoaElementTypeText(std::string typeText, std::string &elemTypeOut) {
-  typeText = normalizeBindingTypeName(typeText);
+  typeText = semantics::normalizeBindingTypeName(typeText);
   if (typeText.empty()) {
     return false;
   }
   while (true) {
     std::string base;
     std::string argText;
-    if (!splitTemplateTypeName(typeText, base, argText) || base.empty()) {
+    if (!semantics::splitTemplateTypeName(typeText, base, argText) || base.empty()) {
       return false;
     }
-    const std::string normalizedBase = normalizeBindingTypeName(base);
+    const std::string normalizedBase = semantics::normalizeBindingTypeName(base);
     if (isTemplateMonomorphSoaReceiverType(
             normalizeCollectionReceiverTypeName(normalizedBase))) {
-      elemTypeOut = normalizeBindingTypeName(argText);
+      elemTypeOut = semantics::normalizeBindingTypeName(argText);
       return !elemTypeOut.empty();
     }
     if ((normalizedBase == "Reference" || normalizedBase == "Pointer") &&
         !argText.empty()) {
       std::vector<std::string> wrappedArgs;
-      if (!splitTopLevelTemplateArgs(argText, wrappedArgs) ||
+      if (!semantics::splitTopLevelTemplateArgs(argText, wrappedArgs) ||
           wrappedArgs.size() != 1) {
         return false;
       }
-      typeText = normalizeBindingTypeName(wrappedArgs.front());
+      typeText = semantics::normalizeBindingTypeName(wrappedArgs.front());
       continue;
     }
     return false;
@@ -73,43 +72,43 @@ bool extractBuiltinSoaElementTypeText(std::string typeText, std::string &elemTyp
 }
 
 bool extractBuiltinVectorElementTypeText(std::string typeText, std::string &elemTypeOut) {
-  typeText = normalizeBindingTypeName(typeText);
+  typeText = semantics::normalizeBindingTypeName(typeText);
   if (typeText.empty()) {
     return false;
   }
   while (true) {
     std::string base;
     std::string argText;
-    if (!splitTemplateTypeName(typeText, base, argText) || base.empty()) {
+    if (!semantics::splitTemplateTypeName(typeText, base, argText) || base.empty()) {
       return false;
     }
-    const std::string normalizedBase = normalizeBindingTypeName(base);
+    const std::string normalizedBase = semantics::normalizeBindingTypeName(base);
     if (normalizeCollectionReceiverTypeName(normalizedBase) == "vector") {
-      elemTypeOut = normalizeBindingTypeName(argText);
+      elemTypeOut = semantics::normalizeBindingTypeName(argText);
       return !elemTypeOut.empty();
     }
     if ((normalizedBase == "Reference" || normalizedBase == "Pointer") &&
         !argText.empty()) {
       std::vector<std::string> wrappedArgs;
-      if (!splitTopLevelTemplateArgs(argText, wrappedArgs) ||
+      if (!semantics::splitTopLevelTemplateArgs(argText, wrappedArgs) ||
           wrappedArgs.size() != 1) {
         return false;
       }
-      typeText = normalizeBindingTypeName(wrappedArgs.front());
+      typeText = semantics::normalizeBindingTypeName(wrappedArgs.front());
       continue;
     }
     return false;
   }
 }
 
-bool assignBindingFromTypeText(const std::string &typeText, BindingInfo &bindingOut) {
-  const std::string normalizedType = normalizeBindingTypeName(typeText);
+bool assignBindingFromTypeText(const std::string &typeText, semantics::BindingInfo &bindingOut) {
+  const std::string normalizedType = semantics::normalizeBindingTypeName(typeText);
   if (normalizedType.empty()) {
     return false;
   }
   std::string base;
   std::string argText;
-  if (splitTemplateTypeName(normalizedType, base, argText) && !base.empty()) {
+  if (semantics::splitTemplateTypeName(normalizedType, base, argText) && !base.empty()) {
     bindingOut.typeName = base;
     bindingOut.typeTemplateArg = argText;
     return true;
@@ -119,7 +118,7 @@ bool assignBindingFromTypeText(const std::string &typeText, BindingInfo &binding
   return true;
 }
 
-std::string unsupportedBuiltinSoaPendingDiagnostic(const Expr &candidate, const LocalTypeMap &locals, const std::vector<ParameterInfo> &params, const std::string &namespacePrefix, Context &ctx, bool allowMathBare) {
+std::string unsupportedBuiltinSoaPendingDiagnostic(const Expr &candidate, const LocalTypeMap &locals, const std::vector<semantics::ParameterInfo> &params, const std::string &namespacePrefix, Context &ctx, bool allowMathBare) {
   if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.name.empty()) {
     return {};
   }
@@ -151,14 +150,14 @@ std::string unsupportedBuiltinSoaPendingDiagnostic(const Expr &candidate, const 
   }
   auto resolvesBuiltinSoaReceiver = [&](const Expr &receiverExpr) {
     auto matchesTypeText = [&](std::string typeText) {
-      typeText = normalizeBindingTypeName(typeText);
+      typeText = semantics::normalizeBindingTypeName(typeText);
       if (typeText.empty()) {
         return false;
       }
       while (true) {
         std::string base;
         std::string argText;
-        if (!splitTemplateTypeName(typeText, base, argText) || base.empty()) {
+        if (!semantics::splitTemplateTypeName(typeText, base, argText) || base.empty()) {
           return isTemplateMonomorphSoaReceiverType(
               normalizeCollectionReceiverTypeName(typeText));
         }
@@ -166,16 +165,16 @@ std::string unsupportedBuiltinSoaPendingDiagnostic(const Expr &candidate, const 
         if ((normalizedBase == "Reference" || normalizedBase == "Pointer") &&
             !argText.empty()) {
           std::vector<std::string> wrappedArgs;
-          if (!splitTopLevelTemplateArgs(argText, wrappedArgs) || wrappedArgs.size() != 1) {
+          if (!semantics::splitTopLevelTemplateArgs(argText, wrappedArgs) || wrappedArgs.size() != 1) {
             return false;
           }
-          typeText = normalizeBindingTypeName(wrappedArgs.front());
+          typeText = semantics::normalizeBindingTypeName(wrappedArgs.front());
           continue;
         }
         return isTemplateMonomorphSoaReceiverType(normalizedBase);
       }
     };
-    BindingInfo receiverInfo;
+    semantics::BindingInfo receiverInfo;
     if (inferBindingTypeForMonomorph(receiverExpr, params, locals, allowMathBare, ctx, receiverInfo) &&
         matchesTypeText(bindingTypeToString(receiverInfo))) {
       return true;
@@ -186,30 +185,30 @@ std::string unsupportedBuiltinSoaPendingDiagnostic(const Expr &candidate, const 
   };
   auto resolvesExperimentalSoaReceiver = [&](const Expr &receiverExpr) {
     auto matchesExperimentalTypeText = [](std::string typeText) {
-      typeText = normalizeBindingTypeName(typeText);
+      typeText = semantics::normalizeBindingTypeName(typeText);
       while (!typeText.empty()) {
         std::string base;
         std::string argText;
-        if (!splitTemplateTypeName(typeText, base, argText) || base.empty()) {
-          return isExperimentalSoaVectorTypePath(typeText);
+        if (!semantics::splitTemplateTypeName(typeText, base, argText) || base.empty()) {
+          return semantics::isExperimentalSoaVectorTypePath(typeText);
         }
-        const std::string normalizedBase = normalizeBindingTypeName(base);
-        if (isExperimentalSoaVectorTypePath(normalizedBase)) {
+        const std::string normalizedBase = semantics::normalizeBindingTypeName(base);
+        if (semantics::isExperimentalSoaVectorTypePath(normalizedBase)) {
           return true;
         }
         if (normalizedBase != "Reference" && normalizedBase != "Pointer") {
           return false;
         }
         std::vector<std::string> wrappedArgs;
-        if (!splitTopLevelTemplateArgs(argText, wrappedArgs) ||
+        if (!semantics::splitTopLevelTemplateArgs(argText, wrappedArgs) ||
             wrappedArgs.size() != 1) {
           return false;
         }
-        typeText = normalizeBindingTypeName(wrappedArgs.front());
+        typeText = semantics::normalizeBindingTypeName(wrappedArgs.front());
       }
       return false;
     };
-    BindingInfo receiverInfo;
+    semantics::BindingInfo receiverInfo;
     if (inferBindingTypeForMonomorph(receiverExpr,
                                      params,
                                      locals,
@@ -232,7 +231,7 @@ std::string unsupportedBuiltinSoaPendingDiagnostic(const Expr &candidate, const 
     const std::string samePath =
         templateMonomorphSamePathSoaHelperPrefix() + std::string(helperName);
     const std::string canonicalPath =
-        compatibilitySoaHelperTargetPath(helperName);
+        semantics::compatibilitySoaHelperTargetPath(helperName);
     return ctx.sourceDefs.count(samePath) > 0 ||
            ctx.helperOverloads.count(samePath) > 0 ||
            ctx.sourceDefs.count(canonicalPath) > 0 ||
@@ -243,9 +242,9 @@ std::string unsupportedBuiltinSoaPendingDiagnostic(const Expr &candidate, const 
   const bool hasVisibleSoaRefRefHelper =
       hasVisibleSoaBorrowedHelper(collection_helpers::kRefRef);
   const std::string resolvedSoaCanonical =
-      canonicalizeLegacySoaRefHelperPath(resolvedPath);
+      semantics::canonicalizeLegacySoaRefHelperPath(resolvedPath);
   const std::string normalizedNameSoaCanonical =
-      canonicalizeLegacySoaRefHelperPath("/" + normalizedName);
+      semantics::canonicalizeLegacySoaRefHelperPath("/" + normalizedName);
   const std::string normalizedNameSoaPath = "/" + normalizedName;
   const bool normalizedNameUsesCanonicalSoaNamespace =
       normalizedName.rfind(
@@ -261,23 +260,23 @@ std::string unsupportedBuiltinSoaPendingDiagnostic(const Expr &candidate, const 
       normalizedPrefixedSoaPath.rfind(
           templateMonomorphSamePathSoaHelperPrefix(), 0) == 0;
   const bool normalizedPrefixedNameMatchesSoaRef =
-      isLegacyOrCanonicalSoaHelperPath(normalizedPrefixedSoaPath, "ref");
+      semantics::isLegacyOrCanonicalSoaHelperPath(normalizedPrefixedSoaPath, "ref");
   const bool normalizedPrefixedNameMatchesSoaRefRef =
-      isLegacyOrCanonicalSoaHelperPath(
+      semantics::isLegacyOrCanonicalSoaHelperPath(
           normalizedPrefixedSoaPath, collection_helpers::kRefRef);
   const bool normalizedCanonicalNameMatchesSoaRef =
-      isLegacyOrCanonicalSoaHelperPath(normalizedNameSoaCanonical, "ref");
+      semantics::isLegacyOrCanonicalSoaHelperPath(normalizedNameSoaCanonical, "ref");
   const bool normalizedCanonicalNameMatchesSoaRefRef =
-      isLegacyOrCanonicalSoaHelperPath(
+      semantics::isLegacyOrCanonicalSoaHelperPath(
           normalizedNameSoaCanonical, collection_helpers::kRefRef);
   const bool resolvedCanonicalNameMatchesSoaRef =
-      isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, "ref");
+      semantics::isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, "ref");
   const bool resolvedCanonicalNameMatchesSoaRefRef =
-      isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, collection_helpers::kRefRef);
+      semantics::isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, collection_helpers::kRefRef);
   const bool normalizedNameMatchesSoaRef =
-      isLegacyOrCanonicalSoaHelperPath(normalizedNameSoaPath, "ref");
+      semantics::isLegacyOrCanonicalSoaHelperPath(normalizedNameSoaPath, "ref");
   const bool normalizedNameMatchesSoaRefRef =
-      isLegacyOrCanonicalSoaHelperPath(normalizedNameSoaPath, collection_helpers::kRefRef);
+      semantics::isLegacyOrCanonicalSoaHelperPath(normalizedNameSoaPath, collection_helpers::kRefRef);
   const bool canonicalNamespaceNameMatchesSoaRef =
       normalizedNameUsesCanonicalSoaNamespace &&
       normalizedCanonicalNameMatchesSoaRef;
@@ -301,9 +300,9 @@ std::string unsupportedBuiltinSoaPendingDiagnostic(const Expr &candidate, const 
   const std::string normalizedMethodSoaPath =
       templateMonomorphSamePathSoaHelperPrefix() + normalizedName;
   const bool normalizedMethodNameMatchesSoaRef =
-      isLegacyOrCanonicalSoaHelperPath(normalizedMethodSoaPath, "ref");
+      semantics::isLegacyOrCanonicalSoaHelperPath(normalizedMethodSoaPath, "ref");
   const bool normalizedMethodNameMatchesSoaRefRef =
-      isLegacyOrCanonicalSoaHelperPath(normalizedMethodSoaPath, collection_helpers::kRefRef);
+      semantics::isLegacyOrCanonicalSoaHelperPath(normalizedMethodSoaPath, collection_helpers::kRefRef);
   const bool isAnyNormalizedMethodNameSoaRefCall =
       normalizedMethodNameMatchesSoaRef || normalizedMethodNameMatchesSoaRefRef;
   const bool isAnyBuiltinSoaRefCall =
@@ -316,7 +315,7 @@ std::string unsupportedBuiltinSoaPendingDiagnostic(const Expr &candidate, const 
         isCanonicalBuiltinSoaRefRefCall ||
         isOldSurfaceBuiltinSoaRefRefCall;
     const std::string missingSoaRefHelperPath =
-        compatibilitySoaHelperTargetPath(
+        semantics::compatibilitySoaHelperTargetPath(
             isAnyBuiltinSoaRefRefCall ? collection_helpers::kRefRef : "ref");
     if (isAnyBuiltinSoaRefRefCall ? hasVisibleSoaRefRefHelper
                                   : hasVisibleSoaRefHelper) {
@@ -328,7 +327,7 @@ std::string unsupportedBuiltinSoaPendingDiagnostic(const Expr &candidate, const 
     if (isAnyCanonicalBuiltinSoaRefCall &&
         !candidate.args.empty() &&
         candidate.args.front().kind == Expr::Kind::Call) {
-      return soaUnavailableMethodDiagnostic(missingSoaRefHelperPath);
+      return semantics::soaUnavailableMethodDiagnostic(missingSoaRefHelperPath);
     }
     const bool isAnyExplicitOrBuiltinSoaRefCall =
         ((!candidate.isMethodCall &&
@@ -341,9 +340,9 @@ std::string unsupportedBuiltinSoaPendingDiagnostic(const Expr &candidate, const 
           normalizedCanonicalNameMatchesSoaRef ||
           normalizedCanonicalNameMatchesSoaRefRef)) ||
         (!candidate.isMethodCall && isAnyNormalizedMethodNameSoaRefCall);
-    if (isCanonicalSoaRefLikeHelperPath(resolvedSoaCanonical) ||
+    if (semantics::isCanonicalSoaRefLikeHelperPath(resolvedSoaCanonical) ||
         isAnyExplicitOrBuiltinSoaRefCall) {
-      return soaUnavailableMethodDiagnostic(missingSoaRefHelperPath);
+      return semantics::soaUnavailableMethodDiagnostic(missingSoaRefHelperPath);
     }
     return {};
   }

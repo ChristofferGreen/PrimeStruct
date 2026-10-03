@@ -14,45 +14,44 @@
 #include "primec/support/StdlibSurfaceRegistry.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "TemplateMonomorphExperimentalCollectionReturnSetup.h"
-#include "TemplateMonomorphUsings.h"
 
 namespace primec {
 
 bool inferCallTargetBinding(const Expr &bindingExpr,
                             bool allowMathBare,
                             Context &ctx,
-                            BindingInfo &bindingOut);
+                            semantics::BindingInfo &bindingOut);
 
 bool resolveAssignmentTargetBinding(const Expr &target,
-                                    const std::vector<ParameterInfo> &params,
+                                    const std::vector<semantics::ParameterInfo> &params,
                                     const LocalTypeMap &locals,
                                     bool allowMathBare,
                                     const std::string &namespacePrefix,
                                     Context &ctx,
-                                    BindingInfo &bindingOut);
+                                    semantics::BindingInfo &bindingOut);
 
 bool resolveFieldBindingTarget(const Expr &target,
-                               const std::vector<ParameterInfo> &params,
+                               const std::vector<semantics::ParameterInfo> &params,
                                const LocalTypeMap &locals,
                                bool allowMathBare,
                                const std::string &namespacePrefix,
                                Context &ctx,
-                               BindingInfo &bindingOut);
+                               semantics::BindingInfo &bindingOut);
 
 bool resolveDereferenceBindingTarget(const Expr &target,
-                                     const std::vector<ParameterInfo> &params,
+                                     const std::vector<semantics::ParameterInfo> &params,
                                      const LocalTypeMap &locals,
                                      bool allowMathBare,
                                      const std::string &namespacePrefix,
                                      Context &ctx,
-                                     BindingInfo &bindingOut);
+                                     semantics::BindingInfo &bindingOut);
 
 bool resolveAssignmentTargetBinding(const Expr &target,
-                                    const std::vector<ParameterInfo> &params,
+                                    const std::vector<semantics::ParameterInfo> &params,
                                     const LocalTypeMap &locals,
                                     bool allowMathBare,
                                     const std::string &namespacePrefix,
                                     Context &ctx,
-                                    BindingInfo &bindingOut);
+                                    semantics::BindingInfo &bindingOut);
 
 } // namespace primec

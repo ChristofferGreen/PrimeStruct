@@ -40,7 +40,7 @@
 
 namespace primec {
 
-PhaseStatus rewriteExprPhase7([[maybe_unused]] Expr &expr, [[maybe_unused]] const SubstMap &mapping, [[maybe_unused]] const std::unordered_set<std::string> &allowedParams, [[maybe_unused]] const std::string &namespacePrefix, [[maybe_unused]] Context &ctx, [[maybe_unused]] std::string &error, [[maybe_unused]] const LocalTypeMap &locals, [[maybe_unused]] const std::vector<ParameterInfo> &params, RewriteExprState &st) {
+PhaseStatus rewriteExprPhase7([[maybe_unused]] Expr &expr, [[maybe_unused]] const SubstMap &mapping, [[maybe_unused]] const std::unordered_set<std::string> &allowedParams, [[maybe_unused]] const std::string &namespacePrefix, [[maybe_unused]] Context &ctx, [[maybe_unused]] std::string &error, [[maybe_unused]] const LocalTypeMap &locals, [[maybe_unused]] const std::vector<semantics::ParameterInfo> &params, RewriteExprState &st) {
   [[maybe_unused]] auto &allowMathBare = st.allowMathBare;
   [[maybe_unused]] auto &isSyntheticSamePathSoaHelperTemplateCarryPath = st.isSyntheticSamePathSoaHelperTemplateCarryPath;
   [[maybe_unused]] auto &collectionHelperReceiverExpr = st.collectionHelperReceiverExpr;
@@ -126,17 +126,17 @@ PhaseStatus rewriteExprPhase7([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
       }
       if (expr.templateArgs.empty() && collection_helpers::isBorrowedVectorHelperPath(methodPath)) {
         // TODO-5375: element type of the borrowed `Reference<vector<T>>` receiver.
-        BindingInfo borrowedReceiver;
+        semantics::BindingInfo borrowedReceiver;
         std::string vectorBase;
         std::string elementType;
         const Expr *borrowedReceiverExpr = collectionHelperReceiverExpr(expr);
         if (borrowedReceiverExpr != nullptr &&
             inferBindingTypeForMonomorph(*borrowedReceiverExpr, params, locals,
                                          allowMathBare, ctx, borrowedReceiver) &&
-            normalizeBindingTypeName(borrowedReceiver.typeName) == "Reference" &&
-            splitTemplateTypeName(normalizeBindingTypeName(borrowedReceiver.typeTemplateArg), vectorBase,
+            semantics::normalizeBindingTypeName(borrowedReceiver.typeName) == "Reference" &&
+            semantics::splitTemplateTypeName(semantics::normalizeBindingTypeName(borrowedReceiver.typeTemplateArg), vectorBase,
                                   elementType) &&
-            normalizeBindingTypeName(vectorBase) == "vector" && !elementType.empty()) {
+            semantics::normalizeBindingTypeName(vectorBase) == "vector" && !elementType.empty()) {
           expr.templateArgs = {elementType};
           allConcrete = true;
         }
@@ -224,7 +224,7 @@ PhaseStatus rewriteExprPhase7([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
           methodPath.find("__t") != std::string::npos) {
         expr.templateArgs.clear();
       }
-      if (methodPath.rfind(legacyExperimentalVectorCompatibilityPrefix(), 0) == 0 &&
+      if (methodPath.rfind(semantics::legacyExperimentalVectorCompatibilityPrefix(), 0) == 0 &&
           methodPath.find("__t") != std::string::npos) {
         expr.templateArgs.clear();
       }
@@ -239,7 +239,7 @@ PhaseStatus rewriteExprPhase7([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
       const bool isStaticFileErrorHelperCall =
           expr.isMethodCall && !expr.args.empty() &&
           expr.args.front().kind == Expr::Kind::Name &&
-          normalizeBindingTypeName(expr.args.front().name) == "FileError" &&
+          semantics::normalizeBindingTypeName(expr.args.front().name) == "FileError" &&
           methodPath.rfind("/std/file/FileError/", 0) == 0;
       if (ctx.helperOverloadInternalToPublic.count(methodPath) > 0) {
         expr.name = methodPath;
@@ -275,8 +275,8 @@ PhaseStatus rewriteExprPhase7([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
         const Expr *receiverExpr = collectionHelperReceiverExpr(expr);
         if (defIt != ctx.sourceDefs.end() && receiverExpr != nullptr &&
             !defIt->second.parameters.empty()) {
-          BindingInfo receiverInfo;
-          BindingInfo receiverParamInfo;
+          semantics::BindingInfo receiverInfo;
+          semantics::BindingInfo receiverParamInfo;
           if (inferBindingTypeForMonomorph(*receiverExpr,
                                            params,
                                            locals,
@@ -286,8 +286,8 @@ PhaseStatus rewriteExprPhase7([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
               extractExplicitBindingType(defIt->second.parameters.front(),
                                          receiverParamInfo) &&
               !receiverInfo.typeTemplateArg.empty()) {
-            std::string receiverBase = normalizeBindingTypeName(receiverInfo.typeName);
-            std::string paramBase = normalizeBindingTypeName(receiverParamInfo.typeName);
+            std::string receiverBase = semantics::normalizeBindingTypeName(receiverInfo.typeName);
+            std::string paramBase = semantics::normalizeBindingTypeName(receiverParamInfo.typeName);
             if (!receiverBase.empty() && receiverBase.front() == '/') {
               receiverBase.erase(receiverBase.begin());
             }
@@ -302,7 +302,7 @@ PhaseStatus rewriteExprPhase7([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
                 (!receiverBase.empty() && !paramBase.empty() &&
                  leafName(receiverBase) == leafName(paramBase))) {
               std::vector<std::string> receiverTemplateArgs;
-              if (splitTopLevelTemplateArgs(receiverInfo.typeTemplateArg,
+              if (semantics::splitTopLevelTemplateArgs(receiverInfo.typeTemplateArg,
                                             receiverTemplateArgs) &&
                   receiverTemplateArgs.size() == defIt->second.templateArgs.size()) {
                 expr.templateArgs = std::move(receiverTemplateArgs);
@@ -426,7 +426,7 @@ PhaseStatus rewriteExprPhase7([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
   return PhaseStatus::Continue;
 }
 
-PhaseStatus rewriteExprPhase8([[maybe_unused]] Expr &expr, [[maybe_unused]] const SubstMap &mapping, [[maybe_unused]] const std::unordered_set<std::string> &allowedParams, [[maybe_unused]] const std::string &namespacePrefix, [[maybe_unused]] Context &ctx, [[maybe_unused]] std::string &error, [[maybe_unused]] const LocalTypeMap &locals, [[maybe_unused]] const std::vector<ParameterInfo> &params, RewriteExprState &st) {
+PhaseStatus rewriteExprPhase8([[maybe_unused]] Expr &expr, [[maybe_unused]] const SubstMap &mapping, [[maybe_unused]] const std::unordered_set<std::string> &allowedParams, [[maybe_unused]] const std::string &namespacePrefix, [[maybe_unused]] Context &ctx, [[maybe_unused]] std::string &error, [[maybe_unused]] const LocalTypeMap &locals, [[maybe_unused]] const std::vector<semantics::ParameterInfo> &params, RewriteExprState &st) {
   [[maybe_unused]] auto &allowMathBare = st.allowMathBare;
   for (auto &arg : expr.args) {
     if (!rewriteExpr(arg, mapping, allowedParams, namespacePrefix, ctx, error, locals, params, allowMathBare)) {
@@ -438,7 +438,7 @@ PhaseStatus rewriteExprPhase8([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
     if (!rewriteExpr(arg, mapping, allowedParams, namespacePrefix, ctx, error, bodyLocals, params, allowMathBare)) {
       return st.done(false);
     }
-    BindingInfo info;
+    semantics::BindingInfo info;
     if (extractExplicitBindingType(arg, info)) {
       if (info.typeName == "auto" && arg.args.size() == 1 &&
           inferBindingTypeForMonomorph(arg.args.front(), params, bodyLocals, allowMathBare, ctx, info)) {
@@ -453,7 +453,7 @@ PhaseStatus rewriteExprPhase8([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
     }
   }
   std::string builtinAccessName;
-  if (!expr.isMethodCall && getBuiltinArrayAccessName(expr, builtinAccessName)) {
+  if (!expr.isMethodCall && semantics::getBuiltinArrayAccessName(expr, builtinAccessName)) {
     expr.namespacePrefix.clear();
     size_t receiverIndex = 0;
     if (hasNamedCallArguments(expr)) {

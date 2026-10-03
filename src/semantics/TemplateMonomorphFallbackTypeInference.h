@@ -14,11 +14,10 @@
 #include "primec/support/StdlibSurfaceRegistry.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "TemplateMonomorphExperimentalCollectionReturnSetup.h"
-#include "TemplateMonomorphUsings.h"
 
 namespace primec {
 
-bool isSoftwareNumericParamCompatible(ReturnKind expectedKind, ReturnKind actualKind);
+bool isSoftwareNumericParamCompatible(semantics::ReturnKind expectedKind, semantics::ReturnKind actualKind);
 
 std::string resolveStructLikeTypePathForTemplatedVectorFallback(const std::string &typeName,
                                                                 const std::string &namespacePrefix,
@@ -44,7 +43,7 @@ bool resolvesExperimentalKeyValueTypeText(const std::string &typeText,
 
 struct TemplatedFallbackQueryStateAdapterData {
   std::string queryTypeText;
-  BindingInfo receiverBinding;
+  semantics::BindingInfo receiverBinding;
   bool hasResultType = false;
   bool resultTypeHasValue = false;
   std::string resultValueType;
@@ -59,7 +58,7 @@ void populateTemplatedFallbackQueryStateAdapterFromQueryTypeText(
 bool inferDefinitionReturnBindingForTemplatedFallback(const Definition &def,
                                                       bool allowMathBare,
                                                       Context &ctx,
-                                                      BindingInfo &infoOut);
+                                                      semantics::BindingInfo &infoOut);
 
 std::string inferExprTypeTextForTemplatedVectorFallback(const Expr &expr,
                                                         const LocalTypeMap &locals,
@@ -69,7 +68,7 @@ std::string inferExprTypeTextForTemplatedVectorFallback(const Expr &expr,
 
 bool inferTemplatedFallbackQueryStateAdapter(const Expr &expr,
                                              const LocalTypeMap &locals,
-                                             const std::vector<ParameterInfo> &params,
+                                             const std::vector<semantics::ParameterInfo> &params,
                                              const std::string &namespacePrefix,
                                              Context &ctx,
                                              bool allowMathBare,
@@ -78,7 +77,7 @@ bool inferTemplatedFallbackQueryStateAdapter(const Expr &expr,
 bool shouldPreferTemplatedVectorFallbackForTypeMismatch(const Definition &def,
                                                         const Expr &expr,
                                                         const LocalTypeMap &locals,
-                                                        const std::vector<ParameterInfo> &params,
+                                                        const std::vector<semantics::ParameterInfo> &params,
                                                         bool allowMathBare,
                                                         Context &ctx,
                                                         const std::string &namespacePrefix);
@@ -86,7 +85,7 @@ bool shouldPreferTemplatedVectorFallbackForTypeMismatch(const Definition &def,
 std::string preferVectorStdlibImplicitTemplatePath(const Expr &expr,
                                                    const std::string &path,
                                                    const LocalTypeMap &locals,
-                                                   const std::vector<ParameterInfo> &params,
+                                                   const std::vector<semantics::ParameterInfo> &params,
                                                    bool allowMathBare,
                                                    Context &ctx,
                                                    const std::string &namespacePrefix);

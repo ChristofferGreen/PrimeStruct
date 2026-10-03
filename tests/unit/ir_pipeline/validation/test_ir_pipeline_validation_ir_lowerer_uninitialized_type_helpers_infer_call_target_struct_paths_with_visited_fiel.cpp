@@ -1,4 +1,4 @@
-#include "test_ir_pipeline_validation_helpers.h"
+#include "test_ir_pipeline_validation_callback_factories.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
@@ -569,10 +569,7 @@ TEST_CASE("ir lowerer uninitialized type helpers only infer namespaced internal 
   primec::Definition soaVectorDef;
   soaVectorDef.fullPath = "/std/collections/soa/SoaVector__tc123";
   soaVectorDef.namespacePrefix = "/std/collections/experimental_soa";
-  primec::Expr storageBinding;
-  storageBinding.kind = primec::Expr::Kind::Name;
-  storageBinding.isBinding = true;
-  storageBinding.name = "storage";
+  primec::Expr storageBinding = primec::validation_test_support::makeBindingNameExpr("storage");
   primec::Transform storageType;
   storageType.name = "/std/collections/soa_storage/SoaColumn__tc999";
   storageBinding.transforms = {storageType};
@@ -581,10 +578,7 @@ TEST_CASE("ir lowerer uninitialized type helpers only infer namespaced internal 
   primec::Definition soaColumnDef;
   soaColumnDef.fullPath = "/std/collections/soa_storage/SoaColumn__tc999";
   soaColumnDef.namespacePrefix = "/std/collections/soa_storage";
-  primec::Expr dataBinding;
-  dataBinding.kind = primec::Expr::Kind::Name;
-  dataBinding.isBinding = true;
-  dataBinding.name = "data";
+  primec::Expr dataBinding = primec::validation_test_support::makeBindingNameExpr("data");
   primec::Transform dataType;
   dataType.name = "Pointer";
   dataType.templateArgs = {"/pkg/Ctor"};
@@ -911,10 +905,7 @@ TEST_CASE("ir lowerer uninitialized type helpers infer concrete stdlib map const
 TEST_CASE("ir lowerer uninitialized type helpers infer forwarded stdlib map constructor structs") {
   primec::Definition wrapDef;
   wrapDef.fullPath = "/pkg/wrapValues";
-  primec::Expr param;
-  param.kind = primec::Expr::Kind::Name;
-  param.isBinding = true;
-  param.name = "values";
+  primec::Expr param = primec::validation_test_support::makeBindingNameExpr("values");
   wrapDef.parameters.push_back(param);
   primec::Expr returnedName;
   returnedName.kind = primec::Expr::Kind::Name;

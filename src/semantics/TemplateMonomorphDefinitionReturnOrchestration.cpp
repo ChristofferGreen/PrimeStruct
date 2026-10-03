@@ -35,14 +35,13 @@
 #include <sstream>
 
 #include "primec/support/CompileArena.h"
-#include "TemplateMonomorphUsings.h"
 
 namespace primec {
 
 bool isDefinitionReturnPathStatement(const Expr &stmt,
                                      size_t stmtIndex,
                                      const DefinitionReturnStatementSelection &selection) {
-  return isReturnCall(stmt) || (!selection.sawExplicitReturn && stmtIndex == selection.implicitReturnStmtIndex);
+  return semantics::isReturnCall(stmt) || (!selection.sawExplicitReturn && stmtIndex == selection.implicitReturnStmtIndex);
 }
 
 } // namespace primec

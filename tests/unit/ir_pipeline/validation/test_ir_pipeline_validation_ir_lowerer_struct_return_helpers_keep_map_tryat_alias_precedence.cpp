@@ -1,4 +1,4 @@
-#include "test_ir_pipeline_validation_helpers.h"
+#include "test_ir_pipeline_validation_callback_factories.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
@@ -586,10 +586,7 @@ TEST_CASE("ir lowerer struct layout helpers compute uncached layout") {
   structAlign.arguments = {"16"};
   def.transforms = {structAlign};
 
-  primec::Expr firstField;
-  firstField.kind = primec::Expr::Kind::Name;
-  firstField.isBinding = true;
-  firstField.name = "value";
+  primec::Expr firstField = primec::validation_test_support::makeBindingNameExpr("value");
 
   primec::Expr staticField = firstField;
   staticField.name = "cached";

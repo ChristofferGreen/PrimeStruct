@@ -14,7 +14,6 @@
 #include "primec/support/StdlibSurfaceRegistry.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "TemplateMonomorphExperimentalCollectionReturnSetup.h"
-#include "TemplateMonomorphUsings.h"
 
 namespace primec {
 
@@ -22,7 +21,7 @@ bool tryAppendDefinitionParameterBinding(Expr &param,
                                          bool allowMathBare,
                                          Context &ctx,
                                          LocalTypeMap &locals,
-                                         std::vector<ParameterInfo> &paramsOut);
+                                         std::vector<semantics::ParameterInfo> &paramsOut);
 
 bool rewriteDefinitionParameters(std::vector<Expr> &parameters,
                                  const SubstMap &mapping,
@@ -31,11 +30,11 @@ bool rewriteDefinitionParameters(std::vector<Expr> &parameters,
                                  Context &ctx,
                                  std::string &error,
                                  LocalTypeMap &locals,
-                                 std::vector<ParameterInfo> &paramsOut,
+                                 std::vector<semantics::ParameterInfo> &paramsOut,
                                  bool allowMathBare);
 
 void recordDefinitionStatementBindingLocal(Expr &stmt,
-                                           const std::vector<ParameterInfo> &params,
+                                           const std::vector<semantics::ParameterInfo> &params,
                                            const LocalTypeMap &locals,
                                            bool allowMathBare,
                                            Context &ctx,

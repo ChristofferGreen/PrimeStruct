@@ -3,10 +3,7 @@
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
 TEST_CASE("ir lowerer inline param helper materializes borrowed array variadic args packs") {
-  primec::Expr valuesParam;
-  valuesParam.kind = primec::Expr::Kind::Name;
-  valuesParam.isBinding = true;
-  valuesParam.name = "values";
+  primec::Expr valuesParam = primec::validation_test_support::makeBindingNameExpr("values");
 
   primec::Expr firstArg;
   firstArg.kind = primec::Expr::Kind::Name;
@@ -71,15 +68,9 @@ TEST_CASE("ir lowerer inline param helper materializes borrowed array variadic a
 }
 
 TEST_CASE("ir lowerer inline param helper aliases pure borrowed array variadic forwarding") {
-  primec::Expr valuesParam;
-  valuesParam.kind = primec::Expr::Kind::Name;
-  valuesParam.isBinding = true;
-  valuesParam.name = "values";
+  primec::Expr valuesParam = primec::validation_test_support::makeBindingNameExpr("values");
 
-  primec::Expr spreadArg;
-  spreadArg.kind = primec::Expr::Kind::Name;
-  spreadArg.name = "source";
-  spreadArg.isSpread = true;
+  primec::Expr spreadArg = primec::validation_test_support::makeSpreadNameExpr("source");
 
   primec::ir_lowerer::LocalMap callerLocals;
   primec::ir_lowerer::LocalInfo sourceInfo;
@@ -130,10 +121,7 @@ TEST_CASE("ir lowerer inline param helper aliases pure borrowed array variadic f
 }
 
 TEST_CASE("ir lowerer inline param helper materializes Buffer variadic args packs") {
-  primec::Expr valuesParam;
-  valuesParam.kind = primec::Expr::Kind::Name;
-  valuesParam.isBinding = true;
-  valuesParam.name = "values";
+  primec::Expr valuesParam = primec::validation_test_support::makeBindingNameExpr("values");
 
   primec::Expr firstArg;
   firstArg.kind = primec::Expr::Kind::Name;
@@ -208,15 +196,9 @@ TEST_CASE("ir lowerer inline param helper materializes Buffer variadic args pack
 }
 
 TEST_CASE("ir lowerer inline param helper aliases pure Buffer variadic forwarding") {
-  primec::Expr valuesParam;
-  valuesParam.kind = primec::Expr::Kind::Name;
-  valuesParam.isBinding = true;
-  valuesParam.name = "values";
+  primec::Expr valuesParam = primec::validation_test_support::makeBindingNameExpr("values");
 
-  primec::Expr spreadArg;
-  spreadArg.kind = primec::Expr::Kind::Name;
-  spreadArg.name = "source";
-  spreadArg.isSpread = true;
+  primec::Expr spreadArg = primec::validation_test_support::makeSpreadNameExpr("source");
 
   primec::ir_lowerer::LocalMap callerLocals;
   primec::ir_lowerer::LocalInfo sourceInfo;
@@ -265,10 +247,7 @@ TEST_CASE("ir lowerer inline param helper aliases pure Buffer variadic forwardin
 }
 
 TEST_CASE("ir lowerer inline param helper materializes borrowed Buffer variadic args packs") {
-  primec::Expr valuesParam;
-  valuesParam.kind = primec::Expr::Kind::Name;
-  valuesParam.isBinding = true;
-  valuesParam.name = "values";
+  primec::Expr valuesParam = primec::validation_test_support::makeBindingNameExpr("values");
 
   primec::Expr firstArg;
   firstArg.kind = primec::Expr::Kind::Name;
@@ -341,10 +320,7 @@ TEST_CASE("ir lowerer inline param helper materializes borrowed Buffer variadic 
 }
 
 TEST_CASE("ir lowerer inline param helper materializes pointer Buffer variadic args packs") {
-  primec::Expr valuesParam;
-  valuesParam.kind = primec::Expr::Kind::Name;
-  valuesParam.isBinding = true;
-  valuesParam.name = "values";
+  primec::Expr valuesParam = primec::validation_test_support::makeBindingNameExpr("values");
 
   primec::Expr firstArg;
   firstArg.kind = primec::Expr::Kind::Name;
@@ -401,15 +377,9 @@ TEST_CASE("ir lowerer inline param helper materializes pointer Buffer variadic a
 }
 
 TEST_CASE("ir lowerer inline param helper aliases pure borrowed Buffer variadic forwarding") {
-  primec::Expr valuesParam;
-  valuesParam.kind = primec::Expr::Kind::Name;
-  valuesParam.isBinding = true;
-  valuesParam.name = "values";
+  primec::Expr valuesParam = primec::validation_test_support::makeBindingNameExpr("values");
 
-  primec::Expr spreadArg;
-  spreadArg.kind = primec::Expr::Kind::Name;
-  spreadArg.name = "source";
-  spreadArg.isSpread = true;
+  primec::Expr spreadArg = primec::validation_test_support::makeSpreadNameExpr("source");
 
   primec::ir_lowerer::LocalMap callerLocals;
   primec::ir_lowerer::LocalInfo sourceInfo;
@@ -461,15 +431,9 @@ TEST_CASE("ir lowerer inline param helper aliases pure borrowed Buffer variadic 
 }
 
 TEST_CASE("ir lowerer inline param helper aliases pure pointer Buffer variadic forwarding") {
-  primec::Expr valuesParam;
-  valuesParam.kind = primec::Expr::Kind::Name;
-  valuesParam.isBinding = true;
-  valuesParam.name = "values";
+  primec::Expr valuesParam = primec::validation_test_support::makeBindingNameExpr("values");
 
-  primec::Expr spreadArg;
-  spreadArg.kind = primec::Expr::Kind::Name;
-  spreadArg.name = "source";
-  spreadArg.isSpread = true;
+  primec::Expr spreadArg = primec::validation_test_support::makeSpreadNameExpr("source");
 
   primec::ir_lowerer::LocalMap callerLocals;
   primec::ir_lowerer::LocalInfo sourceInfo;

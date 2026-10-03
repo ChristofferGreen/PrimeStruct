@@ -1,4 +1,4 @@
-#include "test_ir_pipeline_validation_helpers.h"
+#include "test_ir_pipeline_validation_callback_factories.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
@@ -586,10 +586,7 @@ TEST_CASE("ir lowerer statement call helper preserves struct slot counts for var
   primec::Definition def;
   def.fullPath = "/pkg/score";
 
-  primec::Expr valuesParam;
-  valuesParam.kind = primec::Expr::Kind::Name;
-  valuesParam.isBinding = true;
-  valuesParam.name = "values";
+  primec::Expr valuesParam = primec::validation_test_support::makeBindingNameExpr("values");
   primec::Transform argsTransform;
   argsTransform.name = "args";
   argsTransform.templateArgs = {"/pkg/MapLike"};

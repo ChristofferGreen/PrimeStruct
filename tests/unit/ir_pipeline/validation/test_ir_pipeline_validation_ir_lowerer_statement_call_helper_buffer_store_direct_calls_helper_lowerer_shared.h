@@ -1237,3 +1237,58 @@ inline primec::ir_lowerer::DirectCallStatementEmitResult tryEmitDirectCallStatem
       semanticProgram,
       semanticIndex);
 }
+
+// Return info for the generated map insert builtin: a void helper, nothing else known.
+inline bool insertBuiltinReturnInfo(const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
+  if (path == "/std/collections/map/insert_builtin") {
+    info.returnsVoid = true;
+    return true;
+  }
+  return false;
+}
+
+// Inline-call emitter that counts calls in `inlineCalls` and checks the call it
+// receives: the call name, whether it is a method call, the callee path and the
+// template arguments. Statement context only (a value is never expected).
+inline std::function<bool(const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &, bool)>
+makeInlineCallChecker(int &inlineCalls,
+                      std::string expectedName,
+                      bool expectMethodCall,
+                      std::string expectedCalleePath,
+                      std::vector<std::string> expectedTemplateArgs) {
+  return [&inlineCalls,
+          expectedName = std::move(expectedName),
+          expectMethodCall,
+          expectedCalleePath = std::move(expectedCalleePath),
+          expectedTemplateArgs = std::move(expectedTemplateArgs)](const primec::Expr &callExpr,
+                                                                    const primec::Definition &callee,
+                                                                    const primec::ir_lowerer::LocalMap &,
+                                                                    bool expectValue) {
+    ++inlineCalls;
+    CHECK(callExpr.name == expectedName);
+    CHECK(callExpr.isMethodCall == expectMethodCall);
+    CHECK(callee.fullPath == expectedCalleePath);
+    CHECK_FALSE(expectValue);
+    CHECK(callExpr.templateArgs == expectedTemplateArgs);
+    return true;
+  };
+}
+
+// One direct-call statement case: resets the shared outputs, runs
+// tryEmitDirectCallStatementNoCounts(args..., instructions, error), then expects
+// `expected`, no error, `expectedInlineCalls` inline emissions and no instructions.
+template <class... Args>
+void expectDirectCallEmpty(int &inlineCalls,
+                           std::vector<primec::IrInstruction> &instructions,
+                           std::string &error,
+                           primec::ir_lowerer::DirectCallStatementEmitResult expected,
+                           int expectedInlineCalls,
+                           Args &&...args) {
+  inlineCalls = 0;
+  instructions.clear();
+  error.clear();
+  CHECK(tryEmitDirectCallStatementNoCounts(std::forward<Args>(args)..., instructions, error) == expected);
+  CHECK(error.empty());
+  CHECK(inlineCalls == expectedInlineCalls);
+  CHECK(instructions.empty());
+}

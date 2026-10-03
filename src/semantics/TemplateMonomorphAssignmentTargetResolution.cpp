@@ -35,14 +35,13 @@
 #include <sstream>
 
 #include "primec/support/CompileArena.h"
-#include "TemplateMonomorphUsings.h"
 
 namespace primec {
 
 bool inferCallTargetBinding(const Expr &bindingExpr,
                             bool allowMathBare,
                             Context &ctx,
-                            BindingInfo &bindingOut) {
+                            semantics::BindingInfo &bindingOut) {
   const bool hasExplicitBinding = extractExplicitBindingType(bindingExpr, bindingOut);
   if (hasExplicitBinding && bindingOut.typeName != "auto") {
     return true;
@@ -50,12 +49,12 @@ bool inferCallTargetBinding(const Expr &bindingExpr,
   if (bindingExpr.args.size() != 1) {
     return hasExplicitBinding;
   }
-  BindingInfo inferredBinding;
+  semantics::BindingInfo inferredBinding;
   if (!inferBindingTypeForMonomorph(bindingExpr.args.front(), {}, {}, allowMathBare, ctx, inferredBinding)) {
     Expr rewrittenInitializer = bindingExpr.args.front();
     std::string rewriteError;
     LocalTypeMap emptyLocals;
-    std::vector<ParameterInfo> emptyParams;
+    std::vector<semantics::ParameterInfo> emptyParams;
     if (!rewriteExpr(rewrittenInitializer,
                      SubstMap{},
                      {},
@@ -74,18 +73,18 @@ bool inferCallTargetBinding(const Expr &bindingExpr,
 }
 
 bool resolveFieldBindingTarget(const Expr &target,
-                               const std::vector<ParameterInfo> &params,
+                               const std::vector<semantics::ParameterInfo> &params,
                                const LocalTypeMap &locals,
                                bool allowMathBare,
                                const std::string &namespacePrefix,
                                Context &ctx,
-                               BindingInfo &bindingOut) {
+                               semantics::BindingInfo &bindingOut) {
   if (!(target.kind == Expr::Kind::Call && target.isFieldAccess && target.args.size() == 1)) {
     return false;
   }
   const Expr &receiver = target.args.front();
   std::string receiverTypeText;
-  BindingInfo receiverInfo;
+  semantics::BindingInfo receiverInfo;
   if (resolveAssignmentTargetBinding(receiver, params, locals, allowMathBare, namespacePrefix, ctx, receiverInfo)) {
     receiverTypeText = bindingTypeToString(receiverInfo);
   } else if (inferBindingTypeForMonomorph(receiver, params, locals, allowMathBare, ctx, receiverInfo)) {
@@ -98,32 +97,32 @@ bool resolveFieldBindingTarget(const Expr &target,
   if (receiverTypeText.empty()) {
     return false;
   }
-  receiverTypeText = normalizeBindingTypeName(receiverTypeText);
+  receiverTypeText = semantics::normalizeBindingTypeName(receiverTypeText);
   while (true) {
     std::string base;
     std::string argText;
-    if (!splitTemplateTypeName(receiverTypeText, base, argText) || base.empty()) {
+    if (!semantics::splitTemplateTypeName(receiverTypeText, base, argText) || base.empty()) {
       break;
     }
-    base = normalizeBindingTypeName(base);
+    base = semantics::normalizeBindingTypeName(base);
     if (base != "Reference" && base != "Pointer") {
       receiverTypeText = base;
       break;
     }
     std::vector<std::string> args;
-    if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+    if (!semantics::splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
       return false;
     }
-    receiverTypeText = normalizeBindingTypeName(args.front());
+    receiverTypeText = semantics::normalizeBindingTypeName(args.front());
   }
   std::string receiverStructPath = receiverTypeText;
   std::string receiverBase;
   std::string receiverArgText;
-  if (splitTemplateTypeName(receiverStructPath, receiverBase, receiverArgText) && !receiverBase.empty()) {
-    receiverStructPath = normalizeBindingTypeName(receiverBase);
+  if (semantics::splitTemplateTypeName(receiverStructPath, receiverBase, receiverArgText) && !receiverBase.empty()) {
+    receiverStructPath = semantics::normalizeBindingTypeName(receiverBase);
   }
   if (!receiverStructPath.empty() && receiverStructPath.front() != '/') {
-    receiverStructPath = resolveTypePath(receiverStructPath, receiver.namespacePrefix);
+    receiverStructPath = semantics::resolveTypePath(receiverStructPath, receiver.namespacePrefix);
   }
   auto structIt = ctx.sourceDefs.find(receiverStructPath);
   if (structIt == ctx.sourceDefs.end() || !isStructDefinition(structIt->second)) {
@@ -139,20 +138,20 @@ bool resolveFieldBindingTarget(const Expr &target,
 }
 
 bool resolveDereferenceBindingTarget(const Expr &target,
-                                     const std::vector<ParameterInfo> &params,
+                                     const std::vector<semantics::ParameterInfo> &params,
                                      const LocalTypeMap &locals,
                                      bool allowMathBare,
                                      const std::string &namespacePrefix,
                                      Context &ctx,
-                                     BindingInfo &bindingOut) {
+                                     semantics::BindingInfo &bindingOut) {
   if (target.kind != Expr::Kind::Call || target.args.size() != 1) {
     return false;
   }
   std::string pointerBuiltin;
-  if (!getBuiltinPointerName(target, pointerBuiltin) || pointerBuiltin != "dereference") {
+  if (!semantics::getBuiltinPointerName(target, pointerBuiltin) || pointerBuiltin != "dereference") {
     return false;
   }
-  auto inferPointerBinding = [&](const Expr &pointerExpr, BindingInfo &pointerOut) -> bool {
+  auto inferPointerBinding = [&](const Expr &pointerExpr, semantics::BindingInfo &pointerOut) -> bool {
     if (inferBindingTypeForMonomorph(pointerExpr, params, locals, allowMathBare, ctx, pointerOut)) {
       return true;
     }
@@ -160,10 +159,10 @@ bool resolveDereferenceBindingTarget(const Expr &target,
       return false;
     }
     std::string nestedPointerBuiltin;
-    if (!getBuiltinPointerName(pointerExpr, nestedPointerBuiltin) || nestedPointerBuiltin != "location") {
+    if (!semantics::getBuiltinPointerName(pointerExpr, nestedPointerBuiltin) || nestedPointerBuiltin != "location") {
       return false;
     }
-    BindingInfo pointeeInfo;
+    semantics::BindingInfo pointeeInfo;
     if (!resolveAssignmentTargetBinding(
             pointerExpr.args.front(), params, locals, allowMathBare, namespacePrefix, ctx, pointeeInfo)) {
       return false;
@@ -176,18 +175,18 @@ bool resolveDereferenceBindingTarget(const Expr &target,
     pointerOut.typeTemplateArg = pointeeTypeText;
     return true;
   };
-  BindingInfo pointerInfo;
+  semantics::BindingInfo pointerInfo;
   if (!inferPointerBinding(target.args.front(), pointerInfo)) {
     return false;
   }
-  const std::string normalizedPointerType = normalizeBindingTypeName(pointerInfo.typeName);
+  const std::string normalizedPointerType = semantics::normalizeBindingTypeName(pointerInfo.typeName);
   if ((normalizedPointerType != "Reference" && normalizedPointerType != "Pointer") ||
       pointerInfo.typeTemplateArg.empty()) {
     return false;
   }
   std::string pointeeBase;
   std::string pointeeArgText;
-  if (splitTemplateTypeName(pointerInfo.typeTemplateArg, pointeeBase, pointeeArgText) && !pointeeBase.empty()) {
+  if (semantics::splitTemplateTypeName(pointerInfo.typeTemplateArg, pointeeBase, pointeeArgText) && !pointeeBase.empty()) {
     bindingOut.typeName = pointeeBase;
     bindingOut.typeTemplateArg = pointeeArgText;
   } else {
@@ -198,12 +197,12 @@ bool resolveDereferenceBindingTarget(const Expr &target,
 }
 
 bool resolveAssignmentTargetBinding(const Expr &target,
-                                    const std::vector<ParameterInfo> &params,
+                                    const std::vector<semantics::ParameterInfo> &params,
                                     const LocalTypeMap &locals,
                                     bool allowMathBare,
                                     const std::string &namespacePrefix,
                                     Context &ctx,
-                                    BindingInfo &bindingOut) {
+                                    semantics::BindingInfo &bindingOut) {
   return inferBindingTypeForMonomorph(target, params, locals, allowMathBare, ctx, bindingOut) ||
          resolveFieldBindingTarget(target, params, locals, allowMathBare, namespacePrefix, ctx, bindingOut) ||
          resolveDereferenceBindingTarget(target, params, locals, allowMathBare, namespacePrefix, ctx, bindingOut);

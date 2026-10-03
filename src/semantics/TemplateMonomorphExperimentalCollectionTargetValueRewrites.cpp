@@ -35,19 +35,18 @@
 #include <sstream>
 
 #include "primec/support/CompileArena.h"
-#include "TemplateMonomorphUsings.h"
 
 namespace primec {
 
 bool resolveExperimentalConstructorTargetTypeText(const Expr &targetExpr,
-                                                  const std::vector<ParameterInfo> &params,
+                                                  const std::vector<semantics::ParameterInfo> &params,
                                                   const LocalTypeMap &locals,
                                                   bool allowMathBare,
                                                   const std::string &namespacePrefix,
                                                   Context &ctx,
                                                   std::string &targetTypeTextOut) {
   targetTypeTextOut.clear();
-  BindingInfo targetInfo;
+  semantics::BindingInfo targetInfo;
   if (!resolveAssignmentTargetBinding(targetExpr, params, locals, allowMathBare, namespacePrefix, ctx, targetInfo)) {
     return false;
   }

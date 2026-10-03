@@ -20,7 +20,6 @@
 #include "TemplateMonomorphSetupUtilities.h"
 #include "TemplateMonomorphCollectionCompatibilityPaths.h"
 #include "TemplateMonomorphImplicitTemplateInference.h"
-#include "TemplateMonomorphUsings.h"
 
 namespace primec {
 
@@ -85,9 +84,9 @@ bool rewriteExperimentalKeyValueTargetValueForType(const std::string &typeText,
                                                    RewriteKeyValuePayloadFn &&rewriteKeyValuePayload) {
   std::string base;
   std::string argText;
-  if (splitTemplateTypeName(typeText, base, argText) && normalizeBindingTypeName(base) == "uninitialized") {
+  if (semantics::splitTemplateTypeName(typeText, base, argText) && semantics::normalizeBindingTypeName(base) == "uninitialized") {
     std::vector<std::string> storageArgs;
-    if (!splitTopLevelTemplateArgs(argText, storageArgs) || storageArgs.size() != 1) {
+    if (!semantics::splitTopLevelTemplateArgs(argText, storageArgs) || storageArgs.size() != 1) {
       return true;
     }
     return rewriteExperimentalKeyValueTargetValueForType(trimWhitespace(storageArgs.front()),
@@ -102,11 +101,11 @@ bool rewriteExperimentalKeyValueTargetValueForType(const std::string &typeText,
   if (resolvesExperimentalKeyValueTypeText(typeText, mapping, allowedParams, namespacePrefix, ctx)) {
     return rewriteNestedKeyValueValue(valueExpr);
   }
-  if (!splitTemplateTypeName(typeText, base, argText) || normalizeBindingTypeName(base) != "Result") {
+  if (!semantics::splitTemplateTypeName(typeText, base, argText) || semantics::normalizeBindingTypeName(base) != "Result") {
     return true;
   }
   std::vector<std::string> resultArgs;
-  if (!splitTopLevelTemplateArgs(argText, resultArgs) || resultArgs.size() != 2) {
+  if (!semantics::splitTopLevelTemplateArgs(argText, resultArgs) || resultArgs.size() != 2) {
     return true;
   }
   if (!resolvesExperimentalKeyValueTypeText(trimWhitespace(resultArgs.front()),
@@ -125,9 +124,9 @@ bool rewriteExperimentalVectorTargetValueForType(const std::string &typeText,
                                                  RewriteNestedVectorValueFn &&rewriteNestedVectorValue) {
   std::string base;
   std::string argText;
-  if (splitTemplateTypeName(typeText, base, argText) && normalizeBindingTypeName(base) == "uninitialized") {
+  if (semantics::splitTemplateTypeName(typeText, base, argText) && semantics::normalizeBindingTypeName(base) == "uninitialized") {
     std::vector<std::string> storageArgs;
-    if (!splitTopLevelTemplateArgs(argText, storageArgs) || storageArgs.size() != 1) {
+    if (!semantics::splitTopLevelTemplateArgs(argText, storageArgs) || storageArgs.size() != 1) {
       return true;
     }
     return rewriteExperimentalVectorTargetValueForType(trimWhitespace(storageArgs.front()),
@@ -142,7 +141,7 @@ bool rewriteExperimentalVectorTargetValueForType(const std::string &typeText,
 
 template <typename ExpectedTypeFn, typename RewriteTargetValueFn>
 bool rewriteExperimentalConstructorBinding(Expr &bindingExpr,
-                                           const std::vector<ParameterInfo> &params,
+                                           const std::vector<semantics::ParameterInfo> &params,
                                            const LocalTypeMap &locals,
                                            bool allowMathBare,
                                            Context &ctx,
@@ -152,8 +151,8 @@ bool rewriteExperimentalConstructorBinding(Expr &bindingExpr,
   if (!bindingExpr.isBinding || bindingExpr.args.size() != 1) {
     return true;
   }
-  BindingInfo bindingInfo;
-  const bool hasExplicitBindingTransform = hasExplicitBindingTypeTransform(bindingExpr);
+  semantics::BindingInfo bindingInfo;
+  const bool hasExplicitBindingTransform = semantics::hasExplicitBindingTypeTransform(bindingExpr);
   const bool hasExplicitBindingType = extractExplicitBindingType(bindingExpr, bindingInfo);
   if (hasExplicitBindingType) {
     const std::string bindingTypeText = bindingTypeToString(bindingInfo);

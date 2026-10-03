@@ -35,16 +35,15 @@
 #include <sstream>
 
 #include "primec/support/CompileArena.h"
-#include "TemplateMonomorphUsings.h"
 
 namespace primec {
 
 bool inferCallBindingTypeForMonomorph(const Expr &initializer,
-                                      const std::vector<ParameterInfo> &params,
+                                      const std::vector<semantics::ParameterInfo> &params,
                                       const LocalTypeMap &locals,
                                       bool allowMathBare,
                                       Context &ctx,
-                                      BindingInfo &infoOut,
+                                      semantics::BindingInfo &infoOut,
                                       bool &handledOut) {
   handledOut = false;
   if (initializer.kind != Expr::Kind::Call) {
@@ -54,8 +53,8 @@ bool inferCallBindingTypeForMonomorph(const Expr &initializer,
   if (initializer.isMethodCall && initializer.name == "ok" && initializer.args.size() == 2 &&
       initializer.templateArgs.empty() && !initializer.hasBodyArguments && initializer.bodyArguments.empty()) {
     const Expr &receiver = initializer.args.front();
-    if (receiver.kind == Expr::Kind::Name && normalizeBindingTypeName(receiver.name) == "Result") {
-      BindingInfo payloadInfo;
+    if (receiver.kind == Expr::Kind::Name && semantics::normalizeBindingTypeName(receiver.name) == "Result") {
+      semantics::BindingInfo payloadInfo;
       if (!inferBindingTypeForMonomorph(initializer.args.back(), params, locals, allowMathBare, ctx, payloadInfo)) {
         handledOut = true;
         return false;
@@ -70,9 +69,9 @@ bool inferCallBindingTypeForMonomorph(const Expr &initializer,
       return true;
     }
   }
-  if (isIfCall(initializer) && initializer.args.size() == 3) {
-    BindingInfo thenInfo;
-    BindingInfo elseInfo;
+  if (semantics::isIfCall(initializer) && initializer.args.size() == 3) {
+    semantics::BindingInfo thenInfo;
+    semantics::BindingInfo elseInfo;
     if (!inferBindingTypeForMonomorph(initializer.args[1], params, locals, allowMathBare, ctx, thenInfo) ||
         !inferBindingTypeForMonomorph(initializer.args[2], params, locals, allowMathBare, ctx, elseInfo)) {
       handledOut = true;
@@ -99,14 +98,14 @@ bool inferCallBindingTypeForMonomorph(const Expr &initializer,
     const std::string experimentalPath = experimentalVectorConstructorInferencePath(resolved);
     if (!experimentalPath.empty() && ctx.sourceDefs.count(experimentalPath) > 0) {
       handledOut = true;
-      infoOut.typeName = canonicalVectorTypeIdentityPrefix() + "Vector";
-      infoOut.typeTemplateArg = joinTemplateArgs(initializer.templateArgs);
+      infoOut.typeName = semantics::canonicalVectorTypeIdentityPrefix() + "Vector";
+      infoOut.typeTemplateArg = semantics::joinTemplateArgs(initializer.templateArgs);
       return true;
     }
     if (isCollectionVectorConstructorHelperPath(resolved)) {
       handledOut = true;
-      infoOut.typeName = canonicalVectorTypeIdentityPrefix() + "Vector";
-      infoOut.typeTemplateArg = joinTemplateArgs(initializer.templateArgs);
+      infoOut.typeName = semantics::canonicalVectorTypeIdentityPrefix() + "Vector";
+      infoOut.typeTemplateArg = semantics::joinTemplateArgs(initializer.templateArgs);
       return true;
     }
   }
@@ -129,8 +128,8 @@ bool inferCallBindingTypeForMonomorph(const Expr &initializer,
                                       inferredArgs,
                                       inferError) &&
             inferredArgs.size() == 1) {
-          infoOut.typeName = canonicalVectorTypeIdentityPrefix() + "Vector";
-          infoOut.typeTemplateArg = joinTemplateArgs(inferredArgs);
+          infoOut.typeName = semantics::canonicalVectorTypeIdentityPrefix() + "Vector";
+          infoOut.typeTemplateArg = semantics::joinTemplateArgs(inferredArgs);
           return true;
         }
         if (!inferError.empty()) {
@@ -148,7 +147,7 @@ bool inferCallBindingTypeForMonomorph(const Expr &initializer,
           }
           std::string valueType;
           if (extractCollectionVectorValueTypeFromTypeText(transform.templateArgs.front(), valueType)) {
-            infoOut.typeName = canonicalVectorTypeIdentityPrefix() + "Vector";
+            infoOut.typeName = semantics::canonicalVectorTypeIdentityPrefix() + "Vector";
             infoOut.typeTemplateArg = valueType;
             return true;
           }
@@ -172,8 +171,8 @@ bool inferCallBindingTypeForMonomorph(const Expr &initializer,
                                       inferredArgs,
                                       inferError) &&
             inferredArgs.size() == 1) {
-          infoOut.typeName = canonicalVectorTypeIdentityPrefix() + "Vector";
-          infoOut.typeTemplateArg = joinTemplateArgs(inferredArgs);
+          infoOut.typeName = semantics::canonicalVectorTypeIdentityPrefix() + "Vector";
+          infoOut.typeTemplateArg = semantics::joinTemplateArgs(inferredArgs);
           return true;
         }
         if (!inferError.empty()) {
@@ -191,7 +190,7 @@ bool inferCallBindingTypeForMonomorph(const Expr &initializer,
           }
           std::string valueType;
           if (extractCollectionVectorValueTypeFromTypeText(transform.templateArgs.front(), valueType)) {
-            infoOut.typeName = canonicalVectorTypeIdentityPrefix() + "Vector";
+            infoOut.typeName = semantics::canonicalVectorTypeIdentityPrefix() + "Vector";
             infoOut.typeTemplateArg = valueType;
             return true;
           }
@@ -215,7 +214,7 @@ bool inferCallBindingTypeForMonomorph(const Expr &initializer,
     // specialization.
     if (!initializer.isMethodCall && !defIt->second.templateArgs.empty() &&
         initializer.templateArgs.size() == defIt->second.templateArgs.size()) {
-      infoOut.typeTemplateArg = joinTemplateArgs(initializer.templateArgs);
+      infoOut.typeTemplateArg = semantics::joinTemplateArgs(initializer.templateArgs);
     }
     return true;
   }
@@ -267,7 +266,7 @@ bool inferCallBindingTypeForMonomorph(const Expr &initializer,
     }
     std::string base;
     std::string argText;
-    if (splitTemplateTypeName(resolvedReturnType.text, base, argText) && !base.empty()) {
+    if (semantics::splitTemplateTypeName(resolvedReturnType.text, base, argText) && !base.empty()) {
       infoOut.typeName = base;
       infoOut.typeTemplateArg = argText;
     } else {

@@ -38,7 +38,6 @@
 
 #include "primec/support/CompileArena.h"
 #include "primec/support/CollectionHelperNames.h"
-#include "TemplateMonomorphUsings.h"
 
 namespace primec {
 
@@ -47,8 +46,8 @@ bool extractSpecializedSumTemplateArgsFromTypeText(std::string typeText, std::st
   if (paramNames.size() != 1) {
     return false;
   }
-  typeText = normalizeBindingTypeName(typeText);
-  paramBaseType = normalizeBindingTypeName(paramBaseType);
+  typeText = semantics::normalizeBindingTypeName(typeText);
+  paramBaseType = semantics::normalizeBindingTypeName(paramBaseType);
   if (typeText.empty() || paramBaseType.empty()) {
     return false;
   }
@@ -92,13 +91,13 @@ bool extractSpecializedSumTemplateArgsFromTypeText(std::string typeText, std::st
     std::string candidate = !variant.payloadTypeText.empty()
                                 ? variant.payloadTypeText
                                 : [&]() {
-                                    BindingInfo payloadBinding;
+                                    semantics::BindingInfo payloadBinding;
                                     payloadBinding.typeName = variant.payloadType;
                                     payloadBinding.typeTemplateArg =
-                                        joinTemplateArgs(variant.payloadTemplateArgs);
+                                        semantics::joinTemplateArgs(variant.payloadTemplateArgs);
                                     return bindingTypeToString(payloadBinding);
                                   }();
-    candidate = normalizeBindingTypeName(candidate);
+    candidate = semantics::normalizeBindingTypeName(candidate);
     if (candidate.empty()) {
       continue;
     }
@@ -115,7 +114,7 @@ bool extractSpecializedSumTemplateArgsFromTypeText(std::string typeText, std::st
 }
 
 bool buildTypePackOrderedArguments(const Definition &def,
-                                   const std::vector<ParameterInfo> &callParams,
+                                   const std::vector<semantics::ParameterInfo> &callParams,
                                    const std::vector<Expr> *orderedCallArgs,
                                    const std::vector<std::optional<std::string>> *orderedCallArgNames,
                                    size_t typePackParamIndex,

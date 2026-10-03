@@ -38,16 +38,15 @@
 
 #include "primec/support/CompileArena.h"
 #include "primec/support/CollectionHelperNames.h"
-#include "TemplateMonomorphUsings.h"
 
 namespace primec {
 
 bool inferBindingTypeForMonomorph(const Expr &initializer,
-                                  const std::vector<ParameterInfo> &params,
+                                  const std::vector<semantics::ParameterInfo> &params,
                                   const LocalTypeMap &locals,
                                   bool allowMathBare,
                                   Context &ctx,
-                                  BindingInfo &infoOut) {
+                                  semantics::BindingInfo &infoOut) {
   if (tryInferBindingTypeFromInitializer(initializer, params, locals, infoOut, allowMathBare)) {
     return true;
   }
@@ -84,7 +83,7 @@ bool isStdlibMapHelperDefinitionPath(std::string_view path) {
 bool inferImplicitTemplateArgs(const Definition &def,
                                const Expr &callExpr,
                                const LocalTypeMap &locals,
-                               const std::vector<ParameterInfo> &params,
+                               const std::vector<semantics::ParameterInfo> &params,
                                const SubstMap &mapping,
                                const std::unordered_set<std::string> &allowedParams,
                                const std::string &namespacePrefix,
@@ -97,7 +96,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
   }
   const bool isStdlibCollectionHelper =
       [&]() {
-        if (isCanonicalVectorCompatibilityPath(def.fullPath) ||
+        if (semantics::isCanonicalVectorCompatibilityPath(def.fullPath) ||
             def.fullPath.rfind(templateMonomorphCompatibilitySoaHelperPrefix(),
                                0) == 0 ||
             isStdlibMapHelperDefinitionPath(def.fullPath)) {
@@ -106,7 +105,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
         if (def.fullPath.rfind("/std/collections/", 0) != 0 || def.parameters.empty()) {
           return false;
         }
-        BindingInfo receiverBinding;
+        semantics::BindingInfo receiverBinding;
         if (!extractExplicitBindingType(def.parameters.front(), receiverBinding)) {
           return false;
         }
@@ -161,7 +160,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
   };
   auto inferBindingTypeTextForExpr = [&](const Expr &candidate,
                                          std::string &typeTextOut) {
-    BindingInfo inferredInfo;
+    semantics::BindingInfo inferredInfo;
     if (inferBindingTypeForMonomorph(candidate, params, locals, allowMathBare,
                                      ctx, inferredInfo)) {
       typeTextOut = bindingTypeToString(inferredInfo);
@@ -183,8 +182,8 @@ bool inferImplicitTemplateArgs(const Definition &def,
         def.parameters.empty() || def.templateArgs.empty()) {
       return false;
     }
-    BindingInfo receiverInfo;
-    BindingInfo receiverParamInfo;
+    semantics::BindingInfo receiverInfo;
+    semantics::BindingInfo receiverParamInfo;
     if (!inferBindingTypeForMonomorph(callExpr.args.front(),
                                       params,
                                       locals,
@@ -198,8 +197,8 @@ bool inferImplicitTemplateArgs(const Definition &def,
       const size_t slash = path.find_last_of('/');
       return slash == std::string::npos ? path : path.substr(slash + 1);
     };
-    std::string receiverBase = normalizeBindingTypeName(receiverInfo.typeName);
-    std::string paramBase = normalizeBindingTypeName(receiverParamInfo.typeName);
+    std::string receiverBase = semantics::normalizeBindingTypeName(receiverInfo.typeName);
+    std::string paramBase = semantics::normalizeBindingTypeName(receiverParamInfo.typeName);
     if (!receiverBase.empty() && receiverBase.front() == '/') {
       receiverBase.erase(receiverBase.begin());
     }
@@ -215,7 +214,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
     }
     if (!receiverInfo.typeTemplateArg.empty()) {
       std::vector<std::string> receiverTemplateArgs;
-      if (splitTopLevelTemplateArgs(receiverInfo.typeTemplateArg,
+      if (semantics::splitTopLevelTemplateArgs(receiverInfo.typeTemplateArg,
                                     receiverTemplateArgs) &&
           receiverTemplateArgs.size() == def.templateArgs.size()) {
         templateArgsOut = std::move(receiverTemplateArgs);
@@ -294,13 +293,13 @@ bool inferImplicitTemplateArgs(const Definition &def,
     elemTypeOut.clear();
     std::string accessName;
     if (candidate.kind != Expr::Kind::Call ||
-        !getBuiltinArrayAccessName(candidate, accessName) ||
+        !semantics::getBuiltinArrayAccessName(candidate, accessName) ||
         candidate.args.size() != 2 ||
         candidate.args.front().kind != Expr::Kind::Name) {
       return false;
     }
     const std::string &receiverName = candidate.args.front().name;
-    const BindingInfo *binding = nullptr;
+    const semantics::BindingInfo *binding = nullptr;
     for (const auto &param : params) {
       if (param.name == receiverName) {
         binding = &param.binding;
@@ -339,14 +338,14 @@ bool inferImplicitTemplateArgs(const Definition &def,
           receiverExpr->isMethodCall ? std::string{}
                                      : resolveCalleePath(*receiverExpr, namespacePrefix, ctx);
       if (((!receiverExpr->isMethodCall &&
-            isSimpleCallName(*receiverExpr, "to_soa")) ||
+            semantics::isSimpleCallName(*receiverExpr, "to_soa")) ||
            resolvedReceiverPath == "/to_soa") &&
           receiverExpr->args.size() == 1 &&
           inferBuiltinVectorTemplateArgFromExpr(receiverExpr->args.front(),
                                                 elemTypeOut)) {
         return true;
       }
-      if (isSimpleCallName(*receiverExpr, "dereference") &&
+      if (semantics::isSimpleCallName(*receiverExpr, "dereference") &&
           receiverExpr->args.size() == 1) {
         std::string indexedElemType;
         if (inferIndexedArgsPackElementTypeText(receiverExpr->args.front(),
@@ -373,10 +372,10 @@ bool inferImplicitTemplateArgs(const Definition &def,
       inferred.emplace(def.templateArgs.front(), std::move(inferredSoaElemType));
     }
   }
-  std::vector<ParameterInfo> callParams;
+  std::vector<semantics::ParameterInfo> callParams;
   callParams.reserve(def.parameters.size());
   for (const auto &paramExpr : def.parameters) {
-    ParameterInfo param;
+    semantics::ParameterInfo param;
     param.name = paramExpr.name;
     extractExplicitBindingType(paramExpr, param.binding);
     if (paramExpr.args.size() == 1) {
@@ -419,7 +418,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
   size_t packedParamIndex = callParams.size();
   size_t callArgStart = 0;
   size_t paramIndexOffset = 0;
-  auto assignBindingFromTypeText = [&](const std::string &typeText, BindingInfo &bindingOut) -> bool {
+  auto assignBindingFromTypeText = [&](const std::string &typeText, semantics::BindingInfo &bindingOut) -> bool {
     return ::primec::assignBindingFromTypeText(typeText, bindingOut);
   };
   auto unsupportedBuiltinSoaPendingDiagnostic = [&](const Expr &candidate) -> std::string {
@@ -437,14 +436,14 @@ bool inferImplicitTemplateArgs(const Definition &def,
     if (ownerSlash == std::string::npos) {
       return false;
     }
-    return normalizeBindingTypeName(callParams.front().binding.typeName) ==
+    return semantics::normalizeBindingTypeName(callParams.front().binding.typeName) ==
            def.fullPath.substr(ownerSlash + 1, lastSlash - ownerSlash - 1);
   }();
   auto receiverArgMatchesLeadingParam = [&]() -> bool {
     if (!hasLeadingReceiverParam || callExpr.args.empty() || callParams.empty()) {
       return false;
     }
-    BindingInfo receiverArgInfo;
+    semantics::BindingInfo receiverArgInfo;
     if (!inferBindingTypeForMonomorph(callExpr.args.front(), params, locals, allowMathBare, ctx, receiverArgInfo)) {
       if (!assignBindingFromTypeText(
               inferExprTypeTextForTemplatedVectorFallback(
@@ -453,8 +452,8 @@ bool inferImplicitTemplateArgs(const Definition &def,
         return false;
       }
     }
-    return normalizeBindingTypeName(bindingTypeToString(receiverArgInfo)) ==
-           normalizeBindingTypeName(bindingTypeToString(callParams.front().binding));
+    return semantics::normalizeBindingTypeName(bindingTypeToString(receiverArgInfo)) ==
+           semantics::normalizeBindingTypeName(bindingTypeToString(callParams.front().binding));
   };
   if (hasLeadingReceiverParam && callExpr.args.size() + 1 == callParams.size() &&
       !receiverArgMatchesLeadingParam()) {
@@ -492,7 +491,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
       typePackParamIndex + 1 == callParams.size();
   const bool orderedOk = hasTypePackValueParameter
                              ? buildTypePackOrderedArguments()
-                             : buildOrderedArguments(callParams,
+                             : semantics::buildOrderedArguments(callParams,
                                                      *orderedCallArgs,
                                                      *orderedCallArgNames,
                                                      orderedArgs,
@@ -517,7 +516,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
     key << implicitInferenceFactScopePath
         << "|" << def.fullPath
         << "|template:"
-        << joinTemplateArgs(callExpr.templateArgs)
+        << semantics::joinTemplateArgs(callExpr.templateArgs)
         << "|ordered:";
     for (size_t argIndex = 0; argIndex < orderedArgs.size(); ++argIndex) {
       if (argIndex > 0) {
@@ -536,7 +535,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
         key << "<default>";
         continue;
       }
-      BindingInfo argInfo;
+      semantics::BindingInfo argInfo;
       if (!inferBindingTypeForMonomorph(*argExpr, params, locals, allowMathBare, ctx, argInfo)) {
         if (!assignBindingFromTypeText(
                 inferExprTypeTextForTemplatedVectorFallback(
@@ -546,7 +545,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
           break;
         }
       }
-      const std::string normalizedArgType = normalizeBindingTypeName(bindingTypeToString(argInfo));
+      const std::string normalizedArgType = semantics::normalizeBindingTypeName(bindingTypeToString(argInfo));
       if (normalizedArgType.empty()) {
         canConsumeImplicitInferenceFact = false;
         break;
@@ -564,7 +563,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
           key << "<empty>";
           continue;
         }
-        BindingInfo argInfo;
+        semantics::BindingInfo argInfo;
         if (!inferBindingTypeForMonomorph(*argExpr, params, locals, allowMathBare, ctx, argInfo)) {
           if (!assignBindingFromTypeText(
                   inferExprTypeTextForTemplatedVectorFallback(
@@ -574,7 +573,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
             break;
           }
         }
-        const std::string normalizedArgType = normalizeBindingTypeName(bindingTypeToString(argInfo));
+        const std::string normalizedArgType = semantics::normalizeBindingTypeName(bindingTypeToString(argInfo));
         if (normalizedArgType.empty()) {
           canConsumeImplicitInferenceFact = false;
           break;
@@ -596,11 +595,11 @@ bool inferImplicitTemplateArgs(const Definition &def,
       ++ctx.implicitTemplateArgInferenceFactHitsForTesting;
       if (ctx.collectImplicitTemplateArgFactsForTesting) {
         ctx.implicitTemplateArgFactsForTesting.push_back(
-            ImplicitTemplateArgResolutionFactForTesting{
+            semantics::ImplicitTemplateArgResolutionFactForTesting{
                 implicitInferenceFactScopePath,
                 callExpr.name,
                 def.fullPath,
-                joinTemplateArgs(outArgs),
+                semantics::joinTemplateArgs(outArgs),
             });
       }
       return true;
@@ -609,7 +608,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
 
   for (size_t i = 0; i < def.parameters.size(); ++i) {
     const Expr &param = def.parameters[i];
-    BindingInfo paramInfo;
+    semantics::BindingInfo paramInfo;
     if (!extractExplicitBindingType(param, paramInfo)) {
       continue;
     }
@@ -636,10 +635,10 @@ bool inferImplicitTemplateArgs(const Definition &def,
     if (callParamIndex == packedParamIndex && isArgsPackBinding(paramInfo)) {
       std::string wrapperBase;
       std::string wrapperArgs;
-      if (splitTemplateTypeName(paramInfo.typeTemplateArg, wrapperBase, wrapperArgs) &&
-          normalizeBindingTypeName(wrapperBase) == "Entry") {
+      if (semantics::splitTemplateTypeName(paramInfo.typeTemplateArg, wrapperBase, wrapperArgs) &&
+          semantics::normalizeBindingTypeName(wrapperBase) == "Entry") {
         std::vector<std::string> entryTemplateArgNames;
-        if (splitTopLevelTemplateArgs(wrapperArgs, entryTemplateArgNames) &&
+        if (semantics::splitTopLevelTemplateArgs(wrapperArgs, entryTemplateArgNames) &&
             entryTemplateArgNames.size() == 2) {
           std::string entryKeyParamName = trimWhitespace(entryTemplateArgNames[0]);
           std::string entryValueParamName = trimWhitespace(entryTemplateArgNames[1]);
@@ -668,7 +667,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
                   derivedEntryPairTypes = false;
                   break;
                 }
-                BindingInfo packedArgInfo;
+                semantics::BindingInfo packedArgInfo;
                 if (!inferBindingTypeForMonomorph(*packedArgExpr, params, locals, allowMathBare, ctx,
                                                    packedArgInfo)) {
                   derivedEntryPairTypes = false;
@@ -726,7 +725,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
       if (implicitSet.count(paramInfo.typeName) == 0) {
         std::vector<std::string> wrappedTemplateArgs;
         if (paramInfo.typeTemplateArg.empty() ||
-            !splitTopLevelTemplateArgs(paramInfo.typeTemplateArg, wrappedTemplateArgs) ||
+            !semantics::splitTopLevelTemplateArgs(paramInfo.typeTemplateArg, wrappedTemplateArgs) ||
             wrappedTemplateArgs.empty()) {
           continue;
         }
@@ -777,7 +776,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
         continue;
       }
       if (inferFromWrappedTemplateArgs) {
-        std::string paramBaseType = normalizeBindingTypeName(paramInfo.typeName);
+        std::string paramBaseType = semantics::normalizeBindingTypeName(paramInfo.typeName);
         if (!paramBaseType.empty() && paramBaseType.front() != '/') {
           paramBaseType.insert(paramBaseType.begin(), '/');
         }
@@ -819,7 +818,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
       return false;
     }
     for (const Expr *argExpr : argsToInfer) {
-      BindingInfo argInfo;
+      semantics::BindingInfo argInfo;
       if (!argExpr) {
         if (isStdlibCollectionHelper && allInferredParamNamesKnown(inferredParamNames)) {
           continue;
@@ -841,12 +840,12 @@ bool inferImplicitTemplateArgs(const Definition &def,
           error = "spread argument requires args<T> value";
           return false;
         }
-        argInfo.typeName = normalizeBindingTypeName(spreadElementType);
+        argInfo.typeName = semantics::normalizeBindingTypeName(spreadElementType);
         argInfo.typeTemplateArg.clear();
         std::string spreadBase;
         std::string spreadArgs;
-        if (splitTemplateTypeName(spreadElementType, spreadBase, spreadArgs)) {
-          argInfo.typeName = normalizeBindingTypeName(spreadBase);
+        if (semantics::splitTemplateTypeName(spreadElementType, spreadBase, spreadArgs)) {
+          argInfo.typeName = semantics::normalizeBindingTypeName(spreadBase);
           argInfo.typeTemplateArg = spreadArgs;
         }
       } else if (!inferBindingTypeForMonomorph(*argExpr, params, locals, allowMathBare, ctx, argInfo)) {
@@ -899,23 +898,23 @@ bool inferImplicitTemplateArgs(const Definition &def,
       if (inferFromWrappedTemplateArgs) {
         std::string argBaseType = argInfo.typeName;
         std::string argTemplateArgText = argInfo.typeTemplateArg;
-        if ((normalizeBindingTypeName(argBaseType) == "Reference" ||
-             normalizeBindingTypeName(argBaseType) == "Pointer") &&
+        if ((semantics::normalizeBindingTypeName(argBaseType) == "Reference" ||
+             semantics::normalizeBindingTypeName(argBaseType) == "Pointer") &&
             !argTemplateArgText.empty()) {
           std::string innerBase;
           std::string innerArgs;
-          if (splitTemplateTypeName(argTemplateArgText, innerBase, innerArgs) && !innerBase.empty()) {
+          if (semantics::splitTemplateTypeName(argTemplateArgText, innerBase, innerArgs) && !innerBase.empty()) {
             argBaseType = innerBase;
             argTemplateArgText = innerArgs;
           }
         }
         std::string paramBaseType = paramInfo.typeName;
-        if ((normalizeBindingTypeName(paramBaseType) == "Reference" ||
-             normalizeBindingTypeName(paramBaseType) == "Pointer") &&
+        if ((semantics::normalizeBindingTypeName(paramBaseType) == "Reference" ||
+             semantics::normalizeBindingTypeName(paramBaseType) == "Pointer") &&
             !paramInfo.typeTemplateArg.empty()) {
           std::string innerBase;
           std::string innerArgs;
-          if (splitTemplateTypeName(paramInfo.typeTemplateArg, innerBase, innerArgs) &&
+          if (semantics::splitTemplateTypeName(paramInfo.typeTemplateArg, innerBase, innerArgs) &&
               !innerBase.empty()) {
             paramBaseType = innerBase;
           }
@@ -931,7 +930,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
         auto inferenceReceiverFamilyName = [](std::string value) {
           value = normalizeCollectionReceiverTypeName(std::move(value));
           if (value == "soa" ||
-              trimLeadingSlash(value) == "std/collections/soa") {
+              semantics::trimLeadingSlash(value) == "std/collections/soa") {
             return templateMonomorphSoaReceiverTypeName();
           }
           return value;
@@ -960,7 +959,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
             error = "unable to infer implicit template arguments for " + def.fullPath;
             return false;
           }
-        } else if (!splitTopLevelTemplateArgs(argTemplateArgText, argTemplateArgs)) {
+        } else if (!semantics::splitTopLevelTemplateArgs(argTemplateArgText, argTemplateArgs)) {
           if (isStdlibCollectionHelper) {
             return false;
           }
@@ -1062,11 +1061,11 @@ bool inferImplicitTemplateArgs(const Definition &def,
   }
   if (ctx.collectImplicitTemplateArgFactsForTesting) {
     ctx.implicitTemplateArgFactsForTesting.push_back(
-        ImplicitTemplateArgResolutionFactForTesting{
+        semantics::ImplicitTemplateArgResolutionFactForTesting{
             implicitInferenceFactScopePath,
             callExpr.name,
             def.fullPath,
-            joinTemplateArgs(outArgs),
+            semantics::joinTemplateArgs(outArgs),
         });
   }
   return true;

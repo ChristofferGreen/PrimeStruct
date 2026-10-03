@@ -48,18 +48,18 @@ struct RewriteExprState {
   bool allowMathBare{};
 };
 
-PhaseStatus rewriteExprPhase1(Expr &expr, const SubstMap &mapping, const std::unordered_set<std::string> &allowedParams, const std::string &namespacePrefix, Context &ctx, std::string &error, const LocalTypeMap &locals, const std::vector<ParameterInfo> &params, RewriteExprState &st);
-PhaseStatus rewriteExprPhase2(Expr &expr, const SubstMap &mapping, const std::unordered_set<std::string> &allowedParams, const std::string &namespacePrefix, Context &ctx, std::string &error, const LocalTypeMap &locals, const std::vector<ParameterInfo> &params, RewriteExprState &st);
-PhaseStatus rewriteExprPhase3(Expr &expr, const SubstMap &mapping, const std::unordered_set<std::string> &allowedParams, const std::string &namespacePrefix, Context &ctx, std::string &error, const LocalTypeMap &locals, const std::vector<ParameterInfo> &params, RewriteExprState &st);
-PhaseStatus rewriteExprPhase4(Expr &expr, const SubstMap &mapping, const std::unordered_set<std::string> &allowedParams, const std::string &namespacePrefix, Context &ctx, std::string &error, const LocalTypeMap &locals, const std::vector<ParameterInfo> &params, RewriteExprState &st);
-PhaseStatus rewriteExprPhase5(Expr &expr, const SubstMap &mapping, const std::unordered_set<std::string> &allowedParams, const std::string &namespacePrefix, Context &ctx, std::string &error, const LocalTypeMap &locals, const std::vector<ParameterInfo> &params, RewriteExprState &st);
-PhaseStatus rewriteExprPhase6(Expr &expr, const SubstMap &mapping, const std::unordered_set<std::string> &allowedParams, const std::string &namespacePrefix, Context &ctx, std::string &error, const LocalTypeMap &locals, const std::vector<ParameterInfo> &params, RewriteExprState &st);
-PhaseStatus rewriteExprPhase7(Expr &expr, const SubstMap &mapping, const std::unordered_set<std::string> &allowedParams, const std::string &namespacePrefix, Context &ctx, std::string &error, const LocalTypeMap &locals, const std::vector<ParameterInfo> &params, RewriteExprState &st);
-PhaseStatus rewriteExprPhase8(Expr &expr, const SubstMap &mapping, const std::unordered_set<std::string> &allowedParams, const std::string &namespacePrefix, Context &ctx, std::string &error, const LocalTypeMap &locals, const std::vector<ParameterInfo> &params, RewriteExprState &st);
+PhaseStatus rewriteExprPhase1(Expr &expr, const SubstMap &mapping, const std::unordered_set<std::string> &allowedParams, const std::string &namespacePrefix, Context &ctx, std::string &error, const LocalTypeMap &locals, const std::vector<semantics::ParameterInfo> &params, RewriteExprState &st);
+PhaseStatus rewriteExprPhase2(Expr &expr, const SubstMap &mapping, const std::unordered_set<std::string> &allowedParams, const std::string &namespacePrefix, Context &ctx, std::string &error, const LocalTypeMap &locals, const std::vector<semantics::ParameterInfo> &params, RewriteExprState &st);
+PhaseStatus rewriteExprPhase3(Expr &expr, const SubstMap &mapping, const std::unordered_set<std::string> &allowedParams, const std::string &namespacePrefix, Context &ctx, std::string &error, const LocalTypeMap &locals, const std::vector<semantics::ParameterInfo> &params, RewriteExprState &st);
+PhaseStatus rewriteExprPhase4(Expr &expr, const SubstMap &mapping, const std::unordered_set<std::string> &allowedParams, const std::string &namespacePrefix, Context &ctx, std::string &error, const LocalTypeMap &locals, const std::vector<semantics::ParameterInfo> &params, RewriteExprState &st);
+PhaseStatus rewriteExprPhase5(Expr &expr, const SubstMap &mapping, const std::unordered_set<std::string> &allowedParams, const std::string &namespacePrefix, Context &ctx, std::string &error, const LocalTypeMap &locals, const std::vector<semantics::ParameterInfo> &params, RewriteExprState &st);
+PhaseStatus rewriteExprPhase6(Expr &expr, const SubstMap &mapping, const std::unordered_set<std::string> &allowedParams, const std::string &namespacePrefix, Context &ctx, std::string &error, const LocalTypeMap &locals, const std::vector<semantics::ParameterInfo> &params, RewriteExprState &st);
+PhaseStatus rewriteExprPhase7(Expr &expr, const SubstMap &mapping, const std::unordered_set<std::string> &allowedParams, const std::string &namespacePrefix, Context &ctx, std::string &error, const LocalTypeMap &locals, const std::vector<semantics::ParameterInfo> &params, RewriteExprState &st);
+PhaseStatus rewriteExprPhase8(Expr &expr, const SubstMap &mapping, const std::unordered_set<std::string> &allowedParams, const std::string &namespacePrefix, Context &ctx, std::string &error, const LocalTypeMap &locals, const std::vector<semantics::ParameterInfo> &params, RewriteExprState &st);
 
 // Helpers of rewriteExpr shared by its phase units.
-bool rewriteKeyValueWrapperHelperCallToMethod(Expr &expr, const std::string &namespacePrefix, Context &ctx, const LocalTypeMap &locals, const std::vector<ParameterInfo> &params, bool allowMathBare);
-void unwrapDereferencedBorrowedVectorReceiver(Expr &expr, const std::vector<ParameterInfo> &params, const LocalTypeMap &locals, bool allowMathBare, Context &ctx);
-bool rewriteBorrowedVectorBareHelperCall(Expr &expr, const std::vector<ParameterInfo> &params, const LocalTypeMap &locals, bool allowMathBare, Context &ctx);
+bool rewriteKeyValueWrapperHelperCallToMethod(Expr &expr, const std::string &namespacePrefix, Context &ctx, const LocalTypeMap &locals, const std::vector<semantics::ParameterInfo> &params, bool allowMathBare);
+void unwrapDereferencedBorrowedVectorReceiver(Expr &expr, const std::vector<semantics::ParameterInfo> &params, const LocalTypeMap &locals, bool allowMathBare, Context &ctx);
+bool rewriteBorrowedVectorBareHelperCall(Expr &expr, const std::vector<semantics::ParameterInfo> &params, const LocalTypeMap &locals, bool allowMathBare, Context &ctx);
 
 } // namespace primec

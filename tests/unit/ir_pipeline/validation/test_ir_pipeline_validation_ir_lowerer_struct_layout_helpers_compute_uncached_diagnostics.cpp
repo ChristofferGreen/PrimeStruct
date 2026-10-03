@@ -5,10 +5,7 @@ TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 TEST_CASE("ir lowerer struct layout helpers compute uncached diagnostics") {
   primec::Definition mismatchDef;
   mismatchDef.fullPath = "/pkg/Mismatch";
-  primec::Expr mismatchField;
-  mismatchField.kind = primec::Expr::Kind::Name;
-  mismatchField.isBinding = true;
-  mismatchField.name = "field";
+  primec::Expr mismatchField = primec::validation_test_support::makeBindingNameExpr("field");
   mismatchDef.statements = {mismatchField};
 
   primec::IrStructLayout layout;
@@ -61,10 +58,7 @@ TEST_CASE("ir lowerer struct layout helpers compute from field info") {
   primec::Definition structDef;
   structDef.fullPath = "/pkg/S";
   structDef.namespacePrefix = "/pkg";
-  primec::Expr fieldExpr;
-  fieldExpr.kind = primec::Expr::Kind::Name;
-  fieldExpr.isBinding = true;
-  fieldExpr.name = "nested";
+  primec::Expr fieldExpr = primec::validation_test_support::makeBindingNameExpr("nested");
   structDef.statements = {fieldExpr};
 
   primec::Definition nestedDef;
@@ -109,10 +103,7 @@ TEST_CASE("ir lowerer struct layout helpers compute from field info diagnostics"
   primec::Definition structDef;
   structDef.fullPath = "/pkg/S";
   structDef.namespacePrefix = "/pkg";
-  primec::Expr fieldExpr;
-  fieldExpr.kind = primec::Expr::Kind::Name;
-  fieldExpr.isBinding = true;
-  fieldExpr.name = "missing";
+  primec::Expr fieldExpr = primec::validation_test_support::makeBindingNameExpr("missing");
   structDef.statements = {fieldExpr};
 
   const auto resolveStructTypePath = [](const std::string &typeName, const std::string &namespacePrefix) {
@@ -150,10 +141,7 @@ TEST_CASE("ir lowerer struct layout helpers validate semantic product coverage")
   primec::Transform structTransform;
   structTransform.name = "struct";
   structDef.transforms.push_back(structTransform);
-  primec::Expr fieldExpr;
-  fieldExpr.kind = primec::Expr::Kind::Name;
-  fieldExpr.isBinding = true;
-  fieldExpr.name = "value";
+  primec::Expr fieldExpr = primec::validation_test_support::makeBindingNameExpr("value");
   structDef.statements.push_back(fieldExpr);
   program.definitions.push_back(structDef);
 
@@ -363,10 +351,7 @@ TEST_CASE("ir lowerer call helpers build this params and collect struct fields")
   primec::Definition structDef;
   structDef.fullPath = "/pkg/MyStruct";
 
-  primec::Expr instanceField;
-  instanceField.kind = primec::Expr::Kind::Name;
-  instanceField.isBinding = true;
-  instanceField.name = "value";
+  primec::Expr instanceField = primec::validation_test_support::makeBindingNameExpr("value");
 
   primec::Expr staticField = instanceField;
   staticField.name = "globalValue";
@@ -402,10 +387,7 @@ TEST_CASE("ir lowerer call helpers build inline call parameter lists") {
 
   primec::Definition freeDef;
   freeDef.fullPath = "/free";
-  primec::Expr freeParam;
-  freeParam.kind = primec::Expr::Kind::Name;
-  freeParam.isBinding = true;
-  freeParam.name = "x";
+  primec::Expr freeParam = primec::validation_test_support::makeBindingNameExpr("x");
   freeDef.parameters.push_back(freeParam);
   REQUIRE(primec::ir_lowerer::buildInlineCallParameterList(
       freeDef, structNames, paramsOut, error));
@@ -442,10 +424,7 @@ TEST_CASE("ir lowerer call helpers build inline call parameter lists") {
   primec::Transform structTransform;
   structTransform.name = "struct";
   structDef.transforms.push_back(structTransform);
-  primec::Expr instanceField;
-  instanceField.kind = primec::Expr::Kind::Name;
-  instanceField.isBinding = true;
-  instanceField.name = "value";
+  primec::Expr instanceField = primec::validation_test_support::makeBindingNameExpr("value");
   primec::Expr staticField = instanceField;
   staticField.name = "cached";
   staticField.transforms.push_back(staticTransform);
@@ -476,10 +455,7 @@ TEST_CASE("ir lowerer call helpers build inline call ordered arguments") {
   primec::Definition helperDef;
   helperDef.isNested = true;
   helperDef.fullPath = "/pkg/MyStruct/doThing";
-  primec::Expr valueParam;
-  valueParam.kind = primec::Expr::Kind::Name;
-  valueParam.isBinding = true;
-  valueParam.name = "value";
+  primec::Expr valueParam = primec::validation_test_support::makeBindingNameExpr("value");
   helperDef.parameters.push_back(valueParam);
 
   primec::Expr receiverArg;
@@ -544,16 +520,10 @@ TEST_CASE("ir lowerer call helpers collect packed variadic inline call arguments
   primec::Definition helperDef;
   helperDef.fullPath = "/collect";
 
-  primec::Expr headParam;
-  headParam.kind = primec::Expr::Kind::Name;
-  headParam.isBinding = true;
-  headParam.name = "head";
+  primec::Expr headParam = primec::validation_test_support::makeBindingNameExpr("head");
   helperDef.parameters.push_back(headParam);
 
-  primec::Expr valuesParam;
-  valuesParam.kind = primec::Expr::Kind::Name;
-  valuesParam.isBinding = true;
-  valuesParam.name = "values";
+  primec::Expr valuesParam = primec::validation_test_support::makeBindingNameExpr("values");
   primec::Transform argsTransform;
   argsTransform.name = "args";
   argsTransform.templateArgs.push_back("i32");
@@ -566,10 +536,7 @@ TEST_CASE("ir lowerer call helpers collect packed variadic inline call arguments
   primec::Expr firstPackedArg;
   firstPackedArg.kind = primec::Expr::Kind::Literal;
   firstPackedArg.literalValue = 20;
-  primec::Expr spreadPackedArg;
-  spreadPackedArg.kind = primec::Expr::Kind::Name;
-  spreadPackedArg.name = "rest";
-  spreadPackedArg.isSpread = true;
+  primec::Expr spreadPackedArg = primec::validation_test_support::makeSpreadNameExpr("rest");
 
   primec::Expr callExpr;
   callExpr.kind = primec::Expr::Kind::Call;

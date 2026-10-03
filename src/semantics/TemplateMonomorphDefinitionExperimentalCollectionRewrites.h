@@ -14,13 +14,12 @@
 #include "primec/support/StdlibSurfaceRegistry.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "TemplateMonomorphExperimentalCollectionReturnSetup.h"
-#include "TemplateMonomorphUsings.h"
 
 namespace primec {
 
 void rewriteDefinitionExperimentalKeyValueConstructorValue(Expr &valueExpr,
                                                            LocalTypeMap &locals,
-                                                           std::vector<ParameterInfo> &params,
+                                                           std::vector<semantics::ParameterInfo> &params,
                                                            const SubstMap &mapping,
                                                            const std::unordered_set<std::string> &allowedParams,
                                                            const std::string &namespacePrefix,
@@ -30,7 +29,7 @@ void rewriteDefinitionExperimentalKeyValueConstructorValue(Expr &valueExpr,
 
 void rewriteDefinitionExperimentalVectorConstructorValue(Expr &valueExpr,
                                                          LocalTypeMap &locals,
-                                                         std::vector<ParameterInfo> &params,
+                                                         std::vector<semantics::ParameterInfo> &params,
                                                          const SubstMap &mapping,
                                                          const std::unordered_set<std::string> &allowedParams,
                                                          const std::string &namespacePrefix,
@@ -40,7 +39,7 @@ void rewriteDefinitionExperimentalVectorConstructorValue(Expr &valueExpr,
 
 void rewriteDefinitionExperimentalVectorReturnConstructors(Expr &candidate,
                                                            LocalTypeMap &locals,
-                                                           std::vector<ParameterInfo> &params,
+                                                           std::vector<semantics::ParameterInfo> &params,
                                                            const SubstMap &mapping,
                                                            const std::unordered_set<std::string> &allowedParams,
                                                            const std::string &namespacePrefix,
@@ -50,7 +49,7 @@ void rewriteDefinitionExperimentalVectorReturnConstructors(Expr &candidate,
 
 void rewriteDefinitionExperimentalKeyValueReturnConstructors(Expr &candidate,
                                                              LocalTypeMap &locals,
-                                                             std::vector<ParameterInfo> &params,
+                                                             std::vector<semantics::ParameterInfo> &params,
                                                              const SubstMap &mapping,
                                                              const std::unordered_set<std::string> &allowedParams,
                                                              const std::string &namespacePrefix,
@@ -61,7 +60,7 @@ void rewriteDefinitionExperimentalKeyValueReturnConstructors(Expr &candidate,
 bool rewriteDefinitionExperimentalReturnConstructors(Expr &expr,
                                                      const ExperimentalCollectionReturnRewritePlan &plan,
                                                      LocalTypeMap &locals,
-                                                     std::vector<ParameterInfo> &params,
+                                                     std::vector<semantics::ParameterInfo> &params,
                                                      const SubstMap &mapping,
                                                      const std::unordered_set<std::string> &allowedParams,
                                                      const std::string &namespacePrefix,

@@ -1,4 +1,4 @@
-#include "test_ir_pipeline_validation_helpers.h"
+#include "test_ir_pipeline_validation_callback_factories.h"
 #include "primec/testing/IrLowererCollectionSurfaceContracts.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
@@ -2011,10 +2011,7 @@ TEST_CASE("ir lowerer semantic-product adapter ignores local-auto initializer-pa
   initCall.name = "id";
   initCall.semanticNodeId = 7101;
 
-  primec::Expr localBinding;
-  localBinding.kind = primec::Expr::Kind::Name;
-  localBinding.isBinding = true;
-  localBinding.name = "value";
+  primec::Expr localBinding = primec::validation_test_support::makeBindingNameExpr("value");
   localBinding.semanticNodeId = 0;
   localBinding.args = {initCall};
 
@@ -2084,10 +2081,7 @@ TEST_CASE("ir lowerer semantic-product index does not expose local-auto path fal
   initCall.name = "id";
   initCall.semanticNodeId = 7301;
 
-  primec::Expr localBinding;
-  localBinding.kind = primec::Expr::Kind::Name;
-  localBinding.isBinding = true;
-  localBinding.name = "value";
+  primec::Expr localBinding = primec::validation_test_support::makeBindingNameExpr("value");
   localBinding.semanticNodeId = 0;
   localBinding.args = {initCall};
 
@@ -2156,10 +2150,7 @@ TEST_CASE("ir lowerer semantic-product adapter uses local-auto semantic-id match
   initCall.name = "id";
   initCall.semanticNodeId = 7201;
 
-  primec::Expr localBinding;
-  localBinding.kind = primec::Expr::Kind::Name;
-  localBinding.isBinding = true;
-  localBinding.name = "value";
+  primec::Expr localBinding = primec::validation_test_support::makeBindingNameExpr("value");
   localBinding.semanticNodeId = 7202;
   localBinding.args = {initCall};
 
@@ -2283,10 +2274,7 @@ TEST_CASE("ir lowerer semantic-product index requires published binding semantic
           primec::semanticProgramInternCallTargetString(semanticProgram, "/selected"),
   });
 
-  primec::Expr bindingExpr;
-  bindingExpr.kind = primec::Expr::Kind::Name;
-  bindingExpr.isBinding = true;
-  bindingExpr.name = "selected";
+  primec::Expr bindingExpr = primec::validation_test_support::makeBindingNameExpr("selected");
   bindingExpr.semanticNodeId = 7401;
 
   const auto semanticIndex =
@@ -2359,10 +2347,7 @@ TEST_CASE("ir lowerer statement binding helper consumes semantic-product index d
   });
   semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(7501, 0);
 
-  primec::Expr bindingExpr;
-  bindingExpr.kind = primec::Expr::Kind::Name;
-  bindingExpr.isBinding = true;
-  bindingExpr.name = "selected";
+  primec::Expr bindingExpr = primec::validation_test_support::makeBindingNameExpr("selected");
   bindingExpr.semanticNodeId = 7501;
 
   primec::Expr initExpr;
@@ -2415,10 +2400,7 @@ TEST_CASE("ir lowerer statement binding helper prefers semantic initializer bind
   });
   semanticProgram.publishedRoutingLookups.bindingFactIndicesByExpr.insert_or_assign(7601, 0);
 
-  primec::Expr bindingExpr;
-  bindingExpr.kind = primec::Expr::Kind::Name;
-  bindingExpr.isBinding = true;
-  bindingExpr.name = "selected";
+  primec::Expr bindingExpr = primec::validation_test_support::makeBindingNameExpr("selected");
 
   primec::Expr initExpr;
   initExpr.kind = primec::Expr::Kind::Name;

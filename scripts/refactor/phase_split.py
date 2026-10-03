@@ -23,6 +23,7 @@ config:
 import json, re, sys, os
 
 cfg = json.load(open(sys.argv[1]))
+SV = cfg.get('state_var', 'st')
 src = cfg['file']
 L = open(src).read().split('\n')
 
@@ -105,7 +106,7 @@ for ch in param_text:
 if cur.strip():
     params.append(cur.strip())
 pnames_all = [re.search(r'(\w+)\s*(=.*)?$', p).group(1) for p in params]
-params_nodefault_all = [re.sub(r'\s*=.*$', '', p) for p in params]
+params_nodefault_all = [re.sub(r'^\[\[maybe_unused\]\]\s*', '', re.sub(r'\s*=.*$', '', p)) for p in params]
 val_idx = [i for i, p in enumerate(params_nodefault_all) if '&' not in p]
 pnames = [n for i, n in enumerate(pnames_all) if i not in val_idx]
 params_nodefault = [p for i, p in enumerate(params_nodefault_all) if i not in val_idx]
@@ -195,7 +196,8 @@ for name, info in state.items():
                 missing.append(name); rt = 'bool'
         info['ret'] = rt
         info['lparams'] = lp
-        members.append(f'  std::function<{rt}({re.sub(chr(92)+"s+", " ", lp)})> {name};')
+        lp_clean = re.sub(r'\s*=\s*[^,)]+(?=[,)])', '', re.sub(r'\s+', ' ', lp))
+        members.append(f'  std::function<{rt}({lp_clean})> {name};')
     else:
         typ = cfg.get('types', {}).get(name) or info['type']
         if typ == 'auto' or typ == 'const auto':
@@ -218,7 +220,7 @@ for n, t in val_params:
 hdr = ['#pragma once', '',
        f'// State shared by the {cfg["prefix"]}* phase functions (split out of {func_name}, TODO-5385).',
        *([f'#include "{i}"' for i in cfg.get('state_includes', [])] if FREE else ['#include "SemanticsValidator.h"']), '', '#include <functional>', '#include <optional>', '#include <string>', '', ns_line, '',
-       *(['enum class PhaseStatus { Continue, Done };', ''] if FREE else []),
+       *(['enum class PhaseStatus { Continue, Done };', ''] if FREE and not cfg.get('status_defined') else []),
        f'struct {cfg["state_name"]} {{', f'  {ret_type} result{{}};', '  PhaseStatus done(' + ret_type + ' value) {', '    result = std::move(value);', '    return PhaseStatus::Done;', '  }'] + members + ['};', '', f'}} // namespace {NSN}', '']
 if missing:
     print('lambdas without return type:', missing); sys.exit(1)
@@ -309,7 +311,7 @@ def rewrite_returns(text):
                     break
                 j += 1
             expr = text[i + 6:j].strip()
-            out.append(f'return st.done({expr});')
+            out.append(f'return {SV}.done({expr});')
             i = j + 1
             continue
         out.append(ch)
@@ -320,8 +322,8 @@ def rewrite_returns(text):
 def alias_line(n):
     inf = state[n]
     if inf.get('isref'):
-        return f'  [[maybe_unused]] {inf["reftype"]} &{n} = *st.{n};'
-    return f'  [[maybe_unused]] auto &{n} = st.{n};'
+        return f'  [[maybe_unused]] {inf["reftype"]} &{n} = *{SV}.{n};'
+    return f'  [[maybe_unused]] auto &{n} = {SV}.{n};'
 
 phase_defs = []
 phase_decls = []
@@ -336,21 +338,21 @@ for pi, ph in enumerate(phases):
             info = state[name]
             if info['kind'] == 'lambda':
                 # name = [..]..;
-                t = re.sub(r'^(?:const\s+)?auto\s+(\w+)\s*=', r'st.\1 =', raw.lstrip(), count=1)
+                t = re.sub(r'^(?:const\s+)?auto\s+(\w+)\s*=', f'{SV}.\\1 =', raw.lstrip(), count=1)
                 t = '  ' + t
                 texts.append(t)
-                texts.append(f'  [[maybe_unused]] auto &{name} = st.{name};')
+                texts.append(f'  [[maybe_unused]] auto &{name} = {SV}.{name};')
             else:
                 rest = info['rest']
                 typ = info['type']
                 if info.get('isref') and rest.startswith('='):
-                    t = f'  st.{name} = &({rest[1:].strip()[:-1]});'
+                    t = f'  {SV}.{name} = &({rest[1:].strip()[:-1]});'
                 elif rest.startswith('='):
-                    t = f'  st.{name} = {rest[1:].strip()}'
+                    t = f'  {SV}.{name} = {rest[1:].strip()}'
                 elif rest.startswith('{'):
-                    t = f'  st.{name} = {info["mtype"]}{rest}'
+                    t = f'  {SV}.{name} = {info["mtype"]}{rest}'
                 elif rest.startswith('('):
-                    t = f'  st.{name} = {info["mtype"]}{rest}'
+                    t = f'  {SV}.{name} = {info["mtype"]}{rest}'
                 else:
                     t = None
                 if t:
@@ -363,11 +365,11 @@ for pi, ph in enumerate(phases):
     uses = [n for n in state if state[n]['phase'] < pi and re.search(r'\b' + n + r'\b', body)]
     aliases = [alias_line(n) for n in uses]
     fname = f'{cfg["prefix"]}Phase{pi + 1}'
-    sig = f'PhaseStatus {CN + "::" if CN else ""}{fname}(' + ', '.join(['[[maybe_unused]] ' + p for p in params_nodefault] + [f'{cfg["state_name"]} &st']) + f'){" const" if is_const_fn else ""} {{'
-    valal = [f'  [[maybe_unused]] auto &{n} = st.{n};' for n, _ in val_params]
+    sig = f'PhaseStatus {CN + "::" if CN else ""}{fname}(' + ', '.join(['[[maybe_unused]] ' + p for p in params_nodefault] + [f'{cfg["state_name"]} &{SV}']) + f'){" const" if is_const_fn else ""} {{'
+    valal = [f'  [[maybe_unused]] auto &{n} = {SV}.{n};' for n, _ in val_params]
     d = [sig] + valal + cfg.get('prelude', []) + aliases + [body, '  return PhaseStatus::Continue;', '}', '']
     phase_defs.append('\n'.join(d))
-    phase_decls.append(f'  PhaseStatus {fname}(' + ', '.join(params_nodefault + [f'{cfg["state_name"]} &st']) + f'){" const" if is_const_fn else ""};')
+    phase_decls.append(f'  PhaseStatus {fname}(' + ', '.join(params_nodefault + [f'{cfg["state_name"]} &{SV}']) + f'){" const" if is_const_fn else ""};')
 
 # ---------- write units ----------
 d = os.path.dirname(src)
@@ -388,13 +390,13 @@ for suffix, phs in units:
     unit_files.append(path)
 main_phases = next((phs for suf, phs in units if suf == ''), [])
 # ---------- rewrite the original file ----------
-chain = [f'    {cfg["state_name"]} st;'] + [f'    st.{n} = {n};' for n, _ in val_params]
+chain = [f'    {cfg["state_name"]} {SV};'] + [f'    {SV}.{n} = {n};' for n, _ in val_params]
 for pi in range(len(phases)):
-    chain.append(f'    if ({cfg["prefix"]}Phase{pi + 1}(' + ', '.join(pnames + ['st']) + ') == PhaseStatus::Done) {')
-    chain.append('      return st.result;')
+    chain.append(f'    if ({cfg["prefix"]}Phase{pi + 1}(' + ', '.join(pnames + [SV]) + ') == PhaseStatus::Done) {')
+    chain.append(f'      return {SV}.result;')
     chain.append('    }')
 if cfg.get('tail_return'):
-    chain.append('    return st.result;')
+    chain.append(f'    return {SV}.result;')
 new_L = L[:bl + 1] + chain + L[be:]
 extra = '\n'.join(phase_defs[p - 1] for p in main_phases)
 text = '\n'.join(new_L)

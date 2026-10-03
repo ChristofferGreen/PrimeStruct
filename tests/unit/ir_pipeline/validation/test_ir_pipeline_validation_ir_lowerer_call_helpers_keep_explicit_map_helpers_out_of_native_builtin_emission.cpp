@@ -1,14 +1,11 @@
-#include "test_ir_pipeline_validation_helpers.h"
+#include "test_ir_pipeline_validation_callback_factories.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
 TEST_CASE("ir lowerer call helpers infer forwarded collection pair scalar facts") {
   primec::Definition wrapDef;
   wrapDef.fullPath = "/pkg/wrapValues";
-  primec::Expr param;
-  param.kind = primec::Expr::Kind::Name;
-  param.isBinding = true;
-  param.name = "values";
+  primec::Expr param = primec::validation_test_support::makeBindingNameExpr("values");
   wrapDef.parameters.push_back(param);
   primec::Expr returnedName;
   returnedName.kind = primec::Expr::Kind::Name;

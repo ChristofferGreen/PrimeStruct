@@ -1,4 +1,4 @@
-#include "test_ir_pipeline_validation_helpers.h"
+#include "test_ir_pipeline_validation_callback_factories.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
@@ -182,10 +182,7 @@ TEST_CASE("ir lowerer flow helpers declare for-condition bindings") {
   initExpr.intWidth = 32;
   initExpr.literalValue = 1;
 
-  primec::Expr bindingExpr;
-  bindingExpr.kind = primec::Expr::Kind::Name;
-  bindingExpr.isBinding = true;
-  bindingExpr.name = "cond";
+  primec::Expr bindingExpr = primec::validation_test_support::makeBindingNameExpr("cond");
   bindingExpr.args = {initExpr};
 
   primec::ir_lowerer::LocalMap locals;
@@ -283,10 +280,7 @@ TEST_CASE("ir lowerer flow helpers recover bool for comparison-backed for-condit
   comparisonExpr.name = "less_than";
   comparisonExpr.args = {lhs, rhs};
 
-  primec::Expr bindingExpr;
-  bindingExpr.kind = primec::Expr::Kind::Name;
-  bindingExpr.isBinding = true;
-  bindingExpr.name = "cond_bool";
+  primec::Expr bindingExpr = primec::validation_test_support::makeBindingNameExpr("cond_bool");
   bindingExpr.args = {comparisonExpr};
 
   primec::ir_lowerer::LocalMap locals;
@@ -319,10 +313,7 @@ TEST_CASE("ir lowerer flow helpers init for-condition bindings") {
   initExpr.intWidth = 32;
   initExpr.literalValue = 9;
 
-  primec::Expr bindingExpr;
-  bindingExpr.kind = primec::Expr::Kind::Name;
-  bindingExpr.isBinding = true;
-  bindingExpr.name = "cond";
+  primec::Expr bindingExpr = primec::validation_test_support::makeBindingNameExpr("cond");
   bindingExpr.args = {initExpr};
 
   primec::ir_lowerer::LocalMap locals;

@@ -15,7 +15,6 @@
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "TemplateMonomorphExperimentalCollectionReturnSetup.h"
 #include "StdlibCollectionSurfaceHelpers.h"
-#include "TemplateMonomorphUsings.h"
 
 namespace primec {
 
@@ -94,6 +93,6 @@ std::string resolveCalleePath(const Expr &expr,
                               const std::string &namespacePrefix,
                               const Context &ctx,
                               const LocalTypeMap *locals = nullptr,
-                              const std::vector<ParameterInfo> *params = nullptr);
+                              const std::vector<semantics::ParameterInfo> *params = nullptr);
 
 } // namespace primec

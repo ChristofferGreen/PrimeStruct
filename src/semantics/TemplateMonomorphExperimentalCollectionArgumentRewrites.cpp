@@ -35,18 +35,17 @@
 #include <sstream>
 
 #include "primec/support/CompileArena.h"
-#include "TemplateMonomorphUsings.h"
 
 namespace primec {
 
-std::vector<ParameterInfo> buildExperimentalConstructorRewriteParams(const Definition &targetDef,
+std::vector<semantics::ParameterInfo> buildExperimentalConstructorRewriteParams(const Definition &targetDef,
                                                                      bool allowMathBare,
                                                                      Context &ctx) {
-  std::vector<ParameterInfo> callParams;
+  std::vector<semantics::ParameterInfo> callParams;
   if (!targetDef.parameters.empty()) {
     callParams.reserve(targetDef.parameters.size());
     for (const auto &paramExpr : targetDef.parameters) {
-      ParameterInfo paramInfo;
+      semantics::ParameterInfo paramInfo;
       paramInfo.name = paramExpr.name;
       inferCallTargetBinding(paramExpr, allowMathBare, ctx, paramInfo.binding);
       if (paramExpr.args.size() == 1) {
@@ -63,7 +62,7 @@ std::vector<ParameterInfo> buildExperimentalConstructorRewriteParams(const Defin
     if (!fieldExpr.isBinding) {
       continue;
     }
-    ParameterInfo fieldInfo;
+    semantics::ParameterInfo fieldInfo;
     fieldInfo.name = fieldExpr.name;
     inferCallTargetBinding(fieldExpr, allowMathBare, ctx, fieldInfo.binding);
     if (fieldExpr.args.size() == 1) {

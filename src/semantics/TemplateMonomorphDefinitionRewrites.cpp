@@ -35,7 +35,6 @@
 #include <sstream>
 
 #include "primec/support/CompileArena.h"
-#include "TemplateMonomorphUsings.h"
 
 namespace primec {
 
@@ -52,7 +51,7 @@ std::string sumPayloadTypeTextForMonomorphRefresh(const Transform &transform) {
   if (transform.templateArgs.empty()) {
     return transform.name;
   }
-  return transform.name + "<" + joinTemplateArgs(transform.templateArgs) + ">";
+  return transform.name + "<" + semantics::joinTemplateArgs(transform.templateArgs) + ">";
 }
 
 std::string stripGeneratedSumUnitVariantSuffix(std::string name) {
@@ -167,7 +166,7 @@ bool isTupleDestructuringIdentifier(std::string_view name) {
 }
 
 bool isPrimitiveTupleDestructuringTypeName(const std::string &name) {
-  const std::string normalized = normalizeBindingTypeName(name);
+  const std::string normalized = semantics::normalizeBindingTypeName(name);
   return normalized == "auto" || normalized == "int" || normalized == "i32" ||
          normalized == "i64" || normalized == "u64" || normalized == "bool" ||
          normalized == "f32" || normalized == "f64" || normalized == "string";
@@ -178,10 +177,10 @@ bool isKnownTupleDestructuringBracketEntry(const Transform &transform,
                                            const Context &ctx) {
   if (!transform.arguments.empty() || !transform.templateArgs.empty() ||
       isNonTypeTransformName(transform.name) ||
-      isBindingAuxTransformName(transform.name) ||
+      semantics::isBindingAuxTransformName(transform.name) ||
       isPrimitiveTupleDestructuringTypeName(transform.name) ||
       isBuiltinTemplateContainer(transform.name) ||
-      isRootBuiltinName(transform.name)) {
+      semantics::isRootBuiltinName(transform.name)) {
     return true;
   }
   const std::string resolvedPath =
@@ -200,7 +199,7 @@ bool isStdlibTupleMonomorphPath(std::string_view path) {
 std::string resolveTupleMonomorphBasePath(const std::string &base,
                                           const std::string &namespacePrefix,
                                           const Context &ctx) {
-  std::string normalizedBase = normalizeBindingTypeName(base);
+  std::string normalizedBase = semantics::normalizeBindingTypeName(base);
   if (normalizedBase.empty()) {
     return {};
   }
@@ -223,30 +222,30 @@ bool extractTupleDestructuringArgsFromTypeText(std::string typeText,
                                                std::vector<std::string> &tupleArgsOut) {
   borrowedOut = false;
   tupleArgsOut.clear();
-  typeText = normalizeBindingTypeName(std::move(typeText));
+  typeText = semantics::normalizeBindingTypeName(std::move(typeText));
 
   while (true) {
     std::string wrapperBase;
     std::string wrapperArgText;
-    if (!splitTemplateTypeName(typeText, wrapperBase, wrapperArgText)) {
+    if (!semantics::splitTemplateTypeName(typeText, wrapperBase, wrapperArgText)) {
       break;
     }
-    wrapperBase = normalizeBindingTypeName(wrapperBase);
+    wrapperBase = semantics::normalizeBindingTypeName(wrapperBase);
     if (wrapperBase != "Reference" && wrapperBase != "Pointer") {
       break;
     }
     std::vector<std::string> wrapperArgs;
-    if (!splitTopLevelTemplateArgs(wrapperArgText, wrapperArgs) ||
+    if (!semantics::splitTopLevelTemplateArgs(wrapperArgText, wrapperArgs) ||
         wrapperArgs.size() != 1) {
       return false;
     }
     borrowedOut = true;
-    typeText = normalizeBindingTypeName(wrapperArgs.front());
+    typeText = semantics::normalizeBindingTypeName(wrapperArgs.front());
   }
 
   std::string tupleBase;
   std::string tupleArgText;
-  if (splitTemplateTypeName(typeText, tupleBase, tupleArgText)) {
+  if (semantics::splitTemplateTypeName(typeText, tupleBase, tupleArgText)) {
     if (!isStdlibTupleMonomorphPath(
             resolveTupleMonomorphBasePath(tupleBase, namespacePrefix, ctx))) {
       return false;
@@ -254,7 +253,7 @@ bool extractTupleDestructuringArgsFromTypeText(std::string typeText,
     if (tupleArgText.empty()) {
       return true;
     }
-    return splitTopLevelTemplateArgs(tupleArgText, tupleArgsOut);
+    return semantics::splitTopLevelTemplateArgs(tupleArgText, tupleArgsOut);
   }
 
   const std::string tuplePath =
@@ -275,14 +274,14 @@ bool extractTupleDestructuringArgsFromTypeText(std::string typeText,
   return false;
 }
 
-const BindingInfo *findTupleDestructuringOperandBinding(
+const semantics::BindingInfo *findTupleDestructuringOperandBinding(
     std::string_view name,
-    const std::vector<ParameterInfo> &params,
+    const std::vector<semantics::ParameterInfo> &params,
     const LocalTypeMap &locals) {
   if (auto localIt = locals.find(std::string(name)); localIt != locals.end()) {
     return &localIt->second;
   }
-  for (const ParameterInfo &param : params) {
+  for (const semantics::ParameterInfo &param : params) {
     if (param.name == name) {
       return &param.binding;
     }
@@ -291,7 +290,7 @@ const BindingInfo *findTupleDestructuringOperandBinding(
 }
 
 bool isTupleDestructuringStatementCandidate(const Expr &stmt,
-                                            const std::vector<ParameterInfo> &params,
+                                            const std::vector<semantics::ParameterInfo> &params,
                                             const LocalTypeMap &locals) {
   return stmt.isBinding && stmt.args.empty() && !stmt.transforms.empty() &&
          !stmt.name.empty() &&
@@ -355,7 +354,7 @@ Expr makeTupleDestructuringBindingExpr(const std::string &bindingName,
 }
 
 bool tryExpandTupleDestructuringStatement(const Expr &stmt,
-                                          const std::vector<ParameterInfo> &params,
+                                          const std::vector<semantics::ParameterInfo> &params,
                                           const LocalTypeMap &locals,
                                           const std::string &namespacePrefix,
                                           Context &ctx,
@@ -366,7 +365,7 @@ bool tryExpandTupleDestructuringStatement(const Expr &stmt,
     return true;
   }
 
-  const BindingInfo *operandBinding =
+  const semantics::BindingInfo *operandBinding =
       findTupleDestructuringOperandBinding(stmt.name, params, locals);
   if (operandBinding == nullptr) {
     return true;
@@ -637,7 +636,7 @@ bool rewriteDefinition(Definition &def,
     return false;
   }
   const bool allowMathBare = hasMathImport(ctx);
-  std::vector<ParameterInfo> params;
+  std::vector<semantics::ParameterInfo> params;
   LocalTypeMap locals;
   const ExperimentalCollectionReturnRewritePlan returnRewritePlan =
       inferExperimentalCollectionReturnRewritePlan(def, mapping, allowedParams, allowMathBare, ctx);

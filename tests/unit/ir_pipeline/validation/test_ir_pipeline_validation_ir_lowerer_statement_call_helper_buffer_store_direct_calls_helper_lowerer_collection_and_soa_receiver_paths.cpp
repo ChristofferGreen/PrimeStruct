@@ -11,10 +11,7 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
   int inlineCalls = 0;
   std::string error;
 
-  inlineCalls = 0;
-  instructions.clear();
-  error.clear();
-  CHECK(tryEmitDirectCallStatementNoCounts(
+  expectDirectCallEmpty(inlineCalls, instructions, error, EmitResult::NotMatched, 0,
             f.mapInsertArgsPackNonLocalReceiverInferredStmt,
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.name == "/map/at") {
@@ -25,31 +22,9 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
               }
               return nullptr;
             },
-            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
-              if (path == "/std/collections/map/insert_builtin") {
-                info.returnsVoid = true;
-                return true;
-              }
-              return false;
-            },
-            [&](const primec::Expr &callExpr,
-                const primec::Definition &callee,
-                const primec::ir_lowerer::LocalMap &,
-                bool expectValue) {
-              ++inlineCalls;
-              const std::vector<std::string> expectedTemplateArgs{"i32", "i32"};
-              CHECK(callExpr.name == "/std/collections/map/insert_builtin");
-              CHECK_FALSE(callExpr.isMethodCall);
-              CHECK(callee.fullPath == "/std/collections/map/insert_builtin");
-              CHECK_FALSE(expectValue);
-              CHECK(callExpr.templateArgs == expectedTemplateArgs);
-              return true;
-            },
-            instructions,
-            error) == EmitResult::NotMatched);
-  CHECK(error.empty());
-  CHECK(inlineCalls == 0);
-  CHECK(instructions.empty());
+            insertBuiltinReturnInfo,
+            makeInlineCallChecker(inlineCalls, "/std/collections/map/insert_builtin", false,
+                                   "/std/collections/map/insert_builtin", {"i32", "i32"}));
 
   inlineCalls = 0;
   instructions.clear();
@@ -76,35 +51,15 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
               }
               return nullptr;
             },
-            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
-              if (path == "/std/collections/map/insert_builtin") {
-                info.returnsVoid = true;
-                return true;
-              }
-              return false;
-            },
-            [&](const primec::Expr &callExpr,
-                const primec::Definition &callee,
-                const primec::ir_lowerer::LocalMap &,
-                bool expectValue) {
-              ++inlineCalls;
-              CHECK(callExpr.name == "insert");
-              CHECK(callExpr.isMethodCall);
-              CHECK(callee.fullPath == "/std/collections/mapInsert");
-              CHECK_FALSE(expectValue);
-              CHECK(callExpr.templateArgs.empty());
-              return true;
-            },
+            insertBuiltinReturnInfo,
+            makeInlineCallChecker(inlineCalls, "insert", true, "/std/collections/mapInsert", {}),
             instructions,
             error) == EmitResult::Emitted);
   CHECK(error.empty());
   CHECK(inlineCalls == 1);
   CHECK(instructions.empty());
 
-  inlineCalls = 0;
-  instructions.clear();
-  error.clear();
-  CHECK(tryEmitDirectCallStatementNoCounts(
+  expectDirectCallEmpty(inlineCalls, instructions, error, EmitResult::NotMatched, 0,
             f.mapInsertArgsPackUnsafeNonLocalReceiverInferredStmt,
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.name == "/map/at_unsafe") {
@@ -115,31 +70,9 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
               }
               return nullptr;
             },
-            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
-              if (path == "/std/collections/map/insert_builtin") {
-                info.returnsVoid = true;
-                return true;
-              }
-              return false;
-            },
-            [&](const primec::Expr &callExpr,
-                const primec::Definition &callee,
-                const primec::ir_lowerer::LocalMap &,
-                bool expectValue) {
-              ++inlineCalls;
-              const std::vector<std::string> expectedTemplateArgs{"i32", "i32"};
-              CHECK(callExpr.name == "/std/collections/map/insert_builtin");
-              CHECK_FALSE(callExpr.isMethodCall);
-              CHECK(callee.fullPath == "/std/collections/map/insert_builtin");
-              CHECK_FALSE(expectValue);
-              CHECK(callExpr.templateArgs == expectedTemplateArgs);
-              return true;
-            },
-            instructions,
-            error) == EmitResult::NotMatched);
-  CHECK(error.empty());
-  CHECK(inlineCalls == 0);
-  CHECK(instructions.empty());
+            insertBuiltinReturnInfo,
+            makeInlineCallChecker(inlineCalls, "/std/collections/map/insert_builtin", false,
+                                   "/std/collections/map/insert_builtin", {"i32", "i32"}));
 
   inlineCalls = 0;
   instructions.clear();
@@ -166,35 +99,15 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
               }
               return nullptr;
             },
-            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
-              if (path == "/std/collections/map/insert_builtin") {
-                info.returnsVoid = true;
-                return true;
-              }
-              return false;
-            },
-            [&](const primec::Expr &callExpr,
-                const primec::Definition &callee,
-                const primec::ir_lowerer::LocalMap &,
-                bool expectValue) {
-              ++inlineCalls;
-              CHECK(callExpr.name == "insert");
-              CHECK(callExpr.isMethodCall);
-              CHECK(callee.fullPath == "/std/collections/mapInsert");
-              CHECK_FALSE(expectValue);
-              CHECK(callExpr.templateArgs.empty());
-              return true;
-            },
+            insertBuiltinReturnInfo,
+            makeInlineCallChecker(inlineCalls, "insert", true, "/std/collections/mapInsert", {}),
             instructions,
             error) == EmitResult::Emitted);
   CHECK(error.empty());
   CHECK(inlineCalls == 1);
   CHECK(instructions.empty());
 
-  inlineCalls = 0;
-  instructions.clear();
-  error.clear();
-  CHECK(tryEmitDirectCallStatementNoCounts(
+  expectDirectCallEmpty(inlineCalls, instructions, error, EmitResult::NotMatched, 0,
             f.mapInsertArgsPackAtRefDirectNonLocalReceiverInferredStmt,
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.name == "/map/at_ref") {
@@ -205,31 +118,9 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
               }
               return nullptr;
             },
-            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
-              if (path == "/std/collections/map/insert_builtin") {
-                info.returnsVoid = true;
-                return true;
-              }
-              return false;
-            },
-            [&](const primec::Expr &callExpr,
-                const primec::Definition &callee,
-                const primec::ir_lowerer::LocalMap &,
-                bool expectValue) {
-              ++inlineCalls;
-              const std::vector<std::string> expectedTemplateArgs{"i32", "i32"};
-              CHECK(callExpr.name == "/std/collections/map/insert_builtin");
-              CHECK_FALSE(callExpr.isMethodCall);
-              CHECK(callee.fullPath == "/std/collections/map/insert_builtin");
-              CHECK_FALSE(expectValue);
-              CHECK(callExpr.templateArgs == expectedTemplateArgs);
-              return true;
-            },
-            instructions,
-            error) == EmitResult::NotMatched);
-  CHECK(error.empty());
-  CHECK(inlineCalls == 0);
-  CHECK(instructions.empty());
+            insertBuiltinReturnInfo,
+            makeInlineCallChecker(inlineCalls, "/std/collections/map/insert_builtin", false,
+                                   "/std/collections/map/insert_builtin", {"i32", "i32"}));
 
   inlineCalls = 0;
   instructions.clear();
@@ -256,35 +147,15 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
               }
               return nullptr;
             },
-            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
-              if (path == "/std/collections/map/insert_builtin") {
-                info.returnsVoid = true;
-                return true;
-              }
-              return false;
-            },
-            [&](const primec::Expr &callExpr,
-                const primec::Definition &callee,
-                const primec::ir_lowerer::LocalMap &,
-                bool expectValue) {
-              ++inlineCalls;
-              CHECK(callExpr.name == "insert");
-              CHECK(callExpr.isMethodCall);
-              CHECK(callee.fullPath == "/std/collections/mapInsert");
-              CHECK_FALSE(expectValue);
-              CHECK(callExpr.templateArgs.empty());
-              return true;
-            },
+            insertBuiltinReturnInfo,
+            makeInlineCallChecker(inlineCalls, "insert", true, "/std/collections/mapInsert", {}),
             instructions,
             error) == EmitResult::Emitted);
   CHECK(error.empty());
   CHECK(inlineCalls == 1);
   CHECK(instructions.empty());
 
-  inlineCalls = 0;
-  instructions.clear();
-  error.clear();
-  CHECK(tryEmitDirectCallStatementNoCounts(
+  expectDirectCallEmpty(inlineCalls, instructions, error, EmitResult::NotMatched, 0,
             f.mapInsertArgsPackAtUnsafeRefDirectNonLocalReceiverInferredStmt,
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.name == "/map/at_unsafe_ref") {
@@ -295,31 +166,9 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
               }
               return nullptr;
             },
-            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
-              if (path == "/std/collections/map/insert_builtin") {
-                info.returnsVoid = true;
-                return true;
-              }
-              return false;
-            },
-            [&](const primec::Expr &callExpr,
-                const primec::Definition &callee,
-                const primec::ir_lowerer::LocalMap &,
-                bool expectValue) {
-              ++inlineCalls;
-              const std::vector<std::string> expectedTemplateArgs{"i32", "i32"};
-              CHECK(callExpr.name == "/std/collections/map/insert_builtin");
-              CHECK_FALSE(callExpr.isMethodCall);
-              CHECK(callee.fullPath == "/std/collections/map/insert_builtin");
-              CHECK_FALSE(expectValue);
-              CHECK(callExpr.templateArgs == expectedTemplateArgs);
-              return true;
-            },
-            instructions,
-            error) == EmitResult::NotMatched);
-  CHECK(error.empty());
-  CHECK(inlineCalls == 0);
-  CHECK(instructions.empty());
+            insertBuiltinReturnInfo,
+            makeInlineCallChecker(inlineCalls, "/std/collections/map/insert_builtin", false,
+                                   "/std/collections/map/insert_builtin", {"i32", "i32"}));
 
   inlineCalls = 0;
   instructions.clear();
@@ -346,35 +195,15 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
               }
               return nullptr;
             },
-            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
-              if (path == "/std/collections/map/insert_builtin") {
-                info.returnsVoid = true;
-                return true;
-              }
-              return false;
-            },
-            [&](const primec::Expr &callExpr,
-                const primec::Definition &callee,
-                const primec::ir_lowerer::LocalMap &,
-                bool expectValue) {
-              ++inlineCalls;
-              CHECK(callExpr.name == "insert");
-              CHECK(callExpr.isMethodCall);
-              CHECK(callee.fullPath == "/std/collections/mapInsert");
-              CHECK_FALSE(expectValue);
-              CHECK(callExpr.templateArgs.empty());
-              return true;
-            },
+            insertBuiltinReturnInfo,
+            makeInlineCallChecker(inlineCalls, "insert", true, "/std/collections/mapInsert", {}),
             instructions,
             error) == EmitResult::Emitted);
   CHECK(error.empty());
   CHECK(inlineCalls == 1);
   CHECK(instructions.empty());
 
-  inlineCalls = 0;
-  instructions.clear();
-  error.clear();
-  CHECK(tryEmitDirectCallStatementNoCounts(
+  expectDirectCallEmpty(inlineCalls, instructions, error, EmitResult::NotMatched, 0,
             f.mapInsertArgsPackAtUnsafeRefGeneratedAliasNonLocalReceiverInferredStmt,
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.name == "/std/collections/mapAtUnsafeRef__generated") {
@@ -385,31 +214,9 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
               }
               return nullptr;
             },
-            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
-              if (path == "/std/collections/map/insert_builtin") {
-                info.returnsVoid = true;
-                return true;
-              }
-              return false;
-            },
-            [&](const primec::Expr &callExpr,
-                const primec::Definition &callee,
-                const primec::ir_lowerer::LocalMap &,
-                bool expectValue) {
-              ++inlineCalls;
-              const std::vector<std::string> expectedTemplateArgs{"i32", "i32"};
-              CHECK(callExpr.name == "/std/collections/map/insert_builtin");
-              CHECK_FALSE(callExpr.isMethodCall);
-              CHECK(callee.fullPath == "/std/collections/map/insert_builtin");
-              CHECK_FALSE(expectValue);
-              CHECK(callExpr.templateArgs == expectedTemplateArgs);
-              return true;
-            },
-            instructions,
-            error) == EmitResult::NotMatched);
-  CHECK(error.empty());
-  CHECK(inlineCalls == 0);
-  CHECK(instructions.empty());
+            insertBuiltinReturnInfo,
+            makeInlineCallChecker(inlineCalls, "/std/collections/map/insert_builtin", false,
+                                   "/std/collections/map/insert_builtin", {"i32", "i32"}));
 
   inlineCalls = 0;
   instructions.clear();
@@ -436,35 +243,15 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
               }
               return nullptr;
             },
-            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
-              if (path == "/std/collections/map/insert_builtin") {
-                info.returnsVoid = true;
-                return true;
-              }
-              return false;
-            },
-            [&](const primec::Expr &callExpr,
-                const primec::Definition &callee,
-                const primec::ir_lowerer::LocalMap &,
-                bool expectValue) {
-              ++inlineCalls;
-              CHECK(callExpr.name == "insert");
-              CHECK(callExpr.isMethodCall);
-              CHECK(callee.fullPath == "/std/collections/mapInsert");
-              CHECK_FALSE(expectValue);
-              CHECK(callExpr.templateArgs.empty());
-              return true;
-            },
+            insertBuiltinReturnInfo,
+            makeInlineCallChecker(inlineCalls, "insert", true, "/std/collections/mapInsert", {}),
             instructions,
             error) == EmitResult::Emitted);
   CHECK(error.empty());
   CHECK(inlineCalls == 1);
   CHECK(instructions.empty());
 
-  inlineCalls = 0;
-  instructions.clear();
-  error.clear();
-  CHECK(tryEmitDirectCallStatementNoCounts(
+  expectDirectCallEmpty(inlineCalls, instructions, error, EmitResult::NotMatched, 0,
             f.mapInsertArgsPackAtRefBareNonLocalReceiverInferredStmt,
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.name == "at_ref") {
@@ -475,31 +262,9 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
               }
               return nullptr;
             },
-            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
-              if (path == "/std/collections/map/insert_builtin") {
-                info.returnsVoid = true;
-                return true;
-              }
-              return false;
-            },
-            [&](const primec::Expr &callExpr,
-                const primec::Definition &callee,
-                const primec::ir_lowerer::LocalMap &,
-                bool expectValue) {
-              ++inlineCalls;
-              const std::vector<std::string> expectedTemplateArgs{"i32", "i32"};
-              CHECK(callExpr.name == "/std/collections/map/insert_builtin");
-              CHECK_FALSE(callExpr.isMethodCall);
-              CHECK(callee.fullPath == "/std/collections/map/insert_builtin");
-              CHECK_FALSE(expectValue);
-              CHECK(callExpr.templateArgs == expectedTemplateArgs);
-              return true;
-            },
-            instructions,
-            error) == EmitResult::NotMatched);
-  CHECK(error.empty());
-  CHECK(inlineCalls == 0);
-  CHECK(instructions.empty());
+            insertBuiltinReturnInfo,
+            makeInlineCallChecker(inlineCalls, "/std/collections/map/insert_builtin", false,
+                                   "/std/collections/map/insert_builtin", {"i32", "i32"}));
 
   inlineCalls = 0;
   instructions.clear();
@@ -526,35 +291,15 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
               }
               return nullptr;
             },
-            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
-              if (path == "/std/collections/map/insert_builtin") {
-                info.returnsVoid = true;
-                return true;
-              }
-              return false;
-            },
-            [&](const primec::Expr &callExpr,
-                const primec::Definition &callee,
-                const primec::ir_lowerer::LocalMap &,
-                bool expectValue) {
-              ++inlineCalls;
-              CHECK(callExpr.name == "insert");
-              CHECK(callExpr.isMethodCall);
-              CHECK(callee.fullPath == "/std/collections/mapInsert");
-              CHECK_FALSE(expectValue);
-              CHECK(callExpr.templateArgs.empty());
-              return true;
-            },
+            insertBuiltinReturnInfo,
+            makeInlineCallChecker(inlineCalls, "insert", true, "/std/collections/mapInsert", {}),
             instructions,
             error) == EmitResult::Emitted);
   CHECK(error.empty());
   CHECK(inlineCalls == 1);
   CHECK(instructions.empty());
 
-  inlineCalls = 0;
-  instructions.clear();
-  error.clear();
-  CHECK(tryEmitDirectCallStatementNoCounts(
+  expectDirectCallEmpty(inlineCalls, instructions, error, EmitResult::NotMatched, 0,
             f.mapInsertArgsPackMapAtUnsafeRefGeneratedBareNonLocalReceiverInferredStmt,
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.name == "mapAtUnsafeRef__generated") {
@@ -565,31 +310,9 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
               }
               return nullptr;
             },
-            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
-              if (path == "/std/collections/map/insert_builtin") {
-                info.returnsVoid = true;
-                return true;
-              }
-              return false;
-            },
-            [&](const primec::Expr &callExpr,
-                const primec::Definition &callee,
-                const primec::ir_lowerer::LocalMap &,
-                bool expectValue) {
-              ++inlineCalls;
-              const std::vector<std::string> expectedTemplateArgs{"i32", "i32"};
-              CHECK(callExpr.name == "/std/collections/map/insert_builtin");
-              CHECK_FALSE(callExpr.isMethodCall);
-              CHECK(callee.fullPath == "/std/collections/map/insert_builtin");
-              CHECK_FALSE(expectValue);
-              CHECK(callExpr.templateArgs == expectedTemplateArgs);
-              return true;
-            },
-            instructions,
-            error) == EmitResult::NotMatched);
-  CHECK(error.empty());
-  CHECK(inlineCalls == 0);
-  CHECK(instructions.empty());
+            insertBuiltinReturnInfo,
+            makeInlineCallChecker(inlineCalls, "/std/collections/map/insert_builtin", false,
+                                   "/std/collections/map/insert_builtin", {"i32", "i32"}));
 }
 
 TEST_CASE("ir lowerer statement call helper emits direct calls: collection and soa receiver paths (continued)") {
@@ -624,35 +347,15 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
               }
               return nullptr;
             },
-            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
-              if (path == "/std/collections/map/insert_builtin") {
-                info.returnsVoid = true;
-                return true;
-              }
-              return false;
-            },
-            [&](const primec::Expr &callExpr,
-                const primec::Definition &callee,
-                const primec::ir_lowerer::LocalMap &,
-                bool expectValue) {
-              ++inlineCalls;
-              CHECK(callExpr.name == "insert");
-              CHECK(callExpr.isMethodCall);
-              CHECK(callee.fullPath == "/std/collections/mapInsert");
-              CHECK_FALSE(expectValue);
-              CHECK(callExpr.templateArgs.empty());
-              return true;
-            },
+            insertBuiltinReturnInfo,
+            makeInlineCallChecker(inlineCalls, "insert", true, "/std/collections/mapInsert", {}),
             instructions,
             error) == EmitResult::Emitted);
   CHECK(error.empty());
   CHECK(inlineCalls == 1);
   CHECK(instructions.empty());
 
-  inlineCalls = 0;
-  instructions.clear();
-  error.clear();
-  CHECK(tryEmitDirectCallStatementNoCounts(
+  expectDirectCallEmpty(inlineCalls, instructions, error, EmitResult::NotMatched, 0,
             f.mapInsertArgsPackMapAtUnsafeRefGeneratedBareNonLocalReceiverGeneratedInsertStmt,
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.name == "mapAtUnsafeRef__generated") {
@@ -663,36 +366,11 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
               }
               return nullptr;
             },
-            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
-              if (path == "/std/collections/map/insert_builtin") {
-                info.returnsVoid = true;
-                return true;
-              }
-              return false;
-            },
-            [&](const primec::Expr &callExpr,
-                const primec::Definition &callee,
-                const primec::ir_lowerer::LocalMap &,
-                bool expectValue) {
-              ++inlineCalls;
-              const std::vector<std::string> expectedTemplateArgs{"i32", "i32"};
-              CHECK(callExpr.name == "/std/collections/map/insert_builtin");
-              CHECK_FALSE(callExpr.isMethodCall);
-              CHECK(callee.fullPath == "/std/collections/map/insert_builtin");
-              CHECK_FALSE(expectValue);
-              CHECK(callExpr.templateArgs == expectedTemplateArgs);
-              return true;
-            },
-            instructions,
-            error) == EmitResult::NotMatched);
-  CHECK(error.empty());
-  CHECK(inlineCalls == 0);
-  CHECK(instructions.empty());
+            insertBuiltinReturnInfo,
+            makeInlineCallChecker(inlineCalls, "/std/collections/map/insert_builtin", false,
+                                   "/std/collections/map/insert_builtin", {"i32", "i32"}));
 
-  inlineCalls = 0;
-  instructions.clear();
-  error.clear();
-  CHECK(tryEmitDirectCallStatementNoCounts(
+  expectDirectCallEmpty(inlineCalls, instructions, error, EmitResult::NotMatched, 0,
             f.mapInsertArgsPackMapAtUnsafeRefGeneratedBareNonLocalReceiverGeneratedMapInsertStmt,
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.name == "mapAtUnsafeRef__generated") {
@@ -703,36 +381,11 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
               }
               return nullptr;
             },
-            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
-              if (path == "/std/collections/map/insert_builtin") {
-                info.returnsVoid = true;
-                return true;
-              }
-              return false;
-            },
-            [&](const primec::Expr &callExpr,
-                const primec::Definition &callee,
-                const primec::ir_lowerer::LocalMap &,
-                bool expectValue) {
-              ++inlineCalls;
-              const std::vector<std::string> expectedTemplateArgs{"i32", "i32"};
-              CHECK(callExpr.name == "/std/collections/map/insert_builtin");
-              CHECK_FALSE(callExpr.isMethodCall);
-              CHECK(callee.fullPath == "/std/collections/map/insert_builtin");
-              CHECK_FALSE(expectValue);
-              CHECK(callExpr.templateArgs == expectedTemplateArgs);
-              return true;
-            },
-            instructions,
-            error) == EmitResult::NotMatched);
-  CHECK(error.empty());
-  CHECK(inlineCalls == 0);
-  CHECK(instructions.empty());
+            insertBuiltinReturnInfo,
+            makeInlineCallChecker(inlineCalls, "/std/collections/map/insert_builtin", false,
+                                   "/std/collections/map/insert_builtin", {"i32", "i32"}));
 
-  inlineCalls = 0;
-  instructions.clear();
-  error.clear();
-  CHECK(tryEmitDirectCallStatementNoCounts(
+  expectDirectCallEmpty(inlineCalls, instructions, error, EmitResult::NotMatched, 0,
             f.mapInsertArgsPackAliasNonLocalReceiverInferredStmt,
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.name == "/std/collections/mapAt") {
@@ -743,31 +396,9 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
               }
               return nullptr;
             },
-            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
-              if (path == "/std/collections/map/insert_builtin") {
-                info.returnsVoid = true;
-                return true;
-              }
-              return false;
-            },
-            [&](const primec::Expr &callExpr,
-                const primec::Definition &callee,
-                const primec::ir_lowerer::LocalMap &,
-                bool expectValue) {
-              ++inlineCalls;
-              const std::vector<std::string> expectedTemplateArgs{"i32", "i32"};
-              CHECK(callExpr.name == "/std/collections/map/insert_builtin");
-              CHECK_FALSE(callExpr.isMethodCall);
-              CHECK(callee.fullPath == "/std/collections/map/insert_builtin");
-              CHECK_FALSE(expectValue);
-              CHECK(callExpr.templateArgs == expectedTemplateArgs);
-              return true;
-            },
-            instructions,
-            error) == EmitResult::NotMatched);
-  CHECK(error.empty());
-  CHECK(inlineCalls == 0);
-  CHECK(instructions.empty());
+            insertBuiltinReturnInfo,
+            makeInlineCallChecker(inlineCalls, "/std/collections/map/insert_builtin", false,
+                                   "/std/collections/map/insert_builtin", {"i32", "i32"}));
 
   inlineCalls = 0;
   instructions.clear();
@@ -794,35 +425,15 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
               }
               return nullptr;
             },
-            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
-              if (path == "/std/collections/map/insert_builtin") {
-                info.returnsVoid = true;
-                return true;
-              }
-              return false;
-            },
-            [&](const primec::Expr &callExpr,
-                const primec::Definition &callee,
-                const primec::ir_lowerer::LocalMap &,
-                bool expectValue) {
-              ++inlineCalls;
-              CHECK(callExpr.name == "insert");
-              CHECK(callExpr.isMethodCall);
-              CHECK(callee.fullPath == "/std/collections/mapInsert");
-              CHECK_FALSE(expectValue);
-              CHECK(callExpr.templateArgs.empty());
-              return true;
-            },
+            insertBuiltinReturnInfo,
+            makeInlineCallChecker(inlineCalls, "insert", true, "/std/collections/mapInsert", {}),
             instructions,
             error) == EmitResult::Emitted);
   CHECK(error.empty());
   CHECK(inlineCalls == 1);
   CHECK(instructions.empty());
 
-  inlineCalls = 0;
-  instructions.clear();
-  error.clear();
-  CHECK(tryEmitDirectCallStatementNoCounts(
+  expectDirectCallEmpty(inlineCalls, instructions, error, EmitResult::NotMatched, 0,
             f.mapInsertArgsPackUnsafeAliasNonLocalReceiverInferredStmt,
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.name == "/std/collections/mapAtUnsafe") {
@@ -833,31 +444,9 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
               }
               return nullptr;
             },
-            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
-              if (path == "/std/collections/map/insert_builtin") {
-                info.returnsVoid = true;
-                return true;
-              }
-              return false;
-            },
-            [&](const primec::Expr &callExpr,
-                const primec::Definition &callee,
-                const primec::ir_lowerer::LocalMap &,
-                bool expectValue) {
-              ++inlineCalls;
-              const std::vector<std::string> expectedTemplateArgs{"i32", "i32"};
-              CHECK(callExpr.name == "/std/collections/map/insert_builtin");
-              CHECK_FALSE(callExpr.isMethodCall);
-              CHECK(callee.fullPath == "/std/collections/map/insert_builtin");
-              CHECK_FALSE(expectValue);
-              CHECK(callExpr.templateArgs == expectedTemplateArgs);
-              return true;
-            },
-            instructions,
-            error) == EmitResult::NotMatched);
-  CHECK(error.empty());
-  CHECK(inlineCalls == 0);
-  CHECK(instructions.empty());
+            insertBuiltinReturnInfo,
+            makeInlineCallChecker(inlineCalls, "/std/collections/map/insert_builtin", false,
+                                   "/std/collections/map/insert_builtin", {"i32", "i32"}));
 
   inlineCalls = 0;
   instructions.clear();
@@ -884,35 +473,15 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
               }
               return nullptr;
             },
-            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
-              if (path == "/std/collections/map/insert_builtin") {
-                info.returnsVoid = true;
-                return true;
-              }
-              return false;
-            },
-            [&](const primec::Expr &callExpr,
-                const primec::Definition &callee,
-                const primec::ir_lowerer::LocalMap &,
-                bool expectValue) {
-              ++inlineCalls;
-              CHECK(callExpr.name == "insert");
-              CHECK(callExpr.isMethodCall);
-              CHECK(callee.fullPath == "/std/collections/mapInsert");
-              CHECK_FALSE(expectValue);
-              CHECK(callExpr.templateArgs.empty());
-              return true;
-            },
+            insertBuiltinReturnInfo,
+            makeInlineCallChecker(inlineCalls, "insert", true, "/std/collections/mapInsert", {}),
             instructions,
             error) == EmitResult::Emitted);
   CHECK(error.empty());
   CHECK(inlineCalls == 1);
   CHECK(instructions.empty());
 
-  inlineCalls = 0;
-  instructions.clear();
-  error.clear();
-  CHECK(tryEmitDirectCallStatementNoCounts(
+  expectDirectCallEmpty(inlineCalls, instructions, error, EmitResult::NotMatched, 0,
             f.mapInsertArgsPackMethodAliasNonLocalReceiverInferredStmt,
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.isMethodCall && callExpr.name == "at" && callExpr.args.size() == 2) {
@@ -923,31 +492,9 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
               }
               return nullptr;
             },
-            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
-              if (path == "/std/collections/map/insert_builtin") {
-                info.returnsVoid = true;
-                return true;
-              }
-              return false;
-            },
-            [&](const primec::Expr &callExpr,
-                const primec::Definition &callee,
-                const primec::ir_lowerer::LocalMap &,
-                bool expectValue) {
-              ++inlineCalls;
-              const std::vector<std::string> expectedTemplateArgs{"i32", "i32"};
-              CHECK(callExpr.name == "/std/collections/map/insert_builtin");
-              CHECK_FALSE(callExpr.isMethodCall);
-              CHECK(callee.fullPath == "/std/collections/map/insert_builtin");
-              CHECK_FALSE(expectValue);
-              CHECK(callExpr.templateArgs == expectedTemplateArgs);
-              return true;
-            },
-            instructions,
-            error) == EmitResult::NotMatched);
-  CHECK(error.empty());
-  CHECK(inlineCalls == 0);
-  CHECK(instructions.empty());
+            insertBuiltinReturnInfo,
+            makeInlineCallChecker(inlineCalls, "/std/collections/map/insert_builtin", false,
+                                   "/std/collections/map/insert_builtin", {"i32", "i32"}));
 
   inlineCalls = 0;
   instructions.clear();
@@ -974,35 +521,15 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
               }
               return nullptr;
             },
-            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
-              if (path == "/std/collections/map/insert_builtin") {
-                info.returnsVoid = true;
-                return true;
-              }
-              return false;
-            },
-            [&](const primec::Expr &callExpr,
-                const primec::Definition &callee,
-                const primec::ir_lowerer::LocalMap &,
-                bool expectValue) {
-              ++inlineCalls;
-              CHECK(callExpr.name == "insert");
-              CHECK(callExpr.isMethodCall);
-              CHECK(callee.fullPath == "/std/collections/mapInsert");
-              CHECK_FALSE(expectValue);
-              CHECK(callExpr.templateArgs.empty());
-              return true;
-            },
+            insertBuiltinReturnInfo,
+            makeInlineCallChecker(inlineCalls, "insert", true, "/std/collections/mapInsert", {}),
             instructions,
             error) == EmitResult::Emitted);
   CHECK(error.empty());
   CHECK(inlineCalls == 1);
   CHECK(instructions.empty());
 
-  inlineCalls = 0;
-  instructions.clear();
-  error.clear();
-  CHECK(tryEmitDirectCallStatementNoCounts(
+  expectDirectCallEmpty(inlineCalls, instructions, error, EmitResult::NotMatched, 0,
             f.mapInsertArgsPackUnsafeMethodAliasNonLocalReceiverInferredStmt,
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.isMethodCall && callExpr.name == "at_unsafe" && callExpr.args.size() == 2) {
@@ -1013,31 +540,9 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
               }
               return nullptr;
             },
-            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
-              if (path == "/std/collections/map/insert_builtin") {
-                info.returnsVoid = true;
-                return true;
-              }
-              return false;
-            },
-            [&](const primec::Expr &callExpr,
-                const primec::Definition &callee,
-                const primec::ir_lowerer::LocalMap &,
-                bool expectValue) {
-              ++inlineCalls;
-              const std::vector<std::string> expectedTemplateArgs{"i32", "i32"};
-              CHECK(callExpr.name == "/std/collections/map/insert_builtin");
-              CHECK_FALSE(callExpr.isMethodCall);
-              CHECK(callee.fullPath == "/std/collections/map/insert_builtin");
-              CHECK_FALSE(expectValue);
-              CHECK(callExpr.templateArgs == expectedTemplateArgs);
-              return true;
-            },
-            instructions,
-            error) == EmitResult::NotMatched);
-  CHECK(error.empty());
-  CHECK(inlineCalls == 0);
-  CHECK(instructions.empty());
+            insertBuiltinReturnInfo,
+            makeInlineCallChecker(inlineCalls, "/std/collections/map/insert_builtin", false,
+                                   "/std/collections/map/insert_builtin", {"i32", "i32"}));
 
   inlineCalls = 0;
   instructions.clear();
@@ -1064,35 +569,15 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
               }
               return nullptr;
             },
-            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
-              if (path == "/std/collections/map/insert_builtin") {
-                info.returnsVoid = true;
-                return true;
-              }
-              return false;
-            },
-            [&](const primec::Expr &callExpr,
-                const primec::Definition &callee,
-                const primec::ir_lowerer::LocalMap &,
-                bool expectValue) {
-              ++inlineCalls;
-              CHECK(callExpr.name == "insert");
-              CHECK(callExpr.isMethodCall);
-              CHECK(callee.fullPath == "/std/collections/mapInsert");
-              CHECK_FALSE(expectValue);
-              CHECK(callExpr.templateArgs.empty());
-              return true;
-            },
+            insertBuiltinReturnInfo,
+            makeInlineCallChecker(inlineCalls, "insert", true, "/std/collections/mapInsert", {}),
             instructions,
             error) == EmitResult::Emitted);
   CHECK(error.empty());
   CHECK(inlineCalls == 1);
   CHECK(instructions.empty());
 
-  inlineCalls = 0;
-  instructions.clear();
-  error.clear();
-  CHECK(tryEmitDirectCallStatementNoCounts(
+  expectDirectCallEmpty(inlineCalls, instructions, error, EmitResult::NotMatched, 0,
             f.mapInsertArgsPackAtPascalMethodAliasNonLocalReceiverInferredStmt,
             [&](const primec::Expr &callExpr) -> const primec::Definition * {
               if (callExpr.isMethodCall && callExpr.name == "At" && callExpr.args.size() == 2) {
@@ -1103,31 +588,9 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
               }
               return nullptr;
             },
-            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
-              if (path == "/std/collections/map/insert_builtin") {
-                info.returnsVoid = true;
-                return true;
-              }
-              return false;
-            },
-            [&](const primec::Expr &callExpr,
-                const primec::Definition &callee,
-                const primec::ir_lowerer::LocalMap &,
-                bool expectValue) {
-              ++inlineCalls;
-              const std::vector<std::string> expectedTemplateArgs{"i32", "i32"};
-              CHECK(callExpr.name == "/std/collections/map/insert_builtin");
-              CHECK_FALSE(callExpr.isMethodCall);
-              CHECK(callee.fullPath == "/std/collections/map/insert_builtin");
-              CHECK_FALSE(expectValue);
-              CHECK(callExpr.templateArgs == expectedTemplateArgs);
-              return true;
-            },
-            instructions,
-            error) == EmitResult::NotMatched);
-  CHECK(error.empty());
-  CHECK(inlineCalls == 0);
-  CHECK(instructions.empty());
+            insertBuiltinReturnInfo,
+            makeInlineCallChecker(inlineCalls, "/std/collections/map/insert_builtin", false,
+                                   "/std/collections/map/insert_builtin", {"i32", "i32"}));
 
   inlineCalls = 0;
   instructions.clear();
@@ -1154,25 +617,8 @@ TEST_CASE("ir lowerer statement call helper emits direct calls: collection and s
               }
               return nullptr;
             },
-            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
-              if (path == "/std/collections/map/insert_builtin") {
-                info.returnsVoid = true;
-                return true;
-              }
-              return false;
-            },
-            [&](const primec::Expr &callExpr,
-                const primec::Definition &callee,
-                const primec::ir_lowerer::LocalMap &,
-                bool expectValue) {
-              ++inlineCalls;
-              CHECK(callExpr.name == "insert");
-              CHECK(callExpr.isMethodCall);
-              CHECK(callee.fullPath == "/std/collections/mapInsert");
-              CHECK_FALSE(expectValue);
-              CHECK(callExpr.templateArgs.empty());
-              return true;
-            },
+            insertBuiltinReturnInfo,
+            makeInlineCallChecker(inlineCalls, "insert", true, "/std/collections/mapInsert", {}),
             instructions,
             error) == EmitResult::Emitted);
   CHECK(error.empty());

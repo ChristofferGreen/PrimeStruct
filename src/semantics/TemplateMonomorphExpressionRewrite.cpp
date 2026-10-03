@@ -37,7 +37,6 @@
 #include "primec/support/CompileArena.h"
 #include "primec/support/CollectionHelperNames.h"
 #include "TemplateMonomorphExpressionRewriteState.h"
-#include "TemplateMonomorphUsings.h"
 
 namespace primec {
 
@@ -94,11 +93,11 @@ bool isKeyValueWrapperMethodHelperName(std::string_view name) {
 bool isKeyValueWrapperStructTypeText(std::string typeText,
                                      const std::string &namespacePrefix,
                                      Context &ctx) {
-  typeText = normalizeBindingTypeName(typeText);
+  typeText = semantics::normalizeBindingTypeName(typeText);
   std::string base = typeText;
   std::string argText;
-  if (splitTemplateTypeName(typeText, base, argText)) {
-    base = normalizeBindingTypeName(base);
+  if (semantics::splitTemplateTypeName(typeText, base, argText)) {
+    base = semantics::normalizeBindingTypeName(base);
   }
   if (base.empty()) {
     return false;
@@ -119,7 +118,7 @@ bool rewriteKeyValueWrapperHelperCallToMethod(Expr &expr,
                                               const std::string &namespacePrefix,
                                               Context &ctx,
                                               const LocalTypeMap &locals,
-                                              const std::vector<ParameterInfo> &params,
+                                              const std::vector<semantics::ParameterInfo> &params,
                                               bool allowMathBare) {
   if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.isBinding ||
       expr.isFieldAccess || expr.args.empty() || expr.hasBodyArguments ||
@@ -142,12 +141,12 @@ bool rewriteKeyValueWrapperHelperCallToMethod(Expr &expr,
   if (!isKeyValueWrapperMethodHelperName(helperName)) {
     return false;
   }
-  BindingInfo receiverInfo;
+  semantics::BindingInfo receiverInfo;
   if (!inferBindingTypeForMonomorph(
           expr.args.front(), params, locals, allowMathBare, ctx, receiverInfo)) {
     return false;
   }
-  const std::string receiverBase = normalizeBindingTypeName(receiverInfo.typeName);
+  const std::string receiverBase = semantics::normalizeBindingTypeName(receiverInfo.typeName);
   const bool receiverIsBorrowed =
       receiverBase == "Reference" || receiverBase == "Pointer";
   if (borrowedHelper && !receiverIsBorrowed) {
@@ -172,7 +171,7 @@ bool rewriteKeyValueWrapperHelperCallToMethod(Expr &expr,
 // `Reference<vector<T>>` means the borrowed helper applied to `r` itself;
 // unwrap the dereference so the borrowed-vector routing below applies.
 void unwrapDereferencedBorrowedVectorReceiver(Expr &expr,
-                                              const std::vector<ParameterInfo> &params,
+                                              const std::vector<semantics::ParameterInfo> &params,
                                               const LocalTypeMap &locals,
                                               bool allowMathBare,
                                               Context &ctx) {
@@ -189,20 +188,20 @@ void unwrapDereferencedBorrowedVectorReceiver(Expr &expr,
   }
   const Expr &receiver = expr.args.front();
   if (receiver.kind != Expr::Kind::Call || receiver.isMethodCall || receiver.isBinding ||
-      receiver.args.size() != 1 || !isSimpleCallName(receiver, "dereference")) {
+      receiver.args.size() != 1 || !semantics::isSimpleCallName(receiver, "dereference")) {
     return;
   }
-  BindingInfo pointerInfo;
+  semantics::BindingInfo pointerInfo;
   if (!inferBindingTypeForMonomorph(receiver.args.front(), params, locals, allowMathBare, ctx,
                                     pointerInfo) ||
-      normalizeBindingTypeName(pointerInfo.typeName) != "Reference") {
+      semantics::normalizeBindingTypeName(pointerInfo.typeName) != "Reference") {
     return;
   }
   std::string vectorBase;
   std::string elementType;
-  if (!splitTemplateTypeName(normalizeBindingTypeName(pointerInfo.typeTemplateArg), vectorBase,
+  if (!semantics::splitTemplateTypeName(semantics::normalizeBindingTypeName(pointerInfo.typeTemplateArg), vectorBase,
                              elementType) ||
-      normalizeBindingTypeName(vectorBase) != "vector") {
+      semantics::normalizeBindingTypeName(vectorBase) != "vector") {
     return;
   }
   Expr unwrapped = receiver.args.front();
@@ -214,7 +213,7 @@ void unwrapDereferencedBorrowedVectorReceiver(Expr &expr,
 // the element type as its template argument (method sugar does the same via
 // resolveMethodCallTemplateTarget).
 bool rewriteBorrowedVectorBareHelperCall(Expr &expr,
-                                         const std::vector<ParameterInfo> &params,
+                                         const std::vector<semantics::ParameterInfo> &params,
                                          const LocalTypeMap &locals,
                                          bool allowMathBare,
                                          Context &ctx) {
@@ -233,16 +232,16 @@ bool rewriteBorrowedVectorBareHelperCall(Expr &expr,
   if (ctx.sourceDefs.count(borrowedPath) == 0 && ctx.helperOverloads.count(borrowedPath) == 0) {
     return false;
   }
-  BindingInfo receiverInfo;
+  semantics::BindingInfo receiverInfo;
   if (!inferBindingTypeForMonomorph(expr.args.front(), params, locals, allowMathBare, ctx, receiverInfo) ||
-      normalizeBindingTypeName(receiverInfo.typeName) != "Reference") {
+      semantics::normalizeBindingTypeName(receiverInfo.typeName) != "Reference") {
     return false;
   }
   std::string vectorBase;
   std::string elementType;
-  if (!splitTemplateTypeName(normalizeBindingTypeName(receiverInfo.typeTemplateArg), vectorBase,
+  if (!semantics::splitTemplateTypeName(semantics::normalizeBindingTypeName(receiverInfo.typeTemplateArg), vectorBase,
                              elementType) ||
-      normalizeBindingTypeName(vectorBase) != "vector" || elementType.empty()) {
+      semantics::normalizeBindingTypeName(vectorBase) != "vector" || elementType.empty()) {
     return false;
   }
   if (expr.sourceName.empty()) {
@@ -260,7 +259,7 @@ bool rewriteExpr(Expr &expr,
                  Context &ctx,
                  std::string &error,
                  const LocalTypeMap &locals,
-                 const std::vector<ParameterInfo> &params,
+                 const std::vector<semantics::ParameterInfo> &params,
                  bool allowMathBare) {
     RewriteExprState st;
     st.allowMathBare = allowMathBare;
@@ -291,7 +290,7 @@ bool rewriteExpr(Expr &expr,
     return st.result;
 }
 
-PhaseStatus rewriteExprPhase1([[maybe_unused]] Expr &expr, [[maybe_unused]] const SubstMap &mapping, [[maybe_unused]] const std::unordered_set<std::string> &allowedParams, [[maybe_unused]] const std::string &namespacePrefix, [[maybe_unused]] Context &ctx, [[maybe_unused]] std::string &error, [[maybe_unused]] const LocalTypeMap &locals, [[maybe_unused]] const std::vector<ParameterInfo> &params, RewriteExprState &st) {
+PhaseStatus rewriteExprPhase1([[maybe_unused]] Expr &expr, [[maybe_unused]] const SubstMap &mapping, [[maybe_unused]] const std::unordered_set<std::string> &allowedParams, [[maybe_unused]] const std::string &namespacePrefix, [[maybe_unused]] Context &ctx, [[maybe_unused]] std::string &error, [[maybe_unused]] const LocalTypeMap &locals, [[maybe_unused]] const std::vector<semantics::ParameterInfo> &params, RewriteExprState &st) {
   [[maybe_unused]] auto &allowMathBare = st.allowMathBare;
   expr.namespacePrefix = namespacePrefix;
   st.hadExplicitTemplateArgsOnEntry = !expr.templateArgs.empty();
@@ -326,7 +325,7 @@ PhaseStatus rewriteExprPhase1([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
   }
   if (expr.kind == Expr::Kind::Name) {
     auto isRuntimeParameter = [&]() {
-      for (const ParameterInfo &param : params) {
+      for (const semantics::ParameterInfo &param : params) {
         if (param.name == expr.name) {
           return true;
         }
@@ -446,7 +445,7 @@ PhaseStatus rewriteExprPhase1([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
                        allowMathBare)) {
         return st.done(false);
       }
-      BindingInfo info;
+      semantics::BindingInfo info;
       if (extractExplicitBindingType(param, info)) {
         if (info.typeName == "auto" && param.args.size() == 1 &&
             inferBindingTypeForMonomorph(param.args.front(), {}, {}, allowMathBare, ctx, info)) {
@@ -465,7 +464,7 @@ PhaseStatus rewriteExprPhase1([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
                        allowMathBare)) {
         return st.done(false);
       }
-      BindingInfo info;
+      semantics::BindingInfo info;
       if (extractExplicitBindingType(bodyArg, info)) {
         if (info.typeName == "auto" && bodyArg.args.size() == 1 &&
             inferBindingTypeForMonomorph(bodyArg.args.front(), params, lambdaLocals, allowMathBare, ctx, info)) {
@@ -484,9 +483,9 @@ PhaseStatus rewriteExprPhase1([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
   if (expr.templateArgs.empty()) {
     std::string explicitBase;
     std::string explicitArgText;
-    if (splitTemplateTypeName(expr.name, explicitBase, explicitArgText)) {
+    if (semantics::splitTemplateTypeName(expr.name, explicitBase, explicitArgText)) {
       std::vector<std::string> explicitArgs;
-      if (!splitTopLevelTemplateArgs(explicitArgText, explicitArgs)) {
+      if (!semantics::splitTopLevelTemplateArgs(explicitArgText, explicitArgs)) {
         error = "invalid template arguments for " + expr.name;
         return st.done(false);
       }
@@ -495,7 +494,7 @@ PhaseStatus rewriteExprPhase1([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
     }
   }
   st.resolvePickSumDefinition = [&](const Expr &target) -> Definition * {
-    BindingInfo targetInfo;
+    semantics::BindingInfo targetInfo;
     if (!inferBindingTypeForMonomorph(target, params, locals, allowMathBare, ctx,
                                       targetInfo)) {
       return nullptr;
@@ -511,11 +510,11 @@ PhaseStatus rewriteExprPhase1([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
     if (!resolveError.empty() || resolvedType.text.empty()) {
       return nullptr;
     }
-    targetTypeText = normalizeBindingTypeName(resolvedType.text);
+    targetTypeText = semantics::normalizeBindingTypeName(resolvedType.text);
     std::string base;
     std::string argText;
-    if (splitTemplateTypeName(targetTypeText, base, argText)) {
-      targetTypeText = normalizeBindingTypeName(base);
+    if (semantics::splitTemplateTypeName(targetTypeText, base, argText)) {
+      targetTypeText = semantics::normalizeBindingTypeName(base);
     }
     std::string sumPath = targetTypeText;
     if (sumPath.empty()) {
@@ -546,16 +545,16 @@ PhaseStatus rewriteExprPhase1([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
     if (payloadBinder.kind != Expr::Kind::Name || payloadBinder.name.empty()) {
       return;
     }
-    BindingInfo payloadInfo;
+    semantics::BindingInfo payloadInfo;
     payloadInfo.typeName = variant.payloadType;
     if (!variant.payloadTemplateArgs.empty()) {
-      payloadInfo.typeTemplateArg = joinTemplateArgs(variant.payloadTemplateArgs);
+      payloadInfo.typeTemplateArg = semantics::joinTemplateArgs(variant.payloadTemplateArgs);
     }
     armLocals[payloadBinder.name] = std::move(payloadInfo);
   };
   [[maybe_unused]] auto &appendPickPayloadLocal = st.appendPickPayloadLocal;
   st.recordBodyBindingLocal = [&](Expr &bodyExpr, LocalTypeMap &bodyLocals) {
-    BindingInfo info;
+    semantics::BindingInfo info;
     if (extractExplicitBindingType(bodyExpr, info)) {
       if (info.typeName == "auto" && bodyExpr.args.size() == 1 &&
           inferBindingTypeForMonomorph(bodyExpr.args.front(),
@@ -587,7 +586,7 @@ PhaseStatus rewriteExprPhase1([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
              path.rfind("/std/tuple/tuple__t", 0) == 0;
     };
     auto resolveTupleBasePathEarly = [&](const std::string &base) -> std::string {
-      std::string normalizedBase = normalizeBindingTypeName(base);
+      std::string normalizedBase = semantics::normalizeBindingTypeName(base);
       if (normalizedBase.empty()) {
         return {};
       }
@@ -608,14 +607,14 @@ PhaseStatus rewriteExprPhase1([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
             std::vector<std::string> &tupleArgsOut) -> bool {
       borrowedOut = false;
       tupleArgsOut.clear();
-      typeText = normalizeBindingTypeName(std::move(typeText));
+      typeText = semantics::normalizeBindingTypeName(std::move(typeText));
       while (true) {
         std::string wrapperBase;
         std::string wrapperArgText;
-        if (!splitTemplateTypeName(typeText, wrapperBase, wrapperArgText)) {
+        if (!semantics::splitTemplateTypeName(typeText, wrapperBase, wrapperArgText)) {
           break;
         }
-        wrapperBase = normalizeBindingTypeName(wrapperBase);
+        wrapperBase = semantics::normalizeBindingTypeName(wrapperBase);
         if (wrapperBase != "Reference" && wrapperBase != "Pointer") {
           break;
         }
@@ -623,24 +622,24 @@ PhaseStatus rewriteExprPhase1([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
           return false;
         }
         std::vector<std::string> wrapperArgs;
-        if (!splitTopLevelTemplateArgs(wrapperArgText, wrapperArgs) ||
+        if (!semantics::splitTopLevelTemplateArgs(wrapperArgText, wrapperArgs) ||
             wrapperArgs.size() != 1) {
           return false;
         }
         borrowedOut = true;
-        typeText = normalizeBindingTypeName(wrapperArgs.front());
+        typeText = semantics::normalizeBindingTypeName(wrapperArgs.front());
       }
 
       std::string tupleBase;
       std::string tupleArgText;
-      if (splitTemplateTypeName(typeText, tupleBase, tupleArgText)) {
+      if (semantics::splitTemplateTypeName(typeText, tupleBase, tupleArgText)) {
         if (!isStdlibTuplePathEarly(resolveTupleBasePathEarly(tupleBase))) {
           return false;
         }
         if (tupleArgText.empty()) {
           return true;
         }
-        return splitTopLevelTemplateArgs(tupleArgText, tupleArgsOut);
+        return semantics::splitTopLevelTemplateArgs(tupleArgText, tupleArgsOut);
       }
 
       const std::string tuplePath = resolveTupleBasePathEarly(typeText);
@@ -667,11 +666,11 @@ PhaseStatus rewriteExprPhase1([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
       if (candidate.kind != Expr::Kind::Call) {
         return true;
       }
-      if (getBuiltinArrayAccessName(candidate, builtinAccessName) &&
+      if (semantics::getBuiltinArrayAccessName(candidate, builtinAccessName) &&
           candidate.args.size() == 2 && !hasNamedCallArguments(candidate) &&
           !candidate.hasBodyArguments && candidate.bodyArguments.empty() &&
           candidate.templateArgs.empty()) {
-        BindingInfo receiverInfo;
+        semantics::BindingInfo receiverInfo;
         if (inferBindingTypeForMonomorph(candidate.args.front(),
                                          params,
                                          locals,

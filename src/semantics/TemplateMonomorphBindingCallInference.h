@@ -14,16 +14,15 @@
 #include "primec/support/StdlibSurfaceRegistry.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "TemplateMonomorphExperimentalCollectionReturnSetup.h"
-#include "TemplateMonomorphUsings.h"
 
 namespace primec {
 
 bool inferCallBindingTypeForMonomorph(const Expr &initializer,
-                                      const std::vector<ParameterInfo> &params,
+                                      const std::vector<semantics::ParameterInfo> &params,
                                       const LocalTypeMap &locals,
                                       bool allowMathBare,
                                       Context &ctx,
-                                      BindingInfo &infoOut,
+                                      semantics::BindingInfo &infoOut,
                                       bool &handledOut);
 
 } // namespace primec

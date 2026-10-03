@@ -237,6 +237,8 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/TemplateMonomorphExpressionRewritePhasesA.cpp
   src/semantics/TemplateMonomorphExpressionRewritePhasesB.cpp
   src/semantics/TemplateMonomorphExpressionRewritePhasesC.cpp
+  src/semantics/TemplateMonomorphExpressionRewritePhasesCInnerPhasesA.cpp
+  src/semantics/TemplateMonomorphExpressionRewritePhasesCInnerPhasesB.cpp
   src/semantics/TemplateMonomorphExpressionRewritePhasesD.cpp
   src/semantics/TemplateMonomorphFinalOrchestration.cpp
   src/semantics/CondensationDag.cpp
@@ -406,6 +408,8 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorStatementBindings.cpp
   src/semantics/SemanticsValidatorStatementBindingsPhasesA.cpp
   src/semantics/SemanticsValidatorStatementBindingsPhasesB.cpp
+  src/semantics/SemanticsValidatorStatementBindingsPhasesBReferencePhasesA.cpp
+  src/semantics/SemanticsValidatorStatementBindingsPhasesBReferencePhasesB.cpp
   src/semantics/SemanticsValidatorStatementBindingsPhasesC.cpp
   src/semantics/SemanticsValidatorStatementBodyArguments.cpp
   src/semantics/SemanticsValidatorStatementBuiltins.cpp

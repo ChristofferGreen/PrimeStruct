@@ -14,7 +14,6 @@
 #include "primec/support/StdlibSurfaceRegistry.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "TemplateMonomorphExperimentalCollectionReturnSetup.h"
-#include "TemplateMonomorphUsings.h"
 
 namespace primec {
 
@@ -48,13 +47,13 @@ bool extractTupleDestructuringArgsFromTypeText(std::string typeText,
                                                bool &borrowedOut,
                                                std::vector<std::string> &tupleArgsOut);
 
-const BindingInfo *findTupleDestructuringOperandBinding(
+const semantics::BindingInfo *findTupleDestructuringOperandBinding(
     std::string_view name,
-    const std::vector<ParameterInfo> &params,
+    const std::vector<semantics::ParameterInfo> &params,
     const LocalTypeMap &locals);
 
 bool isTupleDestructuringStatementCandidate(const Expr &stmt,
-                                            const std::vector<ParameterInfo> &params,
+                                            const std::vector<semantics::ParameterInfo> &params,
                                             const LocalTypeMap &locals);
 
 Expr makeTupleDestructuringNameExpr(const std::string &name,
@@ -72,7 +71,7 @@ Expr makeTupleDestructuringBindingExpr(const std::string &bindingName,
                                        const Expr &source);
 
 bool tryExpandTupleDestructuringStatement(const Expr &stmt,
-                                          const std::vector<ParameterInfo> &params,
+                                          const std::vector<semantics::ParameterInfo> &params,
                                           const LocalTypeMap &locals,
                                           const std::string &namespacePrefix,
                                           Context &ctx,

@@ -98,3 +98,5 @@ src/semantics/TemplateMonomorphImplicitTemplateInference.cpp collection
 src/support/BuiltinArrayAccessNameClassifier.cpp collection
 src/support/CollectionSpellingClassifier.cpp collection
 src/support/StdlibSurfaceRegistry.cpp collection
+src/semantics/TemplateMonomorphExpressionRewritePhasesCInnerPhasesA.cpp soa
+src/semantics/TemplateMonomorphExpressionRewritePhasesCInnerPhasesB.cpp soa

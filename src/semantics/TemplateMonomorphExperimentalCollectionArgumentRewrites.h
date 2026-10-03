@@ -14,11 +14,10 @@
 #include "primec/support/StdlibSurfaceRegistry.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "TemplateMonomorphExperimentalCollectionReturnSetup.h"
-#include "TemplateMonomorphUsings.h"
 
 namespace primec {
 
-std::vector<ParameterInfo> buildExperimentalConstructorRewriteParams(const Definition &targetDef,
+std::vector<semantics::ParameterInfo> buildExperimentalConstructorRewriteParams(const Definition &targetDef,
                                                                      bool allowMathBare,
                                                                      Context &ctx);
 
@@ -29,7 +28,7 @@ bool rewriteExperimentalConstructorArgsForTarget(Expr &callExpr,
                                                  bool allowMathBare,
                                                  Context &ctx,
                                                  RewriteTargetValueFn &&rewriteTargetValueForType) {
-  std::vector<ParameterInfo> callParams =
+  std::vector<semantics::ParameterInfo> callParams =
       buildExperimentalConstructorRewriteParams(targetDef, allowMathBare, ctx);
   if (callParams.empty()) {
     return true;
@@ -66,7 +65,7 @@ bool rewriteExperimentalConstructorArgsForTarget(Expr &callExpr,
     ++positionalIndex;
   }
   for (size_t paramIndex = 0; paramIndex < callParams.size() && paramIndex < orderedArgs.size(); ++paramIndex) {
-    const BindingInfo &paramBinding = callParams[paramIndex].binding;
+    const semantics::BindingInfo &paramBinding = callParams[paramIndex].binding;
     std::string typeText = paramBinding.typeName;
     if (!paramBinding.typeTemplateArg.empty()) {
       typeText += "<" + paramBinding.typeTemplateArg + ">";

@@ -117,10 +117,7 @@ of sync with them.
 | TODO-5413 | Re-baseline benchmarks after the structural refactors | ready | performance |
 | TODO-5414 | Split the test files over 3,000 lines | deferred | test-infrastructure |
 | TODO-5415 | Split stdlib/std/collections/soa_storage.prime by concern | deferred | stdlib |
-| TODO-5419 | Split the largest remaining phase functions | deferred | semantics-structure |
-| TODO-5420 | Replace using-declarations in TemplateMonomorphUsings.h with qualified names | deferred | semantics-structure |
 | TODO-5421 | Keep the release gate from dirtying docs/failing_tests.md | deferred | tooling |
-| TODO-5422 | Convert the remaining validation-test clusters measured after TODO-5388..5395 | deferred | test-infrastructure |
 | TODO-5348 | Verify the iOS embed build and XCFramework packaging on macOS | deferred | embedding-ios |
 
 ### Ready Now
@@ -150,8 +147,7 @@ of sync with them.
 - Diagnostics: TODO-5407 -> TODO-5408
 - Tooling: TODO-5410 -> TODO-5409, TODO-5411, TODO-5412; TODO-5421 (needs approval)
 - Performance: TODO-5413
-- Semantics structure: TODO-5419, TODO-5420
-- Test infrastructure: TODO-5414, TODO-5422
+- Test infrastructure: TODO-5414
 - Stdlib: TODO-5415
 
 ### Execution Queue
@@ -159,29 +155,6 @@ of sync with them.
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 ### Task Blocks
-
-- [ ] TODO-5419: Split the largest remaining phase functions
-  - owner: ai
-  - status: deferred
-  - created_at: 2026-10-03
-  - phase: Compiler structure
-  - parallel_track: semantics-structure
-  - scope: The phase splits left two very large phase functions: `validateBindingStatementPhase5` (~700 lines, the `info.typeName == "Reference"` block) and `rewriteExprPhase6` (~1,040 lines, the `!expr.isMethodCall && !expr.isBinding` block). Apply the same state-struct split one level down (nested State carrying a reference to the outer one).
-  - acceptance:
-    - no phase function over 400 lines; files stay under 1,200
-    - dumps byte-identical; full gate green
-  - stop_rule: if a nested block returns from several nesting levels, stop and record the control-flow shape instead of forcing it.
-
-- [ ] TODO-5420: Replace using-declarations in TemplateMonomorphUsings.h with qualified names
-  - owner: ai
-  - status: deferred
-  - created_at: 2026-10-03
-  - phase: Compiler structure
-  - parallel_track: semantics-structure
-  - scope: TODO-5399 hoisted 61 `using semantics::X;` declarations into one header, but a header that injects 61 names into `namespace primec` for every includer is still namespace pollution and hides which names a file really uses. Replace uses with `semantics::X` (mechanical) one subsystem at a time and delete the header when empty.
-  - acceptance:
-    - header deleted; no behavior change; full gate green
-  - stop_rule: stop at any file where qualification would exceed the line-length convention and reflow instead of re-adding a using.
 
 - [ ] TODO-5421: Keep the release gate from dirtying docs/failing_tests.md
   - owner: ai
@@ -194,17 +167,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - acceptance:
     - a green gate leaves `git status` clean; failures still land under Open Failures
   - stop_rule: do not start without explicit approval to change scripts/compile.sh.
-
-- [ ] TODO-5422: Convert the remaining validation-test clusters measured after TODO-5388..5395
-  - owner: ai
-  - status: deferred
-  - created_at: 2026-10-03
-  - phase: Test infrastructure
-  - parallel_track: test-infrastructure
-  - scope: After those leaves the duplication script still reports 24.3% duplicated windows in `tests/unit/ir_pipeline/validation`. Re-run `scripts/measure_test_duplication.py`, list the top ten clusters by excess, and convert each with a factory or table plus a mutation check; many are per-case callback combinations (count_access, inline_struct_arg) that need a builder (`CountAccessCallbacks{}.arrayCount(true)...`) rather than a constant factory.
-  - acceptance:
-    - measured cluster list committed; excess drops below 20% with case counts unchanged and a mutation check per converted file
-  - stop_rule: stop when a cluster's variants differ in more than two callbacks; leave it.
 
 - [ ] TODO-5398: Archive or fold the orphaned long-form docs
   - owner: ai

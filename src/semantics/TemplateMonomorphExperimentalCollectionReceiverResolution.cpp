@@ -36,20 +36,19 @@
 
 #include "primec/support/CompileArena.h"
 #include "primec/support/CollectionHelperNames.h"
-#include "TemplateMonomorphUsings.h"
 
 namespace primec {
 
-std::string experimentalCollectionValueBindingTypeText(const BindingInfo &binding) {
-  const std::string normalizedType = normalizeBindingTypeName(binding.typeName);
+std::string experimentalCollectionValueBindingTypeText(const semantics::BindingInfo &binding) {
+  const std::string normalizedType = semantics::normalizeBindingTypeName(binding.typeName);
   if (normalizedType == "Reference" || normalizedType == "Pointer") {
     return {};
   }
   return bindingTypeToString(binding);
 }
 
-std::string experimentalCollectionBorrowedBindingTypeText(const BindingInfo &binding) {
-  const std::string normalizedType = normalizeBindingTypeName(binding.typeName);
+std::string experimentalCollectionBorrowedBindingTypeText(const semantics::BindingInfo &binding) {
+  const std::string normalizedType = semantics::normalizeBindingTypeName(binding.typeName);
   if ((normalizedType != "Reference" && normalizedType != "Pointer") || binding.typeTemplateArg.empty()) {
     return {};
   }
@@ -57,7 +56,7 @@ std::string experimentalCollectionBorrowedBindingTypeText(const BindingInfo &bin
 }
 
 std::string experimentalKeyValueBackingLeafForReceiverResolution(std::string typeName) {
-  typeName = normalizeBindingTypeName(std::move(typeName));
+  typeName = semantics::normalizeBindingTypeName(std::move(typeName));
   if (!typeName.empty() && typeName.front() == '/') {
     typeName.erase(typeName.begin());
   }
@@ -67,7 +66,7 @@ std::string experimentalKeyValueBackingLeafForReceiverResolution(std::string typ
 
 bool isUnspecializedExperimentalKeyValueBackingTypeForReceiverResolution(
     std::string typeName) {
-  typeName = normalizeBindingTypeName(std::move(typeName));
+  typeName = semantics::normalizeBindingTypeName(std::move(typeName));
   if (!typeName.empty() && typeName.front() == '/') {
     typeName.erase(typeName.begin());
   }
@@ -77,7 +76,7 @@ bool isUnspecializedExperimentalKeyValueBackingTypeForReceiverResolution(
 
 bool isSpecializedExperimentalKeyValueBackingTypeForReceiverResolution(
     std::string typeName) {
-  typeName = normalizeBindingTypeName(std::move(typeName));
+  typeName = semantics::normalizeBindingTypeName(std::move(typeName));
   if (!typeName.empty() && typeName.front() == '/') {
     typeName.erase(typeName.begin());
   }
@@ -87,7 +86,7 @@ bool isSpecializedExperimentalKeyValueBackingTypeForReceiverResolution(
 
 bool isSpecializedCanonicalKeyValueBackingTypeForReceiverResolution(
     std::string typeName) {
-  typeName = normalizeBindingTypeName(std::move(typeName));
+  typeName = semantics::normalizeBindingTypeName(std::move(typeName));
   if (!typeName.empty() && typeName.front() == '/') {
     typeName.erase(typeName.begin());
   }
@@ -139,7 +138,7 @@ bool isPublishedMapConstructorReceiverExpr(const Expr *receiverExpr,
 
 bool inferPublishedMapConstructorReceiverTemplateArgs(
     const Expr *receiverExpr,
-    const std::vector<ParameterInfo> &params,
+    const std::vector<semantics::ParameterInfo> &params,
     const LocalTypeMap &locals,
     bool allowMathBare,
     const std::string &namespacePrefix,
@@ -186,7 +185,7 @@ bool inferPublishedMapConstructorReceiverTemplateArgs(
     }
   }
   auto inferArgType = [&](const Expr &arg, std::string &typeTextOut) {
-    BindingInfo binding;
+    semantics::BindingInfo binding;
     if (!inferBindingTypeForMonomorph(arg, params, locals, allowMathBare, ctx, binding)) {
       return false;
     }
@@ -204,8 +203,8 @@ bool inferPublishedMapConstructorReceiverTemplateArgs(
     std::string nextValueType;
     if (!inferArgType(receiverExpr->args[i], nextKeyType) ||
         !inferArgType(receiverExpr->args[i + 1], nextValueType) ||
-        normalizeBindingTypeName(nextKeyType) != normalizeBindingTypeName(keyType) ||
-        normalizeBindingTypeName(nextValueType) != normalizeBindingTypeName(valueType)) {
+        semantics::normalizeBindingTypeName(nextKeyType) != semantics::normalizeBindingTypeName(keyType) ||
+        semantics::normalizeBindingTypeName(nextValueType) != semantics::normalizeBindingTypeName(valueType)) {
       return false;
     }
   }
@@ -217,28 +216,28 @@ bool extractCollectionVectorElementTypeFromTypeText(const std::string &typeText,
                                                       const Context &ctx,
                                                       std::string &valueTypeOut) {
   valueTypeOut.clear();
-  std::string normalizedType = normalizeBindingTypeName(typeText);
+  std::string normalizedType = semantics::normalizeBindingTypeName(typeText);
   while (true) {
     std::string base;
     std::string argText;
-    if (splitTemplateTypeName(normalizedType, base, argText) && !base.empty()) {
-      std::string normalizedBase = normalizeBindingTypeName(base);
+    if (semantics::splitTemplateTypeName(normalizedType, base, argText) && !base.empty()) {
+      std::string normalizedBase = semantics::normalizeBindingTypeName(base);
       if (normalizedBase == "Reference" || normalizedBase == "Pointer") {
         std::vector<std::string> args;
-        if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+        if (!semantics::splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
           return false;
         }
-        normalizedType = normalizeBindingTypeName(args.front());
+        normalizedType = semantics::normalizeBindingTypeName(args.front());
         continue;
       }
       if (!normalizedBase.empty() && normalizedBase.front() == '/') {
         normalizedBase.erase(normalizedBase.begin());
       }
       if ((normalizedBase == "Vector" ||
-           isLegacyExperimentalVectorCompatibilityPath("/" + normalizedBase)) &&
+           semantics::isLegacyExperimentalVectorCompatibilityPath("/" + normalizedBase)) &&
           !argText.empty()) {
         std::vector<std::string> args;
-        if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+        if (!semantics::splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
           return false;
         }
         valueTypeOut = args.front();
@@ -250,11 +249,11 @@ bool extractCollectionVectorElementTypeFromTypeText(const std::string &typeText,
     if (!resolvedPath.empty() && resolvedPath.front() != '/') {
       resolvedPath.insert(resolvedPath.begin(), '/');
     }
-    std::string normalizedResolvedPath = normalizeBindingTypeName(resolvedPath);
+    std::string normalizedResolvedPath = semantics::normalizeBindingTypeName(resolvedPath);
     if (!normalizedResolvedPath.empty() && normalizedResolvedPath.front() == '/') {
       normalizedResolvedPath.erase(normalizedResolvedPath.begin());
     }
-    if (!isLegacyExperimentalVectorCompatibilitySpecializedTypePath(
+    if (!semantics::isLegacyExperimentalVectorCompatibilitySpecializedTypePath(
             "/" + normalizedResolvedPath)) {
       return false;
     }
@@ -266,21 +265,21 @@ bool extractCollectionVectorElementTypeFromTypeText(const std::string &typeText,
       if (!fieldExpr.isBinding || fieldExpr.name != "data") {
         continue;
       }
-      BindingInfo fieldBinding;
+      semantics::BindingInfo fieldBinding;
       if (!extractExplicitBindingType(fieldExpr, fieldBinding)) {
         continue;
       }
-      if (normalizeBindingTypeName(fieldBinding.typeName) != "Pointer" || fieldBinding.typeTemplateArg.empty()) {
+      if (semantics::normalizeBindingTypeName(fieldBinding.typeName) != "Pointer" || fieldBinding.typeTemplateArg.empty()) {
         continue;
       }
       std::string pointeeBase;
       std::string pointeeArgText;
-      if (!splitTemplateTypeName(normalizeBindingTypeName(fieldBinding.typeTemplateArg), pointeeBase, pointeeArgText) ||
-          normalizeBindingTypeName(pointeeBase) != "uninitialized") {
+      if (!semantics::splitTemplateTypeName(semantics::normalizeBindingTypeName(fieldBinding.typeTemplateArg), pointeeBase, pointeeArgText) ||
+          semantics::normalizeBindingTypeName(pointeeBase) != "uninitialized") {
         continue;
       }
       std::vector<std::string> pointeeArgs;
-      if (!splitTopLevelTemplateArgs(pointeeArgText, pointeeArgs) || pointeeArgs.size() != 1) {
+      if (!semantics::splitTopLevelTemplateArgs(pointeeArgText, pointeeArgs) || pointeeArgs.size() != 1) {
         continue;
       }
       valueTypeOut = pointeeArgs.front();
@@ -293,29 +292,29 @@ bool extractCollectionVectorElementTypeFromTypeText(const std::string &typeText,
 bool extractExperimentalKeyValueReceiverTemplateArgsFromTypeText(const std::string &typeText,
                                                                  const Context &ctx,
                                                                  std::vector<std::string> &templateArgsOut) {
-  std::string normalizedType = normalizeBindingTypeName(typeText);
+  std::string normalizedType = semantics::normalizeBindingTypeName(typeText);
   while (true) {
     std::string base;
     std::string argText;
-    if (!splitTemplateTypeName(normalizedType, base, argText)) {
+    if (!semantics::splitTemplateTypeName(normalizedType, base, argText)) {
       break;
     }
-    std::string normalizedBase = normalizeBindingTypeName(base);
+    std::string normalizedBase = semantics::normalizeBindingTypeName(base);
     if (!normalizedBase.empty() && normalizedBase.front() == '/') {
       normalizedBase.erase(normalizedBase.begin());
     }
     if (normalizedBase == "Reference" || normalizedBase == "Pointer") {
       std::vector<std::string> args;
-      if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+      if (!semantics::splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
         return false;
       }
-      normalizedType = normalizeBindingTypeName(args.front());
+      normalizedType = semantics::normalizeBindingTypeName(args.front());
       continue;
     }
     if (isUnspecializedExperimentalKeyValueBackingTypeForReceiverResolution(
             normalizedBase) ||
-        isKeyValueCollectionTypeName(normalizedBase)) {
-      return splitTopLevelTemplateArgs(argText, templateArgsOut) && templateArgsOut.size() == 2;
+        semantics::isKeyValueCollectionTypeName(normalizedBase)) {
+      return semantics::splitTopLevelTemplateArgs(argText, templateArgsOut) && templateArgsOut.size() == 2;
     }
     break;
   }
@@ -323,7 +322,7 @@ bool extractExperimentalKeyValueReceiverTemplateArgsFromTypeText(const std::stri
   if (!resolvedPath.empty() && resolvedPath.front() != '/') {
     resolvedPath.insert(resolvedPath.begin(), '/');
   }
-  std::string normalizedResolvedPath = normalizeBindingTypeName(resolvedPath);
+  std::string normalizedResolvedPath = semantics::normalizeBindingTypeName(resolvedPath);
   if (!normalizedResolvedPath.empty() && normalizedResolvedPath.front() == '/') {
     normalizedResolvedPath.erase(normalizedResolvedPath.begin());
   }
@@ -343,7 +342,7 @@ bool extractExperimentalKeyValueReceiverTemplateArgsFromTypeText(const std::stri
     if (!fieldExpr.isBinding) {
       continue;
     }
-    BindingInfo fieldBinding;
+    semantics::BindingInfo fieldBinding;
     if (!extractExplicitBindingType(fieldExpr, fieldBinding)) {
       continue;
     }
@@ -367,29 +366,29 @@ bool extractExperimentalKeyValueReceiverTemplateArgsFromTypeText(const std::stri
 bool extractCollectionVectorValueReceiverTemplateArgsFromTypeText(const std::string &typeText,
                                                                     const Context &ctx,
                                                                     std::vector<std::string> &templateArgsOut) {
-  std::string normalizedType = normalizeBindingTypeName(typeText);
+  std::string normalizedType = semantics::normalizeBindingTypeName(typeText);
   std::string base;
   std::string argText;
-  if (splitTemplateTypeName(normalizedType, base, argText)) {
-    std::string normalizedBase = normalizeBindingTypeName(base);
+  if (semantics::splitTemplateTypeName(normalizedType, base, argText)) {
+    std::string normalizedBase = semantics::normalizeBindingTypeName(base);
     if (!normalizedBase.empty() && normalizedBase.front() == '/') {
       normalizedBase.erase(normalizedBase.begin());
     }
     if ((normalizedBase == "Vector" ||
-         isLegacyExperimentalVectorCompatibilityPath("/" + normalizedBase)) &&
+         semantics::isLegacyExperimentalVectorCompatibilityPath("/" + normalizedBase)) &&
         !argText.empty()) {
-      return splitTopLevelTemplateArgs(argText, templateArgsOut) && templateArgsOut.size() == 1;
+      return semantics::splitTopLevelTemplateArgs(argText, templateArgsOut) && templateArgsOut.size() == 1;
     }
   }
   std::string resolvedPath = normalizedType;
   if (!resolvedPath.empty() && resolvedPath.front() != '/') {
     resolvedPath.insert(resolvedPath.begin(), '/');
   }
-  std::string normalizedResolvedPath = normalizeBindingTypeName(resolvedPath);
+  std::string normalizedResolvedPath = semantics::normalizeBindingTypeName(resolvedPath);
   if (!normalizedResolvedPath.empty() && normalizedResolvedPath.front() == '/') {
     normalizedResolvedPath.erase(normalizedResolvedPath.begin());
   }
-  if (!isLegacyExperimentalVectorCompatibilitySpecializedTypePath(
+  if (!semantics::isLegacyExperimentalVectorCompatibilitySpecializedTypePath(
           "/" + normalizedResolvedPath)) {
     return false;
   }
@@ -401,20 +400,20 @@ bool extractCollectionVectorValueReceiverTemplateArgsFromTypeText(const std::str
     if (!fieldExpr.isBinding || fieldExpr.name != "data") {
       continue;
     }
-    BindingInfo fieldBinding;
+    semantics::BindingInfo fieldBinding;
     if (!extractExplicitBindingType(fieldExpr, fieldBinding)) {
       continue;
     }
-    if (normalizeBindingTypeName(fieldBinding.typeName) != "Pointer" || fieldBinding.typeTemplateArg.empty()) {
+    if (semantics::normalizeBindingTypeName(fieldBinding.typeName) != "Pointer" || fieldBinding.typeTemplateArg.empty()) {
       continue;
     }
     std::string pointeeBase;
     std::string pointeeArgText;
-    if (!splitTemplateTypeName(normalizeBindingTypeName(fieldBinding.typeTemplateArg), pointeeBase, pointeeArgText) ||
-        normalizeBindingTypeName(pointeeBase) != "uninitialized") {
+    if (!semantics::splitTemplateTypeName(semantics::normalizeBindingTypeName(fieldBinding.typeTemplateArg), pointeeBase, pointeeArgText) ||
+        semantics::normalizeBindingTypeName(pointeeBase) != "uninitialized") {
       continue;
     }
-    return splitTopLevelTemplateArgs(pointeeArgText, templateArgsOut) && templateArgsOut.size() == 1;
+    return semantics::splitTopLevelTemplateArgs(pointeeArgText, templateArgsOut) && templateArgsOut.size() == 1;
   }
   return false;
 }
@@ -422,23 +421,23 @@ bool extractCollectionVectorValueReceiverTemplateArgsFromTypeText(const std::str
 bool extractExperimentalSoaVectorValueReceiverTemplateArgsFromTypeText(const std::string &typeText,
                                                                        const Context &ctx,
                                                                        std::vector<std::string> &templateArgsOut) {
-  std::string normalizedType = normalizeBindingTypeName(typeText);
+  std::string normalizedType = semantics::normalizeBindingTypeName(typeText);
   while (true) {
     std::string base;
     std::string argText;
-    if (splitTemplateTypeName(normalizedType, base, argText) && !base.empty()) {
+    if (semantics::splitTemplateTypeName(normalizedType, base, argText) && !base.empty()) {
       const std::string normalizedBase = normalizeCollectionReceiverTypeName(base);
       if (normalizedBase == "Reference" || normalizedBase == "Pointer") {
         std::vector<std::string> args;
-        if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+        if (!semantics::splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
           return false;
         }
-        normalizedType = normalizeBindingTypeName(args.front());
+        normalizedType = semantics::normalizeBindingTypeName(args.front());
         continue;
       }
       if (isTemplateMonomorphSoaReceiverType(normalizedBase) &&
           !argText.empty()) {
-        return splitTopLevelTemplateArgs(argText, templateArgsOut) && templateArgsOut.size() == 1;
+        return semantics::splitTopLevelTemplateArgs(argText, templateArgsOut) && templateArgsOut.size() == 1;
       }
     }
     break;
@@ -447,24 +446,24 @@ bool extractExperimentalSoaVectorValueReceiverTemplateArgsFromTypeText(const std
   if (!resolvedPath.empty() && resolvedPath.front() != '/') {
     resolvedPath.insert(resolvedPath.begin(), '/');
   }
-  const std::string normalizedResolvedPath = normalizeBindingTypeName(resolvedPath);
-  if (!isExperimentalSoaVectorSpecializedTypePath(normalizedResolvedPath)) {
+  const std::string normalizedResolvedPath = semantics::normalizeBindingTypeName(resolvedPath);
+  if (!semantics::isExperimentalSoaVectorSpecializedTypePath(normalizedResolvedPath)) {
     return false;
   }
   for (const auto &[cacheKey, specializedPath] : ctx.specializationCache) {
-    if (normalizeBindingTypeName(specializedPath) != normalizeBindingTypeName(resolvedPath)) {
+    if (semantics::normalizeBindingTypeName(specializedPath) != semantics::normalizeBindingTypeName(resolvedPath)) {
       continue;
     }
     std::string base;
     std::string argText;
-    if (!splitTemplateTypeName(cacheKey, base, argText) || base.empty()) {
+    if (!semantics::splitTemplateTypeName(cacheKey, base, argText) || base.empty()) {
       continue;
     }
     if (!isTemplateMonomorphSoaReceiverType(
             normalizeCollectionReceiverTypeName(base))) {
       continue;
     }
-    if (!splitTopLevelTemplateArgs(argText, templateArgsOut) ||
+    if (!semantics::splitTopLevelTemplateArgs(argText, templateArgsOut) ||
         templateArgsOut.size() != 1) {
       return false;
     }
@@ -481,11 +480,11 @@ bool extractExperimentalSoaVectorValueReceiverTemplateArgsFromTypeText(const std
     if (!fieldExpr.isBinding || fieldExpr.name != "storage") {
       continue;
     }
-    BindingInfo fieldBinding;
+    semantics::BindingInfo fieldBinding;
     if (!extractExplicitBindingType(fieldExpr, fieldBinding)) {
       continue;
     }
-    std::string normalizedFieldType = normalizeBindingTypeName(fieldBinding.typeName);
+    std::string normalizedFieldType = semantics::normalizeBindingTypeName(fieldBinding.typeName);
     if (!normalizedFieldType.empty() && normalizedFieldType.front() == '/') {
       normalizedFieldType.erase(normalizedFieldType.begin());
     }
@@ -494,14 +493,14 @@ bool extractExperimentalSoaVectorValueReceiverTemplateArgsFromTypeText(const std
          normalizedFieldType != collection_paths::memberPathBare(collection_paths::kInternalSoaStorageFolder, collection_paths::kSoaColumnTypeName))) {
       continue;
     }
-    return splitTopLevelTemplateArgs(fieldBinding.typeTemplateArg, templateArgsOut) &&
+    return semantics::splitTopLevelTemplateArgs(fieldBinding.typeTemplateArg, templateArgsOut) &&
            templateArgsOut.size() == 1;
   }
   return false;
 }
 
 bool resolvesExperimentalKeyValueReceiver(const Expr *receiverExpr,
-                                          const std::vector<ParameterInfo> &params,
+                                          const std::vector<semantics::ParameterInfo> &params,
                                           const LocalTypeMap &locals,
                                           bool allowMathBare,
                                           const SubstMap &mapping,
@@ -524,7 +523,7 @@ bool resolvesExperimentalKeyValueReceiver(const Expr *receiverExpr,
                                                       constructorTemplateArgs)) {
     return true;
   }
-  BindingInfo receiverInfo;
+  semantics::BindingInfo receiverInfo;
   if (inferBindingTypeForMonomorph(*receiverExpr, params, locals, allowMathBare, ctx, receiverInfo) &&
       resolvesExperimentalKeyValueTypeText(experimentalCollectionValueBindingTypeText(receiverInfo),
                                            mapping,
@@ -539,7 +538,7 @@ bool resolvesExperimentalKeyValueReceiver(const Expr *receiverExpr,
 }
 
 bool resolvesExperimentalKeyValueBorrowedReceiver(const Expr *receiverExpr,
-                                                  const std::vector<ParameterInfo> &params,
+                                                  const std::vector<semantics::ParameterInfo> &params,
                                                   const LocalTypeMap &locals,
                                                   bool allowMathBare,
                                                   const SubstMap &mapping,
@@ -552,7 +551,7 @@ bool resolvesExperimentalKeyValueBorrowedReceiver(const Expr *receiverExpr,
   if (isRootMapConstructorReceiverExpr(receiverExpr)) {
     return false;
   }
-  BindingInfo receiverInfo;
+  semantics::BindingInfo receiverInfo;
   if (inferBindingTypeForMonomorph(*receiverExpr, params, locals, allowMathBare, ctx, receiverInfo) &&
       resolvesExperimentalKeyValueTypeText(experimentalCollectionBorrowedBindingTypeText(receiverInfo),
                                            mapping,
@@ -565,22 +564,22 @@ bool resolvesExperimentalKeyValueBorrowedReceiver(const Expr *receiverExpr,
       inferExprTypeTextForTemplatedVectorFallback(*receiverExpr, locals, namespacePrefix, ctx, allowMathBare);
   std::string base;
   std::string argText;
-  if (!splitTemplateTypeName(inferredReceiverType, base, argText)) {
+  if (!semantics::splitTemplateTypeName(inferredReceiverType, base, argText)) {
     return false;
   }
-  base = normalizeBindingTypeName(base);
+  base = semantics::normalizeBindingTypeName(base);
   if (base != "Reference" && base != "Pointer") {
     return false;
   }
   std::vector<std::string> args;
-  if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+  if (!semantics::splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
     return false;
   }
   return resolvesExperimentalKeyValueTypeText(args.front(), mapping, allowedParams, namespacePrefix, ctx);
 }
 
 bool resolvesCollectionVectorValueReceiver(const Expr *receiverExpr,
-                                             const std::vector<ParameterInfo> &params,
+                                             const std::vector<semantics::ParameterInfo> &params,
                                              const LocalTypeMap &locals,
                                              bool allowMathBare,
                                              const std::string &namespacePrefix,
@@ -601,7 +600,7 @@ bool resolvesCollectionVectorValueReceiver(const Expr *receiverExpr,
       }
     }
   }
-  BindingInfo receiverInfo;
+  semantics::BindingInfo receiverInfo;
   if (inferBindingTypeForMonomorph(*receiverExpr, params, locals, allowMathBare, ctx, receiverInfo) &&
       resolvesCollectionVectorValueTypeText(experimentalCollectionValueBindingTypeText(receiverInfo))) {
     return true;
@@ -762,7 +761,7 @@ std::string canonicalKeyValueHelperUnknownTargetPath(const std::string &resolved
 }
 
 bool resolveExperimentalKeyValueReceiverTemplateArgs(const Expr *receiverExpr,
-                                                     const std::vector<ParameterInfo> &params,
+                                                     const std::vector<semantics::ParameterInfo> &params,
                                                      const LocalTypeMap &locals,
                                                      bool allowMathBare,
                                                      const std::string &namespacePrefix,
@@ -784,13 +783,13 @@ bool resolveExperimentalKeyValueReceiverTemplateArgs(const Expr *receiverExpr,
                                                       templateArgsOut)) {
     return true;
   }
-  BindingInfo receiverInfo;
+  semantics::BindingInfo receiverInfo;
   if (inferBindingTypeForMonomorph(*receiverExpr, params, locals, allowMathBare, ctx, receiverInfo) &&
-      normalizeBindingTypeName(receiverInfo.typeName) != "Reference" &&
-      normalizeBindingTypeName(receiverInfo.typeName) != "Pointer") {
+      semantics::normalizeBindingTypeName(receiverInfo.typeName) != "Reference" &&
+      semantics::normalizeBindingTypeName(receiverInfo.typeName) != "Pointer") {
     std::string keyType;
     std::string valueType;
-    if (extractKeyValueCollectionTypesFromTypeText(bindingTypeToString(receiverInfo), keyType, valueType)) {
+    if (semantics::extractKeyValueCollectionTypesFromTypeText(bindingTypeToString(receiverInfo), keyType, valueType)) {
       templateArgsOut = {keyType, valueType};
       return true;
     }
@@ -802,11 +801,11 @@ bool resolveExperimentalKeyValueReceiverTemplateArgs(const Expr *receiverExpr,
   }
   // A borrowed `Reference<map<K, V>>` receiver: the `_ref` helpers
   // take the key/value types from the pointee.
-  if (normalizeBindingTypeName(receiverInfo.typeName) == "Reference" ||
-      normalizeBindingTypeName(receiverInfo.typeName) == "Pointer") {
+  if (semantics::normalizeBindingTypeName(receiverInfo.typeName) == "Reference" ||
+      semantics::normalizeBindingTypeName(receiverInfo.typeName) == "Pointer") {
     std::string keyType;
     std::string valueType;
-    if (extractKeyValueCollectionTypesFromTypeText(receiverInfo.typeTemplateArg, keyType, valueType)) {
+    if (semantics::extractKeyValueCollectionTypesFromTypeText(receiverInfo.typeTemplateArg, keyType, valueType)) {
       templateArgsOut = {keyType, valueType};
       return true;
     }
@@ -827,15 +826,15 @@ std::string experimentalKeyValueHelperPathForCanonicalHelper(const std::string &
 
 std::string experimentalVectorHelperPathForCanonicalHelper(const std::string &path) {
   std::string helperName;
-  if (!resolveCanonicalVectorHelperNameFromResolvedPath(path, helperName)) {
+  if (!semantics::resolveCanonicalVectorHelperNameFromResolvedPath(path, helperName)) {
     return {};
   }
-  const StdlibSurfaceMetadata *metadata = vectorHelperSurfaceMetadata();
+  const StdlibSurfaceMetadata *metadata = semantics::vectorHelperSurfaceMetadata();
   if (metadata == nullptr) {
     return {};
   }
-  return preferredPublishedCollectionLoweringPath(
-      helperName, metadata->id, legacyExperimentalVectorCompatibilityPrefix());
+  return semantics::preferredPublishedCollectionLoweringPath(
+      helperName, metadata->id, semantics::legacyExperimentalVectorCompatibilityPrefix());
 }
 
 std::string experimentalSoaVectorHelperPathForCanonicalHelper(const std::string &path) {
@@ -848,21 +847,21 @@ std::string experimentalSoaVectorHelperPathForCanonicalHelper(const std::string 
   };
   const std::string canonicalSoaCountPath = canonicalizeSoaHelperPath(path);
   const std::string canonicalSoaGetPath =
-      canonicalizeSoaHelperPath(canonicalizeLegacySoaGetHelperPath(path));
+      canonicalizeSoaHelperPath(semantics::canonicalizeLegacySoaGetHelperPath(path));
   const std::string canonicalSoaRefPath =
-      canonicalizeSoaHelperPath(canonicalizeLegacySoaRefHelperPath(path));
-  if (isLegacyOrCanonicalSoaHelperPath(canonicalSoaCountPath, collection_helpers::kCountRef) ||
-      isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, collection_helpers::kGetRef) ||
-      isLegacyOrCanonicalSoaHelperPath(canonicalSoaRefPath, collection_helpers::kRefRef)) {
+      canonicalizeSoaHelperPath(semantics::canonicalizeLegacySoaRefHelperPath(path));
+  if (semantics::isLegacyOrCanonicalSoaHelperPath(canonicalSoaCountPath, collection_helpers::kCountRef) ||
+      semantics::isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, collection_helpers::kGetRef) ||
+      semantics::isLegacyOrCanonicalSoaHelperPath(canonicalSoaRefPath, collection_helpers::kRefRef)) {
     return {};
   }
   auto resolvesToBorrowedSoaHelper = [](const std::string &candidatePath) {
     const std::string canonicalHelperPath = primec::stdlibSurfaceCanonicalHelperPath(
         primec::StdlibSurfaceId::CollectionsColumnarHelpers,
         candidatePath);
-    return canonicalHelperPath == compatibilitySoaHelperTargetPath(collection_helpers::kCountRef) ||
-           canonicalHelperPath == compatibilitySoaHelperTargetPath(collection_helpers::kGetRef) ||
-           canonicalHelperPath == compatibilitySoaHelperTargetPath(collection_helpers::kRefRef);
+    return canonicalHelperPath == semantics::compatibilitySoaHelperTargetPath(collection_helpers::kCountRef) ||
+           canonicalHelperPath == semantics::compatibilitySoaHelperTargetPath(collection_helpers::kGetRef) ||
+           canonicalHelperPath == semantics::compatibilitySoaHelperTargetPath(collection_helpers::kRefRef);
   };
   if (resolvesToBorrowedSoaHelper(canonicalSoaCountPath) ||
       resolvesToBorrowedSoaHelper(canonicalSoaGetPath) ||
@@ -891,15 +890,15 @@ std::string experimentalSoaVectorHelperPathForCanonicalHelper(const std::string 
 }
 
 bool isCollectionVectorPublicHelperPath(const std::string &path) {
-  if (path.rfind(legacyExperimentalVectorCompatibilityPrefix(), 0) != 0) {
+  if (path.rfind(semantics::legacyExperimentalVectorCompatibilityPrefix(), 0) != 0) {
     return false;
   }
   std::string helperName;
-  return resolveVectorCompatibilityHelperNameFromResolvedPath(path, helperName);
+  return semantics::resolveVectorCompatibilityHelperNameFromResolvedPath(path, helperName);
 }
 
 bool isExperimentalSoaVectorPublicHelperPath(const std::string &path) {
-  return isExperimentalSoaVectorHelperFamilyPath(path);
+  return semantics::isExperimentalSoaVectorHelperFamilyPath(path);
 }
 
 bool hasVisibleStdCollectionsImportForPath(const Context &ctx, const std::string &path) {
@@ -909,7 +908,7 @@ bool hasVisibleStdCollectionsImportForPath(const Context &ctx, const std::string
   if (usesStdlibScopedImportAliases("", ctx)) {
     return true;
   }
-  if (path.rfind(legacyExperimentalVectorCompatibilityPrefix(), 0) == 0) {
+  if (path.rfind(semantics::legacyExperimentalVectorCompatibilityPrefix(), 0) == 0) {
     return false;
   }
   const auto &importPaths = ctx.program.sourceImports.empty() ? ctx.program.imports : ctx.program.sourceImports;
@@ -942,7 +941,7 @@ std::string experimentalKeyValueHelperPathForWrapperHelper(
 }
 
 bool resolveCollectionVectorValueReceiverTemplateArgs(const Expr *receiverExpr,
-                                                        const std::vector<ParameterInfo> &params,
+                                                        const std::vector<semantics::ParameterInfo> &params,
                                                         const LocalTypeMap &locals,
                                                         bool allowMathBare,
                                                         const std::string &namespacePrefix,
@@ -967,7 +966,7 @@ bool resolveCollectionVectorValueReceiverTemplateArgs(const Expr *receiverExpr,
       }
     }
   }
-  BindingInfo receiverInfo;
+  semantics::BindingInfo receiverInfo;
   if (inferBindingTypeForMonomorph(*receiverExpr, params, locals, allowMathBare, ctx, receiverInfo) &&
       extractCollectionVectorValueReceiverTemplateArgsFromTypeText(
           experimentalCollectionValueBindingTypeText(receiverInfo), ctx, templateArgsOut)) {

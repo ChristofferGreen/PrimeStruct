@@ -42,7 +42,6 @@
 #include <sstream>
 #include "primec/support/CompileArena.h"
 #include "primec/support/CollectionHelperNames.h"
-#include "TemplateMonomorphUsings.h"
 
 namespace primec {
 
@@ -141,17 +140,17 @@ inline bool resolveReceiverType(const Expr &receiver,
     // diff-audit is a genuine cross-check, not a tautology.
     std::function<std::string(std::string)> qualifyImportedCollectionTypeText =
         [&](std::string typeText) -> std::string {
-      typeText = normalizeBindingTypeName(typeText);
+      typeText = semantics::normalizeBindingTypeName(typeText);
       if (typeText.empty()) {
         return typeText;
       }
       std::string base;
       std::string argText;
-      if (splitTemplateTypeName(typeText, base, argText) && !base.empty()) {
-        base = normalizeBindingTypeName(base);
+      if (semantics::splitTemplateTypeName(typeText, base, argText) && !base.empty()) {
+        base = semantics::normalizeBindingTypeName(base);
         if ((base == "Reference" || base == "Pointer") && !argText.empty()) {
           std::vector<std::string> args;
-          if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+          if (!semantics::splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
             return typeText;
           }
           return base + "<" + qualifyImportedCollectionTypeText(args.front()) + ">";
@@ -174,7 +173,7 @@ inline bool resolveReceiverType(const Expr &receiver,
       }
       return typeText;
     };
-    auto bindingTypeText = [](const BindingInfo &binding) {
+    auto bindingTypeText = [](const semantics::BindingInfo &binding) {
       std::string typeText = binding.typeName;
       if (!binding.typeTemplateArg.empty()) {
         typeText += "<" + binding.typeTemplateArg + ">";
@@ -182,10 +181,10 @@ inline bool resolveReceiverType(const Expr &receiver,
       return typeText;
     };
     auto isBorrowedSoaReceiverType = [&](std::string typeText) {
-      typeText = normalizeBindingTypeName(qualifyImportedCollectionTypeText(typeText));
+      typeText = semantics::normalizeBindingTypeName(qualifyImportedCollectionTypeText(typeText));
       std::string base;
       std::string argText;
-      if (!splitTemplateTypeName(typeText, base, argText) || argText.empty()) {
+      if (!semantics::splitTemplateTypeName(typeText, base, argText) || argText.empty()) {
         return false;
       }
       const std::string normalizedBase = normalizeCollectionReceiverTypeName(base);
@@ -196,7 +195,7 @@ inline bool resolveReceiverType(const Expr &receiver,
           normalizeCollectionReceiverTypeName(
               unwrapCollectionReceiverEnvelope(argText)));
     };
-    auto unwrapImportedCollectionReceiverType = [&](const BindingInfo &binding) {
+    auto unwrapImportedCollectionReceiverType = [&](const semantics::BindingInfo &binding) {
       return unwrapCollectionReceiverEnvelope(
           qualifyImportedCollectionTypeText(bindingTypeText(binding)));
     };
@@ -208,8 +207,8 @@ inline bool resolveReceiverType(const Expr &receiver,
     out.wrappedBaseTypeName = wrappedReceiverTypeName;
     std::string wrapBase;
     std::string wrapArg;
-    const std::string normalizedWrapped = normalizeBindingTypeName(wrappedReceiverTypeName);
-    if (splitTemplateTypeName(normalizedWrapped, wrapBase, wrapArg) && !wrapArg.empty()) {
+    const std::string normalizedWrapped = semantics::normalizeBindingTypeName(wrappedReceiverTypeName);
+    if (semantics::splitTemplateTypeName(normalizedWrapped, wrapBase, wrapArg) && !wrapArg.empty()) {
       const std::string normalizedWrapBase = normalizeCollectionReceiverTypeName(wrapBase);
       out.isWrapped = (normalizedWrapBase == "Reference" || normalizedWrapBase == "Pointer");
     }
@@ -291,17 +290,17 @@ inline bool resolveReceiverTypeFromCallExprForTemplateMonomorph(
   }
   std::function<std::string(std::string)> qualifyImportedCollectionTypeText =
       [&](std::string typeText) -> std::string {
-    typeText = normalizeBindingTypeName(typeText);
+    typeText = semantics::normalizeBindingTypeName(typeText);
     if (typeText.empty()) {
       return typeText;
     }
     std::string base;
     std::string argText;
-    if (splitTemplateTypeName(typeText, base, argText) && !base.empty()) {
-      base = normalizeBindingTypeName(base);
+    if (semantics::splitTemplateTypeName(typeText, base, argText) && !base.empty()) {
+      base = semantics::normalizeBindingTypeName(base);
       if ((base == "Reference" || base == "Pointer") && !argText.empty()) {
         std::vector<std::string> args;
-        if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+        if (!semantics::splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
           return typeText;
         }
         return base + "<" + qualifyImportedCollectionTypeText(args.front()) + ">";
@@ -324,7 +323,7 @@ inline bool resolveReceiverTypeFromCallExprForTemplateMonomorph(
     }
     return typeText;
   };
-  auto bindingTypeText = [](const BindingInfo &binding) {
+  auto bindingTypeText = [](const semantics::BindingInfo &binding) {
     std::string typeText = binding.typeName;
     if (!binding.typeTemplateArg.empty()) {
       typeText += "<" + binding.typeTemplateArg + ">";
@@ -332,10 +331,10 @@ inline bool resolveReceiverTypeFromCallExprForTemplateMonomorph(
     return typeText;
   };
   auto isBorrowedSoaReceiverType = [&](std::string typeText) {
-    typeText = normalizeBindingTypeName(qualifyImportedCollectionTypeText(typeText));
+    typeText = semantics::normalizeBindingTypeName(qualifyImportedCollectionTypeText(typeText));
     std::string base;
     std::string argText;
-    if (!splitTemplateTypeName(typeText, base, argText) || argText.empty()) {
+    if (!semantics::splitTemplateTypeName(typeText, base, argText) || argText.empty()) {
       return false;
     }
     const std::string normalizedBase = normalizeCollectionReceiverTypeName(base);
@@ -346,7 +345,7 @@ inline bool resolveReceiverTypeFromCallExprForTemplateMonomorph(
         normalizeCollectionReceiverTypeName(
             unwrapCollectionReceiverEnvelope(argText)));
   };
-  auto unwrapImportedCollectionReceiverType = [&](const BindingInfo &binding) {
+  auto unwrapImportedCollectionReceiverType = [&](const semantics::BindingInfo &binding) {
     return unwrapCollectionReceiverEnvelope(
         qualifyImportedCollectionTypeText(bindingTypeText(binding)));
   };
@@ -355,7 +354,7 @@ inline bool resolveReceiverTypeFromCallExprForTemplateMonomorph(
   bool isBorrowedSoaReceiver = false;
   std::string typeName;
 
-  BindingInfo receiverInfo;
+  semantics::BindingInfo receiverInfo;
   if (inferBindingTypeForMonomorph(receiver, {}, locals, hasMathImport(ctx), ctx, receiverInfo)) {
     wrappedReceiverTypeName = qualifyImportedCollectionTypeText(bindingTypeText(receiverInfo));
     isBorrowedSoaReceiver = isBorrowedSoaReceiverType(bindingTypeText(receiverInfo));
@@ -402,7 +401,7 @@ inline bool resolveReceiverTypeFromCallExprForTemplateMonomorph(
         break;
       }
       if (typeName.empty()) {
-        BindingInfo inferredReturn;
+        semantics::BindingInfo inferredReturn;
         if (inferDefinitionReturnBindingForTemplatedFallback(
                 defIt->second, hasMathImport(ctx), ctx, inferredReturn)) {
           wrappedReceiverTypeName = qualifyImportedCollectionTypeText(bindingTypeText(inferredReturn));
@@ -413,7 +412,7 @@ inline bool resolveReceiverTypeFromCallExprForTemplateMonomorph(
       }
     } else {
       std::string collection;
-      if (getBuiltinCollectionName(receiver, collection)) {
+      if (semantics::getBuiltinCollectionName(receiver, collection)) {
         typeName = collection;
       }
     }

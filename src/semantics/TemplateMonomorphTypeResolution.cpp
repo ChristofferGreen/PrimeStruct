@@ -35,7 +35,6 @@
 #include <sstream>
 
 #include "primec/support/CompileArena.h"
-#include "TemplateMonomorphUsings.h"
 
 namespace primec {
 
@@ -372,7 +371,7 @@ ResolvedType resolveTypeStringImpl(std::string input,
   }
   std::string base;
   std::string argText;
-  if (!splitTemplateTypeName(trimmed, base, argText)) {
+  if (!semantics::splitTemplateTypeName(trimmed, base, argText)) {
     if (isEnclosingTemplateParamName(trimmed, namespacePrefix, ctx)) {
       result.text = trimmed;
       result.concrete = false;
@@ -397,7 +396,7 @@ ResolvedType resolveTypeStringImpl(std::string input,
     return result;
   }
   std::vector<std::string> args;
-  if (!splitTopLevelTemplateArgs(argText, args)) {
+  if (!semantics::splitTopLevelTemplateArgs(argText, args)) {
     error = "invalid template arguments for " + base;
     result.text.clear();
     result.concrete = false;
@@ -422,7 +421,7 @@ ResolvedType resolveTypeStringImpl(std::string input,
     }
   }
   const auto explicitTemplateArgFactKey = [&](const std::string &targetPath) {
-    return targetPath + "<" + joinTemplateArgs(resolvedArgs) + ">";
+    return targetPath + "<" + semantics::joinTemplateArgs(resolvedArgs) + ">";
   };
   const auto consumeExplicitTemplateArgFact = [&](const std::string &targetPath, ResolvedType &resolvedOut) {
     const std::string factKey = explicitTemplateArgFactKey(targetPath);
@@ -445,10 +444,10 @@ ResolvedType resolveTypeStringImpl(std::string input,
       return;
     }
     ctx.explicitTemplateArgFactsForTesting.push_back(
-        ExplicitTemplateArgResolutionFactForTesting{
+        semantics::ExplicitTemplateArgResolutionFactForTesting{
             namespacePrefix,
             targetPath,
-            joinTemplateArgs(resolvedArgs),
+            semantics::joinTemplateArgs(resolvedArgs),
             resolvedType.text,
             resolvedType.concrete,
         });
@@ -466,7 +465,7 @@ ResolvedType resolveTypeStringImpl(std::string input,
       return result;
     }
     if (!allConcrete) {
-      result.text = base + "<" + joinTemplateArgs(resolvedArgs) + ">";
+      result.text = base + "<" + semantics::joinTemplateArgs(resolvedArgs) + ">";
       result.concrete = false;
       recordExplicitTemplateArgFact(overloadBasePath, result);
       return result;
@@ -495,7 +494,7 @@ ResolvedType resolveTypeStringImpl(std::string input,
       recordExplicitTemplateArgFact(normalizedBase, result);
       return result;
     }
-    result.text = normalizedBase + "<" + joinTemplateArgs(resolvedArgs) + ">";
+    result.text = normalizedBase + "<" + semantics::joinTemplateArgs(resolvedArgs) + ">";
     result.concrete = allConcrete;
     if (allConcrete) {
       publishExplicitTemplateArgFact(normalizedBase, result);
@@ -521,7 +520,7 @@ ResolvedType resolveTypeStringImpl(std::string input,
     return result;
   }
   if (!allConcrete) {
-    result.text = base + "<" + joinTemplateArgs(resolvedArgs) + ">";
+    result.text = base + "<" + semantics::joinTemplateArgs(resolvedArgs) + ">";
     result.concrete = false;
     recordExplicitTemplateArgFact(resolvedBasePath, result);
     return result;
@@ -574,13 +573,13 @@ bool rewriteTransforms(std::vector<Transform> &transforms,
         if (resolvedName.text != transform.name) {
           std::string base;
           std::string argText;
-          if (splitTemplateTypeName(resolvedName.text, base, argText)) {
+          if (semantics::splitTemplateTypeName(resolvedName.text, base, argText)) {
             if (!transform.templateArgs.empty()) {
               error = "template arguments cannot be combined on " + transform.name;
               return false;
             }
             std::vector<std::string> args;
-            if (!splitTopLevelTemplateArgs(argText, args)) {
+            if (!semantics::splitTopLevelTemplateArgs(argText, args)) {
               error = "invalid template arguments for " + resolvedName.text;
               return false;
             }
@@ -637,7 +636,7 @@ bool rewriteTransforms(std::vector<Transform> &transforms,
           return false;
         }
         if (canResolveTemplatedName) {
-          std::string templatedName = transform.name + "<" + joinTemplateArgs(transform.templateArgs) + ">";
+          std::string templatedName = transform.name + "<" + semantics::joinTemplateArgs(transform.templateArgs) + ">";
           ResolvedType resolvedName = resolveTypeString(templatedName, mapping, allowedParams, namespacePrefix, ctx, error);
           if (!error.empty()) {
             return false;
@@ -645,9 +644,9 @@ bool rewriteTransforms(std::vector<Transform> &transforms,
 
           std::string base;
           std::string argText;
-          if (splitTemplateTypeName(resolvedName.text, base, argText)) {
+          if (semantics::splitTemplateTypeName(resolvedName.text, base, argText)) {
             std::vector<std::string> args;
-            if (!splitTopLevelTemplateArgs(argText, args)) {
+            if (!semantics::splitTopLevelTemplateArgs(argText, args)) {
               error = "invalid template arguments for " + resolvedName.text;
               return false;
             }
@@ -683,13 +682,13 @@ std::string resolveCalleePath(const Expr &expr,
                               const std::string &namespacePrefix,
                               const Context &ctx,
                               const LocalTypeMap *locals,
-                              const std::vector<ParameterInfo> *params) {
+                              const std::vector<semantics::ParameterInfo> *params) {
   auto rewriteBuiltinCollectionImportAlias = [&](const std::string &resolvedPath) -> std::string {
     if (expr.isMethodCall) {
       return resolvedPath;
     }
     std::string builtinCollection;
-    if (!getBuiltinCollectionName(expr, builtinCollection)) {
+    if (!semantics::getBuiltinCollectionName(expr, builtinCollection)) {
       return resolvedPath;
     }
     if (expr.name != builtinCollection) {
@@ -711,13 +710,13 @@ std::string resolveCalleePath(const Expr &expr,
       return resolvedPath;
     }
     const StdlibSurfaceMetadata *vectorCtorMetadata =
-        vectorConstructorSurfaceMetadata();
+        semantics::vectorConstructorSurfaceMetadata();
     const std::string vectorConstructorPath =
         vectorCtorMetadata == nullptr
-            ? canonicalVectorCompatibilityHelperPathOrFallback("vector")
+            ? semantics::canonicalVectorCompatibilityHelperPathOrFallback("vector")
             : std::string(vectorCtorMetadata->canonicalPath);
     const std::string vectorTypePath =
-        canonicalVectorCompatibilityPrefixOrFallback() + "/Vector";
+        semantics::canonicalVectorCompatibilityPrefixOrFallback() + "/Vector";
     if (resolvedPath == vectorTypePath &&
         ctx.sourceDefs.count(vectorTypePath) == 0 &&
         (ctx.sourceDefs.count(vectorConstructorPath) > 0 ||
@@ -860,7 +859,7 @@ std::string resolveCalleePath(const Expr &expr,
   };
   std::string builtinCollection;
   if (!expr.isMethodCall &&
-      getBuiltinCollectionName(expr, builtinCollection) &&
+      semantics::getBuiltinCollectionName(expr, builtinCollection) &&
       expr.name == builtinCollection) {
     if (const std::string *importAlias =
             lookupScopedImportAliasForNamespace(expr.name, namespacePrefix, ctx);

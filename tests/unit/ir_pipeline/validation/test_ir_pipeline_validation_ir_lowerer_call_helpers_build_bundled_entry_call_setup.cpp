@@ -1,4 +1,4 @@
-#include "test_ir_pipeline_validation_helpers.h"
+#include "test_ir_pipeline_validation_callback_factories.h"
 #include "primec/frontend/FrontendSyntax.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
@@ -207,10 +207,7 @@ TEST_CASE("ir lowerer call helpers classify struct definitions") {
 
   primec::Definition implicitStruct;
   implicitStruct.fullPath = "/pkg/ImplicitStruct";
-  primec::Expr field;
-  field.kind = primec::Expr::Kind::Name;
-  field.isBinding = true;
-  field.name = "value";
+  primec::Expr field = primec::validation_test_support::makeBindingNameExpr("value");
   implicitStruct.statements.push_back(field);
   CHECK(primec::ir_lowerer::isStructDefinition(implicitStruct));
 
@@ -289,10 +286,7 @@ TEST_CASE("ir lowerer struct type helpers build definition map and struct names"
 
   primec::Definition implicitStruct;
   implicitStruct.fullPath = "/pkg/StructB";
-  primec::Expr field;
-  field.kind = primec::Expr::Kind::Name;
-  field.isBinding = true;
-  field.name = "value";
+  primec::Expr field = primec::validation_test_support::makeBindingNameExpr("value");
   implicitStruct.statements.push_back(field);
 
   primec::Definition nonStruct;
@@ -343,27 +337,18 @@ TEST_CASE("ir lowerer struct type helpers append layout fields from bindings") {
   primec::Definition structDef;
   structDef.fullPath = "/pkg/S";
 
-  primec::Expr firstField;
-  firstField.kind = primec::Expr::Kind::Name;
-  firstField.isBinding = true;
-  firstField.name = "a";
+  primec::Expr firstField = primec::validation_test_support::makeBindingNameExpr("a");
 
   primec::Expr nonBindingStmt;
   nonBindingStmt.kind = primec::Expr::Kind::Call;
   nonBindingStmt.name = "noop";
 
-  primec::Expr secondField;
-  secondField.kind = primec::Expr::Kind::Name;
-  secondField.isBinding = true;
-  secondField.name = "b";
+  primec::Expr secondField = primec::validation_test_support::makeBindingNameExpr("b");
   primec::Transform staticTransform;
   staticTransform.name = "static";
   secondField.transforms.push_back(staticTransform);
 
-  primec::Expr thirdField;
-  thirdField.kind = primec::Expr::Kind::Name;
-  thirdField.isBinding = true;
-  thirdField.name = "c";
+  primec::Expr thirdField = primec::validation_test_support::makeBindingNameExpr("c");
 
   structDef.statements = {firstField, nonBindingStmt, secondField, thirdField};
 
@@ -488,10 +473,7 @@ TEST_CASE("ir lowerer struct type helpers resolve setup import paths") {
 }
 
 TEST_CASE("ir lowerer struct field binding helpers resolve envelope values") {
-  primec::Expr bindingExpr;
-  bindingExpr.kind = primec::Expr::Kind::Name;
-  bindingExpr.isBinding = true;
-  bindingExpr.name = "tmp";
+  primec::Expr bindingExpr = primec::validation_test_support::makeBindingNameExpr("tmp");
 
   primec::Expr literalExpr;
   literalExpr.kind = primec::Expr::Kind::Literal;

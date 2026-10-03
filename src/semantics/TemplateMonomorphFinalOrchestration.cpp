@@ -36,7 +36,6 @@
 
 #include "primec/support/CompileArena.h"
 #include "primec/support/CollectionHelperNames.h"
-#include "TemplateMonomorphUsings.h"
 
 namespace primec {
 
@@ -54,7 +53,7 @@ void buildImportAliases(Context &ctx) {
   ctx.stdlibScopedImportAliasTargets.clear();
   ctx.importAliasTargets.clear();
   const std::string InternalVectorTypePath =
-      canonicalVectorTypeIdentityPrefix() + "Vector";
+      semantics::canonicalVectorTypeIdentityPrefix() + "Vector";
   const auto &directImportPaths = ctx.program.sourceImports.empty()
                                       ? ctx.program.imports
                                       : ctx.program.sourceImports;
@@ -338,7 +337,7 @@ void buildImportAliases(Context &ctx) {
           continue;
         }
         if (shouldSkipWildcardAlias(prefix, remainder) ||
-            isRootBuiltinName(remainder)) {
+            semantics::isRootBuiltinName(remainder)) {
           continue;
         }
         registerAlias(ctx.transitiveImportAliases, remainder, publicPath);
@@ -353,7 +352,7 @@ void buildImportAliases(Context &ctx) {
           continue;
         }
         if (shouldSkipWildcardAlias(prefix, remainder) ||
-            isRootBuiltinName(remainder)) {
+            semantics::isRootBuiltinName(remainder)) {
           continue;
         }
         registerAlias(ctx.transitiveImportAliases, remainder, publicPath);
@@ -374,7 +373,7 @@ void buildImportAliases(Context &ctx) {
           continue;
         }
         if (shouldSkipWildcardAlias(prefix, remainder) ||
-            isRootBuiltinName(remainder)) {
+            semantics::isRootBuiltinName(remainder)) {
           continue;
         }
         registerDefinitionAlias(ctx.transitiveImportAliases, remainder, path);

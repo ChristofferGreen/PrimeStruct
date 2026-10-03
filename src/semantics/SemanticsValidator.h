@@ -36,6 +36,8 @@ struct ValidateExprCallState;
 
 struct ValidateBindingState;
 
+struct ValidateBindingReferenceState;
+
 class SemanticsValidator {
 public:
   struct ReturnResolutionSnapshotEntry {

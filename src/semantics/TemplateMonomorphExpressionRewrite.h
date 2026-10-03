@@ -14,7 +14,6 @@
 #include "primec/support/StdlibSurfaceRegistry.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "TemplateMonomorphExperimentalCollectionReturnSetup.h"
-#include "TemplateMonomorphUsings.h"
 
 namespace primec {
 
@@ -34,7 +33,7 @@ bool rewriteExpr(Expr &expr,
                  Context &ctx,
                  std::string &error,
                  const LocalTypeMap &locals,
-                 const std::vector<ParameterInfo> &params,
+                 const std::vector<semantics::ParameterInfo> &params,
                  bool allowMathBare);
 
 } // namespace primec

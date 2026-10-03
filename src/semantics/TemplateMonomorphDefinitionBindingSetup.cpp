@@ -35,7 +35,6 @@
 #include <sstream>
 
 #include "primec/support/CompileArena.h"
-#include "TemplateMonomorphUsings.h"
 
 namespace primec {
 
@@ -43,9 +42,9 @@ bool tryAppendDefinitionParameterBinding(Expr &param,
                                          bool allowMathBare,
                                          Context &ctx,
                                          LocalTypeMap &locals,
-                                         std::vector<ParameterInfo> &paramsOut) {
-  BindingInfo info;
-  if (isCompileTimeTypeBinding(param)) {
+                                         std::vector<semantics::ParameterInfo> &paramsOut) {
+  semantics::BindingInfo info;
+  if (semantics::isCompileTimeTypeBinding(param)) {
     return false;
   }
   if (extractExplicitBindingType(param, info)) {
@@ -55,7 +54,7 @@ bool tryAppendDefinitionParameterBinding(Expr &param,
     } else {
       locals[param.name] = info;
     }
-    ParameterInfo paramInfo;
+    semantics::ParameterInfo paramInfo;
     paramInfo.name = param.name;
     paramInfo.binding = info;
     if (param.args.size() == 1) {
@@ -71,7 +70,7 @@ bool tryAppendDefinitionParameterBinding(Expr &param,
     return false;
   }
   locals[param.name] = info;
-  ParameterInfo paramInfo;
+  semantics::ParameterInfo paramInfo;
   paramInfo.name = param.name;
   paramInfo.binding = info;
   paramInfo.defaultExpr = &param.args.front();
@@ -86,7 +85,7 @@ bool rewriteDefinitionParameters(std::vector<Expr> &parameters,
                                  Context &ctx,
                                  std::string &error,
                                  LocalTypeMap &locals,
-                                 std::vector<ParameterInfo> &paramsOut,
+                                 std::vector<semantics::ParameterInfo> &paramsOut,
                                  bool allowMathBare) {
   for (auto &param : parameters) {
     if (!rewriteExpr(param, mapping, allowedParams, namespacePrefix, ctx, error, locals, paramsOut, allowMathBare)) {
@@ -98,13 +97,13 @@ bool rewriteDefinitionParameters(std::vector<Expr> &parameters,
 }
 
 void recordDefinitionStatementBindingLocal(Expr &stmt,
-                                           const std::vector<ParameterInfo> &params,
+                                           const std::vector<semantics::ParameterInfo> &params,
                                            const LocalTypeMap &locals,
                                            bool allowMathBare,
                                            Context &ctx,
                                            LocalTypeMap &localsOut) {
-  BindingInfo info;
-  if (isCompileTimeTypeBinding(stmt)) {
+  semantics::BindingInfo info;
+  if (semantics::isCompileTimeTypeBinding(stmt)) {
     info.typeName = "type";
     localsOut[stmt.name] = info;
     return;

@@ -40,7 +40,7 @@
 
 namespace primec {
 
-PhaseStatus rewriteExprPhase4([[maybe_unused]] Expr &expr, [[maybe_unused]] const SubstMap &mapping, [[maybe_unused]] const std::unordered_set<std::string> &allowedParams, [[maybe_unused]] const std::string &namespacePrefix, [[maybe_unused]] Context &ctx, [[maybe_unused]] std::string &error, [[maybe_unused]] const LocalTypeMap &locals, [[maybe_unused]] const std::vector<ParameterInfo> &params, RewriteExprState &st) {
+PhaseStatus rewriteExprPhase4([[maybe_unused]] Expr &expr, [[maybe_unused]] const SubstMap &mapping, [[maybe_unused]] const std::unordered_set<std::string> &allowedParams, [[maybe_unused]] const std::string &namespacePrefix, [[maybe_unused]] Context &ctx, [[maybe_unused]] std::string &error, [[maybe_unused]] const LocalTypeMap &locals, [[maybe_unused]] const std::vector<semantics::ParameterInfo> &params, RewriteExprState &st) {
   [[maybe_unused]] auto &allowMathBare = st.allowMathBare;
   [[maybe_unused]] auto &collectionHelperReceiverExpr = st.collectionHelperReceiverExpr;
   [[maybe_unused]] auto &resolveExperimentalSoaVectorReceiverTemplateArgs = st.resolveExperimentalSoaVectorReceiverTemplateArgs;
@@ -59,16 +59,16 @@ PhaseStatus rewriteExprPhase4([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
       }
       std::string base;
       std::string argText;
-      if (!splitTemplateTypeName(normalizeBindingTypeName(receiverTypeText), base, argText)) {
+      if (!semantics::splitTemplateTypeName(semantics::normalizeBindingTypeName(receiverTypeText), base, argText)) {
         return false;
       }
-      const std::string normalizedBase = normalizeBindingTypeName(base);
+      const std::string normalizedBase = semantics::normalizeBindingTypeName(base);
       if ((normalizedBase != "Reference" && normalizedBase != "Pointer") ||
           argText.empty()) {
         return false;
       }
       std::vector<std::string> wrappedArgs;
-      if (!splitTopLevelTemplateArgs(argText, wrappedArgs) || wrappedArgs.size() != 1) {
+      if (!semantics::splitTopLevelTemplateArgs(argText, wrappedArgs) || wrappedArgs.size() != 1) {
         return false;
       }
       std::vector<std::string> receiverTemplateArgs;
@@ -77,7 +77,7 @@ PhaseStatus rewriteExprPhase4([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
     };
     auto definitionReturnsBorrowedExperimentalSoaVector =
         [&](const Definition &definition) {
-          BindingInfo inferredReturn;
+          semantics::BindingInfo inferredReturn;
           if (inferDefinitionReturnBindingForTemplatedFallback(
                   definition, allowMathBare, ctx, inferredReturn) &&
               inferFromTypeText(bindingTypeToString(inferredReturn))) {
@@ -92,7 +92,7 @@ PhaseStatus rewriteExprPhase4([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
           }
           return false;
         };
-    BindingInfo receiverInfo;
+    semantics::BindingInfo receiverInfo;
     if (inferBindingTypeForMonomorph(*receiverExpr, params, locals, allowMathBare, ctx, receiverInfo) &&
         inferFromTypeText(bindingTypeToString(receiverInfo))) {
       return true;
@@ -157,31 +157,31 @@ PhaseStatus rewriteExprPhase4([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
       if (receiverTypeText.empty()) {
         return false;
       }
-      receiverTypeText = normalizeBindingTypeName(receiverTypeText);
+      receiverTypeText = semantics::normalizeBindingTypeName(receiverTypeText);
       while (true) {
         std::string base;
         std::string argText;
-        if (!splitTemplateTypeName(receiverTypeText, base, argText) || base.empty()) {
+        if (!semantics::splitTemplateTypeName(receiverTypeText, base, argText) || base.empty()) {
           break;
         }
-        const std::string normalizedBase = normalizeBindingTypeName(base);
+        const std::string normalizedBase = semantics::normalizeBindingTypeName(base);
         if (normalizedBase == "Reference" || normalizedBase == "Pointer") {
           std::vector<std::string> wrappedArgs;
-          if (!splitTopLevelTemplateArgs(argText, wrappedArgs) || wrappedArgs.size() != 1) {
+          if (!semantics::splitTopLevelTemplateArgs(argText, wrappedArgs) || wrappedArgs.size() != 1) {
             return false;
           }
-          receiverTypeText = normalizeBindingTypeName(wrappedArgs.front());
+          receiverTypeText = semantics::normalizeBindingTypeName(wrappedArgs.front());
           continue;
         }
-        return isExperimentalSoaVectorSpecializedTypePath(normalizedBase);
+        return semantics::isExperimentalSoaVectorSpecializedTypePath(normalizedBase);
       }
       if (!receiverTypeText.empty() && receiverTypeText.front() != '/') {
         receiverTypeText.insert(receiverTypeText.begin(), '/');
       }
-      return isExperimentalSoaVectorSpecializedTypePath(
-          normalizeBindingTypeName(receiverTypeText));
+      return semantics::isExperimentalSoaVectorSpecializedTypePath(
+          semantics::normalizeBindingTypeName(receiverTypeText));
     };
-    BindingInfo receiverInfo;
+    semantics::BindingInfo receiverInfo;
     if (inferBindingTypeForMonomorph(*receiverExpr,
                                      params,
                                      locals,
@@ -203,7 +203,7 @@ PhaseStatus rewriteExprPhase4([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
       while (true) {
         std::string base;
         std::string argText;
-        if (!splitTemplateTypeName(receiverTypeText, base, argText) || base.empty()) {
+        if (!semantics::splitTemplateTypeName(receiverTypeText, base, argText) || base.empty()) {
           return normalizeCollectionReceiverTypeName(receiverTypeText);
         }
         const std::string normalizedBase = normalizeCollectionReceiverTypeName(base);
@@ -211,7 +211,7 @@ PhaseStatus rewriteExprPhase4([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
           return normalizedBase;
         }
         std::vector<std::string> receiverArgs;
-        if (!splitTopLevelTemplateArgs(argText, receiverArgs) || receiverArgs.size() != 1) {
+        if (!semantics::splitTopLevelTemplateArgs(argText, receiverArgs) || receiverArgs.size() != 1) {
           return {};
         }
         receiverTypeText = receiverArgs.front();
@@ -220,7 +220,7 @@ PhaseStatus rewriteExprPhase4([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
     if (receiverExpr == nullptr) {
       return {};
     }
-    BindingInfo receiverInfo;
+    semantics::BindingInfo receiverInfo;
     if (inferBindingTypeForMonomorph(*receiverExpr, params, locals, allowMathBare, ctx, receiverInfo)) {
       const std::string family = inferFromTypeText(bindingTypeToString(receiverInfo));
       if (!family.empty()) {
@@ -234,9 +234,9 @@ PhaseStatus rewriteExprPhase4([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
   auto preferredBorrowedPathForPublicOrCompatibility =
       [](const std::string &canonicalPath, std::string_view borrowedHelper) {
         if (canonicalPath.rfind(templateMonomorphPublicSoaHelperPrefix(), 0) == 0) {
-          return publicSoaHelperTargetPath(borrowedHelper);
+          return semantics::publicSoaHelperTargetPath(borrowedHelper);
         }
-        return compatibilitySoaHelperTargetPath(borrowedHelper);
+        return semantics::compatibilitySoaHelperTargetPath(borrowedHelper);
       };
   st.isCanonicalSoaBorrowedWrapperHelper = [&](const std::string &path) {
     auto canonicalizeSoaHelperPath = [](std::string canonicalPath) {
@@ -248,15 +248,15 @@ PhaseStatus rewriteExprPhase4([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
     };
     const std::string canonicalSoaCountPath = canonicalizeSoaHelperPath(path);
     const std::string canonicalSoaGetPath =
-        canonicalizeSoaHelperPath(canonicalizeLegacySoaGetHelperPath(path));
+        canonicalizeSoaHelperPath(semantics::canonicalizeLegacySoaGetHelperPath(path));
     const std::string canonicalSoaRefPath =
-        canonicalizeSoaHelperPath(canonicalizeLegacySoaRefHelperPath(path));
+        canonicalizeSoaHelperPath(semantics::canonicalizeLegacySoaRefHelperPath(path));
     const std::string canonicalSoaToAosPath =
-        canonicalizeLegacySoaToAosHelperPath(path);
-    return isLegacyOrCanonicalSoaHelperPath(canonicalSoaCountPath, collection_helpers::kCountRef) ||
-           isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, collection_helpers::kGetRef) ||
-           isLegacyOrCanonicalSoaHelperPath(canonicalSoaRefPath, collection_helpers::kRefRef) ||
-           isLegacyOrCanonicalSoaHelperPath(
+        semantics::canonicalizeLegacySoaToAosHelperPath(path);
+    return semantics::isLegacyOrCanonicalSoaHelperPath(canonicalSoaCountPath, collection_helpers::kCountRef) ||
+           semantics::isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, collection_helpers::kGetRef) ||
+           semantics::isLegacyOrCanonicalSoaHelperPath(canonicalSoaRefPath, collection_helpers::kRefRef) ||
+           semantics::isLegacyOrCanonicalSoaHelperPath(
                canonicalSoaToAosPath, templateMonomorphSoaToAosHelperName(true));
   };
   [[maybe_unused]] auto &isCanonicalSoaBorrowedWrapperHelper = st.isCanonicalSoaBorrowedWrapperHelper;
@@ -270,42 +270,42 @@ PhaseStatus rewriteExprPhase4([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
     };
     const std::string canonicalSoaCountPath = canonicalizeSoaHelperPath(path);
     const std::string canonicalSoaGetPath =
-        canonicalizeSoaHelperPath(canonicalizeLegacySoaGetHelperPath(path));
+        canonicalizeSoaHelperPath(semantics::canonicalizeLegacySoaGetHelperPath(path));
     const std::string canonicalSoaRefPath =
-        canonicalizeSoaHelperPath(canonicalizeLegacySoaRefHelperPath(path));
+        canonicalizeSoaHelperPath(semantics::canonicalizeLegacySoaRefHelperPath(path));
     const std::string canonicalSoaToAosPath =
-        canonicalizeLegacySoaToAosHelperPath(path);
+        semantics::canonicalizeLegacySoaToAosHelperPath(path);
     if (path == "/count" || path == "count") {
-      return compatibilitySoaHelperTargetPath(collection_helpers::kCountRef);
+      return semantics::compatibilitySoaHelperTargetPath(collection_helpers::kCountRef);
     }
     if (path == "/get" || path == "get") {
-      return compatibilitySoaHelperTargetPath(collection_helpers::kGetRef);
+      return semantics::compatibilitySoaHelperTargetPath(collection_helpers::kGetRef);
     }
     if (path == "/ref" || path == "ref") {
-      return compatibilitySoaHelperTargetPath(collection_helpers::kRefRef);
+      return semantics::compatibilitySoaHelperTargetPath(collection_helpers::kRefRef);
     }
     const std::string samePathSoaToAos =
         "/" + templateMonomorphSoaToAosHelperName();
     if (path == samePathSoaToAos ||
         path == templateMonomorphSoaToAosHelperName()) {
-      return compatibilitySoaHelperTargetPath(
+      return semantics::compatibilitySoaHelperTargetPath(
           templateMonomorphSoaToAosHelperName(true));
     }
-    if (isLegacyOrCanonicalSoaHelperPath(canonicalSoaCountPath, "count")) {
+    if (semantics::isLegacyOrCanonicalSoaHelperPath(canonicalSoaCountPath, "count")) {
       return preferredBorrowedPathForPublicOrCompatibility(canonicalSoaCountPath,
                                                            collection_helpers::kCountRef);
     }
-    if (isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, "get")) {
+    if (semantics::isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, "get")) {
       return preferredBorrowedPathForPublicOrCompatibility(canonicalSoaGetPath,
                                                            collection_helpers::kGetRef);
     }
-    if (isLegacyOrCanonicalSoaHelperPath(canonicalSoaRefPath, "ref")) {
+    if (semantics::isLegacyOrCanonicalSoaHelperPath(canonicalSoaRefPath, "ref")) {
       return preferredBorrowedPathForPublicOrCompatibility(canonicalSoaRefPath,
                                                            collection_helpers::kRefRef);
     }
-    if (isLegacyOrCanonicalSoaHelperPath(
+    if (semantics::isLegacyOrCanonicalSoaHelperPath(
             canonicalSoaToAosPath, templateMonomorphSoaToAosHelperName())) {
-      return compatibilitySoaHelperTargetPath(
+      return semantics::compatibilitySoaHelperTargetPath(
           templateMonomorphSoaToAosHelperName(true));
     }
     return std::string{};
@@ -340,12 +340,12 @@ PhaseStatus rewriteExprPhase4([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
         if (defIt == ctx.sourceDefs.end() || defIt->second.parameters.empty()) {
           return false;
         }
-        BindingInfo paramBinding;
+        semantics::BindingInfo paramBinding;
         if (!extractExplicitBindingType(defIt->second.parameters.front(), paramBinding)) {
           return false;
         }
         return isTemplateMonomorphSoaReceiverType(
-                   normalizeBindingTypeName(paramBinding.typeName)) &&
+                   semantics::normalizeBindingTypeName(paramBinding.typeName)) &&
                !paramBinding.typeTemplateArg.empty();
       };
       const std::string ownedHelperPath(helperPath);
@@ -386,13 +386,13 @@ PhaseStatus rewriteExprPhase4([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
       if (defIt == ctx.sourceDefs.end()) {
         return false;
       }
-      BindingInfo inferredReturn;
+      semantics::BindingInfo inferredReturn;
       if (!inferDefinitionReturnBindingForTemplatedFallback(
               defIt->second, hasMathImport(ctx), const_cast<Context &>(ctx), inferredReturn)) {
         return false;
       }
       return isTemplateMonomorphSoaReceiverType(
-                 normalizeBindingTypeName(inferredReturn.typeName)) &&
+                 semantics::normalizeBindingTypeName(inferredReturn.typeName)) &&
              !inferredReturn.typeTemplateArg.empty();
     };
     auto canonicalizeSoaHelperPath = [](std::string canonicalPath) {
@@ -404,9 +404,9 @@ PhaseStatus rewriteExprPhase4([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
     };
     std::string helperName;
     bool resolvesVectorFamilyPath = false;
-    if (isCanonicalVectorCompatibilityPath(path)) {
+    if (semantics::isCanonicalVectorCompatibilityPath(path)) {
       helperName =
-          std::string(stripUnrootedCanonicalVectorCompatibilityPrefix(path));
+          std::string(semantics::stripUnrootedCanonicalVectorCompatibilityPrefix(path));
       resolvesVectorFamilyPath = true;
     } else if (path.rfind(templateMonomorphCompatibilitySoaHelperPrefix(), 0) == 0) {
       helperName = path.substr(templateMonomorphCompatibilitySoaHelperPrefix().size());
@@ -479,15 +479,15 @@ PhaseStatus rewriteExprPhase4([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
         expr.namespacePrefix.empty() &&
         expr.name == helperName &&
         expr.name.find('/') == std::string::npos &&
-        isPublishedVectorMutatorHelperName(helperName);
+        semantics::isPublishedVectorMutatorHelperName(helperName);
     const bool isMethodPublishedVectorMutatorSugar =
-        expr.isMethodCall && isPublishedVectorMutatorHelperName(helperName);
+        expr.isMethodCall && semantics::isPublishedVectorMutatorHelperName(helperName);
     if ((isBarePublishedVectorMutatorSugar ||
          isMethodPublishedVectorMutatorSugar) &&
         resolvesCollectionVectorValueReceiver(
             receiverExpr, params, locals, allowMathBare, namespacePrefix, ctx)) {
       error = "unknown call target: " +
-              canonicalVectorCompatibilityHelperPathOrFallback(helperName);
+              semantics::canonicalVectorCompatibilityHelperPathOrFallback(helperName);
       return path;
     }
     if (receiverFamily == "vector" &&
@@ -514,7 +514,7 @@ PhaseStatus rewriteExprPhase4([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
     const auto receiverHasVisibleCanonicalCollectionHelper =
         [&](std::string_view candidateHelperName) {
           const std::string preferred =
-              canonicalVectorCompatibilityHelperPathOrFallback(candidateHelperName);
+              semantics::canonicalVectorCompatibilityHelperPathOrFallback(candidateHelperName);
           return receiverFamily == "vector" &&
                  hasVisibleStdCollectionsImportForPath(ctx, preferred) &&
                  ctx.sourceDefs.count(preferred) > 0;
@@ -595,12 +595,12 @@ PhaseStatus rewriteExprPhase4([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
     if (!resolvesVectorFamilyPath &&
         (receiverFamily == "vector" || receiverFamily == "array")) {
       const std::string preferred =
-          canonicalVectorCompatibilityHelperPathOrFallback(helperName);
+          semantics::canonicalVectorCompatibilityHelperPathOrFallback(helperName);
       if (hasVisibleStdCollectionsImportForPath(ctx, preferred) &&
           ctx.sourceDefs.count(preferred) > 0) {
         return preferred;
       }
-      if (isPublishedVectorMutatorHelperName(helperName)) {
+      if (semantics::isPublishedVectorMutatorHelperName(helperName)) {
         return preferred;
       }
     }
@@ -610,7 +610,7 @@ PhaseStatus rewriteExprPhase4([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
   return PhaseStatus::Continue;
 }
 
-PhaseStatus rewriteExprPhase5([[maybe_unused]] Expr &expr, [[maybe_unused]] const SubstMap &mapping, [[maybe_unused]] const std::unordered_set<std::string> &allowedParams, [[maybe_unused]] const std::string &namespacePrefix, [[maybe_unused]] Context &ctx, [[maybe_unused]] std::string &error, [[maybe_unused]] const LocalTypeMap &locals, [[maybe_unused]] const std::vector<ParameterInfo> &params, RewriteExprState &st) {
+PhaseStatus rewriteExprPhase5([[maybe_unused]] Expr &expr, [[maybe_unused]] const SubstMap &mapping, [[maybe_unused]] const std::unordered_set<std::string> &allowedParams, [[maybe_unused]] const std::string &namespacePrefix, [[maybe_unused]] Context &ctx, [[maybe_unused]] std::string &error, [[maybe_unused]] const LocalTypeMap &locals, [[maybe_unused]] const std::vector<semantics::ParameterInfo> &params, RewriteExprState &st) {
   [[maybe_unused]] auto &allowMathBare = st.allowMathBare;
   [[maybe_unused]] auto &isCanonicalBuiltinKeyValueHelperPath = st.isCanonicalBuiltinKeyValueHelperPath;
   [[maybe_unused]] auto &isCanonicalStdlibCollectionHelperPath = st.isCanonicalStdlibCollectionHelperPath;
@@ -657,15 +657,15 @@ PhaseStatus rewriteExprPhase5([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
     const bool borrowedExperimentalSoaReceiver =
         resolvesBorrowedExperimentalSoaVectorReceiver(helperReceiverExpr);
     const bool isCanonicalNonBorrowedSoaHelperPath =
-        path == compatibilitySoaHelperTargetPath("count") ||
-        path == publicSoaHelperTargetPath("count") ||
-        path == compatibilitySoaHelperTargetPath("get") ||
-        path == publicSoaHelperTargetPath("get") ||
-        path == compatibilitySoaHelperTargetPath("ref") ||
-        path == publicSoaHelperTargetPath("ref") ||
-        path == compatibilitySoaHelperTargetPath(
+        path == semantics::compatibilitySoaHelperTargetPath("count") ||
+        path == semantics::publicSoaHelperTargetPath("count") ||
+        path == semantics::compatibilitySoaHelperTargetPath("get") ||
+        path == semantics::publicSoaHelperTargetPath("get") ||
+        path == semantics::compatibilitySoaHelperTargetPath("ref") ||
+        path == semantics::publicSoaHelperTargetPath("ref") ||
+        path == semantics::compatibilitySoaHelperTargetPath(
                     templateMonomorphSoaToAosHelperName()) ||
-        path == publicSoaHelperTargetPath(
+        path == semantics::publicSoaHelperTargetPath(
                     templateMonomorphSoaToAosHelperName());
     if (borrowedExperimentalSoaReceiver &&
         isCanonicalNonBorrowedSoaHelperPath) {
@@ -674,9 +674,9 @@ PhaseStatus rewriteExprPhase5([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
     if ((path.rfind(templateMonomorphCompatibilitySoaHelperPrefix(), 0) == 0 ||
          path.rfind(templateMonomorphPublicSoaHelperPrefix(), 0) == 0) &&
         helperReceiverExpr != nullptr) {
-      if (path == publicSoaHelperTargetPath(
+      if (path == semantics::publicSoaHelperTargetPath(
                       templateMonomorphSoaToAosHelperName()) ||
-          path == publicSoaHelperTargetPath(
+          path == semantics::publicSoaHelperTargetPath(
                       templateMonomorphSoaToAosHelperName(true))) {
         return true;
       }
@@ -694,7 +694,7 @@ PhaseStatus rewriteExprPhase5([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
       }
     }
     if (hasVisibleStdCollectionsImportForPath(ctx, path) && ctx.templateDefs.count(path) > 0) {
-      if (isCanonicalVectorCompatibilityPath(path) &&
+      if (semantics::isCanonicalVectorCompatibilityPath(path) &&
           !resolvesBuiltinVectorReceiver(collectionHelperReceiverExpr(expr)) &&
           !resolvesCollectionVectorValueReceiver(
               collectionHelperReceiverExpr(expr), params, locals, allowMathBare, namespacePrefix, ctx)) {
@@ -803,7 +803,7 @@ PhaseStatus rewriteExprPhase5([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
         expr.name.find('/') == std::string::npos && expr.args.size() == 1 &&
         !hasNamedCallArguments(expr) && expr.templateArgs.empty() &&
         !expr.hasBodyArguments && expr.bodyArguments.empty()) {
-      BindingInfo receiverInfo;
+      semantics::BindingInfo receiverInfo;
       if (inferBindingTypeForMonomorph(expr.args.front(),
                                        params,
                                        locals,
@@ -812,7 +812,7 @@ PhaseStatus rewriteExprPhase5([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
                                        receiverInfo) &&
           receiverInfo.typeTemplateArg.empty()) {
         const std::string receiverType =
-            normalizeBindingTypeName(receiverInfo.typeName);
+            semantics::normalizeBindingTypeName(receiverInfo.typeName);
         if (receiverType == "i32" || receiverType == "i64" ||
             receiverType == "u64" || receiverType == "bool" ||
             receiverType == "f32" || receiverType == "f64" ||
@@ -853,8 +853,8 @@ PhaseStatus rewriteExprPhase5([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
           normalizedName.rfind(
               templateMonomorphPublicSoaHelperPrefix(false), 0) == 0 ||
           normalizedPrefix ==
-              trimLeadingSlash(compatibilitySoaHelperTargetPath("")) ||
-          normalizedPrefix == trimLeadingSlash(publicSoaHelperTargetPath(""));
+              semantics::trimLeadingSlash(semantics::compatibilitySoaHelperTargetPath("")) ||
+          normalizedPrefix == semantics::trimLeadingSlash(semantics::publicSoaHelperTargetPath(""));
       if (!usesCanonicalSoaSurface) {
         return std::string{};
       }
@@ -887,9 +887,9 @@ PhaseStatus rewriteExprPhase5([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
         return std::string(collection_helpers::kRefRef);
       }
       if ((normalizedPrefix == templateMonomorphSoaReceiverTypeName() ||
-           normalizedPrefix == trimLeadingSlash(compatibilitySoaHelperTargetPath("")) ||
+           normalizedPrefix == semantics::trimLeadingSlash(semantics::compatibilitySoaHelperTargetPath("")) ||
            normalizedPrefix == "soa" ||
-           normalizedPrefix == trimLeadingSlash(publicSoaHelperTargetPath(""))) &&
+           normalizedPrefix == semantics::trimLeadingSlash(semantics::publicSoaHelperTargetPath(""))) &&
           (collection_helpers::isGetHelperName(normalizedName) ||
            collection_helpers::isRefHelperName(normalizedName))) {
         return normalizedName;
@@ -915,10 +915,10 @@ PhaseStatus rewriteExprPhase5([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
       }
       const std::string unavailablePath =
           (collection_helpers::isGetHelperName(helperReturnSoaRefHelper))
-              ? compatibilitySoaHelperTargetPath(helperReturnSoaRefHelper)
+              ? semantics::compatibilitySoaHelperTargetPath(helperReturnSoaRefHelper)
               : templateMonomorphSamePathSoaHelperPrefix() +
                     helperReturnSoaRefHelper;
-      error = soaUnavailableMethodDiagnostic(unavailablePath);
+      error = semantics::soaUnavailableMethodDiagnostic(unavailablePath);
       return st.done(false);
     }
   }

@@ -1,4 +1,4 @@
-#include "test_ir_pipeline_validation_helpers.h"
+#include "test_ir_pipeline_validation_callback_factories.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
@@ -233,19 +233,13 @@ TEST_CASE("ir lowerer imports structs setup step builds maps and layouts") {
   structTransform.name = "struct";
   structDef.transforms.push_back(structTransform);
 
-  primec::Expr xField;
-  xField.kind = primec::Expr::Kind::Name;
-  xField.isBinding = true;
-  xField.name = "x";
+  primec::Expr xField = primec::validation_test_support::makeBindingNameExpr("x");
   primec::Transform xType;
   xType.name = "i32";
   xField.transforms.push_back(xType);
   structDef.statements.push_back(xField);
 
-  primec::Expr yField;
-  yField.kind = primec::Expr::Kind::Name;
-  yField.isBinding = true;
-  yField.name = "y";
+  primec::Expr yField = primec::validation_test_support::makeBindingNameExpr("y");
   primec::Transform yType;
   yType.name = "i32";
   yField.transforms.push_back(yType);
@@ -284,10 +278,7 @@ TEST_CASE("ir lowerer imports structs setup step rejects unknown field envelopes
   structTransform.name = "struct";
   structDef.transforms.push_back(structTransform);
 
-  primec::Expr badField;
-  badField.kind = primec::Expr::Kind::Name;
-  badField.isBinding = true;
-  badField.name = "value";
+  primec::Expr badField = primec::validation_test_support::makeBindingNameExpr("value");
   primec::Transform badType;
   badType.name = "UnknownEnvelope";
   badField.transforms.push_back(badType);

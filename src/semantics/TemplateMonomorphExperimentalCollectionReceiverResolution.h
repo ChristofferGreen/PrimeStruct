@@ -14,13 +14,12 @@
 #include "primec/support/StdlibSurfaceRegistry.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "TemplateMonomorphExperimentalCollectionReturnSetup.h"
-#include "TemplateMonomorphUsings.h"
 
 namespace primec {
 
-std::string experimentalCollectionValueBindingTypeText(const BindingInfo &binding);
+std::string experimentalCollectionValueBindingTypeText(const semantics::BindingInfo &binding);
 
-std::string experimentalCollectionBorrowedBindingTypeText(const BindingInfo &binding);
+std::string experimentalCollectionBorrowedBindingTypeText(const semantics::BindingInfo &binding);
 
 std::string experimentalKeyValueBackingLeafForReceiverResolution(std::string typeName);
 
@@ -41,7 +40,7 @@ bool isPublishedMapConstructorReceiverExpr(const Expr *receiverExpr,
 
 bool inferPublishedMapConstructorReceiverTemplateArgs(
     const Expr *receiverExpr,
-    const std::vector<ParameterInfo> &params,
+    const std::vector<semantics::ParameterInfo> &params,
     const LocalTypeMap &locals,
     bool allowMathBare,
     const std::string &namespacePrefix,
@@ -65,7 +64,7 @@ bool extractExperimentalSoaVectorValueReceiverTemplateArgsFromTypeText(const std
                                                                        std::vector<std::string> &templateArgsOut);
 
 bool resolvesExperimentalKeyValueReceiver(const Expr *receiverExpr,
-                                          const std::vector<ParameterInfo> &params,
+                                          const std::vector<semantics::ParameterInfo> &params,
                                           const LocalTypeMap &locals,
                                           bool allowMathBare,
                                           const SubstMap &mapping,
@@ -74,7 +73,7 @@ bool resolvesExperimentalKeyValueReceiver(const Expr *receiverExpr,
                                           Context &ctx);
 
 bool resolvesExperimentalKeyValueBorrowedReceiver(const Expr *receiverExpr,
-                                                  const std::vector<ParameterInfo> &params,
+                                                  const std::vector<semantics::ParameterInfo> &params,
                                                   const LocalTypeMap &locals,
                                                   bool allowMathBare,
                                                   const SubstMap &mapping,
@@ -83,7 +82,7 @@ bool resolvesExperimentalKeyValueBorrowedReceiver(const Expr *receiverExpr,
                                                   Context &ctx);
 
 bool resolvesCollectionVectorValueReceiver(const Expr *receiverExpr,
-                                             const std::vector<ParameterInfo> &params,
+                                             const std::vector<semantics::ParameterInfo> &params,
                                              const LocalTypeMap &locals,
                                              bool allowMathBare,
                                              const std::string &namespacePrefix,
@@ -116,7 +115,7 @@ std::string templateMonomorphPreferredKeyValueHelperSpellingForMember(
 std::string canonicalKeyValueHelperUnknownTargetPath(const std::string &resolvedPath);
 
 bool resolveExperimentalKeyValueReceiverTemplateArgs(const Expr *receiverExpr,
-                                                     const std::vector<ParameterInfo> &params,
+                                                     const std::vector<semantics::ParameterInfo> &params,
                                                      const LocalTypeMap &locals,
                                                      bool allowMathBare,
                                                      const std::string &namespacePrefix,
@@ -139,7 +138,7 @@ std::string experimentalKeyValueHelperPathForWrapperHelper(
     const std::string &path);
 
 bool resolveCollectionVectorValueReceiverTemplateArgs(const Expr *receiverExpr,
-                                                        const std::vector<ParameterInfo> &params,
+                                                        const std::vector<semantics::ParameterInfo> &params,
                                                         const LocalTypeMap &locals,
                                                         bool allowMathBare,
                                                         const std::string &namespacePrefix,

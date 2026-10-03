@@ -14,12 +14,11 @@
 #include "primec/support/StdlibSurfaceRegistry.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "TemplateMonomorphExperimentalCollectionReturnSetup.h"
-#include "TemplateMonomorphUsings.h"
 
 namespace primec {
 
 bool resolveExperimentalConstructorTargetTypeText(const Expr &targetExpr,
-                                                  const std::vector<ParameterInfo> &params,
+                                                  const std::vector<semantics::ParameterInfo> &params,
                                                   const LocalTypeMap &locals,
                                                   bool allowMathBare,
                                                   const std::string &namespacePrefix,
@@ -28,13 +27,13 @@ bool resolveExperimentalConstructorTargetTypeText(const Expr &targetExpr,
 
 template <typename RewriteTargetValueFn>
 void rewriteExperimentalAssignTargetValue(Expr &callExpr,
-                                          const std::vector<ParameterInfo> &params,
+                                          const std::vector<semantics::ParameterInfo> &params,
                                           const LocalTypeMap &locals,
                                           bool allowMathBare,
                                           const std::string &namespacePrefix,
                                           Context &ctx,
                                           RewriteTargetValueFn &&rewriteTargetValueForType) {
-  if (!isAssignCall(callExpr) || callExpr.args.size() != 2) {
+  if (!semantics::isAssignCall(callExpr) || callExpr.args.size() != 2) {
     return;
   }
   std::string targetTypeText;
@@ -47,13 +46,13 @@ void rewriteExperimentalAssignTargetValue(Expr &callExpr,
 
 template <typename RewriteTargetValueFn>
 void rewriteExperimentalInitTargetValue(Expr &callExpr,
-                                        const std::vector<ParameterInfo> &params,
+                                        const std::vector<semantics::ParameterInfo> &params,
                                         const LocalTypeMap &locals,
                                         bool allowMathBare,
                                         const std::string &namespacePrefix,
                                         Context &ctx,
                                         RewriteTargetValueFn &&rewriteTargetValueForType) {
-  if (!isSimpleCallName(callExpr, "init") || callExpr.args.size() != 2) {
+  if (!semantics::isSimpleCallName(callExpr, "init") || callExpr.args.size() != 2) {
     return;
   }
   std::string targetTypeText;

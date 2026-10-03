@@ -213,3 +213,12 @@
   PhaseStatus validateBindingPhase5(const std::vector<ParameterInfo> &params, std::unordered_map<std::string, BindingInfo> &locals, const Expr &stmt, const std::string &namespacePrefix, bool &handled, ValidateBindingState &st);
   PhaseStatus validateBindingPhase6(const std::vector<ParameterInfo> &params, std::unordered_map<std::string, BindingInfo> &locals, const Expr &stmt, const std::string &namespacePrefix, bool &handled, ValidateBindingState &st);
   PhaseStatus validateBindingPhase7(const std::vector<ParameterInfo> &params, std::unordered_map<std::string, BindingInfo> &locals, const Expr &stmt, const std::string &namespacePrefix, bool &handled, ValidateBindingState &st);
+
+  // Phase functions of validateBindingPhase5 (TODO-5385).
+  friend struct ValidateBindingReferenceState;
+  PhaseStatus validateBindingReferencePhase1(const std::vector<ParameterInfo> &params, std::unordered_map<std::string, BindingInfo> &locals, const Expr &stmt, const std::string &namespacePrefix, bool &handled, ValidateBindingState &st, ValidateBindingReferenceState &st2);
+  PhaseStatus validateBindingReferencePhase2(const std::vector<ParameterInfo> &params, std::unordered_map<std::string, BindingInfo> &locals, const Expr &stmt, const std::string &namespacePrefix, bool &handled, ValidateBindingState &st, ValidateBindingReferenceState &st2);
+  PhaseStatus validateBindingReferencePhase3(const std::vector<ParameterInfo> &params, std::unordered_map<std::string, BindingInfo> &locals, const Expr &stmt, const std::string &namespacePrefix, bool &handled, ValidateBindingState &st, ValidateBindingReferenceState &st2);
+  PhaseStatus validateBindingReferencePhase4(const std::vector<ParameterInfo> &params, std::unordered_map<std::string, BindingInfo> &locals, const Expr &stmt, const std::string &namespacePrefix, bool &handled, ValidateBindingState &st, ValidateBindingReferenceState &st2);
+  PhaseStatus validateBindingReferencePhase5(const std::vector<ParameterInfo> &params, std::unordered_map<std::string, BindingInfo> &locals, const Expr &stmt, const std::string &namespacePrefix, bool &handled, ValidateBindingState &st, ValidateBindingReferenceState &st2);
+  PhaseStatus validateBindingReferencePhase6(const std::vector<ParameterInfo> &params, std::unordered_map<std::string, BindingInfo> &locals, const Expr &stmt, const std::string &namespacePrefix, bool &handled, ValidateBindingState &st, ValidateBindingReferenceState &st2);

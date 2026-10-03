@@ -35,7 +35,6 @@
 #include <sstream>
 
 #include "primec/support/CompileArena.h"
-#include "TemplateMonomorphUsings.h"
 
 namespace primec {
 
@@ -64,7 +63,7 @@ ExperimentalCollectionReturnRewritePlan inferExperimentalCollectionReturnRewrite
 
   if (!plan.expectedCollectionVectorReturn && !plan.expectedExperimentalKeyValueReturn &&
       !plan.hasExplicitNonAutoReturn) {
-    BindingInfo inferredReturnInfo;
+    semantics::BindingInfo inferredReturnInfo;
     if (inferDefinitionReturnBindingForTemplatedFallback(def, allowMathBare, ctx, inferredReturnInfo)) {
       std::string inferredReturnType = inferredReturnInfo.typeName;
       if (!inferredReturnInfo.typeTemplateArg.empty()) {
@@ -83,7 +82,7 @@ DefinitionReturnStatementSelection determineDefinitionReturnStatementSelection(c
   DefinitionReturnStatementSelection selection;
   selection.implicitReturnStmtIndex = def.statements.size();
   for (size_t stmtIndex = 0; stmtIndex < def.statements.size(); ++stmtIndex) {
-    if (isReturnCall(def.statements[stmtIndex])) {
+    if (semantics::isReturnCall(def.statements[stmtIndex])) {
       selection.sawExplicitReturn = true;
       break;
     }

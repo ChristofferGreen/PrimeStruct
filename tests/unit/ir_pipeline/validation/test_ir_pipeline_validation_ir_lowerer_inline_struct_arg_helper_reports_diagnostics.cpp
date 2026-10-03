@@ -893,10 +893,7 @@ TEST_CASE("ir lowerer inline param helper preserves explicit vector argument met
 }
 
 TEST_CASE("ir lowerer inline param helper materializes variadic args packs") {
-  primec::Expr valuesParam;
-  valuesParam.kind = primec::Expr::Kind::Name;
-  valuesParam.isBinding = true;
-  valuesParam.name = "values";
+  primec::Expr valuesParam = primec::validation_test_support::makeBindingNameExpr("values");
 
   int32_t nextLocal = 5;
   primec::ir_lowerer::LocalMap calleeLocals;
@@ -964,10 +961,7 @@ TEST_CASE("ir lowerer inline param helper materializes variadic args packs") {
 }
 
 TEST_CASE("ir lowerer inline param helper materializes FileError variadic args packs") {
-  primec::Expr valuesParam;
-  valuesParam.kind = primec::Expr::Kind::Name;
-  valuesParam.isBinding = true;
-  valuesParam.name = "values";
+  primec::Expr valuesParam = primec::validation_test_support::makeBindingNameExpr("values");
 
   primec::Expr firstArg;
   firstArg.kind = primec::Expr::Kind::Name;
@@ -1044,10 +1038,7 @@ TEST_CASE("ir lowerer inline param helper materializes FileError variadic args p
 }
 
 TEST_CASE("ir lowerer inline param helper materializes File handle variadic args packs") {
-  primec::Expr valuesParam;
-  valuesParam.kind = primec::Expr::Kind::Name;
-  valuesParam.isBinding = true;
-  valuesParam.name = "values";
+  primec::Expr valuesParam = primec::validation_test_support::makeBindingNameExpr("values");
 
   primec::Expr firstArg;
   firstArg.kind = primec::Expr::Kind::Name;
@@ -1124,15 +1115,9 @@ TEST_CASE("ir lowerer inline param helper materializes File handle variadic args
 }
 
 TEST_CASE("ir lowerer inline param helper aliases spread args packs") {
-  primec::Expr valuesParam;
-  valuesParam.kind = primec::Expr::Kind::Name;
-  valuesParam.isBinding = true;
-  valuesParam.name = "values";
+  primec::Expr valuesParam = primec::validation_test_support::makeBindingNameExpr("values");
 
-  primec::Expr spreadArg;
-  spreadArg.kind = primec::Expr::Kind::Name;
-  spreadArg.name = "source";
-  spreadArg.isSpread = true;
+  primec::Expr spreadArg = primec::validation_test_support::makeSpreadNameExpr("source");
 
   primec::ir_lowerer::LocalMap callerLocals;
   primec::ir_lowerer::LocalInfo sourceInfo;

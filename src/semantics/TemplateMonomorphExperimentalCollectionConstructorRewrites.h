@@ -14,14 +14,13 @@
 #include "primec/support/StdlibSurfaceRegistry.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "TemplateMonomorphExperimentalCollectionReturnSetup.h"
-#include "TemplateMonomorphUsings.h"
 
 namespace primec {
 
 std::string canonicalizeExperimentalCollectionResolvedPath(std::string path);
 
 bool isExperimentalMapEntryArgument(const Expr &argExpr,
-                                    const std::vector<ParameterInfo> &params,
+                                    const std::vector<semantics::ParameterInfo> &params,
                                     const LocalTypeMap &locals,
                                     bool allowMathBare,
                                     const std::string &namespacePrefix,
@@ -31,7 +30,7 @@ bool inferExperimentalCollectionConstructorTemplateArgs(const std::string &origi
                                                         const std::string &helperPath,
                                                         Expr &valueExpr,
                                                         const LocalTypeMap &locals,
-                                                        const std::vector<ParameterInfo> &params,
+                                                        const std::vector<semantics::ParameterInfo> &params,
                                                         const SubstMap &mapping,
                                                         const std::unordered_set<std::string> &allowedParams,
                                                         const std::string &namespacePrefix,
@@ -43,7 +42,7 @@ bool isCanonicalMapConstructorRewriteSourcePath(std::string_view originalPath);
 
 bool rewriteCanonicalExperimentalKeyValueConstructorExpr(Expr &valueExpr,
                                                          const LocalTypeMap &locals,
-                                                         const std::vector<ParameterInfo> &params,
+                                                         const std::vector<semantics::ParameterInfo> &params,
                                                          const SubstMap &mapping,
                                                          const std::unordered_set<std::string> &allowedParams,
                                                          const std::string &namespacePrefix,
@@ -53,7 +52,7 @@ bool rewriteCanonicalExperimentalKeyValueConstructorExpr(Expr &valueExpr,
 
 bool rewriteCanonicalExperimentalVectorConstructorExpr(Expr &valueExpr,
                                                        const LocalTypeMap &locals,
-                                                       const std::vector<ParameterInfo> &params,
+                                                       const std::vector<semantics::ParameterInfo> &params,
                                                        const SubstMap &mapping,
                                                        const std::unordered_set<std::string> &allowedParams,
                                                        const std::string &namespacePrefix,

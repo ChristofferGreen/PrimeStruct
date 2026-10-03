@@ -35,16 +35,15 @@
 #include <sstream>
 
 #include "primec/support/CompileArena.h"
-#include "TemplateMonomorphUsings.h"
 
 namespace primec {
 
 bool inferBlockBodyBindingTypeForMonomorph(const Expr &initializer,
-                                           const std::vector<ParameterInfo> &params,
+                                           const std::vector<semantics::ParameterInfo> &params,
                                            const LocalTypeMap &locals,
                                            bool allowMathBare,
                                            Context &ctx,
-                                           BindingInfo &infoOut) {
+                                           semantics::BindingInfo &infoOut) {
   if (initializer.kind != Expr::Kind::Call || (!initializer.hasBodyArguments && initializer.bodyArguments.empty())) {
     return false;
   }
@@ -52,7 +51,7 @@ bool inferBlockBodyBindingTypeForMonomorph(const Expr &initializer,
   if (ctx.sourceDefs.count(resolved) > 0) {
     return false;
   }
-  if (!initializer.args.empty() || !initializer.templateArgs.empty() || hasNamedArguments(initializer.argNames)) {
+  if (!initializer.args.empty() || !initializer.templateArgs.empty() || semantics::hasNamedArguments(initializer.argNames)) {
     return false;
   }
   if (initializer.bodyArguments.empty()) {
@@ -64,7 +63,7 @@ bool inferBlockBodyBindingTypeForMonomorph(const Expr &initializer,
   bool sawReturn = false;
   for (const auto &bodyExpr : initializer.bodyArguments) {
     if (bodyExpr.isBinding) {
-      BindingInfo binding;
+      semantics::BindingInfo binding;
       if (extractExplicitBindingType(bodyExpr, binding)) {
         if (binding.typeName == "auto" && bodyExpr.args.size() == 1 &&
             inferBindingTypeForMonomorph(bodyExpr.args.front(), params, blockLocals, allowMathBare, ctx, binding)) {
@@ -79,7 +78,7 @@ bool inferBlockBodyBindingTypeForMonomorph(const Expr &initializer,
       }
       continue;
     }
-    if (isReturnCall(bodyExpr)) {
+    if (semantics::isReturnCall(bodyExpr)) {
       if (bodyExpr.args.size() != 1) {
         return false;
       }
