@@ -10,7 +10,7 @@ reported as unstable and skipped.
 
     python3 scripts/differential_opt_check.py --build-dir build-release [--levels 1,2,3]
                                               [--jobs 4] [--limit N] [--keep-dir DIR]
-                                              [--optexe [--optexe-levels 0,2]]
+                                              [--optexe [--optexe-levels 0,2]] [--baseline-kernel step]
 
 With --optexe each program is also compiled with `primec --emit=optexe` (at each
 --optexe-levels host optimization level, via `-O<n>`) and the resulting binary is
@@ -27,6 +27,7 @@ from __future__ import annotations
 import argparse
 import concurrent.futures
 import hashlib
+import os
 import re
 import subprocess
 import sys
@@ -63,13 +64,17 @@ def collect_sources(root: Path) -> list[tuple[str, str]]:
     return sources
 
 
-def run_vm(build_dir: Path, source_path: Path, flags: list[str]) -> tuple[int, str, str]:
+def run_vm(build_dir: Path, source_path: Path, flags: list[str], kernel: str = "") -> tuple[int, str, str]:
+    env = dict(os.environ)
+    if kernel:
+        env["PRIMEVM_KERNEL"] = kernel
     try:
         completed = subprocess.run(
             [str(build_dir / "primevm"), str(source_path), "--entry", "/main", *flags],
             cwd=build_dir,
             capture_output=True,
             timeout=TIMEOUT_SECONDS,
+            env=env,
         )
     except subprocess.TimeoutExpired:
         return (-999, "", "timeout")
@@ -111,15 +116,15 @@ def run_optexe(build_dir: Path, source_path: Path, level: int) -> tuple[int, str
     )
 
 
-def check_one(args: tuple[str, str, Path, Path, list[int], list[int]]) -> tuple[str, str, str]:
+def check_one(args: tuple[str, str, Path, Path, list[int], list[int], str]) -> tuple[str, str, str]:
     """Returns (label, status, detail); status is ok, unstable, unsupported, or DIFF."""
-    label, text, build_dir, work_dir, levels, optexe_levels = args
+    label, text, build_dir, work_dir, levels, optexe_levels, baseline_kernel = args
     digest = hashlib.sha1(text.encode("utf-8")).hexdigest()[:12]
     source_path = work_dir / f"{digest}.prime"
     source_path.write_text(text, encoding="utf-8")
 
-    baseline = run_vm(build_dir, source_path, [])
-    again = run_vm(build_dir, source_path, [])
+    baseline = run_vm(build_dir, source_path, [], baseline_kernel)
+    again = run_vm(build_dir, source_path, [], baseline_kernel)
     if baseline != again:
         return (label, "unstable", "two -O0 runs differ")
     if baseline[0] == -999:
@@ -165,6 +170,8 @@ def main() -> int:
     parser.add_argument("--levels", default="1", help="comma-separated -O levels to compare against -O0")
     parser.add_argument("--optexe", action="store_true", help="also compare optexe binaries against the -O0 VM")
     parser.add_argument("--optexe-levels", default="2", help="comma-separated host -O levels for --optexe")
+    parser.add_argument("--baseline-kernel", default="", choices=["", "step"],
+                        help="run the -O0 baseline on the step kernel (PRIMEVM_KERNEL=step) to compare it with the fast kernel")
     parser.add_argument("--jobs", type=int, default=4)
     parser.add_argument("--limit", type=int, default=0, help="check only the first N programs")
     parser.add_argument("--keep-dir", type=Path, default=None, help="directory for programs that differ")
@@ -182,7 +189,7 @@ def main() -> int:
 
     work_root = args.keep_dir if args.keep_dir else Path(tempfile.mkdtemp(prefix="primec_diff_"))
     work_root.mkdir(parents=True, exist_ok=True)
-    jobs = [(label, text, build_dir, work_root, levels, optexe_levels) for label, text in sources]
+    jobs = [(label, text, build_dir, work_root, levels, optexe_levels, args.baseline_kernel) for label, text in sources]
 
     counts = {"ok": 0, "unstable": 0, "unsupported": 0, "DIFF": 0}
     failures: list[str] = []

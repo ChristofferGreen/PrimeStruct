@@ -675,6 +675,7 @@ set(PRIMESTRUCT_RUNTIME_SOURCES
   src/runtime/VmControlFlowOpcodeShared.cpp
   src/runtime/VmExecution.cpp
   src/runtime/VmExecutionKernel.cpp
+  src/runtime/VmFastKernel.cpp
   src/runtime/VmHeapHelpers.cpp
   src/runtime/VmStringHeap.cpp
   src/runtime/VmIoHelpers.cpp
@@ -945,6 +946,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/ir_pipeline/optimizer/test_ir_optimizer_random.cpp
     tests/unit/ir_pipeline/optimizer/test_ir_optimizer_cli.cpp
     tests/unit/ir_pipeline/optimizer/test_ir_optexe.cpp
+    tests/unit/ir_pipeline/optimizer/test_ir_vm_fast_kernel.cpp
   )
   target_include_directories(PrimeStruct_ir_optimizer_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
   target_link_libraries(PrimeStruct_ir_optimizer_tests PRIVATE primec_ir_lib primec_backend_registry_lib primec_backend_emitters_lib primec_support_lib primec_runtime_lib)
@@ -2957,6 +2959,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.ir.optimizer_random
     primestruct.ir.optimizer_cli
     primestruct.ir.optexe
+    primestruct.ir.vm_fast_kernel
   )
   foreach(suite IN LISTS PrimeStructIrOptimizerTestSuites)
     string(REPLACE "." "_" suiteId "${suite}")

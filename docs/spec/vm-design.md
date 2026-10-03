@@ -35,6 +35,12 @@
   frame stores locals in 16-byte slots while the operand stack stores raw `u64` values interpreted by opcode (ints,
   floats as bits, and indices). Indirect addresses are byte offsets into the active frame’s local slot space and must be
   16-byte aligned.
+- **Execution kernels:** plain runs (`primevm`, `--emit=vm`, embedded scripts) use a flat loop when every function
+  passes the shared CFG analysis (consistent stack depths, valid jump targets, balanced returns, an entry without
+  parameters): it keeps the instruction pointer, operand-stack pointer and locals pointer in registers and fuses common
+  sequences inside a basic block into single instructions. Debug sessions and any module the analysis rejects use the
+  checked step kernel. Both produce the same results, output and fault messages; `PRIMEVM_KERNEL=step` forces the step
+  kernel for comparison (see `docs/OptimizingBackendsPlan.md`, Phase 4).
 - **Module layout:** `IrModule` bundles functions, string table, and struct layouts; lowering emits entry instructions
   plus reachable non-entry callable function bodies so function names/metadata and executable IR survive serialization.
   VM/native execution starts from `entryIndex`; lowering currently still inlines source-level calls, so recursion

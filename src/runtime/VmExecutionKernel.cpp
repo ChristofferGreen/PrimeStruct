@@ -1,6 +1,7 @@
 #include "primec/runtime/VmExecutionKernel.h"
 
 #include "VmControlFlowOpcodeShared.h"
+#include "VmFastKernel.h"
 #include "primec/ir/IrPureSemantics.h"
 #include "primec/runtime/VmStringHeap.h"
 #include "primec/runtime/VmKernelBoundary.h"
@@ -410,6 +411,14 @@ bool executeVmKernel(const IrModule &module,
       static_cast<size_t>(module.entryIndex) >= module.functions.size()) {
     error = "invalid IR entry index";
     return false;
+  }
+
+  if (vmFastKernelEnabled()) {
+    bool executed = false;
+    const bool ok = executeVmFastKernel(module, host, result, error, executed);
+    if (executed) {
+      return ok;
+    }
   }
 
   std::vector<size_t> localCounts(module.functions.size(), 0);

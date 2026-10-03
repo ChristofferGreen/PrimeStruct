@@ -8,6 +8,7 @@
 
 #include "test_ir_optimizer_helpers.h"
 #include "test_ir_random_programs.h"
+#include "test_ir_runtime_programs.h"
 #include "test_ir_vm_run.h"
 
 #include <bit>
@@ -73,7 +74,8 @@ ProgramRun compileAndRun(const primec::IrModule &module,
   const std::filesystem::path cppPath = scratch(name + ".cpp");
   const std::filesystem::path binary = scratch(name + ".bin");
   std::ofstream(cppPath) << source;
-  if (!primec::compileCppExecutableOptimized(primec::systemProcessRunner(), cppPath, binary, hostLevel)) {
+  if (!primec::compileCppExecutableOptimized(
+          primec::systemProcessRunner(), cppPath, binary, hostLevel)) {
     run.buildError = "host compiler failed on " + cppPath.string();
     return run;
   }
@@ -84,7 +86,8 @@ ProgramRun compileAndRun(const primec::IrModule &module,
   for (const std::string &arg : args) {
     command += " '" + arg + "'";
   }
-  const int status = std::system((command + " > '" + outPath.string() + "' 2> '" + errPath.string() + "'").c_str());
+  const int status = std::system(
+      (command + " > '" + outPath.string() + "' 2> '" + errPath.string() + "'").c_str());
 #if defined(__unix__) || defined(__APPLE__)
   run.exitCode = WIFEXITED(status) ? WEXITSTATUS(status) : -1;
 #else
@@ -110,41 +113,13 @@ void expectMatchesVm(const primec::IrModule &module,
   REQUIRE_MESSAGE(actual.built, actual.buildError);
   CHECK(actual.out == expected.output);
   if (expected.ok) {
-    CHECK(actual.exitCode == static_cast<int>(static_cast<uint8_t>(static_cast<int32_t>(expected.result))));
+    CHECK(actual.exitCode ==
+          static_cast<int>(static_cast<uint8_t>(static_cast<int32_t>(expected.result))));
     CHECK(actual.err.empty());
   } else {
     CHECK(actual.exitCode == 3);
     CHECK(actual.err == "VM error: " + expected.error + "\n");
   }
-}
-
-primec::IrFunction functionOf(const std::string &name,
-                              std::vector<primec::IrInstruction> instructions,
-                              uint32_t parameterCount = 0) {
-  primec::IrFunction function;
-  function.name = name;
-  function.parameterCount = parameterCount;
-  function.instructions = std::move(instructions);
-  function.metadata.effectMask = primec::EffectIoOut;
-  function.metadata.capabilityMask = primec::EffectIoOut;
-  return function;
-}
-
-// A module whose entry (function 0) calls functions 1..N in order, then returns 0.
-primec::IrModule driverModule(std::vector<primec::IrFunction> bodies) {
-  primec::IrModule module;
-  module.entryIndex = 0;
-  std::vector<primec::IrInstruction> driver;
-  for (size_t i = 0; i < bodies.size(); ++i) {
-    driver.push_back({primec::IrOpcode::CallVoid, i + 1});
-  }
-  driver.push_back({primec::IrOpcode::PushI32, 0});
-  driver.push_back({primec::IrOpcode::ReturnI32, 0});
-  module.functions.push_back(functionOf("/main", std::move(driver)));
-  for (primec::IrFunction &body : bodies) {
-    module.functions.push_back(std::move(body));
-  }
-  return module;
 }
 
 std::string diagnosticFor(const primec::IrModule &module) {
@@ -169,12 +144,14 @@ std::string emitted(const primec::IrModule &module) {
 // yields the negative default NaN at run time while a host compiler folding the
 // same expression yields the positive one. Results are compared as "a NaN".
 std::string canonicalResult(std::string_view opName, const std::string &line) {
-  const bool producesF32 = opName.ends_with("F32") && (opName.starts_with("Add") || opName.starts_with("Sub") ||
-                                                       opName.starts_with("Mul") || opName.starts_with("Div") ||
-                                                       opName.starts_with("Neg"));
-  const bool producesF64 = opName.ends_with("F64") && (opName.starts_with("Add") || opName.starts_with("Sub") ||
-                                                       opName.starts_with("Mul") || opName.starts_with("Div") ||
-                                                       opName.starts_with("Neg"));
+  const bool producesF32 =
+      opName.ends_with("F32") &&
+      (opName.starts_with("Add") || opName.starts_with("Sub") || opName.starts_with("Mul") ||
+       opName.starts_with("Div") || opName.starts_with("Neg"));
+  const bool producesF64 =
+      opName.ends_with("F64") &&
+      (opName.starts_with("Add") || opName.starts_with("Sub") || opName.starts_with("Mul") ||
+       opName.starts_with("Div") || opName.starts_with("Neg"));
   const bool convertsToF32 = opName.starts_with("Convert") && opName.ends_with("ToF32");
   const bool convertsToF64 = opName.starts_with("Convert") && opName.ends_with("ToF64");
   const uint64_t value = std::stoull(line);
@@ -199,7 +176,8 @@ uint64_t f64Bits(double value) {
 TEST_CASE("optexe rejects modules it cannot compile with a precise diagnostic") {
   using primec::IrOpcode;
   SUBCASE("host calls") {
-    const primec::IrModule module = optimizer_test::moduleOf(optimizer_test::assemble({"CallHost 0", "ReturnVoid"}));
+    const primec::IrModule module =
+        optimizer_test::moduleOf(optimizer_test::assemble({"CallHost 0", "ReturnVoid"}));
     const std::string error = diagnosticFor(module);
     CHECK(contains(error, "CallHost"));
     CHECK(contains(error, "/main"));
@@ -214,29 +192,35 @@ TEST_CASE("optexe rejects modules it cannot compile with a precise diagnostic") 
     CHECK(contains(diagnosticFor(module), "entry"));
   }
   SUBCASE("unbalanced stack") {
-    const primec::IrModule module = optimizer_test::moduleOf(optimizer_test::assemble({"AddI64", "ReturnVoid"}));
+    const primec::IrModule module =
+        optimizer_test::moduleOf(optimizer_test::assemble({"AddI64", "ReturnVoid"}));
     CHECK(contains(diagnosticFor(module), "operand stack"));
   }
 }
 
 TEST_CASE("optexe maps stack slots and locals to variables, and only addressed frames to memory") {
-  const primec::IrModule scalar = optimizer_test::moduleOf(optimizer_test::assemble({
-      "PushI32 5", "StoreLocal 0", "LoadLocal 0", "JumpIfZero 5", "Jump 5", "PushI32 0", "ReturnI32"}));
+  const primec::IrModule scalar = optimizer_test::moduleOf(optimizer_test::assemble({"PushI32 5",
+                                                                                     "StoreLocal 0",
+                                                                                     "LoadLocal 0",
+                                                                                     "JumpIfZero 5",
+                                                                                     "Jump 5",
+                                                                                     "PushI32 0",
+                                                                                     "ReturnI32"}));
   const std::string scalarSource = emitted(scalar);
   CHECK(contains(scalarSource, "uint64_t l0 = 0"));
   CHECK_FALSE(contains(scalarSource, "uint64_t frame["));
   CHECK(contains(scalarSource, "goto L"));
 
-  const primec::IrModule addressed = optimizer_test::moduleOf(optimizer_test::assemble({
-      "PushI32 5", "StoreLocal 0", "AddressOfLocal 0", "LoadIndirect", "ReturnI32"}));
+  const primec::IrModule addressed = optimizer_test::moduleOf(optimizer_test::assemble(
+      {"PushI32 5", "StoreLocal 0", "AddressOfLocal 0", "LoadIndirect", "ReturnI32"}));
   const std::string addressedSource = emitted(addressed);
   CHECK(contains(addressedSource, "uint64_t frame[1]"));
   CHECK_FALSE(contains(addressedSource, "uint64_t l0"));
 
   // The VM resolves indirect accesses against the current frame, even when the
   // address came from the caller, so an indirect access alone needs a frame.
-  const primec::IrModule indirectOnly = optimizer_test::moduleOf(optimizer_test::assemble({
-      "PushI32 16", "LoadIndirect", "ReturnI32"}));
+  const primec::IrModule indirectOnly = optimizer_test::moduleOf(
+      optimizer_test::assemble({"PushI32 16", "LoadIndirect", "ReturnI32"}));
   CHECK(contains(emitted(indirectOnly), "uint64_t frame["));
 }
 
@@ -298,8 +282,8 @@ TEST_CASE("optexe pure opcodes match the VM over edge-case operands") {
     return intGrid;
   };
   std::vector<primec::IrFunction> bodies;
-  std::vector<std::string> descriptions;  // one per printed line, for readable failures
-  std::vector<std::string_view> opNames;  // aligned with descriptions
+  std::vector<std::string> descriptions; // one per printed line, for readable failures
+  std::vector<std::string_view> opNames; // aligned with descriptions
   size_t cases = 0;
   for (const primec::IrOpcodeInfo &info : primec::IrOpcodeTable) {
     if (!primec::isIrPureOpcode(info.op)) {
@@ -333,10 +317,10 @@ TEST_CASE("optexe pure opcodes match the VM over edge-case operands") {
       }
     }
     code.push_back({IrOpcode::ReturnVoid, 0});
-    bodies.push_back(functionOf(std::string("/") + info.name, std::move(code)));
+    bodies.push_back(optimizer_test::functionOf(std::string("/") + info.name, std::move(code)));
   }
   CHECK(cases > 3000);
-  const primec::IrModule module = driverModule(std::move(bodies));
+  const primec::IrModule module = optimizer_test::driverModule(std::move(bodies));
   const Outcome expected = optimizer_test::run(module);
   REQUIRE(expected.ok);
   const ProgramRun actual = compileAndRun(module, "pure_ops", 1);
@@ -350,7 +334,8 @@ TEST_CASE("optexe pure opcodes match the VM over edge-case operands") {
   for (size_t i = 0; i < descriptions.size(); ++i) {
     REQUIRE(std::getline(expectedLines, expectedLine));
     REQUIRE(std::getline(actualLines, actualLine));
-    if (canonicalResult(opNames[i], expectedLine) != canonicalResult(opNames[i], actualLine) && mismatches++ < 8) {
+    if (canonicalResult(opNames[i], expectedLine) != canonicalResult(opNames[i], actualLine) &&
+        mismatches++ < 8) {
       FAIL_CHECK(descriptions[i] << ": VM " << expectedLine << ", optexe " << actualLine);
     }
   }
@@ -364,7 +349,7 @@ TEST_CASE("optexe matches the VM on random programs, optimized or not") {
     bodies.push_back(optimizer_test::makeModule(seed + 31000).functions[0]);
     bodies.back().name = "/program" + std::to_string(seed);
   }
-  const primec::IrModule module = driverModule(std::move(bodies));
+  const primec::IrModule module = optimizer_test::driverModule(std::move(bodies));
   expectMatchesVm(module, "random_plain", 1);
 
   primec::IrModule optimized = module;
@@ -373,136 +358,31 @@ TEST_CASE("optexe matches the VM on random programs, optimized or not") {
   options.verifyEachPass = true;
   primec::IrOptimizationReport report;
   std::string error;
-  REQUIRE_MESSAGE(primec::optimizeIrModule(optimized, options, primec::IrValidationTarget::Any, report, error), error);
+  REQUIRE_MESSAGE(
+      primec::optimizeIrModule(optimized, options, primec::IrValidationTarget::Any, report, error),
+      error);
   CHECK(report.instructionsAfter < report.instructionsBefore);
   expectMatchesVm(optimized, "random_optimized", 2);
 }
 
 TEST_CASE("optexe calls pass arguments as the callee's initial stack and return values") {
-  using primec::IrOpcode;
-  primec::IrModule module;
-  module.entryIndex = 0;
-  // main: print(sub(10, 3) via /sub), print(fib(15)), then exit with fib(10) - 50.
-  module.functions.push_back(functionOf(
-      "/main",
-      optimizer_test::assemble({"PushI64 10", "PushI64 3", "Call 1", "PrintI64 1", "PushI32 15", "Call 2",
-                                "PrintI32 1", "PushI32 10", "Call 2", "PushI32 50", "SubI32", "ReturnI32"})));
-  module.functions.push_back(functionOf("/sub", optimizer_test::assemble({"SubI64", "ReturnI64"}), 2));
-  // fib(n): n < 2 ? n : fib(n-1) + fib(n-2)
-  module.functions.push_back(functionOf(
-      "/fib",
-      optimizer_test::assemble({"Dup", "PushI32 2", "CmpLtI32", "JumpIfZero 5", "ReturnI32", "Dup", "PushI32 1",
-                                "SubI32", "Call 2", "StoreLocal 0", "PushI32 2", "SubI32", "Call 2", "LoadLocal 0",
-                                "AddI32", "ReturnI32"}),
-      1));
-  expectMatchesVm(module, "calls", 2);
+  expectMatchesVm(optimizer_test::callsProgram(), "calls", 2);
 }
 
 TEST_CASE("optexe heap, indirect addressing and frame addresses match the VM") {
-  // Allocates three slots, writes through computed addresses, reallocates to
-  // grow, frees, and also reads and writes a local through its address.
-  primec::IrModule module = optimizer_test::moduleOf(optimizer_test::assemble({
-      "PushI64 3", "HeapAlloc", "StoreLocal 0",
-      "LoadLocal 0", "PushI64 11", "StoreIndirect", "PrintI64 1",
-      "LoadLocal 0", "PushI64 16", "AddI64", "PushI64 22", "StoreIndirect", "Pop",
-      "LoadLocal 0", "PushI64 6", "HeapRealloc", "StoreLocal 0",
-      "LoadLocal 0", "LoadIndirect", "PrintI64 1",
-      "LoadLocal 0", "PushI64 16", "AddI64", "LoadIndirect", "PrintI64 1",
-      "LoadLocal 0", "PushI64 80", "AddI64", "LoadIndirect", "PrintI64 1",
-      "LoadLocal 0", "HeapFree",
-      "PushI64 0", "HeapFree",
-      "PushI64 99", "StoreLocal 1",
-      "AddressOfLocal 1", "PushI64 123", "StoreIndirect", "Pop",
-      "LoadLocal 1", "PrintI64 1",
-      "AddressOfLocal 1", "LoadIndirect", "PrintI64 1",
-      "PushI64 0", "HeapAlloc", "PrintU64 1",
-      "PushI32 0", "ReturnI32"}));
-  module.functions[0].metadata.effectMask = primec::EffectIoOut;
-  expectMatchesVm(module, "heap", 1);
+  expectMatchesVm(optimizer_test::heapProgram(), "heap", 1);
 }
 
 TEST_CASE("optexe string, argv and file opcodes match the VM") {
   const std::filesystem::path file = scratch("io_roundtrip.txt");
-  primec::IrModule module;
-  module.entryIndex = 0;
-  module.stringTable = {"hello", std::string("a\0b\"q?\n", 7), file.string(), "tail",
-                        file.string() + ".does_not_exist"};
-  module.functions.push_back(functionOf(
-      "/main",
-      optimizer_test::assemble({
-          // The read target (local 1) must be a real local for the VM too.
-          "PushI64 0", "StoreLocal 1",
-          // Static and dynamic string access.
-          "PushI64 1", "LoadStringByte 0", "PrintI32 1",
-          "PushI64 3", "LoadStringByte 1", "PrintI32 1",
-          "PushI64 0", "LoadStringLength", "PrintU64 1",
-          "PushI64 1", "LoadStringLength", "PrintU64 1",
-          "PushI64 3", "PrintStringDynamic 1",
-          "PushI64 0", "PushI64 4", "LoadStringByteDynamic", "PrintI32 1",
-          // Arguments.
-          "PushArgc", "PrintI32 1",
-          "PushI32 1", "PrintArgv 1",
-          "PushI32 2", "PrintArgv 1",
-          "PushI32 9", "PrintArgvUnsafe 1",
-          // Write a file, close, read it back byte by byte.
-          "FileOpenWrite 2", "StoreLocal 0",
-          "LoadLocal 0", "PushI64 12345", "FileWriteI64", "Pop",
-          "LoadLocal 0", "PushI32 65", "FileWriteByte", "Pop",
-          "LoadLocal 0", "FileWriteNewline", "Pop",
-          "LoadLocal 0", "FileWriteString 0", "Pop",
-          "LoadLocal 0", "PushI64 3", "FileWriteStringDynamic", "Pop",
-          "LoadLocal 0", "PushI64 18446744073709551615", "FileWriteU64", "Pop",
-          "LoadLocal 0", "PushI64 7", "FileWriteI32", "Pop",
-          "LoadLocal 0", "FileFlush", "PrintU64 1",
-          "LoadLocal 0", "FileClose", "PrintU64 1",
-          "FileOpenRead 2", "StoreLocal 0",
-          "LoadLocal 0", "FileReadByte 1", "PrintU64 1",
-          "LoadLocal 1", "PrintU64 1",
-          "LoadLocal 0", "FileClose", "Pop",
-          "FileOpenRead 4", "PrintU64 1",
-          "PushI64 2", "FileOpenAppendDynamic", "StoreLocal 0",
-          "LoadLocal 0", "FileWriteNewline", "PrintU64 1",
-          "LoadLocal 0", "FileClose", "Pop",
-          "PushI32 0", "ReturnI32"})));
-  expectMatchesVm(module, "io", 1, {"first", "se cond"});
+  expectMatchesVm(optimizer_test::ioProgram(file.string()), "io", 1, {"first", "se cond"});
   std::error_code ignored;
   std::filesystem::remove(file, ignored);
 }
 
 TEST_CASE("optexe faults carry the VM's message and exit code 3") {
-  struct Case {
-    const char *name;
-    std::vector<const char *> code;
-    uint32_t extraFunctions;
-  };
-  const std::vector<Case> cases = {
-      {"div_zero", {"PushI64 1", "PushI64 0", "DivI64", "ReturnI64"}, 0},
-      {"divu_zero", {"PushI64 1", "PushI64 0", "DivU64", "ReturnI64"}, 0},
-      {"free_invalid", {"PushI64 9223372036854775824", "HeapFree", "ReturnVoid"}, 0},
-      {"realloc_invalid", {"PushI64 9223372036854775824", "PushI64 2", "HeapRealloc", "Pop", "ReturnVoid"}, 0},
-      {"unaligned", {"PushI64 8", "LoadIndirect", "ReturnI64"}, 0},
-      {"stack_address", {"PushI64 4096", "LoadIndirect", "ReturnI64"}, 0},
-      {"use_after_free",
-       {"PushI64 2", "HeapAlloc", "StoreLocal 0", "LoadLocal 0", "HeapFree", "LoadLocal 0", "LoadIndirect", "ReturnI64"},
-       0},
-      {"string_bounds", {"PushI64 99", "LoadStringByte 0", "ReturnI32"}, 0},
-      {"string_index", {"PushI64 7", "LoadStringLength", "ReturnI64"}, 0},
-      {"argv_index", {"PushI32 5", "PrintArgv 1", "ReturnVoid"}, 0},
-      {"recursion", {"CallVoid 1", "ReturnVoid"}, 1},
-  };
-  for (const Case &testCase : cases) {
-    CAPTURE(testCase.name);
-    primec::IrModule module = optimizer_test::moduleOf({});
-    module.stringTable = {"abc"};
-    std::vector<primec::IrInstruction> code;
-    for (const char *line : testCase.code) {
-      code.push_back(optimizer_test::assembleOne(line));
-    }
-    module.functions[0] = functionOf("/main", std::move(code));
-    if (testCase.extraFunctions > 0) {
-      module.functions.push_back(functionOf("/recurse", optimizer_test::assemble({"CallVoid 1", "ReturnVoid"})));
-    }
-    // Make the entry's void/value return shape valid for the VM entry.
-    expectMatchesVm(module, std::string("fault_") + testCase.name, 0);
+  for (const optimizer_test::FaultProgram &fault : optimizer_test::faultPrograms()) {
+    CAPTURE(fault.name);
+    expectMatchesVm(fault.module, "fault_" + fault.name, 0);
   }
 }

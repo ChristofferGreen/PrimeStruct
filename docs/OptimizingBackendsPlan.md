@@ -403,6 +403,27 @@ should be split into leaves once `optexe` has validated the register form.
 4.4 Out-of-line fault paths and host dispatch (print/file via function
     pointers set once per run rather than virtual calls per instruction).
 
+Status (2026-10-03): 4.1 and 4.3 are implemented in `src/runtime/VmFastKernel.cpp` (TODO-5479). `executeVmKernel`
+(plain runs; never debug sessions) first asks the fast loop to take the module. It accepts a module when every
+function passes `buildIrCfg`, every reachable return leaves the caller's stack balanced and the entry takes no
+parameters; otherwise the step kernel runs it unchanged. The loop keeps `ip`, the operand-stack pointer and the
+locals pointer in registers, sizes the stack from the CFG's maximum depth, uses one locals arena, and fuses
+sequences inside a basic block into one instruction (`LoadLocal; Push; Cmp; JumpIfZero`,
+`LoadLocal; Push; Add; StoreLocal`, `Dup; StoreLocal; Pop`, compare-and-branch, and similar; the pairs came from
+an opcode-pair histogram of json_parse). Fused forms are fault-free, so results and fault order are unchanged.
+`PRIMEVM_KERNEL=step` forces the step kernel for comparisons, and
+`scripts/differential_opt_check.py --baseline-kernel step` runs the 850-program corpus against it at -O0 and -O2
+(equal stdout, stderr and exit code); `primestruct.ir.vm_fast_kernel` runs random programs, every fault, calls and
+recursion, files and a fused-form grid through both kernels. 4.2 (O(1) heap addressing in the VM) and 4.4 are open.
+
+Measured wall time of `primevm` including the 13-70 ms compile (seconds):
+
+| program | before | fast loop | + fused forms | + fused forms, -O2 |
+| --- | --- | --- | --- | --- |
+| aggregate | 1.25 | 0.24 | 0.10 | 0.095 |
+| json_scan | 1.31 | 0.30 | 0.17 | 0.12 |
+| json_parse | 2.23 | 0.48 | 0.30 | 0.27 |
+
 ### Phase 5: defaults, docs, gates
 
 5.1 Flip defaults: `-O2` for `--emit=native` and `--emit=vm`/`primevm`,
