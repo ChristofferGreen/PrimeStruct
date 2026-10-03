@@ -169,47 +169,53 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.outputs"
                                   SHARD_PREFIX "ir_and_output_modes_emitters_33_44"
                                   SOURCE_FILE "*test_compile_run_vm_outputs.cpp"
                                   RANGE_FIRST 33
-                                  RANGE_LAST 44)
+                                  RANGE_LAST 37)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.outputs"
                                   TIMEOUT 30
-                                  SHARD_PREFIX "ir_and_output_modes_exe_backend_45_55"
-                                  SOURCE_FILE "*test_compile_run_vm_outputs.cpp"
-                                  RANGE_FIRST 45
-                                  RANGE_LAST 55
+                                  SHARD_PREFIX "ir_and_output_modes_emitters_33_44_part2"
+                                  SOURCE_FILE "*test_compile_run_vm_outputs_part2.cpp"
+                                  RANGE_FIRST 1
+                                  RANGE_LAST 7)
+addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.outputs"
+                                  TIMEOUT 30
+                                  SHARD_PREFIX "ir_and_output_modes_exe_backend_45_55_part2"
+                                  SOURCE_FILE "*test_compile_run_vm_outputs_part2.cpp"
+                                  RANGE_FIRST 8
+                                  RANGE_LAST 18
                                   CASES_PER_SHARD 1)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.outputs"
                                   TIMEOUT 30
-                                  SHARD_PREFIX "ir_and_output_modes_exe_backend_56_66"
-                                  SOURCE_FILE "*test_compile_run_vm_outputs.cpp"
-                                  RANGE_FIRST 56
-                                  RANGE_LAST 66
+                                  SHARD_PREFIX "ir_and_output_modes_exe_backend_56_66_part2"
+                                  SOURCE_FILE "*test_compile_run_vm_outputs_part2.cpp"
+                                  RANGE_FIRST 19
+                                  RANGE_LAST 29
                                   CASES_PER_SHARD 1)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.outputs"
                                   TIMEOUT 30
-                                  SHARD_PREFIX "ir_and_output_modes_argv_arrays_67_76"
-                                  SOURCE_FILE "*test_compile_run_vm_outputs.cpp"
-                                  RANGE_FIRST 67
-                                  RANGE_LAST 76
+                                  SHARD_PREFIX "ir_and_output_modes_argv_arrays_67_76_part2"
+                                  SOURCE_FILE "*test_compile_run_vm_outputs_part2.cpp"
+                                  RANGE_FIRST 30
+                                  RANGE_LAST 39
                                   CASES_PER_SHARD 1)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.outputs"
                                   TIMEOUT 30
-                                  SHARD_PREFIX "ir_and_output_modes_argv_arrays_77_86"
-                                  SOURCE_FILE "*test_compile_run_vm_outputs.cpp"
-                                  RANGE_FIRST 77
-                                  RANGE_LAST 86
+                                  SHARD_PREFIX "ir_and_output_modes_argv_arrays_77_86_part2"
+                                  SOURCE_FILE "*test_compile_run_vm_outputs_part2.cpp"
+                                  RANGE_FIRST 40
+                                  RANGE_LAST 49
                                   CASES_PER_SHARD 1)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.outputs"
                                   TIMEOUT 30
-                                  SHARD_PREFIX "ir_and_output_modes_argv_arrays_87_88"
-                                  SOURCE_FILE "*test_compile_run_vm_outputs.cpp"
-                                  RANGE_FIRST 87
-                                  RANGE_LAST 88)
+                                  SHARD_PREFIX "ir_and_output_modes_argv_arrays_87_88_part2"
+                                  SOURCE_FILE "*test_compile_run_vm_outputs_part2.cpp"
+                                  RANGE_FIRST 50
+                                  RANGE_LAST 51)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.outputs"
                                   TIMEOUT 30
-                                  SHARD_PREFIX "outputs_newly_exposed_2026_07_16"
-                                  SOURCE_FILE "*test_compile_run_vm_outputs.cpp"
-                                  RANGE_FIRST 89
-                                  RANGE_LAST 102
+                                  SHARD_PREFIX "outputs_newly_exposed_2026_07_16_part2"
+                                  SOURCE_FILE "*test_compile_run_vm_outputs_part2.cpp"
+                                  RANGE_FIRST 52
+                                  RANGE_LAST 65
                                   CASES_PER_SHARD 10)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.collections"
                                   TIMEOUT 60

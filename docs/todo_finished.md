@@ -1935,6 +1935,7 @@ are left unarchived.
 | TODO-5411 | Add a CI workflow for the release gate | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
 | TODO-5412 | Share CLI argument parsing between primec and primevm | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
 | TODO-5413 | Re-baseline benchmarks after the structural refactors | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
+| TODO-5414 | Split the test files over 3,000 lines | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
 | TODO-5416 | Make ratchet audits tolerate improvement instead of demanding exact counts | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
 | TODO-5417 | Stop propagating surface-audit exemption markers through file splits | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
 | TODO-5418 | Commit the refactoring helpers used for the semantics splits | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |

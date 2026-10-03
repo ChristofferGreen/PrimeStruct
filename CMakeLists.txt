@@ -1132,12 +1132,15 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/ir_pipeline/serialization/test_ir_pipeline_serialization_structs.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_validator_accepts_lowered_canonical_module.cpp
+    tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_validator_accepts_lowered_canonical_module_part2.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_entry_setup_step_resolves_entry_metadata.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_inference_expr_kind_call_base_setup_infers_try_from_indexed_borrowed_and_po.cpp
+    tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_inference_expr_kind_call_base_setup_infers_try_from_indexed_borrowed_and_po_part2.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_inference_call_return_setup_resolves_namespaced_capacity_definition_directl.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_inference_call_return_setup_resolves_canonical_namespaced_map_access_direct.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_inference_get_return_info_step_reports_missing_definitions.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_inference_expr_kind_dispatch_infers_try_from_indexed_map_tryat_args_pack_lo.cpp
+    tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_inference_expr_kind_dispatch_infers_try_from_indexed_map_tryat_args_pack_lo_part2.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_collection_helper_rewrite_guards.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_statements_calls_step_validates_dependencies.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_inline_call_return_value_step_emits_expected_instructions.cpp
@@ -1153,6 +1156,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_semantics_validator_public_contracts.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_shared_types_key_value_args_pack_predicates.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable.cpp
+    tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable_part2.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_call_helpers_build_bundled_entry_call_setup.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_struct_field_binding_helpers_resolve_layout_bindings.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_struct_return_helpers_reject_canonical_fallback_from_alias_defs_without_ret.cpp
@@ -1198,6 +1202,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_uninitialized_type_helpers_build_storage_resolver_from_definition_field_ind.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_count_access_helpers_build_bundled_entry_count_setup.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_count_access_helpers_emit_count_access_calls.cpp
+    tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_count_access_helpers_emit_count_access_calls_part2.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_runtime_error_helpers_emit_fileerror_why_call_paths.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_setup_inference_helper_rejects_invalid_pointer_targets.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_setup_inference_helper_resolves_reordered_named_access_kinds.cpp
@@ -1233,6 +1238,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/ir_pipeline/conversions/test_ir_pipeline_conversions.cpp
     tests/unit/ir_pipeline/conversions/test_ir_pipeline_conversions_method_calls_and_argv.cpp
     tests/unit/ir_pipeline/conversions/test_ir_pipeline_conversions_numbers.cpp
+    tests/unit/ir_pipeline/conversions/test_ir_pipeline_conversions_numbers_part2.cpp
     tests/unit/ir_pipeline/conversions/test_ir_pipeline_conversions_variadic_basics.cpp
     tests/unit/ir_pipeline/conversions/test_ir_pipeline_conversions_variadic_results.cpp
     tests/unit/ir_pipeline/conversions/test_ir_pipeline_conversions_variadic_file_errors.cpp
@@ -1254,8 +1260,11 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_glsl.cpp
     tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_native_semantic_product_result.cpp
     tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_semantic_lowerer_product_rejects.cpp
+    tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_semantic_lowerer_product_rejects_part2.cpp
     tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_lowerer_semantic_product_rejects.cpp
+    tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_lowerer_semantic_product_rejects_part2.cpp
     tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_semantic_pipeline_benchmark_compile.cpp
+    tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_semantic_pipeline_benchmark_compile_part2.cpp
     tests/unit/vm/test_vm_debug_session.cpp
     tests/unit/ir_pipeline/test_ir_pipeline_external_tooling.cpp
     tests/unit/ir_pipeline/to_cpp/test_ir_pipeline_to_cpp.cpp
@@ -1264,6 +1273,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/ir_pipeline/wasm/test_ir_pipeline_wasm.cpp
     tests/unit/ir_pipeline/wasm/test_ir_pipeline_wasm_wasi.cpp
     tests/unit/compile_run/test_compile_run_benchmark_harness.cpp
+    tests/unit/compile_run/test_compile_run_benchmark_harness_part2.cpp
+    tests/unit/compile_run/test_compile_run_benchmark_harness_part3.cpp
     tests/unit/compile_run/bindings/test_compile_run_bindings_and_examples.cpp
     tests/unit/compile_run/bindings/test_compile_run_bindings_basic.cpp
     tests/unit/compile_run/examples/test_compile_run_examples_browser_smoke.cpp
@@ -1314,6 +1325,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/compile_run/imports/test_compile_run_imports_versions.cpp
     tests/unit/compile_run/imports/test_compile_run_imports_blocks.cpp
     tests/unit/compile_run/imports/test_compile_run_imports_operations.cpp
+    tests/unit/compile_run/imports/test_compile_run_imports_operations_part2.cpp
     tests/unit/compile_run/test_compile_run_lazy_stdlib_imports.cpp
     tests/unit/compile_run/native_backend/test_compile_run_native_backend_argv.cpp
     tests/unit/compile_run/native_backend/test_compile_run_native_backend_core.cpp
@@ -1341,6 +1353,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_canonical_count_shadows.cpp
     tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_canonical_map_helpers.cpp
     tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp
+    tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_experimental_maps_and_helpers_part2.cpp
     tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_map_literals_and_string_keys.cpp
     tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_mutators_and_limits_auto_inferred.cpp
     tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_mutators_and_limits_reserve_shrink.cpp
@@ -1407,6 +1420,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_diagnostics_exec_method_missing_arg.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_diagnostics_emit_structured_semantic.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_dumps.cpp
+    tests/unit/compile_run/text_filters/test_compile_run_text_filters_dumps_part2.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_misc.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_runtime_if.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_semantic_rules.cpp
@@ -1451,8 +1465,10 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/compile_run/vm/test_compile_run_vm_map_wrapper.cpp
     tests/unit/compile_run/vm/test_compile_run_vm_math.cpp
     tests/unit/compile_run/test_compile_run_math_conformance.cpp
+    tests/unit/compile_run/test_compile_run_math_conformance_part2.cpp
     tests/unit/compile_run/vm/test_compile_run_vm_maybe.cpp
     tests/unit/compile_run/vm/test_compile_run_vm_outputs.cpp
+    tests/unit/compile_run/vm/test_compile_run_vm_outputs_part2.cpp
     tests/unit/compile_run/vm/test_compile_run_vm_uninitialized.cpp
   )
 
@@ -1464,8 +1480,11 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_glsl.cpp
     tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_native_semantic_product_result.cpp
     tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_semantic_lowerer_product_rejects.cpp
+    tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_semantic_lowerer_product_rejects_part2.cpp
     tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_lowerer_semantic_product_rejects.cpp
+    tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_lowerer_semantic_product_rejects_part2.cpp
     tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_semantic_pipeline_benchmark_compile.cpp
+    tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_semantic_pipeline_benchmark_compile_part2.cpp
     tests/unit/ir_pipeline/to_cpp/test_ir_pipeline_to_cpp.cpp
     tests/unit/ir_pipeline/to_glsl/test_ir_pipeline_to_glsl.cpp
     tests/unit/ir_pipeline/to_glsl/test_ir_pipeline_to_glsl_runtime.cpp
@@ -1582,6 +1601,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_numeric_builtins.cpp
     tests/unit/semantics/test_semantics_condensation_dag.cpp
     tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_effects.cpp
+    tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_effects_part2.cpp
     tests/unit/semantics/entry/test_semantics_entry_builtins_numeric.cpp
     tests/unit/semantics/entry/test_semantics_entry_entry.cpp
     tests/unit/semantics/entry/test_semantics_entry_executions.cpp
@@ -1602,7 +1622,9 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/semantics/type_resolution/test_semantics_type_resolution_graph.cpp
     tests/unit/semantics/type_resolution/test_semantics_type_resolution_graph_snapshots_require_predicates_facts_ct_if.cpp
     tests/unit/semantics/type_resolution/test_semantics_type_resolution_graph_snapshots_targets_semantic_product_soa.cpp
+    tests/unit/semantics/type_resolution/test_semantics_type_resolution_graph_snapshots_targets_semantic_product_soa_part2.cpp
     tests/unit/semantics/type_resolution/test_semantics_type_resolution_graph_snapshots_semantic_product_publishes_ids.cpp
+    tests/unit/semantics/type_resolution/test_semantics_type_resolution_graph_snapshots_semantic_product_publishes_ids_part2.cpp
     tests/unit/semantics/type_resolution/test_semantics_type_resolution_graph_snapshots_formatter_module_fact_semantic.cpp
     tests/unit/semantics/type_resolution/test_semantics_type_resolution_return_solver.cpp
     tests/unit/semantics/test_semantics_symbol_interner.cpp

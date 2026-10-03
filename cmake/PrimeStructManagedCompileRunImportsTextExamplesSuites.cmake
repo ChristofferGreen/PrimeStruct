@@ -33,7 +33,13 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.imports"
                                   TIMEOUT 120
                                   SHARD_PREFIX "operations_and_collections"
                                   SOURCE_FILE "*test_compile_run_imports_operations.cpp"
-                                  TOTAL_CASES 189
+                                  TOTAL_CASES 58
+                                  CASES_PER_SHARD 2)
+addPrimeStructManagedDoctestSuite("primestruct.compile.run.imports"
+                                  TIMEOUT 120
+                                  SHARD_PREFIX "operations_and_collections_part2"
+                                  SOURCE_FILE "*test_compile_run_imports_operations_part2.cpp"
+                                  TOTAL_CASES 131
                                   CASES_PER_SHARD 2)
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.text_filters"
@@ -75,7 +81,13 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.text_filters"
                                   TIMEOUT 60
                                   SHARD_PREFIX "dumps"
                                   SOURCE_FILE "*test_compile_run_text_filters_dumps.cpp"
-                                  TOTAL_CASES 59
+                                  TOTAL_CASES 26
+                                  CASES_PER_SHARD 10)
+addPrimeStructManagedDoctestSuite("primestruct.compile.run.text_filters"
+                                  TIMEOUT 60
+                                  SHARD_PREFIX "dumps_part2"
+                                  SOURCE_FILE "*test_compile_run_text_filters_dumps_part2.cpp"
+                                  TOTAL_CASES 33
                                   CASES_PER_SHARD 10)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.text_filters"
                                   TIMEOUT 30
@@ -290,109 +302,109 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.math_conformance"
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.math_conformance"
                                   TIMEOUT 30
                                   LABEL "math-conformance"
-                                  SHARD_PREFIX "roots_rounding_and_misc"
-                                  SOURCE_FILE "*test_compile_run_math_conformance.cpp"
-                                  RANGE_FIRST 25
-                                  RANGE_LAST 27
+                                  SHARD_PREFIX "roots_rounding_and_misc_part2"
+                                  SOURCE_FILE "*test_compile_run_math_conformance_part2.cpp"
+                                  RANGE_FIRST 1
+                                  RANGE_LAST 3
                                   CASES_PER_SHARD 1)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.math_conformance"
                                   TIMEOUT 30
                                   LABEL "math-conformance"
-                                  SHARD_PREFIX "stress_grid"
-                                  SOURCE_FILE "*test_compile_run_math_conformance.cpp"
-                                  RANGE_FIRST 28
-                                  RANGE_LAST 28)
+                                  SHARD_PREFIX "stress_grid_part2"
+                                  SOURCE_FILE "*test_compile_run_math_conformance_part2.cpp"
+                                  RANGE_FIRST 4
+                                  RANGE_LAST 4)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.math_conformance"
                                   TIMEOUT 30
                                   LABEL "math-conformance"
-                                  SHARD_PREFIX "float_baseline_trigonometric"
-                                  SOURCE_FILE "*test_compile_run_math_conformance.cpp"
-                                  RANGE_FIRST 29
-                                  RANGE_LAST 29)
+                                  SHARD_PREFIX "float_baseline_trigonometric_part2"
+                                  SOURCE_FILE "*test_compile_run_math_conformance_part2.cpp"
+                                  RANGE_FIRST 5
+                                  RANGE_LAST 5)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.math_conformance"
                                   TIMEOUT 30
                                   LABEL "math-conformance"
-                                  SHARD_PREFIX "float_baseline_transcendental"
-                                  SOURCE_FILE "*test_compile_run_math_conformance.cpp"
-                                  RANGE_FIRST 30
-                                  RANGE_LAST 30)
+                                  SHARD_PREFIX "float_baseline_transcendental_part2"
+                                  SOURCE_FILE "*test_compile_run_math_conformance_part2.cpp"
+                                  RANGE_FIRST 6
+                                  RANGE_LAST 6)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.math_conformance"
                                   TIMEOUT 30
                                   LABEL "math-conformance"
-                                  SHARD_PREFIX "float_baseline_composition"
-                                  SOURCE_FILE "*test_compile_run_math_conformance.cpp"
-                                  RANGE_FIRST 31
-                                  RANGE_LAST 31)
+                                  SHARD_PREFIX "float_baseline_composition_part2"
+                                  SOURCE_FILE "*test_compile_run_math_conformance_part2.cpp"
+                                  RANGE_FIRST 7
+                                  RANGE_LAST 7)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.math_conformance"
                                   TIMEOUT 30
                                   LABEL "math-conformance"
-                                  SHARD_PREFIX "float_grid_sin"
-                                  SOURCE_FILE "*test_compile_run_math_conformance.cpp"
-                                  RANGE_FIRST 32
-                                  RANGE_LAST 32)
+                                  SHARD_PREFIX "float_grid_sin_part2"
+                                  SOURCE_FILE "*test_compile_run_math_conformance_part2.cpp"
+                                  RANGE_FIRST 8
+                                  RANGE_LAST 8)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.math_conformance"
                                   TIMEOUT 30
                                   LABEL "math-conformance"
-                                  SHARD_PREFIX "float_grid_cos"
-                                  SOURCE_FILE "*test_compile_run_math_conformance.cpp"
-                                  RANGE_FIRST 33
-                                  RANGE_LAST 33)
+                                  SHARD_PREFIX "float_grid_cos_part2"
+                                  SOURCE_FILE "*test_compile_run_math_conformance_part2.cpp"
+                                  RANGE_FIRST 9
+                                  RANGE_LAST 9)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.math_conformance"
                                   TIMEOUT 30
                                   LABEL "math-conformance"
-                                  SHARD_PREFIX "float_grid_exp_log"
-                                  SOURCE_FILE "*test_compile_run_math_conformance.cpp"
-                                  RANGE_FIRST 34
-                                  RANGE_LAST 34)
+                                  SHARD_PREFIX "float_grid_exp_log_part2"
+                                  SOURCE_FILE "*test_compile_run_math_conformance_part2.cpp"
+                                  RANGE_FIRST 10
+                                  RANGE_LAST 10)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.math_conformance"
                                   TIMEOUT 30
                                   LABEL "math-conformance"
-                                  SHARD_PREFIX "float_grid_hypot"
-                                  SOURCE_FILE "*test_compile_run_math_conformance.cpp"
-                                  RANGE_FIRST 35
-                                  RANGE_LAST 35)
+                                  SHARD_PREFIX "float_grid_hypot_part2"
+                                  SOURCE_FILE "*test_compile_run_math_conformance_part2.cpp"
+                                  RANGE_FIRST 11
+                                  RANGE_LAST 11)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.math_conformance"
                                   TIMEOUT 30
                                   LABEL "math-conformance"
-                                  SHARD_PREFIX "native_approximation_limits"
-                                  SOURCE_FILE "*test_compile_run_math_conformance.cpp"
-                                  RANGE_FIRST 36
-                                  RANGE_LAST 36)
+                                  SHARD_PREFIX "native_approximation_limits_part2"
+                                  SOURCE_FILE "*test_compile_run_math_conformance_part2.cpp"
+                                  RANGE_FIRST 12
+                                  RANGE_LAST 12)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.math_conformance"
                                   TIMEOUT 30
                                   LABEL "math-conformance"
-                                  SHARD_PREFIX "heavy_trig_workload"
-                                  SOURCE_FILE "*test_compile_run_math_conformance.cpp"
-                                  RANGE_FIRST 37
-                                  RANGE_LAST 37)
+                                  SHARD_PREFIX "heavy_trig_workload_part2"
+                                  SOURCE_FILE "*test_compile_run_math_conformance_part2.cpp"
+                                  RANGE_FIRST 13
+                                  RANGE_LAST 13)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.math_conformance"
                                   TIMEOUT 30
                                   LABEL "math-conformance"
-                                  SHARD_PREFIX "heavy_exp_log_workload"
-                                  SOURCE_FILE "*test_compile_run_math_conformance.cpp"
-                                  RANGE_FIRST 38
-                                  RANGE_LAST 38)
+                                  SHARD_PREFIX "heavy_exp_log_workload_part2"
+                                  SOURCE_FILE "*test_compile_run_math_conformance_part2.cpp"
+                                  RANGE_FIRST 14
+                                  RANGE_LAST 14)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.math_conformance"
                                   TIMEOUT 30
                                   LABEL "math-conformance"
-                                  SHARD_PREFIX "array_dense_and_deterministic"
-                                  SOURCE_FILE "*test_compile_run_math_conformance.cpp"
-                                  RANGE_FIRST 39
-                                  RANGE_LAST 41
+                                  SHARD_PREFIX "array_dense_and_deterministic_part2"
+                                  SOURCE_FILE "*test_compile_run_math_conformance_part2.cpp"
+                                  RANGE_FIRST 15
+                                  RANGE_LAST 17
                                   CASES_PER_SHARD 1)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.math_conformance"
                                   TIMEOUT 30
                                   LABEL "math-conformance"
-                                  SHARD_PREFIX "deterministic_and_conversions"
-                                  SOURCE_FILE "*test_compile_run_math_conformance.cpp"
-                                  RANGE_FIRST 42
-                                  RANGE_LAST 44
+                                  SHARD_PREFIX "deterministic_and_conversions_part2"
+                                  SOURCE_FILE "*test_compile_run_math_conformance_part2.cpp"
+                                  RANGE_FIRST 18
+                                  RANGE_LAST 20
                                   CASES_PER_SHARD 1)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.math_conformance"
                                   TIMEOUT 30
                                   LABEL "math-conformance"
-                                  SHARD_PREFIX "policy_and_edge_cases"
-                                  SOURCE_FILE "*test_compile_run_math_conformance.cpp"
-                                  RANGE_FIRST 45
-                                  RANGE_LAST 47
+                                  SHARD_PREFIX "policy_and_edge_cases_part2"
+                                  SOURCE_FILE "*test_compile_run_math_conformance_part2.cpp"
+                                  RANGE_FIRST 21
+                                  RANGE_LAST 23
                                   CASES_PER_SHARD 1)

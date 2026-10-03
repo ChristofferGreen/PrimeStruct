@@ -113,7 +113,17 @@ TEST_CASE("semantic-product consumer coverage matrix stays source locked") {
   auto readRepoFile = [&](const std::filesystem::path &relativePath) {
     const std::filesystem::path fullPath = root / relativePath;
     REQUIRE(std::filesystem::exists(fullPath));
-    return readTextFile(fullPath);
+    std::string text = readTextFile(fullPath);
+    // Test sources split by TODO-5414 live in <stem>_part2.cpp, <stem>_part3.cpp, ...
+    for (int part = 2; fullPath.extension() == ".cpp"; ++part) {
+      const std::filesystem::path sibling =
+          fullPath.parent_path() / (fullPath.stem().string() + "_part" + std::to_string(part) + ".cpp");
+      if (!std::filesystem::exists(sibling)) {
+        break;
+      }
+      text += readTextFile(sibling);
+    }
+    return text;
   };
 
   const std::string semanticProductSource = readRepoFile("src/frontend/SemanticProduct.cpp");

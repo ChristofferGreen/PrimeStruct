@@ -171,7 +171,7 @@ TEST_CASE("generic contiguous buffer substrate docs and coverage stay source loc
   const std::string vmCompatTest = readRepoShardsConcat(
       resolveRepoPath(std::filesystem::path("tests") / "unit" / "compile_run" / "vm"),
       "test_compile_run_vm_collections_wrapper_temporaries_reject_count");
-  const std::string nativeCompatTest = readFile(nativeCompatTestPath.string());
+  const std::string nativeCompatTest = readFileWithParts(nativeCompatTestPath.string());
 
   CHECK(primeStructDoc.find("VM/native conformance now also covers a non-vector") !=
         std::string::npos);
@@ -263,11 +263,11 @@ TEST_CASE("soa public collection docs stay source locked") {
   const std::string todoFinished = readTodoFinishedWithArchive(todoFinishedPath.string());
   const std::string soaStdlib = readFile(soaPath.string());
   const std::string soaExample = readFile(soaExamplePath.string());
-  const std::string cppCompatTest = readFile(cppCompatTestPath.string());
+  const std::string cppCompatTest = readFileWithParts(cppCompatTestPath.string());
   const std::string vmCompatTest = readRepoShardsConcat(
       resolveRepoPath(std::filesystem::path("tests") / "unit" / "compile_run" / "vm"),
       "test_compile_run_vm_collections_wrapper_temporaries_reject_count");
-  const std::string nativeCompatTest = readFile(nativeCompatTestPath.string());
+  const std::string nativeCompatTest = readFileWithParts(nativeCompatTestPath.string());
 
   CHECK(primeStructDoc.find("### SoA Public Collection Contract") != std::string::npos);
   CHECK(primeStructDoc.find("`soa<T>` is the promoted stdlib-owned public collection spelling") !=

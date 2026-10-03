@@ -89,6 +89,22 @@ inline std::string readFile(const std::string &path) {
   return buffer.str();
 }
 
+// A doctest source split into <stem>_part2.cpp, <stem>_part3.cpp, ... (TODO-5414) is read as one
+// text, so source-lock tests keep finding cases that moved into a part.
+inline std::string readFileWithParts(const std::string &path) {
+  std::string text = readFile(path);
+  const std::filesystem::path original(path);
+  for (int part = 2;; ++part) {
+    const std::filesystem::path sibling =
+        original.parent_path() / (original.stem().string() + "_part" + std::to_string(part) + original.extension().string());
+    if (!std::filesystem::exists(sibling)) {
+      break;
+    }
+    text += readFile(sibling.string());
+  }
+  return text;
+}
+
 // docs/PrimeStruct.md is the index of docs/spec/*.md (TODO-5368); doc-lock
 // tests that search the language spec read the index plus every part.
 inline std::string readPrimeStructSpec(const std::string &indexPath) {

@@ -13,7 +13,7 @@
 #include <vector>
 
 namespace {
-std::string runMathConformance(const std::string &source, const std::string &name, const std::string &emitKind) {
+[[maybe_unused]] std::string runMathConformance(const std::string &source, const std::string &name, const std::string &emitKind) {
   const std::string srcPath = writeTemp(name + ".prime", source);
   const std::string outPath = (testScratchPath("") / (name + "_" + emitKind + ".out")).string();
 
@@ -33,7 +33,7 @@ std::string runMathConformance(const std::string &source, const std::string &nam
   return readFile(outPath);
 }
 
-void checkMathConformance(const std::string &source, const std::string &name) {
+[[maybe_unused]] void checkMathConformance(const std::string &source, const std::string &name) {
   const std::string baseline = runMathConformance(source, name, "exe");
   const std::string vmOut = runMathConformance(source, name, "vm");
   CHECK(vmOut == baseline);
@@ -43,7 +43,7 @@ void checkMathConformance(const std::string &source, const std::string &name) {
 #endif
 }
 
-void checkMathConformanceVmParity(const std::string &source, const std::string &name) {
+[[maybe_unused]] void checkMathConformanceVmParity(const std::string &source, const std::string &name) {
   const std::string baseline = runMathConformance(source, name, "exe");
   const std::string vmOut = runMathConformance(source, name, "vm");
   CHECK(vmOut == baseline);
@@ -56,7 +56,7 @@ struct LabeledSample {
 
 std::string trimWhitespace(const std::string &text);
 
-std::vector<LabeledSample> parseLabeledOutput(const std::string &output, const std::string &context) {
+[[maybe_unused]] std::vector<LabeledSample> parseLabeledOutput(const std::string &output, const std::string &context) {
   std::vector<LabeledSample> samples;
   std::istringstream lines(output);
   std::string line;
@@ -85,7 +85,7 @@ std::vector<LabeledSample> parseLabeledOutput(const std::string &output, const s
   return samples;
 }
 
-void compareLabeledOutputs(const std::vector<LabeledSample> &baseline, const std::vector<LabeledSample> &candidate,
+[[maybe_unused]] void compareLabeledOutputs(const std::vector<LabeledSample> &baseline, const std::vector<LabeledSample> &candidate,
                            const std::string &candidateName,
                            const std::unordered_set<std::string> &valueAllowlist) {
   CHECK_MESSAGE(candidate.size() == baseline.size(), candidateName, " output count mismatch: expected ",
@@ -120,7 +120,7 @@ void compareLabeledOutputs(const std::vector<LabeledSample> &baseline, const std
 
 using EmitCase = std::pair<std::string, std::string>;
 
-std::string renderEmitCases(const std::vector<EmitCase> &cases) {
+[[maybe_unused]] std::string renderEmitCases(const std::vector<EmitCase> &cases) {
   std::string out;
   for (const auto &entry : cases) {
     out += "  emit(\"";
@@ -153,7 +153,7 @@ ParsedFloat parseFloatToken(const std::string &token, const std::string &context
   return parsed;
 }
 
-std::string trimWhitespace(const std::string &text) {
+[[maybe_unused]] std::string trimWhitespace(const std::string &text) {
   size_t start = 0;
   while (start < text.size() && std::isspace(static_cast<unsigned char>(text[start]))) {
     ++start;
@@ -170,7 +170,7 @@ struct FloatSample {
   ParsedFloat value;
 };
 
-std::vector<FloatSample> parseFloatOutput(const std::string &output, const std::string &context) {
+[[maybe_unused]] std::vector<FloatSample> parseFloatOutput(const std::string &output, const std::string &context) {
   std::vector<FloatSample> samples;
   std::istringstream lines(output);
   std::string line;
@@ -202,11 +202,11 @@ std::vector<FloatSample> parseFloatOutput(const std::string &output, const std::
   return samples;
 }
 
-double absDiff(double a, double b) {
+[[maybe_unused]] double absDiff(double a, double b) {
   return std::abs(a - b);
 }
 
-double relativeError(double a, double b) {
+[[maybe_unused]] double relativeError(double a, double b) {
   const double scale = std::max(std::abs(a), std::abs(b));
   if (scale == 0.0) {
     return 0.0;
@@ -214,7 +214,7 @@ double relativeError(double a, double b) {
   return std::abs(a - b) / scale;
 }
 
-bool floatsNear(const ParsedFloat &baseline, const ParsedFloat &candidate, double absEps, double relEps) {
+[[maybe_unused]] bool floatsNear(const ParsedFloat &baseline, const ParsedFloat &candidate, double absEps, double relEps) {
   if (baseline.isNan || candidate.isNan) {
     return baseline.isNan && candidate.isNan;
   }
@@ -230,7 +230,7 @@ bool floatsNear(const ParsedFloat &baseline, const ParsedFloat &candidate, doubl
   return relativeError(baseline.value, candidate.value) <= relEps;
 }
 
-void compareFloatOutputs(const std::vector<FloatSample> &baseline, const std::vector<FloatSample> &candidate,
+[[maybe_unused]] void compareFloatOutputs(const std::vector<FloatSample> &baseline, const std::vector<FloatSample> &candidate,
                          const std::string &candidateName, double absEps, double relEps) {
   CHECK_MESSAGE(candidate.size() == baseline.size(), candidateName, " output count mismatch: expected ",
                 baseline.size(), ", got ", candidate.size());
@@ -256,7 +256,7 @@ void compareFloatOutputs(const std::vector<FloatSample> &baseline, const std::ve
 #endif
 }
 
-bool signMatches(const ParsedFloat &baseline, const ParsedFloat &candidate) {
+[[maybe_unused]] bool signMatches(const ParsedFloat &baseline, const ParsedFloat &candidate) {
   if (baseline.isNan || candidate.isNan) {
     return baseline.isNan && candidate.isNan;
   }
@@ -271,7 +271,7 @@ bool signMatches(const ParsedFloat &baseline, const ParsedFloat &candidate) {
   return std::signbit(baseline.value) == std::signbit(candidate.value);
 }
 
-bool inRange(const ParsedFloat &value, double minValue, double maxValue) {
+[[maybe_unused]] bool inRange(const ParsedFloat &value, double minValue, double maxValue) {
   if (value.isNan || value.isInf) {
     return false;
   }

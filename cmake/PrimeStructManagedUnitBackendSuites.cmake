@@ -85,7 +85,17 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
   TIMEOUT 60
   SOURCE_FILE "*test_ir_pipeline_conversions_numbers.cpp"
   SHARD_PREFIX "numbers"
-  TOTAL_CASES 68
+  TOTAL_CASES 31
+  CASES_PER_SHARD 10
+)
+
+addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.conversions"
+  TARGET PrimeStruct_backend_ir_tests
+  LABEL "parallel-safe"
+  TIMEOUT 60
+  SOURCE_FILE "*test_ir_pipeline_conversions_numbers_part2.cpp"
+  SHARD_PREFIX "numbers_part2"
+  TOTAL_CASES 37
   CASES_PER_SHARD 10
 )
 

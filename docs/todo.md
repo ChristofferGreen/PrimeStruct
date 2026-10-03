@@ -103,7 +103,6 @@ of sync with them.
 | TODO-5402 | Replace the 17-callback native tail dispatch signatures with a hooks struct | deferred | lowerer-structure |
 | TODO-5403 | Extend the source-file-size guard beyond src/semantics | deferred | lowerer-structure |
 | TODO-5404 | Remove the hand-maintained src/ir_lowerer header mirrors | deferred | lowerer-structure |
-| TODO-5414 | Split the test files over 3,000 lines | deferred | test-infrastructure |
 | TODO-5415 | Split stdlib/std/collections/soa_storage.prime by concern | deferred | stdlib |
 | TODO-5421 | Keep the release gate from dirtying docs/failing_tests.md | deferred | tooling |
 | TODO-5348 | Verify the iOS embed build and XCFramework packaging on macOS | deferred | embedding-ios |
@@ -122,7 +121,6 @@ of sync with them.
 - Lowerer structure: TODO-5402 -> TODO-5403 -> TODO-5404
 - Collection resolution: TODO-5424, TODO-5425
 - Tooling: TODO-5421 (needs approval)
-- Test infrastructure: TODO-5414
 - Stdlib: TODO-5415
 
 ### Execution Queue
@@ -203,17 +201,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - every legacy SoA spelling has a matrix row (ok or rejected); rejected ones no longer appear in src/
     - full gate green
   - stop_rule: a spelling the matrix shows as `ok` stays and gets a note, not a deletion.
-
-- [ ] TODO-5414: Split the test files over 3,000 lines
-  - owner: ai
-  - status: deferred
-  - created_at: 2026-10-03
-  - phase: Test infrastructure
-  - parallel_track: test-infrastructure
-  - scope: Four test files exceed 3,000 lines (test_compile_run_benchmark_harness.cpp 3,853; ..._call_helpers_source_delegation_stays_stable.cpp 3,755; test_compile_run_imports_operations.cpp 3,662; ..._ir_validator_accepts_lowered_canonical_module.cpp 3,080). Split along TEST_CASE groups into sibling files with the same TEST_SUITE, then run `scripts/generate_test_inventory.py` and fix shard ranges.
-  - acceptance:
-    - no test file over 2,000 lines; case counts unchanged; registration and inventory ctests pass
-  - stop_rule: pure moves; no case is merged or dropped.
 
 - [ ] TODO-5415: Split stdlib/std/collections/soa_storage.prime by concern
   - owner: ai
