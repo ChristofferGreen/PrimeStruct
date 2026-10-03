@@ -600,7 +600,6 @@ const Definition *resolveMethodCallDefinitionFromExpr(
             recordLegacyCollectionBranchHitCollectionVectorOwnerPathTargetPathFallbackResolved();
             return resolvedDef;
           }
-          recordLegacyCollectionBranchHitCollectionVectorOwnerPathTargetPathFallbackNullptr();
           return nullptr;
         }
       }

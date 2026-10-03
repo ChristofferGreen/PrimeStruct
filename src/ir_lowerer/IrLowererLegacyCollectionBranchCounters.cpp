@@ -112,27 +112,6 @@ const LegacyCollectionBranchCounters &legacyCollectionBranchCounters() {
   return counters();
 }
 
-void recordLegacyCollectionBranchHitStructSlotLayoutVector() {
-  if (!legacyCollectionBranchCountersEnabled()) {
-    return;
-  }
-  ++counters().structSlotLayoutVectorBranchHits;
-}
-
-void recordLegacyCollectionBranchHitStructSlotLayoutSoa() {
-  if (!legacyCollectionBranchCountersEnabled()) {
-    return;
-  }
-  ++counters().structSlotLayoutSoaBranchHits;
-}
-
-void recordLegacyCollectionBranchHitUninitializedStructInferenceDuplicate() {
-  if (!legacyCollectionBranchCountersEnabled()) {
-    return;
-  }
-  ++counters().uninitializedStructInferenceDuplicateHits;
-}
-
 void recordLegacyCollectionBranchHitCollectionVectorMetadataMethodPath() {
   if (!legacyCollectionBranchCountersEnabled()) {
     return;
@@ -161,67 +140,11 @@ void recordLegacyCollectionBranchHitCollectionVectorOwnerPathTargetPathFallbackR
   ++counters().collectionVectorOwnerPathTargetPathFallbackResolvedHits;
 }
 
-void recordLegacyCollectionBranchHitCollectionVectorOwnerPathTargetPathFallbackNullptr() {
-  if (!legacyCollectionBranchCountersEnabled()) {
-    return;
-  }
-  ++counters().collectionVectorOwnerPathTargetPathFallbackNullptrHits;
-}
-
 void recordLegacyCollectionBranchHitCollectionVectorOwnerPathReceiverTypeSite() {
   if (!legacyCollectionBranchCountersEnabled()) {
     return;
   }
   ++counters().collectionVectorOwnerPathReceiverTypeSiteHits;
-}
-
-namespace {
-
-std::string jsonEscape(const std::string &text) {
-  std::string out;
-  out.reserve(text.size());
-  for (char c : text) {
-    switch (c) {
-      case '"':
-        out += "\\\"";
-        break;
-      case '\\':
-        out += "\\\\";
-        break;
-      case '\n':
-        out += "\\n";
-        break;
-      default:
-        out += c;
-        break;
-    }
-  }
-  return out;
-}
-
-} // namespace
-
-void recordLegacyCollectionBranchStructSlotLayoutDivergence(
-    const std::string &site,
-    const std::string &hardcodedStructPath,
-    int32_t hardcodedSlotCount,
-    bool genericResolved,
-    const std::string &genericStructPath,
-    int32_t genericSlotCount) {
-  if (!legacyCollectionBranchCountersEnabled()) {
-    return;
-  }
-  ++counters().structSlotLayoutDivergenceCount;
-  std::string line = "[benchmark-ir-lowerer-legacy-collection-branch-divergence] "
-                      "{\"schema\":\"primestruct_ir_lowerer_legacy_collection_branch_divergence_v1\","
-                      "\"site\":\"" + jsonEscape(site) + "\","
-                      "\"hardcoded_struct_path\":\"" + jsonEscape(hardcodedStructPath) + "\","
-                      "\"hardcoded_slot_count\":" + std::to_string(hardcodedSlotCount) + ","
-                      "\"generic_resolved\":" + (genericResolved ? "true" : "false") + ","
-                      "\"generic_struct_path\":\"" + jsonEscape(genericStructPath) + "\","
-                      "\"generic_slot_count\":" + std::to_string(genericSlotCount) + "}";
-  primec::support::emitBenchmarkLine(line);
-  appendLineToLogFileSink(line);
 }
 
 void emitLegacyCollectionBranchCountersReport() {
@@ -231,11 +154,7 @@ void emitLegacyCollectionBranchCountersReport() {
   const LegacyCollectionBranchCounters &c = counters();
   const std::string line =
       "[benchmark-ir-lowerer-legacy-collection-branch-counters] "
-      "{\"schema\":\"primestruct_ir_lowerer_legacy_collection_branch_counters_v1\","
-      "\"struct_slot_layout_vector_branch_hits\":" + std::to_string(c.structSlotLayoutVectorBranchHits) + ","
-      "\"struct_slot_layout_soa_branch_hits\":" + std::to_string(c.structSlotLayoutSoaBranchHits) + ","
-      "\"uninitialized_struct_inference_duplicate_hits\":" +
-      std::to_string(c.uninitializedStructInferenceDuplicateHits) + ","
+      "{\"schema\":\"primestruct_ir_lowerer_legacy_collection_branch_counters_v2\","
       "\"collection_vector_metadata_method_path_hits\":" +
       std::to_string(c.collectionVectorMetadataMethodPathHits) + ","
       "\"collection_vector_owner_path_hits\":" + std::to_string(c.collectionVectorOwnerPathHits) + ","
@@ -243,11 +162,8 @@ void emitLegacyCollectionBranchCountersReport() {
       std::to_string(c.collectionVectorOwnerPathTargetPathSiteHits) + ","
       "\"collection_vector_owner_path_target_path_fallback_resolved_hits\":" +
       std::to_string(c.collectionVectorOwnerPathTargetPathFallbackResolvedHits) + ","
-      "\"collection_vector_owner_path_target_path_fallback_nullptr_hits\":" +
-      std::to_string(c.collectionVectorOwnerPathTargetPathFallbackNullptrHits) + ","
       "\"collection_vector_owner_path_receiver_type_site_hits\":" +
-      std::to_string(c.collectionVectorOwnerPathReceiverTypeSiteHits) + ","
-      "\"struct_slot_layout_divergence_count\":" + std::to_string(c.structSlotLayoutDivergenceCount) + "}";
+      std::to_string(c.collectionVectorOwnerPathReceiverTypeSiteHits) + "}";
   primec::support::emitBenchmarkLine(line);
   appendLineToLogFileSink(line);
 }

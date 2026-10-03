@@ -444,6 +444,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
 set(PRIMESTRUCT_IR_SOURCES
   src/ast/AstMemory.cpp
   src/pipeline/CliDriver.cpp
+  src/pipeline/CliUsage.cpp
   src/pipeline/CompilePipeline.cpp
   src/pipeline/CompilePipelineSource.cpp
   src/pipeline/CompilePipelineStdlib.cpp

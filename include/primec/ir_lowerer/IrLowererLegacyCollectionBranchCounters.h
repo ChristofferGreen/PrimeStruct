@@ -1,9 +1,8 @@
 #pragma once
 
-// TODO-4699 (docs/todo.md): benchmark-flag-gated reachability instrumentation
-// for the legacy hardcoded-3-slot vector-or-soa struct-layout branches and the
-// legacy collection-vector method-call-resolution branches that TODO-4700/
-// TODO-4701 are evaluating for deletion. Enabled via
+// Benchmark-flag-gated reachability instrumentation for the legacy
+// collection-vector method-call-resolution branches. The struct-slot-layout and
+// uninitialized-struct counters were deleted after a whole-suite run read zero. Enabled via
 // --benchmark-ir-lowerer-legacy-collection-branch-counters (primec CLI,
 // threaded through Options::benchmarkIrLowererLegacyCollectionBranchCounters)
 // or via the PRIMEC_BENCHMARK_IR_LOWERER_LEGACY_COLLECTION_BRANCH_COUNTERS
@@ -20,18 +19,6 @@
 namespace primec::ir_lowerer {
 
 struct LegacyCollectionBranchCounters {
-  // IrLowererStructSlotLayoutHelpers.cpp: the two remaining hardcoded
-  // 3-slot early-exit branches inside the per-field enumeration loop of
-  // resolveStructSlotLayoutFromDefinitionFields (isBuiltinVectorTypeName /
-  // isBuiltinSoaVectorTypeName), distinct from the two early-exit branches
-  // TODO-4670 already removed from the top-level struct-path case.
-  uint64_t structSlotLayoutVectorBranchHits = 0;
-  uint64_t structSlotLayoutSoaBranchHits = 0;
-
-  // IrLowererUninitializedStructInference.cpp:normalizeUninitializedVectorStructPath
-  // - independent duplicate definition of isBuiltinVectorTypeName's check.
-  uint64_t uninitializedStructInferenceDuplicateHits = 0;
-
   // IrLowererSetupTypeMethodCallResolution.cpp: isCollectionVectorOwnerPath /
   // isCollectionVectorMetadataMethodPath causing the caller to take the
   // legacy receiver-resolved-vector-metadata path instead of falling through
@@ -49,13 +36,7 @@ struct LegacyCollectionBranchCounters {
   // to collectionVectorOwnerPathTargetPathSiteHits.
   uint64_t collectionVectorOwnerPathTargetPathSiteHits = 0;
   uint64_t collectionVectorOwnerPathTargetPathFallbackResolvedHits = 0;
-  uint64_t collectionVectorOwnerPathTargetPathFallbackNullptrHits = 0;
   uint64_t collectionVectorOwnerPathReceiverTypeSiteHits = 0;
-
-  // Count of logged divergences from the dual-computation equivalence check
-  // (hardcoded 3-slot layout vs. what the generic field-based layout path
-  // would have produced for the same input).
-  uint64_t structSlotLayoutDivergenceCount = 0;
 };
 
 // Enables or disables counter collection, the dual-computation equivalence
@@ -75,33 +56,17 @@ const LegacyCollectionBranchCounters &legacyCollectionBranchCounters();
 
 // Recording entry points. Each is a no-op unless
 // legacyCollectionBranchCountersEnabled() is true.
-void recordLegacyCollectionBranchHitStructSlotLayoutVector();
-void recordLegacyCollectionBranchHitStructSlotLayoutSoa();
-void recordLegacyCollectionBranchHitUninitializedStructInferenceDuplicate();
 void recordLegacyCollectionBranchHitCollectionVectorMetadataMethodPath();
 void recordLegacyCollectionBranchHitCollectionVectorOwnerPath();
 
-// TODO-4701: finer-grained recorders for the two isCollectionVectorOwnerPath
+// Finer-grained recorders for the two isCollectionVectorOwnerPath
 // call sites (see the struct fields above for what each counts). Each of
 // these is recorded in addition to (not instead of) the coarse
 // recordLegacyCollectionBranchHitCollectionVectorOwnerPath() call already at
 // both sites.
 void recordLegacyCollectionBranchHitCollectionVectorOwnerPathTargetPathSite();
 void recordLegacyCollectionBranchHitCollectionVectorOwnerPathTargetPathFallbackResolved();
-void recordLegacyCollectionBranchHitCollectionVectorOwnerPathTargetPathFallbackNullptr();
 void recordLegacyCollectionBranchHitCollectionVectorOwnerPathReceiverTypeSite();
-
-// Logs a single divergence (log-only, non-fatal) between the hardcoded
-// 3-slot layout result actually used and what the generic field-based
-// layout path computed (or failed to compute) for the same field. No-op
-// unless legacyCollectionBranchCountersEnabled() is true.
-void recordLegacyCollectionBranchStructSlotLayoutDivergence(
-    const std::string &site,
-    const std::string &hardcodedStructPath,
-    int32_t hardcodedSlotCount,
-    bool genericResolved,
-    const std::string &genericStructPath,
-    int32_t genericSlotCount);
 
 // Emits the "[benchmark-ir-lowerer-legacy-collection-branch-counters]"
 // summary line to stderr, in the same style as

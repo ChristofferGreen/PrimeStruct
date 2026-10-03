@@ -104,8 +104,6 @@ of sync with them.
 | TODO-5403 | Extend the source-file-size guard beyond src/semantics | deferred | lowerer-structure |
 | TODO-5404 | Remove the hand-maintained src/ir_lowerer header mirrors | deferred | lowerer-structure |
 | TODO-5405 | Inventory and schedule deletion of compatibility spellings | deferred | collection-resolution |
-| TODO-5406 | Delete or justify the legacy collection branch counters | deferred | collection-resolution |
-| TODO-5412 | Share CLI argument parsing between primec and primevm | deferred | tooling |
 | TODO-5414 | Split the test files over 3,000 lines | deferred | test-infrastructure |
 | TODO-5415 | Split stdlib/std/collections/soa_storage.prime by concern | deferred | stdlib |
 | TODO-5421 | Keep the release gate from dirtying docs/failing_tests.md | deferred | tooling |
@@ -123,8 +121,8 @@ of sync with them.
 
 - Embedding (must support iOS): TODO-5348 (needs macOS)
 - Lowerer structure: TODO-5402 -> TODO-5403 -> TODO-5404
-- Collection resolution: TODO-5405 -> TODO-5406
-- Tooling: TODO-5412; TODO-5421 (needs approval)
+- Collection resolution: TODO-5405
+- Tooling: ; TODO-5421 (needs approval)
 - Test infrastructure: TODO-5414
 - Stdlib: TODO-5415
 
@@ -194,30 +192,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - table committed under docs/; each deletable spelling has a child leaf
     - no behavior change in this leaf
   - stop_rule: stop at the table; deletion is per-child-leaf with the parity matrix as the gate.
-
-- [ ] TODO-5406: Delete or justify the legacy collection branch counters
-  - owner: ai
-  - status: deferred
-  - created_at: 2026-10-03
-  - phase: Compiler structure
-  - parallel_track: collection-resolution
-  - scope: `IrLowererLegacyCollectionBranchCounters` keeps 9 env-var-gated hit counters that print JSON to std::cerr; one is still recorded from `IrLowererSetupTypeMethodCallResolution.cpp`. Run the full suite with the env var set; counters that read zero mark branches that can be deleted along with the counter; non-zero ones get a row in `docs/CollectionRoutingExceptions.md`.
-  - acceptance:
-    - every counter either deleted with its branch or documented; the std::cerr printing goes through TODO-5407's sink
-    - full gate green
-  - stop_rule: a branch with non-zero hits stays; document it, do not delete it.
-
-- [ ] TODO-5412: Share CLI argument parsing between primec and primevm
-  - owner: ai
-  - status: deferred
-  - created_at: 2026-10-03
-  - phase: Tooling
-  - parallel_track: tooling
-  - scope: `src/bin/primevm_main.cpp` has a 402-line `main` and `src/bin/main.cpp` a 247-line one; `src/support/OptionsParser.cpp` already parses primec options. Move primevm's parsing into OptionsParser (or a sibling) so both binaries share flag syntax, help text and error wording.
-  - acceptance:
-    - each `main` under 80 lines; `--help` output covered by a compile-run test for both binaries
-    - full gate green
-  - stop_rule: do not change any flag's meaning; renames need a deprecation alias.
 
 - [ ] TODO-5414: Split the test files over 3,000 lines
   - owner: ai
