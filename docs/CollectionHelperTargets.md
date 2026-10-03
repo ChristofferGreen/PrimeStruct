@@ -114,3 +114,15 @@ change. `Reference<...>` rows (`(Reference)` forms) cover borrowed receivers and
 | soa | `ref` | legacy soa_vector-slash-method | lowering error | `/std/collections/soa_vector/ref`<br>`/std/collections/soa_vector/ref`<br>`/std/collections/soa/soaVectorSingle` | missing lowered definition |
 | soa | `count` | legacy soa_vector-canonical | semantic error |  | count does not accept template arguments |
 | soa | `count` | legacy soa-bare-templated | semantic error |  | unknown method: /soa/count |
+| vector | `count` | removed root-call | semantic error |  | unknown call target: /vector/count |
+| vector | `capacity` | removed root-call | semantic error |  | unknown call target: /vector/capacity |
+| vector | `at` | removed root-call | semantic error |  | unknown call target: /vector/at |
+| vector | `at` | removed slash-method | semantic error |  | unknown method: /vector/at |
+| array | `count` | removed root-call | semantic error |  | unknown call target: /array/count |
+| array | `count` | removed slash-method | semantic error |  | unknown method: /array/count |
+| array | `at` | removed root-call | semantic error |  | unknown call target: /array/at |
+| array | `at` | removed slash-method | semantic error |  | unknown method: /array/at |
+| map | `count` | removed root-call | semantic error |  | unknown call target: /map/count |
+| map | `at` | removed root-call | semantic error |  | unknown call target: /map/at |
+| map | `at` | removed slash-method | semantic error |  | unknown call target: /map/at |
+| map | `contains` | removed root-call | semantic error |  | unknown call target: /map/contains |

@@ -112,6 +112,18 @@ inline const std::vector<std::vector<std::string>> &collectionRowPublishedTarget
       {"/std/collections/soa_vector/ref", "/std/collections/soa_vector/ref", "/std/collections/soa/soaVectorSingle"},
       {},
       {},
+      {},
+      {},
+      {},
+      {},
+      {},
+      {},
+      {},
+      {},
+      {},
+      {},
+      {},
+      {},
   };
   return targets;
 }

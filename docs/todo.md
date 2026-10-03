@@ -111,25 +111,12 @@ of sync with them.
 ### Priority Lanes
 
 - Embedding (must support iOS): TODO-5348 (needs macOS)
-- Collection resolution: TODO-5424
 
 ### Execution Queue
 
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 ### Task Blocks
-
-- [ ] TODO-5424: Collapse the removed vector/array/map call-form spelling diagnostics
-  - owner: ai
-  - status: deferred
-  - created_at: 2026-10-03
-  - phase: Compiler structure
-  - parallel_track: collection-resolution
-  - scope: `docs/CompatibilitySpellingInventory.md` shows `/vector/count(v)`, `/array/count(v)`, `v./vector/count()` and `/map/count(m)` are already rejected (`unknown call target` / `unknown method`). `explicitRemovedMethodPath`, `isRemovedVectorCompatibilityHelper`, `isRemovedKeyValueCompatibilityHelper` and the retired-maybe helpers (about 370 uses) exist to produce those rejections. Pin each rejection in the parity matrix, then let the generic unknown-target path produce the message and delete the classifiers.
-  - acceptance:
-    - rejection rows for every removed spelling in `docs/CollectionHelperTargets.md`; no `explicitRemoved*` / `isRemoved*CompatibilityHelper` identifiers left in src/
-    - full gate green; diagnostics tests updated only where the message text legitimately changes
-  - stop_rule: if a removed spelling still needs a tailored message for users, keep one table-driven function instead of the scattered predicates.
 
 - [ ] TODO-5348: Verify the iOS embed build and XCFramework packaging on macOS
   - owner: human
