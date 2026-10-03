@@ -172,6 +172,11 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
+    case IrOpcode::SextI32:
+      // GLSL ints are already 32-bit and wrap.
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
     case IrOpcode::AddI64:
       emitBinary("+");
       return true;

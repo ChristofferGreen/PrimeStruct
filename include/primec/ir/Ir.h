@@ -7,7 +7,7 @@
 namespace primec {
 
 constexpr uint32_t IrSchemaMagic = 0x50534952u; // "PSIR"
-constexpr uint32_t IrSchemaVersion = 26u;
+constexpr uint32_t IrSchemaVersion = 27u;
 constexpr uint32_t IrSchemaMinimumSupportedVersion = IrSchemaVersion;
 constexpr uint32_t IrSchemaMaximumSupportedVersion = IrSchemaVersion;
 
@@ -130,6 +130,11 @@ enum class IrOpcode : uint8_t {
   // Pops a byte position, then a string index (module table or dynamic VM
   // string), and pushes the byte at that position. VM only.
   LoadStringByteDynamic,
+  // Pops one value and pushes its low 32 bits sign-extended to 64. Lowering
+  // emits it after user-level i32 add/sub/mul/div/negate so that i32 values wrap
+  // at 32 bits on every backend; the I32 arithmetic opcodes themselves compute on
+  // the full 64-bit slot because lowering also uses them for address math.
+  SextI32,
 };
 
 enum class IrStructFieldCategory : uint8_t {

@@ -276,6 +276,13 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
+    case IrOpcode::SextI32:
+      emitStackUnderflowGuard(1, "sext");
+      out << "        stack[sp - 1] = "
+             "static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(stack[sp - 1])));\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
     case IrOpcode::AddI64:
       emitBinaryI64("+", "add");
       return true;

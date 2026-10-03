@@ -239,6 +239,52 @@ TEST_CASE("i32 slots print and return as 32-bit values, as in the VM") {
   expectNativeMatchesVm(module, "i32_widths");
 }
 
+TEST_CASE("SextI32 wraps i32 results in registers, deferred operands and promoted updates") {
+  // The loop body updates two locals with `local = local OP constant; sext`, the
+  // pattern the native emitter fuses into one instruction on a promoted register.
+  primec::IrModule module = optimizer_test::moduleOf(optimizer_test::assemble({"PushI64 2147483000",
+                                                                               "StoreLocal 0",
+                                                                               "PushI32 700",
+                                                                               "StoreLocal 1",
+                                                                               "LoadLocal 1",
+                                                                               "JumpIfZero 19",
+                                                                               "LoadLocal 0",
+                                                                               "PushI32 1",
+                                                                               "AddI32",
+                                                                               "SextI32",
+                                                                               "StoreLocal 0",
+                                                                               "LoadLocal 1",
+                                                                               "PushI32 1",
+                                                                               "SubI32",
+                                                                               "SextI32",
+                                                                               "StoreLocal 1",
+                                                                               "LoadLocal 0",
+                                                                               "Pop",
+                                                                               "Jump 4",
+                                                                               "LoadLocal 0",
+                                                                               "PrintI32 1",
+                                                                               "LoadLocal 0",
+                                                                               "LoadLocal 0",
+                                                                               "MulI32",
+                                                                               "SextI32",
+                                                                               "PrintI32 1",
+                                                                               "PushI64 4294967297",
+                                                                               "SextI32",
+                                                                               "PrintI32 1",
+                                                                               "LoadLocal 0",
+                                                                               "LoadLocal 0",
+                                                                               "AddI32",
+                                                                               "SextI32",
+                                                                               "PrintI64 1",
+                                                                               "PushI32 0",
+                                                                               "ReturnI32"}));
+  module.functions[0].metadata.effectMask = primec::EffectIoOut;
+  const Outcome vm = optimizer_test::run(module);
+  REQUIRE_MESSAGE(vm.ok, vm.error);
+  CHECK(vm.output == "-2147483596\n2704\n1\n104\n");
+  expectNativeMatchesVm(module, "sext_i32");
+}
+
 #else
 
 TEST_CASE("optimized native code is only built on Linux x86_64") {

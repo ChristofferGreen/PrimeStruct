@@ -101,8 +101,13 @@ class X64Emitter {
    }
    // `local = local OP operand` for a promoted local, where the operand is another
    // local or a constant: add, sub or mul (kind 0, 1, 2).
-   void emitPromotedLocalUpdate(
-       uint32_t local, int kind, bool operandIsImm, uint64_t imm, uint32_t operandLocal);
+   // `sext` follows the update with a 32-bit sign extension (an i32 operation).
+   void emitPromotedLocalUpdate(uint32_t local,
+                                int kind,
+                                bool operandIsImm,
+                                uint64_t imm,
+                                uint32_t operandLocal,
+                                bool sext = false);
 
    void setPromotedLocals(const std::vector<PromotedLocalSlot> &locals);
    void clearPromotedLocals();
@@ -155,6 +160,10 @@ class X64Emitter {
   // Replaces the top operand by its low 32 bits sign-extended, which is how the VM
   // reads an i32 slot for printing, file writes and returns.
   void emitSignExtendTop32();
+  // The SextI32 opcode: the same on the top operand, but it works on the deferred
+  // operand list, so wrapped i32 arithmetic keeps its operands in registers.
+  void emitSextI32();
+  void emitMovsxdRegReg(uint8_t rd, uint8_t rs); // rd = sign-extended low 32 bits of rs
   void emitAddF32();
   void emitSubF32();
   void emitMulF32();

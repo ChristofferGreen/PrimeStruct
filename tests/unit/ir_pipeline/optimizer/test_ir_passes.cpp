@@ -1005,3 +1005,30 @@ TEST_CASE("validateIrModule rejects unbalanced operand stacks for every target")
   std::string error;
   CHECK_MESSAGE(primec::validateIrModule(fine, primec::IrValidationTarget::Vm, error), error);
 }
+
+TEST_CASE("SextI32 is folded on constants and dropped after canonical values") {
+  expectGolden("const-fold",
+               {"a constant is wrapped at fold time",
+                assemble({"PushI64 4294967297", "SextI32", "ReturnI32"}),
+                assemble({"PushI32 1", "ReturnI32"})});
+  expectGolden("const-fold",
+               {"an overflowing i32 add stays for run time and its sext is kept",
+                assemble({"PushI32 2147483647", "PushI32 1", "AddI32", "SextI32", "ReturnI32"}),
+                assemble({"PushI32 2147483647", "PushI32 1", "AddI32", "SextI32", "ReturnI32"})});
+  expectGolden("peephole",
+               {"a comparison result needs no sext",
+                assemble({"LoadLocal 0", "LoadLocal 1", "CmpLtI32", "SextI32", "ReturnI32"}),
+                assemble({"LoadLocal 0", "LoadLocal 1", "CmpLtI32", "ReturnI32"})});
+  expectGolden("peephole",
+               {"a second sext is redundant",
+                assemble({"LoadLocal 0", "SextI32", "SextI32", "ReturnI32"}),
+                assemble({"LoadLocal 0", "SextI32", "ReturnI32"})});
+  expectGolden("peephole",
+               {"a sext of an add is needed",
+                assemble({"LoadLocal 0", "LoadLocal 1", "AddI32", "SextI32", "ReturnI32"}),
+                assemble({"LoadLocal 0", "LoadLocal 1", "AddI32", "SextI32", "ReturnI32"})});
+  expectGolden("peephole",
+               {"a discarded sext is dropped with its value",
+                assemble({"LoadLocal 0", "SextI32", "Pop", "PushI32 0", "ReturnI32"}),
+                assemble({"PushI32 0", "ReturnI32"})});
+}

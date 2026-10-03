@@ -36,6 +36,12 @@ inline void Arm64Emitter::emitNeg() {
   emitPushReg(0);
 }
 
+inline void Arm64Emitter::emitSextI32() {
+  emitPopReg(0);
+  emit(0x93407C00u); // SXTW x0, w0 (SBFM x0, x0, #0, #31)
+  emitPushReg(0);
+}
+
 inline void Arm64Emitter::emitAddF32() {
   emitFloatBinaryOp(false, kFaddD0D0D1, kFaddS0S0S1);
 }

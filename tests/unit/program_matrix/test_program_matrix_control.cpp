@@ -366,3 +366,68 @@ main() {
   program.exitCode = (97 + 98 + 3);
   program_matrix::runProgramMatrix(program);
 }
+
+// i32 wraps at 32 bits on every backend (TODO-5477): lowering follows i32
+// add/sub/mul/div/negate with SextI32, so comparisons and widening conversions
+// after an overflow see the wrapped value, as in the C++ emitter (`exe`).
+TEST_CASE("i32 arithmetic wraps and compares after overflow") {
+  program_matrix::ProgramCase program;
+  program.name = "i32_wrap_basic";
+  program.source = R"(
+[return<int> effects(io_out)]
+main() {
+  [i32 mut] total{2147483647i32}
+  assign(total, plus(total, 1i32))
+  print_line(total)
+  print_line(if(less_than(total, 0i32), then() { 1i32 }, else() { 0i32 }))
+  [i32 mut] square{65536i32}
+  assign(square, multiply(square, square))
+  print_line(square)
+  print_line(if(equal(square, 0i32), then() { 1i32 }, else() { 0i32 }))
+  [i64] wide{convert<i64>(total)}
+  print_line(wide)
+  [i32] lowest{minus(negate(2147483647i32), 1i32)}
+  print_line(negate(lowest))
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "-2147483648\n1\n0\n1\n-2147483648\n-2147483648\n";
+  program.onlyConfigs = {
+      "vm-step-O0", "vm-O0", "vm-O2", "native-O0", "native-O2", "optexe-O2", "exe"};
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("i32 loops keep wrapping in promoted locals and fused updates") {
+  program_matrix::ProgramCase program;
+  program.name = "i32_wrap_loops";
+  program.source = R"(
+[return<int> effects(io_out)]
+main() {
+  [i32 mut] x{2147483000i32}
+  repeat(1000i32) {
+    assign(x, plus(x, 1i32))
+  }
+  print_line(x)
+  [i32 mut] h{1i32}
+  repeat(40i32) {
+    assign(h, multiply(h, 3i32))
+  }
+  print_line(h)
+  print_line(if(less_than(h, 0i32), then() { 1i32 }, else() { 0i32 }))
+  [i32 mut] sum{0i32}
+  [i32 mut] i{1i32}
+  repeat(100000i32) {
+    assign(sum, plus(sum, multiply(i, i)))
+    assign(i, plus(i, 1i32))
+  }
+  print_line(sum)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "-2147483296\n689956897\n0\n1626540144\n";
+  program.onlyConfigs = {
+      "vm-step-O0", "vm-O0", "vm-O2", "native-O0", "native-O2", "optexe-O2", "exe"};
+  program_matrix::runProgramMatrix(program);
+}

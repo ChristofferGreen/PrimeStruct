@@ -17,7 +17,7 @@ and individually selectable passes. The C++-emitting path (`--emit=exe`,
 
 ### 1.1 The IR the two backends share
 
-- PSIR (`include/primec/ir/Ir.h`, schema v26) is a linear stack machine: one
+- PSIR (`include/primec/ir/Ir.h`, schema v27) is a linear stack machine: one
   `IrFunction` per callable, a flat `std::vector<IrInstruction>` of
   `{opcode, imm, debugId}`, 16-byte local slots, raw `u64` operand stack
   values. Control flow is `Jump`/`JumpIfZero` to instruction indices.
@@ -187,7 +187,7 @@ Non-goals (for this plan):
                        |
                  IrLowerer (unchanged)
                        |
-                stack IR (PSIR v26)  ----validate----
+                stack IR (PSIR v27)  ----validate----
                        |
           +------------+-----------------+
           |  IR optimizer (new, target-  |   <- Phase 1 + 2, all backends
@@ -210,7 +210,7 @@ Key decisions:
 
 - **PSIR stays the interchange format.** Optimizations never add opcodes to
   PSIR in Phases 1-4; the VM's fused instructions are an in-memory form built
-  after loading. `.psir` files produced at any `-O` level remain v26.
+  after loading. `.psir` files produced at any `-O` level remain v27.
 - **One middle end, two consumers.** The register-form IR is produced from
   stack IR by extending the existing `IrVirtualRegisterLowering` (basic blocks
   and operand-stack vregs already exist; add promoted locals, edge moves, and

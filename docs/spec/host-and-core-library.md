@@ -131,6 +131,12 @@ Rules:
   integer operands are rejected in VM/native lowering (`u64` only combines with `u64`), and `negate` rejects unsigned
   operands. Pointer arithmetic is only defined for `plus`/`minus` with a pointer on the left and an integer offset (see
   Pointer arithmetic below).
+  Integer overflow wraps: `i32` `plus`/`minus`/`multiply`/`divide`/`negate` produce the result modulo 2^32 (two's
+  complement, so `plus(2147483647i32, 1i32)` is `-2147483648i32` and compares less than zero) and `i64`/`u64` wrap
+  modulo 2^64, identically on the VM, native, `optexe`, wasm, GLSL and `--emit=exe` (TODO-5477). Lowering implements the
+  `i32` rule with the `SextI32` IR opcode after each `i32` operation. `i32` division of `-2147483648` by `-1` wraps to
+  `-2147483648` on the VM and native backends; `--emit=exe` inherits the C++ trap there. Builtins other than the five
+  above (for example `abs`, `pow`, `clamp`) do not yet normalize `i32` overflow.
 - **`greater_than(left, right)`, `less_than(left, right)`, `greater_equal(left, right)`, `less_equal(left, right)`,
   `equal(left, right)`, `not_equal(left, right)`, `and(left, right)`, `or(left, right)`, `not(value)`:** comparison
   wrappers used after operator/control-flow desugaring. Comparisons respect operand signedness (`u64` uses unsigned

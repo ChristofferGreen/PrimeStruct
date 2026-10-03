@@ -16,7 +16,10 @@ namespace primec {
 //
 // Operands are raw 64-bit stack slots. Integer slots hold sign-extended values;
 // the I32 and I64 forms of an opcode compute identically on the full slot (an
-// I32 add of two sign-extended values is a 64-bit add and is not truncated).
+// I32 add of two sign-extended values is a 64-bit add and is not truncated;
+// lowering relies on that for address arithmetic). The source language's i32
+// wraps at 32 bits: lowering follows user-level i32 add/sub/mul/div/negate with
+// SextI32, which sign-extends the low 32 bits back into canonical form.
 // Floats are IEEE bit patterns (f32 in the low 32 bits).
 
 enum class IrPureEval : uint8_t {
@@ -30,6 +33,7 @@ enum class IrPureEval : uint8_t {
 // is not a pure numeric opcode. Every pure opcode produces exactly one value.
 constexpr int irPureOpcodeArity(IrOpcode op) {
   switch (op) {
+  case IrOpcode::SextI32:
   case IrOpcode::NegI32:
   case IrOpcode::NegI64:
   case IrOpcode::NegF32:
@@ -178,6 +182,9 @@ inline IrPureEval evalPureOpcode(IrOpcode op, uint64_t lhs, uint64_t rhs, uint64
   case IrOpcode::NegI32:
   case IrOpcode::NegI64:
     result = uint64_t{0} - lhs;
+    return IrPureEval::Ok;
+  case IrOpcode::SextI32:
+    result = static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(lhs)));
     return IrPureEval::Ok;
 
   case IrOpcode::AddF32:

@@ -46,6 +46,7 @@ inline bool opcodeKeepsPromotedRegisters(IrOpcode op) {
   case IrOpcode::MulI32:
   case IrOpcode::DivI32:
   case IrOpcode::NegI32:
+  case IrOpcode::SextI32:
   case IrOpcode::AddI64:
   case IrOpcode::SubI64:
   case IrOpcode::MulI64:

@@ -599,13 +599,14 @@ main() {
   REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
   const auto &inst = module.functions[0].instructions;
-  REQUIRE(inst.size() == 6);
+  REQUIRE(inst.size() == 7);
   CHECK(inst[0].op == primec::IrOpcode::PushI32);
   CHECK(inst[1].op == primec::IrOpcode::PushI32);
   CHECK(inst[2].op == primec::IrOpcode::AddI32);
-  CHECK(inst[3].op == primec::IrOpcode::Pop);
-  CHECK(inst[4].op == primec::IrOpcode::PushI32);
-  CHECK(inst[5].op == primec::IrOpcode::ReturnI32);
+  CHECK(inst[3].op == primec::IrOpcode::SextI32);
+  CHECK(inst[4].op == primec::IrOpcode::Pop);
+  CHECK(inst[5].op == primec::IrOpcode::PushI32);
+  CHECK(inst[6].op == primec::IrOpcode::ReturnI32);
 
   primec::Vm vm;
   uint64_t result = 0;

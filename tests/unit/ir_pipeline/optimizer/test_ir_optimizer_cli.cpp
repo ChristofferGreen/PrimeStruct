@@ -129,7 +129,7 @@ TEST_CASE("opt-report describes the selected passes and what changed") {
   CHECK(result.out == "10\n");
   CHECK(result.err.rfind("optimization_report_v1\nlevel=1\n", 0) == 0);
   CHECK(contains(result.err, "selected_passes=cfg-simplify,const-fold,peephole,dead-store\n"));
-  CHECK(contains(result.err, "instructions_before=14\ninstructions_after=6\n"));
+  CHECK(contains(result.err, "instructions_before=16\ninstructions_after=6\n"));
   CHECK(contains(result.err, "round 1 const-fold: "));
 
   // primevm optimizes at -O2 when no level is given.
@@ -144,7 +144,7 @@ TEST_CASE("opt-report describes the selected passes and what changed") {
   result = run("./primevm " + source + " -O0 --opt-report");
   CHECK(result.exitCode == 0);
   CHECK(contains(result.err, "level=0\nselected_passes=\n"));
-  CHECK(contains(result.err, "instructions_before=14\ninstructions_after=14\n"));
+  CHECK(contains(result.err, "instructions_before=16\ninstructions_after=16\n"));
 
   // --no-opt-pass wins over the level.
   result = run("./primevm " + source +
@@ -154,7 +154,7 @@ TEST_CASE("opt-report describes the selected passes and what changed") {
 
 TEST_CASE("dump-stage prints the lowered module before and after optimization") {
   const std::string source = writeSource("fold_dump.prime", FoldableProgram);
-  const std::string header = "ir_module_v1 schema=26\n"
+  const std::string header = "ir_module_v1 schema=27\n"
                              "entry=/main (function 0)\n"
                              "string_table: 0\n"
                              "host_imports: 0\n"
@@ -165,21 +165,23 @@ TEST_CASE("dump-stage prints the lowered module before and after optimization") 
   CHECK(lowered.exitCode == 0);
   CHECK(lowered.out ==
         header +
-            "function 0 /main parameters=0 effects=0x1 capabilities=0x0 locals=1 instructions=14\n"
+            "function 0 /main parameters=0 effects=0x1 capabilities=0x0 locals=1 instructions=16\n"
             "  0000  PushI32 0\n"
             "  0001  StoreLocal local 0\n"
             "  0002  PushI32 2\n"
             "  0003  PushI32 3\n"
             "  0004  MulI32\n"
-            "  0005  PushI32 4\n"
-            "  0006  AddI32\n"
-            "  0007  Dup\n"
-            "  0008  StoreLocal local 0\n"
-            "  0009  Pop\n"
-            "  0010  LoadLocal local 0\n"
-            "  0011  PrintI32 flags=newline\n"
-            "  0012  PushI32 0\n"
-            "  0013  ReturnI32\n");
+            "  0005  SextI32\n"
+            "  0006  PushI32 4\n"
+            "  0007  AddI32\n"
+            "  0008  SextI32\n"
+            "  0009  Dup\n"
+            "  0010  StoreLocal local 0\n"
+            "  0011  Pop\n"
+            "  0012  LoadLocal local 0\n"
+            "  0013  PrintI32 flags=newline\n"
+            "  0014  PushI32 0\n"
+            "  0015  ReturnI32\n");
 
   const CommandResult optimized = run("./primec --dump-stage ir-optimized -O1 " + source);
   CHECK(optimized.exitCode == 0);

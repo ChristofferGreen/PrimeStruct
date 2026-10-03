@@ -26,7 +26,7 @@ TEST_CASE("module listing is stable and decodes immediates") {
   module.functions[0].metadata.capabilityMask = primec::EffectIoOut;
   const std::string text = primec::formatIrModule(module);
   const std::string expected =
-      "ir_module_v1 schema=26\n"
+      "ir_module_v1 schema=27\n"
       "entry=/main (function 0)\n"
       "string_table: 2\n"
       "  0: \"hi\\n\"\n"

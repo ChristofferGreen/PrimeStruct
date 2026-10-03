@@ -251,3 +251,53 @@ TEST_CASE("fused string byte loads match the step kernel, including their faults
     }
   }
 }
+
+TEST_CASE("fused sext forms match the step kernel over wrapping operands") {
+  using optimizer_test::assembleOne;
+  using optimizer_test::moduleOf;
+  const std::vector<const char *> values = {
+      "0", "1", "2147483647", "2147483648", "4294967295", "4294967296", "18446744073709551615"};
+  struct Form {
+    const char *name;
+    std::vector<std::string> body; // uses locals 0 and 1; leaves one value
+  };
+  const std::vector<Form> forms = {
+      {"add_imm", {"LoadLocal 0", "PushI32 1", "AddI32", "SextI32"}},
+      {"sub_imm", {"LoadLocal 0", "PushI32 1", "SubI32", "SextI32"}},
+      {"mul_imm", {"LoadLocal 0", "PushI32 65537", "MulI32", "SextI32"}},
+      {"add_local", {"LoadLocal 0", "LoadLocal 1", "AddI32", "SextI32"}},
+      {"sub_local", {"LoadLocal 0", "LoadLocal 1", "SubI32", "SextI32"}},
+      {"mul_local", {"LoadLocal 0", "LoadLocal 1", "MulI32", "SextI32"}},
+      {"add_imm_store",
+       {"LoadLocal 0", "PushI32 1", "AddI32", "SextI32", "StoreLocal 2", "LoadLocal 2"}},
+      {"sub_imm_store",
+       {"LoadLocal 0", "PushI32 1", "SubI32", "SextI32", "StoreLocal 2", "LoadLocal 2"}},
+  };
+  for (const Form &form : forms) {
+    for (const char *first : values) {
+      for (const char *second : values) {
+        CAPTURE(form.name);
+        CAPTURE(first);
+        CAPTURE(second);
+        std::vector<std::string> lines = {std::string("PushI64 ") + first,
+                                          "StoreLocal 0",
+                                          std::string("PushI64 ") + second,
+                                          "StoreLocal 1"};
+        lines.insert(lines.end(), form.body.begin(), form.body.end());
+        lines.push_back("PrintI64 1");
+        lines.push_back("PushI32 0");
+        lines.push_back("ReturnI32");
+        std::vector<primec::IrInstruction> code;
+        for (const std::string &line : lines) {
+          code.push_back(assembleOne(line.c_str()));
+        }
+        primec::IrModule module = moduleOf(std::move(code));
+        module.functions[0].metadata.effectMask = primec::EffectIoOut;
+        REQUIRE(primec::testing::vmFastKernelAccepts(module));
+        const BothKernels both = runBoth(module);
+        REQUIRE(both.step.ok);
+        CHECK(both.fast == both.step);
+      }
+    }
+  }
+}

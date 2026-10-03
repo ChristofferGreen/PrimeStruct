@@ -1965,6 +1965,7 @@ are left unarchived.
 | TODO-5474 | optexe: memory model (pinned frames, indirect access, heap with O(1) owner lookup) | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
 | TODO-5475 | optexe: strings, print, file I/O and entry arguments | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
 | TODO-5476 | Run the corpus and benchmarks through optexe; gate compile time | [2026-10.md](todo_archive/2026-10.md) | - |
+| TODO-5477 | Define i32 overflow semantics across vm, native and exe | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
 | TODO-5479 | Fast VM execution loop for plain runs | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5480 | IR passes for the patterns lowering leaves behind | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
 | TODO-5482 | Triage the corpus programs where native differs from the VM | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |

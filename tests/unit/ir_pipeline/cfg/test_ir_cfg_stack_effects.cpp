@@ -146,6 +146,7 @@ std::vector<EffectCase> buildCases() {
     add(op, 0, intOperands);
   }
   add(IrOpcode::NegI32, 0, {pushI32(5)});
+  add(IrOpcode::SextI32, 0, {{IrOpcode::PushI64, 0x100000005ull}});
   add(IrOpcode::NegI64, 0, {pushI32(5)});
 
   // Float arithmetic and comparisons.

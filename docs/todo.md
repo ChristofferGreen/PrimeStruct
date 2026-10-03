@@ -103,23 +103,23 @@ of sync with them.
 | TODO-5464 | Add an output sink to Vm::execute for capturing program output | deferred | test-matrix |
 | TODO-5466 | Migrate duplicated vm/native compile-run cases to the program matrix | in_progress | test-matrix |
 | TODO-5471 | Register form with promoted locals | deferred | opt-regform |
-| TODO-5477 | Define i32 overflow semantics across vm, native and exe | ready | ir-semantics |
+| TODO-5483 | Verify arm64 SextI32 and normalize the remaining i32 builtins | ready | ir-semantics |
 | TODO-5478 | Remove the super-linear front-end cost on very large functions | deferred | compile-speed |
 | TODO-5481 | Gate vm, native and optexe rows in the benchmark baseline | deferred | opt-bench |
 
 ### Ready Now
 
 - TODO-5466 (track: test-matrix): Migrate duplicated vm/native compile-run cases to the program matrix (surface: tests/unit/compile_run, tests/unit/program_matrix, scripts/migrate_compile_run_cases.py).
-- TODO-5477 (track: ir-semantics): Define i32 overflow semantics across vm, native and exe (surface: IrPureSemantics.h, lowering, docs/spec).
+- TODO-5483 (track: ir-semantics): Verify arm64 SextI32 and normalize the remaining i32 builtins (surface: src/ir_lowerer operator helpers, NativeEmitterInternalsArm64Arithmetic.h, tests/unit/program_matrix).
 
 ### Immediate Next 10
 
 1. TODO-5466 - Migrate duplicated vm/native compile-run cases to the program matrix.
-2. TODO-5477 - Define i32 overflow semantics across vm, native and exe.
+2. TODO-5483 - Verify arm64 SextI32 and normalize the remaining i32 builtins.
 
 ### Priority Lanes
 
-- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix TODO-5466 (sink TODO-5464 deferred); IR semantics TODO-5477; VM speed ; passes ; optexe ; deferred: TODO-5471, TODO-5478
+- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix TODO-5466 (sink TODO-5464 deferred); i32 audit TODO-5483; VM speed ; passes ; optexe ; deferred: TODO-5471, TODO-5478
 
 ### Execution Queue
 
@@ -155,6 +155,18 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - full release gate green with total compile-run wall time not higher than before
   - stop_rule: convert in batches of one suite per commit; if a batch changes a test's verdict, revert that batch and record the case.
 
+- [ ] TODO-5483: Verify arm64 SextI32 and normalize the remaining i32 builtins
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-03
+  - phase: Optimizing backends
+  - parallel_track: ir-semantics
+  - scope: TODO-5477 made user-level i32 `plus`/`minus`/`multiply`/`divide`/`negate` wrap through the `SextI32` opcode. Two gaps remain. (1) `Arm64Emitter::emitSextI32` (SXTW x0, w0) was written from the encoding and never executed: run the native conformance and matrix cases on an arm64 macOS machine and add an encoding test. (2) Builtins that compute i32 values in lowering without going through the arithmetic helper (`abs`, `pow`, `clamp`, `saturate`, `round`, `increment`/`decrement` helpers, `sign`) still leave unnormalized slots on overflow; emit SextI32 where an i32 result can leave the 32-bit range and add a matrix case per builtin.
+  - acceptance:
+    - the `i32 arithmetic wraps` matrix cases pass on arm64 macOS native; an encoding unit test pins the SXTW bytes
+    - each audited builtin either has a matrix case showing identical output on vm, native, optexe and exe for overflowing input, or a comment explaining why its result cannot overflow
+  - stop_rule: do not change i64/u64 behavior or the I32 arithmetic opcodes themselves; lowering also uses them for address arithmetic.
+
 - [ ] TODO-5471: Register form with promoted locals
   - owner: ai
   - status: deferred
@@ -168,18 +180,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - a round-trip test (lower to register form, lift back to stack IR) leaves VM results identical for the ir-pipeline corpus with promotion on
     - verifier rejects a promoted local that is read before any def on some path (negative test)
   - stop_rule: do not run any optimization on the register form here; if lifting back cannot preserve behavior for loops, record it and keep promotion behind a test-only switch.
-
-- [ ] TODO-5477: Define i32 overflow semantics across vm, native and exe
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-03
-  - phase: Optimizing backends
-  - parallel_track: ir-semantics
-  - scope: Found while stress-testing optexe: for `[i32 mut] total{2147483647i32}; assign(total, plus(total, 1i32))` the backends disagreed. The VM keeps the full 64-bit slot (`CmpLtI32` sees +2147483648, so `less_than(total, 0i32)` is false) and prints -2147483648; `--emit=exe` wraps in C++ `int32_t` (compare true, prints -2147483648); `--emit=native` kept 64 bits and printed 2147483648. `optexe` follows the VM as the oracle, and native now does too (PrintI32, FileWriteI32 and ReturnI32 read the low 32 bits sign-extended on x86_64; arm64 is untouched and unverified). What remains is the language rule: `exe` (and a C++ reading of the source) wraps every i32 operation, while the IR leaves i32 results unnormalized. Decide the rule (wrapping i32, or unchecked with defined printing), document it in `docs/spec`, and make lowering normalize I32 results (sign-extend after Add/Sub/Mul/Neg/Div of I32) or define the I32 opcodes as 32-bit in IrPureSemantics.h, so comparisons after overflow agree everywhere. Add a conformance test (vm/native/exe/optexe) of overflow, comparison after overflow, and print.
-  - acceptance:
-    - the reproducer above prints identical output on vm, native, exe and optexe; the chosen rule is stated in the spec and in IrPureSemantics.h
-    - differential_opt_check.py shows no change on the corpus except cases that relied on the old 64-bit behavior, each listed
-  - stop_rule: if normalizing costs more than 3% on the VM benchmarks, normalize only at comparison/print/convert use sites and record the cost.
 
 - [ ] TODO-5478: Remove the super-linear front-end cost on very large functions
   - owner: ai

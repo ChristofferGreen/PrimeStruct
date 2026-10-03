@@ -377,7 +377,7 @@ inline void X64Emitter::endComplexOp() {
 }
 
 inline void X64Emitter::emitPromotedLocalUpdate(
-    uint32_t local, int kind, bool operandIsImm, uint64_t imm, uint32_t operandLocal) {
+    uint32_t local, int kind, bool operandIsImm, uint64_t imm, uint32_t operandLocal, bool sext) {
   counters_.valueStackPopCount += 1;
   const uint8_t target = static_cast<uint8_t>(promotedRegister(local));
   flushPendingForAlias(local);
@@ -388,6 +388,9 @@ inline void X64Emitter::emitPromotedLocalUpdate(
         emitAddRegImm32(target, static_cast<int32_t>(imm));
       } else {
         emitSubRegImm32(target, static_cast<int32_t>(imm));
+      }
+      if (sext) {
+        emitMovsxdRegReg(target, target);
       }
       return;
     }
@@ -405,5 +408,8 @@ inline void X64Emitter::emitPromotedLocalUpdate(
     emitSubRegReg(target, source);
   } else {
     emitImulRegReg(target, source);
+  }
+  if (sext) {
+    emitMovsxdRegReg(target, target);
   }
 }

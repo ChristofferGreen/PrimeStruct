@@ -171,6 +171,9 @@ bool emitSimpleInstructionImpl(const IrInstruction &inst,
       appendS32Leb(-1, out);
       out.push_back(WasmOpI32Mul);
       return true;
+    case IrOpcode::SextI32:
+      // i32 values already wrap in wasm; nothing to emit.
+      return true;
     case IrOpcode::AddI64:
       out.push_back(WasmOpI64Add);
       return true;

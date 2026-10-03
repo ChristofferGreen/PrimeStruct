@@ -83,8 +83,9 @@ TEST_CASE("ir lowerer arithmetic helper emits integer add opcode") {
 
   CHECK(result == primec::ir_lowerer::OperatorArithmeticEmitResult::Handled);
   CHECK(error.empty());
-  REQUIRE(instructions.size() == 3);
-  CHECK(instructions.back().op == primec::IrOpcode::AddI32);
+  REQUIRE(instructions.size() == 4);
+  CHECK(instructions[2].op == primec::IrOpcode::AddI32);
+  CHECK(instructions[3].op == primec::IrOpcode::SextI32);
 }
 
 TEST_CASE("ir lowerer arithmetic helper rewrites quaternion multiply from result-type fallback") {
@@ -375,8 +376,9 @@ TEST_CASE("ir lowerer arithmetic helper uses semantic pointer operand facts befo
       &semanticTargets);
   CHECK(result == primec::ir_lowerer::OperatorArithmeticEmitResult::Handled);
   CHECK(error.empty());
-  REQUIRE(instructions.size() == 3);
+  REQUIRE(instructions.size() == 4);
   CHECK(instructions[2].op == primec::IrOpcode::AddI32);
+  CHECK(instructions[3].op == primec::IrOpcode::SextI32);
 
   error.clear();
   instructions.clear();
@@ -666,12 +668,13 @@ TEST_CASE("ir lowerer arithmetic helper keeps mutable scalar locals numeric") {
 
   CHECK(result == primec::ir_lowerer::OperatorArithmeticEmitResult::Handled);
   CHECK(error.empty());
-  REQUIRE(instructions.size() == 3);
+  REQUIRE(instructions.size() == 4);
   CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
   CHECK(instructions[0].imm == 4);
   CHECK(instructions[1].op == primec::IrOpcode::LoadLocal);
   CHECK(instructions[1].imm == 6);
   CHECK(instructions[2].op == primec::IrOpcode::AddI32);
+  CHECK(instructions[3].op == primec::IrOpcode::SextI32);
 }
 
 TEST_CASE("ir lowerer arithmetic helper infers mutable scalar locals as numeric") {
@@ -732,12 +735,13 @@ TEST_CASE("ir lowerer arithmetic helper infers mutable scalar locals as numeric"
 
   CHECK(result == primec::ir_lowerer::OperatorArithmeticEmitResult::Handled);
   CHECK(error.empty());
-  REQUIRE(instructions.size() == 3);
+  REQUIRE(instructions.size() == 4);
   CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
   CHECK(instructions[0].imm == 4);
   CHECK(instructions[1].op == primec::IrOpcode::LoadLocal);
   CHECK(instructions[1].imm == 6);
   CHECK(instructions[2].op == primec::IrOpcode::AddI32);
+  CHECK(instructions[3].op == primec::IrOpcode::SextI32);
 }
 
 TEST_CASE("ir lowerer arithmetic helper allows scoped buffer byte offsets on the right") {

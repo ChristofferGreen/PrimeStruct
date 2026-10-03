@@ -130,7 +130,10 @@ bool emitNativeFunctions(const IrModule &module,
               !branchTargets[index + 1] && !branchTargets[index + 2] && !branchTargets[index + 3]) {
             const IrInstruction &operand = fn.instructions[index + 1];
             const IrInstruction &arithmetic = fn.instructions[index + 2];
-            const IrInstruction &store = fn.instructions[index + 3];
+            // An i32 operation is followed by SextI32 before the store.
+            const bool sext = fn.instructions[index + 3].op == IrOpcode::SextI32 &&
+                              index + 4 < fn.instructions.size() && !branchTargets[index + 4];
+            const IrInstruction &store = fn.instructions[index + (sext ? 4 : 3)];
             int kind = -1;
             if (arithmetic.op == IrOpcode::AddI32 || arithmetic.op == IrOpcode::AddI64) {
               kind = 0;
@@ -151,11 +154,13 @@ bool emitNativeFunctions(const IrModule &module,
                                               kind,
                                               operandIsConstant,
                                               constant,
-                                              static_cast<uint32_t>(operand.imm));
-              for (size_t skipped = 1; skipped <= 3; ++skipped) {
+                                              static_cast<uint32_t>(operand.imm),
+                                              sext);
+              const size_t skippedCount = sext ? 4 : 3;
+              for (size_t skipped = 1; skipped <= skippedCount; ++skipped) {
                 instOffsets[functionIndex][index + skipped] = emitter.currentWordIndex();
               }
-              index += 3;
+              index += skippedCount;
               continue;
             }
           }
@@ -231,6 +236,9 @@ bool emitNativeFunctions(const IrModule &module,
         break;
       case IrOpcode::NegI32:
         emitter.emitNeg();
+        break;
+      case IrOpcode::SextI32:
+        emitter.emitSextI32();
         break;
       case IrOpcode::AddI64:
         emitter.emitAdd();

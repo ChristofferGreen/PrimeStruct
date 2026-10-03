@@ -40,6 +40,8 @@ const char *pureOpcodeUnderflowMessage(IrOpcode op) {
   case IrOpcode::NegF32:
   case IrOpcode::NegF64:
     return "IR stack underflow on negate";
+  case IrOpcode::SextI32:
+    return "IR stack underflow on sext";
   case IrOpcode::AddF32:
   case IrOpcode::SubF32:
   case IrOpcode::MulF32:

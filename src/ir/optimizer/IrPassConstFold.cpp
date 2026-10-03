@@ -50,6 +50,7 @@ bool foldedPush(IrOpcode op, uint64_t result, IrOpcode &pushOp, uint64_t &imm) {
   case IrOpcode::MulI32:
   case IrOpcode::DivI32:
   case IrOpcode::NegI32:
+  case IrOpcode::SextI32:
   case IrOpcode::ConvertF32ToI32:
   case IrOpcode::ConvertF64ToI32:
     if (!fitsInt32(result)) {

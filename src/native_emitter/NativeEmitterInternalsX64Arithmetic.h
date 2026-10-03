@@ -347,10 +347,38 @@ inline void X64Emitter::emitDivU() {
 
 inline void X64Emitter::emitSignExtendTop32() {
   emitPopReg(0);
-  emitRex(true, 0, 0);
-  emitByte(0x63); // movsxd rax, eax
-  emitModRmReg(0, 0);
+  emitMovsxdRegReg(0, 0);
   emitPushReg(0);
+}
+
+inline void X64Emitter::emitMovsxdRegReg(uint8_t rd, uint8_t rs) {
+  emitRex(true, rd, rs);
+  emitByte(0x63); // MOVSXD r64, r/m32
+  emitModRmReg(rd, rs);
+}
+
+inline void X64Emitter::emitSextI32() {
+  if (!deferOperands_) {
+    emitSignExtendTop32();
+    return;
+  }
+  counters_.valueStackPopCount += 1;
+  counters_.valueStackPushCount += 1;
+  uint32_t used = 0;
+  const PendingOperand a = popOperand(used);
+  PendingOperand result;
+  if (a.kind == PendingOperand::Kind::Imm) {
+    result.kind = PendingOperand::Kind::Imm;
+    result.imm = static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(a.imm)));
+    pushPendingOperand(result);
+    return;
+  }
+  // A promoted local must keep its own register: extend into a cache register.
+  const uint8_t dst = a.kind == PendingOperand::Kind::Reg ? a.reg : allocPendingReg(used);
+  emitMovsxdRegReg(dst, a.reg);
+  result.kind = PendingOperand::Kind::Reg;
+  result.reg = dst;
+  pushPendingOperand(result);
 }
 
 inline void X64Emitter::emitNeg() {

@@ -77,6 +77,7 @@ bool computeIrStackEffect(const IrInstruction &instruction,
   case IrOpcode::FileOpenAppendDynamic:
   case IrOpcode::LoadIndirect:
   case IrOpcode::HeapAlloc:
+  case IrOpcode::SextI32:
   case IrOpcode::NegI32:
   case IrOpcode::NegI64:
   case IrOpcode::NegF32:

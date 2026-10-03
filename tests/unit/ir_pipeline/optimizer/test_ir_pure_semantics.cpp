@@ -71,6 +71,12 @@ TEST_CASE("integer arithmetic wraps on the full 64-bit slot") {
   CHECK(eval(IrOpcode::MulI32, i64(65536), i64(65536)).value == 4294967296ull);
   CHECK(eval(IrOpcode::NegI32, i64(5)).value == i64(-5));
   CHECK(eval(IrOpcode::NegI64, Int64Min).value == Int64Min);
+  // SextI32 brings an I32 result back to 32 bits: the low half, sign-extended.
+  CHECK(eval(IrOpcode::SextI32, 2147483648ull).value == i64(-2147483648ll));
+  CHECK(eval(IrOpcode::SextI32, 4294967296ull).value == 0);
+  CHECK(eval(IrOpcode::SextI32, i64(-1)).value == i64(-1));
+  CHECK(eval(IrOpcode::SextI32, 0x1FFFFFFFFull).value == i64(-1));
+  CHECK(eval(IrOpcode::SextI32, 2147483647).value == 2147483647ull);
 }
 
 TEST_CASE("division is checked and signed overflow wraps instead of trapping") {

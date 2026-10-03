@@ -108,7 +108,7 @@
   author lights). No active TODO currently tracks platform/runtime consumption of that shared event stream. Add a
   concrete TODO before changing that UI runtime seam; composite-widget composition remains locked to the basic
   widget/container APIs rather than raw draw-command helpers or raw HTML record append helpers.
-- **IR definition (stable, PSIR v26):**
+- **IR definition (stable, PSIR v27):**
   - **Module:** `{ string_table, struct_layouts, functions, instruction_source_map, host_imports, entry_index, version }`.
     The canonical contract constants live in `include/primec/Ir.h` as `IrSchemaMagic`,
     `IrSchemaVersion`, and the supported-version range; serializer implementations
@@ -175,6 +175,9 @@
   `CallHost` opcode and the module `host_imports` table (VM-only host function calls for embedding; v23 bytecode is
   rejected and must be recompiled); v25 adds the `string` host value kind for host function parameters. v26 appends the VM-only `LoadStringByteDynamic` opcode for run-time (VM-owned) strings (TODO-5364). The same change fixed the deserializer's opcode upper bound, which previously
   stopped at `HeapRealloc` and could not load `FileWriteStringDynamic`.
+  v27 appends the pure `SextI32` opcode (TODO-5477): it sign-extends the low 32 bits of the top value and is emitted
+  after user-level i32 add/sub/mul/div/negate, so i32 wraps at 32 bits on every backend. The I32 arithmetic opcodes
+  themselves still compute on the full 64-bit slot because lowering also uses them for address arithmetic.
   - **PSIR v2:** adds pointer opcodes (`AddressOfLocal`, `LoadIndirect`, `StoreIndirect`) to support
     `location`/`dereference`.
   - **PSIR v4:** adds `ReturnVoid` so void definitions can omit explicit returns without losing a bytecode terminator.

@@ -13,11 +13,12 @@ main() {
   REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
   REQUIRE(module.functions.size() == 1);
-  CHECK(module.functions[0].instructions.size() == 4);
+  CHECK(module.functions[0].instructions.size() == 5);
   CHECK(module.functions[0].instructions[0].op == primec::IrOpcode::PushI32);
   CHECK(module.functions[0].instructions[1].op == primec::IrOpcode::PushI32);
   CHECK(module.functions[0].instructions[2].op == primec::IrOpcode::AddI32);
-  CHECK(module.functions[0].instructions[3].op == primec::IrOpcode::ReturnI32);
+  CHECK(module.functions[0].instructions[3].op == primec::IrOpcode::SextI32);
+  CHECK(module.functions[0].instructions[4].op == primec::IrOpcode::ReturnI32);
 
   std::vector<uint8_t> data;
   REQUIRE(primec::serializeIr(module, data, error));
@@ -27,7 +28,7 @@ main() {
   REQUIRE(primec::deserializeIr(data, decoded, error));
   CHECK(error.empty());
   REQUIRE(decoded.functions.size() == 1);
-  CHECK(decoded.functions[0].instructions.size() == 4);
+  CHECK(decoded.functions[0].instructions.size() == 5);
 
   primec::Vm vm;
   uint64_t result = 0;
@@ -288,17 +289,18 @@ main() {
   REQUIRE(parseValidateAndLower(source, module, error));
   CHECK(error.empty());
   const auto &inst = module.functions[0].instructions;
-  REQUIRE(inst.size() == 10);
+  REQUIRE(inst.size() == 11);
   CHECK(inst[0].op == primec::IrOpcode::PushI32);
   CHECK(inst[1].op == primec::IrOpcode::StoreLocal);
   CHECK(inst[2].op == primec::IrOpcode::LoadLocal);
   CHECK(inst[3].op == primec::IrOpcode::PushI32);
   CHECK(inst[4].op == primec::IrOpcode::AddI32);
-  CHECK(inst[5].op == primec::IrOpcode::Dup);
-  CHECK(inst[6].op == primec::IrOpcode::StoreLocal);
-  CHECK(inst[7].op == primec::IrOpcode::Pop);
-  CHECK(inst[8].op == primec::IrOpcode::LoadLocal);
-  CHECK(inst[9].op == primec::IrOpcode::ReturnI32);
+  CHECK(inst[5].op == primec::IrOpcode::SextI32);
+  CHECK(inst[6].op == primec::IrOpcode::Dup);
+  CHECK(inst[7].op == primec::IrOpcode::StoreLocal);
+  CHECK(inst[8].op == primec::IrOpcode::Pop);
+  CHECK(inst[9].op == primec::IrOpcode::LoadLocal);
+  CHECK(inst[10].op == primec::IrOpcode::ReturnI32);
 
   primec::Vm vm;
   uint64_t result = 0;

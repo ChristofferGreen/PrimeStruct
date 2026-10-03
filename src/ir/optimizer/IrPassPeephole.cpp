@@ -81,6 +81,22 @@ bool isMulOrDivU(IrOpcode op) {
   return op == IrOpcode::MulI32 || op == IrOpcode::MulI64 || isDivision(op);
 }
 
+// True when the opcode leaves a value that is already a sign-extended 32-bit
+// integer, so a following SextI32 changes nothing.
+bool producesCanonicalI32(IrOpcode op) {
+  switch (op) {
+  case IrOpcode::PushI32:
+  case IrOpcode::SextI32:
+  case IrOpcode::ConvertF32ToI32:
+  case IrOpcode::ConvertF64ToI32:
+  case IrOpcode::LoadStringByte:
+  case IrOpcode::LoadStringByteDynamic:
+    return true;
+  default:
+    return isComparison(op);
+  }
+}
+
 // One sweep of adjacent-pair rewrites. `prev` is the nearest surviving earlier
 // instruction; a rule may only fire when `cur` is not a join point, because a
 // jump into `cur` would skip `prev`.
@@ -98,6 +114,10 @@ bool sweep(IrFunction &function) {
     if (prev != function.instructions.size() && !isTarget) {
       const IrInstruction p = rewriter.current(prev);
       bool removePair = false;
+      if (cur.op == IrOpcode::SextI32 && producesCanonicalI32(p.op)) {
+        rewriter.erase(i); // the operand is already canonical
+        continue;
+      }
       if (cur.op == IrOpcode::Pop) {
         if (p.op == IrOpcode::StoreLocal && !targets[prev]) {
           // `dup; store x; pop` is how an assignment statement discards its

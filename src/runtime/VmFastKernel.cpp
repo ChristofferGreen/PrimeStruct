@@ -63,6 +63,14 @@ enum FastOp : uint16_t {
   FastOpPushLocalMulLocal,                 // LoadLocal a; LoadLocal b; Mul
   FastOpLocalAddImmStore,                  // LoadLocal a; Push c; Add; StoreLocal b
   FastOpLocalSubImmStore,                  // LoadLocal a; Push c; Sub; StoreLocal b
+  FastOpPushLocalAddImmSext,               // LoadLocal a; Push c; Add; SextI32
+  FastOpPushLocalSubImmSext,               // LoadLocal a; Push c; Sub; SextI32
+  FastOpPushLocalMulImmSext,               // LoadLocal a; Push c; Mul; SextI32
+  FastOpPushLocalAddLocalSext,             // LoadLocal a; LoadLocal b; Add; SextI32
+  FastOpPushLocalSubLocalSext,             // LoadLocal a; LoadLocal b; Sub; SextI32
+  FastOpPushLocalMulLocalSext,             // LoadLocal a; LoadLocal b; Mul; SextI32
+  FastOpLocalAddImmStoreSext,              // LoadLocal a; Push c; Add; SextI32; StoreLocal b
+  FastOpLocalSubImmStoreSext,              // LoadLocal a; Push c; Sub; SextI32; StoreLocal b
   FastOpLocalStringByteStore,              // LoadLocal a; LoadStringByte #imm; StoreLocal b
   FastOpPushLocalStringByte,               // LoadLocal a; LoadStringByte #imm
   FAST_CMPS(FAST_ENUM_JMP_CMP_LOCAL_IMM)   // LoadLocal a; Push c; Cmp; JumpIfZero b
@@ -170,6 +178,11 @@ uint64_t constantOf(const IrInstruction &instruction) {
              : instruction.imm;
 }
 
+// The slot value SextI32 produces: the low 32 bits sign-extended.
+inline uint64_t sext32(uint64_t value) {
+  return static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(value)));
+}
+
 bool fitsIndex(uint64_t value) {
   return value <= UINT32_MAX;
 }
@@ -206,8 +219,29 @@ void fuseInstructions(const IrFunction &function, const IrCfg &cfg, FastFunction
     size_t length = 1;
     if (op(i) == IrOpcode::LoadLocal && fitsIndex(imm(i))) {
       const uint32_t first = static_cast<uint32_t>(imm(i));
-      if (window(i, 4) && isConstantPush(op(i + 1)) && comparisonKind(op(i + 2)) >= 0 &&
-          op(i + 3) == IrOpcode::JumpIfZero && fitsIndex(imm(i + 3))) {
+      if (window(i, 5) && isConstantPush(op(i + 1)) && arithmeticKind(op(i + 2)) >= 0 &&
+          arithmeticKind(op(i + 2)) <= 1 && op(i + 3) == IrOpcode::SextI32 &&
+          op(i + 4) == IrOpcode::StoreLocal && fitsIndex(imm(i + 4))) {
+        slot.op = arithmeticKind(op(i + 2)) == 0 ? FastOpLocalAddImmStoreSext
+                                                 : FastOpLocalSubImmStoreSext;
+        slot.a = first;
+        slot.imm = constantOf(function.instructions[i + 1]);
+        slot.b = static_cast<uint32_t>(imm(i + 4));
+        length = 5;
+      } else if (window(i, 4) && isConstantPush(op(i + 1)) && arithmeticKind(op(i + 2)) >= 0 &&
+                 op(i + 3) == IrOpcode::SextI32) {
+        slot.op = static_cast<uint16_t>(FastOpPushLocalAddImmSext + arithmeticKind(op(i + 2)));
+        slot.a = first;
+        slot.imm = constantOf(function.instructions[i + 1]);
+        length = 4;
+      } else if (window(i, 4) && op(i + 1) == IrOpcode::LoadLocal && fitsIndex(imm(i + 1)) &&
+                 arithmeticKind(op(i + 2)) >= 0 && op(i + 3) == IrOpcode::SextI32) {
+        slot.op = static_cast<uint16_t>(FastOpPushLocalAddLocalSext + arithmeticKind(op(i + 2)));
+        slot.a = first;
+        slot.b = static_cast<uint32_t>(imm(i + 1));
+        length = 4;
+      } else if (window(i, 4) && isConstantPush(op(i + 1)) && comparisonKind(op(i + 2)) >= 0 &&
+                 op(i + 3) == IrOpcode::JumpIfZero && fitsIndex(imm(i + 3))) {
         slot.op = static_cast<uint16_t>(FastOpJmpCmpLocalImmEq + comparisonKind(op(i + 2)));
         slot.a = first;
         slot.imm = constantOf(function.instructions[i + 1]);
@@ -504,6 +538,38 @@ bool executeVmFastKernel(const IrModule &module,
       locals[inst.b] = locals[inst.a] - inst.imm;
       ip += 4;
       continue;
+    case FastOpPushLocalAddImmSext:
+      *sp++ = sext32(locals[inst.a] + inst.imm);
+      ip += 4;
+      continue;
+    case FastOpPushLocalSubImmSext:
+      *sp++ = sext32(locals[inst.a] - inst.imm);
+      ip += 4;
+      continue;
+    case FastOpPushLocalMulImmSext:
+      *sp++ = sext32(locals[inst.a] * inst.imm);
+      ip += 4;
+      continue;
+    case FastOpPushLocalAddLocalSext:
+      *sp++ = sext32(locals[inst.a] + locals[inst.b]);
+      ip += 4;
+      continue;
+    case FastOpPushLocalSubLocalSext:
+      *sp++ = sext32(locals[inst.a] - locals[inst.b]);
+      ip += 4;
+      continue;
+    case FastOpPushLocalMulLocalSext:
+      *sp++ = sext32(locals[inst.a] * locals[inst.b]);
+      ip += 4;
+      continue;
+    case FastOpLocalAddImmStoreSext:
+      locals[inst.b] = sext32(locals[inst.a] + inst.imm);
+      ip += 5;
+      continue;
+    case FastOpLocalSubImmStoreSext:
+      locals[inst.b] = sext32(locals[inst.a] - inst.imm);
+      ip += 5;
+      continue;
     case FastOpLocalStringByteStore:
     case FastOpPushLocalStringByte: {
       const std::string *text = nullptr;
@@ -571,6 +637,10 @@ bool executeVmFastKernel(const IrModule &module,
     case OP(NegI32):
     case OP(NegI64):
       sp[-1] = uint64_t{0} - sp[-1];
+      ++ip;
+      continue;
+    case OP(SextI32):
+      sp[-1] = sext32(sp[-1]);
       ++ip;
       continue;
     case OP(CmpEqI32):

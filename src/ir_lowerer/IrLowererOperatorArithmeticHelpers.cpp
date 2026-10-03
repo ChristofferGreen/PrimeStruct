@@ -265,6 +265,10 @@ OperatorArithmeticEmitResult emitArithmeticOperatorExpr(const Expr &expr,
       negOp = IrOpcode::NegF32;
     }
     emitInstruction(negOp, 0);
+    if (negOp == IrOpcode::NegI32) {
+      // i32 wraps at 32 bits (see IrPureSemantics.h).
+      emitInstruction(IrOpcode::SextI32, 0);
+    }
     return OperatorArithmeticEmitResult::Handled;
   }
 
@@ -465,6 +469,11 @@ OperatorArithmeticEmitResult emitArithmeticOperatorExpr(const Expr &expr,
     }
   }
   emitInstruction(op, 0);
+  if (op == IrOpcode::AddI32 || op == IrOpcode::SubI32 || op == IrOpcode::MulI32 ||
+      op == IrOpcode::DivI32) {
+    // i32 wraps at 32 bits (see IrPureSemantics.h).
+    emitInstruction(IrOpcode::SextI32, 0);
+  }
   return OperatorArithmeticEmitResult::Handled;
 }
 
