@@ -5,6 +5,7 @@
 #include "primec/backend/IrBackendProfiles.h"
 #include "primec/ir/IrSerializer.h"
 #include "primec/backend/IrToCppEmitter.h"
+#include "primec/backend/IrToOptCppEmitter.h"
 #include "primec/backend/IrToGlslEmitter.h"
 #include "primec/backend/NativeEmitter.h"
 #include "primec/support/ProcessRunner.h"
@@ -511,7 +512,119 @@ public:
   }
 };
 
-const std::array<const IrBackend *, 8> &registeredBackends() {
+class OptCppIrBackend final : public IrBackend {
+public:
+  std::string_view emitKind() const override {
+    return "optcpp-ir";
+  }
+
+  const IrBackendDiagnostics &diagnostics() const override {
+    static constexpr IrBackendDiagnostics Diagnostics = {
+        .loweringDiagnosticCode = DiagnosticCode::LoweringError,
+        .validationDiagnosticCode = DiagnosticCode::LoweringError,
+        .inliningDiagnosticCode = DiagnosticCode::LoweringError,
+        .emitDiagnosticCode = DiagnosticCode::EmitError,
+        .loweringErrorPrefix = "Optimized C++ IR lowering error: ",
+        .validationErrorPrefix = "Optimized C++ IR validation error: ",
+        .inliningErrorPrefix = "Optimized C++ IR inlining error: ",
+        .emitErrorPrefix = "Optimized C++ IR emit error: ",
+        .backendTag = "optcpp-ir",
+    };
+    return Diagnostics;
+  }
+
+  IrValidationTarget validationTarget(const Options & /*options*/) const override {
+    return IrValidationTarget::Any;
+  }
+
+  bool requiresOutputPath() const override {
+    return true;
+  }
+
+  bool emit(const IrModule &module,
+            const IrBackendEmitOptions &options,
+            IrBackendEmitResult & /*result*/,
+            std::string &error) const override {
+    const IrModule prunedModule = pruneIrModuleToReachableFunctions(module);
+    IrToOptCppEmitter emitter;
+    std::string cppSource;
+    if (!emitter.emitSource(prunedModule, cppSource, error)) {
+      if (error.empty()) {
+        error = "ir-to-optcpp failed without diagnostic";
+      }
+      error = "ir-to-optcpp failed: " + error;
+      return false;
+    }
+    if (!writeTextFile(options.outputPath, cppSource)) {
+      error = options.outputPath;
+      return false;
+    }
+    return true;
+  }
+};
+
+class OptExeIrBackend final : public IrBackend {
+public:
+  std::string_view emitKind() const override {
+    return "optexe-ir";
+  }
+
+  const IrBackendDiagnostics &diagnostics() const override {
+    static constexpr IrBackendDiagnostics Diagnostics = {
+        .loweringDiagnosticCode = DiagnosticCode::LoweringError,
+        .validationDiagnosticCode = DiagnosticCode::LoweringError,
+        .inliningDiagnosticCode = DiagnosticCode::LoweringError,
+        .emitDiagnosticCode = DiagnosticCode::EmitError,
+        .loweringErrorPrefix = "Optimized EXE IR lowering error: ",
+        .validationErrorPrefix = "Optimized EXE IR validation error: ",
+        .inliningErrorPrefix = "Optimized EXE IR inlining error: ",
+        .emitErrorPrefix = "Optimized EXE IR emit error: ",
+        .backendTag = "optexe-ir",
+    };
+    return Diagnostics;
+  }
+
+  IrValidationTarget validationTarget(const Options & /*options*/) const override {
+    return IrValidationTarget::Any;
+  }
+
+  bool requiresOutputPath() const override {
+    return true;
+  }
+
+  bool emit(const IrModule &module,
+            const IrBackendEmitOptions &options,
+            IrBackendEmitResult & /*result*/,
+            std::string &error) const override {
+    const IrModule prunedModule = pruneIrModuleToReachableFunctions(module);
+    const std::filesystem::path outputPath(options.outputPath);
+    std::filesystem::path cppPath = outputPath;
+    cppPath.replace_extension(".cpp");
+
+    IrToOptCppEmitter emitter;
+    std::string cppSource;
+    if (!emitter.emitSource(prunedModule, cppSource, error)) {
+      if (error.empty()) {
+        error = "ir-to-optcpp failed without diagnostic";
+      }
+      error = "ir-to-optcpp failed: " + error;
+      return false;
+    }
+    if (!writeTextFile(cppPath.string(), cppSource)) {
+      error = cppPath.string();
+      return false;
+    }
+
+    const ProcessRunner &processRunner = systemProcessRunner();
+    if (!compileCppExecutableOptimized(processRunner, cppPath, outputPath, options.hostOptimizationLevel)) {
+      error = "Failed to compile output executable";
+      return false;
+    }
+    return true;
+  }
+};
+
+const std::array<const IrBackend *, 10> &registeredBackends() {
   // TODO-5235: SystemHeapScope active for the whole block, since several
   // static locals below are constructed together (only on the first call -
   // a plain, non-static guard so it doesn't itself become a magic static)
@@ -526,7 +639,9 @@ const std::array<const IrBackend *, 8> &registeredBackends() {
   static const SpirvIrBackend SpirvBackend;
   static const CppIrBackend CppBackend;
   static const ExeIrBackend ExeBackend;
-  static const std::array<const IrBackend *, 8> Backends = {
+  static const OptCppIrBackend OptCppBackend;
+  static const OptExeIrBackend OptExeBackend;
+  static const std::array<const IrBackend *, 10> Backends = {
       &VmBackend,
       &NativeBackend,
       &IrBackendImpl,
@@ -535,6 +650,8 @@ const std::array<const IrBackend *, 8> &registeredBackends() {
       &SpirvBackend,
       &CppBackend,
       &ExeBackend,
+      &OptCppBackend,
+      &OptExeBackend,
   };
   return Backends;
 }

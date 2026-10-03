@@ -1,9 +1,9 @@
 # Optimizing Native Backend and VM: Plan
 
 Status: in progress (2026-10-03). Implemented so far: the `-O` and `--opt-*` flags, the pass manager and manifest,
-the `ir-lowered`/`ir-optimized` dumps, shared CFG utilities and opcode semantics, local escape analysis, and four
--O1 passes (see `docs/spec/source-pipeline.md` for the user-facing description). The register form, `optexe`, the
-native code generator and the fast VM kernel are not started.
+the `ir-lowered`/`ir-optimized` dumps, shared CFG utilities and opcode semantics, local escape analysis, four
+-O1 passes (see `docs/spec/source-pipeline.md` for the user-facing description), and the `optexe`/`optcpp` emit kinds
+(section 9.1). The register form, the native code generator and the fast VM kernel are not started.
 
 This document records what the direct native backend (`--emit=native`) and the PrimeScript
 VM (`--emit=vm`, `primevm`) do today, why they are slow, and a phased plan to
@@ -305,8 +305,9 @@ should be split into leaves once `optexe` has validated the register form.
 | 1.1 shared CFG, stack-balance check | TODO-5430, TODO-5431 |
 | 1.3 shared pure-opcode semantics | TODO-5432 |
 | 1.4 local escape analysis | TODO-5433 |
-| 2.1 register form with promoted locals | TODO-5434 |
-| 2.1b / section 9 `optexe` | TODO-5435 (skeleton), TODO-5436 (calls, floats), TODO-5437 (memory), TODO-5438 (I/O), TODO-5439 (matrix, benchmarks, compile-time gate) |
+| 2.1 register form with promoted locals | TODO-5434 (deferred: only the native generator needs it) |
+| 2.1b / section 9 `optexe` | TODO-5435..5438 (done), TODO-5439 (matrix, benchmarks) |
+| found while testing | TODO-5440 (i32 overflow semantics), TODO-5441 (front-end cost on huge functions, deferred) |
 
 ### Phase 0: measurement and control surface (no behaviour change)
 
@@ -717,17 +718,59 @@ than changing `exe`/`cpp` in place:
   gate; above a size threshold use `__attribute__((optnone))`/`-O1` for that
   function instead of splitting it.
 
+#### Implementation status and measurements (2026-10-03)
+
+`optexe` and `optcpp` are implemented in `src/backend/IrToOptCppEmitter.cpp` with its runtime text in
+`IrToOptCppRuntime.h`. Deviation from the plan above: there is no register form. The emitter works on the stack
+form directly, using the shared CFG (`IrCfg.h`) for per-block stack depths: stack depth *d* is the C++ variable
+`s<d>`, locals are `l<n>`, blocks are labels, jumps are `goto`. Because depths are proven consistent at joins no
+moves are needed, and the host compiler does the register allocation. Functions with `AddressOfLocal`,
+`LoadIndirect` or `StoreIndirect` use a `uint64_t frame[N]` array (the VM resolves indirect addresses against the
+current frame even when the address came from the caller, so any indirect access needs one). The heap keeps the
+VM's address encoding and fault text but resolves addresses through an owner table in constant time.
+
+Coverage: every opcode except `CallHost` (host imports; rejected with a diagnostic naming opcode and function).
+The host compile flag is `-O<n>` from the command line (default `-O2`) with `-ffp-contract=off`.
+
+Verification: pure-opcode results over ~6,000 edge-case operand pairs, 60 random programs (plain and IR-optimized),
+heap/indirect, string/argv/file and fault tests all compare with the VM (`primestruct.ir.optexe`), and
+`scripts/differential_opt_check.py --optexe` runs the 850-program corpus: 514 programs compile and match the VM's
+stdout, stderr and exit code (the remaining 336 are compile-error cases or rejected earlier by the native-profile
+lowering; none is rejected by the emitter). One systematic difference is accepted and canonicalized in tests: the
+sign and payload of a NaN produced by arithmetic is unspecified (the host compiler folds `inf - inf` to the positive
+NaN, x86 hardware at run time yields the negative one).
+
+Run time on this machine (seconds; `exe` is the old emitter at `clang++ -O0`):
+
+| program | vm -O0 | vm -O2 | exe | optexe -O2 |
+| --- | --- | --- | --- | --- |
+| aggregate | 1.25 | 0.95 | 4.12 | 0.0045 |
+| json_scan | 1.31 | 1.06 | 4.18 | 0.0116 |
+| json_parse | 2.23 | 1.95 | 6.94 | 0.0122 |
+
+These benchmarks have constant inputs, so clang folds much of the work at compile time; the table shows the
+ceiling, not what data-dependent programs will see. TODO-5426/5439 add non-foldable rows.
+
+Compile time: for an `n`-statement `main` of arithmetic and branches, clang on the optexe source takes
+0.8-1.0 s at n=2,000 and 1.2-1.4 s at n=8,000 at every `-O` level (1.1 MB of C++), against 2.8 s and 8.9 s for the
+old emitter at `-O0`. The cost that grows is `primec` itself, before any emitter runs: 3.3 s, 6.5 s, 17 s and 84 s at
+n=2,000, 4,000, 8,000 and 20,000 (TODO-5441). The reproducer is a `main` of lines like
+`assign(total, plus(multiply(total, 3i32), K))`, with an `if` on every seventh line.
+
+Finding (TODO-5440): the backends disagree on i32 overflow. For `total = 2147483647i32; total = total + 1i32`, the
+VM keeps the 64-bit slot (so `total < 0` is false) and prints -2147483648, `exe` wraps in `int32_t` (compare true,
+prints -2147483648), and `native` keeps 64 bits and prints 2147483648. `optexe` follows the VM, the oracle.
+
 Suggested order: Phase 0.1-0.3 (flags, pass manager, dumps), Phase 1.1
-(shared CFG), Phase 2.1 (register form with promoted locals), then this
-emitter, then the matrix runner (0.5) to run the corpus through it. Phase 3
-then ports the proven form to the native emitter.
+(shared CFG), then this emitter (done), then the matrix runner (0.5) to run the corpus through it. Phase 3
+(register form, native code generator) is the next consumer of the middle end.
 
 ## 10. Decisions taken
 
 - Default level after Phase 5 is `-O2` for `--emit=native`, `--emit=vm` and
   `primevm`, `-O0` under any debug session or trace (2026-10-03).
-- The register-form C++ emitter is the first consumer of the middle end
-  (section 9) (2026-10-03).
+- The `optexe` C++ emitter is the first consumer of the middle end
+  (section 9); it works on the stack form with the shared CFG, no register form (2026-10-03).
 - This work is developed on the branch `claude/native-instruction-optimization-rc4qu6`,
   not directly on `master` (2026-10-03, maintainer decision; it overrides the
   `AGENTS.md` default for this programme only). Keep the branch current by

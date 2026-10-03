@@ -10,6 +10,12 @@ reported as unstable and skipped.
 
     python3 scripts/differential_opt_check.py --build-dir build-release [--levels 1,2,3]
                                               [--jobs 4] [--limit N] [--keep-dir DIR]
+                                              [--optexe [--optexe-levels 0,2]]
+
+With --optexe each program is also compiled with `primec --emit=optexe` (at each
+--optexe-levels host optimization level, via `-O<n>`) and the resulting binary is
+compared against the -O0 VM run. Programs the optexe emitter rejects as using an
+unsupported opcode are counted separately and skipped.
 
 Run from anywhere; `primevm` is executed with the build directory as its working
 directory, as the compile-run tests do. Exit status 0 when every program
@@ -74,9 +80,40 @@ def run_vm(build_dir: Path, source_path: Path, flags: list[str]) -> tuple[int, s
     )
 
 
-def check_one(args: tuple[str, str, Path, Path, list[int]]) -> tuple[str, str, str]:
-    """Returns (label, status, detail); status is ok, unstable, or DIFF."""
-    label, text, build_dir, work_dir, levels = args
+def run_optexe(build_dir: Path, source_path: Path, level: int) -> tuple[int, str, str] | str:
+    """Compiles with the optexe emit kind and runs the binary. Returns the run
+    result, or a string naming why it could not be compared (`unsupported` when
+    the emitter rejects the program, `frontend` for any other compile failure)."""
+    binary = source_path.with_suffix(f".optexe{level}")
+    try:
+        compiled = subprocess.run(
+            [str(build_dir / "primec"), str(source_path), "--emit=optexe", f"-O{level}", "--entry", "/main",
+             "-o", str(binary)],
+            cwd=build_dir,
+            capture_output=True,
+            timeout=TIMEOUT_SECONDS * 4,
+        )
+    except subprocess.TimeoutExpired:
+        return "frontend"
+    if compiled.returncode != 0:
+        message = compiled.stderr.decode("utf-8", errors="replace")
+        return "unsupported" if "optexe does not support" in message else "frontend"
+    try:
+        completed = subprocess.run([str(binary)], cwd=build_dir, capture_output=True, timeout=TIMEOUT_SECONDS)
+    except subprocess.TimeoutExpired:
+        binary.unlink(missing_ok=True)
+        return (-999, "", "timeout")
+    binary.unlink(missing_ok=True)
+    return (
+        completed.returncode,
+        completed.stdout.decode("utf-8", errors="replace"),
+        completed.stderr.decode("utf-8", errors="replace"),
+    )
+
+
+def check_one(args: tuple[str, str, Path, Path, list[int], list[int]]) -> tuple[str, str, str]:
+    """Returns (label, status, detail); status is ok, unstable, unsupported, or DIFF."""
+    label, text, build_dir, work_dir, levels, optexe_levels = args
     digest = hashlib.sha1(text.encode("utf-8")).hexdigest()[:12]
     source_path = work_dir / f"{digest}.prime"
     source_path.write_text(text, encoding="utf-8")
@@ -99,8 +136,26 @@ def check_one(args: tuple[str, str, Path, Path, list[int]]) -> tuple[str, str, s
             if result[2] != baseline[2]:
                 detail.append(f"  stderr: {baseline[2][:300]!r} -> {result[2][:300]!r}")
             return (label, "DIFF", "\n".join(detail))
+    unsupported = False
+    for level in optexe_levels:
+        result = run_optexe(build_dir, source_path, level)
+        if isinstance(result, str):
+            if result == "frontend" and baseline[0] == 0:
+                return (label, "DIFF", f"optexe -O{level} failed to compile a program the VM runs "
+                                       f"(source kept as {source_path.name})")
+            unsupported = True
+            break
+        if result != baseline:
+            detail = [f"optexe -O{level} differs from the -O0 VM (source kept as {source_path.name})"]
+            if result[0] != baseline[0]:
+                detail.append(f"  exit code: {baseline[0]} -> {result[0]}")
+            if result[1] != baseline[1]:
+                detail.append(f"  stdout: {baseline[1][:200]!r} -> {result[1][:200]!r}")
+            if result[2] != baseline[2]:
+                detail.append(f"  stderr: {baseline[2][:300]!r} -> {result[2][:300]!r}")
+            return (label, "DIFF", "\n".join(detail))
     source_path.unlink()
-    return (label, "ok", "")
+    return (label, "unsupported" if unsupported else "ok", "")
 
 
 def main() -> int:
@@ -108,6 +163,8 @@ def main() -> int:
     parser.add_argument("--build-dir", type=Path, default=Path("build-release"))
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument("--levels", default="1", help="comma-separated -O levels to compare against -O0")
+    parser.add_argument("--optexe", action="store_true", help="also compare optexe binaries against the -O0 VM")
+    parser.add_argument("--optexe-levels", default="2", help="comma-separated host -O levels for --optexe")
     parser.add_argument("--jobs", type=int, default=4)
     parser.add_argument("--limit", type=int, default=0, help="check only the first N programs")
     parser.add_argument("--keep-dir", type=Path, default=None, help="directory for programs that differ")
@@ -118,15 +175,16 @@ def main() -> int:
         print(f"error: {build_dir / 'primevm'} not found; build first", file=sys.stderr)
         return 2
     levels = [int(part) for part in args.levels.split(",") if part]
+    optexe_levels = [int(part) for part in args.optexe_levels.split(",") if part] if args.optexe else []
     sources = collect_sources(args.root)
     if args.limit > 0:
         sources = sources[: args.limit]
 
     work_root = args.keep_dir if args.keep_dir else Path(tempfile.mkdtemp(prefix="primec_diff_"))
     work_root.mkdir(parents=True, exist_ok=True)
-    jobs = [(label, text, build_dir, work_root, levels) for label, text in sources]
+    jobs = [(label, text, build_dir, work_root, levels, optexe_levels) for label, text in sources]
 
-    counts = {"ok": 0, "unstable": 0, "DIFF": 0}
+    counts = {"ok": 0, "unstable": 0, "unsupported": 0, "DIFF": 0}
     failures: list[str] = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, args.jobs)) as pool:
         for label, status, detail in pool.map(check_one, jobs):
@@ -135,7 +193,7 @@ def main() -> int:
                 failures.append(f"{label}: {detail}")
 
     print(f"programs checked: {len(sources)}  ok: {counts['ok']}  unstable (skipped): {counts['unstable']}  "
-          f"differing: {counts['DIFF']}  levels: {levels}")
+          f"optexe-unsupported: {counts['unsupported']}  differing: {counts['DIFF']}  levels: {levels}")
     for failure in failures:
         print(failure)
     if failures:

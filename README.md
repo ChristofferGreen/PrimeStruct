@@ -380,6 +380,11 @@ python3 scripts/architecture_health_dashboard.py --root .
 - `primec --emit=native` emits a native executable directly
 - `primec --emit=cpp` emits C++, and `primec --emit=exe` uses the C++ path to
   produce a native executable
+- `primec --emit=optexe` (executable) and `--emit=optcpp` (source) emit
+  structured C++ that the host compiler optimizes: IR stack slots and locals
+  become C++ variables, blocks become labels, and `-O<n>` also sets the host
+  `clang++` level (default `-O2`). Output matches the VM; `CallHost` is not
+  supported
 - imports are expanded before semantics, so compilation works over one
   flattened unit by default
 - `--dump-stage=pre_ast|ast|ast-semantic|semantic-product|ir|ir-lowered|ir-optimized`

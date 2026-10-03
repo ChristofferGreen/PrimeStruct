@@ -128,6 +128,12 @@ module {
 - `primec --emit=exe input.prime -o hello`
   - Uses the C++ emitter plus the host toolchain (initially `clang++`).
   - Bundles a minimal runtime shim that maps `main` to `int main()`.
+- `primec --emit=optcpp input.prime -o hello.cpp` and `primec --emit=optexe input.prime -o hello`
+  - Emit structured C++ from the shared IR instead of re-implementing the stack machine: each operand-stack depth and
+    local is a C++ variable, each basic block a label, jumps are `goto`, calls are C++ calls. The host compiler does
+    register allocation; `-O<n>` also selects its optimization level (default `-O2`, `-ffp-contract=off`).
+  - Matches the VM's output, exit code and `VM error:` fault text; `CallHost` (VM host imports) is rejected with a
+    diagnostic. `exe`/`cpp` stay unchanged and serve as an independent oracle.
 - `primec --emit=native input.prime -o hello`
   - Emits a self-contained macOS/arm64 executable directly (no external linker).
   - Lowers through the portable IR that also feeds the VM/network path.

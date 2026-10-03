@@ -209,3 +209,28 @@ TEST_CASE("serialized output is unchanged at -O0 and shrinks at -O1 with the sam
   CHECK(baseline.out == optimized.out);
   CHECK(baseline.out == "10\n");
 }
+
+TEST_CASE("optexe and optcpp emit kinds produce a fast executable and C++ source") {
+  const std::string source = writeSource("fold_optexe.prime", FoldableProgram);
+  const std::string exePath = primec::testing::testScratchPath("optimizer_cli/fold_optexe").string();
+  const std::string cppPath = primec::testing::testScratchPath("optimizer_cli/fold_optcpp.cpp").string();
+
+  // The default host level is -O2; the IR level only changes what the emitter sees.
+  for (const char *level : {"", "-O0", "-O3"}) {
+    CAPTURE(level);
+    REQUIRE(run("./primec --emit=optexe " + source + " " + level + " -o " + exePath).exitCode == 0);
+    const CommandResult executed = run("'" + exePath + "'");
+    CHECK(executed.exitCode == 0);
+    CHECK(executed.out == "10\n");
+  }
+
+  REQUIRE(run("./primec --emit=optcpp " + source + " -O1 -o " + cppPath).exitCode == 0);
+  const std::string generated = readText(cppPath);
+  CHECK(contains(generated, "goto L") == false);  // straight-line program
+  CHECK(contains(generated, "int main(int argc, char **argv)"));
+  CHECK(contains(generated, "VM error: "));
+  // Folding happened before emission: the constant 10 is in the source, the
+  // multiplication is not.
+  CHECK(contains(generated, "UINT64_C(0xa)"));
+  CHECK_FALSE(contains(generated, "s0 * s1"));
+}

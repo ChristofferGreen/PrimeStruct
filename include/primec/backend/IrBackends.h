@@ -28,6 +28,8 @@ struct IrBackendEmitOptions {
   std::string outputPath;
   std::string inputPath;
   std::vector<std::string> programArgs;
+  // Optimization level (0..3) the optexe kinds pass to the host C++ compiler.
+  int hostOptimizationLevel = 2;
 };
 
 struct IrBackendEmitResult {

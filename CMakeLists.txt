@@ -645,6 +645,7 @@ set(PRIMESTRUCT_CODEGEN_SOURCES
   src/glsl_emitter/GlslEmitterHelpers.cpp
   src/glsl_emitter/GlslEmitterStatements.cpp
   src/backend/IrToCppEmitter.cpp
+  src/backend/IrToOptCppEmitter.cpp
   src/backend/IrToCppEmitterInstructionEmitter.cpp
   src/backend/IrToCppEmitterPrintAndFileEmitter.cpp
   src/backend/IrToGlslEmitter.cpp
@@ -921,7 +922,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   target_link_libraries(PrimeStruct_misc_tests PRIVATE primec_ir_lib)
   primestructEnableWarnings(PrimeStruct_misc_tests)
 
-  # Shared IR CFG utilities and the stack-effect table (TODO-5430): structure
+  # Shared IR CFG utilities and the stack-effect table: structure
   # tests plus a cross-check of every opcode's stack effect against the VM.
   add_executable(PrimeStruct_ir_cfg_tests
     tests/unit/test_main.cpp
@@ -932,8 +933,9 @@ if(PRIMESTRUCT_BUILD_TESTS)
   target_link_libraries(PrimeStruct_ir_cfg_tests PRIVATE primec_ir_lib primec_runtime_lib)
   primestructEnableWarnings(PrimeStruct_ir_cfg_tests)
 
-  # IR optimizer building blocks (TODO-5432, TODO-5433 and the passes after them):
-  # shared opcode semantics, local escape analysis, and later the pass tests.
+  # IR optimizer building blocks:
+  # shared opcode semantics, local escape analysis, module printer, pass tests,
+  # random differential tests, the CLI surface, and the optexe emitter.
   add_executable(PrimeStruct_ir_optimizer_tests
     tests/unit/test_main.cpp
     tests/unit/ir_pipeline/optimizer/test_ir_pure_semantics.cpp
@@ -942,9 +944,10 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/ir_pipeline/optimizer/test_ir_passes.cpp
     tests/unit/ir_pipeline/optimizer/test_ir_optimizer_random.cpp
     tests/unit/ir_pipeline/optimizer/test_ir_optimizer_cli.cpp
+    tests/unit/ir_pipeline/optimizer/test_ir_optexe.cpp
   )
   target_include_directories(PrimeStruct_ir_optimizer_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
-  target_link_libraries(PrimeStruct_ir_optimizer_tests PRIVATE primec_ir_lib primec_backend_registry_lib primec_runtime_lib)
+  target_link_libraries(PrimeStruct_ir_optimizer_tests PRIVATE primec_ir_lib primec_backend_registry_lib primec_backend_emitters_lib primec_support_lib primec_runtime_lib)
   primestructEnableWarnings(PrimeStruct_ir_optimizer_tests)
 
   # Collection helper target parity matrix (TODO-5349): dump spelling vs published
@@ -2953,6 +2956,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.ir.passes
     primestruct.ir.optimizer_random
     primestruct.ir.optimizer_cli
+    primestruct.ir.optexe
   )
   foreach(suite IN LISTS PrimeStructIrOptimizerTestSuites)
     string(REPLACE "." "_" suiteId "${suite}")

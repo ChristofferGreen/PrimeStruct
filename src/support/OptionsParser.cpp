@@ -502,7 +502,8 @@ bool applyPrimecOutputDefaults(Options &out) {
     if (stem.empty()) {
       stem = inputPath.filename().string();
     }
-    if (out.emitKind == "cpp" || out.emitKind == "cpp-ir") {
+    if (out.emitKind == "cpp" || out.emitKind == "cpp-ir" || out.emitKind == "optcpp" ||
+        out.emitKind == "optcpp-ir") {
       out.outputPath = stem + ".cpp";
     } else if (out.emitKind == "ir") {
       out.outputPath = stem + ".psir";

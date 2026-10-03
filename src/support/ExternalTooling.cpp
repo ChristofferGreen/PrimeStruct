@@ -57,4 +57,19 @@ bool compileCppExecutable(const ProcessRunner &runner,
   return commandSucceeds(runner, args);
 }
 
+bool compileCppExecutableOptimized(const ProcessRunner &runner,
+                                   const std::filesystem::path &cppPath,
+                                   const std::filesystem::path &outputPath,
+                                   int optimizationLevel) {
+  const int level = optimizationLevel < 0 ? 0 : (optimizationLevel > 3 ? 3 : optimizationLevel);
+  std::vector<std::string> args = {"clang++",
+                                   "-std=c++23",
+                                   "-O" + std::to_string(level),
+                                   "-ffp-contract=off",
+                                   cppPath.string(),
+                                   "-o",
+                                   outputPath.string()};
+  return commandSucceeds(runner, args);
+}
+
 } // namespace primec

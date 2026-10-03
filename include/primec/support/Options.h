@@ -11,8 +11,8 @@ namespace primec {
 enum class DebugJsonSnapshotMode { None, Stop, All };
 
 // IR optimization controls (docs/OptimizingBackendsPlan.md). Parsed from
-// -O0..-O3 and --opt-* flags; nothing consumes them until the IR optimizer
-// exists (TODO-5424), so every combination currently behaves like -O0.
+// -O0..-O3 and --opt-* flags; optimizeIrModule (primec/ir/IrOptimizer.h) reads
+// them, and the default (no flag) is -O0.
 struct OptimizationOptions {
   // 0..3; the value of the last -O<n> flag on the command line.
   uint8_t level = 0;

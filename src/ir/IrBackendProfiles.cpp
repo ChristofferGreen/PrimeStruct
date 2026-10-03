@@ -16,7 +16,7 @@ constexpr uint32_t RuntimeReflectionCapabilityMask =
 constexpr uint32_t HostRuntimeCapabilityMask =
     GraphicsRuntimeSubstrateCapabilityMask | RuntimeReflectionCapabilityMask;
 
-constexpr std::array<IrBackendCapabilityProfile, 13> CapabilityProfiles = {{
+constexpr std::array<IrBackendCapabilityProfile, 17> CapabilityProfiles = {{
     {.emitKind = "vm",
      .wasmProfile = "",
      .targetName = "vm",
@@ -50,6 +50,22 @@ constexpr std::array<IrBackendCapabilityProfile, 13> CapabilityProfiles = {{
     {.emitKind = "exe-ir",
      .wasmProfile = "",
      .targetName = "exe-ir",
+     .capabilities = HostRuntimeCapabilityMask},
+    {.emitKind = "optcpp",
+     .wasmProfile = "",
+     .targetName = "optcpp",
+     .capabilities = HostRuntimeCapabilityMask},
+    {.emitKind = "optcpp-ir",
+     .wasmProfile = "",
+     .targetName = "optcpp-ir",
+     .capabilities = HostRuntimeCapabilityMask},
+    {.emitKind = "optexe",
+     .wasmProfile = "",
+     .targetName = "optexe",
+     .capabilities = HostRuntimeCapabilityMask},
+    {.emitKind = "optexe-ir",
+     .wasmProfile = "",
+     .targetName = "optexe-ir",
      .capabilities = HostRuntimeCapabilityMask},
 }};
 

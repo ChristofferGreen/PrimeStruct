@@ -226,10 +226,14 @@ bool runIrBackend(const primec::IrBackend &backend,
   emitOptions.outputPath = options.outputPath;
   emitOptions.inputPath = options.inputPath;
   emitOptions.programArgs = options.programArgs;
+  // The optexe kinds hand generated C++ to the host compiler; an explicit -O
+  // level carries over, and the default is -O2.
+  emitOptions.hostOptimizationLevel = options.optimization.levelSpecified ? options.optimization.level : 2;
   if (!backend.emit(ir, emitOptions, result, error)) {
     const std::string_view backendTag = diagnostics.backendTag;
     const bool outputWriteFailure =
-        (backendTag == "ir" || backendTag == "wasm" || backendTag == "cpp-ir" || backendTag == "glsl-ir") &&
+        (backendTag == "ir" || backendTag == "wasm" || backendTag == "cpp-ir" || backendTag == "optcpp-ir" ||
+         backendTag == "glsl-ir") &&
         error == options.outputPath;
     failure.stage = outputWriteFailure ? IrBackendRunFailureStage::OutputWrite : IrBackendRunFailureStage::Emit;
     failure.message = std::move(error);
