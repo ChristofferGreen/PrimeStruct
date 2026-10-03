@@ -30,6 +30,46 @@ TEST_CASE("benchmark baseline artifact includes native allocator coverage") {
   CHECK(baseline.find("\"benchmark\": \"json_parse\"") != std::string::npos);
   CHECK(baseline.find("\"benchmark\": \"compile_speed\"") != std::string::npos);
   CHECK(baseline.find("\"entry\": \"primestruct_cpp\"") != std::string::npos);
+  // The VM (default -O2) and optexe rows gate the optimizing backends (TODO-5481).
+  CHECK(baseline.find("\"entry\": \"primestruct_vm\"") != std::string::npos);
+  CHECK(baseline.find("\"entry\": \"primestruct_optexe\"") != std::string::npos);
+}
+
+TEST_CASE("benchmark gate fails a slow vm row and passes a fast one") {
+  const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
+  const std::string baselinePath = (repoRoot / "benchmarks" / "benchmark_baseline.json").string();
+  const std::string checker = (repoRoot / "scripts" / "check_benchmark_report.py").string();
+  // Only the primestruct_vm rows exist in the synthetic report; every other
+  // baseline entry is optional or reported missing, so compare exit codes of a
+  // fast and a slow run against each other.
+  const auto reportFor = [](double seconds) {
+    std::string report = "{\"schema\": \"primestruct_benchmark_report_v1\", \"runtime_results\": [";
+    bool first = true;
+    for (const char *bench : {"aggregate", "json_scan", "json_parse"}) {
+      for (const char *entry : {"primestruct_cpp", "primestruct_vm"}) {
+        report += std::string(first ? "" : ",") + "{\"benchmark\": \"" + bench +
+                  "\", \"entry\": \"" + entry + "\", \"mean_seconds\": " +
+                  (std::string(entry) == "primestruct_vm" ? std::to_string(seconds) : "0.5") +
+                  ", \"artifact_size_bytes\": 1000}";
+        first = false;
+      }
+    }
+    report += "], \"compile_results\": [";
+    first = true;
+    for (const char *entry : {"primestruct_cpp"}) {
+      report += std::string("{\"benchmark\": \"compile_speed\", \"entry\": \"") + entry +
+                "\", \"mean_seconds\": 1.0, \"artifact_size_bytes\": 1000}";
+    }
+    report += "]}";
+    return report;
+  };
+  const auto runGate = [&](double seconds, const std::string &name) {
+    const std::string reportPath = writeTemp(name, reportFor(seconds));
+    return runCommand("python3 " + checker + " --baseline " + baselinePath + " --report " +
+                      reportPath + " > /dev/null 2>&1");
+  };
+  CHECK(runGate(0.1, "benchmark_gate_fast.json") == 0);
+  CHECK(runGate(2.0, "benchmark_gate_slow.json") != 0);
 }
 
 TEST_CASE("semantic memory benchmark helper keeps primary fixture first") {

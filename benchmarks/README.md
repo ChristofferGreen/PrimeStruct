@@ -23,9 +23,18 @@ Run after a release build via:
 You can change the number of runs with `BENCH_RUNS` and control the output
 folder with `BENCH_DIR`.
 
-PrimeStruct benchmarks report two backends:
+PrimeStruct benchmarks report these backends (the C, C++ and Rust programs are the
+speed baseline; `primestruct_cpp` is the old C++ emitter at `-O3` and is not):
 - `primestruct_cpp`: C++ emitter (`--emit=cpp`) compiled with `clang++ -O3`.
-- `primestruct_native`: native codegen backend (`--emit=native`) when available.
+- `primestruct_vm`: `primevm` at its default `-O2` (flat VM loop plus the IR optimizer);
+  the time includes compiling the source.
+- `primestruct_native`: native codegen backend (`--emit=native`, `-O2`) on macOS arm64 and
+  Linux x86_64.
+- `primestruct_optexe`: `--emit=optexe` (IR to C++ to the host compiler at `-O2`) when a host
+  C++ compiler is available.
+
+`scripts/benchmark_backends.py` records the same programs at every optimization level
+(vm-step-O0, vm-O0, vm-O2, native-O0, native-O2, optexe-O2, exe) next to the C reference.
 
 ## JSON Scan (token counting)
 

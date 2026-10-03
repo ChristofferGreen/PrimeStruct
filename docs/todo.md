@@ -105,7 +105,6 @@ of sync with them.
 | TODO-5471 | Register form with promoted locals | deferred | opt-regform |
 | TODO-5483 | Verify arm64 SextI32 and normalize the last i32 builtins | ready | ir-semantics |
 | TODO-5478 | Remove the super-linear front-end cost on very large functions | deferred | compile-speed |
-| TODO-5481 | Gate vm, native and optexe rows in the benchmark baseline | deferred | opt-bench |
 
 ### Ready Now
 
@@ -192,16 +191,3 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - acceptance:
     - the 20,000-statement reproducer compiles at least 4x faster with identical IR output
   - stop_rule: if the cost is inherent to a data structure shared with the semantic product, record the profile and stop.
-
-- [ ] TODO-5481: Gate vm, native and optexe rows in the benchmark baseline
-  - owner: ai
-  - status: deferred
-  - deferred_reason: numbers are recorded by scripts/benchmark_backends.py (TODO-5463); gating needs a stable-timing environment decision (CI runners are noisy) and the 25% ratio policy applied to rows that move 5x between releases.
-  - created_at: 2026-10-03
-  - phase: Optimizing backends
-  - parallel_track: opt-bench
-  - scope: Feed the `vm-O2`, `native-O2` and `optexe-O2` rows of `scripts/benchmark_backends.py --json` into `scripts/benchmark.sh --report-json`/`--baseline-json` and `scripts/check_benchmark_report.py`, with baseline entries per backend and level, so a regression in the VM kernel, the native emitter or the optimizer fails the benchmark gate. Fix `benchmarks/README.md`, which still calls `--emit=exe` a speed baseline (it is the old C++ emitter at `clang++ -O0`; the C/C++ reference programs are the baseline). Design: docs/OptimizingBackendsPlan.md Phase 5.3.
-  - acceptance:
-    - the gate fails when a row regresses past the ratio and passes on the recorded baseline; the benchmark-harness test covers the new entries
-  - stop_rule: do not tighten existing cpp thresholds; new entries use the existing 25% ratio.
-

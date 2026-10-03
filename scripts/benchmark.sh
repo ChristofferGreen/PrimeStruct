@@ -65,10 +65,20 @@ if [[ ! -x "$PRIMEC_BIN" ]]; then
   exit 2
 fi
 
+PRIMEVM_BIN="$(cd "$BUILD_DIR" && pwd)/primevm"
+if [[ ! -x "$PRIMEVM_BIN" ]]; then
+  echo "[benchmark.sh] ERROR: primevm not found: $PRIMEVM_BIN" >&2
+  exit 2
+fi
+
 RUN_NATIVE=0
+machine="$(uname -m)"
 if [[ "$(uname -s)" == "Darwin" ]]; then
-  machine="$(uname -m)"
   if [[ "$machine" == "arm64" || "$machine" == "aarch64" ]]; then
+    RUN_NATIVE=1
+  fi
+elif [[ "$(uname -s)" == "Linux" ]]; then
+  if [[ "$machine" == "x86_64" || "$machine" == "amd64" ]]; then
     RUN_NATIVE=1
   fi
 fi
@@ -96,6 +106,14 @@ if ! command -v "$PYTHON" >/dev/null 2>&1; then
 fi
 
 mkdir -p "$BENCH_DIR"
+
+# optexe compiles generated C++ with the host compiler; skip its rows when that
+# fails (no compiler primec can find) instead of failing the benchmark run.
+RUN_OPTEXE=0
+if "$PRIMEC_BIN" --emit=optexe "$ROOT_DIR/benchmarks/aggregate.prime" -o "$BENCH_DIR/optexe_probe" \
+    --entry /main >/dev/null 2>&1; then
+  RUN_OPTEXE=1
+fi
 
 COMPILE_C_SRC="$BENCH_DIR/compile_speed.c"
 COMPILE_CPP_SRC="$BENCH_DIR/compile_speed.cpp"
@@ -126,18 +144,21 @@ RS_EXE="$BENCH_DIR/aggregate_rust"
 PRIME_CPP="$BENCH_DIR/aggregate_primestruct.cpp"
 PRIME_CPP_EXE="$BENCH_DIR/aggregate_primestruct_cpp"
 PRIME_NATIVE_EXE="$BENCH_DIR/aggregate_primestruct_native"
+PRIME_OPTEXE_EXE="$BENCH_DIR/aggregate_primestruct_optexe"
 C_JSON_EXE="$BENCH_DIR/json_scan_c"
 CPP_JSON_EXE="$BENCH_DIR/json_scan_cpp"
 RS_JSON_EXE="$BENCH_DIR/json_scan_rust"
 PRIME_JSON_CPP="$BENCH_DIR/json_scan_primestruct.cpp"
 PRIME_JSON_CPP_EXE="$BENCH_DIR/json_scan_primestruct_cpp"
 PRIME_JSON_NATIVE_EXE="$BENCH_DIR/json_scan_primestruct_native"
+PRIME_JSON_OPTEXE_EXE="$BENCH_DIR/json_scan_primestruct_optexe"
 C_JSON_PARSE_EXE="$BENCH_DIR/json_parse_c"
 CPP_JSON_PARSE_EXE="$BENCH_DIR/json_parse_cpp"
 RS_JSON_PARSE_EXE="$BENCH_DIR/json_parse_rust"
 PRIME_JSON_PARSE_CPP="$BENCH_DIR/json_parse_primestruct.cpp"
 PRIME_JSON_PARSE_CPP_EXE="$BENCH_DIR/json_parse_primestruct_cpp"
 PRIME_JSON_PARSE_NATIVE_EXE="$BENCH_DIR/json_parse_primestruct_native"
+PRIME_JSON_PARSE_OPTEXE_EXE="$BENCH_DIR/json_parse_primestruct_optexe"
 
 "$PYTHON" - "$COMPILE_C_SRC" "$COMPILE_CPP_SRC" "$COMPILE_RS_SRC" \
   "$COMPILE_SRC" "$COMPILE_LINES" <<'PY'
@@ -252,6 +273,9 @@ PY
 if [[ $RUN_NATIVE -eq 1 ]]; then
   "$PRIMEC_BIN" --emit=native "$PRIME_SRC" -o "$PRIME_NATIVE_EXE" --entry /main
 fi
+if [[ $RUN_OPTEXE -eq 1 ]]; then
+  "$PRIMEC_BIN" --emit=optexe "$PRIME_SRC" -o "$PRIME_OPTEXE_EXE" --entry /main
+fi
 "$CC" -O3 -DNDEBUG -std=c11 "$C_JSON_SRC" -o "$C_JSON_EXE"
 "$CXX" -O3 -DNDEBUG -std=c++23 "$CPP_JSON_SRC" -o "$CPP_JSON_EXE"
 "$RUSTC" -O "$RS_JSON_SRC" -o "$RS_JSON_EXE"
@@ -259,6 +283,9 @@ fi
 "$CXX" -O3 -DNDEBUG -std=c++23 "$PRIME_JSON_CPP" -o "$PRIME_JSON_CPP_EXE"
 if [[ $RUN_NATIVE -eq 1 ]]; then
   "$PRIMEC_BIN" --emit=native "$PRIME_JSON_SRC" -o "$PRIME_JSON_NATIVE_EXE" --entry /main
+fi
+if [[ $RUN_OPTEXE -eq 1 ]]; then
+  "$PRIMEC_BIN" --emit=optexe "$PRIME_JSON_SRC" -o "$PRIME_JSON_OPTEXE_EXE" --entry /main
 fi
 "$CC" -O3 -DNDEBUG -std=c11 "$C_JSON_PARSE_SRC" -o "$C_JSON_PARSE_EXE"
 "$CXX" -O3 -DNDEBUG -std=c++23 "$CPP_JSON_PARSE_SRC" -o "$CPP_JSON_PARSE_EXE"
@@ -268,6 +295,9 @@ fi
 if [[ $RUN_NATIVE -eq 1 ]]; then
   "$PRIMEC_BIN" --emit=native "$PRIME_JSON_PARSE_SRC" -o "$PRIME_JSON_PARSE_NATIVE_EXE" --entry /main
 fi
+if [[ $RUN_OPTEXE -eq 1 ]]; then
+  "$PRIMEC_BIN" --emit=optexe "$PRIME_JSON_PARSE_SRC" -o "$PRIME_JSON_PARSE_OPTEXE_EXE" --entry /main
+fi
 
 (
   cd "$BENCH_DIR"
@@ -275,7 +305,7 @@ fi
     "$COMPILE_C_SRC" "$COMPILE_CPP_SRC" "$COMPILE_RS_SRC" \
     "$CC" "$CXX" "$RUSTC" "$PRIMEC_BIN" \
     "$COMPILE_C_EXE" "$COMPILE_CPP_EXE" "$COMPILE_RS_EXE" \
-    "$COMPILE_CPP" "$COMPILE_NATIVE" "$REPORT_JSON" <<'PY'
+    "$COMPILE_CPP" "$COMPILE_NATIVE" "$REPORT_JSON" "$PRIMEVM_BIN" "$ROOT_DIR/benchmarks" "$RUN_OPTEXE" <<'PY'
 import subprocess
 import sys
 import time
@@ -301,13 +331,20 @@ compile_rs_exe = sys.argv[15]
 compile_cpp = sys.argv[16]
 compile_native = sys.argv[17]
 report_json = sys.argv[18]
+primevm_bin = sys.argv[19]
+bench_source_dir = sys.argv[20]
+run_optexe = int(sys.argv[21]) != 0
 
 def primestruct_entries(name: str):
+    # A path runs an executable; a list is a command (the VM runs the source).
     entries = [
         ("primestruct_cpp", f"./{name}_primestruct_cpp"),
+        ("primestruct_vm", [primevm_bin, f"{bench_source_dir}/{name}.prime", "--entry", "/main"]),
     ]
     if run_native:
         entries.append(("primestruct_native", f"./{name}_primestruct_native"))
+    if run_optexe:
+        entries.append(("primestruct_optexe", f"./{name}_primestruct_optexe"))
     return entries
 
 benchmarks = [
@@ -337,16 +374,18 @@ print("Compile benchmark runs:", compile_runs)
 runtime_results = []
 compile_results = []
 
-def run_entry(benchmark_name: str, label: str, path: str) -> None:
+def run_entry(benchmark_name: str, label: str, target) -> None:
+    command = list(target) if isinstance(target, list) else [target]
+    artifact = command[1] if isinstance(target, list) else command[0]
     print(f"\n== {label} ==")
-    check = subprocess.run([path], capture_output=True, text=True, check=True)
+    check = subprocess.run(command, capture_output=True, text=True, check=True)
     output = check.stdout.strip()
     if output:
         print("output:", output)
     times = []
     for _ in range(runs):
         start = time.perf_counter()
-        subprocess.run([path], stdout=subprocess.DEVNULL, check=True)
+        subprocess.run(command, stdout=subprocess.DEVNULL, check=True)
         times.append(time.perf_counter() - start)
     mean = sum(times) / len(times)
     median = sorted(times)[len(times) // 2]
@@ -358,7 +397,7 @@ def run_entry(benchmark_name: str, label: str, path: str) -> None:
         "mean_seconds": mean,
         "median_seconds": median,
         "output": output,
-        "artifact_size_bytes": Path(path).stat().st_size,
+        "artifact_size_bytes": Path(artifact).stat().st_size,
     })
 
 def run_compile_entry(label: str, cmd: list[str], outputs: list[str]) -> None:
