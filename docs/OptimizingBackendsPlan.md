@@ -724,6 +724,11 @@ then ports the proven form to the native emitter.
   `primevm`, `-O0` under any debug session or trace (2026-10-03).
 - The register-form C++ emitter is the first consumer of the middle end
   (section 9) (2026-10-03).
+- This work is developed on the branch `claude/native-instruction-optimization-rc4qu6`,
+  not directly on `master` (2026-10-03, maintainer decision; it overrides the
+  `AGENTS.md` default for this programme only). Keep the branch current by
+  merging `master` into it rather than rebasing, and land finished leaves back
+  on `master` by merge or cherry-pick when the maintainer asks.
 
 ## 11. Open decisions for the maintainer
 
