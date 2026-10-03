@@ -274,9 +274,12 @@ build and layout solidify.
   `primec/testing/IrLowererHelpers.h` umbrella whenever the shard only needs one contract family.
 - **Visibility transforms:** `public`/`private` are valid on definitions (controls import
   visibility) and bindings (field visibility). Executions still reject them.
-- **VM/native strings:** string values are represented as string-table indices; dynamic
-  string construction is unavailable, so string returns and `Result.why` hooks must
-  return literal-backed strings (entry args or string literals).
+- **VM/native strings:** string values are `u64` indices. Module-table strings (bit 63
+  clear) index the immutable module string table; the VM additionally owns run-time
+  strings (bit 63 set, generation + slot) created by host string returns and embed
+  string arguments, read through `resolveVmString`. `LoadStringByteDynamic` is VM-only;
+  native, wasm, GLSL and C++ backends still have no dynamic strings, so code that must
+  run on them returns literal-backed strings (entry args or string literals).
 - **IR stability:** avoid silent changes to serialized IR; include versioning or migration
   notes when the format changes.
 - **Determinism:** no unordered iteration that affects outputs; sort keys before emitting

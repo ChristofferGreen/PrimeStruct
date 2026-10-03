@@ -101,9 +101,7 @@ of sync with them.
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
 | TODO-5396 | Retire stale TODO-id references in source comments | ready | docs-hygiene |
-| TODO-5397 | Fix stale string-model statements in AGENTS.md and the VM spec | ready | docs-hygiene |
 | TODO-5398 | Archive or fold the orphaned long-form docs | deferred | docs-hygiene |
-| TODO-5399 | Hoist the duplicated TemplateMonomorph using-block into one header | ready | semantics-structure |
 | TODO-5400 | Table-drive the builtin math-name classifiers | ready | lowerer-structure |
 | TODO-5401 | Collapse duplicate std::function callback aliases | ready | lowerer-structure |
 | TODO-5402 | Replace the 17-callback native tail dispatch signatures with a hooks struct | deferred | lowerer-structure |
@@ -125,8 +123,6 @@ of sync with them.
 ### Ready Now
 
 - TODO-5396 (track: docs-hygiene): Retire stale TODO-id references in source comments (surface: src/include comments).
-- TODO-5397 (track: docs-hygiene): Fix stale string-model statements in AGENTS.md and the VM spec (surface: AGENTS.md, docs/spec).
-- TODO-5399 (track: semantics-structure): Hoist the duplicated TemplateMonomorph using-block into one header.
 - TODO-5400 (track: lowerer-structure): Table-drive the builtin math-name classifiers (surface: IrLowererBuiltinNameHelpers.cpp).
 - TODO-5401 (track: lowerer-structure): Collapse duplicate std::function callback aliases (surface: *Fn alias headers).
 - TODO-5407 (track: diagnostics): Route benchmark instrumentation through one sink.
@@ -136,8 +132,6 @@ of sync with them.
 ### Immediate Next 10
 
 1. TODO-5396 - Retire stale TODO-id references in source comments.
-2. TODO-5397 - Fix stale string-model statements in AGENTS.md and the VM spec.
-3. TODO-5399 - Hoist the duplicated TemplateMonomorph using-block into one header.
 4. TODO-5400 - Table-drive the builtin math-name classifiers.
 5. TODO-5401 - Collapse duplicate std::function callback aliases.
 6. TODO-5407 - Route benchmark instrumentation through one sink.
@@ -149,8 +143,7 @@ of sync with them.
 ### Priority Lanes
 
 - Embedding (must support iOS): TODO-5348 (needs macOS)
-- Docs hygiene: TODO-5396, TODO-5397 -> TODO-5398
-- Semantics structure: TODO-5399
+- Docs hygiene: TODO-5396 -> TODO-5398
 - Lowerer structure: TODO-5400, TODO-5401 -> TODO-5402 -> TODO-5403 -> TODO-5404
 - Collection resolution: TODO-5405 -> TODO-5406
 - Diagnostics: TODO-5407 -> TODO-5408
@@ -177,18 +170,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - no behavior change; full release gate green
   - stop_rule: do not delete a comment whose explanation is only the TODO id; rewrite it or cite the archive.
 
-- [ ] TODO-5397: Fix stale string-model statements in AGENTS.md and the VM spec
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-03
-  - phase: Documentation
-  - parallel_track: docs-hygiene
-  - scope: AGENTS.md's `VM/native strings` rule still says dynamic string construction is unavailable and that string returns must be literal-backed; `docs/spec/vm-design.md` says the VM cannot create strings today and lists TODO-5363/5364/5365 as pending. All three landed (VM string heap, `LoadStringByteDynamic`, embed string results). Rewrite both passages to describe the dynamic-string model (bit-63 tagged indices, VM-only opcode, native/wasm/glsl reject) and what is still a restriction (non-VM backends).
-  - acceptance:
-    - AGENTS.md and docs/spec/vm-design.md describe the implemented model with no pending-TODO language
-    - docs-only, `scripts/check_spec_docs.py` passes
-  - stop_rule: docs only; no TODO for the backends that still lack dynamic strings unless you decide to implement them.
-
 - [ ] TODO-5398: Archive or fold the orphaned long-form docs
   - owner: ai
   - status: deferred
@@ -200,18 +181,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - the three files are gone or reduced to a short pointer; every surviving fact lives in a document the index or AGENTS links to
     - `scripts/check_spec_docs.py` and the todo index ctests pass
   - stop_rule: if an entry's truth cannot be verified against the code, drop it rather than carry it forward.
-
-- [ ] TODO-5399: Hoist the duplicated TemplateMonomorph using-block into one header
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-03
-  - phase: Compiler structure
-  - parallel_track: semantics-structure
-  - scope: 22 `src/semantics/TemplateMonomorph*.h` headers (and their .cpp units, 44 files) each repeat the same 57-line `using semantics::...;` block; it is the single largest duplicate cluster in src/semantics (11.4% of 6-line windows). Move it to `TemplateMonomorphUsings.h`, include that instead, and let the dedup script show the drop.
-  - acceptance:
-    - one copy of the block; `python3 scripts/measure_test_duplication.py src/semantics` excess drops (record before/after)
-    - full release gate green
-  - stop_rule: pure move; if a header needs only a subset, include the shared header anyway rather than keep a partial copy.
 
 - [ ] TODO-5400: Table-drive the builtin math-name classifiers
   - owner: ai
