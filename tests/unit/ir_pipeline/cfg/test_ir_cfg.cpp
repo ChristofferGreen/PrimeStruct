@@ -1,4 +1,5 @@
 #include "primec/ir/IrCfg.h"
+#include "primec/ir/IrVirtualRegisterLowering.h"
 
 #include "third_party/doctest.h"
 
@@ -225,8 +226,9 @@ TEST_CASE("cfg reports structured errors with the offending instruction") {
 TEST_CASE("cfg block lookup maps every instruction to its block") {
   const IrModule module = makeModule(makeFunction({
       {IrOpcode::PushI32, 1},
-      {IrOpcode::JumpIfZero, 3},
+      {IrOpcode::JumpIfZero, 4},
       {IrOpcode::PushI32, 2},
+      {IrOpcode::Pop, 0},
       {IrOpcode::PushI32, 0},
       {IrOpcode::ReturnI32, 0},
   }));
@@ -237,8 +239,9 @@ TEST_CASE("cfg block lookup maps every instruction to its block") {
   CHECK(primec::irCfgBlockIndexForInstruction(cfg, 0) == 0);
   CHECK(primec::irCfgBlockIndexForInstruction(cfg, 1) == 0);
   CHECK(primec::irCfgBlockIndexForInstruction(cfg, 2) == 1);
-  CHECK(primec::irCfgBlockIndexForInstruction(cfg, 3) == 2);
+  CHECK(primec::irCfgBlockIndexForInstruction(cfg, 3) == 1);
   CHECK(primec::irCfgBlockIndexForInstruction(cfg, 4) == 2);
+  CHECK(primec::irCfgBlockIndexForInstruction(cfg, 5) == 2);
   CHECK(primec::irCfgBlockIndexForInstruction(cfg, 99) == 2);
 }
 
@@ -276,4 +279,55 @@ TEST_CASE("stack effects of calls follow the callee signature and host imports")
   CHECK(effect.pushes == 1);
   // A value outside the opcode table has no effect entry.
   CHECK_FALSE(primec::computeIrStackEffect({static_cast<IrOpcode>(250), 0}, module, effect));
+}
+
+TEST_CASE("virtual-register lowering gives a called function one entry register per parameter") {
+  IrModule module;
+  module.entryIndex = 0;
+  module.functions.push_back(makeFunction({{IrOpcode::PushI32, 0}, {IrOpcode::ReturnI32, 0}}));
+  module.functions.push_back(makeFunction(
+      {
+          {IrOpcode::StoreLocal, 1},
+          {IrOpcode::StoreLocal, 0},
+          {IrOpcode::LoadLocal, 0},
+          {IrOpcode::LoadLocal, 1},
+          {IrOpcode::SubI32, 0},
+          {IrOpcode::ReturnI32, 0},
+      },
+      2));
+  primec::IrVirtualRegisterModule lowered;
+  std::string error;
+  REQUIRE(primec::lowerIrModuleToBlockVirtualRegisters(module, lowered, error));
+  CHECK(error.empty());
+  REQUIRE(lowered.functions.size() == 2);
+  REQUIRE(lowered.functions[1].blocks.size() == 1);
+  const auto &entry = lowered.functions[1].blocks[0];
+  CHECK(entry.reachable);
+  CHECK(entry.entryRegisters.size() == 2);
+  // The first StoreLocal pops the last-pushed argument, i.e. the top entry register.
+  REQUIRE(entry.instructions.size() == 6);
+  CHECK(entry.instructions[0].useRegisters == std::vector<uint32_t>{entry.entryRegisters[1]});
+  CHECK(entry.instructions[1].useRegisters == std::vector<uint32_t>{entry.entryRegisters[0]});
+}
+
+TEST_CASE("virtual-register lowering treats HeapRealloc as consuming address and size") {
+  const IrModule module = makeModule(makeFunction({
+      {IrOpcode::PushI32, 1},
+      {IrOpcode::HeapAlloc, 0},
+      {IrOpcode::PushI32, 4},
+      {IrOpcode::HeapRealloc, 0},
+      {IrOpcode::HeapFree, 0},
+      {IrOpcode::ReturnVoid, 0},
+  }));
+  primec::IrVirtualRegisterModule lowered;
+  std::string error;
+  REQUIRE(primec::lowerIrModuleToBlockVirtualRegisters(module, lowered, error));
+  REQUIRE(lowered.functions[0].blocks.size() == 1);
+  const auto &block = lowered.functions[0].blocks[0];
+  REQUIRE(block.instructions.size() == 6);
+  CHECK(block.instructions[3].useRegisters.size() == 2);
+  CHECK(block.instructions[3].defRegisters.size() == 1);
+  // The freed address is the realloc result, so the stack is balanced at the return.
+  CHECK(block.instructions[4].useRegisters == block.instructions[3].defRegisters);
+  CHECK(block.exitRegisters.empty());
 }

@@ -127,7 +127,8 @@ std::vector<EffectCase> buildCases() {
   add(IrOpcode::AddressOfLocal, 0, {});
   add(IrOpcode::Dup, 0, {pushI32(5)});
   add(IrOpcode::Pop, 0, {pushI32(5)});
-  add(IrOpcode::LoadIndirect, 0, {{IrOpcode::AddressOfLocal, 0}});
+  // A non-zero address: local 0 holds 0, so address 0 would look unchanged.
+  add(IrOpcode::LoadIndirect, 0, {{IrOpcode::AddressOfLocal, 1}});
   add(IrOpcode::StoreIndirect, 0, {{IrOpcode::AddressOfLocal, 0}, pushI32(5)});
 
   // Integer arithmetic and comparisons.
@@ -371,22 +372,39 @@ TEST_CASE("stack effect table matches the VM for every opcode") {
     file << "abc";
   }
 
-  SilenceStdio silence;
-  for (const EffectCase &testCase : buildCases()) {
-    CAPTURE(testCase.name);
-    MeasuredEffect measured;
+  struct Outcome {
+    EffectCase testCase;
+    bool ok = false;
     std::string failure;
-    const bool ok = measure(testCase, scratch.string(), measured, failure);
-    CHECK_MESSAGE(ok, failure);
-    if (!ok) {
+    MeasuredEffect measured;
+  };
+  // Run every micro-module with stdout/stderr silenced, but report only after
+  // the descriptors are restored: assertions made while silenced would print
+  // into /dev/null.
+  std::vector<Outcome> outcomes;
+  {
+    SilenceStdio silence;
+    for (const EffectCase &testCase : buildCases()) {
+      Outcome outcome;
+      outcome.testCase = testCase;
+      outcome.ok = measure(testCase, scratch.string(), outcome.measured, outcome.failure);
+      outcomes.push_back(std::move(outcome));
+    }
+  }
+
+  for (const Outcome &outcome : outcomes) {
+    CAPTURE(outcome.testCase.name);
+    CHECK_MESSAGE(outcome.ok, outcome.failure);
+    if (!outcome.ok) {
       continue;
     }
-    const primec::IrModule module = makeModule(testCase, scratch.string());
+    const primec::IrModule module = makeModule(outcome.testCase, scratch.string());
     primec::IrStackEffect effect;
-    REQUIRE(primec::computeIrStackEffect({testCase.op, testCase.imm}, module, effect));
-    CHECK_MESSAGE(effect.pops == measured.pops, "table pops ", effect.pops, " but the VM popped ", measured.pops);
-    CHECK_MESSAGE(effect.pushes == measured.pushes,
-                  "table pushes ", effect.pushes, " but the VM pushed ", measured.pushes);
+    REQUIRE(primec::computeIrStackEffect({outcome.testCase.op, outcome.testCase.imm}, module, effect));
+    CHECK_MESSAGE(effect.pops == outcome.measured.pops,
+                  "table pops ", effect.pops, " but the VM popped ", outcome.measured.pops);
+    CHECK_MESSAGE(effect.pushes == outcome.measured.pushes,
+                  "table pushes ", effect.pushes, " but the VM pushed ", outcome.measured.pushes);
   }
 }
 
