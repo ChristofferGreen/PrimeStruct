@@ -134,7 +134,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     the semantics validator, `std::filesystem` deployment target), link the
     runtime XCFramework into a sample iOS app target that loads bytecode and
     calls a bound host function on device and simulator, and add a macOS CI job
-    running the script.
+    running the script (done: `.github/workflows/ios-embed.yml`, not yet run).
   - acceptance:
     - `scripts/build_ios_embed.sh` succeeds on macOS for device and simulator
       and produces both XCFrameworks.

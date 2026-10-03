@@ -1,0 +1,40 @@
+name: ios-embed
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "scripts/build_ios_embed.sh"
+      - "src/embed/**"
+      - "include/primec/embed/**"
+      - "CMakeLists.txt"
+      - "cmake/**"
+  workflow_dispatch:
+
+concurrency:
+  group: ios-embed-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  xcframeworks:
+    runs-on: macos-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain versions
+        run: |
+          xcodebuild -version
+          cmake --version
+
+      - name: Build iOS XCFrameworks
+        run: ./scripts/build_ios_embed.sh --deployment-target 15.0
+
+      - name: Library sizes
+        run: du -sh build-ios/*.xcframework
+
+      - name: Upload XCFrameworks
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-xcframeworks
+          path: build-ios/*.xcframework
