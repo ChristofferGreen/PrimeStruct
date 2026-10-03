@@ -285,6 +285,7 @@ TEST_CASE("vm executes recursive call opcodes") {
 
   primec::IrFunction factFn;
   factFn.name = "/fact";
+  factFn.parameterCount = 1;
   factFn.instructions.push_back({primec::IrOpcode::Dup, 0});
   factFn.instructions.push_back({primec::IrOpcode::PushI32, 0});
   factFn.instructions.push_back({primec::IrOpcode::CmpEqI32, 0});
@@ -385,6 +386,7 @@ TEST_CASE("ir inlining pass keeps recursive call opcodes") {
 
   primec::IrFunction factFn;
   factFn.name = "/fact";
+  factFn.parameterCount = 1;
   factFn.instructions.push_back({primec::IrOpcode::Dup, 0});
   factFn.instructions.push_back({primec::IrOpcode::PushI32, 0});
   factFn.instructions.push_back({primec::IrOpcode::CmpEqI32, 0});

@@ -140,7 +140,8 @@ bool foldFunction(IrFunction &function, const IrModule &module) {
     if (arity != 0 && window.size() >= static_cast<size_t>(arity)) {
       const Entry &rhsEntry = window[window.size() - 1];
       const Entry &lhsEntry = arity == 2 ? window[window.size() - 2] : rhsEntry;
-      if (lhsEntry.known && rhsEntry.known) {
+      if (lhsEntry.known && rhsEntry.known && lhsEntry.producer != NoProducer &&
+          rhsEntry.producer != NoProducer) {
         const uint64_t lhs = lhsEntry.value;
         const uint64_t rhs = rhsEntry.value;
         uint64_t result = 0;
@@ -172,6 +173,11 @@ bool foldFunction(IrFunction &function, const IrModule &module) {
     }
     for (uint32_t pop = 0; pop < effect.pops && !window.empty(); ++pop) {
       window.pop_back();
+    }
+    // A read without a pop (dup) also consumes the value its producer pushed,
+    // so that push can no longer be erased with the folded operation.
+    for (uint32_t read = 0; read < effect.readsWithoutPop && read < window.size(); ++read) {
+      window[window.size() - 1 - read].producer = NoProducer;
     }
     for (uint32_t push = 0; push < effect.pushes; ++push) {
       window.push_back({});

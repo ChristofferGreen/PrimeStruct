@@ -1,5 +1,6 @@
 #include "primec/ir/IrOptimizer.h"
 #include "primec/ir/IrPreparation.h"
+#include "primec/ir/IrValidation.h"
 
 #include "test_ir_optimizer_helpers.h"
 
@@ -217,6 +218,20 @@ TEST_CASE("const-fold leaves unsafe or unprofitable cases alone") {
                           "PushI32 1",
                           "PushI32 2",
                           "AddI32",
+                          "ReturnI32"})});
+  expectGolden("const-fold",
+               {"a push that feeds a dup is not erased with a later fold",
+                assemble({"PushI32 1",
+                          "Dup",
+                          "StoreLocal 0",
+                          "PushI32 0",
+                          "CmpNeI32",
+                          "ReturnI32"}),
+                assemble({"PushI32 1",
+                          "Dup",
+                          "StoreLocal 0",
+                          "PushI32 0",
+                          "CmpNeI32",
                           "ReturnI32"})});
   expectGolden("const-fold",
                {"an unknown operand blocks the fold",
@@ -658,7 +673,7 @@ TEST_CASE("verify-each catches a pass that breaks the operand stack, and failure
   CHECK_FALSE(primec::optimizeIrModuleWithPasses(
       module, breaking, options, primec::IrValidationTarget::Any, report, error));
   CHECK(error.find("optimization pass breaker produced invalid IR") != std::string::npos);
-  CHECK(error.find("inconsistent operand stack") != std::string::npos);
+  CHECK(error.find("operand stack") != std::string::npos);
 
   // Without verify-each the manager does not look; prepareIrModule's final validation does.
   options.verifyEachPass = false;
@@ -961,4 +976,49 @@ TEST_CASE("peephole drops the not-equal-zero test of a comparison result") {
                           "ReturnI32",
                           "PushI32 2",
                           "ReturnI32"})});
+}
+
+TEST_CASE("validateIrModule rejects unbalanced operand stacks for every target") {
+  struct Bad {
+    const char *name;
+    std::vector<primec::IrInstruction> body;
+    const char *message;
+  };
+  const std::vector<Bad> cases = {
+      {"pop on an empty stack", assemble({"Pop", "ReturnVoid"}), "operand stack underflow"},
+      {"binary operator missing an operand",
+       assemble({"PushI32 1", "AddI32", "ReturnI32"}),
+       "operand stack underflow"},
+      {"dup on an empty stack", assemble({"Dup", "ReturnI32"}), "dup with an empty operand stack"},
+      {"join with different depths",
+       assemble({"LoadLocal 0",
+                 "JumpIfZero 4",
+                 "PushI32 1",
+                 "PushI32 2",
+                 "ReturnI32"}),
+       "different operand stack depths"},
+  };
+  const primec::IrValidationTarget targets[] = {primec::IrValidationTarget::Any,
+                                                primec::IrValidationTarget::Vm,
+                                                primec::IrValidationTarget::Native,
+                                                primec::IrValidationTarget::Glsl};
+  for (const Bad &bad : cases) {
+    for (const primec::IrValidationTarget target : targets) {
+      CAPTURE(bad.name);
+      const primec::IrModule module = moduleOf(bad.body);
+      std::string error;
+      CHECK_FALSE(primec::validateIrModule(module, target, error));
+      CHECK_MESSAGE(error.find(bad.message) != std::string::npos, error);
+    }
+  }
+
+  // A balanced module with a join of equal depths still passes.
+  const primec::IrModule fine = moduleOf(assemble({"LoadLocal 0",
+                                                   "JumpIfZero 4",
+                                                   "PushI32 1",
+                                                   "Jump 5",
+                                                   "PushI32 2",
+                                                   "ReturnI32"}));
+  std::string error;
+  CHECK_MESSAGE(primec::validateIrModule(fine, primec::IrValidationTarget::Vm, error), error);
 }

@@ -1,5 +1,6 @@
 #include "primec/ir/IrValidation.h"
 
+#include "primec/ir/IrCfg.h"
 #include "primec/ir/IrOpcodeTable.h"
 
 #include <cstdint>
@@ -266,6 +267,39 @@ bool validateFunction(const IrModule &module,
   return true;
 }
 
+// Every reachable instruction must find the operands it consumes, and paths that
+// meet at a block must arrive with the same operand-stack depth. The shared CFG
+// (IrCfg.h) propagates the depth from the entry, which starts at the function's
+// parameter count; unreachable code is not analyzed.
+bool validateStackBalance(const IrModule &module, size_t functionIndex, const IrFunction &function, std::string &error) {
+  IrCfg cfg;
+  IrCfgError cfgError;
+  if (buildIrCfg(function, module, cfg, cfgError)) {
+    return true;
+  }
+  const char *message = "operand stack is inconsistent";
+  switch (cfgError.kind) {
+    case IrCfgErrorKind::StackUnderflow:
+      message = "operand stack underflow";
+      break;
+    case IrCfgErrorKind::InvalidDup:
+      message = "dup with an empty operand stack";
+      break;
+    case IrCfgErrorKind::InconsistentDepth:
+      message = "paths reach this block with different operand stack depths";
+      break;
+    case IrCfgErrorKind::InvalidJumpTarget:
+      message = "invalid jump target";
+      break;
+    case IrCfgErrorKind::UnsupportedOpcode:
+      message = "unsupported opcode";
+      break;
+    case IrCfgErrorKind::None:
+      break;
+  }
+  return failInstruction(functionIndex, function.name, cfgError.instructionIndex, message, error);
+}
+
 // GLSL/shader targets fundamentally forbid recursive function calls (direct
 // or mutual) - unlike the VM/native/C++/wasm backends, there is no call-stack
 // mechanism to bound recursion depth. Detects a cycle in the Call/CallVoid
@@ -354,6 +388,9 @@ bool validateIrModule(const IrModule &module, IrValidationTarget target, std::st
       return false;
     }
     if (!validateFunction(module, functionIndex, function, target, error)) {
+      return false;
+    }
+    if (!validateStackBalance(module, functionIndex, function, error)) {
       return false;
     }
   }

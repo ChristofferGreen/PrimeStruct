@@ -272,6 +272,7 @@ TEST_CASE("ir call semantics matrix accepts recursive call opcodes with tail met
 
   primec::IrFunction factFn;
   factFn.name = "/fact";
+  factFn.parameterCount = 1;
   factFn.instructions.push_back({primec::IrOpcode::Dup, 0});
   factFn.instructions.push_back({primec::IrOpcode::PushI32, 0});
   factFn.instructions.push_back({primec::IrOpcode::CmpEqI32, 0});
@@ -308,6 +309,7 @@ TEST_CASE("ir validator rejects self-recursive call opcodes for glsl target") {
 
   primec::IrFunction factFn;
   factFn.name = "/fact";
+  factFn.parameterCount = 1;
   factFn.instructions.push_back({primec::IrOpcode::Dup, 0});
   factFn.instructions.push_back({primec::IrOpcode::PushI32, 0});
   factFn.instructions.push_back({primec::IrOpcode::CmpEqI32, 0});
@@ -350,6 +352,7 @@ TEST_CASE("ir validator rejects mutually-recursive call opcodes for glsl target"
   // that only exists across two distinct functions, not a direct self-call.
   primec::IrFunction isEvenFn;
   isEvenFn.name = "/isEven";
+  isEvenFn.parameterCount = 1;
   isEvenFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
   isEvenFn.instructions.push_back({primec::IrOpcode::SubI32, 0});
   isEvenFn.instructions.push_back({primec::IrOpcode::Call, 2});
@@ -357,6 +360,7 @@ TEST_CASE("ir validator rejects mutually-recursive call opcodes for glsl target"
 
   primec::IrFunction isOddFn;
   isOddFn.name = "/isOdd";
+  isOddFn.parameterCount = 1;
   isOddFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
   isOddFn.instructions.push_back({primec::IrOpcode::SubI32, 0});
   isOddFn.instructions.push_back({primec::IrOpcode::Call, 1});
@@ -390,6 +394,7 @@ TEST_CASE("ir validator accepts a non-recursive shared call target for glsl") {
   // /square is called from 2 sites but never recurses - legal GLSL.
   primec::IrFunction squareFn;
   squareFn.name = "/square";
+  squareFn.parameterCount = 1;
   squareFn.instructions.push_back({primec::IrOpcode::Dup, 0});
   squareFn.instructions.push_back({primec::IrOpcode::MulI32, 0});
   squareFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});

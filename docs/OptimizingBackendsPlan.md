@@ -320,7 +320,8 @@ should be split into leaves once `optexe` has validated the register form.
 0.2 Pass manager and `irOptimizationPassManifest()`; `optimizeIrModule()`
     inserted into `prepareIrModule` after validation, re-validating after
     the pipeline (and after every pass under `--opt-verify-each`). Add a
-    stack-balance check to `validateIrModule` so broken passes fail early.
+    stack-balance check to `validateIrModule` so broken passes fail early
+    (done, TODO-5468: it runs the shared `IrCfg` analysis for every target).
 0.3 `--dump-stage=ir-lowered` and `--dump-stage=ir-optimized` printing the
     real `IrModule` (text, deterministic), and an `--opt-report` listing per
     pass: instructions before/after, time. Fix the `--help` default text.
