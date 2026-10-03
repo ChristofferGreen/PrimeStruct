@@ -381,12 +381,8 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
         }
       }
       auto declaredDefinitionStructReturn = [&](const std::string &candidate) -> std::string {
-        for (const Definition &definition : program_.definitions) {
-          if (definition.fullPath != candidate &&
-              definition.fullPath.rfind(candidate + "__", 0) != 0 &&
-              definition.fullPath.rfind(candidate + "<", 0) != 0) {
-            continue;
-          }
+        for (const Definition *matched : definitionsMatchingPathOrSpecialization(candidate)) {
+          const Definition &definition = *matched;
           for (const Transform &transform : definition.transforms) {
             if (transform.name != "return" ||
                 transform.templateArgs.size() != 1) {
@@ -553,12 +549,8 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
           return structPath;
         }
       }
-      for (const Definition &definition : program_.definitions) {
-        if (definition.fullPath != path &&
-            definition.fullPath.rfind(path + "__", 0) != 0 &&
-            definition.fullPath.rfind(path + "<", 0) != 0) {
-          continue;
-        }
+      for (const Definition *matched : definitionsMatchingPathOrSpecialization(path)) {
+        const Definition &definition = *matched;
         if (std::string structPath = returnStructFromDefinition(definition);
             !structPath.empty()) {
           return structPath;

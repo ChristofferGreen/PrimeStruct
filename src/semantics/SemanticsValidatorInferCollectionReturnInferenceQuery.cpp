@@ -397,14 +397,9 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       if (defIt != defMap_.end() && defIt->second != nullptr) {
         definition = defIt->second;
       } else {
-        for (const Definition &candidateDefinition : program_.definitions) {
-          if (candidateDefinition.fullPath != candidatePath &&
-              candidateDefinition.fullPath.rfind(candidatePath + "__", 0) != 0 &&
-              candidateDefinition.fullPath.rfind(candidatePath + "<", 0) != 0) {
-            continue;
-          }
-          definition = &candidateDefinition;
-          break;
+        const auto matches = definitionsMatchingPathOrSpecialization(candidatePath);
+        if (!matches.empty()) {
+          definition = matches.front();
         }
       }
       if (definition == nullptr) {
@@ -886,15 +881,9 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
         resolvedDefinitionPath = candidatePath;
         break;
       }
-      for (const Definition &definition : program_.definitions) {
-        if (definition.fullPath != candidatePath &&
-            definition.fullPath.rfind(candidatePath + "__", 0) != 0 &&
-            definition.fullPath.rfind(candidatePath + "<", 0) != 0) {
-          continue;
-        }
-        resolvedDefinition = &definition;
-        resolvedDefinitionPath = definition.fullPath;
-        break;
+      if (const auto matches = definitionsMatchingPathOrSpecialization(candidatePath); !matches.empty()) {
+        resolvedDefinition = matches.front();
+        resolvedDefinitionPath = matches.front()->fullPath;
       }
       if (resolvedDefinition != nullptr) {
         break;

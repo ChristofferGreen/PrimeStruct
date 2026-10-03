@@ -217,7 +217,22 @@ bool SemanticsValidator::validateRequirementPredicates() {
     }
   }
 
+  // Most definitions carry no require/restrict transform; building the
+  // per-definition context (which copies every capability fact) for them made
+  // this pass quadratic in the definition count.
+  auto hasRequirementTransform = [](const Definition &definition) {
+    for (const auto &transform : definition.transforms) {
+      if (transform.name == "require" || transform.name == "restrict") {
+        return true;
+      }
+    }
+    return false;
+  };
+
   for (const auto &definition : program_.definitions) {
+    if (!hasRequirementTransform(definition)) {
+      continue;
+    }
     const auto paramsIt = paramsByDef_.find(definition.fullPath);
     RequirementPredicateDefinitionContext context;
     context.definitionPath = definition.fullPath;

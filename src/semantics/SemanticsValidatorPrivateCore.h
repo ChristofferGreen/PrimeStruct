@@ -43,6 +43,9 @@
                                          std::vector<SemanticDiagnosticRecord> *transformDiagnosticRecords,
                                          bool &definitionTransformError);
   bool validateRequirementPredicates();
+  // Definitions whose path equals `path` or starts with `path` + "__" / "<", in
+  // program order; replaces linear scans over program_.definitions.
+  std::vector<const Definition *> definitionsMatchingPathOrSpecialization(const std::string &path) const;
   bool buildImportAliases();
   std::string resolveStructReturnPathForBuild(const std::string &typeName,
                                               const std::string &namespacePrefix) const;

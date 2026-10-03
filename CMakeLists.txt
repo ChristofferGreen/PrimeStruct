@@ -294,6 +294,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorBuild.cpp
   src/semantics/SemanticsValidatorBuildTransforms.cpp
   src/semantics/SemanticsValidatorBuildRequirements.cpp
+  src/semantics/SemanticsValidatorDefinitionPathIndex.cpp
   src/semantics/SemanticsValidatorBuildImports.cpp
   src/semantics/SemanticsValidatorBuildReturnKinds.cpp
   src/semantics/SemanticsValidatorBuildLifecycle.cpp

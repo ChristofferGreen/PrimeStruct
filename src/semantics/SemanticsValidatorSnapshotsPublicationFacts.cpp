@@ -1,6 +1,14 @@
 // Definition publication facts, worker-fact rebinding and pilot routing collection.
 #include "SemanticsValidatorSnapshotHelpers.h"
 
+#include <string>
+
+#include <unordered_set>
+
+#include <unordered_map>
+
+#include <optional>
+
 namespace primec::semantics {
 using namespace snapshot_detail;
 
@@ -631,6 +639,22 @@ void SemanticsValidator::collectPilotRoutingSemanticProductFacts() {
   }
 
   if (!useMergedWorkerPublicationFacts && !skipLocalAwareCallRefinement_) {
+    // Keys identifying a call: its semantic node id when assigned, otherwise its
+    // position. Bridge entries carry no call name, so their position key omits it.
+    const auto nodeKey = [](uint64_t id) { return "n" + std::to_string(id); };
+    const auto directPositionKey = [](const std::string &scope, const std::string &name, int line, int column) {
+      return "d" + scope + '\0' + name + '\0' + std::to_string(line) + ':' + std::to_string(column);
+    };
+    const auto bridgePositionKey = [](const std::string &scope, int line, int column) {
+      return "b" + scope + '\0' + std::to_string(line) + ':' + std::to_string(column);
+    };
+    std::unordered_set<uint64_t> replacedSemanticNodeIds;
+    std::unordered_set<std::string> replacedDirectPositions;
+    std::unordered_set<std::string> replacedBridgePositions;
+    std::vector<std::optional<CollectedDirectCallTargetEntry>> refinedDirectCallTargets;
+    std::vector<std::optional<CollectedBridgePathChoiceEntry>> refinedBridgePathChoices;
+    std::unordered_map<std::string, size_t> refinedDirectSlot;
+    std::unordered_map<std::string, size_t> refinedBridgeSlot;
     forEachLocalAwareSnapshotCall(
         [&](const Definition &def,
             const std::vector<ParameterInfo> &defParams,
@@ -640,37 +664,34 @@ void SemanticsValidator::collectPilotRoutingSemanticProductFacts() {
             CallSnapshotData callData;
             if (inferCallSnapshotData(defParams, activeLocals, expr, callData) &&
                 !callData.resolvedPath.empty()) {
-              collectedDirectCallTargets_.erase(
-                  std::remove_if(
-                      collectedDirectCallTargets_.begin(),
-                      collectedDirectCallTargets_.end(),
-                      [&](const CollectedDirectCallTargetEntry &entry) {
-                        if (expr.semanticNodeId != 0) {
-                          return entry.semanticNodeId == expr.semanticNodeId;
-                        }
-                        return entry.scopePath == def.fullPath &&
-                               entry.callName == expr.name &&
-                               entry.sourceLine == expr.sourceLine &&
-                               entry.sourceColumn == expr.sourceColumn;
-                      }),
-                  collectedDirectCallTargets_.end());
-              collectedBridgePathChoices_.erase(
-                  std::remove_if(
-                      collectedBridgePathChoices_.begin(),
-                      collectedBridgePathChoices_.end(),
-                      [&](const CollectedBridgePathChoiceEntry &entry) {
-                        if (expr.semanticNodeId != 0) {
-                          return entry.semanticNodeId == expr.semanticNodeId;
-                        }
-                        return entry.scopePath == def.fullPath &&
-                               entry.sourceLine == expr.sourceLine &&
-                               entry.sourceColumn == expr.sourceColumn;
-                      }),
-                  collectedBridgePathChoices_.end());
+              // Refinements replace the first-pass entry for the same call. Erasing from
+              // the shared vectors per call made this loop quadratic in the call count,
+              // so replaced calls are recorded and removed in one pass afterwards.
+              const std::string directKey = expr.semanticNodeId != 0
+                                                ? nodeKey(expr.semanticNodeId)
+                                                : directPositionKey(def.fullPath, expr.name, expr.sourceLine, expr.sourceColumn);
+              const std::string bridgeKey = expr.semanticNodeId != 0
+                                                ? nodeKey(expr.semanticNodeId)
+                                                : bridgePositionKey(def.fullPath, expr.sourceLine, expr.sourceColumn);
+              if (expr.semanticNodeId != 0) {
+                replacedSemanticNodeIds.insert(expr.semanticNodeId);
+              } else {
+                replacedDirectPositions.insert(directKey);
+                replacedBridgePositions.insert(bridgeKey);
+              }
+              if (const auto slot = refinedBridgeSlot.find(bridgeKey); slot != refinedBridgeSlot.end()) {
+                refinedBridgePathChoices[slot->second].reset();
+                refinedBridgeSlot.erase(slot);
+              }
+              if (const auto slot = refinedDirectSlot.find(directKey); slot != refinedDirectSlot.end()) {
+                refinedDirectCallTargets[slot->second].reset();
+                refinedDirectSlot.erase(slot);
+              }
               if (const auto bridgeChoice =
                       collectionBridgeChoiceFromResolvedPath(callData.resolvedPath);
                   bridgeChoice.has_value()) {
-                collectedBridgePathChoices_.push_back(CollectedBridgePathChoiceEntry{
+                refinedBridgeSlot[bridgeKey] = refinedBridgePathChoices.size();
+                refinedBridgePathChoices.push_back(CollectedBridgePathChoiceEntry{
                     def.fullPath,
                     bridgeChoice->first,
                     bridgeChoice->second,
@@ -680,7 +701,8 @@ void SemanticsValidator::collectPilotRoutingSemanticProductFacts() {
                     expr.semanticNodeId,
                 });
               }
-              collectedDirectCallTargets_.push_back(CollectedDirectCallTargetEntry{
+              refinedDirectSlot[directKey] = refinedDirectCallTargets.size();
+              refinedDirectCallTargets.push_back(CollectedDirectCallTargetEntry{
                   def.fullPath,
                   expr.name,
                   std::move(callData.resolvedPath),
@@ -711,6 +733,35 @@ void SemanticsValidator::collectPilotRoutingSemanticProductFacts() {
               expr.semanticNodeId,
           });
         });
+    const auto isReplacedDirect = [&](const CollectedDirectCallTargetEntry &entry) {
+      if (entry.semanticNodeId != 0) {
+        return replacedSemanticNodeIds.count(entry.semanticNodeId) != 0;
+      }
+      return replacedDirectPositions.count(
+                 directPositionKey(entry.scopePath, entry.callName, entry.sourceLine, entry.sourceColumn)) != 0;
+    };
+    const auto isReplacedBridge = [&](const CollectedBridgePathChoiceEntry &entry) {
+      if (entry.semanticNodeId != 0) {
+        return replacedSemanticNodeIds.count(entry.semanticNodeId) != 0;
+      }
+      return replacedBridgePositions.count(bridgePositionKey(entry.scopePath, entry.sourceLine, entry.sourceColumn)) != 0;
+    };
+    collectedDirectCallTargets_.erase(
+        std::remove_if(collectedDirectCallTargets_.begin(), collectedDirectCallTargets_.end(), isReplacedDirect),
+        collectedDirectCallTargets_.end());
+    collectedBridgePathChoices_.erase(
+        std::remove_if(collectedBridgePathChoices_.begin(), collectedBridgePathChoices_.end(), isReplacedBridge),
+        collectedBridgePathChoices_.end());
+    for (auto &entry : refinedDirectCallTargets) {
+      if (entry.has_value()) {
+        collectedDirectCallTargets_.push_back(std::move(*entry));
+      }
+    }
+    for (auto &entry : refinedBridgePathChoices) {
+      if (entry.has_value()) {
+        collectedBridgePathChoices_.push_back(std::move(*entry));
+      }
+    }
   }
 
   if (useMergedWorkerPublicationFacts) {

@@ -501,6 +501,8 @@ private:
   std::unordered_set<std::string> defaultEffectSet_;
   std::unordered_set<std::string> entryDefaultEffectSet_;
   std::unordered_map<std::string, const Definition *> defMap_;
+  mutable std::vector<std::pair<std::string, size_t>> definitionPathIndex_;
+  mutable size_t definitionPathIndexSize_ = static_cast<size_t>(-1);
   std::unordered_map<std::string, ReturnKind> returnKinds_;
   std::unordered_map<std::string, std::string> returnStructs_;
   std::unordered_map<std::string, BindingInfo> returnBindings_;

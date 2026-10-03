@@ -110,7 +110,6 @@ of sync with them.
 | TODO-5409 | Add clang-format configuration and a changed-files format check | deferred | tooling |
 | TODO-5411 | Add a CI workflow for the release gate | deferred | tooling |
 | TODO-5412 | Share CLI argument parsing between primec and primevm | deferred | tooling |
-| TODO-5413 | Re-baseline benchmarks after the structural refactors | ready | performance |
 | TODO-5414 | Split the test files over 3,000 lines | deferred | test-infrastructure |
 | TODO-5415 | Split stdlib/std/collections/soa_storage.prime by concern | deferred | stdlib |
 | TODO-5421 | Keep the release gate from dirtying docs/failing_tests.md | deferred | tooling |
@@ -118,13 +117,11 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5413 (track: performance): Re-baseline benchmarks after the structural refactors.
 
 ### Immediate Next 10
 
-1. TODO-5413 - Re-baseline benchmarks after the structural refactors.
-2. TODO-5402 - Replace the 17-callback native tail dispatch signatures with a hooks struct.
-3. TODO-5403 - Extend the source-file-size guard beyond src/semantics.
+1. TODO-5402 - Replace the 17-callback native tail dispatch signatures with a hooks struct.
+2. TODO-5403 - Extend the source-file-size guard beyond src/semantics.
 
 ### Priority Lanes
 
@@ -134,7 +131,6 @@ of sync with them.
 - Collection resolution: TODO-5405 -> TODO-5406
 - Diagnostics: TODO-5408
 - Tooling: TODO-5409, TODO-5411, TODO-5412; TODO-5421 (needs approval)
-- Performance: TODO-5413
 - Test infrastructure: TODO-5414
 - Stdlib: TODO-5415
 
@@ -275,18 +271,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - each `main` under 80 lines; `--help` output covered by a compile-run test for both binaries
     - full gate green
   - stop_rule: do not change any flag's meaning; renames need a deprecation alias.
-
-- [ ] TODO-5413: Re-baseline benchmarks after the structural refactors
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-03
-  - phase: Performance
-  - parallel_track: performance
-  - scope: `benchmarks/benchmark_baseline.json` dates from 2026-09-21, before the arena allocator changes, the semantics PCH, the VM kernel stepper, the dynamic string heap and the phase-split giant functions (which now build state structs per call). Run `./scripts/benchmark.sh --build-dir build-release --report-json ... --baseline-json ...`, investigate any regression over 5%, and refresh the baseline.
-  - acceptance:
-    - report committed under build artifacts or docs with before/after numbers; regressions over 5% either fixed or recorded as a leaf
-    - baseline file updated
-  - stop_rule: if a regression is in a phase-split function, fix it by hoisting the state struct, not by re-merging the function.
 
 - [ ] TODO-5414: Split the test files over 3,000 lines
   - owner: ai

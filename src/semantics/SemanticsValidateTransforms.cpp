@@ -510,6 +510,9 @@ struct AstTransformResolutionIndex {
   std::unordered_map<std::string, const Definition *> definitionsByPath;
   std::unordered_map<std::string, std::vector<std::string>> visibleHookAliases;
   std::unordered_map<std::string, std::vector<std::string>> hiddenHookAliases;
+  // Definitions carrying the `ast` transform; usually few, so per-definition alias
+  // collection walks this list instead of every definition in the program.
+  std::vector<std::pair<std::string, const Definition *>> astHookDefinitions;
 };
 
 void addAstTransformAlias(std::unordered_map<std::string, std::vector<std::string>> &aliases,
@@ -526,6 +529,9 @@ AstTransformResolutionIndex buildAstTransformResolutionIndex(const Program &prog
   AstTransformResolutionIndex index;
   for (const auto &def : program.definitions) {
     index.definitionsByPath.emplace(def.fullPath, &def);
+    if (hasTransformNamed(def.transforms, "ast")) {
+      index.astHookDefinitions.emplace_back(def.fullPath, &def);
+    }
   }
 
   auto addImportedAliases = [&](const std::string &importPath) {
@@ -591,7 +597,7 @@ std::unordered_map<std::string, std::vector<std::string>> collectVisibleAstTrans
     const AstTransformResolutionIndex &index,
     const Definition &def) {
   std::unordered_map<std::string, std::vector<std::string>> aliases = index.visibleHookAliases;
-  for (const auto &[path, candidateDef] : index.definitionsByPath) {
+  for (const auto &[path, candidateDef] : index.astHookDefinitions) {
     if (candidateDef == nullptr || !hasTransformNamed(candidateDef->transforms, "ast")) {
       continue;
     }
@@ -600,7 +606,7 @@ std::unordered_map<std::string, std::vector<std::string>> collectVisibleAstTrans
     }
   }
   if (!def.namespacePrefix.empty()) {
-    for (const auto &[path, candidateDef] : index.definitionsByPath) {
+    for (const auto &[path, candidateDef] : index.astHookDefinitions) {
       if (candidateDef == nullptr || !hasTransformNamed(candidateDef->transforms, "ast")) {
         continue;
       }
@@ -609,7 +615,7 @@ std::unordered_map<std::string, std::vector<std::string>> collectVisibleAstTrans
       }
     }
   }
-  for (const auto &[path, candidateDef] : index.definitionsByPath) {
+  for (const auto &[path, candidateDef] : index.astHookDefinitions) {
     if (candidateDef == nullptr || !hasTransformNamed(candidateDef->transforms, "ast")) {
       continue;
     }
