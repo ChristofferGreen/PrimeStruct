@@ -271,9 +271,10 @@ TEST_CASE("all production primec emit kinds route through ir backend resolution"
 
   const std::span<const std::string_view> emitKinds = primec::listPrimecEmitKinds();
   CHECK(std::vector<std::string_view>(emitKinds.begin(), emitKinds.end()) == expectedKinds);
-  CHECK(primec::primecEmitKindsUsage() ==
-        "cpp|cpp-ir|exe|exe-ir|native|ir|vm|glsl|spirv|wasm|glsl-ir|spirv-ir|optcpp|optcpp-ir|optexe|"
-        "optexe-ir");
+  CHECK(
+      primec::primecEmitKindsUsage() ==
+      "cpp|cpp-ir|exe|exe-ir|native|ir|vm|glsl|spirv|wasm|glsl-ir|spirv-ir|optcpp|optcpp-ir|optexe|"
+      "optexe-ir");
 
   for (const std::string_view emitKind : emitKinds) {
     CAPTURE(emitKind);
