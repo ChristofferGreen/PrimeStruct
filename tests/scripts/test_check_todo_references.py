@@ -31,7 +31,7 @@ def main() -> int:
         (root / "docs" / "todo_archive").mkdir(parents=True)
         (root / "src").mkdir()
         (root / "include").mkdir()
-        (root / "docs" / "todo.md").write_text("- [ ] TODO-1: open\n", encoding="utf-8")
+        (root / "docs" / "todo.md").write_text("- [ ] TODO-1: open\n  - mentions TODO-2 in prose\n", encoding="utf-8")
         (root / "docs" / "todo_archive" / "2026-10.md").write_text("- [x] TODO-2: done\n", encoding="utf-8")
         (root / "src" / "a.cpp").write_text("// TODO-1 open\n// TODO-2 done\n// TODO-9 nowhere\n", encoding="utf-8")
         open_ids, archived = module.known_ids(root)
@@ -42,7 +42,7 @@ def main() -> int:
 
     expect(module.evaluate([], module.BASELINE_CLOSED_CITATIONS) == [], "the baseline count passes")
     expect(module.evaluate([], module.BASELINE_CLOSED_CITATIONS + 1) != [], "growth past the baseline fails")
-    expect(module.evaluate([], module.BASELINE_CLOSED_CITATIONS - 1) != [], "shrinking requires lowering the baseline")
+    expect(module.evaluate([], module.BASELINE_CLOSED_CITATIONS - 1) == [], "shrinking never fails")
     expect(module.evaluate(["x"], module.BASELINE_CLOSED_CITATIONS) == ["x"], "dangling ids fail")
 
     if failures:

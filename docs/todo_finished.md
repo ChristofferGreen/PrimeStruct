@@ -1923,6 +1923,7 @@ are left unarchived.
 | TODO-5396 | Retire stale TODO-id references in source comments | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
 | TODO-5397 | Fix stale string-model statements in AGENTS.md and the VM spec | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
 | TODO-5399 | Hoist the duplicated TemplateMonomorph using-block into one header | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
+| TODO-5416 | Make ratchet audits tolerate improvement instead of demanding exact counts | [2026-10.md](todo_archive/2026-10.md) | 2026-10-02 |
 
 <!-- INDEX-END -->
 

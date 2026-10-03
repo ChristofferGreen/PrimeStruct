@@ -117,6 +117,12 @@ of sync with them.
 | TODO-5413 | Re-baseline benchmarks after the structural refactors | ready | performance |
 | TODO-5414 | Split the test files over 3,000 lines | deferred | test-infrastructure |
 | TODO-5415 | Split stdlib/std/collections/soa_storage.prime by concern | deferred | stdlib |
+| TODO-5417 | Stop propagating surface-audit exemption markers through file splits | ready | collection-resolution |
+| TODO-5418 | Commit the refactoring helpers used for the semantics splits | ready | tooling |
+| TODO-5419 | Split the largest remaining phase functions | deferred | semantics-structure |
+| TODO-5420 | Replace using-declarations in TemplateMonomorphUsings.h with qualified names | deferred | semantics-structure |
+| TODO-5421 | Keep the release gate from dirtying docs/failing_tests.md | deferred | tooling |
+| TODO-5422 | Convert the remaining validation-test clusters measured after TODO-5388..5395 | deferred | test-infrastructure |
 | TODO-5348 | Verify the iOS embed build and XCFramework packaging on macOS | deferred | embedding-ios |
 
 ### Ready Now
@@ -125,28 +131,33 @@ of sync with them.
 - TODO-5401 (track: lowerer-structure): Collapse duplicate std::function callback aliases (surface: *Fn alias headers).
 - TODO-5407 (track: diagnostics): Route benchmark instrumentation through one sink.
 - TODO-5410 (track: tooling): Add self-tests for the nine unguarded check scripts.
+- TODO-5417 (track: collection-resolution): Stop propagating surface-audit exemption markers through file splits.
+- TODO-5418 (track: tooling): Commit the refactoring helpers used for the semantics splits.
 - TODO-5413 (track: performance): Re-baseline benchmarks after the structural refactors.
 
 ### Immediate Next 10
 
-4. TODO-5400 - Table-drive the builtin math-name classifiers.
-5. TODO-5401 - Collapse duplicate std::function callback aliases.
-6. TODO-5407 - Route benchmark instrumentation through one sink.
-7. TODO-5410 - Add self-tests for the nine unguarded check scripts.
-8. TODO-5413 - Re-baseline benchmarks after the structural refactors.
-9. TODO-5402 - Replace the 17-callback native tail dispatch signatures with a hooks struct.
-10. TODO-5403 - Extend the source-file-size guard beyond src/semantics.
+1. TODO-5413 - Re-baseline benchmarks after the structural refactors.
+2. TODO-5417 - Stop propagating surface-audit exemption markers through file splits.
+3. TODO-5400 - Table-drive the builtin math-name classifiers.
+4. TODO-5401 - Collapse duplicate std::function callback aliases.
+5. TODO-5407 - Route benchmark instrumentation through one sink.
+6. TODO-5410 - Add self-tests for the nine unguarded check scripts.
+7. TODO-5418 - Commit the refactoring helpers used for the semantics splits.
+8. TODO-5402 - Replace the 17-callback native tail dispatch signatures with a hooks struct.
+9. TODO-5403 - Extend the source-file-size guard beyond src/semantics.
 
 ### Priority Lanes
 
 - Embedding (must support iOS): TODO-5348 (needs macOS)
 - Docs hygiene: TODO-5398
 - Lowerer structure: TODO-5400, TODO-5401 -> TODO-5402 -> TODO-5403 -> TODO-5404
-- Collection resolution: TODO-5405 -> TODO-5406
+- Collection resolution: TODO-5417, TODO-5405 -> TODO-5406
 - Diagnostics: TODO-5407 -> TODO-5408
-- Tooling: TODO-5410 -> TODO-5409, TODO-5411, TODO-5412
+- Tooling: TODO-5410, TODO-5418 -> TODO-5409, TODO-5411, TODO-5412; TODO-5421 (needs approval)
 - Performance: TODO-5413
-- Test infrastructure: TODO-5414
+- Semantics structure: TODO-5419, TODO-5420
+- Test infrastructure: TODO-5414, TODO-5422
 - Stdlib: TODO-5415
 
 ### Execution Queue
@@ -154,6 +165,75 @@ of sync with them.
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 ### Task Blocks
+
+- [ ] TODO-5417: Stop propagating surface-audit exemption markers through file splits
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-03
+  - phase: Tooling
+  - parallel_track: collection-resolution
+  - scope: Splitting files copies the `// *-surface-audit: exempt` marker into every unit that spells a helper literal; the exemption baseline rose 84 -> 96 across TODO-5384/5385/5388 purely from splits. Move the exemption list into one data file (`scripts/surface_audit_exemptions.txt`, path -> markers) that the audits and the ratchet read, delete the in-file markers, and let a split update one line per file.
+  - acceptance:
+    - no `*-surface-audit: exempt` comments remain in src/; the data file lists the same paths; the ratchet counts rows
+    - full gate green; the three surface audits and the ratchet pass
+  - stop_rule: if an audit needs the marker in-file to scope a region, keep the marker only for that region and document why.
+
+- [ ] TODO-5418: Commit the refactoring helpers used for the semantics splits
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-03
+  - phase: Tooling
+  - parallel_track: tooling
+  - scope: TODO-5384/5385 were done with throwaway scripts in a scratch directory: header/part splitting (split.py, split2.py), lambda extraction (extract_lambda.py) and phase-function extraction with a shared state struct (phase_split.py), plus a finish-TODO helper. They encode hard-won rules (RAII scope guards must be forced into the state struct, by-value parameters copy into state, reference locals become pointers, anonymous-namespace helpers move to a named-namespace header, default arguments stay on the declaration). Add them under `scripts/refactor/` with a README of those rules and a golden-file self-test on a small fixture, and add `scripts/finish_todo.py` implementing the AGENTS.md block-move + archive flow so it is no longer manual.
+  - acceptance:
+    - `scripts/refactor/README.md` lists the rules; each tool has a fixture test registered in ctest
+    - `scripts/finish_todo.py TODO-XXXX '<result>'` moves the block, cleans queue sections and runs the archive script
+  - stop_rule: do not generalize past the cases already used; unsupported inputs must fail loudly.
+
+- [ ] TODO-5419: Split the largest remaining phase functions
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-10-03
+  - phase: Compiler structure
+  - parallel_track: semantics-structure
+  - scope: The phase splits left two very large phase functions: `validateBindingStatementPhase5` (~700 lines, the `info.typeName == "Reference"` block) and `rewriteExprPhase6` (~1,040 lines, the `!expr.isMethodCall && !expr.isBinding` block). Apply the same state-struct split one level down (nested State carrying a reference to the outer one).
+  - acceptance:
+    - no phase function over 400 lines; files stay under 1,200
+    - dumps byte-identical; full gate green
+  - stop_rule: if a nested block returns from several nesting levels, stop and record the control-flow shape instead of forcing it.
+
+- [ ] TODO-5420: Replace using-declarations in TemplateMonomorphUsings.h with qualified names
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-10-03
+  - phase: Compiler structure
+  - parallel_track: semantics-structure
+  - scope: TODO-5399 hoisted 61 `using semantics::X;` declarations into one header, but a header that injects 61 names into `namespace primec` for every includer is still namespace pollution and hides which names a file really uses. Replace uses with `semantics::X` (mechanical) one subsystem at a time and delete the header when empty.
+  - acceptance:
+    - header deleted; no behavior change; full gate green
+  - stop_rule: stop at any file where qualification would exceed the line-length convention and reflow instead of re-adding a using.
+
+- [ ] TODO-5421: Keep the release gate from dirtying docs/failing_tests.md
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-10-03
+  - phase: Tooling
+  - parallel_track: tooling
+  - scope: `scripts/compile.sh` rewrites the tracked `docs/failing_tests.md` (new timestamp) on every run, so every validated change leaves a dirty tree that must be checked out before committing. Write the 'no failures' report only to the build dir and touch the tracked file only when there are failures. This edits `compile.sh`, which AGENTS.md freezes absent an explicit request, so it needs the maintainer's go-ahead before any work.
+  - acceptance:
+    - a green gate leaves `git status` clean; failures still land under Open Failures
+  - stop_rule: do not start without explicit approval to change scripts/compile.sh.
+
+- [ ] TODO-5422: Convert the remaining validation-test clusters measured after TODO-5388..5395
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-10-03
+  - phase: Test infrastructure
+  - parallel_track: test-infrastructure
+  - scope: After those leaves the duplication script still reports 24.3% duplicated windows in `tests/unit/ir_pipeline/validation`. Re-run `scripts/measure_test_duplication.py`, list the top ten clusters by excess, and convert each with a factory or table plus a mutation check; many are per-case callback combinations (count_access, inline_struct_arg) that need a builder (`CountAccessCallbacks{}.arrayCount(true)...`) rather than a constant factory.
+  - acceptance:
+    - measured cluster list committed; excess drops below 20% with case counts unchanged and a mutation check per converted file
+  - stop_rule: stop when a cluster's variants differ in more than two callbacks; leave it.
 
 - [ ] TODO-5398: Archive or fold the orphaned long-form docs
   - owner: ai
