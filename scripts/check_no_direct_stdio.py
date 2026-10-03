@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail when production sources write to std::cerr / std::cout.
+"""Fail when production sources write to std::cerr / std::cout or throw.
 
 Instrumentation goes through primec::support::emitBenchmarkLine; src/bin
 (the CLI front ends) may print. The IrToCpp emitters generate C++ text that
@@ -18,8 +18,9 @@ ALLOWLIST = {
     "src/backend/IrToCppEmitterInstructionEmitter.cpp",
     "src/backend/IrToCppEmitterPrintAndFileEmitter.cpp",
     "src/support/BenchmarkSink.cpp",
+    "src/support/CompileArena.cpp",  # throws std::bad_alloc by design
 }
-PATTERN = re.compile(r"\bstd::(cerr|cout)\b")
+PATTERN = re.compile(r"\bstd::(cerr|cout)\b|^\s*throw\b[^;]*;|\bthrow\s+std::")
 
 
 def find_violations(root: Path) -> list[str]:
@@ -33,7 +34,7 @@ def find_violations(root: Path) -> list[str]:
                 continue
             for number, line in enumerate(path.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
                 if PATTERN.search(line):
-                    problems.append(f"{rel}:{number}: direct {PATTERN.search(line).group(0)} use")
+                    problems.append(f"{rel}:{number}: direct {PATTERN.search(line).group(0).strip()} use")
     return problems
 
 

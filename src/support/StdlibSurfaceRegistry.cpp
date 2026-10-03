@@ -9,7 +9,6 @@
 #include <filesystem>
 #include <fstream>
 #include <optional>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -895,28 +894,26 @@ static std::vector<StdlibSurfaceMetadata> buildCollectionsSurfaceMetadata(
   return entries;
 }
 
-// TODO-4689: "fail loudly if not found" -- every one of the 6 known
-// canonical paths above is expected to be discovered at startup given
-// today's real stdlib collection files. If one is missing (e.g. a stdlib
-// file was deleted/renamed without updating KnownCollectionSurfaceIds),
-// StdlibSurfaceId::CollectionsManifestSurface0 and friends would silently
-// resolve to nothing for every one of their ~40 call sites, which is far
-// worse than a hard startup failure.
-static void verifyKnownCollectionSurfaceIdsResolved(
-    const std::vector<StdlibSurfaceMetadata> &collectionsEntries) {
+// Every known canonical collection path must be discovered at startup; a miss is reported
+// through stdlibSurfaceRegistryStartupError() (the registry still builds without it).
+}
+
+std::string verifyKnownStdlibCollectionSurfacesResolved(std::span<const StdlibSurfaceMetadata> collectionsEntries) {
   for (const auto &known : KnownCollectionSurfaceIds) {
     const bool found = std::any_of(
         collectionsEntries.begin(), collectionsEntries.end(), [&](const StdlibSurfaceMetadata &entry) {
           return entry.id == known.id && entry.canonicalPath == known.canonicalPath;
         });
     if (!found) {
-      throw std::runtime_error(
-          "StdlibSurfaceRegistry: a known collection surface canonical path "
-          "was not discovered at startup; the stdlib collections directory "
-          "layout may have changed without updating KnownCollectionSurfaceIds");
+      return "StdlibSurfaceRegistry: a known collection surface canonical path "
+             "was not discovered at startup; the stdlib collections directory "
+             "layout may have changed without updating KnownCollectionSurfaceIds";
     }
   }
+  return {};
 }
+
+namespace {
 
 // TODO-4689: the 5 fixed, non-collection entries (File x2, Collections'
 // ContainerError, Gfx x2). These never grow/shrink at runtime; only the
@@ -1007,26 +1004,22 @@ const StdlibSurfaceMetadata GfxErrorHelpersSurface = {
     .borrowedVariants = {},
 };
 
-// TODO-4689: Registry storage is now a container built once at startup
-// (function-local static, initialized on first use -- process lifetime,
-// same effective lifetime as the old fixed std::array) that concatenates
-// the 5 fixed entries above with however many collection entries
-// deriveCollectionsSurfaceData() discovered. Its size is no longer a
-// compile-time literal: a new discovered collection surface (helper +
-// constructor pair) grows this vector by 2 with no change here.
-const std::vector<StdlibSurfaceMetadata> &registry() {
-  // TODO-5235: this is a magic static (process-lifetime, computed once on
-  // first call) whose first call can happen from inside a compile scope -
-  // wrap its build in systemHeapValue() so its backing vector (and every
-  // heap allocation nested inside buildCollectionsSurfaceMetadata()) lands
-  // on the system heap, never arena memory, regardless of when the first
-  // call happens.
-  static const std::vector<StdlibSurfaceMetadata> storage = systemHeapValue([] {
+// Registry storage: the 5 fixed entries plus the dynamically discovered collection entries,
+// built once on first use (process lifetime).
+struct RegistryBuild {
+  std::vector<StdlibSurfaceMetadata> entries;
+  std::string startupError;
+};
+
+const RegistryBuild &registryBuild() {
+  // TODO-5235: first call can happen inside a compile scope, so build on the system heap.
+  static const RegistryBuild build = systemHeapValue([] {
     const std::vector<StdlibSurfaceMetadata> collectionsEntries =
         buildCollectionsSurfaceMetadata(CollectionsSurfaceData);
-    verifyKnownCollectionSurfaceIdsResolved(collectionsEntries);
+    RegistryBuild result;
+    result.startupError = verifyKnownStdlibCollectionSurfacesResolved(collectionsEntries);
 
-    std::vector<StdlibSurfaceMetadata> built;
+    std::vector<StdlibSurfaceMetadata> &built = result.entries;
     built.reserve(5 + collectionsEntries.size());
     built.push_back(FileHelpersSurface);
     built.push_back(FileErrorHelpersSurface);
@@ -1034,10 +1027,12 @@ const std::vector<StdlibSurfaceMetadata> &registry() {
     built.push_back(CollectionsContainerErrorHelpersSurface);
     built.push_back(GfxBufferHelpersSurface);
     built.push_back(GfxErrorHelpersSurface);
-    return built;
+    return result;
   });
-  return storage;
+  return build;
 }
+
+const std::vector<StdlibSurfaceMetadata> &registry() { return registryBuild().entries; }
 
 bool matchesAny(std::span<const std::string_view> spellings, std::string_view spelling) {
   return std::find(spellings.begin(), spellings.end(), spelling) != spellings.end();
@@ -1346,6 +1341,10 @@ std::string deriveStdlibCollectionCanonicalPath(const std::filesystem::path &fil
 std::string deriveStdlibCollectionBridgeKey(const std::filesystem::path &filepath,
                                             std::string_view surfaceSuffix) {
   return "collections." + filepath.stem().string() + "_" + std::string(surfaceSuffix);
+}
+
+const std::string &stdlibSurfaceRegistryStartupError() {
+  return registryBuild().startupError;
 }
 
 std::span<const StdlibSurfaceMetadata> stdlibSurfaceRegistry() {

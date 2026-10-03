@@ -32,8 +32,9 @@ def main() -> int:
             failures.append("bin, allowlisted and clean files pass")
         (root / "src/semantics/bad.cpp").write_text("void f() {\n  std::cerr << 1;\n}\n", encoding="utf-8")
         (root / "include/bad.h").write_text("auto &o = std::cout;\n", encoding="utf-8")
+        (root / "src/semantics/thrower.cpp").write_text("void g() {\n  throw std::runtime_error(\"x\");\n}\n", encoding="utf-8")
         problems = module.find_violations(root)
-        if len(problems) != 2 or "bad.cpp:2" not in problems[0] and "bad.cpp:2" not in "".join(problems):
+        if len(problems) != 3 or "bad.cpp:2" not in problems[0] and "bad.cpp:2" not in "".join(problems):
             failures.append(f"direct uses are reported with line numbers: {problems}")
 
     if failures:

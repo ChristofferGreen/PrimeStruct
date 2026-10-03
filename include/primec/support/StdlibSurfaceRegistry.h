@@ -67,6 +67,12 @@ struct StdlibSurfaceMetadata {
 
 std::span<const StdlibSurfaceMetadata> stdlibSurfaceRegistry();
 
+// Empty when startup discovery found every known collection surface; otherwise the
+// diagnostic the compile pipeline reports instead of the registry aborting the process.
+const std::string &stdlibSurfaceRegistryStartupError();
+// Returns the diagnostic for a missing known surface in `collectionsEntries`, or "".
+std::string verifyKnownStdlibCollectionSurfacesResolved(std::span<const StdlibSurfaceMetadata> collectionsEntries);
+
 // TODO-4689 testing hook: a fully owned (no string_view/span lifetime
 // concerns), fresh-every-call snapshot of the domain==Collections entries
 // stdlibSurfaceRegistry() would build from today's stdlib/std/collections/

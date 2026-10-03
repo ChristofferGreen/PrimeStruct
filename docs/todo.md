@@ -106,9 +106,6 @@ of sync with them.
 | TODO-5404 | Remove the hand-maintained src/ir_lowerer header mirrors | deferred | lowerer-structure |
 | TODO-5405 | Inventory and schedule deletion of compatibility spellings | deferred | collection-resolution |
 | TODO-5406 | Delete or justify the legacy collection branch counters | deferred | collection-resolution |
-| TODO-5408 | Turn stdlib registry startup throws into diagnostics | deferred | diagnostics |
-| TODO-5409 | Add clang-format configuration and a changed-files format check | deferred | tooling |
-| TODO-5411 | Add a CI workflow for the release gate | deferred | tooling |
 | TODO-5412 | Share CLI argument parsing between primec and primevm | deferred | tooling |
 | TODO-5414 | Split the test files over 3,000 lines | deferred | test-infrastructure |
 | TODO-5415 | Split stdlib/std/collections/soa_storage.prime by concern | deferred | stdlib |
@@ -129,8 +126,7 @@ of sync with them.
 - Docs hygiene: TODO-5398
 - Lowerer structure: TODO-5402 -> TODO-5403 -> TODO-5404
 - Collection resolution: TODO-5405 -> TODO-5406
-- Diagnostics: TODO-5408
-- Tooling: TODO-5409, TODO-5411, TODO-5412; TODO-5421 (needs approval)
+- Tooling: TODO-5412; TODO-5421 (needs approval)
 - Test infrastructure: TODO-5414
 - Stdlib: TODO-5415
 
@@ -224,42 +220,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - every counter either deleted with its branch or documented; the std::cerr printing goes through TODO-5407's sink
     - full gate green
   - stop_rule: a branch with non-zero hits stays; document it, do not delete it.
-
-- [ ] TODO-5408: Turn stdlib registry startup throws into diagnostics
-  - owner: ai
-  - status: deferred
-  - created_at: 2026-10-03
-  - phase: Compiler structure
-  - parallel_track: diagnostics
-  - scope: `src/support/StdlibSurfaceRegistry.cpp:914` throws `std::runtime_error` when a known collection surface is missing at startup, against the `prefer explicit error types over exceptions` rule; `CompileArena` throws `std::bad_alloc` by design. Make registry construction return an Expected-style result that `runCompilePipeline` surfaces as a normal compiler diagnostic.
-  - acceptance:
-    - no `throw` outside CompileArena in production src; a test exercises the missing-surface path and gets a diagnostic, not a crash
-    - full gate green
-  - stop_rule: leave CompileArena's bad_alloc as is.
-
-- [ ] TODO-5409: Add clang-format configuration and a changed-files format check
-  - owner: ai
-  - status: deferred
-  - created_at: 2026-10-03
-  - phase: Tooling
-  - parallel_track: tooling
-  - scope: There is no `.clang-format`; style is enforced only by review. Derive a config that reproduces the current layout (2-space indent, 120 columns, aligned parameters), verify it is a no-op on a sample of recently touched files, and add `scripts/check_format.py` that formats only files changed since `master` so the first run does not rewrite the tree.
-  - acceptance:
-    - .clang-format committed; the check passes on HEAD; AGENTS.md documents the command
-    - no mass reformat in this leaf
-  - stop_rule: if no config reproduces the current style within a few percent of lines, pick the closest and record the diff as a follow-up instead of reformatting everything.
-
-- [ ] TODO-5411: Add a CI workflow for the release gate
-  - owner: ai
-  - status: deferred
-  - created_at: 2026-10-03
-  - phase: Tooling
-  - parallel_track: tooling
-  - scope: The repository has no `.github/workflows`. Add a workflow that runs `./scripts/compile.sh --release` on pushes to master and pull requests, caches `build-release/`, and uploads `LastTestsFailed.log` on failure.
-  - acceptance:
-    - workflow file committed; a green run on master
-    - no change to compile.sh (stability rule)
-  - stop_rule: if the full gate exceeds the runner limit, run configure+build+the parallel-safe label first and record the full gate as a nightly job.
 
 - [ ] TODO-5412: Share CLI argument parsing between primec and primevm
   - owner: ai

@@ -1,0 +1,12 @@
+# Closest fit to the existing layout (about 17% of lines in a sample of recent files differ);
+# scripts/check_format.py only checks lines changed since the base ref, so no mass reformat.
+BasedOnStyle: LLVM
+IndentWidth: 2
+ColumnLimit: 100
+BinPackParameters: false
+BinPackArguments: false
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+ReflowComments: false
+SortIncludes: Never

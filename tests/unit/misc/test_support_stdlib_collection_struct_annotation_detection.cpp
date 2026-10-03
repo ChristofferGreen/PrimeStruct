@@ -403,6 +403,17 @@ TEST_CASE("deriveCollectionsSurfaces() output is byte-identical across the TODO-
   }
 }
 
+TEST_CASE("registry startup reports a missing known collection surface as a diagnostic") {
+  // Nothing discovered: every known surface is missing, and the check returns text instead of throwing.
+  const std::string message = primec::verifyKnownStdlibCollectionSurfacesResolved({});
+  CHECK(message.find("known collection surface canonical path") != std::string::npos);
+
+  // The real registry resolves every known surface, so the pipeline sees no startup error.
+  CHECK(primec::stdlibSurfaceRegistryStartupError().empty());
+  const auto registry = primec::stdlibSurfaceRegistry();
+  CHECK(primec::verifyKnownStdlibCollectionSurfacesResolved(registry).empty());
+}
+
 TEST_SUITE_END();
 
 // TODO-4689: proves the registry's collection-surface storage is

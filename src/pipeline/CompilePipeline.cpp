@@ -197,6 +197,10 @@ bool runCompilePipeline(const Options &options,
     return false;
   };
 
+  if (const std::string &registryError = stdlibSurfaceRegistryStartupError(); !registryError.empty()) {
+    return failPipeline(CompilePipelineErrorStage::Semantic, registryError, capturedDiagnosticInfo);
+  }
+
   CompilePipelineImportStageState importStage;
   if (!runCompilePipelineImportStage(options,
                                      importStage,

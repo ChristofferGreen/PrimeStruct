@@ -2320,6 +2320,13 @@ if(PRIMESTRUCT_BUILD_TESTS)
   set_tests_properties(PrimeStruct_callback_alias_count_self_test PROPERTIES TIMEOUT 60)
 
   add_test(
+    NAME PrimeStruct_check_format_self_test
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/scripts/test_check_format.py
+            --repo-root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_check_format_self_test PROPERTIES TIMEOUT 120)
+
+  add_test(
     NAME PrimeStruct_no_direct_stdio_audit
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/check_no_direct_stdio.py
             --root ${CMAKE_SOURCE_DIR}
