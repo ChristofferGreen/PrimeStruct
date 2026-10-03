@@ -28,6 +28,12 @@ bool eliminateDeadStores(IrFunction &function, const IrModule &module) {
 
   const size_t locals = escape.localCount;
   const size_t blockCount = cfg.blocks.size();
+  // Four bit matrices of blocks x locals are kept; leave very large functions
+  // (tens of thousands of blocks and locals) alone rather than allocate them.
+  constexpr size_t MaxMatrixCells = 256u * 1024u * 1024u;
+  if (blockCount * locals > MaxMatrixCells) {
+    return false;
+  }
   std::vector<bool> trackable(locals, true);
   for (const uint32_t slot : escape.pinnedSlots) {
     trackable[slot] = false;

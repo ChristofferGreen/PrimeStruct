@@ -53,9 +53,9 @@ bool passSupportsTarget(const IrOptimizationPass &pass, IrValidationTarget targe
 
 const std::vector<IrOptimizationPass> &irOptimizationPasses() {
   // Manifest order is execution order. Cheap structural cleanups come first so
-  // later passes see straight-line code; dead-store runs after folding so it
-  // sees the simplified stores, and its leftover pops are swept by the next
-  // round's peephole.
+  // later passes see straight-line code; copy-prop runs before dead-store so
+  // the copies it leaves unread are dropped, and dead-store's leftover pops are
+  // swept by the next round's peephole.
   // The table is built on first use, which can happen while a compile arena is
   // active; its storage must come from the system heap because it is destroyed
   // at process exit (see CompileArena.h).
@@ -73,6 +73,11 @@ const std::vector<IrOptimizationPass> &irOptimizationPasses() {
         1,
         IrTargetsNoGpu},
        &ir_opt::runPeepholePass},
+      {{"copy-prop",
+        "read the original local instead of a copy of it, so the copy can die",
+        2,
+        IrTargetsNoGpu},
+       &ir_opt::runCopyPropPass},
       {{"dead-store", "turn stores to locals that are never read into pops", 1, IrTargetsNoGpu},
        &ir_opt::runDeadStorePass},
   };

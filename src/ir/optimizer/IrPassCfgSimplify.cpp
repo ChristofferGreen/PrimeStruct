@@ -19,15 +19,23 @@ bool constantIsZero(const IrInstruction &push) {
 }
 
 // `Push c; JumpIfZero L` has a known outcome: either an unconditional jump or
-// no jump at all. The jump must not be a join point, or other paths would have
-// pushed their own condition.
+// no jump at all. When the branch is not a join point the pair disappears. When
+// it is (the usual shape of `a && b` and `a || b`, where one arm pushes a
+// constant and falls into the shared test), other paths still need the test, but
+// this path already knows the answer: the push becomes a jump straight to the
+// outcome, which skips the test. Both targets expect the stack as it was before
+// the push, so the depths stay consistent.
 bool foldConstantBranches(IrFunction &function) {
   const std::vector<bool> targets = jumpTargetMask(function);
   InstructionRewriter rewriter(function);
   for (size_t i = 0; i + 1 < function.instructions.size(); ++i) {
     const IrInstruction &push = function.instructions[i];
     const IrInstruction &branch = function.instructions[i + 1];
-    if (!isConstantPush(push) || branch.op != IrOpcode::JumpIfZero || targets[i + 1] || rewriter.erased(i)) {
+    if (!isConstantPush(push) || branch.op != IrOpcode::JumpIfZero || rewriter.erased(i)) {
+      continue;
+    }
+    if (targets[i + 1]) {
+      rewriter.replace(i, IrOpcode::Jump, constantIsZero(push) ? branch.imm : i + 2);
       continue;
     }
     rewriter.erase(i);

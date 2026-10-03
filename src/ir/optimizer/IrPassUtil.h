@@ -38,11 +38,16 @@ inline std::vector<bool> jumpTargetMask(const IrFunction &function) {
 class InstructionRewriter {
 public:
   explicit InstructionRewriter(const IrFunction &function)
-      : function_(function), erased_(function.instructions.size(), false), replaced_(function.instructions.size(), false),
-        replacement_(function.instructions.size()) {}
+      : function_(function), erased_(function.instructions.size(), false),
+        replaced_(function.instructions.size(), false), replacement_(function.instructions.size()) {
+  }
 
-  size_t size() const { return erased_.size(); }
-  bool erased(size_t index) const { return erased_[index]; }
+  size_t size() const {
+    return erased_.size();
+  }
+  bool erased(size_t index) const {
+    return erased_[index];
+  }
 
   void erase(size_t index) {
     if (!erased_[index]) {
@@ -67,7 +72,9 @@ public:
     return replaced_[index] ? replacement_[index] : function_.instructions[index];
   }
 
-  bool changed() const { return changed_; }
+  bool changed() const {
+    return changed_;
+  }
 
   void apply(IrFunction &function) const {
     const size_t count = erased_.size();
@@ -104,9 +111,25 @@ private:
 };
 
 // Pass entry points (one translation unit each).
-bool runCfgSimplifyPass(IrModule &module, const IrPassContext &context, bool &changed, std::string &error);
-bool runConstFoldPass(IrModule &module, const IrPassContext &context, bool &changed, std::string &error);
-bool runPeepholePass(IrModule &module, const IrPassContext &context, bool &changed, std::string &error);
-bool runDeadStorePass(IrModule &module, const IrPassContext &context, bool &changed, std::string &error);
+bool runCfgSimplifyPass(IrModule &module,
+                        const IrPassContext &context,
+                        bool &changed,
+                        std::string &error);
+bool runConstFoldPass(IrModule &module,
+                      const IrPassContext &context,
+                      bool &changed,
+                      std::string &error);
+bool runPeepholePass(IrModule &module,
+                     const IrPassContext &context,
+                     bool &changed,
+                     std::string &error);
+bool runCopyPropPass(IrModule &module,
+                     const IrPassContext &context,
+                     bool &changed,
+                     std::string &error);
+bool runDeadStorePass(IrModule &module,
+                      const IrPassContext &context,
+                      bool &changed,
+                      std::string &error);
 
 } // namespace primec::ir_opt

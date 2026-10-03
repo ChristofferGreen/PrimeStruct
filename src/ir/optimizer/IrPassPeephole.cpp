@@ -24,6 +24,43 @@ bool isPurePush(IrOpcode op) {
   }
 }
 
+// Comparisons produce exactly 0 or 1.
+bool isComparison(IrOpcode op) {
+  switch (op) {
+  case IrOpcode::CmpEqI32:
+  case IrOpcode::CmpNeI32:
+  case IrOpcode::CmpLtI32:
+  case IrOpcode::CmpLeI32:
+  case IrOpcode::CmpGtI32:
+  case IrOpcode::CmpGeI32:
+  case IrOpcode::CmpEqI64:
+  case IrOpcode::CmpNeI64:
+  case IrOpcode::CmpLtI64:
+  case IrOpcode::CmpLeI64:
+  case IrOpcode::CmpGtI64:
+  case IrOpcode::CmpGeI64:
+  case IrOpcode::CmpLtU64:
+  case IrOpcode::CmpLeU64:
+  case IrOpcode::CmpGtU64:
+  case IrOpcode::CmpGeU64:
+  case IrOpcode::CmpEqF32:
+  case IrOpcode::CmpNeF32:
+  case IrOpcode::CmpLtF32:
+  case IrOpcode::CmpLeF32:
+  case IrOpcode::CmpGtF32:
+  case IrOpcode::CmpGeF32:
+  case IrOpcode::CmpEqF64:
+  case IrOpcode::CmpNeF64:
+  case IrOpcode::CmpLtF64:
+  case IrOpcode::CmpLeF64:
+  case IrOpcode::CmpGtF64:
+  case IrOpcode::CmpGeF64:
+    return true;
+  default:
+    return false;
+  }
+}
+
 bool isDivision(IrOpcode op) {
   return op == IrOpcode::DivI32 || op == IrOpcode::DivI64 || op == IrOpcode::DivU64;
 }
@@ -96,6 +133,17 @@ bool sweep(IrFunction &function) {
           rewriter.replace(prev, IrOpcode::Pop, 0);
           prev = i;
           continue;
+        }
+      } else if (isIntegerConstant(p, 0) &&
+                 (cur.op == IrOpcode::CmpNeI32 || cur.op == IrOpcode::CmpNeI64) && !targets[prev]) {
+        // `cmp; push 0; ne` re-tests a boolean: a comparison already yields 0 or
+        // 1, so `x != 0` is `x`. (The lowering emits this for `a && b`.)
+        size_t before = prev;
+        while (before > 0 && rewriter.erased(before - 1)) {
+          --before;
+        }
+        if (before > 0 && isComparison(rewriter.current(before - 1).op)) {
+          removePair = true;
         }
       } else if (isIntegerConstant(p, 0) && isAddOrSub(cur.op)) {
         removePair = true;  // x + 0, x - 0

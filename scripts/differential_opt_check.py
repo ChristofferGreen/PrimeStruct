@@ -121,6 +121,9 @@ def check_one(args: tuple[str, str, Path, Path, list[int], list[int], str]) -> t
     label, text, build_dir, work_dir, levels, optexe_levels, baseline_kernel = args
     digest = hashlib.sha1(text.encode("utf-8")).hexdigest()[:12]
     source_path = work_dir / f"{digest}.prime"
+    # The tests substitute a scratch path for this placeholder; give each program
+    # its own file so parallel jobs do not race on a shared one.
+    text = text.replace("__PATH__", str(work_dir / f"{digest}.data"))
     source_path.write_text(text, encoding="utf-8")
 
     baseline = run_vm(build_dir, source_path, [], baseline_kernel)

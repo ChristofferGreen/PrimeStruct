@@ -88,6 +88,23 @@ TEST_CASE("optimizing random programs at O1 preserves their behavior") {
   CHECK(shrunk > 600);
 }
 
+TEST_CASE("optimizing random programs at O2 and O3 preserves their behavior") {
+  for (const uint8_t level : {2, 3}) {
+    CAPTURE(level);
+    primec::OptimizationOptions options;
+    options.level = level;
+    options.verifyEachPass = true;
+    for (uint64_t seed = 20000; seed < 20600; ++seed) {
+      const primec::IrModule original = makeModule(seed);
+      const Outcome baseline = run(original);
+      REQUIRE_MESSAGE(baseline.ok, "seed ", seed, ": ", baseline.error);
+      std::string detail;
+      CHECK_MESSAGE(
+          optimizedMatches(original, options, baseline, detail), "seed ", seed, ": ", detail);
+    }
+  }
+}
+
 TEST_CASE("each pass alone preserves the behavior of random programs") {
   for (const primec::IrOptimizationPass &pass : primec::irOptimizationPasses()) {
     CAPTURE(pass.info.name);

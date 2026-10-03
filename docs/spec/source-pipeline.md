@@ -44,11 +44,13 @@ Pipeline operating rules:
   the validated IR in `prepareIrModule`, after the optional `--ir-inline` phase and before backend emission, and the
   module is re-validated afterwards; it is shared by every backend (VM, native, C++, wasm, serialized IR).
   - Passes run in a fixed order (the manifest, printed by `--opt-list`) and the whole sequence repeats until nothing
-    changes, at most four rounds. Current passes, all enabled from `-O1`: `cfg-simplify` (constant branches, jump
-    threading, no-op jumps, unreachable code), `const-fold` (pure arithmetic, comparisons and conversions of
-    constants, with the VM's exact semantics), `peephole` (dead push/pop pairs, `dup; store; pop`, `x+0`, `x*1`,
-    `x/1`, double negation), and `dead-store` (stores to locals that are never read, for locals not reachable through
-    memory). `-O2` and `-O3` currently select the same passes as `-O1`.
+    changes, at most four rounds. Current passes: `cfg-simplify` (constant branches, constants pushed into a shared
+    `&&`/`||` test jump straight to the outcome, jump threading, no-op jumps, unreachable code), `const-fold` (pure
+    arithmetic, comparisons and conversions of constants, with the VM's exact semantics), `peephole` (dead push/pop
+    pairs, `dup; store; pop`, `x+0`, `x*1`, `x/1`, double negation, and `cmp; push 0; ne` on a comparison result),
+    and `dead-store` (stores to locals that are never read, for locals not reachable through memory), all enabled from
+    `-O1`; and `copy-prop` (loads of a copy read the original local, using a forward analysis over the CFG; skipped for
+    functions that take local addresses), enabled from `-O2`. `-O3` currently selects the same passes as `-O2`.
   - `--opt-pass <name>` enables a pass regardless of level, `--no-opt-pass <name>` disables one (a disable wins), and
     unknown names are errors. A pass that does not support the target (control-flow rewriting is skipped for wasm and
     GLSL/SPIR-V; GLSL/SPIR-V run no passes) is skipped when selected by level and is an error when named explicitly.

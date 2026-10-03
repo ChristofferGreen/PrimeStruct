@@ -369,6 +369,13 @@ should be split into leaves once `optexe` has validated the register form.
     semantic no-op on the whole corpus.
 2.6 Differential corpus green at `-O2` on vm; benchmark report for vm.
 
+Status (2026-10-03): `copy-prop` is implemented on the stack form (TODO-5480): a forward must-analysis of "local `t`
+holds the value of local `a`" over the CFG, killed by writes to either side, skipped for functions that take local
+addresses; `dead-store` then drops the unread copies. Two peepholes came from the lowered json_parse loop:
+`cmp; push 0; ne` on a comparison result (the `a && b` shape) and a constant pushed into a join-point
+`JumpIfZero`, which now jumps straight to the outcome. Instruction counts at `-O2`: aggregate 45 -> 39, json_scan
+146 -> 103, json_parse 374 -> 281. `cse`, `licm`, `inline` and `tail-self-loop` are not started.
+
 ### Phase 3: optimizing native code generator
 
 3.1 New codegen path from the register form, behind `-O2`; `-O0`/`-O1` keep
