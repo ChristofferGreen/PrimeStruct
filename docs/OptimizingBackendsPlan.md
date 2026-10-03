@@ -454,10 +454,21 @@ Reading the table:
   slower than C. The dispatch structure in section 1.3 explains most of it.
 - `--emit=exe` is **not** a speed baseline. `IrToCppEmitter` emits a C++
   program that re-implements the stack machine (`psEnsureStack`,
-  `psResolveHeapSlot`, a `std::vector` operand stack), which clang cannot
-  optimize away; it is 100x slower than the direct native output. It remains
-  a useful correctness oracle, and it will also get faster from Phases 1-2
-  because it consumes the optimized IR. The C and C++ reference programs in
+  `psResolveHeapSlot`, a `std::deque` operand stack), and
+  `compileCppExecutable` builds it with `clang++ -O0`
+  (`src/support/ExternalTooling.cpp:42`), deliberately, for compile speed.
+  Compiling the same generated source at `-O2` by hand gives:
+
+  | Benchmark | exe at `-O0` (run / compile) | same source at `-O2` (run / compile) | C `-O3` |
+  | --- | --- | --- | --- |
+  | aggregate | 4091 ms / 5.4 s | 609 ms / 1.4 s | 3.8 ms |
+  | json_scan | 4189 ms / 0.8 s | 738 ms / 1.8 s | 2.9 ms |
+  | json_parse | 6791 ms / 0.8 s | 1753 ms / 3.9 s | 9.1 ms |
+
+  So 4x to 7x of the gap is the `-O0` flag and the remaining 160x to 250x
+  is the switch-dispatch stack machine, which clang cannot turn back into
+  loops. The first compile of aggregate at `-O0` includes a cold start.
+  `exe` stays a correctness oracle; the C and C++ reference programs in
   `benchmarks/` are the speed baseline.
 
 Targets for acceptance of the whole programme:
@@ -609,7 +620,8 @@ N: ... } }`, one `case` per IR instruction, with the operand stack in a
 `psEnsureStack` underflow guard before every pop, and functions split into
 1,024-instruction chunks so clang can compile the switch. The `pc` variable is
 loop-carried and the deque is opaque, so clang cannot recover the loop
-structure; the result is the 3.4 to 5.8 second `exe` column in section 7.
+structure: even built at `-O2` the output is still 160x to 250x slower than C
+on the benchmarks (section 7), and `exe` itself builds at `-O0`.
 
 Doing the register form here first is attractive:
 
@@ -648,6 +660,42 @@ Things to settle while doing it:
   is right.
 - Chunking. Functions above a size threshold fall back to the `-O0` emitter
   rather than splitting labelled code across functions.
+
+### 9.1 A separate `optexe` emit kind (recommended)
+
+Add the register-form emitter as new emit kinds next to the old ones rather
+than changing `exe`/`cpp` in place:
+
+- `optexe` (compile) and `optcpp` (source only), following the existing
+  user-facing / `-ir` split: `optexe-ir` and `optcpp-ir` are the registered
+  backends, `resolveIrBackendEmitKind` maps the short names. `optcpp` is
+  worth having because reading the generated source is the main way to debug
+  an emitter.
+- `exe` and `cpp` stay exactly as they are, so they remain an independent
+  oracle for the matrix runner (section 8): same IR, two unrelated C++
+  generators must agree. When `optexe` has run the corpus clean at every level,
+  the alias flip is one line in `resolveIrBackendEmitKind`, and the old
+  emitter can then be deleted or kept as `-O0`.
+- `optexe` always uses the register form; the `-O` level only selects which
+  middle-end passes run before it. The host compile flag is a separate
+  decision: `exe` uses `-O0` for compile speed, `optexe` should default to
+  `-O2` (measured above: 1.4 to 4 s compile versus 0.8 to 5 s at `-O0` for the
+  old output) with a pass-through override.
+- Registration touches: `EmitKind.cpp` (list, usage text, alias map),
+  `IrBackends.cpp` (backend class, registry array size), `IrBackendProfiles.cpp`,
+  `OptionsParser.cpp` (default output name), the backend-architecture and
+  registry tests that enumerate backends, `README.md`, and the spec index.
+  No change to `prepareIrModule`'s contract.
+- Unsupported constructs (for example `CallHost`, which is VM-only) fail with
+  a clear diagnostic rather than falling back per function; the old emitter's
+  calling convention (shared `PsStack&`, `sp`) differs, so mixing forms inside
+  one module is not worth the adapter.
+- Risk to measure early: clang `-O2` time and memory on very large
+  goto-style functions. The old emitter chunks at 1,024 instructions to stay
+  compilable (TODO-4747 started from a 15MB generated file). Run `optexe` on
+  the 100,000-line compile-speed source and keep the existing 12 s baseline
+  gate; above a size threshold use `__attribute__((optnone))`/`-O1` for that
+  function instead of splitting it.
 
 Suggested order: Phase 0.1-0.3 (flags, pass manager, dumps), Phase 1.1
 (shared CFG), Phase 2.1 (register form with promoted locals), then this
