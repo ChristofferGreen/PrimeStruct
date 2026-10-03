@@ -221,3 +221,33 @@ TEST_CASE("fusion never spans a jump target") {
     CHECK(both.fast.output == (selector == 0 ? "111\n" : "222\n"));
   }
 }
+
+TEST_CASE("fused string byte loads match the step kernel, including their faults") {
+  using optimizer_test::assembleOne;
+  using optimizer_test::moduleOf;
+  for (const char *position : {"0", "1", "2", "3", "18446744073709551615"}) {
+    for (const char *stringIndex : {"0", "5"}) {
+      CAPTURE(position);
+      CAPTURE(stringIndex);
+      // LoadLocal; LoadStringByte; StoreLocal and LoadLocal; LoadStringByte.
+      for (const bool store : {true, false}) {
+        std::vector<std::string> lines = {std::string("PushI64 ") + position,
+                                          "StoreLocal 0",
+                                          "LoadLocal 0",
+                                          std::string("LoadStringByte ") + stringIndex};
+        if (store) {
+          lines.insert(lines.end(), {"StoreLocal 1", "LoadLocal 1"});
+        }
+        lines.push_back("ReturnI32");
+        std::vector<primec::IrInstruction> code;
+        for (const std::string &line : lines) {
+          code.push_back(assembleOne(line.c_str()));
+        }
+        primec::IrModule module = moduleOf(std::move(code));
+        module.stringTable = {"abc"};
+        REQUIRE(primec::testing::vmFastKernelAccepts(module));
+        expectSame(module, store ? "store form" : "push form");
+      }
+    }
+  }
+}

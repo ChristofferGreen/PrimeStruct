@@ -36,12 +36,26 @@ private:
   size_t liveCount_ = 0;
 };
 
+// Out-of-line part of resolveVmString: dynamic indices and invalid indices.
+bool resolveVmStringSlow(const IrModule &module,
+                         const VmStringHeap *heap,
+                         uint64_t index,
+                         const std::string *&textOut,
+                         std::string &error);
+
 // The one place VM code turns a string index into text: module-table indices
 // and dynamic indices (when `heap` is given). Faults with a diagnostic otherwise.
-bool resolveVmString(const IrModule &module,
-                     const VmStringHeap *heap,
-                     uint64_t index,
-                     const std::string *&textOut,
-                     std::string &error);
+// A valid module-table index resolves inline so the execution loops pay no call.
+inline bool resolveVmString(const IrModule &module,
+                            const VmStringHeap *heap,
+                            uint64_t index,
+                            const std::string *&textOut,
+                            std::string &error) {
+  if (index < module.stringTable.size()) {
+    textOut = &module.stringTable[static_cast<size_t>(index)];
+    return true;
+  }
+  return resolveVmStringSlow(module, heap, index, textOut, error);
+}
 
 } // namespace primec::vm_detail

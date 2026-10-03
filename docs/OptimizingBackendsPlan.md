@@ -447,7 +447,9 @@ parameters; otherwise the step kernel runs it unchanged. The loop keeps `ip`, th
 locals pointer in registers, sizes the stack from the CFG's maximum depth, uses one locals arena, and fuses
 sequences inside a basic block into one instruction (`LoadLocal; Push; Cmp; JumpIfZero`,
 `LoadLocal; Push; Add; StoreLocal`, `Dup; StoreLocal; Pop`, compare-and-branch, and similar; the pairs came from
-an opcode-pair histogram of json_parse). Fused forms are fault-free, so results and fault order are unchanged.
+an opcode-pair histogram of json_parse). Fused forms do not change results or fault order: all are fault-free except the
+string-byte forms (`LoadLocal; LoadStringByte [; StoreLocal]`), which fault on a bad index before storing or popping,
+exactly where the original instruction would. Module-table strings resolve inline in the loop.
 `PRIMEVM_KERNEL=step` forces the step kernel for comparisons, and
 `scripts/differential_opt_check.py --baseline-kernel step` runs the 850-program corpus against it at -O0 and -O2
 (equal stdout, stderr and exit code); `primestruct.ir.vm_fast_kernel` runs random programs, every fault, calls and
@@ -458,8 +460,8 @@ Measured wall time of `primevm` including the 13-70 ms compile (seconds):
 | program | before | fast loop | + fused forms | + fused forms, -O2 |
 | --- | --- | --- | --- | --- |
 | aggregate | 1.25 | 0.24 | 0.10 | 0.095 |
-| json_scan | 1.31 | 0.30 | 0.17 | 0.12 |
-| json_parse | 2.23 | 0.48 | 0.30 | 0.27 |
+| json_scan | 1.31 | 0.30 | 0.17 | 0.10 |
+| json_parse | 2.23 | 0.48 | 0.30 | 0.23 |
 
 ### Phase 5: defaults, docs, gates
 

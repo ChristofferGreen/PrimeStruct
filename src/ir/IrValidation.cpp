@@ -271,7 +271,10 @@ bool validateFunction(const IrModule &module,
 // meet at a block must arrive with the same operand-stack depth. The shared CFG
 // (IrCfg.h) propagates the depth from the entry, which starts at the function's
 // parameter count; unreachable code is not analyzed.
-bool validateStackBalance(const IrModule &module, size_t functionIndex, const IrFunction &function, std::string &error) {
+bool validateStackBalance(const IrModule &module,
+                          size_t functionIndex,
+                          const IrFunction &function,
+                          std::string &error) {
   IrCfg cfg;
   IrCfgError cfgError;
   if (buildIrCfg(function, module, cfg, cfgError)) {
@@ -279,23 +282,23 @@ bool validateStackBalance(const IrModule &module, size_t functionIndex, const Ir
   }
   const char *message = "operand stack is inconsistent";
   switch (cfgError.kind) {
-    case IrCfgErrorKind::StackUnderflow:
-      message = "operand stack underflow";
-      break;
-    case IrCfgErrorKind::InvalidDup:
-      message = "dup with an empty operand stack";
-      break;
-    case IrCfgErrorKind::InconsistentDepth:
-      message = "paths reach this block with different operand stack depths";
-      break;
-    case IrCfgErrorKind::InvalidJumpTarget:
-      message = "invalid jump target";
-      break;
-    case IrCfgErrorKind::UnsupportedOpcode:
-      message = "unsupported opcode";
-      break;
-    case IrCfgErrorKind::None:
-      break;
+  case IrCfgErrorKind::StackUnderflow:
+    message = "operand stack underflow";
+    break;
+  case IrCfgErrorKind::InvalidDup:
+    message = "dup with an empty operand stack";
+    break;
+  case IrCfgErrorKind::InconsistentDepth:
+    message = "paths reach this block with different operand stack depths";
+    break;
+  case IrCfgErrorKind::InvalidJumpTarget:
+    message = "invalid jump target";
+    break;
+  case IrCfgErrorKind::UnsupportedOpcode:
+    message = "unsupported opcode";
+    break;
+  case IrCfgErrorKind::None:
+    break;
   }
   return failInstruction(functionIndex, function.name, cfgError.instructionIndex, message, error);
 }

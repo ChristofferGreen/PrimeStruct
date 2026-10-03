@@ -219,20 +219,11 @@ TEST_CASE("const-fold leaves unsafe or unprofitable cases alone") {
                           "PushI32 2",
                           "AddI32",
                           "ReturnI32"})});
-  expectGolden("const-fold",
-               {"a push that feeds a dup is not erased with a later fold",
-                assemble({"PushI32 1",
-                          "Dup",
-                          "StoreLocal 0",
-                          "PushI32 0",
-                          "CmpNeI32",
-                          "ReturnI32"}),
-                assemble({"PushI32 1",
-                          "Dup",
-                          "StoreLocal 0",
-                          "PushI32 0",
-                          "CmpNeI32",
-                          "ReturnI32"})});
+  expectGolden(
+      "const-fold",
+      {"a push that feeds a dup is not erased with a later fold",
+       assemble({"PushI32 1", "Dup", "StoreLocal 0", "PushI32 0", "CmpNeI32", "ReturnI32"}),
+       assemble({"PushI32 1", "Dup", "StoreLocal 0", "PushI32 0", "CmpNeI32", "ReturnI32"})});
   expectGolden("const-fold",
                {"an unknown operand blocks the fold",
                 assemble({"LoadLocal 0", "PushI32 2", "AddI32", "ReturnI32"}),
@@ -991,11 +982,7 @@ TEST_CASE("validateIrModule rejects unbalanced operand stacks for every target")
        "operand stack underflow"},
       {"dup on an empty stack", assemble({"Dup", "ReturnI32"}), "dup with an empty operand stack"},
       {"join with different depths",
-       assemble({"LoadLocal 0",
-                 "JumpIfZero 4",
-                 "PushI32 1",
-                 "PushI32 2",
-                 "ReturnI32"}),
+       assemble({"LoadLocal 0", "JumpIfZero 4", "PushI32 1", "PushI32 2", "ReturnI32"}),
        "different operand stack depths"},
   };
   const primec::IrValidationTarget targets[] = {primec::IrValidationTarget::Any,
@@ -1013,12 +1000,8 @@ TEST_CASE("validateIrModule rejects unbalanced operand stacks for every target")
   }
 
   // A balanced module with a join of equal depths still passes.
-  const primec::IrModule fine = moduleOf(assemble({"LoadLocal 0",
-                                                   "JumpIfZero 4",
-                                                   "PushI32 1",
-                                                   "Jump 5",
-                                                   "PushI32 2",
-                                                   "ReturnI32"}));
+  const primec::IrModule fine = moduleOf(
+      assemble({"LoadLocal 0", "JumpIfZero 4", "PushI32 1", "Jump 5", "PushI32 2", "ReturnI32"}));
   std::string error;
   CHECK_MESSAGE(primec::validateIrModule(fine, primec::IrValidationTarget::Vm, error), error);
 }

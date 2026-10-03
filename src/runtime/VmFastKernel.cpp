@@ -63,6 +63,8 @@ enum FastOp : uint16_t {
   FastOpPushLocalMulLocal,                 // LoadLocal a; LoadLocal b; Mul
   FastOpLocalAddImmStore,                  // LoadLocal a; Push c; Add; StoreLocal b
   FastOpLocalSubImmStore,                  // LoadLocal a; Push c; Sub; StoreLocal b
+  FastOpLocalStringByteStore,              // LoadLocal a; LoadStringByte #imm; StoreLocal b
+  FastOpPushLocalStringByte,               // LoadLocal a; LoadStringByte #imm
   FAST_CMPS(FAST_ENUM_JMP_CMP_LOCAL_IMM)   // LoadLocal a; Push c; Cmp; JumpIfZero b
   FAST_CMPS(FAST_ENUM_JMP_CMP_LOCAL_LOCAL) // LoadLocal a; LoadLocal b; Cmp; JumpIfZero imm
   FAST_CMPS(FAST_ENUM_JMP_CMP)             // Cmp; JumpIfZero b
@@ -175,7 +177,9 @@ bool fitsIndex(uint64_t value) {
 // Rewrites the first slot of recognised instruction sequences into a fused
 // instruction. A sequence never spans a basic-block leader, so nothing can jump
 // into its middle, and every fused form is free of faults and host effects,
-// which keeps results and fault order identical to executing the originals.
+// which keeps results and fault order identical to executing the originals
+// (the string-byte forms fault on a bad index exactly where the original
+// LoadStringByte would, before anything has been stored or popped).
 void fuseInstructions(const IrFunction &function, const IrCfg &cfg, FastFunction &out) {
   const size_t count = function.instructions.size();
   std::vector<bool> leader(count + 1, false);
@@ -224,6 +228,18 @@ void fuseInstructions(const IrFunction &function, const IrCfg &cfg, FastFunction
         slot.imm = constantOf(function.instructions[i + 1]);
         slot.b = static_cast<uint32_t>(imm(i + 3));
         length = 4;
+      } else if (window(i, 3) && op(i + 1) == IrOpcode::LoadStringByte &&
+                 op(i + 2) == IrOpcode::StoreLocal && fitsIndex(imm(i + 2))) {
+        slot.op = FastOpLocalStringByteStore;
+        slot.a = first;
+        slot.b = static_cast<uint32_t>(imm(i + 2));
+        slot.imm = imm(i + 1);
+        length = 3;
+      } else if (window(i, 2) && op(i + 1) == IrOpcode::LoadStringByte) {
+        slot.op = FastOpPushLocalStringByte;
+        slot.a = first;
+        slot.imm = imm(i + 1);
+        length = 2;
       } else if (window(i, 3) && isConstantPush(op(i + 1)) && arithmeticKind(op(i + 2)) >= 0) {
         slot.op = static_cast<uint16_t>(FastOpPushLocalAddImm + arithmeticKind(op(i + 2)));
         slot.a = first;
@@ -358,6 +374,9 @@ bool executeVmFastKernel(const IrModule &module,
   const uint64_t argc =
       static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(host.argumentCount())));
   const VmStringHeap *stringHeap = host.stringHeap();
+  const auto resolveString = [&](uint64_t index, const std::string *&text) {
+    return resolveVmString(module, stringHeap, index, text, error);
+  };
 
   std::vector<uint64_t> stack(InitialStackSlots +
                               functions[static_cast<size_t>(module.entryIndex)].stackHeadroom);
@@ -485,6 +504,26 @@ bool executeVmFastKernel(const IrModule &module,
       locals[inst.b] = locals[inst.a] - inst.imm;
       ip += 4;
       continue;
+    case FastOpLocalStringByteStore:
+    case FastOpPushLocalStringByte: {
+      const std::string *text = nullptr;
+      if (!resolveString(inst.imm, text)) {
+        return false;
+      }
+      const uint64_t position = locals[inst.a];
+      if (position >= text->size()) {
+        FAULT("string index out of bounds in IR");
+      }
+      const uint64_t byte = static_cast<uint8_t>((*text)[static_cast<size_t>(position)]);
+      if (inst.op == FastOpLocalStringByteStore) {
+        locals[inst.b] = byte;
+        ip += 3;
+      } else {
+        *sp++ = byte;
+        ip += 2;
+      }
+      continue;
+    }
 #define FAST_CASE_JMP_CMP_LOCAL_IMM(N, O)                                                          \
   case FastOpJmpCmpLocalImm##N:                                                                    \
     ip = static_cast<int64_t>(locals[inst.a]) O static_cast<int64_t>(inst.imm)                     \
@@ -655,7 +694,7 @@ bool executeVmFastKernel(const IrModule &module,
       const uint64_t position = sp[-1];
       const uint64_t stringIndex = dynamic ? sp[-2] : inst.imm;
       const std::string *text = nullptr;
-      if (!resolveVmString(module, stringHeap, stringIndex, text, error)) {
+      if (!resolveString(stringIndex, text)) {
         return false;
       }
       if (position >= text->size()) {
@@ -670,7 +709,7 @@ bool executeVmFastKernel(const IrModule &module,
     }
     case OP(LoadStringLength): {
       const std::string *text = nullptr;
-      if (!resolveVmString(module, stringHeap, sp[-1], text, error)) {
+      if (!resolveString(sp[-1], text)) {
         return false;
       }
       sp[-1] = static_cast<uint64_t>(text->size());

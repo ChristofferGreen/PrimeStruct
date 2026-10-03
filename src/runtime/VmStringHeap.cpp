@@ -59,11 +59,11 @@ bool VmStringHeap::release(uint64_t index) {
   return true;
 }
 
-bool resolveVmString(const IrModule &module,
-                     const VmStringHeap *heap,
-                     uint64_t index,
-                     const std::string *&textOut,
-                     std::string &error) {
+bool resolveVmStringSlow(const IrModule &module,
+                         const VmStringHeap *heap,
+                         uint64_t index,
+                         const std::string *&textOut,
+                         std::string &error) {
   if ((index & DynamicStringTag) != 0) {
     const std::string *text = heap != nullptr ? heap->find(index) : nullptr;
     if (text == nullptr) {
