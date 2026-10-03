@@ -111,7 +111,7 @@ of sync with them.
 ### Priority Lanes
 
 - Embedding (must support iOS): TODO-5348 (needs macOS)
-- Collection resolution: TODO-5424, TODO-5425
+- Collection resolution: TODO-5424
 
 ### Execution Queue
 
@@ -130,18 +130,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - rejection rows for every removed spelling in `docs/CollectionHelperTargets.md`; no `explicitRemoved*` / `isRemoved*CompatibilityHelper` identifiers left in src/
     - full gate green; diagnostics tests updated only where the message text legitimately changes
   - stop_rule: if a removed spelling still needs a tailored message for users, keep one table-driven function instead of the scattered predicates.
-
-- [ ] TODO-5425: Probe and prune the legacy SoA helper path canonicalizers
-  - owner: ai
-  - status: deferred
-  - created_at: 2026-10-03
-  - phase: Compiler structure
-  - parallel_track: collection-resolution
-  - scope: `isLegacyOrCanonicalSoaHelperPath`, `canonicalizeLegacySoa{Ref,Get,ToAos}HelperPath` and `templateMonomorphCompatibilitySoaHelperPrefix` (about 290 uses) map root spellings such as `/to_aos` to `/std/collections/soa/...`, but the parity matrix pins only canonical SoA spellings. Add the legacy spellings as matrix rows first; for each one that is rejected, delete its canonicalizer branch and callers.
-  - acceptance:
-    - every legacy SoA spelling has a matrix row (ok or rejected); rejected ones no longer appear in src/
-    - full gate green
-  - stop_rule: a spelling the matrix shows as `ok` stays and gets a note, not a deletion.
 
 - [ ] TODO-5348: Verify the iOS embed build and XCFramework packaging on macOS
   - owner: human

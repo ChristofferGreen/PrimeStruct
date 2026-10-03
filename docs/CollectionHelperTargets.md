@@ -94,3 +94,23 @@ change. `Reference<...>` rows (`(Reference)` forms) cover borrowed receivers and
 | soa | `get` | bare(Reference) | ok (7) | `/std/collections/soa/soaVectorSingle`<br>`/std/collections/soa/get_ref`<br>`/std/collections/soa/get_ref` |  |
 | soa | `ref` | method(Reference) | ok (7) | `/std/collections/soa/ref_ref`<br>`/std/collections/soa/ref_ref`<br>`/std/collections/soa/soaVectorSingle` |  |
 | soa | `push` | method(Reference) | semantic error |  | unknown call target: push |
+| soa | `to_aos` | legacy root-bare | semantic error |  | unknown method: /to_aos |
+| soa | `to_aos` | legacy soa_vector-bare | semantic error |  | unknown method: /soa_vector/to_aos |
+| soa | `to_aos` | legacy soa-bare | ok (1) | `/std/collections/soa/soaVectorSingle`<br>`/std/collections/soa/to_aos`<br>`/std/collections/soa/to_aos`<br>`/std/collections/vector/count`<br>`/std/collections/vector/count` |  |
+| soa | `to_aos` | legacy soa_vector-canonical | semantic error |  | unknown method: /std/collections/soa_vector/to_aos |
+| soa | `to_aos` | legacy soa-canonical | ok (1) | `/std/collections/soa/soaVectorSingle`<br>`/std/collections/soa/to_aos`<br>`/std/collections/soa/to_aos`<br>`/std/collections/vector/count`<br>`/std/collections/vector/count` |  |
+| soa | `to_aos` | legacy soa_vector-slash-method | semantic error |  | unknown method: /soa_vector/to_aos |
+| soa | `to_aos` | legacy soa-slash-method | ok (1) | `/std/collections/soa/to_aos`<br>`/std/collections/soa/to_aos`<br>`/std/collections/soa/soaVectorSingle`<br>`/std/collections/vector/count`<br>`/std/collections/vector/count` |  |
+| soa | `get` | legacy soa-bare | ok (7) | `/std/collections/soa/soaVectorSingle`<br>`/std/collections/soa/get`<br>`/std/collections/soa/get` |  |
+| soa | `get` | legacy soa_vector-bare | lowering error | `/std/collections/soa/soaVectorSingle`<br>`/std/collections/soa_vector/get`<br>`/std/collections/soa_vector/get` | missing semantic-product bridge-path choice |
+| soa | `get` | legacy root-bare | lowering error | `/std/collections/soa/soaVectorSingle` | backend only supports |
+| soa | `get` | legacy soa_vector-slash-method | lowering error | `/std/collections/soa_vector/get`<br>`/std/collections/soa_vector/get`<br>`/std/collections/soa/soaVectorSingle` | missing lowered definition |
+| soa | `ref` | legacy soa-bare | ok (7) | `/std/collections/soa/soaVectorSingle`<br>`/std/collections/soa/ref`<br>`/std/collections/soa/ref` |  |
+| soa | `ref` | legacy soa-canonical | ok (7) | `/std/collections/soa/soaVectorSingle`<br>`/std/collections/soa/ref`<br>`/std/collections/soa/ref` |  |
+| soa | `ref` | legacy soa_vector-bare | lowering error | `/std/collections/soa/soaVectorSingle`<br>`/std/collections/soa_vector/ref`<br>`/std/collections/soa_vector/ref` | missing semantic-product bridge-path choice |
+| soa | `ref` | legacy soa_vector-canonical | lowering error | `/std/collections/soa/soaVectorSingle`<br>`/std/collections/soa_vector/ref`<br>`/std/collections/soa_vector/ref` | missing semantic-product bridge-path choice |
+| soa | `ref` | legacy root-bare | lowering error | `/std/collections/soa/soaVectorSingle` | backend only supports |
+| soa | `ref` | legacy soa-slash-method | ok (7) | `/std/collections/soa/ref`<br>`/std/collections/soa/ref`<br>`/std/collections/soa/soaVectorSingle` |  |
+| soa | `ref` | legacy soa_vector-slash-method | lowering error | `/std/collections/soa_vector/ref`<br>`/std/collections/soa_vector/ref`<br>`/std/collections/soa/soaVectorSingle` | missing lowered definition |
+| soa | `count` | legacy soa_vector-canonical | semantic error |  | count does not accept template arguments |
+| soa | `count` | legacy soa-bare-templated | semantic error |  | unknown method: /soa/count |
