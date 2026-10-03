@@ -149,8 +149,7 @@ with the stepping one rather than replace it.
 
 ### 1.5 Baseline measurements
 
-See section 7; filled in from this machine (Linux x86_64, 4 cores) after a
-release build.
+See section 7 (Linux x86_64, 4 cores, release build).
 
 ## 2. Goals and non-goals
 
@@ -218,7 +217,9 @@ Key decisions:
   enumerate.
 - **The VM at `-O0` is the reference semantics.** Every pass is checked by
   running the program through the unoptimized VM and comparing output, exit
-  code, and (for `--debug-trace`) the trace where the level allows it.
+  code, and (for `--debug-trace`) the trace where the level allows it. The
+  test runner that does this for every program and configuration is
+  described in section 8.
 - **Division and effects are barriers.** `Div*` can fault (VM) or trap
   (native `idiv`) so it is never removed, hoisted, or folded unless the divisor
   is a provably nonzero constant. Print, file, heap, host-call and
@@ -303,12 +304,13 @@ approved. Order within a phase is a dependency order unless stated.
 0.4 Benchmark harness: time `--emit=native` on Linux x86_64 too, add a
     `primestruct_vm` entry, and an `-O` matrix (`BENCH_OPT_LEVELS`). Add
     baseline entries for vm and native at `-O0` from this machine.
-0.5 Differential harness: a test helper that compiles one source at every
-    level for `vm` and `native`, plus `exe` as a second oracle, and compares
-    stdout and exit code. Run the existing compile-run corpus through it
-    (sharded; one level set per shard). Add a deterministic random stack-IR
-    generator (seeded) whose programs run through the `-O0` VM and the
-    optimized VM.
+0.5 Program matrix test runner (section 8): `ProgramMatrix.h`, the VM output
+    sink, one hand-ported suite, then the migration script and the
+    deduplicated `programs/` tree. Add the seeded random stack-IR generator
+    whose modules run through the `-O0` VM and every other config.
+0.6 Fix the benchmark speed oracle: `benchmarks/README.md` and the baseline
+    JSON treat `--emit=exe` as the fast path; record that the C/C++ reference
+    programs are the baseline and `exe` is a correctness oracle (section 7).
 
 ### Phase 1: stack-IR passes (`-O1`), all backends
 
@@ -424,27 +426,173 @@ approved. Order within a phase is a dependency order unless stated.
 
 ## 7. Baseline numbers (this machine)
 
-Filled in from `build-release` on Linux x86_64. Each number is the mean of the
-runs noted; see `docs/todo_log.md` for the raw commands when the TODOs are
-created.
+Measured 2026-10-03 on Linux x86_64 (4 cores), `build-release`, mean of 3
+runs, wall clock of the whole process. The `vm` column is `primec --emit=vm`
+and so includes compile time; the compile-only time (`--emit=ir`) is listed so
+the pure interpretation time can be read off.
 
-| Benchmark | C `-O3` | `--emit=exe` (C++ `-O3`) | `--emit=native` (today) | `--emit=vm` (today) |
-| --- | --- | --- | --- | --- |
-| aggregate (N=5,000,000) | see below | see below | see below | see below |
-| json_scan (20,000 scans) | see below | see below | see below | see below |
-| json_parse | see below | see below | see below | see below |
+| Benchmark | C `-O3` | C++ `-O3` | `--emit=exe` | `--emit=native` | `--emit=vm` | compile only |
+| --- | --- | --- | --- | --- | --- | --- |
+| aggregate (N=5,000,000) | 3.8 ms | 4.0 ms | 3484 ms | 28.8 ms | 1086 ms | 8.6 ms |
+| json_scan (20,000 scans) | 2.9 ms | 3.3 ms | 3449 ms | 30.7 ms | 1308 ms | 20.6 ms |
+| json_parse | 9.1 ms | 8.1 ms | 5814 ms | 43.4 ms | 1795 ms | 56.8 ms |
 
-Targets for acceptance of the whole programme (to be confirmed against the
-measured baseline):
+Reading the table:
 
-- native `-O2`: within 2x of `--emit=exe` on all three benchmarks; `-O3`
-  within 1.5x on aggregate.
+- The direct native output is 7x to 11x slower than C `-O3` on these loops.
+  That gap is almost entirely the memory value stack and memory-resident
+  locals shown in section 1.2; there is no algorithmic difference.
+- The VM is roughly 40x slower than today's native output and about 300x
+  slower than C. The dispatch structure in section 1.3 explains most of it.
+- `--emit=exe` is **not** a speed baseline. `IrToCppEmitter` emits a C++
+  program that re-implements the stack machine (`psEnsureStack`,
+  `psResolveHeapSlot`, a `std::vector` operand stack), which clang cannot
+  optimize away; it is 100x slower than the direct native output. It remains
+  a useful correctness oracle, and it will also get faster from Phases 1-2
+  because it consumes the optimized IR. The C and C++ reference programs in
+  `benchmarks/` are the speed baseline.
+
+Targets for acceptance of the whole programme:
+
+- native `-O2`: within 2x of C `-O3` on all three benchmarks; `-O3` within
+  1.5x on aggregate.
 - vm `-O2` with the Phase 4 kernel: at least 4x faster than today's VM on
-  all three benchmarks.
+  all three benchmarks (interpretation time, compile time excluded).
 - Compile time of `--emit=native -O2` for the 100,000-line compile-speed
   source within 1.5x of `-O0`.
 
-## 8. Open decisions for the maintainer
+## 8. Testing strategy: one program, many execution forms
+
+### 8.1 What exists
+
+- `tests/unit/compile_run/` holds about 3,570 doctest cases. 962 are in `vm/`
+  and 927 in `native_backend/`. Each case embeds a `.prime` source as a raw
+  string, writes it to scratch, builds a `./primec --emit=<kind> ...` shell
+  command by hand, and checks an exit code or a redirected stdout file.
+- The backend is hard-coded per file and per case. 472 of the 818 distinct VM
+  test programs also appear verbatim in the native suite: the same program,
+  two files, two command lines, two expectations.
+- Cross-backend checks are hand-rolled per feature: math conformance uses
+  `exe` as the oracle and compares `vm` (and `native` only under an Apple
+  arm64 `#if`); reflection runtime tests spell out all three backends inline;
+  the vector/map conformance helpers have their own loops.
+- Every case spawns at least one `primec` process (full parse, semantics and
+  lowering) and, for native, the produced binary; `exe` cases additionally
+  run `clang++`, which is why those shards have 900-second timeouts and a
+  content-addressed compile cache.
+- CTest registration (`addPrimeStructManagedDoctestSuite`,
+  `scripts/check_test_registration.py`) needs a statically enumerable case
+  list per binary and filter: shards are `--first/--last` ranges that must
+  tile the real case count exactly. A matrix design must therefore keep "one
+  program = one doctest case" or change the guard.
+- Most cases fit two mechanical shapes: 731 VM cases are "run, check exit
+  code" (447 also redirect stdout), and 362 native cases are "compile, run,
+  check exit code". The rest check diagnostics, files, or multi-step output.
+
+### 8.2 Design
+
+Separate **what** a test asserts (a program and its expectation) from **how**
+it is executed (a backend configuration), and let one declaration run under
+every applicable configuration.
+
+```cpp
+// include/primec/testing/ProgramMatrix.h (new)
+struct ProgramCase {
+  std::string_view name;
+  std::string_view source;        // .prime text; "{scratch}" is substituted per run
+  ProgramExpectation expected;    // exitCode(n) | stdoutIs(text) | stdoutMatches(oracle) | compileError(substr)
+  ProgramRequirements requires;   // effects/features: heapAlloc, fileIo, hostCalls, dynamicStrings, lambdas...
+  std::vector<std::string> programArgs;
+};
+
+struct ExecutionConfig {
+  std::string_view backend;       // "vm", "native", "exe", "wasm"
+  OptimizationLevel level;        // O0..O3
+  std::vector<std::string> passOn, passOff;   // --opt-pass / --no-opt-pass
+  bool fusedVm = false;           // Phase 4 vm-fuse on/off
+};
+
+// Runs `program` under every config that its requirements and the host allow,
+// checks the explicit expectation when present, and checks that every config
+// agrees with the oracle config (vm, O0) on stdout and exit code.
+void runProgramMatrix(const ProgramCase &program, std::span<const ExecutionConfig> configs);
+```
+
+- **One doctest case per program.** `PROGRAM_CASE(...)` expands to exactly
+  one `TEST_CASE` whose body calls `runProgramMatrix` with the suite's config
+  set; configurations become `SUBCASE`s so a failure names the config. Case
+  counts stay static, so the registration guard and sharding are unchanged.
+- **Oracle, not just literals.** The `-O0` VM is the reference. A program
+  with a literal expectation is checked against it; every other config is
+  checked for parity with the oracle (stdout, exit code). Float formatting
+  differences use the allowlist mechanism math conformance already has.
+- **Requirements, not `#if`.** Backend and platform availability is decided
+  at run time: `native` unavailable on this host, `CallHost`/dynamic strings
+  VM-only, lambdas rejected on vm/native, `exe` needing a C++ compiler. A
+  skipped config is logged by name, never silent, so coverage is visible.
+- **Compile once in process.** The runner calls `runCompilePipeline` and
+  `prepareIrModule` once at `-O0`, then for each config copies the
+  `IrModule`, runs `optimizeIrModule(level, passes)`, and executes:
+  - `vm`: in process through `Vm::execute`, with program output captured
+    through an output sink on the VM host (today prints go straight to
+    `::write`/`fwrite` in `VmIoHelpers.cpp`; the sink is also what embedders
+    want). The fused kernel is the same entry point with a flag.
+  - `native`: `NativeEmitter::emitExecutable` to scratch, then spawn the
+    binary (milliseconds; no `primec` process).
+  - `exe`: only in explicitly opted-in oracle suites, keeping the existing
+    compile cache; never in the default matrix.
+  - `wasm` (optional): through the existing `runWasmMainViaNode` when Node
+    is present.
+  A six-config matrix then costs about what two process spawns cost today,
+  so the 5-second per-case guardrail holds.
+- **Config sets per suite.** Each suite picks its default set (for example
+  `{vm O0, vm O1, vm O2, vm O2 fused, native O0, native O2}`); a
+  `PRIMESTRUCT_TEST_MATRIX=vm:O2,native:O3` environment variable narrows it
+  for local debugging only and is not used in CTest registrations, so the
+  tiling guard needs no change.
+- **Pass-specific tests stay separate.** A pass's own behaviour is checked by
+  golden `--dump-stage=ir-optimized` text (deterministic) in
+  `tests/unit/ir_pipeline/optimizer/`, one `TEST_CASE` per pass per shape,
+  plus `--opt-verify-each` runs. The matrix proves the program still behaves;
+  the golden test proves the pass did what it claims.
+- **Differential fuzzing** (Phase 0.5) uses the same runner with generated
+  stack-IR modules instead of sources: a seeded generator produces balanced,
+  validated IR; `-O0` VM is the oracle; a fixed number of `TEST_CASE`s each
+  cover a seed range so the count is static.
+- **Benchmarks reuse the configs.** `scripts/benchmark.sh` iterates the same
+  `ExecutionConfig` names (`BENCH_CONFIGS=vm:O0,vm:O2,native:O2`) so the perf
+  gate and the correctness matrix describe configurations the same way.
+
+### 8.3 Migrating the existing tests
+
+1. Land `ProgramMatrix.h` and port one small suite by hand (for example
+   `native_backend.control`, 31 cases) to validate the API and the capture
+   path. Register it with the normal sharding and inventory steps.
+2. Write `scripts/migrate_compile_run_cases.py` that recognises the two
+   mechanical shapes above (exit-code-only, stdout-redirect, compile+run) and
+   rewrites them to `PROGRAM_CASE` declarations, keeping case names and order
+   so shard ranges stay valid. It reports every case it could not convert;
+   those keep their current form and are converted by hand or left as is.
+3. Deduplicate: the 472 programs present in both `vm/` and `native_backend/`
+   become one `PROGRAM_CASE` each under a backend-neutral
+   `tests/unit/compile_run/programs/` tree with one matrix run covering both
+   backends. The script emits a count reconciliation (old vm + old native -
+   duplicates = new) so no program is lost, and the suite files, shards, and
+   `tests/TEST_INVENTORY.md` are regenerated in the same change.
+4. Replace the per-feature cross-backend loops (math conformance,
+   reflection runtime, vector/map conformance) with `runProgramMatrix` and
+   their existing allowlists; delete the Apple-only `#if` guards in favour of
+   requirements.
+5. Leave diagnostics tests (compile errors, dump comparisons) and
+   file-system side-effect tests alone unless they are runnable programs; the
+   matrix is for programs that execute.
+
+Expected outcome: every runnable program in the corpus runs at every level on
+every available backend by default, new programs are written once, and the
+total test wall time goes down because the dominant cost (a `primec` process
+per case) is paid once per program instead of once per backend.
+
+## 9. Open decisions for the maintainer
 
 1. Default level after Phase 5: `-O2` for native and vm (proposed), or keep
    `-O0` and opt in.
