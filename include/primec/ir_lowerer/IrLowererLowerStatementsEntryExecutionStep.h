@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "primec/ir_lowerer/IrLowererStatementCallHelpers.h"
+#include "primec/support/CallbackTypes.h"
 
 namespace primec::ir_lowerer {
 
@@ -22,10 +23,10 @@ struct LowerStatementsEntryExecutionStepInput {
   bool entryHasResultInfo = false;
   const ResultReturnInfo *entryResultInfo = nullptr;
 
-  std::function<bool(const Expr &)> emitEntryStatement;
-  std::function<void()> pushFileScope;
-  std::function<void()> emitCurrentFileScopeCleanup;
-  std::function<void()> popFileScope;
+  ExprPredicateFn emitEntryStatement;
+  ActionFn pushFileScope;
+  ActionFn emitCurrentFileScopeCleanup;
+  ActionFn popFileScope;
 
   std::vector<IrInstruction> *instructions = nullptr;
 };

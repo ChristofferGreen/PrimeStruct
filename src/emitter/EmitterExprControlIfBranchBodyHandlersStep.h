@@ -7,6 +7,7 @@
 #include "EmitterExprControlIfBranchBodyStep.h"
 #include "primec/ast/Ast.h"
 #include "primec/backend/Emitter.h"
+#include "primec/support/CallbackTypes.h"
 
 namespace primec::emitter {
 

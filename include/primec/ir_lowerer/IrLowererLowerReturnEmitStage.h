@@ -34,7 +34,6 @@ struct LowerReturnEmitInlineContext {
 using LowerReturnEmitStatementFn = std::function<bool(const Expr &, LocalMap &)>;
 using LowerReturnEmitStructCopyFn = std::function<bool(int32_t, int32_t, int32_t)>;
 using LowerReturnEmitFileScopeCleanupFn = std::function<void(const std::vector<int32_t> &)>;
-using LowerReturnEmitSimpleFn = std::function<void()>;
 using LowerReturnEmitEmitBlockFn = std::function<bool(const Expr &, LocalMap &)>;
 using LowerReturnEmitCompareToZeroFn = std::function<bool(LocalInfo::ValueKind, bool)>;
 using LowerReturnEmitStringValueForCallFn =
@@ -63,8 +62,8 @@ struct LowerReturnEmitStageState {
   LowerExprEmitUploadPassthroughCallFn emitUploadPassthroughCall;
   LowerExprEmitReadbackPassthroughCallFn emitReadbackPassthroughCall;
 
-  std::function<bool(const Expr &)> hasExplicitBindingTypeTransform;
-  std::function<bool(const Expr &)> emitFloatLiteral;
+  ExprPredicateFn hasExplicitBindingTypeTransform;
+  ExprPredicateFn emitFloatLiteral;
   LowerReturnEmitCompareToZeroFn emitCompareToZero;
   GetSetupMathBuiltinNameFn getMathBuiltinName;
   GetSetupMathConstantNameFn getMathConstantName;
@@ -80,9 +79,9 @@ struct LowerReturnEmitStageState {
   LowerReturnEmitStructCopyFn emitStructCopyFromPtrs;
   LowerReturnEmitStructCopyFn emitStructCopySlots;
   LowerReturnEmitFileScopeCleanupFn emitFileScopeCleanup;
-  LowerReturnEmitSimpleFn emitFileScopeCleanupAll;
-  LowerReturnEmitSimpleFn pushFileScope;
-  LowerReturnEmitSimpleFn popFileScope;
+  ActionFn emitFileScopeCleanupAll;
+  ActionFn pushFileScope;
+  ActionFn popFileScope;
   LowerReturnEmitEmitBlockFn emitBlock;
   LowerReturnEmitAppendInstructionSourceRangeFn appendInstructionSourceRange;
 };

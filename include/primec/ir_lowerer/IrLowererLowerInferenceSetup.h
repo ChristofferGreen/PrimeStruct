@@ -29,9 +29,9 @@ struct LowerInferenceSetupBootstrapState {
   std::unordered_set<std::string> returnInferenceStack;
   std::function<bool(const std::string &, ReturnInfo &)> getReturnInfo;
 
-  std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferExprKind;
-  std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferArrayElementKind;
-  std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferBufferElementKind;
+  ExprLocalsValueKindFn inferExprKind;
+  ExprLocalsValueKindFn inferArrayElementKind;
+  ExprLocalsValueKindFn inferBufferElementKind;
   std::function<bool(const Expr &, const LocalMap &, LocalInfo::ValueKind &)> inferLiteralOrNameExprKind;
   std::function<bool(const Expr &, const LocalMap &, LocalInfo::ValueKind &)> inferCallExprBaseKind;
   std::function<CallExpressionReturnKindResolution(const Expr &, const LocalMap &, LocalInfo::ValueKind &)>
@@ -45,7 +45,7 @@ struct LowerInferenceSetupBootstrapState {
 
   std::function<const Definition *(const Expr &, const LocalMap &)> resolveMethodCallDefinition;
   std::function<const Definition *(const Expr &)> resolveDefinitionCall;
-  std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferPointerTargetKind;
+  ExprLocalsValueKindFn inferPointerTargetKind;
   const SemanticProgram *semanticProgram = nullptr;
   const SemanticProductIndex *semanticIndex = nullptr;
   // Internal storage for inference-time errors referenced by nested setup callbacks

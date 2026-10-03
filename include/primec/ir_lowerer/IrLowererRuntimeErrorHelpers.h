@@ -12,21 +12,20 @@
 namespace primec::ir_lowerer {
 
 using InternRuntimeErrorStringFn = std::function<int32_t(const std::string &)>;
-using EmitRuntimeErrorFn = std::function<void()>;
 
 struct RuntimeErrorEmitters {
-  EmitRuntimeErrorFn emitArrayIndexOutOfBounds{};
-  EmitRuntimeErrorFn emitPointerIndexOutOfBounds{};
-  EmitRuntimeErrorFn emitStringIndexOutOfBounds{};
-  EmitRuntimeErrorFn emitMapKeyNotFound{};
-  EmitRuntimeErrorFn emitVectorIndexOutOfBounds{};
-  EmitRuntimeErrorFn emitVectorPopOnEmpty{};
-  EmitRuntimeErrorFn emitVectorCapacityExceeded{};
-  EmitRuntimeErrorFn emitVectorReserveNegative{};
-  EmitRuntimeErrorFn emitVectorReserveExceeded{};
-  EmitRuntimeErrorFn emitLoopCountNegative{};
-  EmitRuntimeErrorFn emitPowNegativeExponent{};
-  EmitRuntimeErrorFn emitFloatToIntNonFinite{};
+  ActionFn emitArrayIndexOutOfBounds{};
+  ActionFn emitPointerIndexOutOfBounds{};
+  ActionFn emitStringIndexOutOfBounds{};
+  ActionFn emitMapKeyNotFound{};
+  ActionFn emitVectorIndexOutOfBounds{};
+  ActionFn emitVectorPopOnEmpty{};
+  ActionFn emitVectorCapacityExceeded{};
+  ActionFn emitVectorReserveNegative{};
+  ActionFn emitVectorReserveExceeded{};
+  ActionFn emitLoopCountNegative{};
+  ActionFn emitPowNegativeExponent{};
+  ActionFn emitFloatToIntNonFinite{};
 };
 
 struct RuntimeErrorAndStringLiteralSetup {
@@ -45,25 +44,25 @@ RuntimeErrorAndStringLiteralSetup makeRuntimeErrorAndStringLiteralSetup(
     std::string &error,
     const SemanticProgram *semanticProgram = nullptr);
 RuntimeErrorEmitters makeRuntimeErrorEmitters(IrFunction &function, const InternRuntimeErrorStringFn &internString);
-EmitRuntimeErrorFn makeEmitArrayIndexOutOfBounds(IrFunction &function,
+ActionFn makeEmitArrayIndexOutOfBounds(IrFunction &function,
                                                  const InternRuntimeErrorStringFn &internString);
-EmitRuntimeErrorFn makeEmitPointerIndexOutOfBounds(IrFunction &function,
+ActionFn makeEmitPointerIndexOutOfBounds(IrFunction &function,
                                                    const InternRuntimeErrorStringFn &internString);
-EmitRuntimeErrorFn makeEmitStringIndexOutOfBounds(IrFunction &function,
+ActionFn makeEmitStringIndexOutOfBounds(IrFunction &function,
                                                   const InternRuntimeErrorStringFn &internString);
-EmitRuntimeErrorFn makeEmitMapKeyNotFound(IrFunction &function, const InternRuntimeErrorStringFn &internString);
-EmitRuntimeErrorFn makeEmitVectorIndexOutOfBounds(IrFunction &function,
+ActionFn makeEmitMapKeyNotFound(IrFunction &function, const InternRuntimeErrorStringFn &internString);
+ActionFn makeEmitVectorIndexOutOfBounds(IrFunction &function,
                                                   const InternRuntimeErrorStringFn &internString);
-EmitRuntimeErrorFn makeEmitVectorPopOnEmpty(IrFunction &function, const InternRuntimeErrorStringFn &internString);
-EmitRuntimeErrorFn makeEmitVectorCapacityExceeded(IrFunction &function,
+ActionFn makeEmitVectorPopOnEmpty(IrFunction &function, const InternRuntimeErrorStringFn &internString);
+ActionFn makeEmitVectorCapacityExceeded(IrFunction &function,
                                                   const InternRuntimeErrorStringFn &internString);
-EmitRuntimeErrorFn makeEmitVectorReserveNegative(IrFunction &function,
+ActionFn makeEmitVectorReserveNegative(IrFunction &function,
                                                  const InternRuntimeErrorStringFn &internString);
-EmitRuntimeErrorFn makeEmitVectorReserveExceeded(IrFunction &function,
+ActionFn makeEmitVectorReserveExceeded(IrFunction &function,
                                                  const InternRuntimeErrorStringFn &internString);
-EmitRuntimeErrorFn makeEmitLoopCountNegative(IrFunction &function, const InternRuntimeErrorStringFn &internString);
-EmitRuntimeErrorFn makeEmitPowNegativeExponent(IrFunction &function, const InternRuntimeErrorStringFn &internString);
-EmitRuntimeErrorFn makeEmitFloatToIntNonFinite(IrFunction &function,
+ActionFn makeEmitLoopCountNegative(IrFunction &function, const InternRuntimeErrorStringFn &internString);
+ActionFn makeEmitPowNegativeExponent(IrFunction &function, const InternRuntimeErrorStringFn &internString);
+ActionFn makeEmitFloatToIntNonFinite(IrFunction &function,
                                                 const InternRuntimeErrorStringFn &internString);
 
 void emitArrayIndexOutOfBounds(IrFunction &function, const InternRuntimeErrorStringFn &internString);
@@ -82,9 +81,9 @@ void emitFileErrorWhy(IrFunction &function, int32_t errorLocal, const InternRunt
 FileErrorWhyCallEmitResult tryEmitFileErrorWhyCall(
     const Expr &expr,
     const LocalMap &localsIn,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const ExprLocalsPredicateFn &emitExpr,
+    const Int32ProviderFn &allocTempLocal,
+    const EmitInstructionFn &emitInstruction,
     const std::function<void(int32_t)> &emitFileErrorWhy,
     std::string &error);
 

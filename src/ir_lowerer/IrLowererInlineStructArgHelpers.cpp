@@ -182,7 +182,7 @@ void materializeInlineStructFieldLocal(const StructSlotFieldInfo &field,
                                        int32_t baseLocal,
                                        int32_t &nextLocal,
                                        LocalInfo &fieldInfo,
-                                       const EmitInlineStructInstructionFn &emitInstruction) {
+                                       const EmitInstructionFn &emitInstruction) {
   if (!field.structPath.empty()) {
     if (fieldInfo.structTypeName.empty()) {
       fieldInfo.structTypeName = field.structPath;
@@ -211,7 +211,7 @@ bool emitInlineStructDefinitionArguments(const std::string &calleePath,
                                          const InferInlineStructFieldLocalInfoFn &inferFieldLocalInfo,
                                          const EmitInlineStructCopySlotsFn &emitStructCopySlots,
                                          const Int32ProviderFn &allocTempLocal,
-                                         const EmitInlineStructInstructionFn &emitInstruction,
+                                         const EmitInstructionFn &emitInstruction,
                                          std::string &error,
                                          std::optional<int32_t> destBaseLocal) {
   StructSlotLayoutInfo layout;
@@ -412,7 +412,7 @@ bool emitInlineStructDefinitionArguments(const std::string &calleePath,
                                          const ExprLocalsPredicateFn &emitExpr,
                                          const EmitInlineStructCopySlotsFn &emitStructCopySlots,
                                          const Int32ProviderFn &allocTempLocal,
-                                         const EmitInlineStructInstructionFn &emitInstruction,
+                                         const EmitInstructionFn &emitInstruction,
                                          std::string &error) {
   std::vector<Expr> synthesizedParams(orderedArgs.size());
   return emitInlineStructDefinitionArguments(calleePath,

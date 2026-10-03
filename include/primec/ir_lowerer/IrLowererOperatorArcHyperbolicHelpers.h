@@ -15,7 +15,7 @@ namespace primec::ir_lowerer {
 enum class OperatorArcHyperbolicEmitResult { Handled, NotHandled, Error };
 
 using InferArcHyperbolicExprKindWithLocalsFn =
-    std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)>;
+    ExprLocalsValueKindFn;
 
 OperatorArcHyperbolicEmitResult emitArcHyperbolicOperatorExpr(
     const Expr &expr,

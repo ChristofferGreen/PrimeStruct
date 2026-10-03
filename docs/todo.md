@@ -111,7 +111,6 @@ of sync with them.
 ### Priority Lanes
 
 - Embedding (must support iOS): TODO-5348 (needs macOS)
-- Lowerer structure: TODO-5426
 - Collection resolution: TODO-5424, TODO-5425
 
 ### Execution Queue
@@ -119,18 +118,6 @@ of sync with them.
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 ### Task Blocks
-
-- [ ] TODO-5426: Bring IrLowererCallHelpers.h under 100 std::function mentions
-  - owner: ai
-  - status: deferred
-  - created_at: 2026-10-03
-  - phase: Compiler structure
-  - parallel_track: lowerer-structure
-  - scope: after the native tail dispatch moved to `NativeCallTailDispatchHooks` (TODO-5402), `include/primec/ir_lowerer/IrLowererCallHelpers.h` still has about 195 `std::function` mentions; the big remaining ones are `emitBuiltinArrayAccess` (40), `emitArrayVectorIndexedAccess` (14), `tryEmitInlineCallWithCountFallbacks` (13), `tryEmitStringTableAccessLoad` (8) and the `emitKeyValueLookup*` family (about 40). Give each a small hooks struct the same way (designated-initializer call sites, one entry point each).
-  - acceptance:
-    - the header has fewer than 100 `std::function` mentions; no overload pair that differs only by omitted callbacks
-    - validation tests converted with case counts unchanged; full gate green
-  - stop_rule: a callback that is only ever a constant lambda becomes a struct default instead of a parameter.
 
 - [ ] TODO-5424: Collapse the removed vector/array/map call-form spelling diagnostics
   - owner: ai

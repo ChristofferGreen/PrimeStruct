@@ -72,7 +72,7 @@ bool emitStructCopySlots(std::vector<IrInstruction> &instructions,
                          int32_t destBaseLocal,
                          int32_t srcPtrLocal,
                          int32_t slotCount,
-                         const std::function<int32_t()> &allocTempLocal);
+                         const Int32ProviderFn &allocTempLocal);
 bool emitVectorDestroySlot(
     std::vector<IrInstruction> &instructions,
     int32_t dataPtrLocal,
@@ -81,7 +81,7 @@ bool emitVectorDestroySlot(
     const std::string &structPath,
     const Definition *destroyHelper,
     const LocalMap &localsIn,
-    const std::function<int32_t()> &allocTempLocal,
+    const Int32ProviderFn &allocTempLocal,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
     std::string &error);
 bool emitVectorMoveSlot(
@@ -93,10 +93,10 @@ bool emitVectorMoveSlot(
     const std::string &structPath,
     const Definition *moveHelper,
     const LocalMap &localsIn,
-    const std::function<int32_t()> &allocTempLocal,
+    const Int32ProviderFn &allocTempLocal,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
     std::string &error);
-void emitDisarmTemporaryStructAfterCopy(const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+void emitDisarmTemporaryStructAfterCopy(const EmitInstructionFn &emitInstruction,
                                         int32_t srcPtrLocal,
                                         const std::string &structPath);
 bool shouldDisarmStructCopySourceExpr(const Expr &expr);
@@ -113,7 +113,7 @@ const char *resolveGpuBuiltinLocalName(const std::string &gpuBuiltin);
 bool emitGpuBuiltinLoad(
     const std::string &gpuBuiltin,
     const std::function<std::optional<int32_t>(const char *)> &resolveLocalIndex,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const EmitInstructionFn &emitInstruction,
     std::string &error);
 enum class UnaryPassthroughCallResult {
   NotMatched,
@@ -133,7 +133,7 @@ struct CountedLoopControl {
 };
 UnaryPassthroughCallResult tryEmitUnaryPassthroughCall(const Expr &expr,
                                                        const char *callName,
-                                                       const std::function<bool(const Expr &)> &emitExpr,
+                                                       const ExprPredicateFn &emitExpr,
                                                        std::string &error);
 bool resolveCountedLoopKind(LocalInfo::ValueKind inferredKind,
                             bool allowBool,
@@ -142,19 +142,19 @@ bool resolveCountedLoopKind(LocalInfo::ValueKind inferredKind,
                             std::string &error);
 bool emitCountedLoopPrologue(
     LocalInfo::ValueKind countKind,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<size_t()> &instructionCount,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const Int32ProviderFn &allocTempLocal,
+    const SizeProviderFn &instructionCount,
+    const EmitInstructionFn &emitInstruction,
     const std::function<void(size_t, int32_t)> &patchInstructionImm,
-    const std::function<void()> &emitLoopCountNegative,
+    const ActionFn &emitLoopCountNegative,
     CountedLoopControl &out,
     std::string &error);
 void emitCountedLoopIterationStep(
     const CountedLoopControl &control,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
+    const EmitInstructionFn &emitInstruction);
 void patchCountedLoopEnd(
     const CountedLoopControl &control,
-    const std::function<size_t()> &instructionCount,
+    const SizeProviderFn &instructionCount,
     const std::function<void(size_t, int32_t)> &patchInstructionImm);
 bool emitBodyStatements(
     const std::vector<Expr> &bodyStatements,
@@ -165,27 +165,27 @@ bool emitBodyStatementsWithFileScope(
     const LocalMap &localsIn,
     const std::function<bool(const Expr &, LocalMap &)> &emitStatement,
     const std::function<bool()> &emitAfterBody,
-    const std::function<void()> &pushFileScope,
-    const std::function<void()> &emitCurrentFileScopeCleanup,
-    const std::function<void()> &popFileScope);
+    const ActionFn &pushFileScope,
+    const ActionFn &emitCurrentFileScopeCleanup,
+    const ActionFn &popFileScope);
 bool declareForConditionBinding(
     const Expr &binding,
     LocalMap &locals,
     int32_t &nextLocal,
-    const std::function<bool(const Expr &)> &isBindingMutable,
+    const ExprPredicateFn &isBindingMutable,
     const std::function<LocalInfo::Kind(const Expr &)> &bindingKind,
-    const std::function<bool(const Expr &)> &hasExplicitBindingTypeTransform,
+    const ExprPredicateFn &hasExplicitBindingTypeTransform,
     const std::function<LocalInfo::ValueKind(const Expr &, LocalInfo::Kind)> &bindingValueKind,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const ExprLocalsValueKindFn &inferExprKind,
     const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath,
-    const std::function<void(const Expr &, LocalInfo &)> &applyStructArrayInfo,
-    const std::function<void(const Expr &, LocalInfo &)> &applyStructValueInfo,
+    const ExprLocalInfoVisitorFn &applyStructArrayInfo,
+    const ExprLocalInfoVisitorFn &applyStructValueInfo,
     std::string &error);
 bool emitForConditionBindingInit(
     const Expr &binding,
     const LocalMap &localsIn,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const ExprLocalsPredicateFn &emitExpr,
+    const EmitInstructionFn &emitInstruction,
     std::string &error);
 struct BufferInitInfo {
   int32_t count = 0;
@@ -209,18 +209,18 @@ bool resolveBufferLoadInfo(
     std::string &error);
 bool emitBufferLoadCall(const Expr &expr,
                         LocalInfo::ValueKind indexKind,
-                        const std::function<bool(const Expr &)> &emitExpr,
-                        const std::function<int32_t()> &allocTempLocal,
-                        const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
+                        const ExprPredicateFn &emitExpr,
+                        const Int32ProviderFn &allocTempLocal,
+                        const EmitInstructionFn &emitInstruction);
 BufferBuiltinCallEmitResult tryEmitBufferBuiltinCall(
     const Expr &expr,
     const LocalMap &localsIn,
     const std::function<LocalInfo::ValueKind(const std::string &)> &resolveValueKind,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const ExprLocalsValueKindFn &inferExprKind,
     const std::function<int32_t(int32_t)> &allocLocalRange,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const Int32ProviderFn &allocTempLocal,
+    const ExprLocalsPredicateFn &emitExpr,
+    const EmitInstructionFn &emitInstruction,
     std::string &error,
     const SemanticProductTargetAdapter *semanticProductTargets = nullptr);
 

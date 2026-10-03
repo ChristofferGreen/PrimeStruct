@@ -15,7 +15,7 @@ namespace primec::ir_lowerer {
 enum class OperatorClampMinMaxTrigEmitResult { Handled, NotHandled, Error };
 
 using InferClampMinMaxTrigExprKindWithLocalsFn =
-    std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)>;
+    ExprLocalsValueKindFn;
 using CombineClampMinMaxTrigNumericKindsFn =
     std::function<LocalInfo::ValueKind(LocalInfo::ValueKind, LocalInfo::ValueKind)>;
 

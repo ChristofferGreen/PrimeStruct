@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "primec/ir_lowerer/IrLowererStatementCallHelpers.h"
+#include "primec/support/CallbackTypes.h"
 
 namespace primec::ir_lowerer {
 
@@ -21,9 +22,9 @@ struct LowerStatementsFunctionTableStepInput {
 
   const std::vector<std::string> *defaultEffects = nullptr;
   const std::vector<std::string> *entryDefaultEffects = nullptr;
-  std::function<bool(const Expr &)> isTailCallCandidate;
+  ExprPredicateFn isTailCallCandidate;
 
-  std::function<void()> resetDefinitionLoweringState;
+  ActionFn resetDefinitionLoweringState;
   std::function<bool(const Definition &, int32_t &, LocalMap &, Expr &, std::string &)> buildDefinitionCallContext;
   std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> emitInlineDefinitionCall;
 

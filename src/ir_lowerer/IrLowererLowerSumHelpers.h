@@ -13,6 +13,7 @@
 #include "primec/ir_lowerer/IrLowererStructTypeHelpers.h"
 #include "primec/ast/Ast.h"
 #include "primec/frontend/SemanticProduct.h"
+#include "primec/support/CallbackTypes.h"
 
 namespace primec::ir_lowerer {
 

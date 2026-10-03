@@ -14,7 +14,7 @@ import re
 import sys
 from pathlib import Path
 
-BASELINE_ALIAS_NAMES = 129
+BASELINE_ALIAS_NAMES = 114
 ALIAS_RE = re.compile(r"^\s*using\s+(\w+)\s*=\s*std::function<(.*)>\s*;\s*$")
 CANONICAL = {
     "bool(const Expr &)": "ExprPredicateFn",
@@ -23,6 +23,10 @@ CANONICAL = {
     "bool(const Expr &, const LocalMap &)": "ExprLocalsPredicateFn",
     "void(const Expr &, LocalInfo &)": "ExprLocalInfoVisitorFn",
     "LocalInfo::ValueKind(const Expr &, const LocalMap &)": "ExprLocalsValueKindFn",
+    "size_t()": "SizeProviderFn",
+    "void()": "ActionFn",
+    "void(IrOpcode, uint64_t)": "EmitInstructionFn",
+    "void(size_t, uint64_t)": "PatchInstructionImmFn",
 }
 
 

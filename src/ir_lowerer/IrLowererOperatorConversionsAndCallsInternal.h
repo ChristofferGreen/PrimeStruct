@@ -1,6 +1,7 @@
 #pragma once
 
 #include "primec/ir_lowerer/IrLowererOperatorConversionsAndCallsHelpers.h"
+#include "primec/support/CallbackTypes.h"
 
 namespace primec::ir_lowerer {
 
@@ -11,9 +12,9 @@ struct ConversionsAndCallsOperatorContext {
   const InferConversionsAndCallsExprKindWithLocalsFn &inferExprKind;
   const EmitConversionsAndCallsCompareToZeroFn &emitCompareToZero;
   const Int32ProviderFn &allocTempLocal;
-  const EmitConversionsAndCallsFloatToIntNonFiniteFn &emitFloatToIntNonFinite;
-  const EmitConversionsAndCallsPointerIndexOutOfBoundsFn &emitPointerIndexOutOfBounds;
-  const EmitConversionsAndCallsArrayIndexOutOfBoundsFn &emitArrayIndexOutOfBounds;
+  const ActionFn &emitFloatToIntNonFinite;
+  const ActionFn &emitPointerIndexOutOfBounds;
+  const ActionFn &emitArrayIndexOutOfBounds;
   const ResolveConversionsAndCallsStringTableTargetFn &resolveStringTableTarget;
   const ConversionsAndCallsValueKindFromTypeNameFn &valueKindFromTypeName;
   const ConversionsAndCallsGetMathConstantNameFn &getMathConstantName;

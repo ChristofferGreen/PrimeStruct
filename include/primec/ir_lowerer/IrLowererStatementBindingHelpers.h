@@ -171,9 +171,9 @@ bool emitStringStatementBindingInitializer(const Expr &stmt,
                                            const std::function<int32_t(const std::string &)> &internString,
                                            const ExprLocalsPredicateFn &emitExpr,
                                            const ExprLocalsValueKindFn &inferExprKind,
-                                           const std::function<int32_t()> &allocTempLocal,
+                                           const Int32ProviderFn &allocTempLocal,
                                            const ExprLocalsPredicateFn &isEntryArgsName,
-                                           const std::function<void()> &emitArrayIndexOutOfBounds,
+                                           const ActionFn &emitArrayIndexOutOfBounds,
                                            std::string &error);
 UninitializedStorageInitDropEmitResult tryEmitUninitializedStorageInitDropStatement(
     const Expr &stmt,
@@ -182,7 +182,7 @@ UninitializedStorageInitDropEmitResult tryEmitUninitializedStorageInitDropStatem
     const ResolveUninitializedStorageForStatementFn &resolveUninitializedStorage,
     const ExprLocalsPredicateFn &emitExpr,
     const ResolveStructSlotLayoutForStatementFn &resolveStructSlotLayout,
-    const std::function<int32_t()> &allocTempLocal,
+    const Int32ProviderFn &allocTempLocal,
     const EmitStructCopyFromPtrsForStatementFn &emitStructCopyFromPtrs,
     const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,
     std::string &error,
@@ -213,8 +213,8 @@ ReturnStatementEmitResult tryEmitReturnStatement(
     const ExprLocalsPredicateFn &emitExpr,
     const ExprLocalsValueKindFn &inferExprKind,
     const ResolveResultExprInfoWithLocalsFn &resolveResultExprInfo,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferArrayElementKind,
-    const std::function<void()> &emitFileScopeCleanupAll,
+    const ExprLocalsValueKindFn &inferArrayElementKind,
+    const ActionFn &emitFileScopeCleanupAll,
     std::string &error);
 ReturnStatementEmitResult tryEmitReturnStatement(
     const Expr &stmt,
@@ -227,8 +227,8 @@ ReturnStatementEmitResult tryEmitReturnStatement(
     const ExprLocalsPredicateFn &emitExpr,
     const ExprLocalsValueKindFn &inferExprKind,
     const ResolveResultExprInfoWithLocalsFn &resolveResultExprInfo,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferArrayElementKind,
-    const std::function<void()> &emitFileScopeCleanupAll,
+    const ExprLocalsValueKindFn &inferArrayElementKind,
+    const ActionFn &emitFileScopeCleanupAll,
     std::string &error);
 StatementMatchIfEmitResult tryEmitMatchIfStatement(
     const Expr &stmt,

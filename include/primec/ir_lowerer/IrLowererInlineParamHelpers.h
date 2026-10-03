@@ -18,17 +18,13 @@ using EmitInlineParameterStringValueFn =
     std::function<bool(const Expr &, const LocalMap &, LocalInfo::StringSource &, int32_t &, bool &)>;
 using InferInlineParameterStructExprPathFn = std::function<std::string(const Expr &, const LocalMap &)>;
 using InferInlineParameterExprKindFn =
-    std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)>;
+    ExprLocalsValueKindFn;
 using InferInlineParameterExprLocalInfoFn =
     std::function<bool(const Expr &, const LocalMap &, LocalInfo &, std::string &)>;
 using ResolveInlineParameterDefinitionCallFn = std::function<const Definition *(const Expr &)>;
 using ResolveInlineParameterStructSlotLayoutFn = std::function<bool(const std::string &, StructSlotLayoutInfo &)>;
 using EmitInlineParameterStructCopySlotsFn = std::function<bool(int32_t, int32_t, int32_t)>;
-using EmitInlineParameterInstructionFn = std::function<void(IrOpcode, uint64_t)>;
 using TrackInlineParameterFileHandleFn = std::function<void(int32_t)>;
-using InlineParameterInstructionCountFn = std::function<size_t()>;
-using PatchInlineParameterInstructionImmFn = std::function<void(size_t, uint64_t)>;
-using EmitInlineParameterArrayIndexOutOfBoundsFn = std::function<void()>;
 
 bool emitInlineDefinitionCallParameters(
     const std::vector<Expr> &callParams,
@@ -47,7 +43,7 @@ bool emitInlineDefinitionCallParameters(
     const ExprLocalsPredicateFn &emitExpr,
     const EmitInlineParameterStructCopySlotsFn &emitStructCopySlots,
     const Int32ProviderFn &allocTempLocal,
-    const EmitInlineParameterInstructionFn &emitInstruction,
+    const EmitInstructionFn &emitInstruction,
     const TrackInlineParameterFileHandleFn &trackFileHandleLocal,
     std::string &error,
     const InferInlineParameterExprLocalInfoFn &inferExprLocalInfo = {});
@@ -70,7 +66,7 @@ bool emitInlineDefinitionCallParameters(
     const ExprLocalsPredicateFn &emitExpr,
     const EmitInlineParameterStructCopySlotsFn &emitStructCopySlots,
     const Int32ProviderFn &allocTempLocal,
-    const EmitInlineParameterInstructionFn &emitInstruction,
+    const EmitInstructionFn &emitInstruction,
     const TrackInlineParameterFileHandleFn &trackFileHandleLocal,
     std::string &error,
     const InferInlineParameterExprLocalInfoFn &inferExprLocalInfo);
@@ -93,7 +89,7 @@ bool emitInlineDefinitionCallParameters(
     const ExprLocalsPredicateFn &emitExpr,
     const EmitInlineParameterStructCopySlotsFn &emitStructCopySlots,
     const Int32ProviderFn &allocTempLocal,
-    const EmitInlineParameterInstructionFn &emitInstruction,
+    const EmitInstructionFn &emitInstruction,
     const TrackInlineParameterFileHandleFn &trackFileHandleLocal,
     std::string &error,
     const InferInlineParameterExprLocalInfoFn &inferExprLocalInfo);
@@ -117,7 +113,7 @@ bool emitInlineDefinitionCallParameters(
     const ExprLocalsPredicateFn &emitExpr,
     const EmitInlineParameterStructCopySlotsFn &emitStructCopySlots,
     const Int32ProviderFn &allocTempLocal,
-    const EmitInlineParameterInstructionFn &emitInstruction,
+    const EmitInstructionFn &emitInstruction,
     const TrackInlineParameterFileHandleFn &trackFileHandleLocal,
     std::string &error,
     const InferInlineParameterExprLocalInfoFn &inferExprLocalInfo = {},
@@ -129,8 +125,8 @@ bool emitInlineDefinitionCallParameters(
     // have direct access to the target IrFunction's instructions (the
     // production ir_lowerer pipeline) must bind these to it; a caller that
     // leaves them unbound keeps the previous (pre-fix) no-op behavior.
-    const InlineParameterInstructionCountFn &instructionCount = {},
-    const PatchInlineParameterInstructionImmFn &patchInstructionImm = {},
-    const EmitInlineParameterArrayIndexOutOfBoundsFn &emitArrayIndexOutOfBounds = {});
+    const SizeProviderFn &instructionCount = {},
+    const PatchInstructionImmFn &patchInstructionImm = {},
+    const ActionFn &emitArrayIndexOutOfBounds = {});
 
 } // namespace primec::ir_lowerer

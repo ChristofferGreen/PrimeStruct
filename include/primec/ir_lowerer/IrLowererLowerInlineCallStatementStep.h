@@ -5,12 +5,13 @@
 #include <string>
 
 #include "primec/ir_lowerer/IrLowererStatementCallHelpers.h"
+#include "primec/support/CallbackTypes.h"
 
 namespace primec::ir_lowerer {
 
 struct LowerInlineCallStatementStepInput {
   IrFunction *function = nullptr;
-  std::function<bool(const Expr &)> emitStatement;
+  ExprPredicateFn emitStatement;
   std::function<void(const std::string &, const Expr &, size_t, size_t)> appendInstructionSourceRange;
 };
 

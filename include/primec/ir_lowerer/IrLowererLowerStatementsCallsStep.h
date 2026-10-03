@@ -7,6 +7,7 @@
 
 #include "primec/ir_lowerer/IrLowererStatementCallHelpers.h"
 #include "primec/ir_lowerer/IrLowererStructTypeHelpers.h"
+#include "primec/support/CallbackTypes.h"
 
 namespace primec::ir_lowerer {
 
@@ -16,30 +17,30 @@ struct LowerStatementsCallsStepInput {
   const SemanticProgram *semanticProgram = nullptr;
   const SemanticProductIndex *semanticIndex = nullptr;
 
-  std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferExprKind;
+  ExprLocalsValueKindFn inferExprKind;
   std::function<std::string(const Expr &, const LocalMap &)> inferStructExprPath;
-  std::function<bool(const Expr &, const LocalMap &)> emitExpr;
-  std::function<int32_t()> allocTempLocal;
+  ExprLocalsPredicateFn emitExpr;
+  Int32ProviderFn allocTempLocal;
 
-  std::function<std::string(const Expr &)> resolveExprPath;
+  ExprStringFn resolveExprPath;
   std::function<const Definition *(const std::string &)> findDefinitionByPath;
   std::function<const Definition *(const std::string &)> resolveDestroyHelperForStruct;
   std::function<const Definition *(const std::string &)> resolveMoveHelperForStruct;
 
-  std::function<bool(const Expr &, const LocalMap &)> isArrayCountCall;
-  std::function<bool(const Expr &, const LocalMap &)> isStringCountCall;
-  std::function<bool(const Expr &, const LocalMap &)> isVectorCapacityCall;
+  ExprLocalsPredicateFn isArrayCountCall;
+  ExprLocalsPredicateFn isStringCountCall;
+  ExprLocalsPredicateFn isVectorCapacityCall;
   ResolveStructSlotLayoutFn resolveStructSlotLayout;
   std::function<const Definition *(const Expr &, const LocalMap &)> resolveMethodCallDefinition;
   std::function<const Definition *(const Expr &)> resolveDefinitionCall;
   std::function<bool(const std::string &, ReturnInfo &)> getReturnInfo;
   std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> emitInlineDefinitionCall;
-  std::function<void()> emitArrayIndexOutOfBounds;
-  std::function<void()> emitVectorCapacityExceeded;
-  std::function<void()> emitVectorPopOnEmpty;
-  std::function<void()> emitVectorIndexOutOfBounds;
-  std::function<void()> emitVectorReserveNegative;
-  std::function<void()> emitVectorReserveExceeded;
+  ActionFn emitArrayIndexOutOfBounds;
+  ActionFn emitVectorCapacityExceeded;
+  ActionFn emitVectorPopOnEmpty;
+  ActionFn emitVectorIndexOutOfBounds;
+  ActionFn emitVectorReserveNegative;
+  ActionFn emitVectorReserveExceeded;
 
   std::vector<IrInstruction> *instructions = nullptr;
 };

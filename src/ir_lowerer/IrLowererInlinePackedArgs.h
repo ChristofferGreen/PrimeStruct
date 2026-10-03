@@ -1,6 +1,7 @@
 #pragma once
 
 #include "primec/ir_lowerer/IrLowererInlineParamHelpers.h"
+#include "primec/support/CallbackTypes.h"
 
 namespace primec::ir_lowerer {
 
@@ -19,7 +20,7 @@ bool emitInlinePackedCallParameter(
     const ExprLocalsPredicateFn &emitExpr,
     const EmitInlineParameterStructCopySlotsFn &emitStructCopySlots,
     const Int32ProviderFn &allocTempLocal,
-    const EmitInlineParameterInstructionFn &emitInstruction,
+    const EmitInstructionFn &emitInstruction,
     std::string &error,
     const InferInlineParameterExprLocalInfoFn &inferExprLocalInfo = {});
 

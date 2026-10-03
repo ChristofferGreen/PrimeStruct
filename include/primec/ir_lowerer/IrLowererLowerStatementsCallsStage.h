@@ -11,6 +11,7 @@
 #include "primec/ir_lowerer/IrLowererOnErrorHelpers.h"
 #include "primec/ir_lowerer/IrLowererLowerStatementsSourceMapStep.h"
 #include "primec/ir_lowerer/IrLowererStatementCallHelpers.h"
+#include "primec/support/CallbackTypes.h"
 
 namespace primec::ir_lowerer {
 
@@ -43,30 +44,30 @@ struct LowerStatementsCallsStageInput {
   LocalMap *locals = nullptr;
   IrModule *outModule = nullptr;
 
-  std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferExprKind;
-  std::function<bool(const Expr &, const LocalMap &)> emitExpr;
+  ExprLocalsValueKindFn inferExprKind;
+  ExprLocalsPredicateFn emitExpr;
   std::function<bool(const Expr &, LocalMap &)> emitStatement;
-  std::function<int32_t()> allocTempLocal;
+  Int32ProviderFn allocTempLocal;
   std::function<void(const std::string &, const Expr &, size_t, size_t)> appendInstructionSourceRange;
 
-  std::function<void()> pushFileScope;
-  std::function<void()> emitCurrentFileScopeCleanup;
-  std::function<void()> popFileScope;
+  ActionFn pushFileScope;
+  ActionFn emitCurrentFileScopeCleanup;
+  ActionFn popFileScope;
 
-  std::function<std::string(const Expr &)> resolveExprPath;
+  ExprStringFn resolveExprPath;
   std::function<const Definition *(const Expr &, const LocalMap &)> resolveMethodCallDefinition;
   std::function<const Definition *(const Expr &)> resolveDefinitionCall;
   std::function<bool(const std::string &, ReturnInfo &)> getReturnInfo;
   std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> emitInlineDefinitionCall;
 
-  std::function<bool(const Expr &)> isTailCallCandidate;
+  ExprPredicateFn isTailCallCandidate;
   std::function<bool(const Definition &)> isStructDefinition;
-  std::function<bool(const Expr &, const LocalMap &)> isArrayCountCall;
-  std::function<bool(const Expr &, const LocalMap &)> isStringCountCall;
-  std::function<bool(const Expr &, const LocalMap &)> isVectorCapacityCall;
+  ExprLocalsPredicateFn isArrayCountCall;
+  ExprLocalsPredicateFn isStringCountCall;
+  ExprLocalsPredicateFn isVectorCapacityCall;
   std::function<bool(const Definition &, int32_t &, LocalMap &, Expr &, std::string &)>
       buildDefinitionCallContext;
-  std::function<void()> resetDefinitionLoweringState;
+  ActionFn resetDefinitionLoweringState;
 
   // TODO-4747 Phase 1: definitions selected for real (non-inlined)
   // Call/CallVoid emission, in the fixed order they were assigned

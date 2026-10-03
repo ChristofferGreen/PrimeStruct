@@ -172,7 +172,7 @@ void emitCopyBuiltinSoaToAosSlotToLocal(
     int32_t destLocal,
     int32_t srcPtrLocal,
     int32_t srcSlotOffset,
-    const EmitInlineParameterInstructionFn &emitInstruction) {
+    const EmitInstructionFn &emitInstruction) {
   emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(srcPtrLocal));
   if (srcSlotOffset != 0) {
     emitInstruction(IrOpcode::PushI64, static_cast<uint64_t>(srcSlotOffset) * IrSlotBytes);
@@ -186,7 +186,7 @@ bool emitBuiltinSoaToAosStructBridge(
     int32_t destBaseLocal,
     int32_t srcPtrLocal,
     const StructSlotLayoutInfo &layout,
-    const EmitInlineParameterInstructionFn &emitInstruction,
+    const EmitInstructionFn &emitInstruction,
     std::string &error) {
   StructSlotFieldInfo storageField;
   if (!resolveBuiltinSoaToAosStorageField(layout, storageField) || storageField.slotCount < 5) {
@@ -501,7 +501,7 @@ bool emitInlineDefinitionCallParameters(
     const ExprLocalsPredicateFn &emitExpr,
     const EmitInlineParameterStructCopySlotsFn &emitStructCopySlots,
     const Int32ProviderFn &allocTempLocal,
-    const EmitInlineParameterInstructionFn &emitInstruction,
+    const EmitInstructionFn &emitInstruction,
     const TrackInlineParameterFileHandleFn &trackFileHandleLocal,
     std::string &error,
     const InferInlineParameterExprLocalInfoFn &inferExprLocalInfo) {
@@ -547,7 +547,7 @@ bool emitInlineDefinitionCallParameters(
     const ExprLocalsPredicateFn &emitExpr,
     const EmitInlineParameterStructCopySlotsFn &emitStructCopySlots,
     const Int32ProviderFn &allocTempLocal,
-    const EmitInlineParameterInstructionFn &emitInstruction,
+    const EmitInstructionFn &emitInstruction,
     const TrackInlineParameterFileHandleFn &trackFileHandleLocal,
     std::string &error,
     const InferInlineParameterExprLocalInfoFn &inferExprLocalInfo) {
@@ -593,7 +593,7 @@ bool emitInlineDefinitionCallParameters(
     const ExprLocalsPredicateFn &emitExpr,
     const EmitInlineParameterStructCopySlotsFn &emitStructCopySlots,
     const Int32ProviderFn &allocTempLocal,
-    const EmitInlineParameterInstructionFn &emitInstruction,
+    const EmitInstructionFn &emitInstruction,
     const TrackInlineParameterFileHandleFn &trackFileHandleLocal,
     std::string &error,
     const InferInlineParameterExprLocalInfoFn &inferExprLocalInfo) {
@@ -640,13 +640,13 @@ bool emitInlineDefinitionCallParameters(
     const ExprLocalsPredicateFn &emitExpr,
     const EmitInlineParameterStructCopySlotsFn &emitStructCopySlots,
     const Int32ProviderFn &allocTempLocal,
-    const EmitInlineParameterInstructionFn &emitInstruction,
+    const EmitInstructionFn &emitInstruction,
     const TrackInlineParameterFileHandleFn &trackFileHandleLocal,
     std::string &error,
     const InferInlineParameterExprLocalInfoFn &inferExprLocalInfo,
-    const InlineParameterInstructionCountFn &instructionCount,
-    const PatchInlineParameterInstructionImmFn &patchInstructionImm,
-    const EmitInlineParameterArrayIndexOutOfBoundsFn &emitArrayIndexOutOfBounds) {
+    const SizeProviderFn &instructionCount,
+    const PatchInstructionImmFn &patchInstructionImm,
+    const ActionFn &emitArrayIndexOutOfBounds) {
   for (size_t i = 0; i < callParams.size(); ++i) {
     const Expr &param = callParams[i];
     const Expr *orderedArg = (i < orderedArgs.size()) ? orderedArgs[i] : nullptr;

@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "primec/ast/Ast.h"
+#include "primec/support/CallbackTypes.h"
 
 namespace primec {
 struct SemanticProgram;
@@ -39,7 +40,7 @@ bool resolveLayoutFieldBinding(
     const std::unordered_map<std::string, LayoutFieldBinding> &knownFields,
     const std::unordered_set<std::string> &structNames,
     const std::function<std::string(const std::string &, const std::string &)> &resolveStructTypePath,
-    const std::function<std::string(const Expr &)> &resolveStructLayoutExprPath,
+    const ExprStringFn &resolveStructLayoutExprPath,
     const std::unordered_map<std::string, const Definition *> &defMap,
     LayoutFieldBinding &bindingOut,
     std::string &errorOut);
@@ -47,7 +48,7 @@ bool collectStructLayoutFieldBindings(
     const Program &program,
     const std::unordered_set<std::string> &structNames,
     const std::function<std::string(const std::string &, const std::string &)> &resolveStructTypePath,
-    const std::function<std::string(const Expr &)> &resolveStructLayoutExprPath,
+    const ExprStringFn &resolveStructLayoutExprPath,
     const std::unordered_map<std::string, const Definition *> &defMap,
     const SemanticProgram *semanticProgram,
     std::unordered_map<std::string, std::vector<LayoutFieldBinding>> &fieldsByStructOut,

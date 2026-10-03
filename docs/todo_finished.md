@@ -1947,6 +1947,7 @@ are left unarchived.
 | TODO-5420 | Replace using-declarations in TemplateMonomorphUsings.h with qualified names | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
 | TODO-5421 | Keep the release gate from dirtying docs/failing_tests.md | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
 | TODO-5422 | Convert the remaining validation-test clusters measured after TODO-5388..5395 | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
+| TODO-5426 | Bring IrLowererCallHelpers.h under 100 std::function mentions | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
 
 <!-- INDEX-END -->
 

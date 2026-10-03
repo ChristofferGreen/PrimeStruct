@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <string>
@@ -16,5 +17,7 @@ namespace primec {
 using ExprPredicateFn = std::function<bool(const Expr &)>;
 using ExprStringFn = std::function<std::string(const Expr &)>;
 using Int32ProviderFn = std::function<int32_t()>;
+using SizeProviderFn = std::function<size_t()>;
+using ActionFn = std::function<void()>;
 
 } // namespace primec

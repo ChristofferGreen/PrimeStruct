@@ -169,7 +169,7 @@ bool emitInlinePackedCallParameter(
     const ExprLocalsPredicateFn &emitExpr,
     const EmitInlineParameterStructCopySlotsFn &emitStructCopySlots,
     const Int32ProviderFn &allocTempLocal,
-    const EmitInlineParameterInstructionFn &emitInstruction,
+    const EmitInstructionFn &emitInstruction,
     std::string &error,
     const InferInlineParameterExprLocalInfoFn &inferExprLocalInfo) {
   StructSlotLayoutInfo structLayout;

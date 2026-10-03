@@ -5,13 +5,14 @@
 #include <string>
 
 #include "primec/ir_lowerer/IrLowererStatementCallHelpers.h"
+#include "primec/support/CallbackTypes.h"
 
 namespace primec::ir_lowerer {
 
 struct LowerInlineCallContextSetupStepInput {
   IrFunction *function = nullptr;
   const ReturnInfo *returnInfo = nullptr;
-  std::function<int32_t()> allocTempLocal;
+  Int32ProviderFn allocTempLocal;
 };
 
 struct LowerInlineCallContextSetupStepOutput {

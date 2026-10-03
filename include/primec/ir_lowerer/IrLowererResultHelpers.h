@@ -140,14 +140,14 @@ struct PackedResultStructPayloadInfo {
 ResultOkMethodCallEmitResult tryEmitResultOkCall(
     const Expr &expr,
     const LocalMap &localsIn,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const ExprLocalsValueKindFn &inferExprKind,
     const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath,
     const ResolveCallDefinitionFn &resolveDefinitionCall,
-    const std::function<bool(const Expr &, const LocalMap &)> &isFileHandleExpr,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const std::function<int32_t()> &allocTempLocal,
+    const ExprLocalsPredicateFn &isFileHandleExpr,
+    const ExprLocalsPredicateFn &emitExpr,
+    const Int32ProviderFn &allocTempLocal,
     const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const EmitInstructionFn &emitInstruction,
     std::string &error,
     const SemanticProductTargetAdapter *semanticProductTargets = nullptr);
 bool inferPackedResultStructType(
@@ -162,18 +162,18 @@ ResultErrorMethodCallEmitResult tryEmitResultErrorCall(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const ResolveResultExprInfoWithLocalsFn &resolveResultExprInfo,
     const ResolveCallDefinitionFn &resolveDefinitionCall,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const ExprLocalsPredicateFn &emitExpr,
+    const Int32ProviderFn &allocTempLocal,
+    const EmitInstructionFn &emitInstruction,
     const SemanticProductTargetAdapter *semanticProductTargets,
     std::string &error);
 bool emitResultWhyLocalsFromValueExpr(
     const Expr &valueExpr,
     const LocalMap &localsIn,
     const ResultExprInfo &resultInfo,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const ExprLocalsPredicateFn &emitExpr,
+    const Int32ProviderFn &allocTempLocal,
+    const EmitInstructionFn &emitInstruction,
     int32_t &errorLocalOut);
 ResultWhyMethodCallEmitResult tryEmitResultWhyCall(
     const Expr &expr,
@@ -182,9 +182,9 @@ ResultWhyMethodCallEmitResult tryEmitResultWhyCall(
     int32_t &onErrorTempCounter,
     const ResolveResultExprInfoWithLocalsFn &resolveResultExprInfo,
     const ResolveCallDefinitionFn &resolveDefinitionCall,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const ExprLocalsPredicateFn &emitExpr,
+    const Int32ProviderFn &allocTempLocal,
+    const EmitInstructionFn &emitInstruction,
     const std::function<int32_t(const std::string &)> &internString,
     const std::function<bool(const std::string &, const std::string &, std::string &)> &resolveStructTypeName,
     const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
@@ -203,9 +203,9 @@ ResultWhyDispatchEmitResult tryEmitResultWhyDispatchCall(
     int32_t &onErrorTempCounter,
     const ResolveResultExprInfoWithLocalsFn &resolveResultExprInfo,
     const ResolveCallDefinitionFn &resolveDefinitionCall,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const ExprLocalsPredicateFn &emitExpr,
+    const Int32ProviderFn &allocTempLocal,
+    const EmitInstructionFn &emitInstruction,
     const std::function<int32_t(const std::string &)> &internString,
     const std::function<bool(const std::string &, const std::string &, std::string &)> &resolveStructTypeName,
     const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
@@ -222,8 +222,8 @@ ResultWhyExprOps makeResultWhyExprOps(
     const std::string &namespacePrefix,
     int32_t &onErrorTempCounter,
     const std::function<int32_t(const std::string &)> &internString,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
+    const Int32ProviderFn &allocTempLocal,
+    const EmitInstructionFn &emitInstruction);
 ResultWhyCallOps makeResultWhyCallOps(
     const std::function<bool(const std::string &, const std::string &, std::string &)> &resolveStructTypeName,
     const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
@@ -280,17 +280,17 @@ void emitResultWhyErrorLocalFromResult(
     int32_t resultLocal,
     const ResultExprInfo &resultInfo,
     int32_t errorLocal,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
+    const Int32ProviderFn &allocTempLocal,
+    const EmitInstructionFn &emitInstruction);
 void emitPackedResultPayloadLocalFromResult(
     int32_t resultLocal,
     const ResultExprInfo &resultInfo,
     int32_t errorLocal,
     int32_t payloadLocal,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
+    const EmitInstructionFn &emitInstruction);
 bool emitResultWhyEmptyString(
     const std::function<int32_t(const std::string &)> &internString,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
+    const EmitInstructionFn &emitInstruction);
 std::string unsupportedPackedResultValueKindError(const std::string &builtinName);
 Expr makeResultWhyErrorValueExpr(int32_t errorLocal,
                                  LocalInfo::ValueKind valueKind,
@@ -302,8 +302,8 @@ Expr makeResultWhyBoolErrorExpr(
     const std::string &namespacePrefix,
     int32_t tempOrdinal,
     LocalMap &callLocals,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
+    const Int32ProviderFn &allocTempLocal,
+    const EmitInstructionFn &emitInstruction);
 enum class ResultWhyCallEmitResult {
   Emitted,
   Error,

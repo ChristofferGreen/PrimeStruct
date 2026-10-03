@@ -13,7 +13,7 @@ OperatorPowAbsSignEmitResult emitPowAbsSignOperatorExpr(const Expr &expr,
                                                         const ExprLocalsValueKindFn &inferExprKind,
                                                         const CombinePowAbsSignNumericKindsFn &combineNumericKinds,
                                                         const Int32ProviderFn &allocTempLocal,
-                                                        const EmitPowNegativeExponentFn &emitPowNegativeExponent,
+                                                        const ActionFn &emitPowNegativeExponent,
                                                         std::vector<IrInstruction> &instructions,
                                                         std::string &error) {
         std::string powName;

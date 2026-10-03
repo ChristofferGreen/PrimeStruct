@@ -119,19 +119,19 @@ ResolvedInlineCallResult emitResolvedInlineDefinitionCall(
 // instead.
 InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
     const Expr &expr,
-    const std::function<bool(const Expr &)> &isArrayCountCall,
-    const std::function<bool(const Expr &)> &isStringCountCall,
-    const std::function<bool(const Expr &)> &isVectorCapacityCall,
+    const ExprPredicateFn &isArrayCountCall,
+    const ExprPredicateFn &isStringCountCall,
+    const ExprPredicateFn &isVectorCapacityCall,
     const std::function<const Definition *(const Expr &)> &resolveMethodCallDefinition,
     const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
     const std::function<bool(const Expr &, const Definition &)> &emitInlineDefinitionCall,
     std::string &error);
 InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
     const Expr &expr,
-    const std::function<bool(const Expr &)> &isArrayCountCall,
-    const std::function<bool(const Expr &)> &isStringCountCall,
-    const std::function<bool(const Expr &)> &isVectorCapacityCall,
-    const std::function<bool(const Expr &)> &isCollectionAccessReceiverExpr,
+    const ExprPredicateFn &isArrayCountCall,
+    const ExprPredicateFn &isStringCountCall,
+    const ExprPredicateFn &isVectorCapacityCall,
+    const ExprPredicateFn &isCollectionAccessReceiverExpr,
     const std::function<const Definition *(const Expr &)> &resolveMethodCallDefinition,
     const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
     const std::function<bool(const Expr &, const Definition &)> &emitInlineDefinitionCall,
@@ -146,15 +146,15 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
 InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     const Expr &expr,
     const LocalMap &localsIn,
-    const std::function<bool(const Expr &, const LocalMap &)> &isArrayCountCall,
-    const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCall,
-    const std::function<bool(const Expr &, const LocalMap &)> &isVectorCapacityCall,
+    const ExprLocalsPredicateFn &isArrayCountCall,
+    const ExprLocalsPredicateFn &isStringCountCall,
+    const ExprLocalsPredicateFn &isVectorCapacityCall,
     const std::function<const Definition *(const Expr &, const LocalMap &)> &resolveMethodCallDefinition,
     const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &)> &emitInlineDefinitionCall,
     std::string &error,
     const SemanticProgram *semanticProgram = nullptr,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind = {},
+    const ExprLocalsValueKindFn &inferExprKind = {},
     const SemanticProductIndex *semanticIndex = nullptr);
 UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(
     const Expr &expr,
@@ -169,11 +169,11 @@ BufferBuiltinDispatchResult tryEmitBufferBuiltinDispatchWithLocals(
     const Expr &expr,
     const LocalMap &localsIn,
     const std::function<LocalInfo::ValueKind(const std::string &)> &valueKindFromTypeName,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const ExprLocalsValueKindFn &inferExprKind,
     const std::function<int32_t(int32_t)> &allocLocalRange,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const Int32ProviderFn &allocTempLocal,
+    const ExprLocalsPredicateFn &emitExpr,
+    const EmitInstructionFn &emitInstruction,
     std::string &error,
     const SemanticProductTargetAdapter *semanticProductTargets = nullptr);
 // Callbacks the native tail dispatch needs from the lowerer. Members a caller does not
@@ -182,24 +182,24 @@ BufferBuiltinDispatchResult tryEmitBufferBuiltinDispatchWithLocals(
 struct NativeCallTailDispatchHooks {
   std::function<bool(const Expr &, std::string &)> tryGetMathBuiltinName;
   std::function<bool(const std::string &)> isSupportedMathBuiltinName;
-  std::function<bool(const Expr &, const LocalMap &)> isArrayCountCall;
-  std::function<bool(const Expr &, const LocalMap &)> isVectorCapacityCall;
-  std::function<bool(const Expr &, const LocalMap &)> isStringCountCall;
-  std::function<bool(const Expr &, const LocalMap &)> isEntryArgsName;
+  ExprLocalsPredicateFn isArrayCountCall;
+  ExprLocalsPredicateFn isVectorCapacityCall;
+  ExprLocalsPredicateFn isStringCountCall;
+  ExprLocalsPredicateFn isEntryArgsName;
   std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> resolveStringTableTarget;
   size_t stringTableCount = 0;
-  std::function<bool(const Expr &, const LocalMap &)> emitExpr;
+  ExprLocalsPredicateFn emitExpr;
   ResolveCallCollectionPairTypeInfoFn resolveCallCollectionPairTypeInfo{};
   ResolveCallArrayVectorAccessTargetInfoFn resolveCallArrayVectorAccessTargetInfo{};
   std::function<bool(const Expr &, std::string &)> tryGetPrintBuiltinName;
-  std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferExprKind;
-  std::function<int32_t()> allocTempLocal;
-  std::function<void()> emitStringIndexOutOfBounds;
-  std::function<void()> emitMapKeyNotFound;
-  std::function<void()> emitArrayIndexOutOfBounds;
-  std::function<size_t()> instructionCount;
-  std::function<void(IrOpcode, uint64_t)> emitInstruction;
-  std::function<void(size_t, uint64_t)> patchInstructionImm;
+  ExprLocalsValueKindFn inferExprKind;
+  Int32ProviderFn allocTempLocal;
+  ActionFn emitStringIndexOutOfBounds;
+  ActionFn emitMapKeyNotFound;
+  ActionFn emitArrayIndexOutOfBounds;
+  SizeProviderFn instructionCount;
+  EmitInstructionFn emitInstruction;
+  PatchInstructionImmFn patchInstructionImm;
 };
 // The semanticProgram default of nullptr exists only so unit tests can exercise the shared
 // dispatch logic without semantic-product plumbing; the production caller always supplies a
@@ -249,13 +249,13 @@ StringTableAccessEmitResult tryEmitStringTableAccessLoad(
     const Expr &indexExpr,
     const LocalMap &localsIn,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const std::function<void()> &emitStringIndexOutOfBounds,
-    const std::function<size_t()> &instructionCount,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    const ExprLocalsValueKindFn &inferExprKind,
+    const Int32ProviderFn &allocTempLocal,
+    const ExprLocalsPredicateFn &emitExpr,
+    const ActionFn &emitStringIndexOutOfBounds,
+    const SizeProviderFn &instructionCount,
+    const EmitInstructionFn &emitInstruction,
+    const PatchInstructionImmFn &patchInstructionImm,
     std::string &error,
     const SemanticProgram *semanticProgram = nullptr,
     const SemanticProductIndex *semanticIndex = nullptr);
@@ -265,13 +265,13 @@ bool emitArrayVectorIndexedAccess(
     const Expr &indexExpr,
     const LocalMap &localsIn,
     const ResolveCallArrayVectorAccessTargetInfoFn &resolveCallArrayVectorAccessTargetInfo,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const std::function<void()> &emitArrayIndexOutOfBounds,
-    const std::function<size_t()> &instructionCount,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    const ExprLocalsValueKindFn &inferExprKind,
+    const Int32ProviderFn &allocTempLocal,
+    const ExprLocalsPredicateFn &emitExpr,
+    const ActionFn &emitArrayIndexOutOfBounds,
+    const SizeProviderFn &instructionCount,
+    const EmitInstructionFn &emitInstruction,
+    const PatchInstructionImmFn &patchInstructionImm,
     std::string &error,
     const SemanticProgram *semanticProgram = nullptr,
     const SemanticProductIndex *semanticIndex = nullptr);
@@ -280,13 +280,13 @@ bool emitArrayVectorIndexedAccess(
     const Expr &targetExpr,
     const Expr &indexExpr,
     const LocalMap &localsIn,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const std::function<void()> &emitArrayIndexOutOfBounds,
-    const std::function<size_t()> &instructionCount,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    const ExprLocalsValueKindFn &inferExprKind,
+    const Int32ProviderFn &allocTempLocal,
+    const ExprLocalsPredicateFn &emitExpr,
+    const ActionFn &emitArrayIndexOutOfBounds,
+    const SizeProviderFn &instructionCount,
+    const EmitInstructionFn &emitInstruction,
+    const PatchInstructionImmFn &patchInstructionImm,
     std::string &error);
 bool emitBuiltinArrayAccess(
     const std::string &accessName,
@@ -296,15 +296,15 @@ bool emitBuiltinArrayAccess(
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
     size_t stringTableCount,
     const ResolveCallArrayVectorAccessTargetInfoFn &resolveCallArrayVectorAccessTargetInfo,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
-    const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const std::function<void()> &emitStringIndexOutOfBounds,
-    const std::function<void()> &emitArrayIndexOutOfBounds,
-    const std::function<size_t()> &instructionCount,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    const ExprLocalsValueKindFn &inferExprKind,
+    const ExprLocalsPredicateFn &isEntryArgsName,
+    const Int32ProviderFn &allocTempLocal,
+    const ExprLocalsPredicateFn &emitExpr,
+    const ActionFn &emitStringIndexOutOfBounds,
+    const ActionFn &emitArrayIndexOutOfBounds,
+    const SizeProviderFn &instructionCount,
+    const EmitInstructionFn &emitInstruction,
+    const PatchInstructionImmFn &patchInstructionImm,
     std::string &error,
     const SemanticProgram *semanticProgram = nullptr,
     const SemanticProductIndex *semanticIndex = nullptr);
@@ -315,15 +315,15 @@ bool emitBuiltinArrayAccess(
     const LocalMap &localsIn,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
     const ResolveCallArrayVectorAccessTargetInfoFn &resolveCallArrayVectorAccessTargetInfo,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
-    const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const std::function<void()> &emitStringIndexOutOfBounds,
-    const std::function<void()> &emitArrayIndexOutOfBounds,
-    const std::function<size_t()> &instructionCount,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    const ExprLocalsValueKindFn &inferExprKind,
+    const ExprLocalsPredicateFn &isEntryArgsName,
+    const Int32ProviderFn &allocTempLocal,
+    const ExprLocalsPredicateFn &emitExpr,
+    const ActionFn &emitStringIndexOutOfBounds,
+    const ActionFn &emitArrayIndexOutOfBounds,
+    const SizeProviderFn &instructionCount,
+    const EmitInstructionFn &emitInstruction,
+    const PatchInstructionImmFn &patchInstructionImm,
     std::string &error);
 bool emitBuiltinArrayAccess(
     const std::string &accessName,
@@ -332,15 +332,15 @@ bool emitBuiltinArrayAccess(
     const LocalMap &localsIn,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
     size_t stringTableCount,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
-    const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const std::function<void()> &emitStringIndexOutOfBounds,
-    const std::function<void()> &emitArrayIndexOutOfBounds,
-    const std::function<size_t()> &instructionCount,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    const ExprLocalsValueKindFn &inferExprKind,
+    const ExprLocalsPredicateFn &isEntryArgsName,
+    const Int32ProviderFn &allocTempLocal,
+    const ExprLocalsPredicateFn &emitExpr,
+    const ActionFn &emitStringIndexOutOfBounds,
+    const ActionFn &emitArrayIndexOutOfBounds,
+    const SizeProviderFn &instructionCount,
+    const EmitInstructionFn &emitInstruction,
+    const PatchInstructionImmFn &patchInstructionImm,
     std::string &error);
 bool emitBuiltinArrayAccess(
     const std::string &accessName,
@@ -348,27 +348,27 @@ bool emitBuiltinArrayAccess(
     const Expr &indexExpr,
     const LocalMap &localsIn,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
-    const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const std::function<void()> &emitStringIndexOutOfBounds,
-    const std::function<void()> &emitArrayIndexOutOfBounds,
-    const std::function<size_t()> &instructionCount,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    const ExprLocalsValueKindFn &inferExprKind,
+    const ExprLocalsPredicateFn &isEntryArgsName,
+    const Int32ProviderFn &allocTempLocal,
+    const ExprLocalsPredicateFn &emitExpr,
+    const ActionFn &emitStringIndexOutOfBounds,
+    const ActionFn &emitArrayIndexOutOfBounds,
+    const SizeProviderFn &instructionCount,
+    const EmitInstructionFn &emitInstruction,
+    const PatchInstructionImmFn &patchInstructionImm,
     std::string &error);
 NonLiteralStringAccessTargetResult validateNonLiteralStringAccessTarget(
     const Expr &targetExpr,
     const LocalMap &localsIn,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
-    const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
+    const ExprLocalsValueKindFn &inferExprKind,
+    const ExprLocalsPredicateFn &isEntryArgsName,
     std::string &error);
 NonLiteralStringAccessTargetResult validateNonLiteralStringAccessTarget(
     const Expr &targetExpr,
     const LocalMap &localsIn,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
-    const std::function<bool(const Expr &, const LocalMap &)> &isEntryArgsName,
+    const ExprLocalsValueKindFn &inferExprKind,
+    const ExprLocalsPredicateFn &isEntryArgsName,
     std::string &error,
     const SemanticProgram *semanticProgram,
     const SemanticProductIndex *semanticIndex);
@@ -376,14 +376,14 @@ bool resolveValidatedAccessIndexKind(
     const Expr &indexExpr,
     const LocalMap &localsIn,
     const std::string &accessName,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const ExprLocalsValueKindFn &inferExprKind,
     LocalInfo::ValueKind &indexKindOut,
     std::string &error);
 bool resolveValidatedAccessIndexKind(
     const Expr &indexExpr,
     const LocalMap &localsIn,
     const std::string &accessName,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const ExprLocalsValueKindFn &inferExprKind,
     LocalInfo::ValueKind &indexKindOut,
     std::string &error,
     const SemanticProgram *semanticProgram,
@@ -394,7 +394,7 @@ KeyValueLookupStringKeyResult tryResolveKeyValueLookupStringKey(
     const Expr &lookupKeyExpr,
     const LocalMap &localsIn,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const ExprLocalsValueKindFn &inferExprKind,
     int32_t &stringIndexOut,
     std::string &error);
 KeyValueLookupKeyLocalEmitResult tryEmitKeyValueLookupStringKeyLocal(
@@ -402,7 +402,7 @@ KeyValueLookupKeyLocalEmitResult tryEmitKeyValueLookupStringKeyLocal(
     const Expr &lookupKeyExpr,
     const LocalMap &localsIn,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
+    const ExprLocalsValueKindFn &inferExprKind,
     const std::function<void(int32_t)> &emitPushI32,
     const std::function<void(int32_t)> &emitStoreLocal,
     int32_t keyLocal,
@@ -411,8 +411,8 @@ bool emitKeyValueLookupNonStringKeyLocal(
     LocalInfo::ValueKind keyValueKeyKind,
     const Expr &lookupKeyExpr,
     const LocalMap &localsIn,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const ExprLocalsValueKindFn &inferExprKind,
+    const ExprLocalsPredicateFn &emitExpr,
     const std::function<void(int32_t)> &emitStoreLocal,
     int32_t keyLocal,
     std::string &error);
@@ -420,10 +420,10 @@ bool emitKeyValueLookupKeyLocal(
     LocalInfo::ValueKind keyValueKeyKind,
     const Expr &lookupKeyExpr,
     const LocalMap &localsIn,
-    const std::function<int32_t()> &allocTempLocal,
+    const Int32ProviderFn &allocTempLocal,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const ExprLocalsValueKindFn &inferExprKind,
+    const ExprLocalsPredicateFn &emitExpr,
     const std::function<void(int32_t)> &emitPushI32,
     const std::function<void(int32_t)> &emitStoreLocal,
     int32_t &keyLocalOut,
@@ -431,27 +431,27 @@ bool emitKeyValueLookupKeyLocal(
 bool emitKeyValueLookupTargetPointerLocal(
     const Expr &targetExpr,
     const LocalMap &localsIn,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const Int32ProviderFn &allocTempLocal,
+    const ExprLocalsPredicateFn &emitExpr,
     const std::function<void(int32_t)> &emitStoreLocal,
     int32_t &ptrLocalOut);
 KeyValueLookupLoopLocals emitKeyValueLookupLoopSearchScaffold(
     int32_t ptrLocal,
     int32_t keyLocal,
     LocalInfo::ValueKind keyValueKeyKind,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<size_t()> &instructionCount,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    const std::function<void(size_t, uint64_t)> &patchInstructionImm);
+    const Int32ProviderFn &allocTempLocal,
+    const SizeProviderFn &instructionCount,
+    const EmitInstructionFn &emitInstruction,
+    const PatchInstructionImmFn &patchInstructionImm);
 void emitKeyValueLookupAccessEpilogue(
     const std::string &accessName,
     int32_t ptrLocal,
     int32_t indexLocal,
     int32_t countLocal,
-    const std::function<void()> &emitMapKeyNotFound,
-    const std::function<size_t()> &instructionCount,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    const std::function<void(size_t, uint64_t)> &patchInstructionImm);
+    const ActionFn &emitMapKeyNotFound,
+    const SizeProviderFn &instructionCount,
+    const EmitInstructionFn &emitInstruction,
+    const PatchInstructionImmFn &patchInstructionImm);
 bool emitKeyValueLookupAccess(
     const std::string &accessName,
     LocalInfo::ValueKind keyValueKeyKind,
@@ -459,14 +459,14 @@ bool emitKeyValueLookupAccess(
     const Expr &targetExpr,
     const Expr &lookupKeyExpr,
     const LocalMap &localsIn,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const Int32ProviderFn &allocTempLocal,
+    const ExprLocalsPredicateFn &emitExpr,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
-    const std::function<void()> &emitMapKeyNotFound,
-    const std::function<size_t()> &instructionCount,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    const ExprLocalsValueKindFn &inferExprKind,
+    const ActionFn &emitMapKeyNotFound,
+    const SizeProviderFn &instructionCount,
+    const EmitInstructionFn &emitInstruction,
+    const PatchInstructionImmFn &patchInstructionImm,
     std::string &error);
 bool emitKeyValueLookupContains(
     LocalInfo::ValueKind keyValueKeyKind,
@@ -474,13 +474,13 @@ bool emitKeyValueLookupContains(
     const Expr &targetExpr,
     const Expr &lookupKeyExpr,
     const LocalMap &localsIn,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const Int32ProviderFn &allocTempLocal,
+    const ExprLocalsPredicateFn &emitExpr,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
-    const std::function<size_t()> &instructionCount,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    const ExprLocalsValueKindFn &inferExprKind,
+    const SizeProviderFn &instructionCount,
+    const EmitInstructionFn &emitInstruction,
+    const PatchInstructionImmFn &patchInstructionImm,
     std::string &error);
 bool emitBuiltinCanonicalMapInsertOverwriteOrGrow(
     int32_t valuesLocal,
@@ -489,20 +489,20 @@ bool emitBuiltinCanonicalMapInsertOverwriteOrGrow(
     int32_t keyLocal,
     int32_t valueLocal,
     LocalInfo::ValueKind keyValueKeyKind,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<size_t()> &instructionCount,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    const std::function<void(size_t, uint64_t)> &patchInstructionImm);
+    const Int32ProviderFn &allocTempLocal,
+    const SizeProviderFn &instructionCount,
+    const EmitInstructionFn &emitInstruction,
+    const PatchInstructionImmFn &patchInstructionImm);
 void emitStringAccessLoad(
     const std::string &accessName,
     int32_t indexLocal,
     LocalInfo::ValueKind indexKind,
     size_t stringLength,
     int32_t stringIndex,
-    const std::function<void()> &emitStringIndexOutOfBounds,
-    const std::function<size_t()> &instructionCount,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    const std::function<void(size_t, uint64_t)> &patchInstructionImm);
+    const ActionFn &emitStringIndexOutOfBounds,
+    const SizeProviderFn &instructionCount,
+    const EmitInstructionFn &emitInstruction,
+    const PatchInstructionImmFn &patchInstructionImm);
 void emitArrayVectorAccessLoad(
     const std::string &accessName,
     int32_t ptrLocal,
@@ -512,76 +512,76 @@ void emitArrayVectorAccessLoad(
     uint64_t arrayHeaderSlots,
     int32_t elementSlotCount,
     bool loadElementValue,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<void()> &emitArrayIndexOutOfBounds,
-    const std::function<size_t()> &instructionCount,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    const std::function<void(size_t, uint64_t)> &patchInstructionImm);
+    const Int32ProviderFn &allocTempLocal,
+    const ActionFn &emitArrayIndexOutOfBounds,
+    const SizeProviderFn &instructionCount,
+    const EmitInstructionFn &emitInstruction,
+    const PatchInstructionImmFn &patchInstructionImm);
 KeyValueLookupLoopLocals emitKeyValueLookupLoopLocals(
     int32_t ptrLocal,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
+    const Int32ProviderFn &allocTempLocal,
+    const EmitInstructionFn &emitInstruction);
 KeyValueLookupLoopConditionAnchors emitKeyValueLookupLoopCondition(
     int32_t indexLocal,
     int32_t countLocal,
-    const std::function<size_t()> &instructionCount,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
+    const SizeProviderFn &instructionCount,
+    const EmitInstructionFn &emitInstruction);
 KeyValueLookupLoopMatchAnchors emitKeyValueLookupLoopMatchCheck(
     int32_t ptrLocal,
     int32_t indexLocal,
     int32_t keyLocal,
     LocalInfo::ValueKind keyValueKeyKind,
-    const std::function<size_t()> &instructionCount,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
+    const SizeProviderFn &instructionCount,
+    const EmitInstructionFn &emitInstruction);
 void emitKeyValueLookupLoopAdvanceAndPatch(
     size_t jumpNotMatch,
     size_t jumpLoopEnd,
     size_t jumpFound,
     size_t loopStart,
     int32_t indexLocal,
-    const std::function<size_t()> &instructionCount,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    const std::function<void(size_t, uint64_t)> &patchInstructionImm);
+    const SizeProviderFn &instructionCount,
+    const EmitInstructionFn &emitInstruction,
+    const PatchInstructionImmFn &patchInstructionImm);
 void emitKeyValueLookupAtKeyNotFoundGuard(
     int32_t indexLocal,
     int32_t countLocal,
-    const std::function<void()> &emitMapKeyNotFound,
-    const std::function<size_t()> &instructionCount,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    const std::function<void(size_t, uint64_t)> &patchInstructionImm);
+    const ActionFn &emitMapKeyNotFound,
+    const SizeProviderFn &instructionCount,
+    const EmitInstructionFn &emitInstruction,
+    const PatchInstructionImmFn &patchInstructionImm);
 void emitKeyValueLookupContainsResult(
     int32_t indexLocal,
     int32_t countLocal,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
+    const EmitInstructionFn &emitInstruction);
 void emitKeyValueLookupValueLoad(
     int32_t ptrLocal,
     int32_t indexLocal,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
+    const EmitInstructionFn &emitInstruction);
 bool emitKeyValueLookupTryAt(
     LocalInfo::ValueKind keyValueKeyKind,
     const std::string &mapStructTypeName,
     const Expr &targetExpr,
     const Expr &lookupKeyExpr,
     const LocalMap &localsIn,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const Int32ProviderFn &allocTempLocal,
+    const ExprLocalsPredicateFn &emitExpr,
     const std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)> &resolveStringTableTarget,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
-    const std::function<size_t()> &instructionCount,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    const ExprLocalsValueKindFn &inferExprKind,
+    const SizeProviderFn &instructionCount,
+    const EmitInstructionFn &emitInstruction,
+    const PatchInstructionImmFn &patchInstructionImm,
     std::string &error);
 bool validateKeyValueLookupKeyKind(LocalInfo::ValueKind keyValueKeyKind,
                               LocalInfo::ValueKind lookupKeyKind,
                               std::string &error);
 CountMethodFallbackResult tryEmitNonMethodCountFallback(
     const Expr &expr,
-    const std::function<bool(const Expr &)> &isArrayCountCall,
-    const std::function<bool(const Expr &)> &isStringCountCall,
+    const ExprPredicateFn &isArrayCountCall,
+    const ExprPredicateFn &isStringCountCall,
     const std::function<const Definition *(const Expr &)> &resolveMethodCallDefinition,
     const std::function<bool(const Expr &, const Definition &)> &emitInlineDefinitionCall,
     std::string &error,
-    std::function<bool(const Expr &)> isCollectionAccessReceiverExpr = {});
+    ExprPredicateFn isCollectionAccessReceiverExpr = {});
 
 bool buildOrderedCallArguments(const Expr &callExpr,
                                const std::vector<Expr> &params,

@@ -34,14 +34,10 @@ struct StringIndexOps {
 };
 
 using InternStringFn = std::function<int32_t(const std::string &)>;
-using EmitInstructionFn = std::function<void(IrOpcode, uint64_t)>;
 using LookupStringBindingFn = std::function<StringBindingInfo(const std::string &)>;
 using ResolveArrayAccessNameFn = std::function<bool(const Expr &, std::string &)>;
 using ResolveStringIndexOpsFn = std::function<bool(const Expr &, const std::string &, StringIndexOps &, std::string &)>;
 using InferCallValueKindFn = std::function<LocalInfo::ValueKind(const Expr &)>;
-using EmitArrayIndexOutOfBoundsFn = std::function<void()>;
-using GetInstructionCountFn = std::function<size_t()>;
-using PatchInstructionImmFn = std::function<void(size_t, int32_t)>;
 
 StringCallEmitResult emitLiteralOrBindingStringCallValue(const Expr &arg,
                                                          const InternStringFn &internString,
@@ -60,9 +56,9 @@ StringCallEmitResult emitCallStringCallValue(const Expr &arg,
                                              const ExprPredicateFn &inferCallReturnsString,
                                              const Int32ProviderFn &allocTempLocal,
                                              const EmitInstructionFn &emitInstruction,
-                                             const GetInstructionCountFn &getInstructionCount,
+                                             const SizeProviderFn &getInstructionCount,
                                              const PatchInstructionImmFn &patchInstructionImm,
-                                             const EmitArrayIndexOutOfBoundsFn &emitArrayIndexOutOfBounds,
+                                             const ActionFn &emitArrayIndexOutOfBounds,
                                              StringCallSource &sourceOut,
                                              bool &argvCheckedOut,
                                              std::string &error);
@@ -77,9 +73,9 @@ bool emitStringValueForCallFromLocals(const Expr &arg,
                                       const ExprPredicateFn &inferCallReturnsString,
                                       const InferCallValueKindFn &inferCallValueKind,
                                       const Int32ProviderFn &allocTempLocal,
-                                      const GetInstructionCountFn &getInstructionCount,
+                                      const SizeProviderFn &getInstructionCount,
                                       const PatchInstructionImmFn &patchInstructionImm,
-                                      const EmitArrayIndexOutOfBoundsFn &emitArrayIndexOutOfBounds,
+                                      const ActionFn &emitArrayIndexOutOfBounds,
                                       LocalInfo::StringSource &sourceOut,
                                       int32_t &stringIndexOut,
                                       bool &argvCheckedOut,
@@ -94,9 +90,9 @@ bool emitStringValueForCallFromLocals(const Expr &arg,
                                       const ExprPredicateFn &emitExpr,
                                       const ExprPredicateFn &inferCallReturnsString,
                                       const Int32ProviderFn &allocTempLocal,
-                                      const GetInstructionCountFn &getInstructionCount,
+                                      const SizeProviderFn &getInstructionCount,
                                       const PatchInstructionImmFn &patchInstructionImm,
-                                      const EmitArrayIndexOutOfBoundsFn &emitArrayIndexOutOfBounds,
+                                      const ActionFn &emitArrayIndexOutOfBounds,
                                       LocalInfo::StringSource &sourceOut,
                                       int32_t &stringIndexOut,
                                       bool &argvCheckedOut,

@@ -20,13 +20,10 @@ struct SemanticProductTargetAdapter;
 
 using EmitConversionsAndCallsStatementWithLocalsFn = std::function<bool(const Expr &, LocalMap &)>;
 using InferConversionsAndCallsExprKindWithLocalsFn =
-    std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)>;
+    ExprLocalsValueKindFn;
 using CombineConversionsAndCallsNumericKindsFn =
     std::function<LocalInfo::ValueKind(LocalInfo::ValueKind, LocalInfo::ValueKind)>;
 using EmitConversionsAndCallsCompareToZeroFn = std::function<bool(LocalInfo::ValueKind, bool)>;
-using EmitConversionsAndCallsFloatToIntNonFiniteFn = std::function<void()>;
-using EmitConversionsAndCallsPointerIndexOutOfBoundsFn = std::function<void()>;
-using EmitConversionsAndCallsArrayIndexOutOfBoundsFn = std::function<void()>;
 using ResolveConversionsAndCallsStringTableTargetFn =
     std::function<bool(const Expr &, const LocalMap &, int32_t &, size_t &)>;
 using ConversionsAndCallsValueKindFromTypeNameFn = std::function<LocalInfo::ValueKind(const std::string &)>;
@@ -46,8 +43,6 @@ using ResolveConversionsAndCallsDefinitionCallFn = std::function<const Definitio
 using LowerConversionsAndCallsMatchToIfFn = std::function<bool(const Expr &, Expr &, std::string &)>;
 using ConversionsAndCallsBindingKindFn = std::function<LocalInfo::Kind(const Expr &)>;
 using ConversionsAndCallsBindingValueKindFn = std::function<LocalInfo::ValueKind(const Expr &, LocalInfo::Kind)>;
-using EnterConversionsAndCallsScopedBlockFn = std::function<void()>;
-using ExitConversionsAndCallsScopedBlockFn = std::function<void()>;
 
 bool emitConversionsAndCallsOperatorExpr(
     const Expr &expr,
@@ -57,9 +52,9 @@ bool emitConversionsAndCallsOperatorExpr(
     const InferConversionsAndCallsExprKindWithLocalsFn &inferExprKind,
     const EmitConversionsAndCallsCompareToZeroFn &emitCompareToZero,
     const Int32ProviderFn &allocTempLocal,
-    const EmitConversionsAndCallsFloatToIntNonFiniteFn &emitFloatToIntNonFinite,
-    const EmitConversionsAndCallsPointerIndexOutOfBoundsFn &emitPointerIndexOutOfBounds,
-    const EmitConversionsAndCallsArrayIndexOutOfBoundsFn &emitArrayIndexOutOfBounds,
+    const ActionFn &emitFloatToIntNonFinite,
+    const ActionFn &emitPointerIndexOutOfBounds,
+    const ActionFn &emitArrayIndexOutOfBounds,
     const ResolveConversionsAndCallsStringTableTargetFn &resolveStringTableTarget,
     const ConversionsAndCallsValueKindFromTypeNameFn &valueKindFromTypeName,
     const ConversionsAndCallsGetMathConstantNameFn &getMathConstantName,
@@ -84,9 +79,9 @@ bool emitConversionsAndCallsOperatorExpr(
     const InferConversionsAndCallsExprKindWithLocalsFn &inferExprKind,
     const EmitConversionsAndCallsCompareToZeroFn &emitCompareToZero,
     const Int32ProviderFn &allocTempLocal,
-    const EmitConversionsAndCallsFloatToIntNonFiniteFn &emitFloatToIntNonFinite,
-    const EmitConversionsAndCallsPointerIndexOutOfBoundsFn &emitPointerIndexOutOfBounds,
-    const EmitConversionsAndCallsArrayIndexOutOfBoundsFn &emitArrayIndexOutOfBounds,
+    const ActionFn &emitFloatToIntNonFinite,
+    const ActionFn &emitPointerIndexOutOfBounds,
+    const ActionFn &emitArrayIndexOutOfBounds,
     const ResolveConversionsAndCallsStringTableTargetFn &resolveStringTableTarget,
     const ConversionsAndCallsValueKindFromTypeNameFn &valueKindFromTypeName,
     const ConversionsAndCallsGetMathConstantNameFn &getMathConstantName,
@@ -117,8 +112,8 @@ bool emitConversionsAndCallsControlExprTail(
     const InferConversionsAndCallsStructExprPathFn &inferStructExprPath,
     const ExprLocalInfoVisitorFn &applyStructArrayInfo,
     const ExprLocalInfoVisitorFn &applyStructValueInfo,
-    const EnterConversionsAndCallsScopedBlockFn &enterScopedBlock,
-    const ExitConversionsAndCallsScopedBlockFn &exitScopedBlock,
+    const ActionFn &enterScopedBlock,
+    const ActionFn &exitScopedBlock,
     const ExprPredicateFn &isReturnCall,
     const ExprPredicateFn &isBlockCall,
     const ExprPredicateFn &isMatchCall,

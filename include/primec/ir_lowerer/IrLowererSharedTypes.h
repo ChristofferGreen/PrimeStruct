@@ -6,6 +6,8 @@
 #include <unordered_map>
 
 #include "primec/ast/Ast.h"
+#include "primec/ir/Ir.h"
+#include "primec/support/CallbackTypes.h"
 
 namespace primec::ir_lowerer {
 
@@ -100,6 +102,8 @@ using LocalMap = std::unordered_map<std::string, LocalInfo>;
 using ExprLocalsPredicateFn = std::function<bool(const Expr &, const LocalMap &)>;
 using ExprLocalInfoVisitorFn = std::function<void(const Expr &, LocalInfo &)>;
 using ExprLocalsValueKindFn = std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)>;
+using EmitInstructionFn = std::function<void(IrOpcode, uint64_t)>;
+using PatchInstructionImmFn = std::function<void(size_t, uint64_t)>;
 
 struct ReturnInfo {
   bool returnsVoid = false;
