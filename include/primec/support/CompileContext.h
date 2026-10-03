@@ -34,6 +34,18 @@ public:
 
   TypeNameCaches typeNames;
 
+  // Memos of pure name classifiers that run once per expression in the front end
+  // (isSimpleCallName in semantics and lowering, isRootBuiltinName,
+  // getBuiltinArrayAccessName). Keys join every input with NUL separators; inserts
+  // run under a SystemHeapScope like the other caches.
+  struct NameClassifierCaches {
+    std::unordered_map<std::string, bool> simpleCallNames;
+    std::unordered_map<std::string, bool> rootBuiltinNames;
+    std::unordered_map<std::string, std::pair<bool, std::string>> builtinArrayAccessNames;
+  };
+
+  NameClassifierCaches nameClassifiers;
+
   // Memo of findStdlibSurfaceMetadataByResolvedPath: resolved path -> metadata of
   // the (process-wide, immutable) stdlib surface registry. Inserted under a
   // SystemHeapScope.

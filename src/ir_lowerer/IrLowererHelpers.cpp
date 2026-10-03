@@ -1,3 +1,5 @@
+#include "primec/support/CompileContext.h"
+#include "primec/support/CompileArena.h"
 #include "primec/ir_lowerer/IrLowererHelpers.h"
 
 #include <cctype>
@@ -209,7 +211,7 @@ std::string specializedExperimentalSoaVectorStructPathForElementType(
   return specializedPath.str();
 }
 
-bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
+static bool isSimpleCallNameUncached(const Expr &expr, const char *nameToMatch) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
@@ -292,6 +294,29 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
     return false;
   }
   return name == targetName;
+}
+
+bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  // A pure function of (name, namespace prefix, target); see the semantics twin.
+  std::string key;
+  key.reserve(expr.name.size() + expr.namespacePrefix.size() + 24);
+  key.push_back('l');
+  key.append(expr.name).push_back('\0');
+  key.append(expr.namespacePrefix).push_back('\0');
+  key.append(nameToMatch == nullptr ? "" : nameToMatch);
+  auto &cache = CompileContext::current().nameClassifiers.simpleCallNames;
+  if (const auto it = cache.find(key); it != cache.end()) {
+    return it->second;
+  }
+  const bool result = isSimpleCallNameUncached(expr, nameToMatch);
+  {
+    primec::SystemHeapScope systemHeapGuard;
+    cache.emplace(key, result);
+  }
+  return result;
 }
 
 namespace {

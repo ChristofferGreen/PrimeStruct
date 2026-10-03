@@ -1,3 +1,4 @@
+#include "primec/support/CompileContext.h"
 #include "SemanticsHelpers.h"
 
 #include "StdlibCollectionSurfaceHelpers.h"
@@ -260,7 +261,7 @@ bool getBuiltinMutationName(const Expr &expr, std::string &out) {
   return false;
 }
 
-bool isRootBuiltinName(const std::string &name) {
+static bool isRootBuiltinNameUncached(const std::string &name) {
   if (name.empty()) {
     return false;
   }
@@ -310,6 +311,19 @@ bool isRootBuiltinName(const std::string &name) {
          (isStdGpuQualified &&
           (normalized == "dispatch" || normalized == "buffer" || normalized == "upload" || normalized == "readback" ||
            normalized == "buffer_load" || normalized == "buffer_store"));
+}
+
+bool isRootBuiltinName(const std::string &name) {
+  auto &cache = CompileContext::current().nameClassifiers.rootBuiltinNames;
+  if (const auto it = cache.find(name); it != cache.end()) {
+    return it->second;
+  }
+  const bool result = isRootBuiltinNameUncached(name);
+  {
+    primec::SystemHeapScope systemHeapGuard;
+    cache.emplace(name, result);
+  }
+  return result;
 }
 
 bool getBuiltinClampName(const Expr &expr, std::string &out, bool allowBare) {

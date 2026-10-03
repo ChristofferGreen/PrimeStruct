@@ -1,3 +1,5 @@
+#include "primec/support/CompileContext.h"
+#include "primec/support/CompileArena.h"
 #include "SemanticsHelpers.h"
 #include "StdlibCollectionSurfaceHelpers.h"
 
@@ -91,7 +93,7 @@ bool isAssignCall(const Expr &expr) {
   return name == "assign";
 }
 
-bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
+static bool isSimpleCallNameUncached(const Expr &expr, const char *nameToMatch) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
@@ -116,6 +118,29 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   }
   name = stripTemplateSpecializationSuffix(name);
   return name == targetName;
+}
+
+bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  // A pure function of (name, target): memoized per compilation because the front end
+  // asks it for every expression against dozens of builtin names.
+  std::string key;
+  key.reserve(expr.name.size() + 24);
+  key.push_back('s');
+  key.append(expr.name).push_back('\0');
+  key.append(nameToMatch == nullptr ? "" : nameToMatch);
+  auto &cache = CompileContext::current().nameClassifiers.simpleCallNames;
+  if (const auto it = cache.find(key); it != cache.end()) {
+    return it->second;
+  }
+  const bool result = isSimpleCallNameUncached(expr, nameToMatch);
+  {
+    primec::SystemHeapScope systemHeapGuard;
+    cache.emplace(key, result);
+  }
+  return result;
 }
 
 bool isIfCall(const Expr &expr) {

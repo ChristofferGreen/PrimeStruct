@@ -1,3 +1,4 @@
+#include "primec/support/CompileContext.h"
 #include "SemanticsHelpers.h"
 
 #include "StdlibCollectionSurfaceHelpers.h"
@@ -224,7 +225,7 @@ primec::BuiltinArrayAccessAliasResult semanticsKeyValueLookup(std::string_view n
 // (4)). This function's own inline logic previously duplicated the
 // classifier's `classifyBuiltinArrayAccessNameForSemantics` composition
 // bit-for-bit; the two are no longer separately maintained.
-bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
+static bool getBuiltinArrayAccessNameUncached(const Expr &expr, std::string &out) {
   if (expr.name.empty()) {
     return false;
   }
@@ -247,6 +248,33 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
       name, rawName, "std/collections/", experimentalCollectionMemberRootLocal("vector"),
       experimentalCollectionMemberRootLocal("map"), collectionMemberRootLocal("vector"),
       semanticsKeyValueLookup, out);
+}
+
+bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
+  if (expr.name.empty()) {
+    return false;
+  }
+  std::string key;
+  key.reserve(expr.name.size() + expr.namespacePrefix.size() + 2);
+  key.append(expr.name).push_back('\0');
+  key.append(expr.namespacePrefix);
+  auto &cache = CompileContext::current().nameClassifiers.builtinArrayAccessNames;
+  if (const auto it = cache.find(key); it != cache.end()) {
+    if (it->second.first) {
+      out = it->second.second;
+    }
+    return it->second.first;
+  }
+  std::string resultName;
+  const bool result = getBuiltinArrayAccessNameUncached(expr, resultName);
+  {
+    primec::SystemHeapScope systemHeapGuard;
+    cache.emplace(key, std::pair<bool, std::string>(result, result ? resultName : std::string()));
+  }
+  if (result) {
+    out = std::move(resultName);
+  }
+  return result;
 }
 
 bool getNamespacedCollectionHelperName(const Expr &expr, std::string &collectionOut, std::string &helperOut) {
