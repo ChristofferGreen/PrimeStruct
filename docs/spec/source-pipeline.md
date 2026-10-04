@@ -52,7 +52,9 @@ Pipeline operating rules:
     pairs, `dup; store; pop`, `x+0`, `x*1`, `x/1`, double negation, and `cmp; push 0; ne` on a comparison result),
     and `dead-store` (stores to locals that are never read, for locals not reachable through memory), all enabled from
     `-O1`; and `copy-prop` (loads of a copy read the original local, using a forward analysis over the CFG; skipped for
-    functions that take local addresses), enabled from `-O2`. `-O3` currently selects the same passes as `-O2`.
+    functions that take local addresses) and `loop-rotate` (a loop whose header is two pure pushes, an integer comparison
+    and the exit branch gets that test copied, inverted, onto its back edge, removing one jump per iteration; VM target
+    only), enabled from `-O2`. `-O3` currently selects the same passes as `-O2`.
   - `--opt-pass <name>` enables a pass regardless of level, `--no-opt-pass <name>` disables one (a disable wins), and
     unknown names are errors. A pass that does not support the target (control-flow rewriting is skipped for wasm and
     GLSL/SPIR-V; GLSL/SPIR-V run no passes) is skipped when selected by level and is an error when named explicitly.

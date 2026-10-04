@@ -520,7 +520,10 @@ Later work (2026-10-04, same machine, run time only, best of 60): the fast VM ke
 computed-goto table (`VmFastKernel.cpp`; one indirect branch per opcode instead of one shared by the switch), which
 took primevm from 171 ms to 148 ms on json_parse, 78 to 72 ms on json_scan and 95 to 63 ms on aggregate (these include
 the compile); the native emitter's branchless guarded adds, 32-byte jump placement and loop-header alignment took
-native -O2 from 17.5 ms to 12.7 ms on json_parse and from 9.4 to 8.2 ms on json_scan. Measured dead ends: sharing
+native -O2 from 17.5 ms to 12.7 ms on json_parse and from 9.4 to 8.2 ms on json_scan. The IR pass `loop-rotate` (VM target, -O2) copies a
+counting loop's header test onto its back edge with the comparison inverted, taking json_parse in primevm from 149 to
+140 ms; on native it cost about 8% (the padding in front of the new compare-and-jump runs every iteration), so the
+pass is VM-only. Measured dead ends: sharing
 promotion registers by liveness, a per-expression `resolveCalleePath` memo (front end), and 8-bit immediate encodings
 for add/sub/cmp (json_parse 12.9 to 15.5 ms: denser code puts more instructions in each 32-byte window than the
 decoded-instruction cache holds).

@@ -454,6 +454,7 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ir/IrInliner.cpp
   src/ir/IrOptimizer.cpp
   src/ir/optimizer/IrPassCfgSimplify.cpp
+  src/ir/optimizer/IrPassLoopRotate.cpp
   src/ir/optimizer/IrPassConstFold.cpp
   src/ir/optimizer/IrPassCopyProp.cpp
   src/ir/optimizer/IrPassDeadStore.cpp

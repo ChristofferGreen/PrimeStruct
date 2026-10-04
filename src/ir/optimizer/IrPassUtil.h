@@ -131,5 +131,9 @@ bool runDeadStorePass(IrModule &module,
                       const IrPassContext &context,
                       bool &changed,
                       std::string &error);
+bool runLoopRotatePass(IrModule &module,
+                       const IrPassContext &context,
+                       bool &changed,
+                       std::string &error);
 
 } // namespace primec::ir_opt
