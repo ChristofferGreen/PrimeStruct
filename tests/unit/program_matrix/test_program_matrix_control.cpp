@@ -828,6 +828,96 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+// IEEE comparisons: with a NaN operand everything but != is false. x86 comiss/comisd and arm64
+// fcmp report an unordered pair through flags that "equal", "below" and signed "less" read as
+// true, so the native backends compare less-than the other way round and check parity.
+TEST_CASE("float comparisons are false on NaN except not-equal") {
+  program_matrix::ProgramCase program;
+  program.name = "nan_comparisons";
+  program.source = R"(
+[return<int>]
+flags([f64] a, [f64] b) {
+  [i32 mut] bits{0i32}
+  if(equal(a, b)) {
+    assign(bits, plus(bits, 1i32))
+  }
+  if(not_equal(a, b)) {
+    assign(bits, plus(bits, 2i32))
+  }
+  if(less_than(a, b)) {
+    assign(bits, plus(bits, 4i32))
+  }
+  if(less_equal(a, b)) {
+    assign(bits, plus(bits, 8i32))
+  }
+  if(greater_than(a, b)) {
+    assign(bits, plus(bits, 16i32))
+  }
+  if(greater_equal(a, b)) {
+    assign(bits, plus(bits, 32i32))
+  }
+  return(bits)
+}
+
+[return<int>]
+flags32([f32] a, [f32] b) {
+  [i32 mut] bits{0i32}
+  if(equal(a, b)) {
+    assign(bits, plus(bits, 1i32))
+  }
+  if(not_equal(a, b)) {
+    assign(bits, plus(bits, 2i32))
+  }
+  if(less_than(a, b)) {
+    assign(bits, plus(bits, 4i32))
+  }
+  if(less_equal(a, b)) {
+    assign(bits, plus(bits, 8i32))
+  }
+  if(greater_than(a, b)) {
+    assign(bits, plus(bits, 16i32))
+  }
+  if(greater_equal(a, b)) {
+    assign(bits, plus(bits, 32i32))
+  }
+  return(bits)
+}
+
+[return<int> effects(io_out)]
+main() {
+  [f64] zero{0.0f64}
+  [f64] nan{divide(zero, zero)}
+  [f32] zero32{0.0f32}
+  [f32] nan32{divide(zero32, zero32)}
+  print_line(flags(nan, 1.0f64))
+  print_line(flags(1.0f64, nan))
+  print_line(flags(nan, nan))
+  print_line(flags(1.0f64, 2.0f64))
+  print_line(flags(2.0f64, 2.0f64))
+  print_line(flags(3.0f64, 2.0f64))
+  print_line(flags32(nan32, 1.0f32))
+  print_line(flags32(nan32, nan32))
+  print_line(flags32(1.0f32, 2.0f32))
+  print_line(flags32(2.0f32, 2.0f32))
+  [i32 mut] direct{0i32}
+  if(less_than(nan, zero)) {
+    assign(direct, plus(direct, 1i32))
+  }
+  if(equal(nan, nan)) {
+    assign(direct, plus(direct, 2i32))
+  }
+  if(not_equal(nan, nan)) {
+    assign(direct, plus(direct, 4i32))
+  }
+  print_line(direct)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "2\n2\n2\n14\n41\n50\n2\n2\n14\n41\n4\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_CASE("i32 loops keep wrapping in promoted locals and fused updates") {
   program_matrix::ProgramCase program;
   program.name = "i32_wrap_loops";

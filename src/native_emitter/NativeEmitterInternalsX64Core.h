@@ -925,6 +925,10 @@ inline X64Emitter::CondCode X64Emitter::invertCond(CondCode cond) {
       return CondCode::BelowEq;
     case CondCode::AboveEq:
       return CondCode::Below;
+    case CondCode::Parity:
+      return CondCode::NoParity;
+    case CondCode::NoParity:
+      return CondCode::Parity;
   }
   return CondCode::Ne;
 }

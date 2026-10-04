@@ -131,11 +131,11 @@ inline void Arm64Emitter::emitCmpNeF32() {
 }
 
 inline void Arm64Emitter::emitCmpLtF32() {
-  emitCompareAndPushFloat(false, CondCode::Lt);
+  emitCompareAndPushFloat(false, CondCode::Mi);
 }
 
 inline void Arm64Emitter::emitCmpLeF32() {
-  emitCompareAndPushFloat(false, CondCode::Le);
+  emitCompareAndPushFloat(false, CondCode::Ls);
 }
 
 inline void Arm64Emitter::emitCmpGtF32() {
@@ -155,11 +155,11 @@ inline void Arm64Emitter::emitCmpNeF64() {
 }
 
 inline void Arm64Emitter::emitCmpLtF64() {
-  emitCompareAndPushFloat(true, CondCode::Lt);
+  emitCompareAndPushFloat(true, CondCode::Mi);
 }
 
 inline void Arm64Emitter::emitCmpLeF64() {
-  emitCompareAndPushFloat(true, CondCode::Le);
+  emitCompareAndPushFloat(true, CondCode::Ls);
 }
 
 inline void Arm64Emitter::emitCmpGtF64() {
@@ -300,6 +300,9 @@ inline void Arm64Emitter::emitFloatUnaryOp(bool isF64, uint32_t opD, uint32_t op
   emitPushReg(0);
 }
 
+// fcmp sets NZCV to 0011 for an unordered pair (a NaN operand), which the signed LT and LE
+// conditions would read as true; float less-than uses MI and less-or-equal LS instead, so every
+// comparison but != is false on NaN, as on the VM.
 inline void Arm64Emitter::emitCompareAndPushFloat(bool isF64, CondCode cond) {
   emitPopReg(0);
   emitPopReg(1);

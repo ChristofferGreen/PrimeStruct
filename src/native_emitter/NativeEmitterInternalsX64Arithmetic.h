@@ -32,6 +32,18 @@ inline void X64Emitter::emitXorRegReg(uint8_t rd, uint8_t rs) {
   emitModRmReg(rs, rd);
 }
 
+inline void X64Emitter::emitAndRegReg(uint8_t rd, uint8_t rs) {
+  emitRex(true, rs, rd);
+  emitByte(0x21); // AND r/m64, r64
+  emitModRmReg(rs, rd);
+}
+
+inline void X64Emitter::emitOrRegReg(uint8_t rd, uint8_t rs) {
+  emitRex(true, rs, rd);
+  emitByte(0x09); // OR r/m64, r64
+  emitModRmReg(rs, rd);
+}
+
 inline void X64Emitter::emitCqo() {
   emitByte(0x48); // REX.W
   emitByte(0x99); // CQO: sign-extend rax into rdx:rax
@@ -102,6 +114,10 @@ inline uint8_t X64Emitter::condCodeValue(CondCode cc) {
       return 0x7;
     case CondCode::AboveEq:
       return 0x3;
+    case CondCode::Parity:
+      return 0xA;
+    case CondCode::NoParity:
+      return 0xB;
   }
   return 0x5;
 }
@@ -285,14 +301,50 @@ inline void X64Emitter::emitFloatNegate(bool isF64) {
   emitPushReg(0);
 }
 
+inline void
+X64Emitter::emitFloatCompareToReg(bool isF64, CondCode cc, uint8_t a, uint8_t b, uint8_t target) {
+  // comiss/comisd report an unordered pair (a NaN operand) as ZF=PF=CF=1, which "equal",
+  // "below" and "below or equal" would all read as true. Less-than compares the operands the
+  // other way round as "above" (CF=0 and ZF=0, false when unordered), and equality also checks
+  // PF. The xors come first because they set the flags.
+  emitXorRegReg(target, target);
+  if (cc == CondCode::Eq || cc == CondCode::Ne) {
+    emitXorRegReg(1, 1);
+  }
+  switch (cc) {
+  case CondCode::Below:
+    emitComiss(isF64, b, a);
+    emitSetccReg(target, CondCode::Above);
+    return;
+  case CondCode::BelowEq:
+    emitComiss(isF64, b, a);
+    emitSetccReg(target, CondCode::AboveEq);
+    return;
+  case CondCode::Eq:
+    emitComiss(isF64, a, b);
+    emitSetccReg(target, CondCode::Eq);
+    emitSetccReg(1, CondCode::NoParity);
+    emitAndRegReg(target, 1);
+    return;
+  case CondCode::Ne:
+    emitComiss(isF64, a, b);
+    emitSetccReg(target, CondCode::Ne);
+    emitSetccReg(1, CondCode::Parity);
+    emitOrRegReg(target, 1);
+    return;
+  default:
+    emitComiss(isF64, a, b);
+    emitSetccReg(target, cc);
+    return;
+  }
+}
+
 inline void X64Emitter::emitFloatCompareAndPush(bool isF64, CondCode cc) {
   emitPopReg(1); // b
   emitPopReg(0); // a
   emitMovqXmmFromReg(1, 1);
   emitMovqXmmFromReg(0, 0);
-  emitComiss(isF64, 0, 1); // flags from a <-> b (unsigned-style flags per COMISS)
-  emitSetccReg(0, cc);
-  emitMovzxReg8(0, 0);
+  emitFloatCompareToReg(isF64, cc, 0, 1, 0);
   emitPushReg(0);
 }
 

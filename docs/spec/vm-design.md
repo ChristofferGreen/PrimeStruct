@@ -35,6 +35,9 @@
   frame stores locals in 16-byte slots while the operand stack stores raw `u64` values interpreted by opcode (ints,
   floats as bits, and indices). Indirect addresses are byte offsets into the active frame’s local slot space and must be
   16-byte aligned.
+- **Float comparisons:** `CmpEq/Ne/Lt/Le/Gt/GeF32/F64` follow IEEE 754: when either operand is NaN, every comparison is
+  false except `CmpNe`, which is true. The VM, native (x86_64 and arm64), Wasm and C++ backends all agree; the
+  `nan_comparisons` program-matrix case checks it.
 - **Execution kernels:** plain runs (`primevm`, `--emit=vm`, embedded scripts) use a flat loop when every function
   passes the shared CFG analysis (consistent stack depths, valid jump targets, balanced returns, an entry without
   parameters): it keeps the instruction pointer, operand-stack pointer and locals pointer in registers and fuses common

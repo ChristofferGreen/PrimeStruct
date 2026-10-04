@@ -586,7 +586,7 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
       case IrOpcode::CmpLeF64:
       case IrOpcode::CmpGtF64:
       case IrOpcode::CmpGeF64: {
-        // The conditions of emitFloatCompareAndPush, on comiss/comisd flags.
+        // The conditions of emitFloatCompareAndPush (false on NaN except for !=).
         CondCode cc = CondCode::Eq;
         switch (ir.op) {
         case IrOpcode::CmpNeF32:
@@ -617,9 +617,7 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
         const uint8_t right = xmmOf(instruction.uses[1], 1);
         const uint32_t d = instruction.defs[0];
         const uint8_t target = targetReg(d, -1);
-        emitXorRegReg(target, target); // before the compare: xor sets the flags
-        emitComiss(isF64, left, right);
-        emitSetccReg(target, cc);
+        emitFloatCompareToReg(isF64, cc, left, right, target);
         storeValue(d, target);
         break;
       }

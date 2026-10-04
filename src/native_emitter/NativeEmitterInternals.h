@@ -336,44 +336,50 @@ class Arm64Emitter {
   }
 
  private:
-  enum class CondCode : uint8_t {
-    Eq = 0x0,
-    Ne = 0x1,
-    Hs = 0x2,
-    Lo = 0x3,
-    Hi = 0x8,
-    Ls = 0x9,
-    Ge = 0xA,
-    Lt = 0xB,
-    Gt = 0xC,
-    Le = 0xD,
-  };
+   enum class CondCode : uint8_t {
+     Eq = 0x0,
+     Ne = 0x1,
+     Hs = 0x2,
+     Lo = 0x3,
+     Mi = 0x4, // negative: a float "less than" that is false when unordered
+     Pl = 0x5,
+     Hi = 0x8,
+     Ls = 0x9,
+     Ge = 0xA,
+     Lt = 0xB,
+     Gt = 0xC,
+     Le = 0xD,
+   };
 
-  static CondCode invertCond(CondCode cond) {
-    switch (cond) {
-      case CondCode::Eq:
-        return CondCode::Ne;
-      case CondCode::Ne:
-        return CondCode::Eq;
-      case CondCode::Hs:
-        return CondCode::Lo;
-      case CondCode::Lo:
-        return CondCode::Hs;
-      case CondCode::Hi:
-        return CondCode::Ls;
-      case CondCode::Ls:
-        return CondCode::Hi;
-      case CondCode::Ge:
-        return CondCode::Lt;
-      case CondCode::Lt:
-        return CondCode::Ge;
-      case CondCode::Gt:
-        return CondCode::Le;
-      case CondCode::Le:
-        return CondCode::Gt;
-    }
-    return CondCode::Ne;
-  }
+   static CondCode invertCond(CondCode cond) {
+     switch (cond) {
+     case CondCode::Eq:
+       return CondCode::Ne;
+     case CondCode::Ne:
+       return CondCode::Eq;
+     case CondCode::Hs:
+       return CondCode::Lo;
+     case CondCode::Lo:
+       return CondCode::Hs;
+     case CondCode::Mi:
+       return CondCode::Pl;
+     case CondCode::Pl:
+       return CondCode::Mi;
+     case CondCode::Hi:
+       return CondCode::Ls;
+     case CondCode::Ls:
+       return CondCode::Hi;
+     case CondCode::Ge:
+       return CondCode::Lt;
+     case CondCode::Lt:
+       return CondCode::Ge;
+     case CondCode::Gt:
+       return CondCode::Le;
+     case CondCode::Le:
+       return CondCode::Gt;
+     }
+     return CondCode::Ne;
+   }
 
   void emit(uint32_t word);
   void patchWord(size_t index, uint32_t word);

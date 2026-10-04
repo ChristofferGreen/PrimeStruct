@@ -317,196 +317,203 @@ class X64Emitter {
   }
 
  private:
-  enum class CondCode : uint8_t {
-    Eq,
-    Ne,
-    Lt,
-    Le,
-    Gt,
-    Ge,
-    Below,
-    BelowEq,
-    Above,
-    AboveEq,
-  };
+   enum class CondCode : uint8_t {
+     Eq,
+     Ne,
+     Lt,
+     Le,
+     Gt,
+     Ge,
+     Below,
+     BelowEq,
+     Above,
+     AboveEq,
+     Parity,   // an unordered float comparison (a NaN operand)
+     NoParity, // an ordered one
+   };
 
-  static CondCode invertCond(CondCode cond);
+   static CondCode invertCond(CondCode cond);
 
-  void emitByte(uint8_t byte);
-  void emitU32(uint32_t value);
-  void emitU64(uint64_t value);
-  void patchByte(size_t index, uint8_t byte);
-  void patchU32(size_t index, uint32_t value);
+   void emitByte(uint8_t byte);
+   void emitU32(uint32_t value);
+   void emitU64(uint64_t value);
+   void patchByte(size_t index, uint8_t byte);
+   void patchU32(size_t index, uint32_t value);
 
-  // REX prefix: 0100WRXB. `w`=64-bit operand, `regExt`/`rmExt` are the
-  // high bit of a 4-bit register index used in the ModRM.reg / ModRM.rm
-  // (or opcode-embedded) field respectively.
-  void emitRex(bool w, uint8_t reg, uint8_t rmOrBase);
-  void emitModRmReg(uint8_t reg, uint8_t rm);        // mod=11 (register-direct)
-  void emitModRmBaseDisp32(uint8_t reg, uint8_t base, int32_t disp);
-  size_t emitModRmRipRelPlaceholder(uint8_t reg);    // mod=00 rm=101, returns disp32 fixup index
+   // REX prefix: 0100WRXB. `w`=64-bit operand, `regExt`/`rmExt` are the
+   // high bit of a 4-bit register index used in the ModRM.reg / ModRM.rm
+   // (or opcode-embedded) field respectively.
+   void emitRex(bool w, uint8_t reg, uint8_t rmOrBase);
+   void emitModRmReg(uint8_t reg, uint8_t rm); // mod=11 (register-direct)
+   void emitModRmBaseDisp32(uint8_t reg, uint8_t base, int32_t disp);
+   size_t emitModRmRipRelPlaceholder(uint8_t reg); // mod=00 rm=101, returns disp32 fixup index
 
-  void emitMovRegImm64(uint8_t rd, uint64_t imm);
-  void emitMovRegReg(uint8_t rd, uint8_t rs);
-  void emitLoadMem(uint8_t rd, uint8_t base, int32_t disp);
-  void emitStoreMem(uint8_t base, int32_t disp, uint8_t rs);
-  void emitAddRegImm32(uint8_t rd, int32_t imm);
-  void emitSubRegImm32(uint8_t rd, int32_t imm);
-  void emitPushReg64(uint8_t reg);
-  void emitPopReg64(uint8_t reg);
-  void emitSyscall();
-  void emitRet();
+   void emitMovRegImm64(uint8_t rd, uint64_t imm);
+   void emitMovRegReg(uint8_t rd, uint8_t rs);
+   void emitLoadMem(uint8_t rd, uint8_t base, int32_t disp);
+   void emitStoreMem(uint8_t base, int32_t disp, uint8_t rs);
+   void emitAddRegImm32(uint8_t rd, int32_t imm);
+   void emitSubRegImm32(uint8_t rd, int32_t imm);
+   void emitPushReg64(uint8_t reg);
+   void emitPopReg64(uint8_t reg);
+   void emitSyscall();
+   void emitRet();
 
-  // Integer arithmetic/compare primitives (all operate on 64-bit GPRs -
-  // this backend mirrors Arm64Emitter's existing simplification of using
-  // the same op for both I32 and I64 IR opcodes, see emitAdd()'s doc).
-  void emitAddRegReg(uint8_t rd, uint8_t rs);
-  void emitSubRegReg(uint8_t rd, uint8_t rs);
-  void emitImulRegReg(uint8_t rd, uint8_t rs); // rd *= rs (RM form: reg=dst)
-  void emitXorRegReg(uint8_t rd, uint8_t rs);
-  void emitCqo();                    // sign-extend rax into rdx:rax
-  void emitIdivReg(uint8_t reg);     // signed divide rdx:rax by reg
-  void emitDivReg(uint8_t reg);      // unsigned divide rdx:rax by reg
-  void emitNegReg(uint8_t rd);
-  void emitCmpRegReg(uint8_t a, uint8_t b); // flags = a - b
-  void emitSetccReg(uint8_t rd, CondCode cc);
-  void emitMovzxReg8(uint8_t rd, uint8_t rs); // rd = zero-extend(low byte of rs)
-  static uint8_t condCodeValue(CondCode cc);
+   // Integer arithmetic/compare primitives (all operate on 64-bit GPRs -
+   // this backend mirrors Arm64Emitter's existing simplification of using
+   // the same op for both I32 and I64 IR opcodes, see emitAdd()'s doc).
+   void emitAddRegReg(uint8_t rd, uint8_t rs);
+   void emitSubRegReg(uint8_t rd, uint8_t rs);
+   void emitImulRegReg(uint8_t rd, uint8_t rs); // rd *= rs (RM form: reg=dst)
+   void emitXorRegReg(uint8_t rd, uint8_t rs);
+   void emitAndRegReg(uint8_t rd, uint8_t rs);
+   void emitOrRegReg(uint8_t rd, uint8_t rs);
+   // target = (xmm a CC xmm b) as 0 or 1 with IEEE semantics: every comparison but != is false
+   // when an operand is NaN. Clobbers rcx; `target` must not be rcx.
+   void emitFloatCompareToReg(bool isF64, CondCode cc, uint8_t a, uint8_t b, uint8_t target);
+   void emitCqo();                // sign-extend rax into rdx:rax
+   void emitIdivReg(uint8_t reg); // signed divide rdx:rax by reg
+   void emitDivReg(uint8_t reg);  // unsigned divide rdx:rax by reg
+   void emitNegReg(uint8_t rd);
+   void emitCmpRegReg(uint8_t a, uint8_t b); // flags = a - b
+   void emitSetccReg(uint8_t rd, CondCode cc);
+   void emitMovzxReg8(uint8_t rd, uint8_t rs); // rd = zero-extend(low byte of rs)
+   static uint8_t condCodeValue(CondCode cc);
 
-  // Raw conditional-jump placeholder/patch for control flow *internal* to
-  // a single emitted routine (e.g. the unsigned int64<->float conversion
-  // sequences below), independent of the IR-level Jump/JumpIfZero fixup
-  // lists the dispatch loop manages - resolved immediately within the
-  // same method that emits the placeholder, never left pending.
-  size_t emitCondJumpPlaceholder(CondCode cc);
-  // Keeps a jump (or a fused compare and jump) from crossing or ending on a 32-byte
-  // boundary; see the definition.
-  void alignBranchSequence(size_t sequenceStart, size_t length);
-  static std::vector<uint8_t> makeNopPadding(size_t count);
-  size_t compareStart_ = 0;
-  void patchCondJumpHere(size_t fixupIndex);
-  size_t emitJumpPlaceholderRaw();
-  void patchJumpHere(size_t fixupIndex);
+   // Raw conditional-jump placeholder/patch for control flow *internal* to
+   // a single emitted routine (e.g. the unsigned int64<->float conversion
+   // sequences below), independent of the IR-level Jump/JumpIfZero fixup
+   // lists the dispatch loop manages - resolved immediately within the
+   // same method that emits the placeholder, never left pending.
+   size_t emitCondJumpPlaceholder(CondCode cc);
+   // Keeps a jump (or a fused compare and jump) from crossing or ending on a 32-byte
+   // boundary; see the definition.
+   void alignBranchSequence(size_t sequenceStart, size_t length);
+   static std::vector<uint8_t> makeNopPadding(size_t count);
+   size_t compareStart_ = 0;
+   void patchCondJumpHere(size_t fixupIndex);
+   size_t emitJumpPlaceholderRaw();
+   void patchJumpHere(size_t fixupIndex);
 
-  // SSE2 float primitives (xmm registers 0-15, same numbering scheme as
-  // GPRs). `isF64` selects the F2 (double) vs F3 (single) SSE prefix.
-  void emitMovqXmmFromReg(uint8_t xmm, uint8_t reg);
-  void emitMovqRegFromXmm(uint8_t reg, uint8_t xmm);
-  void emitSseBinaryOp(bool isF64, uint8_t opcode, uint8_t dstXmm, uint8_t srcXmm);
-  void emitXorpsXmm(uint8_t dstXmm, uint8_t srcXmm);
-  void emitComiss(bool isF64, uint8_t a, uint8_t b);
-  void emitCvtsi2s(bool isF64, uint8_t dstXmm, uint8_t srcReg);   // int64 -> float
-  void emitCvtts2si(bool isF64, uint8_t dstReg, uint8_t srcXmm);  // float -> int64 (truncate)
-  void emitCvtss2sd(uint8_t dstXmm, uint8_t srcXmm);
-  void emitCvtsd2ss(uint8_t dstXmm, uint8_t srcXmm);
-  void emitLoadXmmImm64(uint8_t xmm, uint64_t bits, uint8_t scratchReg);
-  void emitMovapsXmm(uint8_t dstXmm, uint8_t srcXmm);
-  void emitMovqXmmFromMem(uint8_t xmm, uint8_t base, int32_t disp); // low 64 bits, upper zeroed
-  void emitMovqMemFromXmm(uint8_t base, int32_t disp, uint8_t xmm);
-  void emitConvertUnsignedToFloat(bool isF64);
-  void emitConvertFloatToUnsigned(bool isF64);
+   // SSE2 float primitives (xmm registers 0-15, same numbering scheme as
+   // GPRs). `isF64` selects the F2 (double) vs F3 (single) SSE prefix.
+   void emitMovqXmmFromReg(uint8_t xmm, uint8_t reg);
+   void emitMovqRegFromXmm(uint8_t reg, uint8_t xmm);
+   void emitSseBinaryOp(bool isF64, uint8_t opcode, uint8_t dstXmm, uint8_t srcXmm);
+   void emitXorpsXmm(uint8_t dstXmm, uint8_t srcXmm);
+   void emitComiss(bool isF64, uint8_t a, uint8_t b);
+   void emitCvtsi2s(bool isF64, uint8_t dstXmm, uint8_t srcReg);  // int64 -> float
+   void emitCvtts2si(bool isF64, uint8_t dstReg, uint8_t srcXmm); // float -> int64 (truncate)
+   void emitCvtss2sd(uint8_t dstXmm, uint8_t srcXmm);
+   void emitCvtsd2ss(uint8_t dstXmm, uint8_t srcXmm);
+   void emitLoadXmmImm64(uint8_t xmm, uint64_t bits, uint8_t scratchReg);
+   void emitMovapsXmm(uint8_t dstXmm, uint8_t srcXmm);
+   void emitMovqXmmFromMem(uint8_t xmm, uint8_t base, int32_t disp); // low 64 bits, upper zeroed
+   void emitMovqMemFromXmm(uint8_t base, int32_t disp, uint8_t xmm);
+   void emitConvertUnsignedToFloat(bool isF64);
+   void emitConvertFloatToUnsigned(bool isF64);
 
-  void emitPushReg(uint8_t reg);
-  void emitPopReg(uint8_t reg);
-  void emitSpillReg(uint8_t reg);
-  void emitReloadReg(uint8_t reg);
-  void flushValueStackCache();
-  static uint64_t localOffset(uint32_t index);
+   void emitPushReg(uint8_t reg);
+   void emitPopReg(uint8_t reg);
+   void emitSpillReg(uint8_t reg);
+   void emitReloadReg(uint8_t reg);
+   void flushValueStackCache();
+   static uint64_t localOffset(uint32_t index);
 
-  void emitExitSyscall();
-  void emitCompareAndPush(CondCode cc);
-  void emitFloatBinaryOp(bool isF64, uint8_t opcode);
-  void emitFloatNegate(bool isF64);
-  void emitFloatCompareAndPush(bool isF64, CondCode cc);
-  void emitConvertIntToFloatImpl(bool isF64);
-  void emitConvertFloatToIntImpl(bool isF64);
+   void emitExitSyscall();
+   void emitCompareAndPush(CondCode cc);
+   void emitFloatBinaryOp(bool isF64, uint8_t opcode);
+   void emitFloatNegate(bool isF64);
+   void emitFloatCompareAndPush(bool isF64, CondCode cc);
+   void emitConvertIntToFloatImpl(bool isF64);
+   void emitConvertFloatToIntImpl(bool isF64);
 
-  void emitHeapAllocFromSlotCountReg(uint8_t slotCountReg, uint8_t resultReg);
-  void emitHeapFreeFromAddressReg(uint8_t addressReg);
+   void emitHeapAllocFromSlotCountReg(uint8_t slotCountReg, uint8_t resultReg);
+   void emitHeapFreeFromAddressReg(uint8_t addressReg);
 
-  // Byte-granularity memory access (MOVZX load / MOV r/m8,r8 store) - not
-  // needed by the compute core, but required for scratch-buffer digit
-  // writing, string-byte access, and single-byte file I/O below.
-  void emitLoadMemByte(uint8_t rd, uint8_t base, int32_t disp);
-  // movzx rd, byte [base + index]
-  void emitLoadMemByteIndexed(uint8_t rd, uint8_t base, uint8_t index);
-  void emitStoreMemByte(uint8_t base, int32_t disp, uint8_t rs);
-  void emitCmpRegImm32(uint8_t reg, int32_t imm);
+   // Byte-granularity memory access (MOVZX load / MOV r/m8,r8 store) - not
+   // needed by the compute core, but required for scratch-buffer digit
+   // writing, string-byte access, and single-byte file I/O below.
+   void emitLoadMemByte(uint8_t rd, uint8_t base, int32_t disp);
+   // movzx rd, byte [base + index]
+   void emitLoadMemByteIndexed(uint8_t rd, uint8_t base, uint8_t index);
+   void emitStoreMemByte(uint8_t base, int32_t disp, uint8_t rs);
+   void emitCmpRegImm32(uint8_t reg, int32_t imm);
 
-  // rd = rbp - offsetBytes: the same "offset measured away from the frame
-  // pointer" coordinate space localOffset() already uses for locals (see
-  // Core.h's class-comment header), extended to address the scratch
-  // region that NativeEmitterEmit.cpp lays out immediately after the
-  // locals (scratchOffset = localCount*16, see NativeEmitterFunctionLayout).
-  void emitLoadFrameOffset(uint8_t rd, uint32_t offsetBytes);
+   // rd = rbp - offsetBytes: the same "offset measured away from the frame
+   // pointer" coordinate space localOffset() already uses for locals (see
+   // Core.h's class-comment header), extended to address the scratch
+   // region that NativeEmitterEmit.cpp lays out immediately after the
+   // locals (scratchOffset = localCount*16, see NativeEmitterFunctionLayout).
+   void emitLoadFrameOffset(uint8_t rd, uint32_t offsetBytes);
 
-  void emitWriteSyscall(uint64_t fd, uint8_t bufferReg, uint8_t lengthReg);
-  void emitWriteSyscallReg(uint8_t fdReg, uint8_t bufferReg, uint8_t lengthReg);
-  void emitReadSyscallReg(uint8_t fdReg, uint8_t bufferReg, uint8_t lengthReg);
-  void emitWriteNewline(uint64_t fd, uint32_t scratchOffset);
-  void emitWriteNewlineReg(uint8_t fdReg, uint32_t scratchOffset);
-  void emitPrintUnsignedInternal(uint32_t scratchOffset,
-                                 uint32_t scratchBytes,
-                                 bool includeSign,
-                                 uint8_t signReg,
-                                 bool newline,
-                                 uint64_t fd);
-  void emitPrintUnsignedInternalReg(uint32_t scratchOffset,
-                                    uint32_t scratchBytes,
-                                    bool includeSign,
-                                    uint8_t signReg,
-                                    bool newline,
-                                    uint8_t fdReg);
+   void emitWriteSyscall(uint64_t fd, uint8_t bufferReg, uint8_t lengthReg);
+   void emitWriteSyscallReg(uint8_t fdReg, uint8_t bufferReg, uint8_t lengthReg);
+   void emitReadSyscallReg(uint8_t fdReg, uint8_t bufferReg, uint8_t lengthReg);
+   void emitWriteNewline(uint64_t fd, uint32_t scratchOffset);
+   void emitWriteNewlineReg(uint8_t fdReg, uint32_t scratchOffset);
+   void emitPrintUnsignedInternal(uint32_t scratchOffset,
+                                  uint32_t scratchBytes,
+                                  bool includeSign,
+                                  uint8_t signReg,
+                                  bool newline,
+                                  uint64_t fd);
+   void emitPrintUnsignedInternalReg(uint32_t scratchOffset,
+                                     uint32_t scratchBytes,
+                                     bool includeSign,
+                                     uint8_t signReg,
+                                     bool newline,
+                                     uint8_t fdReg);
 
-  // RIP-relative LEA placeholder (x86_64 counterpart to Arm64Emitter's
-  // emitAdrPlaceholder): returns the fixup index of the disp32 field,
-  // resolved later via patchAdr once the string table's final position
-  // is known.
-  size_t emitLeaRipPlaceholder(uint8_t rd);
+   // RIP-relative LEA placeholder (x86_64 counterpart to Arm64Emitter's
+   // emitAdrPlaceholder): returns the fixup index of the disp32 field,
+   // resolved later via patchAdr once the string table's final position
+   // is known.
+   size_t emitLeaRipPlaceholder(uint8_t rd);
 
-  // Pops an index off the value stack and resolves it through the string
-  // offset table into an absolute address, left in `resultReg`. Mirrors
-  // the address-only half of Arm64Emitter's inlined
-  // emitFileOpenDynamicPlaceholder sequence.
-  size_t emitResolveDynamicStringAddress(uint64_t offsetTableDelta, uint8_t resultReg);
+   // Pops an index off the value stack and resolves it through the string
+   // offset table into an absolute address, left in `resultReg`. Mirrors
+   // the address-only half of Arm64Emitter's inlined
+   // emitFileOpenDynamicPlaceholder sequence.
+   size_t emitResolveDynamicStringAddress(uint64_t offsetTableDelta, uint8_t resultReg);
 
-  // Resolves `indexReg` (already holding an index, NOT popped - callers
-  // that need the index off the value stack pop it themselves first)
-  // through both the offset table (-> address, in addrReg) and the
-  // parallel length table (-> byte length, in lengthReg). Mirrors
-  // Arm64Emitter's inlined emitPrintStringDynamicPlaceholder /
-  // emitFileWriteStringDynamicPlaceholder sequence. Clobbers indexReg.
-  size_t emitResolveDynamicStringAddressAndLength(uint64_t offsetTableDelta,
-                                                  uint64_t offsetTableSize,
-                                                  uint8_t indexReg,
-                                                  uint8_t addrReg,
-                                                  uint8_t lengthReg);
+   // Resolves `indexReg` (already holding an index, NOT popped - callers
+   // that need the index off the value stack pop it themselves first)
+   // through both the offset table (-> address, in addrReg) and the
+   // parallel length table (-> byte length, in lengthReg). Mirrors
+   // Arm64Emitter's inlined emitPrintStringDynamicPlaceholder /
+   // emitFileWriteStringDynamicPlaceholder sequence. Clobbers indexReg.
+   size_t emitResolveDynamicStringAddressAndLength(uint64_t offsetTableDelta,
+                                                   uint64_t offsetTableSize,
+                                                   uint8_t indexReg,
+                                                   uint8_t addrReg,
+                                                   uint8_t lengthReg);
 
-  std::vector<uint8_t> code_;
-  uint64_t frameSize_ = 0;
-  uint64_t codeBaseOffset_ = 0;
-  X64InstrumentationCounters counters_;
-  static constexpr uint8_t valueStackCacheReg_ = 14; // r14
-  bool hasValueStackCache_ = false;
-  bool valueStackCacheEnabled_ = true;
-  // Set by beginFunction's `resetValueStack` parameter (which the shared
-  // NativeEmitterFunctionEmit.cpp dispatch loop already passes as
-  // `isEntryFunction` - see NativeEmitterInternalsX64Core.h's comment on
-  // beginFunction). A raw Linux ELF entry point has no caller and no
-  // return address on the stack (unlike Mach-O's LC_MAIN, which dyld
-  // calls properly), so `ret` there would jump to garbage - the entry
-  // function's Return* opcodes must exit_group(value) instead.
-  bool isEntryFunction_ = false;
-  bool localPromotionEnabled_ = false;
+   std::vector<uint8_t> code_;
+   uint64_t frameSize_ = 0;
+   uint64_t codeBaseOffset_ = 0;
+   X64InstrumentationCounters counters_;
+   static constexpr uint8_t valueStackCacheReg_ = 14; // r14
+   bool hasValueStackCache_ = false;
+   bool valueStackCacheEnabled_ = true;
+   // Set by beginFunction's `resetValueStack` parameter (which the shared
+   // NativeEmitterFunctionEmit.cpp dispatch loop already passes as
+   // `isEntryFunction` - see NativeEmitterInternalsX64Core.h's comment on
+   // beginFunction). A raw Linux ELF entry point has no caller and no
+   // return address on the stack (unlike Mach-O's LC_MAIN, which dyld
+   // calls properly), so `ret` there would jump to garbage - the entry
+   // function's Return* opcodes must exit_group(value) instead.
+   bool isEntryFunction_ = false;
+   bool localPromotionEnabled_ = false;
 
-  // An operand waiting to be materialized (see setOperandDeferralEnabled).
-  struct PendingOperand {
-    enum class Kind : uint8_t { Reg, Imm, Local };
-    Kind kind = Kind::Imm;
-    uint8_t reg = 0;    // Reg: the cache register; Local: the promoted local's register
-    uint32_t local = 0; // Local: the promoted local's index
-    uint64_t imm = 0;
-  };
+   // An operand waiting to be materialized (see setOperandDeferralEnabled).
+   struct PendingOperand {
+     enum class Kind : uint8_t { Reg, Imm, Local };
+     Kind kind = Kind::Imm;
+     uint8_t reg = 0;    // Reg: the cache register; Local: the promoted local's register
+     uint32_t local = 0; // Local: the promoted local's index
+     uint64_t imm = 0;
+   };
   bool deferOperands_ = false;
   bool registerAllocationEnabled_ = false;
   int32_t regAllocSlotDisp(uint32_t pseudoLocal) const;
