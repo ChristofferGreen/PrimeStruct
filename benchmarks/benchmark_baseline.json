@@ -1,6 +1,6 @@
 {
   "schema": "primestruct_benchmark_baseline_v1",
-  "notes": "Baseline thresholds for benchmark regression checks. primestruct_vm runs primevm at its default -O2 (the flat VM loop plus the optimizer); a fall back to the step kernel or a lost optimizer pass costs 3-10x and fails these. primestruct_optexe and primestruct_native are optional rows.",
+  "notes": "Baseline thresholds for benchmark regression checks. primestruct_vm runs primevm at its default -O2 (the threaded fast kernel plus the optimizer; the time includes compiling the source) and primestruct_native runs -O2 native code (register allocation on x86_64). Their limits sit about three to four times above the measured means (2026-10-04, Linux x86_64: native 4.0/6.8/16.9 ms and vm 62/78/153 ms for aggregate/json_scan/json_parse), so losing register allocation, the fast kernel or an optimizer pass fails them while ordinary machine noise does not. primestruct_optexe and primestruct_native are optional rows.",
   "entries": [
     {
       "phase": "runtime",
@@ -14,8 +14,8 @@
       "benchmark": "aggregate",
       "entry": "primestruct_native",
       "optional": true,
-      "max_mean_seconds": 1.0,
-      "max_artifact_size_bytes": 200000
+      "max_mean_seconds": 0.02,
+      "max_artifact_size_bytes": 4096
     },
     {
       "phase": "runtime",
@@ -29,8 +29,8 @@
       "benchmark": "json_scan",
       "entry": "primestruct_native",
       "optional": true,
-      "max_mean_seconds": 1.0,
-      "max_artifact_size_bytes": 250000
+      "max_mean_seconds": 0.03,
+      "max_artifact_size_bytes": 8192
     },
     {
       "phase": "runtime",
@@ -44,8 +44,8 @@
       "benchmark": "json_parse",
       "entry": "primestruct_native",
       "optional": true,
-      "max_mean_seconds": 1.5,
-      "max_artifact_size_bytes": 300000
+      "max_mean_seconds": 0.06,
+      "max_artifact_size_bytes": 16384
     },
     {
       "phase": "compile",
@@ -66,7 +66,7 @@
       "phase": "runtime",
       "benchmark": "aggregate",
       "entry": "primestruct_vm",
-      "max_mean_seconds": 0.5,
+      "max_mean_seconds": 0.25,
       "max_artifact_size_bytes": 8000
     },
     {
@@ -81,7 +81,7 @@
       "phase": "runtime",
       "benchmark": "json_scan",
       "entry": "primestruct_vm",
-      "max_mean_seconds": 0.5,
+      "max_mean_seconds": 0.3,
       "max_artifact_size_bytes": 8000
     },
     {
@@ -96,7 +96,7 @@
       "phase": "runtime",
       "benchmark": "json_parse",
       "entry": "primestruct_vm",
-      "max_mean_seconds": 0.9,
+      "max_mean_seconds": 0.5,
       "max_artifact_size_bytes": 8000
     },
     {
