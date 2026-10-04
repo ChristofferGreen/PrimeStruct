@@ -79,6 +79,9 @@ class X64Emitter {
      // Emits instruction `index` with its ordinary template on the memory operand stack.
      std::function<bool(size_t index)> emitTemplate;
      std::function<void(size_t fixupIndex, uint32_t stringIndex)> recordStringFixup;
+     // Records the call placeholder at `fixupIndex` to function `target`; false (with the error
+     // set) when there is no such function.
+     std::function<bool(size_t fixupIndex, uint64_t target)> recordCallFixup;
    };
    void setRegisterAllocationEnabled(bool enabled) {
      registerAllocationEnabled_ = enabled;

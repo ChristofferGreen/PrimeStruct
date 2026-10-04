@@ -68,6 +68,31 @@ Files:
 - `benchmarks/json_parse.rs`
 - `benchmarks/json_parse.prime`
 
+## Call Fib (recursive calls)
+
+This benchmark computes `fib(32)` with the naive doubly recursive definition:
+about seven million calls of a function whose body is a compare, two
+subtractions and an addition. It measures call and return overhead.
+
+Files:
+- `benchmarks/call_fib.c`
+- `benchmarks/call_fib.cpp`
+- `benchmarks/call_fib.rs`
+- `benchmarks/call_fib.prime`
+
+## Float Series (f64 arithmetic)
+
+This benchmark sums 20,000,000 terms of the Leibniz series for pi
+(`sum += sign / denominator`) in `f64` and prints `trunc(sum * 4e9)`. Every
+implementation performs the same operations in the same order, so the result
+is bit-identical. It measures floating-point arithmetic in a loop.
+
+Files:
+- `benchmarks/float_series.c`
+- `benchmarks/float_series.cpp`
+- `benchmarks/float_series.rs`
+- `benchmarks/float_series.prime`
+
 ## Compile Speed (large source)
 
 This benchmark generates a large PrimeStruct source file (default 100,000 lines)

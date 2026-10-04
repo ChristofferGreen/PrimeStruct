@@ -89,7 +89,14 @@ bool planNativeRegisterAllocation(const IrModule &module,
         constant[source.defRegisters.front()] =
             static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(ir.imm)));
         break;
+      case IrOpcode::PushF32:
+        // Float constants are their bit patterns, as the templates push them.
+        instruction.folded = true;
+        isConstant[source.defRegisters.front()] = true;
+        constant[source.defRegisters.front()] = static_cast<uint32_t>(ir.imm);
+        break;
       case IrOpcode::PushI64:
+      case IrOpcode::PushF64:
         instruction.folded = true;
         isConstant[source.defRegisters.front()] = true;
         constant[source.defRegisters.front()] = ir.imm;
@@ -260,7 +267,8 @@ bool planNativeRegisterAllocation(const IrModule &module,
       const bool twoAddress =
           op == IrOpcode::AddI32 || op == IrOpcode::AddI64 || op == IrOpcode::SubI32 ||
           op == IrOpcode::SubI64 || op == IrOpcode::MulI32 || op == IrOpcode::MulI64 ||
-          op == IrOpcode::NegI32 || op == IrOpcode::NegI64 || op == IrOpcode::SextI32;
+          op == IrOpcode::NegI32 || op == IrOpcode::NegI64 || op == IrOpcode::SextI32 ||
+          op == IrOpcode::NegF32 || op == IrOpcode::NegF64;
       if (twoAddress && instruction.defs.size() == 1) {
         // Add and multiply commute, so either operand's register will do.
         const bool commutes = op == IrOpcode::AddI32 || op == IrOpcode::AddI64 ||

@@ -631,6 +631,14 @@ bool emitNativeFunctions(const IrModule &module,
         hooks.recordStringFixup = [&](size_t fixupIndex, uint32_t stringIndex) {
           stringFixups.push_back({fixupIndex, stringIndex});
         };
+        hooks.recordCallFixup = [&](size_t fixupIndex, uint64_t target) {
+          if (target >= module.functions.size()) {
+            error = "native backend detected invalid call target";
+            return false;
+          }
+          callFixups.push_back({fixupIndex, static_cast<size_t>(target)});
+          return true;
+        };
         if (!emitter.emitRegisterAllocatedFunction(
                 fn, regAllocPlan, spillBaseLocal, instOffsets[functionIndex], hooks, error)) {
           return false;

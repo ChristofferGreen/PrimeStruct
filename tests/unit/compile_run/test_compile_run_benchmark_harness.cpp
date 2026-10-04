@@ -45,7 +45,7 @@ TEST_CASE("benchmark gate fails a slow vm row and passes a fast one") {
   const auto reportFor = [](double seconds) {
     std::string report = "{\"schema\": \"primestruct_benchmark_report_v1\", \"runtime_results\": [";
     bool first = true;
-    for (const char *bench : {"aggregate", "json_scan", "json_parse"}) {
+    for (const char *bench : {"aggregate", "json_scan", "json_parse", "call_fib", "float_series"}) {
       for (const char *entry : {"primestruct_cpp", "primestruct_vm"}) {
         report += std::string(first ? "" : ",") + "{\"benchmark\": \"" + bench +
                   "\", \"entry\": \"" + entry + "\", \"mean_seconds\": " +

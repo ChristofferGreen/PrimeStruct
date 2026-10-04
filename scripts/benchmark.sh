@@ -298,6 +298,25 @@ fi
 if [[ $RUN_OPTEXE -eq 1 ]]; then
   "$PRIMEC_BIN" --emit=optexe "$PRIME_JSON_PARSE_SRC" -o "$PRIME_JSON_PARSE_OPTEXE_EXE" --entry /main
 fi
+# Calls (recursive fib) and floating point (an alternating series): the code the native register
+# allocator still hands to its templates.
+for name in call_fib float_series; do
+  "$CC" -O3 -DNDEBUG -std=c11 "$ROOT_DIR/benchmarks/$name.c" -o "$BENCH_DIR/${name}_c"
+  "$CXX" -O3 -DNDEBUG -std=c++23 "$ROOT_DIR/benchmarks/$name.cpp" -o "$BENCH_DIR/${name}_cpp"
+  "$RUSTC" -O "$ROOT_DIR/benchmarks/$name.rs" -o "$BENCH_DIR/${name}_rust"
+  "$PRIMEC_BIN" --emit=cpp "$ROOT_DIR/benchmarks/$name.prime" -o "$BENCH_DIR/${name}_primestruct.cpp" \
+    --entry /main
+  "$CXX" -O3 -DNDEBUG -std=c++23 "$BENCH_DIR/${name}_primestruct.cpp" \
+    -o "$BENCH_DIR/${name}_primestruct_cpp"
+  if [[ $RUN_NATIVE -eq 1 ]]; then
+    "$PRIMEC_BIN" --emit=native "$ROOT_DIR/benchmarks/$name.prime" \
+      -o "$BENCH_DIR/${name}_primestruct_native" --entry /main
+  fi
+  if [[ $RUN_OPTEXE -eq 1 ]]; then
+    "$PRIMEC_BIN" --emit=optexe "$ROOT_DIR/benchmarks/$name.prime" \
+      -o "$BENCH_DIR/${name}_primestruct_optexe" --entry /main
+  fi
+done
 
 (
   cd "$BENCH_DIR"
@@ -363,6 +382,13 @@ benchmarks = [
         ("cpp", "./json_parse_cpp"),
         ("rust", "./json_parse_rust"),
     ] + primestruct_entries("json_parse")),
+] + [
+    (name, [
+        ("c", f"./{name}_c"),
+        ("cpp", f"./{name}_cpp"),
+        ("rust", f"./{name}_rust"),
+    ] + primestruct_entries(name))
+    for name in ("call_fib", "float_series")
 ]
 
 print("Benchmark runs:", runs)

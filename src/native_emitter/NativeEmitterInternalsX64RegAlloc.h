@@ -409,6 +409,140 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
         storeValue(d, target);
         break;
       }
+      case IrOpcode::AddF32:
+      case IrOpcode::SubF32:
+      case IrOpcode::MulF32:
+      case IrOpcode::DivF32:
+      case IrOpcode::AddF64:
+      case IrOpcode::SubF64:
+      case IrOpcode::MulF64:
+      case IrOpcode::DivF64: {
+        // Floats live in general registers as their bit patterns; the arithmetic runs in xmm0
+        // and xmm1, which (like rax and rcx) nothing else holds, so no register is saved.
+        const bool isF64 = ir.op == IrOpcode::AddF64 || ir.op == IrOpcode::SubF64 ||
+                           ir.op == IrOpcode::MulF64 || ir.op == IrOpcode::DivF64;
+        uint8_t opcode = 0x58; // add
+        if (ir.op == IrOpcode::SubF32 || ir.op == IrOpcode::SubF64) {
+          opcode = 0x5C;
+        } else if (ir.op == IrOpcode::MulF32 || ir.op == IrOpcode::MulF64) {
+          opcode = 0x59;
+        } else if (ir.op == IrOpcode::DivF32 || ir.op == IrOpcode::DivF64) {
+          opcode = 0x5E;
+        }
+        emitMovqXmmFromReg(0, valueReg(instruction.uses[0], Rax));
+        emitMovqXmmFromReg(1, valueReg(instruction.uses[1], Rcx));
+        emitSseBinaryOp(isF64, opcode, 0, 1);
+        const uint32_t d = instruction.defs[0];
+        const uint8_t target = targetReg(d, -1);
+        emitMovqRegFromXmm(target, 0);
+        storeValue(d, target);
+        break;
+      }
+      case IrOpcode::NegF32:
+      case IrOpcode::NegF64: {
+        // Flip the sign bit in place: btc target, 31 or 63.
+        const uint32_t d = instruction.defs[0];
+        const uint8_t target = targetReg(d, -1);
+        loadInto(instruction.uses[0], target);
+        emitRex(true, 0, target);
+        emitByte(0x0F);
+        emitByte(0xBA);
+        emitByte(static_cast<uint8_t>(0xC0 | (7 << 3) | (target & 7)));
+        emitByte(ir.op == IrOpcode::NegF64 ? 63 : 31);
+        storeValue(d, target);
+        break;
+      }
+      case IrOpcode::CmpEqF32:
+      case IrOpcode::CmpNeF32:
+      case IrOpcode::CmpLtF32:
+      case IrOpcode::CmpLeF32:
+      case IrOpcode::CmpGtF32:
+      case IrOpcode::CmpGeF32:
+      case IrOpcode::CmpEqF64:
+      case IrOpcode::CmpNeF64:
+      case IrOpcode::CmpLtF64:
+      case IrOpcode::CmpLeF64:
+      case IrOpcode::CmpGtF64:
+      case IrOpcode::CmpGeF64: {
+        // The conditions of emitFloatCompareAndPush, on comiss/comisd flags.
+        CondCode cc = CondCode::Eq;
+        switch (ir.op) {
+        case IrOpcode::CmpNeF32:
+        case IrOpcode::CmpNeF64:
+          cc = CondCode::Ne;
+          break;
+        case IrOpcode::CmpLtF32:
+        case IrOpcode::CmpLtF64:
+          cc = CondCode::Below;
+          break;
+        case IrOpcode::CmpLeF32:
+        case IrOpcode::CmpLeF64:
+          cc = CondCode::BelowEq;
+          break;
+        case IrOpcode::CmpGtF32:
+        case IrOpcode::CmpGtF64:
+          cc = CondCode::Above;
+          break;
+        case IrOpcode::CmpGeF32:
+        case IrOpcode::CmpGeF64:
+          cc = CondCode::AboveEq;
+          break;
+        default:
+          break;
+        }
+        const bool isF64 = ir.op >= IrOpcode::CmpEqF64 && ir.op <= IrOpcode::CmpGeF64;
+        emitMovqXmmFromReg(0, valueReg(instruction.uses[0], Rax));
+        emitMovqXmmFromReg(1, valueReg(instruction.uses[1], Rcx));
+        const uint32_t d = instruction.defs[0];
+        const uint8_t target = targetReg(d, -1);
+        emitXorRegReg(target, target); // before the compare: xor sets the flags
+        emitComiss(isF64, 0, 1);
+        emitSetccReg(target, cc);
+        storeValue(d, target);
+        break;
+      }
+      case IrOpcode::ConvertI32ToF32:
+      case IrOpcode::ConvertI64ToF32:
+      case IrOpcode::ConvertI32ToF64:
+      case IrOpcode::ConvertI64ToF64: {
+        const bool isF64 = ir.op == IrOpcode::ConvertI32ToF64 || ir.op == IrOpcode::ConvertI64ToF64;
+        const uint8_t source = valueReg(instruction.uses[0], Rax);
+        // cvtsi2s writes only the low lane of xmm0 and so waits for its last writer; clearing
+        // xmm0 first breaks that dependency.
+        emitXorpsXmm(0, 0);
+        emitCvtsi2s(isF64, 0, source);
+        const uint32_t d = instruction.defs[0];
+        const uint8_t target = targetReg(d, -1);
+        emitMovqRegFromXmm(target, 0);
+        storeValue(d, target);
+        break;
+      }
+      case IrOpcode::ConvertF32ToI32:
+      case IrOpcode::ConvertF32ToI64:
+      case IrOpcode::ConvertF64ToI32:
+      case IrOpcode::ConvertF64ToI64: {
+        const bool isF64 = ir.op == IrOpcode::ConvertF64ToI32 || ir.op == IrOpcode::ConvertF64ToI64;
+        emitMovqXmmFromReg(0, valueReg(instruction.uses[0], Rax));
+        const uint32_t d = instruction.defs[0];
+        const uint8_t target = targetReg(d, -1);
+        emitCvtts2si(isF64, target, 0);
+        storeValue(d, target);
+        break;
+      }
+      case IrOpcode::ConvertF32ToF64:
+      case IrOpcode::ConvertF64ToF32: {
+        emitMovqXmmFromReg(0, valueReg(instruction.uses[0], Rax));
+        if (ir.op == IrOpcode::ConvertF32ToF64) {
+          emitCvtss2sd(0, 0);
+        } else {
+          emitCvtsd2ss(0, 0);
+        }
+        const uint32_t d = instruction.defs[0];
+        const uint8_t target = targetReg(d, -1);
+        emitMovqRegFromXmm(target, 0);
+        storeValue(d, target);
+        break;
+      }
       case IrOpcode::LoadLocal: {
         // A local some memory access can reach stays in its frame slot.
         const uint32_t d = instruction.defs[0];
@@ -498,6 +632,49 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
         emitEdgeMoves(*edge);
         if (target != blockIndex + 1) {
           emitEdgeJump(blockIndex, *edge, false, CondCode::Eq);
+        }
+        break;
+      }
+      case IrOpcode::Call:
+      case IrOpcode::CallVoid: {
+        // The callee takes its arguments off the operand stack and returns its result in rax;
+        // every register still needed afterwards is saved around the call.
+        const std::vector<uint8_t> saved =
+            regAllocRegistersLiveAcross(plan, blockIndex, instruction.irIndex);
+        for (const uint8_t reg : saved) {
+          emitStoreMem(5, regAllocSlotDisp(saveBaseLocal + reg), reg);
+        }
+        for (const uint32_t use : instruction.uses) {
+          emitSpillReg(valueReg(use, Rax));
+        }
+        if (!hooks.recordCallFixup(emitCallPlaceholder(), ir.imm)) {
+          return false;
+        }
+        if (ir.op == IrOpcode::Call && !instruction.defs.empty()) {
+          storeValue(instruction.defs[0], Rax);
+        }
+        for (const uint8_t reg : saved) {
+          emitLoadMem(reg, 5, regAllocSlotDisp(saveBaseLocal + reg));
+        }
+        break;
+      }
+      case IrOpcode::ReturnI32:
+      case IrOpcode::ReturnI64:
+      case IrOpcode::ReturnF32:
+      case IrOpcode::ReturnF64: {
+        endsWithBranch = true;
+        const uint8_t value = valueReg(instruction.uses[0], Rax);
+        if (ir.op == IrOpcode::ReturnI32) {
+          emitMovsxdRegReg(Rax, value);
+        } else if (value != Rax) {
+          emitMovRegReg(Rax, value);
+        }
+        if (isEntryFunction_) {
+          emitExitSyscall();
+        } else {
+          emitMovRegReg(4, 5); // mov rsp, rbp
+          emitPopReg64(5);     // pop rbp
+          emitRet();
         }
         break;
       }

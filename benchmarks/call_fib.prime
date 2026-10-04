@@ -1,0 +1,13 @@
+[return<int>]
+fib([i32] n) {
+  if(less_than(n, 2i32)) {
+    return(n)
+  }
+  return(plus(fib(minus(n, 1i32)), fib(minus(n, 2i32))))
+}
+
+[return<int> effects(io_out)]
+main() {
+  print_line(fib(32i32))
+  return(0i32)
+}

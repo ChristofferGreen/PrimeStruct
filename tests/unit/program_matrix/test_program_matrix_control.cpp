@@ -612,6 +612,67 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+// Float arithmetic, comparisons, negation and conversions run inline on the allocated registers
+// (as bit patterns, through xmm0/xmm1), and calls return their results in rax.
+TEST_CASE("register allocation keeps float values and call results exact") {
+  program_matrix::ProgramCase program;
+  program.name = "register_allocation_floats";
+  program.source = R"(
+[return<f64>]
+scale([f64] x, [f64] factor) {
+  return(multiply(x, factor))
+}
+
+[return<f32>]
+half([f32] x) {
+  return(divide(x, 2.0f32))
+}
+
+[return<i64>]
+widen([i32] x) {
+  return(multiply(convert<i64>(x), 3000000000i64))
+}
+
+[return<int> effects(io_out)]
+main() {
+  [f64 mut] x{0.0f64}
+  [f64 mut] total{0.0f64}
+  [f32 mut] small{1.5f32}
+  [i32 mut] below{0i32}
+  [i32 mut] i{0i32}
+  while(less_than(i, 40i32)) {
+    assign(x, minus(scale(convert<f64>(i), 0.75f64), 7.0f64))
+    if(less_than(x, 0.0f64)) {
+      assign(below, plus(below, 1i32))
+    }
+    if(greater_equal(x, 10.0f64)) {
+      assign(total, plus(total, negate(x)))
+    } else {
+      assign(total, plus(total, x))
+    }
+    if(not_equal(negate(small), -3.0f32)) {
+      assign(small, plus(half(small), convert<f32>(i)))
+    }
+    assign(i, plus(i, 1i32))
+  }
+  print_line(below)
+  print_line(convert<i64>(multiply(total, 100.0f64)))
+  print_line(convert<i32>(small))
+  print_line(convert<i64>(multiply(convert<f64>(small), 1000.0f64)))
+  print_line(widen(convert<i32>(negate(x))))
+  if(equal(x, 22.25f64)) {
+    return(3i32)
+  }
+  return(0i32)
+}
+)";
+  program.exitCode = 3;
+  program.stdoutText = "10\n-24750\n76\n76000\n-66000000000\n";
+  program.onlyConfigs = {
+      "vm-step-O0", "vm-O0", "vm-O2", "native-O0", "native-O2", "optexe-O2", "exe"};
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_CASE("i32 loops keep wrapping in promoted locals and fused updates") {
   program_matrix::ProgramCase program;
   program.name = "i32_wrap_loops";

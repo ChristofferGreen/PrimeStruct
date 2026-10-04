@@ -1,0 +1,14 @@
+[return<int> effects(io_out)]
+main() {
+  [i32] n{20000000i32}
+  [f64 mut] sum{0.0f64}
+  [f64 mut] sign{1.0f64}
+  [f64 mut] denominator{1.0f64}
+  repeat(n) {
+    assign(sum, plus(sum, divide(sign, denominator)))
+    assign(sign, negate(sign))
+    assign(denominator, plus(denominator, 2.0f64))
+  }
+  print_line(convert<i64>(multiply(sum, 4000000000.0f64)))
+  return(0i32)
+}

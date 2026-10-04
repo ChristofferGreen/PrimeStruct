@@ -544,9 +544,12 @@ locals and operands alike, instead of promoting at most seven locals and deferri
   boundaries measured slower (its members' one or two uses gained less than the copies on its edges cost).
 - Integer arithmetic, comparisons (fused with the following JumpIfZero, or `xor; cmp; setcc`), frame locals and string
   bytes are emitted on the registers; edge copies are parallel copies (rax breaks cycles) placed inline on fall-through
-  and unconditional edges and in a trampoline for a taken conditional edge. Every other opcode, calls, returns, prints,
-  division and file I/O included, runs its ordinary template on the memory operand stack, with its operands pushed
-  there, its results popped into their registers and the registers live across it saved in frame slots. A function
+  and unconditional edges and in a trampoline for a taken conditional edge. Float constants are immediates, and float
+  arithmetic, negation, comparisons and conversions run inline on the allocated registers (floats live there as bit
+  patterns and pass through xmm0/xmm1). A call pushes its arguments on the operand stack, saves the registers live
+  across it and takes its result from rax; a return leaves its value in rax. Every other opcode, prints, division and
+  file I/O included, runs its ordinary template on the memory operand stack, with its operands pushed there, its
+  results popped into their registers and the registers live across it saved in frame slots. A function
   whose register form cannot be built falls back to the template emitter; `--opt-report` on the native backend ends
   with a `native_register_allocation_v1` section naming, per function, its spill slot count or the fallback reason,
   and a CLI test keeps the benchmark loops on registers. `PRIMESTRUCT_NATIVE_REGALLOC=0|1` forces it off or on (the
@@ -557,6 +560,12 @@ locals and operands alike, instead of promoting at most seven locals and deferri
   between 12.7 and 15.3 ms with the loop's position in its cache line; and the IR pass `if-convert` (native, -O2) turns
   `if (cmp) { x = x +/- c }` into `x = x + cmp * (+/-c)`, which the allocator needs for branchless counting (without it
   json_parse runs 18.9 ms).
+
+The call_fib and float_series benchmarks (2026-10-04) showed what the templates cost: with floats and calls on
+templates, register allocation made float_series 238 ms (template emitter at -O1: 63 ms, C 27 ms), because every float
+operation and float constant saved and reloaded each live register, and call_fib 25.6 ms (-O1: 19.1 ms). Inline float
+operations and float immediates bring float_series to 62 ms, and inline calls and returns call_fib to 15.6 ms (C 5.9
+ms, optexe 23.6 ms). float_series is now bound by its loop-carried chains moving between general and xmm registers.
 
 Result (best of 60, run time only): json_parse 13.2 ms (template emitter 12.8 ms), json_scan 6.5 ms (8.4 ms), aggregate
 3.9 ms (3.9 ms); optexe takes 9.9 ms on json_parse. json_parse is now bound by branch mispredictions in its state machine
