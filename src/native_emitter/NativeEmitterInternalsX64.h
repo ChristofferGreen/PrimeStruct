@@ -82,6 +82,10 @@ class X64Emitter {
      // Records the call placeholder at `fixupIndex` to function `target`; false (with the error
      // set) when there is no such function.
      std::function<bool(size_t fixupIndex, uint64_t target)> recordCallFixup;
+     // Up to three arguments travel in rax, rcx and rdx (first argument in rax) when the callee
+     // takes them that way; otherwise on the operand stack.
+     bool argumentsInRegisters = false;
+     std::function<bool(uint64_t target)> calleeTakesRegisterArguments;
    };
    void setRegisterAllocationEnabled(bool enabled) {
      registerAllocationEnabled_ = enabled;

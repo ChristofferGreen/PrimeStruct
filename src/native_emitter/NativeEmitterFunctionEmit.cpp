@@ -32,42 +32,68 @@ bool emitNativeFunctions(const IrModule &module,
       break;
     }
   }
-  for (size_t functionIndex : emitOrder) {
-    const auto countersBefore = emitter.instrumentationCounters();
-    const IrFunction &fn = module.functions[functionIndex];
-    const NativeEmitterFunctionLayout &layout = layouts[functionIndex];
-    const bool isEntryFunction = functionIndex == entryIndex;
-    // Register allocation (x86_64, NativeEmitterRegAlloc.h) plans before the prologue: its spill
-    // slots and the save slots of the 16 general and 16 xmm registers extend the frame past the
-    // locals and the print scratch area.
-    RegAllocFunctionPlan regAllocPlan;
-    bool useRegisterAllocation = false;
-    if constexpr (!kIsArm64) {
-      if (emitter.registerAllocationEnabled()) {
+  // Register allocation (x86_64, NativeEmitterRegAlloc.h) plans every function before any is
+  // emitted, so calls know how their callee takes its arguments.
+  std::vector<RegAllocFunctionPlan> regAllocPlans(module.functions.size());
+  std::vector<bool> registerAllocated(module.functions.size(), false);
+  // Functions whose arguments arrive in rax, rcx and rdx instead of on the operand stack: at most
+  // three parameters, not the entry, and every caller register-allocated (the template callers
+  // pass arguments on the operand stack).
+  std::vector<bool> registerArguments(module.functions.size(), false);
+  if constexpr (!kIsArm64) {
+    if (emitter.registerAllocationEnabled()) {
+      for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
         bool stringsValid = true;
-        for (const IrInstruction &inst : fn.instructions) {
+        for (const IrInstruction &inst : module.functions[functionIndex].instructions) {
           if (inst.op == IrOpcode::LoadStringByte && inst.imm >= module.stringTable.size()) {
             stringsValid = false;
           }
         }
         std::string planError = "string index out of range";
-        useRegisterAllocation =
+        registerAllocated[functionIndex] =
             stringsValid &&
             planNativeRegisterAllocation(module,
                                          functionIndex,
                                          argRegsFree ? X64RegAllocPoolWithArgRegs : X64RegAllocPool,
-                                         regAllocPlan,
+                                         regAllocPlans[functionIndex],
                                          planError);
         if (instrumentation != nullptr) {
           auto &functionInstrumentation = instrumentation->perFunction[functionIndex];
-          functionInstrumentation.registerAllocated = useRegisterAllocation;
+          functionInstrumentation.registerAllocated = registerAllocated[functionIndex];
           functionInstrumentation.registerAllocationSpillSlots =
-              useRegisterAllocation ? regAllocPlan.spillSlotCount : 0;
+              registerAllocated[functionIndex] ? regAllocPlans[functionIndex].spillSlotCount : 0;
           functionInstrumentation.registerAllocationFallback =
-              useRegisterAllocation ? std::string() : planError;
+              registerAllocated[functionIndex] ? std::string() : planError;
+        }
+      }
+      for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
+        const RegAllocFunctionPlan &plan = regAllocPlans[functionIndex];
+        registerArguments[functionIndex] = registerAllocated[functionIndex] &&
+                                           functionIndex != entryIndex && !plan.blocks.empty() &&
+                                           plan.blocks[0].entryValues.size() <= 3;
+      }
+      for (size_t caller = 0; caller < module.functions.size(); ++caller) {
+        if (registerAllocated[caller]) {
+          continue;
+        }
+        for (const IrInstruction &inst : module.functions[caller].instructions) {
+          if ((inst.op == IrOpcode::Call || inst.op == IrOpcode::CallVoid) &&
+              inst.imm < module.functions.size()) {
+            registerArguments[static_cast<size_t>(inst.imm)] = false;
+          }
         }
       }
     }
+  }
+  for (size_t functionIndex : emitOrder) {
+    const auto countersBefore = emitter.instrumentationCounters();
+    const IrFunction &fn = module.functions[functionIndex];
+    const NativeEmitterFunctionLayout &layout = layouts[functionIndex];
+    const bool isEntryFunction = functionIndex == entryIndex;
+    // The register allocator's spill slots and the save slots of the 16 general and 16 xmm
+    // registers extend the frame past the locals and the print scratch area.
+    const RegAllocFunctionPlan &regAllocPlan = regAllocPlans[functionIndex];
+    const bool useRegisterAllocation = registerAllocated[functionIndex];
     const uint32_t spillBaseLocal = static_cast<uint32_t>(layout.localCount + layout.scratchSlots);
     const uint64_t regAllocBytes =
         useRegisterAllocation ? (static_cast<uint64_t>(regAllocPlan.spillSlotCount) + 32) * 16 : 0;
@@ -631,6 +657,10 @@ bool emitNativeFunctions(const IrModule &module,
         hooks.emitTemplate = emitTemplateInstruction;
         hooks.recordStringFixup = [&](size_t fixupIndex, uint32_t stringIndex) {
           stringFixups.push_back({fixupIndex, stringIndex});
+        };
+        hooks.argumentsInRegisters = registerArguments[functionIndex];
+        hooks.calleeTakesRegisterArguments = [&](uint64_t target) {
+          return target < registerArguments.size() && registerArguments[target];
         };
         hooks.recordCallFixup = [&](size_t fixupIndex, uint64_t target) {
           if (target >= module.functions.size()) {

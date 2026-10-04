@@ -352,11 +352,15 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
     return true;
   };
 
-  // Entry: the parameters come off the operand stack, top first; locals read before any store
-  // start at zero.
+  // Entry: the parameters come from rax, rcx and rdx or off the operand stack, top first; locals
+  // read before any store start at zero.
   if (!plan.blocks.empty() && plan.blocks[0].reachable) {
     const RegAllocBlock &first = plan.blocks[0];
-    for (size_t k = first.entryValues.size(); k-- > 0;) {
+    constexpr uint8_t ArgumentRegisters[] = {Rax, Rcx, 2};
+    for (size_t k = 0; hooks.argumentsInRegisters && k < first.entryValues.size(); ++k) {
+      storeValue(first.entryValues[k], ArgumentRegisters[k]);
+    }
+    for (size_t k = hooks.argumentsInRegisters ? 0 : first.entryValues.size(); k-- > 0;) {
       const RegAllocLocation &where = location(first.entryValues[k]);
       if (where.kind == RegAllocLocationKind::Reg) {
         emitReloadReg(where.reg);
@@ -760,8 +764,16 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
         for (const uint8_t reg : saved) {
           saveRegister(reg);
         }
-        for (const uint32_t use : instruction.uses) {
-          emitSpillReg(valueReg(use, Rax));
+        if (hooks.calleeTakesRegisterArguments(ir.imm)) {
+          // No argument lives in a scratch register, so loading them in order clobbers none.
+          constexpr uint8_t ArgumentRegisters[] = {Rax, Rcx, 2};
+          for (size_t k = 0; k < instruction.uses.size(); ++k) {
+            loadInto(instruction.uses[k], ArgumentRegisters[k]);
+          }
+        } else {
+          for (const uint32_t use : instruction.uses) {
+            emitSpillReg(valueReg(use, Rax));
+          }
         }
         if (!hooks.recordCallFixup(emitCallPlaceholder(), ir.imm)) {
           return false;

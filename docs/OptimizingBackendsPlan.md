@@ -547,8 +547,10 @@ locals and operands alike, instead of promoting at most seven locals and deferri
   and unconditional edges and in a trampoline for a taken conditional edge. Float constants are immediates, and float
   arithmetic, negation, comparisons and conversions run inline. A class that only float operations touch is coloured
   from xmm2-xmm15 (saved around calls and templates like the general registers); a float that also meets an integer
-  operation lives in a general register as its bit pattern and passes through xmm0/xmm1. A call pushes its arguments on the operand stack, saves the registers live
-  across it and takes its result from rax; a return leaves its value in rax. Every other opcode, prints, division and
+  operation lives in a general register as its bit pattern and passes through xmm0/xmm1. A call saves the registers live across it and takes its result from rax; a
+  return leaves its value in rax. Every function is planned before any is emitted, so a register-allocated callee
+  with at most three parameters whose callers are all register-allocated takes its arguments in rax, rcx and rdx;
+  other calls pass them on the operand stack. Every other opcode, prints, division and
   file I/O included, runs its ordinary template on the memory operand stack, with its operands pushed there, its
   results popped into their registers and the registers live across it saved in frame slots. A function
   whose register form cannot be built falls back to the template emitter; `--opt-report` on the native backend ends
@@ -566,7 +568,7 @@ The call_fib and float_series benchmarks (2026-10-04) showed what the templates 
 templates, register allocation made float_series 238 ms (template emitter at -O1: 63 ms, C 27 ms), because every float
 operation and float constant saved and reloaded each live register, and call_fib 25.6 ms (-O1: 19.1 ms). Inline float
 operations and float immediates bring float_series to 62 ms, and inline calls and returns call_fib to 15.6 ms (C 5.9
-ms, optexe 23.6 ms). Allocating float classes to xmm registers then took float_series from 62 to 25 ms (C 27 ms): its loop-carried chains
+ms, optexe 23.6 ms). Passing arguments in registers took call_fib from 15.5 to 12.2 ms. Allocating float classes to xmm registers took float_series from 62 to 25 ms (C 27 ms): its loop-carried chains
 had been moving between general and xmm registers on every operation.
 
 Result (best of 60, run time only): json_parse 13.2 ms (template emitter 12.8 ms), json_scan 6.5 ms (8.4 ms), aggregate

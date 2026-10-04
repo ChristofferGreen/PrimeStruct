@@ -770,6 +770,64 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+// Register-allocated callees with at most three parameters take their arguments in rax, rcx
+// and rdx; four parameters still travel on the operand stack.
+TEST_CASE("register allocation passes call arguments in registers") {
+  program_matrix::ProgramCase program;
+  program.name = "register_allocation_call_arguments";
+  program.source = R"(
+[return<int>]
+seven() {
+  return(7i32)
+}
+
+[return<i64>]
+four([i64] a, [i64] b, [i64] c, [i64] d) {
+  return(plus(multiply(a, 1000i64), plus(multiply(b, 100i64), plus(multiply(c, 10i64), d))))
+}
+
+[return<i64>]
+three([i64] a, [i64] b, [i64] c) {
+  return(minus(multiply(a, 100i64), plus(multiply(b, 10i64), c)))
+}
+
+[return<f64>]
+mixed([i32] k, [f64] x, [f64] y) {
+  return(plus(multiply(convert<f64>(k), x), y))
+}
+
+[effects(io_out)]
+report([i64] value, [i32] tag) {
+  print_line(plus(value, convert<i64>(tag)))
+}
+
+[return<int> effects(io_out)]
+main() {
+  [i64 mut] total{0i64}
+  [i32 mut] i{0i32}
+  while(less_than(i, 6i32)) {
+    [i64] w{convert<i64>(i)}
+    assign(total, plus(total, four(w, plus(w, 1i64), three(w, 2i64, 1i64), convert<i64>(seven()))))
+    report(total, i)
+    assign(i, plus(i, 1i32))
+  }
+  print_line(convert<i64>(multiply(mixed(3i32, 1.5f64, 0.25f64), 100.0f64)))
+  return(seven())
+}
+)";
+  program.exitCode = 7;
+  program.stdoutText = "-103\n"
+                       "1895\n"
+                       "5993\n"
+                       "12191\n"
+                       "20489\n"
+                       "30887\n"
+                       "475\n";
+  program.onlyConfigs = {
+      "vm-step-O0", "vm-O0", "vm-O2", "native-O0", "native-O2", "optexe-O2", "exe"};
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_CASE("i32 loops keep wrapping in promoted locals and fused updates") {
   program_matrix::ProgramCase program;
   program.name = "i32_wrap_loops";
