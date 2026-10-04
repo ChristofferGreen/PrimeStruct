@@ -63,18 +63,34 @@ struct NativeEmitterOptions {
   bool registerAllocation = false;
 };
 
+// Code to run inside this process (Linux x86_64; include/primec/backend/NativeJit.h runs it):
+// the functions, string data and a trampoline, then one page of read-write data the code
+// addresses RIP-relative. The image is position-independent.
+struct NativeJitImage {
+  std::vector<uint8_t> bytes;
+  size_t codeBytes = 0; // executable prefix (code and strings), page-aligned
+  size_t trampolineOffset = 0;
+  size_t dataOffset = 0;   // equal to codeBytes
+  uint64_t stackBytes = 0; // machine stack the deepest call chain the VM allows needs
+};
+
 class NativeEmitter {
  public:
-  bool emitExecutable(const IrModule &module, const std::string &outputPath, std::string &error) const;
-  bool emitExecutable(const IrModule &module,
-                      const std::string &outputPath,
-                      std::string &error,
-                      NativeEmitterInstrumentation *instrumentation) const;
-  bool emitExecutable(const IrModule &module,
-                      const std::string &outputPath,
-                      std::string &error,
-                      NativeEmitterInstrumentation *instrumentation,
-                      const NativeEmitterOptions &options) const;
+   // Emits `module` for in-process execution with the VM's fault semantics (see JitFault in
+   // src/native_emitter/NativeEmitterInternalsX64.h). Fails when the backend cannot emit it or a
+   // function cannot be register-allocated.
+   bool emitJitImage(const IrModule &module, NativeJitImage &image, std::string &error) const;
+   bool
+   emitExecutable(const IrModule &module, const std::string &outputPath, std::string &error) const;
+   bool emitExecutable(const IrModule &module,
+                       const std::string &outputPath,
+                       std::string &error,
+                       NativeEmitterInstrumentation *instrumentation) const;
+   bool emitExecutable(const IrModule &module,
+                       const std::string &outputPath,
+                       std::string &error,
+                       NativeEmitterInstrumentation *instrumentation,
+                       const NativeEmitterOptions &options) const;
 };
 
 std::string formatNativeEmitterDebugDump(

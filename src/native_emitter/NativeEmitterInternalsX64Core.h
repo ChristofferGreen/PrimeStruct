@@ -235,6 +235,11 @@ inline bool X64Emitter::beginFunction(uint64_t frameSize, bool resetValueStack, 
   pending_.clear();
   inComplexOp_ = false;
   frameSize_ = frameSize;
+  if (resetValueStack) {
+    entryFrameSize_ = frameSize;
+  } else {
+    maxFrameSize_ = std::max(maxFrameSize_, frameSize);
+  }
   // `resetValueStack` is only ever passed true for the entry function
   // (NativeEmitterFunctionEmit.cpp: `beginFunction(frameSize,
   // isEntryFunction, error)`) - reuse it as this backend's own
@@ -738,7 +743,7 @@ inline void X64Emitter::emitExitSyscall() {
 
 inline void X64Emitter::emitReturn() {
   emitPopReg(0);
-  if (isEntryFunction_) {
+  if (isEntryFunction_ && !jitMode_) {
     emitExitSyscall();
     return;
   }
@@ -750,7 +755,7 @@ inline void X64Emitter::emitReturn() {
 inline void X64Emitter::emitReturnVoid() {
   flushValueStackCache();
   emitMovRegImm64(0, 0);
-  if (isEntryFunction_) {
+  if (isEntryFunction_ && !jitMode_) {
     emitExitSyscall();
     return;
   }

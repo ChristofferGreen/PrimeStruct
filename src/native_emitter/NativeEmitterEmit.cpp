@@ -102,22 +102,34 @@ bool NativeEmitter::emitExecutable(const IrModule &module,
   return emitExecutable(module, outputPath, error, instrumentation, NativeEmitterOptions{});
 }
 
-bool NativeEmitter::emitExecutable(const IrModule &module,
-                                   const std::string &outputPath,
-                                   std::string &error,
-                                   NativeEmitterInstrumentation *instrumentation,
-                                   const NativeEmitterOptions &options) const {
+namespace {
+
+// Emits `module` into an executable image (Mach-O or ELF), or, with `jit`, into an in-process
+// image (x86_64 only).
+bool buildNativeImage(const IrModule &module,
+                      const NativeEmitterOptions &options,
+                      NativeEmitterInstrumentation *instrumentation,
+                      NativeJitImage *jit,
+                      std::vector<uint8_t> &imageOut,
+                      std::string &error) {
   if (instrumentation != nullptr) {
     *instrumentation = NativeEmitterInstrumentation{};
   }
 #if !(defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))) && \
     !(defined(__linux__) && defined(__x86_64__))
   (void)module;
-  (void)outputPath;
   (void)options;
+  (void)jit;
+  (void)imageOut;
   error = "native backend is only supported on macOS/arm64 or Linux/x86_64";
   return false;
 #else
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
+  if (jit != nullptr) {
+    error = "native JIT is only supported on Linux/x86_64";
+    return false;
+  }
+#endif
   if (module.entryIndex < 0 || static_cast<size_t>(module.entryIndex) >= module.functions.size()) {
     error = "invalid IR entry index";
     return false;
@@ -188,7 +200,8 @@ bool NativeEmitter::emitExecutable(const IrModule &module,
   if (const char *forced = std::getenv("PRIMESTRUCT_NATIVE_REGALLOC"); forced != nullptr) {
     registerAllocation = std::string_view(forced) == "1";
   }
-  emitter.setRegisterAllocationEnabled(registerAllocation);
+  emitter.setRegisterAllocationEnabled(registerAllocation || jit != nullptr);
+  emitter.setJitMode(jit != nullptr);
 #endif
   std::vector<NativeEmitterBranchFixup> branchFixups;
   std::vector<NativeEmitterCallFixup> callFixups;
@@ -245,6 +258,11 @@ bool NativeEmitter::emitExecutable(const IrModule &module,
                            error)) {
     return false;
   }
+#if !(defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__)))
+  if (jit != nullptr) {
+    jit->trampolineOffset = emitter.emitJitRuntime(functionOffsets[entryIndex]);
+  }
+#endif
   if (instrumentation != nullptr) {
     for (const auto &functionInstrumentation : instrumentation->perFunction) {
       instrumentation->totalInstructionCount += functionInstrumentation.instructionTotal;
@@ -406,6 +424,23 @@ bool NativeEmitter::emitExecutable(const IrModule &module,
       }
     }
   }
+#if !(defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__)))
+  if (jit != nullptr) {
+    constexpr size_t PageBytes = 4096;
+    const size_t dataOffset = static_cast<size_t>(alignTo(code.size(), PageBytes));
+    code.resize(dataOffset + PageBytes, 0);
+    emitter.patchJitData(code, dataOffset);
+    jit->codeBytes = dataOffset;
+    jit->dataOffset = dataOffset;
+    // Every non-entry frame (its locals plus the return address and saved rbp) at the VM's
+    // deepest call chain, the entry frame with its operand stack, and room for the templates.
+    jit->stackBytes = emitter.entryFrameSize() +
+                      (X64Emitter::JitMaxCallDepth + 1) * (emitter.maxFrameSize() + 16) + 64 * 1024;
+    jit->bytes = std::move(code);
+    imageOut.clear();
+    return true;
+  }
+#endif
   std::vector<uint8_t> image;
 #if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
   if (!buildMachO(code, image, error)) {
@@ -416,8 +451,35 @@ bool NativeEmitter::emitExecutable(const IrModule &module,
     return false;
   }
 #endif
-  return writeBinaryFile(outputPath, image, error);
+  imageOut = std::move(image);
+  return true;
 #endif
+}
+
+} // namespace
+
+bool NativeEmitter::emitExecutable(const IrModule &module,
+                                   const std::string &outputPath,
+                                   std::string &error,
+                                   NativeEmitterInstrumentation *instrumentation,
+                                   const NativeEmitterOptions &options) const {
+  std::vector<uint8_t> image;
+  if (!buildNativeImage(module, options, instrumentation, nullptr, image, error)) {
+    return false;
+  }
+  return writeBinaryFile(outputPath, image, error);
+}
+
+bool NativeEmitter::emitJitImage(const IrModule &module,
+                                 NativeJitImage &image,
+                                 std::string &error) const {
+  image = NativeJitImage{};
+  NativeEmitterOptions options;
+  options.promoteLocals = true;
+  options.deferOperands = true;
+  options.registerAllocation = true;
+  std::vector<uint8_t> unused;
+  return buildNativeImage(module, options, nullptr, &image, unused, error);
 }
 
 } // namespace primec

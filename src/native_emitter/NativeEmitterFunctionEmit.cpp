@@ -93,6 +93,13 @@ bool emitNativeFunctions(const IrModule &module,
     // registers extend the frame past the locals and the print scratch area.
     const RegAllocFunctionPlan &regAllocPlan = regAllocPlans[functionIndex];
     const bool useRegisterAllocation = registerAllocated[functionIndex];
+    if constexpr (!kIsArm64) {
+      // The JIT's fault checks live in the register-allocated emitter only.
+      if (emitter.jitMode() && !useRegisterAllocation) {
+        error = "native JIT needs every function register-allocated";
+        return false;
+      }
+    }
     const uint32_t spillBaseLocal = static_cast<uint32_t>(layout.localCount + layout.scratchSlots);
     const uint64_t regAllocBytes =
         useRegisterAllocation ? (static_cast<uint64_t>(regAllocPlan.spillSlotCount) + 32) * 16 : 0;
@@ -115,7 +122,12 @@ bool emitNativeFunctions(const IrModule &module,
     if (!emitter.beginFunction(frameSize, isEntryFunction, error)) {
       return false;
     }
-    if (isEntryFunction && (kIsArm64 || !argRegsFree)) {
+    // In JIT mode the trampoline passes argc and argv in r12 and r13 itself.
+    bool captureEntryArgs = isEntryFunction && (kIsArm64 || !argRegsFree);
+    if constexpr (!kIsArm64) {
+      captureEntryArgs = captureEntryArgs && !emitter.jitMode();
+    }
+    if (captureEntryArgs) {
       emitter.emitCaptureEntryArgs();
     }
     if constexpr (kIsArm64) {
@@ -658,6 +670,11 @@ bool emitNativeFunctions(const IrModule &module,
           stringFixups.push_back({fixupIndex, stringIndex});
         };
         hooks.argumentsInRegisters = registerArguments[functionIndex];
+        hooks.functionIndex = static_cast<uint32_t>(functionIndex);
+        hooks.stringCount = module.stringTable.size();
+        hooks.stringLength = [&](uint64_t index) -> uint64_t {
+          return index < module.stringTable.size() ? module.stringTable[index].size() : 0;
+        };
         hooks.calleeTakesRegisterArguments = [&](uint64_t target) {
           return target < registerArguments.size() && registerArguments[target];
         };

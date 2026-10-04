@@ -514,6 +514,28 @@ leading parameter stores inside `Call` was tried and dropped: the extra work in 
 instructions) than the dispatch it saved. Instead `StoreLocal a; LoadLocal a; Push c; Cmp; JumpIfZero` (a parameter
 store followed by the first test, or `x = ...; if (x < c)`) is one form: call_fib 107 to 103 ms.
 
+Native execution tier (2026-10-04): after fusion the loop costs 1.3-2.4 ns per dispatch at 6-7 dispatches per loop
+iteration, so the next step was to stop interpreting. `primevm -O2` on Linux x86_64 now compiles eligible modules with
+the native backend into executable memory and calls them (`src/native_emitter/NativeJit.cpp`):
+
+- The image is the native backend's position-independent code and string data, a trampoline and one read-write page
+  (saved stack pointer, call depth, fault code and argument) the code addresses RIP-relative. The trampoline saves the
+  callee-saved registers, switches to a stack sized for the VM's 4096-frame limit (with a guard page), passes argc and
+  argv in r12/r13 and calls the entry function, which returns instead of exiting.
+- Faults: JIT mode emits the VM's checks in the register-allocated code (zero divisors, `LoadStringByte` positions,
+  `LoadStringLength` indices, call depth around every call, a fault after the last block for a missing return); a
+  failed check jumps to a stub that stores the fault code and unwinds to the trampoline, and the host reports the
+  VM's message. Division by -1 negates in all native code, matching the VM's wrapping `INT64_MIN / -1`.
+- Only opcodes whose native code matches the VM exactly are taken (`nativeJitAccepts`); f32 is out because the VM
+  zero-extends f32 results and native code does not, float-to-i32/u64 because out-of-range results differ, and heap,
+  indirect, file, host-call and argv opcodes because native addresses and descriptors are not the VM's. Every
+  function must be register-allocated (the checks live there).
+- `primestruct.ir.native_jit` compares JIT and interpreter on 300 random programs (raw and -O2), calls, every fault
+  kind, `INT64_MIN / -1` and argc; the compile-run suites exercise it through `primevm`.
+
+Measured (best of 7, primevm wall time including compile): aggregate 50 to 13.5 ms, json_scan 59 to 26 ms,
+json_parse 138 to 60 ms, call_fib 107 to 39 ms, float_series 346 to 37 ms.
+
 4.2 and 4.4 (2026-10-04): every heap access used to scan the whole allocation list, freed allocations included, so a
 program that builds many small vectors slowed down quadratically (3,000 vectors of 20 pushes: 1.72 s). Allocations
 are only ever appended, each at the end of the heap, so the list is sorted by base slot and `VmHeapHelpers.cpp` now

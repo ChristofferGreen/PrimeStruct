@@ -678,15 +678,28 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
       case IrOpcode::DivI64:
       case IrOpcode::DivU64: {
         // rax:rdx / divisor; only scratch registers change, so nothing is saved. A zero divisor
-        // traps as in the template.
+        // traps as in the template, or is a VM fault in JIT mode. A divisor of -1 negates, as in
+        // the VM (INT64_MIN / -1 wraps instead of trapping).
         loadInto(instruction.uses[0], Rax);
         const uint8_t divisor = valueReg(instruction.uses[1], Rcx);
+        if (jitMode_) {
+          emitRex(true, divisor, divisor); // test divisor, divisor
+          emitByte(0x85);
+          emitModRmReg(divisor, divisor);
+          emitJitFaultIf(CondCode::Eq, JitFault::DivisionByZero);
+        }
         if (ir.op == IrOpcode::DivU64) {
           emitXorRegReg(2, 2);
           emitDivReg(divisor);
         } else {
+          emitCmpRegImm32(divisor, -1);
+          const size_t divide = emitCondJumpPlaceholder(CondCode::Ne);
+          emitNegReg(Rax);
+          const size_t done = emitJumpPlaceholderRaw();
+          patchCondJumpHere(divide);
           emitCqo();
           emitIdivReg(divisor);
+          patchJumpHere(done);
         }
         storeValue(instruction.defs[0], Rax);
         break;
@@ -738,6 +751,11 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
         const uint32_t d = instruction.defs[0];
         const uint8_t target = targetReg(d, -1);
         const uint8_t index = valueReg(instruction.uses[0], Rax);
+        if (jitMode_) {
+          // The VM faults on a position at or past the end (unsigned, so negatives too).
+          emitCmpRegImm32(index, static_cast<int32_t>(hooks.stringLength(ir.imm)));
+          emitJitFaultIf(CondCode::AboveEq, JitFault::StringIndexOutOfBounds);
+        }
         const size_t fixup = emitLeaRipPlaceholder(Rcx);
         emitLoadMemByteIndexed(target, Rcx, index);
         hooks.recordStringFixup(fixup, static_cast<uint32_t>(ir.imm));
@@ -834,8 +852,14 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
             emitSpillReg(valueReg(use, Rax));
           }
         }
+        if (jitMode_) {
+          emitJitEnterCall();
+        }
         if (!hooks.recordCallFixup(emitCallPlaceholder(), ir.imm)) {
           return false;
+        }
+        if (jitMode_) {
+          emitJitLeaveCall();
         }
         if (ir.op == IrOpcode::Call && !instruction.defs.empty()) {
           storeValue(instruction.defs[0], Rax);
@@ -856,7 +880,7 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
         } else if (value != Rax) {
           emitMovRegReg(Rax, value);
         }
-        if (isEntryFunction_) {
+        if (isEntryFunction_ && !jitMode_) {
           emitExitSyscall();
         } else {
           emitMovRegReg(4, 5); // mov rsp, rbp
@@ -866,6 +890,15 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
         break;
       }
       default: {
+        if (jitMode_ && ir.op == IrOpcode::LoadStringLength) {
+          // The VM's string checks: a tagged (dynamic) index names no string here, and a module
+          // index must exist.
+          const uint8_t index = valueReg(instruction.uses[0], Rax);
+          emitCmpRegImm32(index, 0);
+          emitJitFaultIf(CondCode::Lt, JitFault::InvalidDynamicStringIndex);
+          emitCmpRegImm32(index, static_cast<int32_t>(hooks.stringCount));
+          emitJitFaultIf(CondCode::AboveEq, JitFault::InvalidStringIndex);
+        }
         // Template: operands onto the operand stack, results back off it, and every register
         // that must survive the template saved around it.
         const bool returns = ir.op == IrOpcode::ReturnVoid || ir.op == IrOpcode::ReturnI32 ||
@@ -912,6 +945,10 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
     }
   }
   instOffsets[fn.instructions.size()] = code_.size();
+  if (jitMode_) {
+    // Falling off the end (or jumping to it) is the VM's "missing return" fault.
+    emitJitFault(JitFault::MissingReturn, hooks.functionIndex);
+  }
 
   for (size_t i = 0; i < trampolines.size(); ++i) {
     const Trampoline &trampoline = trampolines[i];

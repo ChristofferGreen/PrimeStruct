@@ -657,6 +657,7 @@ set(PRIMESTRUCT_CODEGEN_SOURCES
   src/native_emitter/NativeEmitterElf.cpp
   src/native_emitter/NativeEmitterEmit.cpp
   src/native_emitter/NativeEmitterTestingEncodings.cpp
+  src/native_emitter/NativeJit.cpp
   src/native_emitter/NativeEmitterFunctionEmit.cpp
   src/native_emitter/NativeEmitterRegAlloc.cpp
   src/wasm_emitter/WasmEmitter.cpp
@@ -874,7 +875,7 @@ else()
 endif()
 
 add_executable(primevm src/bin/primevm_main.cpp)
-target_link_libraries(primevm PRIVATE primec_ir_lib primec_runtime_lib)
+target_link_libraries(primevm PRIVATE primec_ir_lib primec_runtime_lib primec_backend_emitters_lib)
 if(PRIMESTRUCT_MIMALLOC_LINKED)
   target_link_libraries(primevm PRIVATE mimalloc)
 endif()
@@ -955,6 +956,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/ir_pipeline/optimizer/test_ir_vm_fast_kernel.cpp
     tests/unit/ir_pipeline/optimizer/test_ir_native_codegen.cpp
     tests/unit/ir_pipeline/optimizer/test_ir_register_locals.cpp
+    tests/unit/ir_pipeline/optimizer/test_ir_native_jit.cpp
   )
   target_include_directories(PrimeStruct_ir_optimizer_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
   target_link_libraries(PrimeStruct_ir_optimizer_tests PRIVATE primec_ir_lib primec_backend_registry_lib primec_backend_emitters_lib primec_support_lib primec_runtime_lib)
@@ -2991,6 +2993,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.ir.vm_fast_kernel
     primestruct.ir.native_codegen
     primestruct.ir.register_locals
+    primestruct.ir.native_jit
   )
   foreach(suite IN LISTS PrimeStructIrOptimizerTestSuites)
     string(REPLACE "." "_" suiteId "${suite}")

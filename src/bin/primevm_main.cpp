@@ -3,6 +3,7 @@
 #include "primec/pipeline/CompilePipeline.h"
 #include "primec/support/Diagnostics.h"
 #include "primec/backend/IrBackendProfiles.h"
+#include "primec/backend/NativeJit.h"
 #include "primec/ir/IrPreparation.h"
 #include "primec/pipeline/CliUsage.h"
 #include "primec/support/Options.h"
@@ -13,6 +14,7 @@
 
 #include <cctype>
 #include <cstdint>
+#include <cstdlib>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -748,6 +750,33 @@ int main(int argc, char **argv) {
   }
   if (options.debugJson) {
     return runDebugJson(options, vmDiagnostics, ir, args);
+  }
+
+  // Optimized plain runs execute the module as native code when that is observably the same
+  // as interpreting it (primec/backend/NativeJit.h). PRIMEVM_JIT=0, like PRIMEVM_KERNEL=step,
+  // keeps the interpreter.
+  const char *jitSetting = std::getenv("PRIMEVM_JIT");
+  const char *kernelSetting = std::getenv("PRIMEVM_KERNEL");
+  const bool jitAllowed = options.optimization.level >= 2 &&
+                          (jitSetting == nullptr || std::string_view(jitSetting) != "0") &&
+                          (kernelSetting == nullptr || std::string_view(kernelSetting) != "step");
+  if (jitAllowed) {
+    const primec::NativeJitResult jit = primec::runNativeJit(ir, args);
+    if (options.optimization.report) {
+      std::cerr << "execution_tier=" << (jit.executed ? "native" : "interpreter");
+      if (!jit.executed) {
+        std::cerr << " reason=" << jit.reason;
+      }
+      std::cerr << '\n';
+    }
+    if (jit.executed) {
+      if (!jit.ok) {
+        return emitVmRuntimeFailure(options, vmDiagnostics, jit.error);
+      }
+      return static_cast<int>(static_cast<int32_t>(jit.result));
+    }
+  } else if (options.optimization.report) {
+    std::cerr << "execution_tier=interpreter\n";
   }
 
   if (!vm.execute(ir, result, error, args)) {

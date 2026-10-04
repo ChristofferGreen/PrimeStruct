@@ -86,7 +86,53 @@ class X64Emitter {
      // callee takes them that way, the others on the operand stack; otherwise all on the stack.
      bool argumentsInRegisters = false;
      std::function<bool(uint64_t target)> calleeTakesRegisterArguments;
+     // The function's index, which a JIT "missing return" fault reports, and the byte length of
+     // module string `index` (JIT bounds checks).
+     uint32_t functionIndex = 0;
+     std::function<uint64_t(uint64_t index)> stringLength;
+     uint64_t stringCount = 0;
    };
+
+   // In-process execution (NativeJit.h): the entry function returns to a trampoline instead of
+   // exiting, and every VM fault the code can meet (division by zero, a string index out of
+   // bounds, call depth, falling off the end of a function) unwinds to the trampoline with a
+   // fault code in the JIT data area instead of trapping. The data area is a page placed after
+   // the code and strings and addressed RIP-relative; its fields are below.
+   static constexpr uint32_t JitDataSavedStack = 0;
+   static constexpr uint32_t JitDataCallDepth = 8;
+   static constexpr uint32_t JitDataFaultCode = 16;
+   static constexpr uint32_t JitDataFaultArgument = 24;
+   static constexpr uint64_t JitMaxCallDepth =
+       4095; // the VM's limit of 4096 frames, entry included
+   enum class JitFault : uint32_t {
+     None = 0,
+     DivisionByZero = 1,
+     StringIndexOutOfBounds = 2,
+     CallStackOverflow = 3,
+     MissingReturn = 4, // argument: function index
+     InvalidDynamicStringIndex = 5,
+     InvalidStringIndex = 6,
+   };
+   void setJitMode(bool enabled) {
+     jitMode_ = enabled;
+   }
+   bool jitMode() const {
+     return jitMode_;
+   }
+   // Around a call: fault when the call would exceed the VM's depth, else count it.
+   void emitJitEnterCall();
+   void emitJitLeaveCall();
+   // After every function: the fault stubs and the trampoline the host calls as
+   // uint64_t(uint64_t argc, char **argv, void *stackTop); returns the trampoline's offset.
+   size_t emitJitRuntime(size_t entryOffset);
+   // Resolves the data-area references once the data area's offset in the image is known.
+   void patchJitData(std::vector<uint8_t> &image, size_t dataOffset) const;
+   uint64_t maxFrameSize() const {
+     return maxFrameSize_;
+   }
+   uint64_t entryFrameSize() const {
+     return entryFrameSize_;
+   }
    void setRegisterAllocationEnabled(bool enabled) {
      registerAllocationEnabled_ = enabled;
    }
@@ -517,6 +563,26 @@ class X64Emitter {
   bool deferOperands_ = false;
   bool registerAllocationEnabled_ = false;
   int32_t regAllocSlotDisp(uint32_t pseudoLocal) const;
+  bool jitMode_ = false;
+  uint64_t maxFrameSize_ = 0;
+  uint64_t entryFrameSize_ = 0;
+  struct JitDataReference {
+    size_t position = 0; // of the rel32
+    uint32_t field = 0;
+    uint32_t trailing = 0; // immediate bytes after the rel32
+  };
+  struct JitFaultSite {
+    size_t position = 0; // of the rel32
+    JitFault fault = JitFault::None;
+    uint32_t argument = 0;
+  };
+  std::vector<JitDataReference> jitDataReferences_;
+  std::vector<JitFaultSite> jitFaultSites_;
+  // A RIP-relative ModRM operand naming a data-area field (mod=00, rm=101).
+  void emitJitDataOperand(uint8_t reg, uint32_t field, uint32_t trailing = 0);
+  // Jumps to the fault exit when `cc` holds (or always).
+  void emitJitFaultIf(CondCode cc, JitFault fault, uint32_t argument = 0);
+  void emitJitFault(JitFault fault, uint32_t argument = 0);
   bool inComplexOp_ = false;
   std::vector<PendingOperand> pending_;
   // Registers that hold pending Reg operands: r14 first (the only one inside a
@@ -559,6 +625,7 @@ class X64Emitter {
 #include "NativeEmitterInternalsX64Io.h"
 #include "NativeEmitterInternalsX64Deferred.h"
 #include "NativeEmitterInternalsX64RegAlloc.h"
+#include "NativeEmitterInternalsX64Jit.h"
 
 uint32_t computeElfCodeOffset();
 bool buildElf(const std::vector<uint8_t> &code, std::vector<uint8_t> &image, std::string &error);
