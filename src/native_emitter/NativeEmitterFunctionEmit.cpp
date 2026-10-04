@@ -1,10 +1,30 @@
 #include "NativeEmitterEmitInternal.h"
 #include "NativeEmitterPromotion.h"
+#include "primec/ir/IrLocalEscape.h"
 
 #include <fcntl.h>
 #include <type_traits>
 
 namespace primec::native_emitter {
+
+namespace {
+
+// Whether the VM could reach this function's locals through memory: it takes an address, or it
+// dereferences one, which the VM resolves against the current frame whatever its origin. The
+// JIT keeps such a function's locals in their frame slots, zeroed at entry as in the VM.
+bool jitFrameAccessible(const IrFunction &function) {
+  if (analyzeIrLocalEscape(function).addressTaken) {
+    return true;
+  }
+  for (const IrInstruction &instruction : function.instructions) {
+    if (instruction.op == IrOpcode::LoadIndirect || instruction.op == IrOpcode::StoreIndirect) {
+      return true;
+    }
+  }
+  return false;
+}
+
+} // namespace
 
 template <typename EmitterT>
 bool emitNativeFunctions(const IrModule &module,
@@ -52,11 +72,13 @@ bool emitNativeFunctions(const IrModule &module,
         std::string planError = "string index out of range";
         registerAllocated[functionIndex] =
             stringsValid &&
-            planNativeRegisterAllocation(module,
-                                         functionIndex,
-                                         argRegsFree ? X64RegAllocPoolWithArgRegs : X64RegAllocPool,
-                                         regAllocPlans[functionIndex],
-                                         planError);
+            planNativeRegisterAllocation(
+                module,
+                functionIndex,
+                argRegsFree ? X64RegAllocPoolWithArgRegs : X64RegAllocPool,
+                regAllocPlans[functionIndex],
+                planError,
+                !(emitter.jitMode() && jitFrameAccessible(module.functions[functionIndex])));
         if (instrumentation != nullptr) {
           auto &functionInstrumentation = instrumentation->perFunction[functionIndex];
           functionInstrumentation.registerAllocated = registerAllocated[functionIndex];
@@ -672,6 +694,10 @@ bool emitNativeFunctions(const IrModule &module,
         hooks.argumentsInRegisters = registerArguments[functionIndex];
         hooks.functionIndex = static_cast<uint32_t>(functionIndex);
         hooks.stringCount = module.stringTable.size();
+        if (emitter.jitMode()) {
+          hooks.vmLocalCount = analyzeIrLocalEscape(fn).localCount;
+          hooks.zeroFrameLocals = jitFrameAccessible(fn);
+        }
         hooks.stringLength = [&](uint64_t index) -> uint64_t {
           return index < module.stringTable.size() ? module.stringTable[index].size() : 0;
         };

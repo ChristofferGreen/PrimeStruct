@@ -19,6 +19,9 @@ bool opcodeHasNativeVmSemantics(IrOpcode op) {
   case IrOpcode::PushF64:
   case IrOpcode::LoadLocal:
   case IrOpcode::StoreLocal:
+  case IrOpcode::AddressOfLocal:
+  case IrOpcode::LoadIndirect:
+  case IrOpcode::StoreIndirect:
   case IrOpcode::Dup:
   case IrOpcode::Pop:
   case IrOpcode::AddI32:
@@ -120,6 +123,13 @@ bool nativeJitAccepts(const IrModule &module, std::string &reason) {
         reason = "call target";
         return false;
       }
+      // Frame addresses are checked against the local count with a 32-bit immediate.
+      if ((instruction.op == IrOpcode::LoadLocal || instruction.op == IrOpcode::StoreLocal ||
+           instruction.op == IrOpcode::AddressOfLocal) &&
+          instruction.imm >= INT32_MAX / IrSlotBytes) {
+        reason = "local index";
+        return false;
+      }
     }
   }
   return true;
@@ -219,6 +229,12 @@ NativeJitResult runNativeJit(const IrModule &module, const std::vector<std::stri
     break;
   case 6:
     outcome.error = "invalid string index in IR";
+    break;
+  case 7:
+    outcome.error = "unaligned indirect address in IR: " + std::to_string(argument);
+    break;
+  case 8:
+    outcome.error = "invalid indirect address in IR: " + std::to_string(argument);
     break;
   default:
     outcome.error = "native JIT fault " + std::to_string(fault);

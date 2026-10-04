@@ -92,6 +92,25 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
     }
     return reg;
   };
+  // JIT mode: a VM frame address (a byte offset below vmLocalCount * 16, a multiple of 16)
+  // checked as the VM checks it and turned into the slot's machine address in rcx. Local k sits
+  // at the frame slot disp(k) = disp(0) + 16 k below rbp.
+  const auto jitFrameAddress = [&](uint32_t value) -> uint8_t {
+    const uint8_t address = valueReg(value, Rcx);
+    emitRex(true, 0, address); // test address, 15
+    emitByte(0xF7);
+    emitModRmReg(0, address);
+    emitU32(IrSlotBytes - 1);
+    emitJitFaultIfWithRegister(CondCode::Ne, JitFault::UnalignedIndirectAddress, address);
+    emitCmpRegImm32(address, static_cast<int32_t>(hooks.vmLocalCount * IrSlotBytes));
+    emitJitFaultIfWithRegister(CondCode::AboveEq, JitFault::InvalidIndirectAddress, address);
+    if (address != Rcx) {
+      emitMovRegReg(Rcx, address);
+    }
+    emitAddRegReg(Rcx, 5);
+    emitAddRegImm32(Rcx, regAllocSlotDisp(0));
+    return Rcx;
+  };
   // Where to compute `value`: its own register unless that is `avoid` (an operand still
   // needed), otherwise rax.
   const auto targetReg = [&](uint32_t value, int avoid) -> uint8_t {
@@ -365,6 +384,11 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
   // Entry: the first three parameters come from rax, rcx and rdx when the function takes register
   // arguments, the others off the operand stack, top first (rax is free once the register
   // arguments are home); locals read before any store start at zero.
+  if (jitMode_ && hooks.zeroFrameLocals && hooks.vmLocalCount > 0) {
+    // The VM starts every local at zero. rax, rcx and rdx may hold register arguments here,
+    // but no allocatable register holds anything yet.
+    emitJitZeroFrameLocals(hooks.vmLocalCount);
+  }
   if (!plan.blocks.empty() && plan.blocks[0].reachable) {
     const RegAllocBlock &first = plan.blocks[0];
     constexpr uint8_t ArgumentRegisters[] = {Rax, Rcx, 2};
@@ -707,22 +731,30 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
       case IrOpcode::AddressOfLocal: {
         const uint32_t d = instruction.defs[0];
         const uint8_t target = targetReg(d, -1);
-        emitMovRegReg(target, 5);
-        emitAddRegImm32(target, regAllocSlotDisp(static_cast<uint32_t>(ir.imm)));
+        if (jitMode_) {
+          // The VM's address: the slot's byte offset in this frame.
+          emitMovRegImm64(target, ir.imm * IrSlotBytes);
+        } else {
+          emitMovRegReg(target, 5);
+          emitAddRegImm32(target, regAllocSlotDisp(static_cast<uint32_t>(ir.imm)));
+        }
         storeValue(d, target);
         break;
       }
       case IrOpcode::LoadIndirect: {
         const uint32_t d = instruction.defs[0];
         const uint8_t target = targetReg(d, -1);
-        emitLoadMem(target, addressReg(instruction.uses[0]), 0);
+        const uint8_t address =
+            jitMode_ ? jitFrameAddress(instruction.uses[0]) : addressReg(instruction.uses[0]);
+        emitLoadMem(target, address, 0);
         storeValue(d, target);
         break;
       }
       case IrOpcode::StoreIndirect: {
         // Stores the value at the address and leaves the value as the result.
-        const uint8_t address = addressReg(instruction.uses[0]);
         const uint8_t value = valueReg(instruction.uses[1], Rax);
+        const uint8_t address =
+            jitMode_ ? jitFrameAddress(instruction.uses[0]) : addressReg(instruction.uses[0]);
         emitStoreMem(address, 0, value);
         if (!instruction.defs.empty()) {
           storeValue(instruction.defs[0], value);

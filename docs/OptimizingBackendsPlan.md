@@ -536,6 +536,15 @@ the native backend into executable memory and calls them (`src/native_emitter/Na
 Measured (best of 7, primevm wall time including compile): aggregate 50 to 13.5 ms, json_scan 59 to 26 ms,
 json_parse 138 to 60 ms, call_fib 107 to 39 ms, float_series 346 to 37 ms.
 
+Frame addresses (2026-10-04): of the 507 corpus programs that run from the build directory, 70 took the native tier
+and 254 of the rest stopped at `AddressOfLocal` (structs and arrays in the frame). The JIT now keeps the VM's address
+values: `AddressOfLocal k` is `16 k`, and `LoadIndirect`/`StoreIndirect` check alignment and `address < 16 *
+localCount` (the VM's two faults, with the address in the message) before adding the frame base, so address
+arithmetic, printing and faults are the VM's. The VM resolves any untagged address against the current frame, also
+one a caller passed in, so a JIT function that takes or dereferences an address keeps all its locals in their frame
+slots, zeroed at entry as the VM's are. Native-tier programs: 70 to 162 of 507; the heap (`HeapAlloc`, 258 programs) is
+the next obstacle.
+
 4.2 and 4.4 (2026-10-04): every heap access used to scan the whole allocation list, freed allocations included, so a
 program that builds many small vectors slowed down quadratically (3,000 vectors of 20 pushes: 1.72 s). Allocations
 are only ever appended, each at the end of the heap, so the list is sorted by base slot and `VmHeapHelpers.cpp` now

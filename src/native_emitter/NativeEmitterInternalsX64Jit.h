@@ -14,10 +14,38 @@ inline void X64Emitter::emitJitFaultIf(CondCode cc, JitFault fault, uint32_t arg
   emitU32(0);
 }
 
+inline void
+X64Emitter::emitJitFaultIfWithRegister(CondCode cc, JitFault fault, uint8_t argumentRegister) {
+  emitJitFaultIf(cc, fault);
+  jitFaultSites_.back().argumentRegister = argumentRegister;
+}
+
 inline void X64Emitter::emitJitFault(JitFault fault, uint32_t argument) {
   emitByte(0xE9); // jmp rel32
   jitFaultSites_.push_back({code_.size(), fault, argument});
   emitU32(0);
+}
+
+inline void X64Emitter::emitJitZeroFrameLocals(uint32_t count) {
+  constexpr uint32_t Unrolled = 8;
+  if (count <= Unrolled) {
+    for (uint32_t k = 0; k < count; ++k) {
+      emitStoreImm64Mem(5, regAllocSlotDisp(k), 0);
+    }
+    return;
+  }
+  constexpr uint8_t Pointer = 11;
+  constexpr uint8_t Counter = 10;
+  emitMovRegReg(Pointer, 5);
+  emitAddRegImm32(Pointer, regAllocSlotDisp(0));
+  emitMovRegImm64(Counter, count);
+  const size_t loop = code_.size();
+  emitStoreImm64Mem(Pointer, 0, 0);
+  emitAddRegImm32(Pointer, static_cast<int32_t>(IrSlotBytes));
+  emitSubRegImm32(Counter, 1);
+  emitByte(0x0F); // jnz loop
+  emitByte(0x85);
+  emitU32(static_cast<uint32_t>(static_cast<int32_t>(loop - (code_.size() + 4))));
 }
 
 inline void X64Emitter::emitJitEnterCall() {
@@ -44,10 +72,14 @@ inline size_t X64Emitter::emitJitRuntime(size_t entryOffset) {
   for (const JitFaultSite &site : jitFaultSites_) {
     const int32_t delta = static_cast<int32_t>(code_.size() - (site.position + 4));
     patchU32(site.position, static_cast<uint32_t>(delta));
+    if (site.argumentRegister >= 0) {
+      emitMovRegReg(2, static_cast<uint8_t>(site.argumentRegister)); // rdx = the value
+    } else {
+      emitByte(0xBA); // mov edx, imm32
+      emitU32(site.argument);
+    }
     emitByte(0xB8); // mov eax, imm32
     emitU32(static_cast<uint32_t>(site.fault));
-    emitByte(0xBA); // mov edx, imm32
-    emitU32(site.argument);
     emitByte(0xE9);
     exitJumps.push_back(code_.size());
     emitU32(0);

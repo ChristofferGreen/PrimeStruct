@@ -91,6 +91,11 @@ class X64Emitter {
      uint32_t functionIndex = 0;
      std::function<uint64_t(uint64_t index)> stringLength;
      uint64_t stringCount = 0;
+     // JIT mode: the VM's local count (indirect addresses are byte offsets below count * 16), and
+     // whether the frame's locals start at zero here as in the VM (functions that take an
+     // address keep every local in its frame slot).
+     uint32_t vmLocalCount = 0;
+     bool zeroFrameLocals = false;
    };
 
    // In-process execution (NativeJit.h): the entry function returns to a trampoline instead of
@@ -112,6 +117,8 @@ class X64Emitter {
      MissingReturn = 4, // argument: function index
      InvalidDynamicStringIndex = 5,
      InvalidStringIndex = 6,
+     UnalignedIndirectAddress = 7, // argument: the address
+     InvalidIndirectAddress = 8,   // argument: the address
    };
    void setJitMode(bool enabled) {
      jitMode_ = enabled;
@@ -575,6 +582,7 @@ class X64Emitter {
     size_t position = 0; // of the rel32
     JitFault fault = JitFault::None;
     uint32_t argument = 0;
+    int argumentRegister = -1; // when set, the argument is this register's value
   };
   std::vector<JitDataReference> jitDataReferences_;
   std::vector<JitFaultSite> jitFaultSites_;
@@ -582,6 +590,9 @@ class X64Emitter {
   void emitJitDataOperand(uint8_t reg, uint32_t field, uint32_t trailing = 0);
   // Jumps to the fault exit when `cc` holds (or always).
   void emitJitFaultIf(CondCode cc, JitFault fault, uint32_t argument = 0);
+  void emitJitFaultIfWithRegister(CondCode cc, JitFault fault, uint8_t argumentRegister);
+  // Zeroes the frame slots of locals [0, count) (register-allocated functions; uses r10, r11).
+  void emitJitZeroFrameLocals(uint32_t count);
   void emitJitFault(JitFault fault, uint32_t argument = 0);
   bool inComplexOp_ = false;
   std::vector<PendingOperand> pending_;

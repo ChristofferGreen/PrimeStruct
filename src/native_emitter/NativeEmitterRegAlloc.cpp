@@ -130,12 +130,13 @@ bool planNativeRegisterAllocation(const IrModule &module,
                                   size_t functionIndex,
                                   const std::vector<uint8_t> &pool,
                                   RegAllocFunctionPlan &out,
-                                  std::string &error) {
+                                  std::string &error,
+                                  bool promoteLocals) {
   out = {};
   error.clear();
   IrVirtualRegisterFunction registerForm;
   IrVirtualRegisterLoweringOptions options;
-  options.promoteLocals = true;
+  options.promoteLocals = promoteLocals;
   if (!lowerIrFunctionToBlockVirtualRegisters(
           module, functionIndex, registerForm, error, options)) {
     return false;

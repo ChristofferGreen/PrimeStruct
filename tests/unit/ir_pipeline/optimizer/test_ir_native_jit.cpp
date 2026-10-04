@@ -196,9 +196,65 @@ TEST_CASE("native JIT passes argc like the interpreter") {
   CHECK(jit.outcome.output == "3\n");
 }
 
+TEST_CASE("native JIT addresses frame locals like the interpreter") {
+  // Address values are the VM's byte offsets (printed, compared and stepped through), locals
+  // reached only through an address start at zero, and an address handed to another function
+  // names a slot of that function's own frame, as in the VM.
+  primec::IrModule module = moduleFrom(
+      {"PushI64 11",   "StoreLocal 0", "PushI64 22",    "StoreLocal 1", "AddressOfLocal 0",
+       "StoreLocal 4", "LoadLocal 4",  "PrintI64 1",    "LoadLocal 4",  "PushI64 16",
+       "AddI64",       "LoadIndirect", "PrintI64 1",    "LoadLocal 4",  "PushI64 48",
+       "AddI64",       "LoadIndirect", "PrintI64 1",    "LoadLocal 4",  "PushI64 32",
+       "AddI64",       "PushI64 77",   "StoreIndirect", "PrintI64 1",   "LoadLocal 2",
+       "PrintI64 1",   "PushI64 16",   "Call 1",        "PrintI64 1",   "PushI32 0",
+       "ReturnI32"});
+  module.functions.push_back(
+      optimizer_test::functionOf("/callee",
+                                 {optimizer_test::assembleOne("StoreLocal 0"),
+                                  optimizer_test::assembleOne("PushI64 5"),
+                                  optimizer_test::assembleOne("StoreLocal 1"),
+                                  optimizer_test::assembleOne("LoadLocal 0"),
+                                  optimizer_test::assembleOne("LoadIndirect"),
+                                  optimizer_test::assembleOne("ReturnI64")},
+                                 1));
+  expectSame(module, "frame addresses");
+  CHECK(runJit(module).outcome.output == "0\n22\n0\n77\n77\n5\n");
+
+  struct Case {
+    const char *name;
+    const char *address;
+    const char *message;
+  };
+  const std::vector<Case> cases = {
+      {"unaligned", "24", "unaligned indirect address in IR: 24"},
+      {"past_the_locals", "64", "invalid indirect address in IR: 64"},
+      {"tagged", "9223372036854775824", "invalid indirect address in IR: 9223372036854775824"},
+  };
+  for (const Case &testCase : cases) {
+    for (const bool store : {false, true}) {
+      INFO(testCase.name);
+      INFO(store);
+      std::vector<std::string> lines = {
+          "AddressOfLocal 3", "Pop", std::string("PushI64 ") + testCase.address};
+      if (store) {
+        lines.insert(lines.end(), {"PushI64 1", "StoreIndirect"});
+      } else {
+        lines.push_back("LoadIndirect");
+      }
+      lines.push_back("ReturnI64");
+      const primec::IrModule faulting = moduleFrom(lines);
+      const JitRun jit = runJit(faulting);
+      REQUIRE(jit.executed);
+      CHECK(jit.outcome == runVm(faulting));
+      CHECK(jit.outcome.error == testCase.message);
+    }
+  }
+}
+
 TEST_CASE("modules outside the native JIT subset stay on the interpreter") {
   std::string reason;
   CHECK_FALSE(primec::nativeJitAccepts(optimizer_test::heapProgram(), reason));
+  CHECK(reason.find("opcode") == 0);
   const primec::IrModule floats =
       moduleFrom({"PushF32 0x3f800000", "ConvertF32ToF64", "ConvertF64ToI64", "ReturnI32"});
   CHECK_FALSE(primec::nativeJitAccepts(floats, reason));
