@@ -1,4 +1,5 @@
 #include "VmFastKernel.h"
+#include "VmFastKernelProgram.h"
 
 #include "primec/ir/IrCfg.h"
 #include "primec/ir/IrPureSemantics.h"
@@ -37,75 +38,48 @@ bool vmFastKernelEnabled() {
 
 namespace {
 
-// The six integer comparisons the fused compare-and-branch forms cover.
-#define FAST_CMPS(X) X(Eq, ==) X(Ne, !=) X(Lt, <) X(Le, <=) X(Gt, >) X(Ge, >=)
-
-#define FAST_ENUM_JMP_CMP_LOCAL_IMM(N, O) FastOpJmpCmpLocalImm##N,
-#define FAST_ENUM_JMP_CMP_LOCAL_LOCAL(N, O) FastOpJmpCmpLocalLocal##N,
-#define FAST_ENUM_JMP_CMP(N, O) FastOpJmpCmp##N,
-
-// Internal opcodes live above the IrOpcode range. Most are fused sequences of
-// IR instructions that stay inside one basic block (see fuseInstructions); a
-// fused instruction sits in the slot of the first original instruction and
-// advances `ip` past the slots it replaced, which stay in the array untouched
-// so every jump target keeps its index.
-enum FastOp : uint16_t {
-  FastOpMissingReturn = 0x100,
-  FastOpStoreLocalDupPop,                  // Dup; StoreLocal a; Pop
-  FastOpStoreLocalImm,                     // Push c; StoreLocal a
-  FastOpCopyLocal,                         // LoadLocal a; StoreLocal b
-  FastOpJmpLocalZero,                      // LoadLocal a; JumpIfZero b
-  FastOpPushLocalAddImm,                   // LoadLocal a; Push c; Add
-  FastOpPushLocalSubImm,                   // LoadLocal a; Push c; Sub
-  FastOpPushLocalMulImm,                   // LoadLocal a; Push c; Mul
-  FastOpPushLocalAddLocal,                 // LoadLocal a; LoadLocal b; Add
-  FastOpPushLocalSubLocal,                 // LoadLocal a; LoadLocal b; Sub
-  FastOpPushLocalMulLocal,                 // LoadLocal a; LoadLocal b; Mul
-  FastOpLocalAddImmStore,                  // LoadLocal a; Push c; Add; StoreLocal b
-  FastOpLocalSubImmStore,                  // LoadLocal a; Push c; Sub; StoreLocal b
-  FastOpPushLocalAddImmSext,               // LoadLocal a; Push c; Add; SextI32
-  FastOpPushLocalSubImmSext,               // LoadLocal a; Push c; Sub; SextI32
-  FastOpPushLocalMulImmSext,               // LoadLocal a; Push c; Mul; SextI32
-  FastOpPushLocalAddLocalSext,             // LoadLocal a; LoadLocal b; Add; SextI32
-  FastOpPushLocalSubLocalSext,             // LoadLocal a; LoadLocal b; Sub; SextI32
-  FastOpPushLocalMulLocalSext,             // LoadLocal a; LoadLocal b; Mul; SextI32
-  FastOpLocalAddImmStoreSext,              // LoadLocal a; Push c; Add; SextI32; StoreLocal b
-  FastOpLocalSubImmStoreSext,              // LoadLocal a; Push c; Sub; SextI32; StoreLocal b
-  FastOpLocalStringByteStore,              // LoadLocal a; LoadStringByte #imm; StoreLocal b
-  FastOpPushLocalStringByte,               // LoadLocal a; LoadStringByte #imm
-  FAST_CMPS(FAST_ENUM_JMP_CMP_LOCAL_IMM)   // LoadLocal a; Push c; Cmp; JumpIfZero b
-  FAST_CMPS(FAST_ENUM_JMP_CMP_LOCAL_LOCAL) // LoadLocal a; LoadLocal b; Cmp; JumpIfZero imm
-  FAST_CMPS(FAST_ENUM_JMP_CMP)             // Cmp; JumpIfZero b
-  FastOpEnd,
-};
-
-#undef FAST_ENUM_JMP_CMP_LOCAL_IMM
-#undef FAST_ENUM_JMP_CMP_LOCAL_LOCAL
-#undef FAST_ENUM_JMP_CMP
-
-struct FastInst {
-  uint16_t op = 0;
-  // Operands the instruction pops and results it pushes, from the shared stack
-  // effect table. Used by the opcodes that go through the host handlers.
-  uint16_t pops = 0;
-  uint16_t pushes = 0;
-  // Local indices and jump targets of the fused forms.
-  uint32_t a = 0;
-  uint32_t b = 0;
-  uint64_t imm = 0;
-  const IrInstruction *source = nullptr;
-};
-
-struct FastFunction {
-  const IrFunction *function = nullptr;
-  // The function's instructions followed by a sentinel that faults with the
-  // step kernel's "missing return" message, so falling off the end (or jumping
-  // to it) needs no bounds check in the loop.
-  std::vector<FastInst> code;
-  size_t localCount = 0;
-  // Operand-stack slots the function needs above its arguments.
-  size_t stackHeadroom = 0;
-};
+// Float arithmetic, comparisons and conversions: each gets a threaded handler that evaluates it
+// with the shared pure semantics (IrPureSemantics.h), the opcode a constant so the switch folds.
+// clang-format off
+#define FAST_FLOAT_BINARY(X) \
+  X(AddF32) \
+  X(SubF32) \
+  X(MulF32) \
+  X(DivF32) \
+  X(AddF64) \
+  X(SubF64) \
+  X(MulF64) \
+  X(DivF64) \
+  X(CmpEqF32) \
+  X(CmpNeF32) \
+  X(CmpLtF32) \
+  X(CmpLeF32) \
+  X(CmpGtF32) \
+  X(CmpGeF32) \
+  X(CmpEqF64) \
+  X(CmpNeF64) \
+  X(CmpLtF64) \
+  X(CmpLeF64) \
+  X(CmpGtF64) \
+  X(CmpGeF64)
+#define FAST_FLOAT_UNARY(X) \
+  X(NegF32) \
+  X(NegF64) \
+  X(ConvertI32ToF32) \
+  X(ConvertI32ToF64) \
+  X(ConvertI64ToF32) \
+  X(ConvertI64ToF64) \
+  X(ConvertU64ToF32) \
+  X(ConvertU64ToF64) \
+  X(ConvertF32ToI32) \
+  X(ConvertF32ToI64) \
+  X(ConvertF32ToU64) \
+  X(ConvertF64ToI32) \
+  X(ConvertF64ToI64) \
+  X(ConvertF64ToU64) \
+  X(ConvertF32ToF64) \
+  X(ConvertF64ToF32)
+// clang-format on
 
 struct FastFrame {
   const FastFunction *function = nullptr;
@@ -113,278 +87,6 @@ struct FastFrame {
   size_t localsBase = 0;
   bool returnsValue = false;
 };
-
-bool isReturnOpcode(IrOpcode op) {
-  switch (op) {
-  case IrOpcode::ReturnVoid:
-  case IrOpcode::ReturnI32:
-  case IrOpcode::ReturnI64:
-  case IrOpcode::ReturnF32:
-  case IrOpcode::ReturnF64:
-    return true;
-  default:
-    return false;
-  }
-}
-
-int comparisonKind(IrOpcode op) {
-  switch (op) {
-  case IrOpcode::CmpEqI32:
-  case IrOpcode::CmpEqI64:
-    return 0;
-  case IrOpcode::CmpNeI32:
-  case IrOpcode::CmpNeI64:
-    return 1;
-  case IrOpcode::CmpLtI32:
-  case IrOpcode::CmpLtI64:
-    return 2;
-  case IrOpcode::CmpLeI32:
-  case IrOpcode::CmpLeI64:
-    return 3;
-  case IrOpcode::CmpGtI32:
-  case IrOpcode::CmpGtI64:
-    return 4;
-  case IrOpcode::CmpGeI32:
-  case IrOpcode::CmpGeI64:
-    return 5;
-  default:
-    return -1;
-  }
-}
-
-// 0 add, 1 sub, 2 mul; -1 otherwise. The I32 and I64 forms share semantics.
-int arithmeticKind(IrOpcode op) {
-  switch (op) {
-  case IrOpcode::AddI32:
-  case IrOpcode::AddI64:
-    return 0;
-  case IrOpcode::SubI32:
-  case IrOpcode::SubI64:
-    return 1;
-  case IrOpcode::MulI32:
-  case IrOpcode::MulI64:
-    return 2;
-  default:
-    return -1;
-  }
-}
-
-bool isConstantPush(IrOpcode op) {
-  return op == IrOpcode::PushI32 || op == IrOpcode::PushI64;
-}
-
-uint64_t constantOf(const IrInstruction &instruction) {
-  return instruction.op == IrOpcode::PushI32
-             ? static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(instruction.imm)))
-             : instruction.imm;
-}
-
-// The slot value SextI32 produces: the low 32 bits sign-extended.
-inline uint64_t sext32(uint64_t value) {
-  return static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(value)));
-}
-
-bool fitsIndex(uint64_t value) {
-  return value <= UINT32_MAX;
-}
-
-// Rewrites the first slot of recognised instruction sequences into a fused
-// instruction. A sequence never spans a basic-block leader, so nothing can jump
-// into its middle, and every fused form is free of faults and host effects,
-// which keeps results and fault order identical to executing the originals
-// (the string-byte forms fault on a bad index exactly where the original
-// LoadStringByte would, before anything has been stored or popped).
-void fuseInstructions(const IrFunction &function, const IrCfg &cfg, FastFunction &out) {
-  const size_t count = function.instructions.size();
-  std::vector<bool> leader(count + 1, false);
-  for (const IrCfgBlock &block : cfg.blocks) {
-    leader[block.start] = true;
-  }
-  const auto op = [&](size_t index) { return function.instructions[index].op; };
-  const auto imm = [&](size_t index) { return function.instructions[index].imm; };
-  // True when `length` instructions starting at `index` exist and none after the
-  // first starts a block.
-  const auto window = [&](size_t index, size_t length) {
-    if (index + length > count) {
-      return false;
-    }
-    for (size_t k = 1; k < length; ++k) {
-      if (leader[index + k]) {
-        return false;
-      }
-    }
-    return true;
-  };
-  for (size_t i = 0; i < count;) {
-    FastInst &slot = out.code[i];
-    size_t length = 1;
-    if (op(i) == IrOpcode::LoadLocal && fitsIndex(imm(i))) {
-      const uint32_t first = static_cast<uint32_t>(imm(i));
-      if (window(i, 5) && isConstantPush(op(i + 1)) && arithmeticKind(op(i + 2)) >= 0 &&
-          arithmeticKind(op(i + 2)) <= 1 && op(i + 3) == IrOpcode::SextI32 &&
-          op(i + 4) == IrOpcode::StoreLocal && fitsIndex(imm(i + 4))) {
-        slot.op = arithmeticKind(op(i + 2)) == 0 ? FastOpLocalAddImmStoreSext
-                                                 : FastOpLocalSubImmStoreSext;
-        slot.a = first;
-        slot.imm = constantOf(function.instructions[i + 1]);
-        slot.b = static_cast<uint32_t>(imm(i + 4));
-        length = 5;
-      } else if (window(i, 4) && isConstantPush(op(i + 1)) && arithmeticKind(op(i + 2)) >= 0 &&
-                 op(i + 3) == IrOpcode::SextI32) {
-        slot.op = static_cast<uint16_t>(FastOpPushLocalAddImmSext + arithmeticKind(op(i + 2)));
-        slot.a = first;
-        slot.imm = constantOf(function.instructions[i + 1]);
-        length = 4;
-      } else if (window(i, 4) && op(i + 1) == IrOpcode::LoadLocal && fitsIndex(imm(i + 1)) &&
-                 arithmeticKind(op(i + 2)) >= 0 && op(i + 3) == IrOpcode::SextI32) {
-        slot.op = static_cast<uint16_t>(FastOpPushLocalAddLocalSext + arithmeticKind(op(i + 2)));
-        slot.a = first;
-        slot.b = static_cast<uint32_t>(imm(i + 1));
-        length = 4;
-      } else if (window(i, 4) && isConstantPush(op(i + 1)) && comparisonKind(op(i + 2)) >= 0 &&
-                 op(i + 3) == IrOpcode::JumpIfZero && fitsIndex(imm(i + 3))) {
-        slot.op = static_cast<uint16_t>(FastOpJmpCmpLocalImmEq + comparisonKind(op(i + 2)));
-        slot.a = first;
-        slot.imm = constantOf(function.instructions[i + 1]);
-        slot.b = static_cast<uint32_t>(imm(i + 3));
-        length = 4;
-      } else if (window(i, 4) && op(i + 1) == IrOpcode::LoadLocal && fitsIndex(imm(i + 1)) &&
-                 comparisonKind(op(i + 2)) >= 0 && op(i + 3) == IrOpcode::JumpIfZero) {
-        slot.op = static_cast<uint16_t>(FastOpJmpCmpLocalLocalEq + comparisonKind(op(i + 2)));
-        slot.a = first;
-        slot.b = static_cast<uint32_t>(imm(i + 1));
-        slot.imm = imm(i + 3);
-        length = 4;
-      } else if (window(i, 4) && isConstantPush(op(i + 1)) && arithmeticKind(op(i + 2)) >= 0 &&
-                 arithmeticKind(op(i + 2)) <= 1 && op(i + 3) == IrOpcode::StoreLocal &&
-                 fitsIndex(imm(i + 3))) {
-        slot.op = arithmeticKind(op(i + 2)) == 0 ? FastOpLocalAddImmStore : FastOpLocalSubImmStore;
-        slot.a = first;
-        slot.imm = constantOf(function.instructions[i + 1]);
-        slot.b = static_cast<uint32_t>(imm(i + 3));
-        length = 4;
-      } else if (window(i, 3) && op(i + 1) == IrOpcode::LoadStringByte &&
-                 op(i + 2) == IrOpcode::StoreLocal && fitsIndex(imm(i + 2))) {
-        slot.op = FastOpLocalStringByteStore;
-        slot.a = first;
-        slot.b = static_cast<uint32_t>(imm(i + 2));
-        slot.imm = imm(i + 1);
-        length = 3;
-      } else if (window(i, 2) && op(i + 1) == IrOpcode::LoadStringByte) {
-        slot.op = FastOpPushLocalStringByte;
-        slot.a = first;
-        slot.imm = imm(i + 1);
-        length = 2;
-      } else if (window(i, 3) && isConstantPush(op(i + 1)) && arithmeticKind(op(i + 2)) >= 0) {
-        slot.op = static_cast<uint16_t>(FastOpPushLocalAddImm + arithmeticKind(op(i + 2)));
-        slot.a = first;
-        slot.imm = constantOf(function.instructions[i + 1]);
-        length = 3;
-      } else if (window(i, 3) && op(i + 1) == IrOpcode::LoadLocal && fitsIndex(imm(i + 1)) &&
-                 arithmeticKind(op(i + 2)) >= 0) {
-        slot.op = static_cast<uint16_t>(FastOpPushLocalAddLocal + arithmeticKind(op(i + 2)));
-        slot.a = first;
-        slot.b = static_cast<uint32_t>(imm(i + 1));
-        length = 3;
-      } else if (window(i, 2) && op(i + 1) == IrOpcode::JumpIfZero && fitsIndex(imm(i + 1))) {
-        slot.op = FastOpJmpLocalZero;
-        slot.a = first;
-        slot.b = static_cast<uint32_t>(imm(i + 1));
-        length = 2;
-      } else if (window(i, 2) && op(i + 1) == IrOpcode::StoreLocal && fitsIndex(imm(i + 1))) {
-        slot.op = FastOpCopyLocal;
-        slot.a = first;
-        slot.b = static_cast<uint32_t>(imm(i + 1));
-        length = 2;
-      }
-    } else if (comparisonKind(op(i)) >= 0 && window(i, 2) && op(i + 1) == IrOpcode::JumpIfZero &&
-               fitsIndex(imm(i + 1))) {
-      slot.op = static_cast<uint16_t>(FastOpJmpCmpEq + comparisonKind(op(i)));
-      slot.b = static_cast<uint32_t>(imm(i + 1));
-      length = 2;
-    } else if (isConstantPush(op(i)) && window(i, 2) && op(i + 1) == IrOpcode::StoreLocal &&
-               fitsIndex(imm(i + 1))) {
-      slot.op = FastOpStoreLocalImm;
-      slot.imm = constantOf(function.instructions[i]);
-      slot.a = static_cast<uint32_t>(imm(i + 1));
-      length = 2;
-    } else if (op(i) == IrOpcode::Dup && window(i, 3) && op(i + 1) == IrOpcode::StoreLocal &&
-               op(i + 2) == IrOpcode::Pop && fitsIndex(imm(i + 1))) {
-      slot.op = FastOpStoreLocalDupPop;
-      slot.a = static_cast<uint32_t>(imm(i + 1));
-      length = 3;
-    }
-    i += length;
-  }
-}
-
-// Builds the flat form of `function`, or returns false when the loop's
-// assumptions do not hold for it.
-bool prepareFunction(const IrModule &module, const IrFunction &function, FastFunction &out) {
-  IrCfg cfg;
-  IrCfgError cfgError;
-  if (!buildIrCfg(function, module, cfg, cfgError)) {
-    return false;
-  }
-  out.function = &function;
-  out.code.reserve(function.instructions.size() + 1);
-  for (const IrInstruction &instruction : function.instructions) {
-    IrStackEffect effect;
-    if (!computeIrStackEffect(instruction, module, effect) || effect.pops > UINT16_MAX ||
-        effect.pushes > UINT16_MAX) {
-      return false;
-    }
-    FastInst inst;
-    inst.op = static_cast<uint16_t>(instruction.op);
-    inst.pops = static_cast<uint16_t>(effect.pops);
-    inst.pushes = static_cast<uint16_t>(effect.pushes);
-    inst.imm = instruction.imm;
-    inst.source = &instruction;
-    out.code.push_back(inst);
-  }
-  FastInst sentinel;
-  sentinel.op = FastOpMissingReturn;
-  out.code.push_back(sentinel);
-
-  // A return must leave exactly the caller's operands behind: the step kernel
-  // would leave anything extra on the shared stack, which no valid lowering
-  // produces and the loop does not model.
-  for (const IrCfgBlock &block : cfg.blocks) {
-    if (!block.reachable) {
-      continue;
-    }
-    int64_t depth = block.entryDepth;
-    for (size_t i = block.start; i < block.end; ++i) {
-      const FastInst &inst = out.code[i];
-      if (isReturnOpcode(function.instructions[i].op) && depth != static_cast<int64_t>(inst.pops)) {
-        return false;
-      }
-      depth += static_cast<int64_t>(inst.pushes) - static_cast<int64_t>(inst.pops);
-    }
-  }
-  fuseInstructions(function, cfg, out);
-  out.localCount = computeVmKernelLocalCount(function);
-  const int64_t headroom = cfg.maxStackDepth - static_cast<int64_t>(function.parameterCount);
-  out.stackHeadroom = static_cast<size_t>(std::max<int64_t>(headroom, 0)) + 2;
-  return true;
-}
-
-// Prepares every function; false when any of them (or the entry) is not eligible.
-bool prepareModule(const IrModule &module, std::vector<FastFunction> &functions) {
-  if (module.entryIndex < 0 || static_cast<size_t>(module.entryIndex) >= module.functions.size()) {
-    return false;
-  }
-  if (module.functions[static_cast<size_t>(module.entryIndex)].parameterCount != 0) {
-    return false;
-  }
-  functions.assign(module.functions.size(), FastFunction{});
-  for (size_t i = 0; i < module.functions.size(); ++i) {
-    if (!prepareFunction(module, module.functions[i], functions[i])) {
-      return false;
-    }
-  }
-  return true;
-}
 
 constexpr size_t InitialStackSlots = 4096;
 
@@ -503,6 +205,14 @@ bool executeVmFastKernel(const IrModule &module,
   table[FastOpLocalSubImmStoreSext] = &&lbl_FastOpLocalSubImmStoreSext;
   table[FastOpLocalStringByteStore] = &&lbl_FastOpLocalStringByteStore;
   table[FastOpPushLocalStringByte] = &&lbl_FastOpPushLocalStringByte;
+  table[FastOpPushLocalAddLocalF64] = &&lbl_FastOpPushLocalAddLocalF64;
+  table[FastOpPushLocalSubLocalF64] = &&lbl_FastOpPushLocalSubLocalF64;
+  table[FastOpPushLocalMulLocalF64] = &&lbl_FastOpPushLocalMulLocalF64;
+  table[FastOpPushLocalDivLocalF64] = &&lbl_FastOpPushLocalDivLocalF64;
+  table[FastOpPushLocalAddImmF64] = &&lbl_FastOpPushLocalAddImmF64;
+  table[FastOpPushLocalSubImmF64] = &&lbl_FastOpPushLocalSubImmF64;
+  table[FastOpPushLocalMulImmF64] = &&lbl_FastOpPushLocalMulImmF64;
+  table[FastOpPushLocalDivImmF64] = &&lbl_FastOpPushLocalDivImmF64;
   table[OP(AddI32)] = &&lbl_AddI32;
   table[OP(AddI64)] = &&lbl_AddI64;
   table[OP(SubI32)] = &&lbl_SubI32;
@@ -544,6 +254,10 @@ bool executeVmFastKernel(const IrModule &module,
   table[OP(ReturnF32)] = &&lbl_ReturnF32;
   table[OP(ReturnF64)] = &&lbl_ReturnF64;
   table[FastOpMissingReturn] = &&lbl_FastOpMissingReturn;
+#define FAST_TABLE_FLOAT(N) table[OP(N)] = &&lbl_##N;
+  FAST_FLOAT_BINARY(FAST_TABLE_FLOAT)
+  FAST_FLOAT_UNARY(FAST_TABLE_FLOAT)
+#undef FAST_TABLE_FLOAT
 #define FAST_TABLE_CMP(N, O)                                                                       \
   table[FastOpJmpCmpLocalImm##N] = &&lbl_FastOpJmpCmpLocalImm##N;                                  \
   table[FastOpJmpCmpLocalLocal##N] = &&lbl_FastOpJmpCmpLocalLocal##N;                              \
@@ -1038,6 +752,49 @@ bool executeVmFastKernel(const IrModule &module,
       }
       DISPATCH();
     }
+
+#define FAST_CASE_FLOAT_BINARY(N)                                                                  \
+  case OP(N):                                                                                      \
+    lbl_##N : {                                                                                    \
+      uint64_t value = 0;                                                                          \
+      (void)evalPureOpcode(IrOpcode::N, sp[-2], sp[-1], value);                                    \
+      --sp;                                                                                        \
+      sp[-1] = value;                                                                              \
+      ++ip;                                                                                        \
+      DISPATCH();                                                                                  \
+    }
+#define FAST_CASE_FLOAT_UNARY(N)                                                                   \
+  case OP(N):                                                                                      \
+    lbl_##N : {                                                                                    \
+      uint64_t value = 0;                                                                          \
+      (void)evalPureOpcode(IrOpcode::N, sp[-1], sp[-1], value);                                    \
+      sp[-1] = value;                                                                              \
+      ++ip;                                                                                        \
+      DISPATCH();                                                                                  \
+    }
+#define FAST_CASE_LOCAL_F64(NAME, OPCODE, RHS)                                                     \
+  case NAME:                                                                                       \
+    lbl_##NAME : {                                                                                 \
+      uint64_t value = 0;                                                                          \
+      (void)evalPureOpcode(IrOpcode::OPCODE, locals[inst.a], RHS, value);                          \
+      *sp++ = value;                                                                               \
+      ip += 3;                                                                                     \
+      DISPATCH();                                                                                  \
+    }
+      FAST_CASE_LOCAL_F64(FastOpPushLocalAddLocalF64, AddF64, locals[inst.b])
+      FAST_CASE_LOCAL_F64(FastOpPushLocalSubLocalF64, SubF64, locals[inst.b])
+      FAST_CASE_LOCAL_F64(FastOpPushLocalMulLocalF64, MulF64, locals[inst.b])
+      FAST_CASE_LOCAL_F64(FastOpPushLocalDivLocalF64, DivF64, locals[inst.b])
+      FAST_CASE_LOCAL_F64(FastOpPushLocalAddImmF64, AddF64, inst.imm)
+      FAST_CASE_LOCAL_F64(FastOpPushLocalSubImmF64, SubF64, inst.imm)
+      FAST_CASE_LOCAL_F64(FastOpPushLocalMulImmF64, MulF64, inst.imm)
+      FAST_CASE_LOCAL_F64(FastOpPushLocalDivImmF64, DivF64, inst.imm)
+#undef FAST_CASE_LOCAL_F64
+      // Float operations never fault (division by zero gives an infinity or NaN).
+      FAST_FLOAT_BINARY(FAST_CASE_FLOAT_BINARY)
+      FAST_FLOAT_UNARY(FAST_CASE_FLOAT_UNARY)
+#undef FAST_CASE_FLOAT_BINARY
+#undef FAST_CASE_FLOAT_UNARY
 
     case FastOpMissingReturn:
     lbl_FastOpMissingReturn:

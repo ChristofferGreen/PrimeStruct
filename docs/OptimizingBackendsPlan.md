@@ -460,7 +460,8 @@ fixed, with `heap_realloc` as the regression.
 4.4 Out-of-line fault paths and host dispatch (print/file via function
     pointers set once per run rather than virtual calls per instruction).
 
-Status (2026-10-03): 4.1 and 4.3 are implemented in `src/runtime/VmFastKernel.cpp` (TODO-5479). `executeVmKernel`
+Status (2026-10-03): 4.1 and 4.3 are implemented in `src/runtime/VmFastKernel.cpp` (the loop) and
+`src/runtime/VmFastKernelPrepare.cpp` (eligibility and fusion) (TODO-5479). `executeVmKernel`
 (plain runs; never debug sessions) first asks the fast loop to take the module. It accepts a module when every
 function passes `buildIrCfg`, every reachable return leaves the caller's stack balanced and the entry takes no
 parameters; otherwise the step kernel runs it unchanged. The loop keeps `ip`, the operand-stack pointer and the
@@ -482,6 +483,12 @@ Measured wall time of `primevm` including the 13-70 ms compile (seconds):
 | aggregate | 1.25 | 0.24 | 0.10 | 0.095 |
 | json_scan | 1.31 | 0.30 | 0.17 | 0.10 |
 | json_parse | 2.23 | 0.48 | 0.30 | 0.23 |
+
+Float operations first ran through the loop's generic tail (an arity lookup and the full `evalPureOpcode` switch,
+then the plain switch instead of threaded dispatch): float_series took 0.63 s. Every float opcode now has a threaded
+handler that calls `evalPureOpcode` with a constant opcode, so the shared semantics are kept bit for bit and the
+switch folds away (0.48 s), and `LoadLocal; LoadLocal; {Add,Sub,Mul,Div}F64` and `LoadLocal; PushF64; ...F64` are
+fused like their integer counterparts (0.39 s).
 
 ### Phase 5: defaults, docs, gates
 
