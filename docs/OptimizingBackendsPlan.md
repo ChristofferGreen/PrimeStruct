@@ -406,7 +406,12 @@ IR level; the arm64 emitter is untouched):
    function reads argc/argv) for the whole function. Measured dead ends on json_parse (about 20 hot state variables):
    taking rbx and r9 from the operand cache for the promotion pool did not help, and `LoadStringByte` straight into a
    cache register cut instructions by 8% (163M to 149M) without changing the run time, which is bound by
-   loop-carried values that stay in memory; sharing registers between locals whose live ranges never meet (per-instruction backward liveness over the
+   loop-carried values that stay in memory; ranking by static use count put rarely executed locals ahead of the loop-carried ones, so uses now halve per
+   conditional arm (a forward branch that is not a loop test), which cut json_parse from 149.5M to 121.1M instructions
+   (optexe: 116M) with the same output but no change in run time: the run time follows branch mispredictions
+   (cachegrind branch simulation: native 34M branches and 2.7M mispredicts, 17 ms; optexe 26M and 1.8M, 9.8 ms, about
+   15 cycles per mispredict in both), so register assignment is not the lever for json_parse; if-converting
+   `if (c == K) x += 1` chains into branchless code is. Sharing registers between locals whose live ranges never meet (per-instruction backward liveness over the
    candidates, spills and reloads restricted to the live ones) left json_parse at 149.3M instructions against 149.5M
    because its hot state variables are live at the same time, so the gap to optexe is register pressure that needs
    more than seven pool registers or a real allocator with spilling, not better packing. Instructions whose templates clobber those registers (printing, file and heap operations, string table

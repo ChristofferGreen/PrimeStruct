@@ -144,17 +144,42 @@ planPromotedLocals(const IrFunction &function, const uint8_t *pool, size_t poolS
       delta[i + 1] -= 1;
     }
   }
+  // Conditional nesting per instruction: the arm of a forward branch runs about half as
+  // often as the code around it. A forward `JumpIfZero` that ends a loop is the loop
+  // test, not an arm, so it does not count.
+  std::vector<int32_t> armDelta(count + 1, 0);
+  for (size_t i = 0; i < count; ++i) {
+    const IrInstruction &instruction = function.instructions[i];
+    if ((instruction.op != IrOpcode::Jump && instruction.op != IrOpcode::JumpIfZero) ||
+        instruction.imm <= i || instruction.imm > count) {
+      continue;
+    }
+    const size_t target = static_cast<size_t>(instruction.imm);
+    const bool endsLoop = target > 0 &&
+                          (function.instructions[target - 1].op == IrOpcode::Jump ||
+                           function.instructions[target - 1].op == IrOpcode::JumpIfZero) &&
+                          function.instructions[target - 1].imm <= target - 1;
+    if (endsLoop && instruction.op == IrOpcode::JumpIfZero) {
+      continue;
+    }
+    armDelta[i + 1] += 1;
+    armDelta[target] -= 1;
+  }
+  // Fixed point with 6 fractional bits: ten per loop level, halved per conditional arm.
   std::vector<uint64_t> weight(escape.localCount, 0);
   int32_t depth = 0;
+  int32_t arms = 0;
   for (size_t i = 0; i < count; ++i) {
     depth += delta[i];
+    arms += armDelta[i];
     const IrInstruction &instruction = function.instructions[i];
     if ((instruction.op == IrOpcode::LoadLocal || instruction.op == IrOpcode::StoreLocal) &&
         instruction.imm < escape.localCount) {
-      uint64_t use = 1;
+      uint64_t use = 64;
       for (int32_t level = 0; level < std::min<int32_t>(depth, 6); ++level) {
         use *= 10;
       }
+      use >>= std::min<int32_t>(arms, 6);
       weight[static_cast<size_t>(instruction.imm)] += use;
     }
   }
@@ -164,7 +189,7 @@ planPromotedLocals(const IrFunction &function, const uint8_t *pool, size_t poolS
   std::vector<uint32_t> order;
   for (uint32_t local = 0; local < escape.localCount; ++local) {
     // A local touched once or twice outside any loop is not worth a register.
-    if (weight[local] >= 3) {
+    if (weight[local] >= 3 * 64) {
       order.push_back(local);
     }
   }
