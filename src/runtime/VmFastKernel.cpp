@@ -393,7 +393,8 @@ constexpr size_t InitialStackSlots = 4096;
 // Every FastOp and IrOpcode value is below this, so the dispatch table needs no bounds check.
 constexpr size_t VmFastDispatchSlots = 0x200;
 static_assert(FastOpEnd <= VmFastDispatchSlots, "dispatch table too small for the fused opcodes");
-static_assert(static_cast<size_t>(IrOpcode::SextI32) < 0x100, "IR opcodes must stay below the fused range");
+static_assert(static_cast<size_t>(IrOpcode::SextI32) < 0x100,
+              "IR opcodes must stay below the fused range");
 
 } // namespace
 
@@ -459,7 +460,6 @@ bool executeVmFastKernel(const IrModule &module,
     error = (message);                                                                             \
     return false;                                                                                  \
   } while (0)
-
 
   // Threaded dispatch: every case ends by jumping straight to the next instruction's
   // handler through this table, which gives each opcode its own indirect branch for the
@@ -562,129 +562,163 @@ bool executeVmFastKernel(const IrModule &module,
   for (;;) {
     instp = ip;
     switch (instp->op) {
-    case OP(PushI32): lbl_PushI32:
+    case OP(PushI32):
+    lbl_PushI32:
       *sp++ = static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(inst.imm)));
       ++ip;
       DISPATCH();
-    case OP(PushI64): lbl_PushI64:
-    case OP(PushF32): lbl_PushF32:
-    case OP(PushF64): lbl_PushF64:
+    case OP(PushI64):
+    lbl_PushI64:
+    case OP(PushF32):
+    lbl_PushF32:
+    case OP(PushF64):
+    lbl_PushF64:
       *sp++ = inst.imm;
       ++ip;
       DISPATCH();
-    case OP(PushArgc): lbl_PushArgc:
+    case OP(PushArgc):
+    lbl_PushArgc:
       *sp++ = argc;
       ++ip;
       DISPATCH();
-    case OP(LoadLocal): lbl_LoadLocal:
+    case OP(LoadLocal):
+    lbl_LoadLocal:
       *sp++ = locals[inst.imm];
       ++ip;
       DISPATCH();
-    case OP(StoreLocal): lbl_StoreLocal:
+    case OP(StoreLocal):
+    lbl_StoreLocal:
       locals[inst.imm] = *--sp;
       ++ip;
       DISPATCH();
-    case OP(AddressOfLocal): lbl_AddressOfLocal:
+    case OP(AddressOfLocal):
+    lbl_AddressOfLocal:
       *sp++ = inst.imm * slotBytes;
       ++ip;
       DISPATCH();
-    case OP(Dup): lbl_Dup:
+    case OP(Dup):
+    lbl_Dup:
       sp[0] = sp[-1];
       ++sp;
       ++ip;
       DISPATCH();
-    case OP(Pop): lbl_Pop:
+    case OP(Pop):
+    lbl_Pop:
       --sp;
       ++ip;
       DISPATCH();
-    case OP(Jump): lbl_Jump:
+    case OP(Jump):
+    lbl_Jump:
       ip = current->code.data() + inst.imm;
       DISPATCH();
-    case OP(JumpIfZero): lbl_JumpIfZero:
+    case OP(JumpIfZero):
+    lbl_JumpIfZero:
       ip = *--sp == 0 ? current->code.data() + inst.imm : ip + 1;
       DISPATCH();
 
-    case FastOpStoreLocalDupPop: lbl_FastOpStoreLocalDupPop:
+    case FastOpStoreLocalDupPop:
+    lbl_FastOpStoreLocalDupPop:
       locals[inst.a] = *--sp;
       ip += 3;
       DISPATCH();
-    case FastOpStoreLocalImm: lbl_FastOpStoreLocalImm:
+    case FastOpStoreLocalImm:
+    lbl_FastOpStoreLocalImm:
       locals[inst.a] = inst.imm;
       ip += 2;
       DISPATCH();
-    case FastOpCopyLocal: lbl_FastOpCopyLocal:
+    case FastOpCopyLocal:
+    lbl_FastOpCopyLocal:
       locals[inst.b] = locals[inst.a];
       ip += 2;
       DISPATCH();
-    case FastOpJmpLocalZero: lbl_FastOpJmpLocalZero:
+    case FastOpJmpLocalZero:
+    lbl_FastOpJmpLocalZero:
       ip = locals[inst.a] == 0 ? current->code.data() + inst.b : ip + 2;
       DISPATCH();
-    case FastOpPushLocalAddImm: lbl_FastOpPushLocalAddImm:
+    case FastOpPushLocalAddImm:
+    lbl_FastOpPushLocalAddImm:
       *sp++ = locals[inst.a] + inst.imm;
       ip += 3;
       DISPATCH();
-    case FastOpPushLocalSubImm: lbl_FastOpPushLocalSubImm:
+    case FastOpPushLocalSubImm:
+    lbl_FastOpPushLocalSubImm:
       *sp++ = locals[inst.a] - inst.imm;
       ip += 3;
       DISPATCH();
-    case FastOpPushLocalMulImm: lbl_FastOpPushLocalMulImm:
+    case FastOpPushLocalMulImm:
+    lbl_FastOpPushLocalMulImm:
       *sp++ = locals[inst.a] * inst.imm;
       ip += 3;
       DISPATCH();
-    case FastOpPushLocalAddLocal: lbl_FastOpPushLocalAddLocal:
+    case FastOpPushLocalAddLocal:
+    lbl_FastOpPushLocalAddLocal:
       *sp++ = locals[inst.a] + locals[inst.b];
       ip += 3;
       DISPATCH();
-    case FastOpPushLocalSubLocal: lbl_FastOpPushLocalSubLocal:
+    case FastOpPushLocalSubLocal:
+    lbl_FastOpPushLocalSubLocal:
       *sp++ = locals[inst.a] - locals[inst.b];
       ip += 3;
       DISPATCH();
-    case FastOpPushLocalMulLocal: lbl_FastOpPushLocalMulLocal:
+    case FastOpPushLocalMulLocal:
+    lbl_FastOpPushLocalMulLocal:
       *sp++ = locals[inst.a] * locals[inst.b];
       ip += 3;
       DISPATCH();
-    case FastOpLocalAddImmStore: lbl_FastOpLocalAddImmStore:
+    case FastOpLocalAddImmStore:
+    lbl_FastOpLocalAddImmStore:
       locals[inst.b] = locals[inst.a] + inst.imm;
       ip += 4;
       DISPATCH();
-    case FastOpLocalSubImmStore: lbl_FastOpLocalSubImmStore:
+    case FastOpLocalSubImmStore:
+    lbl_FastOpLocalSubImmStore:
       locals[inst.b] = locals[inst.a] - inst.imm;
       ip += 4;
       DISPATCH();
-    case FastOpPushLocalAddImmSext: lbl_FastOpPushLocalAddImmSext:
+    case FastOpPushLocalAddImmSext:
+    lbl_FastOpPushLocalAddImmSext:
       *sp++ = sext32(locals[inst.a] + inst.imm);
       ip += 4;
       DISPATCH();
-    case FastOpPushLocalSubImmSext: lbl_FastOpPushLocalSubImmSext:
+    case FastOpPushLocalSubImmSext:
+    lbl_FastOpPushLocalSubImmSext:
       *sp++ = sext32(locals[inst.a] - inst.imm);
       ip += 4;
       DISPATCH();
-    case FastOpPushLocalMulImmSext: lbl_FastOpPushLocalMulImmSext:
+    case FastOpPushLocalMulImmSext:
+    lbl_FastOpPushLocalMulImmSext:
       *sp++ = sext32(locals[inst.a] * inst.imm);
       ip += 4;
       DISPATCH();
-    case FastOpPushLocalAddLocalSext: lbl_FastOpPushLocalAddLocalSext:
+    case FastOpPushLocalAddLocalSext:
+    lbl_FastOpPushLocalAddLocalSext:
       *sp++ = sext32(locals[inst.a] + locals[inst.b]);
       ip += 4;
       DISPATCH();
-    case FastOpPushLocalSubLocalSext: lbl_FastOpPushLocalSubLocalSext:
+    case FastOpPushLocalSubLocalSext:
+    lbl_FastOpPushLocalSubLocalSext:
       *sp++ = sext32(locals[inst.a] - locals[inst.b]);
       ip += 4;
       DISPATCH();
-    case FastOpPushLocalMulLocalSext: lbl_FastOpPushLocalMulLocalSext:
+    case FastOpPushLocalMulLocalSext:
+    lbl_FastOpPushLocalMulLocalSext:
       *sp++ = sext32(locals[inst.a] * locals[inst.b]);
       ip += 4;
       DISPATCH();
-    case FastOpLocalAddImmStoreSext: lbl_FastOpLocalAddImmStoreSext:
+    case FastOpLocalAddImmStoreSext:
+    lbl_FastOpLocalAddImmStoreSext:
       locals[inst.b] = sext32(locals[inst.a] + inst.imm);
       ip += 5;
       DISPATCH();
-    case FastOpLocalSubImmStoreSext: lbl_FastOpLocalSubImmStoreSext:
+    case FastOpLocalSubImmStoreSext:
+    lbl_FastOpLocalSubImmStoreSext:
       locals[inst.b] = sext32(locals[inst.a] - inst.imm);
       ip += 5;
       DISPATCH();
-    case FastOpLocalStringByteStore: lbl_FastOpLocalStringByteStore:
-    case FastOpPushLocalStringByte: lbl_FastOpPushLocalStringByte: {
+    case FastOpLocalStringByteStore:
+    lbl_FastOpLocalStringByteStore:
+    case FastOpPushLocalStringByte:
+    lbl_FastOpPushLocalStringByte: {
       const std::string *text = nullptr;
       if (!resolveString(inst.imm, text)) {
         return false;
@@ -704,24 +738,27 @@ bool executeVmFastKernel(const IrModule &module,
       DISPATCH();
     }
 #define FAST_CASE_JMP_CMP_LOCAL_IMM(N, O)                                                          \
-  case FastOpJmpCmpLocalImm##N: lbl_FastOpJmpCmpLocalImm##N:                                                                    \
-    ip = static_cast<int64_t>(locals[inst.a]) O static_cast<int64_t>(inst.imm)                     \
-             ? ip + 4                                                                              \
-             : current->code.data() + inst.b;                                                      \
+  case FastOpJmpCmpLocalImm##N:                                                                    \
+    lbl_FastOpJmpCmpLocalImm##N : ip = static_cast<int64_t>(locals[inst.a])                        \
+                                               O static_cast<int64_t>(inst.imm)                    \
+                                           ? ip + 4                                                \
+                                           : current->code.data() + inst.b;                        \
     DISPATCH();
 #define FAST_CASE_JMP_CMP_LOCAL_LOCAL(N, O)                                                        \
-  case FastOpJmpCmpLocalLocal##N: lbl_FastOpJmpCmpLocalLocal##N:                                                                  \
-    ip = static_cast<int64_t>(locals[inst.a]) O static_cast<int64_t>(locals[inst.b])               \
-             ? ip + 4                                                                              \
-             : current->code.data() + inst.imm;                                                    \
+  case FastOpJmpCmpLocalLocal##N:                                                                  \
+    lbl_FastOpJmpCmpLocalLocal##N : ip = static_cast<int64_t>(locals[inst.a])                      \
+                                                 O static_cast<int64_t>(locals[inst.b])            \
+                                             ? ip + 4                                              \
+                                             : current->code.data() + inst.imm;                    \
     DISPATCH();
 #define FAST_CASE_JMP_CMP(N, O)                                                                    \
-  case FastOpJmpCmp##N: lbl_FastOpJmpCmp##N: {                                                                          \
-    const bool taken = static_cast<int64_t>(sp[-2]) O static_cast<int64_t>(sp[-1]);                \
-    sp -= 2;                                                                                       \
-    ip = taken ? ip + 2 : current->code.data() + inst.b;                                           \
-    DISPATCH();                                                                                      \
-  }
+  case FastOpJmpCmp##N:                                                                            \
+    lbl_FastOpJmpCmp##N : {                                                                        \
+      const bool taken = static_cast<int64_t>(sp[-2]) O static_cast<int64_t>(sp[-1]);              \
+      sp -= 2;                                                                                     \
+      ip = taken ? ip + 2 : current->code.data() + inst.b;                                         \
+      DISPATCH();                                                                                  \
+    }
       FAST_CMPS(FAST_CASE_JMP_CMP_LOCAL_IMM)
       FAST_CMPS(FAST_CASE_JMP_CMP_LOCAL_LOCAL)
       FAST_CMPS(FAST_CASE_JMP_CMP)
@@ -729,92 +766,119 @@ bool executeVmFastKernel(const IrModule &module,
 #undef FAST_CASE_JMP_CMP_LOCAL_LOCAL
 #undef FAST_CASE_JMP_CMP
 
-    case OP(AddI32): lbl_AddI32:
-    case OP(AddI64): lbl_AddI64:
+    case OP(AddI32):
+    lbl_AddI32:
+    case OP(AddI64):
+    lbl_AddI64:
       sp[-2] += sp[-1];
       --sp;
       ++ip;
       DISPATCH();
-    case OP(SubI32): lbl_SubI32:
-    case OP(SubI64): lbl_SubI64:
+    case OP(SubI32):
+    lbl_SubI32:
+    case OP(SubI64):
+    lbl_SubI64:
       sp[-2] -= sp[-1];
       --sp;
       ++ip;
       DISPATCH();
-    case OP(MulI32): lbl_MulI32:
-    case OP(MulI64): lbl_MulI64:
+    case OP(MulI32):
+    lbl_MulI32:
+    case OP(MulI64):
+    lbl_MulI64:
       sp[-2] *= sp[-1];
       --sp;
       ++ip;
       DISPATCH();
-    case OP(NegI32): lbl_NegI32:
-    case OP(NegI64): lbl_NegI64:
+    case OP(NegI32):
+    lbl_NegI32:
+    case OP(NegI64):
+    lbl_NegI64:
       sp[-1] = uint64_t{0} - sp[-1];
       ++ip;
       DISPATCH();
-    case OP(SextI32): lbl_SextI32:
+    case OP(SextI32):
+    lbl_SextI32:
       sp[-1] = sext32(sp[-1]);
       ++ip;
       DISPATCH();
-    case OP(CmpEqI32): lbl_CmpEqI32:
-    case OP(CmpEqI64): lbl_CmpEqI64:
+    case OP(CmpEqI32):
+    lbl_CmpEqI32:
+    case OP(CmpEqI64):
+    lbl_CmpEqI64:
       sp[-2] = sp[-2] == sp[-1];
       --sp;
       ++ip;
       DISPATCH();
-    case OP(CmpNeI32): lbl_CmpNeI32:
-    case OP(CmpNeI64): lbl_CmpNeI64:
+    case OP(CmpNeI32):
+    lbl_CmpNeI32:
+    case OP(CmpNeI64):
+    lbl_CmpNeI64:
       sp[-2] = sp[-2] != sp[-1];
       --sp;
       ++ip;
       DISPATCH();
-    case OP(CmpLtI32): lbl_CmpLtI32:
-    case OP(CmpLtI64): lbl_CmpLtI64:
+    case OP(CmpLtI32):
+    lbl_CmpLtI32:
+    case OP(CmpLtI64):
+    lbl_CmpLtI64:
       sp[-2] = static_cast<int64_t>(sp[-2]) < static_cast<int64_t>(sp[-1]);
       --sp;
       ++ip;
       DISPATCH();
-    case OP(CmpLeI32): lbl_CmpLeI32:
-    case OP(CmpLeI64): lbl_CmpLeI64:
+    case OP(CmpLeI32):
+    lbl_CmpLeI32:
+    case OP(CmpLeI64):
+    lbl_CmpLeI64:
       sp[-2] = static_cast<int64_t>(sp[-2]) <= static_cast<int64_t>(sp[-1]);
       --sp;
       ++ip;
       DISPATCH();
-    case OP(CmpGtI32): lbl_CmpGtI32:
-    case OP(CmpGtI64): lbl_CmpGtI64:
+    case OP(CmpGtI32):
+    lbl_CmpGtI32:
+    case OP(CmpGtI64):
+    lbl_CmpGtI64:
       sp[-2] = static_cast<int64_t>(sp[-2]) > static_cast<int64_t>(sp[-1]);
       --sp;
       ++ip;
       DISPATCH();
-    case OP(CmpGeI32): lbl_CmpGeI32:
-    case OP(CmpGeI64): lbl_CmpGeI64:
+    case OP(CmpGeI32):
+    lbl_CmpGeI32:
+    case OP(CmpGeI64):
+    lbl_CmpGeI64:
       sp[-2] = static_cast<int64_t>(sp[-2]) >= static_cast<int64_t>(sp[-1]);
       --sp;
       ++ip;
       DISPATCH();
-    case OP(CmpLtU64): lbl_CmpLtU64:
+    case OP(CmpLtU64):
+    lbl_CmpLtU64:
       sp[-2] = sp[-2] < sp[-1];
       --sp;
       ++ip;
       DISPATCH();
-    case OP(CmpLeU64): lbl_CmpLeU64:
+    case OP(CmpLeU64):
+    lbl_CmpLeU64:
       sp[-2] = sp[-2] <= sp[-1];
       --sp;
       ++ip;
       DISPATCH();
-    case OP(CmpGtU64): lbl_CmpGtU64:
+    case OP(CmpGtU64):
+    lbl_CmpGtU64:
       sp[-2] = sp[-2] > sp[-1];
       --sp;
       ++ip;
       DISPATCH();
-    case OP(CmpGeU64): lbl_CmpGeU64:
+    case OP(CmpGeU64):
+    lbl_CmpGeU64:
       sp[-2] = sp[-2] >= sp[-1];
       --sp;
       ++ip;
       DISPATCH();
 
-    case OP(LoadIndirect): lbl_LoadIndirect:
-    case OP(StoreIndirect): lbl_StoreIndirect: {
+    case OP(LoadIndirect):
+    lbl_LoadIndirect:
+    case OP(StoreIndirect):
+    lbl_StoreIndirect: {
       const bool isStore = inst.op == OP(StoreIndirect);
       const uint64_t value = isStore ? sp[-1] : 0;
       const uint64_t address = isStore ? sp[-2] : sp[-1];
@@ -844,7 +908,8 @@ bool executeVmFastKernel(const IrModule &module,
       DISPATCH();
     }
 
-    case OP(HeapAlloc): lbl_HeapAlloc: {
+    case OP(HeapAlloc):
+    lbl_HeapAlloc: {
       uint64_t address = 0;
       if (!host.allocateHeapSlots(sp[-1], address, error)) {
         return false;
@@ -853,14 +918,16 @@ bool executeVmFastKernel(const IrModule &module,
       ++ip;
       DISPATCH();
     }
-    case OP(HeapFree): lbl_HeapFree:
+    case OP(HeapFree):
+    lbl_HeapFree:
       if (!host.freeHeapSlots(sp[-1], error)) {
         return false;
       }
       --sp;
       ++ip;
       DISPATCH();
-    case OP(HeapRealloc): lbl_HeapRealloc: {
+    case OP(HeapRealloc):
+    lbl_HeapRealloc: {
       uint64_t newAddress = 0;
       if (!host.reallocHeapSlots(sp[-2], sp[-1], newAddress, error)) {
         return false;
@@ -871,8 +938,10 @@ bool executeVmFastKernel(const IrModule &module,
       DISPATCH();
     }
 
-    case OP(LoadStringByte): lbl_LoadStringByte:
-    case OP(LoadStringByteDynamic): lbl_LoadStringByteDynamic: {
+    case OP(LoadStringByte):
+    lbl_LoadStringByte:
+    case OP(LoadStringByteDynamic):
+    lbl_LoadStringByteDynamic: {
       const bool dynamic = inst.op == OP(LoadStringByteDynamic);
       const uint64_t position = sp[-1];
       const uint64_t stringIndex = dynamic ? sp[-2] : inst.imm;
@@ -890,7 +959,8 @@ bool executeVmFastKernel(const IrModule &module,
       ++ip;
       DISPATCH();
     }
-    case OP(LoadStringLength): lbl_LoadStringLength: {
+    case OP(LoadStringLength):
+    lbl_LoadStringLength: {
       const std::string *text = nullptr;
       if (!resolveString(sp[-1], text)) {
         return false;
@@ -900,8 +970,10 @@ bool executeVmFastKernel(const IrModule &module,
       DISPATCH();
     }
 
-    case OP(Call): lbl_Call:
-    case OP(CallVoid): lbl_CallVoid: {
+    case OP(Call):
+    lbl_Call:
+    case OP(CallVoid):
+    lbl_CallVoid: {
       if (inst.imm >= functions.size()) {
         FAULT("invalid call target in IR");
       }
@@ -926,11 +998,16 @@ bool executeVmFastKernel(const IrModule &module,
       DISPATCH();
     }
 
-    case OP(ReturnVoid): lbl_ReturnVoid:
-    case OP(ReturnI32): lbl_ReturnI32:
-    case OP(ReturnI64): lbl_ReturnI64:
-    case OP(ReturnF32): lbl_ReturnF32:
-    case OP(ReturnF64): lbl_ReturnF64: {
+    case OP(ReturnVoid):
+    lbl_ReturnVoid:
+    case OP(ReturnI32):
+    lbl_ReturnI32:
+    case OP(ReturnI64):
+    lbl_ReturnI64:
+    case OP(ReturnF32):
+    lbl_ReturnF32:
+    case OP(ReturnF64):
+    lbl_ReturnF64: {
       uint64_t value = 0;
       switch (inst.op) {
       case OP(ReturnI32):
@@ -962,14 +1039,15 @@ bool executeVmFastKernel(const IrModule &module,
       DISPATCH();
     }
 
-    case FastOpMissingReturn: lbl_FastOpMissingReturn:
+    case FastOpMissingReturn:
+    lbl_FastOpMissingReturn:
       FAULT(frames.empty() ? std::string("missing return in IR")
                            : "missing return in IR function " + current->function->name);
 
     default:
       break;
     }
-    lbl_generic:
+  lbl_generic:
 
     // Arithmetic, comparisons and conversions not inlined above share the
     // semantics of constant folding and the C++ emitters.
