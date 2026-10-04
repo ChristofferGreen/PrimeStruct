@@ -406,7 +406,10 @@ IR level; the arm64 emitter is untouched):
    function reads argc/argv) for the whole function. Measured dead ends on json_parse (about 20 hot state variables):
    taking rbx and r9 from the operand cache for the promotion pool did not help, and `LoadStringByte` straight into a
    cache register cut instructions by 8% (163M to 149M) without changing the run time, which is bound by
-   loop-carried values that stay in memory; closing the gap to optexe needs liveness-based register assignment. Instructions whose templates clobber those registers (printing, file and heap operations, string table
+   loop-carried values that stay in memory; sharing registers between locals whose live ranges never meet (per-instruction backward liveness over the
+   candidates, spills and reloads restricted to the live ones) left json_parse at 149.3M instructions against 149.5M
+   because its hot state variables are live at the same time, so the gap to optexe is register pressure that needs
+   more than seven pool registers or a real allocator with spilling, not better packing. Instructions whose templates clobber those registers (printing, file and heap operations, string table
    lookups, calls) get the locals written to their frame slots before and reloaded after.
 2. Deferred operands: the emitter tracks the top of the operand stack at compile time. Constants and register locals
    are pushed lazily, `add`/`sub`/`mul`/compare/`neg`/`dup`/`pop` work on registers and immediates directly, and the
