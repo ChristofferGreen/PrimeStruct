@@ -229,6 +229,11 @@ void fuseInstructions(const IrFunction &function, const IrCfg &cfg, FastFunction
       slot.op = FastOpStoreLocalDupPop;
       slot.a = static_cast<uint32_t>(imm(i + 1));
       length = 3;
+    } else if ((op(i) == IrOpcode::AddI32 || op(i) == IrOpcode::SubI32 ||
+                op(i) == IrOpcode::MulI32) &&
+               window(i, 2) && op(i + 1) == IrOpcode::SextI32) {
+      slot.op = static_cast<uint16_t>(FastOpAddSext + arithmeticKind(op(i)));
+      length = 2;
     }
     i += length;
   }
@@ -245,6 +250,12 @@ bool prepareFunction(const IrModule &module, const IrFunction &function, FastFun
   out.function = &function;
   out.code.reserve(function.instructions.size() + 1);
   for (const IrInstruction &instruction : function.instructions) {
+    // A call to a missing function is left to the step kernel, which faults on it when (and only
+    // if) it runs, so the loop needs no target check.
+    if ((instruction.op == IrOpcode::Call || instruction.op == IrOpcode::CallVoid) &&
+        instruction.imm >= module.functions.size()) {
+      return false;
+    }
     IrStackEffect effect;
     if (!computeIrStackEffect(instruction, module, effect) || effect.pops > UINT16_MAX ||
         effect.pushes > UINT16_MAX) {

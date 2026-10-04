@@ -12,6 +12,36 @@ bool isVmHeapAddress(uint64_t address) {
   return (address & kVmHeapAddressTag) != 0;
 }
 
+// Allocations are only ever appended, each starting where the heap slots ended, so the list is
+// sorted by baseIndex with no two allocations sharing a slot: a binary search finds the one that
+// holds a slot (live or freed) instead of a scan over every allocation ever made.
+using HeapAllocations = std::vector<VmDebugSession::HeapAllocation>;
+
+HeapAllocations::iterator allocationHolding(HeapAllocations &allocations, uint64_t index) {
+  auto it = std::upper_bound(allocations.begin(),
+                             allocations.end(),
+                             index,
+                             [](uint64_t value, const VmDebugSession::HeapAllocation &allocation) {
+                               return value < static_cast<uint64_t>(allocation.baseIndex);
+                             });
+  if (it == allocations.begin()) {
+    return allocations.end();
+  }
+  --it;
+  if (index >= static_cast<uint64_t>(it->baseIndex) + static_cast<uint64_t>(it->slotCount)) {
+    return allocations.end();
+  }
+  return it;
+}
+
+HeapAllocations::iterator allocationStartingAt(HeapAllocations &allocations, uint64_t baseIndex) {
+  auto it = allocationHolding(allocations, baseIndex);
+  if (it == allocations.end() || static_cast<uint64_t>(it->baseIndex) != baseIndex) {
+    return allocations.end();
+  }
+  return it;
+}
+
 } // namespace
 
 bool resolveIndirectAddress(uint64_t address,
@@ -32,16 +62,10 @@ bool resolveIndirectAddress(uint64_t address,
       error = "invalid indirect address in IR: " + std::to_string(address);
       return false;
     }
-    for (const auto &allocation : heapAllocations) {
-      if (!allocation.live) {
-        continue;
-      }
-      const uint64_t baseIndex = static_cast<uint64_t>(allocation.baseIndex);
-      const uint64_t endIndex = baseIndex + static_cast<uint64_t>(allocation.slotCount);
-      if (index >= baseIndex && index < endIndex) {
-        slotOut = &heapSlots[static_cast<size_t>(index)];
-        return true;
-      }
+    const auto allocation = allocationHolding(heapAllocations, index);
+    if (allocation != heapAllocations.end() && allocation->live) {
+      slotOut = &heapSlots[static_cast<size_t>(index)];
+      return true;
     }
     error = "invalid indirect address in IR: " + std::to_string(address);
     return false;
@@ -100,10 +124,9 @@ bool freeVmHeapSlots(uint64_t address,
   }
   const uint64_t heapAddress = address & ~kVmHeapAddressTag;
   const uint64_t baseIndex = heapAddress / slotBytes;
-  for (auto &allocation : heapAllocations) {
-    if (allocation.baseIndex != baseIndex) {
-      continue;
-    }
+  if (const auto found = allocationStartingAt(heapAllocations, baseIndex);
+      found != heapAllocations.end()) {
+    auto &allocation = *found;
     if (!allocation.live) {
       error = "invalid heap free address in IR: " + std::to_string(address);
       return false;
@@ -146,21 +169,21 @@ bool reallocVmHeapSlots(uint64_t address,
   }
   const uint64_t heapAddress = address & ~kVmHeapAddressTag;
   const uint64_t baseIndex = heapAddress / slotBytes;
-  for (auto &allocation : heapAllocations) {
-    if (allocation.baseIndex != baseIndex) {
-      continue;
-    }
-    if (!allocation.live) {
+  if (const auto found = allocationStartingAt(heapAllocations, baseIndex);
+      found != heapAllocations.end()) {
+    // Copy what is needed: allocating below may grow the list and move its elements.
+    const bool live = found->live;
+    const size_t oldBaseIndex = found->baseIndex;
+    const size_t oldSlotCount = found->slotCount;
+    if (!live) {
       error = "invalid heap realloc address in IR: " + std::to_string(address);
       return false;
     }
-    const size_t endIndex = allocation.baseIndex + allocation.slotCount;
+    const size_t endIndex = oldBaseIndex + oldSlotCount;
     if (endIndex > heapSlots.size()) {
       error = "invalid heap realloc address in IR: " + std::to_string(address);
       return false;
     }
-    const size_t oldBaseIndex = allocation.baseIndex;
-    const size_t oldSlotCount = allocation.slotCount;
 
     uint64_t newAddress = 0;
     if (!allocateVmHeapSlots(slotCount, slotBytes, heapSlots, heapAllocations, newAddress, error)) {
@@ -174,12 +197,7 @@ bool reallocVmHeapSlots(uint64_t address,
     for (size_t index = oldBaseIndex; index < endIndex; ++index) {
       heapSlots[index] = 0;
     }
-    for (auto &candidate : heapAllocations) {
-      if (candidate.baseIndex == oldBaseIndex) {
-        candidate.live = false;
-        break;
-      }
-    }
+    allocationStartingAt(heapAllocations, oldBaseIndex)->live = false;
     addressOut = newAddress;
     return true;
   }

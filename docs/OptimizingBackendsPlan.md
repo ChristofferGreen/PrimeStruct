@@ -474,7 +474,7 @@ exactly where the original instruction would. Module-table strings resolve inlin
 `PRIMEVM_KERNEL=step` forces the step kernel for comparisons, and
 `scripts/differential_opt_check.py --baseline-kernel step` runs the 850-program corpus against it at -O0 and -O2
 (equal stdout, stderr and exit code); `primestruct.ir.vm_fast_kernel` runs random programs, every fault, calls and
-recursion, files and a fused-form grid through both kernels. 4.2 (O(1) heap addressing in the VM) and 4.4 are open.
+recursion, files and a fused-form grid through both kernels. 4.2 and 4.4 are done (below).
 
 Measured wall time of `primevm` including the 13-70 ms compile (seconds):
 
@@ -489,6 +489,19 @@ then the plain switch instead of threaded dispatch): float_series took 0.63 s. E
 handler that calls `evalPureOpcode` with a constant opcode, so the shared semantics are kept bit for bit and the
 switch folds away (0.48 s), and `LoadLocal; LoadLocal; {Add,Sub,Mul,Div}F64` and `LoadLocal; PushF64; ...F64` are
 fused like their integer counterparts (0.39 s).
+
+Calls (call_fib, 7 million calls): a callgrind profile showed about 170 loop instructions per call. Locals are now
+cleared with inline stores for up to four slots (the `memset` call cost more than the clearing), each return opcode
+has its own handler instead of a switch on the opcode, `AddI32; SextI32` (and Sub/Mul) is fused, and call targets are
+checked once when the module is prepared (a module calling a missing function runs on the step kernel, which faults
+when the call executes). call_fib on primevm: 0.13 s to 0.105 s.
+
+4.2 and 4.4 (2026-10-04): every heap access used to scan the whole allocation list, freed allocations included, so a
+program that builds many small vectors slowed down quadratically (3,000 vectors of 20 pushes: 1.72 s). Allocations
+are only ever appended, each at the end of the heap, so the list is sorted by base slot and `VmHeapHelpers.cpp` now
+finds the allocation holding a slot with a binary search (0.17 s); the step kernel and the debugger share it. In the
+fast loop, indirect loads and stores have separate handlers, address the frame with the constant slot size (a mask
+and a shift instead of a division by a runtime value), and build fault messages in a cold out-of-line function.
 
 ### Phase 5: defaults, docs, gates
 

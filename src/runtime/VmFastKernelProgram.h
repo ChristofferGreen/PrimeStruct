@@ -55,6 +55,9 @@ enum FastOp : uint16_t {
   FastOpPushLocalSubImmF64,                // LoadLocal a; PushF64 c; SubF64
   FastOpPushLocalMulImmF64,                // LoadLocal a; PushF64 c; MulF64
   FastOpPushLocalDivImmF64,                // LoadLocal a; PushF64 c; DivF64
+  FastOpAddSext,                           // AddI32; SextI32
+  FastOpSubSext,                           // SubI32; SextI32
+  FastOpMulSext,                           // MulI32; SextI32
   FAST_CMPS(FAST_ENUM_JMP_CMP_LOCAL_IMM)   // LoadLocal a; Push c; Cmp; JumpIfZero b
   FAST_CMPS(FAST_ENUM_JMP_CMP_LOCAL_LOCAL) // LoadLocal a; LoadLocal b; Cmp; JumpIfZero imm
   FAST_CMPS(FAST_ENUM_JMP_CMP)             // Cmp; JumpIfZero b

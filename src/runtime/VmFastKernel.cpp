@@ -98,6 +98,13 @@ static_assert(FastOpEnd <= VmFastDispatchSlots, "dispatch table too small for th
 static_assert(static_cast<size_t>(IrOpcode::SextI32) < 0x100,
               "IR opcodes must stay below the fused range");
 
+// Fault messages are built out of line so the handlers that can fault stay small.
+[[gnu::cold, gnu::noinline]] bool
+addressFault(std::string &error, const char *message, uint64_t address) {
+  error = message + std::to_string(address);
+  return false;
+}
+
 } // namespace
 
 // Threaded dispatch uses the GNU labels-as-values extension (clang and GCC).
@@ -116,13 +123,16 @@ bool executeVmFastKernel(const IrModule &module,
                          bool &executed) {
   executed = false;
   std::vector<FastFunction> functions;
-  if (!prepareModule(module, functions)) {
+  // The loop addresses locals with the constant slot size, so a shift and a mask replace the
+  // division a runtime size would need.
+  if (host.slotBytes() != IrSlotBytes || !prepareModule(module, functions)) {
     return false;
   }
   executed = true;
 
   const size_t maxCallDepth = host.maxCallDepth();
-  const uint64_t slotBytes = host.slotBytes();
+  constexpr uint64_t slotBytes = IrSlotBytes;
+  static_assert((IrSlotBytes & (IrSlotBytes - 1)) == 0, "slot size must be a power of two");
   const uint64_t argc =
       static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(host.argumentCount())));
   const VmStringHeap *stringHeap = host.stringHeap();
@@ -147,6 +157,22 @@ bool executeVmFastKernel(const IrModule &module,
   }
   uint64_t *locals = localsArena.data();
   const FastInst *ip = current->code.data();
+
+  // The slot an indirect address names, or false with the fault in `error`.
+  const auto indirectSlot = [&](uint64_t address, uint64_t *&slot) -> bool {
+    if ((address & (slotBytes - 1)) != 0) [[unlikely]] {
+      return addressFault(error, "unaligned indirect address in IR: ", address);
+    }
+    if ((address & (uint64_t{1} << 63)) != 0) {
+      return host.resolveIndirectAddress(address, noLocals, slot, error);
+    }
+    const uint64_t index = address / slotBytes;
+    if (index >= current->localCount) [[unlikely]] {
+      return addressFault(error, "invalid indirect address in IR: ", address);
+    }
+    slot = locals + index;
+    return true;
+  };
 
   // Reserves `extra` operand slots above sp, moving the stack if it must grow.
   const auto ensureStack = [&](size_t extra) {
@@ -205,6 +231,9 @@ bool executeVmFastKernel(const IrModule &module,
   table[FastOpLocalSubImmStoreSext] = &&lbl_FastOpLocalSubImmStoreSext;
   table[FastOpLocalStringByteStore] = &&lbl_FastOpLocalStringByteStore;
   table[FastOpPushLocalStringByte] = &&lbl_FastOpPushLocalStringByte;
+  table[FastOpAddSext] = &&lbl_FastOpAddSext;
+  table[FastOpSubSext] = &&lbl_FastOpSubSext;
+  table[FastOpMulSext] = &&lbl_FastOpMulSext;
   table[FastOpPushLocalAddLocalF64] = &&lbl_FastOpPushLocalAddLocalF64;
   table[FastOpPushLocalSubLocalF64] = &&lbl_FastOpPushLocalSubLocalF64;
   table[FastOpPushLocalMulLocalF64] = &&lbl_FastOpPushLocalMulLocalF64;
@@ -273,6 +302,7 @@ bool executeVmFastKernel(const IrModule &module,
   const FastInst *instp = ip;
 
   error.clear();
+  uint64_t returnValue = 0;
   for (;;) {
     instp = ip;
     switch (instp->op) {
@@ -516,6 +546,24 @@ bool executeVmFastKernel(const IrModule &module,
       sp[-1] = sext32(sp[-1]);
       ++ip;
       DISPATCH();
+    case FastOpAddSext:
+    lbl_FastOpAddSext:
+      sp[-2] = sext32(sp[-2] + sp[-1]);
+      --sp;
+      ip += 2;
+      DISPATCH();
+    case FastOpSubSext:
+    lbl_FastOpSubSext:
+      sp[-2] = sext32(sp[-2] - sp[-1]);
+      --sp;
+      ip += 2;
+      DISPATCH();
+    case FastOpMulSext:
+    lbl_FastOpMulSext:
+      sp[-2] = sext32(sp[-2] * sp[-1]);
+      --sp;
+      ip += 2;
+      DISPATCH();
     case OP(CmpEqI32):
     lbl_CmpEqI32:
     case OP(CmpEqI64):
@@ -589,35 +637,27 @@ bool executeVmFastKernel(const IrModule &module,
       ++ip;
       DISPATCH();
 
+    // Indirect accesses: a frame-local address indexes this frame's locals, a heap address
+    // (bit 63 set) goes through the host. Faults build their messages out of line.
     case OP(LoadIndirect):
-    lbl_LoadIndirect:
+    lbl_LoadIndirect: {
+      uint64_t *slot = nullptr;
+      if (!indirectSlot(sp[-1], slot)) [[unlikely]] {
+        return false;
+      }
+      sp[-1] = *slot;
+      ++ip;
+      DISPATCH();
+    }
     case OP(StoreIndirect):
     lbl_StoreIndirect: {
-      const bool isStore = inst.op == OP(StoreIndirect);
-      const uint64_t value = isStore ? sp[-1] : 0;
-      const uint64_t address = isStore ? sp[-2] : sp[-1];
       uint64_t *slot = nullptr;
-      if (address % slotBytes != 0) {
-        FAULT("unaligned indirect address in IR: " + std::to_string(address));
+      if (!indirectSlot(sp[-2], slot)) [[unlikely]] {
+        return false;
       }
-      if ((address & (uint64_t{1} << 63)) != 0) {
-        if (!host.resolveIndirectAddress(address, noLocals, slot, error)) {
-          return false;
-        }
-      } else {
-        const uint64_t index = address / slotBytes;
-        if (index >= current->localCount) {
-          FAULT("invalid indirect address in IR: " + std::to_string(address));
-        }
-        slot = locals + index;
-      }
-      if (isStore) {
-        *slot = value;
-        sp[-2] = value;
-        --sp;
-      } else {
-        sp[-1] = *slot;
-      }
+      *slot = sp[-1];
+      sp[-2] = sp[-1];
+      --sp;
       ++ip;
       DISPATCH();
     }
@@ -688,9 +728,7 @@ bool executeVmFastKernel(const IrModule &module,
     lbl_Call:
     case OP(CallVoid):
     lbl_CallVoid: {
-      if (inst.imm >= functions.size()) {
-        FAULT("invalid call target in IR");
-      }
+      // prepareModule only accepts modules whose call targets exist.
       // The step kernel counts the current frame too.
       if (frames.size() + 1 >= maxCallDepth) {
         FAULT("VM call stack overflow");
@@ -702,54 +740,67 @@ bool executeVmFastKernel(const IrModule &module,
       if (localsBase + callee.localCount > localsArena.size()) {
         localsArena.resize(std::max(localsArena.size() * 2, localsBase + callee.localCount), 0);
       }
-      std::fill_n(localsArena.begin() + static_cast<std::ptrdiff_t>(localsBase),
-                  callee.localCount,
-                  uint64_t{0});
       locals = localsArena.data() + localsBase;
+      // Locals start at zero. Most functions have a handful, which a memset call would cost
+      // more to clear than the stores do.
+      switch (callee.localCount) {
+      case 4:
+        locals[3] = 0;
+        [[fallthrough]];
+      case 3:
+        locals[2] = 0;
+        [[fallthrough]];
+      case 2:
+        locals[1] = 0;
+        [[fallthrough]];
+      case 1:
+        locals[0] = 0;
+        [[fallthrough]];
+      case 0:
+        break;
+      default:
+        std::fill_n(locals, callee.localCount, uint64_t{0});
+        break;
+      }
       current = &callee;
       ip = callee.code.data();
       ensureStack(callee.stackHeadroom);
       DISPATCH();
     }
 
+    // Each return form takes its value off the stack (an i32 sign-extended, an f32 as its low
+    // 32 bits) and shares the frame pop.
     case OP(ReturnVoid):
     lbl_ReturnVoid:
+      returnValue = 0;
+      goto return_to_caller;
     case OP(ReturnI32):
     lbl_ReturnI32:
-    case OP(ReturnI64):
-    lbl_ReturnI64:
+      returnValue = sext32(*--sp);
+      goto return_to_caller;
     case OP(ReturnF32):
     lbl_ReturnF32:
+      returnValue = static_cast<uint64_t>(static_cast<uint32_t>(*--sp));
+      goto return_to_caller;
+    case OP(ReturnI64):
+    lbl_ReturnI64:
     case OP(ReturnF64):
-    lbl_ReturnF64: {
-      uint64_t value = 0;
-      switch (inst.op) {
-      case OP(ReturnI32):
-        value = static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(*--sp)));
-        break;
-      case OP(ReturnI64):
-      case OP(ReturnF64):
-        value = *--sp;
-        break;
-      case OP(ReturnF32):
-        value = static_cast<uint64_t>(static_cast<uint32_t>(*--sp));
-        break;
-      default:
-        break;
-      }
+    lbl_ReturnF64:
+      returnValue = *--sp;
+    return_to_caller: {
       if (frames.empty()) {
-        result = value;
+        result = returnValue;
         return true;
       }
-      const FastFrame frame = frames.back();
-      frames.pop_back();
+      const FastFrame &frame = frames.back();
       current = frame.function;
       ip = frame.returnIp;
       localsBase = frame.localsBase;
       locals = localsArena.data() + localsBase;
       if (frame.returnsValue) {
-        *sp++ = value;
+        *sp++ = returnValue;
       }
+      frames.pop_back();
       DISPATCH();
     }
 
