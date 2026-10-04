@@ -398,6 +398,68 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+// A guarded constant add `if (compare) { x = x + K }` is emitted branchless on x86_64
+// (setcc scaled by K and added to the local), for register and frame locals alike.
+TEST_CASE("guarded constant adds stay exact when emitted branchless") {
+  program_matrix::ProgramCase program;
+  program.name = "guarded_constant_adds";
+  program.source = R"(
+[return<int> effects(io_out)]
+main() {
+  [i64 mut] hits{0i64}
+  [i64 mut] weighted{0i64}
+  [i64 mut] misses{100i64}
+  [i64 mut] c0{0i64}
+  [i64 mut] c1{0i64}
+  [i64 mut] c2{0i64}
+  [i64 mut] c3{0i64}
+  [i64 mut] c4{0i64}
+  [i64 mut] c5{0i64}
+  [i64 mut] c6{0i64}
+  [i64 mut] c7{0i64}
+  [i64 mut] c8{0i64}
+  [i64 mut] c9{0i64}
+  [i32 mut] i{0i32}
+  repeat(20i32) {
+    if(equal(i, 3i32)) { assign(hits, plus(hits, 1i64)) }
+    if(less_than(i, 7i32)) { assign(weighted, plus(weighted, 5i64)) }
+    if(greater_than(i, 10i32)) { assign(misses, minus(misses, 2i64)) }
+    if(not_equal(i, 4i32)) { assign(hits, plus(hits, 2i64)) }
+    if(equal(minus(i, multiply(divide(i, 2i32), 2i32)), 0i32)) { assign(c0, plus(c0, 1i64)) }
+    if(equal(minus(i, multiply(divide(i, 3i32), 3i32)), 0i32)) { assign(c1, plus(c1, 2i64)) }
+    if(equal(minus(i, multiply(divide(i, 4i32), 4i32)), 0i32)) { assign(c2, plus(c2, 3i64)) }
+    if(equal(minus(i, multiply(divide(i, 5i32), 5i32)), 0i32)) { assign(c3, plus(c3, 4i64)) }
+    if(equal(minus(i, multiply(divide(i, 6i32), 6i32)), 0i32)) { assign(c4, plus(c4, 5i64)) }
+    if(equal(minus(i, multiply(divide(i, 7i32), 7i32)), 0i32)) { assign(c5, plus(c5, 6i64)) }
+    if(equal(minus(i, multiply(divide(i, 8i32), 8i32)), 0i32)) { assign(c6, plus(c6, 7i64)) }
+    if(equal(minus(i, multiply(divide(i, 9i32), 9i32)), 0i32)) { assign(c7, plus(c7, 8i64)) }
+    if(equal(minus(i, multiply(divide(i, 10i32), 10i32)), 0i32)) { assign(c8, plus(c8, 9i64)) }
+    if(equal(minus(i, multiply(divide(i, 11i32), 11i32)), 0i32)) { assign(c9, plus(c9, 10i64)) }
+    assign(i, plus(i, 1i32))
+  }
+  print_line(hits)
+  print_line(weighted)
+  print_line(misses)
+  print_line(c0)
+  print_line(c1)
+  print_line(c2)
+  print_line(c3)
+  print_line(c4)
+  print_line(c5)
+  print_line(c6)
+  print_line(c7)
+  print_line(c8)
+  print_line(c9)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "39\n35\n82\n10\n14\n15\n16\n20\n18\n21\n24\n18\n20\n";
+  program.onlyConfigs = {
+      "vm-step-O0", "vm-O0", "vm-O2", "native-O0", "native-O2", "optexe-O2", "exe"};
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_CASE("i32 loops keep wrapping in promoted locals and fused updates") {
   program_matrix::ProgramCase program;
   program.name = "i32_wrap_loops";

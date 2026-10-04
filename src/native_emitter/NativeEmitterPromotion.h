@@ -162,10 +162,22 @@ planPromotedLocals(const IrFunction &function, const uint8_t *pool, size_t poolS
     if (endsLoop && instruction.op == IrOpcode::JumpIfZero) {
       continue;
     }
+    // A guarded `local = local +/- constant` is emitted branchless, so it runs every time.
+    if (instruction.op == IrOpcode::JumpIfZero && target == i + 5 && target <= count &&
+        function.instructions[i + 1].op == IrOpcode::LoadLocal &&
+        (function.instructions[i + 2].op == IrOpcode::PushI64 ||
+         function.instructions[i + 2].op == IrOpcode::PushI32) &&
+        (function.instructions[i + 3].op == IrOpcode::AddI64 ||
+         function.instructions[i + 3].op == IrOpcode::SubI64) &&
+        function.instructions[i + 4].op == IrOpcode::StoreLocal &&
+        function.instructions[i + 4].imm == function.instructions[i + 1].imm) {
+      continue;
+    }
     armDelta[i + 1] += 1;
     armDelta[target] -= 1;
   }
-  // Fixed point with 6 fractional bits: ten per loop level, halved per conditional arm.
+  // Fixed point with 6 fractional bits: ten per loop level, halved per conditional arm up
+  // to three deep (else-if ladders reach their later arms far more often than 2^-depth).
   std::vector<uint64_t> weight(escape.localCount, 0);
   int32_t depth = 0;
   int32_t arms = 0;
@@ -179,7 +191,7 @@ planPromotedLocals(const IrFunction &function, const uint8_t *pool, size_t poolS
       for (int32_t level = 0; level < std::min<int32_t>(depth, 6); ++level) {
         use *= 10;
       }
-      use >>= std::min<int32_t>(arms, 6);
+      use >>= std::min<int32_t>(arms, 3);
       weight[static_cast<size_t>(instruction.imm)] += use;
     }
   }

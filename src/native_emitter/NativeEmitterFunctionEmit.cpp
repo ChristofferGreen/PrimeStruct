@@ -118,6 +118,40 @@ bool emitNativeFunctions(const IrModule &module,
       instOffsets[functionIndex][index] = emitter.currentWordIndex();
       if constexpr (!kIsArm64) {
         if (deferOperands) {
+          // `if (compare) { local = local +/- constant }` is branchless: the guarded
+          // statement is exactly LoadLocal, constant, AddI64/SubI64 and StoreLocal of a
+          // register local, and nothing else enters or leaves it.
+          if (index + 1 < fn.instructions.size() &&
+              fn.instructions[index + 1].op == IrOpcode::JumpIfZero && !branchTargets[index + 1]) {
+            const size_t armStart = index + 2;
+            const size_t armEnd = static_cast<size_t>(fn.instructions[index + 1].imm);
+            if (armEnd == armStart + 4 && armEnd <= fn.instructions.size() &&
+                !branchTargets[armStart + 1] && !branchTargets[armStart + 2] &&
+                !branchTargets[armStart + 3] && fn.instructions[armStart].op == IrOpcode::LoadLocal &&
+                (fn.instructions[armStart + 1].op == IrOpcode::PushI64 ||
+                 fn.instructions[armStart + 1].op == IrOpcode::PushI32) &&
+                (fn.instructions[armStart + 2].op == IrOpcode::AddI64 ||
+                 fn.instructions[armStart + 2].op == IrOpcode::SubI64) &&
+                fn.instructions[armStart + 3].op == IrOpcode::StoreLocal &&
+                fn.instructions[armStart + 3].imm == fn.instructions[armStart].imm) {
+              const IrInstruction &operand = fn.instructions[armStart + 1];
+              const uint64_t constant =
+                  operand.op == IrOpcode::PushI32
+                      ? static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(operand.imm)))
+                      : operand.imm;
+              if (emitter.tryEmitCompareConditionalAdd(
+                      inst.op,
+                      static_cast<uint32_t>(fn.instructions[armStart].imm),
+                      fn.instructions[armStart + 2].op == IrOpcode::SubI64,
+                      constant)) {
+                for (size_t skipped = 1; skipped < armEnd - index; ++skipped) {
+                  instOffsets[functionIndex][index + skipped] = emitter.currentWordIndex();
+                }
+                index = armEnd - 1;
+                continue;
+              }
+            }
+          }
           // A comparison feeding a branch becomes one compare-and-branch.
           if (index + 1 < fn.instructions.size() &&
               fn.instructions[index + 1].op == IrOpcode::JumpIfZero && !branchTargets[index + 1]) {

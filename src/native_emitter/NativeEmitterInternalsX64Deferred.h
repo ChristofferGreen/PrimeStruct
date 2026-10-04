@@ -330,11 +330,8 @@ inline bool X64Emitter::compareCondition(IrOpcode op, CondCode &cc) const {
   }
 }
 
-inline bool X64Emitter::tryEmitCompareBranch(IrOpcode compareOp, size_t &fixupIndex) {
-  CondCode cc = CondCode::Eq;
-  if (!deferOperands_ || !compareCondition(compareOp, cc)) {
-    return false;
-  }
+// Pops the two comparison operands and sets the flags from `a CMP b`.
+inline void X64Emitter::emitDeferredCompareFlags() {
   counters_.valueStackPopCount += 2;
   uint32_t used = 0;
   const PendingOperand b = popOperand(used);
@@ -358,8 +355,55 @@ inline bool X64Emitter::tryEmitCompareBranch(IrOpcode compareOp, size_t &fixupIn
     }
     emitCmpRegReg(left, right);
   }
+}
+
+inline bool X64Emitter::tryEmitCompareBranch(IrOpcode compareOp, size_t &fixupIndex) {
+  CondCode cc = CondCode::Eq;
+  if (!deferOperands_ || !compareCondition(compareOp, cc)) {
+    return false;
+  }
+  emitDeferredCompareFlags();
   // JumpIfZero branches when the comparison is false.
   fixupIndex = emitCondJumpPlaceholder(invertCond(cc));
+  return true;
+}
+
+// `if (a CMP b) { local = local +/- constant }` without a branch: the comparison
+// becomes 0 or 1 in rcx, which is scaled by the constant and added to the local (its
+// register, or its frame slot through rax). The same value as the branch whenever the
+// condition is true, and the local unchanged otherwise.
+inline bool X64Emitter::tryEmitCompareConditionalAdd(IrOpcode compareOp,
+                                                     uint32_t local,
+                                                     bool subtract,
+                                                     uint64_t constant) {
+  CondCode cc = CondCode::Eq;
+  if (!deferOperands_ || !compareCondition(compareOp, cc)) {
+    return false;
+  }
+  emitDeferredCompareFlags();
+  emitSetccReg(1, cc);
+  emitMovzxReg8(1, 1);
+  if (constant != 1) {
+    emitMovRegImm64(0, constant);
+    emitImulRegReg(1, 0);
+  }
+  if (const int promoted = promotedRegister(local); promoted >= 0) {
+    flushPendingForAlias(local);
+    if (subtract) {
+      emitSubRegReg(static_cast<uint8_t>(promoted), 1);
+    } else {
+      emitAddRegReg(static_cast<uint8_t>(promoted), 1);
+    }
+    return true;
+  }
+  const int32_t disp = -static_cast<int32_t>(frameSize_ - localOffset(local));
+  emitLoadMem(0, 5, disp);
+  if (subtract) {
+    emitSubRegReg(0, 1);
+  } else {
+    emitAddRegReg(0, 1);
+  }
+  emitStoreMem(5, disp, 0);
   return true;
 }
 

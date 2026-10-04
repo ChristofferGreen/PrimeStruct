@@ -411,7 +411,12 @@ IR level; the arm64 emitter is untouched):
    (optexe: 116M) with the same output but no change in run time: the run time follows branch mispredictions
    (cachegrind branch simulation: native 34M branches and 2.7M mispredicts, 17 ms; optexe 26M and 1.8M, 9.8 ms, about
    15 cycles per mispredict in both), so register assignment is not the lever for json_parse; if-converting
-   `if (c == K) x += 1` chains into branchless code is. Sharing registers between locals whose live ranges never meet (per-instruction backward liveness over the
+   `if (c == K) x += 1` chains into branchless code is: a guarded add of a constant to a local (compare, JumpIfZero over
+   LoadLocal/constant/AddI64|SubI64/StoreLocal) is now emitted as setcc scaled by the constant and added to the local,
+   which cut branches from 34M to 27.6M; together with capping the arm attenuation at three levels (an else-if
+   ladder reaches its later arms far more often than 2^-depth) json_parse runs in 15.5 ms instead of 17.5 ms and
+   json_scan in 8.3 ms instead of 9.4 ms, against 9.8 ms for optexe, whose instruction count (116M) is now within
+   15% of native's (133M). The remaining gap is not branch count (27M vs 26M). Sharing registers between locals whose live ranges never meet (per-instruction backward liveness over the
    candidates, spills and reloads restricted to the live ones) left json_parse at 149.3M instructions against 149.5M
    because its hot state variables are live at the same time, so the gap to optexe is register pressure that needs
    more than seven pool registers or a real allocator with spilling, not better packing. Instructions whose templates clobber those registers (printing, file and heap operations, string table

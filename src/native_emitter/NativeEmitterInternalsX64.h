@@ -96,6 +96,13 @@ class X64Emitter {
    // `a CMP b; JumpIfZero` as one compare and branch. Returns false when
    // `compareOp` is not an integer comparison; otherwise returns the branch fixup.
    bool tryEmitCompareBranch(IrOpcode compareOp, size_t &fixupIndex);
+   // `if (compare) { local = local +/- constant }` as setcc and an add on the local's
+   // register. Returns false (emitting nothing) when `compareOp` is not an integer
+   // comparison or the local is not register-resident.
+   bool tryEmitCompareConditionalAdd(IrOpcode compareOp,
+                                     uint32_t local,
+                                     bool subtract,
+                                     uint64_t constant);
    bool isLocalPromoted(uint32_t index) const {
      return promotedRegister(index) >= 0;
    }
@@ -474,6 +481,7 @@ class X64Emitter {
   PendingOperand popOperand(uint32_t &usedMask);
   void pushPendingOperand(const PendingOperand &entry);
   void flushPendingForAlias(uint32_t local);
+  void emitDeferredCompareFlags();
   void emitStoreImm64Mem(uint8_t base, int32_t disp, uint64_t imm);
   void emitTestRegReg(uint8_t reg);
   template <typename Op> void emitBinaryDeferred(Op &&op);
