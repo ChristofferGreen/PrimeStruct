@@ -558,7 +558,11 @@ locals and operands alike, instead of promoting at most seven locals and deferri
 
 Result (best of 60, run time only): json_parse 13.2 ms (template emitter 12.8 ms), json_scan 6.5 ms (8.4 ms), aggregate
 3.9 ms (3.9 ms); optexe takes 9.9 ms on json_parse. json_parse is now bound by branch mispredictions in its state machine
-rather than by register pressure: 12 values are live in its loop and two spill.
+rather than by register pressure: 12 values are live in its loop and two spill. aggregate's loop is two instructions shorter than the
+template emitter's but runs about 0.25 cycles per iteration slower (35.9 against 31.1 ms at 50M iterations), whichever
+register holds the product; rotating the loop (`loop-rotate` enabled for native) changed nothing there or on the other
+benchmarks, so the pass stays VM-only. The template emitter's deferred compare now zeroes its `setcc` register first
+too, which took it from 15.1 to 7.7 ms on json_scan once `if-convert` produces compare-and-add code for it.
 
 Before the Phase 3 work below, native -O2 was 22 to 32 ms (4x to 15x behind C) because its template expansion kept
 every local and every operand in memory; the IR passes barely moved it.

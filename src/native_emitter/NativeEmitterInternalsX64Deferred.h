@@ -243,24 +243,31 @@ inline void X64Emitter::emitCompareDeferred(CondCode cc) {
   const PendingOperand a = popOperand(used);
   // The result register is chosen before the compare: spilling would clobber flags.
   const uint8_t dst = a.kind == PendingOperand::Kind::Reg ? a.reg : allocPendingReg(used);
-  uint8_t left = a.reg;
+  const bool rightIsImm32 = b.kind == PendingOperand::Kind::Imm &&
+                            static_cast<int64_t>(b.imm) == static_cast<int32_t>(b.imm);
+  const uint8_t left = a.kind == PendingOperand::Kind::Imm ? 0 : a.reg;
+  const int right = rightIsImm32 ? -1 : (b.kind == PendingOperand::Kind::Imm ? 1 : b.reg);
+  // setcc writes only the low byte and so waits for the register's previous value; zeroing it
+  // first (before the compare, since xor sets the flags) breaks that dependency.
+  const bool zeroFirst = dst != left && static_cast<int>(dst) != right;
+  if (zeroFirst) {
+    emitXorRegReg(dst, dst);
+  }
   if (a.kind == PendingOperand::Kind::Imm) {
     emitMovRegImm64(0, a.imm);
-    left = 0;
   }
-  if (b.kind == PendingOperand::Kind::Imm &&
-      static_cast<int64_t>(b.imm) == static_cast<int32_t>(b.imm)) {
+  if (rightIsImm32) {
     emitCmpRegImm32(left, static_cast<int32_t>(b.imm));
   } else {
-    uint8_t right = b.reg;
     if (b.kind == PendingOperand::Kind::Imm) {
       emitMovRegImm64(1, b.imm);
-      right = 1;
     }
-    emitCmpRegReg(left, right);
+    emitCmpRegReg(left, static_cast<uint8_t>(right));
   }
   emitSetccReg(dst, cc);
-  emitMovzxReg8(dst, dst);
+  if (!zeroFirst) {
+    emitMovzxReg8(dst, dst);
+  }
   PendingOperand result;
   result.kind = PendingOperand::Kind::Reg;
   result.reg = dst;

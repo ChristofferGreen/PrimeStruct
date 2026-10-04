@@ -15,9 +15,10 @@ namespace primec::native_emitter {
 // (IrVirtualRegisterLowering.h). Copies are folded away before allocation: a constant push
 // becomes an immediate, and LoadLocal/StoreLocal of a promoted local, Dup and Pop name an
 // existing value instead of producing a new one. Every value is then defined and used inside
-// one block; values cross blocks only through the edge moves, so liveness is a single range
-// per value and a linear scan over the function assigns registers, with each edge move hinting
-// its two ends towards the same register. Values that do not fit get a spill slot.
+// one block and crosses blocks only through the edge moves, so liveness is a single range per
+// value. Values joined by an edge move, or by a two-address operation whose operand dies there,
+// form classes when their ranges do not meet; classes are coloured greedily by estimated
+// executions per position held, and a class that finds no register everywhere gets one slot.
 
 enum class RegAllocLocationKind : uint8_t {
   None, // never read (a compare fused into its branch)
