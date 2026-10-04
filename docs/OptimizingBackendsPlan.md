@@ -516,6 +516,15 @@ numbers below (median of 3; executable rows list run time and, in brackets, the 
 | exe (old C++ emitter, clang -O0) | 4.14 s (+341) | 6.95 s (+450) | 4.06 s (+404) |
 | C reference, cc -O3 | 4.8 ms (+115) | 8.3 ms (+66) | 3.5 ms (+55) |
 
+Later work (2026-10-04, same machine, run time only, best of 60): the fast VM kernel dispatches through a
+computed-goto table (`VmFastKernel.cpp`; one indirect branch per opcode instead of one shared by the switch), which
+took primevm from 171 ms to 148 ms on json_parse, 78 to 72 ms on json_scan and 95 to 63 ms on aggregate (these include
+the compile); the native emitter's branchless guarded adds, 32-byte jump placement and loop-header alignment took
+native -O2 from 17.5 ms to 12.7 ms on json_parse and from 9.4 to 8.2 ms on json_scan. Measured dead ends: sharing
+promotion registers by liveness, a per-expression `resolveCalleePath` memo (front end), and 8-bit immediate encodings
+for add/sub/cmp (json_parse 12.9 to 15.5 ms: denser code puts more instructions in each 32-byte window than the
+decoded-instruction cache holds).
+
 Before the Phase 3 work below, native -O2 was 22 to 32 ms (4x to 15x behind C) because its template expansion kept
 every local and every operand in memory; the IR passes barely moved it.
 
