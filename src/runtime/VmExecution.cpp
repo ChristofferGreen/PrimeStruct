@@ -109,10 +109,10 @@ class RuntimeVmKernelHost final : public VmKernelHost {
 public:
   RuntimeVmKernelHost(uint64_t argCount,
                       const std::vector<std::string_view> *args,
-                      const VmHostFunctions *hostFunctions)
-      : argCount_(argCount),
-        hostFunctions_(hostFunctions),
-        args_(args) {}
+                      const VmHostFunctions *hostFunctions,
+                      const VmOutputSink *outputSink)
+      : argCount_(argCount), hostFunctions_(hostFunctions), args_(args), outputSink_(outputSink) {
+  }
 
   const VmStringHeap *stringHeap() const override { return &stringHeap_; }
   uint64_t argumentCount() const override { return argCount_; }
@@ -168,7 +168,7 @@ public:
                               const IrInstruction &inst,
                               std::vector<uint64_t> &stack,
                               std::string &error) override {
-    return handlePrintOpcode(module, inst, stack, args_, error, &stringHeap_);
+    return handlePrintOpcode(module, inst, stack, args_, error, &stringHeap_, outputSink_);
   }
 
   bool handleFileInstruction(const IrModule &module,
@@ -176,7 +176,7 @@ public:
                              std::vector<uint64_t> &stack,
                              std::vector<uint64_t> &locals,
                              std::string &error) override {
-    return handleFileOpcode(module, inst, stack, locals, error, &stringHeap_);
+    return handleFileOpcode(module, inst, stack, locals, error, &stringHeap_, outputSink_);
   }
 
   bool handleHostCall(const IrModule &module,
@@ -190,6 +190,7 @@ private:
   uint64_t argCount_ = 0;
   const VmHostFunctions *hostFunctions_ = nullptr;
   const std::vector<std::string_view> *args_ = nullptr;
+  const VmOutputSink *outputSink_ = nullptr;
   std::vector<uint64_t> heapSlots_;
   std::vector<VmDebugSession::HeapAllocation> heapAllocations_;
   VmStringHeap stringHeap_;
@@ -202,7 +203,8 @@ bool executeVmModule(const IrModule &module,
                      std::string &error,
                      uint64_t argCount,
                      const std::vector<std::string_view> *args,
-                     const VmHostFunctions *hostFunctions) {
+                     const VmHostFunctions *hostFunctions,
+                     const VmOutputSink *outputSink) {
   if (!module.hostImports.empty()) {
     // Not a function-local static: statics must not hold arena-allocated state.
     const VmHostFunctions noBindings;
@@ -210,7 +212,7 @@ bool executeVmModule(const IrModule &module,
       return false;
     }
   }
-  RuntimeVmKernelHost host(argCount, args, hostFunctions);
+  RuntimeVmKernelHost host(argCount, args, hostFunctions, outputSink);
   return executeVmKernel(module, host, result, error);
 }
 

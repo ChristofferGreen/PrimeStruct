@@ -100,7 +100,6 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5464 | Add an output sink to Vm::execute for capturing program output | deferred | test-matrix |
 | TODO-5471 | Register form with promoted locals | deferred | opt-regform |
 | TODO-5483 | Verify arm64 SextI32 on a macOS machine | deferred | ir-semantics |
 | TODO-5478 | Remove the super-linear front-end cost on very large functions | deferred | compile-speed |
@@ -113,27 +112,13 @@ of sync with them.
 
 ### Priority Lanes
 
-- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix (sink TODO-5464 deferred); arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe ; deferred: TODO-5471, TODO-5478
+- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe ; deferred: TODO-5471, TODO-5478
 
 ### Execution Queue
 
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 ### Task Blocks
-
-- [ ] TODO-5464: Add an output sink to Vm::execute for capturing program output
-  - owner: ai
-  - status: deferred
-  - deferred_reason: the program matrix (TODO-5465) runs every config through the built primec/primevm, which needs no in-process capture; the sink only buys speed (an in-process VM run instead of a subprocess) and removes the dup2-based capture in test_ir_vm_run.h.
-  - created_at: 2026-10-03
-  - phase: Optimizing backends
-  - parallel_track: test-matrix
-  - scope: VM print and file-write-to-stdout opcodes write straight to fd 1/2 (`::write`) or `fwrite` in `VmIoHelpers.cpp`, so tests must shell out and redirect to read output. Add an optional `VmOutputSink` (stdout/stderr chunk callbacks) to the `Vm::execute` overload family and to `VmKernelHost`, defaulting to today's exact fd writes, so a test or embedder can run a module in process and capture output. Do the same for `VmDebugSession::start` only if it is a one-line change. This is the prerequisite for the in-process program matrix (TODO-5465). Design: docs/OptimizingBackendsPlan.md section 8.2.
-  - implementation_notes: `scripts/check_no_direct_stdio.py` forbids std::cout/cerr in production sources; use the existing fd/`fwrite` helpers behind the sink rather than iostreams. `VmKernelHost` is virtual and has `handlePrintInstruction`; thread the sink through `RuntimeVmKernelHost` in `src/runtime/VmExecution.cpp`.
-  - acceptance:
-    - a unit test runs a module that prints to stdout and stderr and receives the exact bytes, in order, through the sink; default behavior is unchanged (existing vm compile-run suites green)
-    - no measurable slowdown on `benchmarks/aggregate.prime` under `--emit=vm` (within noise of the 2026-10-03 baseline)
-  - stop_rule: do not buffer or reorder output in the default path; do not touch native or wasm output.
 
 - [ ] TODO-5483: Verify arm64 SextI32 on a macOS machine
   - owner: ai

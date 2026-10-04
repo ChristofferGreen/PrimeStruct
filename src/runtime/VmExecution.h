@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "primec/ir/Ir.h"
+#include "primec/runtime/Vm.h"
 #include "primec/runtime/VmStringHeap.h"
 #include "primec/runtime/VmHost.h"
 
@@ -15,7 +16,8 @@ bool executeVmModule(const IrModule &module,
                      std::string &error,
                      uint64_t argCount,
                      const std::vector<std::string_view> *args,
-                     const VmHostFunctions *hostFunctions = nullptr);
+                     const VmHostFunctions *hostFunctions = nullptr,
+                     const VmOutputSink *outputSink = nullptr);
 
 // Executes IrOpcode::CallHost against `hostFunctions` (null = nothing bound):
 // pops the import's parameters, invokes the binding and pushes its result.

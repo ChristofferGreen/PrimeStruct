@@ -29,7 +29,24 @@ int writeAll(int fd, const void *data, size_t size) {
   return 0;
 }
 
-void emitPrintedText(std::string_view text, uint64_t flags) {
+// A write to handle 1 or 2 goes to the sink when one is set; everything else is a plain write.
+int writeFd(const VmOutputSink *sink, int fd, const void *data, size_t size) {
+  if (sink != nullptr && sink->write != nullptr && (fd == 1 || fd == 2)) {
+    sink->write(fd, std::string_view(static_cast<const char *>(data), size), sink->userData);
+    return 0;
+  }
+  return writeAll(fd, data, size);
+}
+
+void emitPrintedText(std::string_view text, uint64_t flags, const VmOutputSink *sink) {
+  if (sink != nullptr && sink->write != nullptr) {
+    std::string chunk(text);
+    if ((flags & PrintFlagNewline) != 0) {
+      chunk.push_back('\n');
+    }
+    sink->write((flags & PrintFlagStderr) ? 2 : 1, chunk, sink->userData);
+    return;
+  }
   FILE *out = (flags & PrintFlagStderr) ? stderr : stdout;
   std::fwrite(text.data(), 1, text.size(), out);
   if ((flags & PrintFlagNewline) != 0) {
@@ -96,7 +113,8 @@ bool handlePrintOpcode(const IrModule &module,
                        std::vector<uint64_t> &stack,
                        const std::vector<std::string_view> *args,
                        std::string &error,
-                       const VmStringHeap *heap) {
+                       const VmStringHeap *heap,
+                       const VmOutputSink *sink) {
   switch (inst.op) {
     case IrOpcode::PrintI32: {
       uint64_t raw = 0;
@@ -104,7 +122,7 @@ bool handlePrintOpcode(const IrModule &module,
         return false;
       }
       const std::string text = std::to_string(static_cast<int32_t>(raw));
-      emitPrintedText(text, decodePrintFlags(inst.imm));
+      emitPrintedText(text, decodePrintFlags(inst.imm), sink);
       return true;
     }
     case IrOpcode::PrintI64: {
@@ -113,7 +131,7 @@ bool handlePrintOpcode(const IrModule &module,
         return false;
       }
       const std::string text = std::to_string(static_cast<int64_t>(raw));
-      emitPrintedText(text, decodePrintFlags(inst.imm));
+      emitPrintedText(text, decodePrintFlags(inst.imm), sink);
       return true;
     }
     case IrOpcode::PrintU64: {
@@ -122,7 +140,7 @@ bool handlePrintOpcode(const IrModule &module,
         return false;
       }
       const std::string text = std::to_string(raw);
-      emitPrintedText(text, decodePrintFlags(inst.imm));
+      emitPrintedText(text, decodePrintFlags(inst.imm), sink);
       return true;
     }
     case IrOpcode::PrintString: {
@@ -130,7 +148,7 @@ bool handlePrintOpcode(const IrModule &module,
       if (!resolveVmString(module, heap, decodePrintStringIndex(inst.imm), text, error)) {
         return false;
       }
-      emitPrintedText(*text, decodePrintFlags(inst.imm));
+      emitPrintedText(*text, decodePrintFlags(inst.imm), sink);
       return true;
     }
     case IrOpcode::PrintStringDynamic: {
@@ -142,7 +160,7 @@ bool handlePrintOpcode(const IrModule &module,
       if (!resolveVmString(module, heap, stringIndex, text, error)) {
         return false;
       }
-      emitPrintedText(*text, decodePrintFlags(inst.imm));
+      emitPrintedText(*text, decodePrintFlags(inst.imm), sink);
       return true;
     }
     case IrOpcode::PrintArgv:
@@ -164,7 +182,7 @@ bool handlePrintOpcode(const IrModule &module,
         error = "invalid argv index in IR";
         return false;
       }
-      emitPrintedText((*args)[static_cast<size_t>(index)], decodePrintFlags(inst.imm));
+      emitPrintedText((*args)[static_cast<size_t>(index)], decodePrintFlags(inst.imm), sink);
       return true;
     }
     default:
@@ -178,7 +196,8 @@ bool handleFileOpcode(const IrModule &module,
                       std::vector<uint64_t> &stack,
                       std::vector<uint64_t> &locals,
                       std::string &error,
-                      const VmStringHeap *heap) {
+                      const VmStringHeap *heap,
+                      const VmOutputSink *sink) {
   switch (inst.op) {
     case IrOpcode::FileOpenRead:
     case IrOpcode::FileOpenWrite:
@@ -257,7 +276,7 @@ bool handleFileOpcode(const IrModule &module,
       }
       const int fd = static_cast<int>(handle & 0xffffffffu);
       const std::string text = std::to_string(static_cast<int64_t>(static_cast<int32_t>(rawValue)));
-      stack.push_back(static_cast<uint64_t>(writeAll(fd, text.data(), text.size())));
+      stack.push_back(static_cast<uint64_t>(writeFd(sink, fd, text.data(), text.size())));
       return true;
     }
     case IrOpcode::FileWriteI64: {
@@ -268,7 +287,7 @@ bool handleFileOpcode(const IrModule &module,
       }
       const int fd = static_cast<int>(handle & 0xffffffffu);
       const std::string text = std::to_string(static_cast<int64_t>(rawValue));
-      stack.push_back(static_cast<uint64_t>(writeAll(fd, text.data(), text.size())));
+      stack.push_back(static_cast<uint64_t>(writeFd(sink, fd, text.data(), text.size())));
       return true;
     }
     case IrOpcode::FileWriteU64: {
@@ -279,7 +298,7 @@ bool handleFileOpcode(const IrModule &module,
       }
       const int fd = static_cast<int>(handle & 0xffffffffu);
       const std::string text = std::to_string(static_cast<unsigned long long>(rawValue));
-      stack.push_back(static_cast<uint64_t>(writeAll(fd, text.data(), text.size())));
+      stack.push_back(static_cast<uint64_t>(writeFd(sink, fd, text.data(), text.size())));
       return true;
     }
     case IrOpcode::FileWriteString: {
@@ -292,7 +311,7 @@ bool handleFileOpcode(const IrModule &module,
         return false;
       }
       const int fd = static_cast<int>(handle & 0xffffffffu);
-      stack.push_back(static_cast<uint64_t>(writeAll(fd, text->data(), text->size())));
+      stack.push_back(static_cast<uint64_t>(writeFd(sink, fd, text->data(), text->size())));
       return true;
     }
     case IrOpcode::FileWriteStringDynamic: {
@@ -306,7 +325,7 @@ bool handleFileOpcode(const IrModule &module,
         return false;
       }
       const int fd = static_cast<int>(handle & 0xffffffffu);
-      stack.push_back(static_cast<uint64_t>(writeAll(fd, text->data(), text->size())));
+      stack.push_back(static_cast<uint64_t>(writeFd(sink, fd, text->data(), text->size())));
       return true;
     }
     case IrOpcode::FileWriteByte: {
@@ -317,7 +336,7 @@ bool handleFileOpcode(const IrModule &module,
       }
       const uint8_t value = static_cast<uint8_t>(rawValue & 0xffu);
       const int fd = static_cast<int>(handle & 0xffffffffu);
-      stack.push_back(static_cast<uint64_t>(writeAll(fd, &value, 1)));
+      stack.push_back(static_cast<uint64_t>(writeFd(sink, fd, &value, 1)));
       return true;
     }
     case IrOpcode::FileWriteNewline: {
@@ -327,7 +346,7 @@ bool handleFileOpcode(const IrModule &module,
       }
       const int fd = static_cast<int>(handle & 0xffffffffu);
       const char newline = '\n';
-      stack.push_back(static_cast<uint64_t>(writeAll(fd, &newline, 1)));
+      stack.push_back(static_cast<uint64_t>(writeFd(sink, fd, &newline, 1)));
       return true;
     }
     default:

@@ -182,8 +182,25 @@ bool resolveSourceBreakpoints(const IrModule &module,
                               std::string &error,
                               std::optional<std::string_view> sourceUnit = std::nullopt);
 
+// Receives the program's stdout and stderr (print opcodes, and file writes to handle 1 or 2) in
+// program order instead of the process writing them to fd 1 and 2. `fd` is 1 or 2; `chunk` is valid
+// only during the call. With no sink set, output goes to the process streams exactly as before.
+struct VmOutputSink {
+  using Write = void (*)(int fd, std::string_view chunk, void *userData);
+  Write write = nullptr;
+  void *userData = nullptr;
+};
+
 class Vm {
 public:
+  // Applies to the execute() overloads of this object (debug sessions are not covered).
+  void setOutputSink(const VmOutputSink &sink) {
+    outputSink_ = sink;
+  }
+  void clearOutputSink() {
+    outputSink_ = {};
+  }
+
   bool execute(const IrModule &module, uint64_t &result, std::string &error, uint64_t argCount = 0) const;
   bool execute(const IrModule &module,
                uint64_t &result,
@@ -197,6 +214,9 @@ public:
                std::string &error,
                const std::vector<std::string_view> &args,
                const VmHostFunctions &hostFunctions) const;
+
+private:
+  VmOutputSink outputSink_{};
 };
 
 class VmDebugSession {

@@ -301,3 +301,67 @@ TEST_CASE("fused sext forms match the step kernel over wrapping operands") {
     }
   }
 }
+
+namespace {
+
+struct SinkChunks {
+  std::vector<std::pair<int, std::string>> chunks;
+};
+
+void recordChunk(int fd, std::string_view chunk, void *userData) {
+  static_cast<SinkChunks *>(userData)->chunks.emplace_back(fd, std::string(chunk));
+}
+
+} // namespace
+
+TEST_CASE("the output sink receives stdout and stderr bytes in program order on both kernels") {
+  using primec::IrInstruction;
+  using primec::IrOpcode;
+  primec::IrModule module = optimizer_test::moduleOf({});
+  module.stringTable = {"text"};
+  module.functions[0].instructions = {
+      {IrOpcode::PushI32, 7},
+      {IrOpcode::PrintI32, primec::encodePrintFlags(true, false)},
+      {IrOpcode::PushI32, 8},
+      {IrOpcode::PrintI32, primec::encodePrintFlags(false, true)},
+      {IrOpcode::PrintString,
+       primec::encodePrintStringImm(0, primec::encodePrintFlags(true, true))},
+      {IrOpcode::PushI32, 1}, // file handle 1 is stdout
+      {IrOpcode::FileWriteNewline, 0},
+      {IrOpcode::Pop, 0},
+      {IrOpcode::PushI32, 2}, // file handle 2 is stderr
+      {IrOpcode::FileWriteString, 0},
+      {IrOpcode::Pop, 0},
+      {IrOpcode::PushI32, 0},
+      {IrOpcode::ReturnI32, 0},
+  };
+  module.functions[0].metadata.effectMask = primec::EffectIoOut | primec::EffectIoErr;
+  for (const bool fast : {false, true}) {
+    CAPTURE(fast);
+    primec::testing::setVmFastKernelEnabled(fast);
+    SinkChunks sink;
+    primec::Vm vm;
+    vm.setOutputSink({&recordChunk, &sink});
+    uint64_t result = 99;
+    std::string error;
+    REQUIRE_MESSAGE(vm.execute(module, result, error), error);
+    CHECK(result == 0);
+    const std::vector<std::pair<int, std::string>> expected = {
+        {1, "7\n"}, {2, "8"}, {2, "text\n"}, {1, "\n"}, {2, "text"}};
+    CHECK(sink.chunks == expected);
+
+    // Clearing the sink restores the process streams: nothing more reaches the old sink.
+    vm.clearOutputSink();
+    SinkChunks after;
+    vm.setOutputSink({&recordChunk, &after});
+    vm.clearOutputSink();
+    uint64_t again = 0;
+    REQUIRE(
+        vm.execute(optimizer_test::moduleOf(optimizer_test::assemble({"PushI32 3", "ReturnI32"})),
+                   again,
+                   error));
+    CHECK(after.chunks.empty());
+    CHECK(again == 3);
+  }
+  primec::testing::setVmFastKernelEnabled(true);
+}
