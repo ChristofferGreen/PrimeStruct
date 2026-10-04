@@ -65,11 +65,9 @@ const SemanticProgramQueryFact *findSourceQueryFact(
   const auto matchesCallName = [&](const SemanticProgramQueryFact &queryFact) {
     const std::string_view callName =
         queryFact.callNameId != InvalidSymbolId
-            ? semanticProgramResolveCallTargetString(*semanticProgram,
-                                                     queryFact.callNameId)
+            ? semanticProgramResolveCallTargetString(*semanticProgram, queryFact.callNameId)
             : std::string_view(queryFact.callName);
-    return callName == expr.name ||
-           (!expr.sourceName.empty() && callName == expr.sourceName);
+    return callName == expr.name || (!expr.sourceName.empty() && callName == expr.sourceName);
   };
   const auto &bySourcePosition =
       semanticProgram->publishedRoutingLookups.queryFactIndicesBySourcePosition;
@@ -90,8 +88,7 @@ const SemanticProgramQueryFact *findSourceQueryFact(
         }
       }
     }
-    return best < semanticProgram->queryFacts.size() ? &semanticProgram->queryFacts[best]
-                                                     : nullptr;
+    return best < semanticProgram->queryFacts.size() ? &semanticProgram->queryFacts[best] : nullptr;
   }
   for (const auto &queryFact : semanticProgram->queryFacts) {
     const bool sameSourcePosition =
