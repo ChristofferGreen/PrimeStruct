@@ -818,7 +818,8 @@ inline void X64Emitter::alignBranchSequence(size_t sequenceStart, size_t length)
     return;
   }
   const std::vector<uint8_t> padding = makeNopPadding(Window - offset);
-  code_.insert(code_.begin() + static_cast<std::ptrdiff_t>(sequenceStart), padding.begin(), padding.end());
+  code_.insert(
+      code_.begin() + static_cast<std::ptrdiff_t>(sequenceStart), padding.begin(), padding.end());
 }
 
 // A loop header starts on a 16-byte boundary when that costs at most ten bytes of
