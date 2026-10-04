@@ -511,7 +511,8 @@ an arithmetic result was 17-27% of all dispatches in the arithmetic loops. Two c
 Measured (best of 9, primevm wall time including compile): aggregate 70 to 50 ms, json_scan 78 to 56 ms, json_parse
 144 to 132 ms, float_series 409 to 335 ms (17% fewer instructions), call_fib unchanged at 109 ms. Doing the callee's
 leading parameter stores inside `Call` was tried and dropped: the extra work in the call handler cost more (fib +9%
-instructions) than the dispatch it saved.
+instructions) than the dispatch it saved. Instead `StoreLocal a; LoadLocal a; Push c; Cmp; JumpIfZero` (a parameter
+store followed by the first test, or `x = ...; if (x < c)`) is one form: call_fib 107 to 103 ms.
 
 4.2 and 4.4 (2026-10-04): every heap access used to scan the whole allocation list, freed allocations included, so a
 program that builds many small vectors slowed down quadratically (3,000 vectors of 20 pushes: 1.72 s). Allocations

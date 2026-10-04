@@ -251,6 +251,15 @@ void fuseInstructions(const IrFunction &function, const IrCfg &cfg, FastFunction
         slot.b = static_cast<uint32_t>(imm(i + 1));
         length = 2;
       }
+    } else if (op(i) == IrOpcode::StoreLocal && fitsIndex(imm(i)) && window(i, 5) &&
+               op(i + 1) == IrOpcode::LoadLocal && imm(i + 1) == imm(i) &&
+               isConstantPush(op(i + 2)) && comparisonKind(op(i + 3)) >= 0 &&
+               op(i + 4) == IrOpcode::JumpIfZero && fitsIndex(imm(i + 4))) {
+      slot.op = static_cast<uint16_t>(FastOpStoreJmpCmpLocalImmEq + comparisonKind(op(i + 3)));
+      slot.a = static_cast<uint32_t>(imm(i));
+      slot.imm = constantOf(function.instructions[i + 2]);
+      slot.b = static_cast<uint32_t>(imm(i + 4));
+      length = 5;
     } else if (comparisonKind(op(i)) >= 0 && window(i, 2) && op(i + 1) == IrOpcode::JumpIfZero &&
                fitsIndex(imm(i + 1))) {
       slot.op = static_cast<uint16_t>(FastOpJmpCmpEq + comparisonKind(op(i)));

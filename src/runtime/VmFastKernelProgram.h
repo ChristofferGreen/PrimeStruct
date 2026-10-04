@@ -17,6 +17,7 @@ namespace primec::vm_detail {
 #define FAST_ENUM_JMP_CMP_LOCAL_IMM(N, O) FastOpJmpCmpLocalImm##N,
 #define FAST_ENUM_JMP_CMP_LOCAL_LOCAL(N, O) FastOpJmpCmpLocalLocal##N,
 #define FAST_ENUM_JMP_CMP(N, O) FastOpJmpCmp##N,
+#define FAST_ENUM_STORE_JMP_CMP(N, O) FastOpStoreJmpCmpLocalImm##N,
 
 // Internal opcodes live above the IrOpcode range. Most are fused sequences of
 // IR instructions that stay inside one basic block (see fuseInstructions); a
@@ -91,12 +92,15 @@ enum FastOp : uint16_t {
   FAST_CMPS(FAST_ENUM_JMP_CMP_LOCAL_IMM)   // LoadLocal a; Push c; Cmp; JumpIfZero b
   FAST_CMPS(FAST_ENUM_JMP_CMP_LOCAL_LOCAL) // LoadLocal a; LoadLocal b; Cmp; JumpIfZero imm
   FAST_CMPS(FAST_ENUM_JMP_CMP)             // Cmp; JumpIfZero b
-  FastOpEnd,
+  // StoreLocal a; LoadLocal a; Push c; Cmp; JumpIfZero b: a value stored and tested at once (a
+  // function's parameter store followed by its first test, `x = ...; if (x < c)`).
+  FAST_CMPS(FAST_ENUM_STORE_JMP_CMP) FastOpEnd,
 };
 
 #undef FAST_ENUM_JMP_CMP_LOCAL_IMM
 #undef FAST_ENUM_JMP_CMP_LOCAL_LOCAL
 #undef FAST_ENUM_JMP_CMP
+#undef FAST_ENUM_STORE_JMP_CMP
 
 struct FastInst {
   uint16_t op = 0;

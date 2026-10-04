@@ -471,6 +471,46 @@ TEST_CASE("three-address store forms match the step kernel over edge-case operan
   }
 }
 
+TEST_CASE("store-then-compare branches match the step kernel") {
+  using optimizer_test::assembleOne;
+  using optimizer_test::moduleOf;
+  // StoreLocal a; LoadLocal a; Push c; Cmp; JumpIfZero: the stored value is the one tested.
+  const std::vector<const char *> comparisons = {
+      "CmpEqI64", "CmpNeI64", "CmpLtI64", "CmpLeI64", "CmpGtI64", "CmpGeI64", "CmpLtI32"};
+  const std::vector<const char *> values = {"-5", "-1", "0", "1", "2", "3", "9223372036854775807"};
+  for (const char *comparison : comparisons) {
+    for (const char *value : values) {
+      CAPTURE(comparison);
+      CAPTURE(value);
+      const std::vector<std::string> lines = {std::string("PushI64 ") + value,
+                                              "StoreLocal 0",
+                                              "LoadLocal 0",
+                                              "PushI64 2",
+                                              comparison,
+                                              "JumpIfZero 9",
+                                              "PushI32 1",
+                                              "PrintI32 1",
+                                              "Jump 11",
+                                              "PushI32 0",
+                                              "PrintI32 1",
+                                              "LoadLocal 0",
+                                              "PrintI64 1",
+                                              "PushI32 0",
+                                              "ReturnI32"};
+      std::vector<primec::IrInstruction> code;
+      for (const std::string &line : lines) {
+        code.push_back(assembleOne(line));
+      }
+      primec::IrModule module = moduleOf(std::move(code));
+      module.functions[0].metadata.effectMask = primec::EffectIoOut;
+      REQUIRE(primec::testing::vmFastKernelAccepts(module));
+      const BothKernels both = runBoth(module);
+      REQUIRE(both.step.ok);
+      CHECK(both.fast == both.step);
+    }
+  }
+}
+
 namespace {
 
 struct SinkChunks {

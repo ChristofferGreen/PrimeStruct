@@ -330,6 +330,7 @@ bool executeVmFastKernel(const IrModule &module,
   FAST_FLOAT_UNARY(FAST_TABLE_FLOAT)
 #undef FAST_TABLE_FLOAT
 #define FAST_TABLE_CMP(N, O)                                                                       \
+  table[FastOpStoreJmpCmpLocalImm##N] = &&lbl_FastOpStoreJmpCmpLocalImm##N;                        \
   table[FastOpJmpCmpLocalImm##N] = &&lbl_FastOpJmpCmpLocalImm##N;                                  \
   table[FastOpJmpCmpLocalLocal##N] = &&lbl_FastOpJmpCmpLocalLocal##N;                              \
   table[FastOpJmpCmp##N] = &&lbl_FastOpJmpCmp##N;
@@ -545,6 +546,18 @@ bool executeVmFastKernel(const IrModule &module,
       ip = taken ? ip + 2 : current->code.data() + inst.b;                                         \
       DISPATCH();                                                                                  \
     }
+#define FAST_CASE_STORE_JMP_CMP(N, O)                                                              \
+  case FastOpStoreJmpCmpLocalImm##N:                                                               \
+    lbl_FastOpStoreJmpCmpLocalImm##N : {                                                           \
+      const uint64_t value = *--sp;                                                                \
+      locals[inst.a] = value;                                                                      \
+      ip = static_cast<int64_t>(value) O static_cast<int64_t>(inst.imm)                            \
+               ? ip + 5                                                                            \
+               : current->code.data() + inst.b;                                                    \
+      DISPATCH();                                                                                  \
+    }
+      FAST_CMPS(FAST_CASE_STORE_JMP_CMP)
+#undef FAST_CASE_STORE_JMP_CMP
       FAST_CMPS(FAST_CASE_JMP_CMP_LOCAL_IMM)
       FAST_CMPS(FAST_CASE_JMP_CMP_LOCAL_LOCAL)
       FAST_CMPS(FAST_CASE_JMP_CMP)
