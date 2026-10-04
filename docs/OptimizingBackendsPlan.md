@@ -416,7 +416,11 @@ IR level; the arm64 emitter is untouched):
    which cut branches from 34M to 27.6M; together with capping the arm attenuation at three levels (an else-if
    ladder reaches its later arms far more often than 2^-depth) json_parse runs in 15.5 ms instead of 17.5 ms and
    json_scan in 8.3 ms instead of 9.4 ms, against 9.8 ms for optexe, whose instruction count (116M) is now within
-   15% of native's (133M). The remaining gap is not branch count (27M vs 26M). Sharing registers between locals whose live ranges never meet (per-instruction backward liveness over the
+   15% of native's (133M). The remaining gap was not branch count (27M vs 26M) but code placement: shifting the whole program by 0-31 bytes of
+   leading nops moved json_parse between 15.5 ms and 12.3 ms (the Intel JCC erratum and loop fetch alignment). The
+   x86_64 emitter now keeps every jump, and every fused compare-and-jump, from crossing or ending on a 32-byte
+   boundary (multi-byte nop padding in front of it) and starts loop headers on 16-byte boundaries when that costs at
+   most ten bytes: json_parse 14.1 ms and then 12.7 ms, against 9.8 ms for optexe. Sharing registers between locals whose live ranges never meet (per-instruction backward liveness over the
    candidates, spills and reloads restricted to the live ones) left json_parse at 149.3M instructions against 149.5M
    because its hot state variables are live at the same time, so the gap to optexe is register pressure that needs
    more than seven pool registers or a real allocator with spilling, not better packing. Instructions whose templates clobber those registers (printing, file and heap operations, string table

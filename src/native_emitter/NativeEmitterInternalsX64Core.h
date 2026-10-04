@@ -784,7 +784,58 @@ inline void X64Emitter::emitReturnVoidWithFrameAndLink(uint32_t frameLocalIndex,
   emitReturnVoid();
 }
 
+// Several Intel cores (the JCC erratum) cannot keep a jump, or a macro-fused compare and
+// jump, that crosses or ends on a 32-byte boundary in the decoded-instruction cache, and
+// run it from the legacy decoders instead; hot loops with such jumps ran up to 20%
+// slower depending only on where the code landed. The sequence is moved to the next
+// boundary with multi-byte nops when it would cross or end on one. The code buffer
+// starts on a 32-byte boundary of the loaded image.
+inline std::vector<uint8_t> X64Emitter::makeNopPadding(size_t count) {
+  static constexpr uint8_t Nops[9][9] = {
+      {0x90},
+      {0x66, 0x90},
+      {0x0F, 0x1F, 0x00},
+      {0x0F, 0x1F, 0x40, 0x00},
+      {0x0F, 0x1F, 0x44, 0x00, 0x00},
+      {0x66, 0x0F, 0x1F, 0x44, 0x00, 0x00},
+      {0x0F, 0x1F, 0x80, 0x00, 0x00, 0x00, 0x00},
+      {0x0F, 0x1F, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00},
+      {0x66, 0x0F, 0x1F, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00},
+  };
+  std::vector<uint8_t> padding;
+  for (size_t remaining = count; remaining > 0;) {
+    const size_t chunk = remaining < 9 ? remaining : 9;
+    padding.insert(padding.end(), Nops[chunk - 1], Nops[chunk - 1] + chunk);
+    remaining -= chunk;
+  }
+  return padding;
+}
+
+inline void X64Emitter::alignBranchSequence(size_t sequenceStart, size_t length) {
+  constexpr size_t Window = 32;
+  const size_t offset = sequenceStart % Window;
+  if (offset + length < Window) {
+    return;
+  }
+  const std::vector<uint8_t> padding = makeNopPadding(Window - offset);
+  code_.insert(code_.begin() + static_cast<std::ptrdiff_t>(sequenceStart), padding.begin(), padding.end());
+}
+
+// A loop header starts on a 16-byte boundary when that costs at most ten bytes of
+// padding, so the loop's first fetch block is full.
+inline void X64Emitter::alignLoopHeader() {
+  constexpr size_t Boundary = 16;
+  constexpr size_t MaxSkip = 10;
+  const size_t offset = code_.size() % Boundary;
+  if (offset == 0 || Boundary - offset > MaxSkip) {
+    return;
+  }
+  const std::vector<uint8_t> padding = makeNopPadding(Boundary - offset);
+  code_.insert(code_.end(), padding.begin(), padding.end());
+}
+
 inline size_t X64Emitter::emitJumpPlaceholder() {
+  alignBranchSequence(code_.size(), 5);
   emitByte(0xE9); // jmp rel32
   const size_t fixupIndex = code_.size();
   emitU32(0);

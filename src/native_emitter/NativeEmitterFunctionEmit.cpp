@@ -99,10 +99,15 @@ bool emitNativeFunctions(const IrModule &module,
     }
     instOffsets[functionIndex].assign(fn.instructions.size() + 1, 0);
     std::vector<bool> branchTargets(fn.instructions.size() + 1, false);
-    for (const auto &inst : fn.instructions) {
+    std::vector<bool> loopHeaders(fn.instructions.size() + 1, false);
+    for (size_t jumpIndex = 0; jumpIndex < fn.instructions.size(); ++jumpIndex) {
+      const auto &inst = fn.instructions[jumpIndex];
       if ((inst.op == IrOpcode::Jump || inst.op == IrOpcode::JumpIfZero) &&
           inst.imm <= fn.instructions.size()) {
         branchTargets[static_cast<size_t>(inst.imm)] = true;
+        if (inst.imm <= jumpIndex) {
+          loopHeaders[static_cast<size_t>(inst.imm)] = true;
+        }
       }
     }
 
@@ -113,6 +118,11 @@ bool emitNativeFunctions(const IrModule &module,
     for (size_t index = 0; index < fn.instructions.size(); ++index) {
       if (branchTargets[index]) {
         emitter.flushValueStackCachePublic();
+        if constexpr (!kIsArm64) {
+          if (loopHeaders[index]) {
+            emitter.alignLoopHeader();
+          }
+        }
       }
       const auto &inst = fn.instructions[index];
       instOffsets[functionIndex][index] = emitter.currentWordIndex();

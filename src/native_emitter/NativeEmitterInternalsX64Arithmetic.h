@@ -107,6 +107,7 @@ inline uint8_t X64Emitter::condCodeValue(CondCode cc) {
 }
 
 inline size_t X64Emitter::emitCondJumpPlaceholder(CondCode cc) {
+  alignBranchSequence(code_.size(), 6);
   emitByte(0x0F);
   emitByte(static_cast<uint8_t>(0x80 + condCodeValue(cc))); // Jcc rel32
   const size_t fixupIndex = code_.size();
@@ -120,6 +121,7 @@ inline void X64Emitter::patchCondJumpHere(size_t fixupIndex) {
 }
 
 inline size_t X64Emitter::emitJumpPlaceholderRaw() {
+  alignBranchSequence(code_.size(), 5);
   emitByte(0xE9); // jmp rel32
   const size_t fixupIndex = code_.size();
   emitU32(0);

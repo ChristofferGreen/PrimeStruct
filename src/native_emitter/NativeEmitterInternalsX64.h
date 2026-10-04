@@ -91,6 +91,8 @@ class X64Emitter {
    // Brackets an instruction whose template clobbers the registers deferred
    // operands live in (everything outside the simple opcode set): pending operands
    // go to the memory stack first, and the promoted locals are saved and restored.
+   // Starts a loop header on a 16-byte boundary (bounded padding).
+   void alignLoopHeader();
    void beginComplexOp();
    void endComplexOp();
    // `a CMP b; JumpIfZero` as one compare and branch. Returns false when
@@ -345,6 +347,11 @@ class X64Emitter {
   // lists the dispatch loop manages - resolved immediately within the
   // same method that emits the placeholder, never left pending.
   size_t emitCondJumpPlaceholder(CondCode cc);
+  // Keeps a jump (or a fused compare and jump) from crossing or ending on a 32-byte
+  // boundary; see the definition.
+  void alignBranchSequence(size_t sequenceStart, size_t length);
+  static std::vector<uint8_t> makeNopPadding(size_t count);
+  size_t compareStart_ = 0;
   void patchCondJumpHere(size_t fixupIndex);
   size_t emitJumpPlaceholderRaw();
   void patchJumpHere(size_t fixupIndex);

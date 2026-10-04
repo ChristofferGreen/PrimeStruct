@@ -279,7 +279,9 @@ inline size_t X64Emitter::emitJumpIfZeroDeferred() {
     emitMovRegImm64(0, condition.imm);
     reg = 0;
   }
+  const size_t testStart = code_.size();
   emitTestRegReg(reg);
+  alignBranchSequence(testStart, code_.size() - testStart + 6);
   emitByte(0x0F);
   emitByte(0x84); // jz rel32
   const size_t fixupIndex = code_.size();
@@ -345,15 +347,15 @@ inline void X64Emitter::emitDeferredCompareFlags() {
     left = 0;
   }
   if (b.kind == PendingOperand::Kind::Imm &&
+      static_cast<int64_t>(b.imm) != static_cast<int32_t>(b.imm)) {
+    emitMovRegImm64(1, b.imm);
+  }
+  compareStart_ = code_.size();
+  if (b.kind == PendingOperand::Kind::Imm &&
       static_cast<int64_t>(b.imm) == static_cast<int32_t>(b.imm)) {
     emitCmpRegImm32(left, static_cast<int32_t>(b.imm));
   } else {
-    uint8_t right = b.reg;
-    if (b.kind == PendingOperand::Kind::Imm) {
-      emitMovRegImm64(1, b.imm);
-      right = 1;
-    }
-    emitCmpRegReg(left, right);
+    emitCmpRegReg(left, b.kind == PendingOperand::Kind::Imm ? uint8_t{1} : b.reg);
   }
 }
 
@@ -363,6 +365,8 @@ inline bool X64Emitter::tryEmitCompareBranch(IrOpcode compareOp, size_t &fixupIn
     return false;
   }
   emitDeferredCompareFlags();
+  // The compare and the branch fuse into one micro-op, so they are placed together.
+  alignBranchSequence(compareStart_, code_.size() - compareStart_ + 6);
   // JumpIfZero branches when the comparison is false.
   fixupIndex = emitCondJumpPlaceholder(invertCond(cc));
   return true;
