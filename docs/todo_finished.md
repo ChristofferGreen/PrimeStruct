@@ -1962,6 +1962,7 @@ are left unarchived.
 | TODO-5468 | Validate stack balance and consistent block depths in validateIrModule | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
 | TODO-5469 | Share pure-opcode semantics between the VM, constant folding, and C++ emitters | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5470 | Add per-function local escape analysis (pinned locals) | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
+| TODO-5471 | Register form with promoted locals | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5472 | optexe/optcpp emit kinds: register-form C++ emitter for scalar programs | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5473 | optexe: calls, recursion, floats and conversions | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
 | TODO-5474 | optexe: memory model (pinned frames, indirect access, heap with O(1) owner lookup) | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |

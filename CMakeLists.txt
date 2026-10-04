@@ -949,6 +949,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/ir_pipeline/optimizer/test_ir_optexe.cpp
     tests/unit/ir_pipeline/optimizer/test_ir_vm_fast_kernel.cpp
     tests/unit/ir_pipeline/optimizer/test_ir_native_codegen.cpp
+    tests/unit/ir_pipeline/optimizer/test_ir_register_locals.cpp
   )
   target_include_directories(PrimeStruct_ir_optimizer_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
   target_link_libraries(PrimeStruct_ir_optimizer_tests PRIVATE primec_ir_lib primec_backend_registry_lib primec_backend_emitters_lib primec_support_lib primec_runtime_lib)
@@ -2984,6 +2985,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.ir.optexe
     primestruct.ir.vm_fast_kernel
     primestruct.ir.native_codegen
+    primestruct.ir.register_locals
   )
   foreach(suite IN LISTS PrimeStructIrOptimizerTestSuites)
     string(REPLACE "." "_" suiteId "${suite}")

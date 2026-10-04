@@ -43,6 +43,12 @@ RegisterList mapSuccessorLiveInThroughEdge(const RegisterList &successorLiveIn,
         break;
       }
     }
+    for (const auto &move : edge.localMoves) {
+      if (move.destinationRegister == reg) {
+        sourceReg = move.sourceRegister;
+        break;
+      }
+    }
     mapped.push_back(sourceReg);
   }
   sortUnique(mapped);
@@ -68,7 +74,15 @@ bool buildBlockUseDef(const IrVirtualRegisterFunction &function,
     RegisterList defined;
     defined.reserve(block.instructions.size());
     for (const auto &instruction : block.instructions) {
-      for (uint32_t reg : instruction.useRegisters) {
+      RegisterList uses = instruction.useRegisters;
+      RegisterList defs = instruction.defRegisters;
+      if (instruction.localUseRegister.has_value()) {
+        uses.push_back(*instruction.localUseRegister);
+      }
+      if (instruction.localDefRegister.has_value()) {
+        defs.push_back(*instruction.localDefRegister);
+      }
+      for (uint32_t reg : uses) {
         if (reg >= function.nextVirtualRegister) {
           error = "liveness pass found out-of-range use register";
           return false;
@@ -77,7 +91,7 @@ bool buildBlockUseDef(const IrVirtualRegisterFunction &function,
           blockUseBeforeDef[blockIndex].push_back(reg);
         }
       }
-      for (uint32_t reg : instruction.defRegisters) {
+      for (uint32_t reg : defs) {
         if (reg >= function.nextVirtualRegister) {
           error = "liveness pass found out-of-range def register";
           return false;
@@ -197,14 +211,22 @@ bool buildIntervals(const IrVirtualRegisterFunction &function,
            static_cast<uint32_t>(instructionOffset)) *
           2u;
       const auto &instruction = block.instructions[instructionOffset];
-      for (uint32_t reg : instruction.useRegisters) {
+      RegisterList uses = instruction.useRegisters;
+      RegisterList defs = instruction.defRegisters;
+      if (instruction.localUseRegister.has_value()) {
+        uses.push_back(*instruction.localUseRegister);
+      }
+      if (instruction.localDefRegister.has_value()) {
+        defs.push_back(*instruction.localDefRegister);
+      }
+      for (uint32_t reg : uses) {
         if (reg >= function.nextVirtualRegister) {
           error = "liveness pass found out-of-range use register";
           return false;
         }
         updateRange(intervals[reg], instructionPosition);
       }
-      for (uint32_t reg : instruction.defRegisters) {
+      for (uint32_t reg : defs) {
         if (reg >= function.nextVirtualRegister) {
           error = "liveness pass found out-of-range def register";
           return false;

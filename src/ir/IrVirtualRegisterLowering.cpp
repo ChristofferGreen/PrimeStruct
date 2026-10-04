@@ -1,6 +1,10 @@
 #include "primec/ir/IrVirtualRegisterLowering.h"
 
 #include "primec/ir/IrCfg.h"
+#include "primec/ir/IrLocalEscape.h"
+
+#include <algorithm>
+#include <map>
 
 #include <string>
 #include <utility>
@@ -31,8 +35,83 @@ std::string formatCfgError(const IrCfgError &cfgError) {
   return "virtual-register lowering failed";
 }
 
+// Backward liveness of the promoted locals over the CFG: which of them hold a value that some
+// path still reads at each block's entry and exit. Only LoadLocal reads and StoreLocal defines
+// a promoted local (FileReadByte's slot is pinned, so never promoted).
+struct LocalLiveness {
+  std::vector<std::vector<uint32_t>> liveIn;
+  std::vector<std::vector<uint32_t>> liveOut;
+};
+
+LocalLiveness computeLocalLiveness(const IrFunction &function,
+                                   const IrCfg &cfg,
+                                   const std::vector<bool> &promoted) {
+  const size_t blocks = cfg.blocks.size();
+  std::vector<std::vector<bool>> useBeforeDef(blocks, std::vector<bool>(promoted.size(), false));
+  std::vector<std::vector<bool>> defined(blocks, std::vector<bool>(promoted.size(), false));
+  for (size_t block = 0; block < blocks; ++block) {
+    if (!cfg.blocks[block].reachable) {
+      continue;
+    }
+    for (size_t index = cfg.blocks[block].start; index < cfg.blocks[block].end; ++index) {
+      const IrInstruction &instruction = function.instructions[index];
+      if ((instruction.op != IrOpcode::LoadLocal && instruction.op != IrOpcode::StoreLocal) ||
+          instruction.imm >= promoted.size() || !promoted[static_cast<size_t>(instruction.imm)]) {
+        continue;
+      }
+      const size_t local = static_cast<size_t>(instruction.imm);
+      if (instruction.op == IrOpcode::LoadLocal) {
+        if (!defined[block][local]) {
+          useBeforeDef[block][local] = true;
+        }
+      } else {
+        defined[block][local] = true;
+      }
+    }
+  }
+  std::vector<std::vector<bool>> liveIn(blocks, std::vector<bool>(promoted.size(), false));
+  std::vector<std::vector<bool>> liveOut(blocks, std::vector<bool>(promoted.size(), false));
+  bool changed = true;
+  while (changed) {
+    changed = false;
+    for (size_t block = blocks; block > 0; --block) {
+      const size_t b = block - 1;
+      if (!cfg.blocks[b].reachable) {
+        continue;
+      }
+      for (size_t local = 0; local < promoted.size(); ++local) {
+        bool out = false;
+        for (const size_t successor : cfg.blocks[b].successors) {
+          out = out || (cfg.blocks[successor].reachable && liveIn[successor][local]);
+        }
+        const bool in = useBeforeDef[b][local] || (out && !defined[b][local]);
+        if (out != liveOut[b][local] || in != liveIn[b][local]) {
+          liveOut[b][local] = out;
+          liveIn[b][local] = in;
+          changed = true;
+        }
+      }
+    }
+  }
+  LocalLiveness result;
+  result.liveIn.resize(blocks);
+  result.liveOut.resize(blocks);
+  for (size_t block = 0; block < blocks; ++block) {
+    for (size_t local = 0; local < promoted.size(); ++local) {
+      if (liveIn[block][local]) {
+        result.liveIn[block].push_back(static_cast<uint32_t>(local));
+      }
+      if (liveOut[block][local]) {
+        result.liveOut[block].push_back(static_cast<uint32_t>(local));
+      }
+    }
+  }
+  return result;
+}
+
 bool lowerFunctionToVirtualRegisters(const IrFunction &function,
                                      const IrModule &module,
+                                     bool promoteLocals,
                                      IrVirtualRegisterFunction &out,
                                      std::string &error) {
   error.clear();
@@ -53,6 +132,22 @@ bool lowerFunctionToVirtualRegisters(const IrFunction &function,
 
   out.blocks.resize(cfg.blocks.size());
 
+  std::vector<bool> promoted;
+  LocalLiveness localLiveness;
+  if (promoteLocals) {
+    const IrLocalEscapeInfo escape = analyzeIrLocalEscape(function);
+    promoted.assign(escape.localCount, true);
+    for (const uint32_t pinned : escape.pinnedSlots) {
+      promoted[pinned] = false;
+    }
+    for (uint32_t local = 0; local < promoted.size(); ++local) {
+      if (promoted[local]) {
+        out.promotedLocals.push_back(local);
+      }
+    }
+    localLiveness = computeLocalLiveness(function, cfg, promoted);
+  }
+
   uint32_t nextRegisterId = 0;
   for (size_t blockIndex = 0; blockIndex < cfg.blocks.size(); ++blockIndex) {
     const IrCfgBlock &inBlock = cfg.blocks[blockIndex];
@@ -67,6 +162,11 @@ bool lowerFunctionToVirtualRegisters(const IrFunction &function,
       for (size_t slot = 0; slot < entrySize; ++slot) {
         outBlock.entryRegisters.push_back(nextRegisterId++);
       }
+      if (promoteLocals) {
+        for (const uint32_t local : localLiveness.liveIn[blockIndex]) {
+          outBlock.entryLocals.push_back({local, nextRegisterId++});
+        }
+      }
     }
   }
 
@@ -74,6 +174,10 @@ bool lowerFunctionToVirtualRegisters(const IrFunction &function,
     const IrCfgBlock &inBlock = cfg.blocks[blockIndex];
     IrVirtualRegisterBlock &outBlock = out.blocks[blockIndex];
     std::vector<uint32_t> stack = outBlock.entryRegisters;
+    std::map<uint32_t, uint32_t> currentLocal;
+    for (const IrVirtualRegisterLocalValue &value : outBlock.entryLocals) {
+      currentLocal[value.local] = value.reg;
+    }
 
     outBlock.instructions.reserve(inBlock.end - inBlock.start);
     for (size_t instructionIndex = inBlock.start; instructionIndex < inBlock.end; ++instructionIndex) {
@@ -114,12 +218,40 @@ bool lowerFunctionToVirtualRegisters(const IrFunction &function,
         stack.push_back(reg);
       }
 
+      if (promoteLocals && loweredInstruction.instruction.imm < promoted.size() &&
+          promoted[static_cast<size_t>(loweredInstruction.instruction.imm)]) {
+        const uint32_t local = static_cast<uint32_t>(loweredInstruction.instruction.imm);
+        if (loweredInstruction.instruction.op == IrOpcode::LoadLocal) {
+          const auto current = currentLocal.find(local);
+          if (current == currentLocal.end()) {
+            error = "virtual-register lowering lost the value of local " + std::to_string(local);
+            return false;
+          }
+          loweredInstruction.localUseRegister = current->second;
+        } else if (loweredInstruction.instruction.op == IrOpcode::StoreLocal) {
+          const uint32_t reg = nextRegisterId++;
+          loweredInstruction.localDefRegister = reg;
+          currentLocal[local] = reg;
+        }
+      }
+
       outBlock.instructions.push_back(std::move(loweredInstruction));
     }
 
     outBlock.exitRegisters = stack;
     if (!outBlock.reachable) {
       continue;
+    }
+    if (promoteLocals) {
+      for (const uint32_t local : localLiveness.liveOut[blockIndex]) {
+        const auto current = currentLocal.find(local);
+        if (current == currentLocal.end()) {
+          error = "virtual-register lowering lost the value of local " + std::to_string(local) +
+                  " at a block exit";
+          return false;
+        }
+        outBlock.exitLocals.push_back({local, current->second});
+      }
     }
 
     outBlock.successorEdges.reserve(inBlock.successors.size());
@@ -139,6 +271,18 @@ bool lowerFunctionToVirtualRegisters(const IrFunction &function,
       for (size_t slot = 0; slot < outBlock.exitRegisters.size(); ++slot) {
         edge.stackMoves.push_back({outBlock.exitRegisters[slot], successorBlock.entryRegisters[slot]});
       }
+      for (const IrVirtualRegisterLocalValue &entry : successorBlock.entryLocals) {
+        const auto source = std::find_if(
+            outBlock.exitLocals.begin(),
+            outBlock.exitLocals.end(),
+            [&](const IrVirtualRegisterLocalValue &exit) { return exit.local == entry.local; });
+        if (source == outBlock.exitLocals.end()) {
+          error = "virtual-register lowering found a local live into a block but not out of its "
+                  "predecessor";
+          return false;
+        }
+        edge.localMoves.push_back({entry.local, source->reg, entry.reg});
+      }
       outBlock.successorEdges.push_back(std::move(edge));
     }
   }
@@ -149,7 +293,10 @@ bool lowerFunctionToVirtualRegisters(const IrFunction &function,
 
 } // namespace
 
-bool lowerIrModuleToBlockVirtualRegisters(const IrModule &module, IrVirtualRegisterModule &out, std::string &error) {
+bool lowerIrModuleToBlockVirtualRegisters(const IrModule &module,
+                                          IrVirtualRegisterModule &out,
+                                          std::string &error,
+                                          const IrVirtualRegisterLoweringOptions &options) {
   error.clear();
   out = {};
   out.entryIndex = module.entryIndex;
@@ -159,7 +306,11 @@ bool lowerIrModuleToBlockVirtualRegisters(const IrModule &module, IrVirtualRegis
   out.functions.resize(module.functions.size());
 
   for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
-    if (!lowerFunctionToVirtualRegisters(module.functions[functionIndex], module, out.functions[functionIndex], error)) {
+    if (!lowerFunctionToVirtualRegisters(module.functions[functionIndex],
+                                         module,
+                                         options.promoteLocals,
+                                         out.functions[functionIndex],
+                                         error)) {
       if (!error.empty()) {
         error = "virtual-register lowering failed in function " + module.functions[functionIndex].name + ": " + error;
       }

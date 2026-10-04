@@ -307,7 +307,7 @@ should be split into leaves once `optexe` has validated the register form.
 | 1.1 shared CFG, stack-balance check | TODO-5467, TODO-5468 |
 | 1.3 shared pure-opcode semantics | TODO-5469 |
 | 1.4 local escape analysis | TODO-5470 |
-| 2.1 register form with promoted locals | TODO-5471 (deferred: only the native generator needs it) |
+| 2.1 register form with promoted locals | TODO-5471 (done: test-only `promoteLocals` lowering, local-form verifier, liveness; no consumer yet) |
 | 2.1b / section 9 `optexe` | TODO-5472..5475 (done), TODO-5476 (matrix, benchmarks) |
 | found while testing | TODO-5477 (i32 overflow semantics), TODO-5478 (front-end cost on huge functions, deferred) |
 

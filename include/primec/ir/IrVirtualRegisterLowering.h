@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -13,6 +14,27 @@ struct IrVirtualRegisterInstruction {
   IrInstruction instruction;
   std::vector<uint32_t> useRegisters;
   std::vector<uint32_t> defRegisters;
+  // Promoted-locals mode only (IrVirtualRegisterLoweringOptions::promoteLocals): a LoadLocal of
+  // a promoted slot reads the register holding the local's current value, and a StoreLocal of one
+  // defines a new register for it. The stack operands above are unchanged.
+  std::optional<uint32_t> localUseRegister;
+  std::optional<uint32_t> localDefRegister;
+};
+
+// A promoted local's value at a block boundary.
+struct IrVirtualRegisterLocalValue {
+  uint32_t local = 0;
+  uint32_t reg = 0;
+
+  bool operator==(const IrVirtualRegisterLocalValue &other) const = default;
+};
+
+struct IrVirtualRegisterLocalMove {
+  uint32_t local = 0;
+  uint32_t sourceRegister = 0;
+  uint32_t destinationRegister = 0;
+
+  bool operator==(const IrVirtualRegisterLocalMove &other) const = default;
 };
 
 struct IrVirtualRegisterEdgeMove {
@@ -25,6 +47,8 @@ struct IrVirtualRegisterEdgeMove {
 struct IrVirtualRegisterEdge {
   size_t successorBlockIndex = 0;
   std::vector<IrVirtualRegisterEdgeMove> stackMoves;
+  // One move per promoted local live into the successor (promoted-locals mode).
+  std::vector<IrVirtualRegisterLocalMove> localMoves;
 };
 
 struct IrVirtualRegisterBlock {
@@ -35,6 +59,11 @@ struct IrVirtualRegisterBlock {
   std::vector<uint32_t> exitRegisters;
   std::vector<IrVirtualRegisterInstruction> instructions;
   std::vector<IrVirtualRegisterEdge> successorEdges;
+  // Promoted locals live into / out of the block with the register holding each, ascending by
+  // local (promoted-locals mode). A reachable entry block with entryLocals reads a local before
+  // any definition; the local-form verifier rejects that.
+  std::vector<IrVirtualRegisterLocalValue> entryLocals;
+  std::vector<IrVirtualRegisterLocalValue> exitLocals;
 };
 
 struct IrVirtualRegisterFunction {
@@ -43,6 +72,8 @@ struct IrVirtualRegisterFunction {
   std::vector<IrLocalDebugSlot> localDebugSlots;
   std::vector<IrVirtualRegisterBlock> blocks;
   uint32_t nextVirtualRegister = 0;
+  // Locals held in registers in promoted-locals mode: not pinned by IrLocalEscape.h.
+  std::vector<uint32_t> promotedLocals;
 };
 
 struct IrVirtualRegisterModule {
@@ -53,7 +84,18 @@ struct IrVirtualRegisterModule {
   std::vector<IrInstructionSourceMapEntry> instructionSourceMap;
 };
 
-bool lowerIrModuleToBlockVirtualRegisters(const IrModule &module, IrVirtualRegisterModule &out, std::string &error);
+struct IrVirtualRegisterLoweringOptions {
+  // Test-only switch: give every local that no memory access can reach (see
+  // IrLocalEscape.h) virtual registers, with block-boundary values and edge moves like the stack.
+  // Nothing consumes the result except the local-form verifier and the liveness pass; the
+  // allocator, scheduler and spill insertion expect the default form.
+  bool promoteLocals = false;
+};
+
+bool lowerIrModuleToBlockVirtualRegisters(const IrModule &module,
+                                          IrVirtualRegisterModule &out,
+                                          std::string &error,
+                                          const IrVirtualRegisterLoweringOptions &options = {});
 
 bool liftBlockVirtualRegistersToIrModule(const IrVirtualRegisterModule &virtualModule, IrModule &out, std::string &error);
 

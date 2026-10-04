@@ -1,6 +1,7 @@
 #include "primec/ir/IrVirtualRegisterVerifier.h"
 
 #include <algorithm>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -266,6 +267,158 @@ bool verifyIrVirtualRegisterScheduleAndAllocation(const IrVirtualRegisterModule 
                 ": " + error;
         return false;
       }
+    }
+  }
+  return true;
+}
+
+namespace {
+
+bool verifyLocalFormFunction(const IrVirtualRegisterFunction &function, std::string &error) {
+  const auto isPromoted = [&](uint32_t local) {
+    return std::binary_search(
+        function.promotedLocals.begin(), function.promotedLocals.end(), local);
+  };
+  std::vector<bool> defined(function.nextVirtualRegister, false);
+  const auto define = [&](uint32_t reg, const char *what) {
+    if (reg >= function.nextVirtualRegister) {
+      error = std::string(what) + " register is out of range";
+      return false;
+    }
+    if (defined[reg]) {
+      error = std::string(what) + " register " + std::to_string(reg) + " is defined twice";
+      return false;
+    }
+    defined[reg] = true;
+    return true;
+  };
+  for (const IrVirtualRegisterBlock &block : function.blocks) {
+    if (!block.reachable) {
+      continue;
+    }
+    for (const uint32_t reg : block.entryRegisters) {
+      if (!define(reg, "stack entry")) {
+        return false;
+      }
+    }
+    for (const IrVirtualRegisterLocalValue &value : block.entryLocals) {
+      if (!isPromoted(value.local)) {
+        error = "entry local " + std::to_string(value.local) + " is not promoted";
+        return false;
+      }
+      if (!define(value.reg, "entry local")) {
+        return false;
+      }
+    }
+    for (const IrVirtualRegisterInstruction &instruction : block.instructions) {
+      for (const uint32_t reg : instruction.defRegisters) {
+        if (!define(reg, "stack def")) {
+          return false;
+        }
+      }
+      if (instruction.localDefRegister.has_value() &&
+          !define(*instruction.localDefRegister, "local def")) {
+        return false;
+      }
+    }
+  }
+  if (!function.blocks.empty() && function.blocks.front().reachable &&
+      !function.blocks.front().entryLocals.empty()) {
+    error = "promoted local " + std::to_string(function.blocks.front().entryLocals.front().local) +
+            " is read before any definition on some path";
+    return false;
+  }
+  for (const IrVirtualRegisterBlock &block : function.blocks) {
+    if (!block.reachable) {
+      continue;
+    }
+    std::vector<uint32_t> available;
+    std::map<uint32_t, uint32_t> current;
+    for (const IrVirtualRegisterLocalValue &value : block.entryLocals) {
+      current[value.local] = value.reg;
+    }
+    for (const IrVirtualRegisterInstruction &instruction : block.instructions) {
+      const bool isLoad = instruction.instruction.op == IrOpcode::LoadLocal;
+      const bool isStore = instruction.instruction.op == IrOpcode::StoreLocal;
+      if ((instruction.localUseRegister.has_value() && !isLoad) ||
+          (instruction.localDefRegister.has_value() && !isStore)) {
+        error = "local register on an instruction that is not a local load or store";
+        return false;
+      }
+      if (!isLoad && !isStore) {
+        continue;
+      }
+      const uint32_t local = static_cast<uint32_t>(instruction.instruction.imm);
+      if (!isPromoted(local)) {
+        if (instruction.localUseRegister.has_value() || instruction.localDefRegister.has_value()) {
+          error = "local " + std::to_string(local) + " has a register but is not promoted";
+          return false;
+        }
+        continue;
+      }
+      if (isLoad) {
+        const auto value = current.find(local);
+        if (!instruction.localUseRegister.has_value() || value == current.end() ||
+            value->second != *instruction.localUseRegister) {
+          error = "load of promoted local " + std::to_string(local) +
+                  " does not read its current register";
+          return false;
+        }
+      } else {
+        if (!instruction.localDefRegister.has_value()) {
+          error = "store to promoted local " + std::to_string(local) + " defines no register";
+          return false;
+        }
+        current[local] = *instruction.localDefRegister;
+      }
+    }
+    for (const IrVirtualRegisterLocalValue &exit : block.exitLocals) {
+      const auto value = current.find(exit.local);
+      if (value == current.end() || value->second != exit.reg) {
+        error = "exit local " + std::to_string(exit.local) + " is not the block's current value";
+        return false;
+      }
+    }
+    for (const IrVirtualRegisterEdge &edge : block.successorEdges) {
+      if (edge.successorBlockIndex >= function.blocks.size()) {
+        error = "edge to a block that does not exist";
+        return false;
+      }
+      const IrVirtualRegisterBlock &successor = function.blocks[edge.successorBlockIndex];
+      if (!successor.reachable) {
+        continue;
+      }
+      if (edge.localMoves.size() != successor.entryLocals.size()) {
+        error = "edge local moves do not cover the successor's entry locals";
+        return false;
+      }
+      for (size_t i = 0; i < edge.localMoves.size(); ++i) {
+        const IrVirtualRegisterLocalMove &move = edge.localMoves[i];
+        const IrVirtualRegisterLocalValue &entry = successor.entryLocals[i];
+        const auto exit = std::find_if(
+            block.exitLocals.begin(),
+            block.exitLocals.end(),
+            [&](const IrVirtualRegisterLocalValue &value) { return value.local == move.local; });
+        if (move.local != entry.local || move.destinationRegister != entry.reg ||
+            exit == block.exitLocals.end() || exit->reg != move.sourceRegister) {
+          error = "edge move for local " + std::to_string(move.local) +
+                  " does not connect exit to entry";
+          return false;
+        }
+      }
+    }
+  }
+  return true;
+}
+
+} // namespace
+
+bool verifyIrVirtualRegisterLocalForm(const IrVirtualRegisterModule &module, std::string &error) {
+  error.clear();
+  for (const IrVirtualRegisterFunction &function : module.functions) {
+    if (!verifyLocalFormFunction(function, error)) {
+      error = "local-form verification failed in function " + function.name + ": " + error;
+      return false;
     }
   }
   return true;

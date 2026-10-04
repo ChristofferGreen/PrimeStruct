@@ -100,7 +100,6 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5471 | Register form with promoted locals | deferred | opt-regform |
 | TODO-5483 | Verify arm64 SextI32 on a macOS machine | deferred | ir-semantics |
 | TODO-5478 | Remove the super-linear front-end cost on very large functions | deferred | compile-speed |
 
@@ -112,7 +111,7 @@ of sync with them.
 
 ### Priority Lanes
 
-- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe ; deferred: TODO-5471, TODO-5478
+- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe ; deferred: TODO-5478
 
 ### Execution Queue
 
@@ -131,20 +130,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - acceptance:
     - the `i32` matrix cases (`i32_wrap_basic`, `i32_wrap_loops`, `i32_wrap_builtins`, `i32_limit_builtins`) pass on arm64 macOS native; an encoding unit test pins the SXTW bytes
   - stop_rule: do not change i64/u64 behavior or the I32 arithmetic opcodes themselves; lowering also uses them for address arithmetic.
-
-- [ ] TODO-5471: Register form with promoted locals
-  - owner: ai
-  - status: deferred
-  - deferred_reason: optexe (TODO-5472..5475) works directly on the stack form with the shared CFG and lets the host compiler allocate registers, so the register form is only needed by the native code generator (docs/OptimizingBackendsPlan.md Phase 3); reopen when that phase is filed.
-  - depends_on: TODO-5470, TODO-5467
-  - created_at: 2026-10-03
-  - phase: Optimizing backends
-  - parallel_track: opt-regform
-  - scope: Extend the block virtual-register form so every non-pinned local becomes a virtual register: `LoadLocal`/`StoreLocal` of a promoted slot become register uses/defs, and block edges carry moves for live promoted locals as they already do for stack values. Pinned slots keep their memory instructions. Update the verifier and liveness for the new defs. No code generator consumes this yet except tests. Design: docs/OptimizingBackendsPlan.md Phase 2.1. Depends on the CFG utilities of TODO-5467.
-  - acceptance:
-    - a round-trip test (lower to register form, lift back to stack IR) leaves VM results identical for the ir-pipeline corpus with promotion on
-    - verifier rejects a promoted local that is read before any def on some path (negative test)
-  - stop_rule: do not run any optimization on the register form here; if lifting back cannot preserve behavior for loops, record it and keep promotion behind a test-only switch.
 
 - [ ] TODO-5478: Remove the super-linear front-end cost on very large functions
   - owner: ai
