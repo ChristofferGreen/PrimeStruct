@@ -547,8 +547,10 @@ locals and operands alike, instead of promoting at most seven locals and deferri
   and unconditional edges and in a trampoline for a taken conditional edge. Every other opcode, calls, returns, prints,
   division and file I/O included, runs its ordinary template on the memory operand stack, with its operands pushed
   there, its results popped into their registers and the registers live across it saved in frame slots. A function
-  whose register form cannot be built falls back to the template emitter. `PRIMESTRUCT_NATIVE_REGALLOC=0|1` forces it
-  off or on (the release gate passes with it forced on at every level).
+  whose register form cannot be built falls back to the template emitter; `--opt-report` on the native backend ends
+  with a `native_register_allocation_v1` section naming, per function, its spill slot count or the fallback reason,
+  and a CLI test keeps the benchmark loops on registers. `PRIMESTRUCT_NATIVE_REGALLOC=0|1` forces it off or on (the
+  release gate passes with it forced on at every level).
 - Three findings on the way: `setcc` into a register that still holds an older value waits for it (the low byte merges),
   which serialized json_scan's comparison chain at 12 ms until the target is zeroed with `xor` first (6.5 ms); loop
   headers are now aligned to 64 bytes (at most 63 bytes of padding), because at 16 or 32 bytes json_parse still moved

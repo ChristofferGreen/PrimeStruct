@@ -16,6 +16,12 @@ struct NativeEmitterFunctionInstrumentation {
   uint64_t valueStackPopCount = 0;
   uint64_t spillCount = 0;
   uint64_t reloadCount = 0;
+  // x86_64 register allocation (NativeEmitterOptions::registerAllocation): whether this function
+  // was emitted from a register plan, how many spill slots the plan needed, and, when allocation
+  // was enabled but the function fell back to the template emitter, why.
+  bool registerAllocated = false;
+  uint64_t registerAllocationSpillSlots = 0;
+  std::string registerAllocationFallback;
 };
 
 struct NativeEmitterInstrumentation {
@@ -74,5 +80,11 @@ class NativeEmitter {
 std::string formatNativeEmitterDebugDump(
     const NativeEmitterInstrumentation &instrumentation,
     const NativeEmitterOptimizationInstrumentation &optimization = NativeEmitterOptimizationInstrumentation{});
+
+// Text for --opt-report on the native backend: one line per function saying whether it was
+// register-allocated (with its spill slot count) or emitted by the template path (with the
+// reason when allocation was enabled), in function index order.
+std::string
+formatNativeRegisterAllocationReport(const NativeEmitterInstrumentation &instrumentation);
 
 } // namespace primec

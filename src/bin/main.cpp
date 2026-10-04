@@ -238,7 +238,12 @@ bool runIrBackend(const primec::IrBackend &backend,
   emitOptions.optimizationLevel = options.optimization.level;
   emitOptions.hostOptimizationLevel =
       options.optimization.levelSpecified ? options.optimization.level : 2;
-  if (!backend.emit(ir, emitOptions, result, error)) {
+  emitOptions.collectReport = options.optimization.report;
+  const bool emitted = backend.emit(ir, emitOptions, result, error);
+  if (options.optimization.report && !result.report.empty()) {
+    std::cerr << result.report;
+  }
+  if (!emitted) {
     const std::string_view backendTag = diagnostics.backendTag;
     const bool outputWriteFailure =
         (backendTag == "ir" || backendTag == "wasm" || backendTag == "cpp-ir" ||

@@ -33,10 +33,14 @@ struct IrBackendEmitOptions {
   // IR optimization level the module was prepared at; the native backend keeps
   // locals in registers from -O1.
   int optimizationLevel = 0;
+  // --opt-report: backends that make their own optimization decisions describe them in
+  // IrBackendEmitResult::report (the native backend lists which functions it register-allocated).
+  bool collectReport = false;
 };
 
 struct IrBackendEmitResult {
   int exitCode = 0;
+  std::string report;
 };
 
 enum class IrBackendCapability : uint32_t {

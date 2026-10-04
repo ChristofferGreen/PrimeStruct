@@ -58,6 +58,39 @@ std::string formatNativeEmitterDebugDump(
   return out.str();
 }
 
+std::string
+formatNativeRegisterAllocationReport(const NativeEmitterInstrumentation &instrumentation) {
+  std::vector<NativeEmitterFunctionInstrumentation> orderedFunctions = instrumentation.perFunction;
+  std::stable_sort(orderedFunctions.begin(),
+                   orderedFunctions.end(),
+                   [](const NativeEmitterFunctionInstrumentation &lhs,
+                      const NativeEmitterFunctionInstrumentation &rhs) {
+                     return lhs.functionIndex < rhs.functionIndex;
+                   });
+  std::ostringstream out;
+  out << "native_register_allocation_v1\n";
+  size_t allocated = 0;
+  for (const auto &functionStats : orderedFunctions) {
+    if (functionStats.registerAllocated) {
+      ++allocated;
+    }
+  }
+  out << "functions=" << orderedFunctions.size() << " register_allocated=" << allocated << '\n';
+  for (const auto &functionStats : orderedFunctions) {
+    out << "function " << functionStats.functionName << ": ";
+    if (functionStats.registerAllocated) {
+      out << "registers spill_slots=" << functionStats.registerAllocationSpillSlots;
+    } else {
+      out << "template";
+      if (!functionStats.registerAllocationFallback.empty()) {
+        out << " (" << functionStats.registerAllocationFallback << ')';
+      }
+    }
+    out << '\n';
+  }
+  return out.str();
+}
+
 bool NativeEmitter::emitExecutable(const IrModule &module, const std::string &outputPath, std::string &error) const {
   return emitExecutable(module, outputPath, error, nullptr, NativeEmitterOptions{});
 }

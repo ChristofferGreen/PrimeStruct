@@ -49,7 +49,7 @@ bool emitNativeFunctions(const IrModule &module,
             stringsValid = false;
           }
         }
-        std::string planError;
+        std::string planError = "string index out of range";
         useRegisterAllocation =
             stringsValid &&
             planNativeRegisterAllocation(module,
@@ -57,6 +57,14 @@ bool emitNativeFunctions(const IrModule &module,
                                          argRegsFree ? X64RegAllocPoolWithArgRegs : X64RegAllocPool,
                                          regAllocPlan,
                                          planError);
+        if (instrumentation != nullptr) {
+          auto &functionInstrumentation = instrumentation->perFunction[functionIndex];
+          functionInstrumentation.registerAllocated = useRegisterAllocation;
+          functionInstrumentation.registerAllocationSpillSlots =
+              useRegisterAllocation ? regAllocPlan.spillSlotCount : 0;
+          functionInstrumentation.registerAllocationFallback =
+              useRegisterAllocation ? std::string() : planError;
+        }
       }
     }
     const uint32_t spillBaseLocal = static_cast<uint32_t>(layout.localCount + layout.scratchSlots);

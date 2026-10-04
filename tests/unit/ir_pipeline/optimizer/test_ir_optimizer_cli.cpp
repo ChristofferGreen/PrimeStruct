@@ -249,3 +249,37 @@ TEST_CASE("optexe and optcpp emit kinds produce a fast executable and C++ source
   CHECK(contains(generated, "UINT64_C(0xa)"));
   CHECK_FALSE(contains(generated, "s0 * s1"));
 }
+
+#if defined(__x86_64__) && (defined(__linux__) || defined(__APPLE__))
+TEST_CASE("opt-report lists the native functions that were register-allocated") {
+  const std::string source = writeSource("fold_native.prime", FoldableProgram);
+  const std::string exePath =
+      primec::testing::testScratchPath("optimizer_cli/fold_native").string();
+
+  // -O2 (the native default) allocates registers; -O1 keeps the template emitter.
+  CommandResult result =
+      run("./primec --emit=native " + source + " -o " + exePath + " --opt-report");
+  CHECK(result.exitCode == 0);
+  CHECK(contains(result.err,
+                 "native_register_allocation_v1\nfunctions=1 register_allocated=1\n"
+                 "function /main: registers spill_slots=0\n"));
+  result = run("./primec --emit=native " + source + " -o " + exePath + " -O1 --opt-report");
+  CHECK(result.exitCode == 0);
+  CHECK(contains(result.err,
+                 "native_register_allocation_v1\nfunctions=1 register_allocated=0\n"
+                 "function /main: template\n"));
+
+  // The benchmark loops must not silently fall back to the template emitter.
+  const std::filesystem::path benchmarks =
+      std::filesystem::current_path().parent_path() / "benchmarks";
+  for (const char *name : {"aggregate", "json_scan", "json_parse"}) {
+    CAPTURE(name);
+    const std::string benchmark = (benchmarks / (std::string(name) + ".prime")).string();
+    result = run("./primec --emit=native '" + benchmark + "' -o " + exePath + " --opt-report");
+    CHECK(result.exitCode == 0);
+    CHECK(contains(result.err, "native_register_allocation_v1\n"));
+    CHECK(contains(result.err, "function /main: registers "));
+    CHECK_FALSE(contains(result.err, ": template"));
+  }
+}
+#endif

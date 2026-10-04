@@ -190,14 +190,24 @@ public:
 
   bool emit(const IrModule &module,
             const IrBackendEmitOptions &options,
-            IrBackendEmitResult & /*result*/,
+            IrBackendEmitResult &result,
             std::string &error) const override {
     NativeEmitter nativeEmitter;
     NativeEmitterOptions emitterOptions;
     emitterOptions.promoteLocals = options.optimizationLevel >= 1;
     emitterOptions.deferOperands = options.optimizationLevel >= 1;
     emitterOptions.registerAllocation = options.optimizationLevel >= 2;
-    return nativeEmitter.emitExecutable(module, options.outputPath, error, nullptr, emitterOptions);
+    NativeEmitterInstrumentation instrumentation;
+    const bool emitted =
+        nativeEmitter.emitExecutable(module,
+                                     options.outputPath,
+                                     error,
+                                     options.collectReport ? &instrumentation : nullptr,
+                                     emitterOptions);
+    if (emitted && options.collectReport) {
+      result.report = formatNativeRegisterAllocationReport(instrumentation);
+    }
+    return emitted;
   }
 };
 

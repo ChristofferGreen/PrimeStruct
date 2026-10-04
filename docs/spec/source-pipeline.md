@@ -60,7 +60,8 @@ Pipeline operating rules:
   - `--opt-pass <name>` enables a pass regardless of level, `--no-opt-pass <name>` disables one (a disable wins), and
     unknown names are errors. A pass that does not support the target (control-flow rewriting is skipped for wasm and
     GLSL/SPIR-V; GLSL/SPIR-V run no passes) is skipped when selected by level and is an error when named explicitly.
-  - `--opt-report` prints the selected passes and per-pass instruction counts on stderr, `--opt-list` lists the
+  - `--opt-report` prints the selected passes and per-pass instruction counts on stderr (for `--emit=native`, followed
+    by which functions were register-allocated and why any were not), `--opt-list` lists the
     manifest and exits, and `--opt-verify-each` re-validates the module and its operand-stack consistency after every
     pass that changed it. Optimization never changes observable behavior; `scripts/differential_opt_check.py`
     compares `-O0` against optimized runs over the VM test corpus.
