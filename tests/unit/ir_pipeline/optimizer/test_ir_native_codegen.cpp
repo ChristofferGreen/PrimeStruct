@@ -1,4 +1,5 @@
 #include "primec/backend/NativeEmitter.h"
+#include "primec/testing/NativeEmitterEncodings.h"
 #include "primec/testing/TestScratch.h"
 
 #include "test_ir_optimizer_helpers.h"
@@ -6,6 +7,7 @@
 #include "test_ir_runtime_programs.h"
 #include "test_ir_vm_run.h"
 
+#include <algorithm>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -292,3 +294,35 @@ TEST_CASE("optimized native code is only built on Linux x86_64") {
 }
 
 #endif
+
+// TODO-5483: the arm64 backend cannot run here, so its encodings are pinned. SextI32 is SXTW x0,
+// w0 (SBFM x0, x0, #0, #31). Float comparisons branch on the fcmp flags with the conditions that
+// are false for an unordered pair: EQ, NE (true), MI for <, LS for <=, GT and GE.
+TEST_CASE("arm64 SXTW and float comparison branches keep their encodings") {
+  const std::vector<uint32_t> sext = primec::testing::arm64TemplateWords(primec::IrOpcode::SextI32);
+  CHECK(std::find(sext.begin(), sext.end(), 0x93407C00u) != sext.end());
+
+  const auto branchCondition = [](primec::IrOpcode op) -> int {
+    for (const uint32_t word : primec::testing::arm64TemplateWords(op)) {
+      if ((word & 0xFF000010u) == 0x54000000u) { // B.cond
+        return static_cast<int>(word & 0xFu);
+      }
+    }
+    return -1;
+  };
+  struct Expected {
+    primec::IrOpcode op;
+    int condition;
+  };
+  for (const Expected &expected : {Expected{primec::IrOpcode::CmpEqF64, 0x0},
+                                   Expected{primec::IrOpcode::CmpNeF64, 0x1},
+                                   Expected{primec::IrOpcode::CmpLtF64, 0x4},
+                                   Expected{primec::IrOpcode::CmpLeF64, 0x9},
+                                   Expected{primec::IrOpcode::CmpGtF64, 0xC},
+                                   Expected{primec::IrOpcode::CmpGeF64, 0xA},
+                                   Expected{primec::IrOpcode::CmpLtF32, 0x4},
+                                   Expected{primec::IrOpcode::CmpLeF32, 0x9}}) {
+    CAPTURE(static_cast<int>(expected.op));
+    CHECK(branchCondition(expected.op) == expected.condition);
+  }
+}

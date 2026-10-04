@@ -656,6 +656,7 @@ set(PRIMESTRUCT_CODEGEN_SOURCES
   src/native_emitter/NativeEmitterMachO.cpp
   src/native_emitter/NativeEmitterElf.cpp
   src/native_emitter/NativeEmitterEmit.cpp
+  src/native_emitter/NativeEmitterTestingEncodings.cpp
   src/native_emitter/NativeEmitterFunctionEmit.cpp
   src/native_emitter/NativeEmitterRegAlloc.cpp
   src/wasm_emitter/WasmEmitter.cpp
