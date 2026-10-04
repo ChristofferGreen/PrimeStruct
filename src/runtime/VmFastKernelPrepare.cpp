@@ -124,9 +124,47 @@ void fuseInstructions(const IrFunction &function, const IrCfg &cfg, FastFunction
     size_t length = 1;
     if (op(i) == IrOpcode::LoadLocal && fitsIndex(imm(i))) {
       const uint32_t first = static_cast<uint32_t>(imm(i));
-      if (window(i, 5) && isConstantPush(op(i + 1)) && arithmeticKind(op(i + 2)) >= 0 &&
-          arithmeticKind(op(i + 2)) <= 1 && op(i + 3) == IrOpcode::SextI32 &&
-          op(i + 4) == IrOpcode::StoreLocal && fitsIndex(imm(i + 4))) {
+      const bool secondLocal =
+          window(i, 2) && op(i + 1) == IrOpcode::LoadLocal && fitsIndex(imm(i + 1));
+      if (secondLocal && window(i, 5) && arithmeticKind(op(i + 2)) >= 0 &&
+          op(i + 3) == IrOpcode::SextI32 && op(i + 4) == IrOpcode::StoreLocal &&
+          fitsIndex(imm(i + 4))) {
+        slot.op = static_cast<uint16_t>(FastOpLocalAddLocalSextStore + arithmeticKind(op(i + 2)));
+        slot.a = first;
+        slot.b = static_cast<uint32_t>(imm(i + 1));
+        slot.imm = imm(i + 4);
+        length = 5;
+      } else if (secondLocal && window(i, 4) && arithmeticKind(op(i + 2)) >= 0 &&
+                 op(i + 3) == IrOpcode::StoreLocal && fitsIndex(imm(i + 3))) {
+        slot.op = static_cast<uint16_t>(FastOpLocalAddLocalStore + arithmeticKind(op(i + 2)));
+        slot.a = first;
+        slot.b = static_cast<uint32_t>(imm(i + 1));
+        slot.imm = imm(i + 3);
+        length = 4;
+      } else if (secondLocal && window(i, 4) && arithmeticKindF64(op(i + 2)) >= 0 &&
+                 op(i + 3) == IrOpcode::StoreLocal && fitsIndex(imm(i + 3))) {
+        slot.op = static_cast<uint16_t>(FastOpLocalAddLocalStoreF64 + arithmeticKindF64(op(i + 2)));
+        slot.a = first;
+        slot.b = static_cast<uint32_t>(imm(i + 1));
+        slot.imm = imm(i + 3);
+        length = 4;
+      } else if (window(i, 4) && op(i + 1) == IrOpcode::PushF64 &&
+                 arithmeticKindF64(op(i + 2)) >= 0 && op(i + 3) == IrOpcode::StoreLocal &&
+                 fitsIndex(imm(i + 3))) {
+        slot.op = static_cast<uint16_t>(FastOpLocalAddImmStoreF64 + arithmeticKindF64(op(i + 2)));
+        slot.a = first;
+        slot.imm = imm(i + 1);
+        slot.b = static_cast<uint32_t>(imm(i + 3));
+        length = 4;
+      } else if (window(i, 3) && op(i + 1) == IrOpcode::NegF64 &&
+                 op(i + 2) == IrOpcode::StoreLocal && fitsIndex(imm(i + 2))) {
+        slot.op = FastOpLocalNegStoreF64;
+        slot.a = first;
+        slot.b = static_cast<uint32_t>(imm(i + 2));
+        length = 3;
+      } else if (window(i, 5) && isConstantPush(op(i + 1)) && arithmeticKind(op(i + 2)) >= 0 &&
+                 arithmeticKind(op(i + 2)) <= 1 && op(i + 3) == IrOpcode::SextI32 &&
+                 op(i + 4) == IrOpcode::StoreLocal && fitsIndex(imm(i + 4))) {
         slot.op = arithmeticKind(op(i + 2)) == 0 ? FastOpLocalAddImmStoreSext
                                                  : FastOpLocalSubImmStoreSext;
         slot.a = first;
@@ -231,11 +269,97 @@ void fuseInstructions(const IrFunction &function, const IrCfg &cfg, FastFunction
       length = 3;
     } else if ((op(i) == IrOpcode::AddI32 || op(i) == IrOpcode::SubI32 ||
                 op(i) == IrOpcode::MulI32) &&
+               window(i, 3) && op(i + 1) == IrOpcode::SextI32 &&
+               op(i + 2) == IrOpcode::StoreLocal && fitsIndex(imm(i + 2))) {
+      slot.op = static_cast<uint16_t>(FastOpAddSextStore + arithmeticKind(op(i)));
+      slot.a = static_cast<uint32_t>(imm(i + 2));
+      length = 3;
+    } else if ((op(i) == IrOpcode::AddI32 || op(i) == IrOpcode::SubI32 ||
+                op(i) == IrOpcode::MulI32) &&
                window(i, 2) && op(i + 1) == IrOpcode::SextI32) {
       slot.op = static_cast<uint16_t>(FastOpAddSext + arithmeticKind(op(i)));
       length = 2;
+    } else if (arithmeticKind(op(i)) >= 0 && window(i, 2) && op(i + 1) == IrOpcode::StoreLocal &&
+               fitsIndex(imm(i + 1))) {
+      slot.op = static_cast<uint16_t>(FastOpAddStore + arithmeticKind(op(i)));
+      slot.a = static_cast<uint32_t>(imm(i + 1));
+      length = 2;
+    } else if (arithmeticKindF64(op(i)) >= 0 && window(i, 2) && op(i + 1) == IrOpcode::StoreLocal &&
+               fitsIndex(imm(i + 1))) {
+      slot.op = static_cast<uint16_t>(FastOpAddStoreF64 + arithmeticKindF64(op(i)));
+      slot.a = static_cast<uint32_t>(imm(i + 1));
+      length = 2;
     }
     i += length;
+  }
+}
+
+// Turns compare chains into table lookups. A fused `local == c` test continues at its own next
+// instruction when it holds and jumps to its target otherwise; when that target is another such
+// test of the same local, the chain behaves like a switch on the local's value: the first
+// constant equal to it picks its continuation, and a value matching none ends at the last
+// target. Every test that starts a chain of at least MinimumChain tests whose constants span at
+// most MaximumSpan values becomes FastOpSwitchLocal with a dense table; the tests behind it keep
+// their own form, so jumps into the middle of a chain still work.
+void buildSwitchChains(FastFunction &out) {
+  constexpr size_t MinimumChain = 3;
+  constexpr size_t MaximumChain = 256;
+  constexpr uint64_t MaximumSpan = 256;
+  const size_t count = out.code.size();
+  const auto isEqualityTest = [&](size_t index, uint32_t local) {
+    return index < count && out.code[index].op == FastOpJmpCmpLocalImmEq &&
+           out.code[index].a == local;
+  };
+  // Decide every chain against the unmodified tests, then rewrite.
+  std::vector<std::pair<size_t, FastSwitch>> rewrites;
+  for (size_t head = 0; head < count; ++head) {
+    if (out.code[head].op != FastOpJmpCmpLocalImmEq) {
+      continue;
+    }
+    const uint32_t local = out.code[head].a;
+    std::vector<std::pair<uint64_t, uint32_t>> cases; // first occurrence of each constant wins
+    std::vector<size_t> visited;
+    size_t at = head;
+    while (isEqualityTest(at, local) && visited.size() < MaximumChain &&
+           std::find(visited.begin(), visited.end(), at) == visited.end()) {
+      visited.push_back(at);
+      const FastInst &test = out.code[at];
+      bool seen = false;
+      for (const auto &existing : cases) {
+        seen = seen || existing.first == test.imm;
+      }
+      if (!seen) {
+        cases.emplace_back(test.imm, static_cast<uint32_t>(at + 4));
+      }
+      at = test.b;
+    }
+    // A chain cut off by the length cap (or a cycle) still ends at a test, which is fine: the
+    // lookup continues there.
+    if (cases.size() < MinimumChain || at > UINT32_MAX) {
+      continue;
+    }
+    uint64_t low = cases.front().first;
+    uint64_t high = low;
+    for (const auto &entry : cases) {
+      low = std::min(low, entry.first);
+      high = std::max(high, entry.first);
+    }
+    if (high - low >= MaximumSpan) {
+      continue;
+    }
+    FastSwitch table;
+    table.low = low;
+    table.otherwise = static_cast<uint32_t>(at);
+    table.targets.assign(static_cast<size_t>(high - low + 1), table.otherwise);
+    for (const auto &entry : cases) {
+      table.targets[static_cast<size_t>(entry.first - low)] = entry.second;
+    }
+    rewrites.emplace_back(head, std::move(table));
+  }
+  for (auto &[head, table] : rewrites) {
+    out.code[head].op = FastOpSwitchLocal;
+    out.code[head].imm = out.switches.size();
+    out.switches.push_back(std::move(table));
   }
 }
 
@@ -290,6 +414,7 @@ bool prepareFunction(const IrModule &module, const IrFunction &function, FastFun
     }
   }
   fuseInstructions(function, cfg, out);
+  buildSwitchChains(out);
   out.localCount = computeVmKernelLocalCount(function);
   const int64_t headroom = cfg.maxStackDepth - static_cast<int64_t>(function.parameterCount);
   out.stackHeadroom = static_cast<size_t>(std::max<int64_t>(headroom, 0)) + 2;

@@ -40,6 +40,36 @@ namespace {
 
 // Float arithmetic, comparisons and conversions: each gets a threaded handler that evaluates it
 // with the shared pure semantics (IrPureSemantics.h), the opcode a constant so the switch folds.
+// The three-address forms of VmFastKernelProgram.h (results stored straight into a local).
+// clang-format off
+#define FAST_STORE_FORMS(X) \
+  X(FastOpLocalAddLocalStore) \
+  X(FastOpLocalSubLocalStore) \
+  X(FastOpLocalMulLocalStore) \
+  X(FastOpLocalAddLocalSextStore) \
+  X(FastOpLocalSubLocalSextStore) \
+  X(FastOpLocalMulLocalSextStore) \
+  X(FastOpAddStore) \
+  X(FastOpSubStore) \
+  X(FastOpMulStore) \
+  X(FastOpAddSextStore) \
+  X(FastOpSubSextStore) \
+  X(FastOpMulSextStore) \
+  X(FastOpLocalAddLocalStoreF64) \
+  X(FastOpLocalSubLocalStoreF64) \
+  X(FastOpLocalMulLocalStoreF64) \
+  X(FastOpLocalDivLocalStoreF64) \
+  X(FastOpLocalAddImmStoreF64) \
+  X(FastOpLocalSubImmStoreF64) \
+  X(FastOpLocalMulImmStoreF64) \
+  X(FastOpLocalDivImmStoreF64) \
+  X(FastOpAddStoreF64) \
+  X(FastOpSubStoreF64) \
+  X(FastOpMulStoreF64) \
+  X(FastOpDivStoreF64) \
+  X(FastOpLocalNegStoreF64)
+// clang-format on
+
 // clang-format off
 #define FAST_FLOAT_BINARY(X) \
   X(AddF32) \
@@ -97,6 +127,14 @@ constexpr size_t VmFastDispatchSlots = 0x200;
 static_assert(FastOpEnd <= VmFastDispatchSlots, "dispatch table too small for the fused opcodes");
 static_assert(static_cast<size_t>(IrOpcode::SextI32) < 0x100,
               "IR opcodes must stay below the fused range");
+
+// Float arithmetic with the shared pure semantics; the opcode is a constant at every use, so the
+// switch inside folds away.
+inline uint64_t pureF64(IrOpcode op, uint64_t lhs, uint64_t rhs) {
+  uint64_t value = 0;
+  (void)evalPureOpcode(op, lhs, rhs, value);
+  return value;
+}
 
 // Fault messages are built out of line so the handlers that can fault stay small.
 [[gnu::cold, gnu::noinline]] bool
@@ -231,6 +269,10 @@ bool executeVmFastKernel(const IrModule &module,
   table[FastOpLocalSubImmStoreSext] = &&lbl_FastOpLocalSubImmStoreSext;
   table[FastOpLocalStringByteStore] = &&lbl_FastOpLocalStringByteStore;
   table[FastOpPushLocalStringByte] = &&lbl_FastOpPushLocalStringByte;
+#define FAST_TABLE_ENTRY(N) table[N] = &&lbl_##N;
+  FAST_STORE_FORMS(FAST_TABLE_ENTRY)
+#undef FAST_TABLE_ENTRY
+  table[FastOpSwitchLocal] = &&lbl_FastOpSwitchLocal;
   table[FastOpAddSext] = &&lbl_FastOpAddSext;
   table[FastOpSubSext] = &&lbl_FastOpSubSext;
   table[FastOpMulSext] = &&lbl_FastOpMulSext;
@@ -546,6 +588,74 @@ bool executeVmFastKernel(const IrModule &module,
       sp[-1] = sext32(sp[-1]);
       ++ip;
       DISPATCH();
+      // Three-address forms.
+#define FAST_LOCAL_LOCAL_STORE(NAME, EXPR, LENGTH)                                                 \
+  case NAME:                                                                                       \
+    lbl_##NAME : {                                                                                 \
+      const uint64_t lhs = locals[inst.a];                                                         \
+      const uint64_t rhs = locals[inst.b];                                                         \
+      locals[inst.imm] = (EXPR);                                                                   \
+      ip += (LENGTH);                                                                              \
+      DISPATCH();                                                                                  \
+    }
+      FAST_LOCAL_LOCAL_STORE(FastOpLocalAddLocalStore, lhs + rhs, 4)
+      FAST_LOCAL_LOCAL_STORE(FastOpLocalSubLocalStore, lhs - rhs, 4)
+      FAST_LOCAL_LOCAL_STORE(FastOpLocalMulLocalStore, lhs * rhs, 4)
+      FAST_LOCAL_LOCAL_STORE(FastOpLocalAddLocalSextStore, sext32(lhs + rhs), 5)
+      FAST_LOCAL_LOCAL_STORE(FastOpLocalSubLocalSextStore, sext32(lhs - rhs), 5)
+      FAST_LOCAL_LOCAL_STORE(FastOpLocalMulLocalSextStore, sext32(lhs * rhs), 5)
+      FAST_LOCAL_LOCAL_STORE(FastOpLocalAddLocalStoreF64, pureF64(IrOpcode::AddF64, lhs, rhs), 4)
+      FAST_LOCAL_LOCAL_STORE(FastOpLocalSubLocalStoreF64, pureF64(IrOpcode::SubF64, lhs, rhs), 4)
+      FAST_LOCAL_LOCAL_STORE(FastOpLocalMulLocalStoreF64, pureF64(IrOpcode::MulF64, lhs, rhs), 4)
+      FAST_LOCAL_LOCAL_STORE(FastOpLocalDivLocalStoreF64, pureF64(IrOpcode::DivF64, lhs, rhs), 4)
+#undef FAST_LOCAL_LOCAL_STORE
+#define FAST_LOCAL_IMM_STORE_F64(NAME, OPCODE)                                                     \
+  case NAME:                                                                                       \
+    lbl_##NAME : locals[inst.b] = pureF64(IrOpcode::OPCODE, locals[inst.a], inst.imm);             \
+    ip += 4;                                                                                       \
+    DISPATCH();
+      FAST_LOCAL_IMM_STORE_F64(FastOpLocalAddImmStoreF64, AddF64)
+      FAST_LOCAL_IMM_STORE_F64(FastOpLocalSubImmStoreF64, SubF64)
+      FAST_LOCAL_IMM_STORE_F64(FastOpLocalMulImmStoreF64, MulF64)
+      FAST_LOCAL_IMM_STORE_F64(FastOpLocalDivImmStoreF64, DivF64)
+#undef FAST_LOCAL_IMM_STORE_F64
+#define FAST_STACK_STORE(NAME, EXPR, LENGTH)                                                       \
+  case NAME:                                                                                       \
+    lbl_##NAME : {                                                                                 \
+      const uint64_t lhs = sp[-2];                                                                 \
+      const uint64_t rhs = sp[-1];                                                                 \
+      sp -= 2;                                                                                     \
+      locals[inst.a] = (EXPR);                                                                     \
+      ip += (LENGTH);                                                                              \
+      DISPATCH();                                                                                  \
+    }
+      FAST_STACK_STORE(FastOpAddStore, lhs + rhs, 2)
+      FAST_STACK_STORE(FastOpSubStore, lhs - rhs, 2)
+      FAST_STACK_STORE(FastOpMulStore, lhs * rhs, 2)
+      FAST_STACK_STORE(FastOpAddSextStore, sext32(lhs + rhs), 3)
+      FAST_STACK_STORE(FastOpSubSextStore, sext32(lhs - rhs), 3)
+      FAST_STACK_STORE(FastOpMulSextStore, sext32(lhs * rhs), 3)
+      FAST_STACK_STORE(FastOpAddStoreF64, pureF64(IrOpcode::AddF64, lhs, rhs), 2)
+      FAST_STACK_STORE(FastOpSubStoreF64, pureF64(IrOpcode::SubF64, lhs, rhs), 2)
+      FAST_STACK_STORE(FastOpMulStoreF64, pureF64(IrOpcode::MulF64, lhs, rhs), 2)
+      FAST_STACK_STORE(FastOpDivStoreF64, pureF64(IrOpcode::DivF64, lhs, rhs), 2)
+#undef FAST_STACK_STORE
+    case FastOpLocalNegStoreF64:
+    lbl_FastOpLocalNegStoreF64:
+      locals[inst.b] = pureF64(IrOpcode::NegF64, locals[inst.a], locals[inst.a]);
+      ip += 3;
+      DISPATCH();
+
+    case FastOpSwitchLocal:
+    lbl_FastOpSwitchLocal: {
+      const FastSwitch &chain = current->switches[static_cast<size_t>(inst.imm)];
+      const uint64_t offset = locals[inst.a] - chain.low;
+      ip = current->code.data() + (offset < chain.targets.size()
+                                       ? chain.targets[static_cast<size_t>(offset)]
+                                       : chain.otherwise);
+      DISPATCH();
+    }
+
     case FastOpAddSext:
     lbl_FastOpAddSext:
       sp[-2] = sext32(sp[-2] + sp[-1]);

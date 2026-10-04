@@ -496,6 +496,23 @@ has its own handler instead of a switch on the opcode, `AddI32; SextI32` (and Su
 checked once when the module is prepared (a module calling a missing function runs on the step kernel, which faults
 when the call executes). call_fib on primevm: 0.13 s to 0.105 s.
 
+Dispatch counts (2026-10-04, instrumented loop): aggregate 45M dispatches (9 per iteration), json_scan 29M (60% of
+them `local == constant` tests), json_parse 60M, call_fib 42M, float_series 220M (11 per iteration); `StoreLocal` after
+an arithmetic result was 17-27% of all dispatches in the arithmetic loops. Two changes followed:
+
+- Three-address forms: `LoadLocal; LoadLocal; op; StoreLocal` (add/sub/mul, their `SextI32` variants, and F64
+  add/sub/mul/div), `LoadLocal; PushF64; opF64; StoreLocal`, `op; StoreLocal` on the stack top and
+  `LoadLocal; NegF64; StoreLocal` store their result straight into the local.
+- Compare chains: a fused `local == c` test that, when it fails, jumps to another such test of the same local is the
+  head of a chain; one with at least three tests whose constants span at most 256 values becomes `FastOpSwitchLocal`,
+  a dense table from the local's value to the continuation (the first test of each constant wins; a value matching
+  none goes where the last test jumps). The tests behind the head keep their form, so jumps into the chain still work.
+
+Measured (best of 9, primevm wall time including compile): aggregate 70 to 50 ms, json_scan 78 to 56 ms, json_parse
+144 to 132 ms, float_series 409 to 335 ms (17% fewer instructions), call_fib unchanged at 109 ms. Doing the callee's
+leading parameter stores inside `Call` was tried and dropped: the extra work in the call handler cost more (fib +9%
+instructions) than the dispatch it saved.
+
 4.2 and 4.4 (2026-10-04): every heap access used to scan the whole allocation list, freed allocations included, so a
 program that builds many small vectors slowed down quadratically (3,000 vectors of 20 pushes: 1.72 s). Allocations
 are only ever appended, each at the end of the heap, so the list is sorted by base slot and `VmHeapHelpers.cpp` now

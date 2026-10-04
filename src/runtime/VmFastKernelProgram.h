@@ -25,39 +25,69 @@ namespace primec::vm_detail {
 // so every jump target keeps its index.
 enum FastOp : uint16_t {
   FastOpMissingReturn = 0x100,
-  FastOpStoreLocalDupPop,                  // Dup; StoreLocal a; Pop
-  FastOpStoreLocalImm,                     // Push c; StoreLocal a
-  FastOpCopyLocal,                         // LoadLocal a; StoreLocal b
-  FastOpJmpLocalZero,                      // LoadLocal a; JumpIfZero b
-  FastOpPushLocalAddImm,                   // LoadLocal a; Push c; Add
-  FastOpPushLocalSubImm,                   // LoadLocal a; Push c; Sub
-  FastOpPushLocalMulImm,                   // LoadLocal a; Push c; Mul
-  FastOpPushLocalAddLocal,                 // LoadLocal a; LoadLocal b; Add
-  FastOpPushLocalSubLocal,                 // LoadLocal a; LoadLocal b; Sub
-  FastOpPushLocalMulLocal,                 // LoadLocal a; LoadLocal b; Mul
-  FastOpLocalAddImmStore,                  // LoadLocal a; Push c; Add; StoreLocal b
-  FastOpLocalSubImmStore,                  // LoadLocal a; Push c; Sub; StoreLocal b
-  FastOpPushLocalAddImmSext,               // LoadLocal a; Push c; Add; SextI32
-  FastOpPushLocalSubImmSext,               // LoadLocal a; Push c; Sub; SextI32
-  FastOpPushLocalMulImmSext,               // LoadLocal a; Push c; Mul; SextI32
-  FastOpPushLocalAddLocalSext,             // LoadLocal a; LoadLocal b; Add; SextI32
-  FastOpPushLocalSubLocalSext,             // LoadLocal a; LoadLocal b; Sub; SextI32
-  FastOpPushLocalMulLocalSext,             // LoadLocal a; LoadLocal b; Mul; SextI32
-  FastOpLocalAddImmStoreSext,              // LoadLocal a; Push c; Add; SextI32; StoreLocal b
-  FastOpLocalSubImmStoreSext,              // LoadLocal a; Push c; Sub; SextI32; StoreLocal b
-  FastOpLocalStringByteStore,              // LoadLocal a; LoadStringByte #imm; StoreLocal b
-  FastOpPushLocalStringByte,               // LoadLocal a; LoadStringByte #imm
-  FastOpPushLocalAddLocalF64,              // LoadLocal a; LoadLocal b; AddF64
-  FastOpPushLocalSubLocalF64,              // LoadLocal a; LoadLocal b; SubF64
-  FastOpPushLocalMulLocalF64,              // LoadLocal a; LoadLocal b; MulF64
-  FastOpPushLocalDivLocalF64,              // LoadLocal a; LoadLocal b; DivF64
-  FastOpPushLocalAddImmF64,                // LoadLocal a; PushF64 c; AddF64
-  FastOpPushLocalSubImmF64,                // LoadLocal a; PushF64 c; SubF64
-  FastOpPushLocalMulImmF64,                // LoadLocal a; PushF64 c; MulF64
-  FastOpPushLocalDivImmF64,                // LoadLocal a; PushF64 c; DivF64
-  FastOpAddSext,                           // AddI32; SextI32
-  FastOpSubSext,                           // SubI32; SextI32
-  FastOpMulSext,                           // MulI32; SextI32
+  FastOpStoreLocalDupPop,      // Dup; StoreLocal a; Pop
+  FastOpStoreLocalImm,         // Push c; StoreLocal a
+  FastOpCopyLocal,             // LoadLocal a; StoreLocal b
+  FastOpJmpLocalZero,          // LoadLocal a; JumpIfZero b
+  FastOpPushLocalAddImm,       // LoadLocal a; Push c; Add
+  FastOpPushLocalSubImm,       // LoadLocal a; Push c; Sub
+  FastOpPushLocalMulImm,       // LoadLocal a; Push c; Mul
+  FastOpPushLocalAddLocal,     // LoadLocal a; LoadLocal b; Add
+  FastOpPushLocalSubLocal,     // LoadLocal a; LoadLocal b; Sub
+  FastOpPushLocalMulLocal,     // LoadLocal a; LoadLocal b; Mul
+  FastOpLocalAddImmStore,      // LoadLocal a; Push c; Add; StoreLocal b
+  FastOpLocalSubImmStore,      // LoadLocal a; Push c; Sub; StoreLocal b
+  FastOpPushLocalAddImmSext,   // LoadLocal a; Push c; Add; SextI32
+  FastOpPushLocalSubImmSext,   // LoadLocal a; Push c; Sub; SextI32
+  FastOpPushLocalMulImmSext,   // LoadLocal a; Push c; Mul; SextI32
+  FastOpPushLocalAddLocalSext, // LoadLocal a; LoadLocal b; Add; SextI32
+  FastOpPushLocalSubLocalSext, // LoadLocal a; LoadLocal b; Sub; SextI32
+  FastOpPushLocalMulLocalSext, // LoadLocal a; LoadLocal b; Mul; SextI32
+  FastOpLocalAddImmStoreSext,  // LoadLocal a; Push c; Add; SextI32; StoreLocal b
+  FastOpLocalSubImmStoreSext,  // LoadLocal a; Push c; Sub; SextI32; StoreLocal b
+  FastOpLocalStringByteStore,  // LoadLocal a; LoadStringByte #imm; StoreLocal b
+  FastOpPushLocalStringByte,   // LoadLocal a; LoadStringByte #imm
+  FastOpPushLocalAddLocalF64,  // LoadLocal a; LoadLocal b; AddF64
+  FastOpPushLocalSubLocalF64,  // LoadLocal a; LoadLocal b; SubF64
+  FastOpPushLocalMulLocalF64,  // LoadLocal a; LoadLocal b; MulF64
+  FastOpPushLocalDivLocalF64,  // LoadLocal a; LoadLocal b; DivF64
+  FastOpPushLocalAddImmF64,    // LoadLocal a; PushF64 c; AddF64
+  FastOpPushLocalSubImmF64,    // LoadLocal a; PushF64 c; SubF64
+  FastOpPushLocalMulImmF64,    // LoadLocal a; PushF64 c; MulF64
+  FastOpPushLocalDivImmF64,    // LoadLocal a; PushF64 c; DivF64
+  FastOpAddSext,               // AddI32; SextI32
+  FastOpSubSext,               // SubI32; SextI32
+  FastOpMulSext,               // MulI32; SextI32
+  // Three-address forms: the result goes straight into a local instead of through a separate
+  // StoreLocal dispatch.
+  FastOpLocalAddLocalStore,     // LoadLocal a; LoadLocal b; Add; StoreLocal imm
+  FastOpLocalSubLocalStore,     // LoadLocal a; LoadLocal b; Sub; StoreLocal imm
+  FastOpLocalMulLocalStore,     // LoadLocal a; LoadLocal b; Mul; StoreLocal imm
+  FastOpLocalAddLocalSextStore, // LoadLocal a; LoadLocal b; Add; SextI32; StoreLocal imm
+  FastOpLocalSubLocalSextStore, // LoadLocal a; LoadLocal b; Sub; SextI32; StoreLocal imm
+  FastOpLocalMulLocalSextStore, // LoadLocal a; LoadLocal b; Mul; SextI32; StoreLocal imm
+  FastOpAddStore,               // Add; StoreLocal a
+  FastOpSubStore,               // Sub; StoreLocal a
+  FastOpMulStore,               // Mul; StoreLocal a
+  FastOpAddSextStore,           // AddI32; SextI32; StoreLocal a
+  FastOpSubSextStore,           // SubI32; SextI32; StoreLocal a
+  FastOpMulSextStore,           // MulI32; SextI32; StoreLocal a
+  FastOpLocalAddLocalStoreF64,  // LoadLocal a; LoadLocal b; AddF64; StoreLocal imm
+  FastOpLocalSubLocalStoreF64,  // LoadLocal a; LoadLocal b; SubF64; StoreLocal imm
+  FastOpLocalMulLocalStoreF64,  // LoadLocal a; LoadLocal b; MulF64; StoreLocal imm
+  FastOpLocalDivLocalStoreF64,  // LoadLocal a; LoadLocal b; DivF64; StoreLocal imm
+  FastOpLocalAddImmStoreF64,    // LoadLocal a; PushF64 imm; AddF64; StoreLocal b
+  FastOpLocalSubImmStoreF64,    // LoadLocal a; PushF64 imm; SubF64; StoreLocal b
+  FastOpLocalMulImmStoreF64,    // LoadLocal a; PushF64 imm; MulF64; StoreLocal b
+  FastOpLocalDivImmStoreF64,    // LoadLocal a; PushF64 imm; DivF64; StoreLocal b
+  FastOpAddStoreF64,            // AddF64; StoreLocal a
+  FastOpSubStoreF64,            // SubF64; StoreLocal a
+  FastOpMulStoreF64,            // MulF64; StoreLocal a
+  FastOpDivStoreF64,            // DivF64; StoreLocal a
+  FastOpLocalNegStoreF64,       // LoadLocal a; NegF64; StoreLocal b
+  // A chain of `LoadLocal a; Push c; CmpEq; JumpIfZero` tests of one local, each jumping to the
+  // next when it fails: one table lookup on the local's value (switches[imm]).
+  FastOpSwitchLocal,
   FAST_CMPS(FAST_ENUM_JMP_CMP_LOCAL_IMM)   // LoadLocal a; Push c; Cmp; JumpIfZero b
   FAST_CMPS(FAST_ENUM_JMP_CMP_LOCAL_LOCAL) // LoadLocal a; LoadLocal b; Cmp; JumpIfZero imm
   FAST_CMPS(FAST_ENUM_JMP_CMP)             // Cmp; JumpIfZero b
@@ -81,6 +111,14 @@ struct FastInst {
   const IrInstruction *source = nullptr;
 };
 
+// The targets of a compare chain (FastOpSwitchLocal): the instruction index for each value in
+// [low, low + targets.size()), and `otherwise` for every other value.
+struct FastSwitch {
+  uint64_t low = 0;
+  std::vector<uint32_t> targets;
+  uint32_t otherwise = 0;
+};
+
 struct FastFunction {
   const IrFunction *function = nullptr;
   // The function's instructions followed by a sentinel that faults with the
@@ -90,6 +128,7 @@ struct FastFunction {
   size_t localCount = 0;
   // Operand-stack slots the function needs above its arguments.
   size_t stackHeadroom = 0;
+  std::vector<FastSwitch> switches;
 };
 
 // The slot value SextI32 produces: the low 32 bits sign-extended.

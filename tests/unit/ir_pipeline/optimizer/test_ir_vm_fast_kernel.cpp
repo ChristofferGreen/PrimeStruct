@@ -7,6 +7,7 @@
 #include "test_ir_runtime_programs.h"
 #include "test_ir_vm_run.h"
 
+#include <cstdint>
 #include <filesystem>
 #include <string>
 #include <string_view>
@@ -290,6 +291,174 @@ TEST_CASE("fused sext forms match the step kernel over wrapping operands") {
         std::vector<primec::IrInstruction> code;
         for (const std::string &line : lines) {
           code.push_back(assembleOne(line.c_str()));
+        }
+        primec::IrModule module = moduleOf(std::move(code));
+        module.functions[0].metadata.effectMask = primec::EffectIoOut;
+        REQUIRE(primec::testing::vmFastKernelAccepts(module));
+        const BothKernels both = runBoth(module);
+        REQUIRE(both.step.ok);
+        CHECK(both.fast == both.step);
+      }
+    }
+  }
+}
+
+namespace {
+
+// A chain of `local == c` tests (the shape `if (x == a) ... else if (x == b) ...` lowers to),
+// which the flat loop turns into one table lookup when it has three or more tests. Each hit
+// prints 100 + its position; a miss prints 999. When local 1 is zero the program enters the
+// chain at its second test, which must keep working after the rewrite.
+primec::IrModule
+compareChainModule(const std::vector<int64_t> &constants, int64_t value, bool enterAtSecond) {
+  std::vector<std::string> lines = {"PushI64 " + std::to_string(value),
+                                    "StoreLocal 0",
+                                    std::string("PushI64 ") + (enterAtSecond ? "0" : "1"),
+                                    "StoreLocal 1"};
+  const size_t testsStart = lines.size() + 2;
+  constexpr size_t TestLength = 7; // LoadLocal, Push, CmpEq, JumpIfZero, Push, Print, Jump
+  const size_t missStart = testsStart + constants.size() * TestLength;
+  const size_t end = missStart + 3;
+  lines.push_back("LoadLocal 1");
+  lines.push_back("JumpIfZero " + std::to_string(testsStart + TestLength));
+  for (size_t k = 0; k < constants.size(); ++k) {
+    const size_t next = testsStart + (k + 1) * TestLength;
+    lines.push_back("LoadLocal 0");
+    lines.push_back("PushI64 " + std::to_string(constants[k]));
+    lines.push_back("CmpEqI64");
+    lines.push_back("JumpIfZero " + std::to_string(next));
+    lines.push_back("PushI32 " + std::to_string(100 + k));
+    lines.push_back("PrintI32 1");
+    lines.push_back("Jump " + std::to_string(end));
+  }
+  lines.push_back("PushI32 999");
+  lines.push_back("PrintI32 1");
+  lines.push_back("Jump " + std::to_string(end));
+  lines.push_back("PushI32 0");
+  lines.push_back("ReturnI32");
+  std::vector<primec::IrInstruction> code;
+  for (const std::string &line : lines) {
+    code.push_back(optimizer_test::assembleOne(line));
+  }
+  primec::IrModule module = optimizer_test::moduleOf(std::move(code));
+  module.functions[0].metadata.effectMask = primec::EffectIoOut;
+  return module;
+}
+
+} // namespace
+
+TEST_CASE("compare chains looked up in a table agree with the step kernel") {
+  const std::vector<std::vector<int64_t>> chains = {
+      {3, 7, 3, 12, 5},                 // a repeated constant: the first test wins
+      {-2, -1, 0, 1},                   // negative constants
+      {65, 66, 67, 68, 69, 70, 71, 72}, // a long chain
+      {10, 300},                        // too short for a table
+      {10, 300, 1000},                  // constants too far apart for a table
+  };
+  const std::vector<int64_t> probes = {
+      -3,        -2,       -1, 0,  1,  2,  3,   4,   5,   7,    10,
+      12,        13,       64, 65, 72, 73, 255, 256, 300, 1000, static_cast<int64_t>(1) << 40,
+      INT64_MIN, INT64_MAX};
+  for (const std::vector<int64_t> &chain : chains) {
+    for (const int64_t probe : probes) {
+      for (const bool enterAtSecond : {false, true}) {
+        CAPTURE(chain.size());
+        CAPTURE(chain.front());
+        CAPTURE(probe);
+        CAPTURE(enterAtSecond);
+        const primec::IrModule module = compareChainModule(chain, probe, enterAtSecond);
+        REQUIRE(primec::testing::vmFastKernelAccepts(module));
+        const BothKernels both = runBoth(module);
+        REQUIRE(both.step.ok);
+        CHECK(both.fast == both.step);
+      }
+    }
+  }
+}
+
+TEST_CASE("three-address store forms match the step kernel over edge-case operands") {
+  using optimizer_test::assembleOne;
+  using optimizer_test::moduleOf;
+  struct Form {
+    const char *name;
+    std::vector<std::string> body; // reads locals 0 and 1, writes local 2
+    bool floats;
+  };
+  const std::vector<Form> forms = {
+      {"add_local_store", {"LoadLocal 0", "LoadLocal 1", "AddI64", "StoreLocal 2"}, false},
+      {"sub_local_store", {"LoadLocal 0", "LoadLocal 1", "SubI64", "StoreLocal 2"}, false},
+      {"mul_local_store", {"LoadLocal 0", "LoadLocal 1", "MulI64", "StoreLocal 2"}, false},
+      {"add_i32_local_store", {"LoadLocal 0", "LoadLocal 1", "AddI32", "StoreLocal 2"}, false},
+      {"add_local_sext_store",
+       {"LoadLocal 0", "LoadLocal 1", "AddI32", "SextI32", "StoreLocal 2"},
+       false},
+      {"sub_local_sext_store",
+       {"LoadLocal 0", "LoadLocal 1", "SubI32", "SextI32", "StoreLocal 2"},
+       false},
+      {"mul_local_sext_store",
+       {"LoadLocal 0", "LoadLocal 1", "MulI32", "SextI32", "StoreLocal 2"},
+       false},
+      {"add_store",
+       {"PushI64 3", "LoadLocal 0", "LoadLocal 1", "MulI64", "AddI64", "StoreLocal 2"},
+       false},
+      {"sub_store",
+       {"PushI64 3", "LoadLocal 0", "LoadLocal 1", "MulI64", "SubI64", "StoreLocal 2"},
+       false},
+      {"mul_sext_store",
+       {"PushI64 3", "LoadLocal 0", "LoadLocal 1", "AddI64", "MulI32", "SextI32", "StoreLocal 2"},
+       false},
+      {"add_local_store_f64", {"LoadLocal 0", "LoadLocal 1", "AddF64", "StoreLocal 2"}, true},
+      {"sub_local_store_f64", {"LoadLocal 0", "LoadLocal 1", "SubF64", "StoreLocal 2"}, true},
+      {"mul_local_store_f64", {"LoadLocal 0", "LoadLocal 1", "MulF64", "StoreLocal 2"}, true},
+      {"div_local_store_f64", {"LoadLocal 0", "LoadLocal 1", "DivF64", "StoreLocal 2"}, true},
+      {"add_imm_store_f64",
+       {"LoadLocal 0", "PushF64 0x4008000000000000", "AddF64", "StoreLocal 2"},
+       true},
+      {"div_imm_store_f64",
+       {"LoadLocal 0", "PushF64 0x4008000000000000", "DivF64", "StoreLocal 2"},
+       true},
+      {"sub_store_f64",
+       {"PushF64 0x3ff8000000000000",
+        "LoadLocal 0",
+        "LoadLocal 1",
+        "MulF64",
+        "SubF64",
+        "StoreLocal 2"},
+       true},
+      {"div_store_f64",
+       {"PushF64 0x3ff8000000000000",
+        "LoadLocal 0",
+        "LoadLocal 1",
+        "AddF64",
+        "DivF64",
+        "StoreLocal 2"},
+       true},
+      {"neg_store_f64", {"LoadLocal 0", "NegF64", "StoreLocal 2"}, true},
+  };
+  const std::vector<const char *> integers = {
+      "0", "1", "-1", "2147483647", "2147483648", "4294967295", "9223372036854775807"};
+  const std::vector<const char *> floats = {"0x0",
+                                            "0x8000000000000000",
+                                            "0x3ff0000000000000",
+                                            "0xc000000000000000",
+                                            "0x7ff0000000000000",
+                                            "0x7ff8000000000000",
+                                            "0x0000000000000001"};
+  for (const Form &form : forms) {
+    const std::vector<const char *> &values = form.floats ? floats : integers;
+    for (const char *first : values) {
+      for (const char *second : values) {
+        CAPTURE(form.name);
+        CAPTURE(first);
+        CAPTURE(second);
+        const std::string push = form.floats ? "PushF64 " : "PushI64 ";
+        std::vector<std::string> lines = {
+            push + first, "StoreLocal 0", push + second, "StoreLocal 1"};
+        lines.insert(lines.end(), form.body.begin(), form.body.end());
+        lines.insert(lines.end(), {"LoadLocal 2", "PrintI64 1", "PushI32 0", "ReturnI32"});
+        std::vector<primec::IrInstruction> code;
+        for (const std::string &line : lines) {
+          code.push_back(assembleOne(line));
         }
         primec::IrModule module = moduleOf(std::move(code));
         module.functions[0].metadata.effectMask = primec::EffectIoOut;

@@ -40,8 +40,9 @@
   `nan_comparisons` program-matrix case checks it.
 - **Execution kernels:** plain runs (`primevm`, `--emit=vm`, embedded scripts) use a flat loop when every function
   passes the shared CFG analysis (consistent stack depths, valid jump targets, balanced returns, an entry without
-  parameters): it keeps the instruction pointer, operand-stack pointer and locals pointer in registers and fuses common
-  sequences inside a basic block into single instructions. Debug sessions and any module the analysis rejects use the
+  parameters): it keeps the instruction pointer, operand-stack pointer and locals pointer in registers, fuses common
+  sequences inside a basic block into single instructions (including three-address forms that store a result straight
+  into a local), and turns chains of three or more `local == constant` tests into one table lookup. Debug sessions and any module the analysis rejects use the
   checked step kernel. Both produce the same results, output and fault messages; `PRIMEVM_KERNEL=step` forces the step
   kernel for comparison (see `docs/OptimizingBackendsPlan.md`, Phase 4).
 - **Module layout:** `IrModule` bundles functions, string table, and struct layouts; lowering emits entry instructions
