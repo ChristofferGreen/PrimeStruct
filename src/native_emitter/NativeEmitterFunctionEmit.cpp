@@ -37,10 +37,35 @@ bool emitNativeFunctions(const IrModule &module,
     const IrFunction &fn = module.functions[functionIndex];
     const NativeEmitterFunctionLayout &layout = layouts[functionIndex];
     const bool isEntryFunction = functionIndex == entryIndex;
-    uint64_t frameSize = layout.frameSize;
+    // Register allocation (x86_64, NativeEmitterRegAlloc.h) plans before the prologue: its spill
+    // and save slots extend the frame past the locals and the print scratch area.
+    RegAllocFunctionPlan regAllocPlan;
+    bool useRegisterAllocation = false;
+    if constexpr (!kIsArm64) {
+      if (emitter.registerAllocationEnabled()) {
+        bool stringsValid = true;
+        for (const IrInstruction &inst : fn.instructions) {
+          if (inst.op == IrOpcode::LoadStringByte && inst.imm >= module.stringTable.size()) {
+            stringsValid = false;
+          }
+        }
+        std::string planError;
+        useRegisterAllocation =
+            stringsValid &&
+            planNativeRegisterAllocation(module,
+                                         functionIndex,
+                                         argRegsFree ? X64RegAllocPoolWithArgRegs : X64RegAllocPool,
+                                         regAllocPlan,
+                                         planError);
+      }
+    }
+    const uint32_t spillBaseLocal = static_cast<uint32_t>(layout.localCount + layout.scratchSlots);
+    const uint64_t regAllocBytes =
+        useRegisterAllocation ? (static_cast<uint64_t>(regAllocPlan.spillSlotCount) + 16) * 16 : 0;
+    uint64_t frameSize = alignTo(layout.frameSize + regAllocBytes, 16);
     if (isEntryFunction) {
       constexpr uint64_t ValueStackBytes = 1024ull * 1024ull;
-      frameSize = alignTo(layout.localsSize + ValueStackBytes, 16);
+      frameSize = alignTo(layout.localsSize + regAllocBytes + ValueStackBytes, 16);
     }
     functionOffsets[functionIndex] = emitter.currentWordIndex();
     if constexpr (kIsArm64) {
@@ -84,7 +109,7 @@ bool emitNativeFunctions(const IrModule &module,
     bool hasPromotedLocals = false;
     if constexpr (!kIsArm64) {
       emitter.clearPromotedLocals();
-      if (emitter.localPromotionEnabled()) {
+      if (emitter.localPromotionEnabled() && !useRegisterAllocation) {
         std::vector<X64Emitter::PromotedLocalSlot> promoted;
         const uint8_t *pool = argRegsFree ? X64PromotionPoolWithArgRegs : X64PromotionPool;
         const size_t poolSize =
@@ -111,127 +136,10 @@ bool emitNativeFunctions(const IrModule &module,
       }
     }
 
-    bool deferOperands = false;
-    if constexpr (!kIsArm64) {
-      deferOperands = emitter.operandDeferralEnabled();
-    }
-    for (size_t index = 0; index < fn.instructions.size(); ++index) {
-      if (branchTargets[index]) {
-        emitter.flushValueStackCachePublic();
-        if constexpr (!kIsArm64) {
-          if (loopHeaders[index]) {
-            emitter.alignLoopHeader();
-          }
-        }
-      }
+    // One instruction through its template; also the register allocator's fallback, which
+    // calls it with the operands already on the memory operand stack.
+    const auto emitTemplateInstruction = [&](size_t index) -> bool {
       const auto &inst = fn.instructions[index];
-      instOffsets[functionIndex][index] = emitter.currentWordIndex();
-      if constexpr (!kIsArm64) {
-        if (deferOperands) {
-          // `if (compare) { local = local +/- constant }` is branchless: the guarded
-          // statement is exactly LoadLocal, constant, AddI64/SubI64 and StoreLocal of a
-          // register local, and nothing else enters or leaves it.
-          if (index + 1 < fn.instructions.size() &&
-              fn.instructions[index + 1].op == IrOpcode::JumpIfZero && !branchTargets[index + 1]) {
-            const size_t armStart = index + 2;
-            const size_t armEnd = static_cast<size_t>(fn.instructions[index + 1].imm);
-            if (armEnd == armStart + 4 && armEnd <= fn.instructions.size() &&
-                !branchTargets[armStart + 1] && !branchTargets[armStart + 2] &&
-                !branchTargets[armStart + 3] &&
-                fn.instructions[armStart].op == IrOpcode::LoadLocal &&
-                (fn.instructions[armStart + 1].op == IrOpcode::PushI64 ||
-                 fn.instructions[armStart + 1].op == IrOpcode::PushI32) &&
-                (fn.instructions[armStart + 2].op == IrOpcode::AddI64 ||
-                 fn.instructions[armStart + 2].op == IrOpcode::SubI64) &&
-                fn.instructions[armStart + 3].op == IrOpcode::StoreLocal &&
-                fn.instructions[armStart + 3].imm == fn.instructions[armStart].imm) {
-              const IrInstruction &operand = fn.instructions[armStart + 1];
-              const uint64_t constant = operand.op == IrOpcode::PushI32
-                                            ? static_cast<uint64_t>(static_cast<int64_t>(
-                                                  static_cast<int32_t>(operand.imm)))
-                                            : operand.imm;
-              if (emitter.tryEmitCompareConditionalAdd(
-                      inst.op,
-                      static_cast<uint32_t>(fn.instructions[armStart].imm),
-                      fn.instructions[armStart + 2].op == IrOpcode::SubI64,
-                      constant)) {
-                for (size_t skipped = 1; skipped < armEnd - index; ++skipped) {
-                  instOffsets[functionIndex][index + skipped] = emitter.currentWordIndex();
-                }
-                index = armEnd - 1;
-                continue;
-              }
-            }
-          }
-          // A comparison feeding a branch becomes one compare-and-branch.
-          if (index + 1 < fn.instructions.size() &&
-              fn.instructions[index + 1].op == IrOpcode::JumpIfZero && !branchTargets[index + 1]) {
-            size_t fixupIndex = 0;
-            if (emitter.tryEmitCompareBranch(inst.op, fixupIndex)) {
-              NativeEmitterBranchFixup fixup;
-              fixup.codeIndex = fixupIndex;
-              fixup.functionIndex = functionIndex;
-              fixup.targetInst = static_cast<size_t>(fn.instructions[index + 1].imm);
-              fixup.isConditional = true;
-              branchFixups.push_back(fixup);
-              ++index;
-              instOffsets[functionIndex][index] = emitter.currentWordIndex();
-              continue;
-            }
-          }
-          // `local = local OP (local | constant)` on a register-resident local
-          // becomes one instruction on that register.
-          if (inst.op == IrOpcode::LoadLocal && index + 3 < fn.instructions.size() &&
-              emitter.isLocalPromoted(static_cast<uint32_t>(inst.imm)) &&
-              !branchTargets[index + 1] && !branchTargets[index + 2] && !branchTargets[index + 3]) {
-            const IrInstruction &operand = fn.instructions[index + 1];
-            const IrInstruction &arithmetic = fn.instructions[index + 2];
-            // An i32 operation is followed by SextI32 before the store.
-            const bool sext = fn.instructions[index + 3].op == IrOpcode::SextI32 &&
-                              index + 4 < fn.instructions.size() && !branchTargets[index + 4];
-            const IrInstruction &store = fn.instructions[index + (sext ? 4 : 3)];
-            int kind = -1;
-            if (arithmetic.op == IrOpcode::AddI32 || arithmetic.op == IrOpcode::AddI64) {
-              kind = 0;
-            } else if (arithmetic.op == IrOpcode::SubI32 || arithmetic.op == IrOpcode::SubI64) {
-              kind = 1;
-            } else if (arithmetic.op == IrOpcode::MulI32 || arithmetic.op == IrOpcode::MulI64) {
-              kind = 2;
-            }
-            const bool operandIsConstant =
-                operand.op == IrOpcode::PushI32 || operand.op == IrOpcode::PushI64;
-            if (kind >= 0 && store.op == IrOpcode::StoreLocal && store.imm == inst.imm &&
-                (operandIsConstant || operand.op == IrOpcode::LoadLocal)) {
-              const uint64_t constant = operand.op == IrOpcode::PushI32
-                                            ? static_cast<uint64_t>(static_cast<int64_t>(
-                                                  static_cast<int32_t>(operand.imm)))
-                                            : operand.imm;
-              emitter.emitPromotedLocalUpdate(static_cast<uint32_t>(inst.imm),
-                                              kind,
-                                              operandIsConstant,
-                                              constant,
-                                              static_cast<uint32_t>(operand.imm),
-                                              sext);
-              const size_t skippedCount = sext ? 4 : 3;
-              for (size_t skipped = 1; skipped <= skippedCount; ++skipped) {
-                instOffsets[functionIndex][index + skipped] = emitter.currentWordIndex();
-              }
-              index += skippedCount;
-              continue;
-            }
-          }
-        }
-      }
-      // Instructions whose templates clobber the promoted or cache registers get
-      // the promoted locals written to their frame slots (and the deferred
-      // operands to the memory stack) first, and the locals reloaded afterwards.
-      const bool bracketComplex =
-          (hasPromotedLocals || deferOperands) && !opcodeKeepsPromotedRegisters(inst.op);
-      if constexpr (!kIsArm64) {
-        if (bracketComplex) {
-          emitter.beginComplexOp();
-        }
-      }
       switch (inst.op) {
       case IrOpcode::PushI32:
         emitter.emitPushI32(static_cast<int32_t>(inst.imm));
@@ -700,6 +608,147 @@ bool emitNativeFunctions(const IrModule &module,
       }
       default:
         error = "unsupported IR opcode for native backend";
+        return false;
+      }
+      return true;
+    };
+    bool deferOperands = false;
+    if constexpr (!kIsArm64) {
+      deferOperands = emitter.operandDeferralEnabled();
+    }
+    if (useRegisterAllocation) {
+      if constexpr (!kIsArm64) {
+        X64Emitter::RegAllocHooks hooks;
+        hooks.emitTemplate = emitTemplateInstruction;
+        hooks.recordStringFixup = [&](size_t fixupIndex, uint32_t stringIndex) {
+          stringFixups.push_back({fixupIndex, stringIndex});
+        };
+        if (!emitter.emitRegisterAllocatedFunction(
+                fn, regAllocPlan, spillBaseLocal, instOffsets[functionIndex], hooks, error)) {
+          return false;
+        }
+      }
+    }
+    // Template expansion, unless the register allocator already emitted the body.
+    const size_t templateInstructionCount = useRegisterAllocation ? 0 : fn.instructions.size();
+    for (size_t index = 0; index < templateInstructionCount; ++index) {
+      if (branchTargets[index]) {
+        emitter.flushValueStackCachePublic();
+        if constexpr (!kIsArm64) {
+          if (loopHeaders[index]) {
+            emitter.alignLoopHeader();
+          }
+        }
+      }
+      const auto &inst = fn.instructions[index];
+      instOffsets[functionIndex][index] = emitter.currentWordIndex();
+      if constexpr (!kIsArm64) {
+        if (deferOperands) {
+          // `if (compare) { local = local +/- constant }` is branchless: the guarded
+          // statement is exactly LoadLocal, constant, AddI64/SubI64 and StoreLocal of a
+          // register local, and nothing else enters or leaves it.
+          if (index + 1 < fn.instructions.size() &&
+              fn.instructions[index + 1].op == IrOpcode::JumpIfZero && !branchTargets[index + 1]) {
+            const size_t armStart = index + 2;
+            const size_t armEnd = static_cast<size_t>(fn.instructions[index + 1].imm);
+            if (armEnd == armStart + 4 && armEnd <= fn.instructions.size() &&
+                !branchTargets[armStart + 1] && !branchTargets[armStart + 2] &&
+                !branchTargets[armStart + 3] &&
+                fn.instructions[armStart].op == IrOpcode::LoadLocal &&
+                (fn.instructions[armStart + 1].op == IrOpcode::PushI64 ||
+                 fn.instructions[armStart + 1].op == IrOpcode::PushI32) &&
+                (fn.instructions[armStart + 2].op == IrOpcode::AddI64 ||
+                 fn.instructions[armStart + 2].op == IrOpcode::SubI64) &&
+                fn.instructions[armStart + 3].op == IrOpcode::StoreLocal &&
+                fn.instructions[armStart + 3].imm == fn.instructions[armStart].imm) {
+              const IrInstruction &operand = fn.instructions[armStart + 1];
+              const uint64_t constant = operand.op == IrOpcode::PushI32
+                                            ? static_cast<uint64_t>(static_cast<int64_t>(
+                                                  static_cast<int32_t>(operand.imm)))
+                                            : operand.imm;
+              if (emitter.tryEmitCompareConditionalAdd(
+                      inst.op,
+                      static_cast<uint32_t>(fn.instructions[armStart].imm),
+                      fn.instructions[armStart + 2].op == IrOpcode::SubI64,
+                      constant)) {
+                for (size_t skipped = 1; skipped < armEnd - index; ++skipped) {
+                  instOffsets[functionIndex][index + skipped] = emitter.currentWordIndex();
+                }
+                index = armEnd - 1;
+                continue;
+              }
+            }
+          }
+          // A comparison feeding a branch becomes one compare-and-branch.
+          if (index + 1 < fn.instructions.size() &&
+              fn.instructions[index + 1].op == IrOpcode::JumpIfZero && !branchTargets[index + 1]) {
+            size_t fixupIndex = 0;
+            if (emitter.tryEmitCompareBranch(inst.op, fixupIndex)) {
+              NativeEmitterBranchFixup fixup;
+              fixup.codeIndex = fixupIndex;
+              fixup.functionIndex = functionIndex;
+              fixup.targetInst = static_cast<size_t>(fn.instructions[index + 1].imm);
+              fixup.isConditional = true;
+              branchFixups.push_back(fixup);
+              ++index;
+              instOffsets[functionIndex][index] = emitter.currentWordIndex();
+              continue;
+            }
+          }
+          // `local = local OP (local | constant)` on a register-resident local
+          // becomes one instruction on that register.
+          if (inst.op == IrOpcode::LoadLocal && index + 3 < fn.instructions.size() &&
+              emitter.isLocalPromoted(static_cast<uint32_t>(inst.imm)) &&
+              !branchTargets[index + 1] && !branchTargets[index + 2] && !branchTargets[index + 3]) {
+            const IrInstruction &operand = fn.instructions[index + 1];
+            const IrInstruction &arithmetic = fn.instructions[index + 2];
+            // An i32 operation is followed by SextI32 before the store.
+            const bool sext = fn.instructions[index + 3].op == IrOpcode::SextI32 &&
+                              index + 4 < fn.instructions.size() && !branchTargets[index + 4];
+            const IrInstruction &store = fn.instructions[index + (sext ? 4 : 3)];
+            int kind = -1;
+            if (arithmetic.op == IrOpcode::AddI32 || arithmetic.op == IrOpcode::AddI64) {
+              kind = 0;
+            } else if (arithmetic.op == IrOpcode::SubI32 || arithmetic.op == IrOpcode::SubI64) {
+              kind = 1;
+            } else if (arithmetic.op == IrOpcode::MulI32 || arithmetic.op == IrOpcode::MulI64) {
+              kind = 2;
+            }
+            const bool operandIsConstant =
+                operand.op == IrOpcode::PushI32 || operand.op == IrOpcode::PushI64;
+            if (kind >= 0 && store.op == IrOpcode::StoreLocal && store.imm == inst.imm &&
+                (operandIsConstant || operand.op == IrOpcode::LoadLocal)) {
+              const uint64_t constant = operand.op == IrOpcode::PushI32
+                                            ? static_cast<uint64_t>(static_cast<int64_t>(
+                                                  static_cast<int32_t>(operand.imm)))
+                                            : operand.imm;
+              emitter.emitPromotedLocalUpdate(static_cast<uint32_t>(inst.imm),
+                                              kind,
+                                              operandIsConstant,
+                                              constant,
+                                              static_cast<uint32_t>(operand.imm),
+                                              sext);
+              const size_t skippedCount = sext ? 4 : 3;
+              for (size_t skipped = 1; skipped <= skippedCount; ++skipped) {
+                instOffsets[functionIndex][index + skipped] = emitter.currentWordIndex();
+              }
+              index += skippedCount;
+              continue;
+            }
+          }
+        }
+      }
+      // Instructions whose templates clobber the promoted or cache registers get
+      // the promoted locals written to their frame slots (and the deferred
+      // operands to the memory stack) first, and the locals reloaded afterwards.
+      const bool bracketComplex =
+          (hasPromotedLocals || deferOperands) && !opcodeKeepsPromotedRegisters(inst.op);
+      if constexpr (!kIsArm64) {
+        if (bracketComplex) {
+          emitter.beginComplexOp();
+        }
+      }
+      if (!emitTemplateInstruction(index)) {
         return false;
       }
       if constexpr (!kIsArm64) {

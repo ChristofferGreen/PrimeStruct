@@ -3,8 +3,10 @@
 #include "NativeEmitterInternals.h"
 
 #include <algorithm>
+#include <cstdlib>
 #include <fcntl.h>
 #include <sstream>
+#include <string_view>
 
 namespace primec {
 using namespace native_emitter;
@@ -149,6 +151,11 @@ bool NativeEmitter::emitExecutable(const IrModule &module,
 #if !(defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__)))
   emitter.setLocalPromotionEnabled(options.promoteLocals);
   emitter.setOperandDeferralEnabled(options.deferOperands);
+  bool registerAllocation = options.registerAllocation;
+  if (const char *forced = std::getenv("PRIMESTRUCT_NATIVE_REGALLOC"); forced != nullptr) {
+    registerAllocation = std::string_view(forced) == "1";
+  }
+  emitter.setRegisterAllocationEnabled(registerAllocation);
 #endif
   std::vector<NativeEmitterBranchFixup> branchFixups;
   std::vector<NativeEmitterCallFixup> callFixups;

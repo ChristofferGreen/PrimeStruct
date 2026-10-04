@@ -825,8 +825,8 @@ inline void X64Emitter::alignBranchSequence(size_t sequenceStart, size_t length)
 // A loop header starts on a 16-byte boundary when that costs at most ten bytes of
 // padding, so the loop's first fetch block is full.
 inline void X64Emitter::alignLoopHeader() {
-  constexpr size_t Boundary = 16;
-  constexpr size_t MaxSkip = 10;
+  constexpr size_t Boundary = 64;
+  constexpr size_t MaxSkip = 63;
   const size_t offset = code_.size() % Boundary;
   if (offset == 0 || Boundary - offset > MaxSkip) {
     return;

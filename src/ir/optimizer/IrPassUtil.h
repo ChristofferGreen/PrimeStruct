@@ -131,6 +131,10 @@ bool runDeadStorePass(IrModule &module,
                       const IrPassContext &context,
                       bool &changed,
                       std::string &error);
+bool runIfConvertPass(IrModule &module,
+                      const IrPassContext &context,
+                      bool &changed,
+                      std::string &error);
 bool runLoopRotatePass(IrModule &module,
                        const IrPassContext &context,
                        bool &changed,

@@ -528,6 +528,38 @@ promotion registers by liveness, a per-expression `resolveCalleePath` memo (fron
 for add/sub/cmp (json_parse 12.9 to 15.5 ms: denser code puts more instructions in each 32-byte window than the
 decoded-instruction cache holds).
 
+Register allocation (2026-10-04): at -O2 the x86_64 native backend allocates registers for every value of a function,
+locals and operands alike, instead of promoting at most seven locals and deferring operands
+(`src/native_emitter/NativeEmitterRegAlloc.{h,cpp}`, `NativeEmitterInternalsX64RegAlloc.h`):
+
+- The function is lowered to the block register form with promoted locals (`IrVirtualRegisterLowering`, now in
+  `primec_ir_core_lib`). Constant pushes become immediates, and LoadLocal/StoreLocal of a promoted local, Dup and Pop
+  name existing values, so they emit nothing. Every value is then defined and used inside one block and crosses blocks
+  only through edge copies, which keeps liveness to one range per value.
+- Values joined by an edge copy, or by a two-address operation whose operand dies there (`x = x + 1`), are merged into
+  classes when their ranges do not meet, so a local is one class across the blocks where it is live. Classes are
+  coloured greedily by estimated executions per position held (the branch-attenuated loop weights of the promotion
+  planner), over rbx, rsi, rdi, r8-r11, r14 and r12/r13 when argc/argv are unused; rax, rcx and rdx stay scratch and r15
+  stays the memory operand stack. A class that finds no register everywhere gets one slot: splitting it at block
+  boundaries measured slower (its members' one or two uses gained less than the copies on its edges cost).
+- Integer arithmetic, comparisons (fused with the following JumpIfZero, or `xor; cmp; setcc`), frame locals and string
+  bytes are emitted on the registers; edge copies are parallel copies (rax breaks cycles) placed inline on fall-through
+  and unconditional edges and in a trampoline for a taken conditional edge. Every other opcode, calls, returns, prints,
+  division and file I/O included, runs its ordinary template on the memory operand stack, with its operands pushed
+  there, its results popped into their registers and the registers live across it saved in frame slots. A function
+  whose register form cannot be built falls back to the template emitter. `PRIMESTRUCT_NATIVE_REGALLOC=0|1` forces it
+  off or on (the release gate passes with it forced on at every level).
+- Three findings on the way: `setcc` into a register that still holds an older value waits for it (the low byte merges),
+  which serialized json_scan's comparison chain at 12 ms until the target is zeroed with `xor` first (6.5 ms); loop
+  headers are now aligned to 64 bytes (at most 63 bytes of padding), because at 16 or 32 bytes json_parse still moved
+  between 12.7 and 15.3 ms with the loop's position in its cache line; and the IR pass `if-convert` (native, -O2) turns
+  `if (cmp) { x = x +/- c }` into `x = x + cmp * (+/-c)`, which the allocator needs for branchless counting (without it
+  json_parse runs 18.9 ms).
+
+Result (best of 60, run time only): json_parse 13.2 ms (template emitter 12.8 ms), json_scan 6.5 ms (8.4 ms), aggregate
+3.9 ms (3.9 ms); optexe takes 9.9 ms on json_parse. json_parse is now bound by branch mispredictions in its state machine
+rather than by register pressure: 12 values are live in its loop and two spill.
+
 Before the Phase 3 work below, native -O2 was 22 to 32 ms (4x to 15x behind C) because its template expansion kept
 every local and every operand in memory; the IR passes barely moved it.
 

@@ -1,10 +1,12 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <string>
 #include <vector>
 
 #include "primec/ir/Ir.h"
+#include "NativeEmitterRegAlloc.h"
 
 #if defined(__linux__)
 #include <sys/mman.h>
@@ -70,6 +72,29 @@ class X64Emitter {
      uint32_t index = 0;
      uint8_t reg = 0;
    };
+
+   // Register-allocated function bodies (NativeEmitterRegAlloc.h,
+   // NativeEmitterInternalsX64RegAlloc.h).
+   struct RegAllocHooks {
+     // Emits instruction `index` with its ordinary template on the memory operand stack.
+     std::function<bool(size_t index)> emitTemplate;
+     std::function<void(size_t fixupIndex, uint32_t stringIndex)> recordStringFixup;
+   };
+   void setRegisterAllocationEnabled(bool enabled) {
+     registerAllocationEnabled_ = enabled;
+   }
+   bool registerAllocationEnabled() const {
+     return registerAllocationEnabled_;
+   }
+   // Emits `fn`'s body from `plan` (after beginFunction). Spill slot k and the save slot of
+   // register r are the frame slots of pseudo-locals spillBaseLocal + k and
+   // spillBaseLocal + plan.spillSlotCount + r.
+   bool emitRegisterAllocatedFunction(const IrFunction &fn,
+                                      const RegAllocFunctionPlan &plan,
+                                      uint32_t spillBaseLocal,
+                                      std::vector<size_t> &instOffsets,
+                                      const RegAllocHooks &hooks,
+                                      std::string &error);
 
    void setLocalPromotionEnabled(bool enabled) {
      localPromotionEnabled_ = enabled;
@@ -473,6 +498,8 @@ class X64Emitter {
     uint64_t imm = 0;
   };
   bool deferOperands_ = false;
+  bool registerAllocationEnabled_ = false;
+  int32_t regAllocSlotDisp(uint32_t pseudoLocal) const;
   bool inComplexOp_ = false;
   std::vector<PendingOperand> pending_;
   // Registers that hold pending Reg operands: r14 first (the only one inside a
@@ -514,6 +541,7 @@ class X64Emitter {
 #include "NativeEmitterInternalsX64Arithmetic.h"
 #include "NativeEmitterInternalsX64Io.h"
 #include "NativeEmitterInternalsX64Deferred.h"
+#include "NativeEmitterInternalsX64RegAlloc.h"
 
 uint32_t computeElfCodeOffset();
 bool buildElf(const std::vector<uint8_t> &code, std::vector<uint8_t> &image, std::string &error);

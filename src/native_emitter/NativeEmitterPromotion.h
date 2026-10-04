@@ -26,6 +26,12 @@ inline constexpr uint8_t X64PromotionPool[] = {6, 7, 8, 10, 11};
 // after the entry prologue and join the promotion pool.
 inline constexpr uint8_t X64PromotionPoolWithArgRegs[] = {6, 7, 8, 10, 11, 12, 13};
 
+// Registers the register allocator hands out (NativeEmitterRegAlloc.h): everything except rsp and
+// rbp, the scratch registers rax, rcx and rdx, r15 (the memory operand stack the templates use),
+// and r12/r13 while some function reads argc/argv.
+inline const std::vector<uint8_t> X64RegAllocPool = {3, 6, 7, 8, 9, 10, 11, 14};
+inline const std::vector<uint8_t> X64RegAllocPoolWithArgRegs = {3, 6, 7, 8, 9, 10, 11, 14, 12, 13};
+
 // True for opcodes whose template uses only rax, rcx, rdx, xmm registers, the
 // operand cache and flags. Every other opcode (printing, file and heap
 // operations, string table lookups, calls) runs syscalls or helper sequences
@@ -122,17 +128,10 @@ inline bool opcodeKeepsPromotedRegisters(IrOpcode op) {
   }
 }
 
-// Chooses which locals of `function` live in the registers of `pool`. A local is
-// a candidate when no memory access can reach it (see IrLocalEscape.h); the most
-// used ones win, with uses inside loops counting ten times per nesting level
-// (loops are the backward jumps).
-inline std::vector<PromotedLocal>
-planPromotedLocals(const IrFunction &function, const uint8_t *pool, size_t poolSize) {
-  std::vector<PromotedLocal> plan;
-  const IrLocalEscapeInfo escape = analyzeIrLocalEscape(function);
-  if (escape.localCount == 0 || poolSize == 0) {
-    return plan;
-  }
+// Estimated executions of each instruction relative to the function entry, in fixed point with
+// 6 fractional bits: ten per loop level (loops are backward jumps), halved per conditional arm
+// up to three deep (else-if ladders reach their later arms far more often than 2^-depth).
+inline std::vector<uint64_t> estimateInstructionFrequency(const IrFunction &function) {
   const size_t count = function.instructions.size();
   // Loop nesting depth per instruction from the backward jumps.
   std::vector<int32_t> delta(count + 1, 0);
@@ -176,23 +175,41 @@ planPromotedLocals(const IrFunction &function, const uint8_t *pool, size_t poolS
     armDelta[i + 1] += 1;
     armDelta[target] -= 1;
   }
-  // Fixed point with 6 fractional bits: ten per loop level, halved per conditional arm up
-  // to three deep (else-if ladders reach their later arms far more often than 2^-depth).
-  std::vector<uint64_t> weight(escape.localCount, 0);
+  std::vector<uint64_t> frequency(count, 0);
   int32_t depth = 0;
   int32_t arms = 0;
   for (size_t i = 0; i < count; ++i) {
     depth += delta[i];
     arms += armDelta[i];
+    uint64_t use = 64;
+    for (int32_t level = 0; level < std::min<int32_t>(depth, 6); ++level) {
+      use *= 10;
+    }
+    use >>= std::min<int32_t>(arms, 3);
+    frequency[i] = use;
+  }
+  return frequency;
+}
+
+// Chooses which locals of `function` live in the registers of `pool`. A local is
+// a candidate when no memory access can reach it (see IrLocalEscape.h); the most
+// used ones win, with uses inside loops counting ten times per nesting level
+// (loops are the backward jumps).
+inline std::vector<PromotedLocal>
+planPromotedLocals(const IrFunction &function, const uint8_t *pool, size_t poolSize) {
+  std::vector<PromotedLocal> plan;
+  const IrLocalEscapeInfo escape = analyzeIrLocalEscape(function);
+  if (escape.localCount == 0 || poolSize == 0) {
+    return plan;
+  }
+  const size_t count = function.instructions.size();
+  const std::vector<uint64_t> frequency = estimateInstructionFrequency(function);
+  std::vector<uint64_t> weight(escape.localCount, 0);
+  for (size_t i = 0; i < count; ++i) {
     const IrInstruction &instruction = function.instructions[i];
     if ((instruction.op == IrOpcode::LoadLocal || instruction.op == IrOpcode::StoreLocal) &&
         instruction.imm < escape.localCount) {
-      uint64_t use = 64;
-      for (int32_t level = 0; level < std::min<int32_t>(depth, 6); ++level) {
-        use *= 10;
-      }
-      use >>= std::min<int32_t>(arms, 3);
-      weight[static_cast<size_t>(instruction.imm)] += use;
+      weight[static_cast<size_t>(instruction.imm)] += frequency[i];
     }
   }
   for (const uint32_t slot : escape.pinnedSlots) {

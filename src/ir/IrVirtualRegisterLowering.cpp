@@ -320,6 +320,20 @@ bool lowerIrModuleToBlockVirtualRegisters(const IrModule &module,
   return true;
 }
 
+bool lowerIrFunctionToBlockVirtualRegisters(const IrModule &module,
+                                            size_t functionIndex,
+                                            IrVirtualRegisterFunction &out,
+                                            std::string &error,
+                                            const IrVirtualRegisterLoweringOptions &options) {
+  error.clear();
+  if (functionIndex >= module.functions.size()) {
+    error = "virtual-register lowering got an invalid function index";
+    return false;
+  }
+  return lowerFunctionToVirtualRegisters(
+      module.functions[functionIndex], module, options.promoteLocals, out, error);
+}
+
 bool liftBlockVirtualRegistersToIrModule(const IrVirtualRegisterModule &virtualModule, IrModule &out, std::string &error) {
   error.clear();
   out = {};

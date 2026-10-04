@@ -85,10 +85,10 @@ struct IrVirtualRegisterModule {
 };
 
 struct IrVirtualRegisterLoweringOptions {
-  // Test-only switch: give every local that no memory access can reach (see
-  // IrLocalEscape.h) virtual registers, with block-boundary values and edge moves like the stack.
-  // Nothing consumes the result except the local-form verifier and the liveness pass; the
-  // allocator, scheduler and spill insertion expect the default form.
+  // Give every local that no memory access can reach (see IrLocalEscape.h) virtual registers,
+  // with block-boundary values and edge moves like the stack. The x86_64 native register
+  // allocator (NativeEmitterRegAlloc.h) consumes this form; the generic allocator, scheduler and
+  // spill insertion here expect the default form.
   bool promoteLocals = false;
 };
 
@@ -96,6 +96,13 @@ bool lowerIrModuleToBlockVirtualRegisters(const IrModule &module,
                                           IrVirtualRegisterModule &out,
                                           std::string &error,
                                           const IrVirtualRegisterLoweringOptions &options = {});
+
+// One function of `module` (the module supplies call stack effects).
+bool lowerIrFunctionToBlockVirtualRegisters(const IrModule &module,
+                                            size_t functionIndex,
+                                            IrVirtualRegisterFunction &out,
+                                            std::string &error,
+                                            const IrVirtualRegisterLoweringOptions &options = {});
 
 bool liftBlockVirtualRegistersToIrModule(const IrVirtualRegisterModule &virtualModule, IrModule &out, std::string &error);
 

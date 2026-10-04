@@ -455,6 +455,7 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ir/IrOptimizer.cpp
   src/ir/optimizer/IrPassCfgSimplify.cpp
   src/ir/optimizer/IrPassLoopRotate.cpp
+  src/ir/optimizer/IrPassIfConvert.cpp
   src/ir/optimizer/IrPassConstFold.cpp
   src/ir/optimizer/IrPassCopyProp.cpp
   src/ir/optimizer/IrPassDeadStore.cpp
@@ -464,7 +465,6 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ir/IrPrinter.cpp
   src/ir/IrVirtualRegisterAllocator.cpp
   src/ir/IrVirtualRegisterLiveness.cpp
-  src/ir/IrVirtualRegisterLowering.cpp
   src/ir/IrVirtualRegisterScheduler.cpp
   src/ir/IrVirtualRegisterSpillInsertion.cpp
   src/ir/IrVirtualRegisterVerifier.cpp
@@ -657,6 +657,7 @@ set(PRIMESTRUCT_CODEGEN_SOURCES
   src/native_emitter/NativeEmitterElf.cpp
   src/native_emitter/NativeEmitterEmit.cpp
   src/native_emitter/NativeEmitterFunctionEmit.cpp
+  src/native_emitter/NativeEmitterRegAlloc.cpp
   src/wasm_emitter/WasmEmitter.cpp
   src/wasm_emitter/WasmEmitterControlFlow.cpp
   src/wasm_emitter/WasmEmitterFunctionBodies.cpp
@@ -734,7 +735,8 @@ endif()
 
 # IR container pieces a runtime-only host needs: bytecode (de)serialization and
 # VM-target validation. Deliberately free of parser/semantics/lowerer code.
-add_library(primec_ir_core_lib src/ir/IrCfg.cpp src/ir/IrLocalEscape.cpp src/ir/IrModulePrinter.cpp src/ir/IrSerializer.cpp src/ir/IrValidation.cpp)
+add_library(primec_ir_core_lib src/ir/IrCfg.cpp src/ir/IrLocalEscape.cpp src/ir/IrModulePrinter.cpp src/ir/IrSerializer.cpp src/ir/IrValidation.cpp
+            src/ir/IrVirtualRegisterLowering.cpp)
 target_include_directories(primec_ir_core_lib PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)

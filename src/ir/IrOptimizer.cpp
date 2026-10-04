@@ -84,6 +84,12 @@ const std::vector<IrOptimizationPass> &irOptimizationPasses() {
        &ir_opt::runCopyPropPass},
       {{"dead-store", "turn stores to locals that are never read into pops", 1, IrTargetsNoGpu},
        &ir_opt::runDeadStorePass},
+      {{"if-convert",
+        "turn a local stepped by a constant under a comparison into straight-line code that adds "
+        "the comparison times the step (native only, where branches cost more than the multiply)",
+        2,
+        irValidationTargetBit(IrValidationTarget::Native)},
+       &ir_opt::runIfConvertPass},
       {{"loop-rotate",
         "move the test of a counting loop to its back edge, removing one jump per iteration (VM "
         "only: the native emitter's jump padding makes it slower there)",

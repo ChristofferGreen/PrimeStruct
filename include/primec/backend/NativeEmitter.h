@@ -51,6 +51,10 @@ struct NativeEmitterOptions {
   // compute on registers and immediates, writing operands to the memory stack
   // only where they must outlive an instruction sequence.
   bool deferOperands = false;
+  // x86_64 only: allocate registers for every value of a function, locals and operands alike
+  // (src/native_emitter/NativeEmitterRegAlloc.h), instead of promoting locals and deferring
+  // operands. The PRIMESTRUCT_NATIVE_REGALLOC environment variable forces it on (1) or off (0).
+  bool registerAllocation = false;
 };
 
 class NativeEmitter {

@@ -24,15 +24,16 @@ using optimizer_test::Outcome;
 using optimizer_test::run;
 
 // Optimizes a copy with `options` and returns whether it matched the original.
+// Optimizes for `target` and runs the result on the VM, whose semantics every target shares.
 bool optimizedMatches(const primec::IrModule &original,
                       const primec::OptimizationOptions &options,
                       const Outcome &baseline,
-                      std::string &detail) {
+                      std::string &detail,
+                      primec::IrValidationTarget target = primec::IrValidationTarget::Vm) {
   primec::IrModule optimized = original;
   primec::IrOptimizationReport report;
   std::string error;
-  if (!primec::optimizeIrModule(
-          optimized, options, primec::IrValidationTarget::Vm, report, error)) {
+  if (!primec::optimizeIrModule(optimized, options, target, report, error)) {
     detail = "optimizer failed: " + error;
     return false;
   }
@@ -118,13 +119,21 @@ TEST_CASE("each pass alone preserves the behavior of random programs") {
     primec::OptimizationOptions options;
     options.enabledPasses = {std::string(pass.info.name)};
     options.verifyEachPass = true;
+    // A native-only pass (if-convert) still has to keep the VM's behavior.
+    const primec::IrValidationTarget target =
+        (pass.info.targets & primec::irValidationTargetBit(primec::IrValidationTarget::Vm)) != 0
+            ? primec::IrValidationTarget::Vm
+            : primec::IrValidationTarget::Native;
     for (uint64_t seed = 5000; seed < 5400; ++seed) {
       const primec::IrModule original = makeModule(seed);
       const Outcome baseline = run(original);
       REQUIRE_MESSAGE(baseline.ok, "seed ", seed, ": ", baseline.error);
       std::string detail;
-      CHECK_MESSAGE(
-          optimizedMatches(original, options, baseline, detail), "seed ", seed, ": ", detail);
+      CHECK_MESSAGE(optimizedMatches(original, options, baseline, detail, target),
+                    "seed ",
+                    seed,
+                    ": ",
+                    detail);
     }
   }
 }

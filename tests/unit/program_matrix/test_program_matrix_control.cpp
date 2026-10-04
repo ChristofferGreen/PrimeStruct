@@ -460,6 +460,158 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+// Locals next to an array whose address is taken stay in their frame slots; the loop also
+// calls a function, divides and prints, all of which run through templates with the live
+// registers saved around them.
+TEST_CASE("register allocation keeps frame locals, calls and prints in a loop exact") {
+  program_matrix::ProgramCase program;
+  program.name = "register_allocation_frame_locals";
+  program.source = R"(
+[return<int>]
+mix([i32] a, [i32] b, [i32] c) {
+  return(plus(multiply(a, 3i32), minus(b, c)))
+}
+
+[return<int>]
+fact([i32] n) {
+  if(less_than(n, 2i32), then() { return(1i32) }, else() { return(multiply(n, fact(minus(n, 1i32)))) })
+}
+
+[return<int> effects(io_out)]
+main() {
+  [array<i32>] table{array<i32>(3i32, 5i32, 7i32, 11i32)}
+  [i64 mut] a0{1i64}
+  [i64 mut] a1{2i64}
+  [i64 mut] a2{3i64}
+  [i64 mut] a3{4i64}
+  [i64 mut] a4{5i64}
+  [i64 mut] a5{6i64}
+  [i64 mut] a6{7i64}
+  [i64 mut] a7{8i64}
+  [i64 mut] a8{9i64}
+  [i64 mut] a9{10i64}
+  [i64 mut] a10{11i64}
+  [i64 mut] a11{12i64}
+  [i32 mut] i{0i32}
+  [i32 mut] calls{0i32}
+  repeat(12i32) {
+    assign(a0, plus(a0, a11))
+    assign(a1, plus(a1, a0))
+    assign(a2, minus(a2, a1))
+    assign(a3, plus(a3, multiply(a2, 2i64)))
+    assign(a4, plus(a4, a3))
+    assign(a5, divide(plus(a5, a4), 3i64))
+    assign(a6, plus(a6, a5))
+    assign(a7, minus(a7, a6))
+    assign(a8, plus(a8, a7))
+    assign(a9, plus(a9, a8))
+    assign(a10, plus(a10, a9))
+    assign(a11, plus(a11, convert<i64>(table[minus(i, multiply(divide(i, 4i32), 4i32))])))
+    assign(calls, plus(calls, mix(i, calls, 2i32)))
+    if(equal(minus(i, multiply(divide(i, 5i32), 5i32)), 0i32)) {
+      print_line(a3)
+    }
+    assign(i, plus(i, 1i32))
+  }
+  print_line(a0)
+  print_line(a1)
+  print_line(a2)
+  print_line(a4)
+  print_line(a5)
+  print_line(a6)
+  print_line(a7)
+  print_line(a8)
+  print_line(a9)
+  print_line(a10)
+  print_line(a11)
+  print_line(calls)
+  print_line(fact(10i32))
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "-20\n-4276\n-45586\n535\n2578\n-9954\n-190465\n-81056\n-"
+                       "210336\n503899\n1128628\n2386501\n4801017\n90\n4059\n3628800\n";
+  program.onlyConfigs = {
+      "vm-step-O0", "vm-O0", "vm-O2", "native-O0", "native-O2", "optexe-O2", "exe"};
+  program_matrix::runProgramMatrix(program);
+}
+
+// Fourteen values live across the loop do not fit the allocator's registers: the coldest
+// spill to frame slots, and calls, divisions and prints run with registers saved around them.
+TEST_CASE("register allocation spills under pressure and stays exact") {
+  program_matrix::ProgramCase program;
+  program.name = "register_allocation_spills";
+  program.source = R"(
+[return<int>]
+mix([i32] a, [i32] b, [i32] c) {
+  return(plus(multiply(a, 3i32), minus(b, c)))
+}
+
+[return<int>]
+fact([i32] n) {
+  if(less_than(n, 2i32), then() { return(1i32) }, else() { return(multiply(n, fact(minus(n, 1i32)))) })
+}
+
+[return<int> effects(io_out)]
+main() {
+  [i64 mut] a0{1i64}
+  [i64 mut] a1{2i64}
+  [i64 mut] a2{3i64}
+  [i64 mut] a3{4i64}
+  [i64 mut] a4{5i64}
+  [i64 mut] a5{6i64}
+  [i64 mut] a6{7i64}
+  [i64 mut] a7{8i64}
+  [i64 mut] a8{9i64}
+  [i64 mut] a9{10i64}
+  [i64 mut] a10{11i64}
+  [i64 mut] a11{12i64}
+  [i32 mut] i{0i32}
+  [i32 mut] calls{0i32}
+  repeat(12i32) {
+    assign(a0, plus(a0, a11))
+    assign(a1, plus(a1, a0))
+    assign(a2, minus(a2, a1))
+    assign(a3, plus(a3, multiply(a2, 2i64)))
+    assign(a4, plus(a4, a3))
+    assign(a5, divide(plus(a5, a4), 3i64))
+    assign(a6, plus(a6, a5))
+    assign(a7, minus(a7, a6))
+    assign(a8, plus(a8, a7))
+    assign(a9, plus(a9, a8))
+    assign(a10, plus(a10, a9))
+    assign(a11, plus(a11, convert<i64>(minus(i, multiply(divide(i, 4i32), 4i32)))))
+    assign(calls, plus(calls, mix(i, calls, 2i32)))
+    if(equal(minus(i, multiply(divide(i, 5i32), 5i32)), 0i32)) {
+      print_line(a3)
+    }
+    assign(i, plus(i, 1i32))
+  }
+  print_line(a0)
+  print_line(a1)
+  print_line(a2)
+  print_line(a4)
+  print_line(a5)
+  print_line(a6)
+  print_line(a7)
+  print_line(a8)
+  print_line(a9)
+  print_line(a10)
+  print_line(a11)
+  print_line(calls)
+  print_line(fact(10i32))
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "-20\n-3340\n-28732\n229\n1289\n-5569\n-123761\n-53157\n-"
+                       "145039\n361738\n837217\n1818883\n3742895\n30\n4059\n3628800\n";
+  program.onlyConfigs = {
+      "vm-step-O0", "vm-O0", "vm-O2", "native-O0", "native-O2", "optexe-O2", "exe"};
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_CASE("i32 loops keep wrapping in promoted locals and fused updates") {
   program_matrix::ProgramCase program;
   program.name = "i32_wrap_loops";
