@@ -476,6 +476,8 @@ struct SemanticProgramPublishedRoutingLookups {
   std::unordered_map<uint64_t, std::size_t> localAutoFactIndicesByInitPathAndBindingNameId = {};
   std::unordered_map<uint64_t, std::size_t> queryFactIndicesByExpr = {};
   std::unordered_map<uint64_t, std::size_t> queryFactIndicesByResolvedPathAndCallNameId = {};
+  // Keyed by makeQueryFactSourcePositionKey(line, column); each bucket keeps publication order.
+  std::unordered_map<uint64_t, std::vector<std::size_t>> queryFactIndicesBySourcePosition = {};
   std::unordered_map<uint64_t, std::size_t> tryFactIndicesByExpr = {};
   std::unordered_map<uint64_t, std::size_t> tryFactIndicesByOperandPathAndSource = {};
 };
@@ -636,6 +638,9 @@ const SemanticProgramLocalAutoFact *semanticProgramLookupPublishedLocalAutoFactB
     const SemanticProgram &semanticProgram,
     SymbolId initializerPathId,
     SymbolId bindingNameId);
+inline uint64_t makeQueryFactSourcePositionKey(int line, int column) {
+  return (static_cast<uint64_t>(static_cast<uint32_t>(line)) << 32) | static_cast<uint32_t>(column);
+}
 const SemanticProgramQueryFact *semanticProgramLookupPublishedQueryFactBySemanticId(
     const SemanticProgram &semanticProgram,
     uint64_t semanticNodeId);

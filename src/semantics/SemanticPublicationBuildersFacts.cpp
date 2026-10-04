@@ -424,6 +424,12 @@ void publishQueryFacts(SemanticPublicationBuilderState &state,
       state.semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(
           publishedEntry.semanticNodeId, entryIndex);
     }
+    if (publishedEntry.sourceLine != 0 && publishedEntry.sourceColumn != 0) {
+      state.semanticProgram.publishedRoutingLookups
+          .queryFactIndicesBySourcePosition[makeQueryFactSourcePositionKey(
+              publishedEntry.sourceLine, publishedEntry.sourceColumn)]
+          .push_back(entryIndex);
+    }
     if (publishedEntry.resolvedPathId != InvalidSymbolId &&
         publishedEntry.callNameId != InvalidSymbolId) {
       state.semanticProgram.publishedRoutingLookups.queryFactIndicesByResolvedPathAndCallNameId

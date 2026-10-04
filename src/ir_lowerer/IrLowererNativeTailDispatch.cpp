@@ -62,6 +62,37 @@ const SemanticProgramQueryFact *findSourceQueryFact(
     sourcePositions.emplace_back(expr.args.front().sourceLine,
                                  expr.args.front().sourceColumn);
   }
+  const auto matchesCallName = [&](const SemanticProgramQueryFact &queryFact) {
+    const std::string_view callName =
+        queryFact.callNameId != InvalidSymbolId
+            ? semanticProgramResolveCallTargetString(*semanticProgram,
+                                                     queryFact.callNameId)
+            : std::string_view(queryFact.callName);
+    return callName == expr.name ||
+           (!expr.sourceName.empty() && callName == expr.sourceName);
+  };
+  const auto &bySourcePosition =
+      semanticProgram->publishedRoutingLookups.queryFactIndicesBySourcePosition;
+  if (!bySourcePosition.empty()) {
+    // Buckets keep publication order; the lowest matching index across both positions equals
+    // the first hit of a full scan. Facts without a source position are never indexed.
+    std::size_t best = semanticProgram->queryFacts.size();
+    for (const auto &sourcePosition : sourcePositions) {
+      const auto bucket = bySourcePosition.find(
+          makeQueryFactSourcePositionKey(sourcePosition.first, sourcePosition.second));
+      if (bucket == bySourcePosition.end()) {
+        continue;
+      }
+      for (const std::size_t index : bucket->second) {
+        if (index < best && matchesCallName(semanticProgram->queryFacts[index])) {
+          best = index;
+          break;
+        }
+      }
+    }
+    return best < semanticProgram->queryFacts.size() ? &semanticProgram->queryFacts[best]
+                                                     : nullptr;
+  }
   for (const auto &queryFact : semanticProgram->queryFacts) {
     const bool sameSourcePosition =
         std::any_of(sourcePositions.begin(), sourcePositions.end(),
@@ -69,16 +100,7 @@ const SemanticProgramQueryFact *findSourceQueryFact(
                       return queryFact.sourceLine == sourcePosition.first &&
                              queryFact.sourceColumn == sourcePosition.second;
                     });
-    if (!sameSourcePosition) {
-      continue;
-    }
-    const std::string_view callName =
-        queryFact.callNameId != InvalidSymbolId
-            ? semanticProgramResolveCallTargetString(*semanticProgram,
-                                                     queryFact.callNameId)
-            : std::string_view(queryFact.callName);
-    if (callName == expr.name ||
-        (!expr.sourceName.empty() && callName == expr.sourceName)) {
+    if (sameSourcePosition && matchesCallName(queryFact)) {
       return &queryFact;
     }
   }
