@@ -19,12 +19,14 @@ namespace primec::native_emitter {
 // value. Values joined by an edge move, or by a two-address operation whose operand dies there,
 // form classes when their ranges do not meet; classes are coloured greedily by estimated
 // executions per position held, and a class that finds no register everywhere gets one slot.
+// A class that only float operations read or write is coloured from xmm2-xmm15 instead.
 
 enum class RegAllocLocationKind : uint8_t {
   None, // never read (a compare fused into its branch)
   Imm,  // a constant, used as an immediate
   Reg,  // a machine register
   Slot, // a spill slot
+  Xmm,  // an xmm register, holding the value's bit pattern in its low lane
 };
 
 struct RegAllocLocation {
@@ -98,7 +100,8 @@ bool planNativeRegisterAllocation(const IrModule &module,
                                   std::string &error);
 
 // The machine registers holding a value that must survive instruction `index` of block
-// `blockIndex` (live before and after it, and not written by it).
+// `blockIndex` (live before and after it, and not written by it): general registers by number,
+// xmm registers as 16 + their number.
 std::vector<uint8_t>
 regAllocRegistersLiveAcross(const RegAllocFunctionPlan &plan, size_t blockIndex, size_t index);
 

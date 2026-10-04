@@ -396,6 +396,9 @@ class X64Emitter {
   void emitCvtss2sd(uint8_t dstXmm, uint8_t srcXmm);
   void emitCvtsd2ss(uint8_t dstXmm, uint8_t srcXmm);
   void emitLoadXmmImm64(uint8_t xmm, uint64_t bits, uint8_t scratchReg);
+  void emitMovapsXmm(uint8_t dstXmm, uint8_t srcXmm);
+  void emitMovqXmmFromMem(uint8_t xmm, uint8_t base, int32_t disp); // low 64 bits, upper zeroed
+  void emitMovqMemFromXmm(uint8_t base, int32_t disp, uint8_t xmm);
   void emitConvertUnsignedToFloat(bool isF64);
   void emitConvertFloatToUnsigned(bool isF64);
 

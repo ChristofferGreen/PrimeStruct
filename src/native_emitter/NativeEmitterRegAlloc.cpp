@@ -35,6 +35,95 @@ bool isIntegerComparison(IrOpcode op) {
 
 constexpr uint32_t NoPosition = std::numeric_limits<uint32_t>::max();
 
+// xmm0 and xmm1 are the float scratch registers of the inline code and the templates.
+constexpr uint8_t XmmPool[] = {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+
+bool isFloatOperation(IrOpcode op) {
+  switch (op) {
+  case IrOpcode::AddF32:
+  case IrOpcode::SubF32:
+  case IrOpcode::MulF32:
+  case IrOpcode::DivF32:
+  case IrOpcode::NegF32:
+  case IrOpcode::AddF64:
+  case IrOpcode::SubF64:
+  case IrOpcode::MulF64:
+  case IrOpcode::DivF64:
+  case IrOpcode::NegF64:
+  case IrOpcode::ConvertF32ToF64:
+  case IrOpcode::ConvertF64ToF32:
+    return true;
+  default:
+    return false;
+  }
+}
+
+// Records whether `op` reads and writes its values as floats (in xmm registers) or as integers
+// (in general registers). Templates, calls, returns and frame accesses take either.
+void markRegisterClassAccess(IrOpcode op,
+                             const RegAllocInstruction &instruction,
+                             std::vector<bool> &floatAccess,
+                             std::vector<bool> &integerAccess) {
+  const auto mark = [](const std::vector<uint32_t> &values, std::vector<bool> &access) {
+    for (const uint32_t value : values) {
+      access[value] = true;
+    }
+  };
+  if (isFloatOperation(op)) {
+    mark(instruction.uses, floatAccess);
+    mark(instruction.defs, floatAccess);
+    return;
+  }
+  switch (op) {
+  case IrOpcode::CmpEqF32:
+  case IrOpcode::CmpNeF32:
+  case IrOpcode::CmpLtF32:
+  case IrOpcode::CmpLeF32:
+  case IrOpcode::CmpGtF32:
+  case IrOpcode::CmpGeF32:
+  case IrOpcode::CmpEqF64:
+  case IrOpcode::CmpNeF64:
+  case IrOpcode::CmpLtF64:
+  case IrOpcode::CmpLeF64:
+  case IrOpcode::CmpGtF64:
+  case IrOpcode::CmpGeF64:
+  case IrOpcode::ConvertF32ToI32:
+  case IrOpcode::ConvertF32ToI64:
+  case IrOpcode::ConvertF64ToI32:
+  case IrOpcode::ConvertF64ToI64:
+    mark(instruction.uses, floatAccess);
+    mark(instruction.defs, integerAccess);
+    return;
+  case IrOpcode::ConvertI32ToF32:
+  case IrOpcode::ConvertI64ToF32:
+  case IrOpcode::ConvertI32ToF64:
+  case IrOpcode::ConvertI64ToF64:
+    mark(instruction.uses, integerAccess);
+    mark(instruction.defs, floatAccess);
+    return;
+  case IrOpcode::AddI32:
+  case IrOpcode::AddI64:
+  case IrOpcode::SubI32:
+  case IrOpcode::SubI64:
+  case IrOpcode::MulI32:
+  case IrOpcode::MulI64:
+  case IrOpcode::NegI32:
+  case IrOpcode::NegI64:
+  case IrOpcode::SextI32:
+  case IrOpcode::LoadStringByte:
+  case IrOpcode::JumpIfZero:
+    mark(instruction.uses, integerAccess);
+    mark(instruction.defs, integerAccess);
+    return;
+  default:
+    break;
+  }
+  if (isIntegerComparison(op)) {
+    mark(instruction.uses, integerAccess);
+    mark(instruction.defs, integerAccess);
+  }
+}
+
 } // namespace
 
 bool planNativeRegisterAllocation(const IrModule &module,
@@ -254,8 +343,19 @@ bool planNativeRegisterAllocation(const IrModule &module,
   // Two-address preferences: the result of `a OP b` (and of Neg/SextI32) is best computed in a's
   // register when a dies there.
   std::vector<std::vector<uint32_t>> preferred(valueCount);
+  // Which values float operations and inline integer operations touch: a class that only float
+  // operations touch lives in xmm registers.
+  std::vector<bool> floatAccess(valueCount, false);
+  std::vector<bool> integerAccess(valueCount, false);
   for (const RegAllocBlock &block : out.blocks) {
     for (const RegAllocInstruction &instruction : block.instructions) {
+      if (!instruction.folded) {
+        markRegisterClassAccess(
+            module.functions[functionIndex].instructions[instruction.irIndex].op,
+            instruction,
+            floatAccess,
+            integerAccess);
+      }
       const double executions = static_cast<double>(frequency[instruction.irIndex]);
       for (const uint32_t use : instruction.uses) {
         weight[use] += executions;
@@ -264,15 +364,17 @@ bool planNativeRegisterAllocation(const IrModule &module,
         weight[def] += executions;
       }
       const IrOpcode op = module.functions[functionIndex].instructions[instruction.irIndex].op;
-      const bool twoAddress =
-          op == IrOpcode::AddI32 || op == IrOpcode::AddI64 || op == IrOpcode::SubI32 ||
-          op == IrOpcode::SubI64 || op == IrOpcode::MulI32 || op == IrOpcode::MulI64 ||
-          op == IrOpcode::NegI32 || op == IrOpcode::NegI64 || op == IrOpcode::SextI32 ||
-          op == IrOpcode::NegF32 || op == IrOpcode::NegF64;
+      const bool twoAddress = op == IrOpcode::AddI32 || op == IrOpcode::AddI64 ||
+                              op == IrOpcode::SubI32 || op == IrOpcode::SubI64 ||
+                              op == IrOpcode::MulI32 || op == IrOpcode::MulI64 ||
+                              op == IrOpcode::NegI32 || op == IrOpcode::NegI64 ||
+                              op == IrOpcode::SextI32 || isFloatOperation(op);
       if (twoAddress && instruction.defs.size() == 1) {
         // Add and multiply commute, so either operand's register will do.
         const bool commutes = op == IrOpcode::AddI32 || op == IrOpcode::AddI64 ||
-                              op == IrOpcode::MulI32 || op == IrOpcode::MulI64;
+                              op == IrOpcode::MulI32 || op == IrOpcode::MulI64 ||
+                              op == IrOpcode::AddF32 || op == IrOpcode::AddF64 ||
+                              op == IrOpcode::MulF32 || op == IrOpcode::MulF64;
         for (size_t operand = 0; operand < instruction.uses.size() && (operand == 0 || commutes);
              ++operand) {
           const uint32_t use = instruction.uses[operand];
@@ -443,25 +545,44 @@ bool planNativeRegisterAllocation(const IrModule &module,
   });
   std::vector<RegAllocLocation> home(valueCount);
   uint32_t slotCount = 0;
+  // Registers as bits: general register r is bit r, xmm register x is bit 16 + x.
+  const auto registerBit = [](const RegAllocLocation &where) -> int {
+    if (where.kind == RegAllocLocationKind::Reg) {
+      return where.reg;
+    }
+    if (where.kind == RegAllocLocationKind::Xmm) {
+      return 16 + where.reg;
+    }
+    return -1;
+  };
   const auto registersAround = [&](uint32_t value, uint32_t root) {
     uint32_t used = 0;
     for (const uint32_t other : neighbours[value]) {
-      if (find(other) != root && home[other].kind == RegAllocLocationKind::Reg) {
-        used |= 1u << home[other].reg;
+      const int bit = registerBit(home[other]);
+      if (find(other) != root && bit >= 0) {
+        used |= 1u << bit;
       }
     }
     return used;
   };
-  const auto preferredRegister = [&](uint32_t value, uint32_t used) -> int {
+  const auto preferredRegister = [&](uint32_t value, uint32_t used, RegAllocLocationKind kind) {
     for (const uint32_t partner : preferred[value]) {
-      if (home[partner].kind == RegAllocLocationKind::Reg &&
-          (used & (1u << home[partner].reg)) == 0) {
-        return home[partner].reg;
+      const int bit = registerBit(home[partner]);
+      if (home[partner].kind == kind && (used & (1u << bit)) == 0) {
+        return static_cast<int>(home[partner].reg);
       }
     }
     return -1;
   };
-  const auto firstFree = [&](uint32_t used) -> int {
+  const auto firstFree = [&](uint32_t used, RegAllocLocationKind kind) -> int {
+    if (kind == RegAllocLocationKind::Xmm) {
+      for (const uint8_t reg : XmmPool) {
+        if ((used & (1u << (16 + reg))) == 0) {
+          return reg;
+        }
+      }
+      return -1;
+    }
     for (const uint8_t reg : pool) {
       if ((used & (1u << reg)) == 0) {
         return reg;
@@ -471,22 +592,28 @@ bool planNativeRegisterAllocation(const IrModule &module,
   };
   for (const uint32_t root : classes) {
     uint32_t used = 0;
+    bool floats = false;
+    bool integers = false;
     for (const uint32_t member : members[root]) {
       used |= registersAround(member, root);
+      floats = floats || floatAccess[member];
+      integers = integers || integerAccess[member];
     }
+    const RegAllocLocationKind kind =
+        floats && !integers ? RegAllocLocationKind::Xmm : RegAllocLocationKind::Reg;
     int chosen = -1;
     for (const uint32_t member : members[root]) {
-      chosen = preferredRegister(member, used);
+      chosen = preferredRegister(member, used, kind);
       if (chosen >= 0) {
         break;
       }
     }
     if (chosen < 0) {
-      chosen = firstFree(used);
+      chosen = firstFree(used, kind);
     }
     if (chosen >= 0) {
       for (const uint32_t member : members[root]) {
-        home[member] = {RegAllocLocationKind::Reg, static_cast<uint8_t>(chosen), 0, 0};
+        home[member] = {kind, static_cast<uint8_t>(chosen), 0, 0};
       }
       continue;
     }
@@ -526,9 +653,12 @@ regAllocRegistersLiveAcross(const RegAllocFunctionPlan &plan, size_t blockIndex,
   const uint32_t def = regAllocDefPosition(index);
   for (const uint32_t value : plan.blocks[blockIndex].values) {
     const RegAllocLocation &location = plan.locations[value];
-    if (location.kind == RegAllocLocationKind::Reg && plan.rangeStart[value] < use &&
-        plan.rangeEnd[value] > def) {
-      registers.push_back(location.reg);
+    if (plan.rangeStart[value] < use && plan.rangeEnd[value] > def) {
+      if (location.kind == RegAllocLocationKind::Reg) {
+        registers.push_back(location.reg);
+      } else if (location.kind == RegAllocLocationKind::Xmm) {
+        registers.push_back(static_cast<uint8_t>(16 + location.reg));
+      }
     }
   }
   std::sort(registers.begin(), registers.end());

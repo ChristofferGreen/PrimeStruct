@@ -236,6 +236,35 @@ inline void X64Emitter::emitLoadXmmImm64(uint8_t xmm, uint64_t bits, uint8_t scr
   emitMovqXmmFromReg(xmm, scratchReg);
 }
 
+inline void X64Emitter::emitMovapsXmm(uint8_t dstXmm, uint8_t srcXmm) {
+  if (dstXmm >= 8 || srcXmm >= 8) {
+    emitRex(false, dstXmm, srcXmm);
+  }
+  emitByte(0x0F);
+  emitByte(0x28); // MOVAPS xmm, xmm/m128
+  emitModRmReg(dstXmm, srcXmm);
+}
+
+inline void X64Emitter::emitMovqXmmFromMem(uint8_t xmm, uint8_t base, int32_t disp) {
+  emitByte(0xF3);
+  if (xmm >= 8 || base >= 8) {
+    emitRex(false, xmm, base);
+  }
+  emitByte(0x0F);
+  emitByte(0x7E); // MOVQ xmm, m64
+  emitModRmBaseDisp32(xmm, base, disp);
+}
+
+inline void X64Emitter::emitMovqMemFromXmm(uint8_t base, int32_t disp, uint8_t xmm) {
+  emitByte(0x66);
+  if (xmm >= 8 || base >= 8) {
+    emitRex(false, xmm, base);
+  }
+  emitByte(0x0F);
+  emitByte(0xD6); // MOVQ m64, xmm
+  emitModRmBaseDisp32(xmm, base, disp);
+}
+
 inline void X64Emitter::emitFloatBinaryOp(bool isF64, uint8_t opcode) {
   emitPopReg(1); // b
   emitPopReg(0); // a

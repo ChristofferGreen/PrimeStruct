@@ -5,7 +5,8 @@
 // registers afterwards, with the registers live across it saved in their frame slots.
 //
 // rax, rcx and rdx are never allocated: they are the scratch registers for spilled values,
-// immediates, parallel-move cycles and the templates themselves.
+// immediates, parallel-move cycles and the templates themselves. Values only float operations
+// touch live in xmm2-xmm15; xmm0 and xmm1 are the float scratch registers.
 
 inline int32_t X64Emitter::regAllocSlotDisp(uint32_t pseudoLocal) const {
   return -static_cast<int32_t>(frameSize_ - localOffset(pseudoLocal));
@@ -49,6 +50,9 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
     case RegAllocLocationKind::Imm:
       emitMovRegImm64(scratch, where.imm);
       return scratch;
+    case RegAllocLocationKind::Xmm:
+      emitMovqRegFromXmm(scratch, where.reg);
+      return scratch;
     case RegAllocLocationKind::None:
       break;
     }
@@ -74,6 +78,8 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
       }
     } else if (where.kind == RegAllocLocationKind::Slot) {
       emitStoreMem(5, slotDisp(where.slot), reg);
+    } else if (where.kind == RegAllocLocationKind::Xmm) {
+      emitMovqXmmFromReg(where.reg, reg);
     }
   };
   // Where to compute `value`: its own register unless that is `avoid` (an operand still
@@ -84,6 +90,69 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
       return where.reg;
     }
     return Rax;
+  };
+  // The float counterparts: the xmm register holding `value` (loaded into xmm `scratch` unless it
+  // lives in one; an immediate goes through rcx), writing `value` from an xmm register, and
+  // where to compute it (its own xmm register unless that is `avoid`, otherwise xmm0).
+  const auto xmmOf = [&](uint32_t value, uint8_t scratch) -> uint8_t {
+    const RegAllocLocation &where = location(value);
+    switch (where.kind) {
+    case RegAllocLocationKind::Xmm:
+      return where.reg;
+    case RegAllocLocationKind::Reg:
+      emitMovqXmmFromReg(scratch, where.reg);
+      return scratch;
+    case RegAllocLocationKind::Slot:
+      emitMovqXmmFromMem(scratch, 5, slotDisp(where.slot));
+      return scratch;
+    case RegAllocLocationKind::Imm:
+      if (where.imm == 0) {
+        emitXorpsXmm(scratch, scratch);
+      } else {
+        emitLoadXmmImm64(scratch, where.imm, Rcx);
+      }
+      return scratch;
+    case RegAllocLocationKind::None:
+      break;
+    }
+    emitXorpsXmm(scratch, scratch);
+    return scratch;
+  };
+  const auto storeXmm = [&](uint32_t value, uint8_t xmm) {
+    const RegAllocLocation &where = location(value);
+    if (where.kind == RegAllocLocationKind::Xmm) {
+      if (where.reg != xmm) {
+        emitMovapsXmm(where.reg, xmm);
+      }
+    } else if (where.kind == RegAllocLocationKind::Reg) {
+      emitMovqRegFromXmm(where.reg, xmm);
+    } else if (where.kind == RegAllocLocationKind::Slot) {
+      emitMovqMemFromXmm(5, slotDisp(where.slot), xmm);
+    }
+  };
+  const auto xmmTarget = [&](uint32_t value, int avoid) -> uint8_t {
+    const RegAllocLocation &where = location(value);
+    if (where.kind == RegAllocLocationKind::Xmm && static_cast<int>(where.reg) != avoid) {
+      return where.reg;
+    }
+    return 0;
+  };
+  // Saves and restores a register numbered as regAllocRegistersLiveAcross numbers them.
+  const auto saveRegister = [&](uint8_t reg) {
+    const int32_t disp = regAllocSlotDisp(saveBaseLocal + reg);
+    if (reg >= 16) {
+      emitMovqMemFromXmm(5, disp, static_cast<uint8_t>(reg - 16));
+    } else {
+      emitStoreMem(5, disp, reg);
+    }
+  };
+  const auto restoreRegister = [&](uint8_t reg) {
+    const int32_t disp = regAllocSlotDisp(saveBaseLocal + reg);
+    if (reg >= 16) {
+      emitMovqXmmFromMem(static_cast<uint8_t>(reg - 16), 5, disp);
+    } else {
+      emitLoadMem(reg, 5, disp);
+    }
   };
 
   // Parallel copies on an edge: every destination receives its source's value from before the
@@ -96,7 +165,7 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
     if (a.kind != b.kind) {
       return false;
     }
-    if (a.kind == RegAllocLocationKind::Reg) {
+    if (a.kind == RegAllocLocationKind::Reg || a.kind == RegAllocLocationKind::Xmm) {
       return a.reg == b.reg;
     }
     if (a.kind == RegAllocLocationKind::Slot) {
@@ -105,6 +174,30 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
     return false;
   };
   const auto emitCopy = [&](const RegAllocLocation &source, const RegAllocLocation &destination) {
+    if (destination.kind == RegAllocLocationKind::Xmm) {
+      if (source.kind == RegAllocLocationKind::Xmm) {
+        emitMovapsXmm(destination.reg, source.reg);
+      } else if (source.kind == RegAllocLocationKind::Reg) {
+        emitMovqXmmFromReg(destination.reg, source.reg);
+      } else if (source.kind == RegAllocLocationKind::Slot) {
+        emitMovqXmmFromMem(destination.reg, 5, slotDisp(source.slot));
+      } else if (source.kind == RegAllocLocationKind::Imm) {
+        if (source.imm == 0) {
+          emitXorpsXmm(destination.reg, destination.reg);
+        } else {
+          emitLoadXmmImm64(destination.reg, source.imm, Rcx);
+        }
+      }
+      return;
+    }
+    if (source.kind == RegAllocLocationKind::Xmm) {
+      if (destination.kind == RegAllocLocationKind::Reg) {
+        emitMovqRegFromXmm(destination.reg, source.reg);
+      } else if (destination.kind == RegAllocLocationKind::Slot) {
+        emitMovqMemFromXmm(5, slotDisp(destination.slot), source.reg);
+      }
+      return;
+    }
     uint8_t reg = Rcx;
     if (source.kind == RegAllocLocationKind::Reg) {
       reg = source.reg;
@@ -132,7 +225,8 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
     for (const RegAllocMove &move : edge.moves) {
       const RegAllocLocation &destination = location(move.destination);
       if (destination.kind != RegAllocLocationKind::Reg &&
-          destination.kind != RegAllocLocationKind::Slot) {
+          destination.kind != RegAllocLocationKind::Slot &&
+          destination.kind != RegAllocLocationKind::Xmm) {
         continue;
       }
       const RegAllocLocation &source = location(move.source);
@@ -277,6 +371,8 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
         emitMovRegImm64(where.reg, 0);
       } else if (where.kind == RegAllocLocationKind::Slot) {
         emitStoreImm64Mem(5, slotDisp(where.slot), 0);
+      } else if (where.kind == RegAllocLocationKind::Xmm) {
+        emitXorpsXmm(where.reg, where.reg);
       }
     }
   }
@@ -417,8 +513,8 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
       case IrOpcode::SubF64:
       case IrOpcode::MulF64:
       case IrOpcode::DivF64: {
-        // Floats live in general registers as their bit patterns; the arithmetic runs in xmm0
-        // and xmm1, which (like rax and rcx) nothing else holds, so no register is saved.
+        // `d = a OP b` in d's xmm register (xmm0 when d lives elsewhere or b is there); xmm0,
+        // xmm1 and rcx are scratch, so no register is saved.
         const bool isF64 = ir.op == IrOpcode::AddF64 || ir.op == IrOpcode::SubF64 ||
                            ir.op == IrOpcode::MulF64 || ir.op == IrOpcode::DivF64;
         uint8_t opcode = 0x58; // add
@@ -429,19 +525,41 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
         } else if (ir.op == IrOpcode::DivF32 || ir.op == IrOpcode::DivF64) {
           opcode = 0x5E;
         }
-        emitMovqXmmFromReg(0, valueReg(instruction.uses[0], Rax));
-        emitMovqXmmFromReg(1, valueReg(instruction.uses[1], Rcx));
-        emitSseBinaryOp(isF64, opcode, 0, 1);
+        uint32_t a = instruction.uses[0];
+        uint32_t b = instruction.uses[1];
         const uint32_t d = instruction.defs[0];
-        const uint8_t target = targetReg(d, -1);
-        emitMovqRegFromXmm(target, 0);
-        storeValue(d, target);
+        const bool commutes = opcode == 0x58 || opcode == 0x59;
+        if (commutes && location(d).kind == RegAllocLocationKind::Xmm &&
+            location(b).kind == RegAllocLocationKind::Xmm && location(b).reg == location(d).reg) {
+          std::swap(a, b);
+        }
+        const RegAllocLocation &right = location(b);
+        const uint8_t target =
+            xmmTarget(d, right.kind == RegAllocLocationKind::Xmm ? right.reg : -1);
+        const uint8_t left = xmmOf(a, target);
+        if (left != target) {
+          emitMovapsXmm(target, left);
+        }
+        emitSseBinaryOp(isF64, opcode, target, xmmOf(b, 1));
+        storeXmm(d, target);
         break;
       }
       case IrOpcode::NegF32:
       case IrOpcode::NegF64: {
-        // Flip the sign bit in place: btc target, 31 or 63.
         const uint32_t d = instruction.defs[0];
+        if (location(d).kind == RegAllocLocationKind::Xmm) {
+          // xor with the sign mask.
+          const uint8_t target = xmmTarget(d, -1);
+          const uint8_t source = xmmOf(instruction.uses[0], target);
+          if (source != target) {
+            emitMovapsXmm(target, source);
+          }
+          emitLoadXmmImm64(
+              1, ir.op == IrOpcode::NegF64 ? 0x8000000000000000ull : 0x80000000ull, Rcx);
+          emitXorpsXmm(target, 1);
+          break;
+        }
+        // Flip the sign bit in place: btc target, 31 or 63.
         const uint8_t target = targetReg(d, -1);
         loadInto(instruction.uses[0], target);
         emitRex(true, 0, target);
@@ -491,12 +609,12 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
           break;
         }
         const bool isF64 = ir.op >= IrOpcode::CmpEqF64 && ir.op <= IrOpcode::CmpGeF64;
-        emitMovqXmmFromReg(0, valueReg(instruction.uses[0], Rax));
-        emitMovqXmmFromReg(1, valueReg(instruction.uses[1], Rcx));
+        const uint8_t left = xmmOf(instruction.uses[0], 0);
+        const uint8_t right = xmmOf(instruction.uses[1], 1);
         const uint32_t d = instruction.defs[0];
         const uint8_t target = targetReg(d, -1);
         emitXorRegReg(target, target); // before the compare: xor sets the flags
-        emitComiss(isF64, 0, 1);
+        emitComiss(isF64, left, right);
         emitSetccReg(target, cc);
         storeValue(d, target);
         break;
@@ -507,14 +625,13 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
       case IrOpcode::ConvertI64ToF64: {
         const bool isF64 = ir.op == IrOpcode::ConvertI32ToF64 || ir.op == IrOpcode::ConvertI64ToF64;
         const uint8_t source = valueReg(instruction.uses[0], Rax);
-        // cvtsi2s writes only the low lane of xmm0 and so waits for its last writer; clearing
-        // xmm0 first breaks that dependency.
-        emitXorpsXmm(0, 0);
-        emitCvtsi2s(isF64, 0, source);
+        // cvtsi2s writes only the low lane of its target and so waits for the last writer;
+        // clearing the target first breaks that dependency.
         const uint32_t d = instruction.defs[0];
-        const uint8_t target = targetReg(d, -1);
-        emitMovqRegFromXmm(target, 0);
-        storeValue(d, target);
+        const uint8_t target = xmmTarget(d, -1);
+        emitXorpsXmm(target, target);
+        emitCvtsi2s(isF64, target, source);
+        storeXmm(d, target);
         break;
       }
       case IrOpcode::ConvertF32ToI32:
@@ -522,25 +639,24 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
       case IrOpcode::ConvertF64ToI32:
       case IrOpcode::ConvertF64ToI64: {
         const bool isF64 = ir.op == IrOpcode::ConvertF64ToI32 || ir.op == IrOpcode::ConvertF64ToI64;
-        emitMovqXmmFromReg(0, valueReg(instruction.uses[0], Rax));
+        const uint8_t source = xmmOf(instruction.uses[0], 0);
         const uint32_t d = instruction.defs[0];
         const uint8_t target = targetReg(d, -1);
-        emitCvtts2si(isF64, target, 0);
+        emitCvtts2si(isF64, target, source);
         storeValue(d, target);
         break;
       }
       case IrOpcode::ConvertF32ToF64:
       case IrOpcode::ConvertF64ToF32: {
-        emitMovqXmmFromReg(0, valueReg(instruction.uses[0], Rax));
-        if (ir.op == IrOpcode::ConvertF32ToF64) {
-          emitCvtss2sd(0, 0);
-        } else {
-          emitCvtsd2ss(0, 0);
-        }
+        const uint8_t source = xmmOf(instruction.uses[0], 0);
         const uint32_t d = instruction.defs[0];
-        const uint8_t target = targetReg(d, -1);
-        emitMovqRegFromXmm(target, 0);
-        storeValue(d, target);
+        const uint8_t target = xmmTarget(d, -1);
+        if (ir.op == IrOpcode::ConvertF32ToF64) {
+          emitCvtss2sd(target, source);
+        } else {
+          emitCvtsd2ss(target, source);
+        }
+        storeXmm(d, target);
         break;
       }
       case IrOpcode::LoadLocal: {
@@ -642,7 +758,7 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
         const std::vector<uint8_t> saved =
             regAllocRegistersLiveAcross(plan, blockIndex, instruction.irIndex);
         for (const uint8_t reg : saved) {
-          emitStoreMem(5, regAllocSlotDisp(saveBaseLocal + reg), reg);
+          saveRegister(reg);
         }
         for (const uint32_t use : instruction.uses) {
           emitSpillReg(valueReg(use, Rax));
@@ -654,7 +770,7 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
           storeValue(instruction.defs[0], Rax);
         }
         for (const uint8_t reg : saved) {
-          emitLoadMem(reg, 5, regAllocSlotDisp(saveBaseLocal + reg));
+          restoreRegister(reg);
         }
         break;
       }
@@ -692,7 +808,7 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
           saved = regAllocRegistersLiveAcross(plan, blockIndex, instruction.irIndex);
         }
         for (const uint8_t reg : saved) {
-          emitStoreMem(5, regAllocSlotDisp(saveBaseLocal + reg), reg);
+          saveRegister(reg);
         }
         for (const uint32_t use : instruction.uses) {
           emitSpillReg(valueReg(use, Rax));
@@ -710,7 +826,7 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
           }
         }
         for (const uint8_t reg : saved) {
-          emitLoadMem(reg, 5, regAllocSlotDisp(saveBaseLocal + reg));
+          restoreRegister(reg);
         }
         break;
       }

@@ -1,6 +1,6 @@
 {
   "schema": "primestruct_benchmark_baseline_v1",
-  "notes": "Baseline thresholds for benchmark regression checks. primestruct_vm runs primevm at its default -O2 (the threaded fast kernel plus the optimizer; the time includes compiling the source) and primestruct_native runs -O2 native code (register allocation on x86_64). Their limits sit about three to four times above the measured means (2026-10-04, Linux x86_64: native 4.0/6.8/16.9 ms and vm 62/78/153 ms for aggregate/json_scan/json_parse), so losing register allocation, the fast kernel or an optimizer pass fails them while ordinary machine noise does not. call_fib (recursive calls) and float_series (f64 arithmetic) were added 2026-10-04 with native 16/63 ms and vm 141/650 ms. primestruct_optexe and primestruct_native are optional rows.",
+  "notes": "Baseline thresholds for benchmark regression checks. primestruct_vm runs primevm at its default -O2 (the threaded fast kernel plus the optimizer; the time includes compiling the source) and primestruct_native runs -O2 native code (register allocation on x86_64). Their limits sit about three to four times above the measured means (2026-10-04, Linux x86_64: native 4.0/6.8/16.9 ms and vm 62/78/153 ms for aggregate/json_scan/json_parse), so losing register allocation, the fast kernel or an optimizer pass fails them while ordinary machine noise does not. call_fib (recursive calls) and float_series (f64 arithmetic) were added 2026-10-04 with native 16/25 ms (floats in xmm registers) and vm 141/650 ms. primestruct_optexe and primestruct_native are optional rows.",
   "entries": [
     {
       "phase": "runtime",
@@ -134,7 +134,7 @@
       "benchmark": "float_series",
       "entry": "primestruct_native",
       "optional": true,
-      "max_mean_seconds": 0.2,
+      "max_mean_seconds": 0.1,
       "max_artifact_size_bytes": 4096
     },
     {

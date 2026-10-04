@@ -38,7 +38,8 @@ bool emitNativeFunctions(const IrModule &module,
     const NativeEmitterFunctionLayout &layout = layouts[functionIndex];
     const bool isEntryFunction = functionIndex == entryIndex;
     // Register allocation (x86_64, NativeEmitterRegAlloc.h) plans before the prologue: its spill
-    // and save slots extend the frame past the locals and the print scratch area.
+    // slots and the save slots of the 16 general and 16 xmm registers extend the frame past the
+    // locals and the print scratch area.
     RegAllocFunctionPlan regAllocPlan;
     bool useRegisterAllocation = false;
     if constexpr (!kIsArm64) {
@@ -69,7 +70,7 @@ bool emitNativeFunctions(const IrModule &module,
     }
     const uint32_t spillBaseLocal = static_cast<uint32_t>(layout.localCount + layout.scratchSlots);
     const uint64_t regAllocBytes =
-        useRegisterAllocation ? (static_cast<uint64_t>(regAllocPlan.spillSlotCount) + 16) * 16 : 0;
+        useRegisterAllocation ? (static_cast<uint64_t>(regAllocPlan.spillSlotCount) + 32) * 16 : 0;
     uint64_t frameSize = alignTo(layout.frameSize + regAllocBytes, 16);
     if (isEntryFunction) {
       constexpr uint64_t ValueStackBytes = 1024ull * 1024ull;

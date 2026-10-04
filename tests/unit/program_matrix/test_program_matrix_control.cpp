@@ -673,6 +673,103 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+// Seventeen floats live across a loop with a call in it: more than the fourteen allocatable xmm
+// registers, so some spill, and the xmm registers live across each call are saved around it.
+TEST_CASE("register allocation spills and saves xmm registers") {
+  program_matrix::ProgramCase program;
+  program.name = "register_allocation_xmm_pressure";
+  program.source = R"(
+[return<f64>]
+blend([f64] a, [f64] b) {
+  return(plus(multiply(a, 0.5f64), b))
+}
+
+[return<int> effects(io_out)]
+main() {
+  [f64 mut] f0{1.0f64}
+  [f64 mut] f1{2.0f64}
+  [f64 mut] f2{3.0f64}
+  [f64 mut] f3{4.0f64}
+  [f64 mut] f4{5.0f64}
+  [f64 mut] f5{6.0f64}
+  [f64 mut] f6{7.0f64}
+  [f64 mut] f7{8.0f64}
+  [f64 mut] f8{9.0f64}
+  [f64 mut] f9{10.0f64}
+  [f64 mut] f10{11.0f64}
+  [f64 mut] f11{12.0f64}
+  [f64 mut] f12{13.0f64}
+  [f64 mut] f13{14.0f64}
+  [f64 mut] f14{15.0f64}
+  [f64 mut] f15{16.0f64}
+  [f64 mut] f16{17.0f64}
+  [i32 mut] i{0i32}
+  while(less_than(i, 25i32)) {
+    assign(f0, plus(f0, multiply(f1, 0.125f64)))
+    assign(f1, plus(f1, multiply(f2, 0.125f64)))
+    assign(f2, blend(f2, f3))
+    assign(f3, plus(f3, multiply(f4, 0.125f64)))
+    assign(f4, divide(minus(f4, f5), 1.25f64))
+    assign(f5, plus(f5, multiply(f6, 0.125f64)))
+    assign(f6, plus(f6, multiply(f7, 0.125f64)))
+    assign(f7, blend(f7, f8))
+    assign(f8, plus(f8, multiply(f9, 0.125f64)))
+    assign(f9, divide(minus(f9, f10), 1.25f64))
+    assign(f10, plus(f10, multiply(f11, 0.125f64)))
+    assign(f11, plus(f11, multiply(f12, 0.125f64)))
+    assign(f12, blend(f12, f13))
+    assign(f13, plus(f13, multiply(f14, 0.125f64)))
+    assign(f14, divide(minus(f14, f15), 1.25f64))
+    assign(f15, plus(f15, multiply(f16, 0.125f64)))
+    assign(f16, plus(f16, multiply(f0, 0.125f64)))
+    if(greater_than(f0, f16)) {
+      assign(f16, negate(f16))
+    }
+    assign(i, plus(i, 1i32))
+  }
+  print_line(convert<i64>(multiply(f0, 1000.0f64)))
+  print_line(convert<i64>(multiply(f1, 1000.0f64)))
+  print_line(convert<i64>(multiply(f2, 1000.0f64)))
+  print_line(convert<i64>(multiply(f3, 1000.0f64)))
+  print_line(convert<i64>(multiply(f4, 1000.0f64)))
+  print_line(convert<i64>(multiply(f5, 1000.0f64)))
+  print_line(convert<i64>(multiply(f6, 1000.0f64)))
+  print_line(convert<i64>(multiply(f7, 1000.0f64)))
+  print_line(convert<i64>(multiply(f8, 1000.0f64)))
+  print_line(convert<i64>(multiply(f9, 1000.0f64)))
+  print_line(convert<i64>(multiply(f10, 1000.0f64)))
+  print_line(convert<i64>(multiply(f11, 1000.0f64)))
+  print_line(convert<i64>(multiply(f12, 1000.0f64)))
+  print_line(convert<i64>(multiply(f13, 1000.0f64)))
+  print_line(convert<i64>(multiply(f14, 1000.0f64)))
+  print_line(convert<i64>(multiply(f15, 1000.0f64)))
+  print_line(convert<i64>(multiply(f16, 1000.0f64)))
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "-127334\n"
+                       "-251363\n"
+                       "-248478\n"
+                       "-104572\n"
+                       "220700\n"
+                       "-188308\n"
+                       "-432580\n"
+                       "-499861\n"
+                       "-251919\n"
+                       "138157\n"
+                       "-174480\n"
+                       "-472127\n"
+                       "-640996\n"
+                       "-383474\n"
+                       "-269777\n"
+                       "73076\n"
+                       "-30168\n";
+  program.onlyConfigs = {
+      "vm-step-O0", "vm-O0", "vm-O2", "native-O0", "native-O2", "optexe-O2", "exe"};
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_CASE("i32 loops keep wrapping in promoted locals and fused updates") {
   program_matrix::ProgramCase program;
   program.name = "i32_wrap_loops";
