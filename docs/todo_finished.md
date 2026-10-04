@@ -1969,6 +1969,7 @@ are left unarchived.
 | TODO-5475 | optexe: strings, print, file I/O and entry arguments | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
 | TODO-5476 | Run the corpus and benchmarks through optexe; gate compile time | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5477 | Define i32 overflow semantics across vm, native and exe | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
+| TODO-5478 | Remove the super-linear front-end cost on very large functions | [2026-10.md](todo_archive/2026-10.md) | 2026-10-04 |
 | TODO-5479 | Fast VM execution loop for plain runs | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5480 | IR passes for the patterns lowering leaves behind | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
 | TODO-5481 | Gate vm, native and optexe rows in the benchmark baseline | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |

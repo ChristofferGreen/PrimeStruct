@@ -101,7 +101,6 @@ of sync with them.
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
 | TODO-5483 | Verify arm64 SextI32 on a macOS machine | deferred | ir-semantics |
-| TODO-5478 | Remove the super-linear front-end cost on very large functions | deferred | compile-speed |
 
 ### Ready Now
 
@@ -111,7 +110,7 @@ of sync with them.
 
 ### Priority Lanes
 
-- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe ; deferred: TODO-5478
+- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
 ### Execution Queue
 
@@ -130,16 +129,3 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - acceptance:
     - the `i32` matrix cases (`i32_wrap_basic`, `i32_wrap_loops`, `i32_wrap_builtins`, `i32_limit_builtins`) pass on arm64 macOS native; an encoding unit test pins the SXTW bytes (done: `primestruct.ir.native_codegen` checks SXTW and the float-compare branch conditions through `primec/testing/NativeEmitterEncodings.h`; the float compares now use MI/LS so NaN compares false, also unexecuted)
   - stop_rule: do not change i64/u64 behavior or the I32 arithmetic opcodes themselves; lowering also uses them for address arithmetic.
-
-- [ ] TODO-5478: Remove the super-linear front-end cost on very large functions
-  - owner: ai
-  - status: deferred
-  - deferred_reason: pre-existing and outside the optimizer programme; recorded so the compile-time gate of TODO-5476 is read correctly.
-  - created_at: 2026-10-03
-  - phase: Optimizing backends
-  - parallel_track: compile-speed
-  - scope: `primec`/`primevm` took 3.3 s for a 2,000-statement `main`, 6.5 s for 4,000, 17 s for 8,000 and 84 s for 20,000 (185,739 IR instructions) when first measured; after the front-end fixes below it is 1.1 s, 2.4 s and 5.4 s at 2,000, 4,000 and 8,000 statements (about 0.6 ms per statement, spread over validation, fact collection and lowering with no single super-linear step), all before any emitter or the host compiler runs (host clang is ~1 s of that at every size for foldable programs). Profile semantics validation and lowering on that shape and remove the super-linear step. Reproducer generator: docs/OptimizingBackendsPlan.md section 9.1.
-  - profile_note: a callgrind profile of `primec --emit=ir benchmarks/json_parse.prime` (4 KB of source, 445M instructions, about 100 ms; the VM run is another 120 ms at -O2) puts 79% in `Semantics::validate`, of which 57% is `collectPilotRoutingSemanticProductFacts` re-inferring every call through `inferCallSnapshotDataUncached`/`inferBindingTypeFromInitializer` after validation has finished; the self time is spread over string building (`operator+`, `operator==(string, const char*)`, `findStdlibSurfaceMetadataByCanonicalPath`), so no single hotspot. For short scripts this is now the largest share of `primevm` wall time; the collection ran twice (once at the end of `run()`, then again after node-id assignment invalidated it); the first, discarded run is removed (445M to 317M instructions, json_parse compile 100 ms to about 55 ms); memoizing the per-expression name classifiers (`isSimpleCallName` in semantics and lowering, `isRootBuiltinName`, `getBuiltinArrayAccessName`) in `CompileContext::nameClassifiers` takes it to 223M and about 39 ms. The remaining cost is one collection whose local-aware refinement re-infers every call, and `makeBuiltinCollectionDispatchResolvers` rebuilding its std::function adapters per call (9%); folding the refinement into validation is the next step. The lowerer's `findSourceQueryFact` scanned every published query fact per call (9% of instructions and more in cache misses, quadratic in statement count); it now uses `publishedRoutingLookups.queryFactIndicesBySourcePosition` (n=2,000: 1.6 s to 1.1 s; n=4,000: 3.6 s to 2.4 s). What is left is flat: allocation and string building spread over validation, fact collection and lowering, so the 4x acceptance on the 20,000-statement shape is not reachable without the structural change above. Measured since: the collection pass (`collectPilotRoutingSemanticProductFacts`) is 35% of a json_parse compile, almost all of it in `inferCallInitializerBinding` (26%), whose cost is the per-call construction of dozens of closures (about 9% in `makeBuiltinCollectionDispatchResolvers`, whose 15 `std::function` members each heap-allocate because the captures exceed the 16-byte small buffer); a per-expression `resolveCalleePath` memo inside the snapshot scope gave no gain, and moving the binding computation out of the path-only consumers would just move the work to the later passes that need it. Compile is 20-28% of a `primevm` run (json_parse: 39 of 140 ms), so a shared-context rewrite of the resolver closures is worth about 1-2 ms there; deferred until the 4x target or a larger program makes it matter.
-  - acceptance:
-    - the 20,000-statement reproducer compiles at least 4x faster with identical IR output
-  - stop_rule: if the cost is inherent to a data structure shared with the semantic product, record the profile and stop.
