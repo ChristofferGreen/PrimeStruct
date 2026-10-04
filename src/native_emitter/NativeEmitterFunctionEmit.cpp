@@ -36,8 +36,8 @@ bool emitNativeFunctions(const IrModule &module,
   // emitted, so calls know how their callee takes its arguments.
   std::vector<RegAllocFunctionPlan> regAllocPlans(module.functions.size());
   std::vector<bool> registerAllocated(module.functions.size(), false);
-  // Functions whose arguments arrive in rax, rcx and rdx instead of on the operand stack: at most
-  // three parameters, not the entry, and every caller register-allocated (the template callers
+  // Functions whose first three arguments arrive in rax, rcx and rdx (the others still on the
+  // operand stack): not the entry, and every caller register-allocated (the template callers
   // pass arguments on the operand stack).
   std::vector<bool> registerArguments(module.functions.size(), false);
   if constexpr (!kIsArm64) {
@@ -68,9 +68,8 @@ bool emitNativeFunctions(const IrModule &module,
       }
       for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
         const RegAllocFunctionPlan &plan = regAllocPlans[functionIndex];
-        registerArguments[functionIndex] = registerAllocated[functionIndex] &&
-                                           functionIndex != entryIndex && !plan.blocks.empty() &&
-                                           plan.blocks[0].entryValues.size() <= 3;
+        registerArguments[functionIndex] =
+            registerAllocated[functionIndex] && functionIndex != entryIndex && !plan.blocks.empty();
       }
       for (size_t caller = 0; caller < module.functions.size(); ++caller) {
         if (registerAllocated[caller]) {

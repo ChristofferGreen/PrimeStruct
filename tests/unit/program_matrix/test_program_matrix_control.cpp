@@ -770,8 +770,8 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
-// Register-allocated callees with at most three parameters take their arguments in rax, rcx
-// and rdx; four parameters still travel on the operand stack.
+// Register-allocated callees take their first three arguments in rax, rcx and rdx and any
+// others on the operand stack.
 TEST_CASE("register allocation passes call arguments in registers") {
   program_matrix::ProgramCase program;
   program.name = "register_allocation_call_arguments";
@@ -915,6 +915,64 @@ main() {
 )";
   program.exitCode = 0;
   program.stdoutText = "2\n2\n2\n14\n41\n50\n2\n2\n14\n41\n4\n";
+  program_matrix::runProgramMatrix(program);
+}
+
+// Division (signed and unsigned), frame-array element loads and stores and six-argument calls
+// are emitted inline by the register allocator; the arguments after the third go on the
+// operand stack.
+TEST_CASE("register allocation inlines division, indirect access and long argument lists") {
+  program_matrix::ProgramCase program;
+  program.name = "register_allocation_inline_templates";
+  program.source = R"(
+[return<i64>]
+weigh([i64] a, [f64] b, [i64] c, [i32] d, [f64] e, [i64] f) {
+  [f64] mixed{plus(multiply(b, 2.0f64), e)}
+  return(plus(plus(multiply(a, 7i64), divide(c, 3i64)), plus(convert<i64>(mixed), multiply(convert<i64>(d), f))))
+}
+
+[return<i64>]
+gcd5([i64] a, [i64] b, [i64] depth, [i64] bias, [i64] scale) {
+  if(equal(b, 0i64)) {
+    return(plus(multiply(a, scale), plus(depth, bias)))
+  }
+  return(gcd5(b, minus(a, multiply(divide(a, b), b)), plus(depth, 1i64), bias, scale))
+}
+
+[return<int> effects(io_out)]
+main() {
+  [array<i32> mut] table{array<i32>(3i32, 5i32, 7i32, 11i32, 13i32, 17i32)}
+  [u64 mut] big{18446744073709551615u64}
+  [u64 mut] quotients{0u64}
+  [i64 mut] signedSum{0i64}
+  [i64 mut] total{0i64}
+  [i32 mut] i{0i32}
+  while(less_than(i, 30i32)) {
+    [i32] slot{minus(i, multiply(divide(i, 6i32), 6i32))}
+    assign(table[slot], plus(table[slot], divide(minus(i, 15i32), 4i32)))
+    assign(quotients, plus(quotients, divide(big, plus(convert<u64>(i), 2u64))))
+    assign(signedSum, plus(signedSum, divide(convert<i64>(minus(7i32, multiply(i, 3i32))), -4i64)))
+    assign(total, plus(total, weigh(convert<i64>(i), 1.25f64, signedSum, table[slot], 0.5f64, 3i64)))
+    assign(i, plus(i, 1i32))
+  }
+  print_line(table[0i32])
+  print_line(table[5i32])
+  print_line(quotients)
+  print_line(signedSum)
+  print_line(total)
+  print_line(gcd5(1071i64, 462i64, 0i64, 5i64, 10i64))
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "0\n"
+                       "19\n"
+                       "502585147455685708\n"
+                       "265\n"
+                       "4530\n"
+                       "218\n";
+  program.onlyConfigs = {
+      "vm-step-O0", "vm-O0", "vm-O2", "native-O0", "native-O2", "optexe-O2", "exe"};
   program_matrix::runProgramMatrix(program);
 }
 

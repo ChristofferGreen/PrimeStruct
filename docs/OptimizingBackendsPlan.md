@@ -556,8 +556,9 @@ locals and operands alike, instead of promoting at most seven locals and deferri
   from xmm2-xmm15 (saved around calls and templates like the general registers); a float that also meets an integer
   operation lives in a general register as its bit pattern and passes through xmm0/xmm1. A call saves the registers live across it and takes its result from rax; a
   return leaves its value in rax. Every function is planned before any is emitted, so a register-allocated callee
-  with at most three parameters whose callers are all register-allocated takes its arguments in rax, rcx and rdx;
-  other calls pass them on the operand stack. Every other opcode, prints, division and
+  whose callers are all register-allocated takes its first three arguments in rax, rcx and rdx (the rest on the
+  operand stack); other calls pass them all on the operand stack. Division, `AddressOfLocal` and indirect loads and
+  stores are inline too (only scratch registers change, so nothing is saved). Every other opcode, prints, heap and
   file I/O included, runs its ordinary template on the memory operand stack, with its operands pushed there, its
   results popped into their registers and the registers live across it saved in frame slots. A function
   whose register form cannot be built falls back to the template emitter; `--opt-report` on the native backend ends
