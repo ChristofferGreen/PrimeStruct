@@ -100,7 +100,6 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5496 | Callees destroy their owned parameters | ready | lifecycle |
 | TODO-5497 | Destroy uniform-field structs and locals left by error propagation | ready | lifecycle |
 | TODO-5493 | Inferred bindings in generic struct helpers leak a diagnostic span | ready | diagnostics |
 | TODO-5494 | Local pointers cannot escape into containers or outer locals | ready | escapes |
@@ -108,21 +107,19 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5496 (lifecycle): callees destroy their owned parameters
 - TODO-5497 (lifecycle): destroy uniform-field structs and locals left by error propagation
 - TODO-5493 (diagnostics): inferred bindings in generic struct helpers leak a diagnostic span
 - TODO-5494 (escapes): local pointers cannot escape into containers or outer locals
 
 ### Immediate Next 10
 
-1. TODO-5496
-2. TODO-5497
-3. TODO-5493
-4. TODO-5494
+1. TODO-5497
+2. TODO-5493
+3. TODO-5494
 
 ### Priority Lanes
 
-- Memory safety and parameter modes (docs/spec/value-lifecycle.md Parameter Passing; docs/spec/type-system.md Ownership and Mutability): TODO-5496, TODO-5497, TODO-5494
+- Memory safety and parameter modes (docs/spec/value-lifecycle.md Parameter Passing; docs/spec/type-system.md Ownership and Mutability): TODO-5497, TODO-5494
 - Diagnostics: TODO-5493
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
@@ -131,18 +128,6 @@ of sync with them.
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 ### Task Blocks
-
-- [ ] TODO-5496: Callees destroy their owned parameters
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-05
-  - phase: Memory safety
-  - parallel_track: lifecycle
-  - scope: A `copy` or `move` parameter is owned by the callee, so the callee destroys it when its scope ends (unless it moves it on, for example into a container); the caller then does not destroy a binding it passed to a `move` parameter. A value pushed into a container is destroyed by the container. Today `drop(*slot)` (`vectorDropSlot`, `soaColumnDropSlot`, ring buffer `Destroy`) only runs sum payload destructors, so struct elements with `Destroy` are never destroyed; route it through the stack destroy helper.
-  - acceptance:
-    - compile-run tests on VM, native and C++: a counting `Destroy` runs once by the callee for a `copy` and for a `move` parameter, never by the caller for the moved binding, and once by the vector for a pushed element
-    - full release gate and corpus differential green
-  - stop_rule: no new syntax.
 
 - [ ] TODO-5493: Inferred bindings in generic struct helpers leak a diagnostic span
   - owner: ai

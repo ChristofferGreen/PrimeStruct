@@ -71,9 +71,11 @@
   destroyed when its scope ends on every exit path (fall-through, `return`, including from nested blocks of an inlined
   callee), last declared first, unless its value was moved out (`move(x)`, a `move` parameter) or named in the returned
   value; a per-local drop flag tracks this at run time. A struct field initialized from a place copies it, and
-  `assign` of an owning value destroys the old value and copies the new one. Parameters are not destroyed by the
-  callee yet (TODO-5496), and structs whose fields all have one scalar type, and locals left by error propagation out
-  of a nested block, are not destroyed yet (TODO-5497); both only leak.
+  `assign` of an owning value destroys the old value and copies the new one. A `copy` or `move` parameter is
+  destroyed by the callee when its body ends (the caller does not destroy a binding it passed to a `move` parameter),
+  `init(slot, x)` hands `x` to the storage, and dropping a container slot (`pop`, `clear`, `Destroy` of the container)
+  destroys the element. Structs whose fields all have one scalar type, and locals left by error propagation out of a
+  nested block, are not destroyed yet (TODO-5497); both only leak.
 
 ## Uninitialized Storage (draft)
 - **Purpose:** model explicit, inline uninitialized storage without implicit construction (C-style tagged storage and

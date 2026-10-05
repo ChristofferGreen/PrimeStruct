@@ -6,7 +6,7 @@ TEST_SUITE_BEGIN("primestruct.program_matrix.lifecycle");
 // when its scope ends on every exit path, unless its value was moved or returned; field
 // initializers and assignments copy from places so no two values own the same storage.
 
-TEST_CASE("Destroy runs at scope end in reverse order, never for moved or returned values") {
+TEST_CASE("Destroy runs at scope end in reverse order, and for a moved value in the callee") {
   program_matrix::ProgramCase program;
   program.name = "destroy_scope_end";
   program.source = R"(
@@ -71,7 +71,7 @@ main() {
 }
 )";
   program.exitCode = 0;
-  program.stdoutText = "3\n2\n1\n100\n4\n101\n5\n4\n102\n103\n8\n8\n104\n105\n6\n";
+  program.stdoutText = "3\n2\n1\n100\n4\n101\n5\n4\n102\n7\n103\n8\n8\n104\n105\n6\n";
   program_matrix::runProgramMatrix(program);
 }
 
@@ -182,6 +182,96 @@ main() {
 )";
   program.exitCode = 0;
   program.stdoutText = "1\n2\n1\n0\n";
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("a container destroys its elements when they are dropped") {
+  program_matrix::ProgramCase program;
+  program.name = "destroy_container_elements";
+  program.source = R"(
+import /std/collections/*
+
+[struct]
+Noisy() {
+  [i32 mut] id{0i32}
+  [i64 mut] pad{0i64}
+
+  [public effects(io_out)]
+  Destroy() {
+    print_line(this.id)
+  }
+}
+
+[effects(io_out heap_alloc) return<int>]
+main() {
+  [Vector<Noisy> mut] items{vector<Noisy>()}
+  vectorPush<Noisy>(items, Noisy{1i32, 0i64})
+  vectorPush<Noisy>(items, Noisy{2i32, 0i64})
+  vectorPush<Noisy>(items, Noisy{3i32, 0i64})
+  print_line(100i32)
+  vectorPop<Noisy>(items)
+  print_line(101i32)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "100\n3\n101\n1\n2\n";
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("a callee destroys its copy and move parameters") {
+  program_matrix::ProgramCase program;
+  program.name = "destroy_owned_parameters";
+  program.source = R"(
+import /std/collections/*
+
+[struct]
+Noisy() {
+  [i32 mut] id{0i32}
+  [i64 mut] pad{0i64}
+
+  [public]
+  Copy([Reference<Self>] other) {
+    assign(this.id, plus(other.id, 10i32))
+    assign(this.pad, other.pad)
+  }
+
+  [public effects(io_out)]
+  Destroy() {
+    print_line(this.id)
+  }
+}
+
+[effects(io_out) return<void>]
+take_copy([Noisy copy] value) {
+  print_line(200i32)
+}
+
+[effects(io_out) return<void>]
+take_move([Noisy move] value) {
+  print_line(201i32)
+}
+
+[effects(io_out heap_alloc) return<int>]
+main() {
+  [Noisy] kept{Noisy{1i32, 0i64}}
+  take_copy(kept)
+  print_line(100i32)
+  [Noisy] given{Noisy{2i32, 0i64}}
+  take_move(given)
+  print_line(101i32)
+  [Noisy] explicit{Noisy{3i32, 0i64}}
+  take_move(move(explicit))
+  print_line(102i32)
+  [Vector<Noisy> mut] items{vector<Noisy>()}
+  [Noisy] pushed{Noisy{4i32, 0i64}}
+  vectorPush<Noisy>(items, pushed)
+  print_line(103i32)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "200\n11\n100\n201\n2\n101\n201\n3\n102\n103\n4\n1\n";
   program_matrix::runProgramMatrix(program);
 }
 

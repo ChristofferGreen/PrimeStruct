@@ -1984,6 +1984,7 @@ are left unarchived.
 | TODO-5491 | Flow-sensitive use-after-move | [2026-10.md](todo_archive/2026-10.md) | 2026-10-05 |
 | TODO-5492 | `Destroy` runs at scope end | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5495 | Every owning value has exactly one owner | [2026-10.md](todo_archive/2026-10.md) | 2026-10-05 |
+| TODO-5496 | Callees destroy their owned parameters | [2026-10.md](todo_archive/2026-10.md) | 2026-10-05 |
 
 <!-- INDEX-END -->
 

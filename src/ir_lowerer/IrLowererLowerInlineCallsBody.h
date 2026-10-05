@@ -554,3 +554,33 @@
       popInlineStack();
       return false;
     }
+    // A `copy` or `move` parameter is the callee's own value: the callee body's scope destroys
+    // it unless the callee moves it on (docs/spec/value-lifecycle.md, Ownership).
+    for (const Expr &param : callParams) {
+      if (fileScopeStack.empty() || (!ir_lowerer::parameterHasTransform(param, "copy") &&
+                                     !ir_lowerer::parameterHasTransform(param, "move"))) {
+        continue;
+      }
+      auto ownedIt = calleeLocals.find(param.name);
+      if (ownedIt == calleeLocals.end() || ownedIt->second.structTypeName.empty() ||
+          (ownedIt->second.kind != LocalInfo::Kind::Value &&
+           ownedIt->second.kind != LocalInfo::Kind::Reference) ||
+          !ir_lowerer::structNeedsDestroyHelpers(
+              ownedIt->second.structTypeName,
+              [&](const std::string &path) {
+                return ir_lowerer::findStackDestroyHelper(setupStage.defMap, path);
+              },
+              [&](const std::string &path, StructSlotLayoutInfo &layoutOut) {
+                return resolveStructSlotLayout(path, layoutOut);
+              })) {
+        continue;
+      }
+      LocalInfo &ownedInfo = ownedIt->second;
+      ownedInfo.dropFlagLocal = allocTempLocal();
+      function.instructions.push_back({IrOpcode::PushI32, 1});
+      function.instructions.push_back(
+          {IrOpcode::StoreLocal, static_cast<uint64_t>(ownedInfo.dropFlagLocal)});
+      setupStage.dropEntries.push_back(
+          {ownedInfo.index, ownedInfo.dropFlagLocal, ownedInfo.structTypeName});
+      fileScopeStack.back().push_back(-static_cast<int32_t>(setupStage.dropEntries.size()));
+    }

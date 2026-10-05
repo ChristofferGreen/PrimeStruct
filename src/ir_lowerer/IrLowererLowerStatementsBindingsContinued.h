@@ -464,6 +464,13 @@
       }
       return true;
     }
+    if (isSimpleCallName(stmt, "init") && stmt.args.size() == 2 &&
+        stmt.args[1].kind == Expr::Kind::Name) {
+      // The initialized storage (a container slot, for example) owns the value now.
+      ir_lowerer::emitReleaseDropFlag(localsIn, stmt.args[1].name, [&](IrOpcode op, uint64_t imm) {
+        function.instructions.push_back({op, imm});
+      });
+    }
     const auto uninitializedInitDropResult = ir_lowerer::tryEmitUninitializedStorageInitDropStatement(
         stmt,
         localsIn,
@@ -498,7 +505,33 @@
           handledOut = false;
           const Definition *sumDef = sumHelpers.resolveSumDefinitionByPath(access.typeInfo.structPath);
           if (sumDef == nullptr) {
-            return true;
+            // A struct value dropped from storage (a container slot) runs its destroy helpers.
+            const std::string &structPath = access.typeInfo.structPath;
+            const auto findDestroyHelper = [&](const std::string &path) {
+              return ir_lowerer::findStackDestroyHelper(defMap, path);
+            };
+            const auto resolveLayout = [&](const std::string &path,
+                                           StructSlotLayoutInfo &layoutOut) {
+              return resolveStructSlotLayout(path, layoutOut);
+            };
+            if (structPath.empty() || !ir_lowerer::structNeedsDestroyHelpers(
+                                          structPath, findDestroyHelper, resolveLayout)) {
+              return true;
+            }
+            handledOut = true;
+            if (valuePtrLocal < 0) {
+              return true;
+            }
+            return ir_lowerer::emitStructDestroyHelpersFromPtr(
+                valuePtrLocal,
+                structPath,
+                findDestroyHelper,
+                resolveLayout,
+                [&]() { return allocTempLocal(); },
+                [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+                localsIn,
+                emitInlineDefinitionCall,
+                error);
           }
           handledOut = true;
           if (valuePtrLocal < 0) {
@@ -777,6 +810,29 @@
               [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
               srcPtrLocal,
               aggregateStructPath);
+        } else {
+          // A value returned from a place (a field, an element) is the caller's own copy; the
+          // place keeps owning its value.
+          bool ranCopyHelper = false;
+          if (!ir_lowerer::emitStructCopyHelpersFromPtrs(
+                  ptrLocal,
+                  srcPtrLocal,
+                  aggregateStructPath,
+                  [&](const std::string &path) -> const Definition * {
+                    auto copyIt = defMap.find(path + "/Copy");
+                    return copyIt == defMap.end() ? nullptr : copyIt->second;
+                  },
+                  [&](const std::string &path, StructSlotLayoutInfo &layoutOut) {
+                    return resolveStructSlotLayout(path, layoutOut);
+                  },
+                  [&]() { return allocTempLocal(); },
+                  [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+                  *emittedReturnLocals,
+                  emitInlineDefinitionCall,
+                  ranCopyHelper,
+                  error)) {
+            return false;
+          }
         }
         rewrittenReturnLocals = localsIn;
         LocalInfo returnInfo;
