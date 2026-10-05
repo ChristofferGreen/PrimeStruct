@@ -251,15 +251,142 @@ TEST_CASE("native JIT addresses frame locals like the interpreter") {
   }
 }
 
-TEST_CASE("modules outside the native JIT subset stay on the interpreter") {
+TEST_CASE("native JIT runs heap programs like the interpreter") {
+  // Heap addresses are the VM's (tagged, 16 bytes per slot), loads and stores reach live slots
+  // only, reallocation copies and frees, and every misuse faults with the VM's message.
+  expectSame(optimizer_test::heapProgram(), "heap");
+
+  const std::vector<std::string> prefix = {
+      "PushI64 2", "HeapAlloc", "StoreLocal 0", "LoadLocal 0", "PushI64 5", "StoreIndirect", "Pop"};
+  struct Case {
+    const char *name;
+    std::vector<std::string> code;
+  };
+  const std::vector<Case> cases = {
+      {"load_after_free", {"LoadLocal 0", "HeapFree", "LoadLocal 0", "LoadIndirect", "ReturnI64"}},
+      {"store_after_free",
+       {"LoadLocal 0", "HeapFree", "LoadLocal 0", "PushI64 1", "StoreIndirect", "ReturnI64"}},
+      {"past_the_heap", {"LoadLocal 0", "PushI64 32", "AddI64", "LoadIndirect", "ReturnI64"}},
+      {"unaligned_heap", {"LoadLocal 0", "PushI64 8", "AddI64", "LoadIndirect", "ReturnI64"}},
+      {"double_free",
+       {"LoadLocal 0", "HeapFree", "LoadLocal 0", "HeapFree", "PushI64 0", "ReturnI64"}},
+      {"free_inside",
+       {"LoadLocal 0", "PushI64 16", "AddI64", "HeapFree", "PushI64 0", "ReturnI64"}},
+      {"free_frame_address", {"AddressOfLocal 0", "HeapFree", "PushI64 0", "ReturnI64"}},
+      {"realloc_after_free",
+       {"LoadLocal 0", "HeapFree", "LoadLocal 0", "PushI64 4", "HeapRealloc", "ReturnI64"}},
+      {"old_block_after_realloc",
+       {"LoadLocal 0",
+        "PushI64 4",
+        "HeapRealloc",
+        "Pop",
+        "LoadLocal 0",
+        "LoadIndirect",
+        "ReturnI64"}},
+      {"realloc_shrinks_and_copies",
+       {"LoadLocal 0", "PushI64 1", "HeapRealloc", "LoadIndirect", "ReturnI64"}},
+      {"realloc_to_zero_frees",
+       {"LoadLocal 0",
+        "PushI64 0",
+        "HeapRealloc",
+        "PrintU64 1",
+        "LoadLocal 0",
+        "LoadIndirect",
+        "ReturnI64"}},
+      {"zero_slots_is_null",
+       {"PushI64 0",
+        "HeapAlloc",
+        "PrintU64 1",
+        "PushI64 0",
+        "HeapFree",
+        "LoadLocal 0",
+        "LoadIndirect",
+        "ReturnI64"}},
+  };
+  for (const Case &testCase : cases) {
+    std::vector<std::string> lines = prefix;
+    lines.insert(lines.end(), testCase.code.begin(), testCase.code.end());
+    expectSame(moduleFrom(lines), testCase.name);
+  }
+}
+
+TEST_CASE("native JIT runs strings, argv and files like the interpreter") {
+  const std::filesystem::path file = primec::testing::testScratchPath("native_jit/io.txt");
+  std::filesystem::create_directories(file.parent_path());
+  primec::IrModule module = optimizer_test::ioProgram(file.string());
+  module.functions[0].metadata.effectMask = primec::EffectIoOut;
   std::string reason;
-  CHECK_FALSE(primec::nativeJitAccepts(optimizer_test::heapProgram(), reason));
-  CHECK(reason.find("opcode") == 0);
-  const primec::IrModule floats =
-      moduleFrom({"PushF32 0x3f800000", "ConvertF32ToF64", "ConvertF64ToI64", "ReturnI32"});
-  CHECK_FALSE(primec::nativeJitAccepts(floats, reason));
-  const JitRun jit = runJit(floats);
-  CHECK_FALSE(jit.executed);
+  REQUIRE_MESSAGE(primec::nativeJitAccepts(module, reason), reason);
+  const std::vector<std::string_view> args = {"program", "first", "se cond"};
+  const JitRun jit = runJit(module, args);
+  REQUIRE(jit.executed);
+  CHECK(jit.outcome == runVm(module, args));
+  CHECK(jit.outcome.ok);
+
+  // Dynamic string operations on indices that name no string.
+  for (const char *op : {"PrintStringDynamic 1", "LoadStringByteDynamic"}) {
+    INFO(op);
+    std::vector<std::string> lines = {"PushI64 5"};
+    if (std::string_view(op) == "LoadStringByteDynamic") {
+      lines.push_back("PushI64 0");
+    }
+    lines.insert(lines.end(), {op, "PushI32 0", "ReturnI32"});
+    primec::IrModule faulting = moduleFrom(lines);
+    faulting.stringTable = {"abc"};
+    expectSame(faulting, op);
+  }
+}
+
+TEST_CASE("native JIT computes f32 values and float conversions like the interpreter") {
+  // f32 arithmetic and the conversions without machine code run in the runtime; the results
+  // (zero-extended f32 bits, saturated or NaN-mapped integers) travel through the registers.
+  const std::vector<std::string> constants = {"0x3fc00000",  // 1.5
+                                              "0xc0200000",  // -2.5
+                                              "0x7fc00000",  // NaN
+                                              "0x7f800000",  // inf
+                                              "0x4f800000"}; // 2^32
+  std::vector<std::string> lines;
+  for (const std::string &a : constants) {
+    for (const std::string &b : constants) {
+      for (const char *op : {"AddF32", "SubF32", "MulF32", "DivF32", "CmpLtF32", "CmpEqF32"}) {
+        lines.insert(lines.end(), {"PushF32 " + a, "PushF32 " + b, op, "PrintU64 1"});
+      }
+    }
+    for (const char *op :
+         {"NegF32", "ConvertF32ToI32", "ConvertF32ToI64", "ConvertF32ToU64", "ConvertF32ToF64"}) {
+      lines.insert(lines.end(), {"PushF32 " + a, op, "PrintU64 1"});
+    }
+  }
+  for (const char *value : {"-1", "5000000000", "-9223372036854775808", "7"}) {
+    for (const char *op : {"ConvertI64ToF32", "ConvertU64ToF32", "ConvertI32ToF32"}) {
+      lines.insert(lines.end(), {std::string("PushI64 ") + value, op, "PrintU64 1"});
+    }
+    lines.insert(
+        lines.end(),
+        {std::string("PushI64 ") + value, "ConvertI64ToF64", "ConvertF64ToI32", "PrintU64 1"});
+    lines.insert(
+        lines.end(),
+        {std::string("PushI64 ") + value, "ConvertI64ToF64", "ConvertF64ToU64", "PrintU64 1"});
+    lines.insert(
+        lines.end(),
+        {std::string("PushI64 ") + value, "ConvertI64ToF64", "ConvertF64ToF32", "PrintU64 1"});
+  }
+  lines.insert(lines.end(),
+               {"PushF32 0x3fc00000", "ConvertF32ToF64", "ConvertF64ToI64", "ReturnI32"});
+  const primec::IrModule module = moduleFrom(lines);
+  std::string reason;
+  REQUIRE_MESSAGE(primec::nativeJitAccepts(module, reason), reason);
+  expectSame(module, "f32");
+}
+
+TEST_CASE("modules importing host functions stay on the interpreter") {
+  primec::IrModule module = moduleFrom({"PushI32 0", "ReturnI32"});
+  module.hostImports.push_back({});
+  module.hostImports.back().name = "answer";
+  std::string reason;
+  CHECK_FALSE(primec::nativeJitAccepts(module, reason));
+  CHECK(reason == "host imports");
+  CHECK_FALSE(runJit(module).executed);
 }
 
 #endif

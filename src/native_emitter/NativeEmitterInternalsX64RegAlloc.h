@@ -93,23 +93,64 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
     return reg;
   };
   // JIT mode: a VM frame address (a byte offset below vmLocalCount * 16, a multiple of 16)
-  // checked as the VM checks it and turned into the slot's machine address in rcx. Local k sits
+  // checked as the VM checks it and turned into the slot's machine address. Local k sits
   // at the frame slot disp(k) = disp(0) + 16 k below rbp.
+  //
+  // A heap address (bit 63 set, when the module allocates) names the runtime's heap slot
+  // (address without the tag) / 16: below the slot count and with its live byte set, or the VM's
+  // "invalid indirect address" fault. The machine address goes to rdx either way; the address
+  // register (rcx or an allocated one, never rax or rdx) is left as it was.
   const auto jitFrameAddress = [&](uint32_t value) -> uint8_t {
+    constexpr uint8_t Rdx = 2;
     const uint8_t address = valueReg(value, Rcx);
     emitRex(true, 0, address); // test address, 15
     emitByte(0xF7);
     emitModRmReg(0, address);
     emitU32(IrSlotBytes - 1);
     emitJitFaultIfWithRegister(CondCode::Ne, JitFault::UnalignedIndirectAddress, address);
+    size_t toHeap = 0;
+    if (hooks.heapAddresses) {
+      emitTestRegReg(address);
+      toHeap = emitCondJumpPlaceholder(CondCode::Lt); // js
+    }
     emitCmpRegImm32(address, static_cast<int32_t>(hooks.vmLocalCount * IrSlotBytes));
     emitJitFaultIfWithRegister(CondCode::AboveEq, JitFault::InvalidIndirectAddress, address);
-    if (address != Rcx) {
-      emitMovRegReg(Rcx, address);
+    emitMovRegReg(Rdx, address);
+    emitAddRegReg(Rdx, 5);
+    emitAddRegImm32(Rdx, regAllocSlotDisp(0));
+    if (hooks.heapAddresses) {
+      const size_t done = emitJumpPlaceholderRaw();
+      patchCondJumpHere(toHeap);
+      emitMovRegReg(Rdx, address);
+      for (const uint8_t byte : {0x48, 0xD1, 0xE2, 0x48, 0xC1, 0xEA, 0x05}) {
+        emitByte(byte); // shl rdx, 1; shr rdx, 5: the slot index
+      }
+      emitByte(0x48); // cmp rdx, [rip + slot count]
+      emitByte(0x3B);
+      emitJitDataOperand(Rdx, JitDataHeapSlots);
+      emitJitFaultIfWithRegister(CondCode::AboveEq, JitFault::InvalidIndirectAddress, address);
+      emitByte(0x48); // mov [rip + scratch], rax
+      emitByte(0x89);
+      emitJitDataOperand(Rax, JitDataScratch);
+      emitByte(0x48); // mov rax, [rip + live bytes]
+      emitByte(0x8B);
+      emitJitDataOperand(Rax, JitDataHeapLive);
+      for (const uint8_t byte : {0x80, 0x3C, 0x10, 0x00}) {
+        emitByte(byte); // cmp byte [rax + rdx], 0
+      }
+      emitByte(0x48); // mov rax, [rip + scratch]
+      emitByte(0x8B);
+      emitJitDataOperand(Rax, JitDataScratch);
+      emitJitFaultIfWithRegister(CondCode::Eq, JitFault::InvalidIndirectAddress, address);
+      for (const uint8_t byte : {0x48, 0xC1, 0xE2, 0x03}) {
+        emitByte(byte); // shl rdx, 3
+      }
+      emitByte(0x48); // add rdx, [rip + heap base]
+      emitByte(0x03);
+      emitJitDataOperand(Rdx, JitDataHeapBase);
+      patchJumpHere(done);
     }
-    emitAddRegReg(Rcx, 5);
-    emitAddRegImm32(Rcx, regAllocSlotDisp(0));
-    return Rcx;
+    return Rdx;
   };
   // Where to compute `value`: its own register unless that is `avoid` (an operand still
   // needed), otherwise rax.
@@ -381,6 +422,41 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
     return true;
   };
 
+  // Runs `body` on the memory operand stack: the operands pushed there first, the results
+  // popped into their locations afterwards, and (with `saveLive`) every register that must
+  // survive it saved around it.
+  const auto onOperandStack = [&](size_t blockIndex,
+                                  const RegAllocInstruction &instruction,
+                                  bool saveLive,
+                                  const auto &body) -> bool {
+    std::vector<uint8_t> saved;
+    if (saveLive) {
+      saved = regAllocRegistersLiveAcross(plan, blockIndex, instruction.irIndex);
+    }
+    for (const uint8_t reg : saved) {
+      saveRegister(reg);
+    }
+    for (const uint32_t use : instruction.uses) {
+      emitSpillReg(valueReg(use, Rax));
+    }
+    if (!body()) {
+      return false;
+    }
+    for (size_t k = instruction.defs.size(); k-- > 0;) {
+      const RegAllocLocation &where = location(instruction.defs[k]);
+      if (where.kind == RegAllocLocationKind::Reg) {
+        emitReloadReg(where.reg);
+      } else {
+        emitReloadReg(Rax);
+        storeValue(instruction.defs[k], Rax);
+      }
+    }
+    for (const uint8_t reg : saved) {
+      restoreRegister(reg);
+    }
+    return true;
+  };
+
   // Entry: the first three parameters come from rax, rcx and rdx when the function takes register
   // arguments, the others off the operand stack, top first (rax is free once the register
   // arguments are home); locals read before any store start at zero.
@@ -436,6 +512,21 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
       const IrInstruction &ir = fn.instructions[instruction.irIndex];
       instOffsets[instruction.irIndex] = code_.size();
       if (instruction.folded || instruction.fusedIntoBranch) {
+        continue;
+      }
+      if (jitMode_ && !native_emitter::nativeJitRunsOpcodeInline(ir.op)) {
+        // The runtime runs it on the operands this pushes; its results replace them.
+        if (!onOperandStack(blockIndex, instruction, true, [&] {
+              emitJitHostCall(hooks.functionIndex, static_cast<uint32_t>(instruction.irIndex));
+              const int64_t dropped = static_cast<int64_t>(instruction.uses.size()) -
+                                      static_cast<int64_t>(instruction.defs.size());
+              if (dropped != 0) {
+                emitAddRegImm32(15, static_cast<int32_t>(dropped * 16));
+              }
+              return true;
+            })) {
+          return false;
+        }
         continue;
       }
       switch (ir.op) {
@@ -939,30 +1030,10 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
         if (returns) {
           endsWithBranch = true;
         }
-        std::vector<uint8_t> saved;
-        if (!returns) {
-          saved = regAllocRegistersLiveAcross(plan, blockIndex, instruction.irIndex);
-        }
-        for (const uint8_t reg : saved) {
-          saveRegister(reg);
-        }
-        for (const uint32_t use : instruction.uses) {
-          emitSpillReg(valueReg(use, Rax));
-        }
-        if (!hooks.emitTemplate(instruction.irIndex)) {
+        if (!onOperandStack(blockIndex, instruction, !returns, [&] {
+              return hooks.emitTemplate(instruction.irIndex);
+            })) {
           return false;
-        }
-        for (size_t k = instruction.defs.size(); k-- > 0;) {
-          const RegAllocLocation &where = location(instruction.defs[k]);
-          if (where.kind == RegAllocLocationKind::Reg) {
-            emitReloadReg(where.reg);
-          } else {
-            emitReloadReg(Rax);
-            storeValue(instruction.defs[k], Rax);
-          }
-        }
-        for (const uint8_t reg : saved) {
-          restoreRegister(reg);
         }
         break;
       }

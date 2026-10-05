@@ -48,6 +48,33 @@ inline void X64Emitter::emitJitZeroFrameLocals(uint32_t count) {
   emitU32(static_cast<uint32_t>(static_cast<int32_t>(loop - (code_.size() + 4))));
 }
 
+inline void X64Emitter::emitJitHostCall(uint32_t functionIndex, uint32_t irIndex) {
+  // bridge(context, functionIndex << 32 | irIndex, operand stack top, frame locals) with the
+  // machine stack aligned as the C ABI wants it; returns nonzero on a fault.
+  emitByte(0x48); // mov rdi, [rip + context]
+  emitByte(0x8B);
+  emitJitDataOperand(7, JitDataHostContext);
+  emitMovRegImm64(6, (static_cast<uint64_t>(functionIndex) << 32) | irIndex);
+  emitMovRegReg(2, 15);
+  emitMovRegReg(1, 5);
+  emitAddRegImm32(1, regAllocSlotDisp(0));
+  emitMovRegReg(0, 4); // mov rax, rsp
+  emitByte(0x48);      // and rsp, -16
+  emitByte(0x83);
+  emitByte(0xE4);
+  emitByte(0xF0);
+  emitByte(0x50); // push rax (twice, keeping the alignment)
+  emitByte(0x50);
+  emitByte(0xFF); // call [rip + bridge]
+  emitJitDataOperand(2, JitDataHostBridge);
+  emitByte(0x48); // mov rsp, [rsp]
+  emitByte(0x8B);
+  emitByte(0x24);
+  emitByte(0x24);
+  emitTestRegReg(0);
+  emitJitFaultIf(CondCode::Ne, JitFault::HostFault);
+}
+
 inline void X64Emitter::emitJitEnterCall() {
   // cmp qword [rip + depth], JitMaxCallDepth; jae fault; inc qword [rip + depth]
   emitByte(0x48);

@@ -7,6 +7,7 @@
 
 #include "primec/ir/Ir.h"
 #include "NativeEmitterRegAlloc.h"
+#include "NativeJitOpcodes.h"
 
 #if defined(__linux__)
 #include <sys/mman.h>
@@ -96,6 +97,9 @@ class X64Emitter {
      // address keep every local in its frame slot).
      uint32_t vmLocalCount = 0;
      bool zeroFrameLocals = false;
+     // JIT mode: whether the module allocates heap memory, so an indirect address may name a
+     // heap slot (tagged with bit 63) as well as a frame slot.
+     bool heapAddresses = false;
    };
 
    // In-process execution (NativeJit.h): the entry function returns to a trampoline instead of
@@ -107,6 +111,16 @@ class X64Emitter {
    static constexpr uint32_t JitDataCallDepth = 8;
    static constexpr uint32_t JitDataFaultCode = 16;
    static constexpr uint32_t JitDataFaultArgument = 24;
+   // The runtime side (VmNativeJitHost): its context, the bridge function the code calls for
+   // the opcodes nativeJitBridgesOpcode lists, and the heap it keeps for the code, which the code
+   // reads and writes directly: the VM's slot values, their count, and one byte per slot that is
+   // nonzero while the slot's allocation is live. The last field is scratch for the heap path.
+   static constexpr uint32_t JitDataHostContext = 32;
+   static constexpr uint32_t JitDataHostBridge = 40;
+   static constexpr uint32_t JitDataHeapBase = 48;
+   static constexpr uint32_t JitDataHeapSlots = 56;
+   static constexpr uint32_t JitDataHeapLive = 64;
+   static constexpr uint32_t JitDataScratch = 72;
    static constexpr uint64_t JitMaxCallDepth =
        4095; // the VM's limit of 4096 frames, entry included
    enum class JitFault : uint32_t {
@@ -119,6 +133,7 @@ class X64Emitter {
      InvalidStringIndex = 6,
      UnalignedIndirectAddress = 7, // argument: the address
      InvalidIndirectAddress = 8,   // argument: the address
+     HostFault = 9,                // the bridge failed; the runtime holds the message
    };
    void setJitMode(bool enabled) {
      jitMode_ = enabled;
@@ -594,6 +609,11 @@ class X64Emitter {
   // Zeroes the frame slots of locals [0, count) (register-allocated functions; uses r10, r11).
   void emitJitZeroFrameLocals(uint32_t count);
   void emitJitFault(JitFault fault, uint32_t argument = 0);
+  // Runs instruction `irIndex` of function `functionIndex` through the runtime bridge, its
+  // operands on the operand stack (left for the caller to drop) and its results written in
+  // their place; faults with HostFault when the bridge fails. Clobbers every caller-saved
+  // register.
+  void emitJitHostCall(uint32_t functionIndex, uint32_t irIndex);
   bool inComplexOp_ = false;
   std::vector<PendingOperand> pending_;
   // Registers that hold pending Reg operands: r14 first (the only one inside a

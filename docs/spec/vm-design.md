@@ -36,16 +36,18 @@
   floats as bits, and indices). Indirect addresses are byte offsets into the active frame’s local slot space and must be
   16-byte aligned.
 - **Native execution tier:** on Linux x86_64, `primevm` at `-O2` (its default) runs a module as native code in its own
-  process (`include/primec/backend/NativeJit.h`) when every opcode has the VM's exact semantics natively: integer and
-  f64 arithmetic, comparisons, branches, calls, returns, prints of numbers and module strings, argc, module string
-  bytes and lengths, and frame addresses (`AddressOfLocal`, `LoadIndirect`, `StoreIndirect`: addresses keep the VM's
-  values, byte offsets into the current frame, and are translated on access). The code checks the VM's runtime faults
-  (division by zero, string index out of bounds, invalid string index, unaligned or invalid indirect address, more
-  than 4096 frames, a missing return) and reports them with the VM's messages and exit code 3; `INT64_MIN / -1` wraps
-  as in the VM. Modules that use the heap, files, host calls, argv strings, f32 values or float-to-i32/u64
-  conversions are interpreted. `PRIMEVM_JIT=0` (or `PRIMEVM_KERNEL=step`, `-O0`/`-O1`, any
-  debug mode) keeps the interpreter, and `--opt-report` prints `execution_tier=native` or
-  `execution_tier=interpreter reason=...`.
+  process (`include/primec/backend/NativeJit.h`) with the VM's observable behavior. Integer and f64 arithmetic,
+  comparisons, branches, calls, returns, prints of numbers and module strings, argc, string bytes and lengths, and
+  indirect loads and stores are machine code; addresses keep the VM's values (frame addresses are byte offsets into the
+  current frame, heap addresses are tagged slot offsets) and are translated on access. Heap allocation, freeing and
+  reallocation, files, prints of argv and dynamic strings, dynamic string bytes, f32 arithmetic and the remaining
+  float conversions call into the runtime (`src/runtime/VmNativeJitHost.cpp`), which runs them with the VM's own
+  handlers; the heap the runtime keeps uses the VM's addresses and the code reads and writes it directly. The VM's
+  runtime faults (division by zero, string index out of bounds, invalid string index, unaligned or invalid indirect
+  address, heap misuse, I/O handler errors, more than 4096 frames, a missing return) are reported with the VM's
+  messages and exit code 3; `INT64_MIN / -1` wraps as in the VM. Modules importing host functions are interpreted.
+  `PRIMEVM_JIT=0` (or `PRIMEVM_KERNEL=step`, `-O0`/`-O1`, any debug mode) keeps the interpreter, and `--opt-report`
+  prints `execution_tier=native` or `execution_tier=interpreter reason=...`.
 - **Float comparisons:** `CmpEq/Ne/Lt/Le/Gt/GeF32/F64` follow IEEE 754: when either operand is NaN, every comparison is
   false except `CmpNe`, which is true. The VM, native (x86_64 and arm64), Wasm and C++ backends all agree; the
   `nan_comparisons` program-matrix case checks it.

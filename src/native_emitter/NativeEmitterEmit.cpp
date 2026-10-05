@@ -433,9 +433,11 @@ bool buildNativeImage(const IrModule &module,
     jit->codeBytes = dataOffset;
     jit->dataOffset = dataOffset;
     // Every non-entry frame (its locals plus the return address and saved rbp) at the VM's
-    // deepest call chain, the entry frame with its operand stack, and room for the templates.
+    // deepest call chain, the entry frame with its operand stack, and room for the templates
+    // and the runtime calls (VmNativeJitHost, which prints and opens files).
     jit->stackBytes = emitter.entryFrameSize() +
-                      (X64Emitter::JitMaxCallDepth + 1) * (emitter.maxFrameSize() + 16) + 64 * 1024;
+                      (X64Emitter::JitMaxCallDepth + 1) * (emitter.maxFrameSize() + 16) +
+                      1024 * 1024;
     jit->bytes = std::move(code);
     imageOut.clear();
     return true;

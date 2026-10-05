@@ -545,6 +545,25 @@ one a caller passed in, so a JIT function that takes or dereferences an address 
 slots, zeroed at entry as the VM's are. Native-tier programs: 70 to 162 of 507; the heap (`HeapAlloc`, 258 programs) is
 the next obstacle.
 
+Runtime bridge (2026-10-05): the remaining opcodes no longer keep a module on the interpreter. In JIT mode every
+opcode without exact machine code (`nativeJitBridgesOpcode`, `src/native_emitter/NativeJitOpcodes.h`) goes through the
+register-allocated code's template path, but instead of a template the code calls
+`VmNativeJitHost::bridge(host, function << 32 | instruction, operand stack top, frame locals)` with the stack aligned;
+the runtime reads the operands off the operand stack, runs the VM's own handler (heap, print, file, dynamic string
+bytes, `evalPureOpcode` for f32 and the float conversions) and writes the results in their place, or returns nonzero
+with the VM's message, which the code turns into a fault. The live-across registers are saved around the call as
+around a template, so nothing else changes. Prints made by the runtime are flushed at once, keeping their order with
+the code's direct writes.
+
+The heap stays in the runtime but in a layout the code reads without a call: the VM's slot values and one live byte
+per slot, published (base, slot count, live bytes) in the data page whenever an allocation changes them. An indirect
+access with bit 63 set takes an out-of-line path: slot index = address without the tag / 16, below the slot count and
+live, or the VM's "invalid indirect address" fault. A first layout of 16 bytes per slot (value and live word side by
+side) was simpler to address but doubled the memory of the VM's append-only heap; a loop building 300,000 small
+vectors went from 11 s interpreted to 51 s natively while nearing the machine's memory, and to 20 s (interpreter
+22 s) with the byte map. Native-tier programs: 162 to 506 of the 507 that run; the last one imports host functions. One
+of them needed more than the old 1 GiB stack reservation limit, now 32 GiB (reserved, not committed).
+
 4.2 and 4.4 (2026-10-04): every heap access used to scan the whole allocation list, freed allocations included, so a
 program that builds many small vectors slowed down quadratically (3,000 vectors of 20 pushes: 1.72 s). Allocations
 are only ever appended, each at the end of the heap, so the list is sorted by base slot and `VmHeapHelpers.cpp` now

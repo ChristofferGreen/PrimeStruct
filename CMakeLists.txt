@@ -657,7 +657,6 @@ set(PRIMESTRUCT_CODEGEN_SOURCES
   src/native_emitter/NativeEmitterElf.cpp
   src/native_emitter/NativeEmitterEmit.cpp
   src/native_emitter/NativeEmitterTestingEncodings.cpp
-  src/native_emitter/NativeJit.cpp
   src/native_emitter/NativeEmitterFunctionEmit.cpp
   src/native_emitter/NativeEmitterRegAlloc.cpp
   src/wasm_emitter/WasmEmitter.cpp
@@ -672,6 +671,7 @@ set(PRIMESTRUCT_CODEGEN_SOURCES
 
 set(PRIMESTRUCT_RUNTIME_SOURCES
   src/runtime/Vm.cpp
+  src/runtime/VmNativeJitHost.cpp
   src/runtime/VmHost.cpp
   src/runtime/VmDebugHelpers.cpp
   src/runtime/VmDebugSession.cpp
@@ -757,6 +757,13 @@ add_library(primec_backend_emitters_lib ${PRIMESTRUCT_CODEGEN_SOURCES})
 target_include_directories(primec_backend_emitters_lib PUBLIC include)
 target_link_libraries(primec_backend_emitters_lib PUBLIC primec_ir_core_lib primec_frontend_lib primec_support_lib)
 primestructEnableWarnings(primec_backend_emitters_lib)
+
+# The VM's native execution tier: the native emitter's in-process images run against the
+# runtime's handlers (VmNativeJitHost).
+add_library(primec_native_jit_lib src/native_emitter/NativeJit.cpp)
+target_include_directories(primec_native_jit_lib PUBLIC include)
+target_link_libraries(primec_native_jit_lib PUBLIC primec_backend_emitters_lib primec_runtime_lib)
+primestructEnableWarnings(primec_native_jit_lib)
 
 add_library(primec_codegen_lib INTERFACE)
 target_include_directories(primec_codegen_lib INTERFACE include)
@@ -875,7 +882,7 @@ else()
 endif()
 
 add_executable(primevm src/bin/primevm_main.cpp)
-target_link_libraries(primevm PRIVATE primec_ir_lib primec_runtime_lib primec_backend_emitters_lib)
+target_link_libraries(primevm PRIVATE primec_ir_lib primec_runtime_lib primec_native_jit_lib)
 if(PRIMESTRUCT_MIMALLOC_LINKED)
   target_link_libraries(primevm PRIVATE mimalloc)
 endif()
@@ -959,7 +966,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/ir_pipeline/optimizer/test_ir_native_jit.cpp
   )
   target_include_directories(PrimeStruct_ir_optimizer_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
-  target_link_libraries(PrimeStruct_ir_optimizer_tests PRIVATE primec_ir_lib primec_backend_registry_lib primec_backend_emitters_lib primec_support_lib primec_runtime_lib)
+  target_link_libraries(PrimeStruct_ir_optimizer_tests PRIVATE primec_ir_lib primec_backend_registry_lib primec_backend_emitters_lib primec_native_jit_lib primec_support_lib primec_runtime_lib)
   primestructEnableWarnings(PrimeStruct_ir_optimizer_tests)
 
   # One program, many execution forms: each case runs through the VM kernels,

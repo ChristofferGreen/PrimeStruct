@@ -2,6 +2,7 @@
 #include "NativeEmitterPromotion.h"
 #include "primec/ir/IrLocalEscape.h"
 
+#include <algorithm>
 #include <fcntl.h>
 #include <type_traits>
 
@@ -16,9 +17,34 @@ bool jitFrameAccessible(const IrFunction &function) {
   if (analyzeIrLocalEscape(function).addressTaken) {
     return true;
   }
+  // The runtime reads and writes frame slots too: FileReadByte stores into its local.
   for (const IrInstruction &instruction : function.instructions) {
-    if (instruction.op == IrOpcode::LoadIndirect || instruction.op == IrOpcode::StoreIndirect) {
+    if (instruction.op == IrOpcode::LoadIndirect || instruction.op == IrOpcode::StoreIndirect ||
+        instruction.op == IrOpcode::FileReadByte) {
       return true;
+    }
+  }
+  return false;
+}
+
+// The VM's local count: one past the highest local an instruction loads, stores or addresses.
+uint32_t vmLocalCount(const IrFunction &function) {
+  uint64_t count = 0;
+  for (const IrInstruction &instruction : function.instructions) {
+    if (instruction.op == IrOpcode::LoadLocal || instruction.op == IrOpcode::StoreLocal ||
+        instruction.op == IrOpcode::AddressOfLocal) {
+      count = std::max<uint64_t>(count, instruction.imm + 1);
+    }
+  }
+  return static_cast<uint32_t>(count);
+}
+
+bool allocatesHeap(const IrModule &module) {
+  for (const IrFunction &function : module.functions) {
+    for (const IrInstruction &instruction : function.instructions) {
+      if (instruction.op == IrOpcode::HeapAlloc || instruction.op == IrOpcode::HeapRealloc) {
+        return true;
+      }
     }
   }
   return false;
@@ -43,6 +69,7 @@ bool emitNativeFunctions(const IrModule &module,
                          NativeEmitterInstrumentation *instrumentation,
                          std::string &error) {
   constexpr bool kIsArm64 = std::is_same_v<EmitterT, Arm64Emitter>;
+  const bool moduleAllocatesHeap = allocatesHeap(module);
   // x86_64 keeps argc/argv in r12/r13 for the whole program, but only functions
   // whose layout asks for them read them; without any, the registers are free.
   bool argRegsFree = true;
@@ -695,8 +722,9 @@ bool emitNativeFunctions(const IrModule &module,
         hooks.functionIndex = static_cast<uint32_t>(functionIndex);
         hooks.stringCount = module.stringTable.size();
         if (emitter.jitMode()) {
-          hooks.vmLocalCount = analyzeIrLocalEscape(fn).localCount;
+          hooks.vmLocalCount = vmLocalCount(fn);
           hooks.zeroFrameLocals = jitFrameAccessible(fn);
+          hooks.heapAddresses = moduleAllocatesHeap;
         }
         hooks.stringLength = [&](uint64_t index) -> uint64_t {
           return index < module.stringTable.size() ? module.stringTable[index].size() : 0;

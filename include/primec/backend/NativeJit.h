@@ -10,14 +10,15 @@
 namespace primec {
 
 // In-process native execution for the VM (Linux x86_64): the module is compiled by the native
-// backend and run as machine code instead of being interpreted, when that is observably the
-// same. Only modules whose every opcode has the VM's exact semantics natively are taken
-// (integer and f64 arithmetic, comparisons, branches, calls, returns, prints of numbers and
-// module strings, argc, module string bytes, frame addresses with the VM's address values); the
-// VM's runtime faults (division by zero, string and indirect-address errors, more than 4096
-// frames, a missing return) are checked in the code and reported with the VM's messages. The
-// heap, files, host calls, argv strings, f32 values and float-to-i32/u64 conversions stay on the
-// interpreter.
+// backend and run as machine code instead of being interpreted, observably the same. Integer and
+// f64 arithmetic, comparisons, branches, calls, returns, prints of numbers and module strings,
+// argc, string bytes and indirect loads and stores (frame and heap addresses, with the VM's
+// address values) are machine code; the heap's allocation, files, prints of argv and dynamic
+// strings, dynamic string bytes, f32 arithmetic and the float conversions the code leaves out
+// call into the runtime, which runs them with the VM's own handlers. The VM's runtime faults
+// (division by zero, string, indirect-address and heap errors, more than 4096 frames, a missing
+// return, I/O handler errors) are reported with the VM's messages. Modules importing host
+// functions stay on the interpreter.
 struct NativeJitResult {
   bool executed = false; // false: nothing ran, `reason` says why; run the interpreter instead
   bool ok = false;       // when executed: true with `result`, false with the fault in `error`
