@@ -101,28 +101,28 @@ of sync with them.
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
 | TODO-5489 | Container element borrows keep the container borrowed | ready | borrows |
-| TODO-5490 | Pointers to locals cannot escape their scope | ready | escapes |
 | TODO-5492 | `Destroy` runs at scope end | ready | lifecycle |
 | TODO-5493 | Inferred bindings in generic struct helpers leak a diagnostic span | ready | diagnostics |
+| TODO-5494 | Local pointers cannot escape into containers or outer locals | ready | escapes |
 | TODO-5483 | Verify arm64 SextI32 on a macOS machine | deferred | ir-semantics |
 
 ### Ready Now
 
 - TODO-5493 (diagnostics): inferred bindings in generic struct helpers leak a diagnostic span
 - TODO-5489 (borrows): container element borrows keep the container borrowed
-- TODO-5490 (escapes): pointers to locals cannot escape their scope
 - TODO-5492 (lifecycle): `Destroy` runs at scope end
+- TODO-5494 (escapes): local pointers cannot escape into containers or outer locals
 
 ### Immediate Next 10
 
-1. TODO-5490
-2. TODO-5489
-3. TODO-5492
-4. TODO-5493
+1. TODO-5489
+2. TODO-5492
+3. TODO-5493
+4. TODO-5494
 
 ### Priority Lanes
 
-- Memory safety and parameter modes (docs/spec/value-lifecycle.md Parameter Passing; docs/spec/type-system.md Ownership and Mutability): TODO-5489, TODO-5490, TODO-5492
+- Memory safety and parameter modes (docs/spec/value-lifecycle.md Parameter Passing; docs/spec/type-system.md Ownership and Mutability): TODO-5489, TODO-5492, TODO-5494
 - Diagnostics: TODO-5493
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
@@ -143,18 +143,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - negative tests per container: hold an element reference, push, then use the reference; positive tests: last use before the push compiles (non-lexical lifetimes)
     - full release gate green
   - stop_rule: no runtime checks; compile-time only.
-
-- [ ] TODO-5490: Pointers to locals cannot escape their scope
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-05
-  - phase: Memory safety
-  - parallel_track: escapes
-  - scope: A `Pointer<T>` rooted at a local (`location(x)`, pointer arithmetic on it, aliases; `resolvePointerRoot` in `SemanticsValidatorStatementBindingsPhasesA.cpp:447-550`) cannot be returned, stored in a struct field/container or a longer-lived binding, or passed to a `move`/`copy` parameter, outside `[unsafe]`. References already have these checks (`ExprReferenceEscapes.cpp`, `StatementReturns.cpp:416-425`).
-  - acceptance:
-    - diagnostics `pointer escapes via return` and `pointer escapes via assignment to <target>` with negative and positive (non-escaping) tests
-    - full release gate and corpus differential green
-  - stop_rule: heap pointers from `alloc` are out of scope (covered by TODO-5488).
 
 - [ ] TODO-5492: `Destroy` runs at scope end
   - owner: ai
@@ -180,6 +168,18 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - a program that copies a `Vector` and then calls an unknown function reports the error at the call's own line, with the stdlib binding left untyped; regression test in the semantics diagnostics suite
     - full release gate green
   - stop_rule: diagnostics only; no inference behavior change.
+
+- [ ] TODO-5494: Local pointers cannot escape into containers or outer locals
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-05
+  - phase: Memory safety
+  - parallel_track: escapes
+  - scope: TODO-5490 rejects a pointer rooted at a local when it is returned or assigned through a parameter. Also reject it when it is pushed or inserted into a container that outlives the local (a parameter's container, or a local declared in an enclosing scope), assigned to a binding declared in an enclosing block scope, or passed to a `move`/`copy` parameter whose callee keeps it; outside `[unsafe]` only.
+  - acceptance:
+    - negative tests for each route (`pointer escapes via argument to <callee>` / `via assignment to <target>`) and positive tests for same-scope use
+    - full release gate and corpus scan green
+  - stop_rule: compile-time only; heap pointers from `alloc` stay out of scope.
 
 - [ ] TODO-5483: Verify arm64 SextI32 on a macOS machine
   - owner: ai

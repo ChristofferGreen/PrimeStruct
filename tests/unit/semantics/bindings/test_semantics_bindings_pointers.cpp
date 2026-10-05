@@ -1524,4 +1524,111 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("pointer to a local cannot escape via return") {
+  const std::string direct = R"(
+[return<Pointer<i32>>]
+leak() {
+  [i32 mut] value{4i32}
+  return(location(value))
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(direct, "/main", error));
+  CHECK(error.find("pointer escapes via return (root: value)") != std::string::npos);
+
+  const std::string throughAlias = R"(
+[return<Pointer<i32>>]
+leak() {
+  [i32 mut] value{4i32}
+  [Pointer<i32>] ptr{location(value)}
+  return(plus(ptr, 0i32))
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  error.clear();
+  CHECK_FALSE(validateProgram(throughAlias, "/main", error));
+  CHECK(error.find("pointer escapes via return (root: value)") != std::string::npos);
+}
+
+TEST_CASE("pointer to a local cannot escape via assignment through a parameter") {
+  const std::string throughMutParam = R"(
+[return<void>]
+leak([Pointer<i32> mut] out) {
+  [i32 mut] value{4i32}
+  assign(out, location(value))
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(throughMutParam, "/main", error));
+  CHECK(error.find("pointer escapes via assignment to out (root: value)") != std::string::npos);
+
+  const std::string throughField = R"(
+[struct]
+Holder() {
+  [i32 mut] dummy{0i32}
+  [Pointer<i32> mut] target{location(dummy)}
+}
+
+[return<void>]
+leak([Holder mut] holder) {
+  [i32 mut] value{4i32}
+  assign(holder.target, location(value))
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  error.clear();
+  CHECK_FALSE(validateProgram(throughField, "/main", error));
+  CHECK(error.find("pointer escapes via assignment to holder (root: value)") != std::string::npos);
+}
+
+TEST_CASE("pointers that stay within their local's scope are accepted") {
+  const std::string source = R"(
+[return<Pointer<i32>>]
+pass_through([Pointer<i32>] ptr) {
+  return(ptr)
+}
+
+[return<void>]
+keep_own_copy([Pointer<i32> copy mut] out) {
+  [i32 mut] value{4i32}
+  assign(out, location(value))
+}
+
+[unsafe return<Pointer<i32>>]
+unsafe_leak() {
+  [i32 mut] value{4i32}
+  return(location(value))
+}
+
+[return<int>]
+main() {
+  [i32 mut] value{7i32}
+  [Pointer<i32> mut] ptr{pass_through(location(value))}
+  assign(dereference(ptr), 9i32)
+  return(value)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_SUITE_END();

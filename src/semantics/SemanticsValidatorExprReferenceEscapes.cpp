@@ -229,6 +229,129 @@ bool SemanticsValidator::reportReferenceAssignmentEscape(
   return true;
 }
 
+bool SemanticsValidator::resolveEscapingLocalPointerRoot(
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
+    const Expr &expr,
+    std::string &rootOut) {
+  rootOut.clear();
+  auto acceptLocalRoot = [&](const std::string &root) -> bool {
+    const std::string base = root.substr(0, root.find('.'));
+    if (base.empty() || findParamBinding(params, base) != nullptr) {
+      return false;
+    }
+    auto localIt = locals.find(base);
+    // A Pointer/Reference local holds an address; what it points at is checked through its
+    // own root.
+    if (localIt == locals.end() || localIt->second.typeName == "Pointer" ||
+        localIt->second.typeName == "Reference") {
+      return false;
+    }
+    rootOut = base;
+    return true;
+  };
+  if (expr.kind == Expr::Kind::Name) {
+    if (findParamBinding(params, expr.name) != nullptr) {
+      return false;
+    }
+    auto localIt = locals.find(expr.name);
+    if (localIt == locals.end() || localIt->second.typeName != "Pointer" ||
+        localIt->second.referenceRoot.empty()) {
+      return false;
+    }
+    return acceptLocalRoot(localIt->second.referenceRoot);
+  }
+  if (expr.kind != Expr::Kind::Call || expr.isBinding) {
+    return false;
+  }
+  std::string builtinName;
+  if (getBuiltinPointerName(expr, builtinName) && builtinName == "location" &&
+      expr.args.size() == 1) {
+    const Expr *target = &expr.args.front();
+    while (target->kind == Expr::Kind::Call && target->isFieldAccess && target->args.size() == 1) {
+      target = &target->args.front();
+    }
+    return target->kind == Expr::Kind::Name && acceptLocalRoot(target->name);
+  }
+  std::string operatorName;
+  if (getBuiltinOperatorName(expr, operatorName) &&
+      (operatorName == "plus" || operatorName == "minus") && expr.args.size() == 2) {
+    return resolveEscapingLocalPointerRoot(params, locals, expr.args.front(), rootOut);
+  }
+  return false;
+}
+
+bool SemanticsValidator::resolveParameterRootedAssignmentSink(
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
+    const Expr &target,
+    std::string &sinkOut) {
+  sinkOut.clear();
+  const Expr *base = &target;
+  while (base->kind == Expr::Kind::Call && base->isFieldAccess && base->args.size() == 1) {
+    base = &base->args.front();
+  }
+  bool throughPointer = false;
+  std::string builtinName;
+  if (base->kind == Expr::Kind::Call && getBuiltinPointerName(*base, builtinName) &&
+      builtinName == "dereference" && base->args.size() == 1) {
+    base = &base->args.front();
+    throughPointer = true;
+  }
+  if (base->kind != Expr::Kind::Name) {
+    return false;
+  }
+  if (const BindingInfo *param = findParamBinding(params, base->name)) {
+    // Writes reach the caller through a pointer, a Reference, or a `mut` borrow; an owned
+    // (`copy`/`move`) parameter is the callee's own value.
+    const bool reachesCaller = throughPointer || param->typeName == "Reference" ||
+                               (param->isMutable && !param->isCopy && !param->isMove);
+    if (!reachesCaller) {
+      return false;
+    }
+    sinkOut = base->name;
+    return true;
+  }
+  if (!throughPointer) {
+    return false;
+  }
+  auto localIt = locals.find(base->name);
+  if (localIt == locals.end() || localIt->second.referenceRoot.empty()) {
+    return false;
+  }
+  const std::string rootBase =
+      localIt->second.referenceRoot.substr(0, localIt->second.referenceRoot.find('.'));
+  if (findParamBinding(params, rootBase) == nullptr) {
+    return false;
+  }
+  sinkOut = rootBase;
+  return true;
+}
+
+bool SemanticsValidator::reportAssignmentValueEscape(
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
+    const Expr &assignExpr) {
+  const Expr &value = assignExpr.args[1];
+  if (!currentValidationState_.context.definitionIsUnsafe) {
+    std::string pointerSink;
+    std::string localPointerRoot;
+    if (resolveParameterRootedAssignmentSink(
+            params, locals, assignExpr.args.front(), pointerSink) &&
+        resolveEscapingLocalPointerRoot(params, locals, value, localPointerRoot)) {
+      failExprDiagnostic(assignExpr,
+                         "pointer escapes via assignment to " + pointerSink +
+                             " (root: " + localPointerRoot + ")");
+      return true;
+    }
+  }
+  if (isOwningBorrowedParameter(params, value, assignExpr.namespacePrefix)) {
+    failExprDiagnostic(assignExpr, "borrowed parameter escapes via assignment: " + value.name);
+    return true;
+  }
+  return false;
+}
+
 bool SemanticsValidator::resolveReferenceEscapeSink(
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals,

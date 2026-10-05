@@ -4,7 +4,7 @@ TEST_SUITE_BEGIN("primestruct.program_matrix.container_copies");
 
 // Copying a container (docs/spec/value-lifecycle.md, Copies) gives the copy its own storage:
 // a mutable binding initialized from an existing container, a copy parameter, and the
-// elements and struct fields inside them run their Copy helpers. TODO-5487.
+// elements and struct fields inside them run their Copy helpers.
 
 TEST_CASE("mutable vector binding copies its elements") {
   program_matrix::ProgramCase program;

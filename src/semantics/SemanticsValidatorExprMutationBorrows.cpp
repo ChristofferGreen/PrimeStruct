@@ -1010,9 +1010,8 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
         }
       }
     }
-    if (isOwningBorrowedParameter(params, expr.args[1], expr.namespacePrefix)) {
-      return failMutationBorrowDiagnostic("borrowed parameter escapes via assignment: " +
-                                          expr.args[1].name);
+    if (reportAssignmentValueEscape(params, locals, expr)) {
+      return false;
     }
     auto validateAssignedMapConstructorValue = [&]() -> bool {
       if (!targetIsName || expr.args[1].kind != Expr::Kind::Call ||

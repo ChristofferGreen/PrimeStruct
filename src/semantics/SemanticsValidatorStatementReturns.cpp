@@ -424,6 +424,14 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
       return failReturnEscapeDiagnostic("slice escapes via return (owner: " +
                                         sliceEscapeRoot + ")");
     }
+    // A pointer to one of this definition's locals dangles once it returns.
+    if (!currentValidationState_.context.definitionIsUnsafe) {
+      std::string localPointerRoot;
+      if (resolveEscapingLocalPointerRoot(params, locals, returnExpr, localPointerRoot)) {
+        return failReturnEscapeDiagnostic("pointer escapes via return (root: " + localPointerRoot +
+                                          ")");
+      }
+    }
     // A parameter without `copy`/`move` borrows the caller's value (docs/spec/value-lifecycle.md,
     // Parameter Passing); returning it would hand out the caller's storage. Values that copy
     // trivially (scalars, strings, pointers, plain structs) are returned by copy.

@@ -124,6 +124,24 @@
                                     const std::unordered_map<std::string, BindingInfo> &locals,
                                     const Expr &expr,
                                     std::string &rootOut);
+  // A pointer rooted at a local of this definition (`location(x)`, a Pointer alias of it, or
+  // arithmetic on one); `rootOut` names the local.
+  bool resolveEscapingLocalPointerRoot(const std::vector<ParameterInfo> &params,
+                                       const std::unordered_map<std::string, BindingInfo> &locals,
+                                       const Expr &expr,
+                                       std::string &rootOut);
+  // The parameter an assignment target writes through (the parameter itself, one of its
+  // fields, or what a parameter pointer points at), which outlives this definition's locals.
+  bool
+  resolveParameterRootedAssignmentSink(const std::vector<ParameterInfo> &params,
+                                       const std::unordered_map<std::string, BindingInfo> &locals,
+                                       const Expr &target,
+                                       std::string &sinkOut);
+  // Reports (and returns true for) an `assign(target, value)` whose value outlives what it
+  // points at or borrows: a local pointer stored through a parameter, or a borrowed parameter.
+  bool reportAssignmentValueEscape(const std::vector<ParameterInfo> &params,
+                                   const std::unordered_map<std::string, BindingInfo> &locals,
+                                   const Expr &assignExpr);
   bool reportReferenceAssignmentEscape(const std::vector<ParameterInfo> &params,
                                        const std::unordered_map<std::string, BindingInfo> &locals,
                                        const std::string &sinkName,
