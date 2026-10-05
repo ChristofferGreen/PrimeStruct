@@ -935,6 +935,16 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     out.errorType = !leftResultInfo.errorType.empty() ? leftResultInfo.errorType : rightResultInfo.errorType;
     return true;
   }
+  // A map `tryAt` result carries the map's value kind; a struct value keeps its struct type
+  // from the semantic query fact, so consumers agree on how its payload is packed.
+  auto preferSemanticTryAtStructValue = [&]() {
+    ResultExprInfo semanticInfo;
+    if (applySemanticQueryFactResultInfo(
+            expr, semanticProgram, semanticIndex, nullptr, semanticInfo) &&
+        semanticInfo.hasValue && !semanticInfo.valueStructType.empty()) {
+      out = semanticInfo;
+    }
+  };
   if (expr.kind == Expr::Kind::Call && expr.isMethodCall && expr.name == "tryAt") {
     auto assignTryAtMapResultInfo = [&](LocalInfo::ValueKind valueKind) {
       if (valueKind == LocalInfo::ValueKind::Unknown) {
@@ -944,6 +954,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
       out.hasValue = true;
       out.valueKind = valueKind;
       out.errorType = "ContainerError";
+      preferSemanticTryAtStructValue();
       return true;
     };
     const auto methodTargetInfo = resolveCollectionPairTypeInfo(expr.args.front(), localsIn, inferCallKeyValueTargetInfo);
@@ -986,6 +997,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
       out.hasValue = true;
       out.valueKind = targetInfo.keyValueValueKind;
       out.errorType = "ContainerError";
+      preferSemanticTryAtStructValue();
       return true;
     }
   }

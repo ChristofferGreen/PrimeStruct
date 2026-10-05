@@ -780,15 +780,10 @@ StructLayoutResolutionAdapters makeStructLayoutResolutionAdaptersWithOwnedSlotSt
     std::string &error) {
   StructLayoutResolutionAdapters adapters;
   // A struct with lifecycle helpers keeps the struct value representation even when its fields
-  // share one scalar type, so it is copied and destroyed through those helpers. Single-field
-  // structs stay array handles: a Result of one packs its payload as a scalar.
+  // share one scalar type, so it is copied and destroyed through those helpers.
   StructLayoutFieldIndex arrayCandidateIndex;
   for (const auto &[structPath, fields] : fieldIndex) {
     bool hasLifecycleHelper = false;
-    if (fields.size() < 2) {
-      arrayCandidateIndex.emplace(structPath, fields);
-      continue;
-    }
     for (const char *helperName : {"/Destroy", "/DestroyStack", "/Copy", "/Move"}) {
       hasLifecycleHelper = hasLifecycleHelper || defMap.count(structPath + helperName) > 0;
     }

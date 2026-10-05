@@ -76,8 +76,7 @@
   `init(slot, x)` hands `x` to the storage, and dropping a container slot (`pop`, `clear`, `Destroy` of the container)
   destroys the element. Error propagation (`?`) needs no extra cleanup: a handler does not flow into nested blocks, so
   `?` only runs at the top level of the body that declares `on_error`, and leaving through it destroys that body's
-  owning locals like a `return`. A struct with a single scalar field is not destroyed or copied through its helpers
-  yet (TODO-5498); it only leaks.
+  owning locals like a `return`.
 
 ## Uninitialized Storage (draft)
 - **Purpose:** model explicit, inline uninitialized storage without implicit construction (C-style tagged storage and

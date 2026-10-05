@@ -322,4 +322,50 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("a single-field struct is copied and destroyed, also through try on a map lookup") {
+  program_matrix::ProgramCase program;
+  program.name = "destroy_single_field_struct";
+  program.source = R"(
+import /std/collections/*
+import /std/collections/map/*
+
+[struct]
+Solo() {
+  [i32 mut] id{0i32}
+
+  [public]
+  Copy([Reference<Self>] other) {
+    assign(this.id, plus(other.id, 10i32))
+  }
+
+  [public effects(io_out)]
+  Destroy() {
+    print_line(this.id)
+  }
+}
+
+[effects(io_err)]
+report_missing([ContainerError] err) {
+  print_line_error(1i32)
+}
+
+[effects(io_out heap_alloc) return<Result<int, ContainerError>> on_error<ContainerError, /report_missing>]
+main() {
+  [Solo mut] a{Solo{1i32}}
+  [Solo] b{a}
+  print_line(100i32)
+  assign(a, Solo{2i32})
+  print_line(101i32)
+  [Map<i32, Solo> mut] solos{mapSingle<i32, Solo>(7i32, Solo{3i32})}
+  [Solo] found{try(solos.tryAt(7i32))}
+  print_line(found.id)
+  print_line(102i32)
+  return(Result.ok(0i32))
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "100\n1\n101\n13\n102\n13\n3\n11\n2\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

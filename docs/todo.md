@@ -100,20 +100,16 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5498 | Destroy and copy single-field structs | ready | lifecycle |
 | TODO-5483 | Verify arm64 SextI32 on a macOS machine | deferred | ir-semantics |
 
 ### Ready Now
 
-- TODO-5498 (lifecycle): destroy and copy single-field structs
 
 ### Immediate Next 10
 
-1. TODO-5498
 
 ### Priority Lanes
 
-- Memory safety and parameter modes (docs/spec/value-lifecycle.md Parameter Passing; docs/spec/type-system.md Ownership and Mutability): TODO-5498
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
 ### Execution Queue
@@ -121,18 +117,6 @@ of sync with them.
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 ### Task Blocks
-
-- [ ] TODO-5498: Destroy and copy single-field structs
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-05
-  - phase: Memory safety
-  - parallel_track: lifecycle
-  - scope: A struct with one scalar field still lowers as an array handle, so a `Destroy` or `Copy` helper on it never runs. Giving it the struct representation (as two-field uniform structs now get) breaks `try` on a `Result` of it: `try` treats a single-slot struct payload as packed into the scalar `Result`, while map `tryAt` and stdlib `Result` sums return it by pointer (map conformance `ownership-sensitive experimental map value methods` reads garbage). Make the packed and pointer conventions agree, then drop the single-field exception in `makeStructLayoutResolutionAdaptersWithOwnedSlotState`.
-  - acceptance:
-    - compile-run tests on VM, native and C++: a single-field struct with a counting `Destroy` is destroyed once at scope end and copied through `Copy`; `try` on a map `tryAt` of it returns the stored value
-    - full release gate green
-  - stop_rule: no change to the packed `Result` encoding of scalar payloads.
 
 - [ ] TODO-5483: Verify arm64 SextI32 on a macOS machine
   - owner: ai
