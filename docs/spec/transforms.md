@@ -277,6 +277,9 @@ or a semicolon if you intended to index.
 - **`restrict<T>`:** constrain the accepted envelope to `T`. For bindings/parameters this is equivalent to writing the
   envelope directly (e.g., `[i32] x{...}`), and canonicalization rewrites `[i32]` into `[restrict<i32>]` at the low
   level.
+- **`unsafe_api`:** marks a definition whose misuse can break memory safety (for example a wrapper that frees
+  memory): its body is an unsafe scope as with `unsafe`, and only `[unsafe]` or `[unsafe_api]` definitions may call it
+  (`calling /path requires an unsafe definition`).
 - **`unsafe`:** marks a definition body as an unsafe scope. Aliasing rules are relaxed within the body, and
   `Reference<T>` bindings may use pointer-like initializers (`Pointer<T>`/`Reference<T>` values, including pointer
   arithmetic) when the pointee type matches. References created there must not escape the unsafe scope.

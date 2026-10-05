@@ -8,7 +8,7 @@ inline std::string makeUncheckedPointerHelperSurfaceSource() {
   return R"(
 import /std/collections/buffer_unchecked/*
 
-[effects(io_out, heap_alloc), return<int>]
+[unsafe effects(io_out, heap_alloc), return<int>]
 main() {
   [Pointer<i32> mut] ptr{bufferAlloc<i32>(2i32)}
   [Pointer<i32> mut] first{bufferOffsetUnsafe<i32>(ptr, 0i32)}
@@ -28,7 +28,7 @@ inline std::string makeUncheckedPointerGrowthSource() {
   return R"(
 import /std/collections/buffer_unchecked/*
 
-[effects(io_out, heap_alloc), return<int>]
+[unsafe effects(io_out, heap_alloc), return<int>]
 main() {
   [Pointer<i32> mut] ptr{bufferAlloc<i32>(2i32)}
   bufferWriteUnsafe<i32>(ptr, 0i32, 4i32)

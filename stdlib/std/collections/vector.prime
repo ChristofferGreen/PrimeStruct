@@ -11,7 +11,7 @@ namespace std {
     return(bufferAlloc<T>(count))
   }
 
-  [effects(heap_alloc), return<void>]
+  [unsafe effects(heap_alloc), return<void>]
   vectorFreeStorage<T>([Pointer<uninitialized<T>>] ptr) {
     bufferFreeUninitialized<T>(ptr)
   }
@@ -81,7 +81,7 @@ namespace std {
 
   }
 
-  [return<Pointer<uninitialized<T>>>]
+  [unsafe return<Pointer<uninitialized<T>>>]
   vectorSlotUnsafe<T>([Vector<T>] values, [i32] index) {
     vectorCheckShape<T>(values)
     if(index < 0 || index >= values.field_capacity()) {
@@ -125,7 +125,7 @@ namespace std {
     }
   }
 
-  [effects(heap_alloc), return<void>]
+  [unsafe effects(heap_alloc), return<void>]
   vectorMovePrefixToBuffer<T>([Pointer<uninitialized<T>> mut] dst, [Vector<T> mut] values, [i32] limit) {
     for([i32 mut] index{0}, index < limit, index++) {
       [Pointer<uninitialized<T>> mut] nextSlot{

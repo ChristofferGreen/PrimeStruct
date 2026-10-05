@@ -23,8 +23,9 @@ bool SemanticsValidator::validateExecutions() {
       if (transform.name == "mut") {
         return failPassesExecutionsDiagnostic("mut transform is not allowed on executions: " + exec.fullPath);
       }
-      if (transform.name == "unsafe") {
-        return failPassesExecutionsDiagnostic("unsafe transform is not allowed on executions: " + exec.fullPath);
+      if (transform.name == "unsafe" || transform.name == "unsafe_api") {
+        return failPassesExecutionsDiagnostic(
+            transform.name + " transform is not allowed on executions: " + exec.fullPath);
       }
       if (transform.name == "no_padding" || transform.name == "platform_independent_padding") {
         return failPassesExecutionsDiagnostic("layout transforms are not supported on executions: " + exec.fullPath);

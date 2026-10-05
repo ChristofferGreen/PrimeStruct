@@ -265,7 +265,7 @@ namespace std {
     soaColumnReserve<T15>(sixteenth, capacity)
   }
 
-  [public effects(heap_alloc), return<void>]
+  [unsafe public effects(heap_alloc), return<void>]
   soaColumnReserve<T>([SoaColumn<T> mut] values, [i32] capacity) {
     soaColumnCheckShape<T>(values)
     if(capacity < 0i32) {

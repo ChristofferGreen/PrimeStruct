@@ -26,7 +26,7 @@ TEST_CASE("runs vm with heap free intrinsic") {
   program_matrix::ProgramCase program;
   program.name = "runs_vm_with_heap_free_intrinsic_1";
   program.source = R"(
-[return<int> effects(heap_alloc)]
+[unsafe return<int> effects(heap_alloc)]
 main() {
   [mut] ptr{/std/intrinsics/memory/alloc<i32>(1i32)}
   assign(dereference(ptr), 9i32)
@@ -44,7 +44,7 @@ TEST_CASE("runs vm with heap realloc intrinsic") {
   program_matrix::ProgramCase program;
   program.name = "runs_vm_with_heap_realloc_intrinsic_2";
   program.source = R"(
-[return<int> effects(heap_alloc)]
+[unsafe return<int> effects(heap_alloc)]
 main() {
   [mut] ptr{/std/intrinsics/memory/alloc<i32>(1i32)}
   assign(dereference(ptr), 9i32)
@@ -64,7 +64,7 @@ TEST_CASE("runs vm with checked memory at intrinsic") {
   program_matrix::ProgramCase program;
   program.name = "runs_vm_with_checked_memory_at_intrinsic_3";
   program.source = R"(
-[return<int> effects(heap_alloc)]
+[unsafe return<int> effects(heap_alloc)]
 main() {
   [mut] ptr{/std/intrinsics/memory/alloc<i32>(2i32)}
   assign(dereference(ptr), 9i32)
@@ -84,7 +84,7 @@ TEST_CASE("runs vm with unchecked memory at intrinsic") {
   program_matrix::ProgramCase program;
   program.name = "runs_vm_with_unchecked_memory_at_intrinsic_4";
   program.source = R"(
-[return<int> effects(heap_alloc)]
+[unsafe return<int> effects(heap_alloc)]
 main() {
   [mut] ptr{/std/intrinsics/memory/alloc<i32>(2i32)}
   assign(dereference(ptr), 9i32)
@@ -258,7 +258,7 @@ TEST_CASE("runs vm with pointer-backed uninitialized storage") {
   program_matrix::ProgramCase program;
   program.name = "runs_vm_with_pointer_backed_uninitialized_storage_12";
   program.source = R"(
-[effects(heap_alloc), return<int>]
+[unsafe effects(heap_alloc), return<int>]
 main() {
   [Pointer<uninitialized<i32>>] ptr{/std/intrinsics/memory/alloc<uninitialized<i32>>(1i32)}
   init(dereference(ptr), 7i32)
@@ -299,7 +299,7 @@ Pair() {
   [i32] right{0i32}
 }
 
-[effects(heap_alloc), return<int>]
+[unsafe effects(heap_alloc), return<int>]
 main() {
   [Pointer<uninitialized<Pair>>] ptr{/std/intrinsics/memory/alloc<uninitialized<Pair>>(1i32)}
   init(dereference(ptr), Pair{3i32, 9i32})

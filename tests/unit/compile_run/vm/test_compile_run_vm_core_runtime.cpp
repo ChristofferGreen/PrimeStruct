@@ -22,7 +22,7 @@ main() {
 
 TEST_CASE("vm rejects dereference after heap free intrinsic") {
   const std::string source = R"(
-[return<int> effects(heap_alloc)]
+[unsafe return<int> effects(heap_alloc)]
 main() {
   [mut] ptr{/std/intrinsics/memory/alloc<i32>(1i32)}
   /std/intrinsics/memory/free(ptr)

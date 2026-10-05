@@ -582,13 +582,15 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to brace
 - **Unsafe scopes:** `[unsafe]` on a definition allows aliasing within that body, and also allows pointer-to-reference
   initialization from pointer-like expressions when types match. References created there must not escape the unsafe
   scope. Unsafe scopes are aliasing barriers for optimization.
-- **Unsafe calls:** unsafe definitions may be called from safe code; the call does not taint the caller as long as
-  unsafe-created references do not escape.
-- **Memory safety (partly implemented; open work TODO-5485, TODO-5487 to TODO-5490, TODO-5492):** safe code cannot read or write memory that has been freed. The
+- **Unsafe calls:** `[unsafe]` definitions may be called from safe code; the call does not taint the caller as long as
+  unsafe-created references do not escape. `[unsafe_api]` definitions (unsafe to call, like the raw stdlib buffer
+  wrappers) may only be called from `[unsafe]` or `[unsafe_api]` definitions.
+- **Memory safety (partly implemented; open work TODO-5485, TODO-5487, TODO-5489, TODO-5490, TODO-5492):** safe code cannot read or write memory that has been freed. The
   compiler enforces it with these rules; code that breaks the guarantee from inside an `[unsafe]` definition (or a safe
   API built on one incorrectly) is the author's responsibility.
   - Freeing and reinterpreting memory is unsafe: `/std/intrinsics/memory/free`, `realloc`, `at_unsafe` and
-    `reinterpret` are only accepted in `[unsafe]` definitions. `alloc` stays safe (without `free` it can only leak).
+    `reinterpret` are only accepted in `[unsafe]`/`[unsafe_api]` definitions, and wrappers around them are
+    `[unsafe_api]`. `alloc` stays safe (without `free` it can only leak).
   - Containers own their storage. A borrow of an element or of storage inside a container (a reference returned by a
     container helper, a view, an iterator) borrows the container: the container cannot be structurally changed
     (grown, shrunk, cleared, moved or destroyed) while the borrow is live.

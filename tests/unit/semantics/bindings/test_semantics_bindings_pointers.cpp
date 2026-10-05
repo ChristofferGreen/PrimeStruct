@@ -2,6 +2,9 @@
 
 #include "../test_semantics_helpers.h"
 
+#include <utility>
+#include <vector>
+
 TEST_SUITE_BEGIN("primestruct.semantics.bindings.pointers");
 
 TEST_CASE("pointer helpers validate") {
@@ -119,7 +122,7 @@ main() {
 
 TEST_CASE("memory intrinsics validate with heap_alloc effect") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[unsafe effects(heap_alloc), return<int>]
 main() {
   [mut] ptr{/std/intrinsics/memory/alloc<i32>(4i32)}
   assign(dereference(ptr), 7i32)
@@ -135,7 +138,7 @@ main() {
 
 TEST_CASE("pointer targets allow top-level uninitialized storage") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[unsafe effects(heap_alloc), return<int>]
 main() {
   [Pointer<uninitialized<i32>>] ptr{/std/intrinsics/memory/alloc<uninitialized<i32>>(1i32)}
   init(dereference(ptr), 7i32)
@@ -151,9 +154,14 @@ main() {
 
 TEST_CASE("pointer helper roots allow uninitialized borrow binding") {
   const std::string source = R"(
-[return<Pointer<uninitialized<i32>>>]
+[unsafe return<Pointer<uninitialized<i32>>>]
 slot([Pointer<uninitialized<i32>>] values, [i32] index) {
   return(/std/intrinsics/memory/at_unsafe(values, index))
+}
+
+[unsafe effects(heap_alloc)]
+release([Pointer<uninitialized<i32>>] ptr) {
+  /std/intrinsics/memory/free(ptr)
 }
 
 [effects(heap_alloc), return<int>]
@@ -164,7 +172,7 @@ main() {
   [Reference<i32>] ref{borrow(dereference(ptrSlot))}
   [i32] out{dereference(ref)}
   drop(dereference(ptrSlot))
-  /std/intrinsics/memory/free(ptr)
+  release(ptr)
   return(out)
 }
 )";
@@ -230,7 +238,7 @@ main() {
 
 TEST_CASE("memory at validates checked pointer access") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[unsafe effects(heap_alloc), return<int>]
 main() {
   [mut] ptr{/std/intrinsics/memory/alloc<i32>(2i32)}
   [mut] second{/std/intrinsics/memory/at(ptr, 1i32, 2i32)}
@@ -273,7 +281,7 @@ main() {
 
 TEST_CASE("memory at_unsafe validates unchecked pointer access") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[unsafe effects(heap_alloc), return<int>]
 main() {
   [mut] ptr{/std/intrinsics/memory/alloc<i32>(2i32)}
   [mut] second{/std/intrinsics/memory/at_unsafe(ptr, 1i32)}
@@ -289,7 +297,7 @@ main() {
 
 TEST_CASE("memory at_unsafe rejects non-pointer target") {
   const std::string source = R"(
-[return<int>]
+[unsafe return<int>]
 main() {
   /std/intrinsics/memory/at_unsafe(1i32, 0i32)
   return(0i32)
@@ -302,7 +310,7 @@ main() {
 
 TEST_CASE("memory at_unsafe rejects template arguments") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[unsafe effects(heap_alloc), return<int>]
 main() {
   [Pointer<i32>] ptr{/std/intrinsics/memory/alloc<i32>(2i32)}
   /std/intrinsics/memory/at_unsafe<i32>(ptr, 1i32)
@@ -342,7 +350,7 @@ main() {
 
 TEST_CASE("realloc requires pointer target") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[unsafe effects(heap_alloc), return<int>]
 main() {
   /std/intrinsics/memory/realloc(1i32, 2i32)
   return(0i32)
@@ -355,7 +363,7 @@ main() {
 
 TEST_CASE("free rejects template arguments") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[unsafe effects(heap_alloc), return<int>]
 main() {
   [Pointer<i32>] ptr{/std/intrinsics/memory/alloc<i32>(1i32)}
   /std/intrinsics/memory/free<i32>(ptr)
@@ -1444,6 +1452,76 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("pointer arithmetic requires integer offset") != std::string::npos);
+}
+
+TEST_CASE("raw heap operations require an unsafe definition") {
+  // docs/spec/pointers-and-references.md: free, realloc, at_unsafe and reinterpret are unsafe.
+  const std::vector<std::pair<std::string, std::string>> uses = {
+      {"free", "/std/intrinsics/memory/free(ptr)"},
+      {"realloc", "[Pointer<i32>] grown{/std/intrinsics/memory/realloc(ptr, 2i32)}"},
+      {"at_unsafe", "[Pointer<i32>] slot{/std/intrinsics/memory/at_unsafe(ptr, 0i32)}"},
+      {"reinterpret", "[Pointer<i64>] wide{/std/intrinsics/memory/reinterpret<i64>(ptr)}"},
+  };
+  for (const auto &[name, use] : uses) {
+    INFO(name);
+    for (const bool unsafeMain : {false, true}) {
+      const std::string source = std::string("[") + (unsafeMain ? "unsafe " : "") +
+                                 "effects(heap_alloc), return<int>]\n"
+                                 "main() {\n"
+                                 "  [Pointer<i32>] ptr{/std/intrinsics/memory/alloc<i32>(1i32)}\n"
+                                 "  " +
+                                 use +
+                                 "\n"
+                                 "  return(0i32)\n"
+                                 "}\n";
+      std::string error;
+      if (unsafeMain) {
+        CHECK(validateProgram(source, "/main", error));
+        CHECK(error.empty());
+      } else {
+        CHECK_FALSE(validateProgram(source, "/main", error));
+        CHECK(error.find(name + " requires an unsafe definition") != std::string::npos);
+      }
+    }
+  }
+}
+
+TEST_CASE("unsafe_api definitions are only callable from unsafe code") {
+  const std::string prelude = R"(
+[unsafe_api effects(heap_alloc)]
+release([Pointer<i32>] ptr) {
+  /std/intrinsics/memory/free(ptr)
+}
+
+[unsafe effects(heap_alloc)]
+wrapper([Pointer<i32>] ptr) {
+  release(ptr)
+}
+)";
+  const std::string safeCaller = prelude + R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [Pointer<i32>] ptr{/std/intrinsics/memory/alloc<i32>(1i32)}
+  release(ptr)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(safeCaller, "/main", error));
+  CHECK(error.find("calling /release requires an unsafe definition") != std::string::npos);
+
+  // An [unsafe] definition may call it, and safe code may call that definition.
+  const std::string throughUnsafe = prelude + R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [Pointer<i32>] ptr{/std/intrinsics/memory/alloc<i32>(1i32)}
+  wrapper(ptr)
+  return(0i32)
+}
+)";
+  error.clear();
+  CHECK(validateProgram(throughUnsafe, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_SUITE_END();

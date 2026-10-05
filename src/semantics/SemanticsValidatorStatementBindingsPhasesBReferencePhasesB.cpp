@@ -205,7 +205,10 @@ PhaseStatus SemanticsValidator::validateBindingReferencePhase5([[maybe_unused]] 
       insertLocalBinding(locals, stmt.name, std::move(info));
       return st2.done(st.done(true));
     }
-    if (!initIsLocation && currentValidationState_.context.definitionIsUnsafe) {
+    // `borrow(...)` takes the ordinary borrow path in unsafe bodies too; other non-`location`
+    // initializers there are pointer conversions.
+    if (!initIsLocation && !initIsDirectBorrowStorage &&
+        currentValidationState_.context.definitionIsUnsafe) {
       std::string pointerTargetType;
       if (!resolvePointerTargetType(init, pointerTargetType)) {
         return st2.done(st.done(failBindingDiagnostic("unsafe Reference bindings require pointer-like initializer")));

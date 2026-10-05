@@ -10,7 +10,7 @@ bool SemanticsValidator::makeDefinitionValidationContext(const Definition &def, 
   for (const auto &transform : def.transforms) {
     if (transform.name == "compute") {
       out.definitionIsCompute = true;
-    } else if (transform.name == "unsafe") {
+    } else if (transform.name == "unsafe" || transform.name == "unsafe_api") {
       out.definitionIsUnsafe = true;
     } else if (transform.name == "return" && transform.templateArgs.size() == 1) {
       ResultTypeInfo resultInfo;

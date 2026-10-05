@@ -393,6 +393,13 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
       }
       return true;
     }
+    // Freeing, resizing, unchecked indexing and reinterpreting can reach freed or foreign memory;
+    // only unsafe code may use them (docs/spec/pointers-and-references.md, heap intrinsics).
+    if ((builtinName == "at_unsafe" || builtinName == "reinterpret" || builtinName == "free" ||
+         builtinName == "realloc") &&
+        !currentValidationState_.context.definitionIsUnsafe) {
+      return failScalarPointerMemoryBuiltin(builtinName + " requires an unsafe definition");
+    }
     if (builtinName == "at_unsafe") {
       if (!expr.templateArgs.empty()) {
         return failScalarPointerMemoryBuiltin("at_unsafe does not accept template arguments");

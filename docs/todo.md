@@ -102,7 +102,6 @@ of sync with them.
 | --- | --- | --- | --- |
 | TODO-5485 | `[T copy]` parameters receive their own copy | ready | params |
 | TODO-5487 | Copying a Vector copies its elements | blocked | containers |
-| TODO-5488 | Raw heap operations require `[unsafe]` | ready | unsafe |
 | TODO-5489 | Container element borrows keep the container borrowed | ready | borrows |
 | TODO-5490 | Pointers to locals cannot escape their scope | ready | escapes |
 | TODO-5492 | `Destroy` runs at scope end | blocked | lifecycle |
@@ -111,22 +110,20 @@ of sync with them.
 ### Ready Now
 
 - TODO-5485 (params): `[T copy]` parameters receive their own copy
-- TODO-5488 (unsafe): raw heap operations require `[unsafe]`
 - TODO-5489 (borrows): container element borrows keep the container borrowed
 - TODO-5490 (escapes): pointers to locals cannot escape their scope
 
 ### Immediate Next 10
 
-1. TODO-5488
-2. TODO-5485
-3. TODO-5487 (after TODO-5485)
-4. TODO-5490
-5. TODO-5489
-6. TODO-5492 (after TODO-5487)
+1. TODO-5485
+2. TODO-5487 (after TODO-5485)
+3. TODO-5490
+4. TODO-5489
+5. TODO-5492 (after TODO-5487)
 
 ### Priority Lanes
 
-- Memory safety and parameter modes (docs/spec/value-lifecycle.md Parameter Passing; docs/spec/type-system.md Ownership and Mutability): TODO-5485, TODO-5487, TODO-5488, TODO-5489, TODO-5490, TODO-5492
+- Memory safety and parameter modes (docs/spec/value-lifecycle.md Parameter Passing; docs/spec/type-system.md Ownership and Mutability): TODO-5485, TODO-5487, TODO-5489, TODO-5490, TODO-5492
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
 ### Execution Queue
@@ -160,18 +157,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - benchmarks show no regression from removed alias copies (vector-heavy corpus programs no slower)
     - full release gate and corpus differential green
   - stop_rule: containers only; no parameter-mode changes.
-
-- [ ] TODO-5488: Raw heap operations require `[unsafe]`
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-05
-  - phase: Memory safety
-  - parallel_track: unsafe
-  - scope: Reject `/std/intrinsics/memory/free`, `realloc`, `at_unsafe` and `reinterpret` outside `[unsafe]` definitions (validated in `src/semantics/SemanticsValidatorExprScalarPointerMemory.cpp:396-461`); mark the stdlib helpers that call them (`buffer_checked.prime`, `buffer_unchecked.prime`, vector/map/ring buffer/SoA storage internals) `[unsafe]` so public container APIs stay safe; update tests and corpus programs that call them directly.
-  - acceptance:
-    - diagnostic `free requires an unsafe definition` (and the same for `realloc`, `at_unsafe`, `reinterpret`) with positive (inside `[unsafe]`) and negative tests
-    - no `[unsafe]` needed in user code that only uses public containers; full release gate and corpus differential green
-  - stop_rule: do not change `alloc`, pointer arithmetic or `dereference` rules.
 
 - [ ] TODO-5489: Container element borrows keep the container borrowed
   - owner: ai

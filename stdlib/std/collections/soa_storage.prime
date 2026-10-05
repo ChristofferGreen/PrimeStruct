@@ -55,7 +55,7 @@ namespace std {
       other.ownsData = false
     }
 
-    [mut effects(heap_alloc)]
+    [unsafe mut effects(heap_alloc)]
     Destroy() {
       if(this.ownsData) {
         soaColumnCheckShape<T>(this)
@@ -490,7 +490,7 @@ namespace std {
     }
   }
 
-  [return<Pointer<uninitialized<T>>>]
+  [unsafe return<Pointer<uninitialized<T>>>]
   soaColumnSlotUnsafe<T>([SoaColumn<T>] values, [i32] index) {
     soaColumnCheckShape<T>(values)
     if(index < 0i32 || !(index < values.field_capacity())) {
@@ -499,7 +499,7 @@ namespace std {
     return(bufferOffsetUnsafe<uninitialized<T>>(values.data, index))
   }
 
-  [public return<Pointer<uninitialized<Field>>>]
+  [unsafe public return<Pointer<uninitialized<Field>>>]
   soaColumnFieldSlotUnsafe<Struct, Field>([SoaColumn<Struct>] values, [i32] index, [i32] fieldIndex) {
     soaColumnCheckShape<Struct>(values)
     if(index < 0i32 || !(index < values.field_capacity())) {
@@ -519,7 +519,7 @@ namespace std {
     return(bufferReinterpretFromBytes<uninitialized<Field>>(fieldBytes))
   }
 
-  [public return<SoaFieldView<Field>>]
+  [unsafe public return<SoaFieldView<Field>>]
   soaColumnFieldViewUnsafe<Struct, Field>([SoaColumn<Struct>] values, [i32] fieldIndex) {
     soaColumnCheckShape<Struct>(values)
     [i32] fieldCount{/Struct/SoaSchemaFieldCount()}
@@ -556,7 +556,7 @@ namespace std {
     }
   }
 
-  [return<Pointer<uninitialized<T>>>]
+  [unsafe return<Pointer<uninitialized<T>>>]
   soaFieldViewSlotUnsafe<T>([SoaFieldView<T>] values, [i32] index) {
     soaFieldViewCheckIndex<T>(values, index)
     [i32] byteOffset{index * values.stride}
@@ -630,7 +630,7 @@ namespace std {
     }
   }
 
-  [effects(heap_alloc), return<void>]
+  [unsafe effects(heap_alloc), return<void>]
   soaColumnMovePrefixToBuffer<T>([Pointer<uninitialized<T>> mut] dst, [SoaColumn<T> mut] values, [i32] limit) {
     [i32 mut] index{0i32}
     while(index < limit) {

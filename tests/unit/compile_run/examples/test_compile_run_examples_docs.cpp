@@ -643,7 +643,8 @@ main() {
 }
 )", 106);
 
-  runVmAndNative("docs_safe_extents_optional_pointer", R"(
+  runVmAndNative("docs_safe_extents_optional_pointer",
+                 R"(
 import /std/maybe/*
 
 [return<Maybe<Pointer<i32>>> effects(heap_alloc)]
@@ -653,7 +654,7 @@ try_alloc_slot([i32] initial) {
   return(some<Pointer<i32>>(slot))
 }
 
-[return<int> effects(heap_alloc)]
+[unsafe return<int> effects(heap_alloc)]
 main() {
   [Maybe<Pointer<i32>>] slot{try_alloc_slot(42i32)}
   return(pick(slot) {
@@ -667,7 +668,8 @@ main() {
     }
   })
 }
-)", 42);
+)",
+                 42);
 
   runVmAndNative("docs_safe_extents_capability_reference_param", R"(
 [return<int>]

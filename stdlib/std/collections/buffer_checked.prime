@@ -6,17 +6,17 @@ namespace std {
     return(/std/intrinsics/memory/alloc<T>(count))
   }
 
-  [public effects(heap_alloc), return<Pointer<T>>]
+  [public unsafe_api effects(heap_alloc), return<Pointer<T>>]
   bufferGrow<T>([Pointer<T>] ptr, [i32] count) {
     return(/std/intrinsics/memory/realloc(ptr, count))
   }
 
-  [public effects(heap_alloc), return<void>]
+  [public unsafe_api effects(heap_alloc), return<void>]
   bufferFree<T>([Pointer<T>] ptr) {
     /std/intrinsics/memory/free(ptr)
   }
 
-  [public effects(heap_alloc), return<void>]
+  [public unsafe_api effects(heap_alloc), return<void>]
   bufferFreeUninitialized<T>([Pointer<uninitialized<T>>] ptr) {
     /std/intrinsics/memory/free(ptr)
   }
@@ -26,12 +26,12 @@ namespace std {
     return(/std/intrinsics/memory/at(ptr, index, count))
   }
 
-  [public return<Pointer<T>>]
+  [public unsafe_api return<Pointer<T>>]
   bufferReinterpret<T, U>([Pointer<U>] ptr) {
     return(/std/intrinsics/memory/reinterpret<T>(ptr))
   }
 
-  [public return<Pointer<i32>>]
+  [public unsafe_api return<Pointer<i32>>]
   bufferReinterpretBytes<T>([Pointer<T>] ptr) {
     return(/std/intrinsics/memory/reinterpret<i32>(ptr))
   }
@@ -41,7 +41,7 @@ namespace std {
     return(ptr + byteOffset)
   }
 
-  [public return<Pointer<T>>]
+  [public unsafe_api return<Pointer<T>>]
   bufferReinterpretFromBytes<T>([Pointer<i32>] ptr) {
     return(/std/intrinsics/memory/reinterpret<T>(ptr))
   }

@@ -16,6 +16,7 @@ primec::TransformRegistry buildDefaultTransformRegistry() {
   registry.registerTransform({"require", primec::TransformPhase::Semantic, "-", true, true});
   registry.registerTransform({"single_type_to_return", primec::TransformPhase::Semantic, "-", true, true});
   registry.registerTransform({"unsafe", primec::TransformPhase::Semantic, "-", true, true});
+  registry.registerTransform({"unsafe_api", primec::TransformPhase::Semantic, "-", true, true});
   return registry;
 }
 

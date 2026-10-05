@@ -18,8 +18,8 @@ bool isNonTypeTransformName(const std::string &name) {
   return name == "return" || name == "effects" || name == "capabilities" || name == "type" ||
          name == "mut" || name == "copy" || name == "move" || name == "restrict" ||
          name == "align_bytes" || name == "align_kbytes" || name == "on_error" ||
-         name == "struct" || name == "enum" || name == "unsafe" || name == "pod" ||
-         name == "handle" || name == "gpu_lane" || name == "no_padding" ||
+         name == "struct" || name == "enum" || name == "unsafe" || name == "unsafe_api" ||
+         name == "pod" || name == "handle" || name == "gpu_lane" || name == "no_padding" ||
          name == "platform_independent_padding" || name == "public" || name == "private" ||
          name == "static" || name == "single_type_to_return" || name == "stack" || name == "heap" ||
          name == "buffer" || name == "spawn" || name == "Additive" || name == "Multiplicative" ||

@@ -108,7 +108,7 @@ bool SemanticsValidator::buildParameters() {
     for (const auto &transform : def.transforms) {
       if (transform.name == "compute") {
         definitionValidationState.context.definitionIsCompute = true;
-      } else if (transform.name == "unsafe") {
+      } else if (transform.name == "unsafe" || transform.name == "unsafe_api") {
         definitionValidationState.context.definitionIsUnsafe = true;
       } else if (transform.name == "return" && transform.templateArgs.size() == 1) {
         ResultTypeInfo resultInfo;

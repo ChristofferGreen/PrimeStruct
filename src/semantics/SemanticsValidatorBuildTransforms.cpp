@@ -17,12 +17,12 @@ bool isUnsupportedSumPayloadEnvelope(const Transform &transform) {
          transform.name == "effects" || transform.name == "capabilities" ||
          transform.name == "on_error" || transform.name == "compute" ||
          transform.name == "workgroup_size" || transform.name == "unsafe" ||
-         transform.name == "require" || transform.name == "ast" || transform.name == "reflect" ||
-         transform.name == "generate" || transform.name == "static" || transform.name == "public" ||
-         transform.name == "private" || transform.name == "mut" || transform.name == "copy" ||
-         transform.name == "move" || transform.name == "restrict" ||
-         transform.name == "align_bytes" || transform.name == "align_kbytes" ||
-         isStructTransformName(transform.name);
+         transform.name == "unsafe_api" || transform.name == "require" || transform.name == "ast" ||
+         transform.name == "reflect" || transform.name == "generate" ||
+         transform.name == "static" || transform.name == "public" || transform.name == "private" ||
+         transform.name == "mut" || transform.name == "copy" || transform.name == "move" ||
+         transform.name == "restrict" || transform.name == "align_bytes" ||
+         transform.name == "align_kbytes" || isStructTransformName(transform.name);
 }
 
 bool isLowerCamelIdentifier(const std::string &name) {
@@ -338,7 +338,7 @@ bool SemanticsValidator::validateDefinitionBuildTransforms(
         }
         break;
       }
-    } else if (transform.name == "unsafe") {
+    } else if (transform.name == "unsafe" || transform.name == "unsafe_api") {
       if (sawUnsafe) {
         if (addTransformDiagnostic("duplicate unsafe transform on " + def.fullPath)) {
           return false;
@@ -347,13 +347,15 @@ bool SemanticsValidator::validateDefinitionBuildTransforms(
       }
       sawUnsafe = true;
       if (!transform.templateArgs.empty()) {
-        if (addTransformDiagnostic("unsafe does not accept template arguments on " + def.fullPath)) {
+        if (addTransformDiagnostic(transform.name + " does not accept template arguments on " +
+                                   def.fullPath)) {
           return false;
         }
         break;
       }
       if (!transform.arguments.empty()) {
-        if (addTransformDiagnostic("unsafe does not accept arguments on " + def.fullPath)) {
+        if (addTransformDiagnostic(transform.name + " does not accept arguments on " +
+                                   def.fullPath)) {
           return false;
         }
         break;
@@ -430,7 +432,8 @@ bool SemanticsValidator::validateDefinitionBuildTransforms(
       if (definitionTransformError) {
         break;
       }
-    } else if (transform.name == "stack" || transform.name == "heap" || transform.name == "buffer") {
+    } else if (transform.name == "stack" || transform.name == "heap" ||
+               transform.name == "buffer") {
       if (addTransformDiagnostic("placement transforms are not supported: " + def.fullPath)) {
         return false;
       }
@@ -627,10 +630,9 @@ bool SemanticsValidator::validateDefinitionBuildTransforms(
       }
       if (transform.name == "effects" || transform.name == "capabilities" ||
           transform.name == "compute" || transform.name == "unsafe" ||
-          transform.name == "on_error" || transform.name == "workgroup_size" ||
-          transform.name == "require" ||
-          transform.name == "ast" || transform.name == "reflect" ||
-          transform.name == "generate") {
+          transform.name == "unsafe_api" || transform.name == "on_error" ||
+          transform.name == "workgroup_size" || transform.name == "require" ||
+          transform.name == "ast" || transform.name == "reflect" || transform.name == "generate") {
         if (addTransformDiagnostic("sum definitions cannot combine with callable transforms: " + def.fullPath)) {
           return false;
         }

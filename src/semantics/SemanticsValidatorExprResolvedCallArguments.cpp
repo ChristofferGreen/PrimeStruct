@@ -474,7 +474,13 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
   bool calleeIsUnsafe = false;
   if (context.resolvedDefinition != nullptr) {
     for (const auto &transform : context.resolvedDefinition->transforms) {
-      if (transform.name == "unsafe") {
+      if (transform.name == "unsafe_api" && !currentValidationState_.context.definitionIsUnsafe) {
+        // An `[unsafe_api]` definition can break memory safety when misused; only unsafe code may
+        // call it (docs/spec/type-system.md, Ownership and Mutability).
+        return failResolvedCallArgumentDiagnostic("calling " + resolved +
+                                                  " requires an unsafe definition");
+      }
+      if (transform.name == "unsafe" || transform.name == "unsafe_api") {
         calleeIsUnsafe = true;
         break;
       }

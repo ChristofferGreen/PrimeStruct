@@ -988,7 +988,7 @@ try_alloc_slot([i32] initial) {
   return(some<Pointer<i32>>(slot))
 }
 
-[return<int> effects(heap_alloc)]
+[unsafe return<int> effects(heap_alloc)]
 main() {
   [Maybe<Pointer<i32>>] slot{try_alloc_slot(42i32)}
   return(pick(slot) {
@@ -1012,7 +1012,8 @@ Why this is good:
   produced, so the fallible result travels with the value from the start.
 - `ptr` inside the `some` arm is a real `Pointer<i32>` (not a raw address),
   so `dereference(ptr)` and `free(ptr)` work exactly as they would on a
-  directly-bound pointer.
+  directly-bound pointer. Freeing is an unsafe operation, so `main` is marked
+  `[unsafe]`; code that only uses containers never needs it.
 
 ### Capability-Parameterized Reference Parameter
 

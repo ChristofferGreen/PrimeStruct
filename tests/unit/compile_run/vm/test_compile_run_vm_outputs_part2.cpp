@@ -593,7 +593,7 @@ main() {
 TEST_CASE("exe-ir emitter compiles and runs heap free intrinsic") {
   SKIP_IF_VM_IR_BACKEND_LIMITED();
   const std::string source = R"(
-[return<int> effects(heap_alloc)]
+[unsafe return<int> effects(heap_alloc)]
 main() {
   [mut] ptr{/std/intrinsics/memory/alloc<i32>(1i32)}
   assign(dereference(ptr), 9i32)
@@ -613,7 +613,7 @@ main() {
 TEST_CASE("exe-ir emitter compiles and runs heap realloc intrinsic") {
   SKIP_IF_VM_IR_BACKEND_LIMITED();
   const std::string source = R"(
-[return<int> effects(heap_alloc)]
+[unsafe return<int> effects(heap_alloc)]
 main() {
   [mut] ptr{/std/intrinsics/memory/alloc<i32>(1i32)}
   assign(dereference(ptr), 9i32)
@@ -635,7 +635,7 @@ main() {
 TEST_CASE("exe-ir emitter compiles and runs checked memory at intrinsic") {
   SKIP_IF_VM_IR_BACKEND_LIMITED();
   const std::string source = R"(
-[return<int> effects(heap_alloc)]
+[unsafe return<int> effects(heap_alloc)]
 main() {
   [mut] ptr{/std/intrinsics/memory/alloc<i32>(2i32)}
   assign(dereference(ptr), 9i32)
@@ -657,7 +657,7 @@ main() {
 TEST_CASE("exe-ir emitter compiles and runs unchecked memory at intrinsic") {
   SKIP_IF_VM_IR_BACKEND_LIMITED();
   const std::string source = R"(
-[return<int> effects(heap_alloc)]
+[unsafe return<int> effects(heap_alloc)]
 main() {
   [mut] ptr{/std/intrinsics/memory/alloc<i32>(2i32)}
   assign(dereference(ptr), 9i32)
@@ -699,7 +699,7 @@ main() {
 TEST_CASE("exe-ir emitter faults on dereference after heap free intrinsic") {
   SKIP_IF_VM_IR_BACKEND_LIMITED();
   const std::string source = R"(
-[return<int> effects(heap_alloc)]
+[unsafe return<int> effects(heap_alloc)]
 main() {
   [mut] ptr{/std/intrinsics/memory/alloc<i32>(1i32)}
   /std/intrinsics/memory/free(ptr)

@@ -8,7 +8,7 @@ inline std::string makeCheckedPointerHelperSurfaceSource() {
   return R"(
 import /std/collections/buffer_checked/*
 
-[effects(io_out, heap_alloc), return<int>]
+[unsafe effects(io_out, heap_alloc), return<int>]
 main() {
   [Pointer<i32> mut] ptr{bufferAlloc<i32>(2i32)}
   [Pointer<i32> mut] first{bufferOffsetChecked<i32>(ptr, 0i32, 2i32)}
@@ -28,7 +28,7 @@ inline std::string makeCheckedPointerGrowthSource() {
   return R"(
 import /std/collections/buffer_checked/*
 
-[effects(io_out, heap_alloc), return<int>]
+[unsafe effects(io_out, heap_alloc), return<int>]
 main() {
   [Pointer<i32> mut] ptr{bufferAlloc<i32>(2i32)}
   bufferWriteChecked<i32>(ptr, 0i32, 2i32, 4i32)
@@ -60,7 +60,7 @@ Token() {
   }
 }
 
-[return<Pointer<uninitialized<Token>>>]
+[unsafe return<Pointer<uninitialized<Token>>>]
 token_slot([Pointer<uninitialized<Token>>] values, [i32] index) {
   return(bufferOffsetUnsafe<uninitialized<Token>>(values, index))
 }
@@ -78,7 +78,7 @@ move_prefix([Pointer<uninitialized<Token>> mut] dst,
   })
 }
 
-[effects(io_out, heap_alloc), return<int>]
+[unsafe effects(io_out, heap_alloc), return<int>]
 main() {
   [Pointer<uninitialized<Token>> mut] src{bufferAlloc<uninitialized<Token>>(3i32)}
   [Pointer<uninitialized<Token>> mut] dst{bufferAlloc<uninitialized<Token>>(3i32)}

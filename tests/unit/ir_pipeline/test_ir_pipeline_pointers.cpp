@@ -198,7 +198,7 @@ main() {
 
 TEST_CASE("ir lowers heap realloc pointer sum through dereference offset") {
   const std::string source = R"(
-[return<int> effects(heap_alloc)]
+[unsafe return<int> effects(heap_alloc)]
 main() {
   [mut] ptr{/std/intrinsics/memory/alloc<i32>(1i32)}
   assign(dereference(ptr), 9i32)

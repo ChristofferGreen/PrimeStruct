@@ -110,8 +110,9 @@ bool SemanticsValidator::resolveExecutionEffects(const Expr &expr, std::unordere
       return failPassesEffectsDiagnostic("on_error transform is not allowed on executions: " + context);
     } else if (transform.name == "mut") {
       return failPassesEffectsDiagnostic("mut transform is not allowed on executions: " + context);
-    } else if (transform.name == "unsafe") {
-      return failPassesEffectsDiagnostic("unsafe transform is not allowed on executions: " + context);
+    } else if (transform.name == "unsafe" || transform.name == "unsafe_api") {
+      return failPassesEffectsDiagnostic(transform.name +
+                                         " transform is not allowed on executions: " + context);
     } else if (transform.name == "copy") {
       return failPassesEffectsDiagnostic("copy transform is not allowed on executions: " + context);
     } else if (transform.name == "move") {

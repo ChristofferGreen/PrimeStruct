@@ -164,7 +164,7 @@ addPrimeStructManagedDoctestSuite(
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.bindings.pointers"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 85
+  TOTAL_CASES 87
   SHARD_PREFIX "bindings_pointers"
 )
 

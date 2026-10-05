@@ -77,7 +77,7 @@ namespace std {
       other.ownsData = false
     }
 
-    [mut effects(heap_alloc)]
+    [unsafe mut effects(heap_alloc)]
     Destroy() {
       if(this.ownsData) {
         [Pointer<uninitialized<T>>] dataPtr{this.data}
@@ -118,7 +118,7 @@ namespace std {
     return(values.field_capacity())
   }
 
-  [public effects(heap_alloc), return<void>]
+  [unsafe public effects(heap_alloc), return<void>]
   push<T>([RingBuffer<T> mut] values, [T move] value) {
     if(values.field_capacity() <= 0) {
       panic(values.field_capacity())
@@ -135,7 +135,7 @@ namespace std {
     }
   }
 
-  [return<Pointer<uninitialized<T>>>]
+  [unsafe return<Pointer<uninitialized<T>>>]
   slotUnsafe<T>([RingBuffer<T>] values, [i32] index) {
     if(index < 0 || index >= values.field_count()) {
       panic(index)
