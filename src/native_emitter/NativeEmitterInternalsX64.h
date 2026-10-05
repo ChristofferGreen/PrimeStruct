@@ -113,13 +113,13 @@ class X64Emitter {
    static constexpr uint32_t JitDataFaultArgument = 24;
    // The runtime side (VmNativeJitHost): its context, the bridge function the code calls for
    // the opcodes nativeJitBridgesOpcode lists, and the heap it keeps for the code, which the code
-   // reads and writes directly: the VM's slot values, their count, and one byte per slot that is
-   // nonzero while the slot's allocation is live. The last field is scratch for the heap path.
+   // reads and writes directly: the slot values, their count and the slot states of the VM's
+   // heap (VmHeapCore). The last field is scratch for the heap path.
    static constexpr uint32_t JitDataHostContext = 32;
    static constexpr uint32_t JitDataHostBridge = 40;
    static constexpr uint32_t JitDataHeapBase = 48;
    static constexpr uint32_t JitDataHeapSlots = 56;
-   static constexpr uint32_t JitDataHeapLive = 64;
+   static constexpr uint32_t JitDataHeapStates = 64;
    static constexpr uint32_t JitDataScratch = 72;
    static constexpr uint64_t JitMaxCallDepth =
        4095; // the VM's limit of 4096 frames, entry included

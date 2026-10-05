@@ -162,11 +162,11 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        }\n";
       out << "        if ((loadIndirectAddress & ps_heap_address_tag) != 0ull) {\n";
       out << "          std::size_t loadHeapIndex = 0;\n";
-      out << "          if (!psResolveHeapSlot(loadIndirectAddress, heapSlots, heapAllocations, loadHeapIndex)) {\n";
+      out << "          if (!psResolveHeapSlot(loadIndirectAddress, heap, loadHeapIndex)) {\n";
       out << "            std::cerr << \"invalid indirect address in IR\\n\";\n";
       out << "            return 1;\n";
       out << "          }\n";
-      out << "          stack[sp++] = heapSlots[loadHeapIndex];\n";
+      out << "          stack[sp++] = heap.slots[loadHeapIndex];\n";
       out << "        } else {\n";
       out << "          uint64_t loadIndirectIndex = loadIndirectAddress / " << IrSlotBytes << "ull;\n";
       out << "          if (loadIndirectIndex >= " << localCount << "ull) {\n";
@@ -188,11 +188,11 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        }\n";
       out << "        if ((storeIndirectAddress & ps_heap_address_tag) != 0ull) {\n";
       out << "          std::size_t storeHeapIndex = 0;\n";
-      out << "          if (!psResolveHeapSlot(storeIndirectAddress, heapSlots, heapAllocations, storeHeapIndex)) {\n";
+      out << "          if (!psResolveHeapSlot(storeIndirectAddress, heap, storeHeapIndex)) {\n";
       out << "            std::cerr << \"invalid indirect address in IR\\n\";\n";
       out << "            return 1;\n";
       out << "          }\n";
-      out << "          heapSlots[storeHeapIndex] = storeIndirectValue;\n";
+      out << "          heap.slots[storeHeapIndex] = storeIndirectValue;\n";
       out << "        } else {\n";
       out << "          uint64_t storeIndirectIndex = storeIndirectAddress / " << IrSlotBytes << "ull;\n";
       out << "          if (storeIndirectIndex >= " << localCount << "ull) {\n";
@@ -209,7 +209,7 @@ bool emitInstruction(const IrInstruction &instruction,
       emitStackUnderflowGuard(1, "heap alloc");
       out << "        uint64_t heapAllocSlotCount = stack[--sp];\n";
       out << "        uint64_t heapAllocAddress = 0ull;\n";
-      out << "        if (!psHeapAlloc(heapAllocSlotCount, heapSlots, heapAllocations, heapAllocAddress)) {\n";
+      out << "        if (!psHeapAlloc(heapAllocSlotCount, heap, heapAllocAddress)) {\n";
       out << "          std::cerr << \"VM heap allocation overflow\\n\";\n";
       out << "          return 1;\n";
       out << "        }\n";
@@ -219,7 +219,7 @@ bool emitInstruction(const IrInstruction &instruction,
       return true;
     case IrOpcode::HeapFree:
       emitStackUnderflowGuard(1, "heap free");
-      out << "        if (!psHeapFree(stack[--sp], heapSlots, heapAllocations)) {\n";
+      out << "        if (!psHeapFree(stack[--sp], heap)) {\n";
       out << "          std::cerr << \"invalid heap free address in IR\\n\";\n";
       out << "          return 1;\n";
       out << "        }\n";
@@ -231,7 +231,7 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        uint64_t heapReallocSlotCount = stack[--sp];\n";
       out << "        uint64_t heapReallocAddress = stack[--sp];\n";
       out << "        uint64_t heapReallocResult = 0ull;\n";
-      out << "        if (!psHeapRealloc(heapReallocAddress, heapReallocSlotCount, heapSlots, heapAllocations, "
+      out << "        if (!psHeapRealloc(heapReallocAddress, heapReallocSlotCount, heap, "
              "heapReallocResult)) {\n";
       out << "          std::cerr << \"invalid heap realloc address in IR\\n\";\n";
       out << "          return 1;\n";
@@ -561,12 +561,13 @@ bool emitInstruction(const IrInstruction &instruction,
         return false;
       }
       if (instruction.op == IrOpcode::Call) {
-        out << "        int64_t callValue = " << irFunctionSymbol(static_cast<size_t>(instruction.imm))
-            << "(stack, sp, heapSlots, heapAllocations, argc, argv);\n";
+        out << "        int64_t callValue = "
+            << irFunctionSymbol(static_cast<size_t>(instruction.imm))
+            << "(stack, sp, heap, argc, argv);\n";
         out << "        stack[sp++] = static_cast<uint64_t>(callValue);\n";
       } else {
         out << "        " << irFunctionSymbol(static_cast<size_t>(instruction.imm))
-            << "(stack, sp, heapSlots, heapAllocations, argc, argv);\n";
+            << "(stack, sp, heap, argc, argv);\n";
       }
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";

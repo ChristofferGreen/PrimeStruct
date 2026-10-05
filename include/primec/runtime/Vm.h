@@ -11,6 +11,7 @@
 
 #include "primec/ir/Ir.h"
 #include "primec/runtime/VmExecutionKernel.h"
+#include "primec/runtime/VmHeapCore.h"
 #include "primec/runtime/VmHost.h"
 
 namespace primec {
@@ -246,12 +247,6 @@ public:
   VmDebugSnapshot snapshot() const;
   VmDebugSnapshotPayload snapshotPayload() const;
 
-  struct HeapAllocation {
-    size_t baseIndex = 0;
-    size_t slotCount = 0;
-    bool live = false;
-  };
-
 private:
   // The session steps the shared VM kernel (VmExecutionKernel.h), so its frames
   // are the kernel's.
@@ -272,8 +267,7 @@ private:
   std::vector<std::string_view> ownedArgViews_;
   std::vector<size_t> localCounts_;
   std::vector<uint64_t> stack_;
-  std::vector<uint64_t> heapSlots_;
-  std::vector<HeapAllocation> heapAllocations_;
+  VmHeapCore heap_;
   std::vector<Frame> frames_;
   std::optional<VmHostFunctions> hostFunctions_;
   // Run-time strings of this session (see VmStringHeap.h); reset on start().

@@ -13,14 +13,12 @@
 namespace primec::vm_detail {
 namespace {
 
-constexpr uint64_t HeapAddressTag = uint64_t{1} << 63;
-
-// Data page words (X64Emitter::JitData*): context, bridge, heap values, slot count, live bytes.
+// Data page words (X64Emitter::JitData*): context, bridge, heap values, slot count, slot states.
 constexpr size_t DataHostContext = 4;
 constexpr size_t DataHostBridge = 5;
 constexpr size_t DataHeapBase = 6;
 constexpr size_t DataHeapSlots = 7;
-constexpr size_t DataHeapLive = 8;
+constexpr size_t DataHeapStates = 8;
 
 } // namespace
 
@@ -42,9 +40,9 @@ void VmNativeJitHost::attach(uint64_t *dataPage) {
 
 void VmNativeJitHost::publishHeap() {
   if (data_ != nullptr) {
-    data_[DataHeapBase] = static_cast<uint64_t>(reinterpret_cast<uintptr_t>(heap_.data()));
-    data_[DataHeapSlots] = static_cast<uint64_t>(heap_.size());
-    data_[DataHeapLive] = static_cast<uint64_t>(reinterpret_cast<uintptr_t>(live_.data()));
+    data_[DataHeapBase] = static_cast<uint64_t>(reinterpret_cast<uintptr_t>(heap_.slots.data()));
+    data_[DataHeapSlots] = static_cast<uint64_t>(heap_.slots.size());
+    data_[DataHeapStates] = static_cast<uint64_t>(reinterpret_cast<uintptr_t>(heap_.states.data()));
   }
 }
 
@@ -90,25 +88,27 @@ bool VmNativeJitHost::run(uint32_t functionIndex,
   switch (inst.op) {
   case IrOpcode::HeapAlloc: {
     uint64_t address = 0;
-    if (!allocate(stack_.back(), address)) {
+    if (!heap_.allocate(stack_.back(), address, error_)) {
       return false;
     }
     stack_.back() = address;
+    publishHeap();
     return true;
   }
   case IrOpcode::HeapFree: {
     const uint64_t address = stack_.back();
     stack_.pop_back();
-    return release(address);
+    return heap_.release(address, error_);
   }
   case IrOpcode::HeapRealloc: {
     const uint64_t slotCount = stack_.back();
     stack_.pop_back();
     uint64_t address = 0;
-    if (!reallocate(stack_.back(), slotCount, address)) {
+    if (!heap_.reallocate(stack_.back(), slotCount, address, error_)) {
       return false;
     }
     stack_.back() = address;
+    publishHeap();
     return true;
   }
   case IrOpcode::LoadStringByteDynamic: {
@@ -168,97 +168,6 @@ bool VmNativeJitHost::run(uint32_t functionIndex,
   }
   error_ = "unknown IR opcode";
   return false;
-}
-
-VmNativeJitHost::Allocation *VmNativeJitHost::allocationStartingAt(uint64_t baseIndex) {
-  // Allocations are appended in address order.
-  auto it = std::lower_bound(
-      allocations_.begin(),
-      allocations_.end(),
-      baseIndex,
-      [](const Allocation &allocation, uint64_t value) { return allocation.baseIndex < value; });
-  if (it == allocations_.end() || it->baseIndex != baseIndex) {
-    return nullptr;
-  }
-  return &*it;
-}
-
-void VmNativeJitHost::clearSlots(uint64_t baseIndex, uint64_t slotCount) {
-  std::fill_n(heap_.begin() + static_cast<std::ptrdiff_t>(baseIndex), slotCount, 0);
-  std::fill_n(live_.begin() + static_cast<std::ptrdiff_t>(baseIndex), slotCount, 0);
-}
-
-bool VmNativeJitHost::allocate(uint64_t slotCount, uint64_t &address) {
-  if (slotCount == 0) {
-    address = 0;
-    return true;
-  }
-  // The VM's limits (VmHeapHelpers.cpp) on its vector of 8-byte slots.
-  const uint64_t baseIndex = heap_.size();
-  const uint64_t maxSlots = std::vector<uint64_t>().max_size();
-  if (slotCount > maxSlots - baseIndex) {
-    error_ = "VM heap allocation overflow";
-    return false;
-  }
-  if (baseIndex > (std::numeric_limits<uint64_t>::max() - HeapAddressTag) / IrSlotBytes) {
-    error_ = "VM heap allocation overflow";
-    return false;
-  }
-  heap_.resize(static_cast<size_t>(baseIndex + slotCount), 0);
-  live_.resize(static_cast<size_t>(baseIndex + slotCount), 1);
-  allocations_.push_back({baseIndex, slotCount, true});
-  address = HeapAddressTag + baseIndex * IrSlotBytes;
-  publishHeap();
-  return true;
-}
-
-bool VmNativeJitHost::release(uint64_t address) {
-  if (address == 0) {
-    return true;
-  }
-  Allocation *allocation = (address & HeapAddressTag) == 0 || address % IrSlotBytes != 0
-                               ? nullptr
-                               : allocationStartingAt((address & ~HeapAddressTag) / IrSlotBytes);
-  if (allocation == nullptr || !allocation->live) {
-    error_ = "invalid heap free address in IR: " + std::to_string(address);
-    return false;
-  }
-  clearSlots(allocation->baseIndex, allocation->slotCount);
-  allocation->live = false;
-  return true;
-}
-
-bool VmNativeJitHost::reallocate(uint64_t address, uint64_t slotCount, uint64_t &newAddress) {
-  if (address == 0) {
-    return allocate(slotCount, newAddress);
-  }
-  if (slotCount == 0) {
-    if (!release(address)) {
-      return false;
-    }
-    newAddress = 0;
-    return true;
-  }
-  const uint64_t oldBase = (address & ~HeapAddressTag) / IrSlotBytes;
-  const Allocation *found = (address & HeapAddressTag) == 0 || address % IrSlotBytes != 0
-                                ? nullptr
-                                : allocationStartingAt(oldBase);
-  if (found == nullptr || !found->live) {
-    error_ = "invalid heap realloc address in IR: " + std::to_string(address);
-    return false;
-  }
-  const uint64_t oldCount = found->slotCount; // allocating below may move the list
-  if (!allocate(slotCount, newAddress)) {
-    return false;
-  }
-  const uint64_t newBase = (newAddress & ~HeapAddressTag) / IrSlotBytes;
-  const uint64_t copied = std::min(oldCount, slotCount);
-  std::copy_n(heap_.begin() + static_cast<std::ptrdiff_t>(oldBase),
-              copied,
-              heap_.begin() + static_cast<std::ptrdiff_t>(newBase));
-  clearSlots(oldBase, oldCount);
-  allocationStartingAt(oldBase)->live = false;
-  return true;
 }
 
 } // namespace primec::vm_detail

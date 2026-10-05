@@ -123,45 +123,22 @@ public:
                               std::vector<uint64_t> &locals,
                               uint64_t *&slot,
                               std::string &error) override {
-    return vm_detail::resolveIndirectAddress(address,
-                                             slotBytes(),
-                                             locals,
-                                             heapSlots_,
-                                             heapAllocations_,
-                                             slot,
-                                             error);
+    return vm_detail::resolveIndirectAddress(address, slotBytes(), locals, heap_, slot, error);
   }
 
-  bool allocateHeapSlots(uint64_t slotCount,
-                         uint64_t &address,
-                         std::string &error) override {
-    return allocateVmHeapSlots(slotCount,
-                               slotBytes(),
-                               heapSlots_,
-                               heapAllocations_,
-                               address,
-                               error);
+  bool allocateHeapSlots(uint64_t slotCount, uint64_t &address, std::string &error) override {
+    return heap_.allocate(slotCount, address, error);
   }
 
   bool freeHeapSlots(uint64_t address, std::string &error) override {
-    return freeVmHeapSlots(address,
-                           slotBytes(),
-                           heapSlots_,
-                           heapAllocations_,
-                           error);
+    return heap_.release(address, error);
   }
 
   bool reallocHeapSlots(uint64_t address,
                         uint64_t slotCount,
                         uint64_t &newAddress,
                         std::string &error) override {
-    return reallocVmHeapSlots(address,
-                              slotCount,
-                              slotBytes(),
-                              heapSlots_,
-                              heapAllocations_,
-                              newAddress,
-                              error);
+    return heap_.reallocate(address, slotCount, newAddress, error);
   }
 
   bool handlePrintInstruction(const IrModule &module,
@@ -191,8 +168,7 @@ private:
   const VmHostFunctions *hostFunctions_ = nullptr;
   const std::vector<std::string_view> *args_ = nullptr;
   const VmOutputSink *outputSink_ = nullptr;
-  std::vector<uint64_t> heapSlots_;
-  std::vector<VmDebugSession::HeapAllocation> heapAllocations_;
+  VmHeapCore heap_;
   VmStringHeap stringHeap_;
 };
 

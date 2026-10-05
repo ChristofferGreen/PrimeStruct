@@ -255,6 +255,7 @@ TEST_CASE("native JIT runs heap programs like the interpreter") {
   // Heap addresses are the VM's (tagged, 16 bytes per slot), loads and stores reach live slots
   // only, reallocation copies and frees, and every misuse faults with the VM's message.
   expectSame(optimizer_test::heapProgram(), "heap");
+  expectSame(optimizer_test::heapReuseProgram(), "heap reuse");
 
   const std::vector<std::string> prefix = {
       "PushI64 2", "HeapAlloc", "StoreLocal 0", "LoadLocal 0", "PushI64 5", "StoreIndirect", "Pop"};

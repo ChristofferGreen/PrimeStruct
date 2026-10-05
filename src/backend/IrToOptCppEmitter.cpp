@@ -5,6 +5,7 @@
 #include "primec/ir/IrPureSemantics.h"
 
 #include "IrToOptCppRuntime.h"
+#include "primec/runtime/VmHeapCore.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -630,7 +631,7 @@ bool IrToOptCppEmitter::emitSource(const IrModule &module,
     return false;
   }
   std::ostringstream source;
-  source << OptCppRuntimePreamble;
+  source << OptCppRuntimeHeaders << VmHeapCoreSource << "\n" << OptCppRuntimePreamble;
   source << "namespace {\n\n";
   source << "const PsString ps_strings[] = {";
   for (const std::string &text : module.stringTable) {

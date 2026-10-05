@@ -138,6 +138,22 @@ inline primec::IrModule heapProgram() {
   return module;
 }
 
+// Freed heap slots are reused: a new allocation of them carries the next generation in its
+// address (bits 48-62), starts zeroed, and a reallocation that does not fit moves to new slots.
+inline primec::IrModule heapReuseProgram() {
+  primec::IrModule module = moduleOf(
+      assemble({"PushI64 2",     "HeapAlloc",   "StoreLocal 0", "LoadLocal 0",  "PushI64 5",
+                "StoreIndirect", "Pop",         "LoadLocal 0",  "PrintU64 1",   "LoadLocal 0",
+                "HeapFree",      "PushI64 2",   "HeapAlloc",    "StoreLocal 1", "LoadLocal 1",
+                "PrintU64 1",    "LoadLocal 1", "LoadIndirect", "PrintI64 1",   "PushI64 1",
+                "HeapAlloc",     "PrintU64 1",  "LoadLocal 1",  "PushI64 7",    "StoreIndirect",
+                "Pop",           "LoadLocal 1", "PushI64 4",    "HeapRealloc",  "StoreLocal 1",
+                "LoadLocal 1",   "PrintU64 1",  "LoadLocal 1",  "LoadIndirect", "PrintI64 1",
+                "PushI64 2",     "HeapAlloc",   "PrintU64 1",   "PushI32 0",    "ReturnI32"}));
+  module.functions[0].metadata.effectMask = primec::EffectIoOut;
+  return module;
+}
+
 inline primec::IrModule ioProgram(const std::string &file) {
   primec::IrModule module;
   module.entryIndex = 0;
@@ -266,6 +282,32 @@ inline std::vector<FaultProgram> faultPrograms() {
         "LoadLocal 0",
         "LoadIndirect",
         "ReturnI64"},
+       0},
+      {"stale_after_reuse",
+       {"PushI64 2",
+        "HeapAlloc",
+        "StoreLocal 0",
+        "LoadLocal 0",
+        "HeapFree",
+        "PushI64 2",
+        "HeapAlloc",
+        "Pop",
+        "LoadLocal 0",
+        "LoadIndirect",
+        "ReturnI64"},
+       0},
+      {"free_stale_after_reuse",
+       {"PushI64 1",
+        "HeapAlloc",
+        "StoreLocal 0",
+        "LoadLocal 0",
+        "HeapFree",
+        "PushI64 1",
+        "HeapAlloc",
+        "Pop",
+        "LoadLocal 0",
+        "HeapFree",
+        "ReturnVoid"},
        0},
       {"string_bounds", {"PushI64 99", "LoadStringByte 0", "ReturnI32"}, 0},
       {"string_index", {"PushI64 7", "LoadStringLength", "ReturnI64"}, 0},

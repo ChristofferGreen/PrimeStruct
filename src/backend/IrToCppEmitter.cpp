@@ -2,6 +2,7 @@
 
 #include "IrToCppEmitterInternal.h"
 #include "primec/ir/Ir.h"
+#include "primec/runtime/VmHeapCore.h"
 
 #include <algorithm>
 #include <cstddef>
@@ -274,6 +275,10 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
   body << "#include <limits>\n";
   body << "#include <string>\n";
   body << "#include <deque>\n";
+  body << "#include <iterator>\n";
+  body << "#include <map>\n";
+  body << "#include <set>\n";
+  body << "#include <utility>\n";
   body << "#include <vector>\n";
   if (needsClampI32ConvertHelpers || needsClampI64ConvertHelpers || needsClampU64ConvertHelpers) {
     body << "#include <cmath>\n";
@@ -430,137 +435,29 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
   }
   body << "};\n\n";
   body << "static constexpr uint64_t ps_heap_address_tag = 1ull << 63;\n\n";
-  body << "struct PsHeapAllocation {\n";
-  body << "  std::size_t baseIndex = 0;\n";
-  body << "  std::size_t slotCount = 0;\n";
-  body << "  bool live = false;\n";
-  body << "};\n\n";
-  body << "static bool psResolveHeapSlot(uint64_t address,\n";
-  body << "                              const std::vector<uint64_t> &heapSlots,\n";
-  body << "                              const std::vector<PsHeapAllocation> &heapAllocations,\n";
-  body << "                              std::size_t &slotIndexOut) {\n";
-  body << "  if ((address & ps_heap_address_tag) == 0ull || (address % " << IrSlotBytes << "ull) != 0ull) {\n";
+  // The VM's heap allocator itself (VmHeapCore.h), so addresses and reuse match the VM's.
+  body << VmHeapCoreSource << "\n\n";
+  body << "static bool psResolveHeapSlot(uint64_t address, VmHeapCore &heap, std::size_t "
+          "&slotIndexOut) {\n";
+  body << "  uint64_t *slot = heap.slotAt(address);\n";
+  body << "  if (slot == nullptr) {\n";
   body << "    return false;\n";
   body << "  }\n";
-  body << "  uint64_t heapAddress = address & ~ps_heap_address_tag;\n";
-  body << "  uint64_t heapIndex = heapAddress / " << IrSlotBytes << "ull;\n";
-  body << "  if (heapIndex >= heapSlots.size()) {\n";
-  body << "    return false;\n";
-  body << "  }\n";
-  body << "  for (const auto &allocation : heapAllocations) {\n";
-  body << "    if (!allocation.live) {\n";
-  body << "      continue;\n";
-  body << "    }\n";
-  body << "    uint64_t baseIndex = static_cast<uint64_t>(allocation.baseIndex);\n";
-  body << "    uint64_t endIndex = baseIndex + static_cast<uint64_t>(allocation.slotCount);\n";
-  body << "    if (heapIndex >= baseIndex && heapIndex < endIndex) {\n";
-  body << "      slotIndexOut = static_cast<std::size_t>(heapIndex);\n";
-  body << "      return true;\n";
-  body << "    }\n";
-  body << "  }\n";
-  body << "  return false;\n";
-  body << "}\n\n";
-  body << "static bool psHeapAlloc(uint64_t slotCount,\n";
-  body << "                        std::vector<uint64_t> &heapSlots,\n";
-  body << "                        std::vector<PsHeapAllocation> &heapAllocations,\n";
-  body << "                        uint64_t &addressOut) {\n";
-  body << "  if (slotCount == 0ull) {\n";
-  body << "    addressOut = 0ull;\n";
-  body << "    return true;\n";
-  body << "  }\n";
-  body << "  if (slotCount > static_cast<uint64_t>(heapSlots.max_size() - heapSlots.size())) {\n";
-  body << "    return false;\n";
-  body << "  }\n";
-  body << "  std::size_t baseIndex = heapSlots.size();\n";
-  body << "  uint64_t maxAddressableIndex = (std::numeric_limits<uint64_t>::max() - ps_heap_address_tag) / "
-       << IrSlotBytes << "ull;\n";
-  body << "  if (baseIndex > maxAddressableIndex) {\n";
-  body << "    return false;\n";
-  body << "  }\n";
-  body << "  heapSlots.resize(baseIndex + static_cast<std::size_t>(slotCount), 0ull);\n";
-  body << "  heapAllocations.push_back({baseIndex, static_cast<std::size_t>(slotCount), true});\n";
-  body << "  addressOut = ps_heap_address_tag + static_cast<uint64_t>(baseIndex) * " << IrSlotBytes << "ull;\n";
+  body << "  slotIndexOut = static_cast<std::size_t>(slot - heap.slots.data());\n";
   body << "  return true;\n";
   body << "}\n\n";
-  body << "static bool psHeapFree(uint64_t address,\n";
-  body << "                       std::vector<uint64_t> &heapSlots,\n";
-  body << "                       std::vector<PsHeapAllocation> &heapAllocations) {\n";
-  body << "  if (address == 0ull) {\n";
-  body << "    return true;\n";
-  body << "  }\n";
-  body << "  if ((address & ps_heap_address_tag) == 0ull || (address % " << IrSlotBytes << "ull) != 0ull) {\n";
-  body << "    return false;\n";
-  body << "  }\n";
-  body << "  uint64_t heapAddress = address & ~ps_heap_address_tag;\n";
-  body << "  std::size_t baseIndex = static_cast<std::size_t>(heapAddress / " << IrSlotBytes << "ull);\n";
-  body << "  for (auto &allocation : heapAllocations) {\n";
-  body << "    if (allocation.baseIndex != baseIndex) {\n";
-  body << "      continue;\n";
-  body << "    }\n";
-  body << "    if (!allocation.live || allocation.baseIndex + allocation.slotCount > heapSlots.size()) {\n";
-  body << "      return false;\n";
-  body << "    }\n";
-  body << "    for (std::size_t i = 0; i < allocation.slotCount; ++i) {\n";
-  body << "      heapSlots[allocation.baseIndex + i] = 0ull;\n";
-  body << "    }\n";
-  body << "    allocation.live = false;\n";
-  body << "    return true;\n";
-  body << "  }\n";
-  body << "  return false;\n";
+  body << "static bool psHeapAlloc(uint64_t slotCount, VmHeapCore &heap, uint64_t &addressOut) {\n";
+  body << "  std::string error;\n";
+  body << "  return heap.allocate(slotCount, addressOut, error);\n";
   body << "}\n\n";
-  body << "static bool psHeapRealloc(uint64_t address,\n";
-  body << "                          uint64_t slotCount,\n";
-  body << "                          std::vector<uint64_t> &heapSlots,\n";
-  body << "                          std::vector<PsHeapAllocation> &heapAllocations,\n";
-  body << "                          uint64_t &addressOut) {\n";
-  body << "  if (address == 0ull) {\n";
-  body << "    return psHeapAlloc(slotCount, heapSlots, heapAllocations, addressOut);\n";
-  body << "  }\n";
-  body << "  if (slotCount == 0ull) {\n";
-  body << "    if (!psHeapFree(address, heapSlots, heapAllocations)) {\n";
-  body << "      return false;\n";
-  body << "    }\n";
-  body << "    addressOut = 0ull;\n";
-  body << "    return true;\n";
-  body << "  }\n";
-  body << "  if ((address & ps_heap_address_tag) == 0ull || (address % " << IrSlotBytes << "ull) != 0ull) {\n";
-  body << "    return false;\n";
-  body << "  }\n";
-  body << "  uint64_t heapAddress = address & ~ps_heap_address_tag;\n";
-  body << "  std::size_t baseIndex = static_cast<std::size_t>(heapAddress / " << IrSlotBytes << "ull);\n";
-  body << "  for (auto &allocation : heapAllocations) {\n";
-  body << "    if (allocation.baseIndex != baseIndex) {\n";
-  body << "      continue;\n";
-  body << "    }\n";
-  body << "    if (!allocation.live || allocation.baseIndex + allocation.slotCount > heapSlots.size()) {\n";
-  body << "      return false;\n";
-  body << "    }\n";
-  body << "    std::size_t oldBaseIndex = allocation.baseIndex;\n";
-  body << "    std::size_t oldSlotCount = allocation.slotCount;\n";
-  body << "    uint64_t newAddress = 0ull;\n";
-  body << "    if (!psHeapAlloc(slotCount, heapSlots, heapAllocations, newAddress)) {\n";
-  body << "      addressOut = 0ull;\n";
-  body << "      return true;\n";
-  body << "    }\n";
-  body << "    std::size_t newBaseIndex = static_cast<std::size_t>((newAddress & ~ps_heap_address_tag) / "
-       << IrSlotBytes << "ull);\n";
-  body << "    std::size_t copySlots = std::min(oldSlotCount, static_cast<std::size_t>(slotCount));\n";
-  body << "    for (std::size_t i = 0; i < copySlots; ++i) {\n";
-  body << "      heapSlots[newBaseIndex + i] = heapSlots[oldBaseIndex + i];\n";
-  body << "    }\n";
-  body << "    for (std::size_t i = 0; i < oldSlotCount; ++i) {\n";
-  body << "      heapSlots[oldBaseIndex + i] = 0ull;\n";
-  body << "    }\n";
-  body << "    for (auto &candidate : heapAllocations) {\n";
-  body << "      if (candidate.baseIndex == oldBaseIndex) {\n";
-  body << "        candidate.live = false;\n";
-  body << "        break;\n";
-  body << "      }\n";
-  body << "    }\n";
-  body << "    addressOut = newAddress;\n";
-  body << "    return true;\n";
-  body << "  }\n";
-  body << "  return false;\n";
+  body << "static bool psHeapFree(uint64_t address, VmHeapCore &heap) {\n";
+  body << "  std::string error;\n";
+  body << "  return heap.release(address, error);\n";
+  body << "}\n\n";
+  body << "static bool psHeapRealloc(uint64_t address, uint64_t slotCount, VmHeapCore &heap, "
+          "uint64_t &addressOut) {\n";
+  body << "  std::string error;\n";
+  body << "  return heap.reallocate(address, slotCount, addressOut, error);\n";
   body << "}\n\n";
   body << "struct PsStack {\n";
   body << "  explicit PsStack(std::size_t initialSize) : slots(initialSize, 0ull) {}\n";
@@ -582,8 +479,7 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
 
   for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
     body << "static int64_t " << irFunctionSymbol(functionIndex)
-         << "(PsStack &stack, std::size_t &sp, std::vector<uint64_t> &heapSlots, "
-            "std::vector<PsHeapAllocation> &heapAllocations, int argc, char **argv);\n";
+         << "(PsStack &stack, std::size_t &sp, VmHeapCore &heap, int argc, char **argv);\n";
   }
   body << "\n";
 
@@ -609,8 +505,7 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
       const size_t chunkEnd = std::min(chunkBegin + DispatchChunkSize, instructionCount);
       body << "static int64_t " << irFunctionChunkSymbol(functionIndex, chunkIndex)
            << "(PsStack &stack, std::size_t &sp, std::vector<uint64_t> &locals, "
-              "std::vector<uint64_t> &heapSlots, std::vector<PsHeapAllocation> &heapAllocations, "
-              "std::size_t &pc, int argc, char **argv, bool &transfer) {\n";
+              "VmHeapCore &heap, std::size_t &pc, int argc, char **argv, bool &transfer) {\n";
       body << "  while (true) {\n";
       body << "    switch (pc) {\n";
 
@@ -632,8 +527,7 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
     }
 
     body << "static int64_t " << irFunctionSymbol(functionIndex)
-         << "(PsStack &stack, std::size_t &sp, std::vector<uint64_t> &heapSlots, "
-            "std::vector<PsHeapAllocation> &heapAllocations, int argc, char **argv) {\n";
+         << "(PsStack &stack, std::size_t &sp, VmHeapCore &heap, int argc, char **argv) {\n";
     body << "  std::vector<uint64_t> locals(" << localCount << "ull, 0ull);\n";
     body << "  std::size_t pc = 0;\n";
     body << "  while (true) {\n";
@@ -642,7 +536,7 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
       const size_t chunkEnd = std::min((chunkIndex + 1u) * DispatchChunkSize, instructionCount);
       body << "    if (pc < " << chunkEnd << "ull) {\n";
       body << "      int64_t chunkResult = " << irFunctionChunkSymbol(functionIndex, chunkIndex)
-           << "(stack, sp, locals, heapSlots, heapAllocations, pc, argc, argv, transfer);\n";
+           << "(stack, sp, locals, heap, pc, argc, argv, transfer);\n";
       body << "      if (!transfer) {\n";
       body << "        return chunkResult;\n";
       body << "      }\n";
@@ -657,10 +551,9 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
   body << "static int64_t ps_entry_" << static_cast<size_t>(module.entryIndex) << "(int argc, char **argv) {\n";
   body << "  PsStack stack(1024ull);\n";
   body << "  std::size_t sp = 0;\n";
-  body << "  std::vector<uint64_t> heapSlots;\n";
-  body << "  std::vector<PsHeapAllocation> heapAllocations;\n";
+  body << "  VmHeapCore heap;\n";
   body << "  return " << irFunctionSymbol(static_cast<size_t>(module.entryIndex))
-       << "(stack, sp, heapSlots, heapAllocations, argc, argv);\n";
+       << "(stack, sp, heap, argc, argv);\n";
   body << "}\n\n";
   body << "int main(int argc, char **argv) {\n";
   body << "  return static_cast<int>(ps_entry_" << static_cast<size_t>(module.entryIndex) << "(argc, argv));\n";

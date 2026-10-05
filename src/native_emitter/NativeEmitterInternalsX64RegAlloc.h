@@ -96,9 +96,9 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
   // checked as the VM checks it and turned into the slot's machine address. Local k sits
   // at the frame slot disp(k) = disp(0) + 16 k below rbp.
   //
-  // A heap address (bit 63 set, when the module allocates) names the runtime's heap slot
-  // (address without the tag) / 16: below the slot count and with its live byte set, or the VM's
-  // "invalid indirect address" fault. The machine address goes to rdx either way; the address
+  // A heap address (bit 63 set, when the module allocates) names heap slot (bits 0-47) / 16, which
+  // must be below the slot count with a state equal to the address's top 16 bits (live, same
+  // generation; VmHeapCore), or the VM's "invalid indirect address" fault. The machine address goes to rdx either way; the address
   // register (rcx or an allocated one, never rax or rdx) is left as it was.
   const auto jitFrameAddress = [&](uint32_t value) -> uint8_t {
     constexpr uint8_t Rdx = 2;
@@ -122,8 +122,8 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
       const size_t done = emitJumpPlaceholderRaw();
       patchCondJumpHere(toHeap);
       emitMovRegReg(Rdx, address);
-      for (const uint8_t byte : {0x48, 0xD1, 0xE2, 0x48, 0xC1, 0xEA, 0x05}) {
-        emitByte(byte); // shl rdx, 1; shr rdx, 5: the slot index
+      for (const uint8_t byte : {0x48, 0xC1, 0xE2, 0x10, 0x48, 0xC1, 0xEA, 0x14}) {
+        emitByte(byte); // shl rdx, 16; shr rdx, 20: the slot index (offset bits / 16)
       }
       emitByte(0x48); // cmp rdx, [rip + slot count]
       emitByte(0x3B);
@@ -132,16 +132,20 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
       emitByte(0x48); // mov [rip + scratch], rax
       emitByte(0x89);
       emitJitDataOperand(Rax, JitDataScratch);
-      emitByte(0x48); // mov rax, [rip + live bytes]
+      emitByte(0x48); // mov rax, [rip + slot states]
       emitByte(0x8B);
-      emitJitDataOperand(Rax, JitDataHeapLive);
-      for (const uint8_t byte : {0x80, 0x3C, 0x10, 0x00}) {
-        emitByte(byte); // cmp byte [rax + rdx], 0
+      emitJitDataOperand(Rax, JitDataHeapStates);
+      for (const uint8_t byte : {0x0F, 0xB7, 0x04, 0x50, 0x48, 0xC1, 0xE0, 0x30}) {
+        emitByte(byte); // movzx eax, word [rax + rdx*2]; shl rax, 48
       }
-      emitByte(0x48); // mov rax, [rip + scratch]
+      emitXorRegReg(Rax, address); // the state must equal the address's top 16 bits
+      for (const uint8_t byte : {0x48, 0xC1, 0xE8, 0x30}) {
+        emitByte(byte); // shr rax, 48
+      }
+      emitByte(0x48); // mov rax, [rip + scratch] (flags unchanged)
       emitByte(0x8B);
       emitJitDataOperand(Rax, JitDataScratch);
-      emitJitFaultIfWithRegister(CondCode::Eq, JitFault::InvalidIndirectAddress, address);
+      emitJitFaultIfWithRegister(CondCode::Ne, JitFault::InvalidIndirectAddress, address);
       for (const uint8_t byte : {0x48, 0xC1, 0xE2, 0x03}) {
         emitByte(byte); // shl rdx, 3
       }

@@ -135,7 +135,7 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
   CHECK(output.find("static int64_t ps_fn_0(") != std::string::npos);
-  CHECK(output.find("return ps_fn_0(stack, sp, heapSlots, heapAllocations, argc, argv);") != std::string::npos);
+  CHECK(output.find("return ps_fn_0(stack, sp, heap, argc, argv);") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter compiles stdlib namespaced vector at map target without import") {

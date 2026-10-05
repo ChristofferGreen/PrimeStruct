@@ -573,6 +573,18 @@ sign-extended, also in the native executables). A 20-million-iteration f32 loop:
 Float-to-i32/u64 and u64-to-f32 stay in the runtime: the VM's results for NaN and out-of-range values come from the
 host compiler's conversion sequences.
 
+Heap reuse (2026-10-05): the VM heap only ever grew, so a loop building and dropping 300,000 small vectors needed
+several GB and spent its time in page faults (JIT 20 s, interpreter 22 s). Rule chosen with the user: memory may be
+reused as long as an object whose address the program can see keeps that address; objects nobody can locate may move.
+Live allocations never move, so the rule holds without tracking which addresses were seen. `VmHeapCore`
+(`include/primec/runtime/VmHeapCore.h`) keeps free runs coalesced (best fit, free tail extended) and a 16-bit state per
+slot, `live | generation`; an address carries its allocation's generation in bits 48-62, and an access is valid when
+the slot's state equals the address's top 16 bits, which keeps use-after-free a deterministic fault after reuse. The
+JIT checks that inline (index from bits 0-47, a 16-bit load, shift and xor), the interpreter, the debugger and the JIT
+runtime share the class, and the class body is written once in `VmHeapCoreBody.inc` and expanded both as code and as
+source text that the IR-to-C++ and optexe emitters paste into generated programs. The same program: JIT 1.4 s,
+interpreter 8.7 s, 188 MB peak.
+
 4.2 and 4.4 (2026-10-04): every heap access used to scan the whole allocation list, freed allocations included, so a
 program that builds many small vectors slowed down quadratically (3,000 vectors of 20 pushes: 1.72 s). Allocations
 are only ever appended, each at the end of the heap, so the list is sorted by base slot and `VmHeapHelpers.cpp` now

@@ -1,4 +1,5 @@
 #include "primec/ir/IrOptimizer.h"
+#include "primec/runtime/VmHeapCore.h"
 #include "primec/testing/TestScratch.h"
 #include "primec/testing/VmKernelSelection.h"
 
@@ -89,6 +90,58 @@ TEST_CASE("both kernels agree on random programs, optimized or not") {
 TEST_CASE("both kernels agree on calls, recursion, heap and indirect addressing") {
   expectSame(optimizer_test::callsProgram(), "calls");
   expectSame(optimizer_test::heapProgram(), "heap");
+  expectSame(optimizer_test::heapReuseProgram(), "heap reuse");
+}
+
+TEST_CASE("the VM heap reuses freed slots under new generations") {
+  primec::VmHeapCore heap;
+  std::string error;
+  uint64_t a = 0;
+  uint64_t b = 0;
+  uint64_t c = 0;
+  REQUIRE(heap.allocate(2, a, error));
+  CHECK(a == primec::VmHeapCore::Tag);
+  REQUIRE(heap.release(a, error));
+  REQUIRE(heap.allocate(2, b, error));
+  // Same slots, next generation: the old address no longer names them.
+  CHECK(b == (primec::VmHeapCore::Tag | (uint64_t{1} << 48)));
+  CHECK(heap.slotAt(a) == nullptr);
+  REQUIRE(heap.slotAt(b) != nullptr);
+  CHECK_FALSE(heap.release(a, error));
+  CHECK(error == "invalid heap free address in IR: " + std::to_string(a));
+
+  // Adjacent free runs merge, the best fit is taken, and a free run at the end is extended.
+  primec::VmHeapCore runs;
+  uint64_t x = 0;
+  uint64_t y = 0;
+  uint64_t z = 0;
+  REQUIRE(runs.allocate(3, x, error));
+  REQUIRE(runs.allocate(2, y, error));
+  REQUIRE(runs.allocate(1, z, error));
+  REQUIRE(runs.release(x, error));
+  REQUIRE(runs.release(y, error));
+  REQUIRE(runs.allocate(4, c, error));
+  CHECK((c & primec::VmHeapCore::OffsetMask) == 0); // in the merged run of 5
+  REQUIRE(runs.release(z, error));
+  REQUIRE(runs.allocate(4, c, error));
+  CHECK((c & primec::VmHeapCore::OffsetMask) == 4 * primec::VmHeapCore::SlotBytes);
+  CHECK(runs.slots.size() == 8); // the free tail (slots 4 and 5) grew by two
+
+  // A vector growing by doubling and dropped, a thousand times over, keeps reusing its slots.
+  primec::VmHeapCore churn;
+  for (int round = 0; round < 1000; ++round) {
+    uint64_t vector = 0;
+    for (uint64_t size = 1; size <= 64; size *= 2) {
+      uint64_t grown = 0;
+      REQUIRE(churn.reallocate(vector, size, grown, error));
+      vector = grown;
+    }
+    REQUIRE(churn.release(vector, error));
+  }
+  CHECK(churn.slots.size() < 256);
+
+  // The C++ backends paste the same code into generated programs.
+  CHECK(std::string_view(primec::VmHeapCoreSource).find("class VmHeapCore {") == 0);
 }
 
 TEST_CASE("both kernels agree on strings, arguments and files") {

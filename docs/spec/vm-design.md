@@ -35,6 +35,16 @@
   frame stores locals in 16-byte slots while the operand stack stores raw `u64` values interpreted by opcode (ints,
   floats as bits, and indices). Indirect addresses are byte offsets into the active frame’s local slot space and must be
   16-byte aligned.
+- **Heap:** `HeapAlloc`/`HeapRealloc` return heap addresses `bit 63 | generation << 48 | slot * 16` (generation in bits
+  48-62, slot offset in bits 0-47; zero slots allocate nothing and return 0). A live allocation never moves, so an
+  address a program has seen stays valid until the program frees or reallocates that allocation; `HeapRealloc` returns
+  a new allocation holding the old one's leading values and frees the old one. Freed slots are zeroed and reused by
+  later allocations (best fit among free runs, adjacent runs merged, a free run at the end of the heap extended), and a
+  reuse gives the slots the next generation, so an address from before the free still faults (`invalid indirect
+  address`, `invalid heap free address`, `invalid heap realloc address`) instead of reaching the new object; the
+  generation wraps after 32,768 reuses of the same slot. Slots never allocated before carry generation 0. The VM, the
+  debugger, the native execution tier and the IR-to-C++ and optexe runtimes share one implementation
+  (`include/primec/runtime/VmHeapCore.h`), so all of them produce the same addresses.
 - **Native execution tier:** on Linux x86_64, `primevm` at `-O2` (its default) runs a module as native code in its own
   process (`include/primec/backend/NativeJit.h`) with the VM's observable behavior. Integer, f64 and f32
   arithmetic (f32 results zero-extended as in the VM), comparisons, branches, calls, returns, prints of numbers and module strings, argc, string bytes and lengths, and

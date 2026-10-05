@@ -68,7 +68,8 @@
   validation recognizes and validates all three calls; VM/native/IR-to-C++ lowering now lowers `alloc` onto the shared
   `HeapAlloc` runtime path (including struct element-count expansion by slot width), `free` now lowers onto `HeapFree`,
   `realloc` now lowers onto `HeapRealloc` on VM/native/IR-to-C++ backends, VM/IR-to-C++ runtimes reject dereferences
-  into freed heap ranges deterministically, and `realloc` preserves slot payloads across successful growth/shrink
+  through freed heap pointers deterministically (also after the memory is reused; see the heap note in
+  `vm-design.md`), and `realloc` preserves slot payloads across successful growth/shrink
   reallocation while treating counts as element counts rather than raw bytes.
   Current implementation boundary: the built-in heap intrinsics still return bare `Pointer<T>` values in the
   compiler/runtime. The safe API direction for allocation that can fail is a stdlib wrapper returning

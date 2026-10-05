@@ -1,74 +1,24 @@
 #include "VmHeapHelpers.h"
 
-#include <algorithm>
-#include <limits>
-
 namespace primec::vm_detail {
-namespace {
-
-constexpr uint64_t kVmHeapAddressTag = 1ull << 63;
-
-bool isVmHeapAddress(uint64_t address) {
-  return (address & kVmHeapAddressTag) != 0;
-}
-
-// Allocations are only ever appended, each starting where the heap slots ended, so the list is
-// sorted by baseIndex with no two allocations sharing a slot: a binary search finds the one that
-// holds a slot (live or freed) instead of a scan over every allocation ever made.
-using HeapAllocations = std::vector<VmDebugSession::HeapAllocation>;
-
-HeapAllocations::iterator allocationHolding(HeapAllocations &allocations, uint64_t index) {
-  auto it = std::upper_bound(allocations.begin(),
-                             allocations.end(),
-                             index,
-                             [](uint64_t value, const VmDebugSession::HeapAllocation &allocation) {
-                               return value < static_cast<uint64_t>(allocation.baseIndex);
-                             });
-  if (it == allocations.begin()) {
-    return allocations.end();
-  }
-  --it;
-  if (index >= static_cast<uint64_t>(it->baseIndex) + static_cast<uint64_t>(it->slotCount)) {
-    return allocations.end();
-  }
-  return it;
-}
-
-HeapAllocations::iterator allocationStartingAt(HeapAllocations &allocations, uint64_t baseIndex) {
-  auto it = allocationHolding(allocations, baseIndex);
-  if (it == allocations.end() || static_cast<uint64_t>(it->baseIndex) != baseIndex) {
-    return allocations.end();
-  }
-  return it;
-}
-
-} // namespace
 
 bool resolveIndirectAddress(uint64_t address,
                             uint64_t slotBytes,
                             std::vector<uint64_t> &locals,
-                            std::vector<uint64_t> &heapSlots,
-                            std::vector<VmDebugSession::HeapAllocation> &heapAllocations,
+                            VmHeapCore &heap,
                             uint64_t *&slotOut,
                             std::string &error) {
   if (address % slotBytes != 0) {
     error = "unaligned indirect address in IR: " + std::to_string(address);
     return false;
   }
-  if (isVmHeapAddress(address)) {
-    const uint64_t heapAddress = address & ~kVmHeapAddressTag;
-    const uint64_t index = heapAddress / slotBytes;
-    if (index >= heapSlots.size()) {
+  if ((address & VmHeapCore::Tag) != 0) {
+    slotOut = heap.slotAt(address);
+    if (slotOut == nullptr) {
       error = "invalid indirect address in IR: " + std::to_string(address);
       return false;
     }
-    const auto allocation = allocationHolding(heapAllocations, index);
-    if (allocation != heapAllocations.end() && allocation->live) {
-      slotOut = &heapSlots[static_cast<size_t>(index)];
-      return true;
-    }
-    error = "invalid indirect address in IR: " + std::to_string(address);
-    return false;
+    return true;
   }
   const uint64_t index = address / slotBytes;
   if (index >= locals.size()) {
@@ -77,132 +27,6 @@ bool resolveIndirectAddress(uint64_t address,
   }
   slotOut = &locals[static_cast<size_t>(index)];
   return true;
-}
-
-bool allocateVmHeapSlots(uint64_t slotCount,
-                         uint64_t slotBytes,
-                         std::vector<uint64_t> &heapSlots,
-                         std::vector<VmDebugSession::HeapAllocation> &heapAllocations,
-                         uint64_t &addressOut,
-                         std::string &error) {
-  if (slotCount == 0) {
-    addressOut = 0;
-    return true;
-  }
-  if (slotCount > static_cast<uint64_t>(std::numeric_limits<size_t>::max())) {
-    error = "VM heap allocation overflow";
-    return false;
-  }
-  const size_t baseIndex = heapSlots.size();
-  const size_t allocationSlots = static_cast<size_t>(slotCount);
-  if (allocationSlots > heapSlots.max_size() - baseIndex) {
-    error = "VM heap allocation overflow";
-    return false;
-  }
-  const uint64_t maxAddressableIndex = (std::numeric_limits<uint64_t>::max() - kVmHeapAddressTag) / slotBytes;
-  if (baseIndex > maxAddressableIndex) {
-    error = "VM heap allocation overflow";
-    return false;
-  }
-  heapSlots.resize(baseIndex + allocationSlots, 0);
-  heapAllocations.push_back({baseIndex, allocationSlots, true});
-  addressOut = kVmHeapAddressTag + static_cast<uint64_t>(baseIndex) * slotBytes;
-  return true;
-}
-
-bool freeVmHeapSlots(uint64_t address,
-                     uint64_t slotBytes,
-                     std::vector<uint64_t> &heapSlots,
-                     std::vector<VmDebugSession::HeapAllocation> &heapAllocations,
-                     std::string &error) {
-  if (address == 0) {
-    return true;
-  }
-  if (!isVmHeapAddress(address) || address % slotBytes != 0) {
-    error = "invalid heap free address in IR: " + std::to_string(address);
-    return false;
-  }
-  const uint64_t heapAddress = address & ~kVmHeapAddressTag;
-  const uint64_t baseIndex = heapAddress / slotBytes;
-  if (const auto found = allocationStartingAt(heapAllocations, baseIndex);
-      found != heapAllocations.end()) {
-    auto &allocation = *found;
-    if (!allocation.live) {
-      error = "invalid heap free address in IR: " + std::to_string(address);
-      return false;
-    }
-    const size_t endIndex = allocation.baseIndex + allocation.slotCount;
-    if (endIndex > heapSlots.size()) {
-      error = "invalid heap free address in IR: " + std::to_string(address);
-      return false;
-    }
-    for (size_t index = allocation.baseIndex; index < endIndex; ++index) {
-      heapSlots[index] = 0;
-    }
-    allocation.live = false;
-    return true;
-  }
-  error = "invalid heap free address in IR: " + std::to_string(address);
-  return false;
-}
-
-bool reallocVmHeapSlots(uint64_t address,
-                        uint64_t slotCount,
-                        uint64_t slotBytes,
-                        std::vector<uint64_t> &heapSlots,
-                        std::vector<VmDebugSession::HeapAllocation> &heapAllocations,
-                        uint64_t &addressOut,
-                        std::string &error) {
-  if (address == 0) {
-    return allocateVmHeapSlots(slotCount, slotBytes, heapSlots, heapAllocations, addressOut, error);
-  }
-  if (slotCount == 0) {
-    if (!freeVmHeapSlots(address, slotBytes, heapSlots, heapAllocations, error)) {
-      return false;
-    }
-    addressOut = 0;
-    return true;
-  }
-  if (!isVmHeapAddress(address) || address % slotBytes != 0) {
-    error = "invalid heap realloc address in IR: " + std::to_string(address);
-    return false;
-  }
-  const uint64_t heapAddress = address & ~kVmHeapAddressTag;
-  const uint64_t baseIndex = heapAddress / slotBytes;
-  if (const auto found = allocationStartingAt(heapAllocations, baseIndex);
-      found != heapAllocations.end()) {
-    // Copy what is needed: allocating below may grow the list and move its elements.
-    const bool live = found->live;
-    const size_t oldBaseIndex = found->baseIndex;
-    const size_t oldSlotCount = found->slotCount;
-    if (!live) {
-      error = "invalid heap realloc address in IR: " + std::to_string(address);
-      return false;
-    }
-    const size_t endIndex = oldBaseIndex + oldSlotCount;
-    if (endIndex > heapSlots.size()) {
-      error = "invalid heap realloc address in IR: " + std::to_string(address);
-      return false;
-    }
-
-    uint64_t newAddress = 0;
-    if (!allocateVmHeapSlots(slotCount, slotBytes, heapSlots, heapAllocations, newAddress, error)) {
-      return false;
-    }
-    const uint64_t newBaseIndex = (newAddress & ~kVmHeapAddressTag) / slotBytes;
-    const size_t copySlots = std::min(oldSlotCount, static_cast<size_t>(slotCount));
-    for (size_t index = 0; index < copySlots; ++index) {
-      heapSlots[static_cast<size_t>(newBaseIndex) + index] = heapSlots[oldBaseIndex + index];
-    }
-    for (size_t index = oldBaseIndex; index < endIndex; ++index) {
-      heapSlots[index] = 0;
-    }
-    allocationStartingAt(heapAllocations, oldBaseIndex)->live = false;
-    addressOut = newAddress;
-    return true;
-  }
-  error = "invalid heap realloc address in IR: " + std::to_string(address);
-  return false;
 }
 
 } // namespace primec::vm_detail

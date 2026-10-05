@@ -4,37 +4,17 @@
 #include <string>
 #include <vector>
 
-#include "primec/runtime/Vm.h"
+#include "primec/runtime/VmHeapCore.h"
 
 namespace primec::vm_detail {
 
+// The slot an indirect address names: a heap slot (tagged address, see VmHeapCore) or a local
+// of the current frame (byte offset into `locals`), or the VM's fault message.
 bool resolveIndirectAddress(uint64_t address,
                             uint64_t slotBytes,
                             std::vector<uint64_t> &locals,
-                            std::vector<uint64_t> &heapSlots,
-                            std::vector<VmDebugSession::HeapAllocation> &heapAllocations,
+                            VmHeapCore &heap,
                             uint64_t *&slotOut,
                             std::string &error);
-
-bool allocateVmHeapSlots(uint64_t slotCount,
-                         uint64_t slotBytes,
-                         std::vector<uint64_t> &heapSlots,
-                         std::vector<VmDebugSession::HeapAllocation> &heapAllocations,
-                         uint64_t &addressOut,
-                         std::string &error);
-
-bool freeVmHeapSlots(uint64_t address,
-                     uint64_t slotBytes,
-                     std::vector<uint64_t> &heapSlots,
-                     std::vector<VmDebugSession::HeapAllocation> &heapAllocations,
-                     std::string &error);
-
-bool reallocVmHeapSlots(uint64_t address,
-                        uint64_t slotCount,
-                        uint64_t slotBytes,
-                        std::vector<uint64_t> &heapSlots,
-                        std::vector<VmDebugSession::HeapAllocation> &heapAllocations,
-                        uint64_t &addressOut,
-                        std::string &error);
 
 } // namespace primec::vm_detail

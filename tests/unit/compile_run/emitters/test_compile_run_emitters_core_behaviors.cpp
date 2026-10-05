@@ -785,8 +785,8 @@ main() {
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
-  CHECK(output.find("std::vector<uint64_t> heapSlots") != std::string::npos);
-  CHECK(output.find("return ps_fn_0(stack, sp, heapSlots, heapAllocations, argc, argv);") != std::string::npos);
+  CHECK(output.find("VmHeapCore heap;") != std::string::npos);
+  CHECK(output.find("return ps_fn_0(stack, sp, heap, argc, argv);") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter uses copy to force by-value params") {

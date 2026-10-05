@@ -32,8 +32,7 @@ bool VmDebugSession::initFromModule(const IrModule &module,
   argvViews_ = args;
   localCounts_.assign(module.functions.size(), 0);
   stack_.clear();
-  heapSlots_.clear();
-  heapAllocations_.clear();
+  heap_ = VmHeapCore{};
   stringHeap_ = std::make_shared<vm_detail::VmStringHeap>();
   frames_.clear();
   result_ = 0;

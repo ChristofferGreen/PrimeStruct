@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "primec/ir/Ir.h"
+#include "primec/runtime/VmHeapCore.h"
 #include "primec/runtime/VmStringHeap.h"
 
 namespace primec::vm_detail {
@@ -16,10 +17,8 @@ namespace primec::vm_detail {
 // messages: the heap, prints of argv and dynamic strings, files, dynamic string bytes and the
 // float conversions the code leaves out (to i32 and u64, and u64 to f32).
 //
-// The heap is kept in the layout the code reads directly: the VM's slot values (a VM heap
-// address without its tag is 16 times the slot index) and one byte per slot that is nonzero
-// while the slot's allocation is live. Allocation, freeing and reallocation follow the VM's
-// (VmHeapHelpers.cpp): the same addresses, the same zeroing and the same faults.
+// The heap is the VM's (VmHeapCore); the code reads its slot values and states directly, and the
+// host republishes where they are after every allocation change.
 class VmNativeJitHost {
 public:
   VmNativeJitHost(const IrModule &module, const std::vector<std::string_view> &args);
@@ -38,26 +37,13 @@ public:
   }
 
 private:
-  struct Allocation {
-    uint64_t baseIndex = 0;
-    uint64_t slotCount = 0;
-    bool live = false;
-  };
-
   bool run(uint32_t functionIndex, const IrInstruction &inst, uint64_t *frameLocals);
-  bool allocate(uint64_t slotCount, uint64_t &address);
-  bool release(uint64_t address);
-  bool reallocate(uint64_t address, uint64_t slotCount, uint64_t &newAddress);
-  Allocation *allocationStartingAt(uint64_t baseIndex);
-  void clearSlots(uint64_t baseIndex, uint64_t slotCount);
   void publishHeap();
 
   const IrModule &module_;
   const std::vector<std::string_view> &args_;
   std::vector<size_t> localCounts_;
-  std::vector<uint64_t> heap_;
-  std::vector<uint8_t> live_;
-  std::vector<Allocation> allocations_;
+  VmHeapCore heap_;
   VmStringHeap strings_;
   std::vector<uint64_t> stack_;
   uint64_t *data_ = nullptr;

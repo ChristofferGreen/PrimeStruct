@@ -371,6 +371,7 @@ TEST_CASE("optexe calls pass arguments as the callee's initial stack and return 
 
 TEST_CASE("optexe heap, indirect addressing and frame addresses match the VM") {
   expectMatchesVm(optimizer_test::heapProgram(), "heap", 1);
+  expectMatchesVm(optimizer_test::heapReuseProgram(), "heap_reuse", 1);
 }
 
 TEST_CASE("optexe string, argv and file opcodes match the VM") {
