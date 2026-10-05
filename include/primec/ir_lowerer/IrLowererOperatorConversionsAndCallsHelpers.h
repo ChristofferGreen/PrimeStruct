@@ -37,6 +37,15 @@ using ResolveConversionsAndCallsStructFieldInfoFn =
 using ResolveConversionsAndCallsStructFieldBindingFn =
     std::function<bool(const std::string &, const std::string &, LayoutFieldBinding &)>;
 using EmitConversionsAndCallsStructCopyFromPtrsFn = std::function<bool(int32_t, int32_t, int32_t)>;
+// Assigns the struct at `srcPtrLocal` to the one at `destPtrLocal` with ownership: the old value
+// is destroyed and the new one copied (or moved from a temporary). `destDropFlagLocal` is the
+// destination local's drop flag, or -1 when the destination always owns its value.
+using EmitConversionsAndCallsOwnedStructAssignFn = std::function<bool(int32_t destPtrLocal,
+                                                                      int32_t srcPtrLocal,
+                                                                      int32_t slotCount,
+                                                                      const std::string &structPath,
+                                                                      const Expr &rhsExpr,
+                                                                      int32_t destDropFlagLocal)>;
 using HasConversionsAndCallsNamedArgumentsFn =
     std::function<bool(const std::vector<std::optional<std::string>> &)>;
 using ResolveConversionsAndCallsDefinitionCallFn = std::function<const Definition *(const Expr &)>;
@@ -69,7 +78,8 @@ bool emitConversionsAndCallsOperatorExpr(
     std::string &error,
     const ResolveConversionsAndCallsDefinitionCallFn &resolveDefinitionCall = {},
     const SemanticProductTargetAdapter *semanticProductTargets = nullptr,
-    std::string currentScopePath = {});
+    std::string currentScopePath = {},
+    const EmitConversionsAndCallsOwnedStructAssignFn &emitOwnedStructAssign = {});
 
 bool emitConversionsAndCallsOperatorExpr(
     const Expr &expr,

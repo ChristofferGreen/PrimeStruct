@@ -717,6 +717,7 @@ bool emitInlineDefinitionCallImpl(
     context.returnsArray = contextSetup.returnsArray;
     context.returnKind = contextSetup.returnKind;
     context.returnLocal = contextSetup.returnLocal;
+    context.bodyScopeDepth = fileScopeStack.size();
 
     InlineContext *prevContext = activeInlineContext;
     if (!ir_lowerer::runLowerInlineCallActiveContextStep(

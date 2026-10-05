@@ -198,22 +198,24 @@ void materializeInlineStructFieldLocal(const StructSlotFieldInfo &field,
 
 } // namespace
 
-bool emitInlineStructDefinitionArguments(const std::string &calleePath,
-                                         const std::vector<Expr> &params,
-                                         const std::vector<const Expr *> &orderedArgs,
-                                         const LocalMap &callerLocals,
-                                         bool requireValue,
-                                         int32_t &nextLocal,
-                                         const ResolveInlineStructSlotLayoutFn &resolveStructSlotLayout,
-                                         const ExprLocalsValueKindFn &inferExprKind,
-                                         const InferInlineStructExprPathFn &inferStructExprPath,
-                                         const ExprLocalsPredicateFn &emitExpr,
-                                         const InferInlineStructFieldLocalInfoFn &inferFieldLocalInfo,
-                                         const EmitInlineStructCopySlotsFn &emitStructCopySlots,
-                                         const Int32ProviderFn &allocTempLocal,
-                                         const EmitInstructionFn &emitInstruction,
-                                         std::string &error,
-                                         std::optional<int32_t> destBaseLocal) {
+bool emitInlineStructDefinitionArguments(
+    const std::string &calleePath,
+    const std::vector<Expr> &params,
+    const std::vector<const Expr *> &orderedArgs,
+    const LocalMap &callerLocals,
+    bool requireValue,
+    int32_t &nextLocal,
+    const ResolveInlineStructSlotLayoutFn &resolveStructSlotLayout,
+    const ExprLocalsValueKindFn &inferExprKind,
+    const InferInlineStructExprPathFn &inferStructExprPath,
+    const ExprLocalsPredicateFn &emitExpr,
+    const InferInlineStructFieldLocalInfoFn &inferFieldLocalInfo,
+    const EmitInlineStructCopySlotsFn &emitStructCopySlots,
+    const Int32ProviderFn &allocTempLocal,
+    const EmitInstructionFn &emitInstruction,
+    std::string &error,
+    std::optional<int32_t> destBaseLocal,
+    const std::function<bool(int32_t, int32_t, const std::string &)> &emitPlaceCopyHelpers) {
   StructSlotLayoutInfo layout;
   if (!resolveStructSlotLayout(calleePath, layout)) {
     return false;
@@ -386,6 +388,15 @@ bool emitInlineStructDefinitionArguments(const std::string &calleePath,
     }
     if (shouldDisarmStructCopySourceExpr(*arg)) {
       emitDisarmTemporaryStructAfterCopy(emitInstruction, srcPtrLocal, field.structPath);
+    } else if (emitPlaceCopyHelpers) {
+      // A field initialized from an existing place owns a copy of it.
+      const int32_t destPtrLocal = allocTempLocal();
+      emitInstruction(IrOpcode::AddressOfLocal,
+                      static_cast<uint64_t>(baseLocal + field.slotOffset));
+      emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal));
+      if (!emitPlaceCopyHelpers(destPtrLocal, srcPtrLocal, field.structPath)) {
+        return false;
+      }
     }
     LocalInfo fieldInfo;
     if (!inferFieldLocalInfo(param, structLocals, fieldInfo, error)) {

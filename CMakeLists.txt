@@ -975,6 +975,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_main.cpp
     tests/unit/program_matrix/test_program_matrix_container_copies.cpp
     tests/unit/program_matrix/test_program_matrix_control.cpp
+    tests/unit/program_matrix/test_program_matrix_lifecycle.cpp
     tests/unit/program_matrix/test_program_matrix_optimizer.cpp
     tests/unit/program_matrix/test_program_matrix_parameter_modes.cpp
     tests/unit/program_matrix/test_program_matrix_shared_programs.cpp
@@ -3019,6 +3020,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   set(PrimeStructProgramMatrixTestSuites
     primestruct.program_matrix.container_copies
     primestruct.program_matrix.control
+    primestruct.program_matrix.lifecycle
     primestruct.program_matrix.optimizer
     primestruct.program_matrix.parameter_modes
     primestruct.program_matrix.shared_programs

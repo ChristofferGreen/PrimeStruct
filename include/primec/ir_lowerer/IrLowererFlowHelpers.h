@@ -4,6 +4,8 @@
 #include <functional>
 #include <optional>
 #include <string>
+#include <unordered_map>
+#include <string_view>
 #include <vector>
 
 #include "primec/ir_lowerer/IrLowererSharedTypes.h"
@@ -65,6 +67,38 @@ bool emitMoveHelperFromPtrs(
     const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
     std::string &error);
 struct StructSlotLayoutInfo;
+// The helper that destroys a `structPath` value on the stack (`DestroyStack`, else `Destroy`), or
+// null when there is none or its body is empty (nothing to run).
+const Definition *
+findStackDestroyHelper(const std::unordered_map<std::string, const Definition *> &defMap,
+                       const std::string &structPath);
+// Whether a parameter declaration carries the transform `name` (for example `copy` or `move`).
+bool parameterHasTransform(const Expr &param, std::string_view name);
+// Clears the drop flag of local `name` when it has one: the value now belongs elsewhere (moved,
+// returned), so the local's scope must not destroy it.
+void emitReleaseDropFlag(const LocalMap &locals,
+                         const std::string &name,
+                         const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
+// Whether destroying a `structPath` value runs any code: the type has a destroy helper, or one
+// of its fields (recursively) does.
+bool structNeedsDestroyHelpers(
+    const std::string &structPath,
+    const std::function<const Definition *(const std::string &)> &findDestroyHelper,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)>
+        &resolveStructSlotLayout);
+// Destroys the struct value at `valuePtrLocal`: runs its destroy helper when it has one,
+// otherwise destroys its fields that need it, last field first.
+bool emitStructDestroyHelpersFromPtr(
+    int32_t valuePtrLocal,
+    const std::string &structPath,
+    const std::function<const Definition *(const std::string &)> &findDestroyHelper,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
+    const Int32ProviderFn &allocTempLocal,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)>
+        &emitInlineDefinitionCall,
+    std::string &error);
 // Finishes copying a struct value whose slots were already copied from `srcPtrLocal` to
 // `destPtrLocal`: runs the type's `Copy` helper when it has one, otherwise the copies of its
 // fields that need one (docs/spec/value-lifecycle.md, Copies). Sets `ranHelper` when any ran.

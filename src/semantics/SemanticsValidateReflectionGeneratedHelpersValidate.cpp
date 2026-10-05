@@ -158,17 +158,6 @@ Expr makeHelperCallExpr(const std::string &name, std::vector<std::string> templa
   return call;
 }
 
-Expr makeAssignExpr(Expr lhs, Expr rhs) {
-  Expr assignCall;
-  assignCall.kind = Expr::Kind::Call;
-  assignCall.name = "assign";
-  assignCall.args.push_back(std::move(lhs));
-  assignCall.argNames.push_back(std::nullopt);
-  assignCall.args.push_back(std::move(rhs));
-  assignCall.argNames.push_back(std::nullopt);
-  return assignCall;
-}
-
 Expr makeEnvelopeExpr(const std::string &name, std::vector<Expr> bodyArguments) {
   Expr envelope;
   envelope.kind = Expr::Kind::Call;
@@ -605,18 +594,14 @@ bool emitReflectionSoaSchemaStorageHelpers(ReflectionGeneratedHelperContext &con
   storageReserveHelper.parameters.push_back(
       makeTypeBinding("value", storageStructPath, storageReserveHelper.namespacePrefix, true));
   storageReserveHelper.parameters.push_back(makeTypeBinding("capacity", "i32", storageReserveHelper.namespacePrefix));
+  // Each chunk is changed in place through its field (a copy-and-assign-back would copy and
+  // destroy every column).
   for (size_t chunkIndex = 0; chunkIndex < chunkTemplateArgs.size(); ++chunkIndex) {
-    const std::string localName = "chunk" + std::to_string(chunkIndex) + "Value";
-    Expr chunkBinding = makeTypeBinding(localName, chunkTypeNames[chunkIndex], storageReserveHelper.namespacePrefix, true);
-    chunkBinding.args.push_back(makeFieldAccessExpr("value", "chunk" + std::to_string(chunkIndex)));
-    chunkBinding.argNames.push_back(std::nullopt);
-    storageReserveHelper.statements.push_back(std::move(chunkBinding));
-    storageReserveHelper.statements.push_back(makeHelperCallExpr(
-        makeChunkHelperBasePath("Reserve", chunkTemplateArgs[chunkIndex].size()),
-        chunkTemplateArgs[chunkIndex],
-        {makeNameExpr(localName), makeNameExpr("capacity")}));
     storageReserveHelper.statements.push_back(
-        makeAssignExpr(makeFieldAccessExpr("value", "chunk" + std::to_string(chunkIndex)), makeNameExpr(localName)));
+        makeHelperCallExpr(makeChunkHelperBasePath("Reserve", chunkTemplateArgs[chunkIndex].size()),
+                           chunkTemplateArgs[chunkIndex],
+                           {makeFieldAccessExpr("value", "chunk" + std::to_string(chunkIndex)),
+                            makeNameExpr("capacity")}));
   }
   context.rewrittenDefinitions.push_back(std::move(storageReserveHelper));
   context.definitionPaths.insert(storageReserveHelperPath);
@@ -624,17 +609,10 @@ bool emitReflectionSoaSchemaStorageHelpers(ReflectionGeneratedHelperContext &con
   Definition storageClearHelper = makeHelper("SoaSchemaStorageClear", storageClearHelperPath, "void", false);
   storageClearHelper.parameters.push_back(makeTypeBinding("value", storageStructPath, storageClearHelper.namespacePrefix, true));
   for (size_t chunkIndex = 0; chunkIndex < chunkTemplateArgs.size(); ++chunkIndex) {
-    const std::string localName = "chunk" + std::to_string(chunkIndex) + "Value";
-    Expr chunkBinding = makeTypeBinding(localName, chunkTypeNames[chunkIndex], storageClearHelper.namespacePrefix, true);
-    chunkBinding.args.push_back(makeFieldAccessExpr("value", "chunk" + std::to_string(chunkIndex)));
-    chunkBinding.argNames.push_back(std::nullopt);
-    storageClearHelper.statements.push_back(std::move(chunkBinding));
-    storageClearHelper.statements.push_back(makeHelperCallExpr(
-        makeChunkHelperBasePath("Clear", chunkTemplateArgs[chunkIndex].size()),
-        chunkTemplateArgs[chunkIndex],
-        {makeNameExpr(localName)}));
     storageClearHelper.statements.push_back(
-        makeAssignExpr(makeFieldAccessExpr("value", "chunk" + std::to_string(chunkIndex)), makeNameExpr(localName)));
+        makeHelperCallExpr(makeChunkHelperBasePath("Clear", chunkTemplateArgs[chunkIndex].size()),
+                           chunkTemplateArgs[chunkIndex],
+                           {makeFieldAccessExpr("value", "chunk" + std::to_string(chunkIndex))}));
   }
   context.rewrittenDefinitions.push_back(std::move(storageClearHelper));
   context.definitionPaths.insert(storageClearHelperPath);

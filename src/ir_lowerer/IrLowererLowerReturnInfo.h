@@ -9,11 +9,48 @@
     return ir_lowerer::emitStructCopySlots(
         function.instructions, destBaseLocal, srcPtrLocal, slotCount, [&]() { return allocTempLocal(); });
   };
-  emitFileScopeCleanup = [&](const std::vector<int32_t> &scope) {
-    ir_lowerer::emitFileScopeCleanup(function.instructions, scope);
+  // Destroys an owning struct local whose drop flag is still set, then clears the flag, so a
+  // cleanup that runs again on another exit path is a no-op.
+  auto emitDropEntryCleanup = [&](const LowerSetupStageState::DropEntry &entry) {
+    function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(entry.flagLocal)});
+    const size_t skipJump = function.instructions.size();
+    function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+    function.instructions.push_back({IrOpcode::PushI32, 0});
+    function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(entry.flagLocal)});
+    const bool emitted = ir_lowerer::emitStructDestroyHelpersFromPtr(
+        entry.ptrLocal,
+        entry.structPath,
+        [&](const std::string &path) { return ir_lowerer::findStackDestroyHelper(defMap, path); },
+        [&](const std::string &path, StructSlotLayoutInfo &layoutOut) {
+          return resolveStructSlotLayout(path, layoutOut);
+        },
+        [&]() { return allocTempLocal(); },
+        [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+        LocalMap{},
+        emitInlineDefinitionCall,
+        error);
+    function.instructions[skipJump].imm = static_cast<uint64_t>(function.instructions.size());
+    return emitted;
+  };
+  emitFileScopeCleanup = [&](const std::vector<int32_t> &scopeRef) {
+    // A copy: a destroy helper's inline call pushes scopes of its own, which can reallocate the
+    // stack `scopeRef` lives in.
+    const std::vector<int32_t> scope = scopeRef;
+    for (auto it = scope.rbegin(); it != scope.rend(); ++it) {
+      if (*it >= 0) {
+        ir_lowerer::emitFileScopeCleanup(function.instructions, std::vector<int32_t>{*it});
+      } else {
+        const LowerSetupStageState::DropEntry entry =
+            setupStage.dropEntries[static_cast<size_t>(-*it - 1)];
+        (void)emitDropEntryCleanup(entry);
+      }
+    }
   };
   emitFileScopeCleanupAll = [&]() {
-    ir_lowerer::emitAllFileScopeCleanup(function.instructions, fileScopeStack);
+    for (size_t depth = fileScopeStack.size(); depth > 0; --depth) {
+      const std::vector<int32_t> scope = fileScopeStack[depth - 1];
+      emitFileScopeCleanup(scope);
+    }
   };
   pushFileScope = [&]() { fileScopeStack.emplace_back(); };
   popFileScope = [&]() { fileScopeStack.pop_back(); };

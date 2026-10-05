@@ -36,7 +36,8 @@ bool emitConversionsAndCallsOperatorExpr(
     std::string &error,
     const ResolveConversionsAndCallsDefinitionCallFn &resolveDefinitionCall,
     const SemanticProductTargetAdapter *semanticProductTargets,
-    std::string currentScopePath) {
+    std::string currentScopePath,
+    const EmitConversionsAndCallsOwnedStructAssignFn &emitOwnedStructAssign) {
   handled = true;
   std::string builtin;
   if (getBuiltinConvertName(expr)) {
@@ -243,30 +244,30 @@ bool emitConversionsAndCallsOperatorExpr(
     return true;
   }
 
-  ConversionsAndCallsOperatorContext context{
-      localsIn,
-      nextLocal,
-      emitExpr,
-      inferExprKind,
-      emitCompareToZero,
-      allocTempLocal,
-      emitFloatToIntNonFinite,
-      emitPointerIndexOutOfBounds,
-      emitArrayIndexOutOfBounds,
-      resolveStringTableTarget,
-      valueKindFromTypeName,
-      getMathConstantName,
-      inferStructExprPath,
-      resolveStructTypeName,
-      resolveStructSlotCount,
-      resolveStructFieldInfo,
-      resolveStructFieldBinding,
-      emitStructCopyFromPtrs,
-      instructions,
-      error,
-      resolveDefinitionCall,
-      semanticProductTargets,
-      std::move(currentScopePath)};
+  ConversionsAndCallsOperatorContext context{localsIn,
+                                             nextLocal,
+                                             emitExpr,
+                                             inferExprKind,
+                                             emitCompareToZero,
+                                             allocTempLocal,
+                                             emitFloatToIntNonFinite,
+                                             emitPointerIndexOutOfBounds,
+                                             emitArrayIndexOutOfBounds,
+                                             resolveStringTableTarget,
+                                             valueKindFromTypeName,
+                                             getMathConstantName,
+                                             inferStructExprPath,
+                                             resolveStructTypeName,
+                                             resolveStructSlotCount,
+                                             resolveStructFieldInfo,
+                                             resolveStructFieldBinding,
+                                             emitStructCopyFromPtrs,
+                                             instructions,
+                                             error,
+                                             resolveDefinitionCall,
+                                             semanticProductTargets,
+                                             std::move(currentScopePath),
+                                             emitOwnedStructAssign};
 
   if (!emitConversionsAndCallsMemoryAndPointerExpr(expr, context, handled)) {
     return false;

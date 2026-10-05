@@ -29,6 +29,9 @@ struct LowerReturnEmitInlineContext {
   LocalInfo::ValueKind returnKind = LocalInfo::ValueKind::Unknown;
   int32_t returnLocal = -1;
   std::vector<size_t> returnJumps;
+  // Depth of the cleanup scope stack with the callee body's scope on top; a return from a
+  // nested block cleans the scopes above it before jumping to the call's exit.
+  size_t bodyScopeDepth = 0;
 };
 
 using LowerReturnEmitStatementFn = std::function<bool(const Expr &, LocalMap &)>;

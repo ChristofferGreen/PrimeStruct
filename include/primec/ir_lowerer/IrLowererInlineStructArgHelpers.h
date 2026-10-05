@@ -19,22 +19,26 @@ using InferInlineStructExprPathFn = std::function<std::string(const Expr &, cons
 using InferInlineStructFieldLocalInfoFn = std::function<bool(const Expr &, const LocalMap &, LocalInfo &, std::string &)>;
 using EmitInlineStructCopySlotsFn = std::function<bool(int32_t, int32_t, int32_t)>;
 
-bool emitInlineStructDefinitionArguments(const std::string &calleePath,
-                                         const std::vector<Expr> &params,
-                                         const std::vector<const Expr *> &orderedArgs,
-                                         const LocalMap &callerLocals,
-                                         bool requireValue,
-                                         int32_t &nextLocal,
-                                         const ResolveInlineStructSlotLayoutFn &resolveStructSlotLayout,
-                                         const ExprLocalsValueKindFn &inferExprKind,
-                                         const InferInlineStructExprPathFn &inferStructExprPath,
-                                         const ExprLocalsPredicateFn &emitExpr,
-                                         const InferInlineStructFieldLocalInfoFn &inferFieldLocalInfo,
-                                         const EmitInlineStructCopySlotsFn &emitStructCopySlots,
-                                         const Int32ProviderFn &allocTempLocal,
-                                         const EmitInstructionFn &emitInstruction,
-                                         std::string &error,
-                                         std::optional<int32_t> destBaseLocal = std::nullopt);
+bool emitInlineStructDefinitionArguments(
+    const std::string &calleePath,
+    const std::vector<Expr> &params,
+    const std::vector<const Expr *> &orderedArgs,
+    const LocalMap &callerLocals,
+    bool requireValue,
+    int32_t &nextLocal,
+    const ResolveInlineStructSlotLayoutFn &resolveStructSlotLayout,
+    const ExprLocalsValueKindFn &inferExprKind,
+    const InferInlineStructExprPathFn &inferStructExprPath,
+    const ExprLocalsPredicateFn &emitExpr,
+    const InferInlineStructFieldLocalInfoFn &inferFieldLocalInfo,
+    const EmitInlineStructCopySlotsFn &emitStructCopySlots,
+    const Int32ProviderFn &allocTempLocal,
+    const EmitInstructionFn &emitInstruction,
+    std::string &error,
+    std::optional<int32_t> destBaseLocal = std::nullopt,
+    // Runs the `Copy` helpers for a field initialized from an
+    // existing place: (destPtrLocal, srcPtrLocal, structPath).
+    const std::function<bool(int32_t, int32_t, const std::string &)> &emitPlaceCopyHelpers = {});
 
 bool emitInlineStructDefinitionArguments(const std::string &calleePath,
                                          const std::vector<const Expr *> &orderedArgs,

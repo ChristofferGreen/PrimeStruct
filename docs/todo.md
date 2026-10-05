@@ -100,28 +100,29 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5492 | `Destroy` runs at scope end | ready | lifecycle |
-| TODO-5496 | Callees destroy their owned parameters | blocked | lifecycle |
+| TODO-5496 | Callees destroy their owned parameters | ready | lifecycle |
+| TODO-5497 | Destroy uniform-field structs and locals left by error propagation | ready | lifecycle |
 | TODO-5493 | Inferred bindings in generic struct helpers leak a diagnostic span | ready | diagnostics |
 | TODO-5494 | Local pointers cannot escape into containers or outer locals | ready | escapes |
 | TODO-5483 | Verify arm64 SextI32 on a macOS machine | deferred | ir-semantics |
 
 ### Ready Now
 
-- TODO-5492 (lifecycle): `Destroy` runs at scope end
+- TODO-5496 (lifecycle): callees destroy their owned parameters
+- TODO-5497 (lifecycle): destroy uniform-field structs and locals left by error propagation
 - TODO-5493 (diagnostics): inferred bindings in generic struct helpers leak a diagnostic span
 - TODO-5494 (escapes): local pointers cannot escape into containers or outer locals
 
 ### Immediate Next 10
 
-1. TODO-5492
-2. TODO-5496 (after TODO-5492)
+1. TODO-5496
+2. TODO-5497
 3. TODO-5493
 4. TODO-5494
 
 ### Priority Lanes
 
-- Memory safety and parameter modes (docs/spec/value-lifecycle.md Parameter Passing; docs/spec/type-system.md Ownership and Mutability): TODO-5492, TODO-5496, TODO-5494
+- Memory safety and parameter modes (docs/spec/value-lifecycle.md Parameter Passing; docs/spec/type-system.md Ownership and Mutability): TODO-5496, TODO-5497, TODO-5494
 - Diagnostics: TODO-5493
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
@@ -131,27 +132,13 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 
 ### Task Blocks
 
-- [ ] TODO-5492: `Destroy` runs at scope end
+- [ ] TODO-5496: Callees destroy their owned parameters
   - owner: ai
   - status: ready
   - created_at: 2026-10-05
   - phase: Memory safety
   - parallel_track: lifecycle
-  - scope: Destructors never run automatically today: a struct local or a container goes out of scope without its `Destroy` (a loop building 20,000 vectors grows to 261 MB). Run `Destroy` (and `DestroyStack`/`DestroyHeap` per placement) for every owning local when its scope ends on every exit path (fall-through, `return`, `break`, error propagation), in reverse declaration order, skipping moved-from and returned bindings through per-binding drop flags. `assign(target, place)` of an owning type destroys the old value and copies through the `Copy` helpers; structs with uniform fields (lowered as array handles) take the same binding and assignment copy paths. Lowering lives in `src/ir_lowerer/` (file handles already get scope cleanup: `emitFileScopeCleanup`, `IrLowererFlowControlHelpers.cpp`).
-  - acceptance:
-    - compile-run tests on VM, native and C++: a struct with a counting `Destroy` is destroyed exactly once per value on fall-through, early return, loops and branches, and never for moved-from or returned bindings
-    - the 20,000-vector loop runs in bounded memory
-    - full release gate and corpus differential green
-  - stop_rule: locals only; parameters are TODO-5496.
-
-- [ ] TODO-5496: Callees destroy their owned parameters
-  - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5492
-  - created_at: 2026-10-05
-  - phase: Memory safety
-  - parallel_track: lifecycle
-  - scope: A `copy` or `move` parameter is owned by the callee, so the callee destroys it when its scope ends (unless it moves it on, for example into a container); the caller then does not destroy a binding it passed to a `move` parameter. A value pushed into a container is destroyed by the container.
+  - scope: A `copy` or `move` parameter is owned by the callee, so the callee destroys it when its scope ends (unless it moves it on, for example into a container); the caller then does not destroy a binding it passed to a `move` parameter. A value pushed into a container is destroyed by the container. Today `drop(*slot)` (`vectorDropSlot`, `soaColumnDropSlot`, ring buffer `Destroy`) only runs sum payload destructors, so struct elements with `Destroy` are never destroyed; route it through the stack destroy helper.
   - acceptance:
     - compile-run tests on VM, native and C++: a counting `Destroy` runs once by the callee for a `copy` and for a `move` parameter, never by the caller for the moved binding, and once by the vector for a pushed element
     - full release gate and corpus differential green
@@ -180,6 +167,18 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - negative tests for each route (`pointer escapes via argument to <callee>` / `via assignment to <target>`) and positive tests for same-scope use
     - full release gate and corpus scan green
   - stop_rule: compile-time only; heap pointers from `alloc` stay out of scope.
+
+- [ ] TODO-5497: Destroy uniform-field structs and locals left by error propagation
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-05
+  - phase: Memory safety
+  - parallel_track: lifecycle
+  - scope: Two cases TODO-5492 leaves leaking: structs whose fields all share one scalar type lower as array handles, so their bindings and assignments skip the drop-flag and `Copy` paths; and `try` error propagation out of a nested block of an inlined callee jumps to the call's exit without cleaning the scopes in between (returns already do).
+  - acceptance:
+    - compile-run tests on VM, native and C++: a uniform-field struct with a counting `Destroy` is destroyed once at scope end and copied through `Copy` on binding from a place; a local in a nested block is destroyed when `try` propagates an error out of it
+    - full release gate green
+  - stop_rule: no new syntax.
 
 - [ ] TODO-5483: Verify arm64 SextI32 on a macOS machine
   - owner: ai

@@ -229,7 +229,117 @@ bool emitStructCopyHelpersAtDepth(
   return true;
 }
 
+bool emitStructDestroyHelpersAtDepth(
+    int32_t valuePtrLocal,
+    const std::string &structPath,
+    const std::function<const Definition *(const std::string &)> &findDestroyHelper,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
+    const Int32ProviderFn &allocTempLocal,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)>
+        &emitInlineDefinitionCall,
+    std::string &error,
+    int depth) {
+  if (const Definition *destroyHelper = findDestroyHelper(structPath)) {
+    return emitDestroyHelperFromPtr(
+        valuePtrLocal, structPath, destroyHelper, localsIn, emitInlineDefinitionCall, error);
+  }
+  StructSlotLayoutInfo layout;
+  if (depth > 16 || !resolveStructSlotLayout(structPath, layout)) {
+    return true;
+  }
+  for (auto fieldIt = layout.fields.rbegin(); fieldIt != layout.fields.rend(); ++fieldIt) {
+    if (!structNeedsCopyHelpers(
+            fieldIt->structPath, findDestroyHelper, resolveStructSlotLayout, depth + 1)) {
+      continue;
+    }
+    const int32_t fieldPtrLocal = allocTempLocal();
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(valuePtrLocal));
+    emitInstruction(IrOpcode::PushI64, static_cast<uint64_t>(fieldIt->slotOffset) * IrSlotBytes);
+    emitInstruction(IrOpcode::AddI64, 0);
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(fieldPtrLocal));
+    if (!emitStructDestroyHelpersAtDepth(fieldPtrLocal,
+                                         fieldIt->structPath,
+                                         findDestroyHelper,
+                                         resolveStructSlotLayout,
+                                         allocTempLocal,
+                                         emitInstruction,
+                                         localsIn,
+                                         emitInlineDefinitionCall,
+                                         error,
+                                         depth + 1)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 } // namespace
+
+const Definition *
+findStackDestroyHelper(const std::unordered_map<std::string, const Definition *> &defMap,
+                       const std::string &structPath) {
+  for (const char *helperName : {"/DestroyStack", "/Destroy"}) {
+    auto helperIt = defMap.find(structPath + helperName);
+    if (helperIt == defMap.end() || helperIt->second == nullptr) {
+      continue;
+    }
+    const Definition &helper = *helperIt->second;
+    return helper.statements.empty() && !helper.returnExpr.has_value() ? nullptr : &helper;
+  }
+  return nullptr;
+}
+
+bool parameterHasTransform(const Expr &param, std::string_view name) {
+  for (const Transform &transform : param.transforms) {
+    if (transform.name == name) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void emitReleaseDropFlag(const LocalMap &locals,
+                         const std::string &name,
+                         const std::function<void(IrOpcode, uint64_t)> &emitInstruction) {
+  auto localIt = locals.find(name);
+  if (localIt != locals.end() && localIt->second.dropFlagLocal >= 0) {
+    emitInstruction(IrOpcode::PushI32, 0);
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(localIt->second.dropFlagLocal));
+  }
+}
+
+bool structNeedsDestroyHelpers(
+    const std::string &structPath,
+    const std::function<const Definition *(const std::string &)> &findDestroyHelper,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)>
+        &resolveStructSlotLayout) {
+  return structNeedsCopyHelpers(structPath, findDestroyHelper, resolveStructSlotLayout, 0);
+}
+
+bool emitStructDestroyHelpersFromPtr(
+    int32_t valuePtrLocal,
+    const std::string &structPath,
+    const std::function<const Definition *(const std::string &)> &findDestroyHelper,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
+    const Int32ProviderFn &allocTempLocal,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)>
+        &emitInlineDefinitionCall,
+    std::string &error) {
+  return emitStructDestroyHelpersAtDepth(valuePtrLocal,
+                                         structPath,
+                                         findDestroyHelper,
+                                         resolveStructSlotLayout,
+                                         allocTempLocal,
+                                         emitInstruction,
+                                         localsIn,
+                                         emitInlineDefinitionCall,
+                                         error,
+                                         0);
+}
 
 bool emitStructCopyHelpersFromPtrs(
     int32_t destPtrLocal,

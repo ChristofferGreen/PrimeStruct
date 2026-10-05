@@ -42,6 +42,19 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
   const auto &resolveStructFieldInfo = context.resolveStructFieldInfo;
   const auto &resolveStructFieldBinding = context.resolveStructFieldBinding;
   const auto &emitStructCopyFromPtrs = context.emitStructCopyFromPtrs;
+  // `assign` of a struct value: with ownership when the lowerer provides it, else slot by slot.
+  const auto emitAssignedStructCopy = [&](int32_t destPtrLocal,
+                                          int32_t srcPtrLocal,
+                                          int32_t slotCount,
+                                          const std::string &structPath,
+                                          const Expr &rhsExpr,
+                                          int32_t destDropFlagLocal) {
+    if (context.emitOwnedStructAssign) {
+      return context.emitOwnedStructAssign(
+          destPtrLocal, srcPtrLocal, slotCount, structPath, rhsExpr, destDropFlagLocal);
+    }
+    return emitStructCopyFromPtrs(destPtrLocal, srcPtrLocal, slotCount);
+  };
   const auto *semanticProductTargets = context.semanticProductTargets;
   auto &instructions = context.instructions;
   auto &error = context.error;
@@ -442,7 +455,12 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
           const int32_t srcPtrLocal = allocTempLocal();
           instructions.push_back(
               {IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
-          if (!emitStructCopyFromPtrs(destPtrLocal, srcPtrLocal, structSlotCount)) {
+          if (!emitAssignedStructCopy(destPtrLocal,
+                                      srcPtrLocal,
+                                      structSlotCount,
+                                      it->second.structTypeName,
+                                      rhsExpr,
+                                      -1)) {
             return false;
           }
           instructions.push_back(
@@ -481,7 +499,12 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         }
         const int32_t srcPtrLocal = allocTempLocal();
         instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
-        if (!emitStructCopyFromPtrs(destPtrLocal, srcPtrLocal, structSlotCount)) {
+        if (!emitAssignedStructCopy(destPtrLocal,
+                                    srcPtrLocal,
+                                    structSlotCount,
+                                    it->second.structTypeName,
+                                    rhsExpr,
+                                    it->second.dropFlagLocal)) {
           return false;
         }
         instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
@@ -533,7 +556,12 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
           }
           const int32_t srcPtrLocal = allocTempLocal();
           instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
-          if (!emitStructCopyFromPtrs(destPtrLocal, srcPtrLocal, structSlotCount)) {
+          if (!emitAssignedStructCopy(destPtrLocal,
+                                      srcPtrLocal,
+                                      structSlotCount,
+                                      it->second.structTypeName,
+                                      rhsExpr,
+                                      -1)) {
             return false;
           }
           instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(destPtrLocal)});
@@ -929,7 +957,8 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         }
         const int32_t srcPtrLocal = allocTempLocal();
         instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
-        if (!emitStructCopyFromPtrs(destPtrLocal, srcPtrLocal, fieldSlotCount)) {
+        if (!emitAssignedStructCopy(
+                destPtrLocal, srcPtrLocal, fieldSlotCount, fieldStructPath, rhsExpr, -1)) {
           return false;
         }
         instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(destPtrLocal)});

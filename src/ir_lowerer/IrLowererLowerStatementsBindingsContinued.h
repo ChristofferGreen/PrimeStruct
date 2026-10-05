@@ -87,6 +87,28 @@
           error = "struct binding initializer type mismatch on " + stmt.name;
           return false;
         }
+        // An owning struct local is destroyed when its scope ends unless it was moved out
+        // (docs/spec/value-lifecycle.md): set its drop flag and register it with the scope.
+        const auto registerOwnedStructLocal = [&](LocalInfo &ownedInfo) {
+          if (fileScopeStack.empty() ||
+              !ir_lowerer::structNeedsDestroyHelpers(
+                  ownedInfo.structTypeName,
+                  [&](const std::string &path) {
+                    return ir_lowerer::findStackDestroyHelper(defMap, path);
+                  },
+                  [&](const std::string &path, StructSlotLayoutInfo &layoutOut) {
+                    return resolveStructSlotLayout(path, layoutOut);
+                  })) {
+            return;
+          }
+          ownedInfo.dropFlagLocal = allocTempLocal();
+          function.instructions.push_back({IrOpcode::PushI32, 1});
+          function.instructions.push_back(
+              {IrOpcode::StoreLocal, static_cast<uint64_t>(ownedInfo.dropFlagLocal)});
+          setupStage.dropEntries.push_back(
+              {ownedInfo.index, ownedInfo.dropFlagLocal, ownedInfo.structTypeName});
+          fileScopeStack.back().push_back(-static_cast<int32_t>(setupStage.dropEntries.size()));
+        };
         // Builtin-storage key/value maps (constructed via `map<K, V>(...)` sugar
         // without a stdlib constructor definition in scope) are materialized by
         // `tryEmitBuiltinKeyValueConstructor` as a heap pointer to an inline
@@ -209,9 +231,32 @@
                   [&]() { return allocTempLocal(); },
                   [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
                   error,
-                  baseLocal)) {
+                  baseLocal,
+                  [&](int32_t destPtrLocal, int32_t srcPtrLocal, const std::string &structPath) {
+                    bool ranCopyHelper = false;
+                    return ir_lowerer::emitStructCopyHelpersFromPtrs(
+                        destPtrLocal,
+                        srcPtrLocal,
+                        structPath,
+                        [&](const std::string &path) -> const Definition * {
+                          auto copyIt = defMap.find(path + "/Copy");
+                          return copyIt == defMap.end() ? nullptr : copyIt->second;
+                        },
+                        [&](const std::string &path, StructSlotLayoutInfo &layoutOut) {
+                          return resolveStructSlotLayout(path, layoutOut);
+                        },
+                        [&]() { return allocTempLocal(); },
+                        [&](IrOpcode op, uint64_t imm) {
+                          function.instructions.push_back({op, imm});
+                        },
+                        localsIn,
+                        emitInlineDefinitionCall,
+                        ranCopyHelper,
+                        error);
+                  })) {
             return false;
           }
+          registerOwnedStructLocal(info);
           localsIn.emplace(stmt.name, info);
           return true;
         }
@@ -340,7 +385,9 @@
                                           info.index,
                                           structTypeName)) {
           // A read-only collection binding is a view of the place: it shares the storage
-          // without owning it.
+          // without owning it, so its scope has nothing to destroy.
+          localsIn.emplace(stmt.name, info);
+          return true;
         } else {
           // Any other binding initialized from an existing place owns a copy of it
           // (docs/spec/value-lifecycle.md, Copies): containers copy their elements.
@@ -365,6 +412,7 @@
             return false;
           }
         }
+        registerOwnedStructLocal(info);
         localsIn.emplace(stmt.name, info);
         return true;
       }
@@ -513,6 +561,27 @@
     }
     if (pickStatementResult == LoweredSumPickEmitResult::Emitted) {
       return true;
+    }
+    if (isReturnCall(stmt) && stmt.args.size() == 1) {
+      // A local named in the returned value (returned itself, or wrapped in a Result or an
+      // aggregate) hands its value to the caller; its scope must not destroy it. Clearing a
+      // flag the value did not need to give up only leaks.
+      std::function<void(const Expr &)> releaseReturnedLocals = [&](const Expr &returnedExpr) {
+        if (returnedExpr.kind == Expr::Kind::Name) {
+          ir_lowerer::emitReleaseDropFlag(
+              localsIn, returnedExpr.name, [&](IrOpcode op, uint64_t imm) {
+                function.instructions.push_back({op, imm});
+              });
+          return;
+        }
+        for (const Expr &arg : returnedExpr.args) {
+          releaseReturnedLocals(arg);
+        }
+        for (const Expr &bodyArg : returnedExpr.bodyArguments) {
+          releaseReturnedLocals(bodyArg);
+        }
+      };
+      releaseReturnedLocals(stmt.args.front());
     }
     const std::optional<ir_lowerer::ReturnStatementInlineContext> returnInlineContext = [&]()
         -> std::optional<ir_lowerer::ReturnStatementInlineContext> {
@@ -758,6 +827,22 @@
       return false;
     }
     if (returnResult == ir_lowerer::ReturnStatementEmitResult::Emitted) {
+      // A return from a block nested in an inlined callee jumps to the call's exit, which only
+      // cleans the callee body's scope: clean the scopes in between before the jump.
+      if (activeInlineContext != nullptr &&
+          fileScopeStack.size() > activeInlineContext->bodyScopeDepth &&
+          !function.instructions.empty() && function.instructions.back().op == IrOpcode::Jump &&
+          !activeInlineContext->returnJumps.empty() &&
+          activeInlineContext->returnJumps.back() + 1 == function.instructions.size()) {
+        const IrInstruction returnJump = function.instructions.back();
+        function.instructions.pop_back();
+        for (size_t depth = fileScopeStack.size(); depth > activeInlineContext->bodyScopeDepth;
+             --depth) {
+          emitFileScopeCleanup(fileScopeStack[depth - 1]);
+        }
+        activeInlineContext->returnJumps.back() = function.instructions.size();
+        function.instructions.push_back(returnJump);
+      }
       return true;
     }
     const auto matchIfResult = ir_lowerer::tryEmitMatchIfStatement(

@@ -396,9 +396,14 @@ main() {
   CHECK(storageCapacityHelper->returnExpr->name.rfind(
             "/std/collections/soa_storage/soaColumns2Capacity", 0) == 0);
   REQUIRE(storageReserveHelper->parameters.size() == 2);
-  CHECK(storageReserveHelper->statements.size() == 3);
+  // One in-place chunk helper call per chunk.
+  REQUIRE(storageReserveHelper->statements.size() == 1);
+  CHECK(storageReserveHelper->statements[0].name.rfind(
+            "/std/collections/soa_storage/soaColumns2Reserve", 0) == 0);
+  REQUIRE(storageReserveHelper->statements[0].args.size() == 2);
+  CHECK(storageReserveHelper->statements[0].args[0].isFieldAccess);
   REQUIRE(storageClearHelper->parameters.size() == 1);
-  CHECK(storageClearHelper->statements.size() == 3);
+  CHECK(storageClearHelper->statements.size() == 1);
   CHECK(storageDestroyHelper->parameters.empty());
   CHECK(storageDestroyHelper->statements.size() == 1);
   CHECK(storageDestroyHelper->statements[0].name == "SoaSchemaStorageClear");
@@ -526,8 +531,8 @@ main() {
   REQUIRE(storageCapacityHelper->returnExpr.has_value());
   CHECK(storageCapacityHelper->returnExpr->name.rfind(
             "/std/collections/soa_storage/soaColumns16Capacity", 0) == 0);
-  CHECK(storageReserveHelper->statements.size() == 6);
-  CHECK(storageClearHelper->statements.size() == 6);
+  CHECK(storageReserveHelper->statements.size() == 2);
+  CHECK(storageClearHelper->statements.size() == 2);
   CHECK(storageDestroyHelper->parameters.empty());
   CHECK(storageDestroyHelper->statements.size() == 1);
   CHECK(storageDestroyHelper->statements[0].name == "SoaSchemaStorageClear");

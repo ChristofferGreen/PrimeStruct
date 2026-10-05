@@ -67,8 +67,13 @@
   it as `move`. A `copy` parameter gets its own storage: scalars by value, structs slot by slot and then through the
   type's `Copy` helper when it defines one (or its fields' helpers); a `move(v)` argument is handed over without a
   copy. The stdlib `Vector`, `RingBuffer` and `SoaColumn` `Copy` helpers allocate their own storage and copy each
-  element. Destructors do not run automatically at scope end yet (TODO-5492), so
-  neither the callee nor the caller destroys a moved or copied value today.
+  element. An owning local (a struct with `Destroy`, `DestroyStack` or a field that has one, including containers) is
+  destroyed when its scope ends on every exit path (fall-through, `return`, including from nested blocks of an inlined
+  callee), last declared first, unless its value was moved out (`move(x)`, a `move` parameter) or named in the returned
+  value; a per-local drop flag tracks this at run time. A struct field initialized from a place copies it, and
+  `assign` of an owning value destroys the old value and copies the new one. Parameters are not destroyed by the
+  callee yet (TODO-5496), and structs whose fields all have one scalar type, and locals left by error propagation out
+  of a nested block, are not destroyed yet (TODO-5497); both only leak.
 
 ## Uninitialized Storage (draft)
 - **Purpose:** model explicit, inline uninitialized storage without implicit construction (C-style tagged storage and

@@ -47,7 +47,15 @@ struct LowerSetupStageState {
   std::unordered_map<std::string, std::vector<InstructionSourceRange>> instructionSourceRangesByFunction;
   std::unordered_map<std::string, FunctionSyntaxProvenance> functionSyntaxProvenanceByName;
   const primec::ExpandedSource *expandedSource = nullptr;
+  // Per-scope cleanup: a non-negative entry is a file handle local to close, a negative entry
+  // `-(i + 1)` is `dropEntries[i]`, an owning struct local to destroy if its drop flag is set.
   std::vector<std::vector<int32_t>> fileScopeStack;
+  struct DropEntry {
+    int32_t ptrLocal = -1;
+    int32_t flagLocal = -1;
+    std::string structPath;
+  };
+  std::vector<DropEntry> dropEntries;
   std::optional<OnErrorHandler> currentOnError;
   std::optional<ResultReturnInfo> currentReturnResult;
   bool hasMathImport = false;

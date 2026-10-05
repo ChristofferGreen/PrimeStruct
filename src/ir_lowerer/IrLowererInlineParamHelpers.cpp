@@ -12,7 +12,6 @@
 #include "primec/ir/SoaPathHelpers.h"
 #include "primec/support/CollectionHelperNames.h"
 
-#include <algorithm>
 #include <string_view>
 
 namespace primec::ir_lowerer {
@@ -655,11 +654,14 @@ bool emitInlineDefinitionCallParameters(
     // `[T copy]` (docs/spec/value-lifecycle.md, Parameter Passing): the callee gets its own copy
     // instead of a borrow, except of a `move(x)` argument, which is handed over as is.
     const bool isCopyParam =
-        std::any_of(param.transforms.begin(),
-                    param.transforms.end(),
-                    [](const Transform &transform) { return transform.name == "copy"; }) &&
+        parameterHasTransform(param, "copy") &&
         !(orderedArg != nullptr && orderedArg->kind == Expr::Kind::Call &&
           !orderedArg->isMethodCall && orderedArg->name == "move" && orderedArg->args.size() == 1);
+    // A binding passed to a `move` parameter is the callee's now.
+    if (orderedArg != nullptr && orderedArg->kind == Expr::Kind::Name &&
+        parameterHasTransform(param, "move")) {
+      emitReleaseDropFlag(callerLocals, orderedArg->name, emitInstruction);
+    }
     LocalInfo paramInfo;
     if (!inferCallParameterLocalInfo(param, paramInfo, error)) {
       return false;
@@ -743,8 +745,7 @@ bool emitInlineDefinitionCallParameters(
       continue;
     }
 
-    // Uniform-field structs lower as array handles; a copy parameter of one still gets its own
-    // struct storage below.
+    // Uniform-field structs lower as array handles; a copy parameter still gets struct storage.
     const bool isCopiedStructArray = isCopyParam && paramInfo.kind == LocalInfo::Kind::Array &&
                                      !paramInfo.structTypeName.empty();
     if (orderedArg != nullptr && orderedArg->kind == Expr::Kind::Name && !isCopiedStructArray &&

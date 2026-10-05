@@ -53,6 +53,13 @@
         [&](const Expr &argExpr, const LocalMap &argLocals) { return emitExpr(argExpr, argLocals); },
         error);
     if (moveResult != ir_lowerer::UnaryPassthroughCallResult::NotMatched) {
+      if (moveResult == ir_lowerer::UnaryPassthroughCallResult::Emitted && expr.args.size() == 1 &&
+          expr.args.front().kind == Expr::Kind::Name) {
+        ir_lowerer::emitReleaseDropFlag(
+            localsIn, expr.args.front().name, [&](IrOpcode op, uint64_t imm) {
+              function.instructions.push_back({op, imm});
+            });
+      }
       return moveResult == ir_lowerer::UnaryPassthroughCallResult::Emitted;
     }
     switch (expr.kind) {

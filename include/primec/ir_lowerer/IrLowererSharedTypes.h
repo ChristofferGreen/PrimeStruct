@@ -23,6 +23,9 @@ struct LocalInfo {
   Kind argsPackElementKind = Kind::Value;
   int32_t structSlotCount = 0;
   bool isFileHandle = false;
+  // Set while this owning struct local still owns its value; its scope's cleanup destroys it
+  // only then (moves and returns clear it). -1 when the local needs no destroy.
+  int32_t dropFlagLocal = -1;
   bool isFileError = false;
   std::string errorTypeName;
   std::string errorHelperNamespacePath;

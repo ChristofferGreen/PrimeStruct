@@ -392,7 +392,28 @@
               },
               [&]() { return allocTempLocal(); },
               [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
-              error)) {
+              error,
+              std::nullopt,
+              [&](int32_t destPtrLocal, int32_t srcPtrLocal, const std::string &structPath) {
+                bool ranCopyHelper = false;
+                return ir_lowerer::emitStructCopyHelpersFromPtrs(
+                    destPtrLocal,
+                    srcPtrLocal,
+                    structPath,
+                    [&](const std::string &path) -> const Definition * {
+                      auto copyIt = setupStage.defMap.find(path + "/Copy");
+                      return copyIt == setupStage.defMap.end() ? nullptr : copyIt->second;
+                    },
+                    [&](const std::string &path, StructSlotLayoutInfo &layoutOut) {
+                      return resolveStructSlotLayout(path, layoutOut);
+                    },
+                    [&]() { return allocTempLocal(); },
+                    [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+                    callerLocals,
+                    stateOut.emitInlineDefinitionCall,
+                    ranCopyHelper,
+                    error);
+              })) {
         popInlineStack();
         return false;
       }
