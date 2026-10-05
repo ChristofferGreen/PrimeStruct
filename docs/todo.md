@@ -100,7 +100,6 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5489 | Container element borrows keep the container borrowed | ready | borrows |
 | TODO-5492 | `Destroy` runs at scope end | ready | lifecycle |
 | TODO-5493 | Inferred bindings in generic struct helpers leak a diagnostic span | ready | diagnostics |
 | TODO-5494 | Local pointers cannot escape into containers or outer locals | ready | escapes |
@@ -109,20 +108,18 @@ of sync with them.
 ### Ready Now
 
 - TODO-5493 (diagnostics): inferred bindings in generic struct helpers leak a diagnostic span
-- TODO-5489 (borrows): container element borrows keep the container borrowed
 - TODO-5492 (lifecycle): `Destroy` runs at scope end
 - TODO-5494 (escapes): local pointers cannot escape into containers or outer locals
 
 ### Immediate Next 10
 
-1. TODO-5489
-2. TODO-5492
-3. TODO-5493
-4. TODO-5494
+1. TODO-5492
+2. TODO-5493
+3. TODO-5494
 
 ### Priority Lanes
 
-- Memory safety and parameter modes (docs/spec/value-lifecycle.md Parameter Passing; docs/spec/type-system.md Ownership and Mutability): TODO-5489, TODO-5492, TODO-5494
+- Memory safety and parameter modes (docs/spec/value-lifecycle.md Parameter Passing; docs/spec/type-system.md Ownership and Mutability): TODO-5492, TODO-5494
 - Diagnostics: TODO-5493
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
@@ -131,18 +128,6 @@ of sync with them.
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 ### Task Blocks
-
-- [ ] TODO-5489: Container element borrows keep the container borrowed
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-05
-  - phase: Memory safety
-  - parallel_track: borrows
-  - scope: A `Reference<T>`/pointer obtained from a container (vector/map/ring buffer slot helpers, views, iteration) is rooted at the container binding, so structural changes (push, pop, reserve, clear, remove, insert, move, scope end) while the borrow is live report `borrowed binding: <container>`. Generalize the SoA field-view invalidation (`SemanticsValidatorStatement.cpp:484-498`, `ExprMapSoaBuiltins.cpp:208`) to the other containers.
-  - acceptance:
-    - negative tests per container: hold an element reference, push, then use the reference; positive tests: last use before the push compiles (non-lexical lifetimes)
-    - full release gate green
-  - stop_rule: no runtime checks; compile-time only.
 
 - [ ] TODO-5492: `Destroy` runs at scope end
   - owner: ai

@@ -677,12 +677,11 @@ PhaseStatus SemanticsValidator::validateExprCallPhase5([[maybe_unused]] const st
       auto isSoaFieldViewBindingType = [&](const BindingInfo &binding) -> bool {
         return isSoaFieldViewTypePath(binding.typeName);
       };
-      auto referenceRootForBorrowBinding =
-          [&](const std::string &bindingName,
-              const BindingInfo &binding) -> std::string {
-        if (binding.typeName != "Reference" &&
-            !isSoaFieldViewBindingType(binding) &&
-            !(binding.typeName == "auto" && !binding.referenceRoot.empty())) {
+      auto referenceRootForBorrowBinding = [&](const std::string &bindingName,
+                                               const BindingInfo &binding) -> std::string {
+        if (binding.typeName != "Reference" && !isSoaFieldViewBindingType(binding) &&
+            !(binding.typeName == "auto" && !binding.referenceRoot.empty()) &&
+            !binding.isContainerView) {
           return "";
         }
         if (!binding.referenceRoot.empty()) {

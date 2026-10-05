@@ -1979,6 +1979,7 @@ are left unarchived.
 | TODO-5486 | `[T move]` parameters take ownership | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5487 | Copying a Vector copies its elements | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5488 | Raw heap operations require `[unsafe]` | [2026-10.md](todo_archive/2026-10.md) | 2026-10-05 |
+| TODO-5489 | Container element borrows keep the container borrowed | [2026-10.md](todo_archive/2026-10.md) | 2026-10-05 |
 | TODO-5490 | Pointers to locals cannot escape their scope | [2026-10.md](todo_archive/2026-10.md) | 2026-10-05 |
 | TODO-5491 | Flow-sensitive use-after-move | [2026-10.md](todo_archive/2026-10.md) | 2026-10-05 |
 

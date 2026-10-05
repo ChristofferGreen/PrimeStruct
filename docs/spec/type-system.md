@@ -585,7 +585,7 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to brace
 - **Unsafe calls:** `[unsafe]` definitions may be called from safe code; the call does not taint the caller as long as
   unsafe-created references do not escape. `[unsafe_api]` definitions (unsafe to call, like the raw stdlib buffer
   wrappers) may only be called from `[unsafe]` or `[unsafe_api]` definitions.
-- **Memory safety (partly implemented; open work TODO-5489, TODO-5492, TODO-5494):** safe code cannot read or write memory that has been freed. The
+- **Memory safety (partly implemented; open work TODO-5492, TODO-5494):** safe code cannot read or write memory that has been freed. The
   compiler enforces it with these rules; code that breaks the guarantee from inside an `[unsafe]` definition (or a safe
   API built on one incorrectly) is the author's responsibility.
   - Freeing and reinterpreting memory is unsafe: `/std/intrinsics/memory/free`, `realloc`, `at_unsafe` and
@@ -593,7 +593,10 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to brace
     `[unsafe_api]`. `alloc` stays safe (without `free` it can only leak).
   - Containers own their storage. A borrow of an element or of storage inside a container (a reference returned by a
     container helper, a view, an iterator) borrows the container: the container cannot be structurally changed
-    (grown, shrunk, cleared, moved or destroyed) while the borrow is live.
+    (grown, shrunk, cleared, moved or destroyed) while the borrow is live. Implemented for SoA field views and element
+    references and for read-only collection views (a non-`mut` `vector`/`map`/`soa_vector` binding initialized from a
+    place); a borrow ends at its last use. Element references of the other containers are only reachable through
+    `[unsafe]` stdlib helpers today.
   - Parameters borrow their arguments by default (see Parameter Passing in `value-lifecycle.md`); a borrowed
     parameter cannot escape the call.
   - A pointer or reference to a local (`location(x)`) cannot escape the local's scope: returning it, storing it in a

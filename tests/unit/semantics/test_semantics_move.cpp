@@ -433,4 +433,63 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("changing a container while a view of it is used later is rejected") {
+  const std::string pushWhileViewed = R"(
+import /std/collections/*
+
+[effects(heap_alloc) return<int>]
+main() {
+  [Vector<i32> mut] items{vector<i32>()}
+  vectorPush<i32>(items, 1i32)
+  [Vector<i32>] view{items}
+  vectorPush<i32>(items, 2i32)
+  return(vectorCount<i32>(view))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(pushWhileViewed, "/main", error));
+  CHECK(error.find("borrowed binding: items (root: items, sink: view)") != std::string::npos);
+
+  const std::string fieldWhileViewed = R"(
+import /std/collections/*
+
+[struct]
+Bag() {
+  [Vector<i32> mut] items{vector<i32>()}
+}
+
+[effects(heap_alloc) return<int>]
+main() {
+  [Bag mut] bag{Bag{}}
+  [Vector<i32>] view{bag.items}
+  vectorPush<i32>(bag.items, 2i32)
+  return(vectorCount<i32>(view))
+}
+)";
+  error.clear();
+  CHECK_FALSE(validateProgram(fieldWhileViewed, "/main", error));
+  CHECK(error.find("borrowed binding: bag (root: bag, sink: view)") != std::string::npos);
+}
+
+TEST_CASE("a container view ends at its last use") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc) return<int>]
+main() {
+  [Vector<i32> mut] items{vector<i32>()}
+  vectorPush<i32>(items, 1i32)
+  [Vector<i32>] view{items}
+  [i32] seen{vectorCount<i32>(view)}
+  vectorPush<i32>(items, 2i32)
+  [Vector<i32> mut] copy{items}
+  vectorPush<i32>(items, 3i32)
+  return(plus(seen, vectorCount<i32>(copy)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_SUITE_END();

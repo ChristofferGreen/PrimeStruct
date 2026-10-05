@@ -42,6 +42,9 @@ struct BindingInfo {
   // copy, `move` hands it ownership; neither set means the parameter borrows its argument.
   bool isCopy = false;
   bool isMove = false;
+  // A non-`mut` collection binding initialized from an existing place: a read-only view sharing
+  // that place's storage, borrowed from `referenceRoot` until its last use.
+  bool isContainerView = false;
   bool isEntryArgString = false;
   bool isUnsafeReference = false;
   std::string referenceRoot;

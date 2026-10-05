@@ -212,18 +212,18 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
   auto isSoaFieldViewBindingType = [&](const BindingInfo &binding) -> bool {
     return isSoaFieldViewTypePath(binding.typeName);
   };
-  auto referenceRootForBorrowBinding =
-      [&](const std::string &bindingName, const BindingInfo &binding) -> std::string {
-        if (binding.typeName != "Reference" &&
-            !isSoaFieldViewBindingType(binding) &&
-            !(binding.typeName == "auto" && !binding.referenceRoot.empty())) {
-          return "";
-        }
-        if (!binding.referenceRoot.empty()) {
-          return binding.referenceRoot;
-        }
-        return bindingName;
-      };
+  auto referenceRootForBorrowBinding = [&](const std::string &bindingName,
+                                           const BindingInfo &binding) -> std::string {
+    if (binding.typeName != "Reference" && !isSoaFieldViewBindingType(binding) &&
+        !(binding.typeName == "auto" && !binding.referenceRoot.empty()) &&
+        !binding.isContainerView) {
+      return "";
+    }
+    if (!binding.referenceRoot.empty()) {
+      return binding.referenceRoot;
+    }
+    return bindingName;
+  };
   auto hasActiveBorrowForRoot =
       [&](const std::string &borrowRoot,
           const std::string &ignoreBorrowName = std::string()) -> bool {

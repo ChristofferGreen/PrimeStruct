@@ -2,6 +2,7 @@
 
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
+#include <algorithm>
 #include <functional>
 #include <string>
 #include <string_view>
@@ -304,6 +305,85 @@ bool SemanticsValidator::isOwningBorrowedParameter(const std::vector<ParameterIn
     return false;
   }
   return bindingOwnsResources(*paramBinding, namespacePrefix);
+}
+
+void SemanticsValidator::markContainerViewBinding(
+    const std::vector<ParameterInfo> &params,
+    std::unordered_map<std::string, BindingInfo> &locals,
+    const Expr &bindingStmt) {
+  if (!bindingStmt.isBinding || bindingStmt.args.size() != 1) {
+    return;
+  }
+  auto bindingIt = locals.find(bindingStmt.name);
+  if (bindingIt == locals.end()) {
+    return;
+  }
+  BindingInfo &binding = bindingIt->second;
+  if (binding.isMutable || !binding.referenceRoot.empty()) {
+    return;
+  }
+  // Collection types (declared `collection_type` / `key_value_type`) bound from a place share the
+  // place's storage.
+  std::string namespacePrefix;
+  if (const auto defIt = defMap_.find(currentValidationState_.context.definitionPath);
+      defIt != defMap_.end()) {
+    namespacePrefix = defIt->second->namespacePrefix;
+  }
+  const std::string typeName = normalizeBindingTypeName(binding.typeName);
+  const auto family = collection_helpers::parseCollectionFamily("/" + typeName);
+  const bool isBuiltinCollection = family == collection_helpers::CollectionFamily::Vector ||
+                                   family == collection_helpers::CollectionFamily::Map ||
+                                   family == collection_helpers::CollectionFamily::Soa;
+  const std::string structPath = resolveStructTypePath(typeName, namespacePrefix, structNames_);
+  const auto structIt = defMap_.find(structPath);
+  const bool isCollectionStruct = structIt != defMap_.end() && structIt->second != nullptr &&
+                                  std::any_of(structIt->second->transforms.begin(),
+                                              structIt->second->transforms.end(),
+                                              [](const Transform &transform) {
+                                                return transform.name == "collection_type" ||
+                                                       transform.name == "key_value_type";
+                                              });
+  if (!isBuiltinCollection && !isCollectionStruct) {
+    return;
+  }
+  const Expr *source = &bindingStmt.args.front();
+  while (source->kind == Expr::Kind::Call && source->isFieldAccess && source->args.size() == 1) {
+    source = &source->args.front();
+  }
+  if (source->kind != Expr::Kind::Name) {
+    return;
+  }
+  const BindingInfo *sourceBinding = findParamBinding(params, source->name);
+  if (sourceBinding == nullptr) {
+    const auto sourceIt = locals.find(source->name);
+    if (sourceIt == locals.end()) {
+      return;
+    }
+    sourceBinding = &sourceIt->second;
+  }
+  binding.isContainerView = true;
+  binding.referenceRoot = sourceBinding->isContainerView && !sourceBinding->referenceRoot.empty()
+                              ? sourceBinding->referenceRoot
+                              : source->name;
+}
+
+std::string
+SemanticsValidator::liveContainerViewOf(const std::vector<ParameterInfo> &params,
+                                        const std::unordered_map<std::string, BindingInfo> &locals,
+                                        const std::string &rootName) {
+  (void)params;
+  if (rootName.empty() || currentValidationState_.context.definitionIsUnsafe) {
+    return {};
+  }
+  std::string viewName;
+  for (const auto &[name, binding] : locals) {
+    if (binding.isContainerView && binding.referenceRoot == rootName &&
+        currentValidationState_.endedReferenceBorrows.count(name) == 0 &&
+        (viewName.empty() || name < viewName)) {
+      viewName = name;
+    }
+  }
+  return viewName;
 }
 
 bool SemanticsValidator::bindingOwnsResources(const BindingInfo &binding,

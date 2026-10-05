@@ -107,12 +107,11 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
     auto isSoaFieldViewBindingType = [&](const BindingInfo &binding) -> bool {
       return isSoaFieldViewTypePath(binding.typeName);
     };
-    auto referenceRootForBinding =
-        [&](const std::string &bindingName,
-            const BindingInfo &binding) -> std::string {
-      if (binding.typeName != "Reference" &&
-          !isSoaFieldViewBindingType(binding) &&
-          !(binding.typeName == "auto" && !binding.referenceRoot.empty())) {
+    auto referenceRootForBinding = [&](const std::string &bindingName,
+                                       const BindingInfo &binding) -> std::string {
+      if (binding.typeName != "Reference" && !isSoaFieldViewBindingType(binding) &&
+          !(binding.typeName == "auto" && !binding.referenceRoot.empty()) &&
+          !binding.isContainerView) {
         return "";
       }
       if (!binding.referenceRoot.empty()) {

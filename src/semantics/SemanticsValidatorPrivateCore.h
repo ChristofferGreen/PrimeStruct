@@ -296,6 +296,15 @@
   bool isOwningBorrowedParameter(const std::vector<ParameterInfo> &params,
                                  const Expr &expr,
                                  const std::string &namespacePrefix);
+  // Records a non-`mut` collection binding initialized from an existing place as a view of (a
+  // borrow from) that place's root binding.
+  void markContainerViewBinding(const std::vector<ParameterInfo> &params,
+                                std::unordered_map<std::string, BindingInfo> &locals,
+                                const Expr &bindingStmt);
+  // The name of a container view of `rootName` that is still used later, or empty.
+  std::string liveContainerViewOf(const std::vector<ParameterInfo> &params,
+                                  const std::unordered_map<std::string, BindingInfo> &locals,
+                                  const std::string &rootName);
   // Whether values of `binding`'s type own resources: a container, a type that defines `Destroy`,
   // or one holding either. Such values are moved, not copied, when passed to a `move` parameter.
   bool bindingOwnsResources(const BindingInfo &binding, const std::string &namespacePrefix);

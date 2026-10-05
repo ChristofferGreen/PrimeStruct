@@ -100,6 +100,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
     return false;
   }
   if (handledBindingStatement) {
+    markContainerViewBinding(params, locals, stmt);
     observeLocalMapSize(locals.size());
     return true;
   }
@@ -444,7 +445,8 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       }
       const bool isSoaFieldView = isSoaFieldViewTypePath(normalized);
       if (binding.typeName != "Reference" && !isSoaFieldView &&
-          !(binding.typeName == "auto" && !binding.referenceRoot.empty())) {
+          !(binding.typeName == "auto" && !binding.referenceRoot.empty()) &&
+          !binding.isContainerView) {
         return "";
       }
       if (!binding.referenceRoot.empty()) {

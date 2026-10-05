@@ -20,7 +20,7 @@ inline bool isSoaFieldViewBindingType(const BindingInfo &binding) {
 
 inline bool isBorrowTrackedBindingType(const BindingInfo &binding) {
   return binding.typeName == "Reference" || isSoaFieldViewBindingType(binding) ||
-         (binding.typeName == "auto" && !binding.referenceRoot.empty());
+         (binding.typeName == "auto" && !binding.referenceRoot.empty()) || binding.isContainerView;
 }
 
 inline bool isExperimentalSoaColumnBindingType(const BindingInfo &binding) {

@@ -51,7 +51,9 @@
   otherwise bitwise for `Copy` types; a struct without a `Copy` helper copies its fields, running the helpers of the
   fields that have one. The same applies to a `mut` binding initialized from an existing place (a binding, field or
   dereference): `[Vector<i32> mut] b{a}` gives `b` its own elements, so changing or destroying either leaves the other
-  intact. A non-`mut` binding initialized from a place is a read-only view of it and does not copy. A temporary (a
+  intact. A non-`mut` collection binding (`vector`, `map`, `soa_vector`) initialized from a place is a read-only view of it
+  and does not copy; it borrows the place's root binding until its last use, so the root cannot be changed (passed to a
+  `mut` or `move` parameter, or assigned) while the view is still used: `borrowed binding: <root>`. A temporary (a
   call result or constructor) or `move(x)` initializer is moved in without a copy.
 - **Implementation status:** the IR lowering passes non-`mut` struct and collection arguments by alias and treats
   `mut` parameters as borrows whose writes reach the caller. Semantics checks that a `mut` argument is a mutable place

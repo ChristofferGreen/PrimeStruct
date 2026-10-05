@@ -471,6 +471,29 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
     }
   }
 
+  // Changing a container (a `mut` or `move` argument rooted at it) while a read-only view of it is
+  // still used later could leave the view on freed storage.
+  for (size_t paramIndex = 0; paramIndex < calleeParams.size(); ++paramIndex) {
+    const ParameterInfo &param = calleeParams[paramIndex];
+    const Expr *arg = paramIndex < orderedArgs.size() ? orderedArgs[paramIndex] : nullptr;
+    if (paramIndex == packedParamIndex || arg == nullptr || arg == param.defaultExpr ||
+        (!param.binding.isMove && !isMutableBorrowParam(param))) {
+      continue;
+    }
+    const Expr *root = arg;
+    while (root->kind == Expr::Kind::Call && root->isFieldAccess && root->args.size() == 1) {
+      root = &root->args.front();
+    }
+    if (root->kind != Expr::Kind::Name) {
+      continue;
+    }
+    const std::string view = liveContainerViewOf(params, locals, root->name);
+    if (!view.empty()) {
+      return failResolvedCallArgumentDiagnostic("borrowed binding: " + root->name +
+                                                " (root: " + root->name + ", sink: " + view + ")");
+    }
+  }
+
   bool calleeIsUnsafe = false;
   if (context.resolvedDefinition != nullptr) {
     for (const auto &transform : context.resolvedDefinition->transforms) {
