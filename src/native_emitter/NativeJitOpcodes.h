@@ -79,6 +79,22 @@ inline bool nativeJitRunsOpcodeInline(IrOpcode op) {
   case IrOpcode::PushArgc:
   case IrOpcode::LoadStringByte:
   case IrOpcode::LoadStringLength:
+  case IrOpcode::AddF32:
+  case IrOpcode::SubF32:
+  case IrOpcode::MulF32:
+  case IrOpcode::DivF32:
+  case IrOpcode::NegF32:
+  case IrOpcode::CmpEqF32:
+  case IrOpcode::CmpNeF32:
+  case IrOpcode::CmpLtF32:
+  case IrOpcode::CmpLeF32:
+  case IrOpcode::CmpGtF32:
+  case IrOpcode::CmpGeF32:
+  case IrOpcode::ConvertI32ToF32:
+  case IrOpcode::ConvertI64ToF32:
+  case IrOpcode::ConvertF32ToI64:
+  case IrOpcode::ConvertF32ToF64:
+  case IrOpcode::ConvertF64ToF32:
     return true;
   default:
     return false;
@@ -112,27 +128,11 @@ inline bool nativeJitBridgesOpcode(IrOpcode op) {
   case IrOpcode::FileWriteStringDynamic:
   case IrOpcode::FileWriteByte:
   case IrOpcode::FileWriteNewline:
-  case IrOpcode::AddF32:
-  case IrOpcode::SubF32:
-  case IrOpcode::MulF32:
-  case IrOpcode::DivF32:
-  case IrOpcode::NegF32:
-  case IrOpcode::CmpEqF32:
-  case IrOpcode::CmpNeF32:
-  case IrOpcode::CmpLtF32:
-  case IrOpcode::CmpLeF32:
-  case IrOpcode::CmpGtF32:
-  case IrOpcode::CmpGeF32:
-  case IrOpcode::ConvertI32ToF32:
-  case IrOpcode::ConvertI64ToF32:
   case IrOpcode::ConvertU64ToF32:
   case IrOpcode::ConvertF32ToI32:
-  case IrOpcode::ConvertF32ToI64:
   case IrOpcode::ConvertF32ToU64:
   case IrOpcode::ConvertF64ToI32:
   case IrOpcode::ConvertF64ToU64:
-  case IrOpcode::ConvertF32ToF64:
-  case IrOpcode::ConvertF64ToF32:
     return true;
   default:
     return false;

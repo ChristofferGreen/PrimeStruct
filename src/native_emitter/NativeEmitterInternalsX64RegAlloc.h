@@ -673,6 +673,9 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
           emitMovapsXmm(target, left);
         }
         emitSseBinaryOp(isF64, opcode, target, xmmOf(b, 1));
+        if (!isF64 && jitMode_) {
+          emitClearXmmHigh32(target);
+        }
         storeXmm(d, target);
         break;
       }
@@ -689,6 +692,9 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
           emitLoadXmmImm64(
               1, ir.op == IrOpcode::NegF64 ? 0x8000000000000000ull : 0x80000000ull, Rcx);
           emitXorpsXmm(target, 1);
+          if (ir.op == IrOpcode::NegF32 && jitMode_) {
+            emitClearXmmHigh32(target);
+          }
           break;
         }
         // Flip the sign bit in place: btc target, 31 or 63.
@@ -699,6 +705,9 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
         emitByte(0xBA);
         emitByte(static_cast<uint8_t>(0xC0 | (7 << 3) | (target & 7)));
         emitByte(ir.op == IrOpcode::NegF64 ? 63 : 31);
+        if (ir.op == IrOpcode::NegF32 && jitMode_) {
+          emitMovRegReg32(target, target); // the VM's f32 values are zero-extended
+        }
         storeValue(d, target);
         break;
       }
@@ -760,7 +769,11 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
         const uint32_t d = instruction.defs[0];
         const uint8_t target = xmmTarget(d, -1);
         emitXorpsXmm(target, target);
-        emitCvtsi2s(isF64, target, source);
+        // The I32 forms convert the low 32 bits, as the VM does.
+        emitCvtsi2s(isF64,
+                    target,
+                    source,
+                    ir.op == IrOpcode::ConvertI32ToF32 || ir.op == IrOpcode::ConvertI32ToF64);
         storeXmm(d, target);
         break;
       }
@@ -785,6 +798,9 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
           emitCvtss2sd(target, source);
         } else {
           emitCvtsd2ss(target, source);
+          if (jitMode_) {
+            emitClearXmmHigh32(target);
+          }
         }
         storeXmm(d, target);
         break;

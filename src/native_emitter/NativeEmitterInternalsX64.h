@@ -470,7 +470,10 @@ class X64Emitter {
    void emitSseBinaryOp(bool isF64, uint8_t opcode, uint8_t dstXmm, uint8_t srcXmm);
    void emitXorpsXmm(uint8_t dstXmm, uint8_t srcXmm);
    void emitComiss(bool isF64, uint8_t a, uint8_t b);
-   void emitCvtsi2s(bool isF64, uint8_t dstXmm, uint8_t srcReg);  // int64 -> float
+   // int64 (or, with source32, int32) -> float
+   void emitCvtsi2s(bool isF64, uint8_t dstXmm, uint8_t srcReg, bool source32 = false);
+   void emitClearXmmHigh32(uint8_t xmm);
+   void emitMovRegReg32(uint8_t rd, uint8_t rs);
    void emitCvtts2si(bool isF64, uint8_t dstReg, uint8_t srcXmm); // float -> int64 (truncate)
    void emitCvtss2sd(uint8_t dstXmm, uint8_t srcXmm);
    void emitCvtsd2ss(uint8_t dstXmm, uint8_t srcXmm);

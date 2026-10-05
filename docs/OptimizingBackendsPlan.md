@@ -564,6 +564,15 @@ vectors went from 11 s interpreted to 51 s natively while nearing the machine's 
 22 s) with the byte map. Native-tier programs: 162 to 506 of the 507 that run; the last one imports host functions. One
 of them needed more than the old 1 GiB stack reservation limit, now 32 GiB (reserved, not committed).
 
+f32 inline (2026-10-05): a bridged opcode costs a C call, far more than an interpreted dispatch, so f32 arithmetic
+should not go through the runtime. f32 add, subtract, multiply, divide, negate, compares and the f32/f64, i32/i64-to-f32
+and f32-to-i64 conversions are machine code again; JIT mode clears bits 32-63 after every f32 result (psllq/psrlq 32,
+or a 32-bit mov for the integer-register negate), the VM's zero-extended slot, and the i32 conversions use the 32-bit
+source form of cvtsi2ss/sd (the VM converts the low 32 bits; the 64-bit form was wrong for i32 values not
+sign-extended, also in the native executables). A 20-million-iteration f32 loop: 454 ms interpreted, 51 ms native.
+Float-to-i32/u64 and u64-to-f32 stay in the runtime: the VM's results for NaN and out-of-range values come from the
+host compiler's conversion sequences.
+
 4.2 and 4.4 (2026-10-04): every heap access used to scan the whole allocation list, freed allocations included, so a
 program that builds many small vectors slowed down quadratically (3,000 vectors of 20 pushes: 1.72 s). Allocations
 are only ever appended, each at the end of the heap, so the list is sorted by base slot and `VmHeapHelpers.cpp` now

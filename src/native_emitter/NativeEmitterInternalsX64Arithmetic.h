@@ -211,12 +211,38 @@ inline void X64Emitter::emitComiss(bool isF64, uint8_t a, uint8_t b) {
   emitModRmReg(a, b);
 }
 
-inline void X64Emitter::emitCvtsi2s(bool isF64, uint8_t dstXmm, uint8_t srcReg) {
+inline void X64Emitter::emitCvtsi2s(bool isF64, uint8_t dstXmm, uint8_t srcReg, bool source32) {
   emitByte(isF64 ? 0xF2 : 0xF3);
-  emitRex(true, dstXmm, srcReg);
+  if (!source32) {
+    emitRex(true, dstXmm, srcReg);
+  } else if (dstXmm >= 8 || srcReg >= 8) {
+    emitRex(false, dstXmm, srcReg);
+  }
   emitByte(0x0F);
-  emitByte(0x2A); // CVTSI2SS/SD xmm, r/m64
+  emitByte(0x2A); // CVTSI2SS/SD xmm, r/m64 (r/m32 without REX.W)
   emitModRmReg(dstXmm, srcReg);
+}
+
+inline void X64Emitter::emitClearXmmHigh32(uint8_t xmm) {
+  // psllq xmm, 32; psrlq xmm, 32: zero bits 32-63, leaving an f32 zero-extended.
+  for (const uint8_t extension : {6, 2}) {
+    emitByte(0x66);
+    if (xmm >= 8) {
+      emitByte(0x41);
+    }
+    emitByte(0x0F);
+    emitByte(0x73);
+    emitByte(static_cast<uint8_t>(0xC0 | (extension << 3) | (xmm & 7)));
+    emitByte(32);
+  }
+}
+
+inline void X64Emitter::emitMovRegReg32(uint8_t rd, uint8_t rs) {
+  if (rd >= 8 || rs >= 8) {
+    emitRex(false, rs, rd);
+  }
+  emitByte(0x89); // mov r/m32, r32 (zero-extends)
+  emitModRmReg(rs, rd);
 }
 
 inline void X64Emitter::emitCvtts2si(bool isF64, uint8_t dstReg, uint8_t srcXmm) {

@@ -13,8 +13,8 @@ namespace primec::vm_detail {
 // The runtime side of the native JIT (primec/backend/NativeJit.h). The code calls `bridge` for
 // the opcodes it has no machine code for (nativeJitBridgesOpcode in
 // src/native_emitter/NativeJitOpcodes.h), which runs them with the VM's own handlers and
-// messages: the heap, prints of argv and dynamic strings, files, dynamic string bytes, f32
-// arithmetic and the float conversions the code leaves out.
+// messages: the heap, prints of argv and dynamic strings, files, dynamic string bytes and the
+// float conversions the code leaves out (to i32 and u64, and u64 to f32).
 //
 // The heap is kept in the layout the code reads directly: the VM's slot values (a VM heap
 // address without its tag is 16 times the slot index) and one byte per slot that is nonzero

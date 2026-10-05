@@ -36,12 +36,12 @@
   floats as bits, and indices). Indirect addresses are byte offsets into the active frame’s local slot space and must be
   16-byte aligned.
 - **Native execution tier:** on Linux x86_64, `primevm` at `-O2` (its default) runs a module as native code in its own
-  process (`include/primec/backend/NativeJit.h`) with the VM's observable behavior. Integer and f64 arithmetic,
-  comparisons, branches, calls, returns, prints of numbers and module strings, argc, string bytes and lengths, and
+  process (`include/primec/backend/NativeJit.h`) with the VM's observable behavior. Integer, f64 and f32
+  arithmetic (f32 results zero-extended as in the VM), comparisons, branches, calls, returns, prints of numbers and module strings, argc, string bytes and lengths, and
   indirect loads and stores are machine code; addresses keep the VM's values (frame addresses are byte offsets into the
   current frame, heap addresses are tagged slot offsets) and are translated on access. Heap allocation, freeing and
-  reallocation, files, prints of argv and dynamic strings, dynamic string bytes, f32 arithmetic and the remaining
-  float conversions call into the runtime (`src/runtime/VmNativeJitHost.cpp`), which runs them with the VM's own
+  reallocation, files, prints of argv and dynamic strings, dynamic string bytes and the float-to-i32/u64 and u64-to-f32
+  conversions call into the runtime (`src/runtime/VmNativeJitHost.cpp`), which runs them with the VM's own
   handlers; the heap the runtime keeps uses the VM's addresses and the code reads and writes it directly. The VM's
   runtime faults (division by zero, string index out of bounds, invalid string index, unaligned or invalid indirect
   address, heap misuse, I/O handler errors, more than 4096 frames, a missing return) are reported with the VM's

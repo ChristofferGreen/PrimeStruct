@@ -371,6 +371,24 @@ TEST_CASE("native JIT computes f32 values and float conversions like the interpr
         lines.end(),
         {std::string("PushI64 ") + value, "ConvertI64ToF64", "ConvertF64ToF32", "PrintU64 1"});
   }
+  // f32 operands whose upper 32 bits are not zero: the VM reads the low 32 bits and
+  // zero-extends every f32 result; i32 conversions read the low 32 bits too.
+  for (const char *op : {"AddF32", "MulF32", "CmpLtF32"}) {
+    lines.insert(lines.end(),
+                 {"PushI64 -4611686019477487616", "PushI64 81604378624", op, "PrintU64 1"});
+  }
+  for (const char *op : {"NegF32", "ConvertF32ToF64", "ConvertF32ToI64"}) {
+    lines.insert(lines.end(), {"PushI64 -4611686019477487616", op, "PrintU64 1"});
+  }
+  for (const char *op : {"ConvertI32ToF32", "ConvertI32ToF64"}) {
+    lines.insert(lines.end(), {"PushI64 4294967301", op, "PrintU64 1"});
+  }
+  lines.insert(lines.end(),
+               {"PushF64 0x400c000000000000",
+                "ConvertF64ToF32",
+                "PushF32 0x3f800000",
+                "AddF32",
+                "PrintU64 1"});
   lines.insert(lines.end(),
                {"PushF32 0x3fc00000", "ConvertF32ToF64", "ConvertF64ToI64", "ReturnI32"});
   const primec::IrModule module = moduleFrom(lines);

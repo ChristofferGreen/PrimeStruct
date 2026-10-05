@@ -10,11 +10,11 @@
 namespace primec {
 
 // In-process native execution for the VM (Linux x86_64): the module is compiled by the native
-// backend and run as machine code instead of being interpreted, observably the same. Integer and
-// f64 arithmetic, comparisons, branches, calls, returns, prints of numbers and module strings,
+// backend and run as machine code instead of being interpreted, observably the same. Integer, f64
+// and f32 arithmetic, comparisons, branches, calls, returns, prints of numbers and module strings,
 // argc, string bytes and indirect loads and stores (frame and heap addresses, with the VM's
 // address values) are machine code; the heap's allocation, files, prints of argv and dynamic
-// strings, dynamic string bytes, f32 arithmetic and the float conversions the code leaves out
+// strings, dynamic string bytes and the float conversions the code leaves out
 // call into the runtime, which runs them with the VM's own handlers. The VM's runtime faults
 // (division by zero, string, indirect-address and heap errors, more than 4096 frames, a missing
 // return, I/O handler errors) are reported with the VM's messages. Modules importing host
