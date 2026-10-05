@@ -67,7 +67,8 @@ explicit `utf8`/`ascii` suffix.** `ascii` enforces 7-bit ASCII (the compiler rej
     bindings. Bare zero-argument execution allows `name` to execute a unique visible zero-argument definition in
     command/value position when no stack value, import alias, or other visible callable makes the name ambiguous.
   - **Parameters:** use the same binding envelope as locals: `main([array<string>] args, [i32] limit{10i32})`.
-    Qualifiers like `mut`/`copy` apply here as well; defaults are optional and currently limited to literal/pure forms
+    Qualifiers like `mut`/`copy`/`move` apply here as well and choose how the argument is passed (a read-only borrow
+    by default; see Parameter Passing in `value-lifecycle.md`); defaults are optional and currently limited to literal/pure forms
     (no name references). The key/value collection constructors (`mapNew`, `map<K, V>(...)`) and the public
     `Map<K, V>` wrapper constructors (`Map<K, V>{}`, `mapSingle`, `mapPair`) are also accepted as defaults even though
     they allocate; other allocating calls are rejected.

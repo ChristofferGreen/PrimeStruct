@@ -584,6 +584,20 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to brace
   scope. Unsafe scopes are aliasing barriers for optimization.
 - **Unsafe calls:** unsafe definitions may be called from safe code; the call does not taint the caller as long as
   unsafe-created references do not escape.
+- **Memory safety (planned, TODO-5484 to TODO-5491):** safe code cannot read or write memory that has been freed. The
+  compiler enforces it with these rules; code that breaks the guarantee from inside an `[unsafe]` definition (or a safe
+  API built on one incorrectly) is the author's responsibility.
+  - Freeing and reinterpreting memory is unsafe: `/std/intrinsics/memory/free`, `realloc`, `at_unsafe` and
+    `reinterpret` are only accepted in `[unsafe]` definitions. `alloc` stays safe (without `free` it can only leak).
+  - Containers own their storage. A borrow of an element or of storage inside a container (a reference returned by a
+    container helper, a view, an iterator) borrows the container: the container cannot be structurally changed
+    (grown, shrunk, cleared, moved or destroyed) while the borrow is live.
+  - Parameters borrow their arguments by default (see Parameter Passing in `value-lifecycle.md`); a borrowed
+    parameter cannot escape the call.
+  - A pointer or reference to a local (`location(x)`) cannot escape the local's scope: returning it, storing it in a
+    longer-lived place, or passing it to a `move`/`copy` parameter that keeps it is rejected.
+  - Copying a container copies its elements; two containers never share storage in safe code.
+  - Use-after-move is tracked per control-flow path: a binding moved on any path reaching a use is a compile error.
 
 ### Layout and Struct Semantics
 - Structs record layout manifests in IR.

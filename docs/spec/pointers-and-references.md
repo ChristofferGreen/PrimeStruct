@@ -71,6 +71,9 @@
   through freed heap pointers deterministically (also after the memory is reused; see the heap note in
   `vm-design.md`), and `realloc` preserves slot payloads across successful growth/shrink
   reallocation while treating counts as element counts rather than raw bytes.
+  Safety: `free`, `realloc`, `at_unsafe` and `reinterpret` are unsafe operations, accepted only inside `[unsafe]`
+  definitions (planned, TODO-5488; the memory-safety rules are under Ownership and Mutability in `type-system.md`).
+  Stdlib containers implement their storage in `[unsafe]` helpers behind safe APIs.
   Current implementation boundary: the built-in heap intrinsics still return bare `Pointer<T>` values in the
   compiler/runtime. The safe API direction for allocation that can fail is a stdlib wrapper returning
   `Maybe<Pointer<T>>` or `Result<Pointer<T>, AllocError>` rather than treating null as a valid `Pointer<T>`.

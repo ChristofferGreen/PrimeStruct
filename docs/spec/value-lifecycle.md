@@ -7,8 +7,9 @@
   are optional hooks; `Move`/`Copy` must be nested inside the struct, return `void`, and accept exactly one parameter.
 - **Copy signature:** the canonical copy constructor is `Copy([Reference<Self>] other) { ... }`. A shorthand
   `Copy(other) { ... }` desugars to the reference form.
-- **Move-by-default:** assignments, argument passing, and returns consume values unless the type is `Copy` or the value
-  is a `Reference<T>`.
+- **Move-by-default:** assignments and returns consume values unless the type is `Copy` or the value is a
+  `Reference<T>`. Argument passing follows the parameter's mode instead (see Parameter Passing below): by default a
+  parameter borrows its argument.
 - **`Copy` types (Rust-aligned):** values that can be duplicated by a simple bitwise copy with no custom destruction.
   - Built-in `Copy` types: `bool`, `i32`, `i64`, `u64`, `f32`, `f64`, `Pointer<T>`, `Reference<T>`.
   - Structs are `Copy` when they are `[pod]`, all fields are `Copy`, and they do **not** define `Destroy` or `Copy`.
@@ -25,6 +26,33 @@
 - **References:** `move(...)` rejects `Reference<T>` bindings; references do not participate in move semantics.
 - **Backend note:** `move(...)` is a semantic ownership marker. VM/native lower it as a passthrough; the C++ emitter
   emits `std::move`.
+
+## Parameter Passing
+- **Modes:** a parameter's transforms choose how its argument is passed. Every mode is observably the same for `Copy`
+  scalars except where noted; backends may pass small values in registers.
+
+  | Parameter | The callee gets | The caller |
+  | --- | --- | --- |
+  | `[T] x` | a read-only borrow of the argument (no copy) | keeps the value; it cannot change during the call |
+  | `[T mut] x` | a mutable borrow; its writes are the caller's | must pass a mutable place (binding, field or element of one) |
+  | `[T copy] x` | its own read-only copy | keeps the value; `move(v)` hands it over without a copy |
+  | `[T copy mut] x` | its own copy it may change | as for `copy` |
+  | `[T move] x` | the value itself (passed by reference, no copy); the callee owns it | the binding ends: it is moved-from after the call |
+  | `[T move mut] x` | as for `move`, and it may change it | as for `move` |
+
+- **Borrows at a call:** borrowed parameters (`[T]`, `[T mut]`) follow the borrow rules of `type-system.md` for the
+  duration of the call: a place passed to a `mut` parameter may not also be passed to any other parameter of the same
+  call, and a borrowed parameter cannot escape the call (it cannot be returned, stored, or moved).
+- **Ownership:** a `move` parameter's value is destroyed when the callee's scope ends unless the callee moves it on
+  (for example into a container); the caller does not destroy it. `move(...)` at the call site is optional for a `move`
+  parameter. Using the caller's binding afterwards is a `use-after-move` error until it is reassigned. A temporary
+  argument may be passed to any mode.
+- **Copies:** `copy` duplicates through the type's `Copy` helper when it has one (collections copy their elements),
+  otherwise bitwise for `Copy` types.
+- **Implementation status (planned):** today's IR lowering already passes non-`mut` struct and collection arguments
+  by alias and treats `mut` parameters as borrows whose writes reach the caller; `copy` is accepted but has no effect,
+  `move` parameters do not exist yet, and the call-site checks above are not enforced. Tracked in TODO-5484 to
+  TODO-5487.
 
 ## Uninitialized Storage (draft)
 - **Purpose:** model explicit, inline uninitialized storage without implicit construction (C-style tagged storage and

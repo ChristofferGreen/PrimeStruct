@@ -100,16 +100,38 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
+| TODO-5484 | Parameter modes: mode flags and call-site borrow checks | ready | params |
+| TODO-5485 | `[T copy]` parameters receive their own copy | blocked | params |
+| TODO-5486 | `[T move]` parameters take ownership | blocked | params |
+| TODO-5487 | Copying a Vector copies its elements | blocked | containers |
+| TODO-5488 | Raw heap operations require `[unsafe]` | ready | unsafe |
+| TODO-5489 | Container element borrows keep the container borrowed | ready | borrows |
+| TODO-5490 | Pointers to locals cannot escape their scope | ready | escapes |
+| TODO-5491 | Flow-sensitive use-after-move | ready | moves |
 | TODO-5483 | Verify arm64 SextI32 on a macOS machine | deferred | ir-semantics |
 
 ### Ready Now
 
+- TODO-5484 (params): parameter mode flags and call-site borrow checks
+- TODO-5488 (unsafe): raw heap operations require `[unsafe]`
+- TODO-5489 (borrows): container element borrows keep the container borrowed
+- TODO-5490 (escapes): pointers to locals cannot escape their scope
+- TODO-5491 (moves): flow-sensitive use-after-move
 
 ### Immediate Next 10
 
+1. TODO-5484
+2. TODO-5488
+3. TODO-5485 (after TODO-5484)
+4. TODO-5486 (after TODO-5484)
+5. TODO-5487 (after TODO-5485)
+6. TODO-5491
+7. TODO-5490
+8. TODO-5489
 
 ### Priority Lanes
 
+- Memory safety and parameter modes (docs/spec/value-lifecycle.md Parameter Passing; docs/spec/type-system.md Ownership and Mutability): TODO-5484, TODO-5485, TODO-5486, TODO-5487, TODO-5488, TODO-5489, TODO-5490, TODO-5491
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
 ### Execution Queue
@@ -117,6 +139,109 @@ of sync with them.
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 ### Task Blocks
+
+- [ ] TODO-5484: Parameter modes: mode flags and call-site borrow checks
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-05
+  - phase: Memory safety
+  - parallel_track: params
+  - scope: Implement the Parameter Passing table of `docs/spec/value-lifecycle.md` in semantics. Record `copy`, `move` and `mut` on each parameter (`parseBindingInfo`, `SemanticsHelpersCore.cpp`; `copy` is parsed and dropped today, `move` is not a parameter transform yet). At each call: an argument to a `mut` parameter (without `copy`/`move`) must be a mutable place (a `mut` binding, or a field or element of one); a place passed to a `mut` parameter must not also be passed to another parameter of the same call; a borrowed parameter (`[T]`, `[T mut]`) cannot escape (return, store into a longer-lived place, `move`). Update the legacy AST C++ emitter (`src/emitter/EmitterEmitSetup.h` `appendParam`) so `[i32 mut]` is `int &` like the IR lowering. Audit `[T mut]` parameters in stdlib/tests/docs for ones that only wanted scratch (survey found none in stdlib) and rewrite them to `[T copy mut]` (accepted as `mut` scratch until TODO-5485 lands).
+  - implementation_notes: IR lowering already gives `mut` parameters borrow semantics (`emitInlineDefinitionCallParameters`, `src/ir_lowerer/IrLowererInlineParamHelpers.cpp:779-875`) and passes non-`mut` struct arguments by alias (:877-895); this leaf is the checks, not the lowering.
+  - acceptance:
+    - diagnostics with tests: `mut parameter requires a mutable place: x` for a non-`mut` binding or a literal argument to a `[T mut]` parameter (temporaries from calls are accepted); `borrow conflict` when one place is passed to a `mut` parameter and another parameter of the same call; returning or storing a borrowed parameter is rejected
+    - `move` and `copy` parsed as parameter transforms and stored; `move` on a non-parameter binding is a diagnostic
+    - full release gate and `scripts/differential_opt_check.py` green; every corpus program that fails to compile now is listed in the commit with the reason
+  - stop_rule: no lowering changes beyond the legacy AST C++ emitter; do not change `copy`/`move` behavior yet.
+
+- [ ] TODO-5485: `[T copy]` parameters receive their own copy
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5484
+  - created_at: 2026-10-05
+  - phase: Memory safety
+  - parallel_track: params
+  - scope: Lower `[T copy]` / `[T copy mut]` parameters as owned copies: scalars by value (as today), structs through the type's `Copy` helper when it defines one, otherwise slot by slot; the callee destroys its copy at scope end. A `move(x)` argument is handed over without a copy and marks `x` moved-from.
+  - acceptance:
+    - compile-run tests on VM, native and C++: writes to a `copy mut` parameter do not reach the caller; a struct with a counting `Copy` helper shows exactly one copy per call and none for `move(x)`; `Destroy` runs once for the copy
+    - full release gate green
+  - stop_rule: do not change `Vector.Copy` itself (TODO-5487).
+
+- [ ] TODO-5486: `[T move]` parameters take ownership
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5484
+  - created_at: 2026-10-05
+  - phase: Memory safety
+  - parallel_track: params
+  - scope: `[T move]` / `[T move mut]`: the argument is passed by reference without a copy, the caller's binding is moved-from after the call (`use-after-move` until reassigned; `move(...)` at the call site optional), the caller no longer destroys it, and the callee destroys it at scope end unless it moved it on. Migrate ownership-taking stdlib entry points (vector/map `push`/`insert` element parameters) to `move`.
+  - acceptance:
+    - semantic tests: use of the caller's binding after passing it to a `move` parameter is `use-after-move`; passing a temporary or `move(x)` is accepted
+    - compile-run tests: a struct with counting `Destroy` is destroyed exactly once when passed to a `move` parameter (by the callee), and once when the callee stores it into a vector (by the vector)
+    - full release gate green
+  - stop_rule: no new syntax beyond the `move` parameter transform.
+
+- [ ] TODO-5487: Copying a Vector copies its elements
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5485
+  - created_at: 2026-10-05
+  - phase: Memory safety
+  - parallel_track: containers
+  - scope: `Vector<T>.Copy` (`stdlib/std/collections/vector.prime`) allocates its own storage and copies each element, so a copy owns its data (`ownsData` stays true); remove the shallow-alias uses (`*Ref` helpers that copy `materialized{values}` and write back, map insert paths) by passing `[Vector<T> mut]` borrows instead; apply the same to map, ring buffer and SoA storage `Copy` helpers. Define and test what binding initialization from another container binding (`[Vector<i32>] b{a}`) does (copy via `Copy`, per move-by-default with a `Copy` helper).
+  - acceptance:
+    - compile-run tests: mutating a copy leaves the original unchanged; destroying the original leaves the copy readable; no double free (VM heap fault) in copy-then-destroy-both programs
+    - benchmarks show no regression from removed alias copies (vector-heavy corpus programs no slower)
+    - full release gate and corpus differential green
+  - stop_rule: containers only; no parameter-mode changes.
+
+- [ ] TODO-5488: Raw heap operations require `[unsafe]`
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-05
+  - phase: Memory safety
+  - parallel_track: unsafe
+  - scope: Reject `/std/intrinsics/memory/free`, `realloc`, `at_unsafe` and `reinterpret` outside `[unsafe]` definitions (validated in `src/semantics/SemanticsValidatorExprScalarPointerMemory.cpp:396-461`); mark the stdlib helpers that call them (`buffer_checked.prime`, `buffer_unchecked.prime`, vector/map/ring buffer/SoA storage internals) `[unsafe]` so public container APIs stay safe; update tests and corpus programs that call them directly.
+  - acceptance:
+    - diagnostic `free requires an unsafe definition` (and the same for `realloc`, `at_unsafe`, `reinterpret`) with positive (inside `[unsafe]`) and negative tests
+    - no `[unsafe]` needed in user code that only uses public containers; full release gate and corpus differential green
+  - stop_rule: do not change `alloc`, pointer arithmetic or `dereference` rules.
+
+- [ ] TODO-5489: Container element borrows keep the container borrowed
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-05
+  - phase: Memory safety
+  - parallel_track: borrows
+  - scope: A `Reference<T>`/pointer obtained from a container (vector/map/ring buffer slot helpers, views, iteration) is rooted at the container binding, so structural changes (push, pop, reserve, clear, remove, insert, move, scope end) while the borrow is live report `borrowed binding: <container>`. Generalize the SoA field-view invalidation (`SemanticsValidatorStatement.cpp:484-498`, `ExprMapSoaBuiltins.cpp:208`) to the other containers.
+  - acceptance:
+    - negative tests per container: hold an element reference, push, then use the reference; positive tests: last use before the push compiles (non-lexical lifetimes)
+    - full release gate green
+  - stop_rule: no runtime checks; compile-time only.
+
+- [ ] TODO-5490: Pointers to locals cannot escape their scope
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-05
+  - phase: Memory safety
+  - parallel_track: escapes
+  - scope: A `Pointer<T>` rooted at a local (`location(x)`, pointer arithmetic on it, aliases; `resolvePointerRoot` in `SemanticsValidatorStatementBindingsPhasesA.cpp:447-550`) cannot be returned, stored in a struct field/container or a longer-lived binding, or passed to a `move`/`copy` parameter, outside `[unsafe]`. References already have these checks (`ExprReferenceEscapes.cpp`, `StatementReturns.cpp:416-425`).
+  - acceptance:
+    - diagnostics `pointer escapes via return` and `pointer escapes via assignment to <target>` with negative and positive (non-escaping) tests
+    - full release gate and corpus differential green
+  - stop_rule: heap pointers from `alloc` are out of scope (covered by TODO-5488).
+
+- [ ] TODO-5491: Flow-sensitive use-after-move
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-05
+  - phase: Memory safety
+  - parallel_track: moves
+  - scope: Track moved bindings per control-flow path (`movedBindings`, `SemanticsValidatorPrivateStatements.h:97-104`; set at `ExprMutationBorrows.cpp:494-535`, checked at `SemanticsValidatorExpr.cpp:76`): a move in one branch must not affect the other branch, the state after an `if`/`match` is the union of the branches, and a move inside a loop body is an error at a use earlier in the body on the next iteration (unless reassigned first). Reuse the branch/loop state machinery of the `uninitialized<T>` analysis (`SemanticsValidatorPassesUninitialized.cpp:41-110`).
+  - acceptance:
+    - tests: move in the then-branch, use in the else-branch compiles; move in one branch, use after the `if` fails; use at the top of a loop body after a move at its end fails; reassign before the next use compiles
+    - full release gate green
+  - stop_rule: bindings only (no field-level move tracking).
 
 - [ ] TODO-5483: Verify arm64 SextI32 on a macOS machine
   - owner: ai

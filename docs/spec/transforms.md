@@ -265,9 +265,13 @@ or a semicolon if you intended to index.
   overridden via `--no-semantic-transforms`, `--semantic-transforms`, or `--transform-list`.
 
 **Semantic directives (AST-level, validated)**
-- **`copy`:** force a copy (instead of a move) on entry for a parameter or binding. Only valid for `Copy` types;
-  otherwise a diagnostic. Often paired with `mut`.
-- **`mut`:** mark the local binding as writable; without it the binding behaves like a `const` reference. On
+- **`copy`:** on a parameter, the callee receives its own copy of the argument instead of a borrow (through the type's
+  `Copy` helper when it has one); on a binding, force a copy instead of a move. Often paired with `mut`. See Parameter
+  Passing in `value-lifecycle.md`.
+- **`move`:** on a parameter, the callee takes ownership of the argument, which is passed by reference and ends its
+  lifetime in the caller (the caller's binding is moved-from after the call). Combines with `mut`.
+- **`mut`:** mark the local binding as writable; without it the binding behaves like a `const` reference. On a
+  parameter without `copy`/`move`, `mut` makes the parameter a mutable borrow: its writes reach the caller's argument. On
   definitions, `mut` is valid on struct helpers (including lifecycle helpers) to make the implicit `this` mutable; using
   `mut` on a `[static]` helper is a diagnostic. Executions do not accept `mut`.
 - **`restrict<T>`:** constrain the accepted envelope to `T`. For bindings/parameters this is equivalent to writing the
