@@ -336,6 +336,11 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     if (!emitDynamicVectorHeaderBase(target)) {
       return false;
     }
+    // A Vector field lowers to the address of its inline record, whose count is at slot 1.
+    if (target.kind == Expr::Kind::Call && target.isFieldAccess) {
+      emitInstruction(IrOpcode::PushI64, IrSlotBytes);
+      emitInstruction(IrOpcode::AddI64, 0);
+    }
     emitInstruction(IrOpcode::LoadIndirect, 0);
     return true;
   };
@@ -362,7 +367,9 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     if (!emitDynamicVectorHeaderBase(target)) {
       return false;
     }
-    emitInstruction(IrOpcode::PushI64, IrSlotBytes);
+    // A Vector field's inline record keeps its capacity at slot 2.
+    const bool fieldRecord = target.kind == Expr::Kind::Call && target.isFieldAccess;
+    emitInstruction(IrOpcode::PushI64, (fieldRecord ? 2ull : 1ull) * IrSlotBytes);
     emitInstruction(IrOpcode::AddI64, 0);
     emitInstruction(IrOpcode::LoadIndirect, 0);
     return true;

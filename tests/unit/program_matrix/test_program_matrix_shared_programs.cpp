@@ -313,4 +313,31 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("vector count and capacity read a vector field") {
+  program_matrix::ProgramCase program;
+  program.name = "vector_count_and_capacity_read_a_vector_field_15";
+  program.source = R"(
+import /std/collections/*
+
+[struct]
+Bag() {
+  [Vector<i32> mut] items{vector<i32>()}
+}
+
+[effects(io_out heap_alloc) return<int>]
+main() {
+  [Bag mut] bag{Bag{}}
+  vectorPush<i32>(bag.items, 4i32)
+  vectorPush<i32>(bag.items, 5i32)
+  vectorPush<i32>(bag.items, 6i32)
+  print_line(vectorCount<i32>(bag.items))
+  print_line(vectorCapacity<i32>(bag.items))
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "3\n4\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();
