@@ -136,15 +136,16 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         if (isSoaEmptyLiteral) {
           heapAllocSlots = 1;
         }
-        emitVectorRecordHeader(
-            instructions,
-            baseLocal,
-            vectorSlots,
-            literalCount,
-            literalCount,
-            heapAllocSlots,
-            !isSoaEmptyLiteral && isEmptyOpaqueCollectionLiteral,
-            isSoaEmptyLiteral || literalCount != 0);
+        // The record owns its storage whenever it allocated some.
+        const bool nullDataPointer = !isSoaEmptyLiteral && isEmptyOpaqueCollectionLiteral;
+        emitVectorRecordHeader(instructions,
+                               baseLocal,
+                               vectorSlots,
+                               literalCount,
+                               literalCount,
+                               heapAllocSlots,
+                               nullDataPointer,
+                               !nullDataPointer);
       } else {
         nextLocal += 1 + storageCapacity;
         instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(literalCount)});

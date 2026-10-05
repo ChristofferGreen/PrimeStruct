@@ -296,9 +296,10 @@ bool emitStructCopySlots(std::vector<IrInstruction> &instructions,
   return emitStructCopyFromPtrs(instructions, destPtrLocal, srcPtrLocal, slotCount);
 }
 
-void emitDisarmTemporaryStructAfterCopy(const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-                                        int32_t srcPtrLocal,
-                                        const std::string &structPath) {
+bool emitDisarmTemporaryStructAfterCopy(
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    int32_t srcPtrLocal,
+    const std::string &structPath) {
   auto emitStoreFalseAtOffset = [&](uint64_t offsetBytes) {
     emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(srcPtrLocal));
     if (offsetBytes != 0) {
@@ -322,12 +323,12 @@ void emitDisarmTemporaryStructAfterCopy(const std::function<void(IrOpcode, uint6
 
   if (structPath.rfind(collection_helpers::kCanonicalVectorVectorType, 0) == 0) {
     emitStoreFalseAtOffset(4ull * IrSlotBytes);
-    return;
+    return true;
   }
 
   if (isExperimentalCollectionTypeName(structPath, "vector", "Vector")) {
     emitStoreFalseAtOffset(3ull * IrSlotBytes);
-    return;
+    return true;
   }
 
   const std::string leaf = generatedStructLeaf(structPath);
@@ -345,31 +346,33 @@ void emitDisarmTemporaryStructAfterCopy(const std::function<void(IrOpcode, uint6
         emitStoreFalseAtOffset(static_cast<uint64_t>(1 + column * 5 + 4) * IrSlotBytes);
       }
     }
-    return;
+    return true;
   }
 
   if (structPath.rfind(collection_paths::memberPath(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName), 0) == 0 ||
       leaf == "SoaVector") {
     emitStoreFalseAtOffset(5ull * IrSlotBytes);
-    return;
+    return true;
   }
 
   if (structPath.rfind(collection_paths::memberPath(collection_paths::kInternalSoaStorageFolder, collection_paths::kSoaColumnTypeName), 0) == 0 ||
       leaf == "SoaColumn") {
     emitStoreFalseAtOffset(4ull * IrSlotBytes);
-    return;
+    return true;
   }
 
   if (structPath.rfind(collection_helpers::kCanonicalMapMapValueType, 0) == 0) {
     emitStoreFalseAtOffset(5ull * IrSlotBytes);
     emitStoreFalseAtOffset(10ull * IrSlotBytes);
-    return;
+    return true;
   }
 
   if (isKeyValueStorageStructPath(structPath)) {
     emitStoreFalseAtOffset(3ull * IrSlotBytes);
     emitStoreFalseAtOffset(7ull * IrSlotBytes);
+    return true;
   }
+  return false;
 }
 
 bool shouldDisarmStructCopySourceExpr(const Expr &expr) {

@@ -333,13 +333,16 @@
               [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
               srcPtrLocal,
               structTypeName);
-        } else if (!info.isMutable) {
-          ir_lowerer::emitDisarmTemporaryStructAfterCopy(
-              [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
-              info.index,
-              structTypeName);
+        } else if (!info.isMutable && ir_lowerer::emitDisarmTemporaryStructAfterCopy(
+                                          [&](IrOpcode op, uint64_t imm) {
+                                            function.instructions.push_back({op, imm});
+                                          },
+                                          info.index,
+                                          structTypeName)) {
+          // A read-only collection binding is a view of the place: it shares the storage
+          // without owning it.
         } else {
-          // A mutable binding initialized from an existing place owns a copy of it
+          // Any other binding initialized from an existing place owns a copy of it
           // (docs/spec/value-lifecycle.md, Copies): containers copy their elements.
           bool ranCopyHelper = false;
           if (!ir_lowerer::emitStructCopyHelpersFromPtrs(

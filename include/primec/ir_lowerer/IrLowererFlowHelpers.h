@@ -113,7 +113,9 @@ bool emitVectorMoveSlot(
     const Int32ProviderFn &allocTempLocal,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
     std::string &error);
-void emitDisarmTemporaryStructAfterCopy(const EmitInstructionFn &emitInstruction,
+// Clears the ownership flags of a collection value whose slots were copied elsewhere; returns
+// false (emitting nothing) for types without known ownership flags.
+bool emitDisarmTemporaryStructAfterCopy(const EmitInstructionFn &emitInstruction,
                                         int32_t srcPtrLocal,
                                         const std::string &structPath);
 bool shouldDisarmStructCopySourceExpr(const Expr &expr);

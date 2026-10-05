@@ -197,6 +197,7 @@ namespace std {
       vectorMovePrefixToBuffer<T>(grown, values, values.field_count())
       vectorFreeStorage<T>(values.data)
       values.data = grown
+      values.ownsData = true
       values.fieldCapacity = capacity
     }
   }

@@ -154,4 +154,60 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("an empty vector literal owns its storage") {
+  program_matrix::ProgramCase program;
+  program.name = "empty_vector_literal_owns_storage";
+  program.source = R"(
+import /std/collections/*
+
+[effects(io_out heap_alloc) return<int>]
+main() {
+  [Vector<i32> mut] items{vector<i32>()}
+  print_line(items.ownsData)
+  vectorPush<i32>(items, 5i32)
+  items.Destroy()
+  print_line(items.ownsData)
+  print_line(vectorCount<i32>(items))
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "1\n0\n0\n";
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("read-only binding of an owning struct gets its own copy") {
+  program_matrix::ProgramCase program;
+  program.name = "readonly_binding_owning_struct_copy";
+  program.source = R"(
+[struct]
+Tracked() {
+  [i32 mut] copies{0i32}
+  [i64 mut] id{0i64}
+
+  [public]
+  Copy([Reference<Self>] other) {
+    assign(this.id, other.id)
+    assign(this.copies, plus(other.copies, 1i32))
+  }
+
+  [public]
+  Destroy() {
+  }
+}
+
+[effects(io_out) return<int>]
+main() {
+  [Tracked] original{Tracked{}}
+  [Tracked] copy{original}
+  print_line(copy.copies)
+  print_line(original.copies)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "1\n0\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();
