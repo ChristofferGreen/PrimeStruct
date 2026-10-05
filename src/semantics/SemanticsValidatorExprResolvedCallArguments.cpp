@@ -441,6 +441,40 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
     moveSites[arg->name] = {arg, arg->sourceLine, arg->sourceColumn};
   }
 
+  // A pointer to a local handed to a `move`/`copy` parameter can be stored into a place the same
+  // call borrows mutably (a container push or insert); that place must not outlive the local.
+  if (!currentValidationState_.context.definitionIsUnsafe) {
+    for (size_t paramIndex = 0; paramIndex < calleeParams.size(); ++paramIndex) {
+      const ParameterInfo &param = calleeParams[paramIndex];
+      const Expr *arg = paramIndex < orderedArgs.size() ? orderedArgs[paramIndex] : nullptr;
+      std::string localPointerRoot;
+      if (paramIndex == packedParamIndex || arg == nullptr || arg == param.defaultExpr ||
+          (!param.binding.isMove && !param.binding.isCopy) ||
+          !resolveEscapingLocalPointerRoot(params, locals, *arg, localPointerRoot)) {
+        continue;
+      }
+      for (size_t sinkIndex = 0; sinkIndex < calleeParams.size(); ++sinkIndex) {
+        const Expr *sinkArg = sinkIndex < orderedArgs.size() ? orderedArgs[sinkIndex] : nullptr;
+        std::string sink;
+        const ParameterInfo &sinkParam = calleeParams[sinkIndex];
+        // A method's receiver arrives as a `this` reference it can store into.
+        const bool sinkWritable = isMutableBorrowParam(sinkParam) || sinkParam.name == "this";
+        if (sinkIndex == paramIndex || sinkIndex == packedParamIndex || sinkArg == nullptr ||
+            !sinkWritable ||
+            !resolveOutlivingLocalSink(params, locals, *sinkArg, localPointerRoot, true, sink)) {
+          continue;
+        }
+        std::string callee = *context.diagnosticResolved;
+        for (size_t specialization = callee.find("__t"); specialization != std::string::npos;
+             specialization = callee.find("__t", specialization)) {
+          callee.erase(specialization, callee.find('/', specialization) - specialization);
+        }
+        return failResolvedCallArgumentDiagnostic("pointer escapes via argument to " + callee +
+                                                  " (root: " + localPointerRoot + ")");
+      }
+    }
+  }
+
   for (size_t paramIndex = 0; paramIndex < calleeParams.size(); ++paramIndex) {
     const ParameterInfo &param = calleeParams[paramIndex];
     const Expr *arg = paramIndex < orderedArgs.size() ? orderedArgs[paramIndex] : nullptr;

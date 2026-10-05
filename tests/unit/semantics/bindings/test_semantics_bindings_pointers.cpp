@@ -1631,4 +1631,232 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("pointer to a local cannot escape into a local of an enclosing block") {
+  const std::string direct = R"(
+[return<int>]
+main() {
+  [i32 mut] outer{1i32}
+  [Pointer<i32> mut] ptr{location(outer)}
+  if(true) {
+    [i32 mut] inner{2i32}
+    assign(ptr, location(inner))
+  }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(direct, "/main", error));
+  CHECK(error.find("pointer escapes via assignment to ptr (root: inner)") != std::string::npos);
+
+  const std::string throughFieldAndAlias = R"(
+[struct]
+Holder() {
+  [i32 mut] dummy{0i32}
+  [Pointer<i32> mut] target{location(dummy)}
+}
+
+[return<int>]
+main() {
+  [Holder mut] holder{Holder{}}
+  if(true) {
+    [i32 mut] inner{2i32}
+    [Pointer<i32>] alias{location(inner)}
+    assign(holder.target, alias)
+  }
+  return(0i32)
+}
+)";
+  error.clear();
+  CHECK_FALSE(validateProgram(throughFieldAndAlias, "/main", error));
+  CHECK(error.find("pointer escapes via assignment to holder (root: inner)") != std::string::npos);
+}
+
+TEST_CASE("pointer to a local cannot escape into a longer-lived container") {
+  const std::string prelude = R"(
+import /std/collections/*
+import /std/collections/map/*
+
+[struct]
+Ref() {
+  [i32 mut] dummy{0i32}
+  [Pointer<i32> mut] at{location(dummy)}
+}
+)";
+  const std::string outerVector = prelude + R"(
+[effects(heap_alloc) return<int>]
+main() {
+  [Vector<Ref> mut] refs{vector<Ref>()}
+  if(true) {
+    [i32 mut] inner{2i32}
+    vectorPush<Ref>(refs, Ref{0i32, location(inner)})
+  }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(outerVector, "/main", error));
+  CHECK(error.find(
+            "pointer escapes via argument to /std/collections/vector/vectorPush (root: inner)") !=
+        std::string::npos);
+
+  const std::string parameterVector = prelude + R"(
+[effects(heap_alloc) return<void>]
+fill([Vector<Ref> mut] out) {
+  [i32 mut] inner{2i32}
+  vectorPush<Ref>(out, Ref{0i32, location(inner)})
+}
+
+[effects(heap_alloc) return<int>]
+main() {
+  return(0i32)
+}
+)";
+  error.clear();
+  CHECK_FALSE(validateProgram(parameterVector, "/main", error));
+  CHECK(error.find(
+            "pointer escapes via argument to /std/collections/vector/vectorPush (root: inner)") !=
+        std::string::npos);
+
+  const std::string methodPush = prelude + R"(
+[effects(heap_alloc) return<int>]
+main() {
+  [vector<Ref> mut] refs{vector<Ref>()}
+  for([i32 mut] i{0i32}, i < 2i32, i++) {
+    refs.push(Ref{0i32, location(i)})
+  }
+  return(0i32)
+}
+)";
+  error.clear();
+  CHECK_FALSE(validateProgram(methodPush, "/main", error));
+  CHECK(error.find("pointer escapes via argument to push (root: i)") != std::string::npos);
+
+  const std::string mapInsert = prelude + R"(
+[effects(heap_alloc) return<int>]
+main() {
+  [Map<i32, Ref> mut] refs{mapSingle<i32, Ref>(0i32, Ref{})}
+  if(true) {
+    [i32 mut] inner{2i32}
+    refs.insert(1i32, Ref{0i32, location(inner)})
+  }
+  return(0i32)
+}
+)";
+  error.clear();
+  CHECK_FALSE(validateProgram(mapInsert, "/main", error));
+  CHECK(
+      error.find("pointer escapes via argument to /std/collections/map/Map/insert (root: inner)") !=
+      std::string::npos);
+}
+
+TEST_CASE("pointer to a local cannot escape through a move parameter the callee keeps") {
+  const std::string source = R"(
+[struct]
+Holder() {
+  [i32 mut] dummy{0i32}
+  [Pointer<i32> mut] target{location(dummy)}
+
+  [mut]
+  keep([Pointer<i32> move] ptr) {
+    assign(this.target, ptr)
+  }
+}
+
+[return<void>]
+keep_in([Holder mut] holder, [Pointer<i32> move] ptr) {
+  assign(holder.target, ptr)
+}
+
+[return<int>]
+main() {
+  [Holder mut] holder{Holder{}}
+  if(true) {
+    [i32 mut] inner{2i32}
+    __CALL__
+  }
+  return(0i32)
+}
+)";
+  auto withCall = [&](const std::string &call) {
+    std::string text = source;
+    text.replace(text.find("__CALL__"), 8, call);
+    return text;
+  };
+  std::string error;
+  CHECK_FALSE(validateProgram(withCall("keep_in(holder, location(inner))"), "/main", error));
+  CHECK(error.find("pointer escapes via argument to /keep_in (root: inner)") != std::string::npos);
+  error.clear();
+  CHECK_FALSE(validateProgram(withCall("holder.keep(location(inner))"), "/main", error));
+  CHECK(error.find("pointer escapes via argument to /Holder/keep (root: inner)") !=
+        std::string::npos);
+
+  const std::string returned = R"(
+[struct]
+Ref() {
+  [i32 mut] dummy{0i32}
+  [Pointer<i32> mut] at{location(dummy)}
+}
+
+[return<Ref>]
+leak() {
+  [i32 mut] inner{2i32}
+  return(Ref{0i32, location(inner)})
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  error.clear();
+  CHECK_FALSE(validateProgram(returned, "/main", error));
+  CHECK(error.find("pointer escapes via return (root: inner)") != std::string::npos);
+}
+
+TEST_CASE("pointers kept within their local's block are accepted") {
+  const std::string source = R"(
+import /std/collections/*
+
+[struct]
+Ref() {
+  [i32 mut] dummy{0i32}
+  [Pointer<i32> mut] at{location(dummy)}
+}
+
+[effects(heap_alloc) return<int>]
+main() {
+  [i32 mut] value{4i32}
+  [Pointer<i32> mut] ptr{location(value)}
+  [Vector<Ref> mut] refs{vector<Ref>()}
+  vectorPush<Ref>(refs, Ref{0i32, location(value)})
+  if(true) {
+    [i32 mut] inner{2i32}
+    [Pointer<i32> mut] local{location(value)}
+    assign(local, location(inner))
+    [Vector<Ref> mut] innerRefs{vector<Ref>()}
+    vectorPush<Ref>(innerRefs, Ref{0i32, location(inner)})
+    vectorPush<Ref>(refs, Ref{0i32, location(value)})
+    assign(ptr, location(value))
+  }
+  return(dereference(ptr))
+}
+
+[unsafe effects(heap_alloc) return<int>]
+unsafe_keep() {
+  [Vector<Ref> mut] refs{vector<Ref>()}
+  [i32 mut] outer{1i32}
+  [Pointer<i32> mut] ptr{location(outer)}
+  if(true) {
+    [i32 mut] inner{2i32}
+    vectorPush<Ref>(refs, Ref{0i32, location(inner)})
+    assign(ptr, location(inner))
+  }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_SUITE_END();

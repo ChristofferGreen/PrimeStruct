@@ -319,6 +319,9 @@ PhaseStatus SemanticsValidator::validateExprCallPhase4([[maybe_unused]] const st
                                      vectorHelperCallReceiverIndex)) {
       return st.done(false);
     }
+    if (reportVectorMutatorPointerEscape(params, locals, expr)) {
+      return st.done(false);
+    }
     std::string statementOnlyVectorMutatorName;
     if (expressionIsStatementContext &&
         getVectorMutatorHelperName(expr, statementOnlyVectorMutatorName) &&

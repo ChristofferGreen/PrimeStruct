@@ -137,6 +137,23 @@
                                        const std::unordered_map<std::string, BindingInfo> &locals,
                                        const Expr &target,
                                        std::string &sinkOut);
+  // How deeply nested the block declaring local `name` is among the active scopes of `locals`
+  // (0: the definition body, or a scope this map was copied from); a deeper local dies first.
+  size_t localDeclarationDepth(const std::unordered_map<std::string, BindingInfo> &locals,
+                               const std::string &name) const;
+  // A place outliving local `localRoot` that `target` writes into: a local declared in an
+  // enclosing block, or (with `includeParameters`) a parameter whose writes reach the caller.
+  bool resolveOutlivingLocalSink(const std::vector<ParameterInfo> &params,
+                                 const std::unordered_map<std::string, BindingInfo> &locals,
+                                 const Expr &target,
+                                 const std::string &localRoot,
+                                 bool includeParameters,
+                                 std::string &sinkOut);
+  // Reports (and returns true for) a vector mutator (`push`, `insert`, ...) storing a pointer to
+  // a local into a receiver that outlives it.
+  bool reportVectorMutatorPointerEscape(const std::vector<ParameterInfo> &params,
+                                        const std::unordered_map<std::string, BindingInfo> &locals,
+                                        const Expr &expr);
   // Reports (and returns true for) an `assign(target, value)` whose value outlives what it
   // points at or borrows: a local pointer stored through a parameter, or a borrowed parameter.
   bool reportAssignmentValueEscape(const std::vector<ParameterInfo> &params,

@@ -101,22 +101,19 @@ of sync with them.
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
 | TODO-5498 | Destroy and copy single-field structs | ready | lifecycle |
-| TODO-5494 | Local pointers cannot escape into containers or outer locals | ready | escapes |
 | TODO-5483 | Verify arm64 SextI32 on a macOS machine | deferred | ir-semantics |
 
 ### Ready Now
 
-- TODO-5494 (escapes): local pointers cannot escape into containers or outer locals
 - TODO-5498 (lifecycle): destroy and copy single-field structs
 
 ### Immediate Next 10
 
-1. TODO-5494
-2. TODO-5498
+1. TODO-5498
 
 ### Priority Lanes
 
-- Memory safety and parameter modes (docs/spec/value-lifecycle.md Parameter Passing; docs/spec/type-system.md Ownership and Mutability): TODO-5494, TODO-5498
+- Memory safety and parameter modes (docs/spec/value-lifecycle.md Parameter Passing; docs/spec/type-system.md Ownership and Mutability): TODO-5498
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
 ### Execution Queue
@@ -124,18 +121,6 @@ of sync with them.
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 ### Task Blocks
-
-- [ ] TODO-5494: Local pointers cannot escape into containers or outer locals
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-05
-  - phase: Memory safety
-  - parallel_track: escapes
-  - scope: TODO-5490 rejects a pointer rooted at a local when it is returned or assigned through a parameter. Also reject it when it is pushed or inserted into a container that outlives the local (a parameter's container, or a local declared in an enclosing scope), assigned to a binding declared in an enclosing block scope, or passed to a `move`/`copy` parameter whose callee keeps it; outside `[unsafe]` only.
-  - acceptance:
-    - negative tests for each route (`pointer escapes via argument to <callee>` / `via assignment to <target>`) and positive tests for same-scope use
-    - full release gate and corpus scan green
-  - stop_rule: compile-time only; heap pointers from `alloc` stay out of scope.
 
 - [ ] TODO-5498: Destroy and copy single-field structs
   - owner: ai

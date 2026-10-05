@@ -585,7 +585,7 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to brace
 - **Unsafe calls:** `[unsafe]` definitions may be called from safe code; the call does not taint the caller as long as
   unsafe-created references do not escape. `[unsafe_api]` definitions (unsafe to call, like the raw stdlib buffer
   wrappers) may only be called from `[unsafe]` or `[unsafe_api]` definitions.
-- **Memory safety (partly implemented; open work TODO-5494, TODO-5498):** safe code cannot read or write memory that has been freed. The
+- **Memory safety (partly implemented; open work TODO-5498):** safe code cannot read or write memory that has been freed. The
   compiler enforces it with these rules; code that breaks the guarantee from inside an `[unsafe]` definition (or a safe
   API built on one incorrectly) is the author's responsibility.
   - Freeing and reinterpreting memory is unsafe: `/std/intrinsics/memory/free`, `realloc`, `at_unsafe` and
@@ -605,8 +605,11 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to brace
     `Pointer` binding initialized from one, or pointer arithmetic on either): returning it is `pointer escapes via
     return (root: x)`, and assigning it to a place written through a parameter (a `Reference` or `mut` borrowed
     parameter, one of its fields, or what a parameter pointer points at) is `pointer escapes via assignment to <param>
-    (root: x)`. Storing it into a container and escapes into longer-lived locals of the same definition are not checked
-    yet (TODO-5494).
+    (root: x)`. Assigning it to a local declared in an enclosing block (or to one of its fields) is `pointer escapes
+    via assignment to <local> (root: x)`, and passing it to a `move`/`copy` parameter of a call that also takes a
+    `mut` borrow of a longer-lived place (a parameter, or a local declared in an enclosing block, such as the vector in
+    `vectorPush(outer, location(x))`) is `pointer escapes via argument to <callee> (root: x)`. Locals declared in the
+    same block as `x`, or in blocks nested inside it, may hold it.
   - Copying a container copies its elements; two containers never share storage in safe code.
   - Use-after-move is tracked per control-flow path: a binding moved on any path reaching a use is a compile error
     (implemented for `if` branches, where a branch ending in `return` does not reach the code after it, and for loops,

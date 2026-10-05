@@ -278,6 +278,15 @@ bool SemanticsValidator::resolveEscapingLocalPointerRoot(
       (operatorName == "plus" || operatorName == "minus") && expr.args.size() == 2) {
     return resolveEscapingLocalPointerRoot(params, locals, expr.args.front(), rootOut);
   }
+  // A struct built around such a pointer carries it along.
+  if (!expr.isFieldAccess && !expr.isMethodCall &&
+      structNames_.count(resolveCalleePath(expr)) > 0) {
+    for (const Expr &arg : expr.args) {
+      if (resolveEscapingLocalPointerRoot(params, locals, arg, rootOut)) {
+        return true;
+      }
+    }
+  }
   return false;
 }
 
@@ -328,6 +337,110 @@ bool SemanticsValidator::resolveParameterRootedAssignmentSink(
   return true;
 }
 
+size_t SemanticsValidator::localDeclarationDepth(
+    const std::unordered_map<std::string, BindingInfo> &locals, const std::string &name) const {
+  size_t depth = 0;
+  size_t declaredDepth = 0;
+  for (const LocalBindingScope *scope : activeLocalBindingScopes_) {
+    if (&scope->locals != &locals) {
+      continue;
+    }
+    ++depth;
+    for (const std::string &inserted : scope->insertedNames) {
+      if (inserted == name) {
+        declaredDepth = depth;
+      }
+    }
+  }
+  return declaredDepth;
+}
+
+bool SemanticsValidator::resolveOutlivingLocalSink(
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
+    const Expr &target,
+    const std::string &localRoot,
+    bool includeParameters,
+    std::string &sinkOut) {
+  sinkOut.clear();
+  const Expr *base = &target;
+  while (base->kind == Expr::Kind::Call && base->isFieldAccess && base->args.size() == 1) {
+    base = &base->args.front();
+  }
+  bool throughPointer = false;
+  std::string builtinName;
+  if (base->kind == Expr::Kind::Call && getBuiltinPointerName(*base, builtinName) &&
+      builtinName == "dereference" && base->args.size() == 1) {
+    base = &base->args.front();
+    throughPointer = true;
+  }
+  if (base->kind != Expr::Kind::Name) {
+    return false;
+  }
+  if (const BindingInfo *param = findParamBinding(params, base->name)) {
+    const bool reachesCaller = throughPointer || param->typeName == "Reference" ||
+                               (param->isMutable && !param->isCopy && !param->isMove);
+    if (!includeParameters || !reachesCaller) {
+      return false;
+    }
+    sinkOut = base->name;
+    return true;
+  }
+  auto localIt = locals.find(base->name);
+  if (localIt == locals.end()) {
+    return false;
+  }
+  std::string sinkLocal = base->name;
+  // Writes through a pointer or reference land in what it points at.
+  if (throughPointer || localIt->second.typeName == "Reference") {
+    const std::string &referenceRoot = localIt->second.referenceRoot;
+    if (referenceRoot.empty()) {
+      return false;
+    }
+    sinkLocal = referenceRoot.substr(0, referenceRoot.find('.'));
+    if (findParamBinding(params, sinkLocal) != nullptr) {
+      if (!includeParameters) {
+        return false;
+      }
+      sinkOut = sinkLocal;
+      return true;
+    }
+    if (locals.count(sinkLocal) == 0) {
+      return false;
+    }
+  }
+  if (sinkLocal == localRoot ||
+      localDeclarationDepth(locals, sinkLocal) >= localDeclarationDepth(locals, localRoot)) {
+    return false;
+  }
+  sinkOut = sinkLocal;
+  return true;
+}
+
+bool SemanticsValidator::reportVectorMutatorPointerEscape(
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
+    const Expr &expr) {
+  std::string helperName;
+  if (currentValidationState_.context.definitionIsUnsafe || expr.args.size() < 2 ||
+      !getVectorMutatorHelperName(expr, helperName)) {
+    return false;
+  }
+  for (size_t argIndex = 1; argIndex < expr.args.size(); ++argIndex) {
+    std::string localPointerRoot;
+    std::string sink;
+    if (resolveEscapingLocalPointerRoot(params, locals, expr.args[argIndex], localPointerRoot) &&
+        resolveOutlivingLocalSink(
+            params, locals, expr.args.front(), localPointerRoot, true, sink)) {
+      failExprDiagnostic(expr,
+                         "pointer escapes via argument to " + helperName +
+                             " (root: " + localPointerRoot + ")");
+      return true;
+    }
+  }
+  return false;
+}
+
 bool SemanticsValidator::reportAssignmentValueEscape(
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals,
@@ -339,6 +452,14 @@ bool SemanticsValidator::reportAssignmentValueEscape(
     if (resolveParameterRootedAssignmentSink(
             params, locals, assignExpr.args.front(), pointerSink) &&
         resolveEscapingLocalPointerRoot(params, locals, value, localPointerRoot)) {
+      failExprDiagnostic(assignExpr,
+                         "pointer escapes via assignment to " + pointerSink +
+                             " (root: " + localPointerRoot + ")");
+      return true;
+    }
+    if (resolveEscapingLocalPointerRoot(params, locals, value, localPointerRoot) &&
+        resolveOutlivingLocalSink(
+            params, locals, assignExpr.args.front(), localPointerRoot, false, pointerSink)) {
       failExprDiagnostic(assignExpr,
                          "pointer escapes via assignment to " + pointerSink +
                              " (root: " + localPointerRoot + ")");
