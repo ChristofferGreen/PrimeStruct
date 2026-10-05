@@ -48,7 +48,11 @@
   parameter. Using the caller's binding afterwards is a `use-after-move` error until it is reassigned. A temporary
   argument may be passed to any mode.
 - **Copies:** `copy` duplicates through the type's `Copy` helper when it has one (collections copy their elements),
-  otherwise bitwise for `Copy` types.
+  otherwise bitwise for `Copy` types; a struct without a `Copy` helper copies its fields, running the helpers of the
+  fields that have one. The same applies to a `mut` binding initialized from an existing place (a binding, field or
+  dereference): `[Vector<i32> mut] b{a}` gives `b` its own elements, so changing or destroying either leaves the other
+  intact. A non-`mut` binding initialized from a place is a read-only view of it and does not copy. A temporary (a
+  call result or constructor) or `move(x)` initializer is moved in without a copy.
 - **Implementation status:** the IR lowering passes non-`mut` struct and collection arguments by alias and treats
   `mut` parameters as borrows whose writes reach the caller. Semantics checks that a `mut` argument is a mutable place
   (a non-`mut` binding is `mut parameter requires a mutable place`; literals and other temporaries, fields and elements
@@ -59,8 +63,9 @@
   moved`). A named argument of an owning type passed to a `move` parameter is moved-from after the call (values of
   other types are copied). Stdlib container entry points that store their argument (push, insert, slot writes) take
   it as `move`. A `copy` parameter gets its own storage: scalars by value, structs slot by slot and then through the
-  type's `Copy` helper when it defines one; a `move(v)` argument is handed over without a copy. Container `Copy`
-  helpers still share storage (TODO-5487). Destructors do not run automatically at scope end yet (TODO-5492), so
+  type's `Copy` helper when it defines one (or its fields' helpers); a `move(v)` argument is handed over without a
+  copy. The stdlib `Vector`, `RingBuffer` and `SoaColumn` `Copy` helpers allocate their own storage and copy each
+  element. Destructors do not run automatically at scope end yet (TODO-5492), so
   neither the callee nor the caller destroys a moved or copied value today.
 
 ## Uninitialized Storage (draft)

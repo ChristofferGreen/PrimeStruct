@@ -100,28 +100,30 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5487 | Copying a Vector copies its elements | ready | containers |
 | TODO-5489 | Container element borrows keep the container borrowed | ready | borrows |
 | TODO-5490 | Pointers to locals cannot escape their scope | ready | escapes |
-| TODO-5492 | `Destroy` runs at scope end | blocked | lifecycle |
+| TODO-5492 | `Destroy` runs at scope end | ready | lifecycle |
+| TODO-5493 | Inferred bindings in generic struct helpers leak a diagnostic span | ready | diagnostics |
 | TODO-5483 | Verify arm64 SextI32 on a macOS machine | deferred | ir-semantics |
 
 ### Ready Now
 
-- TODO-5487 (containers): copying a Vector copies its elements
+- TODO-5493 (diagnostics): inferred bindings in generic struct helpers leak a diagnostic span
 - TODO-5489 (borrows): container element borrows keep the container borrowed
 - TODO-5490 (escapes): pointers to locals cannot escape their scope
+- TODO-5492 (lifecycle): `Destroy` runs at scope end
 
 ### Immediate Next 10
 
-1. TODO-5487
-2. TODO-5490
-3. TODO-5489
-4. TODO-5492 (after TODO-5487)
+1. TODO-5490
+2. TODO-5489
+3. TODO-5492
+4. TODO-5493
 
 ### Priority Lanes
 
-- Memory safety and parameter modes (docs/spec/value-lifecycle.md Parameter Passing; docs/spec/type-system.md Ownership and Mutability): TODO-5487, TODO-5489, TODO-5490, TODO-5492
+- Memory safety and parameter modes (docs/spec/value-lifecycle.md Parameter Passing; docs/spec/type-system.md Ownership and Mutability): TODO-5489, TODO-5490, TODO-5492
+- Diagnostics: TODO-5493
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
 ### Execution Queue
@@ -129,19 +131,6 @@ of sync with them.
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 ### Task Blocks
-
-- [ ] TODO-5487: Copying a Vector copies its elements
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-05
-  - phase: Memory safety
-  - parallel_track: containers
-  - scope: `Vector<T>.Copy` (`stdlib/std/collections/vector.prime`) allocates its own storage and copies each element, so a copy owns its data (`ownsData` stays true); remove the shallow-alias uses (`*Ref` helpers that copy `materialized{values}` and write back, map insert paths) by passing `[Vector<T> mut]` borrows instead; apply the same to map, ring buffer and SoA storage `Copy` helpers. Define and test what binding initialization from another container binding (`[Vector<i32>] b{a}`) does (copy via `Copy`, per move-by-default with a `Copy` helper).
-  - acceptance:
-    - compile-run tests: mutating a copy leaves the original unchanged; destroying the original leaves the copy readable; no double free (VM heap fault) in copy-then-destroy-both programs
-    - benchmarks show no regression from removed alias copies (vector-heavy corpus programs no slower)
-    - full release gate and corpus differential green
-  - stop_rule: containers only; no parameter-mode changes.
 
 - [ ] TODO-5489: Container element borrows keep the container borrowed
   - owner: ai
@@ -169,17 +158,28 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 
 - [ ] TODO-5492: `Destroy` runs at scope end
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5487
+  - status: ready
   - created_at: 2026-10-05
   - phase: Memory safety
   - parallel_track: lifecycle
-  - scope: Destructors never run automatically today: a struct local or a container goes out of scope without its `Destroy` (a loop building 20,000 vectors grows to 261 MB). Run `Destroy` (and `DestroyStack`/`DestroyHeap` per placement) for every owning local and owned parameter (`copy`, `move`) when its scope ends on every exit path (fall-through, `return`, `break`, error propagation), in reverse declaration order, skipping moved-from bindings; a value moved into a `move` parameter is destroyed by the callee, a value stored into a container by the container. Lowering lives in `src/ir_lowerer/` (file handles already get scope cleanup: `emitFileScopeCleanup`, `IrLowererFlowControlHelpers.cpp`).
+  - scope: Destructors never run automatically today: a struct local or a container goes out of scope without its `Destroy` (a loop building 20,000 vectors grows to 261 MB). Run `Destroy` (and `DestroyStack`/`DestroyHeap` per placement) for every owning local and owned parameter (`copy`, `move`) when its scope ends on every exit path (fall-through, `return`, `break`, error propagation), in reverse declaration order, skipping moved-from bindings; a value moved into a `move` parameter is destroyed by the callee, a value stored into a container by the container. Lowering lives in `src/ir_lowerer/` (file handles already get scope cleanup: `emitFileScopeCleanup`, `IrLowererFlowControlHelpers.cpp`); a vector bound from `vector<T>()` currently reads `ownsData == false`, so its explicit `Destroy()` is a no-op - fix the ownership flag of call-result initializers first.
   - acceptance:
     - compile-run tests on VM, native and C++: a struct with a counting `Destroy` is destroyed exactly once per value on fall-through, early return, loops and branches; never for moved-from bindings; once by the callee for a `move` parameter and once by the vector for a pushed element
     - the 20,000-vector loop runs in bounded memory
     - full release gate and corpus differential green
   - stop_rule: no new syntax; aliasing hazards must already be rejected (TODO-5484/5487) before this lands.
+
+- [ ] TODO-5493: Inferred bindings in generic struct helpers leak a diagnostic span
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-05
+  - phase: Diagnostics
+  - parallel_track: diagnostics
+  - scope: Validating an untyped binding inferred from a field of `other` in a generic struct helper such as `Copy([Reference<Self>] other)` (for example `[mut] allocCount{other.fieldCapacity}` in `Vector<T>.Copy`) sets the diagnostic primary span, so a later, unrelated semantic error in user code is reported at the stdlib helper's line instead of its own. The stdlib `Copy` helpers now declare those bindings' types (TODO-5487), which hides it. Find where the speculative inference captures the span without an error, and stop it.
+  - acceptance:
+    - a program that copies a `Vector` and then calls an unknown function reports the error at the call's own line, with the stdlib binding left untyped; regression test in the semantics diagnostics suite
+    - full release gate green
+  - stop_rule: diagnostics only; no inference behavior change.
 
 - [ ] TODO-5483: Verify arm64 SextI32 on a macOS machine
   - owner: ai

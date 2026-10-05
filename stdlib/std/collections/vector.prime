@@ -49,12 +49,20 @@ namespace std {
       this.fieldCapacity = value
     }
 
-    [mut]
+    [mut effects(heap_alloc)]
     Copy([Reference<Self>] other) {
-      this.fieldCount = other.fieldCount
+      [i32] itemCount{other.fieldCount}
+      [i32 mut] allocCount{other.fieldCapacity}
+      if(allocCount == 0) {
+        allocCount = 1
+      }
+      this.fieldCount = itemCount
       this.fieldCapacity = other.fieldCapacity
-      this.data = other.data
-      this.ownsData = false
+      this.data = vectorAllocStorage<uninitialized<T>>(allocCount)
+      this.ownsData = true
+      for([i32 mut] index{0}, index < itemCount, index++) {
+        vectorInitSlot<T>(this, index, vectorCopyValue<T>(vectorAtUnsafe<T>(other, index)))
+      }
     }
 
     [mut]
@@ -88,6 +96,12 @@ namespace std {
       panic(index)
     }
     return(bufferOffsetUnsafe<uninitialized<T>>(values.data, index))
+  }
+
+  // Returns its own copy of `value` (through `T`'s `Copy` helper when it has one).
+  [return<T>]
+  vectorCopyValue<T>([T copy] value) {
+    return(value)
   }
 
   [return<void>]
@@ -291,56 +305,37 @@ namespace std {
     values.fieldCount = lastIndex
   }
 
-  // Borrowed (Reference<Vector<T>>) variants. Reads materialize a non-owning
-  // copy; mutations run on a non-owning copy and publish count/capacity/data
-  // back through the reference, so the referenced vector keeps ownership.
-  [effects(heap_alloc), return<void>]
-  vectorSyncRef<T>([Reference<Vector<T>> mut] values, [Vector<T>] source) {
-    values.data = source.data
-    values.fieldCapacity = source.fieldCapacity
-    values.fieldCount = source.fieldCount
-  }
+  // Borrowed (Reference<Vector<T>>) variants. Reads use a non-owning view;
+  // mutations run on the referenced vector itself.
 
   [public effects(heap_alloc), return<void>]
   vectorReserveRef<T>([Reference<Vector<T>> mut] values, [i32] capacity) {
-    [Vector<T> mut] materialized{values}
-    vectorReserveInternal<T>(materialized, capacity)
-    vectorSyncRef<T>(values, materialized)
+    vectorReserveInternal<T>(values, capacity)
   }
 
   [public effects(heap_alloc), return<void>]
   vectorPushRef<T>([Reference<Vector<T>> mut] values, [T move] value) {
-    [Vector<T> mut] materialized{values}
-    vectorPush<T>(materialized, value)
-    vectorSyncRef<T>(values, materialized)
+    vectorPush<T>(values, value)
   }
 
   [public effects(heap_alloc), return<void>]
   vectorPopRef<T>([Reference<Vector<T>> mut] values) {
-    [Vector<T> mut] materialized{values}
-    vectorPop<T>(materialized)
-    vectorSyncRef<T>(values, materialized)
+    vectorPop<T>(values)
   }
 
   [public effects(heap_alloc), return<void>]
   vectorClearRef<T>([Reference<Vector<T>> mut] values) {
-    [Vector<T> mut] materialized{values}
-    vectorClear<T>(materialized)
-    vectorSyncRef<T>(values, materialized)
+    vectorClear<T>(values)
   }
 
   [public effects(heap_alloc), return<void>]
   vectorRemoveAtRef<T>([Reference<Vector<T>> mut] values, [i32] index) {
-    [Vector<T> mut] materialized{values}
-    vectorRemoveAt<T>(materialized, index)
-    vectorSyncRef<T>(values, materialized)
+    vectorRemoveAt<T>(values, index)
   }
 
   [public effects(heap_alloc), return<void>]
   vectorRemoveSwapRef<T>([Reference<Vector<T>> mut] values, [i32] index) {
-    [Vector<T> mut] materialized{values}
-    vectorRemoveSwap<T>(materialized, index)
-    vectorSyncRef<T>(values, materialized)
+    vectorRemoveSwap<T>(values, index)
   }
 
   [public return<T>]

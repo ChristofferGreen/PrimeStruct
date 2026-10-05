@@ -973,6 +973,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   # the native backend and (opt-in) the C++ emitters via the built primec/primevm.
   add_executable(PrimeStruct_program_matrix_tests
     tests/unit/test_main.cpp
+    tests/unit/program_matrix/test_program_matrix_container_copies.cpp
     tests/unit/program_matrix/test_program_matrix_control.cpp
     tests/unit/program_matrix/test_program_matrix_optimizer.cpp
     tests/unit/program_matrix/test_program_matrix_parameter_modes.cpp
@@ -3016,6 +3017,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     ${PrimeStructIrOptimizerTestSuites}
   )
   set(PrimeStructProgramMatrixTestSuites
+    primestruct.program_matrix.container_copies
     primestruct.program_matrix.control
     primestruct.program_matrix.optimizer
     primestruct.program_matrix.parameter_modes

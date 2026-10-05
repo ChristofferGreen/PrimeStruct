@@ -64,6 +64,23 @@ bool emitMoveHelperFromPtrs(
     const LocalMap &localsIn,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
     std::string &error);
+struct StructSlotLayoutInfo;
+// Finishes copying a struct value whose slots were already copied from `srcPtrLocal` to
+// `destPtrLocal`: runs the type's `Copy` helper when it has one, otherwise the copies of its
+// fields that need one (docs/spec/value-lifecycle.md, Copies). Sets `ranHelper` when any ran.
+bool emitStructCopyHelpersFromPtrs(
+    int32_t destPtrLocal,
+    int32_t srcPtrLocal,
+    const std::string &structPath,
+    const std::function<const Definition *(const std::string &)> &findCopyHelper,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
+    const Int32ProviderFn &allocTempLocal,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)>
+        &emitInlineDefinitionCall,
+    bool &ranHelper,
+    std::string &error);
 bool emitStructCopyFromPtrs(std::vector<IrInstruction> &instructions,
                             int32_t destPtrLocal,
                             int32_t srcPtrLocal,

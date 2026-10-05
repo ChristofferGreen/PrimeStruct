@@ -1977,6 +1977,7 @@ are left unarchived.
 | TODO-5484 | Parameter modes: mode flags and call-site borrow checks | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5485 | `[T copy]` parameters receive their own copy | [2026-10.md](todo_archive/2026-10.md) | 2026-10-05 |
 | TODO-5486 | `[T move]` parameters take ownership | [2026-10.md](todo_archive/2026-10.md) | - |
+| TODO-5487 | Copying a Vector copies its elements | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5488 | Raw heap operations require `[unsafe]` | [2026-10.md](todo_archive/2026-10.md) | 2026-10-05 |
 | TODO-5491 | Flow-sensitive use-after-move | [2026-10.md](todo_archive/2026-10.md) | 2026-10-05 |
 

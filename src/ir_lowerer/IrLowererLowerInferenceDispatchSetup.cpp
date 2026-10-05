@@ -649,6 +649,16 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
           }
         }
 
+        // A builtin comparison (not a user operator definition) is always a bool; classify it
+        // before the semantic fact lookups, which key on node ids that inlined helper bodies
+        // can share with other expressions.
+        std::string builtinComparisonName;
+        if (!expr.isMethodCall && getBuiltinComparisonName(expr, builtinComparisonName) &&
+            (!stateInOut.resolveDefinitionCall ||
+             stateInOut.resolveDefinitionCall(expr) == nullptr)) {
+          return LocalInfo::ValueKind::Bool;
+        }
+
         std::string semanticExprTypeText;
         if (resolveDispatchSetupSemanticReceiverTypeText(
                 expr, semanticProgram, semanticIndex, semanticExprTypeText)) {

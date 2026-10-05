@@ -2,6 +2,7 @@
 
 #include "primec/ir_lowerer/IrLowererHelpers.h"
 #include "primec/ir_lowerer/IrLowererSetupTypeCollectionHelpers.h"
+#include "primec/ir_lowerer/IrLowererStructTypeHelpers.h"
 
 #include <string_view>
 #include "primec/ir/StdlibCollectionPaths.h"
@@ -138,6 +139,124 @@ bool emitMoveHelperFromPtrs(
   moveCallExpr.argNames.resize(2);
 
   return emitInlineDefinitionCall(moveCallExpr, *moveHelper, moveLocals, false);
+}
+
+namespace {
+
+bool structNeedsCopyHelpers(
+    const std::string &structPath,
+    const std::function<const Definition *(const std::string &)> &findCopyHelper,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
+    int depth) {
+  if (structPath.empty() || depth > 16) {
+    return false;
+  }
+  if (findCopyHelper(structPath) != nullptr) {
+    return true;
+  }
+  StructSlotLayoutInfo layout;
+  if (!resolveStructSlotLayout(structPath, layout)) {
+    return false;
+  }
+  for (const StructSlotFieldInfo &field : layout.fields) {
+    if (structNeedsCopyHelpers(
+            field.structPath, findCopyHelper, resolveStructSlotLayout, depth + 1)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool emitStructCopyHelpersAtDepth(
+    int32_t destPtrLocal,
+    int32_t srcPtrLocal,
+    const std::string &structPath,
+    const std::function<const Definition *(const std::string &)> &findCopyHelper,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
+    const Int32ProviderFn &allocTempLocal,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)>
+        &emitInlineDefinitionCall,
+    bool &ranHelper,
+    std::string &error,
+    int depth) {
+  if (const Definition *copyHelper = findCopyHelper(structPath)) {
+    ranHelper = true;
+    return emitMoveHelperFromPtrs(destPtrLocal,
+                                  srcPtrLocal,
+                                  structPath,
+                                  copyHelper,
+                                  localsIn,
+                                  emitInlineDefinitionCall,
+                                  error);
+  }
+  StructSlotLayoutInfo layout;
+  if (depth > 16 || !resolveStructSlotLayout(structPath, layout)) {
+    return true;
+  }
+  for (const StructSlotFieldInfo &field : layout.fields) {
+    if (!structNeedsCopyHelpers(
+            field.structPath, findCopyHelper, resolveStructSlotLayout, depth + 1)) {
+      continue;
+    }
+    const uint64_t offsetBytes = static_cast<uint64_t>(field.slotOffset) * IrSlotBytes;
+    const int32_t fieldDestPtrLocal = allocTempLocal();
+    const int32_t fieldSrcPtrLocal = allocTempLocal();
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(destPtrLocal));
+    emitInstruction(IrOpcode::PushI64, offsetBytes);
+    emitInstruction(IrOpcode::AddI64, 0);
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(fieldDestPtrLocal));
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(srcPtrLocal));
+    emitInstruction(IrOpcode::PushI64, offsetBytes);
+    emitInstruction(IrOpcode::AddI64, 0);
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(fieldSrcPtrLocal));
+    if (!emitStructCopyHelpersAtDepth(fieldDestPtrLocal,
+                                      fieldSrcPtrLocal,
+                                      field.structPath,
+                                      findCopyHelper,
+                                      resolveStructSlotLayout,
+                                      allocTempLocal,
+                                      emitInstruction,
+                                      localsIn,
+                                      emitInlineDefinitionCall,
+                                      ranHelper,
+                                      error,
+                                      depth + 1)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+} // namespace
+
+bool emitStructCopyHelpersFromPtrs(
+    int32_t destPtrLocal,
+    int32_t srcPtrLocal,
+    const std::string &structPath,
+    const std::function<const Definition *(const std::string &)> &findCopyHelper,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
+    const Int32ProviderFn &allocTempLocal,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)>
+        &emitInlineDefinitionCall,
+    bool &ranHelper,
+    std::string &error) {
+  ranHelper = false;
+  return emitStructCopyHelpersAtDepth(destPtrLocal,
+                                      srcPtrLocal,
+                                      structPath,
+                                      findCopyHelper,
+                                      resolveStructSlotLayout,
+                                      allocTempLocal,
+                                      emitInstruction,
+                                      localsIn,
+                                      emitInlineDefinitionCall,
+                                      ranHelper,
+                                      error,
+                                      0);
 }
 
 bool emitStructCopyFromPtrs(std::vector<IrInstruction> &instructions,

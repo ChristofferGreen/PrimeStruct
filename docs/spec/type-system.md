@@ -585,7 +585,7 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to brace
 - **Unsafe calls:** `[unsafe]` definitions may be called from safe code; the call does not taint the caller as long as
   unsafe-created references do not escape. `[unsafe_api]` definitions (unsafe to call, like the raw stdlib buffer
   wrappers) may only be called from `[unsafe]` or `[unsafe_api]` definitions.
-- **Memory safety (partly implemented; open work TODO-5487, TODO-5489, TODO-5490, TODO-5492):** safe code cannot read or write memory that has been freed. The
+- **Memory safety (partly implemented; open work TODO-5489, TODO-5490, TODO-5492):** safe code cannot read or write memory that has been freed. The
   compiler enforces it with these rules; code that breaks the guarantee from inside an `[unsafe]` definition (or a safe
   API built on one incorrectly) is the author's responsibility.
   - Freeing and reinterpreting memory is unsafe: `/std/intrinsics/memory/free`, `realloc`, `at_unsafe` and

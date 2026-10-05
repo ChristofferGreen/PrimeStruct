@@ -67,17 +67,13 @@ namespace std {
     [public effects(heap_alloc), return<void> Comparable<K>]
     mapInsert([K move] key, [V move] value) {
       [i32] index{findIndex<K, V>(this, key)}
-      [Vector<K> mut] keys{this.keys}
-      [Vector<V> mut] payloads{this.payloads}
+      [Vector<K>] keys{this.keys}
       [i32] limit{vectorCount<K>(keys)}
       if(index < limit) {
-        overwriteSlot<V>(payloads, index, value)
-        this.payloads = payloads
+        overwriteSlot<V>(this.payloads, index, value)
       } else {
-        vectorPush<K>(keys, key)
-        vectorPush<V>(payloads, value)
-        this.keys = keys
-        this.payloads = payloads
+        vectorPush<K>(this.keys, key)
+        vectorPush<V>(this.payloads, value)
       }
     }
 
@@ -180,48 +176,33 @@ namespace std {
   [public effects(heap_alloc), return<void> Comparable<K>]
   mapInsert<K, V>([MapValue<K, V> mut] entries, [K move] key, [V move] value) {
     [i32] index{findIndex<K, V>(entries, key)}
-    [Vector<K> mut] keys{entries.keys}
-    [Vector<V> mut] payloads{entries.payloads}
     if(index < mapCount<K, V>(entries)) {
-      overwriteSlot<V>(payloads, index, value)
-      entries.payloads = payloads
+      overwriteSlot<V>(entries.payloads, index, value)
     } else {
-      vectorPush<K>(keys, key)
-      vectorPush<V>(payloads, value)
-      entries.keys = keys
-      entries.payloads = payloads
+      vectorPush<K>(entries.keys, key)
+      vectorPush<V>(entries.payloads, value)
     }
   }
 
   [public effects(heap_alloc), return<void> Comparable<K>]
   mapInsertRef<K, V>([Reference<MapValue<K, V>> mut] entries, [K move] key, [V move] value) {
     [i32] index{findIndexRef<K, V>(entries, key)}
-    [Vector<K> mut] keys{entries.keys}
-    [Vector<V> mut] payloads{entries.payloads}
     if(index < mapCountRef<K, V>(entries)) {
-      overwriteSlot<V>(payloads, index, value)
-      entries.payloads = payloads
+      overwriteSlot<V>(entries.payloads, index, value)
     } else {
-      vectorPush<K>(keys, key)
-      vectorPush<V>(payloads, value)
-      entries.keys = keys
-      entries.payloads = payloads
+      vectorPush<K>(entries.keys, key)
+      vectorPush<V>(entries.payloads, value)
     }
   }
 
   [public effects(heap_alloc), return<void> Comparable<K>]
   insert<K, V>([MapValue<K, V> mut] entries, [K move] key, [V move] value) {
     [i32] index{findIndex<K, V>(entries, key)}
-    [Vector<K> mut] keys{entries.keys}
-    [Vector<V> mut] payloads{entries.payloads}
     if(index < mapCount<K, V>(entries)) {
-      overwriteSlot<V>(payloads, index, value)
-      entries.payloads = payloads
+      overwriteSlot<V>(entries.payloads, index, value)
     } else {
-      vectorPush<K>(keys, key)
-      vectorPush<V>(payloads, value)
-      entries.keys = keys
-      entries.payloads = payloads
+      vectorPush<K>(entries.keys, key)
+      vectorPush<V>(entries.payloads, value)
     }
   }
 
@@ -388,9 +369,8 @@ namespace std {
 
     [public effects(heap_alloc), return<void> Comparable<K>]
     insert([K move] key, [V move] value) {
-      [MapValue<K, V> mut] inner{this.inner}
-      mapInsert<K, V>(inner, key, value)
-      this.inner = inner
+      [Reference<MapValue<K, V>> mut] inner{location(this.inner)}
+      mapInsertRef<K, V>(inner, key, value)
     }
   }
 

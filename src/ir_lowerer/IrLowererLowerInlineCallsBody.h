@@ -502,19 +502,23 @@
                 int32_t srcPtrLocal,
                 const std::string &structPath,
                 bool &ranHelper) {
-              ranHelper = false;
-              auto copyIt = setupStage.defMap.find(structPath + "/Copy");
-              if (copyIt == setupStage.defMap.end() || copyIt->second == nullptr) {
-                return true;
-              }
-              ranHelper = true;
-              return ir_lowerer::emitMoveHelperFromPtrs(destPtrLocal,
-                                                        srcPtrLocal,
-                                                        structPath,
-                                                        copyIt->second,
-                                                        callerLocals,
-                                                        stateOut.emitInlineDefinitionCall,
-                                                        error);
+              return ir_lowerer::emitStructCopyHelpersFromPtrs(
+                  destPtrLocal,
+                  srcPtrLocal,
+                  structPath,
+                  [&](const std::string &path) -> const Definition * {
+                    auto copyIt = setupStage.defMap.find(path + "/Copy");
+                    return copyIt == setupStage.defMap.end() ? nullptr : copyIt->second;
+                  },
+                  [&](const std::string &path, StructSlotLayoutInfo &layoutOut) {
+                    return resolveStructSlotLayout(path, layoutOut);
+                  },
+                  [&]() { return allocTempLocal(); },
+                  [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+                  callerLocals,
+                  stateOut.emitInlineDefinitionCall,
+                  ranHelper,
+                  error);
             })) {
       if (std::string_view(error) == VariadicArgsReferenceForwardingDiagnosticMessage) {
         const Expr *diagnosticAnchor = &callExpr;

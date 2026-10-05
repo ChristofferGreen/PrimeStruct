@@ -338,6 +338,29 @@
               [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
               info.index,
               structTypeName);
+        } else {
+          // A mutable binding initialized from an existing place owns a copy of it
+          // (docs/spec/value-lifecycle.md, Copies): containers copy their elements.
+          bool ranCopyHelper = false;
+          if (!ir_lowerer::emitStructCopyHelpersFromPtrs(
+                  info.index,
+                  srcPtrLocal,
+                  structTypeName,
+                  [&](const std::string &path) -> const Definition * {
+                    auto copyIt = defMap.find(path + "/Copy");
+                    return copyIt == defMap.end() ? nullptr : copyIt->second;
+                  },
+                  [&](const std::string &path, StructSlotLayoutInfo &layoutOut) {
+                    return resolveStructSlotLayout(path, layoutOut);
+                  },
+                  [&]() { return allocTempLocal(); },
+                  [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+                  localsIn,
+                  emitInlineDefinitionCall,
+                  ranCopyHelper,
+                  error)) {
+            return false;
+          }
         }
         localsIn.emplace(stmt.name, info);
         return true;

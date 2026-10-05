@@ -25,6 +25,12 @@ namespace std {
     return(index)
   }
 
+  // Returns its own copy of `value` (through `T`'s `Copy` helper when it has one).
+  [return<T>]
+  ringBufferCopyValue<T>([T copy] value) {
+    return(value)
+  }
+
   [public struct collection_type]
   RingBuffer<T>() {
     [i32 mut] fieldCapacity{0}
@@ -58,13 +64,25 @@ namespace std {
       this.fieldCount = value
     }
 
-    [mut]
+    [unsafe mut effects(heap_alloc)]
     Copy([Reference<Self>] other) {
+      [i32] itemCount{other.fieldCount}
+      [i32 mut] allocCapacity{other.fieldCapacity}
+      if(allocCapacity <= 0) {
+        allocCapacity = 1
+      }
       this.fieldCapacity = other.fieldCapacity
-      this.fieldHead = other.fieldHead
-      this.fieldCount = other.fieldCount
-      this.data = other.data
-      this.ownsData = false
+      this.fieldHead = 0
+      this.fieldCount = itemCount
+      this.data = bufferAlloc<uninitialized<T>>(allocCapacity)
+      this.ownsData = true
+      for([i32 mut] index{0}, index < itemCount, index++) {
+        [i32] physical{ringBufferWrap(other.fieldHead + index, other.fieldCapacity)}
+        [Pointer<uninitialized<T>>] source{bufferOffsetUnsafe<uninitialized<T>>(other.data, physical)}
+        [Reference<T>] item{borrow(*source)}
+        [Pointer<uninitialized<T>> mut] slot{bufferOffsetUnsafe<uninitialized<T>>(this.data, index)}
+        init(*slot, ringBufferCopyValue<T>(*item))
+      }
     }
 
     [mut]

@@ -38,12 +38,20 @@ namespace std {
       this.capacity = value
     }
 
-    [mut]
+    [unsafe mut effects(heap_alloc)]
     Copy([Reference<Self>] other) {
-      this.count = other.count
+      [i32] itemCount{other.count}
+      [i32 mut] allocCount{other.capacity}
+      if(allocCount == 0i32) {
+        allocCount = 1i32
+      }
+      this.count = itemCount
       this.capacity = other.capacity
-      this.data = other.data
-      this.ownsData = false
+      this.data = bufferAlloc<uninitialized<T>>(allocCount)
+      this.ownsData = true
+      for([i32 mut] index{0i32}, index < itemCount, index++) {
+        soaColumnInitSlot<T>(this, index, soaColumnCopyValue<T>(*(soaColumnBorrowSlot<T>(other, index))))
+      }
     }
 
     [mut]
@@ -105,11 +113,6 @@ namespace std {
     [public SoaColumn<T0> mut] first{soaColumnNew<T0>()}
     [public SoaColumn<T1> mut] second{soaColumnNew<T1>()}
 
-    [mut]
-    Copy([Reference<Self>] other) {
-      this.first = other.first
-      this.second = other.second
-    }
   }
 
   [public struct]
@@ -118,12 +121,6 @@ namespace std {
     [public SoaColumn<T1> mut] second{soaColumnNew<T1>()}
     [public SoaColumn<T2> mut] third{soaColumnNew<T2>()}
 
-    [mut]
-    Copy([Reference<Self>] other) {
-      this.first = other.first
-      this.second = other.second
-      this.third = other.third
-    }
   }
 
   [public struct]
@@ -133,13 +130,6 @@ namespace std {
     [public SoaColumn<T2> mut] third{soaColumnNew<T2>()}
     [public SoaColumn<T3> mut] fourth{soaColumnNew<T3>()}
 
-    [mut]
-    Copy([Reference<Self>] other) {
-      this.first = other.first
-      this.second = other.second
-      this.third = other.third
-      this.fourth = other.fourth
-    }
   }
 
   [public struct]
@@ -150,14 +140,6 @@ namespace std {
     [public SoaColumn<T3> mut] fourth{soaColumnNew<T3>()}
     [public SoaColumn<T4> mut] fifth{soaColumnNew<T4>()}
 
-    [mut]
-    Copy([Reference<Self>] other) {
-      this.first = other.first
-      this.second = other.second
-      this.third = other.third
-      this.fourth = other.fourth
-      this.fifth = other.fifth
-    }
   }
 
   [public struct]
@@ -169,15 +151,6 @@ namespace std {
     [public SoaColumn<T4> mut] fifth{soaColumnNew<T4>()}
     [public SoaColumn<T5> mut] sixth{soaColumnNew<T5>()}
 
-    [mut]
-    Copy([Reference<Self>] other) {
-      this.first = other.first
-      this.second = other.second
-      this.third = other.third
-      this.fourth = other.fourth
-      this.fifth = other.fifth
-      this.sixth = other.sixth
-    }
   }
 
   [public struct]
@@ -190,16 +163,6 @@ namespace std {
     [public SoaColumn<T5> mut] sixth{soaColumnNew<T5>()}
     [public SoaColumn<T6> mut] seventh{soaColumnNew<T6>()}
 
-    [mut]
-    Copy([Reference<Self>] other) {
-      this.first = other.first
-      this.second = other.second
-      this.third = other.third
-      this.fourth = other.fourth
-      this.fifth = other.fifth
-      this.sixth = other.sixth
-      this.seventh = other.seventh
-    }
   }
 
   [public struct]
@@ -213,17 +176,6 @@ namespace std {
     [public SoaColumn<T6> mut] seventh{soaColumnNew<T6>()}
     [public SoaColumn<T7> mut] eighth{soaColumnNew<T7>()}
 
-    [mut]
-    Copy([Reference<Self>] other) {
-      this.first = other.first
-      this.second = other.second
-      this.third = other.third
-      this.fourth = other.fourth
-      this.fifth = other.fifth
-      this.sixth = other.sixth
-      this.seventh = other.seventh
-      this.eighth = other.eighth
-    }
   }
 
   [public struct]
@@ -238,18 +190,6 @@ namespace std {
     [public SoaColumn<T7> mut] eighth{soaColumnNew<T7>()}
     [public SoaColumn<T8> mut] ninth{soaColumnNew<T8>()}
 
-    [mut]
-    Copy([Reference<Self>] other) {
-      this.first = other.first
-      this.second = other.second
-      this.third = other.third
-      this.fourth = other.fourth
-      this.fifth = other.fifth
-      this.sixth = other.sixth
-      this.seventh = other.seventh
-      this.eighth = other.eighth
-      this.ninth = other.ninth
-    }
   }
 
   [public struct]
@@ -265,19 +205,6 @@ namespace std {
     [public SoaColumn<T8> mut] ninth{soaColumnNew<T8>()}
     [public SoaColumn<T9> mut] tenth{soaColumnNew<T9>()}
 
-    [mut]
-    Copy([Reference<Self>] other) {
-      this.first = other.first
-      this.second = other.second
-      this.third = other.third
-      this.fourth = other.fourth
-      this.fifth = other.fifth
-      this.sixth = other.sixth
-      this.seventh = other.seventh
-      this.eighth = other.eighth
-      this.ninth = other.ninth
-      this.tenth = other.tenth
-    }
   }
 
   [public struct]
@@ -294,20 +221,6 @@ namespace std {
     [public SoaColumn<T9> mut] tenth{soaColumnNew<T9>()}
     [public SoaColumn<T10> mut] eleventh{soaColumnNew<T10>()}
 
-    [mut]
-    Copy([Reference<Self>] other) {
-      this.first = other.first
-      this.second = other.second
-      this.third = other.third
-      this.fourth = other.fourth
-      this.fifth = other.fifth
-      this.sixth = other.sixth
-      this.seventh = other.seventh
-      this.eighth = other.eighth
-      this.ninth = other.ninth
-      this.tenth = other.tenth
-      this.eleventh = other.eleventh
-    }
   }
 
   [public struct]
@@ -325,21 +238,6 @@ namespace std {
     [public SoaColumn<T10> mut] eleventh{soaColumnNew<T10>()}
     [public SoaColumn<T11> mut] twelfth{soaColumnNew<T11>()}
 
-    [mut]
-    Copy([Reference<Self>] other) {
-      this.first = other.first
-      this.second = other.second
-      this.third = other.third
-      this.fourth = other.fourth
-      this.fifth = other.fifth
-      this.sixth = other.sixth
-      this.seventh = other.seventh
-      this.eighth = other.eighth
-      this.ninth = other.ninth
-      this.tenth = other.tenth
-      this.eleventh = other.eleventh
-      this.twelfth = other.twelfth
-    }
   }
 
   [public struct]
@@ -358,22 +256,6 @@ namespace std {
     [public SoaColumn<T11> mut] twelfth{soaColumnNew<T11>()}
     [public SoaColumn<T12> mut] thirteenth{soaColumnNew<T12>()}
 
-    [mut]
-    Copy([Reference<Self>] other) {
-      this.first = other.first
-      this.second = other.second
-      this.third = other.third
-      this.fourth = other.fourth
-      this.fifth = other.fifth
-      this.sixth = other.sixth
-      this.seventh = other.seventh
-      this.eighth = other.eighth
-      this.ninth = other.ninth
-      this.tenth = other.tenth
-      this.eleventh = other.eleventh
-      this.twelfth = other.twelfth
-      this.thirteenth = other.thirteenth
-    }
   }
 
   [public struct]
@@ -393,23 +275,6 @@ namespace std {
     [public SoaColumn<T12> mut] thirteenth{soaColumnNew<T12>()}
     [public SoaColumn<T13> mut] fourteenth{soaColumnNew<T13>()}
 
-    [mut]
-    Copy([Reference<Self>] other) {
-      this.first = other.first
-      this.second = other.second
-      this.third = other.third
-      this.fourth = other.fourth
-      this.fifth = other.fifth
-      this.sixth = other.sixth
-      this.seventh = other.seventh
-      this.eighth = other.eighth
-      this.ninth = other.ninth
-      this.tenth = other.tenth
-      this.eleventh = other.eleventh
-      this.twelfth = other.twelfth
-      this.thirteenth = other.thirteenth
-      this.fourteenth = other.fourteenth
-    }
   }
 
   [public struct]
@@ -430,24 +295,6 @@ namespace std {
     [public SoaColumn<T13> mut] fourteenth{soaColumnNew<T13>()}
     [public SoaColumn<T14> mut] fifteenth{soaColumnNew<T14>()}
 
-    [mut]
-    Copy([Reference<Self>] other) {
-      this.first = other.first
-      this.second = other.second
-      this.third = other.third
-      this.fourth = other.fourth
-      this.fifth = other.fifth
-      this.sixth = other.sixth
-      this.seventh = other.seventh
-      this.eighth = other.eighth
-      this.ninth = other.ninth
-      this.tenth = other.tenth
-      this.eleventh = other.eleventh
-      this.twelfth = other.twelfth
-      this.thirteenth = other.thirteenth
-      this.fourteenth = other.fourteenth
-      this.fifteenth = other.fifteenth
-    }
   }
 
   [public struct]
@@ -469,25 +316,6 @@ namespace std {
     [public SoaColumn<T14> mut] fifteenth{soaColumnNew<T14>()}
     [public SoaColumn<T15> mut] sixteenth{soaColumnNew<T15>()}
 
-    [mut]
-    Copy([Reference<Self>] other) {
-      this.first = other.first
-      this.second = other.second
-      this.third = other.third
-      this.fourth = other.fourth
-      this.fifth = other.fifth
-      this.sixth = other.sixth
-      this.seventh = other.seventh
-      this.eighth = other.eighth
-      this.ninth = other.ninth
-      this.tenth = other.tenth
-      this.eleventh = other.eleventh
-      this.twelfth = other.twelfth
-      this.thirteenth = other.thirteenth
-      this.fourteenth = other.fourteenth
-      this.fifteenth = other.fifteenth
-      this.sixteenth = other.sixteenth
-    }
   }
 
   [unsafe return<Pointer<uninitialized<T>>>]
@@ -575,6 +403,12 @@ namespace std {
   [public return<Reference<T>>]
   soaFieldViewRef<T>([SoaFieldView<T>] values, [i32] index) {
     return(borrow(*(soaFieldViewSlotUnsafe<T>(values, index))))
+  }
+
+  // Returns its own copy of `value` (through `T`'s `Copy` helper when it has one).
+  [return<T>]
+  soaColumnCopyValue<T>([T copy] value) {
+    return(value)
   }
 
   [return<void>]
