@@ -296,6 +296,9 @@
   bool isOwningBorrowedParameter(const std::vector<ParameterInfo> &params,
                                  const Expr &expr,
                                  const std::string &namespacePrefix);
+  // Whether values of `binding`'s type own resources: a container, a type that defines `Destroy`,
+  // or one holding either. Such values are moved, not copied, when passed to a `move` parameter.
+  bool bindingOwnsResources(const BindingInfo &binding, const std::string &namespacePrefix);
   bool validateVectorIndexedRemovalHelperElementType(const BindingInfo &binding,
                                                      const std::string &helperName,
                                                      const std::string &namespacePrefix,

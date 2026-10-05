@@ -101,36 +101,32 @@ of sync with them.
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
 | TODO-5485 | `[T copy]` parameters receive their own copy | ready | params |
-| TODO-5486 | `[T move]` parameters take ownership | ready | params-move |
 | TODO-5487 | Copying a Vector copies its elements | blocked | containers |
 | TODO-5488 | Raw heap operations require `[unsafe]` | ready | unsafe |
 | TODO-5489 | Container element borrows keep the container borrowed | ready | borrows |
 | TODO-5490 | Pointers to locals cannot escape their scope | ready | escapes |
-| TODO-5491 | Flow-sensitive use-after-move | ready | moves |
+| TODO-5492 | `Destroy` runs at scope end | blocked | lifecycle |
 | TODO-5483 | Verify arm64 SextI32 on a macOS machine | deferred | ir-semantics |
 
 ### Ready Now
 
 - TODO-5485 (params): `[T copy]` parameters receive their own copy
-- TODO-5486 (params-move): `[T move]` parameters take ownership
 - TODO-5488 (unsafe): raw heap operations require `[unsafe]`
 - TODO-5489 (borrows): container element borrows keep the container borrowed
 - TODO-5490 (escapes): pointers to locals cannot escape their scope
-- TODO-5491 (moves): flow-sensitive use-after-move
 
 ### Immediate Next 10
 
 1. TODO-5488
-2. TODO-5486
-3. TODO-5485
-4. TODO-5487 (after TODO-5485)
-5. TODO-5491
-6. TODO-5490
-7. TODO-5489
+2. TODO-5485
+3. TODO-5487 (after TODO-5485)
+4. TODO-5490
+5. TODO-5489
+6. TODO-5492 (after TODO-5487)
 
 ### Priority Lanes
 
-- Memory safety and parameter modes (docs/spec/value-lifecycle.md Parameter Passing; docs/spec/type-system.md Ownership and Mutability): TODO-5485, TODO-5486, TODO-5487, TODO-5488, TODO-5489, TODO-5490, TODO-5491
+- Memory safety and parameter modes (docs/spec/value-lifecycle.md Parameter Passing; docs/spec/type-system.md Ownership and Mutability): TODO-5485, TODO-5487, TODO-5488, TODO-5489, TODO-5490, TODO-5492
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
 ### Execution Queue
@@ -150,19 +146,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - compile-run tests on VM, native and C++: writes to a `copy mut` parameter do not reach the caller; a struct with a counting `Copy` helper shows exactly one copy per call and none for `move(x)`; `Destroy` runs once for the copy
     - full release gate green
   - stop_rule: do not change `Vector.Copy` itself (TODO-5487).
-
-- [ ] TODO-5486: `[T move]` parameters take ownership
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-05
-  - phase: Memory safety
-  - parallel_track: params-move
-  - scope: `[T move]` / `[T move mut]`: the argument is passed by reference without a copy, the caller's binding is moved-from after the call (`use-after-move` until reassigned; `move(...)` at the call site optional), the caller no longer destroys it, and the callee destroys it at scope end unless it moved it on. Migrate ownership-taking stdlib entry points (vector/map `push`/`insert` element parameters) to `move`.
-  - acceptance:
-    - semantic tests: use of the caller's binding after passing it to a `move` parameter is `use-after-move`; passing a temporary or `move(x)` is accepted
-    - compile-run tests: a struct with counting `Destroy` is destroyed exactly once when passed to a `move` parameter (by the callee), and once when the callee stores it into a vector (by the vector)
-    - full release gate green
-  - stop_rule: no new syntax beyond the `move` parameter transform.
 
 - [ ] TODO-5487: Copying a Vector copies its elements
   - owner: ai
@@ -214,17 +197,19 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - full release gate and corpus differential green
   - stop_rule: heap pointers from `alloc` are out of scope (covered by TODO-5488).
 
-- [ ] TODO-5491: Flow-sensitive use-after-move
+- [ ] TODO-5492: `Destroy` runs at scope end
   - owner: ai
-  - status: ready
+  - status: blocked
+  - blocked_on: TODO-5487
   - created_at: 2026-10-05
   - phase: Memory safety
-  - parallel_track: moves
-  - scope: Track moved bindings per control-flow path (`movedBindings`, `SemanticsValidatorPrivateStatements.h:97-104`; set at `ExprMutationBorrows.cpp:494-535`, checked at `SemanticsValidatorExpr.cpp:76`): a move in one branch must not affect the other branch, the state after an `if`/`match` is the union of the branches, and a move inside a loop body is an error at a use earlier in the body on the next iteration (unless reassigned first). Reuse the branch/loop state machinery of the `uninitialized<T>` analysis (`SemanticsValidatorPassesUninitialized.cpp:41-110`).
+  - parallel_track: lifecycle
+  - scope: Destructors never run automatically today: a struct local or a container goes out of scope without its `Destroy` (a loop building 20,000 vectors grows to 261 MB). Run `Destroy` (and `DestroyStack`/`DestroyHeap` per placement) for every owning local and owned parameter (`copy`, `move`) when its scope ends on every exit path (fall-through, `return`, `break`, error propagation), in reverse declaration order, skipping moved-from bindings; a value moved into a `move` parameter is destroyed by the callee, a value stored into a container by the container. Lowering lives in `src/ir_lowerer/` (file handles already get scope cleanup: `emitFileScopeCleanup`, `IrLowererFlowControlHelpers.cpp`).
   - acceptance:
-    - tests: move in the then-branch, use in the else-branch compiles; move in one branch, use after the `if` fails; use at the top of a loop body after a move at its end fails; reassign before the next use compiles
-    - full release gate green
-  - stop_rule: bindings only (no field-level move tracking).
+    - compile-run tests on VM, native and C++: a struct with a counting `Destroy` is destroyed exactly once per value on fall-through, early return, loops and branches; never for moved-from bindings; once by the callee for a `move` parameter and once by the vector for a pushed element
+    - the 20,000-vector loop runs in bounded memory
+    - full release gate and corpus differential green
+  - stop_rule: no new syntax; aliasing hazards must already be rejected (TODO-5484/5487) before this lands.
 
 - [ ] TODO-5483: Verify arm64 SextI32 on a macOS machine
   - owner: ai

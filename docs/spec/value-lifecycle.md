@@ -52,11 +52,14 @@
 - **Implementation status:** the IR lowering passes non-`mut` struct and collection arguments by alias and treats
   `mut` parameters as borrows whose writes reach the caller. Semantics checks that a `mut` argument is a mutable place
   (a non-`mut` binding is `mut parameter requires a mutable place`; literals and other temporaries, fields and elements
-  are accepted, and `Reference`/`Pointer`/capability-view parameters are exempt), that a binding passed to a `mut`
-  parameter is not passed to another parameter of the same call (`borrow conflict`), and that a borrowed parameter of
-  an owning type (a container, a type that defines `Destroy`, or one holding either) is not returned or assigned (`borrowed parameter escapes via
-  return` / `via assignment`). `copy` and `move` are parsed and recorded; their lowering (an owned copy, ownership
-  transfer) is planned in TODO-5485 and TODO-5486.
+  are accepted, and `Reference`/`Pointer`/capability-view parameters are exempt), that a binding passed to a `mut` or
+  `move` parameter is not passed to another parameter of the same call (`borrow conflict`), and that a borrowed
+  parameter of an owning type (a container, a type that defines `Destroy`, or one holding either) is not returned,
+  assigned or moved (`borrowed parameter escapes via return` / `via assignment`, `borrowed parameter cannot be
+  moved`). A named argument of an owning type passed to a `move` parameter is moved-from after the call (values of
+  other types are copied). Stdlib container entry points that store their argument (push, insert, slot writes) take
+  it as `move`. `copy` lowering (an owned copy) is planned in TODO-5485. Destructors do not run automatically at scope
+  end yet (TODO-5492), so neither the callee nor the caller destroys a moved value today.
 
 ## Uninitialized Storage (draft)
 - **Purpose:** model explicit, inline uninitialized storage without implicit construction (C-style tagged storage and

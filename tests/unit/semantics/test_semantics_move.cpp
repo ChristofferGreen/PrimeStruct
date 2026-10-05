@@ -278,4 +278,159 @@ main() {
   CHECK(error.empty());
 }
 
+namespace {
+
+// An owning type (it defines Destroy) and a sink that takes ownership of it.
+const char *const OwnedPrelude = R"(
+[struct]
+Owned() {
+  [i32] value{0i32}
+
+  Destroy() {
+  }
+}
+
+[return<int>]
+consume([Owned move] item) {
+  return(item.value)
+}
+
+[return<int>]
+count([i32 move] value) {
+  return(value)
+}
+)";
+
+bool validateWithOwned(const std::string &body, std::string &error) {
+  return validateProgram(std::string(OwnedPrelude) + body, "/main", error);
+}
+
+} // namespace
+
+TEST_CASE("passing an owning value to a move parameter moves it") {
+  std::string error;
+  CHECK_FALSE(validateWithOwned(R"(
+[return<int>]
+main() {
+  [Owned] item{Owned{}}
+  [i32] first{consume(item)}
+  return(plus(first, item.value))
+}
+)",
+                                error));
+  CHECK(error.find("use-after-move: item") != std::string::npos);
+
+  // Values of other types are copied; a moved binding can be reassigned.
+  error.clear();
+  CHECK(validateWithOwned(R"(
+[return<int>]
+main() {
+  [i32] number{3i32}
+  [Owned mut] item{Owned{}}
+  [i32] first{consume(item)}
+  assign(item, Owned{})
+  return(plus(plus(first, count(number)), plus(number, item.value)))
+}
+)",
+                          error));
+  CHECK(error.empty());
+
+  error.clear();
+  CHECK_FALSE(validateWithOwned(R"(
+[return<int>]
+forward([Owned] item) {
+  return(consume(item))
+}
+
+[return<int>]
+main() {
+  [Owned] item{Owned{}}
+  return(forward(item))
+}
+)",
+                                error));
+  CHECK(error.find("borrowed parameter cannot be moved: item") != std::string::npos);
+}
+
+TEST_CASE("moves are tracked per control-flow path") {
+  std::string error;
+  // A move in one branch does not affect the other.
+  CHECK(validateWithOwned(R"(
+[return<int>]
+main() {
+  [Owned] item{Owned{}}
+  [i32 mut] result{0i32}
+  if(true, then() { assign(result, consume(item)) }, else() { assign(result, consume(item)) })
+  return(result)
+}
+)",
+                          error));
+  CHECK(error.empty());
+
+  // A move in a branch that falls through reaches the code after the `if`.
+  error.clear();
+  CHECK_FALSE(validateWithOwned(R"(
+[return<int>]
+main() {
+  [Owned] item{Owned{}}
+  [i32 mut] result{0i32}
+  if(true, then() { assign(result, consume(item)) }, else() { assign(result, 1i32) })
+  return(plus(result, item.value))
+}
+)",
+                                error));
+  CHECK(error.find("use-after-move: item") != std::string::npos);
+
+  // A branch that returns does not.
+  error.clear();
+  CHECK(validateWithOwned(R"(
+[return<int>]
+main() {
+  [Owned] item{Owned{}}
+  if(true, then() { return(consume(item)) }, else() { })
+  return(item.value)
+}
+)",
+                          error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("a loop cannot move a binding from outside it") {
+  std::string error;
+  CHECK_FALSE(validateWithOwned(R"(
+[return<int>]
+main() {
+  [Owned] item{Owned{}}
+  [i32 mut] total{0i32}
+  [i32 mut] round{0i32}
+  while(less_than(round, 2i32)) {
+    assign(total, plus(total, consume(item)))
+    assign(round, plus(round, 1i32))
+  }
+  return(total)
+}
+)",
+                                error));
+  CHECK(error.find("use-after-move: item (moved in an earlier loop iteration)") !=
+        std::string::npos);
+
+  error.clear();
+  CHECK(validateWithOwned(R"(
+[return<int>]
+main() {
+  [Owned mut] item{Owned{}}
+  [i32 mut] total{0i32}
+  [i32 mut] round{0i32}
+  while(less_than(round, 2i32)) {
+    assign(total, plus(total, consume(item)))
+    assign(item, Owned{})
+    assign(round, plus(round, 1i32))
+  }
+  return(total)
+}
+)",
+                          error));
+  CHECK(error.empty());
+}
+
 TEST_SUITE_END();

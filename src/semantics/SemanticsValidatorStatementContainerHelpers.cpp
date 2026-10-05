@@ -303,6 +303,11 @@ bool SemanticsValidator::isOwningBorrowedParameter(const std::vector<ParameterIn
   if (paramBinding == nullptr || paramBinding->isCopy || paramBinding->isMove) {
     return false;
   }
+  return bindingOwnsResources(*paramBinding, namespacePrefix);
+}
+
+bool SemanticsValidator::bindingOwnsResources(const BindingInfo &binding,
+                                              const std::string &namespacePrefix) {
   const std::vector<std::string> *definitionTemplateArgs = nullptr;
   std::string definitionNamespacePrefix = namespacePrefix;
   if (const auto defIt = defMap_.find(currentValidationState_.context.definitionPath);
@@ -369,7 +374,7 @@ bool SemanticsValidator::isOwningBorrowedParameter(const std::vector<ParameterIn
     }
     return false;
   };
-  const std::string typeText = expectedBindingTypeText(*paramBinding);
+  const std::string typeText = expectedBindingTypeText(binding);
   return !typeText.empty() &&
          ownsResources(typeText, definitionNamespacePrefix, definitionTemplateArgs);
 }

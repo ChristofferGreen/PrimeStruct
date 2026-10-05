@@ -101,6 +101,19 @@
   struct ValidationState {
     ValidationContext context;
     std::unordered_set<std::string> movedBindings;
+    // Where each binding was moved into a `move` parameter (the argument node and its source
+    // position); validating that argument again, also as a copy (return inference revalidates
+    // calls), does not count as a second use.
+    struct MoveArgumentSite {
+      const Expr *node = nullptr;
+      int line = 0;
+      int column = 0;
+      bool matches(const Expr &expr) const {
+        return &expr == node ||
+               (line > 0 && expr.sourceLine == line && expr.sourceColumn == column);
+      }
+    };
+    std::unordered_map<std::string, MoveArgumentSite> moveArgumentSites;
     std::unordered_set<std::string> endedReferenceBorrows;
     std::unordered_map<std::string, std::string> compileTimeTypeLocals;
     struct TaskHandleState {

@@ -2,9 +2,20 @@
 #include "SemanticsValidatorStatementLoopCountStep.h"
 
 #include <algorithm>
+#include <unordered_set>
 
 namespace primec::semantics {
+
 namespace {
+
+// Whether the block's last statement is a `return`, so control does not fall out of it.
+bool branchEndsWithReturn(const Expr &block) {
+  if (block.bodyArguments.empty()) {
+    return false;
+  }
+  const Expr &last = block.bodyArguments.back();
+  return last.kind == Expr::Kind::Call && !last.isBinding && last.name == "return";
+}
 
 ReturnKind returnKindForStatementControlFlowBinding(const BindingInfo &binding) {
   if (binding.typeName == "Reference") {
@@ -150,12 +161,27 @@ bool SemanticsValidator::validateControlFlowStatement(const std::vector<Paramete
       }
       return true;
     };
+    // Moves are tracked per path: each branch starts from the state before the `if`, and after it
+    // a binding is moved when a branch that falls through moved it.
+    const std::unordered_set<std::string> movedBefore = currentValidationState_.movedBindings;
     if (!validateBranch(thenArg)) {
       return false;
     }
+    std::unordered_set<std::string> movedAfter;
+    if (!branchEndsWithReturn(thenArg)) {
+      movedAfter = currentValidationState_.movedBindings;
+    }
+    currentValidationState_.movedBindings = movedBefore;
     if (!validateBranch(elseArg)) {
       return false;
     }
+    if (!branchEndsWithReturn(elseArg)) {
+      movedAfter.insert(currentValidationState_.movedBindings.begin(),
+                        currentValidationState_.movedBindings.end());
+    } else if (branchEndsWithReturn(thenArg)) {
+      movedAfter = movedBefore;
+    }
+    currentValidationState_.movedBindings = std::move(movedAfter);
     return true;
   }
 
@@ -165,6 +191,11 @@ bool SemanticsValidator::validateControlFlowStatement(const std::vector<Paramete
                               bool includeNextIterationBody) -> bool {
     if (!isLoopBlockEnvelope(body)) {
       return failStatementDiagnostic("loop body requires a block envelope");
+    }
+    const std::unordered_set<std::string> movedBefore = currentValidationState_.movedBindings;
+    std::unordered_set<std::string> outerBindings;
+    for (const auto &entry : activeLocals) {
+      outerBindings.insert(entry.first);
     }
     LocalBindingScope bodyScope(*this, activeLocals);
     std::vector<BorrowLivenessRange> livenessRanges;
@@ -194,6 +225,17 @@ bool SemanticsValidator::validateControlFlowStatement(const std::vector<Paramete
         livenessRanges.push_back(BorrowLivenessRange{&body.bodyArguments, 0});
       }
       expireReferenceBorrowsForRanges(params, activeLocals, livenessRanges);
+    }
+    // A binding from outside the loop that the body moves and does not reassign would be used
+    // after the move on the next iteration.
+    if (!branchEndsWithReturn(body)) {
+      for (const std::string &name : currentValidationState_.movedBindings) {
+        if (movedBefore.count(name) == 0 &&
+            (outerBindings.count(name) > 0 || findParamBinding(params, name) != nullptr)) {
+          return failStatementDiagnostic("use-after-move: " + name +
+                                         " (moved in an earlier loop iteration)");
+        }
+      }
     }
     return true;
   };

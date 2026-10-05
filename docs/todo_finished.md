@@ -1975,6 +1975,8 @@ are left unarchived.
 | TODO-5481 | Gate vm, native and optexe rows in the benchmark baseline | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
 | TODO-5482 | Triage the corpus programs where native differs from the VM | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
 | TODO-5484 | Parameter modes: mode flags and call-site borrow checks | [2026-10.md](todo_archive/2026-10.md) | - |
+| TODO-5486 | `[T move]` parameters take ownership | [2026-10.md](todo_archive/2026-10.md) | - |
+| TODO-5491 | Flow-sensitive use-after-move | [2026-10.md](todo_archive/2026-10.md) | 2026-10-05 |
 
 <!-- INDEX-END -->
 

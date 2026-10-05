@@ -65,7 +65,7 @@ namespace std {
     }
 
     [public effects(heap_alloc), return<void> Comparable<K>]
-    mapInsert([K] key, [V] value) {
+    mapInsert([K move] key, [V move] value) {
       [i32] index{findIndex<K, V>(this, key)}
       [Vector<K> mut] keys{this.keys}
       [Vector<V> mut] payloads{this.payloads}
@@ -91,7 +91,7 @@ namespace std {
   }
 
   [public return<Entry<K, V>>]
-  entry<K, V>([K] key, [V] value) {
+  entry<K, V>([K move] key, [V move] value) {
     return(Entry<K, V>{key, value})
   }
 
@@ -387,7 +387,7 @@ namespace std {
     }
 
     [public effects(heap_alloc), return<void> Comparable<K>]
-    insert([K] key, [V] value) {
+    insert([K move] key, [V move] value) {
       [MapValue<K, V> mut] inner{this.inner}
       mapInsert<K, V>(inner, key, value)
       this.inner = inner
@@ -395,14 +395,14 @@ namespace std {
   }
 
   [public effects(heap_alloc), return<Map<K, V>> Comparable<K>]
-  mapSingle<K, V>([K] key, [V] value) {
+  mapSingle<K, V>([K move] key, [V move] value) {
     [MapValue<K, V> mut] inner{mapNew<K, V>()}
     mapInsert<K, V>(inner, key, value)
     return(Map<K, V>{inner})
   }
 
   [public effects(heap_alloc), return<Map<K, V>> Comparable<K>]
-  mapPair<K, V>([K] firstKey, [V] firstValue, [K] secondKey, [V] secondValue) {
+  mapPair<K, V>([K move] firstKey, [V move] firstValue, [K move] secondKey, [V move] secondValue) {
     [MapValue<K, V> mut] inner{mapNew<K, V>()}
     mapInsert<K, V>(inner, firstKey, firstValue)
     mapInsert<K, V>(inner, secondKey, secondValue)

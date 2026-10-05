@@ -584,7 +584,7 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to brace
   scope. Unsafe scopes are aliasing barriers for optimization.
 - **Unsafe calls:** unsafe definitions may be called from safe code; the call does not taint the caller as long as
   unsafe-created references do not escape.
-- **Memory safety (planned, TODO-5484 to TODO-5491):** safe code cannot read or write memory that has been freed. The
+- **Memory safety (partly implemented; open work TODO-5485, TODO-5487 to TODO-5490, TODO-5492):** safe code cannot read or write memory that has been freed. The
   compiler enforces it with these rules; code that breaks the guarantee from inside an `[unsafe]` definition (or a safe
   API built on one incorrectly) is the author's responsibility.
   - Freeing and reinterpreting memory is unsafe: `/std/intrinsics/memory/free`, `realloc`, `at_unsafe` and
@@ -597,7 +597,9 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to brace
   - A pointer or reference to a local (`location(x)`) cannot escape the local's scope: returning it, storing it in a
     longer-lived place, or passing it to a `move`/`copy` parameter that keeps it is rejected.
   - Copying a container copies its elements; two containers never share storage in safe code.
-  - Use-after-move is tracked per control-flow path: a binding moved on any path reaching a use is a compile error.
+  - Use-after-move is tracked per control-flow path: a binding moved on any path reaching a use is a compile error
+    (implemented for `if` branches, where a branch ending in `return` does not reach the code after it, and for loops,
+    where moving a binding from outside the loop without reassigning it in the body is an error).
 
 ### Layout and Struct Semantics
 - Structs record layout manifests in IR.

@@ -404,6 +404,43 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
     const auto it = locals.find(name);
     return it == locals.end() ? nullptr : &it->second;
   };
+  // A `move` parameter takes ownership: a named argument of an owning type is moved-from after the
+  // call (values of other types are copied), and a borrowed parameter cannot be handed over.
+  for (size_t paramIndex = 0; paramIndex < calleeParams.size(); ++paramIndex) {
+    const ParameterInfo &param = calleeParams[paramIndex];
+    const Expr *arg = paramIndex < orderedArgs.size() ? orderedArgs[paramIndex] : nullptr;
+    if (paramIndex == packedParamIndex || arg == nullptr || arg == param.defaultExpr ||
+        !param.binding.isMove || arg->kind != Expr::Kind::Name ||
+        currentValidationState_.context.definitionIsUnsafe) {
+      continue;
+    }
+    if (isOwningBorrowedParameter(params, *arg, expr.namespacePrefix)) {
+      return failResolvedCallArgumentDiagnostic("borrowed parameter cannot be moved: " + arg->name);
+    }
+    const BindingInfo *binding = bindingForName(arg->name);
+    if (binding == nullptr || !bindingOwnsResources(*binding, expr.namespacePrefix)) {
+      continue;
+    }
+    for (size_t otherIndex = 0; otherIndex < orderedArgs.size(); ++otherIndex) {
+      const Expr *other = orderedArgs[otherIndex];
+      if (otherIndex != paramIndex && other != nullptr && other->kind == Expr::Kind::Name &&
+          other->name == arg->name) {
+        return failResolvedCallArgumentDiagnostic("borrow conflict: " + arg->name + " (root: " +
+                                                  arg->name + ", sink: " + param.name + ")");
+      }
+    }
+    auto &moveSites = currentValidationState_.moveArgumentSites;
+    if (currentValidationState_.movedBindings.count(arg->name) > 0) {
+      const auto site = moveSites.find(arg->name);
+      if (site != moveSites.end() && site->second.matches(*arg)) {
+        continue;
+      }
+      return failResolvedCallArgumentDiagnostic("use-after-move: " + arg->name);
+    }
+    currentValidationState_.movedBindings.insert(arg->name);
+    moveSites[arg->name] = {arg, arg->sourceLine, arg->sourceColumn};
+  }
+
   for (size_t paramIndex = 0; paramIndex < calleeParams.size(); ++paramIndex) {
     const ParameterInfo &param = calleeParams[paramIndex];
     const Expr *arg = paramIndex < orderedArgs.size() ? orderedArgs[paramIndex] : nullptr;
