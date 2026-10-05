@@ -447,8 +447,12 @@
                 bool &argvCheckedOut) {
               return emitStringValueForCall(argExpr, locals, sourceOut, indexOut, argvCheckedOut);
             },
-            [&](const Expr &argExpr, const LocalMap &locals) { return inferStructExprPath(argExpr, locals); },
-            [&](const Expr &argExpr, const LocalMap &locals) { return inferExprKind(argExpr, locals); },
+            [&](const Expr &argExpr, const LocalMap &locals) {
+              return inferStructExprPath(argExpr, locals);
+            },
+            [&](const Expr &argExpr, const LocalMap &locals) {
+              return inferExprKind(argExpr, locals);
+            },
             [&](const Expr &argExpr) { return resolveDefinitionCall(argExpr); },
             [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
               return resolveStructSlotLayout(structPath, layoutOut);
@@ -493,7 +497,25 @@
             },
             [&]() { return function.instructions.size(); },
             [&](size_t index, uint64_t target) { function.instructions[index].imm = target; },
-            emitArrayIndexOutOfBounds)) {
+            emitArrayIndexOutOfBounds,
+            [&](int32_t destPtrLocal,
+                int32_t srcPtrLocal,
+                const std::string &structPath,
+                bool &ranHelper) {
+              ranHelper = false;
+              auto copyIt = setupStage.defMap.find(structPath + "/Copy");
+              if (copyIt == setupStage.defMap.end() || copyIt->second == nullptr) {
+                return true;
+              }
+              ranHelper = true;
+              return ir_lowerer::emitMoveHelperFromPtrs(destPtrLocal,
+                                                        srcPtrLocal,
+                                                        structPath,
+                                                        copyIt->second,
+                                                        callerLocals,
+                                                        stateOut.emitInlineDefinitionCall,
+                                                        error);
+            })) {
       if (std::string_view(error) == VariadicArgsReferenceForwardingDiagnosticMessage) {
         const Expr *diagnosticAnchor = &callExpr;
         for (const Expr *packedArg : packedArgs) {
@@ -507,4 +529,3 @@
       popInlineStack();
       return false;
     }
-

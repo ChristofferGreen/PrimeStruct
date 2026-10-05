@@ -100,8 +100,7 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5485 | `[T copy]` parameters receive their own copy | ready | params |
-| TODO-5487 | Copying a Vector copies its elements | blocked | containers |
+| TODO-5487 | Copying a Vector copies its elements | ready | containers |
 | TODO-5489 | Container element borrows keep the container borrowed | ready | borrows |
 | TODO-5490 | Pointers to locals cannot escape their scope | ready | escapes |
 | TODO-5492 | `Destroy` runs at scope end | blocked | lifecycle |
@@ -109,21 +108,20 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5485 (params): `[T copy]` parameters receive their own copy
+- TODO-5487 (containers): copying a Vector copies its elements
 - TODO-5489 (borrows): container element borrows keep the container borrowed
 - TODO-5490 (escapes): pointers to locals cannot escape their scope
 
 ### Immediate Next 10
 
-1. TODO-5485
-2. TODO-5487 (after TODO-5485)
-3. TODO-5490
-4. TODO-5489
-5. TODO-5492 (after TODO-5487)
+1. TODO-5487
+2. TODO-5490
+3. TODO-5489
+4. TODO-5492 (after TODO-5487)
 
 ### Priority Lanes
 
-- Memory safety and parameter modes (docs/spec/value-lifecycle.md Parameter Passing; docs/spec/type-system.md Ownership and Mutability): TODO-5485, TODO-5487, TODO-5489, TODO-5490, TODO-5492
+- Memory safety and parameter modes (docs/spec/value-lifecycle.md Parameter Passing; docs/spec/type-system.md Ownership and Mutability): TODO-5487, TODO-5489, TODO-5490, TODO-5492
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
 ### Execution Queue
@@ -132,22 +130,9 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 
 ### Task Blocks
 
-- [ ] TODO-5485: `[T copy]` parameters receive their own copy
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-05
-  - phase: Memory safety
-  - parallel_track: params
-  - scope: Lower `[T copy]` / `[T copy mut]` parameters as owned copies: scalars by value (as today), structs through the type's `Copy` helper when it defines one, otherwise slot by slot; the callee destroys its copy at scope end. A `move(x)` argument is handed over without a copy and marks `x` moved-from.
-  - acceptance:
-    - compile-run tests on VM, native and C++: writes to a `copy mut` parameter do not reach the caller; a struct with a counting `Copy` helper shows exactly one copy per call and none for `move(x)`; `Destroy` runs once for the copy
-    - full release gate green
-  - stop_rule: do not change `Vector.Copy` itself (TODO-5487).
-
 - [ ] TODO-5487: Copying a Vector copies its elements
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5485
+  - status: ready
   - created_at: 2026-10-05
   - phase: Memory safety
   - parallel_track: containers

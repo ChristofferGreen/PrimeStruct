@@ -12,6 +12,7 @@
 #include "primec/ir/SoaPathHelpers.h"
 #include "primec/support/CollectionHelperNames.h"
 
+#include <algorithm>
 #include <string_view>
 
 namespace primec::ir_lowerer {
@@ -646,10 +647,19 @@ bool emitInlineDefinitionCallParameters(
     const InferInlineParameterExprLocalInfoFn &inferExprLocalInfo,
     const SizeProviderFn &instructionCount,
     const PatchInstructionImmFn &patchInstructionImm,
-    const ActionFn &emitArrayIndexOutOfBounds) {
+    const ActionFn &emitArrayIndexOutOfBounds,
+    const EmitInlineParameterStructCopyHelperFn &emitStructCopyHelper) {
   for (size_t i = 0; i < callParams.size(); ++i) {
     const Expr &param = callParams[i];
     const Expr *orderedArg = (i < orderedArgs.size()) ? orderedArgs[i] : nullptr;
+    // `[T copy]` (docs/spec/value-lifecycle.md, Parameter Passing): the callee gets its own copy
+    // instead of a borrow, except of a `move(x)` argument, which is handed over as is.
+    const bool isCopyParam =
+        std::any_of(param.transforms.begin(),
+                    param.transforms.end(),
+                    [](const Transform &transform) { return transform.name == "copy"; }) &&
+        !(orderedArg != nullptr && orderedArg->kind == Expr::Kind::Call &&
+          !orderedArg->isMethodCall && orderedArg->name == "move" && orderedArg->args.size() == 1);
     LocalInfo paramInfo;
     if (!inferCallParameterLocalInfo(param, paramInfo, error)) {
       return false;
@@ -733,7 +743,11 @@ bool emitInlineDefinitionCallParameters(
       continue;
     }
 
-    if (orderedArg != nullptr && orderedArg->kind == Expr::Kind::Name &&
+    // Uniform-field structs lower as array handles; a copy parameter of one still gets its own
+    // struct storage below.
+    const bool isCopiedStructArray = isCopyParam && paramInfo.kind == LocalInfo::Kind::Array &&
+                                     !paramInfo.structTypeName.empty();
+    if (orderedArg != nullptr && orderedArg->kind == Expr::Kind::Name && !isCopiedStructArray &&
         isDirectSequentialHandle(paramInfo)) {
       auto argIt = callerLocals.find(orderedArg->name);
       if (argIt != callerLocals.end() &&
@@ -776,10 +790,9 @@ bool emitInlineDefinitionCallParameters(
       continue;
     }
 
-    if (paramInfo.kind == LocalInfo::Kind::Value && paramInfo.isMutable &&
-        paramInfo.structTypeName.empty() && !paramInfo.isFileHandle &&
-        !paramInfo.isFileError && !paramInfo.isResult &&
-        paramInfo.valueKind != LocalInfo::ValueKind::Unknown &&
+    if (paramInfo.kind == LocalInfo::Kind::Value && paramInfo.isMutable && !isCopyParam &&
+        paramInfo.structTypeName.empty() && !paramInfo.isFileHandle && !paramInfo.isFileError &&
+        !paramInfo.isResult && paramInfo.valueKind != LocalInfo::ValueKind::Unknown &&
         paramInfo.valueKind != LocalInfo::ValueKind::String) {
       if (!orderedArg) {
         error = "argument count mismatch";
@@ -824,9 +837,8 @@ bool emitInlineDefinitionCallParameters(
       continue;
     }
 
-    if (paramInfo.kind == LocalInfo::Kind::Value &&
-        paramInfo.isMutable && !paramInfo.isFileHandle &&
-        !paramInfo.structTypeName.empty()) {
+    if (paramInfo.kind == LocalInfo::Kind::Value && paramInfo.isMutable && !isCopyParam &&
+        !paramInfo.isFileHandle && !paramInfo.structTypeName.empty()) {
       if (!orderedArg) {
         error = "argument count mismatch";
         return false;
@@ -874,9 +886,8 @@ bool emitInlineDefinitionCallParameters(
       continue;
     }
 
-    if (paramInfo.kind == LocalInfo::Kind::Value &&
-        !paramInfo.isMutable && !paramInfo.isFileHandle &&
-        !paramInfo.structTypeName.empty() && orderedArg != nullptr &&
+    if (paramInfo.kind == LocalInfo::Kind::Value && !paramInfo.isMutable && !isCopyParam &&
+        !paramInfo.isFileHandle && !paramInfo.structTypeName.empty() && orderedArg != nullptr &&
         orderedArg->kind == Expr::Kind::Name) {
       auto argIt = callerLocals.find(orderedArg->name);
       if (argIt != callerLocals.end() &&
@@ -893,7 +904,7 @@ bool emitInlineDefinitionCallParameters(
       }
     }
 
-    if (paramInfo.kind == LocalInfo::Kind::Value &&
+    if ((paramInfo.kind == LocalInfo::Kind::Value || isCopiedStructArray) &&
         !paramInfo.isFileHandle && !paramInfo.structTypeName.empty()) {
       if (!orderedArg) {
         error = "argument count mismatch";
@@ -910,7 +921,8 @@ bool emitInlineDefinitionCallParameters(
       }
       LocalInfo copiedParamInfo = paramInfo;
       copiedParamInfo.structTypeName = canonicalStructTypeName(paramInfo.structTypeName, argStruct);
-      if (paramInfo.isMutable || isMapLikeStructTypeName(copiedParamInfo.structTypeName)) {
+      if ((paramInfo.isMutable && !isCopyParam) ||
+          isMapLikeStructTypeName(copiedParamInfo.structTypeName)) {
         if (!emitExpr(*orderedArg, callerLocals)) {
           return false;
         }
@@ -1001,6 +1013,16 @@ bool emitInlineDefinitionCallParameters(
         }
       } else if (!emitStructCopySlots(baseLocal, srcPtrLocal, layout.totalSlots)) {
         return false;
+      }
+      if (isCopyParam && !builtinSoaToAosStructBridge && emitStructCopyHelper) {
+        const int32_t destPtrLocal = allocTempLocal();
+        emitInstruction(IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal));
+        emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal));
+        bool ranHelper = false;
+        if (!emitStructCopyHelper(
+                destPtrLocal, srcPtrLocal, copiedParamInfo.structTypeName, ranHelper)) {
+          return false;
+        }
       }
       if (!builtinSoaToAosStructBridge &&
           shouldDisarmStructCopySourceExpr(*orderedArg)) {

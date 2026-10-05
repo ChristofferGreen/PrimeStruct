@@ -58,8 +58,10 @@
   assigned or moved (`borrowed parameter escapes via return` / `via assignment`, `borrowed parameter cannot be
   moved`). A named argument of an owning type passed to a `move` parameter is moved-from after the call (values of
   other types are copied). Stdlib container entry points that store their argument (push, insert, slot writes) take
-  it as `move`. `copy` lowering (an owned copy) is planned in TODO-5485. Destructors do not run automatically at scope
-  end yet (TODO-5492), so neither the callee nor the caller destroys a moved value today.
+  it as `move`. A `copy` parameter gets its own storage: scalars by value, structs slot by slot and then through the
+  type's `Copy` helper when it defines one; a `move(v)` argument is handed over without a copy. Container `Copy`
+  helpers still share storage (TODO-5487). Destructors do not run automatically at scope end yet (TODO-5492), so
+  neither the callee nor the caller destroys a moved or copied value today.
 
 ## Uninitialized Storage (draft)
 - **Purpose:** model explicit, inline uninitialized storage without implicit construction (C-style tagged storage and

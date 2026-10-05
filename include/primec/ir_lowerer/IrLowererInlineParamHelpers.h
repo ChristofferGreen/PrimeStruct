@@ -25,6 +25,10 @@ using ResolveInlineParameterDefinitionCallFn = std::function<const Definition *(
 using ResolveInlineParameterStructSlotLayoutFn = std::function<bool(const std::string &, StructSlotLayoutInfo &)>;
 using EmitInlineParameterStructCopySlotsFn = std::function<bool(int32_t, int32_t, int32_t)>;
 using TrackInlineParameterFileHandleFn = std::function<void(int32_t)>;
+// Runs the `Copy` lifecycle helper of `structPath` (when it has one) to fill the copy at
+// `destPtrLocal` from the value at `srcPtrLocal`; sets `ranHelper` to whether there was one.
+using EmitInlineParameterStructCopyHelperFn = std::function<bool(
+    int32_t destPtrLocal, int32_t srcPtrLocal, const std::string &structPath, bool &ranHelper)>;
 
 bool emitInlineDefinitionCallParameters(
     const std::vector<Expr> &callParams,
@@ -127,6 +131,8 @@ bool emitInlineDefinitionCallParameters(
     // leaves them unbound keeps the previous (pre-fix) no-op behavior.
     const SizeProviderFn &instructionCount = {},
     const PatchInstructionImmFn &patchInstructionImm = {},
-    const ActionFn &emitArrayIndexOutOfBounds = {});
+    const ActionFn &emitArrayIndexOutOfBounds = {},
+    // `[T copy]` parameters of a type with a `Copy` helper are filled through it.
+    const EmitInlineParameterStructCopyHelperFn &emitStructCopyHelper = {});
 
 } // namespace primec::ir_lowerer
