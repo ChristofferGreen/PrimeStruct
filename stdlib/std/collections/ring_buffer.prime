@@ -119,7 +119,7 @@ namespace std {
   }
 
   [public effects(heap_alloc), return<void>]
-  push<T>([RingBuffer<T> mut] values, [T] value) {
+  push<T>([RingBuffer<T> mut] values, [T move] value) {
     if(values.field_capacity() <= 0) {
       panic(values.field_capacity())
     }

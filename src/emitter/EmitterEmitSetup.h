@@ -351,7 +351,9 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     std::string paramType =
         bindingTypeToCpp(paramInfo, typeNamespace, importAliases, structTypeMap);
     const bool refCandidate = isReferenceCandidate(paramInfo);
-    const bool passByRef = refCandidate && !paramInfo.isCopy;
+    // Parameters borrow their arguments unless they take a copy; a `mut` scalar borrows mutably.
+    const bool passByRef =
+        !paramInfo.isCopy && (refCandidate || paramInfo.isMutable || paramInfo.isMove);
     if (passByRef) {
       if (!paramInfo.isMutable && paramType.rfind("const ", 0) != 0) {
         out << "const ";

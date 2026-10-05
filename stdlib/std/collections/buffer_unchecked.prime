@@ -42,7 +42,7 @@ namespace std {
   }
 
   [public return<void>]
-  bufferWriteUnsafe<T>([Pointer<T> mut] ptr, [i32] index, [T] value) {
+  bufferWriteUnsafe<T>([Pointer<T> mut] ptr, [i32] index, [T move] value) {
     [Pointer<T> mut] slot{/std/intrinsics/memory/at_unsafe(ptr, index)}
     *slot = value
   }

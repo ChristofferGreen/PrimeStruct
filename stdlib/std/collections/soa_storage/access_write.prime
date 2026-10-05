@@ -6,7 +6,7 @@ namespace std {
   namespace collections {
   namespace soa_storage {
   [public return<void>]
-  soaColumnWrite<T>([SoaColumn<T> mut] values, [i32] index, [T] value) {
+  soaColumnWrite<T>([SoaColumn<T> mut] values, [i32] index, [T move] value) {
     soaColumnCheckIndex<T>(values, index)
     soaColumnDropSlot<T>(values, index)
     soaColumnInitSlot<T>(values, index, value)

@@ -172,13 +172,13 @@ namespace std {
   }
 
   [return<void>]
-  overwriteSlot<T>([Vector<T> mut] values, [i32] index, [T] value) {
+  overwriteSlot<T>([Vector<T> mut] values, [i32] index, [T move] value) {
     [Reference<T> mut] slot{vectorBorrowSlot<T>(values, index)}
     *slot = value
   }
 
   [public effects(heap_alloc), return<void> Comparable<K>]
-  mapInsert<K, V>([MapValue<K, V> mut] entries, [K] key, [V] value) {
+  mapInsert<K, V>([MapValue<K, V> mut] entries, [K move] key, [V move] value) {
     [i32] index{findIndex<K, V>(entries, key)}
     [Vector<K> mut] keys{entries.keys}
     [Vector<V> mut] payloads{entries.payloads}
@@ -194,7 +194,7 @@ namespace std {
   }
 
   [public effects(heap_alloc), return<void> Comparable<K>]
-  mapInsertRef<K, V>([Reference<MapValue<K, V>> mut] entries, [K] key, [V] value) {
+  mapInsertRef<K, V>([Reference<MapValue<K, V>> mut] entries, [K move] key, [V move] value) {
     [i32] index{findIndexRef<K, V>(entries, key)}
     [Vector<K> mut] keys{entries.keys}
     [Vector<V> mut] payloads{entries.payloads}
@@ -210,7 +210,7 @@ namespace std {
   }
 
   [public effects(heap_alloc), return<void> Comparable<K>]
-  insert<K, V>([MapValue<K, V> mut] entries, [K] key, [V] value) {
+  insert<K, V>([MapValue<K, V> mut] entries, [K move] key, [V move] value) {
     [i32] index{findIndex<K, V>(entries, key)}
     [Vector<K> mut] keys{entries.keys}
     [Vector<V> mut] payloads{entries.payloads}
@@ -226,7 +226,7 @@ namespace std {
   }
 
   [public effects(heap_alloc), return<void> Comparable<K>]
-  insert_ref<K, V>([Reference<MapValue<K, V>> mut] entries, [K] key, [V] value) {
+  insert_ref<K, V>([Reference<MapValue<K, V>> mut] entries, [K move] key, [V move] value) {
     mapInsertRef<K, V>(entries, key, value)
   }
 

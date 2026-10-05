@@ -11,8 +11,8 @@ using namespace parser;
 namespace {
 
 bool isBindingOnlyTransformName(const std::string &name) {
-  return name == "mut" || name == "copy" || name == "restrict" || name == "align_bytes" ||
-         name == "align_kbytes";
+  return name == "mut" || name == "copy" || name == "move" || name == "restrict" ||
+         name == "align_bytes" || name == "align_kbytes";
 }
 
 bool isNoReturnDefinitionTransform(const std::string &name) {

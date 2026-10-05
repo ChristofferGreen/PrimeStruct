@@ -38,7 +38,7 @@ namespace std {
     }
 
     [public mut effects(heap_alloc), return<void>]
-    push([T] value) {
+    push([T move] value) {
       soaVectorValidateType<T>()
       soaVectorPush<T>(this, value)
     }
@@ -57,7 +57,7 @@ namespace std {
   }
 
   [public effects(heap_alloc), return<SoaVector<T>>]
-  soaVectorSingle<T>([T] value) {
+  soaVectorSingle<T>([T move] value) {
     soaVectorValidateType<T>()
     [SoaVector<T> mut] out{soaVectorNew<T>()}
     [Reference<SoaColumn<T>>] storage{location(out.storage)}
@@ -136,7 +136,7 @@ namespace std {
   }
 
   [public effects(heap_alloc), return<void>]
-  soaVectorPush<T>([SoaVector<T> mut] values, [T] value) {
+  soaVectorPush<T>([SoaVector<T> mut] values, [T move] value) {
     soaVectorValidateType<T>()
     [Reference<SoaColumn<T>>] storage{location(values.storage)}
     if(soaColumnCount<T>(storage) ==
@@ -193,7 +193,7 @@ namespace std {
 }
 
 [public effects(heap_alloc), return<SoaVector<T>>]
-/std/collections/soa/single<T>([T] value) {
+/std/collections/soa/single<T>([T move] value) {
   return(/std/collections/soa/soaVectorSingle<T>(value))
 }
 
@@ -244,7 +244,7 @@ namespace std {
 }
 
 [public effects(heap_alloc), return<void>]
-/std/collections/soa/push<T>([SoaVector<T> mut] values, [T] value) {
+/std/collections/soa/push<T>([SoaVector<T> mut] values, [T move] value) {
   /std/collections/soa/soaVectorPush<T>(values, value)
 }
 

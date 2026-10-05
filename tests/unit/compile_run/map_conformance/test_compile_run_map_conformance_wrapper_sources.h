@@ -167,8 +167,8 @@ inline std::string makeWrappedExperimentalMapParameterConformanceSource() {
   source += "[effects(io_out, heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [Holder] holder{Holder()}\n";
-  source += "  [Map<string, i32>] primary{wrapPrimaryValues()}\n";
-  source += "  [Map<string, i32>] secondary{wrapSecondaryValues()}\n";
+  source += "  [Map<string, i32> mut] primary{wrapPrimaryValues()}\n";
+  source += "  [Map<string, i32> mut] secondary{wrapSecondaryValues()}\n";
   source += "  return(plus(scoreValues(primary), holder.score(secondary)))\n";
   source += "}\n";
   return source;
@@ -180,7 +180,7 @@ inline std::string makeWrappedExperimentalMapBindingConformanceSource() {
   source += "import /std/collections/map/*\n";
   source += "import /std/collections/map/*\n\n";
   source += "[return<T> effects(heap_alloc)]\n";
-  source += "wrapValues<T>([T] values) {\n";
+  source += "wrapValues<T>([T move] values) {\n";
   source += "  return(values)\n";
   source += "}\n\n";
   source += "[effects(io_err)]\n";
@@ -210,7 +210,7 @@ inline std::string makeWrappedExperimentalMapAssignConformanceSource() {
   source += "import /std/collections/map/*\n";
   source += "import /std/collections/map/*\n\n";
   source += "[return<T> effects(heap_alloc)]\n";
-  source += "wrapValues<T>([T] values) {\n";
+  source += "wrapValues<T>([T move] values) {\n";
   source += "  return(values)\n";
   source += "}\n\n";
   source += "[effects(io_err)]\n";
@@ -309,7 +309,7 @@ inline std::string makeWrappedExperimentalMapStorageFieldConformanceSource() {
   source += "import /std/collections/map/*\n";
   source += "import /std/collections/map/*\n\n";
   source += "[return<T> effects(heap_alloc)]\n";
-  source += "wrapValues<T>([T] values) {\n";
+  source += "wrapValues<T>([T move] values) {\n";
   source += "  return(values)\n";
   source += "}\n\n";
   source += "Holder() {\n";
@@ -335,7 +335,7 @@ inline std::string makeWrappedExperimentalMapStorageDerefFieldConformanceSource(
   source += "import /std/collections/map/*\n";
   source += "import /std/collections/map/*\n\n";
   source += "[return<T> effects(heap_alloc)]\n";
-  source += "wrapValues<T>([T] values) {\n";
+  source += "wrapValues<T>([T move] values) {\n";
   source += "  return(values)\n";
   source += "}\n\n";
   source += "Holder() {\n";
@@ -599,7 +599,7 @@ inline std::string makeWrappedInferredExperimentalMapReturnConformanceSource() {
   source += "import /std/collections/map/*\n";
   source += "import /std/collections/map/*\n\n";
   source += "[return<T> effects(heap_alloc)]\n";
-  source += "wrapValues<T>([T] values) {\n";
+  source += "wrapValues<T>([T move] values) {\n";
   source += "  return(values)\n";
   source += "}\n\n";
   source += "[return<auto> effects(heap_alloc)]\n";

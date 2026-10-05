@@ -385,6 +385,55 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
     }
   }
 
+  // Parameter modes (docs/spec/value-lifecycle.md, Parameter Passing): a `mut` parameter borrows its
+  // argument mutably, so the argument must be a mutable place, and that place cannot also be passed
+  // to another parameter of the same call.
+  auto isMutableBorrowParam = [&](const ParameterInfo &param) {
+    if (!param.binding.isMutable || param.binding.isCopy || param.binding.isMove) {
+      return false;
+    }
+    // References, pointers and capability views (`Slice<T, ReadWrite>`) carry their own write access.
+    const std::string typeName = normalizeBindingTypeName(param.binding.typeName);
+    return typeName != "Reference" && typeName != "Pointer" &&
+           param.binding.typeCapabilityArg.empty();
+  };
+  auto bindingForName = [&](const std::string &name) -> const BindingInfo * {
+    if (const BindingInfo *paramBinding = findParamBinding(params, name)) {
+      return paramBinding;
+    }
+    const auto it = locals.find(name);
+    return it == locals.end() ? nullptr : &it->second;
+  };
+  for (size_t paramIndex = 0; paramIndex < calleeParams.size(); ++paramIndex) {
+    const ParameterInfo &param = calleeParams[paramIndex];
+    const Expr *arg = paramIndex < orderedArgs.size() ? orderedArgs[paramIndex] : nullptr;
+    if (paramIndex == packedParamIndex || arg == nullptr || arg == param.defaultExpr ||
+        !isMutableBorrowParam(param)) {
+      continue;
+    }
+    if (arg->kind != Expr::Kind::Name) {
+      continue; // literals and other temporaries, fields and elements
+    }
+    const BindingInfo *binding = bindingForName(arg->name);
+    if (binding == nullptr) {
+      continue;
+    }
+    const std::string typeName = normalizeBindingTypeName(binding->typeName);
+    if (!binding->isMutable && typeName != "Reference" && typeName != "Pointer") {
+      return failResolvedCallArgumentDiagnostic("mut parameter requires a mutable place: " +
+                                                arg->name);
+    }
+    for (size_t otherIndex = 0; otherIndex < orderedArgs.size(); ++otherIndex) {
+      const Expr *other = orderedArgs[otherIndex];
+      if (otherIndex == paramIndex || other == nullptr || other->kind != Expr::Kind::Name ||
+          other->name != arg->name) {
+        continue;
+      }
+      return failResolvedCallArgumentDiagnostic(
+          "borrow conflict: " + arg->name + " (root: " + arg->name + ", sink: " + param.name + ")");
+    }
+  }
+
   bool calleeIsUnsafe = false;
   if (context.resolvedDefinition != nullptr) {
     for (const auto &transform : context.resolvedDefinition->transforms) {

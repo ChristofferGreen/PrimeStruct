@@ -290,6 +290,12 @@
                                                const std::string &namespacePrefix,
                                                const std::vector<std::string> *definitionTemplateArgs,
                                                std::unordered_set<std::string> &visitingStructs);
+  // `expr` names a parameter that borrows its argument (no `copy`/`move`) and whose type owns
+  // resources (a container, a type with `Destroy`, or one holding either), so handing it out (return, assignment) would alias the
+  // caller's value (docs/spec/value-lifecycle.md, Parameter Passing). False in `[unsafe]` bodies.
+  bool isOwningBorrowedParameter(const std::vector<ParameterInfo> &params,
+                                 const Expr &expr,
+                                 const std::string &namespacePrefix);
   bool validateVectorIndexedRemovalHelperElementType(const BindingInfo &binding,
                                                      const std::string &helperName,
                                                      const std::string &namespacePrefix,

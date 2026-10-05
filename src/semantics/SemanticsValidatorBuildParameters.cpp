@@ -395,12 +395,16 @@ bool SemanticsValidator::buildParameters() {
         }
       }
       if (!hasExplicitBindingTypeTransform(param) && param.args.size() == 1) {
+        const bool isCopy = binding.isCopy;
+        const bool isMove = binding.isMove;
         BindingInfo inferredBinding;
         if (inferBindingTypeFromInitializer(param.args.front(), {}, {}, inferredBinding, &param)) {
           binding = std::move(inferredBinding);
         } else {
           (void)tryInferBindingTypeFromInitializer(param.args.front(), {}, {}, binding, hasAnyMathImport());
         }
+        binding.isCopy = isCopy;
+        binding.isMove = isMove;
       }
       if (isLifecycle && isCopyHelperName(def.fullPath) &&
           !hasExplicitBindingTypeTransform(param) && param.args.empty()) {

@@ -236,7 +236,7 @@ inline std::string makeExperimentalMapVariadicConstructorConformanceSource() {
   source += "import /std/collections/map/*\n";
   source += "\n";
   source += "[effects(heap_alloc), return<Map<K, V>> Comparable<K>]\n";
-  source += "wrapMap<K, V>([Map<K, V>] source) {\n";
+  source += "wrapMap<K, V>([Map<K, V> move] source) {\n";
   source += "  return(source)\n";
   source += "}\n";
   source += "\n";

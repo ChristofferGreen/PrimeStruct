@@ -34,7 +34,7 @@
   | Parameter | The callee gets | The caller |
   | --- | --- | --- |
   | `[T] x` | a read-only borrow of the argument (no copy) | keeps the value; it cannot change during the call |
-  | `[T mut] x` | a mutable borrow; its writes are the caller's | must pass a mutable place (binding, field or element of one) |
+  | `[T mut] x` | a mutable borrow; its writes are the caller's | must pass a mutable place (binding, field or element of one) or a temporary |
   | `[T copy] x` | its own read-only copy | keeps the value; `move(v)` hands it over without a copy |
   | `[T copy mut] x` | its own copy it may change | as for `copy` |
   | `[T move] x` | the value itself (passed by reference, no copy); the callee owns it | the binding ends: it is moved-from after the call |
@@ -49,10 +49,14 @@
   argument may be passed to any mode.
 - **Copies:** `copy` duplicates through the type's `Copy` helper when it has one (collections copy their elements),
   otherwise bitwise for `Copy` types.
-- **Implementation status (planned):** today's IR lowering already passes non-`mut` struct and collection arguments
-  by alias and treats `mut` parameters as borrows whose writes reach the caller; `copy` is accepted but has no effect,
-  `move` parameters do not exist yet, and the call-site checks above are not enforced. Tracked in TODO-5484 to
-  TODO-5487.
+- **Implementation status:** the IR lowering passes non-`mut` struct and collection arguments by alias and treats
+  `mut` parameters as borrows whose writes reach the caller. Semantics checks that a `mut` argument is a mutable place
+  (a non-`mut` binding is `mut parameter requires a mutable place`; literals and other temporaries, fields and elements
+  are accepted, and `Reference`/`Pointer`/capability-view parameters are exempt), that a binding passed to a `mut`
+  parameter is not passed to another parameter of the same call (`borrow conflict`), and that a borrowed parameter of
+  an owning type (a container, a type that defines `Destroy`, or one holding either) is not returned or assigned (`borrowed parameter escapes via
+  return` / `via assignment`). `copy` and `move` are parsed and recorded; their lowering (an owned copy, ownership
+  transfer) is planned in TODO-5485 and TODO-5486.
 
 ## Uninitialized Storage (draft)
 - **Purpose:** model explicit, inline uninitialized storage without implicit construction (C-style tagged storage and

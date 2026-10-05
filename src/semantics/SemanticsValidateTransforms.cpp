@@ -19,16 +19,16 @@ namespace {
 
 bool isNonTypeTransformName(const std::string &name) {
   return name == "return" || name == "effects" || name == "capabilities" || name == "type" ||
-         name == "mut" || name == "copy" ||
-         name == "restrict" || name == "align_bytes" || name == "align_kbytes" || name == "on_error" ||
+         name == "mut" || name == "copy" || name == "move" || name == "restrict" ||
+         name == "align_bytes" || name == "align_kbytes" || name == "on_error" ||
          name == "struct" || name == "enum" || name == "compute" || name == "workgroup_size" ||
-         name == "unsafe" || name == "pod" || name == "handle" || name == "gpu_lane" || name == "no_padding" ||
-         name == "platform_independent_padding" || name == "sum" || name == "public" || name == "private" ||
-         name == "static" || name == "single_type_to_return" || name == "stack" || name == "heap" ||
-         name == "buffer" || name == "spawn" || name == "ast" || name == "reflect" ||
-         name == "generate" || name == "Additive" || name == "Multiplicative" ||
-         name == "Comparable" || name == "Indexable" || name == "collection_type" ||
-         name == "key_value_type";
+         name == "unsafe" || name == "pod" || name == "handle" || name == "gpu_lane" ||
+         name == "no_padding" || name == "platform_independent_padding" || name == "sum" ||
+         name == "public" || name == "private" || name == "static" ||
+         name == "single_type_to_return" || name == "stack" || name == "heap" || name == "buffer" ||
+         name == "spawn" || name == "ast" || name == "reflect" || name == "generate" ||
+         name == "Additive" || name == "Multiplicative" || name == "Comparable" ||
+         name == "Indexable" || name == "collection_type" || name == "key_value_type";
 }
 
 bool isSingleTypeReturnCandidate(const Transform &transform) {

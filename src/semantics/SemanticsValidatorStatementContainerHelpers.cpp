@@ -2,6 +2,7 @@
 
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
+#include <functional>
 #include <string>
 #include <string_view>
 #include <unordered_set>
@@ -289,6 +290,88 @@ bool SemanticsValidator::validateVectorRelocationHelperElementType(
       " requires relocation-trivial vector element type until container move/reallocation semantics are "
       "implemented: " +
       binding.typeTemplateArg);
+}
+
+bool SemanticsValidator::isOwningBorrowedParameter(const std::vector<ParameterInfo> &params,
+                                                   const Expr &expr,
+                                                   const std::string &namespacePrefix) {
+  if (expr.kind != Expr::Kind::Name || expr.name == "this" ||
+      currentValidationState_.context.definitionIsUnsafe) {
+    return false;
+  }
+  const BindingInfo *paramBinding = findParamBinding(params, expr.name);
+  if (paramBinding == nullptr || paramBinding->isCopy || paramBinding->isMove) {
+    return false;
+  }
+  const std::vector<std::string> *definitionTemplateArgs = nullptr;
+  std::string definitionNamespacePrefix = namespacePrefix;
+  if (const auto defIt = defMap_.find(currentValidationState_.context.definitionPath);
+      defIt != defMap_.end()) {
+    definitionTemplateArgs = &defIt->second->templateArgs;
+    if (definitionNamespacePrefix.empty()) {
+      definitionNamespacePrefix = defIt->second->namespacePrefix;
+    }
+  }
+  // A type owns resources when it is a container, defines `Destroy`, or holds such a type; values
+  // of other types (scalars, strings, pointers, references, plain structs) copy safely.
+  std::unordered_set<std::string> visitingStructs;
+  std::function<bool(const std::string &, const std::string &, const std::vector<std::string> *)>
+      ownsResources = [&](const std::string &typeName,
+                          const std::string &typeNamespace,
+                          const std::vector<std::string> *templateArgs) -> bool {
+    if (templateArgsContainTypeName(templateArgs, typeName)) {
+      return false;
+    }
+    const std::string normalizedType = normalizeBindingTypeName(typeName);
+    std::string base = normalizedType;
+    std::string argText;
+    if (splitTemplateTypeName(normalizedType, base, argText)) {
+      base = normalizeBindingTypeName(base);
+      if (base == "Pointer" || base == "Reference") {
+        return false;
+      }
+      if (base == "vector" || base == "map" || base == "soa" || base == "uninitialized" ||
+          base == "Buffer") {
+        return true;
+      }
+      if (base == "array") {
+        std::vector<std::string> args;
+        return splitTopLevelTemplateArgs(argText, args) && args.size() == 1 &&
+               ownsResources(args.front(), typeNamespace, templateArgs);
+      }
+    }
+    const std::string structPath = resolveStructTypePath(base, typeNamespace, structNames_);
+    if (structPath.empty() || structNames_.count(structPath) == 0 ||
+        !visitingStructs.insert(structPath).second) {
+      return false;
+    }
+    if (defMap_.count(structPath + "/Destroy") > 0 ||
+        defMap_.count(structPath + "/DestroyStack") > 0 ||
+        defMap_.count(structPath + "/DestroyHeap") > 0 ||
+        defMap_.count(structPath + "/DestroyBuffer") > 0) {
+      return true;
+    }
+    const auto defIt = defMap_.find(structPath);
+    if (defIt == defMap_.end() || defIt->second == nullptr) {
+      return false;
+    }
+    const Definition &structDef = *defIt->second;
+    for (const auto &fieldStmt : structDef.statements) {
+      if (!fieldStmt.isBinding || isCompileTimeTypeBinding(fieldStmt)) {
+        continue;
+      }
+      BindingInfo fieldBinding;
+      if (resolveStructFieldBinding(structDef, fieldStmt, fieldBinding) &&
+          ownsResources(
+              bindingTypeText(fieldBinding), structDef.namespacePrefix, &structDef.templateArgs)) {
+        return true;
+      }
+    }
+    return false;
+  };
+  const std::string typeText = expectedBindingTypeText(*paramBinding);
+  return !typeText.empty() &&
+         ownsResources(typeText, definitionNamespacePrefix, definitionTemplateArgs);
 }
 
 } // namespace primec::semantics

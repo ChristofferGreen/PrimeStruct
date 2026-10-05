@@ -644,7 +644,7 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   CHECK(vectorStdlib.find("vectorInitSlot<T>(out, index, /at(values, index))") != std::string::npos);
   // Internal helpers defined directly; short-named push/count/at wrappers removed in merge (TODO-4632)
   CHECK(vectorStdlib.find("vectorCount<T>([Vector<T>] values)") != std::string::npos);
-  CHECK(vectorStdlib.find("vectorPush<T>([Vector<T> mut] values, [T] value)") != std::string::npos);
+  CHECK(vectorStdlib.find("vectorPush<T>([Vector<T> mut] values, [T move] value)") != std::string::npos);
   CHECK(vectorStdlib.find("vectorAt<T>([Vector<T>] values, [i32] index)") != std::string::npos);
   // Old short-named wrapper call expressions gone (compiler manifest handles dispatch)
   CHECK(vectorStdlib.find("/std/collections/vector/push<T>(result, /at(values, index))") ==
@@ -711,7 +711,7 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
         std::string::npos);
   CHECK(soaPublic.find("/std/collections/soa/soaVectorPush<T>(out, /at(values, index))") !=
         std::string::npos);
-  CHECK(soaPublic.find("/std/collections/soa/single<T>([T] value)") !=
+  CHECK(soaPublic.find("/std/collections/soa/single<T>([T move] value)") !=
         std::string::npos);
   CHECK(soaPublic.find("/std/collections/soa/from_aos<T>([vector<T>] values)") !=
         std::string::npos);
@@ -723,7 +723,7 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
         std::string::npos);
   CHECK(soaPublic.find("/std/collections/soa/reserve<T>([SoaVector<T> mut] values, [i32] capacity)") !=
         std::string::npos);
-  CHECK(soaPublic.find("/std/collections/soa/push<T>([SoaVector<T> mut] values, [T] value)") !=
+  CHECK(soaPublic.find("/std/collections/soa/push<T>([SoaVector<T> mut] values, [T move] value)") !=
         std::string::npos);
   CHECK(soaPublic.find("/std/collections/soa/to_aos<T>([SoaVector<T>] values)") !=
         std::string::npos);

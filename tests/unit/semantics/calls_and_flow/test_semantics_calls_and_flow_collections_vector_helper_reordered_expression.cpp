@@ -457,7 +457,7 @@ import /std/collections/*
 import /std/collections/vector/*
 
 [return<T> effects(heap_alloc)]
-wrapValues<T>([T] values) {
+wrapValues<T>([T move] values) {
   return(values)
 }
 
@@ -553,7 +553,7 @@ import /std/collections/*
 import /std/collections/vector/*
 
 [return<T> effects(heap_alloc)]
-wrapValues<T>([T] values) {
+wrapValues<T>([T move] values) {
   return(values)
 }
 
@@ -576,7 +576,7 @@ import /std/collections/*
 import /std/collections/vector/*
 
 [return<T> effects(heap_alloc)]
-wrapValues<T>([T] values) {
+wrapValues<T>([T move] values) {
   return(values)
 }
 
@@ -685,7 +685,7 @@ import /std/collections/*
 import /std/collections/vector/*
 
 [return<T> effects(heap_alloc)]
-wrapValues<T>([T] values) {
+wrapValues<T>([T move] values) {
   return(values)
 }
 
@@ -709,7 +709,7 @@ import /std/collections/*
 import /std/collections/vector/*
 
 [return<T> effects(heap_alloc)]
-wrapValues<T>([T] values) {
+wrapValues<T>([T move] values) {
   return(values)
 }
 
@@ -730,7 +730,7 @@ import /std/collections/*
 import /std/collections/vector/*
 
 [return<T> effects(heap_alloc)]
-wrapValues<T>([T] values) {
+wrapValues<T>([T move] values) {
   return(values)
 }
 
@@ -754,7 +754,7 @@ import /std/collections/*
 import /std/collections/vector/*
 
 [return<T> effects(heap_alloc)]
-wrapValues<T>([T] values) {
+wrapValues<T>([T move] values) {
   return(values)
 }
 

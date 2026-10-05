@@ -17,7 +17,7 @@ import /std/collections/*
 import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
-wrapValues<T>([T] values) {
+wrapValues<T>([T move] values) {
   return(values)
 }
 
@@ -50,7 +50,7 @@ import /std/collections/*
 import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
-wrapValues<T>([T] values) {
+wrapValues<T>([T move] values) {
   return(values)
 }
 
@@ -261,7 +261,7 @@ import /std/collections/*
 import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
-wrapValues<T>([T] values) {
+wrapValues<T>([T move] values) {
   return(values)
 }
 
@@ -298,7 +298,7 @@ import /std/collections/*
 import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
-wrapValues<T>([T] values) {
+wrapValues<T>([T move] values) {
   return(values)
 }
 
@@ -324,12 +324,12 @@ import /std/collections/*
 import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
-wrapOnce<T>([T] values) {
+wrapOnce<T>([T move] values) {
   return(values)
 }
 
 [return<T> effects(heap_alloc)]
-wrapTwice<T>([T] values) {
+wrapTwice<T>([T move] values) {
   return(wrapOnce(values))
 }
 
@@ -367,12 +367,12 @@ import /std/collections/*
 import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
-wrapOnce<T>([T] values) {
+wrapOnce<T>([T move] values) {
   return(values)
 }
 
 [return<T> effects(heap_alloc)]
-wrapTwice<T>([T] values) {
+wrapTwice<T>([T move] values) {
   return(wrapOnce(values))
 }
 
@@ -567,7 +567,7 @@ import /std/collections/*
 import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
-wrapValues<T>([T] values) {
+wrapValues<T>([T move] values) {
   return(values)
 }
 
@@ -596,7 +596,7 @@ import /std/collections/*
 import /std/collections/map/*
 
 [return<T> effects(heap_alloc)]
-wrapValues<T>([T] values) {
+wrapValues<T>([T move] values) {
   return(values)
 }
 

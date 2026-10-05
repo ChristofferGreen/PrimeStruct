@@ -767,12 +767,12 @@ main() {
 )";
   std::string error;
   // TODO-5050 shape (a) (RESOLVED): .ref(...) on this borrowed helper-
-  // return receiver now resolves correctly. The bare soaVectorReserve<T>(...)
-  // call form isn't currently tracked by the borrow checker (unlike
-  // .push()), so full validation now succeeds.
-  CHECK(validateProgram(source, "/main", error));
+  // return receiver now resolves correctly. soaVectorReserve<T>(...) takes its
+  // vector as a `mut` parameter, which needs a mutable place, and `values` is
+  // not `mut` (docs/spec/value-lifecycle.md, Parameter Passing).
+  CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.empty());
+  CHECK(error.find("mut parameter requires a mutable place: values") != std::string::npos);
 }
 
 TEST_CASE("experimental soa inline location borrowed helper-return ref validates direct soa wildcard import") {

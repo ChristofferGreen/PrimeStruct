@@ -336,7 +336,7 @@ inline std::string makeStdlibWrapperVectorConstructorExplicitVectorBindingSource
   source += "import /std/collections/*\n";
   source += "import /std/collections/vector/*\n\n";
   source += "[return<T> effects(heap_alloc)]\n";
-  source += "wrapValues<T>([T] values) {\n";
+  source += "wrapValues<T>([T move] values) {\n";
   source += "  return(values)\n";
   source += "}\n\n";
   source += "[return<Vector<i32>> effects(heap_alloc)]\n";
@@ -371,7 +371,7 @@ inline std::string makeStdlibWrapperVectorConstructorExplicitVectorBindingMismat
   source += "import /std/collections/*\n";
   source += "import /std/collections/vector/*\n\n";
   source += "[return<T> effects(heap_alloc)]\n";
-  source += "wrapValues<T>([T] values) {\n";
+  source += "wrapValues<T>([T move] values) {\n";
   source += "  return(values)\n";
   source += "}\n\n";
   source += "[return<Vector<i32>> effects(heap_alloc)]\n";
@@ -391,7 +391,7 @@ inline std::string makeStdlibWrapperVectorConstructorAutoInferenceSource() {
   source += "import /std/collections/*\n";
   source += "import /std/collections/vector/*\n\n";
   source += "[return<T> effects(heap_alloc)]\n";
-  source += "wrapValues<T>([T] values) {\n";
+  source += "wrapValues<T>([T move] values) {\n";
   source += "  return(values)\n";
   source += "}\n\n";
   source += "[return<auto> effects(heap_alloc)]\n";
@@ -454,7 +454,7 @@ inline std::string makeStdlibWrapperVectorConstructorAutoInferenceMismatchSource
   source += "import /std/collections/*\n";
   source += "import /std/collections/vector/*\n\n";
   source += "[return<T> effects(heap_alloc)]\n";
-  source += "wrapValues<T>([T] values) {\n";
+  source += "wrapValues<T>([T move] values) {\n";
   source += "  return(values)\n";
   source += "}\n\n";
   source += "[effects(heap_alloc), return<int>]\n";
@@ -470,7 +470,7 @@ inline std::string makeStdlibWrapperVectorConstructorReceiverConformanceSource()
   source += "import /std/collections/*\n";
   source += "import /std/collections/vector/*\n\n";
   source += "[return<T> effects(heap_alloc)]\n";
-  source += "wrapValues<T>([T] values) {\n";
+  source += "wrapValues<T>([T move] values) {\n";
   source += "  return(values)\n";
   source += "}\n\n";
   source += "[effects(heap_alloc), return<int>]\n";

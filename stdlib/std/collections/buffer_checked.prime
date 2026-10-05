@@ -47,7 +47,7 @@ namespace std {
   }
 
   [public return<void>]
-  bufferWriteChecked<T>([Pointer<T> mut] ptr, [i32] index, [i32] count, [T] value) {
+  bufferWriteChecked<T>([Pointer<T> mut] ptr, [i32] index, [i32] count, [T move] value) {
     [Pointer<T> mut] slot{/std/intrinsics/memory/at(ptr, index, count)}
     *slot = value
   }

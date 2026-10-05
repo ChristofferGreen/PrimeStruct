@@ -578,7 +578,7 @@ namespace std {
   }
 
   [return<void>]
-  soaColumnInitSlot<T>([SoaColumn<T> mut] values, [i32] index, [T] value) {
+  soaColumnInitSlot<T>([SoaColumn<T> mut] values, [i32] index, [T move] value) {
     [Pointer<uninitialized<T>> mut] slot{soaColumnSlotUnsafe<T>(values, index)}
     init(*slot, value)
   }

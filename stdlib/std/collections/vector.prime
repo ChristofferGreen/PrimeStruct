@@ -91,7 +91,7 @@ namespace std {
   }
 
   [return<void>]
-  vectorInitSlot<T>([Vector<T> mut] values, [i32] index, [T] value) {
+  vectorInitSlot<T>([Vector<T> mut] values, [i32] index, [T move] value) {
     [Pointer<uninitialized<T>> mut] slot{vectorSlotUnsafe<T>(values, index)}
     init(*slot, value)
   }
@@ -229,7 +229,7 @@ namespace std {
   }
 
   [public effects(heap_alloc), return<void>]
-  vectorPush<T>([Vector<T> mut] values, [T] value) {
+  vectorPush<T>([Vector<T> mut] values, [T move] value) {
     vectorCheckShape<T>(values)
     if(values.field_count() == values.field_capacity()) {
       [i32 mut] nextCapacity{values.field_capacity()}
@@ -309,7 +309,7 @@ namespace std {
   }
 
   [public effects(heap_alloc), return<void>]
-  vectorPushRef<T>([Reference<Vector<T>> mut] values, [T] value) {
+  vectorPushRef<T>([Reference<Vector<T>> mut] values, [T move] value) {
     [Vector<T> mut] materialized{values}
     vectorPush<T>(materialized, value)
     vectorSyncRef<T>(values, materialized)
@@ -385,7 +385,7 @@ namespace std {
 }
 
 [public effects(heap_alloc), return<void>]
-/std/collections/vector/push<T>([/std/collections/vector/Vector<T> mut] values, [T] value) {
+/std/collections/vector/push<T>([/std/collections/vector/Vector<T> mut] values, [T move] value) {
   /std/collections/vector/vectorPush<T>(values, value)
 }
 

@@ -87,7 +87,7 @@ namespace std {
   }
 
   [public effects(heap_alloc), return<void>]
-  soaColumnPush<T>([SoaColumn<T> mut] values, [T] value) {
+  soaColumnPush<T>([SoaColumn<T> mut] values, [T move] value) {
     soaColumnCheckShape<T>(values)
     if(values.field_count() == values.field_capacity()) {
       [i32 mut] nextCapacity{values.field_capacity()}
