@@ -381,7 +381,7 @@ main() {
   }
   [Buffer<i32>] direct{try(directStatus)}
   [Result<Buffer<i32>, GfxError>] mappedStatus{
-    Result.map(make_buffer(), []([Buffer<i32> move] value) { return(value) })
+    Result.map(make_buffer(), []([Buffer<i32>] value) { return(value) })
   }
   [Buffer<i32>] mappedValue{try(mappedStatus)}
   [Result<Buffer<i32>, GfxError>] chainedStatus{
@@ -389,7 +389,7 @@ main() {
   }
   [Buffer<i32>] chainedValue{try(chainedStatus)}
   [Result<Buffer<i32>, GfxError>] combinedStatus{
-    Result.map2(make_buffer(), make_buffer(), []([Buffer<i32>] left, [Buffer<i32> move] right) { return(right) })
+    Result.map2(make_buffer(), make_buffer(), []([Buffer<i32>] left, [Buffer<i32>] right) { return(right) })
   }
   [Buffer<i32>] combinedValue{try(combinedStatus)}
   [array<i32>] directOut{direct.readback()}

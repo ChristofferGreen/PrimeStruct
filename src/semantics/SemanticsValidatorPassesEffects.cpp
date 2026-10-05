@@ -114,12 +114,9 @@ bool SemanticsValidator::resolveExecutionEffects(const Expr &expr, std::unordere
       return failPassesEffectsDiagnostic("unsafe transform is not allowed on executions: " + context);
     } else if (transform.name == "copy") {
       return failPassesEffectsDiagnostic("copy transform is not allowed on executions: " + context);
-    } else if (transform.name == "move") {
-      return failPassesEffectsDiagnostic("move transform is not allowed on executions: " + context);
     } else if (transform.name == "restrict") {
       return failPassesEffectsDiagnostic("restrict transform is not allowed on executions: " + context);
-    } else if (transform.name == "stack" || transform.name == "heap" ||
-               transform.name == "buffer") {
+    } else if (transform.name == "stack" || transform.name == "heap" || transform.name == "buffer") {
       return failPassesEffectsDiagnostic("placement transforms are not supported: " + context);
     } else if (transform.name == "align_bytes" || transform.name == "align_kbytes") {
       return failPassesEffectsDiagnostic("alignment transforms are not supported on executions: " + context);

@@ -382,10 +382,6 @@ BindingInfo getBindingInfo(const Expr &expr) {
       info.isCopy = true;
       continue;
     }
-    if (transform.name == "move" && transform.templateArgs.empty() && transform.arguments.empty()) {
-      info.isMove = true;
-      continue;
-    }
     if (transform.name == "static" && transform.templateArgs.empty() && transform.arguments.empty()) {
       info.isStatic = true;
       continue;

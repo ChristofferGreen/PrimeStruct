@@ -100,8 +100,9 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5485 | `[T copy]` parameters receive their own copy | ready | params |
-| TODO-5486 | `[T move]` parameters take ownership | ready | params-move |
+| TODO-5484 | Parameter modes: mode flags and call-site borrow checks | ready | params |
+| TODO-5485 | `[T copy]` parameters receive their own copy | blocked | params |
+| TODO-5486 | `[T move]` parameters take ownership | blocked | params |
 | TODO-5487 | Copying a Vector copies its elements | blocked | containers |
 | TODO-5488 | Raw heap operations require `[unsafe]` | ready | unsafe |
 | TODO-5489 | Container element borrows keep the container borrowed | ready | borrows |
@@ -111,8 +112,7 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5485 (params): `[T copy]` parameters receive their own copy
-- TODO-5486 (params-move): `[T move]` parameters take ownership
+- TODO-5484 (params): parameter mode flags and call-site borrow checks
 - TODO-5488 (unsafe): raw heap operations require `[unsafe]`
 - TODO-5489 (borrows): container element borrows keep the container borrowed
 - TODO-5490 (escapes): pointers to locals cannot escape their scope
@@ -120,17 +120,18 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5488
-2. TODO-5486
-3. TODO-5485
-4. TODO-5487 (after TODO-5485)
-5. TODO-5491
-6. TODO-5490
-7. TODO-5489
+1. TODO-5484
+2. TODO-5488
+3. TODO-5485 (after TODO-5484)
+4. TODO-5486 (after TODO-5484)
+5. TODO-5487 (after TODO-5485)
+6. TODO-5491
+7. TODO-5490
+8. TODO-5489
 
 ### Priority Lanes
 
-- Memory safety and parameter modes (docs/spec/value-lifecycle.md Parameter Passing; docs/spec/type-system.md Ownership and Mutability): TODO-5485, TODO-5486, TODO-5487, TODO-5488, TODO-5489, TODO-5490, TODO-5491
+- Memory safety and parameter modes (docs/spec/value-lifecycle.md Parameter Passing; docs/spec/type-system.md Ownership and Mutability): TODO-5484, TODO-5485, TODO-5486, TODO-5487, TODO-5488, TODO-5489, TODO-5490, TODO-5491
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
 ### Execution Queue
@@ -139,9 +140,24 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 
 ### Task Blocks
 
-- [ ] TODO-5485: `[T copy]` parameters receive their own copy
+- [ ] TODO-5484: Parameter modes: mode flags and call-site borrow checks
   - owner: ai
   - status: ready
+  - created_at: 2026-10-05
+  - phase: Memory safety
+  - parallel_track: params
+  - scope: Implement the Parameter Passing table of `docs/spec/value-lifecycle.md` in semantics. Record `copy`, `move` and `mut` on each parameter (`parseBindingInfo`, `SemanticsHelpersCore.cpp`; `copy` is parsed and dropped today, `move` is not a parameter transform yet). At each call: an argument to a `mut` parameter (without `copy`/`move`) must be a mutable place (a `mut` binding, or a field or element of one); a place passed to a `mut` parameter must not also be passed to another parameter of the same call; a borrowed parameter (`[T]`, `[T mut]`) cannot escape (return, store into a longer-lived place, `move`). Update the legacy AST C++ emitter (`src/emitter/EmitterEmitSetup.h` `appendParam`) so `[i32 mut]` is `int &` like the IR lowering. Audit `[T mut]` parameters in stdlib/tests/docs for ones that only wanted scratch (survey found none in stdlib) and rewrite them to `[T copy mut]` (accepted as `mut` scratch until TODO-5485 lands).
+  - implementation_notes: IR lowering already gives `mut` parameters borrow semantics (`emitInlineDefinitionCallParameters`, `src/ir_lowerer/IrLowererInlineParamHelpers.cpp:779-875`) and passes non-`mut` struct arguments by alias (:877-895); this leaf is the checks, not the lowering.
+  - acceptance:
+    - diagnostics with tests: `mut parameter requires a mutable place: x` for a non-`mut` binding or a literal argument to a `[T mut]` parameter (temporaries from calls are accepted); `borrow conflict` when one place is passed to a `mut` parameter and another parameter of the same call; returning or storing a borrowed parameter is rejected
+    - `move` and `copy` parsed as parameter transforms and stored; `move` on a non-parameter binding is a diagnostic
+    - full release gate and `scripts/differential_opt_check.py` green; every corpus program that fails to compile now is listed in the commit with the reason
+  - stop_rule: no lowering changes beyond the legacy AST C++ emitter; do not change `copy`/`move` behavior yet.
+
+- [ ] TODO-5485: `[T copy]` parameters receive their own copy
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5484
   - created_at: 2026-10-05
   - phase: Memory safety
   - parallel_track: params
@@ -153,10 +169,11 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 
 - [ ] TODO-5486: `[T move]` parameters take ownership
   - owner: ai
-  - status: ready
+  - status: blocked
+  - blocked_on: TODO-5484
   - created_at: 2026-10-05
   - phase: Memory safety
-  - parallel_track: params-move
+  - parallel_track: params
   - scope: `[T move]` / `[T move mut]`: the argument is passed by reference without a copy, the caller's binding is moved-from after the call (`use-after-move` until reassigned; `move(...)` at the call site optional), the caller no longer destroys it, and the callee destroys it at scope end unless it moved it on. Migrate ownership-taking stdlib entry points (vector/map `push`/`insert` element parameters) to `move`.
   - acceptance:
     - semantic tests: use of the caller's binding after passing it to a `move` parameter is `use-after-move`; passing a temporary or `move(x)` is accepted

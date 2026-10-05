@@ -89,10 +89,9 @@ bool splitTopLevelTemplateArgs(const std::string &text, std::vector<std::string>
 std::string bindingTypeName(const Expr &expr) {
   std::string typeName;
   for (const auto &transform : expr.transforms) {
-    if (transform.name == "mut" || transform.name == "copy" || transform.name == "move" ||
-        transform.name == "restrict" || transform.name == "public" || transform.name == "private" ||
-        transform.name == "static" || transform.name == "align_bytes" ||
-        transform.name == "align_kbytes") {
+    if (transform.name == "mut" || transform.name == "copy" || transform.name == "restrict" ||
+        transform.name == "public" || transform.name == "private" || transform.name == "static" ||
+        transform.name == "align_bytes" || transform.name == "align_kbytes") {
       continue;
     }
     if (!transform.arguments.empty()) {

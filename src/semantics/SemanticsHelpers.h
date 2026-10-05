@@ -38,10 +38,6 @@ struct BindingInfo {
   // of typeTemplateArg see no behavior change.
   std::string typeCapabilityArg;
   bool isMutable = false;
-  // Parameter modes (docs/spec/value-lifecycle.md, Parameter Passing): `copy` gives the callee its own
-  // copy, `move` hands it ownership; neither set means the parameter borrows its argument.
-  bool isCopy = false;
-  bool isMove = false;
   bool isEntryArgString = false;
   bool isUnsafeReference = false;
   std::string referenceRoot;

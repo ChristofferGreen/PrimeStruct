@@ -16,9 +16,8 @@ bool isBindingMutable(const Expr &expr) {
 }
 
 bool isBindingQualifierName(const std::string &name) {
-  return name == "public" || name == "private" || name == "static" || name == "mut" ||
-         name == "copy" || name == "move" || name == "restrict" || name == "align_bytes" ||
-         name == "align_kbytes";
+  return name == "public" || name == "private" || name == "static" || name == "mut" || name == "copy" ||
+         name == "restrict" || name == "align_bytes" || name == "align_kbytes";
 }
 
 bool hasExplicitBindingTypeTransform(const Expr &expr) {

@@ -17,12 +17,13 @@ bool isUnsupportedSumPayloadEnvelope(const Transform &transform) {
          transform.name == "effects" || transform.name == "capabilities" ||
          transform.name == "on_error" || transform.name == "compute" ||
          transform.name == "workgroup_size" || transform.name == "unsafe" ||
-         transform.name == "require" || transform.name == "ast" || transform.name == "reflect" ||
-         transform.name == "generate" || transform.name == "static" || transform.name == "public" ||
-         transform.name == "private" || transform.name == "mut" || transform.name == "copy" ||
-         transform.name == "move" || transform.name == "restrict" ||
-         transform.name == "align_bytes" || transform.name == "align_kbytes" ||
-         isStructTransformName(transform.name);
+         transform.name == "require" ||
+         transform.name == "ast" || transform.name == "reflect" ||
+         transform.name == "generate" || transform.name == "static" ||
+         transform.name == "public" || transform.name == "private" ||
+         transform.name == "mut" || transform.name == "copy" ||
+         transform.name == "restrict" || transform.name == "align_bytes" ||
+         transform.name == "align_kbytes" || isStructTransformName(transform.name);
 }
 
 bool isLowerCamelIdentifier(const std::string &name) {
@@ -264,13 +265,6 @@ bool SemanticsValidator::validateDefinitionBuildTransforms(
     }
     if (transform.name == "copy") {
       if (addTransformDiagnostic("copy transform is only supported on bindings and parameters: " + def.fullPath)) {
-        return false;
-      }
-      break;
-    }
-    if (transform.name == "move") {
-      if (addTransformDiagnostic("move transform is only supported on parameters: " +
-                                 def.fullPath)) {
         return false;
       }
       break;

@@ -569,9 +569,9 @@ bool appendStructLayoutField(const std::string &structPath,
 }
 
 bool isLayoutQualifierName(const std::string &name) {
-  return name == "public" || name == "private" || name == "static" || name == "mut" ||
-         name == "copy" || name == "move" || name == "restrict" || name == "align_bytes" ||
-         name == "align_kbytes" || name == "pod" || name == "handle" || name == "gpu_lane";
+  return name == "public" || name == "private" || name == "static" || name == "mut" || name == "copy" ||
+         name == "restrict" || name == "align_bytes" || name == "align_kbytes" || name == "pod" ||
+         name == "handle" || name == "gpu_lane";
 }
 
 IrStructFieldCategory fieldCategory(const Expr &expr) {

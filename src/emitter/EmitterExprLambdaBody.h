@@ -75,9 +75,7 @@
       const std::string typeNamespace = param.namespacePrefix.empty() ? expr.namespacePrefix : param.namespacePrefix;
       std::string paramType = bindingTypeToCpp(paramInfo, typeNamespace, importAliases, structTypeMap);
       const bool refCandidate = isReferenceCandidate(paramInfo);
-      // Parameters borrow their arguments unless they take a copy; a `mut` scalar borrows mutably.
-      const bool passByRef =
-          !paramInfo.isCopy && (refCandidate || paramInfo.isMutable || paramInfo.isMove);
+      const bool passByRef = refCandidate && !paramInfo.isCopy;
       if (passByRef) {
         if (!paramInfo.isMutable && paramType.rfind("const ", 0) != 0) {
           out << "const ";

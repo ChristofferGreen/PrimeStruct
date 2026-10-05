@@ -16,7 +16,6 @@ public:
     std::string typeTemplateArg;
     bool isMutable = false;
     bool isCopy = false;
-    bool isMove = false;
     bool isStatic = false;
     BindingVisibility visibility = BindingVisibility::Public;
   };

@@ -424,14 +424,6 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
       return failReturnEscapeDiagnostic("slice escapes via return (owner: " +
                                         sliceEscapeRoot + ")");
     }
-    // A parameter without `copy`/`move` borrows the caller's value (docs/spec/value-lifecycle.md,
-    // Parameter Passing); returning it would hand out the caller's storage. Values that copy
-    // trivially (scalars, strings, pointers, plain structs) are returned by copy.
-    if (!expectedReferenceReturnTarget.has_value() &&
-        isOwningBorrowedParameter(params, returnExpr, namespacePrefix)) {
-      return failReturnEscapeDiagnostic("borrowed parameter escapes via return: " +
-                                        returnExpr.name);
-    }
     auto isStandaloneBorrowStorageExpr = [&](const Expr &candidate) {
       if (candidate.kind == Expr::Kind::Name) {
         return true;
