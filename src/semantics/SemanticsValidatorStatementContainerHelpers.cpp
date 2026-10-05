@@ -291,4 +291,31 @@ bool SemanticsValidator::validateVectorRelocationHelperElementType(
       binding.typeTemplateArg);
 }
 
+bool SemanticsValidator::isOwningBorrowedParameter(const std::vector<ParameterInfo> &params,
+                                                   const Expr &expr,
+                                                   const std::string &namespacePrefix) {
+  if (expr.kind != Expr::Kind::Name || expr.name == "this" ||
+      currentValidationState_.context.definitionIsUnsafe) {
+    return false;
+  }
+  const BindingInfo *paramBinding = findParamBinding(params, expr.name);
+  if (paramBinding == nullptr || paramBinding->isCopy || paramBinding->isMove) {
+    return false;
+  }
+  const std::vector<std::string> *definitionTemplateArgs = nullptr;
+  std::string definitionNamespacePrefix = namespacePrefix;
+  if (const auto defIt = defMap_.find(currentValidationState_.context.definitionPath);
+      defIt != defMap_.end()) {
+    definitionTemplateArgs = &defIt->second->templateArgs;
+    if (definitionNamespacePrefix.empty()) {
+      definitionNamespacePrefix = defIt->second->namespacePrefix;
+    }
+  }
+  const std::string typeText = expectedBindingTypeText(*paramBinding);
+  std::unordered_set<std::string> visitingStructs;
+  return !typeText.empty() &&
+         !isRelocationTrivialContainerElementType(
+             typeText, definitionNamespacePrefix, definitionTemplateArgs, visitingStructs);
+}
+
 } // namespace primec::semantics

@@ -1011,13 +1011,13 @@ swallow_gfx_error([GfxError] err) {}
 main() {
   [Result<Buffer<i32>, GfxError>] directStatus{make_buffer()}
   [Result<Buffer<i32>, GfxError>] mappedStatus{
-    Result.map(make_buffer(), []([Buffer<i32>] value) { return(value) })
+    Result.map(make_buffer(), []([Buffer<i32> move] value) { return(value) })
   }
   [Result<Buffer<i32>, GfxError>] chainedStatus{
     Result.and_then(make_buffer(), []([Buffer<i32>] value) { return(Result.ok(value)) })
   }
   [Result<Buffer<i32>, GfxError>] combinedStatus{
-    Result.map2(make_buffer(), make_buffer(), []([Buffer<i32>] left, [Buffer<i32>] right) { return(right) })
+    Result.map2(make_buffer(), make_buffer(), []([Buffer<i32>] left, [Buffer<i32> move] right) { return(right) })
   }
   [GfxError] err{queueSubmitFailed()}
   [Result<Buffer<i32>, GfxError>] failedStatus{err.result<Buffer<i32>>()}

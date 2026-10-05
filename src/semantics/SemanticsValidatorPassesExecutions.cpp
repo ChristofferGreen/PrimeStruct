@@ -36,6 +36,10 @@ bool SemanticsValidator::validateExecutions() {
       if (transform.name == "copy") {
         return failPassesExecutionsDiagnostic("copy transform is not allowed on executions: " + exec.fullPath);
       }
+      if (transform.name == "move") {
+        return failPassesExecutionsDiagnostic("move transform is not allowed on executions: " +
+                                              exec.fullPath);
+      }
       if (transform.name == "restrict") {
         return failPassesExecutionsDiagnostic("restrict transform is not allowed on executions: " + exec.fullPath);
       }

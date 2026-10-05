@@ -49,10 +49,14 @@
   argument may be passed to any mode.
 - **Copies:** `copy` duplicates through the type's `Copy` helper when it has one (collections copy their elements),
   otherwise bitwise for `Copy` types.
-- **Implementation status (planned):** today's IR lowering already passes non-`mut` struct and collection arguments
-  by alias and treats `mut` parameters as borrows whose writes reach the caller; `copy` is accepted but has no effect,
-  `move` parameters do not exist yet, and the call-site checks above are not enforced. Tracked in TODO-5484 to
-  TODO-5487.
+- **Implementation status:** the IR lowering passes non-`mut` struct and collection arguments by alias and treats
+  `mut` parameters as borrows whose writes reach the caller. Semantics checks that a `mut` argument is a mutable place
+  (a literal or a non-`mut` binding is `mut parameter requires a mutable place`; temporaries, fields and elements are
+  accepted, and `Reference`/`Pointer`/capability-view parameters are exempt), that a binding passed to a `mut`
+  parameter is not passed to another parameter of the same call (`borrow conflict`), and that a borrowed parameter of
+  an owning type (one that is not relocation-trivial) is not returned or assigned (`borrowed parameter escapes via
+  return` / `via assignment`). `copy` and `move` are parsed and recorded; their lowering (an owned copy, ownership
+  transfer) is planned in TODO-5485 and TODO-5486.
 
 ## Uninitialized Storage (draft)
 - **Purpose:** model explicit, inline uninitialized storage without implicit construction (C-style tagged storage and

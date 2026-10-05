@@ -340,6 +340,10 @@ PhaseStatus SemanticsValidator::validateBindingPhase2([[maybe_unused]] const std
                         /*allowCapabilityArg=*/true)) {
     return st.done(false);
   }
+  if (info.isMove) {
+    return st.done(
+        failBindingDiagnostic("move transform is only supported on parameters: " + stmt.name));
+  }
   std::string parsedSoaElementType;
   if (extractExperimentalSoaVectorElementType(info, parsedSoaElementType) &&
       isSoaVectorStructElementType(parsedSoaElementType,

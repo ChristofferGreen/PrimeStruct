@@ -215,13 +215,18 @@ bool parseBindingInfo(const Expr &expr,
       info.isMutable = true;
       continue;
     }
-    if (transform.name == "copy") {
+    if (transform.name == "copy" || transform.name == "move") {
       if (!transform.templateArgs.empty()) {
         error = "binding transforms do not take template arguments";
         return false;
       }
       if (!transform.arguments.empty()) {
         error = "binding transforms do not take arguments";
+        return false;
+      }
+      (transform.name == "copy" ? info.isCopy : info.isMove) = true;
+      if (info.isCopy && info.isMove) {
+        error = "binding cannot be both copy and move";
         return false;
       }
       continue;
