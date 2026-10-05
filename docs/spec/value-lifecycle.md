@@ -74,8 +74,10 @@
   `assign` of an owning value destroys the old value and copies the new one. A `copy` or `move` parameter is
   destroyed by the callee when its body ends (the caller does not destroy a binding it passed to a `move` parameter),
   `init(slot, x)` hands `x` to the storage, and dropping a container slot (`pop`, `clear`, `Destroy` of the container)
-  destroys the element. Structs whose fields all have one scalar type, and locals left by error propagation out of a
-  nested block, are not destroyed yet (TODO-5497); both only leak.
+  destroys the element. Error propagation (`?`) needs no extra cleanup: a handler does not flow into nested blocks, so
+  `?` only runs at the top level of the body that declares `on_error`, and leaving through it destroys that body's
+  owning locals like a `return`. A struct with a single scalar field is not destroyed or copied through its helpers
+  yet (TODO-5498); it only leaks.
 
 ## Uninitialized Storage (draft)
 - **Purpose:** model explicit, inline uninitialized storage without implicit construction (C-style tagged storage and

@@ -779,8 +779,25 @@ StructLayoutResolutionAdapters makeStructLayoutResolutionAdaptersWithOwnedSlotSt
     const ValueKindFromTypeNameFn &valueKindFromTypeName,
     std::string &error) {
   StructLayoutResolutionAdapters adapters;
-  adapters.structArrayInfo =
-      makeStructArrayInfoAdapters(fieldIndex, resolveStructTypeName, valueKindFromTypeName);
+  // A struct with lifecycle helpers keeps the struct value representation even when its fields
+  // share one scalar type, so it is copied and destroyed through those helpers. Single-field
+  // structs stay array handles: a Result of one packs its payload as a scalar.
+  StructLayoutFieldIndex arrayCandidateIndex;
+  for (const auto &[structPath, fields] : fieldIndex) {
+    bool hasLifecycleHelper = false;
+    if (fields.size() < 2) {
+      arrayCandidateIndex.emplace(structPath, fields);
+      continue;
+    }
+    for (const char *helperName : {"/Destroy", "/DestroyStack", "/Copy", "/Move"}) {
+      hasLifecycleHelper = hasLifecycleHelper || defMap.count(structPath + helperName) > 0;
+    }
+    if (!hasLifecycleHelper) {
+      arrayCandidateIndex.emplace(structPath, fields);
+    }
+  }
+  adapters.structArrayInfo = makeStructArrayInfoAdapters(
+      arrayCandidateIndex, resolveStructTypeName, valueKindFromTypeName);
   adapters.structSlotResolution = makeStructSlotResolutionAdaptersWithOwnedState(
       fieldIndex, defMap, resolveStructTypeName, valueKindFromTypeName, error);
   return adapters;

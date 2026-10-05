@@ -275,4 +275,51 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("a struct whose fields share one scalar type is copied and destroyed") {
+  program_matrix::ProgramCase program;
+  program.name = "destroy_uniform_field_struct";
+  program.source = R"(
+[struct]
+Solo() {
+  [i32 mut] id{0i32}
+  [i32 mut] tag{0i32}
+
+  [public]
+  Copy([Reference<Self>] other) {
+    assign(this.id, plus(other.id, 10i32))
+    assign(this.tag, other.tag)
+  }
+
+  [public effects(io_out)]
+  Destroy() {
+    print_line(this.id)
+  }
+}
+
+[effects(io_out) return<void>]
+take_copy([Solo copy] value) {
+  print_line(200i32)
+}
+
+[effects(io_out) return<int>]
+main() {
+  [Solo mut] a{Solo{1i32, 0i32}}
+  [Solo] b{a}
+  print_line(100i32)
+  assign(a, Solo{2i32, 0i32})
+  print_line(101i32)
+  take_copy(b)
+  print_line(102i32)
+  if(true) {
+    [Solo] inner{Solo{3i32, 0i32}}
+  }
+  print_line(103i32)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "100\n1\n101\n200\n21\n102\n3\n103\n11\n2\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();
