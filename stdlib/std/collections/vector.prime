@@ -52,7 +52,7 @@ namespace std {
     [mut effects(heap_alloc)]
     Copy([Reference<Self>] other) {
       [i32] itemCount{other.fieldCount}
-      [i32 mut] allocCount{other.fieldCapacity}
+      [mut] allocCount{other.fieldCapacity}
       if(allocCount == 0) {
         allocCount = 1
       }

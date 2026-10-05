@@ -26,12 +26,7 @@ bool SemanticsValidator::inferQuerySnapshotData(const std::vector<ParameterInfo>
   };
 
   auto withPreservedError = [&](const std::function<bool()> &fn) {
-    const std::string previousError = error_;
-    error_.clear();
-    const bool ok = fn();
-    error_.clear();
-    error_ = previousError;
-    return ok;
+    return runWithPreservedDiagnostic(fn);
   };
 
   CallSnapshotData callData;
@@ -164,12 +159,7 @@ bool SemanticsValidator::inferCallSnapshotDataUncached(const std::vector<Paramet
   out = {};
 
   auto withPreservedError = [&](const std::function<bool()> &fn) {
-    const std::string previousError = error_;
-    error_.clear();
-    const bool ok = fn();
-    error_.clear();
-    error_ = previousError;
-    return ok;
+    return runWithPreservedDiagnostic(fn);
   };
 
   if (isTaskWaitExpr(expr)) {
@@ -351,12 +341,7 @@ void SemanticsValidator::forEachLocalAwareSnapshotCall(
   using ActiveLocalBindings = std::unordered_map<std::string, BindingInfo>;
 
   auto withPreservedError = [&](const std::function<bool()> &fn) {
-    const std::string previousError = error_;
-    error_.clear();
-    const bool ok = fn();
-    error_.clear();
-    error_ = previousError;
-    return ok;
+    return runWithPreservedDiagnostic(fn);
   };
 
   auto inferBindingForLocals = [&](const Definition &def,

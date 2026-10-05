@@ -408,12 +408,7 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
   };
 
   auto withPreservedError = [&](const std::function<bool()> &fn) {
-    const std::string previousError = error_;
-    error_.clear();
-    const bool ok = fn();
-    error_.clear();
-    error_ = previousError;
-    return ok;
+    return runWithPreservedDiagnostic(fn);
   };
 
   auto shouldCaptureGraphBinding = [&](const Definition &def, const Expr &bindingExpr) {

@@ -100,27 +100,23 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5493 | Inferred bindings in generic struct helpers leak a diagnostic span | ready | diagnostics |
 | TODO-5498 | Destroy and copy single-field structs | ready | lifecycle |
 | TODO-5494 | Local pointers cannot escape into containers or outer locals | ready | escapes |
 | TODO-5483 | Verify arm64 SextI32 on a macOS machine | deferred | ir-semantics |
 
 ### Ready Now
 
-- TODO-5493 (diagnostics): inferred bindings in generic struct helpers leak a diagnostic span
 - TODO-5494 (escapes): local pointers cannot escape into containers or outer locals
 - TODO-5498 (lifecycle): destroy and copy single-field structs
 
 ### Immediate Next 10
 
-1. TODO-5493
-2. TODO-5494
-3. TODO-5498
+1. TODO-5494
+2. TODO-5498
 
 ### Priority Lanes
 
 - Memory safety and parameter modes (docs/spec/value-lifecycle.md Parameter Passing; docs/spec/type-system.md Ownership and Mutability): TODO-5494, TODO-5498
-- Diagnostics: TODO-5493
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
 ### Execution Queue
@@ -128,18 +124,6 @@ of sync with them.
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 ### Task Blocks
-
-- [ ] TODO-5493: Inferred bindings in generic struct helpers leak a diagnostic span
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-05
-  - phase: Diagnostics
-  - parallel_track: diagnostics
-  - scope: Validating an untyped binding inferred from a field of `other` in a generic struct helper such as `Copy([Reference<Self>] other)` (for example `[mut] allocCount{other.fieldCapacity}` in `Vector<T>.Copy`) sets the diagnostic primary span, so a later, unrelated semantic error in user code is reported at the stdlib helper's line instead of its own. The stdlib `Copy` helpers now declare those bindings' types (TODO-5487), which hides it. Find where the speculative inference captures the span without an error, and stop it.
-  - acceptance:
-    - a program that copies a `Vector` and then calls an unknown function reports the error at the call's own line, with the stdlib binding left untyped; regression test in the semantics diagnostics suite
-    - full release gate green
-  - stop_rule: diagnostics only; no inference behavior change.
 
 - [ ] TODO-5494: Local pointers cannot escape into containers or outer locals
   - owner: ai

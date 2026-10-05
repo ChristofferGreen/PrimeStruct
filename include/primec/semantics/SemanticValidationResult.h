@@ -19,6 +19,8 @@ public:
   const std::string &message() const;
 
   void clearContext();
+  DiagnosticSinkContext saveContext() const;
+  void restoreContext(DiagnosticSinkContext context);
   void capturePrimarySpanIfUnset(int line, int column);
   void addRelatedSpan(int line, int column, const std::string &label);
 

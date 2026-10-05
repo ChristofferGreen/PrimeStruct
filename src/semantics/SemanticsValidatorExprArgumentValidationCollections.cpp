@@ -707,12 +707,7 @@ bool SemanticsValidator::resolveSoaVectorOrExperimentalBorrowedReceiver(
     const std::function<bool(const Expr &, std::string &)> &resolveDirectReceiver,
     std::string &elemTypeOut) {
   auto withPreservedError = [&](const std::function<bool()> &fn) {
-    const std::string previousError = error_;
-    error_.clear();
-    const bool ok = fn();
-    error_.clear();
-    error_ = previousError;
-    return ok;
+    return runWithPreservedDiagnostic(fn);
   };
   if (resolveDirectSoaVectorOrExperimentalBorrowedReceiver(
           target, params, locals, resolveDirectReceiver, elemTypeOut)) {

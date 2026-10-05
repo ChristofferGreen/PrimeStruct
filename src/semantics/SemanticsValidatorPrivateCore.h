@@ -359,6 +359,8 @@
   bool collectDuplicateDefinitionDiagnostics();
   bool shouldCollectStructuredDiagnostics() const;
   void clearStructuredDiagnosticContext();
+  // Runs a speculative check; a failure inside leaves neither its message nor its spans behind.
+  bool runWithPreservedDiagnostic(const std::function<bool()> &fn) const;
   void moveCurrentStructuredDiagnosticTo(std::vector<SemanticDiagnosticRecord> &out);
   void rememberFirstCollectedDiagnosticMessage(const std::string &message);
   bool publishPassesDefinitionsDiagnostic(const Expr *expr = nullptr);

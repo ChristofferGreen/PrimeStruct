@@ -51,14 +51,16 @@ inline void applySemanticsCompilePipelineSemanticProductIntentForTesting(
       (intent == SemanticsCompilePipelineSemanticProductIntentForTesting::SkipForNonConsumingPath);
 }
 
-inline bool validateProgramThroughCompilePipeline(const std::string &source,
-                                                  const std::string &entry,
-                                                  const std::vector<std::string> &defaultEffects,
-                                                  const std::vector<std::string> &entryDefaultEffects,
-                                                  const std::string &emitKind,
-                                                  const std::string &wasmProfile,
-                                                  std::string &error,
-                                                  primec::CompilePipelineDiagnosticInfo *diagnosticInfo = nullptr) {
+inline bool validateProgramThroughCompilePipeline(
+    const std::string &source,
+    const std::string &entry,
+    const std::vector<std::string> &defaultEffects,
+    const std::vector<std::string> &entryDefaultEffects,
+    const std::string &emitKind,
+    const std::string &wasmProfile,
+    std::string &error,
+    primec::CompilePipelineDiagnosticInfo *diagnosticInfo = nullptr,
+    bool collectDiagnostics = true) {
   const std::filesystem::path tempPath = makeTempSemanticSourcePath();
   {
     std::ofstream file(tempPath);
@@ -79,7 +81,7 @@ inline bool validateProgramThroughCompilePipeline(const std::string &source,
   options.dumpStage = "ast_semantic";
   applySemanticsCompilePipelineSemanticProductIntentForTesting(
       options, SemanticsCompilePipelineSemanticProductIntentForTesting::SkipForNonConsumingPath);
-  options.collectDiagnostics = diagnosticInfo != nullptr;
+  options.collectDiagnostics = collectDiagnostics && diagnosticInfo != nullptr;
   primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
 
   primec::CompilePipelineOutput output;
@@ -202,6 +204,19 @@ inline bool validateProgramWithDefaults(const std::string &source,
                                         const std::vector<std::string> &defaultEffects,
                                         std::string &error) {
   return validateProgramWithDefaults(source, entry, defaultEffects, defaultEffects, error);
+}
+
+// Reports the first failure with its spans, as primec does without --collect-diagnostics.
+inline bool validateProgramReportingDiagnostic(const std::string &source,
+                                               const std::string &entry,
+                                               std::string &error,
+                                               primec::SemanticDiagnosticInfo &diagnosticInfo) {
+  primec::CompilePipelineDiagnosticInfo pipelineDiagnostics;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  const bool ok = validateProgramThroughCompilePipeline(
+      source, entry, defaults, defaults, "native", "wasi", error, &pipelineDiagnostics, false);
+  diagnosticInfo = pipelineDiagnostics;
+  return ok;
 }
 
 inline bool validateProgramCollectingDiagnostics(const std::string &source,

@@ -52,6 +52,12 @@ struct DiagnosticSinkRecord {
   bool hasPrimarySpan = false;
 };
 
+struct DiagnosticSinkContext {
+  DiagnosticSpan primarySpan;
+  std::vector<DiagnosticRelatedSpan> relatedSpans;
+  bool hasPrimarySpan = false;
+};
+
 struct DiagnosticSinkReport {
   std::string message;
   DiagnosticSpan primarySpan;
@@ -68,6 +74,8 @@ public:
   bool enabled() const { return report_ != nullptr; }
 
   void clearContext();
+  DiagnosticSinkContext saveContext() const;
+  void restoreContext(DiagnosticSinkContext context);
   void capturePrimarySpanIfUnset(const DiagnosticSpan &span);
   void capturePrimarySpanIfUnset(int line, int column, std::string_view file = {});
   void addRelatedSpan(const DiagnosticRelatedSpan &span);

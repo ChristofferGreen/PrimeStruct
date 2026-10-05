@@ -291,12 +291,7 @@ bool SemanticsValidator::isBuiltinSoaFieldViewExpr(
     return true;
   };
   auto withPreservedError = [&](const std::function<bool()> &fn) {
-    const std::string previousError = const_cast<SemanticsValidator *>(this)->error_;
-    const_cast<SemanticsValidator *>(this)->error_.clear();
-    const bool ok = fn();
-    const_cast<SemanticsValidator *>(this)->error_.clear();
-    const_cast<SemanticsValidator *>(this)->error_ = previousError;
-    return ok;
+    return runWithPreservedDiagnostic(fn);
   };
   auto inferSoaReceiverBinding = [&](const Expr &receiver, BindingInfo &bindingOut) -> bool {
     if (receiver.kind == Expr::Kind::Name) {

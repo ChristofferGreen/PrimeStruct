@@ -270,6 +270,22 @@ void DiagnosticSink::clearContext() {
   report_->hasPrimarySpan = false;
 }
 
+DiagnosticSinkContext DiagnosticSink::saveContext() const {
+  if (report_ == nullptr) {
+    return {};
+  }
+  return {report_->primarySpan, report_->relatedSpans, report_->hasPrimarySpan};
+}
+
+void DiagnosticSink::restoreContext(DiagnosticSinkContext context) {
+  if (report_ == nullptr) {
+    return;
+  }
+  report_->primarySpan = context.primarySpan;
+  report_->relatedSpans = std::move(context.relatedSpans);
+  report_->hasPrimarySpan = context.hasPrimarySpan;
+}
+
 void DiagnosticSink::capturePrimarySpanIfUnset(const DiagnosticSpan &span) {
   if (report_ == nullptr || !spanHasLocation(span) || report_->hasPrimarySpan) {
     return;

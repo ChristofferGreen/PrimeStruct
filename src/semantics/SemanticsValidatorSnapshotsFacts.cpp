@@ -92,12 +92,7 @@ SemanticsValidator::structFieldMetadataSnapshotForSemanticProduct() {
   std::vector<StructFieldMetadataSnapshotEntry> entries;
 
   auto withPreservedError = [&](const std::function<bool()> &fn) {
-    const std::string previousError = error_;
-    error_.clear();
-    const bool ok = fn();
-    error_.clear();
-    error_ = previousError;
-    return ok;
+    return runWithPreservedDiagnostic(fn);
   };
 
   for (const auto &def : program_.definitions) {
@@ -250,12 +245,7 @@ SemanticsValidator::bindingFactSnapshotForSemanticProduct() {
   }
 
   auto withPreservedError = [&](const std::function<bool()> &fn) {
-    const std::string previousError = error_;
-    error_.clear();
-    const bool ok = fn();
-    error_.clear();
-    error_ = previousError;
-    return ok;
+    return runWithPreservedDiagnostic(fn);
   };
 
   auto inferBindingForLocals = [&](const Definition &def,
@@ -593,12 +583,7 @@ SemanticsValidator::returnFactSnapshotForSemanticProduct() {
   entries.reserve(program_.definitions.size());
 
   auto withPreservedError = [&](const std::function<bool()> &fn) {
-    const std::string previousError = error_;
-    error_.clear();
-    const bool ok = fn();
-    error_.clear();
-    error_ = previousError;
-    return ok;
+    return runWithPreservedDiagnostic(fn);
   };
 
   for (const auto &definition : program_.definitions) {

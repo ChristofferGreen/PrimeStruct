@@ -280,6 +280,17 @@ void SemanticsValidator::clearStructuredDiagnosticContext() {
   resultSink_.clearContext();
 }
 
+bool SemanticsValidator::runWithPreservedDiagnostic(const std::function<bool()> &fn) const {
+  auto *self = const_cast<SemanticsValidator *>(this);
+  const std::string previousError = self->error_;
+  DiagnosticSinkContext previousContext = self->resultSink_.saveContext();
+  self->error_.clear();
+  const bool ok = fn();
+  self->error_ = previousError;
+  self->resultSink_.restoreContext(std::move(previousContext));
+  return ok;
+}
+
 void SemanticsValidator::moveCurrentStructuredDiagnosticTo(std::vector<SemanticDiagnosticRecord> &out) {
   resultSink_.moveCurrentDiagnosticTo(out);
 }

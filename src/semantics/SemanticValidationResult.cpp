@@ -36,6 +36,14 @@ void SemanticValidationResultSink::clearContext() {
   diagnosticSink_.clearContext();
 }
 
+DiagnosticSinkContext SemanticValidationResultSink::saveContext() const {
+  return diagnosticSink_.saveContext();
+}
+
+void SemanticValidationResultSink::restoreContext(DiagnosticSinkContext context) {
+  diagnosticSink_.restoreContext(std::move(context));
+}
+
 void SemanticValidationResultSink::capturePrimarySpanIfUnset(int line, int column) {
   diagnosticSink_.capturePrimarySpanIfUnset(line, column);
 }

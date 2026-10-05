@@ -48,13 +48,7 @@ std::optional<std::string> SemanticsValidator::builtinSoaDirectPendingHelperPath
         return candidate.templateArgs.front();
       }
       auto withPreservedError = [&](const std::function<bool()> &fn) {
-        const std::string previousError =
-            const_cast<SemanticsValidator *>(this)->error_;
-        const_cast<SemanticsValidator *>(this)->error_.clear();
-        const bool ok = fn();
-        const_cast<SemanticsValidator *>(this)->error_.clear();
-        const_cast<SemanticsValidator *>(this)->error_ = previousError;
-        return ok;
+        return runWithPreservedDiagnostic(fn);
       };
       const Expr &receiverExpr = candidate.args.front();
       auto extractReceiverStructType = [&](const BindingInfo &binding)

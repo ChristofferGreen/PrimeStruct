@@ -218,4 +218,31 @@ main() {
   CHECK(error.find("mut transform is not allowed on static helpers") != std::string::npos);
 }
 
+TEST_CASE("an inferred binding in a generic Copy helper does not take the error span") {
+  // Vector<T>.Copy infers `allocCount` from `other.fieldCapacity`; that speculative inference
+  // must not leave its span behind for the unrelated error below.
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc) return<int>]
+main() {
+  [Vector<i32> mut] a{vector<i32>()}
+  vectorPush<i32>(a, 4i32)
+  [Vector<i32>] b{a}
+  no_such_function(3i32)
+  return(0i32)
+}
+)";
+  primec::SemanticDiagnosticInfo diagnosticInfo;
+  std::string error;
+  CHECK_FALSE(validateProgramReportingDiagnostic(source, "/main", error, diagnosticInfo));
+  CHECK(error.find("unknown call target: no_such_function") != std::string::npos);
+  REQUIRE(diagnosticInfo.hasPrimarySpan);
+  CHECK(diagnosticInfo.primarySpan.line == 9);
+  CHECK(diagnosticInfo.primarySpan.column == 3);
+  for (const auto &related : diagnosticInfo.relatedSpans) {
+    CHECK(related.label.find("/Copy") == std::string::npos);
+  }
+}
+
 TEST_SUITE_END();
