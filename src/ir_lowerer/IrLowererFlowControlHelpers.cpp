@@ -3,6 +3,7 @@
 #include "primec/ir_lowerer/IrLowererHelpers.h"
 #include "primec/ir_lowerer/IrLowererSetupTypeCollectionHelpers.h"
 #include "primec/ir_lowerer/IrLowererStructTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
 
 #include <string_view>
 #include "primec/ir/StdlibCollectionPaths.h"
@@ -501,6 +502,41 @@ bool shouldDisarmStructCopySourceExpr(const Expr &expr) {
   // struct copy source must still be disarmed like any other temporary
   // (see the "classify borrowed struct copy sources" test, which pins this
   // for a non-method-call `at` access).
+  return true;
+}
+
+// An argument that produces a value nobody else owns (a constructor, or a call returning a value
+// rather than a reference or pointer), which the callee takes over instead of borrowing: not a
+// field, `dereference`/`location`, `move(x)` of a binding, a builtin element access or a method
+// call result.
+bool isOwnedTemporaryArgumentExpr(
+    const Expr &expr,
+    const std::function<const Definition *(const Expr &)> &resolveDefinitionCall) {
+  if (!shouldDisarmStructCopySourceExpr(expr) || isSimpleCallName(expr, "move") ||
+      isSimpleCallName(expr, "borrow") || isSimpleCallName(expr, "at") ||
+      isSimpleCallName(expr, "at_unsafe")) {
+    return false;
+  }
+  if (expr.isBraceConstructor) {
+    return true;
+  }
+  const Definition *callee =
+      (expr.isMethodCall || !resolveDefinitionCall) ? nullptr : resolveDefinitionCall(expr);
+  if (callee == nullptr) {
+    return false;
+  }
+  for (const auto &transform : callee->transforms) {
+    if (transform.name != "return" || transform.templateArgs.size() != 1) {
+      continue;
+    }
+    std::string base;
+    std::string argText;
+    if (splitTemplateTypeName(
+            trimTemplateTypeText(transform.templateArgs.front()), base, argText)) {
+      const std::string normalizedBase = trimTemplateTypeText(base);
+      return normalizedBase != "Reference" && normalizedBase != "Pointer";
+    }
+  }
   return true;
 }
 

@@ -652,11 +652,11 @@ bool emitInlineDefinitionCallParameters(
     const Expr &param = callParams[i];
     const Expr *orderedArg = (i < orderedArgs.size()) ? orderedArgs[i] : nullptr;
     // `[T copy]` (docs/spec/value-lifecycle.md, Parameter Passing): the callee gets its own copy
-    // instead of a borrow, except of a `move(x)` argument, which is handed over as is.
-    const bool isCopyParam =
-        parameterHasTransform(param, "copy") &&
-        !(orderedArg != nullptr && orderedArg->kind == Expr::Kind::Call &&
-          !orderedArg->isMethodCall && orderedArg->name == "move" && orderedArg->args.size() == 1);
+    // instead of a borrow, except of a `move(x)` argument or a temporary, handed over as is.
+    const bool isCopyParam = parameterHasTransform(param, "copy") &&
+                             (orderedArg == nullptr ||
+                              (!isOwnedTemporaryArgumentExpr(*orderedArg, resolveDefinitionCall) &&
+                               !isSimpleCallName(*orderedArg, "move")));
     // A binding passed to a `move` parameter is the callee's now.
     if (orderedArg != nullptr && orderedArg->kind == Expr::Kind::Name &&
         parameterHasTransform(param, "move")) {

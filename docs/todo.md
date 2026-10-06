@@ -100,13 +100,12 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5507 | Unbound temporaries are destroyed | ready | lifecycle-temporaries |
 | TODO-5508 | User Copy helpers work for structs with owning fields | ready | lifecycle-copy |
 | TODO-5509 | Self-assignment, user-Destroy fields, Maybe payloads and move parameters destroy correctly | ready | lifecycle-misc |
 | TODO-5510 | `return` returns from pick arms and lambdas correctly | ready | control-returns |
 | TODO-5524 | Int-backed error structs round-trip through stdlib Result sums | ready | result-error-structs |
 | TODO-5523 | A Result-returning main exits with its error code | ready | result-main |
-| TODO-5525 | `Result.ok(x)` passes as a stdlib Result argument | deferred | result-arguments |
+| TODO-5525 | `Result.ok(x)` passes as a stdlib Result argument | ready | result-arguments |
 | TODO-5526 | Vectors of stdlib Result values keep their elements | deferred | result-containers |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
 | TODO-5512 | Pointers and aliases count as borrows of their root | deferred | safety-borrows |
@@ -123,7 +122,6 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5507 (lifecycle-temporaries): unbound temporaries are destroyed
 - TODO-5508 (lifecycle-copy): user Copy helpers work for structs with owning fields
 - TODO-5509 (lifecycle-misc): self-assignment, user-Destroy fields, Maybe payloads and move parameters destroy correctly
 - TODO-5510 (control-returns): `return` returns from pick arms and lambdas correctly
@@ -131,21 +129,22 @@ of sync with them.
 - TODO-5524 (result-error-structs): int-backed error structs round-trip through stdlib Result sums
 - TODO-5515 (native-result): native Result.ok(Buffer) reads as ok
 - TODO-5523 (result-main): a Result-returning main exits with its error code
+- TODO-5525 (result-arguments): `Result.ok(x)` passes as a stdlib Result argument
 
 ### Immediate Next 10
 
-1. TODO-5507
-2. TODO-5508
-3. TODO-5509
-4. TODO-5510
-5. TODO-5513
-6. TODO-5524
-7. TODO-5515
-8. TODO-5523
+1. TODO-5508
+2. TODO-5509
+3. TODO-5510
+4. TODO-5513
+5. TODO-5524
+6. TODO-5515
+7. TODO-5523
+8. TODO-5525
 
 ### Priority Lanes
 
-- Lifecycle (docs/spec/value-lifecycle.md): TODO-5507, TODO-5508, TODO-5509
+- Lifecycle (docs/spec/value-lifecycle.md): TODO-5508, TODO-5509
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5514, TODO-5516, TODO-5517
@@ -157,18 +156,6 @@ of sync with them.
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 ### Task Blocks
-
-- [ ] TODO-5507: Unbound temporaries are destroyed
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-06
-  - phase: Correctness audit 2026-10
-  - parallel_track: lifecycle-temporaries
-  - scope: Owning temporaries that are never bound are never destroyed: a discarded call `make(3i32)`, a bare `Noisy{5i32}`, temporaries passed to borrow or `mut` parameters (`bump(Noisy{1i32})`), `print_line(make(4i32).id)`, `vectorCount<T>(make_vec())`. A temporary passed to a `copy` parameter is copied and the original leaks. Consequence in the stdlib: `Vector.Copy` (`vectorCopyValue<T>(vectorAtUnsafe<T>(other, index))`) runs each element's Copy twice and leaks the middle copy (also Map copy).
-  - acceptance:
-    - each listed form destroys its temporary exactly once at the end of the full expression; a temporary passed to a `copy` parameter is moved, not copied; copying a `Vector<Noisy>` runs Copy once per element
-    - full release gate green
-  - stop_rule: temporaries only.
 
 - [ ] TODO-5508: User Copy helpers work for structs with owning fields
   - owner: ai
@@ -283,7 +270,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 
 - [ ] TODO-5525: `Result.ok(x)` passes as a stdlib Result argument
   - owner: ai
-  - status: deferred
+  - status: ready
   - created_at: 2026-10-06
   - phase: Correctness audit 2026-10
   - parallel_track: result-arguments
@@ -292,7 +279,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - matrix case passing `Result.ok(...)` to a stdlib Result parameter on VM, native and C++
     - full release gate green
   - stop_rule: `Result.ok` arguments only.
-  - notes: deferred: queued behind the Ready Now cap.
 
 - [ ] TODO-5526: Vectors of stdlib Result values keep their elements
   - owner: ai

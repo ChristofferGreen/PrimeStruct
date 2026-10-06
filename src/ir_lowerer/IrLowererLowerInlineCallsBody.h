@@ -559,11 +559,19 @@
       popInlineStack();
       return false;
     }
-    // A `copy` or `move` parameter is the callee's own value: the callee body's scope destroys
-    // it unless the callee moves it on (docs/spec/value-lifecycle.md, Ownership).
-    for (const Expr &param : callParams) {
-      if (fileScopeStack.empty() || (!ir_lowerer::parameterHasTransform(param, "copy") &&
-                                     !ir_lowerer::parameterHasTransform(param, "move"))) {
+    // A `copy` or `move` parameter is the callee's own value, and so is a temporary argument (a
+    // call result or constructor nobody else owns): the callee body's scope destroys it unless
+    // the callee moves it on (docs/spec/value-lifecycle.md, Ownership).
+    for (size_t paramIndex = 0; paramIndex < callParams.size(); ++paramIndex) {
+      const Expr &param = callParams[paramIndex];
+      const Expr *argExpr = paramIndex < orderedArgs.size() ? orderedArgs[paramIndex] : nullptr;
+      const bool temporaryArg = argExpr != nullptr && ir_lowerer::isOwnedTemporaryArgumentExpr(
+                                                          *argExpr, [&](const Expr &candidate) {
+                                                            return resolveDefinitionCall(candidate);
+                                                          });
+      if (fileScopeStack.empty() ||
+          (!ir_lowerer::parameterHasTransform(param, "copy") &&
+           !ir_lowerer::parameterHasTransform(param, "move") && !temporaryArg)) {
         continue;
       }
       auto ownedIt = calleeLocals.find(param.name);

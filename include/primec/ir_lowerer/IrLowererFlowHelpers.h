@@ -153,6 +153,8 @@ bool emitDisarmTemporaryStructAfterCopy(const EmitInstructionFn &emitInstruction
                                         int32_t srcPtrLocal,
                                         const std::string &structPath);
 bool shouldDisarmStructCopySourceExpr(const Expr &expr);
+bool isOwnedTemporaryArgumentExpr(
+    const Expr &expr, const std::function<const Definition *(const Expr &)> &resolveDefinitionCall);
 bool emitCompareToZero(std::vector<IrInstruction> &instructions,
                        LocalInfo::ValueKind kind,
                        bool equals,

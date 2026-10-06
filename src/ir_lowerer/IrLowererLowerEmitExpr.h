@@ -306,6 +306,55 @@
               return false;
             }
           }
+          // A scalar field read from a temporary receiver (a call result nobody binds) destroys
+          // the receiver once the field value is loaded (docs/spec/value-lifecycle.md).
+          if (const std::string receiverStruct = ownedTemporaryStructPath(receiver, localsIn);
+              !receiverStruct.empty() && inferStructExprPath(expr, localsIn).empty()) {
+            if (!emitExpr(receiver, localsIn)) {
+              return false;
+            }
+            const int32_t receiverPtrLocal = allocTempLocal();
+            function.instructions.push_back(
+                {IrOpcode::StoreLocal, static_cast<uint64_t>(receiverPtrLocal)});
+            LocalInfo receiverInfo;
+            receiverInfo.kind = LocalInfo::Kind::Value;
+            receiverInfo.valueKind = LocalInfo::ValueKind::Int64;
+            receiverInfo.structTypeName = receiverStruct;
+            receiverInfo.index = receiverPtrLocal;
+            LocalMap fieldLocals = localsIn;
+            Expr fieldExpr = expr;
+            Expr &receiverName = fieldExpr.args.front();
+            receiverName = Expr{};
+            receiverName.kind = Expr::Kind::Name;
+            receiverName.name = "__temporary_receiver_" + std::to_string(receiverPtrLocal);
+            receiverName.namespacePrefix = receiver.namespacePrefix;
+            fieldLocals.emplace(receiverName.name, receiverInfo);
+            if (!emitExpr(fieldExpr, fieldLocals)) {
+              return false;
+            }
+            const int32_t fieldValueLocal = allocTempLocal();
+            function.instructions.push_back(
+                {IrOpcode::StoreLocal, static_cast<uint64_t>(fieldValueLocal)});
+            if (!ir_lowerer::emitStructDestroyHelpersFromPtr(
+                    receiverPtrLocal,
+                    receiverStruct,
+                    [&](const std::string &path) {
+                      return ir_lowerer::findStackDestroyHelper(defMap, path);
+                    },
+                    [&](const std::string &path, StructSlotLayoutInfo &layoutOut) {
+                      return resolveStructSlotLayout(path, layoutOut);
+                    },
+                    [&]() { return allocTempLocal(); },
+                    [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+                    localsIn,
+                    emitInlineDefinitionCall,
+                    error)) {
+              return false;
+            }
+            function.instructions.push_back(
+                {IrOpcode::LoadLocal, static_cast<uint64_t>(fieldValueLocal)});
+            return true;
+          }
           auto describeFieldReceiver = [&](const Expr &receiverExpr) {
             if (receiverExpr.kind == Expr::Kind::Name && !receiverExpr.name.empty()) {
               return function.name + " -> " + receiverExpr.name + "." + expr.name;

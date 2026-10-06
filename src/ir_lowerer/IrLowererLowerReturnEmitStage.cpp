@@ -236,6 +236,51 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
 
   ir_lowerer::SumHelpersContext sumHelpers(setupStage, stateOut, callResolutionAdapters, error);
 
+  // The struct path of the owning value a call produces when nobody binds it (a discarded
+  // statement result, a field-access receiver): a definition returning a struct by value (not a
+  // reference, pointer or constructor) that needs destroying.
+  auto ownedTemporaryStructPath = [&](const Expr &callExpr, const LocalMap &locals) {
+    if (callExpr.kind != Expr::Kind::Call || callExpr.isBinding || callExpr.isFieldAccess ||
+        isReturnCall(callExpr)) {
+      return std::string{};
+    }
+    const Definition *callee = callExpr.isMethodCall ? resolveMethodCallDefinition(callExpr, locals)
+                                                     : resolveDefinitionCall(callExpr);
+    if (callee == nullptr || ir_lowerer::isStructDefinition(*callee)) {
+      return std::string{};
+    }
+    ReturnInfo info;
+    if (!getReturnInfo(callee->fullPath, info) || info.returnsVoid || info.returnsArray) {
+      return std::string{};
+    }
+    for (const auto &transform : callee->transforms) {
+      std::string base;
+      std::string argText;
+      if (transform.name == "return" && transform.templateArgs.size() == 1 &&
+          splitTemplateTypeName(
+              trimTemplateTypeText(transform.templateArgs.front()), base, argText)) {
+        const std::string normalizedBase =
+            normalizeCollectionBindingTypeName(trimTemplateTypeText(base));
+        if (normalizedBase == "Reference" || normalizedBase == "Pointer") {
+          return std::string{};
+        }
+      }
+    }
+    std::string structPath = inferStructExprPath(callExpr, locals);
+    if (structPath.empty() || sumHelpers.resolveSumDefinitionByPath(structPath) != nullptr ||
+        !ir_lowerer::structNeedsDestroyHelpers(
+            structPath,
+            [&](const std::string &path) {
+              return ir_lowerer::findStackDestroyHelper(defMap, path);
+            },
+            [&](const std::string &path, StructSlotLayoutInfo &layoutOut) {
+              return resolveStructSlotLayout(path, layoutOut);
+            })) {
+      return std::string{};
+    }
+    return structPath;
+  };
+
   emitInlineDefinitionCall = [&](const Expr &callExpr,
                                  const Definition &callee,
                                  const LocalMap &callerLocals,

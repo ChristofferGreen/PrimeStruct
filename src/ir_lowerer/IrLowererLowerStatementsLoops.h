@@ -404,4 +404,29 @@
           return true;
         }
       }
+      // A discarded owning struct result (a call whose value nobody binds) is destroyed at the
+      // end of its statement (docs/spec/value-lifecycle.md).
+      if (const std::string discardedStruct = ownedTemporaryStructPath(stmt, localsIn);
+          !discardedStruct.empty()) {
+        if (!emitExpr(stmt, localsIn)) {
+          return false;
+        }
+        const int32_t resultPtrLocal = allocTempLocal();
+        function.instructions.push_back(
+            {IrOpcode::StoreLocal, static_cast<uint64_t>(resultPtrLocal)});
+        return ir_lowerer::emitStructDestroyHelpersFromPtr(
+            resultPtrLocal,
+            discardedStruct,
+            [&](const std::string &path) {
+              return ir_lowerer::findStackDestroyHelper(defMap, path);
+            },
+            [&](const std::string &path, StructSlotLayoutInfo &layoutOut) {
+              return resolveStructSlotLayout(path, layoutOut);
+            },
+            [&]() { return allocTempLocal(); },
+            [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+            localsIn,
+            emitInlineDefinitionCall,
+            error);
+      }
     }

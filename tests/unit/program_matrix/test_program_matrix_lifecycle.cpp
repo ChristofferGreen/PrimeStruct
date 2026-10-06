@@ -554,4 +554,101 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("unbound temporaries are destroyed once at the end of their expression") {
+  program_matrix::ProgramCase program;
+  program.name = "unbound_temporaries_destroyed";
+  program.source = R"(
+import /std/collections/*
+
+[struct]
+Noisy() {
+  [i32 mut] id{0i32}
+  [public] Copy([Reference<Self>] other) { assign(this.id, other.id + 1000i32) }
+  [public effects(io_out)] Destroy() { print_line(this.id) }
+}
+
+[return<Noisy>]
+make([i32] id) {
+  return(Noisy{id})
+}
+
+[return<i32>]
+peek([Noisy] n) {
+  return(n.id)
+}
+
+[effects(io_out)]
+bump([Noisy mut] n) {
+  n.id = n.id + 1i32
+}
+
+[return<i32>]
+keep([Noisy copy] n) {
+  return(n.id)
+}
+
+[effects(io_out heap_alloc) return<int>]
+main() {
+  make(1i32)
+  print_line(100i32)
+  print_line(101i32)
+  print_line(peek(make(3i32)))
+  print_line(102i32)
+  print_line(make(4i32).id)
+  print_line(103i32)
+  print_line(keep(make(5i32)))
+  print_line(104i32)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "1\n100\n101\n3\n3\n102\n4\n4\n103\n5\n5\n104\n";
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("temporaries passed to mut parameters and copied vectors run each helper once") {
+  program_matrix::ProgramCase program;
+  program.name = "temporaries_mut_params_vector_copy";
+  program.source = R"(
+import /std/collections/*
+
+[struct]
+Noisy() {
+  [i32 mut] id{0i32}
+  [public] Copy([Reference<Self>] other) { assign(this.id, other.id + 1000i32) }
+  [public effects(io_out)] Destroy() { print_line(this.id) }
+}
+
+[effects(io_out)]
+bump([Noisy mut] n) {
+  n.id = n.id + 1i32
+  print_line(n.id)
+}
+
+[effects(io_out heap_alloc) return<Vector<Noisy>>]
+make_vec() {
+  [Vector<Noisy> mut] made{vector<Noisy>()}
+  vectorPush<Noisy>(made, Noisy{7i32})
+  return(made)
+}
+
+[effects(io_out heap_alloc) return<int>]
+main() {
+  bump(Noisy{1i32})
+  print_line(100i32)
+  print_line(vectorCount<Noisy>(make_vec()))
+  print_line(101i32)
+  [Vector<Noisy> mut] src{vector<Noisy>()}
+  vectorPush<Noisy>(src, Noisy{3i32})
+  print_line(102i32)
+  [Vector<Noisy> mut] dup{src}
+  print_line(103i32)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "2\n2\n100\n7\n1\n101\n102\n103\n1003\n3\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();
