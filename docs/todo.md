@@ -100,16 +100,61 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
+| TODO-5499 | Void functions with an early return keep their trailing return | ready | ir-returns |
+| TODO-5500 | Reading a struct element past index 0 from a vector works | ready | collections-access |
+| TODO-5501 | A discarded non-void call inside a nested block is valid IR | ready | ir-statements |
+| TODO-5502 | `x = Type{...}` assigns instead of defining a nested `assign` | ready | text-filter |
+| TODO-5503 | Locals only read by a return expression are still destroyed | ready | lifecycle-returns |
+| TODO-5504 | `while` bodies destroy their locals every iteration | ready | lifecycle-loops |
+| TODO-5505 | A temporary passed to a move parameter keeps its block's cleanup | ready | lifecycle-blocks |
+| TODO-5506 | Result values use one convention across function boundaries | ready | result-abi |
+| TODO-5507 | Unbound temporaries are destroyed | blocked | lifecycle-temporaries |
+| TODO-5508 | User Copy helpers work for structs with owning fields | deferred | lifecycle-copy |
+| TODO-5509 | Self-assignment, user-Destroy fields, Maybe payloads and move parameters destroy correctly | deferred | lifecycle-misc |
+| TODO-5510 | `return` returns from pick arms and lambdas correctly | deferred | control-returns |
+| TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
+| TODO-5512 | Pointers and aliases count as borrows of their root | deferred | safety-borrows |
+| TODO-5513 | Methods through a dereferenced vector pointer read the right fields | deferred | collections-access |
+| TODO-5514 | Native file I/O writes newlines and reports errno | deferred | native-io |
+| TODO-5515 | Native Result.ok(Buffer) reads as ok | blocked | native-result |
+| TODO-5516 | Integer narrowing and float-to-int conversion agree across backends | deferred | numeric-conversions |
+| TODO-5517 | Runtime faults exit the same way on every backend | deferred | runtime-faults |
+| TODO-5518 | Valid programs the frontend rejects compile | deferred | frontend-accept |
+| TODO-5519 | Operator rewriting handles calls, nested `!` and `?` precedence | deferred | text-filter |
+| TODO-5520 | Diagnostics point at user code with readable names | deferred | diagnostics |
+| TODO-5521 | Math helpers return correct results | deferred | stdlib-math |
 | TODO-5483 | Verify arm64 SextI32 on a macOS machine | deferred | ir-semantics |
 
 ### Ready Now
 
+- TODO-5499 (ir-returns): void functions with an early return keep their trailing return
+- TODO-5500 (collections-access): reading a struct element past index 0 from a vector works
+- TODO-5501 (ir-statements): a discarded non-void call inside a nested block is valid IR
+- TODO-5502 (text-filter): `x = Type{...}` assigns instead of defining a nested `assign`
+- TODO-5503 (lifecycle-returns): locals only read by a return expression are still destroyed
+- TODO-5504 (lifecycle-loops): `while` bodies destroy their locals every iteration
+- TODO-5505 (lifecycle-blocks): a temporary passed to a move parameter keeps its block's cleanup
+- TODO-5506 (result-abi): result values use one convention across function boundaries
 
 ### Immediate Next 10
 
+1. TODO-5499
+2. TODO-5500
+3. TODO-5501
+4. TODO-5502
+5. TODO-5503
+6. TODO-5504
+7. TODO-5505
+8. TODO-5506
 
 ### Priority Lanes
 
+- Correctness audit 2026-10 (P0 miscompiles and crashes): TODO-5499, TODO-5500, TODO-5501, TODO-5502
+- Lifecycle (docs/spec/value-lifecycle.md): TODO-5503, TODO-5504, TODO-5505, TODO-5507, TODO-5508, TODO-5509
+- Result and control flow (docs/spec/errors-and-file-io.md): TODO-5506, TODO-5510, TODO-5515
+- Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
+- Backend parity: TODO-5514, TODO-5516, TODO-5517
+- Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
 ### Execution Queue
@@ -117,6 +162,297 @@ of sync with them.
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 ### Task Blocks
+
+- [ ] TODO-5499: Void functions with an early return keep their trailing return
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-06
+  - phase: Correctness audit 2026-10
+  - parallel_track: ir-returns
+  - scope: A non-inlined `return<void>` definition with `if(c) { return() }` followed by more statements and no trailing `return()` loses its final `ReturnVoid`: `--dump-stage ir-lowered` ends the function after its last statement. VM: `missing return in IR function`; native: SIGSEGV (or `register allocation lost a branch edge` with an owning local). Cause: `src/ir_lowerer/IrLowererStatementCallHelpers.cpp` appends `ReturnVoid` only when no `return` was emitted anywhere, including nested ones. Repro: `early([i32] n) { if(n == 2i32) { return() } print_line(301i32) }` called twice from `main`.
+  - acceptance:
+    - the repro prints `301` twice and exits 0 on VM, native and C++; same with an owning local in the function and inside a loop body
+    - full release gate green
+  - stop_rule: do not change inlined-call return handling.
+
+- [ ] TODO-5500: Reading a struct element past index 0 from a vector works
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-06
+  - phase: Correctness audit 2026-10
+  - parallel_track: collections-access
+  - scope: `[vector<Point> mut] pts{vector<Point>()}` with two pushed `Point{x, y}` (two i32 fields), then `[Point] second{pts.at(1i32)}`: VM `unaligned indirect address in IR`, native SIGSEGV, C++ exit 1. Index 0 works, so the element address for struct elements uses the wrong stride or base.
+  - acceptance:
+    - `pts.at(i)` / `vectorAt<Point>(pts, i)` read the right element for every index on VM, native and C++ (matrix case)
+    - full release gate green
+  - stop_rule: fix the element address computation only; no vector layout change.
+
+- [ ] TODO-5501: A discarded non-void call inside a nested block is valid IR
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-06
+  - phase: Correctness audit 2026-10
+  - parallel_track: ir-statements
+  - scope: `if(c) { num(4i32) }` where `num` returns i32 (or a struct) fails IR validation on every backend: `paths reach this block with different operand stack depths`. Same in `for` bodies and when the call is not the block's last statement. At function top level the value is popped correctly.
+  - acceptance:
+    - the call result is popped (and destroyed when owning) in nested blocks; matrix case covering if/else/loop bodies
+    - full release gate green
+  - stop_rule: statement-position calls only.
+
+- [ ] TODO-5502: `x = Type{...}` assigns instead of defining a nested `assign`
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-06
+  - phase: Correctness audit 2026-10
+  - parallel_track: text-filter
+  - scope: The `=` text filter turns `x = Noisy{6i32}` into `assign(x, Noisy){6i32}`, which parses as a nested definition named `assign`: the assignment disappears silently (prints the old value), or fails with `unable to infer implicit template arguments for /main/assign`, `block arguments require a definition target: /assign`, or `template arguments require a call` (`values = vector<int>{9}` from docs/CodeExamples.md Reinitialize After Move). Labeled braces (`Two{[b] 7i32 [a] 6i32}`) and sum variants (`Val{none}`) fail too.
+  - acceptance:
+    - `x = T{...}`, `x.f = T{...}`, `x = T<U>{...}` and labeled/variant brace forms become `assign(x, T{...})`; the CodeExamples snippet compiles; parse + IR tests
+    - full release gate green
+  - stop_rule: text filter only; no change to the brace construction grammar.
+
+- [ ] TODO-5503: Locals only read by a return expression are still destroyed
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-06
+  - phase: Correctness audit 2026-10
+  - parallel_track: lifecycle-returns
+  - scope: Returning releases the drop flag of every name mentioned in the return expression, so `return(plus(a.id, 1i32))`, `return(vectorCount<T>(v))`, `return(combine(a, b))` with borrow parameters, and `return(p.left)` leak `a`, `v` (and its heap storage), copy parameters, and the other fields of `p`. Only a returned owning local itself (or one moved into the returned value) should skip its Destroy. Release logic: `releaseReturnedLocals` in `src/ir_lowerer/IrLowererLowerStatementsBindingsContinued.h`.
+  - acceptance:
+    - matrix cases: scalar derived from a local, vector count, borrow-parameter call, field of a struct local, returned local, `return(Holder{move(x)})` and a returned constructor holding a local each destroy exactly the values not returned
+    - full release gate green
+  - stop_rule: returns only; temporaries are TODO-5507.
+
+- [ ] TODO-5504: `while` bodies destroy their locals every iteration
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-06
+  - phase: Correctness audit 2026-10
+  - parallel_track: lifecycle-loops
+  - scope: `while(i < 3i32) { [Noisy] w{Noisy{plus(10i32, i)}} i++ }` destroys only the last `w`, after the loop (`200 12` instead of `10 11 12 200`); an early return from the body also skips earlier iterations. `for`, `loop` and `repeat` are correct.
+  - acceptance:
+    - matrix cases for while bodies with fall-through, early return, break and continue destroy each iteration's locals once
+    - full release gate green
+  - stop_rule: while lowering only.
+
+- [ ] TODO-5505: A temporary passed to a move parameter keeps its block's cleanup
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-06
+  - phase: Correctness audit 2026-10
+  - parallel_track: lifecycle-blocks
+  - scope: Inside a nested block (if/loop body) `take_move(Noisy{...})` or `vectorPush<T>(v, T{...})` moves the block's owning locals' cleanup to function end, where only the last instance is destroyed: `for(...) { [Noisy] n{Noisy{i}} take_move(Noisy{plus(10i32, i)}) }` prints `10 11 12 100 2` instead of `10 0 11 1 12 2 100`; two sibling `if` blocks each pushing a temporary into their own vector leak the first vector entirely. A named local passed to the move parameter, and the same code inside an inlined callee, are fine.
+  - acceptance:
+    - matrix cases: temporaries to move parameters in if/for/sibling blocks keep per-block cleanup on VM, native and C++
+    - full release gate green
+  - stop_rule: move-parameter temporaries; other temporaries are TODO-5507.
+
+- [ ] TODO-5506: Result values use one convention across function boundaries
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-06
+  - phase: Correctness audit 2026-10
+  - parallel_track: result-abi
+  - scope: With `/std/result/*` imported, Results cross calls either packed in an i64 (scalar payloads via `Result.ok`) or as a pointer to sum storage (struct payloads), and lowering paths mix them: `return(<named local Result>)` stores `address * 2^32` (every payload/error combo; scalar ok decodes as an error), `return(inner())` and `return(param)` treat a packed value as a pointer (`unaligned indirect address`), `try(m.tryAt(k))` crashes for that reason, status-only `try` propagation stores a raw pointer, `error(0)` reads as ok, `ok(5000000000i64)` / `ok(2.5f64)` read as errors, i64 error codes truncate, string errors with table index 0 read as ok, `Result.error`/`why` on a direct call returning a struct-error Result read garbage, and a Result-returning `main` exits 0 on error. Pick one representation (the sum pointer/copy for all payloads, or packed only where lossless) and use it on every producer and consumer.
+  - acceptance:
+    - matrix cases on VM, native and C++: named-local return, forwarded `return(call())`, parameter pass-through, `try` on map `tryAt` with the import, error code 0, i64/f64/string payloads and errors, status-only propagation, `Result.error`/`why` on direct calls
+    - full release gate green; corpus differential shows no regressions
+  - stop_rule: Result lowering only; split per producer/consumer pair if one change grows too large.
+
+- [ ] TODO-5507: Unbound temporaries are destroyed
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5505
+  - created_at: 2026-10-06
+  - phase: Correctness audit 2026-10
+  - parallel_track: lifecycle-temporaries
+  - scope: Owning temporaries that are never bound are never destroyed: a discarded call `make(3i32)`, a bare `Noisy{5i32}`, temporaries passed to borrow or `mut` parameters (`bump(Noisy{1i32})`), `print_line(make(4i32).id)`, `vectorCount<T>(make_vec())`. A temporary passed to a `copy` parameter is copied and the original leaks. Consequence in the stdlib: `Vector.Copy` (`vectorCopyValue<T>(vectorAtUnsafe<T>(other, index))`) runs each element's Copy twice and leaks the middle copy (also Map copy).
+  - acceptance:
+    - each listed form destroys its temporary exactly once at the end of the full expression; a temporary passed to a `copy` parameter is moved, not copied; copying a `Vector<Noisy>` runs Copy once per element
+    - full release gate green
+  - stop_rule: temporaries only.
+
+- [ ] TODO-5508: User Copy helpers work for structs with owning fields
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-10-06
+  - phase: Correctness audit 2026-10
+  - parallel_track: lifecycle-copy
+  - scope: Inside `Copy([Reference<Self>] other)`, `this` starts as a slot copy of `other`, aliasing its storage: `assign(this.items, other.items)` destroys the alias and frees `other`'s buffer (crash), and leaving the field alone double-frees at scope end. Start `this` with each field default-initialized or copied member-wise before the helper body runs, or document a different contract.
+  - acceptance:
+    - a struct with a `Vector<i32>` field and a user Copy that assigns the field copies correctly on VM, native and C++
+    - full release gate green
+  - stop_rule: Copy helper entry state only.
+  - notes: deferred: queued behind the Ready Now cap.
+
+- [ ] TODO-5509: Self-assignment, user-Destroy fields, Maybe payloads and move parameters destroy correctly
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-10-06
+  - phase: Correctness audit 2026-10
+  - parallel_track: lifecycle-misc
+  - scope: `assign(x, x)` destroys x then copies from it (use-after-free; also `Vector<Noisy>`); fields of a struct with a user `Destroy` are never destroyed (`Bag` with a `Noisy` or `Vector` field); a `Maybe<Noisy>` payload is never destroyed; a `move` parameter not returned on the taken path is destroyed by the caller at its scope end instead of by the callee.
+  - acceptance:
+    - matrix case per item with exactly-once destruction on VM, native and C++
+    - full release gate green
+  - stop_rule: these four behaviors only.
+  - notes: deferred: queued behind the Ready Now cap.
+
+- [ ] TODO-5510: `return` returns from pick arms and lambdas correctly
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-10-06
+  - phase: Correctness audit 2026-10
+  - parallel_track: control-returns
+  - scope: `pick(m) { none { return(-1i32) } num(v) { return(v) } }` in statement position does not return from the unit-variant arm (rewritten to `none{-1}`, IR `PushI32 -1; Pop`); same for `Result<E>`'s `ok { return(...) }`. A lambda passed to `Result.map`/`and_then` with `if(x > 5i32) { return(100i32) }` returns from the enclosing function.
+  - acceptance:
+    - unit-variant pick arms return; lambda returns stay in the lambda; parse/semantic + matrix tests
+    - full release gate green
+  - stop_rule: return lowering in pick arms and lambdas.
+  - notes: deferred: queued behind the Ready Now cap.
+
+- [ ] TODO-5511: Safe code cannot reach container storage or unsafe stdlib helpers
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-10-06
+  - phase: Correctness audit 2026-10
+  - parallel_track: safety-stdlib
+  - scope: Safe code frees or aliases container storage through stdlib internals: `[unsafe]` helpers are callable from safe code (`vectorFreeStorage`, `vectorSlotUnsafe`, `vectorBorrowSlot` returning an untracked `Reference`, `vectorTakeSlot`/`DropSlot`/`InitSlot`, ring-buffer and SoA slot helpers), non-public helpers are callable by absolute path, `Vector`'s `data`/`fieldCount`/`fieldCapacity` fields are public and writable (double free, out-of-bounds read), its brace constructor accepts arbitrary storage, and Map exposes `keys`/`payloads`/`inner`. Make those helpers `[unsafe_api]` (or private and enforced), make container fields private or read-only, and keep the stdlib compiling.
+  - acceptance:
+    - each repro (free via helper, borrowSlot then reserve, takeSlot then clear, `w.data = v.data`, writing fieldCount, brace-constructing a Vector around `v.data`) is rejected outside `[unsafe]`; stdlib and corpus still compile
+    - full release gate green
+  - stop_rule: visibility and unsafe marking; no container redesign.
+  - notes: deferred: queued behind the Ready Now cap; large, split before starting.
+
+- [ ] TODO-5512: Pointers and aliases count as borrows of their root
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-10-06
+  - phase: Correctness audit 2026-10
+  - parallel_track: safety-borrows
+  - scope: `[Pointer<vector<i32>>] p{location(v)}` stays usable after `move(v)` or passing `v` to a move parameter (only References are tracked); a read-only view `[vector<i32>] view{v}` stays live while `v` is grown or cleared through a `Reference` alias passed to a helper (the view check only matches root names).
+  - acceptance:
+    - both are rejected with borrow diagnostics; negative + positive semantics tests
+    - full release gate green
+  - stop_rule: borrow tracking for Pointer roots and aliases.
+  - notes: deferred: queued behind the Ready Now cap.
+
+- [ ] TODO-5513: Methods through a dereferenced vector pointer read the right fields
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-10-06
+  - phase: Correctness audit 2026-10
+  - parallel_track: collections-access
+  - scope: With `[Pointer<vector<i32>>] p{location(v)}`, `dereference(p).count()` returns 0 and `dereference(p).capacity()` returns the count on VM and native; `vectorCount<i32>(dereference(p))` on a `Pointer<Vector<i32>>` is rejected with `expected /std/collections/vector/Vector__t... got /vector`.
+  - acceptance:
+    - count/capacity/at through `dereference(p)` match the direct calls; matrix case
+    - full release gate green
+  - stop_rule: receiver offset handling only.
+  - notes: deferred: queued behind the Ready Now cap.
+
+- [ ] TODO-5514: Native file I/O writes newlines and reports errno
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-10-06
+  - phase: Correctness audit 2026-10
+  - parallel_track: native-io
+  - scope: Native `writeLine` never writes the newline (`emitFileWriteNewline` pops the fd into a register that `emitWriteNewlineReg` overwrites with `'\n'`, so it writes to fd 10); native file open/read errors always report 1 (EPERM) instead of the syscall errno (`emitFileOpenPlaceholder`, `emitFileOpenDynamicPlaceholder`, `emitFileReadByte` in `src/native_emitter/NativeEmitterInternalsX64Io.h`). Also `png.read` of a missing file returns `image_read_unsupported` on VM/C++ because ENOENT (2) collides with readImpl's status 2.
+  - acceptance:
+    - native writeLine and missing-file errors match VM and C++ (matrix cases); missing PNG reports `image_invalid_operation` everywhere
+    - full release gate green
+  - stop_rule: native I/O emitter and png status mapping.
+  - notes: deferred: queued behind the Ready Now cap.
+
+- [ ] TODO-5515: Native Result.ok(Buffer) reads as ok
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5506
+  - created_at: 2026-10-06
+  - phase: Correctness audit 2026-10
+  - parallel_track: native-result
+  - scope: On native, `[Result<Buffer<i32>, GfxError>] s{Result.ok(b)}` then `Result.error(s)` prints 1 (VM/C++ print 0): the payload is packed as a stack address, and native addresses exceed 2^32.
+  - acceptance:
+    - matrix case agrees on VM, native and C++
+    - full release gate green
+  - stop_rule: covered by the convention chosen in TODO-5506 if possible.
+
+- [ ] TODO-5516: Integer narrowing and float-to-int conversion agree across backends
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-10-06
+  - phase: Correctness audit 2026-10
+  - parallel_track: numeric-conversions
+  - scope: After `[i32] x{convert<i32>(4294967297i64)}`, `x` prints 1 but `x == 1i32` is false and `convert<i64>(x)` is 4294967297 (VM/native keep high bits; spec says i32 values wrap mod 2^32). Out-of-range finite float-to-int conversions give a different answer on each backend, and optexe emits C++ undefined behavior (`static_cast<uint64_t>(-1.0)`), which crashed one program. Define and implement one rule (saturate, like the VM for i32, or a runtime fault).
+  - acceptance:
+    - spec states the rule; matrix cases for narrowing and out-of-range conversions agree on VM, native, C++ and optexe
+    - full release gate green
+  - stop_rule: conversions only.
+  - notes: deferred: queued behind the Ready Now cap.
+
+- [ ] TODO-5517: Runtime faults exit the same way on every backend
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-10-06
+  - phase: Correctness audit 2026-10
+  - parallel_track: runtime-faults
+  - scope: Integer division by zero exits 3 with a message on the VM but raises SIGFPE on native and C++ (losing buffered output on C++); C++ reports runtime errors with exit 1 instead of 3; native at 100000 recursion levels segfaults instead of reporting overflow. vm-design.md lists division by zero as a runtime fault with exit 3.
+  - acceptance:
+    - division by zero and the C++ runtime-error exit code match the VM (exit 3, message on stderr)
+    - full release gate green
+  - stop_rule: fault reporting only; recursion limits stay backend-specific but documented.
+  - notes: deferred: queued behind the Ready Now cap.
+
+- [ ] TODO-5518: Valid programs the frontend rejects compile
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-10-06
+  - phase: Correctness audit 2026-10
+  - parallel_track: frontend-accept
+  - scope: Rejected though valid per the spec: an unused `import /std/result/*` or `/std/maybe/*` (`unknown import path`, no location); `return(move(v))` and `return(Holder{move(n)})` (`use-after-move`); an `if` yielding struct values (`if branches must return compatible types`); sum-typed struct fields (`missing struct field info`); `try(...)` as an argument to a user function (`missing on_error for ? usage`); `return([ok] value)` and `return(Result<i32,i32>{[error] 7i32})`.
+  - acceptance:
+    - each form compiles and runs; semantics tests
+    - full release gate green
+  - stop_rule: acceptance of these forms; split per form if needed.
+  - notes: deferred: queued behind the Ready Now cap.
+
+- [ ] TODO-5519: Operator rewriting handles calls, nested `!` and `?` precedence
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-10-06
+  - phase: Correctness audit 2026-10
+  - parallel_track: text-filter
+  - scope: `-id(5i32)` becomes `negate(id)(5i32)`; `print_line(!(id(!true)))` leaves the inner `!` unrewritten (`invalid character '!'`); `x? + 1i32` and `x? * 3i32` are parse errors and `1i32 + x?` parses as `plus(1, x)?`; `try(f()).field` and `f()?.field` fail with `field access requires struct receiver`.
+  - acceptance:
+    - each form rewrites to the expected canonical call; text-filter tests
+    - full release gate green
+  - stop_rule: text filter only.
+  - notes: deferred: queued behind the Ready Now cap.
+
+- [ ] TODO-5520: Diagnostics point at user code with readable names
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-10-06
+  - phase: Correctness audit 2026-10
+  - parallel_track: diagnostics
+  - scope: Many lowering errors carry no file/line (`missing on_error for ? usage`, `requires int-backed stdlib Result error payloads`, `missing semantic-product ...`, `argument count mismatch for /onErr`); C++ errors say `native backend`; messages show mangled names (`Result__arity2__ta77c...`, `Vector__t...`); source snippets show the text-filtered form instead of what the user wrote; an unknown `break` is reported inside stdlib/std/file/file.prime; `borrowed binding: v (root: v, sink: v)` names the root as the sink.
+  - acceptance:
+    - each listed diagnostic has a user-file location, the user's spelling and demangled names; diagnostics tests
+    - full release gate green
+  - stop_rule: diagnostic text and spans only.
+  - notes: deferred: queued behind the Ready Now cap.
+
+- [ ] TODO-5521: Math helpers return correct results
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-10-06
+  - phase: Correctness audit 2026-10
+  - parallel_track: stdlib-math
+  - scope: Consistent on all backends but wrong: `atan2(1, -1)` gives 2.2749 (2.3562), `copysign(3, -0.0)` gives +3, `round(0.49999999999999994)` gives 1, `fma` is not fused.
+  - acceptance:
+    - each returns the IEEE/libm result on VM, native and C++; matrix cases
+    - full release gate green
+  - stop_rule: stdlib math only.
+  - notes: deferred: queued behind the Ready Now cap.
 
 - [ ] TODO-5483: Verify arm64 SextI32 on a macOS machine
   - owner: ai
