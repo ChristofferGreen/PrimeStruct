@@ -376,4 +376,23 @@
         info.valueKind = LocalInfo::ValueKind::Int64;
       }
       info.isFileError = isFileErrorBinding(bindingTypeExprRef);
+      // A vector of structs stores each element inline; element access steps by its slot count.
+      if (info.kind == LocalInfo::Kind::Vector && info.valueKind == LocalInfo::ValueKind::Unknown &&
+          info.vectorStructElementSlotCount == 0) {
+        for (const auto &transform : bindingTypeExprRef.transforms) {
+          if (transform.templateArgs.size() != 1 ||
+              normalizeCollectionBindingTypeName(transform.name) != "vector") {
+            continue;
+          }
+          std::string elementStructPath;
+          StructSlotLayoutInfo elementLayout;
+          if (resolveStructTypeName(trimTemplateTypeText(transform.templateArgs.front()),
+                                    bindingTypeExprRef.namespacePrefix,
+                                    elementStructPath) &&
+              resolveStructSlotLayout(elementStructPath, elementLayout)) {
+            info.vectorStructElementSlotCount = elementLayout.totalSlots;
+          }
+          break;
+        }
+      }
       valueKind = info.valueKind;

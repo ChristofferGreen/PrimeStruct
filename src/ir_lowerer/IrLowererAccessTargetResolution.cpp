@@ -445,6 +445,9 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
           localInfo.structSlotCount > 0;
       return isInlineStructPack ? localInfo.structSlotCount : 1;
     }
+    if (localInfo.vectorStructElementSlotCount > 0) {
+      return localInfo.vectorStructElementSlotCount;
+    }
     return localInfo.structSlotCount;
   };
   const auto populateFromArgsPackLocal = [&](const LocalInfo &localInfo, bool dereferenced) {
@@ -559,6 +562,13 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
           target, semanticProgram, semanticIndex, info, hasSemanticTargetFact) &&
       (info.elemKind != LocalInfo::ValueKind::Unknown ||
        !info.structTypeName.empty())) {
+    if (target.kind == Expr::Kind::Name && info.isVectorTarget &&
+        info.elemKind == LocalInfo::ValueKind::Unknown) {
+      if (auto it = localsIn.find(target.name);
+          it != localsIn.end() && it->second.vectorStructElementSlotCount > 0) {
+        info.elemSlotCount = it->second.vectorStructElementSlotCount;
+      }
+    }
     return info;
   }
   if (hasSemanticTargetFact && resolveCallArrayVectorAccessTargetInfo) {

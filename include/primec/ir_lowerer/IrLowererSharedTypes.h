@@ -22,6 +22,8 @@ struct LocalInfo {
   ValueKind keyValueValueKind = ValueKind::Unknown;
   Kind argsPackElementKind = Kind::Value;
   int32_t structSlotCount = 0;
+  // A vector of structs: slots per inline element (0 for scalar elements).
+  int32_t vectorStructElementSlotCount = 0;
   bool isFileHandle = false;
   // Set while this owning struct local still owns its value; its scope's cleanup destroys it
   // only then (moves and returns clear it). -1 when the local needs no destroy.

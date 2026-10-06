@@ -210,4 +210,54 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("vector at reads struct elements at every index") {
+  program_matrix::ProgramCase program;
+  program.name = "vector_struct_element_at";
+  program.source = R"(
+import /std/collections/*
+
+[struct]
+Point() {
+  [i32 mut] x{0i32}
+  [i32 mut] y{0i32}
+}
+
+[struct]
+Mixed() {
+  [i32 mut] x{0i32}
+  [i64 mut] y{0i64}
+}
+
+[effects(io_out) return<i32>]
+second_y([vector<Point>] pts) {
+  [Point] p{pts.at(1i32)}
+  return(p.y)
+}
+
+[effects(io_out heap_alloc) return<int>]
+main() {
+  [vector<Point> mut] pts{vector<Point>()}
+  pts.push(Point{1i32, 2i32})
+  pts.push(Point{-3i32, -4i32})
+  pts.push(Point{5i32, 6i32})
+  [Point] first{pts.at(0i32)}
+  print_line(first.y)
+  print_line(second_y(pts))
+  for([i32 mut] i{0i32}, i < 3i32, i++) {
+    [Point] q{pts.at(i)}
+    print_line(q.x)
+  }
+  [vector<Mixed> mut] ms{vector<Mixed>()}
+  ms.push(Mixed{1i32, 2i64})
+  ms.push(Mixed{-3i32, -4i64})
+  [Mixed] m{ms.at(1i32)}
+  print_line(m.x)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "2\n-4\n1\n-3\n5\n-3\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

@@ -350,20 +350,28 @@ bool emitArrayVectorIndexedAccess(
        usesCollectionVectorValueStorage(arrayVectorTargetInfo) ||
        isWrappedStructArgsPackTarget);
 
-  emitArrayVectorAccessLoad(
-      accessName,
-      ptrLocal,
-      indexLocal,
-      indexKind,
-      targetUsesVectorStorageLayout,
-      1,
-      (arrayVectorTargetInfo.elemSlotCount > 0) ? arrayVectorTargetInfo.elemSlotCount : 1,
-      loadElementValue,
-      allocTempLocal,
-      emitArrayIndexOutOfBounds,
-      instructionCount,
-      emitInstruction,
-      patchInstructionImm);
+  // A vector of structs stores each element inline in several slots: step by the element size
+  // and yield the element's address.
+  const bool isInlineStructVectorElement =
+      targetUsesVectorStorageLayout && !arrayVectorTargetInfo.isKeyValueTarget &&
+      !arrayVectorTargetInfo.isWrappedKeyValueTarget &&
+      arrayVectorTargetInfo.elemKind == LocalInfo::ValueKind::Unknown &&
+      arrayVectorTargetInfo.elemSlotCount > 1;
+  const int32_t elementSlotCount =
+      (arrayVectorTargetInfo.elemSlotCount > 0) ? arrayVectorTargetInfo.elemSlotCount : 1;
+  emitArrayVectorAccessLoad(accessName,
+                            ptrLocal,
+                            indexLocal,
+                            indexKind,
+                            targetUsesVectorStorageLayout,
+                            1,
+                            elementSlotCount,
+                            loadElementValue && !isInlineStructVectorElement,
+                            allocTempLocal,
+                            emitArrayIndexOutOfBounds,
+                            instructionCount,
+                            emitInstruction,
+                            patchInstructionImm);
   return true;
 }
 

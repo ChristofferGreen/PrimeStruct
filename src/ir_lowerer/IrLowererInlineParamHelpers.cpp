@@ -421,7 +421,6 @@ void preserveSequentialHandleArgumentInfo(LocalInfo &paramInfo,
   const bool paramIsMutable = paramInfo.isMutable;
   const bool paramIsArgsPack = paramInfo.isArgsPack;
   const int32_t paramArgsPackElementCount = paramInfo.argsPackElementCount;
-
   if (argInfo.valueKind != LocalInfo::ValueKind::Unknown) {
     paramInfo.valueKind = argInfo.valueKind;
   }
@@ -431,6 +430,7 @@ void preserveSequentialHandleArgumentInfo(LocalInfo &paramInfo,
   if (argInfo.structSlotCount > 0) {
     paramInfo.structSlotCount = argInfo.structSlotCount;
   }
+  paramInfo.vectorStructElementSlotCount = argInfo.vectorStructElementSlotCount;
   paramInfo.isSoaVector = paramInfo.isSoaVector || argInfo.isSoaVector;
   paramInfo.usesBuiltinCollectionLayout =
       paramInfo.usesBuiltinCollectionLayout || argInfo.usesBuiltinCollectionLayout;
