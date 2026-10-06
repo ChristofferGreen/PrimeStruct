@@ -1998,6 +1998,7 @@ are left unarchived.
 | TODO-5505 | A temporary passed to a move parameter keeps its block's cleanup | [2026-10.md](todo_archive/2026-10.md) | 2026-10-06 |
 | TODO-5506 | Result values use one convention across function boundaries | [2026-10.md](todo_archive/2026-10.md) | 2026-10-06 |
 | TODO-5507 | Unbound temporaries are destroyed | [2026-10.md](todo_archive/2026-10.md) | 2026-10-06 |
+| TODO-5508 | User Copy helpers work for structs with owning fields | [2026-10.md](todo_archive/2026-10.md) | 2026-10-06 |
 | TODO-5522 | Builtin vector<T> locals destroy their elements | [2026-10.md](todo_archive/2026-10.md) | 2026-10-06 |
 
 <!-- INDEX-END -->

@@ -53,7 +53,9 @@
   field is read.
 - **Copies:** `copy` duplicates through the type's `Copy` helper when it has one (collections copy their elements),
   otherwise bitwise for `Copy` types; a struct without a `Copy` helper copies its fields, running the helpers of the
-  fields that have one. The same applies to a binding initialized from an existing place (a binding, field or
+  fields that have one. A user `Copy` helper runs after that field-wise copy, so `this` already owns copies of its
+  fields (it never aliases `other`'s storage) and the helper only adjusts what it needs; assigning a field destroys
+  that copy first. The same applies to a binding initialized from an existing place (a binding, field or
   dereference): `[Vector<i32> mut] b{a}` gives `b` its own elements, so changing or destroying either leaves the other
   intact. A non-`mut` collection binding (`vector`, `map`, `soa_vector`) initialized from a place is a read-only view of it
   and does not copy; it borrows the place's root binding until its last use, so the root cannot be changed (passed to a

@@ -182,19 +182,13 @@ bool emitStructCopyHelpersAtDepth(
     bool &ranHelper,
     std::string &error,
     int depth) {
-  if (const Definition *copyHelper = findCopyHelper(structPath)) {
-    ranHelper = true;
-    return emitMoveHelperFromPtrs(destPtrLocal,
-                                  srcPtrLocal,
-                                  structPath,
-                                  copyHelper,
-                                  localsIn,
-                                  emitInlineDefinitionCall,
-                                  error);
-  }
+  // `dest` starts as a slot copy of `src`. Copy the fields that have helpers of their own first,
+  // so a user `Copy` helper starts from a `this` that owns its fields instead of aliasing the
+  // source's storage (docs/spec/value-lifecycle.md).
+  const Definition *copyHelper = findCopyHelper(structPath);
   StructSlotLayoutInfo layout;
   if (depth > 16 || !resolveStructSlotLayout(structPath, layout)) {
-    return true;
+    layout.fields.clear();
   }
   for (const StructSlotFieldInfo &field : layout.fields) {
     if (!structNeedsCopyHelpers(
@@ -226,6 +220,16 @@ bool emitStructCopyHelpersAtDepth(
                                       depth + 1)) {
       return false;
     }
+  }
+  if (copyHelper != nullptr) {
+    ranHelper = true;
+    return emitMoveHelperFromPtrs(destPtrLocal,
+                                  srcPtrLocal,
+                                  structPath,
+                                  copyHelper,
+                                  localsIn,
+                                  emitInlineDefinitionCall,
+                                  error);
   }
   return true;
 }

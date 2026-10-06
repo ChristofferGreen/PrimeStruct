@@ -651,4 +651,85 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("a user Copy helper starts from fields it owns") {
+  program_matrix::ProgramCase program;
+  program.name = "user_copy_owns_fields";
+  program.source = R"(
+import /std/collections/*
+
+[struct]
+Bag() {
+  [Vector<i32> mut] items{vector<i32>()}
+  [i32 mut] tag{0i32}
+
+  [public effects(heap_alloc)]
+  Copy([Reference<Self>] other) {
+    assign(this.items, other.items)
+    assign(this.tag, other.tag + 100i32)
+  }
+}
+
+[effects(io_out heap_alloc) return<int>]
+main() {
+  [Bag mut] a{Bag{}}
+  vectorPush<i32>(a.items, 4i32)
+  vectorPush<i32>(a.items, 5i32)
+  a.tag = 1i32
+  [Bag mut] b{a}
+  vectorPush<i32>(b.items, 6i32)
+  print_line(vectorCount<i32>(a.items))
+  print_line(vectorCount<i32>(b.items))
+  print_line(b.tag)
+  print_line(vectorAt<i32>(b.items, 2i32))
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "2\n3\n101\n6\n";
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("a user Copy helper that skips owning fields still copies them") {
+  program_matrix::ProgramCase program;
+  program.name = "user_copy_skipped_fields";
+  program.source = R"(
+import /std/collections/*
+
+[struct]
+Noisy() {
+  [i32 mut] id{0i32}
+  [public] Copy([Reference<Self>] other) { assign(this.id, other.id + 10i32) }
+  [public effects(io_out)] Destroy() { print_line(this.id) }
+}
+
+[struct]
+Pair() {
+  [Noisy mut] left{Noisy{1i32}}
+  [Vector<i32> mut] items{vector<i32>()}
+  [i32 mut] copies{0i32}
+
+  [public]
+  Copy([Reference<Self>] other) {
+    assign(this.copies, other.copies + 1i32)
+  }
+}
+
+[effects(io_out heap_alloc) return<int>]
+main() {
+  [Pair mut] a{Pair{}}
+  vectorPush<i32>(a.items, 7i32)
+  [Pair mut] b{a}
+  vectorPush<i32>(b.items, 8i32)
+  print_line(vectorCount<i32>(a.items))
+  print_line(vectorCount<i32>(b.items))
+  print_line(b.copies)
+  print_line(b.left.id)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "1\n2\n1\n11\n11\n1\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();
