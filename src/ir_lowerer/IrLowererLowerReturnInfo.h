@@ -9,6 +9,77 @@
     return ir_lowerer::emitStructCopySlots(
         function.instructions, destBaseLocal, srcPtrLocal, slotCount, [&]() { return allocTempLocal(); });
   };
+  // Destroys each element of a builtin vector record (count in slot 1, data pointer in slot 3)
+  // and frees its data buffer.
+  auto emitBuiltinVectorDrop = [&](const LowerSetupStageState::DropEntry &entry) -> bool {
+    auto &instructions = function.instructions;
+    const int32_t dataLocal = allocTempLocal();
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(entry.ptrLocal)});
+    instructions.push_back({IrOpcode::PushI64, 3 * IrSlotBytes});
+    instructions.push_back({IrOpcode::AddI64, 0});
+    instructions.push_back({IrOpcode::LoadIndirect, 0});
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(dataLocal)});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(dataLocal)});
+    instructions.push_back({IrOpcode::PushI64, 0});
+    instructions.push_back({IrOpcode::CmpEqI64, 0});
+    const size_t skipEmptyJump = instructions.size();
+    instructions.push_back({IrOpcode::JumpIfZero, 0});
+    const size_t toEndJump = instructions.size();
+    instructions.push_back({IrOpcode::Jump, 0});
+    instructions[skipEmptyJump].imm = static_cast<uint64_t>(instructions.size());
+    if (!entry.structPath.empty()) {
+      const int32_t countLocal = allocTempLocal();
+      const int32_t indexLocal = allocTempLocal();
+      const int32_t elementPtrLocal = allocTempLocal();
+      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(entry.ptrLocal)});
+      instructions.push_back({IrOpcode::PushI64, IrSlotBytes});
+      instructions.push_back({IrOpcode::AddI64, 0});
+      instructions.push_back({IrOpcode::LoadIndirect, 0});
+      instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(countLocal)});
+      instructions.push_back({IrOpcode::PushI32, 0});
+      instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal)});
+      const size_t loopStart = instructions.size();
+      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+      instructions.push_back({IrOpcode::CmpLtI32, 0});
+      const size_t loopExitJump = instructions.size();
+      instructions.push_back({IrOpcode::JumpIfZero, 0});
+      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(dataLocal)});
+      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+      instructions.push_back(
+          {IrOpcode::PushI32,
+           static_cast<uint64_t>(entry.builtinVectorElementSlots * IrSlotBytesI32)});
+      instructions.push_back({IrOpcode::MulI32, 0});
+      instructions.push_back({IrOpcode::AddI64, 0});
+      instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(elementPtrLocal)});
+      if (!ir_lowerer::emitStructDestroyHelpersFromPtr(
+              elementPtrLocal,
+              entry.structPath,
+              [&](const std::string &path) {
+                return ir_lowerer::findStackDestroyHelper(defMap, path);
+              },
+              [&](const std::string &path, StructSlotLayoutInfo &layoutOut) {
+                return resolveStructSlotLayout(path, layoutOut);
+              },
+              [&]() { return allocTempLocal(); },
+              [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+              LocalMap{},
+              emitInlineDefinitionCall,
+              error)) {
+        return false;
+      }
+      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+      function.instructions.push_back({IrOpcode::PushI32, 1});
+      function.instructions.push_back({IrOpcode::AddI32, 0});
+      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal)});
+      function.instructions.push_back({IrOpcode::Jump, static_cast<uint64_t>(loopStart)});
+      function.instructions[loopExitJump].imm = static_cast<uint64_t>(function.instructions.size());
+    }
+    function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(dataLocal)});
+    function.instructions.push_back({IrOpcode::HeapFree, 0});
+    function.instructions[toEndJump].imm = static_cast<uint64_t>(function.instructions.size());
+    return true;
+  };
   // Destroys an owning struct local whose drop flag is still set, then clears the flag, so a
   // cleanup that runs again on another exit path is a no-op.
   auto emitDropEntryCleanup = [&](const LowerSetupStageState::DropEntry &entry) {
@@ -17,6 +88,11 @@
     function.instructions.push_back({IrOpcode::JumpIfZero, 0});
     function.instructions.push_back({IrOpcode::PushI32, 0});
     function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(entry.flagLocal)});
+    if (entry.builtinVectorElementSlots > 0) {
+      const bool emitted = emitBuiltinVectorDrop(entry);
+      function.instructions[skipJump].imm = static_cast<uint64_t>(function.instructions.size());
+      return emitted;
+    }
     const bool emitted = ir_lowerer::emitStructDestroyHelpersFromPtr(
         entry.ptrLocal,
         entry.structPath,

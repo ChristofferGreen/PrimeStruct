@@ -459,4 +459,99 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("builtin vector locals destroy their elements in blocks, loops and callees") {
+  program_matrix::ProgramCase program;
+  program.name = "builtin_vector_locals_destroy_elements";
+  program.source = R"(
+import /std/collections/*
+
+[struct]
+Noisy() {
+  [i32 mut] id{0i32}
+  [public effects(io_out)] Destroy() { print_line(this.id) }
+}
+
+[effects(io_out heap_alloc)]
+fill([i32] base) {
+  [vector<Noisy> mut] inner{vector<Noisy>()}
+  inner.push(Noisy{base})
+  inner.push(Noisy{base + 1i32})
+}
+
+[effects(io_out heap_alloc) return<int>]
+main() {
+  if(true) {
+    [vector<Noisy> mut] v{vector<Noisy>()}
+    v.push(Noisy{5i32})
+  }
+  print_line(100i32)
+  fill(10i32)
+  print_line(101i32)
+  [i32 mut] i{0i32}
+  while(i < 2i32) {
+    [vector<Noisy> mut] w{vector<Noisy>()}
+    w.push(Noisy{20i32 + i})
+    i = i + 1i32
+  }
+  print_line(102i32)
+  [vector<Noisy> mut] last{vector<Noisy>()}
+  vectorPush<Noisy>(last, Noisy{7i32})
+  print_line(103i32)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "5\n100\n10\n11\n101\n20\n21\n102\n103\n7\n";
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("returned and aliased builtin vectors are destroyed once by their owner") {
+  program_matrix::ProgramCase program;
+  program.name = "builtin_vector_owner_destroys_once";
+  program.source = R"(
+import /std/collections/*
+
+[struct]
+Noisy() {
+  [i32 mut] id{0i32}
+  [public effects(io_out)] Destroy() { print_line(this.id) }
+}
+
+[effects(io_out heap_alloc) return<vector<Noisy>>]
+make([i32] base) {
+  [vector<Noisy> mut] made{vector<Noisy>()}
+  made.push(Noisy{base})
+  return(made)
+}
+
+[effects(io_out heap_alloc) return<int>]
+main() {
+  if(true) {
+    [vector<Noisy> mut] got{make(30i32)}
+    print_line(got.count())
+  }
+  print_line(200i32)
+  if(true) {
+    [vector<Noisy> mut] v{vector<Noisy>()}
+    v.push(Noisy{40i32})
+    [vector<Noisy>] alias{v}
+    print_line(alias.count())
+  }
+  print_line(201i32)
+  [vector<i32> mut] total{vector<i32>()}
+  [i32 mut] k{0i32}
+  while(k < 50i32) {
+    [vector<i32> mut] scratch{vector<i32>(k, k)}
+    total.push(scratch.count())
+    k = k + 1i32
+  }
+  print_line(total.count())
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "1\n30\n200\n1\n40\n201\n50\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

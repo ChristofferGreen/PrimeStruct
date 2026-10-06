@@ -457,8 +457,41 @@
         return false;
       }
       info.index = nextLocal++;
-      localsIn.emplace(stmt.name, info);
       function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(info.index)});
+      // A builtin vector local that owns its record destroys its elements and frees its buffer
+      // at scope end, like a stdlib Vector local (docs/spec/value-lifecycle.md).
+      if (initializerMakesFreshBuiltinVector(info, init)) {
+        std::string elementStructPath;
+        for (const auto &transform : stmt.transforms) {
+          if (transform.templateArgs.size() == 1 &&
+              normalizeCollectionBindingTypeName(transform.name) == "vector") {
+            std::string resolvedPath;
+            if (resolveStructTypeName(trimTemplateTypeText(transform.templateArgs.front()),
+                                      stmt.namespacePrefix,
+                                      resolvedPath) &&
+                ir_lowerer::structNeedsDestroyHelpers(
+                    resolvedPath,
+                    [&](const std::string &path) {
+                      return ir_lowerer::findStackDestroyHelper(defMap, path);
+                    },
+                    [&](const std::string &path, StructSlotLayoutInfo &layoutOut) {
+                      return resolveStructSlotLayout(path, layoutOut);
+                    })) {
+              elementStructPath = std::move(resolvedPath);
+            }
+            break;
+          }
+        }
+        info.dropFlagLocal = allocTempLocal();
+        function.instructions.push_back({IrOpcode::PushI32, 1});
+        function.instructions.push_back(
+            {IrOpcode::StoreLocal, static_cast<uint64_t>(info.dropFlagLocal)});
+        LowerSetupStageState::DropEntry entry{info.index, info.dropFlagLocal, elementStructPath};
+        entry.builtinVectorElementSlots = std::max<int32_t>(1, info.vectorStructElementSlotCount);
+        setupStage.dropEntries.push_back(std::move(entry));
+        fileScopeStack.back().push_back(-static_cast<int32_t>(setupStage.dropEntries.size()));
+      }
+      localsIn.emplace(stmt.name, info);
       if (info.isFileHandle && !fileScopeStack.empty()) {
         fileScopeStack.back().push_back(info.index);
       }

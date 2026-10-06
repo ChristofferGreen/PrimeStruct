@@ -70,7 +70,10 @@
   element. An owning local (a struct with `Destroy`, `DestroyStack` or a field that has one, including containers) is
   destroyed when its scope ends on every exit path (fall-through, `return`, including from nested blocks of an inlined
   callee), last declared first, unless its value was moved out (`move(x)`, a `move` parameter) or named in the returned
-  value; a per-local drop flag tracks this at run time. A struct field initialized from a place copies it, and
+  value; a per-local drop flag tracks this at run time. A builtin `vector<T>` local initialized by a constructor or a
+  call returning a vector owns it the same way: its elements are destroyed and its buffer freed when its scope ends,
+  while a binding initialized from another vector binding is a view and destroys nothing. A struct field initialized
+  from a place copies it, and
   `assign` of an owning value destroys the old value and copies the new one. A `copy` or `move` parameter is
   destroyed by the callee when its body ends (the caller does not destroy a binding it passed to a `move` parameter),
   `init(slot, x)` hands `x` to the storage, and dropping a container slot (`pop`, `clear`, `Destroy` of the container)

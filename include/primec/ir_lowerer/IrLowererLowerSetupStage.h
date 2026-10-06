@@ -54,6 +54,10 @@ struct LowerSetupStageState {
     int32_t ptrLocal = -1;
     int32_t flagLocal = -1;
     std::string structPath;
+    // Non-zero for a builtin vector record: slots per element. Its elements are destroyed
+    // (structPath names the element struct, empty when elements need no destroy) and its data
+    // buffer freed.
+    int32_t builtinVectorElementSlots = 0;
   };
   std::vector<DropEntry> dropEntries;
   std::optional<OnErrorHandler> currentOnError;

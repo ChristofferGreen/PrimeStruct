@@ -100,13 +100,12 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5522 | Builtin vector<T> locals destroy their elements | ready | lifecycle-builtin-vector |
 | TODO-5507 | Unbound temporaries are destroyed | ready | lifecycle-temporaries |
 | TODO-5508 | User Copy helpers work for structs with owning fields | ready | lifecycle-copy |
 | TODO-5509 | Self-assignment, user-Destroy fields, Maybe payloads and move parameters destroy correctly | ready | lifecycle-misc |
 | TODO-5510 | `return` returns from pick arms and lambdas correctly | ready | control-returns |
 | TODO-5524 | Int-backed error structs round-trip through stdlib Result sums | ready | result-error-structs |
-| TODO-5523 | A Result-returning main exits with its error code | deferred | result-main |
+| TODO-5523 | A Result-returning main exits with its error code | ready | result-main |
 | TODO-5525 | `Result.ok(x)` passes as a stdlib Result argument | deferred | result-arguments |
 | TODO-5526 | Vectors of stdlib Result values keep their elements | deferred | result-containers |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
@@ -124,7 +123,6 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5522 (lifecycle-builtin-vector): builtin vector<T> locals destroy their elements
 - TODO-5507 (lifecycle-temporaries): unbound temporaries are destroyed
 - TODO-5508 (lifecycle-copy): user Copy helpers work for structs with owning fields
 - TODO-5509 (lifecycle-misc): self-assignment, user-Destroy fields, Maybe payloads and move parameters destroy correctly
@@ -132,21 +130,22 @@ of sync with them.
 - TODO-5513 (collections-access): methods through a dereferenced vector pointer read the right fields
 - TODO-5524 (result-error-structs): int-backed error structs round-trip through stdlib Result sums
 - TODO-5515 (native-result): native Result.ok(Buffer) reads as ok
+- TODO-5523 (result-main): a Result-returning main exits with its error code
 
 ### Immediate Next 10
 
-1. TODO-5522
-2. TODO-5507
-3. TODO-5508
-4. TODO-5509
-5. TODO-5510
-6. TODO-5513
-7. TODO-5524
-8. TODO-5515
+1. TODO-5507
+2. TODO-5508
+3. TODO-5509
+4. TODO-5510
+5. TODO-5513
+6. TODO-5524
+7. TODO-5515
+8. TODO-5523
 
 ### Priority Lanes
 
-- Lifecycle (docs/spec/value-lifecycle.md): TODO-5522, TODO-5507, TODO-5508, TODO-5509
+- Lifecycle (docs/spec/value-lifecycle.md): TODO-5507, TODO-5508, TODO-5509
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5514, TODO-5516, TODO-5517
@@ -158,18 +157,6 @@ of sync with them.
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 ### Task Blocks
-
-- [ ] TODO-5522: Builtin vector<T> locals destroy their elements
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-06
-  - phase: Correctness audit 2026-10
-  - parallel_track: lifecycle-builtin-vector
-  - scope: A lowercase `[vector<Noisy> mut] v{vector<Noisy>()}` local (builtin `Kind::Vector`) is never destroyed: neither its elements' `Destroy` nor (likely) its heap storage runs at scope end, while the same code with `Vector<Noisy>` is correct. Repro: push `Noisy{5i32}` into a lowercase vector local and print 100; output lacks the element's Destroy.
-  - acceptance:
-    - lowercase vector locals with struct elements destroy each element once at scope end, in blocks, loops and inlined callees, on VM, native and C++ (matrix case)
-    - full release gate green
-  - stop_rule: builtin vector locals only.
 
 - [ ] TODO-5507: Unbound temporaries are destroyed
   - owner: ai
@@ -284,7 +271,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 
 - [ ] TODO-5523: A Result-returning main exits with its error code
   - owner: ai
-  - status: deferred
+  - status: ready
   - created_at: 2026-10-06
   - phase: Correctness audit 2026-10
   - parallel_track: result-main
@@ -293,7 +280,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - spec states the rule; matrix cases for ok, int error and struct error agree on VM, native and C++
     - full release gate green
   - stop_rule: entry-point Result exit codes only.
-  - notes: deferred: queued behind the Ready Now cap.
 
 - [ ] TODO-5525: `Result.ok(x)` passes as a stdlib Result argument
   - owner: ai
