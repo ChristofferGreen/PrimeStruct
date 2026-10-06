@@ -596,9 +596,10 @@
       return true;
     }
     if (isReturnCall(stmt) && stmt.args.size() == 1) {
-      // A local named in the returned value (returned itself, or wrapped in a Result or an
-      // aggregate) hands its value to the caller; its scope must not destroy it. Clearing a
-      // flag the value did not need to give up only leaks.
+      // A local whose value the return hands to the caller (returned itself, wrapped by
+      // Result.ok or a variant helper, or as an if branch's value) must not be destroyed by its
+      // scope. Anything only read (a field, an operand, a borrowed argument) or copied (a
+      // struct field initializer) stays owned here.
       std::function<void(const Expr &)> releaseReturnedLocals = [&](const Expr &returnedExpr) {
         if (returnedExpr.kind == Expr::Kind::Name) {
           ir_lowerer::emitReleaseDropFlag(
@@ -607,11 +608,25 @@
               });
           return;
         }
-        for (const Expr &arg : returnedExpr.args) {
-          releaseReturnedLocals(arg);
+        if (returnedExpr.kind != Expr::Kind::Call) {
+          return;
         }
-        for (const Expr &bodyArg : returnedExpr.bodyArguments) {
-          releaseReturnedLocals(bodyArg);
+        if (sumHelpers.isLegacyResultOkCall(returnedExpr) ||
+            sumHelpers.isStdlibResultVariantHelperCall(returnedExpr, "ok") ||
+            sumHelpers.isStdlibResultVariantHelperCall(returnedExpr, "error")) {
+          for (const Expr &arg : returnedExpr.args) {
+            releaseReturnedLocals(arg);
+          }
+          return;
+        }
+        if (isIfCall(returnedExpr) && returnedExpr.args.size() == 3) {
+          releaseReturnedLocals(returnedExpr.args[1]);
+          releaseReturnedLocals(returnedExpr.args[2]);
+          return;
+        }
+        // An if branch's block envelope yields its last statement.
+        if (returnedExpr.args.empty() && !returnedExpr.bodyArguments.empty()) {
+          releaseReturnedLocals(returnedExpr.bodyArguments.back());
         }
       };
       releaseReturnedLocals(stmt.args.front());

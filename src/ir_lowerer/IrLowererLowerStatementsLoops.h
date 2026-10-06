@@ -96,12 +96,19 @@
       const size_t jumpEndIndex = function.instructions.size();
       function.instructions.push_back({IrOpcode::JumpIfZero, 0});
 
+      // Each iteration's body is its own scope: its owning locals are destroyed before the
+      // condition is checked again.
+      OnErrorScope onErrorScope(currentOnError, std::nullopt);
+      pushFileScope();
+      LocalMap bodyLocals = localsIn;
       if (!ir_lowerer::emitBodyStatements(
-              body.bodyArguments,
-              localsIn,
-              [&](const Expr &bodyStmt, LocalMap &bodyLocals) { return emitStatement(bodyStmt, bodyLocals); })) {
+              body.bodyArguments, bodyLocals, [&](const Expr &bodyStmt, LocalMap &statementLocals) {
+                return emitStatement(bodyStmt, statementLocals);
+              })) {
         return false;
       }
+      emitFileScopeCleanup(fileScopeStack.back());
+      popFileScope();
 
       function.instructions.push_back({IrOpcode::Jump, static_cast<uint64_t>(checkIndex)});
       const size_t endIndex = function.instructions.size();

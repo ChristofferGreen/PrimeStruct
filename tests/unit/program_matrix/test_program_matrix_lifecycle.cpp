@@ -368,4 +368,95 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("returns, while bodies and block temporaries destroy exactly the values they own") {
+  program_matrix::ProgramCase program;
+  program.name = "destroy_returns_loops_blocks";
+  program.source = R"(
+import /std/collections/*
+
+[struct]
+Noisy() {
+  [i32 mut] id{0i32}
+
+  [public]
+  Copy([Reference<Self>] other) {
+    assign(this.id, plus(other.id, 10i32))
+  }
+
+  [public effects(io_out)]
+  Destroy() {
+    print_line(this.id)
+  }
+}
+
+[struct]
+Pair() {
+  [Noisy mut] left{Noisy{1i32}}
+  [Noisy mut] right{Noisy{2i32}}
+}
+
+[effects(io_out) return<i32>]
+scalar_from_local() {
+  [Noisy] a{Noisy{7i32}}
+  return(plus(a.id, 1i32))
+}
+
+[effects(io_out heap_alloc) return<i32>]
+count_of_local() {
+  [Vector<Noisy> mut] v{vector<Noisy>()}
+  vectorPush<Noisy>(v, Noisy{9i32})
+  return(vectorCount<Noisy>(v))
+}
+
+[effects(io_out) return<Noisy>]
+field_of_local() {
+  [Pair] p{Pair{}}
+  return(p.left)
+}
+
+[effects(io_out) return<Noisy>]
+returned_local() {
+  [Noisy] kept{Noisy{3i32}}
+  return(kept)
+}
+
+[effects(io_out) return<i32>]
+while_body([i32] limit) {
+  [i32 mut] i{0i32}
+  while(i < limit) {
+    [Noisy] each{Noisy{plus(20i32, i)}}
+    if(i == 1i32) {
+      return(i)
+    }
+    i++
+  }
+  return(-1i32)
+}
+
+[effects(io_out heap_alloc) return<int>]
+main() {
+  print_line(scalar_from_local())
+  print_line(100i32)
+  print_line(count_of_local())
+  print_line(101i32)
+  [Noisy] left{field_of_local()}
+  print_line(left.id)
+  [Noisy] kept{returned_local()}
+  print_line(kept.id)
+  print_line(102i32)
+  print_line(while_body(5i32))
+  print_line(103i32)
+  if(true) {
+    [Vector<Noisy> mut] w{vector<Noisy>()}
+    vectorPush<Noisy>(w, Noisy{6i32})
+  }
+  print_line(104i32)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "7\n8\n100\n9\n1\n101\n2\n1\n11\n3\n102\n20\n21\n1\n103\n6\n104\n3\n11\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

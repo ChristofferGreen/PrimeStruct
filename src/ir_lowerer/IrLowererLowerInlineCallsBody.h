@@ -414,9 +414,14 @@
                     ranCopyHelper,
                     error);
               })) {
+        popFileScope();
         popInlineStack();
         return false;
       }
+      // A constructor call has no body scope of its own; leaving it pushed would capture the
+      // caller's later locals and skip their block's cleanup.
+      emitFileScopeCleanup(fileScopeStack.back());
+      popFileScope();
       popInlineStack();
       return true;
     }

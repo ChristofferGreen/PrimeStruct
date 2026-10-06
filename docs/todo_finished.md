@@ -1993,6 +1993,9 @@ are left unarchived.
 | TODO-5500 | Reading a struct element past index 0 from a vector works | [2026-10.md](todo_archive/2026-10.md) | 2026-10-06 |
 | TODO-5501 | A discarded non-void call inside a nested block is valid IR | [2026-10.md](todo_archive/2026-10.md) | 2026-10-06 |
 | TODO-5502 | `x = Type{...}` assigns instead of defining a nested `assign` | [2026-10.md](todo_archive/2026-10.md) | 2026-10-06 |
+| TODO-5503 | Locals only read by a return expression are still destroyed | [2026-10.md](todo_archive/2026-10.md) | 2026-10-06 |
+| TODO-5504 | `while` bodies destroy their locals every iteration | [2026-10.md](todo_archive/2026-10.md) | 2026-10-06 |
+| TODO-5505 | A temporary passed to a move parameter keeps its block's cleanup | [2026-10.md](todo_archive/2026-10.md) | 2026-10-06 |
 
 <!-- INDEX-END -->
 

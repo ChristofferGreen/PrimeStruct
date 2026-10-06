@@ -100,11 +100,9 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5503 | Locals only read by a return expression are still destroyed | ready | lifecycle-returns |
-| TODO-5504 | `while` bodies destroy their locals every iteration | ready | lifecycle-loops |
-| TODO-5505 | A temporary passed to a move parameter keeps its block's cleanup | ready | lifecycle-blocks |
 | TODO-5506 | Result values use one convention across function boundaries | ready | result-abi |
-| TODO-5507 | Unbound temporaries are destroyed | blocked | lifecycle-temporaries |
+| TODO-5522 | Builtin vector<T> locals destroy their elements | ready | lifecycle-builtin-vector |
+| TODO-5507 | Unbound temporaries are destroyed | ready | lifecycle-temporaries |
 | TODO-5508 | User Copy helpers work for structs with owning fields | ready | lifecycle-copy |
 | TODO-5509 | Self-assignment, user-Destroy fields, Maybe payloads and move parameters destroy correctly | ready | lifecycle-misc |
 | TODO-5510 | `return` returns from pick arms and lambdas correctly | ready | control-returns |
@@ -123,10 +121,9 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5503 (lifecycle-returns): locals only read by a return expression are still destroyed
-- TODO-5504 (lifecycle-loops): `while` bodies destroy their locals every iteration
-- TODO-5505 (lifecycle-blocks): a temporary passed to a move parameter keeps its block's cleanup
 - TODO-5506 (result-abi): result values use one convention across function boundaries
+- TODO-5522 (lifecycle-builtin-vector): builtin vector<T> locals destroy their elements
+- TODO-5507 (lifecycle-temporaries): unbound temporaries are destroyed
 - TODO-5508 (lifecycle-copy): user Copy helpers work for structs with owning fields
 - TODO-5509 (lifecycle-misc): self-assignment, user-Destroy fields, Maybe payloads and move parameters destroy correctly
 - TODO-5510 (control-returns): `return` returns from pick arms and lambdas correctly
@@ -134,18 +131,17 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5503
-2. TODO-5504
-3. TODO-5505
-4. TODO-5506
-5. TODO-5508
-6. TODO-5509
-7. TODO-5510
-8. TODO-5513
+1. TODO-5506
+2. TODO-5522
+3. TODO-5507
+4. TODO-5508
+5. TODO-5509
+6. TODO-5510
+7. TODO-5513
 
 ### Priority Lanes
 
-- Lifecycle (docs/spec/value-lifecycle.md): TODO-5503, TODO-5504, TODO-5505, TODO-5507, TODO-5508, TODO-5509
+- Lifecycle (docs/spec/value-lifecycle.md): TODO-5522, TODO-5507, TODO-5508, TODO-5509
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5506, TODO-5510, TODO-5515
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5514, TODO-5516, TODO-5517
@@ -158,41 +154,17 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 
 ### Task Blocks
 
-- [ ] TODO-5503: Locals only read by a return expression are still destroyed
+- [ ] TODO-5522: Builtin vector<T> locals destroy their elements
   - owner: ai
   - status: ready
   - created_at: 2026-10-06
   - phase: Correctness audit 2026-10
-  - parallel_track: lifecycle-returns
-  - scope: Returning releases the drop flag of every name mentioned in the return expression, so `return(plus(a.id, 1i32))`, `return(vectorCount<T>(v))`, `return(combine(a, b))` with borrow parameters, and `return(p.left)` leak `a`, `v` (and its heap storage), copy parameters, and the other fields of `p`. Only a returned owning local itself (or one moved into the returned value) should skip its Destroy. Release logic: `releaseReturnedLocals` in `src/ir_lowerer/IrLowererLowerStatementsBindingsContinued.h`.
+  - parallel_track: lifecycle-builtin-vector
+  - scope: A lowercase `[vector<Noisy> mut] v{vector<Noisy>()}` local (builtin `Kind::Vector`) is never destroyed: neither its elements' `Destroy` nor (likely) its heap storage runs at scope end, while the same code with `Vector<Noisy>` is correct. Repro: push `Noisy{5i32}` into a lowercase vector local and print 100; output lacks the element's Destroy.
   - acceptance:
-    - matrix cases: scalar derived from a local, vector count, borrow-parameter call, field of a struct local, returned local, `return(Holder{move(x)})` and a returned constructor holding a local each destroy exactly the values not returned
+    - lowercase vector locals with struct elements destroy each element once at scope end, in blocks, loops and inlined callees, on VM, native and C++ (matrix case)
     - full release gate green
-  - stop_rule: returns only; temporaries are TODO-5507.
-
-- [ ] TODO-5504: `while` bodies destroy their locals every iteration
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-06
-  - phase: Correctness audit 2026-10
-  - parallel_track: lifecycle-loops
-  - scope: `while(i < 3i32) { [Noisy] w{Noisy{plus(10i32, i)}} i++ }` destroys only the last `w`, after the loop (`200 12` instead of `10 11 12 200`); an early return from the body also skips earlier iterations. `for`, `loop` and `repeat` are correct.
-  - acceptance:
-    - matrix cases for while bodies with fall-through, early return, break and continue destroy each iteration's locals once
-    - full release gate green
-  - stop_rule: while lowering only.
-
-- [ ] TODO-5505: A temporary passed to a move parameter keeps its block's cleanup
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-06
-  - phase: Correctness audit 2026-10
-  - parallel_track: lifecycle-blocks
-  - scope: Inside a nested block (if/loop body) `take_move(Noisy{...})` or `vectorPush<T>(v, T{...})` moves the block's owning locals' cleanup to function end, where only the last instance is destroyed: `for(...) { [Noisy] n{Noisy{i}} take_move(Noisy{plus(10i32, i)}) }` prints `10 11 12 100 2` instead of `10 0 11 1 12 2 100`; two sibling `if` blocks each pushing a temporary into their own vector leak the first vector entirely. A named local passed to the move parameter, and the same code inside an inlined callee, are fine.
-  - acceptance:
-    - matrix cases: temporaries to move parameters in if/for/sibling blocks keep per-block cleanup on VM, native and C++
-    - full release gate green
-  - stop_rule: move-parameter temporaries; other temporaries are TODO-5507.
+  - stop_rule: builtin vector locals only.
 
 - [ ] TODO-5506: Result values use one convention across function boundaries
   - owner: ai
@@ -208,8 +180,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 
 - [ ] TODO-5507: Unbound temporaries are destroyed
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5505
+  - status: ready
   - created_at: 2026-10-06
   - phase: Correctness audit 2026-10
   - parallel_track: lifecycle-temporaries
