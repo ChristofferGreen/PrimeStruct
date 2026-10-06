@@ -383,6 +383,27 @@ namespace primec::ir_lowerer {
                 [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
                 srcPtrLocal,
                 selection.payloadStructPath);
+          } else if (!isStdlibResultSumDefinition(sumDef)) {
+            // A payload taken from a place is copied like a struct field initialized from one, so
+            // the sum owns its payload (docs/spec/value-lifecycle.md).
+            bool ranCopyHelper = false;
+            if (!ir_lowerer::emitStructCopyHelpersFromPtrs(
+                    destPtrLocal,
+                    srcPtrLocal,
+                    selection.payloadStructPath,
+                    [&](const std::string &path) -> const Definition * {
+                      auto copyIt = defMap.find(path + "/Copy");
+                      return copyIt == defMap.end() ? nullptr : copyIt->second;
+                    },
+                    resolveStructSlotLayout,
+                    allocTempLocal,
+                    [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+                    selectedLocals,
+                    emitInlineDefinitionCall,
+                    ranCopyHelper,
+                    error)) {
+              return false;
+            }
           }
           return true;
         }

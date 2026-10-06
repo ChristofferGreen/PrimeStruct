@@ -88,6 +88,12 @@
     function.instructions.push_back({IrOpcode::JumpIfZero, 0});
     function.instructions.push_back({IrOpcode::PushI32, 0});
     function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(entry.flagLocal)});
+    if (entry.sumDef != nullptr) {
+      const bool emitted = sumHelpers.emitActiveSumPayloadDestroyFromSumPtr(
+          *entry.sumDef, entry.ptrLocal, LocalMap{});
+      function.instructions[skipJump].imm = static_cast<uint64_t>(function.instructions.size());
+      return emitted;
+    }
     if (entry.builtinVectorElementSlots > 0) {
       const bool emitted = emitBuiltinVectorDrop(entry);
       function.instructions[skipJump].imm = static_cast<uint64_t>(function.instructions.size());

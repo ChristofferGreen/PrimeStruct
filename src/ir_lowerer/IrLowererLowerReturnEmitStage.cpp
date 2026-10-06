@@ -232,9 +232,9 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
   emitExpr = {};
   emitStatement = {};
 
-#include "IrLowererLowerReturnInfo.h"
-
   ir_lowerer::SumHelpersContext sumHelpers(setupStage, stateOut, callResolutionAdapters, error);
+
+#include "IrLowererLowerReturnInfo.h"
 
   // The struct path of the owning value a call produces when nobody binds it (a discarded
   // statement result, a field-access receiver): a definition returning a struct by value (not a

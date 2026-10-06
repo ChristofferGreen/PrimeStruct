@@ -102,6 +102,7 @@ public:
   const Definition * findSumPayloadMoveHelper(const std::string &structPath);
   const Definition * findSumPayloadDestroyHelper(const std::string &structPath);
   bool emitActiveSumPayloadDestroyFromSumPtr(const Definition &sumDef, int32_t sourceSumPtrLocal, const LocalMap &valueLocals);
+  bool sumPayloadsNeedDestroy(const Definition &sumDef);
   bool emitActiveSumPayloadMoveFromSumPtr(int32_t destBaseLocal, const Definition &sumDef, int32_t sourceSumPtrLocal, const LocalMap &valueLocals);
   bool tryEmitLoweredSumMoveIntoLocal(int32_t baseLocal, const Definition &sumDef, const Expr &initializer, const LocalMap &valueLocals, bool &emittedOut);
   bool isMutableLocalExpr(const Expr &candidate, const LocalMap &localsIn);

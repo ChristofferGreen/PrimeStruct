@@ -724,6 +724,21 @@
         if (!emittedSumMove && !sumHelpers.emitLoweredSumConstructionIntoLocal(baseLocal, *sumDef, init, localsIn)) {
           return false;
         }
+        // A sum local built from a fresh value owns its payload and destroys it at scope end.
+        // Stdlib Result sums are left out: `try` copies their payload out without a copy helper.
+        if (!fileScopeStack.empty() && !emittedSumMove && init.kind == Expr::Kind::Call &&
+            !init.isFieldAccess && ir_lowerer::shouldDisarmStructCopySourceExpr(init) &&
+            !sumHelpers.isStdlibResultSumDefinition(*sumDef) &&
+            sumHelpers.sumPayloadsNeedDestroy(*sumDef)) {
+          info.dropFlagLocal = allocTempLocal();
+          function.instructions.push_back({IrOpcode::PushI32, 1});
+          function.instructions.push_back(
+              {IrOpcode::StoreLocal, static_cast<uint64_t>(info.dropFlagLocal)});
+          LowerSetupStageState::DropEntry entry{info.index, info.dropFlagLocal, sumDef->fullPath};
+          entry.sumDef = sumDef;
+          setupStage.dropEntries.push_back(std::move(entry));
+          fileScopeStack.back().push_back(-static_cast<int32_t>(setupStage.dropEntries.size()));
+        }
         localsIn.emplace(stmt.name, info);
         return true;
       }

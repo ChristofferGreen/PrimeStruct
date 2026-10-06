@@ -58,6 +58,8 @@ struct LowerSetupStageState {
     // (structPath names the element struct, empty when elements need no destroy) and its data
     // buffer freed.
     int32_t builtinVectorElementSlots = 0;
+    // Set for a sum local: its active variant's payload is destroyed.
+    const Definition *sumDef = nullptr;
   };
   std::vector<DropEntry> dropEntries;
   std::optional<OnErrorHandler> currentOnError;

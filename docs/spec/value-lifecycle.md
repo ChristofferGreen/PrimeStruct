@@ -73,7 +73,9 @@
   it as `move`. A `copy` parameter gets its own storage: scalars by value, structs slot by slot and then through the
   type's `Copy` helper when it defines one (or its fields' helpers); a `move(v)` argument is handed over without a
   copy. The stdlib `Vector`, `RingBuffer` and `SoaColumn` `Copy` helpers allocate their own storage and copy each
-  element. An owning local (a struct with `Destroy`, `DestroyStack` or a field that has one, including containers) is
+  element. A struct's own `Destroy` runs first and its fields are destroyed after it, last declared first. A sum local
+  (`Maybe<T>`, a user `[sum]`) initialized from a fresh value destroys its active payload the same way, and a payload
+  taken from a place is copied in like a struct field. An owning local (a struct with `Destroy`, `DestroyStack` or a field that has one, including containers) is
   destroyed when its scope ends on every exit path (fall-through, `return`, including from nested blocks of an inlined
   callee), last declared first, unless its value was moved out (`move(x)`, a `move` parameter) or named in the returned
   value; a per-local drop flag tracks this at run time. A builtin `vector<T>` local initialized by a constructor or a

@@ -246,9 +246,13 @@ bool emitStructDestroyHelpersAtDepth(
         &emitInlineDefinitionCall,
     std::string &error,
     int depth) {
-  if (const Definition *destroyHelper = findDestroyHelper(structPath)) {
-    return emitDestroyHelperFromPtr(
-        valuePtrLocal, structPath, destroyHelper, localsIn, emitInlineDefinitionCall, error);
+  // A user `Destroy` helper runs first; the fields it leaves are destroyed after it, last
+  // declared first (docs/spec/value-lifecycle.md).
+  if (const Definition *destroyHelper = findDestroyHelper(structPath);
+      destroyHelper != nullptr &&
+      !emitDestroyHelperFromPtr(
+          valuePtrLocal, structPath, destroyHelper, localsIn, emitInlineDefinitionCall, error)) {
+    return false;
   }
   StructSlotLayoutInfo layout;
   if (depth > 16 || !resolveStructSlotLayout(structPath, layout)) {

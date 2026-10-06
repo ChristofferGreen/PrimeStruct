@@ -284,6 +284,24 @@ namespace primec::ir_lowerer {
       return nullptr;
     }
 
+    // Whether some variant's payload has destroy helpers to run when the sum is destroyed.
+    bool SumHelpersContext::sumPayloadsNeedDestroy(const Definition &sumDef) {
+      for (const auto &variant : sumDef.sumVariants) {
+        LoweredSumPayloadStorageInfo payloadInfo;
+        if (resolveSumPayloadStorageInfo(sumDef, variant, payloadInfo) && payloadInfo.isAggregate &&
+            ir_lowerer::structNeedsDestroyHelpers(
+                payloadInfo.structPath,
+                [&](const std::string &path) {
+                  return ir_lowerer::findStackDestroyHelper(defMap, path);
+                },
+                resolveStructSlotLayout)) {
+          return true;
+        }
+      }
+      error.clear();
+      return false;
+    }
+
     bool SumHelpersContext::emitActiveSumPayloadDestroyFromSumPtr(const Definition &sumDef, int32_t sourceSumPtrLocal, const LocalMap &valueLocals) {
       std::vector<size_t> endJumps;
       for (const auto &variant : sumDef.sumVariants) {
@@ -298,8 +316,12 @@ namespace primec::ir_lowerer {
         if (!payloadInfo.isAggregate) {
           continue;
         }
-        const Definition *destroyHelper = findSumPayloadDestroyHelper(payloadInfo.structPath);
-        if (destroyHelper == nullptr) {
+        // The active payload runs its destroy helpers, its fields' included.
+        const auto findDestroyHelper = [&](const std::string &path) {
+          return ir_lowerer::findStackDestroyHelper(defMap, path);
+        };
+        if (!ir_lowerer::structNeedsDestroyHelpers(
+                payloadInfo.structPath, findDestroyHelper, resolveStructSlotLayout)) {
           continue;
         }
         int32_t tagValue = 0;
@@ -315,18 +337,16 @@ namespace primec::ir_lowerer {
         function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(2) * IrSlotBytes});
         function.instructions.push_back({IrOpcode::AddI64, 0});
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(payloadPtrLocal)});
-        if (!ir_lowerer::emitDestroyHelperFromPtr(payloadPtrLocal,
-                                                  payloadInfo.structPath,
-                                                  destroyHelper,
-                                                  valueLocals,
-                                                  [&](const Expr &callExpr,
-                                                      const Definition &callee,
-                                                      const LocalMap &callLocals,
-                                                      bool requireValue) {
-                                                    return emitInlineDefinitionCall(
-                                                        callExpr, callee, callLocals, requireValue);
-                                                  },
-                                                  error)) {
+        if (!ir_lowerer::emitStructDestroyHelpersFromPtr(
+                payloadPtrLocal,
+                payloadInfo.structPath,
+                findDestroyHelper,
+                resolveStructSlotLayout,
+                allocTempLocal,
+                [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+                valueLocals,
+                emitInlineDefinitionCall,
+                error)) {
           return false;
         }
         endJumps.push_back(function.instructions.size());

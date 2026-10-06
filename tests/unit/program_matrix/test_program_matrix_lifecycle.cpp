@@ -732,4 +732,210 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("assigning a value to itself copies before destroying") {
+  program_matrix::ProgramCase program;
+  program.name = "self_assignment_copies_first";
+  program.source = R"(
+import /std/collections/*
+
+[struct]
+Noisy() {
+  [i32 mut] id{0i32}
+  [public] Copy([Reference<Self>] other) { assign(this.id, other.id + 10i32) }
+  [public effects(io_out)] Destroy() { print_line(this.id) }
+}
+
+[effects(io_out heap_alloc) return<int>]
+main() {
+  [Noisy mut] x{Noisy{1i32}}
+  assign(x, x)
+  print_line(x.id)
+  [Vector<Noisy> mut] v{vector<Noisy>()}
+  vectorPush<Noisy>(v, Noisy{2i32})
+  assign(v, v)
+  print_line(vectorCount<Noisy>(v))
+  print_line(100i32)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "1\n11\n2\n1\n100\n12\n11\n";
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("fields of a struct with a user Destroy are destroyed after it") {
+  program_matrix::ProgramCase program;
+  program.name = "user_destroy_then_fields";
+  program.source = R"(
+import /std/collections/*
+
+[struct]
+Noisy() {
+  [i32 mut] id{0i32}
+  [public] Copy([Reference<Self>] other) { assign(this.id, other.id + 10i32) }
+  [public effects(io_out)] Destroy() { print_line(this.id) }
+}
+
+[struct]
+Bag() {
+  [Noisy mut] inner{Noisy{3i32}}
+  [Vector<Noisy> mut] items{vector<Noisy>()}
+  [public effects(io_out)] Destroy() { print_line(200i32) }
+}
+
+[effects(io_out heap_alloc) return<int>]
+main() {
+  if(true) {
+    [Bag mut] b{Bag{}}
+    vectorPush<Noisy>(b.items, Noisy{4i32})
+  }
+  print_line(100i32)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "200\n4\n3\n100\n";
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("a Maybe payload is copied in and destroyed once") {
+  program_matrix::ProgramCase program;
+  program.name = "maybe_payload_destroyed_once";
+  program.source = R"(
+import /std/maybe/*
+
+[struct]
+Noisy() {
+  [i32 mut] id{0i32}
+  [public] Copy([Reference<Self>] other) { assign(this.id, other.id + 10i32) }
+  [public effects(io_out)] Destroy() { print_line(this.id) }
+}
+
+[effects(io_out) return<int>]
+main() {
+  if(true) {
+    [Maybe<Noisy>] m{some<Noisy>(Noisy{5i32})}
+    print_line(100i32)
+  }
+  print_line(101i32)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "5\n100\n15\n101\n";
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("sum payloads are destroyed once across returns, loops and pick") {
+  program_matrix::ProgramCase program;
+  program.name = "sum_payloads_destroyed_once";
+  program.source = R"(
+import /std/maybe/*
+import /std/collections/*
+
+[struct]
+Noisy() {
+  [i32 mut] id{0i32}
+  [public] Copy([Reference<Self>] other) { assign(this.id, other.id + 10i32) }
+  [public effects(io_out)] Destroy() { print_line(this.id) }
+}
+
+[sum]
+Shape {
+  [Noisy] circle
+  [i32] square
+}
+
+[effects(io_out) return<Maybe<Noisy>>]
+find([bool] hit) {
+  if(hit) {
+    return(some<Noisy>(Noisy{20i32}))
+  }
+  return(none<Noisy>())
+}
+
+[effects(io_out) return<i32>]
+peek([Maybe<Noisy>] m) {
+  return(pick(m) {
+    none { -1i32 }
+    some(v) { v.id }
+  })
+}
+
+[effects(io_out heap_alloc) return<int>]
+main() {
+  if(true) {
+    [Maybe<Noisy>] a{find(true)}
+    print_line(peek(a))
+    [Maybe<Noisy>] b{find(false)}
+    print_line(peek(b))
+  }
+  print_line(100i32)
+  [i32 mut] i{0i32}
+  while(i < 2i32) {
+    [Maybe<Noisy>] c{some<Noisy>(Noisy{40i32 + i})}
+    i = i + 1i32
+  }
+  print_line(101i32)
+  if(true) {
+    [Shape] s{[circle] Noisy{50i32}}
+    [Shape] t{[square] 3i32}
+    print_line(102i32)
+  }
+  print_line(103i32)
+  if(true) {
+    [Maybe<Vector<i32>>] mv{some<Vector<i32>>(vector<i32>(1i32, 2i32))}
+    print_line(pick(mv) { none { 0i32 } some(v) { vectorCount<i32>(v) } })
+  }
+  print_line(104i32)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "20\n30\n-1\n30\n100\n40\n50\n41\n51\n101\n102\n50\n103\n2\n104\n";
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("a move parameter is destroyed by the callee on every exit") {
+  program_matrix::ProgramCase program;
+  program.name = "move_parameter_destroyed_on_every_exit";
+  program.source = R"(
+[struct]
+Noisy() {
+  [i32 mut] id{0i32}
+  [public] Copy([Reference<Self>] other) { assign(this.id, other.id + 10i32) }
+  [public effects(io_out)] Destroy() { print_line(this.id) }
+}
+
+[effects(io_out) return<i32>]
+consume([Noisy move] n, [bool] early) {
+  if(early) {
+    return(1i32)
+  }
+  print_line(50i32)
+  return(2i32)
+}
+
+[effects(io_out) return<int>]
+main() {
+  if(true) {
+    [Noisy mut] a{Noisy{6i32}}
+    print_line(consume(move(a), true))
+    print_line(100i32)
+  }
+  print_line(101i32)
+  if(true) {
+    [Noisy mut] b{Noisy{7i32}}
+    print_line(consume(move(b), false))
+    print_line(102i32)
+  }
+  print_line(103i32)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "6\n1\n100\n101\n50\n7\n2\n102\n103\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();
