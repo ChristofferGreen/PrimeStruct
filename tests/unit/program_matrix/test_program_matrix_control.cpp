@@ -1067,3 +1067,110 @@ main() {
       "vm-step-O0", "vm-O0", "vm-O2", "native-O0", "native-O2", "optexe-O2", "exe"};
   program_matrix::runProgramMatrix(program);
 }
+
+TEST_CASE("a void function that returns early from a branch still returns at its end") {
+  program_matrix::ProgramCase program;
+  program.name = "void_early_return_falls_through";
+  program.source = R"(
+[struct]
+Noisy() {
+  [i32 mut] id{0i32}
+
+  [public effects(io_out)]
+  Destroy() {
+    print_line(this.id)
+  }
+}
+
+[effects(io_out) return<void>]
+early([i32] n) {
+  if(n == 2i32) {
+    return()
+  }
+  print_line(301i32)
+}
+
+[effects(io_out) return<void>]
+make_and_drop([i32] base) {
+  [Noisy] guard{Noisy{base}}
+  for([i32 mut] i{0i32}, i < 3i32, i++) {
+    if(i == base) {
+      return()
+    }
+  }
+  print_line(99i32)
+}
+
+[effects(io_out) return<void>]
+last_branch([bool] leave) {
+  print_line(400i32)
+  if(leave) {
+    return()
+  }
+}
+
+[effects(io_out) return<int>]
+main() {
+  early(1i32)
+  early(2i32)
+  early(3i32)
+  make_and_drop(1i32)
+  make_and_drop(7i32)
+  last_branch(true)
+  last_branch(false)
+  return(5i32)
+}
+)";
+  program.exitCode = 5;
+  program.stdoutText = "301\n301\n1\n99\n7\n400\n400\n";
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("a discarded call result inside a nested block is dropped") {
+  program_matrix::ProgramCase program;
+  program.name = "discarded_call_in_nested_block";
+  program.source = R"(
+[struct]
+Pair() {
+  [i32 mut] left{0i32}
+  [i64 mut] right{0i64}
+}
+
+[return<i32>]
+in_if([i32] id) {
+  return(id)
+}
+
+[return<i32>]
+in_loop([i32] id) {
+  return(id)
+}
+
+[return<Pair>]
+in_else([i32] id) {
+  return(Pair{id, 1i64})
+}
+
+[effects(io_out) return<int>]
+main() {
+  [bool] c{true}
+  if(c) {
+    in_if(4i32)
+    print_line(100i32)
+  }
+  for([i32 mut] i{0i32}, i < 2i32, i++) {
+    in_loop(i)
+  }
+  if(not(c)) {
+    print_line(0i32)
+  } else {
+    in_else(5i32)
+  }
+  print_line(101i32)
+  return(3i32)
+}
+)";
+  program.exitCode = 3;
+  program.stdoutText = "100\n101\n";
+  program_matrix::runProgramMatrix(program);
+}

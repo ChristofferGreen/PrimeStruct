@@ -9,6 +9,7 @@
 #include "primec/ir_lowerer/IrLowererSetupTypeHelpers.h"
 #include "primec/ir_lowerer/IrLowererStructTypeHelpers.h"
 
+#include <algorithm>
 #include <optional>
 #include <utility>
 
@@ -400,13 +401,24 @@ EntryCallableExecutionResult emitEntryCallableExecutionWithCleanup(
   emitCurrentFileScopeCleanup();
   popFileScope();
 
-  if (!sawReturn) {
-    if (definitionReturnsVoid) {
+  // A void body can also end by falling through after a return nested in a branch, or through a
+  // branch whose jump lands past the last statement; either needs a trailing return.
+  if (definitionReturnsVoid) {
+    const auto isReturnOpcode = [](IrOpcode op) {
+      return op == IrOpcode::ReturnVoid || op == IrOpcode::ReturnI32 || op == IrOpcode::ReturnI64 ||
+             op == IrOpcode::ReturnF32 || op == IrOpcode::ReturnF64;
+    };
+    const bool jumpReachesEnd =
+        std::any_of(instructions.begin(), instructions.end(), [&](const IrInstruction &inst) {
+          return (inst.op == IrOpcode::Jump || inst.op == IrOpcode::JumpIfZero) &&
+                 inst.imm == instructions.size();
+        });
+    if (instructions.empty() || !isReturnOpcode(instructions.back().op) || jumpReachesEnd) {
       instructions.push_back({IrOpcode::ReturnVoid, 0});
-    } else {
-      error = "native backend requires an explicit return statement";
-      return EntryCallableExecutionResult::Error;
     }
+  } else if (!sawReturn) {
+    error = "native backend requires an explicit return statement";
+    return EntryCallableExecutionResult::Error;
   }
   return EntryCallableExecutionResult::Emitted;
 }

@@ -670,6 +670,16 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
   if (stmt.kind != Expr::Kind::Call) {
     return DirectCallStatementEmitResult::NotMatched;
   }
+  // An inlined callee leaves its result on the stack even when no value is required (a real call
+  // already pops it); a statement discards it so every path keeps the same stack depth.
+  auto dropInlinedStatementResult = [&](const Definition &callee) {
+    ReturnInfo calleeReturn;
+    if (getReturnInfo(callee.fullPath, calleeReturn) && !calleeReturn.returnsVoid &&
+        !instructions.empty() && instructions.back().op == IrOpcode::LoadLocal) {
+      instructions.push_back({IrOpcode::Pop, 0});
+    }
+    return true;
+  };
 
   auto resolveDefinitionPathAsDirectCall = [&](const Expr &callExpr,
                                                const std::string &path) -> const Definition * {
@@ -1008,7 +1018,8 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
         error = "native backend does not support block arguments on calls";
         return DirectCallStatementEmitResult::Error;
       }
-      if (!emitInlineDefinitionCall(directStmt, *callee, localsIn, false)) {
+      if (!emitInlineDefinitionCall(directStmt, *callee, localsIn, false) ||
+          !dropInlinedStatementResult(*callee)) {
         return DirectCallStatementEmitResult::Error;
       }
       error = priorError;
@@ -1042,7 +1053,8 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     error = priorError;
     return DirectCallStatementEmitResult::Emitted;
   }
-  if (!emitInlineDefinitionCall(directStmt, *callee, localsIn, false)) {
+  if (!emitInlineDefinitionCall(directStmt, *callee, localsIn, false) ||
+      !dropInlinedStatementResult(*callee)) {
     return DirectCallStatementEmitResult::Error;
   }
   error = priorError;
