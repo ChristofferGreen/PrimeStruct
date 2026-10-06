@@ -100,21 +100,17 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5499 | Void functions with an early return keep their trailing return | ready | ir-returns |
-| TODO-5500 | Reading a struct element past index 0 from a vector works | ready | collections-access |
-| TODO-5501 | A discarded non-void call inside a nested block is valid IR | ready | ir-statements |
-| TODO-5502 | `x = Type{...}` assigns instead of defining a nested `assign` | ready | text-filter |
 | TODO-5503 | Locals only read by a return expression are still destroyed | ready | lifecycle-returns |
 | TODO-5504 | `while` bodies destroy their locals every iteration | ready | lifecycle-loops |
 | TODO-5505 | A temporary passed to a move parameter keeps its block's cleanup | ready | lifecycle-blocks |
 | TODO-5506 | Result values use one convention across function boundaries | ready | result-abi |
 | TODO-5507 | Unbound temporaries are destroyed | blocked | lifecycle-temporaries |
-| TODO-5508 | User Copy helpers work for structs with owning fields | deferred | lifecycle-copy |
-| TODO-5509 | Self-assignment, user-Destroy fields, Maybe payloads and move parameters destroy correctly | deferred | lifecycle-misc |
-| TODO-5510 | `return` returns from pick arms and lambdas correctly | deferred | control-returns |
+| TODO-5508 | User Copy helpers work for structs with owning fields | ready | lifecycle-copy |
+| TODO-5509 | Self-assignment, user-Destroy fields, Maybe payloads and move parameters destroy correctly | ready | lifecycle-misc |
+| TODO-5510 | `return` returns from pick arms and lambdas correctly | ready | control-returns |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
 | TODO-5512 | Pointers and aliases count as borrows of their root | deferred | safety-borrows |
-| TODO-5513 | Methods through a dereferenced vector pointer read the right fields | deferred | collections-access |
+| TODO-5513 | Methods through a dereferenced vector pointer read the right fields | ready | collections-access |
 | TODO-5514 | Native file I/O writes newlines and reports errno | deferred | native-io |
 | TODO-5515 | Native Result.ok(Buffer) reads as ok | blocked | native-result |
 | TODO-5516 | Integer narrowing and float-to-int conversion agree across backends | deferred | numeric-conversions |
@@ -127,29 +123,28 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5499 (ir-returns): void functions with an early return keep their trailing return
-- TODO-5500 (collections-access): reading a struct element past index 0 from a vector works
-- TODO-5501 (ir-statements): a discarded non-void call inside a nested block is valid IR
-- TODO-5502 (text-filter): `x = Type{...}` assigns instead of defining a nested `assign`
 - TODO-5503 (lifecycle-returns): locals only read by a return expression are still destroyed
 - TODO-5504 (lifecycle-loops): `while` bodies destroy their locals every iteration
 - TODO-5505 (lifecycle-blocks): a temporary passed to a move parameter keeps its block's cleanup
 - TODO-5506 (result-abi): result values use one convention across function boundaries
+- TODO-5508 (lifecycle-copy): user Copy helpers work for structs with owning fields
+- TODO-5509 (lifecycle-misc): self-assignment, user-Destroy fields, Maybe payloads and move parameters destroy correctly
+- TODO-5510 (control-returns): `return` returns from pick arms and lambdas correctly
+- TODO-5513 (collections-access): methods through a dereferenced vector pointer read the right fields
 
 ### Immediate Next 10
 
-1. TODO-5499
-2. TODO-5500
-3. TODO-5501
-4. TODO-5502
-5. TODO-5503
-6. TODO-5504
-7. TODO-5505
-8. TODO-5506
+1. TODO-5503
+2. TODO-5504
+3. TODO-5505
+4. TODO-5506
+5. TODO-5508
+6. TODO-5509
+7. TODO-5510
+8. TODO-5513
 
 ### Priority Lanes
 
-- Correctness audit 2026-10 (P0 miscompiles and crashes): TODO-5499, TODO-5500, TODO-5501, TODO-5502
 - Lifecycle (docs/spec/value-lifecycle.md): TODO-5503, TODO-5504, TODO-5505, TODO-5507, TODO-5508, TODO-5509
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5506, TODO-5510, TODO-5515
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
@@ -162,54 +157,6 @@ of sync with them.
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 ### Task Blocks
-
-- [ ] TODO-5499: Void functions with an early return keep their trailing return
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-06
-  - phase: Correctness audit 2026-10
-  - parallel_track: ir-returns
-  - scope: A non-inlined `return<void>` definition with `if(c) { return() }` followed by more statements and no trailing `return()` loses its final `ReturnVoid`: `--dump-stage ir-lowered` ends the function after its last statement. VM: `missing return in IR function`; native: SIGSEGV (or `register allocation lost a branch edge` with an owning local). Cause: `src/ir_lowerer/IrLowererStatementCallHelpers.cpp` appends `ReturnVoid` only when no `return` was emitted anywhere, including nested ones. Repro: `early([i32] n) { if(n == 2i32) { return() } print_line(301i32) }` called twice from `main`.
-  - acceptance:
-    - the repro prints `301` twice and exits 0 on VM, native and C++; same with an owning local in the function and inside a loop body
-    - full release gate green
-  - stop_rule: do not change inlined-call return handling.
-
-- [ ] TODO-5500: Reading a struct element past index 0 from a vector works
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-06
-  - phase: Correctness audit 2026-10
-  - parallel_track: collections-access
-  - scope: `[vector<Point> mut] pts{vector<Point>()}` with two pushed `Point{x, y}` (two i32 fields), then `[Point] second{pts.at(1i32)}`: VM `unaligned indirect address in IR`, native SIGSEGV, C++ exit 1. Index 0 works, so the element address for struct elements uses the wrong stride or base.
-  - acceptance:
-    - `pts.at(i)` / `vectorAt<Point>(pts, i)` read the right element for every index on VM, native and C++ (matrix case)
-    - full release gate green
-  - stop_rule: fix the element address computation only; no vector layout change.
-
-- [ ] TODO-5501: A discarded non-void call inside a nested block is valid IR
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-06
-  - phase: Correctness audit 2026-10
-  - parallel_track: ir-statements
-  - scope: `if(c) { num(4i32) }` where `num` returns i32 (or a struct) fails IR validation on every backend: `paths reach this block with different operand stack depths`. Same in `for` bodies and when the call is not the block's last statement. At function top level the value is popped correctly.
-  - acceptance:
-    - the call result is popped (and destroyed when owning) in nested blocks; matrix case covering if/else/loop bodies
-    - full release gate green
-  - stop_rule: statement-position calls only.
-
-- [ ] TODO-5502: `x = Type{...}` assigns instead of defining a nested `assign`
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-06
-  - phase: Correctness audit 2026-10
-  - parallel_track: text-filter
-  - scope: The `=` text filter turns `x = Noisy{6i32}` into `assign(x, Noisy){6i32}`, which parses as a nested definition named `assign`: the assignment disappears silently (prints the old value), or fails with `unable to infer implicit template arguments for /main/assign`, `block arguments require a definition target: /assign`, or `template arguments require a call` (`values = vector<int>{9}` from docs/CodeExamples.md Reinitialize After Move). Labeled braces (`Two{[b] 7i32 [a] 6i32}`) and sum variants (`Val{none}`) fail too.
-  - acceptance:
-    - `x = T{...}`, `x.f = T{...}`, `x = T<U>{...}` and labeled/variant brace forms become `assign(x, T{...})`; the CodeExamples snippet compiles; parse + IR tests
-    - full release gate green
-  - stop_rule: text filter only; no change to the brace construction grammar.
 
 - [ ] TODO-5503: Locals only read by a return expression are still destroyed
   - owner: ai
@@ -274,7 +221,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 
 - [ ] TODO-5508: User Copy helpers work for structs with owning fields
   - owner: ai
-  - status: deferred
+  - status: ready
   - created_at: 2026-10-06
   - phase: Correctness audit 2026-10
   - parallel_track: lifecycle-copy
@@ -283,11 +230,10 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - a struct with a `Vector<i32>` field and a user Copy that assigns the field copies correctly on VM, native and C++
     - full release gate green
   - stop_rule: Copy helper entry state only.
-  - notes: deferred: queued behind the Ready Now cap.
 
 - [ ] TODO-5509: Self-assignment, user-Destroy fields, Maybe payloads and move parameters destroy correctly
   - owner: ai
-  - status: deferred
+  - status: ready
   - created_at: 2026-10-06
   - phase: Correctness audit 2026-10
   - parallel_track: lifecycle-misc
@@ -296,11 +242,10 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - matrix case per item with exactly-once destruction on VM, native and C++
     - full release gate green
   - stop_rule: these four behaviors only.
-  - notes: deferred: queued behind the Ready Now cap.
 
 - [ ] TODO-5510: `return` returns from pick arms and lambdas correctly
   - owner: ai
-  - status: deferred
+  - status: ready
   - created_at: 2026-10-06
   - phase: Correctness audit 2026-10
   - parallel_track: control-returns
@@ -309,7 +254,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - unit-variant pick arms return; lambda returns stay in the lambda; parse/semantic + matrix tests
     - full release gate green
   - stop_rule: return lowering in pick arms and lambdas.
-  - notes: deferred: queued behind the Ready Now cap.
 
 - [ ] TODO-5511: Safe code cannot reach container storage or unsafe stdlib helpers
   - owner: ai
@@ -339,7 +283,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 
 - [ ] TODO-5513: Methods through a dereferenced vector pointer read the right fields
   - owner: ai
-  - status: deferred
+  - status: ready
   - created_at: 2026-10-06
   - phase: Correctness audit 2026-10
   - parallel_track: collections-access
@@ -348,7 +292,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - count/capacity/at through `dereference(p)` match the direct calls; matrix case
     - full release gate green
   - stop_rule: receiver offset handling only.
-  - notes: deferred: queued behind the Ready Now cap.
 
 - [ ] TODO-5514: Native file I/O writes newlines and reports errno
   - owner: ai
@@ -408,7 +351,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - created_at: 2026-10-06
   - phase: Correctness audit 2026-10
   - parallel_track: frontend-accept
-  - scope: Rejected though valid per the spec: an unused `import /std/result/*` or `/std/maybe/*` (`unknown import path`, no location); `return(move(v))` and `return(Holder{move(n)})` (`use-after-move`); an `if` yielding struct values (`if branches must return compatible types`); sum-typed struct fields (`missing struct field info`); `try(...)` as an argument to a user function (`missing on_error for ? usage`); `return([ok] value)` and `return(Result<i32,i32>{[error] 7i32})`.
+  - scope: Rejected though valid per the spec: an unused `import /std/result/*` or `/std/maybe/*` (`unknown import path`, no location); `return(move(v))` and `return(Holder{move(n)})` (`use-after-move`); an `if` yielding struct values (`if branches must return compatible types`); sum-typed struct fields (`missing struct field info`); `try(...)` as an argument to a user function (`missing on_error for ? usage`); `return([ok] value)` and `return(Result<i32,i32>{[error] 7i32})`; `assign(x, Val{none})` / `x = Val{[num] 3i32}` on a sum-typed local (`assign requires matching struct value`).
   - acceptance:
     - each form compiles and runs; semantics tests
     - full release gate green

@@ -214,6 +214,25 @@ bool parsePrimaryExpression(const std::string &input, size_t &pos, std::string &
       pos = close + 1;
       continue;
     }
+    // `Type{...}` brace construction: the braces follow the type with no space (a block body
+    // such as `then() {` is separated by one).
+    if (scan == pos && scan < input.size() && input[scan] == '{') {
+      size_t close = findMatchingClose(input, scan, '{', '}');
+      if (close == std::string::npos) {
+        error = "unterminated brace construction";
+        return false;
+      }
+      std::string inner = input.substr(scan + 1, close - (scan + 1));
+      std::string rewritten;
+      if (!rewriteBinaryOperatorsWithPrecedence(inner, rewritten, error)) {
+        return false;
+      }
+      token.push_back('{');
+      token.append(rewritten);
+      token.push_back('}');
+      pos = close + 1;
+      continue;
+    }
     if (scan < input.size() && (input[scan] == '(' || input[scan] == '[')) {
       char openChar = input[scan];
       char closeChar = openChar == '(' ? ')' : ']';

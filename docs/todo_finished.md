@@ -1989,6 +1989,10 @@ are left unarchived.
 | TODO-5496 | Callees destroy their owned parameters | [2026-10.md](todo_archive/2026-10.md) | 2026-10-05 |
 | TODO-5497 | Destroy uniform-field structs and locals left by error propagation | [2026-10.md](todo_archive/2026-10.md) | 2026-10-05 |
 | TODO-5498 | Destroy and copy single-field structs | [2026-10.md](todo_archive/2026-10.md) | 2026-10-05 |
+| TODO-5499 | Void functions with an early return keep their trailing return | [2026-10.md](todo_archive/2026-10.md) | 2026-10-06 |
+| TODO-5500 | Reading a struct element past index 0 from a vector works | [2026-10.md](todo_archive/2026-10.md) | 2026-10-06 |
+| TODO-5501 | A discarded non-void call inside a nested block is valid IR | [2026-10.md](todo_archive/2026-10.md) | 2026-10-06 |
+| TODO-5502 | `x = Type{...}` assigns instead of defining a nested `assign` | [2026-10.md](todo_archive/2026-10.md) | 2026-10-06 |
 
 <!-- INDEX-END -->
 

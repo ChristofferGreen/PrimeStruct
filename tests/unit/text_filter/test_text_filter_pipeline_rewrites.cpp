@@ -518,4 +518,25 @@ TEST_CASE("rewrites plus operator with string literals") {
   CHECK(output.find("plus(\"a\"utf8, \"b\"utf8)") != std::string::npos);
 }
 
+TEST_CASE("rewrites assignment of a brace construction") {
+  const std::string source = "main(){\n"
+                             "  x = Noisy{6i32}\n"
+                             "  h.item = Two{[b] 7i32, [a] 6i32 + 1i32}\n"
+                             "  values = vector<int>{9}\n"
+                             "  then() {\n"
+                             "    y = z\n"
+                             "  }\n"
+                             "}\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("assign(x, Noisy{6i32})") != std::string::npos);
+  CHECK(output.find("assign(h.item, Two{[b] 7i32, [a] plus(6i32, 1i32)})") != std::string::npos);
+  CHECK(output.find("assign(values, vector<int>{9})") != std::string::npos);
+  CHECK(output.find("then() {") != std::string::npos);
+  CHECK(output.find("assign(y, z)") != std::string::npos);
+}
+
 TEST_SUITE_END();
