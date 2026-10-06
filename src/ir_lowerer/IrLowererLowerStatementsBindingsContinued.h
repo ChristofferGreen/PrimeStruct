@@ -648,6 +648,61 @@
     const Expr *emittedReturnStmt = &stmt;
     LocalMap rewrittenReturnLocals;
     const LocalMap *emittedReturnLocals = &localsIn;
+    // Stdlib Result sums are returned as sum storage pointers and never packed.
+    const bool returnsStdlibResultSum = [&]() {
+      const Definition *returnSumDef = extractDeclaredSumReturnDefinition();
+      return returnSumDef != nullptr && sumHelpers.isStdlibResultSumDefinition(*returnSumDef);
+    }();
+    // A function returning the stdlib Result sum always returns a pointer to its sum storage,
+    // whatever the payload types, so every caller reads one representation.
+    const auto emitReturnSumStorage = [&](int32_t ptrLocal) -> bool {
+      if (returnInlineContext.has_value()) {
+        if (returnInlineContext->returnLocal < 0) {
+          error = "native backend missing inline return local";
+          return false;
+        }
+        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+        function.instructions.push_back(
+            {IrOpcode::StoreLocal, static_cast<uint64_t>(returnInlineContext->returnLocal)});
+        const size_t jumpIndex = function.instructions.size();
+        function.instructions.push_back({IrOpcode::Jump, 0});
+        if (returnInlineContext->returnJumps != nullptr) {
+          returnInlineContext->returnJumps->push_back(jumpIndex);
+        }
+        return true;
+      }
+      emitFileScopeCleanupAll();
+      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+      function.instructions.push_back({IrOpcode::ReturnI64, 0});
+      sawReturn = true;
+      return true;
+    };
+    // An integer value that is not sum storage is a packed Result.
+    const auto returnValueIsPackedResult = [&](const Expr &valueExpr) {
+      if (valueExpr.kind == Expr::Kind::Name) {
+        auto localIt = localsIn.find(valueExpr.name);
+        if (localIt == localsIn.end() || !localIt->second.structTypeName.empty() ||
+            localIt->second.kind != LocalInfo::Kind::Value) {
+          return false;
+        }
+        if (localIt->second.isResult) {
+          return true;
+        }
+      } else if (valueExpr.kind == Expr::Kind::Call) {
+        if (const Definition *callee = resolveDefinitionCall(valueExpr);
+            callee != nullptr && sumHelpers.declaredStdlibResultSumReturn(*callee) != nullptr) {
+          return false;
+        }
+      } else if (valueExpr.kind != Expr::Kind::Literal) {
+        return false;
+      }
+      if (!inferStructExprPath(valueExpr, localsIn).empty()) {
+        return false;
+      }
+      const LocalInfo::ValueKind kind = inferExprKind(valueExpr, localsIn);
+      return kind == LocalInfo::ValueKind::Int32 || kind == LocalInfo::ValueKind::Int64 ||
+             kind == LocalInfo::ValueKind::UInt64;
+    };
     if (isReturnCall(stmt) && stmt.args.size() == 1) {
       const Expr &returnValueExpr = emittedReturnStmt->args.front();
       if (const Definition *returnSumDef = extractDeclaredSumReturnDefinition();
@@ -676,106 +731,36 @@
         if (!sumHelpers.emitLoweredSumConstructionIntoLocal(baseLocal, *returnSumDef, returnValueExpr, localsIn)) {
           return false;
         }
-        rewrittenReturnLocals = localsIn;
-        LocalInfo returnInfo;
-        returnInfo.kind = LocalInfo::Kind::Value;
-        returnInfo.valueKind = LocalInfo::ValueKind::Int64;
-        const SumVariant *okVariant = sumHelpers.findSumVariantByName(*returnSumDef, "ok");
-        const SumVariant *errorVariant = sumHelpers.findSumVariantByName(*returnSumDef, "error");
-        bool emittedPackedResultReturn = false;
-        if (okVariant != nullptr && errorVariant != nullptr) {
-          LoweredSumPayloadStorageInfo okPayload;
-          LoweredSumPayloadStorageInfo errorPayload;
-          int32_t okTag = 0;
-          int32_t errorTag = 0;
-          if (!sumHelpers.resolveSemanticProductSumPayloadStorageInfo(
-                  *returnSumDef, *okVariant, "packed Result return ok payload", okPayload) ||
-              !sumHelpers.resolveSemanticProductSumPayloadStorageInfo(
-                  *returnSumDef, *errorVariant, "packed Result return error payload", errorPayload) ||
-              !sumHelpers.resolveSemanticProductSumVariantTag(
-                  *returnSumDef, *okVariant, "packed Result return ok tag", okTag) ||
-              !sumHelpers.resolveSemanticProductSumVariantTag(
-                  *returnSumDef, *errorVariant, "packed Result return error tag", errorTag)) {
+        return emitReturnSumStorage(ptrLocal);
+      }
+      if (returnsStdlibResultSum && returnValueIsPackedResult(returnValueExpr)) {
+        // A hand-packed Result (the stdlib error helpers, legacy producers) is decoded into sum
+        // storage so callers still read one representation.
+        const Definition *returnSumDef = extractDeclaredSumReturnDefinition();
+        int32_t totalSlots = 0;
+        if (!sumHelpers.loweredSumSlotCount(*returnSumDef, totalSlots)) {
+          if (error.empty()) {
+            error = "native backend does not support sum payload type on " + returnSumDef->fullPath;
+          }
+          return false;
+        }
+        const int32_t baseLocal = nextLocal;
+        const std::optional<bool> decoded =
+            sumHelpers.emitPackedResultIntoSum(*returnSumDef, baseLocal, [&]() {
+              nextLocal += totalSlots;
+              sumHelpers.emitLoweredSumHeader(baseLocal, totalSlots);
+              return emitExpr(returnValueExpr, localsIn);
+            });
+        if (decoded.has_value()) {
+          if (!*decoded) {
             return false;
           }
-          const bool okPayloadTypeIsScalar =
-              !okVariant->hasPayload ||
-              valueKindFromTypeName(sumHelpers.sumPayloadTypeText(*okVariant)) !=
-                  LocalInfo::ValueKind::Unknown;
-          const bool errorPayloadTypeIsScalar =
-              valueKindFromTypeName(sumHelpers.sumPayloadTypeText(*errorVariant)) !=
-              LocalInfo::ValueKind::Unknown;
-          if (okPayloadTypeIsScalar && errorPayloadTypeIsScalar &&
-              !okPayload.isAggregate && !errorPayload.isAggregate) {
-            const int32_t packedLocal = nextLocal++;
-            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(baseLocal + 1)});
-            function.instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(okTag)});
-            function.instructions.push_back({IrOpcode::CmpEqI32, 0});
-            const size_t jumpToError = function.instructions.size();
-            function.instructions.push_back({IrOpcode::JumpIfZero, 0});
-            if (okVariant->hasPayload) {
-              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(baseLocal + 2)});
-            } else {
-              function.instructions.push_back({IrOpcode::PushI64, 0});
-            }
-            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(packedLocal)});
-            const size_t jumpToEnd = function.instructions.size();
-            function.instructions.push_back({IrOpcode::Jump, 0});
-            function.instructions[jumpToError].imm =
-                static_cast<uint64_t>(function.instructions.size());
-            if (errorVariant->hasPayload) {
-              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(baseLocal + 2)});
-            } else {
-              function.instructions.push_back({IrOpcode::PushI64, 1});
-            }
-            function.instructions.push_back({IrOpcode::PushI64, 4294967296ull});
-            function.instructions.push_back({IrOpcode::MulI64, 0});
-            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(packedLocal)});
-            function.instructions[jumpToEnd].imm =
-                static_cast<uint64_t>(function.instructions.size());
-            returnInfo.index = packedLocal;
-            sumHelpers.applyStdlibResultSumInfoToLocal(*returnSumDef, returnInfo);
-            emittedPackedResultReturn = true;
-          }
+          const int32_t ptrLocal = nextLocal++;
+          function.instructions.push_back(
+              {IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+          return emitReturnSumStorage(ptrLocal);
         }
-        if (!emittedPackedResultReturn) {
-          returnInfo.structTypeName = returnSumDef->fullPath;
-          returnInfo.structSlotCount = totalSlots;
-          returnInfo.index = ptrLocal;
-          sumHelpers.applyStdlibResultSumInfoToLocal(*returnSumDef, returnInfo);
-          if (returnInlineContext.has_value()) {
-            if (returnInlineContext->returnLocal < 0) {
-              error = "native backend missing inline return local";
-              return false;
-            }
-            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
-            function.instructions.push_back(
-                {IrOpcode::StoreLocal, static_cast<uint64_t>(returnInlineContext->returnLocal)});
-            const size_t jumpIndex = function.instructions.size();
-            function.instructions.push_back({IrOpcode::Jump, 0});
-            if (returnInlineContext->returnJumps != nullptr) {
-              returnInlineContext->returnJumps->push_back(jumpIndex);
-            }
-            return true;
-          }
-          emitFileScopeCleanupAll();
-          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
-          function.instructions.push_back({IrOpcode::ReturnI64, 0});
-          sawReturn = true;
-          return true;
-        }
-        const std::string tempReturnName =
-            emittedPackedResultReturn
-                ? "__native_return_packed_result_" + std::to_string(returnInfo.index)
-                : "__native_return_sum_" + std::to_string(ptrLocal);
-        rewrittenReturnLocals.emplace(tempReturnName, returnInfo);
-        rewrittenReturnStmt = *emittedReturnStmt;
-        Expr stableReturnValueExpr;
-        stableReturnValueExpr.kind = Expr::Kind::Name;
-        stableReturnValueExpr.name = tempReturnName;
-        rewrittenReturnStmt.args.front() = std::move(stableReturnValueExpr);
-        emittedReturnStmt = &rewrittenReturnStmt;
-        emittedReturnLocals = &rewrittenReturnLocals;
       }
       const Expr &stableReturnValueExpr = emittedReturnStmt->args.front();
       const bool stableReturnValueIsPackedResult =
@@ -855,6 +840,11 @@
         returnInfo.valueKind = LocalInfo::ValueKind::Int64;
         returnInfo.structTypeName = aggregateStructPath;
         returnInfo.index = ptrLocal;
+        if (const Definition *returnSumDef =
+                sumHelpers.resolveSumDefinitionByPath(aggregateStructPath);
+            returnSumDef != nullptr && sumHelpers.isStdlibResultSumDefinition(*returnSumDef)) {
+          sumHelpers.applyStdlibResultSumInfoToLocal(*returnSumDef, returnInfo);
+        }
         const std::string tempReturnName = "__native_return_struct_" + std::to_string(ptrLocal);
         rewrittenReturnLocals.emplace(tempReturnName, returnInfo);
         rewrittenReturnStmt = *emittedReturnStmt;
@@ -872,11 +862,15 @@
         function.instructions,
         returnInlineContext,
         declaredReturnIsReferenceHandle,
-        currentReturnResult,
+        returnsStdlibResultSum ? std::optional<ResultReturnInfo>{} : currentReturnResult,
         returnsVoid,
         sawReturn,
-        [&](const Expr &valueExpr, const LocalMap &valueLocals) { return emitExpr(valueExpr, valueLocals); },
-        [&](const Expr &valueExpr, const LocalMap &valueLocals) { return inferExprKind(valueExpr, valueLocals); },
+        [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+          return emitExpr(valueExpr, valueLocals);
+        },
+        [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+          return inferExprKind(valueExpr, valueLocals);
+        },
         ir_lowerer::makeResolveResultExprInfoFromLocals(
             [&](const Expr &callExpr, const LocalMap &callLocals) {
               return resolveMethodCallDefinition(callExpr, callLocals);
@@ -891,7 +885,9 @@
             callResolutionAdapters.semanticProgram,
             &callResolutionAdapters.semanticProductTargets.semanticIndex,
             &error),
-        [&](const Expr &valueExpr, const LocalMap &valueLocals) { return inferArrayElementKind(valueExpr, valueLocals); },
+        [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+          return inferArrayElementKind(valueExpr, valueLocals);
+        },
         [&]() { emitFileScopeCleanupAll(); },
         error);
     if (returnResult == ir_lowerer::ReturnStatementEmitResult::Error) {

@@ -100,17 +100,20 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5506 | Result values use one convention across function boundaries | ready | result-abi |
 | TODO-5522 | Builtin vector<T> locals destroy their elements | ready | lifecycle-builtin-vector |
 | TODO-5507 | Unbound temporaries are destroyed | ready | lifecycle-temporaries |
 | TODO-5508 | User Copy helpers work for structs with owning fields | ready | lifecycle-copy |
 | TODO-5509 | Self-assignment, user-Destroy fields, Maybe payloads and move parameters destroy correctly | ready | lifecycle-misc |
 | TODO-5510 | `return` returns from pick arms and lambdas correctly | ready | control-returns |
+| TODO-5524 | Int-backed error structs round-trip through stdlib Result sums | ready | result-error-structs |
+| TODO-5523 | A Result-returning main exits with its error code | deferred | result-main |
+| TODO-5525 | `Result.ok(x)` passes as a stdlib Result argument | deferred | result-arguments |
+| TODO-5526 | Vectors of stdlib Result values keep their elements | deferred | result-containers |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
 | TODO-5512 | Pointers and aliases count as borrows of their root | deferred | safety-borrows |
 | TODO-5513 | Methods through a dereferenced vector pointer read the right fields | ready | collections-access |
 | TODO-5514 | Native file I/O writes newlines and reports errno | deferred | native-io |
-| TODO-5515 | Native Result.ok(Buffer) reads as ok | blocked | native-result |
+| TODO-5515 | Native Result.ok(Buffer) reads as ok | ready | native-result |
 | TODO-5516 | Integer narrowing and float-to-int conversion agree across backends | deferred | numeric-conversions |
 | TODO-5517 | Runtime faults exit the same way on every backend | deferred | runtime-faults |
 | TODO-5518 | Valid programs the frontend rejects compile | deferred | frontend-accept |
@@ -121,28 +124,30 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5506 (result-abi): result values use one convention across function boundaries
 - TODO-5522 (lifecycle-builtin-vector): builtin vector<T> locals destroy their elements
 - TODO-5507 (lifecycle-temporaries): unbound temporaries are destroyed
 - TODO-5508 (lifecycle-copy): user Copy helpers work for structs with owning fields
 - TODO-5509 (lifecycle-misc): self-assignment, user-Destroy fields, Maybe payloads and move parameters destroy correctly
 - TODO-5510 (control-returns): `return` returns from pick arms and lambdas correctly
 - TODO-5513 (collections-access): methods through a dereferenced vector pointer read the right fields
+- TODO-5524 (result-error-structs): int-backed error structs round-trip through stdlib Result sums
+- TODO-5515 (native-result): native Result.ok(Buffer) reads as ok
 
 ### Immediate Next 10
 
-1. TODO-5506
-2. TODO-5522
-3. TODO-5507
-4. TODO-5508
-5. TODO-5509
-6. TODO-5510
-7. TODO-5513
+1. TODO-5522
+2. TODO-5507
+3. TODO-5508
+4. TODO-5509
+5. TODO-5510
+6. TODO-5513
+7. TODO-5524
+8. TODO-5515
 
 ### Priority Lanes
 
 - Lifecycle (docs/spec/value-lifecycle.md): TODO-5522, TODO-5507, TODO-5508, TODO-5509
-- Result and control flow (docs/spec/errors-and-file-io.md): TODO-5506, TODO-5510, TODO-5515
+- Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5514, TODO-5516, TODO-5517
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
@@ -165,18 +170,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - lowercase vector locals with struct elements destroy each element once at scope end, in blocks, loops and inlined callees, on VM, native and C++ (matrix case)
     - full release gate green
   - stop_rule: builtin vector locals only.
-
-- [ ] TODO-5506: Result values use one convention across function boundaries
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-06
-  - phase: Correctness audit 2026-10
-  - parallel_track: result-abi
-  - scope: With `/std/result/*` imported, Results cross calls either packed in an i64 (scalar payloads via `Result.ok`) or as a pointer to sum storage (struct payloads), and lowering paths mix them: `return(<named local Result>)` stores `address * 2^32` (every payload/error combo; scalar ok decodes as an error), `return(inner())` and `return(param)` treat a packed value as a pointer (`unaligned indirect address`), `try(m.tryAt(k))` crashes for that reason, status-only `try` propagation stores a raw pointer, `error(0)` reads as ok, `ok(5000000000i64)` / `ok(2.5f64)` read as errors, i64 error codes truncate, string errors with table index 0 read as ok, `Result.error`/`why` on a direct call returning a struct-error Result read garbage, and a Result-returning `main` exits 0 on error. Pick one representation (the sum pointer/copy for all payloads, or packed only where lossless) and use it on every producer and consumer.
-  - acceptance:
-    - matrix cases on VM, native and C++: named-local return, forwarded `return(call())`, parameter pass-through, `try` on map `tryAt` with the import, error code 0, i64/f64/string payloads and errors, status-only propagation, `Result.error`/`why` on direct calls
-    - full release gate green; corpus differential shows no regressions
-  - stop_rule: Result lowering only; split per producer/consumer pair if one change grows too large.
 
 - [ ] TODO-5507: Unbound temporaries are destroyed
   - owner: ai
@@ -277,10 +270,60 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - stop_rule: native I/O emitter and png status mapping.
   - notes: deferred: queued behind the Ready Now cap.
 
+- [ ] TODO-5524: Int-backed error structs round-trip through stdlib Result sums
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-06
+  - phase: Correctness audit 2026-10
+  - parallel_track: result-error-structs
+  - scope: With `/std/result/*` imported, a sum payload of `ContainerError`/`ImageError`/`GfxError` is stored as a scalar i32 (`valueKindFromTypeName` treats them as int-backed), but `[error] ContainerError{2i32}` stores the struct's address instead of its code; `Result.why(r)` passes the payload slot to `why()` as if it were struct storage (prints `container error` for a missing key); `pick(r) { error(e) { e.code } }` fails with "field access requires struct receiver"; the `on_error` handler receives the address as the code (`err.code` prints 560). Pick one payload storage (the code, or inline struct storage) and use it in construction, `why`, `pick` and `try`.
+  - acceptance:
+    - matrix cases on VM, native and C++: `error<i32, ContainerError>(ContainerError{2i32})` read through `pick`, `Result.why`, `try` with an `on_error` handler, and `m.tryAt(missing)` through `Result.why`
+    - full release gate green
+  - stop_rule: int-backed error struct payloads only.
+
+- [ ] TODO-5523: A Result-returning main exits with its error code
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-10-06
+  - phase: Correctness audit 2026-10
+  - parallel_track: result-main
+  - scope: `[return<Result<i32, i32>>] main() { return(error<i32, i32>(3i32)) }` exits 0 on VM/C++ and 32 on native: the entry returns the raw sum pointer (or, without the import, the packed value whose low 32 bits are 0). Specify the exit code of a Result-returning entry (0 for ok, the error code or 1 otherwise) in docs/spec and decode the entry's return value on every backend.
+  - acceptance:
+    - spec states the rule; matrix cases for ok, int error and struct error agree on VM, native and C++
+    - full release gate green
+  - stop_rule: entry-point Result exit codes only.
+  - notes: deferred: queued behind the Ready Now cap.
+
+- [ ] TODO-5525: `Result.ok(x)` passes as a stdlib Result argument
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-10-06
+  - phase: Correctness audit 2026-10
+  - parallel_track: result-arguments
+  - scope: With `/std/result/*` imported, `show(Result.ok(3i32))` for `show([Result<i32, i32>] r)` fails to lower ("struct parameter type mismatch: expected /std/result/Result__..., got <unknown>") because `Result.ok` in argument position still produces the packed value; `/std/result/ok<i32, i32>(3i32)` works. Construct the sum when a legacy `Result.ok` call feeds a stdlib Result parameter (or any sum-typed slot).
+  - acceptance:
+    - matrix case passing `Result.ok(...)` to a stdlib Result parameter on VM, native and C++
+    - full release gate green
+  - stop_rule: `Result.ok` arguments only.
+  - notes: deferred: queued behind the Ready Now cap.
+
+- [ ] TODO-5526: Vectors of stdlib Result values keep their elements
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-10-06
+  - phase: Correctness audit 2026-10
+  - parallel_track: result-containers
+  - scope: `vector<Result<i32, i32>>` with the Result import pushes each sum's address instead of its storage: reading `rs[0i32]` back prints `2147483647` from `pick`, and `Result.error` reads garbage (probe `vr2`/`vr3`). Store sum elements inline (like struct elements) or reject the element type with a diagnostic.
+  - acceptance:
+    - matrix case pushing ok and error Results and reading them back with `pick` and `Result.error` on VM, native and C++, or a diagnostic test if rejected
+    - full release gate green
+  - stop_rule: Result elements in vectors only.
+  - notes: deferred: queued behind the Ready Now cap.
+
 - [ ] TODO-5515: Native Result.ok(Buffer) reads as ok
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5506
+  - status: ready
   - created_at: 2026-10-06
   - phase: Correctness audit 2026-10
   - parallel_track: native-result

@@ -1996,6 +1996,7 @@ are left unarchived.
 | TODO-5503 | Locals only read by a return expression are still destroyed | [2026-10.md](todo_archive/2026-10.md) | 2026-10-06 |
 | TODO-5504 | `while` bodies destroy their locals every iteration | [2026-10.md](todo_archive/2026-10.md) | 2026-10-06 |
 | TODO-5505 | A temporary passed to a move parameter keeps its block's cleanup | [2026-10.md](todo_archive/2026-10.md) | 2026-10-06 |
+| TODO-5506 | Result values use one convention across function boundaries | [2026-10.md](todo_archive/2026-10.md) | 2026-10-06 |
 
 <!-- INDEX-END -->
 

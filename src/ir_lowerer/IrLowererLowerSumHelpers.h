@@ -70,6 +70,7 @@ public:
   LocalInfo::ValueKind pointerLikePayloadValueKind(const std::string &typeText);
   LocalInfo::ValueKind valueKindOrPointerLikeFromTypeName(const std::string &typeText);
   void applyStdlibResultSumInfoToLocal(const Definition &sumDef, LocalInfo &info);
+  const Definition *declaredStdlibResultSumReturn(const Definition &def);
   bool resolveSumPayloadStorageInfo(const Definition &sumDef, const SumVariant &variant, LoweredSumPayloadStorageInfo &infoOut);
   bool resolvePublishedSumPayloadStorageInfo(const Definition &sumDef, const SemanticProgramSumVariantMetadata &publishedVariant, LoweredSumPayloadStorageInfo &infoOut);
   const Definition * resolveSumDefinitionByPath(const std::string &path);
@@ -88,6 +89,9 @@ public:
   bool selectExplicitSumVariantForConstructor(const Expr &initializer, const Definition &targetSum, LoweredSumVariantSelection &selectionOut);
   bool selectSumVariantForInitializer(const Expr &initializer, const Definition &targetSum, const LocalMap &valueLocals, LoweredSumVariantSelection &selectionOut);
   void emitLoweredSumHeader(int32_t baseLocal, int32_t totalSlots);
+  std::optional<bool> emitPackedResultIntoSum(const Definition &sumDef,
+                                              int32_t baseLocal,
+                                              const std::function<bool()> &emitPackedValue);
   bool emitLoweredSumConstructionIntoLocal(int32_t baseLocal, const Definition &sumDef, const Expr &initializer, const LocalMap &valueLocals);
   bool tryEmitLoweredSumConstructorExpr(const Expr &expr, const LocalMap &valueLocals);
   std::string describePickTargetName(const Expr &targetExpr);

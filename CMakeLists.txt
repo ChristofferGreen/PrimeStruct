@@ -978,6 +978,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/program_matrix/test_program_matrix_lifecycle.cpp
     tests/unit/program_matrix/test_program_matrix_optimizer.cpp
     tests/unit/program_matrix/test_program_matrix_parameter_modes.cpp
+    tests/unit/program_matrix/test_program_matrix_results.cpp
     tests/unit/program_matrix/test_program_matrix_shared_programs.cpp
   )
   target_include_directories(PrimeStruct_program_matrix_tests PRIVATE third_party ${CMAKE_SOURCE_DIR}
@@ -3023,6 +3024,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.program_matrix.lifecycle
     primestruct.program_matrix.optimizer
     primestruct.program_matrix.parameter_modes
+    primestruct.program_matrix.results
     primestruct.program_matrix.shared_programs
   )
   foreach(suite IN LISTS PrimeStructProgramMatrixTestSuites)

@@ -238,6 +238,23 @@ SumHelpersContext::SumHelpersContext(LowerSetupStageState &setupStageIn,
       return pointerLikePayloadValueKind(typeText);
     }
 
+    // A definition whose declared return type is the stdlib Result sum returns a pointer to
+    // its sum storage, whatever the payload types.
+    const Definition *SumHelpersContext::declaredStdlibResultSumReturn(const Definition &def) {
+      for (const auto &transform : def.transforms) {
+        if (transform.name != "return" || transform.templateArgs.size() != 1) {
+          continue;
+        }
+        const Definition *returnSumDef = resolveSumDefinitionForTypeText(
+            trimTemplateTypeText(transform.templateArgs.front()), def.namespacePrefix);
+        if (returnSumDef != nullptr && isStdlibResultSumDefinition(*returnSumDef)) {
+          return returnSumDef;
+        }
+        return nullptr;
+      }
+      return nullptr;
+    }
+
     void SumHelpersContext::applyStdlibResultSumInfoToLocal(const Definition &sumDef, LocalInfo &info) {
       if (!isStdlibResultSumDefinition(sumDef)) {
         return;
@@ -870,5 +887,71 @@ SumHelpersContext::SumHelpersContext(LowerSetupStageState &setupStageIn,
       function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal)});
     }
 
+    // Decodes the packed Result that emitPackedValue pushes (the error code in the high 32 bits,
+    // or the whole value for a status-only Result; zero means ok) into the stdlib Result sum at
+    // baseLocal. nullopt, with nothing emitted, when
+    // either payload is an aggregate.
+    std::optional<bool> SumHelpersContext::emitPackedResultIntoSum(
+        const Definition &sumDef, int32_t baseLocal, const std::function<bool()> &emitPackedValue) {
+      const SumVariant *okVariant = findSumVariantByName(sumDef, "ok");
+      const SumVariant *errorVariant = findSumVariantByName(sumDef, "error");
+      if (okVariant == nullptr || errorVariant == nullptr) {
+        return std::nullopt;
+      }
+      LoweredSumPayloadStorageInfo okPayload;
+      LoweredSumPayloadStorageInfo errorPayload;
+      int32_t okTag = 0;
+      int32_t errorTag = 0;
+      if (!resolveSemanticProductSumPayloadStorageInfo(
+              sumDef, *okVariant, "packed Result ok decode", okPayload) ||
+          !resolveSemanticProductSumPayloadStorageInfo(
+              sumDef, *errorVariant, "packed Result error decode", errorPayload)) {
+        return false;
+      }
+      if (okPayload.isAggregate || errorPayload.isAggregate) {
+        return std::nullopt;
+      }
+      if (!resolveSemanticProductSumVariantTag(
+              sumDef, *okVariant, "packed Result ok decode", okTag) ||
+          !resolveSemanticProductSumVariantTag(
+              sumDef, *errorVariant, "packed Result error decode", errorTag)) {
+        return false;
+      }
+      if (!emitPackedValue()) {
+        return false;
+      }
+      auto &instructions = function.instructions;
+      const int32_t packedLocal = allocTempLocal();
+      const int32_t upperLocal = allocTempLocal();
+      instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(packedLocal)});
+      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(packedLocal)});
+      if (okVariant->hasPayload) {
+        instructions.push_back({IrOpcode::PushI64, 4294967296ull});
+        instructions.push_back({IrOpcode::DivI64, 0});
+      }
+      instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(upperLocal)});
+      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(upperLocal)});
+      instructions.push_back({IrOpcode::PushI64, 0});
+      instructions.push_back({IrOpcode::CmpEqI64, 0});
+      const size_t jumpToError = instructions.size();
+      instructions.push_back({IrOpcode::JumpIfZero, 0});
+      instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(okTag)});
+      instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
+      if (okVariant->hasPayload) {
+        instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(packedLocal)});
+        instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 2)});
+      }
+      const size_t jumpToEnd = instructions.size();
+      instructions.push_back({IrOpcode::Jump, 0});
+      instructions[jumpToError].imm = static_cast<uint64_t>(instructions.size());
+      instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(errorTag)});
+      instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
+      if (errorVariant->hasPayload) {
+        instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(upperLocal)});
+        instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 2)});
+      }
+      instructions[jumpToEnd].imm = static_cast<uint64_t>(instructions.size());
+      return true;
+    }
 
 } // namespace primec::ir_lowerer

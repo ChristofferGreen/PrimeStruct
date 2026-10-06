@@ -291,6 +291,7 @@
               ctorExpr.namespacePrefix = expr.namespacePrefix;
               ctorExpr.isMethodCall = false;
               ctorExpr.isBinding = false;
+              ctorExpr.isBraceConstructor = true;
               ctorExpr.args.push_back(errorExpr);
               ctorExpr.argNames.push_back(std::nullopt);
               handlerErrorExpr = std::move(ctorExpr);
@@ -455,6 +456,15 @@
               if (operandExpr.kind == Expr::Kind::Call) {
                 if (const Definition *calleeDef = resolveDefinitionCall(operandExpr);
                     calleeDef != nullptr) {
+                  // A definition declared to return the stdlib Result sum returns its storage.
+                  if (const Definition *returnSumDef =
+                          sumHelpers.declaredStdlibResultSumReturn(*calleeDef);
+                      returnSumDef != nullptr && stdlibResultSumMatchesResultInfo(*returnSumDef)) {
+                    return returnSumDef;
+                  }
+                  if (!error.empty()) {
+                    return nullptr;
+                  }
                   ReturnInfo operandReturnInfo;
                   if (getReturnInfo(calleeDef->fullPath, operandReturnInfo) &&
                       returnInfoUsesPackedScalarResult(operandReturnInfo)) {
@@ -756,9 +766,6 @@
             };
 
             const Definition *returnSumDef = resolveCurrentStdlibResultReturnSumDefinition();
-            if (currentReturnResult.has_value() && returnSumDef == nullptr) {
-              return true;
-            }
 
             const int32_t sumPtrLocal = resultLocal;
             int32_t sourceOkTag = 0;

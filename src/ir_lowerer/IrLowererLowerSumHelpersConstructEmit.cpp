@@ -285,76 +285,15 @@ namespace primec::ir_lowerer {
           if (!isStdlibResultSumDefinition(sumDef)) {
             return std::nullopt;
           }
-          const SumVariant *okVariant = findSumVariantByName(sumDef, "ok");
-          const SumVariant *errorVariant = findSumVariantByName(sumDef, "error");
-          if (okVariant == nullptr || errorVariant == nullptr) {
-            return std::nullopt;
+          // A definition returning the stdlib Result sum hands back its sum storage.
+          if (initializer.kind == Expr::Kind::Call && !initializer.isMethodCall) {
+            if (const Definition *callee = resolveDefinitionCall(initializer);
+                callee != nullptr && declaredStdlibResultSumReturn(*callee) != nullptr) {
+              return std::nullopt;
+            }
           }
-          LoweredSumPayloadStorageInfo okPayload;
-          LoweredSumPayloadStorageInfo errorPayload;
-          if (!resolveSemanticProductSumPayloadStorageInfo(
-                  sumDef, *okVariant, "packed Result ok decode", okPayload) ||
-              !resolveSemanticProductSumPayloadStorageInfo(
-                  sumDef, *errorVariant, "packed Result error decode", errorPayload)) {
-            return false;
-          }
-          if (okPayload.isAggregate || errorPayload.isAggregate) {
-            return std::nullopt;
-          }
-          int32_t okTag = 0;
-          int32_t errorTag = 0;
-          if (!resolveSemanticProductSumVariantTag(
-                  sumDef, *okVariant, "packed Result ok decode", okTag) ||
-              !resolveSemanticProductSumVariantTag(
-                  sumDef, *errorVariant, "packed Result error decode", errorTag)) {
-            return false;
-          }
-          if (!emitExpr(initializer, valueLocals)) {
-            return false;
-          }
-          const int32_t packedLocal = allocTempLocal();
-          const int32_t upperLocal = allocTempLocal();
-          function.instructions.push_back(
-              {IrOpcode::StoreLocal, static_cast<uint64_t>(packedLocal)});
-          function.instructions.push_back(
-              {IrOpcode::LoadLocal, static_cast<uint64_t>(packedLocal)});
-          function.instructions.push_back({IrOpcode::PushI64, 4294967296ull});
-          function.instructions.push_back({IrOpcode::DivI64, 0});
-          function.instructions.push_back(
-              {IrOpcode::StoreLocal, static_cast<uint64_t>(upperLocal)});
-          function.instructions.push_back(
-              {IrOpcode::LoadLocal, static_cast<uint64_t>(upperLocal)});
-          function.instructions.push_back({IrOpcode::PushI64, 0});
-          function.instructions.push_back({IrOpcode::CmpEqI64, 0});
-          const size_t jumpToError = function.instructions.size();
-          function.instructions.push_back({IrOpcode::JumpIfZero, 0});
-          function.instructions.push_back(
-              {IrOpcode::PushI32, static_cast<uint64_t>(okTag)});
-          function.instructions.push_back(
-              {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
-          if (okVariant->hasPayload) {
-            function.instructions.push_back(
-                {IrOpcode::LoadLocal, static_cast<uint64_t>(packedLocal)});
-            function.instructions.push_back(
-                {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 2)});
-          }
-          const size_t jumpToEnd = function.instructions.size();
-          function.instructions.push_back({IrOpcode::Jump, 0});
-          function.instructions[jumpToError].imm =
-              static_cast<uint64_t>(function.instructions.size());
-          function.instructions.push_back(
-              {IrOpcode::PushI32, static_cast<uint64_t>(errorTag)});
-          function.instructions.push_back(
-              {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
-          if (errorVariant->hasPayload) {
-            function.instructions.push_back(
-                {IrOpcode::LoadLocal, static_cast<uint64_t>(upperLocal)});
-            function.instructions.push_back(
-                {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 2)});
-          }
-          function.instructions[jumpToEnd].imm =
-              static_cast<uint64_t>(function.instructions.size());
-          return true;
+          return emitPackedResultIntoSum(
+              sumDef, baseLocal, [&]() { return emitExpr(initializer, valueLocals); });
         };
         if (!initializerIsExistingSumLocal()) {
           const std::optional<bool> packedResultEmitResult =
@@ -694,81 +633,27 @@ namespace primec::ir_lowerer {
           return true;
         }
         auto tryMaterializePackedResultCallSource = [&]() -> std::optional<bool> {
-          const SumVariant *okVariant = findSumVariantByName(*sourceSumDef, "ok");
-          const SumVariant *errorVariant = findSumVariantByName(*sourceSumDef, "error");
-          if (okVariant == nullptr || errorVariant == nullptr) {
-            return std::nullopt;
+          if (!sourceExpr.isMethodCall) {
+            if (const Definition *callee = resolveDefinitionCall(sourceExpr);
+                callee != nullptr && declaredStdlibResultSumReturn(*callee) != nullptr) {
+              return std::nullopt;
+            }
           }
-          LoweredSumPayloadStorageInfo okPayload;
-          LoweredSumPayloadStorageInfo errorPayload;
-          if (!resolveSemanticProductSumPayloadStorageInfo(
-                  *sourceSumDef, *okVariant, "packed Result source ok payload", okPayload) ||
-              !resolveSemanticProductSumPayloadStorageInfo(
-                  *sourceSumDef, *errorVariant, "packed Result source error payload", errorPayload)) {
-            return false;
-          }
-          if (okPayload.isAggregate || errorPayload.isAggregate) {
-            return std::nullopt;
-          }
-          int32_t okTag = 0;
-          int32_t errorTag = 0;
           int32_t totalSlots = 0;
-          if (!resolveSemanticProductSumVariantTag(
-                  *sourceSumDef, *okVariant, "packed Result source ok tag", okTag) ||
-              !resolveSemanticProductSumVariantTag(
-                  *sourceSumDef, *errorVariant, "packed Result source error tag", errorTag) ||
-              !loweredSumSlotCount(*sourceSumDef, totalSlots)) {
-            return false;
-          }
-          if (!emitExpr(sourceExpr, sourceLocals)) {
+          if (!loweredSumSlotCount(*sourceSumDef, totalSlots)) {
             return false;
           }
           const int32_t baseLocal = nextLocal;
-          nextLocal += totalSlots;
-          const int32_t packedLocal = allocTempLocal();
-          const int32_t upperLocal = allocTempLocal();
+          const std::optional<bool> decoded =
+              emitPackedResultIntoSum(*sourceSumDef, baseLocal, [&]() {
+                nextLocal += totalSlots;
+                emitLoweredSumHeader(baseLocal, totalSlots);
+                return emitExpr(sourceExpr, sourceLocals);
+              });
+          if (!decoded.has_value() || !*decoded) {
+            return decoded;
+          }
           sourceOut.sumPtrLocal = allocTempLocal();
-          emitLoweredSumHeader(baseLocal, totalSlots);
-          function.instructions.push_back(
-              {IrOpcode::StoreLocal, static_cast<uint64_t>(packedLocal)});
-          function.instructions.push_back(
-              {IrOpcode::LoadLocal, static_cast<uint64_t>(packedLocal)});
-          function.instructions.push_back({IrOpcode::PushI64, 4294967296ull});
-          function.instructions.push_back({IrOpcode::DivI64, 0});
-          function.instructions.push_back(
-              {IrOpcode::StoreLocal, static_cast<uint64_t>(upperLocal)});
-          function.instructions.push_back(
-              {IrOpcode::LoadLocal, static_cast<uint64_t>(upperLocal)});
-          function.instructions.push_back({IrOpcode::PushI64, 0});
-          function.instructions.push_back({IrOpcode::CmpEqI64, 0});
-          const size_t jumpToError = function.instructions.size();
-          function.instructions.push_back({IrOpcode::JumpIfZero, 0});
-          function.instructions.push_back(
-              {IrOpcode::PushI32, static_cast<uint64_t>(okTag)});
-          function.instructions.push_back(
-              {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
-          if (okVariant->hasPayload) {
-            function.instructions.push_back(
-                {IrOpcode::LoadLocal, static_cast<uint64_t>(packedLocal)});
-            function.instructions.push_back(
-                {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 2)});
-          }
-          const size_t jumpToEnd = function.instructions.size();
-          function.instructions.push_back({IrOpcode::Jump, 0});
-          function.instructions[jumpToError].imm =
-              static_cast<uint64_t>(function.instructions.size());
-          function.instructions.push_back(
-              {IrOpcode::PushI32, static_cast<uint64_t>(errorTag)});
-          function.instructions.push_back(
-              {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
-          if (errorVariant->hasPayload) {
-            function.instructions.push_back(
-                {IrOpcode::LoadLocal, static_cast<uint64_t>(upperLocal)});
-            function.instructions.push_back(
-                {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 2)});
-          }
-          function.instructions[jumpToEnd].imm =
-              static_cast<uint64_t>(function.instructions.size());
           function.instructions.push_back(
               {IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
           function.instructions.push_back(

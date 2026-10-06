@@ -786,8 +786,11 @@ ResultErrorMethodCallEmitResult tryEmitResultErrorCall(
   auto directCallReturnsImportedStdlibResultSum =
       [&](const Expr &valueExpr, bool &returnsResultOut) {
     returnsResultOut = false;
-    if (valueExpr.kind != Expr::Kind::Call || valueExpr.isMethodCall ||
-        resultInfo.hasValue || !resolveDefinitionCall || !hasImportedStdlibResultSum()) {
+    // A definition returning the stdlib Result sum returns its sum storage, whatever the
+    // payload types (the semantic query fact decides when present); the legacy `Result.ok`
+    // method form stays packed.
+    if (valueExpr.kind != Expr::Kind::Call || valueExpr.isMethodCall || !resolveDefinitionCall ||
+        !hasImportedStdlibResultSum()) {
       return true;
     }
     if (semanticProductTargets != nullptr &&
@@ -800,10 +803,8 @@ ResultErrorMethodCallEmitResult tryEmitResultErrorCall(
                 valueExpr.name;
         return false;
       }
-      if (!queryFact->hasResultType || queryFact->resultTypeHasValue ||
-          resolveSemanticProductQueryErrorTypeText(
-              semanticProductTargets,
-              *queryFact) !=
+      if (!queryFact->hasResultType || queryFact->resultTypeHasValue != resultInfo.hasValue ||
+          resolveSemanticProductQueryErrorTypeText(semanticProductTargets, *queryFact) !=
               trimTemplateTypeText(resultInfo.errorType)) {
         error = "stale semantic-product Result.error source query metadata: " +
                 valueExpr.name;

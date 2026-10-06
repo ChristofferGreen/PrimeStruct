@@ -42,6 +42,14 @@
     `err.why()` / `err.status()` / `err.result<T>()`. Import `/std/gfx/experimental/*` only when preserving legacy
     compatibility imports; that namespace now acts as a compatibility shim over the canonical `/std/gfx/*` helper
     layer rather than as a peer public graphics contract.
+- **Result values across calls:** with `/std/result/*` imported, `Result<T, E>` and `Result<E>` are the stdlib sum
+  types, and every definition declared to return one hands its caller the sum (tag plus payload storage) whatever the
+  payload types: named locals, forwarded calls (`return(inner())`), parameters, `ok`/`error` helpers and `?`
+  propagation all return the same value, so `i64`/`f64`/`string` payloads and an error code of `0` survive the
+  call. Builtin producers and the stdlib's hand-packed error helpers (`ContainerError.result<T>(err)`,
+  `FileError.status(err)`) are converted to the sum when a stdlib-Result definition returns them. Without the import,
+  the builtin `Result` keeps its packed representation (the error code in the high 32 bits, zero for ok), which
+  cannot tell `ok` from an error code of `0`.
 - **Local handlers:** error handling is explicit and local to the scope that declares it.
   - `on_error<ErrorType, Handler>(args...)` is a semantic transform that attaches an error handler to a definition or
     block body.
