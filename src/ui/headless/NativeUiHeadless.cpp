@@ -1,6 +1,7 @@
 #include "primec/ui/NativeUi.h"
 #include "primec/ui/NativeUiHeadless.h"
 #include "primec/ui/NativeUiStandardItems.h"
+#include "primec/ui/SyntaxHighlight.h"
 
 #include <cerrno>
 #include <cstring>
@@ -498,6 +499,12 @@ bool ps_ui_text_view_clear_styles(uint64_t view) {
     v->styles.clear();
   }
   return loggedFlag("ps_ui_text_view_clear_styles(" + std::to_string(view) + ")", v != nullptr);
+}
+
+bool ps_ui_text_view_highlight(uint64_t view, const char *path) {
+  const std::string call = "ps_ui_text_view_highlight(" + std::to_string(view) + ", " + quote(path) + ")";
+  const bool ok = usable() && textView(view) != nullptr && primec::ui::applyHighlight(view, path);
+  return loggedFlag(call, ok);
 }
 
 bool ps_ui_text_view_add_style(uint64_t view, int32_t startByte, int32_t endByte, int32_t rgb, int32_t flags) {

@@ -19,6 +19,7 @@
 
 #include "primec/ui/NativeUi.h"
 #include "primec/ui/NativeUiStandardItems.h"
+#include "primec/ui/SyntaxHighlight.h"
 
 #include <cctype>
 #include <cstdio>
@@ -509,6 +510,10 @@ bool ps_ui_text_view_clear_styles(uint64_t view) {
   [storage endEditing];
   [v.undoManager enableUndoRegistration];
   return true;
+}
+
+bool ps_ui_text_view_highlight(uint64_t view, const char *path) {
+  return usable() && textView(view) != nil && primec::ui::applyHighlight(view, path);
 }
 
 bool ps_ui_text_view_add_style(uint64_t view, int32_t startByte, int32_t endByte, int32_t rgb, int32_t flags) {

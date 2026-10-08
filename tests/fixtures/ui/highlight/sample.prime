@@ -1,0 +1,13 @@
+import /std/math/*
+
+// Adds one.
+[return<i32>]
+add_one([i32] value) {
+  /* block */
+  return(value + 1i32)
+}
+
+[return<string>]
+greeting() {
+  return("héllo, 日本")
+}

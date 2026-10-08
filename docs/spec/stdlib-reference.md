@@ -381,7 +381,8 @@ functions (`primec/ui/NativeUiBindings.h`) to a backend (headless in tests, AppK
 - `TextView`: `text()`, `setText(text)`, `setMonospace(bool)`, `isModified()`, `clearModified()`, and
   `loadFile(path)` / `saveFile(path)` (the backend reads or writes the UTF-8 file itself; `false` means see
   `app.lastError()`; a successful load leaves the view unmodified, a save does not clear the modified flag), and
-  `clearStyles()` / `addStyle(startByte, endByte, rgb, flags)` (colour and bold/italic over UTF-8 byte ranges).
+  `clearStyles()` / `addStyle(startByte, endByte, rgb, flags)` (colour and bold/italic over UTF-8 byte ranges), and `highlight(path)` (syntax highlighting chosen by the file
+  name's extension).
 - `Menu`: `item(title, shortcut, commandId)`, `separator()`, the standard items `undo redo cut copy paste selectAll
   find quit about hide hideOthers minimize zoom bringAllToFront fullScreen help`, and `addToBar()`,
   `addToBarAsApp()`, `addToBarAsWindow()`, `addToBarAsHelp()`. Shortcuts are portable (`"cmd+s"`).

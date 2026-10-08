@@ -109,8 +109,7 @@ of sync with them.
 | TODO-5536 | Small, lazily loaded bytecode for apps | ready | bytecode-startup |
 | TODO-5535 | Launch-time harness and reference Objective-C++ editor | ready | native-ui-launch |
 | TODO-5530 | Read and write whole files as String | blocked | file-text |
-| TODO-5550 | Syntax highlighting in the editor | ready | native-ui-editor-accept |
-| TODO-5553 | Editor acceptance screenshots | blocked | native-ui-editor-accept |
+| TODO-5553 | Editor acceptance screenshots | ready | native-ui-editor-accept |
 | TODO-5554 | Close the editor acceptance gate | blocked | native-ui-editor-accept |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5534 | Compiled programs call the native UI ABI | deferred | native-ui-compiled |
@@ -140,7 +139,7 @@ of sync with them.
 
 - TODO-5537 (bytes): `u8` and byte-addressed memory
 - TODO-5538 (slices): slices are real borrows with shared operations
-- TODO-5550 (native-ui-editor-accept): syntax highlighting in the editor
+- TODO-5553 (native-ui-editor-accept): editor acceptance screenshots
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5510 (control-returns): `return` returns from pick arms and lambdas correctly
@@ -149,7 +148,7 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5550
+1. TODO-5553
 2. TODO-5536
 3. TODO-5537
 4. TODO-5538
@@ -161,7 +160,7 @@ of sync with them.
 ### Priority Lanes
 
 - Strings and slices (docs/spec/strings-and-views.md): TODO-5537, TODO-5538, TODO-5539, TODO-5540, TODO-5530, TODO-5541, TODO-5542
-- Native UI editor acceptance (docs/NativeUiPlan.md): TODO-5550, TODO-5553, TODO-5554
+- Native UI editor acceptance (docs/NativeUiPlan.md): TODO-5553, TODO-5554
 - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533, TODO-5534
 - Lifecycle (docs/spec/value-lifecycle.md): TODO-5527
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
@@ -356,22 +355,9 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - full release gate green
   - stop_rule: whole-file text read and write only.
 
-- [ ] TODO-5550: Syntax highlighting in the editor
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-08
-  - phase: Native UI editor acceptance (requirement 1, highlighter half)
-  - parallel_track: native-ui-editor-accept
-  - scope: A highlighter for PrimeStruct, C/C++, Python, JSON and Markdown, chosen by file extension, that recomputes attribute runs (keywords, strings, comments, numbers, and for Markdown headings/emphasis/code). Programs cannot yet scan text strings (TODO-5539/5540), so the lexers are C++ in a shared unit (`primec/ui/SyntaxHighlight.h`) used by both backends through a new ABI call `ps_ui_text_view_highlight(view, path)` (language from the path's extension; unknown extension clears the styles), which the editor calls after load, save and on text-changed. Sample fixtures under `tests/fixtures/ui/highlight/`.
-  - acceptance:
-    - headless cases assert the attribute runs for one sample file per language, in the editor acceptance gate
-    - unknown extensions get no runs; full release gate green
-  - stop_rule: the five languages and their runs only.
-
 - [ ] TODO-5553: Editor acceptance screenshots
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5550
+  - status: ready
   - created_at: 2026-10-08
   - phase: Native UI editor acceptance (requirement 5)
   - parallel_track: native-ui-editor-accept

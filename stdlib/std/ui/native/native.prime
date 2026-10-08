@@ -98,6 +98,10 @@ ps_ui_text_view_clear_styles([u64] view) {
 ps_ui_text_view_add_style([u64] view, [i32] startByte, [i32] endByte, [i32] rgb, [i32] flags) {
 }
 
+[host return<bool>]
+ps_ui_text_view_highlight([u64] view, [string] path) {
+}
+
 [host return<string>]
 ps_ui_last_error() {
 }
@@ -220,6 +224,13 @@ TextView() {
   [public return<bool>]
   addStyle([i32] startByte, [i32] endByte, [i32] rgb, [i32] flags) {
     return(ps_ui_text_view_add_style(this.handle, startByte, endByte, rgb, flags))
+  }
+
+  // Syntax highlighting for the language of the file name `path` (by extension:
+  // .prime, C/C++, .py, .json, .md); anything else just clears the styles.
+  [public return<bool>]
+  highlight([string] path) {
+    return(ps_ui_text_view_highlight(this.handle, path))
   }
 
   [public return<bool>]

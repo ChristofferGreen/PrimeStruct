@@ -810,10 +810,19 @@ target_include_directories(primec_ui_bindings_lib PUBLIC
 target_link_libraries(primec_ui_bindings_lib PUBLIC primec_embed_runtime_lib)
 primestructEnableWarnings(primec_ui_bindings_lib)
 
+# Syntax highlighting lexers; the backends implement
+# ps_ui_text_view_highlight with them on top of the public style calls.
+add_library(primec_ui_highlight_lib STATIC src/ui/SyntaxHighlight.cpp)
+target_include_directories(primec_ui_highlight_lib PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+primestructEnableWarnings(primec_ui_highlight_lib)
+
 add_library(primec_ui_headless_lib src/ui/headless/NativeUiHeadless.cpp)
 target_include_directories(primec_ui_headless_lib PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
+target_link_libraries(primec_ui_headless_lib PUBLIC primec_ui_highlight_lib)
 primestructEnableWarnings(primec_ui_headless_lib)
 
 # Bindings plus the headless backend: what tests and the headless runner link.
@@ -839,7 +848,7 @@ if(PRIMESTRUCT_BUILD_NATIVE_UI AND APPLE)
   set_target_properties(primec_ui_appkit_lib PROPERTIES OBJCXX_STANDARD 20 OBJCXX_STANDARD_REQUIRED ON)
   target_compile_options(primec_ui_appkit_lib PRIVATE -fobjc-arc)
   target_include_directories(primec_ui_appkit_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-  target_link_libraries(primec_ui_appkit_lib PUBLIC "-framework AppKit" "-framework Foundation")
+  target_link_libraries(primec_ui_appkit_lib PUBLIC primec_ui_highlight_lib "-framework AppKit" "-framework Foundation")
 
   # Development runner: compiles .prime at launch, or runs .psir bytecode.
   add_executable(primestruct_app tools/primestruct_app/main.cpp)
@@ -1266,6 +1275,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/ui/test_native_ui_stdlib.cpp
     tests/unit/ui/test_native_ui_editor.cpp
     tests/unit/ui/test_native_ui_editor_acceptance.cpp
+    tests/unit/ui/test_native_ui_editor_highlight.cpp
   )
   target_include_directories(PrimeStruct_native_ui_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
   target_compile_definitions(PrimeStruct_native_ui_tests PRIVATE

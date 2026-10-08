@@ -115,6 +115,7 @@ main() {
       textChanged(w) {
         [Window] target{w}
         target.setEdited(true)
+        editor.highlight(path)
       }
       quitRequested {
         intent = command_close()
@@ -149,6 +150,7 @@ main() {
           path = target
           hasPath = true
           window.setTitle(path)
+          editor.highlight(path)
           editor.clearModified()
           window.setEdited(false)
         } else {
@@ -163,6 +165,7 @@ main() {
       editor.clearModified()
       path = ""
       hasPath = false
+      editor.highlight(path)
       window.setTitle("Untitled")
       window.setEdited(false)
     }
@@ -173,6 +176,7 @@ main() {
           path = chosen
           hasPath = true
           window.setTitle(path)
+          editor.highlight(path)
           window.setEdited(false)
         } else {
           app.alert("The file could not be opened.", app.lastError(), "OK")
