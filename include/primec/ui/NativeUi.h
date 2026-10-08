@@ -144,6 +144,10 @@ const char *ps_ui_last_error(void);
 /* The chosen path, or "" when cancelled. See the lifetime note above. */
 const char *ps_ui_open_panel(const char *title);
 const char *ps_ui_save_panel(const char *title, const char *suggestedName);
+/* True when the last open/save panel returned a path, false when it was
+ * cancelled. Programs use it instead of testing the returned text for
+ * emptiness. */
+bool ps_ui_panel_chosen(void);
 /* Shows an alert with the given buttons (titles separated by '\n'; the first
  * is the default) and returns the zero-based index of the button pressed, or
  * -1 for a bad call. */

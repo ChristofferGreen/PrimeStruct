@@ -69,7 +69,8 @@ template <class Binder> void forEachBinding(Binder &&bindOne) {
   bindOne("ps_ui_save_panel", [](std::string_view title, std::string_view suggestedName) {
     return std::string(ps_ui_save_panel(text(title).c_str(), text(suggestedName).c_str()));
   });
-  bindOne("ps_ui_alert", [](std::string_view message, std::string_view detail, std::string_view buttons) {
+  bindOne("ps_ui_panel_chosen", [] { return ps_ui_panel_chosen(); });
+  bindOne("ps_ui_alert",[](std::string_view message, std::string_view detail, std::string_view buttons) {
     return ps_ui_alert(text(message).c_str(), text(detail).c_str(), text(buttons).c_str());
   });
 }

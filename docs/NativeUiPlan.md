@@ -107,7 +107,7 @@ is callable only on the thread that called `ps_ui_init`, the main thread on macO
 | Text view | `ps_ui_text_view_create() -> u64`, `_get_text -> String`, `_set_text`, `_set_monospace(bool)`, `_is_modified -> bool`, `_clear_modified` |
 | Menus | `ps_ui_menu_create(title) -> u64`, `_add_item(menu, title, shortcut, commandId)`, `_add_separator`, `_add_standard(menu, standardId)`, `ps_ui_menu_bar_add(menu)` |
 | Text files | `ps_ui_text_view_load_file(view, path) -> bool`, `ps_ui_text_view_save_file(view, path) -> bool`, `ps_ui_last_error() -> String` (the backend reads and writes UTF-8 files itself, so no program-side text is built and a large file never passes through the program) |
-| Dialogs | `ps_ui_open_panel(title) -> String`, `ps_ui_save_panel(title, suggestedName) -> String` (empty means cancelled), `ps_ui_alert(message, detail, buttons) -> i32` |
+| Dialogs | `ps_ui_open_panel(title) -> String`, `ps_ui_save_panel(title, suggestedName) -> String` (empty means cancelled), `ps_ui_panel_chosen() -> bool` (whether the last panel returned a path), `ps_ui_alert(message, detail, buttons) -> i32` |
 
 - **Events.** `ps_ui_wait_event` blocks in the platform's run loop until something the program should handle happens,
   then returns its kind; the accessors read the fields of that event until the next wait. Kinds: `command` (a menu

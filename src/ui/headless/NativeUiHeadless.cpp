@@ -65,6 +65,7 @@ struct State {
   int32_t eventCommand = 0;
   std::string returnedText;
   std::string lastError;
+  bool panelChosen = false;
   std::vector<std::string> log;
 };
 
@@ -596,6 +597,7 @@ const char *ps_ui_open_panel(const char *title) {
     s.returnedText = std::move(s.openAnswers.front());
     s.openAnswers.pop_front();
   }
+  s.panelChosen = !s.returnedText.empty();
   return logged("ps_ui_open_panel(" + quote(title) + ")", s.returnedText.c_str(), quote(s.returnedText));
 }
 
@@ -606,8 +608,13 @@ const char *ps_ui_save_panel(const char *title, const char *suggestedName) {
     s.returnedText = std::move(s.saveAnswers.front());
     s.saveAnswers.pop_front();
   }
+  s.panelChosen = !s.returnedText.empty();
   return logged("ps_ui_save_panel(" + quote(title) + ", " + quote(suggestedName) + ")", s.returnedText.c_str(),
                 quote(s.returnedText));
+}
+
+bool ps_ui_panel_chosen(void) {
+  return loggedFlag("ps_ui_panel_chosen()", state().panelChosen);
 }
 
 int32_t ps_ui_alert(const char *message, const char *detail, const char *buttons) {

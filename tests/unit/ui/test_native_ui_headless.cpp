@@ -278,9 +278,13 @@ TEST_CASE("headless dialogs answer from the script and then default") {
   headless::pushSavePanelAnswer("/docs/b.txt");
   headless::pushAlertAnswer(2);
   CHECK(std::string(ps_ui_open_panel("Open")) == "/docs/a.txt");
+  CHECK(ps_ui_panel_chosen());
   CHECK(std::string(ps_ui_open_panel("Open")).empty());
+  CHECK_FALSE(ps_ui_panel_chosen());
   CHECK(std::string(ps_ui_save_panel("Save", "Untitled.txt")) == "/docs/b.txt");
+  CHECK(ps_ui_panel_chosen());
   CHECK(std::string(ps_ui_save_panel("Save", "Untitled.txt")).empty());
+  CHECK_FALSE(ps_ui_panel_chosen());
   CHECK(ps_ui_alert("Save changes?", "Unsaved text", "Save\nDiscard\nCancel") == 2);
   CHECK(ps_ui_alert("Save changes?", "Unsaved text", "Save\nDiscard\nCancel") == 0);
 }

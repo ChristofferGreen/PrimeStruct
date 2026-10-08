@@ -122,6 +122,10 @@ ps_ui_open_panel([string] title) {
 ps_ui_save_panel([string] title, [string] suggestedName) {
 }
 
+[host return<bool>]
+ps_ui_panel_chosen() {
+}
+
 [host return<i32>]
 ps_ui_alert([string] message, [string] detail, [string] buttons) {
 }
@@ -340,6 +344,12 @@ App() {
   [public return<string>]
   savePanel([string] title, [string] suggestedName) {
     return(ps_ui_save_panel(title, suggestedName))
+  }
+
+  // True when the last openPanel/savePanel returned a path, false when cancelled.
+  [public return<bool>]
+  panelChosen() {
+    return(ps_ui_panel_chosen())
   }
 
   [public return<i32>]

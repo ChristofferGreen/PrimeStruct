@@ -49,6 +49,7 @@ struct State {
   PendingEvent current;
   std::string returnedText;
   std::string lastError;
+  bool panelChosen = false;
   std::string snapshotPath;
   bool snapshotTaken = false;
   uint64_t snapshotWindow = 0;
@@ -591,6 +592,7 @@ bool ps_ui_menu_bar_add(uint64_t menuHandle) {
 const char *ps_ui_open_panel(const char *title) {
   State &s = state();
   s.returnedText.clear();
+  s.panelChosen = false;
   if (!usable()) {
     return s.returnedText.c_str();
   }
@@ -601,6 +603,7 @@ const char *ps_ui_open_panel(const char *title) {
     panel.allowsMultipleSelection = NO;
     if ([panel runModal] == NSModalResponseOK && panel.URL != nil) {
       s.returnedText = panel.URL.path.UTF8String;
+      s.panelChosen = !s.returnedText.empty();
     }
   }
   return s.returnedText.c_str();
@@ -609,6 +612,7 @@ const char *ps_ui_open_panel(const char *title) {
 const char *ps_ui_save_panel(const char *title, const char *suggestedName) {
   State &s = state();
   s.returnedText.clear();
+  s.panelChosen = false;
   if (!usable()) {
     return s.returnedText.c_str();
   }
@@ -618,10 +622,13 @@ const char *ps_ui_save_panel(const char *title, const char *suggestedName) {
     panel.nameFieldStringValue = toNSString(suggestedName);
     if ([panel runModal] == NSModalResponseOK && panel.URL != nil) {
       s.returnedText = panel.URL.path.UTF8String;
+      s.panelChosen = !s.returnedText.empty();
     }
   }
   return s.returnedText.c_str();
 }
+
+bool ps_ui_panel_chosen(void) { return state().panelChosen; }
 
 int32_t ps_ui_alert(const char *message, const char *detail, const char *buttons) {
   if (!usable()) {

@@ -374,7 +374,8 @@ functions (`primec/ui/NativeUiBindings.h`) to a backend (headless in tests, AppK
 
 - `start_app(name) -> App`: starts the app on the calling thread; `app.started` is false when it cannot start.
 - `App`: `window(title, width, height) -> Window`, `textView() -> TextView`, `menu(title) -> Menu`,
-  `waitEvent() -> AppEvent`, `openPanel(title)` and `savePanel(title, suggestedName)` (empty text means cancelled),
+  `waitEvent() -> AppEvent`, `openPanel(title)` and `savePanel(title, suggestedName)` (empty text means cancelled; test the result with
+  `panelChosen() -> bool`, since `count` of a host-returned text is not yet reliable),
   `alert(message, detail, buttons) -> i32` (button titles separated by `\n`, returns the pressed index), `quit()`.
 - `Window`: `setTitle`, `setContent(textView)`, `setEdited(bool)`, `show()`, `close()`.
 - `TextView`: `text()`, `setText(text)`, `setMonospace(bool)`, `isModified()`, `clearModified()`, and
