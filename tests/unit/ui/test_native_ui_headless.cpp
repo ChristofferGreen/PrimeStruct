@@ -272,6 +272,44 @@ TEST_CASE("headless menus reject bad handles and standard ids") {
   CHECK(headless::menuBarItems().empty());
 }
 
+TEST_CASE("headless text views keep style runs in call order and validate their ranges") {
+  startApp();
+  const uint64_t view = ps_ui_text_view_create();
+  // "h\xC3\xA9llo \xE6\x97\xA5": bytes 0 h, 1-2 e-acute, 3 l, 4 l, 5 o, 6 space, 7-9 the CJK character.
+  REQUIRE(ps_ui_text_view_set_text(view, "h\xC3\xA9llo \xE6\x97\xA5"));
+  CHECK(ps_ui_text_view_add_style(view, 0, 6, 0xFF0000, PS_UI_STYLE_BOLD));
+  CHECK(ps_ui_text_view_add_style(view, 7, 10, 0x00FF00, PS_UI_STYLE_BOLD | PS_UI_STYLE_ITALIC));
+  CHECK(ps_ui_text_view_add_style(view, 3, 5, 0x0000FF, 0));
+  const std::vector<headless::StyleRun> runs{{0, 6, 0xFF0000, 1}, {7, 10, 0x00FF00, 3}, {3, 5, 0x0000FF, 0}};
+  CHECK(headless::styleRuns(view) == runs);
+  // Rejected: empty, reversed, past the end, negative, and inside a code point.
+  CHECK_FALSE(ps_ui_text_view_add_style(view, 3, 3, 1, 0));
+  CHECK_FALSE(ps_ui_text_view_add_style(view, 5, 3, 1, 0));
+  CHECK_FALSE(ps_ui_text_view_add_style(view, 0, 11, 1, 0));
+  CHECK_FALSE(ps_ui_text_view_add_style(view, -1, 3, 1, 0));
+  CHECK_FALSE(ps_ui_text_view_add_style(view, 2, 4, 1, 0));
+  CHECK_FALSE(ps_ui_text_view_add_style(view, 0, 8, 1, 0));
+  CHECK_FALSE(ps_ui_text_view_add_style(999, 0, 1, 1, 0));
+  CHECK(headless::styleRuns(view).size() == 3);
+  // Styling is presentation only.
+  CHECK_FALSE(ps_ui_text_view_is_modified(view));
+  CHECK(ps_ui_text_view_clear_styles(view));
+  CHECK(headless::styleRuns(view).empty());
+  CHECK_FALSE(ps_ui_text_view_clear_styles(999));
+}
+
+TEST_CASE("headless style runs go away when the text is replaced but survive typing") {
+  startApp();
+  const uint64_t view = ps_ui_text_view_create();
+  REQUIRE(ps_ui_text_view_set_text(view, "abc"));
+  REQUIRE(ps_ui_text_view_add_style(view, 0, 3, 0x123456, 0));
+  headless::pushTypeText(view, "d");
+  REQUIRE(ps_ui_wait_event() == PS_UI_EVENT_TEXT_CHANGED);
+  CHECK(headless::styleRuns(view).size() == 1);
+  REQUIRE(ps_ui_text_view_set_text(view, "xyz"));
+  CHECK(headless::styleRuns(view).empty());
+}
+
 TEST_CASE("headless dialogs answer from the script and then default") {
   startApp();
   headless::pushOpenPanelAnswer("/docs/a.txt");

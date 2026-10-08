@@ -52,6 +52,15 @@ struct WindowState {
 };
 WindowState windowState(uint64_t window);
 bool isMonospace(uint64_t textView);
+// One styled byte range of a text view, in call order (see ps_ui_text_view_add_style).
+struct StyleRun {
+  int32_t start = 0;
+  int32_t end = 0;
+  int32_t rgb = 0;
+  int32_t flags = 0;
+  bool operator==(const StyleRun &other) const = default;
+};
+std::vector<StyleRun> styleRuns(uint64_t textView);
 // "File>Save (cmd+s) #3", "File>-" for a separator, "File>standard 4" for a
 // standard item; only menus added to the menu bar are listed, in bar order.
 std::vector<std::string> menuBarItems();

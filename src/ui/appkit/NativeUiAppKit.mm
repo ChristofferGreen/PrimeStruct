@@ -23,6 +23,7 @@
 #include <cctype>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <deque>
 #include <string>
 #include <thread>
@@ -45,6 +46,7 @@ struct State {
   uint64_t nextHandle = 1;
   std::unordered_map<uint64_t, NSWindow *> windows;
   std::unordered_map<uint64_t, NSTextView *> textViews;
+  std::unordered_map<uint64_t, NSFont *> baseFonts;
   // A text view does not retain its scroll view, so the maps do.
   std::unordered_map<uint64_t, NSScrollView *> scrollViews;
   std::unordered_map<uint64_t, NSMenu *> menus;
@@ -454,6 +456,7 @@ uint64_t ps_ui_text_view_create(void) {
     const uint64_t handle = s.nextHandle++;
     tag(view, handle);
     s.textViews[handle] = view;
+    s.baseFonts[handle] = view.font;
     s.scrollViews[handle] = scroll;
     s.modified[handle] = false;
     return handle;
@@ -485,6 +488,76 @@ bool ps_ui_text_view_set_monospace(uint64_t view, bool monospace) {
   }
   v.font = monospace ? [NSFont monospacedSystemFontOfSize:13 weight:NSFontWeightRegular]
                      : [NSFont systemFontOfSize:13];
+  state().baseFonts[view] = v.font;
+  return true;
+}
+
+bool ps_ui_text_view_clear_styles(uint64_t view) {
+  NSTextView *v = usable() ? textView(view) : nil;
+  if (v == nil) {
+    return false;
+  }
+  NSFont *base = state().baseFonts[view];
+  NSTextStorage *storage = v.textStorage;
+  const NSRange all = NSMakeRange(0, storage.length);
+  [v.undoManager disableUndoRegistration];
+  [storage beginEditing];
+  [storage addAttribute:NSForegroundColorAttributeName value:[NSColor textColor] range:all];
+  if (base != nil) {
+    [storage addAttribute:NSFontAttributeName value:base range:all];
+  }
+  [storage endEditing];
+  [v.undoManager enableUndoRegistration];
+  return true;
+}
+
+bool ps_ui_text_view_add_style(uint64_t view, int32_t startByte, int32_t endByte, int32_t rgb, int32_t flags) {
+  NSTextView *v = usable() ? textView(view) : nil;
+  if (v == nil || startByte < 0 || endByte <= startByte) {
+    return false;
+  }
+  const char *utf8 = v.string.UTF8String;
+  const size_t size = std::strlen(utf8);
+  auto boundary = [&](int32_t at) {
+    return static_cast<size_t>(at) == size || (static_cast<unsigned char>(utf8[at]) & 0xC0) != 0x80;
+  };
+  if (static_cast<size_t>(endByte) > size || !boundary(startByte) || !boundary(endByte)) {
+    return false;
+  }
+  // Byte offsets of the UTF-8 text become UTF-16 offsets of the NSString.
+  NSString *head = [[NSString alloc] initWithBytes:utf8 length:static_cast<NSUInteger>(startByte)
+                                          encoding:NSUTF8StringEncoding];
+  NSString *body = [[NSString alloc] initWithBytes:utf8 + startByte length:static_cast<NSUInteger>(endByte - startByte)
+                                          encoding:NSUTF8StringEncoding];
+  if (head == nil || body == nil) {
+    return false;
+  }
+  const NSRange range = NSMakeRange(head.length, body.length);
+  NSColor *color = [NSColor colorWithSRGBRed:((rgb >> 16) & 0xFF) / 255.0
+                                       green:((rgb >> 8) & 0xFF) / 255.0
+                                        blue:(rgb & 0xFF) / 255.0
+                                       alpha:1.0];
+  NSFont *font = state().baseFonts[view];
+  if (font != nil && (flags & (PS_UI_STYLE_BOLD | PS_UI_STYLE_ITALIC)) != 0) {
+    NSFontManager *manager = [NSFontManager sharedFontManager];
+    if ((flags & PS_UI_STYLE_BOLD) != 0) {
+      font = [manager convertFont:font toHaveTrait:NSBoldFontMask];
+    }
+    if ((flags & PS_UI_STYLE_ITALIC) != 0) {
+      font = [manager convertFont:font toHaveTrait:NSItalicFontMask];
+    }
+  }
+  NSTextStorage *storage = v.textStorage;
+  // Presentation only: no undo entry, and the program-visible modified flag is
+  // tracked from user edits, which attribute changes are not.
+  [v.undoManager disableUndoRegistration];
+  [storage beginEditing];
+  [storage addAttribute:NSForegroundColorAttributeName value:color range:range];
+  if (font != nil) {
+    [storage addAttribute:NSFontAttributeName value:font range:range];
+  }
+  [storage endEditing];
+  [v.undoManager enableUndoRegistration];
   return true;
 }
 

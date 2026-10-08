@@ -34,6 +34,7 @@ struct TextView {
   bool monospace = false;
   bool modified = false;
   uint64_t window = 0;
+  std::vector<StyleRun> styles;
 };
 
 struct Window {
@@ -275,6 +276,11 @@ bool isMonospace(uint64_t view) {
   return v != nullptr && v->monospace;
 }
 
+std::vector<StyleRun> styleRuns(uint64_t view) {
+  const TextView *v = textView(view);
+  return v != nullptr ? v->styles : std::vector<StyleRun>{};
+}
+
 std::vector<std::string> menuBarOutline() {
   std::vector<std::string> items;
   for (uint64_t handle : state().menuBar) {
@@ -481,8 +487,36 @@ bool ps_ui_text_view_set_text(uint64_t view, const char *text) {
   if (v != nullptr) {
     v->text = text ? text : "";
     v->modified = false;
+    v->styles.clear();
   }
   return loggedFlag(call, v != nullptr);
+}
+
+bool ps_ui_text_view_clear_styles(uint64_t view) {
+  TextView *v = usable() ? textView(view) : nullptr;
+  if (v != nullptr) {
+    v->styles.clear();
+  }
+  return loggedFlag("ps_ui_text_view_clear_styles(" + std::to_string(view) + ")", v != nullptr);
+}
+
+bool ps_ui_text_view_add_style(uint64_t view, int32_t startByte, int32_t endByte, int32_t rgb, int32_t flags) {
+  const std::string call = "ps_ui_text_view_add_style(" + std::to_string(view) + ", " + std::to_string(startByte) +
+                           ", " + std::to_string(endByte) + ", " + std::to_string(rgb) + ", " +
+                           std::to_string(flags) + ")";
+  TextView *v = usable() ? textView(view) : nullptr;
+  bool ok = false;
+  if (v != nullptr && startByte >= 0 && endByte > startByte && static_cast<size_t>(endByte) <= v->text.size()) {
+    // A code point boundary is the end of the text or a byte that is not a continuation byte.
+    auto boundary = [&](int32_t at) {
+      return static_cast<size_t>(at) == v->text.size() || (static_cast<unsigned char>(v->text[at]) & 0xC0) != 0x80;
+    };
+    ok = boundary(startByte) && boundary(endByte);
+    if (ok) {
+      v->styles.push_back(StyleRun{startByte, endByte, rgb, flags});
+    }
+  }
+  return loggedFlag(call, ok);
 }
 
 bool ps_ui_text_view_set_monospace(uint64_t view, bool monospace) {
@@ -597,6 +631,7 @@ bool ps_ui_text_view_load_file(uint64_t view, const char *path) {
   }
   v->text = std::move(contents);
   v->modified = false;
+  v->styles.clear();
   return loggedFlag(call, true);
 }
 

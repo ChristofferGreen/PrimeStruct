@@ -90,6 +90,14 @@ ps_ui_text_view_load_file([u64] view, [string] path) {
 ps_ui_text_view_save_file([u64] view, [string] path) {
 }
 
+[host return<bool>]
+ps_ui_text_view_clear_styles([u64] view) {
+}
+
+[host return<bool>]
+ps_ui_text_view_add_style([u64] view, [i32] startByte, [i32] endByte, [i32] rgb, [i32] flags) {
+}
+
 [host return<string>]
 ps_ui_last_error() {
 }
@@ -198,6 +206,20 @@ TextView() {
   [public return<bool>]
   saveFile([string] path) {
     return(ps_ui_text_view_save_file(this.handle, path))
+  }
+
+  // Removes all style runs (see addStyle).
+  [public return<bool>]
+  clearStyles() {
+    return(ps_ui_text_view_clear_styles(this.handle))
+  }
+
+  // Colours the UTF-8 byte range [startByte, endByte) with 0xRRGGBB; flags: 1 bold, 2 italic.
+  // False for an empty range or one that is not on code point boundaries inside the text.
+  // Later runs win where they overlap; replacing the text drops all runs.
+  [public return<bool>]
+  addStyle([i32] startByte, [i32] endByte, [i32] rgb, [i32] flags) {
+    return(ps_ui_text_view_add_style(this.handle, startByte, endByte, rgb, flags))
   }
 
   [public return<bool>]

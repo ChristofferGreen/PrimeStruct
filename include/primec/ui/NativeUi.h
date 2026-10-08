@@ -127,6 +127,23 @@ bool ps_ui_text_view_set_monospace(uint64_t view, bool monospace);
 bool ps_ui_text_view_is_modified(uint64_t view);
 bool ps_ui_text_view_clear_modified(uint64_t view);
 
+/* Styled text ------------------------------------------------------------ */
+
+/* Style flags for ps_ui_text_view_add_style. */
+enum { PS_UI_STYLE_BOLD = 1, PS_UI_STYLE_ITALIC = 2 };
+
+/* Removes every style run, restoring the view's base font and text colour. */
+bool ps_ui_text_view_clear_styles(uint64_t view);
+/* Styles the UTF-8 byte range [startByte, endByte) of the view's text with the
+ * colour 0xRRGGBB and PS_UI_STYLE_* flags. Both ends must lie on code point
+ * boundaries inside the text, and the range must not be empty; otherwise nothing
+ * changes and the call returns false. Where runs overlap, the later call wins.
+ * Styling is presentation only: it never marks the view modified, produces
+ * PS_UI_EVENT_TEXT_CHANGED or enters the undo stack. Replacing the text
+ * (set_text, load_file) drops all runs; typing keeps the runs of the text around
+ * it, so programs restyle after PS_UI_EVENT_TEXT_CHANGED. */
+bool ps_ui_text_view_add_style(uint64_t view, int32_t startByte, int32_t endByte, int32_t rgb, int32_t flags);
+
 /* Menus ------------------------------------------------------------------ */
 
 uint64_t ps_ui_menu_create(const char *title);

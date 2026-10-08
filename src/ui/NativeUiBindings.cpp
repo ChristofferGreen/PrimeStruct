@@ -53,6 +53,10 @@ template <class Binder> void forEachBinding(Binder &&bindOne) {
   bindOne("ps_ui_text_view_save_file", [](uint64_t view, std::string_view path) {
     return ps_ui_text_view_save_file(view, text(path).c_str());
   });
+  bindOne("ps_ui_text_view_clear_styles", [](uint64_t view) { return ps_ui_text_view_clear_styles(view); });
+  bindOne("ps_ui_text_view_add_style", [](uint64_t view, int32_t start, int32_t end, int32_t rgb, int32_t flags) {
+    return ps_ui_text_view_add_style(view, start, end, rgb, flags);
+  });
   bindOne("ps_ui_last_error", [] { return std::string(ps_ui_last_error()); });
 
   bindOne("ps_ui_menu_create", [](std::string_view title) { return ps_ui_menu_create(text(title).c_str()); });
