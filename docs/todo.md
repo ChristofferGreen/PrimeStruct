@@ -109,8 +109,7 @@ of sync with them.
 | TODO-5536 | Small, lazily loaded bytecode for apps | ready | bytecode-startup |
 | TODO-5535 | Launch-time harness and reference Objective-C++ editor | ready | native-ui-launch |
 | TODO-5530 | Read and write whole files as String | blocked | file-text |
-| TODO-5553 | Editor acceptance screenshots | ready | native-ui-editor-accept |
-| TODO-5554 | Close the editor acceptance gate | blocked | native-ui-editor-accept |
+| TODO-5554 | Close the editor acceptance gate | ready | native-ui-editor-accept |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5534 | Compiled programs call the native UI ABI | deferred | native-ui-compiled |
 | TODO-5510 | `return` returns from pick arms and lambdas correctly | ready | control-returns |
@@ -139,7 +138,7 @@ of sync with them.
 
 - TODO-5537 (bytes): `u8` and byte-addressed memory
 - TODO-5538 (slices): slices are real borrows with shared operations
-- TODO-5553 (native-ui-editor-accept): editor acceptance screenshots
+- TODO-5554 (native-ui-editor-accept): close the editor acceptance gate
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5510 (control-returns): `return` returns from pick arms and lambdas correctly
@@ -148,7 +147,7 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5553
+1. TODO-5554
 2. TODO-5536
 3. TODO-5537
 4. TODO-5538
@@ -160,7 +159,7 @@ of sync with them.
 ### Priority Lanes
 
 - Strings and slices (docs/spec/strings-and-views.md): TODO-5537, TODO-5538, TODO-5539, TODO-5540, TODO-5530, TODO-5541, TODO-5542
-- Native UI editor acceptance (docs/NativeUiPlan.md): TODO-5553, TODO-5554
+- Native UI editor acceptance (docs/NativeUiPlan.md): TODO-5554
 - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533, TODO-5534
 - Lifecycle (docs/spec/value-lifecycle.md): TODO-5527
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
@@ -355,22 +354,9 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - full release gate green
   - stop_rule: whole-file text read and write only.
 
-- [ ] TODO-5553: Editor acceptance screenshots
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-08
-  - phase: Native UI editor acceptance (requirement 5)
-  - parallel_track: native-ui-editor-accept
-  - scope: With `PRIMESTRUCT_UI_SNAPSHOT` (and `PRIMESTRUCT_UI_TYPE` or a file argument), capture the editor showing highlighted code with Unicode text, and a second shot with a menu open if AppKit can render it into a PNG without Screen Recording permission (otherwise rely on the menu-structure test and say so). Extend the AppKit smoke test to check the first PNG is non-trivial.
-  - acceptance:
-    - both PNGs (or the documented reason for the second) are produced from the release build and their paths reported
-    - full release gate green
-  - stop_rule: screenshots and the smoke check only.
-
 - [ ] TODO-5554: Close the editor acceptance gate
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5553
+  - status: ready
   - created_at: 2026-10-08
   - phase: Native UI editor acceptance
   - parallel_track: native-ui-editor-accept

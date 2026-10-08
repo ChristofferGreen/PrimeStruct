@@ -1,0 +1,18 @@
+import /std/ui/native/*
+
+// Unicode showcase: café, naïve, 日本語, 한국어, 🙂 👩‍💻, שלום עולם, مرحبا
+[return<string>]
+greeting([i32] hour) {
+  /* the greeting changes during the day */
+  if(hour < 12i32) {
+    return("Bonjour, élève 🙂")
+  }
+  return("こんにちは、世界 🚀")
+}
+
+[return<int>]
+main() {
+  [App] app{start_app("Showcase")}
+  [Window] window{app.window("Ünïcödé", 720i32, 480i32)}
+  return(0i32)
+}

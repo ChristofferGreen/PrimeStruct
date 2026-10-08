@@ -237,7 +237,15 @@ Planned columns are design intent; only macOS and headless are in the first slic
   window is rendered by its own view hierarchy (`cacheDisplayInRect`) into a PNG once its layout has settled, and the
   program is then told to quit. The app runs as an accessory (no Dock icon, no activation). CTest
   `PrimeStruct_native_ui_appkit_smoke` bundles `examples/native_ui/hello_window.prime`, runs the bundle in snapshot
-  mode and checks the PNG.
+  mode and checks the PNG; it also bundles the editor and checks two pictures of it (below).
+- **Snapshot hooks for pictures of the editor.** `PRIMESTRUCT_UI_TYPE=text` types into the first text view,
+  `PRIMESTRUCT_UI_OPEN=file` loads a file into it and highlights it (the title becomes the path), and
+  `PRIMESTRUCT_UI_MENU=File` pops that menu-bar menu open for the picture. A pop-up menu is a window of its own
+  whose Liquid Glass backdrop does not draw offscreen, so the picture draws a rounded backdrop and then each real
+  menu row (`NSContextMenuItemView`) on it: the text, shortcuts and separators are AppKit's own rendering, the
+  backdrop is ours. Example: `PRIMESTRUCT_UI_OPEN=$PWD/tests/fixtures/ui/screenshot/showcase.prime
+  PRIMESTRUCT_UI_MENU=File PRIMESTRUCT_UI_SNAPSHOT=/path/out.png primestruct_app examples/apps/text_editor/main.prime`.
+  The editor's menu structure is asserted exactly by the headless gate; the picture is a visual check.
 
 **Unicode (TODO-5548).** Text crosses the ABI as UTF-8 and files are read and written byte for byte by the backend
 (no newline translation, a missing final newline stays missing, invalid UTF-8 is refused with `ps_ui_last_error()`).

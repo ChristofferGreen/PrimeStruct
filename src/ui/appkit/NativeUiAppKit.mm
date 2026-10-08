@@ -12,7 +12,10 @@
 // ps_ui_wait_event then reports a quit request. PRIMESTRUCT_UI_TYPE=text
 // additionally types the text (with "\n" as a newline) into the first text view
 // before the picture is taken, and then exits right after it, since the program
-// would otherwise ask what to do with the unsaved text.
+// would otherwise ask what to do with the unsaved text. PRIMESTRUCT_UI_OPEN=file
+// loads a file into the first text view and highlights it (the window title
+// becomes the path), and PRIMESTRUCT_UI_MENU=File pops that menu-bar menu open
+// and draws its window into the picture (no Screen Recording permission needed).
 
 #import <AppKit/AppKit.h>
 #import <objc/runtime.h>
@@ -21,6 +24,7 @@
 #include "primec/ui/NativeUiStandardItems.h"
 #include "primec/ui/SyntaxHighlight.h"
 
+#include <algorithm>
 #include <cctype>
 #include <cstdio>
 #include <cstdlib>
@@ -59,6 +63,9 @@ struct State {
   bool panelChosen = false;
   std::string snapshotPath;
   std::string snapshotTypeText;
+  std::string snapshotOpenPath;
+  std::string snapshotMenu;
+  bool snapshotOpened = false;
   bool snapshotTyped = false;
   bool snapshotTaken = false;
   uint64_t snapshotWindow = 0;
@@ -216,7 +223,45 @@ void buildApplicationMenu(NSString *appName) {
   NSApp.mainMenu = mainMenu;
 }
 
-void captureSnapshot() {
+NSView *findViewOfClass(NSView *root, NSString *className) {
+  if (root == nil) {
+    return nil;
+  }
+  if ([NSStringFromClass([root class]) isEqualToString:className]) {
+    return root;
+  }
+  for (NSView *child in root.subviews) {
+    if (NSView *found = findViewOfClass(child, className)) {
+      return found;
+    }
+  }
+  return nil;
+}
+
+void collectViewsOfClass(NSView *root, NSString *className, std::vector<NSView *> &out) {
+  if (root == nil) {
+    return;
+  }
+  if ([NSStringFromClass([root class]) isEqualToString:className]) {
+    out.push_back(root);
+  }
+  for (NSView *child in root.subviews) {
+    collectViewsOfClass(child, className, out);
+  }
+}
+
+// The visible window of the pop-up menu being tracked, if any.
+NSWindow *openMenuWindow(NSWindow *except) {
+  for (NSWindow *candidate in NSApp.windows) {
+    if (candidate != except && candidate.isVisible &&
+        [NSStringFromClass([candidate class]) containsString:@"Menu"]) {
+      return candidate;
+    }
+  }
+  return nil;
+}
+
+void captureSnapshot(NSWindow *menuWindow = nil) {
   State &s = state();
   NSWindow *window = liveWindow(s.snapshotWindow);
   s.snapshotTaken = true;
@@ -239,6 +284,63 @@ void captureSnapshot() {
     return;
   }
   [view cacheDisplayInRect:bounds toBitmapImageRep:rep];
+  if (menuWindow != nil) {
+    // An open menu is a window of its own: draw it over the picture at its place.
+    // The glass backdrop of a pop-up menu does not draw offscreen, but its item
+    // table does; the backdrop is filled in below.
+    NSView *menuView = findViewOfClass(menuWindow.contentView.superview, @"NSMenuScrollView");
+    if (menuView == nil) {
+      menuView = menuWindow.contentView;
+    }
+    NSBitmapImageRep *menuRep = [menuView bitmapImageRepForCachingDisplayInRect:menuView.bounds];
+    if (menuRep != nil) {
+      [menuView cacheDisplayInRect:menuView.bounds toBitmapImageRep:menuRep];
+      NSBitmapImageRep *combined = [[NSBitmapImageRep alloc] initWithBitmapDataPlanes:NULL
+                                                                           pixelsWide:rep.pixelsWide
+                                                                           pixelsHigh:rep.pixelsHigh
+                                                                        bitsPerSample:8
+                                                                      samplesPerPixel:4
+                                                                             hasAlpha:YES
+                                                                             isPlanar:NO
+                                                                       colorSpaceName:NSCalibratedRGBColorSpace
+                                                                          bytesPerRow:0
+                                                                         bitsPerPixel:0];
+      combined.size = rep.size;
+      NSGraphicsContext *context = [NSGraphicsContext graphicsContextWithBitmapImageRep:combined];
+      [NSGraphicsContext saveGraphicsState];
+      NSGraphicsContext.currentContext = context;
+      [rep drawInRect:NSMakeRect(0, 0, rep.size.width, rep.size.height)];
+      const NSRect frame = menuWindow.frame;
+      const NSRect place = NSMakeRect(frame.origin.x - window.frame.origin.x, frame.origin.y - window.frame.origin.y,
+                                      frame.size.width, frame.size.height);
+      NSBezierPath *backdrop = [NSBezierPath bezierPathWithRoundedRect:place xRadius:10 yRadius:10];
+      [[NSColor colorWithWhite:0.24 alpha:1.0] setFill];
+      [backdrop fill];
+      [[NSColor colorWithWhite:0.4 alpha:1.0] setStroke];
+      backdrop.lineWidth = 1;
+      [backdrop stroke];
+      // Each row draws itself (text, shortcut, separator) on the backdrop.
+      std::vector<NSView *> rows;
+      collectViewsOfClass(menuWindow.contentView.superview, @"NSContextMenuItemView", rows);
+      for (NSView *row : rows) {
+        NSBitmapImageRep *rowRep = [row bitmapImageRepForCachingDisplayInRect:row.bounds];
+        if (rowRep == nil) {
+          continue;
+        }
+        [row cacheDisplayInRect:row.bounds toBitmapImageRep:rowRep];
+        const NSRect inWindow = [row convertRect:row.bounds toView:nil];
+        [rowRep drawInRect:NSMakeRect(place.origin.x + inWindow.origin.x, place.origin.y + inWindow.origin.y,
+                                      inWindow.size.width, inWindow.size.height)
+                  fromRect:NSZeroRect
+                 operation:NSCompositingOperationSourceOver
+                  fraction:1.0
+            respectFlipped:YES
+                     hints:nil];
+      }
+      [NSGraphicsContext restoreGraphicsState];
+      rep = combined;
+    }
+  }
   NSData *png = [rep representationUsingType:NSBitmapImageFileTypePNG properties:@{}];
   NSString *path = toNSString(s.snapshotPath.c_str());
   NSError *error = nil;
@@ -246,6 +348,52 @@ void captureSnapshot() {
     std::fprintf(stderr, "native ui: could not write snapshot %s: %s\n", s.snapshotPath.c_str(),
                  error != nil ? error.localizedDescription.UTF8String : "no PNG data");
   }
+}
+
+void dumpViews(NSView *view, int depth) {
+  if (view == nil || depth > 8) {
+    return;
+  }
+  std::fprintf(stderr, "%*s%s %g,%g %gx%g\n", depth * 2, "", NSStringFromClass([view class]).UTF8String,
+               view.frame.origin.x, view.frame.origin.y, view.frame.size.width, view.frame.size.height);
+  for (NSView *child in view.subviews) {
+    dumpViews(child, depth + 1);
+  }
+}
+
+// Snapshot of the window with the named menu-bar menu open.
+void captureWithOpenMenu(const std::string &name) {
+  State &s = state();
+  NSWindow *window = liveWindow(s.snapshotWindow);
+  NSMenuItem *item = [NSApp.mainMenu itemWithTitle:toNSString(name.c_str())];
+  NSMenu *menu = item.submenu;
+  if (window == nil || menu == nil) {
+    std::fprintf(stderr, "native ui: no menu named %s; taking the plain snapshot\n", name.c_str());
+    captureSnapshot();
+    return;
+  }
+  NSTimer *timer = [NSTimer timerWithTimeInterval:1.0
+                                          repeats:NO
+                                            block:^(NSTimer *) {
+                                              NSWindow *open = openMenuWindow(window);
+                                              if (open == nil) {
+                                                std::fprintf(stderr, "native ui: the menu window was not found\n");
+                                              }
+                                              if (std::getenv("PRIMESTRUCT_UI_DUMP_VIEWS") != nullptr && open != nil) {
+                                                std::fprintf(stderr, "menu window %s frame %g,%g %gx%g\n",
+                                                             NSStringFromClass([open class]).UTF8String,
+                                                             open.frame.origin.x, open.frame.origin.y,
+                                                             open.frame.size.width, open.frame.size.height);
+                                                dumpViews(open.contentView.superview, 0);
+                                              }
+                                              captureSnapshot(open);
+                                              [menu cancelTracking];
+                                            }];
+  [[NSRunLoop currentRunLoop] addTimer:timer forMode:NSRunLoopCommonModes];
+  NSView *content = window.contentView;
+  // Just below the top edge of the content, whichever way its y axis points.
+  const CGFloat top = content.isFlipped ? 2 : content.bounds.size.height - 2;
+  [menu popUpMenuPositioningItem:nil atLocation:NSMakePoint(8, top) inView:content];
 }
 
 } // namespace
@@ -262,6 +410,12 @@ bool ps_ui_init(const char *appName) {
   @autoreleasepool {
     if (const char *path = std::getenv("PRIMESTRUCT_UI_SNAPSHOT"); path != nullptr && *path != '\0') {
       s.snapshotPath = path;
+    }
+    if (const char *open = std::getenv("PRIMESTRUCT_UI_OPEN"); open != nullptr && *open != '\0') {
+      s.snapshotOpenPath = open;
+    }
+    if (const char *menu = std::getenv("PRIMESTRUCT_UI_MENU"); menu != nullptr && *menu != '\0') {
+      s.snapshotMenu = menu;
     }
     if (const char *typed = std::getenv("PRIMESTRUCT_UI_TYPE"); typed != nullptr && *typed != '\0') {
       s.snapshotTypeText = typed;
@@ -320,7 +474,22 @@ int32_t ps_ui_wait_event(void) {
       [NSApp updateWindows];
       if (snapshotting && event == nil) {
         ++s.snapshotIdleSlices;
-        if (!s.snapshotTypeText.empty() && !s.snapshotTyped && s.snapshotIdleSlices >= 6) {
+        if (!s.snapshotOpenPath.empty() && !s.snapshotOpened && s.snapshotIdleSlices >= 4) {
+          // Opens a file into the first text view, as the program would on Open.
+          s.snapshotOpened = true;
+          s.snapshotIdleSlices = 0;
+          uint64_t lowest = UINT64_MAX;
+          for (const auto &entry : s.textViews) {
+            lowest = std::min(lowest, entry.first);
+          }
+          if (lowest != UINT64_MAX) {
+            if (!ps_ui_text_view_load_file(lowest, s.snapshotOpenPath.c_str())) {
+              std::fprintf(stderr, "native ui: %s\n", s.lastError.c_str());
+            }
+            ps_ui_text_view_highlight(lowest, s.snapshotOpenPath.c_str());
+            ps_ui_window_set_title(s.snapshotWindow, s.snapshotOpenPath.c_str());
+          }
+        } else if (!s.snapshotTypeText.empty() && !s.snapshotTyped && s.snapshotIdleSlices >= 6) {
           // Types into the first text view so the picture shows an edited document.
           s.snapshotTyped = true;
           s.snapshotIdleSlices = 0;
@@ -337,8 +506,12 @@ int32_t ps_ui_wait_event(void) {
             [target insertText:toNSString(s.snapshotTypeText.c_str()) replacementRange:NSMakeRange(NSNotFound, 0)];
           }
         } else if (s.snapshotIdleSlices >= 12) {
-          captureSnapshot();
-          if (!s.snapshotTypeText.empty()) {
+          if (s.snapshotMenu.empty()) {
+            captureSnapshot();
+          } else {
+            captureWithOpenMenu(s.snapshotMenu);
+          }
+          if (!s.snapshotTypeText.empty() || !s.snapshotMenu.empty()) {
             // The typed text is unsaved, so a graceful quit would ask about it.
             std::fflush(nullptr);
             std::_Exit(0);

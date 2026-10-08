@@ -2012,6 +2012,7 @@ are left unarchived.
 | TODO-5550 | Syntax highlighting in the editor | [2026-10.md](todo_archive/2026-10.md) | 2026-10-08 |
 | TODO-5551 | Standard menu set for the editor | [2026-10.md](todo_archive/2026-10.md) | 2026-10-08 |
 | TODO-5552 | Editor save/load acceptance and the acceptance gate suite | [2026-10.md](todo_archive/2026-10.md) | 2026-10-08 |
+| TODO-5553 | Editor acceptance screenshots | [2026-10.md](todo_archive/2026-10.md) | 2026-10-08 |
 
 <!-- INDEX-END -->
 
