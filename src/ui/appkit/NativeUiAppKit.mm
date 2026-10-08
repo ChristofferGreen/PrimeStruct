@@ -48,6 +48,7 @@ struct State {
   std::deque<PendingEvent> pending;
   PendingEvent current;
   std::string returnedText;
+  std::string lastError;
   std::string snapshotPath;
   bool snapshotTaken = false;
   uint64_t snapshotWindow = 0;
@@ -460,6 +461,48 @@ bool ps_ui_text_view_clear_modified(uint64_t view) {
   state().modified[view] = false;
   return true;
 }
+
+bool ps_ui_text_view_load_file(uint64_t view, const char *path) {
+  State &s = state();
+  NSTextView *v = usable() ? textView(view) : nil;
+  if (v == nil) {
+    s.lastError = "invalid text view";
+    return false;
+  }
+  @autoreleasepool {
+    NSError *error = nil;
+    NSString *contents = [NSString stringWithContentsOfFile:toNSString(path) encoding:NSUTF8StringEncoding error:&error];
+    if (contents == nil) {
+      s.lastError = std::string("cannot read ") + (path != nullptr ? path : "") + ": " +
+                    (error != nil ? error.localizedDescription.UTF8String : "not valid UTF-8 text");
+      return false;
+    }
+    v.string = contents;
+    s.modified[view] = false;
+    [v.undoManager removeAllActions];
+    return true;
+  }
+}
+
+bool ps_ui_text_view_save_file(uint64_t view, const char *path) {
+  State &s = state();
+  NSTextView *v = usable() ? textView(view) : nil;
+  if (v == nil) {
+    s.lastError = "invalid text view";
+    return false;
+  }
+  @autoreleasepool {
+    NSError *error = nil;
+    if (![v.string writeToFile:toNSString(path) atomically:YES encoding:NSUTF8StringEncoding error:&error]) {
+      s.lastError = std::string("cannot write ") + (path != nullptr ? path : "") + ": " +
+                    (error != nil ? error.localizedDescription.UTF8String : "unknown error");
+      return false;
+    }
+    return true;
+  }
+}
+
+const char *ps_ui_last_error(void) { return state().lastError.c_str(); }
 
 uint64_t ps_ui_menu_create(const char *title) {
   if (!usable()) {

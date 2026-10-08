@@ -1,7 +1,11 @@
 #include "primec/ui/NativeUi.h"
 #include "primec/ui/NativeUiHeadless.h"
 
+#include <cerrno>
+#include <cstring>
 #include <deque>
+#include <fstream>
+#include <iterator>
 #include <map>
 #include <string>
 #include <thread>
@@ -60,8 +64,52 @@ struct State {
   uint64_t eventWidget = 0;
   int32_t eventCommand = 0;
   std::string returnedText;
+  std::string lastError;
   std::vector<std::string> log;
 };
+
+// True when `text` is well-formed UTF-8 (no overlongs, surrogates or values past U+10FFFF).
+bool validUtf8(const std::string &text) {
+  size_t i = 0;
+  const size_t size = text.size();
+  auto at = [&](size_t index) { return static_cast<unsigned char>(text[index]); };
+  while (i < size) {
+    const unsigned char lead = at(i);
+    size_t extra = 0;
+    uint32_t value = 0;
+    if (lead < 0x80) {
+      ++i;
+      continue;
+    } else if (lead >= 0xC2 && lead <= 0xDF) {
+      extra = 1;
+      value = lead & 0x1Fu;
+    } else if (lead >= 0xE0 && lead <= 0xEF) {
+      extra = 2;
+      value = lead & 0x0Fu;
+    } else if (lead >= 0xF0 && lead <= 0xF4) {
+      extra = 3;
+      value = lead & 0x07u;
+    } else {
+      return false;
+    }
+    if (i + extra >= size) {
+      return false;
+    }
+    for (size_t k = 1; k <= extra; ++k) {
+      const unsigned char next = at(i + k);
+      if ((next & 0xC0u) != 0x80u) {
+        return false;
+      }
+      value = (value << 6) | (next & 0x3Fu);
+    }
+    if ((extra == 2 && value < 0x800) || (extra == 3 && value < 0x10000) || value > 0x10FFFF ||
+        (value >= 0xD800 && value <= 0xDFFF)) {
+      return false;
+    }
+    i += extra + 1;
+  }
+  return true;
+}
 
 State &state() {
   static State instance;
@@ -489,6 +537,56 @@ bool ps_ui_menu_bar_add(uint64_t menuHandle) {
     state().menuBar.push_back(menuHandle);
   }
   return loggedFlag("ps_ui_menu_bar_add(" + std::to_string(menuHandle) + ")", ok);
+}
+
+bool ps_ui_text_view_load_file(uint64_t view, const char *path) {
+  State &s = state();
+  const std::string call = "ps_ui_text_view_load_file(" + std::to_string(view) + ", " + quote(path) + ")";
+  TextView *v = usable() ? textView(view) : nullptr;
+  if (v == nullptr) {
+    s.lastError = "invalid text view";
+    return loggedFlag(call, false);
+  }
+  std::ifstream file(path != nullptr ? path : "", std::ios::binary);
+  if (!file) {
+    s.lastError = std::string("cannot open ") + (path != nullptr ? path : "") + ": " + std::strerror(errno);
+    return loggedFlag(call, false);
+  }
+  std::string contents((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  if (!validUtf8(contents)) {
+    s.lastError = std::string(path != nullptr ? path : "") + " is not valid UTF-8 text";
+    return loggedFlag(call, false);
+  }
+  v->text = std::move(contents);
+  v->modified = false;
+  return loggedFlag(call, true);
+}
+
+bool ps_ui_text_view_save_file(uint64_t view, const char *path) {
+  State &s = state();
+  const std::string call = "ps_ui_text_view_save_file(" + std::to_string(view) + ", " + quote(path) + ")";
+  const TextView *v = usable() ? textView(view) : nullptr;
+  if (v == nullptr) {
+    s.lastError = "invalid text view";
+    return loggedFlag(call, false);
+  }
+  std::ofstream file(path != nullptr ? path : "", std::ios::binary | std::ios::trunc);
+  if (!file) {
+    s.lastError = std::string("cannot write ") + (path != nullptr ? path : "") + ": " + std::strerror(errno);
+    return loggedFlag(call, false);
+  }
+  file.write(v->text.data(), static_cast<std::streamsize>(v->text.size()));
+  file.close();
+  if (!file) {
+    s.lastError = std::string("cannot write ") + (path != nullptr ? path : "") + ": " + std::strerror(errno);
+    return loggedFlag(call, false);
+  }
+  return loggedFlag(call, true);
+}
+
+const char *ps_ui_last_error(void) {
+  State &s = state();
+  return logged("ps_ui_last_error()", s.lastError.c_str(), quote(s.lastError));
 }
 
 const char *ps_ui_open_panel(const char *title) {

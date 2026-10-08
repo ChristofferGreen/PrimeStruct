@@ -377,7 +377,9 @@ functions (`primec/ui/NativeUiBindings.h`) to a backend (headless in tests, AppK
   `waitEvent() -> AppEvent`, `openPanel(title)` and `savePanel(title, suggestedName)` (empty text means cancelled),
   `alert(message, detail, buttons) -> i32` (button titles separated by `\n`, returns the pressed index), `quit()`.
 - `Window`: `setTitle`, `setContent(textView)`, `setEdited(bool)`, `show()`, `close()`.
-- `TextView`: `text()`, `setText(text)`, `setMonospace(bool)`, `isModified()`, `clearModified()`.
+- `TextView`: `text()`, `setText(text)`, `setMonospace(bool)`, `isModified()`, `clearModified()`, and
+  `loadFile(path)` / `saveFile(path)` (the backend reads or writes the UTF-8 file itself; `false` means see
+  `app.lastError()`; a successful load leaves the view unmodified, a save does not clear the modified flag).
 - `Menu`: `item(title, shortcut, commandId)`, `separator()`, the standard items `undo redo cut copy paste selectAll
   find quit about`, and `addToBar()`. Shortcuts are portable (`"cmd+s"`).
 - `AppEvent` is `quitRequested | command(i32) | windowCloseRequested(Window) | textChanged(Window)`; typing,

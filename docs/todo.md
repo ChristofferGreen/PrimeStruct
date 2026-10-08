@@ -133,12 +133,14 @@ of sync with them.
 | TODO-5543 | Repair or retire the disabled Apple/arm64 native backend test shards | deferred | native-arm64-tests |
 | TODO-5544 | Method calls on `pick` payload bindings lower | deferred | pick-bindings |
 | TODO-5545 | Record the macOS AppKit manual smoke checklist | deferred | native-ui-macos-manual |
+| TODO-5547 | Dialog results need an emptiness test | ready | native-ui-dialogs |
 
 ### Ready Now
 
 - TODO-5537 (bytes): `u8` and byte-addressed memory
 - TODO-5538 (slices): slices are real borrows with shared operations
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
+- TODO-5547 (native-ui-dialogs): dialog results need an emptiness test
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5510 (control-returns): `return` returns from pick arms and lambdas correctly
 - TODO-5524 (result-error-structs): int-backed error structs round-trip through stdlib Result sums
@@ -146,18 +148,19 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5536
-2. TODO-5537
-3. TODO-5538
-4. TODO-5535
-5. TODO-5510
-6. TODO-5524
-7. TODO-5527
+1. TODO-5547
+2. TODO-5536
+3. TODO-5537
+4. TODO-5538
+5. TODO-5535
+6. TODO-5510
+7. TODO-5524
+8. TODO-5527
 
 ### Priority Lanes
 
 - Strings and slices (docs/spec/strings-and-views.md): TODO-5537, TODO-5538, TODO-5539, TODO-5540, TODO-5530, TODO-5541, TODO-5542
-- Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5532, TODO-5533, TODO-5534
+- Native UI (docs/NativeUiPlan.md): TODO-5547, TODO-5536, TODO-5535, TODO-5532, TODO-5533, TODO-5534
 - Lifecycle (docs/spec/value-lifecycle.md): TODO-5527
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
@@ -354,11 +357,11 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 - [ ] TODO-5532: Native text editor example
   - owner: ai
   - status: blocked
-  - blocked_on: TODO-5529, TODO-5530, TODO-5541
+  - blocked_on: TODO-5547
   - created_at: 2026-10-08
   - phase: Native UI (docs/NativeUiPlan.md)
   - parallel_track: native-ui-editor
-  - scope: `examples/apps/text_editor/main.prime`: the single-window plain-text editor of docs/NativeUiPlan.md section 6 (New/Open/Save/Save As/Close, standard Edit menu, title and edited marker, Save/Don't Save/Cancel prompt, error alerts).
+  - scope: `examples/apps/text_editor/main.prime`: the single-window plain-text editor of docs/NativeUiPlan.md section 6 (New/Open/Save/Save As/Close, standard Edit menu, title and edited marker, Save/Don't Save/Cancel prompt, error alerts). It reads and writes files through `TextView.loadFile/saveFile` (TODO-5546), not `readText/writeText`, so it no longer waits for the string work (TODO-5530, TODO-5541); a first draft is in the integration branch history notes (.claude-run/HANDOFF.md of the session that wrote it) and is blocked only by the dialog emptiness test of TODO-5547. Opening a file named on the command line waits for TODO-5541 (entry-argument strings cannot be passed to host functions).
   - acceptance:
     - headless golden scenarios: type then save, open an existing file, save as, close with unsaved changes (each answer), a failing open
     - on a Mac, the bundled app passes the same scenarios by hand (owner)
@@ -581,6 +584,18 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - a pick payload struct binding accepts method calls in VM, native and C++; a negative test keeps the unknown-method diagnostic
     - docs/spec/stdlib-reference.md "Native UI" drops the copy-first note; full release gate green
   - stop_rule: method-call target publication for pick bindings and imported static helpers only.
+
+- [ ] TODO-5547: Dialog results need an emptiness test
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-08
+  - phase: Native UI (docs/NativeUiPlan.md)
+  - parallel_track: native-ui-dialogs
+  - scope: `[string mut] target{path}` followed by `target = app.savePanel("Save", "Untitled.txt")` leaves `count(target) == 0i32` true even when the panel returned a path (the headless log shows the panel answering and no `ps_ui_text_view_save_file` call), so the editor cannot tell a chosen path from a cancelled dialog. Either make `count` (and `==` against `""`) work on host-returned run-time strings assigned to mutable `string` locals (preferred; part of the VM string model of TODO-5539/TODO-5541), or add a `bool` to the ABI such as `ps_ui_panel_chosen()` plus `App.panelChosen()` so programs test the dialog result without string operations.
+  - acceptance:
+    - a program can branch on whether `openPanel` / `savePanel` returned a path, with a headless test for both answers (path and cancel) and for a reassigned `[string mut]` local
+    - full release gate green
+  - stop_rule: dialog-result emptiness only; the editor example itself is TODO-5532.
 
 - [ ] TODO-5545: Record the macOS AppKit manual smoke checklist
   - owner: human

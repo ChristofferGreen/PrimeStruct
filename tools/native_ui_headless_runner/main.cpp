@@ -11,9 +11,12 @@
 #include "primec/ui/NativeUiBindings.h"
 #include "primec/ui/NativeUiHeadless.h"
 
+#include <algorithm>
+#include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace headless = primec::ui::headless;
@@ -44,6 +47,26 @@ int main(int argc, char **argv) {
       headless::pushAlertAnswer(std::atoi(argv[++i]));
     } else if (arg == "--log") {
       printLog = true;
+    } else if (arg == "--watchdog" && hasValue) {
+      // Debugging aid for programs that loop forever: after N seconds print the
+      // tail of the call log and exit 124.
+      const int seconds = std::atoi(argv[++i]);
+      std::thread([seconds] {
+        std::this_thread::sleep_for(std::chrono::seconds(seconds));
+        const auto &log = headless::callLog();
+        const size_t head = std::min<size_t>(log.size(), 70);
+        for (size_t k = 0; k < head; ++k) {
+          std::puts(log[k].c_str());
+        }
+        if (log.size() > head) {
+          std::puts("...");
+          for (size_t k = std::max(head, log.size() - 12); k < log.size(); ++k) {
+            std::puts(log[k].c_str());
+          }
+        }
+        std::fflush(stdout);
+        std::_Exit(124);
+      }).detach();
     } else {
       std::fprintf(stderr, "unknown or incomplete option: %s\n", arg.c_str());
       return 64;

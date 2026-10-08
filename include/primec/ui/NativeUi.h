@@ -11,7 +11,7 @@
  *
  * Text returned as `const char *` is owned by the library and valid until the
  * next call that returns text (ps_ui_text_view_get_text, ps_ui_open_panel,
- * ps_ui_save_panel). Copy it before then.
+ * ps_ui_save_panel, ps_ui_last_error). Copy it before then.
  *
  * Versioning: additions append functions; changing an existing signature bumps
  * ps_ui_abi_version().
@@ -121,6 +121,23 @@ bool ps_ui_menu_add_separator(uint64_t menu);
 bool ps_ui_menu_add_standard(uint64_t menu, int32_t standardId);
 /* Appends the menu to the app's menu bar. */
 bool ps_ui_menu_bar_add(uint64_t menu);
+
+/* Text files -------------------------------------------------------------- */
+
+/* Replaces the view's text with the UTF-8 file at `path`, the way a native
+ * editor opens a document: the backend reads the file itself (no program-side
+ * string is built), the view is not modified afterwards, and large files do not
+ * pass through the program. False when the file cannot be read or is not valid
+ * UTF-8; the view is left unchanged and ps_ui_last_error() says why. */
+bool ps_ui_text_view_load_file(uint64_t view, const char *path);
+/* Writes the view's text to `path` as UTF-8 (replacing the file). It does not
+ * clear the modified flag; the program does that with ps_ui_text_view_clear_modified
+ * once it considers the text saved. False on failure, see ps_ui_last_error(). */
+bool ps_ui_text_view_save_file(uint64_t view, const char *path);
+/* Describes the last failed call of the file functions; "" when none has
+ * failed. See the lifetime note above (valid until the next text-returning call
+ * or file function). */
+const char *ps_ui_last_error(void);
 
 /* Dialogs ---------------------------------------------------------------- */
 

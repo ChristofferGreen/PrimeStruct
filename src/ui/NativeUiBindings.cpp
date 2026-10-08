@@ -47,6 +47,14 @@ template <class Binder> void forEachBinding(Binder &&bindOne) {
   bindOne("ps_ui_text_view_is_modified", [](uint64_t view) { return ps_ui_text_view_is_modified(view); });
   bindOne("ps_ui_text_view_clear_modified", [](uint64_t view) { return ps_ui_text_view_clear_modified(view); });
 
+  bindOne("ps_ui_text_view_load_file", [](uint64_t view, std::string_view path) {
+    return ps_ui_text_view_load_file(view, text(path).c_str());
+  });
+  bindOne("ps_ui_text_view_save_file", [](uint64_t view, std::string_view path) {
+    return ps_ui_text_view_save_file(view, text(path).c_str());
+  });
+  bindOne("ps_ui_last_error", [] { return std::string(ps_ui_last_error()); });
+
   bindOne("ps_ui_menu_create", [](std::string_view title) { return ps_ui_menu_create(text(title).c_str()); });
   bindOne("ps_ui_menu_add_item",
           [](uint64_t menu, std::string_view title, std::string_view shortcut, int32_t commandId) {

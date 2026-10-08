@@ -106,6 +106,7 @@ is callable only on the thread that called `ps_ui_init`, the main thread on macO
 | Window | `ps_ui_window_create(title, width, height) -> u64`, `_set_title`, `_set_content(window, widget)`, `_set_edited(window, bool)`, `_show`, `_close` |
 | Text view | `ps_ui_text_view_create() -> u64`, `_get_text -> String`, `_set_text`, `_set_monospace(bool)`, `_is_modified -> bool`, `_clear_modified` |
 | Menus | `ps_ui_menu_create(title) -> u64`, `_add_item(menu, title, shortcut, commandId)`, `_add_separator`, `_add_standard(menu, standardId)`, `ps_ui_menu_bar_add(menu)` |
+| Text files | `ps_ui_text_view_load_file(view, path) -> bool`, `ps_ui_text_view_save_file(view, path) -> bool`, `ps_ui_last_error() -> String` (the backend reads and writes UTF-8 files itself, so no program-side text is built and a large file never passes through the program) |
 | Dialogs | `ps_ui_open_panel(title) -> String`, `ps_ui_save_panel(title, suggestedName) -> String` (empty means cancelled), `ps_ui_alert(message, detail, buttons) -> i32` |
 
 - **Events.** `ps_ui_wait_event` blocks in the platform's run loop until something the program should handle happens,
@@ -120,7 +121,8 @@ is callable only on the thread that called `ps_ui_init`, the main thread on macO
   is a `const char *` valid until the next text-returning call, `ps_ui_alert` takes button titles separated by `\n` and
   returns the pressed index, and `ps_ui_init` returns false when the app is already running. The headless backend
   (`primec/ui/NativeUiHeadless.h`) ends a scripted run with `quit_requested` once its action list is empty.
-  `primec/ui/NativeUiBindings.h` binds all 28 functions into a `ScriptEngine` or `Script` under their ABI names.
+  `primec/ui/NativeUiBindings.h` binds all 31 functions into a `ScriptEngine` or `Script` under their ABI names. The
+  three text-file functions (TODO-5546) let the editor open and save before owned `String` exists (TODO-5530).
 - **Versioning.** `ps_ui_abi_version() -> i32` returns 0 for this table. Additions append functions; a change to an
   existing signature bumps the version.
 

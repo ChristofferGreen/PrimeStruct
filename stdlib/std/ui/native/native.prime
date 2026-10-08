@@ -82,6 +82,18 @@ ps_ui_text_view_is_modified([u64] view) {
 ps_ui_text_view_clear_modified([u64] view) {
 }
 
+[host return<bool>]
+ps_ui_text_view_load_file([u64] view, [string] path) {
+}
+
+[host return<bool>]
+ps_ui_text_view_save_file([u64] view, [string] path) {
+}
+
+[host return<string>]
+ps_ui_last_error() {
+}
+
 [host return<u64>]
 ps_ui_menu_create([string] title) {
 }
@@ -165,6 +177,19 @@ TextView() {
   [public return<bool>]
   setMonospace([bool] monospace) {
     return(ps_ui_text_view_set_monospace(this.handle, monospace))
+  }
+
+  // The backend reads the UTF-8 file itself; false (see App.lastError()) when it
+  // cannot be read or is not valid UTF-8. A successful load leaves the view unmodified.
+  [public return<bool>]
+  loadFile([string] path) {
+    return(ps_ui_text_view_load_file(this.handle, path))
+  }
+
+  // Writes the text to the file; call clearModified() once the text counts as saved.
+  [public return<bool>]
+  saveFile([string] path) {
+    return(ps_ui_text_view_save_file(this.handle, path))
   }
 
   [public return<bool>]
@@ -299,6 +324,12 @@ App() {
     }
     [AppEvent] event{}
     return(event)
+  }
+
+  // Why the last loadFile/saveFile failed; empty when none has.
+  [public return<string>]
+  lastError() {
+    return(ps_ui_last_error())
   }
 
   [public return<string>]

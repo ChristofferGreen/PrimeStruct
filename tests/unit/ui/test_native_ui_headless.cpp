@@ -1,8 +1,12 @@
+#include "primec/testing/TestScratch.h"
 #include "primec/ui/NativeUi.h"
 #include "primec/ui/NativeUiHeadless.h"
 
 #include "third_party/doctest.h"
 
+#include <filesystem>
+#include <fstream>
+#include <iterator>
 #include <string>
 #include <thread>
 #include <vector>
@@ -116,6 +120,62 @@ TEST_CASE("headless text views store text and flags") {
   CHECK_FALSE(ps_ui_text_view_set_text(999, "x"));
   CHECK_FALSE(ps_ui_text_view_is_modified(999));
   CHECK_FALSE(ps_ui_text_view_clear_modified(999));
+}
+
+namespace {
+std::string scratchFile(const std::string &name, const std::string &contents) {
+  const std::filesystem::path path = primec::testing::testScratchDir("native_ui_headless") / name;
+  std::filesystem::create_directories(path.parent_path());
+  std::ofstream(path, std::ios::binary) << contents;
+  return path.string();
+}
+
+std::string readScratchFile(const std::string &path) {
+  std::ifstream file(path, std::ios::binary);
+  return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+}
+} // namespace
+
+TEST_CASE("headless text views load UTF-8 files without marking them modified") {
+  startApp();
+  const uint64_t view = ps_ui_text_view_create();
+  const std::string path = scratchFile("load.txt", "h\xC3\xA9llo\nw\xC3\xB6rld \xF0\x9F\x99\x82\n");
+  REQUIRE(ps_ui_text_view_set_text(view, "old"));
+  headless::pushTypeText(view, "!");
+  REQUIRE(ps_ui_wait_event() == PS_UI_EVENT_TEXT_CHANGED);
+  REQUIRE(ps_ui_text_view_is_modified(view));
+  CHECK(ps_ui_text_view_load_file(view, path.c_str()));
+  CHECK(std::string(ps_ui_text_view_get_text(view)) == "h\xC3\xA9llo\nw\xC3\xB6rld \xF0\x9F\x99\x82\n");
+  CHECK_FALSE(ps_ui_text_view_is_modified(view));
+  CHECK(std::string(ps_ui_last_error()).empty());
+}
+
+TEST_CASE("headless text views report files they cannot load") {
+  startApp();
+  const uint64_t view = ps_ui_text_view_create();
+  REQUIRE(ps_ui_text_view_set_text(view, "keep"));
+  CHECK_FALSE(ps_ui_text_view_load_file(view, "/definitely/not/here.txt"));
+  CHECK(std::string(ps_ui_last_error()).find("cannot open /definitely/not/here.txt") == 0);
+  const std::string bad = scratchFile("bad.txt", "ok \xC3\x28 broken");
+  CHECK_FALSE(ps_ui_text_view_load_file(view, bad.c_str()));
+  CHECK(std::string(ps_ui_last_error()).find("not valid UTF-8") != std::string::npos);
+  const std::string truncated = scratchFile("truncated.txt", "cut \xE2\x82");
+  CHECK_FALSE(ps_ui_text_view_load_file(view, truncated.c_str()));
+  CHECK(std::string(ps_ui_text_view_get_text(view)) == "keep");
+  CHECK_FALSE(ps_ui_text_view_load_file(999, bad.c_str()));
+  CHECK(std::string(ps_ui_last_error()) == "invalid text view");
+}
+
+TEST_CASE("headless text views save their text and report write failures") {
+  startApp();
+  const uint64_t view = ps_ui_text_view_create();
+  REQUIRE(ps_ui_text_view_set_text(view, "line one\nline two"));
+  const std::string path = scratchFile("save.txt", "previous contents that are longer");
+  CHECK(ps_ui_text_view_save_file(view, path.c_str()));
+  CHECK(readScratchFile(path) == "line one\nline two");
+  CHECK_FALSE(ps_ui_text_view_save_file(view, "/definitely/not/here/out.txt"));
+  CHECK(std::string(ps_ui_last_error()).find("cannot write /definitely/not/here/out.txt") == 0);
+  CHECK_FALSE(ps_ui_text_view_save_file(999, path.c_str()));
 }
 
 TEST_CASE("headless typing modifies a view and delivers a text changed event") {
