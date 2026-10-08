@@ -365,3 +365,58 @@ sum_two_files([string] a, [string] b) {
   }))
 }
 ```
+
+### Native UI (`/std/ui/native`)
+
+`import /std/ui/native/*` brings in the native-widget surface of the version-0 C ABI
+([Native UI plan](../NativeUiPlan.md)). It runs on the VM only: the embedding runner binds the `ps_ui_*` host
+functions (`primec/ui/NativeUiBindings.h`) to a backend (headless in tests, AppKit on macOS).
+
+- `start_app(name) -> App`: starts the app on the calling thread; `app.started` is false when it cannot start.
+- `App`: `window(title, width, height) -> Window`, `textView() -> TextView`, `menu(title) -> Menu`,
+  `waitEvent() -> AppEvent`, `openPanel(title)` and `savePanel(title, suggestedName)` (empty text means cancelled),
+  `alert(message, detail, buttons) -> i32` (button titles separated by `\n`, returns the pressed index), `quit()`.
+- `Window`: `setTitle`, `setContent(textView)`, `setEdited(bool)`, `show()`, `close()`.
+- `TextView`: `text()`, `setText(text)`, `setMonospace(bool)`, `isModified()`, `clearModified()`.
+- `Menu`: `item(title, shortcut, commandId)`, `separator()`, the standard items `undo redo cut copy paste selectAll
+  find quit about`, and `addToBar()`. Shortcuts are portable (`"cmd+s"`).
+- `AppEvent` is `quitRequested | command(i32) | windowCloseRequested(Window) | textChanged(Window)`; typing,
+  selection, clipboard and undo stay inside the native widget.
+
+Example (`examples/native_ui/hello_window.prime`):
+```
+import /std/ui/native/*
+
+[return<int>]
+main() {
+  [App] app{start_app("Hello")}
+  [Window] window{app.window("Untitled", 720i32, 480i32)}
+  [TextView] editor{app.textView()}
+  window.setContent(editor)
+  editor.setText("Hello, native UI")
+  window.show()
+  [mut] running{true}
+  while(running) {
+    pick(app.waitEvent()) {
+      command(id) {
+      }
+      windowCloseRequested(w) {
+        [Window] target{w}
+        target.close()
+        running = false
+      }
+      textChanged(w) {
+        [Window] target{w}
+        target.setEdited(true)
+      }
+      quitRequested {
+        running = false
+      }
+    }
+  }
+  return(0i32)
+}
+```
+
+Copy a `pick` payload into a local before calling methods on it (`[Window] target{w}`): method calls directly on a
+payload binding do not lower yet (TODO-5544).

@@ -1,0 +1,36 @@
+import /std/ui/native/*
+
+[return<int>]
+main() {
+  [App] app{start_app("Hello")}
+  [Window] window{app.window("Untitled", 720i32, 480i32)}
+  [TextView] editor{app.textView()}
+  window.setContent(editor)
+  editor.setText("Hello, native UI")
+  [Menu] file{app.menu("File")}
+  file.item("Save", "cmd+s", 7i32)
+  file.addToBar()
+  window.show()
+  [mut] commands{0i32}
+  [mut] running{true}
+  while(running) {
+    pick(app.waitEvent()) {
+      command(id) {
+        commands = commands + id
+      }
+      windowCloseRequested(w) {
+        [Window] target{w}
+        target.close()
+        running = false
+      }
+      textChanged(w) {
+        [Window] target{w}
+        target.setEdited(true)
+      }
+      quitRequested {
+        running = false
+      }
+    }
+  }
+  return(commands)
+}

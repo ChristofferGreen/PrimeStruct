@@ -810,6 +810,12 @@ target_include_directories(primec_ui_lib PUBLIC
 target_link_libraries(primec_ui_lib PUBLIC primec_embed_runtime_lib)
 primestructEnableWarnings(primec_ui_lib)
 
+# Development runner: compiles a program and runs it on the headless native UI
+# backend with scripted user actions (see its header comment).
+add_executable(native_ui_headless_runner tools/native_ui_headless_runner/main.cpp)
+target_link_libraries(native_ui_headless_runner PRIVATE primec_ui_lib primec_embed_lib)
+primestructEnableWarnings(native_ui_headless_runner)
+
 # Install rules + CMake package so a host project can
 #   find_package(PrimeStruct REQUIRED)
 #   target_link_libraries(host PRIVATE PrimeStruct::embed)         # compile + run
@@ -1216,8 +1222,11 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_main.cpp
     tests/unit/ui/test_native_ui_headless.cpp
     tests/unit/ui/test_native_ui_bindings.cpp
+    tests/unit/ui/test_native_ui_stdlib.cpp
   )
   target_include_directories(PrimeStruct_native_ui_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
+  target_compile_definitions(PrimeStruct_native_ui_tests PRIVATE
+    PRIMESTRUCT_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
   target_link_libraries(PrimeStruct_native_ui_tests PRIVATE primec_ui_lib primec_embed_lib)
   primestructEnableWarnings(PrimeStruct_native_ui_tests)
   add_test(
@@ -1235,6 +1244,14 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_native_ui_bindings
+                       PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
+  add_test(
+    NAME PrimeStruct_native_ui_stdlib
+    COMMAND $<TARGET_FILE:PrimeStruct_native_ui_tests>
+            "--test-suite=primestruct.ui.stdlib"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_native_ui_stdlib
                        PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
 
   set(PrimeStructBackendAllTestSources

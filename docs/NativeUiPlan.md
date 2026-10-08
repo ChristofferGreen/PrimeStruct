@@ -152,7 +152,9 @@ main() {
 }
 ```
 
-The names follow `docs/CodeExamples.md`; the exact API is settled in the stdlib slice (TODO-5529).
+The names follow `docs/CodeExamples.md`. The surface as built (TODO-5529) is in `docs/spec/stdlib-reference.md`
+("Native UI"): `start_app(name)` replaces `App.start(name)` (a type-qualified static call does not resolve through
+an import yet), and `AppEvent` lists `quitRequested` first because a default sum value needs a unit first variant.
 
 ## 6. The text editor example
 

@@ -108,9 +108,8 @@ of sync with them.
 | TODO-5542 | Native and C++ parity for bytes, slices and strings | blocked | string-backends |
 | TODO-5536 | Small, lazily loaded bytecode for apps | ready | bytecode-startup |
 | TODO-5535 | Launch-time harness and reference Objective-C++ editor | blocked | native-ui-launch |
-| TODO-5529 | `/std/ui/native` surface with an `AppEvent` loop | ready | native-ui-stdlib |
 | TODO-5530 | Read and write whole files as String | blocked | file-text |
-| TODO-5531 | macOS AppKit backend and app runner | blocked | native-ui-macos |
+| TODO-5531 | macOS AppKit backend and app runner | ready | native-ui-macos |
 | TODO-5532 | Native text editor example | blocked | native-ui-editor |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5534 | Compiled programs call the native UI ABI | deferred | native-ui-compiled |
@@ -133,23 +132,24 @@ of sync with them.
 | TODO-5521 | Math helpers return correct results | deferred | stdlib-math |
 | TODO-5483 | Verify arm64 SextI32 on a macOS machine | deferred | ir-semantics |
 | TODO-5543 | Repair or retire the disabled Apple/arm64 native backend test shards | deferred | native-arm64-tests |
+| TODO-5544 | Method calls on `pick` payload bindings lower | deferred | pick-bindings |
 
 ### Ready Now
 
 - TODO-5537 (bytes): `u8` and byte-addressed memory
 - TODO-5538 (slices): slices are real borrows with shared operations
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
-- TODO-5529 (native-ui-stdlib): `/std/ui/native` surface with an `AppEvent` loop
+- TODO-5531 (native-ui-macos): macOS AppKit backend and app runner
 - TODO-5510 (control-returns): `return` returns from pick arms and lambdas correctly
 - TODO-5524 (result-error-structs): int-backed error structs round-trip through stdlib Result sums
 - TODO-5527 (lifecycle-result-payloads): stdlib Result locals destroy their payload once
 
 ### Immediate Next 10
 
-1. TODO-5536
-2. TODO-5537
-3. TODO-5538
-4. TODO-5529
+1. TODO-5531
+2. TODO-5536
+3. TODO-5537
+4. TODO-5538
 5. TODO-5510
 6. TODO-5524
 7. TODO-5527
@@ -157,13 +157,14 @@ of sync with them.
 ### Priority Lanes
 
 - Strings and slices (docs/spec/strings-and-views.md): TODO-5537, TODO-5538, TODO-5539, TODO-5540, TODO-5530, TODO-5541, TODO-5542
-- Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5529, TODO-5531, TODO-5535, TODO-5532, TODO-5533, TODO-5534
+- Native UI (docs/NativeUiPlan.md): TODO-5531, TODO-5536, TODO-5535, TODO-5532, TODO-5533, TODO-5534
 - Lifecycle (docs/spec/value-lifecycle.md): TODO-5527
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5514, TODO-5516, TODO-5517
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
 - macOS support: TODO-5543 (needs macOS)
+- Language gaps found by native UI: TODO-5544
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
 ### Execution Queue
@@ -338,18 +339,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - stop_rule: measurement tooling and the reference editor only.
   - notes: needs a Mac to run.
 
-- [ ] TODO-5529: `/std/ui/native` surface with an `AppEvent` loop
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-08
-  - phase: Native UI (docs/NativeUiPlan.md)
-  - parallel_track: native-ui-stdlib
-  - scope: Add `stdlib/std/ui/native/` with the `[host]` declarations of the ABI, `App`/`Window`/`TextView`/`Menu` wrappers, standard menu items, and an `AppEvent` sum (`command(id)`, `windowCloseRequested(window)`, `textChanged(window)`, `quitRequested`) returned by `app.waitEvent()`; document it in `docs/spec/stdlib-reference.md` with a runnable example.
-  - acceptance:
-    - VM compile-run tests through the embed API and the headless backend: a `main` loop that builds a window, text view and menus, handles scripted commands and close requests with `pick`, and quits
-    - full release gate green
-  - stop_rule: stdlib surface for the version-0 ABI only.
-
 - [ ] TODO-5530: Read and write whole files as String
   - owner: ai
   - status: blocked
@@ -365,8 +354,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 
 - [ ] TODO-5531: macOS AppKit backend and app runner
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5529
+  - status: ready
   - created_at: 2026-10-08
   - phase: Native UI (docs/NativeUiPlan.md)
   - parallel_track: native-ui-macos
@@ -595,3 +583,15 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - `PrimeStructAppleNativeKnownFailingShards` is empty and all `apple_*` shards pass on arm64 macOS
     - full release gate green on Linux and macOS
   - stop_rule: tests and arm64 native emitter output only; no language semantics changes.
+
+- [ ] TODO-5544: Method calls on `pick` payload bindings lower
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-10-08
+  - phase: Native UI (docs/NativeUiPlan.md)
+  - parallel_track: pick-bindings
+  - scope: `pick(app.waitEvent()) { windowCloseRequested(w) { w.close() } }` with `[public struct] Window` payloads passes semantics but VM lowering fails with `missing semantic-product method-call target: /main -> close`; copying the payload first (`[Window] target{w}`, then `target.close()`) works. Publish the method-call target for pick payload bindings (and make `Type.staticHelper()` resolve through `import`, which `App.start(...)` does not).
+  - acceptance:
+    - a pick payload struct binding accepts method calls in VM, native and C++; a negative test keeps the unknown-method diagnostic
+    - docs/spec/stdlib-reference.md "Native UI" drops the copy-first note; full release gate green
+  - stop_rule: method-call target publication for pick bindings and imported static helpers only.

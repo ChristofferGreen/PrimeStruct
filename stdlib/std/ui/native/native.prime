@@ -1,0 +1,331 @@
+// Native UI surface over the version-0 C ABI (include/primec/ui/NativeUi.h,
+// docs/NativeUiPlan.md). The runner binds the ps_ui_* host functions; programs
+// use App, Window, TextView and Menu and loop on App.waitEvent().
+
+[host return<i32>]
+ps_ui_abi_version() {
+}
+
+[host return<bool>]
+ps_ui_init([string] appName) {
+}
+
+[host return<void>]
+ps_ui_quit() {
+}
+
+[host return<i32>]
+ps_ui_platform() {
+}
+
+[host return<i32>]
+ps_ui_wait_event() {
+}
+
+[host return<u64>]
+ps_ui_event_window() {
+}
+
+[host return<u64>]
+ps_ui_event_widget() {
+}
+
+[host return<i32>]
+ps_ui_event_command() {
+}
+
+[host return<u64>]
+ps_ui_window_create([string] title, [i32] width, [i32] height) {
+}
+
+[host return<bool>]
+ps_ui_window_set_title([u64] window, [string] title) {
+}
+
+[host return<bool>]
+ps_ui_window_set_content([u64] window, [u64] widget) {
+}
+
+[host return<bool>]
+ps_ui_window_set_edited([u64] window, [bool] edited) {
+}
+
+[host return<bool>]
+ps_ui_window_show([u64] window) {
+}
+
+[host return<bool>]
+ps_ui_window_close([u64] window) {
+}
+
+[host return<u64>]
+ps_ui_text_view_create() {
+}
+
+[host return<string>]
+ps_ui_text_view_get_text([u64] view) {
+}
+
+[host return<bool>]
+ps_ui_text_view_set_text([u64] view, [string] text) {
+}
+
+[host return<bool>]
+ps_ui_text_view_set_monospace([u64] view, [bool] monospace) {
+}
+
+[host return<bool>]
+ps_ui_text_view_is_modified([u64] view) {
+}
+
+[host return<bool>]
+ps_ui_text_view_clear_modified([u64] view) {
+}
+
+[host return<u64>]
+ps_ui_menu_create([string] title) {
+}
+
+[host return<bool>]
+ps_ui_menu_add_item([u64] menu, [string] title, [string] shortcut, [i32] commandId) {
+}
+
+[host return<bool>]
+ps_ui_menu_add_separator([u64] menu) {
+}
+
+[host return<bool>]
+ps_ui_menu_add_standard([u64] menu, [i32] standardId) {
+}
+
+[host return<bool>]
+ps_ui_menu_bar_add([u64] menu) {
+}
+
+[host return<string>]
+ps_ui_open_panel([string] title) {
+}
+
+[host return<string>]
+ps_ui_save_panel([string] title, [string] suggestedName) {
+}
+
+[host return<i32>]
+ps_ui_alert([string] message, [string] detail, [string] buttons) {
+}
+
+namespace std {
+namespace ui {
+namespace native {
+
+[public struct]
+Window() {
+  [public u64] handle{0u64}
+
+  [public return<bool>]
+  setTitle([string] title) {
+    return(ps_ui_window_set_title(this.handle, title))
+  }
+
+  [public return<bool>]
+  setContent([TextView] content) {
+    return(ps_ui_window_set_content(this.handle, content.handle))
+  }
+
+  [public return<bool>]
+  setEdited([bool] edited) {
+    return(ps_ui_window_set_edited(this.handle, edited))
+  }
+
+  [public return<bool>]
+  show() {
+    return(ps_ui_window_show(this.handle))
+  }
+
+  [public return<bool>]
+  close() {
+    return(ps_ui_window_close(this.handle))
+  }
+}
+
+[public struct]
+TextView() {
+  [public u64] handle{0u64}
+
+  [public return<string>]
+  text() {
+    return(ps_ui_text_view_get_text(this.handle))
+  }
+
+  [public return<bool>]
+  setText([string] value) {
+    return(ps_ui_text_view_set_text(this.handle, value))
+  }
+
+  [public return<bool>]
+  setMonospace([bool] monospace) {
+    return(ps_ui_text_view_set_monospace(this.handle, monospace))
+  }
+
+  [public return<bool>]
+  isModified() {
+    return(ps_ui_text_view_is_modified(this.handle))
+  }
+
+  [public return<bool>]
+  clearModified() {
+    return(ps_ui_text_view_clear_modified(this.handle))
+  }
+}
+
+[public struct]
+Menu() {
+  [public u64] handle{0u64}
+
+  [public return<bool>]
+  item([string] title, [string] shortcut, [i32] commandId) {
+    return(ps_ui_menu_add_item(this.handle, title, shortcut, commandId))
+  }
+
+  [public return<bool>]
+  separator() {
+    return(ps_ui_menu_add_separator(this.handle))
+  }
+
+  [public return<bool>]
+  addToBar() {
+    return(ps_ui_menu_bar_add(this.handle))
+  }
+
+  [public return<bool>]
+  undo() {
+    return(ps_ui_menu_add_standard(this.handle, 1i32))
+  }
+
+  [public return<bool>]
+  redo() {
+    return(ps_ui_menu_add_standard(this.handle, 2i32))
+  }
+
+  [public return<bool>]
+  cut() {
+    return(ps_ui_menu_add_standard(this.handle, 3i32))
+  }
+
+  [public return<bool>]
+  copy() {
+    return(ps_ui_menu_add_standard(this.handle, 4i32))
+  }
+
+  [public return<bool>]
+  paste() {
+    return(ps_ui_menu_add_standard(this.handle, 5i32))
+  }
+
+  [public return<bool>]
+  selectAll() {
+    return(ps_ui_menu_add_standard(this.handle, 6i32))
+  }
+
+  [public return<bool>]
+  find() {
+    return(ps_ui_menu_add_standard(this.handle, 7i32))
+  }
+
+  [public return<bool>]
+  quit() {
+    return(ps_ui_menu_add_standard(this.handle, 8i32))
+  }
+
+  [public return<bool>]
+  about() {
+    return(ps_ui_menu_add_standard(this.handle, 9i32))
+  }
+}
+
+// What waitEvent() returns. Typing, selection, clipboard and undo are handled by
+// the native text view and never reach the program.
+[public sum]
+AppEvent {
+  quitRequested
+  [i32] command
+  [Window] windowCloseRequested
+  [Window] textChanged
+}
+
+[public struct]
+App() {
+  [public bool] started{false}
+
+  [public return<void>]
+  quit() {
+    ps_ui_quit()
+  }
+
+  [public return<Window>]
+  window([string] title, [i32] width, [i32] height) {
+    [Window] created{[handle] ps_ui_window_create(title, width, height)}
+    return(created)
+  }
+
+  [public return<TextView>]
+  textView() {
+    [TextView] created{[handle] ps_ui_text_view_create()}
+    return(created)
+  }
+
+  [public return<Menu>]
+  menu([string] title) {
+    [Menu] created{[handle] ps_ui_menu_create(title)}
+    return(created)
+  }
+
+  [public return<AppEvent>]
+  waitEvent() {
+    [i32] kind{ps_ui_wait_event()}
+    if(kind == 1i32) {
+      [AppEvent] event{[command] ps_ui_event_command()}
+      return(event)
+    }
+    if(kind == 2i32) {
+      [Window] window{[handle] ps_ui_event_window()}
+      [AppEvent] event{[windowCloseRequested] window}
+      return(event)
+    }
+    if(kind == 3i32) {
+      [Window] window{[handle] ps_ui_event_window()}
+      [AppEvent] event{[textChanged] window}
+      return(event)
+    }
+    [AppEvent] event{}
+    return(event)
+  }
+
+  [public return<string>]
+  openPanel([string] title) {
+    return(ps_ui_open_panel(title))
+  }
+
+  [public return<string>]
+  savePanel([string] title, [string] suggestedName) {
+    return(ps_ui_save_panel(title, suggestedName))
+  }
+
+  [public return<i32>]
+  alert([string] message, [string] detail, [string] buttons) {
+    return(ps_ui_alert(message, detail, buttons))
+  }
+}
+
+// Starts the app on the calling thread; `started` is false when the backend
+// cannot start.
+[public return<App>]
+start_app([string] name) {
+  [bool] ok{ps_ui_init(name)}
+  [App] app{[started] ok}
+  return(app)
+}
+
+}
+}
+}
