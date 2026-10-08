@@ -221,6 +221,23 @@ Planned columns are design intent; only macOS and headless are in the first slic
 | TODO-5535 | Launch-time harness and the reference Objective-C++ editor | on a Mac only |
 | TODO-5536 | Small, lazily loaded bytecode for apps | yes |
 
+## 13. Editor acceptance gate
+
+"The text editor is acceptable" means CTest `PrimeStruct_native_ui_editor_acceptance` passes (it runs the doctest
+suites `primestruct.ui.editor` and `primestruct.ui.editor_acceptance` of `PrimeStruct_native_ui_tests` against the
+headless backend, so it is part of `./scripts/compile.sh --release` on every platform), plus the Apple-only
+`PrimeStruct_native_ui_appkit_smoke`. Requirement to test:
+
+| # | Requirement | Where it is checked |
+| --- | --- | --- |
+| 1 | Syntax highlighting for PrimeStruct, C/C++, Python, JSON, Markdown | `test_native_ui_editor_highlight.cpp`: one sample per language (`tests/fixtures/ui/highlight/`) opened in the editor, expected runs by slice, run order and boundaries, extension mapping, unknown extensions unstyled, restyle after typing; `test_native_ui_headless.cpp` for the style ABI itself (validation, replace vs typing) |
+| 2 | Unicode: load, display, save | `test_native_ui_editor_acceptance.cpp`: byte-exact round trips of `tests/fixtures/ui/unicode_sample.txt` (accents, CJK, emoji, combining marks, RTL), CRLF, no final newline, empty file, typed text, invalid UTF-8 refused with the error shown; grapheme-cluster cursor and selection come from `NSTextView` (section 12); display in the smoke picture below |
+| 3 | Saving and loading | `test_native_ui_editor.cpp` (type then save, save as, cancelled save and open panels, open, failing open and save with the error in an alert, close/new with each prompt answer) and `test_native_ui_editor_acceptance.cpp` (open, edit, save, reopen equality; save-as copy) |
+| 4 | Standard menus and shortcuts | `acceptance: the menu bar has the standard macOS structure and shortcuts`: the exact `headless::menuBarOutline()` of App, File, Edit, View, Window and Help, and the command ids |
+| 5 | Screenshots | `PrimeStruct_native_ui_appkit_smoke` bundles the editor and checks two drawn PNGs, the highlighted Unicode file and the File menu open (hooks in section 12); the menu structure itself is requirement 4 |
+
+Hand checks on a Mac (typing, shortcuts, real panels, cursor stepping over grapheme clusters) stay in TODO-5545.
+
 ## 12. macOS backend as built (TODO-5531)
 
 - `src/ui/appkit/NativeUiAppKit.mm` implements the whole ABI with a plain `NSWindow` (no `NSDocument`, no state

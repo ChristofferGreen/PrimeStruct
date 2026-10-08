@@ -109,7 +109,6 @@ of sync with them.
 | TODO-5536 | Small, lazily loaded bytecode for apps | ready | bytecode-startup |
 | TODO-5535 | Launch-time harness and reference Objective-C++ editor | ready | native-ui-launch |
 | TODO-5530 | Read and write whole files as String | blocked | file-text |
-| TODO-5554 | Close the editor acceptance gate | ready | native-ui-editor-accept |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5534 | Compiled programs call the native UI ABI | deferred | native-ui-compiled |
 | TODO-5510 | `return` returns from pick arms and lambdas correctly | ready | control-returns |
@@ -138,7 +137,6 @@ of sync with them.
 
 - TODO-5537 (bytes): `u8` and byte-addressed memory
 - TODO-5538 (slices): slices are real borrows with shared operations
-- TODO-5554 (native-ui-editor-accept): close the editor acceptance gate
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5510 (control-returns): `return` returns from pick arms and lambdas correctly
@@ -147,19 +145,17 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5554
-2. TODO-5536
-3. TODO-5537
-4. TODO-5538
-5. TODO-5535
-6. TODO-5510
-7. TODO-5524
-8. TODO-5527
+1. TODO-5536
+2. TODO-5537
+3. TODO-5538
+4. TODO-5535
+5. TODO-5510
+6. TODO-5524
+7. TODO-5527
 
 ### Priority Lanes
 
 - Strings and slices (docs/spec/strings-and-views.md): TODO-5537, TODO-5538, TODO-5539, TODO-5540, TODO-5530, TODO-5541, TODO-5542
-- Native UI editor acceptance (docs/NativeUiPlan.md): TODO-5554
 - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533, TODO-5534
 - Lifecycle (docs/spec/value-lifecycle.md): TODO-5527
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
@@ -353,17 +349,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - tests on VM, native and C++ read empty, ASCII, multi-byte UTF-8, multi-line and missing files, write them back and compare; invalid UTF-8 reports a `FileError`
     - full release gate green
   - stop_rule: whole-file text read and write only.
-
-- [ ] TODO-5554: Close the editor acceptance gate
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-08
-  - phase: Native UI editor acceptance
-  - parallel_track: native-ui-editor-accept
-  - scope: Verify `PrimeStruct_native_ui_editor_acceptance` has a case for each of the five requirements (highlighting per language, Unicode round trip, save/load, menu structure, screenshot smoke) and add a docs/NativeUiPlan.md section listing them, so the gate is the single statement of "the editor is acceptable".
-  - acceptance:
-    - the doc section maps every requirement to a gate case; full release gate green
-  - stop_rule: documentation and any missing gate case only.
 
 - [ ] TODO-5533: Windows and Linux native UI backends
   - owner: ai
