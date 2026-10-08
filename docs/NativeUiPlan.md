@@ -238,6 +238,15 @@ Planned columns are design intent; only macOS and headless are in the first slic
   `PrimeStruct_native_ui_appkit_smoke` bundles `examples/native_ui/hello_window.prime`, runs the bundle in snapshot
   mode and checks the PNG.
 
+**Unicode (TODO-5548).** Text crosses the ABI as UTF-8 and files are read and written byte for byte by the backend
+(no newline translation, a missing final newline stays missing, invalid UTF-8 is refused with `ps_ui_last_error()`).
+Cursor movement, selection, deletion and double-click word selection are not implemented by PrimeStruct: AppKit's
+`NSTextView` (TextKit) moves by extended grapheme clusters, so an emoji with a skin-tone modifier, a ZWJ sequence, a
+flag or a base letter with combining marks is one cursor step, and bidirectional text is laid out by the platform.
+Checked by the gate cases in `tests/unit/ui/test_native_ui_editor_acceptance.cpp` (round trips of
+`tests/fixtures/ui/unicode_sample.txt`, CRLF, no final newline, empty file, typed text, invalid UTF-8) and, for
+rendering, by the snapshot of TODO-5553; stepping the cursor over clusters by hand is part of TODO-5545.
+
 Smoke checklist (macOS 27, arm64, 2026-10-08): window and title, text view with preset text, bundle launch from
 bytecode, snapshot, quit request ending the loop: checked by the automated smoke. Typing, menu shortcuts, open/save
 panels and the alert need a person at the keyboard: TODO-5545.

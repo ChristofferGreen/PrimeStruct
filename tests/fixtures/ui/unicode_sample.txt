@@ -1,0 +1,6 @@
+Accents: café, naïve, Zoë, Ångström, œuvre
+CJK: 日本語のテキスト, 中文文本, 한국어 텍스트
+Emoji: 🙂 🚀 👩‍💻 🇸🇪 👍🏽
+Combining: e◌́ = é (e + U+0301), ñ (n + U+0303), a̐ᷓ
+RTL: שלום עולם, مرحبا بالعالم
+Mixed: abc אבג 123 دعاء xyz

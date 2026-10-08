@@ -93,6 +93,76 @@ TEST_CASE("acceptance: open, edit, save and reopen keep the bytes") {
   }
 }
 
+namespace {
+std::string writeScratch(const std::string &name, const std::string &contents) {
+  const std::string path = scratchPath(name);
+  std::ofstream(path, std::ios::binary) << contents;
+  return path;
+}
+
+// Opens `source` in the editor and saves it under a new name; returns the copy's path.
+std::string copyThroughEditor(const std::string &source, const std::string &copyName) {
+  const std::string copy = scratchPath(copyName);
+  headless::reset();
+  headless::pushCommand(CommandOpen);
+  headless::pushOpenPanelAnswer(source);
+  headless::pushCommand(CommandSaveAs);
+  headless::pushSavePanelAnswer(copy);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  return copy;
+}
+} // namespace
+
+TEST_CASE("acceptance: unicode text round-trips byte for byte through the editor") {
+  const std::string fixture = std::string(PRIMESTRUCT_SOURCE_DIR) + "/tests/fixtures/ui/unicode_sample.txt";
+  const std::string original = readFile(fixture);
+  REQUIRE(original.size() > 200);
+  // The fixture really holds each script family as multi-byte UTF-8.
+  for (const char *needle : {"caf\xC3\xA9", "\xE6\x97\xA5\xE6\x9C\xAC", "\xF0\x9F\x99\x82", "\xCC\x81",
+                             "\xD7\xA9\xD7\x9C\xD7\x95\xD7\x9D", "\xD9\x85\xD8\xB1\xD8\xAD\xD8\xA8\xD8\xA7"}) {
+    CHECK_MESSAGE(original.find(needle) != std::string::npos, needle);
+  }
+  CHECK(readFile(copyThroughEditor(fixture, "unicode_copy.txt")) == original);
+}
+
+TEST_CASE("acceptance: line endings and a missing final newline survive the editor") {
+  const std::string crlf = "one\r\ntwo\r\n\xE6\x97\xA5\r\n";
+  CHECK(readFile(copyThroughEditor(writeScratch("crlf.txt", crlf), "crlf_copy.txt")) == crlf);
+  const std::string noNewline = "no final newline \xF0\x9F\x99\x82";
+  CHECK(readFile(copyThroughEditor(writeScratch("tail.txt", noNewline), "tail_copy.txt")) == noNewline);
+  CHECK(readFile(copyThroughEditor(writeScratch("empty.txt", ""), "empty_copy.txt")).empty());
+}
+
+TEST_CASE("acceptance: typed unicode is saved exactly") {
+  const std::string path = scratchPath("typed_unicode.txt");
+  const std::string text = "caf\xC3\xA9 \xE6\x97\xA5\xE6\x9C\xAC \xF0\x9F\x91\x8D\xF0\x9F\x8F\xBD e\xCC\x81 \xD7\xA9\xD7\x9C\xD7\x95\xD7\x9D";
+  headless::reset();
+  headless::pushTypeText(0, text);
+  headless::pushCommand(CommandSave);
+  headless::pushSavePanelAnswer(path);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(readFile(path) == text);
+}
+
+TEST_CASE("acceptance: a file that is not valid UTF-8 is refused with the error shown") {
+  const std::string bad = writeScratch("bad_utf8.txt", "ok \xC3\x28 broken");
+  headless::reset();
+  headless::pushCommand(CommandOpen);
+  headless::pushOpenPanelAnswer(bad);
+  headless::pushAlertAnswer(0);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  bool shown = false;
+  for (const auto &entry : headless::callLog()) {
+    shown = shown || (entry.rfind("ps_ui_alert(\"The file could not be opened.\", \"", 0) == 0 &&
+                      entry.find("not valid UTF-8") != std::string::npos);
+  }
+  CHECK(shown);
+  CHECK(headless::windowState(EditorWindow).title == "Untitled");
+}
+
 TEST_CASE("acceptance: save as writes an equal copy and later saves go to it") {
   const std::string original = scratchPath("original.txt");
   const std::string copy = scratchPath("copy.txt");
