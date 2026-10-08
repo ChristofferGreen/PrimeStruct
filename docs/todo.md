@@ -109,7 +109,6 @@ of sync with them.
 | TODO-5536 | Small, lazily loaded bytecode for apps | ready | bytecode-startup |
 | TODO-5535 | Launch-time harness and reference Objective-C++ editor | ready | native-ui-launch |
 | TODO-5530 | Read and write whole files as String | blocked | file-text |
-| TODO-5532 | Native text editor example | ready | native-ui-editor |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5534 | Compiled programs call the native UI ABI | deferred | native-ui-compiled |
 | TODO-5510 | `return` returns from pick arms and lambdas correctly | ready | control-returns |
@@ -139,7 +138,6 @@ of sync with them.
 - TODO-5537 (bytes): `u8` and byte-addressed memory
 - TODO-5538 (slices): slices are real borrows with shared operations
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
-- TODO-5532 (native-ui-editor): native text editor example
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5510 (control-returns): `return` returns from pick arms and lambdas correctly
 - TODO-5524 (result-error-structs): int-backed error structs round-trip through stdlib Result sums
@@ -147,19 +145,18 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5532
-2. TODO-5536
-3. TODO-5537
-4. TODO-5538
-5. TODO-5535
-6. TODO-5510
-7. TODO-5524
-8. TODO-5527
+1. TODO-5536
+2. TODO-5537
+3. TODO-5538
+4. TODO-5535
+5. TODO-5510
+6. TODO-5524
+7. TODO-5527
 
 ### Priority Lanes
 
 - Strings and slices (docs/spec/strings-and-views.md): TODO-5537, TODO-5538, TODO-5539, TODO-5540, TODO-5530, TODO-5541, TODO-5542
-- Native UI (docs/NativeUiPlan.md): TODO-5532, TODO-5536, TODO-5535, TODO-5533, TODO-5534
+- Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533, TODO-5534
 - Lifecycle (docs/spec/value-lifecycle.md): TODO-5527
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
@@ -352,19 +349,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - tests on VM, native and C++ read empty, ASCII, multi-byte UTF-8, multi-line and missing files, write them back and compare; invalid UTF-8 reports a `FileError`
     - full release gate green
   - stop_rule: whole-file text read and write only.
-
-- [ ] TODO-5532: Native text editor example
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-08
-  - phase: Native UI (docs/NativeUiPlan.md)
-  - parallel_track: native-ui-editor
-  - scope: `examples/apps/text_editor/main.prime`: the single-window plain-text editor of docs/NativeUiPlan.md section 6 (New/Open/Save/Save As/Close, standard Edit menu, title and edited marker, Save/Don't Save/Cancel prompt, error alerts). It reads and writes files through `TextView.loadFile/saveFile` (TODO-5546), not `readText/writeText`, so it no longer waits for the string work (TODO-5530, TODO-5541); a first draft is in the integration branch history notes (.claude-run/HANDOFF.md of the session that wrote it) and is blocked only by the dialog emptiness test of TODO-5547. Opening a file named on the command line waits for TODO-5541 (entry-argument strings cannot be passed to host functions).
-  - acceptance:
-    - headless golden scenarios: type then save, open an existing file, save as, close with unsaved changes (each answer), a failing open
-    - on a Mac, the bundled app passes the same scenarios by hand (owner)
-    - full release gate green
-  - stop_rule: the editor example and its scenarios only.
 
 - [ ] TODO-5533: Windows and Linux native UI backends
   - owner: ai

@@ -1,0 +1,164 @@
+import /std/ui/native/*
+
+// A single-window plain-text editor on the native text view
+// (docs/NativeUiPlan.md section 6). Editing, selection, clipboard and undo come
+// from the platform's own control; this program owns the document: its path,
+// Open/Save/Save As, and asking before unsaved text is discarded.
+//
+//   primestruct_app examples/apps/text_editor/main.prime
+//
+// Entry-argument strings cannot be passed to host functions yet, so opening a
+// file named on the command line waits for the string work (docs/todo.md,
+// TODO-5541).
+
+[return<i32>]
+command_new() {
+  return(1i32)
+}
+
+[return<i32>]
+command_open() {
+  return(2i32)
+}
+
+[return<i32>]
+command_save() {
+  return(3i32)
+}
+
+[return<i32>]
+command_save_as() {
+  return(4i32)
+}
+
+[return<i32>]
+command_close() {
+  return(5i32)
+}
+
+// 0 = Save, 1 = Don't Save, 2 = Cancel.
+[return<i32>]
+ask_to_save([App] app) {
+  return(app.alert("Do you want to save the changes?",
+                   "Your changes will be lost if you do not save them.",
+                   "Save\nDon't Save\nCancel"))
+}
+
+[return<int>]
+main() {
+  [App] app{start_app("Text Editor")}
+  [Window] window{app.window("Untitled", 720i32, 480i32)}
+  [TextView] editor{app.textView()}
+  editor.setMonospace(true)
+  window.setContent(editor)
+
+  [Menu] file{app.menu("File")}
+  file.item("New", "cmd+n", command_new())
+  file.item("Open...", "cmd+o", command_open())
+  file.separator()
+  file.item("Save", "cmd+s", command_save())
+  file.item("Save As...", "cmd+shift+s", command_save_as())
+  file.separator()
+  file.item("Close", "cmd+w", command_close())
+  file.addToBar()
+
+  [Menu] edit{app.menu("Edit")}
+  edit.undo()
+  edit.redo()
+  edit.separator()
+  edit.cut()
+  edit.copy()
+  edit.paste()
+  edit.selectAll()
+  edit.separator()
+  edit.find()
+  edit.addToBar()
+
+  window.show()
+
+  [string mut] path{""}
+  [bool mut] hasPath{false}
+  [bool mut] running{true}
+  while(running) {
+    [i32 mut] intent{0i32}
+    pick(app.waitEvent()) {
+      command(id) {
+        intent = id
+      }
+      windowCloseRequested(w) {
+        intent = command_close()
+      }
+      textChanged(w) {
+        [Window] target{w}
+        target.setEdited(true)
+      }
+      quitRequested {
+        intent = command_close()
+      }
+    }
+
+    [bool mut] proceed{true}
+    [bool mut] saveFirst{false}
+    if(intent == command_new() || intent == command_open() || intent == command_close()) {
+      if(editor.isModified()) {
+        [i32] answer{ask_to_save(app)}
+        if(answer == 2i32) {
+          proceed = false
+        }
+        if(answer == 0i32) {
+          saveFirst = true
+        }
+      }
+    }
+
+    if(proceed && (saveFirst || intent == command_save() || intent == command_save_as())) {
+      [string mut] target{path}
+      [bool mut] known{hasPath}
+      if(intent == command_save_as() || !hasPath) {
+        target = app.savePanel("Save", "Untitled.txt")
+        known = app.panelChosen()
+      }
+      if(!known) {
+        proceed = false
+      } else {
+        if(editor.saveFile(target)) {
+          path = target
+          hasPath = true
+          window.setTitle(path)
+          editor.clearModified()
+          window.setEdited(false)
+        } else {
+          app.alert("The file could not be saved.", app.lastError(), "OK")
+          proceed = false
+        }
+      }
+    }
+
+    if(proceed && intent == command_new()) {
+      editor.setText("")
+      editor.clearModified()
+      path = ""
+      hasPath = false
+      window.setTitle("Untitled")
+      window.setEdited(false)
+    }
+    if(proceed && intent == command_open()) {
+      [string] chosen{app.openPanel("Open")}
+      if(app.panelChosen()) {
+        if(editor.loadFile(chosen)) {
+          path = chosen
+          hasPath = true
+          window.setTitle(path)
+          window.setEdited(false)
+        } else {
+          app.alert("The file could not be opened.", app.lastError(), "OK")
+        }
+      }
+    }
+    if(proceed && intent == command_close()) {
+      window.close()
+      running = false
+    }
+  }
+  return(0i32)
+}

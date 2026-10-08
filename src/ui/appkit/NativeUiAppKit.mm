@@ -9,7 +9,10 @@
 // Snapshot mode: when PRIMESTRUCT_UI_SNAPSHOT is set to a path, the first shown
 // window is rendered into a PNG at that path once its layout has settled (no
 // Screen Recording permission needed: the view hierarchy draws itself), and
-// ps_ui_wait_event then reports a quit request.
+// ps_ui_wait_event then reports a quit request. PRIMESTRUCT_UI_TYPE=text
+// additionally types the text (with "\n" as a newline) into the first text view
+// before the picture is taken, and then exits right after it, since the program
+// would otherwise ask what to do with the unsaved text.
 
 #import <AppKit/AppKit.h>
 #import <objc/runtime.h>
@@ -51,6 +54,8 @@ struct State {
   std::string lastError;
   bool panelChosen = false;
   std::string snapshotPath;
+  std::string snapshotTypeText;
+  bool snapshotTyped = false;
   bool snapshotTaken = false;
   uint64_t snapshotWindow = 0;
   int snapshotIdleSlices = 0;
@@ -254,6 +259,13 @@ bool ps_ui_init(const char *appName) {
     if (const char *path = std::getenv("PRIMESTRUCT_UI_SNAPSHOT"); path != nullptr && *path != '\0') {
       s.snapshotPath = path;
     }
+    if (const char *typed = std::getenv("PRIMESTRUCT_UI_TYPE"); typed != nullptr && *typed != '\0') {
+      s.snapshotTypeText = typed;
+      for (size_t at = s.snapshotTypeText.find("\\n"); at != std::string::npos;
+           at = s.snapshotTypeText.find("\\n", at + 1)) {
+        s.snapshotTypeText.replace(at, 2, "\n");
+      }
+    }
     [NSApplication sharedApplication];
     // Snapshot runs stay out of the user's way: no Dock icon, no activation.
     [NSApp setActivationPolicy:s.snapshotPath.empty() ? NSApplicationActivationPolicyRegular
@@ -302,9 +314,33 @@ int32_t ps_ui_wait_event(void) {
         [NSApp sendEvent:event];
       }
       [NSApp updateWindows];
-      if (snapshotting && event == nil && ++s.snapshotIdleSlices >= 12) {
-        captureSnapshot();
-        enqueue(PS_UI_EVENT_QUIT_REQUESTED);
+      if (snapshotting && event == nil) {
+        ++s.snapshotIdleSlices;
+        if (!s.snapshotTypeText.empty() && !s.snapshotTyped && s.snapshotIdleSlices >= 6) {
+          // Types into the first text view so the picture shows an edited document.
+          s.snapshotTyped = true;
+          s.snapshotIdleSlices = 0;
+          NSTextView *target = nil;
+          uint64_t lowest = UINT64_MAX;
+          for (const auto &entry : s.textViews) {
+            if (entry.first < lowest) {
+              lowest = entry.first;
+              target = entry.second;
+            }
+          }
+          if (target != nil) {
+            [target.window makeFirstResponder:target];
+            [target insertText:toNSString(s.snapshotTypeText.c_str()) replacementRange:NSMakeRange(NSNotFound, 0)];
+          }
+        } else if (s.snapshotIdleSlices >= 12) {
+          captureSnapshot();
+          if (!s.snapshotTypeText.empty()) {
+            // The typed text is unsaved, so a graceful quit would ask about it.
+            std::fflush(nullptr);
+            std::_Exit(0);
+          }
+          enqueue(PS_UI_EVENT_QUIT_REQUESTED);
+        }
       }
     }
   }
