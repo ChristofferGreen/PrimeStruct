@@ -22,8 +22,17 @@ function(run_step name)
 endfunction()
 
 run_step(install "${CMAKE_COMMAND}" --install "${BUILD_DIR}" --prefix "${WORK_DIR}/prefix")
+# Build the host with the compiler PrimeStruct itself was built with, not whatever
+# CC/CXX the environment happens to hold.
+set(host_compilers)
+if(DEFINED CXX_COMPILER AND NOT CXX_COMPILER STREQUAL "")
+  list(APPEND host_compilers -DCMAKE_CXX_COMPILER=${CXX_COMPILER})
+endif()
+if(DEFINED C_COMPILER AND NOT C_COMPILER STREQUAL "")
+  list(APPEND host_compilers -DCMAKE_C_COMPILER=${C_COMPILER})
+endif()
 run_step(configure "${CMAKE_COMMAND}" -S "${SOURCE_DIR}/examples/embed" -B "${WORK_DIR}/host"
-         -DCMAKE_PREFIX_PATH=${WORK_DIR}/prefix -DCMAKE_BUILD_TYPE=Release)
+         -DCMAKE_PREFIX_PATH=${WORK_DIR}/prefix -DCMAKE_BUILD_TYPE=Release ${host_compilers})
 run_step(build "${CMAKE_COMMAND}" --build "${WORK_DIR}/host")
 
 # Built-in demo: 55 (sum 1..10) + 3 (program name + 2 args).

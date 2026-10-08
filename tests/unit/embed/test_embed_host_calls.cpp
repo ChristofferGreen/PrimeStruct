@@ -259,9 +259,11 @@ TEST_CASE("vm passes string parameters as pointers into the module string table"
 }
 
 TEST_CASE("debug sessions fault on a host call that has no bindings") {
+  // A session keeps a pointer to its module, so the module must outlive it.
+  const IrModule module = addModule();
   VmDebugSession session;
   std::string error;
-  REQUIRE(session.start(addModule(), error));
+  REQUIRE(session.start(module, error));
   VmDebugStopReason reason = VmDebugStopReason::Step;
   bool ok = true;
   for (int i = 0; i < 8 && ok; ++i) {
@@ -274,9 +276,10 @@ TEST_CASE("debug sessions fault on a host call that has no bindings") {
 TEST_CASE("debug sessions run host calls with bindings supplied") {
   VmHostFunctions hosts;
   hosts.bind("host_add", addBinding());
+  const IrModule module = addModule();
   VmDebugSession session;
   std::string error;
-  REQUIRE_MESSAGE(session.start(addModule(), error, std::vector<std::string_view>{"prog"}, hosts), error);
+  REQUIRE_MESSAGE(session.start(module, error, std::vector<std::string_view>{"prog"}, hosts), error);
   VmDebugStopReason reason = VmDebugStopReason::Step;
   REQUIRE_MESSAGE(session.continueExecution(reason, error), error);
   CHECK(reason == VmDebugStopReason::Exit);
@@ -284,7 +287,7 @@ TEST_CASE("debug sessions run host calls with bindings supplied") {
 
   VmHostFunctions none;
   VmDebugSession unbound;
-  CHECK_FALSE(unbound.start(addModule(), error, std::vector<std::string_view>{"prog"}, none));
+  CHECK_FALSE(unbound.start(module, error, std::vector<std::string_view>{"prog"}, none));
   CHECK(error.find("unbound host function: host_add") != std::string::npos);
 }
 
@@ -370,9 +373,10 @@ TEST_CASE("vm faults cleanly on invalid dynamic string indices") {
 }
 
 TEST_CASE("debug sessions run string-returning host calls") {
+  const IrModule module = dynamicStringModule(0);
   VmDebugSession session;
   std::string error;
-  REQUIRE_MESSAGE(session.start(dynamicStringModule(0), error, std::vector<std::string_view>{"prog"}, stringHost("xy")), error);
+  REQUIRE_MESSAGE(session.start(module, error, std::vector<std::string_view>{"prog"}, stringHost("xy")), error);
   VmDebugStopReason reason = VmDebugStopReason::Step;
   REQUIRE_MESSAGE(session.continueExecution(reason, error), error);
   CHECK(reason == VmDebugStopReason::Exit);
