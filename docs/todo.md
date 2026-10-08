@@ -133,6 +133,7 @@ of sync with them.
 | TODO-5520 | Diagnostics point at user code with readable names | deferred | diagnostics |
 | TODO-5521 | Math helpers return correct results | deferred | stdlib-math |
 | TODO-5483 | Verify arm64 SextI32 on a macOS machine | deferred | ir-semantics |
+| TODO-5543 | Repair or retire the disabled Apple/arm64 native backend test shards | deferred | native-arm64-tests |
 
 ### Ready Now
 
@@ -165,6 +166,7 @@ of sync with them.
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5514, TODO-5516, TODO-5517
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
+- macOS support: TODO-5543 (needs macOS)
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
 ### Execution Queue
@@ -596,3 +598,16 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - acceptance:
     - the `i32` matrix cases (`i32_wrap_basic`, `i32_wrap_loops`, `i32_wrap_builtins`, `i32_limit_builtins`) pass on arm64 macOS native; an encoding unit test pins the SXTW bytes (done: `primestruct.ir.native_codegen` checks SXTW and the float-compare branch conditions through `primec/testing/NativeEmitterEncodings.h`; the float compares now use MI/LS so NaN compares false, also unexecuted)
   - stop_rule: do not change i64/u64 behavior or the I32 arithmetic opcodes themselves; lowering also uses them for address arithmetic.
+
+- [ ] TODO-5543: Repair or retire the disabled Apple/arm64 native backend test shards
+  - owner: ai
+  - status: deferred
+  - deferred_reason: needs an arm64 macOS machine to run; the Linux x86_64 session compiles these suites out.
+  - created_at: 2026-10-08
+  - phase: macOS support
+  - parallel_track: native-arm64-tests
+  - scope: `primestruct.compile.run.native_backend.{core,math_numeric,collections}` are compiled only on Apple/arm64 and were never registered with CTest, so they drifted. They are now registered for Apple/arm64 in `CMakeLists.txt` (shards `*_apple_core_*`, `*_apple_math_numeric_*`, `*_apple_collections_*`), and the 30 shards listed in `PrimeStructAppleNativeKnownFailingShards` are `DISABLED`: stale expected diagnostics (`compile ... == 2` with a changed message), native arm64 exit-code mismatches in `math_numeric_types.h`, and collection shadow/shim cases. Run each disabled shard on a Mac, then fix the expectation, fix the native arm64 backend, or delete the case, and remove the shard from the list.
+  - acceptance:
+    - `PrimeStructAppleNativeKnownFailingShards` is empty and all `apple_*` shards pass on arm64 macOS
+    - full release gate green on Linux and macOS
+  - stop_rule: tests and arm64 native emitter output only; no language semantics changes.

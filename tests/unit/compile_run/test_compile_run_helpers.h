@@ -68,6 +68,12 @@ inline int runCommand(const std::string &command) {
   if (WIFEXITED(code)) {
     return WEXITSTATUS(code);
   }
+  // A signal-terminated child: some `sh -c` implementations exec a lone command
+  // directly (macOS), so system() sees the signal instead of the shell's
+  // 128 + signal exit status (Linux). Report the shell convention on both.
+  if (WIFSIGNALED(code)) {
+    return 128 + WTERMSIG(code);
+  }
   return -1;
 #else
   return code;

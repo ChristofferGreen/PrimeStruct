@@ -13,7 +13,7 @@ namespace {
 // Whether the VM could reach this function's locals through memory: it takes an address, or it
 // dereferences one, which the VM resolves against the current frame whatever its origin. The
 // JIT keeps such a function's locals in their frame slots, zeroed at entry as in the VM.
-bool jitFrameAccessible(const IrFunction &function) {
+[[maybe_unused]] bool jitFrameAccessible(const IrFunction &function) {
   if (analyzeIrLocalEscape(function).addressTaken) {
     return true;
   }
@@ -28,7 +28,7 @@ bool jitFrameAccessible(const IrFunction &function) {
 }
 
 // The VM's local count: one past the highest local an instruction loads, stores or addresses.
-uint32_t vmLocalCount(const IrFunction &function) {
+[[maybe_unused]] uint32_t vmLocalCount(const IrFunction &function) {
   uint64_t count = 0;
   for (const IrInstruction &instruction : function.instructions) {
     if (instruction.op == IrOpcode::LoadLocal || instruction.op == IrOpcode::StoreLocal ||
@@ -205,7 +205,7 @@ bool emitNativeFunctions(const IrModule &module,
     if constexpr (!kIsArm64) {
       emitter.clearPromotedLocals();
       if (emitter.localPromotionEnabled() && !useRegisterAllocation) {
-        std::vector<X64Emitter::PromotedLocalSlot> promoted;
+        std::vector<typename EmitterT::PromotedLocalSlot> promoted;
         const uint8_t *pool = argRegsFree ? X64PromotionPoolWithArgRegs : X64PromotionPool;
         const size_t poolSize =
             argRegsFree ? sizeof(X64PromotionPoolWithArgRegs) : sizeof(X64PromotionPool);
@@ -713,7 +713,7 @@ bool emitNativeFunctions(const IrModule &module,
     }
     if (useRegisterAllocation) {
       if constexpr (!kIsArm64) {
-        X64Emitter::RegAllocHooks hooks;
+        typename EmitterT::RegAllocHooks hooks;
         hooks.emitTemplate = emitTemplateInstruction;
         hooks.recordStringFixup = [&](size_t fixupIndex, uint32_t stringIndex) {
           stringFixups.push_back({fixupIndex, stringIndex});

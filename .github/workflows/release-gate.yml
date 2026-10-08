@@ -44,3 +44,36 @@ jobs:
           path: |
             build-release/Testing/Temporary/LastTestsFailed.log
             build-release/Testing/Temporary/LastTest.log
+
+  gate-macos:
+    runs-on: macos-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: brew install cmake ripgrep
+
+      - name: Cache build directory
+        uses: actions/cache@v4
+        with:
+          path: build-release
+          key: build-release-${{ runner.os }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ github.sha }}
+          restore-keys: |
+            build-release-${{ runner.os }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-
+            build-release-${{ runner.os }}-
+
+      - name: Release gate
+        env:
+          CC: clang
+          CXX: clang++
+        run: ./scripts/compile.sh --release
+
+      - name: Upload failure logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ctest-failures-macos
+          path: |
+            build-release/Testing/Temporary/LastTestsFailed.log
+            build-release/Testing/Temporary/LastTest.log

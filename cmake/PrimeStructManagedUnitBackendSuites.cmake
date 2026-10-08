@@ -45,6 +45,17 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.serialization"
   CASES_PER_SHARD 3
 )
 
+# Cases 111-121 (the tail of test_ir_pipeline_serialization_structs.h) were
+# never registered.
+addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.serialization"
+  TARGET PrimeStruct_backend_ir_tests
+  LABEL "parallel-safe"
+  TIMEOUT 30
+  RANGE_FIRST 111
+  RANGE_LAST 121
+  CASES_PER_SHARD 4
+)
+
 addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.pointers"
   TARGET PrimeStruct_backend_ir_tests
   LABEL "parallel-safe"
