@@ -100,17 +100,24 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
+| TODO-5528 | Native UI C ABI with a headless backend and engine bindings | ready | native-ui-abi |
+| TODO-5529 | `/std/ui/native` surface with an `AppEvent` loop | ready | native-ui-stdlib |
+| TODO-5530 | Read a whole file into a string on the VM | ready | vm-file-text |
+| TODO-5531 | macOS AppKit backend and app runner | blocked | native-ui-macos |
+| TODO-5532 | Native text editor example | blocked | native-ui-editor |
+| TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
+| TODO-5534 | Compiled programs call the native UI ABI | deferred | native-ui-compiled |
 | TODO-5510 | `return` returns from pick arms and lambdas correctly | ready | control-returns |
 | TODO-5524 | Int-backed error structs round-trip through stdlib Result sums | ready | result-error-structs |
 | TODO-5523 | A Result-returning main exits with its error code | ready | result-main |
-| TODO-5525 | `Result.ok(x)` passes as a stdlib Result argument | ready | result-arguments |
-| TODO-5526 | Vectors of stdlib Result values keep their elements | ready | result-containers |
+| TODO-5525 | `Result.ok(x)` passes as a stdlib Result argument | deferred | result-arguments |
+| TODO-5526 | Vectors of stdlib Result values keep their elements | deferred | result-containers |
 | TODO-5527 | Stdlib Result locals destroy their payload once | ready | lifecycle-result-payloads |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
 | TODO-5512 | Pointers and aliases count as borrows of their root | deferred | safety-borrows |
 | TODO-5513 | Methods through a dereferenced vector pointer read the right fields | ready | collections-access |
 | TODO-5514 | Native file I/O writes newlines and reports errno | deferred | native-io |
-| TODO-5515 | Native Result.ok(Buffer) reads as ok | ready | native-result |
+| TODO-5515 | Native Result.ok(Buffer) reads as ok | deferred | native-result |
 | TODO-5516 | Integer narrowing and float-to-int conversion agree across backends | deferred | numeric-conversions |
 | TODO-5517 | Runtime faults exit the same way on every backend | deferred | runtime-faults |
 | TODO-5518 | Valid programs the frontend rejects compile | deferred | frontend-accept |
@@ -121,27 +128,29 @@ of sync with them.
 
 ### Ready Now
 
+- TODO-5528 (native-ui-abi): native UI C ABI with a headless backend and engine bindings
+- TODO-5529 (native-ui-stdlib): `/std/ui/native` surface with an `AppEvent` loop
+- TODO-5530 (vm-file-text): read a whole file into a string on the VM
 - TODO-5510 (control-returns): `return` returns from pick arms and lambdas correctly
 - TODO-5513 (collections-access): methods through a dereferenced vector pointer read the right fields
 - TODO-5524 (result-error-structs): int-backed error structs round-trip through stdlib Result sums
-- TODO-5515 (native-result): native Result.ok(Buffer) reads as ok
 - TODO-5523 (result-main): a Result-returning main exits with its error code
-- TODO-5525 (result-arguments): `Result.ok(x)` passes as a stdlib Result argument
-- TODO-5526 (result-containers): vectors of stdlib Result values keep their elements
 - TODO-5527 (lifecycle-result-payloads): stdlib Result locals destroy their payload once
 
 ### Immediate Next 10
 
-1. TODO-5510
-2. TODO-5513
-3. TODO-5524
-4. TODO-5515
-5. TODO-5523
-6. TODO-5525
-7. TODO-5526
+1. TODO-5528
+2. TODO-5530
+3. TODO-5529
+4. TODO-5510
+5. TODO-5513
+6. TODO-5524
+7. TODO-5523
+8. TODO-5527
 
 ### Priority Lanes
 
+- Native UI (docs/NativeUiPlan.md): TODO-5528, TODO-5530, TODO-5529, TODO-5531, TODO-5532, TODO-5533, TODO-5534
 - Lifecycle (docs/spec/value-lifecycle.md): TODO-5527
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
@@ -218,6 +227,97 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - stop_rule: native I/O emitter and png status mapping.
   - notes: deferred: queued behind the Ready Now cap.
 
+- [ ] TODO-5528: Native UI C ABI with a headless backend and engine bindings
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-08
+  - phase: Native UI (docs/NativeUiPlan.md)
+  - parallel_track: native-ui-abi
+  - scope: Add `include/primec/ui/NativeUi.h` (the version-0 C ABI of docs/NativeUiPlan.md section 3: app, events, window, text view, menus, dialogs), a headless backend in `src/ui/headless/` that keeps the widget tree in memory, replays a scripted list of user actions (menu command, type text, close window, answer a dialog) and records every call, and `src/ui/NativeUiBindings.cpp`, which binds every ABI function into a `primec::embed::ScriptEngine` under its `[host]` name.
+  - acceptance:
+    - unit tests drive the headless backend through the C ABI (create a window and text view, set and read text, menu commands, dialogs, close requests) and check the recorded call log
+    - an embed test runs a script that calls the bound functions through `[host]` declarations
+    - full release gate green
+  - stop_rule: ABI, headless backend and bindings only; no stdlib wrappers.
+
+- [ ] TODO-5529: `/std/ui/native` surface with an `AppEvent` loop
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-08
+  - phase: Native UI (docs/NativeUiPlan.md)
+  - parallel_track: native-ui-stdlib
+  - scope: Add `stdlib/std/ui/native/` with the `[host]` declarations of the ABI, `App`/`Window`/`TextView`/`Menu` wrappers, standard menu items, and an `AppEvent` sum (`command(id)`, `windowCloseRequested(window)`, `textChanged(window)`, `quitRequested`) returned by `app.waitEvent()`; document it in `docs/spec/stdlib-reference.md` with a runnable example.
+  - acceptance:
+    - VM compile-run tests through the embed API and the headless backend: a `main` loop that builds a window, text view and menus, handles scripted commands and close requests with `pick`, and quits
+    - full release gate green
+  - stop_rule: stdlib surface for the version-0 ABI only.
+
+- [ ] TODO-5530: Read a whole file into a string on the VM
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-08
+  - phase: Native UI (docs/NativeUiPlan.md)
+  - parallel_track: vm-file-text
+  - scope: Programs cannot read a file into a string because only host calls create strings. Add a stdlib `readText(path) -> Result<string, FileError>` (and the matching `writeText(path, text)`) that creates a VM-owned run-time string, with a clear diagnostic on backends without dynamic strings; update docs/spec/vm-design.md (string creation) and docs/spec/errors-and-file-io.md.
+  - acceptance:
+    - VM tests read empty, UTF-8, multi-line and missing files, write them back and compare; non-VM targets reject the call with the documented diagnostic
+    - full release gate green
+  - stop_rule: whole-file text read/write on the VM only.
+
+- [ ] TODO-5531: macOS AppKit backend and app runner
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5528, TODO-5529
+  - created_at: 2026-10-08
+  - phase: Native UI (docs/NativeUiPlan.md)
+  - parallel_track: native-ui-macos
+  - scope: Implement the ABI in `src/ui/appkit/` (Objective-C++: `NSApplication` with a program-driven event loop, `NSWindow` with the edited marker, `NSScrollView`+`NSTextView`, `NSMenu` with key equivalents and responder-chain standard items, `NSOpenPanel`/`NSSavePanel`, `NSAlert`), the `tools/primestruct_app` runner (compile at launch in development, precompiled bytecode when bundled), the `PRIMESTRUCT_BUILD_NATIVE_UI` CMake option (APPLE only) and `scripts/bundle_macos_app.sh`.
+  - acceptance:
+    - builds in CI on non-Apple hosts with the option off; on a Mac, a smoke checklist in docs/NativeUiPlan.md passes (window, typing, menus and shortcuts, open/save panels, alert, quit) and is recorded by the owner
+    - full release gate green
+  - stop_rule: macOS backend, runner and bundling only.
+  - notes: needs a Mac to build and verify (like TODO-5483).
+
+- [ ] TODO-5532: Native text editor example
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5529, TODO-5530
+  - created_at: 2026-10-08
+  - phase: Native UI (docs/NativeUiPlan.md)
+  - parallel_track: native-ui-editor
+  - scope: `examples/apps/text_editor/main.prime`: the single-window plain-text editor of docs/NativeUiPlan.md section 5 (New/Open/Save/Save As/Close, standard Edit menu, title and edited marker, Save/Don't Save/Cancel prompt, error alerts).
+  - acceptance:
+    - headless golden scenarios: type then save, open an existing file, save as, close with unsaved changes (each answer), a failing open
+    - on a Mac, the bundled app passes the same scenarios by hand (owner)
+    - full release gate green
+  - stop_rule: the editor example and its scenarios only.
+
+- [ ] TODO-5533: Windows and Linux native UI backends
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-10-08
+  - phase: Native UI (docs/NativeUiPlan.md)
+  - parallel_track: native-ui-platforms
+  - scope: Implement the version-0 ABI with Win32 common controls and with GTK 4, following the coverage matrix in docs/NativeUiPlan.md section 8; split per platform before starting.
+  - acceptance:
+    - the editor scenarios pass on each platform by hand; the coverage matrix is updated to what each backend does
+    - full release gate green
+  - stop_rule: split into one leaf per platform before implementation.
+  - notes: deferred: after the macOS editor works.
+
+- [ ] TODO-5534: Compiled programs call the native UI ABI
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-10-08
+  - phase: Native UI (docs/NativeUiPlan.md)
+  - parallel_track: native-ui-compiled
+  - scope: Host calls are VM-only. Let the C++ emitter (`exe`/`optexe`) lower `[host]` calls of the native UI ABI to `extern "C"` calls linked against a platform backend, so a native UI app can ship without the VM; the native backend follows once it can link platform libraries.
+  - acceptance:
+    - the editor example builds with `--emit=exe` against the headless backend and passes its scenarios
+    - full release gate green
+  - stop_rule: C++ emitter path first; native backend is a separate leaf.
+  - notes: deferred: after the VM runner path works.
+
 - [ ] TODO-5527: Stdlib Result locals destroy their payload once
   - owner: ai
   - status: ready
@@ -256,7 +356,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 
 - [ ] TODO-5525: `Result.ok(x)` passes as a stdlib Result argument
   - owner: ai
-  - status: ready
+  - status: deferred
   - created_at: 2026-10-06
   - phase: Correctness audit 2026-10
   - parallel_track: result-arguments
@@ -265,10 +365,11 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - matrix case passing `Result.ok(...)` to a stdlib Result parameter on VM, native and C++
     - full release gate green
   - stop_rule: `Result.ok` arguments only.
+  - notes: deferred: queued behind the Ready Now cap.
 
 - [ ] TODO-5526: Vectors of stdlib Result values keep their elements
   - owner: ai
-  - status: ready
+  - status: deferred
   - created_at: 2026-10-06
   - phase: Correctness audit 2026-10
   - parallel_track: result-containers
@@ -277,10 +378,11 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - matrix case pushing ok and error Results and reading them back with `pick` and `Result.error` on VM, native and C++, or a diagnostic test if rejected
     - full release gate green
   - stop_rule: Result elements in vectors only.
+  - notes: deferred: queued behind the Ready Now cap.
 
 - [ ] TODO-5515: Native Result.ok(Buffer) reads as ok
   - owner: ai
-  - status: ready
+  - status: deferred
   - created_at: 2026-10-06
   - phase: Correctness audit 2026-10
   - parallel_track: native-result
@@ -289,6 +391,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - matrix case agrees on VM, native and C++
     - full release gate green
   - stop_rule: covered by the convention chosen in TODO-5506 if possible.
+  - notes: deferred: queued behind the Ready Now cap.
 
 - [ ] TODO-5516: Integer narrowing and float-to-int conversion agree across backends
   - owner: ai
