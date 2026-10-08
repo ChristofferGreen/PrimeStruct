@@ -799,6 +799,17 @@ target_compile_definitions(primec_embed_lib PRIVATE
   PRIMESTRUCT_EMBED_SOURCE_STDLIB_DIR="${CMAKE_CURRENT_SOURCE_DIR}/stdlib")
 primestructEnableWarnings(primec_embed_lib)
 
+# Native UI (TODO-5528, docs/NativeUiPlan.md): the C ABI header lives in
+# include/primec/ui; this library holds the headless backend that implements
+# it in memory and the bindings that expose every ABI function to a
+# ScriptEngine under its [host] name. Platform backends come later.
+add_library(primec_ui_lib src/ui/headless/NativeUiHeadless.cpp src/ui/NativeUiBindings.cpp)
+target_include_directories(primec_ui_lib PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+target_link_libraries(primec_ui_lib PUBLIC primec_embed_runtime_lib)
+primestructEnableWarnings(primec_ui_lib)
+
 # Install rules + CMake package so a host project can
 #   find_package(PrimeStruct REQUIRED)
 #   target_link_libraries(host PRIVATE PrimeStruct::embed)         # compile + run
@@ -1196,6 +1207,32 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_embed_runtime_only
+                       PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
+
+  # Native UI C ABI on the headless backend, and its ScriptEngine bindings.
+  add_executable(PrimeStruct_native_ui_tests
+    tests/unit/test_main.cpp
+    tests/unit/ui/test_native_ui_headless.cpp
+    tests/unit/ui/test_native_ui_bindings.cpp
+  )
+  target_include_directories(PrimeStruct_native_ui_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
+  target_link_libraries(PrimeStruct_native_ui_tests PRIVATE primec_ui_lib primec_embed_lib)
+  primestructEnableWarnings(PrimeStruct_native_ui_tests)
+  add_test(
+    NAME PrimeStruct_native_ui_headless
+    COMMAND $<TARGET_FILE:PrimeStruct_native_ui_tests>
+            "--test-suite=primestruct.ui.headless"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_native_ui_headless
+                       PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
+  add_test(
+    NAME PrimeStruct_native_ui_bindings
+    COMMAND $<TARGET_FILE:PrimeStruct_native_ui_tests>
+            "--test-suite=primestruct.ui.bindings"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_native_ui_bindings
                        PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
 
   set(PrimeStructBackendAllTestSources

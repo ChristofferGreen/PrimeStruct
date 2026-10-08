@@ -108,7 +108,6 @@ of sync with them.
 | TODO-5542 | Native and C++ parity for bytes, slices and strings | blocked | string-backends |
 | TODO-5536 | Small, lazily loaded bytecode for apps | ready | bytecode-startup |
 | TODO-5535 | Launch-time harness and reference Objective-C++ editor | blocked | native-ui-launch |
-| TODO-5528 | Native UI C ABI with a headless backend and engine bindings | ready | native-ui-abi |
 | TODO-5529 | `/std/ui/native` surface with an `AppEvent` loop | ready | native-ui-stdlib |
 | TODO-5530 | Read and write whole files as String | blocked | file-text |
 | TODO-5531 | macOS AppKit backend and app runner | blocked | native-ui-macos |
@@ -139,7 +138,6 @@ of sync with them.
 - TODO-5537 (bytes): `u8` and byte-addressed memory
 - TODO-5538 (slices): slices are real borrows with shared operations
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
-- TODO-5528 (native-ui-abi): native UI C ABI with a headless backend and engine bindings
 - TODO-5529 (native-ui-stdlib): `/std/ui/native` surface with an `AppEvent` loop
 - TODO-5510 (control-returns): `return` returns from pick arms and lambdas correctly
 - TODO-5524 (result-error-structs): int-backed error structs round-trip through stdlib Result sums
@@ -147,19 +145,18 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5528
-2. TODO-5536
-3. TODO-5537
-4. TODO-5538
-5. TODO-5529
-6. TODO-5510
-7. TODO-5524
-8. TODO-5527
+1. TODO-5536
+2. TODO-5537
+3. TODO-5538
+4. TODO-5529
+5. TODO-5510
+6. TODO-5524
+7. TODO-5527
 
 ### Priority Lanes
 
 - Strings and slices (docs/spec/strings-and-views.md): TODO-5537, TODO-5538, TODO-5539, TODO-5540, TODO-5530, TODO-5541, TODO-5542
-- Native UI (docs/NativeUiPlan.md): TODO-5528, TODO-5536, TODO-5529, TODO-5531, TODO-5535, TODO-5532, TODO-5533, TODO-5534
+- Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5529, TODO-5531, TODO-5535, TODO-5532, TODO-5533, TODO-5534
 - Lifecycle (docs/spec/value-lifecycle.md): TODO-5527
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
@@ -339,19 +336,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - stop_rule: measurement tooling and the reference editor only.
   - notes: needs a Mac to run.
 
-- [ ] TODO-5528: Native UI C ABI with a headless backend and engine bindings
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-08
-  - phase: Native UI (docs/NativeUiPlan.md)
-  - parallel_track: native-ui-abi
-  - scope: Add `include/primec/ui/NativeUi.h` (the version-0 C ABI of docs/NativeUiPlan.md section 4: app, events, window, text view, menus, dialogs), a headless backend in `src/ui/headless/` that keeps the widget tree in memory, replays a scripted list of user actions (menu command, type text, close window, answer a dialog) and records every call, and `src/ui/NativeUiBindings.cpp`, which binds every ABI function into a `primec::embed::ScriptEngine` under its `[host]` name.
-  - acceptance:
-    - unit tests drive the headless backend through the C ABI (create a window and text view, set and read text, menu commands, dialogs, close requests) and check the recorded call log
-    - an embed test runs a script that calls the bound functions through `[host]` declarations
-    - full release gate green
-  - stop_rule: ABI, headless backend and bindings only; no stdlib wrappers.
-
 - [ ] TODO-5529: `/std/ui/native` surface with an `AppEvent` loop
   - owner: ai
   - status: ready
@@ -380,7 +364,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 - [ ] TODO-5531: macOS AppKit backend and app runner
   - owner: ai
   - status: blocked
-  - blocked_on: TODO-5528, TODO-5529
+  - blocked_on: TODO-5529
   - created_at: 2026-10-08
   - phase: Native UI (docs/NativeUiPlan.md)
   - parallel_track: native-ui-macos

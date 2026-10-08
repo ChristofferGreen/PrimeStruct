@@ -1,6 +1,7 @@
 # Native UI: Plan
 
-Status: planned (2026-10-08). Nothing below is implemented yet; the work is tracked as the TODO slices in section 11.
+Status: in progress (2026-10-08). The C ABI header, the headless backend and the engine bindings exist
+(`include/primec/ui/`, `src/ui/`; TODO-5528); the rest is tracked as the TODO slices in section 11.
 
 PrimeStruct programs get desktop GUIs built from **platform-native widgets**: an `NSTextView` on macOS, an `EDIT`
 control or RichEdit on Windows, a `GtkTextView` on Linux. The first target is macOS and the first example is a plain
@@ -115,6 +116,11 @@ is callable only on the thread that called `ps_ui_init`, the main thread on macO
 - **Shortcuts** are written portably (`"cmd+s"`, `"cmd+shift+s"`); `cmd` means Command on macOS and Ctrl elsewhere.
 - **Standard items** (`undo`, `redo`, `cut`, `copy`, `paste`, `select_all`, `find`, `quit`, `about`) map to the
   platform's own actions (the AppKit responder chain), so they work in the focused native widget without program code.
+- **As built.** `include/primec/ui/NativeUi.h` is the authority for exact signatures: flags are C `bool`, a text result
+  is a `const char *` valid until the next text-returning call, `ps_ui_alert` takes button titles separated by `\n` and
+  returns the pressed index, and `ps_ui_init` returns false when the app is already running. The headless backend
+  (`primec/ui/NativeUiHeadless.h`) ends a scripted run with `quit_requested` once its action list is empty.
+  `primec/ui/NativeUiBindings.h` binds all 28 functions into a `ScriptEngine` or `Script` under their ABI names.
 - **Versioning.** `ps_ui_abi_version() -> i32` returns 0 for this table. Additions append functions; a change to an
   existing signature bumps the version.
 
@@ -200,7 +206,7 @@ Planned columns are design intent; only macOS and headless are in the first slic
 
 | TODO | Slice | Verifiable here |
 | --- | --- | --- |
-| TODO-5528 | C ABI header, headless backend, engine bindings, unit tests | yes |
+| TODO-5528 (done) | C ABI header, headless backend, engine bindings, unit tests | yes |
 | TODO-5529 | `/std/ui/native` surface and `AppEvent`, VM compile-run tests on the headless backend | yes |
 | TODO-5530 | Read and write whole files as `String` (after the string slices) | yes |
 | TODO-5531 | AppKit backend, `primestruct_app` runner, CMake and `.app` bundling | builds and runs on a Mac only |
