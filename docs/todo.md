@@ -100,6 +100,8 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
+| TODO-5536 | Small, lazily loaded bytecode for apps | ready | bytecode-startup |
+| TODO-5535 | Launch-time harness and reference Objective-C++ editor | blocked | native-ui-launch |
 | TODO-5528 | Native UI C ABI with a headless backend and engine bindings | ready | native-ui-abi |
 | TODO-5529 | `/std/ui/native` surface with an `AppEvent` loop | ready | native-ui-stdlib |
 | TODO-5530 | Read a whole file into a string on the VM | ready | vm-file-text |
@@ -109,7 +111,7 @@ of sync with them.
 | TODO-5534 | Compiled programs call the native UI ABI | deferred | native-ui-compiled |
 | TODO-5510 | `return` returns from pick arms and lambdas correctly | ready | control-returns |
 | TODO-5524 | Int-backed error structs round-trip through stdlib Result sums | ready | result-error-structs |
-| TODO-5523 | A Result-returning main exits with its error code | ready | result-main |
+| TODO-5523 | A Result-returning main exits with its error code | deferred | result-main |
 | TODO-5525 | `Result.ok(x)` passes as a stdlib Result argument | deferred | result-arguments |
 | TODO-5526 | Vectors of stdlib Result values keep their elements | deferred | result-containers |
 | TODO-5527 | Stdlib Result locals destroy their payload once | ready | lifecycle-result-payloads |
@@ -128,29 +130,29 @@ of sync with them.
 
 ### Ready Now
 
+- TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
 - TODO-5528 (native-ui-abi): native UI C ABI with a headless backend and engine bindings
 - TODO-5529 (native-ui-stdlib): `/std/ui/native` surface with an `AppEvent` loop
 - TODO-5530 (vm-file-text): read a whole file into a string on the VM
 - TODO-5510 (control-returns): `return` returns from pick arms and lambdas correctly
 - TODO-5513 (collections-access): methods through a dereferenced vector pointer read the right fields
 - TODO-5524 (result-error-structs): int-backed error structs round-trip through stdlib Result sums
-- TODO-5523 (result-main): a Result-returning main exits with its error code
 - TODO-5527 (lifecycle-result-payloads): stdlib Result locals destroy their payload once
 
 ### Immediate Next 10
 
 1. TODO-5528
-2. TODO-5530
-3. TODO-5529
-4. TODO-5510
-5. TODO-5513
-6. TODO-5524
-7. TODO-5523
+2. TODO-5536
+3. TODO-5530
+4. TODO-5529
+5. TODO-5510
+6. TODO-5513
+7. TODO-5524
 8. TODO-5527
 
 ### Priority Lanes
 
-- Native UI (docs/NativeUiPlan.md): TODO-5528, TODO-5530, TODO-5529, TODO-5531, TODO-5532, TODO-5533, TODO-5534
+- Native UI (docs/NativeUiPlan.md): TODO-5528, TODO-5536, TODO-5530, TODO-5529, TODO-5531, TODO-5535, TODO-5532, TODO-5533, TODO-5534
 - Lifecycle (docs/spec/value-lifecycle.md): TODO-5527
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
@@ -227,13 +229,39 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - stop_rule: native I/O emitter and png status mapping.
   - notes: deferred: queued behind the Ready Now cap.
 
+- [ ] TODO-5536: Small, lazily loaded bytecode for apps
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-08
+  - phase: Native UI (docs/NativeUiPlan.md)
+  - parallel_track: bytecode-startup
+  - scope: App startup is dominated by bytecode size: a program using the PNG decoder lowers to 12.7 MB of PSIR (lowering inlines almost every call) and takes ~80 ms to load on the runtime-only VM, against ~1 ms for a small program. Add a startup benchmark (bytecode size and load+run time of `embed_bytecode_runner` for a small, a medium and the PNG program) to the benchmark suite, then cut both: a size-oriented lowering mode for app bundles (real calls instead of inlining beyond a size threshold) and lazy decoding/validation of function bodies on first call.
+  - acceptance:
+    - the startup benchmark is in `scripts/benchmark.sh` with a baseline; the PNG program's bytecode shrinks at least 4x and loads at least 4x faster, with identical program output
+    - full release gate green
+  - stop_rule: bytecode size and load time only; split lazy loading out if the size change is large.
+
+- [ ] TODO-5535: Launch-time harness and reference Objective-C++ editor
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5531
+  - created_at: 2026-10-08
+  - phase: Native UI (docs/NativeUiPlan.md)
+  - parallel_track: native-ui-launch
+  - scope: A macOS launch harness (`tools/launch_bench/`) that starts an app N times, cold and warm, and records the time to its first on-screen window (window-list polling) and to the first drawn text (an `os_signpost` the app emits), plus a reference editor written directly in Objective-C++ with the same UI and startup rules; compare the PrimeStruct editor, the reference and installed editors (TextEdit and others).
+  - acceptance:
+    - the harness prints a table per app; the owner records a Mac run in docs/NativeUiPlan.md section 1, and the PrimeStruct editor meets the budget or gets follow-up TODOs for each gap
+    - full release gate green
+  - stop_rule: measurement tooling and the reference editor only.
+  - notes: needs a Mac to run.
+
 - [ ] TODO-5528: Native UI C ABI with a headless backend and engine bindings
   - owner: ai
   - status: ready
   - created_at: 2026-10-08
   - phase: Native UI (docs/NativeUiPlan.md)
   - parallel_track: native-ui-abi
-  - scope: Add `include/primec/ui/NativeUi.h` (the version-0 C ABI of docs/NativeUiPlan.md section 3: app, events, window, text view, menus, dialogs), a headless backend in `src/ui/headless/` that keeps the widget tree in memory, replays a scripted list of user actions (menu command, type text, close window, answer a dialog) and records every call, and `src/ui/NativeUiBindings.cpp`, which binds every ABI function into a `primec::embed::ScriptEngine` under its `[host]` name.
+  - scope: Add `include/primec/ui/NativeUi.h` (the version-0 C ABI of docs/NativeUiPlan.md section 4: app, events, window, text view, menus, dialogs), a headless backend in `src/ui/headless/` that keeps the widget tree in memory, replays a scripted list of user actions (menu command, type text, close window, answer a dialog) and records every call, and `src/ui/NativeUiBindings.cpp`, which binds every ABI function into a `primec::embed::ScriptEngine` under its `[host]` name.
   - acceptance:
     - unit tests drive the headless backend through the C ABI (create a window and text view, set and read text, menu commands, dialogs, close requests) and check the recorded call log
     - an embed test runs a script that calls the bound functions through `[host]` declarations
@@ -271,7 +299,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - created_at: 2026-10-08
   - phase: Native UI (docs/NativeUiPlan.md)
   - parallel_track: native-ui-macos
-  - scope: Implement the ABI in `src/ui/appkit/` (Objective-C++: `NSApplication` with a program-driven event loop, `NSWindow` with the edited marker, `NSScrollView`+`NSTextView`, `NSMenu` with key equivalents and responder-chain standard items, `NSOpenPanel`/`NSSavePanel`, `NSAlert`), the `tools/primestruct_app` runner (compile at launch in development, precompiled bytecode when bundled), the `PRIMESTRUCT_BUILD_NATIVE_UI` CMake option (APPLE only) and `scripts/bundle_macos_app.sh`.
+  - scope: Implement the ABI in `src/ui/appkit/` (Objective-C++: `NSApplication` with a program-driven event loop, `NSWindow` with the edited marker, `NSScrollView`+`NSTextView`, `NSMenu` with key equivalents and responder-chain standard items, `NSOpenPanel`/`NSSavePanel`, `NSAlert`), the `tools/primestruct_app` runner (compile at launch in development, precompiled bytecode when bundled), the `PRIMESTRUCT_BUILD_NATIVE_UI` CMake option (APPLE only) and `scripts/bundle_macos_app.sh`. Follow the startup rules of docs/NativeUiPlan.md section 1: bytecode only in bundles, runtime-only VM linked into one executable, only Foundation and AppKit, window before file load, plain `NSWindow` without `NSDocument` or state restoration, TextKit 2, helper-process services started after the first frame.
   - acceptance:
     - builds in CI on non-Apple hosts with the option off; on a Mac, a smoke checklist in docs/NativeUiPlan.md passes (window, typing, menus and shortcuts, open/save panels, alert, quit) and is recorded by the owner
     - full release gate green
@@ -285,7 +313,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - created_at: 2026-10-08
   - phase: Native UI (docs/NativeUiPlan.md)
   - parallel_track: native-ui-editor
-  - scope: `examples/apps/text_editor/main.prime`: the single-window plain-text editor of docs/NativeUiPlan.md section 5 (New/Open/Save/Save As/Close, standard Edit menu, title and edited marker, Save/Don't Save/Cancel prompt, error alerts).
+  - scope: `examples/apps/text_editor/main.prime`: the single-window plain-text editor of docs/NativeUiPlan.md section 6 (New/Open/Save/Save As/Close, standard Edit menu, title and edited marker, Save/Don't Save/Cancel prompt, error alerts).
   - acceptance:
     - headless golden scenarios: type then save, open an existing file, save as, close with unsaved changes (each answer), a failing open
     - on a Mac, the bundled app passes the same scenarios by hand (owner)
@@ -298,7 +326,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - created_at: 2026-10-08
   - phase: Native UI (docs/NativeUiPlan.md)
   - parallel_track: native-ui-platforms
-  - scope: Implement the version-0 ABI with Win32 common controls and with GTK 4, following the coverage matrix in docs/NativeUiPlan.md section 8; split per platform before starting.
+  - scope: Implement the version-0 ABI with Win32 common controls and with GTK 4, following the coverage matrix in docs/NativeUiPlan.md section 9; split per platform before starting.
   - acceptance:
     - the editor scenarios pass on each platform by hand; the coverage matrix is updated to what each backend does
     - full release gate green
@@ -344,7 +372,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 
 - [ ] TODO-5523: A Result-returning main exits with its error code
   - owner: ai
-  - status: ready
+  - status: deferred
   - created_at: 2026-10-06
   - phase: Correctness audit 2026-10
   - parallel_track: result-main
@@ -353,6 +381,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - spec states the rule; matrix cases for ok, int error and struct error agree on VM, native and C++
     - full release gate green
   - stop_rule: entry-point Result exit codes only.
+  - notes: deferred: queued behind the Ready Now cap.
 
 - [ ] TODO-5525: `Result.ok(x)` passes as a stdlib Result argument
   - owner: ai

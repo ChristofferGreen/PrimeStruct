@@ -1,6 +1,6 @@
 # Native UI: Plan
 
-Status: planned (2026-10-08). Nothing below is implemented yet; the work is tracked as the TODO slices in section 10.
+Status: planned (2026-10-08). Nothing below is implemented yet; the work is tracked as the TODO slices in section 11.
 
 PrimeStruct programs get desktop GUIs built from **platform-native widgets**: an `NSTextView` on macOS, an `EDIT`
 control or RichEdit on Windows, a `GtkTextView` on Linux. The first target is macOS and the first example is a plain
@@ -8,7 +8,48 @@ text editor. This plan is separate from `docs/Graphics_API_Design.md`, whose `/s
 graph stay the path for custom-drawn UI (games, canvases, the web host); native widgets never go through the scene
 renderer.
 
-## 1. Principles
+## 1. Startup time comes first
+
+Most macOS editors are slow to open because of what they load before the first window: a browser engine or a JVM,
+plugin and extension hosts, indexers, document-restoration and iCloud lookups, or a compiler. The editor's first
+requirement is to open as fast as a native app can. Every design choice below is checked against that, and launch time
+is measured, not assumed.
+
+**Budget.** On a warm launch, the PrimeStruct editor shows its window within 5 ms of a pure Objective-C++ editor with
+the same UI (the reference build in TODO-5535), and shows the text of a 1 MB file within one more frame.
+
+**Measured so far** (Linux, release build, 2026-10-08; wall time of a whole process run):
+
+| Path | Small program (21 KB bytecode) | PNG decoder (12.7 MB bytecode) |
+| --- | --- | --- |
+| Empty C program | 3.5 ms | — |
+| Precompiled bytecode on the runtime-only VM (406 KB executable) | 4.5 ms | 80 ms |
+| Compile the source at launch, then run | 68 ms | 3.7 s |
+
+So the VM itself costs about 1 ms; compiling at launch is never acceptable; and bytecode size is the cost that
+matters. The large program's size comes from lowering inlining almost every call, which TODO-5536 addresses.
+
+**Rules for the app path:**
+- Ship precompiled bytecode only. The runner links `primec_embed_runtime_lib` (no compiler) into one executable, with
+  the bytecode embedded in it or next to it; compiling at launch exists only for development.
+- Keep the bytecode small and cheap to load (TODO-5536): size-oriented lowering for apps, and load and validate
+  functions lazily instead of decoding the whole module up front.
+- Link only Foundation and AppKit; no Swift runtime, no Metal or QuartzCore unless a feature needs them, no extra
+  dylibs (the system frameworks come from the dyld shared cache).
+- Show the window before doing anything else, then load the file. Put the text in the text storage in one batch;
+  very large files show their first screen first.
+- Use a plain `NSWindow`, not the `NSDocument` architecture (autosave, versions, file coordination and iCloud work at
+  open time), and turn off window state restoration.
+- Use TextKit 2 (`NSTextLayoutManager`), which lays out only the visible part of the text.
+- Start services that spin up helper processes (continuous spell and grammar checking, text completion, data detectors)
+  after the first frame, or leave them off by default.
+- No child processes, no network or iCloud lookups and no open panel during launch.
+
+**How it is measured** (TODO-5535): a launch harness starts an app, records the time until its first window is on
+screen (window-list polling) and until the text is drawn (a signpost from the app), for cold and warm launches. It runs
+the PrimeStruct editor, the reference Objective-C++ editor, and installed editors (TextEdit and others) for comparison.
+
+## 2. Principles
 
 - **Native first.** Each widget is the platform's own control, so it brings the platform's editing, selection,
   clipboard, undo, input methods, accessibility, spell checking and look. PrimeStruct code never draws a native
@@ -16,19 +57,19 @@ renderer.
 - **Best effort per platform.** The API describes what an app wants (a menu bar, a text view, a save prompt). Each
   platform does as much of it as it can; where a platform has no equivalent, the call is a documented no-op or the
   nearest native form (for example, an iOS app has no menu bar, so its menus become a toolbar or are omitted). The
-  coverage matrix in section 8 is the contract.
+  coverage matrix in section 9 is the contract.
 - **The program owns the loop.** `main` creates the app, then loops on `waitEvent()` until it decides to quit. State
   lives in ordinary locals, and events arrive as a sum type handled with `pick`; no callbacks are needed.
-- **One C ABI, many hosts.** Every platform implements the same small C interface (section 3). Programs reach it
+- **One C ABI, many hosts.** Every platform implements the same small C interface (section 4). Programs reach it
   through `[host]` functions; the runner binds them. The same program runs against the macOS backend, a headless test
   backend, and later Windows and Linux backends.
 - **VM first.** Host calls run only on the VM today (`docs/spec/host-and-core-library.md`), so the first runner embeds
-  the VM (`docs/Embedding.md`). Compiled backends calling the ABI directly come later (section 9).
+  the VM (`docs/Embedding.md`). Compiled backends calling the ABI directly come later (section 10).
 - **Testable without a screen.** A headless backend implements the whole ABI in memory: it replays a scripted list of
   user actions and records every widget call, so the editor's behavior is golden-tested on Linux CI. Only the thin
   platform backends need manual checks on their OS.
 
-## 2. Architecture
+## 3. Architecture
 
 ```
   app.prime ──[host] calls──▶ runner (embeds primec VM, binds ps_ui_* by name)
@@ -51,7 +92,7 @@ renderer.
 - `stdlib/std/ui/native/`: the PrimeStruct surface: `[host]` declarations plus `App`, `Window`, `TextView`, `Menu`
   and the `AppEvent` sum.
 
-## 3. The C ABI (version 0)
+## 4. The C ABI (version 0)
 
 Handles are opaque non-zero `uint64_t`; `0` means none or failure. Strings in and out are UTF-8. Every function
 is callable only on the thread that called `ps_ui_init`, the main thread on macOS.
@@ -76,7 +117,7 @@ is callable only on the thread that called `ps_ui_init`, the main thread on macO
 - **Versioning.** `ps_ui_abi_version() -> i32` returns 0 for this table. Additions append functions; a change to an
   existing signature bumps the version.
 
-## 4. The PrimeStruct surface
+## 5. The PrimeStruct surface
 
 ```prime
 import /std/ui/native/*
@@ -106,7 +147,7 @@ main() {
 
 The names follow `docs/CodeExamples.md`; the exact API is settled in the stdlib slice (TODO-5529).
 
-## 5. The text editor example
+## 6. The text editor example
 
 `examples/apps/text_editor/main.prime` is a single-window plain-text editor:
 
@@ -117,7 +158,7 @@ The names follow `docs/CodeExamples.md`; the exact API is settled in the stdlib 
 - Open and Save read and write UTF-8 files; a read or write error is shown in an alert instead of quitting.
 - The text view uses the system monospace font; everything else about editing comes from the native control.
 
-## 6. Runtime gaps and how this plan closes them
+## 7. Runtime gaps and how this plan closes them
 
 | Gap | Resolution |
 | --- | --- |
@@ -127,13 +168,13 @@ The names follow `docs/CodeExamples.md`; the exact API is settled in the stdlib 
 | No callbacks | Events are values (`AppEvent` sum) returned by `waitEvent()`. |
 | Native file I/O bugs (TODO-5514) | Not on the VM path; fixed separately. |
 
-## 7. Packaging
+## 8. Packaging
 
 - CMake: `PRIMESTRUCT_BUILD_NATIVE_UI` (default ON on `APPLE`) builds the AppKit backend and `primestruct_app`.
 - `scripts/bundle_macos_app.sh <app.prime> <Name>` makes `Name.app`: the runner, compiled bytecode, the stdlib if
   needed, an `Info.plist`, and an ad-hoc signature for local runs. Notarization is out of scope.
 
-## 8. Platform coverage (contract)
+## 9. Platform coverage (contract)
 
 | Feature | macOS (AppKit) | Headless | Windows (Win32) | Linux (GTK 4) | iOS (UIKit) |
 | --- | --- | --- | --- | --- | --- |
@@ -146,7 +187,7 @@ The names follow `docs/CodeExamples.md`; the exact API is settled in the stdlib 
 
 Planned columns are design intent; only macOS and headless are in the first slices.
 
-## 9. Later
+## 10. Later
 
 - **Compiled programs.** Let the C++ emitter (`--emit=exe`/`optexe`) call the ABI directly through `extern "C"`, then
   the native backend through a platform shim; programs stop needing the VM runner (TODO-5534).
@@ -154,7 +195,7 @@ Planned columns are design intent; only macOS and headless are in the first slic
   stacks; each added to the ABI and the coverage matrix together.
 - **Second and third platforms** (TODO-5533).
 
-## 10. TODO slices
+## 11. TODO slices
 
 | TODO | Slice | Verifiable here |
 | --- | --- | --- |
@@ -165,3 +206,5 @@ Planned columns are design intent; only macOS and headless are in the first slic
 | TODO-5532 | Text editor example with headless golden scenarios | yes (macOS run by hand) |
 | TODO-5533 | Windows and Linux backends | per platform |
 | TODO-5534 | Compiled backends call the ABI | yes for the C++ emitter |
+| TODO-5535 | Launch-time harness and the reference Objective-C++ editor | on a Mac only |
+| TODO-5536 | Small, lazily loaded bytecode for apps | yes |
