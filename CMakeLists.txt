@@ -1265,6 +1265,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/ui/test_native_ui_bindings.cpp
     tests/unit/ui/test_native_ui_stdlib.cpp
     tests/unit/ui/test_native_ui_editor.cpp
+    tests/unit/ui/test_native_ui_editor_acceptance.cpp
   )
   target_include_directories(PrimeStruct_native_ui_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
   target_compile_definitions(PrimeStruct_native_ui_tests PRIVATE
@@ -1302,6 +1303,16 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_native_ui_editor
+                       PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
+  # The editor acceptance gate (docs/todo.md TODO-5552..5554): the editor
+  # scenarios plus the acceptance suite, in one release-gate entry.
+  add_test(
+    NAME PrimeStruct_native_ui_editor_acceptance
+    COMMAND $<TARGET_FILE:PrimeStruct_native_ui_tests>
+            "--test-suite=primestruct.ui.editor,primestruct.ui.editor_acceptance"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_native_ui_editor_acceptance
                        PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
   if(PRIMESTRUCT_BUILD_NATIVE_UI AND APPLE)
     # Bundles an example, runs it against AppKit in snapshot mode and checks the

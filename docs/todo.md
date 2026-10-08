@@ -109,6 +109,12 @@ of sync with them.
 | TODO-5536 | Small, lazily loaded bytecode for apps | ready | bytecode-startup |
 | TODO-5535 | Launch-time harness and reference Objective-C++ editor | ready | native-ui-launch |
 | TODO-5530 | Read and write whole files as String | blocked | file-text |
+| TODO-5548 | Unicode text in the editor | ready | native-ui-editor-accept |
+| TODO-5551 | Standard menu set for the editor | blocked | native-ui-editor-accept |
+| TODO-5549 | Styled-text attribute runs in the native UI ABI | blocked | native-ui-editor-accept |
+| TODO-5550 | Syntax highlighting in the editor | blocked | native-ui-editor-accept |
+| TODO-5553 | Editor acceptance screenshots | blocked | native-ui-editor-accept |
+| TODO-5554 | Close the editor acceptance gate | blocked | native-ui-editor-accept |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5534 | Compiled programs call the native UI ABI | deferred | native-ui-compiled |
 | TODO-5510 | `return` returns from pick arms and lambdas correctly | ready | control-returns |
@@ -137,6 +143,7 @@ of sync with them.
 
 - TODO-5537 (bytes): `u8` and byte-addressed memory
 - TODO-5538 (slices): slices are real borrows with shared operations
+- TODO-5548 (native-ui-editor-accept): Unicode text in the editor
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5510 (control-returns): `return` returns from pick arms and lambdas correctly
@@ -145,17 +152,19 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5536
-2. TODO-5537
-3. TODO-5538
-4. TODO-5535
-5. TODO-5510
-6. TODO-5524
-7. TODO-5527
+1. TODO-5548
+2. TODO-5536
+3. TODO-5537
+4. TODO-5538
+5. TODO-5535
+6. TODO-5510
+7. TODO-5524
+8. TODO-5527
 
 ### Priority Lanes
 
 - Strings and slices (docs/spec/strings-and-views.md): TODO-5537, TODO-5538, TODO-5539, TODO-5540, TODO-5530, TODO-5541, TODO-5542
+- Native UI editor acceptance (docs/NativeUiPlan.md): TODO-5548, TODO-5551, TODO-5549, TODO-5550, TODO-5553, TODO-5554
 - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533, TODO-5534
 - Lifecycle (docs/spec/value-lifecycle.md): TODO-5527
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
@@ -349,6 +358,84 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - tests on VM, native and C++ read empty, ASCII, multi-byte UTF-8, multi-line and missing files, write them back and compare; invalid UTF-8 reports a `FileError`
     - full release gate green
   - stop_rule: whole-file text read and write only.
+
+- [ ] TODO-5548: Unicode text in the editor
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-08
+  - phase: Native UI editor acceptance (requirement 2)
+  - parallel_track: native-ui-editor-accept
+  - scope: Load, display and save multi-byte UTF-8 in the editor: accents, CJK, emoji, combining marks, an RTL sample. Fixture `tests/fixtures/ui/unicode_sample.txt`; headless acceptance cases assert a byte-exact open/save round trip through the editor program. On AppKit, cursor movement and selection use grapheme boundaries through the platform text view (document how, and verify by hand or with a smoke test of `PRIMESTRUCT_UI_TYPE`). The editor's snapshot shows the Unicode rendering (see TODO-5553).
+  - acceptance:
+    - headless round trip of the fixture is byte-exact (including a file without trailing newline and CRLF)
+    - AppKit grapheme behavior documented in docs/NativeUiPlan.md with how it was checked
+    - the cases are part of the editor acceptance gate; full release gate green
+  - stop_rule: Unicode load/save/display only; no highlighting.
+
+- [ ] TODO-5551: Standard menu set for the editor
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5548
+  - created_at: 2026-10-08
+  - phase: Native UI editor acceptance (requirement 4)
+  - parallel_track: native-ui-editor-accept
+  - scope: Menu bar of an App menu (About, Quit), File (New, Open, Save, Save As, Close), Edit (Undo, Redo, Cut, Copy, Paste, Select All, Find), View, Window and Help with the standard macOS shortcuts. Extend the ABI's standard items (View: full screen, zoom; Window: minimize, zoom, bring all to front; Help) in NativeUi.h, headless, AppKit, bindings and `/std/ui/native`, and use them in the editor.
+  - acceptance:
+    - a headless gate test asserts the exact menu structure and shortcuts of the editor
+    - AppKit builds the same menus (smoke test or by-hand note in TODO-5545)
+    - the case is part of the editor acceptance gate; full release gate green
+  - stop_rule: menus and shortcuts only.
+
+- [ ] TODO-5549: Styled-text attribute runs in the native UI ABI
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5551
+  - created_at: 2026-10-08
+  - phase: Native UI editor acceptance (requirement 1, ABI half)
+  - parallel_track: native-ui-editor-accept
+  - scope: Add `ps_ui_text_view_clear_styles(view)` and `ps_ui_text_view_add_style(view, startByte, endByte, rgb, flags)` (flags: bold, italic) to NativeUi.h with UTF-8 byte ranges, implemented in the headless backend (inspectable runs), AppKit (temporary attributes on the layout manager, so editing and undo are unaffected), the bindings and `TextView` in `/std/ui/native`; a getter for the text as bytes already exists. Document the ABI in docs/NativeUiPlan.md.
+  - acceptance:
+    - headless tests for runs, clearing, out-of-range and mid-code-point ranges (rejected), and AppKit smoke build
+    - the ABI call counts in the bindings test are updated; full release gate green
+  - stop_rule: attribute runs only; no highlighter.
+
+- [ ] TODO-5550: Syntax highlighting in the editor
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5549
+  - created_at: 2026-10-08
+  - phase: Native UI editor acceptance (requirement 1, highlighter half)
+  - parallel_track: native-ui-editor-accept
+  - scope: A highlighter in the editor program for PrimeStruct, C/C++, Python, JSON and Markdown, chosen by file extension, that recomputes attribute runs on load and on text change (keywords, strings, comments, numbers, and for Markdown headings/emphasis/code). Sample fixtures under `tests/fixtures/ui/highlight/`.
+  - acceptance:
+    - headless cases assert the attribute runs for one sample file per language, in the editor acceptance gate
+    - unknown extensions get no runs; full release gate green
+  - stop_rule: the five languages and their runs only.
+
+- [ ] TODO-5553: Editor acceptance screenshots
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5550
+  - created_at: 2026-10-08
+  - phase: Native UI editor acceptance (requirement 5)
+  - parallel_track: native-ui-editor-accept
+  - scope: With `PRIMESTRUCT_UI_SNAPSHOT` (and `PRIMESTRUCT_UI_TYPE` or a file argument), capture the editor showing highlighted code with Unicode text, and a second shot with a menu open if AppKit can render it into a PNG without Screen Recording permission (otherwise rely on the menu-structure test and say so). Extend the AppKit smoke test to check the first PNG is non-trivial.
+  - acceptance:
+    - both PNGs (or the documented reason for the second) are produced from the release build and their paths reported
+    - full release gate green
+  - stop_rule: screenshots and the smoke check only.
+
+- [ ] TODO-5554: Close the editor acceptance gate
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5553
+  - created_at: 2026-10-08
+  - phase: Native UI editor acceptance
+  - parallel_track: native-ui-editor-accept
+  - scope: Verify `PrimeStruct_native_ui_editor_acceptance` has a case for each of the five requirements (highlighting per language, Unicode round trip, save/load, menu structure, screenshot smoke) and add a docs/NativeUiPlan.md section listing them, so the gate is the single statement of "the editor is acceptable".
+  - acceptance:
+    - the doc section maps every requirement to a gate case; full release gate green
+  - stop_rule: documentation and any missing gate case only.
 
 - [ ] TODO-5533: Windows and Linux native UI backends
   - owner: ai
