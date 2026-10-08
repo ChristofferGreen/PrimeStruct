@@ -217,3 +217,25 @@ Planned columns are design intent; only macOS and headless are in the first slic
 | TODO-5534 | Compiled backends call the ABI | yes for the C++ emitter |
 | TODO-5535 | Launch-time harness and the reference Objective-C++ editor | on a Mac only |
 | TODO-5536 | Small, lazily loaded bytecode for apps | yes |
+
+## 12. macOS backend as built (TODO-5531)
+
+- `src/ui/appkit/NativeUiAppKit.mm` implements the whole ABI with a plain `NSWindow` (no `NSDocument`, no state
+  restoration), `NSScrollView` + `NSTextView` (TextKit 2 default stack), `NSMenu` with key equivalents and
+  responder-chain standard items, `NSOpenPanel`/`NSSavePanel` and `NSAlert`. `ps_ui_wait_event` pumps the AppKit
+  queue itself, so the program owns the loop; the application delegate turns window close, Cmd+Q and edits into events
+  and never terminates the process on its own.
+- `tools/primestruct_app` runs a program: `primestruct_app app.prime` compiles at launch (development),
+  `primestruct_app app.psir` runs bytecode, and `primestruct_app_runtime` (no compiler linked, about 1 MB) is the
+  bundle runner. `scripts/bundle_macos_app.sh app.prime Name` makes `Name.app` with the runtime runner, the bytecode in
+  `Contents/Resources/app.psir`, an `Info.plist` and an ad-hoc signature. `PRIMESTRUCT_BUILD_NATIVE_UI` (default ON
+  on Apple, OFF elsewhere) controls the Objective-C++ targets.
+- **Snapshots without Screen Recording permission.** With `PRIMESTRUCT_UI_SNAPSHOT=/path/out.png`, the first shown
+  window is rendered by its own view hierarchy (`cacheDisplayInRect`) into a PNG once its layout has settled, and the
+  program is then told to quit. The app runs as an accessory (no Dock icon, no activation). CTest
+  `PrimeStruct_native_ui_appkit_smoke` bundles `examples/native_ui/hello_window.prime`, runs the bundle in snapshot
+  mode and checks the PNG.
+
+Smoke checklist (macOS 27, arm64, 2026-10-08): window and title, text view with preset text, bundle launch from
+bytecode, snapshot, quit request ending the loop: checked by the automated smoke. Typing, menu shortcuts, open/save
+panels and the alert need a person at the keyboard: TODO-5545.

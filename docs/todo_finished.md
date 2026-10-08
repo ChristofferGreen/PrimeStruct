@@ -2003,6 +2003,7 @@ are left unarchived.
 | TODO-5522 | Builtin vector<T> locals destroy their elements | [2026-10.md](todo_archive/2026-10.md) | 2026-10-06 |
 | TODO-5528 | Native UI C ABI with a headless backend and engine bindings | [2026-10.md](todo_archive/2026-10.md) | 2026-10-08 |
 | TODO-5529 | `/std/ui/native` surface with an `AppEvent` loop | [2026-10.md](todo_archive/2026-10.md) | 2026-10-08 |
+| TODO-5531 | macOS AppKit backend and app runner | [2026-10.md](todo_archive/2026-10.md) | 2026-10-08 |
 
 <!-- INDEX-END -->
 

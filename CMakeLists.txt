@@ -803,12 +803,53 @@ primestructEnableWarnings(primec_embed_lib)
 # include/primec/ui; this library holds the headless backend that implements
 # it in memory and the bindings that expose every ABI function to a
 # ScriptEngine under its [host] name. Platform backends come later.
-add_library(primec_ui_lib src/ui/headless/NativeUiHeadless.cpp src/ui/NativeUiBindings.cpp)
-target_include_directories(primec_ui_lib PUBLIC
+add_library(primec_ui_bindings_lib src/ui/NativeUiBindings.cpp)
+target_include_directories(primec_ui_bindings_lib PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
-target_link_libraries(primec_ui_lib PUBLIC primec_embed_runtime_lib)
-primestructEnableWarnings(primec_ui_lib)
+target_link_libraries(primec_ui_bindings_lib PUBLIC primec_embed_runtime_lib)
+primestructEnableWarnings(primec_ui_bindings_lib)
+
+add_library(primec_ui_headless_lib src/ui/headless/NativeUiHeadless.cpp)
+target_include_directories(primec_ui_headless_lib PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+primestructEnableWarnings(primec_ui_headless_lib)
+
+# Bindings plus the headless backend: what tests and the headless runner link.
+add_library(primec_ui_lib INTERFACE)
+target_link_libraries(primec_ui_lib INTERFACE primec_ui_bindings_lib primec_ui_headless_lib)
+
+# macOS AppKit backend and the `primestruct_app` runners (TODO-5531). Off by
+# default elsewhere, so non-Apple hosts never see Objective-C++.
+if(APPLE AND NOT CMAKE_SYSTEM_NAME STREQUAL "iOS")
+  set(_primestruct_native_ui_default ON)
+else()
+  set(_primestruct_native_ui_default OFF)
+endif()
+option(PRIMESTRUCT_BUILD_NATIVE_UI "Build the platform native UI backend and runner" ${_primestruct_native_ui_default})
+if(PRIMESTRUCT_BUILD_NATIVE_UI AND APPLE)
+  # Compile Objective-C++ with the compiler that builds the C++ code instead of
+  # whatever CXX the environment holds.
+  if(NOT CMAKE_OBJCXX_COMPILER AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set(CMAKE_OBJCXX_COMPILER "${CMAKE_CXX_COMPILER}")
+  endif()
+  enable_language(OBJCXX)
+  add_library(primec_ui_appkit_lib STATIC src/ui/appkit/NativeUiAppKit.mm)
+  set_target_properties(primec_ui_appkit_lib PROPERTIES OBJCXX_STANDARD 20 OBJCXX_STANDARD_REQUIRED ON)
+  target_compile_options(primec_ui_appkit_lib PRIVATE -fobjc-arc)
+  target_include_directories(primec_ui_appkit_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+  target_link_libraries(primec_ui_appkit_lib PUBLIC "-framework AppKit" "-framework Foundation")
+
+  # Development runner: compiles .prime at launch, or runs .psir bytecode.
+  add_executable(primestruct_app tools/primestruct_app/main.cpp)
+  target_link_libraries(primestruct_app PRIVATE primec_ui_bindings_lib primec_ui_appkit_lib primec_embed_lib)
+  # Bundle runner: bytecode only, no compiler linked.
+  add_executable(primestruct_app_runtime tools/primestruct_app/main.cpp)
+  target_compile_definitions(primestruct_app_runtime PRIVATE PRIMESTRUCT_APP_RUNTIME_ONLY)
+  target_link_libraries(primestruct_app_runtime PRIVATE primec_ui_bindings_lib primec_ui_appkit_lib
+                                                        primec_embed_runtime_lib)
+endif()
 
 # Development runner: compiles a program and runs it on the headless native UI
 # backend with scripted user actions (see its header comment).
@@ -1253,6 +1294,20 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_native_ui_stdlib
                        PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
+  if(PRIMESTRUCT_BUILD_NATIVE_UI AND APPLE)
+    # Bundles an example, runs it against AppKit in snapshot mode and checks the
+    # PNG of the laid-out window (needs a window-server session).
+    add_test(
+      NAME PrimeStruct_native_ui_appkit_smoke
+      COMMAND ${CMAKE_COMMAND}
+              -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
+              -DBUILD_DIR=${CMAKE_BINARY_DIR}
+              -DWORK_DIR=${CMAKE_BINARY_DIR}/native_ui_appkit_smoke
+              -P ${CMAKE_SOURCE_DIR}/cmake/NativeUiAppKitSmokeTest.cmake
+    )
+    set_tests_properties(PrimeStruct_native_ui_appkit_smoke
+                         PROPERTIES TIMEOUT 120 RESOURCE_LOCK native_ui_appkit)
+  endif()
 
   set(PrimeStructBackendAllTestSources
     tests/unit/ir_pipeline/test_ir_pipeline.cpp

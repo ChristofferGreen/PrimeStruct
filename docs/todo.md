@@ -107,9 +107,8 @@ of sync with them.
 | TODO-5541 | Host functions and embedding use `String` and `string` | blocked | string-host |
 | TODO-5542 | Native and C++ parity for bytes, slices and strings | blocked | string-backends |
 | TODO-5536 | Small, lazily loaded bytecode for apps | ready | bytecode-startup |
-| TODO-5535 | Launch-time harness and reference Objective-C++ editor | blocked | native-ui-launch |
+| TODO-5535 | Launch-time harness and reference Objective-C++ editor | ready | native-ui-launch |
 | TODO-5530 | Read and write whole files as String | blocked | file-text |
-| TODO-5531 | macOS AppKit backend and app runner | ready | native-ui-macos |
 | TODO-5532 | Native text editor example | blocked | native-ui-editor |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5534 | Compiled programs call the native UI ABI | deferred | native-ui-compiled |
@@ -133,23 +132,24 @@ of sync with them.
 | TODO-5483 | Verify arm64 SextI32 on a macOS machine | deferred | ir-semantics |
 | TODO-5543 | Repair or retire the disabled Apple/arm64 native backend test shards | deferred | native-arm64-tests |
 | TODO-5544 | Method calls on `pick` payload bindings lower | deferred | pick-bindings |
+| TODO-5545 | Record the macOS AppKit manual smoke checklist | deferred | native-ui-macos-manual |
 
 ### Ready Now
 
 - TODO-5537 (bytes): `u8` and byte-addressed memory
 - TODO-5538 (slices): slices are real borrows with shared operations
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
-- TODO-5531 (native-ui-macos): macOS AppKit backend and app runner
+- TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5510 (control-returns): `return` returns from pick arms and lambdas correctly
 - TODO-5524 (result-error-structs): int-backed error structs round-trip through stdlib Result sums
 - TODO-5527 (lifecycle-result-payloads): stdlib Result locals destroy their payload once
 
 ### Immediate Next 10
 
-1. TODO-5531
-2. TODO-5536
-3. TODO-5537
-4. TODO-5538
+1. TODO-5536
+2. TODO-5537
+3. TODO-5538
+4. TODO-5535
 5. TODO-5510
 6. TODO-5524
 7. TODO-5527
@@ -157,13 +157,13 @@ of sync with them.
 ### Priority Lanes
 
 - Strings and slices (docs/spec/strings-and-views.md): TODO-5537, TODO-5538, TODO-5539, TODO-5540, TODO-5530, TODO-5541, TODO-5542
-- Native UI (docs/NativeUiPlan.md): TODO-5531, TODO-5536, TODO-5535, TODO-5532, TODO-5533, TODO-5534
+- Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5532, TODO-5533, TODO-5534
 - Lifecycle (docs/spec/value-lifecycle.md): TODO-5527
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5514, TODO-5516, TODO-5517
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
-- macOS support: TODO-5543 (needs macOS)
+- macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
@@ -327,8 +327,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 
 - [ ] TODO-5535: Launch-time harness and reference Objective-C++ editor
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5531
+  - status: ready
   - created_at: 2026-10-08
   - phase: Native UI (docs/NativeUiPlan.md)
   - parallel_track: native-ui-launch
@@ -351,19 +350,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - tests on VM, native and C++ read empty, ASCII, multi-byte UTF-8, multi-line and missing files, write them back and compare; invalid UTF-8 reports a `FileError`
     - full release gate green
   - stop_rule: whole-file text read and write only.
-
-- [ ] TODO-5531: macOS AppKit backend and app runner
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-08
-  - phase: Native UI (docs/NativeUiPlan.md)
-  - parallel_track: native-ui-macos
-  - scope: Implement the ABI in `src/ui/appkit/` (Objective-C++: `NSApplication` with a program-driven event loop, `NSWindow` with the edited marker, `NSScrollView`+`NSTextView`, `NSMenu` with key equivalents and responder-chain standard items, `NSOpenPanel`/`NSSavePanel`, `NSAlert`), the `tools/primestruct_app` runner (compile at launch in development, precompiled bytecode when bundled), the `PRIMESTRUCT_BUILD_NATIVE_UI` CMake option (APPLE only) and `scripts/bundle_macos_app.sh`. Follow the startup rules of docs/NativeUiPlan.md section 1: bytecode only in bundles, runtime-only VM linked into one executable, only Foundation and AppKit, window before file load, plain `NSWindow` without `NSDocument` or state restoration, TextKit 2, helper-process services started after the first frame.
-  - acceptance:
-    - builds in CI on non-Apple hosts with the option off; on a Mac, a smoke checklist in docs/NativeUiPlan.md passes (window, typing, menus and shortcuts, open/save panels, alert, quit) and is recorded by the owner
-    - full release gate green
-  - stop_rule: macOS backend, runner and bundling only.
-  - notes: needs a Mac to build and verify (like TODO-5483).
 
 - [ ] TODO-5532: Native text editor example
   - owner: ai
@@ -595,3 +581,15 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - a pick payload struct binding accepts method calls in VM, native and C++; a negative test keeps the unknown-method diagnostic
     - docs/spec/stdlib-reference.md "Native UI" drops the copy-first note; full release gate green
   - stop_rule: method-call target publication for pick bindings and imported static helpers only.
+
+- [ ] TODO-5545: Record the macOS AppKit manual smoke checklist
+  - owner: human
+  - status: deferred
+  - deferred_reason: needs a person at a Mac keyboard; keystrokes, menu shortcuts and modal panels cannot be driven by the automated smoke test.
+  - created_at: 2026-10-08
+  - phase: Native UI (docs/NativeUiPlan.md)
+  - parallel_track: native-ui-macos-manual
+  - scope: Run `scripts/bundle_macos_app.sh examples/native_ui/hello_window.prime Hello`, open `build-release/apps/Hello.app` and check by hand: typing marks the window edited, Cmd+S and the Edit menu items work (undo, copy, paste, select all, find), the open and save panels and the alert answer correctly, Cmd+Q and the close button reach the program as events. Record the result in docs/NativeUiPlan.md section 12.
+  - acceptance:
+    - each item is recorded as passed or filed as a follow-up TODO
+  - stop_rule: recording the manual run only.
