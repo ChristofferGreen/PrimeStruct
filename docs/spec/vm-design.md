@@ -75,7 +75,8 @@
 - **Strings & IO:** string values are indices into the module string table; `PrintString`/`LoadStringByte` read from it.
   File operations use OS descriptors stored as `i64` values and must be explicitly closed or they close on scope end via
   lowering.
-- **VM-owned dynamic strings (implemented: VM heap, `LoadStringByteDynamic`, embed string arguments and results):** a string value is a `u64`. Before the VM heap existed it could only index the immutable module table; this section records the model that is now implemented, without changing how module-table strings behave.
+- **VM-owned dynamic strings (implemented: VM heap, `LoadStringByteDynamic`, embed string arguments and results; to be
+  replaced by `String` per [Strings, Text and Slices](strings-and-views.md)):** a string value is a `u64`. Before the VM heap existed it could only index the immutable module table; this section records the model that is now implemented, without changing how module-table strings behave.
   - *Index space.* A string value stays a `u64`. Values with bit 63 clear index the module table exactly as today.
     Values with bit 63 set are *dynamic*: `0x8000_0000_0000_0000 | generation << 32 | slot` (31-bit generation, 32-bit
     slot). The tag is independent of the module's table size, so existing indices and `.psir` files keep their meaning.

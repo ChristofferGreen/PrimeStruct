@@ -12,6 +12,8 @@
 
 ### Type Grammar (canonical)
 - **Atomic:** `bool`, `i32`, `i64`, `u64`, `f32`, `f64`, `string`, `void`, `Self`.
+  Planned ([Strings, Text and Slices](strings-and-views.md)): `u8`, `string` as a borrowed read-only UTF-8 view (literals
+  are static `string`s), and the owned `String`.
 - **Composite:** `array<T>`, `vector<T>`, `map<K, V>`, `Pointer<T>`, `Reference<T>`,
   stdlib-owned `soa<T>`, stdlib-owned `tuple<Ts...>`, and draft math value
   types (`Mat2`, `Mat3`, `Mat4`, `Quat`).
@@ -45,14 +47,17 @@ language/runtime-owned, which remain hybrid, and which should move fully into st
 `.prime` implementations.
 
 - `core`
-  Public types/surfaces: fixed-width scalars, `string`, `array<T>`, `Pointer<T>`, `Reference<T>`,
-  and the capability view model around `Reference<T, Capability>` / `Slice<T, Capability>`.
+  Public types/surfaces: fixed-width scalars (planned: `u8`), `string`, `array<T>`, `Pointer<T>`, `Reference<T>`,
+  and the capability view model around `Reference<T, Capability>` / `Slice<T, Capability>`. Planned: `string`
+  becomes the borrowed UTF-8 view of [Strings, Text and Slices](strings-and-views.md).
   Ownership rule: language/runtime owns both the public surface and the substrate because other
   features depend on them directly.
   Migration stance: treat these as stable substrate; delete workaround routing around them instead
   of trying to de-builtinize them.
 - `hybrid`
-  Public types/surfaces: `Result<T, Error>`, `File<Mode>`, `Buffer<T>`, `/std/gfx/*`.
+  Public types/surfaces: `Result<T, Error>`, `File<Mode>`, `Buffer<T>`, `/std/gfx/*`, and (planned) the owned
+  `String`: its API and string heap live in the stdlib, with runtime substrate only for byte memory and the host
+  boundary ([Strings, Text and Slices](strings-and-views.md)).
   Ownership rule: keep only minimal builtin/runtime substrate for propagation, host I/O, and
   device interaction. Imported value-carrying `Result<T, Error>` construction now has a
   stdlib-owned sum surface under `/std/result/*`; `Result.ok(value)`,

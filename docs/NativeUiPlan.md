@@ -94,7 +94,8 @@ the PrimeStruct editor, the reference Objective-C++ editor, and installed editor
 
 ## 4. The C ABI (version 0)
 
-Handles are opaque non-zero `uint64_t`; `0` means none or failure. Strings in and out are UTF-8. Every function
+Handles are opaque non-zero `uint64_t`; `0` means none or failure. Text in and out is UTF-8; programs pass `string`
+or `String` and receive `String` ([Strings, Text and Slices](spec/strings-and-views.md)). Every function
 is callable only on the thread that called `ps_ui_init`, the main thread on macOS.
 
 | Group | Functions |
@@ -102,9 +103,9 @@ is callable only on the thread that called `ps_ui_init`, the main thread on macO
 | App | `ps_ui_init(appName)`, `ps_ui_quit()`, `ps_ui_platform() -> i32` (macOS, Windows, Linux, iOS, headless) |
 | Events | `ps_ui_wait_event() -> i32 kind`, `ps_ui_event_window() -> u64`, `ps_ui_event_widget() -> u64`, `ps_ui_event_command() -> i32` |
 | Window | `ps_ui_window_create(title, width, height) -> u64`, `_set_title`, `_set_content(window, widget)`, `_set_edited(window, bool)`, `_show`, `_close` |
-| Text view | `ps_ui_text_view_create() -> u64`, `_get_text -> string`, `_set_text`, `_set_monospace(bool)`, `_is_modified -> bool`, `_clear_modified` |
+| Text view | `ps_ui_text_view_create() -> u64`, `_get_text -> String`, `_set_text`, `_set_monospace(bool)`, `_is_modified -> bool`, `_clear_modified` |
 | Menus | `ps_ui_menu_create(title) -> u64`, `_add_item(menu, title, shortcut, commandId)`, `_add_separator`, `_add_standard(menu, standardId)`, `ps_ui_menu_bar_add(menu)` |
-| Dialogs | `ps_ui_open_panel(title) -> string`, `ps_ui_save_panel(title, suggestedName) -> string` (empty string means cancelled), `ps_ui_alert(message, detail, buttons) -> i32` |
+| Dialogs | `ps_ui_open_panel(title) -> String`, `ps_ui_save_panel(title, suggestedName) -> String` (empty means cancelled), `ps_ui_alert(message, detail, buttons) -> i32` |
 
 - **Events.** `ps_ui_wait_event` blocks in the platform's run loop until something the program should handle happens,
   then returns its kind; the accessors read the fields of that event until the next wait. Kinds: `command` (a menu
@@ -162,7 +163,7 @@ The names follow `docs/CodeExamples.md`; the exact API is settled in the stdlib 
 
 | Gap | Resolution |
 | --- | --- |
-| Programs cannot read a whole file into a string (they cannot build strings) | VM: a stdlib `readText(path)` that returns a VM-owned run-time string (TODO-5530); writing a run-time string already works (`FileWriteString*` resolves dynamic strings). |
+| Programs cannot build, slice or own text; run-time strings are never freed during a run | Owned `String`, the `string` text view and slices ([Strings, Text and Slices](spec/strings-and-views.md), TODO-5537 to TODO-5542); whole-file text read and write as `String` (TODO-5530). Text from `getText()` is then a `String` freed when dropped, so a long editing session does not grow memory. |
 | Host calls are VM-only | The runner embeds the VM; compiled backends follow in TODO-5534. |
 | Each `Script::call` is a fresh run | The program owns the loop inside one long `main` run, so its state persists. |
 | No callbacks | Events are values (`AppEvent` sum) returned by `waitEvent()`. |
@@ -201,7 +202,7 @@ Planned columns are design intent; only macOS and headless are in the first slic
 | --- | --- | --- |
 | TODO-5528 | C ABI header, headless backend, engine bindings, unit tests | yes |
 | TODO-5529 | `/std/ui/native` surface and `AppEvent`, VM compile-run tests on the headless backend | yes |
-| TODO-5530 | `readText(path)` into a VM-owned string | yes |
+| TODO-5530 | Read and write whole files as `String` (after the string slices) | yes |
 | TODO-5531 | AppKit backend, `primestruct_app` runner, CMake and `.app` bundling | builds and runs on a Mac only |
 | TODO-5532 | Text editor example with headless golden scenarios | yes (macOS run by hand) |
 | TODO-5533 | Windows and Linux backends | per platform |

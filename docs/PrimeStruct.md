@@ -45,6 +45,7 @@ rules), **normative (draft)** (rules still marked draft), **design direction** (
 | [Move/Copy/Destroy, Optional Values, and Lambdas](spec/value-lifecycle.md) | normative | 172 |
 | [Literals and Composite Construction](spec/literals-and-composite-construction.md) | normative | 403 |
 | [Pointers and References](spec/pointers-and-references.md) | normative | 255 |
+| [Strings, Text and Slices](spec/strings-and-views.md) | design direction | 195 |
 | [VM Design](spec/vm-design.md) | implementation note | 99 |
 | [Examples (sketch)](spec/examples.md) | examples | 109 |
 | [Integration Points and Tooling](spec/integration-and-tooling.md) | implementation note / roadmap | 109 |

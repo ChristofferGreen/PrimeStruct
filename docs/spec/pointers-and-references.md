@@ -32,6 +32,10 @@
   `Reference<T>`, array, and pointer surfaces only; do not rely on
   `Reference<T, Capability>` or `Slice<T, Capability>` source syntax before a
   later implementation leaf adds it.
+  The planned slice surface (making slices from every contiguous container,
+  borrowing, the return-from-parameter rule and the shared operations) and the
+  `string` text view built on it are specified in
+  [Strings, Text and Slices](strings-and-views.md).
 - **Qualifiers:** `restrict<T>` is allowed on bindings and parameters only; it must match the binding type (including
   template args) and acts as an explicit type constraint. There is no `readonly` qualifier yet; use `mut` to opt into
   mutation.

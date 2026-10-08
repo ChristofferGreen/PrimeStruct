@@ -100,11 +100,17 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
+| TODO-5537 | `u8` and byte-addressed memory | ready | bytes |
+| TODO-5538 | Slices are real borrows with shared operations | ready | slices |
+| TODO-5539 | Owned `String` with the string heap | blocked | string-owned |
+| TODO-5540 | `string` as the UTF-8 text view | blocked | string-view |
+| TODO-5541 | Host functions and embedding use `String` and `string` | blocked | string-host |
+| TODO-5542 | Native and C++ parity for bytes, slices and strings | blocked | string-backends |
 | TODO-5536 | Small, lazily loaded bytecode for apps | ready | bytecode-startup |
 | TODO-5535 | Launch-time harness and reference Objective-C++ editor | blocked | native-ui-launch |
 | TODO-5528 | Native UI C ABI with a headless backend and engine bindings | ready | native-ui-abi |
 | TODO-5529 | `/std/ui/native` surface with an `AppEvent` loop | ready | native-ui-stdlib |
-| TODO-5530 | Read a whole file into a string on the VM | ready | vm-file-text |
+| TODO-5530 | Read and write whole files as String | blocked | file-text |
 | TODO-5531 | macOS AppKit backend and app runner | blocked | native-ui-macos |
 | TODO-5532 | Native text editor example | blocked | native-ui-editor |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
@@ -117,7 +123,7 @@ of sync with them.
 | TODO-5527 | Stdlib Result locals destroy their payload once | ready | lifecycle-result-payloads |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
 | TODO-5512 | Pointers and aliases count as borrows of their root | deferred | safety-borrows |
-| TODO-5513 | Methods through a dereferenced vector pointer read the right fields | ready | collections-access |
+| TODO-5513 | Methods through a dereferenced vector pointer read the right fields | deferred | collections-access |
 | TODO-5514 | Native file I/O writes newlines and reports errno | deferred | native-io |
 | TODO-5515 | Native Result.ok(Buffer) reads as ok | deferred | native-result |
 | TODO-5516 | Integer narrowing and float-to-int conversion agree across backends | deferred | numeric-conversions |
@@ -130,12 +136,12 @@ of sync with them.
 
 ### Ready Now
 
+- TODO-5537 (bytes): `u8` and byte-addressed memory
+- TODO-5538 (slices): slices are real borrows with shared operations
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
 - TODO-5528 (native-ui-abi): native UI C ABI with a headless backend and engine bindings
 - TODO-5529 (native-ui-stdlib): `/std/ui/native` surface with an `AppEvent` loop
-- TODO-5530 (vm-file-text): read a whole file into a string on the VM
 - TODO-5510 (control-returns): `return` returns from pick arms and lambdas correctly
-- TODO-5513 (collections-access): methods through a dereferenced vector pointer read the right fields
 - TODO-5524 (result-error-structs): int-backed error structs round-trip through stdlib Result sums
 - TODO-5527 (lifecycle-result-payloads): stdlib Result locals destroy their payload once
 
@@ -143,16 +149,17 @@ of sync with them.
 
 1. TODO-5528
 2. TODO-5536
-3. TODO-5530
-4. TODO-5529
-5. TODO-5510
-6. TODO-5513
+3. TODO-5537
+4. TODO-5538
+5. TODO-5529
+6. TODO-5510
 7. TODO-5524
 8. TODO-5527
 
 ### Priority Lanes
 
-- Native UI (docs/NativeUiPlan.md): TODO-5528, TODO-5536, TODO-5530, TODO-5529, TODO-5531, TODO-5535, TODO-5532, TODO-5533, TODO-5534
+- Strings and slices (docs/spec/strings-and-views.md): TODO-5537, TODO-5538, TODO-5539, TODO-5540, TODO-5530, TODO-5541, TODO-5542
+- Native UI (docs/NativeUiPlan.md): TODO-5528, TODO-5536, TODO-5529, TODO-5531, TODO-5535, TODO-5532, TODO-5533, TODO-5534
 - Lifecycle (docs/spec/value-lifecycle.md): TODO-5527
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
@@ -206,7 +213,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 
 - [ ] TODO-5513: Methods through a dereferenced vector pointer read the right fields
   - owner: ai
-  - status: ready
+  - status: deferred
   - created_at: 2026-10-06
   - phase: Correctness audit 2026-10
   - parallel_track: collections-access
@@ -215,6 +222,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - count/capacity/at through `dereference(p)` match the direct calls; matrix case
     - full release gate green
   - stop_rule: receiver offset handling only.
+  - notes: deferred: queued behind the Ready Now cap.
 
 - [ ] TODO-5514: Native file I/O writes newlines and reports errno
   - owner: ai
@@ -228,6 +236,82 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - full release gate green
   - stop_rule: native I/O emitter and png status mapping.
   - notes: deferred: queued behind the Ready Now cap.
+
+- [ ] TODO-5537: `u8` and byte-addressed memory
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-08
+  - phase: Strings and slices (docs/spec/strings-and-views.md)
+  - parallel_track: bytes
+  - scope: Add the `u8` scalar (literals `65u8`, `convert<u8>`, wrapping arithmetic, `Comparable`/`Additive`/`Multiplicative`) and packed byte storage for `array<u8>`, `Vector<u8>` and `Buffer<u8>`: IR `LoadU8`/`StoreU8`/`HeapAllocBytes`, VM byte regions in the heap (linear byte addresses, faults on slot/byte mix-ups), native and C++ byte loads/stores. Update docs/spec/type-system.md and the PSIR version.
+  - acceptance:
+    - matrix cases on VM, native and C++: `u8` arithmetic and conversions, a `Vector<u8>` of 1 MB using about 1 MB of VM heap, element reads/writes and growth
+    - IR serialization round-trips the new opcodes; full release gate green
+  - stop_rule: the byte type and byte memory only; no text.
+
+- [ ] TODO-5538: Slices are real borrows with shared operations
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-08
+  - phase: Strings and slices (docs/spec/strings-and-views.md)
+  - parallel_track: slices
+  - scope: Make `view()`, `slice(start, end)` and `sliceMut(...)` on `array` and `Vector` return a borrowed `Slice<T, Capability>` (pointer and count, one range check) instead of a copied `array<T>`; add the loan rules (owner cannot change, move or be destroyed while a slice is live; no storing slices), the return-from-parameter rule with `[returns_borrow<name>]`, and the shared operations of docs/spec/strings-and-views.md (Slices) in `/std/collections/slice`, instantiated per element size.
+  - acceptance:
+    - positive tests for every operation and negative tests for each loan and escape diagnostic, on VM, native and C++
+    - existing `Slice<T, Read>` parameter examples in docs/CodeExamples.md still run; full release gate green
+  - stop_rule: slices over `array` and `Vector`; strings come later.
+
+- [ ] TODO-5539: Owned `String` with the string heap
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5537
+  - created_at: 2026-10-08
+  - phase: Strings and slices (docs/spec/strings-and-views.md)
+  - parallel_track: string-owned
+  - scope: Add `String` (docs/spec/strings-and-views.md, `String`: owned text): inline storage up to 22 bytes, the size-class string heap in 256 KiB chunks with large blocks over 64 KiB, lifecycle (deep copy, move, destroy), growth and `reserve`/`shrinkToFit`, `stringMemory()`/`setStringMemoryLimit`/`tryReserve`, NUL termination, and the owned-text API (append, `+`, insert, erase, replace, substr, `String.from`).
+  - acceptance:
+    - VM tests for every operation, inline-to-heap transitions, heap reuse (a loop that builds and drops strings keeps `stringMemory().chunks` constant), large blocks returned on free, the limit fault
+    - full release gate green
+  - stop_rule: owned strings on the VM; the `string` view and other backends are separate leaves.
+
+- [ ] TODO-5540: `string` as the UTF-8 text view
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5538, TODO-5539
+  - created_at: 2026-10-08
+  - phase: Strings and slices (docs/spec/strings-and-views.md)
+  - parallel_track: string-view
+  - scope: Make `string` the borrowed read-only UTF-8 view: literals as static views, implicit borrow from `String`, `utf8(bytes)`, byte-offset indexing with code-point boundary checks, the text operations (bytes, code points, lines, split, trim, ASCII case, parsing, `+`), the static-text rule for `string` fields, and the `run-time text requires String` diagnostic.
+  - acceptance:
+    - VM tests for each operation and diagnostic; the existing test suite passes with `string` parameters and literals unchanged
+    - full release gate green
+  - stop_rule: the text view on the VM.
+
+- [ ] TODO-5541: Host functions and embedding use `String` and `string`
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5539, TODO-5540
+  - created_at: 2026-10-08
+  - phase: Strings and slices (docs/spec/strings-and-views.md)
+  - parallel_track: string-host
+  - scope: `[host]` parameters take `string`/`String` (pointer and length; NUL-terminated without a copy when possible) and text results arrive as `String` in the program's string heap; the embedding API converts `std::string` to and from them; retire the VM run-time string index (`LoadStringByteDynamic`, bit-63 indices) and bump the PSIR version; update docs/Embedding.md, docs/spec/host-and-core-library.md and docs/spec/vm-design.md.
+  - acceptance:
+    - embed tests: string arguments and results round-trip, a loop of 10000 host text calls keeps string memory constant
+    - full release gate green
+  - stop_rule: host boundary and VM string retirement only.
+
+- [ ] TODO-5542: Native and C++ parity for bytes, slices and strings
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5539, TODO-5540
+  - created_at: 2026-10-08
+  - phase: Strings and slices (docs/spec/strings-and-views.md)
+  - parallel_track: string-backends
+  - scope: Run `String`, `string` and the string heap on the native backend and the C++ emitter (replacing `std::string_view` for `string`), so the string programs behave identically on VM, native and C++; remove the "dynamic strings are VM-only" limits from docs/spec/vm-design.md and docs/spec/backend-type-support.md.
+  - acceptance:
+    - the string tests of TODO-5539 and TODO-5540 run as matrix cases on VM, native and C++ with identical output and `stringMemory()` figures
+    - full release gate green
+  - stop_rule: backend parity only; split per backend if large.
 
 - [ ] TODO-5536: Small, lazily loaded bytecode for apps
   - owner: ai
@@ -280,17 +364,18 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - full release gate green
   - stop_rule: stdlib surface for the version-0 ABI only.
 
-- [ ] TODO-5530: Read a whole file into a string on the VM
+- [ ] TODO-5530: Read and write whole files as String
   - owner: ai
-  - status: ready
+  - status: blocked
+  - blocked_on: TODO-5539, TODO-5540
   - created_at: 2026-10-08
-  - phase: Native UI (docs/NativeUiPlan.md)
-  - parallel_track: vm-file-text
-  - scope: Programs cannot read a file into a string because only host calls create strings. Add a stdlib `readText(path) -> Result<string, FileError>` (and the matching `writeText(path, text)`) that creates a VM-owned run-time string, with a clear diagnostic on backends without dynamic strings; update docs/spec/vm-design.md (string creation) and docs/spec/errors-and-file-io.md.
+  - phase: Strings and slices (docs/spec/strings-and-views.md)
+  - parallel_track: file-text
+  - scope: Programs cannot read a file into text. Add `readText(path) -> Result<String, FileError>` and `writeText(path, [string] text) -> Result<FileError>` to `/std/file`, built on the owned `String` and byte reads (no VM-only run-time string), and document them in docs/spec/errors-and-file-io.md.
   - acceptance:
-    - VM tests read empty, UTF-8, multi-line and missing files, write them back and compare; non-VM targets reject the call with the documented diagnostic
+    - tests on VM, native and C++ read empty, ASCII, multi-byte UTF-8, multi-line and missing files, write them back and compare; invalid UTF-8 reports a `FileError`
     - full release gate green
-  - stop_rule: whole-file text read/write on the VM only.
+  - stop_rule: whole-file text read and write only.
 
 - [ ] TODO-5531: macOS AppKit backend and app runner
   - owner: ai
@@ -309,7 +394,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 - [ ] TODO-5532: Native text editor example
   - owner: ai
   - status: blocked
-  - blocked_on: TODO-5529, TODO-5530
+  - blocked_on: TODO-5529, TODO-5530, TODO-5541
   - created_at: 2026-10-08
   - phase: Native UI (docs/NativeUiPlan.md)
   - parallel_track: native-ui-editor
