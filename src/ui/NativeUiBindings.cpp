@@ -64,6 +64,8 @@ template <class Binder> void forEachBinding(Binder &&bindOne) {
   bindOne("ps_ui_menu_add_standard",
           [](uint64_t menu, int32_t standardId) { return ps_ui_menu_add_standard(menu, standardId); });
   bindOne("ps_ui_menu_bar_add", [](uint64_t menu) { return ps_ui_menu_bar_add(menu); });
+  bindOne("ps_ui_menu_bar_add_role",
+          [](uint64_t menu, int32_t role) { return ps_ui_menu_bar_add_role(menu, role); });
 
   bindOne("ps_ui_open_panel", [](std::string_view title) { return std::string(ps_ui_open_panel(text(title).c_str())); });
   bindOne("ps_ui_save_panel", [](std::string_view title, std::string_view suggestedName) {

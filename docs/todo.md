@@ -109,8 +109,7 @@ of sync with them.
 | TODO-5536 | Small, lazily loaded bytecode for apps | ready | bytecode-startup |
 | TODO-5535 | Launch-time harness and reference Objective-C++ editor | ready | native-ui-launch |
 | TODO-5530 | Read and write whole files as String | blocked | file-text |
-| TODO-5551 | Standard menu set for the editor | ready | native-ui-editor-accept |
-| TODO-5549 | Styled-text attribute runs in the native UI ABI | blocked | native-ui-editor-accept |
+| TODO-5549 | Styled-text attribute runs in the native UI ABI | ready | native-ui-editor-accept |
 | TODO-5550 | Syntax highlighting in the editor | blocked | native-ui-editor-accept |
 | TODO-5553 | Editor acceptance screenshots | blocked | native-ui-editor-accept |
 | TODO-5554 | Close the editor acceptance gate | blocked | native-ui-editor-accept |
@@ -142,7 +141,7 @@ of sync with them.
 
 - TODO-5537 (bytes): `u8` and byte-addressed memory
 - TODO-5538 (slices): slices are real borrows with shared operations
-- TODO-5551 (native-ui-editor-accept): standard menu set for the editor
+- TODO-5549 (native-ui-editor-accept): styled-text attribute runs in the native UI ABI
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5510 (control-returns): `return` returns from pick arms and lambdas correctly
@@ -151,7 +150,7 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5551
+1. TODO-5549
 2. TODO-5536
 3. TODO-5537
 4. TODO-5538
@@ -163,7 +162,7 @@ of sync with them.
 ### Priority Lanes
 
 - Strings and slices (docs/spec/strings-and-views.md): TODO-5537, TODO-5538, TODO-5539, TODO-5540, TODO-5530, TODO-5541, TODO-5542
-- Native UI editor acceptance (docs/NativeUiPlan.md): TODO-5551, TODO-5549, TODO-5550, TODO-5553, TODO-5554
+- Native UI editor acceptance (docs/NativeUiPlan.md): TODO-5549, TODO-5550, TODO-5553, TODO-5554
 - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533, TODO-5534
 - Lifecycle (docs/spec/value-lifecycle.md): TODO-5527
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
@@ -358,23 +357,9 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - full release gate green
   - stop_rule: whole-file text read and write only.
 
-- [ ] TODO-5551: Standard menu set for the editor
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-08
-  - phase: Native UI editor acceptance (requirement 4)
-  - parallel_track: native-ui-editor-accept
-  - scope: Menu bar of an App menu (About, Quit), File (New, Open, Save, Save As, Close), Edit (Undo, Redo, Cut, Copy, Paste, Select All, Find), View, Window and Help with the standard macOS shortcuts. Extend the ABI's standard items (View: full screen, zoom; Window: minimize, zoom, bring all to front; Help) in NativeUi.h, headless, AppKit, bindings and `/std/ui/native`, and use them in the editor.
-  - acceptance:
-    - a headless gate test asserts the exact menu structure and shortcuts of the editor
-    - AppKit builds the same menus (smoke test or by-hand note in TODO-5545)
-    - the case is part of the editor acceptance gate; full release gate green
-  - stop_rule: menus and shortcuts only.
-
 - [ ] TODO-5549: Styled-text attribute runs in the native UI ABI
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5551
+  - status: ready
   - created_at: 2026-10-08
   - phase: Native UI editor acceptance (requirement 1, ABI half)
   - parallel_track: native-ui-editor-accept

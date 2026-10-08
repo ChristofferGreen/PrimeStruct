@@ -55,5 +55,10 @@ bool isMonospace(uint64_t textView);
 // "File>Save (cmd+s) #3", "File>-" for a separator, "File>standard 4" for a
 // standard item; only menus added to the menu bar are listed, in bar order.
 std::vector<std::string> menuBarItems();
+// The menu bar as the user would read it, in bar order (an application-role menu
+// first): "File>Save As... (cmd+shift+s)", "File>-" for a separator. Standard
+// items show the title and shortcut the platform backends give them
+// (include/primec/ui/NativeUiStandardItems.h).
+std::vector<std::string> menuBarOutline();
 
 } // namespace primec::ui::headless

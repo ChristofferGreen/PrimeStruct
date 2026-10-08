@@ -60,7 +60,24 @@ enum {
   PS_UI_STANDARD_SELECT_ALL = 6,
   PS_UI_STANDARD_FIND = 7,
   PS_UI_STANDARD_QUIT = 8,
-  PS_UI_STANDARD_ABOUT = 9
+  PS_UI_STANDARD_ABOUT = 9,
+  PS_UI_STANDARD_HIDE = 10,
+  PS_UI_STANDARD_HIDE_OTHERS = 11,
+  PS_UI_STANDARD_MINIMIZE = 12,
+  PS_UI_STANDARD_ZOOM = 13,
+  PS_UI_STANDARD_BRING_ALL_TO_FRONT = 14,
+  PS_UI_STANDARD_FULL_SCREEN = 15,
+  PS_UI_STANDARD_HELP = 16
+};
+
+/* Roles of a menu in the menu bar for ps_ui_menu_bar_add_role. */
+enum {
+  /* Takes the place of the platform's default application menu (first). */
+  PS_UI_MENU_ROLE_APP = 1,
+  /* The platform lists the open windows in it. */
+  PS_UI_MENU_ROLE_WINDOW = 2,
+  /* The platform adds its help search to it. */
+  PS_UI_MENU_ROLE_HELP = 3
 };
 
 /* App ------------------------------------------------------------------ */
@@ -121,6 +138,10 @@ bool ps_ui_menu_add_separator(uint64_t menu);
 bool ps_ui_menu_add_standard(uint64_t menu, int32_t standardId);
 /* Appends the menu to the app's menu bar. */
 bool ps_ui_menu_bar_add(uint64_t menu);
+/* Appends the menu to the menu bar with a platform role (PS_UI_MENU_ROLE_*).
+ * The application menu replaces the default one and comes first. False for a
+ * bad menu or role, or a menu that is already in the bar. */
+bool ps_ui_menu_bar_add_role(uint64_t menu, int32_t role);
 
 /* Text files -------------------------------------------------------------- */
 

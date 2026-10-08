@@ -2008,6 +2008,7 @@ are left unarchived.
 | TODO-5546 | Text view file load and save in the native UI ABI | [2026-10.md](todo_archive/2026-10.md) | 2026-10-08 |
 | TODO-5547 | Dialog results need an emptiness test | [2026-10.md](todo_archive/2026-10.md) | 2026-10-08 |
 | TODO-5548 | Unicode text in the editor | [2026-10.md](todo_archive/2026-10.md) | 2026-10-08 |
+| TODO-5551 | Standard menu set for the editor | [2026-10.md](todo_archive/2026-10.md) | 2026-10-08 |
 | TODO-5552 | Editor save/load acceptance and the acceptance gate suite | [2026-10.md](todo_archive/2026-10.md) | 2026-10-08 |
 
 <!-- INDEX-END -->

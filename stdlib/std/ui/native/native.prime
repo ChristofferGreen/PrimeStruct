@@ -94,6 +94,10 @@ ps_ui_text_view_save_file([u64] view, [string] path) {
 ps_ui_last_error() {
 }
 
+[host return<bool>]
+ps_ui_menu_bar_add_role([u64] menu, [i32] role) {
+}
+
 [host return<u64>]
 ps_ui_menu_create([string] title) {
 }
@@ -224,6 +228,58 @@ Menu() {
   [public return<bool>]
   addToBar() {
     return(ps_ui_menu_bar_add(this.handle))
+  }
+
+  // The application menu replaces the platform's default one and comes first.
+  [public return<bool>]
+  addToBarAsApp() {
+    return(ps_ui_menu_bar_add_role(this.handle, 1i32))
+  }
+
+  // The platform lists the open windows in the Window menu.
+  [public return<bool>]
+  addToBarAsWindow() {
+    return(ps_ui_menu_bar_add_role(this.handle, 2i32))
+  }
+
+  [public return<bool>]
+  addToBarAsHelp() {
+    return(ps_ui_menu_bar_add_role(this.handle, 3i32))
+  }
+
+  [public return<bool>]
+  hide() {
+    return(ps_ui_menu_add_standard(this.handle, 10i32))
+  }
+
+  [public return<bool>]
+  hideOthers() {
+    return(ps_ui_menu_add_standard(this.handle, 11i32))
+  }
+
+  [public return<bool>]
+  minimize() {
+    return(ps_ui_menu_add_standard(this.handle, 12i32))
+  }
+
+  [public return<bool>]
+  zoom() {
+    return(ps_ui_menu_add_standard(this.handle, 13i32))
+  }
+
+  [public return<bool>]
+  bringAllToFront() {
+    return(ps_ui_menu_add_standard(this.handle, 14i32))
+  }
+
+  [public return<bool>]
+  fullScreen() {
+    return(ps_ui_menu_add_standard(this.handle, 15i32))
+  }
+
+  [public return<bool>]
+  help() {
+    return(ps_ui_menu_add_standard(this.handle, 16i32))
   }
 
   [public return<bool>]

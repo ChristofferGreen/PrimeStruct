@@ -1,5 +1,6 @@
 #include "primec/ui/NativeUi.h"
 #include "primec/ui/NativeUiHeadless.h"
+#include "primec/ui/NativeUiStandardItems.h"
 
 #include <cerrno>
 #include <cstring>
@@ -274,6 +275,31 @@ bool isMonospace(uint64_t view) {
   return v != nullptr && v->monospace;
 }
 
+std::vector<std::string> menuBarOutline() {
+  std::vector<std::string> items;
+  for (uint64_t handle : state().menuBar) {
+    const Menu *m = menu(handle);
+    if (m == nullptr) {
+      continue;
+    }
+    for (const MenuEntry &entry : m->entries) {
+      std::string title = entry.title;
+      std::string shortcut = entry.shortcut;
+      if (entry.kind == MenuEntry::Kind::Separator) {
+        items.push_back(m->title + ">-");
+        continue;
+      }
+      if (entry.kind == MenuEntry::Kind::Standard) {
+        const StandardItemInfo info = standardItemInfo(entry.id);
+        title = info.title;
+        shortcut = info.shortcut;
+      }
+      items.push_back(m->title + ">" + title + (shortcut.empty() ? "" : " (" + shortcut + ")"));
+    }
+  }
+  return items;
+}
+
 std::vector<std::string> menuBarItems() {
   std::vector<std::string> items;
   for (uint64_t handle : state().menuBar) {
@@ -520,7 +546,7 @@ bool ps_ui_menu_add_standard(uint64_t menuHandle, int32_t standardId) {
   const std::string call =
       "ps_ui_menu_add_standard(" + std::to_string(menuHandle) + ", " + std::to_string(standardId) + ")";
   Menu *m = usable() ? menu(menuHandle) : nullptr;
-  const bool valid = standardId >= PS_UI_STANDARD_UNDO && standardId <= PS_UI_STANDARD_ABOUT;
+  const bool valid = standardId >= PS_UI_STANDARD_UNDO && standardId <= PS_UI_STANDARD_HELP;
   if (m != nullptr && valid) {
     MenuEntry entry;
     entry.kind = MenuEntry::Kind::Standard;
@@ -538,6 +564,17 @@ bool ps_ui_menu_bar_add(uint64_t menuHandle) {
     state().menuBar.push_back(menuHandle);
   }
   return loggedFlag("ps_ui_menu_bar_add(" + std::to_string(menuHandle) + ")", ok);
+}
+
+bool ps_ui_menu_bar_add_role(uint64_t menuHandle, int32_t role) {
+  Menu *m = usable() ? menu(menuHandle) : nullptr;
+  const bool ok = m != nullptr && !m->inBar && role >= PS_UI_MENU_ROLE_APP && role <= PS_UI_MENU_ROLE_HELP;
+  if (ok) {
+    m->inBar = true;
+    auto &bar = state().menuBar;
+    bar.insert(role == PS_UI_MENU_ROLE_APP ? bar.begin() : bar.end(), menuHandle);
+  }
+  return loggedFlag("ps_ui_menu_bar_add_role(" + std::to_string(menuHandle) + ", " + std::to_string(role) + ")", ok);
 }
 
 bool ps_ui_text_view_load_file(uint64_t view, const char *path) {

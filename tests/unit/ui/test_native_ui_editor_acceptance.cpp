@@ -6,10 +6,12 @@
 
 #include "third_party/doctest.h"
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
 #include <string>
+#include <vector>
 
 // The editor acceptance gate (docs/todo.md, TODO-5552 .. TODO-5554). It runs in
 // ctest as PrimeStruct_native_ui_editor_acceptance together with the
@@ -39,6 +41,14 @@ std::string scratchPath(const std::string &name) {
 std::string readFile(const std::string &path) {
   std::ifstream file(path, std::ios::binary);
   return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+}
+
+int countCalls(const std::string &prefix) {
+  int count = 0;
+  for (const auto &entry : headless::callLog()) {
+    count += entry.rfind(prefix, 0) == 0 ? 1 : 0;
+  }
+  return count;
 }
 
 // Runs the editor program once against the scripted headless backend.
@@ -161,6 +171,51 @@ TEST_CASE("acceptance: a file that is not valid UTF-8 is refused with the error 
   }
   CHECK(shown);
   CHECK(headless::windowState(EditorWindow).title == "Untitled");
+}
+
+TEST_CASE("acceptance: the menu bar has the standard macOS structure and shortcuts") {
+  headless::reset();
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  const std::vector<std::string> expected{
+      "Text Editor>About",
+      "Text Editor>-",
+      "Text Editor>Hide (cmd+h)",
+      "Text Editor>Hide Others (cmd+alt+h)",
+      "Text Editor>-",
+      "Text Editor>Quit (cmd+q)",
+      "File>New (cmd+n)",
+      "File>Open... (cmd+o)",
+      "File>-",
+      "File>Save (cmd+s)",
+      "File>Save As... (cmd+shift+s)",
+      "File>-",
+      "File>Close (cmd+w)",
+      "Edit>Undo (cmd+z)",
+      "Edit>Redo (cmd+shift+z)",
+      "Edit>-",
+      "Edit>Cut (cmd+x)",
+      "Edit>Copy (cmd+c)",
+      "Edit>Paste (cmd+v)",
+      "Edit>Select All (cmd+a)",
+      "Edit>-",
+      "Edit>Find... (cmd+f)",
+      "View>Enter Full Screen (cmd+ctrl+f)",
+      "Window>Minimize (cmd+m)",
+      "Window>Zoom",
+      "Window>-",
+      "Window>Bring All to Front",
+      "Help>Help (cmd+?)",
+  };
+  CHECK(headless::menuBarOutline() == expected);
+  // The application menu is registered with its role (it replaces the default one).
+  CHECK(countCalls("ps_ui_menu_bar_add_role(") == 3);
+  // The editor's commands carry the ids the program dispatches on.
+  const auto items = headless::menuBarItems();
+  for (const char *item : {"File>New (cmd+n) #1", "File>Open... (cmd+o) #2", "File>Save (cmd+s) #3",
+                           "File>Save As... (cmd+shift+s) #4", "File>Close (cmd+w) #5"}) {
+    CHECK_MESSAGE(std::find(items.begin(), items.end(), item) != items.end(), item);
+  }
 }
 
 TEST_CASE("acceptance: save as writes an equal copy and later saves go to it") {

@@ -52,6 +52,15 @@ main() {
   editor.setMonospace(true)
   window.setContent(editor)
 
+  [Menu] application{app.menu("Text Editor")}
+  application.about()
+  application.separator()
+  application.hide()
+  application.hideOthers()
+  application.separator()
+  application.quit()
+  application.addToBarAsApp()
+
   [Menu] file{app.menu("File")}
   file.item("New", "cmd+n", command_new())
   file.item("Open...", "cmd+o", command_open())
@@ -73,6 +82,21 @@ main() {
   edit.separator()
   edit.find()
   edit.addToBar()
+
+  [Menu] viewMenu{app.menu("View")}
+  viewMenu.fullScreen()
+  viewMenu.addToBar()
+
+  [Menu] windowMenu{app.menu("Window")}
+  windowMenu.minimize()
+  windowMenu.zoom()
+  windowMenu.separator()
+  windowMenu.bringAllToFront()
+  windowMenu.addToBarAsWindow()
+
+  [Menu] helpMenu{app.menu("Help")}
+  helpMenu.help()
+  helpMenu.addToBarAsHelp()
 
   window.show()
 

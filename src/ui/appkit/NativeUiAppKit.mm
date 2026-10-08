@@ -18,6 +18,7 @@
 #import <objc/runtime.h>
 
 #include "primec/ui/NativeUi.h"
+#include "primec/ui/NativeUiStandardItems.h"
 
 #include <cctype>
 #include <cstdio>
@@ -580,38 +581,83 @@ bool ps_ui_menu_add_standard(uint64_t menuHandle, int32_t standardId) {
   if (menu == nil) {
     return false;
   }
-  const NSEventModifierFlags cmd = NSEventModifierFlagCommand;
+  // Titles and shortcuts come from the table the headless backend reports too.
+  const primec::ui::StandardItemInfo info = primec::ui::standardItemInfo(standardId);
+  if (info.title == nullptr) {
+    return false;
+  }
+  SEL action = nil;
+  id target = nil; // nil: the first responder, so the focused text view handles it
+  NSInteger itemTag = 0;
   switch (standardId) {
-  case PS_UI_STANDARD_UNDO:
-    addMenuItem(menu, @"Undo", @selector(undo:), nil, @"z", cmd, 0);
-    return true;
-  case PS_UI_STANDARD_REDO:
-    addMenuItem(menu, @"Redo", @selector(redo:), nil, @"z", cmd | NSEventModifierFlagShift, 0);
-    return true;
-  case PS_UI_STANDARD_CUT:
-    addMenuItem(menu, @"Cut", @selector(cut:), nil, @"x", cmd, 0);
-    return true;
-  case PS_UI_STANDARD_COPY:
-    addMenuItem(menu, @"Copy", @selector(copy:), nil, @"c", cmd, 0);
-    return true;
-  case PS_UI_STANDARD_PASTE:
-    addMenuItem(menu, @"Paste", @selector(paste:), nil, @"v", cmd, 0);
-    return true;
-  case PS_UI_STANDARD_SELECT_ALL:
-    addMenuItem(menu, @"Select All", @selector(selectAll:), nil, @"a", cmd, 0);
-    return true;
+  case PS_UI_STANDARD_UNDO: action = @selector(undo:); break;
+  case PS_UI_STANDARD_REDO: action = @selector(redo:); break;
+  case PS_UI_STANDARD_CUT: action = @selector(cut:); break;
+  case PS_UI_STANDARD_COPY: action = @selector(copy:); break;
+  case PS_UI_STANDARD_PASTE: action = @selector(paste:); break;
+  case PS_UI_STANDARD_SELECT_ALL: action = @selector(selectAll:); break;
   case PS_UI_STANDARD_FIND:
-    addMenuItem(menu, @"Find…", @selector(performTextFinderAction:), nil, @"f", cmd, NSTextFinderActionShowFindInterface);
-    return true;
+    action = @selector(performTextFinderAction:);
+    itemTag = NSTextFinderActionShowFindInterface;
+    break;
   case PS_UI_STANDARD_QUIT:
-    addMenuItem(menu, @"Quit", @selector(quitRequested:), controller(), @"q", cmd, 0);
-    return true;
+    action = @selector(quitRequested:);
+    target = controller();
+    break;
   case PS_UI_STANDARD_ABOUT:
-    addMenuItem(menu, @"About", @selector(orderFrontStandardAboutPanel:), NSApp, @"", 0, 0);
-    return true;
+    action = @selector(orderFrontStandardAboutPanel:);
+    target = NSApp;
+    break;
+  case PS_UI_STANDARD_HIDE:
+    action = @selector(hide:);
+    target = NSApp;
+    break;
+  case PS_UI_STANDARD_HIDE_OTHERS:
+    action = @selector(hideOtherApplications:);
+    target = NSApp;
+    break;
+  case PS_UI_STANDARD_MINIMIZE: action = @selector(performMiniaturize:); break;
+  case PS_UI_STANDARD_ZOOM: action = @selector(performZoom:); break;
+  case PS_UI_STANDARD_BRING_ALL_TO_FRONT:
+    action = @selector(arrangeInFront:);
+    target = NSApp;
+    break;
+  case PS_UI_STANDARD_FULL_SCREEN: action = @selector(toggleFullScreen:); break;
+  case PS_UI_STANDARD_HELP:
+    action = @selector(showHelp:);
+    target = NSApp;
+    break;
   default:
     return false;
   }
+  NSString *key = nil;
+  NSEventModifierFlags mask = 0;
+  parseShortcut(info.shortcut, &key, &mask);
+  addMenuItem(menu, toNSString(info.title), action, target, key, mask, itemTag);
+  return true;
+}
+
+bool ps_ui_menu_bar_add_role(uint64_t menuHandle, int32_t role) {
+  NSMenu *menu = usable() ? menuFor(menuHandle) : nil;
+  if (menu == nil || menu.supermenu != nil || role < PS_UI_MENU_ROLE_APP || role > PS_UI_MENU_ROLE_HELP) {
+    return false;
+  }
+  NSMenuItem *item = [[NSMenuItem alloc] initWithTitle:menu.title action:nil keyEquivalent:@""];
+  item.submenu = menu;
+  if (role == PS_UI_MENU_ROLE_APP) {
+    if (NSApp.mainMenu.numberOfItems > 0) {
+      [NSApp.mainMenu removeItemAtIndex:0]; // the default application menu
+    }
+    [NSApp.mainMenu insertItem:item atIndex:0];
+  } else {
+    [NSApp.mainMenu addItem:item];
+    if (role == PS_UI_MENU_ROLE_WINDOW) {
+      NSApp.windowsMenu = menu;
+    } else {
+      NSApp.helpMenu = menu;
+    }
+  }
+  return true;
 }
 
 bool ps_ui_menu_bar_add(uint64_t menuHandle) {
