@@ -1,4 +1,5 @@
 #include "primec/embed/ScriptEngine.h"
+#include "primec/testing/TestScratch.h"
 #include "primec/ui/NativeUi.h"
 #include "primec/ui/NativeUiBindings.h"
 #include "primec/ui/NativeUiHeadless.h"
@@ -6,6 +7,7 @@
 
 #include "third_party/doctest.h"
 
+#include <filesystem>
 #include <fstream>
 #include <iterator>
 #include <string>
@@ -460,6 +462,55 @@ TEST_CASE("highlight: each tab is styled for its own file") {
   CHECK(first.front().start == cppRuns.front().start);
   CHECK(second.front().start == jsonRuns.front().start);
   CHECK(first.front().rgb != second.front().rgb);
+}
+
+TEST_CASE("highlight: files past 64 KiB are styled too, and only huge ones are not") {
+  std::string big;
+  while (big.size() < 100 * 1024) {
+    big += "## Heading\n\nSome *text* with `code` and **bold**.\n\n";
+  }
+  const std::filesystem::path dir = primec::testing::testScratchDir("native_ui_editor_highlight");
+  std::filesystem::create_directories(dir);
+  const std::string path = (dir / "big.md").string();
+  std::ofstream(path, std::ios::binary) << big;
+  const auto expected = primec::ui::highlight(Language::Markdown, big);
+  REQUIRE(big.size() > 64 * 1024);
+  const auto runs = openInEditor(path);
+  CHECK(runs.size() == expected.size());
+  CHECK(runs.size() > 1000);
+  // Above the limit the text stays unstyled.
+  headless::reset();
+  REQUIRE(ps_ui_init("Limit"));
+  const uint64_t view = ps_ui_text_view_create();
+  REQUIRE(ps_ui_text_view_set_text(view, std::string(primec::ui::MaxHighlightBytes + 1, 'a').c_str()));
+  CHECK(ps_ui_text_view_highlight(view, "x.md"));
+  CHECK(headless::styleRuns(view).empty());
+}
+
+TEST_CASE("highlight: a file opened into a fresh New tab is styled") {
+  const std::string md = fixturePath("sample.md");
+  headless::reset();
+  headless::pushCommand(CommandOpen);
+  headless::pushOpenPanelAnswer(md);
+  headless::pushCommand(1); // New: a second, untitled tab (window 9, text view 10)
+  headless::pushCommand(CommandOpen);
+  headless::pushOpenPanelAnswer(md);
+  headless::pushCloseWindow(9);
+  headless::pushCloseWindow(EditorWindow);
+  ScriptEngine engine;
+  primec::ui::bindNativeUi(engine);
+  const Script script = engine.compileFile(std::string(PRIMESTRUCT_SOURCE_DIR) + "/examples/apps/text_editor/main.prime");
+  REQUIRE_MESSAGE(script.valid(), script.diagnostics());
+  const auto result = script.run();
+  REQUIRE_MESSAGE(result.ok, result.diagnostics);
+  const auto expected = primec::ui::highlight(Language::Markdown, readFile(md));
+  REQUIRE(!expected.empty());
+  CHECK(headless::styleRuns(EditorView).size() == expected.size());
+  CHECK(headless::styleRuns(10).size() == expected.size());
+  CHECK(headless::windowPath(9) == md);
+  // The open went into the New tab (reused, not a third tab).
+  CHECK(headless::tabGroup(EditorWindow).size() == 0);
+  CHECK(headless::windowState(10).exists == false);
 }
 
 TEST_CASE("highlight: the editor restyles after typing") {

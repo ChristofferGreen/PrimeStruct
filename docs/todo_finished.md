@@ -2019,6 +2019,7 @@ are left unarchived.
 | TODO-5557 | More languages and function names in syntax highlighting | [2026-10.md](todo_archive/2026-10.md) | 2026-10-21 |
 | TODO-5558 | Markup and data languages in syntax highlighting | [2026-10.md](todo_archive/2026-10.md) | 2026-10-21 |
 | TODO-5562 | Command-number switches tabs | [2026-10.md](todo_archive/2026-10.md) | 2026-10-21 |
+| TODO-5563 | Highlight large files | [2026-10.md](todo_archive/2026-10.md) | 2026-10-21 |
 
 <!-- INDEX-END -->
 

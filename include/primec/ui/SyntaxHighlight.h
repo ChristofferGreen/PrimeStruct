@@ -70,8 +70,9 @@ Language languageForPath(std::string_view path);
 
 std::vector<HighlightRun> highlight(Language language, std::string_view text);
 
-// Texts longer than this are shown unstyled (restyling runs on every edit).
-constexpr size_t MaxHighlightBytes = 65536;
+// Texts longer than this are shown unstyled (restyling runs on every edit and
+// costs time linear in the text).
+constexpr size_t MaxHighlightBytes = 2 * 1024 * 1024;
 
 // Replaces the styles of `view` with the highlighting of its text for the language
 // of `path` (unknown extension: styles cleared). Used by the backends to

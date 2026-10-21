@@ -37,6 +37,20 @@
 #include <unordered_map>
 #include <vector>
 
+#import <os/log.h>
+
+// Unified-log trace of the document and styling calls, off unless PRIMESTRUCT_UI_TRACE
+// is set (it names the files being opened). Read it with
+// `log show --predicate 'subsystem == "com.primestruct.ui"' --info`.
+#define PS_TRACE(...)                                                                         \
+  do {                                                                                        \
+    static const bool traceOn = std::getenv("PRIMESTRUCT_UI_TRACE") != nullptr;               \
+    if (traceOn) {                                                                            \
+      static os_log_t traceLog = os_log_create("com.primestruct.ui", "trace");                \
+      os_log(traceLog, "%{public}s", [[NSString stringWithFormat:__VA_ARGS__] UTF8String]);   \
+    }                                                                                         \
+  } while (0)
+
 namespace {
 
 struct PendingEvent {
@@ -161,6 +175,7 @@ NSMenu *menuFor(uint64_t handle) {
 - (void)textDidChange:(NSNotification *)notification {
   NSTextView *view = notification.object;
   const uint64_t widget = handleOf(view);
+  PS_TRACE(@"textDidChange view=%llu window=%llu", widget, handleOf(view.window));
   state().modified[widget] = true;
   enqueue(PS_UI_EVENT_TEXT_CHANGED, handleOf(view.window), widget);
 }
@@ -671,10 +686,20 @@ uint64_t ps_ui_active_window(void) {
     return 0;
   }
   State &s = state();
+  PS_TRACE(@"activeWindow key=%llu main=%llu windows=%lu", handleOf(NSApp.keyWindow), handleOf(NSApp.mainWindow),
+           static_cast<unsigned long>(s.windows.size()));
   for (const uint64_t handle : {handleOf(NSApp.keyWindow), handleOf(NSApp.mainWindow)}) {
     if (handle != 0 && s.windows.count(handle) != 0) {
       return handle;
     }
+  }
+  if (std::getenv("PRIMESTRUCT_UI_TARGET_LAST") != nullptr) {
+    // Snapshot runs have no key window: act on the newest tab, as the user would.
+    uint64_t newest = 0;
+    for (const auto &entry : s.windows) {
+      newest = std::max(newest, entry.first);
+    }
+    return newest;
   }
   if (s.snapshotWindow != 0 && s.windows.count(s.snapshotWindow) != 0) {
     return s.snapshotWindow;
@@ -740,6 +765,7 @@ bool ps_ui_window_set_path(uint64_t window, const char *path) {
     return false;
   }
   state().windowPaths[window] = path != nullptr ? path : "";
+  PS_TRACE(@"setPath window=%llu path=%s", window, path != nullptr ? path : "(null)");
   return true;
 }
 
@@ -830,8 +856,81 @@ bool ps_ui_text_view_clear_styles(uint64_t view) {
   return true;
 }
 
+// Restyles the whole text in one edit: the lexer's runs are in order and do not
+// overlap, so byte offsets become UTF-16 offsets in a single pass and the cost is
+// linear in the text, however many runs there are.
 bool ps_ui_text_view_highlight(uint64_t view, const char *path) {
-  return usable() && textView(view) != nil && primec::ui::applyHighlight(view, path);
+  NSTextView *v = usable() ? textView(view) : nil;
+  if (v == nil) {
+    return false;
+  }
+  const char *utf8 = v.string.UTF8String;
+  const std::string text = utf8 != nullptr ? utf8 : "";
+  const primec::ui::Language language = primec::ui::languageForPath(path != nullptr ? path : "");
+  const bool styled = language != primec::ui::Language::None && text.size() <= primec::ui::MaxHighlightBytes;
+  NSFont *base = state().baseFonts[view];
+  NSTextStorage *storage = v.textStorage;
+  size_t runCount = 0;
+  [v.undoManager disableUndoRegistration];
+  [storage beginEditing];
+  const NSRange all = NSMakeRange(0, storage.length);
+  [storage addAttribute:NSForegroundColorAttributeName value:[NSColor textColor] range:all];
+  if (base != nil) {
+    [storage addAttribute:NSFontAttributeName value:base range:all];
+  }
+  if (styled) {
+    NSFontManager *manager = [NSFontManager sharedFontManager];
+    NSFont *fonts[4] = {base, nil, nil, nil}; // by flags: bold = 1, italic = 2
+    auto fontFor = [&](int32_t flags) -> NSFont * {
+      const int index = flags & 3;
+      if (fonts[index] == nil && base != nil) {
+        NSFont *font = base;
+        if ((index & PS_UI_STYLE_BOLD) != 0) {
+          font = [manager convertFont:font toHaveTrait:NSBoldFontMask];
+        }
+        if ((index & PS_UI_STYLE_ITALIC) != 0) {
+          font = [manager convertFont:font toHaveTrait:NSItalicFontMask];
+        }
+        fonts[index] = font;
+      }
+      return fonts[index];
+    };
+    size_t bytePos = 0;
+    NSUInteger utf16Pos = 0;
+    auto advanceTo = [&](size_t target) {
+      while (bytePos < target && bytePos < text.size()) {
+        const unsigned char c = static_cast<unsigned char>(text[bytePos]);
+        const size_t length = c < 0x80 ? 1 : c < 0xE0 ? 2 : c < 0xF0 ? 3 : 4;
+        utf16Pos += length == 4 ? 2 : 1;
+        bytePos += length;
+      }
+    };
+    for (const primec::ui::HighlightRun &run : primec::ui::highlight(language, text)) {
+      advanceTo(static_cast<size_t>(run.start));
+      const NSUInteger begin = utf16Pos;
+      advanceTo(static_cast<size_t>(run.end));
+      if (utf16Pos <= begin || utf16Pos > storage.length) {
+        continue;
+      }
+      const NSRange range = NSMakeRange(begin, utf16Pos - begin);
+      [storage addAttribute:NSForegroundColorAttributeName
+                      value:[NSColor colorWithSRGBRed:((run.rgb >> 16) & 0xFF) / 255.0
+                                                green:((run.rgb >> 8) & 0xFF) / 255.0
+                                                 blue:(run.rgb & 0xFF) / 255.0
+                                                alpha:1.0]
+                      range:range];
+      if (NSFont *font = fontFor(run.flags); font != nil && (run.flags & 3) != 0) {
+        [storage addAttribute:NSFontAttributeName value:font range:range];
+      }
+      ++runCount;
+    }
+  }
+  [storage endEditing];
+  [v.undoManager enableUndoRegistration];
+  PS_TRACE(@"highlight view=%llu window=%llu path=%s textBytes=%lu runs=%lu", view, handleOf(v.window),
+           path != nullptr ? path : "(null)", static_cast<unsigned long>(text.size()),
+           static_cast<unsigned long>(runCount));
+  return true;
 }
 
 bool ps_ui_text_view_add_style(uint64_t view, int32_t startByte, int32_t endByte, int32_t rgb, int32_t flags) {
@@ -914,6 +1013,7 @@ bool ps_ui_text_view_load_file(uint64_t view, const char *path) {
     v.string = contents;
     s.modified[view] = false;
     [v.undoManager removeAllActions];
+    PS_TRACE(@"loadFile view=%llu window=%llu path=%s", view, handleOf(v.window), path != nullptr ? path : "(null)");
     return true;
   }
 }

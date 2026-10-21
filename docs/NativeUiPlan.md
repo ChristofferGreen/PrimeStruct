@@ -283,6 +283,7 @@ Hand checks on a Mac (typing, shortcuts, real panels, cursor stepping over graph
   backdrop is ours. Example: `PRIMESTRUCT_UI_OPEN=$PWD/tests/fixtures/ui/screenshot/showcase.prime
   PRIMESTRUCT_UI_MENU=File PRIMESTRUCT_UI_SNAPSHOT=/path/out.png primestruct_app examples/apps/text_editor/main.prime`.
   The editor's menu structure is asserted exactly by the headless gate; the picture is a visual check.
+  `PRIMESTRUCT_UI_TRACE=1` logs the document and styling calls to the unified log (subsystem `com.primestruct.ui`).
   `PRIMESTRUCT_UI_OPEN_PANEL=file` makes the Open panel answer with that path, and `PRIMESTRUCT_UI_TARGET_LAST=1`
   aims the open/type hooks and the picture at the newest tab (the tab bar does draw in these pictures when the app
   has run the New command, e.g. `PRIMESTRUCT_UI_COMMANDS=2,2` opens a file into the first and a second tab).

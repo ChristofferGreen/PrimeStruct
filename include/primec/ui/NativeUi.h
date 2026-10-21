@@ -181,7 +181,7 @@ bool ps_ui_text_view_add_style(uint64_t view, int32_t startByte, int32_t endByte
  * .c .h .cc .cpp .hpp .m .mm ..., Python .py, JSON .json, Markdown .md,
  * JavaScript/TypeScript, Rust, Go, Java, Kotlin, Swift, shell, SQL and CMake;
  * the full table is in primec/ui/SyntaxHighlight.h); an
- * unknown extension or "" just clears the styles, as does text over 64 KiB.
+ * unknown extension or "" just clears the styles, as does text over 2 MiB.
  * Programs call it after loading or saving and on PS_UI_EVENT_TEXT_CHANGED. */
 bool ps_ui_text_view_highlight(uint64_t view, const char *path);
 
