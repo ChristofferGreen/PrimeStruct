@@ -1,0 +1,6 @@
+# config
+[package]
+name = "demo"
+version = 12
+enabled = true
+tags = ["a", "b"]

@@ -352,6 +352,391 @@ void lexJson(std::string_view text, Emitter &out) {
   }
 }
 
+bool isNameChar(unsigned char c) {
+  return std::isalnum(c) != 0 || c == '_' || c == '-' || c == ':' || c == '.' || c >= 0x80;
+}
+
+// HTML and XML: comments, declarations, tag names (with their brackets), attribute names and values, entities.
+void lexHtml(std::string_view text, Emitter &out) {
+  const size_t size = text.size();
+  size_t i = 0;
+  while (i < size) {
+    const char c = text[i];
+    if (c == '<') {
+      if (text.compare(i, 4, "<!--") == 0) {
+        size_t end = text.find("-->", i + 4);
+        end = end == std::string_view::npos ? size : end + 3;
+        out.add(i, end, colors::Comment, PS_UI_STYLE_ITALIC);
+        i = end;
+        continue;
+      }
+      if (i + 1 < size && (text[i + 1] == '!' || text[i + 1] == '?')) {
+        size_t end = text.find('>', i);
+        end = end == std::string_view::npos ? size : end + 1;
+        out.add(i, end, colors::Keyword);
+        i = end;
+        continue;
+      }
+      size_t j = i + 1;
+      if (j < size && text[j] == '/') {
+        ++j;
+      }
+      if (j < size && std::isalpha(static_cast<unsigned char>(text[j])) != 0) {
+        while (j < size && isNameChar(static_cast<unsigned char>(text[j]))) {
+          ++j;
+        }
+        out.add(i, j, colors::Keyword);
+        bool closed = false;
+        while (j < size && !closed) {
+          const char ch = text[j];
+          if (ch == '>') {
+            out.add(j, j + 1, colors::Keyword);
+            ++j;
+            closed = true;
+          } else if (ch == '/' && j + 1 < size && text[j + 1] == '>') {
+            out.add(j, j + 2, colors::Keyword);
+            j += 2;
+            closed = true;
+          } else if (ch == '"' || ch == '\'') {
+            size_t end = text.find(ch, j + 1);
+            end = end == std::string_view::npos ? size : end + 1;
+            out.add(j, end, colors::String);
+            j = end;
+          } else if (std::isalpha(static_cast<unsigned char>(ch)) != 0 || ch == '_' || ch == '@' || ch == ':') {
+            size_t end = j + 1;
+            while (end < size && isNameChar(static_cast<unsigned char>(text[end]))) {
+              ++end;
+            }
+            out.add(j, end, colors::Type);
+            j = end;
+          } else {
+            ++j;
+          }
+        }
+        i = j;
+        continue;
+      }
+    } else if (c == '&') {
+      size_t j = i + 1;
+      while (j < size && j - i < 10 && (std::isalnum(static_cast<unsigned char>(text[j])) != 0 || text[j] == '#')) {
+        ++j;
+      }
+      if (j < size && text[j] == ';' && j > i + 1) {
+        out.add(i, j + 1, colors::Number);
+        i = j + 1;
+        continue;
+      }
+    }
+    ++i;
+  }
+}
+
+// CSS values: strings, numbers with units, hex colours, !important, function names.
+void lexCssValue(std::string_view text, size_t begin, size_t end, Emitter &out) {
+  size_t i = begin;
+  while (i < end) {
+    const unsigned char c = static_cast<unsigned char>(text[i]);
+    if (c == '/' && i + 1 < end && text[i + 1] == '*') {
+      size_t close = text.find("*/", i + 2);
+      close = close == std::string_view::npos ? end : std::min(close + 2, end);
+      out.add(i, close, colors::Comment, PS_UI_STYLE_ITALIC);
+      i = close;
+    } else if (c == '"' || c == '\'') {
+      size_t j = i + 1;
+      while (j < end && text[j] != static_cast<char>(c)) {
+        j += text[j] == '\\' ? 2 : 1;
+      }
+      j = std::min(j + 1, end);
+      out.add(i, j, colors::String);
+      i = j;
+    } else if (c == '#' && i + 1 < end && std::isxdigit(static_cast<unsigned char>(text[i + 1])) != 0) {
+      size_t j = i + 1;
+      while (j < end && std::isxdigit(static_cast<unsigned char>(text[j])) != 0) {
+        ++j;
+      }
+      out.add(i, j, colors::Number);
+      i = j;
+    } else if (c == '!' && text.compare(i, 10, "!important") == 0) {
+      out.add(i, i + 10, colors::Keyword);
+      i += 10;
+    } else if (std::isdigit(c) != 0 || ((c == '.' || c == '-' || c == '+') && i + 1 < end &&
+                                       (std::isdigit(static_cast<unsigned char>(text[i + 1])) != 0 ||
+                                        (text[i + 1] == '.' && i + 2 < end)))) {
+      size_t j = i + 1;
+      while (j < end && (std::isdigit(static_cast<unsigned char>(text[j])) != 0 || text[j] == '.')) {
+        ++j;
+      }
+      while (j < end && (std::isalpha(static_cast<unsigned char>(text[j])) != 0 || text[j] == '%')) {
+        ++j;
+      }
+      out.add(i, j, colors::Number);
+      i = j;
+    } else if (isIdentStart(c) || c == '-') {
+      size_t j = i + 1;
+      while (j < end && (isIdentPart(static_cast<unsigned char>(text[j])) || text[j] == '-')) {
+        ++j;
+      }
+      if (j < end && text[j] == '(') {
+        out.add(i, j, colors::Function);
+      }
+      i = j;
+    } else {
+      ++i;
+    }
+  }
+}
+
+void lexCss(std::string_view text, Emitter &out) {
+  const size_t size = text.size();
+  size_t i = 0;
+  while (i < size) {
+    const unsigned char c = static_cast<unsigned char>(text[i]);
+    if (std::isspace(c) != 0 || c == '{' || c == '}' || c == ';') {
+      ++i;
+      continue;
+    }
+    if (c == '/' && i + 1 < size && text[i + 1] == '*') {
+      size_t end = text.find("*/", i + 2);
+      end = end == std::string_view::npos ? size : end + 2;
+      out.add(i, end, colors::Comment, PS_UI_STYLE_ITALIC);
+      i = end;
+      continue;
+    }
+    // The statement runs to the next "{", ";" or "}" (skipping strings and comments).
+    size_t stop = i;
+    while (stop < size && text[stop] != '{' && text[stop] != ';' && text[stop] != '}') {
+      if (text[stop] == '"' || text[stop] == '\'') {
+        const char quote = text[stop];
+        ++stop;
+        while (stop < size && text[stop] != quote) {
+          stop += text[stop] == '\\' ? 2 : 1;
+        }
+      } else if (text[stop] == '/' && stop + 1 < size && text[stop + 1] == '*') {
+        const size_t close = text.find("*/", stop + 2);
+        stop = close == std::string_view::npos ? size : close + 1;
+      }
+      ++stop;
+    }
+    stop = std::min(stop, size);
+    if (c == '@') {
+      size_t j = i + 1;
+      while (j < stop && (isIdentPart(static_cast<unsigned char>(text[j])) || text[j] == '-')) {
+        ++j;
+      }
+      out.add(i, j, colors::Keyword);
+      lexCssValue(text, j, stop, out);
+    } else if (stop < size && text[stop] == '{') {
+      // Selector: one run per simple selector (".a", "#b", "ul", ":hover", "[x=y]").
+      size_t j = i;
+      while (j < stop) {
+        const unsigned char d = static_cast<unsigned char>(text[j]);
+        if (std::isspace(d) != 0 || d == ',' || d == '>' || d == '+' || d == '~') {
+          ++j;
+          continue;
+        }
+        size_t k = j;
+        int brackets = 0;
+        while (k < stop) {
+          const char e = text[k];
+          if (e == '[' || e == '(') {
+            ++brackets;
+          } else if (e == ']' || e == ')') {
+            --brackets;
+          } else if (brackets <= 0 && (std::isspace(static_cast<unsigned char>(e)) != 0 || e == ',' || e == '>' ||
+                                       e == '+' || e == '~')) {
+            break;
+          }
+          ++k;
+        }
+        out.add(j, k, colors::Type);
+        j = k;
+      }
+    } else {
+      // Declaration: "property: value".
+      const size_t colon = text.find(':', i);
+      if (colon != std::string_view::npos && colon < stop) {
+        size_t nameEnd = colon;
+        while (nameEnd > i && std::isspace(static_cast<unsigned char>(text[nameEnd - 1])) != 0) {
+          --nameEnd;
+        }
+        out.add(i, nameEnd, colors::Keyword);
+        lexCssValue(text, colon + 1, stop, out);
+      } else {
+        lexCssValue(text, i, stop, out);
+      }
+    }
+    i = std::max(stop, i + 1);
+  }
+}
+
+bool yamlWord(std::string_view word) {
+  static const Words words{"true", "false", "null", "yes", "no", "on", "off", "~", "True", "False", "Null", "TRUE",
+                           "FALSE", "NULL", "Yes", "No"};
+  return words.count(word) != 0;
+}
+
+bool looksNumeric(std::string_view token) {
+  if (token.empty()) {
+    return false;
+  }
+  size_t i = (token[0] == '-' || token[0] == '+') ? 1 : 0;
+  if (i >= token.size() || std::isdigit(static_cast<unsigned char>(token[i])) == 0) {
+    return false;
+  }
+  for (; i < token.size(); ++i) {
+    const unsigned char c = static_cast<unsigned char>(token[i]);
+    if (std::isalnum(c) == 0 && c != '_' && c != '.' && c != '-' && c != ':' && c != '+') {
+      return false;
+    }
+  }
+  return true;
+}
+
+// The value part of a "key: value" line (or a bare flow/sequence item) of YAML or TOML.
+void lexConfigValue(std::string_view text, size_t begin, size_t end, bool yaml, Emitter &out, bool semicolonComments) {
+  size_t i = begin;
+  while (i < end) {
+    const char c = text[i];
+    if (c == ' ' || c == '\t' || c == ',' || c == '[' || c == ']' || c == '{' || c == '}' || c == '=') {
+      ++i;
+      continue;
+    }
+    if (c == '#' || (semicolonComments && c == ';')) {
+      out.add(i, end, colors::Comment, PS_UI_STYLE_ITALIC);
+      return;
+    }
+    if (c == '"' || c == '\'') {
+      size_t j = i + 1;
+      while (j < end && text[j] != c) {
+        j += (text[j] == '\\' && c == '"') ? 2 : 1;
+      }
+      j = std::min(j + 1, end);
+      out.add(i, j, colors::String);
+      i = j;
+      continue;
+    }
+    size_t j = i;
+    while (j < end && text[j] != ' ' && text[j] != '\t' && text[j] != ',' && text[j] != ']' && text[j] != '}' &&
+           text[j] != '[' && text[j] != '{') {
+      ++j;
+    }
+    const std::string_view token = text.substr(i, j - i);
+    if (yaml && (c == '&' || c == '*' || c == '!')) {
+      out.add(i, j, colors::Annotation);
+    } else if (yaml && (token == "|" || token == ">" || token == "|-" || token == ">-")) {
+      out.add(i, j, colors::Keyword);
+    } else if (looksNumeric(token)) {
+      out.add(i, j, colors::Number);
+    } else if (yaml ? yamlWord(token) : (token == "true" || token == "false")) {
+      out.add(i, j, colors::Keyword);
+    }
+    i = std::max(j, i + 1);
+  }
+}
+
+void lexYaml(std::string_view text, Emitter &out) {
+  const size_t size = text.size();
+  size_t lineStart = 0;
+  while (lineStart < size) {
+    size_t lineEnd = text.find('\n', lineStart);
+    lineEnd = lineEnd == std::string_view::npos ? size : lineEnd;
+    size_t pos = lineStart;
+    while (pos < lineEnd && (text[pos] == ' ' || text[pos] == '\t')) {
+      ++pos;
+    }
+    if (pos < lineEnd && text[pos] == '#') {
+      out.add(pos, lineEnd, colors::Comment, PS_UI_STYLE_ITALIC);
+    } else if (pos < lineEnd) {
+      if (pos == lineStart && (text.compare(pos, 3, "---") == 0 || text.compare(pos, 3, "...") == 0)) {
+        out.add(pos, pos + 3, colors::Keyword);
+        pos += 3;
+      }
+      while (pos < lineEnd && text[pos] == '-' && (pos + 1 == lineEnd || text[pos + 1] == ' ')) {
+        out.add(pos, pos + 1, colors::Marker, PS_UI_STYLE_BOLD);
+        ++pos;
+        while (pos < lineEnd && text[pos] == ' ') {
+          ++pos;
+        }
+      }
+      // A key is a quoted or plain scalar followed by ":" and a space or the end of the line.
+      size_t colon = std::string_view::npos;
+      size_t keyEnd = pos;
+      if (pos < lineEnd && (text[pos] == '"' || text[pos] == '\'')) {
+        const size_t close = text.find(text[pos], pos + 1);
+        if (close != std::string_view::npos && close < lineEnd) {
+          size_t after = close + 1;
+          while (after < lineEnd && text[after] == ' ') {
+            ++after;
+          }
+          if (after < lineEnd && text[after] == ':') {
+            colon = after;
+            keyEnd = close + 1;
+          }
+        }
+      } else if (pos < lineEnd && std::string_view("[{&*!|>%@`#").find(text[pos]) == std::string_view::npos) {
+        for (size_t k = pos; k < lineEnd; ++k) {
+          if (text[k] == ':' && (k + 1 == lineEnd || text[k + 1] == ' ')) {
+            colon = k;
+            keyEnd = k;
+            break;
+          }
+          if (text[k] == '#' && k > pos && text[k - 1] == ' ') {
+            break;
+          }
+        }
+      }
+      if (colon != std::string_view::npos) {
+        while (keyEnd > pos && text[keyEnd - 1] == ' ') {
+          --keyEnd;
+        }
+        out.add(pos, keyEnd, colors::Type);
+        pos = colon + 1;
+      }
+      lexConfigValue(text, pos, lineEnd, true, out, false);
+    }
+    lineStart = lineEnd + 1;
+  }
+}
+
+// TOML and INI: [tables], key = value, # (and, for INI, ;) comments.
+void lexToml(std::string_view text, bool ini, Emitter &out) {
+  const size_t size = text.size();
+  size_t lineStart = 0;
+  while (lineStart < size) {
+    size_t lineEnd = text.find('\n', lineStart);
+    lineEnd = lineEnd == std::string_view::npos ? size : lineEnd;
+    size_t pos = lineStart;
+    while (pos < lineEnd && (text[pos] == ' ' || text[pos] == '\t')) {
+      ++pos;
+    }
+    if (pos < lineEnd && (text[pos] == '#' || (ini && text[pos] == ';'))) {
+      out.add(pos, lineEnd, colors::Comment, PS_UI_STYLE_ITALIC);
+    } else if (pos < lineEnd && text[pos] == '[') {
+      size_t close = text.find(']', pos);
+      close = close == std::string_view::npos || close >= lineEnd ? lineEnd : close + 1;
+      if (close < lineEnd && text[close] == ']') {
+        ++close; // the second bracket of [[array]]
+      }
+      out.add(pos, close, colors::Heading, PS_UI_STYLE_BOLD);
+      lexConfigValue(text, close, lineEnd, false, out, ini);
+    } else if (pos < lineEnd) {
+      size_t eq = pos;
+      while (eq < lineEnd && text[eq] != '=') {
+        ++eq;
+      }
+      if (eq < lineEnd) {
+        size_t keyEnd = eq;
+        while (keyEnd > pos && (text[keyEnd - 1] == ' ' || text[keyEnd - 1] == '\t')) {
+          --keyEnd;
+        }
+        out.add(pos, keyEnd, colors::Type);
+        lexConfigValue(text, eq + 1, lineEnd, false, out, ini);
+      }
+    }
+    lineStart = lineEnd + 1;
+  }
+}
+
 // Inline spans of one Markdown line [start, end): `code`, **strong**, *emphasis*, _emphasis_, [text](url).
 void lexMarkdownInline(std::string_view text, size_t start, size_t end, Emitter &out) {
   size_t i = start;
@@ -476,7 +861,11 @@ Language languageForPath(std::string_view path) {
       {"go", Language::Go},             {"java", Language::Java},      {"kt", Language::Kotlin},
       {"kts", Language::Kotlin},        {"swift", Language::Swift},    {"sh", Language::Shell},
       {"bash", Language::Shell},        {"zsh", Language::Shell},      {"ksh", Language::Shell},
-      {"sql", Language::Sql},           {"cmake", Language::CMake}};
+      {"sql", Language::Sql},           {"cmake", Language::CMake},    {"html", Language::Html},
+      {"htm", Language::Html},          {"xhtml", Language::Html},     {"xml", Language::Html},
+      {"svg", Language::Html},          {"plist", Language::Html},     {"css", Language::Css},
+      {"yml", Language::Yaml},          {"yaml", Language::Yaml},      {"toml", Language::Toml},
+      {"ini", Language::Ini},           {"cfg", Language::Ini},        {"conf", Language::Ini}};
   for (const auto &[ext, language] : table) {
     if (extension == ext) {
       return language;
@@ -623,6 +1012,21 @@ std::vector<HighlightRun> highlight(Language language, std::string_view text) {
     lexCode(text, syntax, out);
     break;
   }
+  case Language::Html:
+    lexHtml(text, out);
+    break;
+  case Language::Css:
+    lexCss(text, out);
+    break;
+  case Language::Yaml:
+    lexYaml(text, out);
+    break;
+  case Language::Toml:
+    lexToml(text, false, out);
+    break;
+  case Language::Ini:
+    lexToml(text, true, out);
+    break;
   case Language::Json:
     lexJson(text, out);
     break;

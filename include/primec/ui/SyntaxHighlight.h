@@ -28,7 +28,12 @@ enum class Language {
   Swift,
   Shell,
   Sql,
-  CMake
+  CMake,
+  Html, // also XML, SVG
+  Css,
+  Yaml,
+  Toml,
+  Ini
 };
 
 // Colours are 0xRRGGBB mid-tones that read on both light and dark backgrounds.
@@ -59,7 +64,8 @@ struct HighlightRun {
 // By the file name's extension, case-insensitively: .prime .ps; .c .h .cc .cpp
 // .cxx .hpp .hh .hxx .m .mm; .py .pyw; .json; .md .markdown; .js .mjs .cjs .jsx
 // .ts .tsx .mts .cts; .rs; .go; .java; .kt .kts; .swift; .sh .bash .zsh .ksh;
-// .sql; .cmake and CMakeLists.txt. None otherwise.
+// .sql; .cmake and CMakeLists.txt; .html .htm .xhtml .xml .svg .plist; .css;
+// .yml .yaml; .toml; .ini .cfg .conf. None otherwise.
 Language languageForPath(std::string_view path);
 
 std::vector<HighlightRun> highlight(Language language, std::string_view text);

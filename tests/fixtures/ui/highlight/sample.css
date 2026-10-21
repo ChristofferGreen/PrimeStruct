@@ -1,0 +1,9 @@
+/* theme */
+@media (max-width: 600px) {
+  .box > a:hover {
+    color: #ff8800;
+    margin: -4px 1.5em;
+    font-family: "Helvetica", sans-serif;
+    background: rgb(1, 2, 3) !important;
+  }
+}

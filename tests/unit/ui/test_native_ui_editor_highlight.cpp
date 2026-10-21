@@ -334,6 +334,92 @@ TEST_CASE("highlight: CMake sample") {
                {"endif", colors::Keyword, 0}});
 }
 
+TEST_CASE("highlight: markup and data extensions") {
+  using primec::ui::languageForPath;
+  CHECK(languageForPath("index.html") == Language::Html);
+  CHECK(languageForPath("data.XML") == Language::Html);
+  CHECK(languageForPath("logo.svg") == Language::Html);
+  CHECK(languageForPath("site.css") == Language::Css);
+  CHECK(languageForPath("ci.yml") == Language::Yaml);
+  CHECK(languageForPath("ci.yaml") == Language::Yaml);
+  CHECK(languageForPath("Cargo.toml") == Language::Toml);
+  CHECK(languageForPath("my.ini") == Language::Ini);
+  CHECK(languageForPath("app.conf") == Language::Ini);
+}
+
+TEST_CASE("highlight: HTML sample") {
+  checkSample("sample.html", Language::Html,
+              {{"<!DOCTYPE html>", colors::Keyword, 0},
+               {"<!-- a page -->", colors::Comment, PS_UI_STYLE_ITALIC},
+               {"<div", colors::Keyword, 0},
+               {"class", colors::Type, 0},
+               {"\"box\"", colors::String, 0},
+               {"id", colors::Type, 0},
+               {"'main'", colors::String, 0},
+               {">", colors::Keyword, 0},
+               {"&amp;", colors::Number, 0},
+               {"<br", colors::Keyword, 0},
+               {"/>", colors::Keyword, 0},
+               {"</div", colors::Keyword, 0}});
+}
+
+TEST_CASE("highlight: CSS sample") {
+  checkSample("sample.css", Language::Css,
+              {{"/* theme */", colors::Comment, PS_UI_STYLE_ITALIC},
+               {"@media", colors::Keyword, 0},
+               {"600px", colors::Number, 0},
+               {".box", colors::Type, 0},
+               {"a:hover", colors::Type, 0},
+               {"color", colors::Keyword, 0},
+               {"#ff8800", colors::Number, 0},
+               {"margin", colors::Keyword, 0},
+               {"-4px", colors::Number, 0},
+               {"1.5em", colors::Number, 0},
+               {"font-family", colors::Keyword, 0},
+               {"\"Helvetica\"", colors::String, 0},
+               {"background", colors::Keyword, 0},
+               {"rgb", colors::Function, 0},
+               {"!important", colors::Keyword, 0}});
+}
+
+TEST_CASE("highlight: YAML sample") {
+  checkSample("sample.yaml", Language::Yaml,
+              {{"# settings", colors::Comment, PS_UI_STYLE_ITALIC},
+               {"---", colors::Keyword, 0},
+               {"name", colors::Type, 0},
+               {"\"demo app\"", colors::String, 0},
+               {"version", colors::Type, 0},
+               {"3.5", colors::Number, 0},
+               {"true", colors::Keyword, 0},
+               {"&base", colors::Annotation, 0},
+               {"retries", colors::Type, 0},
+               {"3", colors::Number, 0},
+               {"# inline comment", colors::Comment, PS_UI_STYLE_ITALIC},
+               {"-", colors::Marker, PS_UI_STYLE_BOLD},
+               {"null", colors::Keyword, 0},
+               {"key", colors::Type, 0}});
+}
+
+TEST_CASE("highlight: TOML and INI samples") {
+  checkSample("sample.toml", Language::Toml,
+              {{"# config", colors::Comment, PS_UI_STYLE_ITALIC},
+               {"[package]", colors::Heading, PS_UI_STYLE_BOLD},
+               {"name", colors::Type, 0},
+               {"\"demo\"", colors::String, 0},
+               {"12", colors::Number, 0},
+               {"true", colors::Keyword, 0},
+               {"tags", colors::Type, 0},
+               {"\"a\"", colors::String, 0},
+               {"\"b\"", colors::String, 0}});
+  checkSample("sample.ini", Language::Ini,
+              {{"; ini sample", colors::Comment, PS_UI_STYLE_ITALIC},
+               {"[server]", colors::Heading, PS_UI_STYLE_BOLD},
+               {"port", colors::Type, 0},
+               {"8080", colors::Number, 0},
+               {"host", colors::Type, 0},
+               {"\"localhost\"", colors::String, 0}});
+}
+
 TEST_CASE("highlight: strings and comments hide their contents from the lexer") {
   const auto runs = primec::ui::highlight(Language::Cpp, "// int return 42\nconst char *s = \"if 7 //\";\n");
   REQUIRE(runs.size() == 4);

@@ -1,0 +1,10 @@
+# settings
+---
+name: "demo app"
+version: 3.5
+enabled: true
+anchors: &base
+  retries: 3 # inline comment
+items:
+  - alpha
+  - key: null
