@@ -237,6 +237,10 @@ headless backend, so it is part of `./scripts/compile.sh --release` on every pla
 | 4 | Standard menus and shortcuts | `acceptance: the menu bar has the standard macOS structure and shortcuts`: the exact `headless::menuBarOutline()` of App, File, Edit, View, Window and Help, and the command ids |
 | 5 | Screenshots | `PrimeStruct_native_ui_appkit_smoke` bundles the editor and checks two drawn PNGs, the highlighted Unicode file and the File menu open (hooks in section 12); the menu structure itself is requirement 4 |
 
+The editor is called PrimeScroll. It keeps one native tab per document (`test_native_ui_editor.cpp`: new tab, independent
+saves, open into a reused or new tab, closing and quitting with per-tab prompts; `test_native_ui_editor_highlight.cpp`:
+each tab styled for its own file); the AppKit smoke test also runs it with two extra tabs.
+
 Hand checks on a Mac (typing, shortcuts, real panels, cursor stepping over grapheme clusters) stay in TODO-5545.
 
 ## 12. macOS backend as built (TODO-5531)

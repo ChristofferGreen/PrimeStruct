@@ -196,6 +196,34 @@ TEST_CASE("highlight: unknown extensions and untitled documents get no styles") 
   CHECK(openInEditor(fixturePath("notes.txt")).empty());
 }
 
+TEST_CASE("highlight: each tab is styled for its own file") {
+  const std::string cpp = fixturePath("sample.cpp");
+  const std::string json = fixturePath("sample.json");
+  headless::reset();
+  headless::pushCommand(CommandOpen);
+  headless::pushOpenPanelAnswer(cpp);
+  headless::pushCommand(CommandOpen);
+  headless::pushOpenPanelAnswer(json);
+  headless::pushCloseWindow(9);
+  headless::pushCloseWindow(EditorWindow);
+  ScriptEngine engine;
+  primec::ui::bindNativeUi(engine);
+  const Script script = engine.compileFile(std::string(PRIMESTRUCT_SOURCE_DIR) + "/examples/apps/text_editor/main.prime");
+  REQUIRE_MESSAGE(script.valid(), script.diagnostics());
+  const auto result = script.run();
+  REQUIRE_MESSAGE(result.ok, result.diagnostics);
+  // Window 1 holds text view 2 (C++), the second tab's window 9 holds text view 10 (JSON).
+  const auto cppRuns = primec::ui::highlight(Language::Cpp, readFile(cpp));
+  const auto jsonRuns = primec::ui::highlight(Language::Json, readFile(json));
+  const auto first = headless::styleRuns(EditorView);
+  const auto second = headless::styleRuns(10);
+  REQUIRE(first.size() == cppRuns.size());
+  REQUIRE(second.size() == jsonRuns.size());
+  CHECK(first.front().start == cppRuns.front().start);
+  CHECK(second.front().start == jsonRuns.front().start);
+  CHECK(first.front().rgb != second.front().rgb);
+}
+
 TEST_CASE("highlight: the editor restyles after typing") {
   const std::string path = fixturePath("sample.json");
   const auto before = openInEditor(path);

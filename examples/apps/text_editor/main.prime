@@ -1,9 +1,11 @@
 import /std/ui/native/*
 
-// A single-window plain-text editor on the native text view
+// PrimeScroll: a plain-text editor with one native tab per document
 // (docs/NativeUiPlan.md section 6). Editing, selection, clipboard and undo come
-// from the platform's own control; this program owns the document: its path,
-// Open/Save/Save As, and asking before unsaved text is discarded.
+// from the platform's own text view. This program owns the documents' life
+// cycle: Open/Save/Save As, and asking before unsaved text is discarded. Each
+// tab is a window whose document path the backend stores, so the program keeps
+// no per-document variables and works on the active tab.
 //
 //   primestruct_app examples/apps/text_editor/main.prime
 //
@@ -36,6 +38,11 @@ command_close() {
   return(5i32)
 }
 
+[return<i32>]
+command_quit() {
+  return(6i32)
+}
+
 // 0 = Save, 1 = Don't Save, 2 = Cancel.
 [return<i32>]
 ask_to_save([App] app) {
@@ -44,15 +51,113 @@ ask_to_save([App] app) {
                    "Save\nDon't Save\nCancel"))
 }
 
+// A new document: a window with its own text view, joined to host's tabs.
+[return<Window>]
+new_tab([App] app, [Window] host) {
+  [Window] created{app.window("Untitled", 720i32, 480i32)}
+  [TextView] view{app.textView()}
+  view.setMonospace(true)
+  created.setContent(view)
+  host.addTab(created)
+  created.show()
+  return(created)
+}
+
+// Writes the tab's text to its file (asking for one with Save As, or when it has
+// none yet). True when the text was saved.
+[return<bool>]
+save_document([App] app, [Window] tab, [bool] chooseFile) {
+  [TextView] view{tab.content()}
+  [bool mut] saved{false}
+  if(chooseFile || !tab.hasPath()) {
+    [string] chosen{app.savePanel("Save", "Untitled.txt")}
+    if(app.panelChosen()) {
+      if(view.saveFile(chosen)) {
+        tab.setPath(chosen)
+        saved = true
+      } else {
+        app.alert("The file could not be saved.", app.lastError(), "OK")
+      }
+    }
+  } else {
+    if(view.saveFile(tab.path())) {
+      saved = true
+    } else {
+      app.alert("The file could not be saved.", app.lastError(), "OK")
+    }
+  }
+  if(saved) {
+    tab.setTitle(tab.path())
+    view.highlight(tab.path())
+    view.clearModified()
+    tab.setEdited(false)
+  }
+  return(saved)
+}
+
+// True when the tab's unsaved text is dealt with (saved or given up).
+[return<bool>]
+confirm_discard([App] app, [Window] tab) {
+  [TextView] view{tab.content()}
+  [bool mut] go{true}
+  if(view.isModified()) {
+    [i32] answer{ask_to_save(app)}
+    if(answer == 2i32) {
+      go = false
+    }
+    if(answer == 0i32) {
+      go = save_document(app, tab, false)
+    }
+  }
+  return(go)
+}
+
+[return<bool>]
+close_tab([App] app, [Window] tab) {
+  [bool] go{confirm_discard(app, tab)}
+  if(go) {
+    tab.close()
+  }
+  return(go)
+}
+
+// Opens a file in a new tab, or in this one while it is still an untouched
+// untitled document.
+[return<bool>]
+open_document([App] app, [Window] tab) {
+  [string] chosen{app.openPanel("Open")}
+  if(app.panelChosen()) {
+    [TextView] current{tab.content()}
+    [bool] reuse{!tab.hasPath() && !current.isModified()}
+    [Window mut] target{tab}
+    if(!reuse) {
+      target = new_tab(app, tab)
+    }
+    [TextView] view{target.content()}
+    if(view.loadFile(chosen)) {
+      target.setPath(chosen)
+      target.setTitle(chosen)
+      view.highlight(chosen)
+      target.setEdited(false)
+    } else {
+      app.alert("The file could not be opened.", app.lastError(), "OK")
+      if(!reuse) {
+        target.close()
+      }
+    }
+  }
+  return(true)
+}
+
 [return<int>]
 main() {
-  [App] app{start_app("Text Editor")}
-  [Window] window{app.window("Untitled", 720i32, 480i32)}
-  [TextView] editor{app.textView()}
-  editor.setMonospace(true)
-  window.setContent(editor)
+  [App] app{start_app("PrimeScroll")}
+  [Window] first{app.window("Untitled", 720i32, 480i32)}
+  [TextView] firstView{app.textView()}
+  firstView.setMonospace(true)
+  first.setContent(firstView)
 
-  [Menu] application{app.menu("Text Editor")}
+  [Menu] application{app.menu("PrimeScroll")}
   application.about()
   application.separator()
   application.hide()
@@ -62,6 +167,7 @@ main() {
   application.addToBarAsApp()
 
   [Menu] file{app.menu("File")}
+  file.item("New Tab", "cmd+t", command_new())
   file.item("New", "cmd+n", command_new())
   file.item("Open...", "cmd+o", command_open())
   file.separator()
@@ -85,11 +191,17 @@ main() {
 
   [Menu] viewMenu{app.menu("View")}
   viewMenu.fullScreen()
+  viewMenu.showTabBar()
   viewMenu.addToBar()
 
   [Menu] windowMenu{app.menu("Window")}
   windowMenu.minimize()
   windowMenu.zoom()
+  windowMenu.separator()
+  windowMenu.nextTab()
+  windowMenu.previousTab()
+  windowMenu.moveTabToNewWindow()
+  windowMenu.mergeAllWindows()
   windowMenu.separator()
   windowMenu.bringAllToFront()
   windowMenu.addToBarAsWindow()
@@ -98,93 +210,58 @@ main() {
   helpMenu.help()
   helpMenu.addToBarAsHelp()
 
-  window.show()
+  first.show()
 
-  [string mut] path{""}
-  [bool mut] hasPath{false}
   [bool mut] running{true}
   while(running) {
     [i32 mut] intent{0i32}
+    [Window mut] tab{app.activeWindow()}
     pick(app.waitEvent()) {
       command(id) {
         intent = id
+        [Window] active{app.activeWindow()}
+        tab = active
       }
       windowCloseRequested(w) {
         intent = command_close()
+        [Window] closing{w}
+        tab = closing
       }
       textChanged(w) {
-        [Window] target{w}
-        target.setEdited(true)
-        editor.highlight(path)
+        [Window] changed{w}
+        changed.setEdited(true)
+        [TextView] view{changed.content()}
+        view.highlight(changed.path())
       }
       quitRequested {
-        intent = command_close()
+        intent = command_quit()
       }
     }
 
-    [bool mut] proceed{true}
-    [bool mut] saveFirst{false}
-    if(intent == command_new() || intent == command_open() || intent == command_close()) {
-      if(editor.isModified()) {
-        [i32] answer{ask_to_save(app)}
-        if(answer == 2i32) {
-          proceed = false
-        }
-        if(answer == 0i32) {
-          saveFirst = true
-        }
+    if(intent == command_new()) {
+      [Window] fresh{new_tab(app, tab)}
+    }
+    if(intent == command_open()) {
+      [bool] opened{open_document(app, tab)}
+    }
+    if(intent == command_save()) {
+      [bool] saved{save_document(app, tab, false)}
+    }
+    if(intent == command_save_as()) {
+      [bool] saved{save_document(app, tab, true)}
+    }
+    if(intent == command_close()) {
+      [bool] closed{close_tab(app, tab)}
+    }
+    if(intent == command_quit()) {
+      // Every tab gets its say; Cancel stops the quit.
+      [bool mut] go{true}
+      while(go && app.windowCount() > 0i32) {
+        [Window] next{app.windowAt(0i32)}
+        go = close_tab(app, next)
       }
     }
-
-    if(proceed && (saveFirst || intent == command_save() || intent == command_save_as())) {
-      [string mut] target{path}
-      [bool mut] known{hasPath}
-      if(intent == command_save_as() || !hasPath) {
-        target = app.savePanel("Save", "Untitled.txt")
-        known = app.panelChosen()
-      }
-      if(!known) {
-        proceed = false
-      } else {
-        if(editor.saveFile(target)) {
-          path = target
-          hasPath = true
-          window.setTitle(path)
-          editor.highlight(path)
-          editor.clearModified()
-          window.setEdited(false)
-        } else {
-          app.alert("The file could not be saved.", app.lastError(), "OK")
-          proceed = false
-        }
-      }
-    }
-
-    if(proceed && intent == command_new()) {
-      editor.setText("")
-      editor.clearModified()
-      path = ""
-      hasPath = false
-      editor.highlight(path)
-      window.setTitle("Untitled")
-      window.setEdited(false)
-    }
-    if(proceed && intent == command_open()) {
-      [string] chosen{app.openPanel("Open")}
-      if(app.panelChosen()) {
-        if(editor.loadFile(chosen)) {
-          path = chosen
-          hasPath = true
-          window.setTitle(path)
-          editor.highlight(path)
-          window.setEdited(false)
-        } else {
-          app.alert("The file could not be opened.", app.lastError(), "OK")
-        }
-      }
-    }
-    if(proceed && intent == command_close()) {
-      window.close()
+    if(app.windowCount() == 0i32) {
       running = false
     }
   }

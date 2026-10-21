@@ -22,9 +22,12 @@ None.
 ## Current Failures
 
 <!-- compile.sh:failing-tests:start -->
-- Last updated: `2026-10-08T20:42:14Z`
+- Last updated: `2026-10-21T21:09:15Z`
 - Build type: `Release`
 - Build dir: `build-release`
 - Command: `ctest --test-dir build-release --output-on-failure --parallel 22`
-- Result: no failing CTest cases.
+- Result: `ctest` failed with status `8`.
+- Failing CTest cases:
+  - `1754`: `PrimeStruct_primestruct_compile_run_native_backend_core_apple_core_71_80`
+  - `1755`: `PrimeStruct_primestruct_compile_run_native_backend_core_apple_core_81_90`
 <!-- compile.sh:failing-tests:end -->

@@ -230,21 +230,114 @@ TEST_CASE("editor close with unsaved text stays open when the user chooses Cance
   CHECK(headless::windowState(EditorWindow).closed);
 }
 
-TEST_CASE("editor new clears the document after asking about unsaved text") {
-  const std::string out = scratchPath("before_new.txt");
+// The editor creates its first window and text view (handles 1 and 2) and then six
+// menus (3 to 8), so the second tab's window and text view are 9 and 10.
+constexpr uint64_t SecondWindow = 9;
+constexpr uint64_t SecondView = 10;
+
+TEST_CASE("editor new opens a second tab in the same tab group") {
   headless::reset();
-  headless::pushTypeText(0, "old");
-  headless::pushCommand(CommandSave);
-  headless::pushSavePanelAnswer(out);
-  headless::pushTypeText(0, "!");
   headless::pushCommand(CommandNew);
-  headless::pushAlertAnswer(1);
+  headless::pushCloseWindow(SecondWindow);
   headless::pushCloseWindow(EditorWindow);
   runEditor();
-  CHECK(readFile(out) == "old");
-  CHECK(headless::windowState(EditorWindow).title == "Untitled");
-  CHECK_FALSE(headless::windowState(EditorWindow).edited);
-  CHECK(countCalls("ps_ui_text_view_set_text(2, \"\")") == 1);
+  CHECK(headless::tabGroup(EditorWindow).empty()); // both closed again
+  const auto second = headless::windowState(SecondWindow);
+  CHECK(second.exists);
+  CHECK(second.title == "Untitled");
+  CHECK(second.content == SecondView);
+  CHECK(second.closed);
+  CHECK(headless::isMonospace(SecondView));
+  CHECK(countCalls("ps_ui_window_add_tab(1, 9)") == 1);
+  CHECK(countCalls("ps_ui_alert(") == 0);
+}
+
+TEST_CASE("editor tabs keep their own paths and save independently") {
+  const std::string pathA = scratchPath("tab_a.txt");
+  const std::string pathB = scratchPath("tab_b.txt");
+  headless::reset();
+  headless::pushTypeText(EditorWindow + 1, "A");
+  headless::pushCommand(CommandSave);
+  headless::pushSavePanelAnswer(pathA);
+  headless::pushCommand(CommandNew);
+  headless::pushTypeText(SecondView, "B");
+  headless::pushCommand(CommandSave);
+  headless::pushSavePanelAnswer(pathB);
+  headless::pushActivateWindow(EditorWindow);
+  headless::pushTypeText(EditorWindow + 1, "2");
+  headless::pushCommand(CommandSave);
+  headless::pushCloseWindow(SecondWindow);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(readFile(pathA) == "A2");
+  CHECK(readFile(pathB) == "B");
+  CHECK(headless::windowPath(EditorWindow) == pathA);
+  CHECK(headless::windowPath(SecondWindow) == pathB);
+  CHECK(headless::windowState(EditorWindow).title == pathA);
+  CHECK(headless::windowState(SecondWindow).title == pathB);
+  CHECK(countCalls("ps_ui_save_panel(") == 2); // the third save reused tab A's path
+  CHECK(countCalls("ps_ui_alert(") == 0);
+}
+
+TEST_CASE("editor open reuses an untouched untitled tab and otherwise opens a new one") {
+  const std::string first = writeScratch("reuse_first.txt", "first");
+  const std::string second = writeScratch("reuse_second.txt", "second");
+  headless::reset();
+  headless::pushCommand(CommandOpen);
+  headless::pushOpenPanelAnswer(first);
+  headless::pushCommand(CommandOpen);
+  headless::pushOpenPanelAnswer(second);
+  headless::pushCloseWindow(SecondWindow);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(headless::windowPath(EditorWindow) == first);
+  CHECK(headless::windowPath(SecondWindow) == second);
+  CHECK(countCalls("ps_ui_window_add_tab(") == 1);
+  CHECK(countCalls("ps_ui_text_view_load_file(2, ") == 1);
+  CHECK(countCalls("ps_ui_text_view_load_file(10, ") == 1);
+}
+
+TEST_CASE("editor closes a failed open's new tab again") {
+  const std::string first = writeScratch("fail_first.txt", "first");
+  headless::reset();
+  headless::pushCommand(CommandOpen);
+  headless::pushOpenPanelAnswer(first);
+  headless::pushCommand(CommandOpen);
+  headless::pushOpenPanelAnswer("/definitely/not/here.txt");
+  headless::pushAlertAnswer(0);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(headless::windowState(SecondWindow).closed);
+  CHECK(headless::windowPath(EditorWindow) == first);
+  CHECK(countCalls("ps_ui_alert(\"The file could not be opened.\"") == 1);
+}
+
+TEST_CASE("editor closing one tab asks about that tab only") {
+  headless::reset();
+  headless::pushCommand(CommandNew);
+  headless::pushTypeText(SecondView, "dirty second");
+  headless::pushCloseWindow(EditorWindow); // the first tab is clean: closes without asking
+  headless::pushCloseWindow(SecondWindow);
+  headless::pushAlertAnswer(1);
+  runEditor();
+  CHECK(headless::windowState(EditorWindow).closed);
+  CHECK(headless::windowState(SecondWindow).closed);
+  CHECK(countCalls("ps_ui_alert(") == 1);
+}
+
+TEST_CASE("editor quit asks about every dirty tab and Cancel stops it") {
+  headless::reset();
+  headless::pushTypeText(EditorWindow + 1, "x");
+  headless::pushCommand(CommandNew);
+  headless::pushTypeText(SecondView, "y");
+  headless::pushQuit();
+  headless::pushAlertAnswer(1); // first tab: Don't Save
+  headless::pushAlertAnswer(2); // second tab: Cancel, the quit stops
+  headless::pushAlertAnswer(1); // quit again once the queue ran dry: Don't Save
+  runEditor();
+  CHECK(countCalls("ps_ui_alert(") == 3);
+  CHECK(headless::windowState(EditorWindow).closed);
+  CHECK(headless::windowState(SecondWindow).closed);
 }
 
 TEST_CASE("editor reports a file that cannot be saved") {

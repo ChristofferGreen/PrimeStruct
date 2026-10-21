@@ -16,6 +16,8 @@
 // loads a file into the first text view and highlights it (the window title
 // becomes the path), and PRIMESTRUCT_UI_MENU=File pops that menu-bar menu open
 // and draws its window into the picture (no Screen Recording permission needed).
+// PRIMESTRUCT_UI_COMMANDS=1,1 delivers those menu command ids to the program
+// first (for the editor, two New commands: two more tabs).
 
 #import <AppKit/AppKit.h>
 #import <objc/runtime.h>
@@ -67,6 +69,8 @@ struct State {
   std::string snapshotTypeText;
   std::string snapshotOpenPath;
   std::string snapshotMenu;
+  std::string snapshotCommands;
+  bool snapshotCommandsSent = false;
   bool snapshotOpened = false;
   bool snapshotTyped = false;
   bool snapshotTaken = false;
@@ -416,6 +420,9 @@ bool ps_ui_init(const char *appName) {
     if (const char *open = std::getenv("PRIMESTRUCT_UI_OPEN"); open != nullptr && *open != '\0') {
       s.snapshotOpenPath = open;
     }
+    if (const char *commands = std::getenv("PRIMESTRUCT_UI_COMMANDS"); commands != nullptr && *commands != '\0') {
+      s.snapshotCommands = commands;
+    }
     if (const char *menu = std::getenv("PRIMESTRUCT_UI_MENU"); menu != nullptr && *menu != '\0') {
       s.snapshotMenu = menu;
     }
@@ -476,7 +483,18 @@ int32_t ps_ui_wait_event(void) {
       [NSApp updateWindows];
       if (snapshotting && event == nil) {
         ++s.snapshotIdleSlices;
-        if (!s.snapshotOpenPath.empty() && !s.snapshotOpened && s.snapshotIdleSlices >= 4) {
+        if (!s.snapshotCommands.empty() && !s.snapshotCommandsSent && s.snapshotIdleSlices >= 2) {
+          // Menu commands as if chosen by the user (the program's own handling runs).
+          s.snapshotCommandsSent = true;
+          s.snapshotIdleSlices = 0;
+          size_t start = 0;
+          while (start < s.snapshotCommands.size()) {
+            size_t comma = s.snapshotCommands.find(',', start);
+            comma = comma == std::string::npos ? s.snapshotCommands.size() : comma;
+            enqueue(PS_UI_EVENT_COMMAND, 0, 0, std::atoi(s.snapshotCommands.substr(start, comma - start).c_str()));
+            start = comma + 1;
+          }
+        } else if (!s.snapshotOpenPath.empty() && !s.snapshotOpened && s.snapshotIdleSlices >= 4) {
           // Opens a file into the first text view, as the program would on Open.
           s.snapshotOpened = true;
           s.snapshotIdleSlices = 0;

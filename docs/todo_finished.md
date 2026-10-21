@@ -2015,6 +2015,7 @@ are left unarchived.
 | TODO-5553 | Editor acceptance screenshots | [2026-10.md](todo_archive/2026-10.md) | 2026-10-08 |
 | TODO-5554 | Close the editor acceptance gate | [2026-10.md](todo_archive/2026-10.md) | 2026-10-08 |
 | TODO-5555 | Tabbed windows in the native UI ABI | [2026-10.md](todo_archive/2026-10.md) | 2026-10-21 |
+| TODO-5556 | Tabs in the text editor | [2026-10.md](todo_archive/2026-10.md) | 2026-10-21 |
 
 <!-- INDEX-END -->
 
