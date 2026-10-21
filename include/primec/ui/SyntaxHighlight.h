@@ -13,7 +13,23 @@
 
 namespace primec::ui {
 
-enum class Language { None, PrimeStruct, Cpp, Python, Json, Markdown };
+enum class Language {
+  None,
+  PrimeStruct,
+  Cpp,
+  Python,
+  Json,
+  Markdown,
+  JavaScript, // also TypeScript
+  Rust,
+  Go,
+  Java,
+  Kotlin,
+  Swift,
+  Shell,
+  Sql,
+  CMake
+};
 
 // Colours are 0xRRGGBB mid-tones that read on both light and dark backgrounds.
 namespace highlight_colors {
@@ -27,6 +43,9 @@ constexpr int32_t Code = 0x3FA04F;
 constexpr int32_t Link = 0xD9822B;
 constexpr int32_t Marker = 0xC9569A;
 constexpr int32_t Strong = 0xE0A53E;
+constexpr int32_t Function = 0x2FB8A8;   // a name followed by "(", or a Rust macro name
+constexpr int32_t Annotation = 0xB08ED6; // @decorator, Rust #[attribute] and 'lifetime
+constexpr int32_t Variable = 0xE07A5F;   // $name, ${name}
 } // namespace highlight_colors
 
 struct HighlightRun {
@@ -38,7 +57,9 @@ struct HighlightRun {
 };
 
 // By the file name's extension, case-insensitively: .prime .ps; .c .h .cc .cpp
-// .cxx .hpp .hh .hxx .m .mm; .py .pyw; .json; .md .markdown. None otherwise.
+// .cxx .hpp .hh .hxx .m .mm; .py .pyw; .json; .md .markdown; .js .mjs .cjs .jsx
+// .ts .tsx .mts .cts; .rs; .go; .java; .kt .kts; .swift; .sh .bash .zsh .ksh;
+// .sql; .cmake and CMakeLists.txt. None otherwise.
 Language languageForPath(std::string_view path);
 
 std::vector<HighlightRun> highlight(Language language, std::string_view text);

@@ -32,9 +32,22 @@ struct CodeSyntax {
   bool singleQuotes = false;
   bool preprocessor = false;
   bool upperIsType = false;
+  bool backtickStrings = false;   // JavaScript templates, Go raw strings: may span lines
+  bool annotations = false;       // @name
+  bool rustMarkup = false;        // #[attribute], 'lifetime, name! macros
+  bool dollarVariables = false;   // $name and ${name}
+  bool ignoreCase = false;        // keywords and types match in any case (SQL, CMake)
   const Words *keywords = nullptr;
   const Words *types = nullptr;
 };
+
+std::string lowered(std::string_view word) {
+  std::string out(word);
+  for (char &c : out) {
+    c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+  }
+  return out;
+}
 
 // Scans C-like or Python-like source. Strings and comments are one run each (to
 // the closing delimiter, or the end of the line / text when unterminated).
@@ -79,6 +92,64 @@ void lexCode(std::string_view text, const CodeSyntax &syntax, Emitter &out) {
       i = end;
       continue;
     }
+    if (syntax.rustMarkup && c == '#' && i + 1 < size && (text[i + 1] == '[' || text[i + 1] == '!')) {
+      // #[derive(Debug)] and #![allow(...)]: up to the matching bracket on the line.
+      const size_t close = text.find(']', i);
+      const size_t eol = text.find('\n', i);
+      if (close != std::string_view::npos && (eol == std::string_view::npos || close < eol)) {
+        out.add(i, close + 1, colors::Annotation);
+        i = close + 1;
+        continue;
+      }
+    }
+    if (syntax.annotations && c == '@' && i + 1 < size && isIdentStart(static_cast<unsigned char>(text[i + 1]))) {
+      size_t j = i + 1;
+      while (j < size && (isIdentPart(static_cast<unsigned char>(text[j])) || text[j] == '.')) {
+        ++j;
+      }
+      out.add(i, j, colors::Annotation);
+      i = j;
+      continue;
+    }
+    if (syntax.dollarVariables && c == '$' && i + 1 < size) {
+      size_t j = i + 1;
+      if (text[j] == '{') {
+        const size_t close = text.find('}', j);
+        j = close == std::string_view::npos ? size : close + 1;
+      } else if (text[j] == '(' || text[j] == '?' || text[j] == '#' || text[j] == '@' || text[j] == '*' ||
+                 text[j] == '!' || text[j] == '$') {
+        ++j;
+      } else {
+        while (j < size && isIdentPart(static_cast<unsigned char>(text[j]))) {
+          ++j;
+        }
+      }
+      if (j > i + 1) {
+        out.add(i, j, colors::Variable);
+        i = j;
+        continue;
+      }
+    }
+    if (syntax.rustMarkup && c == '\'' && i + 1 < size && isIdentStart(static_cast<unsigned char>(text[i + 1]))) {
+      // 'a is a lifetime unless it closes right away as the character literal 'a'.
+      size_t j = i + 1;
+      while (j < size && isIdentPart(static_cast<unsigned char>(text[j]))) {
+        ++j;
+      }
+      const bool charLiteral = j < size && text[j] == '\'' && (j - i - 1 == 1 || static_cast<unsigned char>(text[i + 1]) >= 0x80);
+      if (!charLiteral) {
+        out.add(i, j, colors::Annotation);
+        i = j;
+        continue;
+      }
+    }
+    if (syntax.backtickStrings && c == '`') {
+      size_t end = text.find('`', i + 1);
+      end = end == std::string_view::npos ? size : end + 1;
+      out.add(i, end, colors::String);
+      i = end;
+      continue;
+    }
     if (c == '"' || (c == '\'' && syntax.singleQuotes)) {
       const char quote = static_cast<char>(c);
       if (syntax.tripleQuotes && text.compare(i, 3, std::string(3, quote)) == 0) {
@@ -115,11 +186,20 @@ void lexCode(std::string_view text, const CodeSyntax &syntax, Emitter &out) {
         ++j;
       }
       const std::string_view word = text.substr(i, j - i);
-      if (syntax.keywords != nullptr && syntax.keywords->count(word) != 0) {
+      const std::string folded = syntax.ignoreCase ? lowered(word) : std::string();
+      const std::string_view key = syntax.ignoreCase ? std::string_view(folded) : word;
+      const bool followedByCall = j < size && text[j] == '(';
+      const bool macroCall = syntax.rustMarkup && j + 1 < size && text[j] == '!' && text[j + 1] != '=';
+      if (syntax.keywords != nullptr && syntax.keywords->count(key) != 0) {
         out.add(i, j, colors::Keyword);
-      } else if ((syntax.types != nullptr && syntax.types->count(word) != 0) ||
-                 (syntax.upperIsType && std::isupper(c) != 0)) {
+      } else if ((syntax.types != nullptr && syntax.types->count(key) != 0) ||
+                 (syntax.upperIsType && std::isupper(c) != 0 && !followedByCall)) {
         out.add(i, j, colors::Type);
+      } else if (followedByCall) {
+        out.add(i, j, colors::Function);
+      } else if (macroCall) {
+        out.add(i, j + 1, colors::Function);
+        j += 1;
       }
       i = j;
       continue;
@@ -151,6 +231,79 @@ const Words PythonKeywords{"False",   "None",   "True",    "and",      "as",    
                            "lambda",  "nonlocal", "not",   "or",       "pass",   "raise",  "return", "try",
                            "while",   "with",   "yield",   "match",    "case"};
 const Words PythonTypes{"int", "str", "float", "bool", "list", "dict", "set", "tuple", "bytes", "object", "self"};
+
+const Words JsKeywords{"abstract", "as",         "async",    "await",   "break",    "case",     "catch",   "class",
+                       "const",    "continue",   "debugger", "declare", "default",  "delete",   "do",      "else",
+                       "enum",     "export",     "extends",  "false",   "finally",  "for",      "from",    "function",
+                       "get",      "if",         "implements", "import", "in",      "instanceof", "interface", "keyof",
+                       "let",      "namespace",  "new",      "null",    "of",       "package",  "private", "protected",
+                       "public",   "readonly",   "return",   "set",     "static",   "super",    "switch",  "this",
+                       "throw",    "true",       "try",      "type",    "typeof",   "undefined", "var",    "void",
+                       "while",    "with",       "yield"};
+const Words JsTypes{"string", "number", "boolean", "any", "unknown", "never", "object", "symbol", "bigint"};
+
+const Words RustKeywords{"as",    "async", "await", "break",  "const", "continue", "crate", "dyn",   "else",  "enum",
+                         "extern", "false", "fn",    "for",    "if",    "impl",     "in",    "let",   "loop",  "match",
+                         "mod",   "move",  "mut",   "pub",    "ref",   "return",   "self",  "static", "struct", "super",
+                         "trait", "true",  "type",  "union",  "unsafe", "use",     "where", "while"};
+const Words RustTypes{"i8",  "i16", "i32", "i64", "i128", "isize", "u8",   "u16",    "u32",   "u64",
+                      "u128", "usize", "f32", "f64", "bool", "char",  "str", "String", "Vec",   "Option",
+                      "Result", "Box", "Self", "Some", "None", "Ok",   "Err"};
+
+const Words GoKeywords{"break",  "case", "chan", "const", "continue", "default", "defer",  "else", "fallthrough",
+                       "for",    "func", "go",   "goto",  "if",       "import",  "interface", "map", "package",
+                       "range",  "return", "select", "struct", "switch", "type", "var",   "true", "false",
+                       "nil",    "iota"};
+const Words GoTypes{"bool",   "byte",    "complex64", "complex128", "error", "float32", "float64", "int",
+                    "int8",   "int16",   "int32",     "int64",      "rune",  "string",  "uint",    "uint8",
+                    "uint16", "uint32",  "uint64",    "uintptr",    "any"};
+
+const Words JavaKeywords{"abstract", "assert",  "break",     "case",     "catch",   "class",   "const",     "continue",
+                         "default",  "do",      "else",      "enum",     "extends", "final",   "finally",   "for",
+                         "goto",     "if",      "implements", "import",  "instanceof", "interface", "native", "new",
+                         "package",  "private", "protected", "public",   "record",  "return",  "sealed",    "permits",
+                         "static",   "strictfp", "super",    "switch",   "synchronized", "this", "throw",   "throws",
+                         "transient", "try",    "var",       "volatile", "while",   "yield",   "true",      "false",
+                         "null"};
+const Words JavaTypes{"boolean", "byte", "char", "double", "float", "int", "long", "short", "void"};
+
+const Words KotlinKeywords{"abstract", "as",       "break",   "by",       "catch",   "class",    "companion", "const",
+                           "constructor", "continue", "data", "do",       "else",    "enum",     "false",     "finally",
+                           "for",      "fun",      "if",      "import",   "in",      "init",     "inner",     "interface",
+                           "internal", "is",       "lateinit", "null",    "object",  "open",     "override",  "package",
+                           "private",  "protected", "public", "return",   "sealed",  "super",    "suspend",   "this",
+                           "throw",    "true",     "try",     "typealias", "val",   "var",      "when",      "while"};
+const Words KotlinTypes{"Int", "Long", "Short", "Byte", "Float", "Double", "Boolean", "Char", "String", "Unit", "Any", "Nothing"};
+
+const Words SwiftKeywords{"actor",   "any",     "associatedtype", "async",  "await",   "break",   "case",     "catch",
+                          "class",   "continue", "default",      "defer",  "deinit",  "do",      "else",     "enum",
+                          "extension", "fallthrough", "false",   "fileprivate", "for", "func",   "guard",    "if",
+                          "import",  "in",      "init",          "inout",  "internal", "is",      "let",      "nil",
+                          "open",    "operator", "private",      "protocol", "public", "repeat",  "rethrows", "return",
+                          "self",    "Self",    "some",          "static", "struct",  "subscript", "super",  "switch",
+                          "throw",   "throws",  "true",          "try",    "typealias", "var",    "where",    "while"};
+const Words SwiftTypes{"Int", "Int8", "Int16", "Int32", "Int64", "UInt", "Double", "Float", "Bool", "String", "Character", "Void"};
+
+const Words ShellKeywords{"if",     "then",   "else",  "elif",  "fi",    "for",    "while", "until", "do",    "done",
+                          "case",   "esac",   "in",    "function", "select", "time", "return", "exit", "break", "continue",
+                          "local",  "export", "readonly", "declare", "unset", "shift", "source", "alias", "set",  "trap",
+                          "eval",   "exec"};
+
+const Words SqlKeywords{"select",  "from",   "where",   "insert",  "into",   "values", "update",  "set",     "delete",
+                        "create",  "table",  "drop",    "alter",   "add",    "column", "index",   "view",    "join",
+                        "inner",   "left",   "right",   "outer",   "full",   "cross",  "on",      "group",   "by",
+                        "order",   "having", "limit",   "offset",  "union",  "all",    "distinct", "as",     "and",
+                        "or",      "not",    "null",    "is",      "in",     "like",   "between", "exists",  "case",
+                        "when",    "then",   "else",    "end",     "primary", "key",   "foreign", "references", "default",
+                        "unique",  "check",  "constraint", "begin", "commit", "rollback", "transaction", "with", "returning",
+                        "asc",     "desc",   "true",    "false"};
+const Words SqlTypes{"int",     "integer", "bigint", "smallint", "tinyint", "decimal", "numeric", "float",    "real",
+                     "double",  "varchar", "char",   "text",     "boolean", "bool",    "date",    "time",     "timestamp",
+                     "datetime", "blob",   "json",   "uuid",     "serial"};
+
+const Words CMakeKeywords{"if",       "elseif",   "else",   "endif",   "foreach",  "endforeach", "while",  "endwhile",
+                          "function", "endfunction", "macro", "endmacro", "return", "break",     "continue", "not",
+                          "and",      "or",       "true",   "false",   "on",       "off",        "yes",    "no"};
 
 void lexJson(std::string_view text, Emitter &out) {
   const size_t size = text.size();
@@ -299,6 +452,9 @@ void lexMarkdown(std::string_view text, Emitter &out) {
 Language languageForPath(std::string_view path) {
   const size_t slash = path.find_last_of('/');
   const std::string_view name = slash == std::string_view::npos ? path : path.substr(slash + 1);
+  if (name == "CMakeLists.txt") {
+    return Language::CMake;
+  }
   const size_t dot = name.find_last_of('.');
   if (dot == std::string_view::npos || dot + 1 >= name.size()) {
     return Language::None;
@@ -313,7 +469,14 @@ Language languageForPath(std::string_view path) {
       {"cxx", Language::Cpp},           {"hpp", Language::Cpp},        {"hh", Language::Cpp},
       {"hxx", Language::Cpp},           {"m", Language::Cpp},          {"mm", Language::Cpp},
       {"py", Language::Python},         {"pyw", Language::Python},     {"json", Language::Json},
-      {"md", Language::Markdown},       {"markdown", Language::Markdown}};
+      {"md", Language::Markdown},       {"markdown", Language::Markdown},
+      {"js", Language::JavaScript},     {"mjs", Language::JavaScript}, {"cjs", Language::JavaScript},
+      {"jsx", Language::JavaScript},    {"ts", Language::JavaScript},  {"tsx", Language::JavaScript},
+      {"mts", Language::JavaScript},    {"cts", Language::JavaScript}, {"rs", Language::Rust},
+      {"go", Language::Go},             {"java", Language::Java},      {"kt", Language::Kotlin},
+      {"kts", Language::Kotlin},        {"swift", Language::Swift},    {"sh", Language::Shell},
+      {"bash", Language::Shell},        {"zsh", Language::Shell},      {"ksh", Language::Shell},
+      {"sql", Language::Sql},           {"cmake", Language::CMake}};
   for (const auto &[ext, language] : table) {
     if (extension == ext) {
       return language;
@@ -353,6 +516,110 @@ std::vector<HighlightRun> highlight(Language language, std::string_view text) {
     syntax.singleQuotes = true;
     syntax.keywords = &PythonKeywords;
     syntax.types = &PythonTypes;
+    lexCode(text, syntax, out);
+    break;
+  }
+  case Language::JavaScript: {
+    CodeSyntax syntax;
+    syntax.lineComment = "//";
+    syntax.blockComments = true;
+    syntax.singleQuotes = true;
+    syntax.backtickStrings = true;
+    syntax.annotations = true;
+    syntax.upperIsType = true;
+    syntax.keywords = &JsKeywords;
+    syntax.types = &JsTypes;
+    lexCode(text, syntax, out);
+    break;
+  }
+  case Language::Rust: {
+    CodeSyntax syntax;
+    syntax.lineComment = "//";
+    syntax.blockComments = true;
+    syntax.singleQuotes = true;
+    syntax.rustMarkup = true;
+    syntax.upperIsType = true;
+    syntax.keywords = &RustKeywords;
+    syntax.types = &RustTypes;
+    lexCode(text, syntax, out);
+    break;
+  }
+  case Language::Go: {
+    CodeSyntax syntax;
+    syntax.lineComment = "//";
+    syntax.blockComments = true;
+    syntax.singleQuotes = true;
+    syntax.backtickStrings = true;
+    syntax.keywords = &GoKeywords;
+    syntax.types = &GoTypes;
+    lexCode(text, syntax, out);
+    break;
+  }
+  case Language::Java: {
+    CodeSyntax syntax;
+    syntax.lineComment = "//";
+    syntax.blockComments = true;
+    syntax.singleQuotes = true;
+    syntax.tripleQuotes = true;
+    syntax.annotations = true;
+    syntax.upperIsType = true;
+    syntax.keywords = &JavaKeywords;
+    syntax.types = &JavaTypes;
+    lexCode(text, syntax, out);
+    break;
+  }
+  case Language::Kotlin: {
+    CodeSyntax syntax;
+    syntax.lineComment = "//";
+    syntax.blockComments = true;
+    syntax.singleQuotes = true;
+    syntax.tripleQuotes = true;
+    syntax.annotations = true;
+    syntax.upperIsType = true;
+    syntax.keywords = &KotlinKeywords;
+    syntax.types = &KotlinTypes;
+    lexCode(text, syntax, out);
+    break;
+  }
+  case Language::Swift: {
+    CodeSyntax syntax;
+    syntax.lineComment = "//";
+    syntax.blockComments = true;
+    syntax.tripleQuotes = true;
+    syntax.annotations = true;
+    syntax.upperIsType = true;
+    syntax.keywords = &SwiftKeywords;
+    syntax.types = &SwiftTypes;
+    lexCode(text, syntax, out);
+    break;
+  }
+  case Language::Shell: {
+    CodeSyntax syntax;
+    syntax.lineComment = "#";
+    syntax.singleQuotes = true;
+    syntax.backtickStrings = true;
+    syntax.dollarVariables = true;
+    syntax.keywords = &ShellKeywords;
+    lexCode(text, syntax, out);
+    break;
+  }
+  case Language::Sql: {
+    CodeSyntax syntax;
+    syntax.lineComment = "--";
+    syntax.blockComments = true;
+    syntax.singleQuotes = true;
+    syntax.ignoreCase = true;
+    syntax.keywords = &SqlKeywords;
+    syntax.types = &SqlTypes;
+    lexCode(text, syntax, out);
+    break;
+  }
+  case Language::CMake: {
+    CodeSyntax syntax;
+    syntax.lineComment = "#";
+    syntax.dollarVariables = true;
+    syntax.ignoreCase = true;
+    syntax.keywords = &CMakeKeywords;
     lexCode(text, syntax, out);
     break;
   }

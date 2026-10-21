@@ -171,7 +171,9 @@ bool ps_ui_text_view_clear_styles(uint64_t view);
 bool ps_ui_text_view_add_style(uint64_t view, int32_t startByte, int32_t endByte, int32_t rgb, int32_t flags);
 /* Replaces the view's style runs with syntax highlighting for the language of
  * the file name `path` (by extension: PrimeStruct .prime, C/C++/Objective-C
- * .c .h .cc .cpp .hpp .m .mm ..., Python .py, JSON .json, Markdown .md); an
+ * .c .h .cc .cpp .hpp .m .mm ..., Python .py, JSON .json, Markdown .md,
+ * JavaScript/TypeScript, Rust, Go, Java, Kotlin, Swift, shell, SQL and CMake;
+ * the full table is in primec/ui/SyntaxHighlight.h); an
  * unknown extension or "" just clears the styles, as does text over 64 KiB.
  * Programs call it after loading or saving and on PS_UI_EVENT_TEXT_CHANGED. */
 bool ps_ui_text_view_highlight(uint64_t view, const char *path);

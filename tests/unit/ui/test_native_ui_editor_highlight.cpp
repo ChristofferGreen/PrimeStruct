@@ -110,6 +110,17 @@ TEST_CASE("highlight: language follows the file extension") {
   CHECK(languageForPath("tool.py") == Language::Python);
   CHECK(languageForPath("data.json") == Language::Json);
   CHECK(languageForPath("README.md") == Language::Markdown);
+  CHECK(languageForPath("app.tsx") == Language::JavaScript);
+  CHECK(languageForPath("app.mjs") == Language::JavaScript);
+  CHECK(languageForPath("lib.rs") == Language::Rust);
+  CHECK(languageForPath("main.go") == Language::Go);
+  CHECK(languageForPath("A.java") == Language::Java);
+  CHECK(languageForPath("a.kts") == Language::Kotlin);
+  CHECK(languageForPath("a.swift") == Language::Swift);
+  CHECK(languageForPath("run.zsh") == Language::Shell);
+  CHECK(languageForPath("q.SQL") == Language::Sql);
+  CHECK(languageForPath("/src/CMakeLists.txt") == Language::CMake);
+  CHECK(languageForPath("x.cmake") == Language::CMake);
   CHECK(languageForPath("notes.txt") == Language::None);
   CHECK(languageForPath("Makefile") == Language::None);
   CHECK(languageForPath("dir.d/noext") == Language::None);
@@ -180,6 +191,147 @@ TEST_CASE("highlight: Markdown sample") {
                {"> quoted", colors::Comment, PS_UI_STYLE_ITALIC},
                {"```", colors::Code, 0},
                {"fenced code", colors::Code, 0}});
+}
+
+TEST_CASE("highlight: function names are coloured in code languages") {
+  checkSample("sample.prime", Language::PrimeStruct, {{"add_one", colors::Function, 0}});
+  checkSample("sample.cpp", Language::Cpp, {{"count_items", colors::Function, 0}});
+  checkSample("sample.py", Language::Python, {{"greet", colors::Function, 0}});
+}
+
+TEST_CASE("highlight: JavaScript and TypeScript sample") {
+  checkSample("sample.js", Language::JavaScript,
+              {{"// fetch data", colors::Comment, PS_UI_STYLE_ITALIC},
+               {"import", colors::Keyword, 0},
+               {"\"./load.js\"", colors::String, 0},
+               {"from", colors::Keyword, 0},
+               {"@observe", colors::Annotation, 0},
+               {"class", colors::Keyword, 0},
+               {"Store", colors::Type, 0},
+               {"async", colors::Keyword, 0},
+               {"fetchAll", colors::Function, 0},
+               {"const", colors::Keyword, 0},
+               {"`https://x.y/${items}`", colors::String, 0},
+               {"null", colors::Keyword, 0},
+               {"load", colors::Function, 0},
+               {"'ok'", colors::String, 0},
+               {"42", colors::Number, 0}});
+}
+
+TEST_CASE("highlight: Rust sample") {
+  checkSample("sample.rs", Language::Rust,
+              {{"// a Rust sample", colors::Comment, PS_UI_STYLE_ITALIC},
+               {"#[derive(Debug)]", colors::Annotation, 0},
+               {"struct", colors::Keyword, 0},
+               {"Point", colors::Type, 0},
+               {"'a", colors::Annotation, 0},
+               {"str", colors::Type, 0},
+               {"fn", colors::Keyword, 0},
+               {"main", colors::Function, 0},
+               {"u32", colors::Type, 0},
+               {"5", colors::Number, 0},
+               {"println!", colors::Function, 0},
+               {"\"x = {}\"", colors::String, 0},
+               {"'z'", colors::String, 0}});
+}
+
+TEST_CASE("highlight: Go sample") {
+  checkSample("sample.go", Language::Go,
+              {{"// Package main", colors::Comment, PS_UI_STYLE_ITALIC},
+               {"package", colors::Keyword, 0},
+               {"import", colors::Keyword, 0},
+               {"\"fmt\"", colors::String, 0},
+               {"func", colors::Keyword, 0},
+               {"main", colors::Function, 0},
+               {"var", colors::Keyword, 0},
+               {"int", colors::Type, 0},
+               {"3", colors::Number, 0},
+               {"Println", colors::Function, 0},
+               {"`a raw string`", colors::String, 0}});
+}
+
+TEST_CASE("highlight: Java sample") {
+  checkSample("sample.java", Language::Java,
+              {{"// Java sample", colors::Comment, PS_UI_STYLE_ITALIC},
+               {"@Override", colors::Annotation, 0},
+               {"public", colors::Keyword, 0},
+               {"class", colors::Keyword, 0},
+               {"Greeter", colors::Type, 0},
+               {"final", colors::Keyword, 0},
+               {"int", colors::Type, 0},
+               {"7", colors::Number, 0},
+               {"String", colors::Type, 0},
+               {"greet", colors::Function, 0},
+               {"\"hi \"", colors::String, 0}});
+}
+
+TEST_CASE("highlight: Kotlin sample") {
+  checkSample("sample.kt", Language::Kotlin,
+              {{"// Kotlin sample", colors::Comment, PS_UI_STYLE_ITALIC},
+               {"@Suppress", colors::Annotation, 0},
+               {"\"unused\"", colors::String, 0},
+               {"fun", colors::Keyword, 0},
+               {"greet", colors::Function, 0},
+               {"String", colors::Type, 0},
+               {"Int", colors::Type, 0},
+               {"val", colors::Keyword, 0},
+               {"3", colors::Number, 0}});
+}
+
+TEST_CASE("highlight: Swift sample") {
+  checkSample("sample.swift", Language::Swift,
+              {{"// Swift sample", colors::Comment, PS_UI_STYLE_ITALIC},
+               {"@available", colors::Annotation, 0},
+               {"func", colors::Keyword, 0},
+               {"greet", colors::Function, 0},
+               {"String", colors::Type, 0},
+               {"Int", colors::Type, 0},
+               {"let", colors::Keyword, 0},
+               {"3", colors::Number, 0}});
+}
+
+TEST_CASE("highlight: shell sample") {
+  checkSample("sample.sh", Language::Shell,
+              {{"#!/bin/sh", colors::Comment, PS_UI_STYLE_ITALIC},
+               {"# deploy script", colors::Comment, PS_UI_STYLE_ITALIC},
+               {"\"world\"", colors::String, 0},
+               {"if", colors::Keyword, 0},
+               {"\"$name\"", colors::String, 0},
+               {"then", colors::Keyword, 0},
+               {"\"hello ${name}\"", colors::String, 0},
+               {"'literal'", colors::String, 0},
+               {"$HOME", colors::Variable, 0},
+               {"fi", colors::Keyword, 0}});
+}
+
+TEST_CASE("highlight: SQL sample") {
+  checkSample("sample.sql", Language::Sql,
+              {{"-- list users", colors::Comment, PS_UI_STYLE_ITALIC},
+               {"SELECT", colors::Keyword, 0},
+               {"FROM", colors::Keyword, 0},
+               {"WHERE", colors::Keyword, 0},
+               {"21", colors::Number, 0},
+               {"AND", colors::Keyword, 0},
+               {"'Paris'", colors::String, 0},
+               {"CREATE", colors::Keyword, 0},
+               {"TABLE", colors::Keyword, 0},
+               {"INT", colors::Type, 0},
+               {"PRIMARY", colors::Keyword, 0},
+               {"KEY", colors::Keyword, 0},
+               {"VARCHAR", colors::Type, 0}});
+}
+
+TEST_CASE("highlight: CMake sample") {
+  checkSample("sample.cmake", Language::CMake,
+              {{"# build the app", colors::Comment, PS_UI_STYLE_ITALIC},
+               {"cmake_minimum_required", colors::Function, 0},
+               {"3.20", colors::Number, 0},
+               {"set", colors::Function, 0},
+               {"\"demo\"", colors::String, 0},
+               {"if", colors::Keyword, 0},
+               {"message", colors::Function, 0},
+               {"\"${NAME} on Windows\"", colors::String, 0},
+               {"endif", colors::Keyword, 0}});
 }
 
 TEST_CASE("highlight: strings and comments hide their contents from the lexer") {

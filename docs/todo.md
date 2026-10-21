@@ -109,8 +109,7 @@ of sync with them.
 | TODO-5536 | Small, lazily loaded bytecode for apps | ready | bytecode-startup |
 | TODO-5535 | Launch-time harness and reference Objective-C++ editor | ready | native-ui-launch |
 | TODO-5530 | Read and write whole files as String | blocked | file-text |
-| TODO-5557 | More languages and function names in syntax highlighting | ready | native-ui-syntax |
-| TODO-5558 | Markup and data languages in syntax highlighting | blocked | native-ui-syntax |
+| TODO-5558 | Markup and data languages in syntax highlighting | ready | native-ui-syntax |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5534 | Compiled programs call the native UI ABI | deferred | native-ui-compiled |
 | TODO-5510 | `return` returns from pick arms and lambdas correctly | ready | control-returns |
@@ -139,7 +138,7 @@ of sync with them.
 
 - TODO-5537 (bytes): `u8` and byte-addressed memory
 - TODO-5538 (slices): slices are real borrows with shared operations
-- TODO-5557 (native-ui-syntax): more languages and function names in syntax highlighting
+- TODO-5558 (native-ui-syntax): markup and data languages in syntax highlighting
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5510 (control-returns): `return` returns from pick arms and lambdas correctly
@@ -148,7 +147,7 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5557
+1. TODO-5558
 2. TODO-5536
 3. TODO-5537
 4. TODO-5538
@@ -160,7 +159,7 @@ of sync with them.
 ### Priority Lanes
 
 - Strings and slices (docs/spec/strings-and-views.md): TODO-5537, TODO-5538, TODO-5539, TODO-5540, TODO-5530, TODO-5541, TODO-5542
-- Native UI editor tabs and syntax (docs/NativeUiPlan.md): TODO-5557, TODO-5558
+- Native UI editor tabs and syntax (docs/NativeUiPlan.md): TODO-5558
 - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533, TODO-5534
 - Lifecycle (docs/spec/value-lifecycle.md): TODO-5527
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
@@ -355,22 +354,9 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - full release gate green
   - stop_rule: whole-file text read and write only.
 
-- [ ] TODO-5557: More languages and function names in syntax highlighting
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-21
-  - phase: Native UI editor syntax
-  - parallel_track: native-ui-syntax
-  - scope: Add JavaScript/TypeScript (.js .mjs .jsx .ts .tsx incl. template literals), Rust, Go, Java, Kotlin, Swift, Shell (.sh .bash .zsh, `$var`), SQL (case-insensitive keywords, `--` comments) and CMake (.cmake, CMakeLists.txt) to `SyntaxHighlight`, plus a function-name colour for identifiers followed by `(` in all code languages and block/attribute colours where the language has them (Rust lifetimes and attributes, Swift/Java annotations).
-  - acceptance:
-    - one fixture per new language under tests/fixtures/ui/highlight/ with asserted runs in the editor gate; extension mapping cases
-    - full release gate green
-  - stop_rule: code-like languages and function names only.
-
 - [ ] TODO-5558: Markup and data languages in syntax highlighting
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5557
+  - status: ready
   - created_at: 2026-10-21
   - phase: Native UI editor syntax
   - parallel_track: native-ui-syntax
