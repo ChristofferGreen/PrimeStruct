@@ -55,6 +55,9 @@ template <class Binder> void forEachBinding(Binder &&bindOne) {
   });
   bindOne("ps_ui_window_add_tab", [](uint64_t host, uint64_t tab) { return ps_ui_window_add_tab(host, tab); });
   bindOne("ps_ui_active_window", [] { return ps_ui_active_window(); });
+  bindOne("ps_ui_window_tab_count", [](uint64_t window) { return ps_ui_window_tab_count(window); });
+  bindOne("ps_ui_window_tab_at", [](uint64_t window, int32_t index) { return ps_ui_window_tab_at(window, index); });
+  bindOne("ps_ui_window_select", [](uint64_t window) { return ps_ui_window_select(window); });
   bindOne("ps_ui_window_content", [](uint64_t window) { return ps_ui_window_content(window); });
   bindOne("ps_ui_window_count", [] { return ps_ui_window_count(); });
   bindOne("ps_ui_window_at", [](int32_t index) { return ps_ui_window_at(index); });

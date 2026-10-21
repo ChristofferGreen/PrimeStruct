@@ -360,6 +360,35 @@ TEST_CASE("headless windows enumerate in creation order and the active window fo
   CHECK(ps_ui_active_window() == 0);
 }
 
+TEST_CASE("headless tabs can be counted, indexed and selected") {
+  startApp();
+  const uint64_t a = ps_ui_window_create("A", 100, 100);
+  const uint64_t b = ps_ui_window_create("B", 100, 100);
+  const uint64_t c = ps_ui_window_create("C", 100, 100);
+  // A window in no group is its own single tab.
+  CHECK(ps_ui_window_tab_count(a) == 1);
+  CHECK(ps_ui_window_tab_at(a, 0) == a);
+  CHECK(ps_ui_window_tab_at(a, 1) == 0);
+  REQUIRE(ps_ui_window_add_tab(a, b));
+  REQUIRE(ps_ui_window_add_tab(a, c));
+  for (const uint64_t member : {a, b, c}) {
+    CHECK(ps_ui_window_tab_count(member) == 3);
+    CHECK(ps_ui_window_tab_at(member, 0) == a);
+    CHECK(ps_ui_window_tab_at(member, 2) == c);
+  }
+  CHECK(ps_ui_window_tab_at(b, 3) == 0);
+  CHECK(ps_ui_window_tab_at(b, -1) == 0);
+  CHECK(ps_ui_active_window() == c);
+  CHECK(ps_ui_window_select(a));
+  CHECK(ps_ui_active_window() == a);
+  REQUIRE(ps_ui_window_close(b));
+  CHECK(ps_ui_window_tab_count(a) == 2);
+  CHECK(ps_ui_window_tab_at(a, 1) == c);
+  CHECK_FALSE(ps_ui_window_select(b));
+  CHECK(ps_ui_window_tab_count(b) == 0);
+  CHECK(ps_ui_window_tab_at(999, 0) == 0);
+}
+
 TEST_CASE("headless windows keep their own content and document path") {
   startApp();
   const uint64_t a = ps_ui_window_create("A", 100, 100);

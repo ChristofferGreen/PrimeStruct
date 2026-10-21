@@ -98,6 +98,18 @@ ps_ui_window_add_tab([u64] host, [u64] tab) {
 ps_ui_active_window() {
 }
 
+[host return<i32>]
+ps_ui_window_tab_count([u64] window) {
+}
+
+[host return<u64>]
+ps_ui_window_tab_at([u64] window, [i32] index) {
+}
+
+[host return<bool>]
+ps_ui_window_select([u64] window) {
+}
+
 [host return<u64>]
 ps_ui_window_content([u64] window) {
 }
@@ -210,6 +222,24 @@ Window() {
   [public return<bool>]
   addTab([Window] tab) {
     return(ps_ui_window_add_tab(this.handle, tab.handle))
+  }
+
+  // The tabs of this window's group in tab-bar order (1 when it has no group).
+  [public return<i32>]
+  tabCount() {
+    return(ps_ui_window_tab_count(this.handle))
+  }
+
+  [public return<Window>]
+  tabAt([i32] index) {
+    [Window] found{[handle] ps_ui_window_tab_at(this.handle, index)}
+    return(found)
+  }
+
+  // Selects this window's tab and makes it the active window.
+  [public return<bool>]
+  select() {
+    return(ps_ui_window_select(this.handle))
   }
 
   [public return<TextView>]

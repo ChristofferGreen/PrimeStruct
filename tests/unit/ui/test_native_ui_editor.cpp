@@ -279,6 +279,38 @@ TEST_CASE("editor tabs keep their own paths and save independently") {
   CHECK(countCalls("ps_ui_alert(") == 0);
 }
 
+TEST_CASE("editor Command-number selects that tab and Command-9 the last") {
+  const std::string pathA = scratchPath("number_a.txt");
+  const std::string pathB = scratchPath("number_b.txt");
+  const std::string pathC = scratchPath("number_c.txt");
+  constexpr int32_t CommandTab = 100;
+  headless::reset();
+  headless::pushTypeText(EditorWindow + 1, "A");
+  headless::pushCommand(CommandNew);
+  headless::pushTypeText(SecondView, "B");
+  headless::pushCommand(CommandNew); // window 11, view 12
+  headless::pushTypeText(12, "C");
+  headless::pushCommand(CommandTab + 1); // Command-1: the first tab
+  headless::pushCommand(CommandSave);
+  headless::pushSavePanelAnswer(pathA);
+  headless::pushCommand(CommandTab + 2); // Command-2: the second tab
+  headless::pushCommand(CommandSave);
+  headless::pushSavePanelAnswer(pathB);
+  headless::pushCommand(CommandTab + 9); // Command-9: the last tab
+  headless::pushCommand(CommandSave);
+  headless::pushSavePanelAnswer(pathC);
+  headless::pushCommand(CommandTab + 5); // no fifth tab: nothing changes
+  headless::pushCloseWindow(EditorWindow);
+  headless::pushCloseWindow(SecondWindow);
+  headless::pushCloseWindow(11);
+  runEditor();
+  CHECK(readFile(pathA) == "A");
+  CHECK(readFile(pathB) == "B");
+  CHECK(readFile(pathC) == "C");
+  CHECK(countCalls("ps_ui_window_select(") == 3);
+  CHECK(countCalls("ps_ui_alert(") == 0);
+}
+
 TEST_CASE("editor open reuses an untouched untitled tab and otherwise opens a new one") {
   const std::string first = writeScratch("reuse_first.txt", "first");
   const std::string second = writeScratch("reuse_second.txt", "second");

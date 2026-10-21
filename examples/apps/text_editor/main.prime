@@ -43,12 +43,35 @@ command_quit() {
   return(6i32)
 }
 
+// Cmd+1 ... Cmd+9 are command_tab() + 1 ... + 9.
+[return<i32>]
+command_tab() {
+  return(100i32)
+}
+
 // 0 = Save, 1 = Don't Save, 2 = Cancel.
 [return<i32>]
 ask_to_save([App] app) {
   return(app.alert("Do you want to save the changes?",
                    "Your changes will be lost if you do not save them.",
                    "Save\nDon't Save\nCancel"))
+}
+
+// Selects the number-th tab (1 to 9) of the tab's group; 9 is the last tab, as in
+// other macOS apps. Numbers past the last tab do nothing.
+[return<bool>]
+select_tab([Window] tab, [i32] number) {
+  [i32] count{tab.tabCount()}
+  [i32 mut] index{number - 1i32}
+  if(number == 9i32) {
+    index = count - 1i32
+  }
+  [bool mut] selected{false}
+  if(index >= 0i32 && index < count) {
+    [Window] target{tab.tabAt(index)}
+    selected = target.select()
+  }
+  return(selected)
 }
 
 // A new document: a window with its own text view, joined to host's tabs.
@@ -203,6 +226,16 @@ main() {
   windowMenu.moveTabToNewWindow()
   windowMenu.mergeAllWindows()
   windowMenu.separator()
+  windowMenu.item("Show Tab 1", "cmd+1", command_tab() + 1i32)
+  windowMenu.item("Show Tab 2", "cmd+2", command_tab() + 2i32)
+  windowMenu.item("Show Tab 3", "cmd+3", command_tab() + 3i32)
+  windowMenu.item("Show Tab 4", "cmd+4", command_tab() + 4i32)
+  windowMenu.item("Show Tab 5", "cmd+5", command_tab() + 5i32)
+  windowMenu.item("Show Tab 6", "cmd+6", command_tab() + 6i32)
+  windowMenu.item("Show Tab 7", "cmd+7", command_tab() + 7i32)
+  windowMenu.item("Show Tab 8", "cmd+8", command_tab() + 8i32)
+  windowMenu.item("Show Last Tab", "cmd+9", command_tab() + 9i32)
+  windowMenu.separator()
   windowMenu.bringAllToFront()
   windowMenu.addToBarAsWindow()
 
@@ -252,6 +285,9 @@ main() {
     }
     if(intent == command_close()) {
       [bool] closed{close_tab(app, tab)}
+    }
+    if(intent > command_tab() && intent <= command_tab() + 9i32) {
+      [bool] switched{select_tab(tab, intent - command_tab())}
     }
     if(intent == command_quit()) {
       // Every tab gets its say; Cancel stops the quit.

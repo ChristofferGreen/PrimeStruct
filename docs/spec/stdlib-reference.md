@@ -379,7 +379,7 @@ functions (`primec/ui/NativeUiBindings.h`) to a backend (headless in tests, AppK
   `alert(message, detail, buttons) -> i32` (button titles separated by `\n`, returns the pressed index), `quit()`.
 - `Window`: `setTitle`, `setContent(textView)`, `content() -> TextView`, `setEdited(bool)`, `show()`, `close()`,
   `addTab(window)` (joins that window to this one's tab group), and the document path kept with the window:
-  `setPath(file)`, `path()`, `hasPath()`. `App` adds `activeWindow()`, `windowCount()`, `windowAt(index)`.
+  `setPath(file)`, `path()`, `hasPath()`, `tabCount()`, `tabAt(index)` (tab-bar order) and `select()`. `App` adds `activeWindow()`, `windowCount()`, `windowAt(index)`.
 - `TextView`: `text()`, `setText(text)`, `setMonospace(bool)`, `isModified()`, `clearModified()`, and
   `loadFile(path)` / `saveFile(path)` (the backend reads or writes the UTF-8 file itself; `false` means see
   `app.lastError()`; a successful load leaves the view unmodified, a save does not clear the modified flag), and

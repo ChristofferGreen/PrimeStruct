@@ -128,6 +128,13 @@ bool ps_ui_window_add_tab(uint64_t host, uint64_t tab);
 /* The window the user is working in (the key window, or the selected tab of its
  * group); 0 when no window is open. Menu commands act on it. */
 uint64_t ps_ui_active_window(void);
+/* The tabs of the group `window` belongs to, in the order the tab bar shows them
+ * (dragging reorders them): their number (1 for a window in no group, 0 for a bad
+ * handle) and the index-th of them (0 when out of range). */
+int32_t ps_ui_window_tab_count(uint64_t window);
+uint64_t ps_ui_window_tab_at(uint64_t window, int32_t index);
+/* Selects the window's tab and makes it the active window. */
+bool ps_ui_window_select(uint64_t window);
 /* The text view set with ps_ui_window_set_content; 0 for none or a bad handle. */
 uint64_t ps_ui_window_content(uint64_t window);
 /* Open windows (tabs count separately), and the index-th of them in creation

@@ -400,6 +400,12 @@ void captureWithOpenMenu(const std::string &name) {
   // Just below the top edge of the content, whichever way its y axis points.
   const CGFloat top = content.isFlipped ? 2 : content.bounds.size.height - 2;
   [menu popUpMenuPositioningItem:nil atLocation:NSMakePoint(8, top) inView:content];
+  if (!s.snapshotTaken) {
+    // Tracking ended before the timer fired (the window server closed the menu, for
+    // instance because the user switched apps): still leave a picture of the window.
+    std::fprintf(stderr, "native ui: the menu closed early; taking the plain snapshot\n");
+    captureSnapshot();
+  }
 }
 
 } // namespace
@@ -498,26 +504,34 @@ int32_t ps_ui_wait_event(void) {
           // Opens a file into the first text view, as the program would on Open.
           s.snapshotOpened = true;
           s.snapshotIdleSlices = 0;
-          uint64_t lowest = UINT64_MAX;
+          uint64_t chosen = UINT64_MAX;
+          const bool lastTab = std::getenv("PRIMESTRUCT_UI_TARGET_LAST") != nullptr;
           for (const auto &entry : s.textViews) {
-            lowest = std::min(lowest, entry.first);
+            if (chosen == UINT64_MAX || (lastTab ? entry.first > chosen : entry.first < chosen)) {
+              chosen = entry.first;
+            }
           }
-          if (lowest != UINT64_MAX) {
-            if (!ps_ui_text_view_load_file(lowest, s.snapshotOpenPath.c_str())) {
+          if (chosen != UINT64_MAX) {
+            if (!ps_ui_text_view_load_file(chosen, s.snapshotOpenPath.c_str())) {
               std::fprintf(stderr, "native ui: %s\n", s.lastError.c_str());
             }
-            ps_ui_text_view_highlight(lowest, s.snapshotOpenPath.c_str());
-            ps_ui_window_set_title(s.snapshotWindow, s.snapshotOpenPath.c_str());
+            ps_ui_text_view_highlight(chosen, s.snapshotOpenPath.c_str());
+            const uint64_t window = handleOf(textView(chosen).window);
+            ps_ui_window_set_title(window, s.snapshotOpenPath.c_str());
+            if (lastTab) {
+              s.snapshotWindow = window; // picture of that tab's own window
+            }
           }
         } else if (!s.snapshotTypeText.empty() && !s.snapshotTyped && s.snapshotIdleSlices >= 6) {
           // Types into the first text view so the picture shows an edited document.
           s.snapshotTyped = true;
           s.snapshotIdleSlices = 0;
           NSTextView *target = nil;
-          uint64_t lowest = UINT64_MAX;
+          const bool lastTab = std::getenv("PRIMESTRUCT_UI_TARGET_LAST") != nullptr;
+          uint64_t picked = lastTab ? 0 : UINT64_MAX;
           for (const auto &entry : s.textViews) {
-            if (entry.first < lowest) {
-              lowest = entry.first;
+            if (lastTab ? entry.first > picked : entry.first < picked) {
+              picked = entry.first;
               target = entry.second;
             }
           }
@@ -526,6 +540,11 @@ int32_t ps_ui_wait_event(void) {
             [target insertText:toNSString(s.snapshotTypeText.c_str()) replacementRange:NSMakeRange(NSNotFound, 0)];
           }
         } else if (s.snapshotIdleSlices >= 12) {
+          if (std::getenv("PRIMESTRUCT_UI_TARGET_LAST") != nullptr) {
+            for (const auto &entry : s.windows) {
+              s.snapshotWindow = std::max(s.snapshotWindow, entry.first);
+            }
+          }
           if (s.snapshotMenu.empty()) {
             captureSnapshot();
           } else {
@@ -665,6 +684,35 @@ uint64_t ps_ui_active_window(void) {
     lowest = lowest == 0 ? entry.first : std::min(lowest, entry.first);
   }
   return lowest;
+}
+
+int32_t ps_ui_window_tab_count(uint64_t window) {
+  NSWindow *w = usable() ? liveWindow(window) : nil;
+  if (w == nil) {
+    return 0;
+  }
+  return w.tabbedWindows.count > 0 ? static_cast<int32_t>(w.tabbedWindows.count) : 1;
+}
+
+uint64_t ps_ui_window_tab_at(uint64_t window, int32_t index) {
+  NSWindow *w = usable() ? liveWindow(window) : nil;
+  if (w == nil || index < 0) {
+    return 0;
+  }
+  NSArray<NSWindow *> *tabs = w.tabbedWindows.count > 0 ? w.tabbedWindows : @[ w ];
+  return static_cast<NSUInteger>(index) < tabs.count ? handleOf(tabs[static_cast<NSUInteger>(index)]) : 0;
+}
+
+bool ps_ui_window_select(uint64_t window) {
+  NSWindow *w = usable() ? liveWindow(window) : nil;
+  if (w == nil) {
+    return false;
+  }
+  if (w.tabGroup != nil) {
+    w.tabGroup.selectedWindow = w;
+  }
+  [w makeKeyAndOrderFront:nil];
+  return true;
 }
 
 uint64_t ps_ui_window_content(uint64_t window) {
@@ -1029,6 +1077,12 @@ const char *ps_ui_open_panel(const char *title) {
   s.returnedText.clear();
   s.panelChosen = false;
   if (!usable()) {
+    return s.returnedText.c_str();
+  }
+  if (const char *answer = std::getenv("PRIMESTRUCT_UI_OPEN_PANEL"); answer != nullptr && *answer != '\0') {
+    // Snapshot runs have nobody to click: the Open panel answers with this path.
+    s.returnedText = answer;
+    s.panelChosen = true;
     return s.returnedText.c_str();
   }
   @autoreleasepool {

@@ -521,6 +521,35 @@ uint64_t ps_ui_active_window(void) {
   return loggedHandle("ps_ui_active_window()", handle);
 }
 
+int32_t ps_ui_window_tab_count(uint64_t window) {
+  int32_t count = 0;
+  if (usable() && liveWindow(window) != nullptr) {
+    const std::vector<uint64_t> group = primec::ui::headless::tabGroup(window);
+    count = group.empty() ? 1 : static_cast<int32_t>(group.size());
+  }
+  return logged("ps_ui_window_tab_count(" + std::to_string(window) + ")", count, std::to_string(count));
+}
+
+uint64_t ps_ui_window_tab_at(uint64_t window, int32_t index) {
+  uint64_t found = 0;
+  if (usable() && liveWindow(window) != nullptr && index >= 0) {
+    std::vector<uint64_t> group = primec::ui::headless::tabGroup(window);
+    if (group.empty()) {
+      group.push_back(window);
+    }
+    found = static_cast<size_t>(index) < group.size() ? group[static_cast<size_t>(index)] : 0;
+  }
+  return loggedHandle("ps_ui_window_tab_at(" + std::to_string(window) + ", " + std::to_string(index) + ")", found);
+}
+
+bool ps_ui_window_select(uint64_t window) {
+  Window *w = usable() ? liveWindow(window) : nullptr;
+  if (w != nullptr) {
+    state().activeWindow = window;
+  }
+  return loggedFlag("ps_ui_window_select(" + std::to_string(window) + ")", w != nullptr);
+}
+
 uint64_t ps_ui_window_content(uint64_t window) {
   const Window *w = usable() ? liveWindow(window) : nullptr;
   return loggedHandle("ps_ui_window_content(" + std::to_string(window) + ")", w != nullptr ? w->state.content : 0);
