@@ -3,11 +3,12 @@
 # the program compiled to bytecode (no compiler ships in the bundle), an
 # Info.plist and an ad-hoc signature for local runs. Notarization is out of scope.
 #
-# Usage: scripts/bundle_macos_app.sh <app.prime> <Name> [output-dir] [build-dir]
+# Usage: scripts/bundle_macos_app.sh <app.prime> <Name> [output-dir] [build-dir] [icon.icns]
+# (scripts/make_app_icon.py draws the notepad's icon.)
 set -euo pipefail
 
 if [[ $# -lt 2 ]]; then
-  echo "Usage: $0 <app.prime> <Name> [output-dir] [build-dir]" >&2
+  echo "Usage: $0 <app.prime> <Name> [output-dir] [build-dir] [icon.icns]" >&2
   exit 64
 fi
 
@@ -16,6 +17,7 @@ PROGRAM="$1"
 NAME="$2"
 OUT_DIR="${3:-$ROOT_DIR/build-release/apps}"
 BUILD_DIR="${4:-$ROOT_DIR/build-release}"
+ICON="${5:-}"
 BUNDLE_ID="com.primestruct.${NAME//[^A-Za-z0-9]/-}"
 
 for tool in primec primestruct_app_runtime; do
@@ -32,6 +34,12 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 "$BUILD_DIR/primec" --emit=ir "$PROGRAM" -o "$APP/Contents/Resources/app.psir"
 cp "$BUILD_DIR/primestruct_app_runtime" "$APP/Contents/MacOS/$NAME"
 
+ICON_KEY=""
+if [[ -n "$ICON" ]]; then
+  cp "$ICON" "$APP/Contents/Resources/AppIcon.icns"
+  ICON_KEY="<key>CFBundleIconFile</key><string>AppIcon</string>"
+fi
+
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -41,6 +49,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleDisplayName</key><string>$NAME</string>
   <key>CFBundleIdentifier</key><string>$BUNDLE_ID</string>
   <key>CFBundleExecutable</key><string>$NAME</string>
+  $ICON_KEY
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleVersion</key><string>1</string>
   <key>CFBundleShortVersionString</key><string>1.0</string>
