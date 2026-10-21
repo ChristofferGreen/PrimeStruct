@@ -109,6 +109,9 @@ of sync with them.
 | TODO-5536 | Small, lazily loaded bytecode for apps | ready | bytecode-startup |
 | TODO-5535 | Launch-time harness and reference Objective-C++ editor | ready | native-ui-launch |
 | TODO-5530 | Read and write whole files as String | blocked | file-text |
+| TODO-5556 | Tabs in the text editor | ready | native-ui-tabs |
+| TODO-5557 | More languages and function names in syntax highlighting | blocked | native-ui-syntax |
+| TODO-5558 | Markup and data languages in syntax highlighting | blocked | native-ui-syntax |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5534 | Compiled programs call the native UI ABI | deferred | native-ui-compiled |
 | TODO-5510 | `return` returns from pick arms and lambdas correctly | ready | control-returns |
@@ -137,6 +140,7 @@ of sync with them.
 
 - TODO-5537 (bytes): `u8` and byte-addressed memory
 - TODO-5538 (slices): slices are real borrows with shared operations
+- TODO-5556 (native-ui-tabs): tabs in the text editor
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5510 (control-returns): `return` returns from pick arms and lambdas correctly
@@ -145,17 +149,19 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5536
-2. TODO-5537
-3. TODO-5538
-4. TODO-5535
-5. TODO-5510
-6. TODO-5524
-7. TODO-5527
+1. TODO-5556
+2. TODO-5536
+3. TODO-5537
+4. TODO-5538
+5. TODO-5535
+6. TODO-5510
+7. TODO-5524
+8. TODO-5527
 
 ### Priority Lanes
 
 - Strings and slices (docs/spec/strings-and-views.md): TODO-5537, TODO-5538, TODO-5539, TODO-5540, TODO-5530, TODO-5541, TODO-5542
+- Native UI editor tabs and syntax (docs/NativeUiPlan.md): TODO-5556, TODO-5557, TODO-5558
 - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533, TODO-5534
 - Lifecycle (docs/spec/value-lifecycle.md): TODO-5527
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
@@ -349,6 +355,43 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - tests on VM, native and C++ read empty, ASCII, multi-byte UTF-8, multi-line and missing files, write them back and compare; invalid UTF-8 reports a `FileError`
     - full release gate green
   - stop_rule: whole-file text read and write only.
+
+- [ ] TODO-5556: Tabs in the text editor
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-21
+  - phase: Native UI editor tabs
+  - parallel_track: native-ui-tabs
+  - scope: The editor keeps one document per tab: New opens a tab, Open reuses an untitled unmodified tab or opens a new one, Save/Save As/Close act on the active tab, closing a tab asks about its own unsaved text, Quit walks all tabs (Cancel stops it), the last tab closing ends the app. Menus gain the tab items. State lives in the window (path) and its text view, so the program keeps no per-document variables.
+  - acceptance:
+    - headless gate cases: new tab, open into new and reused tabs, save in each of two tabs without mixing paths, close one tab with each prompt answer, quit with two dirty tabs (each answer), highlighting follows the tab's own path; the menu-structure case is updated
+    - AppKit smoke picture of two tabs; full release gate green
+  - stop_rule: the editor program, its menus and its gate cases only.
+
+- [ ] TODO-5557: More languages and function names in syntax highlighting
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5556
+  - created_at: 2026-10-21
+  - phase: Native UI editor syntax
+  - parallel_track: native-ui-syntax
+  - scope: Add JavaScript/TypeScript (.js .mjs .jsx .ts .tsx incl. template literals), Rust, Go, Java, Kotlin, Swift, Shell (.sh .bash .zsh, `$var`), SQL (case-insensitive keywords, `--` comments) and CMake (.cmake, CMakeLists.txt) to `SyntaxHighlight`, plus a function-name colour for identifiers followed by `(` in all code languages and block/attribute colours where the language has them (Rust lifetimes and attributes, Swift/Java annotations).
+  - acceptance:
+    - one fixture per new language under tests/fixtures/ui/highlight/ with asserted runs in the editor gate; extension mapping cases
+    - full release gate green
+  - stop_rule: code-like languages and function names only.
+
+- [ ] TODO-5558: Markup and data languages in syntax highlighting
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5557
+  - created_at: 2026-10-21
+  - phase: Native UI editor syntax
+  - parallel_track: native-ui-syntax
+  - scope: Add HTML/XML (tags, attributes, comments, entities, `<!DOCTYPE>`), CSS (selectors, properties, values, colours, comments), YAML (keys, scalars, comments, anchors), TOML and INI (tables, keys, strings, comments) to `SyntaxHighlight`, and document the full extension table in docs/NativeUiPlan.md.
+  - acceptance:
+    - one fixture per language with asserted runs in the editor gate; the acceptance map in docs/NativeUiPlan.md section 13 lists them; full release gate green
+  - stop_rule: those markup and data languages only.
 
 - [ ] TODO-5533: Windows and Linux native UI backends
   - owner: ai

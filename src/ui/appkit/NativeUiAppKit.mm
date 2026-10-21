@@ -50,6 +50,8 @@ struct State {
   std::thread::id owner;
   uint64_t nextHandle = 1;
   std::unordered_map<uint64_t, NSWindow *> windows;
+  std::unordered_map<uint64_t, uint64_t> windowContent;
+  std::unordered_map<uint64_t, std::string> windowPaths;
   std::unordered_map<uint64_t, NSTextView *> textViews;
   std::unordered_map<uint64_t, NSFont *> baseFonts;
   // A text view does not retain its scroll view, so the maps do.
@@ -543,6 +545,8 @@ uint64_t ps_ui_window_create(const char *title, int32_t width, int32_t height) {
     window.restorable = NO;
     window.delegate = controller();
     window.title = toNSString(title);
+    window.tabbingMode = NSWindowTabbingModePreferred;
+    window.tabbingIdentifier = @"PrimeStructDocument";
     [window center];
     const uint64_t handle = s.nextHandle++;
     tag(window, handle);
@@ -573,6 +577,7 @@ bool ps_ui_window_set_content(uint64_t window, uint64_t widget) {
   scroll.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
   w.contentView = scroll;
   [w makeFirstResponder:view];
+  state().windowContent[window] = widget;
   return true;
 }
 
@@ -608,7 +613,81 @@ bool ps_ui_window_close(uint64_t window) {
   w.delegate = nil;
   [w close];
   state().windows.erase(window);
+  state().windowContent.erase(window);
+  state().windowPaths.erase(window);
   return true;
+}
+
+bool ps_ui_window_add_tab(uint64_t host, uint64_t tab) {
+  NSWindow *h = usable() ? liveWindow(host) : nil;
+  NSWindow *t = usable() ? liveWindow(tab) : nil;
+  if (h == nil || t == nil || h == t || t.tabbedWindows.count > 1) {
+    return false;
+  }
+  [h addTabbedWindow:t ordered:NSWindowAbove];
+  [t makeKeyAndOrderFront:nil];
+  return true;
+}
+
+uint64_t ps_ui_active_window(void) {
+  if (!usable()) {
+    return 0;
+  }
+  State &s = state();
+  for (const uint64_t handle : {handleOf(NSApp.keyWindow), handleOf(NSApp.mainWindow)}) {
+    if (handle != 0 && s.windows.count(handle) != 0) {
+      return handle;
+    }
+  }
+  if (s.snapshotWindow != 0 && s.windows.count(s.snapshotWindow) != 0) {
+    return s.snapshotWindow;
+  }
+  uint64_t lowest = 0;
+  for (const auto &entry : s.windows) {
+    lowest = lowest == 0 ? entry.first : std::min(lowest, entry.first);
+  }
+  return lowest;
+}
+
+uint64_t ps_ui_window_content(uint64_t window) {
+  State &s = state();
+  auto it = usable() && liveWindow(window) != nil ? s.windowContent.find(window) : s.windowContent.end();
+  return it != s.windowContent.end() ? it->second : 0;
+}
+
+int32_t ps_ui_window_count(void) { return usable() ? static_cast<int32_t>(state().windows.size()) : 0; }
+
+uint64_t ps_ui_window_at(int32_t index) {
+  if (!usable() || index < 0) {
+    return 0;
+  }
+  std::vector<uint64_t> handles;
+  for (const auto &entry : state().windows) {
+    handles.push_back(entry.first);
+  }
+  std::sort(handles.begin(), handles.end());
+  return static_cast<size_t>(index) < handles.size() ? handles[static_cast<size_t>(index)] : 0;
+}
+
+bool ps_ui_window_set_path(uint64_t window, const char *path) {
+  if (!usable() || liveWindow(window) == nil) {
+    return false;
+  }
+  state().windowPaths[window] = path != nullptr ? path : "";
+  return true;
+}
+
+const char *ps_ui_window_path(uint64_t window) {
+  State &s = state();
+  auto it = usable() && liveWindow(window) != nil ? s.windowPaths.find(window) : s.windowPaths.end();
+  s.returnedText = it != s.windowPaths.end() ? it->second : std::string();
+  return s.returnedText.c_str();
+}
+
+bool ps_ui_window_has_path(uint64_t window) {
+  State &s = state();
+  auto it = usable() && liveWindow(window) != nil ? s.windowPaths.find(window) : s.windowPaths.end();
+  return it != s.windowPaths.end() && !it->second.empty();
 }
 
 uint64_t ps_ui_text_view_create(void) {
@@ -878,6 +957,11 @@ bool ps_ui_menu_add_standard(uint64_t menuHandle, int32_t standardId) {
     action = @selector(showHelp:);
     target = NSApp;
     break;
+  case PS_UI_STANDARD_SHOW_TAB_BAR: action = @selector(toggleTabBar:); break;
+  case PS_UI_STANDARD_MERGE_ALL_WINDOWS: action = @selector(mergeAllWindows:); break;
+  case PS_UI_STANDARD_MOVE_TAB_TO_NEW_WINDOW: action = @selector(moveTabToNewWindow:); break;
+  case PS_UI_STANDARD_NEXT_TAB: action = @selector(selectNextTab:); break;
+  case PS_UI_STANDARD_PREVIOUS_TAB: action = @selector(selectPreviousTab:); break;
   default:
     return false;
   }

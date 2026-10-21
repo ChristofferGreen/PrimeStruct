@@ -40,10 +40,12 @@ struct TextView {
 
 struct Window {
   WindowState state;
+  std::string path;
+  uint64_t group = 0; // tab group id; 0 when the window is not in a tab group
 };
 
 struct Action {
-  enum class Kind { Command, TypeText, CloseWindow, Quit } kind = Kind::Quit;
+  enum class Kind { Command, TypeText, CloseWindow, Quit, Activate } kind = Kind::Quit;
   int32_t command = 0;
   uint64_t handle = 0;
   std::string text;
@@ -55,6 +57,9 @@ struct State {
   std::thread::id owner;
   uint64_t nextHandle = 1;
   std::map<uint64_t, Window> windows;
+  std::map<uint64_t, std::vector<uint64_t>> tabGroups; // group id -> windows in tab order
+  uint64_t nextGroup = 1;
+  uint64_t activeWindow = 0;
   std::map<uint64_t, TextView> textViews;
   std::map<uint64_t, Menu> menus;
   std::vector<uint64_t> menuBar;
@@ -214,6 +219,11 @@ bool deliverNextEvent() {
     case Action::Kind::Quit:
       setEvent(PS_UI_EVENT_QUIT_REQUESTED);
       return true;
+    case Action::Kind::Activate:
+      if (liveWindow(action.handle) != nullptr) {
+        s.activeWindow = action.handle;
+      }
+      break;
     case Action::Kind::CloseWindow:
       if (liveWindow(action.handle) != nullptr) {
         setEvent(PS_UI_EVENT_WINDOW_CLOSE_REQUESTED, action.handle);
@@ -262,6 +272,31 @@ void pushCloseWindow(uint64_t window) {
   state().actions.push_back(std::move(a));
 }
 void pushQuit() { state().actions.push_back(Action{}); }
+void pushActivateWindow(uint64_t window) {
+  Action a;
+  a.kind = Action::Kind::Activate;
+  a.handle = window;
+  state().actions.push_back(std::move(a));
+}
+
+std::vector<uint64_t> tabGroup(uint64_t window) {
+  const auto it = state().windows.find(window);
+  std::vector<uint64_t> members;
+  if (it == state().windows.end() || it->second.group == 0) {
+    return members;
+  }
+  for (uint64_t member : state().tabGroups[it->second.group]) {
+    if (liveWindow(member) != nullptr) {
+      members.push_back(member);
+    }
+  }
+  return members;
+}
+
+std::string windowPath(uint64_t window) {
+  const auto it = state().windows.find(window);
+  return it == state().windows.end() ? std::string() : it->second.path;
+}
 void pushOpenPanelAnswer(std::string path) { state().openAnswers.push_back(std::move(path)); }
 void pushSavePanelAnswer(std::string path) { state().saveAnswers.push_back(std::move(path)); }
 void pushAlertAnswer(int32_t button) { state().alertAnswers.push_back(button); }
@@ -447,6 +482,7 @@ bool ps_ui_window_show(uint64_t window) {
   Window *w = usable() ? liveWindow(window) : nullptr;
   if (w != nullptr) {
     w->state.shown = true;
+    state().activeWindow = window;
   }
   return loggedFlag(call, w != nullptr);
 }
@@ -460,8 +496,97 @@ bool ps_ui_window_close(uint64_t window) {
     if (TextView *content = textView(w->state.content)) {
       content->window = 0;
     }
+    State &s = state();
+    if (s.activeWindow == window) {
+      // Like the platform: the neighbour tab, else the newest window still open.
+      s.activeWindow = 0;
+      const std::vector<uint64_t> neighbours = primec::ui::headless::tabGroup(window);
+      if (!neighbours.empty()) {
+        s.activeWindow = neighbours.back();
+      } else {
+        for (const auto &[handle, other] : s.windows) {
+          if (!other.state.closed) {
+            s.activeWindow = handle;
+          }
+        }
+      }
+    }
   }
   return loggedFlag(call, w != nullptr);
+}
+
+uint64_t ps_ui_active_window(void) {
+  const State &s = state();
+  const uint64_t handle = usable() && liveWindow(s.activeWindow) != nullptr ? s.activeWindow : 0;
+  return loggedHandle("ps_ui_active_window()", handle);
+}
+
+uint64_t ps_ui_window_content(uint64_t window) {
+  const Window *w = usable() ? liveWindow(window) : nullptr;
+  return loggedHandle("ps_ui_window_content(" + std::to_string(window) + ")", w != nullptr ? w->state.content : 0);
+}
+
+int32_t ps_ui_window_count(void) {
+  int32_t count = 0;
+  if (usable()) {
+    for (const auto &entry : state().windows) {
+      count += entry.second.state.closed ? 0 : 1;
+    }
+  }
+  return logged("ps_ui_window_count()", count, std::to_string(count));
+}
+
+uint64_t ps_ui_window_at(int32_t index) {
+  uint64_t found = 0;
+  if (usable() && index >= 0) {
+    int32_t seen = 0;
+    for (const auto &entry : state().windows) {
+      if (!entry.second.state.closed && seen++ == index) {
+        found = entry.first;
+        break;
+      }
+    }
+  }
+  return loggedHandle("ps_ui_window_at(" + std::to_string(index) + ")", found);
+}
+
+bool ps_ui_window_add_tab(uint64_t host, uint64_t tab) {
+  const std::string call = "ps_ui_window_add_tab(" + std::to_string(host) + ", " + std::to_string(tab) + ")";
+  State &s = state();
+  Window *h = usable() ? liveWindow(host) : nullptr;
+  Window *t = usable() ? liveWindow(tab) : nullptr;
+  const bool ok = h != nullptr && t != nullptr && host != tab && t->group == 0;
+  if (ok) {
+    if (h->group == 0) {
+      h->group = s.nextGroup++;
+      s.tabGroups[h->group].push_back(host);
+    }
+    t->group = h->group;
+    s.tabGroups[h->group].push_back(tab);
+    s.activeWindow = tab;
+  }
+  return loggedFlag(call, ok);
+}
+
+bool ps_ui_window_set_path(uint64_t window, const char *path) {
+  const std::string call = "ps_ui_window_set_path(" + std::to_string(window) + ", " + quote(path) + ")";
+  Window *w = usable() ? liveWindow(window) : nullptr;
+  if (w != nullptr) {
+    w->path = path != nullptr ? path : "";
+  }
+  return loggedFlag(call, w != nullptr);
+}
+
+const char *ps_ui_window_path(uint64_t window) {
+  State &s = state();
+  const Window *w = usable() ? liveWindow(window) : nullptr;
+  s.returnedText = w != nullptr ? w->path : "";
+  return logged("ps_ui_window_path(" + std::to_string(window) + ")", s.returnedText.c_str(), quote(s.returnedText));
+}
+
+bool ps_ui_window_has_path(uint64_t window) {
+  const Window *w = usable() ? liveWindow(window) : nullptr;
+  return loggedFlag("ps_ui_window_has_path(" + std::to_string(window) + ")", w != nullptr && !w->path.empty());
 }
 
 uint64_t ps_ui_text_view_create(void) {
@@ -587,7 +712,7 @@ bool ps_ui_menu_add_standard(uint64_t menuHandle, int32_t standardId) {
   const std::string call =
       "ps_ui_menu_add_standard(" + std::to_string(menuHandle) + ", " + std::to_string(standardId) + ")";
   Menu *m = usable() ? menu(menuHandle) : nullptr;
-  const bool valid = standardId >= PS_UI_STANDARD_UNDO && standardId <= PS_UI_STANDARD_HELP;
+  const bool valid = standardId >= PS_UI_STANDARD_UNDO && standardId <= PS_UI_STANDARD_PREVIOUS_TAB;
   if (m != nullptr && valid) {
     MenuEntry entry;
     entry.kind = MenuEntry::Kind::Standard;

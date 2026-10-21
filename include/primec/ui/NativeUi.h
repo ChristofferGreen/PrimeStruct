@@ -67,7 +67,12 @@ enum {
   PS_UI_STANDARD_ZOOM = 13,
   PS_UI_STANDARD_BRING_ALL_TO_FRONT = 14,
   PS_UI_STANDARD_FULL_SCREEN = 15,
-  PS_UI_STANDARD_HELP = 16
+  PS_UI_STANDARD_HELP = 16,
+  PS_UI_STANDARD_SHOW_TAB_BAR = 17,
+  PS_UI_STANDARD_MERGE_ALL_WINDOWS = 18,
+  PS_UI_STANDARD_MOVE_TAB_TO_NEW_WINDOW = 19,
+  PS_UI_STANDARD_NEXT_TAB = 20,
+  PS_UI_STANDARD_PREVIOUS_TAB = 21
 };
 
 /* Roles of a menu in the menu bar for ps_ui_menu_bar_add_role. */
@@ -113,6 +118,27 @@ bool ps_ui_window_set_edited(uint64_t window, bool edited);
 bool ps_ui_window_show(uint64_t window);
 /* Closes the window and invalidates its handle. */
 bool ps_ui_window_close(uint64_t window);
+
+/* Tabs and documents ------------------------------------------------------ */
+
+/* Joins `tab` to the native tab group of `host` (the tabs of one window on
+ * macOS) and makes it the active tab. False when either window is bad, they are
+ * the same, or `tab` is already in a group. */
+bool ps_ui_window_add_tab(uint64_t host, uint64_t tab);
+/* The window the user is working in (the key window, or the selected tab of its
+ * group); 0 when no window is open. Menu commands act on it. */
+uint64_t ps_ui_active_window(void);
+/* The text view set with ps_ui_window_set_content; 0 for none or a bad handle. */
+uint64_t ps_ui_window_content(uint64_t window);
+/* Open windows (tabs count separately), and the index-th of them in creation
+ * order; 0 for an index out of range. Closing a window removes it. */
+int32_t ps_ui_window_count(void);
+uint64_t ps_ui_window_at(int32_t index);
+/* The file a window's document is saved to; "" when it has none. The backend
+ * only stores it, so programs keep per-document state without string handling. */
+bool ps_ui_window_set_path(uint64_t window, const char *path);
+const char *ps_ui_window_path(uint64_t window);
+bool ps_ui_window_has_path(uint64_t window);
 
 /* Text view -------------------------------------------------------------- */
 

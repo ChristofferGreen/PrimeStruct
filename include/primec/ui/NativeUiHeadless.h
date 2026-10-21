@@ -27,6 +27,12 @@ void pushCommand(int32_t commandId);
 void pushTypeText(uint64_t widget, std::string text);
 void pushCloseWindow(uint64_t window);
 void pushQuit();
+// Makes `window` the active (key) window when replayed; no event is delivered.
+void pushActivateWindow(uint64_t window);
+// The open windows of the tab group `window` belongs to, in tab order; empty when it is in none.
+std::vector<uint64_t> tabGroup(uint64_t window);
+// The document path stored with a window ("" when none or the handle is bad).
+std::string windowPath(uint64_t window);
 
 // Answers for the next dialogs of each kind, consumed in order. With none left
 // the panels answer "" (cancelled) and alerts answer 0 (the default button).

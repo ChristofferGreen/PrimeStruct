@@ -310,6 +310,84 @@ TEST_CASE("headless style runs go away when the text is replaced but survive typ
   CHECK(headless::styleRuns(view).empty());
 }
 
+TEST_CASE("headless tab groups hold windows in tab order and select the newest tab") {
+  startApp();
+  const uint64_t first = ps_ui_window_create("One", 100, 100);
+  const uint64_t second = ps_ui_window_create("Two", 100, 100);
+  const uint64_t third = ps_ui_window_create("Three", 100, 100);
+  REQUIRE(ps_ui_window_show(first));
+  CHECK(ps_ui_active_window() == first);
+  CHECK(headless::tabGroup(first).empty());
+  CHECK(ps_ui_window_add_tab(first, second));
+  CHECK(ps_ui_active_window() == second);
+  CHECK(ps_ui_window_add_tab(second, third));
+  const std::vector<uint64_t> group{first, second, third};
+  CHECK(headless::tabGroup(first) == group);
+  CHECK(headless::tabGroup(third) == group);
+  // Rejected: the same window, a window that already has a group, bad handles.
+  CHECK_FALSE(ps_ui_window_add_tab(first, first));
+  CHECK_FALSE(ps_ui_window_add_tab(first, third));
+  CHECK_FALSE(ps_ui_window_add_tab(first, 999));
+  CHECK_FALSE(ps_ui_window_add_tab(999, first));
+}
+
+TEST_CASE("headless windows enumerate in creation order and the active window follows closes") {
+  startApp();
+  CHECK(ps_ui_active_window() == 0);
+  CHECK(ps_ui_window_count() == 0);
+  const uint64_t a = ps_ui_window_create("A", 100, 100);
+  const uint64_t b = ps_ui_window_create("B", 100, 100);
+  const uint64_t c = ps_ui_window_create("C", 100, 100);
+  REQUIRE(ps_ui_window_add_tab(a, b));
+  REQUIRE(ps_ui_window_add_tab(b, c));
+  CHECK(ps_ui_window_count() == 3);
+  CHECK(ps_ui_window_at(0) == a);
+  CHECK(ps_ui_window_at(2) == c);
+  CHECK(ps_ui_window_at(3) == 0);
+  CHECK(ps_ui_window_at(-1) == 0);
+  CHECK(ps_ui_active_window() == c);
+  REQUIRE(ps_ui_window_close(c));
+  CHECK(ps_ui_window_count() == 2);
+  CHECK(ps_ui_active_window() == b);
+  CHECK(headless::tabGroup(a) == std::vector<uint64_t>{a, b});
+  headless::pushActivateWindow(a);
+  headless::pushQuit();
+  REQUIRE(ps_ui_wait_event() == PS_UI_EVENT_QUIT_REQUESTED);
+  CHECK(ps_ui_active_window() == a);
+  REQUIRE(ps_ui_window_close(a));
+  REQUIRE(ps_ui_window_close(b));
+  CHECK(ps_ui_window_count() == 0);
+  CHECK(ps_ui_active_window() == 0);
+}
+
+TEST_CASE("headless windows keep their own content and document path") {
+  startApp();
+  const uint64_t a = ps_ui_window_create("A", 100, 100);
+  const uint64_t b = ps_ui_window_create("B", 100, 100);
+  const uint64_t viewA = ps_ui_text_view_create();
+  const uint64_t viewB = ps_ui_text_view_create();
+  REQUIRE(ps_ui_window_set_content(a, viewA));
+  REQUIRE(ps_ui_window_set_content(b, viewB));
+  CHECK(ps_ui_window_content(a) == viewA);
+  CHECK(ps_ui_window_content(b) == viewB);
+  CHECK(ps_ui_window_content(999) == 0);
+  CHECK_FALSE(ps_ui_window_has_path(a));
+  CHECK(std::string(ps_ui_window_path(a)).empty());
+  CHECK(ps_ui_window_set_path(a, "/docs/a.txt"));
+  CHECK(ps_ui_window_set_path(b, "/docs/b.txt"));
+  CHECK(ps_ui_window_has_path(a));
+  CHECK(std::string(ps_ui_window_path(a)) == "/docs/a.txt");
+  CHECK(std::string(ps_ui_window_path(b)) == "/docs/b.txt");
+  CHECK(headless::windowPath(b) == "/docs/b.txt");
+  CHECK(ps_ui_window_set_path(a, ""));
+  CHECK_FALSE(ps_ui_window_has_path(a));
+  CHECK_FALSE(ps_ui_window_set_path(999, "x"));
+  CHECK_FALSE(ps_ui_window_has_path(999));
+  REQUIRE(ps_ui_window_close(b));
+  CHECK(ps_ui_window_content(b) == 0);
+  CHECK(std::string(ps_ui_window_path(b)).empty());
+}
+
 TEST_CASE("headless dialogs answer from the script and then default") {
   startApp();
   headless::pushOpenPanelAnswer("/docs/a.txt");

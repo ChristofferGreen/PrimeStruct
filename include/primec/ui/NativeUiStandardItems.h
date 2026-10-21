@@ -32,6 +32,11 @@ inline StandardItemInfo standardItemInfo(int32_t standardId) {
   case PS_UI_STANDARD_BRING_ALL_TO_FRONT: return {"Bring All to Front", ""};
   case PS_UI_STANDARD_FULL_SCREEN: return {"Enter Full Screen", "cmd+ctrl+f"};
   case PS_UI_STANDARD_HELP: return {"Help", "cmd+?"};
+  case PS_UI_STANDARD_SHOW_TAB_BAR: return {"Show Tab Bar", ""};
+  case PS_UI_STANDARD_MERGE_ALL_WINDOWS: return {"Merge All Windows", ""};
+  case PS_UI_STANDARD_MOVE_TAB_TO_NEW_WINDOW: return {"Move Tab to New Window", ""};
+  case PS_UI_STANDARD_NEXT_TAB: return {"Show Next Tab", "cmd+shift+]"};
+  case PS_UI_STANDARD_PREVIOUS_TAB: return {"Show Previous Tab", "cmd+shift+["};
   default: return {nullptr, nullptr};
   }
 }

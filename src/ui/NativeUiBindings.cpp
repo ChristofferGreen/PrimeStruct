@@ -53,6 +53,16 @@ template <class Binder> void forEachBinding(Binder &&bindOne) {
   bindOne("ps_ui_text_view_save_file", [](uint64_t view, std::string_view path) {
     return ps_ui_text_view_save_file(view, text(path).c_str());
   });
+  bindOne("ps_ui_window_add_tab", [](uint64_t host, uint64_t tab) { return ps_ui_window_add_tab(host, tab); });
+  bindOne("ps_ui_active_window", [] { return ps_ui_active_window(); });
+  bindOne("ps_ui_window_content", [](uint64_t window) { return ps_ui_window_content(window); });
+  bindOne("ps_ui_window_count", [] { return ps_ui_window_count(); });
+  bindOne("ps_ui_window_at", [](int32_t index) { return ps_ui_window_at(index); });
+  bindOne("ps_ui_window_set_path", [](uint64_t window, std::string_view path) {
+    return ps_ui_window_set_path(window, text(path).c_str());
+  });
+  bindOne("ps_ui_window_path", [](uint64_t window) { return std::string(ps_ui_window_path(window)); });
+  bindOne("ps_ui_window_has_path", [](uint64_t window) { return ps_ui_window_has_path(window); });
   bindOne("ps_ui_text_view_clear_styles", [](uint64_t view) { return ps_ui_text_view_clear_styles(view); });
   bindOne("ps_ui_text_view_add_style", [](uint64_t view, int32_t start, int32_t end, int32_t rgb, int32_t flags) {
     return ps_ui_text_view_add_style(view, start, end, rgb, flags);

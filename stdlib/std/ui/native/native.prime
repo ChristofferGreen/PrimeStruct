@@ -91,6 +91,38 @@ ps_ui_text_view_save_file([u64] view, [string] path) {
 }
 
 [host return<bool>]
+ps_ui_window_add_tab([u64] host, [u64] tab) {
+}
+
+[host return<u64>]
+ps_ui_active_window() {
+}
+
+[host return<u64>]
+ps_ui_window_content([u64] window) {
+}
+
+[host return<i32>]
+ps_ui_window_count() {
+}
+
+[host return<u64>]
+ps_ui_window_at([i32] index) {
+}
+
+[host return<bool>]
+ps_ui_window_set_path([u64] window, [string] path) {
+}
+
+[host return<string>]
+ps_ui_window_path([u64] window) {
+}
+
+[host return<bool>]
+ps_ui_window_has_path([u64] window) {
+}
+
+[host return<bool>]
 ps_ui_text_view_clear_styles([u64] view) {
 }
 
@@ -160,8 +192,8 @@ Window() {
   }
 
   [public return<bool>]
-  setContent([TextView] content) {
-    return(ps_ui_window_set_content(this.handle, content.handle))
+  setContent([TextView] view) {
+    return(ps_ui_window_set_content(this.handle, view.handle))
   }
 
   [public return<bool>]
@@ -172,6 +204,34 @@ Window() {
   [public return<bool>]
   show() {
     return(ps_ui_window_show(this.handle))
+  }
+
+  // Joins `tab` to this window's tab group and selects it.
+  [public return<bool>]
+  addTab([Window] tab) {
+    return(ps_ui_window_add_tab(this.handle, tab.handle))
+  }
+
+  [public return<TextView>]
+  content() {
+    [TextView] view{[handle] ps_ui_window_content(this.handle)}
+    return(view)
+  }
+
+  // The file the window's document is saved to ("" when none); stored by the backend.
+  [public return<bool>]
+  setPath([string] file) {
+    return(ps_ui_window_set_path(this.handle, file))
+  }
+
+  [public return<string>]
+  path() {
+    return(ps_ui_window_path(this.handle))
+  }
+
+  [public return<bool>]
+  hasPath() {
+    return(ps_ui_window_has_path(this.handle))
   }
 
   [public return<bool>]
@@ -316,6 +376,31 @@ Menu() {
   }
 
   [public return<bool>]
+  showTabBar() {
+    return(ps_ui_menu_add_standard(this.handle, 17i32))
+  }
+
+  [public return<bool>]
+  mergeAllWindows() {
+    return(ps_ui_menu_add_standard(this.handle, 18i32))
+  }
+
+  [public return<bool>]
+  moveTabToNewWindow() {
+    return(ps_ui_menu_add_standard(this.handle, 19i32))
+  }
+
+  [public return<bool>]
+  nextTab() {
+    return(ps_ui_menu_add_standard(this.handle, 20i32))
+  }
+
+  [public return<bool>]
+  previousTab() {
+    return(ps_ui_menu_add_standard(this.handle, 21i32))
+  }
+
+  [public return<bool>]
   undo() {
     return(ps_ui_menu_add_standard(this.handle, 1i32))
   }
@@ -384,6 +469,25 @@ App() {
   window([string] title, [i32] width, [i32] height) {
     [Window] created{[handle] ps_ui_window_create(title, width, height)}
     return(created)
+  }
+
+  // The window the user is working in (the selected tab); handle 0 when none is open.
+  [public return<Window>]
+  activeWindow() {
+    [Window] active{[handle] ps_ui_active_window()}
+    return(active)
+  }
+
+  [public return<i32>]
+  windowCount() {
+    return(ps_ui_window_count())
+  }
+
+  // The index-th open window in creation order.
+  [public return<Window>]
+  windowAt([i32] index) {
+    [Window] found{[handle] ps_ui_window_at(index)}
+    return(found)
   }
 
   [public return<TextView>]
