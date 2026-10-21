@@ -208,6 +208,15 @@ Planned columns are design intent; only macOS and headless are in the first slic
   stacks; each added to the ABI and the coverage matrix together.
 - **Second and third platforms** (TODO-5533).
 
+**Goal (2026-10-21): PrimeScroll compiled to native code through the C++ emitter, implemented properly.**
+`primec --emit=cpp` and `--emit=native` currently reject every `[host]` call (verified on hello_window and the editor),
+and the editor depends on host-returned text (panel results, error text, per-tab paths), which the compiled backends
+cannot hold until the string work exists. So the order is: bytes (TODO-5537), real slices (TODO-5538), owned `String`
+(TODO-5539), the `string` view (TODO-5540), host functions with `String`/`string` (TODO-5541), compiled-backend parity
+(TODO-5542), then `[host]` lowering in the C++ emitter (TODO-5534), a native app build path (TODO-5559), the editor
+compiling and matching its VM scenarios (TODO-5560), and the native bundle and install (TODO-5561). No VM-only
+shortcut is taken for text on the way.
+
 ## 11. TODO slices
 
 | TODO | Slice | Verifiable here |

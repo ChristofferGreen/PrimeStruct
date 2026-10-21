@@ -110,7 +110,10 @@ of sync with them.
 | TODO-5535 | Launch-time harness and reference Objective-C++ editor | ready | native-ui-launch |
 | TODO-5530 | Read and write whole files as String | blocked | file-text |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
-| TODO-5534 | Compiled programs call the native UI ABI | deferred | native-ui-compiled |
+| TODO-5534 | The C++ emitter lowers `[host]` calls to `extern "C"` calls | blocked | native-ui-compiled |
+| TODO-5559 | Compiled native UI programs run on the platform backend | blocked | native-ui-compiled |
+| TODO-5560 | PrimeScroll compiles to native code | blocked | native-ui-compiled |
+| TODO-5561 | Native PrimeScroll bundle and install | blocked | native-ui-compiled |
 | TODO-5510 | `return` returns from pick arms and lambdas correctly | ready | control-returns |
 | TODO-5524 | Int-backed error structs round-trip through stdlib Result sums | ready | result-error-structs |
 | TODO-5523 | A Result-returning main exits with its error code | deferred | result-main |
@@ -145,9 +148,9 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5536
-2. TODO-5537
-3. TODO-5538
+1. TODO-5537
+2. TODO-5538
+3. TODO-5536
 4. TODO-5535
 5. TODO-5510
 6. TODO-5524
@@ -155,8 +158,9 @@ of sync with them.
 
 ### Priority Lanes
 
-- Strings and slices (docs/spec/strings-and-views.md): TODO-5537, TODO-5538, TODO-5539, TODO-5540, TODO-5530, TODO-5541, TODO-5542
-- Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533, TODO-5534
+- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5537, TODO-5538, TODO-5539, TODO-5540, TODO-5530, TODO-5541, TODO-5542
+- Goal, PrimeScroll compiled to native code through the C++ emitter (in this order; the string chain comes first because the editor passes host-returned text): TODO-5537, TODO-5538, TODO-5539, TODO-5540, TODO-5541, TODO-5542, TODO-5534, TODO-5559, TODO-5560, TODO-5561
+- Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Lifecycle (docs/spec/value-lifecycle.md): TODO-5527
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
@@ -363,18 +367,57 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - stop_rule: split into one leaf per platform before implementation.
   - notes: deferred: after the macOS editor works.
 
-- [ ] TODO-5534: Compiled programs call the native UI ABI
+- [ ] TODO-5534: The C++ emitter lowers `[host]` calls to `extern "C"` calls
   - owner: ai
-  - status: deferred
+  - status: blocked
+  - blocked_on: TODO-5542
   - created_at: 2026-10-08
-  - phase: Native UI (docs/NativeUiPlan.md)
+  - phase: Native UI compiled (goal: PrimeScroll compiled to native code through the C++ emitter)
   - parallel_track: native-ui-compiled
-  - scope: Host calls are VM-only. Let the C++ emitter (`exe`/`optexe`) lower `[host]` calls of the native UI ABI to `extern "C"` calls linked against a platform backend, so a native UI app can ship without the VM; the native backend follows once it can link platform libraries.
+  - scope: Today `primec --emit=cpp` and `--emit=native` reject any `[host]` call ("host calls are only supported by the vm target and serialized bytecode", verified on hello_window and the editor). Let the C++ emitter (`exe`/`optexe`) lower `[host]` calls to direct `extern "C"` calls against the same C ABI the VM bindings use, with the signature mapping of docs/spec/host-and-core-library.md: scalars, `string` views as pointer and length, text results as `String` in the program's heap (the string leaves TODO-5539 to TODO-5542 must be done first, so no VM-only run-time string workaround is needed). The emitted translation unit declares the functions it calls and leaves them to the link step; the native backend follows once it can link platform libraries.
   - acceptance:
-    - the editor example builds with `--emit=exe` against the headless backend and passes its scenarios
+    - a program with scalar, string-argument and string-result host calls compiles with `--emit=cpp`, links against a test host library and matches the VM run (matrix case with a host-function fixture)
+    - hello_window.prime builds with `--emit=exe` against the headless backend and reproduces the VM call log; full release gate green
+  - stop_rule: the C++ emitter path and its tests; the app runner is TODO-5559.
+
+- [ ] TODO-5559: Compiled native UI programs run on the platform backend
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5534
+  - created_at: 2026-10-21
+  - phase: Native UI compiled
+  - parallel_track: native-ui-compiled
+  - scope: A build path that turns a native UI `.prime` program into an executable linked with the AppKit backend (and, for tests, the headless backend): CMake helper or `primestruct_build_app` script around `primec --emit=exe`, the generated `main` calling the program's entry on the main thread, the platform libraries and the highlighter library linked in, no VM and no compiler in the binary.
+  - acceptance:
+    - hello_window and the editor build as native executables on macOS; headless-linked builds replay the scripted scenarios of tests/unit/ui with identical call logs to the VM runs; the AppKit smoke test runs the compiled binary
     - full release gate green
-  - stop_rule: C++ emitter path first; native backend is a separate leaf.
-  - notes: deferred: after the VM runner path works.
+  - stop_rule: build path and equivalence tests; language gaps found in the editor become their own leaves.
+
+- [ ] TODO-5560: PrimeScroll compiles to native code
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5559
+  - created_at: 2026-10-21
+  - phase: Native UI compiled
+  - parallel_track: native-ui-compiled
+  - scope: Make every language feature the editor uses (struct methods returning structs, sum types with `pick`, nested loops and early returns, mutable locals of struct and string type, host strings) produce correct code on the C++ emitter, fixing the emitter or semantics where it differs from the VM; the editor's headless gate scenarios run against the compiled build as well as the VM build.
+  - acceptance:
+    - the whole `PrimeStruct_native_ui_editor_acceptance` scenario set passes on the compiled editor with call logs identical to the VM; any difference found is fixed or split into a leaf here
+    - full release gate green
+  - stop_rule: the editor program's feature set and its compiled-vs-VM equivalence.
+
+- [ ] TODO-5561: Native PrimeScroll bundle and install
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5560
+  - created_at: 2026-10-21
+  - phase: Native UI compiled
+  - parallel_track: native-ui-compiled
+  - scope: `scripts/bundle_macos_app.sh` gains a native mode that bundles the compiled executable (icon, Info.plist, ad-hoc signature); measure startup and memory against the bytecode bundle with the launch harness; install the native PrimeScroll.app in place of the bytecode one and keep the Dock entry.
+  - acceptance:
+    - the native bundle launches and passes the AppKit smoke test; the measured startup is recorded in docs/NativeUiPlan.md section 1; the installed app is the native build
+    - full release gate green
+  - stop_rule: bundling, measurement and installation.
 
 - [ ] TODO-5527: Stdlib Result locals destroy their payload once
   - owner: ai
