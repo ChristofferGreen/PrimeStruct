@@ -233,6 +233,7 @@ bool runIrBackend(const primec::IrBackend &backend,
   emitOptions.outputPath = options.outputPath;
   emitOptions.inputPath = options.inputPath;
   emitOptions.programArgs = options.programArgs;
+  emitOptions.linkArgs = options.linkArgs;
   // The optexe kinds hand generated C++ to the host compiler; an explicit -O
   // level carries over, and the default is -O2.
   emitOptions.optimizationLevel = options.optimization.level;

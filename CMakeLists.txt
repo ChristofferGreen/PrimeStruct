@@ -648,6 +648,7 @@ set(PRIMESTRUCT_CODEGEN_SOURCES
   src/glsl_emitter/GlslEmitterStatements.cpp
   src/backend/IrToCppEmitter.cpp
   src/backend/IrToOptCppEmitter.cpp
+  src/backend/IrToCppHostImports.cpp
   src/backend/IrToCppEmitterInstructionEmitter.cpp
   src/backend/IrToCppEmitterPrintAndFileEmitter.cpp
   src/backend/IrToGlslEmitter.cpp
@@ -1266,6 +1267,30 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_embed_runtime_only
                        PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
+
+  # Host calls through the C++ emitters (exe/optexe/cpp/optcpp): compiled programs call
+  # `extern "C"` host functions and match the VM (docs/NativeUiPlan.md goal).
+  add_executable(PrimeStruct_cpp_host_call_tests
+    tests/unit/test_main.cpp
+    tests/unit/backend_host/test_cpp_host_calls.cpp
+  )
+  add_dependencies(PrimeStruct_cpp_host_call_tests primec)
+  target_include_directories(PrimeStruct_cpp_host_call_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
+  target_compile_definitions(PrimeStruct_cpp_host_call_tests PRIVATE
+    PRIMESTRUCT_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
+    PRIMESTRUCT_PRIMEC_PATH="$<TARGET_FILE:primec>"
+    PRIMESTRUCT_UI_HEADLESS_LIB="$<TARGET_FILE:primec_ui_headless_lib>"
+    PRIMESTRUCT_UI_HIGHLIGHT_LIB="$<TARGET_FILE:primec_ui_highlight_lib>")
+  target_link_libraries(PrimeStruct_cpp_host_call_tests PRIVATE primec_ui_lib primec_embed_lib)
+  primestructEnableWarnings(PrimeStruct_cpp_host_call_tests)
+  add_test(
+    NAME PrimeStruct_cpp_host_calls
+    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+            "--test-suite=primestruct.backend.cpp_host_calls"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_cpp_host_calls
+                       PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
 
   # Native UI C ABI on the headless backend, and its ScriptEngine bindings.
   add_executable(PrimeStruct_native_ui_tests

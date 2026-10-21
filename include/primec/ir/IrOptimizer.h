@@ -29,12 +29,14 @@ constexpr uint32_t IrTargetsAll = irValidationTargetBit(IrValidationTarget::Any)
                                   irValidationTargetBit(IrValidationTarget::Native) |
                                   irValidationTargetBit(IrValidationTarget::Glsl) |
                                   irValidationTargetBit(IrValidationTarget::Wasm) |
-                                  irValidationTargetBit(IrValidationTarget::WasmBrowser);
+                                  irValidationTargetBit(IrValidationTarget::WasmBrowser) |
+                                  irValidationTargetBit(IrValidationTarget::Cpp);
 // Everything except the structured-control-flow targets (wasm, glsl).
 constexpr uint32_t IrTargetsUnstructured = irValidationTargetBit(IrValidationTarget::Any) |
                                            irValidationTargetBit(IrValidationTarget::Serialized) |
                                            irValidationTargetBit(IrValidationTarget::Vm) |
-                                           irValidationTargetBit(IrValidationTarget::Native);
+                                           irValidationTargetBit(IrValidationTarget::Native) |
+                                           irValidationTargetBit(IrValidationTarget::Cpp);
 // The unstructured targets plus wasm; GLSL/SPIR-V are excluded because their
 // emitters reconstruct shader control flow and literal limits from the IR.
 constexpr uint32_t IrTargetsNoGpu = IrTargetsUnstructured |

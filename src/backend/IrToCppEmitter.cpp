@@ -1,6 +1,7 @@
 #include "primec/backend/IrToCppEmitter.h"
 
 #include "IrToCppEmitterInternal.h"
+#include "IrToCppHostImports.h"
 #include "primec/ir/Ir.h"
 #include "primec/runtime/VmHeapCore.h"
 
@@ -262,9 +263,15 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
     }
   }
 
+  if (!validateHostImportsForCpp(module, error)) {
+    return false;
+  }
+
   std::ostringstream body;
-  const bool needsF32Helpers = moduleUsesF32Helpers(module);
-  const bool needsF64Helpers = moduleUsesF64Helpers(module);
+  const bool needsF32Helpers =
+      moduleUsesF32Helpers(module) || hostImportsUseKind(module.hostImports, IrHostValueKind::F32);
+  const bool needsF64Helpers =
+      moduleUsesF64Helpers(module) || hostImportsUseKind(module.hostImports, IrHostValueKind::F64);
   const bool needsClampI32ConvertHelpers = moduleUsesClampI32ConvertHelpers(module);
   const bool needsClampI64ConvertHelpers = moduleUsesClampI64ConvertHelpers(module);
   const bool needsClampU64ConvertHelpers = moduleUsesClampU64ConvertHelpers(module);
@@ -415,6 +422,8 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
     body << "  return 0u;\n";
     body << "}\n\n";
   }
+  // The program's `[host]` functions: plain C functions supplied at link time.
+  body << hostImportDeclarations(module.hostImports);
   body << "static const char *ps_string_table[] = {\n";
   if (module.stringTable.empty()) {
     body << "  \"\",\n";
@@ -435,6 +444,15 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
   }
   body << "};\n\n";
   body << "static constexpr uint64_t ps_heap_address_tag = 1ull << 63;\n\n";
+  if (!module.hostImports.empty()) {
+    // A static text argument of a host call: the module's string, NUL-terminated.
+    body << "static const char *psHostText(uint64_t index) {\n";
+    body << "  if ((index & ps_heap_address_tag) != 0 || index >= ps_string_table_count) {\n";
+    body << "    return nullptr;\n";
+    body << "  }\n";
+    body << "  return ps_string_table[static_cast<std::size_t>(index)];\n";
+    body << "}\n\n";
+  }
   // The VM's heap allocator itself (VmHeapCore.h), so addresses and reuse match the VM's.
   body << VmHeapCoreSource << "\n\n";
   body << "static bool psResolveHeapSlot(uint64_t address, VmHeapCore &heap, std::size_t "
@@ -492,6 +510,7 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
       .stringCount = module.stringTable.size(),
       .functionCount = module.functions.size(),
       .stringLengths = std::move(stringLengths),
+      .hostImports = &module.hostImports,
   };
   constexpr size_t DispatchChunkSize = 1024ull;
   for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {

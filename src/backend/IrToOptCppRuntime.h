@@ -24,10 +24,10 @@ inline constexpr const char *OptCppRuntimeHeaders = R"CPP(#include <algorithm>
 #include <utility>
 #include <vector>
 
-namespace {
 )CPP";
 
-// Follows VmHeapCoreSource.
+// Follows `namespace {` and VmHeapCoreSource (the emitter writes the host function
+// declarations between OptCppRuntimeHeaders and the namespace, so they keep C linkage).
 inline constexpr const char *OptCppRuntimePreamble = R"CPP(
 constexpr uint64_t PsHeapTag = uint64_t{1} << 63;
 constexpr uint64_t PsSlotBytes = 16;
@@ -103,6 +103,11 @@ inline const PsString &ps_string(const PsString *table, size_t count, uint64_t i
     ps_fault("invalid string index in IR");
   }
   return table[static_cast<size_t>(index)];
+}
+
+// A static text argument of a host call: the module's NUL-terminated string.
+inline const char *ps_host_text(const PsString *table, size_t count, uint64_t index) {
+  return ps_string(table, count, index).data;
 }
 
 // ---- heap and indirect addressing ----------------------------------------

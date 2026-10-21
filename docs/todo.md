@@ -110,7 +110,7 @@ of sync with them.
 | TODO-5535 | Launch-time harness and reference Objective-C++ editor | ready | native-ui-launch |
 | TODO-5530 | Read and write whole files as String | blocked | file-text |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
-| TODO-5534 | The C++ emitter lowers `[host]` calls to `extern "C"` calls | blocked | native-ui-compiled |
+| TODO-5564 | C++ emitters pass and return text through `[host]` calls | blocked | native-ui-compiled |
 | TODO-5559 | Compiled native UI programs run on the platform backend | blocked | native-ui-compiled |
 | TODO-5560 | PrimeScroll compiles to native code | blocked | native-ui-compiled |
 | TODO-5561 | Native PrimeScroll bundle and install | blocked | native-ui-compiled |
@@ -159,7 +159,7 @@ of sync with them.
 ### Priority Lanes
 
 - Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5537, TODO-5538, TODO-5539, TODO-5540, TODO-5530, TODO-5541, TODO-5542
-- Goal, PrimeScroll compiled to native code through the C++ emitter (in this order; the string chain comes first because the editor passes host-returned text): TODO-5537, TODO-5538, TODO-5539, TODO-5540, TODO-5541, TODO-5542, TODO-5534, TODO-5559, TODO-5560, TODO-5561
+- Goal, PrimeScroll compiled to native code through the C++ emitter (host calls with scalar and static text are done; next the string chain, because the editor passes host-returned text): TODO-5537, TODO-5538, TODO-5539, TODO-5540, TODO-5541, TODO-5542, TODO-5564, TODO-5559, TODO-5560, TODO-5561
 - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Lifecycle (docs/spec/value-lifecycle.md): TODO-5527
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
@@ -367,23 +367,22 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - stop_rule: split into one leaf per platform before implementation.
   - notes: deferred: after the macOS editor works.
 
-- [ ] TODO-5534: The C++ emitter lowers `[host]` calls to `extern "C"` calls
+- [ ] TODO-5564: C++ emitters pass and return text through `[host]` calls
   - owner: ai
   - status: blocked
   - blocked_on: TODO-5542
-  - created_at: 2026-10-08
-  - phase: Native UI compiled (goal: PrimeScroll compiled to native code through the C++ emitter)
+  - created_at: 2026-10-22
+  - phase: Native UI compiled
   - parallel_track: native-ui-compiled
-  - scope: Today `primec --emit=cpp` and `--emit=native` reject any `[host]` call ("host calls are only supported by the vm target and serialized bytecode", verified on hello_window and the editor). Let the C++ emitter (`exe`/`optexe`) lower `[host]` calls to direct `extern "C"` calls against the same C ABI the VM bindings use, with the signature mapping of docs/spec/host-and-core-library.md: scalars, `string` views as pointer and length, text results as `String` in the program's heap (the string leaves TODO-5539 to TODO-5542 must be done first, so no VM-only run-time string workaround is needed). The emitted translation unit declares the functions it calls and leaves them to the link step; the native backend follows once it can link platform libraries.
+  - scope: Extend the C++ emitters' host-call lowering to `string`/`String` parameters of run-time text (pointer and length, NUL-terminated without a copy for `String`) and `String` results owned by the program's string heap, matching the VM boundary of TODO-5541, so the editor's panel results, error text and per-tab paths compile.
   - acceptance:
-    - a program with scalar, string-argument and string-result host calls compiles with `--emit=cpp`, links against a test host library and matches the VM run (matrix case with a host-function fixture)
-    - hello_window.prime builds with `--emit=exe` against the headless backend and reproduces the VM call log; full release gate green
-  - stop_rule: the C++ emitter path and its tests; the app runner is TODO-5559.
+    - host-function matrix cases with text arguments and results agree on VM, native and C++; a loop of 10000 host text calls keeps `stringMemory()` constant on the C++ backend; full release gate green
+  - stop_rule: the host text boundary in the C++ emitters.
 
 - [ ] TODO-5559: Compiled native UI programs run on the platform backend
   - owner: ai
   - status: blocked
-  - blocked_on: TODO-5534
+  - blocked_on: TODO-5564
   - created_at: 2026-10-21
   - phase: Native UI compiled
   - parallel_track: native-ui-compiled

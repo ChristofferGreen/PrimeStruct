@@ -101,8 +101,22 @@ IrModule pruneIrModuleToReachableFunctions(const IrModule &module) {
   }
 
   pruned.entryIndex = oldToNew[entryIndex];
+  // Host imports the surviving functions call, renumbered in first-use order, so a program
+  // is only asked for the host functions it can actually reach.
+  std::vector<int32_t> hostOldToNew(module.hostImports.size(), -1);
   for (auto &function : pruned.functions) {
     for (auto &instruction : function.instructions) {
+      if (instruction.op == IrOpcode::CallHost) {
+        const std::size_t oldImport = static_cast<std::size_t>(instruction.imm);
+        if (oldImport < hostOldToNew.size()) {
+          if (hostOldToNew[oldImport] < 0) {
+            hostOldToNew[oldImport] = static_cast<int32_t>(pruned.hostImports.size());
+            pruned.hostImports.push_back(module.hostImports[oldImport]);
+          }
+          instruction.imm = static_cast<uint64_t>(hostOldToNew[oldImport]);
+        }
+        continue;
+      }
       if (instruction.op != IrOpcode::Call && instruction.op != IrOpcode::CallVoid) {
         continue;
       }
@@ -436,7 +450,7 @@ public:
   }
 
   IrValidationTarget validationTarget(const Options & /*options*/) const override {
-    return IrValidationTarget::Any;
+    return IrValidationTarget::Cpp;
   }
 
   bool requiresOutputPath() const override {
@@ -487,7 +501,7 @@ public:
   }
 
   IrValidationTarget validationTarget(const Options & /*options*/) const override {
-    return IrValidationTarget::Any;
+    return IrValidationTarget::Cpp;
   }
 
   bool requiresOutputPath() const override {
@@ -518,7 +532,7 @@ public:
     }
 
     const ProcessRunner &processRunner = systemProcessRunner();
-    if (!compileCppExecutable(processRunner, cppPath, outputPath)) {
+    if (!compileCppExecutable(processRunner, cppPath, outputPath, options.linkArgs)) {
       error = "Failed to compile output executable";
       return false;
     }
@@ -548,7 +562,7 @@ public:
   }
 
   IrValidationTarget validationTarget(const Options & /*options*/) const override {
-    return IrValidationTarget::Any;
+    return IrValidationTarget::Cpp;
   }
 
   bool requiresOutputPath() const override {
@@ -599,7 +613,7 @@ public:
   }
 
   IrValidationTarget validationTarget(const Options & /*options*/) const override {
-    return IrValidationTarget::Any;
+    return IrValidationTarget::Cpp;
   }
 
   bool requiresOutputPath() const override {
@@ -631,7 +645,7 @@ public:
 
     const ProcessRunner &processRunner = systemProcessRunner();
     if (!compileCppExecutableOptimized(
-            processRunner, cppPath, outputPath, options.hostOptimizationLevel)) {
+            processRunner, cppPath, outputPath, options.hostOptimizationLevel, options.linkArgs)) {
       error = "Failed to compile output executable";
       return false;
     }

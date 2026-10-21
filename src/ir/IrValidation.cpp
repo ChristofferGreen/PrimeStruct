@@ -161,11 +161,12 @@ bool validateFunction(const IrModule &module,
       return failInstruction(functionIndex, function.name, instructionIndex, "unsupported opcode", error);
     }
     if (inst.op == IrOpcode::CallHost) {
-      if (target != IrValidationTarget::Vm && target != IrValidationTarget::Serialized) {
+      if (target != IrValidationTarget::Vm && target != IrValidationTarget::Serialized &&
+          target != IrValidationTarget::Cpp) {
         return failInstruction(functionIndex,
                                function.name,
                                instructionIndex,
-                               "host calls are only supported by the vm target and serialized bytecode",
+                               "host calls are only supported by the vm target, the C++ targets and serialized bytecode",
                                error);
       }
       if (inst.imm >= module.hostImports.size()) {

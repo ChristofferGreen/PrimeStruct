@@ -4,6 +4,7 @@
 #include "primec/ir/IrOpcodeTable.h"
 #include "primec/ir/IrPureSemantics.h"
 
+#include "IrToCppHostImports.h"
 #include "IrToOptCppRuntime.h"
 #include "primec/runtime/VmHeapCore.h"
 
@@ -464,6 +465,75 @@ private:
       }
       return true;
     }
+    case IrOpcode::CallHost: {
+      if (instruction.imm >= module_.hostImports.size()) {
+        error = "optexe found an invalid host import in " + function_.name;
+        return false;
+      }
+      const IrHostImport &import = module_.hostImports[static_cast<size_t>(instruction.imm)];
+      const int64_t base = depth - static_cast<int64_t>(import.parameters.size());
+      std::string call = import.name + "(";
+      for (size_t i = 0; i < import.parameters.size(); ++i) {
+        const std::string argSlot = slot(base + static_cast<int64_t>(i));
+        std::string arg;
+        switch (import.parameters[i]) {
+        case IrHostValueKind::I32:
+          arg = "static_cast<int32_t>(" + argSlot + ")";
+          break;
+        case IrHostValueKind::I64:
+          arg = "ps_s64(" + argSlot + ")";
+          break;
+        case IrHostValueKind::U64:
+          arg = argSlot;
+          break;
+        case IrHostValueKind::F32:
+          arg = "ps_f32(" + argSlot + ")";
+          break;
+        case IrHostValueKind::F64:
+          arg = "ps_f64(" + argSlot + ")";
+          break;
+        case IrHostValueKind::Bool:
+          arg = "(" + argSlot + " != 0)";
+          break;
+        case IrHostValueKind::String:
+          arg = "ps_host_text(ps_strings, PsStringCount, " + argSlot + ")";
+          break;
+        case IrHostValueKind::Void:
+          error = "optexe found a void host parameter in " + function_.name;
+          return false;
+        }
+        call += (i == 0 ? "" : ", ") + arg;
+      }
+      call += ")";
+      const std::string result = slot(base);
+      switch (import.returnKind) {
+      case IrHostValueKind::Void:
+        line(call + ";");
+        break;
+      case IrHostValueKind::I32:
+        line(result + " = static_cast<uint64_t>(static_cast<int64_t>(" + call + "));");
+        break;
+      case IrHostValueKind::I64:
+        line(result + " = static_cast<uint64_t>(" + call + ");");
+        break;
+      case IrHostValueKind::U64:
+        line(result + " = " + call + ";");
+        break;
+      case IrHostValueKind::F32:
+        line(result + " = ps_slot_f32(" + call + ");");
+        break;
+      case IrHostValueKind::F64:
+        line(result + " = ps_slot_f64(" + call + ");");
+        break;
+      case IrHostValueKind::Bool:
+        line(result + " = (" + call + ") ? 1u : 0u;");
+        break;
+      case IrHostValueKind::String:
+        error = "optexe found a host function returning text in " + function_.name;
+        return false;
+      }
+      return true;
+    }
     case IrOpcode::PrintI32:
       line("ps_emit(std::to_string(static_cast<int32_t>(" + slot(depth - 1) + ")), " +
            std::to_string(decodePrintFlags(instruction.imm)) + ");");
@@ -630,8 +700,14 @@ bool IrToOptCppEmitter::emitSource(const IrModule &module,
     error = "optexe requires an entry function without parameters";
     return false;
   }
+  if (!validateHostImportsForCpp(module, error)) {
+    return false;
+  }
   std::ostringstream source;
-  source << OptCppRuntimeHeaders << VmHeapCoreSource << "\n" << OptCppRuntimePreamble;
+  // The `[host]` functions are plain C functions supplied at link time, so they are
+  // declared before the runtime opens its unnamed namespace.
+  source << OptCppRuntimeHeaders << hostImportDeclarations(module.hostImports) << "namespace {\n"
+         << VmHeapCoreSource << "\n" << OptCppRuntimePreamble;
   source << "namespace {\n\n";
   source << "const PsString ps_strings[] = {";
   for (const std::string &text : module.stringTable) {

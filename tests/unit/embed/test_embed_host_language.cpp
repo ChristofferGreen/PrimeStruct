@@ -314,15 +314,31 @@ TEST_CASE("host string versus integer signature mismatch is diagnosed") {
 }
 
 #ifdef PRIMESTRUCT_TEST_PRIMEC_PATH
-TEST_CASE("non vm backends reject host definitions with a clear diagnostic") {
+TEST_CASE("native, wasm and glsl reject host definitions with a clear diagnostic") {
   const auto dir = embedTestDir("host_backends");
   const auto source = embedWriteFile(dir / "host.prime", AddSource);
-  for (const char *kind : {"native", "cpp", "wasm", "glsl"}) {
+  for (const char *kind : {"native", "wasm", "glsl"}) {
     CAPTURE(kind);
     const auto result = embedRunPrimec(std::string("--emit=") + kind + " \"" + source.string() + "\" -o \"" +
                                        (dir / (std::string("out_") + kind)).string() + "\"");
     CHECK(result.exitCode != 0);
     CHECK(result.output.find("host calls are only supported by the vm target") != std::string::npos);
+  }
+}
+
+TEST_CASE("the C++ backends accept host definitions and declare them with C linkage") {
+  const auto dir = embedTestDir("host_cpp_backends");
+  const auto source = embedWriteFile(dir / "host.prime", AddSource);
+  for (const char *kind : {"cpp", "optcpp"}) {
+    CAPTURE(kind);
+    const auto output = dir / (std::string("out_") + kind + ".cpp");
+    const auto result = embedRunPrimec(std::string("--emit=") + kind + " \"" + source.string() + "\" -o \"" +
+                                       output.string() + "\"");
+    REQUIRE_MESSAGE(result.exitCode == 0, result.output);
+    std::ifstream file(output);
+    const std::string text((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    CHECK(text.find("extern \"C\"") != std::string::npos);
+    CHECK(text.find("host_add") != std::string::npos);
   }
 }
 

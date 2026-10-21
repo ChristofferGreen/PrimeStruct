@@ -62,6 +62,9 @@ struct Options {
   std::vector<std::string> entryDefaultEffects = {"io_out"};
   std::vector<std::string> programArgs;
   std::vector<std::string> importPaths;
+  // --link-arg: extra arguments for the host C++ compiler when it links an exe or optexe output,
+  // such as a host library the program's `[host]` functions come from.
+  std::vector<std::string> linkArgs;
   bool skipSemanticProductForNonConsumingPath = false;
   std::optional<bool> benchmarkForceSemanticProduct;
   bool benchmarkSemanticNoFactEmission = false;

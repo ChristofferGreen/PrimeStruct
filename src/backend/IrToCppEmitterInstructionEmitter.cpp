@@ -572,6 +572,87 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
+    case IrOpcode::CallHost: {
+      if (context.hostImports == nullptr || instruction.imm >= context.hostImports->size()) {
+        error = "IrToCppEmitter host import out of range at instruction " + std::to_string(index);
+        return false;
+      }
+      const IrHostImport &import = (*context.hostImports)[static_cast<size_t>(instruction.imm)];
+      const size_t paramCount = import.parameters.size();
+      if (paramCount > 0) {
+        emitStackUnderflowGuard(paramCount, "host call");
+        out << "        sp -= " << paramCount << ";\n";
+      }
+      // Arguments are read from the slots just popped, in declaration order.
+      std::string call = import.name + "(";
+      for (size_t i = 0; i < paramCount; ++i) {
+        const std::string slot = "stack[sp + " + std::to_string(i) + "]";
+        std::string arg;
+        switch (import.parameters[i]) {
+          case IrHostValueKind::I32:
+            arg = "static_cast<int32_t>(" + slot + ")";
+            break;
+          case IrHostValueKind::I64:
+            arg = "static_cast<int64_t>(" + slot + ")";
+            break;
+          case IrHostValueKind::U64:
+            arg = slot;
+            break;
+          case IrHostValueKind::F32:
+            arg = "psBitsToF32(" + slot + ")";
+            break;
+          case IrHostValueKind::F64:
+            arg = "psBitsToF64(" + slot + ")";
+            break;
+          case IrHostValueKind::Bool:
+            arg = "(" + slot + " != 0)";
+            break;
+          case IrHostValueKind::String:
+            out << "        const char *hostText" << i << " = psHostText(" << slot << ");\n";
+            out << "        if (hostText" << i << " == nullptr) {\n";
+            out << "          std::cerr << \"host function " << import.name
+                << " was given text that is not in the module string table\\n\";\n";
+            out << "          return 1;\n";
+            out << "        }\n";
+            arg = "hostText" + std::to_string(i);
+            break;
+          case IrHostValueKind::Void:
+            error = "IrToCppEmitter host import has a void parameter at instruction " + std::to_string(index);
+            return false;
+        }
+        call += (i == 0 ? "" : ", ") + arg;
+      }
+      call += ")";
+      switch (import.returnKind) {
+        case IrHostValueKind::Void:
+          out << "        " << call << ";\n";
+          break;
+        case IrHostValueKind::I32:
+          out << "        stack[sp++] = static_cast<uint64_t>(static_cast<int64_t>(" << call << "));\n";
+          break;
+        case IrHostValueKind::I64:
+          out << "        stack[sp++] = static_cast<uint64_t>(" << call << ");\n";
+          break;
+        case IrHostValueKind::U64:
+          out << "        stack[sp++] = " << call << ";\n";
+          break;
+        case IrHostValueKind::F32:
+          out << "        stack[sp++] = psF32ToBits(" << call << ");\n";
+          break;
+        case IrHostValueKind::F64:
+          out << "        stack[sp++] = psF64ToBits(" << call << ");\n";
+          break;
+        case IrHostValueKind::Bool:
+          out << "        stack[sp++] = (" << call << ") ? 1u : 0u;\n";
+          break;
+        case IrHostValueKind::String:
+          error = "IrToCppEmitter host import returns text at instruction " + std::to_string(index);
+          return false;
+      }
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
+    }
     case IrOpcode::PushArgc:
     case IrOpcode::PrintI32:
     case IrOpcode::PrintI64:

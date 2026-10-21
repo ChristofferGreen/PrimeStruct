@@ -87,6 +87,7 @@ void printPrimecUsage(std::ostream &err) {
   flagLine(err, "-o <output>", "Output file path");
   flagLine(err, "--out-dir <dir>", "Output directory");
   flagLine(err, "--entry /path", "Entry point definition path");
+  flagLine(err, "--link-arg <arg>", "Extra argument for the C++ compiler when linking exe/optexe (host libraries)");
   flagLine(err, "--wasm-profile wasi|browser", "Wasm host profile (with --emit=wasm)");
   blankLine(err);
 

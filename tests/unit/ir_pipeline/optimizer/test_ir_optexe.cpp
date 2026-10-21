@@ -175,12 +175,24 @@ uint64_t f64Bits(double value) {
 
 TEST_CASE("optexe rejects modules it cannot compile with a precise diagnostic") {
   using primec::IrOpcode;
-  SUBCASE("host calls") {
+  SUBCASE("host call without an import") {
     const primec::IrModule module =
         optimizer_test::moduleOf(optimizer_test::assemble({"CallHost 0", "ReturnVoid"}));
     const std::string error = diagnosticFor(module);
-    CHECK(contains(error, "CallHost"));
+    CHECK(contains(error, "host import"));
     CHECK(contains(error, "/main"));
+  }
+  SUBCASE("host call to a function that returns text") {
+    primec::IrModule module = optimizer_test::moduleOf(optimizer_test::assemble({"CallHost 0", "Pop", "ReturnVoid"}));
+    module.hostImports.push_back({"host_name", {}, primec::IrHostValueKind::String});
+    const std::string error = diagnosticFor(module);
+    CHECK(contains(error, "host_name"));
+    CHECK(contains(error, "returns text"));
+  }
+  SUBCASE("host function whose name is not a C identifier") {
+    primec::IrModule module = optimizer_test::moduleOf(optimizer_test::assemble({"CallHost 0", "ReturnVoid"}));
+    module.hostImports.push_back({"not-a-c-name", {}, primec::IrHostValueKind::Void});
+    CHECK(contains(diagnosticFor(module), "not a C identifier"));
   }
   SUBCASE("entry with parameters") {
     primec::IrModule module = optimizer_test::moduleOf(optimizer_test::assemble({"ReturnVoid"}), 1);

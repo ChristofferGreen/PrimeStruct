@@ -859,6 +859,13 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
       out.benchmarkSemanticDefinitionValidationWorkerCount = workerCount;
     } else if (arg == "--benchmark-ir-lowerer-legacy-collection-branch-counters") {
       out.benchmarkIrLowererLegacyCollectionBranchCounters = true;
+    } else if (arg == "--link-arg" && i + 1 < argc) {
+      out.linkArgs.push_back(argv[++i]);
+    } else if (arg == "--link-arg") {
+      error = "--link-arg requires a value";
+      return false;
+    } else if (arg.rfind("--link-arg=", 0) == 0) {
+      out.linkArgs.push_back(arg.substr(std::string("--link-arg=").size()));
     } else if (arg == "--ir-inline") {
       out.inlineIrCalls = true;
     } else if (arg.rfind("-O", 0) == 0) {

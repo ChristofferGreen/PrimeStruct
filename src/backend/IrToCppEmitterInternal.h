@@ -13,6 +13,8 @@ struct EmitContext {
   size_t stringCount = 0;
   size_t functionCount = 0;
   std::vector<size_t> stringLengths;
+  // The module's `[host]` imports, for IrOpcode::CallHost (IrToCppHostImports.h).
+  const std::vector<IrHostImport> *hostImports = nullptr;
 };
 
 bool emitInstruction(const IrInstruction &instruction,

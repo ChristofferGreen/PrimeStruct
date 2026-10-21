@@ -1,0 +1,51 @@
+// Host functions with scalar and static-text arguments, called by every backend that
+// supports host calls: the VM binds them from C++, the C++ emitters call the
+// `extern "C"` functions of host_impl.cpp.
+
+[host return<void>]
+host_note([string] label, [u64] id) {
+}
+
+[host return<i32>]
+host_add([i32] left, [i32] right) {
+}
+
+[host return<i64>]
+host_widen([i64] value) {
+}
+
+[host return<bool>]
+host_flag([bool] on) {
+}
+
+[host return<f32>]
+host_half([f32] value) {
+}
+
+[host return<f64>]
+host_scale([f64] value, [f64] factor) {
+}
+
+[return<int>]
+main() {
+  host_note("start", 7u64)
+  [i32] sum{host_add(40i32, 2i32)}
+  [i64] wide{host_widen(-5i64)}
+  [bool] flag{host_flag(true)}
+  [f32] half{host_half(3.0f32)}
+  [f64] scaled{host_scale(1.5f64, 4.0f64)}
+  if(flag) {
+    host_note("flag was true", 1u64)
+  }
+  if(wide < 0i64) {
+    host_note("wide stayed negative", 2u64)
+  }
+  if(half > 1.4f32) {
+    host_note("half is about one and a half", 3u64)
+  }
+  if(scaled > 5.9f64) {
+    host_note("scaled is six", 4u64)
+  }
+  host_note("done", 9u64)
+  return(sum)
+}

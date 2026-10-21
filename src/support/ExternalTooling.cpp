@@ -38,7 +38,8 @@ bool compileSpirv(const ProcessRunner &runner,
 
 bool compileCppExecutable(const ProcessRunner &runner,
                           const std::filesystem::path &cppPath,
-                          const std::filesystem::path &outputPath) {
+                          const std::filesystem::path &outputPath,
+                          const std::vector<std::string> &linkArgs) {
   std::vector<std::string> args = {"clang++", "-std=c++23", "-O0"};
 #if defined(PRIMEC_GENERATED_CPP_PCH_PATH)
   // Precompiled header for the fixed stdlib #includes IrToCppEmitter.cpp
@@ -54,13 +55,15 @@ bool compileCppExecutable(const ProcessRunner &runner,
   args.push_back(cppPath.string());
   args.push_back("-o");
   args.push_back(outputPath.string());
+  args.insert(args.end(), linkArgs.begin(), linkArgs.end());
   return commandSucceeds(runner, args);
 }
 
 bool compileCppExecutableOptimized(const ProcessRunner &runner,
                                    const std::filesystem::path &cppPath,
                                    const std::filesystem::path &outputPath,
-                                   int optimizationLevel) {
+                                   int optimizationLevel,
+                                   const std::vector<std::string> &linkArgs) {
   const int level = optimizationLevel < 0 ? 0 : (optimizationLevel > 3 ? 3 : optimizationLevel);
   std::vector<std::string> args = {"clang++",
                                    "-std=c++23",
@@ -69,6 +72,7 @@ bool compileCppExecutableOptimized(const ProcessRunner &runner,
                                    cppPath.string(),
                                    "-o",
                                    outputPath.string()};
+  args.insert(args.end(), linkArgs.begin(), linkArgs.end());
   return commandSucceeds(runner, args);
 }
 

@@ -34,9 +34,17 @@ Rules:
   module's host import table; the import name is the definition path without the
   leading `/`). Expected IR for `host_add(40i32, 2i32)`:
   `PushI32 40`, `PushI32 2`, `CallHost 0`, with `host_imports[0] = host_add(i32, i32) -> i32`.
-- Only the VM target (and `--emit=ir` serialized bytecode) accepts host calls;
-  native, C++, wasm, and GLSL emission reject them with
-  `host calls are only supported by the vm target and serialized bytecode`.
+- The VM target, `--emit=ir` serialized bytecode and the C++ emitters (`--emit=cpp`, `exe`, `optcpp`, `optexe`)
+  accept host calls; native, wasm, and GLSL emission reject them with
+  `host calls are only supported by the vm target, the C++ targets and serialized bytecode`.
+- **C++ emitters.** Each host import that the program can reach becomes a plain function with C linkage whose name is
+  the import's name (it must be a C identifier), declared in the generated source and left to the link step:
+  `int32_t host_add(int32_t, int32_t);`, `void host_note(const char *, uint64_t);`, `bool host_flag(bool);`. The
+  arguments use the VM slot encoding's C types (`i32`, `i64`, `u64`, `f32`, `f64`, `bool`; a static `string` is a
+  NUL-terminated `const char *` from the module's string table), and the result is one of those scalars or `void`.
+  `primec --emit=exe|optexe ... --link-arg <arg>` (repeatable) appends host libraries, search paths or sources to the
+  C++ compiler command that links the program. A host function that returns text, or text built at run time, is not
+  supported by the C++ emitters yet and is rejected with a diagnostic that names TODO-5564.
 - The embedder binds every declared function, by name, with a matching signature
   (`Script::bind` in `docs/Embedding.md`). A missing or mismatched binding fails
   before any instruction runs. A declared host function that is never called adds

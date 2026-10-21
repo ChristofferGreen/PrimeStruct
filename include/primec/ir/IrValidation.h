@@ -16,6 +16,9 @@ enum class IrValidationTarget {
   Glsl,
   Wasm,
   WasmBrowser,
+  // The C++ emitters (cpp, exe, optcpp, optexe): like Any, but host calls are allowed
+  // and become direct calls of `extern "C"` functions the link step supplies.
+  Cpp,
 };
 
 bool validateIrModule(const IrModule &module, IrValidationTarget target, std::string &error);
