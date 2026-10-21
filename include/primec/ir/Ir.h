@@ -7,7 +7,7 @@
 namespace primec {
 
 constexpr uint32_t IrSchemaMagic = 0x50534952u; // "PSIR"
-constexpr uint32_t IrSchemaVersion = 27u;
+constexpr uint32_t IrSchemaVersion = 28u;
 constexpr uint32_t IrSchemaMinimumSupportedVersion = IrSchemaVersion;
 constexpr uint32_t IrSchemaMaximumSupportedVersion = IrSchemaVersion;
 
@@ -135,6 +135,18 @@ enum class IrOpcode : uint8_t {
   // at 32 bits on every backend; the I32 arithmetic opcodes themselves compute on
   // the full 64-bit slot because lowering also uses them for address math.
   SextI32,
+  // Byte memory (docs/spec/vm-design.md, Byte regions). Pops a byte count and pushes the
+  // address of a zeroed byte region of that size (0 for a count of 0); `address + i` names
+  // byte i. HeapFree and HeapRealloc accept byte regions (a realloc counts bytes).
+  HeapAllocBytes,
+  // Pops a byte address and pushes the byte there, zero-extended to 64 bits.
+  LoadU8,
+  // Pops a value, then a byte address, stores the low 8 bits of the value there and
+  // pushes the stored byte, zero-extended (like StoreIndirect, which pushes its value).
+  StoreU8,
+  // Pops one value and pushes its low 8 bits zero-extended: the wrap step after u8
+  // arithmetic, the way SextI32 is for i32.
+  ZextU8,
 };
 
 enum class IrStructFieldCategory : uint8_t {

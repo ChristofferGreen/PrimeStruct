@@ -130,7 +130,11 @@ namespace primec {
   X(FileWriteStringDynamic, 1, 1, 0)                                                               \
   X(CallHost, 0, 0, 0)                                                                             \
   X(LoadStringByteDynamic, 0, 0, 0)                                                                \
-  X(SextI32, 1, 1, 1)
+  X(SextI32, 1, 1, 1)                                                                              \
+  X(HeapAllocBytes, 0, 0, 0)                                                                       \
+  X(LoadU8, 0, 0, 0)                                                                               \
+  X(StoreU8, 0, 0, 0)                                                                              \
+  X(ZextU8, 0, 0, 0)
 
 struct IrOpcodeInfo {
   IrOpcode op;

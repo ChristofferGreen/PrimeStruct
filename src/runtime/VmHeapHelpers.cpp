@@ -8,6 +8,10 @@ bool resolveIndirectAddress(uint64_t address,
                             VmHeapCore &heap,
                             uint64_t *&slotOut,
                             std::string &error) {
+  if (VmHeapCore::isByteAddress(address)) {
+    error = "slot access to a byte region in IR: " + std::to_string(address);
+    return false;
+  }
   if (address % slotBytes != 0) {
     error = "unaligned indirect address in IR: " + std::to_string(address);
     return false;
@@ -26,6 +30,37 @@ bool resolveIndirectAddress(uint64_t address,
     return false;
   }
   slotOut = &locals[static_cast<size_t>(index)];
+  return true;
+}
+
+namespace {
+
+bool byteAddressFault(uint64_t address, std::string &error) {
+  if ((address & VmHeapCore::Tag) != 0 && !VmHeapCore::isByteAddress(address)) {
+    error = "byte access to a slot region in IR: " + std::to_string(address);
+  } else {
+    error = "invalid byte address in IR: " + std::to_string(address);
+  }
+  return false;
+}
+
+} // namespace
+
+bool loadHeapByte(uint64_t address, VmHeapCore &heap, uint8_t &value, std::string &error) {
+  const uint8_t *byte = heap.byteAt(address);
+  if (byte == nullptr) {
+    return byteAddressFault(address, error);
+  }
+  value = *byte;
+  return true;
+}
+
+bool storeHeapByte(uint64_t address, VmHeapCore &heap, uint8_t value, std::string &error) {
+  uint8_t *byte = heap.byteAt(address);
+  if (byte == nullptr) {
+    return byteAddressFault(address, error);
+  }
+  *byte = value;
   return true;
 }
 

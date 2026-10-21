@@ -186,7 +186,9 @@ Every operation keeps the text valid UTF-8.
 
 | TODO | Slice |
 | --- | --- |
-| TODO-5537 | `u8` and byte-addressed memory (VM byte regions, `LoadU8`/`StoreU8`) |
+| TODO-5537 | IR byte opcodes (`LoadU8`/`StoreU8`/`HeapAllocBytes`/`ZextU8`) and VM byte regions |
+| TODO-5565 | the `u8` scalar type |
+| TODO-5566 | packed byte containers (`array<u8>`, `Vector<u8>`, `Buffer<u8>`) |
 | TODO-5538 | `slice(...)` as a real borrow, the return-from-parameter rule, and the shared `Slice<T>` operations on `array` and `Vector` |
 | TODO-5539 | `String`: value, inline storage, lifecycle, the string heap and the owned-text API |
 | TODO-5540 | `string` as the UTF-8 view: static literals, conversions, text operations, field rule |

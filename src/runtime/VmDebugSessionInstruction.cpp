@@ -36,6 +36,15 @@ public:
   bool allocateHeapSlots(uint64_t slotCount, uint64_t &address, std::string &error) override {
     return heap_.allocate(slotCount, address, error);
   }
+  bool allocateHeapBytes(uint64_t byteCount, uint64_t &address, std::string &error) override {
+    return heap_.allocateBytes(byteCount, address, error);
+  }
+  bool loadHeapByte(uint64_t address, uint8_t &value, std::string &error) override {
+    return vm_detail::loadHeapByte(address, heap_, value, error);
+  }
+  bool storeHeapByte(uint64_t address, uint8_t value, std::string &error) override {
+    return vm_detail::storeHeapByte(address, heap_, value, error);
+  }
   bool freeHeapSlots(uint64_t address, std::string &error) override {
     return heap_.release(address, error);
   }

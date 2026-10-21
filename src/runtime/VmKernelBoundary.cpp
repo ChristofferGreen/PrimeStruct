@@ -42,6 +42,8 @@ const char *pureOpcodeUnderflowMessage(IrOpcode op) {
     return "IR stack underflow on negate";
   case IrOpcode::SextI32:
     return "IR stack underflow on sext";
+  case IrOpcode::ZextU8:
+    return "IR stack underflow on zext";
   case IrOpcode::AddF32:
   case IrOpcode::SubF32:
   case IrOpcode::MulF32:

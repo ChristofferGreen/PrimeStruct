@@ -17,4 +17,9 @@ bool resolveIndirectAddress(uint64_t address,
                             uint64_t *&slotOut,
                             std::string &error);
 
+// The byte a byte-region address names (HeapAllocBytes, LoadU8, StoreU8), or the VM's fault
+// message: a slot address, a frame address and a stale or out-of-range byte address all fault.
+bool loadHeapByte(uint64_t address, VmHeapCore &heap, uint8_t &value, std::string &error);
+bool storeHeapByte(uint64_t address, VmHeapCore &heap, uint8_t value, std::string &error);
+
 } // namespace primec::vm_detail

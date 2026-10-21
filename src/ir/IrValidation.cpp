@@ -39,6 +39,12 @@ const char *wasmTargetName(IrValidationTarget target) {
   return "wasm";
 }
 
+// The byte-memory opcodes and the u8 wrap step: VM-only until the native backend learns them.
+bool isByteOpcode(IrOpcode op) {
+  return op == IrOpcode::HeapAllocBytes || op == IrOpcode::LoadU8 || op == IrOpcode::StoreU8 ||
+         op == IrOpcode::ZextU8;
+}
+
 // Both predicates read the per-target flags of the opcode table.
 bool isGlslOpcodeAllowed(IrOpcode op) {
   const IrOpcodeInfo *info = irOpcodeInfo(op);
@@ -176,6 +182,13 @@ bool validateFunction(const IrModule &module,
         return failInstruction(
             functionIndex, function.name, instructionIndex, "host import parameter count exceeds supported limit", error);
       }
+    }
+    if (target == IrValidationTarget::Native && isByteOpcode(inst.op)) {
+      return failInstruction(functionIndex,
+                             function.name,
+                             instructionIndex,
+                             "byte memory opcodes are not supported by the native backend yet (docs/todo.md, TODO-5542)",
+                             error);
     }
     if (isWasmTarget(target) && !isWasmOpcodeAllowedForTarget(inst.op, target)) {
       return failInstruction(functionIndex,

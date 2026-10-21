@@ -1,3 +1,4 @@
+#include "primec/ir/Ir.h"
 #include "primec/testing/TestScratch.h"
 
 #include "third_party/doctest.h"
@@ -154,7 +155,7 @@ TEST_CASE("opt-report describes the selected passes and what changed") {
 
 TEST_CASE("dump-stage prints the lowered module before and after optimization") {
   const std::string source = writeSource("fold_dump.prime", FoldableProgram);
-  const std::string header = "ir_module_v1 schema=27\n"
+  const std::string header = "ir_module_v1 schema=" + std::to_string(primec::IrSchemaVersion) + "\n"
                              "entry=/main (function 0)\n"
                              "string_table: 0\n"
                              "host_imports: 0\n"

@@ -217,6 +217,10 @@ std::vector<EffectCase> buildCases() {
   add(IrOpcode::HeapAlloc, 0, {pushI32(2)});
   add(IrOpcode::HeapFree, 0, {pushI32(2), {IrOpcode::HeapAlloc, 0}});
   add(IrOpcode::HeapRealloc, 0, {pushI32(2), {IrOpcode::HeapAlloc, 0}, pushI32(3)});
+  add(IrOpcode::HeapAllocBytes, 0, {pushI32(8)});
+  add(IrOpcode::LoadU8, 0, {pushI32(8), {IrOpcode::HeapAllocBytes, 0}});
+  add(IrOpcode::StoreU8, 0, {pushI32(8), {IrOpcode::HeapAllocBytes, 0}, pushI32(5)});
+  add(IrOpcode::ZextU8, 0, {pushI32(300)});
 
   // Printing. imm 0 means stdout without a newline.
   add(IrOpcode::PrintI32, 0, {pushI32(5)});

@@ -103,6 +103,9 @@ bool pureExpression(IrOpcode op, const std::string &a, const std::string &b, std
   case IrOpcode::SextI32:
     expr = "static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(" + a + ")))";
     return true;
+  case IrOpcode::ZextU8:
+    expr = "(" + a + " & UINT64_C(0xff))";
+    return true;
   case IrOpcode::AddF32:
     f32bin("+");
     return true;

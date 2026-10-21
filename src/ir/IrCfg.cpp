@@ -77,7 +77,10 @@ bool computeIrStackEffect(const IrInstruction &instruction,
   case IrOpcode::FileOpenAppendDynamic:
   case IrOpcode::LoadIndirect:
   case IrOpcode::HeapAlloc:
+  case IrOpcode::HeapAllocBytes:
+  case IrOpcode::LoadU8:
   case IrOpcode::SextI32:
+  case IrOpcode::ZextU8:
   case IrOpcode::NegI32:
   case IrOpcode::NegI64:
   case IrOpcode::NegF32:
@@ -106,6 +109,7 @@ bool computeIrStackEffect(const IrInstruction &instruction,
     return set(1, 1);
   // Combine two values into one.
   case IrOpcode::StoreIndirect:
+  case IrOpcode::StoreU8:
   case IrOpcode::HeapRealloc:
   case IrOpcode::LoadStringByteDynamic:
   case IrOpcode::AddI32:

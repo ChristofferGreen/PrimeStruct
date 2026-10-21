@@ -25,7 +25,8 @@
   (recursive and larger functions), including recursion up to the VM's call-depth limit.
 - **GLSL note:** GLSL/SPIR-V emission routes through canonical IR (`glsl-ir`/`spirv-ir`) and `IrValidationTarget::Glsl`;
   these modes emit backend output directly without requiring PSIR serialization.
-- **PSIR versioning:** current portable IR is PSIR v23 (adds a per-function `parameter_count` field on top of v22’s
+- **PSIR versioning:** current portable IR is PSIR v28 (v24 to v28 are listed in `include/primec/ir/Ir.h`'s opcode
+  comments and the finished TODO log; v28 adds `HeapAllocBytes`, `LoadU8`, `StoreU8` and `ZextU8`). Before that, PSIR v23 (adds a per-function `parameter_count` field on top of v22’s
   source-unit/file identity in source-map metadata, v21’s `HeapRealloc`, v20’s `FileReadByte` and
   `HeapFree`, v19’s per-instruction source-map metadata keyed by debug ID, v18’s instruction debug IDs, v17’s local
   debug slots, v16’s function-call opcodes `Call`/`CallVoid`, v15’s execution metadata, v14’s float return opcodes,
@@ -45,6 +46,21 @@
   generation wraps after 32,768 reuses of the same slot. Slots never allocated before carry generation 0. The VM, the
   debugger, the native execution tier and the IR-to-C++ and optexe runtimes share one implementation
   (`include/primec/runtime/VmHeapCore.h`), so all of them produce the same addresses.
+- **Byte regions (PSIR v28):** `HeapAllocBytes` pops a byte count and pushes the address of a zeroed region of that many
+  bytes (0 for a count of 0); `LoadU8` pops an address and pushes the byte there, zero-extended; `StoreU8` pops a value
+  and then an address, stores the value's low 8 bits and pushes the stored byte (as `StoreIndirect` pushes its value);
+  `ZextU8` pushes the low 8 bits of a slot zero-extended, the wrap step after `u8` arithmetic as `SextI32` is for
+  `i32`. A byte address is `bit 63 | generation << 48 | bit 47 | byte offset`: the offset counts bytes into one byte
+  arena, so `address + i` names byte `i`, and bit 47 puts the offset far beyond any slot index, which is why a slot
+  access to a byte address (`slot access to a byte region`) and a byte access to a slot, frame or unknown address
+  (`byte access to a slot region`, `invalid byte address`) fault instead of reading the wrong memory. A region is
+  checked on every access (inside a live region, same generation); regions are reused best fit and merged like slot
+  runs, and a reuse takes a new generation, so an address from before a free faults. `HeapFree` accepts both kinds;
+  `HeapRealloc` of a byte region counts bytes and copies the leading bytes, while a realloc of address 0 still
+  allocates slots (a byte container starts with `HeapAllocBytes`). Byte memory and `ZextU8` run on the step kernel and the
+  flat loop declines modules that use the three memory opcodes; the native JIT and the native, wasm and GLSL
+  backends do not support them yet (the validator says so; the C++ backends follow TODO-5542). `VmHeapCore` holds
+  both arenas, so the debugger and the C++ runtimes that paste it share the same addresses.
 - **Native execution tier:** on Linux x86_64, `primevm` at `-O2` (its default) runs a module as native code in its own
   process (`include/primec/backend/NativeJit.h`) with the VM's observable behavior. Integer, f64 and f32
   arithmetic (f32 results zero-extended as in the VM), comparisons, branches, calls, returns, prints of numbers and module strings, argc, string bytes and lengths, and

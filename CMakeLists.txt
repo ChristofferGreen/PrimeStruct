@@ -1268,6 +1268,23 @@ if(PRIMESTRUCT_BUILD_TESTS)
   set_tests_properties(PrimeStruct_embed_runtime_only
                        PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
 
+  # IR byte opcodes and the VM's byte regions, with hand-built IR.
+  add_executable(PrimeStruct_vm_byte_tests
+    tests/unit/test_main.cpp
+    tests/unit/runtime/test_vm_byte_regions.cpp
+  )
+  target_include_directories(PrimeStruct_vm_byte_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
+  target_link_libraries(PrimeStruct_vm_byte_tests PRIVATE primec_embed_lib)
+  primestructEnableWarnings(PrimeStruct_vm_byte_tests)
+  add_test(
+    NAME PrimeStruct_vm_byte_regions
+    COMMAND $<TARGET_FILE:PrimeStruct_vm_byte_tests>
+            "--test-suite=primestruct.runtime.byte_regions"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_vm_byte_regions
+                       PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
+
   # Host calls through the C++ emitters (exe/optexe/cpp/optcpp): compiled programs call
   # `extern "C"` host functions and match the VM (docs/NativeUiPlan.md goal).
   add_executable(PrimeStruct_cpp_host_call_tests

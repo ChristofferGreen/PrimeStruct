@@ -383,6 +383,11 @@ bool prepareFunction(const IrModule &module, const IrFunction &function, FastFun
   out.function = &function;
   out.code.reserve(function.instructions.size() + 1);
   for (const IrInstruction &instruction : function.instructions) {
+    // Byte memory runs on the step kernel only; the loop has no byte heap handlers.
+    if (instruction.op == IrOpcode::HeapAllocBytes || instruction.op == IrOpcode::LoadU8 ||
+        instruction.op == IrOpcode::StoreU8) {
+      return false;
+    }
     // A call to a missing function is left to the step kernel, which faults on it when (and only
     // if) it runs, so the loop needs no target check.
     if ((instruction.op == IrOpcode::Call || instruction.op == IrOpcode::CallVoid) &&

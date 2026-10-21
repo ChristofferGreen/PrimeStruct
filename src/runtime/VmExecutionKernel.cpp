@@ -246,6 +246,53 @@ template <bool TrackEvents>
     ip += 1;
     return VmKernelStepOutcome::Continue;
   }
+  case IrOpcode::HeapAllocBytes: {
+    if (stack.empty()) {
+      error = "IR stack underflow on heap alloc bytes";
+      return VmKernelStepOutcome::Fault;
+    }
+    const uint64_t byteCount = stack.back();
+    stack.pop_back();
+    uint64_t address = 0;
+    if (!host.allocateHeapBytes(byteCount, address, error)) {
+      return VmKernelStepOutcome::Fault;
+    }
+    stack.push_back(address);
+    ip += 1;
+    return VmKernelStepOutcome::Continue;
+  }
+  case IrOpcode::LoadU8: {
+    if (stack.empty()) {
+      error = "IR stack underflow on load u8";
+      return VmKernelStepOutcome::Fault;
+    }
+    const uint64_t address = stack.back();
+    stack.pop_back();
+    uint8_t byte = 0;
+    if (!host.loadHeapByte(address, byte, error)) {
+      return VmKernelStepOutcome::Fault;
+    }
+    stack.push_back(static_cast<uint64_t>(byte));
+    ip += 1;
+    return VmKernelStepOutcome::Continue;
+  }
+  case IrOpcode::StoreU8: {
+    if (stack.size() < 2) {
+      error = "IR stack underflow on store u8";
+      return VmKernelStepOutcome::Fault;
+    }
+    const uint64_t value = stack.back();
+    stack.pop_back();
+    const uint64_t address = stack.back();
+    stack.pop_back();
+    const uint8_t byte = static_cast<uint8_t>(value & 0xFFull);
+    if (!host.storeHeapByte(address, byte, error)) {
+      return VmKernelStepOutcome::Fault;
+    }
+    stack.push_back(static_cast<uint64_t>(byte));
+    ip += 1;
+    return VmKernelStepOutcome::Continue;
+  }
   case IrOpcode::HeapFree: {
     if (stack.empty()) {
       error = "IR stack underflow on heap free";

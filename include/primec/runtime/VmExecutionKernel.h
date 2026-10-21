@@ -29,6 +29,26 @@ public:
   virtual bool allocateHeapSlots(uint64_t slotCount,
                                  uint64_t &address,
                                  std::string &error) = 0;
+  // Byte memory (HeapAllocBytes, LoadU8, StoreU8). Hosts without a byte heap keep these
+  // defaults, which fault with a diagnostic.
+  virtual bool allocateHeapBytes(uint64_t byteCount, uint64_t &address, std::string &error) {
+    (void)byteCount;
+    (void)address;
+    error = "byte memory is not supported by this VM host";
+    return false;
+  }
+  virtual bool loadHeapByte(uint64_t address, uint8_t &value, std::string &error) {
+    (void)address;
+    (void)value;
+    error = "byte memory is not supported by this VM host";
+    return false;
+  }
+  virtual bool storeHeapByte(uint64_t address, uint8_t value, std::string &error) {
+    (void)address;
+    (void)value;
+    error = "byte memory is not supported by this VM host";
+    return false;
+  }
   virtual bool freeHeapSlots(uint64_t address, std::string &error) = 0;
   virtual bool reallocHeapSlots(uint64_t address,
                                 uint64_t slotCount,
