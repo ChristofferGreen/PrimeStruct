@@ -113,39 +113,6 @@ TEST_CASE("host calls compiled by the C++ emitters match the VM") {
   }
 }
 
-TEST_CASE("the native UI hello_window runs through the C++ emitters on the headless backend") {
-  const std::string example = SourceDir + "/examples/native_ui/hello_window.prime";
-  // The VM run, with the same scripted user actions headless_log_dump.cpp queues in the
-  // compiled program before it starts.
-  headless::reset();
-  headless::pushCommand(7);
-  headless::pushTypeText(0, " more");
-  headless::pushCommand(3);
-  headless::pushCloseWindow(1);
-  ScriptEngine engine;
-  primec::ui::bindNativeUi(engine);
-  const Script script = engine.compileFile(example);
-  REQUIRE_MESSAGE(script.valid(), script.diagnostics());
-  const auto vm = script.run();
-  REQUIRE_MESSAGE(vm.ok, vm.diagnostics);
-  std::vector<std::string> vmLog = headless::callLog();
-  REQUIRE(vmLog.size() > 8);
-  const std::vector<std::string> linkArgs = {
-      "--link-arg", quoted(SourceDir + "/tests/fixtures/host_calls/headless_log_dump.cpp"),
-      "--link-arg", quoted("-I" + SourceDir + "/include"),
-      "--link-arg", quoted(PRIMESTRUCT_UI_HEADLESS_LIB),
-      "--link-arg", quoted(PRIMESTRUCT_UI_HIGHLIGHT_LIB)};
-  for (const char *kind : {"optexe"}) {
-    const std::string program = scratch(std::string("hello_") + kind);
-    const CompileResult compiled = compile(kind, example, program, linkArgs);
-    REQUIRE_MESSAGE(compiled.status == 0, kind << ": " << compiled.diagnostics);
-    const std::string output = program + ".out";
-    const int exitCode = run(quoted(program) + " > " + quoted(output));
-    CHECK_MESSAGE(exitCode == static_cast<int>(vm.exitCode), kind);
-    CHECK_MESSAGE(readFile(output) == joined(vmLog), kind);
-  }
-}
-
 TEST_CASE("the C++ sources declare host functions with C linkage and call them directly") {
   for (const char *kind : {"cpp", "optcpp"}) {
     const std::string source = scratch(std::string("scalars_") + kind + ".cpp");

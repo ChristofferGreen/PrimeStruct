@@ -32,3 +32,14 @@
   - acceptance:
     - tests/unit/backend_host/test_cpp_strings.cpp runs `u8` math, `vector<u8>`, `String` editing and growth, string-heap reuse and slices through the VM and `--emit=optexe` with equal exit codes; the native UI hello_window runs through `optexe` on the headless backend with the VM's call log; full release gate green
   - stop_rule: the optimized C++ emitters; the simple C++ emitters and the native backend are TODO-5574.
+
+- [x] TODO-5559: Compiled native UI programs run on the platform backend
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-21
+  - phase: Native UI compiled
+  - parallel_track: native-ui-compiled
+  - scope: `scripts/build_native_app.sh <app.prime> <output> [--backend appkit|headless] [--build-dir DIR] [--link-arg ARG]...` compiles a native UI program with `primec --emit=optexe` and links the AppKit backend (the default on macOS) or the headless backend, plus the highlighter library; the generated `main` runs the entry on the main thread and there is no VM and no compiler in the binary. `tests/fixtures/host_calls/scenario.h` writes a scripted headless run as text so the VM test and the compiled program (`headless_log_dump.cpp`, driven by `HEADLESS_SCENARIO`) queue the same user actions.
+  - acceptance:
+    - tests/unit/backend_host/test_cpp_native_ui.cpp runs hello_window and the editor (typing and saving, opening a chosen file, opening the command-line file, an unopenable file, the unsaved-close prompt) on the VM and as compiled programs with identical headless call logs and exit codes (CTest `PrimeStruct_cpp_native_ui`); cmake/NativeUiCompiledAppTest.cmake builds both as native AppKit executables and checks their snapshot PNGs, including the command-line file (CTest `PrimeStruct_native_ui_compiled_app`, Apple only); full release gate green
+  - stop_rule: build path and equivalence tests; the rest of the editor's gate scenarios are TODO-5560.

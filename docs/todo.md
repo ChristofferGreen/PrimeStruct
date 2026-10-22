@@ -113,8 +113,7 @@ of sync with them.
 | TODO-5530 | Read and write whole files as String | blocked | file-text |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5564 | C++ emitters pass and return text through `[host]` calls | blocked | native-ui-compiled |
-| TODO-5559 | Compiled native UI programs run on the platform backend | ready | native-ui-compiled |
-| TODO-5560 | PrimeScroll compiles to native code | blocked | native-ui-compiled |
+| TODO-5560 | PrimeScroll compiles to native code | ready | native-ui-compiled |
 | TODO-5561 | Native PrimeScroll bundle and install | blocked | native-ui-compiled |
 | TODO-5510 | `return` returns from pick arms and lambdas correctly | ready | control-returns |
 | TODO-5524 | Int-backed error structs round-trip through stdlib Result sums | ready | result-error-structs |
@@ -140,7 +139,7 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5559 (native-ui-compiled): compiled native UI programs run on the platform backend
+- TODO-5560 (native-ui-compiled): PrimeScroll compiles to native code
 - TODO-5567 (bytes): packed `array<u8>`
 - TODO-5570 (slices): slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
@@ -151,7 +150,7 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5559
+1. TODO-5560
 2. TODO-5567
 3. TODO-5570
 4. TODO-5536
@@ -163,7 +162,7 @@ of sync with them.
 ### Priority Lanes
 
 - Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5567, TODO-5570, TODO-5569, TODO-5540, TODO-5568, TODO-5530, TODO-5573, TODO-5572, TODO-5574
-- Goal, PrimeScroll compiled to native code through the C++ emitter (host calls with scalar and static text are done; the string chain is done on the VM and the optimized C++ emitters): TODO-5559, TODO-5564, TODO-5560, TODO-5561
+- Goal, PrimeScroll compiled to native code through the C++ emitter (host calls with scalar and static text are done; the string chain is done on the VM and the optimized C++ emitters): TODO-5560, TODO-5564, TODO-5561
 - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Lifecycle (docs/spec/value-lifecycle.md): TODO-5527
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
@@ -391,7 +390,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 - [ ] TODO-5564: C++ emitters pass and return text through `[host]` calls
   - owner: ai
   - status: blocked
-  - blocked_on: TODO-5559
+  - blocked_on: TODO-5560
   - created_at: 2026-10-22
   - phase: Native UI compiled
   - parallel_track: native-ui-compiled
@@ -400,22 +399,9 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - host-function matrix cases with text arguments and results agree on VM and the optimized C++ emitters; a loop of 10000 host text calls keeps the string heap constant on the C++ backend; full release gate green
   - stop_rule: tests and fixes of the host text boundary in the optimized C++ emitters.
 
-- [ ] TODO-5559: Compiled native UI programs run on the platform backend
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-21
-  - phase: Native UI compiled
-  - parallel_track: native-ui-compiled
-  - scope: A build path that turns a native UI `.prime` program into an executable linked with the AppKit backend (and, for tests, the headless backend): CMake helper or `primestruct_build_app` script around `primec --emit=exe`, the generated `main` calling the program's entry on the main thread, the platform libraries and the highlighter library linked in, no VM and no compiler in the binary.
-  - acceptance:
-    - hello_window and the editor build as native executables on macOS; headless-linked builds replay the scripted scenarios of tests/unit/ui with identical call logs to the VM runs; the AppKit smoke test runs the compiled binary
-    - full release gate green
-  - stop_rule: build path and equivalence tests; language gaps found in the editor become their own leaves.
-
 - [ ] TODO-5560: PrimeScroll compiles to native code
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5559
+  - status: ready
   - created_at: 2026-10-21
   - phase: Native UI compiled
   - parallel_track: native-ui-compiled

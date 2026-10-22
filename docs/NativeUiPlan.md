@@ -217,6 +217,12 @@ cannot hold until the string work exists. So the order is: bytes (TODO-5537), re
 compiling and matching its VM scenarios (TODO-5560), and the native bundle and install (TODO-5561). No VM-only
 shortcut is taken for text on the way.
 
+Status: the build path exists. `scripts/build_native_app.sh app.prime out` compiles a program with
+`primec --emit=optexe` and links the AppKit backend (`--backend headless` links the scripted test backend), so the
+result is a native executable with no VM or compiler in it; `PrimeStruct_cpp_native_ui` replays hello_window and the
+editor's scenarios on the VM and as compiled programs with identical call logs, and
+`PrimeStruct_native_ui_compiled_app` snapshots the compiled AppKit builds.
+
 ## 11. TODO slices
 
 | TODO | Slice | Verifiable here |

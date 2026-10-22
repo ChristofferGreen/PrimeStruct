@@ -1,8 +1,13 @@
-// Linked into a compiled native UI program together with the headless backend: prints the
-// backend's call log when the program ends, so a test can compare it with a VM run.
+// Linked into a compiled native UI program together with the headless backend: queues the
+// scripted user actions of the HEADLESS_SCENARIO environment variable (see scenario.h) before the
+// program starts, and prints the backend's call log when it ends, so a test can compare it with a
+// VM run of the same scenario.
 #include "primec/ui/NativeUiHeadless.h"
 
+#include "scenario.h"
+
 #include <cstdio>
+#include <cstdlib>
 
 namespace {
 struct LogDumper {
@@ -10,11 +15,9 @@ struct LogDumper {
     // Touch the backend first: its state is destroyed after this object, so the log is
     // still there when the destructor runs.
     (void)primec::ui::headless::callLog();
-    // The user actions of the hello_window scenario in the test.
-    primec::ui::headless::pushCommand(7);
-    primec::ui::headless::pushTypeText(0, " more");
-    primec::ui::headless::pushCommand(3);
-    primec::ui::headless::pushCloseWindow(1);
+    if (const char *scenario = std::getenv("HEADLESS_SCENARIO")) {
+      applyHeadlessScenario(scenario);
+    }
   }
   ~LogDumper() {
     for (const std::string &line : primec::ui::headless::callLog()) {

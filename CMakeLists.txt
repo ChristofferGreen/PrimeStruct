@@ -1313,6 +1313,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_main.cpp
     tests/unit/backend_host/test_cpp_host_calls.cpp
     tests/unit/backend_host/test_cpp_strings.cpp
+    tests/unit/backend_host/test_cpp_native_ui.cpp
   )
   add_dependencies(PrimeStruct_cpp_host_call_tests primec)
   target_include_directories(PrimeStruct_cpp_host_call_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
@@ -1331,6 +1332,14 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_cpp_host_calls
                        PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
+  add_test(
+    NAME PrimeStruct_cpp_native_ui
+    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+            "--test-suite=primestruct.backend.cpp_native_ui"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_cpp_native_ui
+                       PROPERTIES TIMEOUT 900 LABELS "parallel-safe")
 
   # Native UI C ABI on the headless backend, and its ScriptEngine bindings.
   add_executable(PrimeStruct_native_ui_tests
@@ -1402,6 +1411,17 @@ if(PRIMESTRUCT_BUILD_TESTS)
     )
     set_tests_properties(PrimeStruct_native_ui_appkit_smoke
                          PROPERTIES TIMEOUT 120 RESOURCE_LOCK native_ui_appkit)
+    # The same programs compiled to native executables (no VM, no bytecode).
+    add_test(
+      NAME PrimeStruct_native_ui_compiled_app
+      COMMAND ${CMAKE_COMMAND}
+              -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
+              -DBUILD_DIR=${CMAKE_BINARY_DIR}
+              -DWORK_DIR=${CMAKE_BINARY_DIR}/native_ui_compiled_app
+              -P ${CMAKE_SOURCE_DIR}/cmake/NativeUiCompiledAppTest.cmake
+    )
+    set_tests_properties(PrimeStruct_native_ui_compiled_app
+                         PROPERTIES TIMEOUT 900 RESOURCE_LOCK native_ui_appkit)
   endif()
 
   set(PrimeStructBackendAllTestSources
