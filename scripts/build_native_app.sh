@@ -72,4 +72,6 @@ esac
 
 mkdir -p "$(dirname "$OUTPUT")"
 "$BUILD_DIR/primec" --emit=optexe "$PROGRAM" -o "$OUTPUT" "${EXTRA[@]+"${EXTRA[@]}"}" "${LINK[@]}"
+# primec leaves the generated C++ next to the executable; the executable is the result.
+rm -f "$OUTPUT.cpp"
 echo "$OUTPUT"

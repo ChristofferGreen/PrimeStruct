@@ -112,8 +112,7 @@ of sync with them.
 | TODO-5535 | Launch-time harness and reference Objective-C++ editor | ready | native-ui-launch |
 | TODO-5530 | Read and write whole files as String | blocked | file-text |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
-| TODO-5564 | C++ emitters pass and return text through `[host]` calls | blocked | native-ui-compiled |
-| TODO-5561 | Native PrimeScroll bundle and install | ready | native-ui-compiled |
+| TODO-5564 | C++ emitters pass and return text through `[host]` calls | ready | native-ui-compiled |
 | TODO-5510 | `return` returns from pick arms and lambdas correctly | ready | control-returns |
 | TODO-5524 | Int-backed error structs round-trip through stdlib Result sums | ready | result-error-structs |
 | TODO-5523 | A Result-returning main exits with its error code | deferred | result-main |
@@ -138,7 +137,7 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5561 (native-ui-compiled): native PrimeScroll bundle and install
+- TODO-5564 (native-ui-compiled): C++ emitters pass and return text through `[host]` calls
 - TODO-5567 (bytes): packed `array<u8>`
 - TODO-5570 (slices): slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
@@ -149,7 +148,7 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5561
+1. TODO-5564
 2. TODO-5567
 3. TODO-5570
 4. TODO-5536
@@ -161,7 +160,7 @@ of sync with them.
 ### Priority Lanes
 
 - Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5567, TODO-5570, TODO-5569, TODO-5540, TODO-5568, TODO-5530, TODO-5573, TODO-5572, TODO-5574
-- Goal, PrimeScroll compiled to native code through the C++ emitter (host calls with scalar and static text are done; the string chain is done on the VM and the optimized C++ emitters): TODO-5561, TODO-5564
+- Goal, PrimeScroll compiled to native code through the C++ emitter (host calls with scalar and static text are done; the string chain is done on the VM and the optimized C++ emitters): TODO-5564
 - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Lifecycle (docs/spec/value-lifecycle.md): TODO-5527
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
@@ -302,7 +301,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 - [ ] TODO-5573: Embedding text results and exports use `String`
   - owner: ai
   - status: blocked
-  - blocked_on: TODO-5561
+  - blocked_on: TODO-5564
   - created_at: 2026-10-22
   - phase: Strings and slices (docs/spec/strings-and-views.md)
   - parallel_track: string-host
@@ -388,8 +387,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 
 - [ ] TODO-5564: C++ emitters pass and return text through `[host]` calls
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5561
+  - status: ready
   - created_at: 2026-10-22
   - phase: Native UI compiled
   - parallel_track: native-ui-compiled
@@ -397,18 +395,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - acceptance:
     - host-function matrix cases with text arguments and results agree on VM and the optimized C++ emitters; a loop of 10000 host text calls keeps the string heap constant on the C++ backend; full release gate green
   - stop_rule: tests and fixes of the host text boundary in the optimized C++ emitters.
-
-- [ ] TODO-5561: Native PrimeScroll bundle and install
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-21
-  - phase: Native UI compiled
-  - parallel_track: native-ui-compiled
-  - scope: `scripts/bundle_macos_app.sh` gains a native mode that bundles the compiled executable (icon, Info.plist, ad-hoc signature); measure startup and memory against the bytecode bundle with the launch harness; install the native PrimeScroll.app in place of the bytecode one and keep the Dock entry.
-  - acceptance:
-    - the native bundle launches and passes the AppKit smoke test; the measured startup is recorded in docs/NativeUiPlan.md section 1; the installed app is the native build
-    - full release gate green
-  - stop_rule: bundling, measurement and installation.
 
 - [ ] TODO-5527: Stdlib Result locals destroy their payload once
   - owner: ai

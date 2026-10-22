@@ -1,14 +1,23 @@
 #!/usr/bin/env bash
-# Builds Name.app from a PrimeStruct native UI program: the bytecode-only runner,
-# the program compiled to bytecode (no compiler ships in the bundle), an
-# Info.plist and an ad-hoc signature for local runs. Notarization is out of scope.
+# Builds Name.app from a PrimeStruct native UI program. By default the bundle holds the
+# bytecode-only runner and the program compiled to bytecode (no compiler ships in the bundle);
+# with --native it holds the program compiled to a native executable by
+# scripts/build_native_app.sh (the C++ emitter linked with the AppKit backend: no VM, no
+# bytecode). Either way: an Info.plist and an ad-hoc signature for local runs.
+# Notarization is out of scope.
 #
-# Usage: scripts/bundle_macos_app.sh <app.prime> <Name> [output-dir] [build-dir] [icon.icns]
+# Usage: scripts/bundle_macos_app.sh [--native] <app.prime> <Name> [output-dir] [build-dir] [icon.icns]
 # (scripts/make_app_icon.py draws the notepad's icon.)
 set -euo pipefail
 
+NATIVE=0
+if [[ "${1:-}" == "--native" ]]; then
+  NATIVE=1
+  shift
+fi
+
 if [[ $# -lt 2 ]]; then
-  echo "Usage: $0 <app.prime> <Name> [output-dir] [build-dir] [icon.icns]" >&2
+  echo "Usage: $0 [--native] <app.prime> <Name> [output-dir] [build-dir] [icon.icns]" >&2
   exit 64
 fi
 
@@ -20,7 +29,11 @@ BUILD_DIR="${4:-$ROOT_DIR/build-release}"
 ICON="${5:-}"
 BUNDLE_ID="com.primestruct.${NAME//[^A-Za-z0-9]/-}"
 
-for tool in primec primestruct_app_runtime; do
+TOOLS=(primec)
+if [[ $NATIVE -eq 0 ]]; then
+  TOOLS+=(primestruct_app_runtime)
+fi
+for tool in "${TOOLS[@]}"; do
   if [[ ! -x "$BUILD_DIR/$tool" ]]; then
     echo "missing $BUILD_DIR/$tool; build it first (cmake --build $BUILD_DIR --target $tool)" >&2
     exit 1
@@ -31,8 +44,13 @@ APP="$OUT_DIR/$NAME.app"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
-"$BUILD_DIR/primec" --emit=ir "$PROGRAM" -o "$APP/Contents/Resources/app.psir"
-cp "$BUILD_DIR/primestruct_app_runtime" "$APP/Contents/MacOS/$NAME"
+if [[ $NATIVE -eq 1 ]]; then
+  bash "$ROOT_DIR/scripts/build_native_app.sh" "$PROGRAM" "$APP/Contents/MacOS/$NAME" \
+    --backend appkit --build-dir "$BUILD_DIR" >/dev/null
+else
+  "$BUILD_DIR/primec" --emit=ir "$PROGRAM" -o "$APP/Contents/Resources/app.psir"
+  cp "$BUILD_DIR/primestruct_app_runtime" "$APP/Contents/MacOS/$NAME"
+fi
 
 ICON_KEY=""
 if [[ -n "$ICON" ]]; then

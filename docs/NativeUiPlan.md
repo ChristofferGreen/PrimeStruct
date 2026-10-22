@@ -27,6 +27,19 @@ the same UI (the reference build in TODO-5535), and shows the text of a 1 MB fil
 | Precompiled bytecode on the runtime-only VM (406 KB executable) | 4.5 ms | 80 ms |
 | Compile the source at launch, then run | 68 ms | 3.7 s |
 
+**Measured on the Mac, 2026-10-22** (`scripts/measure_app_startup.sh`, 10 runs of the editor in the AppKit backend's
+snapshot mode, so wall time to the first laid-out and drawn window including the snapshot itself, and the peak
+resident set; not the 5 ms budget measurement, which is TODO-5535):
+
+| PrimeScroll build | Bundle executable | Bytecode | No file: mean / peak RSS | Opening the 3-language showcase file: mean / peak RSS |
+| --- | --- | --- | --- | --- |
+| Bytecode bundle (runtime-only VM + `app.psir`) | 1.28 MB | 1.16 MB | 1526 ms / 123.5 MB | 1091 ms / 126.4 MB |
+| Native bundle (`optexe` + AppKit backend) | 0.29 MB | none | 912 to 967 ms / 112 to 116 MB | 1057 ms / 122.4 MB |
+
+The native build is 5 times smaller on disk and uses about 10 MB less memory; the snapshot wall time is dominated by
+AppKit's own window creation and layout, and the run-to-run noise (the first bytecode series includes cold caches) is
+larger than the VM's own cost, so the launch harness of TODO-5535 is still the way to compare against the budget.
+
 So the VM itself costs about 1 ms; compiling at launch is never acceptable; and bytecode size is the cost that
 matters. The large program's size comes from lowering inlining almost every call, which TODO-5536 addresses.
 

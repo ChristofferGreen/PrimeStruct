@@ -74,3 +74,23 @@ if(NOT rc EQUAL 0)
   message(FATAL_ERROR "compiled editor with a file argument exited with '${rc}': ${out}${err}")
 endif()
 check_png("${WORK_DIR}/editor_argument.png" 50000)
+
+# The native bundle: Name.app holds the compiled executable (no runtime, no bytecode) and launches.
+execute_process(
+  COMMAND bash "${SOURCE_DIR}/scripts/bundle_macos_app.sh" --native
+          "${SOURCE_DIR}/examples/apps/text_editor/main.prime" NativeBundle "${WORK_DIR}" "${BUILD_DIR}"
+  RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err)
+if(NOT rc EQUAL 0)
+  message(FATAL_ERROR "native bundle failed (${rc}): ${out}${err}")
+endif()
+if(EXISTS "${WORK_DIR}/NativeBundle.app/Contents/Resources/app.psir")
+  message(FATAL_ERROR "the native bundle carries bytecode")
+endif()
+set(ENV{PRIMESTRUCT_UI_SNAPSHOT} "${WORK_DIR}/bundle.png")
+set(ENV{PRIMESTRUCT_UI_OPEN} "${SOURCE_DIR}/tests/fixtures/ui/screenshot/showcase.prime")
+execute_process(COMMAND "${WORK_DIR}/NativeBundle.app/Contents/MacOS/NativeBundle"
+                RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err TIMEOUT 90)
+if(NOT rc EQUAL 0)
+  message(FATAL_ERROR "native bundle exited with '${rc}': ${out}${err}")
+endif()
+check_png("${WORK_DIR}/bundle.png" 50000)

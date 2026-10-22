@@ -54,3 +54,14 @@
   - acceptance:
     - the whole `PrimeStruct_native_ui_editor` and `PrimeStruct_native_ui_editor_acceptance` scenario sets (including the 30 highlight samples) pass on the compiled editor with call logs identical to the VM; full release gate green
   - stop_rule: the editor program's feature set and its compiled-vs-VM equivalence.
+
+- [x] TODO-5561: Native PrimeScroll bundle and install
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-21
+  - phase: Native UI compiled
+  - parallel_track: native-ui-compiled
+  - scope: `scripts/bundle_macos_app.sh --native` bundles the program compiled by `scripts/build_native_app.sh` (the optimized C++ emitter linked with the AppKit backend) instead of the bytecode runner and `app.psir`, with the icon, `Info.plist` and an ad-hoc signature; `build_native_app.sh` removes the generated `.cpp` primec leaves next to the executable. `scripts/measure_app_startup.sh` runs an app in snapshot mode N times and reports mean wall time and peak resident set. The installed `~/Applications/PrimeScroll.app` is now the native build (288 KB executable against a 1.3 MB runner plus 1.1 MB of bytecode), replaced at the same path so the Dock entry still points at it; the bytecode bundle is kept at `build-release/apps/PrimeScroll-bytecode.app`. Measurements are in docs/NativeUiPlan.md section 1.
+  - acceptance:
+    - the native bundle launches and passes the AppKit snapshot check (CTest `PrimeStruct_native_ui_compiled_app` bundles the editor with `--native`, checks it carries no bytecode and snapshots it); the measured startup is recorded; the installed app is the native build; full release gate green
+  - stop_rule: bundling, measurement and installation.
