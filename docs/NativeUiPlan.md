@@ -36,6 +36,12 @@ resident set; not the 5 ms budget measurement, which is TODO-5535):
 | Bytecode bundle (runtime-only VM + `app.psir`) | 1.28 MB | 1.16 MB | 1526 ms / 123.5 MB | 1091 ms / 126.4 MB |
 | Native bundle (`optexe` + AppKit backend) | 0.29 MB | none | 912 to 967 ms / 112 to 116 MB | 1057 ms / 122.4 MB |
 
+**Where the memory goes.** A minimal Objective-C++ app (one window, one `NSTextView`, 20 run loop turns, no
+PrimeStruct code) peaks at 90 MB resident; the native `hello_window` in snapshot mode peaks at 110 MB and PrimeScroll
+at 112 MB. So about 90 MB is AppKit and TextKit themselves, snapshot mode adds about 20 MB for rendering the PNG, and
+everything PrimeStruct adds on top of hello_window is about 2 MB (the editor's own widgets, the string heap and the
+highlighter's runs). There is no PrimeStruct-owned memory to trim here; the 120 MB is the platform's text stack.
+
 The native build is 5 times smaller on disk and uses about 10 MB less memory; the snapshot wall time is dominated by
 AppKit's own window creation and layout, and the run-to-run noise (the first bytecode series includes cold caches) is
 larger than the VM's own cost, so the launch harness of TODO-5535 is still the way to compare against the budget.

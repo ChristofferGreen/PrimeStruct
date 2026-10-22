@@ -177,6 +177,36 @@ TEST_CASE("an out-of-range vector<u8> read stops the program the same way") {
   CHECK(readFile(errors).find("array index out of bounds") != std::string::npos);
 }
 
+TEST_CASE("host functions that take and return String agree on the VM and optexe") {
+  const std::string program = std::string(PRIMESTRUCT_SOURCE_DIR) + "/tests/fixtures/host_calls/text_host.prime";
+  const std::string impl = std::string(PRIMESTRUCT_SOURCE_DIR) + "/tests/fixtures/host_calls/text_impl.cpp";
+
+  std::string notes;
+  ScriptEngine engine;
+  engine.bind("host_greet", [](primec::embed::HostTextView name) {
+    return primec::embed::HostText("hello " + std::string(name.value));
+  });
+  engine.bind("host_empty", [] { return primec::embed::HostText(); });
+  engine.bind("host_measure", [](primec::embed::HostTextView text) { return static_cast<int32_t>(text.value.size()); });
+  engine.bind("host_note", [&notes](primec::embed::HostTextView text) { notes += "note " + std::string(text.value) + "\n"; });
+  const auto script = engine.compileFile(program);
+  REQUIRE_MESSAGE(script.valid(), script.diagnostics());
+  const auto vm = script.run();
+  REQUIRE_MESSAGE(vm.ok, vm.diagnostics);
+  CHECK(vm.exitCode == 1);
+  CHECK(notes == "note hello world\nnote hello héllo\nnote \n");
+
+  const std::string exe = scratch("text_host_optexe");
+  const std::string log = exe + ".log";
+  const int status = run(shellQuote(Primec) + " --emit=optexe " + shellQuote(program) + " -o " + shellQuote(exe) +
+                         " --link-arg " + shellQuote(impl) + " > " + shellQuote(log) + " 2>&1");
+  REQUIRE_MESSAGE(status == 0, readFile(log));
+  const std::string output = exe + ".out";
+  const int exitCode = run(shellQuote(exe) + " > " + shellQuote(output));
+  CHECK(exitCode == vm.exitCode);
+  CHECK(readFile(output) == notes);
+}
+
 TEST_CASE("the simple C++ emitters name the optimized ones for byte programs") {
   const std::string source = programOf("  [String] s{/std/text/stringFrom(\"abc\")}\n  return(s.count())", "");
   for (const char *kind : {"exe", "cpp"}) {

@@ -2029,6 +2029,7 @@ are left unarchived.
 | TODO-5561 | Native PrimeScroll bundle and install | [undated.md](todo_archive/undated.md) | - |
 | TODO-5562 | Command-number switches tabs | [2026-10.md](todo_archive/2026-10.md) | 2026-10-21 |
 | TODO-5563 | Highlight large files | [2026-10.md](todo_archive/2026-10.md) | 2026-10-21 |
+| TODO-5564 | C++ emitters pass and return text through `[host]` calls | [undated.md](todo_archive/undated.md) | - |
 | TODO-5565 | The `u8` scalar type | [2026-10.md](todo_archive/2026-10.md) | 2026-10-22 |
 | TODO-5566 | Packed byte containers | [2026-10.md](todo_archive/2026-10.md) | 2026-10-22 |
 | TODO-5571 | Native UI text uses `String` | [undated.md](todo_archive/undated.md) | - |

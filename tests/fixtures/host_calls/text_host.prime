@@ -1,0 +1,48 @@
+// Host functions that take and return text, for the optimized C++ emitters and the VM
+// (tests/unit/backend_host/test_cpp_strings.cpp binds the same functions on the VM side).
+import /std/text/*
+
+[host return<String>]
+host_greet([String] name) {
+}
+
+[host return<String>]
+host_empty() {
+}
+
+[host return<i32>]
+host_measure([String] text) {
+}
+
+[host return<void>]
+host_note([String] text) {
+}
+
+// A name long enough to need a string-heap block of its own, greeted and measured repeatedly.
+[return<i32> effects(heap_alloc)]
+churn([i32] rounds) {
+  [i32 mut] total{0i32}
+  for([i32 mut] i{0i32}, i < rounds, i++) {
+    [String] name{stringFrom("a name long enough to take a block")}
+    [String] greeting{host_greet(name)}
+    total = total + host_measure(greeting)
+  }
+  return(total)
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [String] who{stringFrom("world")}
+  [String] greeting{host_greet(who)}
+  host_note(greeting)
+  [String] accented{stringFrom("héllo")}
+  host_note(host_greet(accented))
+  [String] nothing{host_empty()}
+  host_note(nothing)
+  [i32] emptyLength{host_measure(nothing)}
+  [u64] before{stringHeapBytesInUse()}
+  [i32] total{churn(10000i32)}
+  [bool] steady{stringHeapBytesInUse() == before && stringHeapChunks() <= 2}
+  [bool] sized{total == 10000i32 * 40i32}
+  return(if(steady && sized && emptyLength == 0i32, then() { 1i32 }, else() { 0i32 }))
+}

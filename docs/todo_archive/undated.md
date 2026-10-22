@@ -65,3 +65,14 @@
   - acceptance:
     - the native bundle launches and passes the AppKit snapshot check (CTest `PrimeStruct_native_ui_compiled_app` bundles the editor with `--native`, checks it carries no bytecode and snapshots it); the measured startup is recorded; the installed app is the native build; full release gate green
   - stop_rule: bundling, measurement and installation.
+
+- [x] TODO-5564: C++ emitters pass and return text through `[host]` calls
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-22
+  - phase: Native UI compiled
+  - parallel_track: native-ui-compiled
+  - scope: The optimized C++ emitters pass `String` parameters as NUL-terminated `const char *` and copy a `const char *` result into the program's string heap (delivered with the byte and string support of the optimized emitters). This leaf adds the matrix: tests/fixtures/host_calls/text_host.prime declares host functions that take text, return text, return empty text and take text without a result, and tests/fixtures/host_calls/text_impl.cpp is their C implementation; tests/unit/backend_host/test_cpp_strings.cpp binds the same functions on the VM with `HostText`/`HostTextView` and compares the notes the host printed and the exit code.
+  - acceptance:
+    - text arguments and results, accented text and empty text agree on the VM and `--emit=optexe`; a loop of 10000 host text calls (a String argument and a String result each) keeps the string heap bytes and chunk count constant on the compiled program; full release gate green
+  - stop_rule: tests of the host text boundary in the optimized C++ emitters.
