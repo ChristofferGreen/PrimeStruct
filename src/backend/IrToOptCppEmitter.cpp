@@ -7,6 +7,7 @@
 #include "IrToCppHostImports.h"
 #include "IrToOptCppRuntime.h"
 #include "primec/runtime/VmHeapCore.h"
+#include "primec/runtime/VmTextHeap.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -327,6 +328,8 @@ public:
         break;
       case IrOpcode::LoadIndirect:
       case IrOpcode::StoreIndirect:
+      case IrOpcode::LoadU8:
+      case IrOpcode::StoreU8:
         frameMode_ = true;
         break;
       default:
@@ -475,6 +478,31 @@ private:
       }
       const IrHostImport &import = module_.hostImports[static_cast<size_t>(instruction.imm)];
       const int64_t base = depth - static_cast<int64_t>(import.parameters.size());
+      const std::string_view textName = textHostFunctionName(import.name);
+      if (!textName.empty()) {
+        // The runtime answers the `__pstext_*` functions itself (string heap and entry arguments).
+        std::string answer;
+        if (textName == "__pstext_argument") {
+          answer = "ps_text_argument(rt, " + slot(base) + ")";
+        } else {
+          std::string args = "{0";
+          for (size_t i = 0; i < import.parameters.size(); ++i) {
+            args += ", " + slot(base + static_cast<int64_t>(i));
+          }
+          line("{");
+          line("  const uint64_t targs[] = " + args + "};");
+          answer = "ps_text_call(rt, " + quote(std::string(textName)) + ", targs + 1)";
+        }
+        if (import.returnKind == IrHostValueKind::Void) {
+          line("  " + answer + ";");
+        } else {
+          line("  " + slot(base) + " = " + answer + ";");
+        }
+        if (textName != "__pstext_argument") {
+          line("}");
+        }
+        return true;
+      }
       std::string call = import.name + "(";
       for (size_t i = 0; i < import.parameters.size(); ++i) {
         const std::string argSlot = slot(base + static_cast<int64_t>(i));
@@ -502,13 +530,11 @@ private:
           arg = "ps_host_text(ps_strings, PsStringCount, " + argSlot + ")";
           break;
         case IrHostValueKind::U8:
-          error = "optexe found a u8 host parameter in " + function_.name +
-                  " (u8 is not supported by the C++ backends yet, docs/todo.md TODO-5542)";
-          return false;
+          arg = "static_cast<uint8_t>(" + argSlot + ")";
+          break;
         case IrHostValueKind::Text:
-          error = "optexe found a text host parameter in " + function_.name +
-                  " (text crosses the host boundary on the vm only yet, docs/todo.md TODO-5564)";
-          return false;
+          arg = "ps_host_text_arg(rt, ps_strings, PsStringCount, " + argSlot + ")";
+          break;
         case IrHostValueKind::Void:
           error = "optexe found a void host parameter in " + function_.name;
           return false;
@@ -540,13 +566,11 @@ private:
         line(result + " = (" + call + ") ? 1u : 0u;");
         break;
       case IrHostValueKind::U8:
-        error = "optexe found a host function returning u8 in " + function_.name +
-                " (u8 is not supported by the C++ backends yet, docs/todo.md TODO-5542)";
-        return false;
+        line(result + " = static_cast<uint64_t>(" + call + ");");
+        break;
       case IrHostValueKind::Text:
-        error = "optexe found a host function returning text in " + function_.name +
-                " (text crosses the host boundary on the vm only yet, docs/todo.md TODO-5564)";
-        return false;
+        line(result + " = ps_host_text_result(rt, " + call + ");");
+        break;
       case IrHostValueKind::String:
         error = "optexe found a host function returning text in " + function_.name;
         return false;
@@ -590,6 +614,17 @@ private:
       return true;
     case IrOpcode::HeapAlloc:
       line(slot(depth - 1) + " = ps_heap_alloc(rt, " + slot(depth - 1) + ");");
+      return true;
+    case IrOpcode::HeapAllocBytes:
+      line(slot(depth - 1) + " = ps_heap_alloc_bytes(rt, " + slot(depth - 1) + ");");
+      return true;
+    case IrOpcode::LoadU8:
+      line(slot(depth - 1) + " = ps_load_u8(rt, frame, " + std::to_string(localCount_) + ", " +
+           slot(depth - 1) + ");");
+      return true;
+    case IrOpcode::StoreU8:
+      line(slot(depth - 2) + " = ps_store_u8(rt, frame, " + std::to_string(localCount_) + ", " +
+           slot(depth - 2) + ", " + slot(depth - 1) + ");");
       return true;
     case IrOpcode::HeapFree:
       line("ps_heap_free(rt, " + slot(depth - 1) + ");");
@@ -726,7 +761,7 @@ bool IrToOptCppEmitter::emitSource(const IrModule &module,
   // The `[host]` functions are plain C functions supplied at link time, so they are
   // declared before the runtime opens its unnamed namespace.
   source << OptCppRuntimeHeaders << hostImportDeclarations(module.hostImports) << "namespace {\n"
-         << VmHeapCoreSource << "\n" << OptCppRuntimePreamble;
+         << VmHeapCoreSource << "\n" << VmTextHeapSource << "\n" << OptCppRuntimePreamble;
   source << "namespace {\n\n";
   source << "const PsString ps_strings[] = {";
   for (const std::string &text : module.stringTable) {

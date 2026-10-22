@@ -43,6 +43,8 @@ std::string targetName(IrValidationTarget target) {
     return "wasm-browser";
   case IrValidationTarget::Cpp:
     return "cpp";
+  case IrValidationTarget::OptCpp:
+    return "optcpp";
   }
   return "?";
 }

@@ -4,7 +4,7 @@
 
 Status: designed 2026-10-08. The bytes, `u8`, packed `vector<u8>` and the owned `String` with its string heap are
 implemented on the VM (TODO-5537, TODO-5565, TODO-5566, TODO-5539); slices, the `string` view, host strings, whole-file
-text and native/C++ parity are still open (TODO-5538, TODO-5540, TODO-5530, TODO-5541, TODO-5542). Until those land, the current behavior is the one in [VM Design](vm-design.md) and
+text and native/simple-C++ parity are still open (TODO-5540, TODO-5530, TODO-5574). Until those land, the current behavior is the one in [VM Design](vm-design.md) and
 [Backend Type Support](backend-type-support.md). This part refines the view model of
 [Pointers and References](pointers-and-references.md) and does not replace it.
 
@@ -231,4 +231,4 @@ is a valid `[host]` parameter and result type and crosses as the block's `u64` a
 | TODO-5540 | `string` as the UTF-8 view: static literals, conversions, text operations, field rule |
 | TODO-5530 | Read and write whole files as `String` |
 | TODO-5541 | Host functions and the embedding API use `String`/`string`; retire VM run-time string indices |
-| TODO-5542 | Native and C++ parity for `u8`, slices, `string` and `String` |
+| TODO-5574 | Simple C++ emitters and native parity for `u8`, slices, `string` and `String` (the optimized C++ emitters are done) |

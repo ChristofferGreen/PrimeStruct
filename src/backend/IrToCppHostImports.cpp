@@ -1,5 +1,7 @@
 #include "IrToCppHostImports.h"
 
+#include "primec/runtime/VmTextHeap.h"
+
 #include <cctype>
 #include <map>
 #include <sstream>
@@ -46,7 +48,7 @@ const char *hostCType(IrHostValueKind kind, bool isResult) {
   case IrHostValueKind::U8:
     return "uint8_t";
   case IrHostValueKind::Text:
-    return isResult ? nullptr : "const char *";
+    return "const char *";
   case IrHostValueKind::F32:
     return "float";
   case IrHostValueKind::F64:
@@ -62,13 +64,16 @@ const char *hostCType(IrHostValueKind kind, bool isResult) {
 bool validateHostImportsForCpp(const IrModule &module, std::string &error) {
   std::map<std::string, std::string> seen;
   for (const IrHostImport &import : module.hostImports) {
+    if (!textHostFunctionName(import.name).empty()) {
+      continue;  // answered by the generated program's runtime
+    }
     if (!isCIdentifier(import.name)) {
       error = "host function name is not a C identifier, so the C++ backends cannot link it: " + import.name;
       return false;
     }
     if (hostCType(import.returnKind, true) == nullptr) {
       error = "host function " + import.name +
-              " returns text, which the C++ backends cannot pass yet (docs/todo.md, TODO-5564)";
+              " returns a `string`, which the C++ backends cannot pass; return a `String` instead";
       return false;
     }
     for (const IrHostValueKind parameter : import.parameters) {
@@ -95,6 +100,9 @@ std::string hostImportDeclarations(const std::vector<IrHostImport> &imports) {
   out << "extern \"C\" {\n";
   std::map<std::string, bool> declared;
   for (const IrHostImport &import : imports) {
+    if (!textHostFunctionName(import.name).empty()) {
+      continue;
+    }
     if (!declared.emplace(import.name, true).second) {
       continue;
     }

@@ -43,8 +43,10 @@ Rules:
   arguments use the VM slot encoding's C types (`i32`, `i64`, `u64`, `f32`, `f64`, `bool`; a static `string` is a
   NUL-terminated `const char *` from the module's string table), and the result is one of those scalars or `void`.
   `primec --emit=exe|optexe ... --link-arg <arg>` (repeatable) appends host libraries, search paths or sources to the
-  C++ compiler command that links the program. A host function that returns text, or text built at run time, is not
-  supported by the C++ emitters yet and is rejected with a diagnostic that names TODO-5564.
+  C++ compiler command that links the program. The optimized emitters (`optcpp`, `optexe`) also pass a `String`
+  parameter as a NUL-terminated `const char *` and take a `const char *` result as a new `String`; `u8` is
+  `uint8_t`. The simple emitters (`cpp`, `exe`) reject `u8` and text host values with a diagnostic that names
+  TODO-5574, and a host function that returns a `string` view is rejected by every C++ emitter.
 - The embedder binds every declared function, by name, with a matching signature
   (`Script::bind` in `docs/Embedding.md`). A missing or mismatched binding fails
   before any instruction runs. A declared host function that is never called adds

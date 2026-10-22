@@ -113,8 +113,8 @@ TEST_CASE("host calls compiled by the C++ emitters match the VM") {
   }
 }
 
-TEST_CASE("the native UI hello window (fixed labels) runs through the C++ emitters on the headless backend") {
-  const std::string example = SourceDir + "/tests/fixtures/host_calls/hello_labels.prime";
+TEST_CASE("the native UI hello_window runs through the C++ emitters on the headless backend") {
+  const std::string example = SourceDir + "/examples/native_ui/hello_window.prime";
   // The VM run, with the same scripted user actions headless_log_dump.cpp queues in the
   // compiled program before it starts.
   headless::reset();
@@ -135,7 +135,7 @@ TEST_CASE("the native UI hello window (fixed labels) runs through the C++ emitte
       "--link-arg", quoted("-I" + SourceDir + "/include"),
       "--link-arg", quoted(PRIMESTRUCT_UI_HEADLESS_LIB),
       "--link-arg", quoted(PRIMESTRUCT_UI_HIGHLIGHT_LIB)};
-  for (const char *kind : {"exe", "optexe"}) {
+  for (const char *kind : {"optexe"}) {
     const std::string program = scratch(std::string("hello_") + kind);
     const CompileResult compiled = compile(kind, example, program, linkArgs);
     REQUIRE_MESSAGE(compiled.status == 0, kind << ": " << compiled.diagnostics);
@@ -167,7 +167,7 @@ TEST_CASE("a program that is never given its host functions does not link") {
   CHECK(compiled.diagnostics.find("Failed to compile output executable") != std::string::npos);
 }
 
-TEST_CASE("host functions that return text are refused with a pointer to the follow-up") {
+TEST_CASE("host functions that return a string view are refused and point at String") {
   const std::string source = scratch("text_result.prime");
   writeFile(source, R"([host return<string>]
 host_name() {
@@ -182,8 +182,8 @@ main() {
   for (const char *kind : {"cpp", "optcpp"}) {
     const CompileResult compiled = compile(kind, source, scratch(std::string("text_result_") + kind));
     CHECK_MESSAGE(compiled.status != 0, kind);
-    CHECK_MESSAGE(compiled.diagnostics.find("returns text") != std::string::npos, kind << ": " << compiled.diagnostics);
-    CHECK_MESSAGE(compiled.diagnostics.find("TODO-5564") != std::string::npos, kind);
+    CHECK_MESSAGE(compiled.diagnostics.find("returns a `string`") != std::string::npos, kind << ": " << compiled.diagnostics);
+    CHECK_MESSAGE(compiled.diagnostics.find("return a `String` instead") != std::string::npos, kind);
   }
 }
 

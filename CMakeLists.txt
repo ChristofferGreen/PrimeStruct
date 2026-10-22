@@ -685,7 +685,6 @@ set(PRIMESTRUCT_RUNTIME_SOURCES
   src/runtime/VmFastKernelPrepare.cpp
   src/runtime/VmHeapHelpers.cpp
   src/runtime/VmStringHeap.cpp
-  src/runtime/VmTextHeap.cpp
   src/runtime/VmIoHelpers.cpp
   src/runtime/VmDebugAdapter.cpp
   src/runtime/VmDebugDap.cpp
@@ -1313,6 +1312,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   add_executable(PrimeStruct_cpp_host_call_tests
     tests/unit/test_main.cpp
     tests/unit/backend_host/test_cpp_host_calls.cpp
+    tests/unit/backend_host/test_cpp_strings.cpp
   )
   add_dependencies(PrimeStruct_cpp_host_call_tests primec)
   target_include_directories(PrimeStruct_cpp_host_call_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
@@ -1326,7 +1326,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   add_test(
     NAME PrimeStruct_cpp_host_calls
     COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
-            "--test-suite=primestruct.backend.cpp_host_calls"
+            "--test-suite=primestruct.backend.cpp_host_calls,primestruct.backend.cpp_strings"
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_cpp_host_calls

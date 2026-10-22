@@ -562,7 +562,7 @@ public:
   }
 
   IrValidationTarget validationTarget(const Options & /*options*/) const override {
-    return IrValidationTarget::Cpp;
+    return IrValidationTarget::OptCpp;
   }
 
   bool requiresOutputPath() const override {
@@ -613,7 +613,7 @@ public:
   }
 
   IrValidationTarget validationTarget(const Options & /*options*/) const override {
-    return IrValidationTarget::Cpp;
+    return IrValidationTarget::OptCpp;
   }
 
   bool requiresOutputPath() const override {

@@ -104,15 +104,16 @@ of sync with them.
 | TODO-5569 | Slice loans, escapes and returned borrows | ready | slices |
 | TODO-5570 | Slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views | ready | slices |
 | TODO-5540 | `string` as the UTF-8 text view | blocked | string-view |
-| TODO-5572 | Remove the VM run-time string index | ready | string-host |
-| TODO-5542 | Native and C++ parity for bytes, slices and strings | blocked | string-backends |
+| TODO-5573 | Embedding text results and exports use `String` | blocked | string-host |
+| TODO-5572 | Remove the VM run-time string index | blocked | string-host |
+| TODO-5574 | Simple C++ emitters and the native backend run bytes and strings | deferred | string-backends |
 | TODO-5568 | String conveniences: operators, numbers, push of code points | blocked | string-owned |
 | TODO-5536 | Small, lazily loaded bytecode for apps | ready | bytecode-startup |
 | TODO-5535 | Launch-time harness and reference Objective-C++ editor | ready | native-ui-launch |
 | TODO-5530 | Read and write whole files as String | blocked | file-text |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5564 | C++ emitters pass and return text through `[host]` calls | blocked | native-ui-compiled |
-| TODO-5559 | Compiled native UI programs run on the platform backend | blocked | native-ui-compiled |
+| TODO-5559 | Compiled native UI programs run on the platform backend | ready | native-ui-compiled |
 | TODO-5560 | PrimeScroll compiles to native code | blocked | native-ui-compiled |
 | TODO-5561 | Native PrimeScroll bundle and install | blocked | native-ui-compiled |
 | TODO-5510 | `return` returns from pick arms and lambdas correctly | ready | control-returns |
@@ -139,7 +140,7 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5572 (string-host): remove the VM run-time string index
+- TODO-5559 (native-ui-compiled): compiled native UI programs run on the platform backend
 - TODO-5567 (bytes): packed `array<u8>`
 - TODO-5570 (slices): slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
@@ -150,7 +151,7 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5572
+1. TODO-5559
 2. TODO-5567
 3. TODO-5570
 4. TODO-5536
@@ -161,8 +162,8 @@ of sync with them.
 
 ### Priority Lanes
 
-- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5567, TODO-5570, TODO-5569, TODO-5540, TODO-5568, TODO-5530, TODO-5572, TODO-5542
-- Goal, PrimeScroll compiled to native code through the C++ emitter (host calls with scalar and static text are done; next the string chain, because the editor passes host-returned text): TODO-5542, TODO-5564, TODO-5559, TODO-5560, TODO-5561
+- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5567, TODO-5570, TODO-5569, TODO-5540, TODO-5568, TODO-5530, TODO-5573, TODO-5572, TODO-5574
+- Goal, PrimeScroll compiled to native code through the C++ emitter (host calls with scalar and static text are done; the string chain is done on the VM and the optimized C++ emitters): TODO-5559, TODO-5564, TODO-5560, TODO-5561
 - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Lifecycle (docs/spec/value-lifecycle.md): TODO-5527
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
@@ -252,7 +253,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - scope: `array<u8>` stores one byte per element like `vector<u8>` already does. Arrays are inline `[count][elements...]` slot aggregates, so this needs a decision first (a header slot plus a byte-region data pointer, or a byte-region-only array) and then the array literal, `at`/`at_unsafe`, `count`, element assignment, iteration, copy/move/return and `Slice<u8>` over an array in the lowerer; `Pointer<u8>` into an array must then step one byte. Update docs/spec/type-system.md.
   - acceptance:
     - VM matrix cases for `array<u8>`: literal, reads, writes, count, iteration, passing and returning, out-of-range faults; an `array<u8>` of 1 MB uses about 1 MB of VM heap; full release gate green
-  - stop_rule: `array<u8>` on the VM; native and C++ are TODO-5542.
+  - stop_rule: `array<u8>` on the VM; native and C++ are TODO-5574.
 
 - [ ] TODO-5570: Slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views
   - owner: ai
@@ -263,7 +264,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - scope: The user-facing spellings the slice value leaves out: `values.view()`, `values.slice(start, end)` and `values.sliceMut(start, end)` on a `vector<T>` (today `/std/collections/vector/view<T>(values)` etc.; the builtin vector surface is name-driven in several places, and `slice` is also the array-copy builtin), `view`/`slice`/`sliceMut` and packed `u8` storage for `array<T>`, `view[i]` and `view[i] = v` on a slice (index sugar currently types only builtin collections), and `Slice<T, Capability>` resolving without an explicit `import /std/collections/slice/*` (the implicit stdlib include stub). Retire the copying `slice(array, start, end)` builtin once array views exist.
   - acceptance:
     - tests for each spelling on `vector<i32>`, `vector<u8>` and `array<i32>` owners; docs/CodeExamples.md uses the method spellings; full release gate green
-  - stop_rule: the spellings and array views on the VM; native and C++ are TODO-5542.
+  - stop_rule: the spellings and array views on the VM; native and C++ are TODO-5574.
 
 - [ ] TODO-5569: Slice loans, escapes and returned borrows
   - owner: ai
@@ -286,7 +287,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - scope: The parts of the owned `String` API that need the `string` view: `+` and `+=` with `string` and `String`, `push(u32 codePoint)` with UTF-8 encoding, `String.from(x)` for integers, floats and `bool`, `String.fromUtf8(bytes)` returning `Result<String, TextError>`, `tryReserve` returning `Result<void, TextError>`, the `String.from(text)` spelling for `stringFrom`, `at(i)`/`[i]` on `String`, and the implicit borrow of a `String` where a `string` is expected. Per-thread string heaps and scoped arenas are separate later work.
   - acceptance:
     - VM tests for each operation, including invalid UTF-8 and the borrow rules; full release gate green
-  - stop_rule: the owned-text conveniences on the VM; native and C++ are TODO-5542.
+  - stop_rule: the owned-text conveniences on the VM; native and C++ are TODO-5574.
 
 - [ ] TODO-5540: `string` as the UTF-8 text view
   - owner: ai
@@ -300,29 +301,41 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - full release gate green
   - stop_rule: the text view on the VM.
 
-- [ ] TODO-5572: Remove the VM run-time string index
+- [ ] TODO-5573: Embedding text results and exports use `String`
   - owner: ai
-  - status: ready
+  - status: blocked
+  - blocked_on: TODO-5561
   - created_at: 2026-10-22
   - phase: Strings and slices (docs/spec/strings-and-views.md)
   - parallel_track: string-host
-  - scope: Retire the VM's host-created dynamic strings (a `u64` with bit 63 set, `VmStringHeap`, `LoadStringByteDynamic`, `invokeString` results of kind `string`) now that host text arrives as `String`; bump the PSIR version and update docs/spec/vm-design.md and docs/Embedding.md.
+  - scope: Move every remaining producer of VM run-time strings onto `String`: a host function whose C++ callable returns `std::string`, `std::string_view` or `const char *` is declared `return<String>` in the script and crosses as `Text`; exported functions that take or return text use `String` in their script signature (the generated wrapper fetches `__psarg_text` and reports `__psret_text`), while the C++ `call<std::string>(..., "text")` surface is unchanged; host `string` parameters accept module-table text only. Port the embed tests, examples/embed, tests that declare `[host return<string>]` and docs/Embedding.md.
+  - acceptance:
+    - the embed export/host tests pass with `String` script signatures; no embed path creates a VM run-time string; full release gate green
+  - stop_rule: the embedding API and its tests; the VM string index is removed by TODO-5572.
+
+- [ ] TODO-5572: Remove the VM run-time string index
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5573
+  - created_at: 2026-10-22
+  - phase: Strings and slices (docs/spec/strings-and-views.md)
+  - parallel_track: string-host
+  - scope: Retire the VM's host-created dynamic strings (a `u64` with bit 63 set, `VmStringHeap`, `invokeString` results of kind `string`, the heap half of `resolveVmString`) now that no producer remains; `LoadStringByteDynamic` keeps loading from module-table strings by a computed index. Bump the PSIR version and update docs/spec/vm-design.md and docs/Embedding.md.
   - acceptance:
     - no host function creates a dynamic string; the embed and VM string tests pass; full release gate green
   - stop_rule: the index and its heap only.
 
-- [ ] TODO-5542: Native and C++ parity for bytes, slices and strings
+- [ ] TODO-5574: Simple C++ emitters and the native backend run bytes and strings
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5572
-  - created_at: 2026-10-08
+  - status: deferred
+  - created_at: 2026-10-22
   - phase: Strings and slices (docs/spec/strings-and-views.md)
   - parallel_track: string-backends
-  - scope: Run `String`, `string` and the string heap on the native backend and the C++ emitter (replacing `std::string_view` for `string`), so the string programs behave identically on VM, native and C++; remove the "dynamic strings are VM-only" limits from docs/spec/vm-design.md and docs/spec/backend-type-support.md.
+  - scope: Port the `u8` byte opcodes (HeapAllocBytes, LoadU8, StoreU8), the `__pstext_*` string heap and the Text host kind to the simple C++ emitters (`--emit=cpp`, `--emit=exe`) and to the native backend, so `String`, `Slice` and `vector<u8>` programs run there as well as on the VM and the optimized C++ emitters (which TODO-5542 finished); replace `std::string_view` for `string` once TODO-5540 defines the view; remove the remaining "VM-only" limits from docs/spec/vm-design.md and docs/spec/backend-type-support.md. Split per backend before starting.
   - acceptance:
-    - the string tests run as matrix cases on VM, native and C++ with identical output and `stringMemory()` figures
-    - full release gate green
-  - stop_rule: backend parity only; split per backend if large.
+    - the tests/unit/backend_host/test_cpp_strings.cpp programs also pass through `--emit=exe` and on the native backend with the VM's exit codes; full release gate green
+  - stop_rule: backend parity only.
+  - notes: deferred: PrimeScroll compiles through the optimized C++ emitter, which needs none of this.
 
 - [ ] TODO-5536: Small, lazily loaded bytecode for apps
   - owner: ai
@@ -378,19 +391,18 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 - [ ] TODO-5564: C++ emitters pass and return text through `[host]` calls
   - owner: ai
   - status: blocked
-  - blocked_on: TODO-5542
+  - blocked_on: TODO-5559
   - created_at: 2026-10-22
   - phase: Native UI compiled
   - parallel_track: native-ui-compiled
-  - scope: Extend the C++ emitters' host-call lowering to `string`/`String` parameters of run-time text (pointer and length, NUL-terminated without a copy for `String`) and `String` results owned by the program's string heap, matching the VM boundary of TODO-5541, so the editor's panel results, error text and per-tab paths compile.
+  - scope: The optimized C++ emitters already pass `String` parameters as NUL-terminated `const char *` and copy a `const char *` result into the program's string heap (TODO-5542). Harden that boundary with host-function matrix cases of text arguments and results, empty and embedded-NUL-free text, and a loop of host text calls.
   - acceptance:
-    - host-function matrix cases with text arguments and results agree on VM, native and C++; a loop of 10000 host text calls keeps `stringMemory()` constant on the C++ backend; full release gate green
-  - stop_rule: the host text boundary in the C++ emitters.
+    - host-function matrix cases with text arguments and results agree on VM and the optimized C++ emitters; a loop of 10000 host text calls keeps the string heap constant on the C++ backend; full release gate green
+  - stop_rule: tests and fixes of the host text boundary in the optimized C++ emitters.
 
 - [ ] TODO-5559: Compiled native UI programs run on the platform backend
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5564
+  - status: ready
   - created_at: 2026-10-21
   - phase: Native UI compiled
   - parallel_track: native-ui-compiled

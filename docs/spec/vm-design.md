@@ -51,7 +51,7 @@
   a pointer to the NUL-terminated bytes without a copy (a module-table string literal is accepted in the same
   position). A `String` result is text the host returns; the VM copies it into a fresh string-heap block and the
   call builds the `String` (length, capacity, data, owning) from it, using the VM-answered `__pstext_length` and
-  `__pstext_usable`. `__pstext_argument(index)` returns the entry argument at `index` the same way, and `argumentText(index)` wraps it. The C++ backends reject text host values until they implement the boundary.
+  `__pstext_usable`. `__pstext_argument(index)` returns the entry argument at `index` the same way, and `argumentText(index)` wraps it. The optimized C++ emitters pass a `String` argument as the NUL-terminated `const char *` of its data block and copy a `const char *` result into their own string heap, and answer the `__pstext_*` functions in the generated program; the simple C++ emitters and the native backend reject text host values until they implement the boundary.
 - **String heap (TODO-5539):** the VM answers the host functions named `__pstext_*` itself, so a program needs no binding for
   them. They manage text blocks over byte regions: 256 KiB chunks of equal blocks in size classes (four per doubling from
   32 bytes to 64 KiB), a byte region of its own for text over 64 KiB, an optional byte limit (the runtime fault
@@ -70,8 +70,10 @@
   `HeapRealloc` of a byte region counts bytes and copies the leading bytes, while a realloc of address 0 still
   allocates slots (a byte container starts with `HeapAllocBytes`). Byte memory and `ZextU8` run on the step kernel and the
   flat loop declines modules that use the three memory opcodes; the native JIT and the native, wasm and GLSL
-  backends do not support them yet (the validator says so; the C++ backends follow TODO-5542). `VmHeapCore` holds
-  both arenas, so the debugger and the C++ runtimes that paste it share the same addresses.
+  backends do not support them yet (the validator says so; TODO-5574). The optimized C++ emitters (`optcpp`,
+  `optexe`) run them: their generated runtime pastes `VmHeapCore` (`VmHeapCoreSource`) and the string heap
+  (`VmTextHeapSource`, from `VmTextHeapBody.inc`), so byte addresses, faults and `stringMemory()` figures match the
+  VM. `VmHeapCore` holds both arenas, so the debugger and the C++ runtimes that paste it share the same addresses.
 - **Native execution tier:** on Linux x86_64, `primevm` at `-O2` (its default) runs a module as native code in its own
   process (`include/primec/backend/NativeJit.h`) with the VM's observable behavior. Integer, f64 and f32
   arithmetic (f32 results zero-extended as in the VM), comparisons, branches, calls, returns, prints of numbers and module strings, argc, string bytes and lengths, and

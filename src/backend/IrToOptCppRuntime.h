@@ -4,7 +4,7 @@
 // IrToOptCppEmitter. It mirrors the VM's observable behavior: the same fault
 // messages (reported as `VM error: ...` with exit code 3), the same heap
 // address encoding, the same file-handle packing and I/O error codes. The heap is
-// the VM's own allocator (VmHeapCore, pasted in between the two halves below).
+// the VM's own allocator (VmHeapCore) and string heap (VmTextHeap), pasted in between the two halves below.
 
 namespace primec {
 
@@ -17,6 +17,7 @@ inline constexpr const char *OptCppRuntimeHeaders = R"CPP(#include <algorithm>
 #include <cstring>
 #include <fcntl.h>
 #include <string>
+#include <string_view>
 #include <iterator>
 #include <map>
 #include <set>
@@ -39,6 +40,7 @@ struct Rt {
   char **argv;
   unsigned depth;
   VmHeapCore heap;
+  VmTextHeap text;
 };
 
 [[noreturn]] void ps_fault(const char *message) {
@@ -112,6 +114,15 @@ inline const char *ps_host_text(const PsString *table, size_t count, uint64_t in
 
 // ---- heap and indirect addressing ----------------------------------------
 
+inline uint64_t ps_heap_alloc_bytes(Rt &rt, uint64_t count) {
+  uint64_t address = 0;
+  std::string error;
+  if (!rt.heap.allocateBytes(count, address, error)) {
+    ps_fault(error);
+  }
+  return address;
+}
+
 inline uint64_t ps_heap_alloc(Rt &rt, uint64_t count) {
   uint64_t address = 0;
   std::string error;
@@ -140,6 +151,9 @@ inline uint64_t ps_heap_realloc(Rt &rt, uint64_t address, uint64_t count) {
 // Resolves a byte address to the slot it names: a tagged heap address, or a
 // frame offset in functions that take local addresses.
 inline uint64_t *ps_resolve(Rt &rt, uint64_t *frame, size_t frameCount, uint64_t address) {
+  if (VmHeapCore::isByteAddress(address)) {
+    ps_fault("slot access to a byte region in IR: " + std::to_string(address));
+  }
   if (address % PsSlotBytes != 0) {
     ps_fault("unaligned indirect address in IR: " + std::to_string(address));
   }
@@ -155,6 +169,97 @@ inline uint64_t *ps_resolve(Rt &rt, uint64_t *frame, size_t frameCount, uint64_t
     ps_fault("invalid indirect address in IR: " + std::to_string(address));
   }
   return &frame[static_cast<size_t>(index)];
+}
+
+[[noreturn]] void ps_byte_fault(uint64_t address) {
+  if ((address & PsHeapTag) != 0 && !VmHeapCore::isByteAddress(address)) {
+    ps_fault("byte access to a slot region in IR: " + std::to_string(address));
+  }
+  ps_fault("invalid byte address in IR: " + std::to_string(address));
+}
+
+// A byte address names a byte of a byte region; a slot address (a u8 local or slot field) names its
+// slot's low byte.
+inline uint64_t ps_load_u8(Rt &rt, uint64_t *frame, size_t frameCount, uint64_t address) {
+  if (!VmHeapCore::isByteAddress(address)) {
+    return *ps_resolve(rt, frame, frameCount, address) & UINT64_C(0xff);
+  }
+  const uint8_t *byte = rt.heap.byteAt(address);
+  if (byte == nullptr) {
+    ps_byte_fault(address);
+  }
+  return *byte;
+}
+
+inline uint64_t ps_store_u8(Rt &rt, uint64_t *frame, size_t frameCount, uint64_t address, uint64_t raw) {
+  const uint8_t value = static_cast<uint8_t>(raw & UINT64_C(0xff));
+  if (!VmHeapCore::isByteAddress(address)) {
+    *ps_resolve(rt, frame, frameCount, address) = value;
+    return value;
+  }
+  uint8_t *byte = rt.heap.byteAt(address);
+  if (byte == nullptr) {
+    ps_byte_fault(address);
+  }
+  *byte = value;
+  return value;
+}
+
+// ---- text across the host boundary ----------------------------------------
+
+// A Text argument of a host call: the NUL-terminated bytes of a String's data block (0 is empty text) or
+// a module-table literal.
+inline const char *ps_host_text_arg(Rt &rt, const PsString *table, size_t count, uint64_t slot) {
+  if (slot == 0) {
+    return "";
+  }
+  if (VmHeapCore::isByteAddress(slot)) {
+    const uint8_t *first = rt.heap.byteAt(slot);
+    if (first == nullptr) {
+      ps_fault("invalid text address passed to host function");
+    }
+    return reinterpret_cast<const char *>(first);
+  }
+  if ((slot & PsHeapTag) == 0 && slot < count) {
+    return table[static_cast<size_t>(slot)].data;
+  }
+  ps_fault("invalid text passed to host function");
+}
+
+// A Text result: the returned text copied into a fresh string-heap block the program owns (0 for empty).
+inline uint64_t ps_host_text_result(Rt &rt, const char *text) {
+  const size_t size = text == nullptr ? 0 : std::strlen(text);
+  if (size == 0) {
+    return 0;
+  }
+  uint64_t block = 0;
+  std::string error;
+  if (!rt.text.allocate(rt.heap, size + 1, block, error)) {
+    ps_fault(error);
+  }
+  std::memcpy(rt.heap.byteAt(block), text, size);
+  return block;
+}
+
+// The `__pstext_*` host functions the runtime answers itself.
+inline uint64_t ps_text_call(Rt &rt, const char *name, const uint64_t *args) {
+  uint64_t result = 0;
+  bool known = false;
+  std::string error;
+  if (!callTextHostFunction(rt.text, rt.heap, name, args, result, known, error)) {
+    ps_fault(error);
+  }
+  if (!known) {
+    ps_fault(std::string("unknown text host function ") + name);
+  }
+  return result;
+}
+
+// `__pstext_argument`: the entry argument at the index copied into a fresh string-heap block.
+inline uint64_t ps_text_argument(Rt &rt, uint64_t raw) {
+  const int64_t index = static_cast<int32_t>(raw);
+  const char *argument = index >= 0 && index < rt.argc ? rt.argv[index] : "";
+  return ps_host_text_result(rt, argument);
 }
 
 // ---- argv ----------------------------------------------------------------

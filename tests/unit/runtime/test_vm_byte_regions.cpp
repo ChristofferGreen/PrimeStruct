@@ -228,17 +228,18 @@ TEST_CASE("the byte opcodes survive serialization") {
   CHECK(IrSchemaVersion >= 28u);
 }
 
-TEST_CASE("only the VM accepts the byte opcodes for now") {
+TEST_CASE("only the VM and the optimized C++ emitters accept the byte opcodes for now") {
   const IrModule module = moduleOf({{IrOpcode::PushI32, 4}, {Alloc, 0}, {IrOpcode::LoadU8, 0}, {IrOpcode::ReturnI32, 0}});
   std::string error;
   CHECK(validateIrModule(module, IrValidationTarget::Vm, error));
   CHECK(validateIrModule(module, IrValidationTarget::Serialized, error));
+  CHECK(validateIrModule(module, IrValidationTarget::OptCpp, error));
   for (const IrValidationTarget target : {IrValidationTarget::Cpp, IrValidationTarget::Native,
                                           IrValidationTarget::Wasm, IrValidationTarget::Glsl}) {
     error.clear();
     CHECK_FALSE(validateIrModule(module, target, error));
-    CHECK(error.find("only supported by the vm yet") != std::string::npos);
-    CHECK(error.find("TODO-5542") != std::string::npos);
+    CHECK(error.find("only supported by the vm and the optimized C++ emitters") != std::string::npos);
+    CHECK(error.find("TODO-5574") != std::string::npos);
   }
   const IrModule zext = moduleOf({{IrOpcode::PushI32, 4}, {IrOpcode::ZextU8, 0}, {IrOpcode::ReturnI32, 0}});
   CHECK_FALSE(validateIrModule(zext, IrValidationTarget::Native, error));

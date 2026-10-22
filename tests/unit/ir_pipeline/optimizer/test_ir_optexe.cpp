@@ -182,12 +182,12 @@ TEST_CASE("optexe rejects modules it cannot compile with a precise diagnostic") 
     CHECK(contains(error, "host import"));
     CHECK(contains(error, "/main"));
   }
-  SUBCASE("host call to a function that returns text") {
+  SUBCASE("host call to a function that returns a string view") {
     primec::IrModule module = optimizer_test::moduleOf(optimizer_test::assemble({"CallHost 0", "Pop", "ReturnVoid"}));
     module.hostImports.push_back({"host_name", {}, primec::IrHostValueKind::String});
     const std::string error = diagnosticFor(module);
     CHECK(contains(error, "host_name"));
-    CHECK(contains(error, "returns text"));
+    CHECK(contains(error, "returns a `string`"));
   }
   SUBCASE("host function whose name is not a C identifier") {
     primec::IrModule module = optimizer_test::moduleOf(optimizer_test::assemble({"CallHost 0", "ReturnVoid"}));

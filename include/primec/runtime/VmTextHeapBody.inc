@@ -1,11 +1,63 @@
-#include "primec/runtime/VmTextHeap.h"
+// The string heap that backs `String`, written once and used twice (see VmTextHeap.h): compiled into the VM,
+// and pasted as text into the programs the optimized C++ backend generates. It must stay self-contained:
+// standard headers (algorithm, map, string, string_view, vector) and VmHeapCore only, no preprocessor lines,
+// balanced parentheses.
+PRIMEC_VM_TEXT_HEAP_BODY(
+struct TextHeapStats {
+  uint64_t chunks = 0;
+  uint64_t bytesInUse = 0;
+  uint64_t bytesFree = 0;
+  uint64_t largeBlocks = 0;
+  uint64_t largeBytes = 0;
+};
 
-#include <algorithm>
-#include <utility>
+class VmTextHeap {
+public:
+  static constexpr uint64_t ChunkBytes = 256 * 1024;
+  static constexpr uint64_t MinBlockBytes = 32;
+  static constexpr uint64_t LargeThreshold = 64 * 1024;
 
-namespace primec {
+  // The block size the heap gives text of `size` bytes: the smallest size class that holds it, or
+  // `size` itself above LargeThreshold. Zero for a size of zero.
+  static uint64_t blockSizeFor(uint64_t size);
 
-uint64_t VmTextHeap::blockSizeFor(uint64_t size) {
+  // A zeroed block of at least `size` bytes (address 0 for zero). Fails with
+  // "string memory limit exceeded" when the limit would be passed.
+  bool allocate(VmHeapCore &core, uint64_t size, uint64_t &address, std::string &error);
+  // Returns a block; address 0 is a no-op.
+  bool release(VmHeapCore &core, uint64_t address, std::string &error);
+  // The size of the block at `address` (a block start).
+  bool blockSize(uint64_t address, uint64_t &size, std::string &error) const;
+
+  TextHeapStats stats() const;
+  // 0 removes the limit.
+  void setLimit(uint64_t bytes) { limit_ = bytes; }
+  uint64_t limit() const { return limit_; }
+
+private:
+  struct Chunk {
+    uint64_t base = 0;  // byte-region address of the chunk
+    uint64_t blockBytes = 0;
+    uint64_t blockCount = 0;
+    std::vector<uint32_t> freeBlocks;  // block indices, most recently freed last
+  };
+
+  uint64_t heldBytes() const { return chunks_.size() * ChunkBytes + largeBytes_; }
+  Chunk *chunkWithFreeBlock(uint64_t blockBytes);
+  std::map<uint64_t, Chunk>::iterator chunkContaining(uint64_t address);
+  std::map<uint64_t, Chunk>::const_iterator chunkContaining(uint64_t address) const;
+  static uint64_t offsetOf(uint64_t address) { return address & VmHeapCore::ByteOffsetMask; }
+
+  // Chunks by the byte offset of their region; the blocks of a chunk never straddle it.
+  std::map<uint64_t, Chunk> chunks_;
+  // Large blocks by byte offset: size.
+  std::map<uint64_t, uint64_t> large_;
+  uint64_t largeBytes_ = 0;
+  uint64_t bytesInUse_ = 0;
+  uint64_t limit_ = 0;
+};
+
+inline uint64_t VmTextHeap::blockSizeFor(uint64_t size) {
   if (size == 0) {
     return 0;
   }
@@ -25,7 +77,7 @@ uint64_t VmTextHeap::blockSizeFor(uint64_t size) {
   return base + (size - base + step - 1) / step * step;
 }
 
-std::map<uint64_t, VmTextHeap::Chunk>::iterator VmTextHeap::chunkContaining(uint64_t address) {
+inline std::map<uint64_t, VmTextHeap::Chunk>::iterator VmTextHeap::chunkContaining(uint64_t address) {
   const uint64_t offset = offsetOf(address);
   auto it = chunks_.upper_bound(offset);
   if (it == chunks_.begin()) {
@@ -35,7 +87,7 @@ std::map<uint64_t, VmTextHeap::Chunk>::iterator VmTextHeap::chunkContaining(uint
   return offset < it->first + ChunkBytes ? it : chunks_.end();
 }
 
-std::map<uint64_t, VmTextHeap::Chunk>::const_iterator VmTextHeap::chunkContaining(uint64_t address) const {
+inline std::map<uint64_t, VmTextHeap::Chunk>::const_iterator VmTextHeap::chunkContaining(uint64_t address) const {
   const uint64_t offset = offsetOf(address);
   auto it = chunks_.upper_bound(offset);
   if (it == chunks_.begin()) {
@@ -45,7 +97,7 @@ std::map<uint64_t, VmTextHeap::Chunk>::const_iterator VmTextHeap::chunkContainin
   return offset < it->first + ChunkBytes ? it : chunks_.end();
 }
 
-VmTextHeap::Chunk *VmTextHeap::chunkWithFreeBlock(uint64_t blockBytes) {
+inline VmTextHeap::Chunk *VmTextHeap::chunkWithFreeBlock(uint64_t blockBytes) {
   for (auto &entry : chunks_) {
     if (entry.second.blockBytes == blockBytes && !entry.second.freeBlocks.empty()) {
       return &entry.second;
@@ -54,7 +106,7 @@ VmTextHeap::Chunk *VmTextHeap::chunkWithFreeBlock(uint64_t blockBytes) {
   return nullptr;
 }
 
-bool VmTextHeap::allocate(VmHeapCore &core, uint64_t size, uint64_t &address, std::string &error) {
+inline bool VmTextHeap::allocate(VmHeapCore &core, uint64_t size, uint64_t &address, std::string &error) {
   address = 0;
   if (size == 0) {
     return true;
@@ -102,7 +154,7 @@ bool VmTextHeap::allocate(VmHeapCore &core, uint64_t size, uint64_t &address, st
   return true;
 }
 
-bool VmTextHeap::release(VmHeapCore &core, uint64_t address, std::string &error) {
+inline bool VmTextHeap::release(VmHeapCore &core, uint64_t address, std::string &error) {
   if (address == 0) {
     return true;
   }
@@ -163,7 +215,7 @@ bool VmTextHeap::release(VmHeapCore &core, uint64_t address, std::string &error)
   return true;
 }
 
-bool VmTextHeap::blockSize(uint64_t address, uint64_t &size, std::string &error) const {
+inline bool VmTextHeap::blockSize(uint64_t address, uint64_t &size, std::string &error) const {
   size = 0;
   if (address == 0) {
     return true;
@@ -182,7 +234,7 @@ bool VmTextHeap::blockSize(uint64_t address, uint64_t &size, std::string &error)
   return true;
 }
 
-TextHeapStats VmTextHeap::stats() const {
+inline TextHeapStats VmTextHeap::stats() const {
   TextHeapStats out;
   out.chunks = chunks_.size();
   out.bytesInUse = bytesInUse_;
@@ -194,7 +246,7 @@ TextHeapStats VmTextHeap::stats() const {
   return out;
 }
 
-bool callTextHostFunction(VmTextHeap &heap,
+inline bool callTextHostFunction(VmTextHeap &heap,
                           VmHeapCore &core,
                           std::string_view name,
                           const uint64_t *args,
@@ -270,5 +322,4 @@ bool callTextHostFunction(VmTextHeap &heap,
   known = false;
   return true;
 }
-
-} // namespace primec
+)

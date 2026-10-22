@@ -618,11 +618,11 @@ bool emitInstruction(const IrInstruction &instruction,
             break;
           case IrHostValueKind::U8:
             error = "IrToCppEmitter host import has a u8 parameter at instruction " + std::to_string(index) +
-                    " (u8 is not supported by the C++ backends yet, docs/todo.md TODO-5542)";
+                    " (u8 is not supported by the C++ backends yet, docs/todo.md TODO-5574)";
             return false;
           case IrHostValueKind::Text:
             error = "IrToCppEmitter host import has a text parameter at instruction " + std::to_string(index) +
-                    " (text crosses the host boundary on the vm only yet, docs/todo.md TODO-5564)";
+                    " (use --emit=optexe for text host values, docs/todo.md TODO-5574)";
             return false;
           case IrHostValueKind::Void:
             error = "IrToCppEmitter host import has a void parameter at instruction " + std::to_string(index);
@@ -655,11 +655,11 @@ bool emitInstruction(const IrInstruction &instruction,
           break;
         case IrHostValueKind::U8:
           error = "IrToCppEmitter host import returns u8 at instruction " + std::to_string(index) +
-                  " (u8 is not supported by the C++ backends yet, docs/todo.md TODO-5542)";
+                  " (u8 is not supported by the C++ backends yet, docs/todo.md TODO-5574)";
           return false;
         case IrHostValueKind::Text:
           error = "IrToCppEmitter host import returns text at instruction " + std::to_string(index) +
-                  " (text crosses the host boundary on the vm only yet, docs/todo.md TODO-5564)";
+                  " (use --emit=optexe for text host values, docs/todo.md TODO-5574)";
           return false;
         case IrHostValueKind::String:
           error = "IrToCppEmitter host import returns text at instruction " + std::to_string(index);

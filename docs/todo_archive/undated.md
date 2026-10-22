@@ -21,3 +21,14 @@
   - acceptance:
     - tests/unit/ui pass with unchanged call logs; PrimeScroll opens a file named on the command line (and reports one that cannot be opened); the text-heap tests keep the string heap constant over host text loops; full release gate green
   - stop_rule: the UI wrappers, bindings and the editor; no new language features.
+
+- [x] TODO-5542: Native and C++ parity for bytes, slices and strings
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-08
+  - phase: Strings and slices (docs/spec/strings-and-views.md)
+  - parallel_track: string-backends
+  - scope: Delivered for the optimized C++ emitters (`optcpp`, `optexe`): the `u8` byte opcodes (`HeapAllocBytes`, `LoadU8`, `StoreU8`, `ZextU8`) run on the pasted `VmHeapCore`, the string heap is the VM's own `VmTextHeap` (now `VmTextHeapBody.inc`, expanded as code and as `VmTextHeapSource` like the VM heap), and the Text host kind crosses `[host]` calls as `const char *` (a `String` argument is its NUL-terminated data block, a result is copied into the program's string heap); the `__pstext_*` functions and `__pstext_argument` are answered by the generated runtime. A new `IrValidationTarget::OptCpp` admits the byte opcodes and `u8`/text host values; the simple C++ emitters, the native backend, Wasm and GLSL still reject them with a diagnostic that names TODO-5574. This also delivers the host text boundary of TODO-5564 for the optimized emitters (its remaining matrix and loop hardening stays in TODO-5564).
+  - acceptance:
+    - tests/unit/backend_host/test_cpp_strings.cpp runs `u8` math, `vector<u8>`, `String` editing and growth, string-heap reuse and slices through the VM and `--emit=optexe` with equal exit codes; the native UI hello_window runs through `optexe` on the headless backend with the VM's call log; full release gate green
+  - stop_rule: the optimized C++ emitters; the simple C++ emitters and the native backend are TODO-5574.

@@ -168,7 +168,7 @@ bool validateFunction(const IrModule &module,
     }
     if (inst.op == IrOpcode::CallHost) {
       if (target != IrValidationTarget::Vm && target != IrValidationTarget::Serialized &&
-          target != IrValidationTarget::Cpp) {
+          target != IrValidationTarget::Cpp && target != IrValidationTarget::OptCpp) {
         return failInstruction(functionIndex,
                                function.name,
                                instructionIndex,
@@ -193,17 +193,18 @@ bool validateFunction(const IrModule &module,
           return failInstruction(functionIndex,
                                  function.name,
                                  instructionIndex,
-                                 "u8 and text host values are only supported by the vm yet (docs/todo.md, TODO-5542)",
+                                 "u8 and text host values are only supported by the vm and the optimized C++ emitters (optexe, optcpp) yet (docs/todo.md, TODO-5574)",
                                  error);
         }
       }
     }
     if (target != IrValidationTarget::Any && target != IrValidationTarget::Vm &&
-        target != IrValidationTarget::Serialized && isByteOpcode(inst.op)) {
+        target != IrValidationTarget::Serialized && target != IrValidationTarget::OptCpp &&
+        isByteOpcode(inst.op)) {
       return failInstruction(functionIndex,
                              function.name,
                              instructionIndex,
-                             "u8 and byte memory opcodes are only supported by the vm yet (docs/todo.md, TODO-5542)",
+                             "u8 and byte memory opcodes are only supported by the vm and the optimized C++ emitters (optexe, optcpp) yet (docs/todo.md, TODO-5574)",
                              error);
     }
     if (isWasmTarget(target) && !isWasmOpcodeAllowedForTarget(inst.op, target)) {
