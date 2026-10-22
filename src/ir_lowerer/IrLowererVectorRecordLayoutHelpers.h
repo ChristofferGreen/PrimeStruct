@@ -163,7 +163,8 @@ inline void emitVectorRecordHeader(std::vector<IrInstruction> &instructions,
                                    int32_t capacity,
                                    int32_t heapAllocSlots,
                                    bool nullDataPointer,
-                                   bool ownsData) {
+                                   bool ownsData,
+                                   bool packedBytes = false) {
   instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(count)});
   instructions.push_back(
       {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + slots.count)});
@@ -175,7 +176,8 @@ inline void emitVectorRecordHeader(std::vector<IrInstruction> &instructions,
   } else {
     instructions.push_back(
         {IrOpcode::PushI32, static_cast<uint64_t>(heapAllocSlots)});
-    instructions.push_back({IrOpcode::HeapAlloc, 0});
+    // Packed u8 storage counts bytes, not slots.
+    instructions.push_back({packedBytes ? IrOpcode::HeapAllocBytes : IrOpcode::HeapAlloc, 0});
   }
   instructions.push_back(
       {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + slots.data)});

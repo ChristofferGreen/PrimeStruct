@@ -371,7 +371,8 @@ bool emitArrayVectorIndexedAccess(
                             emitArrayIndexOutOfBounds,
                             instructionCount,
                             emitInstruction,
-                            patchInstructionImm);
+                            patchInstructionImm,
+                            isPackedByteVectorTarget(arrayVectorTargetInfo));
   return true;
 }
 

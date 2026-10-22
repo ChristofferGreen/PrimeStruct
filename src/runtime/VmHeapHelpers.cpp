@@ -46,7 +46,21 @@ bool byteAddressFault(uint64_t address, std::string &error) {
 
 } // namespace
 
-bool loadHeapByte(uint64_t address, VmHeapCore &heap, uint8_t &value, std::string &error) {
+bool loadHeapByte(uint64_t address,
+                  uint64_t slotBytes,
+                  std::vector<uint64_t> &locals,
+                  VmHeapCore &heap,
+                  uint8_t &value,
+                  std::string &error) {
+  if (!VmHeapCore::isByteAddress(address)) {
+    // A pointer to a u8 local or a u8 slot field: the byte is the slot's low byte.
+    uint64_t *slot = nullptr;
+    if (!resolveIndirectAddress(address, slotBytes, locals, heap, slot, error)) {
+      return false;
+    }
+    value = static_cast<uint8_t>(*slot & 0xFFull);
+    return true;
+  }
   const uint8_t *byte = heap.byteAt(address);
   if (byte == nullptr) {
     return byteAddressFault(address, error);
@@ -55,7 +69,20 @@ bool loadHeapByte(uint64_t address, VmHeapCore &heap, uint8_t &value, std::strin
   return true;
 }
 
-bool storeHeapByte(uint64_t address, VmHeapCore &heap, uint8_t value, std::string &error) {
+bool storeHeapByte(uint64_t address,
+                   uint64_t slotBytes,
+                   std::vector<uint64_t> &locals,
+                   VmHeapCore &heap,
+                   uint8_t value,
+                   std::string &error) {
+  if (!VmHeapCore::isByteAddress(address)) {
+    uint64_t *slot = nullptr;
+    if (!resolveIndirectAddress(address, slotBytes, locals, heap, slot, error)) {
+      return false;
+    }
+    *slot = value;
+    return true;
+  }
   uint8_t *byte = heap.byteAt(address);
   if (byte == nullptr) {
     return byteAddressFault(address, error);

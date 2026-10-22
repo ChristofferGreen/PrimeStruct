@@ -137,12 +137,12 @@ public:
     return heap_.allocateBytes(byteCount, address, error);
   }
 
-  bool loadHeapByte(uint64_t address, uint8_t &value, std::string &error) override {
-    return vm_detail::loadHeapByte(address, heap_, value, error);
+  bool loadHeapByte(uint64_t address, std::vector<uint64_t> &locals, uint8_t &value, std::string &error) override {
+    return vm_detail::loadHeapByte(address, slotBytes(), locals, heap_, value, error);
   }
 
-  bool storeHeapByte(uint64_t address, uint8_t value, std::string &error) override {
-    return vm_detail::storeHeapByte(address, heap_, value, error);
+  bool storeHeapByte(uint64_t address, std::vector<uint64_t> &locals, uint8_t value, std::string &error) override {
+    return vm_detail::storeHeapByte(address, slotBytes(), locals, heap_, value, error);
   }
 
   bool freeHeapSlots(uint64_t address, std::string &error) override {

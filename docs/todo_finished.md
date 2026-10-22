@@ -2023,6 +2023,7 @@ are left unarchived.
 | TODO-5562 | Command-number switches tabs | [2026-10.md](todo_archive/2026-10.md) | 2026-10-21 |
 | TODO-5563 | Highlight large files | [2026-10.md](todo_archive/2026-10.md) | 2026-10-21 |
 | TODO-5565 | The `u8` scalar type | [2026-10.md](todo_archive/2026-10.md) | 2026-10-22 |
+| TODO-5566 | Packed byte containers | [2026-10.md](todo_archive/2026-10.md) | 2026-10-22 |
 
 <!-- INDEX-END -->
 

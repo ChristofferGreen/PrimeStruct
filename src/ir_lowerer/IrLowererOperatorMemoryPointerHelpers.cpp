@@ -73,7 +73,8 @@ std::string resolveSemanticPointerStructTypePath(
     const SemanticProductTargetAdapter *semanticProductTargets,
     const ResolveConversionsAndCallsStructTypeNameFn &resolveStructTypeName,
     std::string_view currentScopePath,
-    bool &hasSemanticPointerFactOut) {
+    bool &hasSemanticPointerFactOut,
+    std::string *pointerTypeTextOut = nullptr) {
   hasSemanticPointerFactOut = false;
   if (semanticProductTargets == nullptr || !semanticProductTargets->hasSemanticProduct ||
       semanticProductTargets->semanticProgram == nullptr) {
@@ -133,6 +134,9 @@ std::string resolveSemanticPointerStructTypePath(
     }
   }
 
+  if (pointerTypeTextOut != nullptr) {
+    *pointerTypeTextOut = typeText;
+  }
   if (hasSemanticPointerFactOut && !typeText.empty()) {
     const std::string semanticStruct =
         inferPointerTargetStructPathFromTypeText(typeText, expr.namespacePrefix, resolveStructTypeName);
@@ -531,6 +535,90 @@ bool resolveReferenceReturnCallExpr(
   return true;
 }
 
+bool pointerTypeTextTargetsBytes(const std::string &typeText) {
+  std::string base;
+  std::string argList;
+  if (!splitTemplateTypeName(trimTemplateTypeText(typeText), base, argList)) {
+    return false;
+  }
+  base = normalizeCollectionBindingTypeName(base);
+  if (base != "Pointer" && base != "Reference") {
+    return false;
+  }
+  std::vector<std::string> args;
+  if (!splitTemplateArgs(argList, args) || args.size() != 1) {
+    return false;
+  }
+  return unwrapTopLevelUninitializedTypeText(trimTemplateTypeText(args.front())) == "u8";
+}
+
+} // namespace
+
+bool pointerTargetsBytes(const Expr &expr, ConversionsAndCallsOperatorContext &context) {
+  const LocalMap &localsIn = context.localsIn;
+  if (context.semanticProductTargets != nullptr && context.semanticProductTargets->hasSemanticProduct) {
+    bool hasFact = false;
+    std::string typeText;
+    resolveSemanticPointerStructTypePath(expr,
+                                         context.semanticProductTargets,
+                                         context.resolveStructTypeName,
+                                         context.currentScopePath,
+                                         hasFact,
+                                         &typeText);
+    if (hasFact && !typeText.empty()) {
+      return pointerTypeTextTargetsBytes(typeText);
+    }
+  }
+  if (expr.kind == Expr::Kind::Name) {
+    auto it = localsIn.find(expr.name);
+    return it != localsIn.end() &&
+           (it->second.kind == LocalInfo::Kind::Pointer || it->second.kind == LocalInfo::Kind::Reference) &&
+           it->second.valueKind == LocalInfo::ValueKind::UInt8 && it->second.structTypeName.empty();
+  }
+  if (expr.kind != Expr::Kind::Call) {
+    return false;
+  }
+  if (expr.isFieldAccess && expr.args.size() == 1) {
+    const std::string receiverStruct = context.inferStructExprPath(expr.args.front(), localsIn);
+    LayoutFieldBinding fieldBinding;
+    if (!receiverStruct.empty() && context.resolveStructFieldBinding &&
+        context.resolveStructFieldBinding(receiverStruct, expr.name, fieldBinding)) {
+      return pointerTypeTextTargetsBytes(fieldBinding.typeName + "<" + fieldBinding.typeTemplateArg + ">");
+    }
+    return false;
+  }
+  std::string memoryBuiltin;
+  if (getBuiltinMemoryName(expr, memoryBuiltin)) {
+    if (memoryBuiltin == "alloc" && expr.templateArgs.size() == 1) {
+      return unwrapTopLevelUninitializedTypeText(expr.templateArgs.front()) == "u8";
+    }
+    if (memoryBuiltin == "reinterpret" && expr.templateArgs.size() == 1) {
+      return unwrapTopLevelUninitializedTypeText(expr.templateArgs.front()) == "u8";
+    }
+    if ((memoryBuiltin == "realloc" || memoryBuiltin == "at" || memoryBuiltin == "at_unsafe") &&
+        !expr.args.empty()) {
+      return pointerTargetsBytes(expr.args.front(), context);
+    }
+    return false;
+  }
+  std::string builtinName;
+  if (getBuiltinOperatorName(expr, builtinName) && (builtinName == "plus" || builtinName == "minus") &&
+      expr.args.size() == 2) {
+    return pointerTargetsBytes(expr.args.front(), context);
+  }
+  if (isSimpleCallName(expr, "location") && expr.args.size() == 1) {
+    const Expr &target = expr.args.front();
+    if (target.kind == Expr::Kind::Name) {
+      auto it = localsIn.find(target.name);
+      return it != localsIn.end() && it->second.kind == LocalInfo::Kind::Value &&
+             it->second.valueKind == LocalInfo::ValueKind::UInt8 && it->second.structTypeName.empty();
+    }
+  }
+  return false;
+}
+
+namespace {
+
 } // namespace
 
 bool emitConversionsAndCallsMemoryAndPointerExpr(
@@ -712,8 +800,10 @@ bool emitConversionsAndCallsMemoryAndPointerExpr(
 
       instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
       instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
-      pushIndexConst(indexKind, slotCountMultiplier * IrSlotBytesI32);
-      instructions.push_back({mulForIndex(indexKind), 0});
+      if (!pointerTargetsBytes(expr.args[0], context)) {
+        pushIndexConst(indexKind, slotCountMultiplier * IrSlotBytesI32);
+        instructions.push_back({mulForIndex(indexKind), 0});
+      }
       instructions.push_back({IrOpcode::AddI64, 0});
       return true;
     }
@@ -754,8 +844,10 @@ bool emitConversionsAndCallsMemoryAndPointerExpr(
         }
       }
 
-      pushIndexConst(indexKind, slotCountMultiplier * IrSlotBytesI32);
-      instructions.push_back({mulForIndex(indexKind), 0});
+      if (!pointerTargetsBytes(expr.args[0], context)) {
+        pushIndexConst(indexKind, slotCountMultiplier * IrSlotBytesI32);
+        instructions.push_back({mulForIndex(indexKind), 0});
+      }
       instructions.push_back({IrOpcode::AddI64, 0});
       return true;
     }
@@ -797,6 +889,11 @@ bool emitConversionsAndCallsMemoryAndPointerExpr(
     int32_t slotCountMultiplier = 1;
     const std::string targetTypeName = unwrapTopLevelUninitializedTypeText(expr.templateArgs.front());
     LocalInfo::ValueKind targetKind = valueKindFromTypeName(targetTypeName);
+    if (targetKind == LocalInfo::ValueKind::UInt8) {
+      // u8 elements are packed: the count is a byte count.
+      instructions.push_back({IrOpcode::HeapAllocBytes, 0});
+      return true;
+    }
     if (targetKind == LocalInfo::ValueKind::Unknown) {
       std::string resolvedStructType;
       if (!resolveStructTypeName(targetTypeName, expr.namespacePrefix, resolvedStructType)) {
@@ -987,7 +1084,10 @@ bool emitConversionsAndCallsMemoryAndPointerExpr(
     if (builtin == "dereference" && aggregatePointerLike) {
       return true;
     }
-    instructions.push_back({IrOpcode::LoadIndirect, 0});
+    instructions.push_back({builtin == "dereference" && pointerTargetsBytes(pointerExpr, context)
+                                ? IrOpcode::LoadU8
+                                : IrOpcode::LoadIndirect,
+                            0});
     return true;
   }
 

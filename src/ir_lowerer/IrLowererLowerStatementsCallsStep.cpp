@@ -564,11 +564,14 @@ VectorMutationStatementEmitResult tryEmitCanonicalVectorMutationStatement(
   } else {
     emitFieldLoad(valuesPtrLocal, 3);
     instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
-    instructions.push_back({IrOpcode::PushI32, IrSlotBytesI32});
-    instructions.push_back({IrOpcode::MulI32, 0});
+    const bool packedBytes = isPackedByteVectorTarget(targetInfo);
+    if (!packedBytes) {
+      instructions.push_back({IrOpcode::PushI32, IrSlotBytesI32});
+      instructions.push_back({IrOpcode::MulI32, 0});
+    }
     instructions.push_back({IrOpcode::AddI64, 0});
     instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(payloadLocal)});
-    instructions.push_back({IrOpcode::StoreIndirect, 0});
+    instructions.push_back({packedBytes ? IrOpcode::StoreU8 : IrOpcode::StoreIndirect, 0});
     instructions.push_back({IrOpcode::Pop, 0});
   }
 

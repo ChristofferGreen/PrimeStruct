@@ -94,6 +94,12 @@ struct ArrayVectorAccessTargetInfo {
   bool isStructBoxedRecordTarget = false;
 };
 
+// A vector<u8> keeps its elements packed, one byte each, in a byte region (not one slot per element).
+inline bool isPackedByteVectorTarget(const ArrayVectorAccessTargetInfo &info) {
+  return info.isVectorTarget && !info.isSoaVector && !info.isKeyValueTarget && !info.isWrappedKeyValueTarget &&
+         info.elemKind == LocalInfo::ValueKind::UInt8 && info.structTypeName.empty() && info.elemSlotCount <= 1;
+}
+
 using ResolveCallCollectionPairTypeInfoFn = std::function<bool(const Expr &, CollectionPairTypeInfo &)>;
 using ResolveCallArrayVectorAccessTargetInfoFn =
     std::function<bool(const Expr &, ArrayVectorAccessTargetInfo &)>;

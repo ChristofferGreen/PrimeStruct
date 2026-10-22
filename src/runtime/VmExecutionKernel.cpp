@@ -269,7 +269,7 @@ template <bool TrackEvents>
     const uint64_t address = stack.back();
     stack.pop_back();
     uint8_t byte = 0;
-    if (!host.loadHeapByte(address, byte, error)) {
+    if (!host.loadHeapByte(address, locals, byte, error)) {
       return VmKernelStepOutcome::Fault;
     }
     stack.push_back(static_cast<uint64_t>(byte));
@@ -286,7 +286,7 @@ template <bool TrackEvents>
     const uint64_t address = stack.back();
     stack.pop_back();
     const uint8_t byte = static_cast<uint8_t>(value & 0xFFull);
-    if (!host.storeHeapByte(address, byte, error)) {
+    if (!host.storeHeapByte(address, locals, byte, error)) {
       return VmKernelStepOutcome::Fault;
     }
     stack.push_back(static_cast<uint64_t>(byte));

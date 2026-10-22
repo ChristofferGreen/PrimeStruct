@@ -37,14 +37,16 @@ public:
     error = "byte memory is not supported by this VM host";
     return false;
   }
-  virtual bool loadHeapByte(uint64_t address, uint8_t &value, std::string &error) {
+  virtual bool loadHeapByte(uint64_t address, std::vector<uint64_t> &locals, uint8_t &value, std::string &error) {
     (void)address;
+    (void)locals;
     (void)value;
     error = "byte memory is not supported by this VM host";
     return false;
   }
-  virtual bool storeHeapByte(uint64_t address, uint8_t value, std::string &error) {
+  virtual bool storeHeapByte(uint64_t address, std::vector<uint64_t> &locals, uint8_t value, std::string &error) {
     (void)address;
+    (void)locals;
     (void)value;
     error = "byte memory is not supported by this VM host";
     return false;

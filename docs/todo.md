@@ -100,9 +100,9 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5566 | Packed byte containers | ready | bytes |
+| TODO-5567 | Packed `array<u8>` | ready | bytes |
 | TODO-5538 | Slices are real borrows with shared operations | ready | slices |
-| TODO-5539 | Owned `String` with the string heap | blocked | string-owned |
+| TODO-5539 | Owned `String` with the string heap | ready | string-owned |
 | TODO-5540 | `string` as the UTF-8 text view | blocked | string-view |
 | TODO-5541 | Host functions and embedding use `String` and `string` | blocked | string-host |
 | TODO-5542 | Native and C++ parity for bytes, slices and strings | blocked | string-backends |
@@ -138,7 +138,8 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5566 (bytes): packed byte containers
+- TODO-5539 (string-owned): owned `String` with the string heap
+- TODO-5567 (bytes): packed `array<u8>`
 - TODO-5538 (slices): slices are real borrows with shared operations
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
@@ -148,18 +149,19 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5566
-2. TODO-5538
-3. TODO-5536
-4. TODO-5535
-5. TODO-5510
-6. TODO-5524
-7. TODO-5527
+1. TODO-5539
+2. TODO-5567
+3. TODO-5538
+4. TODO-5536
+5. TODO-5535
+6. TODO-5510
+7. TODO-5524
+8. TODO-5527
 
 ### Priority Lanes
 
-- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5566, TODO-5538, TODO-5539, TODO-5540, TODO-5530, TODO-5541, TODO-5542
-- Goal, PrimeScroll compiled to native code through the C++ emitter (host calls with scalar and static text are done; next the string chain, because the editor passes host-returned text): TODO-5566, TODO-5538, TODO-5539, TODO-5540, TODO-5541, TODO-5542, TODO-5564, TODO-5559, TODO-5560, TODO-5561
+- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5567, TODO-5538, TODO-5539, TODO-5540, TODO-5530, TODO-5541, TODO-5542
+- Goal, PrimeScroll compiled to native code through the C++ emitter (host calls with scalar and static text are done; next the string chain, because the editor passes host-returned text): TODO-5567, TODO-5538, TODO-5539, TODO-5540, TODO-5541, TODO-5542, TODO-5564, TODO-5559, TODO-5560, TODO-5561
 - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Lifecycle (docs/spec/value-lifecycle.md): TODO-5527
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
@@ -240,16 +242,16 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - stop_rule: native I/O emitter and png status mapping.
   - notes: deferred: queued behind the Ready Now cap.
 
-- [ ] TODO-5566: Packed byte containers
+- [ ] TODO-5567: Packed `array<u8>`
   - owner: ai
   - status: ready
   - created_at: 2026-10-22
-  - phase: Strings and slices, third of three leaves for bytes
+  - phase: Strings and slices, follow-up to the packed `vector<u8>` leaf
   - parallel_track: bytes
-  - scope: `array<u8>`, `Vector<u8>` and `Buffer<u8>` store one byte per element, packed, using `HeapAllocBytes`/`LoadU8`/`StoreU8` (element access, `at`, `push`, `pop`, `reserve`, growth, clear, copy and move) in the stdlib collections and the lowerer's element-size selection; elements of every other type keep slot storage. Update docs/spec/type-system.md and docs/spec/vm-design.md.
+  - scope: `array<u8>` stores one byte per element like `vector<u8>` already does. Arrays are inline `[count][elements...]` slot aggregates, so this needs a decision first (a header slot plus a byte-region data pointer, or a byte-region-only array) and then the array literal, `at`/`at_unsafe`, `count`, element assignment, iteration, copy/move/return and `Slice<u8>` over an array in the lowerer; `Pointer<u8>` into an array must then step one byte. Update docs/spec/type-system.md.
   - acceptance:
-    - VM matrix cases: reads, writes and growth, a `Vector<u8>` of 1 MB using about 1 MB of VM heap, copies and moves, out-of-range faults; full release gate green
-  - stop_rule: byte containers on the VM; native and C++ are TODO-5542.
+    - VM matrix cases for `array<u8>`: literal, reads, writes, count, iteration, passing and returning, out-of-range faults; an `array<u8>` of 1 MB uses about 1 MB of VM heap; full release gate green
+  - stop_rule: `array<u8>` on the VM; native and C++ are TODO-5542.
 
 - [ ] TODO-5538: Slices are real borrows with shared operations
   - owner: ai
@@ -265,8 +267,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 
 - [ ] TODO-5539: Owned `String` with the string heap
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5566
+  - status: ready
   - created_at: 2026-10-08
   - phase: Strings and slices (docs/spec/strings-and-views.md)
   - parallel_track: string-owned

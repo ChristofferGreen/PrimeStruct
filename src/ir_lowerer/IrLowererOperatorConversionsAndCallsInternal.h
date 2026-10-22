@@ -32,6 +32,10 @@ struct ConversionsAndCallsOperatorContext {
   EmitConversionsAndCallsOwnedStructAssignFn emitOwnedStructAssign = {};
 };
 
+// True when `expr` is a pointer (or reference) to u8 element storage: such pointers address single bytes,
+// so their arithmetic steps one byte and their loads and stores are byte accesses.
+bool pointerTargetsBytes(const Expr &expr, ConversionsAndCallsOperatorContext &context);
+
 bool emitConversionsAndCallsMemoryAndPointerExpr(
     const Expr &expr,
     ConversionsAndCallsOperatorContext &context,

@@ -123,6 +123,8 @@
               "native backend cannot resolve experimental collection record fields";
           return false;
         }
+        // A vector<u8> literal stores its elements packed, one byte each.
+        const bool packedBytes = elemKind == LocalInfo::ValueKind::UInt8;
         const int32_t baseLocal = nextLocal;
         nextLocal += vectorSlots.totalSlots;
         emitVectorRecordHeader(function.instructions,
@@ -132,7 +134,8 @@
                                literalCount,
                                literalCount,
                                literalCount == 0,
-                               literalCount != 0);
+                               literalCount != 0,
+                               packedBytes);
 
         for (size_t argIndex = 0; argIndex < collectionLiteralExpr.args.size();
              ++argIndex) {
@@ -141,7 +144,7 @@
               {IrOpcode::LoadLocal,
                static_cast<uint64_t>(baseLocal + vectorSlots.data)});
           const uint64_t offsetBytes =
-              static_cast<uint64_t>(argIndex) * IrSlotBytes;
+              static_cast<uint64_t>(argIndex) * (packedBytes ? 1u : IrSlotBytes);
           if (offsetBytes != 0) {
             function.instructions.push_back({IrOpcode::PushI64, offsetBytes});
             function.instructions.push_back({IrOpcode::AddI64, 0});
@@ -176,7 +179,7 @@
               return false;
             }
           }
-          function.instructions.push_back({IrOpcode::StoreIndirect, 0});
+          function.instructions.push_back({packedBytes ? IrOpcode::StoreU8 : IrOpcode::StoreIndirect, 0});
           function.instructions.push_back({IrOpcode::Pop, 0});
         }
         function.instructions.push_back(

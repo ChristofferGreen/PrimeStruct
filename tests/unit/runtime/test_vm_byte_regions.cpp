@@ -141,11 +141,25 @@ TEST_CASE("a freed byte region is reused, and the old address stays invalid") {
   CHECK(result.error.find("invalid byte address in IR") != std::string::npos);
 }
 
+TEST_CASE("a byte access to an aligned slot reads and writes the slot's low byte") {
+  // A pointer to a u8 local or slot field dereferences with LoadU8/StoreU8 like a byte-region pointer.
+  const Run loadHeapSlot = run(moduleOf({{IrOpcode::PushI32, 2}, {IrOpcode::HeapAlloc, 0}, {IrOpcode::StoreLocal, 0},
+                                         {IrOpcode::LoadLocal, 0}, {IrOpcode::PushI64, 0x1FF}, {IrOpcode::StoreIndirect, 0},
+                                         {IrOpcode::Pop, 0}, {IrOpcode::LoadLocal, 0}, {IrOpcode::LoadU8, 0},
+                                         {IrOpcode::ReturnI32, 0}}));
+  REQUIRE_MESSAGE(loadHeapSlot.ok, loadHeapSlot.error);
+  CHECK(loadHeapSlot.value == 0xFF);
+  const Run storeLocal = run(moduleOf({{IrOpcode::AddressOfLocal, 0}, {IrOpcode::PushI32, 300}, {IrOpcode::StoreU8, 0},
+                                       {IrOpcode::Pop, 0}, {IrOpcode::LoadLocal, 0}, {IrOpcode::ReturnI32, 0}}));
+  REQUIRE_MESSAGE(storeLocal.ok, storeLocal.error);
+  CHECK(storeLocal.value == 44);
+  // An unaligned slot address is still a fault.
+  const Run unaligned = run(moduleOf({{IrOpcode::AddressOfLocal, 0}, {IrOpcode::PushI64, 1}, {IrOpcode::AddI64, 0},
+                                      {IrOpcode::LoadU8, 0}, {IrOpcode::ReturnI32, 0}}));
+  CHECK_FALSE(unaligned.ok);
+}
+
 TEST_CASE("slot and byte memory cannot be mixed") {
-  const Run byteOnSlot = run(moduleOf({{IrOpcode::PushI32, 2}, {IrOpcode::HeapAlloc, 0}, {IrOpcode::LoadU8, 0},
-                                       {IrOpcode::ReturnI32, 0}}));
-  CHECK_FALSE(byteOnSlot.ok);
-  CHECK(byteOnSlot.error.find("byte access to a slot region in IR") != std::string::npos);
   const Run slotOnByte = run(moduleOf({{IrOpcode::PushI32, 16}, {Alloc, 0}, {IrOpcode::LoadIndirect, 0},
                                        {IrOpcode::ReturnI32, 0}}));
   CHECK_FALSE(slotOnByte.ok);
@@ -153,8 +167,6 @@ TEST_CASE("slot and byte memory cannot be mixed") {
   const Run storeSlotOnByte = run(moduleOf({{IrOpcode::PushI32, 16}, {Alloc, 0}, {IrOpcode::PushI32, 1},
                                             {IrOpcode::StoreIndirect, 0}, {IrOpcode::ReturnI32, 0}}));
   CHECK_FALSE(storeSlotOnByte.ok);
-  const Run byteOnLocal = run(moduleOf({{IrOpcode::AddressOfLocal, 0}, {IrOpcode::LoadU8, 0}, {IrOpcode::ReturnI32, 0}}));
-  CHECK_FALSE(byteOnLocal.ok);
   // Freeing a slot region with a byte address of the same offset is not a free of that region.
   const Run freeWrongKind = run(moduleOf({{IrOpcode::PushI32, 1}, {IrOpcode::HeapAlloc, 0}, {IrOpcode::StoreLocal, 0},
                                           {IrOpcode::PushI32, 1}, {Alloc, 0}, {IrOpcode::HeapFree, 0},

@@ -516,7 +516,8 @@ void emitArrayVectorAccessLoad(
     const ActionFn &emitArrayIndexOutOfBounds,
     const SizeProviderFn &instructionCount,
     const EmitInstructionFn &emitInstruction,
-    const PatchInstructionImmFn &patchInstructionImm);
+    const PatchInstructionImmFn &patchInstructionImm,
+    bool packedBytes = false);
 KeyValueLookupLoopLocals emitKeyValueLookupLoopLocals(
     int32_t ptrLocal,
     const Int32ProviderFn &allocTempLocal,

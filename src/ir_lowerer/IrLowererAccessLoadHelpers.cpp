@@ -722,7 +722,8 @@ void emitArrayVectorAccessLoad(
     const std::function<void()> &emitArrayIndexOutOfBounds,
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    const std::function<void(size_t, uint64_t)> &patchInstructionImm) {
+    const std::function<void(size_t, uint64_t)> &patchInstructionImm,
+    bool packedBytes) {
   if (accessName == "at" || (accessName == "at_unsafe" && isVectorTarget)) {
     const int32_t countLocal = allocTempLocal();
     emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal));
@@ -769,6 +770,14 @@ void emitArrayVectorAccessLoad(
 
   emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(basePtrLocal));
   emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal));
+  if (packedBytes) {
+    // Packed u8 elements are one byte apart.
+    emitInstruction(IrOpcode::AddI64, 0);
+    if (loadElementValue) {
+      emitInstruction(IrOpcode::LoadU8, 0);
+    }
+    return;
+  }
   if (!isVectorTarget) {
     if (elementSlotCount > 1) {
       emitInstruction(pushOneForIndex(indexKind), static_cast<uint64_t>(elementSlotCount));

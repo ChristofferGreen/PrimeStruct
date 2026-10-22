@@ -95,6 +95,8 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         return false;
       }
 
+      // vector<u8> stores its elements packed, one byte each.
+      const bool packedBytes = builtin == "vector" && elemKind == LocalInfo::ValueKind::UInt8;
       const int32_t literalCount = static_cast<int32_t>(expr.args.size());
       if (!isSoaVector && isVectorLike && literalCount > kVectorLocalDynamicCapacityLimit) {
         error = collectionLiteralExceedsLocalCapacityLimitMessage();
@@ -158,7 +160,8 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
                                literalCount,
                                heapAllocSlots,
                                nullDataPointer,
-                               !nullDataPointer);
+                               !nullDataPointer,
+                               packedBytes);
       } else {
         nextLocal += 1 + storageCapacity;
         instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(literalCount)});
@@ -234,7 +237,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         }
         if (isVectorLike) {
           instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(dataBaseLocal)});
-          const uint64_t offsetBytes = static_cast<uint64_t>(i) * IrSlotBytes;
+          const uint64_t offsetBytes = static_cast<uint64_t>(i) * (packedBytes ? 1u : IrSlotBytes);
           if (offsetBytes != 0) {
             instructions.push_back({IrOpcode::PushI64, offsetBytes});
             instructions.push_back({IrOpcode::AddI64, 0});
@@ -242,7 +245,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
           if (!emitExpr(arg, localsIn)) {
             return false;
           }
-          instructions.push_back({IrOpcode::StoreIndirect, 0});
+          instructions.push_back({packedBytes ? IrOpcode::StoreU8 : IrOpcode::StoreIndirect, 0});
           instructions.push_back({IrOpcode::Pop, 0});
         } else {
           if (!emitExpr(arg, localsIn)) {
@@ -402,9 +405,10 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
           return false;
         }
       }
+      const bool bytePointee = pointerTargetsBytes(pointerExpr, context);
       instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
       instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
-      instructions.push_back({IrOpcode::LoadIndirect, 0});
+      instructions.push_back({bytePointee ? IrOpcode::LoadU8 : IrOpcode::LoadIndirect, 0});
       if (!emitDelta(valueKind)) {
         return false;
       }
@@ -412,7 +416,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
       instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(valueLocal)});
       instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
       instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
-      instructions.push_back({IrOpcode::StoreIndirect, 0});
+      instructions.push_back({bytePointee ? IrOpcode::StoreU8 : IrOpcode::StoreIndirect, 0});
       return true;
     }
     error = std::string(mutateName) + " target must be a mutable binding";
@@ -584,7 +588,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
       instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(valueLocal)});
       instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
       instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
-      instructions.push_back({IrOpcode::StoreIndirect, 0});
+      instructions.push_back({pointerTargetsBytes(pointerExpr, context) ? IrOpcode::StoreU8 : IrOpcode::StoreIndirect, 0});
       return true;
     }
     std::string accessName;
@@ -698,12 +702,15 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
       const int32_t destPtrLocal = allocTempLocal();
       instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(basePtrLocal)});
       instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+      const bool packedBytes = isPackedByteVectorTarget(targetInfo);
       if (!targetInfo.isVectorTarget) {
         instructions.push_back({pushOneForIndex(indexKind), 1});
         instructions.push_back({addForIndex(indexKind), 0});
       }
-      instructions.push_back({pushOneForIndex(indexKind), IrSlotBytesI32});
-      instructions.push_back({mulForIndex(indexKind), 0});
+      if (!packedBytes) {
+        instructions.push_back({pushOneForIndex(indexKind), IrSlotBytesI32});
+        instructions.push_back({mulForIndex(indexKind), 0});
+      }
       instructions.push_back({IrOpcode::AddI64, 0});
       instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
 
@@ -714,7 +721,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
       instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(valueLocal)});
       instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(destPtrLocal)});
       instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
-      instructions.push_back({IrOpcode::StoreIndirect, 0});
+      instructions.push_back({packedBytes ? IrOpcode::StoreU8 : IrOpcode::StoreIndirect, 0});
       return true;
     }
     if (target.kind == Expr::Kind::Call && target.isFieldAccess) {
