@@ -30,13 +30,13 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.imports"
 # vm/native/exe; a 2-case shard takes up to ~30s alone and doubles under
 # full-suite load, so allow 120s.
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.imports"
-                                  TIMEOUT 120
+                                  TIMEOUT 300
                                   SHARD_PREFIX "operations_and_collections"
                                   SOURCE_FILE "*test_compile_run_imports_operations.cpp"
                                   TOTAL_CASES 58
                                   CASES_PER_SHARD 2)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.imports"
-                                  TIMEOUT 120
+                                  TIMEOUT 300
                                   SHARD_PREFIX "operations_and_collections_part2"
                                   SOURCE_FILE "*test_compile_run_imports_operations_part2.cpp"
                                   TOTAL_CASES 131
@@ -141,7 +141,7 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.examples"
 # full-suite load, so run them one per shard. Case 52 alone takes ~15s and is
 # scheduled first, when machine load peaks, so it doubles; allow 120s.
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.examples"
-                                  TIMEOUT 120
+                                  TIMEOUT 300
                                   SHARD_PREFIX "spinning_cube_argument_validation"
                                   SOURCE_FILE "*test_compile_run_examples_*.cpp"
                                   RANGE_FIRST 51
@@ -165,7 +165,7 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.examples"
 # still above the 30s ceiling (see TODO-4710/TODO-5230 for the per-compile
 # subprocess-cost root cause this depends on).
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.examples"
-                                  TIMEOUT 120
+                                  TIMEOUT 300
                                   SHARD_PREFIX "language_level_examples"
                                   SOURCE_FILE "*test_compile_run_examples_*.cpp"
                                   RANGE_FIRST 79

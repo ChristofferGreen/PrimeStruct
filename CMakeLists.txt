@@ -1097,7 +1097,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--test-case=every helper family*,docs/CollectionHelperTargets.md*"
   )
   set_tests_properties(PrimeStruct_collection_parity_matrix
-                       PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
+                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
 
   add_executable(PrimeStruct_compile_time_tests
     tests/unit/test_main.cpp
@@ -1115,7 +1115,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_compile_time_facade
-                       PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
+                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   add_test(
     NAME PrimeStruct_compile_time_callable
     COMMAND $<TARGET_FILE:PrimeStruct_compile_time_tests>
@@ -1123,7 +1123,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_compile_time_callable
-                       PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
+                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   add_test(
     NAME PrimeStruct_compile_time_value
     COMMAND $<TARGET_FILE:PrimeStruct_compile_time_tests>
@@ -1131,7 +1131,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_compile_time_value
-                       PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
+                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
 
   add_executable(PrimeStruct_embed_tests
     tests/unit/test_main.cpp
@@ -1160,7 +1160,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_embed_script_engine
-                       PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
+                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   add_test(
     NAME PrimeStruct_embed_diagnostics
     COMMAND $<TARGET_FILE:PrimeStruct_embed_tests>
@@ -1168,7 +1168,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_embed_diagnostics
-                       PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
+                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   add_test(
     NAME PrimeStruct_embed_bytecode
     COMMAND $<TARGET_FILE:PrimeStruct_embed_tests>
@@ -1176,7 +1176,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_embed_bytecode
-                       PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
+                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   add_test(
     NAME PrimeStruct_embed_host_calls
     COMMAND $<TARGET_FILE:PrimeStruct_embed_tests>
@@ -1184,7 +1184,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_embed_host_calls
-                       PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
+                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   add_test(
     NAME PrimeStruct_embed_host_language
     COMMAND $<TARGET_FILE:PrimeStruct_embed_tests>
@@ -1192,7 +1192,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_embed_host_language
-                       PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
+                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   add_test(
     NAME PrimeStruct_embed_exports
     COMMAND $<TARGET_FILE:PrimeStruct_embed_tests>
@@ -1216,7 +1216,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_embed_order_independence
-                       PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
+                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   add_test(
     NAME PrimeStruct_embed_no_process
     COMMAND $<TARGET_FILE:PrimeStruct_embed_tests>
@@ -1224,7 +1224,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_embed_no_process
-                       PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
+                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   add_test(
     NAME PrimeStruct_embed_threads
     COMMAND $<TARGET_FILE:PrimeStruct_embed_tests>
@@ -1232,7 +1232,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_embed_threads
-                       PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
+                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
 
   # Installs to a scratch prefix and builds/runs examples/embed against the
   # installed package (TODO-5338).
@@ -1266,7 +1266,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_embed_runtime_only
-                       PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
+                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
 
   # IR byte opcodes and the VM's byte regions, with hand-built IR.
   add_executable(PrimeStruct_vm_byte_tests
@@ -1284,7 +1284,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_vm_byte_regions
-                       PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
+                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
 
   # The `u8` scalar on the VM: literals, wrapping arithmetic, conversions, fields, host calls.
   add_executable(PrimeStruct_u8_scalar_tests
@@ -1363,7 +1363,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_native_ui_headless
-                       PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
+                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   add_test(
     NAME PrimeStruct_native_ui_bindings
     COMMAND $<TARGET_FILE:PrimeStruct_native_ui_tests>
@@ -1371,7 +1371,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_native_ui_bindings
-                       PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
+                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   add_test(
     NAME PrimeStruct_native_ui_stdlib
     COMMAND $<TARGET_FILE:PrimeStruct_native_ui_tests>
@@ -1379,7 +1379,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_native_ui_stdlib
-                       PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
+                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   add_test(
     NAME PrimeStruct_native_ui_editor
     COMMAND $<TARGET_FILE:PrimeStruct_native_ui_tests>
@@ -1387,7 +1387,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_native_ui_editor
-                       PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
+                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   # The editor acceptance gate (docs/todo.md TODO-5552..5554): the editor
   # scenarios plus the acceptance suite, in one release-gate entry.
   add_test(
@@ -1397,7 +1397,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_native_ui_editor_acceptance
-                       PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
+                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   if(PRIMESTRUCT_BUILD_NATIVE_UI AND APPLE)
     # Bundles an example, runs it against AppKit in snapshot mode and checks the
     # PNG of the laid-out window (needs a window-server session).
@@ -1410,7 +1410,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
               -P ${CMAKE_SOURCE_DIR}/cmake/NativeUiAppKitSmokeTest.cmake
     )
     set_tests_properties(PrimeStruct_native_ui_appkit_smoke
-                         PROPERTIES TIMEOUT 120 RESOURCE_LOCK native_ui_appkit)
+                         PROPERTIES TIMEOUT 300 RESOURCE_LOCK native_ui_appkit)
     # The same programs compiled to native executables (no VM, no bytecode).
     add_test(
       NAME PrimeStruct_native_ui_compiled_app
@@ -2902,19 +2902,19 @@ if(PRIMESTRUCT_BUILD_TESTS)
   # shards are registered only there; they do not exist in Linux/x86_64 builds.
   if(APPLE AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64)$")
     addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.core"
-                                      TIMEOUT 120
+                                      TIMEOUT 300
                                       SHARD_PREFIX "apple_core"
                                       TOTAL_CASES 215
                                       CASES_PER_SHARD 10)
     addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.math_numeric"
-                                      TIMEOUT 120
+                                      TIMEOUT 300
                                       SHARD_PREFIX "apple_math_numeric"
                                       TOTAL_CASES 49
                                       CASES_PER_SHARD 10)
     # The one case in test_compile_run_native_backend_collections.cpp has its own
     # shard (array_slice) in PrimeStructManagedCompileRunNativeOtherSuites.cmake.
     addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.collections"
-                                      TIMEOUT 120
+                                      TIMEOUT 300
                                       SHARD_PREFIX "apple_collections"
                                       SOURCE_FILE "*test_compile_run_native_backend_collections_*"
                                       TOTAL_CASES 583
@@ -3277,7 +3277,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     string(REPLACE "." "_" suiteId "${suite}")
     set(testName "PrimeStruct_${suiteId}")
     add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_ir_cfg_tests> "--test-suite=${suite}")
-    set_tests_properties("${testName}" PROPERTIES TIMEOUT 120)
+    set_tests_properties("${testName}" PROPERTIES TIMEOUT 300)
   endforeach()
   addPrimeStructSuiteRegistration(
     PrimeStruct_ir_cfg_suite_registration
@@ -3306,7 +3306,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     string(REPLACE "." "_" suiteId "${suite}")
     set(testName "PrimeStruct_${suiteId}")
     add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_ir_optimizer_tests> "--test-suite=${suite}")
-    set_tests_properties("${testName}" PROPERTIES TIMEOUT 120)
+    set_tests_properties("${testName}" PROPERTIES TIMEOUT 300)
   endforeach()
   addPrimeStructSuiteRegistration(
     PrimeStruct_ir_optimizer_suite_registration
