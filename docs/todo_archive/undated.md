@@ -10,3 +10,14 @@
   - acceptance:
     - embed tests: String arguments and results round-trip, empty text, a loop of 10000 host text calls keeps the string heap constant, discarded results are freed; full release gate green
   - stop_rule: the host boundary on the VM and the embedding API; the native UI port is TODO-5571 and the C++ emitters are TODO-5564.
+
+- [x] TODO-5571: Native UI text uses `String`
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-22
+  - phase: Native UI compiled
+  - parallel_track: native-ui-compiled
+  - scope: Ported stdlib/std/ui/native, the ScriptEngine bindings (src/ui/NativeUiBindings.cpp) and examples/apps/text_editor/main.prime to `String`: text-returning host functions (text view contents, window path, last error, panel results) return `String` (`HostText`), and parameters that receive run-time text (window title, text, file paths, highlight path, alert detail) take `String` (`HostTextView`); fixed labels (titles at creation, menu items, panel titles, alert message and buttons) stay `string` literals, and a literal reaches a `String` parameter through `stringFrom`. The command-line file argument reaches the editor through the new VM-answered `__pstext_argument` and `argumentText(index)`. The scripted scenarios of tests/unit/ui replay with identical call logs.
+  - acceptance:
+    - tests/unit/ui pass with unchanged call logs; PrimeScroll opens a file named on the command line (and reports one that cannot be opened); the text-heap tests keep the string heap constant over host text loops; full release gate green
+  - stop_rule: the UI wrappers, bindings and the editor; no new language features.

@@ -17,6 +17,8 @@ TEST_SUITE_BEGIN("primestruct.ui.bindings");
 
 namespace {
 const char *EditorScript = R"(
+import /std/text/*
+
 [host return<i32>]
 ps_ui_abi_version() {
 }
@@ -45,7 +47,7 @@ ps_ui_event_command() {
 ps_ui_window_create([string] title, [i32] width, [i32] height) {
 }
 [host return<bool>]
-ps_ui_window_set_title([u64] window, [string] title) {
+ps_ui_window_set_title([u64] window, [String] title) {
 }
 [host return<bool>]
 ps_ui_window_set_content([u64] window, [u64] widget) {
@@ -62,11 +64,11 @@ ps_ui_window_close([u64] window) {
 [host return<u64>]
 ps_ui_text_view_create() {
 }
-[host return<string>]
+[host return<String>]
 ps_ui_text_view_get_text([u64] view) {
 }
 [host return<bool>]
-ps_ui_text_view_set_text([u64] view, [string] text) {
+ps_ui_text_view_set_text([u64] view, [String] text) {
 }
 [host return<bool>]
 ps_ui_text_view_set_monospace([u64] view, [bool] monospace) {
@@ -92,14 +94,14 @@ ps_ui_menu_add_standard([u64] menu, [i32] standardId) {
 [host return<bool>]
 ps_ui_menu_bar_add([u64] menu) {
 }
-[host return<string>]
+[host return<String>]
 ps_ui_open_panel([string] title) {
 }
-[host return<string>]
+[host return<String>]
 ps_ui_save_panel([string] title, [string] suggestedName) {
 }
 [host return<i32>]
-ps_ui_alert([string] message, [string] detail, [string] buttons) {
+ps_ui_alert([string] message, [String] detail, [string] buttons) {
 }
 
 [return<int>]
@@ -111,7 +113,7 @@ score([bool] ok) {
   }
 }
 
-[return<int>]
+[return<int> effects(heap_alloc)]
 main() {
   [bool] started{ps_ui_init("Scripted")}
   [u64] window{ps_ui_window_create("Untitled", 720i32, 480i32)}
@@ -127,12 +129,12 @@ main() {
   ok = ok + score(ps_ui_menu_add_standard(menu, 4i32))
   ok = ok + score(ps_ui_menu_bar_add(menu))
   ok = ok + score(ps_ui_window_show(window))
-  [string] picked{ps_ui_open_panel("Open")}
+  [String] picked{ps_ui_open_panel("Open")}
   ok = ok + score(ps_ui_text_view_set_text(text, picked))
   ok = ok + score(ps_ui_text_view_clear_modified(text))
-  [string] saved{ps_ui_save_panel("Save As", "Untitled.txt")}
+  [String] saved{ps_ui_save_panel("Save As", "Untitled.txt")}
   ok = ok + score(ps_ui_window_set_title(window, saved))
-  ok = ok + score(ps_ui_alert("Save changes?", "Unsaved text", "Save\nDiscard\nCancel") == 1i32)
+  ok = ok + score(ps_ui_alert("Save changes?", stringFrom("Unsaved text"), "Save\nDiscard\nCancel") == 1i32)
   [mut] commands{0i32}
   [mut] running{true}
   while(running) {
@@ -162,15 +164,15 @@ TEST_CASE("native ui bindings cover every ABI function once") {
   const auto signatures = primec::ui::nativeUiBindingSignatures();
   CHECK(signatures.size() == 47);
   for (const char *expected : {"ps_ui_init(string) -> bool", "ps_ui_window_create(string, i32, i32) -> u64",
-                               "ps_ui_text_view_get_text(u64) -> string", "ps_ui_window_set_edited(u64, bool) -> bool",
+                               "ps_ui_text_view_get_text(u64) -> text", "ps_ui_window_set_edited(u64, bool) -> bool",
                                "ps_ui_menu_add_item(u64, string, string, i32) -> bool",
-                               "ps_ui_alert(string, string, string) -> i32", "ps_ui_quit() -> void",
+                               "ps_ui_alert(string, text, string) -> i32", "ps_ui_quit() -> void",
                                "ps_ui_panel_chosen() -> bool", "ps_ui_menu_bar_add_role(u64, i32) -> bool",
                                "ps_ui_text_view_add_style(u64, i32, i32, i32, i32) -> bool",
                                "ps_ui_text_view_clear_styles(u64) -> bool",
-                               "ps_ui_text_view_highlight(u64, string) -> bool", "ps_ui_window_add_tab(u64, u64) -> bool",
+                               "ps_ui_text_view_highlight(u64, text) -> bool", "ps_ui_window_add_tab(u64, u64) -> bool",
                                "ps_ui_active_window() -> u64", "ps_ui_window_count() -> i32",
-                               "ps_ui_window_path(u64) -> string"}) {
+                               "ps_ui_window_path(u64) -> text"}) {
     CHECK_MESSAGE(std::find(signatures.begin(), signatures.end(), expected) != signatures.end(), expected);
   }
   std::vector<std::string> names;

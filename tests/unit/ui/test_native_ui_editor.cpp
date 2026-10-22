@@ -170,6 +170,32 @@ TEST_CASE("editor opens an existing file") {
   CHECK(countCalls("ps_ui_alert(") == 0);
 }
 
+TEST_CASE("editor opens the file named on the command line") {
+  const std::string in = writeScratch("argument.txt", "from the command line\n");
+  headless::reset();
+  headless::pushCloseWindow(EditorWindow);
+  const Script script = compileEditor();
+  const auto result = script.run({in});
+  REQUIRE_MESSAGE(result.ok, result.diagnostics);
+  CHECK(result.exitCode == 0);
+  const auto window = headless::windowState(EditorWindow);
+  CHECK(window.title == in);
+  CHECK_FALSE(window.edited);
+  CHECK(countCalls("ps_ui_text_view_load_file(2, ") == 1);
+  CHECK(countCalls("ps_ui_alert(") == 0);
+}
+
+TEST_CASE("editor reports a command line file that cannot be opened") {
+  headless::reset();
+  headless::pushAlertAnswer(0);
+  headless::pushCloseWindow(EditorWindow);
+  const Script script = compileEditor();
+  const auto result = script.run({"/definitely/not/here.txt"});
+  REQUIRE_MESSAGE(result.ok, result.diagnostics);
+  CHECK(headless::windowState(EditorWindow).title == "Untitled");
+  CHECK(countCalls("ps_ui_alert(\"The file could not be opened.\"") == 1);
+}
+
 TEST_CASE("editor reports a file that cannot be opened and keeps its document") {
   headless::reset();
   headless::pushCommand(CommandOpen);

@@ -9,9 +9,11 @@ namespace primec::ui {
 namespace {
 
 std::string text(std::string_view value) { return std::string(value); }
+std::string text(embed::HostTextView value) { return std::string(value.value); }
 
 // Calls `bindOne(name, callable)` once per ABI function. Strings arrive as
-// string_view; they are copied to NUL-terminated text for the C functions.
+// string_view (fixed labels) or HostTextView (program-built text); they are copied to NUL-terminated
+// text for the C functions. Text results return as HostText, which the VM turns into a String.
 template <class Binder> void forEachBinding(Binder &&bindOne) {
   bindOne("ps_ui_abi_version", [] { return ps_ui_abi_version(); });
   bindOne("ps_ui_init", [](std::string_view appName) { return ps_ui_init(text(appName).c_str()); });
@@ -26,7 +28,7 @@ template <class Binder> void forEachBinding(Binder &&bindOne) {
   bindOne("ps_ui_window_create", [](std::string_view title, int32_t width, int32_t height) {
     return ps_ui_window_create(text(title).c_str(), width, height);
   });
-  bindOne("ps_ui_window_set_title", [](uint64_t window, std::string_view title) {
+  bindOne("ps_ui_window_set_title", [](uint64_t window, embed::HostTextView title) {
     return ps_ui_window_set_title(window, text(title).c_str());
   });
   bindOne("ps_ui_window_set_content",
@@ -38,8 +40,8 @@ template <class Binder> void forEachBinding(Binder &&bindOne) {
 
   bindOne("ps_ui_text_view_create", [] { return ps_ui_text_view_create(); });
   bindOne("ps_ui_text_view_get_text",
-          [](uint64_t view) { return std::string(ps_ui_text_view_get_text(view)); });
-  bindOne("ps_ui_text_view_set_text", [](uint64_t view, std::string_view value) {
+          [](uint64_t view) { return embed::HostText(ps_ui_text_view_get_text(view)); });
+  bindOne("ps_ui_text_view_set_text", [](uint64_t view, embed::HostTextView value) {
     return ps_ui_text_view_set_text(view, text(value).c_str());
   });
   bindOne("ps_ui_text_view_set_monospace",
@@ -47,10 +49,10 @@ template <class Binder> void forEachBinding(Binder &&bindOne) {
   bindOne("ps_ui_text_view_is_modified", [](uint64_t view) { return ps_ui_text_view_is_modified(view); });
   bindOne("ps_ui_text_view_clear_modified", [](uint64_t view) { return ps_ui_text_view_clear_modified(view); });
 
-  bindOne("ps_ui_text_view_load_file", [](uint64_t view, std::string_view path) {
+  bindOne("ps_ui_text_view_load_file", [](uint64_t view, embed::HostTextView path) {
     return ps_ui_text_view_load_file(view, text(path).c_str());
   });
-  bindOne("ps_ui_text_view_save_file", [](uint64_t view, std::string_view path) {
+  bindOne("ps_ui_text_view_save_file", [](uint64_t view, embed::HostTextView path) {
     return ps_ui_text_view_save_file(view, text(path).c_str());
   });
   bindOne("ps_ui_window_add_tab", [](uint64_t host, uint64_t tab) { return ps_ui_window_add_tab(host, tab); });
@@ -61,19 +63,19 @@ template <class Binder> void forEachBinding(Binder &&bindOne) {
   bindOne("ps_ui_window_content", [](uint64_t window) { return ps_ui_window_content(window); });
   bindOne("ps_ui_window_count", [] { return ps_ui_window_count(); });
   bindOne("ps_ui_window_at", [](int32_t index) { return ps_ui_window_at(index); });
-  bindOne("ps_ui_window_set_path", [](uint64_t window, std::string_view path) {
+  bindOne("ps_ui_window_set_path", [](uint64_t window, embed::HostTextView path) {
     return ps_ui_window_set_path(window, text(path).c_str());
   });
-  bindOne("ps_ui_window_path", [](uint64_t window) { return std::string(ps_ui_window_path(window)); });
+  bindOne("ps_ui_window_path", [](uint64_t window) { return embed::HostText(ps_ui_window_path(window)); });
   bindOne("ps_ui_window_has_path", [](uint64_t window) { return ps_ui_window_has_path(window); });
   bindOne("ps_ui_text_view_clear_styles", [](uint64_t view) { return ps_ui_text_view_clear_styles(view); });
   bindOne("ps_ui_text_view_add_style", [](uint64_t view, int32_t start, int32_t end, int32_t rgb, int32_t flags) {
     return ps_ui_text_view_add_style(view, start, end, rgb, flags);
   });
-  bindOne("ps_ui_text_view_highlight", [](uint64_t view, std::string_view path) {
+  bindOne("ps_ui_text_view_highlight", [](uint64_t view, embed::HostTextView path) {
     return ps_ui_text_view_highlight(view, text(path).c_str());
   });
-  bindOne("ps_ui_last_error", [] { return std::string(ps_ui_last_error()); });
+  bindOne("ps_ui_last_error", [] { return embed::HostText(ps_ui_last_error()); });
 
   bindOne("ps_ui_menu_create", [](std::string_view title) { return ps_ui_menu_create(text(title).c_str()); });
   bindOne("ps_ui_menu_add_item",
@@ -87,12 +89,12 @@ template <class Binder> void forEachBinding(Binder &&bindOne) {
   bindOne("ps_ui_menu_bar_add_role",
           [](uint64_t menu, int32_t role) { return ps_ui_menu_bar_add_role(menu, role); });
 
-  bindOne("ps_ui_open_panel", [](std::string_view title) { return std::string(ps_ui_open_panel(text(title).c_str())); });
+  bindOne("ps_ui_open_panel", [](std::string_view title) { return embed::HostText(ps_ui_open_panel(text(title).c_str())); });
   bindOne("ps_ui_save_panel", [](std::string_view title, std::string_view suggestedName) {
-    return std::string(ps_ui_save_panel(text(title).c_str(), text(suggestedName).c_str()));
+    return embed::HostText(ps_ui_save_panel(text(title).c_str(), text(suggestedName).c_str()));
   });
   bindOne("ps_ui_panel_chosen", [] { return ps_ui_panel_chosen(); });
-  bindOne("ps_ui_alert",[](std::string_view message, std::string_view detail, std::string_view buttons) {
+  bindOne("ps_ui_alert",[](std::string_view message, embed::HostTextView detail, std::string_view buttons) {
     return ps_ui_alert(text(message).c_str(), text(detail).c_str(), text(buttons).c_str());
   });
 }

@@ -51,7 +51,7 @@
   a pointer to the NUL-terminated bytes without a copy (a module-table string literal is accepted in the same
   position). A `String` result is text the host returns; the VM copies it into a fresh string-heap block and the
   call builds the `String` (length, capacity, data, owning) from it, using the VM-answered `__pstext_length` and
-  `__pstext_usable`. The C++ backends reject text host values until they implement the boundary.
+  `__pstext_usable`. `__pstext_argument(index)` returns the entry argument at `index` the same way, and `argumentText(index)` wraps it. The C++ backends reject text host values until they implement the boundary.
 - **String heap (TODO-5539):** the VM answers the host functions named `__pstext_*` itself, so a program needs no binding for
   them. They manage text blocks over byte regions: 256 KiB chunks of equal blocks in size classes (four per doubling from
   32 bytes to 64 KiB), a byte region of its own for text over 64 KiB, an optional byte limit (the runtime fault

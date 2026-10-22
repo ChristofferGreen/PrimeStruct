@@ -1,3 +1,4 @@
+import /std/text/*
 import /std/ui/native/*
 
 // PrimeScroll: a plain-text editor with one native tab per document
@@ -9,9 +10,7 @@ import /std/ui/native/*
 //
 //   primestruct_app examples/apps/text_editor/main.prime
 //
-// Entry-argument strings cannot be passed to host functions yet, so opening a
-// file named on the command line waits for the string work (docs/todo.md,
-// TODO-5541).
+// A file named after the program on the command line opens in the first tab.
 
 [return<i32>]
 command_new() {
@@ -50,10 +49,10 @@ command_tab() {
 }
 
 // 0 = Save, 1 = Don't Save, 2 = Cancel.
-[return<i32>]
+[return<i32> effects(heap_alloc)]
 ask_to_save([App] app) {
   return(app.alert("Do you want to save the changes?",
-                   "Your changes will be lost if you do not save them.",
+                   stringFrom("Your changes will be lost if you do not save them."),
                    "Save\nDon't Save\nCancel"))
 }
 
@@ -93,7 +92,7 @@ save_document([App] app, [Window] tab, [bool] chooseFile) {
   [TextView] view{tab.content()}
   [bool mut] saved{false}
   if(chooseFile || !tab.hasPath()) {
-    [string] chosen{app.savePanel("Save", "Untitled.txt")}
+    [String] chosen{app.savePanel("Save", "Untitled.txt")}
     if(app.panelChosen()) {
       if(view.saveFile(chosen)) {
         tab.setPath(chosen)
@@ -148,7 +147,7 @@ close_tab([App] app, [Window] tab) {
 // untitled document.
 [return<bool>]
 open_document([App] app, [Window] tab) {
-  [string] chosen{app.openPanel("Open")}
+  [String] chosen{app.openPanel("Open")}
   if(app.panelChosen()) {
     [TextView] current{tab.content()}
     [bool] reuse{!tab.hasPath() && !current.isModified()}
@@ -172,8 +171,8 @@ open_document([App] app, [Window] tab) {
   return(true)
 }
 
-[return<int>]
-main() {
+[return<int> effects(heap_alloc)]
+main([array<string>] args) {
   [App] app{start_app("PrimeScroll")}
   [Window] first{app.window("Untitled", 720i32, 480i32)}
   [TextView] firstView{app.textView()}
@@ -242,6 +241,18 @@ main() {
   [Menu] helpMenu{app.menu("Help")}
   helpMenu.help()
   helpMenu.addToBarAsHelp()
+
+  // A file named on the command line opens in the first tab.
+  if(args.count() > 1i32) {
+    [String] named{argumentText(1i32)}
+    if(firstView.loadFile(named)) {
+      first.setPath(named)
+      first.setTitle(named)
+      firstView.highlight(named)
+    } else {
+      app.alert("The file could not be opened.", app.lastError(), "OK")
+    }
+  }
 
   first.show()
 

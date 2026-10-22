@@ -34,6 +34,23 @@ bool handleVmHostCall(const VmHostFunctions *hostFunctions,
     const size_t textBase = stack.size() - textArgCount;
     uint64_t textResult = 0;
     bool known = false;
+    if (textName == "__pstext_argument") {
+      // The entry argument at the index, copied into a fresh string-heap block (0 for none or empty).
+      const int64_t index = static_cast<int32_t>(stack[textBase]);
+      std::string_view argument;
+      if (text->args != nullptr && index >= 0 && static_cast<size_t>(index) < text->args->size()) {
+        argument = (*text->args)[static_cast<size_t>(index)];
+      }
+      if (!text->heap->allocate(*text->core, argument.size() + (argument.empty() ? 0 : 1), textResult, error)) {
+        return false;
+      }
+      if (!argument.empty()) {
+        std::copy(argument.begin(), argument.end(), reinterpret_cast<char *>(text->core->byteAt(textResult)));
+      }
+      stack.resize(textBase);
+      stack.push_back(textResult);
+      return true;
+    }
     if (!callTextHostFunction(*text->heap, *text->core, textName, stack.data() + textBase, textResult, known, error)) {
       return false;
     }
@@ -252,7 +269,7 @@ public:
                       const IrInstruction &inst,
                       std::vector<uint64_t> &stack,
                       std::string &error) override {
-    TextHeapContext text{&heap_, &textHeap_};
+    TextHeapContext text{&heap_, &textHeap_, args_};
     return handleVmHostCall(hostFunctions_, module, inst, stack, error, &stringHeap_, &text);
   }
 

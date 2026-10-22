@@ -1,12 +1,13 @@
+import /std/text/*
 import /std/ui/native/*
 
-[return<int>]
+[return<int> effects(heap_alloc)]
 main() {
   [App] app{start_app("Hello")}
   [Window] window{app.window("Untitled", 720i32, 480i32)}
   [TextView] editor{app.textView()}
   window.setContent(editor)
-  editor.setText("Hello, native UI")
+  editor.setText(stringFrom("Hello, native UI"))
   [Menu] file{app.menu("File")}
   file.item("Save", "cmd+s", 7i32)
   file.addToBar()

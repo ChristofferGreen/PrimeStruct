@@ -113,8 +113,8 @@ TEST_CASE("host calls compiled by the C++ emitters match the VM") {
   }
 }
 
-TEST_CASE("the native UI hello_window runs through the C++ emitters on the headless backend") {
-  const std::string example = SourceDir + "/examples/native_ui/hello_window.prime";
+TEST_CASE("the native UI hello window (fixed labels) runs through the C++ emitters on the headless backend") {
+  const std::string example = SourceDir + "/tests/fixtures/host_calls/hello_labels.prime";
   // The VM run, with the same scripted user actions headless_log_dump.cpp queues in the
   // compiled program before it starts.
   headless::reset();

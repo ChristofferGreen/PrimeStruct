@@ -88,16 +88,18 @@ TEST_CASE("native ui quit request ends the loop without closing the window") {
 
 TEST_CASE("native ui app wraps dialogs and text views") {
   const Script script = compileSource(R"(
+import /std/text/*
 import /std/ui/native/*
 
-[return<int>]
+[return<int> effects(heap_alloc)]
 main() {
   [App] app{start_app("Dialogs")}
   [TextView] view{app.textView()}
   view.setText(app.openPanel("Open"))
-  [Window] window{app.window(app.savePanel("Save As", "a.txt"), 100i32, 100i32)}
+  [Window] window{app.window("Untitled", 100i32, 100i32)}
+  window.setTitle(app.savePanel("Save As", "a.txt"))
   window.setContent(view)
-  return(app.alert("Discard changes?", "Unsaved text", "Save\nDiscard"))
+  return(app.alert("Discard changes?", stringFrom("Unsaved text"), "Save\nDiscard"))
 }
 )");
   headless::reset();

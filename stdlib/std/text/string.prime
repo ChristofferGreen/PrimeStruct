@@ -31,6 +31,12 @@ namespace std {
   __pstext_set_limit([u64] bytes) {
   }
 
+  // The entry argument at `index` (0 is the program name) copied into a fresh block; empty text when
+  // there is no such argument.
+  [host return</std/text/String>]
+  __pstext_argument([i32] index) {
+  }
+
   [unsafe return<void>]
   textStore([Pointer<u8> mut] block, [i32] index, [u8] value) {
     [Pointer<u8> mut] slot{/std/intrinsics/memory/at_unsafe(block, index)}
@@ -340,6 +346,13 @@ namespace std {
     [String mut] out{String{}}
     out.append(text)
     return(out)
+  }
+
+  // The command-line argument at `index` as a String (index 0 is the program name; empty when there is
+  // no such argument).
+  [public effects(heap_alloc), return<String>]
+  argumentText([i32] index) {
+    return(__pstext_argument(index))
   }
 
   [public effects(heap_alloc), return<String>]

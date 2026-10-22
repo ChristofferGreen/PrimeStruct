@@ -16,6 +16,8 @@ namespace primec::vm_detail {
 struct TextHeapContext {
   VmHeapCore *core = nullptr;
   VmTextHeap *heap = nullptr;
+  // The entry arguments (null when the run has none), for `__pstext_argument`.
+  const std::vector<std::string_view> *args = nullptr;
 };
 
 bool executeVmModule(const IrModule &module,

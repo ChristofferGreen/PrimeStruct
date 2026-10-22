@@ -1,6 +1,10 @@
 // Native UI surface over the version-0 C ABI (include/primec/ui/NativeUi.h,
 // docs/NativeUiPlan.md). The runner binds the ps_ui_* host functions; programs
 // use App, Window, TextView and Menu and loop on App.waitEvent().
+// Text that comes back from the platform, and text the program builds, is the owned
+// `String` (import /std/text/*); fixed labels (titles, shortcuts) stay `string` literals.
+
+import /std/text/*
 
 [host return<i32>]
 ps_ui_abi_version() {
@@ -39,7 +43,7 @@ ps_ui_window_create([string] title, [i32] width, [i32] height) {
 }
 
 [host return<bool>]
-ps_ui_window_set_title([u64] window, [string] title) {
+ps_ui_window_set_title([u64] window, [/std/text/String] title) {
 }
 
 [host return<bool>]
@@ -62,12 +66,12 @@ ps_ui_window_close([u64] window) {
 ps_ui_text_view_create() {
 }
 
-[host return<string>]
+[host return</std/text/String>]
 ps_ui_text_view_get_text([u64] view) {
 }
 
 [host return<bool>]
-ps_ui_text_view_set_text([u64] view, [string] text) {
+ps_ui_text_view_set_text([u64] view, [/std/text/String] text) {
 }
 
 [host return<bool>]
@@ -83,11 +87,11 @@ ps_ui_text_view_clear_modified([u64] view) {
 }
 
 [host return<bool>]
-ps_ui_text_view_load_file([u64] view, [string] path) {
+ps_ui_text_view_load_file([u64] view, [/std/text/String] path) {
 }
 
 [host return<bool>]
-ps_ui_text_view_save_file([u64] view, [string] path) {
+ps_ui_text_view_save_file([u64] view, [/std/text/String] path) {
 }
 
 [host return<bool>]
@@ -123,10 +127,10 @@ ps_ui_window_at([i32] index) {
 }
 
 [host return<bool>]
-ps_ui_window_set_path([u64] window, [string] path) {
+ps_ui_window_set_path([u64] window, [/std/text/String] path) {
 }
 
-[host return<string>]
+[host return</std/text/String>]
 ps_ui_window_path([u64] window) {
 }
 
@@ -143,10 +147,10 @@ ps_ui_text_view_add_style([u64] view, [i32] startByte, [i32] endByte, [i32] rgb,
 }
 
 [host return<bool>]
-ps_ui_text_view_highlight([u64] view, [string] path) {
+ps_ui_text_view_highlight([u64] view, [/std/text/String] path) {
 }
 
-[host return<string>]
+[host return</std/text/String>]
 ps_ui_last_error() {
 }
 
@@ -174,11 +178,11 @@ ps_ui_menu_add_standard([u64] menu, [i32] standardId) {
 ps_ui_menu_bar_add([u64] menu) {
 }
 
-[host return<string>]
+[host return</std/text/String>]
 ps_ui_open_panel([string] title) {
 }
 
-[host return<string>]
+[host return</std/text/String>]
 ps_ui_save_panel([string] title, [string] suggestedName) {
 }
 
@@ -187,7 +191,7 @@ ps_ui_panel_chosen() {
 }
 
 [host return<i32>]
-ps_ui_alert([string] message, [string] detail, [string] buttons) {
+ps_ui_alert([string] message, [/std/text/String] detail, [string] buttons) {
 }
 
 namespace std {
@@ -199,7 +203,7 @@ Window() {
   [public u64] handle{0u64}
 
   [public return<bool>]
-  setTitle([string] title) {
+  setTitle([/std/text/String] title) {
     return(ps_ui_window_set_title(this.handle, title))
   }
 
@@ -250,11 +254,11 @@ Window() {
 
   // The file the window's document is saved to ("" when none); stored by the backend.
   [public return<bool>]
-  setPath([string] file) {
+  setPath([/std/text/String] file) {
     return(ps_ui_window_set_path(this.handle, file))
   }
 
-  [public return<string>]
+  [public return</std/text/String>]
   path() {
     return(ps_ui_window_path(this.handle))
   }
@@ -274,13 +278,13 @@ Window() {
 TextView() {
   [public u64] handle{0u64}
 
-  [public return<string>]
+  [public return</std/text/String>]
   text() {
     return(ps_ui_text_view_get_text(this.handle))
   }
 
   [public return<bool>]
-  setText([string] value) {
+  setText([/std/text/String] value) {
     return(ps_ui_text_view_set_text(this.handle, value))
   }
 
@@ -292,13 +296,13 @@ TextView() {
   // The backend reads the UTF-8 file itself; false (see App.lastError()) when it
   // cannot be read or is not valid UTF-8. A successful load leaves the view unmodified.
   [public return<bool>]
-  loadFile([string] path) {
+  loadFile([/std/text/String] path) {
     return(ps_ui_text_view_load_file(this.handle, path))
   }
 
   // Writes the text to the file; call clearModified() once the text counts as saved.
   [public return<bool>]
-  saveFile([string] path) {
+  saveFile([/std/text/String] path) {
     return(ps_ui_text_view_save_file(this.handle, path))
   }
 
@@ -319,7 +323,7 @@ TextView() {
   // Syntax highlighting for the language of the file name `path` (by extension:
   // .prime, C/C++, .py, .json, .md); anything else just clears the styles.
   [public return<bool>]
-  highlight([string] path) {
+  highlight([/std/text/String] path) {
     return(ps_ui_text_view_highlight(this.handle, path))
   }
 
@@ -554,17 +558,17 @@ App() {
   }
 
   // Why the last loadFile/saveFile failed; empty when none has.
-  [public return<string>]
+  [public return</std/text/String>]
   lastError() {
     return(ps_ui_last_error())
   }
 
-  [public return<string>]
+  [public return</std/text/String>]
   openPanel([string] title) {
     return(ps_ui_open_panel(title))
   }
 
-  [public return<string>]
+  [public return</std/text/String>]
   savePanel([string] title, [string] suggestedName) {
     return(ps_ui_save_panel(title, suggestedName))
   }
@@ -576,7 +580,7 @@ App() {
   }
 
   [public return<i32>]
-  alert([string] message, [string] detail, [string] buttons) {
+  alert([string] message, [/std/text/String] detail, [string] buttons) {
     return(ps_ui_alert(message, detail, buttons))
   }
 }
