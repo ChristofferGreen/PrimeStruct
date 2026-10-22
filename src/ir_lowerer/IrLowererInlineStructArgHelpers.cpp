@@ -284,6 +284,10 @@ bool emitInlineStructDefinitionArguments(
           // Unsuffixed integer literals can flow through explicit i32
           // parameters as i64 facts; the slot representation is still
           // compatible for field materialization.
+        } else if (field.valueKind == LocalInfo::ValueKind::Int64 && arg->kind == Expr::Kind::Name &&
+                   argLocals.count(arg->name) != 0 &&
+                   argLocals.at(arg->name).kind == LocalInfo::Kind::Pointer) {
+          // A pointer local passed for a pointer field: its kind is the pointee's, the slot is the address.
         } else {
           error = "struct field type mismatch: expected " +
                   std::to_string(static_cast<int>(field.valueKind)) +

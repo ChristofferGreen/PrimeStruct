@@ -101,7 +101,8 @@ of sync with them.
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
 | TODO-5567 | Packed `array<u8>` | ready | bytes |
-| TODO-5538 | Slices are real borrows with shared operations | ready | slices |
+| TODO-5569 | Slice loans, escapes and returned borrows | ready | slices |
+| TODO-5570 | Slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views | ready | slices |
 | TODO-5540 | `string` as the UTF-8 text view | blocked | string-view |
 | TODO-5541 | Host functions and embedding use `String` and `string` | blocked | string-host |
 | TODO-5542 | Native and C++ parity for bytes, slices and strings | blocked | string-backends |
@@ -139,7 +140,7 @@ of sync with them.
 ### Ready Now
 
 - TODO-5567 (bytes): packed `array<u8>`
-- TODO-5538 (slices): slices are real borrows with shared operations
+- TODO-5570 (slices): slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5510 (control-returns): `return` returns from pick arms and lambdas correctly
@@ -149,7 +150,7 @@ of sync with them.
 ### Immediate Next 10
 
 1. TODO-5567
-2. TODO-5538
+2. TODO-5570
 3. TODO-5536
 4. TODO-5535
 5. TODO-5510
@@ -158,8 +159,8 @@ of sync with them.
 
 ### Priority Lanes
 
-- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5567, TODO-5538, TODO-5540, TODO-5568, TODO-5530, TODO-5541, TODO-5542
-- Goal, PrimeScroll compiled to native code through the C++ emitter (host calls with scalar and static text are done; next the string chain, because the editor passes host-returned text): TODO-5567, TODO-5538, TODO-5540, TODO-5541, TODO-5542, TODO-5564, TODO-5559, TODO-5560, TODO-5561
+- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5567, TODO-5570, TODO-5569, TODO-5540, TODO-5568, TODO-5530, TODO-5541, TODO-5542
+- Goal, PrimeScroll compiled to native code through the C++ emitter (host calls with scalar and static text are done; next the string chain, because the editor passes host-returned text): TODO-5567, TODO-5570, TODO-5540, TODO-5541, TODO-5542, TODO-5564, TODO-5559, TODO-5560, TODO-5561
 - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Lifecycle (docs/spec/value-lifecycle.md): TODO-5527
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
@@ -251,17 +252,27 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - VM matrix cases for `array<u8>`: literal, reads, writes, count, iteration, passing and returning, out-of-range faults; an `array<u8>` of 1 MB uses about 1 MB of VM heap; full release gate green
   - stop_rule: `array<u8>` on the VM; native and C++ are TODO-5542.
 
-- [ ] TODO-5538: Slices are real borrows with shared operations
+- [ ] TODO-5570: Slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views
   - owner: ai
   - status: ready
-  - created_at: 2026-10-08
-  - phase: Strings and slices (docs/spec/strings-and-views.md)
+  - created_at: 2026-10-22
+  - phase: Strings and slices (docs/spec/strings-and-views.md), follow-up to the slice value
   - parallel_track: slices
-  - scope: Make `view()`, `slice(start, end)` and `sliceMut(...)` on `array` and `Vector` return a borrowed `Slice<T, Capability>` (pointer and count, one range check) instead of a copied `array<T>`; add the loan rules (owner cannot change, move or be destroyed while a slice is live; no storing slices), the return-from-parameter rule with `[returns_borrow<name>]`, and the shared operations of docs/spec/strings-and-views.md (Slices) in `/std/collections/slice`, instantiated per element size.
+  - scope: The user-facing spellings the slice value leaves out: `values.view()`, `values.slice(start, end)` and `values.sliceMut(start, end)` on a `vector<T>` (today `/std/collections/vector/view<T>(values)` etc.; the builtin vector surface is name-driven in several places, and `slice` is also the array-copy builtin), `view`/`slice`/`sliceMut` and packed `u8` storage for `array<T>`, `view[i]` and `view[i] = v` on a slice (index sugar currently types only builtin collections), and `Slice<T, Capability>` resolving without an explicit `import /std/collections/slice/*` (the implicit stdlib include stub). Retire the copying `slice(array, start, end)` builtin once array views exist.
   - acceptance:
-    - positive tests for every operation and negative tests for each loan and escape diagnostic, on VM, native and C++
-    - existing `Slice<T, Read>` parameter examples in docs/CodeExamples.md still run; full release gate green
-  - stop_rule: slices over `array` and `Vector`; strings come later.
+    - tests for each spelling on `vector<i32>`, `vector<u8>` and `array<i32>` owners; docs/CodeExamples.md uses the method spellings; full release gate green
+  - stop_rule: the spellings and array views on the VM; native and C++ are TODO-5542.
+
+- [ ] TODO-5569: Slice loans, escapes and returned borrows
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-22
+  - phase: Strings and slices (docs/spec/strings-and-views.md), second of two leaves for slices
+  - parallel_track: slices
+  - scope: The borrow rules of docs/spec/strings-and-views.md (Borrowing): a slice is a loan on its owner's root binding until its last use (the owner cannot be pushed, popped, reserved, cleared, assigned, moved, passed to a `mut` or `move` parameter or destroyed: `borrowed binding: <root>`); read slices may overlap, a `Write` slice conflicts with any other live slice of the owner; a slice cannot be stored in a field, container, outer binding or global (`slice escapes via <place> (root: <root>)`); a definition may return a slice derived from exactly one parameter, and `[returns_borrow<name>]` names which when it could come from several.
+  - acceptance:
+    - a negative test per diagnostic and a positive test per allowed shape (overlapping reads, returned borrow, narrowing a slice); full release gate green
+  - stop_rule: borrow checking for slices on the VM front end (the checks are backend independent).
 
 - [ ] TODO-5568: String conveniences: operators, numbers, push of code points
   - owner: ai
@@ -278,7 +289,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 - [ ] TODO-5540: `string` as the UTF-8 text view
   - owner: ai
   - status: blocked
-  - blocked_on: TODO-5538
   - created_at: 2026-10-08
   - phase: Strings and slices (docs/spec/strings-and-views.md)
   - parallel_track: string-view

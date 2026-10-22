@@ -329,46 +329,6 @@ bool parseBindingInfo(const Expr &expr,
         return false;
       }
     }
-    if (transformName == "Slice") {
-      // TODO-5250: Slice<T, Capability> desugars to array<T> - it has the
-      // exact same physical representation slice(...) already produces
-      // so every existing array<T> consumer needs no
-      // Slice-specific handling (see normalizeBindingTypeName/
-      // normalizeCollectionBindingTypeName's "Slice" -> "array" mapping).
-      // Capability is tracked the same way as Reference<T, Capability>
-      // TODO-5251 extended real support to local bindings
-      // (verified end to end, both backends); struct fields and return
-      // types remain unaudited.
-      if (!allowCapabilityArg) {
-        error = "Slice<T, Capability> is only supported for function "
-                "parameters and local bindings today (TODO-5250/TODO-5251)";
-        return false;
-      }
-      if (transformTemplateArgs.size() != 2) {
-        error = "Slice requires exactly two template arguments: Slice<T, Capability>";
-        return false;
-      }
-      if (!transform.arguments.empty()) {
-        error = "binding transforms do not take arguments";
-        return false;
-      }
-      if (!typeName.empty()) {
-        error = "binding requires exactly one type";
-        return false;
-      }
-      const std::string &capability = transformTemplateArgs.back();
-      if (capability != "Read" && capability != "Write" && capability != "ReadWrite") {
-        error = "unknown Slice capability: " + capability +
-                " (expected Read, Write, or ReadWrite)";
-        return false;
-      }
-      info.typeCapabilityArg = capability;
-      capabilitySourceTypeName = "Slice";
-      typeName = "array";
-      typeHasTemplate = true;
-      info.typeTemplateArg = transformTemplateArgs.front();
-      continue;
-    }
     if (transformName == "Pointer" || transformName == "Reference") {
       // TODO-5249: an optional second template argument names a capability
       // marker (Read/Write/ReadWrite) - Reference<T, Capability>/

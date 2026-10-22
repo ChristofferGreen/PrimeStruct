@@ -1059,44 +1059,44 @@ Why this is good:
 
 ### Capability-Parameterized Slice Parameter
 
-`Slice<T, Capability>` shares `Reference<T, Capability>`'s view model but
-with a runtime `count` instead of a statically-one element count.
-`Slice<T, Capability>` desugars to `array<T>` - the exact runtime
-representation `slice(...)` (TODO-4608) already produces - so a caller
-constructs the value with ordinary `slice(...)` into a plain `[array<T>]`
-local and passes it to a `Slice<T, Capability>`-typed parameter; no new
-construction syntax is needed. This is verified against the current
-release toolchain for both function parameters and local bindings, for
-the same reason as `Reference<T, Capability>` above.
+`Slice<T, Capability>` is a real borrowed view (docs/spec/strings-and-views.md, Slices): a pointer to the
+first element and a count, defined by the stdlib module `/std/collections/slice` (import it to use the
+type). `Slice<T, Read>` is the stdlib struct `ReadSlice<T>`, which only reads; `Slice<T, Write>` is
+`WriteSlice<T>`, which also writes. A view copies nothing, so a write through a `Write` view changes the
+vector it was made from. Views of a `vector<T>` come from `/std/collections/vector/view<T>(values)`,
+`/std/collections/vector/slice<T>(values, start, end)` and `/std/collections/vector/sliceMut<T>(values,
+start, end)`.
 
 ```prime
+import /std/collections/*
+import /std/collections/slice/*
+
 [return<int>]
 sum_window([Slice<i32, Read>] window) {
   [i32 mut] total{0i32}
-  [i32 mut] i{0i32}
-  while(i < count(window)) {
-    total = total + window[i]
-    i = i + 1i32
+  for([i32 mut] i{0i32}, i < window.count(), i++) {
+    total = total + window.at(i)
   }
   return(total)
 }
 
-[return<int>]
+[return<int> effects(heap_alloc)]
 main() {
-  [array<i32>] values{array<i32>(4i32, 7i32, 9i32, 11i32)}
-  [array<i32>] window{slice(values, 1i32, 3i32)}
+  [vector<i32> mut] values{vector<i32>(4i32, 7i32, 9i32, 11i32)}
+  [Slice<i32, Read>] window{/std/collections/vector/slice<i32>(values, 1i32, 3i32)}
   return(sum_window(window))
 }
 ```
 
 Why this is good:
-- `window` is built once with the existing checked `slice(...)` call, and
-  the `Read` capability at the parameter boundary documents (and enforces)
-  that `sum_window` cannot write through it, the same as the `Reference<T,
-  Capability>` example above.
-- Because `Slice<T, Capability>` desugars to `array<T>`, `count(window)`
-  and `window[i]` are the exact same operations already used on plain
-  arrays - no new indexing or length surface to learn.
+- `window` is built once with one range check and shares the vector's storage; the `Read` capability at the
+  parameter boundary documents (and enforces) that `sum_window` cannot write through it: a read view has no
+  `set`, `fill`, `sort` or other write operation.
+- The operations are the same on every view and on every element type, including `u8`: `count`, `at`,
+  `first`, `last`, `slice`, `find`, `contains`, `equals`, `compare`, `splitPart` and the rest.
+- The vector must not change while a view of it is in use (a push may move its storage); the loan rules
+  that reject this are a separate step in docs/todo.md.
+
 
 ## Intentional Diagnostic Examples
 

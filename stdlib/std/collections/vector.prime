@@ -1,6 +1,7 @@
 // Canonical vector module with merged implementation.
 import /std/collections/buffer_checked/*
 import /std/collections/buffer_unchecked/*
+import /std/collections/slice/*
 import /std/panic/*
 
 namespace std {
@@ -356,6 +357,38 @@ namespace std {
     return(vectorAt<T>(materialized, index))
   }
 
+
+  // The first element's address as a `Pointer<T>` (the storage is `Pointer<uninitialized<T>>`).
+  [unsafe return<Pointer<T>>]
+  vectorElementsFrom<T>([Vector<T>] values, [i32] start) {
+    return(sliceOffset<T>(bufferReinterpret<T, uninitialized<T>>(values.data), start))
+  }
+
+  // A borrowed view of the elements: no copy. The vector must not change while the view is in use.
+  [public return<Slice<T, Read>>]
+  vectorView<T>([Vector<T>] values) {
+    vectorCheckShape<T>(values)
+    return(readSliceMake<T>(vectorElementsFrom<T>(values, 0), values.field_count()))
+  }
+
+  [public return<Slice<T, Read>>]
+  vectorSlice<T>([Vector<T>] values, [i32] start, [i32] end) {
+    vectorCheckShape<T>(values)
+    if(start < 0 || end < start || end > values.field_count()) {
+      panic(start)
+    }
+    return(readSliceMake<T>(vectorElementsFrom<T>(values, start), end - start))
+  }
+
+  [public return<Slice<T, Write>>]
+  vectorSliceMut<T>([Vector<T> mut] values, [i32] start, [i32] end) {
+    vectorCheckShape<T>(values)
+    if(start < 0 || end < start || end > values.field_count()) {
+      panic(start)
+    }
+    return(writeSliceMake<T>(vectorElementsFrom<T>(values, start), end - start))
+  }
+
   [public return<T>]
   vectorAtUnsafeRef<T>([Reference<Vector<T>>] values, [i32] index) {
     [Vector<T>] materialized{values}
@@ -418,4 +451,19 @@ namespace std {
 [public return<T>]
 /std/collections/vector/at_unsafe<T>([/std/collections/vector/Vector<T>] values, [i32] index) {
   return(/std/collections/vector/vectorAtUnsafe<T>(values, index))
+}
+
+[public return<Slice<T, Read>>]
+/std/collections/vector/view<T>([/std/collections/vector/Vector<T>] values) {
+  return(/std/collections/vector/vectorView<T>(values))
+}
+
+[public return<Slice<T, Read>>]
+/std/collections/vector/slice<T>([/std/collections/vector/Vector<T>] values, [i32] start, [i32] end) {
+  return(/std/collections/vector/vectorSlice<T>(values, start, end))
+}
+
+[public return<Slice<T, Write>>]
+/std/collections/vector/sliceMut<T>([/std/collections/vector/Vector<T> mut] values, [i32] start, [i32] end) {
+  return(/std/collections/vector/vectorSliceMut<T>(values, start, end))
 }

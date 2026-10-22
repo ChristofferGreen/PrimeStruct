@@ -38,6 +38,32 @@
 
 namespace primec {
 
+namespace {
+
+// `Slice<T, Read>` and `Slice<T, Write>` name the read and write views of the stdlib's slice module
+// (docs/spec/strings-and-views.md): the capability argument picks the struct (`ReadSlice<T>` or
+// `WriteSlice<T>`), so a read view has no write operations at all. Rewrites `name` and drops the
+// capability from `args`; leaves them alone for anything else.
+void rewriteSliceCapabilityAlias(std::string &name, std::vector<std::string> &args) {
+  const bool namesSlice = name == "Slice" || (name.size() > 6 && name.compare(name.size() - 6, 6, "/Slice") == 0);
+  if (args.size() != 2 || !namesSlice) {
+    return;
+  }
+  const std::string &capabilityText = args.back();
+  const size_t capabilitySlash = capabilityText.find_last_of('/');
+  const std::string capability =
+      capabilitySlash == std::string::npos ? capabilityText : capabilityText.substr(capabilitySlash + 1);
+  const char *viewName = capability == "Read" ? "ReadSlice"
+                         : (capability == "Write" || capability == "ReadWrite") ? "WriteSlice"
+                                                                                : nullptr;
+  if (viewName != nullptr) {
+    name.replace(name.size() - 5, 5, viewName);
+    args.pop_back();
+  }
+}
+
+} // namespace
+
 bool splitTypePackExpansionText(const std::string &input, std::string &packNameOut) {
   const std::string trimmed = trimWhitespace(input);
   if (trimmed.size() <= 3 || trimmed.compare(trimmed.size() - 3, 3, "...") != 0) {
@@ -402,6 +428,7 @@ ResolvedType resolveTypeStringImpl(std::string input,
     result.concrete = false;
     return result;
   }
+  rewriteSliceCapabilityAlias(base, args);
   std::vector<std::string> resolvedArgs;
   resolvedArgs.reserve(args.size());
   bool allConcrete = true;
@@ -452,8 +479,24 @@ ResolvedType resolveTypeStringImpl(std::string input,
             resolvedType.concrete,
         });
   };
-  std::string overloadBasePath =
-      resolveNameToPath(base, namespacePrefix, scopedImportAliasesForNamespace(namespacePrefix, ctx), ctx.sourceDefs);
+  // Resolves a generic type's base name, looking outward through the enclosing namespaces when the
+  // nearest definition of that name is not a generic one (a struct body names its own struct).
+  const auto resolveGenericTypeBasePath = [&](const std::string &name) {
+    std::string path =
+        resolveNameToPath(name, namespacePrefix, scopedImportAliasesForNamespace(namespacePrefix, ctx), ctx.sourceDefs);
+    std::string scope = namespacePrefix;
+    while (ctx.templateDefs.count(path) == 0 && ctx.genericTypeOverloads.count(path) == 0 && !scope.empty()) {
+      const size_t slash = scope.find_last_of('/');
+      scope = slash == std::string::npos || slash == 0 ? std::string{} : scope.substr(0, slash);
+      const std::string outer =
+          resolveNameToPath(name, scope, scopedImportAliasesForNamespace(scope, ctx), ctx.sourceDefs);
+      if (ctx.templateDefs.count(outer) > 0 || ctx.genericTypeOverloads.count(outer) > 0) {
+        return outer;
+      }
+    }
+    return path;
+  };
+  std::string overloadBasePath = resolveGenericTypeBasePath(base);
   if (ctx.genericTypeOverloads.count(overloadBasePath) > 0) {
     if (!selectGenericTypeOverloadPath(overloadBasePath,
                                        resolvedArgs.size(),
@@ -502,8 +545,7 @@ ResolvedType resolveTypeStringImpl(std::string input,
     recordExplicitTemplateArgFact(normalizedBase, result);
     return result;
   }
-  std::string resolvedBasePath =
-      resolveNameToPath(base, namespacePrefix, scopedImportAliasesForNamespace(namespacePrefix, ctx), ctx.sourceDefs);
+  std::string resolvedBasePath = resolveGenericTypeBasePath(base);
   if (!selectGenericTypeOverloadPath(resolvedBasePath,
                                      resolvedArgs.size(),
                                      ctx,
@@ -590,6 +632,7 @@ bool rewriteTransforms(std::vector<Transform> &transforms,
           }
         }
       } else {
+        rewriteSliceCapabilityAlias(transform.name, transform.templateArgs);
         bool allConcreteTemplateArgs = true;
         if (!resolveTemplateArgumentList(transform.templateArgs,
                                          mapping,

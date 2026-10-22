@@ -1293,6 +1293,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/language/test_u8_scalar.cpp
     tests/unit/language/test_u8_containers.cpp
     tests/unit/language/test_string_owned.cpp
+    tests/unit/language/test_slice_values.cpp
   )
   target_include_directories(PrimeStruct_u8_scalar_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
   target_link_libraries(PrimeStruct_u8_scalar_tests PRIVATE primec_embed_lib)
@@ -1300,7 +1301,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   add_test(
     NAME PrimeStruct_u8_scalar
     COMMAND $<TARGET_FILE:PrimeStruct_u8_scalar_tests>
-            "--test-suite=primestruct.language.u8_scalar,primestruct.language.u8_containers,primestruct.language.string_owned"
+            "--test-suite=primestruct.language.u8_scalar,primestruct.language.u8_containers,primestruct.language.string_owned,primestruct.language.slices"
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_u8_scalar
