@@ -145,7 +145,14 @@ bool emitInlineDefinitionCallImpl(
       import.name = callee.fullPath.size() > 1 && callee.fullPath.front() == '/' ? callee.fullPath.substr(1)
                                                                               : callee.fullPath;
       for (const Expr &param : callee.parameters) {
-        const auto kind = hostKind(extractParameterTypeNameStatic(param));
+        bool bytePointerParam = false;
+        for (const Transform &transform : param.transforms) {
+          bytePointerParam = bytePointerParam ||
+                             (transform.name == "Pointer" && transform.templateArgs.size() == 1 &&
+                              transform.templateArgs.front() == "u8");
+        }
+        const auto kind = bytePointerParam ? std::optional<IrHostValueKind>(IrHostValueKind::U64)
+                                           : hostKind(extractParameterTypeNameStatic(param));
         if (!kind.has_value()) {
           error = "host definition parameter is not a primitive: " + callee.fullPath;
           return false;

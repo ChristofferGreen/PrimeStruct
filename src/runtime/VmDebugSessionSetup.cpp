@@ -34,6 +34,7 @@ bool VmDebugSession::initFromModule(const IrModule &module,
   stack_.clear();
   heap_ = VmHeapCore{};
   stringHeap_ = std::make_shared<vm_detail::VmStringHeap>();
+  textHeap_ = std::make_shared<VmTextHeap>();
   frames_.clear();
   result_ = 0;
   pauseRequested_ = false;

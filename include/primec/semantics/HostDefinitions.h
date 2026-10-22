@@ -30,9 +30,23 @@ inline bool isEngineArgumentHostName(std::string_view name) {
   return name.rfind("__psarg_", 0) == 0;
 }
 
+// `Pointer<u8>` crosses the boundary as the u64 byte address (the string heap hands out text blocks).
+inline bool isHostBytePointerTypeText(std::string_view typeText) {
+  std::string compact;
+  for (const char c : typeText) {
+    if (c != ' ') {
+      compact.push_back(c);
+    }
+  }
+  return compact == "Pointer<u8>";
+}
+
 // Canonical host-boundary spelling ("i32", "i64", "u64", "u8", "f32", "f64", "bool", "string")
 // for a primitive type name, or nullopt when the type cannot cross the boundary.
 inline std::optional<std::string_view> canonicalHostTypeName(std::string_view typeName) {
+  if (isHostBytePointerTypeText(typeName)) {
+    return "u64";
+  }
   if (typeName == "i32" || typeName == "int") {
     return "i32";
   }

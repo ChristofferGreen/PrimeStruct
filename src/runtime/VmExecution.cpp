@@ -3,6 +3,7 @@
 #include "VmHeapHelpers.h"
 #include "VmIoHelpers.h"
 #include "primec/runtime/VmExecutionKernel.h"
+#include "primec/runtime/VmTextHeap.h"
 
 #include <exception>
 #include <string>
@@ -16,12 +17,34 @@ bool handleVmHostCall(const VmHostFunctions *hostFunctions,
                       const IrInstruction &inst,
                       std::vector<uint64_t> &stack,
                       std::string &error,
-                      VmStringHeap *heap) {
+                      VmStringHeap *heap,
+                      TextHeapContext *text) {
   if (inst.imm >= module.hostImports.size()) {
     error = "invalid host import index in IR";
     return false;
   }
   const IrHostImport &import = module.hostImports[static_cast<size_t>(inst.imm)];
+  const std::string_view textName = textHostFunctionName(import.name);
+  if (text != nullptr && !textName.empty()) {
+    const size_t textArgCount = import.parameters.size();
+    if (stack.size() < textArgCount) {
+      error = "IR stack underflow on host call " + import.name;
+      return false;
+    }
+    const size_t textBase = stack.size() - textArgCount;
+    uint64_t textResult = 0;
+    bool known = false;
+    if (!callTextHostFunction(*text->heap, *text->core, textName, stack.data() + textBase, textResult, known, error)) {
+      return false;
+    }
+    if (known) {
+      stack.resize(textBase);
+      if (import.returnKind != IrHostValueKind::Void) {
+        stack.push_back(textResult);
+      }
+      return true;
+    }
+  }
   const VmHostBinding *binding = hostFunctions != nullptr ? hostFunctions->find(import.name) : nullptr;
   if (binding == nullptr || (!binding->invoke && !binding->invokeString)) {
     error = "unbound host function: " + import.name;
@@ -175,7 +198,8 @@ public:
                       const IrInstruction &inst,
                       std::vector<uint64_t> &stack,
                       std::string &error) override {
-    return handleVmHostCall(hostFunctions_, module, inst, stack, error, &stringHeap_);
+    TextHeapContext text{&heap_, &textHeap_};
+    return handleVmHostCall(hostFunctions_, module, inst, stack, error, &stringHeap_, &text);
   }
 
 private:
@@ -185,6 +209,7 @@ private:
   const VmOutputSink *outputSink_ = nullptr;
   VmHeapCore heap_;
   VmStringHeap stringHeap_;
+  VmTextHeap textHeap_;
 };
 
 } // namespace

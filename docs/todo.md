@@ -102,10 +102,10 @@ of sync with them.
 | --- | --- | --- | --- |
 | TODO-5567 | Packed `array<u8>` | ready | bytes |
 | TODO-5538 | Slices are real borrows with shared operations | ready | slices |
-| TODO-5539 | Owned `String` with the string heap | ready | string-owned |
 | TODO-5540 | `string` as the UTF-8 text view | blocked | string-view |
 | TODO-5541 | Host functions and embedding use `String` and `string` | blocked | string-host |
 | TODO-5542 | Native and C++ parity for bytes, slices and strings | blocked | string-backends |
+| TODO-5568 | String conveniences: operators, numbers, push of code points | blocked | string-owned |
 | TODO-5536 | Small, lazily loaded bytecode for apps | ready | bytecode-startup |
 | TODO-5535 | Launch-time harness and reference Objective-C++ editor | ready | native-ui-launch |
 | TODO-5530 | Read and write whole files as String | blocked | file-text |
@@ -138,7 +138,6 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5539 (string-owned): owned `String` with the string heap
 - TODO-5567 (bytes): packed `array<u8>`
 - TODO-5538 (slices): slices are real borrows with shared operations
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
@@ -149,19 +148,18 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5539
-2. TODO-5567
-3. TODO-5538
-4. TODO-5536
-5. TODO-5535
-6. TODO-5510
-7. TODO-5524
-8. TODO-5527
+1. TODO-5567
+2. TODO-5538
+3. TODO-5536
+4. TODO-5535
+5. TODO-5510
+6. TODO-5524
+7. TODO-5527
 
 ### Priority Lanes
 
-- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5567, TODO-5538, TODO-5539, TODO-5540, TODO-5530, TODO-5541, TODO-5542
-- Goal, PrimeScroll compiled to native code through the C++ emitter (host calls with scalar and static text are done; next the string chain, because the editor passes host-returned text): TODO-5567, TODO-5538, TODO-5539, TODO-5540, TODO-5541, TODO-5542, TODO-5564, TODO-5559, TODO-5560, TODO-5561
+- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5567, TODO-5538, TODO-5540, TODO-5568, TODO-5530, TODO-5541, TODO-5542
+- Goal, PrimeScroll compiled to native code through the C++ emitter (host calls with scalar and static text are done; next the string chain, because the editor passes host-returned text): TODO-5567, TODO-5538, TODO-5540, TODO-5541, TODO-5542, TODO-5564, TODO-5559, TODO-5560, TODO-5561
 - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Lifecycle (docs/spec/value-lifecycle.md): TODO-5527
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
@@ -265,22 +263,22 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - existing `Slice<T, Read>` parameter examples in docs/CodeExamples.md still run; full release gate green
   - stop_rule: slices over `array` and `Vector`; strings come later.
 
-- [ ] TODO-5539: Owned `String` with the string heap
+- [ ] TODO-5568: String conveniences: operators, numbers, push of code points
   - owner: ai
-  - status: ready
-  - created_at: 2026-10-08
-  - phase: Strings and slices (docs/spec/strings-and-views.md)
+  - status: blocked
+  - blocked_on: TODO-5540
+  - created_at: 2026-10-22
+  - phase: Strings and slices (docs/spec/strings-and-views.md), follow-up to the owned `String`
   - parallel_track: string-owned
-  - scope: Add `String` (docs/spec/strings-and-views.md, `String`: owned text): inline storage up to 22 bytes, the size-class string heap in 256 KiB chunks with large blocks over 64 KiB, lifecycle (deep copy, move, destroy), growth and `reserve`/`shrinkToFit`, `stringMemory()`/`setStringMemoryLimit`/`tryReserve`, NUL termination, and the owned-text API (append, `+`, insert, erase, replace, substr, `String.from`).
+  - scope: The parts of the owned `String` API that need the `string` view: `+` and `+=` with `string` and `String`, `push(u32 codePoint)` with UTF-8 encoding, `String.from(x)` for integers, floats and `bool`, `String.fromUtf8(bytes)` returning `Result<String, TextError>`, `tryReserve` returning `Result<void, TextError>`, the `String.from(text)` spelling for `stringFrom`, `at(i)`/`[i]` on `String`, and the implicit borrow of a `String` where a `string` is expected. Per-thread string heaps and scoped arenas are separate later work.
   - acceptance:
-    - VM tests for every operation, inline-to-heap transitions, heap reuse (a loop that builds and drops strings keeps `stringMemory().chunks` constant), large blocks returned on free, the limit fault
-    - full release gate green
-  - stop_rule: owned strings on the VM; the `string` view and other backends are separate leaves.
+    - VM tests for each operation, including invalid UTF-8 and the borrow rules; full release gate green
+  - stop_rule: the owned-text conveniences on the VM; native and C++ are TODO-5542.
 
 - [ ] TODO-5540: `string` as the UTF-8 text view
   - owner: ai
   - status: blocked
-  - blocked_on: TODO-5538, TODO-5539
+  - blocked_on: TODO-5538
   - created_at: 2026-10-08
   - phase: Strings and slices (docs/spec/strings-and-views.md)
   - parallel_track: string-view
@@ -293,7 +291,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 - [ ] TODO-5541: Host functions and embedding use `String` and `string`
   - owner: ai
   - status: blocked
-  - blocked_on: TODO-5539, TODO-5540
+  - blocked_on: TODO-5540
   - created_at: 2026-10-08
   - phase: Strings and slices (docs/spec/strings-and-views.md)
   - parallel_track: string-host
@@ -306,13 +304,13 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 - [ ] TODO-5542: Native and C++ parity for bytes, slices and strings
   - owner: ai
   - status: blocked
-  - blocked_on: TODO-5539, TODO-5540
+  - blocked_on: TODO-5540
   - created_at: 2026-10-08
   - phase: Strings and slices (docs/spec/strings-and-views.md)
   - parallel_track: string-backends
   - scope: Run `String`, `string` and the string heap on the native backend and the C++ emitter (replacing `std::string_view` for `string`), so the string programs behave identically on VM, native and C++; remove the "dynamic strings are VM-only" limits from docs/spec/vm-design.md and docs/spec/backend-type-support.md.
   - acceptance:
-    - the string tests of TODO-5539 and TODO-5540 run as matrix cases on VM, native and C++ with identical output and `stringMemory()` figures
+    - the string tests run as matrix cases on VM, native and C++ with identical output and `stringMemory()` figures
     - full release gate green
   - stop_rule: backend parity only; split per backend if large.
 
@@ -344,7 +342,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 - [ ] TODO-5530: Read and write whole files as String
   - owner: ai
   - status: blocked
-  - blocked_on: TODO-5539, TODO-5540
+  - blocked_on: TODO-5540
   - created_at: 2026-10-08
   - phase: Strings and slices (docs/spec/strings-and-views.md)
   - parallel_track: file-text

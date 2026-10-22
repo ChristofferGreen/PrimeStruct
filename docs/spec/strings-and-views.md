@@ -2,8 +2,9 @@
 
 > Part of the [PrimeStruct specification index](../PrimeStruct.md). Classification: **design direction**.
 
-Status: designed 2026-10-08, not implemented. The implementation slices are TODO-5537 to TODO-5542 (and TODO-5530 for
-whole-file text); until they land, the current behavior is the one in [VM Design](vm-design.md) and
+Status: designed 2026-10-08. The bytes, `u8`, packed `vector<u8>` and the owned `String` with its string heap are
+implemented on the VM (TODO-5537, TODO-5565, TODO-5566, TODO-5539); slices, the `string` view, host strings, whole-file
+text and native/C++ parity are still open (TODO-5538, TODO-5540, TODO-5530, TODO-5541, TODO-5542). Until those land, the current behavior is the one in [VM Design](vm-design.md) and
 [Backend Type Support](backend-type-support.md). This part refines the view model of
 [Pointers and References](pointers-and-references.md) and does not replace it.
 
@@ -148,7 +149,10 @@ Every operation keeps the text valid UTF-8.
 
 `String` memory is predictable and the same on every backend.
 
-- **Inline:** text up to 22 bytes is stored inside the `String` value and allocates nothing.
+- **No inline storage.** An empty `String` has no storage and allocates nothing; any text, even one byte, takes a
+  block from the string heap (the smallest is 32 bytes, 31 for text). The first design stored up to 22 bytes inside the
+  value, but a VM value is a run of 16-byte slots, and bytes inside slots cannot be addressed or borrowed as text, so
+  inline text would break `string` views and `Slice<u8>` on the VM.
 - **String heap:** longer text comes from a heap of 256 KiB chunks divided into size classes, four per doubling from 32
   bytes to 64 KiB, so at most about 25% of a block is unused. A freed block goes back on its class's free list and is
   reused. A chunk whose blocks are all free is returned to the system, except one kept for reuse. The first chunk is
@@ -164,6 +168,25 @@ Every operation keeps the text valid UTF-8.
   it came from.
 - **Later:** scoped arenas for batch work (`withStringArena { ... }`), whose `String`s are freed together and cannot
   escape the block.
+
+### Current surface (VM)
+
+Until the `string` view and slices land (TODO-5540, TODO-5538), `String` is a stdlib struct in
+`stdlib/std/text/string.prime` (`import /std/text/*`) over the string heap, whose block addresses are byte-region
+addresses of the VM heap. The VM answers the `__pstext_*` host functions itself (they need no binding); `Pointer<u8>`
+is a valid `[host]` parameter and result type and crosses as the block's `u64` address.
+
+- Making one: `String{}`, `/std/text/stringFrom(text)`, `/std/text/stringWithCapacity(n)`. A binding or argument
+  copies through the type's `Copy` helper; a `[String copy]` parameter takes its own copy.
+- Methods: `count()`, `empty()`, `capacity()`, `byteAt(i)` (a fault outside the text), `equalsText(text)`,
+  `terminator()` (always 0), `reserve(n)`, `tryReserve(n) -> bool`, `shrinkToFit()`, `clear()`, `pushByte(u8)`,
+  `append(text)`, `appendString(other)`, `insert(at, text)`, `erase(start, end)`, `replace(start, end, text)`,
+  `substr(start, end) -> String`.
+- Heap: `/std/text/stringHeapChunks()`, `stringHeapBytesInUse()`, `stringHeapBytesFree()`,
+  `stringHeapLargeBlocks()`, `stringHeapLargeBytes()` and `setStringMemoryLimit(bytes)`. `text` parameters are the
+  current literal-backed `string`, read byte by byte; they become real views with TODO-5540.
+- Not yet: `+` and `+=`, `push(u32)`, `String.from(number)`, `fromUtf8`, the `Result`-returning `tryReserve`, per-thread
+  heaps and arenas (TODO-5568).
 
 ## Host functions and embedding
 
@@ -186,11 +209,11 @@ Every operation keeps the text valid UTF-8.
 
 | TODO | Slice |
 | --- | --- |
-| TODO-5537 | IR byte opcodes (`LoadU8`/`StoreU8`/`HeapAllocBytes`/`ZextU8`) and VM byte regions |
-| TODO-5565 | the `u8` scalar type |
-| TODO-5566 | packed byte containers (`array<u8>`, `Vector<u8>`, `Buffer<u8>`) |
+| TODO-5537 (done) | IR byte opcodes (`LoadU8`/`StoreU8`/`HeapAllocBytes`/`ZextU8`) and VM byte regions |
+| TODO-5565 (done) | the `u8` scalar type |
+| TODO-5566 (done), TODO-5567 | packed byte containers: `vector<u8>` and `Pointer<u8>` buffers, then `array<u8>` |
 | TODO-5538 | `slice(...)` as a real borrow, the return-from-parameter rule, and the shared `Slice<T>` operations on `array` and `Vector` |
-| TODO-5539 | `String`: value, inline storage, lifecycle, the string heap and the owned-text API |
+| TODO-5539 (done) | `String`: value, lifecycle, the string heap and the owned-text API |
 | TODO-5540 | `string` as the UTF-8 view: static literals, conversions, text operations, field rule |
 | TODO-5530 | Read and write whole files as `String` |
 | TODO-5541 | Host functions and the embedding API use `String`/`string`; retire VM run-time string indices |

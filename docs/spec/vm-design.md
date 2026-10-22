@@ -46,6 +46,11 @@
   generation wraps after 32,768 reuses of the same slot. Slots never allocated before carry generation 0. The VM, the
   debugger, the native execution tier and the IR-to-C++ and optexe runtimes share one implementation
   (`include/primec/runtime/VmHeapCore.h`), so all of them produce the same addresses.
+- **String heap (TODO-5539):** the VM answers the host functions named `__pstext_*` itself, so a program needs no binding for
+  them. They manage text blocks over byte regions: 256 KiB chunks of equal blocks in size classes (four per doubling from
+  32 bytes to 64 KiB), a byte region of its own for text over 64 KiB, an optional byte limit (the runtime fault
+  `string memory limit exceeded`) and statistics. A chunk whose blocks are all free is returned except one kept for
+  reuse. `Pointer<u8>` is a valid `[host]` parameter and result type (a `u64` byte address in the slot).
 - **Byte regions (PSIR v28):** `HeapAllocBytes` pops a byte count and pushes the address of a zeroed region of that many
   bytes (0 for a count of 0); `LoadU8` pops an address and pushes the byte there, zero-extended; `StoreU8` pops a value
   and then an address, stores the value's low 8 bits and pushes the stored byte (as `StoreIndirect` pushes its value);

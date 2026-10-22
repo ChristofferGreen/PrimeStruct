@@ -12,6 +12,7 @@
 #include "primec/ir/Ir.h"
 #include "primec/runtime/VmExecutionKernel.h"
 #include "primec/runtime/VmHeapCore.h"
+#include "primec/runtime/VmTextHeap.h"
 #include "primec/runtime/VmHost.h"
 
 namespace primec {
@@ -272,6 +273,7 @@ private:
   std::optional<VmHostFunctions> hostFunctions_;
   // Run-time strings of this session (see VmStringHeap.h); reset on start().
   std::shared_ptr<vm_detail::VmStringHeap> stringHeap_;
+  std::shared_ptr<VmTextHeap> textHeap_;
   VmDebugSessionState state_ = VmDebugSessionState::Idle;
   uint64_t result_ = 0;
   bool pauseRequested_ = false;

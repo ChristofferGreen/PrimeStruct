@@ -17,9 +17,10 @@ public:
                          const std::vector<std::string_view> *args,
                          const VmHostFunctions *hostFunctions,
                          VmHeapCore &heap,
-                         vm_detail::VmStringHeap &stringHeap)
+                         vm_detail::VmStringHeap &stringHeap,
+                         VmTextHeap &textHeap)
       : argCount_(argCount), args_(args), hostFunctions_(hostFunctions), heap_(heap),
-        stringHeap_(stringHeap) {
+        stringHeap_(stringHeap), textHeap_(textHeap) {
   }
 
   const vm_detail::VmStringHeap *stringHeap() const override { return &stringHeap_; }
@@ -71,7 +72,8 @@ public:
                       const IrInstruction &inst,
                       std::vector<uint64_t> &stack,
                       std::string &error) override {
-    return vm_detail::handleVmHostCall(hostFunctions_, module, inst, stack, error, &stringHeap_);
+    vm_detail::TextHeapContext text{&heap_, &textHeap_};
+    return vm_detail::handleVmHostCall(hostFunctions_, module, inst, stack, error, &stringHeap_, &text);
   }
 
 private:
@@ -80,6 +82,7 @@ private:
   const VmHostFunctions *hostFunctions_ = nullptr;
   VmHeapCore &heap_;
   vm_detail::VmStringHeap &stringHeap_;
+  VmTextHeap &textHeap_;
 };
 
 } // namespace
@@ -147,7 +150,7 @@ VmDebugSession::StepOutcome VmDebugSession::stepInstruction(std::string &error) 
   emitInstructionHook(hooks_.beforeInstruction);
 
   DebugSessionKernelHost host(
-      argCount_, argvViews_, hostFunctions_ ? &*hostFunctions_ : nullptr, heap_, *stringHeap_);
+      argCount_, argvViews_, hostFunctions_ ? &*hostFunctions_ : nullptr, heap_, *stringHeap_, *textHeap_);
   vm_detail::VmKernelStepEvent event;
   switch (vm_detail::stepVmKernel(*module_, host, stack_, frames_, localCounts_, result_, event, error)) {
     case vm_detail::VmKernelStepOutcome::Fault:

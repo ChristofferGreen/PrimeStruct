@@ -219,7 +219,14 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
       if (!hasExplicitReturn) {
         return failHost("host definition requires an explicit return type");
       }
-      switch (definitionContext.returnKind) {
+      bool bytePointerReturn = false;
+      for (const auto &transform : def.transforms) {
+        if (transform.name == "return" && transform.templateArgs.size() == 1 &&
+            isHostBytePointerTypeText(transform.templateArgs.front())) {
+          bytePointerReturn = true;
+        }
+      }
+      switch (bytePointerReturn ? ReturnKind::UInt64 : definitionContext.returnKind) {
         case ReturnKind::Int:
         case ReturnKind::Int64:
         case ReturnKind::UInt64:
@@ -237,9 +244,12 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
         if (param.defaultExpr != nullptr) {
           return failHost("host definition parameter cannot have a default: " + param.name);
         }
+        const bool bytePointerParam =
+            param.binding.typeName == "Pointer" && param.binding.typeTemplateArg == "u8";
         if (param.binding.isMutable ||
-            !canonicalHostTypeName(param.binding.typeName).has_value() ||
-            !param.binding.typeTemplateArg.empty()) {
+            (!bytePointerParam &&
+             (!canonicalHostTypeName(param.binding.typeName).has_value() ||
+              !param.binding.typeTemplateArg.empty()))) {
           return failHost("host definition parameter must be i32, i64, u64, f32, f64, bool, or string: " + param.name);
         }
       }

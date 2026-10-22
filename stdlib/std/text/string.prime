@@ -1,0 +1,383 @@
+// Owned UTF-8 text (docs/spec/strings-and-views.md, `String`). The bytes live in blocks of the VM's
+// string heap, which the `__pstext_*` host functions below reach (the VM answers them itself; they
+// need no binding). A block always holds one byte more than the text, so the text is NUL terminated,
+// and `capacity()` is the block size less that byte.
+
+import /std/panic/*
+
+namespace std {
+  namespace text {
+  [host return<Pointer<u8>>]
+  __pstext_alloc([u64] size) {
+  }
+
+  [host return<Pointer<u8>>]
+  __pstext_try_alloc([u64] size) {
+  }
+
+  [host return<void>]
+  __pstext_free([Pointer<u8>] block) {
+  }
+
+  [host return<u64>]
+  __pstext_capacity([Pointer<u8>] block) {
+  }
+
+  [host return<u64>]
+  __pstext_stat([u64] which) {
+  }
+
+  [host return<void>]
+  __pstext_set_limit([u64] bytes) {
+  }
+
+  [unsafe return<void>]
+  textStore([Pointer<u8> mut] block, [i32] index, [u8] value) {
+    [Pointer<u8> mut] slot{/std/intrinsics/memory/at_unsafe(block, index)}
+    *slot = value
+  }
+
+  [unsafe return<u8>]
+  textLoad([Pointer<u8>] block, [i32] index) {
+    return(*(/std/intrinsics/memory/at_unsafe(block, index)))
+  }
+
+  // The usable bytes of a block for text (the block less its NUL byte).
+  [return<i32>]
+  textBlockCapacity([Pointer<u8>] block) {
+    return(convert<i32>(__pstext_capacity(block)) - 1i32)
+  }
+
+  [public struct]
+  String() {
+    [public i32 mut] fieldLength{0i32}
+    [public i32 mut] fieldCapacity{0i32}
+    [public Pointer<u8> mut] data{__pstext_alloc(0u64)}
+    [bool mut] ownsData{false}
+
+    [return<i32>]
+    count() {
+      return(this.fieldLength)
+    }
+
+    [return<bool>]
+    empty() {
+      return(this.fieldLength == 0i32)
+    }
+
+    [return<i32>]
+    capacity() {
+      return(this.fieldCapacity)
+    }
+
+    [return<u8>]
+    byteAt([i32] index) {
+      if(index < 0i32 || index >= this.fieldLength) {
+        panic(index)
+      }
+      return(textLoad(this.data, index))
+    }
+
+    [return<bool>]
+    equalsText([string] text) {
+      if(text.count() != this.fieldLength) {
+        return(false)
+      }
+      for([i32 mut] i{0i32}, i < this.fieldLength, i++) {
+        if(convert<i32>(textLoad(this.data, i)) != at(text, i)) {
+          return(false)
+        }
+      }
+      return(true)
+    }
+
+    // Moves the text into a block that holds at least `capacityWanted` bytes (and the NUL). Text
+    // that already fits does not move.
+    [mut effects(heap_alloc)]
+    reserve([i32] capacityWanted) {
+      if(capacityWanted < 0i32 || capacityWanted > 1073741823i32) {
+        panic(capacityWanted)
+      }
+      if(capacityWanted > this.fieldCapacity) {
+        this.moveToBlock(capacityWanted)
+      }
+    }
+
+    // Moves the text to the smallest block that holds it.
+    [mut effects(heap_alloc)]
+    shrinkToFit() {
+      if(this.ownsData) {
+        if(this.fieldLength == 0i32) {
+          __pstext_free(this.data)
+          this.data = __pstext_alloc(0u64)
+          this.fieldCapacity = 0i32
+          this.ownsData = false
+        } else {
+          [Pointer<u8>] smaller{__pstext_alloc(convert<u64>(this.fieldLength) + 1u64)}
+          if(textBlockCapacity(smaller) < this.fieldCapacity) {
+            for([i32 mut] i{0i32}, i < this.fieldLength, i++) {
+              textStore(smaller, i, textLoad(this.data, i))
+            }
+            __pstext_free(this.data)
+            this.data = smaller
+            this.fieldCapacity = textBlockCapacity(smaller)
+          } else {
+            __pstext_free(smaller)
+          }
+        }
+      }
+    }
+
+    [mut effects(heap_alloc)]
+    moveToBlock([i32] capacityWanted) {
+      this.adoptBlock(__pstext_alloc(convert<u64>(capacityWanted) + 1u64))
+    }
+
+    // Copies the text into `block` (a fresh text block) and frees the block it held.
+    [mut effects(heap_alloc)]
+    adoptBlock([Pointer<u8>] block) {
+      for([i32 mut] i{0i32}, i < this.fieldLength, i++) {
+        textStore(block, i, textLoad(this.data, i))
+      }
+      if(this.ownsData) {
+        __pstext_free(this.data)
+      }
+      this.data = block
+      this.fieldCapacity = textBlockCapacity(block)
+      this.ownsData = true
+    }
+
+    // Capacity for `extra` more bytes: doubling, rounded up to the block size.
+    [mut effects(heap_alloc)]
+    growFor([i32] extra) {
+      if(extra < 0i32 || extra > 1073741823i32 - this.fieldLength) {
+        panic(extra)
+      }
+      [i32] needed{this.fieldLength + extra}
+      if(needed > this.fieldCapacity) {
+        [i32 mut] wanted{this.fieldCapacity * 2i32}
+        if(wanted < needed) {
+          wanted = needed
+        }
+        if(wanted > 1073741823i32) {
+          wanted = 1073741823i32
+        }
+        this.moveToBlock(wanted)
+      }
+    }
+
+    // Like reserve, but returns false instead of faulting when the string memory limit (or the
+    // heap) cannot supply the block; the string is unchanged then.
+    [mut effects(heap_alloc), return<bool>]
+    tryReserve([i32] capacityWanted) {
+      if(capacityWanted < 0i32 || capacityWanted > 1073741823i32) {
+        return(false)
+      }
+      if(capacityWanted <= this.fieldCapacity) {
+        return(true)
+      }
+      [Pointer<u8>] block{__pstext_try_alloc(convert<u64>(capacityWanted) + 1u64)}
+      if(__pstext_capacity(block) == 0u64) {
+        return(false)
+      }
+      this.adoptBlock(block)
+      return(true)
+    }
+
+    // The byte after the text: always 0 (an empty string with no storage reports 0 too).
+    [return<u8>]
+    terminator() {
+      if(this.ownsData) {
+        return(textLoad(this.data, this.fieldLength))
+      }
+      return(0u8)
+    }
+
+    [mut]
+    clear() {
+      this.fieldLength = 0i32
+      if(this.ownsData) {
+        textStore(this.data, 0i32, 0u8)
+      }
+    }
+
+    [mut effects(heap_alloc)]
+    pushByte([u8] value) {
+      this.growFor(1i32)
+      textStore(this.data, this.fieldLength, value)
+      this.fieldLength = this.fieldLength + 1i32
+      textStore(this.data, this.fieldLength, 0u8)
+    }
+
+    [mut effects(heap_alloc)]
+    append([string] text) {
+      [i32] extra{text.count()}
+      if(extra > 0i32) {
+        this.growFor(extra)
+        for([i32 mut] i{0i32}, i < extra, i++) {
+          textStore(this.data, this.fieldLength + i, convert<u8>(at(text, i)))
+        }
+        this.fieldLength = this.fieldLength + extra
+        textStore(this.data, this.fieldLength, 0u8)
+      }
+    }
+
+    [mut effects(heap_alloc)]
+    appendString([Reference<Self>] other) {
+      [i32] extra{other.fieldLength}
+      if(extra > 0i32) {
+        this.growFor(extra)
+        for([i32 mut] i{0i32}, i < extra, i++) {
+          textStore(this.data, this.fieldLength + i, textLoad(other.data, i))
+        }
+        this.fieldLength = this.fieldLength + extra
+        textStore(this.data, this.fieldLength, 0u8)
+      }
+    }
+
+    // Replaces the bytes [start, end) with `text`.
+    [mut effects(heap_alloc)]
+    replace([i32] start, [i32] end, [string] text) {
+      if(start < 0i32 || end < start || end > this.fieldLength) {
+        panic(start)
+      }
+      [i32] inserted{text.count()}
+      [i32] removed{end - start}
+      [i32] newLength{this.fieldLength - removed + inserted}
+      if(newLength > this.fieldCapacity) {
+        this.growFor(newLength - this.fieldLength)
+      }
+      [i32] tailLength{this.fieldLength - end}
+      if(inserted > removed) {
+        for([i32 mut] i{tailLength}, i > 0i32, i--) {
+          textStore(this.data, start + inserted + i - 1i32, textLoad(this.data, end + i - 1i32))
+        }
+      }
+      if(inserted < removed) {
+        for([i32 mut] i{0i32}, i < tailLength, i++) {
+          textStore(this.data, start + inserted + i, textLoad(this.data, end + i))
+        }
+      }
+      for([i32 mut] i{0i32}, i < inserted, i++) {
+        textStore(this.data, start + i, convert<u8>(at(text, i)))
+      }
+      this.fieldLength = newLength
+      if(this.ownsData) {
+        textStore(this.data, newLength, 0u8)
+      }
+    }
+
+    [mut effects(heap_alloc)]
+    insert([i32] position, [string] text) {
+      this.replace(position, position, text)
+    }
+
+    [mut effects(heap_alloc)]
+    erase([i32] start, [i32] end) {
+      this.replace(start, end, "")
+    }
+
+    // A copy of the bytes [start, end).
+    [return<String> effects(heap_alloc)]
+    substr([i32] start, [i32] end) {
+      if(start < 0i32 || end < start || end > this.fieldLength) {
+        panic(start)
+      }
+      [String mut] out{String{}}
+      [i32] size{end - start}
+      if(size > 0i32) {
+        out.reserve(size)
+        for([i32 mut] i{0i32}, i < size, i++) {
+          textStore(out.data, i, textLoad(this.data, start + i))
+        }
+        out.fieldLength = size
+        textStore(out.data, size, 0u8)
+      }
+      return(out)
+    }
+
+    [mut effects(heap_alloc)]
+    Copy([Reference<Self>] other) {
+      [i32] size{other.fieldLength}
+      this.fieldLength = size
+      this.fieldCapacity = 0i32
+      this.data = __pstext_alloc(0u64)
+      this.ownsData = false
+      if(size > 0i32) {
+        [Pointer<u8>] block{__pstext_alloc(convert<u64>(size) + 1u64)}
+        for([i32 mut] i{0i32}, i < size, i++) {
+          textStore(block, i, textLoad(other.data, i))
+        }
+        this.data = block
+        this.fieldCapacity = textBlockCapacity(block)
+        this.ownsData = true
+      }
+    }
+
+    [mut]
+    Move([Reference<Self>] other) {
+      this.fieldLength = other.fieldLength
+      this.fieldCapacity = other.fieldCapacity
+      this.data = other.data
+      this.ownsData = other.ownsData
+      other.ownsData = false
+    }
+
+    [mut effects(heap_alloc)]
+    Destroy() {
+      if(this.ownsData) {
+        __pstext_free(this.data)
+        this.ownsData = false
+        this.fieldLength = 0i32
+        this.fieldCapacity = 0i32
+      }
+    }
+  }
+
+  // String.from for text: a new String holding a copy of `text`.
+  [public effects(heap_alloc), return<String>]
+  stringFrom([string] text) {
+    [String mut] out{String{}}
+    out.append(text)
+    return(out)
+  }
+
+  [public effects(heap_alloc), return<String>]
+  stringWithCapacity([i32] capacityWanted) {
+    [String mut] out{String{}}
+    out.reserve(capacityWanted)
+    return(out)
+  }
+
+  // Memory statistics of the string heap.
+  [public return<i32>]
+  stringHeapChunks() {
+    return(convert<i32>(__pstext_stat(0u64)))
+  }
+
+  [public return<u64>]
+  stringHeapBytesInUse() {
+    return(__pstext_stat(1u64))
+  }
+
+  [public return<u64>]
+  stringHeapBytesFree() {
+    return(__pstext_stat(2u64))
+  }
+
+  [public return<i32>]
+  stringHeapLargeBlocks() {
+    return(convert<i32>(__pstext_stat(3u64)))
+  }
+
+  [public return<u64>]
+  stringHeapLargeBytes() {
+    return(__pstext_stat(4u64))
+  }
+
+  [public return<void>]
+  setStringMemoryLimit([u64] bytes) {
+    __pstext_set_limit(bytes)
+  }
+  }
+}

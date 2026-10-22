@@ -1,5 +1,7 @@
 #include "primec/runtime/VmHost.h"
 
+#include "primec/runtime/VmTextHeap.h"
+
 #include <utility>
 
 namespace primec {
@@ -54,6 +56,9 @@ const VmHostBinding *VmHostFunctions::find(std::string_view name) const {
 
 bool VmHostFunctions::verify(const IrModule &module, std::string &error) const {
   for (const IrHostImport &import : module.hostImports) {
+    if (!textHostFunctionName(import.name).empty()) {
+      continue;  // answered by the VM itself (the string heap)
+    }
     const VmHostBinding *binding = find(import.name);
     if (binding == nullptr || (!binding->invoke && !binding->invokeString)) {
       error = "unbound host function: " + import.name + " " + describeSignature(import.parameters, import.returnKind);

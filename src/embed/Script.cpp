@@ -93,7 +93,8 @@ IrHostValueKind toIrKind(HostType type) {
 }
 
 bool isEngineGeneratedImport(const std::string &name) {
-  return name.rfind(detail::ExportArgPrefix, 0) == 0 || name.rfind(detail::ExportResultPrefix, 0) == 0;
+  return name.rfind(detail::ExportArgPrefix, 0) == 0 || name.rfind(detail::ExportResultPrefix, 0) == 0 ||
+         !textHostFunctionName(name).empty();
 }
 
 VmHostFunctions toVmHostFunctions(const HostBindings &bindings) {
