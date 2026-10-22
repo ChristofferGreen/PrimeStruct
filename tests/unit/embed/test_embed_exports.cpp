@@ -298,17 +298,19 @@ TEST_CASE("exports work from several threads on one script") {
 
 namespace {
 const char *StringLibrary = R"(
+import /std/text/*
+
 [return<int>]
-count_chars([string] text) {
+count_chars([String] text) {
   return(text.count())
 }
 
 [host return<void>]
-host_say([string] text) {
+host_say([String] text) {
 }
 
 [return<void>]
-speak([string] text, [i32] times) {
+speak([String] text, [i32] times) {
   [mut] i{0i32}
   while(i < times) {
     host_say(text)
@@ -317,7 +319,7 @@ speak([string] text, [i32] times) {
 }
 
 [return<int>]
-mixed([i32] a, [string] left, [f64] scale, [string] right) {
+mixed([i32] a, [String] left, [f64] scale, [String] right) {
   return(a + left.count() * 10i32 + right.count() * 100i32 + convert<i32>(scale))
 }
 
@@ -354,7 +356,7 @@ TEST_CASE("exports accept string arguments of every C++ string type") {
 TEST_CASE("an exported string argument can be forwarded to a host function") {
   auto script = compileStringLibrary();
   std::vector<std::string> said;
-  script.bind("host_say", [&said](std::string_view text) { said.emplace_back(text); });
+  script.bind("host_say", [&said](primec::embed::HostTextView text) { said.emplace_back(text.value); });
   const auto result = script.call<void>("speak", "hi there", 3);
   REQUIRE_MESSAGE(result.ok, result.diagnostics);
   CHECK(said == std::vector<std::string>{"hi there", "hi there", "hi there"});
@@ -366,11 +368,12 @@ TEST_CASE("an exported string argument can be forwarded to a host function") {
   CHECK(unbound.diagnostics.find("unbound host function: host_say") != std::string::npos);
 }
 
-TEST_CASE("exports handle empty, binary, unicode and very long strings") {
+TEST_CASE("exports handle empty, unicode and very long strings, and text ends at a NUL") {
   const auto script = compileStringLibrary();
   CHECK(script.call<int32_t>("count_chars", "").value == 0);
+  // Text crosses the boundary NUL-terminated (a C string), so a NUL ends it.
   const std::string withNul("a\0b\0", 4);
-  CHECK(script.call<int32_t>("count_chars", withNul).value == 4);
+  CHECK(script.call<int32_t>("count_chars", withNul).value == 1);
   CHECK(script.call<int32_t>("count_chars", "héllo").value == 6);  // UTF-8 bytes
   const std::string big(200000, 'x');
   const auto result = script.call<int32_t>("count_chars", big);
@@ -451,28 +454,30 @@ TEST_CASE("the original module is untouched by string calls") {
 
 namespace {
 const char *StringResultLibrary = R"(
-[host return<string>]
+import /std/text/*
+
+[host return<String>]
 host_greeting([i32] n) {
 }
 
-[return<string>]
-echo([string] text) {
+[return<String> effects(heap_alloc)]
+echo([String copy] text) {
   return(text)
 }
 
-[return<string>]
+[return<String>]
 greet([i32] n) {
   return(host_greeting(n))
 }
 
-[return<string>]
+[return<String> effects(heap_alloc)]
 literal() {
-  return("fixed")
+  return(stringFrom("fixed"))
 }
 
 [return<int>]
-first_byte([string] text) {
-  return(convert<i32>(text[0i32]))
+first_byte([String] text) {
+  return(convert<i32>(text.byteAt(0i32)))
 }
 
 [return<int>]
@@ -514,7 +519,7 @@ TEST_CASE("string results handle empty, binary, unicode and large text") {
   const auto script = compileStringResultLibrary();
   CHECK(script.call<std::string>("echo", "").value.empty());
   const std::string withNul("a\0b\0", 4);
-  CHECK(script.call<std::string>("echo", withNul).value == withNul);
+  CHECK(script.call<std::string>("echo", withNul).value == "a");  // a NUL ends the text
   CHECK(script.call<std::string>("echo", "héllo").value == "héllo");
   const std::string big(300000, 'y');
   const auto result = script.call<std::string>("echo", big);
@@ -522,7 +527,7 @@ TEST_CASE("string results handle empty, binary, unicode and large text") {
   CHECK(result.value == big);
 }
 
-TEST_CASE("host functions can return dynamic strings to the script") {
+TEST_CASE("host functions return text to the script as a String") {
   auto script = compileStringResultLibrary();
   script.bind("host_greeting", [](int32_t n) { return std::string("hello #") + std::to_string(n); });
   const auto result = script.call<std::string>("greet", 7);

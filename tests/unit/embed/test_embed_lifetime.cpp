@@ -65,12 +65,14 @@ TEST_CASE("repeated exported calls with host bindings and strings do not grow me
   ScriptEngine engine;
   engine.exportFunction<int32_t(std::string_view, int32_t)>("measure");
   auto script = engine.compileSource("/lifetime_call.prime", R"(
+import /std/text/*
+
 [host return<int>]
 host_double([i32] value) {
 }
 
 [return<int>]
-measure([string] text, [i32] extra) {
+measure([String] text, [i32] extra) {
   return(host_double(text.count()) + extra)
 }
 

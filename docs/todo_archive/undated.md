@@ -76,3 +76,14 @@
   - acceptance:
     - text arguments and results, accented text and empty text agree on the VM and `--emit=optexe`; a loop of 10000 host text calls (a String argument and a String result each) keeps the string heap bytes and chunk count constant on the compiled program; full release gate green
   - stop_rule: tests of the host text boundary in the optimized C++ emitters.
+
+- [x] TODO-5573: Embedding text results and exports use `String`
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-22
+  - phase: Strings and slices (docs/spec/strings-and-views.md)
+  - parallel_track: string-host
+  - scope: Every embedding producer of VM run-time strings now uses `String`. Exported functions declare `[String]` parameters and a `String` result: the generated wrapper fetches each text argument through the VM-answered `__psarg_text` (a Text-result host function giving a fresh string-heap block) and reports a text result through `__psret_text` (a Text parameter), while the C++ `call<std::string>(..., "text")` surface is unchanged. A host callable returning `std::string`, `std::string_view` or `const char *` binds as a `Text` result (the script declares `return<String>`); `[host return<string>]` is now a compile error ("host definition return type must be ..."); `string` host parameters carry module text only. Text crosses NUL-terminated, so a NUL byte ends it (the tests for NUL-containing text now expect that). Lowering fixes found on the way: a user function's bare `[String]` parameter now resolves to `/std/text/String` for the argument match and the struct layout (`isStdTextStructAliasMatch`, the `String` fallback in the parameter info builder). The embed bundle fixture was regenerated (it now carries the `String` code).
+  - acceptance:
+    - the embed export, host, lifetime, runtime-only and bundle tests pass with `String` script signatures; no embed path creates a VM run-time string; the simple C++ emitters' host test checks the new compile error; full release gate green
+  - stop_rule: the embedding API and its tests; the VM string index is removed by TODO-5572.

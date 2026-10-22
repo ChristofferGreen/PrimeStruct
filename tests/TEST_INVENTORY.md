@@ -63,7 +63,7 @@ Total: 9919 test cases across 565 files.
 - host calls compiled by the C++ emitters match the VM
 - the C++ sources declare host functions with C linkage and call them directly
 - a program that is never given its host functions does not link
-- host functions that return a string view are refused and point at String
+- a host function cannot return a string view, and the simple emitters name optexe for String
 - only host imports the program reaches are declared
 - the native backend still rejects host calls
 
@@ -4291,7 +4291,7 @@ Total: 9919 test cases across 565 files.
 - exports work from several threads on one script
 - exports accept string arguments of every C++ string type
 - an exported string argument can be forwarded to a host function
-- exports handle empty, binary, unicode and very long strings
+- exports handle empty, unicode and very long strings, and text ends at a NUL
 - exports mix string and numeric arguments
 - exports with strings are repeatable and do not retain earlier arguments
 - exports reject a string where a number is declared and the reverse
@@ -4301,7 +4301,7 @@ Total: 9919 test cases across 565 files.
 - exports return strings as std::string
 - exported string arguments can be indexed
 - string results handle empty, binary, unicode and large text
-- host functions can return dynamic strings to the script
+- host functions return text to the script as a String
 - a thousand string-returning calls keep working
 - string result calls reject a mismatched result type
 

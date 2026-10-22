@@ -2033,6 +2033,7 @@ are left unarchived.
 | TODO-5565 | The `u8` scalar type | [2026-10.md](todo_archive/2026-10.md) | 2026-10-22 |
 | TODO-5566 | Packed byte containers | [2026-10.md](todo_archive/2026-10.md) | 2026-10-22 |
 | TODO-5571 | Native UI text uses `String` | [undated.md](todo_archive/undated.md) | - |
+| TODO-5573 | Embedding text results and exports use `String` | [undated.md](todo_archive/undated.md) | - |
 
 <!-- INDEX-END -->
 

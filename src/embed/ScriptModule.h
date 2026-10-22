@@ -24,6 +24,11 @@ struct Script::ExportTable {
 namespace detail {
 // "i32", "i64", "u64", "f32", "f64", "bool", "string", "void".
 const char *hostTypeSpelling(HostType type);
+// The suffix of the `__psarg_` / `__psret_` host function that carries a type: text crosses the export
+// wrappers as the stdlib `String` ("text"), everything else under its own spelling.
+inline const char *exportSpelling(HostType type) {
+  return type == HostType::String ? "text" : hostTypeSpelling(type);
+}
 // Reserved host function names the engine-generated export wrappers use to
 // receive arguments and report results (see ScriptEngine export wrappers).
 constexpr const char *ExportArgPrefix = "__psarg_";

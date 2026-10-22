@@ -27,17 +27,12 @@ bool isCanonicalBuiltinSoaBridgePath(const std::string &calleePath) {
          matchesPath(collection_helpers::kCanonicalSoaCount) ||
          matchesPath(collection_helpers::kCanonicalSoaCountRef) ||
          matchesPath(collection_helpers::kCanonicalSoaGet) ||
-         matchesPath(collection_helpers::kCanonicalSoaGet) ||
-         matchesPath(collection_helpers::kCanonicalSoaGetRef) ||
          matchesPath(collection_helpers::kCanonicalSoaGetRef) ||
          matchesPath(collection_helpers::kCanonicalSoaRef) ||
-         matchesPath(collection_helpers::kCanonicalSoaRef) ||
-         matchesPath(collection_helpers::kCanonicalSoaRefRef) ||
          matchesPath(collection_helpers::kCanonicalSoaRefRef) ||
          matchesPath(collection_helpers::kCanonicalSoaPush) ||
          matchesPath(collection_helpers::kCanonicalSoaReserve) ||
          matchesPath(collection_helpers::kCanonicalSoaFieldView) ||
-         matchesPath(collection_helpers::kCanonicalSoaToAos) ||
          matchesPath(collection_helpers::kCanonicalSoaToAos) ||
          matchesPath(collection_helpers::kCanonicalSoaToAosRef);
 }
@@ -112,16 +107,17 @@ bool isStdGfxStructAliasMatch(const std::string &expectedStruct,
          matchesBareToQualified(argStruct, expectedStruct);
 }
 
-// When a struct parameter is declared with a bare/short type name (e.g. a
-// nested-namespace helper's `[SubstrateDeviceConfig] config`) and the caller's
-// argument resolves to that same struct's fully-qualified path, isStructParamMatch
-// accepts the pair but the *parameter's* stored structTypeName stays bare. Any
-// downstream struct-layout lookup keyed on that bare name then fails to find the
-// registered (qualified) layout, so callers must canonicalize to the qualified
-// spelling before storing/using the parameter's structTypeName. Restricted to the
-// rooted-slash and std-ui/std-gfx alias matches specifically - the builtin
-// vector-to-soa bridging matches intentionally keep the collection's generic
-// backing-type spelling and must not be redirected to a caller's specialized one.
+// `[String] text` after `import /std/text/*` against the argument's /std/text/String.
+bool isStdTextStructAliasMatch(const std::string &expected, const std::string &arg) {
+  return (expected == "String" && arg == "/std/text/String") || (expected == "/std/text/String" && arg == "String");
+}
+
+// A struct parameter declared with a bare type name (e.g. a nested-namespace helper's
+// `[SubstrateDeviceConfig] config`) whose argument resolves to that struct's qualified path
+// matches in isStructParamMatch, but the parameter's stored structTypeName stays bare and a
+// layout lookup keyed on it fails; canonicalize to the qualified spelling before storing it.
+// Only the rooted-slash and std-ui/std-gfx/std-text alias matches: the builtin vector-to-soa
+// bridges keep the collection's generic backing-type spelling.
 std::string canonicalStructTypeName(const std::string &expectedStruct,
                                      const std::string &argStruct) {
   if (expectedStruct == argStruct) {
@@ -130,6 +126,7 @@ std::string canonicalStructTypeName(const std::string &expectedStruct,
   if (!expectedStruct.empty() && expectedStruct.front() != '/' &&
       !argStruct.empty() && argStruct.front() == '/' &&
       (argStruct.substr(1) == expectedStruct ||
+       isStdTextStructAliasMatch(expectedStruct, argStruct) ||
        isStdUiStructAliasMatch(expectedStruct, argStruct) ||
        isStdGfxStructAliasMatch(expectedStruct, argStruct))) {
     return argStruct;
@@ -152,6 +149,7 @@ bool isStructParamMatch(const std::string &calleePath,
   return matchesOptionalRootSlash(expectedStruct, argStruct) ||
          isBuiltinVectorStructMatch(expectedStruct, argStruct) ||
          isBuiltinSoaToAosStructMatch(calleePath, expectedStruct, argStruct) ||
+         isStdTextStructAliasMatch(expectedStruct, argStruct) ||
          isStdUiStructAliasMatch(expectedStruct, argStruct) ||
          isStdGfxStructAliasMatch(expectedStruct, argStruct);
 }

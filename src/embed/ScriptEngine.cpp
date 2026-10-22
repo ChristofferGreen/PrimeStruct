@@ -90,39 +90,52 @@ Script ScriptEngine::compileSource(const std::string &name, const std::string &t
 namespace {
 // Generated entry that calls export `name`, fetching arguments through the
 // reserved __psarg_<type> host functions and reporting through __psret_<type>.
+// Text is the stdlib `String` (the exported function declares `[String]` parameters
+// and a `String` result); every other type is its own spelling.
+std::string scriptTypeOf(HostType type) {
+  return type == HostType::String ? "/std/text/String" : detail::hostTypeSpelling(type);
+}
+
 std::string exportWrapperSource(const std::string &name, const ExportSignature &signature, size_t index) {
   std::string source = "\n";
   std::vector<HostType> seen;
+  bool usesText = signature.returnType == HostType::String;
   for (const HostType type : signature.parameters) {
+    usesText = usesText || type == HostType::String;
     if (std::find(seen.begin(), seen.end(), type) != seen.end()) {
       continue;
     }
     seen.push_back(type);
-    const std::string spelling = detail::hostTypeSpelling(type);
-    source += "[host return<" + spelling + ">]\n" + detail::ExportArgPrefix + spelling + "([i32] index) {\n}\n\n";
-    // (string arguments come back as VM-owned strings, so they can be indexed)
+    source += "[host return<" + scriptTypeOf(type) + ">]\n" + detail::ExportArgPrefix + detail::exportSpelling(type) +
+              "([i32] index) {\n}\n\n";
   }
-  const std::string returnSpelling = detail::hostTypeSpelling(signature.returnType);
+  const std::string returnType = scriptTypeOf(signature.returnType);
   if (signature.returnType != HostType::Void) {
-    source += "[host return<void>]\n" + std::string(detail::ExportResultPrefix) + returnSpelling + "([" +
-              returnSpelling + "] value) {\n}\n\n";
+    source += "[host return<void>]\n" + std::string(detail::ExportResultPrefix) +
+              detail::exportSpelling(signature.returnType) + "([" + returnType + "] value) {\n}\n\n";
   }
-  // Arguments go through local bindings: the VM lowering can index into string
-  // bindings but not into the result of a call expression.
+  // Arguments and a text result go through local bindings, so the String owns its block.
   std::string locals;
   std::string call = name + "(";
   for (size_t i = 0; i < signature.parameters.size(); ++i) {
-    const std::string spelling = detail::hostTypeSpelling(signature.parameters[i]);
-    locals += "  [" + spelling + "] __psa" + std::to_string(i) + "{" + detail::ExportArgPrefix + spelling + "(" +
-              std::to_string(i) + "i32)}\n";
+    const HostType type = signature.parameters[i];
+    locals += "  [" + scriptTypeOf(type) + "] __psa" + std::to_string(i) + "{" + detail::ExportArgPrefix +
+              detail::exportSpelling(type) + "(" + std::to_string(i) + "i32)}\n";
     call += (i == 0 ? "" : ", ");
     call += "__psa" + std::to_string(i);
   }
   call += ")";
-  source += "[return<int>]\n__ps_call_" + std::to_string(index) + "() {\n" + locals;
-  source += signature.returnType == HostType::Void
-                ? "  " + call + "\n"
-                : "  " + std::string(detail::ExportResultPrefix) + returnSpelling + "(" + call + ")\n";
+  source += std::string(usesText ? "[return<int> effects(heap_alloc)]" : "[return<int>]") + "\n__ps_call_" +
+            std::to_string(index) + "() {\n" + locals;
+  if (signature.returnType == HostType::Void) {
+    source += "  " + call + "\n";
+  } else if (signature.returnType == HostType::String) {
+    source += "  [" + returnType + "] __psr{" + call + "}\n  " + std::string(detail::ExportResultPrefix) +
+              detail::exportSpelling(signature.returnType) + "(__psr)\n";
+  } else {
+    source += "  " + std::string(detail::ExportResultPrefix) + detail::exportSpelling(signature.returnType) + "(" +
+              call + ")\n";
+  }
   source += "  return(0i32)\n}\n";
   return source;
 }

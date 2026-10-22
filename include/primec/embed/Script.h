@@ -26,8 +26,9 @@ template <> struct HostTypeOf<uint8_t> { static constexpr HostType value = HostT
 template <> struct HostTypeOf<float> { static constexpr HostType value = HostType::F32; };
 template <> struct HostTypeOf<double> { static constexpr HostType value = HostType::F64; };
 template <> struct HostTypeOf<bool> { static constexpr HostType value = HostType::Bool; };
-// Strings are host function parameters and results and exported function
-// arguments and results (results are returned as std::string).
+// Strings are host function parameters (static `string` text, from a literal), host function results
+// (a `String` in the script, copied into the script's string heap) and exported function arguments and
+// results (a `String` in the script; results are returned as std::string).
 template <> struct HostTypeOf<std::string_view> { static constexpr HostType value = HostType::String; };
 template <> struct HostTypeOf<std::string> { static constexpr HostType value = HostType::String; };
 template <> struct HostTypeOf<const char *> { static constexpr HostType value = HostType::String; };
@@ -132,7 +133,7 @@ template <class R, class... A> struct CallableTraits<R (*)(A...)> {
 class HostBindings {
 public:
   using RawInvoke = std::function<bool(const uint64_t *args, uint64_t &result, std::string &error)>;
-  // For string-returning host functions: the text is stored as a VM-owned string.
+  // For text-returning host functions: the text is copied into a string-heap block of the script.
   using RawStringInvoke = std::function<bool(const uint64_t *args, std::string &result, std::string &error)>;
 
   struct Entry {
@@ -151,7 +152,7 @@ public:
 
   void bindRaw(std::string name, std::vector<HostType> parameters, HostType returnType, RawInvoke invoke);
   void bindRawString(std::string name, std::vector<HostType> parameters, RawStringInvoke invoke,
-                     HostType returnType = HostType::String);
+                     HostType returnType = HostType::Text);
   const std::vector<Entry> &entries() const { return entries_; }
 
 private:
@@ -165,7 +166,7 @@ private:
         return callString<A...>(callable, args, result, std::index_sequence_for<A...>{});
       };
       bindRawString(std::move(name), {detail::HostTypeOf<std::remove_cvref_t<A>>::value...}, std::move(invoke),
-                    detail::HostTypeOf<R>::value);
+                    HostType::Text);
     } else {
       RawInvoke invoke = [callable = std::move(callable)](const uint64_t *args, uint64_t &result,
                                                           std::string &) mutable {

@@ -104,8 +104,7 @@ of sync with them.
 | TODO-5569 | Slice loans, escapes and returned borrows | ready | slices |
 | TODO-5570 | Slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views | ready | slices |
 | TODO-5540 | `string` as the UTF-8 text view | blocked | string-view |
-| TODO-5573 | Embedding text results and exports use `String` | ready | string-host |
-| TODO-5572 | Remove the VM run-time string index | blocked | string-host |
+| TODO-5572 | Remove the VM run-time string index | ready | string-host |
 | TODO-5574 | Simple C++ emitters and the native backend run bytes and strings | deferred | string-backends |
 | TODO-5568 | String conveniences: operators, numbers, push of code points | blocked | string-owned |
 | TODO-5536 | Small, lazily loaded bytecode for apps | ready | bytecode-startup |
@@ -136,7 +135,7 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5573 (string-host): embedding text results and exports use `String`
+- TODO-5572 (string-host): remove the VM run-time string index
 - TODO-5567 (bytes): packed `array<u8>`
 - TODO-5570 (slices): slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
@@ -147,7 +146,7 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5573
+1. TODO-5572
 2. TODO-5567
 3. TODO-5570
 4. TODO-5536
@@ -158,7 +157,7 @@ of sync with them.
 
 ### Priority Lanes
 
-- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5567, TODO-5570, TODO-5569, TODO-5540, TODO-5568, TODO-5530, TODO-5573, TODO-5572, TODO-5574
+- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5567, TODO-5570, TODO-5569, TODO-5540, TODO-5568, TODO-5530, TODO-5572, TODO-5574
 - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Lifecycle (docs/spec/value-lifecycle.md): TODO-5527
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
@@ -296,21 +295,9 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - full release gate green
   - stop_rule: the text view on the VM.
 
-- [ ] TODO-5573: Embedding text results and exports use `String`
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-22
-  - phase: Strings and slices (docs/spec/strings-and-views.md)
-  - parallel_track: string-host
-  - scope: Move every remaining producer of VM run-time strings onto `String`: a host function whose C++ callable returns `std::string`, `std::string_view` or `const char *` is declared `return<String>` in the script and crosses as `Text`; exported functions that take or return text use `String` in their script signature (the generated wrapper fetches `__psarg_text` and reports `__psret_text`), while the C++ `call<std::string>(..., "text")` surface is unchanged; host `string` parameters accept module-table text only. Port the embed tests, examples/embed, tests that declare `[host return<string>]` and docs/Embedding.md.
-  - acceptance:
-    - the embed export/host tests pass with `String` script signatures; no embed path creates a VM run-time string; full release gate green
-  - stop_rule: the embedding API and its tests; the VM string index is removed by TODO-5572.
-
 - [ ] TODO-5572: Remove the VM run-time string index
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5573
+  - status: ready
   - created_at: 2026-10-22
   - phase: Strings and slices (docs/spec/strings-and-views.md)
   - parallel_track: string-host

@@ -74,20 +74,25 @@ that `loadBytecode` restores in the runtime-only library, which can `call` the
 exports without a compiler. `Script::call` is safe to use from several threads
 on one `Script`.
 
-Strings cross the boundary as VM-owned strings: arguments (`std::string_view`,
-`std::string`, `const char *`) are copied into the call and handed to the script
-through the reserved `__psarg_string` host function, and `call<std::string>`
-returns a string result. Inside the script an argument string behaves like any
-other string: `text.count()`, `text[i]`, printing, and forwarding to host
-functions all work. Empty, NUL-containing, UTF-8 and large strings are fine. The
-compiled module is shared and never copied per call, and the VM frees each
-call's strings when it returns.
+Text crosses the boundary as the stdlib `String` (`import /std/text/*`). An exported
+function declares `[String]` parameters and a `String` result, while the C++ side
+stays as it was: arguments (`std::string_view`, `std::string`, `const char *`) are
+copied into the call and `call<std::string>` returns the result. The generated
+wrapper fetches each text argument through the reserved `__psarg_text` host
+function, which gives the script a fresh `String` block, and reports a text result
+through `__psret_text`. A `[String]` parameter is a borrow of the caller's value;
+declare it `[String copy]` when the function returns it or keeps it. Inside the
+script the argument is an ordinary `String`: `text.count()`, `text.byteAt(i)`,
+`equalsText`, and forwarding to host functions all work. Empty, UTF-8 and large
+text are fine. Text crosses NUL-terminated, like a C string, so a NUL byte ends it.
+The compiled module is shared and never copied per call, and the script's `String`s
+free their blocks when they go out of scope.
 
 ## Calling the host from a script
 
 Bind C++ callables by name; signatures come from the callable's primitive
 parameter types (`int32_t`, `int64_t`, `uint64_t`, `float`, `double`, `bool`,
-strings; `void`, one of those, or `std::string`/`std::string_view` as the result):
+strings; `void`, one of those, or `std::string`/`std::string_view`/`HostText` as the result):
 
 ```cpp
 script.bind("host_add", [](int32_t a, int32_t b) { return a + b; });
@@ -136,8 +141,10 @@ script.bind("host_greet", [](primec::embed::HostTextView name) {
 });
 ```
 
-The older `std::string` and `std::string_view` forms still carry `string` values (literals and VM-created run-time
-strings); `HostText` and `HostTextView` are the ones that do not create run-time strings.
+A host function whose C++ callable returns `std::string`, `std::string_view` or `const char *` returns a `String`
+too (declare it `[host return<String>]`; `[host return<string>]` is rejected). The `std::string`/`std::string_view`
+parameter forms carry a static `string` (a literal or other module text) and nothing built at run time; take
+`HostTextView` for a `String` parameter.
 
 ## Precompiled bytecode
 

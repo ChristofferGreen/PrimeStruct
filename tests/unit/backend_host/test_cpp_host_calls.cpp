@@ -134,7 +134,7 @@ TEST_CASE("a program that is never given its host functions does not link") {
   CHECK(compiled.diagnostics.find("Failed to compile output executable") != std::string::npos);
 }
 
-TEST_CASE("host functions that return a string view are refused and point at String") {
+TEST_CASE("a host function cannot return a string view, and the simple emitters name optexe for String") {
   const std::string source = scratch("text_result.prime");
   writeFile(source, R"([host return<string>]
 host_name() {
@@ -149,14 +149,30 @@ main() {
   for (const char *kind : {"cpp", "optcpp"}) {
     const CompileResult compiled = compile(kind, source, scratch(std::string("text_result_") + kind));
     CHECK_MESSAGE(compiled.status != 0, kind);
-    CHECK_MESSAGE(compiled.diagnostics.find("returns a `string`") != std::string::npos, kind << ": " << compiled.diagnostics);
-    CHECK_MESSAGE(compiled.diagnostics.find("return a `String` instead") != std::string::npos, kind);
+    CHECK_MESSAGE(compiled.diagnostics.find("host definition return type must be") != std::string::npos,
+                  kind << ": " << compiled.diagnostics);
   }
+  const std::string textSource = scratch("text_string.prime");
+  writeFile(textSource, R"(import /std/text/*
+
+[host return<String>]
+host_name() {
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [String] name{host_name()}
+  return(name.count())
+}
+)");
+  const CompileResult simple = compile("cpp", textSource, scratch("text_string_cpp"));
+  CHECK(simple.status != 0);
+  CHECK_MESSAGE(simple.diagnostics.find("optimized C++ emitters") != std::string::npos, simple.diagnostics);
 }
 
 TEST_CASE("only host imports the program reaches are declared") {
   const std::string source = scratch("unused_import.prime");
-  writeFile(source, R"([host return<string>]
+  writeFile(source, R"([host return<i32>]
 host_never_called() {
 }
 

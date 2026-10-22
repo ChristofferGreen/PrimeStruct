@@ -236,10 +236,9 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
         case ReturnKind::Float64:
         case ReturnKind::Bool:
         case ReturnKind::Void:
-        case ReturnKind::String:
           break;
         default:
-          return failHost("host definition return type must be i32, i64, u64, f32, f64, bool, string, or void");
+          return failHost("host definition return type must be i32, i64, u64, u8, f32, f64, bool, String, or void");
       }
       for (const auto &param : defParams) {
         if (param.defaultExpr != nullptr) {

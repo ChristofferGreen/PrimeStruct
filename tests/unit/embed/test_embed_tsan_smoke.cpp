@@ -50,13 +50,15 @@ TEST_CASE("one compiled script is shared by several threads") {
   engine.exportFunction<int32_t(int32_t, int32_t)>("add");
   engine.exportFunction<int32_t(std::string_view)>("count_chars");
   auto script = engine.compileSource("/tsan_shared.prime", R"(
+import /std/text/*
+
 [return<int>]
 add([i32] a, [i32] b) {
   return(a + b)
 }
 
 [return<int>]
-count_chars([string] text) {
+count_chars([String] text) {
   return(text.count())
 }
 

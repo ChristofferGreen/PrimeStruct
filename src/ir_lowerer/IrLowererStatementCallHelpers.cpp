@@ -130,7 +130,9 @@ bool buildCallableDefinitionCallContext(
           error = "internal error: missing struct slot layout for " + info.structTypeName;
           return false;
         }
-        const std::string rootedStructTypeName = "/" + info.structTypeName;
+        // The stdlib owned text is declared `[String]` after `import /std/text/*`.
+        const std::string rootedStructTypeName =
+            info.structTypeName == "String" ? std::string("/std/text/String") : "/" + info.structTypeName;
         if (!resolveStructSlotLayout(rootedStructTypeName, layout)) {
           error = "internal error: missing struct slot layout for " + info.structTypeName;
           return false;

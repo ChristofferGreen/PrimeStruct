@@ -156,7 +156,7 @@ VmHostFunctions functionsForVerification(const HostBindings &bindings, const IrM
     if (isEngineGeneratedImport(import.name)) {
       VmHostBinding stub{import.parameters, import.returnKind,
                          [](const uint64_t *, uint64_t &, std::string &) { return true; }};
-      if (import.returnKind == IrHostValueKind::String) {
+      if (import.returnKind == IrHostValueKind::String || import.returnKind == IrHostValueKind::Text) {
         stub.invokeString = [](const uint64_t *, std::string &, std::string &) { return true; };
       }
       functions.bind(import.name, std::move(stub));
@@ -276,8 +276,8 @@ bool Script::callRaw(std::string_view name,
     return false;
   }
 
-  // String arguments are served from `strings` through the reserved __psarg_string
-  // host function, which hands the VM a run-time string per fetch; the compiled
+  // String arguments are served from `strings` through the reserved __psarg_text
+  // host function, which hands the VM a fresh `String` block per fetch; the compiled
   // module is shared and never copied per call.
   const std::vector<uint64_t> &arguments = argumentSlots;
   const IrModule *moduleToRun = &entry->module->ir;
@@ -292,11 +292,11 @@ bool Script::callRaw(std::string_view name,
   uint64_t captured = 0;
   std::string capturedString;
   for (const HostType type : entry->signature.parameters) {
-    const std::string importName = std::string(detail::ExportArgPrefix) + detail::hostTypeSpelling(type);
+    const std::string importName = std::string(detail::ExportArgPrefix) + detail::exportSpelling(type);
     if (type == HostType::String) {
       VmHostBinding binding;
       binding.parameters = {IrHostValueKind::I32};
-      binding.returnKind = IrHostValueKind::String;
+      binding.returnKind = IrHostValueKind::Text;
       binding.invokeString = [&arguments, &strings](const uint64_t *args, std::string &out, std::string &err) {
         const auto index = static_cast<uint64_t>(static_cast<uint32_t>(args[0]));
         if (index >= arguments.size() || arguments[static_cast<size_t>(index)] >= strings.size()) {
@@ -322,13 +322,14 @@ bool Script::callRaw(std::string_view name,
                                  }});
   }
   if (returnType != HostType::Void) {
-    const std::string importName = std::string(detail::ExportResultPrefix) + detail::hostTypeSpelling(returnType);
-    functions.bind(importName, VmHostBinding{{toIrKind(returnType)}, IrHostValueKind::Void,
+    const std::string importName = std::string(detail::ExportResultPrefix) + detail::exportSpelling(returnType);
+    const IrHostValueKind resultKind = returnType == HostType::String ? IrHostValueKind::Text : toIrKind(returnType);
+    functions.bind(importName, VmHostBinding{{resultKind}, IrHostValueKind::Void,
                                               [&captured, &capturedString, returnType](const uint64_t *args, uint64_t &,
                                                                                        std::string &) {
                                                 if (returnType == HostType::String) {
-                                                  capturedString = *reinterpret_cast<const std::string *>(
-                                                      static_cast<uintptr_t>(args[0]));
+                                                  capturedString = std::string(*reinterpret_cast<const std::string_view *>(
+                                                      static_cast<uintptr_t>(args[0])));
                                                 } else {
                                                   captured = args[0];
                                                 }
