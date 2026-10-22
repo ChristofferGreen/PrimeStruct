@@ -6,7 +6,7 @@
 
 #include "primec/ir/Ir.h"
 #include "primec/runtime/Vm.h"
-#include "primec/runtime/VmStringHeap.h"
+#include "primec/runtime/VmStringLookup.h"
 #include "primec/runtime/VmTextHeap.h"
 #include "primec/runtime/VmHost.h"
 
@@ -35,7 +35,6 @@ bool handleVmHostCall(const VmHostFunctions *hostFunctions,
                       const IrInstruction &inst,
                       std::vector<uint64_t> &stack,
                       std::string &error,
-                      VmStringHeap *heap = nullptr,
                       TextHeapContext *text = nullptr);
 
 } // namespace primec::vm_detail

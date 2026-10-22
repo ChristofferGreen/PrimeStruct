@@ -98,9 +98,6 @@ inline void ps_emit(const std::string &text, uint64_t flags) {
 // ---- strings -------------------------------------------------------------
 
 inline const PsString &ps_string(const PsString *table, size_t count, uint64_t index) {
-  if ((index & PsHeapTag) != 0) {
-    ps_fault("invalid dynamic string index in IR");
-  }
   if (index >= count) {
     ps_fault("invalid string index in IR");
   }

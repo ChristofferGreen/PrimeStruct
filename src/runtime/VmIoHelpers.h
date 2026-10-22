@@ -4,7 +4,7 @@
 #include <string_view>
 #include <vector>
 
-#include "primec/runtime/VmStringHeap.h"
+#include "primec/runtime/VmStringLookup.h"
 #include "primec/runtime/Vm.h"
 
 namespace primec::vm_detail {
@@ -14,7 +14,6 @@ bool handlePrintOpcode(const IrModule &module,
                        std::vector<uint64_t> &stack,
                        const std::vector<std::string_view> *args,
                        std::string &error,
-                       const VmStringHeap *heap = nullptr,
                        const VmOutputSink *sink = nullptr);
 
 bool handleFileOpcode(const IrModule &module,
@@ -22,7 +21,6 @@ bool handleFileOpcode(const IrModule &module,
                       std::vector<uint64_t> &stack,
                       std::vector<uint64_t> &locals,
                       std::string &error,
-                      const VmStringHeap *heap = nullptr,
                       const VmOutputSink *sink = nullptr);
 
 } // namespace primec::vm_detail

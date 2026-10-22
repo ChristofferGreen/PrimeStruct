@@ -87,3 +87,14 @@
   - acceptance:
     - the embed export, host, lifetime, runtime-only and bundle tests pass with `String` script signatures; no embed path creates a VM run-time string; the simple C++ emitters' host test checks the new compile error; full release gate green
   - stop_rule: the embedding API and its tests; the VM string index is removed by TODO-5572.
+
+- [x] TODO-5572: Remove the VM run-time string index
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-22
+  - phase: Strings and slices (docs/spec/strings-and-views.md)
+  - parallel_track: string-host
+  - scope: Retired the VM's host-created dynamic strings: `VmStringHeap` and the bit-63 string indices are deleted, `resolveVmString` is now `(module, index, text, error)` over the module table only (`include/primec/runtime/VmStringLookup.h`, with the lint `scripts/check_vm_string_lookups.py` still guarding direct table access), the `heap` parameters of the print/file/host-call helpers, the kernel host interface, the debugger and the native JIT host are gone, and a host function that returns `string` is refused when bindings are verified and when the call runs. `LoadStringByteDynamic` stays for module-table strings addressed by a computed index. The optimized C++ runtime and the native JIT report `invalid string index in IR` for any index outside the table. PSIR v31 (same module layout; hosts returning `string` are invalid); embed fixtures regenerated; docs/spec/vm-design.md and AGENTS.md describe the new model.
+  - acceptance:
+    - no host function creates a dynamic string; the embed, VM, native JIT and optimizer string tests pass; full release gate green
+  - stop_rule: the index and its heap only.

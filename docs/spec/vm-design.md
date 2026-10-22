@@ -25,8 +25,8 @@
   (recursive and larger functions), including recursion up to the VM's call-depth limit.
 - **GLSL note:** GLSL/SPIR-V emission routes through canonical IR (`glsl-ir`/`spirv-ir`) and `IrValidationTarget::Glsl`;
   these modes emit backend output directly without requiring PSIR serialization.
-- **PSIR versioning:** current portable IR is PSIR v30 (v24 to v30 are listed in `include/primec/ir/Ir.h`'s opcode
-  comments and the finished TODO log; v30 appends the `text` host value kind; v29 appends the `u8` host value kind; v28 adds `HeapAllocBytes`, `LoadU8`, `StoreU8` and `ZextU8`). Before that, PSIR v23 (adds a per-function `parameter_count` field on top of v22’s
+- **PSIR versioning:** current portable IR is PSIR v31 (v24 to v31 are listed in `include/primec/ir/Ir.h`'s opcode
+  comments and the finished TODO log; v31 retires run-time string indices (a host function can no longer return `string`; same module layout); v30 appends the `text` host value kind; v29 appends the `u8` host value kind; v28 adds `HeapAllocBytes`, `LoadU8`, `StoreU8` and `ZextU8`). Before that, PSIR v23 (adds a per-function `parameter_count` field on top of v22’s
   source-unit/file identity in source-map metadata, v21’s `HeapRealloc`, v20’s `FileReadByte` and
   `HeapFree`, v19’s per-instruction source-map metadata keyed by debug ID, v18’s instruction debug IDs, v17’s local
   debug slots, v16’s function-call opcodes `Call`/`CallVoid`, v15’s execution metadata, v14’s float return opcodes,
@@ -104,50 +104,14 @@
 - **Strings & IO:** string values are indices into the module string table; `PrintString`/`LoadStringByte` read from it.
   File operations use OS descriptors stored as `i64` values and must be explicitly closed or they close on scope end via
   lowering.
-- **VM-owned dynamic strings (implemented: VM heap, `LoadStringByteDynamic`, embed string arguments and results; to be
-  replaced by `String` per [Strings, Text and Slices](strings-and-views.md)):** a string value is a `u64`. Before the VM heap existed it could only index the immutable module table; this section records the model that is now implemented, without changing how module-table strings behave.
-  - *Index space.* A string value stays a `u64`. Values with bit 63 clear index the module table exactly as today.
-    Values with bit 63 set are *dynamic*: `0x8000_0000_0000_0000 | generation << 32 | slot` (31-bit generation, 32-bit
-    slot). The tag is independent of the module's table size, so existing indices and `.psir` files keep their meaning.
-  - *One lookup.* Every VM string access (`LoadStringLength`, `LoadStringByte`, `PrintString`, `PrintStringDynamic`,
-    the file-open/`FileWriteString*` opcodes, host-call string arguments) goes through one helper,
-    `resolveVmString(module, heap, index)`, which returns the string or faults: index past the table, dynamic slot out of
-    range, or a generation that no longer matches the slot (use after release).
-  - *Heap.* `VmStringHeap` is a slot vector with a free list and a per-slot generation. It belongs to one run
-    (`Vm::execute`, one debug session): it is created empty, and destroyed with the run. There is no GC and no per-string
-    free opcode in the first version, so strings made during a run live until the run ends; embedders that call into a
-    script repeatedly start a new run per call, so memory does not grow across calls. A release opcode can be added
-    later without changing the index format (generations already catch stale uses).
-  - *Creation.* Only host calls create strings in the first version: a binding whose return kind is `String` returns
-    its text (`VmHostBinding` gains a string-returning invoke form) and the VM pushes the new dynamic index. Script code
-    cannot concatenate or build strings; that is a separate language feature.
-  - *Indexing.* `LoadStringByte` carries the string index as an immediate (compile-time literal), so it cannot read a
-    dynamic string. A new opcode `LoadStringByteDynamic` is appended after `CallHost`: it pops the byte position and the
-    string index (both from the stack) and pushes the byte, with the same bounds fault as `LoadStringByte`.
-  - *Backends.* Native, wasm, glsl/spirv and C++ emission do not support dynamic strings: the opcode table
-    (`include/primec/ir/IrOpcodeTable.h`) marks `LoadStringByteDynamic` as VM-only (all target flags 0), so the validator
-    rejects it for those targets with the existing "unsupported opcode for <target> target" diagnostic. Programs that
-    only use literal strings are unaffected.
-  - *PSIR.* Appending an opcode changes the serialized format's opcode range, so `IrSchemaVersion` goes 25 -> 26 and
-    version 25 files are rejected (the supported range is exactly the current version; done in TODO-5364). Host import return kind
-    `String` is already encoded; no module layout change.
-  - *IR sketch* (`host_name()` returns a string, the script returns its first byte):
-
-    ```
-    CallHost 0            ; host_name() -> dynamic string index on the stack
-    Dup
-    LoadStringLength      ; resolveVmString: length of the dynamic string
-    Pop
-    PushI32 0             ; byte position
-    LoadStringByteDynamic ; pops position, then index -> byte
-    ReturnI32
-    ```
-  - *Touched sites (estimate).* VM: `VmExecutionKernel.cpp` (2 table lookups + the new opcode), `VmIoHelpers.cpp` (1 lookup
-    used by print/file ops), `VmExecution.cpp` (host-call string argument and string return, 2 sites), `VmHost.h/.cpp`
-    (string-returning binding), the debug session (shares the kernel, nothing extra), plus `Ir.h`, the opcode table,
-    validator, serializer and version constant. Lowerer/semantics: choosing `LoadStringByteDynamic` for `text.at(i)` when
-    the receiver is not a literal-backed string. Embed: `Script::call` argument/result strings and removal of the
-    `__psarg_string` special case. Roughly 15 source files, none of them large changes.
+- **No run-time string indices (PSIR v31):** a string value is only an index into the module string table, resolved
+  by `resolveVmString(module, index)` (`include/primec/runtime/VmStringLookup.h`), which faults with `invalid string
+  index in IR` for anything else. The earlier VM-owned dynamic strings (bit-63 indices into a per-run `VmStringHeap`,
+  created by host calls that returned `string` and by embed string arguments) are gone: run-time text is the stdlib
+  `String`, a block of the string heap below, and crosses the host boundary as `Text`. A host function that returns
+  `string` is refused when the bindings are verified and when the call runs, `[host return<string>]` is a compile
+  error, and `LoadStringByteDynamic` keeps its meaning for module-table strings only (the string index comes from the
+  stack instead of the instruction, for example a `string` parameter or an entry-independent computed index).
 - **Memory/GC:** there is no GC in the VM today. Arrays are inline locals with
   count metadata plus contiguous element slots. VM/native vector locals use a
   heap-backed `count/capacity/data_ptr` record; push/reserve growth reallocates

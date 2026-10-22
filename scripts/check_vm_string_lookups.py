@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Every VM string lookup goes through resolveVmString (TODO-5364).
 
-src/runtime must not index or size `stringTable` directly; only
-src/runtime/VmStringHeap.cpp (the helper itself) may.
+src/runtime must not index or size `stringTable` directly; the helper lives in
+include/primec/runtime/VmStringLookup.h, outside the scanned directory.
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ import re
 import sys
 from pathlib import Path
 
-ALLOWED = {"src/runtime/VmStringHeap.cpp"}
+ALLOWED: set[str] = set()
 PATTERN = re.compile(r"\bstringTable\b")
 
 

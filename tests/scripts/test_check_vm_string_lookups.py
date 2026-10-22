@@ -27,7 +27,6 @@ def main() -> int:
     expect(module.find_violations({"src/runtime/A.cpp": "x = y;"}) == [], "clean file passes")
     expect(module.find_violations({"src/runtime/A.cpp": "m.stringTable[i]"}) != [], "direct access is reported")
     expect(module.find_violations({"src/runtime/A.cpp": "// stringTable is fine in comments"}) == [], "comments are ignored")
-    expect(module.find_violations({"src/runtime/VmStringHeap.cpp": "module.stringTable[i]"}) == [], "the helper may index the table")
     if failures:
         for failure in failures:
             print(f"FAIL: {failure}", file=sys.stderr)

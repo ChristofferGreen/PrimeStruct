@@ -7,7 +7,7 @@
 namespace primec {
 
 constexpr uint32_t IrSchemaMagic = 0x50534952u; // "PSIR"
-constexpr uint32_t IrSchemaVersion = 30u;
+constexpr uint32_t IrSchemaVersion = 31u;
 constexpr uint32_t IrSchemaMinimumSupportedVersion = IrSchemaVersion;
 constexpr uint32_t IrSchemaMaximumSupportedVersion = IrSchemaVersion;
 

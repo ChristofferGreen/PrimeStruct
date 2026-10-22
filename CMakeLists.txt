@@ -684,7 +684,6 @@ set(PRIMESTRUCT_RUNTIME_SOURCES
   src/runtime/VmFastKernel.cpp
   src/runtime/VmFastKernelPrepare.cpp
   src/runtime/VmHeapHelpers.cpp
-  src/runtime/VmStringHeap.cpp
   src/runtime/VmIoHelpers.cpp
   src/runtime/VmDebugAdapter.cpp
   src/runtime/VmDebugDap.cpp

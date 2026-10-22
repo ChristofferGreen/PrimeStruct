@@ -144,9 +144,9 @@ TEST_CASE("native JIT reports the interpreter's faults") {
       {"string_byte_at_end",
        {"PushI64 3", "LoadStringByte 0", "ReturnI32"},
        "string index out of bounds in IR"},
-      {"dynamic_string_length",
+      {"tagged_string_length",
        {"PushI64 9223372036854775808", "LoadStringLength", "ReturnI64"},
-       "invalid dynamic string index in IR"},
+       "invalid string index in IR"},
       {"missing_return_in_entry", {"PushI32 1", "Pop"}, "missing return in IR"},
   };
   for (const Case &testCase : cases) {

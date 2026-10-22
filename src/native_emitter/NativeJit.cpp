@@ -160,8 +160,6 @@ NativeJitResult runNativeJit(const IrModule &module, const std::vector<std::stri
                               module.functions[static_cast<size_t>(argument)].name;
     break;
   case 5:
-    outcome.error = "invalid dynamic string index in IR";
-    break;
   case 6:
     outcome.error = "invalid string index in IR";
     break;

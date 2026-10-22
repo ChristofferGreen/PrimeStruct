@@ -3,7 +3,7 @@
 
 #include "primec/ir/IrCfg.h"
 #include "primec/ir/IrPureSemantics.h"
-#include "primec/runtime/VmStringHeap.h"
+#include "primec/runtime/VmStringLookup.h"
 #include "primec/testing/VmKernelSelection.h"
 
 #include <algorithm>
@@ -173,9 +173,8 @@ bool executeVmFastKernel(const IrModule &module,
   static_assert((IrSlotBytes & (IrSlotBytes - 1)) == 0, "slot size must be a power of two");
   const uint64_t argc =
       static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(host.argumentCount())));
-  const VmStringHeap *stringHeap = host.stringHeap();
   const auto resolveString = [&](uint64_t index, const std::string *&text) {
-    return resolveVmString(module, stringHeap, index, text, error);
+    return resolveVmString(module, index, text, error);
   };
 
   std::vector<uint64_t> stack(InitialStackSlots +

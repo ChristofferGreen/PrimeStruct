@@ -5,7 +5,6 @@
 #include "primec/ir/IrSerializer.h"
 #include "primec/ir/IrValidation.h"
 #include "primec/runtime/Vm.h"
-#include "primec/runtime/VmStringHeap.h"
 
 #include "third_party/doctest.h"
 
@@ -292,35 +291,24 @@ TEST_CASE("debug sessions run host calls with bindings supplied") {
 }
 
 namespace {
-// main() { s = host_name(); return(s.length() * 1000 + s[pos]) } as hand-built IR;
-// `host_name` returns a run-time string.
-IrModule dynamicStringModule(int32_t position) {
+// main() { return(host_name().length()) } as hand-built IR from before hosts could not return strings.
+IrModule stringReturningModule() {
   IrModule module;
   module.hostImports.push_back({"host_name", {}, IrHostValueKind::String});
   IrFunction main;
   main.name = "/main";
-  main.instructions = {{IrOpcode::CallHost, 0},
-                       {IrOpcode::Dup, 0},
-                       {IrOpcode::LoadStringLength, 0},
-                       {IrOpcode::PushI32, 1000},
-                       {IrOpcode::MulI32, 0},
-                       {IrOpcode::StoreLocal, 0},
-                       {IrOpcode::PushI32, static_cast<uint64_t>(position)},
-                       {IrOpcode::LoadStringByteDynamic, 0},
-                       {IrOpcode::LoadLocal, 0},
-                       {IrOpcode::AddI32, 0},
-                       {IrOpcode::ReturnI32, 0}};
+  main.instructions = {{IrOpcode::CallHost, 0}, {IrOpcode::LoadStringLength, 0}, {IrOpcode::ReturnI32, 0}};
   module.functions.push_back(main);
   module.entryIndex = 0;
   return module;
 }
 
-VmHostFunctions stringHost(std::string text) {
+VmHostFunctions stringReturningHost() {
   VmHostFunctions hosts;
   VmHostBinding binding;
   binding.returnKind = IrHostValueKind::String;
-  binding.invokeString = [text](const uint64_t *, std::string &result, std::string &) {
-    result = text;
+  binding.invoke = [](const uint64_t *, uint64_t &result, std::string &) {
+    result = 0;
     return true;
   };
   hosts.bind("host_name", binding);
@@ -328,59 +316,29 @@ VmHostFunctions stringHost(std::string text) {
 }
 } // namespace
 
-TEST_CASE("vm host functions return run-time strings that scripts index and measure") {
-  uint64_t result = 0;
+TEST_CASE("a host function that returns a string is refused: hosts return text as a String") {
+  const IrModule module = stringReturningModule();
+  const VmHostFunctions hosts = stringReturningHost();
   std::string error;
-  REQUIRE_MESSAGE(runVm(dynamicStringModule(1), stringHost("beta"), result, error), error);
-  CHECK(static_cast<int32_t>(result) == 4 * 1000 + 'e');
-  // Empty, NUL-containing and large strings.
-  REQUIRE_MESSAGE(runVm(dynamicStringModule(0), stringHost(std::string("\0x", 2)), result, error), error);
-  CHECK(static_cast<int32_t>(result) == 2 * 1000 + 0);
-  const std::string large(100000, 'z');
-  REQUIRE_MESSAGE(runVm(dynamicStringModule(99999), stringHost(large), result, error), error);
-  CHECK(static_cast<int32_t>(result) == 100000 * 1000 + 'z');
-  CHECK_FALSE(runVm(dynamicStringModule(0), stringHost(""), result, error));
-  CHECK(error.find("string index out of bounds in IR") != std::string::npos);
-  CHECK_FALSE(runVm(dynamicStringModule(4), stringHost("beta"), result, error));
-  CHECK(error.find("string index out of bounds in IR") != std::string::npos);
+  CHECK_FALSE(hosts.verify(module, error));
+  CHECK(error.find("returns a string") != std::string::npos);
+  uint64_t result = 0;
+  CHECK_FALSE(runVm(module, hosts, result, error));
+  CHECK(error.find("returns a string") != std::string::npos);
 }
 
-TEST_CASE("vm faults cleanly on invalid dynamic string indices") {
+TEST_CASE("vm faults cleanly on a string index outside the module table") {
   IrModule module;
   IrFunction main;
   main.name = "/main";
-  const uint64_t forged = vm_detail::DynamicStringTag | 7u;
-  main.instructions = {{IrOpcode::PushI64, forged}, {IrOpcode::LoadStringLength, 0}, {IrOpcode::ReturnI32, 0}};
+  const uint64_t high = uint64_t{1} << 63;
+  main.instructions = {{IrOpcode::PushI64, high | 7u}, {IrOpcode::LoadStringLength, 0}, {IrOpcode::ReturnI32, 0}};
   module.functions.push_back(main);
   module.entryIndex = 0;
   uint64_t result = 0;
   std::string error;
   CHECK_FALSE(Vm{}.execute(module, result, error));
-  CHECK(error == "invalid dynamic string index in IR");
-
-  vm_detail::VmStringHeap heap;
-  const uint64_t first = heap.create("a");
-  REQUIRE(heap.find(first) != nullptr);
-  CHECK(heap.release(first));
-  CHECK(heap.find(first) == nullptr);   // use after release
-  CHECK_FALSE(heap.release(first));
-  const uint64_t reused = heap.create("b");
-  CHECK(reused != first);               // same slot, new generation
-  CHECK(heap.find(first) == nullptr);
-  CHECK(*heap.find(reused) == "b");
-  CHECK(heap.find(5) == nullptr);       // module-table indices are not heap strings
-  CHECK(heap.liveCount() == 1);
-}
-
-TEST_CASE("debug sessions run string-returning host calls") {
-  const IrModule module = dynamicStringModule(0);
-  VmDebugSession session;
-  std::string error;
-  REQUIRE_MESSAGE(session.start(module, error, std::vector<std::string_view>{"prog"}, stringHost("xy")), error);
-  VmDebugStopReason reason = VmDebugStopReason::Step;
-  REQUIRE_MESSAGE(session.continueExecution(reason, error), error);
-  CHECK(reason == VmDebugStopReason::Exit);
-  CHECK(static_cast<int32_t>(session.snapshot().result) == 2 * 1000 + 'x');
+  CHECK(error == "invalid string index in IR");
 }
 
 namespace {

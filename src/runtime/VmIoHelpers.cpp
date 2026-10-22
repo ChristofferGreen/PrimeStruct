@@ -113,7 +113,6 @@ bool handlePrintOpcode(const IrModule &module,
                        std::vector<uint64_t> &stack,
                        const std::vector<std::string_view> *args,
                        std::string &error,
-                       const VmStringHeap *heap,
                        const VmOutputSink *sink) {
   switch (inst.op) {
     case IrOpcode::PrintI32: {
@@ -145,7 +144,7 @@ bool handlePrintOpcode(const IrModule &module,
     }
     case IrOpcode::PrintString: {
       const std::string *text = nullptr;
-      if (!resolveVmString(module, heap, decodePrintStringIndex(inst.imm), text, error)) {
+      if (!resolveVmString(module, decodePrintStringIndex(inst.imm), text, error)) {
         return false;
       }
       emitPrintedText(*text, decodePrintFlags(inst.imm), sink);
@@ -157,7 +156,7 @@ bool handlePrintOpcode(const IrModule &module,
         return false;
       }
       const std::string *text = nullptr;
-      if (!resolveVmString(module, heap, stringIndex, text, error)) {
+      if (!resolveVmString(module, stringIndex, text, error)) {
         return false;
       }
       emitPrintedText(*text, decodePrintFlags(inst.imm), sink);
@@ -196,14 +195,13 @@ bool handleFileOpcode(const IrModule &module,
                       std::vector<uint64_t> &stack,
                       std::vector<uint64_t> &locals,
                       std::string &error,
-                      const VmStringHeap *heap,
                       const VmOutputSink *sink) {
   switch (inst.op) {
     case IrOpcode::FileOpenRead:
     case IrOpcode::FileOpenWrite:
     case IrOpcode::FileOpenAppend: {
       const std::string *path = nullptr;
-      if (!resolveVmString(module, heap, inst.imm, path, error)) {
+      if (!resolveVmString(module, inst.imm, path, error)) {
         return false;
       }
       const int fd = ::open(path->c_str(), resolveFileOpenFlags(inst.op), 0644);
@@ -218,7 +216,7 @@ bool handleFileOpcode(const IrModule &module,
         return false;
       }
       const std::string *path = nullptr;
-      if (!resolveVmString(module, heap, stringIndex, path, error)) {
+      if (!resolveVmString(module, stringIndex, path, error)) {
         return false;
       }
       const int fd = ::open(path->c_str(), resolveFileOpenFlags(inst.op), 0644);
@@ -307,7 +305,7 @@ bool handleFileOpcode(const IrModule &module,
         return false;
       }
       const std::string *text = nullptr;
-      if (!resolveVmString(module, heap, inst.imm, text, error)) {
+      if (!resolveVmString(module, inst.imm, text, error)) {
         return false;
       }
       const int fd = static_cast<int>(handle & 0xffffffffu);
@@ -321,7 +319,7 @@ bool handleFileOpcode(const IrModule &module,
         return false;
       }
       const std::string *text = nullptr;
-      if (!resolveVmString(module, heap, stringIndex, text, error)) {
+      if (!resolveVmString(module, stringIndex, text, error)) {
         return false;
       }
       const int fd = static_cast<int>(handle & 0xffffffffu);

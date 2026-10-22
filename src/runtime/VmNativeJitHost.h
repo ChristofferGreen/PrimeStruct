@@ -7,7 +7,7 @@
 
 #include "primec/ir/Ir.h"
 #include "primec/runtime/VmHeapCore.h"
-#include "primec/runtime/VmStringHeap.h"
+#include "primec/runtime/VmStringLookup.h"
 
 namespace primec::vm_detail {
 
@@ -44,7 +44,6 @@ private:
   const std::vector<std::string_view> &args_;
   std::vector<size_t> localCounts_;
   VmHeapCore heap_;
-  VmStringHeap strings_;
   std::vector<uint64_t> stack_;
   uint64_t *data_ = nullptr;
   std::string error_;

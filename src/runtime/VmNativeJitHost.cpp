@@ -117,7 +117,7 @@ bool VmNativeJitHost::run(uint32_t functionIndex,
     const uint64_t stringIndex = stack_.back();
     stack_.pop_back();
     const std::string *text = nullptr;
-    if (!resolveVmString(module_, &strings_, stringIndex, text, error_)) {
+    if (!resolveVmString(module_, stringIndex, text, error_)) {
       return false;
     }
     if (static_cast<size_t>(position) >= text->size()) {
@@ -144,7 +144,7 @@ bool VmNativeJitHost::run(uint32_t functionIndex,
     return true;
   }
   if (isVmKernelPrintOpcode(inst.op)) {
-    const bool ok = handlePrintOpcode(module_, inst, stack_, &args_, error_, &strings_, nullptr);
+    const bool ok = handlePrintOpcode(module_, inst, stack_, &args_, error_, nullptr);
     // The code writes to the descriptors directly; keep the order.
     std::fflush(stdout);
     std::fflush(stderr);
@@ -158,7 +158,7 @@ bool VmNativeJitHost::run(uint32_t functionIndex,
     if (readsLocal) {
       locals[slot] = frameLocals[2 * slot];
     }
-    const bool ok = handleFileOpcode(module_, inst, stack_, locals, error_, &strings_, nullptr);
+    const bool ok = handleFileOpcode(module_, inst, stack_, locals, error_, nullptr);
     if (readsLocal) {
       frameLocals[2 * slot] = locals[slot];
     }

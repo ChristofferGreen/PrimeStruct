@@ -3,7 +3,7 @@
 #include "VmControlFlowOpcodeShared.h"
 #include "VmFastKernel.h"
 #include "primec/ir/IrPureSemantics.h"
-#include "primec/runtime/VmStringHeap.h"
+#include "primec/runtime/VmStringLookup.h"
 #include "primec/runtime/VmKernelBoundary.h"
 
 #include <algorithm>
@@ -356,7 +356,7 @@ template <bool TrackEvents>
       stack.pop_back();
     }
     const std::string *text = nullptr;
-    if (!resolveVmString(module, host.stringHeap(), stringIndex, text, error)) {
+    if (!resolveVmString(module, stringIndex, text, error)) {
       return VmKernelStepOutcome::Fault;
     }
     const size_t index = static_cast<size_t>(indexRaw);
@@ -378,7 +378,7 @@ template <bool TrackEvents>
     const uint64_t stringIndex = stack.back();
     stack.pop_back();
     const std::string *text = nullptr;
-    if (!resolveVmString(module, host.stringHeap(), stringIndex, text, error)) {
+    if (!resolveVmString(module, stringIndex, text, error)) {
       return VmKernelStepOutcome::Fault;
     }
     stack.push_back(static_cast<uint64_t>(text->size()));

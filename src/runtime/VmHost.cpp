@@ -61,6 +61,10 @@ bool VmHostFunctions::verify(const IrModule &module, std::string &error) const {
     if (!textHostFunctionName(import.name).empty()) {
       continue;  // answered by the VM itself (the string heap)
     }
+    if (import.returnKind == IrHostValueKind::String) {
+      error = "host function " + import.name + " returns a string, which a host cannot do; it returns text as a String";
+      return false;
+    }
     const VmHostBinding *binding = find(import.name);
     if (binding == nullptr || (!binding->invoke && !binding->invokeString)) {
       error = "unbound host function: " + import.name + " " + describeSignature(import.parameters, import.returnKind);

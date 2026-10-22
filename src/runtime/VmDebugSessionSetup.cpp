@@ -1,6 +1,5 @@
 #include "primec/runtime/Vm.h"
 
-#include "primec/runtime/VmStringHeap.h"
 
 #include <algorithm>
 
@@ -33,7 +32,6 @@ bool VmDebugSession::initFromModule(const IrModule &module,
   localCounts_.assign(module.functions.size(), 0);
   stack_.clear();
   heap_ = VmHeapCore{};
-  stringHeap_ = std::make_shared<vm_detail::VmStringHeap>();
   textHeap_ = std::make_shared<VmTextHeap>();
   frames_.clear();
   result_ = 0;
