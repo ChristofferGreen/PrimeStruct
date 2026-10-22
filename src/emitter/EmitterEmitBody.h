@@ -634,7 +634,7 @@
       out << "int main() { " << nameMap.at(entryPath) << "(); return 0; }\n";
     } else if (entryReturn == ReturnKind::Int) {
       out << "int main() { return " << nameMap.at(entryPath) << "(); }\n";
-    } else if (entryReturn == ReturnKind::Int64 || entryReturn == ReturnKind::UInt64) {
+    } else if (entryReturn == ReturnKind::Int64 || (entryReturn == ReturnKind::UInt64 || entryReturn == ReturnKind::UInt8)) {
       out << "int main() { return static_cast<int>(" << nameMap.at(entryPath) << "()); }\n";
     } else {
       out << "int main() { return static_cast<int>(" << nameMap.at(entryPath) << "()); }\n";

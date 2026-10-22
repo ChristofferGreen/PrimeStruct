@@ -605,7 +605,7 @@ bool emitResultWhyCallWithComposedOps(
 
 bool isSupportedResultWhyErrorKind(LocalInfo::ValueKind kind) {
   return kind == LocalInfo::ValueKind::Int32 || kind == LocalInfo::ValueKind::Int64 ||
-         kind == LocalInfo::ValueKind::UInt64 || kind == LocalInfo::ValueKind::Bool;
+         (kind == LocalInfo::ValueKind::UInt64 || kind == LocalInfo::ValueKind::UInt8) || kind == LocalInfo::ValueKind::Bool;
 }
 
 std::string normalizeResultWhyErrorName(const std::string &errorType, LocalInfo::ValueKind errorKind) {
@@ -619,6 +619,8 @@ std::string normalizeResultWhyErrorName(const std::string &errorType, LocalInfo:
       return "i64";
     case LocalInfo::ValueKind::UInt64:
       return "u64";
+      case LocalInfo::ValueKind::UInt8:
+      return "u8";
     case LocalInfo::ValueKind::Bool:
       return "bool";
     default:

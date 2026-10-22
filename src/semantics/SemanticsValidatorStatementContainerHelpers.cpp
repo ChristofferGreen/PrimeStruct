@@ -48,7 +48,7 @@ bool SemanticsValidator::isDropTrivialContainerElementType(const std::string &ty
   }
 
   const std::string normalizedType = normalizeBindingTypeName(typeName);
-  if (normalizedType == "bool" || normalizedType == "i32" || normalizedType == "i64" || normalizedType == "u64" ||
+  if (normalizedType == "bool" || normalizedType == "i32" || normalizedType == "i64" || normalizedType == "u64" || normalizedType == "u8" ||
       normalizedType == "f32" || normalizedType == "f64" || normalizedType == "string") {
     return true;
   }
@@ -136,7 +136,7 @@ bool SemanticsValidator::isRelocationTrivialContainerElementType(const std::stri
   }
 
   const std::string normalizedType = normalizeBindingTypeName(typeName);
-  if (normalizedType == "bool" || normalizedType == "i32" || normalizedType == "i64" || normalizedType == "u64" ||
+  if (normalizedType == "bool" || normalizedType == "i32" || normalizedType == "i64" || normalizedType == "u64" || normalizedType == "u8" ||
       normalizedType == "f32" || normalizedType == "f64" || normalizedType == "string") {
     return true;
   }

@@ -103,7 +103,7 @@ bool inferPrimitiveFieldBinding(const Expr &initializer,
   std::function<bool(const Expr &, LayoutFieldBinding &)> infer;
   infer = [&](const Expr &expr, LayoutFieldBinding &out) -> bool {
     if (expr.kind == Expr::Kind::Literal) {
-      out.typeName = expr.isUnsigned ? "u64" : (expr.intWidth == 64 ? "i64" : "i32");
+      out.typeName = expr.integerTypeName();
       out.typeTemplateArg.clear();
       return true;
     }
@@ -156,7 +156,7 @@ bool inferPrimitiveFieldBinding(const Expr &initializer,
       const std::string &target = expr.templateArgs.front();
       out.typeName = (target == "int") ? "i32" : target;
       out.typeTemplateArg.clear();
-      return out.typeName == "i32" || out.typeName == "i64" || out.typeName == "u64" ||
+      return out.typeName == "i32" || out.typeName == "i64" || out.typeName == "u64" || out.typeName == "u8" ||
              out.typeName == "f32" || out.typeName == "f64" || out.typeName == "bool" ||
              out.typeName == "string" || out.typeName == "integer" || out.typeName == "decimal" ||
              out.typeName == "complex";

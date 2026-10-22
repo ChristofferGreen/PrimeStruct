@@ -8,7 +8,7 @@ LocalInfo::ValueKind normalizeIndexKind(LocalInfo::ValueKind kind) {
 
 bool isSupportedIndexKind(LocalInfo::ValueKind kind) {
   return kind == LocalInfo::ValueKind::Int32 || kind == LocalInfo::ValueKind::Int64 ||
-         kind == LocalInfo::ValueKind::UInt64;
+         (kind == LocalInfo::ValueKind::UInt64 || kind == LocalInfo::ValueKind::UInt8);
 }
 
 IrOpcode pushZeroForIndex(LocalInfo::ValueKind kind) {

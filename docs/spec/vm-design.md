@@ -25,8 +25,8 @@
   (recursive and larger functions), including recursion up to the VM's call-depth limit.
 - **GLSL note:** GLSL/SPIR-V emission routes through canonical IR (`glsl-ir`/`spirv-ir`) and `IrValidationTarget::Glsl`;
   these modes emit backend output directly without requiring PSIR serialization.
-- **PSIR versioning:** current portable IR is PSIR v28 (v24 to v28 are listed in `include/primec/ir/Ir.h`'s opcode
-  comments and the finished TODO log; v28 adds `HeapAllocBytes`, `LoadU8`, `StoreU8` and `ZextU8`). Before that, PSIR v23 (adds a per-function `parameter_count` field on top of v22’s
+- **PSIR versioning:** current portable IR is PSIR v29 (v24 to v29 are listed in `include/primec/ir/Ir.h`'s opcode
+  comments and the finished TODO log; v29 appends the `u8` host value kind; v28 adds `HeapAllocBytes`, `LoadU8`, `StoreU8` and `ZextU8`). Before that, PSIR v23 (adds a per-function `parameter_count` field on top of v22’s
   source-unit/file identity in source-map metadata, v21’s `HeapRealloc`, v20’s `FileReadByte` and
   `HeapFree`, v19’s per-instruction source-map metadata keyed by debug ID, v18’s instruction debug IDs, v17’s local
   debug slots, v16’s function-call opcodes `Call`/`CallVoid`, v15’s execution metadata, v14’s float return opcodes,

@@ -168,7 +168,7 @@ bool isTupleDestructuringIdentifier(std::string_view name) {
 bool isPrimitiveTupleDestructuringTypeName(const std::string &name) {
   const std::string normalized = semantics::normalizeBindingTypeName(name);
   return normalized == "auto" || normalized == "int" || normalized == "i32" ||
-         normalized == "i64" || normalized == "u64" || normalized == "bool" ||
+         normalized == "i64" || normalized == "u64" || normalized == "u8" || normalized == "bool" ||
          normalized == "f32" || normalized == "f64" || normalized == "string";
 }
 

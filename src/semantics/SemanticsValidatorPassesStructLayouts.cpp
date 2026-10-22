@@ -335,7 +335,7 @@ bool SemanticsValidator::validateStructLayouts() {
       layoutOut = {8u, 8u};
       return true;
     }
-    if (normalized == "bool") {
+    if (normalized == "bool" || normalized == "u8") {
       layoutOut = {1u, 1u};
       return true;
     }

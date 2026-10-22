@@ -64,7 +64,7 @@ void printExpr(std::ostringstream &out, const Expr &expr) {
     } else {
       if (expr.isUnsigned) {
         out << expr.literalValue;
-        out << (expr.intWidth == 64 ? "u64" : "u32");
+        out << (expr.intWidth == 64 ? "u64" : "u8");
       } else {
         out << static_cast<int64_t>(expr.literalValue);
         out << (expr.intWidth == 64 ? "i64" : "i32");
@@ -323,6 +323,9 @@ std::string IrPrinter::print(const Program &program) const {
       if (left == ReturnKind::Float32 || right == ReturnKind::Float32) {
         return ReturnKind::Float32;
       }
+      if (left == ReturnKind::UInt8 || right == ReturnKind::UInt8) {
+        return (left == ReturnKind::UInt8 && right == ReturnKind::UInt8) ? ReturnKind::UInt8 : ReturnKind::Unknown;
+      }
       if (left == ReturnKind::UInt64 || right == ReturnKind::UInt64) {
         return (left == ReturnKind::UInt64 && right == ReturnKind::UInt64) ? ReturnKind::UInt64 : ReturnKind::Unknown;
       }
@@ -341,7 +344,7 @@ std::string IrPrinter::print(const Program &program) const {
 
     if (expr.kind == Expr::Kind::Literal) {
       if (expr.isUnsigned) {
-        return ReturnKind::UInt64;
+        return expr.intWidth == 8 ? ReturnKind::UInt8 : ReturnKind::UInt64;
       }
       if (expr.intWidth == 64) {
         return ReturnKind::Int64;

@@ -99,7 +99,7 @@ bool inferDeclaredReturnCollection(const Definition &definition,
   auto inferLiteralTypeName = [&](const Expr &value, std::string &typeOut) {
     typeOut.clear();
     if (value.kind == Expr::Kind::Literal) {
-      typeOut = value.isUnsigned ? "u64" : (value.intWidth == 64 ? "i64" : "i32");
+      typeOut = value.integerTypeName();
       return true;
     }
     if (value.kind == Expr::Kind::BoolLiteral) {

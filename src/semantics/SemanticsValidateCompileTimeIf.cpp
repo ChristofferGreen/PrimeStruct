@@ -286,7 +286,7 @@ bool serializeCompileTimeIfPredicateExpr(const Expr &expr, std::string &out) {
   case Expr::Kind::Literal:
     out = std::to_string(static_cast<std::int64_t>(expr.literalValue));
     if (expr.isUnsigned) {
-      out += expr.intWidth == 64 ? "u64" : "u32";
+      out += expr.intWidth == 64 ? "u64" : "u8";
     } else {
       out += expr.intWidth == 64 ? "i64" : "i32";
     }

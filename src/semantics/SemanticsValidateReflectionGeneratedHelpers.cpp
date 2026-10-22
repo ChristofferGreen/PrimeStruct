@@ -153,13 +153,13 @@ bool rewriteReflectionGeneratedHelpersImpl(Program &program,
   };
   auto isCompareEligibleFieldType = [](const std::string &fieldTypeName) {
     const std::string normalized = semantics::normalizeBindingTypeName(fieldTypeName);
-    return normalized == "int" || normalized == "i32" || normalized == "i64" || normalized == "u64" ||
+    return normalized == "int" || normalized == "i32" || normalized == "i64" || normalized == "u64" || normalized == "u8" ||
            normalized == "bool" || normalized == "float" || normalized == "f32" || normalized == "f64" ||
            normalized == "string" || normalized == "integer" || normalized == "decimal";
   };
   auto isHash64EligibleFieldType = [](const std::string &fieldTypeName) {
     const std::string normalized = semantics::normalizeBindingTypeName(fieldTypeName);
-    return normalized == "int" || normalized == "i32" || normalized == "i64" || normalized == "u64" ||
+    return normalized == "int" || normalized == "i32" || normalized == "i64" || normalized == "u64" || normalized == "u8" ||
            normalized == "bool" || normalized == "float" || normalized == "f32" || normalized == "f64";
   };
   std::vector<Definition> rewrittenDefinitions;

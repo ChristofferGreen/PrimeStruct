@@ -101,6 +101,8 @@ std::string SemanticsValidator::typeNameForReturnKind(ReturnKind kind) const {
       return "i64";
     case ReturnKind::UInt64:
       return "u64";
+      case ReturnKind::UInt8:
+      return "u8";
     case ReturnKind::Bool:
       return "bool";
     case ReturnKind::String:

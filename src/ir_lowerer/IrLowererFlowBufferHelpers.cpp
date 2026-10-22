@@ -100,7 +100,7 @@ bool resolveBufferInitInfo(const Expr &expr,
   out.count = static_cast<int32_t>(count64);
   out.elemKind = elemKind;
   out.zeroOpcode = IrOpcode::PushI32;
-  if (elemKind == LocalInfo::ValueKind::Int64 || elemKind == LocalInfo::ValueKind::UInt64) {
+  if (elemKind == LocalInfo::ValueKind::Int64 || (elemKind == LocalInfo::ValueKind::UInt64 || elemKind == LocalInfo::ValueKind::UInt8)) {
     out.zeroOpcode = IrOpcode::PushI64;
   } else if (elemKind == LocalInfo::ValueKind::Float64) {
     out.zeroOpcode = IrOpcode::PushF64;

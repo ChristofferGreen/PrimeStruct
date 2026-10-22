@@ -60,7 +60,7 @@ OperatorSaturateRoundingRootsEmitResult emitSaturateRoundingRootsOperatorExpr(
             }
           };
 
-          if (argKind == LocalInfo::ValueKind::UInt64) {
+          if ((argKind == LocalInfo::ValueKind::UInt64 || argKind == LocalInfo::ValueKind::UInt8)) {
             instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
             pushConst(1);
             instructions.push_back({IrOpcode::CmpGtU64, 0});
@@ -253,7 +253,7 @@ OperatorSaturateRoundingRootsEmitResult emitSaturateRoundingRootsOperatorExpr(
           };
 
           if (argKind == LocalInfo::ValueKind::Int32 || argKind == LocalInfo::ValueKind::Int64 ||
-              argKind == LocalInfo::ValueKind::UInt64) {
+              (argKind == LocalInfo::ValueKind::UInt64 || argKind == LocalInfo::ValueKind::UInt8)) {
             if (roundingName == "fract") {
               if (argKind == LocalInfo::ValueKind::Int32) {
                 instructions.push_back({IrOpcode::PushI32, 0});

@@ -84,7 +84,7 @@ bool emitConversionsAndCallsOperatorExpr(
         instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(static_cast<int64_t>(value))});
         return true;
       }
-      if (targetKind == LocalInfo::ValueKind::UInt64) {
+      if ((targetKind == LocalInfo::ValueKind::UInt64 || targetKind == LocalInfo::ValueKind::UInt8)) {
         instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(value)});
         return true;
       }
@@ -125,7 +125,7 @@ bool emitConversionsAndCallsOperatorExpr(
     LocalInfo::ValueKind floatKind = LocalInfo::ValueKind::Unknown;
     if (argKind == LocalInfo::ValueKind::Float32 || argKind == LocalInfo::ValueKind::Float64) {
       if (targetKind == LocalInfo::ValueKind::Int32 || targetKind == LocalInfo::ValueKind::Int64 ||
-          targetKind == LocalInfo::ValueKind::UInt64) {
+          (targetKind == LocalInfo::ValueKind::UInt64 || targetKind == LocalInfo::ValueKind::UInt8)) {
         needsFloatToIntGuard = true;
         floatKind = argKind;
       }
@@ -192,7 +192,7 @@ bool emitConversionsAndCallsOperatorExpr(
         convertOp = IrOpcode::ConvertI32ToF32;
       } else if (argKind == LocalInfo::ValueKind::Int64) {
         convertOp = IrOpcode::ConvertI64ToF32;
-      } else if (argKind == LocalInfo::ValueKind::UInt64) {
+      } else if ((argKind == LocalInfo::ValueKind::UInt64 || argKind == LocalInfo::ValueKind::UInt8)) {
         convertOp = IrOpcode::ConvertU64ToF32;
       } else if (argKind == LocalInfo::ValueKind::Float64) {
         convertOp = IrOpcode::ConvertF64ToF32;
@@ -205,7 +205,7 @@ bool emitConversionsAndCallsOperatorExpr(
         convertOp = IrOpcode::ConvertI32ToF64;
       } else if (argKind == LocalInfo::ValueKind::Int64) {
         convertOp = IrOpcode::ConvertI64ToF64;
-      } else if (argKind == LocalInfo::ValueKind::UInt64) {
+      } else if ((argKind == LocalInfo::ValueKind::UInt64 || argKind == LocalInfo::ValueKind::UInt8)) {
         convertOp = IrOpcode::ConvertU64ToF64;
       } else if (argKind == LocalInfo::ValueKind::Float32) {
         convertOp = IrOpcode::ConvertF32ToF64;
@@ -229,7 +229,7 @@ bool emitConversionsAndCallsOperatorExpr(
       } else {
         needsConvert = false;
       }
-    } else if (targetKind == LocalInfo::ValueKind::UInt64) {
+    } else if ((targetKind == LocalInfo::ValueKind::UInt64 || targetKind == LocalInfo::ValueKind::UInt8)) {
       if (argKind == LocalInfo::ValueKind::Float32) {
         convertOp = IrOpcode::ConvertF32ToU64;
       } else if (argKind == LocalInfo::ValueKind::Float64) {
@@ -240,6 +240,9 @@ bool emitConversionsAndCallsOperatorExpr(
     }
     if (needsConvert) {
       instructions.push_back({convertOp, 0});
+    }
+    if (targetKind == LocalInfo::ValueKind::UInt8) {
+      instructions.push_back({IrOpcode::ZextU8, 0});
     }
     return true;
   }

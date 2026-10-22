@@ -7,7 +7,7 @@
 namespace primec {
 
 constexpr uint32_t IrSchemaMagic = 0x50534952u; // "PSIR"
-constexpr uint32_t IrSchemaVersion = 28u;
+constexpr uint32_t IrSchemaVersion = 29u;
 constexpr uint32_t IrSchemaMinimumSupportedVersion = IrSchemaVersion;
 constexpr uint32_t IrSchemaMaximumSupportedVersion = IrSchemaVersion;
 
@@ -286,9 +286,12 @@ enum class IrHostValueKind : uint8_t {
   Bool,
   // Parameters only: the VM passes the host a pointer to the module's string.
   String,
+  // Appended last so serialized kind values stay stable. Slots hold the byte
+  // zero-extended.
+  U8,
 };
 
-constexpr uint8_t IrHostValueKindMax = static_cast<uint8_t>(IrHostValueKind::String);
+constexpr uint8_t IrHostValueKindMax = static_cast<uint8_t>(IrHostValueKind::U8);
 
 struct IrHostImport {
   std::string name;

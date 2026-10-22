@@ -156,7 +156,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
         const ReturnKind indexKind = inferExprReturnKind(expr.args[1], params, locals);
         if (indexKind != ReturnKind::Int &&
             indexKind != ReturnKind::Int64 &&
-            indexKind != ReturnKind::UInt64) {
+            (indexKind != ReturnKind::UInt64 && indexKind != ReturnKind::UInt8)) {
           return failMethodResolutionDiagnostic(normalizedMethodName + " requires integer index");
         }
       }

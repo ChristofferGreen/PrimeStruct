@@ -587,7 +587,7 @@ bool isNumericTraitType(std::string_view canonicalType) {
   }
   const std::string normalized = normalizeBindingTypeName(std::string(canonicalType));
   return normalized == "i32" || normalized == "i64" ||
-         normalized == "u64" || normalized == "f32" ||
+         normalized == "u64" || normalized == "u8" || normalized == "f32" ||
          normalized == "f64" || normalized == "integer" ||
          normalized == "decimal" || normalized == "complex";
 }

@@ -178,16 +178,31 @@ bool validateFunction(const IrModule &module,
       if (inst.imm >= module.hostImports.size()) {
         return failInstruction(functionIndex, function.name, instructionIndex, "invalid host import index", error);
       }
-      if (module.hostImports[static_cast<size_t>(inst.imm)].parameters.size() > MaxCallParameterCount) {
+      const IrHostImport &hostImport = module.hostImports[static_cast<size_t>(inst.imm)];
+      if (hostImport.parameters.size() > MaxCallParameterCount) {
         return failInstruction(
             functionIndex, function.name, instructionIndex, "host import parameter count exceeds supported limit", error);
       }
+      if (target == IrValidationTarget::Cpp) {
+        bool usesU8 = hostImport.returnKind == IrHostValueKind::U8;
+        for (const IrHostValueKind parameter : hostImport.parameters) {
+          usesU8 = usesU8 || parameter == IrHostValueKind::U8;
+        }
+        if (usesU8) {
+          return failInstruction(functionIndex,
+                                 function.name,
+                                 instructionIndex,
+                                 "u8 host values are only supported by the vm yet (docs/todo.md, TODO-5542)",
+                                 error);
+        }
+      }
     }
-    if (target == IrValidationTarget::Native && isByteOpcode(inst.op)) {
+    if (target != IrValidationTarget::Any && target != IrValidationTarget::Vm &&
+        target != IrValidationTarget::Serialized && isByteOpcode(inst.op)) {
       return failInstruction(functionIndex,
                              function.name,
                              instructionIndex,
-                             "byte memory opcodes are not supported by the native backend yet (docs/todo.md, TODO-5542)",
+                             "u8 and byte memory opcodes are only supported by the vm yet (docs/todo.md, TODO-5542)",
                              error);
     }
     if (isWasmTarget(target) && !isWasmOpcodeAllowedForTarget(inst.op, target)) {

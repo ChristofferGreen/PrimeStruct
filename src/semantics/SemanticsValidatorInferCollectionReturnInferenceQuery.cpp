@@ -129,7 +129,7 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       return resolveBindingTypeText(candidate.name, currentTypeTextOut);
     }
     if (candidate.kind == Expr::Kind::Literal) {
-      currentTypeTextOut = candidate.isUnsigned ? "u64" : (candidate.intWidth == 64 ? "i64" : "i32");
+      currentTypeTextOut = candidate.integerTypeName();
       return true;
     }
     if (candidate.kind == Expr::Kind::BoolLiteral) {

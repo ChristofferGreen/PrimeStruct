@@ -32,7 +32,7 @@ PhaseStatus SemanticsValidator::validateExprCallPhase3([[maybe_unused]] const st
         expr.args.size() == 3) {
       auto isIntegerRangeKind = [](ReturnKind kind) {
         return kind == ReturnKind::Int || kind == ReturnKind::Int64 ||
-               kind == ReturnKind::UInt64;
+               (kind == ReturnKind::UInt64 || kind == ReturnKind::UInt8);
       };
       auto literalIntegerValue = [](const Expr &candidate) -> std::optional<int64_t> {
         if (candidate.kind != Expr::Kind::Literal || candidate.isUnsigned) {
@@ -186,7 +186,7 @@ PhaseStatus SemanticsValidator::validateExprCallPhase3([[maybe_unused]] const st
                 inferExprReturnKind(expr.args[1], params, locals);
             if (indexKind != ReturnKind::Int &&
                 indexKind != ReturnKind::Int64 &&
-                indexKind != ReturnKind::UInt64) {
+                (indexKind != ReturnKind::UInt64 && indexKind != ReturnKind::UInt8)) {
               return st.done(failExprRootDiagnostic(helperName +
                                             " requires integer index"));
             }

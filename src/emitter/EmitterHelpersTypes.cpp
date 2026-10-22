@@ -52,6 +52,9 @@ ReturnKind getReturnKind(const Definition &def) {
     if (typeName == "u64") {
       return ReturnKind::UInt64;
     }
+    if (typeName == "u8") {
+      return ReturnKind::UInt8;
+    }
     if (typeName == "float" || typeName == "f32") {
       return ReturnKind::Float32;
     }
@@ -532,6 +535,9 @@ std::string bindingTypeToCpp(const std::string &typeName) {
   if (normalizedTypeName == "u64") {
     return "uint64_t";
   }
+  if (normalizedTypeName == "u8") {
+    return "uint8_t";
+  }
   if (normalizedTypeName == "bool") {
     return "bool";
   }
@@ -604,6 +610,9 @@ ReturnKind returnKindForTypeName(const std::string &name) {
   if (name == "u64") {
     return ReturnKind::UInt64;
   }
+  if (name == "u8") {
+    return ReturnKind::UInt8;
+  }
   if (name == "bool") {
     return ReturnKind::Bool;
   }
@@ -659,6 +668,9 @@ ReturnKind combineNumericKinds(ReturnKind left, ReturnKind right) {
   if (left == ReturnKind::Float32 || right == ReturnKind::Float32) {
     return ReturnKind::Float32;
   }
+  if (left == ReturnKind::UInt8 || right == ReturnKind::UInt8) {
+    return (left == ReturnKind::UInt8 && right == ReturnKind::UInt8) ? ReturnKind::UInt8 : ReturnKind::Unknown;
+  }
   if (left == ReturnKind::UInt64 || right == ReturnKind::UInt64) {
     return (left == ReturnKind::UInt64 && right == ReturnKind::UInt64) ? ReturnKind::UInt64 : ReturnKind::Unknown;
   }
@@ -680,7 +692,7 @@ ReturnKind inferPrimitiveReturnKind(const Expr &expr,
                                    bool allowMathBare) {
   if (expr.kind == Expr::Kind::Literal) {
     if (expr.isUnsigned) {
-      return ReturnKind::UInt64;
+      return expr.intWidth == 8 ? ReturnKind::UInt8 : ReturnKind::UInt64;
     }
     return expr.intWidth == 64 ? ReturnKind::Int64 : ReturnKind::Int;
   }
@@ -739,7 +751,7 @@ ReturnKind inferPrimitiveReturnKind(const Expr &expr,
   auto kindIt = returnKinds.find(resolved);
   if (kindIt != returnKinds.end()) {
     ReturnKind kind = kindIt->second;
-    if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 ||
+    if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || (kind == ReturnKind::UInt64 || kind == ReturnKind::UInt8) ||
         kind == ReturnKind::Bool || kind == ReturnKind::String || kind == ReturnKind::Float32 ||
         kind == ReturnKind::Float64) {
       return kind;

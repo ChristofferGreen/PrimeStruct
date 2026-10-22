@@ -91,6 +91,9 @@ bool parsePositiveIntArg(const std::string &text, int &value) {
       digits.resize(digits.size() - 3);
     }
   }
+  if (digits.size() > 2 && digits.compare(digits.size() - 2, 2, "u8") == 0) {
+    digits.resize(digits.size() - 2);
+  }
   if (digits.empty() || digits[0] == '-') {
     return false;
   }
@@ -282,10 +285,7 @@ bool isDefaultExprAllowed(const Expr &expr) {
 
 std::string inferPrimitiveBindingTypeFromInitializer(const Expr &expr) {
   if (expr.kind == Expr::Kind::Literal) {
-    if (expr.isUnsigned) {
-      return "u64";
-    }
-    return expr.intWidth == 64 ? "i64" : "i32";
+    return expr.integerTypeName();
   }
   if (expr.kind == Expr::Kind::BoolLiteral) {
     return "bool";
@@ -417,6 +417,8 @@ bool tryInferBindingTypeFromInitializer(const Expr &initializer,
         return "i64";
       case ReturnKind::UInt64:
         return "u64";
+        case ReturnKind::UInt8:
+        return "u8";
       case ReturnKind::Bool:
         return "bool";
       case ReturnKind::String:
@@ -461,6 +463,9 @@ bool tryInferBindingTypeFromInitializer(const Expr &initializer,
     }
     if (left == ReturnKind::Float32 || right == ReturnKind::Float32) {
       return ReturnKind::Float32;
+    }
+    if (left == ReturnKind::UInt8 || right == ReturnKind::UInt8) {
+      return (left == ReturnKind::UInt8 && right == ReturnKind::UInt8) ? ReturnKind::UInt8 : ReturnKind::Unknown;
     }
     if (left == ReturnKind::UInt64 || right == ReturnKind::UInt64) {
       return (left == ReturnKind::UInt64 && right == ReturnKind::UInt64) ? ReturnKind::UInt64 : ReturnKind::Unknown;

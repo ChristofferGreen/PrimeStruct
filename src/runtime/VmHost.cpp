@@ -22,6 +22,8 @@ const char *irHostValueKindName(IrHostValueKind kind) {
     return "bool";
   case IrHostValueKind::String:
     return "string";
+  case IrHostValueKind::U8:
+    return "u8";
   }
   return "unknown";
 }

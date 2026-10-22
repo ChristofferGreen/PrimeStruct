@@ -222,7 +222,7 @@
           ops.pushZero = pushZeroForIndex(indexKind);
           ops.cmpLt = cmpLtForIndex(indexKind);
           ops.cmpGe = cmpGeForIndex(indexKind);
-          ops.skipNegativeCheck = (indexKind == LocalInfo::ValueKind::UInt64);
+          ops.skipNegativeCheck = ((indexKind == LocalInfo::ValueKind::UInt64 || indexKind == LocalInfo::ValueKind::UInt8));
           return true;
         },
         [&](const Expr &exprToEmit) { return emitExpr(exprToEmit, callerLocals); },

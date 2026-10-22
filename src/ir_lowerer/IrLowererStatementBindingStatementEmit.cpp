@@ -58,7 +58,7 @@ bool emitStringStatementBindingInitializer(const Expr &stmt,
             ops.pushZero = pushZeroForIndex(indexKind);
             ops.cmpLt = cmpLtForIndex(indexKind);
             ops.cmpGe = cmpGeForIndex(indexKind);
-            ops.skipNegativeCheck = (indexKind == LocalInfo::ValueKind::UInt64);
+            ops.skipNegativeCheck = ((indexKind == LocalInfo::ValueKind::UInt64 || indexKind == LocalInfo::ValueKind::UInt8));
             return true;
           },
           [&](const Expr &expr) { return emitExpr(expr, localsIn); },
@@ -412,7 +412,7 @@ ReturnStatementEmitResult tryEmitReturnStatement(
   }
 
   auto isSupportedScalarKind = [](LocalInfo::ValueKind kind) {
-    return kind == LocalInfo::ValueKind::Int64 || kind == LocalInfo::ValueKind::UInt64 ||
+    return kind == LocalInfo::ValueKind::Int64 || (kind == LocalInfo::ValueKind::UInt64 || kind == LocalInfo::ValueKind::UInt8) ||
            kind == LocalInfo::ValueKind::Int32 || kind == LocalInfo::ValueKind::Bool ||
            kind == LocalInfo::ValueKind::Float32 || kind == LocalInfo::ValueKind::Float64 ||
            kind == LocalInfo::ValueKind::String;
@@ -542,7 +542,7 @@ ReturnStatementEmitResult tryEmitReturnStatement(
       if (arrayKind == LocalInfo::ValueKind::Unknown) {
         const LocalInfo::ValueKind scalarKind = inferExprKind(valueExpr, localsIn);
         const bool isOpaqueAggregateHandle =
-            scalarKind == LocalInfo::ValueKind::Int64 || scalarKind == LocalInfo::ValueKind::UInt64;
+            scalarKind == LocalInfo::ValueKind::Int64 || (scalarKind == LocalInfo::ValueKind::UInt64 || scalarKind == LocalInfo::ValueKind::UInt8);
         if (isSupportedScalarKind(scalarKind) && !isOpaqueAggregateHandle) {
           error = "native backend only supports returning array values"
                   " [inline scalar=" + typeNameForValueKind(scalarKind) +
@@ -653,7 +653,7 @@ ReturnStatementEmitResult tryEmitReturnStatement(
   }
 
   const LocalInfo::ValueKind returnKind = inferExprKind(valueExpr, localsIn);
-  if (returnKind == LocalInfo::ValueKind::Int64 || returnKind == LocalInfo::ValueKind::UInt64 ||
+  if (returnKind == LocalInfo::ValueKind::Int64 || (returnKind == LocalInfo::ValueKind::UInt64 || returnKind == LocalInfo::ValueKind::UInt8) ||
       returnKind == LocalInfo::ValueKind::String) {
     instructions.push_back({IrOpcode::ReturnI64, 0});
   } else if (returnKind == LocalInfo::ValueKind::Int32 || returnKind == LocalInfo::ValueKind::Bool) {
@@ -743,7 +743,7 @@ StatementMatchIfEmitResult tryEmitMatchIfStatement(const Expr &stmt,
   }
   const bool isIntegralCondition =
       condKind == LocalInfo::ValueKind::Int32 || condKind == LocalInfo::ValueKind::Int64 ||
-      condKind == LocalInfo::ValueKind::UInt64;
+      (condKind == LocalInfo::ValueKind::UInt64 || condKind == LocalInfo::ValueKind::UInt8);
   if (condKind != LocalInfo::ValueKind::Bool && !isIntegralCondition) {
     error = "if condition requires bool";
     return StatementMatchIfEmitResult::Error;

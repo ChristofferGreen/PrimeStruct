@@ -263,7 +263,7 @@ bool SemanticsValidator::validateControlFlowStatement(const std::vector<Paramete
       return false;
     }
     ReturnKind countKind = inferExprReturnKind(count, params, locals);
-    if (countKind != ReturnKind::Int && countKind != ReturnKind::Int64 && countKind != ReturnKind::UInt64) {
+    if (countKind != ReturnKind::Int && countKind != ReturnKind::Int64 && (countKind != ReturnKind::UInt64 && countKind != ReturnKind::UInt8)) {
       return failStatementDiagnostic("loop count requires integer");
     }
     if (runSemanticsValidatorStatementIsNegativeIntegerLiteralStep(count)) {
@@ -375,7 +375,7 @@ bool SemanticsValidator::validateControlFlowStatement(const std::vector<Paramete
       return false;
     }
     ReturnKind countKind = inferExprReturnKind(count, params, locals);
-    if (countKind != ReturnKind::Int && countKind != ReturnKind::Int64 && countKind != ReturnKind::UInt64 &&
+    if (countKind != ReturnKind::Int && countKind != ReturnKind::Int64 && (countKind != ReturnKind::UInt64 && countKind != ReturnKind::UInt8) &&
         countKind != ReturnKind::Bool) {
       return failStatementDiagnostic("repeat count requires integer or bool");
     }

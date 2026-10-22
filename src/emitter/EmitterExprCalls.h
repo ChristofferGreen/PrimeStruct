@@ -53,7 +53,7 @@
       };
       auto isNumericScalarTarget = [&](const Expr &targetExpr) {
         ReturnKind kind = inferPrimitiveReturnKind(targetExpr, localTypes, returnKinds, allowMathBare);
-        return kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 ||
+        return kind == ReturnKind::Int || kind == ReturnKind::Int64 || (kind == ReturnKind::UInt64 || kind == ReturnKind::UInt8) ||
                kind == ReturnKind::Float32 || kind == ReturnKind::Float64;
       };
       auto rewriteHelperCall = [&](const std::string &helperPath) {
@@ -256,7 +256,7 @@
       ReturnKind targetKind = returnKindForTypeName(normalizeBindingTypeName(expr.templateArgs.front()));
       const bool argIsFloat = argKind == ReturnKind::Float32 || argKind == ReturnKind::Float64;
       const bool targetIsInt = targetKind == ReturnKind::Int || targetKind == ReturnKind::Int64 ||
-                               targetKind == ReturnKind::UInt64;
+                               (targetKind == ReturnKind::UInt64 || targetKind == ReturnKind::UInt8);
       if (argIsFloat && targetIsInt) {
         out << "ps_convert_float_to_int<" << targetType << ">("
             << emitExpr(expr.args[0], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,

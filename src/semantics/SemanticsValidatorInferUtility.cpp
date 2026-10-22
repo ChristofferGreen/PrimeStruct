@@ -17,6 +17,9 @@ ReturnKind SemanticsValidator::combineInferredNumericKinds(ReturnKind left, Retu
   if (left == ReturnKind::Float32 || right == ReturnKind::Float32) {
     return ReturnKind::Float32;
   }
+  if (left == ReturnKind::UInt8 || right == ReturnKind::UInt8) {
+    return (left == ReturnKind::UInt8 && right == ReturnKind::UInt8) ? ReturnKind::UInt8 : ReturnKind::Unknown;
+  }
   if (left == ReturnKind::UInt64 || right == ReturnKind::UInt64) {
     return (left == ReturnKind::UInt64 && right == ReturnKind::UInt64) ? ReturnKind::UInt64 : ReturnKind::Unknown;
   }

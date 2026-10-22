@@ -9,7 +9,7 @@ namespace primec::ir_lowerer {
 using namespace ir_lowerer_access_load_helpers_file_local;
 
 IrOpcode keyValueKeyCompareOpcode(LocalInfo::ValueKind keyValueKeyKind) {
-  if (keyValueKeyKind == LocalInfo::ValueKind::Int64 || keyValueKeyKind == LocalInfo::ValueKind::UInt64) {
+  if (keyValueKeyKind == LocalInfo::ValueKind::Int64 || (keyValueKeyKind == LocalInfo::ValueKind::UInt64 || keyValueKeyKind == LocalInfo::ValueKind::UInt8)) {
     return IrOpcode::CmpEqI64;
   }
   if (keyValueKeyKind == LocalInfo::ValueKind::Float64) {
@@ -684,7 +684,7 @@ void emitStringAccessLoad(
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm) {
   if (accessName == "at") {
-    if (indexKind != LocalInfo::ValueKind::UInt64) {
+    if ((indexKind != LocalInfo::ValueKind::UInt64 && indexKind != LocalInfo::ValueKind::UInt8)) {
       emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal));
       emitInstruction(pushZeroForIndex(indexKind), 0);
       emitInstruction(cmpLtForIndex(indexKind), 0);
@@ -738,7 +738,7 @@ void emitArrayVectorAccessLoad(
     emitInstruction(IrOpcode::LoadIndirect, 0);
     emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(countLocal));
 
-    if (indexKind != LocalInfo::ValueKind::UInt64) {
+    if ((indexKind != LocalInfo::ValueKind::UInt64 && indexKind != LocalInfo::ValueKind::UInt8)) {
       emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal));
       emitInstruction(pushZeroForIndex(indexKind), 0);
       emitInstruction(cmpLtForIndex(indexKind), 0);

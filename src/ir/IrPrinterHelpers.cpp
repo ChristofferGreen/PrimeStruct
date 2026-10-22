@@ -113,6 +113,9 @@ std::string bindingTypeName(const Expr &expr) {
   if (typeName == "u64") {
     return "u64";
   }
+  if (typeName == "u8") {
+    return "u8";
+  }
   if (typeName == "bool") {
     return "bool";
   }
@@ -327,6 +330,9 @@ ReturnKind getReturnKind(const Definition &def) {
     if (typeName == "u64") {
       return ReturnKind::UInt64;
     }
+    if (typeName == "u8") {
+      return ReturnKind::UInt8;
+    }
     if (typeName == "bool") {
       return ReturnKind::Bool;
     }
@@ -360,6 +366,9 @@ const char *returnTypeName(ReturnKind kind) {
   }
   if (kind == ReturnKind::UInt64) {
     return "u64";
+  }
+  if (kind == ReturnKind::UInt8) {
+    return "u8";
   }
   if (kind == ReturnKind::Float32) {
     return "f32";
@@ -410,6 +419,9 @@ ReturnKind returnKindForTypeName(const std::string &name) {
   }
   if (name == "u64") {
     return ReturnKind::UInt64;
+  }
+  if (name == "u8") {
+    return ReturnKind::UInt8;
   }
   if (name == "bool") {
     return ReturnKind::Bool;

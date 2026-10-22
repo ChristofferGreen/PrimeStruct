@@ -667,7 +667,7 @@ bool emitConversionsAndCallsMemoryAndPointerExpr(
       }
       instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(countLocal)});
 
-      if (indexKind != LocalInfo::ValueKind::UInt64) {
+      if ((indexKind != LocalInfo::ValueKind::UInt64 && indexKind != LocalInfo::ValueKind::UInt8)) {
         instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
         instructions.push_back({pushZeroForIndex(indexKind), 0});
         instructions.push_back({cmpLtForIndex(indexKind), 0});
@@ -677,7 +677,7 @@ bool emitConversionsAndCallsMemoryAndPointerExpr(
         instructions[jumpIndexNonNegative].imm = static_cast<int32_t>(instructions.size());
       }
 
-      if (countKind != LocalInfo::ValueKind::UInt64) {
+      if ((countKind != LocalInfo::ValueKind::UInt64 && countKind != LocalInfo::ValueKind::UInt8)) {
         instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
         instructions.push_back({pushZeroForIndex(countKind), 0});
         instructions.push_back({cmpLtForIndex(countKind), 0});

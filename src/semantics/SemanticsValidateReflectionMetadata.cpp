@@ -72,7 +72,7 @@ bool rewriteReflectionMetadataQueries(Program &program, std::string &error) {
       return std::string("template");
     }
     const std::string normalized = normalizeBindingTypeName(canonicalType);
-    if (normalized == "i32" || normalized == "i64" || normalized == "u64" || normalized == "integer") {
+    if (normalized == "i32" || normalized == "i64" || normalized == "u64" || normalized == "u8" || normalized == "integer") {
       return std::string("integer");
     }
     if (normalized == "f32" || normalized == "f64") {
@@ -195,7 +195,7 @@ bool rewriteReflectionMetadataQueries(Program &program, std::string &error) {
       return false;
     }
     const std::string normalized = normalizeBindingTypeName(canonicalType);
-    return normalized == "i32" || normalized == "i64" || normalized == "u64" || normalized == "f32" ||
+    return normalized == "i32" || normalized == "i64" || normalized == "u64" || normalized == "u8" || normalized == "f32" ||
            normalized == "f64" || normalized == "integer" || normalized == "decimal" ||
            normalized == "complex";
   };

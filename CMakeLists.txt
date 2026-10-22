@@ -1285,6 +1285,23 @@ if(PRIMESTRUCT_BUILD_TESTS)
   set_tests_properties(PrimeStruct_vm_byte_regions
                        PROPERTIES TIMEOUT 120 LABELS "parallel-safe")
 
+  # The `u8` scalar on the VM: literals, wrapping arithmetic, conversions, fields, host calls.
+  add_executable(PrimeStruct_u8_scalar_tests
+    tests/unit/test_main.cpp
+    tests/unit/language/test_u8_scalar.cpp
+  )
+  target_include_directories(PrimeStruct_u8_scalar_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
+  target_link_libraries(PrimeStruct_u8_scalar_tests PRIVATE primec_embed_lib)
+  primestructEnableWarnings(PrimeStruct_u8_scalar_tests)
+  add_test(
+    NAME PrimeStruct_u8_scalar
+    COMMAND $<TARGET_FILE:PrimeStruct_u8_scalar_tests>
+            "--test-suite=primestruct.language.u8_scalar"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_u8_scalar
+                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+
   # Host calls through the C++ emitters (exe/optexe/cpp/optcpp): compiled programs call
   # `extern "C"` host functions and match the VM (docs/NativeUiPlan.md goal).
   add_executable(PrimeStruct_cpp_host_call_tests

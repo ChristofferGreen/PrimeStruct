@@ -194,7 +194,7 @@ bool resolveFileWriteValueOpcode(LocalInfo::ValueKind kind, IrOpcode &opcodeOut)
     opcodeOut = IrOpcode::FileWriteI64;
     return true;
   }
-  if (kind == LocalInfo::ValueKind::UInt64) {
+  if ((kind == LocalInfo::ValueKind::UInt64 || kind == LocalInfo::ValueKind::UInt8)) {
     opcodeOut = IrOpcode::FileWriteU64;
     return true;
   }
@@ -335,7 +335,7 @@ bool emitFileReadByteCall(const Expr &expr,
   }
   const LocalInfo::ValueKind kind = it->second.valueKind;
   if (kind != LocalInfo::ValueKind::Int32 && kind != LocalInfo::ValueKind::Int64 &&
-      kind != LocalInfo::ValueKind::UInt64) {
+      (kind != LocalInfo::ValueKind::UInt64 && kind != LocalInfo::ValueKind::UInt8)) {
     error = "read_byte requires mutable integer binding";
     return false;
   }

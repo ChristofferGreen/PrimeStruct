@@ -238,7 +238,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
   };
   auto isIntegerExpr = [&](const Expr &arg) -> bool {
     ReturnKind kind = inferExprReturnKind(arg, params, locals);
-    if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64) {
+    if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || (kind == ReturnKind::UInt64 || kind == ReturnKind::UInt8)) {
       return true;
     }
     if (kind == ReturnKind::Bool || kind == ReturnKind::Float32 || kind == ReturnKind::Float64 ||
@@ -257,13 +257,13 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
         if (const BindingInfo *paramBinding = findParamBinding(params, arg.name)) {
           ReturnKind paramKind = returnKindForBinding(*paramBinding);
           return paramKind == ReturnKind::Int || paramKind == ReturnKind::Int64 ||
-                 paramKind == ReturnKind::UInt64;
+                 (paramKind == ReturnKind::UInt64 || paramKind == ReturnKind::UInt8);
         }
         auto it = locals.find(arg.name);
         if (it != locals.end()) {
           ReturnKind localKind = returnKindForBinding(it->second);
           return localKind == ReturnKind::Int || localKind == ReturnKind::Int64 ||
-                 localKind == ReturnKind::UInt64;
+                 (localKind == ReturnKind::UInt64 || localKind == ReturnKind::UInt8);
         }
       }
       return true;

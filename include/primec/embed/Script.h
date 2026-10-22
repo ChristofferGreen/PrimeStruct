@@ -14,7 +14,7 @@
 namespace primec::embed {
 
 // Primitive types that can cross the host boundary.
-enum class HostType : uint8_t { Void, I32, I64, U64, F32, F64, Bool, String };
+enum class HostType : uint8_t { Void, I32, I64, U64, F32, F64, Bool, String, U8 };
 
 namespace detail {
 template <class T> struct HostTypeOf;
@@ -22,6 +22,7 @@ template <> struct HostTypeOf<void> { static constexpr HostType value = HostType
 template <> struct HostTypeOf<int32_t> { static constexpr HostType value = HostType::I32; };
 template <> struct HostTypeOf<int64_t> { static constexpr HostType value = HostType::I64; };
 template <> struct HostTypeOf<uint64_t> { static constexpr HostType value = HostType::U64; };
+template <> struct HostTypeOf<uint8_t> { static constexpr HostType value = HostType::U8; };
 template <> struct HostTypeOf<float> { static constexpr HostType value = HostType::F32; };
 template <> struct HostTypeOf<double> { static constexpr HostType value = HostType::F64; };
 template <> struct HostTypeOf<bool> { static constexpr HostType value = HostType::Bool; };
@@ -41,6 +42,8 @@ template <class T> T fromSlot(uint64_t slot) {
     return static_cast<int64_t>(slot);
   } else if constexpr (std::is_same_v<T, uint64_t>) {
     return slot;
+  } else if constexpr (std::is_same_v<T, uint8_t>) {
+    return static_cast<uint8_t>(slot);
   } else if constexpr (std::is_same_v<T, float>) {
     return std::bit_cast<float>(static_cast<uint32_t>(slot));
   } else if constexpr (std::is_same_v<T, double>) {
@@ -60,6 +63,8 @@ template <class T> uint64_t toSlot(T value) {
   } else if constexpr (std::is_same_v<T, int64_t>) {
     return static_cast<uint64_t>(value);
   } else if constexpr (std::is_same_v<T, uint64_t>) {
+    return value;
+  } else if constexpr (std::is_same_v<T, uint8_t>) {
     return value;
   } else if constexpr (std::is_same_v<T, float>) {
     return std::bit_cast<uint32_t>(value);

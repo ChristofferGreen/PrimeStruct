@@ -506,7 +506,7 @@
           ? resolvedPrimitivePath
           : resolvedPrimitivePath.substr(slash + 1);
           if (leaf == "int" || leaf == "i32" || leaf == "i64" ||
-            leaf == "u64" || leaf == "float" || leaf == "f32" ||
+            leaf == "u64" || leaf == "u8" || leaf == "float" || leaf == "f32" ||
             leaf == "f64" || leaf == "bool") {
             return valueKindFromTypeName(leaf);
           }
@@ -524,6 +524,7 @@
               return true;
             case LocalInfo::ValueKind::Int64:
             case LocalInfo::ValueKind::UInt64:
+            case LocalInfo::ValueKind::UInt8:
               function.instructions.push_back({IrOpcode::PushI64, 0});
               return true;
             case LocalInfo::ValueKind::Float32:

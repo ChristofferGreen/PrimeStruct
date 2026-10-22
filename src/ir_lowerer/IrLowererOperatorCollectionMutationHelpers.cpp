@@ -274,7 +274,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
     const Expr &target = expr.args.front();
     auto validateDeltaKind = [&](LocalInfo::ValueKind kind) -> bool {
       if (kind == LocalInfo::ValueKind::Int32 || kind == LocalInfo::ValueKind::Int64 ||
-          kind == LocalInfo::ValueKind::UInt64 || kind == LocalInfo::ValueKind::Float64 ||
+          (kind == LocalInfo::ValueKind::UInt64 || kind == LocalInfo::ValueKind::UInt8) || kind == LocalInfo::ValueKind::Float64 ||
           kind == LocalInfo::ValueKind::Float32) {
         return true;
       }
@@ -291,9 +291,13 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         instructions.push_back({IrOpcode::SextI32, 0}); // i32 wraps at 32 bits
         return true;
       }
-      if (kind == LocalInfo::ValueKind::Int64 || kind == LocalInfo::ValueKind::UInt64) {
+      if (kind == LocalInfo::ValueKind::Int64 || kind == LocalInfo::ValueKind::UInt64 ||
+          kind == LocalInfo::ValueKind::UInt8) {
         instructions.push_back({IrOpcode::PushI64, 1});
         instructions.push_back({isIncrement ? IrOpcode::AddI64 : IrOpcode::SubI64, 0});
+        if (kind == LocalInfo::ValueKind::UInt8) {
+          instructions.push_back({IrOpcode::ZextU8, 0}); // u8 wraps at 8 bits
+        }
         return true;
       }
       if (kind == LocalInfo::ValueKind::Float64) {
@@ -662,7 +666,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         instructions.push_back({IrOpcode::LoadIndirect, 0});
         instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(countLocal)});
 
-        if (indexKind != LocalInfo::ValueKind::UInt64) {
+        if ((indexKind != LocalInfo::ValueKind::UInt64 && indexKind != LocalInfo::ValueKind::UInt8)) {
           instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
           instructions.push_back({pushZeroForIndex(indexKind), 0});
           instructions.push_back({cmpLtForIndex(indexKind), 0});
@@ -877,7 +881,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
           return false;
         }
 
-        if (indexKind != LocalInfo::ValueKind::UInt64) {
+        if ((indexKind != LocalInfo::ValueKind::UInt64 && indexKind != LocalInfo::ValueKind::UInt8)) {
           instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
           instructions.push_back({pushZeroForIndex(indexKind), 0});
           instructions.push_back({cmpLtForIndex(indexKind), 0});

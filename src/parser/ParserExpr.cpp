@@ -116,7 +116,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
     if (name.empty() || name.find('/') != std::string::npos) {
       return false;
     }
-    return name == "int" || name == "i32" || name == "i64" || name == "u64" || name == "bool" ||
+    return name == "int" || name == "i32" || name == "i64" || name == "u64" || name == "u8" || name == "bool" ||
            name == "float" || name == "f32" || name == "f64";
   };
   auto isCollectionBraceType = [&](std::string name) -> bool {
@@ -362,6 +362,10 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
         intWidth = 64;
         isUnsigned = true;
         suffixLen = 3;
+      } else if (text.size() >= 2 && text.compare(text.size() - 2, 2, "u8") == 0) {
+        intWidth = 8;
+        isUnsigned = true;
+        suffixLen = 2;
       }
       if (suffixLen == 0) {
         int floatWidth = 32;
@@ -387,7 +391,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
           isFloat = true;
         }
         if (!isFloat) {
-          return fail("integer literal requires i32/i64/u64 suffix");
+          return fail("integer literal requires i32/i64/u64/u8 suffix");
         }
         if (!allowSurfaceSyntax_ && !hasFloatWidthSuffix) {
           return fail("float literal requires f32/f64 suffix in canonical mode");
@@ -444,6 +448,9 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       try {
         if (isUnsigned) {
           unsigned long long value = std::stoull(digits, nullptr, base);
+          if (intWidth == 8 && value > 0xFFull) {
+            return fail("u8 literal out of range");
+          }
           out.literalValue = static_cast<uint64_t>(value);
         } else {
           long long value = 0;

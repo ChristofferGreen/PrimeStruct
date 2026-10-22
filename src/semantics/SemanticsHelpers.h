@@ -17,6 +17,7 @@ enum class ReturnKind {
   Int,
   Int64,
   UInt64,
+  UInt8,
   Float32,
   Float64,
   Integer,

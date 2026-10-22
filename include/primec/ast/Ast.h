@@ -110,8 +110,16 @@ struct Transform {
 struct Expr {
   enum class Kind { Literal, BoolLiteral, FloatLiteral, StringLiteral, Call, Name } kind = Kind::Literal;
   uint64_t literalValue = 0;
+  // 8 (u8, unsigned only), 32 (i32), or 64 (i64, u64).
   int intWidth = 32;
   bool isUnsigned = false;
+  // Canonical type name of an integer literal: i32, i64, u64 or u8.
+  const char *integerTypeName() const {
+    if (isUnsigned) {
+      return intWidth == 8 ? "u8" : "u64";
+    }
+    return intWidth == 64 ? "i64" : "i32";
+  }
   bool boolValue = false;
   std::string floatValue;
   int floatWidth = 32;

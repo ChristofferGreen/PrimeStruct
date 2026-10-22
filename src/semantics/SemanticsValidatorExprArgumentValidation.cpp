@@ -98,7 +98,7 @@ std::string SemanticsValidator::argumentStructMismatchDiagnostic(
 bool SemanticsValidator::isSoftwareNumericParamCompatible(ReturnKind expectedKind, ReturnKind actualKind) {
   auto isSoftwareIntegerKind = [](ReturnKind kind) {
     return kind == ReturnKind::Int || kind == ReturnKind::Int64 ||
-           kind == ReturnKind::UInt64 || kind == ReturnKind::Bool ||
+           (kind == ReturnKind::UInt64 || kind == ReturnKind::UInt8) || kind == ReturnKind::Bool ||
            kind == ReturnKind::Integer;
   };
   auto isSoftwareDecimalKind = [&](ReturnKind kind) {
@@ -109,6 +109,7 @@ bool SemanticsValidator::isSoftwareNumericParamCompatible(ReturnKind expectedKin
     case ReturnKind::Int:
     case ReturnKind::Int64:
     case ReturnKind::UInt64:
+    case ReturnKind::UInt8:
     case ReturnKind::Integer:
       return isSoftwareIntegerKind(actualKind);
     case ReturnKind::Float32:

@@ -530,7 +530,7 @@ inline bool inferDirectKeyValueConstructorTargetInfo(const Expr &target, Collect
   auto inferLiteralKind = [&](const Expr &valueExpr, LocalInfo::ValueKind &kindOut) {
     kindOut = LocalInfo::ValueKind::Unknown;
     if (valueExpr.kind == Expr::Kind::Literal) {
-      kindOut = valueExpr.isUnsigned ? LocalInfo::ValueKind::UInt64
+      kindOut = valueExpr.isUnsigned ? (valueExpr.intWidth == 8 ? LocalInfo::ValueKind::UInt8 : LocalInfo::ValueKind::UInt64)
                                      : (valueExpr.intWidth == 64 ? LocalInfo::ValueKind::Int64
                                                                  : LocalInfo::ValueKind::Int32);
       return true;

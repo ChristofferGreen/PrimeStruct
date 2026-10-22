@@ -734,7 +734,7 @@
       }
       const LocalInfo::ValueKind kind = inferExprKind(valueExpr, localsIn);
       return kind == LocalInfo::ValueKind::Int32 || kind == LocalInfo::ValueKind::Int64 ||
-             kind == LocalInfo::ValueKind::UInt64;
+             (kind == LocalInfo::ValueKind::UInt64 || kind == LocalInfo::ValueKind::UInt8);
     };
     if (isReturnCall(stmt) && stmt.args.size() == 1) {
       const Expr &returnValueExpr = emittedReturnStmt->args.front();

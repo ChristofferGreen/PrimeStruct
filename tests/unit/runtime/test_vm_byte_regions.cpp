@@ -221,13 +221,13 @@ TEST_CASE("only the VM accepts the byte opcodes for now") {
   std::string error;
   CHECK(validateIrModule(module, IrValidationTarget::Vm, error));
   CHECK(validateIrModule(module, IrValidationTarget::Serialized, error));
-  CHECK(validateIrModule(module, IrValidationTarget::Cpp, error));
-  CHECK_FALSE(validateIrModule(module, IrValidationTarget::Native, error));
-  CHECK(error.find("byte memory opcodes are not supported by the native backend") != std::string::npos);
-  CHECK_FALSE(validateIrModule(module, IrValidationTarget::Wasm, error));
-  CHECK(error.find("unsupported opcode for wasm target") != std::string::npos);
-  CHECK_FALSE(validateIrModule(module, IrValidationTarget::Glsl, error));
-  CHECK(error.find("unsupported opcode for glsl target") != std::string::npos);
+  for (const IrValidationTarget target : {IrValidationTarget::Cpp, IrValidationTarget::Native,
+                                          IrValidationTarget::Wasm, IrValidationTarget::Glsl}) {
+    error.clear();
+    CHECK_FALSE(validateIrModule(module, target, error));
+    CHECK(error.find("only supported by the vm yet") != std::string::npos);
+    CHECK(error.find("TODO-5542") != std::string::npos);
+  }
   const IrModule zext = moduleOf({{IrOpcode::PushI32, 4}, {IrOpcode::ZextU8, 0}, {IrOpcode::ReturnI32, 0}});
   CHECK_FALSE(validateIrModule(zext, IrValidationTarget::Native, error));
   CHECK_FALSE(validateIrModule(zext, IrValidationTarget::Wasm, error));

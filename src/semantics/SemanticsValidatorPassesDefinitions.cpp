@@ -223,6 +223,7 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
         case ReturnKind::Int:
         case ReturnKind::Int64:
         case ReturnKind::UInt64:
+        case ReturnKind::UInt8:
         case ReturnKind::Float32:
         case ReturnKind::Float64:
         case ReturnKind::Bool:

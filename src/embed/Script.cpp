@@ -60,6 +60,8 @@ const char *hostTypeSpelling(HostType type) {
     return "bool";
   case HostType::String:
     return "string";
+  case HostType::U8:
+    return "u8";
   }
   return "unknown";
 }
@@ -84,6 +86,8 @@ IrHostValueKind toIrKind(HostType type) {
     return IrHostValueKind::Bool;
   case HostType::String:
     return IrHostValueKind::String;
+  case HostType::U8:
+    return IrHostValueKind::U8;
   }
   return IrHostValueKind::Void;
 }
@@ -504,13 +508,13 @@ Script Script::loadBytecode(const std::vector<uint8_t> &bytes, const std::string
     }
     for (uint32_t p = 0; p < parameterCount; ++p) {
       uint8_t type = 0;
-      if (!reader.u8(type) || type > static_cast<uint8_t>(HostType::String)) {
+      if (!reader.u8(type) || type > static_cast<uint8_t>(HostType::U8)) {
         return fail("invalid export parameter type");
       }
       entry.signature.parameters.push_back(static_cast<HostType>(type));
     }
     uint8_t returnType = 0;
-    if (!reader.u8(returnType) || returnType > static_cast<uint8_t>(HostType::String)) {
+    if (!reader.u8(returnType) || returnType > static_cast<uint8_t>(HostType::U8)) {
       return fail("invalid export return type");
     }
     entry.signature.returnType = static_cast<HostType>(returnType);

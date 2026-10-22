@@ -18,7 +18,7 @@ bool emitVectorDestroySlot(
   }
   if (indexKind != LocalInfo::ValueKind::Int32 &&
       indexKind != LocalInfo::ValueKind::Int64 &&
-      indexKind != LocalInfo::ValueKind::UInt64) {
+      (indexKind != LocalInfo::ValueKind::UInt64 && indexKind != LocalInfo::ValueKind::UInt8)) {
     error = "internal error: vector removed-slot destruction requires integer index kind";
     return false;
   }
@@ -53,7 +53,7 @@ bool emitVectorMoveSlot(
     std::string &error) {
   if (indexKind != LocalInfo::ValueKind::Int32 &&
       indexKind != LocalInfo::ValueKind::Int64 &&
-      indexKind != LocalInfo::ValueKind::UInt64) {
+      (indexKind != LocalInfo::ValueKind::UInt64 && indexKind != LocalInfo::ValueKind::UInt8)) {
     error = "internal error: vector survivor motion requires integer index kind";
     return false;
   }

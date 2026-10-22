@@ -39,6 +39,9 @@ LocalInfo::ValueKind valueKindFromTypeName(const std::string &name) {
   if (normalized == "u64") {
     return LocalInfo::ValueKind::UInt64;
   }
+  if (normalized == "u8") {
+    return LocalInfo::ValueKind::UInt8;
+  }
   if (normalized == "float" || normalized == "f32") {
     return LocalInfo::ValueKind::Float32;
   }
@@ -90,6 +93,11 @@ LocalInfo::ValueKind combineNumericKinds(LocalInfo::ValueKind left, LocalInfo::V
     }
     return LocalInfo::ValueKind::Unknown;
   }
+  if (left == LocalInfo::ValueKind::UInt8 || right == LocalInfo::ValueKind::UInt8) {
+    return (left == LocalInfo::ValueKind::UInt8 && right == LocalInfo::ValueKind::UInt8)
+               ? LocalInfo::ValueKind::UInt8
+               : LocalInfo::ValueKind::Unknown;
+  }
   if (left == LocalInfo::ValueKind::UInt64 || right == LocalInfo::ValueKind::UInt64) {
     return (left == LocalInfo::ValueKind::UInt64 && right == LocalInfo::ValueKind::UInt64)
                ? LocalInfo::ValueKind::UInt64
@@ -126,6 +134,8 @@ std::string typeNameForValueKind(LocalInfo::ValueKind kind) {
       return "i64";
     case LocalInfo::ValueKind::UInt64:
       return "u64";
+      case LocalInfo::ValueKind::UInt8:
+      return "u8";
     case LocalInfo::ValueKind::Float32:
       return "f32";
     case LocalInfo::ValueKind::Float64:

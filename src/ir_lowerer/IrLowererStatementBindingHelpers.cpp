@@ -936,6 +936,7 @@ bool selectUninitializedStorageZeroInstruction(LocalInfo::Kind kind,
   switch (valueKind) {
     case LocalInfo::ValueKind::Int64:
     case LocalInfo::ValueKind::UInt64:
+    case LocalInfo::ValueKind::UInt8:
       zeroOp = IrOpcode::PushI64;
       return true;
     case LocalInfo::ValueKind::Float32:

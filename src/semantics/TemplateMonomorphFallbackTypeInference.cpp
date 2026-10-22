@@ -41,7 +41,7 @@ namespace primec {
 
 bool isSoftwareNumericParamCompatible(semantics::ReturnKind expectedKind, semantics::ReturnKind actualKind) {
   auto isSoftwareIntegerKind = [](semantics::ReturnKind kind) {
-    return kind == semantics::ReturnKind::Int || kind == semantics::ReturnKind::Int64 || kind == semantics::ReturnKind::UInt64 ||
+    return kind == semantics::ReturnKind::Int || kind == semantics::ReturnKind::Int64 || (kind == semantics::ReturnKind::UInt64 || kind == semantics::ReturnKind::UInt8) ||
            kind == semantics::ReturnKind::Bool || kind == semantics::ReturnKind::Integer;
   };
   auto isSoftwareDecimalKind = [&](semantics::ReturnKind kind) {
@@ -52,6 +52,7 @@ bool isSoftwareNumericParamCompatible(semantics::ReturnKind expectedKind, semant
     case semantics::ReturnKind::Int:
     case semantics::ReturnKind::Int64:
     case semantics::ReturnKind::UInt64:
+    case semantics::ReturnKind::UInt8:
     case semantics::ReturnKind::Integer:
       return isSoftwareIntegerKind(actualKind);
     case semantics::ReturnKind::Float32:

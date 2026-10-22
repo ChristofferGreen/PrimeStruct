@@ -17,6 +17,8 @@ std::string_view returnKindSnapshotName(ReturnKind kind) {
       return "i64";
     case ReturnKind::UInt64:
       return "u64";
+      case ReturnKind::UInt8:
+      return "u8";
     case ReturnKind::Float32:
       return "f32";
     case ReturnKind::Float64:

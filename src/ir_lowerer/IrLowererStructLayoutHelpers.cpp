@@ -63,7 +63,7 @@ bool classifyBindingTypeLayoutInternal(const LayoutFieldBinding &binding,
     structTypeNameOut.clear();
     return true;
   }
-  if (normalized == "bool") {
+  if (normalized == "bool" || normalized == "u8") {
     layoutOut = {1u, 1u};
     structTypeNameOut.clear();
     return true;

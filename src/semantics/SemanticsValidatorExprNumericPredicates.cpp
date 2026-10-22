@@ -23,7 +23,7 @@ bool SemanticsValidator::isNumericExpr(const std::vector<ParameterInfo> &params,
 
   ReturnKind kind = inferExprReturnKind(expr, params, locals);
   const bool isSoftware = kind == ReturnKind::Integer || kind == ReturnKind::Decimal || kind == ReturnKind::Complex;
-  if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 ||
+  if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || (kind == ReturnKind::UInt64 || kind == ReturnKind::UInt8) ||
       kind == ReturnKind::Float32 || kind == ReturnKind::Float64 || isSoftware) {
     return true;
   }
@@ -40,7 +40,7 @@ bool SemanticsValidator::isNumericExpr(const std::vector<ParameterInfo> &params,
     if (expr.kind == Expr::Kind::Name) {
       if (const BindingInfo *paramBinding = findParamBinding(params, expr.name)) {
         ReturnKind paramKind = returnKindForBinding(*paramBinding);
-        return paramKind == ReturnKind::Int || paramKind == ReturnKind::Int64 || paramKind == ReturnKind::UInt64 ||
+        return paramKind == ReturnKind::Int || paramKind == ReturnKind::Int64 || (paramKind == ReturnKind::UInt64 || paramKind == ReturnKind::UInt8) ||
                paramKind == ReturnKind::Float32 || paramKind == ReturnKind::Float64 ||
                paramKind == ReturnKind::Integer || paramKind == ReturnKind::Decimal ||
                paramKind == ReturnKind::Complex;
@@ -48,7 +48,7 @@ bool SemanticsValidator::isNumericExpr(const std::vector<ParameterInfo> &params,
       auto it = locals.find(expr.name);
       if (it != locals.end()) {
         ReturnKind localKind = returnKindForBinding(it->second);
-        return localKind == ReturnKind::Int || localKind == ReturnKind::Int64 || localKind == ReturnKind::UInt64 ||
+        return localKind == ReturnKind::Int || localKind == ReturnKind::Int64 || (localKind == ReturnKind::UInt64 || localKind == ReturnKind::UInt8) ||
                localKind == ReturnKind::Float32 || localKind == ReturnKind::Float64 ||
                localKind == ReturnKind::Integer || localKind == ReturnKind::Decimal ||
                localKind == ReturnKind::Complex;
@@ -82,7 +82,7 @@ bool SemanticsValidator::isFloatExpr(const std::vector<ParameterInfo> &params,
     return true;
   }
   if (kind == ReturnKind::Bool || kind == ReturnKind::Void || kind == ReturnKind::Array || kind == ReturnKind::Int ||
-      kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 || kind == ReturnKind::Integer ||
+      kind == ReturnKind::Int64 || (kind == ReturnKind::UInt64 || kind == ReturnKind::UInt8) || kind == ReturnKind::Integer ||
       kind == ReturnKind::Complex) {
     return false;
   }
@@ -133,7 +133,7 @@ bool SemanticsValidator::isComparisonOperand(const std::vector<ParameterInfo> &p
   };
 
   ReturnKind kind = inferExprReturnKind(expr, params, locals);
-  if (kind == ReturnKind::Bool || kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 ||
+  if (kind == ReturnKind::Bool || kind == ReturnKind::Int || kind == ReturnKind::Int64 || (kind == ReturnKind::UInt64 || kind == ReturnKind::UInt8) ||
       kind == ReturnKind::Float32 || kind == ReturnKind::Float64 || kind == ReturnKind::Integer ||
       kind == ReturnKind::Decimal || kind == ReturnKind::Complex) {
     return true;
@@ -152,7 +152,7 @@ bool SemanticsValidator::isComparisonOperand(const std::vector<ParameterInfo> &p
       if (const BindingInfo *paramBinding = findParamBinding(params, expr.name)) {
         ReturnKind paramKind = returnKindForBinding(*paramBinding);
         return paramKind == ReturnKind::Bool || paramKind == ReturnKind::Int || paramKind == ReturnKind::Int64 ||
-               paramKind == ReturnKind::UInt64 || paramKind == ReturnKind::Float32 ||
+               (paramKind == ReturnKind::UInt64 || paramKind == ReturnKind::UInt8) || paramKind == ReturnKind::Float32 ||
                paramKind == ReturnKind::Float64 || paramKind == ReturnKind::Integer ||
                paramKind == ReturnKind::Decimal || paramKind == ReturnKind::Complex;
       }
@@ -160,7 +160,7 @@ bool SemanticsValidator::isComparisonOperand(const std::vector<ParameterInfo> &p
       if (it != locals.end()) {
         ReturnKind localKind = returnKindForBinding(it->second);
         return localKind == ReturnKind::Bool || localKind == ReturnKind::Int || localKind == ReturnKind::Int64 ||
-               localKind == ReturnKind::UInt64 || localKind == ReturnKind::Float32 ||
+               (localKind == ReturnKind::UInt64 || localKind == ReturnKind::UInt8) || localKind == ReturnKind::Float32 ||
                localKind == ReturnKind::Float64 || localKind == ReturnKind::Integer ||
                localKind == ReturnKind::Decimal || localKind == ReturnKind::Complex;
       }

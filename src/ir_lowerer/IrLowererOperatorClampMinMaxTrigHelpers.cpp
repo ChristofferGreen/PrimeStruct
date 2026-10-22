@@ -29,7 +29,7 @@ OperatorClampMinMaxTrigEmitResult emitClampMinMaxTrigOperatorExpr(
             if (arg.kind == Expr::Kind::Literal && arg.isUnsigned) {
               sawUnsigned = true;
             }
-            if (kind == LocalInfo::ValueKind::UInt64) {
+            if ((kind == LocalInfo::ValueKind::UInt64 || kind == LocalInfo::ValueKind::UInt8)) {
               sawUnsigned = true;
             } else if (kind == LocalInfo::ValueKind::Int32 || kind == LocalInfo::ValueKind::Int64) {
               sawSigned = true;
@@ -49,7 +49,7 @@ OperatorClampMinMaxTrigEmitResult emitClampMinMaxTrigOperatorExpr(
           }
           IrOpcode cmpLt = IrOpcode::CmpLtI32;
           IrOpcode cmpGt = IrOpcode::CmpGtI32;
-          if (clampKind == LocalInfo::ValueKind::UInt64) {
+          if ((clampKind == LocalInfo::ValueKind::UInt64 || clampKind == LocalInfo::ValueKind::UInt8)) {
             cmpLt = IrOpcode::CmpLtU64;
             cmpGt = IrOpcode::CmpGtU64;
           } else if (clampKind == LocalInfo::ValueKind::Int64) {
@@ -123,7 +123,7 @@ OperatorClampMinMaxTrigEmitResult emitClampMinMaxTrigOperatorExpr(
             if (arg.kind == Expr::Kind::Literal && arg.isUnsigned) {
               sawUnsigned = true;
             }
-            if (kind == LocalInfo::ValueKind::UInt64) {
+            if ((kind == LocalInfo::ValueKind::UInt64 || kind == LocalInfo::ValueKind::UInt8)) {
               sawUnsigned = true;
             } else if (kind == LocalInfo::ValueKind::Int32 || kind == LocalInfo::ValueKind::Int64) {
               sawSigned = true;
@@ -143,7 +143,7 @@ OperatorClampMinMaxTrigEmitResult emitClampMinMaxTrigOperatorExpr(
           if (minMaxName == "max") {
             cmpOp = IrOpcode::CmpGtI32;
           }
-          if (minMaxKind == LocalInfo::ValueKind::UInt64) {
+          if ((minMaxKind == LocalInfo::ValueKind::UInt64 || minMaxKind == LocalInfo::ValueKind::UInt8)) {
             cmpOp = (minMaxName == "max") ? IrOpcode::CmpGtU64 : IrOpcode::CmpLtU64;
           } else if (minMaxKind == LocalInfo::ValueKind::Int64) {
             cmpOp = (minMaxName == "max") ? IrOpcode::CmpGtI64 : IrOpcode::CmpLtI64;
@@ -195,7 +195,7 @@ OperatorClampMinMaxTrigEmitResult emitClampMinMaxTrigOperatorExpr(
             if (arg.kind == Expr::Kind::Literal && arg.isUnsigned) {
               sawUnsigned = true;
             }
-            if (kind == LocalInfo::ValueKind::UInt64) {
+            if ((kind == LocalInfo::ValueKind::UInt64 || kind == LocalInfo::ValueKind::UInt8)) {
               sawUnsigned = true;
             } else if (kind == LocalInfo::ValueKind::Int32 || kind == LocalInfo::ValueKind::Int64) {
               sawSigned = true;
@@ -213,10 +213,14 @@ OperatorClampMinMaxTrigEmitResult emitClampMinMaxTrigOperatorExpr(
             error = lerpName + " requires numeric arguments of the same type";
             return OperatorClampMinMaxTrigEmitResult::Error;
           }
+          if (lerpKind == LocalInfo::ValueKind::UInt8) {
+            error = lerpName + " does not support u8 operands; convert to u64 first";
+            return OperatorClampMinMaxTrigEmitResult::Error;
+          }
           IrOpcode addOp = IrOpcode::AddI32;
           IrOpcode subOp = IrOpcode::SubI32;
           IrOpcode mulOp = IrOpcode::MulI32;
-          if (lerpKind == LocalInfo::ValueKind::Int64 || lerpKind == LocalInfo::ValueKind::UInt64) {
+          if (lerpKind == LocalInfo::ValueKind::Int64 || (lerpKind == LocalInfo::ValueKind::UInt64 || lerpKind == LocalInfo::ValueKind::UInt8)) {
             addOp = IrOpcode::AddI64;
             subOp = IrOpcode::SubI64;
             mulOp = IrOpcode::MulI64;

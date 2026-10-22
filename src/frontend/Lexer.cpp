@@ -195,6 +195,9 @@ Token Lexer::readNumber() {
     advance();
     advance();
     advance();
+  } else if (source_.compare(pos_, 2, "u8") == 0) {
+    advance();
+    advance();
   }
   return {TokenKind::Number, source_.substr(start, pos_ - start), startLine, startColumn};
 }

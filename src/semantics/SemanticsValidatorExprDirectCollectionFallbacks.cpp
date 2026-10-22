@@ -83,7 +83,7 @@ bool SemanticsValidator::validateExprDirectCollectionFallbacks(
               inferExprReturnKind(expr.args[1], params, locals);
           if (payloadKind != ReturnKind::Int &&
               payloadKind != ReturnKind::Int64 &&
-              payloadKind != ReturnKind::UInt64) {
+              (payloadKind != ReturnKind::UInt64 && payloadKind != ReturnKind::UInt8)) {
             const std::string payloadName =
                 vectorMutatorHelper == "reserve" ? "capacity" : "index";
             return failDirectCollectionFallbackDiagnostic(
@@ -156,7 +156,7 @@ bool SemanticsValidator::validateExprDirectCollectionFallbacks(
             inferExprReturnKind(expr.args[1], params, locals);
         if (payloadKind != ReturnKind::Int &&
             payloadKind != ReturnKind::Int64 &&
-            payloadKind != ReturnKind::UInt64) {
+            (payloadKind != ReturnKind::UInt64 && payloadKind != ReturnKind::UInt8)) {
           const std::string payloadName =
               vectorMutatorHelper == "reserve" ? "capacity" : "index";
           return failDirectCollectionFallbackDiagnostic(

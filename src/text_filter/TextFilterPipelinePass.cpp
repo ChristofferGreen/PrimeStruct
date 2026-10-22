@@ -483,6 +483,14 @@ bool applyPass(const std::string &input,
           i = literalEnd + 2;
           continue;
         }
+        if (literalEnd + 1 < input.size() && input.compare(literalEnd, 2, "u8") == 0 &&
+            (literalEnd + 2 >= input.size() ||
+             !(std::isalnum(static_cast<unsigned char>(input[literalEnd + 2])) ||
+               input[literalEnd + 2] == '_'))) {
+          output.append(input.substr(start, literalEnd - start + 2));
+          i = literalEnd + 1;
+          continue;
+        }
         if (literalEnd < input.size()) {
           char next = input[literalEnd];
           if (std::isalpha(static_cast<unsigned char>(next)) || next == '_' || next == '.') {

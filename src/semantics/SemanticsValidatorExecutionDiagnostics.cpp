@@ -345,16 +345,16 @@ void SemanticsValidator::collectExecutionIntraBodyCallDiagnostics(
         const bool softwareNumericCompatible =
             (expectedKind == ReturnKind::Integer &&
              (actualKind == ReturnKind::Int || actualKind == ReturnKind::Int64 ||
-              actualKind == ReturnKind::UInt64 || actualKind == ReturnKind::Bool ||
+              (actualKind == ReturnKind::UInt64 || actualKind == ReturnKind::UInt8) || actualKind == ReturnKind::Bool ||
               actualKind == ReturnKind::Integer)) ||
             (expectedKind == ReturnKind::Decimal &&
              (actualKind == ReturnKind::Int || actualKind == ReturnKind::Int64 ||
-              actualKind == ReturnKind::UInt64 || actualKind == ReturnKind::Bool ||
+              (actualKind == ReturnKind::UInt64 || actualKind == ReturnKind::UInt8) || actualKind == ReturnKind::Bool ||
               actualKind == ReturnKind::Float32 || actualKind == ReturnKind::Float64 ||
               actualKind == ReturnKind::Integer || actualKind == ReturnKind::Decimal)) ||
             (expectedKind == ReturnKind::Complex &&
              (actualKind == ReturnKind::Int || actualKind == ReturnKind::Int64 ||
-              actualKind == ReturnKind::UInt64 || actualKind == ReturnKind::Bool ||
+              (actualKind == ReturnKind::UInt64 || actualKind == ReturnKind::UInt8) || actualKind == ReturnKind::Bool ||
               actualKind == ReturnKind::Float32 || actualKind == ReturnKind::Float64 ||
               actualKind == ReturnKind::Integer || actualKind == ReturnKind::Decimal ||
               actualKind == ReturnKind::Complex));

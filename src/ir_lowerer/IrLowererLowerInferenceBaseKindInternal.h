@@ -829,7 +829,7 @@ inline LocalInfo::ValueKind inferBaseSetupSimpleExprKind(const Expr &expr,
   switch (expr.kind) {
     case Expr::Kind::Literal:
       if (expr.isUnsigned) {
-        return LocalInfo::ValueKind::UInt64;
+        return expr.intWidth == 8 ? LocalInfo::ValueKind::UInt8 : LocalInfo::ValueKind::UInt64;
       }
       return (expr.intWidth == 64) ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
     case Expr::Kind::FloatLiteral:
@@ -861,7 +861,7 @@ inline LocalInfo::ValueKind inferBaseSetupSimpleExprKind(const Expr &expr,
                                      ? resolvedPrimitivePath
                                      : resolvedPrimitivePath.substr(slash + 1);
         if (leaf == "int" || leaf == "i32" || leaf == "i64" ||
-            leaf == "u64" || leaf == "float" || leaf == "f32" ||
+            leaf == "u64" || leaf == "u8" || leaf == "float" || leaf == "f32" ||
             leaf == "f64" || leaf == "bool") {
           return valueKindFromTypeName(leaf);
         }

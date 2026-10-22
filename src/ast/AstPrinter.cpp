@@ -39,7 +39,7 @@ void printExpr(std::ostringstream &out, const Expr &expr) {
     } else {
       if (expr.isUnsigned) {
         out << expr.literalValue;
-        out << (expr.intWidth == 64 ? "u64" : "u32");
+        out << (expr.intWidth == 64 ? "u64" : "u8");
       } else {
         out << static_cast<int64_t>(expr.literalValue);
         out << (expr.intWidth == 64 ? "i64" : "i32");

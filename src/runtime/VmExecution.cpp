@@ -90,6 +90,9 @@ bool handleVmHostCall(const VmHostFunctions *hostFunctions,
   case IrHostValueKind::Bool:
     stack.push_back(result != 0 ? 1u : 0u);
     break;
+  case IrHostValueKind::U8:
+    stack.push_back(result & 0xFFull);
+    break;
   case IrHostValueKind::I64:
   case IrHostValueKind::U64:
   case IrHostValueKind::F64:

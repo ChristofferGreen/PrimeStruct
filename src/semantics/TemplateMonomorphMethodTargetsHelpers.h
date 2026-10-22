@@ -215,7 +215,7 @@ inline bool resolveReceiverType(const Expr &receiver,
     return !out.collectionBaseName.empty();
   }
   if (receiver.kind == Expr::Kind::Literal) {
-    out.collectionBaseName = receiver.isUnsigned ? "u64" : (receiver.intWidth == 64 ? "i64" : "i32");
+    out.collectionBaseName = receiver.integerTypeName();
     return true;
   }
   if (receiver.kind == Expr::Kind::BoolLiteral) {

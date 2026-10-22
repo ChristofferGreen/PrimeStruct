@@ -46,7 +46,7 @@ ReturnKind SemanticsValidator::inferExprReturnKindImpl(const Expr &expr,
 
   if (expr.kind == Expr::Kind::Literal) {
     if (expr.isUnsigned) {
-      return ReturnKind::UInt64;
+      return expr.intWidth == 8 ? ReturnKind::UInt8 : ReturnKind::UInt64;
     }
     if (expr.intWidth == 64) {
       return ReturnKind::Int64;

@@ -310,7 +310,7 @@ bool emitConversionsAndCallsControlExprTail(
     }
     const bool isIntegralCondition =
         condKind == LocalInfo::ValueKind::Int32 || condKind == LocalInfo::ValueKind::Int64 ||
-        condKind == LocalInfo::ValueKind::UInt64;
+        (condKind == LocalInfo::ValueKind::UInt64 || condKind == LocalInfo::ValueKind::UInt8);
     if (condKind != LocalInfo::ValueKind::Bool && !isIntegralCondition) {
       error = "if condition requires bool";
       return false;

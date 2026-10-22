@@ -140,7 +140,7 @@ bool SemanticsValidator::isInferStructReturnNumericScalarExpr(
   const ReturnKind kind = inferExprReturnKind(expr, params, locals);
   const bool isSoftwareNumeric =
       kind == ReturnKind::Integer || kind == ReturnKind::Decimal || kind == ReturnKind::Complex;
-  if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 ||
+  if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || (kind == ReturnKind::UInt64 || kind == ReturnKind::UInt8) ||
       kind == ReturnKind::Float32 || kind == ReturnKind::Float64 || isSoftwareNumeric) {
     return true;
   }

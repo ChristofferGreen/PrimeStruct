@@ -43,6 +43,8 @@ const char *hostCType(IrHostValueKind kind, bool isResult) {
     return "int64_t";
   case IrHostValueKind::U64:
     return "uint64_t";
+  case IrHostValueKind::U8:
+    return "uint8_t";
   case IrHostValueKind::F32:
     return "float";
   case IrHostValueKind::F64:

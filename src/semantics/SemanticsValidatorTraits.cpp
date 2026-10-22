@@ -255,7 +255,7 @@ bool SemanticsValidator::validateTraitConstraints() {
     if (!key.args.empty()) {
       return false;
     }
-    return key.base == "i32" || key.base == "i64" || key.base == "u64" || key.base == "f32" ||
+    return key.base == "i32" || key.base == "i64" || key.base == "u64" || key.base == "u8" || key.base == "f32" ||
            key.base == "f64" || key.base == "integer" || key.base == "decimal" || key.base == "complex";
   };
 

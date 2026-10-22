@@ -7,7 +7,7 @@
 
 namespace primec::ir_printer {
 
-enum class ReturnKind { Unknown, Int, Int64, UInt64, Float32, Float64, Bool, String, Void, Array };
+enum class ReturnKind { Unknown, Int, Int64, UInt64, UInt8, Float32, Float64, Bool, String, Void, Array };
 
 std::string joinTemplateArgs(const std::vector<std::string> &args);
 bool splitTemplateTypeName(const std::string &text, std::string &base, std::string &arg);

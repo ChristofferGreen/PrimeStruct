@@ -382,7 +382,7 @@ std::string requirementOverloadExprDisplayText(const Expr &expr) {
   case Expr::Kind::Literal: {
     std::string suffix;
     if (expr.isUnsigned) {
-      suffix = expr.intWidth == 64 ? "u64" : "u32";
+      suffix = expr.intWidth == 64 ? "u64" : "u8";
     } else {
       suffix = expr.intWidth == 64 ? "i64" : "i32";
     }

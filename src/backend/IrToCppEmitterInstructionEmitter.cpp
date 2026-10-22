@@ -616,6 +616,10 @@ bool emitInstruction(const IrInstruction &instruction,
             out << "        }\n";
             arg = "hostText" + std::to_string(i);
             break;
+          case IrHostValueKind::U8:
+            error = "IrToCppEmitter host import has a u8 parameter at instruction " + std::to_string(index) +
+                    " (u8 is not supported by the C++ backends yet, docs/todo.md TODO-5542)";
+            return false;
           case IrHostValueKind::Void:
             error = "IrToCppEmitter host import has a void parameter at instruction " + std::to_string(index);
             return false;
@@ -645,6 +649,10 @@ bool emitInstruction(const IrInstruction &instruction,
         case IrHostValueKind::Bool:
           out << "        stack[sp++] = (" << call << ") ? 1u : 0u;\n";
           break;
+        case IrHostValueKind::U8:
+          error = "IrToCppEmitter host import returns u8 at instruction " + std::to_string(index) +
+                  " (u8 is not supported by the C++ backends yet, docs/todo.md TODO-5542)";
+          return false;
         case IrHostValueKind::String:
           error = "IrToCppEmitter host import returns text at instruction " + std::to_string(index);
           return false;

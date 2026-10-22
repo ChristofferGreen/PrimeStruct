@@ -93,7 +93,7 @@ bool emitPrintArgImpl(
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal)});
 
         if (accessName == "at") {
-          if (indexKind != LocalInfo::ValueKind::UInt64) {
+          if ((indexKind != LocalInfo::ValueKind::UInt64 && indexKind != LocalInfo::ValueKind::UInt8)) {
             function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
             function.instructions.push_back({pushZeroForIndex(indexKind), 0});
             function.instructions.push_back({cmpLtForIndex(indexKind), 0});
@@ -175,7 +175,7 @@ bool emitPrintArgImpl(
     function.instructions.push_back({IrOpcode::PrintI64, flags});
     return true;
   }
-  if (kind == LocalInfo::ValueKind::UInt64) {
+  if ((kind == LocalInfo::ValueKind::UInt64 || kind == LocalInfo::ValueKind::UInt8)) {
     function.instructions.push_back({IrOpcode::PrintU64, flags});
     return true;
   }

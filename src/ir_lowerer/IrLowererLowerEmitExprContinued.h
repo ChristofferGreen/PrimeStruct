@@ -538,13 +538,13 @@
           emitInstruction(IrOpcode::LoadIndirect, 0);
           emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(countLocal));
 
-          if (startKind != ir_lowerer::LocalInfo::ValueKind::UInt64) {
+          if ((startKind != ir_lowerer::LocalInfo::ValueKind::UInt64 && startKind != ir_lowerer::LocalInfo::ValueKind::UInt8)) {
             emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(startLocal));
             emitInstruction(IrOpcode::PushI64, 0);
             emitInstruction(IrOpcode::CmpLtI64, 0);
             emitSliceBoundsFailureIfTrue();
           }
-          if (endKind != ir_lowerer::LocalInfo::ValueKind::UInt64) {
+          if ((endKind != ir_lowerer::LocalInfo::ValueKind::UInt64 && endKind != ir_lowerer::LocalInfo::ValueKind::UInt8)) {
             emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(endLocal));
             emitInstruction(IrOpcode::PushI64, 0);
             emitInstruction(IrOpcode::CmpLtI64, 0);
@@ -553,8 +553,8 @@
 
           emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(endLocal));
           emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(startLocal));
-          emitInstruction(startKind == ir_lowerer::LocalInfo::ValueKind::UInt64 ||
-                                  endKind == ir_lowerer::LocalInfo::ValueKind::UInt64
+          emitInstruction((startKind == ir_lowerer::LocalInfo::ValueKind::UInt64 || startKind == ir_lowerer::LocalInfo::ValueKind::UInt8) ||
+                                  (endKind == ir_lowerer::LocalInfo::ValueKind::UInt64 || endKind == ir_lowerer::LocalInfo::ValueKind::UInt8)
                               ? IrOpcode::CmpLtU64
                               : IrOpcode::CmpLtI64,
                           0);
@@ -562,7 +562,7 @@
 
           emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(endLocal));
           emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal));
-          emitInstruction(endKind == ir_lowerer::LocalInfo::ValueKind::UInt64
+          emitInstruction((endKind == ir_lowerer::LocalInfo::ValueKind::UInt64 || endKind == ir_lowerer::LocalInfo::ValueKind::UInt8)
                               ? IrOpcode::CmpGtU64
                               : IrOpcode::CmpGtI64,
                           0);

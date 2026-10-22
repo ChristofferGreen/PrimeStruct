@@ -17,7 +17,7 @@ ReturnKind normalizeMemoryIndexKind(ReturnKind kind) {
 
 bool isSupportedMemoryIndexKind(ReturnKind kind) {
   return kind == ReturnKind::Int || kind == ReturnKind::Int64 ||
-         kind == ReturnKind::UInt64;
+         (kind == ReturnKind::UInt64 || kind == ReturnKind::UInt8);
 }
 
 } // namespace
@@ -47,7 +47,7 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
   };
   auto isIntegerExpr = [&](const Expr &arg) -> bool {
     ReturnKind kind = inferExprReturnKind(arg, params, locals);
-    if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64) {
+    if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || (kind == ReturnKind::UInt64 || kind == ReturnKind::UInt8)) {
       return true;
     }
     if (kind == ReturnKind::Bool || kind == ReturnKind::Float32 || kind == ReturnKind::Float64 ||
@@ -66,13 +66,13 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
         if (const BindingInfo *paramBinding = findParamBinding(params, arg.name)) {
           ReturnKind paramKind = returnKindForBinding(*paramBinding);
           return paramKind == ReturnKind::Int || paramKind == ReturnKind::Int64 ||
-                 paramKind == ReturnKind::UInt64;
+                 (paramKind == ReturnKind::UInt64 || paramKind == ReturnKind::UInt8);
         }
         auto it = locals.find(arg.name);
         if (it != locals.end()) {
           ReturnKind localKind = returnKindForBinding(it->second);
           return localKind == ReturnKind::Int || localKind == ReturnKind::Int64 ||
-                 localKind == ReturnKind::UInt64;
+                 (localKind == ReturnKind::UInt64 || localKind == ReturnKind::UInt8);
         }
       }
       return true;
@@ -81,7 +81,7 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
   };
   auto isConvertibleExpr = [&](const Expr &arg) -> bool {
     ReturnKind kind = inferExprReturnKind(arg, params, locals);
-    if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 ||
+    if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || (kind == ReturnKind::UInt64 || kind == ReturnKind::UInt8) ||
         kind == ReturnKind::Float32 || kind == ReturnKind::Float64 || kind == ReturnKind::Bool ||
         kind == ReturnKind::Integer || kind == ReturnKind::Decimal || kind == ReturnKind::Complex) {
       return true;
@@ -106,7 +106,7 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
       if (const BindingInfo *paramBinding = findParamBinding(params, arg.name)) {
         ReturnKind paramKind = returnKindForBinding(*paramBinding);
         return paramKind == ReturnKind::Int || paramKind == ReturnKind::Int64 ||
-               paramKind == ReturnKind::UInt64 || paramKind == ReturnKind::Float32 ||
+               (paramKind == ReturnKind::UInt64 || paramKind == ReturnKind::UInt8) || paramKind == ReturnKind::Float32 ||
                paramKind == ReturnKind::Float64 || paramKind == ReturnKind::Bool ||
                paramKind == ReturnKind::Integer || paramKind == ReturnKind::Decimal ||
                paramKind == ReturnKind::Complex;
@@ -115,7 +115,7 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
       if (it != locals.end()) {
         ReturnKind localKind = returnKindForBinding(it->second);
         return localKind == ReturnKind::Int || localKind == ReturnKind::Int64 ||
-               localKind == ReturnKind::UInt64 || localKind == ReturnKind::Float32 ||
+               (localKind == ReturnKind::UInt64 || localKind == ReturnKind::UInt8) || localKind == ReturnKind::Float32 ||
                localKind == ReturnKind::Float64 || localKind == ReturnKind::Bool ||
                localKind == ReturnKind::Integer || localKind == ReturnKind::Decimal ||
                localKind == ReturnKind::Complex;
@@ -268,7 +268,7 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
     }
     const std::string &typeName = expr.templateArgs[0];
     if (typeName != "int" && typeName != "i32" && typeName != "i64" &&
-        typeName != "u64" && typeName != "bool" && typeName != "float" &&
+        typeName != "u64" && typeName != "u8" && typeName != "bool" && typeName != "float" &&
         typeName != "f32" && typeName != "f64") {
       return failScalarPointerMemoryBuiltin("unsupported convert target type: " + typeName);
     }

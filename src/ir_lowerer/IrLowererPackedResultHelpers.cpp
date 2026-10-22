@@ -263,7 +263,7 @@ bool rewritePackedResultKeyValueConstructorExpr(const Expr &callExpr,
   if (callExpr.args.size() % 2 == 0) {
     auto inferLiteralKind = [&](const Expr &value) {
       if (value.kind == Expr::Kind::Literal) {
-        return valueKindFromTypeName(value.isUnsigned ? "u64" : (value.intWidth == 64 ? "i64" : "i32"));
+        return valueKindFromTypeName(value.integerTypeName());
       }
       if (value.kind == Expr::Kind::BoolLiteral) {
         return LocalInfo::ValueKind::Bool;

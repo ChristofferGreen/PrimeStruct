@@ -415,7 +415,7 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
       const std::string normalizedType =
           normalizeBindingTypeName(binding->typeName);
       if (normalizedType == "i32" || normalizedType == "i64" ||
-          normalizedType == "u64" || normalizedType == "bool" ||
+          normalizedType == "u64" || normalizedType == "u8" || normalizedType == "bool" ||
           normalizedType == "f32" || normalizedType == "f64" ||
           normalizedType == "integer" || normalizedType == "decimal" ||
           normalizedType == "complex") {

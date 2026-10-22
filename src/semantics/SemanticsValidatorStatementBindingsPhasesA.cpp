@@ -180,15 +180,15 @@ PhaseStatus SemanticsValidator::validateBindingPhase3([[maybe_unused]] const std
   auto isSoftwareNumericBindingCompatible = [](ReturnKind expectedKind, ReturnKind actualKind) -> bool {
     switch (expectedKind) {
       case ReturnKind::Integer:
-        return actualKind == ReturnKind::Int || actualKind == ReturnKind::Int64 || actualKind == ReturnKind::UInt64 ||
+        return actualKind == ReturnKind::Int || actualKind == ReturnKind::Int64 || (actualKind == ReturnKind::UInt64 || actualKind == ReturnKind::UInt8) ||
                actualKind == ReturnKind::Bool || actualKind == ReturnKind::Integer;
       case ReturnKind::Decimal:
-        return actualKind == ReturnKind::Int || actualKind == ReturnKind::Int64 || actualKind == ReturnKind::UInt64 ||
+        return actualKind == ReturnKind::Int || actualKind == ReturnKind::Int64 || (actualKind == ReturnKind::UInt64 || actualKind == ReturnKind::UInt8) ||
                actualKind == ReturnKind::Bool || actualKind == ReturnKind::Float32 ||
                actualKind == ReturnKind::Float64 || actualKind == ReturnKind::Integer ||
                actualKind == ReturnKind::Decimal;
       case ReturnKind::Complex:
-        return actualKind == ReturnKind::Int || actualKind == ReturnKind::Int64 || actualKind == ReturnKind::UInt64 ||
+        return actualKind == ReturnKind::Int || actualKind == ReturnKind::Int64 || (actualKind == ReturnKind::UInt64 || actualKind == ReturnKind::UInt8) ||
                actualKind == ReturnKind::Bool || actualKind == ReturnKind::Float32 ||
                actualKind == ReturnKind::Float64 || actualKind == ReturnKind::Integer ||
                actualKind == ReturnKind::Decimal || actualKind == ReturnKind::Complex;

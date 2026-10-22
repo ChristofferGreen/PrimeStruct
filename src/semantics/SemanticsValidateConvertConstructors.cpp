@@ -223,7 +223,7 @@ bool rewriteConvertConstructors(Program &program, std::string &error) {
     }
     const std::string targetName = expr.templateArgs.front();
     const std::string normalizedTarget = normalizeBindingTypeName(targetName);
-    if (normalizedTarget == "i32" || normalizedTarget == "i64" || normalizedTarget == "u64" ||
+    if (normalizedTarget == "i32" || normalizedTarget == "i64" || normalizedTarget == "u64" || normalizedTarget == "u8" ||
         normalizedTarget == "bool" || normalizedTarget == "f32" || normalizedTarget == "f64") {
       return true;
     }

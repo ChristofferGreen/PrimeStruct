@@ -29,7 +29,7 @@ OperatorPowAbsSignEmitResult emitPowAbsSignOperatorExpr(const Expr &expr,
             if (arg.kind == Expr::Kind::Literal && arg.isUnsigned) {
               sawUnsigned = true;
             }
-            if (kind == LocalInfo::ValueKind::UInt64) {
+            if ((kind == LocalInfo::ValueKind::UInt64 || kind == LocalInfo::ValueKind::UInt8)) {
               sawUnsigned = true;
             } else if (kind == LocalInfo::ValueKind::Int32 || kind == LocalInfo::ValueKind::Int64) {
               sawSigned = true;
@@ -41,6 +41,10 @@ OperatorPowAbsSignEmitResult emitPowAbsSignOperatorExpr(const Expr &expr,
           }
           LocalInfo::ValueKind powKind =
               combineNumericKinds(inferExprKind(expr.args[0], localsIn), inferExprKind(expr.args[1], localsIn));
+          if (powKind == LocalInfo::ValueKind::UInt8) {
+            error = powName + " does not support u8 operands; convert to u64 first";
+            return OperatorPowAbsSignEmitResult::Error;
+          }
           if (powKind == LocalInfo::ValueKind::Unknown || powKind == LocalInfo::ValueKind::Bool ||
               powKind == LocalInfo::ValueKind::String) {
             error = powName + " requires numeric arguments of the same type";
@@ -288,15 +292,15 @@ OperatorPowAbsSignEmitResult emitPowAbsSignOperatorExpr(const Expr &expr,
           }
 
           IrOpcode mulOp =
-              (powKind == LocalInfo::ValueKind::Int64 || powKind == LocalInfo::ValueKind::UInt64)
+              (powKind == LocalInfo::ValueKind::Int64 || (powKind == LocalInfo::ValueKind::UInt64 || powKind == LocalInfo::ValueKind::UInt8))
                   ? IrOpcode::MulI64
                   : IrOpcode::MulI32;
           IrOpcode subOp =
-              (powKind == LocalInfo::ValueKind::Int64 || powKind == LocalInfo::ValueKind::UInt64)
+              (powKind == LocalInfo::ValueKind::Int64 || (powKind == LocalInfo::ValueKind::UInt64 || powKind == LocalInfo::ValueKind::UInt8))
                   ? IrOpcode::SubI64
                   : IrOpcode::SubI32;
           IrOpcode cmpGtOp = IrOpcode::CmpGtI32;
-          if (powKind == LocalInfo::ValueKind::UInt64) {
+          if ((powKind == LocalInfo::ValueKind::UInt64 || powKind == LocalInfo::ValueKind::UInt8)) {
             cmpGtOp = IrOpcode::CmpGtU64;
           } else if (powKind == LocalInfo::ValueKind::Int64) {
             cmpGtOp = IrOpcode::CmpGtI64;
@@ -413,7 +417,7 @@ OperatorPowAbsSignEmitResult emitPowAbsSignOperatorExpr(const Expr &expr,
           };
 
           if (absSignName == "abs") {
-            if (argKind == LocalInfo::ValueKind::UInt64) {
+            if ((argKind == LocalInfo::ValueKind::UInt64 || argKind == LocalInfo::ValueKind::UInt8)) {
               instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
               instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
               instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
@@ -454,7 +458,7 @@ OperatorPowAbsSignEmitResult emitPowAbsSignOperatorExpr(const Expr &expr,
             return OperatorPowAbsSignEmitResult::Handled;
           }
 
-          if (argKind == LocalInfo::ValueKind::UInt64) {
+          if ((argKind == LocalInfo::ValueKind::UInt64 || argKind == LocalInfo::ValueKind::UInt8)) {
             instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
             pushZero();
             instructions.push_back({IrOpcode::CmpEqI64, 0});

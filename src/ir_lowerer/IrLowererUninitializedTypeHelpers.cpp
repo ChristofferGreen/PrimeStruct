@@ -87,7 +87,7 @@ bool resolveUninitializedTypeInfo(const std::string &typeText,
   }
   auto isSupportedNumeric = [](LocalInfo::ValueKind kind) {
     return kind == LocalInfo::ValueKind::Int32 || kind == LocalInfo::ValueKind::Int64 ||
-           kind == LocalInfo::ValueKind::UInt64 || kind == LocalInfo::ValueKind::Float32 ||
+           (kind == LocalInfo::ValueKind::UInt64 || kind == LocalInfo::ValueKind::UInt8) || kind == LocalInfo::ValueKind::Float32 ||
            kind == LocalInfo::ValueKind::Float64 || kind == LocalInfo::ValueKind::Bool;
   };
 

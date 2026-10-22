@@ -725,7 +725,7 @@ inline bool inferExprBindingTypeInfo(const Expr &expr,
   }
   if (expr.kind == Expr::Kind::Literal) {
     infoOut.kind = LocalInfo::Kind::Value;
-    infoOut.valueKind = expr.isUnsigned ? LocalInfo::ValueKind::UInt64
+    infoOut.valueKind = expr.isUnsigned ? (expr.intWidth == 8 ? LocalInfo::ValueKind::UInt8 : LocalInfo::ValueKind::UInt64)
                                         : (expr.intWidth == 64 ? LocalInfo::ValueKind::Int64
                                                                : LocalInfo::ValueKind::Int32);
     return true;

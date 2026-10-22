@@ -299,7 +299,7 @@ OperatorComparisonEmitResult emitComparisonOperatorExpr(const Expr &expr,
     } else if (numericKind == LocalInfo::ValueKind::Float32) {
       op = IrOpcode::CmpEqF32;
     } else {
-      op = (numericKind == LocalInfo::ValueKind::UInt64 || numericKind == LocalInfo::ValueKind::Int64)
+      op = ((numericKind == LocalInfo::ValueKind::UInt64 || numericKind == LocalInfo::ValueKind::UInt8) || numericKind == LocalInfo::ValueKind::Int64)
                ? IrOpcode::CmpEqI64
                : IrOpcode::CmpEqI32;
     }
@@ -309,7 +309,7 @@ OperatorComparisonEmitResult emitComparisonOperatorExpr(const Expr &expr,
     } else if (numericKind == LocalInfo::ValueKind::Float32) {
       op = IrOpcode::CmpNeF32;
     } else {
-      op = (numericKind == LocalInfo::ValueKind::UInt64 || numericKind == LocalInfo::ValueKind::Int64)
+      op = ((numericKind == LocalInfo::ValueKind::UInt64 || numericKind == LocalInfo::ValueKind::UInt8) || numericKind == LocalInfo::ValueKind::Int64)
                ? IrOpcode::CmpNeI64
                : IrOpcode::CmpNeI32;
     }
@@ -318,7 +318,7 @@ OperatorComparisonEmitResult emitComparisonOperatorExpr(const Expr &expr,
       op = IrOpcode::CmpLtF64;
     } else if (numericKind == LocalInfo::ValueKind::Float32) {
       op = IrOpcode::CmpLtF32;
-    } else if (numericKind == LocalInfo::ValueKind::UInt64) {
+    } else if ((numericKind == LocalInfo::ValueKind::UInt64 || numericKind == LocalInfo::ValueKind::UInt8)) {
       op = IrOpcode::CmpLtU64;
     } else if (numericKind == LocalInfo::ValueKind::Int64) {
       op = IrOpcode::CmpLtI64;
@@ -330,7 +330,7 @@ OperatorComparisonEmitResult emitComparisonOperatorExpr(const Expr &expr,
       op = IrOpcode::CmpLeF64;
     } else if (numericKind == LocalInfo::ValueKind::Float32) {
       op = IrOpcode::CmpLeF32;
-    } else if (numericKind == LocalInfo::ValueKind::UInt64) {
+    } else if ((numericKind == LocalInfo::ValueKind::UInt64 || numericKind == LocalInfo::ValueKind::UInt8)) {
       op = IrOpcode::CmpLeU64;
     } else if (numericKind == LocalInfo::ValueKind::Int64) {
       op = IrOpcode::CmpLeI64;
@@ -342,7 +342,7 @@ OperatorComparisonEmitResult emitComparisonOperatorExpr(const Expr &expr,
       op = IrOpcode::CmpGtF64;
     } else if (numericKind == LocalInfo::ValueKind::Float32) {
       op = IrOpcode::CmpGtF32;
-    } else if (numericKind == LocalInfo::ValueKind::UInt64) {
+    } else if ((numericKind == LocalInfo::ValueKind::UInt64 || numericKind == LocalInfo::ValueKind::UInt8)) {
       op = IrOpcode::CmpGtU64;
     } else if (numericKind == LocalInfo::ValueKind::Int64) {
       op = IrOpcode::CmpGtI64;
@@ -354,7 +354,7 @@ OperatorComparisonEmitResult emitComparisonOperatorExpr(const Expr &expr,
       op = IrOpcode::CmpGeF64;
     } else if (numericKind == LocalInfo::ValueKind::Float32) {
       op = IrOpcode::CmpGeF32;
-    } else if (numericKind == LocalInfo::ValueKind::UInt64) {
+    } else if ((numericKind == LocalInfo::ValueKind::UInt64 || numericKind == LocalInfo::ValueKind::UInt8)) {
       op = IrOpcode::CmpGeU64;
     } else if (numericKind == LocalInfo::ValueKind::Int64) {
       op = IrOpcode::CmpGeI64;

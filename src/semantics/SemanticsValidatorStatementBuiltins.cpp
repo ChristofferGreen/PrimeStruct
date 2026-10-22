@@ -26,10 +26,10 @@ bool SemanticsValidator::validatePathSpaceComputeBuiltinStatement(
   };
 
   auto isIntegerKind = [&](ReturnKind kind) -> bool {
-    return kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64;
+    return kind == ReturnKind::Int || kind == ReturnKind::Int64 || (kind == ReturnKind::UInt64 || kind == ReturnKind::UInt8);
   };
   auto isNumericOrBoolKind = [&](ReturnKind kind) -> bool {
-    return kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 ||
+    return kind == ReturnKind::Int || kind == ReturnKind::Int64 || (kind == ReturnKind::UInt64 || kind == ReturnKind::UInt8) ||
            kind == ReturnKind::Float32 || kind == ReturnKind::Float64 || kind == ReturnKind::Bool;
   };
   auto resolveArrayElemType = [&](const Expr &arg, std::string &elemType) -> bool {

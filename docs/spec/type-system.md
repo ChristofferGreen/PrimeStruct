@@ -11,8 +11,13 @@
 - Whole-program checks remain supported, but local reasoning is preferred.
 
 ### Type Grammar (canonical)
-- **Atomic:** `bool`, `i32`, `i64`, `u64`, `f32`, `f64`, `string`, `void`, `Self`.
-  Planned ([Strings, Text and Slices](strings-and-views.md)): `u8`, `string` as a borrowed read-only UTF-8 view (literals
+- **Atomic:** `bool`, `i32`, `i64`, `u64`, `u8`, `f32`, `f64`, `string`, `void`, `Self`.
+  `u8` is an unsigned byte (literals `65u8`, 0 to 255; larger literals are rejected). `+ - *` and `increment`/
+  `decrement` wrap modulo 256, `/` and comparisons are unsigned, `convert<u8>(x)` keeps the low eight bits (a float is
+  converted to an integer first), and a `u8` mixed with any other integer type needs an explicit `convert`. `u8` is a
+  struct field of one byte, may cross the `[host]` boundary (zero-extended in the VM slot), and is VM-only until the
+  native/C++/wasm/GLSL backends gain byte support. `pow`, `lerp` and negation reject `u8`; convert to `u64` first.
+  Planned ([Strings, Text and Slices](strings-and-views.md)): `string` as a borrowed read-only UTF-8 view (literals
   are static `string`s), and the owned `String`.
 - **Composite:** `array<T>`, `vector<T>`, `map<K, V>`, `Pointer<T>`, `Reference<T>`,
   stdlib-owned `soa<T>`, stdlib-owned `tuple<Ts...>`, and draft math value
@@ -22,7 +27,7 @@
 - **Template applications:** `Name<T1, T2, ...>`.
 
 ### Core Type Set (portable)
-- `bool`, `i32`, `i64`, `u64`, `f32`, `f64`, `string`.
+- `bool`, `i32`, `i64`, `u64`, `u8`, `f32`, `f64`, `string`.
 - `array<T>`, `vector<T>`, `map<K, V>` where parameters are core types.
 - `soa<T>` for explicit structure-of-arrays storage of SoA-safe struct `T`.
   The public API is stdlib-owned on top of generic language/runtime SoA
@@ -478,7 +483,7 @@ the generic layout and storage primitives that the stdlib wrapper still needs.
 - The typing context maps local bindings, parameters, signatures, struct layouts, and import aliases to resolved types.
 
 ### Expression Rules
-- **Literals:** fixed type determined by suffix (`1i32`, `2u64`, `1.0f32`, `"hi"utf8`, `true`).
+- **Literals:** fixed type determined by suffix (`1i32`, `2u64`, `3u8`, `1.0f32`, `"hi"utf8`, `true`).
 - **Bindings:** declared type in the transform list, or `auto` if omitted.
 - **Calls:** well-typed if the callee resolves to a definition or builtin, and every argument matches the parameter
   type.

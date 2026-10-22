@@ -47,6 +47,8 @@ std::string scalarKindTypeName(LocalInfo::ValueKind kind) {
     return "i64";
   case LocalInfo::ValueKind::UInt64:
     return "u64";
+    case LocalInfo::ValueKind::UInt8:
+    return "u8";
   case LocalInfo::ValueKind::Bool:
     return "bool";
   case LocalInfo::ValueKind::Float32:

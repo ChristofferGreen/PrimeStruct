@@ -23,6 +23,7 @@ bool SemanticsValidator::validateNumericBuiltinExpr(const std::vector<ParameterI
       case ReturnKind::Int:
       case ReturnKind::Int64:
       case ReturnKind::UInt64:
+      case ReturnKind::UInt8:
         return {NumericDomain::Fixed, NumericCategory::Integer};
       case ReturnKind::Float32:
       case ReturnKind::Float64:
@@ -40,7 +41,7 @@ bool SemanticsValidator::validateNumericBuiltinExpr(const std::vector<ParameterI
     }
   };
   auto numericInfoForTypeName = [](const std::string &typeName) -> NumericInfo {
-    if (typeName == "int" || typeName == "i32" || typeName == "i64" || typeName == "u64" || typeName == "bool") {
+    if (typeName == "int" || typeName == "i32" || typeName == "i64" || typeName == "u64" || typeName == "u8" || typeName == "bool") {
       return {NumericDomain::Fixed, NumericCategory::Integer};
     }
     if (typeName == "float" || typeName == "f32" || typeName == "f64") {
@@ -77,7 +78,7 @@ bool SemanticsValidator::validateNumericBuiltinExpr(const std::vector<ParameterI
       return true;
     }
     if (kind == ReturnKind::Void || kind == ReturnKind::Array || kind == ReturnKind::Int ||
-        kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 || kind == ReturnKind::Float32 ||
+        kind == ReturnKind::Int64 || (kind == ReturnKind::UInt64 || kind == ReturnKind::UInt8) || kind == ReturnKind::Float32 ||
         kind == ReturnKind::Float64) {
       return false;
     }
@@ -105,23 +106,39 @@ bool SemanticsValidator::validateNumericBuiltinExpr(const std::vector<ParameterI
     return arg.kind == Expr::Kind::StringLiteral || inferExprReturnKind(arg, params, locals) == ReturnKind::String;
   };
   auto isUnsignedExpr = [&](const Expr &arg) -> bool {
-    return inferExprReturnKind(arg, params, locals) == ReturnKind::UInt64;
+    const ReturnKind kind = inferExprReturnKind(arg, params, locals);
+    return kind == ReturnKind::UInt64 || kind == ReturnKind::UInt8;
   };
+  bool lastMixWasU8 = false;
   auto hasMixedSignedness = [&](const std::vector<Expr> &args, bool boolCountsAsSigned) -> bool {
     bool sawUnsigned = false;
     bool sawSigned = false;
+    bool sawU8 = false;
+    bool sawWide = false;
+    lastMixWasU8 = false;
     for (const auto &arg : args) {
       ReturnKind kind = inferExprReturnKind(arg, params, locals);
       if (kind == ReturnKind::Integer || kind == ReturnKind::Decimal || kind == ReturnKind::Complex) {
         continue;
       }
+      if (kind == ReturnKind::UInt8) {
+        sawUnsigned = true;
+        sawU8 = true;
+        continue;
+      }
       if (kind == ReturnKind::UInt64) {
         sawUnsigned = true;
+        sawWide = true;
         continue;
       }
       if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || (boolCountsAsSigned && kind == ReturnKind::Bool)) {
         sawSigned = true;
+        sawWide = true;
       }
+    }
+    if (sawU8 && sawWide) {
+      lastMixWasU8 = true;
+      return true;
     }
     return sawUnsigned && sawSigned;
   };
@@ -345,7 +362,7 @@ bool SemanticsValidator::validateNumericBuiltinExpr(const std::vector<ParameterI
       const Expr &offsetExpr = expr.args[1];
       ReturnKind offsetKind = inferExprReturnKind(offsetExpr, params, locals);
       if (offsetKind != ReturnKind::Unknown && offsetKind != ReturnKind::Int && offsetKind != ReturnKind::Int64 &&
-          offsetKind != ReturnKind::UInt64) {
+          (offsetKind != ReturnKind::UInt64 && offsetKind != ReturnKind::UInt8)) {
         return failNumericDiagnostic("pointer arithmetic requires integer offset");
       }
     } else if (leftPointer || rightPointer) {
@@ -410,7 +427,7 @@ bool SemanticsValidator::validateNumericBuiltinExpr(const std::vector<ParameterI
         return failNumericDiagnostic("arithmetic operators do not support mixed complex/real operands");
       }
       if (hasMixedSignedness(expr.args, false)) {
-        return failNumericDiagnostic("arithmetic operators do not support mixed signed/unsigned operands");
+        return failNumericDiagnostic(lastMixWasU8 ? std::string("u8 operands cannot be mixed with wider integers; use convert<u8> or convert<u64> to match types") : std::string("arithmetic operators do not support mixed signed/unsigned operands"));
       }
       if (hasMixedNumericCategory(expr.args)) {
         return failNumericDiagnostic("arithmetic operators do not support mixed int/float operands");
@@ -466,7 +483,7 @@ bool SemanticsValidator::validateNumericBuiltinExpr(const std::vector<ParameterI
           return failNumericDiagnostic("comparisons do not support ordered complex operands");
         }
         if (hasMixedSignedness(expr.args, true)) {
-          return failNumericDiagnostic("comparisons do not support mixed signed/unsigned operands");
+          return failNumericDiagnostic(lastMixWasU8 ? std::string("u8 operands cannot be mixed with wider integers; use convert<u8> or convert<u64> to match types") : std::string("comparisons do not support mixed signed/unsigned operands"));
         }
         if (hasMixedNumericCategory(expr.args)) {
           return failNumericDiagnostic("comparisons do not support mixed int/float operands");
@@ -493,7 +510,7 @@ bool SemanticsValidator::validateNumericBuiltinExpr(const std::vector<ParameterI
       return failNumericDiagnostic("clamp does not support complex operands");
     }
     if (hasMixedSignedness(expr.args, false)) {
-      return failNumericDiagnostic("clamp does not support mixed signed/unsigned operands");
+      return failNumericDiagnostic(lastMixWasU8 ? std::string("u8 operands cannot be mixed with wider integers; use convert<u8> or convert<u64> to match types") : std::string("clamp does not support mixed signed/unsigned operands"));
     }
     if (hasMixedNumericCategory(expr.args)) {
       return failNumericDiagnostic("clamp does not support mixed int/float operands");
@@ -519,7 +536,7 @@ bool SemanticsValidator::validateNumericBuiltinExpr(const std::vector<ParameterI
       return failNumericDiagnostic(builtinName + " does not support complex operands");
     }
     if (hasMixedSignedness(expr.args, false)) {
-      return failNumericDiagnostic(builtinName + " does not support mixed signed/unsigned operands");
+      return failNumericDiagnostic(lastMixWasU8 ? std::string("u8 operands cannot be mixed with wider integers; use convert<u8> or convert<u64> to match types") : std::string(builtinName + " does not support mixed signed/unsigned operands"));
     }
     if (hasMixedNumericCategory(expr.args)) {
       return failNumericDiagnostic(builtinName + " does not support mixed int/float operands");
@@ -595,7 +612,7 @@ bool SemanticsValidator::validateNumericBuiltinExpr(const std::vector<ParameterI
         return failNumericDiagnostic(builtinName + " does not support mixed complex/real operands");
       }
       if (hasMixedSignedness(expr.args, false)) {
-        return failNumericDiagnostic(builtinName + " does not support mixed signed/unsigned operands");
+        return failNumericDiagnostic(lastMixWasU8 ? std::string("u8 operands cannot be mixed with wider integers; use convert<u8> or convert<u64> to match types") : std::string(builtinName + " does not support mixed signed/unsigned operands"));
       }
       if (hasMixedNumericCategory(expr.args)) {
         return failNumericDiagnostic(builtinName + " does not support mixed int/float operands");

@@ -296,7 +296,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     if (returnKind == ReturnKind::Int64) {
       return std::string("int64_t");
     }
-    if (returnKind == ReturnKind::UInt64) {
+    if ((returnKind == ReturnKind::UInt64 || returnKind == ReturnKind::UInt8)) {
       return std::string("uint64_t");
     }
     if (returnKind == ReturnKind::Float32) {

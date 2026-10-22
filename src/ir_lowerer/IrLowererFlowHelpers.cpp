@@ -33,7 +33,7 @@ bool emitCompareToZero(std::vector<IrInstruction> &instructions,
                        bool equals,
                        std::string &error) {
   if (kind == LocalInfo::ValueKind::Int64 ||
-      kind == LocalInfo::ValueKind::UInt64) {
+      (kind == LocalInfo::ValueKind::UInt64 || kind == LocalInfo::ValueKind::UInt8)) {
     instructions.push_back({IrOpcode::PushI64, 0});
     instructions.push_back({equals ? IrOpcode::CmpEqI64 : IrOpcode::CmpNeI64, 0});
     return true;
@@ -91,7 +91,7 @@ bool emitReturnForDefinition(std::vector<IrInstruction> &instructions,
   }
   if (returnInfo.returnsArray ||
       returnInfo.kind == LocalInfo::ValueKind::Int64 ||
-      returnInfo.kind == LocalInfo::ValueKind::UInt64 ||
+      (returnInfo.kind == LocalInfo::ValueKind::UInt64 || returnInfo.kind == LocalInfo::ValueKind::UInt8) ||
       returnInfo.kind == LocalInfo::ValueKind::String) {
     instructions.push_back({IrOpcode::ReturnI64, 0});
     return true;

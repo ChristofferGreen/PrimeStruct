@@ -75,7 +75,7 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
   };
   auto isIntegerExpr = [&](const Expr &arg) -> bool {
     ReturnKind kind = inferExprReturnKind(arg, params, locals);
-    if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64) {
+    if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || (kind == ReturnKind::UInt64 || kind == ReturnKind::UInt8)) {
       return true;
     }
     if (kind == ReturnKind::Bool || kind == ReturnKind::Float32 || kind == ReturnKind::Float64 ||
@@ -94,13 +94,13 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
         if (const BindingInfo *paramBinding = findParamBinding(params, arg.name)) {
           ReturnKind paramKind = returnKindForBinding(*paramBinding);
           return paramKind == ReturnKind::Int || paramKind == ReturnKind::Int64 ||
-                 paramKind == ReturnKind::UInt64;
+                 (paramKind == ReturnKind::UInt64 || paramKind == ReturnKind::UInt8);
         }
         auto it = locals.find(arg.name);
         if (it != locals.end()) {
           ReturnKind localKind = returnKindForBinding(it->second);
           return localKind == ReturnKind::Int || localKind == ReturnKind::Int64 ||
-                 localKind == ReturnKind::UInt64;
+                 (localKind == ReturnKind::UInt64 || localKind == ReturnKind::UInt8);
         }
       }
       return true;
@@ -354,7 +354,7 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
         return true;
       }
       ReturnKind kind = inferExprReturnKind(arg, params, locals);
-      if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 ||
+      if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || (kind == ReturnKind::UInt64 || kind == ReturnKind::UInt8) ||
           kind == ReturnKind::Bool) {
         return true;
       }
@@ -365,13 +365,13 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
         if (const BindingInfo *paramBinding = findParamBinding(params, arg.name)) {
           ReturnKind paramKind = returnKindForBinding(*paramBinding);
           return paramKind == ReturnKind::Int || paramKind == ReturnKind::Int64 ||
-                 paramKind == ReturnKind::UInt64 || paramKind == ReturnKind::Bool;
+                 (paramKind == ReturnKind::UInt64 || paramKind == ReturnKind::UInt8) || paramKind == ReturnKind::Bool;
         }
         auto itLocal = locals.find(arg.name);
         if (itLocal != locals.end()) {
           ReturnKind localKind = returnKindForBinding(itLocal->second);
           return localKind == ReturnKind::Int || localKind == ReturnKind::Int64 ||
-                 localKind == ReturnKind::UInt64 || localKind == ReturnKind::Bool;
+                 (localKind == ReturnKind::UInt64 || localKind == ReturnKind::UInt8) || localKind == ReturnKind::Bool;
         }
       }
       if (isPointerLikeExpr(arg, params, locals)) {
@@ -388,7 +388,7 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
     };
     auto isIntegerOrBoolExpr = [&](const Expr &arg) -> bool {
       ReturnKind kind = inferExprReturnKind(arg, params, locals);
-      if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 ||
+      if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || (kind == ReturnKind::UInt64 || kind == ReturnKind::UInt8) ||
           kind == ReturnKind::Bool) {
         return true;
       }
@@ -407,13 +407,13 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
           if (const BindingInfo *paramBinding = findParamBinding(params, arg.name)) {
             ReturnKind paramKind = returnKindForBinding(*paramBinding);
             return paramKind == ReturnKind::Int || paramKind == ReturnKind::Int64 ||
-                   paramKind == ReturnKind::UInt64 || paramKind == ReturnKind::Bool;
+                   (paramKind == ReturnKind::UInt64 || paramKind == ReturnKind::UInt8) || paramKind == ReturnKind::Bool;
           }
           auto itLocal = locals.find(arg.name);
           if (itLocal != locals.end()) {
             ReturnKind localKind = returnKindForBinding(itLocal->second);
             return localKind == ReturnKind::Int || localKind == ReturnKind::Int64 ||
-                   localKind == ReturnKind::UInt64 || localKind == ReturnKind::Bool;
+                   (localKind == ReturnKind::UInt64 || localKind == ReturnKind::UInt8) || localKind == ReturnKind::Bool;
           }
         }
       }
@@ -466,7 +466,7 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
           kind = returnKindForBinding(itLocal->second);
         }
       }
-      if (kind != ReturnKind::Int && kind != ReturnKind::Int64 && kind != ReturnKind::UInt64) {
+      if (kind != ReturnKind::Int && kind != ReturnKind::Int64 && (kind != ReturnKind::UInt64 && kind != ReturnKind::UInt8)) {
         return failResultFileDiagnostic("read_byte requires mutable integer binding");
       }
       return true;

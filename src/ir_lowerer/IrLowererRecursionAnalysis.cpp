@@ -17,6 +17,7 @@ bool isSupportedScalarTypeName(const std::string &typeName) {
     case LocalInfo::ValueKind::Int32:
     case LocalInfo::ValueKind::Int64:
     case LocalInfo::ValueKind::UInt64:
+    case LocalInfo::ValueKind::UInt8:
     case LocalInfo::ValueKind::Float32:
     case LocalInfo::ValueKind::Float64:
     case LocalInfo::ValueKind::Bool:

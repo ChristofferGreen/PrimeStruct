@@ -209,7 +209,7 @@ bool inferLiteralOrNameExprKindImpl(const Expr &expr,
   switch (expr.kind) {
     case Expr::Kind::Literal:
       if (expr.isUnsigned) {
-        kindOut = LocalInfo::ValueKind::UInt64;
+        kindOut = expr.intWidth == 8 ? LocalInfo::ValueKind::UInt8 : LocalInfo::ValueKind::UInt64;
       } else if (expr.intWidth == 64) {
         kindOut = LocalInfo::ValueKind::Int64;
       } else {

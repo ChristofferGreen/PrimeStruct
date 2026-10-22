@@ -104,7 +104,7 @@ main() {
   primec::Program program;
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("integer literal requires i32/i64/u64 suffix") != std::string::npos);
+  CHECK(error.find("integer literal requires i32/i64/u64/u8 suffix") != std::string::npos);
 }
 
 TEST_CASE("rejects integer literals without suffix") {
@@ -119,7 +119,7 @@ main() {
   primec::Program program;
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("integer literal requires i32/i64/u64 suffix") != std::string::npos);
+  CHECK(error.find("integer literal requires i32/i64/u64/u8 suffix") != std::string::npos);
 }
 
 TEST_CASE("rejects integer literals with unsupported suffix") {
@@ -134,7 +134,7 @@ main() {
   primec::Program program;
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("integer literal requires i32/i64/u64 suffix") != std::string::npos);
+  CHECK(error.find("integer literal requires i32/i64/u64/u8 suffix") != std::string::npos);
 }
 
 TEST_CASE("rejects negative unsigned integer literals") {

@@ -34,7 +34,7 @@ std::string quaternionHelperBaseForPath(const std::string &typePath) {
 
 bool isNumericScalarKind(LocalInfo::ValueKind kind) {
   return kind == LocalInfo::ValueKind::Int32 || kind == LocalInfo::ValueKind::Int64 ||
-         kind == LocalInfo::ValueKind::UInt64 || kind == LocalInfo::ValueKind::Float32 ||
+         (kind == LocalInfo::ValueKind::UInt64 || kind == LocalInfo::ValueKind::UInt8) || kind == LocalInfo::ValueKind::Float32 ||
          kind == LocalInfo::ValueKind::Float64;
 }
 
@@ -252,7 +252,7 @@ OperatorArithmeticEmitResult emitArithmeticOperatorExpr(const Expr &expr,
       error = "negate requires numeric operand";
       return OperatorArithmeticEmitResult::Error;
     }
-    if (kind == LocalInfo::ValueKind::UInt64) {
+    if ((kind == LocalInfo::ValueKind::UInt64 || kind == LocalInfo::ValueKind::UInt8)) {
       error = "negate does not support unsigned operands";
       return OperatorArithmeticEmitResult::Error;
     }
@@ -308,7 +308,7 @@ OperatorArithmeticEmitResult emitArithmeticOperatorExpr(const Expr &expr,
       offsetKind = inferExprKind(candidate, localsRef);
     }
     return offsetKind == LocalInfo::ValueKind::Int32 || offsetKind == LocalInfo::ValueKind::Int64 ||
-           offsetKind == LocalInfo::ValueKind::UInt64;
+           (offsetKind == LocalInfo::ValueKind::UInt64 || offsetKind == LocalInfo::ValueKind::UInt8);
   };
   std::function<bool(const Expr &, const LocalMap &)> isPointerOperand;
   isPointerOperand = [&](const Expr &candidate, const LocalMap &localsRef) -> bool {
@@ -393,7 +393,7 @@ OperatorArithmeticEmitResult emitArithmeticOperatorExpr(const Expr &expr,
       const Expr &offsetExpr = leftPointer ? expr.args[1] : expr.args[0];
       LocalInfo::ValueKind offsetKind = inferExprKind(offsetExpr, localsIn);
       if (offsetKind != LocalInfo::ValueKind::Int32 && offsetKind != LocalInfo::ValueKind::Int64 &&
-          offsetKind != LocalInfo::ValueKind::UInt64) {
+          (offsetKind != LocalInfo::ValueKind::UInt64 && offsetKind != LocalInfo::ValueKind::UInt8)) {
         error = "pointer arithmetic requires an integer offset";
         return OperatorArithmeticEmitResult::Error;
       }
@@ -428,7 +428,7 @@ OperatorArithmeticEmitResult emitArithmeticOperatorExpr(const Expr &expr,
       op = IrOpcode::AddF64;
     } else if (numericKind == LocalInfo::ValueKind::Float32) {
       op = IrOpcode::AddF32;
-    } else if (numericKind == LocalInfo::ValueKind::Int64 || numericKind == LocalInfo::ValueKind::UInt64) {
+    } else if (numericKind == LocalInfo::ValueKind::Int64 || (numericKind == LocalInfo::ValueKind::UInt64 || numericKind == LocalInfo::ValueKind::UInt8)) {
       op = IrOpcode::AddI64;
     } else {
       op = IrOpcode::AddI32;
@@ -440,7 +440,7 @@ OperatorArithmeticEmitResult emitArithmeticOperatorExpr(const Expr &expr,
       op = IrOpcode::SubF64;
     } else if (numericKind == LocalInfo::ValueKind::Float32) {
       op = IrOpcode::SubF32;
-    } else if (numericKind == LocalInfo::ValueKind::Int64 || numericKind == LocalInfo::ValueKind::UInt64) {
+    } else if (numericKind == LocalInfo::ValueKind::Int64 || (numericKind == LocalInfo::ValueKind::UInt64 || numericKind == LocalInfo::ValueKind::UInt8)) {
       op = IrOpcode::SubI64;
     } else {
       op = IrOpcode::SubI32;
@@ -451,12 +451,12 @@ OperatorArithmeticEmitResult emitArithmeticOperatorExpr(const Expr &expr,
     } else if (numericKind == LocalInfo::ValueKind::Float32) {
       op = IrOpcode::MulF32;
     } else {
-      op = (numericKind == LocalInfo::ValueKind::Int64 || numericKind == LocalInfo::ValueKind::UInt64)
+      op = (numericKind == LocalInfo::ValueKind::Int64 || (numericKind == LocalInfo::ValueKind::UInt64 || numericKind == LocalInfo::ValueKind::UInt8))
                ? IrOpcode::MulI64
                : IrOpcode::MulI32;
     }
   } else if (builtin == "divide") {
-    if (numericKind == LocalInfo::ValueKind::UInt64) {
+    if ((numericKind == LocalInfo::ValueKind::UInt64 || numericKind == LocalInfo::ValueKind::UInt8)) {
       op = IrOpcode::DivU64;
     } else if (numericKind == LocalInfo::ValueKind::Float64) {
       op = IrOpcode::DivF64;
@@ -473,6 +473,10 @@ OperatorArithmeticEmitResult emitArithmeticOperatorExpr(const Expr &expr,
       op == IrOpcode::DivI32) {
     // i32 wraps at 32 bits (see IrPureSemantics.h).
     emitInstruction(IrOpcode::SextI32, 0);
+  }
+  if (numericKind == LocalInfo::ValueKind::UInt8 && (builtin == "plus" || builtin == "minus" || builtin == "multiply")) {
+    // u8 wraps at 8 bits: the 64-bit result is truncated back into range.
+    emitInstruction(IrOpcode::ZextU8, 0);
   }
   return OperatorArithmeticEmitResult::Handled;
 }

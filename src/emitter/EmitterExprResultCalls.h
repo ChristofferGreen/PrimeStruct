@@ -61,7 +61,7 @@
       return false;
     }
     const std::string normalized = normalizeBindingTypeName(info.typeName);
-    return normalized == "i32" || normalized == "i64" || normalized == "u64" || normalized == "bool" ||
+    return normalized == "i32" || normalized == "i64" || normalized == "u64" || normalized == "u8" || normalized == "bool" ||
            normalized == "FileError";
   };
   auto singleFieldResultBridgePayload = [&](const std::string &typeName,

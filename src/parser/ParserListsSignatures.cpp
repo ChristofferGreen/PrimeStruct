@@ -257,7 +257,8 @@ bool Parser::parseTemplateArgument(std::string &out, TemplateArgument *detailOut
     if (text.find('.') != std::string::npos || text.find('e') != std::string::npos ||
         text.find('E') != std::string::npos || text.find('f') != std::string::npos ||
         text.find('F') != std::string::npos || text.find("i32") != std::string::npos ||
-        text.find("i64") != std::string::npos || text.find("u64") != std::string::npos) {
+        text.find("i64") != std::string::npos || text.find("u64") != std::string::npos ||
+        text.find("u8") != std::string::npos) {
       errorOut = "integer compile-time arguments must be unsigned integer literals";
       return false;
     }

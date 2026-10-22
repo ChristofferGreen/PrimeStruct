@@ -131,6 +131,7 @@ bool emitInlineDefinitionCallImpl(
         if (*canonical == "i32") return IrHostValueKind::I32;
         if (*canonical == "i64") return IrHostValueKind::I64;
         if (*canonical == "u64") return IrHostValueKind::U64;
+        if (*canonical == "u8") return IrHostValueKind::U8;
         if (*canonical == "f32") return IrHostValueKind::F32;
         if (*canonical == "f64") return IrHostValueKind::F64;
         if (*canonical == "string") return IrHostValueKind::String;

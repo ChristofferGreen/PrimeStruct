@@ -316,7 +316,7 @@ bool SemanticsValidator::isPrintableStatementExpr(const Expr &arg,
     return true;
   }
   ReturnKind kind = inferExprReturnKind(arg, params, locals);
-  if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 || kind == ReturnKind::Bool) {
+  if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || (kind == ReturnKind::UInt64 || kind == ReturnKind::UInt8) || kind == ReturnKind::Bool) {
     return true;
   }
   if (kind == ReturnKind::String) {
@@ -328,13 +328,13 @@ bool SemanticsValidator::isPrintableStatementExpr(const Expr &arg,
   if (arg.kind == Expr::Kind::Name) {
     if (const BindingInfo *paramBinding = findParamBinding(params, arg.name)) {
       ReturnKind paramKind = returnKindForStatementBinding(*paramBinding);
-      return paramKind == ReturnKind::Int || paramKind == ReturnKind::Int64 || paramKind == ReturnKind::UInt64 ||
+      return paramKind == ReturnKind::Int || paramKind == ReturnKind::Int64 || (paramKind == ReturnKind::UInt64 || paramKind == ReturnKind::UInt8) ||
              paramKind == ReturnKind::Bool;
     }
     auto it = locals.find(arg.name);
     if (it != locals.end()) {
       ReturnKind localKind = returnKindForStatementBinding(it->second);
-      return localKind == ReturnKind::Int || localKind == ReturnKind::Int64 || localKind == ReturnKind::UInt64 ||
+      return localKind == ReturnKind::Int || localKind == ReturnKind::Int64 || (localKind == ReturnKind::UInt64 || localKind == ReturnKind::UInt8) ||
              localKind == ReturnKind::Bool;
     }
   }

@@ -11,12 +11,12 @@ namespace {
 
 bool isIntegerReturnKind(ReturnKind kind) {
   return kind == ReturnKind::Int || kind == ReturnKind::Int64 ||
-         kind == ReturnKind::UInt64;
+         (kind == ReturnKind::UInt64 || kind == ReturnKind::UInt8);
 }
 
 bool isNumericOrBoolReturnKind(ReturnKind kind) {
   return kind == ReturnKind::Int || kind == ReturnKind::Int64 ||
-         kind == ReturnKind::UInt64 || kind == ReturnKind::Float32 ||
+         (kind == ReturnKind::UInt64 || kind == ReturnKind::UInt8) || kind == ReturnKind::Float32 ||
          kind == ReturnKind::Float64 || kind == ReturnKind::Bool;
 }
 

@@ -173,7 +173,7 @@ bool isCompileTimeTypeBinding(const Expr &expr) {
 }
 
 bool isPrimitiveBindingTypeName(const std::string &name) {
-  return name == "int" || name == "i32" || name == "i64" || name == "u64" || name == "float" || name == "f32" ||
+  return name == "int" || name == "i32" || name == "i64" || name == "u64" || name == "u8" || name == "float" || name == "f32" ||
          name == "f64" || name == "integer" || name == "decimal" || name == "complex" || name == "bool" ||
          name == "string" || name == "auto";
 }
@@ -316,7 +316,7 @@ std::string unwrapReferencePointerTypeText(const std::string &typeText) {
 
 bool isBuiltinComparableKeyTypeName(const std::string &name) {
   const std::string normalized = normalizeBindingTypeName(name);
-  return normalized == "i32" || normalized == "i64" || normalized == "u64" || normalized == "f32" ||
+  return normalized == "i32" || normalized == "i64" || normalized == "u64" || normalized == "u8" || normalized == "f32" ||
          normalized == "f64" || normalized == "bool" || normalized == "string";
 }
 
@@ -690,6 +690,9 @@ ReturnKind returnKindForTypeName(const std::string &name) {
   }
   if (name == "u64") {
     return ReturnKind::UInt64;
+  }
+  if (name == "u8") {
+    return ReturnKind::UInt8;
   }
   if (name == "bool") {
     return ReturnKind::Bool;

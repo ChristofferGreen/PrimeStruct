@@ -593,7 +593,7 @@ bool resolveCountedLoopKind(LocalInfo::ValueKind inferredKind,
   }
   if (countKindOut == LocalInfo::ValueKind::Int32 ||
       countKindOut == LocalInfo::ValueKind::Int64 ||
-      countKindOut == LocalInfo::ValueKind::UInt64) {
+      (countKindOut == LocalInfo::ValueKind::UInt64 || countKindOut == LocalInfo::ValueKind::UInt8)) {
     return true;
   }
   error = errorMessage;
@@ -611,7 +611,7 @@ bool emitCountedLoopPrologue(
     std::string &error) {
   if (countKind != LocalInfo::ValueKind::Int32 &&
       countKind != LocalInfo::ValueKind::Int64 &&
-      countKind != LocalInfo::ValueKind::UInt64) {
+      (countKind != LocalInfo::ValueKind::UInt64 && countKind != LocalInfo::ValueKind::UInt8)) {
     error = "counted loop requires integer count";
     return false;
   }

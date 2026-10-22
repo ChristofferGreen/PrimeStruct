@@ -115,6 +115,8 @@ const char *typeName(embed::HostType type) {
     return "bool";
   case embed::HostType::String:
     return "string";
+  case embed::HostType::U8:
+    return "u8";
   }
   return "?";
 }

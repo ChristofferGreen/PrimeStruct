@@ -814,7 +814,7 @@ PhaseStatus rewriteExprPhase5([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
         const std::string receiverType =
             semantics::normalizeBindingTypeName(receiverInfo.typeName);
         if (receiverType == "i32" || receiverType == "i64" ||
-            receiverType == "u64" || receiverType == "bool" ||
+            receiverType == "u64" || receiverType == "u8" || receiverType == "bool" ||
             receiverType == "f32" || receiverType == "f64" ||
             receiverType == "integer" || receiverType == "decimal" ||
             receiverType == "complex") {

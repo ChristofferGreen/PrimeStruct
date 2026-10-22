@@ -30,7 +30,7 @@ inline bool isEngineArgumentHostName(std::string_view name) {
   return name.rfind("__psarg_", 0) == 0;
 }
 
-// Canonical host-boundary spelling ("i32", "i64", "u64", "f32", "f64", "bool", "string")
+// Canonical host-boundary spelling ("i32", "i64", "u64", "u8", "f32", "f64", "bool", "string")
 // for a primitive type name, or nullopt when the type cannot cross the boundary.
 inline std::optional<std::string_view> canonicalHostTypeName(std::string_view typeName) {
   if (typeName == "i32" || typeName == "int") {
@@ -41,6 +41,9 @@ inline std::optional<std::string_view> canonicalHostTypeName(std::string_view ty
   }
   if (typeName == "u64") {
     return "u64";
+  }
+  if (typeName == "u8") {
+    return "u8";
   }
   if (typeName == "f32" || typeName == "float") {
     return "f32";
