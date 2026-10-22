@@ -17,6 +17,9 @@ namespace primec::ui::headless {
 // Forgets all state (widgets, queued actions, the call log) and lets
 // ps_ui_init run again. Handles start again from 1.
 void reset();
+// Every push since the last reset, as the text form `applyHeadlessScenario` replays
+// (tests/fixtures/host_calls/scenario.h): lets a test run the same scenario in a compiled program.
+std::string pushedScenario();
 
 // User actions, replayed in order by ps_ui_wait_event. When none is left,
 // ps_ui_wait_event returns PS_UI_EVENT_QUIT_REQUESTED so scripted programs end.

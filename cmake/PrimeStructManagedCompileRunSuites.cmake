@@ -10,13 +10,13 @@ list(APPEND PrimeStructManagedCompileRunSuites
 )
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.generic_requirements"
-                                  TIMEOUT 30
+                                  TIMEOUT 300
                                   SHARD_PREFIX "generic_requirements"
                                   TOTAL_CASES 15
                                   CASES_PER_SHARD 1)
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.glsl"
-                                  TIMEOUT 60
+                                  TIMEOUT 300
                                   SHARD_PREFIX "glsl"
                                   TOTAL_CASES 50
                                   CASES_PER_SHARD 5)

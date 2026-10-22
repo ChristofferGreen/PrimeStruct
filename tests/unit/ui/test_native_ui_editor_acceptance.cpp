@@ -4,6 +4,8 @@
 #include "primec/ui/NativeUiBindings.h"
 #include "primec/ui/NativeUiHeadless.h"
 
+#include "tests/unit/ui/CompiledEditorMirror.h"
+
 #include "third_party/doctest.h"
 
 #include <algorithm>
@@ -57,9 +59,11 @@ void runEditor() {
   primec::ui::bindNativeUi(engine);
   const Script script = engine.compileFile(std::string(PRIMESTRUCT_SOURCE_DIR) + "/examples/apps/text_editor/main.prime");
   REQUIRE_MESSAGE(script.valid(), script.diagnostics());
+  compiled_editor::Mirror mirror;
   const auto result = script.run();
   REQUIRE_MESSAGE(result.ok, result.diagnostics);
   CHECK(result.exitCode == 0);
+  mirror.expectSame(result.exitCode);
 }
 } // namespace
 

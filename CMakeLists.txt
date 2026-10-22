@@ -1355,6 +1355,28 @@ if(PRIMESTRUCT_BUILD_TESTS)
   target_compile_definitions(PrimeStruct_native_ui_tests PRIVATE
     PRIMESTRUCT_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
   target_link_libraries(PrimeStruct_native_ui_tests PRIVATE primec_ui_lib primec_embed_lib)
+  # The editor compiled with optexe against the headless backend: the editor scenarios run on it
+  # as well as on the VM and must leave the same call logs (tests/unit/ui/CompiledEditorMirror.h).
+  file(GLOB_RECURSE PRIMESTRUCT_STDLIB_PRIME_FILES CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/stdlib/*.prime)
+  set(PRIMESTRUCT_COMPILED_EDITOR ${CMAKE_BINARY_DIR}/native_ui_compiled/editor_headless)
+  add_custom_command(
+    OUTPUT ${PRIMESTRUCT_COMPILED_EDITOR}
+    COMMAND bash ${CMAKE_SOURCE_DIR}/scripts/build_native_app.sh
+            ${CMAKE_SOURCE_DIR}/examples/apps/text_editor/main.prime ${PRIMESTRUCT_COMPILED_EDITOR}
+            --backend headless --build-dir ${CMAKE_BINARY_DIR}
+            --link-arg ${CMAKE_SOURCE_DIR}/tests/fixtures/host_calls/headless_log_dump.cpp
+    DEPENDS primec primec_ui_headless_lib primec_ui_highlight_lib
+            ${CMAKE_SOURCE_DIR}/scripts/build_native_app.sh
+            ${CMAKE_SOURCE_DIR}/examples/apps/text_editor/main.prime
+            ${PRIMESTRUCT_STDLIB_PRIME_FILES}
+            ${CMAKE_SOURCE_DIR}/tests/fixtures/host_calls/headless_log_dump.cpp
+            ${CMAKE_SOURCE_DIR}/tests/fixtures/host_calls/scenario.h
+    VERBATIM
+  )
+  add_custom_target(native_ui_compiled_editor_headless DEPENDS ${PRIMESTRUCT_COMPILED_EDITOR})
+  add_dependencies(PrimeStruct_native_ui_tests native_ui_compiled_editor_headless)
+  target_compile_definitions(PrimeStruct_native_ui_tests PRIVATE
+    PRIMESTRUCT_COMPILED_EDITOR="${PRIMESTRUCT_COMPILED_EDITOR}")
   primestructEnableWarnings(PrimeStruct_native_ui_tests)
   add_test(
     NAME PrimeStruct_native_ui_headless

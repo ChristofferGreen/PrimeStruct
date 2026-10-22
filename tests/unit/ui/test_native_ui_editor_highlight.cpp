@@ -3,6 +3,8 @@
 #include "primec/ui/NativeUi.h"
 #include "primec/ui/NativeUiBindings.h"
 #include "primec/ui/NativeUiHeadless.h"
+
+#include "tests/unit/ui/CompiledEditorMirror.h"
 #include "primec/ui/SyntaxHighlight.h"
 
 #include "third_party/doctest.h"
@@ -53,8 +55,10 @@ std::vector<headless::StyleRun> openInEditor(const std::string &path, const std:
   primec::ui::bindNativeUi(engine);
   const Script script = engine.compileFile(std::string(PRIMESTRUCT_SOURCE_DIR) + "/examples/apps/text_editor/main.prime");
   REQUIRE_MESSAGE(script.valid(), script.diagnostics());
+  compiled_editor::Mirror mirror;
   const auto result = script.run();
   REQUIRE_MESSAGE(result.ok, result.diagnostics);
+  mirror.expectSame(result.exitCode);
   return headless::styleRuns(EditorView);
 }
 
@@ -450,8 +454,10 @@ TEST_CASE("highlight: each tab is styled for its own file") {
   primec::ui::bindNativeUi(engine);
   const Script script = engine.compileFile(std::string(PRIMESTRUCT_SOURCE_DIR) + "/examples/apps/text_editor/main.prime");
   REQUIRE_MESSAGE(script.valid(), script.diagnostics());
+  compiled_editor::Mirror mirror;
   const auto result = script.run();
   REQUIRE_MESSAGE(result.ok, result.diagnostics);
+  mirror.expectSame(result.exitCode);
   // Window 1 holds text view 2 (C++), the second tab's window 9 holds text view 10 (JSON).
   const auto cppRuns = primec::ui::highlight(Language::Cpp, readFile(cpp));
   const auto jsonRuns = primec::ui::highlight(Language::Json, readFile(json));
@@ -501,8 +507,10 @@ TEST_CASE("highlight: a file opened into a fresh New tab is styled") {
   primec::ui::bindNativeUi(engine);
   const Script script = engine.compileFile(std::string(PRIMESTRUCT_SOURCE_DIR) + "/examples/apps/text_editor/main.prime");
   REQUIRE_MESSAGE(script.valid(), script.diagnostics());
+  compiled_editor::Mirror mirror;
   const auto result = script.run();
   REQUIRE_MESSAGE(result.ok, result.diagnostics);
+  mirror.expectSame(result.exitCode);
   const auto expected = primec::ui::highlight(Language::Markdown, readFile(md));
   REQUIRE(!expected.empty());
   CHECK(headless::styleRuns(EditorView).size() == expected.size());

@@ -4,6 +4,8 @@
 #include "primec/ui/NativeUiBindings.h"
 #include "primec/ui/NativeUiHeadless.h"
 
+#include "tests/unit/ui/CompiledEditorMirror.h"
+
 #include "third_party/doctest.h"
 
 #include <algorithm>
@@ -69,9 +71,11 @@ int countCalls(const std::string &prefix) {
 
 void runEditor() {
   const Script script = compileEditor();
+  compiled_editor::Mirror mirror;
   const auto result = script.run();
   REQUIRE_MESSAGE(result.ok, result.diagnostics);
   CHECK(result.exitCode == 0);
+  mirror.expectSame(result.exitCode);
 }
 } // namespace
 
@@ -175,8 +179,10 @@ TEST_CASE("editor opens the file named on the command line") {
   headless::reset();
   headless::pushCloseWindow(EditorWindow);
   const Script script = compileEditor();
+  compiled_editor::Mirror mirror;
   const auto result = script.run({in});
   REQUIRE_MESSAGE(result.ok, result.diagnostics);
+  mirror.expectSame(result.exitCode, {in});
   CHECK(result.exitCode == 0);
   const auto window = headless::windowState(EditorWindow);
   CHECK(window.title == in);
@@ -190,8 +196,10 @@ TEST_CASE("editor reports a command line file that cannot be opened") {
   headless::pushAlertAnswer(0);
   headless::pushCloseWindow(EditorWindow);
   const Script script = compileEditor();
+  compiled_editor::Mirror mirror;
   const auto result = script.run({"/definitely/not/here.txt"});
   REQUIRE_MESSAGE(result.ok, result.diagnostics);
+  mirror.expectSame(result.exitCode, {"/definitely/not/here.txt"});
   CHECK(headless::windowState(EditorWindow).title == "Untitled");
   CHECK(countCalls("ps_ui_alert(\"The file could not be opened.\"") == 1);
 }

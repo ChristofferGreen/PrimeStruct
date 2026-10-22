@@ -67,6 +67,7 @@ struct State {
   std::deque<std::string> openAnswers;
   std::deque<std::string> saveAnswers;
   std::deque<int32_t> alertAnswers;
+  std::string scenario; // every push, in the text form of tests/fixtures/host_calls/scenario.h
   int32_t eventKind = PS_UI_EVENT_NONE;
   uint64_t eventWindow = 0;
   uint64_t eventWidget = 0;
@@ -251,17 +252,41 @@ bool deliverNextEvent() {
 
 } // namespace
 
+// Text in a scenario entry: ';' separates entries and newlines end a line, so they travel as %XX.
+std::string encodeScenarioText(const std::string &text) {
+  static const char *Digits = "0123456789ABCDEF";
+  std::string out;
+  for (const unsigned char c : text) {
+    if (c == '%' || c == ';' || c == '\n' || c == '\r') {
+      out += '%';
+      out += Digits[c >> 4];
+      out += Digits[c & 15];
+    } else {
+      out += static_cast<char>(c);
+    }
+  }
+  return out;
+}
+
+void recordScenario(const std::string &entry) {
+  std::string &scenario = state().scenario;
+  scenario += scenario.empty() ? entry : ";" + entry;
+}
+
 void reset() { state() = State{}; }
+std::string pushedScenario() { return state().scenario; }
 void pushCommand(int32_t commandId) {
   Action a;
   a.kind = Action::Kind::Command;
   a.command = commandId;
+  recordScenario("cmd:" + std::to_string(commandId));
   state().actions.push_back(std::move(a));
 }
 void pushTypeText(uint64_t widget, std::string text) {
   Action a;
   a.kind = Action::Kind::TypeText;
   a.handle = widget;
+  recordScenario("type:" + std::to_string(widget) + ":" + encodeScenarioText(text));
   a.text = std::move(text);
   state().actions.push_back(std::move(a));
 }
@@ -269,13 +294,18 @@ void pushCloseWindow(uint64_t window) {
   Action a;
   a.kind = Action::Kind::CloseWindow;
   a.handle = window;
+  recordScenario("close:" + std::to_string(window));
   state().actions.push_back(std::move(a));
 }
-void pushQuit() { state().actions.push_back(Action{}); }
+void pushQuit() {
+  recordScenario("quit");
+  state().actions.push_back(Action{});
+}
 void pushActivateWindow(uint64_t window) {
   Action a;
   a.kind = Action::Kind::Activate;
   a.handle = window;
+  recordScenario("activate:" + std::to_string(window));
   state().actions.push_back(std::move(a));
 }
 
@@ -297,9 +327,18 @@ std::string windowPath(uint64_t window) {
   const auto it = state().windows.find(window);
   return it == state().windows.end() ? std::string() : it->second.path;
 }
-void pushOpenPanelAnswer(std::string path) { state().openAnswers.push_back(std::move(path)); }
-void pushSavePanelAnswer(std::string path) { state().saveAnswers.push_back(std::move(path)); }
-void pushAlertAnswer(int32_t button) { state().alertAnswers.push_back(button); }
+void pushOpenPanelAnswer(std::string path) {
+  recordScenario("open:" + encodeScenarioText(path));
+  state().openAnswers.push_back(std::move(path));
+}
+void pushSavePanelAnswer(std::string path) {
+  recordScenario("save:" + encodeScenarioText(path));
+  state().saveAnswers.push_back(std::move(path));
+}
+void pushAlertAnswer(int32_t button) {
+  recordScenario("alert:" + std::to_string(button));
+  state().alertAnswers.push_back(button);
+}
 const std::vector<std::string> &callLog() { return state().log; }
 
 WindowState windowState(uint64_t window) {

@@ -5,7 +5,8 @@
 //
 // Entries are separated by ';'. `cmd:N` is a menu command, `type:W:text` types into window
 // handle W, `close:W` asks to close it, `save:path` and `open:path` answer the next save and open
-// panel, `alert:N` answers the next alert and `quit` asks the app to quit.
+// panel, `alert:N` answers the next alert, `activate:W` makes window W the active one and `quit`
+// asks the app to quit. Text may carry %XX escapes (for ';', '%' and line breaks).
 #pragma once
 
 #include "primec/ui/NativeUiHeadless.h"
@@ -13,6 +14,19 @@
 #include <cstdlib>
 #include <string>
 #include <string_view>
+
+inline std::string decodeScenarioText(const std::string &text) {
+  std::string out;
+  for (size_t i = 0; i < text.size(); ++i) {
+    if (text[i] == '%' && i + 2 < text.size()) {
+      out += static_cast<char>(std::stoi(text.substr(i + 1, 2), nullptr, 16));
+      i += 2;
+    } else {
+      out += text[i];
+    }
+  }
+  return out;
+}
 
 inline void applyHeadlessScenario(std::string_view scenario) {
   namespace headless = primec::ui::headless;
@@ -35,15 +49,17 @@ inline void applyHeadlessScenario(std::string_view scenario) {
     } else if (key == "type") {
       const size_t second = rest.find(':');
       headless::pushTypeText(static_cast<uint64_t>(std::atoll(rest.substr(0, second).c_str())),
-                             second == std::string::npos ? "" : rest.substr(second + 1));
+                             second == std::string::npos ? "" : decodeScenarioText(rest.substr(second + 1)));
     } else if (key == "close") {
       headless::pushCloseWindow(static_cast<uint64_t>(std::atoll(rest.c_str())));
     } else if (key == "save") {
-      headless::pushSavePanelAnswer(rest);
+      headless::pushSavePanelAnswer(decodeScenarioText(rest));
     } else if (key == "open") {
-      headless::pushOpenPanelAnswer(rest);
+      headless::pushOpenPanelAnswer(decodeScenarioText(rest));
     } else if (key == "alert") {
       headless::pushAlertAnswer(std::atoi(rest.c_str()));
+    } else if (key == "activate") {
+      headless::pushActivateWindow(static_cast<uint64_t>(std::atoll(rest.c_str())));
     } else if (key == "quit") {
       headless::pushQuit();
     }

@@ -221,7 +221,10 @@ Status: the build path exists. `scripts/build_native_app.sh app.prime out` compi
 `primec --emit=optexe` and links the AppKit backend (`--backend headless` links the scripted test backend), so the
 result is a native executable with no VM or compiler in it; `PrimeStruct_cpp_native_ui` replays hello_window and the
 editor's scenarios on the VM and as compiled programs with identical call logs, and
-`PrimeStruct_native_ui_compiled_app` snapshots the compiled AppKit builds.
+`PrimeStruct_native_ui_compiled_app` snapshots the compiled AppKit builds. Every scenario of the editor gate
+(section 13: the `primestruct.ui.editor` and `primestruct.ui.editor_acceptance` suites, highlight samples included)
+also runs on the compiled editor linked with the headless backend (`tests/unit/ui/CompiledEditorMirror.h`), and the
+call log, exit code and files must equal the VM run's.
 
 ## 11. TODO slices
 

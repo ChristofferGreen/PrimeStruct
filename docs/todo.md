@@ -113,8 +113,7 @@ of sync with them.
 | TODO-5530 | Read and write whole files as String | blocked | file-text |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5564 | C++ emitters pass and return text through `[host]` calls | blocked | native-ui-compiled |
-| TODO-5560 | PrimeScroll compiles to native code | ready | native-ui-compiled |
-| TODO-5561 | Native PrimeScroll bundle and install | blocked | native-ui-compiled |
+| TODO-5561 | Native PrimeScroll bundle and install | ready | native-ui-compiled |
 | TODO-5510 | `return` returns from pick arms and lambdas correctly | ready | control-returns |
 | TODO-5524 | Int-backed error structs round-trip through stdlib Result sums | ready | result-error-structs |
 | TODO-5523 | A Result-returning main exits with its error code | deferred | result-main |
@@ -139,7 +138,7 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5560 (native-ui-compiled): PrimeScroll compiles to native code
+- TODO-5561 (native-ui-compiled): native PrimeScroll bundle and install
 - TODO-5567 (bytes): packed `array<u8>`
 - TODO-5570 (slices): slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
@@ -150,7 +149,7 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5560
+1. TODO-5561
 2. TODO-5567
 3. TODO-5570
 4. TODO-5536
@@ -162,7 +161,7 @@ of sync with them.
 ### Priority Lanes
 
 - Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5567, TODO-5570, TODO-5569, TODO-5540, TODO-5568, TODO-5530, TODO-5573, TODO-5572, TODO-5574
-- Goal, PrimeScroll compiled to native code through the C++ emitter (host calls with scalar and static text are done; the string chain is done on the VM and the optimized C++ emitters): TODO-5560, TODO-5564, TODO-5561
+- Goal, PrimeScroll compiled to native code through the C++ emitter (host calls with scalar and static text are done; the string chain is done on the VM and the optimized C++ emitters): TODO-5561, TODO-5564
 - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Lifecycle (docs/spec/value-lifecycle.md): TODO-5527
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
@@ -390,7 +389,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 - [ ] TODO-5564: C++ emitters pass and return text through `[host]` calls
   - owner: ai
   - status: blocked
-  - blocked_on: TODO-5560
+  - blocked_on: TODO-5561
   - created_at: 2026-10-22
   - phase: Native UI compiled
   - parallel_track: native-ui-compiled
@@ -399,22 +398,9 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - host-function matrix cases with text arguments and results agree on VM and the optimized C++ emitters; a loop of 10000 host text calls keeps the string heap constant on the C++ backend; full release gate green
   - stop_rule: tests and fixes of the host text boundary in the optimized C++ emitters.
 
-- [ ] TODO-5560: PrimeScroll compiles to native code
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-21
-  - phase: Native UI compiled
-  - parallel_track: native-ui-compiled
-  - scope: Make every language feature the editor uses (struct methods returning structs, sum types with `pick`, nested loops and early returns, mutable locals of struct and string type, host strings) produce correct code on the C++ emitter, fixing the emitter or semantics where it differs from the VM; the editor's headless gate scenarios run against the compiled build as well as the VM build.
-  - acceptance:
-    - the whole `PrimeStruct_native_ui_editor_acceptance` scenario set passes on the compiled editor with call logs identical to the VM; any difference found is fixed or split into a leaf here
-    - full release gate green
-  - stop_rule: the editor program's feature set and its compiled-vs-VM equivalence.
-
 - [ ] TODO-5561: Native PrimeScroll bundle and install
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5560
+  - status: ready
   - created_at: 2026-10-21
   - phase: Native UI compiled
   - parallel_track: native-ui-compiled

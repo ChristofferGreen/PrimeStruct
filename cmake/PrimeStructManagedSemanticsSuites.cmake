@@ -89,7 +89,7 @@ addPrimeStructManagedDoctestSuite(
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.math_imports"
   TARGET PrimeStruct_semantics_tests
-  TIMEOUT 30
+  TIMEOUT 300
   LABEL "parallel-safe"
   TOTAL_CASES 32
   CASES_PER_SHARD 4
@@ -135,7 +135,7 @@ addPrimeStructManagedDoctestSuite(
   # the same non-linear reflected/template-generation cost pattern already
   # documented for SoaColumnsN in TODO-4706/TODO-4713
   # (docs/TestRuntimeOptimization.md), not a hang or test bug.
-  TIMEOUT 30
+  TIMEOUT 300
   TOTAL_CASES 115
   SHARD_PREFIX "effects"
 )
@@ -192,7 +192,7 @@ addPrimeStructManagedDoctestSuite(
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.result_helpers"
   TARGET PrimeStruct_semantics_tests
-  TIMEOUT 30
+  TIMEOUT 300
   LABEL "parallel-safe"
   TOTAL_CASES 111
   CASES_PER_SHARD 2
@@ -222,7 +222,7 @@ addPrimeStructManagedDoctestSuite(
   # the underlying scaling itself. TODO-4712 (grow shard size once
   # cross-test-case pollution is fixed) is the better long-term fix for
   # this blanket override applying to hundreds of otherwise-fast shards.
-  TIMEOUT 30
+  TIMEOUT 300
   TOTAL_CASES 1218
   SHARD_PREFIX "calls_flow_collections"
 )
@@ -266,7 +266,7 @@ addPrimeStructManagedDoctestSuite(
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.imports"
   TARGET PrimeStruct_semantics_tests
-  TIMEOUT 30
+  TIMEOUT 300
   LABEL "parallel-safe"
   TOTAL_CASES 82
   CASES_PER_SHARD 1

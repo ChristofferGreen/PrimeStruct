@@ -43,3 +43,14 @@
   - acceptance:
     - tests/unit/backend_host/test_cpp_native_ui.cpp runs hello_window and the editor (typing and saving, opening a chosen file, opening the command-line file, an unopenable file, the unsaved-close prompt) on the VM and as compiled programs with identical headless call logs and exit codes (CTest `PrimeStruct_cpp_native_ui`); cmake/NativeUiCompiledAppTest.cmake builds both as native AppKit executables and checks their snapshot PNGs, including the command-line file (CTest `PrimeStruct_native_ui_compiled_app`, Apple only); full release gate green
   - stop_rule: build path and equivalence tests; the rest of the editor's gate scenarios are TODO-5560.
+
+- [x] TODO-5560: PrimeScroll compiles to native code
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-21
+  - phase: Native UI compiled
+  - parallel_track: native-ui-compiled
+  - scope: The editor program compiles through `--emit=optexe` and behaves like the VM build: the CMake target `native_ui_compiled_editor_headless` builds it against the headless backend with `scripts/build_native_app.sh`, and every scenario of the editor, acceptance and highlight test files (`tests/unit/ui`) now also runs on it through `tests/unit/ui/CompiledEditorMirror.h`. The mirror remembers the scratch files before the VM run, replays the pushed actions (`headless::pushedScenario()`) in the compiled program from those same files, and checks the headless call log, the exit code and the files left behind are identical. No emitter or semantics difference showed up; the first mismatch found was the harness running the compiled editor after the VM run had already changed the files.
+  - acceptance:
+    - the whole `PrimeStruct_native_ui_editor` and `PrimeStruct_native_ui_editor_acceptance` scenario sets (including the 30 highlight samples) pass on the compiled editor with call logs identical to the VM; full release gate green
+  - stop_rule: the editor program's feature set and its compiled-vs-VM equivalence.

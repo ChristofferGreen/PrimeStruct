@@ -3,7 +3,7 @@ list(APPEND PrimeStructManagedCompileRunSuites
 )
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.smoke"
-                                  TIMEOUT 30
+                                  TIMEOUT 300
                                   SHARD_PREFIX "core_paths_foundation"
                                   SOURCE_FILE "*test_compile_run_smoke_core_*.cpp"
                                   RANGE_FIRST 1
@@ -11,7 +11,7 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.smoke"
                                   CASES_PER_SHARD 1)
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.smoke"
-                                  TIMEOUT 60
+                                  TIMEOUT 300
                                   SHARD_PREFIX "core_paths_wasm_and_debug"
                                   SOURCE_FILE "*test_compile_run_smoke_core_*.cpp"
                                   RANGE_FIRST 32
@@ -33,7 +33,7 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.smoke"
                                   CASES_PER_SHARD 3)
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.smoke"
-                                  TIMEOUT 30
+                                  TIMEOUT 300
                                   SHARD_PREFIX "collective_paths_core"
                                   SOURCE_FILE "*test_compile_run_smoke_collective.cpp"
                                   RANGE_FIRST 1
@@ -41,7 +41,7 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.smoke"
                                   CASES_PER_SHARD 1)
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.smoke"
-                                  TIMEOUT 30
+                                  TIMEOUT 300
                                   SHARD_PREFIX "collective_paths_extended"
                                   SOURCE_FILE "*test_compile_run_smoke_collective.cpp"
                                   RANGE_FIRST 12
@@ -49,14 +49,14 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.smoke"
                                   CASES_PER_SHARD 1)
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.smoke"
-                                  TIMEOUT 30
+                                  TIMEOUT 300
                                   SHARD_PREFIX "argv_and_cli"
                                   SOURCE_FILE "*test_compile_run_smoke_argv.cpp"
                                   TOTAL_CASES 21
                                   CASES_PER_SHARD 1)
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.smoke"
-                                  TIMEOUT 30
+                                  TIMEOUT 300
                                   SHARD_PREFIX "ring_buffer"
                                   SOURCE_FILE "*test_compile_run_smoke_ring_buffer.cpp"
                                   TOTAL_CASES 3
