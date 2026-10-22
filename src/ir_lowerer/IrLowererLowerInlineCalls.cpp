@@ -135,6 +135,7 @@ bool emitInlineDefinitionCallImpl(
         if (*canonical == "f32") return IrHostValueKind::F32;
         if (*canonical == "f64") return IrHostValueKind::F64;
         if (*canonical == "string") return IrHostValueKind::String;
+        if (*canonical == "text") return IrHostValueKind::Text;
         return IrHostValueKind::Bool;
       };
       if (setupStage.outModule == nullptr) {
@@ -144,7 +145,9 @@ bool emitInlineDefinitionCallImpl(
       IrHostImport import;
       import.name = callee.fullPath.size() > 1 && callee.fullPath.front() == '/' ? callee.fullPath.substr(1)
                                                                               : callee.fullPath;
+      std::vector<bool> textStructParam;
       for (const Expr &param : callee.parameters) {
+        textStructParam.push_back(isHostStringTypeText(extractParameterTypeNameStatic(param)));
         bool bytePointerParam = false;
         for (const Transform &transform : param.transforms) {
           bytePointerParam = bytePointerParam ||
@@ -164,12 +167,14 @@ bool emitInlineDefinitionCallImpl(
         error = "internal error: missing return info for host definition " + callee.fullPath;
         return false;
       }
+      bool textStructResult = false;
       import.returnKind = IrHostValueKind::Void;
       if (!hostReturnInfo.returnsVoid) {
         std::optional<IrHostValueKind> returnKind;
         for (const auto &transform : callee.transforms) {
           if (transform.name == "return" && transform.templateArgs.size() == 1) {
             returnKind = hostKind(transform.templateArgs.front());
+            textStructResult = isHostStringTypeText(transform.templateArgs.front());
           }
         }
         if (!returnKind.has_value()) {
@@ -197,6 +202,7 @@ bool emitInlineDefinitionCallImpl(
         error = "host call argument mismatch for " + callee.fullPath;
         return false;
       }
+      size_t hostArgIndex = 0;
       for (const Expr *argExpr : hostOrderedArgs) {
         if (argExpr == nullptr) {
           error = "internal error: missing argument for host call " + callee.fullPath;
@@ -205,6 +211,28 @@ bool emitInlineDefinitionCallImpl(
         if (!emitExpr(*argExpr, callerLocals)) {
           return false;
         }
+        if (textStructParam[hostArgIndex]) {
+          // A String argument is the address of the struct; the host takes its data block.
+          StructSlotLayoutInfo stringLayout;
+          if (!resolveStructSlotLayout("/std/text/String", stringLayout)) {
+            error = "host call passes a String but /std/text/String is not loaded: " + callee.fullPath;
+            return false;
+          }
+          int32_t dataSlot = -1;
+          for (const StructSlotFieldInfo &field : stringLayout.fields) {
+            if (field.name == "data") {
+              dataSlot = field.slotOffset;
+            }
+          }
+          if (dataSlot < 0) {
+            error = "/std/text/String has no data field";
+            return false;
+          }
+          function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(dataSlot) * IrSlotBytes});
+          function.instructions.push_back({IrOpcode::AddI64, 0});
+          function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+        }
+        ++hostArgIndex;
       }
       auto &imports = setupStage.outModule->hostImports;
       uint64_t importIndex = imports.size();
@@ -218,6 +246,72 @@ bool emitInlineDefinitionCallImpl(
         imports.push_back(std::move(import));
       }
       function.instructions.push_back({IrOpcode::CallHost, importIndex});
+      if (textStructResult) {
+        // The host returned text: the VM made a string-heap block of it and pushed the block address.
+        // Build the String (length, capacity, data, owning) around it.
+        StructSlotLayoutInfo stringLayout;
+        if (!resolveStructSlotLayout("/std/text/String", stringLayout)) {
+          error = "host call returns a String but /std/text/String is not loaded: " + callee.fullPath;
+          return false;
+        }
+        auto fieldSlot = [&](const char *name) {
+          for (const StructSlotFieldInfo &field : stringLayout.fields) {
+            if (field.name == name) {
+              return field.slotOffset;
+            }
+          }
+          return -1;
+        };
+        const int32_t lengthSlot = fieldSlot("fieldLength");
+        const int32_t capacitySlot = fieldSlot("fieldCapacity");
+        const int32_t dataSlot = fieldSlot("data");
+        const int32_t ownsSlot = fieldSlot("ownsData");
+        if (lengthSlot < 0 || capacitySlot < 0 || dataSlot < 0 || ownsSlot < 0) {
+          error = "/std/text/String does not have the expected fields";
+          return false;
+        }
+        auto textImport = [&](const char *name, IrHostValueKind parameter, IrHostValueKind result) {
+          for (size_t i = 0; i < imports.size(); ++i) {
+            if (imports[i].name == name) {
+              return static_cast<uint64_t>(i);
+            }
+          }
+          IrHostImport helper;
+          helper.name = name;
+          helper.parameters.push_back(parameter);
+          helper.returnKind = result;
+          imports.push_back(std::move(helper));
+          return static_cast<uint64_t>(imports.size() - 1);
+        };
+        const uint64_t lengthImport = textImport("std/text/__pstext_length", IrHostValueKind::U64, IrHostValueKind::I32);
+        const uint64_t usableImport = textImport("std/text/__pstext_usable", IrHostValueKind::U64, IrHostValueKind::I32);
+        const uint64_t freeImport = textImport("std/text/__pstext_free", IrHostValueKind::U64, IrHostValueKind::Void);
+        const int32_t blockLocal = allocTempLocal();
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(blockLocal)});
+        if (!requireValue) {
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(blockLocal)});
+          function.instructions.push_back({IrOpcode::CallHost, freeImport});
+          return true;
+        }
+        const int32_t baseLocal = nextLocal;
+        nextLocal += stringLayout.totalSlots;
+        function.instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(stringLayout.totalSlots - 1))});
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal)});
+        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(blockLocal)});
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + dataSlot)});
+        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(blockLocal)});
+        function.instructions.push_back({IrOpcode::CallHost, lengthImport});
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + lengthSlot)});
+        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(blockLocal)});
+        function.instructions.push_back({IrOpcode::CallHost, usableImport});
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + capacitySlot)});
+        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(blockLocal)});
+        function.instructions.push_back({IrOpcode::PushI64, 0});
+        function.instructions.push_back({IrOpcode::CmpNeI64, 0});
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + ownsSlot)});
+        function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
+        return true;
+      }
       if (imports[importIndex].returnKind != IrHostValueKind::Void && !requireValue) {
         function.instructions.push_back({IrOpcode::Pop, 0});
       }

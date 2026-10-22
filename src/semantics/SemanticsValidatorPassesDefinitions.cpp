@@ -222,7 +222,8 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
       bool bytePointerReturn = false;
       for (const auto &transform : def.transforms) {
         if (transform.name == "return" && transform.templateArgs.size() == 1 &&
-            isHostBytePointerTypeText(transform.templateArgs.front())) {
+            (isHostBytePointerTypeText(transform.templateArgs.front()) ||
+             isHostStringTypeText(transform.templateArgs.front()))) {
           bytePointerReturn = true;
         }
       }
@@ -245,7 +246,8 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
           return failHost("host definition parameter cannot have a default: " + param.name);
         }
         const bool bytePointerParam =
-            param.binding.typeName == "Pointer" && param.binding.typeTemplateArg == "u8";
+            (param.binding.typeName == "Pointer" && param.binding.typeTemplateArg == "u8") ||
+            (isHostStringTypeText(param.binding.typeName) && param.binding.typeTemplateArg.empty());
         if (param.binding.isMutable ||
             (!bytePointerParam &&
              (!canonicalHostTypeName(param.binding.typeName).has_value() ||

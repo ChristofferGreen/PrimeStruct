@@ -104,7 +104,8 @@ of sync with them.
 | TODO-5569 | Slice loans, escapes and returned borrows | ready | slices |
 | TODO-5570 | Slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views | ready | slices |
 | TODO-5540 | `string` as the UTF-8 text view | blocked | string-view |
-| TODO-5541 | Host functions and embedding use `String` and `string` | blocked | string-host |
+| TODO-5571 | Native UI text uses `String` | ready | native-ui-compiled |
+| TODO-5572 | Remove the VM run-time string index | blocked | string-host |
 | TODO-5542 | Native and C++ parity for bytes, slices and strings | blocked | string-backends |
 | TODO-5568 | String conveniences: operators, numbers, push of code points | blocked | string-owned |
 | TODO-5536 | Small, lazily loaded bytecode for apps | ready | bytecode-startup |
@@ -139,6 +140,7 @@ of sync with them.
 
 ### Ready Now
 
+- TODO-5571 (native-ui-compiled): native UI text uses `String`
 - TODO-5567 (bytes): packed `array<u8>`
 - TODO-5570 (slices): slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
@@ -149,18 +151,19 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5567
-2. TODO-5570
-3. TODO-5536
-4. TODO-5535
-5. TODO-5510
-6. TODO-5524
-7. TODO-5527
+1. TODO-5571
+2. TODO-5567
+3. TODO-5570
+4. TODO-5536
+5. TODO-5535
+6. TODO-5510
+7. TODO-5524
+8. TODO-5527
 
 ### Priority Lanes
 
-- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5567, TODO-5570, TODO-5569, TODO-5540, TODO-5568, TODO-5530, TODO-5541, TODO-5542
-- Goal, PrimeScroll compiled to native code through the C++ emitter (host calls with scalar and static text are done; next the string chain, because the editor passes host-returned text): TODO-5567, TODO-5570, TODO-5540, TODO-5541, TODO-5542, TODO-5564, TODO-5559, TODO-5560, TODO-5561
+- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5567, TODO-5570, TODO-5569, TODO-5540, TODO-5568, TODO-5530, TODO-5572, TODO-5542
+- Goal, PrimeScroll compiled to native code through the C++ emitter (host calls with scalar and static text are done; next the string chain, because the editor passes host-returned text): TODO-5571, TODO-5542, TODO-5564, TODO-5559, TODO-5560, TODO-5561
 - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Lifecycle (docs/spec/value-lifecycle.md): TODO-5527
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
@@ -288,7 +291,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 
 - [ ] TODO-5540: `string` as the UTF-8 text view
   - owner: ai
-  - status: blocked
+  - status: ready
   - created_at: 2026-10-08
   - phase: Strings and slices (docs/spec/strings-and-views.md)
   - parallel_track: string-view
@@ -298,23 +301,33 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - full release gate green
   - stop_rule: the text view on the VM.
 
-- [ ] TODO-5541: Host functions and embedding use `String` and `string`
+- [ ] TODO-5571: Native UI text uses `String`
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-22
+  - phase: Native UI compiled
+  - parallel_track: native-ui-compiled
+  - scope: Port stdlib/std/ui/native, the ScriptEngine bindings (src/ui/NativeUiBindings.cpp) and examples/apps/text_editor/main.prime from host-created dynamic strings to `String`: text-returning host functions (panel results, text view contents, paths, errors) return `String`, text parameters that receive run-time text take `String` (declared once more under a link name), and the command-line file argument reaches the editor as text. The scripted scenarios of tests/unit/ui replay with identical call logs.
+  - acceptance:
+    - tests/unit/ui pass unchanged in behavior; PrimeScroll opens a file named on the command line; a loop of host text calls keeps the string heap constant; full release gate green
+  - stop_rule: the UI wrappers, bindings and the editor; no new language features.
+
+- [ ] TODO-5572: Remove the VM run-time string index
   - owner: ai
   - status: blocked
-  - blocked_on: TODO-5540
-  - created_at: 2026-10-08
+  - blocked_on: TODO-5571
+  - created_at: 2026-10-22
   - phase: Strings and slices (docs/spec/strings-and-views.md)
   - parallel_track: string-host
-  - scope: `[host]` parameters take `string`/`String` (pointer and length; NUL-terminated without a copy when possible) and text results arrive as `String` in the program's string heap; the embedding API converts `std::string` to and from them; retire the VM run-time string index (`LoadStringByteDynamic`, bit-63 indices) and bump the PSIR version; update docs/Embedding.md, docs/spec/host-and-core-library.md and docs/spec/vm-design.md.
+  - scope: Retire the VM's host-created dynamic strings (a `u64` with bit 63 set, `VmStringHeap`, `LoadStringByteDynamic`, `invokeString` results of kind `string`) now that host text arrives as `String`; bump the PSIR version and update docs/spec/vm-design.md and docs/Embedding.md.
   - acceptance:
-    - embed tests: string arguments and results round-trip, a loop of 10000 host text calls keeps string memory constant
-    - full release gate green
-  - stop_rule: host boundary and VM string retirement only.
+    - no host function creates a dynamic string; the embed and VM string tests pass; full release gate green
+  - stop_rule: the index and its heap only.
 
 - [ ] TODO-5542: Native and C++ parity for bytes, slices and strings
   - owner: ai
   - status: blocked
-  - blocked_on: TODO-5540
+  - blocked_on: TODO-5571
   - created_at: 2026-10-08
   - phase: Strings and slices (docs/spec/strings-and-views.md)
   - parallel_track: string-backends

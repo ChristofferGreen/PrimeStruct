@@ -2009,6 +2009,7 @@ are left unarchived.
 | TODO-5537 | IR byte opcodes and VM byte regions | [2026-10.md](todo_archive/2026-10.md) | 2026-10-22 |
 | TODO-5538 | The `Slice<T, Capability>` value and its operations | [2026-10.md](todo_archive/2026-10.md) | 2026-10-22 |
 | TODO-5539 | Owned `String` with the string heap | [2026-10.md](todo_archive/2026-10.md) | 2026-10-22 |
+| TODO-5541 | Host functions take and return `String` | [undated.md](todo_archive/undated.md) | - |
 | TODO-5546 | Text view file load and save in the native UI ABI | [2026-10.md](todo_archive/2026-10.md) | 2026-10-08 |
 | TODO-5547 | Dialog results need an emptiness test | [2026-10.md](todo_archive/2026-10.md) | 2026-10-08 |
 | TODO-5548 | Unicode text in the editor | [2026-10.md](todo_archive/2026-10.md) | 2026-10-08 |

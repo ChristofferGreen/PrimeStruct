@@ -112,6 +112,33 @@ debug sessions and `primevm` have no bindings. Offline bytecode that declares
 host functions loads in the runtime-only library, which then needs the same
 `bind` calls before `run`.
 
+### Text that the script owns
+
+A script's owned text is the stdlib `String` (`import /std/text/*`, docs/spec/strings-and-views.md). A `[host]`
+definition may name `String` as a parameter or result type:
+
+```prime
+import /std/text/*
+
+[host return<String>]
+host_greet([String] name) {
+}
+```
+
+On the C++ side a `String` parameter is a `primec::embed::HostTextView` (a `std::string_view` over the
+NUL-terminated bytes, valid during the call, with no copy) and a `String` result is a `primec::embed::HostText`
+(a `std::string`), which the VM copies into a fresh block of the script's string heap; the script owns it and
+frees it like any `String`. Empty text crosses as no block at all.
+
+```cpp
+script.bind("host_greet", [](primec::embed::HostTextView name) {
+  return primec::embed::HostText("hello " + std::string(name.value));
+});
+```
+
+The older `std::string` and `std::string_view` forms still carry `string` values (literals and VM-created run-time
+strings); `HostText` and `HostTextView` are the ones that do not create run-time strings.
+
 ## Precompiled bytecode
 
 ```cpp

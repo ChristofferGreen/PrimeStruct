@@ -56,7 +56,41 @@ bool handleVmHostCall(const VmHostFunctions *hostFunctions,
     return false;
   }
   const size_t base = stack.size() - argCount;
+  // Text parameters: the host receives a pointer to a string_view over the NUL-terminated bytes (valid for
+  // the duration of the call); `textViews` keeps those views at stable addresses.
+  std::vector<std::string_view> textViews;
+  textViews.reserve(argCount);
   for (size_t i = 0; i < argCount; ++i) {
+    if (import.parameters[i] == IrHostValueKind::Text) {
+      uint64_t &slot = stack[base + i];
+      std::string_view view;
+      const std::string *literal = nullptr;
+      std::string literalError;
+      if (slot != 0 && !VmHeapCore::isByteAddress(slot) &&
+          resolveVmString(module, nullptr, slot, literal, literalError)) {
+        view = *literal;
+      } else if (slot == 0) {
+        view = std::string_view();
+      } else if (text != nullptr && VmHeapCore::isByteAddress(slot)) {
+        const uint8_t *first = text->core->byteAt(slot);
+        if (first == nullptr) {
+          error = "invalid text address passed to host function " + import.name;
+          return false;
+        }
+        const uint8_t *end = text->core->bytes.data() + text->core->bytes.size();
+        const uint8_t *last = first;
+        while (last != end && *last != 0) {
+          ++last;
+        }
+        view = std::string_view(reinterpret_cast<const char *>(first), static_cast<size_t>(last - first));
+      } else {
+        error = "invalid text passed to host function " + import.name;
+        return false;
+      }
+      textViews.push_back(view);
+      slot = static_cast<uint64_t>(reinterpret_cast<uintptr_t>(&textViews.back()));
+      continue;
+    }
     if (import.parameters[i] == IrHostValueKind::String) {
       uint64_t &slot = stack[base + i];
       const std::string *text = nullptr;
@@ -76,12 +110,31 @@ bool handleVmHostCall(const VmHostFunctions *hostFunctions,
     error = "host function " + import.name + " returns a string, which this VM host does not support";
     return false;
   }
+  const bool returnsText = import.returnKind == IrHostValueKind::Text && binding->invokeString;
+  if (returnsText && text == nullptr) {
+    error = "host function " + import.name + " returns text, which this VM host does not support";
+    return false;
+  }
   try {
-    if (returnsHeapString) {
-      std::string text;
-      ok = binding->invokeString(stack.data() + base, text, hostError);
+    if (returnsText) {
+      std::string produced;
+      ok = binding->invokeString(stack.data() + base, produced, hostError);
       if (ok) {
-        result = heap->create(std::move(text));
+        // The text becomes a fresh string-heap block (0 for empty text) that the program owns.
+        std::string allocateError;
+        if (!text->heap->allocate(*text->core, produced.size() + (produced.empty() ? 0 : 1), result, allocateError)) {
+          ok = false;
+          hostError = allocateError;
+        } else if (!produced.empty()) {
+          uint8_t *block = text->core->byteAt(result);
+          std::copy(produced.begin(), produced.end(), reinterpret_cast<char *>(block));
+        }
+      }
+    } else if (returnsHeapString) {
+      std::string produced;
+      ok = binding->invokeString(stack.data() + base, produced, hostError);
+      if (ok) {
+        result = heap->create(std::move(produced));
       }
     } else {
       ok = binding->invoke(stack.data() + base, result, hostError);
@@ -120,6 +173,7 @@ bool handleVmHostCall(const VmHostFunctions *hostFunctions,
   case IrHostValueKind::U64:
   case IrHostValueKind::F64:
   case IrHostValueKind::String:
+  case IrHostValueKind::Text:
     stack.push_back(result);
     break;
   case IrHostValueKind::F32:

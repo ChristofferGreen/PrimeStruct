@@ -45,6 +45,8 @@ const char *hostCType(IrHostValueKind kind, bool isResult) {
     return "uint64_t";
   case IrHostValueKind::U8:
     return "uint8_t";
+  case IrHostValueKind::Text:
+    return isResult ? nullptr : "const char *";
   case IrHostValueKind::F32:
     return "float";
   case IrHostValueKind::F64:

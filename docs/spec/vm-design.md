@@ -25,8 +25,8 @@
   (recursive and larger functions), including recursion up to the VM's call-depth limit.
 - **GLSL note:** GLSL/SPIR-V emission routes through canonical IR (`glsl-ir`/`spirv-ir`) and `IrValidationTarget::Glsl`;
   these modes emit backend output directly without requiring PSIR serialization.
-- **PSIR versioning:** current portable IR is PSIR v29 (v24 to v29 are listed in `include/primec/ir/Ir.h`'s opcode
-  comments and the finished TODO log; v29 appends the `u8` host value kind; v28 adds `HeapAllocBytes`, `LoadU8`, `StoreU8` and `ZextU8`). Before that, PSIR v23 (adds a per-function `parameter_count` field on top of v22’s
+- **PSIR versioning:** current portable IR is PSIR v30 (v24 to v30 are listed in `include/primec/ir/Ir.h`'s opcode
+  comments and the finished TODO log; v30 appends the `text` host value kind; v29 appends the `u8` host value kind; v28 adds `HeapAllocBytes`, `LoadU8`, `StoreU8` and `ZextU8`). Before that, PSIR v23 (adds a per-function `parameter_count` field on top of v22’s
   source-unit/file identity in source-map metadata, v21’s `HeapRealloc`, v20’s `FileReadByte` and
   `HeapFree`, v19’s per-instruction source-map metadata keyed by debug ID, v18’s instruction debug IDs, v17’s local
   debug slots, v16’s function-call opcodes `Call`/`CallVoid`, v15’s execution metadata, v14’s float return opcodes,
@@ -46,6 +46,12 @@
   generation wraps after 32,768 reuses of the same slot. Slots never allocated before carry generation 0. The VM, the
   debugger, the native execution tier and the IR-to-C++ and optexe runtimes share one implementation
   (`include/primec/runtime/VmHeapCore.h`), so all of them produce the same addresses.
+- **Host text (PSIR v30):** `IrHostValueKind::Text` is owned text at the host boundary. A `[host]` definition may name
+  the stdlib `String` as a parameter or result type. A `String` argument passes its data block: the VM gives the host
+  a pointer to the NUL-terminated bytes without a copy (a module-table string literal is accepted in the same
+  position). A `String` result is text the host returns; the VM copies it into a fresh string-heap block and the
+  call builds the `String` (length, capacity, data, owning) from it, using the VM-answered `__pstext_length` and
+  `__pstext_usable`. The C++ backends reject text host values until they implement the boundary.
 - **String heap (TODO-5539):** the VM answers the host functions named `__pstext_*` itself, so a program needs no binding for
   them. They manage text blocks over byte regions: 256 KiB chunks of equal blocks in size classes (four per doubling from
   32 bytes to 64 KiB), a byte region of its own for text over 64 KiB, an optional byte limit (the runtime fault

@@ -220,6 +220,8 @@ std::string formatIrModule(const IrModule &module) {
       return "string";
     case IrHostValueKind::U8:
       return "u8";
+    case IrHostValueKind::Text:
+      return "text";
     }
     return "?";
   };

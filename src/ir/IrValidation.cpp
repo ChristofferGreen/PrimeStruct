@@ -184,15 +184,16 @@ bool validateFunction(const IrModule &module,
             functionIndex, function.name, instructionIndex, "host import parameter count exceeds supported limit", error);
       }
       if (target == IrValidationTarget::Cpp) {
-        bool usesU8 = hostImport.returnKind == IrHostValueKind::U8;
+        auto vmOnlyKind = [](IrHostValueKind kind) { return kind == IrHostValueKind::U8 || kind == IrHostValueKind::Text; };
+        bool usesU8 = vmOnlyKind(hostImport.returnKind);
         for (const IrHostValueKind parameter : hostImport.parameters) {
-          usesU8 = usesU8 || parameter == IrHostValueKind::U8;
+          usesU8 = usesU8 || vmOnlyKind(parameter);
         }
         if (usesU8) {
           return failInstruction(functionIndex,
                                  function.name,
                                  instructionIndex,
-                                 "u8 host values are only supported by the vm yet (docs/todo.md, TODO-5542)",
+                                 "u8 and text host values are only supported by the vm yet (docs/todo.md, TODO-5542)",
                                  error);
         }
       }

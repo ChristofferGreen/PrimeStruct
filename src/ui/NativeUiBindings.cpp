@@ -117,6 +117,8 @@ const char *typeName(embed::HostType type) {
     return "string";
   case embed::HostType::U8:
     return "u8";
+  case embed::HostType::Text:
+    return "text";
   }
   return "?";
 }

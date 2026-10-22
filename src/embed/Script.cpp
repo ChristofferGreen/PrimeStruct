@@ -26,11 +26,12 @@ void HostBindings::bindRaw(std::string name, std::vector<HostType> parameters, H
   entries_.push_back(std::move(fresh));
 }
 
-void HostBindings::bindRawString(std::string name, std::vector<HostType> parameters, RawStringInvoke invoke) {
+void HostBindings::bindRawString(std::string name, std::vector<HostType> parameters, RawStringInvoke invoke,
+                                 HostType returnType) {
   Entry fresh;
   fresh.name = std::move(name);
   fresh.parameters = std::move(parameters);
-  fresh.returnType = HostType::String;
+  fresh.returnType = returnType;
   fresh.invokeString = std::move(invoke);
   for (Entry &entry : entries_) {
     if (entry.name == fresh.name) {
@@ -62,6 +63,8 @@ const char *hostTypeSpelling(HostType type) {
     return "string";
   case HostType::U8:
     return "u8";
+  case HostType::Text:
+    return "text";
   }
   return "unknown";
 }
@@ -88,6 +91,8 @@ IrHostValueKind toIrKind(HostType type) {
     return IrHostValueKind::String;
   case HostType::U8:
     return IrHostValueKind::U8;
+  case HostType::Text:
+    return IrHostValueKind::Text;
   }
   return IrHostValueKind::Void;
 }
@@ -509,13 +514,13 @@ Script Script::loadBytecode(const std::vector<uint8_t> &bytes, const std::string
     }
     for (uint32_t p = 0; p < parameterCount; ++p) {
       uint8_t type = 0;
-      if (!reader.u8(type) || type > static_cast<uint8_t>(HostType::U8)) {
+      if (!reader.u8(type) || type > static_cast<uint8_t>(HostType::Text)) {
         return fail("invalid export parameter type");
       }
       entry.signature.parameters.push_back(static_cast<HostType>(type));
     }
     uint8_t returnType = 0;
-    if (!reader.u8(returnType) || returnType > static_cast<uint8_t>(HostType::U8)) {
+    if (!reader.u8(returnType) || returnType > static_cast<uint8_t>(HostType::Text)) {
       return fail("invalid export return type");
     }
     entry.signature.returnType = static_cast<HostType>(returnType);

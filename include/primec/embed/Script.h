@@ -14,7 +14,7 @@
 namespace primec::embed {
 
 // Primitive types that can cross the host boundary.
-enum class HostType : uint8_t { Void, I32, I64, U64, F32, F64, Bool, String, U8 };
+enum class HostType : uint8_t { Void, I32, I64, U64, F32, F64, Bool, String, U8, Text };
 
 namespace detail {
 template <class T> struct HostTypeOf;
@@ -31,6 +31,29 @@ template <> struct HostTypeOf<bool> { static constexpr HostType value = HostType
 template <> struct HostTypeOf<std::string_view> { static constexpr HostType value = HostType::String; };
 template <> struct HostTypeOf<std::string> { static constexpr HostType value = HostType::String; };
 template <> struct HostTypeOf<const char *> { static constexpr HostType value = HostType::String; };
+}  // namespace detail
+
+// Owned text across the host boundary (a `String` in the script). A host function takes it as a
+// `HostTextView` (the bytes, valid during the call) and returns it as a `HostText`, which the VM copies
+// into a string-heap block the script owns.
+struct HostText {
+  std::string value;
+  HostText() = default;
+  HostText(std::string text) : value(std::move(text)) {}
+  HostText(std::string_view text) : value(text) {}
+  HostText(const char *text) : value(text == nullptr ? "" : text) {}
+};
+
+struct HostTextView {
+  std::string_view value;
+  HostTextView() = default;
+  HostTextView(std::string_view text) : value(text) {}
+  operator std::string_view() const { return value; }
+};
+
+namespace detail {
+template <> struct HostTypeOf<HostText> { static constexpr HostType value = HostType::Text; };
+template <> struct HostTypeOf<HostTextView> { static constexpr HostType value = HostType::Text; };
 
 template <class T> inline constexpr bool IsStringLike = HostTypeOf<std::remove_cvref_t<T>>::value == HostType::String;
 
@@ -48,6 +71,8 @@ template <class T> T fromSlot(uint64_t slot) {
     return std::bit_cast<float>(static_cast<uint32_t>(slot));
   } else if constexpr (std::is_same_v<T, double>) {
     return std::bit_cast<double>(slot);
+  } else if constexpr (std::is_same_v<T, HostTextView>) {
+    return HostTextView(*reinterpret_cast<const std::string_view *>(static_cast<uintptr_t>(slot)));
   } else if constexpr (std::is_same_v<T, std::string_view>) {
     return std::string_view(*reinterpret_cast<const std::string *>(static_cast<uintptr_t>(slot)));
   } else if constexpr (std::is_same_v<T, std::string>) {
@@ -125,20 +150,22 @@ public:
   }
 
   void bindRaw(std::string name, std::vector<HostType> parameters, HostType returnType, RawInvoke invoke);
-  void bindRawString(std::string name, std::vector<HostType> parameters, RawStringInvoke invoke);
+  void bindRawString(std::string name, std::vector<HostType> parameters, RawStringInvoke invoke,
+                     HostType returnType = HostType::String);
   const std::vector<Entry> &entries() const { return entries_; }
 
 private:
   template <class F, class... A, class R>
   void bindTyped(std::string name, F callable, std::tuple<A...> *, R *) {
-    if constexpr (detail::HostTypeOf<R>::value == HostType::String) {
-      static_assert(std::is_same_v<R, std::string> || std::is_same_v<R, std::string_view>,
-                    "string host function results must be std::string or std::string_view");
+    if constexpr (detail::HostTypeOf<R>::value == HostType::String || detail::HostTypeOf<R>::value == HostType::Text) {
+      static_assert(std::is_same_v<R, std::string> || std::is_same_v<R, std::string_view> || std::is_same_v<R, HostText>,
+                    "text host function results must be std::string, std::string_view or HostText");
       RawStringInvoke invoke = [callable = std::move(callable)](const uint64_t *args, std::string &result,
                                                                 std::string &) mutable {
         return callString<A...>(callable, args, result, std::index_sequence_for<A...>{});
       };
-      bindRawString(std::move(name), {detail::HostTypeOf<std::remove_cvref_t<A>>::value...}, std::move(invoke));
+      bindRawString(std::move(name), {detail::HostTypeOf<std::remove_cvref_t<A>>::value...}, std::move(invoke),
+                    detail::HostTypeOf<R>::value);
     } else {
       RawInvoke invoke = [callable = std::move(callable)](const uint64_t *args, uint64_t &result,
                                                           std::string &) mutable {
@@ -151,7 +178,11 @@ private:
 
   template <class... A, class F, size_t... I>
   static bool callString(F &callable, const uint64_t *args, std::string &result, std::index_sequence<I...>) {
-    result = std::string(callable(detail::fromSlot<std::remove_cvref_t<A>>(args[I])...));
+    if constexpr (std::is_same_v<decltype(callable(detail::fromSlot<std::remove_cvref_t<A>>(args[I])...)), HostText>) {
+      result = std::move(callable(detail::fromSlot<std::remove_cvref_t<A>>(args[I])...).value);
+    } else {
+      result = std::string(callable(detail::fromSlot<std::remove_cvref_t<A>>(args[I])...));
+    }
     return true;
   }
 

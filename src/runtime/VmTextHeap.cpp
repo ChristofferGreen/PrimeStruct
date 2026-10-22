@@ -219,6 +219,27 @@ bool callTextHostFunction(VmTextHeap &heap,
   if (name == "__pstext_capacity") {
     return heap.blockSize(args[0], result, error);
   }
+  if (name == "__pstext_length") {
+    // The text length of a block: bytes before the NUL, within the block.
+    uint64_t size = 0;
+    if (!heap.blockSize(args[0], size, error)) {
+      return false;
+    }
+    const uint8_t *first = args[0] == 0 ? nullptr : core.byteAt(args[0]);
+    while (first != nullptr && result < size && first[result] != 0) {
+      ++result;
+    }
+    return true;
+  }
+  if (name == "__pstext_usable") {
+    // The bytes of text a block holds: its size less the NUL byte (0 for the null block).
+    uint64_t size = 0;
+    if (!heap.blockSize(args[0], size, error)) {
+      return false;
+    }
+    result = size == 0 ? 0 : size - 1;
+    return true;
+  }
   if (name == "__pstext_stat") {
     const TextHeapStats stats = heap.stats();
     switch (args[0]) {

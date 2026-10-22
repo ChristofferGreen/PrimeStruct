@@ -505,6 +505,10 @@ private:
           error = "optexe found a u8 host parameter in " + function_.name +
                   " (u8 is not supported by the C++ backends yet, docs/todo.md TODO-5542)";
           return false;
+        case IrHostValueKind::Text:
+          error = "optexe found a text host parameter in " + function_.name +
+                  " (text crosses the host boundary on the vm only yet, docs/todo.md TODO-5564)";
+          return false;
         case IrHostValueKind::Void:
           error = "optexe found a void host parameter in " + function_.name;
           return false;
@@ -538,6 +542,10 @@ private:
       case IrHostValueKind::U8:
         error = "optexe found a host function returning u8 in " + function_.name +
                 " (u8 is not supported by the C++ backends yet, docs/todo.md TODO-5542)";
+        return false;
+      case IrHostValueKind::Text:
+        error = "optexe found a host function returning text in " + function_.name +
+                " (text crosses the host boundary on the vm only yet, docs/todo.md TODO-5564)";
         return false;
       case IrHostValueKind::String:
         error = "optexe found a host function returning text in " + function_.name;
