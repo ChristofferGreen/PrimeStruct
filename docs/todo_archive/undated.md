@@ -186,3 +186,14 @@
   - acceptance:
     - `primec::testing::buildMachOImportProbe("abs", ...)` builds an image that calls the bound `abs(-5)`, stores the result in the writable state and exits with 5, and passes `codesign --verify`; an unknown symbol does not reach its code; full release gate green
   - stop_rule: image layout, binding and signing; no host-call lowering.
+
+- [x] TODO-5583: Native backend calls `[host]` functions
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-23
+  - phase: Native PrimeScroll (docs/NativeUiPlan.md)
+  - parallel_track: native-backend-imports
+  - scope: The arm64 native backend (`--emit=native`, macOS) lowers `CallHost` for any host function that is not a string heap function: the program imports the function by name through a pointer slot of the image's data segment (TODO-5582), the arguments are popped into the AAPCS64 registers by their host kinds (integers and pointers in x0-x7, `f32`/`f64` in s0-s7/d0-d7 with the two classes counted separately, at most eight of each), the call goes through the slot, and the result is pushed (`i32` sign-extended, `bool` normalised, `f32`/`f64` as bits). A `string` argument is the NUL-terminated text of its string-table entry, a `Text`/`String` argument is its data block pointer, and text a host returns is copied into a fresh text block (0 for null or empty). The image builder patches the slot loads once the data segment's address is known, and the validator lets host calls through for the native target on arm64. The symbols bind to libSystem only; a library of their own is TODO-5584.
+  - acceptance:
+    - tests/fixtures/host_calls/libsystem_host.prime (`labs`, `strlen`, `toupper`, `atoi`, `strerror`, `ldexp`, `sqrtf`) exits with the VM's result through `--emit=native`; a program with host functions no library has still compiles natively; full release gate green
+  - stop_rule: host-call lowering on arm64 native; the UI library is TODO-5584.

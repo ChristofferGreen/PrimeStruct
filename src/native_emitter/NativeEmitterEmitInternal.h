@@ -42,6 +42,18 @@ struct NativeEmitterStringFixup {
   uint32_t stringIndex = 0;
 };
 
+// The C functions the program calls (CallHost, arm64 native only): their names in slot order (the
+// pointer slots of the image's data segment, see MachOData) and the code that loads each slot.
+struct NativeEmitterHostFixup {
+  size_t codeIndex = 0; // word index of the ADRP of the slot load (the LDR follows it)
+  size_t slot = 0;
+};
+
+struct NativeEmitterHostImports {
+  std::vector<std::string> symbols;
+  std::vector<NativeEmitterHostFixup> fixups;
+};
+
 // Templated so the exact same IR-dispatch logic drives whichever
 // concrete emitter this platform builds - see NativeEmitterFunctionEmit.cpp
 // for the definition and the platform-gated explicit instantiation.
@@ -61,6 +73,7 @@ bool emitNativeFunctions(const IrModule &module,
                          uint64_t stringOffsetTableSize,
                          std::vector<size_t> &functionOffsets,
                          std::vector<std::vector<size_t>> &instOffsets,
+                         NativeEmitterHostImports &hostImports,
                          NativeEmitterInstrumentation *instrumentation,
                          std::string &error);
 

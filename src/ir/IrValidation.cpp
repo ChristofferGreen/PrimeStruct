@@ -178,9 +178,10 @@ bool validateFunction(const IrModule &module,
       return failInstruction(functionIndex, function.name, instructionIndex, "unsupported opcode", error);
     }
     if (inst.op == IrOpcode::CallHost) {
-      // The arm64 native backend answers the string heap functions itself and takes no other host call yet.
-      const NativeTextHost nativeText = target == IrValidationTarget::Native && nativeEmitsByteMemory() &&
-                                                inst.imm < module.hostImports.size()
+      // The arm64 native backend answers the string heap functions itself and imports any other host function
+      // as a C function by name.
+      const bool nativeHost = target == IrValidationTarget::Native && nativeEmitsByteMemory();
+      const NativeTextHost nativeText = nativeHost && inst.imm < module.hostImports.size()
                                             ? nativeTextHost(module.hostImports[static_cast<size_t>(inst.imm)].name)
                                             : NativeTextHost::NotText;
       if (nativeText == NativeTextHost::Unsupported) {
@@ -190,9 +191,8 @@ bool validateFunction(const IrModule &module,
                                "string heap statistics, limits and entry arguments are not available on the native backend yet (docs/todo.md, TODO-5586)",
                                error);
       }
-      if (nativeText == NativeTextHost::NotText && target != IrValidationTarget::Vm &&
-          target != IrValidationTarget::Serialized && target != IrValidationTarget::Cpp &&
-          target != IrValidationTarget::OptCpp) {
+      if (!nativeHost && target != IrValidationTarget::Vm && target != IrValidationTarget::Serialized &&
+          target != IrValidationTarget::Cpp && target != IrValidationTarget::OptCpp) {
         return failInstruction(functionIndex,
                                function.name,
                                instructionIndex,

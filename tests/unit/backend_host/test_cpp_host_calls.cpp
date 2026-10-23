@@ -193,8 +193,15 @@ main() {
   CHECK(text.find("host_never_called") == std::string::npos);
 }
 
-TEST_CASE("the native backend still rejects host calls") {
+TEST_CASE("the native backend imports host functions by name on macOS/arm64 and rejects them elsewhere") {
+  // The scalars program's host functions are the test's own (host_impl.cpp), not libSystem's: the arm64 native
+  // backend compiles the calls into imports (running it needs a library that has them, see
+  // test_cpp_strings.cpp for libSystem functions); the Linux native backend has no host calls.
   const CompileResult compiled = compile("native", scalarsProgram(), scratch("scalars_native"));
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
+  CHECK_MESSAGE(compiled.status == 0, compiled.diagnostics);
+#else
   CHECK(compiled.status != 0);
   CHECK(compiled.diagnostics.find("host calls are only supported") != std::string::npos);
+#endif
 }

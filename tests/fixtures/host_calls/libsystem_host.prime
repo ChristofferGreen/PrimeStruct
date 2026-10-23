@@ -1,0 +1,48 @@
+// Host functions that are libSystem functions, so the arm64 native backend can import them by name
+// (tests/unit/backend_host/test_cpp_strings.cpp binds the same functions on the VM side). They cover
+// the argument classes: 64-bit and 32-bit integers, a static string, a String block, floating point in
+// both widths mixed with integers, and text returned by the host.
+import /std/text/*
+
+[host return<i64>]
+labs([i64] value) {
+}
+
+[host return<u64>]
+strlen([string] text) {
+}
+
+[host return<i32>]
+toupper([i32] code) {
+}
+
+[host return<i32>]
+atoi([String] text) {
+}
+
+[host return<String>]
+strerror([i32] code) {
+}
+
+[host return<f64>]
+ldexp([f64] value, [i32] exponent) {
+}
+
+[host return<f32>]
+sqrtf([f32] value) {
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [i32 mut] total{0i32}
+  total = total + convert<i32>(labs(0i64 - 40i64))
+  total = total + convert<i32>(strlen("hello, host"))
+  total = total + toupper(97i32) - 65i32
+  [String] digits{stringFrom("123")}
+  total = total + atoi(digits)
+  [String] message{strerror(2i32)}
+  total = total + message.count()
+  total = total + convert<i32>(ldexp(1.5f64, 4i32))
+  total = total + convert<i32>(sqrtf(49.0f32))
+  return(total)
+}

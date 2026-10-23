@@ -2043,6 +2043,7 @@ are left unarchived.
 | TODO-5580 | Native backend runs byte memory | [undated.md](todo_archive/undated.md) | - |
 | TODO-5581 | Native backend runs the String heap | [undated.md](todo_archive/undated.md) | - |
 | TODO-5582 | Mach-O images import functions from dylibs | [undated.md](todo_archive/undated.md) | - |
+| TODO-5583 | Native backend calls `[host]` functions | [undated.md](todo_archive/undated.md) | - |
 
 <!-- INDEX-END -->
 

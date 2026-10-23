@@ -207,6 +207,7 @@ bool buildNativeImage(const IrModule &module,
   std::vector<NativeEmitterCallFixup> callFixups;
   std::vector<NativeEmitterStringFixup> stringFixups;
   std::vector<size_t> stringTableFixups;
+  NativeEmitterHostImports hostImports;
   std::vector<uint64_t> stringOffsets;
   std::vector<uint8_t> stringData;
   if (!module.stringTable.empty()) {
@@ -254,6 +255,7 @@ bool buildNativeImage(const IrModule &module,
                            stringOffsetTableSize,
                            functionOffsets,
                            instOffsets,
+                           hostImports,
                            instrumentation,
                            error)) {
     return false;
@@ -328,7 +330,8 @@ bool buildNativeImage(const IrModule &module,
   }
 
 #if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
-  uint32_t codeBaseOffset = computeMachOCodeOffset();
+  // The data segment of imported functions adds a segment command, which moves the code.
+  uint32_t codeBaseOffset = computeMachOCodeOffset(!hostImports.symbols.empty());
   emitter.setCodeBaseOffset(codeBaseOffset);
 #endif
   // X64 doesn't need codeBaseOffset: RIP-relative deltas (see patchAdr)
@@ -445,7 +448,45 @@ bool buildNativeImage(const IrModule &module,
 #endif
   std::vector<uint8_t> image;
 #if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
-  if (!buildMachO(code, image, error)) {
+  MachOData machOData;
+  machOData.imports = hostImports.symbols;
+  if (!hostImports.fixups.empty()) {
+    // The pointer slots sit at the start of the data segment, which follows the code (all of it, string
+    // table included, so the address is known only now). Point each slot load at its slot.
+    const uint32_t codeOffset = computeMachOCodeOffset(true);
+    const uint64_t dataVmAddr = machODataVmAddr(codeOffset, code.size());
+    constexpr int64_t AdrpMin = -(1LL << 20);
+    constexpr int64_t AdrpMax = (1LL << 20) - 1;
+    const auto readWord = [&](size_t index) {
+      uint32_t word = 0;
+      for (size_t i = 0; i < 4; ++i) {
+        word |= static_cast<uint32_t>(code[index * 4 + i]) << (i * 8);
+      }
+      return word;
+    };
+    const auto writeWord = [&](size_t index, uint32_t word) {
+      for (size_t i = 0; i < 4; ++i) {
+        code[index * 4 + i] = static_cast<uint8_t>((word >> (i * 8)) & 0xFFu);
+      }
+    };
+    for (const NativeEmitterHostFixup &fixup : hostImports.fixups) {
+      const uint64_t slotAddr = dataVmAddr + fixup.slot * 8;
+      const uint64_t pc = TextVmAddr + codeOffset + fixup.codeIndex * 4;
+      const int64_t pages = (static_cast<int64_t>(slotAddr & ~0xFFFull) - static_cast<int64_t>(pc & ~0xFFFull)) >> 12;
+      if (pages < AdrpMin || pages > AdrpMax) {
+        error = "native backend host import out of range";
+        return false;
+      }
+      const uint32_t adrp = readWord(fixup.codeIndex);
+      writeWord(fixup.codeIndex,
+                (adrp & ~((3u << 29) | (0x7FFFFu << 5))) | ((static_cast<uint32_t>(pages) & 3u) << 29) |
+                    (((static_cast<uint32_t>(pages) >> 2) & 0x7FFFFu) << 5));
+      const uint32_t ldr = readWord(fixup.codeIndex + 1);
+      writeWord(fixup.codeIndex + 1,
+                (ldr & ~(0xFFFu << 10)) | (static_cast<uint32_t>((slotAddr & 0xFFFull) / 8) << 10));
+    }
+  }
+  if (!buildMachO(code, image, error, machOData.imports.empty() ? nullptr : &machOData)) {
     return false;
   }
 #else

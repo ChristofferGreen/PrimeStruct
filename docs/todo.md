@@ -104,8 +104,7 @@ of sync with them.
 | TODO-5569 | Slice loans, escapes and returned borrows | ready | slices |
 | TODO-5570 | Slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views | ready | slices |
 | TODO-5540 | `string` as the UTF-8 text view | blocked | string-view |
-| TODO-5583 | Native backend calls `[host]` functions | ready | native-backend-imports |
-| TODO-5584 | Native PrimeScroll links the AppKit backend as a dylib | blocked | native-backend-imports |
+| TODO-5584 | Native PrimeScroll links the AppKit backend as a dylib | ready | native-backend-imports |
 | TODO-5585 | The text editor builds and runs on the native backend | blocked | native-backend-editor |
 | TODO-5586 | Native String heap: pooled blocks, statistics, limit and arguments | deferred | native-backend-strings |
 | TODO-5574 | Simple C++ emitters run bytes and strings | deferred | string-backends |
@@ -140,7 +139,7 @@ of sync with them.
 
 - TODO-5567 (bytes): packed `array<u8>`
 - TODO-5570 (slices): slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views
-- TODO-5583 (native-backend-imports): native backend calls `[host]` functions
+- TODO-5584 (native-backend-imports): native PrimeScroll links the AppKit backend as a dylib
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5510 (control-returns): `return` returns from pick arms and lambdas correctly
@@ -151,7 +150,7 @@ of sync with them.
 
 2. TODO-5567
 3. TODO-5570
-4. TODO-5583
+4. TODO-5584
 5. TODO-5536
 6. TODO-5535
 7. TODO-5510
@@ -161,7 +160,7 @@ of sync with them.
 ### Priority Lanes
 
 - Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5567, TODO-5570, TODO-5569, TODO-5540, TODO-5568, TODO-5530, TODO-5574
-- Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5583, TODO-5584, TODO-5585, TODO-5586
+- Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5584, TODO-5585, TODO-5586
 - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Lifecycle (docs/spec/value-lifecycle.md): TODO-5527
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
@@ -311,21 +310,9 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - stop_rule: the simple C++ emitters only.
   - notes: deferred: PrimeScroll compiles through the optimized C++ emitter, which needs none of this.
 
-- [ ] TODO-5583: Native backend calls `[host]` functions
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-23
-  - phase: Native PrimeScroll (docs/NativeUiPlan.md)
-  - parallel_track: native-backend-imports
-  - scope: Lower `CallHost` on the arm64 native backend: pop the arguments into x0-x7/d0-d7 by `IrHostValueKind` (i32, i64, u64, bool, f32, f64, String and Text as `const char *`), call the imported symbol, and push the result (Text results are copied into a heap block); relax the native validator for host calls on arm64. Hosts are imported by name through `MachOData` (`src/native_emitter/NativeEmitterMachO.cpp`, TODO-5582): libSystem now, and a dylib named by a compiler option (add an `LC_LOAD_DYLIB` and a bind ordinal for it; TODO-5584 builds on that).
-  - acceptance:
-    - a native program calling `abs`, `strlen` and a text-returning host matches the VM's exit codes; full release gate green
-  - stop_rule: host-call lowering; the UI library is TODO-5584.
-
 - [ ] TODO-5584: Native PrimeScroll links the AppKit backend as a dylib
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5583
+  - status: ready
   - created_at: 2026-10-23
   - phase: Native PrimeScroll (docs/NativeUiPlan.md)
   - parallel_track: native-backend-imports

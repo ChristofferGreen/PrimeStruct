@@ -158,13 +158,20 @@ TEST_CASE("host call results can be used by later instructions repeatedly") {
   CHECK(calls == 2);
 }
 
-TEST_CASE("validation only allows host calls for the vm target") {
+TEST_CASE("validation only allows host calls for the vm target and the arm64 native backend") {
   const IrModule module = addModule();
   std::string error;
   CHECK(validateIrModule(module, IrValidationTarget::Vm, error));
   CHECK(validateIrModule(module, IrValidationTarget::Serialized, error));
-  for (const auto target : {IrValidationTarget::Any, IrValidationTarget::Native, IrValidationTarget::Glsl,
-                            IrValidationTarget::Wasm, IrValidationTarget::WasmBrowser}) {
+  // The arm64 native backend imports host functions as C functions; the other native backends do not.
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
+  CHECK(validateIrModule(module, IrValidationTarget::Native, error));
+#else
+  CHECK_FALSE(validateIrModule(module, IrValidationTarget::Native, error));
+  CHECK(error.find("host calls are only supported by the vm target") != std::string::npos);
+#endif
+  for (const auto target : {IrValidationTarget::Any, IrValidationTarget::Glsl, IrValidationTarget::Wasm,
+                            IrValidationTarget::WasmBrowser}) {
     CHECK_FALSE(validateIrModule(module, target, error));
     CHECK(error.find("host calls are only supported by the vm target") != std::string::npos);
   }

@@ -203,6 +203,17 @@ class Arm64Emitter {
   // Byte memory: a zeroed region of the popped byte count (0 for a count of 0), a byte load that
   // zero-extends, a byte store that leaves the stored byte, and the u8 wrap.
   void emitHeapAllocBytes();
+  // An imported C function (CallHost): see NativeEmitterInternalsArm64Host.h.
+  struct HostCallSite {
+    const std::vector<IrHostValueKind> *parameters = nullptr;
+    IrHostValueKind returnKind = IrHostValueKind::Void;
+    uint64_t stringTableDelta = 0;          // the string table's offset from the string data
+    std::vector<size_t> *stringTableFixups = nullptr;
+    size_t *slotFixup = nullptr;            // out: the word index of the slot load's ADRP
+  };
+  bool emitHostCall(const HostCallSite &site, std::string &error);
+  size_t emitHostSlotLoad(uint8_t reg);
+  void emitHostTextResult();
   // The string heap functions (`__pstext_*`, primec/ir/IrNativeTextHost.h): a text block is a byte
   // region sized by the VM's size classes, with its capacity in the block header.
   void emitTextAlloc();
@@ -532,6 +543,7 @@ class Arm64Emitter {
 #include "NativeEmitterInternalsArm64Arithmetic.h"
 #include "NativeEmitterInternalsArm64Core.h"
 #include "NativeEmitterInternalsArm64Io.h"
+#include "NativeEmitterInternalsArm64Host.h"
 
 bool computeMaxStackDepth(const IrFunction &fn, const IrModule &module, int64_t &maxDepth, std::string &error);
 

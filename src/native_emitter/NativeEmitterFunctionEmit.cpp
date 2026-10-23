@@ -68,6 +68,7 @@ bool emitNativeFunctions(const IrModule &module,
                          uint64_t stringOffsetTableSize,
                          std::vector<size_t> &functionOffsets,
                          std::vector<std::vector<size_t>> &instOffsets,
+                         NativeEmitterHostImports &hostImports,
                          NativeEmitterInstrumentation *instrumentation,
                          std::string &error) {
   constexpr bool kIsArm64 = std::is_same_v<EmitterT, Arm64Emitter>;
@@ -300,6 +301,29 @@ bool emitNativeFunctions(const IrModule &module,
           case NativeTextHost::Usable:
             emitter.emitTextUsable();
             break;
+          case NativeTextHost::NotText: {
+            // Any other host function is a C function the image imports by name.
+            const IrHostImport &import = module.hostImports[static_cast<size_t>(inst.imm)];
+            size_t slot = 0;
+            while (slot < hostImports.symbols.size() && hostImports.symbols[slot] != import.name) {
+              ++slot;
+            }
+            if (slot == hostImports.symbols.size()) {
+              hostImports.symbols.push_back(import.name);
+            }
+            typename EmitterT::HostCallSite site;
+            site.parameters = &import.parameters;
+            site.returnKind = import.returnKind;
+            site.stringTableDelta = stringTableOffsetDelta;
+            site.stringTableFixups = &stringTableFixups;
+            size_t slotFixup = 0;
+            site.slotFixup = &slotFixup;
+            if (!emitter.emitHostCall(site, error)) {
+              return false;
+            }
+            hostImports.fixups.push_back({slotFixup, slot});
+            break;
+          }
           default:
             error = "unsupported host function for native backend: " +
                     module.hostImports[static_cast<size_t>(inst.imm)].name;
@@ -962,6 +986,7 @@ template bool emitNativeFunctions<Arm64Emitter>(const IrModule &,
                                                 uint64_t,
                                                 std::vector<size_t> &,
                                                 std::vector<std::vector<size_t>> &,
+                                                NativeEmitterHostImports &,
                                                 NativeEmitterInstrumentation *,
                                                 std::string &);
 #elif defined(__linux__) && defined(__x86_64__)
@@ -978,6 +1003,7 @@ template bool emitNativeFunctions<X64Emitter>(const IrModule &,
                                               uint64_t,
                                               std::vector<size_t> &,
                                               std::vector<std::vector<size_t>> &,
+                                              NativeEmitterHostImports &,
                                               NativeEmitterInstrumentation *,
                                               std::string &);
 #endif

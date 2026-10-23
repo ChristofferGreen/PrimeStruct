@@ -317,10 +317,17 @@ TEST_CASE("host string versus integer signature mismatch is diagnosed") {
 TEST_CASE("native, wasm and glsl reject host definitions with a clear diagnostic") {
   const auto dir = embedTestDir("host_backends");
   const auto source = embedWriteFile(dir / "host.prime", AddSource);
+  // The arm64 native backend (macOS) imports host functions as C functions instead of rejecting them.
   for (const char *kind : {"native", "wasm", "glsl"}) {
     CAPTURE(kind);
     const auto result = embedRunPrimec(std::string("--emit=") + kind + " \"" + source.string() + "\" -o \"" +
                                        (dir / (std::string("out_") + kind)).string() + "\"");
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
+    if (std::string_view(kind) == "native") {
+      CHECK_MESSAGE(result.exitCode == 0, result.output);
+      continue;
+    }
+#endif
     CHECK(result.exitCode != 0);
     CHECK(result.output.find("host calls are only supported by the vm target") != std::string::npos);
   }

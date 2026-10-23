@@ -230,6 +230,35 @@ TEST_CASE("host functions that take and return String agree on the VM and optexe
   CHECK(readFile(output) == notes);
 }
 
+TEST_CASE("libSystem host functions run on the arm64 native backend with the VM's result") {
+  const std::string program = std::string(PRIMESTRUCT_SOURCE_DIR) + "/tests/fixtures/host_calls/libsystem_host.prime";
+  ScriptEngine engine;
+  engine.bind("labs", [](int64_t value) { return static_cast<int64_t>(std::llabs(value)); });
+  engine.bind("strlen", [](std::string_view text) { return static_cast<uint64_t>(text.size()); });
+  engine.bind("toupper", [](int32_t code) { return static_cast<int32_t>(std::toupper(code)); });
+  engine.bind("atoi", [](primec::embed::HostTextView text) { return std::atoi(std::string(text.value).c_str()); });
+  engine.bind("strerror", [](int32_t code) { return primec::embed::HostText(std::string(std::strerror(code))); });
+  engine.bind("ldexp", [](double value, int32_t exponent) { return std::ldexp(value, exponent); });
+  engine.bind("sqrtf", [](float value) { return std::sqrt(value); });
+  const auto script = engine.compileFile(program);
+  REQUIRE_MESSAGE(script.valid(), script.diagnostics());
+  const auto vm = script.run();
+  REQUIRE_MESSAGE(vm.ok, vm.diagnostics);
+  // 40 + 11 + 0 + 123 + 25 + 24 + 7
+  CHECK(vm.exitCode == 230);
+
+  const std::string exe = scratch("libsystem_host_native");
+  const std::string log = exe + ".log";
+  const int status = run(shellQuote(Primec) + " --emit=native " + shellQuote(program) + " -o " + shellQuote(exe) +
+                         " > " + shellQuote(log) + " 2>&1");
+  if (NativeRunsBytes) {
+    REQUIRE_MESSAGE(status == 0, readFile(log));
+    CHECK(run(shellQuote(exe) + " > /dev/null 2>&1") == vm.exitCode);
+  } else {
+    CHECK_FALSE(status == 0);
+  }
+}
+
 TEST_CASE("the simple C++ emitters name the optimized ones for byte programs") {
   const std::string source = programOf("  [String] s{/std/text/stringFrom(\"abc\")}\n  return(s.count())", "");
   for (const char *kind : {"exe", "cpp"}) {
