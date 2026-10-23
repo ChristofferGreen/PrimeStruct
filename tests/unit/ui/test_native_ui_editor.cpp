@@ -419,3 +419,63 @@ TEST_CASE("editor reports a file that cannot be saved") {
   CHECK(headless::windowState(EditorWindow).title == "Untitled");
   CHECK(headless::windowState(EditorWindow).closed);
 }
+
+
+// Handles: the first window is 1 with text view 2, the menus follow, the second tab's window is 9
+// with text view 10. Commands: 1 New, 7 View > Show Line Numbers, 8 Start with Line Numbers.
+TEST_CASE("editor toggles the line number bar in every tab from the View menu") {
+  headless::reset();
+  headless::pushCommand(1);
+  headless::pushCommand(7);
+  headless::pushCloseWindow(9);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK_FALSE(headless::lineNumbersVisible(2) == false);
+  CHECK(headless::lineNumbersVisible(2));
+  CHECK(headless::lineNumbersVisible(10));
+  CHECK(headless::menuItemChecked(7));
+
+  headless::reset();
+  headless::pushCommand(1);
+  headless::pushCommand(7);
+  headless::pushCommand(7);
+  headless::pushCloseWindow(9);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK_FALSE(headless::lineNumbersVisible(2));
+  CHECK_FALSE(headless::lineNumbersVisible(10));
+  CHECK_FALSE(headless::menuItemChecked(7));
+}
+
+TEST_CASE("editor starts with the line number bar when the preference says so") {
+  headless::reset();
+  headless::setBoolPref("lineNumbers", true);
+  headless::pushCommand(1);
+  headless::pushCloseWindow(9);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(headless::lineNumbersVisible(2));
+  CHECK(headless::lineNumbersVisible(10));  // a new tab follows the current setting
+  CHECK(headless::menuItemChecked(7));
+  CHECK(headless::menuItemChecked(8));
+}
+
+TEST_CASE("editor remembers the start-up choice without changing the open tabs") {
+  headless::reset();
+  headless::pushCommand(8);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(headless::boolPref("lineNumbers", false));
+  CHECK_FALSE(headless::lineNumbersVisible(2));
+  CHECK(headless::menuItemChecked(8));
+  CHECK_FALSE(headless::menuItemChecked(7));
+
+  headless::reset();
+  headless::setBoolPref("lineNumbers", true);
+  headless::pushCommand(8);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK_FALSE(headless::boolPref("lineNumbers", true));
+  CHECK(headless::lineNumbersVisible(2));
+  CHECK_FALSE(headless::menuItemChecked(8));
+}

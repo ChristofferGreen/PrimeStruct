@@ -482,3 +482,53 @@ TEST_CASE("headless reset forgets everything and restarts handles") {
   CHECK(ps_ui_wait_event() == PS_UI_EVENT_QUIT_REQUESTED);
   CHECK(logContains("ps_ui_init(\"Again\") -> true"));
 }
+
+
+TEST_CASE("a text view shows or hides its line number bar") {
+  startApp();
+  const uint64_t view = ps_ui_text_view_create();
+  CHECK_FALSE(headless::lineNumbersVisible(view));
+  CHECK(ps_ui_text_view_set_line_numbers(view, true));
+  CHECK(headless::lineNumbersVisible(view));
+  CHECK_FALSE(headless::styleRuns(view).size() != 0);
+  CHECK(ps_ui_text_view_is_modified(view) == false);  // presentation only
+  CHECK(ps_ui_text_view_set_line_numbers(view, false));
+  CHECK_FALSE(headless::lineNumbersVisible(view));
+  CHECK_FALSE(ps_ui_text_view_set_line_numbers(999, true));
+  CHECK(logContains("ps_ui_text_view_set_line_numbers(" + std::to_string(view) + ", true) -> true"));
+  CHECK(logContains("ps_ui_text_view_set_line_numbers(999, true) -> false"));
+}
+
+TEST_CASE("menu items carry a check mark that follows ps_ui_menu_set_checked") {
+  startApp();
+  const uint64_t menu = ps_ui_menu_create("View");
+  REQUIRE(ps_ui_menu_add_item(menu, "Show Line Numbers", "cmd+shift+l", 7));
+  REQUIRE(ps_ui_menu_add_item(menu, "Other", "", 8));
+  REQUIRE(ps_ui_menu_bar_add(menu));
+  CHECK_FALSE(headless::menuItemChecked(7));
+  CHECK(ps_ui_menu_set_checked(menu, 7, true));
+  CHECK(headless::menuItemChecked(7));
+  CHECK_FALSE(headless::menuItemChecked(8));
+  const std::vector<std::string> checked{"View>Show Line Numbers (cmd+shift+l) #7 [checked]", "View>Other #8"};
+  CHECK(headless::menuBarItems() == checked);
+  CHECK(ps_ui_menu_set_checked(menu, 7, false));
+  CHECK_FALSE(headless::menuItemChecked(7));
+  CHECK_FALSE(ps_ui_menu_set_checked(menu, 99, true));  // no item with that id
+  CHECK_FALSE(ps_ui_menu_set_checked(999, 7, true));    // no such menu
+}
+
+TEST_CASE("boolean preferences keep their value and answer the fallback when unset") {
+  startApp();
+  CHECK(ps_ui_pref_get_bool("lineNumbers", true));
+  CHECK_FALSE(ps_ui_pref_get_bool("lineNumbers", false));
+  CHECK(ps_ui_pref_set_bool("lineNumbers", true));
+  CHECK(ps_ui_pref_get_bool("lineNumbers", false));
+  CHECK(headless::boolPref("lineNumbers", false));
+  CHECK(ps_ui_pref_set_bool("lineNumbers", false));
+  CHECK_FALSE(ps_ui_pref_get_bool("lineNumbers", true));
+  CHECK_FALSE(ps_ui_pref_set_bool("", true));
+  CHECK_FALSE(ps_ui_pref_set_bool(nullptr, true));
+  headless::setBoolPref("preset", true);
+  CHECK(ps_ui_pref_get_bool("preset", false));
+  CHECK(headless::pushedScenario() == "pref:preset=1");
+}

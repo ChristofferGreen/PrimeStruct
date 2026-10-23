@@ -2035,6 +2035,7 @@ are left unarchived.
 | TODO-5571 | Native UI text uses `String` | [undated.md](todo_archive/undated.md) | - |
 | TODO-5572 | Remove the VM run-time string index | [undated.md](todo_archive/undated.md) | - |
 | TODO-5573 | Embedding text results and exports use `String` | [undated.md](todo_archive/undated.md) | - |
+| TODO-5575 | A line number bar in the editor | [undated.md](todo_archive/undated.md) | - |
 
 <!-- INDEX-END -->
 

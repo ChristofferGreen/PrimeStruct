@@ -42,6 +42,18 @@ command_quit() {
   return(6i32)
 }
 
+// View > Show Line Numbers toggles the bar of line numbers in every tab; the application menu's
+// Start with Line Numbers keeps that choice for the next launch.
+[return<i32>]
+command_line_numbers() {
+  return(7i32)
+}
+
+[return<i32>]
+command_line_numbers_start() {
+  return(8i32)
+}
+
 // Cmd+1 ... Cmd+9 are command_tab() + 1 ... + 9.
 [return<i32>]
 command_tab() {
@@ -75,10 +87,11 @@ select_tab([Window] tab, [i32] number) {
 
 // A new document: a window with its own text view, joined to host's tabs.
 [return<Window>]
-new_tab([App] app, [Window] host) {
+new_tab([App] app, [Window] host, [bool] lineNumbers) {
   [Window] created{app.window("Untitled", 720i32, 480i32)}
   [TextView] view{app.textView()}
   view.setMonospace(true)
+  view.setLineNumbers(lineNumbers)
   created.setContent(view)
   host.addTab(created)
   created.show()
@@ -146,14 +159,14 @@ close_tab([App] app, [Window] tab) {
 // Opens a file in a new tab, or in this one while it is still an untouched
 // untitled document.
 [return<bool>]
-open_document([App] app, [Window] tab) {
+open_document([App] app, [Window] tab, [bool] lineNumbers) {
   [String] chosen{app.openPanel("Open")}
   if(app.panelChosen()) {
     [TextView] current{tab.content()}
     [bool] reuse{!tab.hasPath() && !current.isModified()}
     [Window mut] target{tab}
     if(!reuse) {
-      target = new_tab(app, tab)
+      target = new_tab(app, tab, lineNumbers)
     }
     [TextView] view{target.content()}
     if(view.loadFile(chosen)) {
@@ -174,13 +187,18 @@ open_document([App] app, [Window] tab) {
 [return<int> effects(heap_alloc)]
 main([array<string>] args) {
   [App] app{start_app("PrimeScroll")}
+  [bool mut] lineNumbers{app.boolPref("lineNumbers", false)}
+  [bool mut] startWithNumbers{lineNumbers}
   [Window] first{app.window("Untitled", 720i32, 480i32)}
   [TextView] firstView{app.textView()}
   firstView.setMonospace(true)
+  firstView.setLineNumbers(lineNumbers)
   first.setContent(firstView)
 
   [Menu] application{app.menu("PrimeScroll")}
   application.about()
+  application.separator()
+  application.item("Start with Line Numbers", "", command_line_numbers_start())
   application.separator()
   application.hide()
   application.hideOthers()
@@ -214,6 +232,7 @@ main([array<string>] args) {
   [Menu] viewMenu{app.menu("View")}
   viewMenu.fullScreen()
   viewMenu.showTabBar()
+  viewMenu.item("Show Line Numbers", "cmd+shift+l", command_line_numbers())
   viewMenu.addToBar()
 
   [Menu] windowMenu{app.menu("Window")}
@@ -254,6 +273,9 @@ main([array<string>] args) {
     }
   }
 
+  viewMenu.setChecked(command_line_numbers(), lineNumbers)
+  application.setChecked(command_line_numbers_start(), startWithNumbers)
+
   first.show()
 
   [bool mut] running{true}
@@ -283,10 +305,26 @@ main([array<string>] args) {
     }
 
     if(intent == command_new()) {
-      [Window] fresh{new_tab(app, tab)}
+      [Window] fresh{new_tab(app, tab, lineNumbers)}
     }
     if(intent == command_open()) {
-      [bool] opened{open_document(app, tab)}
+      [bool] opened{open_document(app, tab, lineNumbers)}
+    }
+    if(intent == command_line_numbers()) {
+      lineNumbers = !lineNumbers
+      [i32 mut] index{0i32}
+      while(index < app.windowCount()) {
+        [Window] each{app.windowAt(index)}
+        [TextView] eachView{each.content()}
+        eachView.setLineNumbers(lineNumbers)
+        index = index + 1i32
+      }
+      viewMenu.setChecked(command_line_numbers(), lineNumbers)
+    }
+    if(intent == command_line_numbers_start()) {
+      startWithNumbers = !startWithNumbers
+      app.setBoolPref("lineNumbers", startWithNumbers)
+      application.setChecked(command_line_numbers_start(), startWithNumbers)
     }
     if(intent == command_save()) {
       [bool] saved{save_document(app, tab, false)}

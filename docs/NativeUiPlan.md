@@ -123,11 +123,12 @@ is callable only on the thread that called `ps_ui_init`, the main thread on macO
 | App | `ps_ui_init(appName)`, `ps_ui_quit()`, `ps_ui_platform() -> i32` (macOS, Windows, Linux, iOS, headless) |
 | Events | `ps_ui_wait_event() -> i32 kind`, `ps_ui_event_window() -> u64`, `ps_ui_event_widget() -> u64`, `ps_ui_event_command() -> i32` |
 | Window | `ps_ui_window_create(title, width, height) -> u64`, `_set_title`, `_set_content(window, widget)`, `_set_edited(window, bool)`, `_show`, `_close` |
-| Text view | `ps_ui_text_view_create() -> u64`, `_get_text -> String`, `_set_text`, `_set_monospace(bool)`, `_is_modified -> bool`, `_clear_modified` |
-| Menus | `ps_ui_menu_create(title) -> u64`, `_add_item(menu, title, shortcut, commandId)`, `_add_separator`, `_add_standard(menu, standardId)`, `ps_ui_menu_bar_add(menu)`, `ps_ui_menu_bar_add_role(menu, role)` (application menu replaces the platform default, Window lists the windows, Help). Standard items 1-16 (Undo ... Help, including Hide, Hide Others, Minimize, Zoom, Bring All to Front, Enter Full Screen) take their titles and shortcuts from `include/primec/ui/NativeUiStandardItems.h`, shared with the headless backend so `headless::menuBarOutline()` shows what the platform menus hold |
+| Text view | `ps_ui_text_view_create() -> u64`, `_get_text -> String`, `_set_text`, `_set_monospace(bool)`, `_set_line_numbers(bool)` (a bar of line numbers to the left of the text, one per paragraph, wrapped lines carry none; presentation only), `_is_modified -> bool`, `_clear_modified` |
+| Menus | `ps_ui_menu_create(title) -> u64`, `_add_item(menu, title, shortcut, commandId)`, `_add_separator`, `_add_standard(menu, standardId)`, `_set_checked(menu, commandId, bool)` (a check mark on the items with that command id), `ps_ui_menu_bar_add(menu)`, `ps_ui_menu_bar_add_role(menu, role)` (application menu replaces the platform default, Window lists the windows, Help). Standard items 1-16 (Undo ... Help, including Hide, Hide Others, Minimize, Zoom, Bring All to Front, Enter Full Screen) take their titles and shortcuts from `include/primec/ui/NativeUiStandardItems.h`, shared with the headless backend so `headless::menuBarOutline()` shows what the platform menus hold |
 | Tabs and documents | `ps_ui_window_add_tab(host, tab)` (native tab group; AppKit `addTabbedWindow:`), `ps_ui_active_window()`, `ps_ui_window_tab_count/tab_at(window, index)` (tab-bar order) and `ps_ui_window_select(window)` (what Command-1 to Command-9 use), `ps_ui_window_content(window)`, `ps_ui_window_count()`, `ps_ui_window_at(index)`, and a per-window document path (`ps_ui_window_set_path/path/has_path`, stored by the backend so programs keep per-document state without handling strings). Standard items 17-21: Show Tab Bar, Merge All Windows, Move Tab to New Window, Show Next/Previous Tab. Menu commands carry no window: programs act on the active window |
 | Styled text | `ps_ui_text_view_clear_styles(view) -> bool`, `ps_ui_text_view_add_style(view, startByte, endByte, rgb, flags) -> bool` (UTF-8 byte ranges on code point boundaries, `rgb` is 0xRRGGBB, flags `PS_UI_STYLE_BOLD`/`PS_UI_STYLE_ITALIC`; later runs win; presentation only: no modified flag, no text-changed event, no undo entry; replacing the text drops the runs, typing keeps them so programs restyle on text-changed). AppKit applies them as text storage attributes with undo registration off), `ps_ui_text_view_highlight(view, path) -> bool` (restyles the text with the syntax highlighting of the file name's extension: PrimeStruct, C/C++/Objective-C, Python, JSON, Markdown, JavaScript/TypeScript, Rust, Go, Java, Kotlin, Swift, shell, SQL, CMake, with keyword, type, string, comment, number, function-name, annotation and variable colours; the lexers are C++ in `src/ui/SyntaxHighlight.cpp` because programs cannot scan strings yet) |
 | Text files | `ps_ui_text_view_load_file(view, path) -> bool`, `ps_ui_text_view_save_file(view, path) -> bool`, `ps_ui_last_error() -> String` (the backend reads and writes UTF-8 files itself, so no program-side text is built and a large file never passes through the program) |
+| Preferences | `ps_ui_pref_get_bool(key, fallback) -> bool`, `ps_ui_pref_set_bool(key, value) -> bool` (booleans the app keeps between runs: `NSUserDefaults` on macOS under `ps.pref.<key>`; `PRIMESTRUCT_UI_PREFS=key=1,other=0` and every snapshot run answer from the environment instead and never touch the user's defaults; the headless backend keeps them in memory, preset with `headless::setBoolPref`) |
 | Dialogs | `ps_ui_open_panel(title) -> String`, `ps_ui_save_panel(title, suggestedName) -> String` (empty means cancelled), `ps_ui_panel_chosen() -> bool` (whether the last panel returned a path), `ps_ui_alert(message, detail, buttons) -> i32` |
 
 - **Events.** `ps_ui_wait_event` blocks in the platform's run loop until something the program should handle happens,
@@ -142,7 +143,7 @@ is callable only on the thread that called `ps_ui_init`, the main thread on macO
   is a `const char *` valid until the next text-returning call, `ps_ui_alert` takes button titles separated by `\n` and
   returns the pressed index, and `ps_ui_init` returns false when the app is already running. The headless backend
   (`primec/ui/NativeUiHeadless.h`) ends a scripted run with `quit_requested` once its action list is empty.
-  `primec/ui/NativeUiBindings.h` binds all 31 functions into a `ScriptEngine` or `Script` under their ABI names. The
+  `primec/ui/NativeUiBindings.h` binds all 51 functions into a `ScriptEngine` or `Script` under their ABI names. The
   three text-file functions (TODO-5546) let the editor open and save before owned `String` exists (TODO-5530).
 - **Versioning.** `ps_ui_abi_version() -> i32` returns 0 for this table. Additions append functions; a change to an
   existing signature bumps the version.
@@ -189,6 +190,11 @@ an import yet), and `AppEvent` lists `quitRequested` first because a default sum
 - Closing or quitting with unsaved changes asks Save / Don't Save / Cancel.
 - Open and Save read and write UTF-8 files; a read or write error is shown in an alert instead of quitting.
 - The text view uses the system monospace font; everything else about editing comes from the native control.
+- **Line numbers:** View > Show Line Numbers (⇧⌘L) shows or hides a bar of line numbers to the left of the text in every
+  tab (new tabs follow the current setting; the item carries a check mark). The application menu's *Start with Line
+  Numbers* item is the preference for the next launch (a check mark, stored with `ps_ui_pref_set_bool`); the bar is off
+  until it is chosen. The AppKit bar is an `NSRulerView` that numbers the TextKit 2 layout fragments of the visible
+  part only.
 
 ## 7. Runtime gaps and how this plan closes them
 

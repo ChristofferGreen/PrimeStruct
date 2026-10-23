@@ -46,6 +46,8 @@ template <class Binder> void forEachBinding(Binder &&bindOne) {
   });
   bindOne("ps_ui_text_view_set_monospace",
           [](uint64_t view, bool monospace) { return ps_ui_text_view_set_monospace(view, monospace); });
+  bindOne("ps_ui_text_view_set_line_numbers",
+          [](uint64_t view, bool visible) { return ps_ui_text_view_set_line_numbers(view, visible); });
   bindOne("ps_ui_text_view_is_modified", [](uint64_t view) { return ps_ui_text_view_is_modified(view); });
   bindOne("ps_ui_text_view_clear_modified", [](uint64_t view) { return ps_ui_text_view_clear_modified(view); });
 
@@ -82,6 +84,15 @@ template <class Binder> void forEachBinding(Binder &&bindOne) {
           [](uint64_t menu, std::string_view title, std::string_view shortcut, int32_t commandId) {
             return ps_ui_menu_add_item(menu, text(title).c_str(), text(shortcut).c_str(), commandId);
           });
+  bindOne("ps_ui_menu_set_checked", [](uint64_t menu, int32_t commandId, bool checked) {
+    return ps_ui_menu_set_checked(menu, commandId, checked);
+  });
+  bindOne("ps_ui_pref_get_bool", [](std::string_view key, bool fallback) {
+    return ps_ui_pref_get_bool(text(key).c_str(), fallback);
+  });
+  bindOne("ps_ui_pref_set_bool", [](std::string_view key, bool value) {
+    return ps_ui_pref_set_bool(text(key).c_str(), value);
+  });
   bindOne("ps_ui_menu_add_separator", [](uint64_t menu) { return ps_ui_menu_add_separator(menu); });
   bindOne("ps_ui_menu_add_standard",
           [](uint64_t menu, int32_t standardId) { return ps_ui_menu_add_standard(menu, standardId); });

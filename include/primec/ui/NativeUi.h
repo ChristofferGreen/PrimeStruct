@@ -159,6 +159,10 @@ bool ps_ui_text_view_set_monospace(uint64_t view, bool monospace);
 /* True once the user changed the text since creation or the last clear. */
 bool ps_ui_text_view_is_modified(uint64_t view);
 bool ps_ui_text_view_clear_modified(uint64_t view);
+/* Shows or hides a bar of line numbers to the left of the text (one number per
+ * paragraph; wrapped lines are not numbered). Presentation only: it never marks the
+ * view modified or produces events. Views start without the bar. */
+bool ps_ui_text_view_set_line_numbers(uint64_t view, bool visible);
 
 /* Styled text ------------------------------------------------------------ */
 
@@ -194,6 +198,9 @@ uint64_t ps_ui_menu_create(const char *title);
 bool ps_ui_menu_add_item(uint64_t menu, const char *title, const char *shortcut, int32_t commandId);
 bool ps_ui_menu_add_separator(uint64_t menu);
 bool ps_ui_menu_add_standard(uint64_t menu, int32_t standardId);
+/* Puts or removes a check mark on the items of `menu` added with `commandId`
+ * (ps_ui_menu_add_item). False for a bad menu or when no item has that id. */
+bool ps_ui_menu_set_checked(uint64_t menu, int32_t commandId, bool checked);
 /* Appends the menu to the app's menu bar. */
 bool ps_ui_menu_bar_add(uint64_t menu);
 /* Appends the menu to the menu bar with a platform role (PS_UI_MENU_ROLE_*).
@@ -217,6 +224,14 @@ bool ps_ui_text_view_save_file(uint64_t view, const char *path);
  * failed. See the lifetime note above (valid until the next text-returning call
  * or file function). */
 const char *ps_ui_last_error(void);
+
+/* Preferences ---------------------------------------------------------------- */
+
+/* A boolean the app keeps between runs under `key` (NSUserDefaults on macOS):
+ * its stored value, or `fallback` when none was stored. */
+bool ps_ui_pref_get_bool(const char *key, bool fallback);
+/* Stores the boolean under `key`. False for an empty key or before ps_ui_init. */
+bool ps_ui_pref_set_bool(const char *key, bool value);
 
 /* Dialogs ---------------------------------------------------------------- */
 

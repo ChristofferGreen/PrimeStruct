@@ -184,6 +184,8 @@ TEST_CASE("acceptance: the menu bar has the standard macOS structure and shortcu
   const std::vector<std::string> expected{
       "PrimeScroll>About",
       "PrimeScroll>-",
+      "PrimeScroll>Start with Line Numbers",
+      "PrimeScroll>-",
       "PrimeScroll>Hide (cmd+h)",
       "PrimeScroll>Hide Others (cmd+alt+h)",
       "PrimeScroll>-",
@@ -207,6 +209,7 @@ TEST_CASE("acceptance: the menu bar has the standard macOS structure and shortcu
       "Edit>Find... (cmd+f)",
       "View>Enter Full Screen (cmd+ctrl+f)",
       "View>Show Tab Bar",
+      "View>Show Line Numbers (cmd+shift+l)",
       "Window>Minimize (cmd+m)",
       "Window>Zoom",
       "Window>-",
@@ -234,7 +237,9 @@ TEST_CASE("acceptance: the menu bar has the standard macOS structure and shortcu
   // The editor's commands carry the ids the program dispatches on.
   const auto items = headless::menuBarItems();
   for (const char *item : {"File>New (cmd+n) #1", "File>Open... (cmd+o) #2", "File>Save (cmd+s) #3",
-                           "File>Save As... (cmd+shift+s) #4", "File>Close (cmd+w) #5"}) {
+                           "File>Save As... (cmd+shift+s) #4", "File>Close (cmd+w) #5",
+                           "View>Show Line Numbers (cmd+shift+l) #7",
+                           "PrimeScroll>Start with Line Numbers #8"}) {
     CHECK_MESSAGE(std::find(items.begin(), items.end(), item) != items.end(), item);
   }
 }

@@ -28,6 +28,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -74,6 +75,10 @@ struct State {
   std::unordered_map<uint64_t, NSScrollView *> scrollViews;
   std::unordered_map<uint64_t, NSMenu *> menus;
   std::unordered_map<uint64_t, bool> modified;
+  // PRIMESTRUCT_UI_PREFS=key=1,other=0 (and every snapshot run) answers preferences from this map
+  // and never reads or writes the user's defaults.
+  bool prefOverridesActive = false;
+  std::unordered_map<std::string, bool> prefOverrides;
   std::deque<PendingEvent> pending;
   PendingEvent current;
   std::string returnedText;
@@ -282,6 +287,8 @@ NSWindow *openMenuWindow(NSWindow *except) {
   return nil;
 }
 
+void dumpViews(NSView *view, int depth);
+
 void captureSnapshot(NSWindow *menuWindow = nil) {
   State &s = state();
   NSWindow *window = liveWindow(s.snapshotWindow);
@@ -303,6 +310,9 @@ void captureSnapshot(NSWindow *menuWindow = nil) {
   if (rep == nil) {
     std::fprintf(stderr, "native ui: no bitmap for a %gx%g view\n", bounds.size.width, bounds.size.height);
     return;
+  }
+  if (std::getenv("PRIMESTRUCT_UI_DUMP_WINDOW") != nullptr) {
+    dumpViews(view, 0);
   }
   [view cacheDisplayInRect:bounds toBitmapImageRep:rep];
   if (menuWindow != nil) {
@@ -425,6 +435,172 @@ void captureWithOpenMenu(const std::string &name) {
 
 } // namespace
 
+// The bar of line numbers to the left of a text view: one number per paragraph (the layout fragments
+// of TextKit 2, so wrapped lines carry none), drawn for the visible part only. Counting the
+// newlines before the first visible paragraph is cached between redraws and dropped on every edit
+// of the characters.
+@interface PSLineNumberRuler : NSRulerView
+- (instancetype)initForTextView:(NSTextView *)textView scrollView:(NSScrollView *)scrollView;
+@end
+
+@implementation PSLineNumberRuler {
+  __weak NSTextView *_textView;
+  NSUInteger _cachedOffset;
+  NSUInteger _cachedNewlines;
+  NSUInteger _totalLines;
+}
+
+static NSUInteger countNewlines(NSString *text, NSUInteger from, NSUInteger to) {
+  unichar buffer[2048];
+  NSUInteger count = 0;
+  while (from < to) {
+    const NSUInteger chunk = std::min<NSUInteger>(2048, to - from);
+    [text getCharacters:buffer range:NSMakeRange(from, chunk)];
+    for (NSUInteger i = 0; i < chunk; ++i) {
+      count += buffer[i] == '\n' ? 1 : 0;
+    }
+    from += chunk;
+  }
+  return count;
+}
+
+- (instancetype)initForTextView:(NSTextView *)textView scrollView:(NSScrollView *)scrollView {
+  self = [super initWithScrollView:scrollView orientation:NSVerticalRuler];
+  if (self != nil) {
+    _textView = textView;
+    self.clientView = textView;
+    NSNotificationCenter *center = NSNotificationCenter.defaultCenter;
+    [center addObserver:self
+               selector:@selector(storageEdited:)
+                   name:NSTextStorageDidProcessEditingNotification
+                 object:textView.textStorage];
+    scrollView.contentView.postsBoundsChangedNotifications = YES;
+    [center addObserver:self
+               selector:@selector(scrolled:)
+                   name:NSViewBoundsDidChangeNotification
+                 object:scrollView.contentView];
+    [self recount];
+  }
+  return self;
+}
+
+- (void)dealloc {
+  [NSNotificationCenter.defaultCenter removeObserver:self];
+}
+
+- (void)recount {
+  NSString *text = _textView.string;
+  _cachedOffset = 0;
+  _cachedNewlines = 0;
+  _totalLines = 1 + countNewlines(text, 0, text.length);
+  NSUInteger digits = 1;
+  for (NSUInteger lines = _totalLines; lines >= 10; lines /= 10) {
+    ++digits;
+  }
+  NSFont *font = [NSFont monospacedDigitSystemFontOfSize:11 weight:NSFontWeightRegular];
+  const CGFloat digitWidth = [@"0" sizeWithAttributes:@{NSFontAttributeName : font}].width;
+  const CGFloat thickness = std::max<CGFloat>(32, std::ceil(digitWidth * std::max<NSUInteger>(digits, 2) + 18));
+  if (thickness != self.ruleThickness) {
+    self.ruleThickness = thickness;
+  }
+  self.needsDisplay = YES;
+}
+
+- (void)storageEdited:(NSNotification *)note {
+  NSTextStorage *storage = note.object;
+  if ((storage.editedMask & NSTextStorageEditedCharacters) != 0) {
+    [self recount];
+  }
+}
+
+- (void)scrolled:(NSNotification *)note {
+  self.needsDisplay = YES;
+}
+
+- (NSUInteger)newlinesBefore:(NSUInteger)offset text:(NSString *)text {
+  if (offset < _cachedOffset) {
+    _cachedOffset = 0;
+    _cachedNewlines = 0;
+  }
+  _cachedNewlines += countNewlines(text, _cachedOffset, offset);
+  _cachedOffset = offset;
+  return _cachedNewlines;
+}
+
+- (void)drawHashMarksAndLabelsInRect:(NSRect)rect {
+  NSTextView *textView = _textView;
+  NSTextLayoutManager *layout = textView.textLayoutManager;
+  // Only the bar's own strip: the dirty rect can be larger than the ruler (a snapshot of an ancestor).
+  const NSRect strip = NSIntersectionRect(rect, self.bounds);
+  [NSColor.controlBackgroundColor setFill];
+  NSRectFill(strip);
+  [NSColor.separatorColor setFill];
+  NSRectFill(NSMakeRect(NSMaxX(self.bounds) - 1, strip.origin.y, 1, strip.size.height));
+  if (textView == nil || layout == nil) {
+    return;
+  }
+  NSFont *font = [NSFont monospacedDigitSystemFontOfSize:11 weight:NSFontWeightRegular];
+  NSDictionary *attributes = @{NSFontAttributeName : font, NSForegroundColorAttributeName : NSColor.secondaryLabelColor};
+  NSString *text = textView.string;
+  const NSPoint origin = textView.textContainerOrigin;
+  const CGFloat visibleBottom = NSMaxY(textView.visibleRect);
+  NSTextRange *viewport = layout.textViewportLayoutController.viewportRange;
+  id<NSTextLocation> start = viewport != nil ? viewport.location : layout.documentRange.location;
+  const NSInteger startOffset = [layout offsetFromLocation:layout.documentRange.location toLocation:start];
+  __block NSUInteger line = 1 + [self newlinesBefore:(NSUInteger)std::max<NSInteger>(startOffset, 0) text:text];
+  __block CGFloat lastBottom = origin.y;
+  __block CGFloat lastTop = origin.y;
+  __block NSTextLineFragment *lastLine = nil;
+  __block BOOL reachedEnd = YES;
+  void (^drawNumber)(NSUInteger, CGFloat, CGFloat) = ^(NSUInteger number, CGFloat top, CGFloat height) {
+    NSString *label = [NSString stringWithFormat:@"%lu", (unsigned long)number];
+    const NSSize size = [label sizeWithAttributes:attributes];
+    const CGFloat y = [self convertPoint:NSMakePoint(0, top) fromView:textView].y;
+    if (y + height < rect.origin.y || y > NSMaxY(rect)) {
+      return;
+    }
+    [label drawAtPoint:NSMakePoint(NSMaxX(self.bounds) - 7 - size.width, y + (height - size.height) / 2)
+        withAttributes:attributes];
+  };
+  // The viewport controller has laid out what is visible; forcing layout from a draw would disturb it.
+  const NSTextLayoutFragmentEnumerationOptions options =
+      viewport != nil ? NSTextLayoutFragmentEnumerationOptionsNone : NSTextLayoutFragmentEnumerationOptionsEnsuresLayout;
+  [layout enumerateTextLayoutFragmentsFromLocation:start
+                                           options:options
+                                        usingBlock:^BOOL(NSTextLayoutFragment *fragment) {
+                                          const CGRect frame = fragment.layoutFragmentFrame;
+                                          const CGFloat top = frame.origin.y + origin.y;
+                                          if (top > visibleBottom) {
+                                            reachedEnd = NO;
+                                            return NO;
+                                          }
+                                          NSTextLineFragment *first = fragment.textLineFragments.firstObject;
+                                          const CGFloat height =
+                                              first != nil ? first.typographicBounds.size.height : frame.size.height;
+                                          drawNumber(line, top, height);
+                                          ++line;
+                                          lastBottom = top + frame.size.height;
+                                          lastTop = top;
+                                          lastLine = fragment.textLineFragments.lastObject;
+                                          return YES;
+                                        }];
+  // The empty last paragraph after a final newline is the empty last line fragment of the paragraph
+  // before it (or, in an empty text, the first line).
+  if (reachedEnd && line <= _totalLines) {
+    CGFloat top = lastBottom;
+    CGFloat height = font.pointSize + 4;
+    if (lastLine != nil && lastLine.characterRange.length == 0) {
+      top = lastTop + lastLine.typographicBounds.origin.y;
+      height = lastLine.typographicBounds.size.height;
+    }
+    if (top <= visibleBottom) {
+      drawNumber(line, top, height);
+    }
+  }
+}
+
+@end
+
 extern "C" {
 
 int32_t ps_ui_abi_version(void) { return PS_UI_ABI_VERSION; }
@@ -453,6 +629,23 @@ bool ps_ui_init(const char *appName) {
            at = s.snapshotTypeText.find("\\n", at + 1)) {
         s.snapshotTypeText.replace(at, 2, "\n");
       }
+    }
+    if (const char *prefs = std::getenv("PRIMESTRUCT_UI_PREFS"); prefs != nullptr) {
+      s.prefOverridesActive = true;
+      const std::string list = prefs;
+      for (size_t start = 0; start < list.size();) {
+        size_t comma = list.find(',', start);
+        comma = comma == std::string::npos ? list.size() : comma;
+        const std::string item = list.substr(start, comma - start);
+        const size_t equals = item.find('=');
+        if (equals != std::string::npos) {
+          s.prefOverrides[item.substr(0, equals)] = item.substr(equals + 1) == "1";
+        }
+        start = comma + 1;
+      }
+    }
+    if (!s.snapshotPath.empty()) {
+      s.prefOverridesActive = true;
     }
     [NSApplication sharedApplication];
     // Snapshot runs stay out of the user's way: no Dock icon, no activation.
@@ -837,6 +1030,22 @@ bool ps_ui_text_view_set_monospace(uint64_t view, bool monospace) {
   return true;
 }
 
+bool ps_ui_text_view_set_line_numbers(uint64_t view, bool visible) {
+  NSTextView *v = usable() ? textView(view) : nil;
+  if (v == nil) {
+    return false;
+  }
+  @autoreleasepool {
+    NSScrollView *scroll = state().scrollViews[view];
+    if (visible && ![scroll.verticalRulerView isKindOfClass:PSLineNumberRuler.class]) {
+      scroll.verticalRulerView = [[PSLineNumberRuler alloc] initForTextView:v scrollView:scroll];
+      scroll.hasVerticalRuler = YES;
+    }
+    scroll.rulersVisible = visible;
+  }
+  return true;
+}
+
 bool ps_ui_text_view_clear_styles(uint64_t view) {
   NSTextView *v = usable() ? textView(view) : nil;
   if (v == nil) {
@@ -1060,6 +1269,50 @@ bool ps_ui_menu_add_item(uint64_t menuHandle, const char *title, const char *sho
   NSEventModifierFlags mask = 0;
   parseShortcut(shortcut, &key, &mask);
   addMenuItem(menu, toNSString(title), @selector(menuCommand:), controller(), key, mask, commandId);
+  return true;
+}
+
+bool ps_ui_menu_set_checked(uint64_t menuHandle, int32_t commandId, bool checked) {
+  NSMenu *menu = usable() ? menuFor(menuHandle) : nil;
+  if (menu == nil) {
+    return false;
+  }
+  bool found = false;
+  for (NSMenuItem *item in menu.itemArray) {
+    if (item.action == @selector(menuCommand:) && item.tag == commandId) {
+      item.state = checked ? NSControlStateValueOn : NSControlStateValueOff;
+      found = true;
+    }
+  }
+  return found;
+}
+
+bool ps_ui_pref_get_bool(const char *key, bool fallback) {
+  if (!usable() || key == nullptr || *key == '\0') {
+    return fallback;
+  }
+  State &s = state();
+  if (const auto it = s.prefOverrides.find(key); it != s.prefOverrides.end()) {
+    return it->second;
+  }
+  if (s.prefOverridesActive) {
+    return fallback;
+  }
+  NSString *name = [@"ps.pref." stringByAppendingString:toNSString(key)];
+  NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
+  return [defaults objectForKey:name] != nil ? [defaults boolForKey:name] : fallback;
+}
+
+bool ps_ui_pref_set_bool(const char *key, bool value) {
+  if (!usable() || key == nullptr || *key == '\0') {
+    return false;
+  }
+  State &s = state();
+  if (s.prefOverridesActive) {
+    s.prefOverrides[key] = value;
+    return true;
+  }
+  [NSUserDefaults.standardUserDefaults setBool:value forKey:[@"ps.pref." stringByAppendingString:toNSString(key)]];
   return true;
 }
 

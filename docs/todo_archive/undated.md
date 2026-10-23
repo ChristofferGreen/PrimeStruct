@@ -98,3 +98,14 @@
   - acceptance:
     - no host function creates a dynamic string; the embed, VM, native JIT and optimizer string tests pass; full release gate green
   - stop_rule: the index and its heap only.
+
+- [x] TODO-5575: A line number bar in the editor
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-23
+  - phase: Native UI (docs/NativeUiPlan.md)
+  - parallel_track: native-ui-editor
+  - scope: PrimeScroll shows an optional bar of line numbers to the left of the text. The C ABI gains `ps_ui_text_view_set_line_numbers(view, bool)`, `ps_ui_menu_set_checked(menu, commandId, bool)` and the boolean preferences `ps_ui_pref_get_bool(key, fallback)` / `ps_ui_pref_set_bool(key, value)` (`TextView.setLineNumbers`, `Menu.setChecked`, `App.boolPref` / `setBoolPref` in `/std/ui/native`, bound in the engine bindings, now 51 functions). AppKit draws the bar with an `NSRulerView` (`PSLineNumberRuler`) over the TextKit 2 layout fragments of the visible part, numbering paragraphs, sized to the digit count; preferences live in `NSUserDefaults` (`ps.pref.<key>`) unless `PRIMESTRUCT_UI_PREFS` or snapshot mode answers them from the environment. The headless backend records the same calls, check marks (`[checked]` in `menuBarItems`) and preferences (`headless::lineNumbersVisible`, `menuItemChecked`, `setBoolPref`, `boolPref`, `pref:key=1` in scenarios). The editor gets View > Show Line Numbers (command 7, Cmd+Shift+L, check-marked) which toggles every tab, and an application menu item *Start with Line Numbers* (command 8, check-marked) that stores the launch preference; new tabs follow the current setting and the bar is off until chosen.
+  - acceptance:
+    - headless ABI tests for the four calls; editor tests for the toggle in every tab, the launch preference preset, the remembered start-up choice and a new tab inheriting the setting (each also runs on the compiled editor through the mirror); the AppKit smoke and compiled-app snapshots include the bar (`editor_gutter.png`) and show numbers aligned with the text lines; full release gate green
+  - stop_rule: the bar, the menu items and the preference; a settings window waits for more widgets in the ABI.

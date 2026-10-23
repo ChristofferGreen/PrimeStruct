@@ -61,6 +61,14 @@ struct WindowState {
 };
 WindowState windowState(uint64_t window);
 bool isMonospace(uint64_t textView);
+// True when the line number bar of the text view is shown.
+bool lineNumbersVisible(uint64_t textView);
+// True when some menu item added with `commandId` carries a check mark.
+bool menuItemChecked(int32_t commandId);
+// The boolean preferences: the program reads and writes them through ps_ui_pref_*; a test sets a
+// starting value before the run (recorded in pushedScenario as `pref:key=0|1`) and reads it back.
+void setBoolPref(const std::string &key, bool value);
+bool boolPref(const std::string &key, bool fallback);
 // One styled byte range of a text view, in call order (see ps_ui_text_view_add_style).
 struct StyleRun {
   int32_t start = 0;

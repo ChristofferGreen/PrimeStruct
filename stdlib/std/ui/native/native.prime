@@ -79,6 +79,10 @@ ps_ui_text_view_set_monospace([u64] view, [bool] monospace) {
 }
 
 [host return<bool>]
+ps_ui_text_view_set_line_numbers([u64] view, [bool] visible) {
+}
+
+[host return<bool>]
 ps_ui_text_view_is_modified([u64] view) {
 }
 
@@ -168,6 +172,18 @@ ps_ui_menu_add_item([u64] menu, [string] title, [string] shortcut, [i32] command
 
 [host return<bool>]
 ps_ui_menu_add_separator([u64] menu) {
+}
+
+[host return<bool>]
+ps_ui_menu_set_checked([u64] menu, [i32] commandId, [bool] checked) {
+}
+
+[host return<bool>]
+ps_ui_pref_get_bool([string] key, [bool] fallback) {
+}
+
+[host return<bool>]
+ps_ui_pref_set_bool([string] key, [bool] value) {
 }
 
 [host return<bool>]
@@ -327,6 +343,12 @@ TextView() {
     return(ps_ui_text_view_highlight(this.handle, path))
   }
 
+  // Shows or hides a bar of line numbers (one per paragraph) to the left of the text.
+  [public return<bool>]
+  setLineNumbers([bool] visible) {
+    return(ps_ui_text_view_set_line_numbers(this.handle, visible))
+  }
+
   [public return<bool>]
   isModified() {
     return(ps_ui_text_view_is_modified(this.handle))
@@ -345,6 +367,12 @@ Menu() {
   [public return<bool>]
   item([string] title, [string] shortcut, [i32] commandId) {
     return(ps_ui_menu_add_item(this.handle, title, shortcut, commandId))
+  }
+
+  // Puts or removes a check mark on the items added with `commandId`.
+  [public return<bool>]
+  setChecked([i32] commandId, [bool] checked) {
+    return(ps_ui_menu_set_checked(this.handle, commandId, checked))
   }
 
   [public return<bool>]
@@ -571,6 +599,17 @@ App() {
   [public return</std/text/String>]
   savePanel([string] title, [string] suggestedName) {
     return(ps_ui_save_panel(title, suggestedName))
+  }
+
+  // A boolean the app keeps between runs: the stored value, or `fallback` when none was stored.
+  [public return<bool>]
+  boolPref([string] key, [bool] fallback) {
+    return(ps_ui_pref_get_bool(key, fallback))
+  }
+
+  [public return<bool>]
+  setBoolPref([string] key, [bool] value) {
+    return(ps_ui_pref_set_bool(key, value))
   }
 
   // True when the last openPanel/savePanel returned a path, false when cancelled.

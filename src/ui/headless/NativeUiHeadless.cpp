@@ -22,6 +22,7 @@ struct MenuEntry {
   std::string title;
   std::string shortcut;
   int32_t id = 0;
+  bool checked = false;
 };
 
 struct Menu {
@@ -33,6 +34,7 @@ struct Menu {
 struct TextView {
   std::string text;
   bool monospace = false;
+  bool lineNumbers = false;
   bool modified = false;
   uint64_t window = 0;
   std::vector<StyleRun> styles;
@@ -67,6 +69,7 @@ struct State {
   std::deque<std::string> openAnswers;
   std::deque<std::string> saveAnswers;
   std::deque<int32_t> alertAnswers;
+  std::map<std::string, bool> prefs;
   std::string scenario; // every push, in the text form of tests/fixtures/host_calls/scenario.h
   int32_t eventKind = PS_UI_EVENT_NONE;
   uint64_t eventWindow = 0;
@@ -351,6 +354,32 @@ bool isMonospace(uint64_t view) {
   return v != nullptr && v->monospace;
 }
 
+bool lineNumbersVisible(uint64_t view) {
+  const TextView *v = textView(view);
+  return v != nullptr && v->lineNumbers;
+}
+
+bool menuItemChecked(int32_t commandId) {
+  for (const auto &entry : state().menus) {
+    for (const MenuEntry &item : entry.second.entries) {
+      if (item.kind == MenuEntry::Kind::Item && item.id == commandId && item.checked) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+void setBoolPref(const std::string &key, bool value) {
+  recordScenario("pref:" + encodeScenarioText(key) + "=" + (value ? "1" : "0"));
+  state().prefs[key] = value;
+}
+
+bool boolPref(const std::string &key, bool fallback) {
+  const auto it = state().prefs.find(key);
+  return it != state().prefs.end() ? it->second : fallback;
+}
+
 std::vector<StyleRun> styleRuns(uint64_t view) {
   const TextView *v = textView(view);
   return v != nullptr ? v->styles : std::vector<StyleRun>{};
@@ -392,7 +421,7 @@ std::vector<std::string> menuBarItems() {
       switch (entry.kind) {
       case MenuEntry::Kind::Item:
         items.push_back(m->title + ">" + entry.title + (entry.shortcut.empty() ? "" : " (" + entry.shortcut + ")") +
-                        " #" + std::to_string(entry.id));
+                        " #" + std::to_string(entry.id) + (entry.checked ? " [checked]" : ""));
         break;
       case MenuEntry::Kind::Separator:
         items.push_back(m->title + ">-");
@@ -728,6 +757,15 @@ bool ps_ui_text_view_set_monospace(uint64_t view, bool monospace) {
   return loggedFlag(call, v != nullptr);
 }
 
+bool ps_ui_text_view_set_line_numbers(uint64_t view, bool visible) {
+  const std::string call = "ps_ui_text_view_set_line_numbers(" + std::to_string(view) + ", " + flag(visible) + ")";
+  TextView *v = usable() ? textView(view) : nullptr;
+  if (v != nullptr) {
+    v->lineNumbers = visible;
+  }
+  return loggedFlag(call, v != nullptr);
+}
+
 bool ps_ui_text_view_is_modified(uint64_t view) {
   const TextView *v = usable() ? textView(view) : nullptr;
   return loggedFlag("ps_ui_text_view_is_modified(" + std::to_string(view) + ")", v != nullptr && v->modified);
@@ -764,6 +802,39 @@ bool ps_ui_menu_add_item(uint64_t menuHandle, const char *title, const char *sho
     m->entries.push_back(std::move(entry));
   }
   return loggedFlag(call, m != nullptr);
+}
+
+bool ps_ui_menu_set_checked(uint64_t menuHandle, int32_t commandId, bool checked) {
+  const std::string call = "ps_ui_menu_set_checked(" + std::to_string(menuHandle) + ", " + std::to_string(commandId) +
+                           ", " + flag(checked) + ")";
+  Menu *m = usable() ? menu(menuHandle) : nullptr;
+  bool found = false;
+  if (m != nullptr) {
+    for (MenuEntry &entry : m->entries) {
+      if (entry.kind == MenuEntry::Kind::Item && entry.id == commandId) {
+        entry.checked = checked;
+        found = true;
+      }
+    }
+  }
+  return loggedFlag(call, found);
+}
+
+bool ps_ui_pref_get_bool(const char *key, bool fallback) {
+  const std::string call = "ps_ui_pref_get_bool(" + quote(key) + ", " + flag(fallback) + ")";
+  if (!usable() || key == nullptr || *key == '\0') {
+    return loggedFlag(call, fallback);
+  }
+  return loggedFlag(call, boolPref(key, fallback));
+}
+
+bool ps_ui_pref_set_bool(const char *key, bool value) {
+  const std::string call = "ps_ui_pref_set_bool(" + quote(key) + ", " + flag(value) + ")";
+  const bool ok = usable() && key != nullptr && *key != '\0';
+  if (ok) {
+    state().prefs[key] = value;
+  }
+  return loggedFlag(call, ok);
 }
 
 bool ps_ui_menu_add_separator(uint64_t menuHandle) {
