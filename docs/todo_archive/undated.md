@@ -197,3 +197,14 @@
   - acceptance:
     - tests/fixtures/host_calls/libsystem_host.prime (`labs`, `strlen`, `toupper`, `atoi`, `strerror`, `ldexp`, `sqrtf`) exits with the VM's result through `--emit=native`; a program with host functions no library has still compiles natively; full release gate green
   - stop_rule: host-call lowering on arm64 native; the UI library is TODO-5584.
+
+- [x] TODO-5584: Native PrimeScroll links the AppKit backend as a dylib
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-23
+  - phase: Native PrimeScroll (docs/NativeUiPlan.md)
+  - parallel_track: native-backend-imports
+  - scope: The AppKit backend builds as `libps_ui_appkit.dylib` (target `primec_ui_appkit_dylib`, 65 `ps_ui_*` exports), and `primec --emit=native ... --link-arg <path>.dylib` makes the image load it: `MachOData::dylibs` adds an `LC_LOAD_DYLIB` per library and the imports bind by flat lookup (libSystem first). The image also declares the SDK it was built with (`LC_BUILD_VERSION`, taken from `Availability.h`, minos 11.0) and a hash-derived `LC_UUID`, which dyld requires with it; without a build version AppKit drew the legacy look. `scripts/build_native_app.sh --direct` copies the dylib next to the output and loads it through `@executable_path`, with no C++ compiler.
+  - acceptance:
+    - `PrimeStruct_native_ui_compiled_app` builds hello_window with `--direct`, runs it in snapshot mode and checks the picture has the size of the C++ build's; full release gate green
+  - stop_rule: bundling and linking; the editor's language gaps are TODO-5587 and TODO-5585.

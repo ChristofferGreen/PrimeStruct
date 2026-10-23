@@ -61,6 +61,9 @@ struct NativeEmitterOptions {
   // (src/native_emitter/NativeEmitterRegAlloc.h), instead of promoting locals and deferring
   // operands. The PRIMESTRUCT_NATIVE_REGALLOC environment variable forces it on (1) or off (0).
   bool registerAllocation = false;
+  // arm64 macOS only: libraries the executable loads (LC_LOAD_DYLIB install paths, for example
+  // "@executable_path/libps_ui_appkit.dylib") and takes the program's host functions from, besides libSystem.
+  std::vector<std::string> dylibs;
 };
 
 // Code to run inside this process (Linux x86_64; include/primec/backend/NativeJit.h runs it):

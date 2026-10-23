@@ -88,7 +88,7 @@ bool buildMachOImportProbe(const std::string &symbol, std::vector<uint8_t> &imag
       0xD65F03C0u, // ret
   };
 
-  const uint32_t codeOffset = native_emitter::computeMachOCodeOffset(true);
+  const uint32_t codeOffset = native_emitter::computeMachOCodeOffset(&data);
   const uint64_t dataVmAddr = native_emitter::machODataVmAddr(codeOffset, words.size() * 4);
   const auto adrpWord = [&](size_t index, uint64_t target, uint32_t base) {
     const uint64_t pc = native_emitter::TextVmAddr + codeOffset + index * 4;

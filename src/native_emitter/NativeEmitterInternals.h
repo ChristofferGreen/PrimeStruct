@@ -552,9 +552,14 @@ bool writeBinaryFile(const std::string &path, const std::vector<uint8_t> &data, 
 // Writable data of a Mach-O image (the `__DATA` segment): one 8-byte pointer slot per imported function,
 // which dyld binds from libSystem at load, followed by `stateBytes` of zeroed runtime state. Slot `i`
 // is at the segment's address + 8 * i and the state at + 8 * imports.size().
+//
+// `dylibs` are further libraries the image loads (LC_LOAD_DYLIB paths, such as
+// "@executable_path/libps_ui_appkit.dylib"). With any, the imports bind by flat lookup, so each symbol is
+// taken from whichever loaded library has it (libSystem first).
 struct MachOData {
   std::vector<std::string> imports; // C symbol names, without the leading underscore
   uint64_t stateBytes = 0;
+  std::vector<std::string> dylibs;
 };
 
 bool buildMachO(const std::vector<uint8_t> &code,
@@ -563,7 +568,7 @@ bool buildMachO(const std::vector<uint8_t> &code,
                 const MachOData *data = nullptr);
 
 #if defined(__APPLE__)
-uint32_t computeMachOCodeOffset(bool withData = false);
+uint32_t computeMachOCodeOffset(const MachOData *data = nullptr);
 // The VM address of the data segment of an image whose code starts at `codeOffset` and is `codeSize`
 // bytes long (code first, then the segment on the next page).
 uint64_t machODataVmAddr(uint32_t codeOffset, uint64_t codeSize);

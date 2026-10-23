@@ -7,6 +7,7 @@
 #include <vector>
 
 #if defined(__APPLE__)
+#include <Availability.h>
 #include <mach/machine.h>
 #include <mach-o/loader.h>
 #endif
@@ -257,11 +258,49 @@ bool buildCodeSignature(const std::vector<uint8_t> &image,
 
 } // namespace
 
+namespace {
+
+// The macOS the image says it was built for (LC_BUILD_VERSION). AppKit picks its look from the SDK a
+// program was linked against, and an image with no build version gets the oldest one, so the image
+// declares the SDK this build of primec was compiled with, like a program the C++ compiler links.
+constexpr uint32_t machOVersion(uint32_t major, uint32_t minor, uint32_t patch) {
+  return (major << 16) | (minor << 8) | patch;
+}
+#if defined(__MAC_OS_X_VERSION_MAX_ALLOWED)
+constexpr uint32_t BuildSdkVersion = machOVersion(__MAC_OS_X_VERSION_MAX_ALLOWED / 10000,
+                                                 (__MAC_OS_X_VERSION_MAX_ALLOWED / 100) % 100,
+                                                 __MAC_OS_X_VERSION_MAX_ALLOWED % 100);
+#else
+constexpr uint32_t BuildSdkVersion = machOVersion(11, 0, 0);
+#endif
+constexpr uint32_t MinimumMacOsVersion = machOVersion(11, 0, 0); // the first macOS that runs arm64
+
+bool machOHasData(const MachOData *data) {
+  return data != nullptr && data->imports.size() * 8 + data->stateBytes != 0;
+}
+
+uint32_t dylibCommandSize(const std::string &path) {
+  return static_cast<uint32_t>(alignTo(sizeof(dylib_command) + path.size() + 1, 8));
+}
+
+uint32_t extraDylibCommandBytes(const MachOData *data) {
+  uint32_t bytes = 0;
+  if (data != nullptr) {
+    for (const std::string &path : data->dylibs) {
+      bytes += dylibCommandSize(path);
+    }
+  }
+  return bytes;
+}
+
+} // namespace
+
 uint64_t machODataVmAddr(uint32_t codeOffset, uint64_t codeSize) {
   return TextVmAddr + alignTo(static_cast<uint64_t>(codeOffset) + codeSize, PageSize);
 }
 
-uint32_t computeMachOCodeOffset(bool withData) {
+uint32_t computeMachOCodeOffset(const MachOData *data) {
+  const bool withData = machOHasData(data);
   const std::string dyldPath = "/usr/lib/dyld";
   const std::string libSystemPath = "/usr/lib/libSystem.B.dylib";
 
@@ -284,7 +323,7 @@ uint32_t computeMachOCodeOffset(bool withData) {
   const uint32_t sizeofcmds =
       pageZeroCmdSize + textCmdSize + dataCmdSize + linkeditCmdSize + dylinkerCmdSize + dylibCmdSize +
       dyldInfoCmdSize + symtabCmdSize + dysymtabCmdSize + funcStartsCmdSize + dataInCodeCmdSize + entryCmdSize +
-      codeSigCmdSize;
+      codeSigCmdSize + sizeof(build_version_command) + sizeof(uuid_command) + extraDylibCommandBytes(data);
 
   return static_cast<uint32_t>(alignTo(headerSize + sizeofcmds, 16));
 }
@@ -304,9 +343,13 @@ void appendUleb128(std::vector<uint8_t> &out, uint64_t value) {
 
 // The dyld bind opcodes that fill the pointer slots at the start of segment `segmentIndex` with the
 // libSystem functions named by `imports`.
-std::vector<uint8_t> buildBindInfo(const std::vector<std::string> &imports, uint8_t segmentIndex) {
+std::vector<uint8_t> buildBindInfo(const std::vector<std::string> &imports, uint8_t segmentIndex, bool flatLookup) {
   std::vector<uint8_t> bind;
-  bind.push_back(static_cast<uint8_t>(BIND_OPCODE_SET_DYLIB_ORDINAL_IMM | 1)); // libSystem: the first dylib
+  if (flatLookup) {
+    bind.push_back(static_cast<uint8_t>(BIND_OPCODE_SET_DYLIB_SPECIAL_IMM | (BIND_SPECIAL_DYLIB_FLAT_LOOKUP & 0xF)));
+  } else {
+    bind.push_back(static_cast<uint8_t>(BIND_OPCODE_SET_DYLIB_ORDINAL_IMM | 1)); // libSystem: the first dylib
+  }
   for (size_t i = 0; i < imports.size(); ++i) {
     bind.push_back(static_cast<uint8_t>(BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM | 0));
     bind.push_back('_');
@@ -336,8 +379,11 @@ bool buildMachO(const std::vector<uint8_t> &code,
   }
   const uint64_t dataUsedBytes = data == nullptr ? 0 : data->imports.size() * 8 + data->stateBytes;
   const bool withData = dataUsedBytes != 0;
+  const std::vector<std::string> noDylibs;
+  const std::vector<std::string> &extraDylibs = data == nullptr ? noDylibs : data->dylibs;
   const std::vector<uint8_t> bindInfo =
-      withData && !data->imports.empty() ? buildBindInfo(data->imports, 2) : std::vector<uint8_t>();
+      withData && !data->imports.empty() ? buildBindInfo(data->imports, 2, !extraDylibs.empty())
+                                         : std::vector<uint8_t>();
 
   constexpr uint8_t pageSizeLog2 = 14;
   constexpr uint32_t hashSize = 32;
@@ -363,9 +409,9 @@ bool buildMachO(const std::vector<uint8_t> &code,
   const uint32_t sizeofcmds =
       pageZeroCmdSize + textCmdSize + dataCmdSize + linkeditCmdSize + dylinkerCmdSize + dylibCmdSize +
       dyldInfoCmdSize + symtabCmdSize + dysymtabCmdSize + funcStartsCmdSize + dataInCodeCmdSize + entryCmdSize +
-      codeSigCmdSize;
+      codeSigCmdSize + sizeof(build_version_command) + sizeof(uuid_command) + extraDylibCommandBytes(data);
 
-  const uint32_t codeOffset = computeMachOCodeOffset(withData);
+  const uint32_t codeOffset = computeMachOCodeOffset(data);
   const uint64_t codeSize = code.size();
   const uint64_t textFileSize = codeOffset + codeSize;
   const uint64_t textVmSize = alignTo(textFileSize, PageSize);
@@ -399,7 +445,7 @@ bool buildMachO(const std::vector<uint8_t> &code,
   header.cputype = CPU_TYPE_ARM64;
   header.cpusubtype = CPU_SUBTYPE_ARM64_ALL;
   header.filetype = MH_EXECUTE;
-  header.ncmds = withData ? 13 : 12;
+  header.ncmds = (withData ? 15 : 14) + static_cast<uint32_t>(extraDylibs.size());
   header.sizeofcmds = sizeofcmds;
   header.flags = MH_NOUNDEFS | MH_DYLDLINK | MH_TWOLEVEL | MH_PIE;
 
@@ -548,6 +594,20 @@ bool buildMachO(const std::vector<uint8_t> &code,
               libSystemPath.size() + 1);
   std::memcpy(image.data() + offset, dylibBlob.data(), dylibBlob.size());
   offset += dylibBlob.size();
+  for (const std::string &path : extraDylibs) {
+    dylib_command extraCmd{};
+    extraCmd.cmd = LC_LOAD_DYLIB;
+    extraCmd.cmdsize = dylibCommandSize(path);
+    extraCmd.dylib.name.offset = sizeof(dylib_command);
+    extraCmd.dylib.timestamp = 2;
+    extraCmd.dylib.current_version = 0x00010000;
+    extraCmd.dylib.compatibility_version = 0x00010000;
+    std::vector<uint8_t> extraBlob(extraCmd.cmdsize, 0);
+    std::memcpy(extraBlob.data(), &extraCmd, sizeof(extraCmd));
+    std::memcpy(extraBlob.data() + extraCmd.dylib.name.offset, path.c_str(), path.size() + 1);
+    std::memcpy(image.data() + offset, extraBlob.data(), extraBlob.size());
+    offset += extraBlob.size();
+  }
   std::memcpy(image.data() + offset, &dyldInfo, sizeof(dyldInfo));
   offset += sizeof(dyldInfo);
   std::memcpy(image.data() + offset, &symtab, sizeof(symtab));
@@ -565,6 +625,28 @@ bool buildMachO(const std::vector<uint8_t> &code,
   entryCmd.stacksize = 0;
   std::memcpy(image.data() + offset, &entryCmd, sizeof(entryCmd));
   offset += sizeof(entryCmd);
+  build_version_command buildVersion{};
+  buildVersion.cmd = LC_BUILD_VERSION;
+  buildVersion.cmdsize = sizeof(build_version_command);
+  buildVersion.platform = PLATFORM_MACOS;
+  buildVersion.minos = MinimumMacOsVersion;
+  buildVersion.sdk = BuildSdkVersion;
+  buildVersion.ntools = 0;
+  std::memcpy(image.data() + offset, &buildVersion, sizeof(buildVersion));
+  offset += sizeof(buildVersion);
+  // dyld wants a UUID once there is a build version: the first bytes of a hash of the code, so the same
+  // program always gets the same image.
+  uuid_command uuid{};
+  uuid.cmd = LC_UUID;
+  uuid.cmdsize = sizeof(uuid_command);
+  {
+    Sha256 sha;
+    sha.update(code.data(), code.size());
+    const std::array<uint8_t, 32> digest = sha.finalize();
+    std::memcpy(uuid.uuid, digest.data(), sizeof(uuid.uuid));
+  }
+  std::memcpy(image.data() + offset, &uuid, sizeof(uuid));
+  offset += sizeof(uuid);
   std::memcpy(image.data() + offset, &codeSig, sizeof(codeSig));
 
   std::memcpy(image.data() + codeOffset, code.data(), code.size());

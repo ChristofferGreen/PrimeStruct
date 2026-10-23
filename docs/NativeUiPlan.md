@@ -263,6 +263,15 @@ editor's scenarios on the VM and as compiled programs with identical call logs, 
 also runs on the compiled editor linked with the headless backend (`tests/unit/ui/CompiledEditorMirror.h`), and the
 call log, exit code and files must equal the VM run's.
 
+**Direct native build (primec's own backend, macOS/arm64).** `primec --emit=native app.prime -o out --link-arg
+path/libps_ui_appkit.dylib` writes the Mach-O itself, with no C++ compiler and no linker: the AppKit backend is built as
+`libps_ui_appkit.dylib` (target `primec_ui_appkit_dylib`), the image loads it (`LC_LOAD_DYLIB`), binds the program's
+`[host]` functions to it by flat lookup at launch, and declares the SDK it was built with (`LC_BUILD_VERSION`,
+`LC_UUID`) so AppKit draws the current look. `scripts/build_native_app.sh --direct` copies the dylib next to the output
+and loads it through `@executable_path`; `PrimeStruct_native_ui_compiled_app` builds hello_window this way and checks
+that it draws a window of the same size as the C++ build. The editor is next: its native compile stops at the string
+heap's entry arguments (TODO-5587), then TODO-5585 runs its scenarios on the native build.
+
 ## 11. TODO slices
 
 | TODO | Slice | Verifiable here |

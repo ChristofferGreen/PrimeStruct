@@ -211,6 +211,12 @@ public:
     emitterOptions.promoteLocals = options.optimizationLevel >= 1;
     emitterOptions.deferOperands = options.optimizationLevel >= 1;
     emitterOptions.registerAllocation = options.optimizationLevel >= 2;
+    // --link-arg names the libraries the host functions come from: for the native backend, the .dylib ones.
+    for (const std::string &arg : options.linkArgs) {
+      if (arg.size() > 6 && arg.compare(arg.size() - 6, 6, ".dylib") == 0) {
+        emitterOptions.dylibs.push_back(arg);
+      }
+    }
     NativeEmitterInstrumentation instrumentation;
     const bool emitted =
         nativeEmitter.emitExecutable(module,

@@ -330,8 +330,11 @@ bool buildNativeImage(const IrModule &module,
   }
 
 #if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
-  // The data segment of imported functions adds a segment command, which moves the code.
-  uint32_t codeBaseOffset = computeMachOCodeOffset(!hostImports.symbols.empty());
+  // The data segment of imported functions and the libraries to load add load commands, which move the code.
+  MachOData machOData;
+  machOData.imports = hostImports.symbols;
+  machOData.dylibs = options.dylibs;
+  uint32_t codeBaseOffset = computeMachOCodeOffset(&machOData);
   emitter.setCodeBaseOffset(codeBaseOffset);
 #endif
   // X64 doesn't need codeBaseOffset: RIP-relative deltas (see patchAdr)
@@ -448,12 +451,10 @@ bool buildNativeImage(const IrModule &module,
 #endif
   std::vector<uint8_t> image;
 #if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
-  MachOData machOData;
-  machOData.imports = hostImports.symbols;
   if (!hostImports.fixups.empty()) {
     // The pointer slots sit at the start of the data segment, which follows the code (all of it, string
     // table included, so the address is known only now). Point each slot load at its slot.
-    const uint32_t codeOffset = computeMachOCodeOffset(true);
+    const uint32_t codeOffset = computeMachOCodeOffset(&machOData);
     const uint64_t dataVmAddr = machODataVmAddr(codeOffset, code.size());
     constexpr int64_t AdrpMin = -(1LL << 20);
     constexpr int64_t AdrpMax = (1LL << 20) - 1;
@@ -486,7 +487,7 @@ bool buildNativeImage(const IrModule &module,
                 (ldr & ~(0xFFFu << 10)) | (static_cast<uint32_t>((slotAddr & 0xFFFull) / 8) << 10));
     }
   }
-  if (!buildMachO(code, image, error, machOData.imports.empty() ? nullptr : &machOData)) {
+  if (!buildMachO(code, image, error, &machOData)) {
     return false;
   }
 #else

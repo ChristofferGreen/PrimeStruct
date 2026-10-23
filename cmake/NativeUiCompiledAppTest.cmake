@@ -1,6 +1,8 @@
 # CTest driver for compiled native UI programs on the AppKit backend (TODO-5559): builds the
 # examples as native executables with scripts/build_native_app.sh (no VM, no bytecode) and runs
-# them in snapshot mode, checking that PNGs of the laid-out windows were written.
+# them in snapshot mode, checking that PNGs of the laid-out windows were written. The hello example
+# is also built with --direct, by primec's own native backend and the AppKit dylib, and must draw the
+# same picture.
 #
 #   cmake -DSOURCE_DIR=<repo> -DBUILD_DIR=<build> -DWORK_DIR=<scratch> -P NativeUiCompiledAppTest.cmake
 foreach(var SOURCE_DIR BUILD_DIR WORK_DIR)
@@ -41,6 +43,29 @@ if(NOT rc EQUAL 0)
   message(FATAL_ERROR "compiled hello exited with '${rc}': ${out}${err}")
 endif()
 check_png("${WORK_DIR}/hello.png" 2000)
+
+# Built by primec's native backend (no C++ compiler), loading the AppKit backend as a dylib.
+execute_process(
+  COMMAND bash "${SOURCE_DIR}/scripts/build_native_app.sh" "${SOURCE_DIR}/examples/native_ui/hello_window.prime"
+          "${WORK_DIR}/direct/HelloDirect" --backend appkit --direct --build-dir "${BUILD_DIR}"
+  RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err)
+if(NOT rc EQUAL 0)
+  message(FATAL_ERROR "direct native build of hello failed (${rc}): ${out}${err}")
+endif()
+set(ENV{PRIMESTRUCT_UI_SNAPSHOT} "${WORK_DIR}/hello_direct.png")
+execute_process(COMMAND "${WORK_DIR}/direct/HelloDirect" RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err TIMEOUT 60)
+if(NOT rc EQUAL 0)
+  message(FATAL_ERROR "direct native hello exited with '${rc}': ${out}${err}")
+endif()
+check_png("${WORK_DIR}/hello_direct.png" 2000)
+# The window has the same size and look as the one the C++ build draws (the PNG header holds the pixel size;
+# the pictures themselves are not byte-identical from run to run).
+file(READ "${WORK_DIR}/hello.png" helloHeader LIMIT 24 HEX)
+file(READ "${WORK_DIR}/hello_direct.png" helloDirectHeader LIMIT 24 HEX)
+if(NOT helloHeader STREQUAL helloDirectHeader)
+  message(FATAL_ERROR "the direct native hello drew a window of another size than the C++ build "
+                      "(${helloDirectHeader} against ${helloHeader})")
+endif()
 
 build_app("${SOURCE_DIR}/examples/apps/text_editor/main.prime" EditorNative)
 set(ENV{PRIMESTRUCT_UI_OPEN} "${SOURCE_DIR}/tests/fixtures/ui/screenshot/showcase.prime")
