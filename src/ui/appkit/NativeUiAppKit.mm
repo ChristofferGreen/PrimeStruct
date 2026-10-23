@@ -79,6 +79,8 @@ struct State {
   // PRIMESTRUCT_UI_PREFS=key=1,other=0 (and every snapshot run) answers preferences from this map
   // and never reads or writes the user's defaults.
   bool prefOverridesActive = false;
+  std::unordered_map<std::string, int32_t> intOverrides;
+  std::unordered_map<std::string, std::vector<std::string>> listOverrides;
   std::vector<std::string> recentOverride; // the recent files while the overrides are active
   std::unordered_map<std::string, bool> prefOverrides;
   std::deque<PendingEvent> pending;
@@ -656,6 +658,7 @@ bool ps_ui_init(const char *appName) {
         const size_t equals = item.find('=');
         if (equals != std::string::npos) {
           s.prefOverrides[item.substr(0, equals)] = item.substr(equals + 1) == "1";
+          s.intOverrides[item.substr(0, equals)] = std::atoi(item.substr(equals + 1).c_str());
         }
         start = comma + 1;
       }
@@ -1338,6 +1341,108 @@ bool ps_ui_menu_set_checked(uint64_t menuHandle, int32_t commandId, bool checked
     }
   }
   return found;
+}
+
+bool ps_ui_window_set_autosave_name(uint64_t window, const char *name) {
+  NSWindow *w = usable() ? liveWindow(window) : nil;
+  if (w == nil || name == nullptr || *name == '\0') {
+    return false;
+  }
+  if (state().prefOverridesActive) {
+    return true; // test and snapshot runs neither read nor write the user's saved frames
+  }
+  return [w setFrameAutosaveName:toNSString(name)];
+}
+
+int32_t ps_ui_pref_get_int(const char *key, int32_t fallback) {
+  if (!usable() || key == nullptr || *key == '\0') {
+    return fallback;
+  }
+  State &s = state();
+  if (const auto it = s.intOverrides.find(key); it != s.intOverrides.end()) {
+    return it->second;
+  }
+  if (s.prefOverridesActive) {
+    return fallback;
+  }
+  NSString *name = [@"ps.pref." stringByAppendingString:toNSString(key)];
+  NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
+  return [defaults objectForKey:name] != nil ? static_cast<int32_t>([defaults integerForKey:name]) : fallback;
+}
+
+bool ps_ui_pref_set_int(const char *key, int32_t value) {
+  if (!usable() || key == nullptr || *key == '\0') {
+    return false;
+  }
+  State &s = state();
+  if (s.prefOverridesActive) {
+    s.intOverrides[key] = value;
+    return true;
+  }
+  [NSUserDefaults.standardUserDefaults setInteger:value forKey:[@"ps.pref." stringByAppendingString:toNSString(key)]];
+  return true;
+}
+
+static NSString *listName(const char *key) { return [@"ps.list." stringByAppendingString:toNSString(key)]; }
+
+bool ps_ui_pref_list_clear(const char *key) {
+  if (!usable() || key == nullptr || *key == '\0') {
+    return false;
+  }
+  State &s = state();
+  if (s.prefOverridesActive) {
+    s.listOverrides[key].clear();
+  } else {
+    [NSUserDefaults.standardUserDefaults setObject:@[] forKey:listName(key)];
+  }
+  return true;
+}
+
+bool ps_ui_pref_list_add(const char *key, const char *text) {
+  if (!usable() || key == nullptr || *key == '\0' || text == nullptr) {
+    return false;
+  }
+  State &s = state();
+  if (s.prefOverridesActive) {
+    s.listOverrides[key].push_back(text);
+  } else {
+    NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
+    NSMutableArray *items = [([defaults arrayForKey:listName(key)] ?: @[]) mutableCopy];
+    [items addObject:toNSString(text)];
+    [defaults setObject:items forKey:listName(key)];
+  }
+  return true;
+}
+
+int32_t ps_ui_pref_list_count(const char *key) {
+  if (!usable() || key == nullptr || *key == '\0') {
+    return 0;
+  }
+  State &s = state();
+  if (s.prefOverridesActive) {
+    const auto it = s.listOverrides.find(key);
+    return it != s.listOverrides.end() ? static_cast<int32_t>(it->second.size()) : 0;
+  }
+  return static_cast<int32_t>([NSUserDefaults.standardUserDefaults arrayForKey:listName(key)].count);
+}
+
+const char *ps_ui_pref_list_get(const char *key, int32_t index) {
+  State &s = state();
+  s.returnedText.clear();
+  if (usable() && key != nullptr && *key != '\0' && index >= 0) {
+    if (s.prefOverridesActive) {
+      const auto it = s.listOverrides.find(key);
+      if (it != s.listOverrides.end() && static_cast<size_t>(index) < it->second.size()) {
+        s.returnedText = it->second[static_cast<size_t>(index)];
+      }
+    } else {
+      NSArray *items = [NSUserDefaults.standardUserDefaults arrayForKey:listName(key)];
+      if (static_cast<NSUInteger>(index) < items.count && [items[static_cast<NSUInteger>(index)] isKindOfClass:NSString.class]) {
+        s.returnedText = [items[static_cast<NSUInteger>(index)] UTF8String];
+      }
+    }
+  }
+  return s.returnedText.c_str();
 }
 
 bool ps_ui_menu_add_submenu(uint64_t menuHandle, const char *title, uint64_t submenuHandle) {

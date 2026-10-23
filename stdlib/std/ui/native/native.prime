@@ -47,6 +47,10 @@ ps_ui_window_set_title([u64] window, [/std/text/String] title) {
 }
 
 [host return<bool>]
+ps_ui_window_set_autosave_name([u64] window, [string] name) {
+}
+
+[host return<bool>]
 ps_ui_window_set_content([u64] window, [u64] widget) {
 }
 
@@ -206,6 +210,30 @@ ps_ui_recent_path([i32] index) {
 ps_ui_recent_clear() {
 }
 
+[host return<i32>]
+ps_ui_pref_get_int([string] key, [i32] fallback) {
+}
+
+[host return<bool>]
+ps_ui_pref_set_int([string] key, [i32] value) {
+}
+
+[host return<bool>]
+ps_ui_pref_list_clear([string] key) {
+}
+
+[host return<bool>]
+ps_ui_pref_list_add([string] key, [/std/text/String] item) {
+}
+
+[host return<i32>]
+ps_ui_pref_list_count([string] key) {
+}
+
+[host return</std/text/String>]
+ps_ui_pref_list_get([string] key, [i32] index) {
+}
+
 [host return<bool>]
 ps_ui_pref_get_bool([string] key, [bool] fallback) {
 }
@@ -249,6 +277,12 @@ Window() {
   [public return<bool>]
   setTitle([/std/text/String] title) {
     return(ps_ui_window_set_title(this.handle, title))
+  }
+
+  // Remembers the window's position and size between runs under `name`.
+  [public return<bool>]
+  setAutosaveName([string] name) {
+    return(ps_ui_window_set_autosave_name(this.handle, name))
   }
 
   [public return<bool>]
@@ -667,6 +701,37 @@ App() {
   [public return<bool>]
   clearRecent() {
     return(ps_ui_recent_clear())
+  }
+
+  // Integers and lists of texts the app keeps between runs.
+  [public return<i32>]
+  intPref([string] key, [i32] fallback) {
+    return(ps_ui_pref_get_int(key, fallback))
+  }
+
+  [public return<bool>]
+  setIntPref([string] key, [i32] value) {
+    return(ps_ui_pref_set_int(key, value))
+  }
+
+  [public return<bool>]
+  listClear([string] key) {
+    return(ps_ui_pref_list_clear(key))
+  }
+
+  [public return<bool>]
+  listAdd([string] key, [/std/text/String] item) {
+    return(ps_ui_pref_list_add(key, item))
+  }
+
+  [public return<i32>]
+  listCount([string] key) {
+    return(ps_ui_pref_list_count(key))
+  }
+
+  [public return</std/text/String>]
+  listGet([string] key, [i32] index) {
+    return(ps_ui_pref_list_get(key, index))
   }
 
   // A boolean the app keeps between runs: the stored value, or `fallback` when none was stored.

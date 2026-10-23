@@ -565,3 +565,79 @@ TEST_CASE("editor reopens a recent file from the menu and can clear the list") {
   }
   CHECK(std::find(items.begin(), items.end(), "File>Open Recent>Clear Menu #210") != items.end());
 }
+
+
+// The session: the open files in tab order and the active tab come back at the next launch.
+TEST_CASE("editor remembers its open files when it quits") {
+  const std::string a = writeScratch("session_a.txt", "a");
+  const std::string b = writeScratch("session_b.txt", "b");
+  headless::reset();
+  headless::pushCommand(CommandOpen);
+  headless::pushOpenPanelAnswer(a);
+  headless::pushCommand(CommandOpen);
+  headless::pushOpenPanelAnswer(b);
+  headless::pushQuit();
+  runEditor();
+  CHECK(headless::prefList("session.files") == std::vector<std::string>{a, b});
+  CHECK(headless::intPref("session.active", -1) == 1);
+}
+
+TEST_CASE("editor brings back the last session's tabs and selects the active one") {
+  const std::string a = writeScratch("restore_a.txt", "a");
+  const std::string b = writeScratch("restore_b.txt", "b");
+  headless::reset();
+  headless::setPrefList("session.files", {a, b});
+  headless::setIntPref("session.active", 1);
+  headless::pushCloseWindow(SecondWindow);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(headless::windowPath(EditorWindow) == a);
+  CHECK(headless::windowPath(SecondWindow) == b);
+  CHECK(headless::windowState(SecondWindow).title == b);
+  CHECK(countCalls("ps_ui_window_select(10)") == 1);
+  CHECK(countCalls("ps_ui_alert(") == 0);
+}
+
+TEST_CASE("editor skips a remembered file that is gone") {
+  const std::string b = writeScratch("restore_only.txt", "b");
+  headless::reset();
+  headless::setPrefList("session.files", {"/definitely/not/here.txt", b});
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(headless::windowPath(EditorWindow) == b);
+  CHECK_FALSE(headless::windowState(SecondWindow).exists);
+  CHECK(countCalls("ps_ui_alert(") == 0);
+}
+
+TEST_CASE("editor opens only the file named on the command line, not the last session") {
+  const std::string a = writeScratch("restore_not_a.txt", "a");
+  const std::string b = writeScratch("restore_named.txt", "b");
+  headless::reset();
+  headless::setPrefList("session.files", {a});
+  headless::pushCloseWindow(EditorWindow);
+  const Script script = compileEditor();
+  compiled_editor::Mirror mirror;
+  const auto result = script.run({b});
+  REQUIRE_MESSAGE(result.ok, result.diagnostics);
+  mirror.expectSame(result.exitCode, {b});
+  CHECK(headless::windowPath(EditorWindow) == b);
+  CHECK_FALSE(headless::windowState(SecondWindow).exists);
+}
+
+TEST_CASE("editor forgets the session when the last tab is closed") {
+  const std::string a = writeScratch("restore_closed.txt", "a");
+  headless::reset();
+  headless::setPrefList("session.files", {a});
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(headless::windowPath(EditorWindow) == a);
+  CHECK(headless::prefList("session.files").empty());
+}
+
+TEST_CASE("editor asks to remember the first window's size and position") {
+  headless::reset();
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(headless::windowState(EditorWindow).autosaveName == "PrimeScroll");
+  CHECK_FALSE(headless::windowState(SecondWindow).exists);
+}

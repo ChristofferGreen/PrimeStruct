@@ -11,7 +11,7 @@
  *
  * Text returned as `const char *` is owned by the library and valid until the
  * next call that returns text (ps_ui_text_view_get_text, ps_ui_open_panel,
- * ps_ui_save_panel, ps_ui_last_error, ps_ui_recent_path). Copy it before then.
+ * ps_ui_save_panel, ps_ui_last_error, ps_ui_recent_path, ps_ui_pref_list_get). Copy it before then.
  *
  * Versioning: additions append functions; changing an existing signature bumps
  * ps_ui_abi_version().
@@ -116,6 +116,10 @@ bool ps_ui_window_set_content(uint64_t window, uint64_t widget);
 /* Shows the platform's unsaved-changes marker. */
 bool ps_ui_window_set_edited(uint64_t window, bool edited);
 bool ps_ui_window_show(uint64_t window);
+/* Remembers the window's position and size between runs under `name` and restores a saved frame
+ * now (NSWindow frame autosave on macOS). Use one name per window that should come back where the
+ * user left it; false for a bad window, an empty name or a name another window already uses. */
+bool ps_ui_window_set_autosave_name(uint64_t window, const char *name);
 /* Closes the window and invalidates its handle. */
 bool ps_ui_window_close(uint64_t window);
 
@@ -255,6 +259,15 @@ const char *ps_ui_last_error(void);
 bool ps_ui_pref_get_bool(const char *key, bool fallback);
 /* Stores the boolean under `key`. False for an empty key or before ps_ui_init. */
 bool ps_ui_pref_set_bool(const char *key, bool value);
+/* The same for an integer. */
+int32_t ps_ui_pref_get_int(const char *key, int32_t fallback);
+bool ps_ui_pref_set_int(const char *key, int32_t value);
+/* A list of texts kept under `key`: empty it, append to it, its length and its index-th item ("" when
+ * out of range; see the lifetime note above). Programs keep what they had open this way. */
+bool ps_ui_pref_list_clear(const char *key);
+bool ps_ui_pref_list_add(const char *key, const char *text);
+int32_t ps_ui_pref_list_count(const char *key);
+const char *ps_ui_pref_list_get(const char *key, int32_t index);
 
 /* Dialogs ---------------------------------------------------------------- */
 

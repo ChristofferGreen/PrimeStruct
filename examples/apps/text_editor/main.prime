@@ -214,6 +214,69 @@ open_document([App] app, [Window] tab, [bool] lineNumbers, [bool] wrapLines) {
   return(opened)
 }
 
+// Remembers the files the tabs hold (in tab-bar order) and which tab is active, so the next launch
+// brings them back. Untitled tabs have nothing to reopen.
+[return<bool>]
+save_session([App] app) {
+  [Window] current{app.activeWindow()}
+  app.listClear("session.files")
+  [i32] count{current.tabCount()}
+  [i32 mut] active{0i32}
+  [i32 mut] saved{0i32}
+  [i32 mut] index{0i32}
+  while(index < count) {
+    [Window] each{current.tabAt(index)}
+    if(each.hasPath()) {
+      app.listAdd("session.files", each.path())
+      if(each.handle == current.handle) {
+        active = saved
+      }
+      saved = saved + 1i32
+    }
+    index = index + 1i32
+  }
+  app.setIntPref("session.active", active)
+  return(true)
+}
+
+// Opens the files the last session had open, one tab each in the same order, and selects the tab
+// that was active. A file that is gone is skipped. Returns how many tabs it opened.
+[return<i32>]
+restore_session([App] app, [Window] first, [TextView] firstView, [bool] lineNumbers, [bool] wrapLines) {
+  [i32] saved{app.listCount("session.files")}
+  [i32 mut] opened{0i32}
+  [i32 mut] position{0i32}
+  while(position < saved) {
+    [String] path{app.listGet("session.files", position)}
+    if(opened == 0i32) {
+      if(firstView.loadFile(path)) {
+        first.setPath(path)
+        first.setTitle(path)
+        firstView.highlight(path)
+        opened = 1i32
+      }
+    } else {
+      [Window] extra{new_tab(app, first, lineNumbers, wrapLines)}
+      [TextView] extraView{extra.content()}
+      if(extraView.loadFile(path)) {
+        extra.setPath(path)
+        extra.setTitle(path)
+        extraView.highlight(path)
+        opened = opened + 1i32
+      } else {
+        extra.close()
+      }
+    }
+    position = position + 1i32
+  }
+  [i32] active{app.intPref("session.active", 0i32)}
+  if(active > 0i32 && active < first.tabCount()) {
+    [Window] chosen{first.tabAt(active)}
+    chosen.select()
+  }
+  return(opened)
+}
+
 // Rebuilds File > Open Recent from the recent files list; returns how many files it shows.
 [return<i32>]
 refresh_recent([Menu] recent) {
@@ -233,6 +296,7 @@ main([array<string>] args) {
   [bool mut] startWithNumbers{lineNumbers}
   [bool mut] wrapLines{true}
   [Window] first{app.window("Untitled", 720i32, 480i32)}
+  first.setAutosaveName("PrimeScroll")
   [TextView] firstView{app.textView()}
   firstView.setMonospace(true)
   firstView.setLineNumbers(lineNumbers)
@@ -327,6 +391,11 @@ main([array<string>] args) {
 
   first.show()
 
+  // Without a file on the command line the last session comes back.
+  if(args.count() <= 1i32) {
+    [i32] restored{restore_session(app, first, firstView, lineNumbers, wrapLines)}
+  }
+
   [bool mut] running{true}
   while(running) {
     [i32 mut] intent{0i32}
@@ -414,12 +483,19 @@ main([array<string>] args) {
     if(intent > command_tab() && intent <= command_tab() + 9i32) {
       [bool] switched{select_tab(tab, intent - command_tab())}
     }
+    if(intent != 0i32 && intent != command_quit()) {
+      [bool] remembered{save_session(app)}
+    }
     if(intent == command_quit()) {
-      // Every tab gets its say; Cancel stops the quit.
+      // The session is what the tabs hold now; every tab gets its say, and Cancel stops the quit.
+      [bool] rememberedQuit{save_session(app)}
       [bool mut] go{true}
       while(go && app.windowCount() > 0i32) {
         [Window] next{app.windowAt(0i32)}
         go = close_tab(app, next)
+      }
+      if(app.windowCount() > 0i32) {
+        [bool] again{save_session(app)}
       }
     }
     if(app.windowCount() == 0i32) {

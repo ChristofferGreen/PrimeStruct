@@ -611,3 +611,51 @@ TEST_CASE("recent file items are titled with the file name and numbered from the
   const std::vector<std::string> clash{"Open Recent>a.txt \xE2\x80\x94 y #1", "Open Recent>a.txt \xE2\x80\x94 x #2"};
   CHECK(headless::menuBarItems() == clash);
 }
+
+
+TEST_CASE("a window remembers its frame under an autosave name") {
+  startApp();
+  const uint64_t window = ps_ui_window_create("W", 100, 100);
+  CHECK(headless::windowState(window).autosaveName.empty());
+  CHECK(ps_ui_window_set_autosave_name(window, "Main"));
+  CHECK(headless::windowState(window).autosaveName == "Main");
+  CHECK_FALSE(ps_ui_window_set_autosave_name(window, ""));
+  CHECK_FALSE(ps_ui_window_set_autosave_name(window, nullptr));
+  CHECK_FALSE(ps_ui_window_set_autosave_name(999, "Other"));
+}
+
+TEST_CASE("integer preferences keep their value and answer the fallback when unset") {
+  startApp();
+  CHECK(ps_ui_pref_get_int("session.active", 7) == 7);
+  CHECK(ps_ui_pref_set_int("session.active", 3));
+  CHECK(ps_ui_pref_get_int("session.active", 7) == 3);
+  CHECK(headless::intPref("session.active", 0) == 3);
+  CHECK(ps_ui_pref_set_int("session.active", -2));
+  CHECK(ps_ui_pref_get_int("session.active", 7) == -2);
+  CHECK_FALSE(ps_ui_pref_set_int("", 1));
+  CHECK(ps_ui_pref_get_int(nullptr, 5) == 5);
+  headless::setIntPref("preset", 12);
+  CHECK(ps_ui_pref_get_int("preset", 0) == 12);
+  CHECK(headless::pushedScenario() == "pint:preset=12");
+}
+
+TEST_CASE("list preferences keep their items in order") {
+  startApp();
+  CHECK(ps_ui_pref_list_count("files") == 0);
+  CHECK(ps_ui_pref_list_add("files", "/a/one.txt"));
+  CHECK(ps_ui_pref_list_add("files", "/a/two.txt"));
+  CHECK(ps_ui_pref_list_count("files") == 2);
+  CHECK(std::string(ps_ui_pref_list_get("files", 0)) == "/a/one.txt");
+  CHECK(std::string(ps_ui_pref_list_get("files", 1)) == "/a/two.txt");
+  CHECK(std::string(ps_ui_pref_list_get("files", 2)).empty());
+  CHECK(std::string(ps_ui_pref_list_get("files", -1)).empty());
+  CHECK(std::string(ps_ui_pref_list_get("other", 0)).empty());
+  CHECK(ps_ui_pref_list_clear("files"));
+  CHECK(ps_ui_pref_list_count("files") == 0);
+  CHECK_FALSE(ps_ui_pref_list_add("", "x"));
+  CHECK_FALSE(ps_ui_pref_list_add("files", nullptr));
+  CHECK_FALSE(ps_ui_pref_list_clear(nullptr));
+  headless::setPrefList("plain", {"x", "y,z"});
+  CHECK(headless::prefList("plain") == std::vector<std::string>{"x", "y,z"});
+  CHECK(headless::pushedScenario() == "plist:plain=x,y%2Cz");
+}

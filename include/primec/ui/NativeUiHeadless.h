@@ -58,6 +58,7 @@ struct WindowState {
   bool edited = false;
   bool shown = false;
   bool closed = false;
+  std::string autosaveName; // set with ps_ui_window_set_autosave_name
 };
 WindowState windowState(uint64_t window);
 bool isMonospace(uint64_t textView);
@@ -75,6 +76,11 @@ bool menuItemChecked(int32_t commandId);
 // starting value before the run (recorded in pushedScenario as `pref:key=0|1`) and reads it back.
 void setBoolPref(const std::string &key, bool value);
 bool boolPref(const std::string &key, bool fallback);
+// The integer and list preferences the same way (`pint:key=3` and `plist:key=a,b` in pushedScenario).
+void setIntPref(const std::string &key, int32_t value);
+int32_t intPref(const std::string &key, int32_t fallback);
+void setPrefList(const std::string &key, const std::vector<std::string> &items);
+std::vector<std::string> prefList(const std::string &key);
 // One styled byte range of a text view, in call order (see ps_ui_text_view_add_style).
 struct StyleRun {
   int32_t start = 0;

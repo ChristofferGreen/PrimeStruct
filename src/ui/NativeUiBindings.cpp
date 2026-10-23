@@ -31,6 +31,9 @@ template <class Binder> void forEachBinding(Binder &&bindOne) {
   bindOne("ps_ui_window_set_title", [](uint64_t window, embed::HostTextView title) {
     return ps_ui_window_set_title(window, text(title).c_str());
   });
+  bindOne("ps_ui_window_set_autosave_name", [](uint64_t window, std::string_view name) {
+    return ps_ui_window_set_autosave_name(window, text(name).c_str());
+  });
   bindOne("ps_ui_window_set_content",
           [](uint64_t window, uint64_t widget) { return ps_ui_window_set_content(window, widget); });
   bindOne("ps_ui_window_set_edited",
@@ -99,6 +102,20 @@ template <class Binder> void forEachBinding(Binder &&bindOne) {
   bindOne("ps_ui_recent_add", [](embed::HostTextView path) { return ps_ui_recent_add(text(path).c_str()); });
   bindOne("ps_ui_recent_path", [](int32_t index) { return embed::HostText(ps_ui_recent_path(index)); });
   bindOne("ps_ui_recent_clear", [] { return ps_ui_recent_clear(); });
+  bindOne("ps_ui_pref_get_int", [](std::string_view key, int32_t fallback) {
+    return ps_ui_pref_get_int(text(key).c_str(), fallback);
+  });
+  bindOne("ps_ui_pref_set_int", [](std::string_view key, int32_t value) {
+    return ps_ui_pref_set_int(text(key).c_str(), value);
+  });
+  bindOne("ps_ui_pref_list_clear", [](std::string_view key) { return ps_ui_pref_list_clear(text(key).c_str()); });
+  bindOne("ps_ui_pref_list_add", [](std::string_view key, embed::HostTextView item) {
+    return ps_ui_pref_list_add(text(key).c_str(), text(item).c_str());
+  });
+  bindOne("ps_ui_pref_list_count", [](std::string_view key) { return ps_ui_pref_list_count(text(key).c_str()); });
+  bindOne("ps_ui_pref_list_get", [](std::string_view key, int32_t index) {
+    return embed::HostText(ps_ui_pref_list_get(text(key).c_str(), index));
+  });
   bindOne("ps_ui_pref_get_bool", [](std::string_view key, bool fallback) {
     return ps_ui_pref_get_bool(text(key).c_str(), fallback);
   });

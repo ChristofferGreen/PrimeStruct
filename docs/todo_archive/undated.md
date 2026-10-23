@@ -120,3 +120,14 @@
   - acceptance:
     - headless ABI tests for wrapping, submenus (attach once, not into itself, clear), the recent list (order, repeats, cap of ten, path, clear, titles) and recent items numbered from the first command id; editor tests for the wrap toggle in every tab, the list at start, files added by open and save, reopening and clearing (each also run on the compiled editor through the mirror); full release gate green
   - stop_rule: the wrap switch and the recent files submenu.
+
+- [x] TODO-5577: Restore the last session in the editor
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-23
+  - phase: Native UI (docs/NativeUiPlan.md)
+  - parallel_track: native-ui-editor
+  - scope: PrimeScroll remembers its window frame and its tabs between sessions. The C ABI gains `ps_ui_window_set_autosave_name` (`NSWindow` frame autosave on AppKit), integer preferences `ps_ui_pref_get_int/set_int` and list preferences `ps_ui_pref_list_clear/add/count/get` (65 functions now; `Window.setAutosaveName`, `App.intPref/setIntPref/listClear/listAdd/listCount/listGet`), kept in `NSUserDefaults` (`ps.pref.<key>`, `ps.list.<key>`) unless `PRIMESTRUCT_UI_PREFS` or snapshot mode answers them from memory so tests never touch the user's defaults or saved frames. The headless backend keeps them in memory (`WindowState::autosaveName`, `headless::intPref/setIntPref/prefList/setPrefList`; scenarios preset them with `pint:` and `plist:`). The editor names the first window `PrimeScroll`, saves `session.files` (the tabs that have a path, in tab-bar order) and `session.active` after every command and before the tabs close on quit (again when the quit is cancelled), and at launch without a command-line file reopens them one tab each, skips files that are gone and selects the active tab; closing the last tab forgets the session.
+  - acceptance:
+    - headless ABI tests for the autosave name and the integer and list preferences; editor tests for saving on quit, restoring tabs and the active one, skipping a missing file, the command-line file replacing the restore, forgetting the session on closing the last tab and the autosave name (each also run on the compiled editor through the mirror); full release gate green
+  - stop_rule: the frame, the tabs and the active tab; unsaved text and per-tab view settings are not part of the session.

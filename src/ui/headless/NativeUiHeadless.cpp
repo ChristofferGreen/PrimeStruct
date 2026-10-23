@@ -74,6 +74,8 @@ struct State {
   std::deque<std::string> saveAnswers;
   std::deque<int32_t> alertAnswers;
   std::map<std::string, bool> prefs;
+  std::map<std::string, int32_t> intPrefs;
+  std::map<std::string, std::vector<std::string>> listPrefs;
   std::vector<std::string> recents; // most recent first
   std::string scenario; // every push, in the text form of tests/fixtures/host_calls/scenario.h
   int32_t eventKind = PS_UI_EVENT_NONE;
@@ -265,7 +267,7 @@ std::string encodeScenarioText(const std::string &text) {
   static const char *Digits = "0123456789ABCDEF";
   std::string out;
   for (const unsigned char c : text) {
-    if (c == '%' || c == ';' || c == '\n' || c == '\r') {
+    if (c == '%' || c == ';' || c == ',' || c == '\n' || c == '\r') {
       out += '%';
       out += Digits[c >> 4];
       out += Digits[c & 15];
@@ -378,6 +380,30 @@ bool menuItemChecked(int32_t commandId) {
 void setBoolPref(const std::string &key, bool value) {
   recordScenario("pref:" + encodeScenarioText(key) + "=" + (value ? "1" : "0"));
   state().prefs[key] = value;
+}
+
+void setIntPref(const std::string &key, int32_t value) {
+  recordScenario("pint:" + encodeScenarioText(key) + "=" + std::to_string(value));
+  state().intPrefs[key] = value;
+}
+
+int32_t intPref(const std::string &key, int32_t fallback) {
+  const auto it = state().intPrefs.find(key);
+  return it != state().intPrefs.end() ? it->second : fallback;
+}
+
+void setPrefList(const std::string &key, const std::vector<std::string> &items) {
+  std::string joined;
+  for (const std::string &item : items) {
+    joined += (joined.empty() ? "" : ",") + encodeScenarioText(item);
+  }
+  recordScenario("plist:" + encodeScenarioText(key) + "=" + joined);
+  state().listPrefs[key] = items;
+}
+
+std::vector<std::string> prefList(const std::string &key) {
+  const auto it = state().listPrefs.find(key);
+  return it != state().listPrefs.end() ? it->second : std::vector<std::string>{};
 }
 
 bool boolPref(const std::string &key, bool fallback) {
@@ -948,6 +974,66 @@ bool ps_ui_recent_clear(void) {
     state().recents.clear();
   }
   return loggedFlag("ps_ui_recent_clear()", usable());
+}
+
+bool ps_ui_window_set_autosave_name(uint64_t window, const char *name) {
+  const std::string call = "ps_ui_window_set_autosave_name(" + std::to_string(window) + ", " + quote(name) + ")";
+  Window *w = usable() ? liveWindow(window) : nullptr;
+  const bool ok = w != nullptr && name != nullptr && *name != '\0';
+  if (ok) {
+    w->state.autosaveName = name;
+  }
+  return loggedFlag(call, ok);
+}
+
+int32_t ps_ui_pref_get_int(const char *key, int32_t fallback) {
+  const std::string call = "ps_ui_pref_get_int(" + quote(key) + ", " + std::to_string(fallback) + ")";
+  const int32_t value = usable() && key != nullptr && *key != '\0' ? intPref(key, fallback) : fallback;
+  return logged(call, value, std::to_string(value));
+}
+
+bool ps_ui_pref_set_int(const char *key, int32_t value) {
+  const std::string call = "ps_ui_pref_set_int(" + quote(key) + ", " + std::to_string(value) + ")";
+  const bool ok = usable() && key != nullptr && *key != '\0';
+  if (ok) {
+    state().intPrefs[key] = value;
+  }
+  return loggedFlag(call, ok);
+}
+
+bool ps_ui_pref_list_clear(const char *key) {
+  const std::string call = "ps_ui_pref_list_clear(" + quote(key) + ")";
+  const bool ok = usable() && key != nullptr && *key != '\0';
+  if (ok) {
+    state().listPrefs[key].clear();
+  }
+  return loggedFlag(call, ok);
+}
+
+bool ps_ui_pref_list_add(const char *key, const char *text) {
+  const std::string call = "ps_ui_pref_list_add(" + quote(key) + ", " + quote(text) + ")";
+  const bool ok = usable() && key != nullptr && *key != '\0' && text != nullptr;
+  if (ok) {
+    state().listPrefs[key].push_back(text);
+  }
+  return loggedFlag(call, ok);
+}
+
+int32_t ps_ui_pref_list_count(const char *key) {
+  const std::string call = "ps_ui_pref_list_count(" + quote(key) + ")";
+  const auto it = usable() && key != nullptr ? state().listPrefs.find(key) : state().listPrefs.end();
+  const int32_t count = it != state().listPrefs.end() ? static_cast<int32_t>(it->second.size()) : 0;
+  return logged(call, count, std::to_string(count));
+}
+
+const char *ps_ui_pref_list_get(const char *key, int32_t index) {
+  State &s = state();
+  const auto it = usable() && key != nullptr ? s.listPrefs.find(key) : s.listPrefs.end();
+  s.returnedText = it != s.listPrefs.end() && index >= 0 && static_cast<size_t>(index) < it->second.size()
+                       ? it->second[static_cast<size_t>(index)]
+                       : std::string();
+  s.log.push_back("ps_ui_pref_list_get(" + quote(key) + ", " + std::to_string(index) + ") -> " + quote(s.returnedText));
+  return s.returnedText.c_str();
 }
 
 bool ps_ui_pref_get_bool(const char *key, bool fallback) {
