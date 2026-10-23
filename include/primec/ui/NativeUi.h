@@ -46,7 +46,10 @@ enum {
   /* The text of ps_ui_event_widget() (inside ps_ui_event_window()) changed. */
   PS_UI_EVENT_TEXT_CHANGED = 3,
   /* The platform asked the app to quit (Cmd+Q, last window gone, ...). */
-  PS_UI_EVENT_QUIT_REQUESTED = 4
+  PS_UI_EVENT_QUIT_REQUESTED = 4,
+  /* The user changed a control, ps_ui_event_widget() (inside ps_ui_event_window()): toggled a check box
+   * or chose another item of a pop-up. Read the new state with the control's accessor. */
+  PS_UI_EVENT_CONTROL_CHANGED = 5
 };
 
 /* Standard menu items for ps_ui_menu_add_standard. They map to the platform's
@@ -85,6 +88,14 @@ enum {
   PS_UI_MENU_ROLE_HELP = 3
 };
 
+/* Styles of a window for ps_ui_window_set_style. */
+enum {
+  /* A document window: it can join a tab group and be resized (the default). */
+  PS_UI_WINDOW_DOCUMENT = 0,
+  /* A settings window: never a tab, sized to fit its content, no minimize or zoom. */
+  PS_UI_WINDOW_SETTINGS = 1
+};
+
 /* App ------------------------------------------------------------------ */
 
 /* The ABI version this build implements (PS_UI_ABI_VERSION). */
@@ -111,7 +122,8 @@ int32_t ps_ui_event_command(void);
 
 uint64_t ps_ui_window_create(const char *title, int32_t width, int32_t height);
 bool ps_ui_window_set_title(uint64_t window, const char *title);
-/* Makes `widget` (a text view) the window's content view. */
+/* Makes `widget` the window's content view: a text view, or a control that nothing holds yet (usually a
+ * form or tabs, see Controls and forms). */
 bool ps_ui_window_set_content(uint64_t window, uint64_t widget);
 /* Shows the platform's unsaved-changes marker. */
 bool ps_ui_window_set_edited(uint64_t window, bool edited);
@@ -120,6 +132,9 @@ bool ps_ui_window_show(uint64_t window);
  * now (NSWindow frame autosave on macOS). Use one name per window that should come back where the
  * user left it; false for a bad window, an empty name or a name another window already uses. */
 bool ps_ui_window_set_autosave_name(uint64_t window, const char *name);
+/* Sets a PS_UI_WINDOW_* style. False for a bad window or style, or for a settings style on a window that is
+ * already in a tab group. */
+bool ps_ui_window_set_style(uint64_t window, int32_t style);
 /* Closes the window and invalidates its handle. */
 bool ps_ui_window_close(uint64_t window);
 
@@ -151,6 +166,40 @@ bool ps_ui_window_set_path(uint64_t window, const char *path);
 const char *ps_ui_window_path(uint64_t window);
 bool ps_ui_window_has_path(uint64_t window);
 
+/* Controls and forms ------------------------------------------------------ */
+
+/* The pieces of a settings window. Every function returns a handle (0 for a failed create) or a flag like the
+ * rest of the ABI. A control is held by one form or tabs, or is the content of a window; putting one where
+ * another already holds it fails. When the user changes a check box or a pop-up the program gets
+ * PS_UI_EVENT_CONTROL_CHANGED; changes the program makes itself produce no event. A backend without controls
+ * fails every call in this section like a bad handle. */
+
+uint64_t ps_ui_label_create(const char *text);
+bool ps_ui_label_set_text(uint64_t label, const char *text);
+
+uint64_t ps_ui_checkbox_create(const char *title, bool checked);
+bool ps_ui_checkbox_set_checked(uint64_t checkbox, bool checked);
+bool ps_ui_checkbox_checked(uint64_t checkbox);
+
+/* A pop-up button: add its items in order, the first one is chosen at first. */
+uint64_t ps_ui_popup_create(void);
+bool ps_ui_popup_add_item(uint64_t popup, const char *title);
+bool ps_ui_popup_select(uint64_t popup, int32_t index);
+/* The chosen item's index, -1 for a pop-up without items or a bad handle. */
+int32_t ps_ui_popup_selected(uint64_t popup);
+
+/* A form lays its rows out in a column: a bold heading, a row with a label to the left of a control (the
+ * labels line up, the controls line up), or a control alone in the controls' column (a check box). */
+uint64_t ps_ui_form_create(void);
+bool ps_ui_form_add_heading(uint64_t form, const char *title);
+bool ps_ui_form_add_row(uint64_t form, const char *label, uint64_t control);
+bool ps_ui_form_add_control(uint64_t form, uint64_t control);
+
+/* Tabs show one page at a time under a row of tab titles; the first page added is shown. */
+uint64_t ps_ui_tabs_create(void);
+bool ps_ui_tabs_add(uint64_t tabs, const char *title, uint64_t content);
+bool ps_ui_tabs_select(uint64_t tabs, int32_t index);
+
 /* Markdown preview -------------------------------------------------------- */
 
 /* Turns the window's preview pane on or off. With it on the window shows its text view and, beside it,
@@ -167,6 +216,8 @@ bool ps_ui_window_refresh_preview(uint64_t window);
  * preview, instead of the state ps_ui_menu_set_checked gave them. False for a bad menu or an unknown
  * command id. */
 bool ps_ui_menu_follow_preview(uint64_t menu, int32_t commandId);
+/* Whether the source and the page of a preview scroll together (on by default). */
+bool ps_ui_preview_set_scroll_lock(bool on);
 
 /* Text view -------------------------------------------------------------- */
 
@@ -177,6 +228,8 @@ const char *ps_ui_text_view_get_text(uint64_t view);
  * not produce PS_UI_EVENT_TEXT_CHANGED. */
 bool ps_ui_text_view_set_text(uint64_t view, const char *text);
 bool ps_ui_text_view_set_monospace(uint64_t view, bool monospace);
+/* The size of the view's text in points (6 to 96); false outside that. */
+bool ps_ui_text_view_set_font_size(uint64_t view, int32_t points);
 /* True once the user changed the text since creation or the last clear. */
 bool ps_ui_text_view_is_modified(uint64_t view);
 bool ps_ui_text_view_clear_modified(uint64_t view);

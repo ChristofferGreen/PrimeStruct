@@ -691,6 +691,197 @@ TEST_CASE("a menu item's check mark can follow the active window's preview") {
   CHECK_FALSE(headless::menuItemChecked(10));
 }
 
+TEST_CASE("controls need a started app and bad handles fail") {
+  headless::reset();
+  CHECK(ps_ui_label_create("x") == 0);
+  CHECK(ps_ui_checkbox_create("x", true) == 0);
+  CHECK(ps_ui_popup_create() == 0);
+  CHECK(ps_ui_form_create() == 0);
+  CHECK(ps_ui_tabs_create() == 0);
+  CHECK_FALSE(ps_ui_preview_set_scroll_lock(false));
+  REQUIRE(ps_ui_init("Test"));
+  CHECK_FALSE(ps_ui_label_set_text(999, "x"));
+  CHECK_FALSE(ps_ui_checkbox_checked(999));
+  CHECK(ps_ui_popup_selected(999) == -1);
+  CHECK_FALSE(ps_ui_form_add_heading(999, "x"));
+  CHECK_FALSE(ps_ui_tabs_select(999, 0));
+}
+
+TEST_CASE("labels, check boxes and pop-ups hold their state") {
+  startApp();
+  const uint64_t label = ps_ui_label_create("Font size");
+  const uint64_t box = ps_ui_checkbox_create("Wrap long lines", true);
+  const uint64_t popup = ps_ui_popup_create();
+  REQUIRE(label != 0);
+  REQUIRE(box != 0);
+  REQUIRE(popup != 0);
+  CHECK(ps_ui_label_set_text(label, "Size"));
+  CHECK(headless::controlOutline(label) == std::vector<std::string>{"label \"Size\""});
+  CHECK(ps_ui_checkbox_checked(box));
+  CHECK(ps_ui_checkbox_set_checked(box, false));
+  CHECK_FALSE(ps_ui_checkbox_checked(box));
+  CHECK_FALSE(headless::checkBoxChecked(box));
+
+  // A pop-up has no chosen item until it has an item; the first one added is chosen.
+  CHECK(ps_ui_popup_selected(popup) == -1);
+  CHECK(ps_ui_popup_add_item(popup, "12"));
+  CHECK(ps_ui_popup_add_item(popup, "14"));
+  CHECK(ps_ui_popup_selected(popup) == 0);
+  CHECK(ps_ui_popup_select(popup, 1));
+  CHECK(ps_ui_popup_selected(popup) == 1);
+  CHECK_FALSE(ps_ui_popup_select(popup, 2));
+  CHECK_FALSE(ps_ui_popup_select(popup, -1));
+  CHECK(ps_ui_popup_selected(popup) == 1);
+  CHECK(headless::controlOutline(popup) == std::vector<std::string>{"popup [12|14] selected=1"});
+
+  // The wrong kind of handle and a missing text fail.
+  CHECK_FALSE(ps_ui_checkbox_set_checked(label, true));
+  CHECK_FALSE(ps_ui_label_set_text(box, "x"));
+  CHECK_FALSE(ps_ui_popup_add_item(box, "x"));
+  CHECK_FALSE(ps_ui_popup_add_item(popup, nullptr));
+  CHECK(ps_ui_popup_selected(box) == -1);
+}
+
+TEST_CASE("forms and tabs hold controls and a window shows them") {
+  startApp();
+  const uint64_t form = ps_ui_form_create();
+  const uint64_t size = ps_ui_popup_create();
+  ps_ui_popup_add_item(size, "12");
+  ps_ui_popup_add_item(size, "14");
+  const uint64_t wrap = ps_ui_checkbox_create("Wrap", true);
+  const uint64_t hint = ps_ui_label_create("Applies to every tab");
+  CHECK(ps_ui_form_add_heading(form, "Editor"));
+  CHECK(ps_ui_form_add_row(form, "Font size", size));
+  CHECK(ps_ui_form_add_control(form, wrap));
+  CHECK(ps_ui_form_add_control(form, hint));
+  const std::vector<std::string> formLines{"form",
+                                           "  heading \"Editor\"",
+                                           "  row \"Font size\": popup [12|14] selected=0",
+                                           "  control: checkbox \"Wrap\" [checked]",
+                                           "  control: label \"Applies to every tab\""};
+  CHECK(headless::controlOutline(form) == formLines);
+
+  // A control has one holder, a form cannot hold itself, and only a form takes rows.
+  const uint64_t other = ps_ui_form_create();
+  CHECK_FALSE(ps_ui_form_add_control(other, wrap));
+  CHECK_FALSE(ps_ui_form_add_row(other, "Again", size));
+  CHECK_FALSE(ps_ui_form_add_control(form, form));
+  CHECK_FALSE(ps_ui_form_add_control(size, ps_ui_label_create("x")));
+  CHECK_FALSE(ps_ui_form_add_row(form, nullptr, ps_ui_label_create("y")));
+  CHECK(headless::controlOutline(form) == formLines);
+
+  const uint64_t tabs = ps_ui_tabs_create();
+  CHECK(ps_ui_tabs_add(tabs, "Editor", form));
+  CHECK(ps_ui_tabs_add(tabs, "Markdown", other));
+  CHECK_FALSE(ps_ui_tabs_add(tabs, "Again", form));
+  CHECK_FALSE(ps_ui_tabs_add(tabs, "Itself", tabs));
+  CHECK_FALSE(ps_ui_tabs_add(form, "Not tabs", ps_ui_form_create()));
+  std::vector<std::string> outline = headless::controlOutline(tabs);
+  CHECK(outline.front() == "tabs selected=0");
+  CHECK(outline[1] == "  page \"Editor\":");
+  CHECK(outline[2] == "    form");
+  CHECK(outline[outline.size() - 2] == "  page \"Markdown\":");
+  CHECK(outline.back() == "    form");
+  CHECK(ps_ui_tabs_select(tabs, 1));
+  CHECK_FALSE(ps_ui_tabs_select(tabs, 2));
+  CHECK_FALSE(ps_ui_tabs_select(tabs, -1));
+  CHECK(headless::controlOutline(tabs).front() == "tabs selected=1");
+
+  // A window takes the tabs as its content, once, and not a control that something holds.
+  const uint64_t window = ps_ui_window_create("Settings", 400, 300);
+  const uint64_t second = ps_ui_window_create("Other", 400, 300);
+  CHECK_FALSE(ps_ui_window_set_content(window, form)); // the tabs hold it
+  CHECK(ps_ui_window_set_content(window, tabs));
+  CHECK(ps_ui_window_content(window) == tabs);
+  CHECK(headless::windowState(window).content == tabs);
+  CHECK_FALSE(ps_ui_window_set_content(second, tabs));
+  CHECK(ps_ui_window_set_content(window, tabs)); // the same content again
+  CHECK_FALSE(ps_ui_form_add_control(ps_ui_form_create(), tabs));
+}
+
+TEST_CASE("the user changes controls and the program is told which") {
+  startApp();
+  const uint64_t window = ps_ui_window_create("Settings", 400, 300);
+  const uint64_t form = ps_ui_form_create();
+  const uint64_t box = ps_ui_checkbox_create("Wrap", false);
+  const uint64_t popup = ps_ui_popup_create();
+  ps_ui_popup_add_item(popup, "12");
+  ps_ui_popup_add_item(popup, "14");
+  ps_ui_popup_add_item(popup, "16");
+  REQUIRE(ps_ui_form_add_control(form, box));
+  REQUIRE(ps_ui_form_add_row(form, "Size", popup));
+  REQUIRE(ps_ui_window_set_content(window, form));
+  headless::pushToggleCheckBox(box);
+  headless::pushSelectPopupItem(popup, 2);
+  headless::pushSelectPopupItem(popup, 9); // no such item: skipped
+  headless::pushToggleCheckBox(popup);     // not a check box: skipped
+  headless::pushToggleCheckBox(box);
+  const std::string b = std::to_string(box);
+  const std::string p = std::to_string(popup);
+  CHECK(headless::pushedScenario() == "check:" + b + ";popup:" + p + ":2;popup:" + p + ":9;check:" + p + ";check:" + b);
+
+  CHECK(ps_ui_wait_event() == PS_UI_EVENT_CONTROL_CHANGED);
+  CHECK(ps_ui_event_widget() == box);
+  CHECK(ps_ui_event_window() == window);
+  CHECK(ps_ui_checkbox_checked(box));
+  CHECK(ps_ui_wait_event() == PS_UI_EVENT_CONTROL_CHANGED);
+  CHECK(ps_ui_event_widget() == popup);
+  CHECK(ps_ui_event_window() == window);
+  CHECK(ps_ui_popup_selected(popup) == 2);
+  CHECK(ps_ui_wait_event() == PS_UI_EVENT_CONTROL_CHANGED);
+  CHECK(ps_ui_event_widget() == box);
+  CHECK_FALSE(ps_ui_checkbox_checked(box));
+  CHECK(ps_ui_popup_selected(popup) == 2);
+  CHECK(ps_ui_wait_event() == PS_UI_EVENT_QUIT_REQUESTED);
+  CHECK(logContains("ps_ui_wait_event() -> control_changed"));
+
+  // The program's own changes make no event.
+  CHECK(ps_ui_checkbox_set_checked(box, true));
+  CHECK(ps_ui_popup_select(popup, 0));
+  CHECK(ps_ui_wait_event() == PS_UI_EVENT_QUIT_REQUESTED);
+}
+
+TEST_CASE("a settings window is never a tab") {
+  startApp();
+  const uint64_t host = ps_ui_window_create("Document", 100, 100);
+  const uint64_t settings = ps_ui_window_create("Settings", 100, 100);
+  CHECK(headless::windowState(settings).style == PS_UI_WINDOW_DOCUMENT);
+  CHECK(ps_ui_window_set_style(settings, PS_UI_WINDOW_SETTINGS));
+  CHECK(headless::windowState(settings).style == PS_UI_WINDOW_SETTINGS);
+  CHECK_FALSE(ps_ui_window_add_tab(host, settings));
+  CHECK_FALSE(ps_ui_window_add_tab(settings, host));
+  CHECK(ps_ui_window_tab_count(settings) == 1);
+  CHECK_FALSE(ps_ui_window_set_style(settings, 5));
+  CHECK_FALSE(ps_ui_window_set_style(999, PS_UI_WINDOW_SETTINGS));
+
+  // A window already in a tab group stays a document.
+  const uint64_t tab = ps_ui_window_create("Tab", 100, 100);
+  CHECK(ps_ui_window_add_tab(host, tab));
+  CHECK_FALSE(ps_ui_window_set_style(tab, PS_UI_WINDOW_SETTINGS));
+  CHECK(ps_ui_window_set_style(settings, PS_UI_WINDOW_DOCUMENT));
+  CHECK(ps_ui_window_add_tab(host, settings));
+}
+
+TEST_CASE("a text view has a font size and the preview's scroll lock can be switched") {
+  startApp();
+  const uint64_t view = ps_ui_text_view_create();
+  CHECK(headless::fontSize(view) == 0);
+  CHECK(ps_ui_text_view_set_font_size(view, 13));
+  CHECK(headless::fontSize(view) == 13);
+  CHECK(ps_ui_text_view_set_font_size(view, 6));
+  CHECK(ps_ui_text_view_set_font_size(view, 96));
+  CHECK_FALSE(ps_ui_text_view_set_font_size(view, 5));
+  CHECK_FALSE(ps_ui_text_view_set_font_size(view, 97));
+  CHECK_FALSE(ps_ui_text_view_set_font_size(999, 12));
+  CHECK(headless::fontSize(view) == 96);
+
+  CHECK(headless::previewScrollLock());
+  CHECK(ps_ui_preview_set_scroll_lock(false));
+  CHECK_FALSE(headless::previewScrollLock());
+  CHECK(ps_ui_preview_set_scroll_lock(true));
+  CHECK(headless::previewScrollLock());
+}
+
 TEST_CASE("integer preferences keep their value and answer the fallback when unset") {
   startApp();
   CHECK(ps_ui_pref_get_int("session.active", 7) == 7);

@@ -85,6 +85,7 @@ struct State {
   std::unordered_map<uint64_t, bool> previewSyncing;       // the page is moving the text view right now
   std::unordered_map<uint64_t, id> previewObservers;       // the observer of the text view's scrolling
   id previewEventMonitor = nil;                            // sees the events that scroll a page
+  bool previewScrollLock = true;                           // the source and the page scroll together
   std::unordered_map<uint64_t, bool> previewRefreshPending;
   std::unordered_set<int32_t> previewMenuItems; // command ids whose check mark follows the active preview
   std::unordered_map<uint64_t, NSTextView *> textViews;
@@ -247,6 +248,9 @@ NSString *webScrollScript(double fraction) {
 // The page follows the text view.
 void syncWebFromText(uint64_t window, bool force) {
   State &s = state();
+  if (!s.previewScrollLock) {
+    return;
+  }
   NSScrollView *scroll = previewTextScroll(window);
   const auto web = s.previewWebs.find(window);
   if (scroll == nil || web == s.previewWebs.end()) {
@@ -267,6 +271,9 @@ void syncWebFromText(uint64_t window, bool force) {
 // The text view follows the page: read where the page is, then move the text view there.
 void syncTextFromWeb(uint64_t window) {
   State &s = state();
+  if (!s.previewScrollLock) {
+    return;
+  }
   const auto web = s.previewWebs.find(window);
   if (web == s.previewWebs.end()) {
     return;
@@ -1830,6 +1837,35 @@ bool ps_ui_menu_follow_preview(uint64_t menuHandle, int32_t commandId) {
     state().previewMenuItems.insert(commandId);
   }
   return found;
+}
+
+// The controls, the settings window style and the font size are the next slice of the AppKit backend: until it
+// lands they fail like a bad call. The preview's scroll lock is answered here.
+uint64_t ps_ui_label_create(const char *) { return 0; }
+bool ps_ui_label_set_text(uint64_t, const char *) { return false; }
+uint64_t ps_ui_checkbox_create(const char *, bool) { return 0; }
+bool ps_ui_checkbox_set_checked(uint64_t, bool) { return false; }
+bool ps_ui_checkbox_checked(uint64_t) { return false; }
+uint64_t ps_ui_popup_create(void) { return 0; }
+bool ps_ui_popup_add_item(uint64_t, const char *) { return false; }
+bool ps_ui_popup_select(uint64_t, int32_t) { return false; }
+int32_t ps_ui_popup_selected(uint64_t) { return -1; }
+uint64_t ps_ui_form_create(void) { return 0; }
+bool ps_ui_form_add_heading(uint64_t, const char *) { return false; }
+bool ps_ui_form_add_row(uint64_t, const char *, uint64_t) { return false; }
+bool ps_ui_form_add_control(uint64_t, uint64_t) { return false; }
+uint64_t ps_ui_tabs_create(void) { return 0; }
+bool ps_ui_tabs_add(uint64_t, const char *, uint64_t) { return false; }
+bool ps_ui_tabs_select(uint64_t, int32_t) { return false; }
+bool ps_ui_window_set_style(uint64_t, int32_t) { return false; }
+bool ps_ui_text_view_set_font_size(uint64_t, int32_t) { return false; }
+
+bool ps_ui_preview_set_scroll_lock(bool on) {
+  if (!usable()) {
+    return false;
+  }
+  state().previewScrollLock = on;
+  return true;
 }
 
 int32_t ps_ui_pref_get_int(const char *key, int32_t fallback) {

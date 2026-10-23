@@ -274,3 +274,14 @@
   - acceptance:
     - the AppKit smoke test takes the long markdown fixture (tests/fixtures/ui/screenshot/preview_long.md) with the preview at the top, with the source scrolled to its bottom and with the page scrolled to its bottom: the two scrolled pictures differ from the top one, and by eye each shows both views at their ends (Sections 29 and 30 on both sides); full release gate green
   - stop_rule: scroll locking in the AppKit preview.
+
+- [x] TODO-5592: Controls and forms in the native UI ABI
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-24
+  - phase: Settings window (docs/NativeUiPlan.md section 15)
+  - parallel_track: settings-window
+  - scope: The native UI ABI grows to 88 functions with the pieces of a settings window: labels, check boxes, pop-up buttons, forms (heading rows, labelled rows, control-only rows) and tabs (`ps_ui_label_*`, `ps_ui_checkbox_*`, `ps_ui_popup_*`, `ps_ui_form_*`, `ps_ui_tabs_*`); `ps_ui_window_set_content` takes any control that nothing holds yet; `ps_ui_window_set_style` with `PS_UI_WINDOW_SETTINGS` makes a window that is never a tab; `PS_UI_EVENT_CONTROL_CHANGED` reports the user's click on a check box or choice in a pop-up (the program's own changes make no event); `ps_ui_text_view_set_font_size` and `ps_ui_preview_set_scroll_lock` complete what the editor's settings need (the AppKit backend already switches the preview's scroll lock; the controls, the style and the font size answer false there until TODO-5593). The headless backend (`NativeUiHeadlessControls.cpp`, `Control` in the shared state) keeps it all in memory, answers scripted clicks (`headless::pushToggleCheckBox`, `pushSelectPopupItem`; `check:H` and `popup:H:I` in scenarios) and prints a control tree (`headless::controlOutline`). The bindings and the stdlib carry it: `Widget`, `Label`, `CheckBox` (`isChecked`), `Popup`, `Form`, `Tabs`, `AppEvent.controlChanged`, `App.label/checkBox/popup/form/tabs`, `Window.setContentWidget/setSettingsStyle`, `TextView.setFontSize`, `App.setPreviewScrollLock`. A pick over `AppEvent` must now name `controlChanged`: the sample and the editor do, doing nothing yet.
+  - acceptance:
+    - headless tests (controls need a started app, state of labels, check boxes and pop-ups, forms and tabs with their outline and holder rules, a window showing them, the user's changes as events, a settings window never a tab, font size, scroll lock), the bindings list (88 functions) and a PrimeStruct settings program built from the stdlib controls (exit code from its events and state) pass; the editor scenarios still pass on the VM, the optexe editor and the native editor; full release gate green
+  - stop_rule: the ABI, the headless backend, the bindings and the stdlib; the AppKit controls are TODO-5593.

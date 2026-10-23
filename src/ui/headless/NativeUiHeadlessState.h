@@ -34,12 +34,34 @@ struct Menu {
   bool inBar = false;
 };
 
+// A label, check box, pop-up, form or tabs (the controls of a settings window).
+struct Control {
+  enum class Kind { Label, CheckBox, Popup, Form, Tabs } kind = Kind::Label;
+  std::string text;                // a label's text, a check box's title
+  bool checked = false;            // a check box
+  std::vector<std::string> items;  // a pop-up's items
+  int32_t selected = -1;           // a pop-up's chosen item, the page tabs show
+  struct Row {
+    enum class Kind { Heading, Labelled, Plain } kind = Kind::Plain;
+    std::string label;
+    uint64_t control = 0;
+  };
+  std::vector<Row> rows;           // a form's rows
+  struct Page {
+    std::string title;
+    uint64_t content = 0;
+  };
+  std::vector<Page> pages;         // tabs' pages
+  uint64_t parent = 0;             // the form or tabs that holds it
+};
+
 struct TextView {
   std::string text;
   bool monospace = false;
   bool lineNumbers = false;
   bool wrapping = true;
   bool modified = false;
+  int32_t fontSize = 0; // set with ps_ui_text_view_set_font_size
   uint64_t window = 0;
   std::vector<StyleRun> styles;
 };
@@ -52,7 +74,7 @@ struct Window {
 };
 
 struct Action {
-  enum class Kind { Command, TypeText, CloseWindow, Quit, Activate } kind = Kind::Quit;
+  enum class Kind { Command, TypeText, CloseWindow, Quit, Activate, Toggle, Select } kind = Kind::Quit;
   int32_t command = 0;
   uint64_t handle = 0;
   std::string text;
@@ -68,6 +90,8 @@ struct State {
   uint64_t nextGroup = 1;
   uint64_t activeWindow = 0;
   std::map<uint64_t, TextView> textViews;
+  std::map<uint64_t, Control> controls;
+  bool scrollLock = true; // the preview's scroll lock
   std::map<uint64_t, Menu> menus;
   std::vector<uint64_t> menuBar;
   std::deque<Action> actions;
@@ -171,6 +195,8 @@ inline const char *eventName(int32_t kind) {
     return "text_changed";
   case PS_UI_EVENT_QUIT_REQUESTED:
     return "quit_requested";
+  case PS_UI_EVENT_CONTROL_CHANGED:
+    return "control_changed";
   default:
     return "none";
   }
@@ -207,6 +233,29 @@ inline TextView *textView(uint64_t handle) {
 inline Menu *menu(uint64_t handle) {
   auto it = state().menus.find(handle);
   return it != state().menus.end() ? &it->second : nullptr;
+}
+
+inline Control *control(uint64_t handle) {
+  auto it = state().controls.find(handle);
+  return it != state().controls.end() ? &it->second : nullptr;
+}
+
+// The window whose content holds the control (directly or through forms and tabs); 0 when none.
+inline uint64_t windowOfControl(uint64_t handle) {
+  uint64_t root = handle;
+  for (int depth = 0; depth < 64; ++depth) {
+    const Control *c = control(root);
+    if (c == nullptr || c->parent == 0) {
+      break;
+    }
+    root = c->parent;
+  }
+  for (const auto &entry : state().windows) {
+    if (!entry.second.state.closed && entry.second.state.content == root) {
+      return entry.first;
+    }
+  }
+  return 0;
 }
 
 inline bool activeWindowHasPreview() {
@@ -256,6 +305,25 @@ inline bool deliverNextEvent() {
         return true;
       }
       break;
+    case Action::Kind::Toggle: {
+      Control *box = control(action.handle);
+      if (box != nullptr && box->kind == Control::Kind::CheckBox) {
+        box->checked = !box->checked;
+        setEvent(PS_UI_EVENT_CONTROL_CHANGED, windowOfControl(action.handle), action.handle);
+        return true;
+      }
+      break;
+    }
+    case Action::Kind::Select: {
+      Control *popup = control(action.handle);
+      if (popup != nullptr && popup->kind == Control::Kind::Popup && action.command >= 0 &&
+          static_cast<size_t>(action.command) < popup->items.size()) {
+        popup->selected = action.command;
+        setEvent(PS_UI_EVENT_CONTROL_CHANGED, windowOfControl(action.handle), action.handle);
+        return true;
+      }
+      break;
+    }
     case Action::Kind::TypeText: {
       uint64_t handle = action.handle;
       if (handle == 0 && !s.textViews.empty()) {

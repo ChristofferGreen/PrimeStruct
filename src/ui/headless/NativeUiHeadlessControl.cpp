@@ -260,4 +260,97 @@ void pushRecentFile(const std::string &path) {
 
 std::vector<std::string> recentFiles() { return state().recents; }
 
+void pushToggleCheckBox(uint64_t checkBox) {
+  recordScenario("check:" + std::to_string(checkBox));
+  Action a;
+  a.kind = Action::Kind::Toggle;
+  a.handle = checkBox;
+  state().actions.push_back(std::move(a));
+}
+
+void pushSelectPopupItem(uint64_t popup, int32_t index) {
+  recordScenario("popup:" + std::to_string(popup) + ":" + std::to_string(index));
+  Action a;
+  a.kind = Action::Kind::Select;
+  a.handle = popup;
+  a.command = index;
+  state().actions.push_back(std::move(a));
+}
+
+int32_t fontSize(uint64_t view) {
+  const TextView *v = textView(view);
+  return v != nullptr ? v->fontSize : 0;
+}
+
+bool previewScrollLock() { return state().scrollLock; }
+
+bool checkBoxChecked(uint64_t checkBox) {
+  const Control *c = control(checkBox);
+  return c != nullptr && c->kind == Control::Kind::CheckBox && c->checked;
+}
+
+int32_t popupSelected(uint64_t popup) {
+  const Control *c = control(popup);
+  return c != nullptr && c->kind == Control::Kind::Popup ? c->selected : -1;
+}
+
+namespace {
+
+std::string leafOutline(const Control &c) {
+  switch (c.kind) {
+  case Control::Kind::Label:
+    return "label " + quote(c.text);
+  case Control::Kind::CheckBox:
+    return "checkbox " + quote(c.text) + (c.checked ? " [checked]" : "");
+  case Control::Kind::Popup: {
+    std::string items;
+    for (size_t i = 0; i < c.items.size(); ++i) {
+      items += (i == 0 ? "" : "|") + c.items[i];
+    }
+    return "popup [" + items + "] selected=" + std::to_string(c.selected);
+  }
+  default:
+    return "";
+  }
+}
+
+void describeControl(uint64_t handle, const std::string &indent, const std::string &prefix,
+                     std::vector<std::string> &out) {
+  const Control *c = control(handle);
+  if (c == nullptr) {
+    out.push_back(indent + prefix + "(none)");
+  } else if (c->kind == Control::Kind::Form) {
+    out.push_back(indent + prefix + "form");
+    for (const Control::Row &row : c->rows) {
+      switch (row.kind) {
+      case Control::Row::Kind::Heading:
+        out.push_back(indent + "  heading " + quote(row.label));
+        break;
+      case Control::Row::Kind::Labelled:
+        describeControl(row.control, indent + "  ", "row " + quote(row.label) + ": ", out);
+        break;
+      case Control::Row::Kind::Plain:
+        describeControl(row.control, indent + "  ", "control: ", out);
+        break;
+      }
+    }
+  } else if (c->kind == Control::Kind::Tabs) {
+    out.push_back(indent + prefix + "tabs selected=" + std::to_string(c->selected));
+    for (const Control::Page &page : c->pages) {
+      out.push_back(indent + "  page " + quote(page.title) + ":");
+      describeControl(page.content, indent + "    ", "", out);
+    }
+  } else {
+    out.push_back(indent + prefix + leafOutline(*c));
+  }
+}
+
+} // namespace
+
+std::vector<std::string> controlOutline(uint64_t root) {
+  std::vector<std::string> out;
+  describeControl(root, "", "", out);
+  return out;
+}
+
 } // namespace primec::ui::headless

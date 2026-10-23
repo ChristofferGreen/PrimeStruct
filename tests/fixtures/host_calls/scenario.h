@@ -6,7 +6,7 @@
 // Entries are separated by ';'. `cmd:N` is a menu command, `type:W:text` types into window
 // handle W, `close:W` asks to close it, `save:path` and `open:path` answer the next save and open
 // panel, `alert:N` answers the next alert, `activate:W` makes window W the active one and `quit`
-// asks the app to quit, `pref:key=1` presets a boolean preference and `recent:path` notes a recent file, `pint:key=3` and `plist:key=a,b` preset an integer and a list preference. Text may carry %XX escapes (for ';', '%' and line breaks).
+// asks the app to quit, `check:H` clicks check box H and `popup:H:I` chooses item I of pop-up H, `pref:key=1` presets a boolean preference and `recent:path` notes a recent file, `pint:key=3` and `plist:key=a,b` preset an integer and a list preference. Text may carry %XX escapes (for ';', '%' and line breaks).
 #pragma once
 
 #include "primec/ui/NativeUiHeadless.h"
@@ -80,6 +80,12 @@ inline void applyHeadlessScenario(std::string_view scenario) {
       const size_t equals = rest.rfind('=');
       headless::setBoolPref(decodeScenarioText(rest.substr(0, equals)),
                             equals != std::string::npos && rest.substr(equals + 1) == "1");
+    } else if (key == "check") {
+      headless::pushToggleCheckBox(static_cast<uint64_t>(std::atoll(rest.c_str())));
+    } else if (key == "popup") {
+      const size_t second = rest.find(':');
+      headless::pushSelectPopupItem(static_cast<uint64_t>(std::atoll(rest.substr(0, second).c_str())),
+                                    second == std::string::npos ? 0 : std::atoi(rest.substr(second + 1).c_str()));
     } else if (key == "activate") {
       headless::pushActivateWindow(static_cast<uint64_t>(std::atoll(rest.c_str())));
     } else if (key == "quit") {

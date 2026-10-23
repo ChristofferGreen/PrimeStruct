@@ -106,7 +106,11 @@ bool ps_ui_window_set_content(uint64_t window, uint64_t widget) {
       "ps_ui_window_set_content(" + std::to_string(window) + ", " + std::to_string(widget) + ")";
   Window *w = usable() ? liveWindow(window) : nullptr;
   TextView *view = usable() ? textView(widget) : nullptr;
-  if (w == nullptr || view == nullptr || (view->window != 0 && view->window != window)) {
+  Control *root = usable() ? control(widget) : nullptr;
+  const bool viewOk = view != nullptr && (view->window == 0 || view->window == window);
+  const bool controlOk = root != nullptr && root->parent == 0 &&
+                         (windowOfControl(widget) == 0 || windowOfControl(widget) == window);
+  if (w == nullptr || (!viewOk && !controlOk)) {
     return loggedFlag(call, false);
   }
   if (w->state.content != 0 && w->state.content != widget) {
@@ -115,7 +119,9 @@ bool ps_ui_window_set_content(uint64_t window, uint64_t widget) {
     }
   }
   w->state.content = widget;
-  view->window = window;
+  if (view != nullptr) {
+    view->window = window;
+  }
   return loggedFlag(call, true);
 }
 
@@ -235,7 +241,8 @@ bool ps_ui_window_add_tab(uint64_t host, uint64_t tab) {
   State &s = state();
   Window *h = usable() ? liveWindow(host) : nullptr;
   Window *t = usable() ? liveWindow(tab) : nullptr;
-  const bool ok = h != nullptr && t != nullptr && host != tab && t->group == 0;
+  const bool ok = h != nullptr && t != nullptr && host != tab && t->group == 0 &&
+                  h->state.style == PS_UI_WINDOW_DOCUMENT && t->state.style == PS_UI_WINDOW_DOCUMENT;
   if (ok) {
     if (h->group == 0) {
       h->group = s.nextGroup++;

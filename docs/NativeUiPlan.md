@@ -130,6 +130,7 @@ is callable only on the thread that called `ps_ui_init`, the main thread on macO
 | Text files | `ps_ui_text_view_load_file(view, path) -> bool`, `ps_ui_text_view_save_file(view, path) -> bool`, `ps_ui_last_error() -> String` (the backend reads and writes UTF-8 files itself, so no program-side text is built and a large file never passes through the program) |
 | Recent files | `ps_ui_recent_add(path)`, `ps_ui_recent_path(index) -> String` (most recent first), `ps_ui_recent_clear()` (the app's own defaults list `ps.recent.files` on macOS, kept between runs and across app updates; `PRIMESTRUCT_UI_RECENT=/a:/b` and every snapshot run use an in-memory list instead; the headless backend keeps the list in memory, preset with `headless::pushRecentFile`, at most 10 entries) |
 | Preferences | `ps_ui_pref_get_bool(key, fallback) -> bool`, `ps_ui_pref_set_bool(key, value) -> bool` (and `_get_int/_set_int`, plus lists of texts: `ps_ui_pref_list_clear/add/count/get(key, ...)`; booleans the app keeps between runs: `NSUserDefaults` on macOS under `ps.pref.<key>`; `PRIMESTRUCT_UI_PREFS=key=1,other=0` and every snapshot run answer from the environment instead and never touch the user's defaults; the headless backend keeps them in memory, preset with `headless::setBoolPref`) |
+| Controls and forms | `ps_ui_label_create(text)`, `_set_text`; `ps_ui_checkbox_create(title, checked)`, `_set_checked`, `_checked`; `ps_ui_popup_create()`, `_add_item(popup, title)`, `_select(popup, index)`, `_selected(popup) -> i32` (the first item added is chosen); `ps_ui_form_create()`, `_add_heading(form, title)`, `_add_row(form, label, control)` (the labels line up in one column, the controls in the next), `_add_control(form, control)` (a control alone in the controls' column, such as a check box); `ps_ui_tabs_create()`, `_add(tabs, title, content)`, `_select(tabs, index)` (the first page added is shown). A control is held by one form or tabs, or is a window's content (`ps_ui_window_set_content` takes any of them). The user's click on a check box or choice in a pop-up is `PS_UI_EVENT_CONTROL_CHANGED` with the control as the event's widget and its window; the program's own changes make no event. `ps_ui_window_set_style(window, PS_UI_WINDOW_SETTINGS)` makes a window that is never a tab and fits its content. `ps_ui_text_view_set_font_size(view, points)` (6 to 96). The headless backend keeps all of it in memory, answers scripted user actions (`headless::pushToggleCheckBox`, `pushSelectPopupItem`; `check:H` and `popup:H:I` in a scenario) and shows a control tree as text (`headless::controlOutline(root)`); the AppKit backend answers the controls with TODO-5593 |
 | Markdown preview | `ps_ui_window_set_preview(window, bool)` (the window shows its text view and, beside it, the markdown of that text rendered as a page; the backend builds the preview only when it is turned on; false for a bad window or one with no text view; on while on is a no-op), `ps_ui_window_has_preview(window) -> bool`, `ps_ui_window_refresh_preview(window) -> bool` (render again from the current text; false without a preview; a backend may coalesce refreshes), `ps_ui_menu_follow_preview(menu, commandId) -> bool` (the items' check mark shows whether the active window has a preview, so it stays right when the user clicks another tab). The headless backend records the page (`headless::previewPage(window)`) and how often it was built (`WindowState::previewRenders`) |
 | Dialogs | `ps_ui_open_panel(title) -> String`, `ps_ui_save_panel(title, suggestedName) -> String` (empty means cancelled), `ps_ui_panel_chosen() -> bool` (whether the last panel returned a path), `ps_ui_alert(message, detail, buttons) -> i32` |
 
@@ -145,7 +146,7 @@ is callable only on the thread that called `ps_ui_init`, the main thread on macO
   is a `const char *` valid until the next text-returning call, `ps_ui_alert` takes button titles separated by `\n` and
   returns the pressed index, and `ps_ui_init` returns false when the app is already running. The headless backend
   (`primec/ui/NativeUiHeadless.h`) ends a scripted run with `quit_requested` once its action list is empty.
-  `primec/ui/NativeUiBindings.h` binds all 69 functions into a `ScriptEngine` or `Script` under their ABI names. The
+  `primec/ui/NativeUiBindings.h` binds all 88 functions into a `ScriptEngine` or `Script` under their ABI names. The
   three text-file functions (TODO-5546) let the editor open and save before owned `String` exists (TODO-5530).
 - **Versioning.** `ps_ui_abi_version() -> i32` returns 0 for this table. Additions append functions; a change to an
   existing signature bumps the version.
@@ -400,3 +401,22 @@ page follows the text as it is edited. It is done when the installed native Prim
 - **Slices (all done).** The converter (TODO-5588), the ABI with the headless backend and the editor menu (TODO-5589:
   the editor scenarios run it on the VM, the optimized C++ build and the native build), and the AppKit split view with
   the lazily loaded web view (TODO-5590). The installed native PrimeScroll shows it.
+
+## 15. Settings window
+
+**Goal (2026-10-24): PrimeScroll has a proper settings window.** Command-Comma (the application menu's Settings...)
+opens one window with tabs. Every setting is kept between runs, takes effect at once, and keeps the View menu in
+step with it.
+
+- **General:** Reopen the files of the last session (`restoreSession`, on).
+- **Editor:** Show line numbers (`lineNumbers`, off; it replaces the application menu's Start with Line Numbers),
+  Wrap long lines (`wrapLines`, on), Font size (`fontSize`, 13; a pop-up of 11, 12, 13, 14, 16, 18, 20 and 24).
+- **Markdown:** Open markdown files with the preview on (`previewMarkdown`, off), and Scroll the source and the preview
+  together (`lockScroll`, on).
+- **Controls.** The ABI grows a small widget set (section 4, Controls and forms): labels, check boxes, pop-ups, forms,
+  tabs, the settings window style and the control-changed event. The headless backend prints a control tree as text
+  (`headless::controlOutline`), so an acceptance test can pin the whole window like the menu bar's outline.
+- **Not a document.** A settings window is never a tab and does not count as an open document: closing the last
+  document ends the app and closes the settings window with it.
+- **Slices.** The controls ABI with the headless backend, the bindings and the stdlib (TODO-5592, done), the AppKit
+  controls and the settings window style (TODO-5593), then the editor's window and its preferences (TODO-5594).

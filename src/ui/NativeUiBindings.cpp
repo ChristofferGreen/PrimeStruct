@@ -40,6 +40,40 @@ template <class Binder> void forEachBinding(Binder &&bindOne) {
   bindOne("ps_ui_window_refresh_preview", [](uint64_t window) { return ps_ui_window_refresh_preview(window); });
   bindOne("ps_ui_menu_follow_preview",
           [](uint64_t menu, int32_t commandId) { return ps_ui_menu_follow_preview(menu, commandId); });
+  bindOne("ps_ui_label_create", [](std::string_view value) { return ps_ui_label_create(text(value).c_str()); });
+  bindOne("ps_ui_label_set_text", [](uint64_t label, std::string_view value) {
+    return ps_ui_label_set_text(label, text(value).c_str());
+  });
+  bindOne("ps_ui_checkbox_create", [](std::string_view title, bool checked) {
+    return ps_ui_checkbox_create(text(title).c_str(), checked);
+  });
+  bindOne("ps_ui_checkbox_set_checked",
+          [](uint64_t box, bool checked) { return ps_ui_checkbox_set_checked(box, checked); });
+  bindOne("ps_ui_checkbox_checked", [](uint64_t box) { return ps_ui_checkbox_checked(box); });
+  bindOne("ps_ui_popup_create", [] { return ps_ui_popup_create(); });
+  bindOne("ps_ui_popup_add_item", [](uint64_t popup, std::string_view title) {
+    return ps_ui_popup_add_item(popup, text(title).c_str());
+  });
+  bindOne("ps_ui_popup_select", [](uint64_t popup, int32_t index) { return ps_ui_popup_select(popup, index); });
+  bindOne("ps_ui_popup_selected", [](uint64_t popup) { return ps_ui_popup_selected(popup); });
+  bindOne("ps_ui_form_create", [] { return ps_ui_form_create(); });
+  bindOne("ps_ui_form_add_heading", [](uint64_t form, std::string_view title) {
+    return ps_ui_form_add_heading(form, text(title).c_str());
+  });
+  bindOne("ps_ui_form_add_row", [](uint64_t form, std::string_view label, uint64_t control) {
+    return ps_ui_form_add_row(form, text(label).c_str(), control);
+  });
+  bindOne("ps_ui_form_add_control",
+          [](uint64_t form, uint64_t control) { return ps_ui_form_add_control(form, control); });
+  bindOne("ps_ui_tabs_create", [] { return ps_ui_tabs_create(); });
+  bindOne("ps_ui_tabs_add", [](uint64_t tabs, std::string_view title, uint64_t content) {
+    return ps_ui_tabs_add(tabs, text(title).c_str(), content);
+  });
+  bindOne("ps_ui_tabs_select", [](uint64_t tabs, int32_t index) { return ps_ui_tabs_select(tabs, index); });
+  bindOne("ps_ui_window_set_style", [](uint64_t window, int32_t style) { return ps_ui_window_set_style(window, style); });
+  bindOne("ps_ui_text_view_set_font_size",
+          [](uint64_t view, int32_t points) { return ps_ui_text_view_set_font_size(view, points); });
+  bindOne("ps_ui_preview_set_scroll_lock", [](bool on) { return ps_ui_preview_set_scroll_lock(on); });
   bindOne("ps_ui_window_set_content",
           [](uint64_t window, uint64_t widget) { return ps_ui_window_set_content(window, widget); });
   bindOne("ps_ui_window_set_edited",

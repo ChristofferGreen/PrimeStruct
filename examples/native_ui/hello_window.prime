@@ -28,6 +28,9 @@ main() {
         [Window] target{w}
         target.setEdited(true)
       }
+      controlChanged(widget) {
+        [Widget] changed{widget}
+      }
       quitRequested {
         running = false
       }

@@ -32,6 +32,11 @@ void pushCloseWindow(uint64_t window);
 void pushQuit();
 // Makes `window` the active (key) window when replayed; no event is delivered.
 void pushActivateWindow(uint64_t window);
+// The user clicks a check box (it flips) or chooses item `index` of a pop-up; either delivers
+// PS_UI_EVENT_CONTROL_CHANGED (recorded in pushedScenario as `check:H` and `popup:H:I`). An action whose control
+// is gone or of another kind by replay time is skipped.
+void pushToggleCheckBox(uint64_t checkBox);
+void pushSelectPopupItem(uint64_t popup, int32_t index);
 // The open windows of the tab group `window` belongs to, in tab order; empty when it is in none.
 std::vector<uint64_t> tabGroup(uint64_t window);
 // The document path stored with a window ("" when none or the handle is bad).
@@ -61,6 +66,7 @@ struct WindowState {
   std::string autosaveName; // set with ps_ui_window_set_autosave_name
   bool preview = false;     // the preview pane is on (ps_ui_window_set_preview)
   int32_t previewRenders = 0; // how many times the preview page was built
+  int32_t style = 0;          // the PS_UI_WINDOW_* style (ps_ui_window_set_style)
 };
 WindowState windowState(uint64_t window);
 // The page the window's preview shows (primec::ui::markdownPreviewPage of the text view's text when it
@@ -71,6 +77,21 @@ bool isMonospace(uint64_t textView);
 bool lineNumbersVisible(uint64_t textView);
 // True when the text view wraps long lines (the default).
 bool lineWrapping(uint64_t textView);
+// The point size set with ps_ui_text_view_set_font_size (0 when never set).
+int32_t fontSize(uint64_t textView);
+// Whether the preview's source and page scroll together (on by default).
+bool previewScrollLock();
+bool checkBoxChecked(uint64_t checkBox);
+// The chosen item of a pop-up (-1 for none or a bad handle).
+int32_t popupSelected(uint64_t popup);
+// The controls under `root` as indented lines, such as
+//   tabs selected=0
+//     page "General":
+//       form
+//         heading "Startup"
+//         row "Font size": popup [12|14] selected=1
+//         control: checkbox "Wrap" [checked]
+std::vector<std::string> controlOutline(uint64_t root);
 // Notes a recent file the way the program does (recorded in pushedScenario as `recent:path`); the
 // list, most recent first.
 void pushRecentFile(const std::string &path);

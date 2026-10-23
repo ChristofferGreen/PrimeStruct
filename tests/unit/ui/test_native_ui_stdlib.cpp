@@ -168,3 +168,67 @@ main() {
   REQUIRE_MESSAGE(result.ok, result.diagnostics);
   CHECK(result.exitCode == 1);
 }
+
+TEST_CASE("a settings window built from the stdlib controls reports what the user changes") {
+  const std::string source = R"(
+import /std/ui/native/*
+
+[return<int>]
+main() {
+  [App] app{start_app("Settings")}
+  [Window] window{app.window("Settings", 420i32, 300i32)}
+  window.setSettingsStyle()
+  [Tabs] tabs{app.tabs()}
+  [Form] general{app.form()}
+  general.heading("Startup")
+  [CheckBox] restore{app.checkBox("Reopen the last session", true)}
+  general.control(restore.widget())
+  [Popup] size{app.popup()}
+  size.addItem("12")
+  size.addItem("14")
+  general.row("Font size", size.widget())
+  tabs.add("General", general.widget())
+  window.setContentWidget(tabs.widget())
+  window.show()
+  [mut] changes{0i32}
+  [mut] running{true}
+  while(running) {
+    pick(app.waitEvent()) {
+      command(id) {
+        changes = changes + 0i32
+      }
+      windowCloseRequested(w) {
+        running = false
+      }
+      textChanged(w) {
+        changes = changes + 0i32
+      }
+      controlChanged(widget) {
+        changes = changes + 1i32
+      }
+      quitRequested {
+        running = false
+      }
+    }
+  }
+  [i32] checkedValue{if(restore.isChecked(), then() { 10i32 }, else() { 0i32 })}
+  return(changes * 100i32 + checkedValue + size.selected())
+}
+)";
+  const Script script = compileSource(source);
+  headless::reset();
+  // Handles in creation order: the window 1, tabs 2, form 3, check box 4, pop-up 5.
+  headless::pushToggleCheckBox(4);
+  headless::pushSelectPopupItem(5, 1);
+  const auto result = script.run();
+  REQUIRE_MESSAGE(result.ok, result.diagnostics);
+  CHECK(result.exitCode == 201); // two changes, the box unchecked, the second item chosen
+  CHECK(headless::windowState(1).style == PS_UI_WINDOW_SETTINGS);
+  const std::vector<std::string> outline{"tabs selected=0",
+                                         "  page \"General\":",
+                                         "    form",
+                                         "      heading \"Startup\"",
+                                         "      control: checkbox \"Reopen the last session\"",
+                                         "      row \"Font size\": popup [12|14] selected=1"};
+  CHECK(headless::controlOutline(2) == outline);
+}

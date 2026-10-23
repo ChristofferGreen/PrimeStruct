@@ -428,6 +428,9 @@ main([array<string>] args) {
         view.highlight(changed.path())
         changed.refreshPreview()
       }
+      controlChanged(widget) {
+        [Widget] changed{widget}
+      }
       quitRequested {
         intent = command_quit()
       }

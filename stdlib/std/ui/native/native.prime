@@ -163,6 +163,82 @@ ps_ui_window_refresh_preview([u64] window) {
 }
 
 [host return<bool>]
+ps_ui_preview_set_scroll_lock([bool] on) {
+}
+
+[host return<bool>]
+ps_ui_window_set_style([u64] window, [i32] style) {
+}
+
+[host return<bool>]
+ps_ui_text_view_set_font_size([u64] view, [i32] points) {
+}
+
+[host return<u64>]
+ps_ui_label_create([string] text) {
+}
+
+[host return<bool>]
+ps_ui_label_set_text([u64] label, [string] text) {
+}
+
+[host return<u64>]
+ps_ui_checkbox_create([string] title, [bool] checked) {
+}
+
+[host return<bool>]
+ps_ui_checkbox_set_checked([u64] checkbox, [bool] checked) {
+}
+
+[host return<bool>]
+ps_ui_checkbox_checked([u64] checkbox) {
+}
+
+[host return<u64>]
+ps_ui_popup_create() {
+}
+
+[host return<bool>]
+ps_ui_popup_add_item([u64] popup, [string] title) {
+}
+
+[host return<bool>]
+ps_ui_popup_select([u64] popup, [i32] index) {
+}
+
+[host return<i32>]
+ps_ui_popup_selected([u64] popup) {
+}
+
+[host return<u64>]
+ps_ui_form_create() {
+}
+
+[host return<bool>]
+ps_ui_form_add_heading([u64] form, [string] title) {
+}
+
+[host return<bool>]
+ps_ui_form_add_row([u64] form, [string] label, [u64] control) {
+}
+
+[host return<bool>]
+ps_ui_form_add_control([u64] form, [u64] control) {
+}
+
+[host return<u64>]
+ps_ui_tabs_create() {
+}
+
+[host return<bool>]
+ps_ui_tabs_add([u64] tabs, [string] title, [u64] content) {
+}
+
+[host return<bool>]
+ps_ui_tabs_select([u64] tabs, [i32] index) {
+}
+
+[host return<bool>]
 ps_ui_text_view_clear_styles([u64] view) {
 }
 
@@ -306,6 +382,18 @@ Window() {
     return(ps_ui_window_set_content(this.handle, view.handle))
   }
 
+  // A control (usually a form or tabs) as the window's content, as in a settings window.
+  [public return<bool>]
+  setContentWidget([Widget] widget) {
+    return(ps_ui_window_set_content(this.handle, widget.handle))
+  }
+
+  // A settings window: never a tab, sized to fit its content, no minimize or zoom.
+  [public return<bool>]
+  setSettingsStyle() {
+    return(ps_ui_window_set_style(this.handle, 1i32))
+  }
+
   [public return<bool>]
   setEdited([bool] edited) {
     return(ps_ui_window_set_edited(this.handle, edited))
@@ -402,6 +490,12 @@ TextView() {
   [public return<bool>]
   setMonospace([bool] monospace) {
     return(ps_ui_text_view_set_monospace(this.handle, monospace))
+  }
+
+  // The size of the text in points (6 to 96).
+  [public return<bool>]
+  setFontSize([i32] points) {
+    return(ps_ui_text_view_set_font_size(this.handle, points))
   }
 
   // The backend reads the UTF-8 file itself; false (see App.lastError()) when it
@@ -633,14 +727,138 @@ Menu() {
   }
 }
 
+// Controls for a settings window: values are handles. A control is held by one form or tabs, or is a
+// window's content; `widget()` is the generic handle a form, tabs or window takes.
+[public struct]
+Widget() {
+  [public u64] handle{0u64}
+}
+
+[public struct]
+Label() {
+  [public u64] handle{0u64}
+
+  [public return<Widget>]
+  widget() {
+    [Widget] generic{[handle] this.handle}
+    return(generic)
+  }
+
+  [public return<bool>]
+  setText([string] value) {
+    return(ps_ui_label_set_text(this.handle, value))
+  }
+}
+
+[public struct]
+CheckBox() {
+  [public u64] handle{0u64}
+
+  [public return<Widget>]
+  widget() {
+    [Widget] generic{[handle] this.handle}
+    return(generic)
+  }
+
+  // The program's own change: it produces no event.
+  [public return<bool>]
+  setChecked([bool] checked) {
+    return(ps_ui_checkbox_set_checked(this.handle, checked))
+  }
+
+  [public return<bool>]
+  isChecked() {
+    return(ps_ui_checkbox_checked(this.handle))
+  }
+}
+
+[public struct]
+Popup() {
+  [public u64] handle{0u64}
+
+  [public return<Widget>]
+  widget() {
+    [Widget] generic{[handle] this.handle}
+    return(generic)
+  }
+
+  // Items are added in order; the first one is chosen at first.
+  [public return<bool>]
+  addItem([string] title) {
+    return(ps_ui_popup_add_item(this.handle, title))
+  }
+
+  [public return<bool>]
+  select([i32] index) {
+    return(ps_ui_popup_select(this.handle, index))
+  }
+
+  // The chosen item's index (-1 without items).
+  [public return<i32>]
+  selected() {
+    return(ps_ui_popup_selected(this.handle))
+  }
+}
+
+// A column of rows: headings, a label with a control, or a control alone in the controls' column.
+[public struct]
+Form() {
+  [public u64] handle{0u64}
+
+  [public return<Widget>]
+  widget() {
+    [Widget] generic{[handle] this.handle}
+    return(generic)
+  }
+
+  [public return<bool>]
+  heading([string] title) {
+    return(ps_ui_form_add_heading(this.handle, title))
+  }
+
+  [public return<bool>]
+  row([string] label, [Widget] control) {
+    return(ps_ui_form_add_row(this.handle, label, control.handle))
+  }
+
+  [public return<bool>]
+  control([Widget] control) {
+    return(ps_ui_form_add_control(this.handle, control.handle))
+  }
+}
+
+// Pages under a row of tab titles; the first page added is shown.
+[public struct]
+Tabs() {
+  [public u64] handle{0u64}
+
+  [public return<Widget>]
+  widget() {
+    [Widget] generic{[handle] this.handle}
+    return(generic)
+  }
+
+  [public return<bool>]
+  add([string] title, [Widget] content) {
+    return(ps_ui_tabs_add(this.handle, title, content.handle))
+  }
+
+  [public return<bool>]
+  select([i32] index) {
+    return(ps_ui_tabs_select(this.handle, index))
+  }
+}
+
 // What waitEvent() returns. Typing, selection, clipboard and undo are handled by
-// the native text view and never reach the program.
+// the native text view and never reach the program. `controlChanged` carries the check box or
+// pop-up the user changed.
 [public sum]
 AppEvent {
   quitRequested
   [i32] command
   [Window] windowCloseRequested
   [Window] textChanged
+  [Widget] controlChanged
 }
 
 [public struct]
@@ -689,6 +907,42 @@ App() {
     return(created)
   }
 
+  [public return<Label>]
+  label([string] text) {
+    [Label] created{[handle] ps_ui_label_create(text)}
+    return(created)
+  }
+
+  [public return<CheckBox>]
+  checkBox([string] title, [bool] checked) {
+    [CheckBox] created{[handle] ps_ui_checkbox_create(title, checked)}
+    return(created)
+  }
+
+  [public return<Popup>]
+  popup() {
+    [Popup] created{[handle] ps_ui_popup_create()}
+    return(created)
+  }
+
+  [public return<Form>]
+  form() {
+    [Form] created{[handle] ps_ui_form_create()}
+    return(created)
+  }
+
+  [public return<Tabs>]
+  tabs() {
+    [Tabs] created{[handle] ps_ui_tabs_create()}
+    return(created)
+  }
+
+  // Whether the source and the page of a markdown preview scroll together (on by default).
+  [public return<bool>]
+  setPreviewScrollLock([bool] on) {
+    return(ps_ui_preview_set_scroll_lock(on))
+  }
+
   [public return<AppEvent>]
   waitEvent() {
     [i32] kind{ps_ui_wait_event()}
@@ -704,6 +958,11 @@ App() {
     if(kind == 3i32) {
       [Window] window{[handle] ps_ui_event_window()}
       [AppEvent] event{[textChanged] window}
+      return(event)
+    }
+    if(kind == 5i32) {
+      [Widget] widget{[handle] ps_ui_event_widget()}
+      [AppEvent] event{[controlChanged] widget}
       return(event)
     }
     [AppEvent] event{}
