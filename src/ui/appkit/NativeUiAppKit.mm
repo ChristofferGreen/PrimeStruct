@@ -20,8 +20,10 @@
 // first (for the editor, two New commands: two more tabs).
 
 #import <AppKit/AppKit.h>
+#import <objc/message.h>
 #import <objc/runtime.h>
 
+#include "primec/ui/Markdown.h"
 #include "primec/ui/NativeUi.h"
 #include "primec/ui/NativeUiRecentFiles.h"
 #include "primec/ui/NativeUiStandardItems.h"
@@ -34,9 +36,11 @@
 #include <cstdlib>
 #include <cstring>
 #include <deque>
+#include <dlfcn.h>
 #include <string>
 #include <thread>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #import <os/log.h>
@@ -70,7 +74,15 @@ struct State {
   std::unordered_map<uint64_t, NSWindow *> windows;
   std::unordered_map<uint64_t, uint64_t> windowContent;
   std::unordered_map<uint64_t, std::string> windowPaths;
-  std::unordered_map<uint64_t, bool> previews; // windows whose preview pane is on
+  // The markdown preview (ps_ui_window_set_preview): a split view of the text view and a web view per
+  // window. WebKit is loaded when the first preview turns on and is never linked.
+  std::unordered_map<uint64_t, bool> previews;
+  std::unordered_map<uint64_t, NSSplitView *> previewSplits;
+  std::unordered_map<uint64_t, NSView *> previewWebs;
+  std::unordered_map<uint64_t, bool> previewLoading;
+  std::unordered_map<uint64_t, double> previewScroll;
+  std::unordered_map<uint64_t, bool> previewRefreshPending;
+  std::unordered_set<int32_t> previewMenuItems; // command ids whose check mark follows the active preview
   std::unordered_map<uint64_t, NSTextView *> textViews;
   std::unordered_map<uint64_t, NSFont *> baseFonts;
   // A text view does not retain its scroll view, so the maps do.
@@ -152,6 +164,173 @@ NSMenu *menuFor(uint64_t handle) {
   return it != state().menus.end() ? it->second : nil;
 }
 
+// ---- the markdown preview ------------------------------------------------------------------------
+// WebKit is not linked: the first preview loads the framework and its classes are used by name, so a
+// program that never previews neither loads WebKit nor pays for it at launch.
+
+Class webKitClass(NSString *name) {
+  static const bool loaded = dlopen("/System/Library/Frameworks/WebKit.framework/WebKit", RTLD_LAZY) != nullptr;
+  return loaded ? NSClassFromString(name) : Nil;
+}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+
+void loadPage(NSView *web, NSString *page) {
+  [web performSelector:NSSelectorFromString(@"loadHTMLString:baseURL:") withObject:page withObject:nil];
+}
+
+void evaluateScript(NSView *web, NSString *script, void (^done)(id)) {
+  [web performSelector:NSSelectorFromString(@"evaluateJavaScript:completionHandler:")
+            withObject:script
+            withObject:^(id result, NSError *error) {
+              if (done != nil) {
+                done(result);
+              }
+            }];
+}
+
+// Navigation is the program's to refuse: the page the preview loads is allowed, a click on a link opens
+// the address in the default browser, and nothing else may navigate the preview.
+Class previewDelegateClass() {
+  static Class created = [] {
+    Class made = objc_allocateClassPair([NSObject class], "PSPreviewDelegate", 0);
+    class_addMethod(made, NSSelectorFromString(@"webView:decidePolicyForNavigationAction:decisionHandler:"),
+                    imp_implementationWithBlock(^(id, id, id action, void (^decide)(NSInteger)) {
+                      const NSInteger type = [[action valueForKey:@"navigationType"] integerValue];
+                      NSURL *url = [[action valueForKey:@"request"] URL];
+                      if (type == -1 || [url.absoluteString hasPrefix:@"about:blank"]) {
+                        decide(1);
+                        return;
+                      }
+                      decide(0);
+                      NSString *scheme = url.scheme.lowercaseString;
+                      if ([scheme isEqualToString:@"http"] || [scheme isEqualToString:@"https"] ||
+                          [scheme isEqualToString:@"mailto"]) {
+                        [[NSWorkspace sharedWorkspace] openURL:url];
+                      }
+                    }),
+                    "v@:@@@?");
+    class_addMethod(made, NSSelectorFromString(@"webView:didFinishNavigation:"),
+                    imp_implementationWithBlock(^(id, id web, id) {
+                      State &s = state();
+                      const uint64_t window = handleOf(web);
+                      s.previewLoading[window] = false;
+                      const double scroll = s.previewScroll[window];
+                      if (scroll > 0) {
+                        evaluateScript(web, [NSString stringWithFormat:@"window.scrollTo(0, %f)", scroll], nil);
+                      }
+                    }),
+                    "v@:@@");
+    for (NSString *failed in @[ @"webView:didFailNavigation:withError:",
+                                @"webView:didFailProvisionalNavigation:withError:" ]) {
+      class_addMethod(made, NSSelectorFromString(failed),
+                      imp_implementationWithBlock(^(id, id web, id, id) { state().previewLoading[handleOf(web)] = false; }),
+                      "v@:@@@");
+    }
+    objc_registerClassPair(made);
+    return made;
+  }();
+  return created;
+}
+
+bool previewOn(uint64_t window) {
+  const auto it = state().previews.find(window);
+  return it != state().previews.end() && it->second;
+}
+
+bool anyPreviewLoading() {
+  for (const auto &entry : state().previewLoading) {
+    if (entry.second) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Builds the page of the window's text and loads it into its web view; with `keepScroll` the page comes
+// back to where the reader was.
+void renderPreview(uint64_t window, bool keepScroll) {
+  State &s = state();
+  const auto web = s.previewWebs.find(window);
+  const auto content = s.windowContent.find(window);
+  NSTextView *view = content != s.windowContent.end() ? textView(content->second) : nil;
+  if (web == s.previewWebs.end() || view == nil) {
+    return;
+  }
+  NSView *target = web->second;
+  const char *text = view.string.UTF8String;
+  NSString *page = toNSString(primec::ui::markdownPreviewPage(text != nullptr ? text : "").c_str());
+  s.previewLoading[window] = true;
+  void (^load)(double) = ^(double scroll) {
+    State &now = state();
+    const auto current = now.previewWebs.find(window);
+    if (current == now.previewWebs.end() || current->second != target) {
+      return;
+    }
+    now.previewScroll[window] = scroll;
+    loadPage(target, page);
+  };
+  if (keepScroll) {
+    evaluateScript(target, @"window.scrollY", ^(id result) {
+      load([result respondsToSelector:@selector(doubleValue)] ? [result doubleValue] : 0);
+    });
+  } else {
+    load(0);
+  }
+}
+
+void dropPreviewState(uint64_t window) {
+  State &s = state();
+  const auto web = s.previewWebs.find(window);
+  if (web != s.previewWebs.end()) {
+    [web->second setValue:nil forKey:@"navigationDelegate"];
+  }
+  s.previews.erase(window);
+  s.previewSplits.erase(window);
+  s.previewWebs.erase(window);
+  s.previewLoading.erase(window);
+  s.previewScroll.erase(window);
+  s.previewRefreshPending.erase(window);
+}
+
+// A web view does not draw itself into an offscreen bitmap: ask it for a snapshot of its own and put that
+// where the web view sits in the window's picture.
+void drawPreviewWeb(uint64_t window, NSView *view, NSBitmapImageRep *rep) {
+  State &s = state();
+  const auto found = s.previewWebs.find(window);
+  Class configurationClass = webKitClass(@"WKSnapshotConfiguration");
+  if (found == s.previewWebs.end() || configurationClass == Nil) {
+    return;
+  }
+  NSView *web = found->second;
+  __block NSImage *image = nil;
+  __block BOOL done = NO;
+  id configuration = [[configurationClass alloc] init];
+  [web performSelector:NSSelectorFromString(@"takeSnapshotWithConfiguration:completionHandler:")
+            withObject:configuration
+            withObject:^(NSImage *taken, NSError *error) {
+              image = taken;
+              done = YES;
+            }];
+  NSDate *deadline = [NSDate dateWithTimeIntervalSinceNow:5];
+  while (!done && deadline.timeIntervalSinceNow > 0) {
+    [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:[NSDate dateWithTimeIntervalSinceNow:0.05]];
+  }
+  if (image == nil) {
+    std::fprintf(stderr, "native ui: the preview could not be drawn into the snapshot\n");
+    return;
+  }
+  const NSRect place = [web convertRect:web.bounds toView:view];
+  NSGraphicsContext *context = [NSGraphicsContext graphicsContextWithBitmapImageRep:rep];
+  [NSGraphicsContext saveGraphicsState];
+  NSGraphicsContext.currentContext = context;
+  [image drawInRect:place];
+  [NSGraphicsContext restoreGraphicsState];
+}
+
+#pragma clang diagnostic pop
+
 } // namespace
 
 @interface PSController : NSObject <NSApplicationDelegate, NSWindowDelegate, NSTextViewDelegate>
@@ -166,6 +345,14 @@ NSMenu *menuFor(uint64_t handle) {
 
 - (void)quitRequested:(id)sender {
   enqueue(PS_UI_EVENT_QUIT_REQUESTED);
+}
+
+// A menu item registered with ps_ui_menu_follow_preview shows whether the active window has a preview.
+- (BOOL)validateMenuItem:(NSMenuItem *)item {
+  if (state().previewMenuItems.count(static_cast<int32_t>(item.tag)) != 0) {
+    item.state = ps_ui_window_has_preview(ps_ui_active_window()) ? NSControlStateValueOn : NSControlStateValueOff;
+  }
+  return YES;
 }
 
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)sender {
@@ -320,6 +507,7 @@ void captureSnapshot(NSWindow *menuWindow = nil) {
     dumpViews(view, 0);
   }
   [view cacheDisplayInRect:bounds toBitmapImageRep:rep];
+  drawPreviewWeb(s.snapshotWindow, view, rep);
   if (menuWindow != nil) {
     // An open menu is a window of its own: draw it over the picture at its place.
     // The glass backdrop of a pop-up menu does not draw offscreen, but its item
@@ -766,6 +954,7 @@ int32_t ps_ui_wait_event(void) {
             ps_ui_text_view_highlight(chosen, s.snapshotOpenPath.c_str());
             const uint64_t window = handleOf(textView(chosen).window);
             ps_ui_window_set_title(window, s.snapshotOpenPath.c_str());
+            ps_ui_window_refresh_preview(window);
             if (lastTab) {
               s.snapshotWindow = window; // picture of that tab's own window
             }
@@ -787,7 +976,8 @@ int32_t ps_ui_wait_event(void) {
             [target.window makeFirstResponder:target];
             [target insertText:toNSString(s.snapshotTypeText.c_str()) replacementRange:NSMakeRange(NSNotFound, 0)];
           }
-        } else if (s.snapshotIdleSlices >= 12) {
+        } else if (s.snapshotIdleSlices >= 12 && (!anyPreviewLoading() || s.snapshotIdleSlices >= 400)) {
+          // (A preview still loading its page is waited for, up to twenty seconds.)
           if (std::getenv("PRIMESTRUCT_UI_TARGET_LAST") != nullptr) {
             for (const auto &entry : s.windows) {
               s.snapshotWindow = std::max(s.snapshotWindow, entry.first);
@@ -900,6 +1090,7 @@ bool ps_ui_window_close(uint64_t window) {
   state().windows.erase(window);
   state().windowContent.erase(window);
   state().windowPaths.erase(window);
+  dropPreviewState(window);
   return true;
 }
 
@@ -1364,25 +1555,89 @@ bool ps_ui_window_set_autosave_name(uint64_t window, const char *name) {
 }
 
 bool ps_ui_window_set_preview(uint64_t window, bool on) {
-  if (!usable() || liveWindow(window) == nil) {
+  NSWindow *w = usable() ? liveWindow(window) : nil;
+  if (w == nil) {
     return false;
   }
   State &s = state();
-  if (on && s.windowContent.find(window) == s.windowContent.end()) {
+  const auto content = s.windowContent.find(window);
+  NSTextView *view = content != s.windowContent.end() ? textView(content->second) : nil;
+  const auto scrollEntry = content != s.windowContent.end() ? s.scrollViews.find(content->second) : s.scrollViews.end();
+  NSScrollView *scroll = scrollEntry != s.scrollViews.end() ? scrollEntry->second : nil;
+  if (on == previewOn(window)) {
+    return true; // already as asked
+  }
+  NSRect contentRect = [w contentRectForFrameRect:w.frame];
+  contentRect.origin = NSZeroPoint;
+  if (!on) {
+    // The text view alone again.
+    [s.previewWebs[window] removeFromSuperview];
+    if (scroll != nil) {
+      [scroll removeFromSuperview];
+      scroll.frame = contentRect;
+      scroll.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+      w.contentView = scroll;
+      [w makeFirstResponder:view];
+    }
+    dropPreviewState(window);
+    return true;
+  }
+  if (view == nil || scroll == nil) {
     return false;
   }
-  s.previews[window] = on;
+  Class configurationClass = webKitClass(@"WKWebViewConfiguration");
+  Class webClass = webKitClass(@"WKWebView");
+  if (configurationClass == Nil || webClass == Nil) {
+    return false;
+  }
+  @autoreleasepool {
+    id configuration = [[configurationClass alloc] init];
+    // The page is fixed text: nothing in it runs.
+    [[configuration valueForKey:@"defaultWebpagePreferences"] setValue:@NO forKey:@"allowsContentJavaScript"];
+    NSView *web = ((id(*)(id, SEL, NSRect, id))objc_msgSend)([webClass alloc],
+                                                             NSSelectorFromString(@"initWithFrame:configuration:"),
+                                                             contentRect, configuration);
+    static id delegate = [[previewDelegateClass() alloc] init];
+    [web setValue:delegate forKey:@"navigationDelegate"];
+    tag(web, window);
+    NSSplitView *split = [[NSSplitView alloc] initWithFrame:contentRect];
+    split.vertical = YES;
+    split.dividerStyle = NSSplitViewDividerStyleThin;
+    split.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+    w.contentView = split;
+    [split addSubview:scroll];
+    [split addSubview:web];
+    [split setPosition:contentRect.size.width / 2 ofDividerAtIndex:0];
+    [w makeFirstResponder:view];
+    s.previews[window] = true;
+    s.previewSplits[window] = split;
+    s.previewWebs[window] = web;
+    renderPreview(window, false);
+  }
   return true;
 }
 
 bool ps_ui_window_has_preview(uint64_t window) {
-  State &s = state();
-  const auto it = usable() && liveWindow(window) != nil ? s.previews.find(window) : s.previews.end();
-  return it != s.previews.end() && it->second;
+  return usable() && liveWindow(window) != nil && previewOn(window);
 }
 
+// Refreshes that follow each other closely (every keystroke) become one page load per run-loop turn.
 bool ps_ui_window_refresh_preview(uint64_t window) {
-  return ps_ui_window_has_preview(window);
+  if (!ps_ui_window_has_preview(window)) {
+    return false;
+  }
+  State &s = state();
+  if (!s.previewRefreshPending[window]) {
+    s.previewRefreshPending[window] = true;
+    s.previewLoading[window] = true; // a snapshot waits for the page
+    dispatch_async(dispatch_get_main_queue(), ^{
+      state().previewRefreshPending[window] = false;
+      if (previewOn(window)) {
+        renderPreview(window, true);
+      }
+    });
+  }
+  return true;
 }
 
 bool ps_ui_menu_follow_preview(uint64_t menuHandle, int32_t commandId) {
@@ -1395,6 +1650,9 @@ bool ps_ui_menu_follow_preview(uint64_t menuHandle, int32_t commandId) {
     if (item.action == @selector(menuCommand:) && item.tag == commandId) {
       found = true;
     }
+  }
+  if (found) {
+    state().previewMenuItems.insert(commandId);
   }
   return found;
 }

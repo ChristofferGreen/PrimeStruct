@@ -374,12 +374,23 @@ page follows the text as it is edited. It is done when the installed native Prim
   text, and link and image targets are limited to http, https, mailto, relative references and `data:image/`, so a
   preview cannot run scripts. `PrimeStruct_native_ui_markdown` pins its output.
 - **The web view is loaded only when needed.** The AppKit backend creates the `WKWebView` the first time a preview
-  turns on (WebKit is `dlopen`ed then, not linked), and destroys it when the preview turns off, so a session that never
-  previews has the launch time and memory it has today.
+  turns on (WebKit is `dlopen`ed then and its classes are used by name, so neither the compiled editor nor the AppKit
+  dylib lists WebKit, which `PrimeStruct_native_ui_compiled_app` checks with `otool -L`), and destroys it when the
+  preview turns off, so a session that never previews has the launch time and memory it has today (the installed
+  PrimeScroll peaks at about 118 MB resident; with a preview on, the main process is about 25 to 30 MB larger, and the
+  WebKit processes are separate).
+- **As built (AppKit).** The preview is an `NSSplitView` with the text view on the left and the web view on the right,
+  half and half, created for the tab that asked. JavaScript is off in the page; navigation is locked (the page the
+  preview loads is allowed, in-page `#fragment` links work, a click on an http, https or mailto link opens the default
+  browser and nothing navigates the preview). Refreshes are coalesced to one page load per run-loop turn and keep the
+  reader's scroll position (read with `evaluateJavaScript`, restored when the load finishes). The View item's check
+  mark follows the active tab through `validateMenuItem:`. A snapshot (`PRIMESTRUCT_UI_SNAPSHOT`) waits for the page
+  and draws the web view through `takeSnapshotWithConfiguration:`; the smoke test takes one of
+  `tests/fixtures/ui/screenshot/preview.md` with `PRIMESTRUCT_UI_COMMANDS=10`.
 - **ABI.** Four functions (section 4): `ps_ui_window_set_preview(window, on)`, `ps_ui_window_has_preview(window)`,
   `ps_ui_window_refresh_preview(window)` and `ps_ui_menu_follow_preview(menu, commandId)`. The backend owns the
   preview view; the editor decides when it shows (View > Show Markdown Preview, one preview per tab, its check mark
   following the active tab) and when it refreshes (every text change and every file opened into a tab).
-- **Slices.** The converter (TODO-5588, done), the ABI with the headless backend and the editor menu (TODO-5589, done:
-  the editor scenarios run it on the VM, the optimized C++ build and the native build; the AppKit backend keeps only
-  the on/off state until the next slice), then the AppKit split view with the lazily loaded web view (TODO-5590).
+- **Slices (all done).** The converter (TODO-5588), the ABI with the headless backend and the editor menu (TODO-5589:
+  the editor scenarios run it on the VM, the optimized C++ build and the native build), and the AppKit split view with
+  the lazily loaded web view (TODO-5590). The installed native PrimeScroll shows it.

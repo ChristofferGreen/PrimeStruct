@@ -252,3 +252,14 @@
   - acceptance:
     - headless tests (turning it on and off, the page following the text only when refreshed, bad handles, the menu check mark following the active window) and four editor scenarios (toggle on and off, typing refreshes, only the tabs that asked for it render, opening a file refreshes) pass on the VM, the optexe editor and the native editor through the mirror; the menu bar outline gate lists the new item; full release gate green
   - stop_rule: the ABI, the headless backend and the editor logic; the AppKit view is TODO-5590.
+
+- [x] TODO-5590: AppKit markdown preview: a split view with a lazily loaded web view
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-23
+  - phase: Markdown preview (docs/NativeUiPlan.md section 14)
+  - parallel_track: markdown-preview
+  - scope: The AppKit backend (`NativeUiAppKit.mm`, in the static library and in `libps_ui_appkit.dylib`) answers the preview calls for real. Turning a tab's preview on puts its text view and a `WKWebView` side by side in an `NSSplitView` (half and half) and loads `markdownPreviewPage` of the text; turning it off restores the text view alone and releases the web view. WebKit is loaded on first use (`dlopen`, classes looked up by name, no `-framework WebKit`), so a session that never previews neither links nor loads it. JavaScript is off in the page, navigation is locked (the loaded page and in-page fragments are allowed; a click on an http, https or mailto link opens the default browser), refreshes are coalesced to one load per run-loop turn and keep the scroll position, the View item's check mark follows the active tab through `validateMenuItem:` (`ps_ui_menu_follow_preview`), and snapshot mode waits for the page and draws the web view into the picture with `takeSnapshotWithConfiguration:`.
+  - acceptance:
+    - the AppKit smoke test's editor snapshot of tests/fixtures/ui/screenshot/preview.md with the preview command is a real PNG with the source on the left and the rendered heading, emphasis, link, nested and task lists, quote and table on the right (checked by eye); `PrimeStruct_native_ui_compiled_app` finds no WebKit in `otool -L` of the compiled editor and the dylib and takes the same picture from the native bundle; the installed PrimeScroll peaks at about 118 MB without a preview (unchanged) and 140 to 148 MB with one; full release gate green
+  - stop_rule: the AppKit preview view.

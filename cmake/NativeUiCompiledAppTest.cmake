@@ -68,6 +68,15 @@ if(NOT helloHeader STREQUAL helloDirectHeader)
 endif()
 
 build_app("${SOURCE_DIR}/examples/apps/text_editor/main.prime" EditorNative)
+
+# WebKit is loaded when a preview turns on, never linked: neither the compiled editor nor the AppKit dylib
+# lists it, so a session that does not preview pays nothing for it.
+foreach(binary "${WORK_DIR}/EditorNative" "${BUILD_DIR}/libps_ui_appkit.dylib")
+  execute_process(COMMAND otool -L "${binary}" OUTPUT_VARIABLE linked RESULT_VARIABLE rc)
+  if(NOT rc EQUAL 0 OR linked MATCHES "WebKit")
+    message(FATAL_ERROR "${binary} links WebKit or cannot be inspected: ${linked}")
+  endif()
+endforeach()
 set(ENV{PRIMESTRUCT_UI_OPEN} "${SOURCE_DIR}/tests/fixtures/ui/screenshot/showcase.prime")
 foreach(shot gutter code menu tabs)
   set(ENV{PRIMESTRUCT_UI_SNAPSHOT} "${WORK_DIR}/editor_${shot}.png")
@@ -134,3 +143,15 @@ if(NOT rc EQUAL 0)
   message(FATAL_ERROR "native bundle exited with '${rc}': ${out}${err}")
 endif()
 check_png("${WORK_DIR}/bundle.png" 50000)
+
+# The native bundle with the markdown preview turned on (the page is drawn by a web view loaded on demand).
+set(ENV{PRIMESTRUCT_UI_SNAPSHOT} "${WORK_DIR}/bundle_preview.png")
+set(ENV{PRIMESTRUCT_UI_OPEN} "${SOURCE_DIR}/tests/fixtures/ui/screenshot/preview.md")
+set(ENV{PRIMESTRUCT_UI_COMMANDS} "10")
+execute_process(COMMAND "${WORK_DIR}/NativeBundle.app/Contents/MacOS/NativeBundle"
+                RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err TIMEOUT 90)
+if(NOT rc EQUAL 0)
+  message(FATAL_ERROR "native bundle with a preview exited with '${rc}': ${out}${err}")
+endif()
+check_png("${WORK_DIR}/bundle_preview.png" 50000)
+unset(ENV{PRIMESTRUCT_UI_COMMANDS})

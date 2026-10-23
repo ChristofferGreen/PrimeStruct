@@ -2049,6 +2049,7 @@ are left unarchived.
 | TODO-5587 | Native String heap: entry arguments | [undated.md](todo_archive/undated.md) | - |
 | TODO-5588 | Markdown to HTML converter for the preview | [undated.md](todo_archive/undated.md) | - |
 | TODO-5589 | Markdown preview: window preview ABI, headless backend and editor menu | [undated.md](todo_archive/undated.md) | - |
+| TODO-5590 | AppKit markdown preview: a split view with a lazily loaded web view | [undated.md](todo_archive/undated.md) | - |
 
 <!-- INDEX-END -->
 
