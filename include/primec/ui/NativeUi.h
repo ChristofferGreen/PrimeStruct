@@ -11,7 +11,7 @@
  *
  * Text returned as `const char *` is owned by the library and valid until the
  * next call that returns text (ps_ui_text_view_get_text, ps_ui_open_panel,
- * ps_ui_save_panel, ps_ui_last_error). Copy it before then.
+ * ps_ui_save_panel, ps_ui_last_error, ps_ui_recent_path). Copy it before then.
  *
  * Versioning: additions append functions; changing an existing signature bumps
  * ps_ui_abi_version().
@@ -163,6 +163,9 @@ bool ps_ui_text_view_clear_modified(uint64_t view);
  * paragraph; wrapped lines are not numbered). Presentation only: it never marks the
  * view modified or produces events. Views start without the bar. */
 bool ps_ui_text_view_set_line_numbers(uint64_t view, bool visible);
+/* Wraps long lines at the view's width (the default) or lets them run to the right with a
+ * horizontal scroll bar. Presentation only. */
+bool ps_ui_text_view_set_wrapping(uint64_t view, bool wrap);
 
 /* Styled text ------------------------------------------------------------ */
 
@@ -201,6 +204,26 @@ bool ps_ui_menu_add_standard(uint64_t menu, int32_t standardId);
 /* Puts or removes a check mark on the items of `menu` added with `commandId`
  * (ps_ui_menu_add_item). False for a bad menu or when no item has that id. */
 bool ps_ui_menu_set_checked(uint64_t menu, int32_t commandId, bool checked);
+/* Adds an item titled `title` that opens `submenu` (a menu made with ps_ui_menu_create that is not
+ * in the menu bar and not a submenu already). False for bad handles. */
+bool ps_ui_menu_add_submenu(uint64_t menu, const char *title, uint64_t submenu);
+/* Removes every item of the menu (to rebuild a dynamic submenu such as the recent files). */
+bool ps_ui_menu_clear(uint64_t menu);
+/* Appends one item per recent file (see ps_ui_recent_add), most recent first, at most `maxItems`,
+ * titled with the file name (the folder name is added when two files share a name). The items
+ * produce PS_UI_EVENT_COMMAND with `firstCommandId + index`; the program opens
+ * ps_ui_recent_path(index). Returns how many items it added. */
+int32_t ps_ui_menu_add_recent_files(uint64_t menu, int32_t firstCommandId, int32_t maxItems);
+
+/* Recent files --------------------------------------------------------------- */
+
+/* Notes `path` as the most recently used file (the platform's recent documents list, which also
+ * survives between runs). */
+bool ps_ui_recent_add(const char *path);
+/* The index-th recent file, most recent first; "" when there are fewer. See the lifetime note
+ * above (valid until the next text-returning call). */
+const char *ps_ui_recent_path(int32_t index);
+bool ps_ui_recent_clear(void);
 /* Appends the menu to the app's menu bar. */
 bool ps_ui_menu_bar_add(uint64_t menu);
 /* Appends the menu to the menu bar with a platform role (PS_UI_MENU_ROLE_*).

@@ -54,6 +54,23 @@ command_line_numbers_start() {
   return(8i32)
 }
 
+// View > Wrap Lines (on by default) and File > Open Recent: the recent files are the commands
+// command_recent() + 0 ... + 9, and Clear Menu empties the list.
+[return<i32>]
+command_wrap() {
+  return(9i32)
+}
+
+[return<i32>]
+command_recent() {
+  return(200i32)
+}
+
+[return<i32>]
+command_recent_clear() {
+  return(210i32)
+}
+
 // Cmd+1 ... Cmd+9 are command_tab() + 1 ... + 9.
 [return<i32>]
 command_tab() {
@@ -87,11 +104,12 @@ select_tab([Window] tab, [i32] number) {
 
 // A new document: a window with its own text view, joined to host's tabs.
 [return<Window>]
-new_tab([App] app, [Window] host, [bool] lineNumbers) {
+new_tab([App] app, [Window] host, [bool] lineNumbers, [bool] wrapLines) {
   [Window] created{app.window("Untitled", 720i32, 480i32)}
   [TextView] view{app.textView()}
   view.setMonospace(true)
   view.setLineNumbers(lineNumbers)
+  view.setWrapping(wrapLines)
   created.setContent(view)
   host.addTab(created)
   created.show()
@@ -123,6 +141,7 @@ save_document([App] app, [Window] tab, [bool] chooseFile) {
   }
   if(saved) {
     tab.setTitle(tab.path())
+    app.addRecent(tab.path())
     view.highlight(tab.path())
     view.clearModified()
     tab.setEdited(false)
@@ -156,22 +175,22 @@ close_tab([App] app, [Window] tab) {
   return(go)
 }
 
-// Opens a file in a new tab, or in this one while it is still an untouched
-// untitled document.
+// Opens `chosen` in a new tab, or in this one while it is still an untouched
+// untitled document; a file that opened joins the recent files.
 [return<bool>]
-open_document([App] app, [Window] tab, [bool] lineNumbers) {
-  [String] chosen{app.openPanel("Open")}
-  if(app.panelChosen()) {
+open_path([App] app, [Window] tab, [bool] lineNumbers, [bool] wrapLines, [String] chosen) {
+  if(!chosen.empty()) {
     [TextView] current{tab.content()}
     [bool] reuse{!tab.hasPath() && !current.isModified()}
     [Window mut] target{tab}
     if(!reuse) {
-      target = new_tab(app, tab, lineNumbers)
+      target = new_tab(app, tab, lineNumbers, wrapLines)
     }
     [TextView] view{target.content()}
     if(view.loadFile(chosen)) {
       target.setPath(chosen)
       target.setTitle(chosen)
+      app.addRecent(chosen)
       view.highlight(chosen)
       target.setEdited(false)
     } else {
@@ -184,11 +203,35 @@ open_document([App] app, [Window] tab, [bool] lineNumbers) {
   return(true)
 }
 
+// Asks for a file and opens it.
+[return<bool>]
+open_document([App] app, [Window] tab, [bool] lineNumbers, [bool] wrapLines) {
+  [String] chosen{app.openPanel("Open")}
+  [bool mut] opened{false}
+  if(app.panelChosen()) {
+    opened = open_path(app, tab, lineNumbers, wrapLines, chosen)
+  }
+  return(opened)
+}
+
+// Rebuilds File > Open Recent from the recent files list; returns how many files it shows.
+[return<i32>]
+refresh_recent([Menu] recent) {
+  recent.clear()
+  [i32] shown{recent.addRecentFiles(command_recent(), 10i32)}
+  if(shown > 0i32) {
+    recent.separator()
+  }
+  recent.item("Clear Menu", "", command_recent_clear())
+  return(shown)
+}
+
 [return<int> effects(heap_alloc)]
 main([array<string>] args) {
   [App] app{start_app("PrimeScroll")}
   [bool mut] lineNumbers{app.boolPref("lineNumbers", false)}
   [bool mut] startWithNumbers{lineNumbers}
+  [bool mut] wrapLines{true}
   [Window] first{app.window("Untitled", 720i32, 480i32)}
   [TextView] firstView{app.textView()}
   firstView.setMonospace(true)
@@ -210,6 +253,8 @@ main([array<string>] args) {
   file.item("New Tab", "cmd+t", command_new())
   file.item("New", "cmd+n", command_new())
   file.item("Open...", "cmd+o", command_open())
+  [Menu] recentMenu{app.menu("Open Recent")}
+  file.submenu("Open Recent", recentMenu)
   file.separator()
   file.item("Save", "cmd+s", command_save())
   file.item("Save As...", "cmd+shift+s", command_save_as())
@@ -233,6 +278,7 @@ main([array<string>] args) {
   viewMenu.fullScreen()
   viewMenu.showTabBar()
   viewMenu.item("Show Line Numbers", "cmd+shift+l", command_line_numbers())
+  viewMenu.item("Wrap Lines", "", command_wrap())
   viewMenu.addToBar()
 
   [Menu] windowMenu{app.menu("Window")}
@@ -267,6 +313,7 @@ main([array<string>] args) {
     if(firstView.loadFile(named)) {
       first.setPath(named)
       first.setTitle(named)
+      app.addRecent(named)
       firstView.highlight(named)
     } else {
       app.alert("The file could not be opened.", app.lastError(), "OK")
@@ -274,7 +321,9 @@ main([array<string>] args) {
   }
 
   viewMenu.setChecked(command_line_numbers(), lineNumbers)
+  viewMenu.setChecked(command_wrap(), wrapLines)
   application.setChecked(command_line_numbers_start(), startWithNumbers)
+  [i32] recentShown{refresh_recent(recentMenu)}
 
   first.show()
 
@@ -304,11 +353,33 @@ main([array<string>] args) {
       }
     }
 
+    [bool mut] recentsChanged{false}
     if(intent == command_new()) {
-      [Window] fresh{new_tab(app, tab, lineNumbers)}
+      [Window] fresh{new_tab(app, tab, lineNumbers, wrapLines)}
     }
     if(intent == command_open()) {
-      [bool] opened{open_document(app, tab, lineNumbers)}
+      [bool] opened{open_document(app, tab, lineNumbers, wrapLines)}
+      recentsChanged = true
+    }
+    if(intent >= command_recent() && intent < command_recent() + 10i32) {
+      [String] picked{app.recentPath(intent - command_recent())}
+      [bool] reopened{open_path(app, tab, lineNumbers, wrapLines, picked)}
+      recentsChanged = true
+    }
+    if(intent == command_recent_clear()) {
+      app.clearRecent()
+      recentsChanged = true
+    }
+    if(intent == command_wrap()) {
+      wrapLines = !wrapLines
+      [i32 mut] wrapIndex{0i32}
+      while(wrapIndex < app.windowCount()) {
+        [Window] wrapEach{app.windowAt(wrapIndex)}
+        [TextView] wrapView{wrapEach.content()}
+        wrapView.setWrapping(wrapLines)
+        wrapIndex = wrapIndex + 1i32
+      }
+      viewMenu.setChecked(command_wrap(), wrapLines)
     }
     if(intent == command_line_numbers()) {
       lineNumbers = !lineNumbers
@@ -328,9 +399,14 @@ main([array<string>] args) {
     }
     if(intent == command_save()) {
       [bool] saved{save_document(app, tab, false)}
+      recentsChanged = true
     }
     if(intent == command_save_as()) {
       [bool] saved{save_document(app, tab, true)}
+      recentsChanged = true
+    }
+    if(recentsChanged) {
+      [i32] shownNow{refresh_recent(recentMenu)}
     }
     if(intent == command_close()) {
       [bool] closed{close_tab(app, tab)}

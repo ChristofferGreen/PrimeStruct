@@ -63,6 +63,12 @@ WindowState windowState(uint64_t window);
 bool isMonospace(uint64_t textView);
 // True when the line number bar of the text view is shown.
 bool lineNumbersVisible(uint64_t textView);
+// True when the text view wraps long lines (the default).
+bool lineWrapping(uint64_t textView);
+// Notes a recent file the way the program does (recorded in pushedScenario as `recent:path`); the
+// list, most recent first.
+void pushRecentFile(const std::string &path);
+std::vector<std::string> recentFiles();
 // True when some menu item added with `commandId` carries a check mark.
 bool menuItemChecked(int32_t commandId);
 // The boolean preferences: the program reads and writes them through ps_ui_pref_*; a test sets a
@@ -79,7 +85,8 @@ struct StyleRun {
 };
 std::vector<StyleRun> styleRuns(uint64_t textView);
 // "File>Save (cmd+s) #3", "File>-" for a separator, "File>standard 4" for a
-// standard item; only menus added to the menu bar are listed, in bar order.
+// standard item, "File>Open Recent>" for a submenu followed by its items
+// ("File>Open Recent>a.txt #200"); only menus added to the menu bar are listed, in bar order.
 std::vector<std::string> menuBarItems();
 // The menu bar as the user would read it, in bar order (an application-role menu
 // first): "File>Save As... (cmd+shift+s)", "File>-" for a separator. Standard

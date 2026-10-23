@@ -48,6 +48,8 @@ template <class Binder> void forEachBinding(Binder &&bindOne) {
           [](uint64_t view, bool monospace) { return ps_ui_text_view_set_monospace(view, monospace); });
   bindOne("ps_ui_text_view_set_line_numbers",
           [](uint64_t view, bool visible) { return ps_ui_text_view_set_line_numbers(view, visible); });
+  bindOne("ps_ui_text_view_set_wrapping",
+          [](uint64_t view, bool wrap) { return ps_ui_text_view_set_wrapping(view, wrap); });
   bindOne("ps_ui_text_view_is_modified", [](uint64_t view) { return ps_ui_text_view_is_modified(view); });
   bindOne("ps_ui_text_view_clear_modified", [](uint64_t view) { return ps_ui_text_view_clear_modified(view); });
 
@@ -87,6 +89,16 @@ template <class Binder> void forEachBinding(Binder &&bindOne) {
   bindOne("ps_ui_menu_set_checked", [](uint64_t menu, int32_t commandId, bool checked) {
     return ps_ui_menu_set_checked(menu, commandId, checked);
   });
+  bindOne("ps_ui_menu_add_submenu", [](uint64_t menu, std::string_view title, uint64_t submenu) {
+    return ps_ui_menu_add_submenu(menu, text(title).c_str(), submenu);
+  });
+  bindOne("ps_ui_menu_clear", [](uint64_t menu) { return ps_ui_menu_clear(menu); });
+  bindOne("ps_ui_menu_add_recent_files", [](uint64_t menu, int32_t firstCommandId, int32_t maxItems) {
+    return ps_ui_menu_add_recent_files(menu, firstCommandId, maxItems);
+  });
+  bindOne("ps_ui_recent_add", [](embed::HostTextView path) { return ps_ui_recent_add(text(path).c_str()); });
+  bindOne("ps_ui_recent_path", [](int32_t index) { return embed::HostText(ps_ui_recent_path(index)); });
+  bindOne("ps_ui_recent_clear", [] { return ps_ui_recent_clear(); });
   bindOne("ps_ui_pref_get_bool", [](std::string_view key, bool fallback) {
     return ps_ui_pref_get_bool(text(key).c_str(), fallback);
   });

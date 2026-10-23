@@ -532,3 +532,82 @@ TEST_CASE("boolean preferences keep their value and answer the fallback when uns
   CHECK(ps_ui_pref_get_bool("preset", false));
   CHECK(headless::pushedScenario() == "pref:preset=1");
 }
+
+
+TEST_CASE("a text view wraps long lines until told not to") {
+  startApp();
+  const uint64_t view = ps_ui_text_view_create();
+  CHECK(headless::lineWrapping(view));
+  CHECK(ps_ui_text_view_set_wrapping(view, false));
+  CHECK_FALSE(headless::lineWrapping(view));
+  CHECK(ps_ui_text_view_set_wrapping(view, true));
+  CHECK(headless::lineWrapping(view));
+  CHECK_FALSE(ps_ui_text_view_set_wrapping(999, false));
+}
+
+TEST_CASE("a submenu hangs off its parent and can be rebuilt") {
+  startApp();
+  const uint64_t file = ps_ui_menu_create("File");
+  const uint64_t recent = ps_ui_menu_create("Open Recent");
+  REQUIRE(ps_ui_menu_add_item(file, "Open...", "cmd+o", 2));
+  CHECK(ps_ui_menu_add_submenu(file, "Open Recent", recent));
+  CHECK_FALSE(ps_ui_menu_add_submenu(file, "Again", recent));      // already attached
+  CHECK_FALSE(ps_ui_menu_add_submenu(file, "Itself", file));       // not into itself
+  CHECK_FALSE(ps_ui_menu_add_submenu(file, "Bad", 999));
+  REQUIRE(ps_ui_menu_add_item(recent, "a.txt", "", 200));
+  REQUIRE(ps_ui_menu_bar_add(file));
+  const std::vector<std::string> filled{"File>Open... (cmd+o)", "File>Open Recent>", "File>Open Recent>a.txt"};
+  CHECK(headless::menuBarOutline() == filled);
+  CHECK(ps_ui_menu_set_checked(recent, 200, true));
+  CHECK(headless::menuItemChecked(200));
+  CHECK(ps_ui_menu_clear(recent));
+  const std::vector<std::string> emptied{"File>Open... (cmd+o)", "File>Open Recent>"};
+  CHECK(headless::menuBarOutline() == emptied);
+  CHECK_FALSE(ps_ui_menu_clear(999));
+}
+
+TEST_CASE("recent files keep the latest first, drop repeats and stop at ten") {
+  startApp();
+  CHECK(ps_ui_recent_add("/a/one.txt"));
+  CHECK(ps_ui_recent_add("/a/two.txt"));
+  CHECK(ps_ui_recent_add("/a/one.txt"));
+  CHECK(std::string(ps_ui_recent_path(0)) == "/a/one.txt");
+  CHECK(std::string(ps_ui_recent_path(1)) == "/a/two.txt");
+  CHECK(std::string(ps_ui_recent_path(2)).empty());
+  CHECK(std::string(ps_ui_recent_path(-1)).empty());
+  CHECK_FALSE(ps_ui_recent_add(""));
+  CHECK_FALSE(ps_ui_recent_add(nullptr));
+  for (int i = 0; i < 12; ++i) {
+    CHECK(ps_ui_recent_add(("/b/file" + std::to_string(i) + ".txt").c_str()));
+  }
+  CHECK(headless::recentFiles().size() == 10);
+  CHECK(std::string(ps_ui_recent_path(0)) == "/b/file11.txt");
+  CHECK(std::string(ps_ui_recent_path(9)) == "/b/file2.txt");
+  CHECK(ps_ui_recent_clear());
+  CHECK(headless::recentFiles().empty());
+}
+
+TEST_CASE("recent file items are titled with the file name and numbered from the first command id") {
+  startApp();
+  const uint64_t menu = ps_ui_menu_create("Open Recent");
+  REQUIRE(ps_ui_menu_bar_add(menu));
+  ps_ui_recent_add("/x/notes.txt");
+  ps_ui_recent_add("/y/todo.md");
+  ps_ui_recent_add("/z/other.txt");
+  CHECK(ps_ui_menu_add_recent_files(menu, 200, 2) == 2);
+  const std::vector<std::string> two{"Open Recent>other.txt #200", "Open Recent>todo.md #201"};
+  CHECK(headless::menuBarItems() == two);
+  CHECK(ps_ui_menu_clear(menu));
+  CHECK(ps_ui_menu_add_recent_files(menu, 300, 10) == 3);
+  CHECK(ps_ui_menu_add_recent_files(menu, 300, 0) == 0);
+  CHECK(ps_ui_menu_add_recent_files(999, 300, 10) == 0);
+
+  // Two files with one name get their folder added.
+  ps_ui_recent_clear();
+  ps_ui_recent_add("/x/a.txt");
+  ps_ui_recent_add("/y/a.txt");
+  CHECK(ps_ui_menu_clear(menu));
+  CHECK(ps_ui_menu_add_recent_files(menu, 1, 10) == 2);
+  const std::vector<std::string> clash{"Open Recent>a.txt \xE2\x80\x94 y #1", "Open Recent>a.txt \xE2\x80\x94 x #2"};
+  CHECK(headless::menuBarItems() == clash);
+}

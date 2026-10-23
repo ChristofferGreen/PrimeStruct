@@ -265,9 +265,9 @@ TEST_CASE("editor close with unsaved text stays open when the user chooses Cance
 }
 
 // The editor creates its first window and text view (handles 1 and 2) and then six
-// menus (3 to 8), so the second tab's window and text view are 9 and 10.
-constexpr uint64_t SecondWindow = 9;
-constexpr uint64_t SecondView = 10;
+// menus (3 to 9), so the second tab's window and text view are 10 and 11.
+constexpr uint64_t SecondWindow = 10;
+constexpr uint64_t SecondView = 11;
 
 TEST_CASE("editor new opens a second tab in the same tab group") {
   headless::reset();
@@ -282,7 +282,7 @@ TEST_CASE("editor new opens a second tab in the same tab group") {
   CHECK(second.content == SecondView);
   CHECK(second.closed);
   CHECK(headless::isMonospace(SecondView));
-  CHECK(countCalls("ps_ui_window_add_tab(1, 9)") == 1);
+  CHECK(countCalls("ps_ui_window_add_tab(1, 10)") == 1);
   CHECK(countCalls("ps_ui_alert(") == 0);
 }
 
@@ -322,8 +322,8 @@ TEST_CASE("editor Command-number selects that tab and Command-9 the last") {
   headless::pushTypeText(EditorWindow + 1, "A");
   headless::pushCommand(CommandNew);
   headless::pushTypeText(SecondView, "B");
-  headless::pushCommand(CommandNew); // window 11, view 12
-  headless::pushTypeText(12, "C");
+  headless::pushCommand(CommandNew); // window 12, view 13
+  headless::pushTypeText(13, "C");
   headless::pushCommand(CommandTab + 1); // Command-1: the first tab
   headless::pushCommand(CommandSave);
   headless::pushSavePanelAnswer(pathA);
@@ -336,7 +336,7 @@ TEST_CASE("editor Command-number selects that tab and Command-9 the last") {
   headless::pushCommand(CommandTab + 5); // no fifth tab: nothing changes
   headless::pushCloseWindow(EditorWindow);
   headless::pushCloseWindow(SecondWindow);
-  headless::pushCloseWindow(11);
+  headless::pushCloseWindow(12);
   runEditor();
   CHECK(readFile(pathA) == "A");
   CHECK(readFile(pathB) == "B");
@@ -360,7 +360,7 @@ TEST_CASE("editor open reuses an untouched untitled tab and otherwise opens a ne
   CHECK(headless::windowPath(SecondWindow) == second);
   CHECK(countCalls("ps_ui_window_add_tab(") == 1);
   CHECK(countCalls("ps_ui_text_view_load_file(2, ") == 1);
-  CHECK(countCalls("ps_ui_text_view_load_file(10, ") == 1);
+  CHECK(countCalls("ps_ui_text_view_load_file(11, ") == 1);
 }
 
 TEST_CASE("editor closes a failed open's new tab again") {
@@ -422,28 +422,28 @@ TEST_CASE("editor reports a file that cannot be saved") {
 
 
 // Handles: the first window is 1 with text view 2, the menus follow, the second tab's window is 9
-// with text view 10. Commands: 1 New, 7 View > Show Line Numbers, 8 Start with Line Numbers.
+// with text view 11. Commands: 1 New, 7 View > Show Line Numbers, 8 Start with Line Numbers.
 TEST_CASE("editor toggles the line number bar in every tab from the View menu") {
   headless::reset();
   headless::pushCommand(1);
   headless::pushCommand(7);
-  headless::pushCloseWindow(9);
+  headless::pushCloseWindow(10);
   headless::pushCloseWindow(EditorWindow);
   runEditor();
   CHECK_FALSE(headless::lineNumbersVisible(2) == false);
   CHECK(headless::lineNumbersVisible(2));
-  CHECK(headless::lineNumbersVisible(10));
+  CHECK(headless::lineNumbersVisible(11));
   CHECK(headless::menuItemChecked(7));
 
   headless::reset();
   headless::pushCommand(1);
   headless::pushCommand(7);
   headless::pushCommand(7);
-  headless::pushCloseWindow(9);
+  headless::pushCloseWindow(10);
   headless::pushCloseWindow(EditorWindow);
   runEditor();
   CHECK_FALSE(headless::lineNumbersVisible(2));
-  CHECK_FALSE(headless::lineNumbersVisible(10));
+  CHECK_FALSE(headless::lineNumbersVisible(11));
   CHECK_FALSE(headless::menuItemChecked(7));
 }
 
@@ -451,11 +451,11 @@ TEST_CASE("editor starts with the line number bar when the preference says so") 
   headless::reset();
   headless::setBoolPref("lineNumbers", true);
   headless::pushCommand(1);
-  headless::pushCloseWindow(9);
+  headless::pushCloseWindow(10);
   headless::pushCloseWindow(EditorWindow);
   runEditor();
   CHECK(headless::lineNumbersVisible(2));
-  CHECK(headless::lineNumbersVisible(10));  // a new tab follows the current setting
+  CHECK(headless::lineNumbersVisible(11));  // a new tab follows the current setting
   CHECK(headless::menuItemChecked(7));
   CHECK(headless::menuItemChecked(8));
 }
@@ -478,4 +478,90 @@ TEST_CASE("editor remembers the start-up choice without changing the open tabs")
   CHECK_FALSE(headless::boolPref("lineNumbers", true));
   CHECK(headless::lineNumbersVisible(2));
   CHECK_FALSE(headless::menuItemChecked(8));
+}
+
+
+// Commands: 9 View > Wrap Lines, 200 to 209 the recent files, 210 Clear Menu.
+TEST_CASE("editor wraps lines until View > Wrap Lines is switched off, in every tab") {
+  headless::reset();
+  headless::pushCommand(1);
+  headless::pushCommand(9);
+  headless::pushCloseWindow(SecondWindow);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK_FALSE(headless::lineWrapping(2));
+  CHECK_FALSE(headless::lineWrapping(SecondView));
+  CHECK_FALSE(headless::menuItemChecked(9));
+
+  headless::reset();
+  headless::pushCommand(1);
+  headless::pushCommand(9);
+  headless::pushCommand(9);
+  headless::pushCloseWindow(SecondWindow);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(headless::lineWrapping(2));
+  CHECK(headless::lineWrapping(SecondView));
+  CHECK(headless::menuItemChecked(9));
+}
+
+TEST_CASE("editor lists the recent files under File > Open Recent") {
+  const std::string a = writeScratch("recent_a.txt", "aaa");
+  const std::string b = writeScratch("recent_b.txt", "bbb");
+  headless::reset();
+  headless::pushRecentFile(a);
+  headless::pushRecentFile(b);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  const auto items = headless::menuBarItems();
+  CHECK(std::find(items.begin(), items.end(), "File>Open Recent>recent_b.txt #200") != items.end());
+  CHECK(std::find(items.begin(), items.end(), "File>Open Recent>recent_a.txt #201") != items.end());
+  CHECK(std::find(items.begin(), items.end(), "File>Open Recent>Clear Menu #210") != items.end());
+}
+
+TEST_CASE("editor adds a file it opened or saved to the recent files") {
+  const std::string opened = writeScratch("recent_opened.txt", "text");
+  const std::string saved = scratchPath("recent_saved.txt");
+  headless::reset();
+  headless::pushCommand(2);
+  headless::pushOpenPanelAnswer(opened);
+  headless::pushCommand(1);
+  headless::pushTypeText(SecondView, "new text");
+  headless::pushCommand(3);
+  headless::pushSavePanelAnswer(saved);
+  headless::pushCloseWindow(SecondWindow);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  const auto recent = headless::recentFiles();
+  REQUIRE(recent.size() == 2);
+  CHECK(recent[0] == saved);
+  CHECK(recent[1] == opened);
+  const auto items = headless::menuBarItems();
+  CHECK(std::find(items.begin(), items.end(), "File>Open Recent>recent_saved.txt #200") != items.end());
+  CHECK(std::find(items.begin(), items.end(), "File>Open Recent>recent_opened.txt #201") != items.end());
+}
+
+TEST_CASE("editor reopens a recent file from the menu and can clear the list") {
+  const std::string b = writeScratch("recent_again.txt", "again");
+  headless::reset();
+  headless::pushRecentFile(b);
+  headless::pushCommand(200);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(headless::windowPath(EditorWindow) == b);
+  CHECK(headless::windowState(EditorWindow).title == b);
+  CHECK(countCalls("ps_ui_text_view_load_file(2, ") == 1);
+  CHECK(countCalls("ps_ui_alert(") == 0);
+
+  headless::reset();
+  headless::pushRecentFile(b);
+  headless::pushCommand(210);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(headless::recentFiles().empty());
+  const auto items = headless::menuBarItems();
+  for (const std::string &item : items) {
+    CHECK(item.rfind("File>Open Recent>recent_again.txt", 0) != 0);
+  }
+  CHECK(std::find(items.begin(), items.end(), "File>Open Recent>Clear Menu #210") != items.end());
 }

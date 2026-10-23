@@ -23,6 +23,7 @@
 #import <objc/runtime.h>
 
 #include "primec/ui/NativeUi.h"
+#include "primec/ui/NativeUiRecentFiles.h"
 #include "primec/ui/NativeUiStandardItems.h"
 #include "primec/ui/SyntaxHighlight.h"
 
@@ -78,6 +79,7 @@ struct State {
   // PRIMESTRUCT_UI_PREFS=key=1,other=0 (and every snapshot run) answers preferences from this map
   // and never reads or writes the user's defaults.
   bool prefOverridesActive = false;
+  std::vector<std::string> recentOverride; // the recent files while the overrides are active
   std::unordered_map<std::string, bool> prefOverrides;
   std::deque<PendingEvent> pending;
   PendingEvent current;
@@ -435,6 +437,20 @@ void captureWithOpenMenu(const std::string &name) {
 
 } // namespace
 
+static std::vector<std::string> recentFilePaths() {
+  State &s = state();
+  if (s.prefOverridesActive) {
+    return s.recentOverride;
+  }
+  std::vector<std::string> paths;
+  for (NSURL *url in NSDocumentController.sharedDocumentController.recentDocumentURLs) {
+    if (url.path != nil) {
+      paths.push_back(url.path.UTF8String);
+    }
+  }
+  return paths;
+}
+
 // The bar of line numbers to the left of a text view: one number per paragraph (the layout fragments
 // of TextKit 2, so wrapped lines carry none), drawn for the visible part only. Counting the
 // newlines before the first visible paragraph is cached between redraws and dropped on every edit
@@ -642,6 +658,18 @@ bool ps_ui_init(const char *appName) {
           s.prefOverrides[item.substr(0, equals)] = item.substr(equals + 1) == "1";
         }
         start = comma + 1;
+      }
+    }
+    if (const char *recent = std::getenv("PRIMESTRUCT_UI_RECENT"); recent != nullptr) {
+      s.prefOverridesActive = true;
+      const std::string list = recent;
+      for (size_t start = 0; start < list.size();) {
+        size_t colon = list.find(':', start);
+        colon = colon == std::string::npos ? list.size() : colon;
+        if (colon > start) {
+          s.recentOverride.push_back(list.substr(start, colon - start));
+        }
+        start = colon + 1;
       }
     }
     if (!s.snapshotPath.empty()) {
@@ -1046,6 +1074,31 @@ bool ps_ui_text_view_set_line_numbers(uint64_t view, bool visible) {
   return true;
 }
 
+bool ps_ui_text_view_set_wrapping(uint64_t view, bool wrap) {
+  NSTextView *v = usable() ? textView(view) : nil;
+  if (v == nil) {
+    return false;
+  }
+  NSScrollView *scroll = state().scrollViews[view];
+  NSTextContainer *container = v.textContainer;
+  if (wrap) {
+    container.widthTracksTextView = YES;
+    v.horizontallyResizable = NO;
+    v.autoresizingMask = NSViewWidthSizable;
+    scroll.hasHorizontalScroller = NO;
+    container.containerSize = NSMakeSize(scroll.contentSize.width, CGFLOAT_MAX);
+  } else {
+    container.widthTracksTextView = NO;
+    container.containerSize = NSMakeSize(CGFLOAT_MAX, CGFLOAT_MAX);
+    v.horizontallyResizable = YES;
+    v.autoresizingMask = NSViewNotSizable;
+    v.maxSize = NSMakeSize(CGFLOAT_MAX, CGFLOAT_MAX);
+    scroll.hasHorizontalScroller = YES;
+  }
+  [v sizeToFit];
+  return true;
+}
+
 bool ps_ui_text_view_clear_styles(uint64_t view) {
   NSTextView *v = usable() ? textView(view) : nil;
   if (v == nil) {
@@ -1285,6 +1338,82 @@ bool ps_ui_menu_set_checked(uint64_t menuHandle, int32_t commandId, bool checked
     }
   }
   return found;
+}
+
+bool ps_ui_menu_add_submenu(uint64_t menuHandle, const char *title, uint64_t submenuHandle) {
+  NSMenu *menu = usable() ? menuFor(menuHandle) : nil;
+  NSMenu *child = usable() ? menuFor(submenuHandle) : nil;
+  if (menu == nil || child == nil || menu == child || child.supermenu != nil) {
+    return false;
+  }
+  NSMenuItem *item = [[NSMenuItem alloc] initWithTitle:toNSString(title) action:nil keyEquivalent:@""];
+  child.title = toNSString(title);
+  item.submenu = child;
+  [menu addItem:item];
+  return true;
+}
+
+bool ps_ui_menu_clear(uint64_t menuHandle) {
+  NSMenu *menu = usable() ? menuFor(menuHandle) : nil;
+  if (menu == nil) {
+    return false;
+  }
+  [menu removeAllItems];
+  return true;
+}
+
+int32_t ps_ui_menu_add_recent_files(uint64_t menuHandle, int32_t firstCommandId, int32_t maxItems) {
+  NSMenu *menu = usable() ? menuFor(menuHandle) : nil;
+  if (menu == nil || maxItems <= 0) {
+    return 0;
+  }
+  const std::vector<std::string> paths = recentFilePaths();
+  int32_t added = 0;
+  for (size_t i = 0; i < paths.size() && added < maxItems; ++i) {
+    addMenuItem(menu, toNSString(primec::ui::recentFileTitle(paths, i).c_str()), @selector(menuCommand:),
+                controller(), @"", 0, firstCommandId + static_cast<int32_t>(i));
+    ++added;
+  }
+  return added;
+}
+
+bool ps_ui_recent_add(const char *path) {
+  if (!usable() || path == nullptr || *path == '\0') {
+    return false;
+  }
+  State &s = state();
+  if (s.prefOverridesActive) {
+    s.recentOverride.erase(std::remove(s.recentOverride.begin(), s.recentOverride.end(), std::string(path)),
+                           s.recentOverride.end());
+    s.recentOverride.insert(s.recentOverride.begin(), path);
+    if (s.recentOverride.size() > 10) {
+      s.recentOverride.resize(10);
+    }
+    return true;
+  }
+  [NSDocumentController.sharedDocumentController noteNewRecentDocumentURL:[NSURL fileURLWithPath:toNSString(path)]];
+  return true;
+}
+
+const char *ps_ui_recent_path(int32_t index) {
+  State &s = state();
+  const std::vector<std::string> paths = usable() ? recentFilePaths() : std::vector<std::string>();
+  s.returnedText = index >= 0 && static_cast<size_t>(index) < paths.size() ? paths[static_cast<size_t>(index)]
+                                                                           : std::string();
+  return s.returnedText.c_str();
+}
+
+bool ps_ui_recent_clear(void) {
+  if (!usable()) {
+    return false;
+  }
+  State &s = state();
+  if (s.prefOverridesActive) {
+    s.recentOverride.clear();
+  } else {
+    [NSDocumentController.sharedDocumentController clearRecentDocuments:nil];
+  }
+  return true;
 }
 
 bool ps_ui_pref_get_bool(const char *key, bool fallback) {

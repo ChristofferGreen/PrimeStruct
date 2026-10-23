@@ -193,6 +193,8 @@ TEST_CASE("acceptance: the menu bar has the standard macOS structure and shortcu
       "File>New Tab (cmd+t)",
       "File>New (cmd+n)",
       "File>Open... (cmd+o)",
+      "File>Open Recent>",
+      "File>Open Recent>Clear Menu",
       "File>-",
       "File>Save (cmd+s)",
       "File>Save As... (cmd+shift+s)",
@@ -210,6 +212,7 @@ TEST_CASE("acceptance: the menu bar has the standard macOS structure and shortcu
       "View>Enter Full Screen (cmd+ctrl+f)",
       "View>Show Tab Bar",
       "View>Show Line Numbers (cmd+shift+l)",
+      "View>Wrap Lines",
       "Window>Minimize (cmd+m)",
       "Window>Zoom",
       "Window>-",
@@ -238,7 +241,8 @@ TEST_CASE("acceptance: the menu bar has the standard macOS structure and shortcu
   const auto items = headless::menuBarItems();
   for (const char *item : {"File>New (cmd+n) #1", "File>Open... (cmd+o) #2", "File>Save (cmd+s) #3",
                            "File>Save As... (cmd+shift+s) #4", "File>Close (cmd+w) #5",
-                           "View>Show Line Numbers (cmd+shift+l) #7",
+                           "View>Show Line Numbers (cmd+shift+l) #7", "View>Wrap Lines #9 [checked]",
+                           "File>Open Recent>Clear Menu #210",
                            "PrimeScroll>Start with Line Numbers #8"}) {
     CHECK_MESSAGE(std::find(items.begin(), items.end(), item) != items.end(), item);
   }

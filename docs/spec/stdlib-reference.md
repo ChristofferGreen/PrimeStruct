@@ -377,16 +377,16 @@ functions (`primec/ui/NativeUiBindings.h`) to a backend (headless in tests, AppK
   `waitEvent() -> AppEvent`, `openPanel(title)` and `savePanel(title, suggestedName)` (empty text means cancelled; test the result with
   `panelChosen() -> bool`, since `count` of a host-returned text is not yet reliable),
   `alert(message, detail, buttons) -> i32` (button titles separated by `\n`, returns the pressed index), `quit()`,
-  and the preferences `boolPref(key, fallback) -> bool` / `setBoolPref(key, value) -> bool` (booleans kept between runs).
+  the preferences `boolPref(key, fallback) -> bool` / `setBoolPref(key, value) -> bool` (booleans kept between runs), and the recent files `addRecent(path)`, `recentPath(index) -> String`, `clearRecent()`.
 - `Window`: `setTitle`, `setContent(textView)`, `content() -> TextView`, `setEdited(bool)`, `show()`, `close()`,
   `addTab(window)` (joins that window to this one's tab group), and the document path kept with the window:
   `setPath(file)`, `path()`, `hasPath()`, `tabCount()`, `tabAt(index)` (tab-bar order) and `select()`. `App` adds `activeWindow()`, `windowCount()`, `windowAt(index)`.
-- `TextView`: `text()`, `setText(text)`, `setMonospace(bool)`, `setLineNumbers(bool)` (a bar of line numbers, one per paragraph, left of the text), `isModified()`, `clearModified()`, and
+- `TextView`: `text()`, `setText(text)`, `setMonospace(bool)`, `setLineNumbers(bool)` (a bar of line numbers, one per paragraph, left of the text), `setWrapping(bool)` (wrap long lines, the default), `isModified()`, `clearModified()`, and
   `loadFile(path)` / `saveFile(path)` (the backend reads or writes the UTF-8 file itself; `false` means see
   `app.lastError()`; a successful load leaves the view unmodified, a save does not clear the modified flag), and
   `clearStyles()` / `addStyle(startByte, endByte, rgb, flags)` (colour and bold/italic over UTF-8 byte ranges), and `highlight(path)` (syntax highlighting chosen by the file
   name's extension).
-- `Menu`: `item(title, shortcut, commandId)`, `setChecked(commandId, bool)` (a check mark on those items), `separator()`, the standard items `undo redo cut copy paste selectAll
+- `Menu`: `item(title, shortcut, commandId)`, `setChecked(commandId, bool)` (a check mark on those items), `submenu(title, menu)`, `clear()`, `addRecentFiles(firstCommandId, maxItems) -> i32` (one item per recent file), `separator()`, the standard items `undo redo cut copy paste selectAll
   find quit about hide hideOthers minimize zoom bringAllToFront fullScreen help showTabBar mergeAllWindows
   moveTabToNewWindow nextTab previousTab`, and `addToBar()`,
   `addToBarAsApp()`, `addToBarAsWindow()`, `addToBarAsHelp()`. Shortcuts are portable (`"cmd+s"`).

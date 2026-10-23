@@ -109,3 +109,14 @@
   - acceptance:
     - headless ABI tests for the four calls; editor tests for the toggle in every tab, the launch preference preset, the remembered start-up choice and a new tab inheriting the setting (each also runs on the compiled editor through the mirror); the AppKit smoke and compiled-app snapshots include the bar (`editor_gutter.png`) and show numbers aligned with the text lines; full release gate green
   - stop_rule: the bar, the menu items and the preference; a settings window waits for more widgets in the ABI.
+
+- [x] TODO-5576: Line wrapping switch and recent files in the editor
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-23
+  - phase: Native UI (docs/NativeUiPlan.md)
+  - parallel_track: native-ui-editor
+  - scope: PrimeScroll gets View > Wrap Lines (command 9, check-marked, on by default, applied to every tab and to new ones) and File > Open Recent. The C ABI gains `ps_ui_text_view_set_wrapping`, the submenu calls `ps_ui_menu_add_submenu` and `ps_ui_menu_clear`, `ps_ui_menu_add_recent_files(menu, firstCommandId, maxItems)` and the recent-files list `ps_ui_recent_add`, `ps_ui_recent_path`, `ps_ui_recent_clear` (58 functions now; `TextView.setWrapping`, `Menu.submenu/clear/addRecentFiles`, `App.addRecent/recentPath/clearRecent` in `/std/ui/native`). AppKit switches wrapping through the text container (`widthTracksTextView`, a horizontal scroller), builds the submenu with `NSMenuItem.submenu` and keeps the list in `NSDocumentController`'s recent documents; titles are the file name plus the folder name when two recent files share one (`include/primec/ui/NativeUiRecentFiles.h`, shared with the headless backend). The headless backend keeps the list in memory (at most 10, most recent first), shows submenus in `menuBarOutline`/`menuBarItems` (`File>Open Recent>` followed by its items), and scenarios preset it with `recent:path`. The editor refactors opening into `open_path`, rebuilds the submenu after every open, save and clear, adds files it opened, saved or got on the command line, and opens a chosen recent file like Open does. The Open Recent menu takes a handle, so the second tab's window and text view are now 10 and 11 in the tests.
+  - acceptance:
+    - headless ABI tests for wrapping, submenus (attach once, not into itself, clear), the recent list (order, repeats, cap of ten, path, clear, titles) and recent items numbered from the first command id; editor tests for the wrap toggle in every tab, the list at start, files added by open and save, reopening and clearing (each also run on the compiled editor through the mirror); full release gate green
+  - stop_rule: the wrap switch and the recent files submenu.

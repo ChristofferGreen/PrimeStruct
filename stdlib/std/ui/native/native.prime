@@ -83,6 +83,10 @@ ps_ui_text_view_set_line_numbers([u64] view, [bool] visible) {
 }
 
 [host return<bool>]
+ps_ui_text_view_set_wrapping([u64] view, [bool] wrap) {
+}
+
+[host return<bool>]
 ps_ui_text_view_is_modified([u64] view) {
 }
 
@@ -176,6 +180,30 @@ ps_ui_menu_add_separator([u64] menu) {
 
 [host return<bool>]
 ps_ui_menu_set_checked([u64] menu, [i32] commandId, [bool] checked) {
+}
+
+[host return<bool>]
+ps_ui_menu_add_submenu([u64] menu, [string] title, [u64] submenu) {
+}
+
+[host return<bool>]
+ps_ui_menu_clear([u64] menu) {
+}
+
+[host return<i32>]
+ps_ui_menu_add_recent_files([u64] menu, [i32] firstCommandId, [i32] maxItems) {
+}
+
+[host return<bool>]
+ps_ui_recent_add([/std/text/String] path) {
+}
+
+[host return</std/text/String>]
+ps_ui_recent_path([i32] index) {
+}
+
+[host return<bool>]
+ps_ui_recent_clear() {
 }
 
 [host return<bool>]
@@ -349,6 +377,12 @@ TextView() {
     return(ps_ui_text_view_set_line_numbers(this.handle, visible))
   }
 
+  // Wraps long lines at the view's width (the default) or lets them run to the right.
+  [public return<bool>]
+  setWrapping([bool] wrap) {
+    return(ps_ui_text_view_set_wrapping(this.handle, wrap))
+  }
+
   [public return<bool>]
   isModified() {
     return(ps_ui_text_view_is_modified(this.handle))
@@ -373,6 +407,24 @@ Menu() {
   [public return<bool>]
   setChecked([i32] commandId, [bool] checked) {
     return(ps_ui_menu_set_checked(this.handle, commandId, checked))
+  }
+
+  // Adds an item that opens `child`, a menu that is not in the bar.
+  [public return<bool>]
+  submenu([string] title, [Menu] child) {
+    return(ps_ui_menu_add_submenu(this.handle, title, child.handle))
+  }
+
+  [public return<bool>]
+  clear() {
+    return(ps_ui_menu_clear(this.handle))
+  }
+
+  // Appends one item per recent file (most recent first, at most maxItems) with the command ids
+  // firstCommandId, firstCommandId + 1, ...; returns how many it added.
+  [public return<i32>]
+  addRecentFiles([i32] firstCommandId, [i32] maxItems) {
+    return(ps_ui_menu_add_recent_files(this.handle, firstCommandId, maxItems))
   }
 
   [public return<bool>]
@@ -599,6 +651,22 @@ App() {
   [public return</std/text/String>]
   savePanel([string] title, [string] suggestedName) {
     return(ps_ui_save_panel(title, suggestedName))
+  }
+
+  // The recent files list (the platform's, kept between runs).
+  [public return<bool>]
+  addRecent([/std/text/String] path) {
+    return(ps_ui_recent_add(path))
+  }
+
+  [public return</std/text/String>]
+  recentPath([i32] index) {
+    return(ps_ui_recent_path(index))
+  }
+
+  [public return<bool>]
+  clearRecent() {
+    return(ps_ui_recent_clear())
   }
 
   // A boolean the app keeps between runs: the stored value, or `fallback` when none was stored.

@@ -1,8 +1,10 @@
 #include "primec/ui/NativeUi.h"
 #include "primec/ui/NativeUiHeadless.h"
+#include "primec/ui/NativeUiRecentFiles.h"
 #include "primec/ui/NativeUiStandardItems.h"
 #include "primec/ui/SyntaxHighlight.h"
 
+#include <algorithm>
 #include <cerrno>
 #include <cstring>
 #include <deque>
@@ -18,11 +20,12 @@ namespace primec::ui::headless {
 namespace {
 
 struct MenuEntry {
-  enum class Kind { Item, Separator, Standard } kind = Kind::Item;
+  enum class Kind { Item, Separator, Standard, Submenu } kind = Kind::Item;
   std::string title;
   std::string shortcut;
   int32_t id = 0;
   bool checked = false;
+  uint64_t child = 0; // the submenu of a Submenu entry
 };
 
 struct Menu {
@@ -35,6 +38,7 @@ struct TextView {
   std::string text;
   bool monospace = false;
   bool lineNumbers = false;
+  bool wrapping = true;
   bool modified = false;
   uint64_t window = 0;
   std::vector<StyleRun> styles;
@@ -70,6 +74,7 @@ struct State {
   std::deque<std::string> saveAnswers;
   std::deque<int32_t> alertAnswers;
   std::map<std::string, bool> prefs;
+  std::vector<std::string> recents; // most recent first
   std::string scenario; // every push, in the text form of tests/fixtures/host_calls/scenario.h
   int32_t eventKind = PS_UI_EVENT_NONE;
   uint64_t eventWindow = 0;
@@ -385,26 +390,62 @@ std::vector<StyleRun> styleRuns(uint64_t view) {
   return v != nullptr ? v->styles : std::vector<StyleRun>{};
 }
 
+namespace {
+
+void outlineOf(const std::string &prefix, const Menu &m, std::vector<std::string> &items) {
+  for (const MenuEntry &entry : m.entries) {
+    std::string title = entry.title;
+    std::string shortcut = entry.shortcut;
+    if (entry.kind == MenuEntry::Kind::Separator) {
+      items.push_back(prefix + "-");
+      continue;
+    }
+    if (entry.kind == MenuEntry::Kind::Submenu) {
+      items.push_back(prefix + entry.title + ">");
+      if (const Menu *child = menu(entry.child)) {
+        outlineOf(prefix + entry.title + ">", *child, items);
+      }
+      continue;
+    }
+    if (entry.kind == MenuEntry::Kind::Standard) {
+      const StandardItemInfo info = standardItemInfo(entry.id);
+      title = info.title;
+      shortcut = info.shortcut;
+    }
+    items.push_back(prefix + title + (shortcut.empty() ? "" : " (" + shortcut + ")"));
+  }
+}
+
+void itemsOf(const std::string &prefix, const Menu &m, std::vector<std::string> &items) {
+  for (const MenuEntry &entry : m.entries) {
+    switch (entry.kind) {
+    case MenuEntry::Kind::Item:
+      items.push_back(prefix + entry.title + (entry.shortcut.empty() ? "" : " (" + entry.shortcut + ")") + " #" +
+                      std::to_string(entry.id) + (entry.checked ? " [checked]" : ""));
+      break;
+    case MenuEntry::Kind::Separator:
+      items.push_back(prefix + "-");
+      break;
+    case MenuEntry::Kind::Standard:
+      items.push_back(prefix + "standard " + std::to_string(entry.id));
+      break;
+    case MenuEntry::Kind::Submenu:
+      items.push_back(prefix + entry.title + ">");
+      if (const Menu *child = menu(entry.child)) {
+        itemsOf(prefix + entry.title + ">", *child, items);
+      }
+      break;
+    }
+  }
+}
+
+} // namespace
+
 std::vector<std::string> menuBarOutline() {
   std::vector<std::string> items;
   for (uint64_t handle : state().menuBar) {
-    const Menu *m = menu(handle);
-    if (m == nullptr) {
-      continue;
-    }
-    for (const MenuEntry &entry : m->entries) {
-      std::string title = entry.title;
-      std::string shortcut = entry.shortcut;
-      if (entry.kind == MenuEntry::Kind::Separator) {
-        items.push_back(m->title + ">-");
-        continue;
-      }
-      if (entry.kind == MenuEntry::Kind::Standard) {
-        const StandardItemInfo info = standardItemInfo(entry.id);
-        title = info.title;
-        shortcut = info.shortcut;
-      }
-      items.push_back(m->title + ">" + title + (shortcut.empty() ? "" : " (" + shortcut + ")"));
+    if (const Menu *m = menu(handle)) {
+      outlineOf(m->title + ">", *m, items);
     }
   }
   return items;
@@ -413,27 +454,29 @@ std::vector<std::string> menuBarOutline() {
 std::vector<std::string> menuBarItems() {
   std::vector<std::string> items;
   for (uint64_t handle : state().menuBar) {
-    const Menu *m = menu(handle);
-    if (m == nullptr) {
-      continue;
-    }
-    for (const MenuEntry &entry : m->entries) {
-      switch (entry.kind) {
-      case MenuEntry::Kind::Item:
-        items.push_back(m->title + ">" + entry.title + (entry.shortcut.empty() ? "" : " (" + entry.shortcut + ")") +
-                        " #" + std::to_string(entry.id) + (entry.checked ? " [checked]" : ""));
-        break;
-      case MenuEntry::Kind::Separator:
-        items.push_back(m->title + ">-");
-        break;
-      case MenuEntry::Kind::Standard:
-        items.push_back(m->title + ">standard " + std::to_string(entry.id));
-        break;
-      }
+    if (const Menu *m = menu(handle)) {
+      itemsOf(m->title + ">", *m, items);
     }
   }
   return items;
 }
+
+bool lineWrapping(uint64_t view) {
+  const TextView *v = textView(view);
+  return v != nullptr && v->wrapping;
+}
+
+void pushRecentFile(const std::string &path) {
+  recordScenario("recent:" + encodeScenarioText(path));
+  std::vector<std::string> &recents = state().recents;
+  recents.erase(std::remove(recents.begin(), recents.end(), path), recents.end());
+  recents.insert(recents.begin(), path);
+  if (recents.size() > 10) {
+    recents.resize(10);
+  }
+}
+
+std::vector<std::string> recentFiles() { return state().recents; }
 
 } // namespace primec::ui::headless
 
@@ -766,6 +809,15 @@ bool ps_ui_text_view_set_line_numbers(uint64_t view, bool visible) {
   return loggedFlag(call, v != nullptr);
 }
 
+bool ps_ui_text_view_set_wrapping(uint64_t view, bool wrap) {
+  const std::string call = "ps_ui_text_view_set_wrapping(" + std::to_string(view) + ", " + flag(wrap) + ")";
+  TextView *v = usable() ? textView(view) : nullptr;
+  if (v != nullptr) {
+    v->wrapping = wrap;
+  }
+  return loggedFlag(call, v != nullptr);
+}
+
 bool ps_ui_text_view_is_modified(uint64_t view) {
   const TextView *v = usable() ? textView(view) : nullptr;
   return loggedFlag("ps_ui_text_view_is_modified(" + std::to_string(view) + ")", v != nullptr && v->modified);
@@ -818,6 +870,84 @@ bool ps_ui_menu_set_checked(uint64_t menuHandle, int32_t commandId, bool checked
     }
   }
   return loggedFlag(call, found);
+}
+
+bool ps_ui_menu_add_submenu(uint64_t menuHandle, const char *title, uint64_t submenuHandle) {
+  const std::string call = "ps_ui_menu_add_submenu(" + std::to_string(menuHandle) + ", " + quote(title) + ", " +
+                           std::to_string(submenuHandle) + ")";
+  Menu *m = usable() ? menu(menuHandle) : nullptr;
+  Menu *child = usable() ? menu(submenuHandle) : nullptr;
+  bool attached = false;
+  for (const auto &entry : state().menus) {
+    for (const MenuEntry &item : entry.second.entries) {
+      attached = attached || (item.kind == MenuEntry::Kind::Submenu && item.child == submenuHandle);
+    }
+  }
+  const bool ok = m != nullptr && child != nullptr && menuHandle != submenuHandle && !child->inBar && !attached;
+  if (ok) {
+    MenuEntry entry;
+    entry.kind = MenuEntry::Kind::Submenu;
+    entry.title = title ? title : "";
+    entry.child = submenuHandle;
+    m->entries.push_back(std::move(entry));
+  }
+  return loggedFlag(call, ok);
+}
+
+bool ps_ui_menu_clear(uint64_t menuHandle) {
+  Menu *m = usable() ? menu(menuHandle) : nullptr;
+  if (m != nullptr) {
+    m->entries.clear();
+  }
+  return loggedFlag("ps_ui_menu_clear(" + std::to_string(menuHandle) + ")", m != nullptr);
+}
+
+int32_t ps_ui_menu_add_recent_files(uint64_t menuHandle, int32_t firstCommandId, int32_t maxItems) {
+  const std::string call = "ps_ui_menu_add_recent_files(" + std::to_string(menuHandle) + ", " +
+                           std::to_string(firstCommandId) + ", " + std::to_string(maxItems) + ")";
+  Menu *m = usable() ? menu(menuHandle) : nullptr;
+  int32_t added = 0;
+  if (m != nullptr && maxItems > 0) {
+    const std::vector<std::string> &recents = state().recents;
+    for (size_t i = 0; i < recents.size() && static_cast<int32_t>(i) < maxItems; ++i) {
+      MenuEntry entry;
+      entry.title = primec::ui::recentFileTitle(recents, i);
+      entry.id = firstCommandId + static_cast<int32_t>(i);
+      m->entries.push_back(std::move(entry));
+      ++added;
+    }
+  }
+  return logged(call, added, std::to_string(added));
+}
+
+bool ps_ui_recent_add(const char *path) {
+  const std::string call = "ps_ui_recent_add(" + quote(path) + ")";
+  const bool ok = usable() && path != nullptr && *path != '\0';
+  if (ok) {
+    std::vector<std::string> &recents = state().recents;
+    recents.erase(std::remove(recents.begin(), recents.end(), std::string(path)), recents.end());
+    recents.insert(recents.begin(), path);
+    if (recents.size() > 10) {
+      recents.resize(10);
+    }
+  }
+  return loggedFlag(call, ok);
+}
+
+const char *ps_ui_recent_path(int32_t index) {
+  State &s = state();
+  s.returnedText = usable() && index >= 0 && static_cast<size_t>(index) < s.recents.size()
+                       ? s.recents[static_cast<size_t>(index)]
+                       : std::string();
+  s.log.push_back("ps_ui_recent_path(" + std::to_string(index) + ") -> " + quote(s.returnedText));
+  return s.returnedText.c_str();
+}
+
+bool ps_ui_recent_clear(void) {
+  if (usable()) {
+    state().recents.clear();
+  }
+  return loggedFlag("ps_ui_recent_clear()", usable());
 }
 
 bool ps_ui_pref_get_bool(const char *key, bool fallback) {
