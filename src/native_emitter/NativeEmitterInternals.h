@@ -203,6 +203,14 @@ class Arm64Emitter {
   // Byte memory: a zeroed region of the popped byte count (0 for a count of 0), a byte load that
   // zero-extends, a byte store that leaves the stored byte, and the u8 wrap.
   void emitHeapAllocBytes();
+  // The string heap functions (`__pstext_*`, primec/ir/IrNativeTextHost.h): a text block is a byte
+  // region sized by the VM's size classes, with its capacity in the block header.
+  void emitTextAlloc();
+  void emitTextFree() { emitHeapFree(); }
+  void emitTextCapacity();
+  void emitTextUsable();
+  void emitTextLength();
+  void emitTextBlockSize();
   void emitLoadU8() {
     emitPopReg(0);
     emit(encodeLdrbRegBase(1, 0, 0));

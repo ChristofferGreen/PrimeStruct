@@ -164,3 +164,14 @@
   - acceptance:
     - the `u8` arithmetic program and a 2000-element `vector<u8>` program of tests/unit/backend_host/test_cpp_strings.cpp also run through `--emit=native` with the VM's exit codes; full release gate green
   - stop_rule: byte memory on arm64 native.
+
+- [x] TODO-5581: Native backend runs the String heap
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-23
+  - phase: Native PrimeScroll (docs/NativeUiPlan.md)
+  - parallel_track: native-backend-strings
+  - scope: The arm64 native backend (`--emit=native`, macOS) answers the stdlib `String` heap functions `__pstext_alloc`, `__pstext_try_alloc`, `__pstext_free`, `__pstext_capacity`, `__pstext_length` and `__pstext_usable` with emitted code (`include/primec/ir/IrNativeTextHost.h` names them; the validator lets exactly these host calls through for the native target on arm64). A text block is a byte region of its own sized by the VM's size classes (32 bytes, then four per doubling, `size` itself above 64 KiB), zeroed, with its size in the header, so capacity and usable match the VM. The pooled heap, `__pstext_stat`, `__pstext_set_limit` and `__pstext_argument` are TODO-5586 (they need writable global state, which comes with TODO-5582); other host calls are TODO-5583.
+  - acceptance:
+    - the String edit program of tests/unit/backend_host/test_cpp_strings.cpp (insert, erase, 3000 pushed bytes, byteAt, count) also runs through `--emit=native` with the VM's exit code; full release gate green
+  - stop_rule: String without statistics, limit or arguments on arm64 native.

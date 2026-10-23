@@ -1,6 +1,7 @@
 #include "primec/ir/IrValidation.h"
 
 #include "primec/ir/IrCfg.h"
+#include "primec/ir/IrNativeTextHost.h"
 #include "primec/ir/IrOpcodeTable.h"
 
 #include <cstdint>
@@ -177,8 +178,21 @@ bool validateFunction(const IrModule &module,
       return failInstruction(functionIndex, function.name, instructionIndex, "unsupported opcode", error);
     }
     if (inst.op == IrOpcode::CallHost) {
-      if (target != IrValidationTarget::Vm && target != IrValidationTarget::Serialized &&
-          target != IrValidationTarget::Cpp && target != IrValidationTarget::OptCpp) {
+      // The arm64 native backend answers the string heap functions itself and takes no other host call yet.
+      const NativeTextHost nativeText = target == IrValidationTarget::Native && nativeEmitsByteMemory() &&
+                                                inst.imm < module.hostImports.size()
+                                            ? nativeTextHost(module.hostImports[static_cast<size_t>(inst.imm)].name)
+                                            : NativeTextHost::NotText;
+      if (nativeText == NativeTextHost::Unsupported) {
+        return failInstruction(functionIndex,
+                               function.name,
+                               instructionIndex,
+                               "string heap statistics, limits and entry arguments are not available on the native backend yet (docs/todo.md, TODO-5586)",
+                               error);
+      }
+      if (nativeText == NativeTextHost::NotText && target != IrValidationTarget::Vm &&
+          target != IrValidationTarget::Serialized && target != IrValidationTarget::Cpp &&
+          target != IrValidationTarget::OptCpp) {
         return failInstruction(functionIndex,
                                function.name,
                                instructionIndex,

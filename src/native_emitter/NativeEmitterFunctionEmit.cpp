@@ -1,6 +1,7 @@
 #include "NativeEmitterEmitInternal.h"
 #include "NativeEmitterPromotion.h"
 #include "primec/ir/IrLocalEscape.h"
+#include "primec/ir/IrNativeTextHost.h"
 
 #include <algorithm>
 #include <fcntl.h>
@@ -276,6 +277,39 @@ bool emitNativeFunctions(const IrModule &module,
       case IrOpcode::HeapRealloc:
         emitter.emitHeapRealloc();
         break;
+      case IrOpcode::CallHost:
+        if constexpr (kIsArm64) {
+          if (inst.imm >= module.hostImports.size()) {
+            error = "native backend encountered an invalid host import";
+            return false;
+          }
+          switch (nativeTextHost(module.hostImports[static_cast<size_t>(inst.imm)].name)) {
+          case NativeTextHost::Alloc:
+          case NativeTextHost::TryAlloc:
+            emitter.emitTextAlloc();
+            break;
+          case NativeTextHost::Free:
+            emitter.emitTextFree();
+            break;
+          case NativeTextHost::Capacity:
+            emitter.emitTextCapacity();
+            break;
+          case NativeTextHost::Length:
+            emitter.emitTextLength();
+            break;
+          case NativeTextHost::Usable:
+            emitter.emitTextUsable();
+            break;
+          default:
+            error = "unsupported host function for native backend: " +
+                    module.hostImports[static_cast<size_t>(inst.imm)].name;
+            return false;
+          }
+          break;
+        } else {
+          error = "unsupported IR opcode for native backend";
+          return false;
+        }
       // Byte memory is emitted by the arm64 emitter only (docs/todo.md, TODO-5574).
       case IrOpcode::HeapAllocBytes:
       case IrOpcode::LoadU8:

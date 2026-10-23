@@ -73,7 +73,7 @@ Compiled compileWith(const std::string &kind, const std::string &name, const std
   return compiled;
 }
 
-// Whether the arm64 native backend runs byte memory in this build (TODO-5574: no strings or hosts yet).
+// Whether the arm64 native backend runs byte memory and the String heap in this build (no host calls yet).
 constexpr bool NativeRunsBytes =
 #if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
     true;
@@ -150,7 +150,9 @@ TEST_CASE("String text, growth, editing and comparison agree with the VM") {
           "  }\n"
           "  [bool] ok{s.byteAt(0i32) == 101u8}\n"
           "  return(if(ok, then() { s.count() - s.count() / 200i32 * 200i32 }, else() { 99i32 }))",
-          (3000 + 13) % 200);
+          (3000 + 13) % 200,
+          "",
+          true);
 }
 
 TEST_CASE("the string heap reuses blocks and reports the same figures") {
