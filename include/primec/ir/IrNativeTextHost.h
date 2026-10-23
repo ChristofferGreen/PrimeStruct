@@ -15,6 +15,7 @@ enum class NativeTextHost {
   Capacity,    // __pstext_capacity(Pointer<u8>) -> u64
   Length,      // __pstext_length(Pointer<u8>) -> i32
   Usable,      // __pstext_usable(Pointer<u8>) -> u64
+  Argument,    // __pstext_argument(i32) -> Pointer<u8>: the entry argument at the index in a fresh block
   Unsupported, // a `__pstext_*` function the native backend does not answer yet
 };
 
@@ -43,6 +44,9 @@ inline NativeTextHost nativeTextHost(std::string_view importName) {
   }
   if (leaf == "__pstext_usable") {
     return NativeTextHost::Usable;
+  }
+  if (leaf == "__pstext_argument") {
+    return NativeTextHost::Argument;
   }
   return NativeTextHost::Unsupported;
 }

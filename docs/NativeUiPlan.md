@@ -269,8 +269,8 @@ path/libps_ui_appkit.dylib` writes the Mach-O itself, with no C++ compiler and n
 `[host]` functions to it by flat lookup at launch, and declares the SDK it was built with (`LC_BUILD_VERSION`,
 `LC_UUID`) so AppKit draws the current look. `scripts/build_native_app.sh --direct` copies the dylib next to the output
 and loads it through `@executable_path`; `PrimeStruct_native_ui_compiled_app` builds hello_window this way and checks
-that it draws a window of the same size as the C++ build. The editor is next: its native compile stops at the string
-heap's entry arguments (TODO-5587), then TODO-5585 runs its scenarios on the native build.
+that it draws a window of the same size as the C++ build. The editor compiles this way too and opens a highlighted
+Unicode file in snapshot mode; TODO-5585 runs its scenarios on the native build and ships the bundle from it.
 
 ## 11. TODO slices
 

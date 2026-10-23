@@ -17,6 +17,34 @@ inline size_t Arm64Emitter::emitHostSlotLoad(uint8_t reg) {
 // address is pushed (0 for a null or empty string, or when no block can be mapped).
 inline void Arm64Emitter::emitHostTextResult() {
   emitMovReg(13, 0);
+  emitTextCopyOfReg13();
+}
+
+// The entry argument at the popped index (`__pstext_argument`) copied into a fresh string-heap block: argc and
+// argv live in locals of the function (captured from x19 and x20, which hold them for the whole program). An
+// index outside 0 to argc - 1 or a null argument gives the null block, like an empty argument.
+inline void Arm64Emitter::emitTextArgument(uint32_t argcLocalIndex, uint32_t argvLocalIndex) {
+  emitPopReg(0);
+  emit(0x93407C00u); // SXTW x0, w0: the index is an i32
+  emitMovImm64(13, 0);
+  emitCompareRegZero(0);
+  const size_t jumpNegative = emitCondBranchPlaceholder(CondCode::Lt);
+  emitLoadLocalToReg(1, argcLocalIndex);
+  emitCompareReg(0, 1);
+  const size_t jumpPast = emitCondBranchPlaceholder(CondCode::Ge);
+  emitLoadLocalToReg(2, argvLocalIndex);
+  emitMovImm64(3, 8);
+  emitMulReg(3, 0, 3);
+  emitAddReg(2, 2, 3);
+  emit(encodeLdrRegBase(13, 2, 0));
+  const size_t copyIndex = currentWordIndex();
+  patchCondBranch(jumpNegative, static_cast<int32_t>(copyIndex - jumpNegative), CondCode::Lt);
+  patchCondBranch(jumpPast, static_cast<int32_t>(copyIndex - jumpPast), CondCode::Ge);
+  emitTextCopyOfReg13();
+}
+
+// x13 is a C string (or null): its text copied into a fresh string-heap block whose address is pushed.
+inline void Arm64Emitter::emitTextCopyOfReg13() {
   emitMovImm64(8, 0);
   emitCompareRegZero(13);
   const size_t jumpNull = emitCondBranchPlaceholder(CondCode::Eq);

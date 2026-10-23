@@ -208,3 +208,14 @@
   - acceptance:
     - `PrimeStruct_native_ui_compiled_app` builds hello_window with `--direct`, runs it in snapshot mode and checks the picture has the size of the C++ build's; full release gate green
   - stop_rule: bundling and linking; the editor's language gaps are TODO-5587 and TODO-5585.
+
+- [x] TODO-5587: Native String heap: entry arguments
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-23
+  - phase: Native PrimeScroll (docs/NativeUiPlan.md)
+  - parallel_track: native-backend-strings
+  - scope: The arm64 native backend (`--emit=native`, macOS) answers `__pstext_argument(index)`, the stdlib `argumentText` the editor uses for the file named on its command line. A function that calls it keeps argc and argv in locals (captured from x19 and x20, which hold them for the whole program, as PrintArgv does); an index outside 0 to argc - 1 or an empty argument gives the null block, and any other argument is copied into a fresh text block. With it the editor compiles on the native backend (`primec --emit=native examples/apps/text_editor/main.prime`).
+  - acceptance:
+    - a program that reads `argumentText(1)`, `argumentText(2)`, an index past argc and a negative index as `String` exits with the VM's code on the VM, through optexe and through `--emit=native` when run with the same two arguments; full release gate green
+  - stop_rule: entry arguments only.

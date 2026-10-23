@@ -1,6 +1,7 @@
 #include "primec/backend/NativeEmitter.h"
 #include "NativeEmitterEmitInternal.h"
 #include "NativeEmitterInternals.h"
+#include "primec/ir/IrNativeTextHost.h"
 
 #include <algorithm>
 #include <cstdlib>
@@ -160,6 +161,12 @@ bool buildNativeImage(const IrModule &module,
       }
       if (inst.op == IrOpcode::PushArgc) {
         layout.needsArgc = true;
+      }
+      // The entry argument host function reads argc and argv from the function's locals.
+      if (inst.op == IrOpcode::CallHost && inst.imm < module.hostImports.size() &&
+          nativeTextHost(module.hostImports[static_cast<size_t>(inst.imm)].name) == NativeTextHost::Argument) {
+        layout.needsArgc = true;
+        layout.needsArgv = true;
       }
     }
     {

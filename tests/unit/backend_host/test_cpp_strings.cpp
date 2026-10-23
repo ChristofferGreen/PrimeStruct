@@ -259,6 +259,31 @@ TEST_CASE("libSystem host functions run on the arm64 native backend with the VM'
   }
 }
 
+TEST_CASE("entry arguments read as String agree on the VM, optexe and the arm64 native backend") {
+  const std::string source = programOf(
+      "  [String] first{argumentText(1i32)}\n"
+      "  [String] second{argumentText(2i32)}\n"
+      "  [String] missing{argumentText(9i32)}\n"
+      "  [String] negative{argumentText(0i32 - 1i32)}\n"
+      "  return(first.count() * 16i32 + second.count() + convert<i32>(first.byteAt(0i32)) - 104i32 + missing.count() + negative.count())",
+      "");
+  ScriptEngine engine;
+  const auto script = engine.compileSource("/entry_arguments.prime", source);
+  REQUIRE_MESSAGE(script.valid(), script.diagnostics());
+  const auto vm = script.run({"hello", "x"});
+  REQUIRE_MESSAGE(vm.ok, vm.diagnostics);
+  CHECK(vm.exitCode == 5 * 16 + 1);
+  std::vector<const char *> kinds = {"optexe"};
+  if (NativeRunsBytes) {
+    kinds.push_back("native");
+  }
+  for (const char *kind : kinds) {
+    const Compiled compiled = compileWith(kind, "entry_arguments", source);
+    REQUIRE_MESSAGE(compiled.status == 0, kind << ": " << compiled.diagnostics);
+    CHECK_MESSAGE(run(shellQuote(compiled.program) + " hello x > /dev/null 2>&1") == vm.exitCode, kind);
+  }
+}
+
 TEST_CASE("the simple C++ emitters name the optimized ones for byte programs") {
   const std::string source = programOf("  [String] s{/std/text/stringFrom(\"abc\")}\n  return(s.count())", "");
   for (const char *kind : {"exe", "cpp"}) {

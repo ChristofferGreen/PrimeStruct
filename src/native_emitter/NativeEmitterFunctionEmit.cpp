@@ -301,6 +301,9 @@ bool emitNativeFunctions(const IrModule &module,
           case NativeTextHost::Usable:
             emitter.emitTextUsable();
             break;
+          case NativeTextHost::Argument:
+            emitter.emitTextArgument(layout.argcLocalIndex, layout.argvLocalIndex);
+            break;
           case NativeTextHost::NotText: {
             // Any other host function is a C function the image imports by name.
             const IrHostImport &import = module.hostImports[static_cast<size_t>(inst.imm)];

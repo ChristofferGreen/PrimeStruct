@@ -214,6 +214,8 @@ class Arm64Emitter {
   bool emitHostCall(const HostCallSite &site, std::string &error);
   size_t emitHostSlotLoad(uint8_t reg);
   void emitHostTextResult();
+  void emitTextCopyOfReg13();
+  void emitTextArgument(uint32_t argcLocalIndex, uint32_t argvLocalIndex);
   // The string heap functions (`__pstext_*`, primec/ir/IrNativeTextHost.h): a text block is a byte
   // region sized by the VM's size classes, with its capacity in the block header.
   void emitTextAlloc();
