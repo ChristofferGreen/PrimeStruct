@@ -241,3 +241,14 @@
   - acceptance:
     - `PrimeStruct_native_ui_markdown` (`primestruct.ui.markdown`) pins the HTML of every construct above, the script-safety cases and hostile input (deep quotes, long delimiter runs, unmatched brackets, an embedded NUL); full release gate green
   - stop_rule: the converter and its tests; the preview ABI is TODO-5589.
+
+- [x] TODO-5589: Markdown preview: window preview ABI, headless backend and editor menu
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-23
+  - phase: Markdown preview (docs/NativeUiPlan.md section 14)
+  - parallel_track: markdown-preview
+  - scope: The native UI ABI gains four functions (69 in all): `ps_ui_window_set_preview(window, on)`, `ps_ui_window_has_preview(window)`, `ps_ui_window_refresh_preview(window)` and `ps_ui_menu_follow_preview(menu, commandId)` (a menu item whose check mark shows whether the active window has a preview, so it stays right when the user clicks another tab; the editor cannot see tab clicks). The headless backend renders `primec::ui::markdownPreviewPage` of the window's text view when the preview turns on or is refreshed, and exposes the page (`headless::previewPage`) and the render count (`WindowState::previewRenders`); the bindings and the stdlib (`Window.setPreview/hasPreview/refreshPreview`, `Menu.followPreview`) carry them; the AppKit backend keeps only the on/off state until TODO-5590. The editor has View > Show Markdown Preview (Command-Shift-M, command 10, one preview per tab) and refreshes a tab's preview on every text change and whenever a file opens into the tab.
+  - acceptance:
+    - headless tests (turning it on and off, the page following the text only when refreshed, bad handles, the menu check mark following the active window) and four editor scenarios (toggle on and off, typing refreshes, only the tabs that asked for it render, opening a file refreshes) pass on the VM, the optexe editor and the native editor through the mirror; the menu bar outline gate lists the new item; full release gate green
+  - stop_rule: the ABI, the headless backend and the editor logic; the AppKit view is TODO-5590.

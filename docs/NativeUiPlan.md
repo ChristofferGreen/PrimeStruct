@@ -130,6 +130,7 @@ is callable only on the thread that called `ps_ui_init`, the main thread on macO
 | Text files | `ps_ui_text_view_load_file(view, path) -> bool`, `ps_ui_text_view_save_file(view, path) -> bool`, `ps_ui_last_error() -> String` (the backend reads and writes UTF-8 files itself, so no program-side text is built and a large file never passes through the program) |
 | Recent files | `ps_ui_recent_add(path)`, `ps_ui_recent_path(index) -> String` (most recent first), `ps_ui_recent_clear()` (the app's own defaults list `ps.recent.files` on macOS, kept between runs and across app updates; `PRIMESTRUCT_UI_RECENT=/a:/b` and every snapshot run use an in-memory list instead; the headless backend keeps the list in memory, preset with `headless::pushRecentFile`, at most 10 entries) |
 | Preferences | `ps_ui_pref_get_bool(key, fallback) -> bool`, `ps_ui_pref_set_bool(key, value) -> bool` (and `_get_int/_set_int`, plus lists of texts: `ps_ui_pref_list_clear/add/count/get(key, ...)`; booleans the app keeps between runs: `NSUserDefaults` on macOS under `ps.pref.<key>`; `PRIMESTRUCT_UI_PREFS=key=1,other=0` and every snapshot run answer from the environment instead and never touch the user's defaults; the headless backend keeps them in memory, preset with `headless::setBoolPref`) |
+| Markdown preview | `ps_ui_window_set_preview(window, bool)` (the window shows its text view and, beside it, the markdown of that text rendered as a page; the backend builds the preview only when it is turned on; false for a bad window or one with no text view; on while on is a no-op), `ps_ui_window_has_preview(window) -> bool`, `ps_ui_window_refresh_preview(window) -> bool` (render again from the current text; false without a preview; a backend may coalesce refreshes), `ps_ui_menu_follow_preview(menu, commandId) -> bool` (the items' check mark shows whether the active window has a preview, so it stays right when the user clicks another tab). The headless backend records the page (`headless::previewPage(window)`) and how often it was built (`WindowState::previewRenders`) |
 | Dialogs | `ps_ui_open_panel(title) -> String`, `ps_ui_save_panel(title, suggestedName) -> String` (empty means cancelled), `ps_ui_panel_chosen() -> bool` (whether the last panel returned a path), `ps_ui_alert(message, detail, buttons) -> i32` |
 
 - **Events.** `ps_ui_wait_event` blocks in the platform's run loop until something the program should handle happens,
@@ -144,7 +145,7 @@ is callable only on the thread that called `ps_ui_init`, the main thread on macO
   is a `const char *` valid until the next text-returning call, `ps_ui_alert` takes button titles separated by `\n` and
   returns the pressed index, and `ps_ui_init` returns false when the app is already running. The headless backend
   (`primec/ui/NativeUiHeadless.h`) ends a scripted run with `quit_requested` once its action list is empty.
-  `primec/ui/NativeUiBindings.h` binds all 65 functions into a `ScriptEngine` or `Script` under their ABI names. The
+  `primec/ui/NativeUiBindings.h` binds all 69 functions into a `ScriptEngine` or `Script` under their ABI names. The
   three text-file functions (TODO-5546) let the editor open and save before owned `String` exists (TODO-5530).
 - **Versioning.** `ps_ui_abi_version() -> i32` returns 0 for this table. Additions append functions; a change to an
   existing signature bumps the version.
@@ -361,8 +362,9 @@ panels and the alert need a person at the keyboard: TODO-5545.
 
 ## 14. Markdown preview
 
-PrimeScroll shows a markdown file as it will read next to its source: View > Markdown Preview (Command-Shift-M)
-splits the active tab into the text view and a rendered page, and the page follows the text as it is edited.
+**Goal (2026-10-23): PrimeScroll shows a markdown file as it will read next to its source, in every compile mode.**
+View > Show Markdown Preview (Command-Shift-M) splits the active tab into the text view and a rendered page, and the
+page follows the text as it is edited. It is done when the installed native PrimeScroll can show it.
 
 - **One converter for every mode.** `primec::ui::markdownToHtml` / `markdownPreviewPage` (`include/primec/ui/Markdown.h`,
   `src/ui/Markdown.cpp`, in `primec_ui_highlight_lib`) is plain text in and text out. It lives behind the C ABI, so the
@@ -374,8 +376,10 @@ splits the active tab into the text view and a rendered page, and the page follo
 - **The web view is loaded only when needed.** The AppKit backend creates the `WKWebView` the first time a preview
   turns on (WebKit is `dlopen`ed then, not linked), and destroys it when the preview turns off, so a session that never
   previews has the launch time and memory it has today.
-- **ABI.** Three window functions: `ps_ui_window_set_preview(window, on)`, `ps_ui_window_has_preview(window)` and
-  `ps_ui_window_refresh_preview(window)`. The backend owns the preview view, the editor decides when it shows
-  (the menu item, one preview per tab) and when it refreshes (text change, open, save).
-- **Slices.** The converter (TODO-5588, done), the ABI with the headless backend and the editor menu (TODO-5589), then
-  the AppKit split view with the lazily loaded web view (TODO-5590).
+- **ABI.** Four functions (section 4): `ps_ui_window_set_preview(window, on)`, `ps_ui_window_has_preview(window)`,
+  `ps_ui_window_refresh_preview(window)` and `ps_ui_menu_follow_preview(menu, commandId)`. The backend owns the
+  preview view; the editor decides when it shows (View > Show Markdown Preview, one preview per tab, its check mark
+  following the active tab) and when it refreshes (every text change and every file opened into a tab).
+- **Slices.** The converter (TODO-5588, done), the ABI with the headless backend and the editor menu (TODO-5589, done:
+  the editor scenarios run it on the VM, the optimized C++ build and the native build; the AppKit backend keeps only
+  the on/off state until the next slice), then the AppKit split view with the lazily loaded web view (TODO-5590).

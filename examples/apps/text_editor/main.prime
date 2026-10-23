@@ -61,6 +61,13 @@ command_wrap() {
   return(9i32)
 }
 
+// View > Show Markdown Preview (Command-Shift-M) splits the active tab into its text and the rendered
+// markdown; the item's check mark follows the active tab, and the preview follows the text.
+[return<i32>]
+command_preview() {
+  return(10i32)
+}
+
 [return<i32>]
 command_recent() {
   return(200i32)
@@ -193,6 +200,7 @@ open_path([App] app, [Window] tab, [bool] lineNumbers, [bool] wrapLines, [String
       app.addRecent(chosen)
       view.highlight(chosen)
       target.setEdited(false)
+      target.refreshPreview()
     } else {
       app.alert("The file could not be opened.", app.lastError(), "OK")
       if(!reuse) {
@@ -343,6 +351,8 @@ main([array<string>] args) {
   viewMenu.showTabBar()
   viewMenu.item("Show Line Numbers", "cmd+shift+l", command_line_numbers())
   viewMenu.item("Wrap Lines", "", command_wrap())
+  viewMenu.item("Show Markdown Preview", "cmd+shift+m", command_preview())
+  viewMenu.followPreview(command_preview())
   viewMenu.addToBar()
 
   [Menu] windowMenu{app.menu("Window")}
@@ -416,6 +426,7 @@ main([array<string>] args) {
         changed.setEdited(true)
         [TextView] view{changed.content()}
         view.highlight(changed.path())
+        changed.refreshPreview()
       }
       quitRequested {
         intent = command_quit()
@@ -438,6 +449,9 @@ main([array<string>] args) {
     if(intent == command_recent_clear()) {
       app.clearRecent()
       recentsChanged = true
+    }
+    if(intent == command_preview()) {
+      [bool] previewing{tab.setPreview(!tab.hasPreview())}
     }
     if(intent == command_wrap()) {
       wrapLines = !wrapLines

@@ -34,6 +34,12 @@ template <class Binder> void forEachBinding(Binder &&bindOne) {
   bindOne("ps_ui_window_set_autosave_name", [](uint64_t window, std::string_view name) {
     return ps_ui_window_set_autosave_name(window, text(name).c_str());
   });
+  bindOne("ps_ui_window_set_preview",
+          [](uint64_t window, bool on) { return ps_ui_window_set_preview(window, on); });
+  bindOne("ps_ui_window_has_preview", [](uint64_t window) { return ps_ui_window_has_preview(window); });
+  bindOne("ps_ui_window_refresh_preview", [](uint64_t window) { return ps_ui_window_refresh_preview(window); });
+  bindOne("ps_ui_menu_follow_preview",
+          [](uint64_t menu, int32_t commandId) { return ps_ui_menu_follow_preview(menu, commandId); });
   bindOne("ps_ui_window_set_content",
           [](uint64_t window, uint64_t widget) { return ps_ui_window_set_content(window, widget); });
   bindOne("ps_ui_window_set_edited",

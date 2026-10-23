@@ -151,6 +151,18 @@ ps_ui_window_has_path([u64] window) {
 }
 
 [host return<bool>]
+ps_ui_window_set_preview([u64] window, [bool] on) {
+}
+
+[host return<bool>]
+ps_ui_window_has_preview([u64] window) {
+}
+
+[host return<bool>]
+ps_ui_window_refresh_preview([u64] window) {
+}
+
+[host return<bool>]
 ps_ui_text_view_clear_styles([u64] view) {
 }
 
@@ -184,6 +196,10 @@ ps_ui_menu_add_separator([u64] menu) {
 
 [host return<bool>]
 ps_ui_menu_set_checked([u64] menu, [i32] commandId, [bool] checked) {
+}
+
+[host return<bool>]
+ps_ui_menu_follow_preview([u64] menu, [i32] commandId) {
 }
 
 [host return<bool>]
@@ -346,6 +362,23 @@ Window() {
     return(ps_ui_window_has_path(this.handle))
   }
 
+  // The markdown preview beside the window's text view: on or off, whether it is on, and rendering it
+  // again after the text changed.
+  [public return<bool>]
+  setPreview([bool] on) {
+    return(ps_ui_window_set_preview(this.handle, on))
+  }
+
+  [public return<bool>]
+  hasPreview() {
+    return(ps_ui_window_has_preview(this.handle))
+  }
+
+  [public return<bool>]
+  refreshPreview() {
+    return(ps_ui_window_refresh_preview(this.handle))
+  }
+
   [public return<bool>]
   close() {
     return(ps_ui_window_close(this.handle))
@@ -441,6 +474,12 @@ Menu() {
   [public return<bool>]
   setChecked([i32] commandId, [bool] checked) {
     return(ps_ui_menu_set_checked(this.handle, commandId, checked))
+  }
+
+  // The check mark of the items with `commandId` shows whether the active window has a preview.
+  [public return<bool>]
+  followPreview([i32] commandId) {
+    return(ps_ui_menu_follow_preview(this.handle, commandId))
   }
 
   // Adds an item that opens `child`, a menu that is not in the bar.

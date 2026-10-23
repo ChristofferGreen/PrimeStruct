@@ -213,6 +213,7 @@ TEST_CASE("acceptance: the menu bar has the standard macOS structure and shortcu
       "View>Show Tab Bar",
       "View>Show Line Numbers (cmd+shift+l)",
       "View>Wrap Lines",
+      "View>Show Markdown Preview (cmd+shift+m)",
       "Window>Minimize (cmd+m)",
       "Window>Zoom",
       "Window>-",

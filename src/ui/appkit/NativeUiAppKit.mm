@@ -70,6 +70,7 @@ struct State {
   std::unordered_map<uint64_t, NSWindow *> windows;
   std::unordered_map<uint64_t, uint64_t> windowContent;
   std::unordered_map<uint64_t, std::string> windowPaths;
+  std::unordered_map<uint64_t, bool> previews; // windows whose preview pane is on
   std::unordered_map<uint64_t, NSTextView *> textViews;
   std::unordered_map<uint64_t, NSFont *> baseFonts;
   // A text view does not retain its scroll view, so the maps do.
@@ -1360,6 +1361,42 @@ bool ps_ui_window_set_autosave_name(uint64_t window, const char *name) {
     return true; // test and snapshot runs neither read nor write the user's saved frames
   }
   return [w setFrameAutosaveName:toNSString(name)];
+}
+
+bool ps_ui_window_set_preview(uint64_t window, bool on) {
+  if (!usable() || liveWindow(window) == nil) {
+    return false;
+  }
+  State &s = state();
+  if (on && s.windowContent.find(window) == s.windowContent.end()) {
+    return false;
+  }
+  s.previews[window] = on;
+  return true;
+}
+
+bool ps_ui_window_has_preview(uint64_t window) {
+  State &s = state();
+  const auto it = usable() && liveWindow(window) != nil ? s.previews.find(window) : s.previews.end();
+  return it != s.previews.end() && it->second;
+}
+
+bool ps_ui_window_refresh_preview(uint64_t window) {
+  return ps_ui_window_has_preview(window);
+}
+
+bool ps_ui_menu_follow_preview(uint64_t menuHandle, int32_t commandId) {
+  NSMenu *menu = usable() ? menuFor(menuHandle) : nil;
+  if (menu == nil) {
+    return false;
+  }
+  bool found = false;
+  for (NSMenuItem *item in menu.itemArray) {
+    if (item.action == @selector(menuCommand:) && item.tag == commandId) {
+      found = true;
+    }
+  }
+  return found;
 }
 
 int32_t ps_ui_pref_get_int(const char *key, int32_t fallback) {

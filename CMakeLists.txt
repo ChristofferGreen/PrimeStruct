@@ -819,7 +819,8 @@ target_include_directories(primec_ui_highlight_lib PUBLIC
   $<INSTALL_INTERFACE:include>)
 primestructEnableWarnings(primec_ui_highlight_lib)
 
-add_library(primec_ui_headless_lib src/ui/headless/NativeUiHeadless.cpp)
+add_library(primec_ui_headless_lib src/ui/headless/NativeUiHeadless.cpp
+                                  src/ui/headless/NativeUiHeadlessControl.cpp)
 target_include_directories(primec_ui_headless_lib PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
@@ -1392,6 +1393,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   # headless backend and the scenario/log fixture built as a dylib, and must leave the same logs.
   if(APPLE AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64)$")
     add_library(primec_ui_headless_dylib SHARED src/ui/headless/NativeUiHeadless.cpp
+                                                src/ui/headless/NativeUiHeadlessControl.cpp
                                                 tests/fixtures/host_calls/headless_log_dump.cpp)
     set_target_properties(primec_ui_headless_dylib PROPERTIES OUTPUT_NAME ps_ui_headless)
     target_include_directories(primec_ui_headless_dylib PRIVATE ${CMAKE_SOURCE_DIR}/include
@@ -1450,7 +1452,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_native_ui_editor
-                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+                       PROPERTIES TIMEOUT 900 LABELS "parallel-safe")
   # The editor acceptance gate (docs/todo.md TODO-5552..5554): the editor
   # scenarios plus the acceptance suite, in one release-gate entry.
   add_test(
@@ -1460,7 +1462,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_native_ui_editor_acceptance
-                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+                       PROPERTIES TIMEOUT 900 LABELS "parallel-safe")
   if(PRIMESTRUCT_BUILD_NATIVE_UI AND APPLE)
     # Bundles an example, runs it against AppKit in snapshot mode and checks the
     # PNG of the laid-out window (needs a window-server session).

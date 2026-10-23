@@ -59,8 +59,13 @@ struct WindowState {
   bool shown = false;
   bool closed = false;
   std::string autosaveName; // set with ps_ui_window_set_autosave_name
+  bool preview = false;     // the preview pane is on (ps_ui_window_set_preview)
+  int32_t previewRenders = 0; // how many times the preview page was built
 };
 WindowState windowState(uint64_t window);
+// The page the window's preview shows (primec::ui::markdownPreviewPage of the text view's text when it
+// was last rendered); "" when the window has no preview.
+std::string previewPage(uint64_t window);
 bool isMonospace(uint64_t textView);
 // True when the line number bar of the text view is shown.
 bool lineNumbersVisible(uint64_t textView);

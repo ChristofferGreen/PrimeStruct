@@ -27,6 +27,7 @@ constexpr int32_t CommandNew = 1;
 constexpr int32_t CommandOpen = 2;
 constexpr int32_t CommandSave = 3;
 constexpr int32_t CommandSaveAs = 4;
+constexpr int32_t CommandPreview = 10;
 
 // Handles in creation order: the window, then its text view.
 constexpr uint64_t EditorWindow = 1;
@@ -659,4 +660,74 @@ TEST_CASE("editor asks to remember the first window's size and position") {
   runEditor();
   CHECK(headless::windowState(EditorWindow).autosaveName == "PrimeScroll");
   CHECK_FALSE(headless::windowState(SecondWindow).exists);
+}
+
+// The markdown preview: View > Show Markdown Preview splits the active tab, and the page follows its text.
+TEST_CASE("editor shows a markdown preview of the active tab and turns it off again") {
+  const std::string md = writeScratch("preview.md", "# Heading\n\ntext");
+  headless::reset();
+  headless::pushCommand(CommandOpen);
+  headless::pushOpenPanelAnswer(md);
+  headless::pushCommand(CommandPreview);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(headless::windowState(EditorWindow).preview);
+  CHECK(headless::previewPage(EditorWindow).find("<h1>Heading</h1>") != std::string::npos);
+  CHECK(countCalls("ps_ui_menu_follow_preview(") == 1);
+
+  headless::reset();
+  headless::pushCommand(CommandOpen);
+  headless::pushOpenPanelAnswer(md);
+  headless::pushCommand(CommandPreview);
+  headless::pushCommand(CommandPreview);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK_FALSE(headless::windowState(EditorWindow).preview);
+  CHECK(headless::previewPage(EditorWindow).empty());
+}
+
+TEST_CASE("editor refreshes the preview as the text changes") {
+  const std::string md = writeScratch("preview_typing.md", "# Heading");
+  headless::reset();
+  headless::pushCommand(CommandOpen);
+  headless::pushOpenPanelAnswer(md);
+  headless::pushCommand(CommandPreview);
+  headless::pushTypeText(0, "\n\nmore words");
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(headless::previewPage(EditorWindow).find("<p>more words</p>") != std::string::npos);
+  CHECK(headless::windowState(EditorWindow).previewRenders == 2);
+}
+
+TEST_CASE("editor previews only the tabs that asked for it") {
+  const std::string md = writeScratch("preview_tabs.md", "# One");
+  headless::reset();
+  headless::pushCommand(CommandOpen);
+  headless::pushOpenPanelAnswer(md);
+  headless::pushCommand(CommandNew);
+  headless::pushCommand(CommandPreview);
+  headless::pushTypeText(2, " typed in the first tab");
+  headless::pushCloseWindow(SecondWindow);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK_FALSE(headless::windowState(EditorWindow).preview);
+  CHECK(headless::windowState(EditorWindow).previewRenders == 0);
+  CHECK(headless::windowState(SecondWindow).preview);
+  CHECK(headless::windowState(SecondWindow).previewRenders == 1);
+}
+
+TEST_CASE("editor refreshes a preview when a file opens into the tab") {
+  const std::string first = writeScratch("preview_open_a.md", "# First");
+  const std::string second = writeScratch("preview_open_b.md", "# Second");
+  headless::reset();
+  headless::pushCommand(CommandPreview);
+  headless::pushCommand(CommandOpen);
+  headless::pushOpenPanelAnswer(first);
+  headless::pushCloseWindow(EditorWindow);
+  headless::pushCloseWindow(SecondWindow);
+  runEditor();
+  // The untouched first tab took the file and its preview, already on, shows it.
+  CHECK(headless::windowState(EditorWindow).preview);
+  CHECK(headless::previewPage(EditorWindow).find("<h1>First</h1>") != std::string::npos);
+  (void)second;
 }

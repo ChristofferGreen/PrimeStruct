@@ -151,6 +151,23 @@ bool ps_ui_window_set_path(uint64_t window, const char *path);
 const char *ps_ui_window_path(uint64_t window);
 bool ps_ui_window_has_path(uint64_t window);
 
+/* Markdown preview -------------------------------------------------------- */
+
+/* Turns the window's preview pane on or off. With it on the window shows its text view and, beside it,
+ * the markdown of that text rendered as a page (primec::ui::markdownPreviewPage); turning it off puts
+ * the text view back alone. The backend builds the preview only when it is turned on. False for a bad
+ * handle, or for turning it on in a window with no text view as its content; turning it on while it is
+ * on succeeds and changes nothing. */
+bool ps_ui_window_set_preview(uint64_t window, bool on);
+bool ps_ui_window_has_preview(uint64_t window);
+/* Renders the preview again from the text view's current text. False when the window has no preview.
+ * A backend may coalesce refreshes that follow each other closely. */
+bool ps_ui_window_refresh_preview(uint64_t window);
+/* Makes the check mark of the items of `menu` with `commandId` show whether the active window has a
+ * preview, instead of the state ps_ui_menu_set_checked gave them. False for a bad menu or an unknown
+ * command id. */
+bool ps_ui_menu_follow_preview(uint64_t menu, int32_t commandId);
+
 /* Text view -------------------------------------------------------------- */
 
 uint64_t ps_ui_text_view_create(void);

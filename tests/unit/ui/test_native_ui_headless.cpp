@@ -624,6 +624,73 @@ TEST_CASE("a window remembers its frame under an autosave name") {
   CHECK_FALSE(ps_ui_window_set_autosave_name(999, "Other"));
 }
 
+TEST_CASE("a window shows a markdown preview of its text view") {
+  startApp();
+  const uint64_t window = ps_ui_window_create("W", 100, 100);
+  CHECK_FALSE(ps_ui_window_has_preview(window));
+  CHECK_FALSE(ps_ui_window_set_preview(window, true)); // no text view yet
+  const uint64_t view = ps_ui_text_view_create();
+  REQUIRE(ps_ui_window_set_content(window, view));
+  CHECK(ps_ui_text_view_set_text(view, "# Title\n\nbody"));
+  CHECK_FALSE(ps_ui_window_refresh_preview(window)); // the preview is off
+  CHECK(headless::previewPage(window).empty());
+
+  CHECK(ps_ui_window_set_preview(window, true));
+  CHECK(ps_ui_window_has_preview(window));
+  CHECK(headless::windowState(window).preview);
+  CHECK(headless::previewPage(window).find("<h1>Title</h1>") != std::string::npos);
+  CHECK(headless::previewPage(window).find("<!DOCTYPE html>") == 0);
+
+  // The page follows the text when it is refreshed, not before.
+  CHECK(ps_ui_text_view_set_text(view, "## Next"));
+  CHECK(headless::previewPage(window).find("<h2>") == std::string::npos);
+  CHECK(ps_ui_window_refresh_preview(window));
+  CHECK(headless::previewPage(window).find("<h2>Next</h2>") != std::string::npos);
+  CHECK(headless::windowState(window).previewRenders == 2);
+
+  // Turning it on again changes nothing; turning it off drops the page.
+  CHECK(ps_ui_window_set_preview(window, true));
+  CHECK(headless::windowState(window).previewRenders == 2);
+  CHECK(ps_ui_window_set_preview(window, false));
+  CHECK_FALSE(ps_ui_window_has_preview(window));
+  CHECK(headless::previewPage(window).empty());
+  CHECK_FALSE(ps_ui_window_refresh_preview(window));
+  CHECK(ps_ui_window_set_preview(window, false)); // already off
+
+  CHECK_FALSE(ps_ui_window_has_preview(999));
+  CHECK_FALSE(ps_ui_window_set_preview(999, true));
+  CHECK_FALSE(ps_ui_window_refresh_preview(999));
+}
+
+TEST_CASE("a menu item's check mark can follow the active window's preview") {
+  startApp();
+  const uint64_t menu = ps_ui_menu_create("View");
+  REQUIRE(ps_ui_menu_add_item(menu, "Preview", "", 10));
+  REQUIRE(ps_ui_menu_bar_add(menu));
+  CHECK_FALSE(ps_ui_menu_follow_preview(menu, 11));
+  CHECK_FALSE(ps_ui_menu_follow_preview(999, 10));
+  CHECK(ps_ui_menu_follow_preview(menu, 10));
+  const auto windowWithText = [] {
+    const uint64_t window = ps_ui_window_create("W", 100, 100);
+    REQUIRE(ps_ui_window_set_content(window, ps_ui_text_view_create()));
+    return window;
+  };
+  const uint64_t first = windowWithText();
+  const uint64_t second = windowWithText();
+  CHECK(ps_ui_window_select(first));
+  CHECK_FALSE(headless::menuItemChecked(10));
+  CHECK(ps_ui_window_set_preview(first, true));
+  CHECK(headless::menuItemChecked(10));
+  CHECK(ps_ui_window_select(second));
+  CHECK_FALSE(headless::menuItemChecked(10));
+  CHECK(ps_ui_window_select(first));
+  CHECK(headless::menuItemChecked(10));
+  const auto items = headless::menuBarItems();
+  CHECK(items == std::vector<std::string>{"View>Preview #10 [checked]"});
+  CHECK(ps_ui_window_set_preview(first, false));
+  CHECK_FALSE(headless::menuItemChecked(10));
+}
+
 TEST_CASE("integer preferences keep their value and answer the fallback when unset") {
   startApp();
   CHECK(ps_ui_pref_get_int("session.active", 7) == 7);
