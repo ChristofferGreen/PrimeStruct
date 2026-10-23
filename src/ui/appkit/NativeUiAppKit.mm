@@ -444,13 +444,21 @@ static std::vector<std::string> recentFilePaths() {
   if (s.prefOverridesActive) {
     return s.recentOverride;
   }
+  // The list is kept in the app's own defaults: the system recent documents are tied to the app's
+  // code signature and bundle, so they are lost whenever the app is replaced by an update.
   std::vector<std::string> paths;
-  for (NSURL *url in NSDocumentController.sharedDocumentController.recentDocumentURLs) {
-    if (url.path != nil) {
-      paths.push_back(url.path.UTF8String);
-    }
+  for (NSString *path in [NSUserDefaults.standardUserDefaults stringArrayForKey:@"ps.recent.files"]) {
+    paths.push_back(path.UTF8String);
   }
   return paths;
+}
+
+static void storeRecentFilePaths(const std::vector<std::string> &paths) {
+  NSMutableArray<NSString *> *list = [NSMutableArray array];
+  for (const std::string &path : paths) {
+    [list addObject:toNSString(path.c_str())];
+  }
+  [NSUserDefaults.standardUserDefaults setObject:list forKey:@"ps.recent.files"];
 }
 
 // The bar of line numbers to the left of a text view: one number per paragraph (the layout fragments
@@ -1496,6 +1504,13 @@ bool ps_ui_recent_add(const char *path) {
     }
     return true;
   }
+  std::vector<std::string> paths = recentFilePaths();
+  paths.erase(std::remove(paths.begin(), paths.end(), std::string(path)), paths.end());
+  paths.insert(paths.begin(), path);
+  if (paths.size() > 10) {
+    paths.resize(10);
+  }
+  storeRecentFilePaths(paths);
   [NSDocumentController.sharedDocumentController noteNewRecentDocumentURL:[NSURL fileURLWithPath:toNSString(path)]];
   return true;
 }
@@ -1516,6 +1531,7 @@ bool ps_ui_recent_clear(void) {
   if (s.prefOverridesActive) {
     s.recentOverride.clear();
   } else {
+    storeRecentFilePaths({});
     [NSDocumentController.sharedDocumentController clearRecentDocuments:nil];
   }
   return true;

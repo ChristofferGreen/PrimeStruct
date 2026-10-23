@@ -142,3 +142,14 @@
   - acceptance:
     - editor tests: open a file and close its tab, then the session still lists the file; a restored session that is closed straight away is kept; closing one of two tabs leaves only the other in the session (each also run on the compiled editor through the mirror); full release gate green
   - stop_rule: the session saved around closing tabs.
+
+- [x] TODO-5579: Recent files survive app updates
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-23
+  - phase: Native UI (docs/NativeUiPlan.md)
+  - parallel_track: native-ui-editor
+  - scope: A bug in the recent files menu of TODO-5576: the AppKit backend read the list from the system recent documents, which are tied to the app's code signature and bundle, so replacing the app with an update lost the list. The backend now keeps the list in its own defaults (`ps.recent.files`, newest first, at most 10), still notes each file with the system for its Open Recent services, and reads only its own list.
+  - acceptance:
+    - the headless and AppKit smoke tests and the editor tests (recent menu, order, clear) still pass; full release gate green
+  - stop_rule: where the AppKit backend stores the recent files.
