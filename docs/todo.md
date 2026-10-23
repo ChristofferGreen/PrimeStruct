@@ -104,7 +104,9 @@ of sync with them.
 | TODO-5569 | Slice loans, escapes and returned borrows | ready | slices |
 | TODO-5570 | Slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views | ready | slices |
 | TODO-5540 | `string` as the UTF-8 text view | blocked | string-view |
-| TODO-5586 | Native String heap: pooled blocks, statistics and limit | ready | native-backend-strings |
+| TODO-5589 | Markdown preview: window preview ABI, headless backend and editor menu | ready | markdown-preview |
+| TODO-5590 | AppKit markdown preview: a split view with a lazily loaded web view | blocked | markdown-preview |
+| TODO-5586 | Native String heap: pooled blocks, statistics and limit | deferred | native-backend-strings |
 | TODO-5574 | Simple C++ emitters run bytes and strings | deferred | string-backends |
 | TODO-5568 | String conveniences: operators, numbers, push of code points | blocked | string-owned |
 | TODO-5536 | Small, lazily loaded bytecode for apps | ready | bytecode-startup |
@@ -137,7 +139,7 @@ of sync with them.
 
 - TODO-5567 (bytes): packed `array<u8>`
 - TODO-5570 (slices): slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views
-- TODO-5586 (native-backend-strings): native String heap: pooled blocks, statistics and limit
+- TODO-5589 (markdown-preview): markdown preview: window preview ABI, headless backend and editor menu
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5510 (control-returns): `return` returns from pick arms and lambdas correctly
@@ -148,7 +150,7 @@ of sync with them.
 
 2. TODO-5567
 3. TODO-5570
-4. TODO-5586
+4. TODO-5589
 5. TODO-5536
 6. TODO-5535
 7. TODO-5510
@@ -159,6 +161,7 @@ of sync with them.
 
 - Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5567, TODO-5570, TODO-5569, TODO-5540, TODO-5568, TODO-5530, TODO-5574
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
+- Markdown preview (docs/NativeUiPlan.md section 14): TODO-5589, TODO-5590
 - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Lifecycle (docs/spec/value-lifecycle.md): TODO-5527
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
@@ -310,7 +313,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 
 - [ ] TODO-5586: Native String heap: pooled blocks, statistics and limit
   - owner: ai
-  - status: ready
+  - status: deferred
   - created_at: 2026-10-23
   - phase: Native PrimeScroll (docs/NativeUiPlan.md)
   - parallel_track: native-backend-strings
@@ -318,7 +321,30 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - acceptance:
     - the string_heap program of tests/unit/backend_host/test_cpp_strings.cpp (reuse and figures) also runs through `--emit=native` with the VM's exit codes; a 100000-String loop uses no more than a few MB; full release gate green
   - stop_rule: the native String heap's allocator and its statistics.
-  - notes: PrimeScroll ships from the native build now, so every String it makes takes a mapping of its own; the writable data segment this needs exists (`MachOData::stateBytes`).
+  - notes: deferred behind the markdown preview (TODO-5589, TODO-5590) to keep Ready Now at eight. PrimeScroll ships from the native build, so every String it makes takes a mapping of its own; the writable data segment this needs exists (`MachOData::stateBytes`).
+
+- [ ] TODO-5589: Markdown preview: window preview ABI, headless backend and editor menu
+  - owner: ai
+  - status: ready
+  - created_at: 2026-10-23
+  - phase: Markdown preview (docs/NativeUiPlan.md section 14)
+  - parallel_track: markdown-preview
+  - scope: Add the preview to the native UI ABI as three window functions, `ps_ui_window_set_preview(window, bool on)`, `ps_ui_window_has_preview(window)` and `ps_ui_window_refresh_preview(window)` (the backend owns the preview view and renders `primec::ui::markdownPreviewPage` of the window's text view; ABI 68 functions), with the headless backend recording them and the last page (`headless::previewPage(window)`), the stdlib `Window.setPreview/hasPreview/refreshPreview`, and the editor: View > Markdown Preview (Command-Shift-M, checked while a tab's preview is on, one preview per tab) toggles the active tab, and every text change, open and save of a tab with a preview refreshes it. The AppKit backend answers the three calls with a stub until TODO-5590.
+  - acceptance:
+    - headless ABI tests (toggle, state per window, refresh renders the page of the current text) and editor scenarios (the menu item toggles the active tab, typing refreshes only a tab that has a preview, closing a tab with a preview) pass on the VM, the optexe editor and the native editor through the mirror; full release gate green
+  - stop_rule: the ABI, the headless backend and the editor logic; the AppKit view is TODO-5590.
+
+- [ ] TODO-5590: AppKit markdown preview: a split view with a lazily loaded web view
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5589
+  - created_at: 2026-10-23
+  - phase: Markdown preview (docs/NativeUiPlan.md section 14)
+  - parallel_track: markdown-preview
+  - scope: The AppKit backend (`NativeUiAppKit.mm`, in the static library and the dylib) answers the preview calls: turning a tab's preview on puts its text view and a `WKWebView` side by side in an `NSSplitView`, loads the page of the current text, and turning it off removes the split and destroys the web view. WebKit is loaded on first use (`dlopen` of the WebKit framework and `NSClassFromString`), so a program that never previews neither links nor loads it, and its launch time and memory stay as they are; refreshes are coalesced (one load per run-loop turn at most) and keep the page's scroll position; links open in the default browser, never inside the preview; script is off. `PRIMESTRUCT_UI_SNAPSHOT` snapshots show the split when the preview command ran (`PRIMESTRUCT_UI_COMMANDS`).
+  - acceptance:
+    - a snapshot of the editor with a markdown file and the preview on is a real PNG with the rendered heading beside the source (checked in the AppKit smoke test); the editor binary does not list WebKit among its libraries and a run without the preview has the resident size of one without this change; full release gate green
+  - stop_rule: the AppKit preview view.
 
 - [ ] TODO-5536: Small, lazily loaded bytecode for apps
   - owner: ai

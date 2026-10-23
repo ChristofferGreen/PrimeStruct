@@ -230,3 +230,14 @@
   - acceptance:
     - the `primestruct.ui.editor` and `primestruct.ui.editor_acceptance` suites pass with both compiled editors in the mirror; `PrimeStruct_native_ui_compiled_app` builds, verifies and launches the native bundle; full release gate green
   - stop_rule: the editor on the native backend and its bundle.
+
+- [x] TODO-5588: Markdown to HTML converter for the preview
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-23
+  - phase: Markdown preview (docs/NativeUiPlan.md section 14)
+  - parallel_track: markdown-preview
+  - scope: `primec::ui::markdownToHtml` and `markdownPreviewPage` (`include/primec/ui/Markdown.h`, `src/ui/Markdown.cpp`, built into `primec_ui_highlight_lib`): a CommonMark and GitHub-flavoured subset in C++ that every backend and every compile mode shares. Blocks: ATX and setext headings, paragraphs with hard breaks, fenced and indented code with the language class, block quotes (lazy continuation), bullet and ordered lists (nested, tight and loose, start numbers, task items), thematic breaks and pipe tables with alignment. Inline: code spans, emphasis, strong and strikethrough by the delimiter-run rules (flanking, the rule of three, no intraword underscores), links, images, autolinks, bare http(s) URLs and backslash escapes, entities passed through. Raw HTML is escaped, and targets are limited to http, https, mailto, relative references and `data:image/` (images), so a preview cannot run scripts. The page wrapper carries a stylesheet that follows the system's light or dark mode.
+  - acceptance:
+    - `PrimeStruct_native_ui_markdown` (`primestruct.ui.markdown`) pins the HTML of every construct above, the script-safety cases and hostile input (deep quotes, long delimiter runs, unmatched brackets, an embedded NUL); full release gate green
+  - stop_rule: the converter and its tests; the preview ABI is TODO-5589.

@@ -812,7 +812,8 @@ primestructEnableWarnings(primec_ui_bindings_lib)
 
 # Syntax highlighting lexers; the backends implement
 # ps_ui_text_view_highlight with them on top of the public style calls.
-add_library(primec_ui_highlight_lib STATIC src/ui/SyntaxHighlight.cpp)
+# Text helpers every UI backend shares: syntax highlighting and the markdown preview's HTML.
+add_library(primec_ui_highlight_lib STATIC src/ui/SyntaxHighlight.cpp src/ui/Markdown.cpp)
 target_include_directories(primec_ui_highlight_lib PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
@@ -1359,6 +1360,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/ui/test_native_ui_editor.cpp
     tests/unit/ui/test_native_ui_editor_acceptance.cpp
     tests/unit/ui/test_native_ui_editor_highlight.cpp
+    tests/unit/ui/test_markdown.cpp
   )
   target_include_directories(PrimeStruct_native_ui_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
   target_compile_definitions(PrimeStruct_native_ui_tests PRIVATE
@@ -1419,6 +1421,12 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_native_ui_headless
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+  add_test(
+    NAME PrimeStruct_native_ui_markdown
+    COMMAND $<TARGET_FILE:PrimeStruct_native_ui_tests>
+            "--test-suite=primestruct.ui.markdown"
+            "--order-by=file"
+  )
   add_test(
     NAME PrimeStruct_native_ui_bindings
     COMMAND $<TARGET_FILE:PrimeStruct_native_ui_tests>

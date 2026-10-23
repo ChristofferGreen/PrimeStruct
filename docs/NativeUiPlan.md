@@ -358,3 +358,24 @@ rendering, by the snapshot of TODO-5553; stepping the cursor over clusters by ha
 Smoke checklist (macOS 27, arm64, 2026-10-08): window and title, text view with preset text, bundle launch from
 bytecode, snapshot, quit request ending the loop: checked by the automated smoke. Typing, menu shortcuts, open/save
 panels and the alert need a person at the keyboard: TODO-5545.
+
+## 14. Markdown preview
+
+PrimeScroll shows a markdown file as it will read next to its source: View > Markdown Preview (Command-Shift-M)
+splits the active tab into the text view and a rendered page, and the page follows the text as it is edited.
+
+- **One converter for every mode.** `primec::ui::markdownToHtml` / `markdownPreviewPage` (`include/primec/ui/Markdown.h`,
+  `src/ui/Markdown.cpp`, in `primec_ui_highlight_lib`) is plain text in and text out. It lives behind the C ABI, so the
+  editor program only makes host calls and runs the same in the VM, the optimized C++ build and the direct native
+  build. It covers a CommonMark and GitHub subset (headings, paragraphs, fenced and indented code, quotes, nested and
+  task lists, tables, emphasis, strikethrough, links, images, autolinks, bare URLs); raw HTML in the source is shown as
+  text, and link and image targets are limited to http, https, mailto, relative references and `data:image/`, so a
+  preview cannot run scripts. `PrimeStruct_native_ui_markdown` pins its output.
+- **The web view is loaded only when needed.** The AppKit backend creates the `WKWebView` the first time a preview
+  turns on (WebKit is `dlopen`ed then, not linked), and destroys it when the preview turns off, so a session that never
+  previews has the launch time and memory it has today.
+- **ABI.** Three window functions: `ps_ui_window_set_preview(window, on)`, `ps_ui_window_has_preview(window)` and
+  `ps_ui_window_refresh_preview(window)`. The backend owns the preview view, the editor decides when it shows
+  (the menu item, one preview per tab) and when it refreshes (text change, open, save).
+- **Slices.** The converter (TODO-5588, done), the ABI with the headless backend and the editor menu (TODO-5589), then
+  the AppKit split view with the lazily loaded web view (TODO-5590).
