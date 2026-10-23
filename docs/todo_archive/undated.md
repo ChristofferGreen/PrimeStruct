@@ -175,3 +175,14 @@
   - acceptance:
     - the String edit program of tests/unit/backend_host/test_cpp_strings.cpp (insert, erase, 3000 pushed bytes, byteAt, count) also runs through `--emit=native` with the VM's exit code; full release gate green
   - stop_rule: String without statistics, limit or arguments on arm64 native.
+
+- [x] TODO-5582: Mach-O images import functions from dylibs
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-23
+  - phase: Native PrimeScroll (docs/NativeUiPlan.md)
+  - parallel_track: native-backend-imports
+  - scope: The hand-built Mach-O of the arm64 native backend (`src/native_emitter/NativeEmitterMachO.cpp`) can import C functions and has a writable data segment. `buildMachO(code, image, error, &MachOData)` adds a `__DATA` segment holding one 8-byte pointer slot per imported libSystem function followed by `stateBytes` of zeroed runtime state; `LC_DYLD_INFO_ONLY` bind opcodes make dyld fill the slots at load (a missing symbol stops the program before it runs); `machODataVmAddr(codeOffset, codeSize)` gives the segment's address so the emitter can patch ADRP/LDR fixups. The ad-hoc code signature covers the new pages, and its last partial page is now hashed as far as the code goes instead of zero-padded (the old padding was never exercised, since the image ended on a page boundary). Extra dylibs are TODO-5584; calling imports from IR is TODO-5583.
+  - acceptance:
+    - `primec::testing::buildMachOImportProbe("abs", ...)` builds an image that calls the bound `abs(-5)`, stores the result in the writable state and exits with 5, and passes `codesign --verify`; an unknown symbol does not reach its code; full release gate green
+  - stop_rule: image layout, binding and signing; no host-call lowering.

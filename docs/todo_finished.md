@@ -2042,6 +2042,7 @@ are left unarchived.
 | TODO-5579 | Recent files survive app updates | [undated.md](todo_archive/undated.md) | - |
 | TODO-5580 | Native backend runs byte memory | [undated.md](todo_archive/undated.md) | - |
 | TODO-5581 | Native backend runs the String heap | [undated.md](todo_archive/undated.md) | - |
+| TODO-5582 | Mach-O images import functions from dylibs | [undated.md](todo_archive/undated.md) | - |
 
 <!-- INDEX-END -->
 

@@ -326,3 +326,38 @@ TEST_CASE("arm64 SXTW and float comparison branches keep their encodings") {
     CHECK(branchCondition(expected.op) == expected.condition);
   }
 }
+
+// TODO-5582: the Mach-O image can import libSystem functions (dyld binds the pointer slots in its
+// writable data segment at load) and keeps zeroed writable state next to them.
+TEST_CASE("a Mach-O image imports libSystem functions and keeps writable state") {
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
+  const auto runProbe = [](const std::string &symbol, int &signatureStatus) -> int {
+    std::vector<uint8_t> image;
+    std::string error;
+    REQUIRE_MESSAGE(primec::testing::buildMachOImportProbe(symbol, image, error), error);
+    const std::filesystem::path binary = primec::testing::testScratchPath("native_codegen/import_probe_" + symbol);
+    std::filesystem::create_directories(binary.parent_path());
+    {
+      std::ofstream out(binary, std::ios::binary);
+      out.write(reinterpret_cast<const char *>(image.data()), static_cast<std::streamsize>(image.size()));
+    }
+    std::filesystem::permissions(binary,
+                                 std::filesystem::perms::owner_all,
+                                 std::filesystem::perm_options::replace);
+    const int verify = std::system(("codesign --verify '" + binary.string() + "' > /dev/null 2>&1").c_str());
+    signatureStatus = WIFEXITED(verify) ? WEXITSTATUS(verify) : -1;
+    const int status = std::system(("'" + binary.string() + "' > /dev/null 2>&1").c_str());
+    return WIFEXITED(status) ? WEXITSTATUS(status) : -1;
+  };
+  int signatureStatus = -1;
+  // abs(-5) is 5: the pointer slot was bound, the call returned, and the state held the result.
+  CHECK(runProbe("abs", signatureStatus) == 5);
+  CHECK(signatureStatus == 0);
+  // A symbol libSystem does not have stops the program at load, before any of its code runs.
+  CHECK(runProbe("primec_no_such_function", signatureStatus) != 5);
+#else
+  std::vector<uint8_t> image;
+  std::string error;
+  CHECK_FALSE(primec::testing::buildMachOImportProbe("abs", image, error));
+#endif
+}

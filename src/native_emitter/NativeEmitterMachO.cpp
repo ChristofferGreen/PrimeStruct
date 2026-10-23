@@ -234,12 +234,9 @@ bool buildCodeSignature(const std::vector<uint8_t> &image,
     size_t start = static_cast<size_t>(slot) * pageSize;
     size_t end = std::min(static_cast<size_t>(codeLimit), start + pageSize);
     Sha256 sha;
+    // The last page is hashed as far as the code goes (codeLimit), not padded to a full page.
     if (start < end) {
       sha.update(image.data() + start, end - start);
-    }
-    if (end < start + pageSize) {
-      std::vector<uint8_t> pad(start + pageSize - end, 0);
-      sha.update(pad.data(), pad.size());
     }
     auto digest = sha.finalize();
     codeDir.insert(codeDir.end(), digest.begin(), digest.end());
@@ -260,12 +257,17 @@ bool buildCodeSignature(const std::vector<uint8_t> &image,
 
 } // namespace
 
-uint32_t computeMachOCodeOffset() {
+uint64_t machODataVmAddr(uint32_t codeOffset, uint64_t codeSize) {
+  return TextVmAddr + alignTo(static_cast<uint64_t>(codeOffset) + codeSize, PageSize);
+}
+
+uint32_t computeMachOCodeOffset(bool withData) {
   const std::string dyldPath = "/usr/lib/dyld";
   const std::string libSystemPath = "/usr/lib/libSystem.B.dylib";
 
   const uint32_t headerSize = sizeof(mach_header_64);
   const uint32_t pageZeroCmdSize = sizeof(segment_command_64);
+  const uint32_t dataCmdSize = withData ? sizeof(segment_command_64) + sizeof(section_64) : 0;
   const uint32_t textCmdSize = sizeof(segment_command_64) + sizeof(section_64);
   const uint32_t linkeditCmdSize = sizeof(segment_command_64);
   const uint32_t dylinkerCmdSize =
@@ -280,17 +282,62 @@ uint32_t computeMachOCodeOffset() {
   const uint32_t entryCmdSize = sizeof(entry_point_command);
   const uint32_t codeSigCmdSize = sizeof(linkedit_data_command);
   const uint32_t sizeofcmds =
-      pageZeroCmdSize + textCmdSize + linkeditCmdSize + dylinkerCmdSize + dylibCmdSize + dyldInfoCmdSize +
-      symtabCmdSize + dysymtabCmdSize + funcStartsCmdSize + dataInCodeCmdSize + entryCmdSize + codeSigCmdSize;
+      pageZeroCmdSize + textCmdSize + dataCmdSize + linkeditCmdSize + dylinkerCmdSize + dylibCmdSize +
+      dyldInfoCmdSize + symtabCmdSize + dysymtabCmdSize + funcStartsCmdSize + dataInCodeCmdSize + entryCmdSize +
+      codeSigCmdSize;
 
   return static_cast<uint32_t>(alignTo(headerSize + sizeofcmds, 16));
 }
 
-bool buildMachO(const std::vector<uint8_t> &code, std::vector<uint8_t> &image, std::string &error) {
+namespace {
+
+void appendUleb128(std::vector<uint8_t> &out, uint64_t value) {
+  do {
+    uint8_t byte = static_cast<uint8_t>(value & 0x7Fu);
+    value >>= 7;
+    if (value != 0) {
+      byte |= 0x80u;
+    }
+    out.push_back(byte);
+  } while (value != 0);
+}
+
+// The dyld bind opcodes that fill the pointer slots at the start of segment `segmentIndex` with the
+// libSystem functions named by `imports`.
+std::vector<uint8_t> buildBindInfo(const std::vector<std::string> &imports, uint8_t segmentIndex) {
+  std::vector<uint8_t> bind;
+  bind.push_back(static_cast<uint8_t>(BIND_OPCODE_SET_DYLIB_ORDINAL_IMM | 1)); // libSystem: the first dylib
+  for (size_t i = 0; i < imports.size(); ++i) {
+    bind.push_back(static_cast<uint8_t>(BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM | 0));
+    bind.push_back('_');
+    bind.insert(bind.end(), imports[i].begin(), imports[i].end());
+    bind.push_back(0);
+    bind.push_back(static_cast<uint8_t>(BIND_OPCODE_SET_TYPE_IMM | BIND_TYPE_POINTER));
+    bind.push_back(static_cast<uint8_t>(BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB | segmentIndex));
+    appendUleb128(bind, i * 8);
+    bind.push_back(BIND_OPCODE_DO_BIND);
+  }
+  bind.push_back(BIND_OPCODE_DONE);
+  while (bind.size() % 8 != 0) {
+    bind.push_back(0);
+  }
+  return bind;
+}
+
+} // namespace
+
+bool buildMachO(const std::vector<uint8_t> &code,
+                std::vector<uint8_t> &image,
+                std::string &error,
+                const MachOData *data) {
   if (code.empty()) {
     error = "native backend requires non-empty code";
     return false;
   }
+  const uint64_t dataUsedBytes = data == nullptr ? 0 : data->imports.size() * 8 + data->stateBytes;
+  const bool withData = dataUsedBytes != 0;
+  const std::vector<uint8_t> bindInfo =
+      withData && !data->imports.empty() ? buildBindInfo(data->imports, 2) : std::vector<uint8_t>();
 
   constexpr uint8_t pageSizeLog2 = 14;
   constexpr uint32_t hashSize = 32;
@@ -300,6 +347,7 @@ bool buildMachO(const std::vector<uint8_t> &code, std::vector<uint8_t> &image, s
 
   const uint32_t pageZeroCmdSize = sizeof(segment_command_64);
   const uint32_t textCmdSize = sizeof(segment_command_64) + sizeof(section_64);
+  const uint32_t dataCmdSize = withData ? sizeof(segment_command_64) + sizeof(section_64) : 0;
   const uint32_t linkeditCmdSize = sizeof(segment_command_64);
   const uint32_t dylinkerCmdSize =
       static_cast<uint32_t>(alignTo(sizeof(dylinker_command) + dyldPath.size() + 1, 8));
@@ -313,16 +361,23 @@ bool buildMachO(const std::vector<uint8_t> &code, std::vector<uint8_t> &image, s
   const uint32_t entryCmdSize = sizeof(entry_point_command);
   const uint32_t codeSigCmdSize = sizeof(linkedit_data_command);
   const uint32_t sizeofcmds =
-      pageZeroCmdSize + textCmdSize + linkeditCmdSize + dylinkerCmdSize + dylibCmdSize + dyldInfoCmdSize +
-      symtabCmdSize + dysymtabCmdSize + funcStartsCmdSize + dataInCodeCmdSize + entryCmdSize + codeSigCmdSize;
+      pageZeroCmdSize + textCmdSize + dataCmdSize + linkeditCmdSize + dylinkerCmdSize + dylibCmdSize +
+      dyldInfoCmdSize + symtabCmdSize + dysymtabCmdSize + funcStartsCmdSize + dataInCodeCmdSize + entryCmdSize +
+      codeSigCmdSize;
 
-  const uint32_t codeOffset = computeMachOCodeOffset();
+  const uint32_t codeOffset = computeMachOCodeOffset(withData);
   const uint64_t codeSize = code.size();
   const uint64_t textFileSize = codeOffset + codeSize;
   const uint64_t textVmSize = alignTo(textFileSize, PageSize);
 
-  const uint64_t linkeditFileOff = alignTo(textFileSize, PageSize);
-  const uint64_t sigOffset = alignTo(linkeditFileOff, 16);
+  // The data segment (when there is one) follows the text pages; LINKEDIT holds the bind opcodes and the
+  // code signature, which hashes everything before it.
+  const uint64_t dataFileOff = alignTo(textFileSize, PageSize);
+  const uint64_t dataVmAddr = TextVmAddr + textVmSize;
+  const uint64_t dataSegmentSize = withData ? alignTo(dataUsedBytes, PageSize) : 0;
+  const uint64_t linkeditFileOff = dataFileOff + dataSegmentSize;
+  const uint64_t bindOffset = linkeditFileOff;
+  const uint64_t sigOffset = alignTo(linkeditFileOff + bindInfo.size(), 16);
   const uint32_t codeLimit = static_cast<uint32_t>(sigOffset);
 
   const uint32_t codeDirHeaderSize = 88;
@@ -332,7 +387,7 @@ bool buildMachO(const std::vector<uint8_t> &code, std::vector<uint8_t> &image, s
   const uint32_t codeDirLength = hashOffset + nCodeSlots * hashSize;
   const uint32_t sigSize = 12 + 8 + codeDirLength;
 
-  const uint64_t linkeditVmAddr = alignTo(TextVmAddr + textVmSize, PageSize);
+  const uint64_t linkeditVmAddr = alignTo(dataVmAddr + dataSegmentSize, PageSize);
   const uint64_t linkeditFileSize = (sigOffset - linkeditFileOff) + sigSize;
   const uint64_t linkeditVmSize = alignTo(linkeditFileSize, PageSize);
   const uint64_t fileSize = sigOffset + sigSize;
@@ -344,7 +399,7 @@ bool buildMachO(const std::vector<uint8_t> &code, std::vector<uint8_t> &image, s
   header.cputype = CPU_TYPE_ARM64;
   header.cpusubtype = CPU_SUBTYPE_ARM64_ALL;
   header.filetype = MH_EXECUTE;
-  header.ncmds = 12;
+  header.ncmds = withData ? 13 : 12;
   header.sizeofcmds = sizeofcmds;
   header.flags = MH_NOUNDEFS | MH_DYLDLINK | MH_TWOLEVEL | MH_PIE;
 
@@ -407,9 +462,35 @@ bool buildMachO(const std::vector<uint8_t> &code, std::vector<uint8_t> &image, s
   codeSig.dataoff = static_cast<uint32_t>(sigOffset);
   codeSig.datasize = sigSize;
 
+  segment_command_64 dataSegment{};
+  section_64 dataSection{};
+  if (withData) {
+    dataSegment.cmd = LC_SEGMENT_64;
+    dataSegment.cmdsize = dataCmdSize;
+    std::memcpy(dataSegment.segname, "__DATA", sizeof("__DATA") - 1);
+    dataSegment.vmaddr = dataVmAddr;
+    dataSegment.vmsize = dataSegmentSize;
+    dataSegment.fileoff = dataFileOff;
+    dataSegment.filesize = dataSegmentSize;
+    dataSegment.maxprot = VM_PROT_READ | VM_PROT_WRITE;
+    dataSegment.initprot = VM_PROT_READ | VM_PROT_WRITE;
+    dataSegment.nsects = 1;
+    std::memcpy(dataSection.sectname, "__data", sizeof("__data") - 1);
+    std::memcpy(dataSection.segname, "__DATA", sizeof("__DATA") - 1);
+    dataSection.addr = dataVmAddr;
+    dataSection.size = dataUsedBytes;
+    dataSection.offset = static_cast<uint32_t>(dataFileOff);
+    dataSection.align = 3;
+    dataSection.flags = S_REGULAR;
+  }
+
   dyld_info_command dyldInfo{};
   dyldInfo.cmd = LC_DYLD_INFO_ONLY;
   dyldInfo.cmdsize = dyldInfoCmdSize;
+  if (!bindInfo.empty()) {
+    dyldInfo.bind_off = static_cast<uint32_t>(bindOffset);
+    dyldInfo.bind_size = static_cast<uint32_t>(bindInfo.size());
+  }
 
   symtab_command symtab{};
   symtab.cmd = LC_SYMTAB;
@@ -436,6 +517,12 @@ bool buildMachO(const std::vector<uint8_t> &code, std::vector<uint8_t> &image, s
   offset += sizeof(text);
   std::memcpy(image.data() + offset, &textSection, sizeof(textSection));
   offset += sizeof(textSection);
+  if (withData) {
+    std::memcpy(image.data() + offset, &dataSegment, sizeof(dataSegment));
+    offset += sizeof(dataSegment);
+    std::memcpy(image.data() + offset, &dataSection, sizeof(dataSection));
+    offset += sizeof(dataSection);
+  }
   std::memcpy(image.data() + offset, &linkedit, sizeof(linkedit));
   offset += sizeof(linkedit);
   dylinker_command dyldCmd{};
@@ -481,6 +568,9 @@ bool buildMachO(const std::vector<uint8_t> &code, std::vector<uint8_t> &image, s
   std::memcpy(image.data() + offset, &codeSig, sizeof(codeSig));
 
   std::memcpy(image.data() + codeOffset, code.data(), code.size());
+  if (!bindInfo.empty()) {
+    std::memcpy(image.data() + bindOffset, bindInfo.data(), bindInfo.size());
+  }
   std::vector<uint8_t> signature;
   if (!buildCodeSignature(image, codeLimit, signature, error)) {
     return false;
