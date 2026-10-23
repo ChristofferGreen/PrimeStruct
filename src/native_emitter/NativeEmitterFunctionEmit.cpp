@@ -42,7 +42,8 @@ namespace {
 bool allocatesHeap(const IrModule &module) {
   for (const IrFunction &function : module.functions) {
     for (const IrInstruction &instruction : function.instructions) {
-      if (instruction.op == IrOpcode::HeapAlloc || instruction.op == IrOpcode::HeapRealloc) {
+      if (instruction.op == IrOpcode::HeapAlloc || instruction.op == IrOpcode::HeapRealloc ||
+          instruction.op == IrOpcode::HeapAllocBytes) {
         return true;
       }
     }
@@ -275,6 +276,26 @@ bool emitNativeFunctions(const IrModule &module,
       case IrOpcode::HeapRealloc:
         emitter.emitHeapRealloc();
         break;
+      // Byte memory is emitted by the arm64 emitter only (docs/todo.md, TODO-5574).
+      case IrOpcode::HeapAllocBytes:
+      case IrOpcode::LoadU8:
+      case IrOpcode::StoreU8:
+      case IrOpcode::ZextU8:
+        if constexpr (kIsArm64) {
+          if (inst.op == IrOpcode::HeapAllocBytes) {
+            emitter.emitHeapAllocBytes();
+          } else if (inst.op == IrOpcode::LoadU8) {
+            emitter.emitLoadU8();
+          } else if (inst.op == IrOpcode::StoreU8) {
+            emitter.emitStoreU8();
+          } else {
+            emitter.emitZextU8();
+          }
+          break;
+        } else {
+          error = "unsupported IR opcode for native backend";
+          return false;
+        }
       case IrOpcode::Dup:
         emitter.emitDup();
         break;

@@ -228,21 +228,28 @@ TEST_CASE("the byte opcodes survive serialization") {
   CHECK(IrSchemaVersion >= 28u);
 }
 
-TEST_CASE("only the VM and the optimized C++ emitters accept the byte opcodes for now") {
+TEST_CASE("only the VM, the optimized C++ emitters and arm64 native accept the byte opcodes for now") {
+  // The native emitter has byte memory on macOS/arm64 only.
+  constexpr bool nativeHasBytes =
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
+      true;
+#else
+      false;
+#endif
   const IrModule module = moduleOf({{IrOpcode::PushI32, 4}, {Alloc, 0}, {IrOpcode::LoadU8, 0}, {IrOpcode::ReturnI32, 0}});
   std::string error;
   CHECK(validateIrModule(module, IrValidationTarget::Vm, error));
   CHECK(validateIrModule(module, IrValidationTarget::Serialized, error));
   CHECK(validateIrModule(module, IrValidationTarget::OptCpp, error));
-  for (const IrValidationTarget target : {IrValidationTarget::Cpp, IrValidationTarget::Native,
-                                          IrValidationTarget::Wasm, IrValidationTarget::Glsl}) {
+  CHECK(validateIrModule(module, IrValidationTarget::Native, error) == nativeHasBytes);
+  for (const IrValidationTarget target : {IrValidationTarget::Cpp, IrValidationTarget::Wasm, IrValidationTarget::Glsl}) {
     error.clear();
     CHECK_FALSE(validateIrModule(module, target, error));
-    CHECK(error.find("only supported by the vm and the optimized C++ emitters") != std::string::npos);
+    CHECK(error.find("only supported by the vm") != std::string::npos);
     CHECK(error.find("TODO-5574") != std::string::npos);
   }
   const IrModule zext = moduleOf({{IrOpcode::PushI32, 4}, {IrOpcode::ZextU8, 0}, {IrOpcode::ReturnI32, 0}});
-  CHECK_FALSE(validateIrModule(zext, IrValidationTarget::Native, error));
+  CHECK(validateIrModule(zext, IrValidationTarget::Native, error) == nativeHasBytes);
   CHECK_FALSE(validateIrModule(zext, IrValidationTarget::Wasm, error));
 }
 

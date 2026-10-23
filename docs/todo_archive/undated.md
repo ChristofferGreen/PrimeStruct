@@ -153,3 +153,14 @@
   - acceptance:
     - the headless and AppKit smoke tests and the editor tests (recent menu, order, clear) still pass; full release gate green
   - stop_rule: where the AppKit backend stores the recent files.
+
+- [x] TODO-5580: Native backend runs byte memory
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-23
+  - phase: Native PrimeScroll (docs/NativeUiPlan.md)
+  - parallel_track: native-backend-bytes
+  - scope: The arm64 native backend (`--emit=native`, macOS) emits the byte opcodes: HeapAllocBytes (a zeroed region of the popped byte count, 0 for 0), LoadU8, StoreU8 and ZextU8. A byte region has the block layout of a slot allocation with its own header magic, so HeapFree takes both kinds and HeapRealloc counts bytes for a byte region and keeps its kind; the realloc copy now moves whole 16-byte slots. The validator lets the byte opcodes through for the native target on macOS/arm64 only; Linux/x86_64 keeps rejecting them. Part of the split of TODO-5574 (the simple C++ emitters stay there; String, host calls and the editor are TODO-5581 to TODO-5585).
+  - acceptance:
+    - the `u8` arithmetic program and a 2000-element `vector<u8>` program of tests/unit/backend_host/test_cpp_strings.cpp also run through `--emit=native` with the VM's exit codes; full release gate green
+  - stop_rule: byte memory on arm64 native.

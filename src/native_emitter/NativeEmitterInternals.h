@@ -55,6 +55,9 @@ constexpr uint64_t MmapProtReadWrite = 0;
 constexpr uint64_t MmapFlagsPrivateAnon = 0;
 #endif
 constexpr uint64_t HeapHeaderMagic = 0x5053484541503031ull;
+// The header magic of a byte region (HeapAllocBytes): the same block layout as a slot allocation, but
+// HeapRealloc counts its size in bytes.
+constexpr uint64_t HeapHeaderMagicBytes = 0x5053484541503032ull;
 
 inline uint64_t alignTo(uint64_t value, uint64_t alignment) {
   if (alignment == 0) {
@@ -197,6 +200,26 @@ class Arm64Emitter {
   void emitHeapAlloc();
   void emitHeapFree();
   void emitHeapRealloc();
+  // Byte memory: a zeroed region of the popped byte count (0 for a count of 0), a byte load that
+  // zero-extends, a byte store that leaves the stored byte, and the u8 wrap.
+  void emitHeapAllocBytes();
+  void emitLoadU8() {
+    emitPopReg(0);
+    emit(encodeLdrbRegBase(1, 0, 0));
+    emitPushReg(1);
+  }
+  void emitStoreU8() {
+    emitPopReg(0);
+    emitPopReg(1);
+    emit(encodeStrbRegBase(0, 1, 0));
+    emit(0x53001C00u); // UXTB w0, w0
+    emitPushReg(0);
+  }
+  void emitZextU8() {
+    emitPopReg(0);
+    emit(0x53001C00u); // UXTB w0, w0
+    emitPushReg(0);
+  }
 
   void emitDup();
   void emitPop();
@@ -411,7 +434,7 @@ class Arm64Emitter {
   void emitSubReg(uint8_t rd, uint8_t rn, uint8_t rm);
   void emitMulReg(uint8_t rd, uint8_t rn, uint8_t rm);
   void emitUdivReg(uint8_t rd, uint8_t rn, uint8_t rm);
-  void emitHeapAllocFromSlotCountReg(uint8_t slotCountReg, uint8_t resultReg);
+  void emitHeapAllocFromSlotCountReg(uint8_t slotCountReg, uint8_t resultReg, uint64_t magic = HeapHeaderMagic);
   void emitHeapFreeFromAddressReg(uint8_t addressReg);
 
   void emitStrbRegBase(uint8_t rt, uint8_t rn, uint16_t offsetBytes);

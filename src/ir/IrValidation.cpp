@@ -39,10 +39,20 @@ const char *wasmTargetName(IrValidationTarget target) {
   return "wasm";
 }
 
-// The byte-memory opcodes and the u8 wrap step: VM-only until the native backend learns them.
+// The byte-memory opcodes and the u8 wrap step: the VM, the optimized C++ emitters and the arm64
+// native emitter run them; the other backends reject them.
 bool isByteOpcode(IrOpcode op) {
   return op == IrOpcode::HeapAllocBytes || op == IrOpcode::LoadU8 || op == IrOpcode::StoreU8 ||
          op == IrOpcode::ZextU8;
+}
+
+// Whether the native emitter of this build emits byte memory: only its arm64 emitter does.
+constexpr bool nativeEmitsByteMemory() {
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
+  return true;
+#else
+  return false;
+#endif
 }
 
 // Both predicates read the per-target flags of the opcode table.
@@ -200,11 +210,11 @@ bool validateFunction(const IrModule &module,
     }
     if (target != IrValidationTarget::Any && target != IrValidationTarget::Vm &&
         target != IrValidationTarget::Serialized && target != IrValidationTarget::OptCpp &&
-        isByteOpcode(inst.op)) {
+        !(target == IrValidationTarget::Native && nativeEmitsByteMemory()) && isByteOpcode(inst.op)) {
       return failInstruction(functionIndex,
                              function.name,
                              instructionIndex,
-                             "u8 and byte memory opcodes are only supported by the vm and the optimized C++ emitters (optexe, optcpp) yet (docs/todo.md, TODO-5574)",
+                             "u8 and byte memory opcodes are only supported by the vm, the optimized C++ emitters (optexe, optcpp) and the arm64 native backend yet (docs/todo.md, TODO-5574)",
                              error);
     }
     if (isWasmTarget(target) && !isWasmOpcodeAllowedForTarget(inst.op, target)) {

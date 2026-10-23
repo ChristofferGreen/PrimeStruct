@@ -2040,6 +2040,7 @@ are left unarchived.
 | TODO-5577 | Restore the last session in the editor | [undated.md](todo_archive/undated.md) | - |
 | TODO-5578 | Closing the last tab keeps the session | [undated.md](todo_archive/undated.md) | - |
 | TODO-5579 | Recent files survive app updates | [undated.md](todo_archive/undated.md) | - |
+| TODO-5580 | Native backend runs byte memory | [undated.md](todo_archive/undated.md) | - |
 
 <!-- INDEX-END -->
 

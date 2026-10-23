@@ -11,6 +11,16 @@ inline void Arm64Emitter::emitHeapFree() {
   emitHeapFreeFromAddressReg(0);
 }
 
+inline void Arm64Emitter::emitHeapAllocBytes() {
+  emitPopReg(1);
+  // Whole slots: (bytes + IrSlotBytes - 1) >> 4, so a count of 0 stays 0 (no allocation).
+  static_assert(IrSlotBytes == 16, "emitHeapAllocBytes shifts by log2(IrSlotBytes)");
+  emitAddRegImm(1, 1, static_cast<uint16_t>(IrSlotBytes - 1));
+  emit(0xD344FC21u); // LSR x1, x1, #4
+  emitHeapAllocFromSlotCountReg(1, 0, HeapHeaderMagicBytes);
+  emitPushReg(0);
+}
+
 inline void Arm64Emitter::emitHeapRealloc() {
   emitPopReg(1);
   emitPopReg(0);
@@ -45,7 +55,16 @@ inline void Arm64Emitter::emitHeapRealloc() {
   emit(encodeLdrRegBase(10, 9, 0));
   emitMovImm64(11, HeapHeaderMagic);
   emitCompareReg(10, 11);
+  const size_t jumpSlotRegion = emitCondBranchPlaceholder(CondCode::Eq);
+  emitMovImm64(11, HeapHeaderMagicBytes);
+  emitCompareReg(10, 11);
   const size_t jumpInvalidAddress = emitCondBranchPlaceholder(CondCode::Ne);
+  // A byte region counts bytes: the new size is the slots that hold them.
+  emitAddRegImm(6, 6, static_cast<uint16_t>(IrSlotBytes - 1));
+  emit(0xD344FCC6u); // LSR x6, x6, #4
+  emitMovReg(12, 6);
+  const size_t slotRegionIndex = currentWordIndex();
+  patchCondBranch(jumpSlotRegion, static_cast<int32_t>(slotRegionIndex - jumpSlotRegion), CondCode::Eq);
   emit(encodeLdrRegBase(8, 9, 8));
 
   emitHeapAllocFromSlotCountReg(6, 0);
@@ -60,6 +79,11 @@ inline void Arm64Emitter::emitHeapRealloc() {
                   CondCode::Ne);
 
   emitMovReg(13, 0);
+  // The new region keeps the old one's kind (slots or bytes).
+  emit(encodeLdrRegBase(10, 9, 0));
+  emitMovImm64(14, IrSlotBytes);
+  emitSubReg(14, 13, 14);
+  emit(encodeStrRegBase(10, 14, 0));
   emitMovImm64(14, IrSlotBytes);
   emitUdivReg(15, 8, 14);
   emitMovImm64(6, 1);
@@ -81,6 +105,8 @@ inline void Arm64Emitter::emitHeapRealloc() {
   const size_t copyLoopIndex = currentWordIndex();
   emit(encodeLdrRegBase(2, 10, 0));
   emit(encodeStrRegBase(2, 11, 0));
+  emit(encodeLdrRegBase(2, 10, 8)); // the rest of the slot: byte regions use all of it
+  emit(encodeStrRegBase(2, 11, 8));
   emit(encodeAddReg(10, 10, 14));
   emit(encodeAddReg(11, 11, 14));
   emitSubReg(15, 15, 6);
@@ -276,7 +302,8 @@ inline void Arm64Emitter::emitUdivReg(uint8_t rd, uint8_t rn, uint8_t rm) {
 }
 
 inline void Arm64Emitter::emitHeapAllocFromSlotCountReg(uint8_t slotCountReg,
-                                                        uint8_t resultReg) {
+                                                        uint8_t resultReg,
+                                                        uint64_t magic) {
   emitCompareRegZero(slotCountReg);
   const size_t jumpNonZeroSlots = emitCondBranchPlaceholder(CondCode::Ne);
   emitMovImm64(resultReg, 0);
@@ -311,7 +338,7 @@ inline void Arm64Emitter::emitHeapAllocFromSlotCountReg(uint8_t slotCountReg,
                   static_cast<int32_t>(nonNegativeIndex - jumpNonNegative),
                   CondCode::Ge);
 
-  emitMovImm64(2, HeapHeaderMagic);
+  emitMovImm64(2, magic);
   emit(encodeStrRegBase(2, 0, 0));
   emit(encodeStrRegBase(6, 0, 8));
   emitMovImm64(2, IrSlotBytes);
@@ -333,7 +360,12 @@ inline void Arm64Emitter::emitHeapFreeFromAddressReg(uint8_t addressReg) {
   emit(encodeLdrRegBase(1, 0, 0));
   emitMovImm64(2, HeapHeaderMagic);
   emitCompareReg(1, 2);
+  const size_t jumpSlotMagic = emitCondBranchPlaceholder(CondCode::Eq);
+  emitMovImm64(2, HeapHeaderMagicBytes);
+  emitCompareReg(1, 2);
   const size_t jumpSkip = emitCondBranchPlaceholder(CondCode::Ne);
+  const size_t validIndex = currentWordIndex();
+  patchCondBranch(jumpSlotMagic, static_cast<int32_t>(validIndex - jumpSlotMagic), CondCode::Eq);
   emit(encodeLdrRegBase(1, 0, 8));
   emitMovImm64(16, SysMunmap);
   emit(encodeSvc());

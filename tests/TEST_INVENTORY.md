@@ -7950,7 +7950,7 @@ Total: 9942 test cases across 565 files.
 - ZextU8 keeps the low eight bits
 - byte opcodes underflow with a clear message
 - the byte opcodes survive serialization
-- only the VM and the optimized C++ emitters accept the byte opcodes for now
+- only the VM, the optimized C++ emitters and arm64 native accept the byte opcodes for now
 - heap core reuses the smallest free run that fits and coalesces neighbours
 - heap core extends a free run at the end of the heap
 - heap core realloc copies the leading bytes and frees the old region

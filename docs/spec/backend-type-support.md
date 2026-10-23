@@ -8,8 +8,10 @@
   bindings for print/map contexts; string returns are supported for literal-backed values, while string arrays and
   string pointers/references are rejected. `convert<T>` supports `i32`, `i64`, `u64`, `bool`, `f32`, `f64`.
 - **`u8`, byte containers and `String`:** run on the VM and on the optimized C++ emitters (`--emit=optcpp|optexe`,
-  which also pass `String` through `[host]` calls); the native backend, the simple C++ emitters (`cpp`, `exe`), Wasm
-  and GLSL reject the byte opcodes and `u8`/text host values at validation (TODO-5574).
+  which also pass `String` through `[host]` calls). The arm64 native backend (macOS) runs `u8` and byte containers
+  (`vector<u8>`; byte regions grow with realloc) but not yet `String` or host calls (TODO-5581 to TODO-5585); the
+  Linux/x86_64 native backend, the simple C++ emitters (`cpp`, `exe`), Wasm and GLSL reject the byte opcodes and
+  `u8`/text host values at validation (TODO-5574 for the simple C++ emitters).
 - **VM/native emitter restrictions (current):** recursive calls are rejected; lambdas are rejected (use the C++
   emitter); `equal`/`not_equal` on two strings lower to a real byte-by-byte comparison (reusing the same count()/at()
   builtins as the stdlib `/string/equal` helper), but ordered string comparisons (`less_than`, `greater_than`,

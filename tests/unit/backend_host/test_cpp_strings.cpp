@@ -73,12 +73,29 @@ Compiled compileWith(const std::string &kind, const std::string &name, const std
   return compiled;
 }
 
-// Runs one program on the VM and through the optimized C++ emitter and checks they agree.
-void matches(const std::string &name, const std::string &body, int expected, const std::string &definitions = "") {
+// Whether the arm64 native backend runs byte memory in this build (TODO-5574: no strings or hosts yet).
+constexpr bool NativeRunsBytes =
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
+    true;
+#else
+    false;
+#endif
+
+// Runs one program on the VM and through the optimized C++ emitter (and the arm64 native backend when
+// `native` is set and this build has it) and checks they agree.
+void matches(const std::string &name,
+             const std::string &body,
+             int expected,
+             const std::string &definitions = "",
+             bool native = false) {
   const std::string source = programOf(body, definitions);
   const int vm = vmExit(source);
   CHECK_MESSAGE(vm == (expected & 0xFF), name << ": the VM returned " << vm);
-  for (const char *kind : {"optexe"}) {
+  std::vector<const char *> kinds = {"optexe"};
+  if (native && NativeRunsBytes) {
+    kinds.push_back("native");
+  }
+  for (const char *kind : kinds) {
     const Compiled compiled = compileWith(kind, name, source);
     REQUIRE_MESSAGE(compiled.status == 0, name << " " << kind << ": " << compiled.diagnostics);
     const int exitCode = run(shellQuote(compiled.program) + " > /dev/null 2>&1");
@@ -96,27 +113,31 @@ TEST_CASE("u8 arithmetic and conversions agree with the VM") {
           "  [i32] widened{convert<i32>(sum)}\n"
           "  [u8] masked{convert<u8>(300i32)}\n"
           "  return(widened + convert<i32>(masked))",
-          44 + 44);
+          44 + 44,
+          "",
+          true);
 }
 
 TEST_CASE("vector<u8> stores packed bytes") {
   matches("vector_u8",
           "  [vector<u8> mut] bytes{vector<u8>{}}\n"
-          "  for([i32 mut] i{0i32}, i < 100i32, i++) {\n"
+          "  for([i32 mut] i{0i32}, i < 2000i32, i++) {\n"
           "    bytes.push(convert<u8>(i * 7i32))\n"
           "  }\n"
           "  [i32 mut] total{0i32}\n"
-          "  for([i32 mut] i{0i32}, i < 100i32, i++) {\n"
+          "  for([i32 mut] i{0i32}, i < 2000i32, i++) {\n"
           "    total = total + convert<i32>(bytes.at(i))\n"
           "  }\n"
           "  return(total - total / 251i32 * 251i32)",
           [] {
             int total = 0;
-            for (int i = 0; i < 100; ++i) {
+            for (int i = 0; i < 2000; ++i) {
               total += (i * 7) & 0xFF;
             }
             return total % 251;
-          }());
+          }(),
+          "",
+          true);
 }
 
 TEST_CASE("String text, growth, editing and comparison agree with the VM") {
