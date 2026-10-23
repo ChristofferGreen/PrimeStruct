@@ -80,7 +80,11 @@ struct State {
   std::unordered_map<uint64_t, NSSplitView *> previewSplits;
   std::unordered_map<uint64_t, NSView *> previewWebs;
   std::unordered_map<uint64_t, bool> previewLoading;
-  std::unordered_map<uint64_t, double> previewScroll;
+  std::unordered_map<uint64_t, int> previewScriptsPending; // scripts sent to the page that have not answered
+  std::unordered_map<uint64_t, double> previewFraction;    // where both views were last put (0 top, 1 bottom)
+  std::unordered_map<uint64_t, bool> previewSyncing;       // the page is moving the text view right now
+  std::unordered_map<uint64_t, id> previewObservers;       // the observer of the text view's scrolling
+  id previewEventMonitor = nil;                            // sees the events that scroll a page
   std::unordered_map<uint64_t, bool> previewRefreshPending;
   std::unordered_set<int32_t> previewMenuItems; // command ids whose check mark follows the active preview
   std::unordered_map<uint64_t, NSTextView *> textViews;
@@ -105,6 +109,8 @@ struct State {
   std::string snapshotTypeText;
   std::string snapshotOpenPath;
   std::string snapshotMenu;
+  std::string snapshotScroll; // PRIMESTRUCT_UI_SCROLL=text:1 or preview:1: scroll one view, the other follows
+  bool snapshotScrolled = false;
   std::string snapshotCommands;
   bool snapshotCommandsSent = false;
   bool snapshotOpened = false;
@@ -190,6 +196,97 @@ void evaluateScript(NSView *web, NSString *script, void (^done)(id)) {
             }];
 }
 
+bool previewOn(uint64_t window) {
+  const auto it = state().previews.find(window);
+  return it != state().previews.end() && it->second;
+}
+
+// Scrolling is locked between the source and the page: both sit at the same fraction of the height they can
+// scroll. The text view's scrolling is observed; the page's is noticed through the events that scroll it
+// (the wheel, keys, the scroll bar), after which its position is read back.
+
+NSScrollView *previewTextScroll(uint64_t window) {
+  State &s = state();
+  const auto content = s.windowContent.find(window);
+  if (content == s.windowContent.end()) {
+    return nil;
+  }
+  const auto scroll = s.scrollViews.find(content->second);
+  return scroll != s.scrollViews.end() ? scroll->second : nil;
+}
+
+CGFloat textScrollRange(NSScrollView *scroll) {
+  return scroll.documentView.frame.size.height - scroll.contentView.bounds.size.height;
+}
+
+double textScrollFraction(NSScrollView *scroll) {
+  const CGFloat range = textScrollRange(scroll);
+  return range > 0 ? std::clamp<double>(scroll.contentView.bounds.origin.y / range, 0, 1) : 0;
+}
+
+void setTextScrollFraction(NSScrollView *scroll, double fraction) {
+  const CGFloat range = textScrollRange(scroll);
+  if (range <= 0) {
+    return;
+  }
+  NSPoint origin = scroll.contentView.bounds.origin;
+  origin.y = std::clamp<double>(fraction, 0, 1) * range;
+  [scroll.contentView scrollToPoint:origin];
+  [scroll reflectScrolledClipView:scroll.contentView];
+}
+
+NSString *const WebFractionScript =
+    @"(function(){var h=document.documentElement.scrollHeight-window.innerHeight;return h>0?window.scrollY/h:0;})()";
+
+NSString *webScrollScript(double fraction) {
+  return [NSString stringWithFormat:@"(function(){var h=document.documentElement.scrollHeight-window.innerHeight;"
+                                    @"window.scrollTo(0,h>0?%f*h:0);})()",
+                                    fraction];
+}
+
+// The page follows the text view.
+void syncWebFromText(uint64_t window, bool force) {
+  State &s = state();
+  NSScrollView *scroll = previewTextScroll(window);
+  const auto web = s.previewWebs.find(window);
+  if (scroll == nil || web == s.previewWebs.end()) {
+    return;
+  }
+  const double fraction = textScrollFraction(scroll);
+  const auto last = s.previewFraction.find(window);
+  if (!force && last != s.previewFraction.end() && std::fabs(last->second - fraction) < 0.0005) {
+    return;
+  }
+  s.previewFraction[window] = fraction;
+  s.previewScriptsPending[window] += 1;
+  evaluateScript(web->second, webScrollScript(fraction), ^(id) {
+    state().previewScriptsPending[window] -= 1;
+  });
+}
+
+// The text view follows the page: read where the page is, then move the text view there.
+void syncTextFromWeb(uint64_t window) {
+  State &s = state();
+  const auto web = s.previewWebs.find(window);
+  if (web == s.previewWebs.end()) {
+    return;
+  }
+  s.previewScriptsPending[window] += 1;
+  evaluateScript(web->second, WebFractionScript, ^(id result) {
+    State &now = state();
+    now.previewScriptsPending[window] -= 1;
+    NSScrollView *scroll = previewTextScroll(window);
+    if (scroll == nil || ![result respondsToSelector:@selector(doubleValue)]) {
+      return;
+    }
+    const double fraction = std::clamp<double>([result doubleValue], 0, 1);
+    now.previewFraction[window] = fraction;
+    now.previewSyncing[window] = true;
+    setTextScrollFraction(scroll, fraction);
+    now.previewSyncing[window] = false;
+  });
+}
+
 // Navigation is the program's to refuse: the page the preview loads is allowed, a click on a link opens
 // the address in the default browser, and nothing else may navigate the preview.
 Class previewDelegateClass() {
@@ -211,15 +308,12 @@ Class previewDelegateClass() {
                       }
                     }),
                     "v@:@@@?");
+    // A page that has loaded goes to where the text view is.
     class_addMethod(made, NSSelectorFromString(@"webView:didFinishNavigation:"),
                     imp_implementationWithBlock(^(id, id web, id) {
-                      State &s = state();
                       const uint64_t window = handleOf(web);
-                      s.previewLoading[window] = false;
-                      const double scroll = s.previewScroll[window];
-                      if (scroll > 0) {
-                        evaluateScript(web, [NSString stringWithFormat:@"window.scrollTo(0, %f)", scroll], nil);
-                      }
+                      state().previewLoading[window] = false;
+                      syncWebFromText(window, true);
                     }),
                     "v@:@@");
     for (NSString *failed in @[ @"webView:didFailNavigation:withError:",
@@ -234,23 +328,23 @@ Class previewDelegateClass() {
   return created;
 }
 
-bool previewOn(uint64_t window) {
-  const auto it = state().previews.find(window);
-  return it != state().previews.end() && it->second;
-}
-
 bool anyPreviewLoading() {
-  for (const auto &entry : state().previewLoading) {
+  State &s = state();
+  for (const auto &entry : s.previewLoading) {
     if (entry.second) {
+      return true;
+    }
+  }
+  for (const auto &entry : s.previewScriptsPending) {
+    if (entry.second > 0) {
       return true;
     }
   }
   return false;
 }
 
-// Builds the page of the window's text and loads it into its web view; with `keepScroll` the page comes
-// back to where the reader was.
-void renderPreview(uint64_t window, bool keepScroll) {
+// Builds the page of the window's text and loads it into its web view.
+void renderPreview(uint64_t window) {
   State &s = state();
   const auto web = s.previewWebs.find(window);
   const auto content = s.windowContent.find(window);
@@ -258,26 +352,53 @@ void renderPreview(uint64_t window, bool keepScroll) {
   if (web == s.previewWebs.end() || view == nil) {
     return;
   }
-  NSView *target = web->second;
   const char *text = view.string.UTF8String;
-  NSString *page = toNSString(primec::ui::markdownPreviewPage(text != nullptr ? text : "").c_str());
   s.previewLoading[window] = true;
-  void (^load)(double) = ^(double scroll) {
-    State &now = state();
-    const auto current = now.previewWebs.find(window);
-    if (current == now.previewWebs.end() || current->second != target) {
-      return;
-    }
-    now.previewScroll[window] = scroll;
-    loadPage(target, page);
-  };
-  if (keepScroll) {
-    evaluateScript(target, @"window.scrollY", ^(id result) {
-      load([result respondsToSelector:@selector(doubleValue)] ? [result doubleValue] : 0);
-    });
-  } else {
-    load(0);
+  loadPage(web->second, toNSString(primec::ui::markdownPreviewPage(text != nullptr ? text : "").c_str()));
+}
+
+// One monitor for every preview: a wheel turn, a key or a drag over a page may have scrolled it, so the text
+// view is brought to where the page is (again after the page's own scrolling animation, for keys).
+void ensurePreviewEventMonitor() {
+  State &s = state();
+  if (s.previewEventMonitor != nil) {
+    return;
   }
+  const NSEventMask mask =
+      NSEventMaskScrollWheel | NSEventMaskKeyDown | NSEventMaskLeftMouseDragged | NSEventMaskLeftMouseUp;
+  s.previewEventMonitor = [NSEvent addLocalMonitorForEventsMatchingMask:mask
+                                                                handler:^NSEvent *(NSEvent *event) {
+                                                                  State &now = state();
+                                                                  const uint64_t window = handleOf(event.window);
+                                                                  const auto web = now.previewWebs.find(window);
+                                                                  if (web == now.previewWebs.end()) {
+                                                                    return event;
+                                                                  }
+                                                                  NSView *view = web->second;
+                                                                  bool relevant = false;
+                                                                  if (event.type == NSEventTypeKeyDown) {
+                                                                    NSResponder *responder = event.window.firstResponder;
+                                                                    relevant = [responder isKindOfClass:[NSView class]] &&
+                                                                               [(NSView *)responder isDescendantOf:view];
+                                                                  } else {
+                                                                    const NSPoint point =
+                                                                        [view.superview convertPoint:event.locationInWindow
+                                                                                            fromView:nil];
+                                                                    relevant = [view hitTest:point] != nil;
+                                                                  }
+                                                                  if (relevant) {
+                                                                    for (const int64_t delay : {30, 250}) {
+                                                                      dispatch_after(
+                                                                          dispatch_time(DISPATCH_TIME_NOW, delay * NSEC_PER_MSEC),
+                                                                          dispatch_get_main_queue(), ^{
+                                                                            if (previewOn(window)) {
+                                                                              syncTextFromWeb(window);
+                                                                            }
+                                                                          });
+                                                                    }
+                                                                  }
+                                                                  return event;
+                                                                }];
 }
 
 void dropPreviewState(uint64_t window) {
@@ -286,12 +407,46 @@ void dropPreviewState(uint64_t window) {
   if (web != s.previewWebs.end()) {
     [web->second setValue:nil forKey:@"navigationDelegate"];
   }
+  const auto observer = s.previewObservers.find(window);
+  if (observer != s.previewObservers.end()) {
+    [NSNotificationCenter.defaultCenter removeObserver:observer->second];
+  }
   s.previews.erase(window);
   s.previewSplits.erase(window);
   s.previewWebs.erase(window);
   s.previewLoading.erase(window);
-  s.previewScroll.erase(window);
+  s.previewScriptsPending.erase(window);
+  s.previewFraction.erase(window);
+  s.previewSyncing.erase(window);
+  s.previewObservers.erase(window);
   s.previewRefreshPending.erase(window);
+  if (s.previews.empty() && s.previewEventMonitor != nil) {
+    [NSEvent removeMonitor:s.previewEventMonitor];
+    s.previewEventMonitor = nil;
+  }
+}
+
+// Scrolls one of the two views to a fraction, "text:0.5" or "preview:1", the way the user would; the other
+// view follows (snapshot runs use this to show the lock).
+void applySnapshotScroll(uint64_t window, const std::string &spec) {
+  State &s = state();
+  const size_t colon = spec.find(':');
+  const std::string side = spec.substr(0, colon);
+  const double fraction = colon == std::string::npos ? 1.0 : std::atof(spec.c_str() + colon + 1);
+  if (side == "text") {
+    if (NSScrollView *scroll = previewTextScroll(window)) {
+      setTextScrollFraction(scroll, fraction);
+    }
+  } else if (side == "preview") {
+    const auto web = s.previewWebs.find(window);
+    if (web != s.previewWebs.end()) {
+      s.previewScriptsPending[window] += 1;
+      evaluateScript(web->second, webScrollScript(fraction), ^(id) {
+        state().previewScriptsPending[window] -= 1;
+        syncTextFromWeb(window);
+      });
+    }
+  }
 }
 
 // A web view does not draw itself into an offscreen bitmap: ask it for a snapshot of its own and put that
@@ -838,6 +993,9 @@ bool ps_ui_init(const char *appName) {
     if (const char *menu = std::getenv("PRIMESTRUCT_UI_MENU"); menu != nullptr && *menu != '\0') {
       s.snapshotMenu = menu;
     }
+    if (const char *scroll = std::getenv("PRIMESTRUCT_UI_SCROLL"); scroll != nullptr && *scroll != '\0') {
+      s.snapshotScroll = scroll;
+    }
     if (const char *typed = std::getenv("PRIMESTRUCT_UI_TYPE"); typed != nullptr && *typed != '\0') {
       s.snapshotTypeText = typed;
       for (size_t at = s.snapshotTypeText.find("\\n"); at != std::string::npos;
@@ -976,6 +1134,12 @@ int32_t ps_ui_wait_event(void) {
             [target.window makeFirstResponder:target];
             [target insertText:toNSString(s.snapshotTypeText.c_str()) replacementRange:NSMakeRange(NSNotFound, 0)];
           }
+        } else if (!s.snapshotScroll.empty() && !s.snapshotScrolled && s.snapshotIdleSlices >= 8 &&
+                   !anyPreviewLoading()) {
+          // Scrolls one of the two views, as the user would; the other one follows.
+          s.snapshotScrolled = true;
+          s.snapshotIdleSlices = 0;
+          applySnapshotScroll(s.snapshotWindow, s.snapshotScroll);
         } else if (s.snapshotIdleSlices >= 12 && (!anyPreviewLoading() || s.snapshotIdleSlices >= 400)) {
           // (A preview still loading its page is waited for, up to twenty seconds.)
           if (std::getenv("PRIMESTRUCT_UI_TARGET_LAST") != nullptr) {
@@ -1562,8 +1726,7 @@ bool ps_ui_window_set_preview(uint64_t window, bool on) {
   State &s = state();
   const auto content = s.windowContent.find(window);
   NSTextView *view = content != s.windowContent.end() ? textView(content->second) : nil;
-  const auto scrollEntry = content != s.windowContent.end() ? s.scrollViews.find(content->second) : s.scrollViews.end();
-  NSScrollView *scroll = scrollEntry != s.scrollViews.end() ? scrollEntry->second : nil;
+  NSScrollView *scroll = previewTextScroll(window);
   if (on == previewOn(window)) {
     return true; // already as asked
   }
@@ -1612,7 +1775,19 @@ bool ps_ui_window_set_preview(uint64_t window, bool on) {
     s.previews[window] = true;
     s.previewSplits[window] = split;
     s.previewWebs[window] = web;
-    renderPreview(window, false);
+    // The page follows the text view when it scrolls (the text view follows the page through the monitor).
+    scroll.contentView.postsBoundsChangedNotifications = YES;
+    s.previewObservers[window] =
+        [NSNotificationCenter.defaultCenter addObserverForName:NSViewBoundsDidChangeNotification
+                                                        object:scroll.contentView
+                                                         queue:nil
+                                                    usingBlock:^(NSNotification *) {
+                                                      if (!state().previewSyncing[window]) {
+                                                        syncWebFromText(window, false);
+                                                      }
+                                                    }];
+    ensurePreviewEventMonitor();
+    renderPreview(window);
   }
   return true;
 }
@@ -1633,7 +1808,7 @@ bool ps_ui_window_refresh_preview(uint64_t window) {
     dispatch_async(dispatch_get_main_queue(), ^{
       state().previewRefreshPending[window] = false;
       if (previewOn(window)) {
-        renderPreview(window, true);
+        renderPreview(window);
       }
     });
   }

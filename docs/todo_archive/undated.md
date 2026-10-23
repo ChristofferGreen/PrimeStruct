@@ -263,3 +263,14 @@
   - acceptance:
     - the AppKit smoke test's editor snapshot of tests/fixtures/ui/screenshot/preview.md with the preview command is a real PNG with the source on the left and the rendered heading, emphasis, link, nested and task lists, quote and table on the right (checked by eye); `PrimeStruct_native_ui_compiled_app` finds no WebKit in `otool -L` of the compiled editor and the dylib and takes the same picture from the native bundle; the installed PrimeScroll peaks at about 118 MB without a preview (unchanged) and 140 to 148 MB with one; full release gate green
   - stop_rule: the AppKit preview view.
+
+- [x] TODO-5591: Locked scrolling between the source and the preview
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-23
+  - phase: Markdown preview (docs/NativeUiPlan.md section 14)
+  - parallel_track: markdown-preview
+  - scope: Scrolling is locked between the text view and the web view of a preview: both sit at the same fraction of the height they can scroll (proportional, not line-accurate; when one view cannot scroll the other is left alone). The AppKit backend observes the text view's clip view and moves the page with a script; the page has no scroll notification, so one local event monitor sees the scroll wheel, key presses and drags over a page, reads its position back with a script and moves the text view (a guard keeps the two from chasing each other, and keys get a second look after 250 ms for the page's scrolling animation). A page that finishes loading goes to where the text view is, which replaces the old restore of an absolute scroll offset. Snapshot runs can scroll one view (`PRIMESTRUCT_UI_SCROLL=text:1` or `preview:1`) and wait for the other.
+  - acceptance:
+    - the AppKit smoke test takes the long markdown fixture (tests/fixtures/ui/screenshot/preview_long.md) with the preview at the top, with the source scrolled to its bottom and with the page scrolled to its bottom: the two scrolled pictures differ from the top one, and by eye each shows both views at their ends (Sections 29 and 30 on both sides); full release gate green
+  - stop_rule: scroll locking in the AppKit preview.
