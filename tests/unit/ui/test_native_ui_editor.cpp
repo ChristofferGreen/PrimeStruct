@@ -624,14 +624,33 @@ TEST_CASE("editor opens only the file named on the command line, not the last se
   CHECK_FALSE(headless::windowState(SecondWindow).exists);
 }
 
-TEST_CASE("editor forgets the session when the last tab is closed") {
+TEST_CASE("editor keeps the session when the last tab is closed, as the app ends like on quit") {
   const std::string a = writeScratch("restore_closed.txt", "a");
+  headless::reset();
+  headless::pushCommand(CommandOpen);
+  headless::pushOpenPanelAnswer(a);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(headless::windowPath(EditorWindow) == a);
+  CHECK(headless::prefList("session.files") == std::vector<std::string>{a});
+
+  // A session that was restored and closed straight away is still there for the next launch.
   headless::reset();
   headless::setPrefList("session.files", {a});
   headless::pushCloseWindow(EditorWindow);
   runEditor();
-  CHECK(headless::windowPath(EditorWindow) == a);
-  CHECK(headless::prefList("session.files").empty());
+  CHECK(headless::prefList("session.files") == std::vector<std::string>{a});
+}
+
+TEST_CASE("editor drops a closed tab from the session but keeps the last one") {
+  const std::string a = writeScratch("restore_keep_a.txt", "a");
+  const std::string b = writeScratch("restore_keep_b.txt", "b");
+  headless::reset();
+  headless::setPrefList("session.files", {a, b});
+  headless::pushCloseWindow(SecondWindow);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(headless::prefList("session.files") == std::vector<std::string>{a});
 }
 
 TEST_CASE("editor asks to remember the first window's size and position") {

@@ -483,7 +483,8 @@ main([array<string>] args) {
     if(intent > command_tab() && intent <= command_tab() + 9i32) {
       [bool] switched{select_tab(tab, intent - command_tab())}
     }
-    if(intent != 0i32 && intent != command_quit()) {
+    // Closing the last tab ends the app like Quit does, so the session stays as it was before it closed.
+    if(intent != 0i32 && intent != command_quit() && app.windowCount() > 0i32) {
       [bool] remembered{save_session(app)}
     }
     if(intent == command_quit()) {

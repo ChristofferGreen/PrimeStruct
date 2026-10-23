@@ -202,7 +202,8 @@ an import yet), and `AppEvent` lists `quitRequested` first because a default sum
   tabs hold (in tab-bar order) and the active tab are kept as the list `session.files` and the integer
   `session.active`, saved after every command and before the tabs close on quit; the next launch reopens them one
   tab each and selects the active one (a file that is gone is skipped, a file named on the command line replaces the
-  restore, and closing the last tab forgets the session).
+  restore, and closing the last tab leaves the session as it was, since the app ends then like it does on quit; closing
+  one of several tabs drops it from the session).
 - **Open Recent:** File > Open Recent lists up to ten recently used files (opened or saved by the editor, or given on
   the command line), most recent first, with a Clear Menu item. The submenu is rebuilt after every open, save and
   clear with `Menu.clear()` and `Menu.addRecentFiles(...)`; choosing a file opens it like Open does.

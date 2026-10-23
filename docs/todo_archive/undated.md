@@ -131,3 +131,14 @@
   - acceptance:
     - headless ABI tests for the autosave name and the integer and list preferences; editor tests for saving on quit, restoring tabs and the active one, skipping a missing file, the command-line file replacing the restore, forgetting the session on closing the last tab and the autosave name (each also run on the compiled editor through the mirror); full release gate green
   - stop_rule: the frame, the tabs and the active tab; unsaved text and per-tab view settings are not part of the session.
+
+- [x] TODO-5578: Closing the last tab keeps the session
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-23
+  - phase: Native UI (docs/NativeUiPlan.md)
+  - parallel_track: native-ui-editor
+  - scope: A bug in the session restore of TODO-5577: closing the last tab (the red button) ends the app, and the editor saved an empty session after that close, so a file opened before closing was not reopened at the next launch. The editor now saves the session after a command only while some window remains; closing the last tab leaves the session as it was, like Quit, and closing one of several tabs still drops that tab from the session. docs/NativeUiPlan.md says so.
+  - acceptance:
+    - editor tests: open a file and close its tab, then the session still lists the file; a restored session that is closed straight away is kept; closing one of two tabs leaves only the other in the session (each also run on the compiled editor through the mirror); full release gate green
+  - stop_rule: the session saved around closing tabs.

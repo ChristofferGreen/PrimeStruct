@@ -2038,6 +2038,7 @@ are left unarchived.
 | TODO-5575 | A line number bar in the editor | [undated.md](todo_archive/undated.md) | - |
 | TODO-5576 | Line wrapping switch and recent files in the editor | [undated.md](todo_archive/undated.md) | - |
 | TODO-5577 | Restore the last session in the editor | [undated.md](todo_archive/undated.md) | - |
+| TODO-5578 | Closing the last tab keeps the session | [undated.md](todo_archive/undated.md) | - |
 
 <!-- INDEX-END -->
 
