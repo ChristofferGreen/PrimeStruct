@@ -1,9 +1,10 @@
 #pragma once
 
-// Runs an editor scenario a second time as the compiled program (examples/apps/text_editor built with
-// scripts/build_native_app.sh --backend headless, see CMakeLists.txt) and checks the compiled editor
-// leaves the same headless call log, exit code and files as the VM run that just finished. The
-// scenario is whatever the test pushed to the headless backend, read back with `pushedScenario()`.
+// Runs an editor scenario again as the compiled programs (examples/apps/text_editor built with
+// scripts/build_native_app.sh --backend headless, and on macOS/arm64 also by primec's own native backend
+// against the headless dylib, see CMakeLists.txt) and checks each compiled editor leaves the same headless
+// call log, exit code and files as the VM run that just finished. The scenario is whatever the test pushed
+// to the headless backend, read back with `pushedScenario()`.
 //
 //   compiled_editor::Mirror mirror;            // before the VM run: remembers the files
 //   const auto result = script.run(args);      // the VM run
@@ -100,17 +101,23 @@ public:
       expected += line + "\n";
     }
     const Files afterVm = snapshot();
-    restore(before_);
-    const std::string output = (outputDir() / "log.out").string();
-    std::string command = "HEADLESS_SCENARIO=" + shellQuote(scenario) + " " + shellQuote(PRIMESTRUCT_COMPILED_EDITOR);
-    for (const std::string &arg : args) {
-      command += " " + shellQuote(arg);
+    std::vector<std::string> editors = {PRIMESTRUCT_COMPILED_EDITOR};
+#ifdef PRIMESTRUCT_COMPILED_EDITOR_NATIVE
+    editors.push_back(PRIMESTRUCT_COMPILED_EDITOR_NATIVE);
+#endif
+    for (const std::string &editor : editors) {
+      restore(before_);
+      const std::string output = (outputDir() / "log.out").string();
+      std::string command = "HEADLESS_SCENARIO=" + shellQuote(scenario) + " " + shellQuote(editor);
+      for (const std::string &arg : args) {
+        command += " " + shellQuote(arg);
+      }
+      const int status = std::system((command + " > " + shellQuote(output)).c_str());
+      const int exitCode = WIFEXITED(status) ? WEXITSTATUS(status) : -1;
+      CHECK_MESSAGE(exitCode == (vmExitCode & 0xFF), editor << ": compiled editor exit code for " << scenario);
+      CHECK_MESSAGE(readFile(output) == expected, editor << ": compiled editor call log differs for " << scenario);
+      CHECK_MESSAGE(snapshot() == afterVm, editor << ": compiled editor left different files for " << scenario);
     }
-    const int status = std::system((command + " > " + shellQuote(output)).c_str());
-    const int exitCode = WIFEXITED(status) ? WEXITSTATUS(status) : -1;
-    CHECK_MESSAGE(exitCode == (vmExitCode & 0xFF), "compiled editor exit code for " << scenario);
-    CHECK_MESSAGE(readFile(output) == expected, "compiled editor call log differs for " << scenario);
-    CHECK_MESSAGE(snapshot() == afterVm, "compiled editor left different files for " << scenario);
     restore(afterVm);
 #else
     (void)vmExitCode;

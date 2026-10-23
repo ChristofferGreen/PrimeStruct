@@ -104,8 +104,7 @@ of sync with them.
 | TODO-5569 | Slice loans, escapes and returned borrows | ready | slices |
 | TODO-5570 | Slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views | ready | slices |
 | TODO-5540 | `string` as the UTF-8 text view | blocked | string-view |
-| TODO-5585 | The text editor builds and runs on the native backend | ready | native-backend-editor |
-| TODO-5586 | Native String heap: pooled blocks, statistics and limit | deferred | native-backend-strings |
+| TODO-5586 | Native String heap: pooled blocks, statistics and limit | ready | native-backend-strings |
 | TODO-5574 | Simple C++ emitters run bytes and strings | deferred | string-backends |
 | TODO-5568 | String conveniences: operators, numbers, push of code points | blocked | string-owned |
 | TODO-5536 | Small, lazily loaded bytecode for apps | ready | bytecode-startup |
@@ -138,7 +137,7 @@ of sync with them.
 
 - TODO-5567 (bytes): packed `array<u8>`
 - TODO-5570 (slices): slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views
-- TODO-5585 (native-backend-editor): the text editor builds and runs on the native backend
+- TODO-5586 (native-backend-strings): native String heap: pooled blocks, statistics and limit
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5510 (control-returns): `return` returns from pick arms and lambdas correctly
@@ -149,7 +148,7 @@ of sync with them.
 
 2. TODO-5567
 3. TODO-5570
-4. TODO-5585
+4. TODO-5586
 5. TODO-5536
 6. TODO-5535
 7. TODO-5510
@@ -159,7 +158,7 @@ of sync with them.
 ### Priority Lanes
 
 - Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5567, TODO-5570, TODO-5569, TODO-5540, TODO-5568, TODO-5530, TODO-5574
-- Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5585, TODO-5586
+- Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Lifecycle (docs/spec/value-lifecycle.md): TODO-5527
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
@@ -309,20 +308,9 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - stop_rule: the simple C++ emitters only.
   - notes: deferred: PrimeScroll compiles through the optimized C++ emitter, which needs none of this.
 
-- [ ] TODO-5585: The text editor builds and runs on the native backend
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-23
-  - phase: Native PrimeScroll (docs/NativeUiPlan.md)
-  - parallel_track: native-backend-editor
-  - scope: `examples/apps/text_editor/main.prime` already compiles with `--emit=native ... --link-arg libps_ui_appkit.dylib` and opens a file with highlighting and Unicode in snapshot mode (2026-10-23). Still open: (1) build the headless backend as a dylib too, so the compiled-editor mirror (`tests/unit/ui/CompiledEditorMirror.h`) can replay every editor scenario on the native build with the same call log, exit code and files as the VM run; (2) `scripts/bundle_macos_app.sh --native` builds from `--direct` (dylib inside the bundle, signed), and the native bundle test uses it; (3) reinstall `~/Applications/PrimeScroll.app` from that build and check the session restore, recent files, line numbers and command-line file on it. Fix or split out whatever the scenarios turn up.
-  - acceptance:
-    - the editor scenarios pass on the direct native build with the same call log, exit code and files; `scripts/bundle_macos_app.sh --native` produces the bundle from the direct build and it launches; full release gate green
-  - stop_rule: the editor on the native backend.
-
 - [ ] TODO-5586: Native String heap: pooled blocks, statistics and limit
   - owner: ai
-  - status: deferred
+  - status: ready
   - created_at: 2026-10-23
   - phase: Native PrimeScroll (docs/NativeUiPlan.md)
   - parallel_track: native-backend-strings
@@ -330,7 +318,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - acceptance:
     - the string_heap program of tests/unit/backend_host/test_cpp_strings.cpp (reuse and figures) also runs through `--emit=native` with the VM's exit codes; a 100000-String loop uses no more than a few MB; full release gate green
   - stop_rule: the native String heap's allocator and its statistics.
-  - notes: deferred only to keep Ready Now at eight; the writable data segment it needs exists (`MachOData::stateBytes`, TODO-5582).
+  - notes: PrimeScroll ships from the native build now, so every String it makes takes a mapping of its own; the writable data segment this needs exists (`MachOData::stateBytes`).
 
 - [ ] TODO-5536: Small, lazily loaded bytecode for apps
   - owner: ai

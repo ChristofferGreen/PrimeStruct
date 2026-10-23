@@ -270,7 +270,10 @@ path/libps_ui_appkit.dylib` writes the Mach-O itself, with no C++ compiler and n
 `LC_UUID`) so AppKit draws the current look. `scripts/build_native_app.sh --direct` copies the dylib next to the output
 and loads it through `@executable_path`; `PrimeStruct_native_ui_compiled_app` builds hello_window this way and checks
 that it draws a window of the same size as the C++ build. The editor compiles this way too and opens a highlighted
-Unicode file in snapshot mode; TODO-5585 runs its scenarios on the native build and ships the bundle from it.
+Unicode file in snapshot mode. Every editor scenario (section 13) also runs on the editor built this way, linked with
+`libps_ui_headless.dylib` (the headless backend and the call-log fixture), and must leave the VM's call log, exit code
+and files. `scripts/bundle_macos_app.sh --native` builds PrimeScroll from it: `Contents/MacOS` holds the native
+executable (about 0.5 MB) and the AppKit dylib, both ad-hoc signed, and `codesign --verify --deep --strict` passes.
 
 ## 11. TODO slices
 

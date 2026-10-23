@@ -2045,6 +2045,7 @@ are left unarchived.
 | TODO-5582 | Mach-O images import functions from dylibs | [undated.md](todo_archive/undated.md) | - |
 | TODO-5583 | Native backend calls `[host]` functions | [undated.md](todo_archive/undated.md) | - |
 | TODO-5584 | Native PrimeScroll links the AppKit backend as a dylib | [undated.md](todo_archive/undated.md) | - |
+| TODO-5585 | The text editor builds and runs on the native backend | [undated.md](todo_archive/undated.md) | - |
 | TODO-5587 | Native String heap: entry arguments | [undated.md](todo_archive/undated.md) | - |
 
 <!-- INDEX-END -->

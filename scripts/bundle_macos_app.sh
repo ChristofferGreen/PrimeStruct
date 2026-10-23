@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Builds Name.app from a PrimeStruct native UI program. By default the bundle holds the
 # bytecode-only runner and the program compiled to bytecode (no compiler ships in the bundle);
-# with --native it holds the program compiled to a native executable by
-# scripts/build_native_app.sh (the C++ emitter linked with the AppKit backend: no VM, no
-# bytecode). Either way: an Info.plist and an ad-hoc signature for local runs.
-# Notarization is out of scope.
+# with --native it holds the program compiled to a native executable by primec's own native
+# backend (scripts/build_native_app.sh --direct: no VM, no bytecode, no C++ compiler) and the AppKit
+# backend as a dylib next to it in Contents/MacOS. Either way: an Info.plist and an ad-hoc
+# signature for local runs. Notarization is out of scope.
 #
 # Usage: scripts/bundle_macos_app.sh [--native] <app.prime> <Name> [output-dir] [build-dir] [icon.icns]
 # (scripts/make_app_icon.py draws the notepad's icon.)
@@ -46,7 +46,7 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
 if [[ $NATIVE -eq 1 ]]; then
   bash "$ROOT_DIR/scripts/build_native_app.sh" "$PROGRAM" "$APP/Contents/MacOS/$NAME" \
-    --backend appkit --build-dir "$BUILD_DIR" >/dev/null
+    --backend appkit --direct --build-dir "$BUILD_DIR" >/dev/null
 else
   "$BUILD_DIR/primec" --emit=ir "$PROGRAM" -o "$APP/Contents/Resources/app.psir"
   cp "$BUILD_DIR/primestruct_app_runtime" "$APP/Contents/MacOS/$NAME"
@@ -80,5 +80,10 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 
+# The dylib of a native bundle is signed first, then the bundle seals it with the executable.
+if [[ $NATIVE -eq 1 ]]; then
+  codesign --force --sign - "$APP/Contents/MacOS/libps_ui_appkit.dylib" >/dev/null 2>&1 \
+    || echo "warning: ad-hoc signing of the dylib failed" >&2
+fi
 codesign --force --sign - "$APP" >/dev/null 2>&1 || echo "warning: ad-hoc signing failed" >&2
 echo "$APP"

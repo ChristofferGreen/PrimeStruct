@@ -1386,6 +1386,30 @@ if(PRIMESTRUCT_BUILD_TESTS)
   add_dependencies(PrimeStruct_native_ui_tests native_ui_compiled_editor_headless)
   target_compile_definitions(PrimeStruct_native_ui_tests PRIVATE
     PRIMESTRUCT_COMPILED_EDITOR="${PRIMESTRUCT_COMPILED_EDITOR}")
+  # On macOS/arm64 the editor is also compiled by primec's own native backend (no C++ compiler) against the
+  # headless backend and the scenario/log fixture built as a dylib, and must leave the same logs.
+  if(APPLE AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64)$")
+    add_library(primec_ui_headless_dylib SHARED src/ui/headless/NativeUiHeadless.cpp
+                                                tests/fixtures/host_calls/headless_log_dump.cpp)
+    set_target_properties(primec_ui_headless_dylib PROPERTIES OUTPUT_NAME ps_ui_headless)
+    target_include_directories(primec_ui_headless_dylib PRIVATE ${CMAKE_SOURCE_DIR}/include
+                                                                ${CMAKE_SOURCE_DIR}/tests/fixtures/host_calls)
+    target_link_libraries(primec_ui_headless_dylib PRIVATE primec_ui_highlight_lib)
+    set(PRIMESTRUCT_COMPILED_EDITOR_NATIVE ${CMAKE_BINARY_DIR}/native_ui_compiled/editor_headless_native)
+    add_custom_command(
+      OUTPUT ${PRIMESTRUCT_COMPILED_EDITOR_NATIVE}
+      COMMAND $<TARGET_FILE:primec> --emit=native ${CMAKE_SOURCE_DIR}/examples/apps/text_editor/main.prime
+              -o ${PRIMESTRUCT_COMPILED_EDITOR_NATIVE} --link-arg $<TARGET_FILE:primec_ui_headless_dylib>
+      DEPENDS primec primec_ui_headless_dylib
+              ${CMAKE_SOURCE_DIR}/examples/apps/text_editor/main.prime
+              ${PRIMESTRUCT_STDLIB_PRIME_FILES}
+      VERBATIM
+    )
+    add_custom_target(native_ui_compiled_editor_native DEPENDS ${PRIMESTRUCT_COMPILED_EDITOR_NATIVE})
+    add_dependencies(PrimeStruct_native_ui_tests native_ui_compiled_editor_native)
+    target_compile_definitions(PrimeStruct_native_ui_tests PRIVATE
+      PRIMESTRUCT_COMPILED_EDITOR_NATIVE="${PRIMESTRUCT_COMPILED_EDITOR_NATIVE}")
+  endif()
   primestructEnableWarnings(PrimeStruct_native_ui_tests)
   add_test(
     NAME PrimeStruct_native_ui_headless

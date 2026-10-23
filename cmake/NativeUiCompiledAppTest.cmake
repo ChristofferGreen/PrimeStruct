@@ -117,6 +117,15 @@ endif()
 if(EXISTS "${WORK_DIR}/NativeBundle.app/Contents/Resources/app.psir")
   message(FATAL_ERROR "the native bundle carries bytecode")
 endif()
+# The bundle is the direct native build: the AppKit backend sits beside the executable, and the signatures hold.
+if(NOT EXISTS "${WORK_DIR}/NativeBundle.app/Contents/MacOS/libps_ui_appkit.dylib")
+  message(FATAL_ERROR "the native bundle has no AppKit dylib")
+endif()
+execute_process(COMMAND codesign --verify --deep --strict "${WORK_DIR}/NativeBundle.app"
+                RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err)
+if(NOT rc EQUAL 0)
+  message(FATAL_ERROR "the native bundle's signature does not verify (${rc}): ${out}${err}")
+endif()
 set(ENV{PRIMESTRUCT_UI_SNAPSHOT} "${WORK_DIR}/bundle.png")
 set(ENV{PRIMESTRUCT_UI_OPEN} "${SOURCE_DIR}/tests/fixtures/ui/screenshot/showcase.prime")
 execute_process(COMMAND "${WORK_DIR}/NativeBundle.app/Contents/MacOS/NativeBundle"

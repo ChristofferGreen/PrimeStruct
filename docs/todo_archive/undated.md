@@ -219,3 +219,14 @@
   - acceptance:
     - a program that reads `argumentText(1)`, `argumentText(2)`, an index past argc and a negative index as `String` exits with the VM's code on the VM, through optexe and through `--emit=native` when run with the same two arguments; full release gate green
   - stop_rule: entry arguments only.
+
+- [x] TODO-5585: The text editor builds and runs on the native backend
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-23
+  - phase: Native PrimeScroll (docs/NativeUiPlan.md)
+  - parallel_track: native-backend-editor
+  - scope: `examples/apps/text_editor/main.prime` compiles with `primec --emit=native` against the AppKit dylib and ships as PrimeScroll. The headless backend and its call-log fixture build as `libps_ui_headless.dylib` (target `primec_ui_headless_dylib`), so the compiled-editor mirror (`tests/unit/ui/CompiledEditorMirror.h`) replays every editor scenario on two compiled editors, the optexe build and the editor built by primec's native backend, and each must leave the VM's call log, exit code and files. `scripts/bundle_macos_app.sh --native` now builds from `build_native_app.sh --direct`: the bundle holds the native executable and `libps_ui_appkit.dylib` in `Contents/MacOS`, the dylib signed first and then the bundle, and the native bundle test checks the dylib is there, that `codesign --verify --deep --strict` passes and that the bundle launches and draws.
+  - acceptance:
+    - the `primestruct.ui.editor` and `primestruct.ui.editor_acceptance` suites pass with both compiled editors in the mirror; `PrimeStruct_native_ui_compiled_app` builds, verifies and launches the native bundle; full release gate green
+  - stop_rule: the editor on the native backend and its bundle.
