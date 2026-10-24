@@ -392,7 +392,13 @@ page follows the text as it is edited. It is done when the installed native Prim
   (above, the default); and with the cursor (the page scrolls when the text cursor moves, putting its line a third of
   the page's height below the top, and scrolling either view alone moves nothing). The text is laid out in full before a
   line is mapped to a position, because TextKit only estimates the height of what it has not laid out and a line far
-  down the source was put in the wrong place. The text view is observed directly (the bounds
+  down the source was put in the wrong place. A page that is reloaded (every edit) starts at the top, so after each load
+  the position is put back by mode (together: to the text view; with the cursor: to the cursor's line; independent: to
+  where it was), the mode can be chosen from View > Scroll Preview as well as Settings, and a document opens with its
+  cursor at the start. The top line of the text view is read from its TextKit 2 layout fragments, not from a character
+  index (after an edit that returned the end of the text). `PrimeStruct_native_ui_appkit_scroll` asserts the modes
+  with the snapshot harness (`PRIMESTRUCT_UI_CARET`, `PRIMESTRUCT_UI_TYPE_AFTER_SCROLL`, `PRIMESTRUCT_UI_REPORT`);
+  `docs/PreviewScrollTests.md` lists the scenarios and the by-hand checks. The text view is observed directly (the bounds
   notification of its clip view) and moves the page with a script; the page has no scroll notification, so a local event
   monitor sees the wheel, keys and drags over it, reads its position back with a script and moves the text view (again
   after 250 ms, for the page's scrolling animation). A page that finishes loading goes to where the text view is, so an

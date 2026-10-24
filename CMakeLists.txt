@@ -1478,6 +1478,18 @@ if(PRIMESTRUCT_BUILD_TESTS)
     )
     set_tests_properties(PrimeStruct_native_ui_appkit_smoke
                          PROPERTIES TIMEOUT 300 RESOURCE_LOCK native_ui_appkit)
+    # The preview's scroll modes (independent, linear, by block, with the cursor): scroll a view, move the
+    # cursor, type, and assert where both views end up (docs/PreviewScrollTests.md).
+    add_test(
+      NAME PrimeStruct_native_ui_appkit_scroll
+      COMMAND ${CMAKE_COMMAND}
+              -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
+              -DBUILD_DIR=${CMAKE_BINARY_DIR}
+              -DWORK_DIR=${CMAKE_BINARY_DIR}/native_ui_appkit_scroll
+              -P ${CMAKE_SOURCE_DIR}/cmake/NativeUiAppKitScrollTest.cmake
+    )
+    set_tests_properties(PrimeStruct_native_ui_appkit_scroll
+                         PROPERTIES TIMEOUT 900 RESOURCE_LOCK native_ui_appkit)
     # The same programs compiled to native executables (no VM, no bytecode).
     add_test(
       NAME PrimeStruct_native_ui_compiled_app

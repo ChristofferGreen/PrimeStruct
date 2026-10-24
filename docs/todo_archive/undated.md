@@ -332,3 +332,15 @@
     - headless and bindings tests for the mode function; editor tests for the preference (default, saved value at launch, the pop-up of the settings window, the outline); the AppKit smoke snapshots `scrollpagelong` (page scrolled a third of a long note) and `scrollpageuneven` show the same part of the text in both views; full release gate green
   - stop_rule: the scroll modes and the layout fix.
   - notes: the cursor mode is not covered by a picture (the snapshot harness does not move a cursor) and the real wheel path was not tried by hand.
+
+- [x] TODO-5597: Preview scroll modes tested and edits keep the page in place
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-24
+  - phase: Native PrimeScroll (docs/NativeUiPlan.md section 14)
+  - parallel_track: markdown-preview
+  - scope: Editing a markdown tab rebuilds its preview page, which starts at the top; in the cursor mode (and in the independent one) nothing put it back, and after an edit the text view's top line was read as the end of the text (`characterIndexForInsertionAtPoint:` on a stale layout), which sent a block-scrolled page to the end. After every load the page now goes to the place the scroll mode gives (`restorePreviewPosition`: the text view's line, the cursor's line, or where an independent page was), the top line comes from TextKit 2 layout fragments, a document opens with its cursor at the start, and `ps_ui_preview_set_scroll_mode` moves the open previews at once. View > Scroll Preview (Independently, Linearly, By Block, With the Cursor, check mark following the preference) joins the settings pop-up. The snapshot harness learned `PRIMESTRUCT_UI_CARET`, `PRIMESTRUCT_UI_TYPE_AFTER_SCROLL` and `PRIMESTRUCT_UI_REPORT`, and `PrimeStruct_native_ui_appkit_scroll` (`cmake/NativeUiAppKitScrollTest.cmake`) asserts 18 scenarios over the four modes (scroll either view, the ends, the cursor, typing, scrolling then typing, a page of tall blocks). `docs/PreviewScrollTests.md` is the test set: automated scenarios and the by-hand checks.
+  - acceptance:
+    - the scroll ctest passes with believable numbers for the typing scenarios (the page neither at the top nor at the end after an edit); the editor tests pass with the View > Scroll Preview submenu in the outline; full release gate green
+  - stop_rule: the scroll modes' restore after reloads, the harness and the test set; the by-hand list stays by hand.
+  - notes: mode switching from the menu while a preview is open, the real wheel, keys and dragging, resizing, several tabs, and unusual documents are not automated.

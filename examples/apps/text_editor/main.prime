@@ -68,6 +68,13 @@ command_preview() {
   return(10i32)
 }
 
+// View > Scroll Preview: command_scroll() + 0 ... + 3 are the scroll modes (independently, linearly, by block,
+// with the cursor); the chosen one carries a check mark and is the `scrollMode` preference.
+[return<i32>]
+command_scroll() {
+  return(20i32)
+}
+
 [return<i32>]
 command_recent() {
   return(200i32)
@@ -271,7 +278,7 @@ document_window([App] app, [u64] settingsWindow) {
 
 // Every document shows the editor preferences; the View menu and the settings window show them too.
 [return<bool>]
-refresh_preferences([App] app, [Menu] viewMenu, [Settings] settings) {
+refresh_preferences([App] app, [Menu] viewMenu, [Menu] scrollMenu, [Settings] settings) {
   [i32 mut] index{0i32}
   while(index < app.windowCount()) {
     [Window] each{app.windowAt(index)}
@@ -287,6 +294,14 @@ refresh_preferences([App] app, [Menu] viewMenu, [Settings] settings) {
   numbersBox.setChecked(app.boolPref("lineNumbers", false))
   [CheckBox] wrapBox{[handle] settings.wrap}
   wrapBox.setChecked(app.boolPref("wrapLines", true))
+  [i32] mode{app.intPref("scrollMode", 2i32)}
+  [i32 mut] choice{0i32}
+  while(choice < 4i32) {
+    scrollMenu.setChecked(command_scroll() + choice, choice == mode)
+    choice = choice + 1i32
+  }
+  [Popup] scrollChoice{[handle] settings.lock}
+  scrollChoice.select(mode)
   return(true)
 }
 
@@ -557,6 +572,12 @@ main([array<string>] args) {
   viewMenu.item("Wrap Lines", "", command_wrap())
   viewMenu.item("Show Markdown Preview", "cmd+shift+m", command_preview())
   viewMenu.followPreview(command_preview())
+  [Menu] scrollMenu{app.menu("Scroll Preview")}
+  scrollMenu.item("Independently", "", command_scroll())
+  scrollMenu.item("Linearly", "", command_scroll() + 1i32)
+  scrollMenu.item("By Block", "", command_scroll() + 2i32)
+  scrollMenu.item("With the Cursor", "", command_scroll() + 3i32)
+  viewMenu.submenu("Scroll Preview", scrollMenu)
   viewMenu.addToBar()
 
   [Menu] windowMenu{app.menu("Window")}
@@ -599,7 +620,7 @@ main([array<string>] args) {
     }
   }
 
-  [bool] shown{refresh_preferences(app, viewMenu, settings)}
+  [bool] shown{refresh_preferences(app, viewMenu, scrollMenu, settings)}
   [i32] recentShown{refresh_recent(recentMenu)}
 
   first.show()
@@ -674,7 +695,7 @@ main([array<string>] args) {
       if(changedControl == settings.size) {
         app.setIntPref("fontSize", font_size_at(sizeChoice.selected()))
       }
-      [bool] controlsApplied{refresh_preferences(app, viewMenu, settings)}
+      [bool] controlsApplied{refresh_preferences(app, viewMenu, scrollMenu, settings)}
     }
 
     [bool mut] recentsChanged{false}
@@ -705,13 +726,18 @@ main([array<string>] args) {
     if(intent == command_preview()) {
       [bool] previewing{tab.setPreview(!tab.hasPreview())}
     }
+    if(intent >= command_scroll() && intent < command_scroll() + 4i32) {
+      app.setIntPref("scrollMode", intent - command_scroll())
+      app.setPreviewScrollMode(intent - command_scroll())
+      [bool] scrollChosen{refresh_preferences(app, viewMenu, scrollMenu, settings)}
+    }
     if(intent == command_wrap()) {
       app.setBoolPref("wrapLines", !app.boolPref("wrapLines", true))
-      [bool] wrapped{refresh_preferences(app, viewMenu, settings)}
+      [bool] wrapped{refresh_preferences(app, viewMenu, scrollMenu, settings)}
     }
     if(intent == command_line_numbers()) {
       app.setBoolPref("lineNumbers", !app.boolPref("lineNumbers", false))
-      [bool] numbered{refresh_preferences(app, viewMenu, settings)}
+      [bool] numbered{refresh_preferences(app, viewMenu, scrollMenu, settings)}
     }
     if(intent == command_save()) {
       [bool] saved{save_document(app, tab, false)}

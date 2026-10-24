@@ -266,9 +266,9 @@ TEST_CASE("editor close with unsaved text stays open when the user chooses Cance
 }
 
 // The editor creates its first window and text view (handles 1 and 2) and then six
-// menus (3 to 9), so the second tab's window and text view are 10 and 11.
-constexpr uint64_t SecondWindow = 10;
-constexpr uint64_t SecondView = 11;
+// menus (3 to 10), so the second tab's window and text view are 11 and 12.
+constexpr uint64_t SecondWindow = 11;
+constexpr uint64_t SecondView = 12;
 
 TEST_CASE("editor new opens a second tab in the same tab group") {
   headless::reset();
@@ -283,7 +283,7 @@ TEST_CASE("editor new opens a second tab in the same tab group") {
   CHECK(second.content == SecondView);
   CHECK(second.closed);
   CHECK(headless::isMonospace(SecondView));
-  CHECK(countCalls("ps_ui_window_add_tab(1, 10)") == 1);
+  CHECK(countCalls("ps_ui_window_add_tab(1, 11)") == 1);
   CHECK(countCalls("ps_ui_alert(") == 0);
 }
 
@@ -323,8 +323,8 @@ TEST_CASE("editor Command-number selects that tab and Command-9 the last") {
   headless::pushTypeText(EditorWindow + 1, "A");
   headless::pushCommand(CommandNew);
   headless::pushTypeText(SecondView, "B");
-  headless::pushCommand(CommandNew); // window 12, view 13
-  headless::pushTypeText(13, "C");
+  headless::pushCommand(CommandNew); // window 13, view 14
+  headless::pushTypeText(14, "C");
   headless::pushCommand(CommandTab + 1); // Command-1: the first tab
   headless::pushCommand(CommandSave);
   headless::pushSavePanelAnswer(pathA);
@@ -337,7 +337,7 @@ TEST_CASE("editor Command-number selects that tab and Command-9 the last") {
   headless::pushCommand(CommandTab + 5); // no fifth tab: nothing changes
   headless::pushCloseWindow(EditorWindow);
   headless::pushCloseWindow(SecondWindow);
-  headless::pushCloseWindow(12);
+  headless::pushCloseWindow(13);
   runEditor();
   CHECK(readFile(pathA) == "A");
   CHECK(readFile(pathB) == "B");
@@ -361,7 +361,7 @@ TEST_CASE("editor open reuses an untouched untitled tab and otherwise opens a ne
   CHECK(headless::windowPath(SecondWindow) == second);
   CHECK(countCalls("ps_ui_window_add_tab(") == 1);
   CHECK(countCalls("ps_ui_text_view_load_file(2, ") == 1);
-  CHECK(countCalls("ps_ui_text_view_load_file(11, ") == 1);
+  CHECK(countCalls("ps_ui_text_view_load_file(12, ") == 1);
 }
 
 TEST_CASE("editor closes a failed open's new tab again") {
@@ -428,23 +428,23 @@ TEST_CASE("editor toggles the line number bar in every tab from the View menu") 
   headless::reset();
   headless::pushCommand(1);
   headless::pushCommand(7);
-  headless::pushCloseWindow(10);
+  headless::pushCloseWindow(11);
   headless::pushCloseWindow(EditorWindow);
   runEditor();
   CHECK_FALSE(headless::lineNumbersVisible(2) == false);
   CHECK(headless::lineNumbersVisible(2));
-  CHECK(headless::lineNumbersVisible(11));
+  CHECK(headless::lineNumbersVisible(12));
   CHECK(headless::menuItemChecked(7));
 
   headless::reset();
   headless::pushCommand(1);
   headless::pushCommand(7);
   headless::pushCommand(7);
-  headless::pushCloseWindow(10);
+  headless::pushCloseWindow(11);
   headless::pushCloseWindow(EditorWindow);
   runEditor();
   CHECK_FALSE(headless::lineNumbersVisible(2));
-  CHECK_FALSE(headless::lineNumbersVisible(11));
+  CHECK_FALSE(headless::lineNumbersVisible(12));
   CHECK_FALSE(headless::menuItemChecked(7));
 }
 
@@ -452,11 +452,11 @@ TEST_CASE("editor starts with the line number bar when the preference says so") 
   headless::reset();
   headless::setBoolPref("lineNumbers", true);
   headless::pushCommand(1);
-  headless::pushCloseWindow(10);
+  headless::pushCloseWindow(11);
   headless::pushCloseWindow(EditorWindow);
   runEditor();
   CHECK(headless::lineNumbersVisible(2));
-  CHECK(headless::lineNumbersVisible(11));  // a new tab follows the current setting
+  CHECK(headless::lineNumbersVisible(12));  // a new tab follows the current setting
   CHECK(headless::menuItemChecked(7));
 }
 
@@ -470,19 +470,19 @@ TEST_CASE("editor keeps the line number choice for the next launch") {
 }
 
 // The settings window (command 8): handles in creation order after the first window, its text view and the
-// seven menus: the window is 10, then the General form 11 with the restore check box 12, the Editor form 13
+// eight menus: the window is 11, then the General form 12 with the restore check box 13, the Editor form 14
 // with the line numbers 14, wrapping 15 and the font size pop-up 16, the Markdown form 17 with the preview
 // 18 and the scroll lock 19 check boxes, and the tabs 20.
 namespace {
-constexpr uint64_t SettingsWindow = 10;
-constexpr uint64_t RestoreBox = 12;
-constexpr uint64_t NumbersBox = 14;
-constexpr uint64_t WrapBox = 15;
-constexpr uint64_t SizePopup = 16;
-constexpr uint64_t PreviewBox = 18;
-constexpr uint64_t ScrollPopup = 19;
-constexpr uint64_t SettingsTabs = 20;
-constexpr uint64_t TabAfterSettings = 21; // a New command after the settings window: window 21, view 22
+constexpr uint64_t SettingsWindow = 11;
+constexpr uint64_t RestoreBox = 13;
+constexpr uint64_t NumbersBox = 15;
+constexpr uint64_t WrapBox = 16;
+constexpr uint64_t SizePopup = 17;
+constexpr uint64_t PreviewBox = 19;
+constexpr uint64_t ScrollPopup = 20;
+constexpr uint64_t SettingsTabs = 21;
+constexpr uint64_t TabAfterSettings = 22; // a New command after the settings window: window 22, view 23
 constexpr int32_t CommandSettings = 8;
 } // namespace
 
@@ -525,7 +525,7 @@ TEST_CASE("settings window opens once and a second Settings command brings it fo
   headless::pushCloseWindow(EditorWindow);
   runEditor();
   CHECK(countCalls("ps_ui_window_create(\"Settings\"") == 1);
-  CHECK(countCalls("ps_ui_window_show(10)") == 2);
+  CHECK(countCalls("ps_ui_window_show(11)") == 2);
 }
 
 TEST_CASE("settings window can be closed and opened again") {
@@ -691,7 +691,7 @@ TEST_CASE("the app ends after the last document closes with the settings window 
   runEditor();
   CHECK(headless::windowState(EditorWindow).closed);
   CHECK(headless::windowState(SecondWindow).closed);
-  CHECK(headless::windowState(12).closed); // the settings window, after the second tab's two handles
+  CHECK(headless::windowState(13).closed); // the settings window, after the second tab's two handles
 }
 
 TEST_CASE("commands that arrive while the settings window is active act on a document") {
@@ -819,7 +819,7 @@ TEST_CASE("editor brings back the last session's tabs and selects the active one
   CHECK(headless::windowPath(EditorWindow) == a);
   CHECK(headless::windowPath(SecondWindow) == b);
   CHECK(headless::windowState(SecondWindow).title == b);
-  CHECK(countCalls("ps_ui_window_select(10)") == 1);
+  CHECK(countCalls("ps_ui_window_select(11)") == 1);
   CHECK(countCalls("ps_ui_alert(") == 0);
 }
 

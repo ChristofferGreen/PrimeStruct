@@ -87,6 +87,7 @@ struct State {
   std::unordered_map<uint64_t, NSSplitView *> previewSplits;
   std::unordered_map<uint64_t, NSView *> previewWebs;
   std::unordered_map<uint64_t, bool> previewLoading;
+  std::unordered_map<uint64_t, double> previewKeepY; // where an independent page was before it reloaded
   std::unordered_map<uint64_t, int> previewScriptsPending; // scripts sent to the page that have not answered
   std::unordered_map<uint64_t, double> previewFraction;    // the source line both views were last put at
   std::unordered_map<uint64_t, bool> previewSyncing;       // the page is moving the text view right now
@@ -123,6 +124,12 @@ struct State {
   bool snapshotScrolled = false;
   std::string snapshotClicks; // PRIMESTRUCT_UI_CLICK=check:6;popup:8:3 clicks controls through their actions
   bool snapshotClicked = false;
+  int snapshotCaretLine = -1;      // PRIMESTRUCT_UI_CARET=N puts the text cursor at the start of line N
+  bool snapshotCareted = false;
+  bool snapshotTypeAfterScroll = false; // PRIMESTRUCT_UI_TYPE_AFTER_SCROLL: type once the scroll step is done
+  std::string snapshotReportPath;  // PRIMESTRUCT_UI_REPORT=path: where both views are, written before the picture
+  bool snapshotReportStarted = false;
+  bool snapshotReportDone = false;
   std::string snapshotCommands;
   bool snapshotCommandsSent = false;
   bool snapshotOpened = false;
@@ -448,9 +455,12 @@ LineSpot lineSpotOfLine(NSString *text, NSUInteger line) {
 
 double textLineCount(NSTextView *view) { return static_cast<double>(lineSpotAtIndex(view.string, view.string.length).line + 1); }
 
+void ensureTextLayout(NSTextView *view);
+
 // The line (with the fraction of it) at the top of the text view's visible area.
 double textScrollLine(NSScrollView *scroll) {
   NSTextView *view = scroll.documentView;
+  ensureTextLayout(view); // after an edit the layout below it is stale, and a point there maps to the end
   const double total = textLineCount(view);
   const CGFloat range = textScrollRange(scroll);
   const CGFloat top = scroll.contentView.bounds.origin.y;
@@ -459,6 +469,19 @@ double textScrollLine(NSScrollView *scroll) {
   }
   if (top >= range - 1) {
     return total;
+  }
+  if (NSTextLayoutManager *layout = view.textLayoutManager) {
+    // The paragraph (layout fragment) at the top of the visible area, and how far down it the top is.
+    const CGFloat y = std::max<CGFloat>(top + 1 - view.textContainerOrigin.y, 0);
+    NSTextLayoutFragment *fragment = [layout textLayoutFragmentForPosition:CGPointMake(0, y)];
+    if (fragment != nil) {
+      NSTextContentManager *content = layout.textContentManager;
+      const NSInteger offset = [content offsetFromLocation:content.documentRange.location
+                                                toLocation:fragment.rangeInElement.location];
+      const NSRect frame = fragment.layoutFragmentFrame;
+      const double through = frame.size.height > 0 ? std::clamp((y - frame.origin.y) / frame.size.height, 0.0, 1.0) : 0;
+      return static_cast<double>(lineSpotAtIndex(view.string, static_cast<NSUInteger>(std::max<NSInteger>(offset, 0))).line) + through;
+    }
   }
   const NSPoint point = NSMakePoint(view.textContainerInset.width + 2, std::max<CGFloat>(top, 0) + view.textContainerInset.height + 1);
   const NSUInteger index = [view characterIndexForInsertionAtPoint:point];
@@ -637,6 +660,85 @@ void syncWebToCursor(NSTextView *view) {
                  });
 }
 
+// A freshly loaded page starts at the top: put it where the scroll mode says. Scrolled together it goes to
+// where the text view is, with the cursor to the cursor's line, and an independent page to where it was.
+void restorePreviewPosition(uint64_t window) {
+  State &s = state();
+  const auto web = s.previewWebs.find(window);
+  if (web == s.previewWebs.end()) {
+    return;
+  }
+  if (s.previewScrollMode == PS_UI_SCROLL_LINEAR || s.previewScrollMode == PS_UI_SCROLL_BLOCKS) {
+    syncWebFromText(window, true);
+  } else if (s.previewScrollMode == PS_UI_SCROLL_CURSOR) {
+    const auto content = s.windowContent.find(window);
+    if (NSTextView *view = content != s.windowContent.end() ? textView(content->second) : nil) {
+      syncWebToCursor(view);
+    }
+  } else if (const auto keep = s.previewKeepY.find(window); keep != s.previewKeepY.end()) {
+    const double y = keep->second;
+    s.previewKeepY.erase(keep);
+    if (y > 0) {
+      s.previewScriptsPending[window] += 1;
+      evaluateScript(web->second, [NSString stringWithFormat:@"window.scrollTo(0,%f)", y], ^(id) {
+        state().previewScriptsPending[window] -= 1;
+      });
+    }
+  }
+}
+
+// Every preview goes to the place its (new) scroll mode gives.
+void applyScrollModeToPreviews() {
+  State &s = state();
+  std::vector<uint64_t> windows;
+  for (const auto &entry : s.previews) {
+    if (entry.second) {
+      windows.push_back(entry.first);
+    }
+  }
+  for (const uint64_t window : windows) {
+    restorePreviewPosition(window);
+  }
+}
+
+// Writes where both views are (snapshot runs, PRIMESTRUCT_UI_REPORT): the text view's top line and fraction,
+// the cursor's line, the page's line (as the page's blocks map it) and scroll position.
+void startSnapshotReport(uint64_t window) {
+  State &s = state();
+  NSScrollView *scroll = previewTextScroll(window);
+  const auto web = s.previewWebs.find(window);
+  NSTextView *view = scroll != nil ? scroll.documentView : nil;
+  if (scroll == nil || view == nil) {
+    s.snapshotReportDone = true;
+    return;
+  }
+  const double total = textLineCount(view);
+  NSString *head = [NSString stringWithFormat:@"mode=%d\ntext_line=%.3f\ntext_fraction=%.4f\ncaret_line=%lu\ntext_lines=%.0f\n",
+                                              s.previewScrollMode, textScrollLine(scroll), textScrollFraction(scroll),
+                                              static_cast<unsigned long>(lineSpotAtIndex(view.string, view.selectedRange.location).line),
+                                              total];
+  NSString *path = toNSString(s.snapshotReportPath.c_str());
+  if (web == s.previewWebs.end()) {
+    [[head stringByAppendingString:@"web=none\n"] writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:nil];
+    s.snapshotReportDone = true;
+    return;
+  }
+  NSView *page = web->second;
+  s.previewScriptsPending[window] += 1;
+  evaluateScript(page, webLineScript(total), ^(id lineResult) {
+    NSString *line = [NSString stringWithFormat:@"web_line=%.3f\n", [lineResult respondsToSelector:@selector(doubleValue)] ? [lineResult doubleValue] : -1.0];
+    evaluateScript(page, @"window.scrollY+','+(document.documentElement.scrollHeight-window.innerHeight)", ^(id positions) {
+      NSArray<NSString *> *parts = [[positions description] componentsSeparatedByString:@","];
+      NSString *body = [NSString stringWithFormat:@"%@%@web_y=%@\nweb_max=%@\n", head, line, parts.count > 0 ? parts[0] : @"-1",
+                                                  parts.count > 1 ? parts[1] : @"-1"];
+      [body writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:nil];
+      State &now = state();
+      now.previewScriptsPending[window] -= 1;
+      now.snapshotReportDone = true;
+    });
+  });
+}
+
 // Navigation is the program's to refuse: the page the preview loads is allowed, a click on a link opens
 // the address in the default browser, and nothing else may navigate the preview.
 Class previewDelegateClass() {
@@ -663,7 +765,7 @@ Class previewDelegateClass() {
                     imp_implementationWithBlock(^(id, id web, id) {
                       const uint64_t window = handleOf(web);
                       state().previewLoading[window] = false;
-                      syncWebFromText(window, true);
+                      restorePreviewPosition(window);
                     }),
                     "v@:@@");
     for (NSString *failed in @[ @"webView:didFailNavigation:withError:",
@@ -704,7 +806,20 @@ void renderPreview(uint64_t window) {
   }
   const char *text = view.string.UTF8String;
   s.previewLoading[window] = true;
-  loadPage(web->second, toNSString(primec::ui::markdownPreviewPage(text != nullptr ? text : "").c_str()));
+  NSString *page = toNSString(primec::ui::markdownPreviewPage(text != nullptr ? text : "").c_str());
+  NSView *pageView = web->second;
+  if (s.previewScrollMode == PS_UI_SCROLL_OFF) {
+    // A new page starts at the top; an independent page goes back to where it was once it has loaded.
+    s.previewScriptsPending[window] += 1;
+    evaluateScript(pageView, @"window.scrollY", ^(id y) {
+      State &now = state();
+      now.previewScriptsPending[window] -= 1;
+      now.previewKeepY[window] = [y respondsToSelector:@selector(doubleValue)] ? [y doubleValue] : 0;
+      loadPage(pageView, page);
+    });
+    return;
+  }
+  loadPage(pageView, page);
 }
 
 // One monitor for every preview: a wheel turn, a key or a drag over a page may have scrolled it, so the text
@@ -767,6 +882,7 @@ void dropPreviewState(uint64_t window) {
   s.previewLoading.erase(window);
   s.previewScriptsPending.erase(window);
   s.previewFraction.erase(window);
+  s.previewKeepY.erase(window);
   s.previewSyncing.erase(window);
   s.previewObservers.erase(window);
   s.previewRefreshPending.erase(window);
@@ -1364,6 +1480,13 @@ bool ps_ui_init(const char *appName) {
     if (const char *click = std::getenv("PRIMESTRUCT_UI_CLICK"); click != nullptr && *click != '\0') {
       s.snapshotClicks = click;
     }
+    if (const char *caret = std::getenv("PRIMESTRUCT_UI_CARET"); caret != nullptr && *caret != '\0') {
+      s.snapshotCaretLine = std::atoi(caret);
+    }
+    s.snapshotTypeAfterScroll = std::getenv("PRIMESTRUCT_UI_TYPE_AFTER_SCROLL") != nullptr;
+    if (const char *report = std::getenv("PRIMESTRUCT_UI_REPORT"); report != nullptr && *report != '\0') {
+      s.snapshotReportPath = report;
+    }
     if (const char *typed = std::getenv("PRIMESTRUCT_UI_TYPE"); typed != nullptr && *typed != '\0') {
       s.snapshotTypeText = typed;
       for (size_t at = s.snapshotTypeText.find("\\n"); at != std::string::npos;
@@ -1485,7 +1608,26 @@ int32_t ps_ui_wait_event(void) {
               s.snapshotWindow = window; // picture of that tab's own window
             }
           }
-        } else if (!s.snapshotTypeText.empty() && !s.snapshotTyped && s.snapshotIdleSlices >= 6) {
+        } else if (s.snapshotCaretLine >= 0 && !s.snapshotCareted && s.snapshotIdleSlices >= 5) {
+          // Puts the text cursor at the start of a line, as a click there would.
+          s.snapshotCareted = true;
+          s.snapshotIdleSlices = 0;
+          const bool lastTab = std::getenv("PRIMESTRUCT_UI_TARGET_LAST") != nullptr;
+          uint64_t picked = lastTab ? 0 : UINT64_MAX;
+          NSTextView *target = nil;
+          for (const auto &entry : s.textViews) {
+            if (lastTab ? entry.first > picked : entry.first < picked) {
+              picked = entry.first;
+              target = entry.second;
+            }
+          }
+          if (target != nil) {
+            const LineSpot spot = lineSpotOfLine(target.string, static_cast<NSUInteger>(s.snapshotCaretLine));
+            [target.window makeFirstResponder:target];
+            [target setSelectedRange:NSMakeRange(spot.found ? spot.start : target.string.length, 0)];
+          }
+        } else if (!s.snapshotTypeText.empty() && !s.snapshotTyped && s.snapshotIdleSlices >= 6 &&
+                   (!s.snapshotTypeAfterScroll || s.snapshotScroll.empty() || s.snapshotScrolled)) {
           // Types into the first text view so the picture shows an edited document.
           s.snapshotTyped = true;
           s.snapshotIdleSlices = 0;
@@ -1513,7 +1655,18 @@ int32_t ps_ui_wait_event(void) {
           s.snapshotScrolled = true;
           s.snapshotIdleSlices = 0;
           applySnapshotScroll(s.snapshotWindow, s.snapshotScroll);
-        } else if (s.snapshotIdleSlices >= 12 && (!anyPreviewLoading() || s.snapshotIdleSlices >= 400)) {
+        } else if (!s.snapshotReportPath.empty() && !s.snapshotReportStarted && s.snapshotIdleSlices >= 12 &&
+                   (!anyPreviewLoading() || s.snapshotIdleSlices >= 400)) {
+          // Writes where both views are, once everything has settled; the picture follows.
+          if (std::getenv("PRIMESTRUCT_UI_TARGET_LAST") != nullptr) {
+            for (const auto &entry : s.windows) {
+              s.snapshotWindow = std::max(s.snapshotWindow, entry.first);
+            }
+          }
+          s.snapshotReportStarted = true;
+          startSnapshotReport(s.snapshotWindow);
+        } else if (s.snapshotIdleSlices >= 12 && (!anyPreviewLoading() || s.snapshotIdleSlices >= 400) &&
+                   (s.snapshotReportPath.empty() || s.snapshotReportDone)) {
           // (A preview still loading its page is waited for, up to twenty seconds.)
           if (std::getenv("PRIMESTRUCT_UI_TARGET_LAST") != nullptr) {
             for (const auto &entry : s.windows) {
@@ -2034,6 +2187,7 @@ bool ps_ui_text_view_load_file(uint64_t view, const char *path) {
       return false;
     }
     v.string = contents;
+    v.selectedRange = NSMakeRange(0, 0); // a document opens with its cursor at the start
     s.modified[view] = false;
     [v.undoManager removeAllActions];
     PS_TRACE(@"loadFile view=%llu window=%llu path=%s", view, handleOf(v.window), path != nullptr ? path : "(null)");
@@ -2456,6 +2610,7 @@ bool ps_ui_preview_set_scroll_mode(int32_t mode) {
     return false;
   }
   state().previewScrollMode = mode;
+  applyScrollModeToPreviews();
   return true;
 }
 
