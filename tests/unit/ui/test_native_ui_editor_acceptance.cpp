@@ -184,7 +184,7 @@ TEST_CASE("acceptance: the menu bar has the standard macOS structure and shortcu
   const std::vector<std::string> expected{
       "PrimeScroll>About",
       "PrimeScroll>-",
-      "PrimeScroll>Start with Line Numbers",
+      "PrimeScroll>Settings... (cmd+,)",
       "PrimeScroll>-",
       "PrimeScroll>Hide (cmd+h)",
       "PrimeScroll>Hide Others (cmd+alt+h)",
@@ -244,7 +244,7 @@ TEST_CASE("acceptance: the menu bar has the standard macOS structure and shortcu
                            "File>Save As... (cmd+shift+s) #4", "File>Close (cmd+w) #5",
                            "View>Show Line Numbers (cmd+shift+l) #7", "View>Wrap Lines #9 [checked]",
                            "File>Open Recent>Clear Menu #210",
-                           "PrimeScroll>Start with Line Numbers #8"}) {
+                           "PrimeScroll>Settings... (cmd+,) #8"}) {
     CHECK_MESSAGE(std::find(items.begin(), items.end(), item) != items.end(), item);
   }
 }

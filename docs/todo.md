@@ -104,7 +104,6 @@ of sync with them.
 | TODO-5569 | Slice loans, escapes and returned borrows | ready | slices |
 | TODO-5570 | Slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views | ready | slices |
 | TODO-5540 | `string` as the UTF-8 text view | blocked | string-view |
-| TODO-5594 | The editor's settings window | ready | settings-window |
 | TODO-5586 | Native String heap: pooled blocks, statistics and limit | deferred | native-backend-strings |
 | TODO-5574 | Simple C++ emitters run bytes and strings | deferred | string-backends |
 | TODO-5568 | String conveniences: operators, numbers, push of code points | blocked | string-owned |
@@ -138,7 +137,6 @@ of sync with them.
 
 - TODO-5567 (bytes): packed `array<u8>`
 - TODO-5570 (slices): slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views
-- TODO-5594 (settings-window): the editor's settings window
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5510 (control-returns): `return` returns from pick arms and lambdas correctly
@@ -149,7 +147,6 @@ of sync with them.
 
 2. TODO-5567
 3. TODO-5570
-4. TODO-5594
 5. TODO-5536
 6. TODO-5535
 7. TODO-5510
@@ -160,8 +157,7 @@ of sync with them.
 
 - Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5567, TODO-5570, TODO-5569, TODO-5540, TODO-5568, TODO-5530, TODO-5574
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
-- Settings window (docs/NativeUiPlan.md section 15): TODO-5594
-- Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
+- - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Lifecycle (docs/spec/value-lifecycle.md): TODO-5527
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
@@ -320,18 +316,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - acceptance:
     - the string_heap program of tests/unit/backend_host/test_cpp_strings.cpp (reuse and figures) also runs through `--emit=native` with the VM's exit codes; a 100000-String loop uses no more than a few MB; full release gate green
   - stop_rule: the native String heap's allocator and its statistics.
-  - notes: deferred behind the settings window (TODO-5594) to keep Ready Now at eight. PrimeScroll ships from the native build, so every String it makes takes a mapping of its own; the writable data segment this needs exists (`MachOData::stateBytes`).
-
-- [ ] TODO-5594: The editor's settings window
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-24
-  - phase: Settings window (docs/NativeUiPlan.md section 15)
-  - parallel_track: settings-window
-  - scope: PrimeScroll gets a settings window: Command-Comma, "Settings..." in the application menu (it replaces "Start with Line Numbers"), a `PS_UI_WINDOW_SETTINGS` window with tabs General, Editor and Markdown. Settings, all kept as preferences and applied at once: `restoreSession` (default on: whether the last session's files come back at launch), `lineNumbers` (existing key, default off), `wrapLines` (default on), `fontSize` (default 13; a pop-up of 11, 12, 13, 14, 16, 18, 20, 24), `previewMarkdown` (default off: a file named `*.md` or `*.markdown` opens with its preview on), `lockScroll` (default on). The editor reads the preferences instead of carrying `lineNumbers` and `wrapLines` through its functions; the View menu's Show Line Numbers, Wrap Lines items and the settings check boxes stay in step; the settings window does not count as a document (the app ends when no document window is left and the settings window closes with it) and opens once (a second Command-Comma brings it forward).
-  - acceptance:
-    - editor scenarios on the VM, the optexe editor and the native editor through the mirror: Command-Comma builds the window, the acceptance gate pins its whole outline with `headless::controlOutline`, toggling each control changes its preference and the open tabs at once, the first launch uses the defaults, `restoreSession` off skips the session, `previewMarkdown` turns a markdown file's preview on, the app ends after the last document closes with the settings window open; the installed PrimeScroll shows the window; full release gate green
-  - stop_rule: the editor's settings window and preferences.
+  - notes: deferred to keep Ready Now at eight. PrimeScroll ships from the native build, so every String it makes takes a mapping of its own; the writable data segment this needs exists (`MachOData::stateBytes`).
 
 - [ ] TODO-5536: Small, lazily loaded bytecode for apps
   - owner: ai

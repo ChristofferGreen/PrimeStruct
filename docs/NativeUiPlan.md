@@ -194,9 +194,8 @@ an import yet), and `AppEvent` lists `quitRequested` first because a default sum
 - Open and Save read and write UTF-8 files; a read or write error is shown in an alert instead of quitting.
 - The text view uses the system monospace font; everything else about editing comes from the native control.
 - **Line numbers:** View > Show Line Numbers (⇧⌘L) shows or hides a bar of line numbers to the left of the text in every
-  tab (new tabs follow the current setting; the item carries a check mark). The application menu's *Start with Line
-  Numbers* item is the preference for the next launch (a check mark, stored with `ps_ui_pref_set_bool`); the bar is off
-  until it is chosen. The AppKit bar is an `NSRulerView` that numbers the TextKit 2 layout fragments of the visible
+  tab (new tabs follow the current setting; the item carries a check mark). The choice is the `lineNumbers` preference (stored with
+  `ps_ui_pref_set_bool`, off until chosen), also a check box of the settings window (section 15). The AppKit bar is an `NSRulerView` that numbers the TextKit 2 layout fragments of the visible
   part only.
 - **Wrapping:** View > Wrap Lines (check-marked, on by default) wraps long lines at the window width or lets them
   run to the right with a horizontal scroll bar, in every tab; new tabs follow the current setting.
@@ -409,7 +408,7 @@ opens one window with tabs. Every setting is kept between runs, takes effect at 
 step with it.
 
 - **General:** Reopen the files of the last session (`restoreSession`, on).
-- **Editor:** Show line numbers (`lineNumbers`, off; it replaces the application menu's Start with Line Numbers),
+- **Editor:** Show line numbers (`lineNumbers`, off; it replaced the application menu's Start with Line Numbers),
   Wrap long lines (`wrapLines`, on), Font size (`fontSize`, 13; a pop-up of 11, 12, 13, 14, 16, 18, 20 and 24).
 - **Markdown:** Open markdown files with the preview on (`previewMarkdown`, off), and Scroll the source and the preview
   together (`lockScroll`, on).
@@ -418,5 +417,9 @@ step with it.
   (`headless::controlOutline`), so an acceptance test can pin the whole window like the menu bar's outline.
 - **Not a document.** A settings window is never a tab and does not count as an open document: closing the last
   document ends the app and closes the settings window with it.
-- **Slices.** The controls ABI with the headless backend, the bindings and the stdlib (TODO-5592, done), the AppKit
-  controls and the settings window style (TODO-5593), then the editor's window and its preferences (TODO-5594).
+- **Slices (all done).** The controls ABI with the headless backend, the bindings and the stdlib (TODO-5592), the
+  AppKit controls and the settings window style (TODO-5593), then the editor's window and its preferences (TODO-5594).
+- **In the editor.** `main.prime` keeps a `Settings` struct of the window and control handles (0 while closed). A
+  control event is matched against those handles, the matching preference is written, and `refresh_preferences` applies
+  the editor preferences to every document and updates the View menu items and the check boxes. Documents are the
+  windows other than the settings window; menu commands that arrive while it is active act on the first document.

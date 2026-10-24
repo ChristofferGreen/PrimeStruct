@@ -458,27 +458,241 @@ TEST_CASE("editor starts with the line number bar when the preference says so") 
   CHECK(headless::lineNumbersVisible(2));
   CHECK(headless::lineNumbersVisible(11));  // a new tab follows the current setting
   CHECK(headless::menuItemChecked(7));
-  CHECK(headless::menuItemChecked(8));
 }
 
-TEST_CASE("editor remembers the start-up choice without changing the open tabs") {
+TEST_CASE("editor keeps the line number choice for the next launch") {
   headless::reset();
-  headless::pushCommand(8);
+  headless::pushCommand(7);
   headless::pushCloseWindow(EditorWindow);
   runEditor();
   CHECK(headless::boolPref("lineNumbers", false));
-  CHECK_FALSE(headless::lineNumbersVisible(2));
-  CHECK(headless::menuItemChecked(8));
-  CHECK_FALSE(headless::menuItemChecked(7));
+  CHECK(headless::lineNumbersVisible(2));
+}
 
+// The settings window (command 8): handles in creation order after the first window, its text view and the
+// seven menus: the window is 10, then the General form 11 with the restore check box 12, the Editor form 13
+// with the line numbers 14, wrapping 15 and the font size pop-up 16, the Markdown form 17 with the preview
+// 18 and the scroll lock 19 check boxes, and the tabs 20.
+namespace {
+constexpr uint64_t SettingsWindow = 10;
+constexpr uint64_t RestoreBox = 12;
+constexpr uint64_t NumbersBox = 14;
+constexpr uint64_t WrapBox = 15;
+constexpr uint64_t SizePopup = 16;
+constexpr uint64_t PreviewBox = 18;
+constexpr uint64_t LockBox = 19;
+constexpr uint64_t SettingsTabs = 20;
+constexpr uint64_t TabAfterSettings = 21; // a New command after the settings window: window 21, view 22
+constexpr int32_t CommandSettings = 8;
+} // namespace
+
+TEST_CASE("settings window shows the preferences in tabs and is not a document") {
   headless::reset();
-  headless::setBoolPref("lineNumbers", true);
-  headless::pushCommand(8);
+  headless::pushCommand(CommandSettings);
   headless::pushCloseWindow(EditorWindow);
   runEditor();
-  CHECK_FALSE(headless::boolPref("lineNumbers", true));
+  const std::vector<std::string> expected{
+      "tabs selected=0",
+      "  page \"General\":",
+      "    form",
+      "      heading \"Startup\"",
+      "      control: checkbox \"Reopen the files of the last session\" [checked]",
+      "  page \"Editor\":",
+      "    form",
+      "      heading \"Text\"",
+      "      control: checkbox \"Show line numbers\"",
+      "      control: checkbox \"Wrap long lines\" [checked]",
+      "      row \"Font size\": popup [11|12|13|14|16|18|20|24] selected=2",
+      "  page \"Markdown\":",
+      "    form",
+      "      heading \"Preview\"",
+      "      control: checkbox \"Show the preview when a markdown file opens\"",
+      "      control: checkbox \"Scroll the preview with the text\" [checked]",
+  };
+  CHECK(headless::controlOutline(SettingsTabs) == expected);
+  const auto settings = headless::windowState(SettingsWindow);
+  CHECK(settings.title == "Settings");
+  CHECK(settings.style == 1);
+  // It goes with the last document.
+  CHECK(settings.closed);
+  CHECK(headless::windowState(EditorWindow).closed);
+}
+
+TEST_CASE("settings window opens once and a second Settings command brings it forward") {
+  headless::reset();
+  headless::pushCommand(CommandSettings);
+  headless::pushCommand(CommandSettings);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(countCalls("ps_ui_window_create(\"Settings\"") == 1);
+  CHECK(countCalls("ps_ui_window_show(10)") == 2);
+}
+
+TEST_CASE("settings window can be closed and opened again") {
+  headless::reset();
+  headless::pushCommand(CommandSettings);
+  headless::pushCloseWindow(SettingsWindow);
+  headless::pushCommand(CommandSettings);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(headless::windowState(SettingsWindow).closed);
+  CHECK(headless::windowState(EditorWindow).closed);
+  CHECK(countCalls("ps_ui_window_create(\"Settings\"") == 2);
+}
+
+TEST_CASE("settings toggles line numbers and wrapping in every tab at once") {
+  headless::reset();
+  headless::pushCommand(1);
+  headless::pushCommand(CommandSettings);
+  headless::pushToggleCheckBox(NumbersBox + 2); // the second tab took the handles 10 and 11
+  headless::pushToggleCheckBox(WrapBox + 2);
+  headless::pushCloseWindow(SecondWindow);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(headless::boolPref("lineNumbers", false));
+  CHECK_FALSE(headless::boolPref("wrapLines", true));
   CHECK(headless::lineNumbersVisible(2));
-  CHECK_FALSE(headless::menuItemChecked(8));
+  CHECK(headless::lineNumbersVisible(SecondView));
+  CHECK_FALSE(headless::lineWrapping(2));
+  CHECK_FALSE(headless::lineWrapping(SecondView));
+  // The View menu follows the check boxes.
+  CHECK(headless::menuItemChecked(7));
+  CHECK_FALSE(headless::menuItemChecked(9));
+}
+
+TEST_CASE("the View menu and the settings window stay in step") {
+  headless::reset();
+  headless::pushCommand(CommandSettings);
+  headless::pushCommand(7);
+  headless::pushCommand(9);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(headless::checkBoxChecked(NumbersBox));
+  CHECK_FALSE(headless::checkBoxChecked(WrapBox));
+  CHECK(headless::lineNumbersVisible(2));
+  CHECK_FALSE(headless::lineWrapping(2));
+}
+
+TEST_CASE("settings changes the font size of every tab and of new tabs") {
+  headless::reset();
+  headless::pushCommand(CommandSettings);
+  headless::pushSelectPopupItem(SizePopup, 6);
+  headless::pushCommand(1);
+  headless::pushCloseWindow(TabAfterSettings);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(headless::intPref("fontSize", 13) == 20);
+  CHECK(headless::fontSize(2) == 20);
+  CHECK(headless::fontSize(TabAfterSettings + 1) == 20);
+  CHECK(headless::popupSelected(SizePopup) == 6);
+}
+
+TEST_CASE("the first launch uses the default preferences") {
+  headless::reset();
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK_FALSE(headless::lineNumbersVisible(2));
+  CHECK(headless::lineWrapping(2));
+  CHECK(headless::fontSize(2) == 13);
+  CHECK(headless::previewScrollLock());
+  CHECK_FALSE(headless::menuItemChecked(7));
+  CHECK(headless::menuItemChecked(9));
+}
+
+TEST_CASE("the saved font size and scroll lock apply at launch") {
+  headless::reset();
+  headless::setIntPref("fontSize", 18);
+  headless::setBoolPref("lockScroll", false);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(headless::fontSize(2) == 18);
+  CHECK_FALSE(headless::previewScrollLock());
+}
+
+TEST_CASE("settings switches the scroll lock of the preview") {
+  headless::reset();
+  headless::pushCommand(CommandSettings);
+  headless::pushToggleCheckBox(LockBox);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK_FALSE(headless::boolPref("lockScroll", true));
+  CHECK_FALSE(headless::previewScrollLock());
+}
+
+TEST_CASE("restoring the last session can be switched off") {
+  const std::string kept = writeScratch("session_kept.txt", "kept");
+  headless::reset();
+  headless::setPrefList("session.files", {kept});
+  headless::pushCommand(CommandSettings);
+  headless::pushToggleCheckBox(RestoreBox);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK_FALSE(headless::boolPref("restoreSession", true));
+  CHECK(headless::windowState(EditorWindow).title == kept);
+
+  // A launch with the preference off leaves the saved session alone: the window stays untitled.
+  headless::reset();
+  headless::setPrefList("session.files", {kept});
+  headless::setBoolPref("restoreSession", false);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(headless::windowState(EditorWindow).title == "Untitled");
+}
+
+TEST_CASE("a markdown file opens with its preview when the preference is on") {
+  const std::string note = writeScratch("preview_note.md", "# Title\n");
+  const std::string plain = writeScratch("preview_plain.txt", "text\n");
+  headless::reset();
+  headless::setBoolPref("previewMarkdown", true);
+  headless::pushCommand(CommandOpen);
+  headless::pushOpenPanelAnswer(note);
+  headless::pushCommand(CommandOpen);
+  headless::pushOpenPanelAnswer(plain);
+  headless::pushCloseWindow(SecondWindow);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(headless::windowState(EditorWindow).preview);
+  CHECK_FALSE(headless::windowState(SecondWindow).preview);
+
+  headless::reset();
+  headless::pushCommand(CommandOpen);
+  headless::pushOpenPanelAnswer(note);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK_FALSE(headless::windowState(EditorWindow).preview);
+}
+
+TEST_CASE("settings turns the markdown preview preference on and off") {
+  headless::reset();
+  headless::pushCommand(CommandSettings);
+  headless::pushToggleCheckBox(PreviewBox);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(headless::boolPref("previewMarkdown", false));
+  CHECK(headless::checkBoxChecked(PreviewBox));
+}
+
+TEST_CASE("the app ends after the last document closes with the settings window open") {
+  headless::reset();
+  headless::pushCommand(1);
+  headless::pushCommand(CommandSettings);
+  headless::pushCloseWindow(EditorWindow);
+  headless::pushCloseWindow(SecondWindow);
+  runEditor();
+  CHECK(headless::windowState(EditorWindow).closed);
+  CHECK(headless::windowState(SecondWindow).closed);
+  CHECK(headless::windowState(12).closed); // the settings window, after the second tab's two handles
+}
+
+TEST_CASE("commands that arrive while the settings window is active act on a document") {
+  headless::reset();
+  headless::pushCommand(CommandSettings);
+  headless::pushCommand(1);
+  headless::pushCloseWindow(TabAfterSettings);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(countCalls("ps_ui_window_add_tab(") == 1);
+  CHECK(headless::windowState(SettingsWindow).style == 1);
 }
 
 

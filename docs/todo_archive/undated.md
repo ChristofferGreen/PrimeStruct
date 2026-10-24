@@ -297,3 +297,15 @@
     - the smoke test's snapshot of a PrimeStruct settings window (tabs, a form with a heading, check boxes and a pop-up) is a real PNG; scripted clicks on a check box and a pop-up item arrive in the program as control events (its title changes, the picture differs); full release gate green
   - stop_rule: the AppKit controls and style; the editor's window is TODO-5594.
   - notes: the snapshot (`cacheDisplayInRect`) draws the tab selector as an empty pill; the labels are not captured there, so the tab titles were not seen by eye.
+
+- [x] TODO-5594: The editor's settings window
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-24
+  - phase: Settings window (docs/NativeUiPlan.md section 15)
+  - parallel_track: settings-window
+  - scope: PrimeScroll gets a settings window: Command-Comma, "Settings..." in the application menu (it replaces "Start with Line Numbers"), a `PS_UI_WINDOW_SETTINGS` window with tabs General, Editor and Markdown. Settings, all kept as preferences and applied at once: `restoreSession` (default on: whether the last session's files come back at launch), `lineNumbers` (existing key, default off), `wrapLines` (default on), `fontSize` (default 13; a pop-up of 11, 12, 13, 14, 16, 18, 20, 24), `previewMarkdown` (default off: a file named `*.md` or `*.markdown` opens with its preview on), `lockScroll` (default on). The editor reads the preferences instead of carrying `lineNumbers` and `wrapLines` through its functions; the View menu's Show Line Numbers, Wrap Lines items and the settings check boxes stay in step; the settings window does not count as a document (the app ends when no document window is left and the settings window closes with it) and opens once (a second Command-Comma brings it forward).
+  - acceptance:
+    - editor scenarios on the VM, the optexe editor and the native editor through the mirror: Command-Comma builds the window, the acceptance gate pins its whole outline with `headless::controlOutline`, toggling each control changes its preference and the open tabs at once, the first launch uses the defaults, `restoreSession` off skips the session, `previewMarkdown` turns a markdown file's preview on, the app ends after the last document closes with the settings window open; the installed PrimeScroll shows the window; full release gate green
+  - stop_rule: the editor's settings window and preferences.
+  - notes: the preferences are plain `App.boolPref/intPref` calls; the editor tests drive the window with `headless::pushToggleCheckBox` and `pushSelectPopupItem` (control handles follow creation order) and run through the VM, optexe and native mirrors.
