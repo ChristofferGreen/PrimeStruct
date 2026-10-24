@@ -274,8 +274,7 @@ NSSize controlFittingSize(uint64_t handle) {
   NSTabView *tabs = (NSTabView *)info->view;
   NSSize best = NSZeroSize;
   for (NSTabViewItem *item in tabs.tabViewItems) {
-    const NSSize page = controlFittingSize(static_cast<uint64_t>([item.identifier unsignedLongLongValue]));
-    best.width = std::max(best.width, page.width + 2 * PageMargin);
+    const NSSize page = controlFittingSize(static_cast<uint64_t>([item.identifier unsignedLongLongValue]));    best.width = std::max(best.width, page.width + 2 * PageMargin);
     best.height = std::max(best.height, page.height + 2 * PageMargin);
   }
   const NSRect probe = NSMakeRect(0, 0, 400, 300);
@@ -2058,6 +2057,9 @@ uint64_t ps_ui_checkbox_create(const char *title, bool checked) {
   }
   NSButton *box = [NSButton checkboxWithTitle:toNSString(title) target:controller() action:@selector(controlChanged:)];
   box.state = checked ? NSControlStateValueOn : NSControlStateValueOff;
+  // A title stays on one line: wrapping would make the control's fitting width the width of a word.
+  box.lineBreakMode = NSLineBreakByClipping;
+  [box setContentCompressionResistancePriority:NSLayoutPriorityRequired forOrientation:NSLayoutConstraintOrientationHorizontal];
   return createControl(ControlInfo::Kind::CheckBox, box);
 }
 
@@ -2163,7 +2165,9 @@ bool ps_ui_form_add_control(uint64_t form, uint64_t control) {
   if (child == nullptr) {
     return false;
   }
-  [(NSGridView *)info->view addRowWithViews:@[ [NSGridCell emptyContentView], child->view ]];
+  // The blank first cell is an empty label, not the grid's empty-content marker: a column of only markers and
+  // merged headings takes no width, and the controls beside it would not count in the form's size.
+  [(NSGridView *)info->view addRowWithViews:@[ [NSTextField labelWithString:@""], child->view ]];
   child->parent = form;
   return true;
 }
