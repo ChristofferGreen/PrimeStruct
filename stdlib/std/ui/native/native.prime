@@ -163,7 +163,7 @@ ps_ui_window_refresh_preview([u64] window) {
 }
 
 [host return<bool>]
-ps_ui_preview_set_scroll_lock([bool] on) {
+ps_ui_preview_set_scroll_mode([i32] mode) {
 }
 
 [host return<bool>]
@@ -937,10 +937,11 @@ App() {
     return(created)
   }
 
-  // Whether the source and the page of a markdown preview scroll together (on by default).
+  // How the source and the page of a markdown preview scroll together: 0 independently, 1 linearly (the same
+  // fraction), 2 by block (the same source line; the default), 3 the page follows the text cursor.
   [public return<bool>]
-  setPreviewScrollLock([bool] on) {
-    return(ps_ui_preview_set_scroll_lock(on))
+  setPreviewScrollMode([i32] mode) {
+    return(ps_ui_preview_set_scroll_mode(mode))
   }
 
   [public return<AppEvent>]

@@ -73,7 +73,7 @@ template <class Binder> void forEachBinding(Binder &&bindOne) {
   bindOne("ps_ui_window_set_style", [](uint64_t window, int32_t style) { return ps_ui_window_set_style(window, style); });
   bindOne("ps_ui_text_view_set_font_size",
           [](uint64_t view, int32_t points) { return ps_ui_text_view_set_font_size(view, points); });
-  bindOne("ps_ui_preview_set_scroll_lock", [](bool on) { return ps_ui_preview_set_scroll_lock(on); });
+  bindOne("ps_ui_preview_set_scroll_mode", [](int32_t mode) { return ps_ui_preview_set_scroll_mode(mode); });
   bindOne("ps_ui_window_set_content",
           [](uint64_t window, uint64_t widget) { return ps_ui_window_set_content(window, widget); });
   bindOne("ps_ui_window_set_edited",

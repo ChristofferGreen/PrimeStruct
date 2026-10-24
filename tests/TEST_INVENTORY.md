@@ -11600,8 +11600,8 @@ Total: 9982 test cases across 566 files.
 - the View menu and the settings window stay in step
 - settings changes the font size of every tab and of new tabs
 - the first launch uses the default preferences
-- the saved font size and scroll lock apply at launch
-- settings switches the scroll lock of the preview
+- the saved font size and scroll mode apply at launch
+- settings chooses how the preview scrolls with the source
 - restoring the last session can be switched off
 - a markdown file opens with its preview when the preference is on
 - settings turns the markdown preview preference on and off

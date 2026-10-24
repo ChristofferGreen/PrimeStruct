@@ -53,7 +53,7 @@ if(NOT rc EQUAL 0)
   message(FATAL_ERROR "editor bundle failed (${rc}): ${out}${err}")
 endif()
 set(ENV{PRIMESTRUCT_UI_OPEN} "${SOURCE_DIR}/tests/fixtures/ui/screenshot/showcase.prime")
-foreach(shot gutter code menu tabs preview longtop scrolltext scrollpreview scrolluneven)
+foreach(shot gutter code menu tabs preview longtop scrolltext scrollpreview scrolluneven scrollpageuneven scrollpagelong)
   set(snapshot "${WORK_DIR}/editor_${shot}.png")
   set(ENV{PRIMESTRUCT_UI_SNAPSHOT} "${snapshot}")
   if(shot STREQUAL "menu")
@@ -89,10 +89,20 @@ foreach(shot gutter code menu tabs preview longtop scrolltext scrollpreview scro
   endif()
   # A page with a tall code block and a table, the source scrolled to the middle: the page follows by source
   # line, so both views show the same part of the text although the blocks differ in height.
-  if(shot STREQUAL "scrolluneven")
+  if(shot STREQUAL "scrollpagelong")
+    # A long page scrolled a third of the way: the source, whose lower part is not laid out yet, must follow.
+    set(ENV{PRIMESTRUCT_UI_OPEN} "${SOURCE_DIR}/tests/fixtures/ui/screenshot/preview_long.md")
+    set(ENV{PRIMESTRUCT_UI_COMMANDS} "10")
+    set(ENV{PRIMESTRUCT_UI_SCROLL} "preview:0.33")
+  endif()
+  if(shot STREQUAL "scrolluneven" OR shot STREQUAL "scrollpageuneven")
     set(ENV{PRIMESTRUCT_UI_OPEN} "${SOURCE_DIR}/tests/fixtures/ui/screenshot/preview_uneven.md")
     set(ENV{PRIMESTRUCT_UI_COMMANDS} "10")
+    # The same place reached from the other side: the page scrolled halfway, the source must follow it.
     set(ENV{PRIMESTRUCT_UI_SCROLL} "text:0.5")
+    if(shot STREQUAL "scrollpageuneven")
+      set(ENV{PRIMESTRUCT_UI_SCROLL} "preview:0.5")
+    endif()
   endif()
   # "gutter": the bar of line numbers, switched on through the preference override.
   if(shot STREQUAL "gutter")

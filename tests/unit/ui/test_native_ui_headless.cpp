@@ -698,7 +698,7 @@ TEST_CASE("controls need a started app and bad handles fail") {
   CHECK(ps_ui_popup_create() == 0);
   CHECK(ps_ui_form_create() == 0);
   CHECK(ps_ui_tabs_create() == 0);
-  CHECK_FALSE(ps_ui_preview_set_scroll_lock(false));
+  CHECK_FALSE(ps_ui_preview_set_scroll_mode(PS_UI_SCROLL_OFF));
   REQUIRE(ps_ui_init("Test"));
   CHECK_FALSE(ps_ui_label_set_text(999, "x"));
   CHECK_FALSE(ps_ui_checkbox_checked(999));
@@ -875,11 +875,14 @@ TEST_CASE("a text view has a font size and the preview's scroll lock can be swit
   CHECK_FALSE(ps_ui_text_view_set_font_size(999, 12));
   CHECK(headless::fontSize(view) == 96);
 
-  CHECK(headless::previewScrollLock());
-  CHECK(ps_ui_preview_set_scroll_lock(false));
-  CHECK_FALSE(headless::previewScrollLock());
-  CHECK(ps_ui_preview_set_scroll_lock(true));
-  CHECK(headless::previewScrollLock());
+  CHECK(headless::previewScrollMode() == PS_UI_SCROLL_BLOCKS);
+  for (const int32_t mode : {PS_UI_SCROLL_OFF, PS_UI_SCROLL_LINEAR, PS_UI_SCROLL_CURSOR, PS_UI_SCROLL_BLOCKS}) {
+    CHECK(ps_ui_preview_set_scroll_mode(mode));
+    CHECK(headless::previewScrollMode() == mode);
+  }
+  CHECK_FALSE(ps_ui_preview_set_scroll_mode(-1));
+  CHECK_FALSE(ps_ui_preview_set_scroll_mode(4));
+  CHECK(headless::previewScrollMode() == PS_UI_SCROLL_BLOCKS);
 }
 
 TEST_CASE("integer preferences keep their value and answer the fallback when unset") {

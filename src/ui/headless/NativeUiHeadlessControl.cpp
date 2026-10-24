@@ -282,7 +282,7 @@ int32_t fontSize(uint64_t view) {
   return v != nullptr ? v->fontSize : 0;
 }
 
-bool previewScrollLock() { return state().scrollLock; }
+int32_t previewScrollMode() { return state().scrollMode; }
 
 bool checkBoxChecked(uint64_t checkBox) {
   const Control *c = control(checkBox);

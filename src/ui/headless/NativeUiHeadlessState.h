@@ -91,7 +91,7 @@ struct State {
   uint64_t activeWindow = 0;
   std::map<uint64_t, TextView> textViews;
   std::map<uint64_t, Control> controls;
-  bool scrollLock = true; // the preview's scroll lock
+  int32_t scrollMode = 2; // the preview's scroll mode (PS_UI_SCROLL_BLOCKS)
   std::map<uint64_t, Menu> menus;
   std::vector<uint64_t> menuBar;
   std::deque<Action> actions;

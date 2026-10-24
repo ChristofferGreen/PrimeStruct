@@ -219,8 +219,13 @@ build_settings([App] app) {
   markdown.heading("Preview")
   [CheckBox] preview{app.checkBox("Show the preview when a markdown file opens", app.boolPref("previewMarkdown", false))}
   markdown.control(preview.widget())
-  [CheckBox] lock{app.checkBox("Scroll the preview with the text", app.boolPref("lockScroll", true))}
-  markdown.control(lock.widget())
+  [Popup] lock{app.popup()}
+  lock.addItem("Independently")
+  lock.addItem("Linearly")
+  lock.addItem("By block")
+  lock.addItem("With the cursor")
+  lock.select(app.intPref("scrollMode", 2i32))
+  markdown.row("Scroll source and preview", lock.widget())
 
   [Tabs] tabs{app.tabs()}
   tabs.add("General", general.widget())
@@ -501,7 +506,7 @@ refresh_recent([Menu] recent) {
 main([array<string>] args) {
   [App] app{start_app("PrimeScroll")}
   [Settings mut] settings{Settings{}}
-  app.setPreviewScrollLock(app.boolPref("lockScroll", true))
+  app.setPreviewScrollMode(app.intPref("scrollMode", 2i32))
   [Window] first{app.window("Untitled", 720i32, 480i32)}
   first.setAutosaveName("PrimeScroll")
   [TextView] firstView{app.textView()}
@@ -648,7 +653,7 @@ main([array<string>] args) {
       [CheckBox] numbersBox{[handle] settings.numbers}
       [CheckBox] wrapBox{[handle] settings.wrap}
       [CheckBox] previewBox{[handle] settings.preview}
-      [CheckBox] lockBox{[handle] settings.lock}
+      [Popup] lockChoice{[handle] settings.lock}
       [Popup] sizeChoice{[handle] settings.size}
       if(changedControl == settings.restore) {
         app.setBoolPref("restoreSession", restoreBox.isChecked())
@@ -663,8 +668,8 @@ main([array<string>] args) {
         app.setBoolPref("previewMarkdown", previewBox.isChecked())
       }
       if(changedControl == settings.lock) {
-        app.setBoolPref("lockScroll", lockBox.isChecked())
-        app.setPreviewScrollLock(lockBox.isChecked())
+        app.setIntPref("scrollMode", lockChoice.selected())
+        app.setPreviewScrollMode(lockChoice.selected())
       }
       if(changedControl == settings.size) {
         app.setIntPref("fontSize", font_size_at(sizeChoice.selected()))

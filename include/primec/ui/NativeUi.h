@@ -216,8 +216,17 @@ bool ps_ui_window_refresh_preview(uint64_t window);
  * preview, instead of the state ps_ui_menu_set_checked gave them. False for a bad menu or an unknown
  * command id. */
 bool ps_ui_menu_follow_preview(uint64_t menu, int32_t commandId);
-/* Whether the source and the page of a preview scroll together (on by default). */
-bool ps_ui_preview_set_scroll_lock(bool on);
+/* How the source and the page of a preview scroll together: PS_UI_SCROLL_OFF (independently),
+ * PS_UI_SCROLL_LINEAR (the same fraction of what each can scroll), PS_UI_SCROLL_BLOCKS (the same source line,
+ * by the page's blocks; the default) or PS_UI_SCROLL_CURSOR (the page follows the text cursor). False for any
+ * other value. */
+enum {
+  PS_UI_SCROLL_OFF = 0,
+  PS_UI_SCROLL_LINEAR = 1,
+  PS_UI_SCROLL_BLOCKS = 2,
+  PS_UI_SCROLL_CURSOR = 3,
+};
+bool ps_ui_preview_set_scroll_mode(int32_t mode);
 
 /* Text view -------------------------------------------------------------- */
 

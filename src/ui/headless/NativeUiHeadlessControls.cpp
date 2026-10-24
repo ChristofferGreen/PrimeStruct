@@ -206,11 +206,11 @@ bool ps_ui_text_view_set_font_size(uint64_t view, int32_t points) {
   return loggedFlag(call, ok);
 }
 
-bool ps_ui_preview_set_scroll_lock(bool on) {
-  const std::string call = "ps_ui_preview_set_scroll_lock(" + flag(on) + ")";
-  const bool ok = usable();
+bool ps_ui_preview_set_scroll_mode(int32_t mode) {
+  const std::string call = "ps_ui_preview_set_scroll_mode(" + std::to_string(mode) + ")";
+  const bool ok = usable() && mode >= PS_UI_SCROLL_OFF && mode <= PS_UI_SCROLL_CURSOR;
   if (ok) {
-    state().scrollLock = on;
+    state().scrollMode = mode;
   }
   return loggedFlag(call, ok);
 }

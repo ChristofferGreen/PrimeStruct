@@ -79,8 +79,8 @@ bool lineNumbersVisible(uint64_t textView);
 bool lineWrapping(uint64_t textView);
 // The point size set with ps_ui_text_view_set_font_size (0 when never set).
 int32_t fontSize(uint64_t textView);
-// Whether the preview's source and page scroll together (on by default).
-bool previewScrollLock();
+// How the preview's source and page scroll together (PS_UI_SCROLL_*; blocks by default).
+int32_t previewScrollMode();
 bool checkBoxChecked(uint64_t checkBox);
 // The chosen item of a pop-up (-1 for none or a bad handle).
 int32_t popupSelected(uint64_t popup);

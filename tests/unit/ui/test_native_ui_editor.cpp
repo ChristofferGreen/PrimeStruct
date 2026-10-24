@@ -480,7 +480,7 @@ constexpr uint64_t NumbersBox = 14;
 constexpr uint64_t WrapBox = 15;
 constexpr uint64_t SizePopup = 16;
 constexpr uint64_t PreviewBox = 18;
-constexpr uint64_t LockBox = 19;
+constexpr uint64_t ScrollPopup = 19;
 constexpr uint64_t SettingsTabs = 20;
 constexpr uint64_t TabAfterSettings = 21; // a New command after the settings window: window 21, view 22
 constexpr int32_t CommandSettings = 8;
@@ -507,7 +507,7 @@ TEST_CASE("settings window shows the preferences in tabs and is not a document")
       "    form",
       "      heading \"Preview\"",
       "      control: checkbox \"Show the preview when a markdown file opens\"",
-      "      control: checkbox \"Scroll the preview with the text\" [checked]",
+      "      row \"Scroll source and preview\": popup [Independently|Linearly|By block|With the cursor] selected=2",
   };
   CHECK(headless::controlOutline(SettingsTabs) == expected);
   const auto settings = headless::windowState(SettingsWindow);
@@ -594,29 +594,39 @@ TEST_CASE("the first launch uses the default preferences") {
   CHECK_FALSE(headless::lineNumbersVisible(2));
   CHECK(headless::lineWrapping(2));
   CHECK(headless::fontSize(2) == 13);
-  CHECK(headless::previewScrollLock());
+  CHECK(headless::previewScrollMode() == 2);
   CHECK_FALSE(headless::menuItemChecked(7));
   CHECK(headless::menuItemChecked(9));
 }
 
-TEST_CASE("the saved font size and scroll lock apply at launch") {
+TEST_CASE("the saved font size and scroll mode apply at launch") {
   headless::reset();
   headless::setIntPref("fontSize", 18);
-  headless::setBoolPref("lockScroll", false);
+  headless::setIntPref("scrollMode", 3);
   headless::pushCloseWindow(EditorWindow);
   runEditor();
   CHECK(headless::fontSize(2) == 18);
-  CHECK_FALSE(headless::previewScrollLock());
+  CHECK(headless::previewScrollMode() == 3);
 }
 
-TEST_CASE("settings switches the scroll lock of the preview") {
+TEST_CASE("settings chooses how the preview scrolls with the source") {
   headless::reset();
   headless::pushCommand(CommandSettings);
-  headless::pushToggleCheckBox(LockBox);
+  headless::pushSelectPopupItem(ScrollPopup, 1);
   headless::pushCloseWindow(EditorWindow);
   runEditor();
-  CHECK_FALSE(headless::boolPref("lockScroll", true));
-  CHECK_FALSE(headless::previewScrollLock());
+  CHECK(headless::intPref("scrollMode", 2) == 1);
+  CHECK(headless::previewScrollMode() == 1);
+  CHECK(headless::popupSelected(ScrollPopup) == 1);
+
+  headless::reset();
+  headless::setIntPref("scrollMode", 3);
+  headless::pushCommand(CommandSettings);
+  headless::pushSelectPopupItem(ScrollPopup, 0);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(headless::intPref("scrollMode", 2) == 0);
+  CHECK(headless::previewScrollMode() == 0);
 }
 
 TEST_CASE("restoring the last session can be switched off") {

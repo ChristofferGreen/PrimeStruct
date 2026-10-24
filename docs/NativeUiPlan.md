@@ -387,7 +387,12 @@ page follows the text as it is edited. It is done when the installed native Prim
   starts on (`data-line`, `markdownToHtml(text, true)`), the text view reports the line, with the fraction through it,
   at its top, and the page scrolls to that place by interpolating between the tops of the blocks around it (and the
   other way round), so a tall code block or table does not put the views out of step; the end of either view is the end
-  of the other, and a view that cannot scroll leaves the other alone. The text view is observed directly (the bounds
+  of the other, and a view that cannot scroll leaves the other alone. This is one of four scroll modes
+  (`ps_ui_preview_set_scroll_mode`): independently; linearly (the same fraction of what each can scroll); by block
+  (above, the default); and with the cursor (the page scrolls when the text cursor moves, putting its line a third of
+  the page's height below the top, and scrolling either view alone moves nothing). The text is laid out in full before a
+  line is mapped to a position, because TextKit only estimates the height of what it has not laid out and a line far
+  down the source was put in the wrong place. The text view is observed directly (the bounds
   notification of its clip view) and moves the page with a script; the page has no scroll notification, so a local event
   monitor sees the wheel, keys and drags over it, reads its position back with a script and moves the text view (again
   after 250 ms, for the page's scrolling animation). A page that finishes loading goes to where the text view is, so an
@@ -413,8 +418,8 @@ step with it.
 - **General:** Reopen the files of the last session (`restoreSession`, on).
 - **Editor:** Show line numbers (`lineNumbers`, off; it replaced the application menu's Start with Line Numbers),
   Wrap long lines (`wrapLines`, on), Font size (`fontSize`, 13; a pop-up of 11, 12, 13, 14, 16, 18, 20 and 24).
-- **Markdown:** Open markdown files with the preview on (`previewMarkdown`, off), and Scroll the source and the preview
-  together (`lockScroll`, on).
+- **Markdown:** Open markdown files with the preview on (`previewMarkdown`, off), and how the source and the preview scroll
+  together (`scrollMode`, by block: independently, linearly, by block or with the cursor).
 - **Controls.** The ABI grows a small widget set (section 4, Controls and forms): labels, check boxes, pop-ups, forms,
   tabs, the settings window style and the control-changed event. The headless backend prints a control tree as text
   (`headless::controlOutline`), so an acceptance test can pin the whole window like the menu bar's outline.

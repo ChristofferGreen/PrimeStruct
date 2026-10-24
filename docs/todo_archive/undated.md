@@ -320,3 +320,15 @@
   - acceptance:
     - markdown tests pin the tags through lists, quotes, tables, code, setext headings and CRLF; the AppKit smoke test's `scrolluneven` picture (a page with a tall code block and a table, the source scrolled halfway) shows the same table header at the top of both views; full release gate green
   - stop_rule: the line mapping of blocks and the lock; line-accurate inside very long blocks is not attempted.
+
+- [x] TODO-5596: Preview scroll modes
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-24
+  - phase: Native PrimeScroll (docs/NativeUiPlan.md section 14)
+  - parallel_track: markdown-preview
+  - scope: Scrolling the preview put the text view in the wrong place (far down a long file the source lagged the page by sections: TextKit's position of text it had not laid out was an estimate), and one lock does not suit every use. The text is now laid out in full before a line is mapped to a position (TextKit 2 layout fragments), and `ps_ui_preview_set_scroll_lock(bool)` became `ps_ui_preview_set_scroll_mode(mode)` with `PS_UI_SCROLL_OFF`, `LINEAR` (the same fraction), `BLOCKS` (the same source line; the default) and `CURSOR` (the page follows the text cursor, `textViewDidChangeSelection:`). The headless backend, bindings, stdlib (`App.setPreviewScrollMode`) and the editor follow: the Markdown tab of the settings window has a "Scroll source and preview" pop-up kept as the `scrollMode` preference (replacing `lockScroll`).
+  - acceptance:
+    - headless and bindings tests for the mode function; editor tests for the preference (default, saved value at launch, the pop-up of the settings window, the outline); the AppKit smoke snapshots `scrollpagelong` (page scrolled a third of a long note) and `scrollpageuneven` show the same part of the text in both views; full release gate green
+  - stop_rule: the scroll modes and the layout fix.
+  - notes: the cursor mode is not covered by a picture (the snapshot harness does not move a cursor) and the real wheel path was not tried by hand.

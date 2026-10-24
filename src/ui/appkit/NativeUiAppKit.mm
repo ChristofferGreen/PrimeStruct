@@ -92,7 +92,7 @@ struct State {
   std::unordered_map<uint64_t, bool> previewSyncing;       // the page is moving the text view right now
   std::unordered_map<uint64_t, id> previewObservers;       // the observer of the text view's scrolling
   id previewEventMonitor = nil;                            // sees the events that scroll a page
-  bool previewScrollLock = true;                           // the source and the page scroll together
+  int32_t previewScrollMode = PS_UI_SCROLL_BLOCKS;         // how the source and the page scroll together
   std::unordered_map<uint64_t, bool> previewRefreshPending;
   std::unordered_set<int32_t> previewMenuItems; // command ids whose check mark follows the active preview
   std::unordered_map<uint64_t, ControlInfo> controls;
@@ -467,6 +467,32 @@ double textScrollLine(NSScrollView *scroll) {
   return static_cast<double>(spot.line) + through;
 }
 
+// Lays the whole text out (TextKit estimates the height of what it has not laid out yet, and a line far down
+// would be put in the wrong place); notes are small, and a huge text is left to the estimate.
+void ensureTextLayout(NSTextView *view) {
+  NSTextLayoutManager *layout = view.textLayoutManager;
+  if (layout != nil && view.string.length < 4000000) {
+    [layout ensureLayoutForRange:layout.documentRange];
+  }
+}
+
+// The y of a place in a line, in the text view's coordinates.
+CGFloat textLineY(NSTextView *view, NSUInteger lineStart, double through) {
+  NSTextLayoutManager *layout = view.textLayoutManager;
+  if (layout != nil) {
+    NSTextContentManager *content = layout.textContentManager;
+    id<NSTextLocation> location = [content locationFromLocation:content.documentRange.location
+                                                     withOffset:static_cast<NSInteger>(lineStart)];
+    NSTextLayoutFragment *fragment = location != nil ? [layout textLayoutFragmentForLocation:location] : nil;
+    if (fragment != nil) {
+      const NSRect frame = fragment.layoutFragmentFrame;
+      return frame.origin.y + frame.size.height * through + view.textContainerOrigin.y;
+    }
+  }
+  const NSRect screen = [view firstRectForCharacterRange:NSMakeRange(lineStart, 0) actualRange:nil];
+  return [view convertRect:[view.window convertRectFromScreen:screen] fromView:nil].origin.y;
+}
+
 // Scrolls the text view so that the place `line` is at the top.
 void setTextScrollLine(NSScrollView *scroll, double line) {
   NSTextView *view = scroll.documentView;
@@ -474,15 +500,12 @@ void setTextScrollLine(NSScrollView *scroll, double line) {
   if (range <= 0) {
     return;
   }
+  ensureTextLayout(view);
   CGFloat y = range;
   if (line < textLineCount(view)) {
     const LineSpot spot = lineSpotOfLine(view.string, static_cast<NSUInteger>(std::max(line, 0.0)));
     if (spot.found) {
-      const double through = std::clamp(line - std::floor(line), 0.0, 1.0);
-      const NSUInteger index = spot.start + static_cast<NSUInteger>(through * spot.length);
-      const NSRect screen = [view firstRectForCharacterRange:NSMakeRange(index, 0) actualRange:nil];
-      const NSRect local = [view convertRect:[view.window convertRectFromScreen:screen] fromView:nil];
-      y = local.origin.y - view.textContainerInset.height;
+      y = textLineY(view, spot.start, std::clamp(line - std::floor(line), 0.0, 1.0)) - view.textContainerInset.height;
     }
   }
   NSPoint origin = scroll.contentView.bounds.origin;
@@ -508,29 +531,37 @@ NSString *webLineScript(double total) {
                        WebBlocksScript, total];
 }
 
-NSString *webScrollToLineScript(double line, double total) {
+// Scrolls the page so that the place `line` is `above` of the page's height below its top.
+NSString *webScrollToLineScript(double line, double total, double above) {
   return [NSString
-      stringWithFormat:@"(function(L,N){%@if(L>=N){window.scrollTo(0,max>0?max:0);return;}"
+      stringWithFormat:@"(function(L,N,U){%@if(L>=N&&U==0){window.scrollTo(0,max>0?max:0);return;}"
                        @"if(!a.length){window.scrollTo(0,max>0?max*L/N:0);return;}"
                        @"var i=-1;for(var k=0;k<a.length;k++){if(a[k][0]<=L)i=k;else break;}var y;"
                        @"if(i<0){y=a[0][0]>0?a[0][1]*L/a[0][0]:0;}"
                        @"else{var el=N,ey=H;for(var k=i+1;k<a.length;k++){if(a[k][0]>a[i][0]){el=a[k][0];ey=a[k][1];break;}}"
                        @"y=el>a[i][0]?a[i][1]+(ey-a[i][1])*(L-a[i][0])/(el-a[i][0]):a[i][1];}"
-                       @"window.scrollTo(0,Math.max(0,y));})(%f,%f)",
-                       WebBlocksScript, line, total];
+                       @"window.scrollTo(0,Math.max(0,y-U*window.innerHeight));})(%f,%f,%f)",
+                       WebBlocksScript, line, total, above];
 }
 
-// A fraction of what the page can scroll (snapshot runs use it to scroll the page the way the user would).
+// A fraction of what the page can scroll (linear scrolling, and snapshot runs scrolling the page).
 NSString *webScrollScript(double fraction) {
   return [NSString stringWithFormat:@"(function(){var h=document.documentElement.scrollHeight-window.innerHeight;"
                                     @"window.scrollTo(0,h>0?%f*h:0);})()",
                                     fraction];
 }
 
+NSString *const WebFractionScript =
+    @"(function(){var h=document.documentElement.scrollHeight-window.innerHeight;return h>0?window.scrollY/h:0;})()";
+
+bool scrollsTogether(const State &s) {
+  return s.previewScrollMode == PS_UI_SCROLL_LINEAR || s.previewScrollMode == PS_UI_SCROLL_BLOCKS;
+}
+
 // The page follows the text view.
 void syncWebFromText(uint64_t window, bool force) {
   State &s = state();
-  if (!s.previewScrollLock) {
+  if (!scrollsTogether(s)) {
     return;
   }
   NSScrollView *scroll = previewTextScroll(window);
@@ -538,22 +569,27 @@ void syncWebFromText(uint64_t window, bool force) {
   if (scroll == nil || web == s.previewWebs.end()) {
     return;
   }
-  const double line = textScrollLine(scroll);
+  const bool linear = s.previewScrollMode == PS_UI_SCROLL_LINEAR;
+  if (!linear) {
+    ensureTextLayout(scroll.documentView);
+  }
+  const double place = linear ? textScrollFraction(scroll) : textScrollLine(scroll);
   const auto last = s.previewFraction.find(window);
-  if (!force && last != s.previewFraction.end() && std::fabs(last->second - line) < 0.01) {
+  if (!force && last != s.previewFraction.end() && std::fabs(last->second - place) < (linear ? 0.0005 : 0.01)) {
     return;
   }
-  s.previewFraction[window] = line;
+  s.previewFraction[window] = place;
   s.previewScriptsPending[window] += 1;
-  evaluateScript(web->second, webScrollToLineScript(line, textLineCount(scroll.documentView)), ^(id) {
+  NSString *script = linear ? webScrollScript(place) : webScrollToLineScript(place, textLineCount(scroll.documentView), 0);
+  evaluateScript(web->second, script, ^(id) {
     state().previewScriptsPending[window] -= 1;
   });
 }
 
-// The text view follows the page: read which line the page is at, then move the text view there.
+// The text view follows the page: read where the page is, then move the text view there.
 void syncTextFromWeb(uint64_t window) {
   State &s = state();
-  if (!s.previewScrollLock) {
+  if (!scrollsTogether(s)) {
     return;
   }
   const auto web = s.previewWebs.find(window);
@@ -561,20 +597,44 @@ void syncTextFromWeb(uint64_t window) {
   if (web == s.previewWebs.end() || textScroll == nil) {
     return;
   }
+  const bool linear = s.previewScrollMode == PS_UI_SCROLL_LINEAR;
   s.previewScriptsPending[window] += 1;
-  evaluateScript(web->second, webLineScript(textLineCount(textScroll.documentView)), ^(id result) {
+  NSString *script = linear ? WebFractionScript : webLineScript(textLineCount(textScroll.documentView));
+  evaluateScript(web->second, script, ^(id result) {
     State &now = state();
     now.previewScriptsPending[window] -= 1;
     NSScrollView *scroll = previewTextScroll(window);
     if (scroll == nil || ![result respondsToSelector:@selector(doubleValue)]) {
       return;
     }
-    const double line = [result doubleValue];
-    now.previewFraction[window] = line;
+    const double place = [result doubleValue];
+    now.previewFraction[window] = place;
     now.previewSyncing[window] = true;
-    setTextScrollLine(scroll, line);
+    if (linear) {
+      setTextScrollFraction(scroll, std::clamp(place, 0.0, 1.0));
+    } else {
+      setTextScrollLine(scroll, place);
+    }
     now.previewSyncing[window] = false;
   });
+}
+
+// The page follows the text cursor: the line it is on is put a third of the page's height below the top.
+void syncWebToCursor(NSTextView *view) {
+  State &s = state();
+  const uint64_t window = handleOf(view.window);
+  const auto web = s.previewWebs.find(window);
+  if (s.previewScrollMode != PS_UI_SCROLL_CURSOR || web == s.previewWebs.end() || !previewOn(window)) {
+    return;
+  }
+  const NSUInteger index = view.selectedRange.location;
+  const LineSpot spot = lineSpotAtIndex(view.string, index);
+  const double through = spot.length > 0 ? static_cast<double>(std::min(index, spot.start + spot.length) - spot.start) / spot.length : 0;
+  s.previewScriptsPending[window] += 1;
+  evaluateScript(web->second, webScrollToLineScript(static_cast<double>(spot.line) + through, textLineCount(view), 0.33),
+                 ^(id) {
+                   state().previewScriptsPending[window] -= 1;
+                 });
 }
 
 // Navigation is the program's to refuse: the page the preview loads is allowed, a click on a link opens
@@ -827,6 +887,14 @@ void drawPreviewWeb(uint64_t window, NSView *view, NSBitmapImageRep *rep) {
   PS_TRACE(@"textDidChange view=%llu window=%llu", widget, handleOf(view.window));
   state().modified[widget] = true;
   enqueue(PS_UI_EVENT_TEXT_CHANGED, handleOf(view.window), widget);
+}
+
+// With the cursor scroll mode the preview follows the caret (and the selection's start).
+- (void)textViewDidChangeSelection:(NSNotification *)notification {
+  NSTextView *view = notification.object;
+  if ([view isKindOfClass:[NSTextView class]]) {
+    syncWebToCursor(view);
+  }
 }
 @end
 
@@ -2383,11 +2451,11 @@ bool ps_ui_text_view_set_font_size(uint64_t view, int32_t points) {
   return true;
 }
 
-bool ps_ui_preview_set_scroll_lock(bool on) {
-  if (!usable()) {
+bool ps_ui_preview_set_scroll_mode(int32_t mode) {
+  if (!usable() || mode < PS_UI_SCROLL_OFF || mode > PS_UI_SCROLL_CURSOR) {
     return false;
   }
-  state().previewScrollLock = on;
+  state().previewScrollMode = mode;
   return true;
 }
 

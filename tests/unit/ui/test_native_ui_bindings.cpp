@@ -192,7 +192,7 @@ TEST_CASE("native ui bindings cover every ABI function once") {
                                "ps_ui_tabs_add(u64, string, u64) -> bool",
                                "ps_ui_window_set_style(u64, i32) -> bool",
                                "ps_ui_text_view_set_font_size(u64, i32) -> bool",
-                               "ps_ui_preview_set_scroll_lock(bool) -> bool"}) {
+                               "ps_ui_preview_set_scroll_mode(i32) -> bool"}) {
     CHECK_MESSAGE(std::find(signatures.begin(), signatures.end(), expected) != signatures.end(), expected);
   }
   std::vector<std::string> names;
