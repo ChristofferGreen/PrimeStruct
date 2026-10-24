@@ -285,3 +285,15 @@
   - acceptance:
     - headless tests (controls need a started app, state of labels, check boxes and pop-ups, forms and tabs with their outline and holder rules, a window showing them, the user's changes as events, a settings window never a tab, font size, scroll lock), the bindings list (88 functions) and a PrimeStruct settings program built from the stdlib controls (exit code from its events and state) pass; the editor scenarios still pass on the VM, the optexe editor and the native editor; full release gate green
   - stop_rule: the ABI, the headless backend, the bindings and the stdlib; the AppKit controls are TODO-5593.
+
+- [x] TODO-5593: AppKit controls and the settings window style
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-24
+  - phase: Settings window (docs/NativeUiPlan.md section 15)
+  - parallel_track: settings-window
+  - scope: The AppKit backend (`NativeUiAppKit.mm`, static library and dylib) answers the controls of TODO-5592: labels (`NSTextField`), check boxes (`NSButton` switches), pop-ups (`NSPopUpButton`), forms (an `NSGridView` with a trailing-aligned label column, a control column and bold heading rows), tabs (`NSTabView`), a window whose content is a control, `ps_ui_window_set_style` (a settings window: no tabbing, no resize, minimize or zoom, sized to its content and centered), `ps_ui_text_view_set_font_size` (kept through highlighting) and the control events (`PS_UI_EVENT_CONTROL_CHANGED` from the control's action, with the control and its window). Snapshot mode clicks controls with `PRIMESTRUCT_UI_CLICK` (`check:H`, `popup:H:I`); `tests/fixtures/ui/screenshot/settings_demo.prime` is the picture.
+  - acceptance:
+    - the smoke test's snapshot of a PrimeStruct settings window (tabs, a form with a heading, check boxes and a pop-up) is a real PNG; scripted clicks on a check box and a pop-up item arrive in the program as control events (its title changes, the picture differs); full release gate green
+  - stop_rule: the AppKit controls and style; the editor's window is TODO-5594.
+  - notes: the snapshot (`cacheDisplayInRect`) draws the tab selector as an empty pill; the labels are not captured there, so the tab titles were not seen by eye.

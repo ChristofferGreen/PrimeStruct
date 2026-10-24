@@ -104,8 +104,7 @@ of sync with them.
 | TODO-5569 | Slice loans, escapes and returned borrows | ready | slices |
 | TODO-5570 | Slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views | ready | slices |
 | TODO-5540 | `string` as the UTF-8 text view | blocked | string-view |
-| TODO-5593 | AppKit controls and the settings window style | ready | settings-window |
-| TODO-5594 | The editor's settings window | blocked | settings-window |
+| TODO-5594 | The editor's settings window | ready | settings-window |
 | TODO-5586 | Native String heap: pooled blocks, statistics and limit | deferred | native-backend-strings |
 | TODO-5574 | Simple C++ emitters run bytes and strings | deferred | string-backends |
 | TODO-5568 | String conveniences: operators, numbers, push of code points | blocked | string-owned |
@@ -139,7 +138,7 @@ of sync with them.
 
 - TODO-5567 (bytes): packed `array<u8>`
 - TODO-5570 (slices): slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views
-- TODO-5593 (settings-window): AppKit controls and the settings window style
+- TODO-5594 (settings-window): the editor's settings window
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5510 (control-returns): `return` returns from pick arms and lambdas correctly
@@ -150,7 +149,7 @@ of sync with them.
 
 2. TODO-5567
 3. TODO-5570
-4. TODO-5593
+4. TODO-5594
 5. TODO-5536
 6. TODO-5535
 7. TODO-5510
@@ -161,7 +160,7 @@ of sync with them.
 
 - Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5567, TODO-5570, TODO-5569, TODO-5540, TODO-5568, TODO-5530, TODO-5574
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
-- Settings window (docs/NativeUiPlan.md section 15): TODO-5593, TODO-5594
+- Settings window (docs/NativeUiPlan.md section 15): TODO-5594
 - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Lifecycle (docs/spec/value-lifecycle.md): TODO-5527
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
@@ -321,23 +320,11 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - acceptance:
     - the string_heap program of tests/unit/backend_host/test_cpp_strings.cpp (reuse and figures) also runs through `--emit=native` with the VM's exit codes; a 100000-String loop uses no more than a few MB; full release gate green
   - stop_rule: the native String heap's allocator and its statistics.
-  - notes: deferred behind the settings window (TODO-5593, TODO-5594) to keep Ready Now at eight. PrimeScroll ships from the native build, so every String it makes takes a mapping of its own; the writable data segment this needs exists (`MachOData::stateBytes`).
-
-- [ ] TODO-5593: AppKit controls and the settings window style
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-24
-  - phase: Settings window (docs/NativeUiPlan.md section 15)
-  - parallel_track: settings-window
-  - scope: The AppKit backend (`NativeUiAppKit.mm`, in the static library and the dylib) answers the controls of TODO-5592: labels (`NSTextField` labels), check boxes (`NSButton` switches), pop-ups (`NSPopUpButton`), forms (an `NSGridView` with a right-aligned label column, a control column and bold heading rows), tabs (`NSTabView`), a window whose content is not a text view, `ps_ui_window_set_style` (a settings window: no tabbing, a fixed size fitted to its content, no minimize or zoom), `ps_ui_text_view_set_font_size` (monospace and proportional text, kept through highlighting), and the control events (`PS_UI_EVENT_CONTROL_CHANGED` from the control's action, with the control and its window). Snapshot mode can take a picture of a settings window built by a test program and click a control.
-  - acceptance:
-    - the smoke test's snapshot of a PrimeStruct settings window (tabs, a form with a heading, a check box and a pop-up) is a real PNG that looks like a macOS settings window when viewed; a scripted click on a check box and on a pop-up item arrives in the program as control events; the font size changes a text view's text; full release gate green
-  - stop_rule: the AppKit controls and style; the editor's window is TODO-5594.
+  - notes: deferred behind the settings window (TODO-5594) to keep Ready Now at eight. PrimeScroll ships from the native build, so every String it makes takes a mapping of its own; the writable data segment this needs exists (`MachOData::stateBytes`).
 
 - [ ] TODO-5594: The editor's settings window
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5593
+  - status: ready
   - created_at: 2026-10-24
   - phase: Settings window (docs/NativeUiPlan.md section 15)
   - parallel_track: settings-window

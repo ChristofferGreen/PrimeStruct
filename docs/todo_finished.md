@@ -2052,6 +2052,7 @@ are left unarchived.
 | TODO-5590 | AppKit markdown preview: a split view with a lazily loaded web view | [undated.md](todo_archive/undated.md) | - |
 | TODO-5591 | Locked scrolling between the source and the preview | [undated.md](todo_archive/undated.md) | - |
 | TODO-5592 | Controls and forms in the native UI ABI | [undated.md](todo_archive/undated.md) | - |
+| TODO-5593 | AppKit controls and the settings window style | [undated.md](todo_archive/undated.md) | - |
 
 <!-- INDEX-END -->
 

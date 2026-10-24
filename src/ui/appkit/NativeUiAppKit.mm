@@ -66,6 +66,13 @@ struct PendingEvent {
   int32_t command = 0;
 };
 
+// A control of a settings window (ps_ui_label_create and the others): its view, and the form or tabs that holds it.
+struct ControlInfo {
+  enum class Kind { Label, CheckBox, Popup, Form, Tabs } kind = Kind::Label;
+  NSView *view = nil;
+  uint64_t parent = 0;
+};
+
 struct State {
   bool initialized = false;
   bool quitting = false;
@@ -88,6 +95,8 @@ struct State {
   bool previewScrollLock = true;                           // the source and the page scroll together
   std::unordered_map<uint64_t, bool> previewRefreshPending;
   std::unordered_set<int32_t> previewMenuItems; // command ids whose check mark follows the active preview
+  std::unordered_map<uint64_t, ControlInfo> controls;
+  std::unordered_map<uint64_t, double> fontPoints; // the size set with ps_ui_text_view_set_font_size
   std::unordered_map<uint64_t, NSTextView *> textViews;
   std::unordered_map<uint64_t, NSFont *> baseFonts;
   // A text view does not retain its scroll view, so the maps do.
@@ -112,6 +121,8 @@ struct State {
   std::string snapshotMenu;
   std::string snapshotScroll; // PRIMESTRUCT_UI_SCROLL=text:1 or preview:1: scroll one view, the other follows
   bool snapshotScrolled = false;
+  std::string snapshotClicks; // PRIMESTRUCT_UI_CLICK=check:6;popup:8:3 clicks controls through their actions
+  bool snapshotClicked = false;
   std::string snapshotCommands;
   bool snapshotCommandsSent = false;
   bool snapshotOpened = false;
@@ -169,6 +180,159 @@ NSTextView *textView(uint64_t handle) {
 NSMenu *menuFor(uint64_t handle) {
   auto it = state().menus.find(handle);
   return it != state().menus.end() ? it->second : nil;
+}
+
+// ---- controls of a settings window -----------------------------------------------------------------
+// Labels, check boxes and pop-ups are the platform's own controls; a form is an NSGridView (labels in one
+// column, controls in the next), tabs an NSTabView whose pages are forms. A control is held by one form or
+// tabs, or is the content of a window.
+
+constexpr CGFloat PageMargin = 20;
+constexpr CGFloat TabsMargin = 16;
+
+ControlInfo *controlInfo(uint64_t handle) {
+  auto it = state().controls.find(handle);
+  return it != state().controls.end() ? &it->second : nullptr;
+}
+
+ControlInfo *controlOfKind(uint64_t handle, ControlInfo::Kind kind) {
+  ControlInfo *info = usable() ? controlInfo(handle) : nullptr;
+  return info != nullptr && info->kind == kind ? info : nullptr;
+}
+
+// The window whose content holds the control (directly or through forms and tabs); 0 when none.
+uint64_t windowOfControl(uint64_t handle) {
+  State &s = state();
+  uint64_t root = handle;
+  for (int depth = 0; depth < 64; ++depth) {
+    const ControlInfo *info = controlInfo(root);
+    if (info == nullptr || info->parent == 0) {
+      break;
+    }
+    root = info->parent;
+  }
+  for (const auto &entry : s.windowContent) {
+    if (entry.second == root && s.windows.count(entry.first) != 0) {
+      return entry.first;
+    }
+  }
+  return 0;
+}
+
+// A control that may be put into a container: it exists and nothing holds it yet.
+ControlInfo *freeControl(uint64_t handle) {
+  ControlInfo *info = controlInfo(handle);
+  return info != nullptr && info->parent == 0 && windowOfControl(handle) == 0 ? info : nullptr;
+}
+
+uint64_t createControl(ControlInfo::Kind kind, NSView *view) {
+  State &s = state();
+  const uint64_t handle = s.nextHandle++;
+  tag(view, handle);
+  ControlInfo info;
+  info.kind = kind;
+  info.view = view;
+  s.controls[handle] = info;
+  return handle;
+}
+
+// The content at the top left of a view, a margin away from its edges (the view takes its own size).
+NSView *paddedView(NSView *content, CGFloat margin) {
+  NSView *container = [[NSView alloc] initWithFrame:NSZeroRect];
+  content.translatesAutoresizingMaskIntoConstraints = NO;
+  [container addSubview:content];
+  [NSLayoutConstraint activateConstraints:@[
+    [content.topAnchor constraintEqualToAnchor:container.topAnchor constant:margin],
+    [content.leadingAnchor constraintEqualToAnchor:container.leadingAnchor constant:margin],
+  ]];
+  return container;
+}
+
+// The content filling a view with a margin on all four sides.
+NSView *insetView(NSView *content, CGFloat margin) {
+  NSView *container = [[NSView alloc] initWithFrame:NSZeroRect];
+  content.translatesAutoresizingMaskIntoConstraints = NO;
+  [container addSubview:content];
+  [NSLayoutConstraint activateConstraints:@[
+    [content.topAnchor constraintEqualToAnchor:container.topAnchor constant:margin],
+    [content.leadingAnchor constraintEqualToAnchor:container.leadingAnchor constant:margin],
+    [container.trailingAnchor constraintEqualToAnchor:content.trailingAnchor constant:margin],
+    [container.bottomAnchor constraintEqualToAnchor:content.bottomAnchor constant:margin],
+  ]];
+  return container;
+}
+
+// The room a control needs: its fitting size; tabs need their largest page plus the tab view's own chrome.
+NSSize controlFittingSize(uint64_t handle) {
+  const ControlInfo *info = controlInfo(handle);
+  if (info == nullptr) {
+    return NSZeroSize;
+  }
+  if (info->kind != ControlInfo::Kind::Tabs) {
+    return info->view.fittingSize;
+  }
+  NSTabView *tabs = (NSTabView *)info->view;
+  NSSize best = NSZeroSize;
+  for (NSTabViewItem *item in tabs.tabViewItems) {
+    const NSSize page = controlFittingSize(static_cast<uint64_t>([item.identifier unsignedLongLongValue]));
+    best.width = std::max(best.width, page.width + 2 * PageMargin);
+    best.height = std::max(best.height, page.height + 2 * PageMargin);
+  }
+  const NSRect probe = NSMakeRect(0, 0, 400, 300);
+  tabs.frame = probe;
+  const NSRect inner = tabs.contentRect;
+  return NSMakeSize(best.width + (probe.size.width - inner.size.width), best.height + (probe.size.height - inner.size.height));
+}
+
+// The view a window shows for a control that is its content.
+NSView *windowContentFor(uint64_t handle) {
+  ControlInfo *info = controlInfo(handle);
+  if (info->kind == ControlInfo::Kind::Tabs) {
+    return insetView(info->view, TabsMargin);
+  }
+  return paddedView(info->view, PageMargin);
+}
+
+// A settings window is as large as its content needs, and stays centered.
+void fitSettingsWindow(NSWindow *w, uint64_t window) {
+  State &s = state();
+  const auto content = s.windowContent.find(window);
+  const ControlInfo *root = content != s.windowContent.end() ? controlInfo(content->second) : nullptr;
+  if (root == nullptr) {
+    return;
+  }
+  NSSize size = controlFittingSize(content->second);
+  const CGFloat margin = root->kind == ControlInfo::Kind::Tabs ? TabsMargin : PageMargin;
+  size.width += 2 * margin;
+  size.height += 2 * margin;
+  [w setContentSize:size];
+  [w center];
+}
+
+// Snapshot runs: "check:6" clicks check box 6, "popup:8:3" chooses item 3 of pop-up 8, through the controls'
+// own actions (the program hears about each as a control event).
+void applySnapshotClicks(const std::string &spec) {
+  for (size_t start = 0; start < spec.size();) {
+    size_t end = spec.find(';', start);
+    end = end == std::string::npos ? spec.size() : end;
+    const std::string entry = spec.substr(start, end - start);
+    start = end + 1;
+    const size_t first = entry.find(':');
+    const std::string kind = entry.substr(0, first);
+    const uint64_t handle = first == std::string::npos ? 0 : std::strtoull(entry.c_str() + first + 1, nullptr, 10);
+    const size_t second = first == std::string::npos ? std::string::npos : entry.find(':', first + 1);
+    const ControlInfo *info = controlInfo(handle);
+    if (info == nullptr) {
+      continue;
+    }
+    if (kind == "check" && info->kind == ControlInfo::Kind::CheckBox) {
+      [(NSButton *)info->view performClick:nil];
+    } else if (kind == "popup" && info->kind == ControlInfo::Kind::Popup && second != std::string::npos) {
+      NSPopUpButton *popup = (NSPopUpButton *)info->view;
+      [popup selectItemAtIndex:std::atoi(entry.c_str() + second + 1)];
+      [NSApp sendAction:popup.action to:popup.target from:popup];
+    }
+  }
 }
 
 // ---- the markdown preview ------------------------------------------------------------------------
@@ -497,6 +661,7 @@ void drawPreviewWeb(uint64_t window, NSView *view, NSBitmapImageRep *rep) {
 
 @interface PSController : NSObject <NSApplicationDelegate, NSWindowDelegate, NSTextViewDelegate>
 - (void)menuCommand:(id)sender;
+- (void)controlChanged:(id)sender;
 - (void)quitRequested:(id)sender;
 @end
 
@@ -507,6 +672,12 @@ void drawPreviewWeb(uint64_t window, NSView *view, NSBitmapImageRep *rep) {
 
 - (void)quitRequested:(id)sender {
   enqueue(PS_UI_EVENT_QUIT_REQUESTED);
+}
+
+// The user clicked a check box or chose an item of a pop-up.
+- (void)controlChanged:(id)sender {
+  const uint64_t control = handleOf(sender);
+  enqueue(PS_UI_EVENT_CONTROL_CHANGED, windowOfControl(control), control);
 }
 
 // A menu item registered with ps_ui_menu_follow_preview shows whether the active window has a preview.
@@ -1003,6 +1174,9 @@ bool ps_ui_init(const char *appName) {
     if (const char *scroll = std::getenv("PRIMESTRUCT_UI_SCROLL"); scroll != nullptr && *scroll != '\0') {
       s.snapshotScroll = scroll;
     }
+    if (const char *click = std::getenv("PRIMESTRUCT_UI_CLICK"); click != nullptr && *click != '\0') {
+      s.snapshotClicks = click;
+    }
     if (const char *typed = std::getenv("PRIMESTRUCT_UI_TYPE"); typed != nullptr && *typed != '\0') {
       s.snapshotTypeText = typed;
       for (size_t at = s.snapshotTypeText.find("\\n"); at != std::string::npos;
@@ -1141,6 +1315,11 @@ int32_t ps_ui_wait_event(void) {
             [target.window makeFirstResponder:target];
             [target insertText:toNSString(s.snapshotTypeText.c_str()) replacementRange:NSMakeRange(NSNotFound, 0)];
           }
+        } else if (!s.snapshotClicks.empty() && !s.snapshotClicked && s.snapshotIdleSlices >= 6) {
+          // Clicks controls through their actions, as the user would; the program hears about each.
+          s.snapshotClicked = true;
+          s.snapshotIdleSlices = 0;
+          applySnapshotClicks(s.snapshotClicks);
         } else if (!s.snapshotScroll.empty() && !s.snapshotScrolled && s.snapshotIdleSlices >= 8 &&
                    !anyPreviewLoading()) {
           // Scrolls one of the two views, as the user would; the other one follows.
@@ -1212,18 +1391,36 @@ bool ps_ui_window_set_title(uint64_t window, const char *title) {
 
 bool ps_ui_window_set_content(uint64_t window, uint64_t widget) {
   NSWindow *w = usable() ? liveWindow(window) : nil;
+  State &s = state();
+  if (w != nil && usable() && controlInfo(widget) != nullptr) {
+    // A control (a form, tabs, ...) as the content: its holder must be this window or none.
+    const ControlInfo *root = controlInfo(widget);
+    const uint64_t holder = windowOfControl(widget);
+    if (root->parent != 0 || (holder != 0 && holder != window)) {
+      return false;
+    }
+    if (holder == window) {
+      return true;
+    }
+    w.contentView = windowContentFor(widget);
+    s.windowContent[window] = widget;
+    if (w.tabbingMode == NSWindowTabbingModeDisallowed) {
+      fitSettingsWindow(w, window);
+    }
+    return true;
+  }
   NSTextView *view = usable() ? textView(widget) : nil;
   if (w == nil || view == nil || (view.window != nil && view.window != w)) {
     return false;
   }
-  NSScrollView *scroll = state().scrollViews[widget];
+  NSScrollView *scroll = s.scrollViews[widget];
   NSRect contentRect = [w contentRectForFrameRect:w.frame];
   contentRect.origin = NSZeroPoint;
   scroll.frame = contentRect;
   scroll.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
   w.contentView = scroll;
   [w makeFirstResponder:view];
-  state().windowContent[window] = widget;
+  s.windowContent[window] = widget;
   return true;
 }
 
@@ -1268,8 +1465,9 @@ bool ps_ui_window_close(uint64_t window) {
 bool ps_ui_window_add_tab(uint64_t host, uint64_t tab) {
   NSWindow *h = usable() ? liveWindow(host) : nil;
   NSWindow *t = usable() ? liveWindow(tab) : nil;
-  if (h == nil || t == nil || h == t || t.tabbedWindows.count > 1) {
-    return false;
+  if (h == nil || t == nil || h == t || t.tabbedWindows.count > 1 ||
+      h.tabbingMode == NSWindowTabbingModeDisallowed || t.tabbingMode == NSWindowTabbingModeDisallowed) {
+    return false; // a settings window is never a tab
   }
   [h addTabbedWindow:t ordered:NSWindowAbove];
   [t makeKeyAndOrderFront:nil];
@@ -1426,8 +1624,10 @@ bool ps_ui_text_view_set_monospace(uint64_t view, bool monospace) {
   if (v == nil) {
     return false;
   }
-  v.font = monospace ? [NSFont monospacedSystemFontOfSize:13 weight:NSFontWeightRegular]
-                     : [NSFont systemFontOfSize:13];
+  const auto points = state().fontPoints.find(view);
+  const CGFloat size = points != state().fontPoints.end() ? points->second : 13;
+  v.font = monospace ? [NSFont monospacedSystemFontOfSize:size weight:NSFontWeightRegular]
+                     : [NSFont systemFontOfSize:size];
   state().baseFonts[view] = v.font;
   return true;
 }
@@ -1839,26 +2039,225 @@ bool ps_ui_menu_follow_preview(uint64_t menuHandle, int32_t commandId) {
   return found;
 }
 
-// The controls, the settings window style and the font size are the next slice of the AppKit backend: until it
-// lands they fail like a bad call. The preview's scroll lock is answered here.
-uint64_t ps_ui_label_create(const char *) { return 0; }
-bool ps_ui_label_set_text(uint64_t, const char *) { return false; }
-uint64_t ps_ui_checkbox_create(const char *, bool) { return 0; }
-bool ps_ui_checkbox_set_checked(uint64_t, bool) { return false; }
-bool ps_ui_checkbox_checked(uint64_t) { return false; }
-uint64_t ps_ui_popup_create(void) { return 0; }
-bool ps_ui_popup_add_item(uint64_t, const char *) { return false; }
-bool ps_ui_popup_select(uint64_t, int32_t) { return false; }
-int32_t ps_ui_popup_selected(uint64_t) { return -1; }
-uint64_t ps_ui_form_create(void) { return 0; }
-bool ps_ui_form_add_heading(uint64_t, const char *) { return false; }
-bool ps_ui_form_add_row(uint64_t, const char *, uint64_t) { return false; }
-bool ps_ui_form_add_control(uint64_t, uint64_t) { return false; }
-uint64_t ps_ui_tabs_create(void) { return 0; }
-bool ps_ui_tabs_add(uint64_t, const char *, uint64_t) { return false; }
-bool ps_ui_tabs_select(uint64_t, int32_t) { return false; }
-bool ps_ui_window_set_style(uint64_t, int32_t) { return false; }
-bool ps_ui_text_view_set_font_size(uint64_t, int32_t) { return false; }
+uint64_t ps_ui_label_create(const char *text) {
+  return usable() ? createControl(ControlInfo::Kind::Label, [NSTextField labelWithString:toNSString(text)]) : 0;
+}
+
+bool ps_ui_label_set_text(uint64_t label, const char *text) {
+  ControlInfo *info = controlOfKind(label, ControlInfo::Kind::Label);
+  if (info == nullptr || text == nullptr) {
+    return false;
+  }
+  [(NSTextField *)info->view setStringValue:toNSString(text)];
+  return true;
+}
+
+uint64_t ps_ui_checkbox_create(const char *title, bool checked) {
+  if (!usable()) {
+    return 0;
+  }
+  NSButton *box = [NSButton checkboxWithTitle:toNSString(title) target:controller() action:@selector(controlChanged:)];
+  box.state = checked ? NSControlStateValueOn : NSControlStateValueOff;
+  return createControl(ControlInfo::Kind::CheckBox, box);
+}
+
+bool ps_ui_checkbox_set_checked(uint64_t checkbox, bool checked) {
+  ControlInfo *info = controlOfKind(checkbox, ControlInfo::Kind::CheckBox);
+  if (info == nullptr) {
+    return false;
+  }
+  ((NSButton *)info->view).state = checked ? NSControlStateValueOn : NSControlStateValueOff;
+  return true;
+}
+
+bool ps_ui_checkbox_checked(uint64_t checkbox) {
+  ControlInfo *info = controlOfKind(checkbox, ControlInfo::Kind::CheckBox);
+  return info != nullptr && ((NSButton *)info->view).state == NSControlStateValueOn;
+}
+
+uint64_t ps_ui_popup_create(void) {
+  if (!usable()) {
+    return 0;
+  }
+  NSPopUpButton *popup = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
+  popup.menu.autoenablesItems = NO;
+  popup.target = controller();
+  popup.action = @selector(controlChanged:);
+  return createControl(ControlInfo::Kind::Popup, popup);
+}
+
+bool ps_ui_popup_add_item(uint64_t popup, const char *title) {
+  ControlInfo *info = controlOfKind(popup, ControlInfo::Kind::Popup);
+  if (info == nullptr || title == nullptr) {
+    return false;
+  }
+  NSPopUpButton *button = (NSPopUpButton *)info->view;
+  // The menu is used directly: addItemWithTitle: on the button drops an item whose title is already there.
+  NSMenuItem *item = [button.menu addItemWithTitle:toNSString(title) action:nil keyEquivalent:@""];
+  item.enabled = YES;
+  if (button.numberOfItems == 1) {
+    [button selectItemAtIndex:0];
+  }
+  return true;
+}
+
+bool ps_ui_popup_select(uint64_t popup, int32_t index) {
+  ControlInfo *info = controlOfKind(popup, ControlInfo::Kind::Popup);
+  NSPopUpButton *button = info != nullptr ? (NSPopUpButton *)info->view : nil;
+  if (button == nil || index < 0 || index >= button.numberOfItems) {
+    return false;
+  }
+  [button selectItemAtIndex:index];
+  return true;
+}
+
+int32_t ps_ui_popup_selected(uint64_t popup) {
+  ControlInfo *info = controlOfKind(popup, ControlInfo::Kind::Popup);
+  return info != nullptr ? static_cast<int32_t>(((NSPopUpButton *)info->view).indexOfSelectedItem) : -1;
+}
+
+uint64_t ps_ui_form_create(void) {
+  if (!usable()) {
+    return 0;
+  }
+  NSGridView *grid = [NSGridView gridViewWithNumberOfColumns:2 rows:0];
+  grid.columnSpacing = 12;
+  grid.rowSpacing = 10;
+  grid.rowAlignment = NSGridRowAlignmentFirstBaseline;
+  [grid columnAtIndex:0].xPlacement = NSGridCellPlacementTrailing;
+  [grid columnAtIndex:1].xPlacement = NSGridCellPlacementLeading;
+  return createControl(ControlInfo::Kind::Form, grid);
+}
+
+bool ps_ui_form_add_heading(uint64_t form, const char *title) {
+  ControlInfo *info = controlOfKind(form, ControlInfo::Kind::Form);
+  if (info == nullptr || title == nullptr) {
+    return false;
+  }
+  NSGridView *grid = (NSGridView *)info->view;
+  NSTextField *heading = [NSTextField labelWithString:toNSString(title)];
+  heading.font = [NSFont boldSystemFontOfSize:NSFont.systemFontSize];
+  NSGridRow *row = [grid addRowWithViews:@[ heading, [NSGridCell emptyContentView] ]];
+  [row mergeCellsInRange:NSMakeRange(0, 2)];
+  [row cellAtIndex:0].xPlacement = NSGridCellPlacementLeading;
+  if ([grid indexOfRow:row] > 0) {
+    row.topPadding = 12;
+  }
+  return true;
+}
+
+bool ps_ui_form_add_row(uint64_t form, const char *label, uint64_t control) {
+  ControlInfo *info = controlOfKind(form, ControlInfo::Kind::Form);
+  ControlInfo *child = info != nullptr && control != form ? freeControl(control) : nullptr;
+  if (child == nullptr || label == nullptr) {
+    return false;
+  }
+  [(NSGridView *)info->view addRowWithViews:@[ [NSTextField labelWithString:toNSString(label)], child->view ]];
+  child->parent = form;
+  return true;
+}
+
+bool ps_ui_form_add_control(uint64_t form, uint64_t control) {
+  ControlInfo *info = controlOfKind(form, ControlInfo::Kind::Form);
+  ControlInfo *child = info != nullptr && control != form ? freeControl(control) : nullptr;
+  if (child == nullptr) {
+    return false;
+  }
+  [(NSGridView *)info->view addRowWithViews:@[ [NSGridCell emptyContentView], child->view ]];
+  child->parent = form;
+  return true;
+}
+
+uint64_t ps_ui_tabs_create(void) {
+  if (!usable()) {
+    return 0;
+  }
+  return createControl(ControlInfo::Kind::Tabs, [[NSTabView alloc] initWithFrame:NSZeroRect]);
+}
+
+bool ps_ui_tabs_add(uint64_t tabs, const char *title, uint64_t content) {
+  ControlInfo *info = controlOfKind(tabs, ControlInfo::Kind::Tabs);
+  ControlInfo *page = info != nullptr && content != tabs ? freeControl(content) : nullptr;
+  if (page == nullptr || title == nullptr) {
+    return false;
+  }
+  NSTabViewItem *item = [[NSTabViewItem alloc] initWithIdentifier:@(content)];
+  item.label = toNSString(title);
+  item.view = paddedView(page->view, PageMargin);
+  [(NSTabView *)info->view addTabViewItem:item];
+  page->parent = tabs;
+  return true;
+}
+
+bool ps_ui_tabs_select(uint64_t tabs, int32_t index) {
+  ControlInfo *info = controlOfKind(tabs, ControlInfo::Kind::Tabs);
+  NSTabView *view = info != nullptr ? (NSTabView *)info->view : nil;
+  if (view == nil || index < 0 || index >= view.numberOfTabViewItems) {
+    return false;
+  }
+  [view selectTabViewItemAtIndex:index];
+  return true;
+}
+
+// A settings window is never a tab, is as large as its content needs, and has no minimize or zoom; a
+// document window is the default.
+bool ps_ui_window_set_style(uint64_t window, int32_t style) {
+  NSWindow *w = usable() ? liveWindow(window) : nil;
+  if (w == nil || (style != PS_UI_WINDOW_DOCUMENT && style != PS_UI_WINDOW_SETTINGS)) {
+    return false;
+  }
+  if (style == PS_UI_WINDOW_SETTINGS) {
+    if (w.tabbedWindows.count > 1) {
+      return false;
+    }
+    w.tabbingMode = NSWindowTabbingModeDisallowed;
+    w.styleMask = w.styleMask & ~(NSWindowStyleMaskResizable | NSWindowStyleMaskMiniaturizable);
+    [w standardWindowButton:NSWindowZoomButton].enabled = NO;
+    [w standardWindowButton:NSWindowMiniaturizeButton].enabled = NO;
+    fitSettingsWindow(w, window);
+  } else {
+    w.tabbingMode = NSWindowTabbingModePreferred;
+    w.styleMask = w.styleMask | NSWindowStyleMaskResizable | NSWindowStyleMaskMiniaturizable;
+    [w standardWindowButton:NSWindowZoomButton].enabled = YES;
+    [w standardWindowButton:NSWindowMiniaturizeButton].enabled = YES;
+  }
+  return true;
+}
+
+// The text's size in points: the base font and every styled run keep their weight and slant at the new size,
+// so a highlighted document changes size at once.
+bool ps_ui_text_view_set_font_size(uint64_t view, int32_t points) {
+  NSTextView *v = usable() ? textView(view) : nil;
+  if (v == nil || points < 6 || points > 96) {
+    return false;
+  }
+  State &s = state();
+  s.fontPoints[view] = points;
+  NSFont *base = s.baseFonts[view];
+  if (base != nil) {
+    s.baseFonts[view] = [NSFont fontWithDescriptor:base.fontDescriptor size:points];
+  }
+  NSTextStorage *storage = v.textStorage;
+  [v.undoManager disableUndoRegistration];
+  [storage beginEditing];
+  [storage enumerateAttribute:NSFontAttributeName
+                      inRange:NSMakeRange(0, storage.length)
+                      options:0
+                   usingBlock:^(id value, NSRange range, BOOL *stop) {
+                     if ([value isKindOfClass:[NSFont class]]) {
+                       NSFont *font = value;
+                       [storage addAttribute:NSFontAttributeName
+                                       value:[NSFont fontWithDescriptor:font.fontDescriptor size:points]
+                                       range:range];
+                     }
+                   }];
+  [storage endEditing];
+  [v.undoManager enableUndoRegistration];
+  NSMutableDictionary *typing = [v.typingAttributes mutableCopy];
+  typing[NSFontAttributeName] = s.baseFonts[view] != nil ? s.baseFonts[view] : [NSFont systemFontOfSize:points];
+  v.typingAttributes = typing;
+  return true;
+}
 
 bool ps_ui_preview_set_scroll_lock(bool on) {
   if (!usable()) {

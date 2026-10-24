@@ -1,0 +1,62 @@
+// A settings window built from the stdlib controls: tabs with forms, headings, check boxes and a pop-up. The
+// smoke test (cmake/NativeUiAppKitSmokeTest.cmake) runs it in snapshot mode and clicks "Show line numbers" and the
+// pop-up through PRIMESTRUCT_UI_CLICK; the window's title says the program heard about the change.
+import /std/text/*
+import /std/ui/native/*
+
+[return<int> effects(heap_alloc)]
+main() {
+  [App] app{start_app("Settings demo")}
+  [Window] window{app.window("Settings", 420i32, 300i32)}
+  window.setSettingsStyle()
+
+  [Form] general{app.form()}
+  general.heading("Startup")
+  [CheckBox] restore{app.checkBox("Reopen the files of the last session", true)}
+  general.control(restore.widget())
+
+  [Form] editor{app.form()}
+  editor.heading("Text")
+  [CheckBox] numbers{app.checkBox("Show line numbers", false)}
+  editor.control(numbers.widget())
+  [CheckBox] wrap{app.checkBox("Wrap long lines", true)}
+  editor.control(wrap.widget())
+  [Popup] size{app.popup()}
+  size.addItem("11")
+  size.addItem("12")
+  size.addItem("13")
+  size.addItem("14")
+  size.addItem("16")
+  editor.row("Font size", size.widget())
+
+  [Tabs] tabs{app.tabs()}
+  tabs.add("General", general.widget())
+  tabs.add("Editor", editor.widget())
+  tabs.select(1i32)
+  window.setContentWidget(tabs.widget())
+  window.show()
+
+  [mut] running{true}
+  while(running) {
+    pick(app.waitEvent()) {
+      command(id) {
+        running = running
+      }
+      windowCloseRequested(w) {
+        [Window] closing{w}
+        closing.close()
+        running = false
+      }
+      textChanged(w) {
+        running = running
+      }
+      controlChanged(widget) {
+        window.setTitle(stringFrom("Settings changed"))
+      }
+      quitRequested {
+        running = false
+      }
+    }
+  }
+  return(0i32)
+}

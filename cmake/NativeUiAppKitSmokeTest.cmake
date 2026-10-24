@@ -121,3 +121,44 @@ foreach(scrolled scrolltext scrollpreview)
   endif()
 endforeach()
 message(STATUS "scroll lock snapshots differ from the top ones")
+
+# A settings window built from the stdlib controls (tabs, a form, a heading, check boxes, a pop-up): its picture,
+# and two clicks (a check box and a pop-up item) that reach the program, which says so in the window's title.
+execute_process(
+  COMMAND bash "${SOURCE_DIR}/scripts/bundle_macos_app.sh"
+          "${SOURCE_DIR}/tests/fixtures/ui/screenshot/settings_demo.prime" SettingsDemo "${WORK_DIR}" "${BUILD_DIR}"
+  RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err)
+if(NOT rc EQUAL 0)
+  message(FATAL_ERROR "settings demo bundle failed (${rc}): ${out}${err}")
+endif()
+unset(ENV{PRIMESTRUCT_UI_OPEN})
+unset(ENV{PRIMESTRUCT_UI_COMMANDS})
+unset(ENV{PRIMESTRUCT_UI_MENU})
+unset(ENV{PRIMESTRUCT_UI_SCROLL})
+foreach(shot settings settingsclick)
+  set(ENV{PRIMESTRUCT_UI_SNAPSHOT} "${WORK_DIR}/${shot}.png")
+  if(shot STREQUAL "settingsclick")
+    set(ENV{PRIMESTRUCT_UI_CLICK} "check:5;popup:7:3")
+  else()
+    unset(ENV{PRIMESTRUCT_UI_CLICK})
+  endif()
+  execute_process(
+    COMMAND "${WORK_DIR}/SettingsDemo.app/Contents/MacOS/SettingsDemo"
+    RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err
+    TIMEOUT 90)
+  if(NOT rc EQUAL 0)
+    message(FATAL_ERROR "settings demo ${shot} run exited with '${rc}': ${out}${err}")
+  endif()
+  file(SIZE "${WORK_DIR}/${shot}.png" size)
+  file(READ "${WORK_DIR}/${shot}.png" magic LIMIT 4 HEX)
+  if(NOT magic STREQUAL "89504e47" OR size LESS 10000)
+    message(FATAL_ERROR "settings demo ${shot} snapshot is not a drawn PNG (magic ${magic}, ${size} bytes)")
+  endif()
+  message(STATUS "settings demo ${shot} snapshot ok (${size} bytes)")
+endforeach()
+unset(ENV{PRIMESTRUCT_UI_CLICK})
+file(SHA256 "${WORK_DIR}/settings.png" settingsHash)
+file(SHA256 "${WORK_DIR}/settingsclick.png" settingsClickHash)
+if(settingsHash STREQUAL settingsClickHash)
+  message(FATAL_ERROR "the clicks changed nothing in the settings window")
+endif()
