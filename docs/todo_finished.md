@@ -2057,6 +2057,7 @@ are left unarchived.
 | TODO-5595 | Preview scroll lock follows source lines | [undated.md](todo_archive/undated.md) | - |
 | TODO-5596 | Preview scroll modes | [undated.md](todo_archive/undated.md) | - |
 | TODO-5597 | Preview scroll modes tested and edits keep the page in place | [undated.md](todo_archive/undated.md) | - |
+| TODO-5598 | The preview comes back with the session | [undated.md](todo_archive/undated.md) | - |
 
 <!-- INDEX-END -->
 

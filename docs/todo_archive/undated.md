@@ -344,3 +344,15 @@
     - the scroll ctest passes with believable numbers for the typing scenarios (the page neither at the top nor at the end after an edit); the editor tests pass with the View > Scroll Preview submenu in the outline; full release gate green
   - stop_rule: the scroll modes' restore after reloads, the harness and the test set; the by-hand list stays by hand.
   - notes: mode switching from the menu while a preview is open, the real wheel, keys and dragging, resizing, several tabs, and unusual documents are not automated.
+
+- [x] TODO-5598: The preview comes back with the session
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-24
+  - phase: Native PrimeScroll (docs/NativeUiPlan.md section 14)
+  - parallel_track: markdown-preview
+  - scope: A tab whose markdown preview was on when the app shut down shows it again at the next launch. `save_session` writes the list preference `session.previews` ("1" for a tab with a preview, "0" without) next to `session.files`, one entry per tab with a file, and `restore_session` switches the preview of each restored tab on by its position (`restore_preview`); a session saved before this has no list and restores no previews; tabs without a file are not restored and so are not remembered. While testing it, restoring turned out to leave the last-opened tab active when the saved active tab was the first one (the selection only happened for an index above 0); it now selects the saved tab whenever more than one tab was restored.
+  - acceptance:
+    - editor tests: previews come back for the tabs that had them (either order, none for an old session), toggling a preview changes the saved list, through the VM, optexe and native mirrors; the other session tests still pass; full release gate green
+  - stop_rule: the session's preview flags and the active-tab restore.
+  - notes: a real quit and relaunch of the installed app was not tried by hand.

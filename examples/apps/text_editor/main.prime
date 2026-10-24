@@ -442,10 +442,12 @@ open_document([App] app, [Window] tab) {
 }
 
 // Remembers the files the tabs hold (in tab-bar order) and which tab is active, so the next launch
-// brings them back. Untitled tabs have nothing to reopen.
-[return<bool>]
+// brings them back, with the tabs that showed their markdown preview ("1" for a tab with a preview, "0" without,
+// in the order of the files). Untitled tabs have nothing to reopen.
+[return<bool> effects(heap_alloc)]
 save_session([App] app, [Window] current) {
   app.listClear("session.files")
+  app.listClear("session.previews")
   [i32] count{current.tabCount()}
   [i32 mut] active{0i32}
   [i32 mut] saved{0i32}
@@ -454,6 +456,11 @@ save_session([App] app, [Window] current) {
     [Window] each{current.tabAt(index)}
     if(each.hasPath()) {
       app.listAdd("session.files", each.path())
+      if(each.hasPreview()) {
+        app.listAdd("session.previews", stringFrom("1"))
+      } else {
+        app.listAdd("session.previews", stringFrom("0"))
+      }
       if(each.handle == current.handle) {
         active = saved
       }
@@ -463,6 +470,19 @@ save_session([App] app, [Window] current) {
   }
   app.setIntPref("session.active", active)
   return(true)
+}
+
+// Shows the preview of a restored tab when the last session had it on.
+[return<bool>]
+restore_preview([App] app, [Window] tab, [i32] position) {
+  [bool mut] shown{false}
+  if(position < app.listCount("session.previews")) {
+    [String] flag{app.listGet("session.previews", position)}
+    if(flag.equalsText("1")) {
+      shown = tab.setPreview(true)
+    }
+  }
+  return(shown)
 }
 
 // Opens the files the last session had open, one tab each in the same order, and selects the tab
@@ -480,6 +500,7 @@ restore_session([App] app, [Window] first, [TextView] firstView) {
         first.setTitle(path)
         firstView.highlight(path)
         [bool] firstPreviewed{preview_if_markdown(app, first, path)}
+        [bool] firstRestored{restore_preview(app, first, position)}
         opened = 1i32
       }
     } else {
@@ -490,6 +511,7 @@ restore_session([App] app, [Window] first, [TextView] firstView) {
         extra.setTitle(path)
         extraView.highlight(path)
         [bool] extraPreviewed{preview_if_markdown(app, extra, path)}
+        [bool] extraRestored{restore_preview(app, extra, position)}
         opened = opened + 1i32
       } else {
         extra.close()
@@ -498,7 +520,7 @@ restore_session([App] app, [Window] first, [TextView] firstView) {
     position = position + 1i32
   }
   [i32] active{app.intPref("session.active", 0i32)}
-  if(active > 0i32 && active < first.tabCount()) {
+  if(opened > 1i32 && active >= 0i32 && active < first.tabCount()) {
     [Window] chosen{first.tabAt(active)}
     chosen.select()
   }

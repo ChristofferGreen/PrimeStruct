@@ -867,6 +867,49 @@ TEST_CASE("editor keeps the session when the last tab is closed, as the app ends
   CHECK(headless::prefList("session.files") == std::vector<std::string>{a});
 }
 
+TEST_CASE("editor brings back the preview of the tabs that had it on at the last shutdown") {
+  const std::string a = writeScratch("session_preview_a.md", "# a");
+  const std::string b = writeScratch("session_preview_b.txt", "b");
+  headless::reset();
+  headless::setPrefList("session.files", {a, b});
+  headless::setPrefList("session.previews", {"1", "0"});
+  headless::pushCloseWindow(SecondWindow);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(headless::windowState(EditorWindow).preview);
+  CHECK_FALSE(headless::windowState(SecondWindow).preview);
+
+  // The other way round, and a session saved before previews were remembered has none on.
+  headless::reset();
+  headless::setPrefList("session.files", {a, b});
+  headless::setPrefList("session.previews", {"0", "1"});
+  headless::pushCloseWindow(SecondWindow);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK_FALSE(headless::windowState(EditorWindow).preview);
+  CHECK(headless::windowState(SecondWindow).preview);
+  headless::reset();
+  headless::setPrefList("session.files", {a});
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK_FALSE(headless::windowState(EditorWindow).preview);
+}
+
+TEST_CASE("editor remembers which tabs show their preview") {
+  const std::string a = writeScratch("session_remember_a.md", "# a");
+  const std::string b = writeScratch("session_remember_b.md", "# b");
+  headless::reset();
+  headless::setPrefList("session.files", {a, b});
+  headless::pushCommand(CommandPreview); // the first tab is the active one: its preview goes on
+  headless::pushCloseWindow(SecondWindow);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  // Closing the second tab saved the session with the first tab alone, and its preview on; the last tab's
+  // closing leaves the session as it was.
+  CHECK(headless::prefList("session.files") == std::vector<std::string>{a});
+  CHECK(headless::prefList("session.previews") == std::vector<std::string>{"1"});
+}
+
 TEST_CASE("editor drops a closed tab from the session but keeps the last one") {
   const std::string a = writeScratch("restore_keep_a.txt", "a");
   const std::string b = writeScratch("restore_keep_b.txt", "b");

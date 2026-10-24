@@ -398,7 +398,9 @@ page follows the text as it is edited. It is done when the installed native Prim
   cursor at the start. The top line of the text view is read from its TextKit 2 layout fragments, not from a character
   index (after an edit that returned the end of the text). `PrimeStruct_native_ui_appkit_scroll` asserts the modes
   with the snapshot harness (`PRIMESTRUCT_UI_CARET`, `PRIMESTRUCT_UI_TYPE_AFTER_SCROLL`, `PRIMESTRUCT_UI_REPORT`);
-  `docs/PreviewScrollTests.md` lists the scenarios and the by-hand checks. The text view is observed directly (the bounds
+  `docs/PreviewScrollTests.md` lists the scenarios and the by-hand checks. The session remembers which tabs had their
+  preview on (`session.previews`, "1" or "0" per tab with a file, in the order of `session.files`) and the next launch
+  switches those previews on again; restoring a session also selects the tab that was active, the first one included. The text view is observed directly (the bounds
   notification of its clip view) and moves the page with a script; the page has no scroll notification, so a local event
   monitor sees the wheel, keys and drags over it, reads its position back with a script and moves the text view (again
   after 250 ms, for the page's scrolling animation). A page that finishes loading goes to where the text view is, so an
