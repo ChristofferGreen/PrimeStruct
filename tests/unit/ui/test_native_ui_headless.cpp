@@ -638,14 +638,14 @@ TEST_CASE("a window shows a markdown preview of its text view") {
   CHECK(ps_ui_window_set_preview(window, true));
   CHECK(ps_ui_window_has_preview(window));
   CHECK(headless::windowState(window).preview);
-  CHECK(headless::previewPage(window).find("<h1>Title</h1>") != std::string::npos);
+  CHECK(headless::previewPage(window).find("<h1 data-line=\"0\">Title</h1>") != std::string::npos);
   CHECK(headless::previewPage(window).find("<!DOCTYPE html>") == 0);
 
   // The page follows the text when it is refreshed, not before.
   CHECK(ps_ui_text_view_set_text(view, "## Next"));
-  CHECK(headless::previewPage(window).find("<h2>") == std::string::npos);
+  CHECK(headless::previewPage(window).find("<h2") == std::string::npos);
   CHECK(ps_ui_window_refresh_preview(window));
-  CHECK(headless::previewPage(window).find("<h2>Next</h2>") != std::string::npos);
+  CHECK(headless::previewPage(window).find("<h2 data-line=\"0\">Next</h2>") != std::string::npos);
   CHECK(headless::windowState(window).previewRenders == 2);
 
   // Turning it on again changes nothing; turning it off drops the page.

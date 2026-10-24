@@ -886,7 +886,7 @@ TEST_CASE("editor shows a markdown preview of the active tab and turns it off ag
   headless::pushCloseWindow(EditorWindow);
   runEditor();
   CHECK(headless::windowState(EditorWindow).preview);
-  CHECK(headless::previewPage(EditorWindow).find("<h1>Heading</h1>") != std::string::npos);
+  CHECK(headless::previewPage(EditorWindow).find(">Heading</h1>") != std::string::npos);
   CHECK(countCalls("ps_ui_menu_follow_preview(") == 1);
 
   headless::reset();
@@ -909,7 +909,7 @@ TEST_CASE("editor refreshes the preview as the text changes") {
   headless::pushTypeText(0, "\n\nmore words");
   headless::pushCloseWindow(EditorWindow);
   runEditor();
-  CHECK(headless::previewPage(EditorWindow).find("<p>more words</p>") != std::string::npos);
+  CHECK(headless::previewPage(EditorWindow).find(">more words</p>") != std::string::npos);
   CHECK(headless::windowState(EditorWindow).previewRenders == 2);
 }
 
@@ -942,6 +942,6 @@ TEST_CASE("editor refreshes a preview when a file opens into the tab") {
   runEditor();
   // The untouched first tab took the file and its preview, already on, shows it.
   CHECK(headless::windowState(EditorWindow).preview);
-  CHECK(headless::previewPage(EditorWindow).find("<h1>First</h1>") != std::string::npos);
+  CHECK(headless::previewPage(EditorWindow).find(">First</h1>") != std::string::npos);
   (void)second;
 }

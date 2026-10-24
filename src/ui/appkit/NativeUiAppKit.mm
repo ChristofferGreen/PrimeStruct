@@ -88,7 +88,7 @@ struct State {
   std::unordered_map<uint64_t, NSView *> previewWebs;
   std::unordered_map<uint64_t, bool> previewLoading;
   std::unordered_map<uint64_t, int> previewScriptsPending; // scripts sent to the page that have not answered
-  std::unordered_map<uint64_t, double> previewFraction;    // where both views were last put (0 top, 1 bottom)
+  std::unordered_map<uint64_t, double> previewFraction;    // the source line both views were last put at
   std::unordered_map<uint64_t, bool> previewSyncing;       // the page is moving the text view right now
   std::unordered_map<uint64_t, id> previewObservers;       // the observer of the text view's scrolling
   id previewEventMonitor = nil;                            // sees the events that scroll a page
@@ -365,8 +365,7 @@ bool previewOn(uint64_t window) {
   return it != state().previews.end() && it->second;
 }
 
-// Scrolling is locked between the source and the page: both sit at the same fraction of the height they can
-// scroll. The text view's scrolling is observed; the page's is noticed through the events that scroll it
+// Scrolling is locked between the source and the page by source line (see textScrollLine). The text view's scrolling is observed; the page's is noticed through the events that scroll it
 // (the wheel, keys, the scroll bar), after which its position is read back.
 
 NSScrollView *previewTextScroll(uint64_t window) {
@@ -399,9 +398,129 @@ void setTextScrollFraction(NSScrollView *scroll, double fraction) {
   [scroll reflectScrolledClipView:scroll.contentView];
 }
 
-NSString *const WebFractionScript =
-    @"(function(){var h=document.documentElement.scrollHeight-window.innerHeight;return h>0?window.scrollY/h:0;})()";
+// The scroll position is a place in the source: a 0-based line number with a fraction through that line (the
+// total line count when scrolled to the end). The page's blocks carry the line they start on (data-line,
+// primec::ui::markdownToHtml), and a place between two blocks is interpolated between their tops, so a long
+// code block or a table in the page does not throw the two views out of step.
 
+struct LineSpot {
+  NSUInteger line = 0;
+  NSUInteger start = 0;  // the offset of the line's first character
+  NSUInteger length = 0; // characters before the line's end
+  bool found = true;
+};
+
+LineSpot lineSpotAtIndex(NSString *text, NSUInteger index) {
+  LineSpot spot;
+  const NSUInteger size = text.length;
+  index = std::min(index, size);
+  NSUInteger from = 0;
+  while (from < index) {
+    const NSRange found = [text rangeOfString:@"\n" options:0 range:NSMakeRange(from, index - from)];
+    if (found.location == NSNotFound) {
+      break;
+    }
+    ++spot.line;
+    from = NSMaxRange(found);
+    spot.start = from;
+  }
+  const NSRange end = [text rangeOfString:@"\n" options:0 range:NSMakeRange(index, size - index)];
+  spot.length = (end.location == NSNotFound ? size : end.location) - spot.start;
+  return spot;
+}
+
+LineSpot lineSpotOfLine(NSString *text, NSUInteger line) {
+  LineSpot spot;
+  const NSUInteger size = text.length;
+  while (spot.line < line) {
+    const NSRange found = [text rangeOfString:@"\n" options:0 range:NSMakeRange(spot.start, size - spot.start)];
+    if (found.location == NSNotFound) {
+      spot.found = false;
+      return spot;
+    }
+    ++spot.line;
+    spot.start = NSMaxRange(found);
+  }
+  const NSRange end = [text rangeOfString:@"\n" options:0 range:NSMakeRange(spot.start, size - spot.start)];
+  spot.length = (end.location == NSNotFound ? size : end.location) - spot.start;
+  return spot;
+}
+
+double textLineCount(NSTextView *view) { return static_cast<double>(lineSpotAtIndex(view.string, view.string.length).line + 1); }
+
+// The line (with the fraction of it) at the top of the text view's visible area.
+double textScrollLine(NSScrollView *scroll) {
+  NSTextView *view = scroll.documentView;
+  const double total = textLineCount(view);
+  const CGFloat range = textScrollRange(scroll);
+  const CGFloat top = scroll.contentView.bounds.origin.y;
+  if (range <= 0) {
+    return 0;
+  }
+  if (top >= range - 1) {
+    return total;
+  }
+  const NSPoint point = NSMakePoint(view.textContainerInset.width + 2, std::max<CGFloat>(top, 0) + view.textContainerInset.height + 1);
+  const NSUInteger index = [view characterIndexForInsertionAtPoint:point];
+  const LineSpot spot = lineSpotAtIndex(view.string, index);
+  const double through = spot.length > 0 ? static_cast<double>(std::min(index, spot.start + spot.length) - spot.start) / spot.length : 0;
+  return static_cast<double>(spot.line) + through;
+}
+
+// Scrolls the text view so that the place `line` is at the top.
+void setTextScrollLine(NSScrollView *scroll, double line) {
+  NSTextView *view = scroll.documentView;
+  const CGFloat range = textScrollRange(scroll);
+  if (range <= 0) {
+    return;
+  }
+  CGFloat y = range;
+  if (line < textLineCount(view)) {
+    const LineSpot spot = lineSpotOfLine(view.string, static_cast<NSUInteger>(std::max(line, 0.0)));
+    if (spot.found) {
+      const double through = std::clamp(line - std::floor(line), 0.0, 1.0);
+      const NSUInteger index = spot.start + static_cast<NSUInteger>(through * spot.length);
+      const NSRect screen = [view firstRectForCharacterRange:NSMakeRange(index, 0) actualRange:nil];
+      const NSRect local = [view convertRect:[view.window convertRectFromScreen:screen] fromView:nil];
+      y = local.origin.y - view.textContainerInset.height;
+    }
+  }
+  NSPoint origin = scroll.contentView.bounds.origin;
+  origin.y = std::clamp<CGFloat>(y, 0, range);
+  [scroll.contentView scrollToPoint:origin];
+  [scroll reflectScrolledClipView:scroll.contentView];
+}
+
+// The page's blocks: [source line, top] in document order, and the page's height.
+NSString *const WebBlocksScript =
+    @"var a=[],n=document.querySelectorAll('[data-line]'),y0=window.scrollY;"
+    @"for(var i=0;i<n.length;i++){a.push([+n[i].getAttribute('data-line'),n[i].getBoundingClientRect().top+y0]);}"
+    @"var H=document.documentElement.scrollHeight,max=H-window.innerHeight;";
+
+NSString *webLineScript(double total) {
+  return [NSString
+      stringWithFormat:@"(function(N){%@var y=window.scrollY;if(max>0&&y>=max-1)return N;"
+                       @"if(!a.length)return max>0?N*y/max:0;"
+                       @"var i=-1;for(var k=0;k<a.length;k++){if(a[k][1]<=y+0.5)i=k;}"
+                       @"if(i<0)return a[0][1]>0?y/a[0][1]*a[0][0]:0;"
+                       @"var el=N,ey=H;for(var k=i+1;k<a.length;k++){if(a[k][0]>a[i][0]&&a[k][1]>a[i][1]){el=a[k][0];ey=a[k][1];break;}}"
+                       @"return ey>a[i][1]?a[i][0]+(y-a[i][1])/(ey-a[i][1])*(el-a[i][0]):a[i][0];})(%f)",
+                       WebBlocksScript, total];
+}
+
+NSString *webScrollToLineScript(double line, double total) {
+  return [NSString
+      stringWithFormat:@"(function(L,N){%@if(L>=N){window.scrollTo(0,max>0?max:0);return;}"
+                       @"if(!a.length){window.scrollTo(0,max>0?max*L/N:0);return;}"
+                       @"var i=-1;for(var k=0;k<a.length;k++){if(a[k][0]<=L)i=k;else break;}var y;"
+                       @"if(i<0){y=a[0][0]>0?a[0][1]*L/a[0][0]:0;}"
+                       @"else{var el=N,ey=H;for(var k=i+1;k<a.length;k++){if(a[k][0]>a[i][0]){el=a[k][0];ey=a[k][1];break;}}"
+                       @"y=el>a[i][0]?a[i][1]+(ey-a[i][1])*(L-a[i][0])/(el-a[i][0]):a[i][1];}"
+                       @"window.scrollTo(0,Math.max(0,y));})(%f,%f)",
+                       WebBlocksScript, line, total];
+}
+
+// A fraction of what the page can scroll (snapshot runs use it to scroll the page the way the user would).
 NSString *webScrollScript(double fraction) {
   return [NSString stringWithFormat:@"(function(){var h=document.documentElement.scrollHeight-window.innerHeight;"
                                     @"window.scrollTo(0,h>0?%f*h:0);})()",
@@ -419,40 +538,41 @@ void syncWebFromText(uint64_t window, bool force) {
   if (scroll == nil || web == s.previewWebs.end()) {
     return;
   }
-  const double fraction = textScrollFraction(scroll);
+  const double line = textScrollLine(scroll);
   const auto last = s.previewFraction.find(window);
-  if (!force && last != s.previewFraction.end() && std::fabs(last->second - fraction) < 0.0005) {
+  if (!force && last != s.previewFraction.end() && std::fabs(last->second - line) < 0.01) {
     return;
   }
-  s.previewFraction[window] = fraction;
+  s.previewFraction[window] = line;
   s.previewScriptsPending[window] += 1;
-  evaluateScript(web->second, webScrollScript(fraction), ^(id) {
+  evaluateScript(web->second, webScrollToLineScript(line, textLineCount(scroll.documentView)), ^(id) {
     state().previewScriptsPending[window] -= 1;
   });
 }
 
-// The text view follows the page: read where the page is, then move the text view there.
+// The text view follows the page: read which line the page is at, then move the text view there.
 void syncTextFromWeb(uint64_t window) {
   State &s = state();
   if (!s.previewScrollLock) {
     return;
   }
   const auto web = s.previewWebs.find(window);
-  if (web == s.previewWebs.end()) {
+  NSScrollView *textScroll = previewTextScroll(window);
+  if (web == s.previewWebs.end() || textScroll == nil) {
     return;
   }
   s.previewScriptsPending[window] += 1;
-  evaluateScript(web->second, WebFractionScript, ^(id result) {
+  evaluateScript(web->second, webLineScript(textLineCount(textScroll.documentView)), ^(id result) {
     State &now = state();
     now.previewScriptsPending[window] -= 1;
     NSScrollView *scroll = previewTextScroll(window);
     if (scroll == nil || ![result respondsToSelector:@selector(doubleValue)]) {
       return;
     }
-    const double fraction = std::clamp<double>([result doubleValue], 0, 1);
-    now.previewFraction[window] = fraction;
+    const double line = [result doubleValue];
+    now.previewFraction[window] = line;
     now.previewSyncing[window] = true;
-    setTextScrollFraction(scroll, fraction);
+    setTextScrollLine(scroll, line);
     now.previewSyncing[window] = false;
   });
 }

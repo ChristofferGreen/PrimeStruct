@@ -309,3 +309,14 @@
     - editor scenarios on the VM, the optexe editor and the native editor through the mirror: Command-Comma builds the window, the acceptance gate pins its whole outline with `headless::controlOutline`, toggling each control changes its preference and the open tabs at once, the first launch uses the defaults, `restoreSession` off skips the session, `previewMarkdown` turns a markdown file's preview on, the app ends after the last document closes with the settings window open; the installed PrimeScroll shows the window; full release gate green
   - stop_rule: the editor's settings window and preferences.
   - notes: the preferences are plain `App.boolPref/intPref` calls; the editor tests drive the window with `headless::pushToggleCheckBox` and `pushSelectPopupItem` (control handles follow creation order) and run through the VM, optexe and native mirrors.
+
+- [x] TODO-5595: Preview scroll lock follows source lines
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-24
+  - phase: Native PrimeScroll (docs/NativeUiPlan.md section 14)
+  - parallel_track: markdown-preview
+  - scope: The proportional scroll lock drifted wherever the source and the page differ in height (code blocks, tables, images). `markdownToHtml(text, true)` (and the preview page) tags every block and list item with `data-line`, the 0-based source line it starts on (nested list items and quoted blocks keep their own lines; the plain output is unchanged). The AppKit backend keeps both views at a source line: the text view's top line with the fraction through it (`textScrollLine`), the page's from its blocks' tops (`webLineScript`), and each view is scrolled to a line by interpolating between the blocks around it (`setTextScrollLine`, `webScrollToLineScript`); the ends of the views match.
+  - acceptance:
+    - markdown tests pin the tags through lists, quotes, tables, code, setext headings and CRLF; the AppKit smoke test's `scrolluneven` picture (a page with a tall code block and a table, the source scrolled halfway) shows the same table header at the top of both views; full release gate green
+  - stop_rule: the line mapping of blocks and the lock; line-accurate inside very long blocks is not attempted.

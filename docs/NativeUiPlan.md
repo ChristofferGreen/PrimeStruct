@@ -383,8 +383,11 @@ page follows the text as it is edited. It is done when the installed native Prim
   half and half, created for the tab that asked. JavaScript is off in the page; navigation is locked (the page the
   preview loads is allowed, in-page `#fragment` links work, a click on an http, https or mailto link opens the default
   browser and nothing navigates the preview). Refreshes are coalesced to one page load per run-loop turn. Scrolling is
-  locked between the two views: both sit at the same fraction of the height they can scroll (proportional, not
-  line-accurate; a view that cannot scroll leaves the other alone). The text view is observed directly (the bounds
+  locked between the two views by source line: the converter tags every block and list item of the page with the line it
+  starts on (`data-line`, `markdownToHtml(text, true)`), the text view reports the line, with the fraction through it,
+  at its top, and the page scrolls to that place by interpolating between the tops of the blocks around it (and the
+  other way round), so a tall code block or table does not put the views out of step; the end of either view is the end
+  of the other, and a view that cannot scroll leaves the other alone. The text view is observed directly (the bounds
   notification of its clip view) and moves the page with a script; the page has no scroll notification, so a local event
   monitor sees the wheel, keys and drags over it, reads its position back with a script and moves the text view (again
   after 250 ms, for the page's scrolling animation). A page that finishes loading goes to where the text view is, so an

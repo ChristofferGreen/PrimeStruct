@@ -820,14 +820,21 @@ std::vector<char> parseTableDelimiter(const std::string &line) {
   return alignments;
 }
 
-void renderBlocks(const Lines &lines, bool tight, std::string &out);
+// ` data-line="N"` for the block that starts at lines[index], N being its (0-based) line in the source; the
+// preview scrolls with the text through these. A negative base marks lines that no longer map one to one.
+std::string lineAttribute(long base, size_t index) {
+  return base < 0 ? std::string() : " data-line=\"" + std::to_string(base + static_cast<long>(index)) + "\"";
+}
+
+void renderBlocks(const Lines &lines, bool tight, std::string &out, long base);
 
 // The list that starts at lines[i]; returns the index after it. Each item's lines, with the marker's
 // indentation removed, are blocks of their own; the list is loose when blank lines separate its items or
 // the blocks inside an item.
-size_t renderList(const Lines &lines, size_t i, std::string &out) {
+size_t renderList(const Lines &lines, size_t i, std::string &out, long base) {
   const ListMarker first = parseListMarker(lines[i]);
   std::vector<Lines> items;
+  std::vector<size_t> itemStarts;
   bool loose = false;
   bool listEnded = false;
   size_t cur = i;
@@ -838,6 +845,7 @@ size_t renderList(const Lines &lines, size_t i, std::string &out) {
       break;
     }
     items.emplace_back();
+    itemStarts.push_back(cur);
     Lines &item = items.back();
     item.push_back(marker.empty ? std::string() : lines[cur].substr(std::min(marker.contentIndent, lines[cur].size())));
     ++cur;
@@ -879,9 +887,12 @@ size_t renderList(const Lines &lines, size_t i, std::string &out) {
       }
     }
   }
-  out += first.ordered ? (first.number == 1 ? "<ol>\n" : "<ol start=\"" + std::to_string(first.number) + "\">\n")
-                       : "<ul>\n";
-  for (Lines &item : items) {
+  const std::string listLine = lineAttribute(base, i);
+  out += first.ordered ? (first.number == 1 ? "<ol" + listLine + ">\n"
+                                            : "<ol start=\"" + std::to_string(first.number) + "\"" + listLine + ">\n")
+                       : "<ul" + listLine + ">\n";
+  for (size_t itemIndex = 0; itemIndex < items.size(); ++itemIndex) {
+    Lines &item = items[itemIndex];
     std::string task;
     if (!item.empty()) {
       const std::string &head = item.front();
@@ -893,17 +904,17 @@ size_t renderList(const Lines &lines, size_t i, std::string &out) {
       }
     }
     std::string body;
-    renderBlocks(item, !loose, body);
+    renderBlocks(item, !loose, body, base < 0 ? -1 : base + static_cast<long>(itemStarts[itemIndex]));
     while (!body.empty() && body.back() == '\n') {
       body.pop_back();
     }
-    out += "<li>" + task + body + "</li>\n";
+    out += "<li" + lineAttribute(base, itemStarts[itemIndex]) + ">" + task + body + "</li>\n";
   }
   out += first.ordered ? "</ol>\n" : "</ul>\n";
   return cur;
 }
 
-void renderBlocks(const Lines &lines, bool tight, std::string &out) {
+void renderBlocks(const Lines &lines, bool tight, std::string &out, long base) {
   const size_t n = lines.size();
   size_t i = 0;
   while (i < n) {
@@ -912,6 +923,8 @@ void renderBlocks(const Lines &lines, bool tight, std::string &out) {
       ++i;
       continue;
     }
+    const size_t blockStart = i;
+    const std::string where = lineAttribute(base, blockStart);
     // Fenced code.
     const Fence fence = parseFence(line);
     if (fence.ok) {
@@ -928,7 +941,7 @@ void renderBlocks(const Lines &lines, bool tight, std::string &out) {
         ++i;
       }
       std::string language = fence.info.substr(0, fence.info.find_first_of(" \t"));
-      out += "<pre><code";
+      out += "<pre" + where + "><code";
       if (!language.empty()) {
         out += " class=\"language-" + escapeHtml(language) + "\"";
       }
@@ -938,12 +951,13 @@ void renderBlocks(const Lines &lines, bool tight, std::string &out) {
     // Headings and breaks.
     std::string headingText;
     if (const int level = parseAtxHeading(line, headingText); level != 0) {
-      out += "<h" + std::to_string(level) + ">" + renderInline(headingText) + "</h" + std::to_string(level) + ">\n";
+      out += "<h" + std::to_string(level) + where + ">" + renderInline(headingText) + "</h" + std::to_string(level) +
+             ">\n";
       ++i;
       continue;
     }
     if (isThematicBreak(line)) {
-      out += "<hr>\n";
+      out += "<hr" + where + ">\n";
       ++i;
       continue;
     }
@@ -966,13 +980,13 @@ void renderBlocks(const Lines &lines, bool tight, std::string &out) {
         }
       }
       std::string inner;
-      renderBlocks(quoted, false, inner);
-      out += "<blockquote>\n" + inner + "</blockquote>\n";
+      renderBlocks(quoted, false, inner, base < 0 ? -1 : base + static_cast<long>(blockStart));
+      out += "<blockquote" + where + ">\n" + inner + "</blockquote>\n";
       continue;
     }
     // Lists.
     if (parseListMarker(line).ok) {
-      i = renderList(lines, i, out);
+      i = renderList(lines, i, out, base);
       continue;
     }
     // Indented code.
@@ -989,7 +1003,7 @@ void renderBlocks(const Lines &lines, bool tight, std::string &out) {
         }
         ++i;
       }
-      out += "<pre><code>" + escapeHtml(code) + "</code></pre>\n";
+      out += "<pre" + where + "><code>" + escapeHtml(code) + "</code></pre>\n";
       continue;
     }
     // A table: a row with pipes followed by the delimiter row.
@@ -1006,7 +1020,7 @@ void renderBlocks(const Lines &lines, bool tight, std::string &out) {
           }
           return std::string("<") + tag + style + ">" + renderInline(text) + "</" + tag + ">";
         };
-        out += "<table>\n<thead>\n<tr>";
+        out += "<table" + where + ">\n<thead>\n<tr>";
         for (size_t c = 0; c < header.size(); ++c) {
           out += cellTag("th", c, header[c]);
         }
@@ -1046,11 +1060,11 @@ void renderBlocks(const Lines &lines, bool tight, std::string &out) {
       ++i;
     }
     if (setext != 0) {
-      out += "<h" + std::to_string(setext) + ">" + renderInline(text) + "</h" + std::to_string(setext) + ">\n";
+      out += "<h" + std::to_string(setext) + where + ">" + renderInline(text) + "</h" + std::to_string(setext) + ">\n";
     } else if (tight) {
       out += renderInline(text) + "\n";
     } else {
-      out += "<p>" + renderInline(text) + "</p>\n";
+      out += "<p" + where + ">" + renderInline(text) + "</p>\n";
     }
   }
 }
@@ -1091,9 +1105,9 @@ Lines splitLines(std::string_view markdown) {
 
 } // namespace
 
-std::string markdownToHtml(std::string_view markdown) {
+std::string markdownToHtml(std::string_view markdown, bool sourceLines) {
   std::string out;
-  renderBlocks(splitLines(markdown), false, out);
+  renderBlocks(splitLines(markdown), false, out, sourceLines ? 0 : -1);
   return out;
 }
 
@@ -1120,7 +1134,7 @@ std::string markdownPreviewPage(std::string_view markdown) {
       "</style>\n";
   return std::string("<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"utf-8\">\n"
                      "<meta name=\"viewport\" content=\"width=device-width\">\n") +
-         Style + "</head>\n<body>\n" + markdownToHtml(markdown) + "</body>\n</html>\n";
+         Style + "</head>\n<body>\n" + markdownToHtml(markdown, true) +"</body>\n</html>\n";
 }
 
 } // namespace primec::ui

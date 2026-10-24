@@ -113,10 +113,31 @@ TEST_CASE("block quotes and tables") {
 TEST_CASE("the preview page wraps the body and follows the system appearance") {
   const std::string page = markdownPreviewPage("# Hi");
   CHECK(page.find("<!DOCTYPE html>") == 0);
-  CHECK(page.find("<h1>Hi</h1>") != std::string::npos);
+  CHECK(page.find("<h1 data-line=\"0\">Hi</h1>") != std::string::npos);
   CHECK(page.find("color-scheme: light dark") != std::string::npos);
   CHECK(page.find("prefers-color-scheme: dark") != std::string::npos);
   CHECK(page.find("</html>") != std::string::npos);
+}
+
+TEST_CASE("blocks carry the source line they start on when asked") {
+  // Without the flag the HTML is plain.
+  CHECK(markdownToHtml("# T\n\ntext") == "<h1>T</h1>\n<p>text</p>\n");
+  CHECK(markdownToHtml("# T\n\ntext", true) == "<h1 data-line=\"0\">T</h1>\n<p data-line=\"2\">text</p>\n");
+  // Code, tables, rules and setext headings.
+  CHECK(markdownToHtml("a\n\n```\nx\ny\n```\n\n---\n\nSub\n---", true) ==
+        "<p data-line=\"0\">a</p>\n<pre data-line=\"2\"><code>x\ny\n</code></pre>\n<hr data-line=\"7\">\n"
+        "<h2 data-line=\"9\">Sub</h2>\n");
+  CHECK(markdownToHtml("p\n\n| a |\n|---|\n| 1 |", true).find("<table data-line=\"2\">") != std::string::npos);
+  // Lists: the list and every item, nested items by their own line; a quote's blocks by theirs.
+  CHECK(markdownToHtml("intro\n\n- one\n- two\n  - deep\n- three", true) ==
+        "<p data-line=\"0\">intro</p>\n<ul data-line=\"2\">\n<li data-line=\"2\">one</li>\n"
+        "<li data-line=\"3\">two\n<ul data-line=\"4\">\n<li data-line=\"4\">deep</li>\n</ul></li>\n"
+        "<li data-line=\"5\">three</li>\n</ul>\n");
+  CHECK(markdownToHtml("> q1\n>\n> q2\n\nafter", true) ==
+        "<blockquote data-line=\"0\">\n<p data-line=\"0\">q1</p>\n<p data-line=\"2\">q2</p>\n</blockquote>\n"
+        "<p data-line=\"4\">after</p>\n");
+  // Windows line endings count once.
+  CHECK(markdownToHtml("a\r\n\r\nb", true) == "<p data-line=\"0\">a</p>\n<p data-line=\"2\">b</p>\n");
 }
 
 TEST_CASE("odd and hostile input does not crash") {

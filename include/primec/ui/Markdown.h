@@ -16,10 +16,12 @@
 
 namespace primec::ui {
 
-// The HTML for the body of a document.
-std::string markdownToHtml(std::string_view markdown);
+// The HTML for the body of a document. With `sourceLines` every block (and list item) carries
+// data-line="N", the 0-based line of the source it starts on, so a preview can scroll to a source line.
+std::string markdownToHtml(std::string_view markdown, bool sourceLines = false);
 
-// A complete HTML page around that body, with a stylesheet that follows the system's light or dark mode.
+// A complete HTML page around that body (with source lines), with a stylesheet that follows the system's
+// light or dark mode.
 std::string markdownPreviewPage(std::string_view markdown);
 
 } // namespace primec::ui
