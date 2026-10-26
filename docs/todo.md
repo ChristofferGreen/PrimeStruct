@@ -104,8 +104,8 @@ of sync with them.
 | TODO-5569 | Slice loans, escapes and returned borrows | ready | slices |
 | TODO-5570 | Slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views | ready | slices |
 | TODO-5540 | `string` as the UTF-8 text view | blocked | string-view |
-| TODO-5601 | The editor's Files settings and open-file requests | ready | file-associations |
-| TODO-5602 | Bytecode-only bundles pass their arguments to the program | blocked | bytecode-startup |
+| TODO-5602 | Bytecode-only bundles pass their arguments to the program | ready | bytecode-startup |
+| TODO-5603 | Startup audit: what a launch loads and does | blocked | startup |
 | TODO-5586 | Native String heap: pooled blocks, statistics and limit | deferred | native-backend-strings |
 | TODO-5574 | Simple C++ emitters run bytes and strings | deferred | string-backends |
 | TODO-5568 | String conveniences: operators, numbers, push of code points | blocked | string-owned |
@@ -139,7 +139,7 @@ of sync with them.
 
 - TODO-5567 (bytes): packed `array<u8>`
 - TODO-5570 (slices): slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views
-- TODO-5601 (file-associations): the editor's Files settings and open-file requests
+- TODO-5602 (bytecode-startup): bytecode-only bundles pass their arguments to the program
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5510 (control-returns): `return` returns from pick arms and lambdas correctly
@@ -150,7 +150,7 @@ of sync with them.
 
 2. TODO-5567
 3. TODO-5570
-4. TODO-5601
+4. TODO-5602
 5. TODO-5536
 6. TODO-5535
 7. TODO-5510
@@ -162,7 +162,7 @@ of sync with them.
 - Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5567, TODO-5570, TODO-5569, TODO-5540, TODO-5568, TODO-5530, TODO-5574
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
-- File associations (docs/NativeUiPlan.md section 16): TODO-5601
+- Startup and bundles (docs/NativeUiPlan.md section 16): TODO-5602, TODO-5603
 - Lifecycle (docs/spec/value-lifecycle.md): TODO-5527
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
@@ -299,21 +299,9 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - full release gate green
   - stop_rule: the text view on the VM.
 
-- [ ] TODO-5601: The editor's Files settings and open-file requests
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-26
-  - phase: File associations (docs/NativeUiPlan.md section 16)
-  - parallel_track: file-associations
-  - scope: PrimeScroll's settings window gets a Files tab: an "Application" row with the application that will be made the default (PrimeScroll, or the one chosen with a "Choose..." button through the application panel, kept as the `defaultApp` list preference) and one row per declared file type (`file_types.txt`: Plain text, Markdown, PrimeStruct source, JSON, YAML, Configuration, C and C++, Shell scripts, Python, Web scripts and styles, Logs) with a "Make Default" button whose title says when the chosen application already is the default, and a "Make All Default" button. The editor opens the files the system asks it to open (`openFile` events: in a new tab, or the untouched untitled one, and into the recent files; a file that is already open in a tab selects that tab, because macOS also reports a command-line file argument as an open request). None of it runs at startup: the document types, the default application lookups and every other system call of this feature happen only when the settings window is built or a button is pressed, never on the way to the first window (the launch time must not change). Tests drive it through the headless backend (`click:H`, `appanswer:`, `openfile:`) on the VM, the optexe editor and the native editor, the acceptance gate pins the tab's outline, and the installed PrimeScroll shows the tab.
-  - acceptance:
-    - editor scenarios: the Files tab builds with the declared types, a click makes the chosen application the default for that group's extensions (and "Make All Default" for all), "Choose..." changes the application and the buttons follow, an `openFile` event opens the file, through the mirrors; full release gate green
-  - stop_rule: the editor's tab and open-file handling.
-
 - [ ] TODO-5602: Bytecode-only bundles pass their arguments to the program
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5601
+  - status: ready
   - created_at: 2026-10-26
   - phase: Native PrimeScroll (docs/NativeUiPlan.md)
   - parallel_track: bytecode-startup
@@ -322,6 +310,19 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - a program bundled without `--native` reads its arguments (a test bundles a program that writes `args` to a file, runs it with two arguments and compares); an existing `primestruct_app app.psir` run is unchanged; full release gate green
   - stop_rule: the bytecode-only runner's argument handling; the VM's argument support itself exists.
   - notes: found while testing the file types demo (TODO-5600), which uses a native bundle until this lands.
+
+- [ ] TODO-5603: Startup audit: what a launch loads and does
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5602
+  - created_at: 2026-10-26
+  - phase: Native PrimeScroll (docs/NativeUiPlan.md)
+  - parallel_track: startup
+  - scope: Take stock of what PrimeScroll loads and does on the way to its first window, and keep it minimal (the user asked for this pass after the file-association work, where a framework link and system lookups had to be checked against the launch time). Measure first: the libraries dyld loads (`DYLD_PRINT_LIBRARIES=1` on a launch with `PRIMESTRUCT_UI_SNAPSHOT` set; the baseline of 2026-10-26 is 1404 lines for both the installed build and the one with the file-type code, UniformTypeIdentifiers included because AppKit loads it) and the time to the first window over repeated launches of the installed app, as a script (`scripts/measure_startup.sh`) so the numbers can be compared. Then list the work a launch does before the first window (preference and session reads, building every menu, the Info.plist, the runtime's setup: the native String heap, the host-call table, the highlighter) and move whatever can wait behind first use, as the markdown preview's web view already does. Record the before and after numbers in docs/NativeUiPlan.md.
+  - acceptance:
+    - `scripts/measure_startup.sh` prints the loaded-library count and the median time to the first window of a bundle over a number of launches; the plan records the baseline and what moved; a guard (a test or the script with a recorded limit) fails when a launch loads more libraries than the baseline; full release gate green
+  - stop_rule: measurement, the guard and the launch-time work that can wait; no feature changes.
+  - notes: system calls of a feature belong behind its window (the file associations only run when the settings window is built or a button is pressed).
 
 - [ ] TODO-5574: Simple C++ emitters run bytes and strings
   - owner: ai

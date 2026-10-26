@@ -482,8 +482,55 @@ constexpr uint64_t SizePopup = 17;
 constexpr uint64_t PreviewBox = 19;
 constexpr uint64_t ScrollPopup = 20;
 constexpr uint64_t SettingsTabs = 21;
-constexpr uint64_t TabAfterSettings = 22; // a New command after the settings window: window 22, view 23
+// The Files tab: the form 22, the application button 23, the 11 file type buttons 24 to 34, "Make All Default" 35.
+constexpr uint64_t ApplicationButton = 23;
+constexpr uint64_t FirstTypeButton = 24;
+constexpr uint64_t MakeAllButton = 35;
+constexpr uint64_t TabAfterSettings = 36; // a New command after the settings window: window 36, view 37
 constexpr int32_t CommandSettings = 8;
+
+// The file types of the headless backend (examples/apps/text_editor/file_types.txt) and the buttons of the Files tab.
+struct HeadlessFileType {
+  const char *name;
+  const char *extensions;
+};
+const std::vector<HeadlessFileType> HeadlessFileTypes = {
+    {"Plain text", "txt,text"},        {"Markdown", "md,markdown"},
+    {"PrimeStruct source", "prime"},   {"JSON", "json"},
+    {"YAML", "yml,yaml"},              {"Configuration", "toml,ini,cfg,conf"},
+    {"C and C++", "c,h,cc,cpp,hpp,cxx"}, {"Shell scripts", "sh,bash,zsh"},
+    {"Python", "py"},                  {"Web scripts and styles", "js,ts,css"},
+    {"Logs", "log"},
+};
+
+std::string fileTypeTitle(const HeadlessFileType &type, bool isDefault) {
+  std::string title = std::string(type.name) + " (.";
+  for (const char *c = type.extensions; *c != '\0'; ++c) {
+    title += *c == ',' ? std::string(", .") : std::string(1, *c);
+  }
+  return title + (isDefault ? ") - Default" : ") - Make Default");
+}
+
+// The outline lines of the Files page; `defaults` names the types whose button says they are the default.
+std::vector<std::string> filesPage(const std::string &applicationName, const std::vector<std::string> &defaults = {}) {
+  std::vector<std::string> page{"  page \"Files\":", "    form", "      heading \"Default application\"",
+                                "      row \"Application\": button \"Choose... (" + applicationName + ")\"",
+                                "      heading \"File types\""};
+  for (const auto &type : HeadlessFileTypes) {
+    const bool isDefault = std::find(defaults.begin(), defaults.end(), type.name) != defaults.end();
+    page.push_back("      control: button \"" + fileTypeTitle(type, isDefault) + "\"");
+  }
+  page.push_back("      control: button \"Make All Default\"");
+  return page;
+}
+
+std::vector<std::string> settingsOutline(const std::vector<std::string> &base, const std::string &applicationName,
+                                         const std::vector<std::string> &defaults = {}) {
+  std::vector<std::string> outline = base;
+  const auto files = filesPage(applicationName, defaults);
+  outline.insert(outline.end(), files.begin(), files.end());
+  return outline;
+}
 } // namespace
 
 TEST_CASE("settings window shows the preferences in tabs and is not a document") {
@@ -509,7 +556,7 @@ TEST_CASE("settings window shows the preferences in tabs and is not a document")
       "      control: checkbox \"Show the preview when a markdown file opens\"",
       "      row \"Scroll source and preview\": popup [Independently|Linearly|By block|With the cursor] selected=2",
   };
-  CHECK(headless::controlOutline(SettingsTabs) == expected);
+  CHECK(headless::controlOutline(SettingsTabs) == settingsOutline(expected, "PrimeScroll"));
   const auto settings = headless::windowState(SettingsWindow);
   CHECK(settings.title == "Settings");
   CHECK(settings.style == 1);
@@ -997,4 +1044,151 @@ TEST_CASE("editor refreshes a preview when a file opens into the tab") {
   CHECK(headless::windowState(EditorWindow).preview);
   CHECK(headless::previewPage(EditorWindow).find(">First</h1>") != std::string::npos);
   (void)second;
+}
+
+// A base outline of the other three pages, for the Files tests (the first test pins them whole).
+namespace {
+std::vector<std::string> otherPages() {
+  return {
+      "tabs selected=0",
+      "  page \"General\":",
+      "    form",
+      "      heading \"Startup\"",
+      "      control: checkbox \"Reopen the files of the last session\" [checked]",
+      "  page \"Editor\":",
+      "    form",
+      "      heading \"Text\"",
+      "      control: checkbox \"Show line numbers\"",
+      "      control: checkbox \"Wrap long lines\" [checked]",
+      "      row \"Font size\": popup [11|12|13|14|16|18|20|24] selected=2",
+      "  page \"Markdown\":",
+      "    form",
+      "      heading \"Preview\"",
+      "      control: checkbox \"Show the preview when a markdown file opens\"",
+      "      row \"Scroll source and preview\": popup [Independently|Linearly|By block|With the cursor] selected=2",
+  };
+}
+} // namespace
+
+TEST_CASE("settings makes the app the default for a file type") {
+  headless::reset();
+  headless::pushCommand(CommandSettings);
+  headless::pushClickButton(FirstTypeButton + 1); // Markdown
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(headless::defaultApp("md") == "/Headless/PrimeScroll.app");
+  CHECK(headless::defaultApp("markdown") == "/Headless/PrimeScroll.app");
+  CHECK(headless::defaultApp("txt").empty());
+  CHECK(headless::controlOutline(SettingsTabs) == settingsOutline(otherPages(), "PrimeScroll", {"Markdown"}));
+}
+
+TEST_CASE("settings chooses another application for the file types") {
+  headless::reset();
+  headless::pushCommand(CommandSettings);
+  headless::pushApplicationPanelAnswer("/Applications/Other.app");
+  headless::pushClickButton(ApplicationButton);
+  headless::pushClickButton(FirstTypeButton + 2); // PrimeStruct source (.prime)
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(headless::prefList("defaultApp") == std::vector<std::string>{"/Applications/Other.app"});
+  CHECK(headless::defaultApp("prime") == "/Applications/Other.app");
+  CHECK(headless::defaultApp("md").empty());
+  CHECK(headless::controlOutline(SettingsTabs) == settingsOutline(otherPages(), "Other", {"PrimeStruct source"}));
+  CHECK(countCalls("ps_ui_open_application_panel(\"Choose an application\")") == 1);
+}
+
+TEST_CASE("settings keeps the application when the chooser is cancelled") {
+  headless::reset();
+  headless::pushCommand(CommandSettings);
+  headless::pushClickButton(ApplicationButton);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(headless::prefList("defaultApp").empty());
+  CHECK(headless::controlOutline(SettingsTabs) == settingsOutline(otherPages(), "PrimeScroll"));
+}
+
+TEST_CASE("settings makes the app the default for all file types") {
+  headless::reset();
+  headless::pushCommand(CommandSettings);
+  headless::pushClickButton(MakeAllButton);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  std::vector<std::string> names;
+  for (const auto &type : HeadlessFileTypes) {
+    names.push_back(type.name);
+    std::string list = type.extensions;
+    for (size_t from = 0; from <= list.size();) {
+      size_t comma = list.find(',', from);
+      comma = comma == std::string::npos ? list.size() : comma;
+      CHECK_MESSAGE(headless::defaultApp(list.substr(from, comma - from)) == "/Headless/PrimeScroll.app", list);
+      from = comma + 1;
+    }
+  }
+  CHECK(headless::defaultApp("prime") == "/Headless/PrimeScroll.app");
+  CHECK(headless::controlOutline(SettingsTabs) == settingsOutline(otherPages(), "PrimeScroll", names));
+}
+
+// The launch time must not change: nothing of the file associations is asked before the settings window is built.
+TEST_CASE("the file types are not looked up before the settings window opens") {
+  const char *calls[] = {"ps_ui_document_type_", "ps_ui_default_app(", "ps_ui_set_default_app(", "ps_ui_app_path(",
+                         "ps_ui_open_application_panel(", "ps_ui_button_"};
+  headless::reset();
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  for (const char *call : calls) {
+    CHECK_MESSAGE(countCalls(call) == 0, call);
+  }
+  headless::reset();
+  headless::pushCommand(CommandSettings);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(countCalls("ps_ui_document_type_count(") >= 1);
+  CHECK(countCalls("ps_ui_default_app(") >= 1);
+}
+
+TEST_CASE("a file the system asks to open opens in the untitled tab") {
+  const std::string a = writeScratch("request_a.txt", "a");
+  headless::reset();
+  headless::pushOpenFile(a);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(headless::windowState(EditorWindow).title == a);
+  CHECK(headless::windowPath(EditorWindow) == a);
+  REQUIRE(headless::recentFiles().size() == 1);
+  CHECK(headless::recentFiles()[0] == a);
+  CHECK(countCalls("ps_ui_window_create(\"Untitled\"") == 1);
+}
+
+TEST_CASE("a file that is already open is selected instead of opened again") {
+  const std::string a = writeScratch("request_same_a.txt", "a");
+  const std::string b = writeScratch("request_same_b.txt", "b");
+  headless::reset();
+  headless::pushOpenFile(a);
+  headless::pushOpenFile(a);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(countCalls("ps_ui_window_create(\"Untitled\"") == 1);
+
+  // Another file gets a tab of its own, and asking for the first again selects the first tab.
+  headless::reset();
+  headless::pushOpenFile(a);
+  headless::pushOpenFile(b);
+  headless::pushOpenFile(a);
+  headless::pushCloseWindow(SecondWindow);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(countCalls("ps_ui_window_create(\"Untitled\"") == 2);
+  CHECK(headless::windowPath(SecondWindow) == b);
+  CHECK(countCalls("ps_ui_window_select(1)") >= 1);
+}
+
+TEST_CASE("a file the system asks to open goes to a document while the settings window is active") {
+  const std::string a = writeScratch("request_settings.txt", "a");
+  headless::reset();
+  headless::pushCommand(CommandSettings);
+  headless::pushOpenFile(a);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(headless::windowPath(EditorWindow) == a);
+  CHECK(headless::windowPath(SettingsWindow).empty());
 }

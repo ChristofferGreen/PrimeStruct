@@ -460,8 +460,12 @@ window, including `.prime`, and the application can be chosen the normal macOS w
   limited to applications, which is how another editor than PrimeScroll is chosen by hand.
 - **Opening.** A double click, Open With or a drop on the icon reaches the program as `PS_UI_EVENT_OPEN_FILE`
   (`AppEvent.openFile`, the path from `App.eventText()`).
-- **Settings.** A Files tab: the application (PrimeScroll or the chosen one, "Choose..."), one "Make Default" button per
-  file type and "Make All Default". Buttons are a new control: a click is a `PS_UI_EVENT_CONTROL_CHANGED`.
+- **Settings.** A Files tab. A button titled "Choose... (PrimeScroll)" shows the application the types are made to open
+  with and opens the application chooser (any editor; kept as the `defaultApp` preference); below it one button per
+  declared file type, titled "<Name> (.ext, .ext) - Make Default" (or "- Default" when the chosen application already is
+  the default of the type's first extension), and "Make All Default". Buttons are a new control: a click is a
+  `PS_UI_EVENT_CONTROL_CHANGED`. Opening a file the system asks for opens it in the untitled tab or a new one, or selects
+  the tab that already holds it.
 - **No cost at startup.** Everything here happens only when the settings window is built or a button is pressed. The
   bundle's document types are read on the first call, the default application is looked up and set only then, and the
   application panel only opens on a click; nothing of it is on the way to the first window, so the launch time does not

@@ -181,6 +181,124 @@ font_size_index([i32] size) {
   return(index)
 }
 
+// True when both texts are the same bytes.
+[return<bool>]
+same_text([String] a, [String] b) {
+  [bool mut] same{a.count() == b.count()}
+  [i32 mut] index{0i32}
+  while(same && index < a.count()) {
+    if(a.byteAt(index) != b.byteAt(index)) {
+      same = false
+    }
+    index = index + 1i32
+  }
+  return(same)
+}
+
+// The application the file types are made to open with: the one chosen in the Files settings (the `defaultApp`
+// preference), else this app. "" outside a bundle, which the system calls take for this app.
+[return</std/text/String> effects(heap_alloc)]
+chosen_application([App] app) {
+  [String mut] path{app.appPath()}
+  if(app.listCount("defaultApp") > 0i32) {
+    path = app.listGet("defaultApp", 0i32)
+  }
+  return(path)
+}
+
+// "/Applications/Xcode.app" is "Xcode".
+[return</std/text/String> effects(heap_alloc)]
+application_name([String] path) {
+  [i32] size{path.count()}
+  [i32 mut] start{0i32}
+  [i32 mut] index{0i32}
+  while(index < size) {
+    if(convert<i32>(path.byteAt(index)) == 47i32) {
+      start = index + 1i32
+    }
+    index = index + 1i32
+  }
+  [i32 mut] end{size}
+  if(size - start > 4i32) {
+    [String] tail{path.substr(size - 4i32, size)}
+    if(tail.equalsText(".app")) {
+      end = size - 4i32
+    }
+  }
+  [String mut] name{path.substr(start, end)}
+  if(name.empty()) {
+    name = stringFrom("this app")
+  }
+  return(name)
+}
+
+// The text of the button that chooses the application.
+[return</std/text/String> effects(heap_alloc)]
+application_title([String] path) {
+  [String mut] title{String{}}
+  [String] name{application_name(path)}
+  title.append("Choose... (")
+  title.appendString(name)
+  title.append(")")
+  return(title)
+}
+
+// "md,markdown" starts with "md".
+[return</std/text/String> effects(heap_alloc)]
+first_extension([String] list) {
+  [i32] size{list.count()}
+  [i32 mut] end{0i32}
+  while(end < size && convert<i32>(list.byteAt(end)) != 44i32) {
+    end = end + 1i32
+  }
+  return(list.substr(0i32, end))
+}
+
+// The text of the button of a file type: "Markdown (.md, .markdown) - Make Default", or "- Default" when the chosen
+// application already is the default of its first extension.
+[return</std/text/String> effects(heap_alloc)]
+type_title([App] app, [i32] index, [bool] isDefault) {
+  [String mut] title{String{}}
+  [String] name{app.documentTypeName(index)}
+  [String] list{app.documentTypeExtensions(index)}
+  title.appendString(name)
+  title.append(" (.")
+  [i32 mut] at{0i32}
+  while(at < list.count()) {
+    if(convert<i32>(list.byteAt(at)) == 44i32) {
+      title.append(", .")
+    } else {
+      title.pushByte(list.byteAt(at))
+    }
+    at = at + 1i32
+  }
+  if(isDefault) {
+    title.append(") - Default")
+  } else {
+    title.append(") - Make Default")
+  }
+  return(title)
+}
+
+// Shows the chosen application and which file types it already opens by default. These are the only system
+// lookups of the file types, and they happen when the settings window is built or a button of it was pressed.
+[return<bool> effects(heap_alloc)]
+refresh_files([App] app, [u64] applicationHandle, [u64] first, [u64] last) {
+  [String] chosen{chosen_application(app)}
+  [Button] applicationButton{[handle] applicationHandle}
+  applicationButton.setTitle(application_title(chosen))
+  [i32] count{convert<i32>(last - first)}
+  [i32 mut] index{0i32}
+  while(index < count) {
+    [String] list{app.documentTypeExtensions(index)}
+    [String] current{app.defaultApp(first_extension(list))}
+    [Button] typeButton{[handle] first + convert<u64>(index)}
+    typeButton.setTitle(type_title(app, index, same_text(current, chosen)))
+    index = index + 1i32
+  }
+  return(true)
+}
+
 // The settings window and the controls the program reads back; every handle is 0 while it is closed.
 [struct]
 Settings() {
@@ -191,6 +309,10 @@ Settings() {
   [public u64] size{0u64}
   [public u64] preview{0u64}
   [public u64] lock{0u64}
+  [public u64] application{0u64} // the button that chooses the application
+  [public u64] first{0u64}       // the buttons of the file types: first up to (not including) last, in creation order
+  [public u64] last{0u64}
+  [public u64] all{0u64}
 }
 
 // Builds the settings window (tabs General, Editor and Markdown) from the current preferences.
@@ -235,13 +357,38 @@ build_settings([App] app) {
   markdown.row("Scroll source and preview", lock.widget())
 
   [Tabs] tabs{app.tabs()}
+
+  [Form] files{app.form()}
+  files.heading("Default application")
+  [Button] application{app.button("Choose...")}
+  files.row("Application", application.widget())
+  files.heading("File types")
+  [u64 mut] firstType{0u64}
+  [u64 mut] lastType{0u64}
+  [i32] typeCount{app.documentTypeCount()}
+  [i32 mut] typeIndex{0i32}
+  while(typeIndex < typeCount) {
+    [Button] typeButton{app.button("Make Default")}
+    files.control(typeButton.widget())
+    if(typeIndex == 0i32) {
+      firstType = typeButton.handle
+    }
+    lastType = typeButton.handle + 1u64
+    typeIndex = typeIndex + 1i32
+  }
+  [Button] makeAll{app.button("Make All Default")}
+  files.control(makeAll.widget())
+  [bool] filled{refresh_files(app, application.handle, firstType, lastType)}
+
   tabs.add("General", general.widget())
   tabs.add("Editor", editor.widget())
   tabs.add("Markdown", markdown.widget())
+  tabs.add("Files", files.widget())
   created.setContentWidget(tabs.widget())
   created.show()
   return(Settings{[window] created.handle, [restore] restore.handle, [numbers] numbers.handle,
-                  [wrap] wrap.handle, [size] size.handle, [preview] preview.handle, [lock] lock.handle})
+                  [wrap] wrap.handle, [size] size.handle, [preview] preview.handle, [lock] lock.handle,
+                  [application] application.handle, [first] firstType, [last] lastType, [all] makeAll.handle})
 }
 
 // Documents are the windows other than the settings window.
@@ -428,6 +575,28 @@ open_path([App] app, [Window] tab, [String] chosen) {
     }
   }
   return(true)
+}
+
+// Opens `requested` (a file the system asks the app to open), or selects the tab that already holds it: macOS also
+// reports a file named on the command line as such a request.
+[return<bool>]
+open_or_select([App] app, [Window] tab, [String] requested, [u64] settingsWindow) {
+  [bool mut] found{false}
+  [i32 mut] index{0i32}
+  while(!found && index < app.windowCount()) {
+    [Window] each{app.windowAt(index)}
+    if(each.handle != settingsWindow && each.hasPath()) {
+      if(same_text(each.path(), requested)) {
+        found = each.select()
+      }
+    }
+    index = index + 1i32
+  }
+  [bool mut] opened{found}
+  if(!found) {
+    opened = open_path(app, tab, requested)
+  }
+  return(opened)
 }
 
 // Asks for a file and opens it.
@@ -680,7 +849,10 @@ main([array<string>] args) {
         changedControl = changed.handle
       }
       openFile(request) {
-        [i32] ignoredRequest{request}
+        [String] requested{app.eventText()}
+        [Window] target{document_window(app, settings.window)}
+        [bool] openedRequest{open_or_select(app, target, requested, settings.window)}
+        [i32] listedRecent{refresh_recent(recentMenu)}
       }
       quitRequested {
         intent = command_quit()
@@ -719,6 +891,32 @@ main([array<string>] args) {
       }
       if(changedControl == settings.size) {
         app.setIntPref("fontSize", font_size_at(sizeChoice.selected()))
+      }
+      if(settings.application != 0u64 && changedControl == settings.application) {
+        [String] picked{app.applicationPanel("Choose an application")}
+        if(app.panelChosen()) {
+          app.listClear("defaultApp")
+          app.listAdd("defaultApp", picked)
+          [bool] chosenShown{refresh_files(app, settings.application, settings.first, settings.last)}
+        }
+      }
+      if(settings.first != 0u64 && changedControl >= settings.first && changedControl < settings.last) {
+        [i32] typeAt{convert<i32>(changedControl - settings.first)}
+        [String] chosenApp{chosen_application(app)}
+        [String] typeExtensions{app.documentTypeExtensions(typeAt)}
+        app.setDefaultApp(typeExtensions, chosenApp)
+        [bool] typeShown{refresh_files(app, settings.application, settings.first, settings.last)}
+      }
+      if(settings.all != 0u64 && changedControl == settings.all) {
+        [String] allApp{chosen_application(app)}
+        [i32] allCount{convert<i32>(settings.last - settings.first)}
+        [i32 mut] allAt{0i32}
+        while(allAt < allCount) {
+          [String] allExtensions{app.documentTypeExtensions(allAt)}
+          app.setDefaultApp(allExtensions, allApp)
+          allAt = allAt + 1i32
+        }
+        [bool] allShown{refresh_files(app, settings.application, settings.first, settings.last)}
       }
       [bool] controlsApplied{refresh_preferences(app, viewMenu, scrollMenu, settings)}
     }

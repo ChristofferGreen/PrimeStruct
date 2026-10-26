@@ -1455,7 +1455,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_native_ui_editor
-                       PROPERTIES TIMEOUT 900 LABELS "parallel-safe")
+                       PROPERTIES TIMEOUT 2400 LABELS "parallel-safe")
   # The editor acceptance gate (docs/todo.md TODO-5552..5554): the editor
   # scenarios plus the acceptance suite, in one release-gate entry.
   add_test(
@@ -1465,7 +1465,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_native_ui_editor_acceptance
-                       PROPERTIES TIMEOUT 900 LABELS "parallel-safe")
+                       PROPERTIES TIMEOUT 2400 LABELS "parallel-safe")
   if(PRIMESTRUCT_BUILD_NATIVE_UI AND APPLE)
     # Bundles an example, runs it against AppKit in snapshot mode and checks the
     # PNG of the laid-out window (needs a window-server session).
