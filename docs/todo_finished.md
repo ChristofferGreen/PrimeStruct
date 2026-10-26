@@ -2065,6 +2065,8 @@ are left unarchived.
 | TODO-5604 | Selectable lists and the Files tab on them | [undated.md](todo_archive/undated.md) | - |
 | TODO-5605 | Drag and drop, and opening any file | [undated.md](todo_archive/undated.md) | - |
 | TODO-5606 | Remove the application chooser from the Files tab | [undated.md](todo_archive/undated.md) | - |
+| TODO-5607 | Make Default asks the system as little as possible | [undated.md](todo_archive/undated.md) | - |
+| TODO-5608 | Drop files on the markdown preview | [undated.md](todo_archive/undated.md) | - |
 
 <!-- INDEX-END -->
 

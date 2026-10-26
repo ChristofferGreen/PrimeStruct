@@ -499,7 +499,7 @@ const std::vector<HeadlessFileType> HeadlessFileTypes = {
     {"PrimeStruct source", "prime"},   {"JSON", "json"},
     {"YAML", "yml,yaml"},              {"Configuration", "toml,ini,cfg,conf"},
     {"C and C++", "c,h,cc,cpp,hpp,cxx"}, {"Shell scripts", "sh,bash,zsh"},
-    {"Python", "py"},                  {"Web scripts and styles", "js,ts,css"},
+    {"Python", "py"},                  {"Web scripts and styles", "js,css"},
     {"Logs", "log"},
 };
 
@@ -527,7 +527,7 @@ std::vector<std::string> filesPage(const std::string &applicationName, const std
   return {"  page \"Files\":",
           "    form",
           "      heading \"File types\"",
-          "      control: label \"Select file types, then press Make Default.\"",
+          "      control: label \"Select file types, then press Make Default. macOS asks you to confirm each type.\"",
           "      control: list [" + items + "] selected=" + selected,
           "      control: button \"Make Default\""};
 }
@@ -1094,6 +1094,17 @@ TEST_CASE("settings makes the app the default for the selected file types") {
   CHECK(headless::controlOutline(SettingsTabs) ==
         settingsOutline(otherPages(), "PrimeScroll", {{"Markdown", "PrimeScroll"}, {"PrimeStruct source", "PrimeScroll"}},
                         "1,2"));
+}
+
+TEST_CASE("Make Default asks the system once, for every selected type together") {
+  headless::reset();
+  headless::pushCommand(CommandSettings);
+  headless::pushSelectListRows(FileTypeList, {0, 1, 2});
+  headless::pushClickButton(MakeDefaultButton);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(countCalls("ps_ui_set_default_app(") == 1);
+  CHECK(countCalls("ps_ui_set_default_app(\"txt,text,md,markdown,prime\"") == 1);
 }
 
 TEST_CASE("selecting file types alone changes nothing; the button applies the selection") {

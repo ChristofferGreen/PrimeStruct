@@ -458,14 +458,22 @@ support.**
   app itself) the system's default for a comma separated list of extensions (AppKit: `NSWorkspace
   setDefaultApplicationAtURL:toOpenContentType:completionHandler:`; the system may ask the user to confirm), and
   `ps_ui_default_app(extension)` reads the current handler. Choosing another editor than PrimeScroll is left to
-  the system (Finder's Open With and Change All); the app has no chooser of its own.
+  the system (Finder's Open With and Change All); the app has no chooser of its own. The system asks the user to
+  confirm every content type it is asked to change, one question each, so a request is cut down to what it must ask:
+  extensions that share a content type (txt and text, md and markdown) count once, and the types the application already
+  opens are left out; the Files tab sends all selected types in one request. Launch Services' older
+  `LSSetDefaultRoleHandlerForContentType` is no way around the questions: tried on a scratch type it returns success
+  and changes nothing. `PRIMESTRUCT_UI_DEFAULT_APP_PLAN=file` is a dry run that writes the content types the system would
+  be asked about to the file.
 - **Opening.** A double click, Open With or a drop on the icon reaches the program as `PS_UI_EVENT_OPEN_FILE`
   (`AppEvent.openFile`, the path from `App.eventText()`).
 - **Drag and drop.** The text views take files dropped on them as open requests (`PSDropTextView`: each dropped file is a
   `PS_UI_EVENT_OPEN_FILE`; the path is not pasted; dragging text is unchanged). The catch-all "Any file" document type
   (`public.data`, handler rank None) of the bundle lets any file be dropped on the Dock icon and offers the app in Open
   With for every file, without making it anybody's default. Checked with the harness drop and with a real
-  Launch Services open of an undeclared extension; a real mouse drag and a Dock drop are tried by hand.
+  Launch Services open of an undeclared extension; a real mouse drag and a Dock drop are tried by hand. The markdown
+  preview (a web view) takes dropped files the same way (`PSDropWebView`, a runtime subclass of `WKWebView`: it used to
+  refuse the navigation a drop asks for and so did nothing); the harness drops on it with `PRIMESTRUCT_UI_DROP_PREVIEW=path`.
 - **Settings.** A Files tab: a selectable list (`ps_ui_list_*`: rows of text, any number selected, a change of the
   selection is a `PS_UI_EVENT_CONTROL_CHANGED`) with one row per declared file type, "✓ Markdown (.md, .markdown) -
   PrimeScroll": a check mark when PrimeScroll is the default of the type's first extension, then the application that is.

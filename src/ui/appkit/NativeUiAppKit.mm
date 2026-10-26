@@ -131,6 +131,8 @@ struct State {
   bool snapshotOpenFileSent = false;
   std::string snapshotDrop; // PRIMESTRUCT_UI_DROP=path: the file is dropped on the text view
   bool snapshotDropped = false;
+  std::string snapshotDropPreview; // PRIMESTRUCT_UI_DROP_PREVIEW=path: the file is dropped on the markdown preview
+  bool snapshotDroppedPreview = false;
   int snapshotCaretLine = -1;      // PRIMESTRUCT_UI_CARET=N puts the text cursor at the start of line N
   bool snapshotCareted = false;
   bool snapshotTypeAfterScroll = false; // PRIMESTRUCT_UI_TYPE_AFTER_SCROLL: type once the scroll step is done
@@ -1117,6 +1119,81 @@ static NSArray<NSURL *> *droppedFileURLs(id<NSDraggingInfo> info) {
 }
 @end
 
+// The markdown preview takes dropped files too (a web view would otherwise try to navigate to them, which the
+// preview refuses, so nothing happened). The web view's class is made at run time, a subclass of WKWebView (WebKit
+// is loaded only when a preview is first shown): a drag that carries files is an open request, any other drag is
+// WebKit's own.
+static Class dropWebViewClass() {
+  static Class made = []() -> Class {
+    Class base = webKitClass(@"WKWebView");
+    if (base == Nil) {
+      return Nil;
+    }
+    Class sub = objc_allocateClassPair(base, "PSDropWebView", 0);
+    if (sub == Nil) {
+      return Nil;
+    }
+    for (NSString *name in @[ @"draggingEntered:", @"draggingUpdated:" ]) {
+      const SEL selector = NSSelectorFromString(name);
+      const IMP original = class_getMethodImplementation(base, selector);
+      class_addMethod(sub, selector,
+                      imp_implementationWithBlock(^NSDragOperation(id receiver, id sender) {
+                        if (droppedFileURLs(sender).count > 0) {
+                          return NSDragOperationCopy;
+                        }
+                        return original != nullptr ? ((NSDragOperation(*)(id, SEL, id))original)(receiver, selector, sender)
+                                                   : NSDragOperationNone;
+                      }),
+                      "Q@:@");
+    }
+    const std::string boolMethod = std::string(@encode(BOOL)) + "@:@";
+    const SEL prepare = NSSelectorFromString(@"prepareForDragOperation:");
+    const IMP originalPrepare = class_getMethodImplementation(base, prepare);
+    class_addMethod(sub, prepare,
+                    imp_implementationWithBlock(^BOOL(id receiver, id sender) {
+                      if (droppedFileURLs(sender).count > 0) {
+                        return YES;
+                      }
+                      return originalPrepare != nullptr ? ((BOOL(*)(id, SEL, id))originalPrepare)(receiver, prepare, sender) : NO;
+                    }),
+                    boolMethod.c_str());
+    const SEL perform = NSSelectorFromString(@"performDragOperation:");
+    const IMP originalPerform = class_getMethodImplementation(base, perform);
+    class_addMethod(sub, perform,
+                    imp_implementationWithBlock(^BOOL(id receiver, id sender) {
+                      NSArray<NSURL *> *urls = droppedFileURLs(sender);
+                      if (urls.count > 0) {
+                        handleDroppedFiles(urls);
+                        return YES;
+                      }
+                      return originalPerform != nullptr ? ((BOOL(*)(id, SEL, id))originalPerform)(receiver, perform, sender) : NO;
+                    }),
+                    boolMethod.c_str());
+    objc_registerClassPair(sub);
+    return sub;
+  }();
+  return made;
+}
+
+// A stand-in for the dragging information of a drop (the snapshot harness drops a file on the preview with it): the
+// drop code only reads the pasteboard.
+@interface PSFakeDrop : NSObject
+@property(nonatomic, strong) NSPasteboard *draggingPasteboard;
+@end
+
+@implementation PSFakeDrop
+@end
+
+static void dropOnPreviewWeb(NSView *web, NSString *path) {
+  NSPasteboard *board = [NSPasteboard pasteboardWithUniqueName];
+  [board clearContents];
+  [board writeObjects:@[ [NSURL fileURLWithPath:path] ]];
+  PSFakeDrop *drop = [[PSFakeDrop alloc] init];
+  drop.draggingPasteboard = board;
+  ((NSDragOperation(*)(id, SEL, id))objc_msgSend)(web, NSSelectorFromString(@"draggingEntered:"), drop);
+  ((BOOL(*)(id, SEL, id))objc_msgSend)(web, NSSelectorFromString(@"performDragOperation:"), drop);
+}
+
 namespace {
 
 PSController *controller() {
@@ -1590,6 +1667,9 @@ bool ps_ui_init(const char *appName) {
     if (const char *drop = std::getenv("PRIMESTRUCT_UI_DROP"); drop != nullptr && *drop != '\0') {
       s.snapshotDrop = drop;
     }
+    if (const char *drop = std::getenv("PRIMESTRUCT_UI_DROP_PREVIEW"); drop != nullptr && *drop != '\0') {
+      s.snapshotDropPreview = drop;
+    }
     if (const char *request = std::getenv("PRIMESTRUCT_UI_OPEN_FILE_EVENT"); request != nullptr && *request != '\0') {
       s.snapshotOpenFileEvent = request;
     }
@@ -1753,6 +1833,12 @@ int32_t ps_ui_wait_event(void) {
             [target.window makeFirstResponder:target];
             [target insertText:toNSString(s.snapshotTypeText.c_str()) replacementRange:NSMakeRange(NSNotFound, 0)];
           }
+        } else if (!s.snapshotDropPreview.empty() && !s.snapshotDroppedPreview && s.snapshotIdleSlices >= 10 &&
+                   !s.previewWebs.empty() && !anyPreviewLoading()) {
+          // A file dropped on the markdown preview: the same code as a real drop.
+          s.snapshotDroppedPreview = true;
+          s.snapshotIdleSlices = 0;
+          dropOnPreviewWeb(s.previewWebs.begin()->second, toNSString(s.snapshotDropPreview.c_str()));
         } else if (!s.snapshotDrop.empty() && !s.snapshotDropped && s.snapshotIdleSlices >= 6) {
           // A file dropped on the text view: the same code as a real drop.
           s.snapshotDropped = true;
@@ -2417,7 +2503,10 @@ bool ps_ui_window_set_preview(uint64_t window, bool on) {
     return false;
   }
   Class configurationClass = webKitClass(@"WKWebViewConfiguration");
-  Class webClass = webKitClass(@"WKWebView");
+  Class webClass = dropWebViewClass();
+  if (webClass == Nil) {
+    webClass = webKitClass(@"WKWebView");
+  }
   if (configurationClass == Nil || webClass == Nil) {
     return false;
   }
@@ -2431,6 +2520,7 @@ bool ps_ui_window_set_preview(uint64_t window, bool on) {
     static id delegate = [[previewDelegateClass() alloc] init];
     [web setValue:delegate forKey:@"navigationDelegate"];
     tag(web, window);
+    [web registerForDraggedTypes:@[ NSPasteboardTypeFileURL ]];
     NSSplitView *split = [[NSSplitView alloc] initWithFrame:contentRect];
     split.vertical = YES;
     split.dividerStyle = NSSplitViewDividerStyleThin;
@@ -2921,7 +3011,11 @@ const char *ps_ui_default_app(const char *extension) {
   return s.returnedText.c_str();
 }
 
-// The system may ask the user to confirm each change; the answers are awaited with the run loop running.
+// The system asks the user to confirm every content type it is asked to change, one question each (the older
+// Launch Services call does not change anything any more, it only reports success). So the request is cut down to
+// what the system must be asked: extensions that share a content type (txt and text) count once, and the types the
+// application already is the default of are left out. The answers are awaited with the run loop running.
+// PRIMESTRUCT_UI_DEFAULT_APP_PLAN=file only writes those content types to the file (tests): nothing is changed.
 bool ps_ui_set_default_app(const char *extensions, const char *appPath) {
   if (!usable() || extensions == nullptr) {
     return false;
@@ -2929,14 +3023,40 @@ bool ps_ui_set_default_app(const char *extensions, const char *appPath) {
   @autoreleasepool {
     NSString *application = appPath != nullptr && *appPath != '\0' ? toNSString(appPath) : NSBundle.mainBundle.bundlePath;
     NSURL *applicationURL = [NSURL fileURLWithPath:application];
-    bool any = false;
+    NSMutableArray<UTType *> *types = [NSMutableArray array];
+    NSMutableSet<NSString *> *seen = [NSMutableSet set];
     bool failed = false;
     for (NSString *extension in [toNSString(extensions) componentsSeparatedByString:@","]) {
-      UTType *type = typeOfExtension([extension stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceCharacterSet]);
+      NSString *trimmed = [extension stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceCharacterSet];
+      if (trimmed.length == 0) {
+        continue;
+      }
+      UTType *type = typeOfExtension(trimmed);
       if (type == nil) {
         failed = true; // the system does not know the extension (the app is not registered yet)
         continue;
       }
+      if (![seen containsObject:type.identifier]) {
+        [seen addObject:type.identifier];
+        [types addObject:type];
+      }
+    }
+    NSMutableArray<UTType *> *changes = [NSMutableArray array];
+    for (UTType *type in types) {
+      NSURL *current = [NSWorkspace.sharedWorkspace URLForApplicationToOpenContentType:type];
+      if (current == nil || ![current.path isEqualToString:applicationURL.path]) {
+        [changes addObject:type];
+      }
+    }
+    if (const char *plan = std::getenv("PRIMESTRUCT_UI_DEFAULT_APP_PLAN"); plan != nullptr && *plan != '\0') {
+      NSMutableString *text = [NSMutableString string];
+      for (UTType *type in changes) {
+        [text appendFormat:@"%@\n", type.identifier];
+      }
+      [text writeToFile:toNSString(plan) atomically:YES encoding:NSUTF8StringEncoding error:nil];
+      return !failed && types.count > 0;
+    }
+    for (UTType *type in changes) {
       __block BOOL done = NO;
       __block BOOL succeeded = NO;
       [NSWorkspace.sharedWorkspace setDefaultApplicationAtURL:applicationURL
@@ -2945,14 +3065,13 @@ bool ps_ui_set_default_app(const char *extensions, const char *appPath) {
                                              succeeded = error == nil;
                                              done = YES;
                                            }];
-      NSDate *limit = [NSDate dateWithTimeIntervalSinceNow:20];
+      NSDate *limit = [NSDate dateWithTimeIntervalSinceNow:60];
       while (!done && limit.timeIntervalSinceNow > 0) {
         [NSRunLoop.currentRunLoop runMode:NSDefaultRunLoopMode beforeDate:[NSDate dateWithTimeIntervalSinceNow:0.05]];
       }
-      any = any || succeeded;
       failed = failed || !succeeded;
     }
-    return any && !failed;
+    return !failed && types.count > 0;
   }
 }
 

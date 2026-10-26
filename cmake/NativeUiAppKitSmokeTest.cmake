@@ -348,6 +348,79 @@ foreach(needle "app:" "txt:")
 endforeach()
 message(STATUS "the runner outside a bundle still takes the program path first")
 
+# Make Default for every file type of the Files list, as a dry run (PRIMESTRUCT_UI_DEFAULT_APP_PLAN: the content types the
+# system would be asked about are written to the file and nothing is changed): all selected types go in one request, and
+# a content type that several extensions share (txt and text, md and markdown, ...) is asked about once.
+foreach(var OPEN SCROLL CARET TYPE TYPE_AFTER_SCROLL MENU REPORT DROP DROP_PREVIEW)
+  unset(ENV{PRIMESTRUCT_UI_${var}})
+endforeach()
+set(planFile "${WORK_DIR}/default_app_plan.txt")
+file(REMOVE "${planFile}")
+set(ENV{PRIMESTRUCT_UI_PREFS} "restoreSession=0")
+set(ENV{PRIMESTRUCT_UI_COMMANDS} "8")
+set(ENV{PRIMESTRUCT_UI_TARGET_LAST} "1")
+set(ENV{PRIMESTRUCT_UI_DEFAULT_APP_PLAN} "${planFile}")
+set(ENV{PRIMESTRUCT_UI_SNAPSHOT} "${WORK_DIR}/editor_plan.png")
+set(ENV{PRIMESTRUCT_UI_CLICK} "tab:21:3;rows:24:0,1,2,3,4,5,6,7,8,9,10;button:25")
+execute_process(
+  COMMAND "${WORK_DIR}/EditorSmoke.app/Contents/MacOS/EditorSmoke"
+  RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err
+  TIMEOUT 90)
+foreach(var COMMANDS TARGET_LAST DEFAULT_APP_PLAN CLICK PREFS)
+  unset(ENV{PRIMESTRUCT_UI_${var}})
+endforeach()
+if(NOT rc EQUAL 0 OR NOT EXISTS "${planFile}")
+  message(FATAL_ERROR "the Make Default dry run exited with '${rc}' and wrote no plan: ${out}${err}")
+endif()
+file(STRINGS "${planFile}" planTypes)
+set(uniqueTypes ${planTypes})
+list(REMOVE_DUPLICATES uniqueTypes)
+list(LENGTH planTypes planCount)
+list(LENGTH uniqueTypes uniqueCount)
+message(STATUS "Make Default would ask about ${planCount} content types for 25 extensions: ${planTypes}")
+if(NOT planCount EQUAL uniqueCount)
+  message(FATAL_ERROR "a content type would be asked about twice: ${planTypes}")
+endif()
+if(planCount LESS 12 OR NOT planCount LESS 25)
+  message(FATAL_ERROR "expected fewer content types than the 25 extensions (the shared ones count once), got ${planCount}")
+endif()
+list(FIND planTypes "org.primestruct.prime-source" primeIndex)
+if(primeIndex EQUAL -1)
+  message(FATAL_ERROR "the .prime type is not among the types Make Default would ask about: ${planTypes}")
+endif()
+
+# A file dropped on the markdown preview (a web view): the editor opens it in a tab of its own. The picture is the last
+# window, the new tab with the file, and differs from the one of the same run without the drop.
+foreach(shot previewonly previewdrop)
+  set(snapshot "${WORK_DIR}/editor_${shot}.png")
+  set(ENV{PRIMESTRUCT_UI_SNAPSHOT} "${snapshot}")
+  set(ENV{PRIMESTRUCT_UI_PREFS} "restoreSession=0")
+  set(ENV{PRIMESTRUCT_UI_OPEN} "${SOURCE_DIR}/tests/fixtures/ui/screenshot/preview.md")
+  set(ENV{PRIMESTRUCT_UI_COMMANDS} "10")
+  set(ENV{PRIMESTRUCT_UI_TARGET_LAST} "1")
+  if(shot STREQUAL "previewdrop")
+    set(ENV{PRIMESTRUCT_UI_DROP_PREVIEW} "${unknownFile}")
+  else()
+    unset(ENV{PRIMESTRUCT_UI_DROP_PREVIEW})
+  endif()
+  execute_process(
+    COMMAND "${WORK_DIR}/EditorSmoke.app/Contents/MacOS/EditorSmoke"
+    RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err
+    TIMEOUT 90)
+  if(NOT rc EQUAL 0 OR NOT EXISTS "${snapshot}")
+    message(FATAL_ERROR "editor ${shot} run exited with '${rc}' and no picture: ${out}${err}")
+  endif()
+endforeach()
+foreach(var OPEN COMMANDS TARGET_LAST DROP_PREVIEW PREFS)
+  unset(ENV{PRIMESTRUCT_UI_${var}})
+endforeach()
+file(SHA256 "${WORK_DIR}/editor_previewonly.png" previewOnlyHash)
+file(SHA256 "${WORK_DIR}/editor_previewdrop.png" previewDropHash)
+if(previewOnlyHash STREQUAL previewDropHash)
+  message(FATAL_ERROR "a file dropped on the markdown preview did not open in the editor")
+endif()
+message(STATUS "a file dropped on the markdown preview opens in the editor")
+
 # The editor and file types bundles of this test declare document types. Launch Services must not keep them: a bundle
 # in a build directory could otherwise become the handler of the user's .prime and configuration files.
 set(lsregister "/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister")

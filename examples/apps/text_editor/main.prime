@@ -340,7 +340,7 @@ build_settings([App] app) {
 
   [Form] files{app.form()}
   files.heading("File types")
-  [Label] hint{app.label("Select file types, then press Make Default.")}
+  [Label] hint{app.label("Select file types, then press Make Default. macOS asks you to confirm each type.")}
   files.control(hint.widget())
   [ItemList] types{app.itemList()}
   [String] chosenNow{app.appPath()}
@@ -871,12 +871,19 @@ main([array<string>] args) {
         [ItemList] picks{[handle] settings.list}
         [i32] pickCount{picks.count()}
         [i32 mut] pickAt{0i32}
+        [String mut] pickedExtensions{String{}}
         while(pickAt < pickCount) {
           if(picks.isSelected(pickAt)) {
             [String] typeExtensions{app.documentTypeExtensions(pickAt)}
-            app.setDefaultApp(typeExtensions, chosenApp)
+            if(!pickedExtensions.empty()) {
+              pickedExtensions.append(",")
+            }
+            pickedExtensions.appendString(typeExtensions)
           }
           pickAt = pickAt + 1i32
+        }
+        if(!pickedExtensions.empty()) {
+          app.setDefaultApp(pickedExtensions, chosenApp)
         }
         [bool] pickShown{refresh_files(app, settings.list)}
       }

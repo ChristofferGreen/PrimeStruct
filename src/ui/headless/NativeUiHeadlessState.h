@@ -207,7 +207,7 @@ inline const std::vector<DocumentType> &documentTypes() {
       {"C and C++", "c,h,cc,cpp,hpp,cxx"},
       {"Shell scripts", "sh,bash,zsh"},
       {"Python", "py"},
-      {"Web scripts and styles", "js,ts,css"},
+      {"Web scripts and styles", "js,css"},
       {"Logs", "log"},
   };
   return types;

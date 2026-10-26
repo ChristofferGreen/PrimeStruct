@@ -438,3 +438,26 @@
   - acceptance:
     - the editor scenarios (the Files page outline, selecting and applying rows, all rows selected, nothing selected, no file-type call before Settings opens), the headless and bindings tests (103 functions) pass through the VM, optexe and native mirrors; the smoke picture of the Files tab shows only the list and the button; full release gate green
   - stop_rule: the chooser and what only it used.
+
+- [x] TODO-5607: Make Default asks the system as little as possible
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-26
+  - phase: File associations (docs/NativeUiPlan.md section 16)
+  - parallel_track: file-associations
+  - scope: macOS asks the user to confirm every content type that `setDefaultApplicationAtURL:toOpenContentType:` is called for, and Make Default called it once per extension, so a few selected types meant many questions. A request is now cut down to what the system must be asked: the extensions are mapped to content types and each content type is asked about once (txt and text, md and markdown, yml and yaml, cc, cpp and cxx share types), and the types the application already is the default of are skipped; the editor sends all selected rows in one request (one comma separated list). The older Launch Services call (`LSSetDefaultRoleHandlerForContentType`, what duti uses) was tried as a way around the questions and is none: on a scratch content type with two scratch applications it returned success every time and changed nothing (the read-back stayed the same). The hint under the list says that macOS asks to confirm each type. `PRIMESTRUCT_UI_DEFAULT_APP_PLAN=file` is a dry run: the content types the system would be asked about are written to the file and nothing is changed. The `.ts` extension left the web scripts group: the system types it as an MPEG-2 transport stream (video), so making PrimeScroll its default would have taken over video files.
+  - acceptance:
+    - the smoke test's dry run for all 11 rows (25 extensions) plans fewer content types than extensions, none twice, with the `.prime` type among them; the editor scenario checks that Make Default makes one request for the selected rows together; full release gate green
+  - stop_rule: the number of questions; the system's confirmation itself cannot be removed.
+  - notes: the number of questions on the user's machine, and whether one is asked for a type that is already the default, are only visible by hand. A smoke run against a stale AppKit library once did the old per-extension request; a read-only check afterwards showed no default had changed.
+
+- [x] TODO-5608: Drop files on the markdown preview
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-26
+  - phase: File associations (docs/NativeUiPlan.md section 16)
+  - parallel_track: file-associations
+  - scope: A file dropped on the markdown preview did nothing: the preview is a web view, which tries to navigate to a dropped file, and the preview refuses every navigation. The preview's web view is now made from a run-time subclass of `WKWebView` (`PSDropWebView`, made when the first preview is shown, so WebKit is still loaded lazily) registered for file URLs: a drag that carries files is an open request (`PS_UI_EVENT_OPEN_FILE` per file, as for the text views), so the editor opens a new tab with the document, or selects the tab that already holds it; any other drag is WebKit's own. The snapshot harness has `PRIMESTRUCT_UI_DROP_PREVIEW=path`, which drops a file on the preview through a stand-in for the dragging information.
+  - acceptance:
+    - the smoke test: with a preview open, a harness drop of a file on it opens the file in the editor (the picture of the last window differs from the same run without the drop); full release gate green
+  - stop_rule: drops on the preview pane; a real mouse drag is not automated.
