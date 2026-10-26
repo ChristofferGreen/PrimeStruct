@@ -207,7 +207,7 @@ message(STATUS "editor Info.plist declares its file types")
 # a file, and the files the system asks it to open (the harness stands in for the Finder).
 set(ENV{PS_DOCUMENT_TYPES} "${SOURCE_DIR}/examples/apps/text_editor/file_types.txt")
 execute_process(
-  COMMAND bash "${SOURCE_DIR}/scripts/bundle_macos_app.sh" --native
+  COMMAND bash "${SOURCE_DIR}/scripts/bundle_macos_app.sh"
           "${SOURCE_DIR}/tests/fixtures/ui/screenshot/file_types_demo.prime" FileTypesDemo "${WORK_DIR}" "${BUILD_DIR}"
   RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err)
 unset(ENV{PS_DOCUMENT_TYPES})
@@ -238,3 +238,26 @@ foreach(needle "Markdown|md,markdown" "PrimeStruct source|prime" "Plain text|txt
   endif()
 endforeach()
 message(STATUS "file types, the app path, the default application and an open-file request reach a program")
+
+# Outside a bundle the runner still takes its first argument for the program: the same bytecode run by path, with the
+# report file as the program's only argument.
+set(pathReport "${WORK_DIR}/types_report_by_path.txt")
+file(REMOVE "${pathReport}")
+set(ENV{PRIMESTRUCT_UI_SNAPSHOT} "${WORK_DIR}/types_by_path.png")
+execute_process(
+  COMMAND "${BUILD_DIR}/primestruct_app_runtime" "${WORK_DIR}/FileTypesDemo.app/Contents/Resources/app.psir" "${pathReport}"
+  RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err
+  TIMEOUT 90)
+if(NOT rc EQUAL 0 OR NOT EXISTS "${pathReport}")
+  message(FATAL_ERROR "the runner outside a bundle exited with '${rc}' and no report: ${out}${err}")
+endif()
+file(READ "${pathReport}" pathText)
+# (Outside a bundle there is no Info.plist: no declared file types and no app path, but the program ran and its
+# argument reached it.)
+foreach(needle "app:" "txt:")
+  string(FIND "${pathText}" "${needle}" found)
+  if(found EQUAL -1)
+    message(FATAL_ERROR "the runner outside a bundle did not run the program with its argument (${needle}): ${pathText}")
+  endif()
+endforeach()
+message(STATUS "the runner outside a bundle still takes the program path first")

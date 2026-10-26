@@ -104,8 +104,7 @@ of sync with them.
 | TODO-5569 | Slice loans, escapes and returned borrows | ready | slices |
 | TODO-5570 | Slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views | ready | slices |
 | TODO-5540 | `string` as the UTF-8 text view | blocked | string-view |
-| TODO-5602 | Bytecode-only bundles pass their arguments to the program | ready | bytecode-startup |
-| TODO-5603 | Startup audit: what a launch loads and does | blocked | startup |
+| TODO-5603 | Startup audit: what a launch loads and does | ready | startup |
 | TODO-5586 | Native String heap: pooled blocks, statistics and limit | deferred | native-backend-strings |
 | TODO-5574 | Simple C++ emitters run bytes and strings | deferred | string-backends |
 | TODO-5568 | String conveniences: operators, numbers, push of code points | blocked | string-owned |
@@ -139,7 +138,7 @@ of sync with them.
 
 - TODO-5567 (bytes): packed `array<u8>`
 - TODO-5570 (slices): slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views
-- TODO-5602 (bytecode-startup): bytecode-only bundles pass their arguments to the program
+- TODO-5603 (startup): startup audit: what a launch loads and does
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5510 (control-returns): `return` returns from pick arms and lambdas correctly
@@ -150,7 +149,7 @@ of sync with them.
 
 2. TODO-5567
 3. TODO-5570
-4. TODO-5602
+4. TODO-5603
 5. TODO-5536
 6. TODO-5535
 7. TODO-5510
@@ -162,7 +161,7 @@ of sync with them.
 - Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5567, TODO-5570, TODO-5569, TODO-5540, TODO-5568, TODO-5530, TODO-5574
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
-- Startup and bundles (docs/NativeUiPlan.md section 16): TODO-5602, TODO-5603
+- Startup (docs/NativeUiPlan.md section 16): TODO-5603
 - Lifecycle (docs/spec/value-lifecycle.md): TODO-5527
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
@@ -299,22 +298,9 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - full release gate green
   - stop_rule: the text view on the VM.
 
-- [ ] TODO-5602: Bytecode-only bundles pass their arguments to the program
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-26
-  - phase: Native PrimeScroll (docs/NativeUiPlan.md)
-  - parallel_track: bytecode-startup
-  - scope: The bytecode-only runner of a bundle (`primestruct_app_runtime`, started from `Contents/MacOS/Name` with `Contents/Resources/app.psir` next to it) takes its first argument for a `.psir` path and refuses anything else ("this build runs precompiled .psir bytecode only"), so a program started from a bundle cannot read command-line arguments the way a native bundle's can (`main([array<string>] args)`, `argumentText`). A runner that finds its bytecode in the bundle passes every argument to the program, as `primestruct_app` does for the file it runs; a bundle-less run keeps the path-first form. This lets the file types demo and the editor bundles be tested in both forms with the same command line.
-  - acceptance:
-    - a program bundled without `--native` reads its arguments (a test bundles a program that writes `args` to a file, runs it with two arguments and compares); an existing `primestruct_app app.psir` run is unchanged; full release gate green
-  - stop_rule: the bytecode-only runner's argument handling; the VM's argument support itself exists.
-  - notes: found while testing the file types demo (TODO-5600), which uses a native bundle until this lands.
-
 - [ ] TODO-5603: Startup audit: what a launch loads and does
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5602
+  - status: ready
   - created_at: 2026-10-26
   - phase: Native PrimeScroll (docs/NativeUiPlan.md)
   - parallel_track: startup

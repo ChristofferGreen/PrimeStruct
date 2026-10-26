@@ -391,3 +391,15 @@
     - editor scenarios through the VM, optexe and native mirrors: the Files page's outline, Make Default for a type, choosing another application (and a cancelled chooser keeping the old one), Make All Default, no file-type call before Settings opens, an open request opening or selecting a tab; the existing settings, session and scroll tests still pass; full release gate green
   - stop_rule: the editor's Files tab and open-file handling.
   - notes: the real change of a default application is not exercised by a test (it changes the user's settings, and macOS may ask to confirm it). Handles of the Files tab follow creation order (the form 22, the application button 23, the file type buttons from 24, "Make All Default" last), which the tests rely on.
+
+- [x] TODO-5602: Bytecode-only bundles pass their arguments to the program
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-26
+  - phase: Native PrimeScroll (docs/NativeUiPlan.md)
+  - parallel_track: bytecode-startup
+  - scope: The bytecode-only runner of a bundle (`primestruct_app_runtime`) took its first argument for a `.psir` path and refused anything else, so a program started from a bytecode bundle could not read command-line arguments as a native bundle's can. Started from a bundle (`Contents/Resources/app.psir` next to the executable) it now runs that bytecode and passes every argument to the program, dropping the `-psn_` process serial number argument Launch Services used to add; anywhere else the first argument still names the program (`primestruct_app program.prime|program.psir [args...]` is unchanged).
+  - acceptance:
+    - the smoke test bundles `file_types_demo.prime` without `--native`, runs it with a report path as its argument and reads the report (the declared file types, the app path, the default application of `.txt` files and the file the harness asks it to open), and runs the same bytecode through `primestruct_app_runtime` by path outside a bundle with the same result; full release gate green
+  - stop_rule: the bytecode-only runner's argument handling.
+  - notes: found while testing the file types demo (TODO-5600), which used a native bundle until this landed.

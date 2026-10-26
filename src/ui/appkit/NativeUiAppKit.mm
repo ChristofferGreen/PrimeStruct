@@ -340,6 +340,9 @@ void applySnapshotClicks(const std::string &spec) {
     if ((kind == "check" && info->kind == ControlInfo::Kind::CheckBox) ||
         (kind == "button" && info->kind == ControlInfo::Kind::Button)) {
       [(NSButton *)info->view performClick:nil];
+    } else if (kind == "tab" && info->kind == ControlInfo::Kind::Tabs && second != std::string::npos) {
+      // "tab:21:3" shows the fourth page of the tabs control 21, as a click on its title would.
+      [(NSTabView *)info->view selectTabViewItemAtIndex:std::atoi(entry.c_str() + second + 1)];
     } else if (kind == "popup" && info->kind == ControlInfo::Kind::Popup && second != std::string::npos) {
       NSPopUpButton *popup = (NSPopUpButton *)info->view;
       [popup selectItemAtIndex:std::atoi(entry.c_str() + second + 1)];

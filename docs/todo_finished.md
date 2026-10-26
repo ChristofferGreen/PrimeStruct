@@ -2061,6 +2061,7 @@ are left unarchived.
 | TODO-5599 | Buttons, file types and open-file requests in the native UI ABI | [undated.md](todo_archive/undated.md) | - |
 | TODO-5600 | AppKit buttons, file types, default applications and open-file requests | [undated.md](todo_archive/undated.md) | - |
 | TODO-5601 | The editor's Files settings and open-file requests | [undated.md](todo_archive/undated.md) | - |
+| TODO-5602 | Bytecode-only bundles pass their arguments to the program | [undated.md](todo_archive/undated.md) | - |
 
 <!-- INDEX-END -->
 

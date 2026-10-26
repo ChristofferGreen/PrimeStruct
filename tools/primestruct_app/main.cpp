@@ -4,7 +4,9 @@
 //   primestruct_app program.psir  [args...]   run precompiled bytecode
 //
 // The runtime-only build (PRIMESTRUCT_APP_RUNTIME_ONLY) links no compiler and
-// accepts bytecode only; bundles use it (scripts/bundle_macos_app.sh).
+// accepts bytecode only; bundles use it (scripts/bundle_macos_app.sh). Started from a
+// bundle (Contents/Resources/app.psir next to it) it runs that bytecode and passes
+// every argument to the program.
 //
 // Environment: PRIMESTRUCT_UI_SNAPSHOT=out.png renders the first window into a
 // PNG once laid out and then quits (AppKit backend).
@@ -74,17 +76,19 @@ std::string bundledProgramPath() {
 } // namespace
 
 int main(int argc, char **argv) {
-  std::string programPath;
-  int firstArg = 2;
-  if (argc >= 2) {
-    programPath = argv[1];
-  } else {
-    programPath = bundledProgramPath();
-    firstArg = argc;
-  }
-  if (programPath.empty()) {
-    std::fputs("usage: primestruct_app program.prime|program.psir [args...]\n", stderr);
-    return 64;
+  // Started from a bundle the program is the bytecode inside it and every argument is the program's (a file named
+  // on the command line, as with a native bundle); anywhere else the first argument names the program.
+  std::string programPath = bundledProgramPath();
+  const bool bundled = !programPath.empty();
+  int firstArg = 1;
+  if (!bundled) {
+    if (argc >= 2) {
+      programPath = argv[1];
+      firstArg = 2;
+    } else {
+      std::fputs("usage: primestruct_app program.prime|program.psir [args...]\n", stderr);
+      return 64;
+    }
   }
   primec::embed::Script script = loadProgram(programPath);
   if (!script.valid()) {
@@ -92,7 +96,13 @@ int main(int argc, char **argv) {
     return 2;
   }
   primec::ui::bindNativeUi(script);
-  const std::vector<std::string> args(argv + firstArg, argv + argc);
+  std::vector<std::string> args;
+  for (int i = firstArg; i < argc; ++i) {
+    // Launch Services used to add a process serial number argument; it is not the program's.
+    if (!bundled || std::string(argv[i]).rfind("-psn_", 0) != 0) {
+      args.push_back(argv[i]);
+    }
+  }
   const auto result = script.run(args);
   if (!result.ok) {
     std::fputs(result.diagnostics.c_str(), stderr);

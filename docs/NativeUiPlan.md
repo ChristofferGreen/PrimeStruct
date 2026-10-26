@@ -474,9 +474,9 @@ window, including `.prime`, and the application can be chosen the normal macOS w
 - **AppKit.** `NSButton`; `application:openFiles:` for open-file requests (macOS also sends one for a file named on the
   command line, so a program should not open it twice); `CFBundleDocumentTypes` of the Info.plist for the declared types;
   `NSWorkspace` with `UTType` for reading and setting the default; `NSOpenPanel` limited to applications for choosing one.
-  The snapshot harness has `PRIMESTRUCT_UI_CLICK=button:H`, `PRIMESTRUCT_UI_OPEN_FILE_EVENT=path` and
-  `PRIMESTRUCT_UI_APP_PANEL=path`. Setting a default is not exercised by a test (it changes the user's settings); reading
+  The snapshot harness has `PRIMESTRUCT_UI_CLICK=button:H` (and `tab:H:I`, which shows page I of the tabs control H),
+  `PRIMESTRUCT_UI_OPEN_FILE_EVENT=path` and `PRIMESTRUCT_UI_APP_PANEL=path`. Setting a default is not exercised by a test (it changes the user's settings); reading
   it is.
 - **Slices.** The ABI, the headless backend, the bindings and the stdlib (TODO-5599), the AppKit backend and the bundle's
-  Info.plist (TODO-5600), then the editor's tab and open-file handling (TODO-5601). A bytecode-only bundle takes no
-  program arguments yet (TODO-5602).
+  Info.plist (TODO-5600), then the editor's tab and open-file handling (TODO-5601). A bytecode-only bundle passes its
+  arguments to the program like a native one (TODO-5602).
