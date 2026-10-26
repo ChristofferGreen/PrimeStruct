@@ -166,6 +166,46 @@ ps_ui_window_refresh_preview([u64] window) {
 ps_ui_preview_set_scroll_mode([i32] mode) {
 }
 
+[host return</std/text/String>]
+ps_ui_event_text() {
+}
+
+[host return<u64>]
+ps_ui_button_create([string] title) {
+}
+
+[host return<bool>]
+ps_ui_button_set_title([u64] button, [/std/text/String] title) {
+}
+
+[host return<i32>]
+ps_ui_document_type_count() {
+}
+
+[host return</std/text/String>]
+ps_ui_document_type_name([i32] index) {
+}
+
+[host return</std/text/String>]
+ps_ui_document_type_extensions([i32] index) {
+}
+
+[host return</std/text/String>]
+ps_ui_app_path() {
+}
+
+[host return</std/text/String>]
+ps_ui_default_app([/std/text/String] extension) {
+}
+
+[host return<bool>]
+ps_ui_set_default_app([/std/text/String] extensions, [/std/text/String] appPath) {
+}
+
+[host return</std/text/String>]
+ps_ui_open_application_panel([string] title) {
+}
+
 [host return<bool>]
 ps_ui_window_set_style([u64] window, [i32] style) {
 }
@@ -800,6 +840,23 @@ Popup() {
   }
 }
 
+// A push button; the user's click is an `AppEvent.controlChanged` carrying it.
+[public struct]
+Button() {
+  [public u64] handle{0u64}
+
+  [public return<Widget>]
+  widget() {
+    [Widget] generic{[handle] this.handle}
+    return(generic)
+  }
+
+  [public return<bool>]
+  setTitle([/std/text/String] title) {
+    return(ps_ui_button_set_title(this.handle, title))
+  }
+}
+
 // A column of rows: headings, a label with a control, or a control alone in the controls' column.
 [public struct]
 Form() {
@@ -859,6 +916,7 @@ AppEvent {
   [Window] windowCloseRequested
   [Window] textChanged
   [Widget] controlChanged
+  [i32] openFile
 }
 
 [public struct]
@@ -966,8 +1024,65 @@ App() {
       [AppEvent] event{[controlChanged] widget}
       return(event)
     }
+    if(kind == 6i32) {
+      [AppEvent] event{[openFile] 0i32}
+      return(event)
+    }
     [AppEvent] event{}
     return(event)
+  }
+
+  // The path of the file an `openFile` event asks to open (valid until the next waitEvent).
+  [public return</std/text/String>]
+  eventText() {
+    return(ps_ui_event_text())
+  }
+
+  [public return<Button>]
+  button([string] title) {
+    [Button] created{[handle] ps_ui_button_create(title)}
+    return(created)
+  }
+
+  // The file types the app declares it can open: a name ("Markdown") and its extensions ("md,markdown").
+  [public return<i32>]
+  documentTypeCount() {
+    return(ps_ui_document_type_count())
+  }
+
+  [public return</std/text/String>]
+  documentTypeName([i32] index) {
+    return(ps_ui_document_type_name(index))
+  }
+
+  [public return</std/text/String>]
+  documentTypeExtensions([i32] index) {
+    return(ps_ui_document_type_extensions(index))
+  }
+
+  // The path of this app's bundle ("" when it does not run from one).
+  [public return</std/text/String>]
+  appPath() {
+    return(ps_ui_app_path())
+  }
+
+  // The application the system opens files of this extension with ("" when unknown).
+  [public return</std/text/String>]
+  defaultApp([/std/text/String] extension) {
+    return(ps_ui_default_app(extension))
+  }
+
+  // Makes the application at the path `application` ("" for this app) the default for the comma separated
+  // extensions.
+  [public return<bool>]
+  setDefaultApp([/std/text/String] extensions, [/std/text/String] application) {
+    return(ps_ui_set_default_app(extensions, application))
+  }
+
+  // Asks for an application (the Open dialog limited to applications); see panelChosen().
+  [public return</std/text/String>]
+  applicationPanel([string] title) {
+    return(ps_ui_open_application_panel(title))
   }
 
   // Why the last loadFile/saveFile failed; empty when none has.

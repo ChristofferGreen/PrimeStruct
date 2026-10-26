@@ -36,7 +36,7 @@ struct Menu {
 
 // A label, check box, pop-up, form or tabs (the controls of a settings window).
 struct Control {
-  enum class Kind { Label, CheckBox, Popup, Form, Tabs } kind = Kind::Label;
+  enum class Kind { Label, CheckBox, Popup, Form, Tabs, Button } kind = Kind::Label;
   std::string text;                // a label's text, a check box's title
   bool checked = false;            // a check box
   std::vector<std::string> items;  // a pop-up's items
@@ -74,7 +74,7 @@ struct Window {
 };
 
 struct Action {
-  enum class Kind { Command, TypeText, CloseWindow, Quit, Activate, Toggle, Select } kind = Kind::Quit;
+  enum class Kind { Command, TypeText, CloseWindow, Quit, Activate, Toggle, Select, Click, OpenFile } kind = Kind::Quit;
   int32_t command = 0;
   uint64_t handle = 0;
   std::string text;
@@ -98,6 +98,8 @@ struct State {
   std::deque<std::string> openAnswers;
   std::deque<std::string> saveAnswers;
   std::deque<int32_t> alertAnswers;
+  std::deque<std::string> appAnswers;               // answers of the application panel
+  std::map<std::string, std::string> defaultApps;   // extension -> the application that opens it by default
   std::map<std::string, bool> prefs;
   std::map<std::string, int32_t> intPrefs;
   std::map<std::string, std::vector<std::string>> listPrefs;
@@ -107,6 +109,7 @@ struct State {
   uint64_t eventWindow = 0;
   uint64_t eventWidget = 0;
   int32_t eventCommand = 0;
+  std::string eventText;
   std::string returnedText;
   std::string lastError;
   bool panelChosen = false;
@@ -185,6 +188,32 @@ inline std::string quote(const std::string &text) { return quote(text.c_str()); 
 
 inline std::string flag(bool value) { return value ? "true" : "false"; }
 
+// The file types the headless "app" declares: the same list as examples/apps/text_editor/file_types.txt (a test keeps
+// them equal).
+struct DocumentType {
+  const char *name;
+  const char *extensions;
+};
+
+inline const std::vector<DocumentType> &documentTypes() {
+  static const std::vector<DocumentType> types = {
+      {"Plain text", "txt,text"},
+      {"Markdown", "md,markdown"},
+      {"PrimeStruct source", "prime"},
+      {"JSON", "json"},
+      {"YAML", "yml,yaml"},
+      {"Configuration", "toml,ini,cfg,conf"},
+      {"C and C++", "c,h,cc,cpp,hpp,cxx"},
+      {"Shell scripts", "sh,bash,zsh"},
+      {"Python", "py"},
+      {"Web scripts and styles", "js,ts,css"},
+      {"Logs", "log"},
+  };
+  return types;
+}
+
+inline const char *HeadlessAppPath = "/Headless/PrimeScroll.app";
+
 inline const char *eventName(int32_t kind) {
   switch (kind) {
   case PS_UI_EVENT_COMMAND:
@@ -197,6 +226,8 @@ inline const char *eventName(int32_t kind) {
     return "quit_requested";
   case PS_UI_EVENT_CONTROL_CHANGED:
     return "control_changed";
+  case PS_UI_EVENT_OPEN_FILE:
+    return "open_file";
   default:
     return "none";
   }
@@ -272,9 +303,11 @@ inline void renderPreview(Window &w, const TextView &view) {
   ++w.state.previewRenders;
 }
 
-inline void setEvent(int32_t kind, uint64_t window = 0, uint64_t widget = 0, int32_t command = 0) {
+inline void setEvent(int32_t kind, uint64_t window = 0, uint64_t widget = 0, int32_t command = 0,
+                     std::string text = std::string()) {
   State &s = state();
   s.eventKind = kind;
+  s.eventText = std::move(text);
   s.eventWindow = window;
   s.eventWidget = widget;
   s.eventCommand = command;
@@ -324,6 +357,17 @@ inline bool deliverNextEvent() {
       }
       break;
     }
+    case Action::Kind::Click: {
+      const Control *button = control(action.handle);
+      if (button != nullptr && button->kind == Control::Kind::Button) {
+        setEvent(PS_UI_EVENT_CONTROL_CHANGED, windowOfControl(action.handle), action.handle);
+        return true;
+      }
+      break;
+    }
+    case Action::Kind::OpenFile:
+      setEvent(PS_UI_EVENT_OPEN_FILE, 0, 0, 0, action.text);
+      return true;
     case Action::Kind::TypeText: {
       uint64_t handle = action.handle;
       if (handle == 0 && !s.textViews.empty()) {

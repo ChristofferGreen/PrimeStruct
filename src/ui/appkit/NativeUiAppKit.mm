@@ -2614,6 +2614,19 @@ bool ps_ui_preview_set_scroll_mode(int32_t mode) {
   return true;
 }
 
+// Buttons, the declared file types, default applications and open-file requests are the next slice of the AppKit
+// backend; until then they are answered as unsupported.
+uint64_t ps_ui_button_create(const char *) { return 0; }
+bool ps_ui_button_set_title(uint64_t, const char *) { return false; }
+const char *ps_ui_event_text(void) { return ""; }
+int32_t ps_ui_document_type_count(void) { return 0; }
+const char *ps_ui_document_type_name(int32_t) { return ""; }
+const char *ps_ui_document_type_extensions(int32_t) { return ""; }
+const char *ps_ui_app_path(void) { return ""; }
+const char *ps_ui_default_app(const char *) { return ""; }
+bool ps_ui_set_default_app(const char *, const char *) { return false; }
+const char *ps_ui_open_application_panel(const char *) { return ""; }
+
 int32_t ps_ui_pref_get_int(const char *key, int32_t fallback) {
   if (!usable() || key == nullptr || *key == '\0') {
     return fallback;

@@ -920,3 +920,99 @@ TEST_CASE("list preferences keep their items in order") {
   CHECK(headless::prefList("plain") == std::vector<std::string>{"x", "y,z"});
   CHECK(headless::pushedScenario() == "plist:plain=x,y%2Cz");
 }
+
+TEST_CASE("buttons click into control events") {
+  startApp();
+  const uint64_t button = ps_ui_button_create("Make Default");
+  REQUIRE(button != 0);
+  const uint64_t form = ps_ui_form_create();
+  CHECK(ps_ui_form_add_row(form, "Application", button));
+  const uint64_t window = ps_ui_window_create("Settings", 100, 100);
+  CHECK(ps_ui_window_set_content(window, form));
+  CHECK(ps_ui_button_set_title(button, "Done"));
+  CHECK_FALSE(ps_ui_button_set_title(999, "x"));
+  CHECK_FALSE(ps_ui_button_set_title(button, nullptr));
+  CHECK(headless::controlOutline(form) == std::vector<std::string>{"form", "  row \"Application\": button \"Done\""});
+  headless::pushClickButton(button);
+  headless::pushClickButton(999); // a button that is gone is skipped
+  CHECK(ps_ui_wait_event() == PS_UI_EVENT_CONTROL_CHANGED);
+  CHECK(ps_ui_event_widget() == button);
+  CHECK(ps_ui_event_window() == window);
+  CHECK(ps_ui_wait_event() == PS_UI_EVENT_QUIT_REQUESTED);
+  CHECK(headless::pushedScenario() == "click:" + std::to_string(button) + ";click:999");
+}
+
+TEST_CASE("a request to open a file is an event with the path") {
+  startApp();
+  headless::pushOpenFile("/notes/a b.md");
+  CHECK(ps_ui_wait_event() == PS_UI_EVENT_OPEN_FILE);
+  CHECK(std::string(ps_ui_event_text()) == "/notes/a b.md");
+  CHECK(ps_ui_event_window() == 0);
+  CHECK(ps_ui_wait_event() == PS_UI_EVENT_QUIT_REQUESTED);
+  CHECK(std::string(ps_ui_event_text()).empty());
+  CHECK(headless::pushedScenario().rfind("openfile:", 0) == 0);
+}
+
+namespace {
+struct FileTypeLine {
+  std::string name;
+  std::string extensions;
+};
+
+// The lines of examples/apps/text_editor/file_types.txt (comments and blank lines skipped).
+std::vector<FileTypeLine> declaredFileTypes() {
+  std::ifstream file(std::string(PRIMESTRUCT_SOURCE_DIR) + "/examples/apps/text_editor/file_types.txt");
+  std::vector<FileTypeLine> lines;
+  for (std::string line; std::getline(file, line);) {
+    if (line.empty() || line.front() == '#') {
+      continue;
+    }
+    const size_t first = line.find('|');
+    const size_t second = line.find('|', first + 1);
+    lines.push_back({line.substr(0, first), line.substr(first + 1, second == std::string::npos ? std::string::npos : second - first - 1)});
+  }
+  return lines;
+}
+} // namespace
+
+TEST_CASE("the app declares the file types of file_types.txt") {
+  startApp();
+  const auto declared = declaredFileTypes();
+  REQUIRE(declared.size() > 5);
+  CHECK(ps_ui_document_type_count() == static_cast<int32_t>(declared.size()));
+  bool prime = false;
+  for (size_t i = 0; i < declared.size(); ++i) {
+    CHECK(std::string(ps_ui_document_type_name(static_cast<int32_t>(i))) == declared[i].name);
+    CHECK(std::string(ps_ui_document_type_extensions(static_cast<int32_t>(i))) == declared[i].extensions);
+    prime = prime || declared[i].extensions == "prime";
+  }
+  CHECK(prime);
+  CHECK(std::string(ps_ui_document_type_name(-1)).empty());
+  CHECK(std::string(ps_ui_document_type_extensions(1000)).empty());
+}
+
+TEST_CASE("the default application of file extensions can be read and set") {
+  startApp();
+  CHECK(std::string(ps_ui_app_path()) == "/Headless/PrimeScroll.app");
+  CHECK(std::string(ps_ui_default_app("md")).empty());
+  CHECK(ps_ui_set_default_app("md,.Markdown", ""));
+  CHECK(std::string(ps_ui_default_app("md")) == "/Headless/PrimeScroll.app");
+  CHECK(std::string(ps_ui_default_app(".MARKDOWN")) == "/Headless/PrimeScroll.app");
+  CHECK(headless::defaultApp("markdown") == "/Headless/PrimeScroll.app");
+  CHECK(ps_ui_set_default_app("md", "/Applications/Other.app"));
+  CHECK(std::string(ps_ui_default_app("md")) == "/Applications/Other.app");
+  CHECK(std::string(ps_ui_default_app("markdown")) == "/Headless/PrimeScroll.app");
+  CHECK_FALSE(ps_ui_set_default_app("", ""));
+  CHECK_FALSE(ps_ui_set_default_app(nullptr, ""));
+  CHECK_FALSE(ps_ui_set_default_app(",,", ""));
+}
+
+TEST_CASE("the application panel answers with the scripted choices") {
+  startApp();
+  headless::pushApplicationPanelAnswer("/Applications/Other.app");
+  CHECK(std::string(ps_ui_open_application_panel("Choose")) == "/Applications/Other.app");
+  CHECK(ps_ui_panel_chosen());
+  CHECK(std::string(ps_ui_open_application_panel("Choose")).empty());
+  CHECK_FALSE(ps_ui_panel_chosen());
+  CHECK(headless::pushedScenario() == "appanswer:/Applications/Other.app");
+}

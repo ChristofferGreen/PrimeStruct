@@ -206,6 +206,9 @@ main() {
       controlChanged(widget) {
         changes = changes + 1i32
       }
+      openFile(request) {
+        changes = changes + 0i32
+      }
       quitRequested {
         running = false
       }

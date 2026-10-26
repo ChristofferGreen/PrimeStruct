@@ -31,6 +31,9 @@ main() {
       controlChanged(widget) {
         [Widget] changed{widget}
       }
+      openFile(request) {
+        commands = commands + 0i32
+      }
       quitRequested {
         running = false
       }

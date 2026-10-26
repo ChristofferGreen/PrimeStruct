@@ -76,6 +76,12 @@ int32_t ps_ui_event_command(void) {
   return logged("ps_ui_event_command()", value, std::to_string(value));
 }
 
+const char *ps_ui_event_text(void) {
+  State &s = state();
+  s.returnedText = usable() ? s.eventText : std::string();
+  return logged("ps_ui_event_text()", s.returnedText.c_str(), quote(s.returnedText));
+}
+
 uint64_t ps_ui_window_create(const char *title, int32_t width, int32_t height) {
   const std::string call =
       "ps_ui_window_create(" + quote(title) + ", " + std::to_string(width) + ", " + std::to_string(height) + ")";

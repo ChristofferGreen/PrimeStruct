@@ -53,6 +53,9 @@ main() {
       controlChanged(widget) {
         window.setTitle(stringFrom("Settings changed"))
       }
+      openFile(request) {
+        running = running
+      }
       quitRequested {
         running = false
       }

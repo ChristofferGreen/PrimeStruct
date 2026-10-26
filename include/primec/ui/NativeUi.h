@@ -49,7 +49,10 @@ enum {
   PS_UI_EVENT_QUIT_REQUESTED = 4,
   /* The user changed a control, ps_ui_event_widget() (inside ps_ui_event_window()): toggled a check box
    * or chose another item of a pop-up. Read the new state with the control's accessor. */
-  PS_UI_EVENT_CONTROL_CHANGED = 5
+  PS_UI_EVENT_CONTROL_CHANGED = 5,
+  /* The system asks the app to open a file (a double click in the Finder, Open With, a file dropped on the app's
+   * icon): its path is ps_ui_event_text(). */
+  PS_UI_EVENT_OPEN_FILE = 6
 };
 
 /* Standard menu items for ps_ui_menu_add_standard. They map to the platform's
@@ -117,6 +120,9 @@ int32_t ps_ui_wait_event(void);
 uint64_t ps_ui_event_window(void);
 uint64_t ps_ui_event_widget(void);
 int32_t ps_ui_event_command(void);
+/* The text of the event: the path of a PS_UI_EVENT_OPEN_FILE; "" for the other kinds. See the lifetime note
+ * above. */
+const char *ps_ui_event_text(void);
 
 /* Window ---------------------------------------------------------------- */
 
@@ -347,6 +353,33 @@ bool ps_ui_pref_list_clear(const char *key);
 bool ps_ui_pref_list_add(const char *key, const char *text);
 int32_t ps_ui_pref_list_count(const char *key);
 const char *ps_ui_pref_list_get(const char *key, int32_t index);
+
+/* Buttons ---------------------------------------------------------------- */
+
+/* A push button for a settings window; held by a form (or the content of a window) like the other controls.
+ * The user's click produces PS_UI_EVENT_CONTROL_CHANGED with the button as ps_ui_event_widget(). */
+uint64_t ps_ui_button_create(const char *title);
+bool ps_ui_button_set_title(uint64_t button, const char *title);
+
+/* File types and the default application ------------------------------------ */
+
+/* The kinds of file the app declares it can open (the document types of its Info.plist on macOS): a name for
+ * the group ("Markdown") and its extensions without dots, separated by commas ("md,markdown"). Index out of
+ * range reads as "". See the lifetime note above. */
+int32_t ps_ui_document_type_count(void);
+const char *ps_ui_document_type_name(int32_t index);
+const char *ps_ui_document_type_extensions(int32_t index);
+/* The path of the app (its bundle on macOS); "" when the program does not run from one. */
+const char *ps_ui_app_path(void);
+/* The path of the application the system opens files with `extension` with ("md" or ".md"); "" when none or
+ * unknown. */
+const char *ps_ui_default_app(const char *extension);
+/* Makes the application at `appPath` ("" or NULL: this app) the system's default for every extension of the
+ * comma separated list. False when the list is empty or the system refuses (the user may be asked to confirm). */
+bool ps_ui_set_default_app(const char *extensions, const char *appPath);
+/* Asks for an application to choose, the normal Open dialog limited to applications. The chosen path, or "" when
+ * cancelled; ps_ui_panel_chosen() tells which. */
+const char *ps_ui_open_application_panel(const char *title);
 
 /* Dialogs ---------------------------------------------------------------- */
 

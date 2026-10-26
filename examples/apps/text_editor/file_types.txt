@@ -1,0 +1,15 @@
+# The file types PrimeScroll declares in its Info.plist (scripts/bundle_macos_app.sh reads this file next to the
+# program) and offers in Settings > Files as ones it can be the default application for.
+# One line per group: name|extensions separated by commas|optional uniform type identifier PrimeScroll exports for it.
+# tests/unit/ui/test_native_ui_headless.cpp keeps the headless backend's list equal to this file.
+Plain text|txt,text
+Markdown|md,markdown
+PrimeStruct source|prime|org.primestruct.prime-source
+JSON|json
+YAML|yml,yaml
+Configuration|toml,ini,cfg,conf
+C and C++|c,h,cc,cpp,hpp,cxx
+Shell scripts|sh,bash,zsh
+Python|py
+Web scripts and styles|js,ts,css
+Logs|log

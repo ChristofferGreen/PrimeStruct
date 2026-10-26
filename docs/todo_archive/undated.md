@@ -356,3 +356,14 @@
     - editor tests: previews come back for the tabs that had them (either order, none for an old session), toggling a preview changes the saved list, through the VM, optexe and native mirrors; the other session tests still pass; full release gate green
   - stop_rule: the session's preview flags and the active-tab restore.
   - notes: a real quit and relaunch of the installed app was not tried by hand.
+
+- [x] TODO-5599: Buttons, file types and open-file requests in the native UI ABI
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-26
+  - phase: File associations (docs/NativeUiPlan.md section 16)
+  - parallel_track: file-associations
+  - scope: The native UI ABI grows to 98 functions for making an app the system's default for file types: a push button (`ps_ui_button_create/set_title`; a click is `PS_UI_EVENT_CONTROL_CHANGED`), `PS_UI_EVENT_OPEN_FILE` with `ps_ui_event_text` (the path the system asks the app to open), the file types the app declares (`ps_ui_document_type_count/name/extensions`), `ps_ui_app_path`, `ps_ui_default_app(extension)`, `ps_ui_set_default_app(extensions, appPath)` ("" is this app) and `ps_ui_open_application_panel` (choose an application). The headless backend keeps the registry of default applications, a fixed list of document types, application panel answers, and the new scripted actions (`click:H`, `openfile:PATH`, `appanswer:PATH`, `headless::pushClickButton/pushOpenFile/pushApplicationPanelAnswer/defaultApp`, a `button "..."` line in `controlOutline`). `examples/apps/text_editor/file_types.txt` is the one list of the editor's file types (name, extensions, an optional exported type identifier; `.prime` included) and a test keeps the headless list equal to it. The bindings and the stdlib carry it (`Button`, `AppEvent.openFile`, `App.button/eventText/documentType*/appPath/defaultApp/setDefaultApp/applicationPanel`); a pick over `AppEvent` must now name `openFile`. The AppKit backend answers the new functions as unsupported until TODO-5600.
+  - acceptance:
+    - headless tests (buttons into control events, open-file events, document types equal to file_types.txt, default applications read and set, the application panel's answers), the bindings list (98 functions) and the stdlib, editor and acceptance suites pass; full release gate green
+  - stop_rule: the ABI, the headless backend, the bindings and the stdlib; AppKit is TODO-5600 and the editor TODO-5601.

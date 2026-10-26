@@ -679,6 +679,9 @@ main([array<string>] args) {
         [Widget] changed{widget}
         changedControl = changed.handle
       }
+      openFile(request) {
+        [i32] ignoredRequest{request}
+      }
       quitRequested {
         intent = command_quit()
       }

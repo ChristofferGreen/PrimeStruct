@@ -86,6 +86,12 @@ inline void applyHeadlessScenario(std::string_view scenario) {
       const size_t second = rest.find(':');
       headless::pushSelectPopupItem(static_cast<uint64_t>(std::atoll(rest.substr(0, second).c_str())),
                                     second == std::string::npos ? 0 : std::atoi(rest.substr(second + 1).c_str()));
+    } else if (key == "click") {
+      headless::pushClickButton(static_cast<uint64_t>(std::atoll(rest.c_str())));
+    } else if (key == "openfile") {
+      headless::pushOpenFile(decodeScenarioText(rest));
+    } else if (key == "appanswer") {
+      headless::pushApplicationPanelAnswer(decodeScenarioText(rest));
     } else if (key == "activate") {
       headless::pushActivateWindow(static_cast<uint64_t>(std::atoll(rest.c_str())));
     } else if (key == "quit") {

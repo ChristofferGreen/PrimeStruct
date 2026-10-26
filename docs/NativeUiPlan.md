@@ -146,7 +146,7 @@ is callable only on the thread that called `ps_ui_init`, the main thread on macO
   is a `const char *` valid until the next text-returning call, `ps_ui_alert` takes button titles separated by `\n` and
   returns the pressed index, and `ps_ui_init` returns false when the app is already running. The headless backend
   (`primec/ui/NativeUiHeadless.h`) ends a scripted run with `quit_requested` once its action list is empty.
-  `primec/ui/NativeUiBindings.h` binds all 88 functions into a `ScriptEngine` or `Script` under their ABI names. The
+  `primec/ui/NativeUiBindings.h` binds all 98 functions into a `ScriptEngine` or `Script` under their ABI names. The
   three text-file functions (TODO-5546) let the editor open and save before owned `String` exists (TODO-5530).
 - **Versioning.** `ps_ui_abi_version() -> i32` returns 0 for this table. Additions append functions; a change to an
   existing signature bumps the version.
@@ -439,3 +439,28 @@ step with it.
   control event is matched against those handles, the matching preference is written, and `refresh_preferences` applies
   the editor preferences to every document and updates the View menu items and the check boxes. Documents are the
   windows other than the settings window; menu commands that arrive while it is active act on the first document.
+
+## 16. File associations
+
+**Goal (2026-10-26): PrimeScroll can be made the default application for a set of file types from its settings
+window, including `.prime`, and the application can be chosen the normal macOS way.**
+
+- **What the app declares.** `examples/apps/text_editor/file_types.txt` lists the file types as `name|extensions|optional
+  type identifier`: Plain text, Markdown, PrimeStruct source (`.prime`, with the exported identifier
+  `org.primestruct.prime-source`), JSON, YAML, Configuration, C and C++, Shell scripts, Python, Web scripts and styles,
+  and Logs. `scripts/bundle_macos_app.sh` turns the file next to a program into `CFBundleDocumentTypes` (ranked as an
+  alternate handler, so installing the app changes nothing by itself) and, for entries with an identifier,
+  `UTExportedTypeDeclarations` conforming to `public.source-code`. The program reads the list back with
+  `ps_ui_document_type_count/name/extensions`, so the bundle is the one source; the headless backend has a fixed copy
+  that a test keeps equal to the file.
+- **Making the default.** `ps_ui_set_default_app(extensions, appPath)` makes the application at `appPath` ("" is the
+  app itself) the system's default for a comma separated list of extensions (AppKit: `NSWorkspace
+  setDefaultApplicationAtURL:toOpenContentType:completionHandler:`; the system may ask the user to confirm), and
+  `ps_ui_default_app(extension)` reads the current handler. `ps_ui_open_application_panel` is the normal Open dialog
+  limited to applications, which is how another editor than PrimeScroll is chosen by hand.
+- **Opening.** A double click, Open With or a drop on the icon reaches the program as `PS_UI_EVENT_OPEN_FILE`
+  (`AppEvent.openFile`, the path from `App.eventText()`).
+- **Settings.** A Files tab: the application (PrimeScroll or the chosen one, "Choose..."), one "Make Default" button per
+  file type and "Make All Default". Buttons are a new control: a click is a `PS_UI_EVENT_CONTROL_CHANGED`.
+- **Slices.** The ABI, the headless backend, the bindings and the stdlib (TODO-5599), the AppKit backend and the bundle's
+  Info.plist (TODO-5600), then the editor's tab and open-file handling (TODO-5601).

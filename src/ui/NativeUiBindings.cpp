@@ -74,6 +74,25 @@ template <class Binder> void forEachBinding(Binder &&bindOne) {
   bindOne("ps_ui_text_view_set_font_size",
           [](uint64_t view, int32_t points) { return ps_ui_text_view_set_font_size(view, points); });
   bindOne("ps_ui_preview_set_scroll_mode", [](int32_t mode) { return ps_ui_preview_set_scroll_mode(mode); });
+  bindOne("ps_ui_event_text", [] { return embed::HostText(ps_ui_event_text()); });
+  bindOne("ps_ui_button_create", [](std::string_view title) { return ps_ui_button_create(text(title).c_str()); });
+  bindOne("ps_ui_button_set_title", [](uint64_t button, embed::HostTextView title) {
+    return ps_ui_button_set_title(button, text(title).c_str());
+  });
+  bindOne("ps_ui_document_type_count", [] { return ps_ui_document_type_count(); });
+  bindOne("ps_ui_document_type_name", [](int32_t index) { return embed::HostText(ps_ui_document_type_name(index)); });
+  bindOne("ps_ui_document_type_extensions",
+          [](int32_t index) { return embed::HostText(ps_ui_document_type_extensions(index)); });
+  bindOne("ps_ui_app_path", [] { return embed::HostText(ps_ui_app_path()); });
+  bindOne("ps_ui_default_app", [](embed::HostTextView extension) {
+    return embed::HostText(ps_ui_default_app(text(extension).c_str()));
+  });
+  bindOne("ps_ui_set_default_app", [](embed::HostTextView extensions, embed::HostTextView appPath) {
+    return ps_ui_set_default_app(text(extensions).c_str(), text(appPath).c_str());
+  });
+  bindOne("ps_ui_open_application_panel", [](std::string_view title) {
+    return embed::HostText(ps_ui_open_application_panel(text(title).c_str()));
+  });
   bindOne("ps_ui_window_set_content",
           [](uint64_t window, uint64_t widget) { return ps_ui_window_set_content(window, widget); });
   bindOne("ps_ui_window_set_edited",

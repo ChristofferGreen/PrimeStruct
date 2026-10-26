@@ -77,6 +77,20 @@ bool ps_ui_checkbox_checked(uint64_t checkbox) {
   return loggedFlag("ps_ui_checkbox_checked(" + std::to_string(checkbox) + ")", c != nullptr && c->checked);
 }
 
+uint64_t ps_ui_button_create(const char *title) {
+  return createControl("ps_ui_button_create(" + quote(title) + ")", Control::Kind::Button, title != nullptr ? title : "");
+}
+
+bool ps_ui_button_set_title(uint64_t button, const char *title) {
+  const std::string call = "ps_ui_button_set_title(" + std::to_string(button) + ", " + quote(title) + ")";
+  Control *c = controlOfKind(button, Control::Kind::Button);
+  const bool ok = c != nullptr && title != nullptr;
+  if (ok) {
+    c->text = title;
+  }
+  return loggedFlag(call, ok);
+}
+
 uint64_t ps_ui_popup_create(void) { return createControl("ps_ui_popup_create()", Control::Kind::Popup, ""); }
 
 bool ps_ui_popup_add_item(uint64_t popup, const char *title) {
@@ -213,6 +227,85 @@ bool ps_ui_preview_set_scroll_mode(int32_t mode) {
     state().scrollMode = mode;
   }
   return loggedFlag(call, ok);
+}
+
+int32_t ps_ui_document_type_count(void) {
+  const int32_t count = static_cast<int32_t>(documentTypes().size());
+  return logged("ps_ui_document_type_count()", count, std::to_string(count));
+}
+
+const char *ps_ui_document_type_name(int32_t index) {
+  State &s = state();
+  const auto &types = documentTypes();
+  s.returnedText = index >= 0 && static_cast<size_t>(index) < types.size() ? types[static_cast<size_t>(index)].name : "";
+  return logged("ps_ui_document_type_name(" + std::to_string(index) + ")", s.returnedText.c_str(), quote(s.returnedText));
+}
+
+const char *ps_ui_document_type_extensions(int32_t index) {
+  State &s = state();
+  const auto &types = documentTypes();
+  s.returnedText = index >= 0 && static_cast<size_t>(index) < types.size() ? types[static_cast<size_t>(index)].extensions : "";
+  return logged("ps_ui_document_type_extensions(" + std::to_string(index) + ")", s.returnedText.c_str(),
+                quote(s.returnedText));
+}
+
+const char *ps_ui_app_path(void) {
+  State &s = state();
+  s.returnedText = HeadlessAppPath;
+  return logged("ps_ui_app_path()", s.returnedText.c_str(), quote(s.returnedText));
+}
+
+extern "C++" {
+namespace {
+// "MD" and ".md" are the extension "md".
+std::string normalExtension(const char *extension) {
+  std::string name = extension != nullptr ? extension : "";
+  if (!name.empty() && name.front() == '.') {
+    name.erase(0, 1);
+  }
+  for (char &c : name) {
+    c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+  }
+  return name;
+}
+} // namespace
+}
+
+const char *ps_ui_default_app(const char *extension) {
+  State &s = state();
+  const auto found = s.defaultApps.find(normalExtension(extension));
+  s.returnedText = found != s.defaultApps.end() ? found->second : "";
+  return logged("ps_ui_default_app(" + quote(extension) + ")", s.returnedText.c_str(), quote(s.returnedText));
+}
+
+bool ps_ui_set_default_app(const char *extensions, const char *appPath) {
+  const std::string call = "ps_ui_set_default_app(" + quote(extensions) + ", " + quote(appPath) + ")";
+  State &s = state();
+  const std::string list = extensions != nullptr ? extensions : "";
+  const std::string app = appPath != nullptr && *appPath != '\0' ? appPath : HeadlessAppPath;
+  bool any = false;
+  for (size_t from = 0; usable() && from <= list.size();) {
+    size_t comma = list.find(',', from);
+    comma = comma == std::string::npos ? list.size() : comma;
+    const std::string extension = normalExtension(list.substr(from, comma - from).c_str());
+    if (!extension.empty()) {
+      s.defaultApps[extension] = app;
+      any = true;
+    }
+    from = comma + 1;
+  }
+  return loggedFlag(call, any);
+}
+
+const char *ps_ui_open_application_panel(const char *title) {
+  State &s = state();
+  s.returnedText.clear();
+  if (usable() && !s.appAnswers.empty()) {
+    s.returnedText = std::move(s.appAnswers.front());
+    s.appAnswers.pop_front();
+  }
+  s.panelChosen = !s.returnedText.empty();
+  return logged("ps_ui_open_application_panel(" + quote(title) + ")", s.returnedText.c_str(), quote(s.returnedText));
 }
 
 } // extern "C"

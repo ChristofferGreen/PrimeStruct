@@ -268,6 +268,36 @@ void pushToggleCheckBox(uint64_t checkBox) {
   state().actions.push_back(std::move(a));
 }
 
+void pushClickButton(uint64_t button) {
+  recordScenario("click:" + std::to_string(button));
+  Action a;
+  a.kind = Action::Kind::Click;
+  a.handle = button;
+  state().actions.push_back(std::move(a));
+}
+
+void pushOpenFile(std::string path) {
+  recordScenario("openfile:" + encodeScenarioText(path));
+  Action a;
+  a.kind = Action::Kind::OpenFile;
+  a.text = std::move(path);
+  state().actions.push_back(std::move(a));
+}
+
+void pushApplicationPanelAnswer(std::string path) {
+  recordScenario("appanswer:" + encodeScenarioText(path));
+  state().appAnswers.push_back(std::move(path));
+}
+
+std::string defaultApp(const std::string &extension) {
+  std::string name = extension;
+  if (!name.empty() && name.front() == '.') {
+    name.erase(0, 1);
+  }
+  const auto found = state().defaultApps.find(name);
+  return found != state().defaultApps.end() ? found->second : std::string();
+}
+
 void pushSelectPopupItem(uint64_t popup, int32_t index) {
   recordScenario("popup:" + std::to_string(popup) + ":" + std::to_string(index));
   Action a;
@@ -302,6 +332,8 @@ std::string leafOutline(const Control &c) {
     return "label " + quote(c.text);
   case Control::Kind::CheckBox:
     return "checkbox " + quote(c.text) + (c.checked ? " [checked]" : "");
+  case Control::Kind::Button:
+    return "button " + quote(c.text);
   case Control::Kind::Popup: {
     std::string items;
     for (size_t i = 0; i < c.items.size(); ++i) {

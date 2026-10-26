@@ -37,6 +37,13 @@ void pushActivateWindow(uint64_t window);
 // is gone or of another kind by replay time is skipped.
 void pushToggleCheckBox(uint64_t checkBox);
 void pushSelectPopupItem(uint64_t popup, int32_t index);
+// The user clicks a button (PS_UI_EVENT_CONTROL_CHANGED, `click:H`), or the system asks the app to open a file
+// (PS_UI_EVENT_OPEN_FILE, `openfile:PATH`). The answer of the next application panel (`appanswer:PATH`), and the
+// application the headless "system" opens a file extension with after ps_ui_set_default_app ("" when none).
+void pushClickButton(uint64_t button);
+void pushOpenFile(std::string path);
+void pushApplicationPanelAnswer(std::string path);
+std::string defaultApp(const std::string &extension);
 // The open windows of the tab group `window` belongs to, in tab order; empty when it is in none.
 std::vector<uint64_t> tabGroup(uint64_t window);
 // The document path stored with a window ("" when none or the handle is bad).
