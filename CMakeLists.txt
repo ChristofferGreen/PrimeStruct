@@ -822,7 +822,8 @@ primestructEnableWarnings(primec_ui_highlight_lib)
 
 add_library(primec_ui_headless_lib src/ui/headless/NativeUiHeadless.cpp
                                   src/ui/headless/NativeUiHeadlessControl.cpp
-                                  src/ui/headless/NativeUiHeadlessControls.cpp)
+                                  src/ui/headless/NativeUiHeadlessControls.cpp
+                                  src/ui/headless/NativeUiHeadlessToolbar.cpp)
 target_include_directories(primec_ui_headless_lib PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
@@ -1399,6 +1400,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     add_library(primec_ui_headless_dylib SHARED src/ui/headless/NativeUiHeadless.cpp
                                                 src/ui/headless/NativeUiHeadlessControl.cpp
                                                 src/ui/headless/NativeUiHeadlessControls.cpp
+                                                src/ui/headless/NativeUiHeadlessToolbar.cpp
                                                 tests/fixtures/host_calls/headless_log_dump.cpp)
     set_target_properties(primec_ui_headless_dylib PROPERTIES OUTPUT_NAME ps_ui_headless)
     target_include_directories(primec_ui_headless_dylib PRIVATE ${CMAKE_SOURCE_DIR}/include

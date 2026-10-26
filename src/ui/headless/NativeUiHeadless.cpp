@@ -520,9 +520,11 @@ bool ps_ui_window_set_preview(uint64_t window, bool on) {
   const bool ok = w != nullptr && (view != nullptr || !on);
   if (ok && on && !w->state.preview) {
     w->state.preview = true;
+    w->state.previewMode = PS_UI_PREVIEW_SPLIT;
     renderPreview(*w, *view);
   } else if (ok && !on) {
     w->state.preview = false;
+    w->state.previewMode = PS_UI_PREVIEW_TEXT;
     w->previewPage.clear();
   }
   return loggedFlag(call, ok);

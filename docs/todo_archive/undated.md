@@ -473,3 +473,15 @@
     - unit tests of the strings in and out for every operation, including toggling off, selections over several lines, blank lines, a cursor in no word, bold plus italic, non-ASCII text, a table with escaped pipes, alignment, ragged rows and a table at the end of the text without a trailing newline; the full release gate green
   - stop_rule: the library and its tests; no ABI and no backend yet.
   - notes: 17 unit cases (58 checks) in `tests/unit/ui/test_markdown_edit.cpp` with «selection» and ¦caret markers. Inline operations leave the inner text selected.
+
+- [x] TODO-5610: Toolbar, preview modes and markdown edits in the UI ABI
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-26
+  - phase: Markdown toolbar (docs/NativeUiPlan.md section 17)
+  - parallel_track: markdown-toolbar
+  - scope: The UI ABI gets `ps_ui_toolbar_create/add_button/add_segments/add_menu/add_separator`, `ps_ui_window_set_toolbar` (0 hides) and `ps_ui_window_toolbar_select` (a toolbar item is a command: a click is `PS_UI_EVENT_COMMAND`), `ps_ui_window_set_preview_mode/preview_mode` (0 text, 1 split, 2 preview alone; `set_preview` is 0 or 1), `ps_ui_text_view_markdown_edit(view, operation, a, b)` (applies the library as one edit, the user-visible change raises `PS_UI_EVENT_TEXT_CHANGED`) and `ps_ui_text_view_set_markdown_editing` (Tab moves between table cells). The headless backend keeps the toolbars and their outline (`headless::toolbarOutline`), the preview mode, the selection of a text view (`headless::setSelection`) and applies the edits with the library; the bindings and the stdlib (`Toolbar`, `Window.setToolbar/setPreviewMode/previewMode/selectToolbarItem`, `TextView.markdownEdit/setMarkdownEditing`) carry it; AppKit answers as unsupported until TODO-5611.
+  - acceptance:
+    - headless tests for the toolbar outline, the preview modes, the edits through the selection and their text-changed event; the bindings list; the editor, acceptance and stdlib suites still pass; the full release gate green
+  - stop_rule: the ABI, the headless backend, the bindings and the stdlib.
+  - notes: the headless suite has the preview modes, the toolbar outline and the edits through the selection; the bindings list is 114 signatures. Toolbar titles are fixed labels (`string`).

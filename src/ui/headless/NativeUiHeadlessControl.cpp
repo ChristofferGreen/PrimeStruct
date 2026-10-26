@@ -51,6 +51,15 @@ void pushTypeText(uint64_t widget, std::string text) {
   a.text = std::move(text);
   state().actions.push_back(std::move(a));
 }
+void pushSelectText(uint64_t view, int32_t start, int32_t end) {
+  Action a;
+  a.kind = Action::Kind::Selection;
+  a.handle = view;
+  a.command = start;
+  a.text = std::to_string(end);
+  recordScenario("select:" + std::to_string(view) + ":" + std::to_string(start) + ":" + std::to_string(end));
+  state().actions.push_back(std::move(a));
+}
 void pushCloseWindow(uint64_t window) {
   Action a;
   a.kind = Action::Kind::CloseWindow;

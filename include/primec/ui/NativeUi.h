@@ -234,6 +234,42 @@ enum {
 };
 bool ps_ui_preview_set_scroll_mode(int32_t mode);
 
+/* How much of the window the preview takes: PS_UI_PREVIEW_TEXT (the text view alone), PS_UI_PREVIEW_SPLIT (the text view and
+ * the page, what ps_ui_window_set_preview(window, true) gives) or PS_UI_PREVIEW_ONLY (the page alone; the text view stays
+ * alive and keeps its text and selection). False for a bad handle, another value, or a mode other than TEXT in a window
+ * with no text view as its content. ps_ui_window_has_preview is true in SPLIT and ONLY; turning the preview off with
+ * ps_ui_window_set_preview(window, false) is TEXT. */
+enum {
+  PS_UI_PREVIEW_TEXT = 0,
+  PS_UI_PREVIEW_SPLIT = 1,
+  PS_UI_PREVIEW_ONLY = 2,
+};
+bool ps_ui_window_set_preview_mode(uint64_t window, int32_t mode);
+/* The window's mode (PS_UI_PREVIEW_*); 0 for a bad handle. */
+int32_t ps_ui_window_preview_mode(uint64_t window);
+
+/* Toolbar ------------------------------------------------------------------ */
+
+/* A toolbar is a row of items above a window's content. Every item is a command: choosing it produces
+ * PS_UI_EVENT_COMMAND with its command id, like a menu item, so a program handles one command from the toolbar, the
+ * menu and a shortcut alike. A toolbar belongs to the window it is set on; it is built once and may be set on, and
+ * hidden from, any number of windows. `symbol` names a platform icon (SF Symbols on macOS, such as "bold" or
+ * "list.bullet"); the title is the tooltip and the fallback when the platform has no such icon. */
+uint64_t ps_ui_toolbar_create(void);
+bool ps_ui_toolbar_add_button(uint64_t toolbar, const char *title, const char *symbol, int32_t commandId);
+/* A segmented control: `titles` is a list separated by '|', and the segments produce the commands `firstCommandId`,
+ * `firstCommandId + 1`, ... One segment is selected at a time (see ps_ui_window_toolbar_select). */
+bool ps_ui_toolbar_add_segments(uint64_t toolbar, const char *titles, int32_t firstCommandId);
+/* A button that opens `menu` (a menu made with ps_ui_menu_create that is not in the menu bar); its items produce their
+ * command ids. */
+bool ps_ui_toolbar_add_menu(uint64_t toolbar, const char *title, const char *symbol, uint64_t menu);
+bool ps_ui_toolbar_add_separator(uint64_t toolbar);
+/* Shows `toolbar` on the window, or hides the window's toolbar with 0. False for a bad window or toolbar. */
+bool ps_ui_window_set_toolbar(uint64_t window, uint64_t toolbar);
+/* Selects the segment with `commandId` in the window's toolbar (it shows selected; no event). False when the window has
+ * no toolbar or no segment has that command. */
+bool ps_ui_window_toolbar_select(uint64_t window, int32_t commandId);
+
 /* Text view -------------------------------------------------------------- */
 
 uint64_t ps_ui_text_view_create(void);
@@ -245,6 +281,39 @@ bool ps_ui_text_view_set_text(uint64_t view, const char *text);
 bool ps_ui_text_view_set_monospace(uint64_t view, bool monospace);
 /* The size of the view's text in points (6 to 96); false outside that. */
 bool ps_ui_text_view_set_font_size(uint64_t view, int32_t points);
+/* Markdown editing (primec/ui/MarkdownEdit.h): applies `operation` (PS_UI_MARKDOWN_*) to the text and the selection of
+ * the view as one undoable edit, the way a markdown editor's buttons do. `a` and `b` are the operation's arguments (the
+ * heading level, the table's columns and rows, the alignment). The change is the user's: the view is modified and
+ * PS_UI_EVENT_TEXT_CHANGED is produced. False for a bad handle or operation, or when the operation does not apply
+ * (a table operation with the cursor outside a table). */
+enum {
+  PS_UI_MARKDOWN_BOLD = 0,
+  PS_UI_MARKDOWN_ITALIC = 1,
+  PS_UI_MARKDOWN_STRIKE = 2,
+  PS_UI_MARKDOWN_CODE = 3,
+  PS_UI_MARKDOWN_LINK = 4,
+  PS_UI_MARKDOWN_IMAGE = 5,
+  PS_UI_MARKDOWN_HEADING = 6,
+  PS_UI_MARKDOWN_BULLETS = 7,
+  PS_UI_MARKDOWN_NUMBERS = 8,
+  PS_UI_MARKDOWN_TASKS = 9,
+  PS_UI_MARKDOWN_QUOTE = 10,
+  PS_UI_MARKDOWN_CODE_BLOCK = 11,
+  PS_UI_MARKDOWN_RULE = 12,
+  PS_UI_MARKDOWN_TABLE_INSERT = 13,
+  PS_UI_MARKDOWN_TABLE_FORMAT = 14,
+  PS_UI_MARKDOWN_TABLE_ADD_ROW = 15,
+  PS_UI_MARKDOWN_TABLE_ADD_COLUMN = 16,
+  PS_UI_MARKDOWN_TABLE_DELETE_ROW = 17,
+  PS_UI_MARKDOWN_TABLE_DELETE_COLUMN = 18,
+  PS_UI_MARKDOWN_TABLE_ALIGN = 19,
+  PS_UI_MARKDOWN_TABLE_NEXT_CELL = 20,
+  PS_UI_MARKDOWN_TABLE_PREVIOUS_CELL = 21,
+};
+bool ps_ui_text_view_markdown_edit(uint64_t view, int32_t operation, int32_t a, int32_t b);
+/* With it on, Tab and Shift-Tab in the view move between the cells of a markdown table when the cursor is in one (and
+ * are ordinary otherwise). Off by default. */
+bool ps_ui_text_view_set_markdown_editing(uint64_t view, bool on);
 /* True once the user changed the text since creation or the last clear. */
 bool ps_ui_text_view_is_modified(uint64_t view);
 bool ps_ui_text_view_clear_modified(uint64_t view);

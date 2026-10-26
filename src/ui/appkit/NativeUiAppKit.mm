@@ -2472,6 +2472,21 @@ bool ps_ui_window_set_autosave_name(uint64_t window, const char *name) {
   return [w setFrameAutosaveName:toNSString(name)];
 }
 
+// The toolbar, the preview-only mode and markdown edits are TODO-5611; until then the backend answers as unsupported.
+uint64_t ps_ui_toolbar_create(void) { return 0; }
+bool ps_ui_toolbar_add_button(uint64_t, const char *, const char *, int32_t) { return false; }
+bool ps_ui_toolbar_add_segments(uint64_t, const char *, int32_t) { return false; }
+bool ps_ui_toolbar_add_menu(uint64_t, const char *, const char *, uint64_t) { return false; }
+bool ps_ui_toolbar_add_separator(uint64_t) { return false; }
+bool ps_ui_window_set_toolbar(uint64_t, uint64_t) { return false; }
+bool ps_ui_window_toolbar_select(uint64_t, int32_t) { return false; }
+bool ps_ui_text_view_markdown_edit(uint64_t, int32_t, int32_t, int32_t) { return false; }
+bool ps_ui_text_view_set_markdown_editing(uint64_t, bool) { return false; }
+bool ps_ui_window_set_preview_mode(uint64_t window, int32_t mode) {
+  return (mode == PS_UI_PREVIEW_TEXT || mode == PS_UI_PREVIEW_SPLIT) && ps_ui_window_set_preview(window, mode == PS_UI_PREVIEW_SPLIT);
+}
+int32_t ps_ui_window_preview_mode(uint64_t window) { return ps_ui_window_has_preview(window) ? PS_UI_PREVIEW_SPLIT : PS_UI_PREVIEW_TEXT; }
+
 bool ps_ui_window_set_preview(uint64_t window, bool on) {
   NSWindow *w = usable() ? liveWindow(window) : nil;
   if (w == nil) {

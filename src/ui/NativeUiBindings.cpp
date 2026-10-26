@@ -36,6 +36,31 @@ template <class Binder> void forEachBinding(Binder &&bindOne) {
   });
   bindOne("ps_ui_window_set_preview",
           [](uint64_t window, bool on) { return ps_ui_window_set_preview(window, on); });
+  bindOne("ps_ui_window_set_preview_mode",
+          [](uint64_t window, int32_t mode) { return ps_ui_window_set_preview_mode(window, mode); });
+  bindOne("ps_ui_window_preview_mode", [](uint64_t window) { return ps_ui_window_preview_mode(window); });
+  bindOne("ps_ui_toolbar_create", [] { return ps_ui_toolbar_create(); });
+  bindOne("ps_ui_toolbar_add_button",
+          [](uint64_t toolbar, std::string_view title, std::string_view symbol, int32_t commandId) {
+            return ps_ui_toolbar_add_button(toolbar, text(title).c_str(), text(symbol).c_str(), commandId);
+          });
+  bindOne("ps_ui_toolbar_add_segments", [](uint64_t toolbar, std::string_view titles, int32_t firstCommandId) {
+    return ps_ui_toolbar_add_segments(toolbar, text(titles).c_str(), firstCommandId);
+  });
+  bindOne("ps_ui_toolbar_add_menu",
+          [](uint64_t toolbar, std::string_view title, std::string_view symbol, uint64_t menu) {
+            return ps_ui_toolbar_add_menu(toolbar, text(title).c_str(), text(symbol).c_str(), menu);
+          });
+  bindOne("ps_ui_toolbar_add_separator", [](uint64_t toolbar) { return ps_ui_toolbar_add_separator(toolbar); });
+  bindOne("ps_ui_window_set_toolbar",
+          [](uint64_t window, uint64_t toolbar) { return ps_ui_window_set_toolbar(window, toolbar); });
+  bindOne("ps_ui_window_toolbar_select",
+          [](uint64_t window, int32_t commandId) { return ps_ui_window_toolbar_select(window, commandId); });
+  bindOne("ps_ui_text_view_markdown_edit", [](uint64_t view, int32_t operation, int32_t a, int32_t b) {
+    return ps_ui_text_view_markdown_edit(view, operation, a, b);
+  });
+  bindOne("ps_ui_text_view_set_markdown_editing",
+          [](uint64_t view, bool on) { return ps_ui_text_view_set_markdown_editing(view, on); });
   bindOne("ps_ui_window_has_preview", [](uint64_t window) { return ps_ui_window_has_preview(window); });
   bindOne("ps_ui_window_refresh_preview", [](uint64_t window) { return ps_ui_window_refresh_preview(window); });
   bindOne("ps_ui_menu_follow_preview",

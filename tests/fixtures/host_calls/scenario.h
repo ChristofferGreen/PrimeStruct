@@ -6,7 +6,7 @@
 // Entries are separated by ';'. `cmd:N` is a menu command, `type:W:text` types into window
 // handle W, `close:W` asks to close it, `save:path` and `open:path` answer the next save and open
 // panel, `alert:N` answers the next alert, `activate:W` makes window W the active one and `quit`
-// asks the app to quit, `check:H` clicks check box H and `popup:H:I` chooses item I of pop-up H, `pref:key=1` presets a boolean preference and `recent:path` notes a recent file, `pint:key=3` and `plist:key=a,b` preset an integer and a list preference. Text may carry %XX escapes (for ';', '%' and line breaks).
+// asks the app to quit, `check:H` clicks check box H and `popup:H:I` chooses item I of pop-up H, `pref:key=1` presets a boolean preference and `select:H:S:E` selects bytes S to E of text view H, `recent:path` notes a recent file, `pint:key=3` and `plist:key=a,b` preset an integer and a list preference. Text may carry %XX escapes (for ';', '%' and line breaks).
 #pragma once
 
 #include "primec/ui/NativeUiHeadless.h"
@@ -51,6 +51,14 @@ inline void applyHeadlessScenario(std::string_view scenario) {
       const size_t second = rest.find(':');
       headless::pushTypeText(static_cast<uint64_t>(std::atoll(rest.substr(0, second).c_str())),
                              second == std::string::npos ? "" : decodeScenarioText(rest.substr(second + 1)));
+    } else if (key == "select") {
+      const size_t second = rest.find(':');
+      const size_t third = second == std::string::npos ? second : rest.find(':', second + 1);
+      if (third != std::string::npos) {
+        headless::pushSelectText(static_cast<uint64_t>(std::atoll(rest.substr(0, second).c_str())),
+                                 std::atoi(rest.substr(second + 1, third - second - 1).c_str()),
+                                 std::atoi(rest.substr(third + 1).c_str()));
+      }
     } else if (key == "close") {
       headless::pushCloseWindow(static_cast<uint64_t>(std::atoll(rest.c_str())));
     } else if (key == "save") {

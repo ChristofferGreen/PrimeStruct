@@ -10,6 +10,7 @@
 
 #include <cstdint>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace primec::ui::headless {
@@ -75,12 +76,23 @@ struct WindowState {
   std::string autosaveName; // set with ps_ui_window_set_autosave_name
   bool preview = false;     // the preview pane is on (ps_ui_window_set_preview)
   int32_t previewRenders = 0; // how many times the preview page was built
+  int32_t previewMode = 0;    // PS_UI_PREVIEW_TEXT, _SPLIT or _ONLY
+  uint64_t toolbar = 0;       // the toolbar shown on the window (0 for none)
+  int32_t toolbarSelected = -1; // the command of the selected segment of the toolbar (-1 for none)
   int32_t style = 0;          // the PS_UI_WINDOW_* style (ps_ui_window_set_style)
 };
 WindowState windowState(uint64_t window);
 // The page the window's preview shows (primec::ui::markdownPreviewPage of the text view's text when it
 // was last rendered); "" when the window has no preview.
 std::string previewPage(uint64_t window);
+// The user selects bytes [start, end) of a text view (no event; `select:H:S:E` in pushedScenario), and the selection
+// as {start, end}. Typing moves the caret to the end of the text.
+void pushSelectText(uint64_t textView, int32_t start, int32_t end);
+std::pair<int32_t, int32_t> selection(uint64_t textView);
+// The toolbar shown on the window, one line per item: "button Bold [bold] #20", "segments Editor|Split|Preview #1
+// [selected 2]", "menu Heading [textformat]" followed by its items indented ("  Heading 1 #31"), "-" for a separator.
+// Empty when the window has none.
+std::vector<std::string> toolbarOutline(uint64_t window);
 bool isMonospace(uint64_t textView);
 // True when the line number bar of the text view is shown.
 bool lineNumbersVisible(uint64_t textView);

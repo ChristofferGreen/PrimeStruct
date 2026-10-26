@@ -1059,3 +1059,102 @@ TEST_CASE("the user's selection of list rows is a control event; the program's o
   CHECK(headless::listSelection(list).empty());
   CHECK(headless::pushedScenario() == "rows:" + std::to_string(list) + ":1,2,9;rows:" + std::to_string(list) + ":");
 }
+
+TEST_CASE("a window's preview has three modes") {
+  startApp();
+  const uint64_t window = ps_ui_window_create("W", 100, 100);
+  CHECK(ps_ui_window_preview_mode(window) == PS_UI_PREVIEW_TEXT);
+  CHECK_FALSE(ps_ui_window_set_preview_mode(window, PS_UI_PREVIEW_ONLY)); // no text view yet
+  const uint64_t view = ps_ui_text_view_create();
+  REQUIRE(ps_ui_window_set_content(window, view));
+  ps_ui_text_view_set_text(view, "# T");
+  CHECK_FALSE(ps_ui_window_set_preview_mode(window, 3));
+  CHECK_FALSE(ps_ui_window_set_preview_mode(window, -1));
+
+  CHECK(ps_ui_window_set_preview_mode(window, PS_UI_PREVIEW_ONLY));
+  CHECK(ps_ui_window_preview_mode(window) == PS_UI_PREVIEW_ONLY);
+  CHECK(ps_ui_window_has_preview(window));
+  CHECK(headless::previewPage(window).find("<h1") != std::string::npos);
+  CHECK(ps_ui_window_set_preview_mode(window, PS_UI_PREVIEW_SPLIT));
+  CHECK(headless::windowState(window).previewRenders == 1); // the page was already there
+  CHECK(ps_ui_window_set_preview(window, false));
+  CHECK(ps_ui_window_preview_mode(window) == PS_UI_PREVIEW_TEXT);
+  CHECK(ps_ui_window_set_preview(window, true));
+  CHECK(ps_ui_window_preview_mode(window) == PS_UI_PREVIEW_SPLIT);
+  CHECK(ps_ui_window_set_preview_mode(window, PS_UI_PREVIEW_TEXT));
+  CHECK_FALSE(ps_ui_window_has_preview(window));
+  CHECK(headless::previewPage(window).empty());
+  CHECK(ps_ui_window_preview_mode(999) == 0);
+  CHECK_FALSE(ps_ui_window_set_preview_mode(999, 1));
+}
+
+TEST_CASE("a toolbar is a row of commands on a window") {
+  startApp();
+  const uint64_t window = ps_ui_window_create("W", 100, 100);
+  const uint64_t bar = ps_ui_toolbar_create();
+  REQUIRE(bar != 0);
+  CHECK(ps_ui_toolbar_add_segments(bar, "Editor|Split|Preview", 1));
+  CHECK(ps_ui_toolbar_add_separator(bar));
+  CHECK(ps_ui_toolbar_add_button(bar, "Bold", "bold", 20));
+  const uint64_t headings = ps_ui_menu_create("Heading");
+  REQUIRE(ps_ui_menu_add_item(headings, "Heading 1", "", 31));
+  REQUIRE(ps_ui_menu_add_separator(headings));
+  REQUIRE(ps_ui_menu_add_item(headings, "Paragraph", "", 30));
+  CHECK(ps_ui_toolbar_add_menu(bar, "Heading", "textformat", headings));
+  CHECK_FALSE(ps_ui_toolbar_add_segments(bar, "", 5));
+  CHECK_FALSE(ps_ui_toolbar_add_button(999, "x", "", 1));
+  CHECK_FALSE(ps_ui_toolbar_add_menu(bar, "x", "", 999));
+
+  CHECK(headless::toolbarOutline(window).empty());
+  CHECK(ps_ui_window_set_toolbar(window, bar));
+  CHECK(headless::windowState(window).toolbar == bar);
+  const std::vector<std::string> outline{"segments Editor|Split|Preview #1", "-", "button Bold [bold] #20",
+                                         "menu Heading [textformat]", "  Heading 1 #31", "  -", "  Paragraph #30"};
+  CHECK(headless::toolbarOutline(window) == outline);
+
+  CHECK(ps_ui_window_toolbar_select(window, 2));
+  CHECK_FALSE(ps_ui_window_toolbar_select(window, 20)); // a button is not a segment
+  CHECK_FALSE(ps_ui_window_toolbar_select(window, 4));
+  CHECK(headless::toolbarOutline(window).front() == "segments Editor|Split|Preview #1 [selected 1]");
+
+  CHECK_FALSE(ps_ui_window_set_toolbar(window, 999));
+  CHECK_FALSE(ps_ui_window_set_toolbar(999, bar));
+  CHECK(ps_ui_window_set_toolbar(window, 0));
+  CHECK(headless::toolbarOutline(window).empty());
+
+  // A toolbar item is a command: it reaches the program like a menu item.
+  headless::pushCommand(20);
+  CHECK(ps_ui_wait_event() == PS_UI_EVENT_COMMAND);
+  CHECK(ps_ui_event_command() == 20);
+}
+
+TEST_CASE("markdown edits change the text through the selection and report it") {
+  startApp();
+  const uint64_t window = ps_ui_window_create("W", 100, 100);
+  const uint64_t view = ps_ui_text_view_create();
+  REQUIRE(ps_ui_window_set_content(window, view));
+  ps_ui_text_view_set_text(view, "a word b");
+  CHECK_FALSE(ps_ui_text_view_is_modified(view));
+
+  headless::pushSelectText(view, 2, 6);
+  headless::pushCommand(7); // the program's next event comes after the selection
+  CHECK(ps_ui_wait_event() == PS_UI_EVENT_COMMAND);
+  CHECK(headless::selection(view) == std::make_pair(2, 6));
+  CHECK(ps_ui_text_view_markdown_edit(view, PS_UI_MARKDOWN_BOLD, 0, 0));
+  CHECK(std::string(ps_ui_text_view_get_text(view)) == "a **word** b");
+  CHECK(headless::selection(view) == std::make_pair(4, 8));
+  CHECK(ps_ui_text_view_is_modified(view));
+  CHECK(ps_ui_wait_event() == PS_UI_EVENT_TEXT_CHANGED);
+  CHECK(ps_ui_event_widget() == view);
+  CHECK(ps_ui_event_window() == window);
+
+  // Not applicable: a table operation outside a table changes nothing and raises nothing.
+  CHECK_FALSE(ps_ui_text_view_markdown_edit(view, PS_UI_MARKDOWN_TABLE_FORMAT, 0, 0));
+  CHECK(std::string(ps_ui_text_view_get_text(view)) == "a **word** b");
+  CHECK_FALSE(ps_ui_text_view_markdown_edit(view, 99, 0, 0));
+  CHECK_FALSE(ps_ui_text_view_markdown_edit(999, PS_UI_MARKDOWN_BOLD, 0, 0));
+
+  CHECK(ps_ui_text_view_set_markdown_editing(view, true));
+  CHECK_FALSE(ps_ui_text_view_set_markdown_editing(999, true));
+  CHECK(headless::pushedScenario() == "select:" + std::to_string(view) + ":2:6;cmd:7");
+}

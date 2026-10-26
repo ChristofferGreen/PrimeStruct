@@ -159,6 +159,50 @@ ps_ui_window_has_preview([u64] window) {
 }
 
 [host return<bool>]
+ps_ui_window_set_preview_mode([u64] window, [i32] mode) {
+}
+
+[host return<i32>]
+ps_ui_window_preview_mode([u64] window) {
+}
+
+[host return<u64>]
+ps_ui_toolbar_create() {
+}
+
+[host return<bool>]
+ps_ui_toolbar_add_button([u64] toolbar, [string] title, [string] symbol, [i32] commandId) {
+}
+
+[host return<bool>]
+ps_ui_toolbar_add_segments([u64] toolbar, [string] titles, [i32] firstCommandId) {
+}
+
+[host return<bool>]
+ps_ui_toolbar_add_menu([u64] toolbar, [string] title, [string] symbol, [u64] menu) {
+}
+
+[host return<bool>]
+ps_ui_toolbar_add_separator([u64] toolbar) {
+}
+
+[host return<bool>]
+ps_ui_window_set_toolbar([u64] window, [u64] toolbar) {
+}
+
+[host return<bool>]
+ps_ui_window_toolbar_select([u64] window, [i32] commandId) {
+}
+
+[host return<bool>]
+ps_ui_text_view_markdown_edit([u64] view, [i32] operation, [i32] a, [i32] b) {
+}
+
+[host return<bool>]
+ps_ui_text_view_set_markdown_editing([u64] view, [bool] on) {
+}
+
+[host return<bool>]
 ps_ui_window_refresh_preview([u64] window) {
 }
 
@@ -527,6 +571,34 @@ Window() {
     return(ps_ui_window_refresh_preview(this.handle))
   }
 
+  // How much of the window the preview takes: 0 the text alone, 1 text and page, 2 the page alone.
+  [public return<bool>]
+  setPreviewMode([i32] mode) {
+    return(ps_ui_window_set_preview_mode(this.handle, mode))
+  }
+
+  [public return<i32>]
+  previewMode() {
+    return(ps_ui_window_preview_mode(this.handle))
+  }
+
+  // Shows `bar` above the content; hideToolbar() takes it away again.
+  [public return<bool>]
+  setToolbar([Toolbar] bar) {
+    return(ps_ui_window_set_toolbar(this.handle, bar.handle))
+  }
+
+  [public return<bool>]
+  hideToolbar() {
+    return(ps_ui_window_set_toolbar(this.handle, 0u64))
+  }
+
+  // Marks the segment with `commandId` of the toolbar as selected.
+  [public return<bool>]
+  selectToolbarItem([i32] commandId) {
+    return(ps_ui_window_toolbar_select(this.handle, commandId))
+  }
+
   [public return<bool>]
   close() {
     return(ps_ui_window_close(this.handle))
@@ -612,6 +684,46 @@ TextView() {
   [public return<bool>]
   clearModified() {
     return(ps_ui_text_view_clear_modified(this.handle))
+  }
+
+  // Applies a markdown editing operation (PS_UI_MARKDOWN_*: bold, a list, a table row, ...) to the text and the
+  // selection as one undoable change; `a` and `b` are its arguments. False when it does not apply.
+  [public return<bool>]
+  markdownEdit([i32] operation, [i32] a, [i32] b) {
+    return(ps_ui_text_view_markdown_edit(this.handle, operation, a, b))
+  }
+
+  // Tab and Shift-Tab move between the cells of a markdown table.
+  [public return<bool>]
+  setMarkdownEditing([bool] on) {
+    return(ps_ui_text_view_set_markdown_editing(this.handle, on))
+  }
+}
+
+// A row of buttons above a window's content; every item is a command, like a menu item.
+[public struct]
+Toolbar() {
+  [public u64] handle{0u64}
+
+  [public return<bool>]
+  button([string] title, [string] symbol, [i32] commandId) {
+    return(ps_ui_toolbar_add_button(this.handle, title, symbol, commandId))
+  }
+
+  // Segments titled by `titles` (separated by |) with the commands firstCommandId, firstCommandId + 1, ...
+  [public return<bool>]
+  segments([string] titles, [i32] firstCommandId) {
+    return(ps_ui_toolbar_add_segments(this.handle, titles, firstCommandId))
+  }
+
+  [public return<bool>]
+  menu([string] title, [string] symbol, [Menu] items) {
+    return(ps_ui_toolbar_add_menu(this.handle, title, symbol, items.handle))
+  }
+
+  [public return<bool>]
+  separator() {
+    return(ps_ui_toolbar_add_separator(this.handle))
   }
 }
 
@@ -1020,6 +1132,12 @@ App() {
   [public return<Menu>]
   menu([string] title) {
     [Menu] created{[handle] ps_ui_menu_create(title)}
+    return(created)
+  }
+
+  [public return<Toolbar>]
+  toolbar() {
+    [Toolbar] created{[handle] ps_ui_toolbar_create()}
     return(created)
   }
 

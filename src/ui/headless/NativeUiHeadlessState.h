@@ -10,6 +10,8 @@
 #include "primec/ui/NativeUiHeadless.h"
 
 #include <cstdint>
+#include <algorithm>
+#include <cstdlib>
 #include <deque>
 #include <map>
 #include <set>
@@ -57,6 +59,20 @@ struct Control {
   uint64_t parent = 0;             // the form or tabs that holds it
 };
 
+// A toolbar: items in order; a segmented control is one item with several segments.
+struct ToolbarItem {
+  enum class Kind { Button, Segments, Menu, Separator } kind = Kind::Button;
+  std::string title;
+  std::string symbol;
+  int32_t id = 0;                 // a button's command, a segmented control's first command
+  std::vector<std::string> segments;
+  uint64_t menu = 0;
+};
+
+struct Toolbar {
+  std::vector<ToolbarItem> items;
+};
+
 struct TextView {
   std::string text;
   bool monospace = false;
@@ -64,6 +80,9 @@ struct TextView {
   bool wrapping = true;
   bool modified = false;
   int32_t fontSize = 0; // set with ps_ui_text_view_set_font_size
+  size_t selectionStart = 0; // byte offsets; a caret when equal
+  size_t selectionEnd = 0;
+  bool markdownEditing = false; // ps_ui_text_view_set_markdown_editing
   uint64_t window = 0;
   std::vector<StyleRun> styles;
 };
@@ -76,7 +95,7 @@ struct Window {
 };
 
 struct Action {
-  enum class Kind { Command, TypeText, CloseWindow, Quit, Activate, Toggle, Select, Click, OpenFile, Rows } kind = Kind::Quit;
+  enum class Kind { Command, TypeText, CloseWindow, Quit, Activate, Toggle, Select, Click, OpenFile, Rows, Selection, TextChanged } kind = Kind::Quit;
   int32_t command = 0;
   uint64_t handle = 0;
   std::string text;
@@ -95,6 +114,7 @@ struct State {
   std::map<uint64_t, Control> controls;
   int32_t scrollMode = 2; // the preview's scroll mode (PS_UI_SCROLL_BLOCKS)
   std::map<uint64_t, Menu> menus;
+  std::map<uint64_t, Toolbar> toolbars;
   std::vector<uint64_t> menuBar;
   std::deque<Action> actions;
   std::deque<std::string> openAnswers;
@@ -262,6 +282,11 @@ inline TextView *textView(uint64_t handle) {
   return it != state().textViews.end() ? &it->second : nullptr;
 }
 
+inline Toolbar *toolbar(uint64_t handle) {
+  auto it = state().toolbars.find(handle);
+  return it != state().toolbars.end() ? &it->second : nullptr;
+}
+
 inline Menu *menu(uint64_t handle) {
   auto it = state().menus.find(handle);
   return it != state().menus.end() ? &it->second : nullptr;
@@ -387,6 +412,23 @@ inline bool deliverNextEvent() {
       }
       break;
     }
+    case Action::Kind::Selection: {
+      TextView *view = textView(action.handle);
+      if (view != nullptr) {
+        const size_t size = view->text.size();
+        view->selectionStart = std::min(static_cast<size_t>(action.command), size);
+        view->selectionEnd = std::min(static_cast<size_t>(std::atoll(action.text.c_str())), size);
+      }
+      break;
+    }
+    case Action::Kind::TextChanged: {
+      const TextView *view = textView(action.handle);
+      if (view != nullptr) {
+        setEvent(PS_UI_EVENT_TEXT_CHANGED, view->window, action.handle);
+        return true;
+      }
+      break;
+    }
     case Action::Kind::TypeText: {
       uint64_t handle = action.handle;
       if (handle == 0 && !s.textViews.empty()) {
@@ -395,6 +437,7 @@ inline bool deliverNextEvent() {
       TextView *view = textView(handle);
       if (view != nullptr) {
         view->text += action.text;
+        view->selectionStart = view->selectionEnd = view->text.size();
         view->modified = true;
         setEvent(PS_UI_EVENT_TEXT_CHANGED, view->window, handle);
         return true;
