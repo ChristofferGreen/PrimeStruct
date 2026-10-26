@@ -152,10 +152,12 @@ unset(ENV{PRIMESTRUCT_UI_OPEN})
 unset(ENV{PRIMESTRUCT_UI_COMMANDS})
 unset(ENV{PRIMESTRUCT_UI_MENU})
 unset(ENV{PRIMESTRUCT_UI_SCROLL})
-foreach(shot settings settingsclick)
+foreach(shot settings settingsclick settingsbutton)
   set(ENV{PRIMESTRUCT_UI_SNAPSHOT} "${WORK_DIR}/${shot}.png")
   if(shot STREQUAL "settingsclick")
     set(ENV{PRIMESTRUCT_UI_CLICK} "check:5;popup:7:3")
+  elseif(shot STREQUAL "settingsbutton")
+    set(ENV{PRIMESTRUCT_UI_CLICK} "button:9") # the "Make Default" button added last: handle 9
   else()
     unset(ENV{PRIMESTRUCT_UI_CLICK})
   endif()
@@ -179,3 +181,60 @@ file(SHA256 "${WORK_DIR}/settingsclick.png" settingsClickHash)
 if(settingsHash STREQUAL settingsClickHash)
   message(FATAL_ERROR "the clicks changed nothing in the settings window")
 endif()
+file(SHA256 "${WORK_DIR}/settingsbutton.png" settingsButtonHash)
+if(settingsHash STREQUAL settingsButtonHash)
+  message(FATAL_ERROR "clicking the button changed nothing in the settings window")
+endif()
+
+# The editor's bundle declares its file types (file_types.txt next to the program): the document types, and the
+# exported type of .prime; the plist must be valid.
+file(READ "${WORK_DIR}/EditorSmoke.app/Contents/Info.plist" editorPlist)
+foreach(needle "CFBundleDocumentTypes" "UTExportedTypeDeclarations" "org.primestruct.prime-source"
+               "<string>Markdown</string>" "<string>prime</string>" "<string>markdown</string>")
+  string(FIND "${editorPlist}" "${needle}" found)
+  if(found EQUAL -1)
+    message(FATAL_ERROR "the editor's Info.plist does not contain ${needle}")
+  endif()
+endforeach()
+execute_process(COMMAND plutil -lint "${WORK_DIR}/EditorSmoke.app/Contents/Info.plist"
+                RESULT_VARIABLE lintRc OUTPUT_VARIABLE lintOut ERROR_VARIABLE lintErr)
+if(NOT lintRc EQUAL 0)
+  message(FATAL_ERROR "the editor's Info.plist is not valid: ${lintOut}${lintErr}")
+endif()
+message(STATUS "editor Info.plist declares its file types")
+
+# A program that reports the declared file types, the app's path and the default application of .txt files into
+# a file, and the files the system asks it to open (the harness stands in for the Finder).
+set(ENV{PS_DOCUMENT_TYPES} "${SOURCE_DIR}/examples/apps/text_editor/file_types.txt")
+execute_process(
+  COMMAND bash "${SOURCE_DIR}/scripts/bundle_macos_app.sh" --native
+          "${SOURCE_DIR}/tests/fixtures/ui/screenshot/file_types_demo.prime" FileTypesDemo "${WORK_DIR}" "${BUILD_DIR}"
+  RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err)
+unset(ENV{PS_DOCUMENT_TYPES})
+if(NOT rc EQUAL 0)
+  message(FATAL_ERROR "file types demo bundle failed (${rc}): ${out}${err}")
+endif()
+set(typesReport "${WORK_DIR}/types_report.txt")
+file(REMOVE "${typesReport}")
+unset(ENV{PRIMESTRUCT_UI_CLICK})
+unset(ENV{PRIMESTRUCT_UI_PREFS})
+set(ENV{PRIMESTRUCT_UI_SNAPSHOT} "${WORK_DIR}/types.png")
+set(ENV{PRIMESTRUCT_UI_OPEN_FILE_EVENT} "${SOURCE_DIR}/tests/fixtures/ui/screenshot/preview.md")
+execute_process(
+  COMMAND "${WORK_DIR}/FileTypesDemo.app/Contents/MacOS/FileTypesDemo" "${typesReport}"
+  RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err
+  TIMEOUT 90)
+unset(ENV{PRIMESTRUCT_UI_OPEN_FILE_EVENT})
+if(NOT rc EQUAL 0 OR NOT EXISTS "${typesReport}")
+  message(FATAL_ERROR "file types demo exited with '${rc}' and no report: ${out}${err}")
+endif()
+file(READ "${typesReport}" typesText)
+message(STATUS "file types report:\n${typesText}")
+foreach(needle "Markdown|md,markdown" "PrimeStruct source|prime" "Plain text|txt,text" "app:" "FileTypesDemo.app"
+               "txt:" "opened:${SOURCE_DIR}/tests/fixtures/ui/screenshot/preview.md")
+  string(FIND "${typesText}" "${needle}" found)
+  if(found EQUAL -1)
+    message(FATAL_ERROR "the file types report does not contain ${needle}")
+  endif()
+endforeach()
+message(STATUS "file types, the app path, the default application and an open-file request reach a program")

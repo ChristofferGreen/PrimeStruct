@@ -367,3 +367,15 @@
   - acceptance:
     - headless tests (buttons into control events, open-file events, document types equal to file_types.txt, default applications read and set, the application panel's answers), the bindings list (98 functions) and the stdlib, editor and acceptance suites pass; full release gate green
   - stop_rule: the ABI, the headless backend, the bindings and the stdlib; AppKit is TODO-5600 and the editor TODO-5601.
+
+- [x] TODO-5600: AppKit buttons, file types, default applications and open-file requests
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-26
+  - phase: File associations (docs/NativeUiPlan.md section 16)
+  - parallel_track: file-associations
+  - scope: The AppKit backend answers the functions of TODO-5599: `ps_ui_button_create/set_title` (an `NSButton` whose action is a `PS_UI_EVENT_CONTROL_CHANGED`), `PS_UI_EVENT_OPEN_FILE` with `ps_ui_event_text` (`application:openFiles:` of the app delegate), `ps_ui_document_type_*` (the bundle's `CFBundleDocumentTypes`, read on the first call), `ps_ui_app_path` (the bundle path), `ps_ui_default_app` (`NSWorkspace URLForApplicationToOpenContentType:` of the extension's `UTType`), `ps_ui_set_default_app` (`NSWorkspace setDefaultApplicationAtURL:toOpenContentType:completionHandler:`, each answer awaited with the run loop running; the system may ask the user to confirm) and `ps_ui_open_application_panel` (an `NSOpenPanel` limited to applications, starting in /Applications). `scripts/document_types_plist.py` turns a `file_types.txt` (next to the program, or `PS_DOCUMENT_TYPES`) into `CFBundleDocumentTypes` (an alternate handler per type, the owner for the exported `.prime` type) and `UTExportedTypeDeclarations`, and `scripts/bundle_macos_app.sh` puts them in Info.plist. The UniformTypeIdentifiers framework is linked; AppKit already loads it at launch, so the set of libraries a launch loads is unchanged (measured with `DYLD_PRINT_LIBRARIES`: the same 1404 lines as the installed PrimeScroll). The snapshot harness learned `PRIMESTRUCT_UI_CLICK=button:H`, `PRIMESTRUCT_UI_OPEN_FILE_EVENT=path` and `PRIMESTRUCT_UI_APP_PANEL=path`.
+  - acceptance:
+    - the smoke test: the editor bundle's Info.plist is valid and declares its types (Markdown, `.prime` with its exported identifier); a settings window with a button clicked through the harness changes the program's title; `file_types_demo.prime` (a native bundle) reports the declared types, its own path, the default application of `.txt` files and the file the harness asks it to open; full release gate green
+  - stop_rule: the AppKit backend and the bundle's Info.plist; the editor's tab is TODO-5601.
+  - notes: the real change of a default application (`ps_ui_set_default_app`) is not exercised by a test, because it changes the user's system settings; only reading the default is. The file types demo uses a native bundle because a bytecode-only bundle takes no program arguments (TODO-5602). macOS also reports a command-line file argument as an open-file request.

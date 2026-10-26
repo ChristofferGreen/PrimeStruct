@@ -58,6 +58,14 @@ if [[ -n "$ICON" ]]; then
   ICON_KEY="<key>CFBundleIconFile</key><string>AppIcon</string>"
 fi
 
+# The file types the program declares (file_types.txt next to it, or PS_DOCUMENT_TYPES) become the bundle's
+# document types and the types it exports (scripts/document_types_plist.py).
+DOCUMENT_KEYS=""
+TYPES_FILE="${PS_DOCUMENT_TYPES:-$(dirname "$PROGRAM")/file_types.txt}"
+if [[ -f "$TYPES_FILE" ]]; then
+  DOCUMENT_KEYS="$(python3 "$ROOT_DIR/scripts/document_types_plist.py" "$TYPES_FILE")"
+fi
+
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -68,6 +76,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleIdentifier</key><string>$BUNDLE_ID</string>
   <key>CFBundleExecutable</key><string>$NAME</string>
   $ICON_KEY
+  $DOCUMENT_KEYS
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleVersion</key><string>1</string>
   <key>CFBundleShortVersionString</key><string>1.0</string>

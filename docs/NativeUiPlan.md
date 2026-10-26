@@ -462,5 +462,17 @@ window, including `.prime`, and the application can be chosen the normal macOS w
   (`AppEvent.openFile`, the path from `App.eventText()`).
 - **Settings.** A Files tab: the application (PrimeScroll or the chosen one, "Choose..."), one "Make Default" button per
   file type and "Make All Default". Buttons are a new control: a click is a `PS_UI_EVENT_CONTROL_CHANGED`.
+- **No cost at startup.** Everything here happens only when the settings window is built or a button is pressed. The
+  bundle's document types are read on the first call, the default application is looked up and set only then, and the
+  application panel only opens on a click; nothing of it is on the way to the first window, so the launch time does not
+  change. The one launch-time effect is the link to `UniformTypeIdentifiers`, which AppKit loads anyway (a launch loads
+  the same libraries as before; checked with `DYLD_PRINT_LIBRARIES`).
+- **AppKit.** `NSButton`; `application:openFiles:` for open-file requests (macOS also sends one for a file named on the
+  command line, so a program should not open it twice); `CFBundleDocumentTypes` of the Info.plist for the declared types;
+  `NSWorkspace` with `UTType` for reading and setting the default; `NSOpenPanel` limited to applications for choosing one.
+  The snapshot harness has `PRIMESTRUCT_UI_CLICK=button:H`, `PRIMESTRUCT_UI_OPEN_FILE_EVENT=path` and
+  `PRIMESTRUCT_UI_APP_PANEL=path`. Setting a default is not exercised by a test (it changes the user's settings); reading
+  it is.
 - **Slices.** The ABI, the headless backend, the bindings and the stdlib (TODO-5599), the AppKit backend and the bundle's
-  Info.plist (TODO-5600), then the editor's tab and open-file handling (TODO-5601).
+  Info.plist (TODO-5600), then the editor's tab and open-file handling (TODO-5601). A bytecode-only bundle takes no
+  program arguments yet (TODO-5602).

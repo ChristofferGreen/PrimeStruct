@@ -2059,6 +2059,7 @@ are left unarchived.
 | TODO-5597 | Preview scroll modes tested and edits keep the page in place | [undated.md](todo_archive/undated.md) | - |
 | TODO-5598 | The preview comes back with the session | [undated.md](todo_archive/undated.md) | - |
 | TODO-5599 | Buttons, file types and open-file requests in the native UI ABI | [undated.md](todo_archive/undated.md) | - |
+| TODO-5600 | AppKit buttons, file types, default applications and open-file requests | [undated.md](todo_archive/undated.md) | - |
 
 <!-- INDEX-END -->
 

@@ -20,6 +20,7 @@
 // first (for the editor, two New commands: two more tabs).
 
 #import <AppKit/AppKit.h>
+#import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 #import <objc/message.h>
 #import <objc/runtime.h>
 
@@ -60,6 +61,7 @@
 namespace {
 
 struct PendingEvent {
+  std::string text; // the path of an open-file request
   int32_t kind = PS_UI_EVENT_NONE;
   uint64_t window = 0;
   uint64_t widget = 0;
@@ -68,7 +70,7 @@ struct PendingEvent {
 
 // A control of a settings window (ps_ui_label_create and the others): its view, and the form or tabs that holds it.
 struct ControlInfo {
-  enum class Kind { Label, CheckBox, Popup, Form, Tabs } kind = Kind::Label;
+  enum class Kind { Label, CheckBox, Popup, Form, Tabs, Button } kind = Kind::Label;
   NSView *view = nil;
   uint64_t parent = 0;
 };
@@ -124,6 +126,8 @@ struct State {
   bool snapshotScrolled = false;
   std::string snapshotClicks; // PRIMESTRUCT_UI_CLICK=check:6;popup:8:3 clicks controls through their actions
   bool snapshotClicked = false;
+  std::string snapshotOpenFileEvent; // PRIMESTRUCT_UI_OPEN_FILE_EVENT=path: the system "asks" the app to open it
+  bool snapshotOpenFileSent = false;
   int snapshotCaretLine = -1;      // PRIMESTRUCT_UI_CARET=N puts the text cursor at the start of line N
   bool snapshotCareted = false;
   bool snapshotTypeAfterScroll = false; // PRIMESTRUCT_UI_TYPE_AFTER_SCROLL: type once the scroll step is done
@@ -165,8 +169,10 @@ bool usable() {
   return s.initialized && s.owner == std::this_thread::get_id();
 }
 
-void enqueue(int32_t kind, uint64_t window = 0, uint64_t widget = 0, int32_t command = 0) {
+void enqueue(int32_t kind, uint64_t window = 0, uint64_t widget = 0, int32_t command = 0,
+             std::string text = std::string()) {
   PendingEvent event;
+  event.text = std::move(text);
   event.kind = kind;
   event.window = window;
   event.widget = widget;
@@ -331,7 +337,8 @@ void applySnapshotClicks(const std::string &spec) {
     if (info == nullptr) {
       continue;
     }
-    if (kind == "check" && info->kind == ControlInfo::Kind::CheckBox) {
+    if ((kind == "check" && info->kind == ControlInfo::Kind::CheckBox) ||
+        (kind == "button" && info->kind == ControlInfo::Kind::Button)) {
       [(NSButton *)info->view performClick:nil];
     } else if (kind == "popup" && info->kind == ControlInfo::Kind::Popup && second != std::string::npos) {
       NSPopUpButton *popup = (NSPopUpButton *)info->view;
@@ -983,6 +990,14 @@ void drawPreviewWeb(uint64_t window, NSView *view, NSBitmapImageRep *rep) {
   return YES;
 }
 
+// The system asks the app to open files (a double click in the Finder, Open With, a drop on the icon).
+- (void)application:(NSApplication *)sender openFiles:(NSArray<NSString *> *)filenames {
+  for (NSString *path in filenames) {
+    enqueue(PS_UI_EVENT_OPEN_FILE, 0, 0, 0, path.UTF8String != nullptr ? path.UTF8String : "");
+  }
+  [sender replyToOpenOrPrint:NSApplicationDelegateReplySuccess];
+}
+
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)sender {
   enqueue(PS_UI_EVENT_QUIT_REQUESTED);
   return NSTerminateCancel;
@@ -1484,6 +1499,9 @@ bool ps_ui_init(const char *appName) {
       s.snapshotCaretLine = std::atoi(caret);
     }
     s.snapshotTypeAfterScroll = std::getenv("PRIMESTRUCT_UI_TYPE_AFTER_SCROLL") != nullptr;
+    if (const char *request = std::getenv("PRIMESTRUCT_UI_OPEN_FILE_EVENT"); request != nullptr && *request != '\0') {
+      s.snapshotOpenFileEvent = request;
+    }
     if (const char *report = std::getenv("PRIMESTRUCT_UI_REPORT"); report != nullptr && *report != '\0') {
       s.snapshotReportPath = report;
     }
@@ -1644,6 +1662,11 @@ int32_t ps_ui_wait_event(void) {
             [target.window makeFirstResponder:target];
             [target insertText:toNSString(s.snapshotTypeText.c_str()) replacementRange:NSMakeRange(NSNotFound, 0)];
           }
+        } else if (!s.snapshotOpenFileEvent.empty() && !s.snapshotOpenFileSent && s.snapshotIdleSlices >= 6) {
+          // The system asking the app to open a file (a double click in the Finder).
+          s.snapshotOpenFileSent = true;
+          s.snapshotIdleSlices = 0;
+          enqueue(PS_UI_EVENT_OPEN_FILE, 0, 0, 0, s.snapshotOpenFileEvent);
         } else if (!s.snapshotClicks.empty() && !s.snapshotClicked && s.snapshotIdleSlices >= 6) {
           // Clicks controls through their actions, as the user would; the program hears about each.
           s.snapshotClicked = true;
@@ -2614,18 +2637,166 @@ bool ps_ui_preview_set_scroll_mode(int32_t mode) {
   return true;
 }
 
-// Buttons, the declared file types, default applications and open-file requests are the next slice of the AppKit
-// backend; until then they are answered as unsupported.
-uint64_t ps_ui_button_create(const char *) { return 0; }
-bool ps_ui_button_set_title(uint64_t, const char *) { return false; }
-const char *ps_ui_event_text(void) { return ""; }
-int32_t ps_ui_document_type_count(void) { return 0; }
-const char *ps_ui_document_type_name(int32_t) { return ""; }
-const char *ps_ui_document_type_extensions(int32_t) { return ""; }
-const char *ps_ui_app_path(void) { return ""; }
-const char *ps_ui_default_app(const char *) { return ""; }
-bool ps_ui_set_default_app(const char *, const char *) { return false; }
-const char *ps_ui_open_application_panel(const char *) { return ""; }
+const char *ps_ui_event_text(void) {
+  State &s = state();
+  s.returnedText = usable() ? s.current.text : std::string();
+  return s.returnedText.c_str();
+}
+
+uint64_t ps_ui_button_create(const char *title) {
+  if (!usable()) {
+    return 0;
+  }
+  NSButton *button = [NSButton buttonWithTitle:toNSString(title) target:controller() action:@selector(controlChanged:)];
+  return createControl(ControlInfo::Kind::Button, button);
+}
+
+bool ps_ui_button_set_title(uint64_t button, const char *title) {
+  ControlInfo *info = controlOfKind(button, ControlInfo::Kind::Button);
+  if (info == nullptr || title == nullptr) {
+    return false;
+  }
+  [(NSButton *)info->view setTitle:toNSString(title)];
+  return true;
+}
+
+// ---- file types and the default application ---------------------------------------------------------------
+
+extern "C++" {
+namespace {
+struct DocumentTypeInfo {
+  std::string name;
+  std::string extensions;
+};
+
+// The kinds of file the bundle's Info.plist declares (CFBundleDocumentTypes), read once.
+const std::vector<DocumentTypeInfo> &bundleDocumentTypes() {
+  static const std::vector<DocumentTypeInfo> types = [] {
+    std::vector<DocumentTypeInfo> found;
+    NSArray *declared = NSBundle.mainBundle.infoDictionary[@"CFBundleDocumentTypes"];
+    if ([declared isKindOfClass:[NSArray class]]) {
+      for (NSDictionary *entry in declared) {
+        NSString *name = entry[@"CFBundleTypeName"];
+        NSArray *extensions = entry[@"CFBundleTypeExtensions"];
+        if (![name isKindOfClass:[NSString class]] || ![extensions isKindOfClass:[NSArray class]]) {
+          continue;
+        }
+        found.push_back({name.UTF8String, [extensions componentsJoinedByString:@","].UTF8String});
+      }
+    }
+    return found;
+  }();
+  return types;
+}
+
+// The content type of an extension ("md" or ".md"); nil when the system does not know it.
+UTType *typeOfExtension(NSString *extension) {
+  NSString *name = [extension hasPrefix:@"."] ? [extension substringFromIndex:1] : extension;
+  return name.length > 0 ? [UTType typeWithFilenameExtension:name] : nil;
+}
+} // namespace
+}
+
+int32_t ps_ui_document_type_count(void) { return static_cast<int32_t>(bundleDocumentTypes().size()); }
+
+const char *ps_ui_document_type_name(int32_t index) {
+  State &s = state();
+  const auto &types = bundleDocumentTypes();
+  s.returnedText = index >= 0 && static_cast<size_t>(index) < types.size() ? types[static_cast<size_t>(index)].name : "";
+  return s.returnedText.c_str();
+}
+
+const char *ps_ui_document_type_extensions(int32_t index) {
+  State &s = state();
+  const auto &types = bundleDocumentTypes();
+  s.returnedText =
+      index >= 0 && static_cast<size_t>(index) < types.size() ? types[static_cast<size_t>(index)].extensions : "";
+  return s.returnedText.c_str();
+}
+
+const char *ps_ui_app_path(void) {
+  State &s = state();
+  NSString *path = NSBundle.mainBundle.bundlePath;
+  s.returnedText = [path hasSuffix:@".app"] ? path.UTF8String : "";
+  return s.returnedText.c_str();
+}
+
+const char *ps_ui_default_app(const char *extension) {
+  State &s = state();
+  s.returnedText.clear();
+  @autoreleasepool {
+    UTType *type = typeOfExtension(toNSString(extension));
+    NSURL *url = type != nil ? [NSWorkspace.sharedWorkspace URLForApplicationToOpenContentType:type] : nil;
+    if (url != nil && url.path != nil) {
+      s.returnedText = url.path.UTF8String;
+    }
+  }
+  return s.returnedText.c_str();
+}
+
+// The system may ask the user to confirm each change; the answers are awaited with the run loop running.
+bool ps_ui_set_default_app(const char *extensions, const char *appPath) {
+  if (!usable() || extensions == nullptr) {
+    return false;
+  }
+  @autoreleasepool {
+    NSString *application = appPath != nullptr && *appPath != '\0' ? toNSString(appPath) : NSBundle.mainBundle.bundlePath;
+    NSURL *applicationURL = [NSURL fileURLWithPath:application];
+    bool any = false;
+    bool failed = false;
+    for (NSString *extension in [toNSString(extensions) componentsSeparatedByString:@","]) {
+      UTType *type = typeOfExtension([extension stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceCharacterSet]);
+      if (type == nil) {
+        failed = true; // the system does not know the extension (the app is not registered yet)
+        continue;
+      }
+      __block BOOL done = NO;
+      __block BOOL succeeded = NO;
+      [NSWorkspace.sharedWorkspace setDefaultApplicationAtURL:applicationURL
+                                           toOpenContentType:type
+                                           completionHandler:^(NSError *error) {
+                                             succeeded = error == nil;
+                                             done = YES;
+                                           }];
+      NSDate *limit = [NSDate dateWithTimeIntervalSinceNow:20];
+      while (!done && limit.timeIntervalSinceNow > 0) {
+        [NSRunLoop.currentRunLoop runMode:NSDefaultRunLoopMode beforeDate:[NSDate dateWithTimeIntervalSinceNow:0.05]];
+      }
+      any = any || succeeded;
+      failed = failed || !succeeded;
+    }
+    return any && !failed;
+  }
+}
+
+const char *ps_ui_open_application_panel(const char *title) {
+  State &s = state();
+  s.returnedText.clear();
+  s.panelChosen = false;
+  if (!usable()) {
+    return s.returnedText.c_str();
+  }
+  if (const char *answer = std::getenv("PRIMESTRUCT_UI_APP_PANEL"); answer != nullptr && *answer != '\0') {
+    // Snapshot runs have nobody to click: the panel answers with this path.
+    s.returnedText = answer;
+    s.panelChosen = true;
+    return s.returnedText.c_str();
+  }
+  @autoreleasepool {
+    NSOpenPanel *panel = [NSOpenPanel openPanel];
+    panel.title = toNSString(title);
+    panel.canChooseFiles = YES;
+    panel.canChooseDirectories = NO;
+    panel.allowsMultipleSelection = NO;
+    panel.allowedContentTypes = @[ UTTypeApplication ];
+    panel.directoryURL = [NSURL fileURLWithPath:@"/Applications"];
+    if ([panel runModal] == NSModalResponseOK && panel.URL != nil) {
+      s.returnedText = panel.URL.path.UTF8String;
+      s.panelChosen = !s.returnedText.empty();
+    }
+  }
+  return s.returnedText.c_str();
+}
 
 int32_t ps_ui_pref_get_int(const char *key, int32_t fallback) {
   if (!usable() || key == nullptr || *key == '\0') {

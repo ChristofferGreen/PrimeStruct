@@ -1,0 +1,74 @@
+// Reports the file types the bundle declares, this app's path and the system's default for .txt files into the
+// file named on the command line, then reports the files the system asks it to open (the smoke test hands it one
+// through PRIMESTRUCT_UI_OPEN_FILE_EVENT). cmake/NativeUiAppKitSmokeTest.cmake reads the report.
+import /std/text/*
+import /std/ui/native/*
+
+[return<int> effects(heap_alloc)]
+main([array<string>] args) {
+  [App] app{start_app("File types")}
+  [Window] window{app.window("File types", 480i32, 320i32)}
+  [TextView] view{app.textView()}
+  window.setContent(view)
+  window.show()
+
+  [String mut] report{String{}}
+  [i32] count{app.documentTypeCount()}
+  [i32 mut] index{0i32}
+  while(index < count) {
+    [String] name{app.documentTypeName(index)}
+    [String] extensions{app.documentTypeExtensions(index)}
+    report.appendString(name)
+    report.append("|")
+    report.appendString(extensions)
+    report.append("\n")
+    index = index + 1i32
+  }
+  [String] where{app.appPath()}
+  report.append("app:")
+  report.appendString(where)
+  report.append("\n")
+  [String] textEditor{app.defaultApp(stringFrom("txt"))}
+  report.append("txt:")
+  report.appendString(textEditor)
+  report.append("\n")
+  view.setText(report)
+  [String] out{argumentText(1i32)}
+  if(args.count() > 1i32) {
+    view.saveFile(out)
+  }
+
+  [bool mut] running{true}
+  while(running) {
+    pick(app.waitEvent()) {
+      command(id) {
+        running = running
+      }
+      windowCloseRequested(w) {
+        [Window] closing{w}
+        closing.close()
+        running = false
+      }
+      textChanged(w) {
+        running = running
+      }
+      controlChanged(widget) {
+        running = running
+      }
+      openFile(request) {
+        [String] path{app.eventText()}
+        report.append("opened:")
+        report.appendString(path)
+        report.append("\n")
+        view.setText(report)
+        if(args.count() > 1i32) {
+          view.saveFile(out)
+        }
+      }
+      quitRequested {
+        running = false
+      }
+    }
+  }
+  return(0i32)
+}

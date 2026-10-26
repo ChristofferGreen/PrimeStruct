@@ -81,6 +81,7 @@ case "$BACKEND" in
     LINK+=("--link-arg" "$BUILD_DIR/libprimec_ui_highlight_lib.a")
     LINK+=("--link-arg" "-framework" "--link-arg" "AppKit")
     LINK+=("--link-arg" "-framework" "--link-arg" "Foundation")
+    LINK+=("--link-arg" "-framework" "--link-arg" "UniformTypeIdentifiers")
     ;;
   headless)
     require "$BUILD_DIR/libprimec_ui_headless_lib.a" primec_ui_headless_lib

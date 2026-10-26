@@ -33,6 +33,8 @@ main() {
   tabs.add("General", general.widget())
   tabs.add("Editor", editor.widget())
   tabs.select(1i32)
+  [Button] extra{app.button("Make Default")}
+  editor.control(extra.widget())
   window.setContentWidget(tabs.widget())
   window.show()
 
@@ -51,7 +53,13 @@ main() {
         running = running
       }
       controlChanged(widget) {
-        window.setTitle(stringFrom("Settings changed"))
+        [Widget] changed{widget}
+        if(changed.handle == 9u64) {
+          window.setTitle(stringFrom("Button clicked"))
+        }
+        if(changed.handle != 9u64) {
+          window.setTitle(stringFrom("Settings changed"))
+        }
       }
       openFile(request) {
         running = running
