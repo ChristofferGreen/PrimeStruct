@@ -75,6 +75,18 @@ template <class Binder> void forEachBinding(Binder &&bindOne) {
           [](uint64_t view, int32_t points) { return ps_ui_text_view_set_font_size(view, points); });
   bindOne("ps_ui_preview_set_scroll_mode", [](int32_t mode) { return ps_ui_preview_set_scroll_mode(mode); });
   bindOne("ps_ui_event_text", [] { return embed::HostText(ps_ui_event_text()); });
+  bindOne("ps_ui_list_create", [] { return ps_ui_list_create(); });
+  bindOne("ps_ui_list_add_item", [](uint64_t list, embed::HostTextView item) {
+    return ps_ui_list_add_item(list, text(item).c_str());
+  });
+  bindOne("ps_ui_list_set_item", [](uint64_t list, int32_t index, embed::HostTextView item) {
+    return ps_ui_list_set_item(list, index, text(item).c_str());
+  });
+  bindOne("ps_ui_list_item_count", [](uint64_t list) { return ps_ui_list_item_count(list); });
+  bindOne("ps_ui_list_set_selected", [](uint64_t list, int32_t index, bool selected) {
+    return ps_ui_list_set_selected(list, index, selected);
+  });
+  bindOne("ps_ui_list_is_selected", [](uint64_t list, int32_t index) { return ps_ui_list_is_selected(list, index); });
   bindOne("ps_ui_button_create", [](std::string_view title) { return ps_ui_button_create(text(title).c_str()); });
   bindOne("ps_ui_button_set_title", [](uint64_t button, embed::HostTextView title) {
     return ps_ui_button_set_title(button, text(title).c_str());

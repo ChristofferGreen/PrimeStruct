@@ -12,6 +12,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iterator>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -482,11 +483,11 @@ constexpr uint64_t SizePopup = 17;
 constexpr uint64_t PreviewBox = 19;
 constexpr uint64_t ScrollPopup = 20;
 constexpr uint64_t SettingsTabs = 21;
-// The Files tab: the form 22, the application button 23, the 11 file type buttons 24 to 34, "Make All Default" 35.
+// The Files tab: the form 22, the application button 23, the hint 24, the file type list 25, "Make Default" 26.
 constexpr uint64_t ApplicationButton = 23;
-constexpr uint64_t FirstTypeButton = 24;
-constexpr uint64_t MakeAllButton = 35;
-constexpr uint64_t TabAfterSettings = 36; // a New command after the settings window: window 36, view 37
+constexpr uint64_t FileTypeList = 25;
+constexpr uint64_t MakeDefaultButton = 26;
+constexpr uint64_t TabAfterSettings = 27; // a New command after the settings window: window 27, view 28
 constexpr int32_t CommandSettings = 8;
 
 // The file types of the headless backend (examples/apps/text_editor/file_types.txt) and the buttons of the Files tab.
@@ -503,31 +504,42 @@ const std::vector<HeadlessFileType> HeadlessFileTypes = {
     {"Logs", "log"},
 };
 
-std::string fileTypeTitle(const HeadlessFileType &type, bool isDefault) {
-  std::string title = std::string(type.name) + " (.";
+// A row of the Files list: a check mark when the chosen application is the default, then the type and the default.
+std::string fileTypeLine(const HeadlessFileType &type, const std::string &defaultName, bool chosenIsDefault) {
+  std::string line = chosenIsDefault ? "\xE2\x9C\x93 " : "  ";
+  line += type.name;
+  line += " (.";
   for (const char *c = type.extensions; *c != '\0'; ++c) {
-    title += *c == ',' ? std::string(", .") : std::string(1, *c);
+    line += *c == ',' ? std::string(", .") : std::string(1, *c);
   }
-  return title + (isDefault ? ") - Default" : ") - Make Default");
+  return line + ") - " + (defaultName.empty() ? std::string("no default") : defaultName);
 }
 
-// The outline lines of the Files page; `defaults` names the types whose button says they are the default.
-std::vector<std::string> filesPage(const std::string &applicationName, const std::vector<std::string> &defaults = {}) {
-  std::vector<std::string> page{"  page \"Files\":", "    form", "      heading \"Default application\"",
-                                "      row \"Application\": button \"Choose... (" + applicationName + ")\"",
-                                "      heading \"File types\""};
-  for (const auto &type : HeadlessFileTypes) {
-    const bool isDefault = std::find(defaults.begin(), defaults.end(), type.name) != defaults.end();
-    page.push_back("      control: button \"" + fileTypeTitle(type, isDefault) + "\"");
+// The outline lines of the Files page. `defaults` maps a type's name to the display name of its default application;
+// `selected` is the list's selection ("1,2").
+std::vector<std::string> filesPage(const std::string &applicationName, const std::map<std::string, std::string> &defaults,
+                                   const std::string &selected) {
+  std::string items;
+  for (size_t i = 0; i < HeadlessFileTypes.size(); ++i) {
+    const auto found = defaults.find(HeadlessFileTypes[i].name);
+    const std::string name = found != defaults.end() ? found->second : std::string();
+    items += (i == 0 ? "" : "|") + fileTypeLine(HeadlessFileTypes[i], name, !name.empty() && name == applicationName);
   }
-  page.push_back("      control: button \"Make All Default\"");
-  return page;
+  return {"  page \"Files\":",
+          "    form",
+          "      heading \"Default application\"",
+          "      row \"Application\": button \"Choose... (" + applicationName + ")\"",
+          "      heading \"File types\"",
+          "      control: label \"Select file types, then press Make Default.\"",
+          "      control: list [" + items + "] selected=" + selected,
+          "      control: button \"Make Default\""};
 }
 
 std::vector<std::string> settingsOutline(const std::vector<std::string> &base, const std::string &applicationName,
-                                         const std::vector<std::string> &defaults = {}) {
+                                         const std::map<std::string, std::string> &defaults = {},
+                                         const std::string &selected = "") {
   std::vector<std::string> outline = base;
-  const auto files = filesPage(applicationName, defaults);
+  const auto files = filesPage(applicationName, defaults, selected);
   outline.insert(outline.end(), files.begin(), files.end());
   return outline;
 }
@@ -1070,30 +1082,55 @@ std::vector<std::string> otherPages() {
 }
 } // namespace
 
-TEST_CASE("settings makes the app the default for a file type") {
+TEST_CASE("settings makes the app the default for the selected file types") {
   headless::reset();
   headless::pushCommand(CommandSettings);
-  headless::pushClickButton(FirstTypeButton + 1); // Markdown
+  headless::pushSelectListRows(FileTypeList, {1, 2}); // Markdown, PrimeStruct source
+  headless::pushClickButton(MakeDefaultButton);
   headless::pushCloseWindow(EditorWindow);
   runEditor();
   CHECK(headless::defaultApp("md") == "/Headless/PrimeScroll.app");
   CHECK(headless::defaultApp("markdown") == "/Headless/PrimeScroll.app");
+  CHECK(headless::defaultApp("prime") == "/Headless/PrimeScroll.app");
   CHECK(headless::defaultApp("txt").empty());
-  CHECK(headless::controlOutline(SettingsTabs) == settingsOutline(otherPages(), "PrimeScroll", {"Markdown"}));
+  CHECK(headless::defaultApp("json").empty());
+  CHECK(headless::controlOutline(SettingsTabs) ==
+        settingsOutline(otherPages(), "PrimeScroll", {{"Markdown", "PrimeScroll"}, {"PrimeStruct source", "PrimeScroll"}},
+                        "1,2"));
 }
 
-TEST_CASE("settings chooses another application for the file types") {
+TEST_CASE("selecting file types alone changes nothing; the button applies the selection") {
+  headless::reset();
+  headless::pushCommand(CommandSettings);
+  headless::pushSelectListRows(FileTypeList, {1});
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(countCalls("ps_ui_set_default_app(") == 0);
+  CHECK(headless::listSelection(FileTypeList) == std::vector<int32_t>{1});
+
+  headless::reset();
+  headless::pushCommand(CommandSettings);
+  headless::pushClickButton(MakeDefaultButton); // nothing selected
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(countCalls("ps_ui_set_default_app(") == 0);
+  CHECK(headless::defaultApp("md").empty());
+}
+
+TEST_CASE("settings chooses another application for the selected file types") {
   headless::reset();
   headless::pushCommand(CommandSettings);
   headless::pushApplicationPanelAnswer("/Applications/Other.app");
   headless::pushClickButton(ApplicationButton);
-  headless::pushClickButton(FirstTypeButton + 2); // PrimeStruct source (.prime)
+  headless::pushSelectListRows(FileTypeList, {2}); // PrimeStruct source (.prime)
+  headless::pushClickButton(MakeDefaultButton);
   headless::pushCloseWindow(EditorWindow);
   runEditor();
   CHECK(headless::prefList("defaultApp") == std::vector<std::string>{"/Applications/Other.app"});
   CHECK(headless::defaultApp("prime") == "/Applications/Other.app");
   CHECK(headless::defaultApp("md").empty());
-  CHECK(headless::controlOutline(SettingsTabs) == settingsOutline(otherPages(), "Other", {"PrimeStruct source"}));
+  CHECK(headless::controlOutline(SettingsTabs) ==
+        settingsOutline(otherPages(), "Other", {{"PrimeStruct source", "Other"}}, "2"));
   CHECK(countCalls("ps_ui_open_application_panel(\"Choose an application\")") == 1);
 }
 
@@ -1107,15 +1144,22 @@ TEST_CASE("settings keeps the application when the chooser is cancelled") {
   CHECK(headless::controlOutline(SettingsTabs) == settingsOutline(otherPages(), "PrimeScroll"));
 }
 
-TEST_CASE("settings makes the app the default for all file types") {
+TEST_CASE("settings makes the app the default for all file types when every row is selected") {
   headless::reset();
   headless::pushCommand(CommandSettings);
-  headless::pushClickButton(MakeAllButton);
+  std::vector<int32_t> rows;
+  std::string joined;
+  for (size_t i = 0; i < HeadlessFileTypes.size(); ++i) {
+    rows.push_back(static_cast<int32_t>(i));
+    joined += (i == 0 ? "" : ",") + std::to_string(i);
+  }
+  headless::pushSelectListRows(FileTypeList, rows);
+  headless::pushClickButton(MakeDefaultButton);
   headless::pushCloseWindow(EditorWindow);
   runEditor();
-  std::vector<std::string> names;
+  std::map<std::string, std::string> defaults;
   for (const auto &type : HeadlessFileTypes) {
-    names.push_back(type.name);
+    defaults[type.name] = "PrimeScroll";
     std::string list = type.extensions;
     for (size_t from = 0; from <= list.size();) {
       size_t comma = list.find(',', from);
@@ -1124,14 +1168,13 @@ TEST_CASE("settings makes the app the default for all file types") {
       from = comma + 1;
     }
   }
-  CHECK(headless::defaultApp("prime") == "/Headless/PrimeScroll.app");
-  CHECK(headless::controlOutline(SettingsTabs) == settingsOutline(otherPages(), "PrimeScroll", names));
+  CHECK(headless::controlOutline(SettingsTabs) == settingsOutline(otherPages(), "PrimeScroll", defaults, joined));
 }
 
 // The launch time must not change: nothing of the file associations is asked before the settings window is built.
 TEST_CASE("the file types are not looked up before the settings window opens") {
   const char *calls[] = {"ps_ui_document_type_", "ps_ui_default_app(", "ps_ui_set_default_app(", "ps_ui_app_path(",
-                         "ps_ui_open_application_panel(", "ps_ui_button_"};
+                         "ps_ui_open_application_panel(", "ps_ui_button_", "ps_ui_list_"};
   headless::reset();
   headless::pushCloseWindow(EditorWindow);
   runEditor();

@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <deque>
 #include <map>
+#include <set>
 #include <string>
 #include <thread>
 #include <vector>
@@ -36,10 +37,11 @@ struct Menu {
 
 // A label, check box, pop-up, form or tabs (the controls of a settings window).
 struct Control {
-  enum class Kind { Label, CheckBox, Popup, Form, Tabs, Button } kind = Kind::Label;
+  enum class Kind { Label, CheckBox, Popup, Form, Tabs, Button, List } kind = Kind::Label;
   std::string text;                // a label's text, a check box's title
   bool checked = false;            // a check box
-  std::vector<std::string> items;  // a pop-up's items
+  std::vector<std::string> items;  // a pop-up's or a list's items
+  std::set<int32_t> picked;        // a list's selected rows
   int32_t selected = -1;           // a pop-up's chosen item, the page tabs show
   struct Row {
     enum class Kind { Heading, Labelled, Plain } kind = Kind::Plain;
@@ -74,7 +76,7 @@ struct Window {
 };
 
 struct Action {
-  enum class Kind { Command, TypeText, CloseWindow, Quit, Activate, Toggle, Select, Click, OpenFile } kind = Kind::Quit;
+  enum class Kind { Command, TypeText, CloseWindow, Quit, Activate, Toggle, Select, Click, OpenFile, Rows } kind = Kind::Quit;
   int32_t command = 0;
   uint64_t handle = 0;
   std::string text;
@@ -368,6 +370,24 @@ inline bool deliverNextEvent() {
     case Action::Kind::OpenFile:
       setEvent(PS_UI_EVENT_OPEN_FILE, 0, 0, 0, action.text);
       return true;
+    case Action::Kind::Rows: {
+      Control *list = control(action.handle);
+      if (list != nullptr && list->kind == Control::Kind::List) {
+        list->picked.clear();
+        for (size_t from = 0; from < action.text.size();) {
+          size_t comma = action.text.find(',', from);
+          comma = comma == std::string::npos ? action.text.size() : comma;
+          const int32_t row = std::atoi(action.text.substr(from, comma - from).c_str());
+          if (row >= 0 && static_cast<size_t>(row) < list->items.size()) {
+            list->picked.insert(row);
+          }
+          from = comma + 1;
+        }
+        setEvent(PS_UI_EVENT_CONTROL_CHANGED, windowOfControl(action.handle), action.handle);
+        return true;
+      }
+      break;
+    }
     case Action::Kind::TypeText: {
       uint64_t handle = action.handle;
       if (handle == 0 && !s.textViews.empty()) {

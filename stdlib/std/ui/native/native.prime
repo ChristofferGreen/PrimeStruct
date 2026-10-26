@@ -171,6 +171,30 @@ ps_ui_event_text() {
 }
 
 [host return<u64>]
+ps_ui_list_create() {
+}
+
+[host return<bool>]
+ps_ui_list_add_item([u64] list, [/std/text/String] text) {
+}
+
+[host return<bool>]
+ps_ui_list_set_item([u64] list, [i32] index, [/std/text/String] text) {
+}
+
+[host return<i32>]
+ps_ui_list_item_count([u64] list) {
+}
+
+[host return<bool>]
+ps_ui_list_set_selected([u64] list, [i32] index, [bool] selected) {
+}
+
+[host return<bool>]
+ps_ui_list_is_selected([u64] list, [i32] index) {
+}
+
+[host return<u64>]
 ps_ui_button_create([string] title) {
 }
 
@@ -857,6 +881,44 @@ Button() {
   }
 }
 
+// A list of text rows, any number of them selected; the user's change of the selection is an
+// `AppEvent.controlChanged` carrying it (the program's own changes make no event).
+[public struct]
+ItemList() {
+  [public u64] handle{0u64}
+
+  [public return<Widget>]
+  widget() {
+    [Widget] generic{[handle] this.handle}
+    return(generic)
+  }
+
+  [public return<bool>]
+  addItem([/std/text/String] text) {
+    return(ps_ui_list_add_item(this.handle, text))
+  }
+
+  [public return<bool>]
+  setItem([i32] index, [/std/text/String] text) {
+    return(ps_ui_list_set_item(this.handle, index, text))
+  }
+
+  [public return<i32>]
+  count() {
+    return(ps_ui_list_item_count(this.handle))
+  }
+
+  [public return<bool>]
+  setSelected([i32] index, [bool] selected) {
+    return(ps_ui_list_set_selected(this.handle, index, selected))
+  }
+
+  [public return<bool>]
+  isSelected([i32] index) {
+    return(ps_ui_list_is_selected(this.handle, index))
+  }
+}
+
 // A column of rows: headings, a label with a control, or a control alone in the controls' column.
 [public struct]
 Form() {
@@ -1036,6 +1098,12 @@ App() {
   [public return</std/text/String>]
   eventText() {
     return(ps_ui_event_text())
+  }
+
+  [public return<ItemList>]
+  itemList() {
+    [ItemList] created{[handle] ps_ui_list_create()}
+    return(created)
   }
 
   [public return<Button>]

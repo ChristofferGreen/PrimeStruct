@@ -70,8 +70,9 @@ struct PendingEvent {
 
 // A control of a settings window (ps_ui_label_create and the others): its view, and the form or tabs that holds it.
 struct ControlInfo {
-  enum class Kind { Label, CheckBox, Popup, Form, Tabs, Button } kind = Kind::Label;
+  enum class Kind { Label, CheckBox, Popup, Form, Tabs, Button, List } kind = Kind::Label;
   NSView *view = nil;
+  id model = nil; // a list's rows and selection handling (PSListModel)
   uint64_t parent = 0;
 };
 
@@ -340,6 +341,18 @@ void applySnapshotClicks(const std::string &spec) {
     if ((kind == "check" && info->kind == ControlInfo::Kind::CheckBox) ||
         (kind == "button" && info->kind == ControlInfo::Kind::Button)) {
       [(NSButton *)info->view performClick:nil];
+    } else if (kind == "rows" && info->kind == ControlInfo::Kind::List && second != std::string::npos) {
+      // "rows:25:1,3" selects exactly those rows of the list 25, as the user's clicks would.
+      NSMutableIndexSet *rows = [NSMutableIndexSet indexSet];
+      const std::string joined = entry.substr(second + 1);
+      for (size_t from = 0; from < joined.size();) {
+        size_t comma = joined.find(',', from);
+        comma = comma == std::string::npos ? joined.size() : comma;
+        [rows addIndex:static_cast<NSUInteger>(std::atoi(joined.substr(from, comma - from).c_str()))];
+        from = comma + 1;
+      }
+      NSTableView *table = ((NSScrollView *)info->view).documentView;
+      [table selectRowIndexes:rows byExtendingSelection:NO];
     } else if (kind == "tab" && info->kind == ControlInfo::Kind::Tabs && second != std::string::npos) {
       // "tab:21:3" shows the fourth page of the tabs control 21, as a click on its title would.
       [(NSTabView *)info->view selectTabViewItemAtIndex:std::atoi(entry.c_str() + second + 1)];
@@ -1028,6 +1041,30 @@ void drawPreviewWeb(uint64_t window, NSView *view, NSBitmapImageRep *rep) {
   NSTextView *view = notification.object;
   if ([view isKindOfClass:[NSTextView class]]) {
     syncWebToCursor(view);
+  }
+}
+@end
+
+// A list's rows, and the selection the user makes in it.
+@interface PSListModel : NSObject <NSTableViewDataSource, NSTableViewDelegate>
+@property(nonatomic, strong) NSMutableArray<NSString *> *items;
+@property(nonatomic, weak) NSTableView *table;
+@property(nonatomic) uint64_t handle;
+@property(nonatomic) BOOL quiet; // the program changes the list: no event
+@end
+
+@implementation PSListModel
+- (NSInteger)numberOfRowsInTableView:(NSTableView *)tableView {
+  return static_cast<NSInteger>(self.items.count);
+}
+
+- (id)tableView:(NSTableView *)tableView objectValueForTableColumn:(NSTableColumn *)column row:(NSInteger)row {
+  return row >= 0 && static_cast<NSUInteger>(row) < self.items.count ? self.items[static_cast<NSUInteger>(row)] : @"";
+}
+
+- (void)tableViewSelectionDidChange:(NSNotification *)notification {
+  if (!self.quiet) {
+    enqueue(PS_UI_EVENT_CONTROL_CHANGED, windowOfControl(self.handle), self.handle);
   }
 }
 @end
@@ -2661,6 +2698,96 @@ bool ps_ui_button_set_title(uint64_t button, const char *title) {
   }
   [(NSButton *)info->view setTitle:toNSString(title)];
   return true;
+}
+
+// ---- lists --------------------------------------------------------------------------------------------------
+
+uint64_t ps_ui_list_create(void) {
+  if (!usable()) {
+    return 0;
+  }
+  PSListModel *model = [[PSListModel alloc] init];
+  model.items = [NSMutableArray array];
+  NSTableView *table = [[NSTableView alloc] initWithFrame:NSZeroRect];
+  NSTableColumn *column = [[NSTableColumn alloc] initWithIdentifier:@"text"];
+  column.resizingMask = NSTableColumnAutoresizingMask;
+  [table addTableColumn:column];
+  table.headerView = nil;
+  table.allowsMultipleSelection = YES;
+  table.allowsEmptySelection = YES;
+  table.usesAlternatingRowBackgroundColors = YES;
+  table.columnAutoresizingStyle = NSTableViewUniformColumnAutoresizingStyle;
+  table.dataSource = model;
+  table.delegate = model;
+  model.table = table;
+  NSScrollView *scroll = [[NSScrollView alloc] initWithFrame:NSZeroRect];
+  scroll.documentView = table;
+  scroll.hasVerticalScroller = YES;
+  scroll.borderType = NSBezelBorder;
+  scroll.translatesAutoresizingMaskIntoConstraints = NO;
+  [scroll.widthAnchor constraintEqualToConstant:520].active = YES;
+  [scroll.heightAnchor constraintEqualToConstant:260].active = YES;
+  const uint64_t handle = createControl(ControlInfo::Kind::List, scroll);
+  model.handle = handle;
+  state().controls[handle].model = model;
+  return handle;
+}
+
+namespace {
+PSListModel *listModel(uint64_t list) {
+  ControlInfo *info = controlOfKind(list, ControlInfo::Kind::List);
+  return info != nullptr ? (PSListModel *)info->model : nil;
+}
+} // namespace
+
+bool ps_ui_list_add_item(uint64_t list, const char *text) {
+  PSListModel *model = listModel(list);
+  if (model == nil || text == nullptr) {
+    return false;
+  }
+  model.quiet = YES;
+  [model.items addObject:toNSString(text)];
+  [model.table reloadData];
+  model.quiet = NO;
+  return true;
+}
+
+bool ps_ui_list_set_item(uint64_t list, int32_t index, const char *text) {
+  PSListModel *model = listModel(list);
+  if (model == nil || text == nullptr || index < 0 || static_cast<NSUInteger>(index) >= model.items.count) {
+    return false;
+  }
+  model.quiet = YES;
+  model.items[static_cast<NSUInteger>(index)] = toNSString(text);
+  [model.table reloadDataForRowIndexes:[NSIndexSet indexSetWithIndex:static_cast<NSUInteger>(index)]
+                         columnIndexes:[NSIndexSet indexSetWithIndex:0]];
+  model.quiet = NO;
+  return true;
+}
+
+int32_t ps_ui_list_item_count(uint64_t list) {
+  PSListModel *model = listModel(list);
+  return model != nil ? static_cast<int32_t>(model.items.count) : 0;
+}
+
+bool ps_ui_list_set_selected(uint64_t list, int32_t index, bool selected) {
+  PSListModel *model = listModel(list);
+  if (model == nil || index < 0 || static_cast<NSUInteger>(index) >= model.items.count) {
+    return false;
+  }
+  model.quiet = YES;
+  if (selected) {
+    [model.table selectRowIndexes:[NSIndexSet indexSetWithIndex:static_cast<NSUInteger>(index)] byExtendingSelection:YES];
+  } else {
+    [model.table deselectRow:index];
+  }
+  model.quiet = NO;
+  return true;
+}
+
+bool ps_ui_list_is_selected(uint64_t list, int32_t index) {
+  PSListModel *model = listModel(list);
+  return model != nil && index >= 0 && [model.table isRowSelected:index];
 }
 
 // ---- file types and the default application ---------------------------------------------------------------

@@ -1016,3 +1016,56 @@ TEST_CASE("the application panel answers with the scripted choices") {
   CHECK_FALSE(ps_ui_panel_chosen());
   CHECK(headless::pushedScenario() == "appanswer:/Applications/Other.app");
 }
+
+TEST_CASE("lists keep rows and a selection of any number of rows") {
+  startApp();
+  const uint64_t list = ps_ui_list_create();
+  REQUIRE(list != 0);
+  CHECK(ps_ui_list_add_item(list, "one"));
+  CHECK(ps_ui_list_add_item(list, "two"));
+  CHECK(ps_ui_list_add_item(list, "three"));
+  CHECK(ps_ui_list_item_count(list) == 3);
+  CHECK(ps_ui_list_set_item(list, 1, "deux"));
+  CHECK_FALSE(ps_ui_list_set_item(list, 3, "x"));
+  CHECK_FALSE(ps_ui_list_set_item(list, -1, "x"));
+  CHECK_FALSE(ps_ui_list_add_item(list, nullptr));
+  CHECK_FALSE(ps_ui_list_add_item(999, "x"));
+  CHECK(ps_ui_list_item_count(999) == 0);
+
+  CHECK_FALSE(ps_ui_list_is_selected(list, 0));
+  CHECK(ps_ui_list_set_selected(list, 0, true));
+  CHECK(ps_ui_list_set_selected(list, 2, true));
+  CHECK_FALSE(ps_ui_list_set_selected(list, 3, true));
+  CHECK(ps_ui_list_is_selected(list, 0));
+  CHECK(ps_ui_list_is_selected(list, 2));
+  CHECK_FALSE(ps_ui_list_is_selected(list, 1));
+  CHECK(ps_ui_list_set_selected(list, 0, false));
+  CHECK(headless::listSelection(list) == std::vector<int32_t>{2});
+
+  const uint64_t form = ps_ui_form_create();
+  CHECK(ps_ui_form_add_control(form, list));
+  CHECK(headless::controlOutline(form) ==
+        std::vector<std::string>{"form", "  control: list [one|deux|three] selected=2"});
+}
+
+TEST_CASE("the user's selection of list rows is a control event; the program's own is not") {
+  startApp();
+  const uint64_t list = ps_ui_list_create();
+  ps_ui_list_add_item(list, "a");
+  ps_ui_list_add_item(list, "b");
+  ps_ui_list_add_item(list, "c");
+  const uint64_t form = ps_ui_form_create();
+  ps_ui_form_add_control(form, list);
+  const uint64_t window = ps_ui_window_create("Settings", 100, 100);
+  CHECK(ps_ui_window_set_content(window, form));
+  ps_ui_list_set_selected(list, 0, true); // no event
+  headless::pushSelectListRows(list, {1, 2, 9}); // the user selects rows 1 and 2 (9 is not a row)
+  CHECK(ps_ui_wait_event() == PS_UI_EVENT_CONTROL_CHANGED);
+  CHECK(ps_ui_event_widget() == list);
+  CHECK(ps_ui_event_window() == window);
+  CHECK(headless::listSelection(list) == std::vector<int32_t>{1, 2});
+  headless::pushSelectListRows(list, {});
+  CHECK(ps_ui_wait_event() == PS_UI_EVENT_CONTROL_CHANGED);
+  CHECK(headless::listSelection(list).empty());
+  CHECK(headless::pushedScenario() == "rows:" + std::to_string(list) + ":1,2,9;rows:" + std::to_string(list) + ":");
+}

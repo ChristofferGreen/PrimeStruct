@@ -268,6 +268,25 @@ void pushToggleCheckBox(uint64_t checkBox) {
   state().actions.push_back(std::move(a));
 }
 
+void pushSelectListRows(uint64_t list, std::vector<int32_t> rows) {
+  std::string joined;
+  for (size_t i = 0; i < rows.size(); ++i) {
+    joined += (i == 0 ? "" : ",") + std::to_string(rows[i]);
+  }
+  recordScenario("rows:" + std::to_string(list) + ":" + joined);
+  Action a;
+  a.kind = Action::Kind::Rows;
+  a.handle = list;
+  a.text = joined;
+  state().actions.push_back(std::move(a));
+}
+
+std::vector<int32_t> listSelection(uint64_t list) {
+  const Control *c = control(list);
+  return c != nullptr && c->kind == Control::Kind::List ? std::vector<int32_t>(c->picked.begin(), c->picked.end())
+                                                         : std::vector<int32_t>();
+}
+
 void pushClickButton(uint64_t button) {
   recordScenario("click:" + std::to_string(button));
   Action a;
@@ -334,6 +353,17 @@ std::string leafOutline(const Control &c) {
     return "checkbox " + quote(c.text) + (c.checked ? " [checked]" : "");
   case Control::Kind::Button:
     return "button " + quote(c.text);
+  case Control::Kind::List: {
+    std::string items;
+    for (size_t i = 0; i < c.items.size(); ++i) {
+      items += (i == 0 ? "" : "|") + c.items[i];
+    }
+    std::string rows;
+    for (const int32_t row : c.picked) {
+      rows += (rows.empty() ? "" : ",") + std::to_string(row);
+    }
+    return "list [" + items + "] selected=" + rows;
+  }
   case Control::Kind::Popup: {
     std::string items;
     for (size_t i = 0; i < c.items.size(); ++i) {

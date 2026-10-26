@@ -41,6 +41,10 @@ void pushSelectPopupItem(uint64_t popup, int32_t index);
 // (PS_UI_EVENT_OPEN_FILE, `openfile:PATH`). The answer of the next application panel (`appanswer:PATH`), and the
 // application the headless "system" opens a file extension with after ps_ui_set_default_app ("" when none).
 void pushClickButton(uint64_t button);
+// The user selects exactly these rows of a list (PS_UI_EVENT_CONTROL_CHANGED, `rows:H:1,3`; an empty list clears the
+// selection), and the rows that are selected, ascending.
+void pushSelectListRows(uint64_t list, std::vector<int32_t> rows);
+std::vector<int32_t> listSelection(uint64_t list);
 void pushOpenFile(std::string path);
 void pushApplicationPanelAnswer(std::string path);
 std::string defaultApp(const std::string &extension);

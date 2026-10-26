@@ -11,6 +11,9 @@ foreach(var SOURCE_DIR BUILD_DIR WORK_DIR)
   endif()
 endforeach()
 
+# This test does not look at the bundle's document types: leave them out, so the bundle cannot become the handler of
+# the user's files in Launch Services.
+set(ENV{PS_NO_DOCUMENT_TYPES} "1")
 file(REMOVE_RECURSE "${WORK_DIR}")
 file(MAKE_DIRECTORY "${WORK_DIR}")
 

@@ -361,6 +361,19 @@ const char *ps_ui_pref_list_get(const char *key, int32_t index);
 uint64_t ps_ui_button_create(const char *title);
 bool ps_ui_button_set_title(uint64_t button, const char *title);
 
+/* Lists ------------------------------------------------------------------ */
+
+/* A list of text rows of which any number can be selected (the user's click, shift and command click, select
+ * all), for a settings window; held by a form (or the content of a window) like the other controls. The user's
+ * change of the selection produces PS_UI_EVENT_CONTROL_CHANGED with the list as ps_ui_event_widget(); the
+ * program's own changes produce none. Rows are numbered from 0 in the order they were added. */
+uint64_t ps_ui_list_create(void);
+bool ps_ui_list_add_item(uint64_t list, const char *text);
+bool ps_ui_list_set_item(uint64_t list, int32_t index, const char *text);
+int32_t ps_ui_list_item_count(uint64_t list);
+bool ps_ui_list_set_selected(uint64_t list, int32_t index, bool selected);
+bool ps_ui_list_is_selected(uint64_t list, int32_t index);
+
 /* File types and the default application ------------------------------------ */
 
 /* The kinds of file the app declares it can open (the document types of its Info.plist on macOS): a name for

@@ -128,6 +128,45 @@ foreach(shot gutter code menu tabs preview longtop scrolltext scrollpreview scro
   message(STATUS "editor ${shot} snapshot ok (${size} bytes)")
 endforeach()
 
+# The editor's settings window on its Files tab (the fourth page of the tabs control 21): the list of file types with
+# the application that opens each, and the same with two rows selected through the harness (the list is control 25).
+foreach(var OPEN SCROLL CARET TYPE TYPE_AFTER_SCROLL MENU REPORT CLICK)
+  unset(ENV{PRIMESTRUCT_UI_${var}})
+endforeach()
+set(ENV{PRIMESTRUCT_UI_PREFS} "restoreSession=0")
+set(ENV{PRIMESTRUCT_UI_COMMANDS} "8")
+set(ENV{PRIMESTRUCT_UI_TARGET_LAST} "1")
+foreach(shot files filesrows)
+  set(snapshot "${WORK_DIR}/editor_${shot}.png")
+  set(ENV{PRIMESTRUCT_UI_SNAPSHOT} "${snapshot}")
+  if(shot STREQUAL "filesrows")
+    set(ENV{PRIMESTRUCT_UI_CLICK} "tab:21:3;rows:25:1,2")
+  else()
+    set(ENV{PRIMESTRUCT_UI_CLICK} "tab:21:3")
+  endif()
+  execute_process(
+    COMMAND "${WORK_DIR}/EditorSmoke.app/Contents/MacOS/EditorSmoke"
+    RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err
+    TIMEOUT 90)
+  if(NOT rc EQUAL 0 OR NOT EXISTS "${snapshot}")
+    message(FATAL_ERROR "editor ${shot} snapshot run exited with '${rc}' and no picture: ${out}${err}")
+  endif()
+  file(SIZE "${snapshot}" size)
+  file(READ "${snapshot}" magic LIMIT 4 HEX)
+  if(NOT magic STREQUAL "89504e47" OR size LESS 10000)
+    message(FATAL_ERROR "editor ${shot} snapshot is not a drawn PNG (magic ${magic}, ${size} bytes)")
+  endif()
+  message(STATUS "editor ${shot} snapshot ok (${size} bytes)")
+endforeach()
+foreach(var COMMANDS TARGET_LAST CLICK PREFS)
+  unset(ENV{PRIMESTRUCT_UI_${var}})
+endforeach()
+file(SHA256 "${WORK_DIR}/editor_files.png" filesHash)
+file(SHA256 "${WORK_DIR}/editor_filesrows.png" filesRowsHash)
+if(filesHash STREQUAL filesRowsHash)
+  message(FATAL_ERROR "selecting rows of the file type list changed nothing in the settings window")
+endif()
+
 # Scrolling either view of a preview moved both: the pictures differ from the unscrolled one.
 unset(ENV{PRIMESTRUCT_UI_SCROLL})
 file(SHA256 "${WORK_DIR}/editor_longtop.png" longTopHash)
@@ -261,3 +300,12 @@ foreach(needle "app:" "txt:")
   endif()
 endforeach()
 message(STATUS "the runner outside a bundle still takes the program path first")
+
+# The editor and file types bundles of this test declare document types. Launch Services must not keep them: a bundle
+# in a build directory could otherwise become the handler of the user's .prime and configuration files.
+set(lsregister "/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister")
+if(EXISTS "${lsregister}")
+  foreach(bundle EditorSmoke FileTypesDemo)
+    execute_process(COMMAND "${lsregister}" -u "${WORK_DIR}/${bundle}.app" OUTPUT_QUIET ERROR_QUIET)
+  endforeach()
+endif()

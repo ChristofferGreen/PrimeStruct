@@ -146,7 +146,7 @@ is callable only on the thread that called `ps_ui_init`, the main thread on macO
   is a `const char *` valid until the next text-returning call, `ps_ui_alert` takes button titles separated by `\n` and
   returns the pressed index, and `ps_ui_init` returns false when the app is already running. The headless backend
   (`primec/ui/NativeUiHeadless.h`) ends a scripted run with `quit_requested` once its action list is empty.
-  `primec/ui/NativeUiBindings.h` binds all 98 functions into a `ScriptEngine` or `Script` under their ABI names. The
+  `primec/ui/NativeUiBindings.h` binds all 104 functions into a `ScriptEngine` or `Script` under their ABI names. The
   three text-file functions (TODO-5546) let the editor open and save before owned `String` exists (TODO-5530).
 - **Versioning.** `ps_ui_abi_version() -> i32` returns 0 for this table. Additions append functions; a change to an
   existing signature bumps the version.
@@ -461,11 +461,17 @@ window, including `.prime`, and the application can be chosen the normal macOS w
 - **Opening.** A double click, Open With or a drop on the icon reaches the program as `PS_UI_EVENT_OPEN_FILE`
   (`AppEvent.openFile`, the path from `App.eventText()`).
 - **Settings.** A Files tab. A button titled "Choose... (PrimeScroll)" shows the application the types are made to open
-  with and opens the application chooser (any editor; kept as the `defaultApp` preference); below it one button per
-  declared file type, titled "<Name> (.ext, .ext) - Make Default" (or "- Default" when the chosen application already is
-  the default of the type's first extension), and "Make All Default". Buttons are a new control: a click is a
-  `PS_UI_EVENT_CONTROL_CHANGED`. Opening a file the system asks for opens it in the untitled tab or a new one, or selects
-  the tab that already holds it.
+  with and opens the application chooser (any editor; kept as the `defaultApp` preference). Below it a selectable list
+  (`ps_ui_list_*`: rows of text, any number selected, a change of the selection is a `PS_UI_EVENT_CONTROL_CHANGED`) has
+  one row per declared file type, "✓ Markdown (.md, .markdown) - PrimeScroll": a check mark when the chosen application
+  already is the default of the type's first extension, then the application that is. The Make Default button makes the
+  chosen application the default of the selected rows (selecting alone changes nothing; with nothing selected it does
+  nothing). Opening a file the system asks for opens it in the untitled tab or a new one, or selects the tab that
+  already holds it.
+- **Test bundles.** A bundle that declares document types can become the system's handler of the user's files (a
+  build-directory test bundle showed up as the default of `.prime` and the configuration types). Tests that do not look
+  at the types set `PS_NO_DOCUMENT_TYPES=1` for the bundle script, and the smoke test unregisters the bundles that do
+  declare them (`lsregister -u`).
 - **No cost at startup.** Everything here happens only when the settings window is built or a button is pressed. The
   bundle's document types are read on the first call, the default application is looked up and set only then, and the
   application panel only opens on a click; nothing of it is on the way to the first window, so the launch time does not
@@ -474,7 +480,7 @@ window, including `.prime`, and the application can be chosen the normal macOS w
 - **AppKit.** `NSButton`; `application:openFiles:` for open-file requests (macOS also sends one for a file named on the
   command line, so a program should not open it twice); `CFBundleDocumentTypes` of the Info.plist for the declared types;
   `NSWorkspace` with `UTType` for reading and setting the default; `NSOpenPanel` limited to applications for choosing one.
-  The snapshot harness has `PRIMESTRUCT_UI_CLICK=button:H` (and `tab:H:I`, which shows page I of the tabs control H),
+  The snapshot harness has `PRIMESTRUCT_UI_CLICK=button:H` (and `tab:H:I`, which shows page I of the tabs control H, and `rows:H:1,3`, which selects those rows of the list H),
   `PRIMESTRUCT_UI_OPEN_FILE_EVENT=path` and `PRIMESTRUCT_UI_APP_PANEL=path`. Setting a default is not exercised by a test (it changes the user's settings); reading
   it is.
 - **Slices.** The ABI, the headless backend, the bindings and the stdlib (TODO-5599), the AppKit backend and the bundle's

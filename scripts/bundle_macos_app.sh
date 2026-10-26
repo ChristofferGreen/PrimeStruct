@@ -59,10 +59,12 @@ if [[ -n "$ICON" ]]; then
 fi
 
 # The file types the program declares (file_types.txt next to it, or PS_DOCUMENT_TYPES) become the bundle's
-# document types and the types it exports (scripts/document_types_plist.py).
+# document types and the types it exports (scripts/document_types_plist.py). PS_NO_DOCUMENT_TYPES=1 leaves them out:
+# a bundle that declares types can become the system's handler of the user's files, so tests that do not look at
+# the types do not declare them.
 DOCUMENT_KEYS=""
 TYPES_FILE="${PS_DOCUMENT_TYPES:-$(dirname "$PROGRAM")/file_types.txt}"
-if [[ -f "$TYPES_FILE" ]]; then
+if [[ -z "${PS_NO_DOCUMENT_TYPES:-}" && -f "$TYPES_FILE" ]]; then
   DOCUMENT_KEYS="$(python3 "$ROOT_DIR/scripts/document_types_plist.py" "$TYPES_FILE")"
 fi
 

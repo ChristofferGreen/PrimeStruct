@@ -229,6 +229,55 @@ bool ps_ui_preview_set_scroll_mode(int32_t mode) {
   return loggedFlag(call, ok);
 }
 
+uint64_t ps_ui_list_create(void) { return createControl("ps_ui_list_create()", Control::Kind::List, ""); }
+
+bool ps_ui_list_add_item(uint64_t list, const char *text) {
+  const std::string call = "ps_ui_list_add_item(" + std::to_string(list) + ", " + quote(text) + ")";
+  Control *c = controlOfKind(list, Control::Kind::List);
+  const bool ok = c != nullptr && text != nullptr;
+  if (ok) {
+    c->items.push_back(text);
+  }
+  return loggedFlag(call, ok);
+}
+
+bool ps_ui_list_set_item(uint64_t list, int32_t index, const char *text) {
+  const std::string call = "ps_ui_list_set_item(" + std::to_string(list) + ", " + std::to_string(index) + ", " + quote(text) + ")";
+  Control *c = controlOfKind(list, Control::Kind::List);
+  const bool ok = c != nullptr && text != nullptr && index >= 0 && static_cast<size_t>(index) < c->items.size();
+  if (ok) {
+    c->items[static_cast<size_t>(index)] = text;
+  }
+  return loggedFlag(call, ok);
+}
+
+int32_t ps_ui_list_item_count(uint64_t list) {
+  const Control *c = controlOfKind(list, Control::Kind::List);
+  const int32_t count = c != nullptr ? static_cast<int32_t>(c->items.size()) : 0;
+  return logged("ps_ui_list_item_count(" + std::to_string(list) + ")", count, std::to_string(count));
+}
+
+bool ps_ui_list_set_selected(uint64_t list, int32_t index, bool selected) {
+  const std::string call =
+      "ps_ui_list_set_selected(" + std::to_string(list) + ", " + std::to_string(index) + ", " + flag(selected) + ")";
+  Control *c = controlOfKind(list, Control::Kind::List);
+  const bool ok = c != nullptr && index >= 0 && static_cast<size_t>(index) < c->items.size();
+  if (ok) {
+    if (selected) {
+      c->picked.insert(index);
+    } else {
+      c->picked.erase(index);
+    }
+  }
+  return loggedFlag(call, ok);
+}
+
+bool ps_ui_list_is_selected(uint64_t list, int32_t index) {
+  const Control *c = controlOfKind(list, Control::Kind::List);
+  return loggedFlag("ps_ui_list_is_selected(" + std::to_string(list) + ", " + std::to_string(index) + ")",
+                    c != nullptr && c->picked.count(index) != 0);
+}
+
 int32_t ps_ui_document_type_count(void) {
   const int32_t count = static_cast<int32_t>(documentTypes().size());
   return logged("ps_ui_document_type_count()", count, std::to_string(count));

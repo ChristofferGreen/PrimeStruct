@@ -86,6 +86,17 @@ inline void applyHeadlessScenario(std::string_view scenario) {
       const size_t second = rest.find(':');
       headless::pushSelectPopupItem(static_cast<uint64_t>(std::atoll(rest.substr(0, second).c_str())),
                                     second == std::string::npos ? 0 : std::atoi(rest.substr(second + 1).c_str()));
+    } else if (key == "rows") {
+      const size_t second = rest.find(':');
+      std::vector<int32_t> rows;
+      const std::string joined = second == std::string::npos ? "" : rest.substr(second + 1);
+      for (size_t from = 0; from < joined.size();) {
+        size_t comma = joined.find(',', from);
+        comma = comma == std::string::npos ? joined.size() : comma;
+        rows.push_back(std::atoi(joined.substr(from, comma - from).c_str()));
+        from = comma + 1;
+      }
+      headless::pushSelectListRows(static_cast<uint64_t>(std::atoll(rest.substr(0, second).c_str())), rows);
     } else if (key == "click") {
       headless::pushClickButton(static_cast<uint64_t>(std::atoll(rest.c_str())));
     } else if (key == "openfile") {
