@@ -104,8 +104,7 @@ of sync with them.
 | TODO-5569 | Slice loans, escapes and returned borrows | ready | slices |
 | TODO-5570 | Slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views | ready | slices |
 | TODO-5540 | `string` as the UTF-8 text view | blocked | string-view |
-| TODO-5611 | AppKit toolbar, preview-only layout and markdown edits | ready | markdown-toolbar |
-| TODO-5612 | The editor's markdown toolbar and Format menu | blocked | markdown-toolbar |
+| TODO-5612 | The editor's markdown toolbar and Format menu | ready | markdown-toolbar |
 | TODO-5603 | Startup audit: what a launch loads and does | blocked | startup |
 | TODO-5586 | Native String heap: pooled blocks, statistics and limit | deferred | native-backend-strings |
 | TODO-5574 | Simple C++ emitters run bytes and strings | deferred | string-backends |
@@ -140,7 +139,7 @@ of sync with them.
 
 - TODO-5567 (bytes): packed `array<u8>`
 - TODO-5570 (slices): slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views
-- TODO-5611 (markdown-toolbar): AppKit toolbar, preview-only layout and markdown edits
+- TODO-5612 (markdown-toolbar): the editor's markdown toolbar and Format menu
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5510 (control-returns): `return` returns from pick arms and lambdas correctly
@@ -151,7 +150,7 @@ of sync with them.
 
 2. TODO-5567
 3. TODO-5570
-4. TODO-5611
+4. TODO-5612
 5. TODO-5536
 6. TODO-5535
 7. TODO-5510
@@ -163,7 +162,7 @@ of sync with them.
 - Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5567, TODO-5570, TODO-5569, TODO-5540, TODO-5568, TODO-5530, TODO-5574
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
-- Markdown toolbar (docs/NativeUiPlan.md section 17): TODO-5611, TODO-5612
+- Markdown toolbar (docs/NativeUiPlan.md section 17): TODO-5612
 - Startup (docs/NativeUiPlan.md section 16): TODO-5603
 - Lifecycle (docs/spec/value-lifecycle.md): TODO-5527
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
@@ -301,21 +300,9 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - full release gate green
   - stop_rule: the text view on the VM.
 
-- [ ] TODO-5611: AppKit toolbar, preview-only layout and markdown edits
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-26
-  - phase: Markdown toolbar (docs/NativeUiPlan.md section 17)
-  - parallel_track: markdown-toolbar
-  - scope: The AppKit backend: an `NSToolbar` per window made from a toolbar description (buttons with SF Symbols, a segmented control, menu buttons from `Menu`s, separators), shown or hidden by `ps_ui_window_set_toolbar`; the preview-only mode (the text view's scroll view is hidden, the page fills the window); `ps_ui_text_view_markdown_edit` as one undoable edit that keeps the scroll position and raises the text-changed event; Tab and Shift-Tab in a markdown text view (`textView:doCommandBySelector:`) move between table cells through the library. The snapshot harness can show a toolbar item pressed.
-  - acceptance:
-    - smoke pictures of a window with the toolbar (all items visible, the segmented control on each mode) and of the preview-only mode; a harness-run edit changes the text and one undo restores it; full release gate green
-  - stop_rule: the AppKit backend; the editor is TODO-5612.
-
 - [ ] TODO-5612: The editor's markdown toolbar and Format menu
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5611
+  - status: ready
   - created_at: 2026-10-26
   - phase: Markdown toolbar (docs/NativeUiPlan.md section 17)
   - parallel_track: markdown-toolbar

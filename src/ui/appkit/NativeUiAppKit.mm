@@ -25,6 +25,7 @@
 #import <objc/runtime.h>
 
 #include "primec/ui/Markdown.h"
+#include "primec/ui/MarkdownEdit.h"
 #include "primec/ui/NativeUi.h"
 #include "primec/ui/NativeUiRecentFiles.h"
 #include "primec/ui/NativeUiStandardItems.h"
@@ -76,6 +77,20 @@ struct ControlInfo {
   uint64_t parent = 0;
 };
 
+// A toolbar (ps_ui_toolbar_create): its items in order; each window it is set on gets an NSToolbar built from it.
+struct ToolbarItemDesc {
+  enum class Kind { Button, Segments, Menu, Separator } kind = Kind::Button;
+  std::string title;
+  std::string symbol;
+  int32_t id = 0; // a button's command, a segmented control's first command
+  std::vector<std::string> segments;
+  uint64_t menu = 0;
+};
+
+struct ToolbarDesc {
+  std::vector<ToolbarItemDesc> items;
+};
+
 struct State {
   bool initialized = false;
   bool quitting = false;
@@ -98,6 +113,11 @@ struct State {
   id previewEventMonitor = nil;                            // sees the events that scroll a page
   int32_t previewScrollMode = PS_UI_SCROLL_BLOCKS;         // how the source and the page scroll together
   std::unordered_map<uint64_t, bool> previewRefreshPending;
+  std::unordered_map<uint64_t, int32_t> previewModes; // PS_UI_PREVIEW_* of the windows whose preview is on
+  std::unordered_map<uint64_t, ToolbarDesc> toolbarDescs;
+  std::unordered_map<uint64_t, NSToolbar *> windowToolbars; // the NSToolbar of a window
+  std::unordered_map<uint64_t, int32_t> toolbarSelected;    // the selected segment's command per window (items are built lazily)
+  std::unordered_set<uint64_t> markdownEditingViews;      // text views where Tab moves between table cells
   std::unordered_set<int32_t> previewMenuItems; // command ids whose check mark follows the active preview
   std::unordered_map<uint64_t, ControlInfo> controls;
   std::unordered_map<uint64_t, double> fontPoints; // the size set with ps_ui_text_view_set_font_size
@@ -140,6 +160,10 @@ struct State {
   bool snapshotReportStarted = false;
   bool snapshotReportDone = false;
   std::string snapshotCommands;
+  std::string snapshotSelect;  // PRIMESTRUCT_UI_SELECT=start:end selects that UTF-16 range of the first text view
+  bool snapshotSelected = false;
+  int snapshotUndoCount = 0;   // PRIMESTRUCT_UI_UNDO=N undoes N edits of the first text view after the commands
+  bool snapshotUndone = false;
   bool snapshotCommandsSent = false;
   bool snapshotOpened = false;
   bool snapshotTyped = false;
@@ -913,6 +937,7 @@ void dropPreviewState(uint64_t window) {
     [NSNotificationCenter.defaultCenter removeObserver:observer->second];
   }
   s.previews.erase(window);
+  s.previewModes.erase(window);
   s.previewSplits.erase(window);
   s.previewWebs.erase(window);
   s.previewLoading.erase(window);
@@ -993,12 +1018,36 @@ void drawPreviewWeb(uint64_t window, NSView *view, NSBitmapImageRep *rep) {
 @interface PSController : NSObject <NSApplicationDelegate, NSWindowDelegate, NSTextViewDelegate>
 - (void)menuCommand:(id)sender;
 - (void)controlChanged:(id)sender;
+- (void)toolbarSegments:(id)sender;
 - (void)quitRequested:(id)sender;
 @end
 
 @implementation PSController
 - (void)menuCommand:(id)sender {
   enqueue(PS_UI_EVENT_COMMAND, 0, 0, static_cast<int32_t>([sender tag]));
+}
+
+// A segment of a toolbar's segmented control: its command is the group's first command plus the segment's index.
+- (void)toolbarSegments:(id)sender {
+  NSToolbarItemGroup *group = sender;
+  if (group.selectedIndex >= 0) {
+    enqueue(PS_UI_EVENT_COMMAND, 0, 0, static_cast<int32_t>(group.tag) + static_cast<int32_t>(group.selectedIndex));
+  }
+}
+
+// Tab and Shift-Tab move between the cells of a markdown table where the view asked for it; anywhere else they
+// are ordinary.
+- (BOOL)textView:(NSTextView *)view doCommandBySelector:(SEL)selector {
+  if (state().markdownEditingViews.count(handleOf(view)) == 0) {
+    return NO;
+  }
+  if (selector == @selector(insertTab:)) {
+    return ps_ui_text_view_markdown_edit(handleOf(view), PS_UI_MARKDOWN_TABLE_NEXT_CELL, 0, 0) ? YES : NO;
+  }
+  if (selector == @selector(insertBacktab:)) {
+    return ps_ui_text_view_markdown_edit(handleOf(view), PS_UI_MARKDOWN_TABLE_PREVIOUS_CELL, 0, 0) ? YES : NO;
+  }
+  return NO;
 }
 
 - (void)quitRequested:(id)sender {
@@ -1055,6 +1104,93 @@ void drawPreviewWeb(uint64_t window, NSView *view, NSBitmapImageRep *rep) {
   if ([view isKindOfClass:[NSTextView class]]) {
     syncWebToCursor(view);
   }
+}
+@end
+
+namespace {
+PSController *controller();
+}
+
+// The items of a toolbar for NSToolbar: one identifier per item ("ps.N"), built when the toolbar asks for it.
+@interface PSToolbarDelegate : NSObject <NSToolbarDelegate>
+@property(nonatomic) uint64_t toolbarHandle;
+@property(nonatomic) uint64_t windowHandle;
+@end
+
+@implementation PSToolbarDelegate
+- (NSArray<NSToolbarItemIdentifier> *)identifiers {
+  NSMutableArray *ids = [NSMutableArray array];
+  const auto desc = state().toolbarDescs.find(self.toolbarHandle);
+  if (desc != state().toolbarDescs.end()) {
+    for (size_t i = 0; i < desc->second.items.size(); ++i) {
+      [ids addObject:desc->second.items[i].kind == ToolbarItemDesc::Kind::Separator
+                         ? NSToolbarSpaceItemIdentifier
+                         : [NSString stringWithFormat:@"ps.%zu", i]];
+    }
+  }
+  return ids;
+}
+
+- (NSArray<NSToolbarItemIdentifier> *)toolbarDefaultItemIdentifiers:(NSToolbar *)toolbar {
+  return [self identifiers];
+}
+
+- (NSArray<NSToolbarItemIdentifier> *)toolbarAllowedItemIdentifiers:(NSToolbar *)toolbar {
+  return [self identifiers];
+}
+
+- (NSToolbarItem *)toolbar:(NSToolbar *)toolbar
+        itemForItemIdentifier:(NSToolbarItemIdentifier)identifier
+    willBeInsertedIntoToolbar:(BOOL)flag {
+  const auto desc = state().toolbarDescs.find(self.toolbarHandle);
+  if (desc == state().toolbarDescs.end() || ![identifier hasPrefix:@"ps."]) {
+    return nil;
+  }
+  const size_t index = static_cast<size_t>([[identifier substringFromIndex:3] integerValue]);
+  if (index >= desc->second.items.size()) {
+    return nil;
+  }
+  const ToolbarItemDesc &item = desc->second.items[index];
+  NSString *title = toNSString(item.title.c_str());
+  NSImage *image = nil;
+  if (!item.symbol.empty()) {
+    image = [NSImage imageWithSystemSymbolName:toNSString(item.symbol.c_str()) accessibilityDescription:title];
+  }
+  if (item.kind == ToolbarItemDesc::Kind::Segments) {
+    NSMutableArray *titles = [NSMutableArray array];
+    for (const std::string &segment : item.segments) {
+      [titles addObject:toNSString(segment.c_str())];
+    }
+    NSToolbarItemGroup *group = [NSToolbarItemGroup groupWithItemIdentifier:identifier
+                                                                     titles:titles
+                                                              selectionMode:NSToolbarItemGroupSelectionModeSelectOne
+                                                                     labels:titles
+                                                                     target:controller()
+                                                                     action:@selector(toolbarSegments:)];
+    group.tag = item.id;
+    const auto picked = state().toolbarSelected.find(self.windowHandle);
+    const int32_t at = picked != state().toolbarSelected.end() ? picked->second - item.id : 0;
+    group.selectedIndex = at >= 0 && at < static_cast<int32_t>(item.segments.size()) ? at : 0;
+    return group;
+  }
+  if (item.kind == ToolbarItemDesc::Kind::Menu) {
+    NSMenuToolbarItem *menuItem = [[NSMenuToolbarItem alloc] initWithItemIdentifier:identifier];
+    menuItem.label = title;
+    menuItem.toolTip = title;
+    menuItem.image = image;
+    menuItem.menu = menuFor(item.menu);
+    menuItem.showsIndicator = YES;
+    return menuItem;
+  }
+  NSToolbarItem *button = [[NSToolbarItem alloc] initWithItemIdentifier:identifier];
+  button.label = title;
+  button.toolTip = title;
+  button.image = image;
+  button.bordered = YES;
+  button.tag = item.id;
+  button.target = controller();
+  button.action = @selector(menuCommand:);
+  return button;
 }
 @end
 
@@ -1651,6 +1787,12 @@ bool ps_ui_init(const char *appName) {
     if (const char *commands = std::getenv("PRIMESTRUCT_UI_COMMANDS"); commands != nullptr && *commands != '\0') {
       s.snapshotCommands = commands;
     }
+    if (const char *select = std::getenv("PRIMESTRUCT_UI_SELECT"); select != nullptr && *select != '\0') {
+      s.snapshotSelect = select;
+    }
+    if (const char *undo = std::getenv("PRIMESTRUCT_UI_UNDO"); undo != nullptr && *undo != '\0') {
+      s.snapshotUndoCount = std::atoi(undo);
+    }
     if (const char *menu = std::getenv("PRIMESTRUCT_UI_MENU"); menu != nullptr && *menu != '\0') {
       s.snapshotMenu = menu;
     }
@@ -1763,7 +1905,42 @@ int32_t ps_ui_wait_event(void) {
       [NSApp updateWindows];
       if (snapshotting && event == nil) {
         ++s.snapshotIdleSlices;
-        if (!s.snapshotCommands.empty() && !s.snapshotCommandsSent && s.snapshotIdleSlices >= 2) {
+        if (!s.snapshotSelect.empty() && !s.snapshotSelected && s.snapshotIdleSlices >= 1) {
+          // Selects a range of the first text view, as the user would with the mouse.
+          s.snapshotSelected = true;
+          s.snapshotIdleSlices = 0;
+          NSTextView *target = nil;
+          uint64_t picked = UINT64_MAX;
+          for (const auto &entry : s.textViews) {
+            if (entry.first < picked) {
+              picked = entry.first;
+              target = entry.second;
+            }
+          }
+          const size_t colon = s.snapshotSelect.find(':');
+          if (target != nil && colon != std::string::npos) {
+            const NSUInteger from = static_cast<NSUInteger>(std::atoll(s.snapshotSelect.c_str()));
+            const NSUInteger to = static_cast<NSUInteger>(std::atoll(s.snapshotSelect.c_str() + colon + 1));
+            [target.window makeFirstResponder:target];
+            target.selectedRange = NSMakeRange(std::min(from, target.string.length),
+                                               std::min(to, target.string.length) - std::min(from, target.string.length));
+          }
+        } else if (s.snapshotUndoCount > 0 && s.snapshotCommandsSent && !s.snapshotUndone && s.snapshotIdleSlices >= 10) {
+          // Undoes edits of the first text view, as Edit > Undo would.
+          s.snapshotUndone = true;
+          s.snapshotIdleSlices = 0;
+          NSTextView *target = nil;
+          uint64_t picked = UINT64_MAX;
+          for (const auto &entry : s.textViews) {
+            if (entry.first < picked) {
+              picked = entry.first;
+              target = entry.second;
+            }
+          }
+          for (int i = 0; i < s.snapshotUndoCount && target != nil; ++i) {
+            [target.undoManager undo];
+          }
+        } else if (!s.snapshotCommands.empty() && !s.snapshotCommandsSent && s.snapshotIdleSlices >= 2) {
           // Menu commands as if chosen by the user (the program's own handling runs).
           s.snapshotCommandsSent = true;
           s.snapshotIdleSlices = 0;
@@ -2003,6 +2180,7 @@ bool ps_ui_window_close(uint64_t window) {
   state().windows.erase(window);
   state().windowContent.erase(window);
   state().windowPaths.erase(window);
+  state().windowToolbars.erase(window);
   dropPreviewState(window);
   return true;
 }
@@ -2137,6 +2315,26 @@ uint64_t ps_ui_text_view_create(void) {
     view.automaticSpellingCorrectionEnabled = NO;
     view.textContainerInset = NSMakeSize(8, 8);
     view.delegate = controller();
+    // Undo and redo change the text without the view telling its delegate: the program hears of them here.
+    static id undoObservers[2] = {nil, nil};
+    if (undoObservers[0] == nil) {
+      int next = 0;
+      for (NSNotificationName name : {NSUndoManagerDidUndoChangeNotification, NSUndoManagerDidRedoChangeNotification}) {
+        undoObservers[next++] = [NSNotificationCenter.defaultCenter
+            addObserverForName:name
+                        object:nil
+                         queue:nil
+                    usingBlock:^(NSNotification *note) {
+                      for (const auto &entry : state().textViews) {
+                        NSTextView *candidate = entry.second;
+                        if (candidate.undoManager == note.object && candidate.window.firstResponder == candidate) {
+                          state().modified[entry.first] = true;
+                          enqueue(PS_UI_EVENT_TEXT_CHANGED, handleOf(candidate.window), entry.first);
+                        }
+                      }
+                    }];
+      }
+    }
     const uint64_t handle = s.nextHandle++;
     tag(view, handle);
     s.textViews[handle] = view;
@@ -2472,20 +2670,247 @@ bool ps_ui_window_set_autosave_name(uint64_t window, const char *name) {
   return [w setFrameAutosaveName:toNSString(name)];
 }
 
-// The toolbar, the preview-only mode and markdown edits are TODO-5611; until then the backend answers as unsupported.
-uint64_t ps_ui_toolbar_create(void) { return 0; }
-bool ps_ui_toolbar_add_button(uint64_t, const char *, const char *, int32_t) { return false; }
-bool ps_ui_toolbar_add_segments(uint64_t, const char *, int32_t) { return false; }
-bool ps_ui_toolbar_add_menu(uint64_t, const char *, const char *, uint64_t) { return false; }
-bool ps_ui_toolbar_add_separator(uint64_t) { return false; }
-bool ps_ui_window_set_toolbar(uint64_t, uint64_t) { return false; }
-bool ps_ui_window_toolbar_select(uint64_t, int32_t) { return false; }
-bool ps_ui_text_view_markdown_edit(uint64_t, int32_t, int32_t, int32_t) { return false; }
-bool ps_ui_text_view_set_markdown_editing(uint64_t, bool) { return false; }
-bool ps_ui_window_set_preview_mode(uint64_t window, int32_t mode) {
-  return (mode == PS_UI_PREVIEW_TEXT || mode == PS_UI_PREVIEW_SPLIT) && ps_ui_window_set_preview(window, mode == PS_UI_PREVIEW_SPLIT);
+// ---- toolbar, preview modes and markdown edits (docs/NativeUiPlan.md section 17) -------------------------
+
+uint64_t ps_ui_toolbar_create(void) {
+  if (!usable()) {
+    return 0;
+  }
+  State &s = state();
+  const uint64_t handle = s.nextHandle++;
+  s.toolbarDescs[handle];
+  return handle;
 }
-int32_t ps_ui_window_preview_mode(uint64_t window) { return ps_ui_window_has_preview(window) ? PS_UI_PREVIEW_SPLIT : PS_UI_PREVIEW_TEXT; }
+
+namespace {
+
+ToolbarDesc *toolbarDesc(uint64_t handle) {
+  auto it = state().toolbarDescs.find(handle);
+  return it != state().toolbarDescs.end() ? &it->second : nullptr;
+}
+
+} // namespace
+
+bool ps_ui_toolbar_add_button(uint64_t toolbar, const char *title, const char *symbol, int32_t commandId) {
+  ToolbarDesc *desc = usable() ? toolbarDesc(toolbar) : nullptr;
+  if (desc == nullptr) {
+    return false;
+  }
+  ToolbarItemDesc item;
+  item.title = title != nullptr ? title : "";
+  item.symbol = symbol != nullptr ? symbol : "";
+  item.id = commandId;
+  desc->items.push_back(std::move(item));
+  return true;
+}
+
+bool ps_ui_toolbar_add_segments(uint64_t toolbar, const char *titles, int32_t firstCommandId) {
+  ToolbarDesc *desc = usable() ? toolbarDesc(toolbar) : nullptr;
+  if (desc == nullptr || titles == nullptr || *titles == '\0') {
+    return false;
+  }
+  ToolbarItemDesc item;
+  item.kind = ToolbarItemDesc::Kind::Segments;
+  item.id = firstCommandId;
+  std::string current;
+  for (const char *p = titles; *p != '\0'; ++p) {
+    if (*p == '|') {
+      item.segments.push_back(current);
+      current.clear();
+    } else {
+      current += *p;
+    }
+  }
+  item.segments.push_back(current);
+  desc->items.push_back(std::move(item));
+  return true;
+}
+
+bool ps_ui_toolbar_add_menu(uint64_t toolbar, const char *title, const char *symbol, uint64_t menu) {
+  ToolbarDesc *desc = usable() ? toolbarDesc(toolbar) : nullptr;
+  NSMenu *items = usable() ? menuFor(menu) : nil;
+  if (desc == nullptr || items == nil || items.supermenu != nil) {
+    return false;
+  }
+  ToolbarItemDesc item;
+  item.kind = ToolbarItemDesc::Kind::Menu;
+  item.title = title != nullptr ? title : "";
+  item.symbol = symbol != nullptr ? symbol : "";
+  item.menu = menu;
+  desc->items.push_back(std::move(item));
+  return true;
+}
+
+bool ps_ui_toolbar_add_separator(uint64_t toolbar) {
+  ToolbarDesc *desc = usable() ? toolbarDesc(toolbar) : nullptr;
+  if (desc == nullptr) {
+    return false;
+  }
+  ToolbarItemDesc item;
+  item.kind = ToolbarItemDesc::Kind::Separator;
+  desc->items.push_back(std::move(item));
+  return true;
+}
+
+bool ps_ui_window_set_toolbar(uint64_t window, uint64_t toolbar) {
+  NSWindow *w = usable() ? liveWindow(window) : nil;
+  if (w == nil || (toolbar != 0 && toolbarDesc(toolbar) == nullptr)) {
+    return false;
+  }
+  State &s = state();
+  if (toolbar == 0) {
+    w.toolbar = nil;
+    s.windowToolbars.erase(window);
+    s.toolbarSelected.erase(window);
+    return true;
+  }
+  s.toolbarSelected.erase(window);
+  @autoreleasepool {
+    NSToolbar *bar = [[NSToolbar alloc]
+        initWithIdentifier:[NSString stringWithFormat:@"ps.toolbar.%llu.%llu", toolbar, window]];
+    PSToolbarDelegate *delegate = [[PSToolbarDelegate alloc] init];
+    delegate.toolbarHandle = toolbar;
+    delegate.windowHandle = window;
+    bar.delegate = delegate;
+    objc_setAssociatedObject(bar, "ps.toolbar.delegate", delegate, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    bar.displayMode = NSToolbarDisplayModeIconOnly;
+    bar.allowsUserCustomization = NO;
+    w.toolbar = bar;
+    s.windowToolbars[window] = bar;
+  }
+  return true;
+}
+
+bool ps_ui_window_toolbar_select(uint64_t window, int32_t commandId) {
+  NSWindow *w = usable() ? liveWindow(window) : nil;
+  const auto bar = state().windowToolbars.find(window);
+  const auto desc = bar != state().windowToolbars.end() ? bar->second.delegate : nil;
+  if (w == nil || bar == state().windowToolbars.end()) {
+    return false;
+  }
+  (void)desc;
+  // The control may not exist yet (items are built when the toolbar first needs them): remember the choice too.
+  const auto described = state().toolbarDescs.find(((PSToolbarDelegate *)bar->second.delegate).toolbarHandle);
+  bool known = false;
+  if (described != state().toolbarDescs.end()) {
+    for (const ToolbarItemDesc &item : described->second.items) {
+      known = known || (item.kind == ToolbarItemDesc::Kind::Segments && commandId >= item.id &&
+                        commandId < item.id + static_cast<int32_t>(item.segments.size()));
+    }
+  }
+  if (!known) {
+    return false;
+  }
+  state().toolbarSelected[window] = commandId;
+  for (NSToolbarItem *item in bar->second.items) {
+    if (![item isKindOfClass:[NSToolbarItemGroup class]]) {
+      continue;
+    }
+    NSToolbarItemGroup *group = (NSToolbarItemGroup *)item;
+    if (commandId >= group.tag && commandId < group.tag + static_cast<NSInteger>(group.subitems.count)) {
+      group.selectedIndex = commandId - group.tag;
+    }
+  }
+  return true;
+}
+
+namespace {
+
+// Byte offsets of the library and UTF-16 offsets of NSTextView.
+size_t byteOffset(NSString *text, NSUInteger location) {
+  return [[text substringToIndex:std::min(location, text.length)] lengthOfBytesUsingEncoding:NSUTF8StringEncoding];
+}
+
+NSUInteger utf16Offset(const std::string &utf8, size_t bytes) {
+  NSString *head = [[NSString alloc] initWithBytes:utf8.data()
+                                            length:std::min(bytes, utf8.size())
+                                          encoding:NSUTF8StringEncoding];
+  return head.length;
+}
+
+} // namespace
+
+bool ps_ui_text_view_markdown_edit(uint64_t view, int32_t operation, int32_t a, int32_t b) {
+  NSTextView *v = usable() ? textView(view) : nil;
+  if (v == nil || operation < PS_UI_MARKDOWN_BOLD || operation > PS_UI_MARKDOWN_TABLE_PREVIOUS_CELL) {
+    return false;
+  }
+  const char *utf8 = v.string.UTF8String;
+  const std::string text = utf8 != nullptr ? utf8 : "";
+  const NSRange selected = v.selectedRange;
+  const primec::ui::MarkdownEditResult result =
+      primec::ui::markdownEdit(text, byteOffset(v.string, selected.location),
+                               byteOffset(v.string, NSMaxRange(selected)),
+                               static_cast<primec::ui::MarkdownEditOp>(operation), a, b);
+  if (!result.applied) {
+    return false;
+  }
+  const NSUInteger from = utf16Offset(text, result.replaceStart);
+  const NSRange replaced = NSMakeRange(from, utf16Offset(text, result.replaceEnd) - from);
+  NSString *replacement = toNSString(result.replacement.c_str());
+  // One edit through the text view's own path: it is undoable as a unit, marks the view modified and tells the
+  // delegate (PS_UI_EVENT_TEXT_CHANGED); the scroll position stays.
+  if (![v shouldChangeTextInRange:replaced replacementString:replacement]) {
+    return false;
+  }
+  [v replaceCharactersInRange:replaced withString:replacement];
+  [v didChangeText];
+  const std::string now = primec::ui::applyMarkdownEdit(text, result);
+  const NSUInteger start = utf16Offset(now, result.selectionStart);
+  const NSUInteger end = utf16Offset(now, result.selectionEnd);
+  v.selectedRange = NSMakeRange(start, end - start);
+  [v scrollRangeToVisible:v.selectedRange];
+  return true;
+}
+
+bool ps_ui_text_view_set_markdown_editing(uint64_t view, bool on) {
+  if (!usable() || textView(view) == nil) {
+    return false;
+  }
+  if (on) {
+    state().markdownEditingViews.insert(view);
+  } else {
+    state().markdownEditingViews.erase(view);
+  }
+  return true;
+}
+
+// The text view's scroll view is hidden in the preview-only mode (the split view gives the page the whole window).
+bool ps_ui_window_set_preview_mode(uint64_t window, int32_t mode) {
+  if (!usable() || liveWindow(window) == nil || mode < PS_UI_PREVIEW_TEXT || mode > PS_UI_PREVIEW_ONLY) {
+    return false;
+  }
+  if (mode == PS_UI_PREVIEW_TEXT) {
+    return ps_ui_window_set_preview(window, false);
+  }
+  State &s = state();
+  if (!previewOn(window) && !ps_ui_window_set_preview(window, true)) {
+    return false;
+  }
+  NSScrollView *scroll = previewTextScroll(window);
+  NSSplitView *split = s.previewSplits[window];
+  if (scroll == nil || split == nil) {
+    return false;
+  }
+  if (mode == PS_UI_PREVIEW_ONLY) {
+    scroll.hidden = YES;
+    [split adjustSubviews];
+  } else if (scroll.hidden) {
+    scroll.hidden = NO;
+    [split setPosition:split.bounds.size.width / 2 ofDividerAtIndex:0];
+    [liveWindow(window) makeFirstResponder:textView(s.windowContent[window])];
+  }
+  s.previewModes[window] = mode;
+  return true;
+}
+
+int32_t ps_ui_window_preview_mode(uint64_t window) {
+  if (!usable() || liveWindow(window) == nil || !previewOn(window)) {
+    return PS_UI_PREVIEW_TEXT;
+  }
+  const auto mode = state().previewModes.find(window);
+  return mode != state().previewModes.end() ? mode->second : PS_UI_PREVIEW_SPLIT;
+}
 
 bool ps_ui_window_set_preview(uint64_t window, bool on) {
   NSWindow *w = usable() ? liveWindow(window) : nil;
@@ -2505,6 +2930,7 @@ bool ps_ui_window_set_preview(uint64_t window, bool on) {
     // The text view alone again.
     [s.previewWebs[window] removeFromSuperview];
     if (scroll != nil) {
+      scroll.hidden = NO;
       [scroll removeFromSuperview];
       scroll.frame = contentRect;
       scroll.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
@@ -2546,6 +2972,7 @@ bool ps_ui_window_set_preview(uint64_t window, bool on) {
     [split setPosition:contentRect.size.width / 2 ofDividerAtIndex:0];
     [w makeFirstResponder:view];
     s.previews[window] = true;
+    s.previewModes[window] = PS_UI_PREVIEW_SPLIT;
     s.previewSplits[window] = split;
     s.previewWebs[window] = web;
     // The page follows the text view when it scrolls (the text view follows the page through the monitor).

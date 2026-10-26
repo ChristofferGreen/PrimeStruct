@@ -1,0 +1,104 @@
+// A markdown window with a toolbar: Editor, Split and Preview segments, Bold and a Table menu. Each toolbar item is a
+// command; a command applies its markdown edit or switches the preview mode, and after every command and every text
+// change the program writes the text and the mode into the two files named on the command line.
+// cmake/NativeUiAppKitSmokeTest.cmake drives it with PRIMESTRUCT_UI_SELECT, PRIMESTRUCT_UI_COMMANDS and
+// PRIMESTRUCT_UI_UNDO and reads the report.
+import /std/text/*
+import /std/ui/native/*
+
+// The text goes to the first argument, the preview mode to the second.
+[return<void> effects(heap_alloc)]
+write_report([Window] window, [TextView] view, [TextView] sink, [i32] argc) {
+  if(argc > 2i32) {
+    [String] textOut{argumentText(1i32)}
+    view.saveFile(textOut)
+    [String] modeOut{argumentText(2i32)}
+    if(window.previewMode() == 0i32) {
+      sink.setText(stringFrom("0"))
+    }
+    if(window.previewMode() == 1i32) {
+      sink.setText(stringFrom("1"))
+    }
+    if(window.previewMode() == 2i32) {
+      sink.setText(stringFrom("2"))
+    }
+    sink.saveFile(modeOut)
+  }
+}
+
+[return<int> effects(heap_alloc)]
+main([array<string>] args) {
+  [App] app{start_app("Toolbar demo")}
+  [Window] window{app.window("Toolbar demo", 720i32, 420i32)}
+  [TextView] view{app.textView()}
+  view.setMonospace(true)
+  view.setMarkdownEditing(true)
+  view.setText(stringFrom("A short word here.\n\n|a|bb|\n|-|:-:|\n|ccc|d|\n"))
+  window.setContent(view)
+
+  [Menu] table{app.menu("Table")}
+  table.item("Insert 3 by 3", "", 40i32)
+  table.item("Format", "", 41i32)
+  table.item("Add Row", "", 42i32)
+  [Toolbar] bar{app.toolbar()}
+  bar.segments("Editor|Split|Preview", 1i32)
+  bar.separator()
+  bar.button("Bold", "bold", 20i32)
+  bar.menu("Table", "tablecells", table)
+  window.setToolbar(bar)
+  window.selectToolbarItem(1i32)
+  window.show()
+
+  [TextView] sink{app.textView()}
+  [i32] argc{args.count()}
+  [bool mut] running{true}
+  while(running) {
+    pick(app.waitEvent()) {
+      command(id) {
+        if(id == 1i32) {
+          window.setPreviewMode(0i32)
+          window.selectToolbarItem(1i32)
+        }
+        if(id == 2i32) {
+          window.setPreviewMode(1i32)
+          window.selectToolbarItem(2i32)
+        }
+        if(id == 3i32) {
+          window.setPreviewMode(2i32)
+          window.selectToolbarItem(3i32)
+        }
+        if(id == 20i32) {
+          view.markdownEdit(0i32, 0i32, 0i32)
+        }
+        if(id == 40i32) {
+          view.markdownEdit(13i32, 3i32, 3i32)
+        }
+        if(id == 41i32) {
+          view.markdownEdit(14i32, 0i32, 0i32)
+        }
+        if(id == 42i32) {
+          view.markdownEdit(15i32, 0i32, 0i32)
+        }
+        write_report(window, view, sink, argc)
+      }
+      windowCloseRequested(w) {
+        [Window] closing{w}
+        closing.close()
+        running = false
+      }
+      textChanged(w) {
+        write_report(window, view, sink, argc)
+      }
+      controlChanged(widget) {
+        running = running
+      }
+      openFile(request) {
+        running = running
+      }
+      quitRequested {
+        running = false
+      }
+    }
+  }
+  return(0i32)
+}

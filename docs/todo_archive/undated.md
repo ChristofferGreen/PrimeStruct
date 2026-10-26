@@ -485,3 +485,15 @@
     - headless tests for the toolbar outline, the preview modes, the edits through the selection and their text-changed event; the bindings list; the editor, acceptance and stdlib suites still pass; the full release gate green
   - stop_rule: the ABI, the headless backend, the bindings and the stdlib.
   - notes: the headless suite has the preview modes, the toolbar outline and the edits through the selection; the bindings list is 114 signatures. Toolbar titles are fixed labels (`string`).
+
+- [x] TODO-5611: AppKit toolbar, preview-only layout and markdown edits
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-26
+  - phase: Markdown toolbar (docs/NativeUiPlan.md section 17)
+  - parallel_track: markdown-toolbar
+  - scope: The AppKit backend: an `NSToolbar` per window made from a toolbar description (buttons with SF Symbols, a segmented control, menu buttons from `Menu`s, separators), shown or hidden by `ps_ui_window_set_toolbar`; the preview-only mode (the text view's scroll view is hidden, the page fills the window); `ps_ui_text_view_markdown_edit` as one undoable edit that keeps the scroll position and raises the text-changed event; Tab and Shift-Tab in a markdown text view (`textView:doCommandBySelector:`) move between table cells through the library. The snapshot harness can show a toolbar item pressed.
+  - acceptance:
+    - smoke pictures of a window with the toolbar (all items visible, the segmented control on each mode) and of the preview-only mode; a harness-run edit changes the text and one undo restores it; full release gate green
+  - stop_rule: the AppKit backend; the editor is TODO-5612.
+  - notes: `tests/fixtures/ui/screenshot/toolbar_demo.prime` and eight smoke runs (pictures and reports: bold, undo, preview-only, split, format, add row, insert table); harness variables PRIMESTRUCT_UI_SELECT and PRIMESTRUCT_UI_UNDO. Undo and redo of a text view did not reach the delegate, so the backend observes the undo manager. Open: the selected segment of the toolbar's segmented control is drawn as a blank white pill on the last segment in every offscreen picture whatever the mode; check it on the installed app in TODO-5612 (the commands and the layouts are right).
