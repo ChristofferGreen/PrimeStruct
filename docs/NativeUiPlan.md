@@ -146,7 +146,7 @@ is callable only on the thread that called `ps_ui_init`, the main thread on macO
   is a `const char *` valid until the next text-returning call, `ps_ui_alert` takes button titles separated by `\n` and
   returns the pressed index, and `ps_ui_init` returns false when the app is already running. The headless backend
   (`primec/ui/NativeUiHeadless.h`) ends a scripted run with `quit_requested` once its action list is empty.
-  `primec/ui/NativeUiBindings.h` binds all 104 functions into a `ScriptEngine` or `Script` under their ABI names. The
+  `primec/ui/NativeUiBindings.h` binds all 103 functions into a `ScriptEngine` or `Script` under their ABI names. The
   three text-file functions (TODO-5546) let the editor open and save before owned `String` exists (TODO-5530).
 - **Versioning.** `ps_ui_abi_version() -> i32` returns 0 for this table. Additions append functions; a change to an
   existing signature bumps the version.
@@ -443,7 +443,8 @@ step with it.
 ## 16. File associations
 
 **Goal (2026-10-26): PrimeScroll can be made the default application for a set of file types from its settings
-window, including `.prime`, and the application can be chosen the normal macOS way.**
+window, including `.prime`; choosing another editor is the system's own way (Open With, Change All), which the declared types
+support.**
 
 - **What the app declares.** `examples/apps/text_editor/file_types.txt` lists the file types as `name|extensions|optional
   type identifier`: Plain text, Markdown, PrimeStruct source (`.prime`, with the exported identifier
@@ -456,8 +457,8 @@ window, including `.prime`, and the application can be chosen the normal macOS w
 - **Making the default.** `ps_ui_set_default_app(extensions, appPath)` makes the application at `appPath` ("" is the
   app itself) the system's default for a comma separated list of extensions (AppKit: `NSWorkspace
   setDefaultApplicationAtURL:toOpenContentType:completionHandler:`; the system may ask the user to confirm), and
-  `ps_ui_default_app(extension)` reads the current handler. `ps_ui_open_application_panel` is the normal Open dialog
-  limited to applications, which is how another editor than PrimeScroll is chosen by hand.
+  `ps_ui_default_app(extension)` reads the current handler. Choosing another editor than PrimeScroll is left to
+  the system (Finder's Open With and Change All); the app has no chooser of its own.
 - **Opening.** A double click, Open With or a drop on the icon reaches the program as `PS_UI_EVENT_OPEN_FILE`
   (`AppEvent.openFile`, the path from `App.eventText()`).
 - **Drag and drop.** The text views take files dropped on them as open requests (`PSDropTextView`: each dropped file is a
@@ -465,14 +466,12 @@ window, including `.prime`, and the application can be chosen the normal macOS w
   (`public.data`, handler rank None) of the bundle lets any file be dropped on the Dock icon and offers the app in Open
   With for every file, without making it anybody's default. Checked with the harness drop and with a real
   Launch Services open of an undeclared extension; a real mouse drag and a Dock drop are tried by hand.
-- **Settings.** A Files tab. A button titled "Choose... (PrimeScroll)" shows the application the types are made to open
-  with and opens the application chooser (any editor; kept as the `defaultApp` preference). Below it a selectable list
-  (`ps_ui_list_*`: rows of text, any number selected, a change of the selection is a `PS_UI_EVENT_CONTROL_CHANGED`) has
-  one row per declared file type, "✓ Markdown (.md, .markdown) - PrimeScroll": a check mark when the chosen application
-  already is the default of the type's first extension, then the application that is. The Make Default button makes the
-  chosen application the default of the selected rows (selecting alone changes nothing; with nothing selected it does
-  nothing). Opening a file the system asks for opens it in the untitled tab or a new one, or selects the tab that
-  already holds it.
+- **Settings.** A Files tab: a selectable list (`ps_ui_list_*`: rows of text, any number selected, a change of the
+  selection is a `PS_UI_EVENT_CONTROL_CHANGED`) with one row per declared file type, "✓ Markdown (.md, .markdown) -
+  PrimeScroll": a check mark when PrimeScroll is the default of the type's first extension, then the application that is.
+  The Make Default button makes PrimeScroll the default of the selected rows (selecting alone changes nothing; with
+  nothing selected it does nothing). Opening a file the system asks for opens it in the untitled tab or a new one, or
+  selects the tab that already holds it.
 - **Test bundles.** A bundle that declares document types can become the system's handler of the user's files (a
   build-directory test bundle showed up as the default of `.prime` and the configuration types). Tests that do not look
   at the types set `PS_NO_DOCUMENT_TYPES=1` for the bundle script, and the smoke test unregisters the bundles that do
@@ -484,10 +483,9 @@ window, including `.prime`, and the application can be chosen the normal macOS w
   the same libraries as before; checked with `DYLD_PRINT_LIBRARIES`).
 - **AppKit.** `NSButton`; `application:openFiles:` for open-file requests (macOS also sends one for a file named on the
   command line, so a program should not open it twice); `CFBundleDocumentTypes` of the Info.plist for the declared types;
-  `NSWorkspace` with `UTType` for reading and setting the default; `NSOpenPanel` limited to applications for choosing one.
+  `NSWorkspace` with `UTType` for reading and setting the default.
   The snapshot harness has `PRIMESTRUCT_UI_CLICK=button:H` (and `tab:H:I`, which shows page I of the tabs control H, and `rows:H:1,3`, which selects those rows of the list H),
-  `PRIMESTRUCT_UI_OPEN_FILE_EVENT=path`, `PRIMESTRUCT_UI_DROP=path` (a file dropped on the text view) and
-  `PRIMESTRUCT_UI_APP_PANEL=path`. Setting a default is not exercised by a test (it changes the user's settings); reading
+  `PRIMESTRUCT_UI_OPEN_FILE_EVENT=path` and `PRIMESTRUCT_UI_DROP=path` (a file dropped on the text view). Setting a default is not exercised by a test (it changes the user's settings); reading
   it is.
 - **Slices.** The ABI, the headless backend, the bindings and the stdlib (TODO-5599), the AppKit backend and the bundle's
   Info.plist (TODO-5600), then the editor's tab and open-file handling (TODO-5601). A bytecode-only bundle passes its

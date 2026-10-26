@@ -102,9 +102,6 @@ template <class Binder> void forEachBinding(Binder &&bindOne) {
   bindOne("ps_ui_set_default_app", [](embed::HostTextView extensions, embed::HostTextView appPath) {
     return ps_ui_set_default_app(text(extensions).c_str(), text(appPath).c_str());
   });
-  bindOne("ps_ui_open_application_panel", [](std::string_view title) {
-    return embed::HostText(ps_ui_open_application_panel(text(title).c_str()));
-  });
   bindOne("ps_ui_window_set_content",
           [](uint64_t window, uint64_t widget) { return ps_ui_window_set_content(window, widget); });
   bindOne("ps_ui_window_set_edited",

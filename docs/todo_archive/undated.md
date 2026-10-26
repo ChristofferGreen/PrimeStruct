@@ -427,3 +427,14 @@
     - the smoke test: the editor bundle's Info.plist declares the catch-all type; a harness drop of a file with an undeclared extension, and a real Launch Services open of the same kind of file (`open -n -W -a EditorSmoke.app --env PRIMESTRUCT_UI_SNAPSHOT=... file`), open it in the editor (the pictures show its path as the title and its text, and differ from an editor started with nothing); full release gate green
   - stop_rule: file drops on the text views and the catch-all document type; a drop on the preview pane or the tab bar is not part of this.
   - notes: a real mouse drag, a real drop on the Dock icon and a Finder double click are not automated (the Launch Services open is the same path the Finder uses). Dropping on the web preview is blocked by its navigation rules.
+
+- [x] TODO-5606: Remove the application chooser from the Files tab
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-26
+  - phase: File associations (docs/NativeUiPlan.md section 16)
+  - parallel_track: file-associations
+  - scope: The Files tab had a "Default application" heading and a "Choose... (PrimeScroll)" button that opened an Open dialog limited to applications, kept as the `defaultApp` preference, so that another editor than PrimeScroll could be made the default of the selected types. It came from reading "specify the binary the normal macOS way" as a feature of the app; that is Finder's Open With and Change All, which the declared document types support. The button, its heading, the preference and the unused `ps_ui_open_application_panel` (ABI 104 -> 103 functions, with the headless answers, `appanswer:` scenario entries, the binding, `App.applicationPanel` and `PRIMESTRUCT_UI_APP_PANEL`) are removed. The tab is the hint, the list of file types and Make Default, which makes PrimeScroll the default of the selected rows. Handles of the Files tab: the form 22, the hint 23, the list 24, Make Default 25.
+  - acceptance:
+    - the editor scenarios (the Files page outline, selecting and applying rows, all rows selected, nothing selected, no file-type call before Settings opens), the headless and bindings tests (103 functions) pass through the VM, optexe and native mirrors; the smoke picture of the Files tab shows only the list and the button; full release gate green
+  - stop_rule: the chooser and what only it used.

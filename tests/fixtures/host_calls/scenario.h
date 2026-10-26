@@ -101,8 +101,6 @@ inline void applyHeadlessScenario(std::string_view scenario) {
       headless::pushClickButton(static_cast<uint64_t>(std::atoll(rest.c_str())));
     } else if (key == "openfile") {
       headless::pushOpenFile(decodeScenarioText(rest));
-    } else if (key == "appanswer") {
-      headless::pushApplicationPanelAnswer(decodeScenarioText(rest));
     } else if (key == "activate") {
       headless::pushActivateWindow(static_cast<uint64_t>(std::atoll(rest.c_str())));
     } else if (key == "quit") {

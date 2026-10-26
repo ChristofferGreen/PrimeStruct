@@ -162,7 +162,7 @@ main() {
 
 TEST_CASE("native ui bindings cover every ABI function once") {
   const auto signatures = primec::ui::nativeUiBindingSignatures();
-  CHECK(signatures.size() == 104);
+  CHECK(signatures.size() == 103);
   for (const char *expected : {"ps_ui_init(string) -> bool", "ps_ui_window_create(string, i32, i32) -> u64",
                                "ps_ui_text_view_get_text(u64) -> text", "ps_ui_window_set_edited(u64, bool) -> bool",
                                "ps_ui_menu_add_item(u64, string, string, i32) -> bool",
@@ -197,7 +197,6 @@ TEST_CASE("native ui bindings cover every ABI function once") {
                                "ps_ui_button_set_title(u64, text) -> bool", "ps_ui_document_type_count() -> i32",
                                "ps_ui_document_type_extensions(i32) -> text", "ps_ui_default_app(text) -> text",
                                "ps_ui_set_default_app(text, text) -> bool",
-                               "ps_ui_open_application_panel(string) -> text",
                                "ps_ui_list_create() -> u64", "ps_ui_list_add_item(u64, text) -> bool",
                                "ps_ui_list_set_item(u64, i32, text) -> bool", "ps_ui_list_item_count(u64) -> i32",
                                "ps_ui_list_set_selected(u64, i32, bool) -> bool",

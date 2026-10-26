@@ -346,15 +346,4 @@ bool ps_ui_set_default_app(const char *extensions, const char *appPath) {
   return loggedFlag(call, any);
 }
 
-const char *ps_ui_open_application_panel(const char *title) {
-  State &s = state();
-  s.returnedText.clear();
-  if (usable() && !s.appAnswers.empty()) {
-    s.returnedText = std::move(s.appAnswers.front());
-    s.appAnswers.pop_front();
-  }
-  s.panelChosen = !s.returnedText.empty();
-  return logged("ps_ui_open_application_panel(" + quote(title) + ")", s.returnedText.c_str(), quote(s.returnedText));
-}
-
 } // extern "C"

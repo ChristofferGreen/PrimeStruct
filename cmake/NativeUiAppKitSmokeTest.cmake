@@ -129,7 +129,7 @@ foreach(shot gutter code menu tabs preview longtop scrolltext scrollpreview scro
 endforeach()
 
 # The editor's settings window on its Files tab (the fourth page of the tabs control 21): the list of file types with
-# the application that opens each, and the same with two rows selected through the harness (the list is control 25).
+# the application that opens each, and the same with two rows selected through the harness (the list is control 24).
 foreach(var OPEN SCROLL CARET TYPE TYPE_AFTER_SCROLL MENU REPORT CLICK)
   unset(ENV{PRIMESTRUCT_UI_${var}})
 endforeach()
@@ -140,7 +140,7 @@ foreach(shot files filesrows)
   set(snapshot "${WORK_DIR}/editor_${shot}.png")
   set(ENV{PRIMESTRUCT_UI_SNAPSHOT} "${snapshot}")
   if(shot STREQUAL "filesrows")
-    set(ENV{PRIMESTRUCT_UI_CLICK} "tab:21:3;rows:25:1,2")
+    set(ENV{PRIMESTRUCT_UI_CLICK} "tab:21:3;rows:24:1,2")
   else()
     set(ENV{PRIMESTRUCT_UI_CLICK} "tab:21:3")
   endif()

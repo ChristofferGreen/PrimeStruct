@@ -303,11 +303,6 @@ void pushOpenFile(std::string path) {
   state().actions.push_back(std::move(a));
 }
 
-void pushApplicationPanelAnswer(std::string path) {
-  recordScenario("appanswer:" + encodeScenarioText(path));
-  state().appAnswers.push_back(std::move(path));
-}
-
 std::string defaultApp(const std::string &extension) {
   std::string name = extension;
   if (!name.empty() && name.front() == '.') {

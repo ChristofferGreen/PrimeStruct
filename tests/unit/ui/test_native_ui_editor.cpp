@@ -483,11 +483,10 @@ constexpr uint64_t SizePopup = 17;
 constexpr uint64_t PreviewBox = 19;
 constexpr uint64_t ScrollPopup = 20;
 constexpr uint64_t SettingsTabs = 21;
-// The Files tab: the form 22, the application button 23, the hint 24, the file type list 25, "Make Default" 26.
-constexpr uint64_t ApplicationButton = 23;
-constexpr uint64_t FileTypeList = 25;
-constexpr uint64_t MakeDefaultButton = 26;
-constexpr uint64_t TabAfterSettings = 27; // a New command after the settings window: window 27, view 28
+// The Files tab: the form 22, the hint 23, the file type list 24, "Make Default" 25.
+constexpr uint64_t FileTypeList = 24;
+constexpr uint64_t MakeDefaultButton = 25;
+constexpr uint64_t TabAfterSettings = 26; // a New command after the settings window: window 26, view 27
 constexpr int32_t CommandSettings = 8;
 
 // The file types of the headless backend (examples/apps/text_editor/file_types.txt) and the buttons of the Files tab.
@@ -518,7 +517,7 @@ std::string fileTypeLine(const HeadlessFileType &type, const std::string &defaul
 // The outline lines of the Files page. `defaults` maps a type's name to the display name of its default application;
 // `selected` is the list's selection ("1,2").
 std::vector<std::string> filesPage(const std::string &applicationName, const std::map<std::string, std::string> &defaults,
-                                   const std::string &selected) {
+                                   const std::string &selected) {  // applicationName: the app that shows a check mark
   std::string items;
   for (size_t i = 0; i < HeadlessFileTypes.size(); ++i) {
     const auto found = defaults.find(HeadlessFileTypes[i].name);
@@ -527,8 +526,6 @@ std::vector<std::string> filesPage(const std::string &applicationName, const std
   }
   return {"  page \"Files\":",
           "    form",
-          "      heading \"Default application\"",
-          "      row \"Application\": button \"Choose... (" + applicationName + ")\"",
           "      heading \"File types\"",
           "      control: label \"Select file types, then press Make Default.\"",
           "      control: list [" + items + "] selected=" + selected,
@@ -1117,33 +1114,6 @@ TEST_CASE("selecting file types alone changes nothing; the button applies the se
   CHECK(headless::defaultApp("md").empty());
 }
 
-TEST_CASE("settings chooses another application for the selected file types") {
-  headless::reset();
-  headless::pushCommand(CommandSettings);
-  headless::pushApplicationPanelAnswer("/Applications/Other.app");
-  headless::pushClickButton(ApplicationButton);
-  headless::pushSelectListRows(FileTypeList, {2}); // PrimeStruct source (.prime)
-  headless::pushClickButton(MakeDefaultButton);
-  headless::pushCloseWindow(EditorWindow);
-  runEditor();
-  CHECK(headless::prefList("defaultApp") == std::vector<std::string>{"/Applications/Other.app"});
-  CHECK(headless::defaultApp("prime") == "/Applications/Other.app");
-  CHECK(headless::defaultApp("md").empty());
-  CHECK(headless::controlOutline(SettingsTabs) ==
-        settingsOutline(otherPages(), "Other", {{"PrimeStruct source", "Other"}}, "2"));
-  CHECK(countCalls("ps_ui_open_application_panel(\"Choose an application\")") == 1);
-}
-
-TEST_CASE("settings keeps the application when the chooser is cancelled") {
-  headless::reset();
-  headless::pushCommand(CommandSettings);
-  headless::pushClickButton(ApplicationButton);
-  headless::pushCloseWindow(EditorWindow);
-  runEditor();
-  CHECK(headless::prefList("defaultApp").empty());
-  CHECK(headless::controlOutline(SettingsTabs) == settingsOutline(otherPages(), "PrimeScroll"));
-}
-
 TEST_CASE("settings makes the app the default for all file types when every row is selected") {
   headless::reset();
   headless::pushCommand(CommandSettings);
@@ -1173,8 +1143,7 @@ TEST_CASE("settings makes the app the default for all file types when every row 
 
 // The launch time must not change: nothing of the file associations is asked before the settings window is built.
 TEST_CASE("the file types are not looked up before the settings window opens") {
-  const char *calls[] = {"ps_ui_document_type_", "ps_ui_default_app(", "ps_ui_set_default_app(", "ps_ui_app_path(",
-                         "ps_ui_open_application_panel(", "ps_ui_button_", "ps_ui_list_"};
+  const char *calls[] = {"ps_ui_document_type_", "ps_ui_default_app(", "ps_ui_set_default_app(", "ps_ui_app_path(", "ps_ui_button_", "ps_ui_list_"};
   headless::reset();
   headless::pushCloseWindow(EditorWindow);
   runEditor();

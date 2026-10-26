@@ -2956,34 +2956,6 @@ bool ps_ui_set_default_app(const char *extensions, const char *appPath) {
   }
 }
 
-const char *ps_ui_open_application_panel(const char *title) {
-  State &s = state();
-  s.returnedText.clear();
-  s.panelChosen = false;
-  if (!usable()) {
-    return s.returnedText.c_str();
-  }
-  if (const char *answer = std::getenv("PRIMESTRUCT_UI_APP_PANEL"); answer != nullptr && *answer != '\0') {
-    // Snapshot runs have nobody to click: the panel answers with this path.
-    s.returnedText = answer;
-    s.panelChosen = true;
-    return s.returnedText.c_str();
-  }
-  @autoreleasepool {
-    NSOpenPanel *panel = [NSOpenPanel openPanel];
-    panel.title = toNSString(title);
-    panel.canChooseFiles = YES;
-    panel.canChooseDirectories = NO;
-    panel.allowsMultipleSelection = NO;
-    panel.allowedContentTypes = @[ UTTypeApplication ];
-    panel.directoryURL = [NSURL fileURLWithPath:@"/Applications"];
-    if ([panel runModal] == NSModalResponseOK && panel.URL != nil) {
-      s.returnedText = panel.URL.path.UTF8String;
-      s.panelChosen = !s.returnedText.empty();
-    }
-  }
-  return s.returnedText.c_str();
-}
 
 int32_t ps_ui_pref_get_int(const char *key, int32_t fallback) {
   if (!usable() || key == nullptr || *key == '\0') {

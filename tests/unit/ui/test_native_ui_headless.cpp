@@ -1007,16 +1007,6 @@ TEST_CASE("the default application of file extensions can be read and set") {
   CHECK_FALSE(ps_ui_set_default_app(",,", ""));
 }
 
-TEST_CASE("the application panel answers with the scripted choices") {
-  startApp();
-  headless::pushApplicationPanelAnswer("/Applications/Other.app");
-  CHECK(std::string(ps_ui_open_application_panel("Choose")) == "/Applications/Other.app");
-  CHECK(ps_ui_panel_chosen());
-  CHECK(std::string(ps_ui_open_application_panel("Choose")).empty());
-  CHECK_FALSE(ps_ui_panel_chosen());
-  CHECK(headless::pushedScenario() == "appanswer:/Applications/Other.app");
-}
-
 TEST_CASE("lists keep rows and a selection of any number of rows") {
   startApp();
   const uint64_t list = ps_ui_list_create();

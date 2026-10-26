@@ -390,9 +390,6 @@ const char *ps_ui_default_app(const char *extension);
 /* Makes the application at `appPath` ("" or NULL: this app) the system's default for every extension of the
  * comma separated list. False when the list is empty or the system refuses (the user may be asked to confirm). */
 bool ps_ui_set_default_app(const char *extensions, const char *appPath);
-/* Asks for an application to choose, the normal Open dialog limited to applications. The chosen path, or "" when
- * cancelled; ps_ui_panel_chosen() tells which. */
-const char *ps_ui_open_application_panel(const char *title);
 
 /* Dialogs ---------------------------------------------------------------- */
 

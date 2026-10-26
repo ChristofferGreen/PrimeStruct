@@ -226,10 +226,6 @@ ps_ui_default_app([/std/text/String] extension) {
 ps_ui_set_default_app([/std/text/String] extensions, [/std/text/String] appPath) {
 }
 
-[host return</std/text/String>]
-ps_ui_open_application_panel([string] title) {
-}
-
 [host return<bool>]
 ps_ui_window_set_style([u64] window, [i32] style) {
 }
@@ -1145,12 +1141,6 @@ App() {
   [public return<bool>]
   setDefaultApp([/std/text/String] extensions, [/std/text/String] application) {
     return(ps_ui_set_default_app(extensions, application))
-  }
-
-  // Asks for an application (the Open dialog limited to applications); see panelChosen().
-  [public return</std/text/String>]
-  applicationPanel([string] title) {
-    return(ps_ui_open_application_panel(title))
   }
 
   // Why the last loadFile/saveFile failed; empty when none has.

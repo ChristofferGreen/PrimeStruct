@@ -100,7 +100,6 @@ struct State {
   std::deque<std::string> openAnswers;
   std::deque<std::string> saveAnswers;
   std::deque<int32_t> alertAnswers;
-  std::deque<std::string> appAnswers;               // answers of the application panel
   std::map<std::string, std::string> defaultApps;   // extension -> the application that opens it by default
   std::map<std::string, bool> prefs;
   std::map<std::string, int32_t> intPrefs;
