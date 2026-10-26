@@ -356,3 +356,6 @@ if(EXISTS "${lsregister}")
     execute_process(COMMAND "${lsregister}" -u "${WORK_DIR}/${bundle}.app" OUTPUT_QUIET ERROR_QUIET)
   endforeach()
 endif()
+# Launch Services registers an app again whenever it finds it on disk, so the bundles that declare types are deleted
+# (the pictures and reports stay for looking at).
+file(REMOVE_RECURSE "${WORK_DIR}/EditorSmoke.app" "${WORK_DIR}/FileTypesDemo.app")
