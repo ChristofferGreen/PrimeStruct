@@ -129,6 +129,8 @@ struct State {
   bool snapshotClicked = false;
   std::string snapshotOpenFileEvent; // PRIMESTRUCT_UI_OPEN_FILE_EVENT=path: the system "asks" the app to open it
   bool snapshotOpenFileSent = false;
+  std::string snapshotDrop; // PRIMESTRUCT_UI_DROP=path: the file is dropped on the text view
+  bool snapshotDropped = false;
   int snapshotCaretLine = -1;      // PRIMESTRUCT_UI_CARET=N puts the text cursor at the start of line N
   bool snapshotCareted = false;
   bool snapshotTypeAfterScroll = false; // PRIMESTRUCT_UI_TYPE_AFTER_SCROLL: type once the scroll step is done
@@ -179,6 +181,15 @@ void enqueue(int32_t kind, uint64_t window = 0, uint64_t widget = 0, int32_t com
   event.widget = widget;
   event.command = command;
   state().pending.push_back(event);
+}
+
+// Files dropped on a text view (or handed over by the snapshot harness): each path is an open-file request.
+void handleDroppedFiles(NSArray<NSURL *> *urls) {
+  for (NSURL *url in urls) {
+    if (url.isFileURL && url.path != nil && !url.hasDirectoryPath) {
+      enqueue(PS_UI_EVENT_OPEN_FILE, 0, 0, 0, url.path.UTF8String);
+    }
+  }
 }
 
 NSWindow *liveWindow(uint64_t handle) {
@@ -1069,6 +1080,43 @@ void drawPreviewWeb(uint64_t window, NSView *view, NSBitmapImageRep *rep) {
 }
 @end
 
+// The text views take files dropped on them as open requests instead of pasting their paths; other drags (text) are
+// the text view's own. The class is applied to a text view after it is made (it adds no instance variables).
+static NSArray<NSURL *> *droppedFileURLs(id<NSDraggingInfo> info) {
+  return [info.draggingPasteboard readObjectsForClasses:@[ NSURL.class ]
+                                                options:@{NSPasteboardURLReadingFileURLsOnlyKey : @YES}];
+}
+
+@interface PSDropTextView : NSTextView
+@end
+
+@implementation PSDropTextView
+- (NSArray<NSPasteboardType> *)acceptableDragTypes {
+  return [[super acceptableDragTypes] arrayByAddingObject:NSPasteboardTypeFileURL];
+}
+
+- (NSDragOperation)draggingEntered:(id<NSDraggingInfo>)sender {
+  return droppedFileURLs(sender).count > 0 ? NSDragOperationCopy : [super draggingEntered:sender];
+}
+
+- (NSDragOperation)draggingUpdated:(id<NSDraggingInfo>)sender {
+  return droppedFileURLs(sender).count > 0 ? NSDragOperationCopy : [super draggingUpdated:sender];
+}
+
+- (BOOL)prepareForDragOperation:(id<NSDraggingInfo>)sender {
+  return droppedFileURLs(sender).count > 0 ? YES : [super prepareForDragOperation:sender];
+}
+
+- (BOOL)performDragOperation:(id<NSDraggingInfo>)sender {
+  NSArray<NSURL *> *urls = droppedFileURLs(sender);
+  if (urls.count == 0) {
+    return [super performDragOperation:sender];
+  }
+  handleDroppedFiles(urls);
+  return YES;
+}
+@end
+
 namespace {
 
 PSController *controller() {
@@ -1539,6 +1587,9 @@ bool ps_ui_init(const char *appName) {
       s.snapshotCaretLine = std::atoi(caret);
     }
     s.snapshotTypeAfterScroll = std::getenv("PRIMESTRUCT_UI_TYPE_AFTER_SCROLL") != nullptr;
+    if (const char *drop = std::getenv("PRIMESTRUCT_UI_DROP"); drop != nullptr && *drop != '\0') {
+      s.snapshotDrop = drop;
+    }
     if (const char *request = std::getenv("PRIMESTRUCT_UI_OPEN_FILE_EVENT"); request != nullptr && *request != '\0') {
       s.snapshotOpenFileEvent = request;
     }
@@ -1702,6 +1753,11 @@ int32_t ps_ui_wait_event(void) {
             [target.window makeFirstResponder:target];
             [target insertText:toNSString(s.snapshotTypeText.c_str()) replacementRange:NSMakeRange(NSNotFound, 0)];
           }
+        } else if (!s.snapshotDrop.empty() && !s.snapshotDropped && s.snapshotIdleSlices >= 6) {
+          // A file dropped on the text view: the same code as a real drop.
+          s.snapshotDropped = true;
+          s.snapshotIdleSlices = 0;
+          handleDroppedFiles(@[ [NSURL fileURLWithPath:toNSString(s.snapshotDrop.c_str())] ]);
         } else if (!s.snapshotOpenFileEvent.empty() && !s.snapshotOpenFileSent && s.snapshotIdleSlices >= 6) {
           // The system asking the app to open a file (a double click in the Finder).
           s.snapshotOpenFileSent = true;
@@ -1986,6 +2042,7 @@ uint64_t ps_ui_text_view_create(void) {
   @autoreleasepool {
     NSScrollView *scroll = [NSTextView scrollableTextView];
     NSTextView *view = scroll.documentView;
+    object_setClass(view, [PSDropTextView class]);
     view.richText = NO;
     view.allowsUndo = YES;
     view.automaticQuoteSubstitutionEnabled = NO;

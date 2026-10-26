@@ -3,7 +3,8 @@
 
 The input is a file_types.txt: one `name|extensions|optional type identifier` per line, extensions separated by
 commas, `#` comment lines and blank lines skipped (see examples/apps/text_editor/file_types.txt). The output is the
-`CFBundleDocumentTypes` array (an alternate handler for every type, the owner for a type the app exports) and, for the
+`CFBundleDocumentTypes` array (an alternate handler for every type, the owner for a type the app exports, and a
+catch-all entry for any other file that is never a default) and, for the
 lines with a type identifier, a `UTExportedTypeDeclarations` array that declares them as source code.
 """
 
@@ -50,6 +51,14 @@ def main():
                 )
             entry += "</dict>"
             documents.append(entry)
+    # Every other file: dropped on the Dock icon, and offered in Open With. Handler rank None: the app is never
+    # anybody's default for them by itself.
+    documents.append(
+        "<dict><key>CFBundleTypeName</key><string>Any file</string>"
+        "<key>CFBundleTypeRole</key><string>Editor</string>"
+        "<key>LSHandlerRank</key><string>None</string>"
+        f"<key>LSItemContentTypes</key><array>{strings(['public.data'])}</array></dict>"
+    )
     out = "<key>CFBundleDocumentTypes</key><array>" + "".join(documents) + "</array>"
     if exported:
         out += "<key>UTExportedTypeDeclarations</key><array>" + "".join(exported) + "</array>"

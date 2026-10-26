@@ -2063,6 +2063,7 @@ are left unarchived.
 | TODO-5601 | The editor's Files settings and open-file requests | [undated.md](todo_archive/undated.md) | - |
 | TODO-5602 | Bytecode-only bundles pass their arguments to the program | [undated.md](todo_archive/undated.md) | - |
 | TODO-5604 | Selectable lists and the Files tab on them | [undated.md](todo_archive/undated.md) | - |
+| TODO-5605 | Drag and drop, and opening any file | [undated.md](todo_archive/undated.md) | - |
 
 <!-- INDEX-END -->
 

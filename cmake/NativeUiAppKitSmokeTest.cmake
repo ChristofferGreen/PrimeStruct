@@ -228,7 +228,8 @@ endif()
 # The editor's bundle declares its file types (file_types.txt next to the program): the document types, and the
 # exported type of .prime; the plist must be valid.
 file(READ "${WORK_DIR}/EditorSmoke.app/Contents/Info.plist" editorPlist)
-foreach(needle "CFBundleDocumentTypes" "UTExportedTypeDeclarations" "org.primestruct.prime-source"
+foreach(needle "CFBundleDocumentTypes" "UTExportedTypeDeclarations" "org.primestruct.prime-source" "public.data"
+               "<string>Any file</string>"
                "<string>Markdown</string>" "<string>prime</string>" "<string>markdown</string>")
   string(FIND "${editorPlist}" "${needle}" found)
   if(found EQUAL -1)
@@ -241,6 +242,52 @@ if(NOT lintRc EQUAL 0)
   message(FATAL_ERROR "the editor's Info.plist is not valid: ${lintOut}${lintErr}")
 endif()
 message(STATUS "editor Info.plist declares its file types")
+
+# A file dropped on the editor (the harness runs the code of a real drop), and a file of an undeclared kind opened
+# the way the Finder does it (Launch Services, `open -a`): each opens in the editor, so its picture shows the file
+# (its path as the window's title) and differs from the editor started with nothing.
+set(unknownFile "${WORK_DIR}/dropped_note.unknownext")
+file(WRITE "${unknownFile}" "A file with an extension the editor does not declare.\n")
+foreach(var OPEN SCROLL CARET TYPE TYPE_AFTER_SCROLL MENU REPORT CLICK COMMANDS DROP)
+  unset(ENV{PRIMESTRUCT_UI_${var}})
+endforeach()
+set(ENV{PRIMESTRUCT_UI_PREFS} "restoreSession=0")
+foreach(shot opennothing opendrop openfinder)
+  set(snapshot "${WORK_DIR}/editor_${shot}.png")
+  set(ENV{PRIMESTRUCT_UI_SNAPSHOT} "${snapshot}")
+  if(shot STREQUAL "opendrop")
+    set(ENV{PRIMESTRUCT_UI_DROP} "${unknownFile}")
+  else()
+    unset(ENV{PRIMESTRUCT_UI_DROP})
+  endif()
+  if(shot STREQUAL "openfinder")
+    execute_process(
+      COMMAND open -n -W -a "${WORK_DIR}/EditorSmoke.app"
+              --env "PRIMESTRUCT_UI_SNAPSHOT=${snapshot}" --env "PRIMESTRUCT_UI_PREFS=restoreSession=0" "${unknownFile}"
+      RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err
+      TIMEOUT 90)
+  else()
+    execute_process(
+      COMMAND "${WORK_DIR}/EditorSmoke.app/Contents/MacOS/EditorSmoke"
+      RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err
+      TIMEOUT 90)
+  endif()
+  if(NOT rc EQUAL 0 OR NOT EXISTS "${snapshot}")
+    message(FATAL_ERROR "editor ${shot} run exited with '${rc}' and no picture: ${out}${err}")
+  endif()
+  file(SIZE "${snapshot}" size)
+  message(STATUS "editor ${shot} snapshot ok (${size} bytes)")
+endforeach()
+unset(ENV{PRIMESTRUCT_UI_PREFS})
+unset(ENV{PRIMESTRUCT_UI_DROP})
+file(SHA256 "${WORK_DIR}/editor_opennothing.png" nothingHash)
+foreach(shot opendrop openfinder)
+  file(SHA256 "${WORK_DIR}/editor_${shot}.png" shotHash)
+  if(shotHash STREQUAL nothingHash)
+    message(FATAL_ERROR "the editor did not open the file of ${shot}")
+  endif()
+endforeach()
+message(STATUS "a dropped file and a Launch Services open of an undeclared file type open in the editor")
 
 # A program that reports the declared file types, the app's path and the default application of .txt files into
 # a file, and the files the system asks it to open (the harness stands in for the Finder).

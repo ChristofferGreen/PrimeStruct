@@ -460,6 +460,11 @@ window, including `.prime`, and the application can be chosen the normal macOS w
   limited to applications, which is how another editor than PrimeScroll is chosen by hand.
 - **Opening.** A double click, Open With or a drop on the icon reaches the program as `PS_UI_EVENT_OPEN_FILE`
   (`AppEvent.openFile`, the path from `App.eventText()`).
+- **Drag and drop.** The text views take files dropped on them as open requests (`PSDropTextView`: each dropped file is a
+  `PS_UI_EVENT_OPEN_FILE`; the path is not pasted; dragging text is unchanged). The catch-all "Any file" document type
+  (`public.data`, handler rank None) of the bundle lets any file be dropped on the Dock icon and offers the app in Open
+  With for every file, without making it anybody's default. Checked with the harness drop and with a real
+  Launch Services open of an undeclared extension; a real mouse drag and a Dock drop are tried by hand.
 - **Settings.** A Files tab. A button titled "Choose... (PrimeScroll)" shows the application the types are made to open
   with and opens the application chooser (any editor; kept as the `defaultApp` preference). Below it a selectable list
   (`ps_ui_list_*`: rows of text, any number selected, a change of the selection is a `PS_UI_EVENT_CONTROL_CHANGED`) has
@@ -481,7 +486,8 @@ window, including `.prime`, and the application can be chosen the normal macOS w
   command line, so a program should not open it twice); `CFBundleDocumentTypes` of the Info.plist for the declared types;
   `NSWorkspace` with `UTType` for reading and setting the default; `NSOpenPanel` limited to applications for choosing one.
   The snapshot harness has `PRIMESTRUCT_UI_CLICK=button:H` (and `tab:H:I`, which shows page I of the tabs control H, and `rows:H:1,3`, which selects those rows of the list H),
-  `PRIMESTRUCT_UI_OPEN_FILE_EVENT=path` and `PRIMESTRUCT_UI_APP_PANEL=path`. Setting a default is not exercised by a test (it changes the user's settings); reading
+  `PRIMESTRUCT_UI_OPEN_FILE_EVENT=path`, `PRIMESTRUCT_UI_DROP=path` (a file dropped on the text view) and
+  `PRIMESTRUCT_UI_APP_PANEL=path`. Setting a default is not exercised by a test (it changes the user's settings); reading
   it is.
 - **Slices.** The ABI, the headless backend, the bindings and the stdlib (TODO-5599), the AppKit backend and the bundle's
   Info.plist (TODO-5600), then the editor's tab and open-file handling (TODO-5601). A bytecode-only bundle passes its

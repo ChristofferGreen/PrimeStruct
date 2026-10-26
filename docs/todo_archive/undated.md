@@ -415,3 +415,15 @@
     - headless list tests, the bindings list (104 functions) and the editor scenarios through the VM, optexe and native mirrors (the Files page outline, selecting and applying rows, choosing another application, a cancelled chooser, all rows selected, nothing selected, no file-type call before Settings opens); the smoke pictures of the Files tab differ with a selection; full release gate green
   - stop_rule: the list control and the Files tab; drag and drop and opening any file are TODO-5605.
   - notes: the first Files tab (a button per type) was replaced because the user wanted a list that shows which types PrimeScroll is the default of and one button for the selected ones. Handles of the Files tab follow creation order (the form 22, the application button 23, the hint 24, the list 25, Make Default 26).
+
+- [x] TODO-5605: Drag and drop, and opening any file
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-26
+  - phase: File associations (docs/NativeUiPlan.md section 16)
+  - parallel_track: file-associations
+  - scope: Files dropped on PrimeScroll open in it. The text views are `PSDropTextView` (applied with `object_setClass` after `[NSTextView scrollableTextView]`; it adds no instance variables): `acceptableDragTypes` adds `NSPasteboardTypeFileURL`, a drag that carries files is accepted as a copy and each dropped file (directories skipped) is a `PS_UI_EVENT_OPEN_FILE` for the program instead of its path being pasted into the text, while other drags (text) are the text view's own. The bundle's Info.plist (`scripts/document_types_plist.py`) also declares a catch-all document type ("Any file", `public.data`, handler rank None): any file can be dropped on the Dock icon and the app is offered in Open With for every file, without ever becoming anybody's default by itself. The snapshot harness has `PRIMESTRUCT_UI_DROP=path`, which runs the same code as a real drop. The editor already opened or selected the tab of an open request.
+  - acceptance:
+    - the smoke test: the editor bundle's Info.plist declares the catch-all type; a harness drop of a file with an undeclared extension, and a real Launch Services open of the same kind of file (`open -n -W -a EditorSmoke.app --env PRIMESTRUCT_UI_SNAPSHOT=... file`), open it in the editor (the pictures show its path as the title and its text, and differ from an editor started with nothing); full release gate green
+  - stop_rule: file drops on the text views and the catch-all document type; a drop on the preview pane or the tab bar is not part of this.
+  - notes: a real mouse drag, a real drop on the Dock icon and a Finder double click are not automated (the Launch Services open is the same path the Finder uses). Dropping on the web preview is blocked by its navigation rules.

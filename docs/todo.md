@@ -104,8 +104,7 @@ of sync with them.
 | TODO-5569 | Slice loans, escapes and returned borrows | ready | slices |
 | TODO-5570 | Slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views | ready | slices |
 | TODO-5540 | `string` as the UTF-8 text view | blocked | string-view |
-| TODO-5605 | Drag and drop, and opening any file | ready | file-associations |
-| TODO-5603 | Startup audit: what a launch loads and does | blocked | startup |
+| TODO-5603 | Startup audit: what a launch loads and does | ready | startup |
 | TODO-5586 | Native String heap: pooled blocks, statistics and limit | deferred | native-backend-strings |
 | TODO-5574 | Simple C++ emitters run bytes and strings | deferred | string-backends |
 | TODO-5568 | String conveniences: operators, numbers, push of code points | blocked | string-owned |
@@ -139,7 +138,7 @@ of sync with them.
 
 - TODO-5567 (bytes): packed `array<u8>`
 - TODO-5570 (slices): slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views
-- TODO-5605 (file-associations): drag and drop, and opening any file
+- TODO-5603 (startup): startup audit: what a launch loads and does
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5510 (control-returns): `return` returns from pick arms and lambdas correctly
@@ -150,7 +149,7 @@ of sync with them.
 
 2. TODO-5567
 3. TODO-5570
-4. TODO-5605
+4. TODO-5603
 5. TODO-5536
 6. TODO-5535
 7. TODO-5510
@@ -162,7 +161,7 @@ of sync with them.
 - Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5567, TODO-5570, TODO-5569, TODO-5540, TODO-5568, TODO-5530, TODO-5574
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
-- File associations and startup (docs/NativeUiPlan.md section 16): TODO-5605, TODO-5603
+- Startup (docs/NativeUiPlan.md section 16): TODO-5603
 - Lifecycle (docs/spec/value-lifecycle.md): TODO-5527
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
@@ -299,22 +298,9 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - full release gate green
   - stop_rule: the text view on the VM.
 
-- [ ] TODO-5605: Drag and drop, and opening any file
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-26
-  - phase: File associations (docs/NativeUiPlan.md section 16)
-  - parallel_track: file-associations
-  - scope: Files dropped on PrimeScroll open in it. (1) Dropped on the editor's text views: a runtime subclass of `NSTextView` for the text views, registered for file URLs, takes the drop (`draggingEntered:`, `performDragOperation:`) and hands every dropped path to the program as a `PS_UI_EVENT_OPEN_FILE` instead of pasting the path into the text; other drops (text) behave as before; the harness has `PRIMESTRUCT_UI_DROP=path` that runs the same code. (2) Dropped on the Dock icon, and listed in Open With for every file: the bundle's Info.plist (`scripts/document_types_plist.py`) also declares a catch-all document type (`public.data`, handler rank None, so the app is offered but never becomes anybody's default). The editor already opens or selects the tab of an open request. Real Launch Services opens of a file with an extension that is not declared are checked with `open -n -W -a`.
-  - acceptance:
-    - the bundled editor's Info.plist declares the catch-all type (plutil); `open -n -W -a Name.app --env PRIMESTRUCT_UI_SNAPSHOT=... file.unknownext` opens the file (the picture shows it); a harness drop opens a tab and does not paste the path; full release gate green
-  - stop_rule: file drops into the text views and the catch-all document type; dropping on the preview pane and on the tab bar are not part of this.
-  - notes: a real drag with the mouse is not automated.
-
 - [ ] TODO-5603: Startup audit: what a launch loads and does
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5605
+  - status: ready
   - created_at: 2026-10-26
   - phase: Native PrimeScroll (docs/NativeUiPlan.md)
   - parallel_track: startup
