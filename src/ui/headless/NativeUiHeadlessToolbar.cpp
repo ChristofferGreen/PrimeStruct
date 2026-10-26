@@ -167,7 +167,7 @@ bool ps_ui_window_set_toolbar(uint64_t window, uint64_t handle) {
   const std::string call = "ps_ui_window_set_toolbar(" + std::to_string(window) + ", " + std::to_string(handle) + ")";
   Window *w = usable() ? liveWindow(window) : nullptr;
   const bool ok = w != nullptr && (handle == 0 || toolbar(handle) != nullptr);
-  if (ok) {
+  if (ok && w->state.toolbar != handle) { // the same toolbar again changes nothing
     w->state.toolbar = handle;
     w->state.toolbarSelected = -1;
   }

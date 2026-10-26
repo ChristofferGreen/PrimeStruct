@@ -497,3 +497,15 @@
     - smoke pictures of a window with the toolbar (all items visible, the segmented control on each mode) and of the preview-only mode; a harness-run edit changes the text and one undo restores it; full release gate green
   - stop_rule: the AppKit backend; the editor is TODO-5612.
   - notes: `tests/fixtures/ui/screenshot/toolbar_demo.prime` and eight smoke runs (pictures and reports: bold, undo, preview-only, split, format, add row, insert table); harness variables PRIMESTRUCT_UI_SELECT and PRIMESTRUCT_UI_UNDO. Undo and redo of a text view did not reach the delegate, so the backend observes the undo manager. Open: the selected segment of the toolbar's segmented control is drawn as a blank white pill on the last segment in every offscreen picture whatever the mode; check it on the installed app in TODO-5612 (the commands and the layouts are right).
+
+- [x] TODO-5612: The editor's markdown toolbar and Format menu
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-26
+  - phase: Markdown toolbar (docs/NativeUiPlan.md section 17)
+  - parallel_track: markdown-toolbar
+  - scope: PrimeScroll shows the toolbar for markdown windows only (file ends in `.md` or `.markdown`, or the preview is on), decided when a file opens, is saved or the preview changes, and built when the first markdown window needs it: the segmented Editor, Split and Preview control, then Bold, Italic, Strikethrough, Code, Link, Image, a Heading menu (1 to 3 and Paragraph), Bulleted, Numbered and Task lists, Quote, Code Block, Horizontal Rule and a Table menu (Insert 2 by 2, 3 by 3, 4 by 3, 5 by 4; Format, Add Row, Add Column, Delete Row, Delete Column, Align Left, Center, Right). A Format menu offers the same commands with shortcuts (Bold, Italic and Link at least), View gets Editor, Split View and Preview commands, and a format command in the preview-only mode switches to split first. The session keeps the preview mode of every tab (0, 1 or 2). Tests through the headless backend on the VM, optexe and native editors; the installed PrimeScroll shows the toolbar.
+  - acceptance:
+    - editor scenarios: no toolbar for a text file, the toolbar for a markdown file and for a file with the preview on, the commands change the text through the selection, the modes switch and are restored with the session; the toolbar's outline is pinned; the pictures of the installed app; full release gate green
+  - stop_rule: the editor's toolbar, Format menu, commands and session; smart list continuation on Return is separate.
+  - notes: PrimeScroll builds the toolbar when the first markdown window needs it (three handles: the toolbar and its two menus); the Format menu has Bold cmd+b, Italic cmd+i, Strikethrough cmd+shift+x, Code cmd+e and Link cmd+k, View has Editor, Split View and Preview on cmd+alt+1, 2 and 3. Seven new editor scenarios pin the toolbar, the modes, the formats, tables and the session; the handles of the editor tests moved by three (the Format menus). Smart list continuation on Return is not part of this.

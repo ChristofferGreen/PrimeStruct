@@ -448,7 +448,7 @@ TEST_CASE("highlight: each tab is styled for its own file") {
   headless::pushOpenPanelAnswer(cpp);
   headless::pushCommand(CommandOpen);
   headless::pushOpenPanelAnswer(json);
-  headless::pushCloseWindow(11);
+  headless::pushCloseWindow(14);
   headless::pushCloseWindow(EditorWindow);
   ScriptEngine engine;
   primec::ui::bindNativeUi(engine);
@@ -462,7 +462,7 @@ TEST_CASE("highlight: each tab is styled for its own file") {
   const auto cppRuns = primec::ui::highlight(Language::Cpp, readFile(cpp));
   const auto jsonRuns = primec::ui::highlight(Language::Json, readFile(json));
   const auto first = headless::styleRuns(EditorView);
-  const auto second = headless::styleRuns(12);
+  const auto second = headless::styleRuns(15);
   REQUIRE(first.size() == cppRuns.size());
   REQUIRE(second.size() == jsonRuns.size());
   CHECK(first.front().start == cppRuns.front().start);
@@ -498,10 +498,10 @@ TEST_CASE("highlight: a file opened into a fresh New tab is styled") {
   headless::reset();
   headless::pushCommand(CommandOpen);
   headless::pushOpenPanelAnswer(md);
-  headless::pushCommand(1); // New: a second, untitled tab (window 11, text view 12)
+  headless::pushCommand(1); // New: a second, untitled tab (window 17, text view 18: the first markdown file built the toolbar and its two menus)
   headless::pushCommand(CommandOpen);
   headless::pushOpenPanelAnswer(md);
-  headless::pushCloseWindow(11);
+  headless::pushCloseWindow(17);
   headless::pushCloseWindow(EditorWindow);
   ScriptEngine engine;
   primec::ui::bindNativeUi(engine);
@@ -514,11 +514,11 @@ TEST_CASE("highlight: a file opened into a fresh New tab is styled") {
   const auto expected = primec::ui::highlight(Language::Markdown, readFile(md));
   REQUIRE(!expected.empty());
   CHECK(headless::styleRuns(EditorView).size() == expected.size());
-  CHECK(headless::styleRuns(12).size() == expected.size());
-  CHECK(headless::windowPath(11) == md);
+  CHECK(headless::styleRuns(18).size() == expected.size());
+  CHECK(headless::windowPath(17) == md);
   // The open went into the New tab (reused, not a third tab).
   CHECK(headless::tabGroup(EditorWindow).size() == 0);
-  CHECK(headless::windowState(12).exists == false);
+  CHECK(headless::windowState(18).exists == false);
 }
 
 TEST_CASE("highlight: the editor restyles after typing") {

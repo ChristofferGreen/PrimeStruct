@@ -268,8 +268,10 @@ TEST_CASE("editor close with unsaved text stays open when the user chooses Cance
 
 // The editor creates its first window and text view (handles 1 and 2) and then six
 // menus (3 to 10), so the second tab's window and text view are 11 and 12.
-constexpr uint64_t SecondWindow = 11;
-constexpr uint64_t SecondView = 12;
+constexpr uint64_t SecondWindow = 14;
+constexpr uint64_t SecondView = 15;
+// Opening a markdown file builds the toolbar first (its handle and the handles of its two menus).
+constexpr uint64_t MarkdownSecondWindow = 17;
 
 TEST_CASE("editor new opens a second tab in the same tab group") {
   headless::reset();
@@ -284,7 +286,7 @@ TEST_CASE("editor new opens a second tab in the same tab group") {
   CHECK(second.content == SecondView);
   CHECK(second.closed);
   CHECK(headless::isMonospace(SecondView));
-  CHECK(countCalls("ps_ui_window_add_tab(1, 11)") == 1);
+  CHECK(countCalls("ps_ui_window_add_tab(1, 14)") == 1);
   CHECK(countCalls("ps_ui_alert(") == 0);
 }
 
@@ -324,8 +326,8 @@ TEST_CASE("editor Command-number selects that tab and Command-9 the last") {
   headless::pushTypeText(EditorWindow + 1, "A");
   headless::pushCommand(CommandNew);
   headless::pushTypeText(SecondView, "B");
-  headless::pushCommand(CommandNew); // window 13, view 14
-  headless::pushTypeText(14, "C");
+  headless::pushCommand(CommandNew); // window 16, view 17
+  headless::pushTypeText(17, "C");
   headless::pushCommand(CommandTab + 1); // Command-1: the first tab
   headless::pushCommand(CommandSave);
   headless::pushSavePanelAnswer(pathA);
@@ -338,7 +340,7 @@ TEST_CASE("editor Command-number selects that tab and Command-9 the last") {
   headless::pushCommand(CommandTab + 5); // no fifth tab: nothing changes
   headless::pushCloseWindow(EditorWindow);
   headless::pushCloseWindow(SecondWindow);
-  headless::pushCloseWindow(13);
+  headless::pushCloseWindow(16);
   runEditor();
   CHECK(readFile(pathA) == "A");
   CHECK(readFile(pathB) == "B");
@@ -362,7 +364,7 @@ TEST_CASE("editor open reuses an untouched untitled tab and otherwise opens a ne
   CHECK(headless::windowPath(SecondWindow) == second);
   CHECK(countCalls("ps_ui_window_add_tab(") == 1);
   CHECK(countCalls("ps_ui_text_view_load_file(2, ") == 1);
-  CHECK(countCalls("ps_ui_text_view_load_file(12, ") == 1);
+  CHECK(countCalls("ps_ui_text_view_load_file(15, ") == 1);
 }
 
 TEST_CASE("editor closes a failed open's new tab again") {
@@ -434,7 +436,7 @@ TEST_CASE("editor toggles the line number bar in every tab from the View menu") 
   runEditor();
   CHECK_FALSE(headless::lineNumbersVisible(2) == false);
   CHECK(headless::lineNumbersVisible(2));
-  CHECK(headless::lineNumbersVisible(12));
+  CHECK(headless::lineNumbersVisible(15));
   CHECK(headless::menuItemChecked(7));
 
   headless::reset();
@@ -445,7 +447,7 @@ TEST_CASE("editor toggles the line number bar in every tab from the View menu") 
   headless::pushCloseWindow(EditorWindow);
   runEditor();
   CHECK_FALSE(headless::lineNumbersVisible(2));
-  CHECK_FALSE(headless::lineNumbersVisible(12));
+  CHECK_FALSE(headless::lineNumbersVisible(15));
   CHECK_FALSE(headless::menuItemChecked(7));
 }
 
@@ -457,7 +459,7 @@ TEST_CASE("editor starts with the line number bar when the preference says so") 
   headless::pushCloseWindow(EditorWindow);
   runEditor();
   CHECK(headless::lineNumbersVisible(2));
-  CHECK(headless::lineNumbersVisible(12));  // a new tab follows the current setting
+  CHECK(headless::lineNumbersVisible(15));  // a new tab follows the current setting
   CHECK(headless::menuItemChecked(7));
 }
 
@@ -475,18 +477,18 @@ TEST_CASE("editor keeps the line number choice for the next launch") {
 // with the line numbers 14, wrapping 15 and the font size pop-up 16, the Markdown form 17 with the preview
 // 18 and the scroll lock 19 check boxes, and the tabs 20.
 namespace {
-constexpr uint64_t SettingsWindow = 11;
-constexpr uint64_t RestoreBox = 13;
-constexpr uint64_t NumbersBox = 15;
-constexpr uint64_t WrapBox = 16;
-constexpr uint64_t SizePopup = 17;
-constexpr uint64_t PreviewBox = 19;
-constexpr uint64_t ScrollPopup = 20;
-constexpr uint64_t SettingsTabs = 21;
+constexpr uint64_t SettingsWindow = 14;
+constexpr uint64_t RestoreBox = 16;
+constexpr uint64_t NumbersBox = 18;
+constexpr uint64_t WrapBox = 19;
+constexpr uint64_t SizePopup = 20;
+constexpr uint64_t PreviewBox = 22;
+constexpr uint64_t ScrollPopup = 23;
+constexpr uint64_t SettingsTabs = 24;
 // The Files tab: the form 22, the hint 23, the file type list 24, "Make Default" 25.
-constexpr uint64_t FileTypeList = 24;
-constexpr uint64_t MakeDefaultButton = 25;
-constexpr uint64_t TabAfterSettings = 26; // a New command after the settings window: window 26, view 27
+constexpr uint64_t FileTypeList = 27;
+constexpr uint64_t MakeDefaultButton = 28;
+constexpr uint64_t TabAfterSettings = 29; // a New command after the settings window: window 29, view 30
 constexpr int32_t CommandSettings = 8;
 
 // The file types of the headless backend (examples/apps/text_editor/file_types.txt) and the buttons of the Files tab.
@@ -581,7 +583,7 @@ TEST_CASE("settings window opens once and a second Settings command brings it fo
   headless::pushCloseWindow(EditorWindow);
   runEditor();
   CHECK(countCalls("ps_ui_window_create(\"Settings\"") == 1);
-  CHECK(countCalls("ps_ui_window_show(11)") == 2);
+  CHECK(countCalls("ps_ui_window_show(14)") == 2);
 }
 
 TEST_CASE("settings window can be closed and opened again") {
@@ -747,7 +749,7 @@ TEST_CASE("the app ends after the last document closes with the settings window 
   runEditor();
   CHECK(headless::windowState(EditorWindow).closed);
   CHECK(headless::windowState(SecondWindow).closed);
-  CHECK(headless::windowState(13).closed); // the settings window, after the second tab's two handles
+  CHECK(headless::windowState(16).closed); // the settings window, after the second tab's two handles
 }
 
 TEST_CASE("commands that arrive while the settings window is active act on a document") {
@@ -875,7 +877,7 @@ TEST_CASE("editor brings back the last session's tabs and selects the active one
   CHECK(headless::windowPath(EditorWindow) == a);
   CHECK(headless::windowPath(SecondWindow) == b);
   CHECK(headless::windowState(SecondWindow).title == b);
-  CHECK(countCalls("ps_ui_window_select(11)") == 1);
+  CHECK(countCalls("ps_ui_window_select(14)") == 1);
   CHECK(countCalls("ps_ui_alert(") == 0);
 }
 
@@ -1030,13 +1032,13 @@ TEST_CASE("editor previews only the tabs that asked for it") {
   headless::pushCommand(CommandNew);
   headless::pushCommand(CommandPreview);
   headless::pushTypeText(2, " typed in the first tab");
-  headless::pushCloseWindow(SecondWindow);
+  headless::pushCloseWindow(MarkdownSecondWindow);
   headless::pushCloseWindow(EditorWindow);
   runEditor();
   CHECK_FALSE(headless::windowState(EditorWindow).preview);
   CHECK(headless::windowState(EditorWindow).previewRenders == 0);
-  CHECK(headless::windowState(SecondWindow).preview);
-  CHECK(headless::windowState(SecondWindow).previewRenders == 1);
+  CHECK(headless::windowState(MarkdownSecondWindow).preview);
+  CHECK(headless::windowState(MarkdownSecondWindow).previewRenders == 1);
 }
 
 TEST_CASE("editor refreshes a preview when a file opens into the tab") {
@@ -1214,4 +1216,214 @@ TEST_CASE("a file the system asks to open goes to a document while the settings 
   runEditor();
   CHECK(headless::windowPath(EditorWindow) == a);
   CHECK(headless::windowPath(SettingsWindow).empty());
+}
+
+// The markdown toolbar (docs/NativeUiPlan.md section 17): shown for markdown windows only, with the view modes and
+// the format commands; the Format menu offers the same commands.
+namespace {
+// Command ids of the markdown toolbar.
+constexpr int32_t CommandMode = 30;   // + 0 editor, 1 split, 2 preview
+constexpr int32_t CommandFormat = 40; // + the operation of ps_ui_text_view_markdown_edit
+constexpr int32_t CommandHeading = 70; // + the level
+constexpr int32_t CommandTable = 80;  // + 0 ... 3, the sizes
+constexpr int32_t CommandAlign = 90;  // + 1 left, 2 center, 3 right
+constexpr uint64_t EditorView = 2;
+
+std::string viewText(uint64_t view) { return ps_ui_text_view_get_text(view); }
+
+// Opens `path` in the first tab, runs the queued commands and closes it without saving.
+void runMarkdownEditor(const std::string &path, const std::vector<int32_t> &commands) {
+  headless::reset();
+  headless::pushCommand(CommandOpen);
+  headless::pushOpenPanelAnswer(path);
+  for (const int32_t command : commands) {
+    headless::pushCommand(command);
+  }
+  headless::pushAlertAnswer(1);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+}
+} // namespace
+
+TEST_CASE("editor shows the markdown toolbar for markdown windows only") {
+  const std::string md = writeScratch("toolbar_shown.md", "# t");
+  const std::string markdown = writeScratch("toolbar_shown.markdown", "# t");
+  const std::string txt = writeScratch("toolbar_hidden.txt", "t");
+  runMarkdownEditor(md, {});
+  CHECK(headless::windowState(EditorWindow).toolbar != 0);
+  runMarkdownEditor(markdown, {});
+  CHECK(headless::windowState(EditorWindow).toolbar != 0);
+  runMarkdownEditor(txt, {});
+  CHECK(headless::windowState(EditorWindow).toolbar == 0);
+  CHECK(headless::toolbarOutline(EditorWindow).empty());
+  // The toolbar is not built until a window wants it.
+  CHECK(countCalls("ps_ui_toolbar_create(") == 0);
+
+  // A text file with its preview on has it too, and loses it again with the preview.
+  runMarkdownEditor(txt, {CommandPreview});
+  CHECK(headless::windowState(EditorWindow).toolbar != 0);
+  runMarkdownEditor(txt, {CommandPreview, CommandPreview});
+  CHECK(headless::windowState(EditorWindow).toolbar == 0);
+
+  // An untitled window has none, and Save As to a markdown name gives it one.
+  headless::reset();
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(headless::windowState(EditorWindow).toolbar == 0);
+  CHECK(countCalls("ps_ui_toolbar_create(") == 0);
+  headless::reset();
+  headless::pushTypeText(EditorView, "text");
+  headless::pushCommand(CommandSaveAs);
+  headless::pushSavePanelAnswer(scratchPath("toolbar_saved_as.md"));
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(headless::windowState(EditorWindow).toolbar != 0);
+}
+
+TEST_CASE("editor's toolbar offers the view modes and the markdown formats") {
+  const std::string md = writeScratch("toolbar_outline.md", "# t");
+  runMarkdownEditor(md, {});
+  const std::vector<std::string> outline{"segments Editor|Split|Preview #30 [selected 0]",
+                                         "-",
+                                         "button Bold [bold] #40",
+                                         "button Italic [italic] #41",
+                                         "button Strikethrough [strikethrough] #42",
+                                         "button Code [chevron.left.forwardslash.chevron.right] #43",
+                                         "button Link [link] #44",
+                                         "button Image [photo] #45",
+                                         "-",
+                                         "menu Heading [textformat.size]",
+                                         "  Heading 1 #71",
+                                         "  Heading 2 #72",
+                                         "  Heading 3 #73",
+                                         "  -",
+                                         "  Paragraph #70",
+                                         "button Bulleted List [list.bullet] #47",
+                                         "button Numbered List [list.number] #48",
+                                         "button Task List [checklist] #49",
+                                         "button Quote [text.quote] #50",
+                                         "button Code Block [curlybraces] #51",
+                                         "button Horizontal Rule [minus] #52",
+                                         "-",
+                                         "menu Table [tablecells]",
+                                         "  Insert 2 by 2 #80",
+                                         "  Insert 3 by 3 #81",
+                                         "  Insert 4 by 3 #82",
+                                         "  Insert 5 by 4 #83",
+                                         "  -",
+                                         "  Format Table #54",
+                                         "  Add Row #55",
+                                         "  Add Column #56",
+                                         "  Delete Row #57",
+                                         "  Delete Column #58",
+                                         "  -",
+                                         "  Align Left #91",
+                                         "  Align Center #92",
+                                         "  Align Right #93"};
+  CHECK(headless::toolbarOutline(EditorWindow) == outline);
+  // One toolbar serves every markdown window.
+  CHECK(countCalls("ps_ui_toolbar_create(") == 1);
+}
+
+TEST_CASE("editor's view modes switch between the text, both and the preview alone") {
+  const std::string md = writeScratch("toolbar_modes.md", "# t");
+  runMarkdownEditor(md, {CommandMode + 1});
+  CHECK(headless::windowState(EditorWindow).previewMode == PS_UI_PREVIEW_SPLIT);
+  CHECK(headless::toolbarOutline(EditorWindow).front() == "segments Editor|Split|Preview #30 [selected 1]");
+  runMarkdownEditor(md, {CommandMode + 2});
+  CHECK(headless::windowState(EditorWindow).previewMode == PS_UI_PREVIEW_ONLY);
+  CHECK(headless::windowState(EditorWindow).preview);
+  CHECK(headless::toolbarOutline(EditorWindow).front() == "segments Editor|Split|Preview #30 [selected 2]");
+  runMarkdownEditor(md, {CommandMode + 2, CommandMode});
+  CHECK(headless::windowState(EditorWindow).previewMode == PS_UI_PREVIEW_TEXT);
+  CHECK_FALSE(headless::windowState(EditorWindow).preview);
+  // The markdown file keeps its toolbar in the text mode.
+  CHECK(headless::windowState(EditorWindow).toolbar != 0);
+}
+
+TEST_CASE("editor's format commands change the selected text") {
+  const std::string md = writeScratch("toolbar_format.md", "hello world");
+  headless::reset();
+  headless::pushCommand(CommandOpen);
+  headless::pushOpenPanelAnswer(md);
+  headless::pushSelectText(EditorView, 0, 5);
+  headless::pushCommand(CommandFormat);       // bold
+  headless::pushCommand(CommandHeading + 2);  // a level 2 heading
+  headless::pushAlertAnswer(1);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(viewText(EditorView) == "## **hello** world");
+  CHECK(headless::windowState(EditorWindow).edited);
+
+  headless::reset();
+  headless::pushCommand(CommandOpen);
+  headless::pushOpenPanelAnswer(md);
+  headless::pushSelectText(EditorView, 6, 11);
+  headless::pushCommand(CommandFormat + 1);   // italic
+  headless::pushCommand(CommandFormat + 7);   // a bulleted list
+  headless::pushAlertAnswer(1);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(viewText(EditorView) == "- hello *world*");
+}
+
+TEST_CASE("editor inserts and edits tables with the Table menu") {
+  const std::string md = writeScratch("toolbar_table.md", "");
+  headless::reset();
+  headless::pushCommand(CommandOpen);
+  headless::pushOpenPanelAnswer(md);
+  headless::pushCommand(CommandTable);           // 2 by 2
+  headless::pushCommand(CommandFormat + 15);     // add a row
+  headless::pushCommand(CommandAlign + 3);       // align the first column right
+  headless::pushAlertAnswer(1);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  const std::string table = viewText(EditorView);
+  CHECK(table.find("| Column 1 | Column 2 |") != std::string::npos);
+  CHECK(table.find("| -------: | -------- |") != std::string::npos);
+  // Header, delimiter row and 2 + 1 body rows.
+  CHECK(std::count(table.begin(), table.end(), '\n') >= 4);
+
+  // A table command outside a table does nothing.
+  const std::string plain = writeScratch("toolbar_not_table.md", "text");
+  runMarkdownEditor(plain, {CommandFormat + 14, CommandFormat + 15});
+  CHECK(viewText(EditorView) == "text");
+}
+
+TEST_CASE("editor's format command in the preview-only mode shows the text again") {
+  const std::string md = writeScratch("toolbar_only_format.md", "word");
+  headless::reset();
+  headless::pushCommand(CommandOpen);
+  headless::pushOpenPanelAnswer(md);
+  headless::pushCommand(CommandMode + 2);
+  headless::pushSelectText(EditorView, 0, 4);
+  headless::pushCommand(CommandFormat);
+  headless::pushAlertAnswer(1);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(viewText(EditorView) == "**word**");
+  CHECK(headless::windowState(EditorWindow).previewMode == PS_UI_PREVIEW_SPLIT);
+}
+
+TEST_CASE("editor remembers the preview mode of every tab") {
+  const std::string a = writeScratch("session_mode_a.md", "# a");
+  const std::string b = writeScratch("session_mode_b.md", "# b");
+  headless::reset();
+  headless::setPrefList("session.files", {a, b});
+  headless::pushCommand(CommandMode + 2); // the first tab is the active one
+  headless::pushCloseWindow(SecondWindow);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(headless::prefList("session.previews") == std::vector<std::string>{"2"});
+
+  headless::reset();
+  headless::setPrefList("session.files", {a, b});
+  headless::setPrefList("session.previews", {"2", "1"});
+  headless::pushCloseWindow(SecondWindow);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(headless::windowState(EditorWindow).previewMode == PS_UI_PREVIEW_ONLY);
+  CHECK(headless::windowState(SecondWindow).previewMode == PS_UI_PREVIEW_SPLIT);
+  CHECK(headless::toolbarOutline(EditorWindow).front() == "segments Editor|Split|Preview #30 [selected 2]");
+  CHECK(headless::toolbarOutline(SecondWindow).front() == "segments Editor|Split|Preview #30 [selected 1]");
 }

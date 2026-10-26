@@ -2070,6 +2070,7 @@ are left unarchived.
 | TODO-5609 | Markdown editing operations library | [undated.md](todo_archive/undated.md) | - |
 | TODO-5610 | Toolbar, preview modes and markdown edits in the UI ABI | [undated.md](todo_archive/undated.md) | - |
 | TODO-5611 | AppKit toolbar, preview-only layout and markdown edits | [undated.md](todo_archive/undated.md) | - |
+| TODO-5612 | The editor's markdown toolbar and Format menu | [undated.md](todo_archive/undated.md) | - |
 
 <!-- INDEX-END -->
 

@@ -140,9 +140,9 @@ foreach(shot files filesrows)
   set(snapshot "${WORK_DIR}/editor_${shot}.png")
   set(ENV{PRIMESTRUCT_UI_SNAPSHOT} "${snapshot}")
   if(shot STREQUAL "filesrows")
-    set(ENV{PRIMESTRUCT_UI_CLICK} "tab:21:3;rows:24:1,2")
+    set(ENV{PRIMESTRUCT_UI_CLICK} "tab:24:3;rows:27:1,2")
   else()
-    set(ENV{PRIMESTRUCT_UI_CLICK} "tab:21:3")
+    set(ENV{PRIMESTRUCT_UI_CLICK} "tab:24:3")
   endif()
   execute_process(
     COMMAND "${WORK_DIR}/EditorSmoke.app/Contents/MacOS/EditorSmoke"
@@ -361,7 +361,7 @@ set(ENV{PRIMESTRUCT_UI_COMMANDS} "8")
 set(ENV{PRIMESTRUCT_UI_TARGET_LAST} "1")
 set(ENV{PRIMESTRUCT_UI_DEFAULT_APP_PLAN} "${planFile}")
 set(ENV{PRIMESTRUCT_UI_SNAPSHOT} "${WORK_DIR}/editor_plan.png")
-set(ENV{PRIMESTRUCT_UI_CLICK} "tab:21:3;rows:24:0,1,2,3,4,5,6,7,8,9,10;button:25")
+set(ENV{PRIMESTRUCT_UI_CLICK} "tab:24:3;rows:27:0,1,2,3,4,5,6,7,8,9,10;button:28")
 execute_process(
   COMMAND "${WORK_DIR}/EditorSmoke.app/Contents/MacOS/EditorSmoke"
   RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err

@@ -2758,6 +2758,11 @@ bool ps_ui_window_set_toolbar(uint64_t window, uint64_t toolbar) {
     return false;
   }
   State &s = state();
+  const auto shown = s.windowToolbars.find(window);
+  if (toolbar != 0 && shown != s.windowToolbars.end() && w.toolbar == shown->second &&
+      static_cast<PSToolbarDelegate *>(shown->second.delegate).toolbarHandle == toolbar) {
+    return true; // the same toolbar again changes nothing
+  }
   if (toolbar == 0) {
     w.toolbar = nil;
     s.windowToolbars.erase(window);

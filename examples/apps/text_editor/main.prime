@@ -75,6 +75,36 @@ command_scroll() {
   return(20i32)
 }
 
+// The markdown toolbar and the Format menu (docs/NativeUiPlan.md section 17): View > Editor, Split View and Preview are
+// command_mode() + 0 ... + 2 (the toolbar's segments too); a format command is command_format() + the operation of
+// ps_ui_text_view_markdown_edit (bold 0, italic 1, ... table format 14); Heading is command_heading() + the level
+// (0 for a paragraph); Insert Table is command_table() + 0 ... + 3 (2 by 2, 3 by 3, 4 by 3, 5 by 4); Align is
+// command_align() + 1 ... + 3 (left, center, right).
+[return<i32>]
+command_mode() {
+  return(30i32)
+}
+
+[return<i32>]
+command_format() {
+  return(40i32)
+}
+
+[return<i32>]
+command_heading() {
+  return(70i32)
+}
+
+[return<i32>]
+command_table() {
+  return(80i32)
+}
+
+[return<i32>]
+command_align() {
+  return(90i32)
+}
+
 [return<i32>]
 command_recent() {
   return(200i32)
@@ -123,6 +153,7 @@ apply_preferences([App] app, [TextView] view) {
   view.setLineNumbers(app.boolPref("lineNumbers", false))
   view.setWrapping(app.boolPref("wrapLines", true))
   view.setFontSize(app.intPref("fontSize", 13i32))
+  view.setMarkdownEditing(true)
   return(true)
 }
 
@@ -449,6 +480,111 @@ preview_if_markdown([App] app, [Window] tab, [String] path) {
   return(shown)
 }
 
+// The Heading and Table menus, built once for the toolbar and once for the Format menu (a menu has one parent).
+[return<bool>]
+add_heading_items([Menu] menu) {
+  menu.item("Heading 1", "", command_heading() + 1i32)
+  menu.item("Heading 2", "", command_heading() + 2i32)
+  menu.item("Heading 3", "", command_heading() + 3i32)
+  menu.separator()
+  menu.item("Paragraph", "", command_heading())
+  return(true)
+}
+
+[return<bool>]
+add_table_items([Menu] menu) {
+  menu.item("Insert 2 by 2", "", command_table())
+  menu.item("Insert 3 by 3", "", command_table() + 1i32)
+  menu.item("Insert 4 by 3", "", command_table() + 2i32)
+  menu.item("Insert 5 by 4", "", command_table() + 3i32)
+  menu.separator()
+  menu.item("Format Table", "", command_format() + 14i32)
+  menu.item("Add Row", "", command_format() + 15i32)
+  menu.item("Add Column", "", command_format() + 16i32)
+  menu.item("Delete Row", "", command_format() + 17i32)
+  menu.item("Delete Column", "", command_format() + 18i32)
+  menu.separator()
+  menu.item("Align Left", "", command_align() + 1i32)
+  menu.item("Align Center", "", command_align() + 2i32)
+  menu.item("Align Right", "", command_align() + 3i32)
+  return(true)
+}
+
+// The toolbar of a markdown window, built when the first one needs it: the view mode, the inline marks, the block
+// formats and the tables.
+[return<Toolbar>]
+build_toolbar([App] app) {
+  [Toolbar] bar{app.toolbar()}
+  bar.segments("Editor|Split|Preview", command_mode())
+  bar.separator()
+  bar.button("Bold", "bold", command_format())
+  bar.button("Italic", "italic", command_format() + 1i32)
+  bar.button("Strikethrough", "strikethrough", command_format() + 2i32)
+  bar.button("Code", "chevron.left.forwardslash.chevron.right", command_format() + 3i32)
+  bar.button("Link", "link", command_format() + 4i32)
+  bar.button("Image", "photo", command_format() + 5i32)
+  bar.separator()
+  [Menu] headings{app.menu("Heading")}
+  [bool] headingItems{add_heading_items(headings)}
+  bar.menu("Heading", "textformat.size", headings)
+  bar.button("Bulleted List", "list.bullet", command_format() + 7i32)
+  bar.button("Numbered List", "list.number", command_format() + 8i32)
+  bar.button("Task List", "checklist", command_format() + 9i32)
+  bar.button("Quote", "text.quote", command_format() + 10i32)
+  bar.button("Code Block", "curlybraces", command_format() + 11i32)
+  bar.button("Horizontal Rule", "minus", command_format() + 12i32)
+  bar.separator()
+  [Menu] tables{app.menu("Table")}
+  [bool] tableItems{add_table_items(tables)}
+  bar.menu("Table", "tablecells", tables)
+  return(bar)
+}
+
+// A window shows the toolbar when it holds a markdown file or its preview is on.
+[return<bool>]
+wants_toolbar([Window] tab) {
+  [bool mut] wanted{tab.hasPreview()}
+  if(!wanted && tab.hasPath()) {
+    [String] path{tab.path()}
+    wanted = ends_with_text(path, ".md", 3i32) || ends_with_text(path, ".markdown", 9i32)
+  }
+  return(wanted)
+}
+
+// Shows the toolbar on the document windows that want it (building it on the first) and takes it off the others;
+// returns the toolbar, which is built once.
+[return<Toolbar>]
+sync_toolbars([App] app, [u64] settingsWindow, [Toolbar] known) {
+  [Toolbar mut] bar{known}
+  [i32 mut] index{0i32}
+  while(index < app.windowCount()) {
+    [Window] each{app.windowAt(index)}
+    if(each.handle != settingsWindow) {
+      if(wants_toolbar(each)) {
+        if(bar.handle == 0u64) {
+          bar = build_toolbar(app)
+        }
+        [bool] shown{each.setToolbar(bar)}
+        [bool] selected{each.selectToolbarItem(command_mode() + each.previewMode())}
+      } else {
+        [bool] hidden{each.hideToolbar()}
+      }
+    }
+    index = index + 1i32
+  }
+  return(bar)
+}
+
+// A format command acts on the text; in the preview-only mode there is no text to see, so the window shows both first.
+[return<bool>]
+format_text([Window] tab, [i32] operation, [i32] a, [i32] b) {
+  if(tab.previewMode() == 2i32) {
+    [bool] split{tab.setPreviewMode(1i32)}
+  }
+  [TextView] view{tab.content()}
+  return(view.markdownEdit(operation, a, b))
+}
+
 // A new document: a window with its own text view, joined to host's tabs.
 [return<Window>]
 new_tab([App] app, [Window] host) {
@@ -585,8 +721,8 @@ open_document([App] app, [Window] tab) {
 }
 
 // Remembers the files the tabs hold (in tab-bar order) and which tab is active, so the next launch
-// brings them back, with the tabs that showed their markdown preview ("1" for a tab with a preview, "0" without,
-// in the order of the files). Untitled tabs have nothing to reopen.
+// brings them back, with the preview mode of each tab ("0" the text alone, "1" split, "2" the preview alone, in the
+// order of the files). Untitled tabs have nothing to reopen.
 [return<bool> effects(heap_alloc)]
 save_session([App] app, [Window] current) {
   app.listClear("session.files")
@@ -599,10 +735,14 @@ save_session([App] app, [Window] current) {
     [Window] each{current.tabAt(index)}
     if(each.hasPath()) {
       app.listAdd("session.files", each.path())
-      if(each.hasPreview()) {
-        app.listAdd("session.previews", stringFrom("1"))
+      if(each.previewMode() == 2i32) {
+        app.listAdd("session.previews", stringFrom("2"))
       } else {
-        app.listAdd("session.previews", stringFrom("0"))
+        if(each.previewMode() == 1i32) {
+          app.listAdd("session.previews", stringFrom("1"))
+        } else {
+          app.listAdd("session.previews", stringFrom("0"))
+        }
       }
       if(each.handle == current.handle) {
         active = saved
@@ -622,7 +762,10 @@ restore_preview([App] app, [Window] tab, [i32] position) {
   if(position < app.listCount("session.previews")) {
     [String] flag{app.listGet("session.previews", position)}
     if(flag.equalsText("1")) {
-      shown = tab.setPreview(true)
+      shown = tab.setPreviewMode(1i32)
+    }
+    if(flag.equalsText("2")) {
+      shown = tab.setPreviewMode(2i32)
     }
   }
   return(shown)
@@ -730,6 +873,30 @@ main([array<string>] args) {
   edit.find()
   edit.addToBar()
 
+  [Menu] formatMenu{app.menu("Format")}
+  formatMenu.item("Bold", "cmd+b", command_format())
+  formatMenu.item("Italic", "cmd+i", command_format() + 1i32)
+  formatMenu.item("Strikethrough", "cmd+shift+x", command_format() + 2i32)
+  formatMenu.item("Code", "cmd+e", command_format() + 3i32)
+  formatMenu.separator()
+  formatMenu.item("Link", "cmd+k", command_format() + 4i32)
+  formatMenu.item("Image", "", command_format() + 5i32)
+  formatMenu.separator()
+  [Menu] headingMenu{app.menu("Heading")}
+  [bool] headingItems{add_heading_items(headingMenu)}
+  formatMenu.submenu("Heading", headingMenu)
+  formatMenu.item("Bulleted List", "", command_format() + 7i32)
+  formatMenu.item("Numbered List", "", command_format() + 8i32)
+  formatMenu.item("Task List", "", command_format() + 9i32)
+  formatMenu.item("Quote", "", command_format() + 10i32)
+  formatMenu.item("Code Block", "", command_format() + 11i32)
+  formatMenu.item("Horizontal Rule", "", command_format() + 12i32)
+  formatMenu.separator()
+  [Menu] tableMenu{app.menu("Table")}
+  [bool] tableItems{add_table_items(tableMenu)}
+  formatMenu.submenu("Table", tableMenu)
+  formatMenu.addToBar()
+
   [Menu] viewMenu{app.menu("View")}
   viewMenu.fullScreen()
   viewMenu.showTabBar()
@@ -737,6 +904,9 @@ main([array<string>] args) {
   viewMenu.item("Wrap Lines", "", command_wrap())
   viewMenu.item("Show Markdown Preview", "cmd+shift+m", command_preview())
   viewMenu.followPreview(command_preview())
+  viewMenu.item("Editor", "cmd+alt+1", command_mode())
+  viewMenu.item("Split View", "cmd+alt+2", command_mode() + 1i32)
+  viewMenu.item("Preview", "cmd+alt+3", command_mode() + 2i32)
   [Menu] scrollMenu{app.menu("Scroll Preview")}
   scrollMenu.item("Independently", "", command_scroll())
   scrollMenu.item("Linearly", "", command_scroll() + 1i32)
@@ -795,9 +965,13 @@ main([array<string>] args) {
     [i32] restored{restore_session(app, first, firstView)}
   }
 
+  [Toolbar mut] markdownBar{Toolbar{}}
+  markdownBar = sync_toolbars(app, settings.window, markdownBar)
+
   [bool mut] running{true}
   while(running) {
     [i32 mut] intent{0i32}
+    [bool mut] documentsChanged{false}
     [u64 mut] changedControl{0u64}
     [Window mut] tab{app.activeWindow()}
     pick(app.waitEvent()) {
@@ -827,6 +1001,7 @@ main([array<string>] args) {
         [Window] target{document_window(app, settings.window)}
         [bool] openedRequest{open_or_select(app, target, requested, settings.window)}
         [i32] listedRecent{refresh_recent(recentMenu)}
+        documentsChanged = true
       }
       quitRequested {
         intent = command_quit()
@@ -918,6 +1093,36 @@ main([array<string>] args) {
     if(intent == command_preview()) {
       [bool] previewing{tab.setPreview(!tab.hasPreview())}
     }
+    if(intent >= command_mode() && intent < command_mode() + 3i32) {
+      [bool] moded{tab.setPreviewMode(intent - command_mode())}
+    }
+    if(intent >= command_format() && intent < command_format() + 22i32) {
+      [bool] formatted{format_text(tab, intent - command_format(), 0i32, 0i32)}
+    }
+    if(intent >= command_heading() && intent < command_heading() + 4i32) {
+      [bool] headed{format_text(tab, 6i32, intent - command_heading(), 0i32)}
+    }
+    if(intent >= command_align() + 1i32 && intent < command_align() + 4i32) {
+      [bool] aligned{format_text(tab, 19i32, intent - command_align(), 0i32)}
+    }
+    if(intent >= command_table() && intent < command_table() + 4i32) {
+      [i32] size{intent - command_table()}
+      [i32 mut] columns{2i32}
+      [i32 mut] rows{2i32}
+      if(size == 1i32) {
+        columns = 3i32
+        rows = 3i32
+      }
+      if(size == 2i32) {
+        columns = 4i32
+        rows = 3i32
+      }
+      if(size == 3i32) {
+        columns = 5i32
+        rows = 4i32
+      }
+      [bool] tabled{format_text(tab, 13i32, columns, rows)}
+    }
     if(intent >= command_scroll() && intent < command_scroll() + 4i32) {
       app.setIntPref("scrollMode", intent - command_scroll())
       app.setPreviewScrollMode(intent - command_scroll())
@@ -950,6 +1155,10 @@ main([array<string>] args) {
     }
     if(intent > command_tab() && intent <= command_tab() + 9i32) {
       [bool] switched{select_tab(tab, intent - command_tab())}
+    }
+    // The toolbar follows what each window holds: a markdown file or its preview.
+    if(intent != 0i32 || documentsChanged) {
+      markdownBar = sync_toolbars(app, settings.window, markdownBar)
     }
     // Closing the last tab ends the app like Quit does, so the session stays as it was before it closed.
     if(intent != 0i32 && intent != command_quit() && count_documents(app, settings.window) > 0i32) {
