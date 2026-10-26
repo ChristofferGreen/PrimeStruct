@@ -2067,6 +2067,7 @@ are left unarchived.
 | TODO-5606 | Remove the application chooser from the Files tab | [undated.md](todo_archive/undated.md) | - |
 | TODO-5607 | Make Default asks the system as little as possible | [undated.md](todo_archive/undated.md) | - |
 | TODO-5608 | Drop files on the markdown preview | [undated.md](todo_archive/undated.md) | - |
+| TODO-5609 | Markdown editing operations library | [undated.md](todo_archive/undated.md) | - |
 
 <!-- INDEX-END -->
 

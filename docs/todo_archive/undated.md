@@ -461,3 +461,15 @@
   - acceptance:
     - the smoke test: with a preview open, a harness drop of a file on it opens the file in the editor (the picture of the last window differs from the same run without the drop); full release gate green
   - stop_rule: drops on the preview pane; a real mouse drag is not automated.
+
+- [x] TODO-5609: Markdown editing operations library
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-26
+  - phase: Markdown toolbar (docs/NativeUiPlan.md section 17)
+  - parallel_track: markdown-toolbar
+  - scope: `primec::ui::markdownEdit` (`include/primec/ui/MarkdownEdit.h`, `src/ui/MarkdownEdit.cpp` and `MarkdownTable.cpp` in `primec_ui_highlight_lib`): UTF-8 text, a byte selection and an operation in, the change (replace range, replacement) and the new selection out, or "not applicable". Operations: inline marks (bold, italic, strikethrough, code) that wrap, unwrap and expand to the word at the cursor; link and image; heading levels 0 to 6; bulleted, numbered and task lists and quote with conversion between list kinds and toggling; fenced code block; horizontal rule; tables: insert (columns and rows), format, add and delete row and column, align a column, next and previous cell (adding a row after the last cell). The behaviour is the one described in section 17.
+  - acceptance:
+    - unit tests of the strings in and out for every operation, including toggling off, selections over several lines, blank lines, a cursor in no word, bold plus italic, non-ASCII text, a table with escaped pipes, alignment, ragged rows and a table at the end of the text without a trailing newline; the full release gate green
+  - stop_rule: the library and its tests; no ABI and no backend yet.
+  - notes: 17 unit cases (58 checks) in `tests/unit/ui/test_markdown_edit.cpp` with «selection» and ¦caret markers. Inline operations leave the inner text selected.

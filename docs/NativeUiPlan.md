@@ -498,3 +498,47 @@ support.**
 - **Slices.** The ABI, the headless backend, the bindings and the stdlib (TODO-5599), the AppKit backend and the bundle's
   Info.plist (TODO-5600), then the editor's tab and open-file handling (TODO-5601). A bytecode-only bundle passes its
   arguments to the program like a native one (TODO-5602).
+
+## 17. Markdown toolbar and editing
+
+**Goal (2026-10-26): a toolbar that shows up by context, starting with markdown: a markdown document has one, other file
+types do not.** The toolbar switches between the text editor, a split view and the preview, and inserts the common
+markdown constructs; tables get the most help.
+
+- **Context.** A window shows the toolbar when its file is markdown (`.md`, `.markdown`) or when its preview is on; the
+  editor decides per window (`ps_ui_window_set_toolbar`, 0 hides it) whenever the file opens, is saved under another name
+  or the preview changes. Nothing of it is built for other files, and the toolbar's items are made when the first
+  markdown window needs them, so the launch time does not change.
+- **View modes.** The preview of a window has three modes (`ps_ui_window_set_preview_mode`): 0 the text editor alone,
+  1 split (the existing preview), 2 the preview alone. View > Show Markdown Preview still toggles 0 and 1, and the
+  mode is part of the saved session. The toolbar's segmented control (Editor, Split, Preview) shows and sets it; View
+  gets the same three commands with shortcuts.
+- **A toolbar is a list of commands.** `ps_ui_toolbar_*` describes buttons (a command id, a title, an SF Symbol name),
+  a segmented control (consecutive command ids), menu buttons (an existing `Menu`) and separators; a click is a
+  `PS_UI_EVENT_COMMAND`, exactly like a menu item, so the program has one place that handles a command whether it came
+  from the toolbar, the menu bar or a shortcut, and the Format menu offers the same commands with shortcuts. AppKit makes
+  an `NSToolbar` per window from the description (the toolbar's own overflow handles a narrow window).
+- **Insertions are text transformations, written once.** `primec::ui::markdownEdit` (`include/primec/ui/MarkdownEdit.h`)
+  takes the text, the selection and an operation and returns the change and the new selection; the backends only apply
+  it as one undoable edit (`ps_ui_text_view_markdown_edit`), so the behaviour is the same on every backend and is tested
+  as plain strings. How editors usually do it, and what this does:
+  - *Inline marks* (bold `**`, italic `*`, strikethrough `~~`, code `` ` ``): wrap the selection and keep it selected;
+    with no selection wrap the word at the cursor, or insert the pair with the cursor between; a second use takes the
+    marks off again (bold and italic together `***` are told apart by counting the stars); spaces at the edges of the
+    selection stay outside the marks. Link and image: `[text](url)` with the selection as the text and `url` selected for
+    typing (a selected URL becomes the target instead).
+  - *Line formats* (heading level 1 to 6 or none, bulleted, numbered and task lists, quote): apply to every line the
+    selection touches, convert one list kind into another, and toggle off when every line already has it; blank lines are
+    left alone; numbers count up. A fenced code block wraps the selected lines (or inserts an empty one with the cursor
+    inside) and unwraps when it is already wrapped; a horizontal rule goes on its own line between blank lines.
+  - *Tables.* Raw pipe tables are hard to type, so the help comes in four parts, as in the table editors of the popular
+    editors: Insert Table (columns and rows from a menu: 2 by 2, 3 by 3, 4 by 3, 5 by 4) makes a formatted skeleton with the
+    first header selected for typing; Format Table aligns the columns (padding by the column's alignment, `:--`, `:-:`, `--:`
+    kept); with the cursor in a table Add Row, Add Column, Delete Row, Delete Column and Align Left, Center, Right edit it
+    and reformat it; and, in a markdown text view, Tab and Shift-Tab move between cells (selecting the cell's text),
+    formatting the table first, and Tab in the last cell adds a row. Outside a table Tab is an ordinary tab. A table is
+    the lines around the cursor that contain pipes with a delimiter row as the second line (GitHub's rule); escaped pipes
+    `\|` stay in their cell.
+- **Slices.** The editing library (TODO-5609), the ABI, headless backend, bindings and stdlib (TODO-5610), the AppKit
+  toolbar, preview-only layout and edits (TODO-5611), then the editor's toolbar, Format menu and commands (TODO-5612).
+  Smart list continuation on Return (a new bullet after a bullet) is the usual next step and is not part of these.

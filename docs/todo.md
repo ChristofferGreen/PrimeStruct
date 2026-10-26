@@ -104,7 +104,10 @@ of sync with them.
 | TODO-5569 | Slice loans, escapes and returned borrows | ready | slices |
 | TODO-5570 | Slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views | ready | slices |
 | TODO-5540 | `string` as the UTF-8 text view | blocked | string-view |
-| TODO-5603 | Startup audit: what a launch loads and does | ready | startup |
+| TODO-5610 | Toolbar, preview modes and markdown edits in the UI ABI | ready | markdown-toolbar |
+| TODO-5611 | AppKit toolbar, preview-only layout and markdown edits | blocked | markdown-toolbar |
+| TODO-5612 | The editor's markdown toolbar and Format menu | blocked | markdown-toolbar |
+| TODO-5603 | Startup audit: what a launch loads and does | blocked | startup |
 | TODO-5586 | Native String heap: pooled blocks, statistics and limit | deferred | native-backend-strings |
 | TODO-5574 | Simple C++ emitters run bytes and strings | deferred | string-backends |
 | TODO-5568 | String conveniences: operators, numbers, push of code points | blocked | string-owned |
@@ -138,7 +141,7 @@ of sync with them.
 
 - TODO-5567 (bytes): packed `array<u8>`
 - TODO-5570 (slices): slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views
-- TODO-5603 (startup): startup audit: what a launch loads and does
+- TODO-5610 (markdown-toolbar): toolbar, preview modes and markdown edits in the UI ABI
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5510 (control-returns): `return` returns from pick arms and lambdas correctly
@@ -149,7 +152,7 @@ of sync with them.
 
 2. TODO-5567
 3. TODO-5570
-4. TODO-5603
+4. TODO-5610
 5. TODO-5536
 6. TODO-5535
 7. TODO-5510
@@ -161,6 +164,7 @@ of sync with them.
 - Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5567, TODO-5570, TODO-5569, TODO-5540, TODO-5568, TODO-5530, TODO-5574
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
+- Markdown toolbar (docs/NativeUiPlan.md section 17): TODO-5610, TODO-5611, TODO-5612
 - Startup (docs/NativeUiPlan.md section 16): TODO-5603
 - Lifecycle (docs/spec/value-lifecycle.md): TODO-5527
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
@@ -298,9 +302,45 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - full release gate green
   - stop_rule: the text view on the VM.
 
-- [ ] TODO-5603: Startup audit: what a launch loads and does
+- [ ] TODO-5610: Toolbar, preview modes and markdown edits in the UI ABI
   - owner: ai
   - status: ready
+  - created_at: 2026-10-26
+  - phase: Markdown toolbar (docs/NativeUiPlan.md section 17)
+  - parallel_track: markdown-toolbar
+  - scope: The UI ABI gets `ps_ui_toolbar_create/add_button/add_segments/add_menu/add_separator`, `ps_ui_window_set_toolbar` (0 hides) and `ps_ui_window_toolbar_select` (a toolbar item is a command: a click is `PS_UI_EVENT_COMMAND`), `ps_ui_window_set_preview_mode/preview_mode` (0 text, 1 split, 2 preview alone; `set_preview` is 0 or 1), `ps_ui_text_view_markdown_edit(view, operation, a, b)` (applies the library as one edit, the user-visible change raises `PS_UI_EVENT_TEXT_CHANGED`) and `ps_ui_text_view_set_markdown_editing` (Tab moves between table cells). The headless backend keeps the toolbars and their outline (`headless::toolbarOutline`), the preview mode, the selection of a text view (`headless::setSelection`) and applies the edits with the library; the bindings and the stdlib (`Toolbar`, `Window.setToolbar/setPreviewMode/previewMode/selectToolbarItem`, `TextView.markdownEdit/setMarkdownEditing`) carry it; AppKit answers as unsupported until TODO-5611.
+  - acceptance:
+    - headless tests for the toolbar outline, the preview modes, the edits through the selection and their text-changed event; the bindings list; the editor, acceptance and stdlib suites still pass; the full release gate green
+  - stop_rule: the ABI, the headless backend, the bindings and the stdlib.
+
+- [ ] TODO-5611: AppKit toolbar, preview-only layout and markdown edits
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5610
+  - created_at: 2026-10-26
+  - phase: Markdown toolbar (docs/NativeUiPlan.md section 17)
+  - parallel_track: markdown-toolbar
+  - scope: The AppKit backend: an `NSToolbar` per window made from a toolbar description (buttons with SF Symbols, a segmented control, menu buttons from `Menu`s, separators), shown or hidden by `ps_ui_window_set_toolbar`; the preview-only mode (the text view's scroll view is hidden, the page fills the window); `ps_ui_text_view_markdown_edit` as one undoable edit that keeps the scroll position and raises the text-changed event; Tab and Shift-Tab in a markdown text view (`textView:doCommandBySelector:`) move between table cells through the library. The snapshot harness can show a toolbar item pressed.
+  - acceptance:
+    - smoke pictures of a window with the toolbar (all items visible, the segmented control on each mode) and of the preview-only mode; a harness-run edit changes the text and one undo restores it; full release gate green
+  - stop_rule: the AppKit backend; the editor is TODO-5612.
+
+- [ ] TODO-5612: The editor's markdown toolbar and Format menu
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5611
+  - created_at: 2026-10-26
+  - phase: Markdown toolbar (docs/NativeUiPlan.md section 17)
+  - parallel_track: markdown-toolbar
+  - scope: PrimeScroll shows the toolbar for markdown windows only (file ends in `.md` or `.markdown`, or the preview is on), decided when a file opens, is saved or the preview changes, and built when the first markdown window needs it: the segmented Editor, Split and Preview control, then Bold, Italic, Strikethrough, Code, Link, Image, a Heading menu (1 to 3 and Paragraph), Bulleted, Numbered and Task lists, Quote, Code Block, Horizontal Rule and a Table menu (Insert 2 by 2, 3 by 3, 4 by 3, 5 by 4; Format, Add Row, Add Column, Delete Row, Delete Column, Align Left, Center, Right). A Format menu offers the same commands with shortcuts (Bold, Italic and Link at least), View gets Editor, Split View and Preview commands, and a format command in the preview-only mode switches to split first. The session keeps the preview mode of every tab (0, 1 or 2). Tests through the headless backend on the VM, optexe and native editors; the installed PrimeScroll shows the toolbar.
+  - acceptance:
+    - editor scenarios: no toolbar for a text file, the toolbar for a markdown file and for a file with the preview on, the commands change the text through the selection, the modes switch and are restored with the session; the toolbar's outline is pinned; the pictures of the installed app; full release gate green
+  - stop_rule: the editor's toolbar, Format menu, commands and session; smart list continuation on Return is separate.
+
+- [ ] TODO-5603: Startup audit: what a launch loads and does
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5612
   - created_at: 2026-10-26
   - phase: Native PrimeScroll (docs/NativeUiPlan.md)
   - parallel_track: startup
