@@ -851,7 +851,8 @@ if(PRIMESTRUCT_BUILD_NATIVE_UI AND APPLE)
   set_target_properties(primec_ui_appkit_lib PROPERTIES OBJCXX_STANDARD 20 OBJCXX_STANDARD_REQUIRED ON)
   target_compile_options(primec_ui_appkit_lib PRIVATE -fobjc-arc)
   target_include_directories(primec_ui_appkit_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-  target_link_libraries(primec_ui_appkit_lib PUBLIC primec_ui_highlight_lib "-framework AppKit" "-framework Foundation")
+  target_link_libraries(primec_ui_appkit_lib PUBLIC primec_ui_highlight_lib "-framework AppKit" "-framework Foundation"
+                        "-framework UniformTypeIdentifiers")
 
   # The same backend as a dynamic library, for programs compiled by `primec --emit=native` (which has no
   # linker): the executable loads it and binds its `ps_ui_*` host functions at launch.
@@ -861,7 +862,7 @@ if(PRIMESTRUCT_BUILD_NATIVE_UI AND APPLE)
   target_compile_options(primec_ui_appkit_dylib PRIVATE -fobjc-arc)
   target_include_directories(primec_ui_appkit_dylib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
   target_link_libraries(primec_ui_appkit_dylib PRIVATE primec_ui_highlight_lib "-framework AppKit"
-                                                       "-framework Foundation")
+                                                       "-framework Foundation" "-framework UniformTypeIdentifiers")
 
   # Development runner: compiles .prime at launch, or runs .psir bytecode.
   add_executable(primestruct_app tools/primestruct_app/main.cpp)
