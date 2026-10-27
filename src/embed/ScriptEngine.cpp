@@ -152,10 +152,12 @@ bool ScriptEngine::compileEntry(const std::string &path,
   options.entryPath = entryPath;
   options.importPaths = importPaths_;
   options.inMemorySource = text;
+  // An explicit stdlib wins; the checkout the script's path happens to sit in would add the same modules a second time.
   if (const std::string stdlibDir = resolveStdlibDir(stdlibPath_); !stdlibDir.empty()) {
     options.importPaths.push_back(stdlibDir);
+  } else {
+    addDefaultStdlibInclude(options.inputPath, options.importPaths);
   }
-  addDefaultStdlibInclude(options.inputPath, options.importPaths);
 
   std::string error;
   CompilePipelineErrorStage stage = CompilePipelineErrorStage::None;

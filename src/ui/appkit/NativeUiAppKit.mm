@@ -118,7 +118,6 @@ struct State {
   std::unordered_map<uint64_t, int32_t> previewModes; // PS_UI_PREVIEW_* of the windows whose preview is on
   // Running scripts (ps_ui_script_run) and the output pane under the window's content.
   struct ScriptSession {
-    const primec::ui::ScriptRunnerApi *api = nullptr;
     PsScriptRun *run = nullptr;
     int32_t endCommand = 0;
     uint64_t token = 0; // tells a late callback of an earlier run from this one's
@@ -3021,11 +3020,10 @@ void releaseWindowScript(uint64_t window) {
     return;
   }
   PsScriptRun *run = it->second.run;
-  const primec::ui::ScriptRunnerApi *api = it->second.api;
   void *context = it->second.context;
   s.scripts.erase(it);
   if (run != nullptr) {
-    api->release(run); // stops the script and joins its worker
+    ps_script_release(run); // ends the script's process and joins its worker
   }
   delete static_cast<ScriptCallbackContext *>(context);
 }
@@ -3073,12 +3071,6 @@ bool ps_ui_script_run(uint64_t window, const char *name, const char *text, int32
   }
   NSTextView *view = outputView(window);
   view.string = @"";
-  const primec::ui::ScriptRunnerApi *api = primec::ui::scriptRunnerApi();
-  if (api == nullptr) {
-    appendOutput(window, [NSString stringWithFormat:@"The script runner is not available: %s\n",
-                                                    primec::ui::scriptRunnerError()]);
-    return false;
-  }
   // The stdlib the script imports from: the bundle's copy when there is one.
   std::string stdlib;
   NSString *bundled = [NSBundle.mainBundle.resourcePath stringByAppendingPathComponent:@"stdlib"];
@@ -3090,17 +3082,16 @@ bool ps_ui_script_run(uint64_t window, const char *name, const char *text, int32
   context->window = window;
   context->token = s.nextScriptToken++;
   State::ScriptSession session;
-  session.api = api;
   session.endCommand = endCommand;
   session.token = context->token;
   session.context = context;
   s.scripts[window] = session;
-  PsScriptRun *run = api->start(name != nullptr ? name : "script.prime", text != nullptr ? text : "", stdlib.c_str(),
-                                scriptOutput, scriptFinished, context);
+  PsScriptRun *run = ps_script_start(name != nullptr ? name : "script.prime", text != nullptr ? text : "",
+                                     stdlib.c_str(), scriptOutput, scriptFinished, context);
   if (run == nullptr) {
     s.scripts.erase(window);
     delete context;
-    appendOutput(window, @"The script could not be started.\n");
+    appendOutput(window, [NSString stringWithFormat:@"The script could not be started: %s\n", ps_script_last_error()]);
     return false;
   }
   s.scripts[window].run = run;
@@ -3113,7 +3104,7 @@ bool ps_ui_script_stop(uint64_t window) {
   if (it == s.scripts.end() || it->second.run == nullptr) {
     return false;
   }
-  it->second.api->stop(it->second.run);
+  ps_script_stop(it->second.run);
   return true;
 }
 

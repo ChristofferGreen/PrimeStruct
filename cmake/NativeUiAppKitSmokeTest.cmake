@@ -129,7 +129,7 @@ foreach(shot gutter code menu tabs preview longtop scrolltext scrollpreview scro
 endforeach()
 
 # Run (command 120, sent once the file is loaded) on a script, in a native bundle that carries the interpreter
-# (libps_script.dylib and the stdlib): the output pane opens under the editor and shows what the script printed, so
+# (PrimeScriptRunner and the stdlib): the output pane opens under the editor and shows what the script printed, so
 # the picture differs from the plain editor's.
 foreach(var OPEN SCROLL CARET TYPE TYPE_AFTER_SCROLL MENU REPORT CLICK PREFS TARGET_LAST)
   unset(ENV{PRIMESTRUCT_UI_${var}})
@@ -141,7 +141,7 @@ execute_process(
 if(NOT rc EQUAL 0)
   message(FATAL_ERROR "native editor bundle failed (${rc}): ${out}${err}")
 endif()
-foreach(file MacOS/libps_script.dylib Resources/stdlib/std)
+foreach(file MacOS/PrimeScriptRunner Resources/stdlib/std)
   if(NOT EXISTS "${WORK_DIR}/EditorRun.app/Contents/${file}")
     message(FATAL_ERROR "the native bundle lacks ${file}")
   endif()

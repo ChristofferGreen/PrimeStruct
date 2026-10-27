@@ -572,12 +572,14 @@ build_toolbar([App] app) {
   return(bar)
 }
 
-// The toolbar of a script window: Run and Stop.
+// The toolbar of a script window: Run and Stop, and a button that hides or shows the output pane.
 [return<Toolbar>]
 build_script_toolbar([App] app) {
   [Toolbar] bar{app.toolbar()}
   bar.button("Run", "play.fill", command_run())
   bar.button("Stop", "stop.fill", command_stop())
+  bar.separator()
+  bar.button("Output", "rectangle.bottomhalf.inset.filled", command_output())
   return(bar)
 }
 

@@ -1,0 +1,45 @@
+import /std/text/*
+import /std/ui/native/*
+
+// A window with one button; clicking it prints "Hello, world!".
+//
+//   primestruct_app examples/native_ui/hello_button.prime
+
+[return<int> effects(heap_alloc, io_out)]
+main() {
+  [App] app{start_app("Hello Button")}
+  [Window] window{app.window("Hello", 320i32, 120i32)}
+  [Button] hello{app.button("Say Hello")}
+  window.setContentWidget(hello.widget())
+  window.show()
+  [mut] running{true}
+  while(running) {
+    pick(app.waitEvent()) {
+      controlChanged(widget) {
+        [Widget] clicked{widget}
+        if(clicked.handle == hello.handle) {
+          print_line("Hello, world!"utf8)
+        }
+      }
+      windowCloseRequested(w) {
+        [Window] target{w}
+        target.close()
+        running = false
+      }
+      quitRequested {
+        running = false
+      }
+      command(id) {
+        running = running
+      }
+      textChanged(w) {
+        [Window] target{w}
+        target.setEdited(true)
+      }
+      openFile(request) {
+        running = running
+      }
+    }
+  }
+  return(0i32)
+}

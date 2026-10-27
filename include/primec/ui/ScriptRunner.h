@@ -1,51 +1,33 @@
 #pragma once
 
-// Runs a PrimeScript on a worker thread for a UI backend's "Run" (docs/NativeUiPlan.md section 18). The interpreter is
-// the embedding facade (primec::embed::ScriptEngine: parser, semantics, lowerer and VM), which is large, so it lives in
-// its own dynamic library (libps_script) that a backend loads with scriptRunnerApi() on the first run and never at
-// launch. The library exports the three C functions below; the backends call them through the table.
+// Runs a PrimeScript for a UI backend's "Run" (docs/NativeUiPlan.md section 18). The script runs in its own process:
+// the PrimeScriptRunner executable (the development runner `primestruct_app` with its `--script-host` mode: the
+// compiler, the interpreter and the native UI bindings) reads the text from its standard input and runs it, so a
+// script that opens windows is an app of its own, a script that does not end is stopped by ending its process, and a
+// crash cannot take the editor down. The backend reads the process's output (stdout and stderr, in program order) on a
+// worker thread. The functions are plain C so a backend needs nothing else.
 
 #include <cstddef>
 
 extern "C" {
 
 typedef struct PsScriptRun PsScriptRun;
-// Output of the script in program order: fd 1 is stdout, fd 2 is stderr and the runner's own last lines (a diagnostic,
-// "[exit code N]", "[stopped]"). Called on the worker thread; `chunk` is valid during the call.
+// Output of the script in program order (fd is 1: the process's stdout and stderr share one pipe) and the runner's own
+// last lines (a diagnostic, "[exit code N]", "[stopped]"). Called on the worker thread; `chunk` is valid during the call.
 typedef void (*PsScriptOutput)(int fd, const char *chunk, size_t size, void *user);
-// Called once on the worker thread after the last output: status 0 the script ran (`exitCode` is main's result),
-// 1 it did not compile or failed while running, 2 it was stopped.
+// Called once on the worker thread after the last output: status 0 the script ran (its own trailer says how it ended),
+// 1 it did not start or its process failed, 2 it was stopped.
 typedef void (*PsScriptFinished)(int status, int exitCode, void *user);
 
-// Starts compiling and running `text` (named `name` in diagnostics and as the base of relative imports). `stdlibDir` is
-// the directory holding `std/` ("" or NULL: the engine looks for it itself). Returns NULL when the thread cannot start.
+// Starts the runner and sends it `text` (named `name` in diagnostics and as the base of relative imports). `stdlibDir` is
+// the directory holding `std/` ("" or NULL: the runner looks for it itself). Returns NULL when the runner cannot be found
+// or started; ps_script_last_error() then says why.
 PsScriptRun *ps_script_start(const char *name, const char *text, const char *stdlibDir, PsScriptOutput output,
                              PsScriptFinished finished, void *user);
-// Asks the run to stop (it fails with status 2 soon after; a no-op once finished).
+// Asks the run to stop (its process is ended; a no-op once finished).
 void ps_script_stop(PsScriptRun *run);
 // Stops the run if it still goes, waits for the worker to end and frees it. No callback runs after it returns.
 void ps_script_release(PsScriptRun *run);
+// Why the last ps_script_start returned NULL.
+const char *ps_script_last_error(void);
 }
-
-namespace primec::ui {
-
-struct ScriptRunnerApi {
-  PsScriptRun *(*start)(const char *, const char *, const char *, PsScriptOutput, PsScriptFinished, void *) = nullptr;
-  void (*stop)(PsScriptRun *) = nullptr;
-  void (*release)(PsScriptRun *) = nullptr;
-};
-
-// The runner library's functions, loading it on the first call (the PRIMESTRUCT_SCRIPT_RUNNER environment variable,
-// then `libps_script.dylib` beside the library or executable this code is in, then the build tree's copy). nullptr when
-// it cannot be loaded; `scriptRunnerError()` then says why.
-const ScriptRunnerApi *scriptRunnerApi();
-// Installs the functions to use instead of loading the library (a program that links the runner itself, such as the
-// tests); nullptr goes back to loading it.
-void setScriptRunnerApi(const ScriptRunnerApi *api);
-// Makes Run unavailable in this program ("script runner is not available": a runner without a compiler), instead of
-// looking for the library: a program that links the compiler's allocator must not load libps_script (see
-// docs/NativeUiPlan.md section 18).
-void disableScriptRunner();
-const char *scriptRunnerError();
-
-} // namespace primec::ui

@@ -13,7 +13,6 @@
 
 #include "primec/embed/Script.h"
 #include "primec/ui/NativeUiBindings.h"
-#include "primec/ui/ScriptRunner.h"
 
 #ifndef PRIMESTRUCT_APP_RUNTIME_ONLY
 #include "primec/embed/ScriptEngine.h"
@@ -27,6 +26,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <filesystem>
+#include <iostream>
 #include <fstream>
 #include <iterator>
 #include <string>
@@ -74,15 +74,38 @@ std::string bundledProgramPath() {
   return {};
 }
 
+#ifndef PRIMESTRUCT_APP_RUNTIME_ONLY
+// The script host (docs/NativeUiPlan.md section 18): the editor's Run starts this process with the script's text on stdin.
+// The script runs with the native UI bound, so one that opens windows is an app of its own. Output is unbuffered and
+// stdout and stderr share a pipe, so the editor shows it in program order; the last line says how the run ended (the
+// process itself exits 0 once it got that far).
+int runScriptHost(const std::string &name) {
+  std::setvbuf(stdout, nullptr, _IONBF, 0);
+  const std::string text((std::istreambuf_iterator<char>(std::cin)), std::istreambuf_iterator<char>());
+  primec::embed::ScriptEngine engine;
+  primec::embed::Script script = engine.compileSource(name, text);
+  if (!script.valid()) {
+    std::fputs((script.diagnostics() + "\n").c_str(), stderr);
+    return 0;
+  }
+  primec::ui::bindNativeUi(script);
+  const auto result = script.run({});
+  if (result.ok) {
+    std::fprintf(stderr, "[exit code %d]\n", result.exitCode);
+  } else {
+    std::fputs((result.diagnostics + "\n").c_str(), stderr);
+  }
+  return 0;
+}
+#endif
+
 } // namespace
 
 int main(int argc, char **argv) {
-  // Run (docs/NativeUiPlan.md section 18): the development runner links the interpreter, the bytecode-only one has none.
-#ifdef PRIMESTRUCT_APP_RUNTIME_ONLY
-  primec::ui::disableScriptRunner();
-#else
-  static const primec::ui::ScriptRunnerApi scriptRunner{&ps_script_start, &ps_script_stop, &ps_script_release};
-  primec::ui::setScriptRunnerApi(&scriptRunner);
+#ifndef PRIMESTRUCT_APP_RUNTIME_ONLY
+  if (argc >= 3 && std::string(argv[1]) == "--script-host") {
+    return runScriptHost(argv[2]);
+  }
 #endif
   // Started from a bundle the program is the bytecode inside it and every argument is the program's (a file named
   // on the command line, as with a native bundle); anywhere else the first argument names the program.

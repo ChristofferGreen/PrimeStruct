@@ -1461,7 +1461,10 @@ TEST_CASE("editor shows a Run toolbar for PrimeStruct files only") {
   const std::string script = writeScratch("run_toolbar.prime", HelloScript);
   const std::string txt = writeScratch("run_toolbar.txt", "t");
   runMarkdownEditor(script, {});
-  const std::vector<std::string> outline = {"button Run [play.fill] #120", "button Stop [stop.fill] #121"};
+  const std::vector<std::string> outline = {"button Run [play.fill] #120",
+                                            "button Stop [stop.fill] #121",
+                                            "-",
+                                            "button Output [rectangle.bottomhalf.inset.filled] #122"};
   CHECK(headless::toolbarOutline(EditorWindow) == outline);
   runMarkdownEditor(txt, {});
   CHECK(headless::toolbarOutline(EditorWindow).empty());

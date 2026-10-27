@@ -13,7 +13,6 @@
 namespace primec::ui::headless::detail {
 
 struct ScriptSession {
-  const primec::ui::ScriptRunnerApi *api = nullptr;
   PsScriptRun *run = nullptr;
   int32_t endCommand = 0;
   std::mutex mutex;
@@ -23,7 +22,7 @@ struct ScriptSession {
 
   ~ScriptSession() {
     if (run != nullptr) {
-      api->release(run);
+      ps_script_release(run);
     }
   }
 };
@@ -58,7 +57,7 @@ bool deliverScriptEvent() {
     // A script that never ends must not hang a test forever: stop it after a while.
     if (!session.changed.wait_for(lock, std::chrono::seconds(20), [&] { return session.finished; })) {
       lock.unlock();
-      session.api->stop(session.run);
+      ps_script_stop(session.run);
       lock.lock();
       session.changed.wait(lock, [&] { return session.finished; });
     }
@@ -87,18 +86,12 @@ bool ps_ui_script_run(uint64_t window, const char *name, const char *text, int32
   }
   w->state.output.clear();
   w->state.outputVisible = true;
-  const primec::ui::ScriptRunnerApi *api = primec::ui::scriptRunnerApi();
-  if (api == nullptr) {
-    w->state.output = std::string("The script runner is not available: ") + primec::ui::scriptRunnerError() + "\n";
-    return loggedFlag(call, false);
-  }
   auto session = std::make_shared<ScriptSession>();
-  session->api = api;
   session->endCommand = endCommand;
-  session->run = api->start(name != nullptr ? name : "script.prime", text != nullptr ? text : "", "", onOutput,
-                            onFinished, session.get());
+  session->run = ps_script_start(name != nullptr ? name : "script.prime", text != nullptr ? text : "", "", onOutput,
+                                 onFinished, session.get());
   if (session->run == nullptr) {
-    w->state.output = "The script could not be started.\n";
+    w->state.output = std::string("The script could not be started: ") + ps_script_last_error() + "\n";
     return loggedFlag(call, false);
   }
   w->script = std::move(session);
@@ -111,7 +104,7 @@ bool ps_ui_script_stop(uint64_t window) {
   Window *w = usable() ? liveWindow(window) : nullptr;
   const bool running = w != nullptr && w->script != nullptr;
   if (running) {
-    w->script->api->stop(w->script->run);
+    ps_script_stop(w->script->run);
   }
   return loggedFlag(call, running);
 }

@@ -1,7 +1,6 @@
 #include "primec/testing/TestScratch.h"
 #include "primec/ui/NativeUi.h"
 #include "primec/ui/NativeUiHeadless.h"
-#include "primec/ui/ScriptRunner.h"
 
 #include "third_party/doctest.h"
 
@@ -14,14 +13,6 @@
 
 namespace headless = primec::ui::headless;
 
-namespace {
-// The tests link the runner themselves (one allocator in the process) instead of loading libps_script.
-struct InstallScriptRunner {
-  primec::ui::ScriptRunnerApi api{&ps_script_start, &ps_script_stop, &ps_script_release};
-  InstallScriptRunner() { primec::ui::setScriptRunnerApi(&api); }
-};
-const InstallScriptRunner installScriptRunner;
-} // namespace
 
 TEST_SUITE_BEGIN("primestruct.ui.headless");
 
@@ -1167,4 +1158,76 @@ TEST_CASE("markdown edits change the text through the selection and report it") 
   CHECK(ps_ui_text_view_set_markdown_editing(view, true));
   CHECK_FALSE(ps_ui_text_view_set_markdown_editing(999, true));
   CHECK(headless::pushedScenario() == "select:" + std::to_string(view) + ":2:6;cmd:7");
+}
+
+TEST_CASE("a script run shows its output in the output pane and ends with a command") {
+  startApp();
+  const uint64_t window = ps_ui_window_create("Run", 400, 300);
+  REQUIRE(window != 0);
+  CHECK_FALSE(headless::windowState(window).outputVisible);
+  const char *source = "[return<i32> effects(io_out, io_err)]\nmain() {\n  print_line(\"hello\"utf8)\n"
+                       "  print_line_error(\"oops\"utf8)\n  return(4i32)\n}\n";
+  REQUIRE(ps_ui_script_run(window, "hello.prime", source, 77));
+  CHECK(ps_ui_script_running(window));
+  CHECK_FALSE(ps_ui_script_run(window, "hello.prime", source, 77)); // one run at a time
+  CHECK(headless::windowState(window).outputVisible);
+  // Nothing else to do: the run's end arrives as the command, with the output in place.
+  CHECK(ps_ui_wait_event() == PS_UI_EVENT_COMMAND);
+  CHECK(ps_ui_event_command() == 77);
+  CHECK(ps_ui_event_window() == window);
+  CHECK_FALSE(ps_ui_script_running(window));
+  CHECK(headless::windowState(window).output == "hello\noops\n[exit code 4]\n");
+  // A new run clears the pane.
+  REQUIRE(ps_ui_script_run(window, "again.prime", "[return<i32>]\nmain() {\n  return(0i32)\n}\n", 77));
+  CHECK(ps_ui_wait_event() == PS_UI_EVENT_COMMAND);
+  CHECK(headless::windowState(window).output == "[exit code 0]\n");
+}
+
+TEST_CASE("a script that does not compile shows its diagnostic") {
+  startApp();
+  const uint64_t window = ps_ui_window_create("Run", 400, 300);
+  REQUIRE(ps_ui_script_run(window, "broken.prime", "[return<i32>]\nmain() {\n  return(missing_helper())\n}\n", 5));
+  CHECK(ps_ui_wait_event() == PS_UI_EVENT_COMMAND);
+  const std::string output = headless::windowState(window).output;
+  CHECK(output.find("missing_helper") != std::string::npos);
+  CHECK(output.find("[exit code") == std::string::npos);
+}
+
+TEST_CASE("a queued stop ends a script that does not end") {
+  startApp();
+  const uint64_t window = ps_ui_window_create("Run", 400, 300);
+  REQUIRE(ps_ui_script_run(window, "forever.prime",
+                           "[return<i32>]\nmain() {\n  [mut] n{0i32}\n  while(true) {\n    n = n + 1i32\n  }\n"
+                           "  return(n)\n}\n",
+                           9));
+  CHECK(ps_ui_script_stop(window));
+  CHECK(ps_ui_wait_event() == PS_UI_EVENT_COMMAND);
+  CHECK(ps_ui_event_command() == 9);
+  CHECK(headless::windowState(window).output == "[stopped]\n");
+  CHECK_FALSE(ps_ui_script_stop(window)); // nothing runs any more
+}
+
+TEST_CASE("the output pane is shown and hidden by the program and a closed window ends its run") {
+  startApp();
+  const uint64_t window = ps_ui_window_create("Run", 400, 300);
+  CHECK(ps_ui_window_set_output_visible(window, true));
+  CHECK(ps_ui_window_output_visible(window));
+  CHECK(ps_ui_window_set_output_visible(window, false));
+  CHECK_FALSE(ps_ui_window_output_visible(window));
+  CHECK_FALSE(ps_ui_window_set_output_visible(999, true));
+  REQUIRE(ps_ui_script_run(window, "forever.prime",
+                           "[return<i32>]\nmain() {\n  while(true) {\n  }\n  return(0i32)\n}\n", 9));
+  CHECK(ps_ui_window_close(window)); // ends the process and joins the worker
+  CHECK_FALSE(ps_ui_script_running(window));
+}
+
+TEST_CASE("a script run has the native UI bound, as a program of its own") {
+  startApp();
+  const uint64_t window = ps_ui_window_create("Run", 400, 300);
+  REQUIRE(ps_ui_script_run(window, "ui.prime",
+                           "import /std/ui/native/*\n\n[return<i32> effects(io_out)]\nmain() {\n"
+                           "  print_line(ps_ui_abi_version())\n  return(0i32)\n}\n",
+                           5));
+  CHECK(ps_ui_wait_event() == PS_UI_EVENT_COMMAND);
+  CHECK(headless::windowState(window).output == std::to_string(PS_UI_ABI_VERSION) + "\n[exit code 0]\n");
 }

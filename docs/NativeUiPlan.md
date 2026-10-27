@@ -546,47 +546,47 @@ markdown constructs; tables get the most help.
 
 ## 18. Running scripts
 
-**Goal (2026-10-27): editing a `.prime` file offers a Run button; the editor runs the script on an embedded PrimeScript
-interpreter and shows its text output in a pane at the bottom of the window, like the markdown preview but simpler.**
+**Goal (2026-10-27): editing a `.prime` file offers a Run button; the editor runs the script on the PrimeScript interpreter
+and shows its text output in a pane at the bottom of the window, like the markdown preview but simpler.**
 
-How it is read: the interpreter is the embedding facade (`primec::embed::ScriptEngine`, docs/Embedding.md) that compiles
-the editor's text and runs it on the VM; no child process. A run has no host functions bound, takes no arguments and
-shows what the script prints (stdout and stderr, in program order) plus the compile or runtime diagnostic or the exit
-code. A run that does not end can be stopped.
+How it is read: the editor's text is compiled and run by the interpreter (`primec::embed::ScriptEngine`, docs/Embedding.md)
+**in a process of its own**. A run takes no arguments and shows what the script prints (stdout and stderr, in program
+order) plus the compile or runtime diagnostic or the exit code. A script that does not end can be stopped, and a script
+that opens windows is an app of its own.
 
 - **Cancellation (TODO-5613, done).** `Vm::setCancelFlag` / `RunOptions::cancel`: the plain interpreter polls an atomic
   flag every 1024 steps and fails with "execution stopped"; a run with a flag skips the fast kernel. Output goes to a
-  `RunOptions::output` callback (the VM's `VmOutputSink`), not the process streams.
-- **Runner (TODO-5614, done).** `libps_script` (`src/ui/ScriptRunner.cpp`, `include/primec/ui/ScriptRunner.h`) runs a
-  script on a worker thread (64 MB stack) with `ScriptEngine` and `RunOptions`, and reports output chunks and the end
-  through callbacks; its last output is the trailer line ("[exit code N]", the diagnostic, "[stopped]"). The compiler
-  and VM are large (the dylib is 19 MB), so a backend loads it with `dlopen` on the first Run
-  (`primec::ui::scriptRunnerApi()`, `ScriptRunnerLoader.cpp`: `PRIMESTRUCT_SCRIPT_RUNNER`, then `libps_script.dylib`
-  beside the backend's library, then the build tree's copy), never at launch (startup budget, section 16). The headless
-  backends load it the same way, so the compiled-editor mirrors need no compiler libraries.
+  `RunOptions::output` callback (the VM's `VmOutputSink`). The editor no longer uses it (it ends a process instead); it
+  stays for embedders.
+- **The runner process (TODO-5617, done).** `primestruct_app --script-host NAME` (the development runner: compiler,
+  interpreter and the native UI bindings; bundled as `Contents/MacOS/PrimeScriptRunner`) reads the script from stdin,
+  runs it with the native UI bound and prints its last line ("[exit code N]", or the diagnostic) to stderr; stdout is
+  unbuffered and shares one pipe with stderr, so the output stays in program order. `src/ui/ScriptProcess.cpp` (in
+  `primec_ui_highlight_lib`, plain C functions `ps_script_start/stop/release`, `include/primec/ui/ScriptRunner.h`) spawns
+  it with `posix_spawn`, writes the text, reads the pipe on a worker thread, and ends the process on Stop or when its
+  window closes (SIGTERM, SIGKILL after three seconds). It finds the runner through `PRIMESTRUCT_SCRIPT_RUNNER`, then
+  `PrimeScriptRunner` beside the library or program, then the build tree's `primestruct_app`. The stdlib directory goes to
+  the child as `PRIMESTRUCT_STDLIB`. An earlier in-process version (a 19 MB dylib loaded with dlopen) was replaced: it
+  could not run scripts that use the UI, could not stop a blocked script, and its allocator clashed with the compiler
+  arena's global `operator new` inside libc++.
 - **ABI (TODO-5614, done).** `ps_ui_script_run(window, name, text, endCommand)`, `ps_ui_script_stop`,
   `ps_ui_script_running`, `ps_ui_window_set_output_visible/output_visible`. The backend owns the pane: a run clears and
   shows it and appends the output as it arrives (queued to the main thread); the end of a run is a command event with
-  `endCommand` and the window. Headless: the output and the end are handed over only when no user action is left, so a
-  scenario is deterministic (a queued Stop happens before the script's output); `WindowState.output/outputVisible/
+  `endCommand` and the window. Headless: the output and the end are handed over only when no user action is left, or at
+  a `wait` scenario step (`pushWaitScript`), so a scenario is deterministic; `WindowState.output/outputVisible/
   scriptRunning`.
 - **AppKit (TODO-5615, done).** The output pane is a read-only monospaced NSTextView in an NSSplitView with a horizontal
-  divider under the window's content (about a third of the height); a run clears and shows it, appends the worker's
-  output on the main thread (`dispatch_async` plus a wake-up event, since `ps_ui_wait_event` sleeps in `nextEvent`) and
-  enqueues the end command. Turning a preview on closes the pane first (the preview lays the content out itself).
-  `scripts/bundle_macos_app.sh` copies `libps_script.dylib` into `Contents/MacOS` and `stdlib/` into
-  `Contents/Resources`, and a run passes the bundled stdlib to the engine. Nothing is loaded at launch: a launch that
-  never runs a script has the same libraries as before. The harness delivers `PRIMESTRUCT_UI_COMMANDS=+120` after
-  `PRIMESTRUCT_UI_OPEN` has loaded its file (a run needs the text) and a snapshot waits for a running script.
-- **Allocator (a lesson).** `libps_script` is built from `ScriptRunner.cpp` and `ScriptRunnerArena.cpp`: the compiler's
-  arena (`CompileArena.cpp`) replaces the global `operator new/delete`, which inside a dlopen'ed library does not reach
-  libc++.dylib's own string code (it frees arena blocks with `free()`: "pointer being freed was not allocated" during the
-  library's static initialisers). The library therefore defines plain malloc/free operators, and a program that links the
-  compiler itself (the unit tests) links the runner statically (`primec_ui_script_lib`) and installs it with
-  `primec::ui::setScriptRunnerApi` instead of loading the dylib.
-- **Editor (TODO-5616, done).** A `.prime` window gets a toolbar with Run (`play.fill`, command 120) and Stop
-  (`stop.fill`, 121); the Run menu has Run Cmd+R, Stop Cmd+period and Show Output (Cmd+Option+O, 122); the end of a run
+  divider under the window's content (about a third of the height); a run clears and shows it, appends the output on the
+  main thread (`dispatch_async` plus a wake-up event, since `ps_ui_wait_event` sleeps in `nextEvent`) and enqueues the end
+  command. Turning a preview on closes the pane first. `scripts/bundle_macos_app.sh` copies `primestruct_app` into
+  `Contents/MacOS/PrimeScriptRunner` and `stdlib/` into `Contents/Resources`. Nothing is started at launch. The harness
+  delivers `PRIMESTRUCT_UI_COMMANDS=+120` after `PRIMESTRUCT_UI_OPEN` has loaded its file and a snapshot waits for a
+  running script.
+- **Editor (TODO-5616, done).** A `.prime` window gets a toolbar with Run (`play.fill`, command 120), Stop
+  (`stop.fill`, 121) and, after a separator, Output (`rectangle.bottomhalf.inset.filled`, 122: hides or shows the
+  output pane, the same command as the menu's Show Output); the Run menu has Run Cmd+R, Stop Cmd+period and Show Output (Cmd+Option+O, 122); the end of a run
   is command 123 (nothing to do). The text run is the tab's text as it is, saved or not, named by the tab's path (or
   "untitled.prime"). `sync_toolbars` takes the kind of toolbar (1 markdown, 2 script) and is called once for each; a
-  window of neither kind has none. Markdown windows are unchanged. The Run menu shifts the handles of every window
-  created after the menus by one (the tests' constants moved).
+  window of neither kind has none. The Run menu shifts the handles of every window created after the menus by one.
+  A compiled (optexe) editor crashed freeing a reassigned `String` local, so `run_script` builds its strings with
+  locals and branches.
