@@ -498,10 +498,10 @@ TEST_CASE("highlight: a file opened into a fresh New tab is styled") {
   headless::reset();
   headless::pushCommand(CommandOpen);
   headless::pushOpenPanelAnswer(md);
-  headless::pushCommand(1); // New: a second, untitled tab (window 17, text view 18: the first markdown file built the toolbar and its two menus)
+  headless::pushCommand(1); // New: a second, untitled tab (window 18, text view 19: the first markdown file built the toolbar and its three menus)
   headless::pushCommand(CommandOpen);
   headless::pushOpenPanelAnswer(md);
-  headless::pushCloseWindow(17);
+  headless::pushCloseWindow(18);
   headless::pushCloseWindow(EditorWindow);
   ScriptEngine engine;
   primec::ui::bindNativeUi(engine);
@@ -514,11 +514,11 @@ TEST_CASE("highlight: a file opened into a fresh New tab is styled") {
   const auto expected = primec::ui::highlight(Language::Markdown, readFile(md));
   REQUIRE(!expected.empty());
   CHECK(headless::styleRuns(EditorView).size() == expected.size());
-  CHECK(headless::styleRuns(18).size() == expected.size());
-  CHECK(headless::windowPath(17) == md);
+  CHECK(headless::styleRuns(19).size() == expected.size());
+  CHECK(headless::windowPath(18) == md);
   // The open went into the New tab (reused, not a third tab).
   CHECK(headless::tabGroup(EditorWindow).size() == 0);
-  CHECK(headless::windowState(18).exists == false);
+  CHECK(headless::windowState(19).exists == false);
 }
 
 TEST_CASE("highlight: the editor restyles after typing") {

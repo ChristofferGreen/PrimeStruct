@@ -1029,9 +1029,9 @@ void drawPreviewWeb(uint64_t window, NSView *view, NSBitmapImageRep *rep) {
 
 // A segment of a toolbar's segmented control: its command is the group's first command plus the segment's index.
 - (void)toolbarSegments:(id)sender {
-  NSToolbarItemGroup *group = sender;
-  if (group.selectedIndex >= 0) {
-    enqueue(PS_UI_EVENT_COMMAND, 0, 0, static_cast<int32_t>(group.tag) + static_cast<int32_t>(group.selectedIndex));
+  NSSegmentedControl *segments = sender;
+  if (segments.selectedSegment >= 0) {
+    enqueue(PS_UI_EVENT_COMMAND, 0, 0, static_cast<int32_t>(segments.tag) + static_cast<int32_t>(segments.selectedSegment));
   }
 }
 
@@ -1161,16 +1161,19 @@ PSController *controller();
     for (const std::string &segment : item.segments) {
       [titles addObject:toNSString(segment.c_str())];
     }
-    NSToolbarItemGroup *group = [NSToolbarItemGroup groupWithItemIdentifier:identifier
-                                                                     titles:titles
-                                                              selectionMode:NSToolbarItemGroupSelectionModeSelectOne
-                                                                     labels:titles
-                                                                     target:controller()
-                                                                     action:@selector(toolbarSegments:)];
-    group.tag = item.id;
+    // A segmented control of its own (an NSToolbarItemGroup did not keep its selection).
+    NSSegmentedControl *segments = [NSSegmentedControl segmentedControlWithLabels:titles
+                                                                     trackingMode:NSSegmentSwitchTrackingSelectOne
+                                                                           target:controller()
+                                                                           action:@selector(toolbarSegments:)];
+    segments.tag = item.id;
     const auto picked = state().toolbarSelected.find(self.windowHandle);
     const int32_t at = picked != state().toolbarSelected.end() ? picked->second - item.id : 0;
-    group.selectedIndex = at >= 0 && at < static_cast<int32_t>(item.segments.size()) ? at : 0;
+    segments.selectedSegment = at >= 0 && at < static_cast<int32_t>(item.segments.size()) ? at : 0;
+    NSToolbarItem *group = [[NSToolbarItem alloc] initWithItemIdentifier:identifier];
+    group.view = segments;
+    group.label = title;
+    group.visibilityPriority = NSToolbarItemVisibilityPriorityHigh; // the last to move into the overflow menu
     return group;
   }
   if (item.kind == ToolbarItemDesc::Kind::Menu) {
@@ -1180,6 +1183,7 @@ PSController *controller();
     menuItem.image = image;
     menuItem.menu = menuFor(item.menu);
     menuItem.showsIndicator = YES;
+    menuItem.visibilityPriority = NSToolbarItemVisibilityPriorityHigh;
     return menuItem;
   }
   NSToolbarItem *button = [[NSToolbarItem alloc] initWithItemIdentifier:identifier];
@@ -2789,11 +2793,9 @@ bool ps_ui_window_set_toolbar(uint64_t window, uint64_t toolbar) {
 bool ps_ui_window_toolbar_select(uint64_t window, int32_t commandId) {
   NSWindow *w = usable() ? liveWindow(window) : nil;
   const auto bar = state().windowToolbars.find(window);
-  const auto desc = bar != state().windowToolbars.end() ? bar->second.delegate : nil;
   if (w == nil || bar == state().windowToolbars.end()) {
     return false;
   }
-  (void)desc;
   // The control may not exist yet (items are built when the toolbar first needs them): remember the choice too.
   const auto described = state().toolbarDescs.find(((PSToolbarDelegate *)bar->second.delegate).toolbarHandle);
   bool known = false;
@@ -2808,12 +2810,9 @@ bool ps_ui_window_toolbar_select(uint64_t window, int32_t commandId) {
   }
   state().toolbarSelected[window] = commandId;
   for (NSToolbarItem *item in bar->second.items) {
-    if (![item isKindOfClass:[NSToolbarItemGroup class]]) {
-      continue;
-    }
-    NSToolbarItemGroup *group = (NSToolbarItemGroup *)item;
-    if (commandId >= group.tag && commandId < group.tag + static_cast<NSInteger>(group.subitems.count)) {
-      group.selectedIndex = commandId - group.tag;
+    NSSegmentedControl *segments = [item.view isKindOfClass:[NSSegmentedControl class]] ? (NSSegmentedControl *)item.view : nil;
+    if (segments != nil && commandId >= segments.tag && commandId < segments.tag + segments.segmentCount) {
+      segments.selectedSegment = commandId - segments.tag;
     }
   }
   return true;

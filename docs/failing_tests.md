@@ -22,9 +22,12 @@ None.
 ## Current Failures
 
 <!-- compile.sh:failing-tests:start -->
-- Last updated: `2026-10-26T22:09:03Z`
+- Last updated: `2026-10-26T23:42:01Z`
 - Build type: `Release`
 - Build dir: `build-release`
 - Command: `ctest --test-dir build-release --output-on-failure --parallel 22`
-- Result: no failing CTest cases.
+- Result: `ctest` failed with status `8`.
+- Failing CTest cases:
+  - `34`: `PrimeStruct_native_ui_editor`
+  - `35`: `PrimeStruct_native_ui_editor_acceptance`
 <!-- compile.sh:failing-tests:end -->

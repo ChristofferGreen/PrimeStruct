@@ -492,6 +492,18 @@ add_heading_items([Menu] menu) {
 }
 
 [return<bool>]
+add_block_items([Menu] menu) {
+  menu.item("Bulleted List", "", command_format() + 7i32)
+  menu.item("Numbered List", "", command_format() + 8i32)
+  menu.item("Task List", "", command_format() + 9i32)
+  menu.separator()
+  menu.item("Quote", "", command_format() + 10i32)
+  menu.item("Code Block", "", command_format() + 11i32)
+  menu.item("Horizontal Rule", "", command_format() + 12i32)
+  return(true)
+}
+
+[return<bool>]
 add_table_items([Menu] menu) {
   menu.item("Insert 2 by 2", "", command_table())
   menu.item("Insert 3 by 3", "", command_table() + 1i32)
@@ -510,8 +522,8 @@ add_table_items([Menu] menu) {
   return(true)
 }
 
-// The toolbar of a markdown window, built when the first one needs it: the view mode, the inline marks, the block
-// formats and the tables.
+// The toolbar of a markdown window, built when the first one needs it: the view mode, the inline marks, a heading menu,
+// a menu of block formats and the tables (menus keep it short enough for a window of the default width).
 [return<Toolbar>]
 build_toolbar([App] app) {
   [Toolbar] bar{app.toolbar()}
@@ -527,12 +539,9 @@ build_toolbar([App] app) {
   [Menu] headings{app.menu("Heading")}
   [bool] headingItems{add_heading_items(headings)}
   bar.menu("Heading", "textformat.size", headings)
-  bar.button("Bulleted List", "list.bullet", command_format() + 7i32)
-  bar.button("Numbered List", "list.number", command_format() + 8i32)
-  bar.button("Task List", "checklist", command_format() + 9i32)
-  bar.button("Quote", "text.quote", command_format() + 10i32)
-  bar.button("Code Block", "curlybraces", command_format() + 11i32)
-  bar.button("Horizontal Rule", "minus", command_format() + 12i32)
+  [Menu] blocks{app.menu("Blocks")}
+  [bool] blockItems{add_block_items(blocks)}
+  bar.menu("Blocks", "list.bullet", blocks)
   bar.separator()
   [Menu] tables{app.menu("Table")}
   [bool] tableItems{add_table_items(tables)}
@@ -588,7 +597,7 @@ format_text([Window] tab, [i32] operation, [i32] a, [i32] b) {
 // A new document: a window with its own text view, joined to host's tabs.
 [return<Window>]
 new_tab([App] app, [Window] host) {
-  [Window] created{app.window("Untitled", 720i32, 480i32)}
+  [Window] created{app.window("Untitled", 880i32, 480i32)}
   [TextView] view{app.textView()}
   view.setMonospace(true)
   apply_preferences(app, view)
@@ -830,7 +839,7 @@ main([array<string>] args) {
   [App] app{start_app("PrimeScroll")}
   [Settings mut] settings{Settings{}}
   app.setPreviewScrollMode(app.intPref("scrollMode", 2i32))
-  [Window] first{app.window("Untitled", 720i32, 480i32)}
+  [Window] first{app.window("Untitled", 880i32, 480i32)}
   first.setAutosaveName("PrimeScroll")
   [TextView] firstView{app.textView()}
   firstView.setMonospace(true)

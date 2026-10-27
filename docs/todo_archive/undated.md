@@ -496,7 +496,7 @@
   - acceptance:
     - smoke pictures of a window with the toolbar (all items visible, the segmented control on each mode) and of the preview-only mode; a harness-run edit changes the text and one undo restores it; full release gate green
   - stop_rule: the AppKit backend; the editor is TODO-5612.
-  - notes: `tests/fixtures/ui/screenshot/toolbar_demo.prime` and eight smoke runs (pictures and reports: bold, undo, preview-only, split, format, add row, insert table); harness variables PRIMESTRUCT_UI_SELECT and PRIMESTRUCT_UI_UNDO. Undo and redo of a text view did not reach the delegate, so the backend observes the undo manager. Open: the selected segment of the toolbar's segmented control is drawn as a blank white pill on the last segment in every offscreen picture whatever the mode; check it on the installed app in TODO-5612 (the commands and the layouts are right).
+  - notes: `tests/fixtures/ui/screenshot/toolbar_demo.prime` and eight smoke runs (pictures and reports: bold, undo, preview-only, split, format, add row, insert table); harness variables PRIMESTRUCT_UI_SELECT and PRIMESTRUCT_UI_UNDO. Undo and redo of a text view did not reach the delegate, so the backend observes the undo manager. The segmented control is an NSSegmentedControl in a toolbar item, not an NSToolbarItemGroup (whose selection came back as the last segment); the selected segment's label is not drawn in the offscreen picture (white on white), the pill is on the right segment.
 
 - [x] TODO-5612: The editor's markdown toolbar and Format menu
   - owner: ai

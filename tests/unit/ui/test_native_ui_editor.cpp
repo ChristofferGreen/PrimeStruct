@@ -270,8 +270,8 @@ TEST_CASE("editor close with unsaved text stays open when the user chooses Cance
 // menus (3 to 10), so the second tab's window and text view are 11 and 12.
 constexpr uint64_t SecondWindow = 14;
 constexpr uint64_t SecondView = 15;
-// Opening a markdown file builds the toolbar first (its handle and the handles of its two menus).
-constexpr uint64_t MarkdownSecondWindow = 17;
+// Opening a markdown file builds the toolbar first (its handle and the handles of its three menus).
+constexpr uint64_t MarkdownSecondWindow = 18;
 
 TEST_CASE("editor new opens a second tab in the same tab group") {
   headless::reset();
@@ -1298,12 +1298,14 @@ TEST_CASE("editor's toolbar offers the view modes and the markdown formats") {
                                          "  Heading 3 #73",
                                          "  -",
                                          "  Paragraph #70",
-                                         "button Bulleted List [list.bullet] #47",
-                                         "button Numbered List [list.number] #48",
-                                         "button Task List [checklist] #49",
-                                         "button Quote [text.quote] #50",
-                                         "button Code Block [curlybraces] #51",
-                                         "button Horizontal Rule [minus] #52",
+                                         "menu Blocks [list.bullet]",
+                                         "  Bulleted List #47",
+                                         "  Numbered List #48",
+                                         "  Task List #49",
+                                         "  -",
+                                         "  Quote #50",
+                                         "  Code Block #51",
+                                         "  Horizontal Rule #52",
                                          "-",
                                          "menu Table [tablecells]",
                                          "  Insert 2 by 2 #80",
