@@ -99,6 +99,7 @@ struct State {
   std::unordered_map<uint64_t, NSWindow *> windows;
   std::unordered_map<uint64_t, uint64_t> windowContent;
   std::unordered_map<uint64_t, std::string> windowPaths;
+  std::unordered_map<uint64_t, std::string> windowTitles; // the full title each window was given
   // The markdown preview (ps_ui_window_set_preview): a split view of the text view and a web view per
   // window. WebKit is loaded when the first preview turns on and is never linked.
   std::unordered_map<uint64_t, bool> previews;
@@ -1015,6 +1016,36 @@ void drawPreviewWeb(uint64_t window, NSView *view, NSBitmapImageRep *rep) {
 
 } // namespace
 
+// Shows the window's full title, or only the file name (the part after the last '/') when the full one would not fit
+// beside the window buttons and the toolbar.
+static void applyWindowTitle(NSWindow *w) {
+  State &s = state();
+  uint64_t handle = 0;
+  for (const auto &entry : s.windowTitles) {
+    if (liveWindow(entry.first) == w) {
+      handle = entry.first;
+      break;
+    }
+  }
+  if (handle == 0) {
+    return;
+  }
+  NSString *full = toNSString(s.windowTitles[handle].c_str());
+  NSString *shown = full;
+  const NSRange slash = [full rangeOfString:@"/" options:NSBackwardsSearch];
+  if (slash.location != NSNotFound) {
+    NSFont *font = [NSFont titleBarFontOfSize:0];
+    const CGFloat textWidth = [full sizeWithAttributes:@{NSFontAttributeName : font}].width;
+    const CGFloat reserved = w.toolbar != nil ? 360 : 150; // window buttons, and the toolbar beside the title
+    if (textWidth + reserved > w.frame.size.width) {
+      shown = [full substringFromIndex:slash.location + 1];
+    }
+  }
+  if (![w.title isEqualToString:shown]) {
+    w.title = shown;
+  }
+}
+
 @interface PSController : NSObject <NSApplicationDelegate, NSWindowDelegate, NSTextViewDelegate>
 - (void)menuCommand:(id)sender;
 - (void)controlChanged:(id)sender;
@@ -1083,6 +1114,10 @@ void drawPreviewWeb(uint64_t window, NSView *view, NSBitmapImageRep *rep) {
 
 - (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)sender {
   return NO;
+}
+
+- (void)windowDidResize:(NSNotification *)notification {
+  applyWindowTitle(notification.object);
 }
 
 - (BOOL)windowShouldClose:(NSWindow *)sender {
@@ -2111,7 +2146,9 @@ bool ps_ui_window_set_title(uint64_t window, const char *title) {
   if (w == nil) {
     return false;
   }
+  state().windowTitles[window] = title != nullptr ? title : "";
   w.title = toNSString(title);
+  applyWindowTitle(w);
   return true;
 }
 
@@ -2184,6 +2221,7 @@ bool ps_ui_window_close(uint64_t window) {
   state().windows.erase(window);
   state().windowContent.erase(window);
   state().windowPaths.erase(window);
+  state().windowTitles.erase(window);
   state().windowToolbars.erase(window);
   dropPreviewState(window);
   return true;
@@ -2771,6 +2809,7 @@ bool ps_ui_window_set_toolbar(uint64_t window, uint64_t toolbar) {
     w.toolbar = nil;
     s.windowToolbars.erase(window);
     s.toolbarSelected.erase(window);
+    applyWindowTitle(w);
     return true;
   }
   s.toolbarSelected.erase(window);
@@ -2787,6 +2826,7 @@ bool ps_ui_window_set_toolbar(uint64_t window, uint64_t toolbar) {
     w.toolbar = bar;
     s.windowToolbars[window] = bar;
   }
+  applyWindowTitle(w);
   return true;
 }
 
