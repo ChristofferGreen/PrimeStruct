@@ -2869,6 +2869,14 @@ bool ps_ui_window_set_toolbar(uint64_t window, uint64_t toolbar) {
   return true;
 }
 
+// ---- running scripts (docs/NativeUiPlan.md section 18) ----------------------------------------------------------
+
+bool ps_ui_script_run(uint64_t, const char *, const char *, int32_t) { return false; }
+bool ps_ui_script_stop(uint64_t) { return false; }
+bool ps_ui_script_running(uint64_t) { return false; }
+bool ps_ui_window_set_output_visible(uint64_t, bool) { return false; }
+bool ps_ui_window_output_visible(uint64_t) { return false; }
+
 bool ps_ui_window_toolbar_select(uint64_t window, int32_t commandId) {
   NSWindow *w = usable() ? liveWindow(window) : nil;
   const auto bar = state().windowToolbars.find(window);

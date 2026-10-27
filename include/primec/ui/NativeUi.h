@@ -270,6 +270,25 @@ bool ps_ui_window_set_toolbar(uint64_t window, uint64_t toolbar);
  * no toolbar or no segment has that command. */
 bool ps_ui_window_toolbar_select(uint64_t window, int32_t commandId);
 
+/* Running scripts ------------------------------------------------------------ */
+
+/* Compiles and runs PrimeScript `text` (named `name` in diagnostics and as the base of its imports) on the embedded
+ * interpreter, on a worker thread, and shows what it prints in the window's output pane: the pane is cleared and shown
+ * when the run starts, the output (stdout and stderr in program order) is appended as it arrives, and the run ends with
+ * a line saying how ("[exit code N]", the compile or runtime diagnostic, or "[stopped]"). The script takes no
+ * arguments and has no host functions. When the run ends PS_UI_EVENT_COMMAND arrives with `endCommand` and the
+ * window's handle, so a program can re-enable its Run button. False for a bad window, a run already going on the
+ * window, or when the interpreter cannot be loaded (the pane then says why). The interpreter library is loaded on the
+ * first run, never at launch. */
+bool ps_ui_script_run(uint64_t window, const char *name, const char *text, int32_t endCommand);
+/* Asks the window's run to stop; it ends soon after with "[stopped]". False when none is running. */
+bool ps_ui_script_stop(uint64_t window);
+/* True from ps_ui_script_run until the end command has been delivered. */
+bool ps_ui_script_running(uint64_t window);
+/* Shows or hides the output pane under the window's content (the text kept); a run shows it. False for a bad window. */
+bool ps_ui_window_set_output_visible(uint64_t window, bool visible);
+bool ps_ui_window_output_visible(uint64_t window);
+
 /* Text view -------------------------------------------------------------- */
 
 uint64_t ps_ui_text_view_create(void);

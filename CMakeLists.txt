@@ -814,16 +814,30 @@ primestructEnableWarnings(primec_ui_bindings_lib)
 # ps_ui_text_view_highlight with them on top of the public style calls.
 # Text helpers every UI backend shares: syntax highlighting and the markdown preview's HTML.
 add_library(primec_ui_highlight_lib STATIC src/ui/SyntaxHighlight.cpp src/ui/Markdown.cpp
-  src/ui/MarkdownEdit.cpp src/ui/MarkdownTable.cpp)
+  src/ui/MarkdownEdit.cpp src/ui/MarkdownTable.cpp src/ui/ScriptRunnerLoader.cpp)
 target_include_directories(primec_ui_highlight_lib PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
+target_link_libraries(primec_ui_highlight_lib PUBLIC ${CMAKE_DL_LIBS})
 primestructEnableWarnings(primec_ui_highlight_lib)
+
+# The script runner (docs/NativeUiPlan.md section 18): the embedded interpreter behind a backend's Run, as a dynamic
+# library the backends load on the first run (the compiler and VM are too large to load at launch). The loader falls back
+# to the copy in the build tree, so tests find it without a bundle.
+if(APPLE)
+  add_library(primec_script_runner_dylib SHARED src/ui/ScriptRunner.cpp)
+  set_target_properties(primec_script_runner_dylib PROPERTIES OUTPUT_NAME ps_script)
+  target_include_directories(primec_script_runner_dylib PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+  target_link_libraries(primec_script_runner_dylib PRIVATE primec_embed_lib)
+  target_compile_definitions(primec_ui_highlight_lib PRIVATE
+    PRIMESTRUCT_SCRIPT_RUNNER_BUILD_PATH="${CMAKE_BINARY_DIR}/libps_script.dylib")
+endif()
 
 add_library(primec_ui_headless_lib src/ui/headless/NativeUiHeadless.cpp
                                   src/ui/headless/NativeUiHeadlessControl.cpp
                                   src/ui/headless/NativeUiHeadlessControls.cpp
-                                  src/ui/headless/NativeUiHeadlessToolbar.cpp)
+                                  src/ui/headless/NativeUiHeadlessToolbar.cpp
+                                  src/ui/headless/NativeUiHeadlessScript.cpp)
 target_include_directories(primec_ui_headless_lib PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
@@ -1381,6 +1395,9 @@ if(PRIMESTRUCT_BUILD_TESTS)
   target_compile_definitions(PrimeStruct_native_ui_tests PRIVATE
     PRIMESTRUCT_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
   target_link_libraries(PrimeStruct_native_ui_tests PRIVATE primec_ui_lib primec_embed_lib)
+  if(APPLE)
+    add_dependencies(PrimeStruct_native_ui_tests primec_script_runner_dylib)
+  endif()
   # The editor compiled with optexe against the headless backend: the editor scenarios run on it
   # as well as on the VM and must leave the same call logs (tests/unit/ui/CompiledEditorMirror.h).
   file(GLOB_RECURSE PRIMESTRUCT_STDLIB_PRIME_FILES CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/stdlib/*.prime)
@@ -1410,6 +1427,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
                                                 src/ui/headless/NativeUiHeadlessControl.cpp
                                                 src/ui/headless/NativeUiHeadlessControls.cpp
                                                 src/ui/headless/NativeUiHeadlessToolbar.cpp
+                                                src/ui/headless/NativeUiHeadlessScript.cpp
                                                 tests/fixtures/host_calls/headless_log_dump.cpp)
     set_target_properties(primec_ui_headless_dylib PROPERTIES OUTPUT_NAME ps_ui_headless)
     target_include_directories(primec_ui_headless_dylib PRIVATE ${CMAKE_SOURCE_DIR}/include

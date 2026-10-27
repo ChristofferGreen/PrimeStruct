@@ -557,15 +557,19 @@ code. A run that does not end can be stopped.
 - **Cancellation (TODO-5613, done).** `Vm::setCancelFlag` / `RunOptions::cancel`: the plain interpreter polls an atomic
   flag every 1024 steps and fails with "execution stopped"; a run with a flag skips the fast kernel. Output goes to a
   `RunOptions::output` callback (the VM's `VmOutputSink`), not the process streams.
-- **Runner (TODO-5614).** A small library runs a script on a worker thread and hands the output to the backend in
-  chunks: `ps_script_start(source, name, stdlibDir, callbacks)`, `ps_script_stop`. The compiler and VM are large, so
-  the AppKit backend loads the runner from its own dylib (`libps_script.dylib` next to `libps_ui_appkit.dylib`) with
-  `dlopen` on the first Run, never at launch (startup budget, docs section 16); the headless backend links it.
-- **ABI (TODO-5614).** `ps_ui_window_set_output_visible/visible`, `ps_ui_window_output_clear`,
-  `ps_ui_window_output_append` (the pane is a read-only monospaced text view in a vertical split under the editor),
-  `ps_ui_script_run(window, name, text)`, `ps_ui_script_stop(window)`, `ps_ui_script_running(window)`; the end of a
-  run arrives as a command event the editor names when it starts the run. Output appended from the worker is queued to
-  the main thread by the backend.
+- **Runner (TODO-5614, done).** `libps_script` (`src/ui/ScriptRunner.cpp`, `include/primec/ui/ScriptRunner.h`) runs a
+  script on a worker thread (64 MB stack) with `ScriptEngine` and `RunOptions`, and reports output chunks and the end
+  through callbacks; its last output is the trailer line ("[exit code N]", the diagnostic, "[stopped]"). The compiler
+  and VM are large (the dylib is 19 MB), so a backend loads it with `dlopen` on the first Run
+  (`primec::ui::scriptRunnerApi()`, `ScriptRunnerLoader.cpp`: `PRIMESTRUCT_SCRIPT_RUNNER`, then `libps_script.dylib`
+  beside the backend's library, then the build tree's copy), never at launch (startup budget, section 16). The headless
+  backends load it the same way, so the compiled-editor mirrors need no compiler libraries.
+- **ABI (TODO-5614, done).** `ps_ui_script_run(window, name, text, endCommand)`, `ps_ui_script_stop`,
+  `ps_ui_script_running`, `ps_ui_window_set_output_visible/output_visible`. The backend owns the pane: a run clears and
+  shows it and appends the output as it arrives (queued to the main thread); the end of a run is a command event with
+  `endCommand` and the window. Headless: the output and the end are handed over only when no user action is left, so a
+  scenario is deterministic (a queued Stop happens before the script's output); `WindowState.output/outputVisible/
+  scriptRunning`.
 - **AppKit (TODO-5615).** The output pane under the editor in an NSSplitView with a horizontal divider; the stdlib the
   scripts import is bundled in `Contents/Resources/stdlib` by `scripts/bundle_macos_app.sh`.
 - **Editor (TODO-5616).** A `.prime` window gets a toolbar with Run and Stop (SF Symbols `play.fill` and `stop.fill`)

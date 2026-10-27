@@ -80,6 +80,9 @@ struct WindowState {
   uint64_t toolbar = 0;       // the toolbar shown on the window (0 for none)
   int32_t toolbarSelected = -1; // the command of the selected segment of the toolbar (-1 for none)
   int32_t style = 0;          // the PS_UI_WINDOW_* style (ps_ui_window_set_style)
+  bool outputVisible = false; // the output pane under the content (ps_ui_window_set_output_visible, a script run)
+  bool scriptRunning = false; // ps_ui_script_run until its end command is delivered
+  std::string output;         // what the output pane shows
 };
 WindowState windowState(uint64_t window);
 // The page the window's preview shows (primec::ui::markdownPreviewPage of the text view's text when it

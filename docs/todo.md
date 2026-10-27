@@ -104,7 +104,6 @@ of sync with them.
 | TODO-5569 | Slice loans, escapes and returned borrows | ready | slices |
 | TODO-5570 | Slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views | ready | slices |
 | TODO-5540 | `string` as the UTF-8 text view | blocked | string-view |
-| TODO-5614 | Script runner library, output pane and run ABI with a headless backend | ready | script-runner |
 | TODO-5615 | AppKit output pane and the lazily loaded runner | blocked | script-runner |
 | TODO-5616 | The editor's Run button and output pane | blocked | script-runner |
 | TODO-5603 | Startup audit: what a launch loads and does | ready | startup |
@@ -141,7 +140,6 @@ of sync with them.
 
 - TODO-5567 (bytes): packed `array<u8>`
 - TODO-5570 (slices): slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views
-- TODO-5614 (script-runner): script runner library, output pane and run ABI with a headless backend
 - TODO-5603 (startup): startup audit: what a launch loads and does
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
@@ -152,19 +150,18 @@ of sync with them.
 
 1. TODO-5567
 2. TODO-5570
-3. TODO-5614
-4. TODO-5603
-5. TODO-5536
-6. TODO-5535
-7. TODO-5510
-8. TODO-5524
+3. TODO-5603
+4. TODO-5536
+5. TODO-5535
+6. TODO-5510
+7. TODO-5524
 
 ### Priority Lanes
 
 - Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5567, TODO-5570, TODO-5569, TODO-5540, TODO-5568, TODO-5530, TODO-5574
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
-- Running scripts (docs/NativeUiPlan.md section 18): TODO-5614, TODO-5615, TODO-5616
+- Running scripts (docs/NativeUiPlan.md section 18): TODO-5615, TODO-5616
 - Startup (docs/NativeUiPlan.md section 16): TODO-5603
 - Lifecycle (docs/spec/value-lifecycle.md): TODO-5527
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
@@ -313,17 +310,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - `scripts/measure_startup.sh` prints the loaded-library count and the median time to the first window of a bundle over a number of launches; the plan records the baseline and what moved; a guard (a test or the script with a recorded limit) fails when a launch loads more libraries than the baseline; full release gate green
   - stop_rule: measurement, the guard and the launch-time work that can wait; no feature changes.
   - notes: system calls of a feature belong behind its window (the file associations only run when the settings window is built or a button is pressed).
-
-- [ ] TODO-5614: Script runner library, output pane and run ABI with a headless backend
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-27
-  - phase: Running scripts (docs/NativeUiPlan.md section 18)
-  - parallel_track: script-runner
-  - scope: A runner library (`src/ui/ScriptRunner.cpp`, C functions `ps_script_start/stop`) that compiles the given text with `ScriptEngine` and runs it on a worker thread with `RunOptions` output and cancel, reporting output chunks and the end (exit code or diagnostic) through callbacks; the UI ABI (`ps_ui_window_set_output_visible/visible`, `ps_ui_window_output_clear/append`, `ps_ui_script_run/stop/running`, end-of-run command), the headless backend (output pane outline, a run that really runs the script), the bindings table and `stdlib/std/ui/native/native.prime` declarations; the runner is its own library so a backend can load it lazily.
-  - acceptance:
-    - headless tests: a script's output appears in the window's output text in order, a compile error shows its diagnostic, a script that does not end is stopped, the end command arrives with the exit code; the bindings signature test and the scenario text cover the new calls; full release gate green
-  - stop_rule: runner, ABI and headless backend; no AppKit and no editor UI.
 
 - [ ] TODO-5615: AppKit output pane and the lazily loaded runner
   - owner: ai

@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <deque>
+#include <memory>
 #include <map>
 #include <set>
 #include <string>
@@ -87,8 +88,12 @@ struct TextView {
   std::vector<StyleRun> styles;
 };
 
+// A script run on a worker thread (NativeUiHeadlessScript.cpp); the destructor stops and joins the worker.
+struct ScriptSession;
+
 struct Window {
   WindowState state;
+  std::shared_ptr<ScriptSession> script;
   std::string previewPage;
   std::string path;
   uint64_t group = 0; // tab group id; 0 when the window is not in a tab group
@@ -315,6 +320,10 @@ inline uint64_t windowOfControl(uint64_t handle) {
   return 0;
 }
 
+// With no user action left: waits for the running script of the first window that has one, appends its output to the
+// window's output text and delivers the end command. False when no script runs.
+bool deliverScriptEvent();
+
 inline bool activeWindowHasPreview() {
   const Window *w = liveWindow(state().activeWindow);
   return w != nullptr && w->state.preview;
@@ -446,7 +455,7 @@ inline bool deliverNextEvent() {
     }
     }
   }
-  return false;
+  return deliverScriptEvent();
 }
 
 } // namespace primec::ui::headless::detail

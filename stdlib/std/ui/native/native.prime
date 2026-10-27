@@ -195,6 +195,26 @@ ps_ui_window_toolbar_select([u64] window, [i32] commandId) {
 }
 
 [host return<bool>]
+ps_ui_script_run([u64] window, [/std/text/String] name, [/std/text/String] text, [i32] endCommand) {
+}
+
+[host return<bool>]
+ps_ui_script_stop([u64] window) {
+}
+
+[host return<bool>]
+ps_ui_script_running([u64] window) {
+}
+
+[host return<bool>]
+ps_ui_window_set_output_visible([u64] window, [bool] visible) {
+}
+
+[host return<bool>]
+ps_ui_window_output_visible([u64] window) {
+}
+
+[host return<bool>]
 ps_ui_text_view_markdown_edit([u64] view, [i32] operation, [i32] a, [i32] b) {
 }
 
@@ -591,6 +611,34 @@ Window() {
   [public return<bool>]
   hideToolbar() {
     return(ps_ui_window_set_toolbar(this.handle, 0u64))
+  }
+
+  // Runs PrimeScript `text` (named `name`) on the embedded interpreter and shows its output in the output pane under
+  // the content; `endCommand` arrives as a command when the run ends. False when a run is going or the interpreter
+  // cannot load.
+  [public return<bool>]
+  runScript([/std/text/String] name, [/std/text/String] text, [i32] endCommand) {
+    return(ps_ui_script_run(this.handle, name, text, endCommand))
+  }
+
+  [public return<bool>]
+  stopScript() {
+    return(ps_ui_script_stop(this.handle))
+  }
+
+  [public return<bool>]
+  scriptRunning() {
+    return(ps_ui_script_running(this.handle))
+  }
+
+  [public return<bool>]
+  setOutputVisible([bool] visible) {
+    return(ps_ui_window_set_output_visible(this.handle, visible))
+  }
+
+  [public return<bool>]
+  outputVisible() {
+    return(ps_ui_window_output_visible(this.handle))
   }
 
   // Marks the segment with `commandId` of the toolbar as selected.

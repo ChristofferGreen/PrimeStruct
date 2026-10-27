@@ -54,6 +54,15 @@ template <class Binder> void forEachBinding(Binder &&bindOne) {
   bindOne("ps_ui_toolbar_add_separator", [](uint64_t toolbar) { return ps_ui_toolbar_add_separator(toolbar); });
   bindOne("ps_ui_window_set_toolbar",
           [](uint64_t window, uint64_t toolbar) { return ps_ui_window_set_toolbar(window, toolbar); });
+  bindOne("ps_ui_script_run", [](uint64_t window, embed::HostTextView name, embed::HostTextView value,
+                                 int32_t endCommand) {
+    return ps_ui_script_run(window, text(name).c_str(), text(value).c_str(), endCommand);
+  });
+  bindOne("ps_ui_script_stop", [](uint64_t window) { return ps_ui_script_stop(window); });
+  bindOne("ps_ui_script_running", [](uint64_t window) { return ps_ui_script_running(window); });
+  bindOne("ps_ui_window_set_output_visible",
+          [](uint64_t window, bool visible) { return ps_ui_window_set_output_visible(window, visible); });
+  bindOne("ps_ui_window_output_visible", [](uint64_t window) { return ps_ui_window_output_visible(window); });
   bindOne("ps_ui_window_toolbar_select",
           [](uint64_t window, int32_t commandId) { return ps_ui_window_toolbar_select(window, commandId); });
   bindOne("ps_ui_text_view_markdown_edit", [](uint64_t view, int32_t operation, int32_t a, int32_t b) {

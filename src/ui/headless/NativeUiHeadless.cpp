@@ -156,6 +156,8 @@ bool ps_ui_window_close(uint64_t window) {
   if (w != nullptr) {
     w->state.closed = true;
     w->state.shown = false;
+    w->script.reset(); // stops a running script
+    w->state.scriptRunning = false;
     if (TextView *content = textView(w->state.content)) {
       content->window = 0;
     }
