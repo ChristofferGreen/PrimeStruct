@@ -268,10 +268,10 @@ TEST_CASE("editor close with unsaved text stays open when the user chooses Cance
 
 // The editor creates its first window and text view (handles 1 and 2) and then six
 // menus (3 to 10), so the second tab's window and text view are 11 and 12.
-constexpr uint64_t SecondWindow = 14;
-constexpr uint64_t SecondView = 15;
+constexpr uint64_t SecondWindow = 15;
+constexpr uint64_t SecondView = 16;
 // Opening a markdown file builds the toolbar first (its handle and the handles of its three menus).
-constexpr uint64_t MarkdownSecondWindow = 18;
+constexpr uint64_t MarkdownSecondWindow = 19;
 
 TEST_CASE("editor new opens a second tab in the same tab group") {
   headless::reset();
@@ -286,7 +286,7 @@ TEST_CASE("editor new opens a second tab in the same tab group") {
   CHECK(second.content == SecondView);
   CHECK(second.closed);
   CHECK(headless::isMonospace(SecondView));
-  CHECK(countCalls("ps_ui_window_add_tab(1, 14)") == 1);
+  CHECK(countCalls("ps_ui_window_add_tab(1, 15)") == 1);
   CHECK(countCalls("ps_ui_alert(") == 0);
 }
 
@@ -326,8 +326,8 @@ TEST_CASE("editor Command-number selects that tab and Command-9 the last") {
   headless::pushTypeText(EditorWindow + 1, "A");
   headless::pushCommand(CommandNew);
   headless::pushTypeText(SecondView, "B");
-  headless::pushCommand(CommandNew); // window 16, view 17
-  headless::pushTypeText(17, "C");
+  headless::pushCommand(CommandNew); // window 17, view 18
+  headless::pushTypeText(18, "C");
   headless::pushCommand(CommandTab + 1); // Command-1: the first tab
   headless::pushCommand(CommandSave);
   headless::pushSavePanelAnswer(pathA);
@@ -340,7 +340,7 @@ TEST_CASE("editor Command-number selects that tab and Command-9 the last") {
   headless::pushCommand(CommandTab + 5); // no fifth tab: nothing changes
   headless::pushCloseWindow(EditorWindow);
   headless::pushCloseWindow(SecondWindow);
-  headless::pushCloseWindow(16);
+  headless::pushCloseWindow(17);
   runEditor();
   CHECK(readFile(pathA) == "A");
   CHECK(readFile(pathB) == "B");
@@ -364,7 +364,7 @@ TEST_CASE("editor open reuses an untouched untitled tab and otherwise opens a ne
   CHECK(headless::windowPath(SecondWindow) == second);
   CHECK(countCalls("ps_ui_window_add_tab(") == 1);
   CHECK(countCalls("ps_ui_text_view_load_file(2, ") == 1);
-  CHECK(countCalls("ps_ui_text_view_load_file(15, ") == 1);
+  CHECK(countCalls("ps_ui_text_view_load_file(16, ") == 1);
 }
 
 TEST_CASE("editor closes a failed open's new tab again") {
@@ -436,7 +436,7 @@ TEST_CASE("editor toggles the line number bar in every tab from the View menu") 
   runEditor();
   CHECK_FALSE(headless::lineNumbersVisible(2) == false);
   CHECK(headless::lineNumbersVisible(2));
-  CHECK(headless::lineNumbersVisible(15));
+  CHECK(headless::lineNumbersVisible(SecondView));
   CHECK(headless::menuItemChecked(7));
 
   headless::reset();
@@ -447,7 +447,7 @@ TEST_CASE("editor toggles the line number bar in every tab from the View menu") 
   headless::pushCloseWindow(EditorWindow);
   runEditor();
   CHECK_FALSE(headless::lineNumbersVisible(2));
-  CHECK_FALSE(headless::lineNumbersVisible(15));
+  CHECK_FALSE(headless::lineNumbersVisible(SecondView));
   CHECK_FALSE(headless::menuItemChecked(7));
 }
 
@@ -459,7 +459,7 @@ TEST_CASE("editor starts with the line number bar when the preference says so") 
   headless::pushCloseWindow(EditorWindow);
   runEditor();
   CHECK(headless::lineNumbersVisible(2));
-  CHECK(headless::lineNumbersVisible(15));  // a new tab follows the current setting
+  CHECK(headless::lineNumbersVisible(SecondView));  // a new tab follows the current setting
   CHECK(headless::menuItemChecked(7));
 }
 
@@ -477,18 +477,18 @@ TEST_CASE("editor keeps the line number choice for the next launch") {
 // with the line numbers 14, wrapping 15 and the font size pop-up 16, the Markdown form 17 with the preview
 // 18 and the scroll lock 19 check boxes, and the tabs 20.
 namespace {
-constexpr uint64_t SettingsWindow = 14;
-constexpr uint64_t RestoreBox = 16;
-constexpr uint64_t NumbersBox = 18;
-constexpr uint64_t WrapBox = 19;
-constexpr uint64_t SizePopup = 20;
-constexpr uint64_t PreviewBox = 22;
-constexpr uint64_t ScrollPopup = 23;
-constexpr uint64_t SettingsTabs = 24;
+constexpr uint64_t SettingsWindow = 15;
+constexpr uint64_t RestoreBox = 17;
+constexpr uint64_t NumbersBox = 19;
+constexpr uint64_t WrapBox = 20;
+constexpr uint64_t SizePopup = 21;
+constexpr uint64_t PreviewBox = 23;
+constexpr uint64_t ScrollPopup = 24;
+constexpr uint64_t SettingsTabs = 25;
 // The Files tab: the form 22, the hint 23, the file type list 24, "Make Default" 25.
-constexpr uint64_t FileTypeList = 27;
-constexpr uint64_t MakeDefaultButton = 28;
-constexpr uint64_t TabAfterSettings = 29; // a New command after the settings window: window 29, view 30
+constexpr uint64_t FileTypeList = 28;
+constexpr uint64_t MakeDefaultButton = 29;
+constexpr uint64_t TabAfterSettings = 30; // a New command after the settings window: window 30, view 31
 constexpr int32_t CommandSettings = 8;
 
 // The file types of the headless backend (examples/apps/text_editor/file_types.txt) and the buttons of the Files tab.
@@ -583,7 +583,7 @@ TEST_CASE("settings window opens once and a second Settings command brings it fo
   headless::pushCloseWindow(EditorWindow);
   runEditor();
   CHECK(countCalls("ps_ui_window_create(\"Settings\"") == 1);
-  CHECK(countCalls("ps_ui_window_show(14)") == 2);
+  CHECK(countCalls("ps_ui_window_show(15)") == 2);
 }
 
 TEST_CASE("settings window can be closed and opened again") {
@@ -749,7 +749,7 @@ TEST_CASE("the app ends after the last document closes with the settings window 
   runEditor();
   CHECK(headless::windowState(EditorWindow).closed);
   CHECK(headless::windowState(SecondWindow).closed);
-  CHECK(headless::windowState(16).closed); // the settings window, after the second tab's two handles
+  CHECK(headless::windowState(17).closed); // the settings window, after the second tab's two handles
 }
 
 TEST_CASE("commands that arrive while the settings window is active act on a document") {
@@ -877,7 +877,7 @@ TEST_CASE("editor brings back the last session's tabs and selects the active one
   CHECK(headless::windowPath(EditorWindow) == a);
   CHECK(headless::windowPath(SecondWindow) == b);
   CHECK(headless::windowState(SecondWindow).title == b);
-  CHECK(countCalls("ps_ui_window_select(14)") == 1);
+  CHECK(countCalls("ps_ui_window_select(15)") == 1);
   CHECK(countCalls("ps_ui_alert(") == 0);
 }
 
@@ -1428,4 +1428,68 @@ TEST_CASE("editor remembers the preview mode of every tab") {
   CHECK(headless::windowState(SecondWindow).previewMode == PS_UI_PREVIEW_SPLIT);
   CHECK(headless::toolbarOutline(EditorWindow).front() == "segments Editor|Split|Preview #30 [selected 2]");
   CHECK(headless::toolbarOutline(SecondWindow).front() == "segments Editor|Split|Preview #30 [selected 1]");
+}
+
+// Running scripts (docs/NativeUiPlan.md section 18): a PrimeStruct file gets a toolbar with Run and Stop, and Run shows
+// the output under the editor.
+namespace {
+constexpr int32_t CommandRun = 120;
+constexpr int32_t CommandStop = 121;
+constexpr int32_t CommandOutput = 122;
+
+// Like runMarkdownEditor, and lets a running script end (its output arrives) before the window closes.
+void runScriptEditor(const std::string &path, const std::vector<int32_t> &commands) {
+  headless::reset();
+  headless::pushCommand(CommandOpen);
+  headless::pushOpenPanelAnswer(path);
+  for (const int32_t command : commands) {
+    headless::pushCommand(command);
+  }
+  headless::pushWaitScript();
+  headless::pushAlertAnswer(1);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+}
+
+const char *HelloScript = "[return<i32> effects(io_out)]\nmain() {\n  print_line(\"hello from the editor\"utf8)\n"
+                          "  return(3i32)\n}\n";
+const char *ForeverScript = "[return<i32>]\nmain() {\n  [mut] n{0i32}\n  while(true) {\n    n = n + 1i32\n  }\n"
+                            "  return(n)\n}\n";
+} // namespace
+
+TEST_CASE("editor shows a Run toolbar for PrimeStruct files only") {
+  const std::string script = writeScratch("run_toolbar.prime", HelloScript);
+  const std::string txt = writeScratch("run_toolbar.txt", "t");
+  runMarkdownEditor(script, {});
+  const std::vector<std::string> outline = {"button Run [play.fill] #120", "button Stop [stop.fill] #121"};
+  CHECK(headless::toolbarOutline(EditorWindow) == outline);
+  runMarkdownEditor(txt, {});
+  CHECK(headless::toolbarOutline(EditorWindow).empty());
+}
+
+TEST_CASE("editor's Run shows the script's output under the text") {
+  const std::string script = writeScratch("run_output.prime", HelloScript);
+  runScriptEditor(script, {CommandRun});
+  const auto state = headless::windowState(EditorWindow);
+  CHECK(state.outputVisible);
+  CHECK(state.output == "hello from the editor\n[exit code 3]\n");
+  CHECK_FALSE(state.scriptRunning);
+}
+
+TEST_CASE("editor's Run reports a broken script") {
+  const std::string script =
+      writeScratch("run_broken.prime", "[return<i32>]\nmain() {\n  return(missing_helper())\n}\n");
+  runScriptEditor(script, {CommandRun});
+  const std::string output = headless::windowState(EditorWindow).output;
+  CHECK(output.find("missing_helper") != std::string::npos);
+}
+
+TEST_CASE("editor's Stop ends a script that does not end and Show Output toggles the pane") {
+  const std::string script = writeScratch("run_forever.prime", ForeverScript);
+  runScriptEditor(script, {CommandRun, CommandStop});
+  CHECK(headless::windowState(EditorWindow).output == "[stopped]\n");
+  runMarkdownEditor(script, {CommandOutput});
+  CHECK(headless::windowState(EditorWindow).outputVisible);
+  runMarkdownEditor(script, {CommandOutput, CommandOutput});
+  CHECK_FALSE(headless::windowState(EditorWindow).outputVisible);
 }

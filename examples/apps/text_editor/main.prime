@@ -105,6 +105,29 @@ command_align() {
   return(90i32)
 }
 
+// Running a script (docs/NativeUiPlan.md section 18): Run executes the tab's text on the embedded interpreter and shows
+// its output in the pane under the editor; Stop ends a run that does not end; Show Output toggles the pane; the end of a
+// run arrives as command_script_done() (nothing to do: the pane already shows how it ended).
+[return<i32>]
+command_run() {
+  return(120i32)
+}
+
+[return<i32>]
+command_stop() {
+  return(121i32)
+}
+
+[return<i32>]
+command_output() {
+  return(122i32)
+}
+
+[return<i32>]
+command_script_done() {
+  return(123i32)
+}
+
 [return<i32>]
 command_recent() {
   return(200i32)
@@ -549,39 +572,83 @@ build_toolbar([App] app) {
   return(bar)
 }
 
-// A window shows the toolbar when it holds a markdown file or its preview is on.
-[return<bool>]
-wants_toolbar([Window] tab) {
-  [bool mut] wanted{tab.hasPreview()}
-  if(!wanted && tab.hasPath()) {
-    [String] path{tab.path()}
-    wanted = ends_with_text(path, ".md", 3i32) || ends_with_text(path, ".markdown", 9i32)
-  }
-  return(wanted)
+// The toolbar of a script window: Run and Stop.
+[return<Toolbar>]
+build_script_toolbar([App] app) {
+  [Toolbar] bar{app.toolbar()}
+  bar.button("Run", "play.fill", command_run())
+  bar.button("Stop", "stop.fill", command_stop())
+  return(bar)
 }
 
-// Shows the toolbar on the document windows that want it (building it on the first) and takes it off the others;
-// returns the toolbar, which is built once.
+// Which toolbar a window shows: 1 the markdown one (a markdown file, or its preview is on), 2 the script one (a
+// PrimeStruct file), 0 none.
+[return<i32>]
+toolbar_kind([Window] tab) {
+  [i32 mut] kind{0i32}
+  if(tab.hasPreview()) {
+    kind = 1i32
+  }
+  if(kind == 0i32 && tab.hasPath()) {
+    [String] path{tab.path()}
+    if(ends_with_text(path, ".md", 3i32) || ends_with_text(path, ".markdown", 9i32)) {
+      kind = 1i32
+    }
+    if(ends_with_text(path, ".prime", 6i32)) {
+      kind = 2i32
+    }
+  }
+  return(kind)
+}
+
+// Shows the toolbar of kind `wanted` (1 markdown, 2 script) on the document windows that want it (building it on the
+// first) and takes the toolbar off the windows that want none; returns the toolbar, which is built once. Call it once
+// for each kind.
 [return<Toolbar>]
-sync_toolbars([App] app, [u64] settingsWindow, [Toolbar] known) {
+sync_toolbars([App] app, [u64] settingsWindow, [Toolbar] known, [i32] wanted) {
   [Toolbar mut] bar{known}
   [i32 mut] index{0i32}
   while(index < app.windowCount()) {
     [Window] each{app.windowAt(index)}
     if(each.handle != settingsWindow) {
-      if(wants_toolbar(each)) {
+      [i32] kind{toolbar_kind(each)}
+      if(kind == wanted) {
         if(bar.handle == 0u64) {
-          bar = build_toolbar(app)
+          if(wanted == 1i32) {
+            bar = build_toolbar(app)
+          } else {
+            bar = build_script_toolbar(app)
+          }
         }
         [bool] shown{each.setToolbar(bar)}
-        [bool] selected{each.selectToolbarItem(command_mode() + each.previewMode())}
-      } else {
+        if(wanted == 1i32) {
+          [bool] selected{each.selectToolbarItem(command_mode() + each.previewMode())}
+        }
+      }
+      if(kind == 0i32) {
         [bool] hidden{each.hideToolbar()}
       }
     }
     index = index + 1i32
   }
   return(bar)
+}
+
+// Runs the tab's text as a script; the pane under the editor shows the output.
+[return<bool>]
+run_script([Window] tab) {
+  [TextView] view{tab.content()}
+  [String] source{view.text()}
+  [bool mut] started{false}
+  if(tab.hasPath()) {
+    [String] path{tab.path()}
+    started = tab.runScript(path, source, command_script_done())
+  } else {
+    [String mut] untitled{String{}}
+    untitled.append("untitled.prime")
+    started = tab.runScript(untitled, source, command_script_done())
+  }
+  return(started)
 }
 
 // A format command acts on the text; in the preview-only mode there is no text to see, so the window shows both first.
@@ -906,6 +973,13 @@ main([array<string>] args) {
   formatMenu.submenu("Table", tableMenu)
   formatMenu.addToBar()
 
+  [Menu] runMenu{app.menu("Run")}
+  runMenu.item("Run", "cmd+r", command_run())
+  runMenu.item("Stop", "cmd+.", command_stop())
+  runMenu.separator()
+  runMenu.item("Show Output", "cmd+alt+o", command_output())
+  runMenu.addToBar()
+
   [Menu] viewMenu{app.menu("View")}
   viewMenu.fullScreen()
   viewMenu.showTabBar()
@@ -975,7 +1049,9 @@ main([array<string>] args) {
   }
 
   [Toolbar mut] markdownBar{Toolbar{}}
-  markdownBar = sync_toolbars(app, settings.window, markdownBar)
+  [Toolbar mut] scriptBar{Toolbar{}}
+  markdownBar = sync_toolbars(app, settings.window, markdownBar, 1i32)
+  scriptBar = sync_toolbars(app, settings.window, scriptBar, 2i32)
 
   [bool mut] running{true}
   while(running) {
@@ -1105,6 +1181,15 @@ main([array<string>] args) {
     if(intent >= command_mode() && intent < command_mode() + 3i32) {
       [bool] moded{tab.setPreviewMode(intent - command_mode())}
     }
+    if(intent == command_run()) {
+      [bool] started{run_script(tab)}
+    }
+    if(intent == command_stop()) {
+      [bool] stopped{tab.stopScript()}
+    }
+    if(intent == command_output()) {
+      [bool] toggled{tab.setOutputVisible(!tab.outputVisible())}
+    }
     if(intent >= command_format() && intent < command_format() + 22i32) {
       [bool] formatted{format_text(tab, intent - command_format(), 0i32, 0i32)}
     }
@@ -1165,9 +1250,10 @@ main([array<string>] args) {
     if(intent > command_tab() && intent <= command_tab() + 9i32) {
       [bool] switched{select_tab(tab, intent - command_tab())}
     }
-    // The toolbar follows what each window holds: a markdown file or its preview.
+    // The toolbar follows what each window holds: a markdown file or its preview, or a script.
     if(intent != 0i32 || documentsChanged) {
-      markdownBar = sync_toolbars(app, settings.window, markdownBar)
+      markdownBar = sync_toolbars(app, settings.window, markdownBar, 1i32)
+      scriptBar = sync_toolbars(app, settings.window, scriptBar, 2i32)
     }
     // Closing the last tab ends the app like Quit does, so the session stays as it was before it closed.
     if(intent != 0i32 && intent != command_quit() && count_documents(app, settings.window) > 0i32) {

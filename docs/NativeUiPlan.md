@@ -570,9 +570,23 @@ code. A run that does not end can be stopped.
   `endCommand` and the window. Headless: the output and the end are handed over only when no user action is left, so a
   scenario is deterministic (a queued Stop happens before the script's output); `WindowState.output/outputVisible/
   scriptRunning`.
-- **AppKit (TODO-5615).** The output pane under the editor in an NSSplitView with a horizontal divider; the stdlib the
-  scripts import is bundled in `Contents/Resources/stdlib` by `scripts/bundle_macos_app.sh`.
-- **Editor (TODO-5616).** A `.prime` window gets a toolbar with Run and Stop (SF Symbols `play.fill` and `stop.fill`)
-  and a Run menu (Run Cmd+R, Stop Cmd+period, Show Output); the pane opens on the first Run and is cleared by the
-  next. Markdown windows keep their toolbar; other file types have none.
-
+- **AppKit (TODO-5615, done).** The output pane is a read-only monospaced NSTextView in an NSSplitView with a horizontal
+  divider under the window's content (about a third of the height); a run clears and shows it, appends the worker's
+  output on the main thread (`dispatch_async` plus a wake-up event, since `ps_ui_wait_event` sleeps in `nextEvent`) and
+  enqueues the end command. Turning a preview on closes the pane first (the preview lays the content out itself).
+  `scripts/bundle_macos_app.sh` copies `libps_script.dylib` into `Contents/MacOS` and `stdlib/` into
+  `Contents/Resources`, and a run passes the bundled stdlib to the engine. Nothing is loaded at launch: a launch that
+  never runs a script has the same libraries as before. The harness delivers `PRIMESTRUCT_UI_COMMANDS=+120` after
+  `PRIMESTRUCT_UI_OPEN` has loaded its file (a run needs the text) and a snapshot waits for a running script.
+- **Allocator (a lesson).** `libps_script` is built from `ScriptRunner.cpp` and `ScriptRunnerArena.cpp`: the compiler's
+  arena (`CompileArena.cpp`) replaces the global `operator new/delete`, which inside a dlopen'ed library does not reach
+  libc++.dylib's own string code (it frees arena blocks with `free()`: "pointer being freed was not allocated" during the
+  library's static initialisers). The library therefore defines plain malloc/free operators, and a program that links the
+  compiler itself (the unit tests) links the runner statically (`primec_ui_script_lib`) and installs it with
+  `primec::ui::setScriptRunnerApi` instead of loading the dylib.
+- **Editor (TODO-5616, done).** A `.prime` window gets a toolbar with Run (`play.fill`, command 120) and Stop
+  (`stop.fill`, 121); the Run menu has Run Cmd+R, Stop Cmd+period and Show Output (Cmd+Option+O, 122); the end of a run
+  is command 123 (nothing to do). The text run is the tab's text as it is, saved or not, named by the tab's path (or
+  "untitled.prime"). `sync_toolbars` takes the kind of toolbar (1 markdown, 2 script) and is called once for each; a
+  window of neither kind has none. Markdown windows are unchanged. The Run menu shifts the handles of every window
+  created after the menus by one (the tests' constants moved).

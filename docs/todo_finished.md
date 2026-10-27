@@ -2073,6 +2073,8 @@ are left unarchived.
 | TODO-5612 | The editor's markdown toolbar and Format menu | [undated.md](todo_archive/undated.md) | - |
 | TODO-5613 | Cancellable script runs with captured output | [2026-10.md](todo_archive/2026-10.md) | 2026-10-27 |
 | TODO-5614 | Script runner library, output pane and run ABI with a headless backend | [2026-10.md](todo_archive/2026-10.md) | 2026-10-27 |
+| TODO-5615 | AppKit output pane and the lazily loaded runner | [2026-10.md](todo_archive/2026-10.md) | 2026-10-27 |
+| TODO-5616 | The editor's Run button and output pane | [2026-10.md](todo_archive/2026-10.md) | 2026-10-27 |
 
 <!-- INDEX-END -->
 
