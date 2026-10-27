@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -16,6 +17,8 @@ public:
   virtual uint64_t argumentCount() const = 0;
   virtual uint64_t slotBytes() const = 0;
   virtual size_t maxCallDepth() const = 0;
+  // A host that can be cancelled answers the flag a run polls (null: never cancelled; see Vm::setCancelFlag).
+  virtual const std::atomic<bool> *cancelFlag() const { return nullptr; }
 
   virtual bool resolveIndirectAddress(uint64_t address,
                                       std::vector<uint64_t> &locals,

@@ -12,7 +12,8 @@ const VmOutputSink *sinkOrNull(const VmOutputSink &sink) {
 
 bool Vm::execute(const IrModule &module, uint64_t &result, std::string &error, uint64_t argCount) const {
   return vm_detail::executeVmModule(
-      module, result, error, argCount, nullptr, nullptr, sinkOrNull(outputSink_));
+      module, result, error, argCount, nullptr, nullptr, sinkOrNull(outputSink_),
+      cancelFlag_);
 }
 
 bool Vm::execute(const IrModule &module,
@@ -25,7 +26,8 @@ bool Vm::execute(const IrModule &module,
                                     static_cast<uint64_t>(args.size()),
                                     &args,
                                     nullptr,
-                                    sinkOrNull(outputSink_));
+                                    sinkOrNull(outputSink_),
+      cancelFlag_);
 }
 
 bool Vm::execute(const IrModule &module,
@@ -39,7 +41,8 @@ bool Vm::execute(const IrModule &module,
                                     static_cast<uint64_t>(args.size()),
                                     &args,
                                     &hostFunctions,
-                                    sinkOrNull(outputSink_));
+                                    sinkOrNull(outputSink_),
+      cancelFlag_);
 }
 
 } // namespace primec

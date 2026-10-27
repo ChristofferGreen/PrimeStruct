@@ -543,3 +543,32 @@ markdown constructs; tables get the most help.
 - **Slices.** The editing library (TODO-5609), the ABI, headless backend, bindings and stdlib (TODO-5610), the AppKit
   toolbar, preview-only layout and edits (TODO-5611), then the editor's toolbar, Format menu and commands (TODO-5612).
   Smart list continuation on Return (a new bullet after a bullet) is the usual next step and is not part of these.
+
+## 18. Running scripts
+
+**Goal (2026-10-27): editing a `.prime` file offers a Run button; the editor runs the script on an embedded PrimeScript
+interpreter and shows its text output in a pane at the bottom of the window, like the markdown preview but simpler.**
+
+How it is read: the interpreter is the embedding facade (`primec::embed::ScriptEngine`, docs/Embedding.md) that compiles
+the editor's text and runs it on the VM; no child process. A run has no host functions bound, takes no arguments and
+shows what the script prints (stdout and stderr, in program order) plus the compile or runtime diagnostic or the exit
+code. A run that does not end can be stopped.
+
+- **Cancellation (TODO-5613, done).** `Vm::setCancelFlag` / `RunOptions::cancel`: the plain interpreter polls an atomic
+  flag every 1024 steps and fails with "execution stopped"; a run with a flag skips the fast kernel. Output goes to a
+  `RunOptions::output` callback (the VM's `VmOutputSink`), not the process streams.
+- **Runner (TODO-5614).** A small library runs a script on a worker thread and hands the output to the backend in
+  chunks: `ps_script_start(source, name, stdlibDir, callbacks)`, `ps_script_stop`. The compiler and VM are large, so
+  the AppKit backend loads the runner from its own dylib (`libps_script.dylib` next to `libps_ui_appkit.dylib`) with
+  `dlopen` on the first Run, never at launch (startup budget, docs section 16); the headless backend links it.
+- **ABI (TODO-5614).** `ps_ui_window_set_output_visible/visible`, `ps_ui_window_output_clear`,
+  `ps_ui_window_output_append` (the pane is a read-only monospaced text view in a vertical split under the editor),
+  `ps_ui_script_run(window, name, text)`, `ps_ui_script_stop(window)`, `ps_ui_script_running(window)`; the end of a
+  run arrives as a command event the editor names when it starts the run. Output appended from the worker is queued to
+  the main thread by the backend.
+- **AppKit (TODO-5615).** The output pane under the editor in an NSSplitView with a horizontal divider; the stdlib the
+  scripts import is bundled in `Contents/Resources/stdlib` by `scripts/bundle_macos_app.sh`.
+- **Editor (TODO-5616).** A `.prime` window gets a toolbar with Run and Stop (SF Symbols `play.fill` and `stop.fill`)
+  and a Run menu (Run Cmd+R, Stop Cmd+period, Show Output); the pane opens on the first Run and is cleared by the
+  next. Markdown windows keep their toolbar; other file types have none.
+

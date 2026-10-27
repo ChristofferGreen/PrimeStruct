@@ -219,6 +219,10 @@ bool Script::checkHostBindings(std::string &error) const {
 }
 
 ScriptResult Script::run(const std::vector<std::string> &args) const {
+  return run(args, RunOptions{});
+}
+
+ScriptResult Script::run(const std::vector<std::string> &args, const RunOptions &options) const {
   ScriptResult result;
   if (module_ == nullptr) {
     result.diagnostics = diagnostics_.empty() ? (valid() ? "script has no main entry; use call()"
@@ -233,6 +237,15 @@ ScriptResult Script::run(const std::vector<std::string> &args) const {
     views.push_back(arg);
   }
   Vm vm;
+  if (options.output) {
+    VmOutputSink sink;
+    sink.userData = const_cast<RunOptions *>(&options);
+    sink.write = [](int fd, std::string_view chunk, void *userData) {
+      static_cast<const RunOptions *>(userData)->output(fd, chunk);
+    };
+    vm.setOutputSink(sink);
+  }
+  vm.setCancelFlag(options.cancel);
   uint64_t value = 0;
   std::string error;
   const VmHostFunctions hostFunctions = toVmHostFunctions(hostBindings_);

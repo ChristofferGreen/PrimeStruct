@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <atomic>
 #include <memory>
 #include <cstdint>
 #include <optional>
@@ -202,6 +203,12 @@ public:
   void clearOutputSink() {
     outputSink_ = {};
   }
+  // A run polls the flag and stops with the error "execution stopped" once it is true, so a host can cancel a
+  // script that does not end. The flag must outlive the run. A run with a flag takes the plain interpreter, not
+  // the fast kernel (which does not poll).
+  void setCancelFlag(const std::atomic<bool> *flag) {
+    cancelFlag_ = flag;
+  }
 
   bool execute(const IrModule &module, uint64_t &result, std::string &error, uint64_t argCount = 0) const;
   bool execute(const IrModule &module,
@@ -219,6 +226,7 @@ public:
 
 private:
   VmOutputSink outputSink_{};
+  const std::atomic<bool> *cancelFlag_ = nullptr;
 };
 
 class VmDebugSession {

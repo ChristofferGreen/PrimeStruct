@@ -460,7 +460,7 @@ bool executeVmKernel(const IrModule &module,
     return false;
   }
 
-  if (vmFastKernelEnabled()) {
+  if (vmFastKernelEnabled() && host.cancelFlag() == nullptr) {
     bool executed = false;
     const bool ok = executeVmFastKernel(module, host, result, error, executed);
     if (executed) {
@@ -483,7 +483,13 @@ bool executeVmKernel(const IrModule &module,
   frames.push_back(std::move(entryFrame));
 
   VmKernelStepEvent event;
+  const std::atomic<bool> *cancel = host.cancelFlag();
+  uint32_t steps = 0;
   while (!frames.empty()) {
+    if (cancel != nullptr && (++steps & 0x3FF) == 0 && cancel->load(std::memory_order_relaxed)) {
+      error = "execution stopped";
+      return false;
+    }
     switch (stepImpl<false>(module, host, stack, frames, localCounts, result, event, error)) {
     case VmKernelStepOutcome::Continue:
       break;

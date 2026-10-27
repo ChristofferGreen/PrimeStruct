@@ -50,6 +50,21 @@ auto result = script.run();   // result.ok, result.exitCode == 7
 Errors are returned as data (`ScriptResult::diagnostics`); the API never exits
 the process or writes to stdout/stderr.
 
+To capture what a script prints, or to stop one that does not end, pass
+`RunOptions`:
+
+```cpp
+std::atomic<bool> stop{false};
+primec::embed::RunOptions options;
+options.output = [&](int fd, std::string_view chunk) { /* fd 1 = stdout, 2 = stderr */ };
+options.cancel = &stop;                  // set it to true from another thread to stop the run
+auto result = script.run({}, options);   // stopped: !result.ok, "VM error: execution stopped"
+```
+
+The output callback runs on the thread that runs the script. A run with a cancel
+flag uses the plain interpreter, which polls the flag every 1024 steps; without a
+flag the run takes the fast kernel and cannot be stopped.
+
 ## Calling script functions from the host
 
 Declare the functions the host will call, then call them by name:

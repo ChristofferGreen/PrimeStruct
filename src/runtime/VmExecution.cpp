@@ -191,9 +191,12 @@ public:
   RuntimeVmKernelHost(uint64_t argCount,
                       const std::vector<std::string_view> *args,
                       const VmHostFunctions *hostFunctions,
-                      const VmOutputSink *outputSink)
-      : argCount_(argCount), hostFunctions_(hostFunctions), args_(args), outputSink_(outputSink) {
+                      const VmOutputSink *outputSink,
+                      const std::atomic<bool> *cancel)
+      : argCount_(argCount), hostFunctions_(hostFunctions), args_(args), outputSink_(outputSink), cancel_(cancel) {
   }
+
+  const std::atomic<bool> *cancelFlag() const override { return cancel_; }
 
   uint64_t argumentCount() const override { return argCount_; }
   uint64_t slotBytes() const override { return IrSlotBytes; }
@@ -261,6 +264,7 @@ private:
   const VmHostFunctions *hostFunctions_ = nullptr;
   const std::vector<std::string_view> *args_ = nullptr;
   const VmOutputSink *outputSink_ = nullptr;
+  const std::atomic<bool> *cancel_ = nullptr;
   VmHeapCore heap_;
   VmTextHeap textHeap_;
 };
@@ -273,7 +277,8 @@ bool executeVmModule(const IrModule &module,
                      uint64_t argCount,
                      const std::vector<std::string_view> *args,
                      const VmHostFunctions *hostFunctions,
-                     const VmOutputSink *outputSink) {
+                     const VmOutputSink *outputSink,
+                     const std::atomic<bool> *cancel) {
   if (!module.hostImports.empty()) {
     // Not a function-local static: statics must not hold arena-allocated state.
     const VmHostFunctions noBindings;
@@ -281,7 +286,7 @@ bool executeVmModule(const IrModule &module,
       return false;
     }
   }
-  RuntimeVmKernelHost host(argCount, args, hostFunctions, outputSink);
+  RuntimeVmKernelHost host(argCount, args, hostFunctions, outputSink, cancel);
   return executeVmKernel(module, host, result, error);
 }
 

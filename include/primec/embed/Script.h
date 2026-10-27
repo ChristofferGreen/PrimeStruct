@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <bit>
 #include <cstdint>
 #include <functional>
@@ -230,6 +231,16 @@ struct ScriptResult {
   std::string diagnostics;
 };
 
+// Where a run's output goes and how it is stopped (Script::run).
+struct RunOptions {
+  // Receives the program's stdout (fd 1) and stderr (fd 2) in program order instead of the process streams. The
+  // chunk is valid during the call; it runs on the thread that runs the script.
+  std::function<void(int fd, std::string_view chunk)> output;
+  // When set and it becomes true the run stops with the diagnostic "VM error: execution stopped". A run with a
+  // flag uses the plain interpreter, which polls it. The flag must outlive the run.
+  const std::atomic<bool> *cancel = nullptr;
+};
+
 // A compiled script. Cheap to copy (shares the compiled module); `run` may be
 // called repeatedly without recompiling.
 class Script {
@@ -243,6 +254,8 @@ public:
   // Runs the entry definition. `args` become the script's argv after the
   // leading program name.
   ScriptResult run(const std::vector<std::string> &args = {}) const;
+  // The same with the output captured and/or the run cancellable.
+  ScriptResult run(const std::vector<std::string> &args, const RunOptions &options) const;
 
   // Calls a function exported with ScriptEngine::exportFunction. Arguments and
   // the result are the primitive types int32_t, int64_t, uint64_t, float,
