@@ -2123,6 +2123,36 @@ uint64_t ps_ui_event_window(void) { return usable() ? state().current.window : 0
 uint64_t ps_ui_event_widget(void) { return usable() ? state().current.widget : 0; }
 int32_t ps_ui_event_command(void) { return usable() ? state().current.command : 0; }
 
+// A double click on the title bar of a window with a toolbar zooms it (maximizes or restores), as it does on any
+// window; the toolbar's own controls keep their clicks.
+static void installTitleBarZoom() {
+  static id monitor = nil;
+  if (monitor != nil) {
+    return;
+  }
+  monitor = [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskLeftMouseDown
+                                                  handler:^NSEvent *(NSEvent *event) {
+    NSWindow *w = event.window;
+    if (w == nil || event.clickCount != 2 || w.toolbar == nil || state().windowTitles.empty() ||
+        w.delegate != controller()) {
+      return event;
+    }
+    const NSPoint at = event.locationInWindow;
+    if (at.y < NSMaxY([w contentLayoutRect])) {
+      return event; // below the title bar
+    }
+    for (NSToolbarItem *item in w.toolbar.items) {
+      NSView *view = item.view;
+      if (view != nil && view.window == w &&
+          NSPointInRect(at, [view convertRect:view.bounds toView:nil])) {
+        return event; // a toolbar control
+      }
+    }
+    [w performZoom:nil];
+    return nil;
+  }];
+}
+
 uint64_t ps_ui_window_create(const char *title, int32_t width, int32_t height) {
   if (!usable() || width <= 0 || height <= 0) {
     return 0;
@@ -2138,6 +2168,7 @@ uint64_t ps_ui_window_create(const char *title, int32_t width, int32_t height) {
     window.releasedWhenClosed = NO;
     window.restorable = NO;
     window.delegate = controller();
+    installTitleBarZoom();
     window.title = toNSString(title);
     window.tabbingMode = NSWindowTabbingModePreferred;
     window.tabbingIdentifier = @"PrimeStructDocument";
