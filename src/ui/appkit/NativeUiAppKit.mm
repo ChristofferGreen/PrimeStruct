@@ -1036,7 +1036,15 @@ static void applyWindowTitle(NSWindow *w) {
   if (slash.location != NSNotFound) {
     NSFont *font = [NSFont titleBarFontOfSize:0];
     const CGFloat textWidth = [full sizeWithAttributes:@{NSFontAttributeName : font}].width;
-    const CGFloat reserved = w.toolbar != nil ? 360 : 150; // window buttons, and the toolbar beside the title
+    CGFloat reserved = 150; // window buttons and margins
+    if (w.toolbar != nil) {
+      // The toolbar shares the bar with the title: its items' widths, or a typical full toolbar before they exist.
+      CGFloat bar = 0;
+      for (NSToolbarItem *item in w.toolbar.items) {
+        bar += item.view != nil ? item.view.frame.size.width + 8 : 40;
+      }
+      reserved += bar > 0 ? bar : 560;
+    }
     if (textWidth + reserved > w.frame.size.width) {
       shown = [full substringFromIndex:slash.location + 1];
     }
