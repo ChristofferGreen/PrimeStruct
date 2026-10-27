@@ -30,6 +30,9 @@ void pushCommand(int32_t commandId);
 // text view; an action whose target is gone by replay time is skipped.
 void pushTypeText(uint64_t widget, std::string text);
 void pushCloseWindow(uint64_t window);
+// Waits for the running script of the first window that has one (ps_ui_script_run) and delivers its output and end
+// command, then goes on (`wait` in pushedScenario). Without it the output arrives only when no action is left.
+void pushWaitScript();
 void pushQuit();
 // Makes `window` the active (key) window when replayed; no event is delivered.
 void pushActivateWindow(uint64_t window);

@@ -334,6 +334,10 @@ void arenaDeallocate(void *ptr) noexcept {
 // found none among the dominant allocation sites).
 // ---------------------------------------------------------------------------
 
+// A dynamic library that is loaded into a host program (libps_script, src/ui/ScriptRunner.cpp) builds this file with
+// PRIMEC_NO_GLOBAL_OPERATOR_NEW and keeps the system operators: inside such a library libc++.dylib's own string and
+// container code would free arena blocks with free().
+#ifndef PRIMEC_NO_GLOBAL_OPERATOR_NEW
 void *operator new(std::size_t size) {
   return primec::arenaAllocate(size);
 }
@@ -381,6 +385,7 @@ void operator delete(void *ptr, const std::nothrow_t &) noexcept {
 void operator delete[](void *ptr, const std::nothrow_t &) noexcept {
   primec::arenaDeallocate(ptr);
 }
+#endif // PRIMEC_NO_GLOBAL_OPERATOR_NEW
 
 namespace primec {
 

@@ -29,6 +29,7 @@
 #include "primec/ui/NativeUi.h"
 #include "primec/ui/NativeUiRecentFiles.h"
 #include "primec/ui/NativeUiStandardItems.h"
+#include "primec/ui/ScriptRunner.h"
 #include "primec/ui/SyntaxHighlight.h"
 
 #include <algorithm>
@@ -115,6 +116,19 @@ struct State {
   int32_t previewScrollMode = PS_UI_SCROLL_BLOCKS;         // how the source and the page scroll together
   std::unordered_map<uint64_t, bool> previewRefreshPending;
   std::unordered_map<uint64_t, int32_t> previewModes; // PS_UI_PREVIEW_* of the windows whose preview is on
+  // Running scripts (ps_ui_script_run) and the output pane under the window's content.
+  struct ScriptSession {
+    const primec::ui::ScriptRunnerApi *api = nullptr;
+    PsScriptRun *run = nullptr;
+    int32_t endCommand = 0;
+    uint64_t token = 0; // tells a late callback of an earlier run from this one's
+    void *context = nullptr; // what the worker's callbacks were given; freed once the worker is joined
+  };
+  std::unordered_map<uint64_t, ScriptSession> scripts;
+  uint64_t nextScriptToken = 1;
+  std::unordered_map<uint64_t, NSSplitView *> outputSplits; // the split view that holds the content and the pane
+  std::unordered_map<uint64_t, NSView *> outputMains;       // the content the pane sits under
+  std::unordered_map<uint64_t, NSTextView *> outputViews;
   std::unordered_map<uint64_t, ToolbarDesc> toolbarDescs;
   std::unordered_map<uint64_t, NSToolbar *> windowToolbars; // the NSToolbar of a window
   std::unordered_map<uint64_t, int32_t> toolbarSelected;    // the selected segment's command per window (items are built lazily)
@@ -166,6 +180,7 @@ struct State {
   int snapshotUndoCount = 0;   // PRIMESTRUCT_UI_UNDO=N undoes N edits of the first text view after the commands
   bool snapshotUndone = false;
   bool snapshotCommandsSent = false;
+  bool snapshotCommandsAfterOpen = false;
   bool snapshotOpened = false;
   bool snapshotTyped = false;
   bool snapshotTaken = false;
@@ -841,8 +856,12 @@ Class previewDelegateClass() {
   return created;
 }
 
+// True while a page loads or a script runs: a snapshot waits for both (a run's output arrives as it goes).
 bool anyPreviewLoading() {
   State &s = state();
+  if (!s.scripts.empty()) {
+    return true;
+  }
   for (const auto &entry : s.previewLoading) {
     if (entry.second) {
       return true;
@@ -1833,6 +1852,10 @@ bool ps_ui_init(const char *appName) {
     }
     if (const char *commands = std::getenv("PRIMESTRUCT_UI_COMMANDS"); commands != nullptr && *commands != '\0') {
       s.snapshotCommands = commands;
+      if (s.snapshotCommands[0] == '+') { // "+120": sent after PRIMESTRUCT_UI_OPEN has loaded its file
+        s.snapshotCommands.erase(0, 1);
+        s.snapshotCommandsAfterOpen = true;
+      }
     }
     if (const char *select = std::getenv("PRIMESTRUCT_UI_SELECT"); select != nullptr && *select != '\0') {
       s.snapshotSelect = select;
@@ -1987,7 +2010,8 @@ int32_t ps_ui_wait_event(void) {
           for (int i = 0; i < s.snapshotUndoCount && target != nil; ++i) {
             [target.undoManager undo];
           }
-        } else if (!s.snapshotCommands.empty() && !s.snapshotCommandsSent && s.snapshotIdleSlices >= 2) {
+        } else if (!s.snapshotCommands.empty() && !s.snapshotCommandsSent && s.snapshotIdleSlices >= 2 &&
+                   (!s.snapshotCommandsAfterOpen || s.snapshotOpenPath.empty() || s.snapshotOpened)) {
           // Menu commands as if chosen by the user (the program's own handling runs).
           s.snapshotCommandsSent = true;
           s.snapshotIdleSlices = 0;
@@ -2250,13 +2274,22 @@ bool ps_ui_window_show(uint64_t window) {
   return true;
 }
 
+namespace {
+void releaseWindowScript(uint64_t window);
+void hideOutputPane(uint64_t window);
+} // namespace
+
 bool ps_ui_window_close(uint64_t window) {
   NSWindow *w = usable() ? liveWindow(window) : nil;
   if (w == nil) {
     return false;
   }
   w.delegate = nil;
+  releaseWindowScript(window);
   [w close];
+  state().outputSplits.erase(window);
+  state().outputMains.erase(window);
+  state().outputViews.erase(window);
   state().windows.erase(window);
   state().windowContent.erase(window);
   state().windowPaths.erase(window);
@@ -2871,11 +2904,235 @@ bool ps_ui_window_set_toolbar(uint64_t window, uint64_t toolbar) {
 
 // ---- running scripts (docs/NativeUiPlan.md section 18) ----------------------------------------------------------
 
-bool ps_ui_script_run(uint64_t, const char *, const char *, int32_t) { return false; }
-bool ps_ui_script_stop(uint64_t) { return false; }
-bool ps_ui_script_running(uint64_t) { return false; }
-bool ps_ui_window_set_output_visible(uint64_t, bool) { return false; }
-bool ps_ui_window_output_visible(uint64_t) { return false; }
+namespace {
+
+// Wakes ps_ui_wait_event, which sleeps in nextEvent until something arrives.
+void wakeEventLoop() {
+  NSEvent *wake = [NSEvent otherEventWithType:NSEventTypeApplicationDefined
+                                     location:NSZeroPoint
+                                modifierFlags:0
+                                    timestamp:0
+                                 windowNumber:0
+                                      context:nil
+                                      subtype:0
+                                        data1:0
+                                        data2:0];
+  [NSApp postEvent:wake atStart:NO];
+}
+
+NSTextView *outputView(uint64_t window) {
+  State &s = state();
+  const auto it = s.outputViews.find(window);
+  return it != s.outputViews.end() ? it->second : nil;
+}
+
+// The pane: a read-only monospaced text view under the window's content, in a split view with a horizontal divider.
+bool showOutputPane(uint64_t window) {
+  State &s = state();
+  NSWindow *w = liveWindow(window);
+  if (w == nil) {
+    return false;
+  }
+  if (s.outputSplits.count(window) != 0) {
+    return true;
+  }
+  NSView *main = w.contentView;
+  if (main == nil) {
+    return false;
+  }
+  NSRect frame = main.frame;
+  NSTextView *view = outputView(window);
+  if (view == nil) {
+    NSScrollView *scroll = [[NSScrollView alloc] initWithFrame:NSMakeRect(0, 0, frame.size.width, 120)];
+    scroll.hasVerticalScroller = YES;
+    scroll.autohidesScrollers = YES;
+    scroll.borderType = NSNoBorder;
+    view = [[NSTextView alloc] initWithFrame:scroll.bounds];
+    view.editable = NO;
+    view.selectable = YES;
+    view.richText = NO;
+    view.font = [NSFont monospacedSystemFontOfSize:12 weight:NSFontWeightRegular];
+    view.textColor = NSColor.textColor;
+    view.backgroundColor = NSColor.textBackgroundColor;
+    view.textContainerInset = NSMakeSize(8, 6);
+    view.autoresizingMask = NSViewWidthSizable;
+    view.verticallyResizable = YES;
+    view.horizontallyResizable = NO;
+    view.textContainer.widthTracksTextView = YES;
+    scroll.documentView = view;
+    s.outputViews[window] = view;
+  }
+  NSScrollView *scroll = view.enclosingScrollView;
+  NSSplitView *split = [[NSSplitView alloc] initWithFrame:frame];
+  split.vertical = NO;
+  split.dividerStyle = NSSplitViewDividerStyleThin;
+  split.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+  w.contentView = split;
+  [main removeFromSuperview];
+  [split addSubview:main];
+  [split addSubview:scroll];
+  [split adjustSubviews];
+  [split setPosition:frame.size.height * 0.68 ofDividerAtIndex:0];
+  s.outputSplits[window] = split;
+  s.outputMains[window] = main;
+  return true;
+}
+
+void hideOutputPane(uint64_t window) {
+  State &s = state();
+  const auto split = s.outputSplits.find(window);
+  NSWindow *w = liveWindow(window);
+  if (split == s.outputSplits.end() || w == nil) {
+    return;
+  }
+  NSView *main = s.outputMains[window];
+  NSRect frame = split->second.frame;
+  [main removeFromSuperview];
+  main.frame = frame;
+  main.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+  w.contentView = main;
+  s.outputSplits.erase(window);
+  s.outputMains.erase(window);
+}
+
+void appendOutput(uint64_t window, NSString *text) {
+  NSTextView *view = outputView(window);
+  if (view == nil || text.length == 0) {
+    return;
+  }
+  NSDictionary *attributes = @{
+    NSFontAttributeName : view.font,
+    NSForegroundColorAttributeName : NSColor.textColor,
+  };
+  [view.textStorage appendAttributedString:[[NSAttributedString alloc] initWithString:text attributes:attributes]];
+  [view scrollRangeToVisible:NSMakeRange(view.string.length, 0)];
+}
+
+// What a worker thread tells the main thread about a run: output text, or its end.
+struct ScriptCallbackContext {
+  uint64_t window = 0;
+  uint64_t token = 0;
+};
+
+void releaseWindowScript(uint64_t window) {
+  State &s = state();
+  const auto it = s.scripts.find(window);
+  if (it == s.scripts.end()) {
+    return;
+  }
+  PsScriptRun *run = it->second.run;
+  const primec::ui::ScriptRunnerApi *api = it->second.api;
+  void *context = it->second.context;
+  s.scripts.erase(it);
+  if (run != nullptr) {
+    api->release(run); // stops the script and joins its worker
+  }
+  delete static_cast<ScriptCallbackContext *>(context);
+}
+
+void scriptOutput(int, const char *chunk, size_t size, void *user) {
+  const auto *context = static_cast<ScriptCallbackContext *>(user);
+  NSString *text = [[NSString alloc] initWithBytes:chunk length:size encoding:NSUTF8StringEncoding];
+  if (text == nil) {
+    text = [[NSString alloc] initWithBytes:chunk length:size encoding:NSISOLatin1StringEncoding];
+  }
+  const uint64_t window = context->window;
+  const uint64_t token = context->token;
+  dispatch_async(dispatch_get_main_queue(), ^{
+    const auto it = state().scripts.find(window);
+    if (it != state().scripts.end() && it->second.token == token) {
+      appendOutput(window, text);
+    }
+  });
+  wakeEventLoop();
+}
+
+void scriptFinished(int, int, void *user) {
+  const auto *context = static_cast<ScriptCallbackContext *>(user);
+  const uint64_t window = context->window;
+  const uint64_t token = context->token;
+  dispatch_async(dispatch_get_main_queue(), ^{
+    State &s = state();
+    const auto it = s.scripts.find(window);
+    if (it == s.scripts.end() || it->second.token != token) {
+      return;
+    }
+    const int32_t command = it->second.endCommand;
+    releaseWindowScript(window); // the worker is done: this only joins it
+    enqueue(PS_UI_EVENT_COMMAND, window, 0, command);
+  });
+  wakeEventLoop();
+}
+
+} // namespace
+
+bool ps_ui_script_run(uint64_t window, const char *name, const char *text, int32_t endCommand) {
+  State &s = state();
+  if (!usable() || liveWindow(window) == nil || s.scripts.count(window) != 0 || !showOutputPane(window)) {
+    return false;
+  }
+  NSTextView *view = outputView(window);
+  view.string = @"";
+  const primec::ui::ScriptRunnerApi *api = primec::ui::scriptRunnerApi();
+  if (api == nullptr) {
+    appendOutput(window, [NSString stringWithFormat:@"The script runner is not available: %s\n",
+                                                    primec::ui::scriptRunnerError()]);
+    return false;
+  }
+  // The stdlib the script imports from: the bundle's copy when there is one.
+  std::string stdlib;
+  NSString *bundled = [NSBundle.mainBundle.resourcePath stringByAppendingPathComponent:@"stdlib"];
+  BOOL isDirectory = NO;
+  if ([NSFileManager.defaultManager fileExistsAtPath:bundled isDirectory:&isDirectory] && isDirectory) {
+    stdlib = bundled.UTF8String;
+  }
+  auto *context = new ScriptCallbackContext;
+  context->window = window;
+  context->token = s.nextScriptToken++;
+  State::ScriptSession session;
+  session.api = api;
+  session.endCommand = endCommand;
+  session.token = context->token;
+  session.context = context;
+  s.scripts[window] = session;
+  PsScriptRun *run = api->start(name != nullptr ? name : "script.prime", text != nullptr ? text : "", stdlib.c_str(),
+                                scriptOutput, scriptFinished, context);
+  if (run == nullptr) {
+    s.scripts.erase(window);
+    delete context;
+    appendOutput(window, @"The script could not be started.\n");
+    return false;
+  }
+  s.scripts[window].run = run;
+  return true;
+}
+
+bool ps_ui_script_stop(uint64_t window) {
+  State &s = state();
+  const auto it = usable() ? s.scripts.find(window) : s.scripts.end();
+  if (it == s.scripts.end() || it->second.run == nullptr) {
+    return false;
+  }
+  it->second.api->stop(it->second.run);
+  return true;
+}
+
+bool ps_ui_script_running(uint64_t window) { return usable() && state().scripts.count(window) != 0; }
+
+bool ps_ui_window_set_output_visible(uint64_t window, bool visible) {
+  if (!usable() || liveWindow(window) == nil) {
+    return false;
+  }
+  if (visible) {
+    return showOutputPane(window);
+  }
+  hideOutputPane(window);
+  return true;
+}
+
+bool ps_ui_window_output_visible(uint64_t window) {
+  return usable() && liveWindow(window) != nil && state().outputSplits.count(window) != 0;
+}
 
 bool ps_ui_window_toolbar_select(uint64_t window, int32_t commandId) {
   NSWindow *w = usable() ? liveWindow(window) : nil;
@@ -3008,6 +3265,7 @@ bool ps_ui_window_set_preview(uint64_t window, bool on) {
   if (w == nil) {
     return false;
   }
+  hideOutputPane(window); // the preview lays the window's content out itself
   State &s = state();
   const auto content = s.windowContent.find(window);
   NSTextView *view = content != s.windowContent.end() ? textView(content->second) : nil;

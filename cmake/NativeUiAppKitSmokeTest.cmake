@@ -128,6 +128,58 @@ foreach(shot gutter code menu tabs preview longtop scrolltext scrollpreview scro
   message(STATUS "editor ${shot} snapshot ok (${size} bytes)")
 endforeach()
 
+# Run (command 120, sent once the file is loaded) on a script, in a native bundle that carries the interpreter
+# (libps_script.dylib and the stdlib): the output pane opens under the editor and shows what the script printed, so
+# the picture differs from the plain editor's.
+foreach(var OPEN SCROLL CARET TYPE TYPE_AFTER_SCROLL MENU REPORT CLICK PREFS TARGET_LAST)
+  unset(ENV{PRIMESTRUCT_UI_${var}})
+endforeach()
+execute_process(
+  COMMAND bash "${SOURCE_DIR}/scripts/bundle_macos_app.sh" --native
+          "${SOURCE_DIR}/examples/apps/text_editor/main.prime" EditorRun "${WORK_DIR}" "${BUILD_DIR}"
+  RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err)
+if(NOT rc EQUAL 0)
+  message(FATAL_ERROR "native editor bundle failed (${rc}): ${out}${err}")
+endif()
+foreach(file MacOS/libps_script.dylib Resources/stdlib/std)
+  if(NOT EXISTS "${WORK_DIR}/EditorRun.app/Contents/${file}")
+    message(FATAL_ERROR "the native bundle lacks ${file}")
+  endif()
+endforeach()
+set(ENV{PRIMESTRUCT_UI_OPEN} "${SOURCE_DIR}/tests/fixtures/ui/screenshot/run_demo.prime")
+set(ENV{PRIMESTRUCT_UI_COMMANDS} "+120")
+set(snapshot "${WORK_DIR}/editor_run.png")
+set(ENV{PRIMESTRUCT_UI_SNAPSHOT} "${snapshot}")
+execute_process(
+  COMMAND "${WORK_DIR}/EditorRun.app/Contents/MacOS/EditorRun"
+  RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err
+  TIMEOUT 90)
+if(NOT rc EQUAL 0)
+  message(FATAL_ERROR "editor run snapshot run exited with '${rc}': ${out}${err}")
+endif()
+file(SIZE "${snapshot}" runSize)
+file(SIZE "${WORK_DIR}/editor_code.png" codeSize)
+if(runSize LESS 50000)
+  message(FATAL_ERROR "editor run snapshot is not a drawn PNG (${runSize} bytes)")
+endif()
+# The same file without the run is the "code" picture of showcase.prime: a different text, so only the size of the
+# pane is compared here, through the exact bytes of the two runs below.
+set(ENV{PRIMESTRUCT_UI_SNAPSHOT} "${WORK_DIR}/editor_norun.png")
+unset(ENV{PRIMESTRUCT_UI_COMMANDS})
+execute_process(
+  COMMAND "${WORK_DIR}/EditorRun.app/Contents/MacOS/EditorRun"
+  RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err
+  TIMEOUT 90)
+if(NOT rc EQUAL 0)
+  message(FATAL_ERROR "editor no-run snapshot run exited with '${rc}': ${out}${err}")
+endif()
+file(READ "${snapshot}" runBytes HEX)
+file(READ "${WORK_DIR}/editor_norun.png" noRunBytes HEX)
+if(runBytes STREQUAL noRunBytes)
+  message(FATAL_ERROR "Run changed nothing in the picture: the output pane did not show")
+endif()
+message(STATUS "editor run snapshot ok (${runSize} bytes): the output pane shows after Run")
+
 # The editor's settings window on its Files tab (the fourth page of the tabs control 21): the list of file types with
 # the application that opens each, and the same with two rows selected through the harness (the list is control 24).
 foreach(var OPEN SCROLL CARET TYPE TYPE_AFTER_SCROLL MENU REPORT CLICK)
@@ -140,9 +192,9 @@ foreach(shot files filesrows)
   set(snapshot "${WORK_DIR}/editor_${shot}.png")
   set(ENV{PRIMESTRUCT_UI_SNAPSHOT} "${snapshot}")
   if(shot STREQUAL "filesrows")
-    set(ENV{PRIMESTRUCT_UI_CLICK} "tab:24:3;rows:27:1,2")
+    set(ENV{PRIMESTRUCT_UI_CLICK} "tab:25:3;rows:28:1,2")
   else()
-    set(ENV{PRIMESTRUCT_UI_CLICK} "tab:24:3")
+    set(ENV{PRIMESTRUCT_UI_CLICK} "tab:25:3")
   endif()
   execute_process(
     COMMAND "${WORK_DIR}/EditorSmoke.app/Contents/MacOS/EditorSmoke"
@@ -361,7 +413,7 @@ set(ENV{PRIMESTRUCT_UI_COMMANDS} "8")
 set(ENV{PRIMESTRUCT_UI_TARGET_LAST} "1")
 set(ENV{PRIMESTRUCT_UI_DEFAULT_APP_PLAN} "${planFile}")
 set(ENV{PRIMESTRUCT_UI_SNAPSHOT} "${WORK_DIR}/editor_plan.png")
-set(ENV{PRIMESTRUCT_UI_CLICK} "tab:24:3;rows:27:0,1,2,3,4,5,6,7,8,9,10;button:28")
+set(ENV{PRIMESTRUCT_UI_CLICK} "tab:25:3;rows:28:0,1,2,3,4,5,6,7,8,9,10;button:29")
 execute_process(
   COMMAND "${WORK_DIR}/EditorSmoke.app/Contents/MacOS/EditorSmoke"
   RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err

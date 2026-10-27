@@ -13,6 +13,7 @@
 
 #include "primec/embed/Script.h"
 #include "primec/ui/NativeUiBindings.h"
+#include "primec/ui/ScriptRunner.h"
 
 #ifndef PRIMESTRUCT_APP_RUNTIME_ONLY
 #include "primec/embed/ScriptEngine.h"
@@ -76,6 +77,13 @@ std::string bundledProgramPath() {
 } // namespace
 
 int main(int argc, char **argv) {
+  // Run (docs/NativeUiPlan.md section 18): the development runner links the interpreter, the bytecode-only one has none.
+#ifdef PRIMESTRUCT_APP_RUNTIME_ONLY
+  primec::ui::disableScriptRunner();
+#else
+  static const primec::ui::ScriptRunnerApi scriptRunner{&ps_script_start, &ps_script_stop, &ps_script_release};
+  primec::ui::setScriptRunnerApi(&scriptRunner);
+#endif
   // Started from a bundle the program is the bytecode inside it and every argument is the program's (a file named
   // on the command line, as with a native bundle); anywhere else the first argument names the program.
   std::string programPath = bundledProgramPath();

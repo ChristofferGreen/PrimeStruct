@@ -824,11 +824,25 @@ primestructEnableWarnings(primec_ui_highlight_lib)
 # The script runner (docs/NativeUiPlan.md section 18): the embedded interpreter behind a backend's Run, as a dynamic
 # library the backends load on the first run (the compiler and VM are too large to load at launch). The loader falls back
 # to the copy in the build tree, so tests find it without a bundle.
+# The same runner as a static library, for programs that already link the compiler (the tests): they install it with
+# primec::ui::setScriptRunnerApi instead of loading the dynamic library, which keeps one allocator in the process.
+add_library(primec_ui_script_lib STATIC src/ui/ScriptRunner.cpp)
+target_include_directories(primec_ui_script_lib PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+target_link_libraries(primec_ui_script_lib PUBLIC primec_embed_lib)
+primestructEnableWarnings(primec_ui_script_lib)
 if(APPLE)
-  add_library(primec_script_runner_dylib SHARED src/ui/ScriptRunner.cpp)
+  add_library(primec_script_runner_dylib SHARED src/ui/ScriptRunner.cpp src/ui/ScriptRunnerArena.cpp)
   set_target_properties(primec_script_runner_dylib PROPERTIES OUTPUT_NAME ps_script)
   target_include_directories(primec_script_runner_dylib PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
   target_link_libraries(primec_script_runner_dylib PRIVATE primec_embed_lib)
+  # Only the three runner functions are exported; the library's operator new/delete are plain malloc and free
+  # (ScriptRunnerArena.cpp), not the compiler arena's.
+  target_link_options(primec_script_runner_dylib PRIVATE
+    -Wl,-exported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ScriptRunner.exports)
+  set_property(TARGET primec_script_runner_dylib APPEND PROPERTY LINK_DEPENDS
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ScriptRunner.exports)
   target_compile_definitions(primec_ui_highlight_lib PRIVATE
     PRIMESTRUCT_SCRIPT_RUNNER_BUILD_PATH="${CMAKE_BINARY_DIR}/libps_script.dylib")
 endif()
@@ -882,7 +896,7 @@ if(PRIMESTRUCT_BUILD_NATIVE_UI AND APPLE)
 
   # Development runner: compiles .prime at launch, or runs .psir bytecode.
   add_executable(primestruct_app tools/primestruct_app/main.cpp)
-  target_link_libraries(primestruct_app PRIVATE primec_ui_bindings_lib primec_ui_appkit_lib primec_embed_lib)
+  target_link_libraries(primestruct_app PRIVATE primec_ui_bindings_lib primec_ui_appkit_lib primec_embed_lib primec_ui_script_lib)
   # Bundle runner: bytecode only, no compiler linked.
   add_executable(primestruct_app_runtime tools/primestruct_app/main.cpp)
   target_compile_definitions(primestruct_app_runtime PRIVATE PRIMESTRUCT_APP_RUNTIME_ONLY)
@@ -1394,7 +1408,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   target_include_directories(PrimeStruct_native_ui_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
   target_compile_definitions(PrimeStruct_native_ui_tests PRIVATE
     PRIMESTRUCT_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
-  target_link_libraries(PrimeStruct_native_ui_tests PRIVATE primec_ui_lib primec_embed_lib)
+  target_link_libraries(PrimeStruct_native_ui_tests PRIVATE primec_ui_lib primec_embed_lib primec_ui_script_lib)
   if(APPLE)
     add_dependencies(PrimeStruct_native_ui_tests primec_script_runner_dylib)
   endif()

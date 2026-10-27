@@ -100,7 +100,7 @@ struct Window {
 };
 
 struct Action {
-  enum class Kind { Command, TypeText, CloseWindow, Quit, Activate, Toggle, Select, Click, OpenFile, Rows, Selection, TextChanged } kind = Kind::Quit;
+  enum class Kind { Command, TypeText, CloseWindow, Quit, Activate, Toggle, Select, Click, OpenFile, Rows, Selection, TextChanged, WaitScript } kind = Kind::Quit;
   int32_t command = 0;
   uint64_t handle = 0;
   std::string text;
@@ -438,6 +438,11 @@ inline bool deliverNextEvent() {
       }
       break;
     }
+    case Action::Kind::WaitScript:
+      if (deliverScriptEvent()) {
+        return true;
+      }
+      break;
     case Action::Kind::TypeText: {
       uint64_t handle = action.handle;
       if (handle == 0 && !s.textViews.empty()) {

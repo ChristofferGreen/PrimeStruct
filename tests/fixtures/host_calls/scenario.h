@@ -59,6 +59,8 @@ inline void applyHeadlessScenario(std::string_view scenario) {
                                  std::atoi(rest.substr(second + 1, third - second - 1).c_str()),
                                  std::atoi(rest.substr(third + 1).c_str()));
       }
+    } else if (key == "wait") {
+      headless::pushWaitScript();
     } else if (key == "close") {
       headless::pushCloseWindow(static_cast<uint64_t>(std::atoll(rest.c_str())));
     } else if (key == "save") {

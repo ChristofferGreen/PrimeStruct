@@ -39,6 +39,13 @@ struct ScriptRunnerApi {
 // then `libps_script.dylib` beside the library or executable this code is in, then the build tree's copy). nullptr when
 // it cannot be loaded; `scriptRunnerError()` then says why.
 const ScriptRunnerApi *scriptRunnerApi();
+// Installs the functions to use instead of loading the library (a program that links the runner itself, such as the
+// tests); nullptr goes back to loading it.
+void setScriptRunnerApi(const ScriptRunnerApi *api);
+// Makes Run unavailable in this program ("script runner is not available": a runner without a compiler), instead of
+// looking for the library: a program that links the compiler's allocator must not load libps_script (see
+// docs/NativeUiPlan.md section 18).
+void disableScriptRunner();
 const char *scriptRunnerError();
 
 } // namespace primec::ui

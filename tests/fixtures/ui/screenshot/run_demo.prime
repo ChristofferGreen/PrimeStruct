@@ -1,0 +1,14 @@
+// A script for the editor's Run button: it prints a few lines and exits with 3.
+[return<i32> effects(io_out)]
+main() {
+  print_line("Hello from PrimeScript"utf8)
+  [mut] total{0i32}
+  [mut] i{1i32}
+  while(i <= 5i32) {
+    total = total + i
+    print_line(i)
+    i = i + 1i32
+  }
+  print_line(total)
+  return(3i32)
+}

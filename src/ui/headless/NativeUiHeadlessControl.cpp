@@ -51,6 +51,12 @@ void pushTypeText(uint64_t widget, std::string text) {
   a.text = std::move(text);
   state().actions.push_back(std::move(a));
 }
+void pushWaitScript() {
+  Action a;
+  a.kind = Action::Kind::WaitScript;
+  recordScenario("wait");
+  state().actions.push_back(std::move(a));
+}
 void pushSelectText(uint64_t view, int32_t start, int32_t end) {
   Action a;
   a.kind = Action::Kind::Selection;

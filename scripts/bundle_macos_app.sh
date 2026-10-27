@@ -52,6 +52,13 @@ else
   cp "$BUILD_DIR/primestruct_app_runtime" "$APP/Contents/MacOS/$NAME"
 fi
 
+# The script runner (docs/NativeUiPlan.md section 18): the interpreter behind Run, loaded on the first run from beside
+# the backend's dylib, and the stdlib the scripts import from.
+if [[ $NATIVE -eq 1 && -f "$BUILD_DIR/libps_script.dylib" ]]; then
+  cp "$BUILD_DIR/libps_script.dylib" "$APP/Contents/MacOS/libps_script.dylib"
+  cp -R "$ROOT_DIR/stdlib" "$APP/Contents/Resources/stdlib"
+fi
+
 ICON_KEY=""
 if [[ -n "$ICON" ]]; then
   cp "$ICON" "$APP/Contents/Resources/AppIcon.icns"
@@ -95,6 +102,10 @@ PLIST
 if [[ $NATIVE -eq 1 ]]; then
   codesign --force --sign - "$APP/Contents/MacOS/libps_ui_appkit.dylib" >/dev/null 2>&1 \
     || echo "warning: ad-hoc signing of the dylib failed" >&2
+  if [[ -f "$APP/Contents/MacOS/libps_script.dylib" ]]; then
+    codesign --force --sign - "$APP/Contents/MacOS/libps_script.dylib" >/dev/null 2>&1 \
+      || echo "warning: ad-hoc signing of the script runner failed" >&2
+  fi
 fi
 codesign --force --sign - "$APP" >/dev/null 2>&1 || echo "warning: ad-hoc signing failed" >&2
 echo "$APP"

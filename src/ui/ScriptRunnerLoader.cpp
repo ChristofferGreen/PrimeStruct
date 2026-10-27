@@ -70,11 +70,38 @@ const Loaded &loaded() {
 
 } // namespace
 
+namespace {
+const ScriptRunnerApi *installed = nullptr;
+
+bool disabled = false;
+}
+
+void setScriptRunnerApi(const ScriptRunnerApi *api) {
+  installed = api;
+  disabled = false;
+}
+
+void disableScriptRunner() {
+  installed = nullptr;
+  disabled = true;
+}
+
 const ScriptRunnerApi *scriptRunnerApi() {
+  if (installed != nullptr) {
+    return installed;
+  }
+  if (disabled) {
+    return nullptr;
+  }
   const Loaded &l = loaded();
   return l.ok ? &l.api : nullptr;
 }
 
-const char *scriptRunnerError() { return loaded().error.c_str(); }
+const char *scriptRunnerError() {
+  if (disabled) {
+    return "this program has no interpreter";
+  }
+  return installed != nullptr ? "" : loaded().error.c_str();
+}
 
 } // namespace primec::ui

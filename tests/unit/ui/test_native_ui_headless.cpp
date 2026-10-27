@@ -1,6 +1,7 @@
 #include "primec/testing/TestScratch.h"
 #include "primec/ui/NativeUi.h"
 #include "primec/ui/NativeUiHeadless.h"
+#include "primec/ui/ScriptRunner.h"
 
 #include "third_party/doctest.h"
 
@@ -12,6 +13,15 @@
 #include <vector>
 
 namespace headless = primec::ui::headless;
+
+namespace {
+// The tests link the runner themselves (one allocator in the process) instead of loading libps_script.
+struct InstallScriptRunner {
+  primec::ui::ScriptRunnerApi api{&ps_script_start, &ps_script_stop, &ps_script_release};
+  InstallScriptRunner() { primec::ui::setScriptRunnerApi(&api); }
+};
+const InstallScriptRunner installScriptRunner;
+} // namespace
 
 TEST_SUITE_BEGIN("primestruct.ui.headless");
 
