@@ -17,3 +17,15 @@ source_file = std/text/string.prime
 [module]
 root = /std/text/view
 source_file = std/text/view.prime
+
+[module]
+root = /std/text/secret
+source_file = std/text/secret.prime
+
+[module]
+root = /std/text/string_map
+source_file = std/text/string_map.prime
+
+[module]
+root = /std/text/interner
+source_file = std/text/interner.prime

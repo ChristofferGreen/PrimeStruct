@@ -17,6 +17,7 @@
 #include <fstream>
 #include <functional>
 #include <iterator>
+#include <unordered_map>
 #include <string>
 #include <vector>
 
@@ -1770,6 +1771,245 @@ TEST_CASE("a malformed format pattern or a missing argument stops the program") 
   CHECK(failsToRun(head + "  [String] s{formatText(textOf(\"{2}\"), textOf(\"a\"))}\n  return(s.count())\n}\n"));
   CHECK(failsToRun(head + "  [String] s{formatText(textOf(\"{:>x}\"), textOf(\"a\"))}\n  return(s.count())\n}\n"));
   CHECK_FALSE(failsToRun(head + "  [String] s{formatText(textOf(\"{}\"), textOf(\"a\"))}\n  return(0i32)\n}\n"));
+}
+
+// ---- Secret ----------------------------------------------------------------------------------------------------
+
+namespace {
+std::string secretProgram() {
+  return
+      "import /std/text/*\nimport /std/text/view/*\nimport /std/text/secret/*\n\n"
+      "[return<Pointer<u8>> effects(heap_alloc)]\nleakyPointer() {\n"
+      "  [Secret] s{secretOf(textOf(\"topsecret\"))}\n  return(s.reveal().data)\n}\n\n"
+      "[return<i32> effects(heap_alloc)]\nchurn() {\n"
+      "  [Secret] s{secretOf(textOf(\"a secret value long enough to need a heap block of its own\"))}\n  return(s.count())\n}\n\n"
+      "[return<int> effects(heap_alloc, io_out)]\nmain() {\n"
+      "  [Secret] a{secretOf(textOf(\"hunter2\"))}\n  [Secret] b{secretOf(textOf(\"hunter2\"))}\n"
+      "  [Secret] c{secretOf(textOf(\"hunter3\"))}\n  [Secret] d{secretOf(textOf(\"hunter\"))}\n  [Secret] e{secretOf(textOf(\"\"))}\n"
+      "  print_line(if(a.equalsConstantTime(b), then() { 1i32 }, else() { 0i32 }))\n"
+      "  print_line(if(a.equalsConstantTime(c), then() { 1i32 }, else() { 0i32 }))\n"
+      "  print_line(if(a.equalsConstantTime(d), then() { 1i32 }, else() { 0i32 }))\n"
+      "  print_line(if(e.equalsConstantTime(e), then() { 1i32 }, else() { 0i32 }))\n"
+      "  print_line(if(a.equalsViewConstantTime(textOf(\"hunter2\")), then() { 1i32 }, else() { 0i32 }))\n"
+      "  print_line(if(a.equalsViewConstantTime(textOf(\"Hunter2\")), then() { 1i32 }, else() { 0i32 }))\n"
+      "  print_line(a.count())\n  print_line(if(e.empty(), then() { 1i32 }, else() { 0i32 }))\n"
+      "  print_line(if(a.reveal().equalsText(\"hunter2\"), then() { 1i32 }, else() { 0i32 }))\n"
+      "  [Pointer<u8>] gone{leakyPointer()}\n  [i32 mut] nonZero{0i32}\n"
+      "  for([i32 mut] i{0i32}, i < 9i32, i++) {\n    if(/std/text/textLoad(gone, i) != 0u8) {\n      nonZero = nonZero + 1i32\n    }\n  }\n"
+      "  print_line(nonZero)\n"
+      "  for([i32 mut] r{0i32}, r < 40i32, r++) {\n    churn()\n  }\n"
+      "  print_line(if(stringHeapBytesInUse() > 0u64, then() { 1i32 }, else() { 0i32 }))\n"
+      "  return(0i32)\n}\n";
+}
+
+const char *SecretExpected = "1\n0\n0\n1\n1\n0\n7\n1\n1\n0\n1\n";
+} // namespace
+
+TEST_CASE("Secret compares, reveals and zeroes its text on the VM") {
+  // The last line is 1 here because a..e are still alive: the churn loop itself must not add to the heap.
+  CHECK(vmOutput(secretProgram()) == SecretExpected);
+}
+
+TEST_CASE("Secret compares, reveals and zeroes its text through optexe") {
+  CHECK(optexeOutput("secret", secretProgram()) == SecretExpected);
+}
+
+TEST_CASE("a Secret cannot be formatted or printed") {
+  const std::string head = "import /std/text/*\nimport /std/text/view/*\nimport /std/text/secret/*\n\n"
+                           "[return<int> effects(heap_alloc, io_out)]\nmain() {\n"
+                           "  [Secret] s{secretOf(textOf(\"hunter2\"))}\n";
+  const auto compiles = [](const std::string &source) {
+    ScriptEngine engine;
+    return engine.compileSource("/secret_misuse.prime", source).valid();
+  };
+  CHECK(compiles(head + "  return(0i32)\n}\n"));
+  CHECK_FALSE(compiles(head + "  [String] f{formatText(textOf(\"{}\"), s)}\n  return(0i32)\n}\n"));
+  CHECK_FALSE(compiles(head + "  print_line(s)\n  return(0i32)\n}\n"));
+}
+
+// ---- StringMap and hashing -------------------------------------------------------------------------------------
+
+namespace {
+// Keys "k0".."k<n-1>" built at run time: insert, look up, erase every third, re-insert every sixth, look up again.
+std::string mapProgram(int n) {
+  const std::string count = std::to_string(n);
+  return
+      "import /std/text/*\nimport /std/text/view/*\nimport /std/text/string_map/*\n\n"
+      "[return<void> effects(heap_alloc)]\nmakeKey([String mut] key, [i32] i) {\n  key.clear()\n  key.append(\"k\")\n  key.appendI64(convert<i64>(i))\n}\n\n"
+      "[return<int> effects(heap_alloc, io_out)]\nmain() {\n"
+      "  [StringMap<i32> mut] m{StringMap<i32>{}}\n  [String mut] key{stringWithCapacity(0i32)}\n"
+      "  for([i32 mut] i{0i32}, i < " + count + "i32, i++) {\n    makeKey(key, i)\n    m.insert(key.view(), i * 3i32)\n  }\n"
+      "  print_line(m.count())\n"
+      "  [i64 mut] sum{0i64}\n  for([i32 mut] j{0i32}, j < m.count(), j++) {\n    sum = sum + convert<i64>(m.valueAt(j))\n  }\n  print_line(sum)\n"
+      "  [i64 mut] looked{0i64}\n  for([i32 mut] i{0i32}, i < " + count + "i32, i++) {\n    makeKey(key, i)\n    looked = looked + convert<i64>(m.getOr(key.view(), -1i32))\n  }\n  print_line(looked)\n"
+      "  [i32 mut] erased{0i32}\n  for([i32 mut] i{0i32}, i < " + count + "i32, i = i + 3i32) {\n    makeKey(key, i)\n    if(m.erase(key.view())) {\n      erased = erased + 1i32\n    }\n  }\n"
+      "  print_line(erased)\n  print_line(m.count())\n"
+      "  [i32 mut] wrong{0i32}\n  for([i32 mut] i{0i32}, i < " + count + "i32, i++) {\n    makeKey(key, i)\n    [bool] here{m.contains(key.view())}\n"
+      "    [bool] shouldBe{i - i / 3i32 * 3i32 != 0i32}\n    if(here != shouldBe) {\n      wrong = wrong + 1i32\n    }\n    if(here && m.at(key.view()) != i * 3i32) {\n      wrong = wrong + 1i32\n    }\n  }\n  print_line(wrong)\n"
+      "  print_line(if(m.erase(key.view()) || m.contains(key.view()), then() { 1i32 }, else() { 0i32 }))\n"
+      "  for([i32 mut] i{0i32}, i < " + count + "i32, i = i + 6i32) {\n    makeKey(key, i)\n    m.insert(key.view(), i)\n  }\n"
+      "  print_line(m.count())\n"
+      "  [i64 mut] sum2{0i64}\n  [i64 mut] keyBytes{0i64}\n  for([i32 mut] j{0i32}, j < m.count(), j++) {\n    sum2 = sum2 + convert<i64>(m.valueAt(j))\n    keyBytes = keyBytes + convert<i64>(m.keyAt(j).count())\n  }\n"
+      "  print_line(sum2)\n  print_line(keyBytes)\n"
+      "  m.clear()\n  print_line(m.count())\n  print_line(if(m.contains(textOf(\"k0\")), then() { 1i32 }, else() { 0i32 }))\n"
+      "  return(0i32)\n}\n";
+}
+
+std::string mapOracle(int n) {
+  std::unordered_map<std::string, int32_t> map;
+  std::string out;
+  for (int i = 0; i < n; ++i) {
+    map["k" + std::to_string(i)] = i * 3;
+  }
+  const auto total = [&map]() {
+    int64_t sum = 0;
+    for (const auto &entry : map) {
+      sum += entry.second;
+    }
+    return sum;
+  };
+  out += std::to_string(map.size()) + "\n" + std::to_string(total()) + "\n";
+  int64_t looked = 0;
+  for (int i = 0; i < n; ++i) {
+    looked += map.at("k" + std::to_string(i));
+  }
+  out += std::to_string(looked) + "\n";
+  int erased = 0;
+  for (int i = 0; i < n; i += 3) {
+    erased += static_cast<int>(map.erase("k" + std::to_string(i)));
+  }
+  out += std::to_string(erased) + "\n" + std::to_string(map.size()) + "\n0\n";
+  // the key left in the program's buffer is k<n-1>; it is erased (and so absent) only when n-1 is a multiple of 3
+  const std::string last = "k" + std::to_string(n - 1);
+  const bool lastGone = (n - 1) % 3 == 0;
+  out += std::string(lastGone ? "0" : "1") + "\n";
+  if (!lastGone) {
+    map.erase(last);
+  }
+  // the program erased `last` above when present; mirror that before the re-insert
+  for (int i = 0; i < n; i += 6) {
+    map["k" + std::to_string(i)] = i;
+  }
+  out += std::to_string(map.size()) + "\n" + std::to_string(total()) + "\n";
+  int64_t keyBytes = 0;
+  for (const auto &entry : map) {
+    keyBytes += static_cast<int64_t>(entry.first.size());
+  }
+  out += std::to_string(keyBytes) + "\n0\n0\n";
+  return out;
+}
+
+// SipHash-1-3 reference, written from the paper (an independent copy of the host function's algorithm).
+uint64_t referenceSipHash13(const std::string &text, uint64_t seed) {
+  const uint64_t k0 = seed;
+  const uint64_t k1 = seed * 0x9E3779B97F4A7C15ULL + 0xD1B54A32D192ED03ULL;
+  uint64_t v[4] = {k0 ^ 0x736f6d6570736575ULL, k1 ^ 0x646f72616e646f6dULL, k0 ^ 0x6c7967656e657261ULL, k1 ^ 0x7465646279746573ULL};
+  const auto rotl = [](uint64_t x, unsigned b) { return (x << b) | (x >> (64 - b)); };
+  const auto round = [&]() {
+    v[0] += v[1]; v[2] += v[3]; v[1] = rotl(v[1], 13); v[3] = rotl(v[3], 16);
+    v[1] ^= v[0]; v[3] ^= v[2]; v[0] = rotl(v[0], 32);
+    v[2] += v[1]; v[0] += v[3]; v[1] = rotl(v[1], 17); v[3] = rotl(v[3], 21);
+    v[1] ^= v[2]; v[3] ^= v[0]; v[2] = rotl(v[2], 32);
+  };
+  const size_t whole = text.size() / 8 * 8;
+  for (size_t at = 0; at < whole; at += 8) {
+    uint64_t word = 0;
+    std::memcpy(&word, text.data() + at, 8);
+    v[3] ^= word; round(); v[0] ^= word;
+  }
+  uint64_t last = static_cast<uint64_t>(text.size()) << 56;
+  for (size_t k = 0; whole + k < text.size(); ++k) {
+    last |= static_cast<uint64_t>(static_cast<unsigned char>(text[whole + k])) << (8 * k);
+  }
+  v[3] ^= last; round(); v[0] ^= last;
+  v[2] ^= 0xff; round(); round(); round();
+  return v[0] ^ v[1] ^ v[2] ^ v[3];
+}
+
+const std::vector<std::string> HashInputs = {"", "a", "abcdefg", "abcdefgh", "abcdefghi", "hello world, this is longer than sixteen bytes", "\xC3\xA9\xE4\xB8\x96"};
+
+std::string hashProgram() {
+  std::string body = "import /std/text/*\nimport /std/text/view/*\n\n[return<int> effects(heap_alloc, io_out)]\nmain() {\n";
+  int index = 0;
+  for (const std::string &text : HashInputs) {
+    const std::string name = "h" + std::to_string(index++);
+    body += "  [StringView] " + name + "{textOf(\"" + text + "\")}\n";
+    body += "  print_line(" + name + ".hash())\n  print_line(" + name + ".hashSeeded(1234567890123u64))\n";
+  }
+  body += "  [String] owned{stringFrom(\"hello\")}\n  [StringView] literal{textOf(\"hello\")}\n  [u64] ownedHash{owned.hash()}\n"
+          "  [u64] literalHash{literal.hash()}\n  print_line(if(ownedHash == literalHash, then() { 1i32 }, else() { 0i32 }))\n";
+  return body + "  return(0i32)\n}\n";
+}
+
+std::string hashOracle() {
+  std::string out;
+  for (const std::string &text : HashInputs) {
+    out += std::to_string(referenceSipHash13(text, 0)) + "\n" + std::to_string(referenceSipHash13(text, 1234567890123ULL)) + "\n";
+  }
+  return out + "1\n";
+}
+} // namespace
+
+TEST_CASE("StringMap agrees with std::unordered_map on the VM") {
+  CHECK(vmOutput(mapProgram(2500)) == mapOracle(2500));
+}
+
+TEST_CASE("StringMap agrees with std::unordered_map through optexe with 100000 run-time keys") {
+  CHECK(optexeOutput("string_map", mapProgram(100000)) == mapOracle(100000));
+}
+
+TEST_CASE("string hashes agree with a SipHash-1-3 reference on the VM") {
+  CHECK(vmOutput(hashProgram()) == hashOracle());
+}
+
+TEST_CASE("string hashes agree with a SipHash-1-3 reference through optexe") {
+  CHECK(optexeOutput("hashes", hashProgram()) == hashOracle());
+}
+
+// ---- Interner ----------------------------------------------------------------------------------------------------
+
+namespace {
+// Texts "n<i mod m>" interned in a loop: the symbols must be numbered in first-seen order and equal exactly when the
+// texts are.
+std::string internProgram(int rounds, int distinct) {
+  return
+      "import /std/text/*\nimport /std/text/view/*\nimport /std/text/interner/*\n\n"
+      "[return<int> effects(heap_alloc, io_out)]\nmain() {\n"
+      "  [Interner mut] names{Interner{}}\n  [String mut] key{stringWithCapacity(0i32)}\n"
+      "  [i64 mut] checksum{0i64}\n  [i32 mut] mismatches{0i32}\n"
+      "  for([i32 mut] i{0i32}, i < " + std::to_string(rounds) + "i32, i++) {\n"
+      "    key.clear()\n    key.append(\"n\")\n    key.appendI64(convert<i64>(i * 7i32 - i * 7i32 / " + std::to_string(distinct) + "i32 * " + std::to_string(distinct) + "i32))\n"
+      "    [Symbol] s{names.intern(key.view())}\n    checksum = checksum + convert<i64>(s.id) * convert<i64>(i + 1i32)\n"
+      "    [Symbol] again{names.find(key.view())}\n    if(!s.equals(again)) {\n      mismatches = mismatches + 1i32\n    }\n"
+      "    [StringView] shown{names.text(s)}\n    [StringView] typed{key.view()}\n    [bool] same{shown.equals(typed)}\n"
+      "    if(!same) {\n      mismatches = mismatches + 1i32\n    }\n  }\n"
+      "  print_line(names.count())\n  print_line(checksum)\n  print_line(mismatches)\n"
+      "  [Symbol] first{names.find(textOf(\"n0\"))}\n  print_line(first.id)\n"
+      "  return(0i32)\n}\n";
+}
+
+std::string internOracle(int rounds, int distinct) {
+  std::unordered_map<int, int> ids;
+  int64_t checksum = 0;
+  for (int i = 0; i < rounds; ++i) {
+    const int key = (i * 7) - (i * 7) / distinct * distinct;
+    const auto found = ids.find(key);
+    const int id = found == ids.end() ? static_cast<int>(ids.size()) : found->second;
+    if (found == ids.end()) {
+      ids[key] = id;
+    }
+    checksum += static_cast<int64_t>(id) * (i + 1);
+  }
+  return std::to_string(ids.size()) + "\n" + std::to_string(checksum) + "\n0\n" + std::to_string(ids.count(0) ? ids[0] : -1) + "\n";
+}
+} // namespace
+
+TEST_CASE("Interner numbers texts in first-seen order on the VM") {
+  CHECK(vmOutput(internProgram(900, 130)) == internOracle(900, 130));
+}
+
+TEST_CASE("Interner numbers texts in first-seen order through optexe with 100000 lookups") {
+  CHECK(optexeOutput("interner", internProgram(100000, 20011)) == internOracle(100000, 20011));
 }
 
 TEST_SUITE_END();

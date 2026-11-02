@@ -2084,10 +2084,13 @@ are left unarchived.
 | TODO-5622 | Optimized C++ emitters run the `string` view | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 | TODO-5623 | `String` mutation parity: fill, resize, front/back, pop, swap, lossy bytes | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 | TODO-5624 | `StringView` byte-set search and `replaceAll` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
+| TODO-5625 | Hashing text and a hash table for text keys | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 | TODO-5626 | Number to text parity: radix, precision, shortest round trip | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 | TODO-5627 | `format`, `join` and split into owned pieces | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 | TODO-5628 | std::string conformance and speed gate for `String` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 | TODO-5629 | Bulk byte operations under `String` and `Slice<u8>` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
+| TODO-5635 | `Secret`: a text that is not a String, compared in constant work, zeroed on destroy | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
+| TODO-5636 | Interned `Symbol` for names and tags | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 | TODO-5639 | A binding whose declared type is an imported short name skipped the Copy helper | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 | TODO-5640 | String heap hot paths: O(1) frees, chunk index, region cache | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 | TODO-5644 | Split `/std/text` so a plain `String` program compiles fast | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |

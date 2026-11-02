@@ -234,7 +234,7 @@ the other entries are specified here and tracked by the TODO named.
 | `find_first_of`, `find_last_of`, `find_first_not_of`, `find_last_not_of` | `findFirstOf`, `findLastOf`, `findFirstNotOf`, `findLastNotOf` (+ `...From`) | done |
 | `to_string`, `stoi`, `stol`, `stod`, `from_chars` | `stringFromI32/I64/U64/F64/...`, `parseI32Into/I64Into/U64Into/F64Into` and `...Or` | done |
 | `to_chars` (radix, precision, shortest round trip) | `appendI64Radix`, `appendF64`, `appendF64Fixed`, `appendF64Scientific`, `appendF32` | done |
-| `std::hash<string>`, `unordered_map<string, V>`, `map<string, V>` | `String` and views as `map` keys, `hash()` | TODO-5625 |
+| `std::hash<string>`, `unordered_map<string, V>` | `hash()`, `hashSeeded(seed)` (SipHash-1-3), `StringMap<V>` | done; builtin `map<String, V>` is not hashed |
 | `std::format`, `operator<<`, `getline` | `formatText(pattern, args...)`, `joinWith`, `lineAt`, `splitOwned`, `readTextInto` | done |
 | `memcpy`/`memmove`/`memcmp`/`memchr` speed | the `__pstext_move/fill/compare/find` host functions under every copy, compare and search | done |
 | `string_view::remove_prefix`/`remove_suffix`/`substr` | `slice` | done |
@@ -337,6 +337,13 @@ to compile the view code. `TextView` is taken by the native-UI widget.
   (radix 2 to 36; floats as `std::to_chars` writes them) and passed as views.
 - **Files:** `readTextInto(path, out)`, `writeText(path, text)`, `appendText(path, text)` take a view as the path and
   return 0 or the C errno (`readTextInto` also -1 for invalid UTF-8); they need the `file_read` / `file_write` effects.
+- **Hashing and keys:** `hash()` and `hashSeeded(seed)` on a view, `hash()` on a `String` (SipHash-1-3, a 64-bit seed, 0 by
+  default; the same value on every backend). `import /std/text/string_map/*` gives `StringMap<V>`, a hash table
+  from text keys to Copy values: `insert`, `at`, `getOr`, `tryGet`, `contains`, `indexOf`, `erase`, `clear`, `count`,
+  `keyAt(i)`, `valueAt(i)`, `setSeed(seed)`. Pass a secret random seed to `setSeed` to make collisions unpredictable.
+- **Interned names:** `import /std/text/interner/*` gives `Interner` and `Symbol` (an i32 id in first-seen order).
+- **Secrets:** `import /std/text/secret/*` gives `Secret`, a text that cannot be printed or formatted, compared with
+  `equalsConstantTime`, read with `reveal()`, and zeroed on destroy. Field privacy is not enforced by the compiler yet.
 - **Compile cost:** a module is spliced in whole, so `/std/text` (the `String` core) and `/std/text/view` (`StringView`,
   search, parsing, formatting, files, UTF-8 checks) are separate import roots in `stdlib/std/modules.psmeta`. A program
   that makes one `String` compiles in 0.15 s (it was 0.12 s before the view code, 0.50 s when both were one module).

@@ -1,0 +1,74 @@
+// Interned names (docs/spec/strings-and-views.md): an `Interner` turns each distinct text into a small `Symbol` once,
+// so comparing or hashing a header name, a method or a route segment is an integer operation. Symbols are numbered in
+// the order texts are first seen (the first text is symbol 0), so a run is deterministic. A Symbol is only meaningful
+// with the Interner that made it, and an Interner never forgets: it holds every text it was given until it is
+// destroyed. A module of its own: `import /std/text/interner/*`.
+
+import /std/panic/*
+import /std/text/*
+import /std/text/view/*
+import /std/text/string_map/*
+
+namespace std {
+  namespace text {
+  namespace interner {
+  [public struct]
+  Symbol() {
+    [public i32] id{-1i32}
+
+    [return<bool>]
+    equals([/std/text/interner/Symbol] other) {
+      return(this.id == other.id)
+    }
+
+    // A hash of the symbol, for use as a key in another table: the id itself.
+    [return<u64>]
+    hash() {
+      return(convert<u64>(this.id))
+    }
+
+    [return<bool>]
+    valid() {
+      return(this.id >= 0i32)
+    }
+  }
+
+  [public struct]
+  Interner() {
+    [StringMap<i32> mut] names{StringMap<i32>{}}
+
+    // How many distinct texts have been interned.
+    [return<i32>]
+    count() {
+      return(this.names.count())
+    }
+
+    // The symbol of `text`, made on first sight.
+    [mut effects(heap_alloc), return</std/text/interner/Symbol>]
+    intern([/std/text/view/StringView] text) {
+      [i32 mut] found{this.names.indexOf(text)}
+      if(found < 0i32) {
+        this.names.insert(text, this.names.count())
+        found = this.names.count() - 1i32
+      }
+      return(/std/text/interner/Symbol{[id] found})
+    }
+
+    // The symbol of `text` when it has been interned (otherwise an invalid symbol, id -1), without making one.
+    [return</std/text/interner/Symbol>]
+    find([/std/text/view/StringView] text) {
+      return(/std/text/interner/Symbol{[id] this.names.indexOf(text)})
+    }
+
+    // The text of a symbol, as a view valid until the next intern.
+    [return</std/text/view/StringView>]
+    text([/std/text/interner/Symbol] symbol) {
+      if(symbol.id < 0i32 || symbol.id >= this.names.count()) {
+        panic(symbol.id)
+      }
+      return(this.names.keyAt(symbol.id))
+    }
+  }
+  }
+  }
+}

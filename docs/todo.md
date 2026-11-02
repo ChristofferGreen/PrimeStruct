@@ -104,18 +104,16 @@ of sync with them.
 | TODO-5569 | Slice loans, escapes and returned borrows | ready | slices |
 | TODO-5570 | Slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views | ready | slices |
 | TODO-5621 | Static-text field rule and `run-time text requires String` | blocked | string-view |
-| TODO-5625 | `String` and `string` as map keys, with `hash()` | blocked | string-keys |
 | TODO-5631 | Structs that hold views (borrow-carrying aggregates) | blocked | string-borrows |
 | TODO-5630 | Request-scoped string arenas: `withStringArena` | blocked | string-arenas |
 | TODO-5632 | Fused `+` chains: one allocation per expression | blocked | string-owned |
 | TODO-5633 | Unicode case mapping and case folding (lazy) | blocked | string-unicode |
 | TODO-5634 | Unicode normalization and grapheme clusters (lazy) | blocked | string-unicode |
-| TODO-5635 | `Secret<String>`: zeroed on destroy, never printed | blocked | string-owned |
-| TODO-5636 | Interned `Symbol` for names and tags | blocked | string-keys |
 | TODO-5637 | Fold string operations on literals at compile time | blocked | string-quality |
 | TODO-5638 | Shared immutable strings for threads (`SharedString`) | deferred | string-concurrency |
 | TODO-5642 | Struct methods inside sum-returning functions, and explicit-self definitions | ready | lowering-gaps |
 | TODO-5643 | Operators and index sugar for stdlib types (`String + String`, `s[i]`) | ready | lowering-gaps |
+| TODO-5645 | Real calls for struct-receiver methods (library code is inlined at every call site) | ready | lowering-gaps |
 | TODO-5603 | Startup audit: what a launch loads and does | ready | startup |
 | TODO-5586 | Native String heap: pooled blocks, statistics and limit | deferred | native-backend-strings |
 | TODO-5574 | Simple C++ emitters run bytes and strings | deferred | string-backends |
@@ -165,7 +163,7 @@ of sync with them.
 
 ### Priority Lanes
 
-- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5570, TODO-5569, TODO-5621, TODO-5568, TODO-5625, TODO-5642, TODO-5643, TODO-5631, TODO-5630, TODO-5632, TODO-5633, TODO-5634, TODO-5635, TODO-5636, TODO-5637, TODO-5638, TODO-5567, TODO-5574
+- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5570, TODO-5569, TODO-5621, TODO-5568, TODO-5642, TODO-5643, TODO-5645, TODO-5631, TODO-5630, TODO-5632, TODO-5633, TODO-5634, TODO-5637, TODO-5638, TODO-5567, TODO-5574
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Startup (docs/NativeUiPlan.md section 16): TODO-5603
@@ -305,18 +303,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - a negative test per diagnostic and a positive test per allowed shape; stdlib, examples and corpus compile; full release gate green
   - stop_rule: the two diagnostics and the migrations they force.
 
-- [ ] TODO-5625: `String` and `string` as map keys, with `hash()`
-  - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5618
-  - created_at: 2026-11-02
-  - phase: Strings and slices (docs/spec/strings-and-views.md, Parity with `std::string`)
-  - parallel_track: string-keys
-  - scope: Map keys of type `String`/`string` work at run time (today `map` string keys must be literals or literal-backed bindings on VM and native). Define a stable byte hash (`hash() -> u64`, same value on every backend), `Equality` for text, and make `map<String, V>` and the stdlib map (`stdlib/std/collections/map.prime`) accept it with owned keys that are copied in. Headers, query strings and routes are the use case. The hash is keyed (SipHash-class) so crafted keys cannot flood a table: the seed comes from a new `random` effect (add it to the capability taxonomy in docs/spec/backend-type-support.md), and programs without it, tests included, use a fixed seed so runs stay deterministic.
-  - acceptance:
-    - VM and `optexe` tests: insert, lookup, overwrite, erase and growth with 100k run-time keys, keys built by concatenation, a `string` view used as a lookup key without copying; the hash of fixed inputs is pinned by a test; full release gate green
-  - stop_rule: text keys for the stdlib map; ordered containers are not part of this leaf.
-
 - [ ] TODO-5631: Structs that hold views (borrow-carrying aggregates)
   - owner: ai
   - status: blocked
@@ -377,30 +363,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - tests against the Unicode normalization and grapheme break conformance samples for a fixed subset checked into tests/fixtures; the same no-cost-when-unused check as TODO-5633; full release gate green
   - stop_rule: NFC/NFD and extended grapheme clusters; NFKC/NFKD and word/sentence breaks are separate if wanted.
 
-- [ ] TODO-5635: `Secret<String>`: zeroed on destroy, never printed
-  - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5618
-  - created_at: 2026-11-02
-  - phase: Strings and slices (docs/spec/strings-and-views.md, Beyond std::string)
-  - parallel_track: string-owned
-  - scope: A `Secret` wrapper over `String` for tokens and passwords: `Destroy` zeroes the block before freeing it (the zeroing cannot be optimized away on the C++ emitters), it cannot be printed or formatted, copies are explicit, and `equalsConstantTime(other)` compares without early exit.
-  - acceptance:
-    - VM and `optexe` tests: the freed block reads as zeros (via a test hook of the string heap), print/format of a `Secret` is a compile error, comparison time does not depend on the matching prefix (counted by operation, not wall clock); full release gate green
-  - stop_rule: the wrapper and its guarantees; no key management.
-
-- [ ] TODO-5636: Interned `Symbol` for names and tags
-  - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5625
-  - created_at: 2026-11-02
-  - phase: Strings and slices (docs/spec/strings-and-views.md, Beyond std::string)
-  - parallel_track: string-keys
-  - scope: `Symbol` is a small copyable value for header names, methods and route segments: `Symbol.of(text)` interns into a per-process table (ids are assigned in first-seen order, so runs are deterministic), equality and hash are O(1) integer operations, `text()` returns the borrowed `string`. The table has a documented growth and memory limit.
-  - acceptance:
-    - VM and `optexe` tests: same text same symbol, distinct text distinct symbols, 100k interns, `Symbol` as a map key; full release gate green
-  - stop_rule: interning and the `Symbol` type; no weak symbols or table eviction.
-
 - [ ] TODO-5637: Fold string operations on literals at compile time
   - owner: ai
   - status: blocked
@@ -445,6 +407,17 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - acceptance:
     - a user struct with member `plus` works with `+`; `String + String` and `+=` give a new String / append; `==` and `<` on views and Strings compare bytes; `s[i]`; negative tests for a missing member; pass-manifest test; full release gate green
   - stop_rule: struct operator dispatch and index sugar in semantics; no operator definitions for other stdlib types in this leaf.
+
+- [ ] TODO-5645: Real calls for struct-receiver methods (library code is inlined at every call site)
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-02
+  - phase: Strings and slices (docs/spec/strings-and-views.md), found building TODO-5625
+  - parallel_track: lowering-gaps
+  - scope: Only definitions whose parameters and result are all plain scalars can be lowered as real `Call`s (`computeRealCallEligibleDefinitionPaths` in `src/ir_lowerer/IrLowererRecursionAnalysis.h`); a method with a struct receiver, a pointer or a view is inlined at every call site. For stdlib types built from small methods this multiplies: lowering a program that makes one `StringMap<i32>` and calls it eight times takes about 5 s (`primec --dump-stage ir-lowered`: 1.1 s with one `count()` call, +1.4 s for the first `insert`, +0.5 s for each further call), and `vector<i32>` alone costs 0.8 s. Extend real-call emission to definitions with struct and pointer parameters (pass the address of the receiver, as the inline path does for `mut` parameters), starting with the non-recursive library methods that are called from more than one site.
+  - acceptance:
+    - the 8-call `StringMap` sample lowers in under 2 s; the IR of programs that call a method from several sites shrinks; every existing test passes with identical output; full release gate green
+  - stop_rule: eligibility and emission for struct/pointer parameters; no inliner tuning beyond that.
 
 - [ ] TODO-5603: Startup audit: what a launch loads and does
   - owner: ai

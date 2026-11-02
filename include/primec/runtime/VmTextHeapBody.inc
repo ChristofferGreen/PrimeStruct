@@ -373,6 +373,62 @@ inline bool callTextHostFunction(VmTextHeap &heap,
     heap.setLimit(args[0]);
     return true;
   }
+  // `__pstext_hash(address, count, seed)`: SipHash-1-3 of the bytes with a 64-bit seed (the second key half is derived
+  // from it), the same value on every backend. A count of 0 hashes the empty text whatever the address.
+  if (name == "__pstext_hash") {
+    const uint64_t length = args[1];
+    const uint8_t *data = length == 0 ? nullptr : core.byteSpan(args[0], length);
+    if (length != 0 && data == nullptr) {
+      error = "invalid text range: " + std::to_string(length) + " bytes at " + std::to_string(args[0]);
+      return false;
+    }
+    const uint64_t key0 = args[2];
+    const uint64_t key1 = args[2] * 0x9E3779B97F4A7C15ULL + 0xD1B54A32D192ED03ULL;
+    uint64_t v0 = key0 ^ 0x736f6d6570736575ULL;
+    uint64_t v1 = key1 ^ 0x646f72616e646f6dULL;
+    uint64_t v2 = key0 ^ 0x6c7967656e657261ULL;
+    uint64_t v3 = key1 ^ 0x7465646279746573ULL;
+    const auto rotl = [](uint64_t x, int b) { return (x << b) | (x >> (64 - b)); };
+    const auto round = [&]() {
+      v0 += v1;
+      v1 = rotl(v1, 13);
+      v1 ^= v0;
+      v0 = rotl(v0, 32);
+      v2 += v3;
+      v3 = rotl(v3, 16);
+      v3 ^= v2;
+      v0 += v3;
+      v3 = rotl(v3, 21);
+      v3 ^= v0;
+      v2 += v1;
+      v1 = rotl(v1, 17);
+      v1 ^= v2;
+      v2 = rotl(v2, 32);
+    };
+    uint64_t at = 0;
+    for (; at + 8 <= length; at += 8) {
+      uint64_t word = 0;
+      for (int k = 7; k >= 0; --k) {
+        word = (word << 8) | data[at + static_cast<uint64_t>(k)];
+      }
+      v3 ^= word;
+      round();
+      v0 ^= word;
+    }
+    uint64_t last = length << 56;
+    for (uint64_t k = 0; at + k < length; ++k) {
+      last |= static_cast<uint64_t>(data[at + k]) << (8 * k);
+    }
+    v3 ^= last;
+    round();
+    v0 ^= last;
+    v2 ^= 0xff;
+    round();
+    round();
+    round();
+    result = v0 ^ v1 ^ v2 ^ v3;
+    return true;
+  }
   // Floating-point to text with std::to_chars: `__pstext_format_f64(value, style, precision, destination, capacity)` is
   // the length of the text (-1 for a precision to_chars cannot do); the text is written when `capacity` holds it.
   // Styles: 0 shortest round trip as an f64, 1 fixed with `precision` digits, 2 scientific with `precision` digits,

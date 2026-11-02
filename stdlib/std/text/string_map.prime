@@ -1,0 +1,298 @@
+// A hash table from text keys to values (docs/spec/strings-and-views.md): `StringMap<V>`. Keys are copied in and
+// compared as bytes; lookups take a StringView, so a literal (`textOf("host")`) or a slice of a request needs no copy.
+// The table is open addressing with linear probing and backward-shift deletion (no tombstones), kept at most three
+// quarters full; the key bytes live in one pooled String, so an entry is a few numbers and `keyAt(i)` is a view.
+// Entries are dense: `valueAt(i)` and `keyAt(i)` visit every entry, in insertion order until an erase moves the last
+// entry into the hole. Hashes are SipHash-1-3 with the map's seed (0 by default: set a secret random one with
+// `setSeed` before the first insert to keep an attacker from choosing colliding keys). A module of its own:
+// `import /std/text/string_map/*`. `V` is a scalar or another Copy type.
+
+import /std/panic/*
+import /std/text/*
+import /std/text/view/*
+import /std/collections/vector/*
+import /std/collections/slice/*
+
+namespace std {
+  namespace text {
+  namespace string_map {
+  [public struct]
+  StringMap<V>() {
+    [String mut] pool{String{}}
+    [Vector<i32> mut] offsets{vector<i32>()}
+    [Vector<i32> mut] lengths{vector<i32>()}
+    [Vector<u64> mut] hashes{vector<u64>()}
+    [Vector<V> mut] values{vector<V>()}
+    [Vector<i32> mut] table{vector<i32>()}
+    [u64 mut] seed{0u64}
+    [i32 mut] garbage{0i32}
+
+    [return<i32>]
+    count() {
+      return(vectorCount<i32>(this.offsets))
+    }
+
+    [return<bool>]
+    empty() {
+      return(vectorCount<i32>(this.offsets) == 0i32)
+    }
+
+    // The key bytes of entry `index`, as a view valid until the next insert or erase.
+    [return</std/text/view/StringView>]
+    keyAt([i32] index) {
+      return(/std/text/view/StringView{[data] /std/text/textAddress(this.pool.data, vectorAt<i32>(this.offsets, index)),
+                                       [fieldLength] vectorAt<i32>(this.lengths, index)})
+    }
+
+    [return<V>]
+    valueAt([i32] index) {
+      return(vectorAt<V>(this.values, index))
+    }
+
+    // Changes the hash seed; only an empty map can, since the stored hashes depend on it.
+    [mut]
+    setSeed([u64] newSeed) {
+      if(vectorCount<i32>(this.offsets) != 0i32) {
+        panic(0i32)
+      }
+      this.seed = newSeed
+    }
+
+    // ---- the table ----
+
+    [return<i32>]
+    homeSlot([u64] hash) {
+      [u64] cap{convert<u64>(vectorCount<i32>(this.table))}
+      return(convert<i32>(hash - hash / cap * cap))
+    }
+
+    [return<i32>]
+    nextSlot([i32] slot) {
+      if(slot + 1i32 == vectorCount<i32>(this.table)) {
+        return(0i32)
+      }
+      return(slot + 1i32)
+    }
+
+    [mut]
+    setTable([i32] slot, [i32] entry) {
+      [Slice<i32, Write>] cells{vectorSliceMut<i32>(this.table, 0i32, vectorCount<i32>(this.table))}
+      cells.set(slot, entry)
+    }
+
+    // Whether entry `entry` holds exactly the bytes of `key`.
+    [return<bool>]
+    entryHolds([i32] entry, [/std/text/view/StringView] key) {
+      if(vectorAt<i32>(this.lengths, entry) != key.fieldLength) {
+        return(false)
+      }
+      return(/std/text/compareBytes(/std/text/textAddress(this.pool.data, vectorAt<i32>(this.offsets, entry)), key.data, key.fieldLength) == 0i32)
+    }
+
+    // The table slot that holds `key` (hash `hash`), or -1.
+    [return<i32>]
+    findSlot([/std/text/view/StringView] key, [u64] hash) {
+      [i32] cap{vectorCount<i32>(this.table)}
+      if(cap == 0i32) {
+        return(-1i32)
+      }
+      [i32 mut] slot{this.homeSlot(hash)}
+      for([i32 mut] step{0i32}, step < cap, step++) {
+        [i32] entry{vectorAt<i32>(this.table, slot)}
+        if(entry < 0i32) {
+          return(-1i32)
+        }
+        if(vectorAt<u64>(this.hashes, entry) == hash && this.entryHolds(entry, key)) {
+          return(slot)
+        }
+        slot = this.nextSlot(slot)
+      }
+      return(-1i32)
+    }
+
+    // The entry index of `key`, or -1.
+    [return<i32>]
+    indexOf([/std/text/view/StringView] key) {
+      [i32] slot{this.findSlot(key, key.hashSeeded(this.seed))}
+      if(slot < 0i32) {
+        return(-1i32)
+      }
+      return(vectorAt<i32>(this.table, slot))
+    }
+
+    [return<bool>]
+    contains([/std/text/view/StringView] key) {
+      return(this.indexOf(key) >= 0i32)
+    }
+
+    // The value of `key`; the program stops when there is none.
+    [return<V>]
+    at([/std/text/view/StringView] key) {
+      [i32] index{this.indexOf(key)}
+      if(index < 0i32) {
+        panic(index)
+      }
+      return(vectorAt<V>(this.values, index))
+    }
+
+    [return<V>]
+    getOr([/std/text/view/StringView] key, [V] fallback) {
+      [i32] index{this.indexOf(key)}
+      if(index < 0i32) {
+        return(fallback)
+      }
+      return(vectorAt<V>(this.values, index))
+    }
+
+    // Stores the value of `key` in `out` and returns true, or returns false and leaves `out` alone.
+    [return<bool>]
+    tryGet([/std/text/view/StringView] key, [V mut] out) {
+      [i32] index{this.indexOf(key)}
+      if(index < 0i32) {
+        return(false)
+      }
+      out = vectorAt<V>(this.values, index)
+      return(true)
+    }
+
+    // Puts entry `entry` (whose hash is stored) into the first free slot of its probe sequence.
+    [mut]
+    placeEntry([i32] entry) {
+      [i32 mut] slot{this.homeSlot(vectorAt<u64>(this.hashes, entry))}
+      while(vectorAt<i32>(this.table, slot) >= 0i32) {
+        slot = this.nextSlot(slot)
+      }
+      this.setTable(slot, entry)
+    }
+
+    // A table of `cap` slots with every entry placed again.
+    [mut effects(heap_alloc)]
+    rebuildTable([i32] cap) {
+      vectorClear<i32>(this.table)
+      for([i32 mut] i{0i32}, i < cap, i++) {
+        vectorPush<i32>(this.table, -1i32)
+      }
+      for([i32 mut] entry{0i32}, entry < vectorCount<i32>(this.offsets), entry++) {
+        this.placeEntry(entry)
+      }
+    }
+
+    // Sets the value of entry `index`.
+    [mut]
+    storeValue([i32] index, [V] value) {
+      [Slice<V, Write>] cells{vectorSliceMut<V>(this.values, 0i32, vectorCount<V>(this.values))}
+      cells.set(index, value)
+    }
+
+    // Adds `key` with `value`, or replaces the value when the key is there. The key bytes are copied.
+    [mut effects(heap_alloc)]
+    insert([/std/text/view/StringView] key, [V] value) {
+      [u64] hash{key.hashSeeded(this.seed)}
+      [i32] slot{this.findSlot(key, hash)}
+      if(slot >= 0i32) {
+        this.storeValue(vectorAt<i32>(this.table, slot), value)
+      } else {
+        [i32] cap{vectorCount<i32>(this.table)}
+        if(cap == 0i32) {
+          this.rebuildTable(8i32)
+        } else {
+          if((vectorCount<i32>(this.offsets) + 1i32) * 4i32 > cap * 3i32) {
+            this.rebuildTable(cap * 2i32)
+          }
+        }
+        if(this.garbage > 64i32 && this.garbage * 2i32 > this.pool.count()) {
+          this.compact()
+        }
+        [i32] offset{this.pool.count()}
+        this.pool.appendBytes(key.data, key.fieldLength)
+        vectorPush<i32>(this.offsets, offset)
+        vectorPush<i32>(this.lengths, key.fieldLength)
+        vectorPush<u64>(this.hashes, hash)
+        vectorPush<V>(this.values, value)
+        this.placeEntry(vectorCount<i32>(this.offsets) - 1i32)
+      }
+    }
+
+    // Removes the slot `slot` from the table, shifting later entries of the probe run back (no tombstone).
+    [mut]
+    removeSlot([i32] start) {
+      [i32 mut] hole{start}
+      [i32 mut] scan{start}
+      while(true) {
+        scan = this.nextSlot(scan)
+        [i32] entry{vectorAt<i32>(this.table, scan)}
+        if(entry < 0i32) {
+          this.setTable(hole, -1i32)
+          return()
+        }
+        [i32] home{this.homeSlot(vectorAt<u64>(this.hashes, entry))}
+        [bool] between{if(hole <= scan, then() { hole < home && home <= scan }, else() { hole < home || home <= scan })}
+        if(!between) {
+          this.setTable(hole, entry)
+          hole = scan
+        }
+      }
+    }
+
+    // Removes `key`; returns whether it was there. The last entry takes its place in the dense arrays.
+    [mut effects(heap_alloc), return<bool>]
+    erase([/std/text/view/StringView] key) {
+      [u64] hash{key.hashSeeded(this.seed)}
+      [i32] slot{this.findSlot(key, hash)}
+      if(slot < 0i32) {
+        return(false)
+      }
+      [i32] entry{vectorAt<i32>(this.table, slot)}
+      [i32] last{vectorCount<i32>(this.offsets) - 1i32}
+      this.garbage = this.garbage + vectorAt<i32>(this.lengths, entry)
+      this.removeSlot(slot)
+      if(entry != last) {
+        [i32 mut] where{this.homeSlot(vectorAt<u64>(this.hashes, last))}
+        while(vectorAt<i32>(this.table, where) != last) {
+          where = this.nextSlot(where)
+        }
+        this.setTable(where, entry)
+        [Slice<i32, Write>] offsetCells{vectorSliceMut<i32>(this.offsets, 0i32, last + 1i32)}
+        offsetCells.set(entry, vectorAt<i32>(this.offsets, last))
+        [Slice<i32, Write>] lengthCells{vectorSliceMut<i32>(this.lengths, 0i32, last + 1i32)}
+        lengthCells.set(entry, vectorAt<i32>(this.lengths, last))
+        [Slice<u64, Write>] hashCells{vectorSliceMut<u64>(this.hashes, 0i32, last + 1i32)}
+        hashCells.set(entry, vectorAt<u64>(this.hashes, last))
+        this.storeValue(entry, vectorAt<V>(this.values, last))
+      }
+      vectorPop<i32>(this.offsets)
+      vectorPop<i32>(this.lengths)
+      vectorPop<u64>(this.hashes)
+      vectorPop<V>(this.values)
+      return(true)
+    }
+
+    // Rewrites the key pool without the bytes of erased keys.
+    [mut effects(heap_alloc)]
+    compact() {
+      [String mut] fresh{stringWithCapacity(this.pool.count() - this.garbage)}
+      [i32] total{vectorCount<i32>(this.offsets)}
+      [Slice<i32, Write>] offsetCells{vectorSliceMut<i32>(this.offsets, 0i32, total)}
+      for([i32 mut] entry{0i32}, entry < total, entry++) {
+        [i32] newOffset{fresh.count()}
+        fresh.appendBytes(/std/text/textAddress(this.pool.data, vectorAt<i32>(this.offsets, entry)), vectorAt<i32>(this.lengths, entry))
+        offsetCells.set(entry, newOffset)
+      }
+      this.pool.swap(fresh)
+      this.garbage = 0i32
+    }
+
+    [mut effects(heap_alloc)]
+    clear() {
+      vectorClear<i32>(this.offsets)
+      vectorClear<i32>(this.lengths)
+      vectorClear<u64>(this.hashes)
+      vectorClear<V>(this.values)
+      vectorClear<i32>(this.table)
+      this.pool.clear()
+      this.garbage = 0i32
+    }
+  }
+  }
+  }
+}
