@@ -1359,11 +1359,32 @@ if(PRIMESTRUCT_BUILD_TESTS)
   add_test(
     NAME PrimeStruct_cpp_host_calls
     COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
-            "--test-suite=primestruct.backend.cpp_host_calls,primestruct.backend.cpp_strings,primestruct.backend.string_conformance"
+            "--test-suite=primestruct.backend.cpp_host_calls,primestruct.backend.cpp_strings"
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_cpp_host_calls
                        PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
+  # The String / StringView differential suite (tests/unit/backend_host/test_string_conformance.cpp). Most of its time is
+  # the host C++ compiler building optexe programs, so the cases that go through optexe are a CTest entry of their own
+  # and run beside the VM ones.
+  add_test(
+    NAME PrimeStruct_string_conformance_vm
+    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+            "--test-suite=primestruct.backend.string_conformance"
+            "--test-case-exclude=*through optexe*"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_string_conformance_vm
+                       PROPERTIES TIMEOUT 900 LABELS "parallel-safe")
+  add_test(
+    NAME PrimeStruct_string_conformance_optexe
+    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+            "--test-suite=primestruct.backend.string_conformance"
+            "--test-case=*through optexe*"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_string_conformance_optexe
+                       PROPERTIES TIMEOUT 1200 LABELS "parallel-safe")
   add_test(
     NAME PrimeStruct_cpp_native_ui
     COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>

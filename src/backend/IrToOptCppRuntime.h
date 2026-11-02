@@ -11,6 +11,7 @@ namespace primec {
 inline constexpr const char *OptCppRuntimeHeaders = R"CPP(#include <algorithm>
 #include <bit>
 #include <cerrno>
+#include <charconv>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>

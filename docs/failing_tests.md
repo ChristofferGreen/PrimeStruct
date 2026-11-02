@@ -22,11 +22,9 @@ None.
 ## Current Failures
 
 <!-- compile.sh:failing-tests:start -->
-- Last updated: `2026-11-02T19:48:33Z`
+- Last updated: `2026-11-02T21:52:10Z`
 - Build type: `Release`
 - Build dir: `build-release`
 - Command: `ctest --test-dir build-release --output-on-failure --parallel 22`
-- Result: `ctest` failed with status `8`.
-- Failing CTest cases:
-  - `1888`: `PrimeStruct_vm_string_lookups`
+- Result: no failing CTest cases.
 <!-- compile.sh:failing-tests:end -->

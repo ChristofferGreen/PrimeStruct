@@ -1,7 +1,10 @@
 #pragma once
 
 #include <algorithm>
+#include <cerrno>
+#include <charconv>
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <map>
 #include <set>

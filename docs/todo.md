@@ -104,11 +104,7 @@ of sync with them.
 | TODO-5569 | Slice loans, escapes and returned borrows | ready | slices |
 | TODO-5570 | Slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views | ready | slices |
 | TODO-5621 | Static-text field rule and `run-time text requires String` | blocked | string-view |
-| TODO-5623 | `String` mutation parity: fill, resize, front/back, pop, swap, lossy bytes | blocked | string-owned |
-| TODO-5624 | `string` byte-set search: find_first_of and friends | blocked | string-view |
 | TODO-5625 | `String` and `string` as map keys, with `hash()` | blocked | string-keys |
-| TODO-5626 | Number to text parity: radix, precision, shortest round trip | blocked | string-owned |
-| TODO-5627 | `format`, `join` and split into owned pieces | blocked | string-owned |
 | TODO-5631 | Structs that hold views (borrow-carrying aggregates) | blocked | string-borrows |
 | TODO-5630 | Request-scoped string arenas: `withStringArena` | blocked | string-arenas |
 | TODO-5632 | Fused `+` chains: one allocation per expression | blocked | string-owned |
@@ -119,13 +115,13 @@ of sync with them.
 | TODO-5637 | Fold string operations on literals at compile time | blocked | string-quality |
 | TODO-5638 | Shared immutable strings for threads (`SharedString`) | deferred | string-concurrency |
 | TODO-5642 | Struct methods inside sum-returning functions, and explicit-self definitions | ready | lowering-gaps |
+| TODO-5643 | Operators and index sugar for stdlib types (`String + String`, `s[i]`) | ready | lowering-gaps |
 | TODO-5603 | Startup audit: what a launch loads and does | ready | startup |
 | TODO-5586 | Native String heap: pooled blocks, statistics and limit | deferred | native-backend-strings |
 | TODO-5574 | Simple C++ emitters run bytes and strings | deferred | string-backends |
-| TODO-5568 | String conveniences: operators, numbers, push of code points | blocked | string-owned |
+| TODO-5568 | String conveniences: operators, code points, indexing | blocked | string-owned |
 | TODO-5536 | Small, lazily loaded bytecode for apps | ready | bytecode-startup |
 | TODO-5535 | Launch-time harness and reference Objective-C++ editor | ready | native-ui-launch |
-| TODO-5530 | Read and write whole files as String | blocked | file-text |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5510 | `return` returns from pick arms and lambdas correctly | ready | control-returns |
 | TODO-5524 | Int-backed error structs round-trip through stdlib Result sums | ready | result-error-structs |
@@ -169,7 +165,7 @@ of sync with them.
 
 ### Priority Lanes
 
-- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5570, TODO-5569, TODO-5621, TODO-5568, TODO-5623, TODO-5624, TODO-5625, TODO-5626, TODO-5627, TODO-5642, TODO-5631, TODO-5630, TODO-5632, TODO-5633, TODO-5634, TODO-5635, TODO-5636, TODO-5637, TODO-5638, TODO-5530, TODO-5567, TODO-5574
+- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5570, TODO-5569, TODO-5621, TODO-5568, TODO-5625, TODO-5642, TODO-5643, TODO-5631, TODO-5630, TODO-5632, TODO-5633, TODO-5634, TODO-5635, TODO-5636, TODO-5637, TODO-5638, TODO-5567, TODO-5574
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Startup (docs/NativeUiPlan.md section 16): TODO-5603
@@ -285,17 +281,17 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - a negative test per diagnostic and a positive test per allowed shape (overlapping reads, returned borrow, narrowing a slice); full release gate green
   - stop_rule: borrow checking for slices on the VM front end (the checks are backend independent).
 
-- [ ] TODO-5568: String conveniences: operators, numbers, push of code points
+- [ ] TODO-5568: String conveniences: operators, code points, indexing
   - owner: ai
   - status: blocked
-  - blocked_on: TODO-5618
+  - blocked_on: TODO-5643
   - created_at: 2026-10-22
   - phase: Strings and slices (docs/spec/strings-and-views.md), follow-up to the owned `String`
   - parallel_track: string-owned
-  - scope: The parts of the owned `String` API that need the `string` view: `+` and `+=` with `string` and `String`, `push(u32 codePoint)` with UTF-8 encoding, `String.from(x)` for integers, floats and `bool`, `String.fromUtf8(bytes)` returning `Result<String, TextError>`, `tryReserve` returning `Result<void, TextError>`, the `String.from(text)` spelling for `stringFrom`, `at(i)`/`[i]` on `String`, and the implicit borrow of a `String` where a `string` is expected. Per-thread string heaps and scoped arenas are separate later work.
+  - scope: What is left of the owned-text conveniences once TODO-5623, 5626 and 5627 are done: `+` and `+=` with views and Strings, `s[i]` and `at(i)` on `String`, `push(codePoint)` with UTF-8 encoding (`pushCodePoint`), `String.from(x)` spellings, and the implicit borrow of a `String` where a view is expected. Done elsewhere: numbers as text (TODO-5626), `fromUtf8` (TODO-5618 `textFromBytes`, TODO-5623 `stringFromUtf8Lossy`), `tryReserve` (a `bool`).
   - acceptance:
-    - VM tests for each operation, including invalid UTF-8 and the borrow rules; full release gate green
-  - stop_rule: the owned-text conveniences on the VM; native and C++ are TODO-5574.
+    - VM and `optexe` tests for each operation, incl. invalid UTF-8 and the borrow rules; full release gate green
+  - stop_rule: the owned-text conveniences on the VM and optexe.
 
 - [ ] TODO-5621: Static-text field rule and `run-time text requires String`
   - owner: ai
@@ -309,30 +305,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - a negative test per diagnostic and a positive test per allowed shape; stdlib, examples and corpus compile; full release gate green
   - stop_rule: the two diagnostics and the migrations they force.
 
-- [ ] TODO-5623: `String` mutation parity: fill, resize, front/back, pop, swap, lossy bytes
-  - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5618
-  - created_at: 2026-11-02
-  - phase: Strings and slices (docs/spec/strings-and-views.md, Parity with `std::string`)
-  - parallel_track: string-owned
-  - scope: The mutation members the Parity table assigns here: `String.filled(n, byte)`, `fill`, `resize(n, byte)`, `first()`/`last()` as `Maybe<u8>`, `popByte()`, `pop()` (one code point), `appendFilled(n, byte)`, byte and fill overloads of `insert`/`replace`, `swap(other)`, `slice(a, b).copyTo(destination)`, and `String.fromUtf8Lossy(bytes)` (invalid sequences become U+FFFD). Mutations that cut text keep it valid UTF-8 or fault, as in the spec.
-  - acceptance:
-    - VM tests per operation incl. empty text, multi-byte cuts and capacity growth; differential cases added to the TODO-5628 suite; full release gate green
-  - stop_rule: the listed operations on the VM; compiled backends follow TODO-5622's pattern.
-
-- [ ] TODO-5624: `string` byte-set search: find_first_of and friends
-  - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5619
-  - created_at: 2026-11-02
-  - phase: Strings and slices (docs/spec/strings-and-views.md, Parity with `std::string`)
-  - parallel_track: string-view
-  - scope: `findFirstOf`, `findLastOf`, `findFirstNotOf`, `findLastNotOf` over a set given as `string` (bytes) with an optional start position, returning `Maybe<i32>`; also `replaceAll(from, to) -> String`.
-  - acceptance:
-    - VM tests per operation incl. empty set, empty text, start past the end; added to the TODO-5628 differential suite; full release gate green
-  - stop_rule: the listed operations on the VM.
-
 - [ ] TODO-5625: `String` and `string` as map keys, with `hash()`
   - owner: ai
   - status: blocked
@@ -344,30 +316,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - acceptance:
     - VM and `optexe` tests: insert, lookup, overwrite, erase and growth with 100k run-time keys, keys built by concatenation, a `string` view used as a lookup key without copying; the hash of fixed inputs is pinned by a test; full release gate green
   - stop_rule: text keys for the stdlib map; ordered containers are not part of this leaf.
-
-- [ ] TODO-5626: Number to text parity: radix, precision, shortest round trip
-  - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5568
-  - created_at: 2026-11-02
-  - phase: Strings and slices (docs/spec/strings-and-views.md, Parity with `std::string`)
-  - parallel_track: string-owned
-  - scope: What `std::to_chars`/`std::format` give beyond `String.from(x)`: `String.from(x, radix)` for integers (2 to 36), fixed/scientific `formatF64(x, precision)`, shortest round-trip text for `f32`/`f64` (the default of `String.from(f64)`), `parseU64` and radix parsing, and exact text for `NaN` and infinities. Output is locale-free and byte-identical on every backend that runs text (VM and optimized C++ today; native when it gains `String`), checked by one shared expectation table. The output must match `std::to_chars` and the C++ reference of TODO-5628 for a fixed table of values.
-  - acceptance:
-    - round trips for 100k random `f64`/`f32`; a table of edge values compared with the C++ reference; full release gate green
-  - stop_rule: number formatting and parsing; `format` strings are TODO-5627.
-
-- [ ] TODO-5627: `format`, `join` and split into owned pieces
-  - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5626
-  - created_at: 2026-11-02
-  - phase: Strings and slices (docs/spec/strings-and-views.md, Parity with `std::string`)
-  - parallel_track: string-owned
-  - scope: Build text without hand-written append chains: `format("{} is {}", a, b)` with checked placeholders (`{}`, `{:x}`, `{:>8}`, `{:.3}`; placeholder count and argument types checked at compile time when the format is a literal), `join(parts, separator)`, `split(separator) -> Vector<String>` (the owned counterpart of the view-returning split), and a `StringBuilder`-style `appendFormat`. `format` and `join` measure the result first and allocate once (no growth copies). Record the chosen format grammar in the spec before implementing.
-  - acceptance:
-    - VM and `optexe` tests incl. a mismatched placeholder compile error and escaped braces; an allocation-count test shows one block for `format` and `join`; full release gate green
-  - stop_rule: the listed operations; locale-aware formatting is out of scope.
 
 - [ ] TODO-5631: Structs that hold views (borrow-carrying aggregates)
   - owner: ai
@@ -487,6 +435,17 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - the two repros compile and run on the VM and `optexe`; `StringView.find(needle)`, `rfind` and `parseI32()` return `Maybe<i32>` and agree with `indexOf`/`lastIndexOf`/`parseI32Into`; full release gate green
   - stop_rule: lowering of the two shapes and the `Maybe` forms; no new sum features.
 
+- [ ] TODO-5643: Operators and index sugar for stdlib types (`String + String`, `s[i]`)
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-02
+  - phase: Strings and slices (docs/spec/strings-and-views.md), found building TODO-5568
+  - parallel_track: lowering-gaps
+  - scope: `a + b` on a struct is always the numeric builtin: `[Money] z{x + y}` with a `plus(Money, Money)` definition fails with `arithmetic operators require numeric operands`, and a definition named `plus` shadows the builtin for the whole program. Let a stdlib struct provide operators: when the operands of `plus`, `equal`, `not_equal`, `less_than` and friends are struct values and the left operand's type has a member definition of the same name (`/std/text/String/plus`), rewrite the call to it (a semantic rewrite pass registered in `semanticValidationPassManifest()`, before template monomorphization), and the same for `value[index]` through a member `at`. Use it for `String + String`, `String + StringView`, `+=`, `==` and `<` on text, and `s[i]`.
+  - acceptance:
+    - a user struct with member `plus` works with `+`; `String + String` and `+=` give a new String / append; `==` and `<` on views and Strings compare bytes; `s[i]`; negative tests for a missing member; pass-manifest test; full release gate green
+  - stop_rule: struct operator dispatch and index sugar in semantics; no operator definitions for other stdlib types in this leaf.
+
 - [ ] TODO-5603: Startup audit: what a launch loads and does
   - owner: ai
   - status: ready
@@ -547,19 +506,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - full release gate green
   - stop_rule: measurement tooling and the reference editor only.
   - notes: needs a Mac to run.
-
-- [ ] TODO-5530: Read and write whole files as String
-  - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5618
-  - created_at: 2026-10-08
-  - phase: Strings and slices (docs/spec/strings-and-views.md)
-  - parallel_track: file-text
-  - scope: Programs cannot read a file into text. Add `readText(path) -> Result<String, FileError>` and `writeText(path, [string] text) -> Result<FileError>` to `/std/file`, built on the owned `String` and byte reads (no VM-only run-time string), and document them in docs/spec/errors-and-file-io.md.
-  - acceptance:
-    - tests on VM, native and C++ read empty, ASCII, multi-byte UTF-8, multi-line and missing files, write them back and compare; invalid UTF-8 reports a `FileError`
-    - full release gate green
-  - stop_rule: whole-file text read and write only.
 
 - [ ] TODO-5533: Windows and Linux native UI backends
   - owner: ai

@@ -373,6 +373,117 @@ inline bool callTextHostFunction(VmTextHeap &heap,
     heap.setLimit(args[0]);
     return true;
   }
+  // Floating-point to text with std::to_chars: `__pstext_format_f64(value, style, precision, destination, capacity)` is
+  // the length of the text (-1 for a precision to_chars cannot do); the text is written when `capacity` holds it.
+  // Styles: 0 shortest round trip as an f64, 1 fixed with `precision` digits, 2 scientific with `precision` digits,
+  // 3 shortest round trip as an f32.
+  if (name == "__pstext_format_f64") {
+    double value = 0.0;
+    std::copy(reinterpret_cast<const uint8_t *>(&args[0]), reinterpret_cast<const uint8_t *>(&args[0]) + sizeof(double),
+              reinterpret_cast<uint8_t *>(&value));
+    const int32_t style = static_cast<int32_t>(args[1]);
+    const int32_t precision = static_cast<int32_t>(args[2]);
+    char buffer[1200];
+    std::to_chars_result made{buffer, std::errc::invalid_argument};
+    if (style == 0) {
+      made = std::to_chars(buffer, buffer + sizeof(buffer), value);
+    } else if (style == 3) {
+      made = std::to_chars(buffer, buffer + sizeof(buffer), static_cast<float>(value));
+    } else if ((style == 1 || style == 2) && precision >= 0 && precision <= 700) {
+      made = std::to_chars(buffer, buffer + sizeof(buffer), value,
+                           style == 1 ? std::chars_format::fixed : std::chars_format::scientific, precision);
+    }
+    if (made.ec != std::errc()) {
+      result = ~uint64_t{0};
+      return true;
+    }
+    const uint64_t length = static_cast<uint64_t>(made.ptr - buffer);
+    if (args[4] >= length && length != 0) {
+      uint8_t *destination = core.byteSpan(args[3], length);
+      if (destination == nullptr) {
+        error = "invalid text range: " + std::to_string(length) + " bytes at " + std::to_string(args[3]);
+        return false;
+      }
+      std::copy(reinterpret_cast<const uint8_t *>(buffer), reinterpret_cast<const uint8_t *>(buffer) + length, destination);
+    }
+    result = length;
+    return true;
+  }
+  // Whole-file text: `__pstext_file_size(path, pathCount)` is the size of the file (or the negated errno),
+  // `__pstext_file_read(path, pathCount, destination, capacity)` reads up to `capacity` bytes into a byte region (the
+  // count read, or the negated errno) and `__pstext_file_write(path, pathCount, source, count, append)` writes (or
+  // appends) `count` bytes (0, or the negated errno). The path is a byte range, not NUL terminated.
+  if (name == "__pstext_file_size" || name == "__pstext_file_read" || name == "__pstext_file_write") {
+    const uint64_t pathCount = args[1];
+    std::string path;
+    if (pathCount != 0) {
+      const uint8_t *first = core.byteSpan(args[0], pathCount);
+      if (first == nullptr) {
+        error = "invalid text range: " + std::to_string(pathCount) + " bytes at " + std::to_string(args[0]);
+        return false;
+      }
+      path.assign(reinterpret_cast<const char *>(first), static_cast<size_t>(pathCount));
+    }
+    const auto failure = [&result](int code) { result = static_cast<uint64_t>(-static_cast<int64_t>(code)); };
+    errno = 0;
+    if (name == "__pstext_file_size") {
+      std::FILE *file = std::fopen(path.c_str(), "rb");
+      if (file == nullptr) {
+        failure(errno != 0 ? errno : EIO);
+        return true;
+      }
+      std::fseek(file, 0, SEEK_END);
+      const long size = std::ftell(file);
+      std::fclose(file);
+      if (size < 0) {
+        failure(errno != 0 ? errno : EIO);
+      } else {
+        result = static_cast<uint64_t>(size);
+      }
+      return true;
+    }
+    if (name == "__pstext_file_read") {
+      const uint64_t capacity = args[3];
+      uint8_t *destination = capacity == 0 ? nullptr : core.byteSpan(args[2], capacity);
+      if (capacity != 0 && destination == nullptr) {
+        error = "invalid text range: " + std::to_string(capacity) + " bytes at " + std::to_string(args[2]);
+        return false;
+      }
+      std::FILE *file = std::fopen(path.c_str(), "rb");
+      if (file == nullptr) {
+        failure(errno != 0 ? errno : EIO);
+        return true;
+      }
+      const size_t got = capacity == 0 ? 0 : std::fread(destination, 1, static_cast<size_t>(capacity), file);
+      const bool failed = std::ferror(file) != 0;
+      std::fclose(file);
+      if (failed) {
+        failure(errno != 0 ? errno : EIO);
+      } else {
+        result = static_cast<uint64_t>(got);
+      }
+      return true;
+    }
+    const uint64_t count = args[3];
+    const uint8_t *source = count == 0 ? nullptr : core.byteSpan(args[2], count);
+    if (count != 0 && source == nullptr) {
+      error = "invalid text range: " + std::to_string(count) + " bytes at " + std::to_string(args[2]);
+      return false;
+    }
+    std::FILE *file = std::fopen(path.c_str(), args[4] != 0 ? "ab" : "wb");
+    if (file == nullptr) {
+      failure(errno != 0 ? errno : EIO);
+      return true;
+    }
+    const size_t wrote = count == 0 ? 0 : std::fwrite(source, 1, static_cast<size_t>(count), file);
+    const bool failed = wrote != count || std::fflush(file) != 0;
+    const int savedErrno = errno;
+    std::fclose(file);
+    if (failed) {
+      failure(savedErrno != 0 ? savedErrno : EIO);
+    }
+    return true;
+  }
   // Decimal text to double with the C library's correctly rounded conversion (the text is checked to be a plain
   // decimal number by the caller): `__pstext_f64_ok(address, count)` is 1 when the text converts to a finite value,
   // `__pstext_parse_f64(address, count)` is the value's bits.

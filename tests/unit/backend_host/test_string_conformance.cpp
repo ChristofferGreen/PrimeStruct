@@ -13,7 +13,9 @@
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
+#include <format>
 #include <fstream>
+#include <functional>
 #include <iterator>
 #include <string>
 #include <vector>
@@ -147,7 +149,7 @@ std::string editProgram() {
     seeds += foldCode("s", "  ");
     seeds += "  print_line(h)\n  s.clear()\n";
   }
-  return "import /std/text/*\n\n"
+  return "import /std/text/*\nimport /std/text/view/*\n\n"
          "[return<int>]\npick([i32] r, [i32] m) {\n  [i32] v{r - r / m * m}\n"
          "  return(if(v < 0i32, then() { v + m }, else() { v }))\n}\n\n"
          "[return<int> effects(heap_alloc, io_out)]\nmain() {\n"
@@ -207,7 +209,7 @@ std::string boundaryProgram() {
     body += "  h = 17i32\n" + foldCode(copyName, "  ") + "  h = h * 31i32 + " + copyName + ".count()\n  print_line(h)\n";
     body += "  s.shrinkToFit()\n  h = 17i32\n" + foldCode("s", "  ") + "  print_line(h)\n";
   }
-  return "import /std/text/*\n\n"
+  return "import /std/text/*\nimport /std/text/view/*\n\n"
          "[return<int> effects(heap_alloc, io_out)]\nmain() {\n"
          "  [String mut] s{/std/text/stringFrom(\"\")}\n  [i32 mut] h{17i32}\n" +
          body + "  return(0i32)\n}\n";
@@ -259,7 +261,7 @@ const char *BulkText = "abcdefghijklmnopqrstuvwxyz0123456789";
 // printed; mirrored below on std::string with memmove, memset, memcmp and memchr.
 std::string bulkProgram() {
   std::string body =
-      "import /std/text/*\n\n[return<int> effects(heap_alloc, io_out)]\nmain() {\n"
+      "import /std/text/*\nimport /std/text/view/*\n\n[return<int> effects(heap_alloc, io_out)]\nmain() {\n"
       "  [String mut] a{/std/text/stringFrom(\"abcdefghijklmnopqrstuvwxyz0123456789\")}\n"
       "  [String mut] b{/std/text/stringFrom(\"abcdefghijklmnopqrstuvwxyz0123456789\")}\n";
   const auto fold = [](const char *var) {
@@ -346,7 +348,7 @@ TEST_CASE("bulk byte operations agree with the C library on the arm64 native bac
 // leaves the chunk faults.
 TEST_CASE("a bulk operation past the end of its region stops the program on the VM") {
   const std::string source =
-      "import /std/text/*\n\n[return<int> effects(heap_alloc)]\nmain() {\n"
+      "import /std/text/*\nimport /std/text/view/*\n\n[return<int> effects(heap_alloc)]\nmain() {\n"
       "  [String mut] a{/std/text/stringFrom(\"abc\")}\n"
       "  /std/text/fillBytes(a.data, 1u8, 1000000i32)\n  return(0i32)\n}\n";
   ScriptEngine engine;
@@ -362,7 +364,7 @@ TEST_CASE("a bulk operation past the end of its region stops the program on the 
 namespace {
 std::string viewProgram() {
   return
-      "import /std/text/*\n\n[return<int> effects(heap_alloc, io_out)]\nmain() {\n"
+      "import /std/text/*\nimport /std/text/view/*\n\n[return<int> effects(heap_alloc, io_out)]\nmain() {\n"
       "  [String mut] s{/std/text/stringFrom(\"hello world\")}\n"
       "  [StringView] v{s.view()}\n"
       "  [StringView] lit{textOf(\"hello world\")}\n"
@@ -405,7 +407,7 @@ TEST_CASE("StringView over Strings and literals gives the same answers through o
 
 TEST_CASE("StringView byteAt past the end stops the program") {
   const std::string source =
-      "import /std/text/*\n\n[return<int> effects(heap_alloc)]\nmain() {\n"
+      "import /std/text/*\nimport /std/text/view/*\n\n[return<int> effects(heap_alloc)]\nmain() {\n"
       "  [StringView] v{textOf(\"abc\")}\n  return(convert<i32>(v.byteAt(3i32)))\n}\n";
   ScriptEngine engine;
   const auto script = engine.compileSource("/view_fault.prime", source);
@@ -491,7 +493,7 @@ const std::vector<std::vector<int>> Utf8Cases = {
 };
 
 std::string utf8Program() {
-  std::string body = "import /std/text/*\n\n[return<int> effects(heap_alloc, io_out)]\nmain() {\n";
+  std::string body = "import /std/text/*\nimport /std/text/view/*\n\n[return<int> effects(heap_alloc, io_out)]\nmain() {\n";
   int index = 0;
   for (const std::vector<int> &bytes : Utf8Cases) {
     const std::string name = "t" + std::to_string(index++);
@@ -514,7 +516,7 @@ std::string utf8Oracle() {
 
 std::string sliceProgram() {
   return
-      "import /std/text/*\n\n[return<int> effects(heap_alloc, io_out)]\nmain() {\n"
+      "import /std/text/*\nimport /std/text/view/*\n\n[return<int> effects(heap_alloc, io_out)]\nmain() {\n"
       "  [String mut] s{/std/text/stringFrom(\"h\xC3\xA9llo, \xE4\xB8\x96\xE7\x95\x8C!\")}\n"
       "  [StringView] v{s.view()}\n"
       "  print_line(v.count())\n"
@@ -584,7 +586,7 @@ TEST_CASE("slices of a StringView cut between code points through optexe") {
 }
 
 TEST_CASE("a slice inside a code point or outside the text stops the program") {
-  const std::string head = "import /std/text/*\n\n[return<int> effects(heap_alloc)]\nmain() {\n"
+  const std::string head = "import /std/text/*\nimport /std/text/view/*\n\n[return<int> effects(heap_alloc)]\nmain() {\n"
                            "  [StringView] v{textOf(\"h\xC3\xA9llo\")}\n";
   CHECK(failsToRun(head + "  [StringView] cut{v.slice(0i32, 2i32)}\n  return(cut.count())\n}\n"));
   CHECK(failsToRun(head + "  [StringView] cut{v.slice(2i32, 4i32)}\n  return(cut.count())\n}\n"));
@@ -595,7 +597,7 @@ TEST_CASE("a slice inside a code point or outside the text stops the program") {
 }
 
 TEST_CASE("textFromBytes stops the program on invalid UTF-8") {
-  const std::string head = "import /std/text/*\n\n[return<int> effects(heap_alloc)]\nmain() {\n"
+  const std::string head = "import /std/text/*\nimport /std/text/view/*\n\n[return<int> effects(heap_alloc)]\nmain() {\n"
                            "  [String mut] s{/std/text/stringFrom(\"ab\")}\n";
   CHECK(failsToRun(head + "  s.pushByte(255u8)\n  [StringView] v{textFromBytes(s.view().bytes())}\n  return(v.count())\n}\n"));
   CHECK_FALSE(failsToRun(head + "  [StringView] v{textFromBytes(s.view().bytes())}\n  return(0i32)\n}\n"));
@@ -638,9 +640,9 @@ int sign(int value) { return value < 0 ? -1 : (value > 0 ? 1 : 0); }
 // searchCases), so the program stays small however many cases there are.
 std::string searchProgram() {
   std::string body =
-      "import /std/text/*\n\n"
+      "import /std/text/*\nimport /std/text/view/*\n\n"
       "[return<void> effects(io_out)]\n"
-      "probe([/std/text/StringView] h, [/std/text/StringView] n) {\n"
+      "probe([/std/text/view/StringView] h, [/std/text/view/StringView] n) {\n"
       "  print_line(h.indexOf(n))\n"
       "  print_line(h.lastIndexOf(n))\n"
       "  print_line(h.compare(n))\n"
@@ -723,7 +725,7 @@ std::string literal(const std::string &text) {
 }
 
 std::string pieceProgram() {
-  std::string body = "import /std/text/*\n\n[return<int> effects(heap_alloc, io_out)]\nmain() {\n";
+  std::string body = "import /std/text/*\nimport /std/text/view/*\n\n[return<int> effects(heap_alloc, io_out)]\nmain() {\n";
   int index = 0;
   for (const std::string &text : TrimCases) {
     const std::string name = "t" + std::to_string(index++);
@@ -813,7 +815,7 @@ std::string pieceOracle() {
 // A haystack of `hay` 'a' bytes and a needle of `needle` - 1 'a' bytes then 'b': a naive search compares about
 // hay * needle bytes, the two-way search about 2 * hay.
 std::string worstCaseProgram(int hay, int needle) {
-  return "import /std/text/*\n\n[return<int> effects(heap_alloc, io_out)]\nmain() {\n"
+  return "import /std/text/*\nimport /std/text/view/*\n\n[return<int> effects(heap_alloc, io_out)]\nmain() {\n"
          "  [String mut] h{/std/text/stringFrom(\"\")}\n"
          "  for([i32 mut] i{0i32}, i < " + std::to_string(hay) + "i32, i++) {\n    h.pushByte(97u8)\n  }\n"
          "  [String mut] n{/std/text/stringFrom(\"\")}\n"
@@ -871,9 +873,9 @@ std::string stringLiteral(const std::string &text) { return "\"" + text + "\""; 
 
 std::string numberProgram() {
   std::string body =
-      "import /std/text/*\n\n"
+      "import /std/text/*\nimport /std/text/view/*\n\n"
       "[return<void> effects(io_out)]\n"
-      "probeInt([/std/text/StringView] v) {\n"
+      "probeInt([/std/text/view/StringView] v) {\n"
       "  [i32 mut] small{-5i32}\n"
       "  [i64 mut] wide{-5i64}\n"
       "  print_line(if(v.parseI32Into(small), then() { 1i32 }, else() { 0i32 }))\n"
@@ -882,7 +884,7 @@ std::string numberProgram() {
       "  print_line(wide)\n"
       "}\n\n"
       "[return<void> effects(io_out)]\n"
-      "probeFloat([/std/text/StringView] v) {\n"
+      "probeFloat([/std/text/view/StringView] v) {\n"
       "  [f64 mut] value{-0.5f64}\n"
       "  print_line(if(v.parseF64Into(value), then() { 1i32 }, else() { 0i32 }))\n"
       "  print_line(convert<i64>(value * 1000.0f64))\n"
@@ -965,7 +967,7 @@ std::string numberOracle() {
 const std::vector<std::string> CodePointCases = {"", "a", "h\xC3\xA9llo", "\xE4\xB8\x96\xE7\x95\x8C", "\xF0\x9F\x98\x80!", "\x7F\xC2\x80\xDF\xBF\xE0\xA0\x80\xEF\xBF\xBF\xF4\x8F\xBF\xBF"};
 
 std::string codePointProgram() {
-  std::string body = "import /std/text/*\n\n[return<int> effects(heap_alloc, io_out)]\nmain() {\n";
+  std::string body = "import /std/text/*\nimport /std/text/view/*\n\n[return<int> effects(heap_alloc, io_out)]\nmain() {\n";
   int index = 0;
   for (const std::string &text : CodePointCases) {
     std::string escaped;
@@ -1005,7 +1007,7 @@ std::string codePointOracle() {
 
 std::string caseProgram() {
   return
-      "import /std/text/*\n\n[return<int> effects(heap_alloc, io_out)]\nmain() {\n"
+      "import /std/text/*\nimport /std/text/view/*\n\n[return<int> effects(heap_alloc, io_out)]\nmain() {\n"
       "  [StringView] mixed{textOf(\"Hello, W\xC3\x96rld! 123 zZ\")}\n"
       "  [String] lower{mixed.toAsciiLower()}\n"
       "  [String] upper{mixed.toAsciiUpper()}\n"
@@ -1056,6 +1058,718 @@ TEST_CASE("ASCII case mapping leaves bytes 128 and up alone on the VM") {
 
 TEST_CASE("ASCII case mapping leaves bytes 128 and up alone through optexe") {
   CHECK(optexeOutput("ascii_case", caseProgram()) == caseOracle());
+}
+
+// ---- the rest of std::string's editing members ------------------------------------------------------------------
+
+namespace {
+constexpr int MutationSteps = 400;
+
+// Seeded edits with the members added for std::string parity; ASCII only, so every cut is a code point boundary.
+std::string mutationProgram() {
+  return
+      "import /std/text/*\nimport /std/text/view/*\n\n"
+      "[return<u64>]\nlcgStep([u64] seed) {\n"
+      "  [u64] raw{seed * 1664525u64 + 1013904223u64}\n"
+      "  return(raw - raw / 4294967296u64 * 4294967296u64)\n}\n\n"
+      "[return<i32>]\nbelow([u64] seed, [i32] bound) {\n"
+      "  [i32] value{convert<i32>(seed / 256u64 - seed / 256u64 / 1073741824u64 * 1073741824u64)}\n"
+      "  return(value - value / bound * bound)\n}\n\n"
+      "[return<int> effects(heap_alloc, io_out)]\nmain() {\n"
+      "  [String mut] s{stringFilled(3i32, 120u8)}\n"
+      "  [String mut] other{/std/text/stringFrom(\"SWAPPED\")}\n"
+      "  [u64 mut] seed{424242u64}\n"
+      "  [i32 mut] h{17i32}\n"
+      "  for([i32 mut] step{0i32}, step < " + std::to_string(MutationSteps) + "i32, step++) {\n"
+      "    seed = lcgStep(seed)\n    [i32] op{below(seed, 10i32)}\n"
+      "    seed = lcgStep(seed)\n    [i32] a{below(seed, s.count() + 1i32)}\n"
+      "    seed = lcgStep(seed)\n    [i32] b{a + below(seed, s.count() - a + 1i32)}\n"
+      "    seed = lcgStep(seed)\n    [i32] n{below(seed, 6i32)}\n"
+      "    seed = lcgStep(seed)\n    [u8] ch{convert<u8>(97i32 + below(seed, 26i32))}\n"
+      "    if(op == 0i32) {\n      s.appendFilled(n, ch)\n    }\n"
+      "    if(op == 1i32) {\n      s.insertFilled(a, n, ch)\n    }\n"
+      "    if(op == 2i32) {\n      s.insertByte(a, ch)\n    }\n"
+      "    if(op == 3i32) {\n      if(s.count() > 0i32) {\n        s.popByte()\n      }\n    }\n"
+      "    if(op == 4i32) {\n      s.resize(n * 5i32, ch)\n    }\n"
+      "    if(op == 5i32) {\n      s.replaceFilled(a, b, n, ch)\n    }\n"
+      "    if(op == 6i32) {\n      if(s.count() > 0i32) {\n"
+      "        h = h * 31i32 + convert<i32>(s.front())\n        h = h * 31i32 + convert<i32>(s.back())\n      }\n    }\n"
+      "    if(op == 7i32) {\n      s.swap(other)\n      h = h * 31i32 + s.count()\n      h = h * 31i32 + other.count()\n"
+      "      s.swap(other)\n    }\n"
+      "    if(op == 8i32) {\n      s.assignFilled(n, ch)\n    }\n"
+      "    if(op == 9i32) {\n      s.erase(a, b)\n    }\n"
+      "    h = h * 31i32 + s.count()\n"
+      "  }\n"
+      "  for([i32 mut] i{0i32}, i < s.count(), i++) {\n    h = h * 31i32 + convert<i32>(s.byteAt(i))\n  }\n"
+      "  print_line(h)\n"
+      "  print_line(s.count())\n"
+      "  return(0i32)\n}\n";
+}
+
+std::string mutationOracle() {
+  std::string s(3, 'x');
+  std::string other = "SWAPPED";
+  uint32_t seed = 424242u;
+  int32_t h = 17;
+  const auto step = [&seed]() { seed = seed * 1664525u + 1013904223u; return seed; };
+  const auto below = [](uint32_t seedValue, int32_t bound) {
+    const int32_t value = static_cast<int32_t>((seedValue / 256u) % 1073741824u);
+    return value - value / bound * bound;
+  };
+  for (int i = 0; i < MutationSteps; ++i) {
+    const int32_t op = below(step(), 10);
+    const int32_t a = below(step(), static_cast<int32_t>(s.size()) + 1);
+    const int32_t b = a + below(step(), static_cast<int32_t>(s.size()) - a + 1);
+    const int32_t n = below(step(), 6);
+    const char ch = static_cast<char>(97 + below(step(), 26));
+    switch (op) {
+    case 0: s.append(static_cast<size_t>(n), ch); break;
+    case 1: s.insert(static_cast<size_t>(a), static_cast<size_t>(n), ch); break;
+    case 2: s.insert(static_cast<size_t>(a), 1, ch); break;
+    case 3:
+      if (!s.empty()) {
+        s.pop_back();
+      }
+      break;
+    case 4: s.resize(static_cast<size_t>(n * 5), ch); break;
+    case 5: s.replace(static_cast<size_t>(a), static_cast<size_t>(b - a), static_cast<size_t>(n), ch); break;
+    case 6:
+      if (!s.empty()) {
+        h = wrapAdd(wrapMul(h, 31), static_cast<unsigned char>(s.front()));
+        h = wrapAdd(wrapMul(h, 31), static_cast<unsigned char>(s.back()));
+      }
+      break;
+    case 7:
+      h = wrapAdd(wrapMul(h, 31), static_cast<int32_t>(other.size()));
+      h = wrapAdd(wrapMul(h, 31), static_cast<int32_t>(s.size()));
+      break;
+    case 8: s.assign(static_cast<size_t>(n), ch); break;
+    default: s.erase(static_cast<size_t>(a), static_cast<size_t>(b - a)); break;
+    }
+    h = wrapAdd(wrapMul(h, 31), static_cast<int32_t>(s.size()));
+  }
+  h = foldText(s, h);
+  return std::to_string(h) + "\n" + std::to_string(s.size()) + "\n";
+}
+
+std::string popProgram() {
+  return
+      "import /std/text/*\nimport /std/text/view/*\n\n[return<int> effects(heap_alloc, io_out)]\nmain() {\n"
+      "  [String mut] s{/std/text/stringFrom(\"a\xC3\xA9\xE4\xB8\x96\xF0\x9F\x98\x80z\")}\n"
+      "  [i32 mut] guard{0i32}\n"
+      "  while(s.count() > 0i32 && guard < 10i32) {\n"
+      "    print_line(s.pop())\n    print_line(s.count())\n    guard = guard + 1i32\n  }\n"
+      "  [String mut] t{/std/text/stringFrom(\"h\xC3\xA9llo\")}\n"
+      "  [String mut] copy{/std/text/stringFrom(\"\")}\n"
+      "  copy.resize(7i32, 46u8)\n"
+      "  t.view().copyTo(copy.data)\n"
+      "  print_line(copy.count())\n"
+      "  for([i32 mut] i{0i32}, i < copy.count(), i++) {\n    print_line(convert<i32>(copy.byteAt(i)))\n  }\n"
+      "  return(0i32)\n}\n";
+}
+
+std::string popOracle() {
+  // a, e-acute (U+E9), CJK (U+4E16), emoji (U+1F600), z: 11 bytes, popped from the end: 10, 6, 3, 1, 0 bytes left.
+  std::string out = "122\n10\n128512\n6\n19990\n3\n233\n1\n97\n0\n";
+  const std::string text = "h\xC3\xA9llo";
+  out += "7\n";
+  for (size_t i = 0; i < 7; ++i) {
+    out += std::to_string(i < text.size() ? static_cast<unsigned char>(text[i]) : 46) + "\n";
+  }
+  return out;
+}
+
+// The Unicode standard's own example (Table 3-8, recommended replacement of maximal subparts): 61 F1 80 80 E1 80 C2 62
+// 80 63 80 BF 64 becomes a U+FFFD U+FFFD U+FFFD b U+FFFD c U+FFFD U+FFFD d.
+std::string lossyProgram() {
+  std::string body = "import /std/text/*\nimport /std/text/view/*\n\n[return<int> effects(heap_alloc, io_out)]\nmain() {\n";
+  const std::vector<std::vector<int>> vectors = {
+      {0x61, 0xF1, 0x80, 0x80, 0xE1, 0x80, 0xC2, 0x62, 0x80, 0x63, 0x80, 0xBF, 0x64},
+      {0x68, 0xC3, 0xA9, 0x21},
+      {0xFF, 0xFE},
+      {0xE4, 0xB8},
+      {0xF0, 0x9F, 0x98},
+      {0xED, 0xA0, 0x80},
+      {},
+  };
+  int index = 0;
+  for (const std::vector<int> &bytes : vectors) {
+    const std::string name = "v" + std::to_string(index++);
+    body += "  [String mut] " + name + "{/std/text/stringFrom(\"\")}\n";
+    for (const int value : bytes) {
+      body += "  " + name + ".pushByte(" + std::to_string(value) + "u8)\n";
+    }
+    body += "  [String] fixed" + name + "{stringFromUtf8Lossy(" + name + ".view().bytes())}\n";
+    body += "  print_line(fixed" + name + ".count())\n";
+    body += "  for([i32 mut] i{0i32}, i < fixed" + name + ".count(), i++) {\n    print_line(convert<i32>(fixed" + name +
+            ".byteAt(i)))\n  }\n";
+  }
+  return body + "  return(0i32)\n}\n";
+}
+
+std::string lossyOracle() {
+  const auto emit = [](const std::string &text) {
+    std::string out = std::to_string(text.size()) + "\n";
+    for (const unsigned char ch : text) {
+      out += std::to_string(ch) + "\n";
+    }
+    return out;
+  };
+  const std::string replacement = "\xEF\xBF\xBD";
+  std::string out;
+  out += emit("a" + replacement + replacement + replacement + "b" + replacement + "c" + replacement + replacement + "d");
+  out += emit("h\xC3\xA9!");
+  out += emit(replacement + replacement);
+  out += emit(replacement);
+  out += emit(replacement);
+  out += emit(replacement + replacement + replacement);
+  out += emit("");
+  return out;
+}
+} // namespace
+
+TEST_CASE("the std::string editing members agree with std::string on the VM") {
+  CHECK(vmOutput(mutationProgram()) == mutationOracle());
+}
+
+TEST_CASE("the std::string editing members agree with std::string through optexe") {
+  CHECK(optexeOutput("mutations", mutationProgram()) == mutationOracle());
+}
+
+TEST_CASE("pop and copyTo return code points and bytes on the VM") {
+  CHECK(vmOutput(popProgram()) == popOracle());
+}
+
+TEST_CASE("pop and copyTo return code points and bytes through optexe") {
+  CHECK(optexeOutput("pops", popProgram()) == popOracle());
+}
+
+TEST_CASE("lossy UTF-8 decoding replaces maximal invalid parts on the VM") {
+  CHECK(vmOutput(lossyProgram()) == lossyOracle());
+}
+
+TEST_CASE("lossy UTF-8 decoding replaces maximal invalid parts through optexe") {
+  CHECK(optexeOutput("lossy", lossyProgram()) == lossyOracle());
+}
+
+TEST_CASE("resize inside a code point, popByte and pop on empty text stop the program") {
+  const std::string head = "import /std/text/*\nimport /std/text/view/*\n\n[return<int> effects(heap_alloc)]\nmain() {\n"
+                           "  [String mut] s{/std/text/stringFrom(\"h\xC3\xA9\")}\n";
+  CHECK(failsToRun(head + "  s.resize(2i32, 46u8)\n  return(s.count())\n}\n"));
+  CHECK_FALSE(failsToRun(head + "  s.resize(1i32, 46u8)\n  return(0i32)\n}\n"));
+  CHECK(failsToRun("import /std/text/*\nimport /std/text/view/*\n\n[return<int> effects(heap_alloc)]\nmain() {\n"
+                   "  [String mut] s{/std/text/stringFrom(\"\")}\n  s.popByte()\n  return(0i32)\n}\n"));
+  CHECK(failsToRun("import /std/text/*\nimport /std/text/view/*\n\n[return<int> effects(heap_alloc)]\nmain() {\n"
+                   "  [String mut] s{/std/text/stringFrom(\"\")}\n  return(s.pop())\n}\n"));
+  CHECK(failsToRun("import /std/text/*\nimport /std/text/view/*\n\n[return<int> effects(heap_alloc)]\nmain() {\n"
+                   "  [String mut] s{/std/text/stringFrom(\"\")}\n  return(convert<i32>(s.front()))\n}\n"));
+}
+
+// ---- byte-set search and replaceAll ----------------------------------------------------------------------------
+
+namespace {
+constexpr int SetRounds = 200;
+
+// Random haystacks, sets and positions generated by the program itself (same LCG as the oracle).
+std::string setProgram() {
+  return
+      "import /std/text/*\nimport /std/text/view/*\n\n"
+      "[return<u64>]\nlcgStep([u64] seed) {\n"
+      "  [u64] raw{seed * 1664525u64 + 1013904223u64}\n"
+      "  return(raw - raw / 4294967296u64 * 4294967296u64)\n}\n\n"
+      "[return<u64>]\nbelow([u64] seed, [u64] bound) {\n"
+      "  [u64] value{seed / 256u64}\n"
+      "  return(value - value / bound * bound)\n}\n\n"
+      "[return<void> effects(io_out)]\nprobe([/std/text/view/StringView] h, [/std/text/view/StringView] set, [i32] pos) {\n"
+      "  print_line(h.findFirstOf(set))\n  print_line(h.findFirstNotOf(set))\n"
+      "  print_line(h.findLastOf(set))\n  print_line(h.findLastNotOf(set))\n"
+      "  print_line(h.findFirstOfFrom(set, pos))\n  print_line(h.findFirstNotOfFrom(set, pos))\n"
+      "  print_line(h.findLastOfFrom(set, pos))\n  print_line(h.findLastNotOfFrom(set, pos))\n}\n\n"
+      "[return<int> effects(heap_alloc, io_out)]\nmain() {\n"
+      "  [String mut] hay{/std/text/stringFrom(\"\")}\n"
+      "  [String mut] set{/std/text/stringFrom(\"\")}\n"
+      "  [u64 mut] seed{13579u64}\n"
+      "  for([i32 mut] round{0i32}, round < " + std::to_string(SetRounds) + "i32, round++) {\n"
+      "    hay.clear()\n    set.clear()\n"
+      "    seed = lcgStep(seed)\n    [u64] hayLength{below(seed, 14u64)}\n"
+      "    for([u64 mut] k{0u64}, k < hayLength, k++) {\n"
+      "      seed = lcgStep(seed)\n      hay.pushByte(convert<u8>(97u64 + below(seed, 4u64)))\n    }\n"
+      "    seed = lcgStep(seed)\n    [u64] setLength{below(seed, 4u64)}\n"
+      "    for([u64 mut] k{0u64}, k < setLength, k++) {\n"
+      "      seed = lcgStep(seed)\n      set.pushByte(convert<u8>(97u64 + below(seed, 4u64)))\n    }\n"
+      "    seed = lcgStep(seed)\n    [i32] pos{convert<i32>(below(seed, 17u64))}\n"
+      "    probe(hay.view(), set.view(), pos)\n"
+      "  }\n"
+      "  return(0i32)\n}\n";
+}
+
+std::string setOracle() {
+  uint32_t seed = 13579u;
+  const auto step = [&seed]() { seed = seed * 1664525u + 1013904223u; return seed; };
+  const auto below = [](uint32_t value, uint32_t bound) {
+    const uint32_t v = value / 256u;
+    return v - v / bound * bound;
+  };
+  const auto idx = [](size_t found) { return found == std::string::npos ? -1 : static_cast<int>(found); };
+  std::string out;
+  for (int round = 0; round < SetRounds; ++round) {
+    std::string hay;
+    std::string set;
+    for (uint32_t k = 0, n = below(step(), 14); k < n; ++k) {
+      hay.push_back(static_cast<char>('a' + below(step(), 4)));
+    }
+    for (uint32_t k = 0, n = below(step(), 4); k < n; ++k) {
+      set.push_back(static_cast<char>('a' + below(step(), 4)));
+    }
+    const size_t pos = below(step(), 17);
+    out += std::to_string(idx(hay.find_first_of(set))) + "\n" + std::to_string(idx(hay.find_first_not_of(set))) + "\n";
+    out += std::to_string(idx(hay.find_last_of(set))) + "\n" + std::to_string(idx(hay.find_last_not_of(set))) + "\n";
+    out += std::to_string(idx(hay.find_first_of(set, pos))) + "\n" + std::to_string(idx(hay.find_first_not_of(set, pos))) + "\n";
+    out += std::to_string(idx(hay.find_last_of(set, pos))) + "\n" + std::to_string(idx(hay.find_last_not_of(set, pos))) + "\n";
+  }
+  return out;
+}
+
+struct ReplaceCase {
+  std::string hay;
+  std::string from;
+  std::string to;
+};
+
+const std::vector<ReplaceCase> ReplaceCases = {
+    {"", "a", "b"}, {"abc", "", "x"}, {"aaaa", "aa", "b"}, {"aaa", "aa", "b"}, {"banana", "an", ""}, {"banana", "a", "aa"},
+    {"hello world", "o", "00"}, {"abcabc", "abc", "abc"}, {"xyz", "q", "r"}, {"a,b,,c", ",", ", "}, {"ababab", "bab", "-"}, {"aXbXc", "X", "XX"}};
+
+std::string replaceProgram() {
+  std::string body = "import /std/text/*\nimport /std/text/view/*\n\n[return<int> effects(heap_alloc, io_out)]\nmain() {\n";
+  int index = 0;
+  for (const ReplaceCase &testCase : ReplaceCases) {
+    const std::string name = "r" + std::to_string(index++);
+    body += "  [StringView] " + name + "h{textOf(\"" + testCase.hay + "\")}\n";
+    body += "  [String] " + name + "{" + name + "h.replaceAll(textOf(\"" + testCase.from + "\"), textOf(\"" + testCase.to + "\"))}\n";
+    body += "  print_line(" + name + ".count())\n";
+    body += "  for([i32 mut] i{0i32}, i < " + name + ".count(), i++) {\n    print_line(convert<i32>(" + name + ".byteAt(i)))\n  }\n";
+  }
+  return body + "  return(0i32)\n}\n";
+}
+
+std::string replaceOracle() {
+  std::string out;
+  for (const ReplaceCase &testCase : ReplaceCases) {
+    std::string result;
+    if (testCase.from.empty()) {
+      result = testCase.hay;
+    } else {
+      size_t cursor = 0;
+      for (;;) {
+        const size_t hit = testCase.hay.find(testCase.from, cursor);
+        if (hit == std::string::npos) {
+          result += testCase.hay.substr(cursor);
+          break;
+        }
+        result += testCase.hay.substr(cursor, hit - cursor) + testCase.to;
+        cursor = hit + testCase.from.size();
+      }
+    }
+    out += std::to_string(result.size()) + "\n";
+    for (const unsigned char ch : result) {
+      out += std::to_string(ch) + "\n";
+    }
+  }
+  return out;
+}
+} // namespace
+
+TEST_CASE("find_first_of and its relatives agree with std::string on the VM") {
+  CHECK(vmOutput(setProgram()) == setOracle());
+}
+
+TEST_CASE("find_first_of and its relatives agree with std::string through optexe") {
+  CHECK(optexeOutput("sets", setProgram()) == setOracle());
+}
+
+TEST_CASE("replaceAll agrees with a reference on the VM") {
+  CHECK(vmOutput(replaceProgram()) == replaceOracle());
+}
+
+TEST_CASE("replaceAll agrees with a reference through optexe") {
+  CHECK(optexeOutput("replace_all", replaceProgram()) == replaceOracle());
+}
+
+// ---- whole-file text (readTextInto, writeText, appendText) -----------------------------------------------------
+
+namespace {
+struct FileCase {
+  std::string name;
+  std::string content;
+};
+
+std::string largeText() {
+  std::string text;
+  for (int i = 0; i < 30000; ++i) {
+    text += "line " + std::to_string(i) + " \xC3\xA9\xE4\xB8\x96\n";
+  }
+  return text;
+}
+
+std::vector<FileCase> fileCases() {
+  return {{"empty", ""},
+          {"ascii", "hello"},
+          {"multibyte", "h\xC3\xA9llo \xE4\xB8\x96\xE7\x95\x8C \xF0\x9F\x98\x80"},
+          {"lines", "one\r\ntwo\nthree\n"},
+          {"invalid", "ab\xFF" "cd"},
+          {"truncated", "ab\xE4\xB8"},
+          {"large", largeText()}};
+}
+
+void writeBytes(const std::string &path, const std::string &content) {
+  std::ofstream(path, std::ios::binary) << content;
+}
+
+std::string fileProgram(const std::string &directory, const std::string &outPath) {
+  std::string body =
+      "import /std/text/*\nimport /std/text/view/*\n\n"
+      "[return<void> effects(io_out, file_read, heap_alloc)]\n"
+      "probe([/std/text/view/StringView] path) {\n"
+      "  [String mut] text{/std/text/stringFrom(\"untouched\")}\n"
+      "  print_line(readTextInto(path, text))\n"
+      "  print_line(text.count())\n"
+      "  [i32 mut] h{17i32}\n"
+      "  for([i32 mut] i{0i32}, i < text.count(), i++) {\n    h = h * 31i32 + convert<i32>(text.byteAt(i))\n  }\n"
+      "  print_line(h)\n}\n\n"
+      "[return<int> effects(heap_alloc, io_out, file_read, file_write)]\nmain() {\n";
+  for (const FileCase &testCase : fileCases()) {
+    body += "  probe(textOf(\"" + directory + "/" + testCase.name + ".txt\"))\n";
+  }
+  body += "  probe(textOf(\"" + directory + "/missing.txt\"))\n";
+  body += "  print_line(writeText(textOf(\"" + outPath + "\"), textOf(\"first \xC3\xA9\\n\")))\n";
+  body += "  print_line(appendText(textOf(\"" + outPath + "\"), textOf(\"second\")))\n";
+  body += "  print_line(writeText(textOf(\"" + directory + "/no_such_dir/out.txt\"), textOf(\"x\")))\n";
+  body += "  print_line(writeText(textOf(\"" + directory + "/empty_out.txt\"), textOf(\"\")))\n";
+  return body + "  return(0i32)\n}\n";
+}
+
+std::string fileOracle() {
+  std::string out;
+  for (const FileCase &testCase : fileCases()) {
+    const bool valid = referenceUtf8ErrorOffset([&testCase] {
+      std::vector<int> bytes;
+      for (const unsigned char ch : testCase.content) {
+        bytes.push_back(ch);
+      }
+      return bytes;
+    }()) < 0;
+    const std::string &shown = valid ? testCase.content : std::string("untouched");
+    out += std::string(valid ? "0" : "-1") + "\n" + std::to_string(shown.size()) + "\n" + std::to_string(foldText(shown, 17)) + "\n";
+  }
+  out += "2\n9\n" + std::to_string(foldText("untouched", 17)) + "\n";
+  out += "0\n0\n2\n0\n";
+  return out;
+}
+
+void checkFiles(const std::string &kind, const std::function<std::string(const std::string &)> &run) {
+  const std::string directory = scratch("files_" + kind);
+  std::filesystem::create_directories(directory);
+  for (const FileCase &testCase : fileCases()) {
+    writeBytes(directory + "/" + testCase.name + ".txt", testCase.content);
+  }
+  const std::string outPath = directory + "/out.txt";
+  std::filesystem::remove(outPath);
+  CHECK(run(fileProgram(directory, outPath)) == fileOracle());
+  CHECK(readFile(outPath) == "first \xC3\xA9\nsecond");
+  CHECK(readFile(directory + "/empty_out.txt").empty());
+  CHECK_FALSE(std::filesystem::exists(directory + "/no_such_dir"));
+}
+} // namespace
+
+TEST_CASE("whole-file text reads and writes agree with C++ on the VM") {
+  checkFiles("vm", [](const std::string &source) { return vmOutput(source); });
+}
+
+TEST_CASE("whole-file text reads and writes agree with C++ through optexe") {
+  checkFiles("optexe", [](const std::string &source) { return optexeOutput("filetext", source); });
+}
+
+// ---- numbers as text and in any radix --------------------------------------------------------------------------
+
+namespace {
+const std::vector<std::string> FloatTexts = {"0.1", "100000", "1e20", "1.5e-7", "123456789.125", "0.3333333333333333", "5e-324",
+                                             "1.7976931348623157e308", "0", "-0", "1e21", "1e-5", "123", "2.5", "-7.75", "1e15",
+                                             "123456789012345678", "0.000001", "16777216", "3.4028234663852886e38"};
+const std::vector<int64_t> IntValues = {0, 1, -1, 42, -42, 2147483647, -2147483648LL, 4294967296LL, 9223372036854775807LL,
+                                        INT64_MIN, 255, 1000000007};
+const std::vector<int> Radixes = {2, 3, 8, 10, 16, 36};
+
+// Folds the text of a String into a number the program prints with its length.
+const char *FoldHelper =
+    "[return<void> effects(io_out)]\nshow([/std/text/String] s) {\n"
+    "  [i32 mut] h{17i32}\n"
+    "  for([i32 mut] i{0i32}, i < s.count(), i++) {\n    h = h * 31i32 + convert<i32>(s.byteAt(i))\n  }\n"
+    "  print_line(s.count())\n  print_line(h)\n}\n\n";
+
+std::string showText(const std::string &text) {
+  return std::to_string(text.size()) + "\n" + std::to_string(foldText(text, 17)) + "\n";
+}
+
+// One call site per kind of conversion, inside loops; the values are picked by if chains, so the program stays small.
+std::string formatProgram() {
+  std::string body = std::string("import /std/text/*\nimport /std/text/view/*\n\n") + FoldHelper + "[return<int> effects(heap_alloc, io_out)]\nmain() {\n";
+  // integers: every value in decimal and in every radix
+  body += "  for([i32 mut] vi{0i32}, vi < " + std::to_string(IntValues.size()) + "i32, vi++) {\n    [i64 mut] value{0i64}\n";
+  for (size_t i = 0; i < IntValues.size(); ++i) {
+    body += "    if(vi == " + std::to_string(i) + "i32) {\n      value = " + std::to_string(IntValues[i]) + "i64\n    }\n";
+  }
+  body += "    show(stringFromI64(value))\n";
+  body += "    for([i32 mut] ri{0i32}, ri < " + std::to_string(Radixes.size()) + "i32, ri++) {\n      [i32 mut] radix{10i32}\n";
+  for (size_t i = 0; i < Radixes.size(); ++i) {
+    body += "      if(ri == " + std::to_string(i) + "i32) {\n        radix = " + std::to_string(Radixes[i]) + "i32\n      }\n";
+  }
+  body += "      show(stringFromI64Radix(value, radix))\n    }\n  }\n";
+  body += "  show(stringFromI32(-2147483647i32))\n  show(stringFromU64(18446744073709551615u64))\n";
+  body += "  for([i32 mut] ri{0i32}, ri < " + std::to_string(Radixes.size()) + "i32, ri++) {\n    [i32 mut] radix{10i32}\n";
+  for (size_t i = 0; i < Radixes.size(); ++i) {
+    body += "    if(ri == " + std::to_string(i) + "i32) {\n      radix = " + std::to_string(Radixes[i]) + "i32\n    }\n";
+  }
+  body += "    show(stringFromU64Radix(18446744073709551615u64, radix))\n  }\n";
+  body += "  show(stringFromBool(true))\n  show(stringFromBool(false))\n";
+  // floats: every text in every style
+  body += "  for([i32 mut] fi{0i32}, fi < " + std::to_string(FloatTexts.size()) + "i32, fi++) {\n    [StringView mut] source{textOf(\"0\")}\n";
+  for (size_t i = 0; i < FloatTexts.size(); ++i) {
+    body += "    if(fi == " + std::to_string(i) + "i32) {\n      source = textOf(\"" + FloatTexts[i] + "\")\n    }\n";
+  }
+  body += "    [f64] value{source.parseF64Or(-1.0f64)}\n";
+  body += "    for([i32 mut] si{0i32}, si < 8i32, si++) {\n      [i32 mut] style{0i32}\n      [i32 mut] precision{0i32}\n";
+  const int styles[8][2] = {{0, 0}, {3, 0}, {1, 0}, {1, 2}, {1, 10}, {2, 0}, {2, 3}, {2, 15}};
+  for (int i = 0; i < 8; ++i) {
+    body += "      if(si == " + std::to_string(i) + "i32) {\n        style = " + std::to_string(styles[i][0]) + "i32\n        precision = " +
+            std::to_string(styles[i][1]) + "i32\n      }\n";
+  }
+  body += "      [String mut] made{stringWithCapacity(0i32)}\n      made.appendF64Style(value, style, precision)\n      show(made)\n    }\n  }\n";
+  return body + "  return(0i32)\n}\n";
+}
+
+std::string toChars(int64_t value, int radix) {
+  char buffer[80];
+  const auto made = std::to_chars(buffer, buffer + sizeof(buffer), value, radix);
+  return std::string(buffer, made.ptr);
+}
+
+std::string toCharsUnsigned(uint64_t value, int radix) {
+  char buffer[80];
+  const auto made = std::to_chars(buffer, buffer + sizeof(buffer), value, radix);
+  return std::string(buffer, made.ptr);
+}
+
+template <class... Args> std::string floatChars(double value, Args... args) {
+  char buffer[1200];
+  const auto made = std::to_chars(buffer, buffer + sizeof(buffer), value, args...);
+  return std::string(buffer, made.ptr);
+}
+
+std::string formatOracle() {
+  std::string out;
+  for (const int64_t value : IntValues) {
+    out += showText(toChars(value, 10));
+    for (const int radix : Radixes) {
+      out += showText(toChars(value, radix));
+    }
+  }
+  out += showText("-2147483647") + showText("18446744073709551615");
+  for (const int radix : Radixes) {
+    out += showText(toCharsUnsigned(UINT64_MAX, radix));
+  }
+  out += showText("true") + showText("false");
+  for (const std::string &text : FloatTexts) {
+    const double value = std::strtod(text.c_str(), nullptr);
+    out += showText(floatChars(value));
+    char buffer[64];
+    const auto narrow = std::to_chars(buffer, buffer + sizeof(buffer), static_cast<float>(value));
+    out += showText(std::string(buffer, narrow.ptr));
+    out += showText(floatChars(value, std::chars_format::fixed, 0));
+    out += showText(floatChars(value, std::chars_format::fixed, 2));
+    out += showText(floatChars(value, std::chars_format::fixed, 10));
+    out += showText(floatChars(value, std::chars_format::scientific, 0));
+    out += showText(floatChars(value, std::chars_format::scientific, 3));
+    out += showText(floatChars(value, std::chars_format::scientific, 15));
+  }
+  return out;
+}
+
+struct RadixParse {
+  std::string text;
+  int radix;
+  bool isSigned;
+};
+
+const std::vector<RadixParse> RadixParses = {
+    {"ff", 16, true},   {"FF", 16, true},    {"-ff", 16, true},   {"+ff", 16, true},    {"zz", 36, true},   {"ZZ", 36, false},
+    {"12", 2, true},    {"102", 2, false},   {"777", 8, true},    {"", 10, true},       {"-", 10, true},    {"+", 10, true},
+    {"-1", 10, false},  {"+1", 10, false},   {"0", 10, false},    {"18446744073709551615", 10, false},
+    {"18446744073709551616", 10, false},     {"-9223372036854775808", 10, true},  {"9223372036854775808", 10, true},
+    {"7fffffffffffffff", 16, true},          {"8000000000000000", 16, true},      {"ffffffffffffffff", 16, false},
+    {"10000000000000000", 16, false},        {"1 ", 10, true},    {" 1", 10, true}, {"1_0", 10, true}, {"0x10", 16, true}};
+
+std::string radixProgram() {
+  std::string body = "import /std/text/*\nimport /std/text/view/*\n\n[return<int> effects(heap_alloc, io_out)]\nmain() {\n";
+  int index = 0;
+  for (const RadixParse &testCase : RadixParses) {
+    const std::string name = "p" + std::to_string(index++);
+    body += "  [StringView] " + name + "{textOf(\"" + testCase.text + "\")}\n";
+    if (testCase.isSigned) {
+      body += "  [i64 mut] " + name + "v{-5i64}\n  print_line(if(" + name + ".parseI64RadixInto(" + std::to_string(testCase.radix) + "i32, " + name +
+              "v), then() { 1i32 }, else() { 0i32 }))\n  print_line(" + name + "v)\n";
+    } else {
+      body += "  [u64 mut] " + name + "v{5u64}\n  print_line(if(" + name + ".parseU64RadixInto(" + std::to_string(testCase.radix) + "i32, " + name +
+              "v), then() { 1i32 }, else() { 0i32 }))\n  print_line(" + name + "v)\n";
+    }
+  }
+  return body + "  return(0i32)\n}\n";
+}
+
+std::string radixOracle() {
+  std::string out;
+  for (const RadixParse &testCase : RadixParses) {
+    std::string digits = testCase.text;
+    bool valid = !digits.empty();
+    if (valid && testCase.isSigned && digits[0] == '+') {
+      digits.erase(0, 1);
+      valid = !digits.empty() && digits[0] != '-' && digits[0] != '+';
+    }
+    if (testCase.isSigned) {
+      int64_t value = 0;
+      if (valid) {
+        const auto parsed = std::from_chars(digits.data(), digits.data() + digits.size(), value, testCase.radix);
+        valid = parsed.ec == std::errc() && parsed.ptr == digits.data() + digits.size();
+      }
+      out += std::string(valid ? "1" : "0") + "\n" + std::to_string(valid ? value : -5) + "\n";
+    } else {
+      uint64_t value = 0;
+      if (valid) {
+        const auto parsed = std::from_chars(digits.data(), digits.data() + digits.size(), value, testCase.radix);
+        valid = parsed.ec == std::errc() && parsed.ptr == digits.data() + digits.size();
+      }
+      out += std::string(valid ? "1" : "0") + "\n" + std::to_string(valid ? value : 5ULL) + "\n";
+    }
+  }
+  return out;
+}
+} // namespace
+
+TEST_CASE("number to text in every style agrees with std::to_chars on the VM") {
+  CHECK(vmOutput(formatProgram()) == formatOracle());
+}
+
+TEST_CASE("number to text in every style agrees with std::to_chars through optexe") {
+  CHECK(optexeOutput("formats", formatProgram()) == formatOracle());
+}
+
+TEST_CASE("integer parsing in any radix and unsigned parsing agree with std::from_chars on the VM") {
+  CHECK(vmOutput(radixProgram()) == radixOracle());
+}
+
+TEST_CASE("integer parsing in any radix and unsigned parsing agree with std::from_chars through optexe") {
+  CHECK(optexeOutput("radix", radixProgram()) == radixOracle());
+}
+
+// ---- format, join and owned split ------------------------------------------------------------------------------
+
+namespace {
+struct FormatCase {
+  std::string pattern;
+  std::vector<std::string> args;
+};
+
+const std::vector<FormatCase> FormatCases = {
+    {"{} is {}", {"x", "yy"}},
+    {"{1} {0} {1}", {"a", "b"}},
+    {"{{}} {}", {"z"}},
+    {"[{:>6}]", {"ab"}},
+    {"[{:<6}]", {"ab"}},
+    {"[{:^6}]", {"ab"}},
+    {"[{:^7}]", {"ab"}},
+    {"[{:*^7}]", {"abc"}},
+    {"[{:-<5}]", {"abcdef"}},
+    {"[{:3}]", {"\xC3\xA9"}},
+    {"[{:>4}]", {"\xC3\xA9\xC3\xA9"}},
+    {"{}", {""}},
+    {"no placeholders", {}},
+    {"{}{}{}", {"a", "b", "c"}},
+    {"{:^1}", {"xyz"}},
+    {"{0:>4}{0:<4}|", {"q"}},
+    {"}}{{", {}},
+    {"{:#>12}|{:_<3}", {"right", "x"}},
+    {"{2}{1}{0}", {"1", "2", "3"}},
+};
+
+// One call site of formatText inside a loop (the cases are picked by an if chain), so the program stays small.
+std::string formatProgram2() {
+  std::string body = "import /std/text/*\nimport /std/text/view/*\nimport /std/collections/*\n\n";
+  body += "[return<void> effects(io_out, heap_alloc)]\nshow([/std/text/String] s) {\n"
+          "  print_line(s.count())\n"
+          "  for([i32 mut] i{0i32}, i < s.count(), i++) {\n    print_line(convert<i32>(s.byteAt(i)))\n  }\n}\n\n";
+  body += "[return<int> effects(heap_alloc, io_out)]\nmain() {\n";
+  body += "  for([i32 mut] round{0i32}, round < " + std::to_string(FormatCases.size()) + "i32, round++) {\n";
+  body += "    [StringView mut] pattern{textOf(\"\")}\n    [StringView mut] a{textOf(\"\")}\n    [StringView mut] b{textOf(\"\")}\n"
+          "    [StringView mut] c{textOf(\"\")}\n";
+  for (size_t i = 0; i < FormatCases.size(); ++i) {
+    const FormatCase &testCase = FormatCases[i];
+    body += "    if(round == " + std::to_string(i) + "i32) {\n      pattern = textOf(\"" + testCase.pattern + "\")\n";
+    const char *names[] = {"a", "b", "c"};
+    for (size_t k = 0; k < testCase.args.size(); ++k) {
+      body += std::string("      ") + names[k] + " = textOf(\"" + testCase.args[k] + "\")\n";
+    }
+    body += "    }\n";
+  }
+  body += "    show(formatText(pattern, a, b, c))\n  }\n";
+  body += "  show(joinWith(textOf(\", \"), textOf(\"a\"), textOf(\"bb\"), textOf(\"\"), textOf(\"c\")))\n";
+  body += "  show(joinWith(textOf(\"-\"), textOf(\"only\")))\n";
+  body += "  show(joinWith(textOf(\"-\")))\n";
+  // owned pieces of a split
+  body += "  [StringView] text{textOf(\"a,b,,c,\")}\n  [vector<String>] pieces{text.splitOwned(textOf(\",\"))}\n"
+          "  print_line(pieces.count())\n"
+          "  for([i32 mut] i{0i32}, i < pieces.count(), i++) {\n    [i32] n{pieces.at(i).count()}\n    print_line(n)\n  }\n";
+  return body + "  return(0i32)\n}\n";
+}
+
+std::string showString(const std::string &text) {
+  std::string out = std::to_string(text.size()) + "\n";
+  for (const unsigned char ch : text) {
+    out += std::to_string(ch) + "\n";
+  }
+  return out;
+}
+
+std::string formatOracle2() {
+  std::string out;
+  for (const FormatCase &testCase : FormatCases) {
+    std::string padded[3] = {"", "", ""};
+    for (size_t k = 0; k < testCase.args.size(); ++k) {
+      padded[k] = testCase.args[k];
+    }
+    out += showString(std::vformat(testCase.pattern, std::make_format_args(padded[0], padded[1], padded[2])));
+  }
+  out += showString("a, bb, , c") + showString("only") + showString("");
+  out += "5\n1\n1\n0\n1\n0\n";
+  return out;
+}
+} // namespace
+
+TEST_CASE("formatText, joinWith and splitOwned agree with std::format on the VM") {
+  CHECK(vmOutput(formatProgram2()) == formatOracle2());
+}
+
+TEST_CASE("formatText, joinWith and splitOwned agree with std::format through optexe") {
+  CHECK(optexeOutput("formatting", formatProgram2()) == formatOracle2());
+}
+
+TEST_CASE("a malformed format pattern or a missing argument stops the program") {
+  const std::string head = "import /std/text/*\nimport /std/text/view/*\n\n[return<int> effects(heap_alloc)]\nmain() {\n";
+  CHECK(failsToRun(head + "  [String] s{formatText(textOf(\"{\"), textOf(\"a\"))}\n  return(s.count())\n}\n"));
+  CHECK(failsToRun(head + "  [String] s{formatText(textOf(\"}\"), textOf(\"a\"))}\n  return(s.count())\n}\n"));
+  CHECK(failsToRun(head + "  [String] s{formatText(textOf(\"{}{}\"), textOf(\"a\"))}\n  return(s.count())\n}\n"));
+  CHECK(failsToRun(head + "  [String] s{formatText(textOf(\"{2}\"), textOf(\"a\"))}\n  return(s.count())\n}\n"));
+  CHECK(failsToRun(head + "  [String] s{formatText(textOf(\"{:>x}\"), textOf(\"a\"))}\n  return(s.count())\n}\n"));
+  CHECK_FALSE(failsToRun(head + "  [String] s{formatText(textOf(\"{}\"), textOf(\"a\"))}\n  return(0i32)\n}\n"));
 }
 
 TEST_SUITE_END();

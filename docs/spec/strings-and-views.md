@@ -210,34 +210,34 @@ the other entries are specified here and tracked by the TODO named.
 
 | C++ | PrimeStruct | Status |
 | --- | --- | --- |
-| `string()`, `string(const char*)`, `string(sv)` | `String{}`, `String.from(text)`, `[String] s{"text"}` | done as `stringFrom`; spelling TODO-5568 |
-| `string(n, ch)`, `assign(n, ch)` | `String.filled(n, byte)`, `fill(n, byte)` | TODO-5623 |
-| `string(sv, pos, n)`, `substr` | `text.slice(a, b).toOwned()`, `substr(a, b)` | `substr` done; `slice` TODO-5618 |
-| construct from raw bytes | `String.fromUtf8(bytes)`, `String.fromUtf8Lossy(bytes)` | TODO-5568, TODO-5623 |
+| `string()`, `string(const char*)`, `string(sv)` | `String{}`, `stringFrom("text")`, `view.toOwned()` | done |
+| `string(n, ch)`, `assign(n, ch)` | `stringFilled(n, byte)`, `assignFilled(n, byte)` | done |
+| `string(sv, pos, n)`, `substr` | `view.slice(a, b).toOwned()`, `substr(a, b)` | done |
+| construct from raw bytes | `textFromBytes(bytes)` (valid UTF-8 or stops), `stringFromUtf8Lossy(bytes)` | done |
 | copy / move, destructor | `Copy`, `Move`, `Destroy` lifecycle | done |
-| `at`, `operator[]` | `byteAt(i)`, `[i]`, `at(i)` | `byteAt` done; operators TODO-5568 |
-| `front`, `back` | `first()`, `last()` | TODO-5623 |
+| `at`, `operator[]` | `byteAt(i)`; `s[i]` | `byteAt` done; operator TODO-5643 |
+| `front`, `back` | `front()`, `back()` (stop on empty text) | done |
 | `data`, `c_str` | the block, always NUL terminated | done |
-| `operator string_view` | implicit borrow as `string` | TODO-5618 |
-| `begin`/`end` iterators | `bytes()`, `codePoints()`, index loops (range-`for` is a separate language change) | TODO-5618, TODO-5620 |
+| `operator string_view` | `s.view()` (explicit; no implicit borrow) | done; loans TODO-5569 |
+| `begin`/`end` iterators | `bytes()`, `codePointAt`/`codePointLength`, index loops (range-`for` is a separate language change) | done |
 | `empty`, `size`, `capacity`, `reserve`, `shrink_to_fit`, `clear` | `empty`, `count`, `capacity`, `reserve`, `shrinkToFit`, `clear` | done |
-| `resize` | `resize(n, byte)` | TODO-5623 |
-| `push_back`, `pop_back` | `pushByte`, `push(codePoint)`, `popByte`, `pop()` | `pushByte` done; rest TODO-5568, TODO-5623 |
-| `append(sv)`, `append(n, ch)`, `operator+=` | `append`, `appendFilled`, `+=` | `append` done; rest TODO-5568, TODO-5623 |
-| `insert`, `erase`, `replace` | `insert`, `erase`, `replace` (byte ranges) | done; byte and fill overloads TODO-5623 |
-| `operator+` | `+` | TODO-5568 |
-| `swap` | `swap(other)` | TODO-5623 |
-| `copy(dst, n, pos)` | `slice(a, b).copyTo(destination)` | TODO-5623 |
-| `compare`, `==`, `<=>` | `compare(other)`, `==`, `<` and friends (byte order) | TODO-5619 |
-| `starts_with`, `ends_with`, `contains` | `startsWith`, `endsWith`, `contains` | TODO-5619 |
-| `find`, `rfind` (with `pos`) | `find(text, from)`, `rfind(text, from)` | TODO-5619 |
-| `find_first_of`, `find_last_of`, `find_first_not_of`, `find_last_not_of` | same names in lowerCamelCase over a byte set | TODO-5624 |
-| `to_string`, `stoi`, `stol`, `stod`, `from_chars` | `String.from(x)`, `parseI32/I64/U64/F64` | TODO-5568, TODO-5620 |
-| `to_chars` (radix, precision, shortest round trip) | `String.from(x, radix)`, `formatF64(x, precision)`, `String.from(f64)` shortest | TODO-5626 |
-| `std::hash<string>`, `unordered_map<string, V>`, `map<string, V>` | `String` and `string` as `map` keys, `hash()` | TODO-5625 |
-| `std::format`, `operator<<`, `getline` | `format("{}", ...)`, `join`, `lines()`, `readText` | TODO-5627, TODO-5619, TODO-5530 |
-| `memcpy`/`memmove`/`memcmp`/`memchr` speed | bulk byte opcodes under every copy, compare and search | TODO-5629 |
-| `string_view::remove_prefix`/`remove_suffix`/`substr` | `dropFirst`, `dropLast`, `slice` | done on `Slice`; `string` TODO-5618 |
+| `resize` | `resize(n, byte)` (a shrink inside a code point stops) | done |
+| `push_back`, `pop_back` | `pushByte`, `popByte`, `pop()` (a code point); `pushCodePoint` | `pushCodePoint` TODO-5568 |
+| `append(sv)`, `append(n, ch)`, `operator+=` | `append("lit")`, `appendView`, `appendBytes`, `appendFilled`; `+=` | `+=` TODO-5643 |
+| `insert`, `erase`, `replace` | `insert`, `erase`, `replace` (byte ranges), `insertFilled`, `insertByte`, `replaceFilled` | done |
+| `operator+` | `a + b` | TODO-5643 |
+| `swap` | `swap(other)` | done |
+| `copy(dst, n, pos)` | `view.copyTo(destination)` | done |
+| `compare`, `==`, `<=>` | `compare(other)`, `equals`; `==` and `<` operators | operators TODO-5643 |
+| `starts_with`, `ends_with`, `contains` | `startsWith`, `endsWith`, `contains` | done |
+| `find`, `rfind` (with `pos`) | `indexOf`, `indexOfFrom`, `lastIndexOf` (-1 when absent; `Maybe` TODO-5642) | done |
+| `find_first_of`, `find_last_of`, `find_first_not_of`, `find_last_not_of` | `findFirstOf`, `findLastOf`, `findFirstNotOf`, `findLastNotOf` (+ `...From`) | done |
+| `to_string`, `stoi`, `stol`, `stod`, `from_chars` | `stringFromI32/I64/U64/F64/...`, `parseI32Into/I64Into/U64Into/F64Into` and `...Or` | done |
+| `to_chars` (radix, precision, shortest round trip) | `appendI64Radix`, `appendF64`, `appendF64Fixed`, `appendF64Scientific`, `appendF32` | done |
+| `std::hash<string>`, `unordered_map<string, V>`, `map<string, V>` | `String` and views as `map` keys, `hash()` | TODO-5625 |
+| `std::format`, `operator<<`, `getline` | `formatText(pattern, args...)`, `joinWith`, `lineAt`, `splitOwned`, `readTextInto` | done |
+| `memcpy`/`memmove`/`memcmp`/`memchr` speed | the `__pstext_move/fill/compare/find` host functions under every copy, compare and search | done |
+| `string_view::remove_prefix`/`remove_suffix`/`substr` | `slice` | done |
 
 Beyond C++: UTF-8 validity, code points, `trim`, `split`, `lines`, `join`, ASCII case, `repeat`, `replaceAll`,
 `Result`-typed parsing.
@@ -307,8 +307,9 @@ is capped at 1 GiB (`reserve` rejects more).
 
 The view is built in stages. `string` is still the static literal type (a module string-table index): print, map
 keys, `File` paths, host parameters and every existing program keep it. Text that is not a literal is viewed through
-the stdlib struct `StringView` (`import /std/text/*`; the name follows `std::string_view`), a pointer to the first
-byte and a byte count. `TextView` is taken by the native-UI widget.
+the stdlib struct `StringView` (`import /std/text/view/*`, a module of its own; the name follows `std::string_view`), a
+pointer to the first byte and a byte count. A program that only makes `String`s imports `/std/text/*` and does not pay
+to compile the view code. `TextView` is taken by the native-UI widget.
 
 - **Making one:** `s.view()` on a `String`, `textOf("literal")` for a literal, `s.slice(a, b)` or `v.slice(a, b)`
   for part of a text, `textFromBytes(bytes)` for bytes that are valid UTF-8. A literal's bytes get an address from the
@@ -328,6 +329,19 @@ byte and a byte count. `TextView` is taken by the native-UI widget.
 - **Code points and case:** `codePointCount()`, `codePointLength(offset)`, `codePointAt(offset)` (an i32), and
   `toAsciiLower()`/`toAsciiUpper()` (a `String`) and `equalsIgnoreAsciiCase(other)`; bytes 128 and up are left alone.
 - **Checking bytes:** `utf8ErrorOffset(data, count)` is the offset of the first byte that starts invalid UTF-8, or -1.
+- **Search by byte set, replace:** `findFirstOf`, `findFirstNotOf`, `findLastOf`, `findLastNotOf` (and `...From(set, pos)`, with
+  `std::string`'s position meaning) return an index or -1; `replaceAll(from, to)` gives a `String`; `toOwned()` copies a
+  view into a `String`; `splitOwned(separator)` gives a `vector<String>`.
+- **Formatting:** `formatText(pattern, args...)` takes views and follows `std::format`: `{}`, `{N}`, `{{`, `}}` and
+  `{:[[fill]align]width}`; `joinWith(separator, parts...)`. Numbers are rendered first with `stringFromI64` and friends
+  (radix 2 to 36; floats as `std::to_chars` writes them) and passed as views.
+- **Files:** `readTextInto(path, out)`, `writeText(path, text)`, `appendText(path, text)` take a view as the path and
+  return 0 or the C errno (`readTextInto` also -1 for invalid UTF-8); they need the `file_read` / `file_write` effects.
+- **Compile cost:** a module is spliced in whole, so `/std/text` (the `String` core) and `/std/text/view` (`StringView`,
+  search, parsing, formatting, files, UTF-8 checks) are separate import roots in `stdlib/std/modules.psmeta`. A program
+  that makes one `String` compiles in 0.15 s (it was 0.12 s before the view code, 0.50 s when both were one module).
+  `s.view()` and `s.slice(a, b)` are members of `String` defined in the view module, and `appendView(out, view)` is a
+  function there.
 - A view is valid while its text is not changed or freed. The loan rules that make that a compile-time guarantee are
   TODO-5569; until then it is the program's responsibility, as with `ReadSlice`.
 - Not yet: `Maybe` and `Result<..., TextError>` results (TODO-5642 and the result lane: the lowerer cannot return a sum

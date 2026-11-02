@@ -2003,6 +2003,7 @@ are left unarchived.
 | TODO-5522 | Builtin vector<T> locals destroy their elements | [2026-10.md](todo_archive/2026-10.md) | 2026-10-06 |
 | TODO-5528 | Native UI C ABI with a headless backend and engine bindings | [2026-10.md](todo_archive/2026-10.md) | 2026-10-08 |
 | TODO-5529 | `/std/ui/native` surface with an `AppEvent` loop | [2026-10.md](todo_archive/2026-10.md) | 2026-10-08 |
+| TODO-5530 | Read and write whole files as text | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 | TODO-5531 | macOS AppKit backend and app runner | [2026-10.md](todo_archive/2026-10.md) | 2026-10-08 |
 | TODO-5532 | Native text editor example | [2026-10.md](todo_archive/2026-10.md) | 2026-10-08 |
 | TODO-5534 | The C++ emitters lower `[host]` calls with scalar and static-text arguments | [2026-10.md](todo_archive/2026-10.md) | 2026-10-22 |
@@ -2081,10 +2082,15 @@ are left unarchived.
 | TODO-5619 | `StringView` search, comparison, trimming, pieces and lines | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 | TODO-5620 | `StringView` numbers, code points and ASCII case | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 | TODO-5622 | Optimized C++ emitters run the `string` view | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
+| TODO-5623 | `String` mutation parity: fill, resize, front/back, pop, swap, lossy bytes | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
+| TODO-5624 | `StringView` byte-set search and `replaceAll` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
+| TODO-5626 | Number to text parity: radix, precision, shortest round trip | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
+| TODO-5627 | `format`, `join` and split into owned pieces | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 | TODO-5628 | std::string conformance and speed gate for `String` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 | TODO-5629 | Bulk byte operations under `String` and `Slice<u8>` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 | TODO-5639 | A binding whose declared type is an imported short name skipped the Copy helper | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 | TODO-5640 | String heap hot paths: O(1) frees, chunk index, region cache | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
+| TODO-5644 | Split `/std/text` so a plain `String` program compiles fast | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 
 <!-- INDEX-END -->
 

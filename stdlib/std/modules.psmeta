@@ -9,3 +9,11 @@ source_file = std/gfx/gfx.prime
 [module]
 root = /std/gfx/experimental
 source_file = std/gfx/experimental.prime
+
+[module]
+root = /std/text
+source_file = std/text/string.prime
+
+[module]
+root = /std/text/view
+source_file = std/text/view.prime
