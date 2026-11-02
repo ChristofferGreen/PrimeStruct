@@ -115,6 +115,40 @@ TEST_CASE("a copy parameter gives its own text") {
                "  return(if(ok, then() { 1i32 }, else() { 0i32 }))", duplicate) == 1);
 }
 
+// A binding from another binding is a copy: the text is not shared and each String frees its own block. The type is
+// the imported short name `String`, which the lowerer used to look up as a raw name and so missed the Copy helper
+// (TODO-5639: both Strings then pointed at one block and the VM stopped on the second free).
+TEST_CASE("a binding from another String binding owns its own text") {
+  CHECK(exitOf("  [String mut] a{/std/text/stringFrom(\"abc\")}\n"
+               "  [String mut] b{a}\n"
+               "  b.append(\"def\")\n"
+               "  a.pushByte(convert<u8>(120i32))\n"
+               "  [bool] ok{a.equalsText(\"abcx\") && b.equalsText(\"abcdef\") && a.count() == 4i32 && b.count() == 6i32}\n"
+               "  return(if(ok, then() { 1i32 }, else() { 0i32 }))") == 1);
+}
+
+TEST_CASE("bindings from bindings of every spelling copy and free once") {
+  CHECK(exitOf("  [/std/text/String mut] a{/std/text/stringFrom(\"abc\")}\n"
+               "  [String mut] b{a}\n"
+               "  [/std/text/String] c{b}\n"
+               "  [String] d{c}\n"
+               "  b.append(\"!\")\n"
+               "  [bool] ok{a.equalsText(\"abc\") && b.equalsText(\"abc!\") && c.equalsText(\"abc\") && d.equalsText(\"abc\")}\n"
+               "  return(if(ok, then() { 1i32 }, else() { 0i32 }))") == 1);
+}
+
+TEST_CASE("copying a String binding in a loop leaves the string heap empty") {
+  CHECK(exitOf("  [String mut] source{/std/text/stringFrom(\"a name long enough to need a heap block of its own\")}\n"
+               "  [i32 mut] total{0i32}\n"
+               "  for([i32 mut] i{0i32}, i < 300i32, i++) {\n"
+               "    [String mut] copy{source}\n"
+               "    copy.append(\"!\")\n"
+               "    total = total + copy.count()\n"
+               "  }\n"
+               "  [bool] ok{source.count() == 50i32 && total == 300i32 * 51i32}\n"
+               "  return(if(ok, then() { 1i32 }, else() { 0i32 }))") == 1);
+}
+
 TEST_CASE("reserve gives the class that holds the request and shrinkToFit gives it back") {
   CHECK(exitOf("  [String mut] s{/std/text/stringFrom(\"hi\")}\n"
                "  s.reserve(100i32)\n"

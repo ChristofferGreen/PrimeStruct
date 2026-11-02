@@ -124,7 +124,6 @@ of sync with them.
 | TODO-5636 | Interned `Symbol` for names and tags | blocked | string-keys |
 | TODO-5637 | Fold string operations on literals at compile time | blocked | string-quality |
 | TODO-5638 | Shared immutable strings for threads (`SharedString`) | deferred | string-concurrency |
-| TODO-5639 | Binding a `String` from another binding aliases it and frees the block twice | ready | lifecycle-strings |
 | TODO-5603 | Startup audit: what a launch loads and does | ready | startup |
 | TODO-5586 | Native String heap: pooled blocks, statistics and limit | deferred | native-backend-strings |
 | TODO-5574 | Simple C++ emitters run bytes and strings | deferred | string-backends |
@@ -179,7 +178,7 @@ of sync with them.
 
 ### Priority Lanes
 
-- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5540, TODO-5570, TODO-5569, TODO-5618, TODO-5619, TODO-5620, TODO-5621, TODO-5622, TODO-5568, TODO-5639, TODO-5629, TODO-5623, TODO-5624, TODO-5625, TODO-5626, TODO-5627, TODO-5631, TODO-5630, TODO-5632, TODO-5633, TODO-5634, TODO-5635, TODO-5636, TODO-5637, TODO-5638, TODO-5530, TODO-5567, TODO-5574
+- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5540, TODO-5570, TODO-5569, TODO-5618, TODO-5619, TODO-5620, TODO-5621, TODO-5622, TODO-5568, TODO-5629, TODO-5623, TODO-5624, TODO-5625, TODO-5626, TODO-5627, TODO-5631, TODO-5630, TODO-5632, TODO-5633, TODO-5634, TODO-5635, TODO-5636, TODO-5637, TODO-5638, TODO-5530, TODO-5567, TODO-5574
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Startup (docs/NativeUiPlan.md section 16): TODO-5603
@@ -387,10 +386,10 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - created_at: 2026-11-02
   - phase: Strings and slices (docs/spec/strings-and-views.md, Parity with `std::string`), speed
   - parallel_track: string-quality
-  - scope: `String.append`, `replace`, `Copy`, `substr`, `equalsText` and the slice operations move bytes in `.prime` loops of `textLoad`/`textStore` today. Add copy, move (overlap-safe), fill, compare and find-byte as IR opcodes (or host-kernel calls) implemented with `memcpy`/`memmove`/`memset`/`memcmp`/`memchr` in the VM, fast kernel, JIT and the optimized C++ emitters, expose them as `/std/intrinsics/memory` helpers over `Pointer<u8>`, and rebuild the `String` and `Slice<u8>` operations on them. Bounds stay checked once per call.
+  - scope: `String.reserve/shrinkToFit/appendString/replace/substr/Copy` move bytes in `.prime` loops of `textLoad`/`textStore` today (appending or comparing a string literal reads the module string table, not a byte region, so those stay per byte until the string view of TODO-5540). Add copy, move (overlap-safe), fill, compare and find-byte as IR opcodes implemented as `__pstext_move/fill/compare/find` host functions answered by the VM and the optimized C++ runtime (no new opcode, no PSIR change) and by plain byte loops in the arm64 native emitter, expose them as `/std/text` helpers (`moveBytes`, `fillBytes`, `compareBytes`, `findByte`), and rebuild the `String` operations on them. `Slice<u8>` follows with the string view (TODO-5540), since generic slice code cannot specialize on `u8` yet. Bounds stay checked once per call.
   - acceptance:
     - VM and `optexe` tests incl. overlapping moves and out-of-range faults; the TODO-5628 benchmarks improve and the numbers are recorded; PSIR version note if opcodes are added; full release gate green
-  - stop_rule: the byte primitives and the String/Slice<u8> operations that use them.
+  - stop_rule: the byte primitives and the String operations that use them; Slice<u8> follows the string view.
 
 - [ ] TODO-5623: `String` mutation parity: fill, resize, front/back, pop, swap, lossy bytes
   - owner: ai
@@ -558,17 +557,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - acceptance:
     - to be set when the leaf is un-deferred
   - stop_rule: not started.
-
-- [ ] TODO-5639: Binding a `String` from another binding aliases it and frees the block twice
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-02
-  - phase: Strings and slices (docs/spec/strings-and-views.md), found by the TODO-5628 suite
-  - parallel_track: lifecycle-strings
-  - scope: `[String mut] s{stringFrom("hello")}` then `[String mut] c{s}` bit-copies the struct: `s` and `c` share one heap block, `c.append("!!")` grows the text in place while `s.count()` stays 5, and at scope end the VM stops with `string heap block freed twice` (size 1 to 31) or `invalid string heap free address` (32 and up); `optexe` aborts the same way. docs/spec/value-lifecycle.md says assignments and bindings consume a value unless its type is `Copy`, so `c{s}` must either move `s` (the `Move` helper runs, `s` is dead and a later use of `s` is a diagnostic) or, if the language decides bindings of lifecycle types copy, route through `Copy`. Decide per the spec's move-by-default rule, implement it for named bindings, assignments (`c = s`) and by-value arguments, and apply it to every struct with a `Destroy` helper, not only `String`. The documented workaround, a `[String copy]` parameter, keeps working.
-  - acceptance:
-    - the repro programs (`[String] c{s}`, `c = s`, passing `s` by value) no longer fault and never alias; a use after the move is a diagnostic; positive tests for `String` and a user struct with `Destroy`; the TODO-5628 suite can use the binding form; full release gate green
-  - stop_rule: lifecycle of named-binding moves and copies on the front end and VM; native and C++ follow the existing lowering.
 
 - [ ] TODO-5603: Startup audit: what a launch loads and does
   - owner: ai

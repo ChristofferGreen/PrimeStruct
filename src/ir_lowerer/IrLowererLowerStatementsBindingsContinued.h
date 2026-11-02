@@ -377,13 +377,13 @@
           ir_lowerer::emitDisarmTemporaryStructAfterCopy(
               [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
               srcPtrLocal,
-              structTypeName);
+              info.structTypeName);
         } else if (!info.isMutable && ir_lowerer::emitDisarmTemporaryStructAfterCopy(
                                           [&](IrOpcode op, uint64_t imm) {
                                             function.instructions.push_back({op, imm});
                                           },
                                           info.index,
-                                          structTypeName)) {
+                                          info.structTypeName)) {
           // A read-only collection binding is a view of the place: it shares the storage
           // without owning it, so its scope has nothing to destroy.
           localsIn.emplace(stmt.name, info);
@@ -395,7 +395,7 @@
           if (!ir_lowerer::emitStructCopyHelpersFromPtrs(
                   info.index,
                   srcPtrLocal,
-                  structTypeName,
+                  info.structTypeName,
                   [&](const std::string &path) -> const Definition * {
                     auto copyIt = defMap.find(path + "/Copy");
                     return copyIt == defMap.end() ? nullptr : copyIt->second;
