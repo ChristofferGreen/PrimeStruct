@@ -103,7 +103,12 @@ of sync with them.
 | TODO-5567 | Packed `array<u8>` | ready | bytes |
 | TODO-5569 | Slice loans, escapes and returned borrows | ready | slices |
 | TODO-5570 | Slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views | ready | slices |
-| TODO-5540 | `string` as the UTF-8 text view | blocked | string-view |
+| TODO-5540 | `string` as a static UTF-8 view: literals, count, bytes, equality | ready | string-view |
+| TODO-5618 | `string` borrowed from `String`, `view()`, `slice()`, `utf8()` | blocked | string-view |
+| TODO-5619 | `string` search, comparison and trimming | blocked | string-view |
+| TODO-5620 | `string` parsing, code points and ASCII case | blocked | string-view |
+| TODO-5621 | Static-text field rule and `run-time text requires String` | blocked | string-view |
+| TODO-5622 | Optimized C++ emitters run the `string` view | blocked | string-backends |
 | TODO-5603 | Startup audit: what a launch loads and does | ready | startup |
 | TODO-5586 | Native String heap: pooled blocks, statistics and limit | deferred | native-backend-strings |
 | TODO-5574 | Simple C++ emitters run bytes and strings | deferred | string-backends |
@@ -136,27 +141,29 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5567 (bytes): packed `array<u8>`
+- TODO-5540 (string-view): `string` as a static UTF-8 view: literals, count, bytes, equality
 - TODO-5570 (slices): slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views
 - TODO-5603 (startup): startup audit: what a launch loads and does
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5510 (control-returns): `return` returns from pick arms and lambdas correctly
 - TODO-5524 (result-error-structs): int-backed error structs round-trip through stdlib Result sums
+- TODO-5567 (bytes): packed `array<u8>`
 
 ### Immediate Next 10
 
-1. TODO-5567
+1. TODO-5540
 2. TODO-5570
 3. TODO-5603
 4. TODO-5536
 5. TODO-5535
 6. TODO-5510
 7. TODO-5524
+8. TODO-5567
 
 ### Priority Lanes
 
-- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5567, TODO-5570, TODO-5569, TODO-5540, TODO-5568, TODO-5530, TODO-5574
+- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5540, TODO-5570, TODO-5569, TODO-5618, TODO-5619, TODO-5620, TODO-5621, TODO-5622, TODO-5568, TODO-5530, TODO-5567, TODO-5574
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Startup (docs/NativeUiPlan.md section 16): TODO-5603
@@ -275,7 +282,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 - [ ] TODO-5568: String conveniences: operators, numbers, push of code points
   - owner: ai
   - status: blocked
-  - blocked_on: TODO-5540
+  - blocked_on: TODO-5618
   - created_at: 2026-10-22
   - phase: Strings and slices (docs/spec/strings-and-views.md), follow-up to the owned `String`
   - parallel_track: string-owned
@@ -284,17 +291,78 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - VM tests for each operation, including invalid UTF-8 and the borrow rules; full release gate green
   - stop_rule: the owned-text conveniences on the VM; native and C++ are TODO-5574.
 
-- [ ] TODO-5540: `string` as the UTF-8 text view
+- [ ] TODO-5540: `string` as a static UTF-8 view: literals, count, bytes, equality
   - owner: ai
   - status: ready
   - created_at: 2026-10-08
-  - phase: Strings and slices (docs/spec/strings-and-views.md)
+  - phase: Strings and slices (docs/spec/strings-and-views.md), first of six leaves for the text view
   - parallel_track: string-view
-  - scope: Make `string` the borrowed read-only UTF-8 view: literals as static views, implicit borrow from `String`, `utf8(bytes)`, byte-offset indexing with code-point boundary checks, the text operations (bytes, code points, lines, split, trim, ASCII case, parsing, `+`), the static-text rule for `string` fields, and the `run-time text requires String` diagnostic.
+  - scope: Give `string` a view representation (pointer and byte count, like `ReadSlice<u8>`) in place of today's module string-table index, and make literals static views of constant data the VM can address as bytes (`LoadStringByteDynamic` and the `PrintString*`/`FileWriteString*` opcodes are the existing table-index consumers to migrate or keep behind the literal case). Cover `count()`, `empty()`, `[i]`/`at(i)` as `u8`, `==`/`!=`, `bytes() -> Slice<u8, Read>`, printing, `[host]` string parameters and map string keys, so every program that takes `[string]`, prints or returns literals is unchanged. Decide and record in docs/spec/strings-and-views.md how static literal data is addressed in the VM and in PSIR (the PSIR version changes if the format does).
   - acceptance:
-    - VM tests for each operation and diagnostic; the existing test suite passes with `string` parameters and literals unchanged
+    - VM tests for each operation on literals, literal-backed bindings and `string` parameters; the existing suite passes with `string` parameters and literals unchanged; PSIR change noted with a migration note if the format moves
     - full release gate green
-  - stop_rule: the text view on the VM.
+  - stop_rule: the view type and static literals on the VM; borrowing from `String`, search, parsing and the field rule are TODO-5618 to TODO-5621; compiled backends are TODO-5622.
+
+- [ ] TODO-5618: `string` borrowed from `String`, `view()`, `slice()`, `utf8()`
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5540
+  - depends_on: TODO-5569
+  - created_at: 2026-10-30
+  - phase: Strings and slices (docs/spec/strings-and-views.md), second of six leaves for the text view
+  - parallel_track: string-view
+  - scope: The ways to make a non-literal `string`: the implicit borrow of a `String` where a `string` is expected, `text.view()`, `text.slice(start, end)` on `String` and `string` (byte offsets; a cut inside a code point is a compile error when known and a fault otherwise), and `utf8(bytes)` returning `Result<string, TextError>` (defines `TextError`). A borrowed `string` is a loan on the `String` under the TODO-5569 rules (`borrowed binding: <root>`, returned borrows).
+  - acceptance:
+    - VM tests for each constructor including multi-byte text, a cut inside a code point and invalid UTF-8; negative tests for mutating or moving a `String` while a `string` borrowed from it is live; full release gate green
+  - stop_rule: construction and borrowing of the view on the VM.
+
+- [ ] TODO-5619: `string` search, comparison and trimming
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5540
+  - created_at: 2026-10-30
+  - phase: Strings and slices (docs/spec/strings-and-views.md), third of six leaves for the text view
+  - parallel_track: string-view
+  - scope: The read-only slice operations on `string` with `string` or `u8` arguments (`find`, `rfind`, `contains`, `startsWith`, `endsWith`, `count(value)`), ordered comparison (`<`, `<=`, `>`, `>=` byte-wise, which lifts the "ordered string comparisons still require the C++ emitter" limit on the VM), `trim`, `trimStart`, `trimEnd`, and the pieces of `split(string)` and `lines()` as views of the same text. Reuse `ReadSlice<u8>` operations rather than writing a second copy.
+  - acceptance:
+    - VM tests for each operation on empty, ASCII, multi-byte and no-match inputs, and for `split`/`lines` with leading, trailing and repeated separators and `\r\n` line ends; full release gate green
+  - stop_rule: the operations on the VM; parsing and case are TODO-5620.
+
+- [ ] TODO-5620: `string` parsing, code points and ASCII case
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5618
+  - created_at: 2026-10-30
+  - phase: Strings and slices (docs/spec/strings-and-views.md), fourth of six leaves for the text view
+  - parallel_track: string-view
+  - scope: `parseI32()`, `parseI64()` and `parseF64()` returning `Result<T, TextError>` (empty text, a sign alone, junk, trailing bytes and overflow are errors), `codePoints()` yielding `u32` code points with their byte offsets, `codePointCount()`, `toAsciiLower()`/`toAsciiUpper()` returning `String`, and `equalsIgnoreAsciiCase(string)`.
+  - acceptance:
+    - VM tests for each operation including the error cases listed above and 1- to 4-byte code points; full release gate green
+  - stop_rule: the operations on the VM.
+
+- [ ] TODO-5621: Static-text field rule and `run-time text requires String`
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5618
+  - created_at: 2026-10-30
+  - phase: Strings and slices (docs/spec/strings-and-views.md), fifth of six leaves for the text view
+  - parallel_track: string-view
+  - scope: A `string` struct field holds static text only: assigning a borrowed `string` to one is rejected (`string field requires static text; use String`). Where a `string` would have to own run-time text (a binding, field, return or container element built from host results or built text) report `run-time text requires String`. Slices and views follow the escape rules of TODO-5569; this leaf only adds the text-specific diagnostics and migrates stdlib and examples that trip them.
+  - acceptance:
+    - a negative test per diagnostic and a positive test per allowed shape; stdlib, examples and corpus compile; full release gate green
+  - stop_rule: the two diagnostics and the migrations they force.
+
+- [ ] TODO-5622: Optimized C++ emitters run the `string` view
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5620
+  - created_at: 2026-10-30
+  - phase: Strings and slices (docs/spec/strings-and-views.md), last of six leaves for the text view
+  - parallel_track: string-backends
+  - scope: Run the programs of TODO-5540 and TODO-5618 to TODO-5621 through `--emit=optcpp` and `--emit=optexe` (the Linux build that web servers and containers use), including `[host]` `string` parameters, so the view behaves the same there as on the VM. Rejects stay explicit for backends that lack it (simple C++ emitters: TODO-5574; native x86_64 and arm64: TODO-5581 to TODO-5586; Wasm, GLSL).
+  - acceptance:
+    - the string-view compile-run programs also pass through `--emit=optexe` with the VM's output and exit codes; full release gate green
+  - stop_rule: the optimized C++ emitters only.
 
 - [ ] TODO-5603: Startup audit: what a launch loads and does
   - owner: ai
@@ -360,7 +428,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 - [ ] TODO-5530: Read and write whole files as String
   - owner: ai
   - status: blocked
-  - blocked_on: TODO-5540
+  - blocked_on: TODO-5618
   - created_at: 2026-10-08
   - phase: Strings and slices (docs/spec/strings-and-views.md)
   - parallel_track: file-text
