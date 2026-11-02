@@ -109,7 +109,6 @@ of sync with them.
 | TODO-5620 | `string` parsing, code points and ASCII case | blocked | string-view |
 | TODO-5621 | Static-text field rule and `run-time text requires String` | blocked | string-view |
 | TODO-5622 | Optimized C++ emitters run the `string` view | blocked | string-backends |
-| TODO-5628 | std::string conformance and speed gate for `String` | ready | string-quality |
 | TODO-5629 | Bulk byte operations under `String` and `Slice<u8>` | ready | string-quality |
 | TODO-5623 | `String` mutation parity: fill, resize, front/back, pop, swap, lossy bytes | blocked | string-owned |
 | TODO-5624 | `string` byte-set search: find_first_of and friends | blocked | string-view |
@@ -125,6 +124,7 @@ of sync with them.
 | TODO-5636 | Interned `Symbol` for names and tags | blocked | string-keys |
 | TODO-5637 | Fold string operations on literals at compile time | blocked | string-quality |
 | TODO-5638 | Shared immutable strings for threads (`SharedString`) | deferred | string-concurrency |
+| TODO-5639 | Binding a `String` from another binding aliases it and frees the block twice | ready | lifecycle-strings |
 | TODO-5603 | Startup audit: what a launch loads and does | ready | startup |
 | TODO-5586 | Native String heap: pooled blocks, statistics and limit | deferred | native-backend-strings |
 | TODO-5574 | Simple C++ emitters run bytes and strings | deferred | string-backends |
@@ -164,7 +164,7 @@ of sync with them.
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5510 (control-returns): `return` returns from pick arms and lambdas correctly
 - TODO-5524 (result-error-structs): int-backed error structs round-trip through stdlib Result sums
-- TODO-5628 (string-quality): std::string conformance and speed gate for `String`
+- TODO-5629 (string-quality): bulk byte operations under `String` and `Slice<u8>`
 
 ### Immediate Next 10
 
@@ -175,11 +175,11 @@ of sync with them.
 5. TODO-5535
 6. TODO-5510
 7. TODO-5524
-8. TODO-5628
+8. TODO-5629
 
 ### Priority Lanes
 
-- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5540, TODO-5570, TODO-5569, TODO-5618, TODO-5619, TODO-5620, TODO-5621, TODO-5622, TODO-5568, TODO-5628, TODO-5629, TODO-5623, TODO-5624, TODO-5625, TODO-5626, TODO-5627, TODO-5631, TODO-5630, TODO-5632, TODO-5633, TODO-5634, TODO-5635, TODO-5636, TODO-5637, TODO-5638, TODO-5530, TODO-5567, TODO-5574
+- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5540, TODO-5570, TODO-5569, TODO-5618, TODO-5619, TODO-5620, TODO-5621, TODO-5622, TODO-5568, TODO-5639, TODO-5629, TODO-5623, TODO-5624, TODO-5625, TODO-5626, TODO-5627, TODO-5631, TODO-5630, TODO-5632, TODO-5633, TODO-5634, TODO-5635, TODO-5636, TODO-5637, TODO-5638, TODO-5530, TODO-5567, TODO-5574
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Startup (docs/NativeUiPlan.md section 16): TODO-5603
@@ -380,17 +380,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - the string-view compile-run programs also pass through `--emit=optexe` with the VM's output and exit codes; full release gate green
   - stop_rule: the optimized C++ emitters only.
 
-- [ ] TODO-5628: std::string conformance and speed gate for `String`
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-02
-  - phase: Strings and slices (docs/spec/strings-and-views.md, Parity with `std::string`), quality gate
-  - parallel_track: string-quality
-  - scope: Pin `String` to `std::string` with data. Add a differential suite: each operation of the Parity table that exists is run on the VM and through `--emit=optexe` and compared with a C++ reference program that applies the same operations to `std::string` (append, insert, erase, replace, substr, reserve/shrink, find, compare, edge cases at 0, 1, 31, 32 and 64 KiB). Add benchmarks (append in a loop, concatenation, many short strings, `find` in a long text, copy) timed against `std::string` and recorded in `benchmarks/benchmark_baseline.json` style with a budget. Fix every divergence the suite finds in the current `String` API. Record the limits found (1 GiB cap from `i32` counts, no inline small-string storage) in the spec's Parity section.
-  - acceptance:
-    - the suite runs in release validation under the 5 second doctest guardrail (split otherwise); benchmark numbers for `String` versus `std::string` are in docs/spec/strings-and-views.md with a regression budget; full release gate green
-  - stop_rule: harness, baseline numbers and fixes to the existing API; new operations belong to TODO-5619 to TODO-5627.
-
 - [ ] TODO-5629: Bulk byte operations under `String` and `Slice<u8>`
   - owner: ai
   - status: ready
@@ -569,6 +558,17 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - acceptance:
     - to be set when the leaf is un-deferred
   - stop_rule: not started.
+
+- [ ] TODO-5639: Binding a `String` from another binding aliases it and frees the block twice
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-02
+  - phase: Strings and slices (docs/spec/strings-and-views.md), found by the TODO-5628 suite
+  - parallel_track: lifecycle-strings
+  - scope: `[String mut] s{stringFrom("hello")}` then `[String mut] c{s}` bit-copies the struct: `s` and `c` share one heap block, `c.append("!!")` grows the text in place while `s.count()` stays 5, and at scope end the VM stops with `string heap block freed twice` (size 1 to 31) or `invalid string heap free address` (32 and up); `optexe` aborts the same way. docs/spec/value-lifecycle.md says assignments and bindings consume a value unless its type is `Copy`, so `c{s}` must either move `s` (the `Move` helper runs, `s` is dead and a later use of `s` is a diagnostic) or, if the language decides bindings of lifecycle types copy, route through `Copy`. Decide per the spec's move-by-default rule, implement it for named bindings, assignments (`c = s`) and by-value arguments, and apply it to every struct with a `Destroy` helper, not only `String`. The documented workaround, a `[String copy]` parameter, keeps working.
+  - acceptance:
+    - the repro programs (`[String] c{s}`, `c = s`, passing `s` by value) no longer fault and never alias; a use after the move is a diagnostic; positive tests for `String` and a user struct with `Destroy`; the TODO-5628 suite can use the binding form; full release gate green
+  - stop_rule: lifecycle of named-binding moves and copies on the front end and VM; native and C++ follow the existing lowering.
 
 - [ ] TODO-5603: Startup audit: what a launch loads and does
   - owner: ai

@@ -1,0 +1,21 @@
+import /std/text/*
+
+[return</std/text/String> effects(heap_alloc)]
+duplicate([/std/text/String copy] value) {
+  return(value)
+}
+
+[return<int> effects(heap_alloc, io_out)]
+main() {
+  [String mut] source{/std/text/stringFrom("")}
+  for([i32 mut] i{0i32}, i < 1000i32, i++) {
+    source.pushByte(convert<u8>(97i32 + i - i / 26i32 * 26i32))
+  }
+  [i32 mut] total{0i32}
+  for([i32 mut] round{0i32}, round < 200000i32, round++) {
+    [String] copy{duplicate(source)}
+    total = total + copy.count() + convert<i32>(copy.byteAt(round - round / 1000i32 * 1000i32))
+  }
+  print_line(total)
+  return(0i32)
+}

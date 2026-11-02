@@ -1,0 +1,11 @@
+import /std/text/*
+
+[return<int> effects(heap_alloc, io_out)]
+main() {
+  [String mut] s{/std/text/stringFrom("")}
+  for([i32 mut] i{0i32}, i < 5000000i32, i++) {
+    s.pushByte(convert<u8>(97i32 + i - i / 26i32 * 26i32))
+  }
+  print_line(s.count() + convert<i32>(s.byteAt(2500000i32)))
+  return(0i32)
+}

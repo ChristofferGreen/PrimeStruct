@@ -273,6 +273,32 @@ Where the language's own rules let text be better than the C++ type, and the TOD
 
 Typed, context-escaped text (`Html`, `Url`, ...) was considered and left out for now.
 
+### Measured against `std::string`
+
+`tests/unit/backend_host/test_string_conformance.cpp` (suite `primestruct.backend.string_conformance`) runs seeded
+edit sequences (append, push, insert, erase, replace, substr, reserve, shrink) and sizes around the heap block
+classes (0 to 70000 bytes) on the VM and through `--emit=optexe`, and compares the printed checksums with a
+`std::string` oracle; they agree. `python3 scripts/benchmark_strings.py --build-dir build-release --budget
+benchmarks/strings/budget.json` times `optexe` against `std::string` on the six workloads of `benchmarks/strings/`.
+Medians of repeated runs on macOS arm64 (2026-11-02, release build):
+
+| Workload | `std::string` | `String` (`optexe`) | Ratio | Budget |
+| --- | --- | --- | --- | --- |
+| `append_bytes`: 5M `pushByte` | 0.03 s | 0.18 s | 5x | 9 |
+| `append_chunks`: 200k appends of 43 bytes | 0.03 s | 0.19 s | 7x | 11 |
+| `short_strings`: 1M `"GET"` + 12 bytes | 0.03 s | 2.9 s | 110 to 140x | 190 |
+| `insert_front`: 20k inserts at 0 | 0.03 s | 1.4 s | 43 to 61x | 100 |
+| `copy_text`: 200k copies of 1000 bytes | 0.03 s | 1.0 to 1.2 s | 15 to 35x | 56 |
+| `replace_middle`: 100k replaces | 0.03 s | 1.1 to 1.5 s | 39 to 52x | 85 |
+
+The gap is the quality work still to do. Every byte move is a `.prime` loop (TODO-5629) and every non-empty `String`
+takes a heap block. Re-measure `short_strings` after TODO-5629 before deciding whether a small-string form is worth
+it: much of that ratio is per-call overhead, not allocation. Lower a budget whenever its ratio drops.
+
+Found by the suite: a binding initialized from another `String` binding aliases the heap block and frees it twice
+(TODO-5639); the supported way to duplicate text is a `[String copy]` parameter. Known limits: counts are `i32`, so text
+is capped at 1 GiB (`reserve` rejects more).
+
 ## Host functions and embedding
 
 - A `[host]` parameter may be `string` or `String`; the host receives a UTF-8 pointer and length. A `String` (always

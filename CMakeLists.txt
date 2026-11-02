@@ -1344,6 +1344,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/test_main.cpp
     tests/unit/backend_host/test_cpp_host_calls.cpp
     tests/unit/backend_host/test_cpp_strings.cpp
+    tests/unit/backend_host/test_string_conformance.cpp
     tests/unit/backend_host/test_cpp_native_ui.cpp
   )
   add_dependencies(PrimeStruct_cpp_host_call_tests primec)
@@ -1358,7 +1359,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   add_test(
     NAME PrimeStruct_cpp_host_calls
     COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
-            "--test-suite=primestruct.backend.cpp_host_calls,primestruct.backend.cpp_strings"
+            "--test-suite=primestruct.backend.cpp_host_calls,primestruct.backend.cpp_strings,primestruct.backend.string_conformance"
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_cpp_host_calls

@@ -1,0 +1,11 @@
+import /std/text/*
+
+[return<int> effects(heap_alloc, io_out)]
+main() {
+  [String mut] s{/std/text/stringFrom("")}
+  for([i32 mut] i{0i32}, i < 20000i32, i++) {
+    s.insert(0i32, "x")
+  }
+  print_line(s.count() + convert<i32>(s.byteAt(19999i32)))
+  return(0i32)
+}

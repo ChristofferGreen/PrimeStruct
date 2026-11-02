@@ -1,0 +1,9 @@
+{
+  "notes": "Upper limits for optexe time / std::string time, about 1.6x above the worst ratio seen in repeated runs on 2026-11-02 (macOS arm64, release build, median of 7 after a warm-up launch): append_bytes 5.2-5.4, append_chunks 6.7-6.9, short_strings 112-117, insert_front 43-61, copy_text 33-35, replace_middle 39-52. Every String byte move is a .prime loop and every non-empty String takes a heap block; TODO-5629 (bulk byte opcodes) and the small-string decision of TODO-5628 should bring these down. Tighten a limit whenever its ratio improves.",
+  "append_bytes": {"max_optexe_over_std": 9.0},
+  "append_chunks": {"max_optexe_over_std": 11.0},
+  "short_strings": {"max_optexe_over_std": 190.0},
+  "insert_front": {"max_optexe_over_std": 100.0},
+  "copy_text": {"max_optexe_over_std": 56.0},
+  "replace_middle": {"max_optexe_over_std": 85.0}
+}
