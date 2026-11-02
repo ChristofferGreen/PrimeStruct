@@ -519,7 +519,19 @@ inline bool inferBaseSetupSemanticFieldAccessKind(const Expr &receiver,
   }
   hasSemanticReceiverOut = true;
   std::vector<std::string> candidateStructPaths;
-  const std::string trimmedReceiverType = trimTemplateTypeText(receiverType);
+  std::string trimmedReceiverType = trimTemplateTypeText(receiverType);
+  {
+    // The receiver of an inlined method is recorded as `Reference<Type>`: its fields are the fields of `Type`. Looking the
+    // wrapped text up as a struct path fails, and a failed lookup leaves a layout error behind.
+    std::string wrapper;
+    std::string wrapped;
+    if (splitTemplateTypeName(trimmedReceiverType, wrapper, wrapped)) {
+      const std::string wrapperName = trimTemplateTypeText(wrapper);
+      if (wrapperName == "Reference" || wrapperName == "Pointer") {
+        trimmedReceiverType = trimTemplateTypeText(wrapped);
+      }
+    }
+  }
   if (!trimmedReceiverType.empty()) {
     candidateStructPaths.push_back(trimmedReceiverType);
     if (trimmedReceiverType.front() != '/') {

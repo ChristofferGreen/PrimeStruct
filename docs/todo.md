@@ -111,7 +111,6 @@ of sync with them.
 | TODO-5634 | Unicode normalization and grapheme clusters (lazy) | blocked | string-unicode |
 | TODO-5637 | Fold string operations on literals at compile time | blocked | string-quality |
 | TODO-5638 | Shared immutable strings for threads (`SharedString`) | deferred | string-concurrency |
-| TODO-5642 | Struct methods inside sum-returning functions, and explicit-self definitions | ready | lowering-gaps |
 | TODO-5643 | Operators and index sugar for stdlib types (`String + String`, `s[i]`) | ready | lowering-gaps |
 | TODO-5645 | Real calls for struct-receiver methods (library code is inlined at every call site) | ready | lowering-gaps |
 | TODO-5603 | Startup audit: what a launch loads and does | ready | startup |
@@ -163,7 +162,7 @@ of sync with them.
 
 ### Priority Lanes
 
-- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5570, TODO-5569, TODO-5621, TODO-5568, TODO-5642, TODO-5643, TODO-5645, TODO-5631, TODO-5630, TODO-5632, TODO-5633, TODO-5634, TODO-5637, TODO-5638, TODO-5567, TODO-5574
+- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5570, TODO-5569, TODO-5621, TODO-5568, TODO-5643, TODO-5645, TODO-5631, TODO-5630, TODO-5632, TODO-5633, TODO-5634, TODO-5637, TODO-5638, TODO-5567, TODO-5574
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Startup (docs/NativeUiPlan.md section 16): TODO-5603
@@ -385,17 +384,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - acceptance:
     - to be set when the leaf is un-deferred
   - stop_rule: not started.
-
-- [ ] TODO-5642: Struct methods inside sum-returning functions, and explicit-self definitions
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-02
-  - phase: Strings and slices (docs/spec/strings-and-views.md), found building TODO-5619 and TODO-5620
-  - parallel_track: lowering-gaps
-  - scope: Two lowering gaps stopped `StringView` from returning `Maybe<i32>`. (1) `[return<Maybe<i32>>] f([/std/text/StringView] v, [/std/text/StringView] n) { [i32] c{v.indexOf(n)} if(c < 0i32) { return(none<i32>()) } return(some<i32>(c)) }` fails on the VM with `vm backend cannot resolve struct layout: /Reference</std/text/StringView>`: a call of a non-trivial (not inlined) method on a struct parameter inside a function that returns a sum; `v.count()` works. The same happens for a method of the struct that returns `Maybe<i32>`. (2) A definition `/std/text/StringView/parseI32([/std/text/StringView] self)` written with a full path next to the struct is found by `v.parseI32()`, but once one such call is lowered, a later ordinary method call on another `StringView` in the same function fails with the same layout error. Fix both in the lowerer, and add `Maybe<i32>` results `find`/`rfind`/`parseI32` to `StringView` (and `Maybe<i64>`/`Maybe<f64>` if sums accept those payloads) as the acceptance case.
-  - acceptance:
-    - the two repros compile and run on the VM and `optexe`; `StringView.find(needle)`, `rfind` and `parseI32()` return `Maybe<i32>` and agree with `indexOf`/`lastIndexOf`/`parseI32Into`; full release gate green
-  - stop_rule: lowering of the two shapes and the `Maybe` forms; no new sum features.
 
 - [ ] TODO-5643: Operators and index sugar for stdlib types (`String + String`, `s[i]`)
   - owner: ai

@@ -18,6 +18,19 @@ namespace std {
     return(result)
   }
 
+  // The value of a `some`, or `fallback` for `none`.
+  [public return<T>]
+  /Maybe/unwrapOr<T>([Maybe<T>] self, [T] fallback) {
+    return(pick(self) {
+      none {
+        return(fallback)
+      }
+      some(value) {
+        return(value)
+      }
+    })
+  }
+
   [public return<bool>]
   /Maybe/isEmpty<T>([Maybe<T>] self) {
     return(pick(self) {

@@ -318,12 +318,12 @@ to compile the view code. `TextView` is taken by the native-UI widget.
 - **Access:** `count()`, `empty()`, `byteAt(i)` (faults outside the text), `bytes()` (a `ReadSlice<u8>`), `isBoundary(i)`.
   A slice cut inside a code point, or outside the text, stops the program.
 - **Compare and search** (byte order, which orders UTF-8 by code point): `equals`, `equalsText`, `compare`,
-  `startsWith`, `endsWith`, `contains`, `indexOfByte`, `indexOf`, `indexOfFrom`, `lastIndexOf` (an index or -1). Forward
+  `startsWith`, `endsWith`, `contains`, `indexOfByte`, `indexOf`, `indexOfFrom`, `lastIndexOf` (an index or -1), and `find`, `rfind` as a `Maybe<i32>`. Forward
   search is linear time (two-way matching, no allocation). The bulk work is done by the `__pstext_*` functions of
   the TODO-5629 section.
 - **Pieces:** `trim`, `trimStart`, `trimEnd` (ASCII white space), `splitCount`/`splitPart(separator, n)` (views),
   `lineCount`/`lineAt(n)` (a carriage return before the line feed is dropped; no empty line after a final one).
-- **Numbers:** `parseI32Into(out)`, `parseI64Into(out)`, `parseF64Into(out)` and the `...Or(fallback)` forms; the text
+- **Numbers:** `parseI32Into(out)`, `parseI64Into(out)`, `parseF64Into(out)`, the `...Or(fallback)` forms, and `parseI32()` as a `Maybe<i32>` (`Maybe` has `isSome`, `isEmpty` and `unwrapOr`; `first()` and `last()` give a `Maybe<u8>`); the text
   must be exactly a number in range (floats: a plain decimal, no white space, hexadecimal, inf or nan), and `out` is
   left alone on failure. The float conversion is the C library's, correctly rounded (`__pstext_parse_f64`).
 - **Code points and case:** `codePointCount()`, `codePointLength(offset)`, `codePointAt(offset)` (an i32), and
@@ -351,9 +351,8 @@ to compile the view code. `TextView` is taken by the native-UI widget.
   function there.
 - A view is valid while its text is not changed or freed. The loan rules that make that a compile-time guarantee are
   TODO-5569; until then it is the program's responsibility, as with `ReadSlice`.
-- Not yet: `Maybe` and `Result<..., TextError>` results (TODO-5642 and the result lane: the lowerer cannot return a sum
-  from a function that calls a struct method, so searches return -1 and parses fill an out parameter), the native
-  backends for `__pstext_literal` and the float functions (TODO-5622 and its native follow-ups), and unifying `string`
+- Not yet: `Result<..., TextError>` results (the result lane, TODO-5524 to TODO-5526), the native backends for
+  `__pstext_literal` and the float functions, and unifying `string`
   and `StringView` into the single type described above (TODO-5621).
 
 ## Host functions and embedding

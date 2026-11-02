@@ -3,6 +3,7 @@
 // makes Strings (`import /std/text/*`) does not pay to compile it.
 
 import /std/panic/*
+import /std/maybe/*
 import /std/text/*
 import /std/collections/slice/*
 import /std/collections/vector/*
@@ -289,6 +290,43 @@ namespace std {
       return(out)
     }
 
+    // ---- the same searches as a Maybe (none when absent) ----
+
+    [return<Maybe<i32>>]
+    find([/std/text/view/StringView] needle) {
+      [i32] at{textIndexOfFrom(this.data, this.fieldLength, needle.data, needle.fieldLength, 0i32)}
+      if(at < 0i32) {
+        return(none<i32>())
+      }
+      return(some<i32>(at))
+    }
+
+    [return<Maybe<i32>>]
+    rfind([/std/text/view/StringView] needle) {
+      [i32] at{textLastIndexOf(this.data, this.fieldLength, needle.data, needle.fieldLength)}
+      if(at < 0i32) {
+        return(none<i32>())
+      }
+      return(some<i32>(at))
+    }
+
+    // The first and last byte, or none for empty text.
+    [return<Maybe<u8>>]
+    first() {
+      if(this.fieldLength == 0i32) {
+        return(none<u8>())
+      }
+      return(some<u8>(textLoad(this.data, 0i32)))
+    }
+
+    [return<Maybe<u8>>]
+    last() {
+      if(this.fieldLength == 0i32) {
+        return(none<u8>())
+      }
+      return(some<u8>(textLoad(this.data, this.fieldLength - 1i32)))
+    }
+
     // ---- trimming (ASCII white space: space, tab, line feed, vertical tab, form feed, carriage return) ----
 
     [return<StringView>]
@@ -489,6 +527,19 @@ namespace std {
         return(value)
       }
       return(fallback)
+    }
+
+    // The value as a Maybe: none unless the text is exactly an i32.
+    [return<Maybe<i32>>]
+    parseI32() {
+      [i64 mut] wide{0i64}
+      if(!textParseI64(this.data, this.fieldLength, wide)) {
+        return(none<i32>())
+      }
+      if(wide < -2147483648i64 || wide > 2147483647i64) {
+        return(none<i32>())
+      }
+      return(some<i32>(convert<i32>(wide)))
     }
 
     [return<i32>]

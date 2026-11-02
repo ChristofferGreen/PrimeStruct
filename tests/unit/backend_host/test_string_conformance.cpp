@@ -2012,4 +2012,93 @@ TEST_CASE("Interner numbers texts in first-seen order through optexe with 100000
   CHECK(optexeOutput("interner", internProgram(100000, 20011)) == internOracle(100000, 20011));
 }
 
+// ---- Maybe-valued searches and parses (find, rfind, parseI32, first, last) --------------------------------------
+
+namespace {
+// One call site per probe: the first cases are picked by an if chain, the rest come from the same in-program generator as
+// searchProgram, so the program stays small.
+std::string maybeProgram() {
+  std::string body =
+      "import /std/text/*\nimport /std/text/view/*\nimport /std/maybe/*\n\n"
+      "[return<u64>]\nlcgStep([u64] seed) {\n"
+      "  [u64] raw{seed * 1664525u64 + 1013904223u64}\n"
+      "  return(raw - raw / 4294967296u64 * 4294967296u64)\n}\n\n"
+      "[return<u64>]\nbelow([u64] seed, [u64] bound) {\n"
+      "  [u64] value{seed / 256u64}\n"
+      "  return(value - value / bound * bound)\n}\n\n"
+      "[return<void> effects(io_out)]\nprobe([/std/text/view/StringView] h, [/std/text/view/StringView] n) {\n"
+      "  [Maybe<i32>] forward{h.find(n)}\n  [Maybe<i32>] backward{h.rfind(n)}\n"
+      "  print_line(forward.unwrapOr(-1i32))\n  print_line(h.indexOf(n))\n"
+      "  print_line(backward.unwrapOr(-1i32))\n  print_line(h.lastIndexOf(n))\n}\n\n"
+      "[return<void> effects(io_out)]\nprobeNumber([/std/text/view/StringView] v) {\n"
+      "  [Maybe<i32>] parsed{v.parseI32()}\n  print_line(parsed.unwrapOr(-99i32))\n  print_line(v.parseI32Or(-99i32))\n"
+      "  [Maybe<u8>] head{v.first()}\n  [Maybe<u8>] tail{v.last()}\n"
+      "  print_line(convert<i32>(head.unwrapOr(0u8)))\n  print_line(convert<i32>(tail.unwrapOr(0u8)))\n"
+      "  print_line(if(head.isEmpty(), then() { 1i32 }, else() { 0i32 }))\n}\n\n"
+      "[return<int> effects(heap_alloc, io_out)]\nmain() {\n"
+      "  [String mut] hay{/std/text/stringFrom(\"\")}\n  [String mut] needle{/std/text/stringFrom(\"\")}\n  [u64 mut] seed{987654321u64}\n";
+  const std::vector<SearchCase> cases = searchCases();
+  body += "  for([i32 mut] round{0i32}, round < 10i32, round++) {\n    hay.clear()\n    needle.clear()\n";
+  for (size_t i = 0; i < 10; ++i) {
+    body += "    if(round == " + std::to_string(i) + "i32) {\n      hay.append(\"" + cases[i].hay + "\")\n      needle.append(\"" + cases[i].needle + "\")\n    }\n";
+  }
+  body += "    probe(hay.view(), needle.view())\n  }\n";
+  body +=
+      "  for([i32 mut] round{0i32}, round < 160i32, round++) {\n"
+      "    [u64] alphabet{if(round - round / 3i32 * 3i32 == 1i32, then() { 3u64 }, else() { 2u64 })}\n"
+      "    hay.clear()\n    needle.clear()\n"
+      "    seed = lcgStep(seed)\n    [u64] hayLength{below(seed, 24u64)}\n"
+      "    for([u64 mut] k{0u64}, k < hayLength, k++) {\n"
+      "      seed = lcgStep(seed)\n      hay.pushByte(convert<u8>(97u64 + below(seed, alphabet)))\n    }\n"
+      "    seed = lcgStep(seed)\n    [u64] needleLength{below(seed, 7u64)}\n"
+      "    for([u64 mut] k{0u64}, k < needleLength, k++) {\n"
+      "      seed = lcgStep(seed)\n      needle.pushByte(convert<u8>(97u64 + below(seed, alphabet)))\n    }\n"
+      "    probe(hay.view(), needle.view())\n  }\n";
+  body += "  for([i32 mut] round{0i32}, round < " + std::to_string(IntCases.size()) + "i32, round++) {\n    hay.clear()\n";
+  for (size_t i = 0; i < IntCases.size(); ++i) {
+    body += "    if(round == " + std::to_string(i) + "i32) {\n      hay.append(\"" + IntCases[i] + "\")\n    }\n";
+  }
+  body += "    probeNumber(hay.view())\n  }\n";
+  return body + "  return(0i32)\n}\n";
+}
+
+std::string maybeOracle() {
+  std::string out;
+  for (const SearchCase &testCase : searchCases()) {
+    const size_t found = testCase.hay.find(testCase.needle);
+    const size_t last = testCase.hay.rfind(testCase.needle);
+    const int forward = found == std::string::npos ? -1 : static_cast<int>(found);
+    const int backward = last == std::string::npos ? -1 : static_cast<int>(last);
+    out += std::to_string(forward) + "\n" + std::to_string(forward) + "\n" + std::to_string(backward) + "\n" + std::to_string(backward) + "\n";
+  }
+  for (const std::string &text : IntCases) {
+    std::string digits = text;
+    bool valid = !digits.empty();
+    if (valid && digits[0] == '+') {
+      digits.erase(0, 1);
+      valid = !digits.empty() && digits[0] != '-' && digits[0] != '+';
+    }
+    int64_t wide = 0;
+    if (valid) {
+      const auto parsed = std::from_chars(digits.data(), digits.data() + digits.size(), wide);
+      valid = parsed.ec == std::errc() && parsed.ptr == digits.data() + digits.size();
+    }
+    const int parsedValue = valid && wide >= INT32_MIN && wide <= INT32_MAX ? static_cast<int>(wide) : -99;
+    out += std::to_string(parsedValue) + "\n" + std::to_string(parsedValue) + "\n";
+    out += std::to_string(text.empty() ? 0 : static_cast<unsigned char>(text.front())) + "\n";
+    out += std::to_string(text.empty() ? 0 : static_cast<unsigned char>(text.back())) + "\n";
+    out += std::string(text.empty() ? "1" : "0") + "\n";
+  }
+  return out;
+}
+} // namespace
+
+TEST_CASE("Maybe-valued find, rfind, parseI32, first and last agree with the plain forms on the VM") {
+  CHECK(vmOutput(maybeProgram()) == maybeOracle());
+}
+
+TEST_CASE("Maybe-valued find, rfind, parseI32, first and last agree with the plain forms through optexe") {
+  CHECK(optexeOutput("maybes", maybeProgram()) == maybeOracle());
+}
+
 TEST_SUITE_END();
