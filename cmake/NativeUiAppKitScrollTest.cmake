@@ -10,6 +10,11 @@ foreach(var SOURCE_DIR BUILD_DIR WORK_DIR)
   endif()
 endforeach()
 
+include("${CMAKE_CURRENT_LIST_DIR}/NativeUiTestGuards.cmake")
+if(PRIMESTRUCT_UI_SKIP)
+  return()
+endif()
+
 # This test does not look at the bundle's document types: leave them out, so the bundle cannot become the handler of
 # the user's files in Launch Services.
 set(ENV{PS_NO_DOCUMENT_TYPES} "1")

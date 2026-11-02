@@ -2258,13 +2258,27 @@ bool ps_ui_window_set_edited(uint64_t window, bool edited) {
   return true;
 }
 
+// Brings a window to the front. A snapshot run (the tests) only needs the window to lay out and draw itself into a
+// picture, so there it stays transparent and takes no mouse events: a test run neither flashes windows nor changes
+// the pointer's cursor under the user's hand. (The open-menu snapshot is the one step that cannot be invisible.)
+static void presentWindow(NSWindow *w) {
+  if (!state().snapshotPath.empty()) {
+    w.alphaValue = 0;
+    w.ignoresMouseEvents = YES;
+    w.hasShadow = NO;
+    w.collectionBehavior |= NSWindowCollectionBehaviorTransient | NSWindowCollectionBehaviorIgnoresCycle |
+                            NSWindowCollectionBehaviorStationary;
+  }
+  [w makeKeyAndOrderFront:nil];
+}
+
 bool ps_ui_window_show(uint64_t window) {
   NSWindow *w = usable() ? liveWindow(window) : nil;
   if (w == nil) {
     return false;
   }
   State &s = state();
-  [w makeKeyAndOrderFront:nil];
+  presentWindow(w);
   if (s.snapshotPath.empty()) {
     [NSApp activateIgnoringOtherApps:YES];
   } else if (s.snapshotWindow == 0) {
@@ -2306,7 +2320,7 @@ bool ps_ui_window_add_tab(uint64_t host, uint64_t tab) {
     return false; // a settings window is never a tab
   }
   [h addTabbedWindow:t ordered:NSWindowAbove];
-  [t makeKeyAndOrderFront:nil];
+  presentWindow(t);
   return true;
 }
 
@@ -2365,7 +2379,7 @@ bool ps_ui_window_select(uint64_t window) {
   if (w.tabGroup != nil) {
     w.tabGroup.selectedWindow = w;
   }
-  [w makeKeyAndOrderFront:nil];
+  presentWindow(w);
   return true;
 }
 
@@ -4204,6 +4218,14 @@ const char *ps_ui_save_panel(const char *title, const char *suggestedName) {
   if (!usable()) {
     return s.returnedText.c_str();
   }
+  if (!s.snapshotPath.empty()) {
+    // Snapshot runs have nobody to click and must not show a panel: answer with PRIMESTRUCT_UI_SAVE_PANEL, or cancel.
+    if (const char *answer = std::getenv("PRIMESTRUCT_UI_SAVE_PANEL"); answer != nullptr && *answer != '\0') {
+      s.returnedText = answer;
+      s.panelChosen = true;
+    }
+    return s.returnedText.c_str();
+  }
   @autoreleasepool {
     NSSavePanel *panel = [NSSavePanel savePanel];
     panel.title = toNSString(title);
@@ -4221,6 +4243,19 @@ bool ps_ui_panel_chosen(void) { return state().panelChosen; }
 int32_t ps_ui_alert(const char *message, const char *detail, const char *buttons) {
   if (!usable()) {
     return -1;
+  }
+  if (!state().snapshotPath.empty()) {
+    // Snapshot runs show no dialog. The answer is button PRIMESTRUCT_UI_ALERT_BUTTON (default 1: "Don't Save" in
+    // the editor's Save / Don't Save / Cancel prompt), kept inside the buttons that exist.
+    int32_t count = 1;
+    for (const char *c = buttons; c != nullptr && *c != '\0'; ++c) {
+      count += *c == '\n' ? 1 : 0;
+    }
+    int32_t answer = 1;
+    if (const char *text = std::getenv("PRIMESTRUCT_UI_ALERT_BUTTON"); text != nullptr && *text != '\0') {
+      answer = std::atoi(text);
+    }
+    return std::max<int32_t>(0, std::min<int32_t>(answer, count - 1));
   }
   @autoreleasepool {
     NSAlert *alert = [[NSAlert alloc] init];

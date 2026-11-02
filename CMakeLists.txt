@@ -1499,7 +1499,9 @@ if(PRIMESTRUCT_BUILD_TESTS)
                        PROPERTIES TIMEOUT 2400 LABELS "parallel-safe")
   if(PRIMESTRUCT_BUILD_NATIVE_UI AND APPLE)
     # Bundles an example, runs it against AppKit in snapshot mode and checks the
-    # PNG of the laid-out window (needs a window-server session).
+    # PNG of the laid-out window (needs a window-server session). The windows are invisible; set
+    # PRIMESTRUCT_SKIP_UI_WINDOWS=1 to skip these drivers, PRIMESTRUCT_TEST_UI_INTRUSIVE=1 to also run the
+    # open-menu steps (cmake/NativeUiTestGuards.cmake).
     add_test(
       NAME PrimeStruct_native_ui_appkit_smoke
       COMMAND ${CMAKE_COMMAND}
@@ -1509,7 +1511,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
               -P ${CMAKE_SOURCE_DIR}/cmake/NativeUiAppKitSmokeTest.cmake
     )
     set_tests_properties(PrimeStruct_native_ui_appkit_smoke
-                         PROPERTIES TIMEOUT 300 RESOURCE_LOCK native_ui_appkit)
+                         PROPERTIES TIMEOUT 300 RESOURCE_LOCK native_ui_appkit
+                         SKIP_REGULAR_EXPRESSION "PRIMESTRUCT_UI_SKIPPED")
     # The preview's scroll modes (independent, linear, by block, with the cursor): scroll a view, move the
     # cursor, type, and assert where both views end up (docs/PreviewScrollTests.md).
     add_test(
@@ -1521,7 +1524,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
               -P ${CMAKE_SOURCE_DIR}/cmake/NativeUiAppKitScrollTest.cmake
     )
     set_tests_properties(PrimeStruct_native_ui_appkit_scroll
-                         PROPERTIES TIMEOUT 900 RESOURCE_LOCK native_ui_appkit)
+                         PROPERTIES TIMEOUT 900 RESOURCE_LOCK native_ui_appkit
+                         SKIP_REGULAR_EXPRESSION "PRIMESTRUCT_UI_SKIPPED")
     # The same programs compiled to native executables (no VM, no bytecode).
     add_test(
       NAME PrimeStruct_native_ui_compiled_app
@@ -1532,7 +1536,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
               -P ${CMAKE_SOURCE_DIR}/cmake/NativeUiCompiledAppTest.cmake
     )
     set_tests_properties(PrimeStruct_native_ui_compiled_app
-                         PROPERTIES TIMEOUT 900 RESOURCE_LOCK native_ui_appkit)
+                         PROPERTIES TIMEOUT 900 RESOURCE_LOCK native_ui_appkit
+                         SKIP_REGULAR_EXPRESSION "PRIMESTRUCT_UI_SKIPPED")
   endif()
 
   set(PrimeStructBackendAllTestSources

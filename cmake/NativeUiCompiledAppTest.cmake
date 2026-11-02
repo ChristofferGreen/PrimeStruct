@@ -11,6 +11,11 @@ foreach(var SOURCE_DIR BUILD_DIR WORK_DIR)
   endif()
 endforeach()
 
+include("${CMAKE_CURRENT_LIST_DIR}/NativeUiTestGuards.cmake")
+if(PRIMESTRUCT_UI_SKIP)
+  return()
+endif()
+
 # This test does not look at the bundle's document types: leave them out, so the bundle cannot become the handler of
 # the user's files in Launch Services.
 set(ENV{PS_NO_DOCUMENT_TYPES} "1")
@@ -82,6 +87,10 @@ foreach(binary "${WORK_DIR}/EditorNative" "${BUILD_DIR}/libps_ui_appkit.dylib")
 endforeach()
 set(ENV{PRIMESTRUCT_UI_OPEN} "${SOURCE_DIR}/tests/fixtures/ui/screenshot/showcase.prime")
 foreach(shot gutter code menu tabs)
+  if(shot STREQUAL "menu" AND NOT PRIMESTRUCT_UI_INTRUSIVE)
+    message(STATUS "skipping the open-menu snapshot (it grabs the mouse); set PRIMESTRUCT_TEST_UI_INTRUSIVE=1 to run it")
+    continue()
+  endif()
   set(ENV{PRIMESTRUCT_UI_SNAPSHOT} "${WORK_DIR}/editor_${shot}.png")
   if(shot STREQUAL "menu")
     set(ENV{PRIMESTRUCT_UI_MENU} "File")
