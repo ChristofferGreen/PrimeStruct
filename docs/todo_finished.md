@@ -2080,6 +2080,7 @@ are left unarchived.
 | TODO-5618 | `StringView` slices, bytes and UTF-8 validation | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 | TODO-5619 | `StringView` search, comparison, trimming, pieces and lines | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 | TODO-5620 | `StringView` numbers, code points and ASCII case | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
+| TODO-5622 | Optimized C++ emitters run the `string` view | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 | TODO-5628 | std::string conformance and speed gate for `String` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 | TODO-5629 | Bulk byte operations under `String` and `Slice<u8>` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 | TODO-5639 | A binding whose declared type is an imported short name skipped the Copy helper | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |

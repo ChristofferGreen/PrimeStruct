@@ -104,7 +104,6 @@ of sync with them.
 | TODO-5569 | Slice loans, escapes and returned borrows | ready | slices |
 | TODO-5570 | Slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views | ready | slices |
 | TODO-5621 | Static-text field rule and `run-time text requires String` | blocked | string-view |
-| TODO-5622 | Optimized C++ emitters run the `string` view | blocked | string-backends |
 | TODO-5623 | `String` mutation parity: fill, resize, front/back, pop, swap, lossy bytes | blocked | string-owned |
 | TODO-5624 | `string` byte-set search: find_first_of and friends | blocked | string-view |
 | TODO-5625 | `String` and `string` as map keys, with `hash()` | blocked | string-keys |
@@ -170,7 +169,7 @@ of sync with them.
 
 ### Priority Lanes
 
-- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5570, TODO-5569, TODO-5621, TODO-5622, TODO-5568, TODO-5623, TODO-5624, TODO-5625, TODO-5626, TODO-5627, TODO-5642, TODO-5631, TODO-5630, TODO-5632, TODO-5633, TODO-5634, TODO-5635, TODO-5636, TODO-5637, TODO-5638, TODO-5530, TODO-5567, TODO-5574
+- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5570, TODO-5569, TODO-5621, TODO-5568, TODO-5623, TODO-5624, TODO-5625, TODO-5626, TODO-5627, TODO-5642, TODO-5631, TODO-5630, TODO-5632, TODO-5633, TODO-5634, TODO-5635, TODO-5636, TODO-5637, TODO-5638, TODO-5530, TODO-5567, TODO-5574
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Startup (docs/NativeUiPlan.md section 16): TODO-5603
@@ -309,18 +308,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - acceptance:
     - a negative test per diagnostic and a positive test per allowed shape; stdlib, examples and corpus compile; full release gate green
   - stop_rule: the two diagnostics and the migrations they force.
-
-- [ ] TODO-5622: Optimized C++ emitters run the `string` view
-  - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5620
-  - created_at: 2026-10-30
-  - phase: Strings and slices (docs/spec/strings-and-views.md), last of six leaves for the text view
-  - parallel_track: string-backends
-  - scope: Run the programs of TODO-5540 and TODO-5618 to TODO-5621 through `--emit=optcpp` and `--emit=optexe` (the Linux build that web servers and containers use), including `[host]` `string` parameters, so the view behaves the same there as on the VM. Rejects stay explicit for backends that lack it (simple C++ emitters: TODO-5574; native x86_64 and arm64: TODO-5581 to TODO-5586; Wasm, GLSL).
-  - acceptance:
-    - the string-view compile-run programs also pass through `--emit=optexe` with the VM's output and exit codes; full release gate green
-  - stop_rule: the optimized C++ emitters only.
 
 - [ ] TODO-5623: `String` mutation parity: fill, resize, front/back, pop, swap, lossy bytes
   - owner: ai
