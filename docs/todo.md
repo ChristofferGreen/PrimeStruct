@@ -116,6 +116,15 @@ of sync with them.
 | TODO-5625 | `String` and `string` as map keys, with `hash()` | blocked | string-keys |
 | TODO-5626 | Number to text parity: radix, precision, shortest round trip | blocked | string-owned |
 | TODO-5627 | `format`, `join` and split into owned pieces | blocked | string-owned |
+| TODO-5631 | Structs that hold views (borrow-carrying aggregates) | blocked | string-borrows |
+| TODO-5630 | Request-scoped string arenas: `withStringArena` | blocked | string-arenas |
+| TODO-5632 | Fused `+` chains: one allocation per expression | blocked | string-owned |
+| TODO-5633 | Unicode case mapping and case folding (lazy) | blocked | string-unicode |
+| TODO-5634 | Unicode normalization and grapheme clusters (lazy) | blocked | string-unicode |
+| TODO-5635 | `Secret<String>`: zeroed on destroy, never printed | blocked | string-owned |
+| TODO-5636 | Interned `Symbol` for names and tags | blocked | string-keys |
+| TODO-5637 | Fold string operations on literals at compile time | blocked | string-quality |
+| TODO-5638 | Shared immutable strings for threads (`SharedString`) | deferred | string-concurrency |
 | TODO-5603 | Startup audit: what a launch loads and does | ready | startup |
 | TODO-5586 | Native String heap: pooled blocks, statistics and limit | deferred | native-backend-strings |
 | TODO-5574 | Simple C++ emitters run bytes and strings | deferred | string-backends |
@@ -170,7 +179,7 @@ of sync with them.
 
 ### Priority Lanes
 
-- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5540, TODO-5570, TODO-5569, TODO-5618, TODO-5619, TODO-5620, TODO-5621, TODO-5622, TODO-5568, TODO-5628, TODO-5629, TODO-5623, TODO-5624, TODO-5625, TODO-5626, TODO-5627, TODO-5530, TODO-5567, TODO-5574
+- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5540, TODO-5570, TODO-5569, TODO-5618, TODO-5619, TODO-5620, TODO-5621, TODO-5622, TODO-5568, TODO-5628, TODO-5629, TODO-5623, TODO-5624, TODO-5625, TODO-5626, TODO-5627, TODO-5631, TODO-5630, TODO-5632, TODO-5633, TODO-5634, TODO-5635, TODO-5636, TODO-5637, TODO-5638, TODO-5530, TODO-5567, TODO-5574
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Startup (docs/NativeUiPlan.md section 16): TODO-5603
@@ -330,9 +339,9 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - created_at: 2026-10-30
   - phase: Strings and slices (docs/spec/strings-and-views.md), third of six leaves for the text view
   - parallel_track: string-view
-  - scope: The read-only slice operations on `string` with `string` or `u8` arguments (`find`, `rfind`, `contains`, `startsWith`, `endsWith`, `count(value)`), ordered comparison (`<`, `<=`, `>`, `>=` byte-wise, which lifts the "ordered string comparisons still require the C++ emitter" limit on the VM), `trim`, `trimStart`, `trimEnd`, and the pieces of `split(string)` and `lines()` as views of the same text. Reuse `ReadSlice<u8>` operations rather than writing a second copy.
+  - scope: The read-only slice operations on `string` with `string` or `u8` arguments (`find`, `rfind`, `contains`, `startsWith`, `endsWith`, `count(value)`), ordered comparison (`<`, `<=`, `>`, `>=` byte-wise, which lifts the "ordered string comparisons still require the C++ emitter" limit on the VM), `trim`, `trimStart`, `trimEnd`, with `find`/`rfind` returning `Maybe<i32>` (no `npos`) and a worst-case linear-time search (two-way or equivalent, never quadratic), and the pieces of `split(string)` and `lines()` as views of the same text. Reuse `ReadSlice<u8>` operations rather than writing a second copy.
   - acceptance:
-    - VM tests for each operation on empty, ASCII, multi-byte and no-match inputs, and for `split`/`lines` with leading, trailing and repeated separators and `\r\n` line ends; full release gate green
+    - VM tests for each operation on empty, ASCII, multi-byte and no-match inputs, and for `split`/`lines` with leading, trailing and repeated separators and `\r\n` line ends; a pathological input (`"aaaa...ab"` in `"aaaa...a"`, 1 MB) finishes in linear time; full release gate green
   - stop_rule: the operations on the VM; parsing and case are TODO-5620.
 
 - [ ] TODO-5620: `string` parsing, code points and ASCII case
@@ -425,7 +434,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - created_at: 2026-11-02
   - phase: Strings and slices (docs/spec/strings-and-views.md, Parity with `std::string`)
   - parallel_track: string-keys
-  - scope: Map keys of type `String`/`string` work at run time (today `map` string keys must be literals or literal-backed bindings on VM and native). Define a stable byte hash (`hash() -> u64`, same value on every backend), `Equality` for text, and make `map<String, V>` and the stdlib map (`stdlib/std/collections/map.prime`) accept it with owned keys that are copied in. Headers, query strings and routes are the use case.
+  - scope: Map keys of type `String`/`string` work at run time (today `map` string keys must be literals or literal-backed bindings on VM and native). Define a stable byte hash (`hash() -> u64`, same value on every backend), `Equality` for text, and make `map<String, V>` and the stdlib map (`stdlib/std/collections/map.prime`) accept it with owned keys that are copied in. Headers, query strings and routes are the use case. The hash is keyed (SipHash-class) so crafted keys cannot flood a table: the seed comes from a new `random` effect (add it to the capability taxonomy in docs/spec/backend-type-support.md), and programs without it, tests included, use a fixed seed so runs stay deterministic.
   - acceptance:
     - VM and `optexe` tests: insert, lookup, overwrite, erase and growth with 100k run-time keys, keys built by concatenation, a `string` view used as a lookup key without copying; the hash of fixed inputs is pinned by a test; full release gate green
   - stop_rule: text keys for the stdlib map; ordered containers are not part of this leaf.
@@ -437,7 +446,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - created_at: 2026-11-02
   - phase: Strings and slices (docs/spec/strings-and-views.md, Parity with `std::string`)
   - parallel_track: string-owned
-  - scope: What `std::to_chars`/`std::format` give beyond `String.from(x)`: `String.from(x, radix)` for integers (2 to 36), fixed/scientific `formatF64(x, precision)`, shortest round-trip text for `f32`/`f64` (the default of `String.from(f64)`), `parseU64` and radix parsing, and exact text for `NaN` and infinities. The output must match `std::to_chars` and the C++ reference of TODO-5628 for a fixed table of values.
+  - scope: What `std::to_chars`/`std::format` give beyond `String.from(x)`: `String.from(x, radix)` for integers (2 to 36), fixed/scientific `formatF64(x, precision)`, shortest round-trip text for `f32`/`f64` (the default of `String.from(f64)`), `parseU64` and radix parsing, and exact text for `NaN` and infinities. Output is locale-free and byte-identical on every backend that runs text (VM and optimized C++ today; native when it gains `String`), checked by one shared expectation table. The output must match `std::to_chars` and the C++ reference of TODO-5628 for a fixed table of values.
   - acceptance:
     - round trips for 100k random `f64`/`f32`; a table of edge values compared with the C++ reference; full release gate green
   - stop_rule: number formatting and parsing; `format` strings are TODO-5627.
@@ -449,10 +458,117 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - created_at: 2026-11-02
   - phase: Strings and slices (docs/spec/strings-and-views.md, Parity with `std::string`)
   - parallel_track: string-owned
-  - scope: Build text without hand-written append chains: `format("{} is {}", a, b)` with checked placeholders (`{}`, `{:x}`, `{:>8}`, `{:.3}`; placeholder count and argument types checked at compile time when the format is a literal), `join(parts, separator)`, `split(separator) -> Vector<String>` (the owned counterpart of the view-returning split), and a `StringBuilder`-style `appendFormat`. Record the chosen format grammar in the spec before implementing.
+  - scope: Build text without hand-written append chains: `format("{} is {}", a, b)` with checked placeholders (`{}`, `{:x}`, `{:>8}`, `{:.3}`; placeholder count and argument types checked at compile time when the format is a literal), `join(parts, separator)`, `split(separator) -> Vector<String>` (the owned counterpart of the view-returning split), and a `StringBuilder`-style `appendFormat`. `format` and `join` measure the result first and allocate once (no growth copies). Record the chosen format grammar in the spec before implementing.
   - acceptance:
-    - VM and `optexe` tests incl. a mismatched placeholder compile error and escaped braces; full release gate green
+    - VM and `optexe` tests incl. a mismatched placeholder compile error and escaped braces; an allocation-count test shows one block for `format` and `join`; full release gate green
   - stop_rule: the listed operations; locale-aware formatting is out of scope.
+
+- [ ] TODO-5631: Structs that hold views (borrow-carrying aggregates)
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5569
+  - created_at: 2026-11-02
+  - phase: Strings and slices (docs/spec/strings-and-views.md, Beyond std::string)
+  - parallel_track: string-borrows
+  - scope: The spec forbids storing a slice or `string` view in a struct field (`slice escapes via <place>`), so a parsed `Request` cannot hold its method, path and headers as views into the receive buffer, and zero-copy parsing needs a defensive copy. Design and implement a struct that carries view fields and is itself a loan on the owners they borrow from: the struct value cannot outlive its sources, cannot be stored in anything longer lived, and keeps the sources borrowed while it is live; a function may return such a struct derived from its parameters under `[returns_borrow<...>]`. Record the rules in docs/spec/strings-and-views.md and docs/MemoryCapabilities.md.
+  - acceptance:
+    - a parser returning a struct of views into a `Vector<u8>`/`String` buffer compiles and runs on the VM and `optexe` with no copies (allocation-count test); negative tests: struct outliving the buffer, mutating the buffer while the struct is live, storing the struct in a global or longer-lived container; full release gate green
+  - stop_rule: view-holding structs on the front end and VM; no lifetime parameters in surface syntax unless the tests prove they are needed.
+
+- [ ] TODO-5630: Request-scoped string arenas: `withStringArena`
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5618
+  - created_at: 2026-11-02
+  - phase: Strings and slices (docs/spec/strings-and-views.md, Beyond std::string)
+  - parallel_track: string-arenas
+  - scope: `withStringArena { ... }` allocates every `String` made inside the block (including those made by callees) bump-style from one arena and frees them all when the block ends, in O(1) with no per-string free. Strings and views that borrow arena text cannot escape the block (compile error naming the place); `String` values moved out of the block are copied to the ordinary heap at the boundary or rejected, as the spec section decides; the arena honors `setStringMemoryLimit`. Observable through `stringMemory()`.
+  - acceptance:
+    - VM and `optexe` tests: many allocations then one release, nested arenas, escape negatives, a limit hit inside an arena; a benchmark in the TODO-5628 style shows the arena beats per-string allocation for a request-shaped workload; full release gate green
+  - stop_rule: arenas for `String` only; no other allocator surface.
+
+- [ ] TODO-5632: Fused `+` chains: one allocation per expression
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5568
+  - created_at: 2026-11-02
+  - phase: Strings and slices (docs/spec/strings-and-views.md, Beyond std::string)
+  - parallel_track: string-owned
+  - scope: A transform (before IR lowering, with the other expression rewrites) turns `a + b + c + ...` and a run of `+=` on one `String` into: sum the counts, one allocation, copy each part in order. It is a guaranteed rewrite with a documented rule, not an optimization that may or may not fire, and it keeps left-to-right evaluation of the operands. Note the rule in docs/spec/transforms.md.
+  - acceptance:
+    - an allocation-count test shows one block for a chain of five parts; evaluation order and overflow-of-capacity cases match the unfused semantics; full release gate green
+  - stop_rule: `+`/`+=` chains; `format` sizing is TODO-5627.
+
+- [ ] TODO-5633: Unicode case mapping and case folding (lazy)
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5620
+  - created_at: 2026-11-02
+  - phase: Strings and slices (docs/spec/strings-and-views.md, Beyond std::string)
+  - parallel_track: string-unicode
+  - scope: `/std/unicode`: `toLower()`, `toUpper()` (full mappings incl. multi-code-point results such as U+00DF), `caseFold()` and `equalsIgnoreCase(string)` with Unicode case folding. The data tables live in a separately imported `.prime` (or generated) unit that loads on first use, so a program that never calls them pays no startup, binary or bytecode cost.
+  - acceptance:
+    - tests against a table of Unicode conformance samples (Latin, Greek, Cyrillic, sharp s, Turkish dotted i left locale-free); a program not importing `/std/unicode` has an unchanged module size and `DYLD_PRINT_LIBRARIES`/startup measurement (TODO-5603's script); full release gate green
+  - stop_rule: locale-independent case operations; no collation.
+
+- [ ] TODO-5634: Unicode normalization and grapheme clusters (lazy)
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5633
+  - created_at: 2026-11-02
+  - phase: Strings and slices (docs/spec/strings-and-views.md, Beyond std::string)
+  - parallel_track: string-unicode
+  - scope: `normalizeNfc()`, `normalizeNfd()`, `isNfc()`, and `graphemes()` iterating extended grapheme clusters as views, in the same lazily loaded `/std/unicode` unit family as TODO-5633.
+  - acceptance:
+    - tests against the Unicode normalization and grapheme break conformance samples for a fixed subset checked into tests/fixtures; the same no-cost-when-unused check as TODO-5633; full release gate green
+  - stop_rule: NFC/NFD and extended grapheme clusters; NFKC/NFKD and word/sentence breaks are separate if wanted.
+
+- [ ] TODO-5635: `Secret<String>`: zeroed on destroy, never printed
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5618
+  - created_at: 2026-11-02
+  - phase: Strings and slices (docs/spec/strings-and-views.md, Beyond std::string)
+  - parallel_track: string-owned
+  - scope: A `Secret` wrapper over `String` for tokens and passwords: `Destroy` zeroes the block before freeing it (the zeroing cannot be optimized away on the C++ emitters), it cannot be printed or formatted, copies are explicit, and `equalsConstantTime(other)` compares without early exit.
+  - acceptance:
+    - VM and `optexe` tests: the freed block reads as zeros (via a test hook of the string heap), print/format of a `Secret` is a compile error, comparison time does not depend on the matching prefix (counted by operation, not wall clock); full release gate green
+  - stop_rule: the wrapper and its guarantees; no key management.
+
+- [ ] TODO-5636: Interned `Symbol` for names and tags
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5625
+  - created_at: 2026-11-02
+  - phase: Strings and slices (docs/spec/strings-and-views.md, Beyond std::string)
+  - parallel_track: string-keys
+  - scope: `Symbol` is a small copyable value for header names, methods and route segments: `Symbol.of(text)` interns into a per-process table (ids are assigned in first-seen order, so runs are deterministic), equality and hash are O(1) integer operations, `text()` returns the borrowed `string`. The table has a documented growth and memory limit.
+  - acceptance:
+    - VM and `optexe` tests: same text same symbol, distinct text distinct symbols, 100k interns, `Symbol` as a map key; full release gate green
+  - stop_rule: interning and the `Symbol` type; no weak symbols or table eviction.
+
+- [ ] TODO-5637: Fold string operations on literals at compile time
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5568
+  - created_at: 2026-11-02
+  - phase: Strings and slices (docs/spec/strings-and-views.md, Beyond std::string)
+  - parallel_track: string-quality
+  - scope: When every operand is a literal, fold `+`, `count()`, `==`, `startsWith`, `endsWith`, `contains` and `[i]` in the front end so they emit a literal or constant (and report an out-of-range `[i]` as a compile error). A `string` literal that is not valid UTF-8 is already a lexer error; keep it.
+  - acceptance:
+    - IR snapshot tests show no run-time text work for folded expressions; negative test for a literal index out of range; full release gate green
+  - stop_rule: operations on literals only; no general constant evaluation.
+
+- [ ] TODO-5638: Shared immutable strings for threads (`SharedString`)
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-02
+  - phase: Strings and slices (docs/spec/strings-and-views.md, Beyond std::string)
+  - parallel_track: string-concurrency
+  - scope: A refcounted immutable `SharedString` with O(1) clone and view, safe to send between threads. Deferred until the concurrency model (docs/MultithreadingPrototype.md) has a scheduler, atomics and per-thread string heaps; scope it again then.
+  - acceptance:
+    - to be set when the leaf is un-deferred
+  - stop_rule: not started.
 
 - [ ] TODO-5603: Startup audit: what a launch loads and does
   - owner: ai

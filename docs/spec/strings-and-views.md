@@ -252,6 +252,27 @@ Intended differences, recorded so they stay deliberate:
   to `u64` follows the language's integer-width decisions; TODO-5628 records the cap as a known limit of the
   conformance suite.
 
+## Beyond `std::string`
+
+Where the language's own rules let text be better than the C++ type, and the TODO that delivers it:
+
+| Idea | What it gives | TODO |
+| --- | --- | --- |
+| Borrow-checked views | no dangling `string_view`; no iterator invalidation | TODO-5569, TODO-5618 |
+| Structs that hold views | a parsed `Request` of views into its buffer: zero-copy and safe | TODO-5631 |
+| Request-scoped string arenas | all of a request's text freed in O(1) | TODO-5630 |
+| Fused `+` chains and one-allocation `format` | one block per expression, guaranteed | TODO-5632, TODO-5627 |
+| `Maybe`/`Result` APIs | no `npos`, no exceptions, no undefined behavior | TODO-5619, TODO-5620 |
+| Linear-time search | `find` never goes quadratic | TODO-5619 |
+| Byte-identical text on every backend | locale-free number and case output | TODO-5626 |
+| Keyed hash, `Symbol` interning | flood-resistant keys; O(1) equality for names | TODO-5625, TODO-5636 |
+| UTF-8 invariant, Unicode case, normalization, graphemes | correct text, loaded only when used | TODO-5633, TODO-5634 |
+| `Secret<String>` | zeroed on destroy, never printed, constant-time compare | TODO-5635 |
+| Compile-time folding of literal operations | no run-time work for constants | TODO-5637 |
+| `SharedString` | cheap immutable sharing across threads (deferred with concurrency) | TODO-5638 |
+
+Typed, context-escaped text (`Html`, `Url`, ...) was considered and left out for now.
+
 ## Host functions and embedding
 
 - A `[host]` parameter may be `string` or `String`; the host receives a UTF-8 pointer and length. A `String` (always
@@ -284,6 +305,7 @@ Intended differences, recorded so they stay deliberate:
 | TODO-5620 | `string` parsing, code points, ASCII case |
 | TODO-5621 | static-text field rule and `run-time text requires String` |
 | TODO-5622 | optimized C++ emitters (`optcpp`, `optexe`) run the view |
+| TODO-5630 to TODO-5638 | beyond `std::string`: arenas, view-holding structs, fused concatenation, Unicode, `Secret`, `Symbol`, literal folding, `SharedString` (see Beyond above) |
 | TODO-5623 to TODO-5629 | `std::string` parity: mutation, search sets, hashing and map keys, number formatting, `format`/`join`, conformance and speed gate, bulk byte opcodes (see Parity above) |
 | TODO-5530 | Read and write whole files as `String` |
 | TODO-5541 | Host functions and the embedding API use `String`/`string`; retire VM run-time string indices |
