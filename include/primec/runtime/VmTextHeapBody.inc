@@ -340,6 +340,45 @@ inline bool callTextHostFunction(VmTextHeap &heap,
     heap.setLimit(args[0]);
     return true;
   }
+  // The bulk byte operations of String and the byte containers: one range check per call, then a library
+  // loop. Each address names a byte region (a text block or a vector<u8> buffer); a range that leaves its region
+  // faults. A count of 0 touches nothing, whatever the addresses.
+  if (name == "__pstext_move" || name == "__pstext_fill" || name == "__pstext_compare" || name == "__pstext_find") {
+    const bool isMove = name == "__pstext_move";
+    const bool isFill = name == "__pstext_fill";
+    const bool isFind = name == "__pstext_find";
+    // move(destination, source, count), fill(destination, value, count), compare(a, b, count),
+    // find(address, count, value)
+    const uint64_t count = isFind ? args[1] : args[2];
+    if (count == 0) {
+      result = isFind ? ~uint64_t{0} : 0;
+      return true;
+    }
+    uint8_t *first = core.byteSpan(args[0], count);
+    const uint8_t *second = (isFill || isFind) ? first : core.byteSpan(args[1], count);
+    if (first == nullptr || second == nullptr) {
+      error = "invalid text range: " + std::to_string(count) + " bytes at " + std::to_string(args[0]);
+      return false;
+    }
+    if (isMove) {
+      if (first < second) {
+        std::copy(second, second + count, first);
+      } else if (first > second) {
+        std::copy_backward(second, second + count, first + count);
+      }
+    } else if (isFill) {
+      std::fill(first, first + count, static_cast<uint8_t>(args[1]));
+    } else if (isFind) {
+      const uint8_t *hit = std::find(first, first + count, static_cast<uint8_t>(args[2]));
+      result = hit == first + count ? ~uint64_t{0} : static_cast<uint64_t>(hit - first);
+    } else {
+      const auto differs = std::mismatch(first, first + count, second);
+      if (differs.first != first + count) {
+        result = *differs.first < *differs.second ? ~uint64_t{0} : uint64_t{1};
+      }
+    }
+    return true;
+  }
   known = false;
   return true;
 }

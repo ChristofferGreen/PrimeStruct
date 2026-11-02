@@ -124,6 +124,16 @@ public:
     return &bytes[static_cast<size_t>(offset)];
   }
 
+  // The first of `count` bytes starting at a byte-region address, or null unless every one of them lies in the one
+  // live region of that address (byteAt leaves that region's end in lastEnd_).
+  uint8_t *byteSpan(uint64_t address, uint64_t count) {
+    uint8_t *first = byteAt(address);
+    if (first == nullptr) {
+      return nullptr;
+    }
+    return count <= lastEnd_ - (address & ByteOffsetMask) ? first : nullptr;
+  }
+
   // Live byte-region bytes, for tests and instrumentation.
   uint64_t liveByteCount() const { return liveBytes_; }
 

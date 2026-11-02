@@ -224,6 +224,11 @@ class Arm64Emitter {
   void emitTextUsable();
   void emitTextLength();
   void emitTextBlockSize();
+  // The bulk byte operations (`__pstext_move`, `_fill`, `_compare`, `_find`) as byte loops over raw addresses.
+  void emitTextMove();
+  void emitTextFill();
+  void emitTextCompare();
+  void emitTextFind();
   void emitLoadU8() {
     emitPopReg(0);
     emit(encodeLdrbRegBase(1, 0, 0));

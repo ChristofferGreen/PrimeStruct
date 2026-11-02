@@ -136,6 +136,126 @@ inline void Arm64Emitter::emitTextLength() {
   emitPushReg(0);
 }
 
+// ---- bulk byte operations ----------------------------------------------------------------------------------
+// Raw loops over the popped addresses (the native heap has no region table to check against): the arguments pop
+// in reverse order into x0, x1, x2.
+
+// move(destination x0, source x1, count x2): forward when the destination is not above the source, else backward.
+inline void Arm64Emitter::emitTextMove() {
+  emitPopReg(2);
+  emitPopReg(1);
+  emitPopReg(0);
+  emitCompareRegZero(2);
+  const size_t jumpDone = emitCondBranchPlaceholder(CondCode::Eq);
+  emitCompareReg(0, 1);
+  const size_t jumpBackward = emitCondBranchPlaceholder(CondCode::Hi);
+  emitMovImm64(3, 0);
+  const size_t forwardLoop = currentWordIndex();
+  emitCompareReg(3, 2);
+  const size_t jumpForwardEnd = emitCondBranchPlaceholder(CondCode::Hs);
+  emitAddReg(4, 1, 3);
+  emit(encodeLdrbRegBase(5, 4, 0));
+  emitAddReg(4, 0, 3);
+  emit(encodeStrbRegBase(5, 4, 0));
+  emitAddRegImm(3, 3, 1);
+  const size_t jumpForwardBack = emitJumpPlaceholder();
+  patchJump(jumpForwardBack, static_cast<int32_t>(forwardLoop - jumpForwardBack));
+  const size_t jumpPastBackward = emitJumpPlaceholder();
+  const size_t backward = currentWordIndex();
+  patchCondBranch(jumpBackward, static_cast<int32_t>(backward - jumpBackward), CondCode::Hi);
+  emitMovReg(3, 2);
+  const size_t backwardLoop = currentWordIndex();
+  emitCompareRegZero(3);
+  const size_t jumpBackwardEnd = emitCondBranchPlaceholder(CondCode::Eq);
+  emitSubRegImm(3, 3, 1);
+  emitAddReg(4, 1, 3);
+  emit(encodeLdrbRegBase(5, 4, 0));
+  emitAddReg(4, 0, 3);
+  emit(encodeStrbRegBase(5, 4, 0));
+  const size_t jumpBackwardBack = emitJumpPlaceholder();
+  patchJump(jumpBackwardBack, static_cast<int32_t>(backwardLoop - jumpBackwardBack));
+  const size_t endIndex = currentWordIndex();
+  patchCondBranch(jumpDone, static_cast<int32_t>(endIndex - jumpDone), CondCode::Eq);
+  patchCondBranch(jumpForwardEnd, static_cast<int32_t>(endIndex - jumpForwardEnd), CondCode::Hs);
+  patchCondBranch(jumpBackwardEnd, static_cast<int32_t>(endIndex - jumpBackwardEnd), CondCode::Eq);
+  patchJump(jumpPastBackward, static_cast<int32_t>(endIndex - jumpPastBackward));
+}
+
+// fill(destination x0, value x1, count x2): the low byte of the value.
+inline void Arm64Emitter::emitTextFill() {
+  emitPopReg(2);
+  emitPopReg(1);
+  emitPopReg(0);
+  emitMovImm64(3, 0);
+  const size_t loopIndex = currentWordIndex();
+  emitCompareReg(3, 2);
+  const size_t jumpEnd = emitCondBranchPlaceholder(CondCode::Hs);
+  emitAddReg(4, 0, 3);
+  emit(encodeStrbRegBase(1, 4, 0));
+  emitAddRegImm(3, 3, 1);
+  const size_t jumpBack = emitJumpPlaceholder();
+  patchJump(jumpBack, static_cast<int32_t>(loopIndex - jumpBack));
+  const size_t endIndex = currentWordIndex();
+  patchCondBranch(jumpEnd, static_cast<int32_t>(endIndex - jumpEnd), CondCode::Hs);
+}
+
+// compare(a x0, b x1, count x2) -> -1, 0 or 1 by the first differing byte (unsigned).
+inline void Arm64Emitter::emitTextCompare() {
+  emitPopReg(2);
+  emitPopReg(1);
+  emitPopReg(0);
+  emitMovImm64(7, 0);
+  emitMovImm64(3, 0);
+  const size_t loopIndex = currentWordIndex();
+  emitCompareReg(3, 2);
+  const size_t jumpEnd = emitCondBranchPlaceholder(CondCode::Hs);
+  emitAddReg(4, 0, 3);
+  emit(encodeLdrbRegBase(5, 4, 0));
+  emitAddReg(4, 1, 3);
+  emit(encodeLdrbRegBase(6, 4, 0));
+  emitCompareReg(5, 6);
+  const size_t jumpDiffers = emitCondBranchPlaceholder(CondCode::Ne);
+  emitAddRegImm(3, 3, 1);
+  const size_t jumpBack = emitJumpPlaceholder();
+  patchJump(jumpBack, static_cast<int32_t>(loopIndex - jumpBack));
+  const size_t differsIndex = currentWordIndex();
+  patchCondBranch(jumpDiffers, static_cast<int32_t>(differsIndex - jumpDiffers), CondCode::Ne);
+  emitMovImm64(7, 1);
+  emitCompareReg(5, 6);
+  const size_t jumpAbove = emitCondBranchPlaceholder(CondCode::Hi);
+  emitMovImm64(7, ~uint64_t{0});
+  const size_t endIndex = currentWordIndex();
+  patchCondBranch(jumpEnd, static_cast<int32_t>(endIndex - jumpEnd), CondCode::Hs);
+  patchCondBranch(jumpAbove, static_cast<int32_t>(endIndex - jumpAbove), CondCode::Hi);
+  emitPushReg(7);
+}
+
+// find(address x0, count x1, value x2) -> the index of the first byte equal to the value, or -1.
+inline void Arm64Emitter::emitTextFind() {
+  emitPopReg(2);
+  emitPopReg(1);
+  emitPopReg(0);
+  emit(0x53001C42u); // UXTB w2, w2: compare only the low byte
+  emitMovImm64(7, ~uint64_t{0});
+  emitMovImm64(3, 0);
+  const size_t loopIndex = currentWordIndex();
+  emitCompareReg(3, 1);
+  const size_t jumpEnd = emitCondBranchPlaceholder(CondCode::Hs);
+  emitAddReg(4, 0, 3);
+  emit(encodeLdrbRegBase(5, 4, 0));
+  emitCompareReg(5, 2);
+  const size_t jumpFound = emitCondBranchPlaceholder(CondCode::Eq);
+  emitAddRegImm(3, 3, 1);
+  const size_t jumpBack = emitJumpPlaceholder();
+  patchJump(jumpBack, static_cast<int32_t>(loopIndex - jumpBack));
+  const size_t foundIndex = currentWordIndex();
+  patchCondBranch(jumpFound, static_cast<int32_t>(foundIndex - jumpFound), CondCode::Eq);
+  emitMovReg(7, 3);
+  const size_t endIndex = currentWordIndex();
+  patchCondBranch(jumpEnd, static_cast<int32_t>(endIndex - jumpEnd), CondCode::Hs);
+  emitPushReg(7);
+}
+
 inline void Arm64Emitter::emitHeapAllocBytes() {
   emitPopReg(1);
   // Whole slots: (bytes + IrSlotBytes - 1) >> 4, so a count of 0 stays 0 (no allocation).

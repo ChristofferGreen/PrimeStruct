@@ -38,6 +38,8 @@ namespace primec {
 //   __pstext_alloc(size) -> Pointer<u8>      __pstext_try_alloc(size) -> Pointer<u8> (null on failure)
 //   __pstext_free(Pointer<u8>)               __pstext_capacity(Pointer<u8>) -> u64 (block size)
 //   __pstext_stat(which) -> u64              0 chunks, 1 bytesInUse, 2 bytesFree, 3 largeBlocks, 4 largeBytes
+//   __pstext_move(dst, src, count) / __pstext_fill(dst, value, count) / __pstext_compare(a, b, count) -> i32 /
+//   __pstext_find(address, count, value) -> i32: bulk byte operations, one range check per call (VmHeapCore::byteSpan)
 //   __pstext_length(Pointer<u8>) -> i32 (text length)   __pstext_usable(Pointer<u8>) -> u64 (block size less the NUL)
 //   __pstext_set_limit(bytes)
 inline constexpr std::string_view TextHostPrefix = "__pstext_";

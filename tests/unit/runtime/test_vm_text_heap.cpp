@@ -5,6 +5,7 @@
 
 #include "third_party/doctest.h"
 
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -258,6 +259,71 @@ TEST_CASE("random allocate and free cycles keep the figures and reject every dou
   CHECK(f.heap.stats().bytesInUse == 0);
   CHECK(f.heap.stats().largeBlocks == 0);
   CHECK(f.heap.stats().chunks <= 6);
+}
+
+namespace {
+// Calls one of the bulk byte host functions on the fixture's heap.
+bool bulk(Fixture &f, const char *name, std::vector<uint64_t> args, uint64_t &result, std::string &error) {
+  bool known = false;
+  result = 0;
+  const bool ok = callTextHostFunction(f.heap, f.core, name, args.data(), result, known, error);
+  CHECK(known);
+  return ok;
+}
+} // namespace
+
+TEST_CASE("the bulk byte host functions move, fill, compare and find inside a region") {
+  Fixture f;
+  const uint64_t block = f.alloc(40);
+  uint8_t *bytes = f.core.byteAt(block);
+  for (int i = 0; i < 40; ++i) {
+    bytes[i] = static_cast<uint8_t>('a' + i % 26);
+  }
+  uint64_t result = 0;
+  std::string error;
+  // Overlapping moves in both directions give what memmove gives.
+  std::vector<uint8_t> expected(bytes, bytes + 40);
+  REQUIRE(bulk(f, "__pstext_move", {block + 2, block, 10}, result, error));
+  std::memmove(&expected[2], &expected[0], 10);
+  CHECK(std::vector<uint8_t>(bytes, bytes + 40) == expected);
+  REQUIRE(bulk(f, "__pstext_move", {block + 1, block + 9, 20}, result, error));
+  std::memmove(&expected[1], &expected[9], 20);
+  CHECK(std::vector<uint8_t>(bytes, bytes + 40) == expected);
+  // fill, compare and find
+  REQUIRE(bulk(f, "__pstext_fill", {block + 5, 0x1FF, 4}, result, error));
+  CHECK(bytes[5] == 0xFF);
+  CHECK(bytes[8] == 0xFF);
+  CHECK(bytes[9] != 0xFF);
+  REQUIRE(bulk(f, "__pstext_compare", {block, block, 40}, result, error));
+  CHECK(result == 0);
+  REQUIRE(bulk(f, "__pstext_compare", {block + 4, block + 5, 3}, result, error));
+  CHECK(static_cast<int64_t>(result) == (bytes[4] < bytes[5] ? -1 : 1));
+  REQUIRE(bulk(f, "__pstext_compare", {block + 5, block + 4, 3}, result, error));
+  CHECK(static_cast<int64_t>(result) == (bytes[5] < bytes[4] ? -1 : 1));
+  REQUIRE(bulk(f, "__pstext_find", {block, 40, 0xFF}, result, error));
+  CHECK(result == 5);
+  REQUIRE(bulk(f, "__pstext_find", {block, 5, 0xFF}, result, error));
+  CHECK(static_cast<int64_t>(result) == -1);
+  f.free(block);
+}
+
+TEST_CASE("the bulk byte host functions check their ranges once and ignore empty ones") {
+  Fixture f;
+  const uint64_t block = f.alloc(40);
+  uint64_t result = 0;
+  std::string error;
+  // A count of 0 touches nothing, whatever the addresses; find reports -1.
+  CHECK(bulk(f, "__pstext_move", {12345, 67890, 0}, result, error));
+  CHECK(bulk(f, "__pstext_fill", {12345, 1, 0}, result, error));
+  CHECK(bulk(f, "__pstext_find", {12345, 0, 1}, result, error));
+  CHECK(static_cast<int64_t>(result) == -1);
+  // A range that leaves the chunk, or starts at an address that is no byte region, is rejected.
+  CHECK_FALSE(bulk(f, "__pstext_fill", {block, 1, VmTextHeap::ChunkBytes + 1}, result, error));
+  CHECK(error.find("invalid text range") != std::string::npos);
+  CHECK_FALSE(bulk(f, "__pstext_move", {block, 12345, 4}, result, error));
+  CHECK_FALSE(bulk(f, "__pstext_compare", {12345, block, 4}, result, error));
+  CHECK_FALSE(bulk(f, "__pstext_find", {12345, 4, 1}, result, error));
+  f.free(block);
 }
 
 TEST_CASE("the VM answers the string heap host functions without bindings") {

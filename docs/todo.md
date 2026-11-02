@@ -109,7 +109,6 @@ of sync with them.
 | TODO-5620 | `string` parsing, code points and ASCII case | blocked | string-view |
 | TODO-5621 | Static-text field rule and `run-time text requires String` | blocked | string-view |
 | TODO-5622 | Optimized C++ emitters run the `string` view | blocked | string-backends |
-| TODO-5629 | Bulk byte operations under `String` and `Slice<u8>` | ready | string-quality |
 | TODO-5623 | `String` mutation parity: fill, resize, front/back, pop, swap, lossy bytes | blocked | string-owned |
 | TODO-5624 | `string` byte-set search: find_first_of and friends | blocked | string-view |
 | TODO-5625 | `String` and `string` as map keys, with `hash()` | blocked | string-keys |
@@ -163,7 +162,6 @@ of sync with them.
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5510 (control-returns): `return` returns from pick arms and lambdas correctly
 - TODO-5524 (result-error-structs): int-backed error structs round-trip through stdlib Result sums
-- TODO-5629 (string-quality): bulk byte operations under `String` and `Slice<u8>`
 
 ### Immediate Next 10
 
@@ -174,11 +172,10 @@ of sync with them.
 5. TODO-5535
 6. TODO-5510
 7. TODO-5524
-8. TODO-5629
 
 ### Priority Lanes
 
-- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5540, TODO-5570, TODO-5569, TODO-5618, TODO-5619, TODO-5620, TODO-5621, TODO-5622, TODO-5568, TODO-5629, TODO-5623, TODO-5624, TODO-5625, TODO-5626, TODO-5627, TODO-5631, TODO-5630, TODO-5632, TODO-5633, TODO-5634, TODO-5635, TODO-5636, TODO-5637, TODO-5638, TODO-5530, TODO-5567, TODO-5574
+- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5540, TODO-5570, TODO-5569, TODO-5618, TODO-5619, TODO-5620, TODO-5621, TODO-5622, TODO-5568, TODO-5623, TODO-5624, TODO-5625, TODO-5626, TODO-5627, TODO-5631, TODO-5630, TODO-5632, TODO-5633, TODO-5634, TODO-5635, TODO-5636, TODO-5637, TODO-5638, TODO-5530, TODO-5567, TODO-5574
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Startup (docs/NativeUiPlan.md section 16): TODO-5603
@@ -378,18 +375,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - acceptance:
     - the string-view compile-run programs also pass through `--emit=optexe` with the VM's output and exit codes; full release gate green
   - stop_rule: the optimized C++ emitters only.
-
-- [ ] TODO-5629: Bulk byte operations under `String` and `Slice<u8>`
-  - owner: ai
-  - status: ready
-  - depends_on: TODO-5628
-  - created_at: 2026-11-02
-  - phase: Strings and slices (docs/spec/strings-and-views.md, Parity with `std::string`), speed
-  - parallel_track: string-quality
-  - scope: `String.reserve/shrinkToFit/appendString/replace/substr/Copy` move bytes in `.prime` loops of `textLoad`/`textStore` today (appending or comparing a string literal reads the module string table, not a byte region, so those stay per byte until the string view of TODO-5540). Add copy, move (overlap-safe), fill, compare and find-byte as IR opcodes implemented as `__pstext_move/fill/compare/find` host functions answered by the VM and the optimized C++ runtime (no new opcode, no PSIR change) and by plain byte loops in the arm64 native emitter, expose them as `/std/text` helpers (`moveBytes`, `fillBytes`, `compareBytes`, `findByte`), and rebuild the `String` operations on them. `Slice<u8>` follows with the string view (TODO-5540), since generic slice code cannot specialize on `u8` yet. Bounds stay checked once per call.
-  - acceptance:
-    - VM and `optexe` tests incl. overlapping moves and out-of-range faults; the TODO-5628 benchmarks improve and the numbers are recorded; PSIR version note if opcodes are added; full release gate green
-  - stop_rule: the byte primitives and the String operations that use them; Slice<u8> follows the string view.
 
 - [ ] TODO-5623: `String` mutation parity: fill, resize, front/back, pop, swap, lossy bytes
   - owner: ai

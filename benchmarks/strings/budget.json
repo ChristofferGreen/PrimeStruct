@@ -1,9 +1,9 @@
 {
-  "notes": "Upper limits for optexe time / std::string time, about 1.6x above the worst ratio seen in repeated runs (macOS arm64, release build, median of 7 after a warm-up launch). After the string heap hot-path fixes of 2026-11-02 (TODO-5640): append_bytes 4.9-5.5, append_chunks 7.6-8.4, short_strings 4.7-8.8, insert_front 32-48, copy_text 17-24, replace_middle 34-43. Before them short_strings was 112-137. The remaining gap is the per-byte .prime loops under String; TODO-5629 (bulk byte opcodes) should bring insert_front, copy_text and replace_middle down. Tighten a limit whenever its ratio improves.",
-  "append_bytes": {"max_optexe_over_std": 9.0},
-  "append_chunks": {"max_optexe_over_std": 13.0},
-  "short_strings": {"max_optexe_over_std": 14.0},
-  "insert_front": {"max_optexe_over_std": 80.0},
-  "copy_text": {"max_optexe_over_std": 38.0},
-  "replace_middle": {"max_optexe_over_std": 70.0}
+  "notes": "Upper limits for optexe time / std::string time, about 1.6x above the worst ratio seen in repeated runs (macOS arm64, release build, median of 7 after a warm-up launch). After the bulk byte host functions of TODO-5629: append_bytes 2.9-3.3, append_chunks 2.3-3.2, short_strings 8.6-9.3, insert_front 1.0-1.3, copy_text 1.3-1.7, replace_middle 1.1-1.3. Before TODO-5640 short_strings was 112-137 and insert_front 43-61. What is left: appending a string literal still copies byte by byte from the string table (until the string view, TODO-5540) and every non-empty String takes a heap block. Tighten a limit whenever its ratio improves.",
+  "append_bytes": {"max_optexe_over_std": 5.0},
+  "append_chunks": {"max_optexe_over_std": 5.0},
+  "short_strings": {"max_optexe_over_std": 15.0},
+  "insert_front": {"max_optexe_over_std": 2.5},
+  "copy_text": {"max_optexe_over_std": 3.0},
+  "replace_middle": {"max_optexe_over_std": 2.5}
 }

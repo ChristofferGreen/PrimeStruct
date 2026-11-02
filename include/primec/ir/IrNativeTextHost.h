@@ -16,6 +16,10 @@ enum class NativeTextHost {
   Length,      // __pstext_length(Pointer<u8>) -> i32
   Usable,      // __pstext_usable(Pointer<u8>) -> u64
   Argument,    // __pstext_argument(i32) -> Pointer<u8>: the entry argument at the index in a fresh block
+  Move,        // __pstext_move(Pointer<u8> destination, Pointer<u8> source, u64 count): overlap allowed
+  Fill,        // __pstext_fill(Pointer<u8> destination, u64 value, u64 count)
+  Compare,     // __pstext_compare(Pointer<u8> a, Pointer<u8> b, u64 count) -> i32: -1, 0 or 1
+  Find,        // __pstext_find(Pointer<u8> address, u64 count, u64 value) -> i32: the index or -1
   Unsupported, // a `__pstext_*` function the native backend does not answer yet
 };
 
@@ -47,6 +51,18 @@ inline NativeTextHost nativeTextHost(std::string_view importName) {
   }
   if (leaf == "__pstext_argument") {
     return NativeTextHost::Argument;
+  }
+  if (leaf == "__pstext_move") {
+    return NativeTextHost::Move;
+  }
+  if (leaf == "__pstext_fill") {
+    return NativeTextHost::Fill;
+  }
+  if (leaf == "__pstext_compare") {
+    return NativeTextHost::Compare;
+  }
+  if (leaf == "__pstext_find") {
+    return NativeTextHost::Find;
   }
   return NativeTextHost::Unsupported;
 }

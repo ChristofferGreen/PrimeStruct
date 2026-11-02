@@ -284,18 +284,20 @@ Medians of repeated runs on macOS arm64 (2026-11-02, release build):
 
 | Workload | `std::string` | `String` (`optexe`) | Ratio | Budget |
 | --- | --- | --- | --- | --- |
-| `append_bytes`: 5M `pushByte` | 0.03 s | 0.15 s | 5x | 9 |
-| `append_chunks`: 200k appends of 43 bytes | 0.02 s | 0.16 to 0.20 s | 8x | 13 |
-| `short_strings`: 1M `"GET"` + 12 bytes | 0.02 s | 0.15 s | 5 to 9x | 14 |
-| `insert_front`: 20k inserts at 0 | 0.02 s | 0.8 to 1.0 s | 32 to 48x | 80 |
-| `copy_text`: 200k copies of 1000 bytes | 0.03 s | 0.6 to 0.75 s | 17 to 24x | 38 |
-| `replace_middle`: 100k replaces | 0.02 s | 0.7 to 0.85 s | 34 to 43x | 70 |
+| `append_bytes`: 5M `pushByte` | 0.03 s | 0.10 s | 3x | 5 |
+| `append_chunks`: 200k appends of 43 bytes | 0.02 s | 0.07 s | 2 to 3x | 5 |
+| `short_strings`: 1M `"GET"` + 12 bytes | 0.02 s | 0.17 s | 9x | 15 |
+| `insert_front`: 20k inserts at 0 | 0.02 s | 0.02 s | 1.0 to 1.3x | 2.5 |
+| `copy_text`: 200k copies of 1000 bytes | 0.03 s | 0.04 to 0.05 s | 1.3 to 1.7x | 3 |
+| `replace_middle`: 100k replaces | 0.02 s | 0.03 s | 1.1 to 1.3x | 2.5 |
 
-The string heap fixes of TODO-5640 (an O(1) double-free check, a per-class index of chunks with free blocks, an
-empty-chunk counter and a one-entry region cache in `byteAt`) took `short_strings` from 110 to 140x down to 5 to 9x;
-before them about 90% of its time was a linear scan in every block free. What is left is the byte loops: every byte
-move is a `.prime` loop of `LoadU8`/`StoreU8` (TODO-5629). Re-measure after TODO-5629 before deciding whether a
-small-string form is worth it. Lower a budget whenever its ratio drops.
+Two steps got there. The string heap fixes of TODO-5640 (an O(1) double-free check, a per-class index of chunks with
+free blocks, an empty-chunk counter and a one-entry region cache in `byteAt`) took `short_strings` from 110 to 140x
+down to about 9x. The bulk byte host functions of TODO-5629 (`__pstext_move`, `_fill`, `_compare`, `_find`, one
+range check per call, then a library loop on the VM and `optexe` and a plain byte loop on the arm64 native backend)
+took `insert_front`, `copy_text` and `replace_middle` from 20 to 60x to about 1 to 2x. What is left: appending a
+string literal still copies byte by byte from the module string table until the string view lands (TODO-5540), and
+every non-empty `String` takes a heap block (`short_strings`). Lower a budget whenever its ratio drops.
 
 Found by the suite: a binding initialized from another `String` binding aliases the heap block and frees it twice
 (TODO-5639); the supported way to duplicate text is a `[String copy]` parameter. Known limits: counts are `i32`, so text
