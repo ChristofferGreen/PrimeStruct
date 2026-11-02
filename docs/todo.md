@@ -103,10 +103,6 @@ of sync with them.
 | TODO-5567 | Packed `array<u8>` | ready | bytes |
 | TODO-5569 | Slice loans, escapes and returned borrows | ready | slices |
 | TODO-5570 | Slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views | ready | slices |
-| TODO-5540 | `string` as a static UTF-8 view: literals, count, bytes, equality | ready | string-view |
-| TODO-5618 | `string` borrowed from `String`, `view()`, `slice()`, `utf8()` | blocked | string-view |
-| TODO-5619 | `string` search, comparison and trimming | blocked | string-view |
-| TODO-5620 | `string` parsing, code points and ASCII case | blocked | string-view |
 | TODO-5621 | Static-text field rule and `run-time text requires String` | blocked | string-view |
 | TODO-5622 | Optimized C++ emitters run the `string` view | blocked | string-backends |
 | TODO-5623 | `String` mutation parity: fill, resize, front/back, pop, swap, lossy bytes | blocked | string-owned |
@@ -123,6 +119,7 @@ of sync with them.
 | TODO-5636 | Interned `Symbol` for names and tags | blocked | string-keys |
 | TODO-5637 | Fold string operations on literals at compile time | blocked | string-quality |
 | TODO-5638 | Shared immutable strings for threads (`SharedString`) | deferred | string-concurrency |
+| TODO-5642 | Struct methods inside sum-returning functions, and explicit-self definitions | ready | lowering-gaps |
 | TODO-5603 | Startup audit: what a launch loads and does | ready | startup |
 | TODO-5586 | Native String heap: pooled blocks, statistics and limit | deferred | native-backend-strings |
 | TODO-5574 | Simple C++ emitters run bytes and strings | deferred | string-backends |
@@ -155,7 +152,6 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5540 (string-view): `string` as a static UTF-8 view: literals, count, bytes, equality
 - TODO-5570 (slices): slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views
 - TODO-5603 (startup): startup audit: what a launch loads and does
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
@@ -165,17 +161,16 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5540
-2. TODO-5570
-3. TODO-5603
-4. TODO-5536
-5. TODO-5535
-6. TODO-5510
-7. TODO-5524
+1. TODO-5570
+2. TODO-5603
+3. TODO-5536
+4. TODO-5535
+5. TODO-5510
+6. TODO-5524
 
 ### Priority Lanes
 
-- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5540, TODO-5570, TODO-5569, TODO-5618, TODO-5619, TODO-5620, TODO-5621, TODO-5622, TODO-5568, TODO-5623, TODO-5624, TODO-5625, TODO-5626, TODO-5627, TODO-5631, TODO-5630, TODO-5632, TODO-5633, TODO-5634, TODO-5635, TODO-5636, TODO-5637, TODO-5638, TODO-5530, TODO-5567, TODO-5574
+- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5570, TODO-5569, TODO-5621, TODO-5622, TODO-5568, TODO-5623, TODO-5624, TODO-5625, TODO-5626, TODO-5627, TODO-5642, TODO-5631, TODO-5630, TODO-5632, TODO-5633, TODO-5634, TODO-5635, TODO-5636, TODO-5637, TODO-5638, TODO-5530, TODO-5567, TODO-5574
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Startup (docs/NativeUiPlan.md section 16): TODO-5603
@@ -302,55 +297,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - acceptance:
     - VM tests for each operation, including invalid UTF-8 and the borrow rules; full release gate green
   - stop_rule: the owned-text conveniences on the VM; native and C++ are TODO-5574.
-
-- [ ] TODO-5540: `string` as a static UTF-8 view: literals, count, bytes, equality
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-08
-  - phase: Strings and slices (docs/spec/strings-and-views.md), first of six leaves for the text view
-  - parallel_track: string-view
-  - scope: Give `string` a view representation (pointer and byte count, like `ReadSlice<u8>`) in place of today's module string-table index, and make literals static views of constant data the VM can address as bytes (`LoadStringByteDynamic` and the `PrintString*`/`FileWriteString*` opcodes are the existing table-index consumers to migrate or keep behind the literal case). Cover `count()`, `empty()`, `[i]`/`at(i)` as `u8`, `==`/`!=`, `bytes() -> Slice<u8, Read>`, printing, `[host]` string parameters and map string keys, so every program that takes `[string]`, prints or returns literals is unchanged. Decide and record in docs/spec/strings-and-views.md how static literal data is addressed in the VM and in PSIR (the PSIR version changes if the format does).
-  - acceptance:
-    - VM tests for each operation on literals, literal-backed bindings and `string` parameters; the existing suite passes with `string` parameters and literals unchanged; PSIR change noted with a migration note if the format moves
-    - full release gate green
-  - stop_rule: the view type and static literals on the VM; borrowing from `String`, search, parsing and the field rule are TODO-5618 to TODO-5621; compiled backends are TODO-5622.
-
-- [ ] TODO-5618: `string` borrowed from `String`, `view()`, `slice()`, `utf8()`
-  - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5540
-  - depends_on: TODO-5569
-  - created_at: 2026-10-30
-  - phase: Strings and slices (docs/spec/strings-and-views.md), second of six leaves for the text view
-  - parallel_track: string-view
-  - scope: The ways to make a non-literal `string`: the implicit borrow of a `String` where a `string` is expected, `text.view()`, `text.slice(start, end)` on `String` and `string` (byte offsets; a cut inside a code point is a compile error when known and a fault otherwise), and `utf8(bytes)` returning `Result<string, TextError>` (defines `TextError`). A borrowed `string` is a loan on the `String` under the TODO-5569 rules (`borrowed binding: <root>`, returned borrows).
-  - acceptance:
-    - VM tests for each constructor including multi-byte text, a cut inside a code point and invalid UTF-8; negative tests for mutating or moving a `String` while a `string` borrowed from it is live; full release gate green
-  - stop_rule: construction and borrowing of the view on the VM.
-
-- [ ] TODO-5619: `string` search, comparison and trimming
-  - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5540
-  - created_at: 2026-10-30
-  - phase: Strings and slices (docs/spec/strings-and-views.md), third of six leaves for the text view
-  - parallel_track: string-view
-  - scope: The read-only slice operations on `string` with `string` or `u8` arguments (`find`, `rfind`, `contains`, `startsWith`, `endsWith`, `count(value)`), ordered comparison (`<`, `<=`, `>`, `>=` byte-wise, which lifts the "ordered string comparisons still require the C++ emitter" limit on the VM), `trim`, `trimStart`, `trimEnd`, with `find`/`rfind` returning `Maybe<i32>` (no `npos`) and a worst-case linear-time search (two-way or equivalent, never quadratic), and the pieces of `split(string)` and `lines()` as views of the same text. Reuse `ReadSlice<u8>` operations rather than writing a second copy.
-  - acceptance:
-    - VM tests for each operation on empty, ASCII, multi-byte and no-match inputs, and for `split`/`lines` with leading, trailing and repeated separators and `\r\n` line ends; a pathological input (`"aaaa...ab"` in `"aaaa...a"`, 1 MB) finishes in linear time; full release gate green
-  - stop_rule: the operations on the VM; parsing and case are TODO-5620.
-
-- [ ] TODO-5620: `string` parsing, code points and ASCII case
-  - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5618
-  - created_at: 2026-10-30
-  - phase: Strings and slices (docs/spec/strings-and-views.md), fourth of six leaves for the text view
-  - parallel_track: string-view
-  - scope: `parseI32()`, `parseI64()` and `parseF64()` returning `Result<T, TextError>` (empty text, a sign alone, junk, trailing bytes and overflow are errors), `codePoints()` yielding `u32` code points with their byte offsets, `codePointCount()`, `toAsciiLower()`/`toAsciiUpper()` returning `String`, and `equalsIgnoreAsciiCase(string)`.
-  - acceptance:
-    - VM tests for each operation including the error cases listed above and 1- to 4-byte code points; full release gate green
-  - stop_rule: the operations on the VM.
 
 - [ ] TODO-5621: Static-text field rule and `run-time text requires String`
   - owner: ai
@@ -542,6 +488,17 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - acceptance:
     - to be set when the leaf is un-deferred
   - stop_rule: not started.
+
+- [ ] TODO-5642: Struct methods inside sum-returning functions, and explicit-self definitions
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-02
+  - phase: Strings and slices (docs/spec/strings-and-views.md), found building TODO-5619 and TODO-5620
+  - parallel_track: lowering-gaps
+  - scope: Two lowering gaps stopped `StringView` from returning `Maybe<i32>`. (1) `[return<Maybe<i32>>] f([/std/text/StringView] v, [/std/text/StringView] n) { [i32] c{v.indexOf(n)} if(c < 0i32) { return(none<i32>()) } return(some<i32>(c)) }` fails on the VM with `vm backend cannot resolve struct layout: /Reference</std/text/StringView>`: a call of a non-trivial (not inlined) method on a struct parameter inside a function that returns a sum; `v.count()` works. The same happens for a method of the struct that returns `Maybe<i32>`. (2) A definition `/std/text/StringView/parseI32([/std/text/StringView] self)` written with a full path next to the struct is found by `v.parseI32()`, but once one such call is lowered, a later ordinary method call on another `StringView` in the same function fails with the same layout error. Fix both in the lowerer, and add `Maybe<i32>` results `find`/`rfind`/`parseI32` to `StringView` (and `Maybe<i64>`/`Maybe<f64>` if sums accept those payloads) as the acceptance case.
+  - acceptance:
+    - the two repros compile and run on the VM and `optexe`; `StringView.find(needle)`, `rfind` and `parseI32()` return `Maybe<i32>` and agree with `indexOf`/`lastIndexOf`/`parseI32Into`; full release gate green
+  - stop_rule: lowering of the two shapes and the `Maybe` forms; no new sum features.
 
 - [ ] TODO-5603: Startup audit: what a launch loads and does
   - owner: ai

@@ -252,6 +252,17 @@ inline uint64_t ps_text_call(Rt &rt, const char *name, const uint64_t *args) {
   return result;
 }
 
+// `__pstext_literal`: the address of a module string literal's bytes (a byte region made on first use).
+inline uint64_t ps_text_literal(Rt &rt, const PsString *table, size_t count, uint64_t index) {
+  const PsString &literal = ps_string(table, count, index);
+  uint64_t address = 0;
+  std::string error;
+  if (!rt.text.literal(rt.heap, index, count, literal.data, literal.size, address, error)) {
+    ps_fault(error);
+  }
+  return address;
+}
+
 // `__pstext_argument`: the entry argument at the index copied into a fresh string-heap block.
 inline uint64_t ps_text_argument(Rt &rt, uint64_t raw) {
   const int64_t index = static_cast<int32_t>(raw);

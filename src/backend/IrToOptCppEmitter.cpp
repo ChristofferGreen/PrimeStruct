@@ -484,6 +484,14 @@ private:
         std::string answer;
         if (textName == "__pstext_argument") {
           answer = "ps_text_argument(rt, " + slot(base) + ")";
+        } else if (textName == "__pstext_literal") {
+          answer = "ps_text_literal(rt, ps_strings, PsStringCount, " + slot(base) + ")";
+          if (import.returnKind == IrHostValueKind::Void) {
+            line("  " + answer + ";");
+          } else {
+            line("  " + slot(base) + " = " + answer + ";");
+          }
+          return true;
         } else {
           std::string args = "{0";
           for (size_t i = 0; i < import.parameters.size(); ++i) {

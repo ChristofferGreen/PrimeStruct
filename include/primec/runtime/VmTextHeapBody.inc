@@ -30,6 +30,12 @@ public:
   bool blockSize(uint64_t address, uint64_t &size, std::string &error) const;
 
   TextHeapStats stats() const;
+
+  // The address of a module string literal's bytes (`__pstext_literal`): the literal is copied, NUL terminated,
+  // into a byte region of its own the first time it is asked for, and the region lives as long as the heap.
+  // `tableSize` is the number of literals of the module, `index` the one asked for; an empty literal has address 0.
+  bool literal(VmHeapCore &core, uint64_t index, uint64_t tableSize, const char *data, uint64_t size,
+               uint64_t &address, std::string &error);
   // 0 removes the limit.
   void setLimit(uint64_t bytes) { limit_ = bytes; }
   uint64_t limit() const { return limit_; }
@@ -61,6 +67,8 @@ private:
   uint64_t largeBytes_ = 0;
   uint64_t bytesInUse_ = 0;
   uint64_t limit_ = 0;
+  // Region address of each literal asked for through `literal`, by string index (0 = none yet).
+  std::vector<uint64_t> literalAddresses_;
 };
 
 inline uint64_t VmTextHeap::blockSizeFor(uint64_t size) {
@@ -255,6 +263,31 @@ inline bool VmTextHeap::blockSize(uint64_t address, uint64_t &size, std::string 
   return true;
 }
 
+inline bool VmTextHeap::literal(VmHeapCore &core, uint64_t index, uint64_t tableSize, const char *data, uint64_t size,
+                                uint64_t &address, std::string &error) {
+  address = 0;
+  if (index >= tableSize) {
+    error = "invalid string index in IR";
+    return false;
+  }
+  if (size == 0) {
+    return true;
+  }
+  if (literalAddresses_.size() < tableSize) {
+    literalAddresses_.resize(static_cast<size_t>(tableSize), 0);
+  }
+  if (literalAddresses_[static_cast<size_t>(index)] == 0) {
+    uint64_t region = 0;
+    if (!core.allocateBytes(size + 1, region, error)) {
+      return false;
+    }
+    std::copy(reinterpret_cast<const uint8_t *>(data), reinterpret_cast<const uint8_t *>(data) + size, core.byteAt(region));
+    literalAddresses_[static_cast<size_t>(index)] = region;
+  }
+  address = literalAddresses_[static_cast<size_t>(index)];
+  return true;
+}
+
 inline TextHeapStats VmTextHeap::stats() const {
   TextHeapStats out;
   out.chunks = chunks_.size();
@@ -338,6 +371,32 @@ inline bool callTextHostFunction(VmTextHeap &heap,
   }
   if (name == "__pstext_set_limit") {
     heap.setLimit(args[0]);
+    return true;
+  }
+  // Decimal text to double with the C library's correctly rounded conversion (the text is checked to be a plain
+  // decimal number by the caller): `__pstext_f64_ok(address, count)` is 1 when the text converts to a finite value,
+  // `__pstext_parse_f64(address, count)` is the value's bits.
+  if (name == "__pstext_f64_ok" || name == "__pstext_parse_f64") {
+    const uint64_t length = args[1];
+    std::string digits;
+    if (length != 0) {
+      const uint8_t *first = core.byteSpan(args[0], length);
+      if (first == nullptr) {
+        error = "invalid text range: " + std::to_string(length) + " bytes at " + std::to_string(args[0]);
+        return false;
+      }
+      digits.assign(reinterpret_cast<const char *>(first), static_cast<size_t>(length));
+    }
+    char *end = nullptr;
+    const double value = std::strtod(digits.c_str(), &end);
+    const bool ok = !digits.empty() && end == digits.c_str() + digits.size() && value - value == 0.0;
+    if (name == "__pstext_f64_ok") {
+      result = ok ? 1 : 0;
+    } else {
+      static_assert(sizeof(double) == sizeof(uint64_t), "a double fits a slot");
+      std::copy(reinterpret_cast<const uint8_t *>(&value), reinterpret_cast<const uint8_t *>(&value) + sizeof(double),
+                reinterpret_cast<uint8_t *>(&result));
+    }
     return true;
   }
   // The bulk byte operations of String and the byte containers: one range check per call, then a library

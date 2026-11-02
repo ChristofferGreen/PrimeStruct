@@ -22,4 +22,7 @@ inline bool resolveVmString(const IrModule &module,
   return true;
 }
 
+// The number of literals in the module's string table.
+inline uint64_t vmStringCount(const IrModule &module) { return module.stringTable.size(); }
+
 } // namespace primec::vm_detail

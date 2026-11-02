@@ -2009,6 +2009,7 @@ are left unarchived.
 | TODO-5537 | IR byte opcodes and VM byte regions | [2026-10.md](todo_archive/2026-10.md) | 2026-10-22 |
 | TODO-5538 | The `Slice<T, Capability>` value and its operations | [2026-10.md](todo_archive/2026-10.md) | 2026-10-22 |
 | TODO-5539 | Owned `String` with the string heap | [2026-10.md](todo_archive/2026-10.md) | 2026-10-22 |
+| TODO-5540 | `StringView`: a borrowed view of literals and Strings | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 | TODO-5541 | Host functions take and return `String` | [undated.md](todo_archive/undated.md) | - |
 | TODO-5542 | Native and C++ parity for bytes, slices and strings | [undated.md](todo_archive/undated.md) | - |
 | TODO-5546 | Text view file load and save in the native UI ABI | [2026-10.md](todo_archive/2026-10.md) | 2026-10-08 |
@@ -2076,6 +2077,9 @@ are left unarchived.
 | TODO-5615 | AppKit output pane and the lazily loaded runner | [2026-10.md](todo_archive/2026-10.md) | 2026-10-27 |
 | TODO-5616 | The editor's Run button and output pane | [2026-10.md](todo_archive/2026-10.md) | 2026-10-27 |
 | TODO-5617 | Run scripts in their own process | [2026-10.md](todo_archive/2026-10.md) | 2026-10-27 |
+| TODO-5618 | `StringView` slices, bytes and UTF-8 validation | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
+| TODO-5619 | `StringView` search, comparison, trimming, pieces and lines | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
+| TODO-5620 | `StringView` numbers, code points and ASCII case | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 | TODO-5628 | std::string conformance and speed gate for `String` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 | TODO-5629 | Bulk byte operations under `String` and `Slice<u8>` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 | TODO-5639 | A binding whose declared type is an imported short name skipped the Copy helper | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |

@@ -50,6 +50,22 @@ bool handleVmHostCall(const VmHostFunctions *hostFunctions,
       stack.push_back(textResult);
       return true;
     }
+    if (textName == "__pstext_literal") {
+      // The address of a module string literal's bytes: the string index comes from the stack.
+      const std::string *literal = nullptr;
+      std::string lookupError;
+      if (!resolveVmString(module, stack[textBase], literal, lookupError)) {
+        error = "invalid string index passed to " + import.name;
+        return false;
+      }
+      if (!text->heap->literal(*text->core, stack[textBase], vmStringCount(module), literal->data(), literal->size(),
+                               textResult, error)) {
+        return false;
+      }
+      stack.resize(textBase);
+      stack.push_back(textResult);
+      return true;
+    }
     if (!callTextHostFunction(*text->heap, *text->core, textName, stack.data() + textBase, textResult, known, error)) {
       return false;
     }

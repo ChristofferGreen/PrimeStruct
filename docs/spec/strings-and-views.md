@@ -303,6 +303,38 @@ Found by the suite: a binding initialized from another `String` binding aliases 
 (TODO-5639); the supported way to duplicate text is a `[String copy]` parameter. Known limits: counts are `i32`, so text
 is capped at 1 GiB (`reserve` rejects more).
 
+### Current surface of the text view (VM and optexe)
+
+The view is built in stages. `string` is still the static literal type (a module string-table index): print, map
+keys, `File` paths, host parameters and every existing program keep it. Text that is not a literal is viewed through
+the stdlib struct `StringView` (`import /std/text/*`; the name follows `std::string_view`), a pointer to the first
+byte and a byte count. `TextView` is taken by the native-UI widget.
+
+- **Making one:** `s.view()` on a `String`, `textOf("literal")` for a literal, `s.slice(a, b)` or `v.slice(a, b)`
+  for part of a text, `textFromBytes(bytes)` for bytes that are valid UTF-8. A literal's bytes get an address from the
+  text host function `__pstext_literal` (a NUL-terminated byte region made the first time and kept for the run); an
+  empty literal or empty String gives the null pointer and a count of 0.
+- **Access:** `count()`, `empty()`, `byteAt(i)` (faults outside the text), `bytes()` (a `ReadSlice<u8>`), `isBoundary(i)`.
+  A slice cut inside a code point, or outside the text, stops the program.
+- **Compare and search** (byte order, which orders UTF-8 by code point): `equals`, `equalsText`, `compare`,
+  `startsWith`, `endsWith`, `contains`, `indexOfByte`, `indexOf`, `indexOfFrom`, `lastIndexOf` (an index or -1). Forward
+  search is linear time (two-way matching, no allocation). The bulk work is done by the `__pstext_*` functions of
+  the TODO-5629 section.
+- **Pieces:** `trim`, `trimStart`, `trimEnd` (ASCII white space), `splitCount`/`splitPart(separator, n)` (views),
+  `lineCount`/`lineAt(n)` (a carriage return before the line feed is dropped; no empty line after a final one).
+- **Numbers:** `parseI32Into(out)`, `parseI64Into(out)`, `parseF64Into(out)` and the `...Or(fallback)` forms; the text
+  must be exactly a number in range (floats: a plain decimal, no white space, hexadecimal, inf or nan), and `out` is
+  left alone on failure. The float conversion is the C library's, correctly rounded (`__pstext_parse_f64`).
+- **Code points and case:** `codePointCount()`, `codePointLength(offset)`, `codePointAt(offset)` (an i32), and
+  `toAsciiLower()`/`toAsciiUpper()` (a `String`) and `equalsIgnoreAsciiCase(other)`; bytes 128 and up are left alone.
+- **Checking bytes:** `utf8ErrorOffset(data, count)` is the offset of the first byte that starts invalid UTF-8, or -1.
+- A view is valid while its text is not changed or freed. The loan rules that make that a compile-time guarantee are
+  TODO-5569; until then it is the program's responsibility, as with `ReadSlice`.
+- Not yet: `Maybe` and `Result<..., TextError>` results (TODO-5642 and the result lane: the lowerer cannot return a sum
+  from a function that calls a struct method, so searches return -1 and parses fill an out parameter), the native
+  backends for `__pstext_literal` and the float functions (TODO-5622 and its native follow-ups), and unifying `string`
+  and `StringView` into the single type described above (TODO-5621).
+
 ## Host functions and embedding
 
 - A `[host]` parameter may be `string` or `String`; the host receives a UTF-8 pointer and length. A `String` (always
@@ -329,7 +361,7 @@ is capped at 1 GiB (`reserve` rejects more).
 | TODO-5566 (done), TODO-5567 | packed byte containers: `vector<u8>` and `Pointer<u8>` buffers, then `array<u8>` |
 | TODO-5538 (done), TODO-5569, TODO-5570 | `Slice<T, Capability>` as a real view with shared operations; loan and escape rules; method spellings and `array<T>` views |
 | TODO-5539 (done) | `String`: value, lifecycle, the string heap and the owned-text API |
-| TODO-5540 | `string` as a static view: literals, count, bytes, equality |
+| TODO-5540 | `StringView`: a borrowed view of literals and Strings |
 | TODO-5618 | `string` borrowed from `String`, `view()`, `slice()`, `utf8()` |
 | TODO-5619 | `string` search, ordered comparison, trim, `split`, `lines` |
 | TODO-5620 | `string` parsing, code points, ASCII case |

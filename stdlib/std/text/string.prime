@@ -4,6 +4,7 @@
 // and `capacity()` is the block size less that byte.
 
 import /std/panic/*
+import /std/collections/slice/*
 
 namespace std {
   namespace text {
@@ -54,9 +55,26 @@ namespace std {
   __pstext_compare([Pointer<u8>] a, [Pointer<u8>] b, [u64] count) {
   }
 
+  // Decimal text to double (C library conversion, correctly rounded): ok is 1 when the `count` bytes at `address` are a
+  // number the C library converts to a finite value; parse gives its bits as an f64. The caller checks the grammar.
+  // The VM and the optimized C++ runtime answer them; the native backends do not yet.
+  [host return<i32>]
+  __pstext_f64_ok([Pointer<u8>] address, [u64] count) {
+  }
+
+  [host return<f64>]
+  __pstext_parse_f64([Pointer<u8>] address, [u64] count) {
+  }
+
   // find: the index of the first of `count` bytes equal to the low byte of `value`, or -1.
   [host return<i32>]
   __pstext_find([Pointer<u8>] address, [u64] count, [u64] value) {
+  }
+
+  // The address of a string literal's bytes (NUL terminated, valid for the whole run): a byte region the VM and the
+  // optimized C++ runtime make the first time the literal is asked for. Not on the native backends yet.
+  [host return<Pointer<u8>>]
+  __pstext_literal([string] text) {
   }
 
   [unsafe return<void>]
@@ -113,6 +131,718 @@ namespace std {
     return(convert<i32>(__pstext_capacity(block)) - 1i32)
   }
 
+  // A borrowed, read-only view of text: a pointer to its first byte and a byte count (docs/spec/strings-and-views.md).
+  // It copies nothing and owns nothing. A literal becomes a view with `textOf("...")`, a String with `s.view()`; the
+  // view is valid while that text is not changed or freed.
+  [public struct]
+  StringView() {
+    [public Pointer<u8> mut] data{__pstext_alloc(0u64)}
+    [public i32 mut] fieldLength{0i32}
+
+    [return<i32>]
+    count() {
+      return(this.fieldLength)
+    }
+
+    [return<bool>]
+    empty() {
+      return(this.fieldLength == 0i32)
+    }
+
+    [return<u8>]
+    byteAt([i32] index) {
+      if(index < 0i32 || index >= this.fieldLength) {
+        panic(index)
+      }
+      return(textLoad(this.data, index))
+    }
+
+    [return<bool>]
+    equals([/std/text/StringView] other) {
+      if(other.fieldLength != this.fieldLength) {
+        return(false)
+      }
+      return(compareBytes(this.data, other.data, this.fieldLength) == 0i32)
+    }
+
+    [return<bool>]
+    equalsText([string] text) {
+      return(this.equals(textOf(text)))
+    }
+
+    // True when `index` lies between two code points, or at either end of the text. Text is UTF-8, so a byte of the
+    // form 10xxxxxx (128 to 191) continues a code point and is no place to cut.
+    [return<bool>]
+    isBoundary([i32] index) {
+      if(index < 0i32 || index > this.fieldLength) {
+        return(false)
+      }
+      if(index == 0i32 || index == this.fieldLength) {
+        return(true)
+      }
+      return(convert<i32>(textLoad(this.data, index)) / 64i32 != 2i32)
+    }
+
+    // The bytes [start, end) as a view of the same text. A cut inside a code point, or a range outside the text,
+    // stops the program.
+    [return<StringView>]
+    slice([i32] start, [i32] end) {
+      if(start < 0i32 || end < start || end > this.fieldLength) {
+        panic(start)
+      }
+      if(!this.isBoundary(start) || !this.isBoundary(end)) {
+        panic(start)
+      }
+      return(StringView{[data] textAddress(this.data, start), [fieldLength] end - start})
+    }
+
+    // The text as a read view of its bytes.
+    [return<ReadSlice<u8>>]
+    bytes() {
+      return(readSliceMake<u8>(this.data, this.fieldLength))
+    }
+
+    // ---- comparison and search (byte order; UTF-8 sorts by code point) ----
+
+    // -1, 0 or 1: the first differing byte decides, a shorter text that is a prefix sorts first.
+    [return<i32>]
+    compare([/std/text/StringView] other) {
+      [i32] common{if(this.fieldLength < other.fieldLength, then() { this.fieldLength }, else() { other.fieldLength })}
+      [i32] order{compareBytes(this.data, other.data, common)}
+      if(order != 0i32) {
+        return(order)
+      }
+      if(this.fieldLength < other.fieldLength) {
+        return(-1i32)
+      }
+      if(this.fieldLength > other.fieldLength) {
+        return(1i32)
+      }
+      return(0i32)
+    }
+
+    [return<bool>]
+    startsWith([/std/text/StringView] prefix) {
+      if(prefix.fieldLength > this.fieldLength) {
+        return(false)
+      }
+      return(compareBytes(this.data, prefix.data, prefix.fieldLength) == 0i32)
+    }
+
+    [return<bool>]
+    endsWith([/std/text/StringView] suffix) {
+      if(suffix.fieldLength > this.fieldLength) {
+        return(false)
+      }
+      return(compareBytes(textAddress(this.data, this.fieldLength - suffix.fieldLength), suffix.data, suffix.fieldLength) == 0i32)
+    }
+
+    // The index of the first byte equal to `value`, or -1.
+    [return<i32>]
+    indexOfByte([u8] value) {
+      return(findByte(this.data, this.fieldLength, value))
+    }
+
+    // The index of the first place `needle` occurs at or after `from`, or -1. The empty needle occurs at `from`.
+    // Linear time (Crochemore-Perrin two-way matching; a single byte uses a byte scan).
+    [return<i32>]
+    indexOfFrom([/std/text/StringView] needle, [i32] from) {
+      return(textIndexOfFrom(this.data, this.fieldLength, needle.data, needle.fieldLength, from))
+    }
+
+    [return<i32>]
+    indexOf([/std/text/StringView] needle) {
+      return(textIndexOfFrom(this.data, this.fieldLength, needle.data, needle.fieldLength, 0i32))
+    }
+
+    // The index of the last place `needle` occurs, or -1.
+    [return<i32>]
+    lastIndexOf([/std/text/StringView] needle) {
+      return(textLastIndexOf(this.data, this.fieldLength, needle.data, needle.fieldLength))
+    }
+
+    [return<bool>]
+    contains([/std/text/StringView] needle) {
+      return(this.indexOf(needle) >= 0i32)
+    }
+
+    // ---- trimming (ASCII white space: space, tab, line feed, vertical tab, form feed, carriage return) ----
+
+    [return<StringView>]
+    trimStart() {
+      [i32 mut] start{0i32}
+      while(start < this.fieldLength && isAsciiSpace(textLoad(this.data, start))) {
+        start = start + 1i32
+      }
+      return(StringView{[data] textAddress(this.data, start), [fieldLength] this.fieldLength - start})
+    }
+
+    [return<StringView>]
+    trimEnd() {
+      [i32 mut] end{this.fieldLength}
+      while(end > 0i32 && isAsciiSpace(textLoad(this.data, end - 1i32))) {
+        end = end - 1i32
+      }
+      return(StringView{[data] this.data, [fieldLength] end})
+    }
+
+    [return<StringView>]
+    trim() {
+      return(this.trimStart().trimEnd())
+    }
+
+    // ---- pieces: views of this text between separators ----
+
+    // How many pieces `splitPart` has: one more than the separators (a non-empty separator).
+    [return<i32>]
+    splitCount([/std/text/StringView] separator) {
+      if(separator.fieldLength == 0i32) {
+        return(1i32)
+      }
+      [i32 mut] pieces{1i32}
+      [i32 mut] from{0i32}
+      while(from <= this.fieldLength) {
+        [i32] at{this.indexOfFrom(separator, from)}
+        if(at < 0i32) {
+          return(pieces)
+        }
+        pieces = pieces + 1i32
+        from = at + separator.fieldLength
+      }
+      return(pieces)
+    }
+
+    // Piece `n` (from 0): the text between the n-th and the next separator. An empty separator gives the whole text.
+    [return<StringView>]
+    splitPart([/std/text/StringView] separator, [i32] n) {
+      if(n < 0i32) {
+        panic(n)
+      }
+      [i32 mut] start{0i32}
+      if(separator.fieldLength == 0i32) {
+        if(n != 0i32) {
+          panic(n)
+        }
+        return(this.slice(0i32, this.fieldLength))
+      }
+      for([i32 mut] i{0i32}, i < n, i++) {
+        [i32] at{this.indexOfFrom(separator, start)}
+        if(at < 0i32) {
+          panic(n)
+        }
+        start = at + separator.fieldLength
+      }
+      [i32] stop{this.indexOfFrom(separator, start)}
+      return(this.slice(start, if(stop < 0i32, then() { this.fieldLength }, else() { stop })))
+    }
+
+    // Lines end at a line feed; a carriage return before it is not part of the line, and there is no empty
+    // line after a final line feed. The empty text has no lines.
+    [return<i32>]
+    lineCount() {
+      if(this.fieldLength == 0i32) {
+        return(0i32)
+      }
+      [i32 mut] lines{0i32}
+      [i32 mut] from{0i32}
+      while(from < this.fieldLength) {
+        [i32] at{findByte(textAddress(this.data, from), this.fieldLength - from, 10u8)}
+        lines = lines + 1i32
+        if(at < 0i32) {
+          return(lines)
+        }
+        from = from + at + 1i32
+      }
+      return(lines)
+    }
+
+    [return<StringView>]
+    lineAt([i32] n) {
+      if(n < 0i32) {
+        panic(n)
+      }
+      [i32 mut] start{0i32}
+      for([i32 mut] i{0i32}, i < n, i++) {
+        [i32] at{findByte(textAddress(this.data, start), this.fieldLength - start, 10u8)}
+        if(at < 0i32) {
+          panic(n)
+        }
+        start = start + at + 1i32
+      }
+      if(start >= this.fieldLength) {
+        panic(n)
+      }
+      [i32] lineBreak{findByte(textAddress(this.data, start), this.fieldLength - start, 10u8)}
+      [i32 mut] end{if(lineBreak < 0i32, then() { this.fieldLength }, else() { start + lineBreak })}
+      if(end > start && textLoad(this.data, end - 1i32) == 13u8) {
+        end = end - 1i32
+      }
+      return(StringView{[data] textAddress(this.data, start), [fieldLength] end - start})
+    }
+
+    // ---- numbers (no value when the text is not exactly a number) ----
+
+    // An optional sign then decimal digits, nothing else, in range: stores the value in `out` and returns true;
+    // otherwise returns false and leaves `out` alone. (Maybe-valued forms wait on TODO-5642 and the 64-bit payload.)
+    [return<bool>]
+    parseI64Into([i64 mut] out) {
+      return(textParseI64(this.data, this.fieldLength, out))
+    }
+
+    [return<i64>]
+    parseI64Or([i64] fallback) {
+      [i64 mut] value{fallback}
+      if(this.parseI64Into(value)) {
+        return(value)
+      }
+      return(fallback)
+    }
+
+    // Like parseI64Into, for a value that fits an i32.
+    [return<bool>]
+    parseI32Into([i32 mut] out) {
+      [i64 mut] wide{0i64}
+      if(!textParseI64(this.data, this.fieldLength, wide)) {
+        return(false)
+      }
+      if(wide < -2147483648i64 || wide > 2147483647i64) {
+        return(false)
+      }
+      out = convert<i32>(wide)
+      return(true)
+    }
+
+    // A plain decimal number: an optional sign, digits with an optional fraction (or a fraction alone), and an optional
+    // exponent. No white space, no hexadecimal form, no inf or nan. Stores the value in `out` and returns true; false
+    // (leaving `out`) for other text or a value too large for an f64.
+    [return<bool>]
+    parseF64Into([f64 mut] out) {
+      if(!isDecimalNumber(this.data, this.fieldLength)) {
+        return(false)
+      }
+      if(__pstext_f64_ok(this.data, convert<u64>(this.fieldLength)) == 0i32) {
+        return(false)
+      }
+      out = __pstext_parse_f64(this.data, convert<u64>(this.fieldLength))
+      return(true)
+    }
+
+    [return<f64>]
+    parseF64Or([f64] fallback) {
+      [f64 mut] value{fallback}
+      if(this.parseF64Into(value)) {
+        return(value)
+      }
+      return(fallback)
+    }
+
+    [return<i32>]
+    parseI32Or([i32] fallback) {
+      [i32 mut] value{fallback}
+      if(this.parseI32Into(value)) {
+        return(value)
+      }
+      return(fallback)
+    }
+
+    // ---- code points ----
+
+    // The width in bytes of the code point that starts at `offset` (1 to 4), from its lead byte; `offset` must be a
+    // boundary inside the text.
+    [return<i32>]
+    codePointLength([i32] offset) {
+      if(offset < 0i32 || offset >= this.fieldLength || !this.isBoundary(offset)) {
+        panic(offset)
+      }
+      [i32] lead{convert<i32>(textLoad(this.data, offset))}
+      if(lead < 192i32) {
+        return(1i32)
+      }
+      if(lead < 224i32) {
+        return(2i32)
+      }
+      if(lead < 240i32) {
+        return(3i32)
+      }
+      return(4i32)
+    }
+
+    // The code point that starts at `offset` (at most 0x10FFFF, so an i32; there is no u32 type yet). The text is
+    // valid UTF-8 (a String or a checked view).
+    [return<i32>]
+    codePointAt([i32] offset) {
+      [i32] width{this.codePointLength(offset)}
+      if(offset + width > this.fieldLength) {
+        panic(offset)
+      }
+      [i32] lead{convert<i32>(textLoad(this.data, offset))}
+      if(width == 1i32) {
+        return(lead)
+      }
+      [i32 mut] value{lead - (if(width == 2i32, then() { 192i32 }, else() { if(width == 3i32, then() { 224i32 }, else() { 240i32 }) }))}
+      for([i32 mut] k{1i32}, k < width, k++) {
+        value = value * 64i32 + (convert<i32>(textLoad(this.data, offset + k)) - 128i32)
+      }
+      return(value)
+    }
+
+    // How many code points the text holds: the bytes that are not continuation bytes.
+    [return<i32>]
+    codePointCount() {
+      [i32 mut] total{0i32}
+      for([i32 mut] i{0i32}, i < this.fieldLength, i++) {
+        if(convert<i32>(textLoad(this.data, i)) / 64i32 != 2i32) {
+          total = total + 1i32
+        }
+      }
+      return(total)
+    }
+
+    // ---- ASCII case (bytes 128 and up are left alone) ----
+
+    [return<String> effects(heap_alloc)]
+    toAsciiLower() {
+      [String mut] out{stringWithCapacity(this.fieldLength)}
+      for([i32 mut] i{0i32}, i < this.fieldLength, i++) {
+        [u8] byte{textLoad(this.data, i)}
+        out.pushByte(if(byte >= 65u8 && byte <= 90u8, then() { byte + 32u8 }, else() { byte }))
+      }
+      return(out)
+    }
+
+    [return<String> effects(heap_alloc)]
+    toAsciiUpper() {
+      [String mut] out{stringWithCapacity(this.fieldLength)}
+      for([i32 mut] i{0i32}, i < this.fieldLength, i++) {
+        [u8] byte{textLoad(this.data, i)}
+        out.pushByte(if(byte >= 97u8 && byte <= 122u8, then() { byte - 32u8 }, else() { byte }))
+      }
+      return(out)
+    }
+
+    [return<bool>]
+    equalsIgnoreAsciiCase([/std/text/StringView] other) {
+      if(other.fieldLength != this.fieldLength) {
+        return(false)
+      }
+      for([i32 mut] i{0i32}, i < this.fieldLength, i++) {
+        [u8 mut] a{textLoad(this.data, i)}
+        [u8 mut] b{textLoad(other.data, i)}
+        if(a >= 65u8 && a <= 90u8) {
+          a = a + 32u8
+        }
+        if(b >= 65u8 && b <= 90u8) {
+          b = b + 32u8
+        }
+        if(a != b) {
+          return(false)
+        }
+      }
+      return(true)
+    }
+  }
+
+  // [+-]? ( digits+ ( '.' digits* )? | '.' digits+ ) ( [eE] [+-]? digits+ )?  and nothing else.
+  [return<bool>]
+  isDecimalNumber([Pointer<u8>] data, [i32] length) {
+    [i32 mut] i{0i32}
+    if(length > 0i32 && (textLoad(data, 0i32) == 43u8 || textLoad(data, 0i32) == 45u8)) {
+      i = 1i32
+    }
+    [i32 mut] whole{0i32}
+    while(i < length && textLoad(data, i) >= 48u8 && textLoad(data, i) <= 57u8) {
+      i = i + 1i32
+      whole = whole + 1i32
+    }
+    [i32 mut] fraction{0i32}
+    if(i < length && textLoad(data, i) == 46u8) {
+      i = i + 1i32
+      while(i < length && textLoad(data, i) >= 48u8 && textLoad(data, i) <= 57u8) {
+        i = i + 1i32
+        fraction = fraction + 1i32
+      }
+    }
+    if(whole + fraction == 0i32) {
+      return(false)
+    }
+    if(i < length && (textLoad(data, i) == 101u8 || textLoad(data, i) == 69u8)) {
+      i = i + 1i32
+      if(i < length && (textLoad(data, i) == 43u8 || textLoad(data, i) == 45u8)) {
+        i = i + 1i32
+      }
+      [i32 mut] exponent{0i32}
+      while(i < length && textLoad(data, i) >= 48u8 && textLoad(data, i) <= 57u8) {
+        i = i + 1i32
+        exponent = exponent + 1i32
+      }
+      if(exponent == 0i32) {
+        return(false)
+      }
+    }
+    return(i == length)
+  }
+
+  // The index of the first place the needle occurs in the haystack at or after `from`, or -1.
+  [return<i32>]
+  textIndexOfFrom([Pointer<u8>] hay, [i32] hayCount, [Pointer<u8>] needle, [i32] needleCount, [i32] from) {
+    if(from < 0i32 || from > hayCount) {
+      return(-1i32)
+    }
+    [i32] hit{twoWayFind(textAddress(hay, from), hayCount - from, needle, needleCount)}
+    if(hit < 0i32) {
+      return(-1i32)
+    }
+    return(from + hit)
+  }
+
+  [return<i32>]
+  textLastIndexOf([Pointer<u8>] hay, [i32] hayCount, [Pointer<u8>] needle, [i32] needleCount) {
+    for([i32 mut] at{hayCount - needleCount}, at >= 0i32, at--) {
+      if(compareBytes(textAddress(hay, at), needle, needleCount) == 0i32) {
+        return(at)
+      }
+    }
+    return(-1i32)
+  }
+
+  // An optional sign then decimal digits, nothing else, in range: stores the value in `out` and returns true;
+  // otherwise returns false and leaves `out` alone.
+  [return<bool>]
+  textParseI64([Pointer<u8>] data, [i32] length, [i64 mut] out) {
+    if(length == 0i32) {
+      return(false)
+    }
+    [i32 mut] i{0i32}
+    [bool] negative{textLoad(data, 0i32) == 45u8}
+    if(negative || textLoad(data, 0i32) == 43u8) {
+      i = 1i32
+    }
+    if(i == length) {
+      return(false)
+    }
+    [u64] limit{if(negative, then() { 9223372036854775808u64 }, else() { 9223372036854775807u64 })}
+    [u64 mut] magnitude{0u64}
+    while(i < length) {
+      [u8] digit{textLoad(data, i) - 48u8}
+      if(digit > 9u8) {
+        return(false)
+      }
+      [u64] d{convert<u64>(digit)}
+      if(magnitude > (limit - d) / 10u64) {
+        return(false)
+      }
+      magnitude = magnitude * 10u64 + d
+      i = i + 1i32
+    }
+    [i64 mut] value{convert<i64>(magnitude)}
+    if(negative) {
+      value = 0i64 - value
+    }
+    out = value
+    return(true)
+  }
+
+  [return<bool>]
+  isAsciiSpace([u8] value) {
+    return(value == 32u8 || (value >= 9u8 && value <= 13u8))
+  }
+
+  // The index in the haystack (`hayCount` bytes at `hay`) of the first occurrence of the needle, or -1; the empty
+  // needle occurs at 0. A single byte is a byte scan; longer needles use two-way matching (Crochemore and Perrin,
+  // as in glibc's two_way_short_needle): at most about 2 * hayCount byte comparisons, with no allocation.
+  [return<i32>]
+  twoWayFind([Pointer<u8>] hay, [i32] hayCount, [Pointer<u8>] needle, [i32] needleCount) {
+    if(needleCount == 0i32) {
+      return(0i32)
+    }
+    if(needleCount > hayCount) {
+      return(-1i32)
+    }
+    if(needleCount == 1i32) {
+      return(findByte(hay, hayCount, textLoad(needle, 0i32)))
+    }
+    // Critical factorization: the maximal suffix under both byte orders, keeping the longer one.
+    [i32 mut] period{1i32}
+    [i32 mut] suffixForward{-1i32}
+    [i32 mut] j{0i32}
+    [i32 mut] k{1i32}
+    while(j + k < needleCount) {
+      [u8] a{textLoad(needle, j + k)}
+      [u8] b{textLoad(needle, suffixForward + k)}
+      if(a < b) {
+        j = j + k
+        k = 1i32
+        period = j - suffixForward
+      } else {
+        if(a == b) {
+          if(k != period) {
+            k = k + 1i32
+          } else {
+            j = j + period
+            k = 1i32
+          }
+        } else {
+          suffixForward = j
+          j = j + 1i32
+          k = 1i32
+          period = 1i32
+        }
+      }
+    }
+    [i32] periodForward{period}
+    [i32 mut] suffixReverse{-1i32}
+    period = 1i32
+    j = 0i32
+    k = 1i32
+    while(j + k < needleCount) {
+      [u8] a{textLoad(needle, j + k)}
+      [u8] b{textLoad(needle, suffixReverse + k)}
+      if(b < a) {
+        j = j + k
+        k = 1i32
+        period = j - suffixReverse
+      } else {
+        if(a == b) {
+          if(k != period) {
+            k = k + 1i32
+          } else {
+            j = j + period
+            k = 1i32
+          }
+        } else {
+          suffixReverse = j
+          j = j + 1i32
+          k = 1i32
+          period = 1i32
+        }
+      }
+    }
+    [i32 mut] suffix{suffixReverse + 1i32}
+    [i32 mut] finalPeriod{period}
+    if(suffixReverse + 1i32 < suffixForward + 1i32) {
+      suffix = suffixForward + 1i32
+      finalPeriod = periodForward
+    }
+    [i32 mut] pos{0i32}
+    if(compareBytes(needle, textAddress(needle, finalPeriod), suffix) == 0i32) {
+      // The needle is periodic: remember how much of the right half the last attempt already matched.
+      [i32 mut] memory{0i32}
+      while(pos + needleCount <= hayCount) {
+        [i32 mut] i{if(suffix > memory, then() { suffix }, else() { memory })}
+        while(i < needleCount && textLoad(needle, i) == textLoad(hay, pos + i)) {
+          i = i + 1i32
+        }
+        if(i >= needleCount) {
+          i = suffix - 1i32
+          while(memory < i + 1i32 && textLoad(needle, i) == textLoad(hay, pos + i)) {
+            i = i - 1i32
+          }
+          if(i + 1i32 < memory + 1i32) {
+            return(pos)
+          }
+          pos = pos + finalPeriod
+          memory = needleCount - finalPeriod
+        } else {
+          pos = pos + i - suffix + 1i32
+          memory = 0i32
+        }
+      }
+    } else {
+      // The halves differ: any mismatch shifts by the longer half.
+      finalPeriod = (if(suffix > needleCount - suffix, then() { suffix }, else() { needleCount - suffix })) + 1i32
+      while(pos + needleCount <= hayCount) {
+        [i32 mut] i{suffix}
+        while(i < needleCount && textLoad(needle, i) == textLoad(hay, pos + i)) {
+          i = i + 1i32
+        }
+        if(i >= needleCount) {
+          i = suffix - 1i32
+          while(i >= 0i32 && textLoad(needle, i) == textLoad(hay, pos + i)) {
+            i = i - 1i32
+          }
+          if(i < 0i32) {
+            return(pos)
+          }
+          pos = pos + finalPeriod
+        } else {
+          pos = pos + i - suffix + 1i32
+        }
+      }
+    }
+    return(-1i32)
+  }
+
+  // The offset of the first byte that starts invalid UTF-8 in the `count` bytes at `data`, or -1 when all of it is
+  // valid: no overlong forms, no surrogates, nothing above U+10FFFF, no truncated sequence.
+  [public return<i32>]
+  utf8ErrorOffset([Pointer<u8>] data, [i32] count) {
+    [i32 mut] i{0i32}
+    while(i < count) {
+      [i32] lead{convert<i32>(textLoad(data, i))}
+      [i32 mut] need{0i32}
+      [i32 mut] low{128i32}
+      [i32 mut] high{191i32}
+      [bool mut] valid{lead < 128i32}
+      if(lead >= 194i32 && lead <= 223i32) {
+        need = 1i32
+        valid = true
+      }
+      if(lead >= 224i32 && lead <= 239i32) {
+        need = 2i32
+        valid = true
+        if(lead == 224i32) {
+          low = 160i32
+        }
+        if(lead == 237i32) {
+          high = 159i32
+        }
+      }
+      if(lead >= 240i32 && lead <= 244i32) {
+        need = 3i32
+        valid = true
+        if(lead == 240i32) {
+          low = 144i32
+        }
+        if(lead == 244i32) {
+          high = 143i32
+        }
+      }
+      if(!valid) {
+        return(i)
+      }
+      if(need > 0i32 && i + need >= count) {
+        return(i)
+      }
+      for([i32 mut] k{1i32}, k <= need, k++) {
+        [i32] next{convert<i32>(textLoad(data, i + k))}
+        [i32] floor{if(k == 1i32, then() { low }, else() { 128i32 })}
+        [i32] ceiling{if(k == 1i32, then() { high }, else() { 191i32 })}
+        if(next < floor || next > ceiling) {
+          return(i)
+        }
+      }
+      i = i + need + 1i32
+    }
+    return(-1i32)
+  }
+
+  // A view of the bytes of `bytes`, which must be valid UTF-8: invalid bytes stop the program. Use utf8ErrorOffset
+  // first to handle them instead.
+  [public return<StringView>]
+  textFromBytes([ReadSlice<u8>] bytes) {
+    [i32] bad{utf8ErrorOffset(bytes.data, bytes.count())}
+    if(bad >= 0i32) {
+      panic(bad)
+    }
+    return(StringView{[data] bytes.data, [fieldLength] bytes.count()})
+  }
+
+  // The view of a string literal's text.
+  [public return<StringView>]
+  textOf([string] text) {
+    return(StringView{[data] __pstext_literal(text), [fieldLength] text.count()})
+  }
+
   [public struct]
   String() {
     [public i32 mut] fieldLength{0i32}
@@ -128,6 +858,18 @@ namespace std {
     [return<bool>]
     empty() {
       return(this.fieldLength == 0i32)
+    }
+
+    // A view of the bytes [start, end), cut between code points (see StringView.slice).
+    [return<StringView>]
+    slice([i32] start, [i32] end) {
+      return(this.view().slice(start, end))
+    }
+
+    // A view of the whole text; valid until this String changes or is destroyed.
+    [return<StringView>]
+    view() {
+      return(StringView{[data] this.data, [fieldLength] this.fieldLength})
     }
 
     [return<i32>]
