@@ -2077,6 +2077,7 @@ are left unarchived.
 | TODO-5616 | The editor's Run button and output pane | [2026-10.md](todo_archive/2026-10.md) | 2026-10-27 |
 | TODO-5617 | Run scripts in their own process | [2026-10.md](todo_archive/2026-10.md) | 2026-10-27 |
 | TODO-5628 | std::string conformance and speed gate for `String` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
+| TODO-5640 | String heap hot paths: O(1) frees, chunk index, region cache | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 
 <!-- INDEX-END -->
 

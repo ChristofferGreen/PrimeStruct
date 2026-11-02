@@ -284,16 +284,18 @@ Medians of repeated runs on macOS arm64 (2026-11-02, release build):
 
 | Workload | `std::string` | `String` (`optexe`) | Ratio | Budget |
 | --- | --- | --- | --- | --- |
-| `append_bytes`: 5M `pushByte` | 0.03 s | 0.18 s | 5x | 9 |
-| `append_chunks`: 200k appends of 43 bytes | 0.03 s | 0.19 s | 7x | 11 |
-| `short_strings`: 1M `"GET"` + 12 bytes | 0.03 s | 2.9 s | 110 to 140x | 190 |
-| `insert_front`: 20k inserts at 0 | 0.03 s | 1.4 s | 43 to 61x | 100 |
-| `copy_text`: 200k copies of 1000 bytes | 0.03 s | 1.0 to 1.2 s | 15 to 35x | 56 |
-| `replace_middle`: 100k replaces | 0.03 s | 1.1 to 1.5 s | 39 to 52x | 85 |
+| `append_bytes`: 5M `pushByte` | 0.03 s | 0.15 s | 5x | 9 |
+| `append_chunks`: 200k appends of 43 bytes | 0.02 s | 0.16 to 0.20 s | 8x | 13 |
+| `short_strings`: 1M `"GET"` + 12 bytes | 0.02 s | 0.15 s | 5 to 9x | 14 |
+| `insert_front`: 20k inserts at 0 | 0.02 s | 0.8 to 1.0 s | 32 to 48x | 80 |
+| `copy_text`: 200k copies of 1000 bytes | 0.03 s | 0.6 to 0.75 s | 17 to 24x | 38 |
+| `replace_middle`: 100k replaces | 0.02 s | 0.7 to 0.85 s | 34 to 43x | 70 |
 
-The gap is the quality work still to do. Every byte move is a `.prime` loop (TODO-5629) and every non-empty `String`
-takes a heap block. Re-measure `short_strings` after TODO-5629 before deciding whether a small-string form is worth
-it: much of that ratio is per-call overhead, not allocation. Lower a budget whenever its ratio drops.
+The string heap fixes of TODO-5640 (an O(1) double-free check, a per-class index of chunks with free blocks, an
+empty-chunk counter and a one-entry region cache in `byteAt`) took `short_strings` from 110 to 140x down to 5 to 9x;
+before them about 90% of its time was a linear scan in every block free. What is left is the byte loops: every byte
+move is a `.prime` loop of `LoadU8`/`StoreU8` (TODO-5629). Re-measure after TODO-5629 before deciding whether a
+small-string form is worth it. Lower a budget whenever its ratio drops.
 
 Found by the suite: a binding initialized from another `String` binding aliases the heap block and frees it twice
 (TODO-5639); the supported way to duplicate text is a `[String copy]` parameter. Known limits: counts are `i32`, so text

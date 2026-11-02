@@ -1,6 +1,6 @@
 // The string heap that backs `String`, written once and used twice (see VmTextHeap.h): compiled into the VM,
 // and pasted as text into the programs the optimized C++ backend generates. It must stay self-contained:
-// standard headers (algorithm, map, string, string_view, vector) and VmHeapCore only, no preprocessor lines,
+// standard headers (algorithm, map, set, string, string_view, vector) and VmHeapCore only, no preprocessor lines,
 // balanced parentheses.
 PRIMEC_VM_TEXT_HEAP_BODY(
 struct TextHeapStats {
@@ -40,6 +40,7 @@ private:
     uint64_t blockBytes = 0;
     uint64_t blockCount = 0;
     std::vector<uint32_t> freeBlocks;  // block indices, most recently freed last
+    std::vector<uint8_t> isFree;       // per block: 1 while it is on freeBlocks (frees check it in O(1))
   };
 
   uint64_t heldBytes() const { return chunks_.size() * ChunkBytes + largeBytes_; }
@@ -50,6 +51,11 @@ private:
 
   // Chunks by the byte offset of their region; the blocks of a chunk never straddle it.
   std::map<uint64_t, Chunk> chunks_;
+  // Per block size, the byte offsets of the chunks that have a free block (lowest first, so allocation takes the
+  // lowest chunk as a scan of chunks_ would).
+  std::map<uint64_t, std::set<uint64_t>> withFree_;
+  // Chunks whose blocks are all free; one is kept, any other is returned.
+  uint64_t emptyChunks_ = 0;
   // Large blocks by byte offset: size.
   std::map<uint64_t, uint64_t> large_;
   uint64_t largeBytes_ = 0;
@@ -98,12 +104,11 @@ inline std::map<uint64_t, VmTextHeap::Chunk>::const_iterator VmTextHeap::chunkCo
 }
 
 inline VmTextHeap::Chunk *VmTextHeap::chunkWithFreeBlock(uint64_t blockBytes) {
-  for (auto &entry : chunks_) {
-    if (entry.second.blockBytes == blockBytes && !entry.second.freeBlocks.empty()) {
-      return &entry.second;
-    }
+  const auto candidates = withFree_.find(blockBytes);
+  if (candidates == withFree_.end() || candidates->second.empty()) {
+    return nullptr;
   }
-  return nullptr;
+  return &chunks_.find(*candidates->second.begin())->second;
 }
 
 inline bool VmTextHeap::allocate(VmHeapCore &core, uint64_t size, uint64_t &address, std::string &error) {
@@ -145,10 +150,20 @@ inline bool VmTextHeap::allocate(VmHeapCore &core, uint64_t size, uint64_t &addr
     for (uint64_t i = fresh.blockCount; i > 0; --i) {
       fresh.freeBlocks.push_back(static_cast<uint32_t>(i - 1));
     }
+    fresh.isFree.assign(static_cast<size_t>(fresh.blockCount), uint8_t{1});
     chunk = &(chunks_[offsetOf(region)] = std::move(fresh));
+    withFree_[blockBytes].insert(offsetOf(region));
+    ++emptyChunks_;
+  }
+  if (chunk->freeBlocks.size() == chunk->blockCount) {
+    --emptyChunks_;  // it is about to hold a block
   }
   const uint32_t index = chunk->freeBlocks.back();
   chunk->freeBlocks.pop_back();
+  chunk->isFree[index] = 0;
+  if (chunk->freeBlocks.empty()) {
+    withFree_[blockBytes].erase(offsetOf(chunk->base));
+  }
   bytesInUse_ += blockBytes;
   address = chunk->base + index * blockBytes;
   return true;
@@ -184,8 +199,13 @@ inline bool VmTextHeap::release(VmHeapCore &core, uint64_t address, std::string 
     error = "invalid string heap free address: " + std::to_string(address);
     return false;
   }
-  const uint32_t index = static_cast<uint32_t>(within / chunk.blockBytes);
-  if (std::find(chunk.freeBlocks.begin(), chunk.freeBlocks.end(), index) != chunk.freeBlocks.end()) {
+  const uint64_t blockIndex = within / chunk.blockBytes;
+  if (blockIndex >= chunk.blockCount) {
+    error = "invalid string heap free address: " + std::to_string(address);
+    return false;
+  }
+  const uint32_t index = static_cast<uint32_t>(blockIndex);
+  if (chunk.isFree[index] != 0) {
     error = "string heap block freed twice: " + std::to_string(address);
     return false;
   }
@@ -196,19 +216,20 @@ inline bool VmTextHeap::release(VmHeapCore &core, uint64_t address, std::string 
     return false;
   }
   std::fill(first, first + chunk.blockBytes, uint8_t{0});
+  if (chunk.freeBlocks.empty()) {
+    withFree_[chunk.blockBytes].insert(found->first);
+  }
   chunk.freeBlocks.push_back(index);
+  chunk.isFree[index] = 1;
   bytesInUse_ -= chunk.blockBytes;
   if (chunk.freeBlocks.size() == chunk.blockCount) {
     // Keep one fully free chunk; return any other.
-    uint64_t emptyChunks = 0;
-    for (const auto &entry : chunks_) {
-      if (entry.second.freeBlocks.size() == entry.second.blockCount) {
-        ++emptyChunks;
-      }
-    }
-    if (emptyChunks > 1) {
+    ++emptyChunks_;
+    if (emptyChunks_ > 1) {
       const uint64_t base = chunk.base;
+      withFree_[chunk.blockBytes].erase(found->first);
       chunks_.erase(found);
+      --emptyChunks_;
       return core.releaseBytes(base, error);
     }
   }

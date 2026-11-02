@@ -187,6 +187,79 @@ TEST_CASE("freeing an invalid or already freed block is rejected") {
   f.free(keepAlive);
 }
 
+TEST_CASE("a free in the unused tail of a chunk is rejected") {
+  // 40-byte blocks do not divide a 256 KiB chunk: the last 24 bytes belong to no block.
+  Fixture f;
+  const uint64_t first = f.alloc(33);
+  REQUIRE(VmTextHeap::blockSizeFor(33) == 40);
+  const uint64_t blocks = VmTextHeap::ChunkBytes / 40;
+  std::string error;
+  CHECK_FALSE(f.heap.release(f.core, first + blocks * 40, error));
+  CHECK(error.find("invalid string heap free address") != std::string::npos);
+  f.free(first);
+}
+
+TEST_CASE("allocation takes the lowest chunk with a free block and chunk accounting stays exact") {
+  Fixture f;
+  // Fill three chunks of 32-byte blocks and free one block in the middle chunk and one in the last.
+  const uint64_t perChunk = VmTextHeap::ChunkBytes / 32;
+  std::vector<uint64_t> blocks;
+  for (uint64_t i = 0; i < perChunk * 3; ++i) {
+    blocks.push_back(f.alloc(10));
+  }
+  CHECK(f.heap.stats().chunks == 3);
+  const uint64_t inMiddle = blocks[perChunk + 5];
+  const uint64_t inLast = blocks[perChunk * 2 + 9];
+  f.free(inLast);
+  f.free(inMiddle);
+  // The lower chunk gets the next block, whatever was freed last.
+  CHECK(f.alloc(10) == inMiddle);
+  CHECK(f.alloc(10) == inLast);
+  CHECK(f.heap.stats().chunks == 3);
+  for (const uint64_t block : blocks) {
+    f.free(block);
+  }
+  // Everything is free: one chunk stays, the others return to the VM heap.
+  CHECK(f.heap.stats().chunks == 1);
+  CHECK(f.heap.stats().bytesInUse == 0);
+}
+
+TEST_CASE("random allocate and free cycles keep the figures and reject every double free") {
+  Fixture f;
+  uint32_t seed = 12345;
+  const auto next = [&seed](uint32_t bound) {
+    seed = seed * 1664525u + 1013904223u;
+    return (seed >> 8) % bound;
+  };
+  std::vector<std::pair<uint64_t, uint64_t>> live;  // address, block size
+  uint64_t expectedInUse = 0;
+  for (int step = 0; step < 4000; ++step) {
+    if (live.empty() || next(100) < 55) {
+      const uint64_t size = 1 + next(next(10) == 0 ? 90000 : 700);
+      const uint64_t address = f.alloc(size);
+      live.emplace_back(address, VmTextHeap::blockSizeFor(size));
+      expectedInUse += live.back().second;
+    } else {
+      const size_t pick = next(static_cast<uint32_t>(live.size()));
+      const auto block = live[pick];
+      live.erase(live.begin() + static_cast<std::ptrdiff_t>(pick));
+      f.free(block.first);
+      expectedInUse -= block.second;
+      std::string error;
+      CHECK_FALSE(f.heap.release(f.core, block.first, error));
+    }
+    if (step % 250 == 0) {
+      CHECK(f.heap.stats().bytesInUse == expectedInUse);
+    }
+  }
+  for (const auto &block : live) {
+    f.free(block.first);
+  }
+  CHECK(f.heap.stats().bytesInUse == 0);
+  CHECK(f.heap.stats().largeBlocks == 0);
+  CHECK(f.heap.stats().chunks <= 6);
+}
+
 TEST_CASE("the VM answers the string heap host functions without bindings") {
   IrModule module;
   module.hostImports.push_back({"__pstext_alloc", {IrHostValueKind::U64}, IrHostValueKind::U64});

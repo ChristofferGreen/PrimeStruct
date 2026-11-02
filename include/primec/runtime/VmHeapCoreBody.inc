@@ -104,15 +104,23 @@ public:
       return nullptr;
     }
     const uint64_t offset = address & ByteOffsetMask;
+    const uint64_t generation = (address >> GenerationShift) & GenerationMask;
+    // The region of the last successful lookup answers repeated accesses (a byte loop over one block) without
+    // the map search; releaseByteRegion forgets it.
+    if (offset >= lastBegin_ && offset < lastEnd_ && generation == lastGeneration_) {
+      return &bytes[static_cast<size_t>(offset)];
+    }
     auto region = byteLive_.upper_bound(offset);
     if (region == byteLive_.begin()) {
       return nullptr;
     }
     --region;
-    if (offset >= region->first + region->second.first ||
-        region->second.second != ((address >> GenerationShift) & GenerationMask)) {
+    if (offset >= region->first + region->second.first || region->second.second != generation) {
       return nullptr;
     }
+    lastBegin_ = region->first;
+    lastEnd_ = region->first + region->second.first;
+    lastGeneration_ = generation;
     return &bytes[static_cast<size_t>(offset)];
   }
 
@@ -247,6 +255,10 @@ public:
   }
 
 private:
+  // The byte region the last byteAt found (an empty range when none): [lastBegin_, lastEnd_) at lastGeneration_.
+  uint64_t lastBegin_ = 0;
+  uint64_t lastEnd_ = 0;
+  uint64_t lastGeneration_ = 0;
   using LiveMap = std::map<uint64_t, std::pair<uint64_t, uint64_t>>;
 
   // Live allocations by first slot: slot count and generation.
@@ -317,6 +329,8 @@ private:
   }
 
   void releaseByteRegion(LiveMap::iterator region) {
+    lastBegin_ = 0;
+    lastEnd_ = 0;
     uint64_t base = region->first;
     uint64_t count = region->second.first;
     for (uint64_t i = base; i < base + count; ++i) {
