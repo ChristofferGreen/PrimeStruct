@@ -202,6 +202,56 @@ is a valid `[host]` parameter and result type and crosses as the block's `u64` a
 - Not yet: `+` and `+=`, `push(u32)`, `String.from(number)`, `fromUtf8`, the `Result`-returning `tryReserve`, per-thread
   heaps and arenas (TODO-5568).
 
+## Parity with `std::string` and `std::string_view`
+
+Quality bar: `String` and `string` are no less capable than `std::string` and `std::string_view`, with UTF-8 text
+operations on top. Every C++ member has a PrimeStruct spelling or a stated difference. "Done" means on the VM today;
+the other entries are specified here and tracked by the TODO named.
+
+| C++ | PrimeStruct | Status |
+| --- | --- | --- |
+| `string()`, `string(const char*)`, `string(sv)` | `String{}`, `String.from(text)`, `[String] s{"text"}` | done as `stringFrom`; spelling TODO-5568 |
+| `string(n, ch)`, `assign(n, ch)` | `String.filled(n, byte)`, `fill(n, byte)` | TODO-5623 |
+| `string(sv, pos, n)`, `substr` | `text.slice(a, b).toOwned()`, `substr(a, b)` | `substr` done; `slice` TODO-5618 |
+| construct from raw bytes | `String.fromUtf8(bytes)`, `String.fromUtf8Lossy(bytes)` | TODO-5568, TODO-5623 |
+| copy / move, destructor | `Copy`, `Move`, `Destroy` lifecycle | done |
+| `at`, `operator[]` | `byteAt(i)`, `[i]`, `at(i)` | `byteAt` done; operators TODO-5568 |
+| `front`, `back` | `first()`, `last()` | TODO-5623 |
+| `data`, `c_str` | the block, always NUL terminated | done |
+| `operator string_view` | implicit borrow as `string` | TODO-5618 |
+| `begin`/`end` iterators | `bytes()`, `codePoints()`, index loops (range-`for` is a separate language change) | TODO-5618, TODO-5620 |
+| `empty`, `size`, `capacity`, `reserve`, `shrink_to_fit`, `clear` | `empty`, `count`, `capacity`, `reserve`, `shrinkToFit`, `clear` | done |
+| `resize` | `resize(n, byte)` | TODO-5623 |
+| `push_back`, `pop_back` | `pushByte`, `push(codePoint)`, `popByte`, `pop()` | `pushByte` done; rest TODO-5568, TODO-5623 |
+| `append(sv)`, `append(n, ch)`, `operator+=` | `append`, `appendFilled`, `+=` | `append` done; rest TODO-5568, TODO-5623 |
+| `insert`, `erase`, `replace` | `insert`, `erase`, `replace` (byte ranges) | done; byte and fill overloads TODO-5623 |
+| `operator+` | `+` | TODO-5568 |
+| `swap` | `swap(other)` | TODO-5623 |
+| `copy(dst, n, pos)` | `slice(a, b).copyTo(destination)` | TODO-5623 |
+| `compare`, `==`, `<=>` | `compare(other)`, `==`, `<` and friends (byte order) | TODO-5619 |
+| `starts_with`, `ends_with`, `contains` | `startsWith`, `endsWith`, `contains` | TODO-5619 |
+| `find`, `rfind` (with `pos`) | `find(text, from)`, `rfind(text, from)` | TODO-5619 |
+| `find_first_of`, `find_last_of`, `find_first_not_of`, `find_last_not_of` | same names in lowerCamelCase over a byte set | TODO-5624 |
+| `to_string`, `stoi`, `stol`, `stod`, `from_chars` | `String.from(x)`, `parseI32/I64/U64/F64` | TODO-5568, TODO-5620 |
+| `to_chars` (radix, precision, shortest round trip) | `String.from(x, radix)`, `formatF64(x, precision)`, `String.from(f64)` shortest | TODO-5626 |
+| `std::hash<string>`, `unordered_map<string, V>`, `map<string, V>` | `String` and `string` as `map` keys, `hash()` | TODO-5625 |
+| `std::format`, `operator<<`, `getline` | `format("{}", ...)`, `join`, `lines()`, `readText` | TODO-5627, TODO-5619, TODO-5530 |
+| `memcpy`/`memmove`/`memcmp`/`memchr` speed | bulk byte opcodes under every copy, compare and search | TODO-5629 |
+| `string_view::remove_prefix`/`remove_suffix`/`substr` | `dropFirst`, `dropLast`, `slice` | done on `Slice`; `string` TODO-5618 |
+
+Beyond C++: UTF-8 validity, code points, `trim`, `split`, `lines`, `join`, ASCII case, `repeat`, `replaceAll`,
+`Result`-typed parsing.
+
+Intended differences, recorded so they stay deliberate:
+
+- **Text is valid UTF-8.** `std::string` holds any bytes; `String` does not. Arbitrary bytes are `Vector<u8>` or
+  `Slice<u8>`, with `String.fromUtf8`/`fromUtf8Lossy` and `bytes()` converting either way without surprises.
+- **No inline small-string storage** (see Memory above). TODO-5628 measures short-string workloads against
+  `std::string` and decides from the numbers whether a small-string form is worth its cost on the VM.
+- **Counts and offsets are `i32` today**, so text is capped at 1 GiB (`reserve` rejects more). Whether `count()` moves
+  to `u64` follows the language's integer-width decisions; TODO-5628 records the cap as a known limit of the
+  conformance suite.
+
 ## Host functions and embedding
 
 - A `[host]` parameter may be `string` or `String`; the host receives a UTF-8 pointer and length. A `String` (always
@@ -234,6 +284,7 @@ is a valid `[host]` parameter and result type and crosses as the block's `u64` a
 | TODO-5620 | `string` parsing, code points, ASCII case |
 | TODO-5621 | static-text field rule and `run-time text requires String` |
 | TODO-5622 | optimized C++ emitters (`optcpp`, `optexe`) run the view |
+| TODO-5623 to TODO-5629 | `std::string` parity: mutation, search sets, hashing and map keys, number formatting, `format`/`join`, conformance and speed gate, bulk byte opcodes (see Parity above) |
 | TODO-5530 | Read and write whole files as `String` |
 | TODO-5541 | Host functions and the embedding API use `String`/`string`; retire VM run-time string indices |
 | TODO-5574 | Simple C++ emitters and native parity for `u8`, slices, `string` and `String` (the optimized C++ emitters are done) |
