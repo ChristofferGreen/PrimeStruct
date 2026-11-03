@@ -313,6 +313,35 @@ namespace std {
       textStore(this.data, this.fieldLength, 0u8)
     }
 
+    // Appends the UTF-8 encoding of a code point; a surrogate or a value past U+10FFFF stops the program.
+    [mut effects(heap_alloc)]
+    pushCodePoint([i32] point) {
+      if(point < 0i32 || point > 1114111i32 || (point >= 55296i32 && point <= 57343i32)) {
+        panic(point)
+      }
+      if(point < 128i32) {
+        this.pushByte(convert<u8>(point))
+        return()
+      }
+      if(point < 2048i32) {
+        this.pushByte(convert<u8>(192i32 + point / 64i32))
+        this.pushByte(convert<u8>(128i32 + (point - point / 64i32 * 64i32)))
+        return()
+      }
+      [i32] mid{point / 64i32}
+      if(point < 65536i32) {
+        this.pushByte(convert<u8>(224i32 + point / 4096i32))
+        this.pushByte(convert<u8>(128i32 + (mid - mid / 64i32 * 64i32)))
+        this.pushByte(convert<u8>(128i32 + (point - mid * 64i32)))
+        return()
+      }
+      [i32] high{mid / 64i32}
+      this.pushByte(convert<u8>(240i32 + point / 262144i32))
+      this.pushByte(convert<u8>(128i32 + (high - high / 64i32 * 64i32)))
+      this.pushByte(convert<u8>(128i32 + (mid - high * 64i32)))
+      this.pushByte(convert<u8>(128i32 + (point - mid * 64i32)))
+    }
+
     [mut effects(heap_alloc)]
     append([string] text) {
       [i32] extra{text.count()}

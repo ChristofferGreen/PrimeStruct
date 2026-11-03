@@ -199,8 +199,10 @@ is a valid `[host]` parameter and result type and crosses as the block's `u64` a
 - Heap: `/std/text/stringHeapChunks()`, `stringHeapBytesInUse()`, `stringHeapBytesFree()`,
   `stringHeapLargeBlocks()`, `stringHeapLargeBytes()` and `setStringMemoryLimit(bytes)`. `text` parameters are the
   current literal-backed `string`, read byte by byte; they become real views with TODO-5540.
-- Not yet: `+` and `+=`, `push(u32)`, `String.from(number)`, `fromUtf8`, the `Result`-returning `tryReserve`, per-thread
-  heaps and arenas (TODO-5568).
+- `pushCodePoint(point)` appends the UTF-8 encoding of a code point (a surrogate or a value past U+10FFFF stops the
+  program); `+` and the comparisons are the operators described under the text view below.
+- Not yet: `+=` (the language has no token), the `Result`-returning `tryReserve`, per-thread heaps and arenas
+  (TODO-5630). A `String` is never borrowed implicitly where a view is expected: write `s.view()`, so every borrow is visible.
 
 ## Parity with `std::string` and `std::string_view`
 
@@ -222,7 +224,7 @@ the other entries are specified here and tracked by the TODO named.
 | `begin`/`end` iterators | `bytes()`, `codePointAt`/`codePointLength`, index loops (range-`for` is a separate language change) | done |
 | `empty`, `size`, `capacity`, `reserve`, `shrink_to_fit`, `clear` | `empty`, `count`, `capacity`, `reserve`, `shrinkToFit`, `clear` | done |
 | `resize` | `resize(n, byte)` (a shrink inside a code point stops) | done |
-| `push_back`, `pop_back` | `pushByte`, `popByte`, `pop()` (a code point); `pushCodePoint` | `pushCodePoint` TODO-5568 |
+| `push_back`, `pop_back` | `pushByte`, `popByte`, `pop()` (a code point); `pushCodePoint` | done |
 | `append(sv)`, `append(n, ch)`, `operator+=` | `append("lit")`, `appendView`, `appendBytes`, `appendFilled`; `+=` | `a = a + b` done; `+=` has no token in the language |
 | `insert`, `erase`, `replace` | `insert`, `erase`, `replace` (byte ranges), `insertFilled`, `insertByte`, `replaceFilled` | done |
 | `operator+` | `a + b` | done (`opPlus`); fused chains TODO-5632 |

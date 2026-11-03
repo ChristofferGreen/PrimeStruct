@@ -117,7 +117,6 @@ of sync with them.
 | TODO-5603 | Startup audit: what a launch loads and does | ready | startup |
 | TODO-5586 | Native String heap: pooled blocks, statistics and limit | deferred | native-backend-strings |
 | TODO-5574 | Simple C++ emitters run bytes and strings | deferred | string-backends |
-| TODO-5568 | String conveniences: operators, code points, indexing | blocked | string-owned |
 | TODO-5536 | Small, lazily loaded bytecode for apps | ready | bytecode-startup |
 | TODO-5535 | Launch-time harness and reference Objective-C++ editor | ready | native-ui-launch |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
@@ -163,7 +162,7 @@ of sync with them.
 
 ### Priority Lanes
 
-- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5570, TODO-5569, TODO-5621, TODO-5568, TODO-5645, TODO-5646, TODO-5647, TODO-5631, TODO-5630, TODO-5632, TODO-5633, TODO-5634, TODO-5637, TODO-5638, TODO-5567, TODO-5574
+- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5570, TODO-5569, TODO-5621, TODO-5645, TODO-5646, TODO-5647, TODO-5631, TODO-5630, TODO-5632, TODO-5633, TODO-5634, TODO-5637, TODO-5638, TODO-5567, TODO-5574
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Startup (docs/NativeUiPlan.md section 16): TODO-5603
@@ -278,18 +277,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - acceptance:
     - a negative test per diagnostic and a positive test per allowed shape (overlapping reads, returned borrow, narrowing a slice); full release gate green
   - stop_rule: borrow checking for slices on the VM front end (the checks are backend independent).
-
-- [ ] TODO-5568: String conveniences: operators, code points, indexing
-  - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5643
-  - created_at: 2026-10-22
-  - phase: Strings and slices (docs/spec/strings-and-views.md), follow-up to the owned `String`
-  - parallel_track: string-owned
-  - scope: What is left of the owned-text conveniences once TODO-5623, 5626 and 5627 are done: `+` and `+=` with views and Strings, `s[i]` and `at(i)` on `String`, `push(codePoint)` with UTF-8 encoding (`pushCodePoint`), `String.from(x)` spellings, and the implicit borrow of a `String` where a view is expected. Done elsewhere: numbers as text (TODO-5626), `fromUtf8` (TODO-5618 `textFromBytes`, TODO-5623 `stringFromUtf8Lossy`), `tryReserve` (a `bool`).
-  - acceptance:
-    - VM and `optexe` tests for each operation, incl. invalid UTF-8 and the borrow rules; full release gate green
-  - stop_rule: the owned-text conveniences on the VM and optexe.
 
 - [ ] TODO-5621: Static-text field rule and `run-time text requires String`
   - owner: ai

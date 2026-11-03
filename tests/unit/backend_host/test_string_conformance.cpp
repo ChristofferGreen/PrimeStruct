@@ -2161,4 +2161,68 @@ TEST_CASE("operators and index sugar on String and StringView agree with std::st
   CHECK(optexeOutput("operators", operatorProgram()) == operatorOracle());
 }
 
+// ---- pushCodePoint ------------------------------------------------------------------------------------------------
+
+namespace {
+// Every 251st code point plus the encoding boundaries goes through pushCodePoint; the bytes are folded into one hash.
+std::string pushCodePointProgram() {
+  return "import /std/text/*\nimport /std/text/view/*\n\n"
+         "[return<int> effects(heap_alloc, io_out)]\nmain() {\n"
+         "  [String mut] s{String{}}\n  [i32 mut] h{17i32}\n"
+         "  for([i32 mut] p{0i32}, p < 1114112i32, p = p + 251i32) {\n"
+         "    if(p < 55296i32 || p > 57343i32) {\n      s.pushCodePoint(p)\n    }\n"
+         "  }\n"
+         "  s.pushCodePoint(127i32)\n  s.pushCodePoint(128i32)\n  s.pushCodePoint(2047i32)\n  s.pushCodePoint(2048i32)\n"
+         "  s.pushCodePoint(55295i32)\n  s.pushCodePoint(57344i32)\n  s.pushCodePoint(65535i32)\n  s.pushCodePoint(65536i32)\n"
+         "  s.pushCodePoint(1114111i32)\n"
+         "  for([i32 mut] i{0i32}, i < s.count(), i++) {\n    h = h * 31i32 + convert<i32>(s.byteAt(i))\n  }\n"
+         "  print_line(s.count())\n  print_line(h)\n"
+         "  print_line(utf8ErrorOffset(s.data, s.count()))\n"
+         "  return(0i32)\n}\n";
+}
+
+void encodeUtf8Reference(std::string &out, int32_t point) {
+  if (point < 0x80) {
+    out += static_cast<char>(point);
+  } else if (point < 0x800) {
+    out += static_cast<char>(0xC0 + (point >> 6));
+    out += static_cast<char>(0x80 + (point & 63));
+  } else if (point < 0x10000) {
+    out += static_cast<char>(0xE0 + (point >> 12));
+    out += static_cast<char>(0x80 + ((point >> 6) & 63));
+    out += static_cast<char>(0x80 + (point & 63));
+  } else {
+    out += static_cast<char>(0xF0 + (point >> 18));
+    out += static_cast<char>(0x80 + ((point >> 12) & 63));
+    out += static_cast<char>(0x80 + ((point >> 6) & 63));
+    out += static_cast<char>(0x80 + (point & 63));
+  }
+}
+
+std::string pushCodePointOracle() {
+  std::string s;
+  for (int32_t p = 0; p < 1114112; p += 251) {
+    if (p < 55296 || p > 57343) {
+      encodeUtf8Reference(s, p);
+    }
+  }
+  for (const int32_t p : {127, 128, 2047, 2048, 55295, 57344, 65535, 65536, 1114111}) {
+    encodeUtf8Reference(s, p);
+  }
+  int32_t h = 17;
+  for (const char c : s) {
+    h = wrapAdd(wrapMul(h, 31), static_cast<int32_t>(static_cast<unsigned char>(c)));
+  }
+  return std::to_string(s.size()) + "\n" + std::to_string(h) + "\n-1\n";
+}
+} // namespace
+
+TEST_CASE("pushCodePoint encodes UTF-8 like a reference encoder on the VM") {
+  CHECK(vmOutput(pushCodePointProgram()) == pushCodePointOracle());
+}
+
+TEST_CASE("pushCodePoint encodes UTF-8 like a reference encoder through optexe") {
+  CHECK(optexeOutput("codepoints", pushCodePointProgram()) == pushCodePointOracle());
+}
+
 TEST_SUITE_END();
