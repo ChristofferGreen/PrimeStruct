@@ -232,7 +232,7 @@ TEST_CASE("out of range access faults") {
 namespace {
 const std::string MoneyStruct =
     "[struct]\nMoney() {\n  [i32] cents{0i32}\n}\n\n"
-    "[return<Money>]\n/Money/opPlus([Money] self, [Money] other) {\n  [i32] total{self.cents + other.cents}\n  return(Money{total})\n}\n\n"
+    "[return<Money>]\n/Money/opPlus([Money] self, [Money] other) {\n  return(Money{self.cents + other.cents})\n}\n\n"
     "[return<bool>]\n/Money/opLessThan([Money] self, [Money] other) {\n  return(self.cents < other.cents)\n}\n";
 } // namespace
 

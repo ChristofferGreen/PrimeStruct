@@ -104,7 +104,6 @@ of sync with them.
 | TODO-5638 | Shared immutable strings for threads (`SharedString`) | deferred | string-concurrency |
 | TODO-5645 | Real calls for struct-receiver methods (library code is inlined at every call site) | ready | lowering-gaps |
 | TODO-5647 | A StringView member named `opNotEqual` makes `StringMap<i32>.insert` fail to lower | ready | lowering-gaps |
-| TODO-5648 | `Money{self.cents + other.cents}` fails under `ScriptEngine` but compiles under `primevm` | ready | lowering-gaps |
 | TODO-5603 | Startup audit: what a launch loads and does | ready | startup |
 | TODO-5586 | Native String heap: pooled blocks, statistics and limit | deferred | native-backend-strings |
 | TODO-5536 | Small, lazily loaded bytecode for apps | ready | bytecode-startup |
@@ -268,17 +267,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - the 8-call `StringMap` sample lowers in under 2 s; the IR of programs that call a method from several sites shrinks; every existing test passes with identical output; full release gate green
   - stop_rule: eligibility and emission for struct/pointer parameters; no inliner tuning beyond that.
 
-
-- [ ] TODO-5648: `Money{self.cents + other.cents}` fails under `ScriptEngine` but compiles under `primevm`
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-03
-  - phase: Strings and slices (docs/spec/strings-and-views.md), found building TODO-5643
-  - parallel_track: lowering-gaps
-  - scope: Compiling `[struct] Money() { [i32] cents{0i32} }` and `/Money/opPlus([Money] self, [Money] other) { return(Money{self.cents + other.cents}) }` through `ScriptEngine::compileSource` reports `argument type mismatch for /Money parameter cents: expected i32 got array`, while the same source under `primevm --entry /main` compiles and returns the right value; binding the sum to an `[i32]` local first works around it. Find the difference between the two option sets (the `Options` defaults in `ScriptEngine::compileEntry` against the CLI's) and the construction-argument inference that turns `plus(a, b)` into an array.
-  - acceptance:
-    - the brace construction compiles under both entry points; a regression test in `tests/unit/language/test_string_owned.cpp` uses the direct form; full release gate green
-  - stop_rule: the option difference or inference bug behind the one failure; nothing wider.
 
 
 - [ ] TODO-5647: A StringView member named `opNotEqual` makes `StringMap<i32>.insert` fail to lower
