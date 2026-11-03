@@ -18,8 +18,10 @@
   struct field of one byte, may cross the `[host]` boundary (zero-extended in the VM slot), and is VM-only until the
   native/C++/wasm/GLSL backends gain byte support. `pow`, `lerp` and negation reject `u8`; convert to `u64` first.
   Element storage is packed: `vector<u8>` and `Pointer<u8>` buffers keep one byte per element in a VM byte region
-  (a `Pointer<u8>` steps one byte), while `u8` locals and fields use a slot. `array<u8>` still uses one slot per
-  element (docs/todo.md, packed `array<u8>`).
+  (a `Pointer<u8>` steps one byte), while `u8` locals and fields use a slot. `array<u8>` is packed too: the text
+  filter that handles collection literals spells `array<u8>` as `vector<u8>` (outside strings, comments and import lines), so an
+  `array<u8>` has the header (count, capacity) and the byte region of a `vector<u8>`, one byte per element, and it also
+  has `push`, `reserve` and `view()`; every other `array<T>` keeps the inline slot form.
   Planned ([Strings, Text and Slices](strings-and-views.md)): `string` as a borrowed read-only UTF-8 view (literals
   are static `string`s), and the owned `String`.
 - **Composite:** `array<T>`, `vector<T>`, `map<K, V>`, `Pointer<T>`, `Reference<T>`,

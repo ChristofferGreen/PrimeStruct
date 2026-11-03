@@ -100,7 +100,6 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5567 | Packed `array<u8>` | ready | bytes |
 | TODO-5649 | Remaining slice loan rules: `mut`/`move` owners, `Write` conflicts, outer bindings | ready | slices |
 | TODO-5652 | Views of `array<T>` and retiring the copying `slice(array, start, end)` | blocked | slices |
 | TODO-5650 | A wildcard-imported struct type as a parameter type needs its full path | ready | lowering-gaps |
@@ -153,7 +152,7 @@ of sync with them.
 
 ### Priority Lanes
 
-- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5645, TODO-5638, TODO-5567, TODO-5652
+- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5645, TODO-5638, TODO-5652
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Startup (docs/NativeUiPlan.md section 16): TODO-5603
@@ -236,28 +235,16 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - stop_rule: native I/O emitter and png status mapping.
   - notes: deferred: queued behind the Ready Now cap.
 
-- [ ] TODO-5567: Packed `array<u8>`
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-22
-  - phase: Strings and slices, follow-up to the packed `vector<u8>` leaf
-  - parallel_track: bytes
-  - scope: `array<u8>` stores one byte per element like `vector<u8>` already does. Arrays are inline `[count][elements...]` slot aggregates, so this needs a decision first (a header slot plus a byte-region data pointer, or a byte-region-only array) and then the array literal, `at`/`at_unsafe`, `count`, element assignment, iteration, copy/move/return and `Slice<u8>` over an array in the lowerer; `Pointer<u8>` into an array must then step one byte. Update docs/spec/type-system.md.
-  - acceptance:
-    - VM matrix cases for `array<u8>`: literal, reads, writes, count, iteration, passing and returning, out-of-range faults; an `array<u8>` of 1 MB uses about 1 MB of VM heap; full release gate green
-  - stop_rule: `array<u8>` on the VM; native and C++ are TODO-5574.
-
 - [ ] TODO-5652: Views of `array<T>` and retiring the copying `slice(array, start, end)`
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5567
+  - status: ready
   - created_at: 2026-11-03
   - phase: Strings and slices (docs/spec/strings-and-views.md), split from TODO-5570
   - parallel_track: slices
-  - scope: `view`/`slice`/`sliceMut` as methods on `array<T>` giving `Slice<T, Read|Write>` over the array's storage (needs the data pointer that packed arrays, TODO-5567, provide), `view[i]` and `view[i] = v` over them, and removal of the copying `slice(array, start, end)` builtin once array views exist (migrating its callers).
+  - scope: `view`/`slice`/`sliceMut` already work on `array<u8>` (it is a `vector<u8>`, TODO-5567). What is left is `view`/`slice`/`sliceMut` on `array<T>` for other `T`, whose elements live in the owner's local slots: a view needs a pointer to the first element slot, and the language has no way to write one (`location` takes a local binding, not `at(values, 0)`), so this needs a builtin or opcode for an element address. Then `view[i]` over them and the removal of the copying `slice(array, start, end)` builtin (used by docs/CodeExamples.md and the examples test), migrating its callers.
   - acceptance:
-    - tests for each spelling on `array<i32>` and `array<u8>` owners; no caller of the copying builtin is left; full release gate green
-  - stop_rule: the array views and the builtin's retirement on the VM; native and C++ are TODO-5574.
+    - tests for each spelling on `array<i32>` owners; no caller of the copying builtin is left; full release gate green
+  - stop_rule: the array views and the builtin's retirement on the VM; native follows the VM.
 
 - [ ] TODO-5649: Remaining slice loan rules: `mut`/`move` owners, `Write` conflicts, outer bindings
   - owner: ai

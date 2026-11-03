@@ -216,3 +216,39 @@ TEST_CASE("the method spellings work on vector<u8> and a read view cannot be ind
   const Outcome readOnly = runBody(bytes + "  [Slice<u8, Read>] s{all.view()}\n  s[0i32] = 5u8\n  return(0i32)");
   CHECK_FALSE(readOnly.compiled);
 }
+
+TEST_CASE("array<u8> is packed bytes: literal, reads, writes, count, iteration, passing and returning") {
+  const std::string helpers =
+      "[return<array<u8>> effects(heap_alloc)]\nmake([i32] n) {\n  [array<u8> mut] data{array<u8>(1u8, 2u8, 3u8)}\n"
+      "  for([i32 mut] i{0i32}, i < n, i++) {\n    data.push(convert<u8>(10i32 + i))\n  }\n  return(data)\n}\n\n"
+      "[return<int>]\nsum([array<u8>] values) {\n  [i32 mut] total{0i32}\n"
+      "  for([i32 mut] i{0i32}, i < count(values), i++) {\n    total = total + convert<i32>(values[i])\n  }\n  return(total)\n}\n";
+  const std::string source = Prelude + "\n" + helpers + "\n[return<int> effects(heap_alloc)]\nmain() {\n"
+                             "  [array<u8> mut] made{make(2i32)}\n  made[0i32] = 100u8\n"
+                             "  [Slice<u8, Read>] view{made.view()}\n  return(sum(made) + view.count() + convert<i32>(made.at(1i32)))\n}\n";
+  ScriptEngine engine;
+  const auto script = engine.compileSource("/array_u8.prime", source);
+  REQUIRE_MESSAGE(script.valid(), script.diagnostics());
+  const auto result = script.run();
+  REQUIRE_MESSAGE(result.ok, result.diagnostics);
+  // 100 + 2 + 3 + 10 + 11 = 126, plus count 5, plus made[1] = 2.
+  CHECK(result.exitCode == 126 + 5 + 2);
+}
+
+TEST_CASE("array<u8> faults out of range and keeps one byte per element") {
+  const Outcome range = runBody("  [array<u8>] a{array<u8>(1u8, 2u8)}\n  return(convert<i32>(a[5i32]))");
+  REQUIRE(range.compiled);
+  CHECK((!range.ok || range.exitCode != 0));
+  // A million bytes need about a million bytes of backing store (the slot form would need eight times that): the
+  // capacity doubles on growth, so it stays under two million.
+  const Outcome packed = runBody("  [array<u8> mut] a{array<u8>()}\n  for([i32 mut] i{0i32}, i < 1000000i32, i++) {\n    a.push(7u8)\n  }\n"
+                                 "  return(if(a.count() == 1000000i32 && a.capacity() < 2100000i32, then() { 7i32 }, else() { 0i32 }))");
+  REQUIRE(packed.compiled);
+  CHECK(packed.exitCode == 7);
+}
+
+TEST_CASE("the array<u8> spelling is left alone in strings, comments and longer names") {
+  const Outcome text = runBody("  // an array<u8> in a comment\n  [i32] n{\"array<u8>\".count()}\n  return(n)");
+  REQUIRE(text.compiled);
+  CHECK(text.exitCode == 9);
+}

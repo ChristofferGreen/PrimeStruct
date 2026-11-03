@@ -10,12 +10,75 @@ namespace primec {
 using namespace text_filter;
 
 namespace {
+
+// `array<u8>` is stored as packed bytes: a header (count, capacity) and a byte region, which is the layout of
+// `vector<u8>`, so the spelling `array<u8>` names that type (docs/spec/type-system.md). Strings and comments are left
+// alone, and so is a longer name that ends in `array<u8>`.
+bool aliasPackedByteArrays(const std::string &input, std::string &aliased) {
+  constexpr std::string_view spelling = "array<u8>";
+  if (input.find(spelling) == std::string::npos) {
+    return false;
+  }
+  aliased.clear();
+  aliased.reserve(input.size());
+  bool replaced = false;
+  for (size_t index = 0; index < input.size();) {
+    const char c = input[index];
+    if (c == '"' || c == '\'') {
+      const size_t end = skipQuotedForward(input, index);
+      const size_t stop = end == std::string::npos ? input.size() : end;
+      aliased.append(input, index, stop - index);
+      index = stop;
+      continue;
+    }
+    if (c == 'i' && input.compare(index, 7, "import ") == 0 &&
+        (index == 0 || input[index - 1] == '\n' || input[index - 1] == ' ' || input[index - 1] == '\t')) {
+      // An import line (`import /std/text/*` has a `/*` that is not a comment).
+      const size_t newline = input.find('\n', index);
+      const size_t stop = newline == std::string::npos ? input.size() : newline;
+      aliased.append(input, index, stop - index);
+      index = stop;
+      continue;
+    }
+    if (isCommentStart(input, index)) {
+      size_t stop = input.size();
+      if (input[index + 1] == '/') {
+        const size_t newline = input.find('\n', index);
+        stop = newline == std::string::npos ? input.size() : newline;
+      } else {
+        const size_t close = input.find("*/", index + 2);
+        stop = close == std::string::npos ? input.size() : close + 2;
+      }
+      aliased.append(input, index, stop - index);
+      index = stop;
+      continue;
+    }
+    if (input.compare(index, spelling.size(), spelling) == 0 &&
+        (index == 0 || !(std::isalnum(static_cast<unsigned char>(input[index - 1])) || input[index - 1] == '_' ||
+                         input[index - 1] == '/' || input[index - 1] == '.'))) {
+      aliased += "vector<u8>";
+      index += spelling.size();
+      replaced = true;
+      continue;
+    }
+    aliased.push_back(c);
+    ++index;
+  }
+  return replaced;
+}
+
 } // namespace
 
 bool applyPass(const std::string &input,
                std::string &output,
                std::string &error,
                const primec::TextFilterOptions &options) {
+  if (options.hasFilter("collections")) {
+    std::string aliased;
+    if (aliasPackedByteArrays(input, aliased)) {
+      return applyPass(aliased, output, error, options);
+    }
+  }
   output.clear();
   output.reserve(input.size());
   error.clear();

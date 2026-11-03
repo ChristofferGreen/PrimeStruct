@@ -437,7 +437,7 @@ to compile the view code. `TextView` is taken by the native-UI widget.
 | --- | --- |
 | TODO-5537 (done) | IR byte opcodes (`LoadU8`/`StoreU8`/`HeapAllocBytes`/`ZextU8`) and VM byte regions |
 | TODO-5565 (done) | the `u8` scalar type |
-| TODO-5566 (done), TODO-5567 | packed byte containers: `vector<u8>` and `Pointer<u8>` buffers, then `array<u8>` |
+| TODO-5566 (done), TODO-5567 (done) | packed byte containers: `vector<u8>` and `Pointer<u8>` buffers, then `array<u8>` (spelled as `vector<u8>`) |
 | TODO-5538 (done), TODO-5569, TODO-5570 | `Slice<T, Capability>` as a real view with shared operations; loan and escape rules; method spellings and `array<T>` views |
 | TODO-5539 (done) | `String`: value, lifecycle, the string heap and the owned-text API |
 | TODO-5540 | `StringView`: a borrowed view of literals and Strings |
