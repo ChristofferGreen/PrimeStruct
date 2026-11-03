@@ -228,3 +228,24 @@ TEST_CASE("out of range access faults") {
   REQUIRE(outcome.compiled);
   CHECK((!outcome.ok || outcome.exitCode != 0));
 }
+
+namespace {
+const std::string MoneyStruct =
+    "[struct]\nMoney() {\n  [i32] cents{0i32}\n}\n\n"
+    "[return<Money>]\n/Money/opPlus([Money] self, [Money] other) {\n  [i32] total{self.cents + other.cents}\n  return(Money{total})\n}\n\n"
+    "[return<bool>]\n/Money/opLessThan([Money] self, [Money] other) {\n  return(self.cents < other.cents)\n}\n";
+} // namespace
+
+TEST_CASE("a struct with an opPlus or opLessThan member works with the operators") {
+  CHECK(exitOf("  [Money] a{Money{5i32}}\n  [Money] b{Money{7i32}}\n  [Money] c{a + b}\n"
+               "  return(if(a < b, then() { c.cents }, else() { 0i32 }))",
+               MoneyStruct) == 12);
+}
+
+TEST_CASE("an operator on a struct without the matching member stays a numeric-operand error") {
+  const Outcome outcome = runBody("  [Money] a{Money{5i32}}\n  [Money] b{Money{7i32}}\n"
+                                  "  return(if(a == b, then() { 1i32 }, else() { 0i32 }))",
+                                  MoneyStruct);
+  CHECK_FALSE(outcome.compiled);
+  CHECK(outcome.diagnostics.find("comparisons require numeric, bool, or string operands") != std::string::npos);
+}

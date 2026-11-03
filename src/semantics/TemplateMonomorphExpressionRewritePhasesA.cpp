@@ -136,6 +136,8 @@ PhaseStatus rewriteExprPhase2([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
   expandCurrentTypePackSpreadArguments(expr.bodyArguments, bodyArgumentNames);
   (void)rewriteKeyValueWrapperHelperCallToMethod(
       expr, namespacePrefix, ctx, locals, params, allowMathBare);
+  (void)rewriteStructOperatorCallToMethod(
+      expr, namespacePrefix, ctx, locals, params, allowMathBare);
   if (!expr.isMethodCall && !expr.isBinding && !expr.isFieldAccess &&
       expr.kind == Expr::Kind::Call && expr.transforms.empty() &&
       semantics::isSimpleCallName(expr, "wait") && expr.args.size() > 1 &&

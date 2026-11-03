@@ -1230,6 +1230,97 @@ namespace std {
     return(__pstext_hash(self.data, convert<u64>(self.fieldLength), 0u64))
   }
 
+  // Operators: `a + b`, `==`, `!=`, `<`, `<=`, `>`, `>=` and `s[i]` on text dispatch to these members (byte order).
+  [public return<String> effects(heap_alloc)]
+  /std/text/String/opPlus([/std/text/String] self, [/std/text/String] other) {
+    [String mut] out{stringWithCapacity(self.fieldLength + other.fieldLength)}
+    out.appendBytes(self.data, self.fieldLength)
+    out.appendBytes(other.data, other.fieldLength)
+    return(out)
+  }
+
+  [public return<bool>]
+  /std/text/String/opEqual([/std/text/String] self, [/std/text/String] other) {
+    [i32] order{self.view().compare(other.view())}
+    return(order == 0i32)
+  }
+
+  [public return<bool>]
+  /std/text/String/opNotEqualTo([/std/text/String] self, [/std/text/String] other) {
+    [i32] order{self.view().compare(other.view())}
+    return(order != 0i32)
+  }
+
+  [public return<bool>]
+  /std/text/String/opLessThan([/std/text/String] self, [/std/text/String] other) {
+    [i32] order{self.view().compare(other.view())}
+    return(order < 0i32)
+  }
+
+  [public return<bool>]
+  /std/text/String/opLessEqual([/std/text/String] self, [/std/text/String] other) {
+    [i32] order{self.view().compare(other.view())}
+    return(order <= 0i32)
+  }
+
+  [public return<bool>]
+  /std/text/String/opGreaterThan([/std/text/String] self, [/std/text/String] other) {
+    [i32] order{self.view().compare(other.view())}
+    return(order > 0i32)
+  }
+
+  [public return<bool>]
+  /std/text/String/opGreaterEqual([/std/text/String] self, [/std/text/String] other) {
+    [i32] order{self.view().compare(other.view())}
+    return(order >= 0i32)
+  }
+
+  [public return<u8>]
+  /std/text/String/opAt([/std/text/String] self, [i32] index) {
+    return(self.view().byteAt(index))
+  }
+
+  [public return<bool>]
+  /std/text/view/StringView/opEqual([/std/text/view/StringView] self, [/std/text/view/StringView] other) {
+    [i32] order{self.compare(other)}
+    return(order == 0i32)
+  }
+
+  [public return<bool>]
+  /std/text/view/StringView/opNotEqualTo([/std/text/view/StringView] self, [/std/text/view/StringView] other) {
+    [i32] order{self.compare(other)}
+    return(order != 0i32)
+  }
+
+  [public return<bool>]
+  /std/text/view/StringView/opLessThan([/std/text/view/StringView] self, [/std/text/view/StringView] other) {
+    [i32] order{self.compare(other)}
+    return(order < 0i32)
+  }
+
+  [public return<bool>]
+  /std/text/view/StringView/opLessEqual([/std/text/view/StringView] self, [/std/text/view/StringView] other) {
+    [i32] order{self.compare(other)}
+    return(order <= 0i32)
+  }
+
+  [public return<bool>]
+  /std/text/view/StringView/opGreaterThan([/std/text/view/StringView] self, [/std/text/view/StringView] other) {
+    [i32] order{self.compare(other)}
+    return(order > 0i32)
+  }
+
+  [public return<bool>]
+  /std/text/view/StringView/opGreaterEqual([/std/text/view/StringView] self, [/std/text/view/StringView] other) {
+    [i32] order{self.compare(other)}
+    return(order >= 0i32)
+  }
+
+  [public return<u8>]
+  /std/text/view/StringView/opAt([/std/text/view/StringView] self, [i32] index) {
+    return(self.byteAt(index))
+  }
+
   // Appends the text of a view to `out` (not a view of `out`'s own text).
   [public effects(heap_alloc), return<void>]
   appendView([String mut] out, [/std/text/view/StringView] other) {

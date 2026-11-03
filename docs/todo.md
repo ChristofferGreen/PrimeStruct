@@ -111,8 +111,9 @@ of sync with them.
 | TODO-5634 | Unicode normalization and grapheme clusters (lazy) | blocked | string-unicode |
 | TODO-5637 | Fold string operations on literals at compile time | blocked | string-quality |
 | TODO-5638 | Shared immutable strings for threads (`SharedString`) | deferred | string-concurrency |
-| TODO-5643 | Operators and index sugar for stdlib types (`String + String`, `s[i]`) | ready | lowering-gaps |
 | TODO-5645 | Real calls for struct-receiver methods (library code is inlined at every call site) | ready | lowering-gaps |
+| TODO-5647 | A StringView member named `opNotEqual` makes `StringMap<i32>.insert` fail to lower | ready | lowering-gaps |
+| TODO-5646 | `x.f().g(y) == 0` is parsed with the comparison applied to the wrong receiver | ready | lowering-gaps |
 | TODO-5603 | Startup audit: what a launch loads and does | ready | startup |
 | TODO-5586 | Native String heap: pooled blocks, statistics and limit | deferred | native-backend-strings |
 | TODO-5574 | Simple C++ emitters run bytes and strings | deferred | string-backends |
@@ -162,7 +163,7 @@ of sync with them.
 
 ### Priority Lanes
 
-- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5570, TODO-5569, TODO-5621, TODO-5568, TODO-5643, TODO-5645, TODO-5631, TODO-5630, TODO-5632, TODO-5633, TODO-5634, TODO-5637, TODO-5638, TODO-5567, TODO-5574
+- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5570, TODO-5569, TODO-5621, TODO-5568, TODO-5645, TODO-5646, TODO-5647, TODO-5631, TODO-5630, TODO-5632, TODO-5633, TODO-5634, TODO-5637, TODO-5638, TODO-5567, TODO-5574
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Startup (docs/NativeUiPlan.md section 16): TODO-5603
@@ -385,17 +386,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - to be set when the leaf is un-deferred
   - stop_rule: not started.
 
-- [ ] TODO-5643: Operators and index sugar for stdlib types (`String + String`, `s[i]`)
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-02
-  - phase: Strings and slices (docs/spec/strings-and-views.md), found building TODO-5568
-  - parallel_track: lowering-gaps
-  - scope: `a + b` on a struct is always the numeric builtin: `[Money] z{x + y}` with a `plus(Money, Money)` definition fails with `arithmetic operators require numeric operands`, and a definition named `plus` shadows the builtin for the whole program. Let a stdlib struct provide operators: when the operands of `plus`, `equal`, `not_equal`, `less_than` and friends are struct values and the left operand's type has a member definition of the same name (`/std/text/String/plus`), rewrite the call to it (a semantic rewrite pass registered in `semanticValidationPassManifest()`, before template monomorphization), and the same for `value[index]` through a member `at`. Use it for `String + String`, `String + StringView`, `+=`, `==` and `<` on text, and `s[i]`.
-  - acceptance:
-    - a user struct with member `plus` works with `+`; `String + String` and `+=` give a new String / append; `==` and `<` on views and Strings compare bytes; `s[i]`; negative tests for a missing member; pass-manifest test; full release gate green
-  - stop_rule: struct operator dispatch and index sugar in semantics; no operator definitions for other stdlib types in this leaf.
-
 - [ ] TODO-5645: Real calls for struct-receiver methods (library code is inlined at every call site)
   - owner: ai
   - status: ready
@@ -406,6 +396,30 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - acceptance:
     - the 8-call `StringMap` sample lowers in under 2 s; the IR of programs that call a method from several sites shrinks; every existing test passes with identical output; full release gate green
   - stop_rule: eligibility and emission for struct/pointer parameters; no inliner tuning beyond that.
+
+
+- [ ] TODO-5646: `x.f().g(y) == 0` is parsed with the comparison applied to the wrong receiver
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-03
+  - phase: Strings and slices (docs/spec/strings-and-views.md), found building TODO-5643
+  - parallel_track: lowering-gaps
+  - scope: `if(a.view().compare(b.view()) == 0i32)` fails with `argument count mismatch for builtin equal` (the printed form is `a.view().equal(compare(b.view()), 0i32)`), so a comparison after a method chain whose last call has arguments is rewritten as a method call on the head of the chain. Binding the result to a local first works. Reproduce with the three-line program in `tests/unit/language/test_string_owned.cpp` once added, find where the operator is attached to the chain (surface transform or the method-call rewrite) and fix it. Also look at why `Money{self.cents + other.cents}` in a struct constructor reports `expected i32 got array` under `ScriptEngine` but compiles under `primevm`.
+  - acceptance:
+    - the comparison after a method chain compiles and runs; a regression test covers it and the constructor case; full release gate green
+  - stop_rule: the operator-after-method-chain parse/rewrite bug and the ScriptEngine difference; no other operator work.
+
+
+- [ ] TODO-5647: A StringView member named `opNotEqual` makes `StringMap<i32>.insert` fail to lower
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-03
+  - phase: Strings and slices (docs/spec/strings-and-views.md), found building TODO-5643
+  - parallel_track: lowering-gaps
+  - scope: With `/std/text/view/StringView/opNotEqual([StringView] self, [StringView] other)` defined (any body), a program that inserts into a `StringMap<i32>` fails with `VM lowering error: unsupported operand types for multiply`: in `homeSlot`, `divide(hash, cap)` of two `u64` is inferred as `i32`. The same member spelled `opNotEqualTo` or `opDiffers` lowers fine, and moving the block does not help, so something keyed by the name (a cache, a semantic-product lookup or a definition-order dependency) answers for the wrong expression. Reproduce by renaming `opNotEqualTo` back in `stdlib/std/text/view.prime` and compiling `StringMap<i32>{}.insert(k.view(), 3i32)`. Find the lookup, make it scope-correct, and then spell the member `opNotEqual`.
+  - acceptance:
+    - the repro lowers with the member named `opNotEqual`; a regression test covers a name-keyed lookup collision; full release gate green
+  - stop_rule: the wrongly keyed lookup in the lowerer or semantic product; no other renames.
 
 - [ ] TODO-5603: Startup audit: what a launch loads and does
   - owner: ai

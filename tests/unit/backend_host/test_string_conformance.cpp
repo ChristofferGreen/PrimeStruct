@@ -2101,4 +2101,64 @@ TEST_CASE("Maybe-valued find, rfind, parseI32, first and last agree with the pla
   CHECK(optexeOutput("maybes", maybeProgram()) == maybeOracle());
 }
 
+// ---- Operators and index sugar (+, ==, !=, <, <=, >, >=, s[i]) --------------------------------------------------
+
+namespace {
+const std::vector<std::string> OperatorWords = {"", "a", "ab", "abc", "abd", "b", "B", "zz", "caf\xc3\xa9", "caf", "0123456789"};
+
+// Every ordered pair goes through the same operators in one loop; the words come from a chain in word().
+std::string operatorProgram() {
+  std::string chain;
+  for (size_t i = 0; i < OperatorWords.size(); ++i) {
+    chain += "  if(i == " + std::to_string(i) + "i32) {\n    return(stringFrom(\"" + OperatorWords[i] + "\"))\n  }\n";
+  }
+  std::string checks;
+  for (const char *expr : {"joined == b + a", "a == b", "a != b", "a < b", "a <= b", "a > b", "a >= b",
+                           "va < vb", "va == vb", "va != vb", "va <= vb", "va > vb", "va >= vb"}) {
+    checks += std::string("      print_line(if(") + expr + ", then() { 1i32 }, else() { 0i32 }))\n";
+  }
+  const std::string count = std::to_string(OperatorWords.size());
+  return "import /std/text/*\nimport /std/text/view/*\n\n"
+         "[return<String> effects(heap_alloc)]\nword([i32] i) {\n" + chain + "  return(stringFrom(\"\"))\n}\n\n"
+         "[return<int> effects(heap_alloc, io_out)]\nmain() {\n"
+         "  for([i32 mut] i{0i32}, i < " + count + "i32, i++) {\n"
+         "    for([i32 mut] j{0i32}, j < " + count + "i32, j++) {\n"
+         "      [String] a{word(i)}\n      [String] b{word(j)}\n"
+         "      [StringView] va{a.view()}\n      [StringView] vb{b.view()}\n"
+         "      [String] joined{a + b}\n      print_line(joined.count())\n" + checks +
+         "      if(joined.count() > 0i32) {\n        print_line(convert<i32>(joined[0i32]))\n"
+         "        print_line(convert<i32>(joined[joined.count() - 1i32]))\n      }\n"
+         "    }\n  }\n  return(0i32)\n}\n";
+}
+
+std::string operatorOracle() {
+  std::string out;
+  const auto flag = [&out](bool value) { out += value ? "1\n" : "0\n"; };
+  for (const std::string &a : OperatorWords) {
+    for (const std::string &b : OperatorWords) {
+      const std::string joined = a + b;
+      out += std::to_string(joined.size()) + "\n";
+      flag(joined == b + a);
+      for (const bool value : {a == b, a != b, a < b, a <= b, a > b, a >= b,
+                               a < b, a == b, a != b, a <= b, a > b, a >= b}) {
+        flag(value);
+      }
+      if (!joined.empty()) {
+        out += std::to_string(static_cast<unsigned char>(joined.front())) + "\n" +
+               std::to_string(static_cast<unsigned char>(joined.back())) + "\n";
+      }
+    }
+  }
+  return out;
+}
+} // namespace
+
+TEST_CASE("operators and index sugar on String and StringView agree with std::string on the VM") {
+  CHECK(vmOutput(operatorProgram()) == operatorOracle());
+}
+
+TEST_CASE("operators and index sugar on String and StringView agree with std::string through optexe") {
+  CHECK(optexeOutput("operators", operatorProgram()) == operatorOracle());
+}
+
 TEST_SUITE_END();

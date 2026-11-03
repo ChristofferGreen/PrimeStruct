@@ -167,6 +167,99 @@ bool rewriteKeyValueWrapperHelperCallToMethod(Expr &expr,
   return true;
 }
 
+// Operators and index sugar for stdlib structs: `a + b`, `a == b`, `a < b` and
+// `a[i]` on a struct value whose type has a member of the matching name
+// (`/std/text/String/plus`) become the method call `a.plus(b)`.
+bool rewriteStructOperatorCallToMethod(Expr &expr,
+                                       const std::string &namespacePrefix,
+                                       Context &ctx,
+                                       const LocalTypeMap &locals,
+                                       const std::vector<semantics::ParameterInfo> &params,
+                                       bool allowMathBare) {
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.isBinding ||
+      expr.isFieldAccess || expr.args.size() != 2 || expr.hasBodyArguments ||
+      !expr.bodyArguments.empty() || hasNamedCallArguments(expr) ||
+      !expr.templateArgs.empty() || expr.name.empty() || expr.name.front() == '/') {
+    return false;
+  }
+  const std::string name = expr.name;
+  if (name != "plus" && name != "equal" && name != "not_equal" && name != "less_than" &&
+      name != "less_equal" && name != "greater_than" && name != "greater_equal" && name != "at") {
+    return false;
+  }
+  // Operands first, so `a == b + c` sees the type of `b.opPlus(c)`.
+  for (Expr &operand : expr.args) {
+    (void)rewriteStructOperatorCallToMethod(operand, namespacePrefix, ctx, locals, params, allowMathBare);
+  }
+  // Only operands whose type the inference reports reliably: names, calls of free functions, and operator
+  // results; a field access or an arbitrary method chain is left alone (bind it to a local to use an operator).
+  for (const Expr &operand : expr.args) {
+    const bool operatorResult = operand.isMethodCall && operand.name.rfind("op", 0) == 0;
+    const bool plainOperand = operand.kind == Expr::Kind::Name ||
+        (operand.kind == Expr::Kind::Call && !operand.isMethodCall && !operand.isFieldAccess);
+    if (!operatorResult && !plainOperand && operand.kind != Expr::Kind::Literal) {
+      return false;
+    }
+  }
+  semantics::BindingInfo receiverInfo;
+  if (!inferBindingTypeForMonomorph(
+          expr.args.front(), params, locals, allowMathBare, ctx, receiverInfo)) {
+    return false;
+  }
+  std::string base = semantics::normalizeBindingTypeName(receiverInfo.typeName);
+  if (base.empty() || base == "Reference" || base == "Pointer" || base == "array" ||
+      base == "vector" || base == "map" || base == "string") {
+    return false;
+  }
+  if (base.front() != '/') {
+    base = resolveNameToPath(base,
+                             namespacePrefix,
+                             scopedImportAliasesForNamespace(namespacePrefix, ctx),
+                             ctx.sourceDefs);
+  }
+  if (base.empty() || base.front() != '/') {
+    return false;
+  }
+  if (name != "at") {
+    semantics::BindingInfo otherInfo;
+    if (!inferBindingTypeForMonomorph(expr.args[1], params, locals, allowMathBare, ctx, otherInfo) ||
+        semantics::normalizeBindingTypeName(otherInfo.typeName) !=
+            semantics::normalizeBindingTypeName(receiverInfo.typeName)) {
+      return false;
+    }
+  }
+  // Operator members are spelled opPlus, opEqual, opLessThan, ... (`at` is opAt): a member named `plus` would
+  // capture every bare `plus(a, b)` written inside the struct's own scope.
+  std::string opName = "op";
+  opName += static_cast<char>(std::toupper(static_cast<unsigned char>(name.front())));
+  for (size_t i = 1; i < name.size(); ++i) {
+    if (name[i] == '_' && i + 1 < name.size()) {
+      opName += static_cast<char>(std::toupper(static_cast<unsigned char>(name[++i])));
+    } else {
+      opName += name[i];
+    }
+  }
+  // `opNotEqual` on StringView makes StringMap<i32>.insert fail to lower (TODO-5647); the spelling is opNotEqualTo.
+  if (name == "not_equal") {
+    opName = "opNotEqualTo";
+  }
+  auto hasMember = [&](const std::string &memberName) {
+    const std::string memberPath = base + "/" + memberName;
+    return ctx.sourceDefs.count(memberPath) > 0 || ctx.helperOverloads.count(memberPath) > 0 ||
+           anySourceDefStartsWith(ctx, memberPath + "<") ||
+           anySourceDefStartsWith(ctx, memberPath + "__t");
+  };
+  if (!hasMember(opName)) {
+    return false;
+  }
+  if (expr.sourceName.empty()) {
+    expr.sourceName = expr.name;
+  }
+  expr.name = opName;
+  expr.isMethodCall = true;
+  return true;
+}
+
 // TODO-5381: `count(dereference(r))` / `dereference(r).count()` where `r` is a
 // `Reference<vector<T>>` means the borrowed helper applied to `r` itself;
 // unwrap the dereference so the borrowed-vector routing below applies.

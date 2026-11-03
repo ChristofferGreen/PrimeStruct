@@ -215,7 +215,7 @@ the other entries are specified here and tracked by the TODO named.
 | `string(sv, pos, n)`, `substr` | `view.slice(a, b).toOwned()`, `substr(a, b)` | done |
 | construct from raw bytes | `textFromBytes(bytes)` (valid UTF-8 or stops), `stringFromUtf8Lossy(bytes)` | done |
 | copy / move, destructor | `Copy`, `Move`, `Destroy` lifecycle | done |
-| `at`, `operator[]` | `byteAt(i)`; `s[i]` | `byteAt` done; operator TODO-5643 |
+| `at`, `operator[]` | `byteAt(i)`; `s[i]` | done: `s[i]` (`opAt`) |
 | `front`, `back` | `front()`, `back()` (stop on empty text) | done |
 | `data`, `c_str` | the block, always NUL terminated | done |
 | `operator string_view` | `s.view()` (explicit; no implicit borrow) | done; loans TODO-5569 |
@@ -223,12 +223,12 @@ the other entries are specified here and tracked by the TODO named.
 | `empty`, `size`, `capacity`, `reserve`, `shrink_to_fit`, `clear` | `empty`, `count`, `capacity`, `reserve`, `shrinkToFit`, `clear` | done |
 | `resize` | `resize(n, byte)` (a shrink inside a code point stops) | done |
 | `push_back`, `pop_back` | `pushByte`, `popByte`, `pop()` (a code point); `pushCodePoint` | `pushCodePoint` TODO-5568 |
-| `append(sv)`, `append(n, ch)`, `operator+=` | `append("lit")`, `appendView`, `appendBytes`, `appendFilled`; `+=` | `+=` TODO-5643 |
+| `append(sv)`, `append(n, ch)`, `operator+=` | `append("lit")`, `appendView`, `appendBytes`, `appendFilled`; `+=` | `a = a + b` done; `+=` has no token in the language |
 | `insert`, `erase`, `replace` | `insert`, `erase`, `replace` (byte ranges), `insertFilled`, `insertByte`, `replaceFilled` | done |
-| `operator+` | `a + b` | TODO-5643 |
+| `operator+` | `a + b` | done (`opPlus`); fused chains TODO-5632 |
 | `swap` | `swap(other)` | done |
 | `copy(dst, n, pos)` | `view.copyTo(destination)` | done |
-| `compare`, `==`, `<=>` | `compare(other)`, `equals`; `==` and `<` operators | operators TODO-5643 |
+| `compare`, `==`, `<=>` | `compare(other)`, `equals`; `==` and `<` operators | done (`opEqual`, `opLessThan`, ...) |
 | `starts_with`, `ends_with`, `contains` | `startsWith`, `endsWith`, `contains` | done |
 | `find`, `rfind` (with `pos`) | `indexOf`, `indexOfFrom`, `lastIndexOf` (-1 when absent; `Maybe` TODO-5642) | done |
 | `find_first_of`, `find_last_of`, `find_first_not_of`, `find_last_not_of` | `findFirstOf`, `findLastOf`, `findFirstNotOf`, `findLastNotOf` (+ `...From`) | done |
@@ -351,6 +351,14 @@ to compile the view code. `TextView` is taken by the native-UI widget.
   function there.
 - A view is valid while its text is not changed or freed. The loan rules that make that a compile-time guarantee are
   TODO-5569; until then it is the program's responsibility, as with `ReadSlice`.
+- Operators: `a + b` (a new `String`), `==`, `!=`, `<`, `<=`, `>`, `>=` and `s[i]` work on `String` and on `StringView`
+  (byte order; `s[i]` is the byte, stopping when out of range). The compiler rewrites an operator call whose first operand is
+  a struct value, and whose second operand has the same type, to the struct's member `opPlus`, `opEqual`, `opNotEqualTo`,
+  `opLessThan`, `opLessEqual`, `opGreaterThan`, `opGreaterEqual` or `opAt` (`opPlus` and the others are ordinary members
+  defined as `/Type/opPlus([Type] self, [Type] other)`; a user struct gets operators the same way). The `op` prefix is
+  deliberate: a member named `plus` would capture every bare `plus(a, b)` inside the struct. Operands must be names, calls of
+  free functions or operator results; bind a field or method-chain result to a local first. `+=` has no token yet, write
+  `a = a + b`.
 - Not yet: `Result<..., TextError>` results (the result lane, TODO-5524 to TODO-5526), the native backends for
   `__pstext_literal` and the float functions, and unifying `string`
   and `StringView` into the single type described above (TODO-5621).

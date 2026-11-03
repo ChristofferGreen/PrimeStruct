@@ -2094,6 +2094,7 @@ are left unarchived.
 | TODO-5639 | A binding whose declared type is an imported short name skipped the Copy helper | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 | TODO-5640 | String heap hot paths: O(1) frees, chunk index, region cache | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 | TODO-5642 | A method of an imported struct in a sum-returning function failed to lower; `Maybe` results for `StringView` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-03 |
+| TODO-5643 | Operators and index sugar for stdlib types (`String + String`, `s[i]`) | [2026-11.md](todo_archive/2026-11.md) | 2026-11-03 |
 | TODO-5644 | Split `/std/text` so a plain `String` program compiles fast | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 
 <!-- INDEX-END -->

@@ -59,6 +59,7 @@ PhaseStatus rewriteExprPhase8(Expr &expr, const SubstMap &mapping, const std::un
 
 // Helpers of rewriteExpr shared by its phase units.
 bool rewriteKeyValueWrapperHelperCallToMethod(Expr &expr, const std::string &namespacePrefix, Context &ctx, const LocalTypeMap &locals, const std::vector<semantics::ParameterInfo> &params, bool allowMathBare);
+bool rewriteStructOperatorCallToMethod(Expr &expr, const std::string &namespacePrefix, Context &ctx, const LocalTypeMap &locals, const std::vector<semantics::ParameterInfo> &params, bool allowMathBare);
 void unwrapDereferencedBorrowedVectorReceiver(Expr &expr, const std::vector<semantics::ParameterInfo> &params, const LocalTypeMap &locals, bool allowMathBare, Context &ctx);
 bool rewriteBorrowedVectorBareHelperCall(Expr &expr, const std::vector<semantics::ParameterInfo> &params, const LocalTypeMap &locals, bool allowMathBare, Context &ctx);
 
