@@ -852,18 +852,20 @@ Why this is good:
 
 ### Checked Slice Loop
 
-`slice(values, start, end)` is checked read-only view construction: an
-out-of-range literal range is a compile-time diagnostic, and a range that
-depends on runtime values gets a single construction-time bounds check. This
-is verified against the current release toolchain.
+`values.slice(start, end)` is checked read-only view construction: a range
+outside the array faults at construction with a single bounds check, and the
+borrow checker keeps the view from outliving `values`. This is verified
+against the current release toolchain.
 
 ```prime
+import /std/collections/slice/*
+
 [return<int>]
 sum_window([array<i32>] values, [i32] start, [i32] end) {
-  [array<i32>] window{slice(values, start, end)}
+  [Slice<i32, Read>] window{values.slice(start, end)}
   [i32 mut] total{0i32}
   [i32 mut] i{0i32}
-  while(i < count(window)) {
+  while(i < window.count()) {
     total = total + window[i]
     i = i + 1i32
   }
@@ -878,9 +880,9 @@ main() {
 ```
 
 Why this is good:
-- `slice(...)` names the checked view construction step separately from the
+- `values.slice(...)` names the checked view construction step separately from the
   loop that reads it.
-- `count(window)` bounds the loop against the slice's own extent, not the
+- `window.count()` bounds the loop against the slice's own extent, not the
   original array's, so the loop stays correct if the slice range changes.
 - The out-of-range case fails at construction, not partway through the loop.
 

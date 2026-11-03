@@ -182,12 +182,6 @@ bool SemanticsValidator::validateExprResolvedStructConstructorCall(
             *context.argumentValidationContext)) {
       return false;
     }
-    std::string sliceEscapeRoot;
-    if (this->resolveEscapingArraySliceRoot(params, locals, *arg, sliceEscapeRoot)) {
-      return failStructConstructorDiagnostic(
-          "slice escapes via field " + fieldParam.name + " (owner: " +
-          sliceEscapeRoot + ")");
-    }
   }
 
   handledOut = true;

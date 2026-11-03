@@ -419,11 +419,6 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
         !returnExpr.args.empty()) {
       return failReturnEscapeDiagnostic("field-view escapes via return");
     }
-    std::string sliceEscapeRoot;
-    if (resolveEscapingArraySliceRoot(params, locals, returnExpr, sliceEscapeRoot)) {
-      return failReturnEscapeDiagnostic("slice escapes via return (owner: " +
-                                        sliceEscapeRoot + ")");
-    }
     // A pointer to one of this definition's locals dangles once it returns.
     if (!currentValidationState_.context.definitionIsUnsafe) {
       std::string localPointerRoot;

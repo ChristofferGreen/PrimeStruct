@@ -30,28 +30,6 @@ PhaseStatus SemanticsValidator::validateExprCallPhase3([[maybe_unused]] const st
   };
     if (!expr.isMethodCall && isSimpleCallName(expr, "slice") &&
         expr.args.size() == 3) {
-      auto isIntegerRangeKind = [](ReturnKind kind) {
-        return kind == ReturnKind::Int || kind == ReturnKind::Int64 ||
-               (kind == ReturnKind::UInt64 || kind == ReturnKind::UInt8);
-      };
-      auto literalIntegerValue = [](const Expr &candidate) -> std::optional<int64_t> {
-        if (candidate.kind != Expr::Kind::Literal || candidate.isUnsigned) {
-          return std::nullopt;
-        }
-        if (candidate.intWidth == 64) {
-          return static_cast<int64_t>(candidate.literalValue);
-        }
-        return static_cast<int32_t>(candidate.literalValue);
-      };
-      auto literalArrayExtent = [&](const Expr &candidate) -> std::optional<int64_t> {
-        std::string collectionName;
-        if (candidate.kind != Expr::Kind::Call ||
-            !getBuiltinCollectionName(candidate, collectionName) ||
-            collectionName != "array") {
-          return std::nullopt;
-        }
-        return static_cast<int64_t>(candidate.args.size());
-      };
       std::string receiverTypeText;
       const bool receiverIsArray =
           inferQueryExprTypeText(expr.args.front(), params, locals,
@@ -65,38 +43,8 @@ PhaseStatus SemanticsValidator::validateExprCallPhase3([[maybe_unused]] const st
                    normalizeBindingTypeName(base) == "array";
           }();
       if (receiverIsArray) {
-        if (hasNamedArguments(expr.argNames)) {
-          return st.done(failExprRootDiagnostic("named arguments not supported for builtin calls"));
-        }
-        if (!expr.templateArgs.empty()) {
-          return st.done(failExprRootDiagnostic("slice does not accept template arguments"));
-        }
-        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-          return st.done(failExprRootDiagnostic("slice does not accept block arguments"));
-        }
-        const ReturnKind startKind =
-            inferExprReturnKind(expr.args[1], params, locals);
-        const ReturnKind endKind = inferExprReturnKind(expr.args[2], params, locals);
-        if (!isIntegerRangeKind(startKind) || !isIntegerRangeKind(endKind)) {
-          return st.done(failExprRootDiagnostic("slice requires integer start and end"));
-        }
-        if (const auto extent = literalArrayExtent(expr.args.front())) {
-          const auto start = literalIntegerValue(expr.args[1]);
-          const auto end = literalIntegerValue(expr.args[2]);
-          if (start.has_value() && end.has_value() &&
-              (*start < 0 || *end < *start || *end > *extent)) {
-            return st.done(failExprRootDiagnostic(
-                "slice range out of bounds: start=" + std::to_string(*start) +
-                ", end=" + std::to_string(*end) +
-                ", count=" + std::to_string(*extent)));
-          }
-        }
-        return st.done(validateExpr(params, locals, expr.args.front(),
-                            enclosingStatements, statementIndex) &&
-               validateExpr(params, locals, expr.args[1],
-                            enclosingStatements, statementIndex) &&
-               validateExpr(params, locals, expr.args[2],
-                            enclosingStatements, statementIndex));
+        return st.done(failExprRootDiagnostic(
+            "slice(values, start, end) was removed; write values.slice(start, end) for a view"));
       }
     }
     if (expr.isFieldAccess) {

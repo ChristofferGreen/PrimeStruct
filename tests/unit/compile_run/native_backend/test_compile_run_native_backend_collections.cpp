@@ -5,11 +5,13 @@ TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.collections");
 
 TEST_CASE("native array slice count and indexed access") {
   const std::string source = R"(
+import /std/collections/slice/*
+
 [return<int>]
 main() {
   [array<i32>] values{array<i32>(4i32, 7i32, 9i32, 11i32)}
-  [array<i32>] window{slice(values, 1i32, 3i32)}
-  return(plus(count(window), window[1i32]))
+  [Slice<i32, Read>] window{values.slice(1i32, 3i32)}
+  return(plus(window.count(), window[1i32]))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_array_slice.prime", source);

@@ -242,9 +242,9 @@ inline std::string snapshotExtentExprText(const Expr &expr) {
 }
 
 inline std::optional<std::size_t> staticArrayExtentForBindingInitializer(
-    const std::string &scopePath,
+    [[maybe_unused]] const std::string &scopePath,
     const Expr &bindingExpr,
-    const std::unordered_map<std::string, std::size_t> &staticExtentsByResolvedPath,
+    [[maybe_unused]] const std::unordered_map<std::string, std::size_t> &staticExtentsByResolvedPath,
     std::string &extentExpressionOut) {
   extentExpressionOut.clear();
   if (bindingExpr.args.size() != 1) {
@@ -256,29 +256,7 @@ inline std::optional<std::size_t> staticArrayExtentForBindingInitializer(
       collectionName == "array") {
     return initializer.args.size();
   }
-  if (initializer.kind != Expr::Kind::Call || initializer.isMethodCall ||
-      !isSimpleCallName(initializer, "slice") || initializer.args.size() != 3 ||
-      initializer.args.front().kind != Expr::Kind::Name) {
-    return std::nullopt;
-  }
-  const Expr &startExpr = initializer.args[1];
-  const Expr &endExpr = initializer.args[2];
-  extentExpressionOut =
-      snapshotExtentExprText(endExpr) + " - " + snapshotExtentExprText(startExpr);
-  const auto start = snapshotSignedLiteralValue(startExpr);
-  const auto end = snapshotSignedLiteralValue(endExpr);
-  if (!start.has_value() || !end.has_value() || *end < *start) {
-    return std::nullopt;
-  }
-  const std::string targetResolvedPath =
-      fallbackSnapshotBindingResolvedPath(scopePath, initializer.args.front().name);
-  const auto targetExtent = staticExtentsByResolvedPath.find(targetResolvedPath);
-  if (targetExtent == staticExtentsByResolvedPath.end() ||
-      *start < 0 ||
-      static_cast<std::size_t>(*end) > targetExtent->second) {
-    return std::nullopt;
-  }
-  return static_cast<std::size_t>(*end - *start);
+  return std::nullopt;
 }
 
 inline void collectStaticArrayExtentsForBindings(

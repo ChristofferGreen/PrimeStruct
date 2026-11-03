@@ -14,7 +14,7 @@ Arithmetic" section below) is now implemented for both `array<T>` and
 `vector<T>` as an ordinary generic stdlib type in
 `stdlib/std/cursor/cursor.prime` - see TODO-4610/TODO-5247 in
 `docs/todo_finished.md`. It ships without the `Capability` type parameter
-sketched below (deferred, matching how `slice(...)` also shipped without
+sketched below (deferred, matching how `values.slice(...)` also shipped without
 the full `Slice<T, Capability>` view model), and the owning collection is
 kept as an explicit parameter alongside the cursor
 (`readVector`/`readArray` take the collection plus the cursor) rather than
@@ -226,12 +226,12 @@ Possible public surfaces:
 Reference<T, Capability> // view with count == 1
 Slice<T, Capability>     // view with runtime count
 
-slice(values, start, end)          // checked read view
-slice_mut(values, start, end)      // checked write view
+values.slice(start, end)           // checked read view (the free `slice(values, a, b)` copy builtin is removed)
+values.sliceMut(start, end)        // checked write view
 slice_unsafe(values, start, count) // unsafe/internal, no bounds proof
 ```
 
-Core facts for `slice(values, start, end)`:
+Core facts for `values.slice(start, end)`:
 
 ```text
 0 <= start
@@ -422,7 +422,7 @@ Invalid sketch:
 [return<Slice<int, Read>>]
 bad() {
   [array<int>] values{array<int>{1, 2, 3}}
-  return(slice(values, 0, 2)) // invalid: view escapes owner
+  return(values.slice(0, 2)) // invalid: view escapes owner
 }
 ```
 
@@ -431,7 +431,7 @@ Valid sketch:
 ```prime
 [return<int> require(start <= end, end <= count(values))]
 sum_window([Reference<array<int>>] values, [int] start, [int] end) {
-  [Slice<int, Read>] window{slice(values, start, end)}
+  [Slice<int, Read>] window{values.slice(start, end)}
   [int mut] total{0}
 
   for([int mut] i{0}; i < count(window); ++i) {

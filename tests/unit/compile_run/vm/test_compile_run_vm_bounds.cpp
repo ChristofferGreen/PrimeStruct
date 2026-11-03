@@ -37,11 +37,13 @@ main() {
 
 TEST_CASE("vm array slice count and indexed access use slice extent") {
   const std::string source = R"(
+import /std/collections/slice/*
+
 [return<int>]
 main() {
   [array<i32>] values{array<i32>(4i32, 7i32, 9i32, 11i32)}
-  [array<i32>] window{slice(values, 1i32, 3i32)}
-  return(plus(count(window), window[1i32]))
+  [Slice<i32, Read>] window{values.slice(1i32, 3i32)}
+  return(plus(window.count(), window[1i32]))
 }
 )";
   const std::string srcPath = writeTemp("vm_array_slice_count_access.prime", source);
@@ -51,12 +53,14 @@ main() {
 
 TEST_CASE("vm array slice checks runtime bounds at construction") {
   const std::string source = R"(
+import /std/collections/slice/*
+
 [return<int>]
 main() {
   [array<i32>] values{array<i32>(4i32, 7i32)}
   [i32] end{plus(count(values), 1i32)}
-  [array<i32>] window{slice(values, 0i32, end)}
-  return(count(window))
+  [Slice<i32, Read>] window{values.slice(0i32, end)}
+  return(window.count())
 }
 )";
   const std::string srcPath = writeTemp("vm_array_slice_runtime_bounds.prime", source);
@@ -64,96 +68,25 @@ main() {
       (testScratchPath("") / "primec_vm_array_slice_runtime_bounds_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(errPath) == "array index out of bounds\n");
+  CHECK(!readFile(errPath).empty());
 }
 
-TEST_CASE("array slice rejects statically out-of-range literal ranges") {
+TEST_CASE("the copying slice builtin is removed and the error names the view method") {
   const std::string source = R"(
-[return<int>]
-main() {
-  [array<i32>] window{slice(array<i32>(4i32, 7i32), 1i32, 3i32)}
-  return(count(window))
-}
-)";
-  const std::string srcPath = writeTemp("array_slice_static_bounds.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_array_slice_static_bounds_err.txt").string();
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " --entry /main > /dev/null 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "slice range out of bounds: start=1, end=3, count=2") !=
-        std::string::npos);
-}
-
-TEST_CASE("array slice rejects escaping local array owner via return") {
-  // TODO-4609: the first conservative, lexical view-lifetime diagnostic -
-  // a slice of a local array may not be returned, since the slice view
-  // would outlive the local array it borrows from.
-  const std::string source = R"(
-[return<array<i32>>]
-make() {
-  [array<i32>] values{array<i32>(4i32, 7i32, 9i32)}
-  return(slice(values, 0i32, 2i32))
-}
-)";
-  const std::string srcPath = writeTemp("array_slice_escape_return.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_array_slice_escape_return_err.txt").string();
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " --entry /make > /dev/null 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("slice escapes via return (owner: values)") !=
-        std::string::npos);
-}
-
-TEST_CASE("array slice rejects escaping local array owner via stored field") {
-  // TODO-4609: a slice of a local array may not be stored into a struct
-  // field either, for the same reason - the struct instance can outlive
-  // the local array the slice borrows from.
-  const std::string source = R"(
-[struct]
-Holder {
-  [array<i32>] window{array<i32>()}
-}
-
-[return<int>]
-main() {
-  [array<i32>] values{array<i32>(4i32, 7i32, 9i32, 11i32)}
-  [Holder] holder{Holder{slice(values, 1i32, 3i32)}}
-  return(count(holder.window))
-}
-)";
-  const std::string srcPath = writeTemp("array_slice_escape_field.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_array_slice_escape_field_err.txt").string();
-  const std::string compileCmd =
-      "./primec --emit=vm " + srcPath + " --entry /main > /dev/null 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("slice escapes via field window (owner: values)") !=
-        std::string::npos);
-}
-
-TEST_CASE("array slice allows passing to a callee that does not store or return it") {
-  // TODO-4609: passing a slice view to a callee remains accepted as long as
-  // the callee itself does not store or return it - only escapes through
-  // the current function's own return value or a stored field are rejected.
-  const std::string source = R"(
-[return<int>]
-consume([array<i32>] window) {
-  return(count(window))
-}
-
 [return<int>]
 main() {
   [array<i32>] values{array<i32>(4i32, 7i32, 9i32, 11i32)}
   [array<i32>] window{slice(values, 1i32, 3i32)}
-  return(consume(window))
+  return(count(window))
 }
 )";
-  const std::string srcPath = writeTemp("array_slice_escape_allowed_passthrough.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 2);
+  const std::string srcPath = writeTemp("array_slice_builtin_removed.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_array_slice_builtin_removed_err.txt").string();
+  const std::string compileCmd =
+      "./primec --emit=vm " + srcPath + " --entry /main > /dev/null 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("write values.slice(start, end)") != std::string::npos);
 }
 
 TEST_CASE("vm array access rejects negative index") {

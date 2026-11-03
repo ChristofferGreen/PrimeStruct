@@ -334,33 +334,11 @@ inline std::string arrayExtentOperandText(const Expr &expr) {
   return "?";
 }
 
-inline std::string sliceExtentExpressionForBindingInitializer(const Expr &bindingExpr) {
-  if (bindingExpr.args.size() != 1) {
-    return {};
-  }
-  const Expr &initializer = bindingExpr.args.front();
-  if (initializer.kind != Expr::Kind::Call || initializer.isMethodCall ||
-      !isSimpleCallName(initializer, "slice") || initializer.args.size() != 3) {
-    return {};
-  }
-  return arrayExtentOperandText(initializer.args[2]) + " - " +
-         arrayExtentOperandText(initializer.args[1]);
-}
-
 inline void collectArrayExtentExpressionsForBindings(
     const std::string &scopePath,
     const std::vector<Expr> &exprs,
     std::unordered_map<std::string, std::string> &extentExpressionsByResolvedPath) {
   for (const Expr &expr : exprs) {
-    if (expr.isBinding) {
-      if (std::string extentExpression =
-              sliceExtentExpressionForBindingInitializer(expr);
-          !extentExpression.empty()) {
-        extentExpressionsByResolvedPath.insert_or_assign(
-            arrayExtentBindingResolvedPath(scopePath, expr.name),
-            std::move(extentExpression));
-      }
-    }
     collectArrayExtentExpressionsForBindings(
         scopePath, expr.args, extentExpressionsByResolvedPath);
     collectArrayExtentExpressionsForBindings(

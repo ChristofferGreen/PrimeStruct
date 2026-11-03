@@ -2116,6 +2116,7 @@ are left unarchived.
 | TODO-5651 | Pushing a named owning struct to a `[T move]` parameter shares its storage | [2026-11.md](todo_archive/2026-11.md) | 2026-11-03 |
 | TODO-5652 | Views of `array<T>` and retiring the copying `slice(array, start, end)` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-03 |
 | TODO-5653 | Cut the lowering time of inline-heavy library code | [2026-11.md](todo_archive/2026-11.md) | 2026-11-03 |
+| TODO-5654 | Retire the copying `slice(array, start, end)` builtin | [2026-11.md](todo_archive/2026-11.md) | 2026-11-03 |
 
 <!-- INDEX-END -->
 

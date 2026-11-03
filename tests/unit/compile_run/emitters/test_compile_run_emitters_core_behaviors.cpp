@@ -9,11 +9,13 @@ TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
 
 TEST_CASE("array slice count and indexed access in C++ emitter") {
   const std::string source = R"(
+import /std/collections/slice/*
+
 [return<int>]
 main() {
   [array<i32>] values{array<i32>(4i32, 7i32, 9i32, 11i32)}
-  [array<i32>] window{slice(values, 1i32, 3i32)}
-  return(plus(count(window), window[1i32]))
+  [Slice<i32, Read>] window{values.slice(1i32, 3i32)}
+  return(plus(window.count(), window[1i32]))
 }
 )";
   std::string exePath;

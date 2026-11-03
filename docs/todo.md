@@ -100,7 +100,6 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5654 | Retire the copying `slice(array, start, end)` builtin | ready | slices |
 | TODO-5638 | Shared immutable strings for threads (`SharedString`) | deferred | string-concurrency |
 | TODO-5645 | Real calls for struct-receiver methods (library code is inlined at every call site) | ready | lowering-gaps |
 | TODO-5603 | Startup audit: what a launch loads and does | ready | startup |
@@ -230,17 +229,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - full release gate green
   - stop_rule: native I/O emitter and png status mapping.
   - notes: deferred: queued behind the Ready Now cap.
-
-- [ ] TODO-5654: Retire the copying `slice(array, start, end)` builtin
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-03
-  - phase: Strings and slices (docs/spec/strings-and-views.md), split from TODO-5652
-  - parallel_track: slices
-  - scope: The free function `slice(values, start, end)` copies a range of an array into a new array (checked in `SemanticsValidatorExprArraySliceEscapes.cpp` and lowered in the VM, the C++ emitters and the native backends). Array views exist now, so remove the builtin and migrate its callers: the compile-run tests in `test_compile_run_vm_bounds.cpp`, `test_compile_run_native_backend_collections.cpp`, `test_compile_run_emitters_core_behaviors.cpp`, `test_compile_run_examples_docs.cpp`, the semantic snapshot test, and docs/CodeExamples.md and docs/SafeArrayExtentViews.md.
-  - acceptance:
-    - no caller of the copying builtin is left and `slice(array, a, b)` reports a diagnostic that names `values.slice(a, b)`; full release gate green
-  - stop_rule: the builtin's removal and its callers; no new view features.
 
 - [ ] TODO-5638: Shared immutable strings for threads (`SharedString`)
   - owner: ai

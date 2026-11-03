@@ -525,7 +525,7 @@ TEST_CASE("safe extent and cursor docs examples stay documented and executable")
       "### Runtime Extent Contract",
       "[return<int> require(count(values) > 0)]",
       "### Checked Slice Loop",
-      "[array<i32>] window{slice(values, start, end)}",
+      "[Slice<i32, Read>] window{values.slice(start, end)}",
       "### Forward Cursor Loop",
       "[Cursor<i32> mut] it{startVector<i32>(values)}",
       "### Reverse Cursor Loop",
@@ -576,12 +576,14 @@ main() {
 )", 41);
 
   runVmAndNative("docs_safe_extents_slice_loop", R"(
+import /std/collections/slice/*
+
 [return<int>]
 sum_window([array<i32>] values, [i32] start, [i32] end) {
-  [array<i32>] window{slice(values, start, end)}
+  [Slice<i32, Read>] window{values.slice(start, end)}
   [i32 mut] total{0i32}
   [i32 mut] i{0i32}
-  while(i < count(window)) {
+  while(i < window.count()) {
     total = total + window[i]
     i = i + 1i32
   }
