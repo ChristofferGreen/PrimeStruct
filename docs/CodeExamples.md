@@ -1063,9 +1063,8 @@ Why this is good:
 first element and a count, defined by the stdlib module `/std/collections/slice` (import it to use the
 type). `Slice<T, Read>` is the stdlib struct `ReadSlice<T>`, which only reads; `Slice<T, Write>` is
 `WriteSlice<T>`, which also writes. A view copies nothing, so a write through a `Write` view changes the
-vector it was made from. Views of a `vector<T>` come from `/std/collections/vector/view<T>(values)`,
-`/std/collections/vector/slice<T>(values, start, end)` and `/std/collections/vector/sliceMut<T>(values,
-start, end)`.
+vector it was made from. Views of a `vector<T>` come from `values.view()`, `values.slice(start, end)` and
+`values.sliceMut(start, end)`, and a view reads and writes with `window[i]` and `window[i] = v`.
 
 ```prime
 import /std/collections/*
@@ -1075,7 +1074,7 @@ import /std/collections/slice/*
 sum_window([Slice<i32, Read>] window) {
   [i32 mut] total{0i32}
   for([i32 mut] i{0i32}, i < window.count(), i++) {
-    total = total + window.at(i)
+    total = total + window[i]
   }
   return(total)
 }
@@ -1083,8 +1082,8 @@ sum_window([Slice<i32, Read>] window) {
 [return<int> effects(heap_alloc)]
 main() {
   [vector<i32> mut] values{vector<i32>(4i32, 7i32, 9i32, 11i32)}
-  [Slice<i32, Read>] window{/std/collections/vector/slice<i32>(values, 1i32, 3i32)}
-  return(sum_window(window))
+  [Slice<i32, Read>] window{values.slice(1i32, 3i32)}
+  return(sum_window(window) + window[0i32])
 }
 ```
 

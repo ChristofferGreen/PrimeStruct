@@ -194,3 +194,25 @@ TEST_CASE("a read slice has no write operations") {
   const Outcome fill = runBody(Five + "  all.fill(1i32)\n  return(0i32)");
   CHECK_FALSE(fill.compiled);
 }
+
+TEST_CASE("a vector has the view, slice and sliceMut method spellings and a view indexes with brackets") {
+  const std::string values = "  [vector<i32> mut] all{vector<i32>(10i32, 20i32, 30i32, 40i32)}\n";
+  CHECK(runBody(values + "  [Slice<i32, Read>] s{all.view()}\n  return(s.count() * 10i32 + s[1i32] / 10i32)").exitCode == 42);
+  CHECK(runBody(values + "  [Slice<i32, Read>] s{all.slice(1i32, 3i32)}\n  return(s.count() * 100i32 + s[0i32] + s[1i32])").exitCode ==
+        (250 & 255));
+  const Outcome write = runBody(values + "  [Slice<i32, Write> mut] w{all.sliceMut(2i32, 4i32)}\n  w[0i32] = 99i32\n"
+                                         "  w[1i32] = 7i32\n  return(all.at(2i32) + all.at(3i32))");
+  REQUIRE(write.compiled);
+  CHECK(write.exitCode == 106);
+  const Outcome outOfRange = runBody(values + "  [Slice<i32, Read>] s{all.view()}\n  return(s[9i32])");
+  REQUIRE(outOfRange.compiled);
+  CHECK((!outOfRange.ok || outOfRange.exitCode != 0));
+}
+
+TEST_CASE("the method spellings work on vector<u8> and a read view cannot be indexed for writing") {
+  const std::string bytes = "  [vector<u8> mut] all{vector<u8>(1u8, 2u8, 3u8)}\n";
+  CHECK(runBody(bytes + "  [Slice<u8, Read>] s{all.view()}\n  return(convert<i32>(s[2i32]) + s.count() * 10i32)").exitCode == 33);
+  CHECK(runBody(bytes + "  [Slice<u8, Write>] w{all.sliceMut(0i32, 2i32)}\n  w[1i32] = 9u8\n  return(convert<i32>(all.at(1i32)))").exitCode == 9);
+  const Outcome readOnly = runBody(bytes + "  [Slice<u8, Read>] s{all.view()}\n  s[0i32] = 5u8\n  return(0i32)");
+  CHECK_FALSE(readOnly.compiled);
+}

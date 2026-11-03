@@ -107,8 +107,9 @@ no write operations and `WriteSlice<T>.readOnly()` gives a read view of the same
 (`Maybe<T>`), `find`, `rfind`, `contains`, `occurrences` (spelled `count(value)` in the table), `equals`,
 `compare`, `startsWith`, `endsWith`, `findSlice`, `takeFirst`, `dropFirst`, `takeLast`, `dropLast`, `head`,
 `tail`, `splitPart(separator, n)`, `splitCount(separator)` and, on a write view, `set`, `fill`, `swap`,
-`reverse`, `copyFrom`, `sort`. Not yet: the `values.view()`/`slice()`/`sliceMut()` method spellings, `[i]` on
-a view and views of `array<T>` (docs/todo.md).
+`reverse`, `copyFrom`, `sort`. A `vector<T>` has the method spellings `values.view()`, `values.slice(start, end)` and
+`values.sliceMut(start, end)`, and a view indexes with `view[i]` and `view[i] = v` (the struct operator rewrite calls the
+`opAt` and `opSet` members of the slice structs). Not yet: views of `array<T>` (TODO-5652).
 
 ### Operations on every slice
 

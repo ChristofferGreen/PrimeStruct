@@ -290,6 +290,12 @@ READ_METHODS = '''    [return<i32>]
       return(sliceRead<T>(this.data, index))
     }
 
+    // `view[i]` is rewritten to this call (docs/spec/transforms.md, operators on structs).
+    [return<T>]
+    opAt([i32] index) {
+      return(this.at(index))
+    }
+
     [return<Maybe<T>>]
     first() {
       if(this.fieldCount == 0i32) {
@@ -423,6 +429,12 @@ WRITE_METHODS = '''
         panic(index)
       }
       sliceWrite<T>(this.data, index, value)
+    }
+
+    // `view[i] = value` is rewritten to this call.
+    [mut]
+    opSet([i32] index, [T] value) {
+      this.set(index, value)
     }
 
     [mut]

@@ -536,7 +536,7 @@ TEST_CASE("safe extent and cursor docs examples stay documented and executable")
       "[Reference<array<i32>, Read>] values",
       "### Capability-Parameterized Slice Parameter",
       "sum_window([Slice<i32, Read>] window)",
-      "/std/collections/vector/slice<i32>(values, 1i32, 3i32)"};
+      "values.slice(1i32, 3i32)"};
   for (const std::string &snippet : requiredCodeExampleSnippets) {
     CAPTURE(snippet);
     CHECK(codeExamples.find(snippet) != std::string::npos);
@@ -701,7 +701,7 @@ import /std/collections/slice/*
 sum_window([Slice<i32, Read>] window) {
   [i32 mut] total{0i32}
   for([i32 mut] i{0i32}, i < window.count(), i++) {
-    total = total + window.at(i)
+    total = total + window[i]
   }
   return(total)
 }
@@ -709,11 +709,11 @@ sum_window([Slice<i32, Read>] window) {
 [return<int> effects(heap_alloc)]
 main() {
   [vector<i32> mut] values{vector<i32>(4i32, 7i32, 9i32, 11i32)}
-  [Slice<i32, Read>] window{/std/collections/vector/slice<i32>(values, 1i32, 3i32)}
-  return(sum_window(window))
+  [Slice<i32, Read>] window{values.slice(1i32, 3i32)}
+  return(sum_window(window) + window[0i32])
 }
 )");
-    CHECK(runCommand("./primec --emit=vm " + srcPath + " --entry /main") == 16);
+    CHECK(runCommand("./primec --emit=vm " + srcPath + " --entry /main") == 23);
   }
 }
 

@@ -350,6 +350,92 @@ bool foldLiteralTextCall(Expr &expr, std::string &error) {
   return true;
 }
 
+// `values.view()`, `values.slice(start, end)` and `values.sliceMut(start, end)` on a `vector<T>` are the calls
+// `/std/collections/vector/view<T>(values)` and friends (the vector surface resolves its methods by name, so the three
+// slice makers are spelled out here).
+bool rewriteVectorViewMethod(Expr &expr,
+                             Context &ctx,
+                             const LocalTypeMap &locals,
+                             const std::vector<semantics::ParameterInfo> &params,
+                             bool allowMathBare) {
+  if (expr.kind != Expr::Kind::Call || !expr.isMethodCall || expr.isBinding || expr.hasBodyArguments ||
+      !expr.bodyArguments.empty() || hasNamedCallArguments(expr) || !expr.templateArgs.empty()) {
+    return false;
+  }
+  const bool viewForm = expr.name == "view" && expr.args.size() == 1;
+  const bool sliceForm = (expr.name == "slice" || expr.name == "sliceMut") && expr.args.size() == 3;
+  if (!viewForm && !sliceForm) {
+    return false;
+  }
+  const Expr &receiver = expr.args.front();
+  if (receiver.kind != Expr::Kind::Name) {
+    return false;
+  }
+  semantics::BindingInfo receiverInfo;
+  if (!inferBindingTypeForMonomorph(receiver, params, locals, allowMathBare, ctx, receiverInfo)) {
+    return false;
+  }
+  const std::string base = semantics::normalizeBindingTypeName(receiverInfo.typeName);
+  const bool isVector = base == "vector" || base == "Vector" || base == collection_helpers::kCanonicalVectorVectorType;
+  if (!isVector || receiverInfo.typeTemplateArg.empty()) {
+    return false;
+  }
+  if (expr.sourceName.empty()) {
+    expr.sourceName = expr.name;
+  }
+  expr.name = std::string(collection_helpers::kCanonicalVectorPrefix) + expr.name;
+  expr.isMethodCall = false;
+  expr.templateArgs.push_back(receiverInfo.typeTemplateArg);
+  return true;
+}
+
+// `view[i] = value` on a struct with an `opSet` member becomes `view.opSet(i, value)`.
+bool rewriteStructIndexAssign(Expr &expr,
+                              const std::string &namespacePrefix,
+                              Context &ctx,
+                              const LocalTypeMap &locals,
+                              const std::vector<semantics::ParameterInfo> &params,
+                              bool allowMathBare) {
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.isBinding || expr.isFieldAccess ||
+      expr.name != "assign" || expr.args.size() != 2 || hasNamedCallArguments(expr)) {
+    return false;
+  }
+  const Expr &target = expr.args[0];
+  if (target.kind != Expr::Kind::Call || target.isMethodCall || target.isBinding || target.isFieldAccess ||
+      target.name != "at" || target.args.size() != 2 || target.args[0].kind != Expr::Kind::Name) {
+    return false;
+  }
+  semantics::BindingInfo receiverInfo;
+  if (!inferBindingTypeForMonomorph(target.args[0], params, locals, allowMathBare, ctx, receiverInfo)) {
+    return false;
+  }
+  std::string base = semantics::normalizeBindingTypeName(receiverInfo.typeName);
+  if (base.empty() || base == "Reference" || base == "Pointer" || base == "array" || base == "vector" || base == "map" ||
+      base == "string") {
+    return false;
+  }
+  if (base.front() != '/') {
+    base = resolveNameToPath(base, namespacePrefix, scopedImportAliasesForNamespace(namespacePrefix, ctx), ctx.sourceDefs);
+  }
+  if (base.empty() || base.front() != '/') {
+    return false;
+  }
+  const std::string memberPath = base + "/opSet";
+  if (ctx.sourceDefs.count(memberPath) == 0 && ctx.helperOverloads.count(memberPath) == 0 &&
+      !anySourceDefStartsWith(ctx, memberPath + "<") && !anySourceDefStartsWith(ctx, memberPath + "__t")) {
+    return false;
+  }
+  std::vector<Expr> args = {target.args[0], target.args[1], expr.args[1]};
+  if (expr.sourceName.empty()) {
+    expr.sourceName = expr.name;
+  }
+  expr.args = std::move(args);
+  expr.argNames.clear();
+  expr.name = "opSet";
+  expr.isMethodCall = true;
+  return true;
+}
+
 // Operators and index sugar for stdlib structs: `a + b`, `a == b`, `a < b` and
 // `a[i]` on a struct value whose type has a member of the matching name
 // (`/std/text/String/plus`) become the method call `a.plus(b)`.

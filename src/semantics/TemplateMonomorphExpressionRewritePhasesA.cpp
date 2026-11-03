@@ -139,6 +139,8 @@ PhaseStatus rewriteExprPhase2([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
   if (!foldLiteralTextCall(expr, error)) {
     return st.done(false);
   }
+  (void)rewriteVectorViewMethod(expr, ctx, locals, params, allowMathBare);
+  (void)rewriteStructIndexAssign(expr, namespacePrefix, ctx, locals, params, allowMathBare);
   (void)rewriteStructOperatorCallToMethod(
       expr, namespacePrefix, ctx, locals, params, allowMathBare);
   if (!expr.isMethodCall && !expr.isBinding && !expr.isFieldAccess &&

@@ -102,7 +102,7 @@ of sync with them.
 | --- | --- | --- | --- |
 | TODO-5567 | Packed `array<u8>` | ready | bytes |
 | TODO-5649 | Remaining slice loan rules: `mut`/`move` owners, `Write` conflicts, outer bindings | ready | slices |
-| TODO-5570 | Slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views | ready | slices |
+| TODO-5652 | Views of `array<T>` and retiring the copying `slice(array, start, end)` | blocked | slices |
 | TODO-5650 | A wildcard-imported struct type as a parameter type needs its full path | ready | lowering-gaps |
 | TODO-5651 | Pushing a named owning struct to a `[T move]` parameter shares its storage | ready | lowering-gaps |
 | TODO-5638 | Shared immutable strings for threads (`SharedString`) | deferred | string-concurrency |
@@ -139,7 +139,6 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5570 (slices): slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views
 - TODO-5603 (startup): startup audit: what a launch loads and does
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
@@ -148,16 +147,15 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5570
-2. TODO-5603
-3. TODO-5536
-4. TODO-5535
-5. TODO-5510
-6. TODO-5524
+1. TODO-5603
+2. TODO-5536
+3. TODO-5535
+4. TODO-5510
+5. TODO-5524
 
 ### Priority Lanes
 
-- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5570, TODO-5645, TODO-5638, TODO-5567, TODO-5574
+- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5645, TODO-5638, TODO-5567, TODO-5652, TODO-5574
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Startup (docs/NativeUiPlan.md section 16): TODO-5603
@@ -251,16 +249,17 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - VM matrix cases for `array<u8>`: literal, reads, writes, count, iteration, passing and returning, out-of-range faults; an `array<u8>` of 1 MB uses about 1 MB of VM heap; full release gate green
   - stop_rule: `array<u8>` on the VM; native and C++ are TODO-5574.
 
-- [ ] TODO-5570: Slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views
+- [ ] TODO-5652: Views of `array<T>` and retiring the copying `slice(array, start, end)`
   - owner: ai
-  - status: ready
-  - created_at: 2026-10-22
-  - phase: Strings and slices (docs/spec/strings-and-views.md), follow-up to the slice value
+  - status: blocked
+  - blocked_on: TODO-5567
+  - created_at: 2026-11-03
+  - phase: Strings and slices (docs/spec/strings-and-views.md), split from TODO-5570
   - parallel_track: slices
-  - scope: The user-facing spellings the slice value leaves out: `values.view()`, `values.slice(start, end)` and `values.sliceMut(start, end)` on a `vector<T>` (today `/std/collections/vector/view<T>(values)` etc.; the builtin vector surface is name-driven in several places, and `slice` is also the array-copy builtin), `view`/`slice`/`sliceMut` and packed `u8` storage for `array<T>`, `view[i]` and `view[i] = v` on a slice (index sugar currently types only builtin collections), and `Slice<T, Capability>` resolving without an explicit `import /std/collections/slice/*` (the implicit stdlib include stub). Retire the copying `slice(array, start, end)` builtin once array views exist.
+  - scope: `view`/`slice`/`sliceMut` as methods on `array<T>` giving `Slice<T, Read|Write>` over the array's storage (needs the data pointer that packed arrays, TODO-5567, provide), `view[i]` and `view[i] = v` over them, and removal of the copying `slice(array, start, end)` builtin once array views exist (migrating its callers).
   - acceptance:
-    - tests for each spelling on `vector<i32>`, `vector<u8>` and `array<i32>` owners; docs/CodeExamples.md uses the method spellings; full release gate green
-  - stop_rule: the spellings and array views on the VM; native and C++ are TODO-5574.
+    - tests for each spelling on `array<i32>` and `array<u8>` owners; no caller of the copying builtin is left; full release gate green
+  - stop_rule: the array views and the builtin's retirement on the VM; native and C++ are TODO-5574.
 
 - [ ] TODO-5649: Remaining slice loan rules: `mut`/`move` owners, `Write` conflicts, outer bindings
   - owner: ai

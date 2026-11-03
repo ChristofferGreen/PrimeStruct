@@ -2036,6 +2036,7 @@ are left unarchived.
 | TODO-5566 | Packed byte containers | [2026-10.md](todo_archive/2026-10.md) | 2026-10-22 |
 | TODO-5568 | String conveniences: operators, code points, indexing | [2026-11.md](todo_archive/2026-11.md) | 2026-11-03 |
 | TODO-5569 | Slice loans, escapes and returned borrows | [2026-11.md](todo_archive/2026-11.md) | 2026-11-03 |
+| TODO-5570 | Slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views | [2026-11.md](todo_archive/2026-11.md) | 2026-11-03 |
 | TODO-5571 | Native UI text uses `String` | [undated.md](todo_archive/undated.md) | - |
 | TODO-5572 | Remove the VM run-time string index | [undated.md](todo_archive/undated.md) | - |
 | TODO-5573 | Embedding text results and exports use `String` | [undated.md](todo_archive/undated.md) | - |
