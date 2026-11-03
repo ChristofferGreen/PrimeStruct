@@ -23,6 +23,10 @@ root = /std/text/secret
 source_file = std/text/secret.prime
 
 [module]
+root = /std/text/shared
+source_file = std/text/shared.prime
+
+[module]
 root = /std/text/string_map
 source_file = std/text/string_map.prime
 

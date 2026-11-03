@@ -22,9 +22,12 @@ None.
 ## Current Failures
 
 <!-- compile.sh:failing-tests:start -->
-- Last updated: `2026-11-03T08:06:37Z`
+- Last updated: `2026-11-03T08:25:11Z`
 - Build type: `Release`
 - Build dir: `build-release`
 - Command: `ctest --test-dir build-release --output-on-failure --parallel 22`
-- Result: no failing CTest cases.
+- Result: `ctest` failed with status `8`.
+- Failing CTest cases:
+  - `27`: `PrimeStruct_u8_scalar`
+  - `1277`: `PrimeStruct_primestruct_compile_run_reflection_codegen_reflection_codegen_23_23`
 <!-- compile.sh:failing-tests:end -->

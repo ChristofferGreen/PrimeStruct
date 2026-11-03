@@ -100,7 +100,7 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5638 | Shared immutable strings for threads (`SharedString`) | deferred | string-concurrency |
+| TODO-5656 | Thread-safe `SharedString` (atomic count, per-thread string heaps) | deferred | string-concurrency |
 | TODO-5603 | Startup audit: what a launch loads and does | ready | startup |
 | TODO-5586 | Native String heap: pooled blocks, statistics and limit | deferred | native-backend-strings |
 | TODO-5536 | Small, lazily loaded bytecode for apps | ready | bytecode-startup |
@@ -146,7 +146,7 @@ of sync with them.
 
 ### Priority Lanes
 
-- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5638
+- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5656
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Startup (docs/NativeUiPlan.md section 16): TODO-5603
@@ -229,13 +229,13 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - stop_rule: native I/O emitter and png status mapping.
   - notes: deferred: queued behind the Ready Now cap.
 
-- [ ] TODO-5638: Shared immutable strings for threads (`SharedString`)
+- [ ] TODO-5656: Thread-safe `SharedString` (atomic count, per-thread string heaps)
   - owner: ai
   - status: deferred
-  - created_at: 2026-11-02
+  - created_at: 2026-11-03
   - phase: Strings and slices (docs/spec/strings-and-views.md, Beyond std::string)
   - parallel_track: string-concurrency
-  - scope: A refcounted immutable `SharedString` with O(1) clone and view, safe to send between threads. Deferred until the concurrency model (docs/MultithreadingPrototype.md) has a scheduler, atomics and per-thread string heaps; scope it again then.
+  - scope: Make `SharedString` (TODO-5638) safe to send between threads: an atomic count and string blocks that may be freed on a thread other than the one that made them. Deferred until the concurrency model (docs/MultithreadingPrototype.md) has a scheduler, atomics and per-thread string heaps; scope it again then.
   - acceptance:
     - to be set when the leaf is un-deferred
   - stop_rule: not started.

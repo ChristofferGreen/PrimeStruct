@@ -481,3 +481,19 @@ TEST_CASE("a mut method and a struct parameter work as real calls and write the 
                "  return(b.total * 1000i32 + b.hits * 100i32 + last + twice * 0i32 + a.hits)",
                counter) == (24 * 1000 + 5 * 100 + 24 + 4));
 }
+
+TEST_CASE("a SharedString is shared by copying, counted, and freed with its last owner") {
+  const std::string imports = "import /std/text/view/*\nimport /std/text/shared/*\n";
+  CHECK(exitOf("  [String] owner{stringFrom(\"hello\")}\n  [SharedString] a{sharedFrom(owner.view())}\n  [i32] one{a.owners()}\n"
+               "  [SharedString] b{a}\n  [i32] two{a.owners()}\n  [i32 mut] inner{0i32}\n"
+               "  if(one == 1i32) {\n    [SharedString] c{b}\n    inner = a.owners()\n  }\n"
+               "  [i32] back{a.owners()}\n  [bool] same{b.view().equals(owner.view())}\n"
+               "  return(one * 1000i32 + two * 100i32 + inner * 10i32 + back + if(same, then() { 10000i32 }, else() { 0i32 }))",
+               imports) == 11232);
+  CHECK(exitOf("  [SharedString] kept{sharedFrom(textOf(\"kept\"))}\n  [i32 mut] total{0i32}\n"
+               "  for([i32 mut] i{0i32}, i < 500i32, i++) {\n    [SharedString] copy{kept}\n    total = total + copy.count()\n  }\n"
+               "  return(total + kept.owners() * 10000i32)",
+               imports) == 2000 + 10000);
+  CHECK(exitOf("  [SharedString] empty{SharedString{}}\n  [SharedString] other{empty}\n  return(empty.count() + empty.owners() + other.owners())",
+               imports) == 0);
+}
