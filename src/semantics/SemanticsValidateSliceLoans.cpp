@@ -6,6 +6,7 @@
 #include <set>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 
 namespace primec::semantics {
@@ -17,8 +18,18 @@ std::string leafName(const std::string &name) {
   return slash == std::string::npos ? name : name.substr(slash + 1);
 }
 
+// The leaf of a type name without the suffix a template instantiation adds (`ReadSlice__t0123` is `ReadSlice`).
+std::string typeLeafName(const std::string &name) {
+  std::string leaf = leafName(name);
+  const size_t suffix = leaf.find("__t");
+  if (suffix != std::string::npos) {
+    leaf.erase(suffix);
+  }
+  return leaf;
+}
+
 bool isViewTypeName(const std::string &typeName) {
-  const std::string leaf = leafName(typeName);
+  const std::string leaf = typeLeafName(typeName);
   return leaf == "Slice" || leaf == "ReadSlice" || leaf == "WriteSlice" || leaf == "StringView";
 }
 
@@ -27,7 +38,7 @@ bool hasTypeLeaf(const Expr &expr, std::string_view leaf) {
     return false;
   }
   for (const Transform &transform : expr.transforms) {
-    if (leafName(transform.name) == leaf) {
+    if (typeLeafName(transform.name) == leaf) {
       return true;
     }
   }
@@ -38,7 +49,7 @@ bool hasTypeLeaf(const Expr &expr, std::string_view leaf) {
 using CarrierSet = std::set<std::string>;
 
 bool isViewTypeName(const std::string &typeName, const CarrierSet &carriers) {
-  return isViewTypeName(typeName) || carriers.count(leafName(typeName)) > 0;
+  return isViewTypeName(typeName) || carriers.count(typeLeafName(typeName)) > 0;
 }
 
 bool isViewBinding(const Expr &expr, const CarrierSet &carriers) {
@@ -168,9 +179,77 @@ bool mutatesRoot(const Expr &expr, const std::string &root) {
   return false;
 }
 
+bool paramHasTransform(const Expr &param, std::string_view name) {
+  for (const Transform &transform : param.transforms) {
+    if (transform.name == name) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Whether the binding has a Write capability: `WriteSlice<T>` or `Slice<T, Write>`.
+bool isWriteView(const Expr &binding) {
+  for (const Transform &transform : binding.transforms) {
+    const std::string leaf = typeLeafName(transform.name);
+    if (leaf == "WriteSlice") {
+      return true;
+    }
+    if (leaf == "Slice" && transform.templateArgs.size() >= 2) {
+      const std::string &capability = transform.templateArgs[1];
+      if (capability.find("Write") != std::string::npos) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+using DefinitionMap = std::unordered_map<std::string, const Definition *>;
+
+// Whether `expr` passes the binding `root` as the argument of a `mut` or `move` parameter of a function it calls.
+bool passesToMutableParameter(const Expr &expr, const std::string &root, const DefinitionMap &definitions) {
+  if (expr.kind == Expr::Kind::Call && !expr.isBinding && !expr.isMethodCall && !expr.resolvedCallPath.empty()) {
+    const auto found = definitions.find(expr.resolvedCallPath);
+    if (found != definitions.end()) {
+      const Definition &callee = *found->second;
+      for (size_t k = 0; k < expr.args.size() && k < callee.parameters.size(); ++k) {
+        const Expr &arg = expr.args[k];
+        if (arg.kind == Expr::Kind::Name && arg.name == root &&
+            (paramHasTransform(callee.parameters[k], "mut") || paramHasTransform(callee.parameters[k], "move"))) {
+          return true;
+        }
+      }
+    }
+  }
+  for (const Expr &arg : expr.args) {
+    if (passesToMutableParameter(arg, root, definitions)) {
+      return true;
+    }
+  }
+  for (const Expr &arg : expr.bodyArguments) {
+    if (passesToMutableParameter(arg, root, definitions)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+struct LiveLoan {
+  std::string name;
+  std::set<std::string> roots;
+  std::set<std::string> ancestors;  // the views this one was narrowed from
+  bool write = false;
+  size_t blockDepth = 0;
+  size_t lastUse = 0;
+};
+
 struct Checker {
   const Definition &def;
   const CarrierSet &carriers;
+  const DefinitionMap &definitions;
+  std::vector<LiveLoan> liveLoans;
+  std::vector<size_t> blockPosition;  // the statement being checked in each enclosing block
   std::set<std::string> parameterNames;
   bool returnsView = false;
   std::string error;
@@ -188,7 +267,8 @@ struct Checker {
   // names declared by each enclosing block, innermost last
   std::vector<std::set<std::string>> scopes;
 
-  Checker(const Definition &definition, const CarrierSet &carrierSet) : def(definition), carriers(carrierSet) {
+  Checker(const Definition &definition, const CarrierSet &carrierSet, const DefinitionMap &definitionMap)
+      : def(definition), carriers(carrierSet), definitions(definitionMap) {
     for (const Expr &param : def.parameters) {
       parameterNames.insert(param.name);
       if (isViewBinding(param, carriers)) {
@@ -226,6 +306,22 @@ struct Checker {
         roots.insert(inner.begin(), inner.end());
       }
       return roots;
+    }
+    // A callee that says which parameter its result borrows from (`[returns_borrow<name>]`) lends that argument's roots.
+    if (!expr.isMethodCall && !expr.resolvedCallPath.empty()) {
+      const auto found = definitions.find(expr.resolvedCallPath);
+      if (found != definitions.end()) {
+        for (const Transform &transform : found->second->transforms) {
+          if (transform.name != "returns_borrow" || transform.templateArgs.size() != 1) {
+            continue;
+          }
+          for (size_t k = 0; k < found->second->parameters.size() && k < expr.args.size(); ++k) {
+            if (found->second->parameters[k].name == transform.templateArgs.front()) {
+              return rootsOf(expr.args[k]);
+            }
+          }
+        }
+      }
     }
     if (!expr.args.empty()) {
       const Expr *base = placeBase(expr.args.front());
@@ -287,7 +383,12 @@ struct Checker {
 
   bool checkBlock(const std::vector<Expr> &statements) {
     scopes.emplace_back();
+    blockPosition.push_back(0);
     const bool ok = checkStatements(statements);
+    blockPosition.pop_back();
+    while (!liveLoans.empty() && liveLoans.back().blockDepth == scopes.size()) {
+      liveLoans.pop_back();
+    }
     while (!arenas.empty() && arenas.back().second == scopes.size()) {
       for (auto it = arenaStrings.begin(); it != arenaStrings.end();) {
         it = it->second == arenas.size() - 1 ? arenaStrings.erase(it) : std::next(it);
@@ -302,6 +403,7 @@ struct Checker {
   bool checkStatements(const std::vector<Expr> &statements) {
     for (size_t i = 0; i < statements.size(); ++i) {
       const Expr &statement = statements[i];
+      blockPosition.back() = i;
       if (statement.isBinding) {
         scopes.back().insert(statement.name);
         declarationOrder[statement.name] = ++declarationCount;
@@ -330,11 +432,40 @@ struct Checker {
           }
           for (size_t j = i + 1; j < lastUse; ++j) {
             for (const std::string &root : roots) {
-              if (mutatesRoot(statements[j], root)) {
+              if (mutatesRoot(statements[j], root) || passesToMutableParameter(statements[j], root, definitions)) {
                 return fail("borrowed binding: " + root + " (root: " + root + ", sink: " + statement.name + ")");
               }
             }
           }
+          // A Write view conflicts with any other live view of the same owner (the views it was narrowed from excepted).
+          std::set<std::string> ancestors;
+          if (!statement.args.empty()) {
+            const Expr *base = placeBase(statement.args.front());
+            if (base->kind == Expr::Kind::Name && loanRoots.count(base->name) > 0) {
+              ancestors.insert(base->name);
+              for (const LiveLoan &loan : liveLoans) {
+                if (loan.name == base->name) {
+                  ancestors.insert(loan.ancestors.begin(), loan.ancestors.end());
+                }
+              }
+            }
+          }
+          const bool writes = isWriteView(statement);
+          for (const LiveLoan &loan : liveLoans) {
+            if (loan.name == statement.name || ancestors.count(loan.name) > 0 || (!writes && !loan.write)) {
+              continue;
+            }
+            const size_t position = blockPosition[loan.blockDepth - 1];
+            if (loan.lastUse <= position) {
+              continue;  // its last use is behind us
+            }
+            for (const std::string &root : roots) {
+              if (loan.roots.count(root) > 0) {
+                return fail("borrowed binding: " + root + " (root: " + root + ", sink: " + statement.name + ")");
+              }
+            }
+          }
+          liveLoans.push_back(LiveLoan{statement.name, roots, ancestors, writes, scopes.size(), lastUse});
         }
       }
       if (!checkEscapes(statement)) {
@@ -492,11 +623,16 @@ struct Checker {
 
 bool validateSliceLoans(const Program &program, std::string &error) {
   const CarrierSet carriers = collectCarriers(program);
+  DefinitionMap definitions;
+  definitions.reserve(program.definitions.size());
+  for (const Definition &def : program.definitions) {
+    definitions.emplace(def.fullPath, &def);
+  }
   for (const Definition &def : program.definitions) {
     if (def.statements.empty() && !def.returnExpr.has_value()) {
       continue;
     }
-    Checker checker(def, carriers);
+    Checker checker(def, carriers, definitions);
     if (!checker.run()) {
       error = checker.error;
       return false;

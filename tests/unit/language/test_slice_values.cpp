@@ -148,12 +148,19 @@ TEST_CASE("a Write slice edits the vector's elements in place") {
                "  w.sort()\n"
                "  return(v.at(0i32) * 10000i32 + v.at(1i32) * 1000i32 + v.at(2i32) * 100i32 + v.at(3i32) * 10i32 + "
                "v.at(4i32))") == 12345);
-  CHECK(exitOf("  [vector<i32> mut] v{vector<i32>(1i32, 2i32, 3i32, 4i32, 5i32)}\n"
-               "  [Slice<i32, Write> mut] dst{/std/collections/vector/sliceMut<i32>(v, 1i32, 5i32)}\n"
-               "  [Slice<i32, Read>] src{/std/collections/vector/slice<i32>(v, 0i32, 4i32)}\n"
-               "  dst.copyFrom(src)\n"
-               "  return(v.at(0i32) * 10000i32 + v.at(1i32) * 1000i32 + v.at(2i32) * 100i32 + v.at(3i32) * 10i32 + "
-               "v.at(4i32))") == 11234);
+  {
+    // Overlapping ranges of one owner reach copyFrom as arguments (bindings of both would be a Write conflict).
+    const std::string source = Prelude +
+        "\n[return<void>]\ncopyOver([Slice<i32, Write> mut] dst, [Slice<i32, Read>] src) {\n  dst.copyFrom(src)\n}\n\n"
+        "[return<int> effects(heap_alloc)]\nmain() {\n"
+        "  [vector<i32> mut] v{vector<i32>(1i32, 2i32, 3i32, 4i32, 5i32)}\n"
+        "  copyOver(v.sliceMut(1i32, 5i32), v.slice(0i32, 4i32))\n"
+        "  return(v.at(0i32) * 10000i32 + v.at(1i32) * 1000i32 + v.at(2i32) * 100i32 + v.at(3i32) * 10i32 + v.at(4i32))\n}\n";
+    ScriptEngine overlapEngine;
+    const auto overlapScript = overlapEngine.compileSource("/copy_overlap.prime", source);
+    REQUIRE_MESSAGE(overlapScript.valid(), overlapScript.diagnostics());
+    CHECK(overlapScript.run().exitCode == 11234);
+  }
   CHECK(exitOf("  [vector<i32> mut] v{vector<i32>(1i32, 2i32, 3i32)}\n"
                "  [Slice<i32, Write> mut] w{/std/collections/vector/sliceMut<i32>(v, 0i32, 3i32)}\n"
                "  [Slice<i32, Write> mut] tail{w.slice(1i32, 3i32)}\n"
@@ -290,4 +297,42 @@ TEST_CASE("location of an array element is the address of that slot and is range
   const Outcome outside = runBody("  [array<i32>] a{array<i32>(10i32)}\n  [Pointer<i32>] p{location(at(a, 3i32))}\n  return(0i32)");
   REQUIRE(outside.compiled);
   CHECK((!outside.ok || outside.exitCode != 0));
+}
+
+TEST_CASE("a Write view conflicts with any other live view of the same owner and a read view with a Write view") {
+  const std::string values = "  [vector<i32> mut] all{vector<i32>(1i32, 2i32, 3i32, 4i32)}\n";
+  const Outcome writeThenRead = runBody(values + "  [Slice<i32, Write>] w{all.sliceMut(0i32, 2i32)}\n  [Slice<i32, Read>] r{all.view()}\n"
+                                                 "  w[0i32] = 9i32\n  return(r.count())");
+  CHECK_FALSE(writeThenRead.compiled);
+  CHECK(writeThenRead.diagnostics.find("borrowed binding: all (root: all, sink: r)") != std::string::npos);
+  const Outcome readThenWrite = runBody(values + "  [Slice<i32, Read>] r{all.view()}\n  [Slice<i32, Write>] w{all.sliceMut(0i32, 2i32)}\n"
+                                                 "  w[0i32] = 9i32\n  return(r.count())");
+  CHECK_FALSE(readThenWrite.compiled);
+  CHECK(readThenWrite.diagnostics.find("borrowed binding: all (root: all") != std::string::npos);
+  const Outcome twoWrites = runBody(values + "  [Slice<i32, Write>] a{all.sliceMut(0i32, 2i32)}\n  [Slice<i32, Write>] b{all.sliceMut(2i32, 4i32)}\n"
+                                             "  a[0i32] = 1i32\n  b[0i32] = 2i32\n  return(0i32)");
+  CHECK_FALSE(twoWrites.compiled);
+  // Two read views overlap, a Write view narrows to a Write view, and a Write view whose last use is behind is no conflict.
+  CHECK(runBody(values + "  [Slice<i32, Read>] a{all.view()}\n  [Slice<i32, Read>] b{all.slice(1i32, 3i32)}\n  return(a.count() + b.count())").exitCode == 6);
+  CHECK(runBody(values + "  [Slice<i32, Write>] w{all.sliceMut(0i32, 4i32)}\n  [Slice<i32, Write>] n{w.slice(1i32, 3i32)}\n"
+                         "  n[0i32] = 50i32\n  return(all.at(1i32))").exitCode == 50);
+  CHECK(runBody(values + "  [Slice<i32, Write>] w{all.sliceMut(0i32, 2i32)}\n  w[0i32] = 8i32\n  [Slice<i32, Read>] r{all.view()}\n"
+                         "  return(r.at(0i32))").exitCode == 8);
+}
+
+TEST_CASE("an owner passed to a mut or move parameter while a view of it is live is rejected") {
+  const std::string consumer = "[return<void>]\nfill([vector<i32> mut] target) {\n  target.clear()\n}\n\n";
+  const std::string source = Prelude + "\n" + consumer +
+                             "[return<int> effects(heap_alloc)]\nmain() {\n  [vector<i32> mut] all{vector<i32>(1i32, 2i32)}\n"
+                             "  [Slice<i32, Read>] r{all.view()}\n  fill(all)\n  return(r.count())\n}\n";
+  ScriptEngine engine;
+  const auto script = engine.compileSource("/mut_owner.prime", source);
+  CHECK_FALSE(script.valid());
+  CHECK(script.diagnostics().find("borrowed binding: all (root: all, sink: r)") != std::string::npos);
+  const std::string fine = Prelude + "\n" + consumer +
+                           "[return<int> effects(heap_alloc)]\nmain() {\n  [vector<i32> mut] all{vector<i32>(1i32, 2i32)}\n"
+                           "  [Slice<i32, Read>] r{all.view()}\n  [i32] n{r.count()}\n  fill(all)\n  return(n)\n}\n";
+  const auto accepted = engine.compileSource("/mut_owner_ok.prime", fine);
+  REQUIRE_MESSAGE(accepted.valid(), accepted.diagnostics());
+  CHECK(accepted.run().exitCode == 2);
 }

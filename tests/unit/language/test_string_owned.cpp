@@ -428,3 +428,19 @@ TEST_CASE("a named String pushed into a vector is moved into it and keeps its te
                "  return(total - 2400i32)",
                "import /std/collections/vector/*\n") == (48 + 49 + 50 + 51));
 }
+
+TEST_CASE("the result of a returns_borrow call is a loan on the named argument only") {
+  const std::string pick = "[return</std/text/view/StringView> returns_borrow<a>]\npickFirst([/std/text/view/StringView] a, [/std/text/view/StringView] b) {\n"
+                           "  return(a.slice(0i32, 1i32))\n}\n";
+  // `first` borrows `left`, not `right`: changing `right` is fine, changing `left` is not.
+  const Outcome ok = runViews("  [String mut] left{stringFromI32(12i32)}\n  [String mut] right{stringFromI32(34i32)}\n"
+                              "  [StringView] first{pickFirst(left.view(), right.view())}\n  right.append(\"x\")\n  return(first.count())",
+                              pick);
+  REQUIRE_MESSAGE(ok.compiled, ok.diagnostics);
+  CHECK(ok.exitCode == 1);
+  const Outcome bad = runViews("  [String mut] left{stringFromI32(12i32)}\n  [String mut] right{stringFromI32(34i32)}\n"
+                               "  [StringView] first{pickFirst(left.view(), right.view())}\n  left.append(\"x\")\n  return(first.count())",
+                               pick);
+  CHECK_FALSE(bad.compiled);
+  CHECK(bad.diagnostics.find("borrowed binding: left (root: left, sink: first)") != std::string::npos);
+}

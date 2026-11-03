@@ -85,9 +85,12 @@ reserves, resizes, sets, assigns or moves the owner (or a field of it) is reject
 <root>, sink: <view>)`. A view assigned to a field (`slice escapes via field <name> (root: <root>)`), pushed or inserted
 into a container (`slice escapes via container`) or returned from a definition while it borrows a local
 (`slice escapes via return`) is rejected. A definition that returns views of more than one parameter needs
-`[returns_borrow<name>]` (`returned view could borrow from more than one parameter`). Not checked yet: an owner passed
-to a `mut` or `move` parameter, the `Write` slice conflict rule, a view stored in a global, and the caller side of a
-returned borrow beyond treating the first argument as the owner.
+`[returns_borrow<name>]` (`returned view could borrow from more than one parameter`). Also rejected: passing the owner to a `mut` or `move` parameter of a function it calls (found through the call's
+resolved callee) before the view's last use, and a `Write` view next to any other live view of the same owner (the
+views it was narrowed from excepted; two `Read` views may overlap): `borrowed binding: <root> (root: <root>, sink:
+<view>)`. Overlapping copies inside one owner therefore take their two views as call arguments, not as two
+bindings. A call to a definition with `[returns_borrow<name>]` lends only the argument for that parameter. Not
+checked: a view stored in a global (the language has none).
 
 A struct with a view field (a *carrier*, directly or through another carrier) is itself a loan: `[Request] req{parseRequest(buffer.view())}`
 borrows `buffer` until the last use of `req`, and a constructor such as `Request{[method] line.slice(0, i)}` takes the
