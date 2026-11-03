@@ -103,7 +103,6 @@ of sync with them.
 | TODO-5654 | Retire the copying `slice(array, start, end)` builtin | ready | slices |
 | TODO-5638 | Shared immutable strings for threads (`SharedString`) | deferred | string-concurrency |
 | TODO-5645 | Real calls for struct-receiver methods (library code is inlined at every call site) | ready | lowering-gaps |
-| TODO-5647 | A StringView member named `opNotEqual` makes `StringMap<i32>.insert` fail to lower | ready | lowering-gaps |
 | TODO-5603 | Startup audit: what a launch loads and does | ready | startup |
 | TODO-5586 | Native String heap: pooled blocks, statistics and limit | deferred | native-backend-strings |
 | TODO-5536 | Small, lazily loaded bytecode for apps | ready | bytecode-startup |
@@ -268,18 +267,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - stop_rule: eligibility and emission for struct/pointer parameters; no inliner tuning beyond that.
 
 
-
-- [ ] TODO-5647: A StringView member named `opNotEqual` makes `StringMap<i32>.insert` fail to lower
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-03
-  - phase: Strings and slices (docs/spec/strings-and-views.md), found building TODO-5643
-  - parallel_track: lowering-gaps
-  - scope: With `/std/text/view/StringView/opNotEqual([StringView] self, [StringView] other)` defined (any body), a program that inserts into a `StringMap<i32>` fails with `VM lowering error: unsupported operand types for multiply`: in `homeSlot`, `divide(hash, cap)` of two `u64` is inferred as `i32`. The same member spelled `opNotEqualTo` or `opDiffers` lowers fine, and moving the block does not help, so something keyed by the name (a cache, a semantic-product lookup or a definition-order dependency) answers for the wrong expression. Reproduce by renaming `opNotEqualTo` back in `stdlib/std/text/view.prime` and compiling `StringMap<i32>{}.insert(k.view(), 3i32)`. Find the lookup, make it scope-correct, and then spell the member `opNotEqual`.
-  - acceptance:
-    - the repro lowers with the member named `opNotEqual`; a regression test covers a name-keyed lookup collision; full release gate green
-  - lead: the semantic-product publication (`inferCallSnapshotData` in `src/semantics/SemanticsValidatorSnapshotLocals.cpp`) records the `convert<u64>(vectorCount<i32>(this.table))` temporary in `StringMap<i32>.homeSlot` as `i32` when the member is named `opNotEqual` (`semantic-product` dump: `binding_facts` of `homeSlot` list `convert i32`, `divide i32`, `multiply i32`, `minus i32`, against `u64` with another spelling), so the lowerer later sees `divide(u64, u64)` as `i32`. The `AST` dumps are identical; the call snapshot memo (keyed by expression address) was ruled out.
-  - stop_rule: the wrongly keyed lookup in the lowerer or semantic product; no other renames.
 
 - [ ] TODO-5603: Startup audit: what a launch loads and does
   - owner: ai

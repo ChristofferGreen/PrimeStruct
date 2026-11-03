@@ -409,7 +409,7 @@ to compile the view code. `TextView` is taken by the native-UI widget.
   Unicode 15.0) are a separate module that is part of a program only when it calls one of these.
 - Operators: `a + b` (a new `String`), `==`, `!=`, `<`, `<=`, `>`, `>=` and `s[i]` work on `String` and on `StringView`
   (byte order; `s[i]` is the byte, stopping when out of range). The compiler rewrites an operator call whose first operand is
-  a struct value, and whose second operand has the same type, to the struct's member `opPlus`, `opEqual`, `opNotEqualTo`,
+  a struct value, and whose second operand has the same type, to the struct's member `opPlus`, `opEqual`, `opNotEqual`,
   `opLessThan`, `opLessEqual`, `opGreaterThan`, `opGreaterEqual` or `opAt` (`opPlus` and the others are ordinary members
   defined as `/Type/opPlus([Type] self, [Type] other)`; a user struct gets operators the same way). The `op` prefix is
   deliberate: a member named `plus` would capture every bare `plus(a, b)` inside the struct. Operands must be names, calls of

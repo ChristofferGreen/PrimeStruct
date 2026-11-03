@@ -33,13 +33,14 @@ std::string SemanticsValidator::inferStructReturnPath(
       &locals,
       locals.size(),
   };
+  const uint64_t fingerprint = exprMemoFingerprint(expr);
   if (const auto memoIt = inferStructReturnMemo_.find(memoKey);
       memoIt != inferStructReturnMemo_.end() &&
-      memoIt->second.localsRevision == localsRevision) {
+      memoIt->second.localsRevision == localsRevision && memoIt->second.fingerprint == fingerprint) {
     return memoIt->second.structPath;
   }
   std::string inferred = inferStructReturnPathImpl(expr, params, locals);
-  inferStructReturnMemo_[memoKey] = ExprStructReturnMemoValue{inferred, localsRevision};
+  inferStructReturnMemo_[memoKey] = ExprStructReturnMemoValue{inferred, localsRevision, fingerprint};
   return inferred;
 }
 

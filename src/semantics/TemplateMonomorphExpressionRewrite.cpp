@@ -545,10 +545,6 @@ bool rewriteStructOperatorCallToMethod(Expr &expr,
       opName += name[i];
     }
   }
-  // `opNotEqual` on StringView makes StringMap<i32>.insert fail to lower (TODO-5647); the spelling is opNotEqualTo.
-  if (name == "not_equal") {
-    opName = "opNotEqualTo";
-  }
   auto hasMember = [&](const std::string &memberName) {
     const std::string memberPath = base + "/" + memberName;
     return ctx.sourceDefs.count(memberPath) > 0 || ctx.helperOverloads.count(memberPath) > 0 ||

@@ -2109,6 +2109,7 @@ are left unarchived.
 | TODO-5643 | Operators and index sugar for stdlib types (`String + String`, `s[i]`) | [2026-11.md](todo_archive/2026-11.md) | 2026-11-03 |
 | TODO-5644 | Split `/std/text` so a plain `String` program compiles fast | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 | TODO-5646 | `x.f().g(y) == 0` is parsed with the comparison applied to the wrong receiver | [2026-11.md](todo_archive/2026-11.md) | 2026-11-03 |
+| TODO-5647 | A StringView member named `opNotEqual` makes `StringMap<i32>.insert` fail to lower | [2026-11.md](todo_archive/2026-11.md) | 2026-11-03 |
 | TODO-5648 | `Money{self.cents + other.cents}` fails under `ScriptEngine` but compiles under `primevm` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-03 |
 | TODO-5649 | Remaining slice loan rules: `mut`/`move` owners, `Write` conflicts, outer bindings | [2026-11.md](todo_archive/2026-11.md) | 2026-11-03 |
 | TODO-5650 | A wildcard-imported struct type as a parameter type needs its full path | [2026-11.md](todo_archive/2026-11.md) | 2026-11-03 |

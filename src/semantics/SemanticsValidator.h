@@ -412,9 +412,15 @@ private:
     }
   };
 
+  // The memo keys hold addresses of expressions, parameter vectors and local maps, and a temporary that is freed lets a
+  // different expression reuse the address. The fingerprint (the expression's own fields and its direct arguments) is
+  // checked on a hit so a recycled address cannot answer for another expression.
+  static uint64_t exprMemoFingerprint(const Expr &expr);
+
   struct ExprReturnKindMemoValue {
     ReturnKind kind = ReturnKind::Unknown;
     uint64_t localsRevision = 0;
+    uint64_t fingerprint = 0;
   };
 
   struct ExprStructReturnMemoKey {
@@ -459,6 +465,7 @@ private:
   struct ExprStructReturnMemoValue {
     std::string structPath;
     uint64_t localsRevision = 0;
+    uint64_t fingerprint = 0;
   };
 
   struct StructFieldReturnKindMemoKey {

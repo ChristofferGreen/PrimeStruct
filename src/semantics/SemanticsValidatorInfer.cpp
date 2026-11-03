@@ -8,6 +8,26 @@
 
 namespace primec::semantics {
 
+uint64_t SemanticsValidator::exprMemoFingerprint(const Expr &expr) {
+  uint64_t hash = 0xcbf29ce484222325ULL;
+  auto mix = [&](uint64_t value) {
+    hash ^= value + 0x9e3779b97f4a7c15ULL + (hash << 6) + (hash >> 2);
+  };
+  auto mixShallow = [&](const Expr &e) {
+    mix(static_cast<uint64_t>(e.kind));
+    mix(std::hash<std::string>{}(e.name));
+    mix(e.literalValue);
+    mix(e.semanticNodeId);
+    mix(static_cast<uint64_t>(e.sourceLine) << 32 | static_cast<uint32_t>(e.sourceColumn));
+    mix(e.args.size() << 8 | e.templateArgs.size() << 1 | (e.isMethodCall ? 1 : 0));
+  };
+  mixShallow(expr);
+  for (const Expr &arg : expr.args) {
+    mixShallow(arg);
+  }
+  return hash;
+}
+
 ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
                                                    const std::vector<ParameterInfo> &params,
                                                    const std::unordered_map<std::string, BindingInfo> &locals) {
@@ -21,13 +41,14 @@ ReturnKind SemanticsValidator::inferExprReturnKind(const Expr &expr,
       &locals,
       locals.size(),
   };
+  const uint64_t fingerprint = exprMemoFingerprint(expr);
   if (const auto memoIt = inferExprReturnKindMemo_.find(memoKey);
       memoIt != inferExprReturnKindMemo_.end() &&
-      memoIt->second.localsRevision == localsRevision) {
+      memoIt->second.localsRevision == localsRevision && memoIt->second.fingerprint == fingerprint) {
     return memoIt->second.kind;
   }
   const ReturnKind inferred = inferExprReturnKindImpl(expr, params, locals);
-  inferExprReturnKindMemo_[memoKey] = ExprReturnKindMemoValue{inferred, localsRevision};
+  inferExprReturnKindMemo_[memoKey] = ExprReturnKindMemoValue{inferred, localsRevision, fingerprint};
   return inferred;
 }
 

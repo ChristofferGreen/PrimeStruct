@@ -88,7 +88,7 @@ or a semicolon if you intended to index.
   `increment(a)`, `--a` / `a--` → `decrement(a)`).
 - Operators on structs: once the AST exists, the template-monomorph pass rewrites `plus`, `equal`, `not_equal`,
   `less_than`, `less_equal`, `greater_than`, `greater_equal` and `at` whose first operand is a struct value (and, except
-  for `at`, whose second operand has the same type) to the struct's member `opPlus`, `opEqual`, `opNotEqualTo`,
+  for `at`, whose second operand has the same type) to the struct's member `opPlus`, `opEqual`, `opNotEqual`,
   `opLessThan`, `opLessEqual`, `opGreaterThan`, `opGreaterEqual` or `opAt`. The `op` prefix keeps a member from capturing
   the bare builtin calls written inside the struct's own scope. A struct without the member keeps the numeric-operand
   diagnostic.

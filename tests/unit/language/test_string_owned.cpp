@@ -459,3 +459,12 @@ TEST_CASE("an imported struct type can be written with its bare name in paramete
                "  [StringView] word{firstWord(buffer.view())}\n  return(req.method.count() * 100i32 + req.path.count() + word.count())",
                parser) == (300 + 11 + 3));
 }
+
+TEST_CASE("a member path with a specialization suffix does not resolve through its struct's first member") {
+  // Inserting into a StringMap<i32> infers the type of `less_than` calls inside the specialized collections; a
+  // candidate path stripped of everything after `__t` named the bare struct, whose first specialization answered.
+  CHECK(exitOf("  [StringMap<i32> mut] m{StringMap<i32>{}}\n  [String mut] key{stringWithCapacity(0i32)}\n"
+               "  key.append(\"a\")\n  m.insert(key.view(), 3i32)\n  key.append(\"b\")\n  m.insert(key.view(), 4i32)\n"
+               "  return(m.count() * 10i32 + m.getOr(key.view(), 0i32))",
+               "import /std/text/string_map/*\n") == 24);
+}

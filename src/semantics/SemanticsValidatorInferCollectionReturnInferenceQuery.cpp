@@ -520,9 +520,12 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       }
     }
 
+    // Drops the specialization suffix of a trailing struct or constructor path. A member path such as
+    // `Vector__t1/less_than` keeps its suffix: erasing from `__t` onward would turn it into the bare `Vector`, whose
+    // specializations then answer with whichever definition sorts first.
     auto canonicalizeResolvedPath = [](std::string path) {
       const size_t suffix = path.find("__t");
-      if (suffix != std::string::npos) {
+      if (suffix != std::string::npos && path.find('/', suffix) == std::string::npos) {
         path.erase(suffix);
       }
       return path;
