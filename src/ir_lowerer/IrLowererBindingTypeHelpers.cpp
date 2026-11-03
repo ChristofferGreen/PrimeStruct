@@ -42,7 +42,8 @@ bool validateSemanticProductBindingCoverage(const Program &program,
     return true;
   }
 
-  const SemanticProductIndex semanticIndex = buildSemanticProductIndex(semanticProgram);
+  const auto semanticIndexHolder = acquireSemanticProductIndex(semanticProgram);
+  const SemanticProductIndex &semanticIndex = *semanticIndexHolder;
   auto validateBindingExpr = [&](const std::string &scopePath,
                                  const std::string &siteKind,
                                  const Expr &expr) {
@@ -126,7 +127,8 @@ bool validateSemanticProductLocalAutoCoverage(const Program &program,
     return true;
   }
 
-  const SemanticProductIndex semanticIndex = buildSemanticProductIndex(semanticProgram);
+  const auto semanticIndexHolder = acquireSemanticProductIndex(semanticProgram);
+  const SemanticProductIndex &semanticIndex = *semanticIndexHolder;
 
   std::function<bool(const std::string &, const Expr &)> validateExpr;
   auto validateExprs = [&](const std::string &scopePath, const std::vector<Expr> &exprs) {
@@ -282,7 +284,8 @@ bool validateSemanticProductCollectionSpecializationCoverage(
     return true;
   }
 
-  const SemanticProductIndex semanticIndex = buildSemanticProductIndex(semanticProgram);
+  const auto semanticIndexHolder = acquireSemanticProductIndex(semanticProgram);
+  const SemanticProductIndex &semanticIndex = *semanticIndexHolder;
   auto validateBindingExpr = [&](const std::string &scopePath,
                                  const std::string &siteKind,
                                  const Expr &expr) {
@@ -410,7 +413,8 @@ bool validateSemanticProductArrayExtentCoverage(const Program &program,
     return true;
   }
 
-  const SemanticProductIndex semanticIndex = buildSemanticProductIndex(semanticProgram);
+  const auto semanticIndexHolder = acquireSemanticProductIndex(semanticProgram);
+  const SemanticProductIndex &semanticIndex = *semanticIndexHolder;
   std::unordered_map<std::string, std::string> extentExpressionsByResolvedPath;
   for (const auto &def : program.definitions) {
     collectArrayExtentExpressionsForBindings(def.fullPath,

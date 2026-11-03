@@ -65,7 +65,8 @@ bool analyzeEntryReturnTransforms(const Definition &entryDef,
                                   std::string &error) {
   out = {};
   if (semanticProgram != nullptr) {
-    const SemanticProductIndex semanticIndex = buildSemanticProductIndex(semanticProgram);
+    const auto semanticIndexHolder = acquireSemanticProductIndex(semanticProgram);
+    const SemanticProductIndex &semanticIndex = *semanticIndexHolder;
     const auto *callableSummary = findSemanticProductCallableSummary(semanticProgram, entryPath);
     if (callableSummary == nullptr) {
       error = "missing semantic-product callable summary: " + entryPath;

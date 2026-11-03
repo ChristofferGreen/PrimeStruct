@@ -44,7 +44,8 @@ bool isArrayCountCall(const Expr &expr,
                       bool hasEntryArgs,
                       const std::string &entryArgsName,
                       const SemanticProgram *semanticProgram) {
-  const SemanticProductIndex semanticIndex = buildSemanticProductIndex(semanticProgram);
+  const auto semanticIndexHolder = acquireSemanticProductIndex(semanticProgram);
+  const SemanticProductIndex &semanticIndex = *semanticIndexHolder;
   return isArrayCountCall(expr,
                           localsIn,
                           hasEntryArgs,
@@ -305,7 +306,8 @@ bool isStringCountCall(const Expr &expr, const LocalMap &localsIn) {
 bool isStringCountCall(const Expr &expr,
                        const LocalMap &localsIn,
                        const SemanticProgram *semanticProgram) {
-  const SemanticProductIndex semanticIndex = buildSemanticProductIndex(semanticProgram);
+  const auto semanticIndexHolder = acquireSemanticProductIndex(semanticProgram);
+  const SemanticProductIndex &semanticIndex = *semanticIndexHolder;
   return isStringCountCall(expr,
                            localsIn,
                            semanticProgram,

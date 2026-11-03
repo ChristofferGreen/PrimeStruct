@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <limits>
 #include <utility>
+#include <vector>
 
 namespace primec::ir_lowerer {
 
@@ -65,6 +66,10 @@ bool runLowerStatementsSourceMapStep(const LowerStatementsSourceMapStepInput &in
     const auto sourceRangesIt = input.instructionSourceRangesByFunction->find(loweredFunction.name);
     const std::vector<InstructionSourceRange> *sourceRanges =
         sourceRangesIt == input.instructionSourceRangesByFunction->end() ? nullptr : &sourceRangesIt->second;
+    // The ranges are sorted by begin index, so a sweep keeps the ranges that cover the current instruction (in the
+    // same order a full scan would meet them) instead of scanning every earlier range for every instruction.
+    std::vector<const InstructionSourceRange *> activeRanges;
+    size_t nextRange = 0;
     for (size_t instructionIndex = 0; instructionIndex < loweredFunction.instructions.size(); ++instructionIndex) {
       auto &instruction = loweredFunction.instructions[instructionIndex];
       if (nextInstructionDebugId > static_cast<uint64_t>(std::numeric_limits<uint32_t>::max())) {
@@ -77,20 +82,26 @@ bool runLowerStatementsSourceMapStep(const LowerStatementsSourceMapStepInput &in
       std::string sourceUnit = fallbackSourceUnit;
       IrSourceMapProvenance sourceProvenance = IrSourceMapProvenance::SyntheticIr;
       if (sourceRanges != nullptr) {
+        while (nextRange < sourceRanges->size() && (*sourceRanges)[nextRange].beginIndex <= instructionIndex) {
+          activeRanges.push_back(&(*sourceRanges)[nextRange]);
+          ++nextRange;
+        }
+        activeRanges.erase(std::remove_if(activeRanges.begin(),
+                                          activeRanges.end(),
+                                          [instructionIndex](const InstructionSourceRange *range) {
+                                            return range->endIndex <= instructionIndex;
+                                          }),
+                           activeRanges.end());
         const InstructionSourceRange *bestRange = nullptr;
-        for (const auto &range : *sourceRanges) {
-          if (range.beginIndex > instructionIndex) {
-            break;
-          }
-          if (instructionIndex < range.endIndex) {
-            if (bestRange == nullptr) {
+        for (const InstructionSourceRange *rangePtr : activeRanges) {
+          const InstructionSourceRange &range = *rangePtr;
+          if (bestRange == nullptr) {
+            bestRange = &range;
+          } else {
+            const size_t bestWidth = bestRange->endIndex - bestRange->beginIndex;
+            const size_t width = range.endIndex - range.beginIndex;
+            if (width < bestWidth || (width == bestWidth && range.beginIndex >= bestRange->beginIndex)) {
               bestRange = &range;
-            } else {
-              const size_t bestWidth = bestRange->endIndex - bestRange->beginIndex;
-              const size_t width = range.endIndex - range.beginIndex;
-              if (width < bestWidth || (width == bestWidth && range.beginIndex >= bestRange->beginIndex)) {
-                bestRange = &range;
-              }
             }
           }
         }

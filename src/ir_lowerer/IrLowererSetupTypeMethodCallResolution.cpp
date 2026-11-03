@@ -118,7 +118,8 @@ const Definition *resolveMethodCallDefinitionFromExpr(
   static const std::unordered_map<std::string, std::string> noImportAliases;
   const auto &semanticAwareImportAliases =
       semanticProgram != nullptr ? noImportAliases : importAliases;
-  const SemanticProductIndex semanticIndex = buildSemanticProductIndex(semanticProgram);
+  const auto semanticIndexHolder = acquireSemanticProductIndex(semanticProgram);
+  const SemanticProductIndex &semanticIndex = *semanticIndexHolder;
   const SemanticProductIndex *const semanticIndexPtr =
       semanticProgram != nullptr ? &semanticIndex : nullptr;
 

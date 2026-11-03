@@ -214,7 +214,8 @@ bool buildOnErrorByDefinition(const Program &program,
       !validateSemanticProductCallableSummaryPathIds(*semanticProgram, error)) {
     return false;
   }
-  const SemanticProductIndex semanticIndex = buildSemanticProductIndex(semanticProgram);
+  const auto semanticIndexHolder = acquireSemanticProductIndex(semanticProgram);
+  const SemanticProductIndex &semanticIndex = *semanticIndexHolder;
   out.clear();
   out.reserve(program.definitions.size());
   for (const auto &def : program.definitions) {

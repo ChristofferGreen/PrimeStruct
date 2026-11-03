@@ -130,6 +130,41 @@ SemanticProductIndex buildSemanticProductIndex(const SemanticProgram *semanticPr
   return SemanticProductIndexBuilder{semanticProgram}.build();
 }
 
+namespace {
+// The cache lives only while a lowering runs (the SemanticProgram is not changed in that time).
+thread_local int semanticIndexScopeDepth = 0;
+thread_local std::unordered_map<const SemanticProgram *, std::shared_ptr<const SemanticProductIndex>> *semanticIndexCache =
+    nullptr;
+} // namespace
+
+SemanticProductIndexCacheScope::SemanticProductIndexCacheScope() {
+  if (semanticIndexScopeDepth++ == 0) {
+    semanticIndexCache =
+        new std::unordered_map<const SemanticProgram *, std::shared_ptr<const SemanticProductIndex>>();
+  }
+}
+
+SemanticProductIndexCacheScope::~SemanticProductIndexCacheScope() {
+  if (--semanticIndexScopeDepth == 0) {
+    delete semanticIndexCache;
+    semanticIndexCache = nullptr;
+  }
+}
+
+std::shared_ptr<const SemanticProductIndex> acquireSemanticProductIndex(const SemanticProgram *semanticProgram) {
+  if (semanticProgram == nullptr || semanticIndexCache == nullptr) {
+    return std::make_shared<const SemanticProductIndex>(buildSemanticProductIndex(semanticProgram));
+  }
+  auto found = semanticIndexCache->find(semanticProgram);
+  if (found == semanticIndexCache->end()) {
+    found = semanticIndexCache
+                ->emplace(semanticProgram,
+                          std::make_shared<const SemanticProductIndex>(buildSemanticProductIndex(semanticProgram)))
+                .first;
+  }
+  return found->second;
+}
+
 SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticProgram *semanticProgram) {
   SemanticProductTargetAdapter adapter;
   if (semanticProgram == nullptr) {

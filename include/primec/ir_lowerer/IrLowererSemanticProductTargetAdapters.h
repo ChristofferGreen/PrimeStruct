@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -57,6 +58,19 @@ struct SemanticProductCallTarget {
 };
 
 SemanticProductIndex buildSemanticProductIndex(const SemanticProgram *semanticProgram);
+
+// The index of `semanticProgram`, built once per lowering: while a SemanticProductIndexCacheScope is alive the first
+// call builds it and later calls (the count/binding classifiers run once per expression) share it. Without a scope
+// each call builds a fresh one.
+std::shared_ptr<const SemanticProductIndex> acquireSemanticProductIndex(const SemanticProgram *semanticProgram);
+
+class SemanticProductIndexCacheScope {
+public:
+  SemanticProductIndexCacheScope();
+  ~SemanticProductIndexCacheScope();
+  SemanticProductIndexCacheScope(const SemanticProductIndexCacheScope &) = delete;
+  SemanticProductIndexCacheScope &operator=(const SemanticProductIndexCacheScope &) = delete;
+};
 SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticProgram *semanticProgram);
 
 std::string describeSyntaxCallSite(const SyntaxCallSiteProvenance &syntax);

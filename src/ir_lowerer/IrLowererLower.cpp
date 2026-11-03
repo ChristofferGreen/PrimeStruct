@@ -116,6 +116,7 @@ bool IrLowerer::lower(const Program &program,
                       const ExpandedSource *expandedSource) const {
   out = IrModule{};
   error.clear();
+  const SemanticProductIndexCacheScope semanticIndexCacheScope;
   DiagnosticSink diagnosticSink(diagnosticInfo);
   diagnosticSink.reset();
   bool loweringSucceeded = false;
