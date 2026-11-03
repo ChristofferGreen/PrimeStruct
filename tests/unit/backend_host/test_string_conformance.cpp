@@ -2327,4 +2327,118 @@ TEST_CASE("a literal index out of range is a compile error") {
   CHECK(readFile(log).find("out of bounds for a literal of 5 bytes") != std::string::npos);
 }
 
+// ---- Unicode case mapping (/std/text/unicode) -------------------------------------------------------------------------
+
+namespace {
+// Expected values come from Python's unicodedata (Unicode 15.0), per code point, without the conditional rules.
+const std::vector<std::string> CaseSamples = {"Stra\xc3\x9f""e", "\xce\x91\xce\xa3\xce\xa3", "\xce\x95\xce\xbb\xce\xbb\xce\xb7\xce\xbd\xce\xb9\xce\xba\xce\xac", "\xd0\x9f\xd0\xa0\xd0\x98\xd0\x92\xd0\x95\xd0\xa2 \xd0\xbf\xd1\x80\xd0\xb8\xd0\xb2\xd0\xb5\xd1\x82", "\xc4\xb0stanbul", "\xc5\x89\xc7\xb0\xce\x90", "\xef\xac\x81\xef\xac\x82", "\xc7\x85", "\xce\xa3", "\xc3\x80\xc3\x89\xc3\x8e\xc3\x95\xc3\x9c", "", "plain ASCII 123"};
+// per sample: lower, upper, fold as count,hash
+const std::vector<std::pair<int, int>> CaseSampleExpected = {{7,1976057896}, {7,-1601004956}, {7,1975979652}, {6,-319906404}, {6,-349458114}, {6,-319906404}, {16,-197129569}, {16,616753561}, {16,-197129569}, {25,-1985689105}, {25,306638127}, {25,-1985689105}, {10,-1837133736}, {9,-506916242}, {10,-1837133736}, {6,-614704704}, {12,-1465575493}, {12,-1138488357}, {6,618016978}, {4,17857626}, {4,18842714}, {2,22640}, {2,22638}, {2,22640}, {2,22885}, {2,22886}, {2,22885}, {10,85529802}, {10,-570399702}, {10,85529802}, {0,17}, {0,17}, {0,17}, {15,-1521062436}, {15,1898657180}, {15,-1521062436}};
+
+std::string caseSampleProgram() {
+  std::string chain;
+  for (size_t i = 0; i < CaseSamples.size(); ++i) {
+    chain += "  if(i == " + std::to_string(i) + "i32) {\n    return(textOf(\"" + CaseSamples[i] + "\"))\n  }\n";
+  }
+  return "import /std/text/*\nimport /std/text/view/*\nimport /std/text/unicode/*\n\n"
+         "[return</std/text/view/StringView>]\nsample([i32] i) {\n" + chain + "  return(textOf(\"\"))\n}\n\n"
+         "[return<void> effects(heap_alloc, io_out)]\nreport([String] text) {\n"
+         "  [i32 mut] h{17i32}\n  for([i32 mut] i{0i32}, i < text.count(), i++) {\n    h = h * 31i32 + convert<i32>(text[i])\n  }\n"
+         "  print_line(text.count())\n  print_line(h)\n}\n\n"
+         "[return<int> effects(heap_alloc, io_out)]\nmain() {\n"
+         "  for([i32 mut] i{0i32}, i < " + std::to_string(CaseSamples.size()) + "i32, i++) {\n"
+         "    [StringView] text{sample(i)}\n"
+         "    report(text.toLower())\n    report(text.toUpper())\n    report(text.caseFold())\n"
+         "  }\n  return(0i32)\n}\n";
+}
+
+std::string caseSampleOracle() {
+  std::string out;
+  for (const auto &expected : CaseSampleExpected) {
+    out += std::to_string(expected.first) + "\n" + std::to_string(expected.second) + "\n";
+  }
+  return out;
+}
+
+// Whole blocks of the cased scripts, mapped as one text.
+std::string caseRangeProgram() {
+  return "import /std/text/*\nimport /std/text/view/*\nimport /std/text/unicode/*\n\n"
+         "[return<void> effects(heap_alloc, io_out)]\nreport([String] text) {\n"
+         "  [i32 mut] h{17i32}\n  for([i32 mut] i{0i32}, i < text.count(), i++) {\n    h = h * 31i32 + convert<i32>(text[i])\n  }\n"
+         "  print_line(text.count())\n  print_line(h)\n}\n\n"
+         "[return<int> effects(heap_alloc, io_out)]\nmain() {\n"
+         "  [String mut] all{String{}}\n"
+         "  for([i32 mut] block{0i32}, block < 9i32, block++) {\n"
+         "    [i32 mut] first{0i32}\n    [i32 mut] last{0i32}\n"
+         "    if(block == 0i32) { first = 0i32 last = 1536i32 }\n"
+         "    if(block == 1i32) { first = 7168i32 last = 8704i32 }\n"
+         "    if(block == 2i32) { first = 11264i32 last = 11568i32 }\n"
+         "    if(block == 3i32) { first = 42560i32 last = 43008i32 }\n"
+         "    if(block == 4i32) { first = 64256i32 last = 64336i32 }\n"
+         "    if(block == 5i32) { first = 65312i32 last = 65371i32 }\n"
+         "    if(block == 6i32) { first = 66560i32 last = 66816i32 }\n"
+         "    if(block == 7i32) { first = 71840i32 last = 71904i32 }\n"
+         "    if(block == 8i32) { first = 125184i32 last = 125280i32 }\n"
+         "    for([i32 mut] p{first}, p < last, p++) {\n"
+         "      if(p < 55296i32 || p > 57343i32) {\n        all.pushCodePoint(p)\n      }\n    }\n"
+         "  }\n"
+         "  [StringView] text{all.view()}\n"
+         "  report(all)\n  report(text.toLower())\n  report(text.toUpper())\n  report(text.caseFold())\n"
+         "  return(0i32)\n}\n";
+}
+
+const char *CaseRangeOracle = "11889\n546300750\n11869\n1661365438\n12060\n1582006169\n12025\n-125898994\n";
+} // namespace
+
+TEST_CASE("case mapping of samples matches the Unicode data on the VM") {
+  CHECK(vmOutput(caseSampleProgram()) == caseSampleOracle());
+}
+
+TEST_CASE("case mapping of samples matches the Unicode data through optexe") {
+  CHECK(optexeOutput("case_samples", caseSampleProgram()) == caseSampleOracle());
+}
+
+TEST_CASE("case mapping of whole script blocks matches the Unicode data on the VM") {
+  CHECK(vmOutput(caseRangeProgram()) == CaseRangeOracle);
+}
+
+TEST_CASE("case mapping of whole script blocks matches the Unicode data through optexe") {
+  CHECK(optexeOutput("case_ranges", caseRangeProgram()) == CaseRangeOracle);
+}
+
+TEST_CASE("equalsIgnoreCase compares after case folding") {
+  const std::string program =
+      "import /std/text/*\nimport /std/text/view/*\nimport /std/text/unicode/*\n\n"
+      "[return<int> effects(heap_alloc, io_out)]\nmain() {\n"
+      "  [StringView] a{textOf(\"Stra\xc3\x9f""e\")}\n  [StringView] b{textOf(\"STRASSE\")}\n  [StringView] c{textOf(\"strasse!\")}\n"
+      "  print_line(if(a.equalsIgnoreCase(b), then() { 1i32 }, else() { 0i32 }))\n"
+      "  print_line(if(a.equalsIgnoreCase(c), then() { 1i32 }, else() { 0i32 }))\n"
+      "  print_line(if(textOf(\"\xce\x91\xce\xa3\").equalsIgnoreCase(textOf(\"\xce\xb1\xcf\x83\")), then() { 1i32 }, else() { 0i32 }))\n"
+      "  return(0i32)\n}\n";
+  CHECK(vmOutput(program) == "1\n0\n1\n");
+}
+
+TEST_CASE("a program that does not use the case module carries none of its tables") {
+  const auto bytecode = [](const std::string &name, const std::string &imports, const std::string &body) {
+    const std::string file = scratch(name + ".prime");
+    std::ofstream(file, std::ios::binary) << imports << "\n[return<int> effects(heap_alloc)]\nmain() {\n" << body << "}\n";
+    const std::string out = scratch(name + ".psir");
+    const std::string log = out + ".log";
+    REQUIRE_MESSAGE(run(shellQuote(Primec) + " --emit=ir " + shellQuote(file) + " -o " + shellQuote(out) + " > " + shellQuote(log) +
+                        " 2>&1") == 0,
+                    readFile(log));
+    return readFile(out);
+  };
+  const std::string plainImports = "import /std/text/*\nimport /std/text/view/*\n";
+  const std::string without = bytecode("case_without", plainImports, "  [String] s{stringFromI32(5i32)}\n  return(s.count() - s.count())\n");
+  const std::string unusedImport = bytecode("case_unused", plainImports + "import /std/text/unicode/*\n",
+                                            "  [String] s{stringFromI32(5i32)}\n  return(s.count() - s.count())\n");
+  const std::string used = bytecode("case_used", plainImports + "import /std/text/unicode/*\n",
+                                    "  [StringView] t{textOf(\"Ab\")}\n  [String] s{t.toLower()}\n  return(s.count() - s.count())\n");
+  const std::string firstLowerRecord = "000041100006100000000000"; // 'A' maps to 'a'
+  CHECK(without.find(firstLowerRecord) == std::string::npos);
+  CHECK(unusedImport.find(firstLowerRecord) == std::string::npos);
+  CHECK(used.find(firstLowerRecord) != std::string::npos);
+}
+
 TEST_SUITE_END();

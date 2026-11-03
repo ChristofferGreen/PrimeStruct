@@ -106,7 +106,6 @@ of sync with them.
 | TODO-5621 | Static-text field rule and `run-time text requires String` | blocked | string-view |
 | TODO-5631 | Structs that hold views (borrow-carrying aggregates) | blocked | string-borrows |
 | TODO-5630 | Request-scoped string arenas: `withStringArena` | blocked | string-arenas |
-| TODO-5633 | Unicode case mapping and case folding (lazy) | blocked | string-unicode |
 | TODO-5634 | Unicode normalization and grapheme clusters (lazy) | blocked | string-unicode |
 | TODO-5638 | Shared immutable strings for threads (`SharedString`) | deferred | string-concurrency |
 | TODO-5645 | Real calls for struct-receiver methods (library code is inlined at every call site) | ready | lowering-gaps |
@@ -160,7 +159,7 @@ of sync with them.
 
 ### Priority Lanes
 
-- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5570, TODO-5569, TODO-5621, TODO-5645, TODO-5631, TODO-5630, TODO-5633, TODO-5634, TODO-5638, TODO-5567, TODO-5574
+- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5570, TODO-5569, TODO-5621, TODO-5645, TODO-5631, TODO-5630, TODO-5634, TODO-5638, TODO-5567, TODO-5574
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Startup (docs/NativeUiPlan.md section 16): TODO-5603
@@ -312,18 +311,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - VM and `optexe` tests: many allocations then one release, nested arenas, escape negatives, a limit hit inside an arena; a benchmark in the TODO-5628 style shows the arena beats per-string allocation for a request-shaped workload; full release gate green
   - stop_rule: arenas for `String` only; no other allocator surface.
 
-- [ ] TODO-5633: Unicode case mapping and case folding (lazy)
-  - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5620
-  - created_at: 2026-11-02
-  - phase: Strings and slices (docs/spec/strings-and-views.md, Beyond std::string)
-  - parallel_track: string-unicode
-  - scope: `/std/unicode`: `toLower()`, `toUpper()` (full mappings incl. multi-code-point results such as U+00DF), `caseFold()` and `equalsIgnoreCase(string)` with Unicode case folding. The data tables live in a separately imported `.prime` (or generated) unit that loads on first use, so a program that never calls them pays no startup, binary or bytecode cost.
-  - acceptance:
-    - tests against a table of Unicode conformance samples (Latin, Greek, Cyrillic, sharp s, Turkish dotted i left locale-free); a program not importing `/std/unicode` has an unchanged module size and `DYLD_PRINT_LIBRARIES`/startup measurement (TODO-5603's script); full release gate green
-  - stop_rule: locale-independent case operations; no collation.
-
 - [ ] TODO-5634: Unicode normalization and grapheme clusters (lazy)
   - owner: ai
   - status: blocked
@@ -331,7 +318,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - created_at: 2026-11-02
   - phase: Strings and slices (docs/spec/strings-and-views.md, Beyond std::string)
   - parallel_track: string-unicode
-  - scope: `normalizeNfc()`, `normalizeNfd()`, `isNfc()`, and `graphemes()` iterating extended grapheme clusters as views, in the same lazily loaded `/std/unicode` unit family as TODO-5633.
+  - scope: `normalizeNfc()`, `normalizeNfd()`, `isNfc()`, and `graphemes()` iterating extended grapheme clusters as views, in the same lazily loaded `/std/text/unicode` module family as TODO-5633.
   - acceptance:
     - tests against the Unicode normalization and grapheme break conformance samples for a fixed subset checked into tests/fixtures; the same no-cost-when-unused check as TODO-5633; full release gate green
   - stop_rule: NFC/NFD and extended grapheme clusters; NFKC/NFKD and word/sentence breaks are separate if wanted.

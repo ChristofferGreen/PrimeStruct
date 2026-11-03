@@ -1,0 +1,120 @@
+// Locale-free Unicode case operations on text: lower and upper case with the full mappings (a sharp s becomes SS),
+// case folding and case-insensitive equality (docs/spec/strings-and-views.md). The tables are in the separate module
+// /std/text/unicode_data, so a program that never imports `/std/text/unicode/*` pays nothing for them. The rules are the
+// unconditional ones: no final sigma, no Turkish dotted i, no title case.
+
+import /std/panic/*
+import /std/text/*
+import /std/text/view/*
+import /std/text/unicode_data/*
+
+namespace std {
+  namespace text {
+    namespace unicode {
+      [return<i32>]
+      hexDigit([u8] c) {
+        if(c >= 65u8) {
+          return(convert<i32>(c) - 55i32)
+        }
+        return(convert<i32>(c) - 48i32)
+      }
+
+      // The 6 digit hex number at `offset` of record `record`.
+      [return<i32>]
+      recordNumber([/std/text/view/StringView] table, [i32] record, [i32] offset) {
+        [i32] start{record * 25i32 + offset}
+        [i32 mut] value{0i32}
+        for([i32 mut] k{0i32}, k < 6i32, k++) {
+          value = value * 16i32 + hexDigit(table.byteAt(start + k))
+        }
+        return(value)
+      }
+
+      // The record that maps code point `point`, or -1 (binary search over the sorted records).
+      [return<i32>]
+      findRecord([/std/text/view/StringView] table, [i32] point) {
+        [i32 mut] low{0i32}
+        [i32 mut] high{table.count() / 25i32 - 1i32}
+        while(low <= high) {
+          [i32] middle{low + (high - low) / 2i32}
+          [i32] key{recordNumber(table, middle, 0i32)}
+          if(key == point) {
+            return(middle)
+          }
+          if(key < point) {
+            low = middle + 1i32
+          } else {
+            high = middle - 1i32
+          }
+        }
+        return(-1i32)
+      }
+
+      // `text` with every code point replaced by its mapping in `table`; invalid UTF-8 stops the program.
+      [return<String> effects(heap_alloc)]
+      mapText([/std/text/view/StringView] text, [/std/text/view/StringView] table) {
+        [String mut] out{stringWithCapacity(text.count() + 8i32)}
+        [i32 mut] offset{0i32}
+        while(offset < text.count()) {
+          [i32] point{text.codePointAt(offset)}
+          [i32] width{text.codePointLength(offset)}
+          [i32] record{findRecord(table, point)}
+          if(record < 0i32) {
+            out.pushCodePoint(point)
+          } else {
+            [i32] length{hexDigit(table.byteAt(record * 25i32 + 6i32))}
+            for([i32 mut] k{0i32}, k < length, k++) {
+              out.pushCodePoint(recordNumber(table, record, 7i32 + k * 6i32))
+            }
+          }
+          offset = offset + width
+        }
+        return(out)
+      }
+
+      [public return<String> effects(heap_alloc)]
+      toLowerText([/std/text/view/StringView] text) {
+        return(mapText(text, lowerTable()))
+      }
+
+      [public return<String> effects(heap_alloc)]
+      toUpperText([/std/text/view/StringView] text) {
+        return(mapText(text, upperTable()))
+      }
+
+      [public return<String> effects(heap_alloc)]
+      caseFoldText([/std/text/view/StringView] text) {
+        return(mapText(text, foldTable()))
+      }
+
+      // `view.toLower()`, `view.toUpper()` and `view.caseFold()`: the mapped text as a new String.
+      [public return<String> effects(heap_alloc)]
+      /std/text/view/StringView/toLower([/std/text/view/StringView] self) {
+        return(toLowerText(self))
+      }
+
+      [public return<String> effects(heap_alloc)]
+      /std/text/view/StringView/toUpper([/std/text/view/StringView] self) {
+        return(toUpperText(self))
+      }
+
+      [public return<String> effects(heap_alloc)]
+      /std/text/view/StringView/caseFold([/std/text/view/StringView] self) {
+        return(caseFoldText(self))
+      }
+
+      [public return<bool> effects(heap_alloc)]
+      /std/text/view/StringView/equalsIgnoreCase([/std/text/view/StringView] self, [/std/text/view/StringView] other) {
+        return(equalsIgnoreCase(self, other))
+      }
+
+      // Whether the two texts are equal after case folding.
+      [public return<bool> effects(heap_alloc)]
+      equalsIgnoreCase([/std/text/view/StringView] left, [/std/text/view/StringView] right) {
+        [String] foldedLeft{caseFoldText(left)}
+        [String] foldedRight{caseFoldText(right)}
+        return(foldedLeft == foldedRight)
+      }
+    }
+  }
+}
