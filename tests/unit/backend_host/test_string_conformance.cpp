@@ -2277,4 +2277,54 @@ TEST_CASE("a chain of Strings allocates once and keeps evaluation order through 
   CHECK(optexeOutput("fused", fusedProgram()) == fusedOracle());
 }
 
+// ---- folding of literal text operations ------------------------------------------------------------------------------
+
+namespace {
+const char *FoldedBody =
+    "  print_line(\"ab\" + \"cd\" == \"abcd\")\n"
+    "  print_line(\"ab\" != \"ab\")\n"
+    "  print_line(convert<i32>(at(\"hello\", 1i32)))\n"
+    "  print_line(textOf(\"hello\").startsWith(textOf(\"he\")))\n"
+    "  print_line(textOf(\"hello\").endsWith(textOf(\"lo\")))\n"
+    "  print_line(textOf(\"hello\").contains(textOf(\"ell\")))\n"
+    "  print_line(textOf(\"hello\").contains(textOf(\"xyz\")))\n"
+    "  print_line(textOf(\"hello\").count())\n"
+    "  print_line(textOf(\"abc\") < textOf(\"abd\"))\n"
+    "  print_line(textOf(\"abc\") >= textOf(\"abd\"))\n"
+    "  print_line(textOf(\"abc\") == textOf(\"abc\"))\n"
+    "  print_line(convert<i32>(textOf(\"hello\")[4i32]))\n"
+    "  print_line(\"a\\nb\" + \"c\" == \"a\\nbc\")\n";
+
+std::string foldedProgram(const std::string &body) {
+  return "import /std/text/*\nimport /std/text/view/*\n\n[return<int> effects(io_out)]\nmain() {\n" + body + "  return(0i32)\n}\n";
+}
+
+const char *FoldedOutput = "1\n0\n101\n1\n1\n1\n0\n5\n1\n0\n1\n111\n1\n";
+} // namespace
+
+TEST_CASE("operations on literal text give the same results on the VM and through optexe") {
+  CHECK(vmOutput(foldedProgram(FoldedBody)) == FoldedOutput);
+  CHECK(optexeOutput("folded", foldedProgram(FoldedBody)) == FoldedOutput);
+}
+
+TEST_CASE("operations on literal text leave no run-time text work in the lowered IR") {
+  const std::string file = scratch("folded_ir.prime");
+  std::ofstream(file, std::ios::binary) << foldedProgram(FoldedBody);
+  const std::string dump = scratch("folded_ir.txt");
+  REQUIRE(run(shellQuote(Primec) + " --emit=vm --dump-stage ir-lowered " + shellQuote(file) + " > " + shellQuote(dump) + " 2>&1") == 0);
+  const std::string ir = readFile(dump);
+  CHECK(ir.find("LoadStringByte") == std::string::npos);
+  CHECK(ir.find("LoadStringLength") == std::string::npos);
+  CHECK(ir.find("CallHost") == std::string::npos);
+}
+
+TEST_CASE("a literal index out of range is a compile error") {
+  const std::string file = scratch("folded_range.prime");
+  std::ofstream(file, std::ios::binary) << foldedProgram("  print_line(convert<i32>(at(\"hello\", 9i32)))\n");
+  const std::string log = scratch("folded_range.log");
+  CHECK(run(shellQuote(Primec) + " --emit=vm " + shellQuote(file) + " -o " + shellQuote(scratch("folded_range.out")) + " > " +
+            shellQuote(log) + " 2>&1") != 0);
+  CHECK(readFile(log).find("out of bounds for a literal of 5 bytes") != std::string::npos);
+}
+
 TEST_SUITE_END();

@@ -92,6 +92,11 @@ or a semicolon if you intended to index.
   `opLessThan`, `opLessEqual`, `opGreaterThan`, `opGreaterEqual` or `opAt`. The `op` prefix keeps a member from capturing
   the bare builtin calls written inside the struct's own scope. A struct without the member keeps the numeric-operand
   diagnostic.
+- Literal folding: when every operand is a literal the template-monomorph pass folds the operation, so no run-time text
+  work remains: `"a" + "b"` (one literal), `"a" == "b"`, `"a" != "b"`, `at("text", 1)` (a constant byte), and on views of
+  literals `textOf("a")` with `==`, `!=`, `<`, `<=`, `>`, `>=`, `.equals`, `.startsWith`, `.endsWith`, `.contains`
+  (a `bool`), `.count()` and `[i]`. A literal index outside the literal is a compile error. Only operations on literals
+  fold; nothing else is evaluated at compile time.
 - Text chains: a chain of three or more `String` operands joined by `+` (`a + b + c`, `a + (b + c)`) is rewritten to one
   call `a.opPlusMany(b, c)`. This is a guaranteed rewrite, not an optimization: the chain is flattened (`+` on text is
   associative), the parts are evaluated left to right as written, the counts are summed, one block is allocated and each

@@ -108,7 +108,6 @@ of sync with them.
 | TODO-5630 | Request-scoped string arenas: `withStringArena` | blocked | string-arenas |
 | TODO-5633 | Unicode case mapping and case folding (lazy) | blocked | string-unicode |
 | TODO-5634 | Unicode normalization and grapheme clusters (lazy) | blocked | string-unicode |
-| TODO-5637 | Fold string operations on literals at compile time | blocked | string-quality |
 | TODO-5638 | Shared immutable strings for threads (`SharedString`) | deferred | string-concurrency |
 | TODO-5645 | Real calls for struct-receiver methods (library code is inlined at every call site) | ready | lowering-gaps |
 | TODO-5647 | A StringView member named `opNotEqual` makes `StringMap<i32>.insert` fail to lower | ready | lowering-gaps |
@@ -161,7 +160,7 @@ of sync with them.
 
 ### Priority Lanes
 
-- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5570, TODO-5569, TODO-5621, TODO-5645, TODO-5631, TODO-5630, TODO-5633, TODO-5634, TODO-5637, TODO-5638, TODO-5567, TODO-5574
+- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5570, TODO-5569, TODO-5621, TODO-5645, TODO-5631, TODO-5630, TODO-5633, TODO-5634, TODO-5638, TODO-5567, TODO-5574
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Startup (docs/NativeUiPlan.md section 16): TODO-5603
@@ -336,18 +335,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - acceptance:
     - tests against the Unicode normalization and grapheme break conformance samples for a fixed subset checked into tests/fixtures; the same no-cost-when-unused check as TODO-5633; full release gate green
   - stop_rule: NFC/NFD and extended grapheme clusters; NFKC/NFKD and word/sentence breaks are separate if wanted.
-
-- [ ] TODO-5637: Fold string operations on literals at compile time
-  - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5568
-  - created_at: 2026-11-02
-  - phase: Strings and slices (docs/spec/strings-and-views.md, Beyond std::string)
-  - parallel_track: string-quality
-  - scope: When every operand is a literal, fold `+`, `count()`, `==`, `startsWith`, `endsWith`, `contains` and `[i]` in the front end so they emit a literal or constant (and report an out-of-range `[i]` as a compile error). A `string` literal that is not valid UTF-8 is already a lexer error; keep it.
-  - acceptance:
-    - IR snapshot tests show no run-time text work for folded expressions; negative test for a literal index out of range; full release gate green
-  - stop_rule: operations on literals only; no general constant evaluation.
 
 - [ ] TODO-5638: Shared immutable strings for threads (`SharedString`)
   - owner: ai

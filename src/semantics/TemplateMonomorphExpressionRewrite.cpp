@@ -1,4 +1,5 @@
 #include "TemplateMonomorphAssignmentTargetResolution.h"
+#include "primec/frontend/StringLiteral.h"
 #include "TemplateMonomorphBindingBlockInference.h"
 #include "TemplateMonomorphBindingCallInference.h"
 #include "TemplateMonomorphDefinitionBindingSetup.h"
@@ -164,6 +165,188 @@ bool rewriteKeyValueWrapperHelperCallToMethod(Expr &expr,
   expr.isMethodCall = true;
   expr.templateArgs.clear();
   expr.templateArgDetails.clear();
+  return true;
+}
+
+namespace {
+
+bool decodedStringLiteral(const Expr &expr, std::string &decoded, StringEncoding &encoding) {
+  if (expr.kind != Expr::Kind::StringLiteral) {
+    return false;
+  }
+  ParsedStringLiteral parsed;
+  std::string parseError;
+  if (!parseStringLiteralToken(expr.stringValue, parsed, parseError)) {
+    return false;
+  }
+  decoded = std::move(parsed.decoded);
+  encoding = parsed.encoding;
+  return true;
+}
+
+// `textOf("literal")` (the StringView of a literal): the literal's text.
+bool decodedTextOfLiteral(const Expr &expr, std::string &decoded) {
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.isBinding || expr.args.size() != 1 ||
+      !expr.templateArgs.empty() || hasNamedCallArguments(expr)) {
+    return false;
+  }
+  const std::string &callee = expr.name;
+  if (callee != "textOf" && callee != "/std/text/view/textOf") {
+    return false;
+  }
+  StringEncoding encoding = StringEncoding::Utf8;
+  return decodedStringLiteral(expr.args.front(), decoded, encoding);
+}
+
+std::string stringLiteralToken(const std::string &decoded, StringEncoding encoding) {
+  std::string token = "\"";
+  for (const char c : decoded) {
+    switch (c) {
+    case '\n': token += "\\n"; break;
+    case '\r': token += "\\r"; break;
+    case '\t': token += "\\t"; break;
+    case '\\': token += "\\\\"; break;
+    case '"': token += "\\\""; break;
+    case '\0': token += "\\0"; break;
+    default: token.push_back(c); break;
+    }
+  }
+  token += "\"";
+  token += encoding == StringEncoding::Ascii ? "ascii" : "utf8";
+  return token;
+}
+
+void makeBoolLiteral(Expr &expr, bool value) {
+  expr.kind = Expr::Kind::BoolLiteral;
+  expr.boolValue = value;
+  expr.args.clear();
+  expr.argNames.clear();
+  expr.templateArgs.clear();
+  expr.isMethodCall = false;
+  expr.name.clear();
+}
+
+void makeIntLiteral(Expr &expr, uint64_t value, int width, bool isUnsigned) {
+  expr.kind = Expr::Kind::Literal;
+  expr.literalValue = value;
+  expr.intWidth = width;
+  expr.isUnsigned = isUnsigned;
+  expr.args.clear();
+  expr.argNames.clear();
+  expr.templateArgs.clear();
+  expr.isMethodCall = false;
+  expr.name.clear();
+}
+
+} // namespace
+
+// Operations whose operands are all literals are folded where the AST is rewritten, so no run-time text work remains:
+// `"a" + "b"`, `"a" == "b"`, `at("text", 1)` and, on views of literals, `textOf("a") == textOf("b")`, `.count()`,
+// `.startsWith`, `.endsWith`, `.contains`, `.equals` and `textOf("text")[1]`. A literal index out of range is an error.
+bool foldLiteralTextCall(Expr &expr, std::string &error) {
+  if (expr.kind != Expr::Kind::Call || expr.isBinding || expr.isFieldAccess || expr.hasBodyArguments ||
+      !expr.bodyArguments.empty() || hasNamedCallArguments(expr)) {
+    return true;
+  }
+  for (Expr &arg : expr.args) {
+    if (!foldLiteralTextCall(arg, error)) {
+      return false;
+    }
+  }
+  const std::string &name = expr.name;
+  if (expr.args.empty() || expr.args.size() > 2 || !expr.templateArgs.empty()) {
+    return true;
+  }
+  std::string left;
+  std::string right;
+  StringEncoding leftEncoding = StringEncoding::Utf8;
+  StringEncoding rightEncoding = StringEncoding::Utf8;
+  const bool plain = !expr.isMethodCall;
+  if (expr.args.size() == 2 && plain) {
+    const bool bothLiterals =
+        decodedStringLiteral(expr.args[0], left, leftEncoding) && decodedStringLiteral(expr.args[1], right, rightEncoding);
+    if (bothLiterals) {
+      if (name == "plus") {
+        const StringEncoding joined =
+            leftEncoding == StringEncoding::Ascii && rightEncoding == StringEncoding::Ascii ? StringEncoding::Ascii
+                                                                                              : StringEncoding::Utf8;
+        const std::string sourceNameKept = expr.sourceName;
+        const int line = expr.sourceLine;
+        const int column = expr.sourceColumn;
+        expr = Expr();
+        expr.kind = Expr::Kind::StringLiteral;
+        expr.stringValue = stringLiteralToken(left + right, joined);
+        expr.sourceLine = line;
+        expr.sourceColumn = column;
+        return true;
+      }
+      if (name == "equal" || name == "not_equal") {
+        makeBoolLiteral(expr, (left == right) == (name == "equal"));
+        return true;
+      }
+      return true;
+    }
+    int64_t index = 0;
+    if (name == "at" && decodedStringLiteral(expr.args[0], left, leftEncoding) &&
+        expr.args[1].kind == Expr::Kind::Literal && !expr.args[1].isUnsigned) {
+      index = static_cast<int64_t>(static_cast<int32_t>(expr.args[1].literalValue));
+      if (index < 0 || static_cast<size_t>(index) >= left.size()) {
+        error = "string index " + std::to_string(index) + " is out of bounds for a literal of " +
+                std::to_string(left.size()) + " bytes";
+        return false;
+      }
+      makeIntLiteral(expr, static_cast<unsigned char>(left[static_cast<size_t>(index)]), 32, false);
+      return true;
+    }
+  }
+  // Views of literals: textOf("a") compared with textOf("b"), indexed, counted or searched.
+  const bool methodForm = expr.isMethodCall;
+  if (expr.args.size() == 2 && decodedTextOfLiteral(expr.args[0], left)) {
+    if (decodedTextOfLiteral(expr.args[1], right)) {
+      const int order = left < right ? -1 : (left == right ? 0 : 1); // std::string compares unsigned bytes
+      bool value = false;
+      bool known = true;
+      if (name == "equal" || name == "equals") {
+        value = order == 0;
+      } else if (name == "not_equal") {
+        value = order != 0;
+      } else if (name == "less_than") {
+        value = order < 0;
+      } else if (name == "less_equal") {
+        value = order <= 0;
+      } else if (name == "greater_than") {
+        value = order > 0;
+      } else if (name == "greater_equal") {
+        value = order >= 0;
+      } else if (name == "startsWith") {
+        value = left.rfind(right, 0) == 0;
+      } else if (name == "endsWith") {
+        value = left.size() >= right.size() && left.compare(left.size() - right.size(), right.size(), right) == 0;
+      } else if (name == "contains") {
+        value = left.find(right) != std::string::npos;
+      } else {
+        known = false;
+      }
+      if (known && (plain || methodForm)) {
+        makeBoolLiteral(expr, value);
+        return true;
+      }
+    }
+    if (name == "at" && plain && expr.args[1].kind == Expr::Kind::Literal && !expr.args[1].isUnsigned) {
+      const int64_t index = static_cast<int64_t>(static_cast<int32_t>(expr.args[1].literalValue));
+      if (index < 0 || static_cast<size_t>(index) >= left.size()) {
+        error = "string index " + std::to_string(index) + " is out of bounds for a literal of " +
+                std::to_string(left.size()) + " bytes";
+        return false;
+      }
+      makeIntLiteral(expr, static_cast<unsigned char>(left[static_cast<size_t>(index)]), 8, true);
+      return true;
+    }
+  }
+  if (expr.args.size() == 1 && name == "count" && decodedTextOfLiteral(expr.args[0], left)) {
+    makeIntLiteral(expr, left.size(), 32, false);
+    return true;
+  }
   return true;
 }
 

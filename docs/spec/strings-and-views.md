@@ -270,7 +270,7 @@ Where the language's own rules let text be better than the C++ type, and the TOD
 | Keyed hash, `Symbol` interning | flood-resistant keys; O(1) equality for names | TODO-5625, TODO-5636 |
 | UTF-8 invariant, Unicode case, normalization, graphemes | correct text, loaded only when used | TODO-5633, TODO-5634 |
 | `Secret<String>` | zeroed on destroy, never printed, constant-time compare | TODO-5635 |
-| Compile-time folding of literal operations | no run-time work for constants | TODO-5637 |
+| Compile-time folding of literal operations | no run-time work for constants | done: `+`, `==`, `!=`, `at` on literals; `==`, `<`.., `count`, `startsWith`, `endsWith`, `contains`, `[i]` on `textOf("..")`; a literal index out of range is a compile error |
 | `SharedString` | cheap immutable sharing across threads (deferred with concurrency) | TODO-5638 |
 
 Typed, context-escaped text (`Html`, `Url`, ...) was considered and left out for now.
