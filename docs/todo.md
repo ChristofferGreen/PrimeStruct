@@ -162,7 +162,7 @@ of sync with them.
 
 ### Priority Lanes
 
-- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5570, TODO-5569, TODO-5621, TODO-5645, TODO-5647, TODO-5648, TODO-5631, TODO-5630, TODO-5632, TODO-5633, TODO-5634, TODO-5637, TODO-5638, TODO-5567, TODO-5574
+- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5570, TODO-5569, TODO-5621, TODO-5645, TODO-5631, TODO-5630, TODO-5632, TODO-5633, TODO-5634, TODO-5637, TODO-5638, TODO-5567, TODO-5574
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Startup (docs/NativeUiPlan.md section 16): TODO-5603
@@ -406,6 +406,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - scope: With `/std/text/view/StringView/opNotEqual([StringView] self, [StringView] other)` defined (any body), a program that inserts into a `StringMap<i32>` fails with `VM lowering error: unsupported operand types for multiply`: in `homeSlot`, `divide(hash, cap)` of two `u64` is inferred as `i32`. The same member spelled `opNotEqualTo` or `opDiffers` lowers fine, and moving the block does not help, so something keyed by the name (a cache, a semantic-product lookup or a definition-order dependency) answers for the wrong expression. Reproduce by renaming `opNotEqualTo` back in `stdlib/std/text/view.prime` and compiling `StringMap<i32>{}.insert(k.view(), 3i32)`. Find the lookup, make it scope-correct, and then spell the member `opNotEqual`.
   - acceptance:
     - the repro lowers with the member named `opNotEqual`; a regression test covers a name-keyed lookup collision; full release gate green
+  - lead: the semantic-product publication (`inferCallSnapshotData` in `src/semantics/SemanticsValidatorSnapshotLocals.cpp`) records the `convert<u64>(vectorCount<i32>(this.table))` temporary in `StringMap<i32>.homeSlot` as `i32` when the member is named `opNotEqual` (`semantic-product` dump: `binding_facts` of `homeSlot` list `convert i32`, `divide i32`, `multiply i32`, `minus i32`, against `u64` with another spelling), so the lowerer later sees `divide(u64, u64)` as `i32`. The `AST` dumps are identical; the call snapshot memo (keyed by expression address) was ruled out.
   - stop_rule: the wrongly keyed lookup in the lowerer or semantic product; no other renames.
 
 - [ ] TODO-5603: Startup audit: what a launch loads and does
