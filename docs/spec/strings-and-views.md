@@ -109,7 +109,11 @@ no write operations and `WriteSlice<T>.readOnly()` gives a read view of the same
 `tail`, `splitPart(separator, n)`, `splitCount(separator)` and, on a write view, `set`, `fill`, `swap`,
 `reverse`, `copyFrom`, `sort`. A `vector<T>` has the method spellings `values.view()`, `values.slice(start, end)` and
 `values.sliceMut(start, end)`, and a view indexes with `view[i]` and `view[i] = v` (the struct operator rewrite calls the
-`opAt` and `opSet` members of the slice structs). Not yet: views of `array<T>` (TODO-5652).
+`opAt` and `opSet` members of the slice structs). An `array<T>` has the same three method spellings; they call
+`arrayView`, `arraySlice` and `arraySliceMut` in `/std/collections/slice`, which take the array by reference and build
+the view from `location(at_unsafe(values, 0))`, the address of the first element slot (`location(at(values, i))` is
+range checked). The method form of `slice` on an array is therefore a view, not a copy; the free function form
+`slice(values, start, end)` still copies (TODO-5654).
 
 ### Operations on every slice
 

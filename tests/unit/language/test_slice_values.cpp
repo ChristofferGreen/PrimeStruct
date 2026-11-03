@@ -252,3 +252,42 @@ TEST_CASE("the array<u8> spelling is left alone in strings, comments and longer 
   REQUIRE(text.compiled);
   CHECK(text.exitCode == 9);
 }
+
+TEST_CASE("an array<i32> has the view, slice and sliceMut method spellings and views write through to it") {
+  const std::string sumHelper =
+      "[return<int>]\nsumView([Slice<i32, Read>] window) {\n  [i32 mut] total{0i32}\n"
+      "  for([i32 mut] i{0i32}, i < window.count(), i++) {\n    total = total + window[i]\n  }\n  return(total)\n}\n\n";
+  const std::string source = Prelude + "\n" + sumHelper +
+                             "[return<int>]\nmain() {\n  [array<i32> mut] a{array<i32>(5i32, 6i32, 7i32, 8i32)}\n"
+                             "  [Slice<i32, Read>] all{a.view()}\n  [Slice<i32, Read>] middle{a.slice(1i32, 3i32)}\n"
+                             "  [Slice<i32, Write>] tail{a.sliceMut(2i32, 4i32)}\n  tail[0i32] = 70i32\n"
+                             "  return(sumView(all) + sumView(middle) * 100i32 + a[2i32])\n}\n";
+  ScriptEngine engine;
+  const auto script = engine.compileSource("/array_views.prime", source);
+  REQUIRE_MESSAGE(script.valid(), script.diagnostics());
+  const auto result = script.run();
+  REQUIRE_MESSAGE(result.ok, result.diagnostics);
+  // The array is 5 6 70 8 after the write: 89 + 76 * 100 + 70 = 7759.
+  CHECK(result.exitCode == 7759);
+}
+
+TEST_CASE("an array view is range checked and a read view of an array cannot write") {
+  const Outcome range = runBody("  [array<i32>] a{array<i32>(1i32, 2i32)}\n  [Slice<i32, Read>] s{a.slice(1i32, 5i32)}\n  return(s.count())");
+  REQUIRE(range.compiled);
+  CHECK((!range.ok || range.exitCode != 1));
+  const Outcome index = runBody("  [array<i32>] a{array<i32>(1i32, 2i32)}\n  [Slice<i32, Read>] s{a.view()}\n  return(s[7i32])");
+  REQUIRE(index.compiled);
+  CHECK((!index.ok || index.exitCode != 0));
+  const Outcome write = runBody("  [array<i32> mut] a{array<i32>(1i32, 2i32)}\n  [Slice<i32, Read>] s{a.view()}\n  s[0i32] = 9i32\n  return(0i32)");
+  CHECK_FALSE(write.compiled);
+}
+
+TEST_CASE("location of an array element is the address of that slot and is range checked") {
+  const Outcome pointer = runBody("  [array<i32> mut] a{array<i32>(10i32, 20i32, 30i32)}\n  [Pointer<i32>] p{location(at(a, 1i32))}\n"
+                                  "  return(dereference(p))");
+  REQUIRE(pointer.compiled);
+  CHECK(pointer.exitCode == 20);
+  const Outcome outside = runBody("  [array<i32>] a{array<i32>(10i32)}\n  [Pointer<i32>] p{location(at(a, 3i32))}\n  return(0i32)");
+  REQUIRE(outside.compiled);
+  CHECK((!outside.ok || outside.exitCode != 0));
+}

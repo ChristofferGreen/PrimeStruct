@@ -377,6 +377,43 @@ bool rewriteVectorViewMethod(Expr &expr,
   }
   const std::string base = semantics::normalizeBindingTypeName(receiverInfo.typeName);
   const bool isVector = base == "vector" || base == "Vector" || base == collection_helpers::kCanonicalVectorVectorType;
+  if (!isVector && !receiverInfo.typeTemplateArg.empty()) {
+    // An `array<T>` (or a reference to one): the view helpers take the array by reference.
+    std::string arrayElement;
+    bool wrapInLocation = false;
+    if (base == "array") {
+      arrayElement = receiverInfo.typeTemplateArg;
+      wrapInLocation = true;
+    } else if (base == "Reference") {
+      std::string wrapper;
+      std::string wrapped;
+      if (semantics::splitTemplateTypeName(semantics::normalizeBindingTypeName(receiverInfo.typeTemplateArg), wrapper,
+                                           wrapped) &&
+          semantics::normalizeBindingTypeName(wrapper) == "array") {
+        arrayElement = wrapped;
+      }
+    }
+    if (!arrayElement.empty()) {
+      if (expr.sourceName.empty()) {
+        expr.sourceName = expr.name;
+      }
+      const std::string helper = expr.name == "view" ? "arrayView" : (expr.name == "slice" ? "arraySlice" : "arraySliceMut");
+      expr.name = std::string(collection_helpers::kCanonicalSlicePrefix) + helper;
+      expr.isMethodCall = false;
+      expr.templateArgs.push_back(arrayElement);
+      if (wrapInLocation) {
+        Expr reference;
+        reference.kind = Expr::Kind::Call;
+        reference.name = "location";
+        reference.namespacePrefix = expr.args.front().namespacePrefix;
+        reference.sourceLine = expr.args.front().sourceLine;
+        reference.sourceColumn = expr.args.front().sourceColumn;
+        reference.args.push_back(expr.args.front());
+        expr.args.front() = std::move(reference);
+      }
+      return true;
+    }
+  }
   if (!isVector || receiverInfo.typeTemplateArg.empty()) {
     return false;
   }

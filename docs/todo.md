@@ -101,7 +101,7 @@ of sync with them.
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
 | TODO-5649 | Remaining slice loan rules: `mut`/`move` owners, `Write` conflicts, outer bindings | ready | slices |
-| TODO-5652 | Views of `array<T>` and retiring the copying `slice(array, start, end)` | blocked | slices |
+| TODO-5654 | Retire the copying `slice(array, start, end)` builtin | ready | slices |
 | TODO-5650 | A wildcard-imported struct type as a parameter type needs its full path | ready | lowering-gaps |
 | TODO-5638 | Shared immutable strings for threads (`SharedString`) | deferred | string-concurrency |
 | TODO-5645 | Real calls for struct-receiver methods (library code is inlined at every call site) | ready | lowering-gaps |
@@ -152,7 +152,7 @@ of sync with them.
 
 ### Priority Lanes
 
-- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5645, TODO-5638, TODO-5652
+- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5645, TODO-5638
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Startup (docs/NativeUiPlan.md section 16): TODO-5603
@@ -235,16 +235,16 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - stop_rule: native I/O emitter and png status mapping.
   - notes: deferred: queued behind the Ready Now cap.
 
-- [ ] TODO-5652: Views of `array<T>` and retiring the copying `slice(array, start, end)`
+- [ ] TODO-5654: Retire the copying `slice(array, start, end)` builtin
   - owner: ai
   - status: ready
   - created_at: 2026-11-03
-  - phase: Strings and slices (docs/spec/strings-and-views.md), split from TODO-5570
+  - phase: Strings and slices (docs/spec/strings-and-views.md), split from TODO-5652
   - parallel_track: slices
-  - scope: `view`/`slice`/`sliceMut` already work on `array<u8>` (it is a `vector<u8>`, TODO-5567). What is left is `view`/`slice`/`sliceMut` on `array<T>` for other `T`, whose elements live in the owner's local slots: a view needs a pointer to the first element slot, and the language has no way to write one (`location` takes a local binding, not `at(values, 0)`), so this needs a builtin or opcode for an element address. Then `view[i]` over them and the removal of the copying `slice(array, start, end)` builtin (used by docs/CodeExamples.md and the examples test), migrating its callers.
+  - scope: The free function `slice(values, start, end)` copies a range of an array into a new array (checked in `SemanticsValidatorExprArraySliceEscapes.cpp` and lowered in the VM, the C++ emitters and the native backends). Array views exist now, so remove the builtin and migrate its callers: the compile-run tests in `test_compile_run_vm_bounds.cpp`, `test_compile_run_native_backend_collections.cpp`, `test_compile_run_emitters_core_behaviors.cpp`, `test_compile_run_examples_docs.cpp`, the semantic snapshot test, and docs/CodeExamples.md and docs/SafeArrayExtentViews.md.
   - acceptance:
-    - tests for each spelling on `array<i32>` owners; no caller of the copying builtin is left; full release gate green
-  - stop_rule: the array views and the builtin's retirement on the VM; native follows the VM.
+    - no caller of the copying builtin is left and `slice(array, a, b)` reports a diagnostic that names `values.slice(a, b)`; full release gate green
+  - stop_rule: the builtin's removal and its callers; no new view features.
 
 - [ ] TODO-5649: Remaining slice loan rules: `mut`/`move` owners, `Write` conflicts, outer bindings
   - owner: ai

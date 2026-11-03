@@ -484,6 +484,28 @@ FOOTER = '''  }
 }
 '''
 
+ARRAY_VIEWS = '''
+  // Views of an `array<T>` (inline slots): `values.view()`, `values.slice(start, end)` and `values.sliceMut(start, end)` on an
+  // array are rewritten to these calls, with the array passed by reference. The element address comes from
+  // `location(at_unsafe(values, 0))`; an empty array gives a view that is never read.
+  [public return<ReadSlice<T>>]
+  arrayView<T>([Reference<array<T>>] values) {
+    return(readSliceMake<T>(location(at_unsafe(values, 0i32)), count(values)))
+  }
+
+  [public return<ReadSlice<T>>]
+  arraySlice<T>([Reference<array<T>>] values, [i32] start, [i32] end) {
+    [ReadSlice<T>] whole{arrayView<T>(values)}
+    return(whole.slice(start, end))
+  }
+
+  [public return<WriteSlice<T>>]
+  arraySliceMut<T>([Reference<array<T>> mut] values, [i32] start, [i32] end) {
+    [WriteSlice<T>] whole{writeSliceMake<T>(location(at_unsafe(values, 0i32)), count(values))}
+    return(whole.slice(start, end))
+  }
+'''
+
 
 def main() -> None:
     out = [HEADER]
@@ -493,7 +515,7 @@ def main() -> None:
     out.append(STRUCT.replace("{V}", "WriteSlice"))
     out.append(READ_METHODS.replace("{V}", "WriteSlice").replace("{MAKE}", "writeSliceMake"))
     out.append(WRITE_METHODS)
-    out.append(FOOTER)
+    out.append("  }\n" + ARRAY_VIEWS + "  }\n  }\n}\n")
     OUT.write_text("".join(out))
     print(f"wrote {OUT}")
 

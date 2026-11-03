@@ -117,6 +117,7 @@ inline constexpr char kCanonicalSoaStorageSoaColumnCountSpecialized[] = "/std/co
 inline constexpr char kCanonicalSoaVectorPrefix[] = "/std/collections/soa_vector/";
 inline constexpr char kCanonicalVector[] = "/std/collections/vector";
 inline constexpr char kCanonicalVectorPrefix[] = "/std/collections/vector/";
+inline constexpr char kCanonicalSlicePrefix[] = "/std/collections/slice/";
 inline constexpr char kCanonicalVectorVectorType[] = "/std/collections/vector/Vector";
 inline constexpr char kCanonicalVectorAt[] = "/std/collections/vector/at";
 inline constexpr char kCanonicalVectorAtUnsafe[] = "/std/collections/vector/at_unsafe";

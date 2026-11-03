@@ -34,6 +34,31 @@ bool SemanticsValidator::validateExprEarlyPointerBuiltin(
     if (target.isFieldAccess && target.args.size() == 1) {
       return self(target.args.front(), self);
     }
+    // `location(at(values, index))`: the address of an element of a local array.
+    if (!target.isMethodCall && target.args.size() == 2 && (target.name == "at" || target.name == "at_unsafe") &&
+        target.args.front().kind == Expr::Kind::Name && !isEntryArgsName(target.args.front().name) &&
+        (locals.count(target.args.front().name) != 0 || isParam(params, target.args.front().name))) {
+      const BindingInfo *arrayBinding = nullptr;
+      if (const auto localIt = locals.find(target.args.front().name); localIt != locals.end()) {
+        arrayBinding = &localIt->second;
+      } else {
+        arrayBinding = findParamBinding(params, target.args.front().name);
+      }
+      if (arrayBinding != nullptr) {
+        std::string bindingType = normalizeBindingTypeName(arrayBinding->typeName);
+        std::string wrapped = arrayBinding->typeTemplateArg;
+        if (bindingType == "Reference" || bindingType == "Pointer") {
+          std::string base;
+          std::string argText;
+          if (splitTemplateTypeName(normalizeBindingTypeName(wrapped), base, argText)) {
+            bindingType = normalizeBindingTypeName(base);
+          }
+        }
+        if (bindingType == "array") {
+          return true;
+        }
+      }
+    }
     std::string indexedElemType;
     const auto &dispatchResolvers = dispatchBootstrap.dispatchResolvers;
     const bool resolvesWrappedIndexedArgsPackElement =

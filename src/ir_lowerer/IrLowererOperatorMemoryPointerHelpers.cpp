@@ -1049,6 +1049,63 @@ bool emitConversionsAndCallsMemoryAndPointerExpr(
           return emitExpr(target, localsIn);
         }
       }
+      // `location(at(values, index))` on a local array (or a reference to one): the address of that element slot.
+      std::string elementBuiltin;
+      if (target.kind == Expr::Kind::Call && target.args.size() == 2 && !target.isMethodCall &&
+          getBuiltinArrayAccessName(target, elementBuiltin) && (elementBuiltin == "at" || elementBuiltin == "at_unsafe") &&
+          target.args.front().kind == Expr::Kind::Name) {
+        const auto arrayIt = localsIn.find(target.args.front().name);
+        if (arrayIt != localsIn.end() &&
+            (arrayIt->second.kind == LocalInfo::Kind::Array || arrayIt->second.kind == LocalInfo::Kind::Reference)) {
+          const LocalInfo::ValueKind indexKind = normalizeIndexKind(inferExprKind(target.args[1], localsIn));
+          if (!isSupportedIndexKind(indexKind)) {
+            error = "location of an array element requires an integer index";
+            return false;
+          }
+          const int32_t basePtrLocal = allocTempLocal();
+          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(arrayIt->second.index)});
+          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(basePtrLocal)});
+          const int32_t indexLocal = allocTempLocal();
+          if (!emitExpr(target.args[1], localsIn)) {
+            return false;
+          }
+          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal)});
+          if (elementBuiltin == "at") {
+            if (indexKind != LocalInfo::ValueKind::UInt64 && indexKind != LocalInfo::ValueKind::UInt8) {
+              instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+              instructions.push_back({pushZeroForIndex(indexKind), 0});
+              instructions.push_back({cmpLtForIndex(indexKind), 0});
+              const size_t jumpNonNegative = instructions.size();
+              instructions.push_back({IrOpcode::JumpIfZero, 0});
+              emitPointerIndexOutOfBounds();
+              instructions[jumpNonNegative].imm = static_cast<int32_t>(instructions.size());
+            }
+            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(basePtrLocal)});
+            instructions.push_back({IrOpcode::LoadIndirect, 0});
+            instructions.push_back({cmpGeForIndex(indexKind), 0});
+            const size_t jumpInRange = instructions.size();
+            instructions.push_back({IrOpcode::JumpIfZero, 0});
+            emitPointerIndexOutOfBounds();
+            instructions[jumpInRange].imm = static_cast<int32_t>(instructions.size());
+          }
+          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(basePtrLocal)});
+          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+          if (indexKind == LocalInfo::ValueKind::Int32) {
+            instructions.push_back({IrOpcode::PushI32, 1});
+            instructions.push_back({IrOpcode::AddI32, 0});
+            instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(IrSlotBytes)});
+            instructions.push_back({IrOpcode::MulI32, 0});
+          } else {
+            instructions.push_back({IrOpcode::PushI64, 1});
+            instructions.push_back({IrOpcode::AddI64, 0});
+            instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(IrSlotBytes)});
+            instructions.push_back({IrOpcode::MulI64, 0});
+          }
+          instructions.push_back({IrOpcode::AddI64, 0});
+          return true;
+        }
+      }
       error = "location requires a local binding";
       return false;
     }
