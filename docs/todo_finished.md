@@ -2092,6 +2092,7 @@ are left unarchived.
 | TODO-5627 | `format`, `join` and split into owned pieces | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 | TODO-5628 | std::string conformance and speed gate for `String` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 | TODO-5629 | Bulk byte operations under `String` and `Slice<u8>` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
+| TODO-5631 | Structs that hold views (borrow-carrying aggregates) | [2026-11.md](todo_archive/2026-11.md) | 2026-11-03 |
 | TODO-5632 | Fused `+` chains: one allocation per expression | [2026-11.md](todo_archive/2026-11.md) | 2026-11-03 |
 | TODO-5633 | Unicode case mapping and case folding (lazy) | [2026-11.md](todo_archive/2026-11.md) | 2026-11-03 |
 | TODO-5634 | Unicode normalization and grapheme clusters (lazy) | [2026-11.md](todo_archive/2026-11.md) | 2026-11-03 |

@@ -2610,4 +2610,43 @@ TEST_CASE("a program that does not use the normalization module carries none of 
   CHECK(used.find(firstClassRecord) != std::string::npos);
 }
 
+// ---- structs that hold views ------------------------------------------------------------------------------------------
+
+namespace {
+// A parsed request of views into its buffer: parsing allocates nothing.
+std::string requestProgram() {
+  return "import /std/text/*\nimport /std/text/view/*\n\n"
+         "[struct]\nRequest() {\n  [/std/text/view/StringView] method{textOf(\"\")}\n  [/std/text/view/StringView] path{textOf(\"\")}\n}\n\n"
+         "[return<Request>]\nparseRequest([/std/text/view/StringView] line) {\n"
+         "  [i32] firstSpace{line.indexOf(textOf(\" \"))}\n"
+         "  [/std/text/view/StringView] rest{line.slice(firstSpace + 1i32, line.count())}\n"
+         "  [i32] secondSpace{rest.indexOf(textOf(\" \"))}\n"
+         "  return(Request{[method] line.slice(0i32, firstSpace), [path] rest.slice(0i32, secondSpace)})\n}\n\n"
+         "[return<int> effects(heap_alloc, io_out)]\nmain() {\n"
+         "  [String] buffer{stringFrom(\"GET /index.html HTTP/1.1\")}\n"
+         "  [u64] before{stringHeapAllocations()}\n"
+         "  [Request] req{parseRequest(buffer.view())}\n"
+         "  print_line(convert<i32>(stringHeapAllocations() - before))\n"
+         "  print_line(req.method.count())\n  print_line(req.path.count())\n"
+         "  for([i32 mut] i{0i32}, i < req.path.count(), i++) {\n    print_line(convert<i32>(req.path.byteAt(i)))\n  }\n"
+         "  return(0i32)\n}\n";
+}
+
+std::string requestOracle() {
+  std::string out = "0\n3\n11\n";
+  for (const char c : std::string("/index.html")) {
+    out += std::to_string(static_cast<int>(c)) + "\n";
+  }
+  return out;
+}
+} // namespace
+
+TEST_CASE("a parsed request of views runs without a copy on the VM") {
+  CHECK(vmOutput(requestProgram()) == requestOracle());
+}
+
+TEST_CASE("a parsed request of views runs without a copy through optexe") {
+  CHECK(optexeOutput("request", requestProgram()) == requestOracle());
+}
+
 TEST_SUITE_END();

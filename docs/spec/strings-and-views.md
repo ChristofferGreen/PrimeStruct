@@ -86,9 +86,15 @@ reserves, resizes, sets, assigns or moves the owner (or a field of it) is reject
 into a container (`slice escapes via container`) or returned from a definition while it borrows a local
 (`slice escapes via return`) is rejected. A definition that returns views of more than one parameter needs
 `[returns_borrow<name>]` (`returned view could borrow from more than one parameter`). Not checked yet: an owner passed
-to a `mut` or `move` parameter, the `Write` slice conflict rule, a view stored in an outer binding or a global, a view
-inside a struct constructor (TODO-5631), and the caller side of a returned borrow beyond treating the first argument as
-the owner.
+to a `mut` or `move` parameter, the `Write` slice conflict rule, a view stored in a global, and the caller side of a
+returned borrow beyond treating the first argument as the owner.
+
+A struct with a view field (a *carrier*, directly or through another carrier) is itself a loan: `[Request] req{parseRequest(buffer.view())}`
+borrows `buffer` until the last use of `req`, and a constructor such as `Request{[method] line.slice(0, i)}` takes the
+roots of its view arguments. A carrier follows the same escape rules as a view (field, container, return of a local
+owner, outer binding of an inner owner) and the same `[returns_borrow<name>]` rule when it is returned. Parsing into a
+carrier allocates nothing: the `Request` parser test counts zero heap blocks. In definitions the view type must be
+written with its full path (`/std/text/view/StringView`) for now (TODO-5650).
 
 ### Current surface (VM)
 

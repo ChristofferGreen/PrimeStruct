@@ -103,7 +103,7 @@ of sync with them.
 | TODO-5567 | Packed `array<u8>` | ready | bytes |
 | TODO-5649 | Remaining slice loan rules: `mut`/`move` owners, `Write` conflicts, outer bindings | ready | slices |
 | TODO-5570 | Slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views | ready | slices |
-| TODO-5631 | Structs that hold views (borrow-carrying aggregates) | blocked | string-borrows |
+| TODO-5650 | A wildcard-imported struct type as a parameter type needs its full path | ready | lowering-gaps |
 | TODO-5630 | Request-scoped string arenas: `withStringArena` | blocked | string-arenas |
 | TODO-5638 | Shared immutable strings for threads (`SharedString`) | deferred | string-concurrency |
 | TODO-5645 | Real calls for struct-receiver methods (library code is inlined at every call site) | ready | lowering-gaps |
@@ -157,7 +157,7 @@ of sync with them.
 
 ### Priority Lanes
 
-- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5570, TODO-5645, TODO-5631, TODO-5630, TODO-5638, TODO-5567, TODO-5574
+- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5570, TODO-5645, TODO-5630, TODO-5638, TODO-5567, TODO-5574
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Startup (docs/NativeUiPlan.md section 16): TODO-5603
@@ -273,17 +273,16 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - a negative test per rule and a positive test per allowed shape; full release gate green
   - stop_rule: the four rules; struct-held views are TODO-5631.
 
-- [ ] TODO-5631: Structs that hold views (borrow-carrying aggregates)
+- [ ] TODO-5650: A wildcard-imported struct type as a parameter type needs its full path
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5569
-  - created_at: 2026-11-02
-  - phase: Strings and slices (docs/spec/strings-and-views.md, Beyond std::string)
-  - parallel_track: string-borrows
-  - scope: The spec forbids storing a slice or `string` view in a struct field (`slice escapes via <place>`), so a parsed `Request` cannot hold its method, path and headers as views into the receive buffer, and zero-copy parsing needs a defensive copy. Design and implement a struct that carries view fields and is itself a loan on the owners they borrow from: the struct value cannot outlive its sources, cannot be stored in anything longer lived, and keeps the sources borrowed while it is live; a function may return such a struct derived from its parameters under `[returns_borrow<...>]`. Record the rules in docs/spec/strings-and-views.md and docs/MemoryCapabilities.md.
+  - status: ready
+  - created_at: 2026-11-03
+  - phase: Strings and slices (docs/spec/strings-and-views.md), found building TODO-5631
+  - parallel_track: lowering-gaps
+  - scope: A definition `f([StringView] text)` with `import /std/text/view/*` compiles, but calling it with a `StringView` argument fails in lowering with `struct parameter type mismatch: expected StringView, got /std/text/view/StringView`; spelling the parameter, return and field types `/std/text/view/StringView` works. Resolve imported struct type names in parameter, return and field types to their full path before lowering (and add a test with the short spelling).
   - acceptance:
-    - a parser returning a struct of views into a `Vector<u8>`/`String` buffer compiles and runs on the VM and `optexe` with no copies (allocation-count test); negative tests: struct outliving the buffer, mutating the buffer while the struct is live, storing the struct in a global or longer-lived container; full release gate green
-  - stop_rule: view-holding structs on the front end and VM; no lifetime parameters in surface syntax unless the tests prove they are needed.
+    - the short spelling works for parameters, returns and fields; full release gate green
+  - stop_rule: struct type name resolution for imported names; nothing wider.
 
 - [ ] TODO-5630: Request-scoped string arenas: `withStringArena`
   - owner: ai

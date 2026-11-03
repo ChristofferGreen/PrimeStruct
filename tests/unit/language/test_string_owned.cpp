@@ -348,3 +348,44 @@ TEST_CASE("a definition may return a view of one of its parameters") {
                                 "  return(a.slice(0i32, 1i32))\n}\n";
   CHECK(exitOf("  return(pickOne(textOf(\"ab\"), textOf(\"cd\")).count())", TextViews + annotated) == 1);
 }
+
+namespace {
+const std::string RequestParser =
+    "import /std/text/view/*\nimport /std/collections/vector/*\n\n"
+    "[struct]\nRequest() {\n  [/std/text/view/StringView] method{textOf(\"\")}\n  [/std/text/view/StringView] path{textOf(\"\")}\n}\n\n"
+    "[return<Request>]\nparseRequest([/std/text/view/StringView] line) {\n"
+    "  [i32] firstSpace{line.indexOf(textOf(\" \"))}\n"
+    "  [/std/text/view/StringView] rest{line.slice(firstSpace + 1i32, line.count())}\n"
+    "  [i32] secondSpace{rest.indexOf(textOf(\" \"))}\n"
+    "  return(Request{[method] line.slice(0i32, firstSpace), [path] rest.slice(0i32, secondSpace)})\n}\n";
+}
+
+TEST_CASE("a struct of views is a loan on the buffers its views borrow") {
+  CHECK(exitOf("  [String] buffer{stringFrom(\"GET /index.html HTTP/1.1\")}\n  [Request] req{parseRequest(buffer.view())}\n"
+               "  return(req.method.count() * 100i32 + req.path.count())",
+               RequestParser) == 311);
+
+  const Outcome mutated = runBody("  [String mut] buffer{stringFrom(\"GET /a HTTP/1.1\")}\n  [Request] req{parseRequest(buffer.view())}\n"
+                                  "  buffer.append(\"x\")\n  return(req.path.count())",
+                                  RequestParser);
+  CHECK_FALSE(mutated.compiled);
+  CHECK(mutated.diagnostics.find("borrowed binding: buffer (root: buffer, sink: req)") != std::string::npos);
+
+  const std::string leaking = "[return<Request> effects(heap_alloc)]\nreadLine() {\n  [String] buffer{stringFrom(\"GET /a HTTP/1.1\")}\n"
+                              "  return(parseRequest(buffer.view()))\n}\n";
+  const Outcome outlived = runBody("  [Request] req{readLine()}\n  return(req.path.count())", RequestParser + leaking);
+  CHECK_FALSE(outlived.compiled);
+  CHECK(outlived.diagnostics.find("slice escapes via return (root: buffer)") != std::string::npos);
+
+  const Outcome stored = runBody("  [String] buffer{stringFrom(\"GET /a HTTP/1.1\")}\n  [Request] req{parseRequest(buffer.view())}\n"
+                                 "  [vector<Request> mut] all{vector<Request>()}\n  all.push(req)\n  return(0i32)",
+                                 RequestParser);
+  CHECK_FALSE(stored.compiled);
+  CHECK(stored.diagnostics.find("slice escapes via container (root: buffer)") != std::string::npos);
+
+  const Outcome outer = runBody("  [Request mut] kept{Request{}}\n  if(true) {\n    [String] inner{stringFrom(\"GET /a HTTP/1.1\")}\n"
+                                "    kept = parseRequest(inner.view())\n  }\n  return(kept.path.count())",
+                                RequestParser);
+  CHECK_FALSE(outer.compiled);
+  CHECK(outer.diagnostics.find("slice escapes via outer binding kept (root: inner)") != std::string::npos);
+}

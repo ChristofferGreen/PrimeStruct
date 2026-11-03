@@ -405,6 +405,17 @@ allocate<T>([Reference<Region> mut] arena) {
 The beginner model does not need explicit regions. Region names become useful
 when APIs return views, store references, or manage arenas/device memory.
 
+### Structs That Hold Views
+
+A struct with a field of view type (`Slice`, `ReadSlice`, `WriteSlice`, `StringView`, or another such struct) carries
+borrows. Building one from views (`Request{[method] line.slice(0, i)}`) makes the struct value a loan on every owner its
+views borrow from, for as long as the struct is used: the owners cannot be changed structurally, assigned or moved in
+that time. The struct cannot outlive its sources: it cannot be returned from a definition when it borrows a local, put in
+a container, assigned to a field, or assigned to a binding of an outer block when a source is local to an inner block. A
+definition may return such a struct built from its parameters, under `[returns_borrow<name>]` when more than one
+parameter could be the source. The rules are checked lexically by the same pass as slice loans
+(`validateSliceLoans`); see docs/spec/strings-and-views.md.
+
 ## Raw Address Authority
 
 Raw address exposure should be a separate capability. A function that can read
