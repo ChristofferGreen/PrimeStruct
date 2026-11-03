@@ -803,6 +803,12 @@ namespace std {
     return(__pstext_stat(4u64))
   }
 
+  // Blocks handed out since the program started (a test of how many allocations an expression makes).
+  [public return<u64>]
+  stringHeapAllocations() {
+    return(__pstext_stat(5u64))
+  }
+
   [public return<void>]
   setStringMemoryLimit([u64] bytes) {
     __pstext_set_limit(bytes)

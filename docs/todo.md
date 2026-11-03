@@ -106,7 +106,6 @@ of sync with them.
 | TODO-5621 | Static-text field rule and `run-time text requires String` | blocked | string-view |
 | TODO-5631 | Structs that hold views (borrow-carrying aggregates) | blocked | string-borrows |
 | TODO-5630 | Request-scoped string arenas: `withStringArena` | blocked | string-arenas |
-| TODO-5632 | Fused `+` chains: one allocation per expression | blocked | string-owned |
 | TODO-5633 | Unicode case mapping and case folding (lazy) | blocked | string-unicode |
 | TODO-5634 | Unicode normalization and grapheme clusters (lazy) | blocked | string-unicode |
 | TODO-5637 | Fold string operations on literals at compile time | blocked | string-quality |
@@ -162,7 +161,7 @@ of sync with them.
 
 ### Priority Lanes
 
-- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5570, TODO-5569, TODO-5621, TODO-5645, TODO-5631, TODO-5630, TODO-5632, TODO-5633, TODO-5634, TODO-5637, TODO-5638, TODO-5567, TODO-5574
+- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5570, TODO-5569, TODO-5621, TODO-5645, TODO-5631, TODO-5630, TODO-5633, TODO-5634, TODO-5637, TODO-5638, TODO-5567, TODO-5574
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Startup (docs/NativeUiPlan.md section 16): TODO-5603
@@ -313,18 +312,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - acceptance:
     - VM and `optexe` tests: many allocations then one release, nested arenas, escape negatives, a limit hit inside an arena; a benchmark in the TODO-5628 style shows the arena beats per-string allocation for a request-shaped workload; full release gate green
   - stop_rule: arenas for `String` only; no other allocator surface.
-
-- [ ] TODO-5632: Fused `+` chains: one allocation per expression
-  - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5568
-  - created_at: 2026-11-02
-  - phase: Strings and slices (docs/spec/strings-and-views.md, Beyond std::string)
-  - parallel_track: string-owned
-  - scope: A transform (before IR lowering, with the other expression rewrites) turns `a + b + c + ...` and a run of `+=` on one `String` into: sum the counts, one allocation, copy each part in order. It is a guaranteed rewrite with a documented rule, not an optimization that may or may not fire, and it keeps left-to-right evaluation of the operands. Note the rule in docs/spec/transforms.md.
-  - acceptance:
-    - an allocation-count test shows one block for a chain of five parts; evaluation order and overflow-of-capacity cases match the unfused semantics; full release gate green
-  - stop_rule: `+`/`+=` chains; `format` sizing is TODO-5627.
 
 - [ ] TODO-5633: Unicode case mapping and case folding (lazy)
   - owner: ai

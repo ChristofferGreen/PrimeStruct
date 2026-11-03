@@ -227,7 +227,7 @@ the other entries are specified here and tracked by the TODO named.
 | `push_back`, `pop_back` | `pushByte`, `popByte`, `pop()` (a code point); `pushCodePoint` | done |
 | `append(sv)`, `append(n, ch)`, `operator+=` | `append("lit")`, `appendView`, `appendBytes`, `appendFilled`; `+=` | `a = a + b` done; `+=` has no token in the language |
 | `insert`, `erase`, `replace` | `insert`, `erase`, `replace` (byte ranges), `insertFilled`, `insertByte`, `replaceFilled` | done |
-| `operator+` | `a + b` | done (`opPlus`); fused chains TODO-5632 |
+| `operator+` | `a + b` | done (`opPlus`); chains of three or more are one allocation (`opPlusMany`) |
 | `swap` | `swap(other)` | done |
 | `copy(dst, n, pos)` | `view.copyTo(destination)` | done |
 | `compare`, `==`, `<=>` | `compare(other)`, `equals`; `==` and `<` operators | done (`opEqual`, `opLessThan`, ...) |
@@ -263,7 +263,7 @@ Where the language's own rules let text be better than the C++ type, and the TOD
 | Borrow-checked views | no dangling `string_view`; no iterator invalidation | TODO-5569, TODO-5618 |
 | Structs that hold views | a parsed `Request` of views into its buffer: zero-copy and safe | TODO-5631 |
 | Request-scoped string arenas | all of a request's text freed in O(1) | TODO-5630 |
-| Fused `+` chains and one-allocation `format` | one block per expression, guaranteed | TODO-5632, TODO-5627 |
+| Fused `+` chains and one-allocation `format` | one block per expression, guaranteed | done (`opPlusMany`, `stringHeapAllocations()` counts blocks); `format` sizing TODO-5627 |
 | `Maybe`/`Result` APIs | no `npos`, no exceptions, no undefined behavior | TODO-5619, TODO-5620 |
 | Linear-time search | `find` never goes quadratic | TODO-5619 |
 | Byte-identical text on every backend | locale-free number and case output | TODO-5626 |

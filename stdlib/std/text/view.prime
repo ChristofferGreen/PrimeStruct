@@ -1239,6 +1239,24 @@ namespace std {
     return(out)
   }
 
+  // A chain `a + b + c + ...` of three or more Strings is rewritten to this call: the counts are summed, one block is
+  // allocated and each part is copied in order. Named parts are not copied and call results stay alive for the call.
+  [public return<String> effects(heap_alloc)]
+  /std/text/String/opPlusMany([/std/text/String] self, [args</std/text/String>] parts) {
+    [i32 mut] total{self.fieldLength}
+    for([i32 mut] i{0i32}, i < parts.count(), i++) {
+      [StringView] part{parts[i].view()}
+      total = total + part.fieldLength
+    }
+    [String mut] out{stringWithCapacity(total)}
+    out.appendBytes(self.data, self.fieldLength)
+    for([i32 mut] i{0i32}, i < parts.count(), i++) {
+      [StringView] part{parts[i].view()}
+      out.appendBytes(part.data, part.fieldLength)
+    }
+    return(out)
+  }
+
   [public return<bool>]
   /std/text/String/opEqual([/std/text/String] self, [/std/text/String] other) {
     [i32] order{self.view().compare(other.view())}

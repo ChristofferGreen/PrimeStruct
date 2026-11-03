@@ -2225,4 +2225,56 @@ TEST_CASE("pushCodePoint encodes UTF-8 like a reference encoder through optexe")
   CHECK(optexeOutput("codepoints", pushCodePointProgram()) == pushCodePointOracle());
 }
 
+// ---- fused + chains -------------------------------------------------------------------------------------------------
+
+namespace {
+// A chain of Strings allocates once, evaluates its operands left to right, and gives the same text as std::string.
+std::string fusedProgram() {
+  return "import /std/text/*\nimport /std/text/view/*\n\n"
+         "[return<String> effects(heap_alloc, io_out)]\nword([i32] i) {\n"
+         "  print_line(i)\n  return(stringFromI32(i * 1000i32 + 7i32))\n}\n\n"
+         "[return<void> effects(heap_alloc, io_out)]\nreport([String] text, [u64] used) {\n"
+         "  print_line(text.count())\n  print_line(convert<i32>(used))\n"
+         "  for([i32 mut] i{0i32}, i < text.count(), i++) {\n    print_line(convert<i32>(text[i]))\n  }\n}\n\n"
+         "[return<int> effects(heap_alloc, io_out)]\nmain() {\n"
+         "  [String] a{word(1i32)}\n  [String] b{word(2i32)}\n  [String] c{word(3i32)}\n  [String] empty{String{}}\n"
+         "  [u64 mut] start{stringHeapAllocations()}\n"
+         "  [String] five{a + b + c + a + b}\n  report(five, stringHeapAllocations() - start)\n"
+         "  start = stringHeapAllocations()\n"
+         "  [String] mixed{a + (b + c + empty) + word(4i32) + empty}\n  report(mixed, stringHeapAllocations() - start)\n"
+         "  start = stringHeapAllocations()\n"
+         "  [String] pair{a + b}\n  report(pair, stringHeapAllocations() - start)\n"
+         "  return(0i32)\n}\n";
+}
+
+std::string fusedOracle() {
+  const auto word = [](int i) { return std::to_string(i * 1000 + 7); };
+  const auto report = [](const std::string &text, int used) {
+    std::string out = std::to_string(text.size()) + "\n" + std::to_string(used) + "\n";
+    for (const char c : text) {
+      out += std::to_string(static_cast<unsigned char>(c)) + "\n";
+    }
+    return out;
+  };
+  const std::string a = word(1);
+  const std::string b = word(2);
+  const std::string c = word(3);
+  // word() runs (and prints its argument) while the arguments of main's bindings are made: 1 2 3 first, then 4 inside the second chain.
+  std::string out = "1\n2\n3\n";
+  out += report(a + b + c + a + b, 1);
+  out += "4\n";
+  out += report(a + (b + c) + word(4), 2); // one block for the whole chain, one for word(4) itself
+  out += report(a + b, 1);
+  return out;
+}
+} // namespace
+
+TEST_CASE("a chain of Strings allocates once and keeps evaluation order on the VM") {
+  CHECK(vmOutput(fusedProgram()) == fusedOracle());
+}
+
+TEST_CASE("a chain of Strings allocates once and keeps evaluation order through optexe") {
+  CHECK(optexeOutput("fused", fusedProgram()) == fusedOracle());
+}
+
 TEST_SUITE_END();

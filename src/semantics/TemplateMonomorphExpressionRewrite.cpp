@@ -255,6 +255,36 @@ bool rewriteStructOperatorCallToMethod(Expr &expr,
   if (expr.sourceName.empty()) {
     expr.sourceName = expr.name;
   }
+  // A chain of three or more Strings is one call: `a + b + c` and `a + (b + c)` become
+  // a.opPlusMany(b, c), which sums the counts and allocates once. The chain is flattened (text `+` is
+  // associative) and the parts are evaluated left to right, as they are written.
+  if (name == "plus" && base == "/std/text/String" && hasMember("opPlusMany")) {
+    std::vector<Expr> leaves;
+    auto collectLeaves = [&](const Expr &part, auto &&self) -> void {
+      if (part.kind == Expr::Kind::Call && part.isMethodCall && part.name == "opPlus" && part.args.size() == 2) {
+        self(part.args[0], self);
+        self(part.args[1], self);
+        return;
+      }
+      if (part.kind == Expr::Kind::Call && part.isMethodCall && part.name == "opPlusMany" && !part.args.empty()) {
+        self(part.args[0], self);
+        for (size_t k = 1; k < part.args.size(); ++k) {
+          self(part.args[k], self);
+        }
+        return;
+      }
+      leaves.push_back(part);
+    };
+    collectLeaves(expr.args[0], collectLeaves);
+    collectLeaves(expr.args[1], collectLeaves);
+    if (leaves.size() >= 3) {
+      expr.args = std::move(leaves);
+      expr.argNames.clear();
+      expr.name = "opPlusMany";
+      expr.isMethodCall = true;
+      return true;
+    }
+  }
   expr.name = opName;
   expr.isMethodCall = true;
   return true;

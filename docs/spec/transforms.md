@@ -86,6 +86,17 @@ or a semicolon if you intended to index.
   `greater_equal(a, b)`, `a <= b` → `less_equal(a, b)`, `a == b` → `equal(a, b)`, `a != b` → `not_equal(a, b)`, `a && b`
   → `and(a, b)`, `a || b` → `or(a, b)`, `!a` → `not(a)`, `-a` → `negate(a)`, `a = b` → `assign(a, b)`, `++a` / `a++` →
   `increment(a)`, `--a` / `a--` → `decrement(a)`).
+- Operators on structs: once the AST exists, the template-monomorph pass rewrites `plus`, `equal`, `not_equal`,
+  `less_than`, `less_equal`, `greater_than`, `greater_equal` and `at` whose first operand is a struct value (and, except
+  for `at`, whose second operand has the same type) to the struct's member `opPlus`, `opEqual`, `opNotEqualTo`,
+  `opLessThan`, `opLessEqual`, `opGreaterThan`, `opGreaterEqual` or `opAt`. The `op` prefix keeps a member from capturing
+  the bare builtin calls written inside the struct's own scope. A struct without the member keeps the numeric-operand
+  diagnostic.
+- Text chains: a chain of three or more `String` operands joined by `+` (`a + b + c`, `a + (b + c)`) is rewritten to one
+  call `a.opPlusMany(b, c)`. This is a guaranteed rewrite, not an optimization: the chain is flattened (`+` on text is
+  associative), the parts are evaluated left to right as written, the counts are summed, one block is allocated and each
+  part is copied in order. Named parts are not copied and call results stay alive for the call. A chain of two parts is
+  `a.opPlus(b)`, which also allocates once.
 - Because imports expand first, slash paths survive every transform untouched until the AST builder consumes them, and
   IR lowering never needs to reason about infix syntax.
 

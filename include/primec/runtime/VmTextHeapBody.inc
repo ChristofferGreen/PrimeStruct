@@ -9,6 +9,7 @@ struct TextHeapStats {
   uint64_t bytesFree = 0;
   uint64_t largeBlocks = 0;
   uint64_t largeBytes = 0;
+  uint64_t allocations = 0;  // blocks handed out since the heap was made (empty requests excluded)
 };
 
 class VmTextHeap {
@@ -65,6 +66,7 @@ private:
   // Large blocks by byte offset: size.
   std::map<uint64_t, uint64_t> large_;
   uint64_t largeBytes_ = 0;
+  uint64_t allocations_ = 0;
   uint64_t bytesInUse_ = 0;
   uint64_t limit_ = 0;
   // Region address of each literal asked for through `literal`, by string index (0 = none yet).
@@ -124,6 +126,7 @@ inline bool VmTextHeap::allocate(VmHeapCore &core, uint64_t size, uint64_t &addr
   if (size == 0) {
     return true;
   }
+  ++allocations_;
   const uint64_t blockBytes = blockSizeFor(size);
   if (size > LargeThreshold) {
     if (limit_ != 0 && heldBytes() + blockBytes > limit_) {
@@ -297,6 +300,7 @@ inline TextHeapStats VmTextHeap::stats() const {
   }
   out.largeBlocks = large_.size();
   out.largeBytes = largeBytes_;
+  out.allocations = allocations_;
   return out;
 }
 
@@ -363,6 +367,9 @@ inline bool callTextHostFunction(VmTextHeap &heap,
       return true;
     case 4:
       result = stats.largeBytes;
+      return true;
+    case 5:
+      result = stats.allocations;
       return true;
     default:
       error = "unknown string heap statistic: " + std::to_string(args[0]);
