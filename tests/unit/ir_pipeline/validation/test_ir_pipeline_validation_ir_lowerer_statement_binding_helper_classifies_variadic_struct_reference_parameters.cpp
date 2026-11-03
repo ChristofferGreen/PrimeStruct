@@ -1042,7 +1042,7 @@ main([array<string>] args) {
       &semanticProductTargets));
   CHECK(error.empty());
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Value);
-  CHECK(info.structTypeName == "LayoutTree");
+  CHECK(info.structTypeName == "/std/ui/LayoutTree");
 }
 
 TEST_CASE(

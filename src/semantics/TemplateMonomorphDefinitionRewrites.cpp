@@ -613,6 +613,82 @@ bool rejectUnsupportedTypePackStatementExpansions(const Definition &def, std::st
   return true;
 }
 
+namespace {
+
+bool isBareTypeIdentifier(const std::string &name) {
+  if (name.empty() || !(std::isalpha(static_cast<unsigned char>(name.front())) || name.front() == '_')) {
+    return false;
+  }
+  for (const char c : name) {
+    if (!(std::isalnum(static_cast<unsigned char>(c)) || c == '_')) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// The struct a bare type name reaches through the imports (`StringView` after `import /std/text/view/*`), as its full
+// path, or empty when the name is not a struct or already resolves where it is written.
+std::string importedStructPath(const std::string &name, const std::string &namespacePrefix, Context &ctx) {
+  if (!isBareTypeIdentifier(name)) {
+    return {};
+  }
+  const std::string path = resolveNameToPath(
+      name, namespacePrefix, scopedImportAliasesForNamespace(namespacePrefix, ctx), ctx.sourceDefs);
+  if (path.empty() || path.front() != '/' || path == "/" + name) {
+    return {};
+  }
+  const auto found = ctx.sourceDefs.find(path);
+  if (found == ctx.sourceDefs.end() || !isStructDefinition(found->second)) {
+    return {};
+  }
+  return path;
+}
+
+void qualifyImportedStructTypes(Expr &expr, const std::string &namespacePrefix, Context &ctx) {
+  if (expr.isBinding) {
+    for (Transform &transform : expr.transforms) {
+      if (transform.templateArgs.empty() && transform.arguments.empty()) {
+        const std::string path = importedStructPath(transform.name, namespacePrefix, ctx);
+        if (!path.empty()) {
+          transform.name = path;
+        }
+      }
+    }
+  }
+  for (Expr &arg : expr.args) {
+    qualifyImportedStructTypes(arg, namespacePrefix, ctx);
+  }
+  for (Expr &arg : expr.bodyArguments) {
+    qualifyImportedStructTypes(arg, namespacePrefix, ctx);
+  }
+}
+
+// Parameter, return, field and local types written with a bare imported struct name get the struct's full path, so
+// every later stage sees one spelling.
+void qualifyImportedStructTypes(Definition &def, Context &ctx) {
+  for (Transform &transform : def.transforms) {
+    if (transform.name == "return" && transform.templateArgs.size() == 1) {
+      const std::string path = importedStructPath(transform.templateArgs.front(), def.namespacePrefix, ctx);
+      if (!path.empty()) {
+        transform.templateArgs.front() = path;
+      }
+    }
+  }
+  for (Expr &param : def.parameters) {
+    qualifyImportedStructTypes(param, def.namespacePrefix, ctx);
+  }
+  // Fields of a struct; the locals of a body keep the spelling they were written with (implicit conversions such as
+  // `[Quat] q{Mat3{...}}` look at it).
+  if (isStructDefinition(def)) {
+    for (Expr &stmt : def.statements) {
+      qualifyImportedStructTypes(stmt, def.namespacePrefix, ctx);
+    }
+  }
+}
+
+} // namespace
+
 bool rewriteDefinition(Definition &def,
                        const SubstMap &mapping,
                        const std::unordered_set<std::string> &allowedParams,
@@ -635,6 +711,7 @@ bool rewriteDefinition(Definition &def,
     restoreDefinitionPath();
     return false;
   }
+  qualifyImportedStructTypes(def, ctx);
   const bool allowMathBare = hasMathImport(ctx);
   std::vector<semantics::ParameterInfo> params;
   LocalTypeMap locals;

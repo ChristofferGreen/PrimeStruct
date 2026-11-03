@@ -411,7 +411,7 @@ TEST_CASE("text made in a string arena is rejected where it would outlive the ar
 
 TEST_CASE("text that outlives its arena through a call faults when it is released") {
   const Outcome outlived = runViews("  [String] after{leak()}\n  return(after.count())",
-                                    "[return<String> effects(heap_alloc)]\npassThrough([String] text) {\n  return(text)\n}\n\n"
+                                    "[return<String> effects(heap_alloc)]\npassThrough([String] text) {\n  return(text.view().toOwned())\n}\n\n"
                                     "[return<String> effects(heap_alloc)]\nleak() {\n  [StringArena] arena{beginStringArena()}\n"
                                     "  [String] made{stringFromI32(777i32)}\n  return(passThrough(made))\n}\n");
   REQUIRE(outlived.compiled);
@@ -443,4 +443,19 @@ TEST_CASE("the result of a returns_borrow call is a loan on the named argument o
                                pick);
   CHECK_FALSE(bad.compiled);
   CHECK(bad.diagnostics.find("borrowed binding: left (root: left, sink: first)") != std::string::npos);
+}
+
+TEST_CASE("an imported struct type can be written with its bare name in parameters, returns, fields and locals") {
+  const std::string parser =
+      "import /std/text/view/*\n\n"
+      "[struct]\nRequest() {\n  [StringView] method{textOf(\"\")}\n  [StringView] path{textOf(\"\")}\n}\n\n"
+      "[return<Request>]\nparseRequest([StringView] line) {\n"
+      "  [i32] firstSpace{line.indexOf(textOf(\" \"))}\n"
+      "  [StringView] rest{line.slice(firstSpace + 1i32, line.count())}\n"
+      "  [i32] secondSpace{rest.indexOf(textOf(\" \"))}\n"
+      "  return(Request{[method] line.slice(0i32, firstSpace), [path] rest.slice(0i32, secondSpace)})\n}\n\n"
+      "[return<StringView>]\nfirstWord([StringView] text) {\n  return(text.slice(0i32, text.indexOf(textOf(\" \"))))\n}\n";
+  CHECK(exitOf("  [String] buffer{stringFrom(\"GET /index.html HTTP/1.1\")}\n  [Request] req{parseRequest(buffer.view())}\n"
+               "  [StringView] word{firstWord(buffer.view())}\n  return(req.method.count() * 100i32 + req.path.count() + word.count())",
+               parser) == (300 + 11 + 3));
 }

@@ -101,7 +101,6 @@ of sync with them.
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
 | TODO-5654 | Retire the copying `slice(array, start, end)` builtin | ready | slices |
-| TODO-5650 | A wildcard-imported struct type as a parameter type needs its full path | ready | lowering-gaps |
 | TODO-5638 | Shared immutable strings for threads (`SharedString`) | deferred | string-concurrency |
 | TODO-5645 | Real calls for struct-receiver methods (library code is inlined at every call site) | ready | lowering-gaps |
 | TODO-5647 | A StringView member named `opNotEqual` makes `StringMap<i32>.insert` fail to lower | ready | lowering-gaps |
@@ -244,17 +243,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - acceptance:
     - no caller of the copying builtin is left and `slice(array, a, b)` reports a diagnostic that names `values.slice(a, b)`; full release gate green
   - stop_rule: the builtin's removal and its callers; no new view features.
-
-- [ ] TODO-5650: A wildcard-imported struct type as a parameter type needs its full path
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-03
-  - phase: Strings and slices (docs/spec/strings-and-views.md), found building TODO-5631
-  - parallel_track: lowering-gaps
-  - scope: A definition `f([StringView] text)` with `import /std/text/view/*` compiles, but calling it with a `StringView` argument fails in lowering with `struct parameter type mismatch: expected StringView, got /std/text/view/StringView`; spelling the parameter, return and field types `/std/text/view/StringView` works. Resolve imported struct type names in parameter, return and field types to their full path before lowering (and add a test with the short spelling).
-  - acceptance:
-    - the short spelling works for parameters, returns and fields; full release gate green
-  - stop_rule: struct type name resolution for imported names; nothing wider.
 
 - [ ] TODO-5638: Shared immutable strings for threads (`SharedString`)
   - owner: ai

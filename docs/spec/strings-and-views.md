@@ -96,8 +96,7 @@ A struct with a view field (a *carrier*, directly or through another carrier) is
 borrows `buffer` until the last use of `req`, and a constructor such as `Request{[method] line.slice(0, i)}` takes the
 roots of its view arguments. A carrier follows the same escape rules as a view (field, container, return of a local
 owner, outer binding of an inner owner) and the same `[returns_borrow<name>]` rule when it is returned. Parsing into a
-carrier allocates nothing: the `Request` parser test counts zero heap blocks. In definitions the view type must be
-written with its full path (`/std/text/view/StringView`) for now (TODO-5650).
+carrier allocates nothing: the `Request` parser test counts zero heap blocks.
 
 ### Current surface (VM)
 
