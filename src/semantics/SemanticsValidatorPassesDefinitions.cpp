@@ -237,6 +237,8 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
         case ReturnKind::Bool:
         case ReturnKind::Void:
           break;
+        case ReturnKind::String:
+          return failHost("run-time text requires String: a host function returns text as String, a string is static text");
         default:
           return failHost("host definition return type must be i32, i64, u64, u8, f32, f64, bool, String, or void");
       }

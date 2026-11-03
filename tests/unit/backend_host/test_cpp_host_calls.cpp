@@ -149,7 +149,7 @@ main() {
   for (const char *kind : {"cpp", "optcpp"}) {
     const CompileResult compiled = compile(kind, source, scratch(std::string("text_result_") + kind));
     CHECK_MESSAGE(compiled.status != 0, kind);
-    CHECK_MESSAGE(compiled.diagnostics.find("host definition return type must be") != std::string::npos,
+    CHECK_MESSAGE(compiled.diagnostics.find("run-time text requires String") != std::string::npos,
                   kind << ": " << compiled.diagnostics);
   }
   const std::string textSource = scratch("text_string.prime");

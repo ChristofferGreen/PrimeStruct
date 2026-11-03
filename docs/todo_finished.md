@@ -2082,6 +2082,7 @@ are left unarchived.
 | TODO-5618 | `StringView` slices, bytes and UTF-8 validation | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 | TODO-5619 | `StringView` search, comparison, trimming, pieces and lines | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 | TODO-5620 | `StringView` numbers, code points and ASCII case | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
+| TODO-5621 | Static-text field rule and `run-time text requires String` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-03 |
 | TODO-5622 | Optimized C++ emitters run the `string` view | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 | TODO-5623 | `String` mutation parity: fill, resize, front/back, pop, swap, lossy bytes | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 | TODO-5624 | `StringView` byte-set search and `replaceAll` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |

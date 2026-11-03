@@ -262,3 +262,16 @@ TEST_CASE("a comparison after a method chain with arguments compares the chain")
                "  return(if(a.same().cmp(b.same()) < 0i32, then() { 1i32 }, else() { 0i32 }))",
                chain) == 1);
 }
+
+TEST_CASE("a host function cannot return a string: run-time text requires String") {
+  const Outcome outcome = runBody("  [string] name{host_name()}\n  return(0i32)", "[host return<string>]\nhost_name() {\n}\n");
+  CHECK_FALSE(outcome.compiled);
+  CHECK(outcome.diagnostics.find("run-time text requires String") != std::string::npos);
+}
+
+TEST_CASE("a string field holds static text: literals and other strings are the only sources") {
+  const std::string named =
+      "[struct]\nNamed() {\n  [string mut] label{\"first\"}\n}\n\n"
+      "[return<int>]\nrename([string] text) {\n  [Named mut] n{Named{}}\n  n.label = text\n  return(n.label.count())\n}\n";
+  CHECK(exitOf("  return(rename(\"second\"))", named) == 6);
+}

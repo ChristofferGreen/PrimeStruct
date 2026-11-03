@@ -115,7 +115,10 @@ a `Vector<u8>` or an `array<u8>` runs the same lowered loops, which keeps byteco
   returning from a parameter) except that it can only be made in ways that keep the text valid.
 - **Literals** are static `string`s: they point at constant data, never allocate, and may be stored anywhere,
   including struct fields. A struct field of type `string` may only hold static text; assigning a borrowed `string`
-  to one is rejected (`string field requires static text; use String`).
+  to one is rejected (`string field requires static text; use String`). In the shipped design the borrowed form is
+  `StringView`, and a `string` can only be a literal or an entry argument, so every `string` is static text by
+  construction and the field rule needs no diagnostic: a `string` field can be assigned any `string`, and text that
+  must outlive a buffer is a `String` field.
 - **Making one:** a literal; `text.view()` or an implicit borrow of a `String` where a `string` is expected;
   `text.slice(start, end)` on a `String` or `string`; `utf8(bytes)` on a `Slice<u8, Read>`, which checks the bytes and
   returns `Result<string, TextError>`.
@@ -392,7 +395,8 @@ to compile the view code. `TextView` is taken by the native-UI widget.
 
 - Code that takes `[string]`, prints literals or returns literals is unchanged.
 - A binding, field or return that holds text created at run time (host results, built text) becomes `String`. The
-  compiler reports `run-time text requires String` where a `string` would need to own its text.
+  compiler reports `run-time text requires String` where a `string` would need to own its text: a `[host return<string>]`
+  declaration is rejected with that message (declare `[host return<String>]`).
 - `Slice<T, Capability>` parameters that today receive a copied `array<T>` receive a real slice; code that relied on
   the copy being independent of its source keeps working because the source cannot change while the slice is live.
 

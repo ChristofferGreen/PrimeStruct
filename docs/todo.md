@@ -103,7 +103,6 @@ of sync with them.
 | TODO-5567 | Packed `array<u8>` | ready | bytes |
 | TODO-5569 | Slice loans, escapes and returned borrows | ready | slices |
 | TODO-5570 | Slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views | ready | slices |
-| TODO-5621 | Static-text field rule and `run-time text requires String` | blocked | string-view |
 | TODO-5631 | Structs that hold views (borrow-carrying aggregates) | blocked | string-borrows |
 | TODO-5630 | Request-scoped string arenas: `withStringArena` | blocked | string-arenas |
 | TODO-5638 | Shared immutable strings for threads (`SharedString`) | deferred | string-concurrency |
@@ -158,7 +157,7 @@ of sync with them.
 
 ### Priority Lanes
 
-- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5570, TODO-5569, TODO-5621, TODO-5645, TODO-5631, TODO-5630, TODO-5638, TODO-5567, TODO-5574
+- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5570, TODO-5569, TODO-5645, TODO-5631, TODO-5630, TODO-5638, TODO-5567, TODO-5574
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Startup (docs/NativeUiPlan.md section 16): TODO-5603
@@ -273,18 +272,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - acceptance:
     - a negative test per diagnostic and a positive test per allowed shape (overlapping reads, returned borrow, narrowing a slice); full release gate green
   - stop_rule: borrow checking for slices on the VM front end (the checks are backend independent).
-
-- [ ] TODO-5621: Static-text field rule and `run-time text requires String`
-  - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5618
-  - created_at: 2026-10-30
-  - phase: Strings and slices (docs/spec/strings-and-views.md), fifth of six leaves for the text view
-  - parallel_track: string-view
-  - scope: A `string` struct field holds static text only: assigning a borrowed `string` to one is rejected (`string field requires static text; use String`). Where a `string` would have to own run-time text (a binding, field, return or container element built from host results or built text) report `run-time text requires String`. Slices and views follow the escape rules of TODO-5569; this leaf only adds the text-specific diagnostics and migrates stdlib and examples that trip them.
-  - acceptance:
-    - a negative test per diagnostic and a positive test per allowed shape; stdlib, examples and corpus compile; full release gate green
-  - stop_rule: the two diagnostics and the migrations they force.
 
 - [ ] TODO-5631: Structs that hold views (borrow-carrying aggregates)
   - owner: ai
