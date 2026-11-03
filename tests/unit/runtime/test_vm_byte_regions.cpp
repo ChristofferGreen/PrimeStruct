@@ -247,7 +247,6 @@ TEST_CASE("only the VM, the optimized C++ emitters and arm64 native accept the b
     error.clear();
     CHECK_FALSE(validateIrModule(module, target, error));
     CHECK(error.find("only supported by the vm") != std::string::npos);
-    CHECK(error.find("TODO-5574") != std::string::npos);
   }
   const IrModule zext = moduleOf({{IrOpcode::PushI32, 4}, {IrOpcode::ZextU8, 0}, {IrOpcode::ReturnI32, 0}});
   CHECK(validateIrModule(zext, IrValidationTarget::Native, error) == nativeHasBytes);

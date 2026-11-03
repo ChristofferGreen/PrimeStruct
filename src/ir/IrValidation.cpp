@@ -214,7 +214,7 @@ bool validateFunction(const IrModule &module,
       return failInstruction(functionIndex,
                              function.name,
                              instructionIndex,
-                             "u8 and byte memory opcodes are only supported by the vm, the C++ emitters and the arm64 native backend yet (docs/todo.md, TODO-5574)",
+                             "u8 and byte memory opcodes are only supported by the vm, the C++ emitters and the arm64 native backend",
                              error);
     }
     if (isWasmTarget(target) && !isWasmOpcodeAllowedForTarget(inst.op, target)) {

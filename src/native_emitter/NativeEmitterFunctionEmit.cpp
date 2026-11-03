@@ -349,7 +349,7 @@ bool emitNativeFunctions(const IrModule &module,
           error = "unsupported IR opcode for native backend";
           return false;
         }
-      // Byte memory is emitted by the arm64 emitter only (docs/todo.md, TODO-5574).
+      // Byte memory is emitted by the arm64 emitter only.
       case IrOpcode::HeapAllocBytes:
       case IrOpcode::LoadU8:
       case IrOpcode::StoreU8:
