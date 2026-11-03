@@ -468,3 +468,16 @@ TEST_CASE("a member path with a specialization suffix does not resolve through i
                "  return(m.count() * 10i32 + m.getOr(key.view(), 0i32))",
                "import /std/text/string_map/*\n") == 24);
 }
+
+TEST_CASE("a mut method and a struct parameter work as real calls and write the receiver back") {
+  const std::string counter =
+      "[struct]\nCounter() {\n  [i32 mut] total{0i32}\n  [i32 mut] hits{0i32}\n\n"
+      "  [mut return<void>]\n  bump([i32] delta) {\n    this.total = this.total + delta\n    this.hits = this.hits + 1i32\n  }\n\n"
+      "  [mut return<i32>]\n  bumpTwice([i32] delta) {\n    this.bump(delta)\n    this.bump(delta)\n    return(this.total)\n  }\n\n"
+      "  [mut return<i32>]\n  absorb([Counter] other) {\n    this.total = this.total + other.total\n"
+      "    this.hits = this.hits + other.hits\n    return(this.total)\n  }\n}\n";
+  CHECK(exitOf("  [Counter mut] a{Counter{}}\n  [Counter mut] b{Counter{}}\n  a.bump(3i32)\n  a.bump(4i32)\n  b.bump(10i32)\n"
+               "  b.absorb(a)\n  [i32] last{b.absorb(a)}\n  [i32] twice{a.bumpTwice(1i32)}\n"
+               "  return(b.total * 1000i32 + b.hits * 100i32 + last + twice * 0i32 + a.hits)",
+               counter) == (24 * 1000 + 5 * 100 + 24 + 4));
+}

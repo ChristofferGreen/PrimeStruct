@@ -58,14 +58,22 @@ std::unordered_set<std::string> findReachableDefinitionPaths(const Program &prog
 // that actually lower a body should still re-verify each parameter/return
 // kind with the authoritative inference machinery and fail loudly on a
 // mismatch rather than silently miscompile.
+// `allowMutReceivers` admits `mut` methods: the call site hands them the address of a heap copy of the receiver and
+// copies it back after the call, so the target must have a heap (the VM).
 std::unordered_set<std::string> computeRealCallEligibleDefinitionPaths(const Program &program,
-                                                                       const std::string &entryPath);
+                                                                       const std::string &entryPath,
+                                                                       bool allowMutReceivers = false);
 
 // Exposed so real-call body lowering (which must build the exact same
 // parameter/return LocalInfo::ValueKind this eligibility scan already
 // validated) can reuse the identical extraction instead of a second,
 // possibly-diverging implementation.
 bool isSupportedScalarTypeName(const std::string &typeName);
+// The struct a by-value parameter passes (its full path), or empty when the parameter is a scalar or not eligible: a
+// plain struct name, no `mut`, not a collection record.
+std::string realCallStructParameterPath(const Definition &def,
+                                        const Expr &param,
+                                        const std::unordered_set<std::string> &structNames);
 std::string extractParameterTypeNameStatic(const Expr &paramExpr);
 
 } // namespace primec::ir_lowerer

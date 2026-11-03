@@ -101,8 +101,6 @@ of sync with them.
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
 | TODO-5638 | Shared immutable strings for threads (`SharedString`) | deferred | string-concurrency |
-| TODO-5645 | Real calls for struct-receiver methods (library code is inlined at every call site) | ready | lowering-gaps |
-| TODO-5655 | Callee-reachable receiver addresses so `mut` methods can be real calls | ready | lowering-gaps |
 | TODO-5603 | Startup audit: what a launch loads and does | ready | startup |
 | TODO-5586 | Native String heap: pooled blocks, statistics and limit | deferred | native-backend-strings |
 | TODO-5536 | Small, lazily loaded bytecode for apps | ready | bytecode-startup |
@@ -148,7 +146,7 @@ of sync with them.
 
 ### Priority Lanes
 
-- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5645, TODO-5655, TODO-5638
+- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5638
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Startup (docs/NativeUiPlan.md section 16): TODO-5603
@@ -241,32 +239,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - acceptance:
     - to be set when the leaf is un-deferred
   - stop_rule: not started.
-
-- [ ] TODO-5645: Real calls for struct-receiver methods (library code is inlined at every call site)
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-02
-  - phase: Strings and slices (docs/spec/strings-and-views.md), found building TODO-5625
-  - parallel_track: lowering-gaps
-  - scope: Only definitions whose parameters and result are all plain scalars can be lowered as real `Call`s (`computeRealCallEligibleDefinitionPaths` in `src/ir_lowerer/IrLowererRecursionAnalysis.h`); a method with a struct receiver, a pointer or a view is inlined at every call site. For stdlib types built from small methods this multiplies: lowering a program that makes one `StringMap<i32>` and calls it eight times took about 5 s before TODO-5653 and takes 2.4 s after it (one `insert` 1.5 s), and `vector<i32>` alone costs 0.8 s. Extend real-call emission to definitions with struct and pointer parameters (pass the address of the receiver, as the inline path does for `mut` parameters), starting with the non-recursive library methods that are called from more than one site.
-  - first slice done (2026-11-03): read-only (`mut`-free) struct helper methods with scalar parameters and a scalar or void result, outside `/std/collections/`, are now real calls when they have two or more call sites (`computeRealCallEligibleDefinitionPaths`, `IrLowererLowerStatementsCallsStage.cpp`, `IrLowererLowerInlineCalls.cpp`). A local address is an index into the current frame (`VmFastKernel.cpp` `indirectSlot`), so a callee cannot read through the address of a caller's struct; the receiver therefore goes as a copy of its slots on the operand stack, rebuilt in a block of the callee's frame. Measured: the 8-call `StringMap` sample still lowers in 2.4 s because its methods are `mut` or called once. Still open: `mut` receivers and struct parameters (they need a write-back or an addressing model where a callee can reach a caller's frame, in the VM, the C++ runtime and the native emitters), the `copy`/`move` lifecycle, and the collection records whose locals carry element and key/value kinds.
-  - remaining work (2026-11-03): the `mut` receiver and struct parameter part is split out as TODO-5655; this block closes with it.
-  - design notes (2026-11-03): the pieces exist but are not joined. (1) Eligibility (`computeRealCallEligibleDefinitionPaths`) rejects `takesImplicitThis` helpers, `mut` parameters and any non-scalar parameter; the call site (`IrLowererLowerInlineCalls.cpp`, the `realCallReservationIndex` branch) pushes `emitExpr` values, and `IrLowererLowerStatementsCallsStage.cpp` pops them into scalar `Value` locals 0..N-1. (2) The inline path binds a struct parameter without copying when the argument is a struct local (`LoadLocal` of the struct local is its address, stored in the parameter's local; a `mut` struct parameter becomes `Kind::Reference` the same way) and copies slots only for other arguments (`emitInlineDefinitionCallParameters`, `IrLowererInlineParamHelpers.cpp`). (3) `buildCallableDefinitionCallContext` (`IrLowererStatementCallHelpers.cpp`) already builds the locals of a definition lowered as its own function, including the implicit `this`, struct layouts and bare struct names, from `inferCallParameterLocalInfo`; the real-call body loop should reuse it instead of the scalar-only loop. (4) Open questions: the `copy`/`move` parameter lifecycle (drop flags are released at the call site today), argument shapes that need a temporary, and `isStructParamMatch` aliases for bare imported names (TODO-5650). A first slice could take only struct receivers (`this`) of non-`mut`-free methods with scalar or void results.
-  - acceptance:
-    - the 8-call `StringMap` sample lowers in under 2 s; the IR of programs that call a method from several sites shrinks; every existing test passes with identical output; full release gate green
-  - stop_rule: eligibility and emission for struct/pointer parameters; no inliner tuning beyond that.
-- [ ] TODO-5655: Callee-reachable receiver addresses so `mut` methods can be real calls
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-03
-  - phase: Strings and slices (docs/spec/strings-and-views.md), split from TODO-5645
-  - parallel_track: lowering-gaps
-  - scope: Measured 2026-11-03: the 8-call `StringMap<i32>` sample still takes 3.2 s end to end under `primevm` and `--emit=ir` writes 33 MB for it, because `insert`, `erase` and the other `mut` methods are inlined at every call site and the read-only slice of TODO-5645 does not reach them. A local address is an index into the current frame (`indirectSlot` in `src/runtime/VmFastKernel.cpp`, `AddressOfLocal` in `VmExecutionKernel.cpp`), so a callee cannot write through a caller's address. Choose one model and apply it in every consumer of the IR: (a) a copy-in/copy-out receiver (the callee returns its modified receiver slots through a result area that the call site stores back), or (b) frame-qualified addresses (a call-depth or frame-base tag that `AddressOfLocal`/`LoadIndirect`/`StoreIndirect` honor in the VM kernels, the simple and optimizing C++ emitters, the arm64 backend and the GLSL/Wasm validators). Then let `computeRealCallEligibleDefinitionPaths` accept `mut` receivers and struct parameters, including `/std/collections/` receivers once their collection-record metadata survives the call.
-  - findings (2026-11-03): copy-out through the operand stack (the callee pushes its receiver slots below the result and the call site pops them back into the receiver) needs no VM change, since `Call`/`Return` share one operand stack, but it makes a function leave more than its result behind. The optimizing C++ emitter and the native backends compile each IR function to a function that returns only its result, and virtual-register lowering assumes a `Call` consumes its parameters and yields at most one value, so the trick works in the VM only. A portable copy-out needs a result area that survives the frame (the heap, or a frame-qualified address), which is the work this block scopes.
-  - acceptance:
-    - the 8-call `StringMap` sample lowers in under 2 s and its IR is under a quarter of today's size; every existing test passes with identical output; full release gate green
-  - stop_rule: the addressing model and the eligibility extension; no inliner tuning.
-
 
 
 - [ ] TODO-5603: Startup audit: what a launch loads and does

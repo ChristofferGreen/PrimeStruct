@@ -346,54 +346,122 @@ bool emitInlineDefinitionCallImpl(
         error = "internal error: unexpected packed arguments for real-call target " + callee.fullPath;
         return false;
       }
-      // A method takes its receiver (the implicit `this`, first among the ordered arguments) by address.
+      // Phase 1 evaluates the receiver (the implicit `this`, first among the ordered arguments) and the arguments
+      // into temporaries: a scalar is a value, a struct (receiver or by-value parameter) is the address of its
+      // slots. Phase 2 pushes them in parameter order, so an argument that changes the receiver is seen by the callee.
       const bool calleeTakesThis = realCallParams.size() == callee.parameters.size() + 1;
+      const bool mutReceiverCall = calleeTakesThis && definitionHasTransform(callee, "mut");
+      struct RealCallArg {
+        int32_t local = 0;
+        int32_t structSlots = 0;  // 0: a scalar value
+      };
+      std::vector<RealCallArg> realCallArgs;
+      realCallArgs.reserve(realCallOrderedArgs.size());
       for (size_t argIndex = 0; argIndex < realCallOrderedArgs.size(); ++argIndex) {
         const Expr *argExpr = realCallOrderedArgs[argIndex];
         if (argExpr == nullptr) {
           error = "internal error: missing argument for real-call target " + callee.fullPath;
           return false;
         }
+        std::string structPath;
         if (calleeTakesThis && argIndex == 0) {
-          std::string receiverParent;
-          StructSlotLayoutInfo receiverLayout;
-          if (!isStructHelperDefinition(callee, structNames, receiverParent) ||
-              !resolveStructSlotLayout(receiverParent, receiverLayout) || receiverLayout.totalSlots <= 0) {
+          if (!isStructHelperDefinition(callee, structNames, structPath)) {
             error = "internal error: no receiver layout for real-call target " + callee.fullPath;
             return false;
           }
+        } else {
+          const size_t paramIndex = calleeTakesThis ? argIndex - 1 : argIndex;
+          structPath = ir_lowerer::realCallStructParameterPath(callee, callee.parameters[paramIndex], structNames);
+        }
+        RealCallArg realArg;
+        if (!structPath.empty()) {
+          StructSlotLayoutInfo layout;
+          if (!resolveStructSlotLayout(structPath, layout) || layout.totalSlots <= 0) {
+            error = "internal error: no struct layout for real-call target " + callee.fullPath;
+            return false;
+          }
+          realArg.structSlots = layout.totalSlots;
           bool pushedAddress = false;
           if (argExpr->kind == Expr::Kind::Name) {
-            const auto receiverIt = callerLocals.find(argExpr->name);
-            if (receiverIt != callerLocals.end() &&
-                (receiverIt->second.kind == LocalInfo::Kind::Reference ||
-                 (receiverIt->second.kind == LocalInfo::Kind::Value && !receiverIt->second.structTypeName.empty()))) {
-              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(receiverIt->second.index)});
+            const auto localIt = callerLocals.find(argExpr->name);
+            if (localIt != callerLocals.end() &&
+                (localIt->second.kind == LocalInfo::Kind::Reference ||
+                 (localIt->second.kind == LocalInfo::Kind::Value && !localIt->second.structTypeName.empty()))) {
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(localIt->second.index)});
               pushedAddress = true;
             }
           }
           if (!pushedAddress && !emitExpr(*argExpr, callerLocals)) {
             return false;
           }
-          const int32_t receiverPtrLocal = allocTempLocal();
-          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(receiverPtrLocal)});
-          for (int32_t slot = 0; slot < receiverLayout.totalSlots; ++slot) {
-            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(receiverPtrLocal)});
-            if (slot != 0) {
-              function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(slot) * IrSlotBytes});
-              function.instructions.push_back({IrOpcode::AddI64, 0});
-            }
-            function.instructions.push_back({IrOpcode::LoadIndirect, 0});
-          }
-          continue;
-        }
-        if (!emitExpr(*argExpr, callerLocals)) {
+        } else if (!emitExpr(*argExpr, callerLocals)) {
           return false;
+        }
+        realArg.local = allocTempLocal();
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(realArg.local)});
+        realCallArgs.push_back(realArg);
+      }
+      // A slot of a struct or of its heap copy: the base address plus the slot offset.
+      const auto pushSlotAddress = [&](int32_t baseLocal, int32_t slot) {
+        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(baseLocal)});
+        if (slot != 0) {
+          function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(slot) * IrSlotBytes});
+          function.instructions.push_back({IrOpcode::AddI64, 0});
+        }
+      };
+      const auto pushStructSlots = [&](const RealCallArg &realArg) {
+        for (int32_t slot = 0; slot < realArg.structSlots; ++slot) {
+          pushSlotAddress(realArg.local, slot);
+          function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+        }
+      };
+      int32_t mutStashLocal = 0;
+      for (size_t argIndex = 0; argIndex < realCallArgs.size(); ++argIndex) {
+        const RealCallArg &realArg = realCallArgs[argIndex];
+        if (mutReceiverCall && argIndex == 0) {
+          // The callee works on a heap copy of the receiver and the call site copies it back afterwards.
+          mutStashLocal = allocTempLocal();
+          function.instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(realArg.structSlots)});
+          function.instructions.push_back({IrOpcode::HeapAlloc, 0});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(mutStashLocal)});
+          for (int32_t slot = 0; slot < realArg.structSlots; ++slot) {
+            pushSlotAddress(mutStashLocal, slot);
+            pushSlotAddress(realArg.local, slot);
+            function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+            function.instructions.push_back({IrOpcode::StoreIndirect, 0});
+            function.instructions.push_back({IrOpcode::Pop, 0});
+          }
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(mutStashLocal)});
+        } else if (realArg.structSlots > 0) {
+          pushStructSlots(realArg);
+        } else {
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(realArg.local)});
         }
       }
       const uint64_t placeholderImm = (uint64_t(1) << 32) | realCallIt->second;
       function.instructions.push_back(
           {calleeReturnInfo.returnsVoid ? IrOpcode::CallVoid : IrOpcode::Call, placeholderImm});
+      if (mutReceiverCall) {
+        int32_t resultLocal = 0;
+        if (!calleeReturnInfo.returnsVoid) {
+          resultLocal = allocTempLocal();
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(resultLocal)});
+        }
+        const RealCallArg &receiverArg = realCallArgs.front();
+        for (int32_t slot = 0; slot < receiverArg.structSlots; ++slot) {
+          pushSlotAddress(receiverArg.local, slot);
+          pushSlotAddress(mutStashLocal, slot);
+          function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+          function.instructions.push_back({IrOpcode::StoreIndirect, 0});
+          function.instructions.push_back({IrOpcode::Pop, 0});
+        }
+        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(mutStashLocal)});
+        function.instructions.push_back({IrOpcode::HeapFree, 0});
+        if (!calleeReturnInfo.returnsVoid && requireValue) {
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal)});
+        }
+        return true;
+      }
       if (!calleeReturnInfo.returnsVoid && !requireValue) {
         function.instructions.push_back({IrOpcode::Pop, 0});
       }

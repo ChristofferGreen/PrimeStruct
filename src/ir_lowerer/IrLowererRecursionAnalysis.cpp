@@ -342,8 +342,44 @@ std::unordered_set<std::string> findReachableDefinitionPaths(const Program &prog
   return reachable;
 }
 
+std::string realCallStructParameterPath(const Definition &def,
+                                        const Expr &param,
+                                        const std::unordered_set<std::string> &structNames) {
+  if (isArgsPackBinding(param) || paramHasMutTransform(param) || !param.args.empty()) {
+    return {};
+  }
+  const std::string typeName = extractParameterTypeNameStatic(param);
+  if (typeName.empty() || isSupportedScalarTypeName(typeName)) {
+    return {};
+  }
+  std::string path;
+  if (typeName.front() == '/') {
+    path = typeName;
+  } else {
+    std::string prefix = def.namespacePrefix;
+    while (true) {
+      const std::string candidate = prefix + "/" + typeName;
+      if (structNames.count(candidate) != 0) {
+        path = candidate;
+        break;
+      }
+      if (prefix.empty()) {
+        break;
+      }
+      const size_t cut = prefix.find_last_of('/');
+      prefix = cut == std::string::npos ? std::string() : prefix.substr(0, cut);
+    }
+  }
+  if (path.empty() || structNames.count(path) == 0 ||
+      path.rfind(collection_helpers::kCanonicalCollectionsRoot, 0) == 0) {
+    return {};
+  }
+  return path;
+}
+
 std::unordered_set<std::string> computeRealCallEligibleDefinitionPaths(const Program &program,
-                                                                       const std::string &entryPath) {
+                                                                       const std::string &entryPath,
+                                                                       bool allowMutReceivers) {
   const std::unordered_set<std::string> recursive = findRecursiveDefinitionPaths(program);
   const std::unordered_set<std::string> reachable = findReachableDefinitionPaths(program, entryPath);
   const std::unordered_map<std::string, size_t> callSiteCounts = countCallSitesByDefinitionPath(program);
@@ -413,21 +449,52 @@ std::unordered_set<std::string> computeRealCallEligibleDefinitionPaths(const Pro
       continue;
     }
     if (takesImplicitThis(def)) {
-      // A read-only method with an implicit `this` and scalar parameters is a real call. Local addresses are relative
-      // to a frame, so the receiver goes as a copy of its slots (rebuilt in the callee's frame), not as an address; a
-      // `mut` method writes through the receiver and stays inline, and lifecycle helpers keep their own handling.
+      // A method with an implicit `this` and scalar parameters is a real call. Local addresses are relative to a
+      // frame, so a read-only method gets a copy of the receiver's slots (rebuilt in the callee's frame) and a `mut`
+      // method gets the address of a heap copy that the call site copies back; lifecycle helpers keep their own
+      // handling.
       const size_t leafStart = def.fullPath.find_last_of('/');
       const std::string leaf = leafStart == std::string::npos ? def.fullPath : def.fullPath.substr(leafStart + 1);
       if (leaf == "Create" || leaf == "Destroy" || leaf == "Copy" || leaf == "Move" ||
-          definitionHasTransform(def, "mut") || receiverKeepsInline(def)) {
+          (definitionHasTransform(def, "mut") && !allowMutReceivers) || receiverKeepsInline(def)) {
         continue;
       }
     }
-    if (!hasOnlyScalarParameters(def) || !hasScalarOrVoidReturn(def)) {
+    bool parametersEligible = true;
+    for (const Expr &param : def.parameters) {
+      if (allowMutReceivers) {
+        const std::string structPath = realCallStructParameterPath(def, param, structNames);
+        if (!structPath.empty()) {
+          // A struct passed by value is its slots; a struct with lifecycle helpers is copied and destroyed by them,
+          // which only the inline path runs.
+          if (byPath.count(structPath + "/Copy") != 0 || byPath.count(structPath + "/Move") != 0 ||
+              byPath.count(structPath + "/Destroy") != 0) {
+            parametersEligible = false;
+            break;
+          }
+          continue;
+        }
+      }
+      const Definition scalarProbe = [&]() {
+        Definition probe;
+        probe.parameters.push_back(param);
+        return probe;
+      }();
+      if (!hasOnlyScalarParameters(scalarProbe)) {
+        parametersEligible = false;
+        break;
+      }
+    }
+    if (!parametersEligible || !hasScalarOrVoidReturn(def)) {
       continue;
     }
     if (definitionUsesTry(def)) {
       continue;
+    }
+    if (def.returnExpr.has_value() &&
+        (def.statements.empty() || def.statements.back().kind != Expr::Kind::Call ||
+         def.statements.back().name != "return")) {
+      continue;  // a generated tail value; the real-call body lowering only runs the statements
     }
     eligible.insert(path);
   }

@@ -122,3 +122,11 @@
   runtime faults (stack underflow, invalid addresses) surface as `VM error:` with exit code 3.
 - **Deployment target:** the VM serves as the sandboxed runtime for user-supplied scripts (e.g., on iOS) where native
   code generation is unavailable. Effect masks and capabilities enforce per-platform restrictions.
+
+- Real calls for methods: a definition with scalar parameters is lowered once as a function and called, not inlined at
+  every call site, when it has two or more call sites. For the VM target this also covers a method with an implicit
+  `this` and a struct passed by value. A local address is an index into the current frame, so a callee cannot write
+  through its caller's address: a read-only method gets the receiver's slots on the operand stack (rebuilt in a block of
+  the callee's frame), and a `mut` method gets the address of a heap copy of the receiver that the call site copies back
+  after the call and frees. Structs with `Copy`/`Move`/`Destroy` helpers, `/std/collections/` receivers and definitions
+  with a generated tail value stay inline.
