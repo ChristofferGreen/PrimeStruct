@@ -1,0 +1,388 @@
+// Unicode normalization (NFC, NFD) and extended grapheme clusters of text (docs/spec/strings-and-views.md). The tables are
+// in the separate module /std/text/unicode_norm_data, so a program that never calls these pays nothing for them.
+// Working buffers are Strings holding one 3-byte little-endian code point per entry.
+
+import /std/panic/*
+import /std/text/*
+import /std/text/view/*
+import /std/text/unicode_norm_data/*
+
+namespace std {
+  namespace text {
+    namespace unicode_norm {
+      [return<i32>]
+      hexDigit([u8] c) {
+        if(c >= 65u8) {
+          return(convert<i32>(c) - 55i32)
+        }
+        return(convert<i32>(c) - 48i32)
+      }
+
+      [return<i32>]
+      hexNumber([/std/text/view/StringView] table, [i32] start, [i32] digits) {
+        [i32 mut] value{0i32}
+        for([i32 mut] k{0i32}, k < digits, k++) {
+          value = value * 16i32 + hexDigit(table.byteAt(start + k))
+        }
+        return(value)
+      }
+
+      // The record of `table` (records of `width` characters, sorted by the 6 digit number they start with) for `point`, or -1.
+      [return<i32>]
+      findRecord([/std/text/view/StringView] table, [i32] width, [i32] point) {
+        [i32 mut] low{0i32}
+        [i32 mut] high{table.count() / width - 1i32}
+        while(low <= high) {
+          [i32] middle{low + (high - low) / 2i32}
+          [i32] key{hexNumber(table, middle * width, 6i32)}
+          if(key == point) {
+            return(middle)
+          }
+          if(key < point) {
+            low = middle + 1i32
+          } else {
+            high = middle - 1i32
+          }
+        }
+        return(-1i32)
+      }
+
+      [return<i32>]
+      combiningClass([i32] point) {
+        if(point < 768i32) {
+          return(0i32)
+        }
+        [/std/text/view/StringView] table{cccTable()}
+        [i32] record{findRecord(table, 8i32, point)}
+        if(record < 0i32) {
+          return(0i32)
+        }
+        return(hexNumber(table, record * 8i32 + 6i32, 2i32))
+      }
+
+      // ---- buffers of code points ----
+
+      [public return<i32>]
+      pointCount([String] buffer) {
+        return(buffer.count() / 3i32)
+      }
+
+      [public return<i32>]
+      pointAt([String] buffer, [i32] index) {
+        [i32] base{index * 3i32}
+        return(convert<i32>(buffer.byteAt(base)) + convert<i32>(buffer.byteAt(base + 1i32)) * 256i32 + convert<i32>(buffer.byteAt(base + 2i32)) * 65536i32)
+      }
+
+      [public return<void> effects(heap_alloc)]
+      pushPoint([String mut] buffer, [i32] point) {
+        buffer.pushByte(convert<u8>(point - point / 256i32 * 256i32))
+        buffer.pushByte(convert<u8>(point / 256i32 - point / 65536i32 * 256i32))
+        buffer.pushByte(convert<u8>(point / 65536i32))
+      }
+
+      [return<void>]
+      setPoint([String mut] buffer, [i32] index, [i32] point) {
+        [i32] base{index * 3i32}
+        textStore(buffer.data, base, convert<u8>(point - point / 256i32 * 256i32))
+        textStore(buffer.data, base + 1i32, convert<u8>(point / 256i32 - point / 65536i32 * 256i32))
+        textStore(buffer.data, base + 2i32, convert<u8>(point / 65536i32))
+      }
+
+      // ---- decomposition ----
+
+      [return<void> effects(heap_alloc)]
+      decomposePoint([String mut] buffer, [i32] point) {
+        if(point < 192i32) {
+          pushPoint(buffer, point)
+          return()
+        }
+        if(point >= 44032i32 && point <= 55203i32) {
+          [i32] index{point - 44032i32}
+          [i32] leadAndVowel{index / 28i32}
+          [i32] trail{index - leadAndVowel * 28i32}
+          pushPoint(buffer, 4352i32 + leadAndVowel / 21i32)
+          pushPoint(buffer, 4449i32 + (leadAndVowel - leadAndVowel / 21i32 * 21i32))
+          if(trail > 0i32) {
+            pushPoint(buffer, 4519i32 + trail)
+          }
+          return()
+        }
+        [/std/text/view/StringView] table{decompTable()}
+        [i32] record{findRecord(table, 31i32, point)}
+        if(record < 0i32) {
+          pushPoint(buffer, point)
+          return()
+        }
+        [i32] length{hexDigit(table.byteAt(record * 31i32 + 6i32))}
+        for([i32 mut] k{0i32}, k < length, k++) {
+          pushPoint(buffer, hexNumber(table, record * 31i32 + 7i32 + k * 6i32, 6i32))
+        }
+      }
+
+      // The canonical decomposition of `text` with the marks in canonical order, as a buffer.
+      [return<String> effects(heap_alloc)]
+      decompose([/std/text/view/StringView] text) {
+        [String mut] buffer{String{}}
+        [i32 mut] offset{0i32}
+        while(offset < text.count()) {
+          decomposePoint(buffer, text.codePointAt(offset))
+          offset = offset + text.codePointLength(offset)
+        }
+        [i32] count{pointCount(buffer)}
+        for([i32 mut] i{1i32}, i < count, i++) {
+          [i32] current{combiningClass(pointAt(buffer, i))}
+          if(current != 0i32) {
+            [i32 mut] j{i}
+            [bool mut] moving{true}
+            while(moving) {
+              if(j == 0i32) {
+                moving = false
+              } else {
+                [i32] previous{pointAt(buffer, j - 1i32)}
+                if(combiningClass(previous) <= current) {
+                  moving = false
+                } else {
+                  setPoint(buffer, j - 1i32, pointAt(buffer, j))
+                  setPoint(buffer, j, previous)
+                  j = j - 1i32
+                }
+              }
+            }
+          }
+        }
+        return(buffer)
+      }
+
+      // ---- composition ----
+
+      // The composite of `first` and `second`, or -1.
+      [return<i32>]
+      composePair([i32] first, [i32] second) {
+        if(first >= 4352i32 && first <= 4370i32 && second >= 4449i32 && second <= 4469i32) {
+          return(44032i32 + ((first - 4352i32) * 21i32 + (second - 4449i32)) * 28i32)
+        }
+        if(first >= 44032i32 && first <= 55203i32 && second >= 4520i32 && second <= 4546i32) {
+          [i32] index{first - 44032i32}
+          if(index - index / 28i32 * 28i32 == 0i32) {
+            return(first + (second - 4519i32))
+          }
+        }
+        if(second < 768i32) {
+          return(-1i32)
+        }
+        [/std/text/view/StringView] table{compTable()}
+        [i32 mut] low{0i32}
+        [i32 mut] high{table.count() / 18i32 - 1i32}
+        while(low <= high) {
+          [i32] middle{low + (high - low) / 2i32}
+          [i32] key{hexNumber(table, middle * 18i32, 6i32)}
+          [i32] next{hexNumber(table, middle * 18i32 + 6i32, 6i32)}
+          if(key == first && next == second) {
+            return(hexNumber(table, middle * 18i32 + 12i32, 6i32))
+          }
+          if(key < first || (key == first && next < second)) {
+            low = middle + 1i32
+          } else {
+            high = middle - 1i32
+          }
+        }
+        return(-1i32)
+      }
+
+      // Canonical composition of a decomposed buffer.
+      [return<String> effects(heap_alloc)]
+      compose([String] buffer) {
+        [String mut] out{String{}}
+        [i32 mut] starter{-1i32}
+        for([i32 mut] i{0i32}, i < pointCount(buffer), i++) {
+          [i32] point{pointAt(buffer, i)}
+          [i32] cls{combiningClass(point)}
+          [bool mut] merged{false}
+          if(starter >= 0i32) {
+            [i32] last{pointCount(out) - 1i32}
+            [bool] blocked{last > starter && combiningClass(pointAt(out, last)) >= cls}
+            if(!blocked) {
+              [i32] composite{composePair(pointAt(out, starter), point)}
+              if(composite >= 0i32) {
+                setPoint(out, starter, composite)
+                merged = true
+              }
+            }
+          }
+          if(!merged) {
+            pushPoint(out, point)
+            if(cls == 0i32) {
+              starter = pointCount(out) - 1i32
+            }
+          }
+        }
+        return(out)
+      }
+
+      [return<String> effects(heap_alloc)]
+      encode([String] buffer) {
+        [String mut] out{stringWithCapacity(buffer.count())}
+        for([i32 mut] i{0i32}, i < pointCount(buffer), i++) {
+          out.pushCodePoint(pointAt(buffer, i))
+        }
+        return(out)
+      }
+
+      [public return<String> effects(heap_alloc)]
+      normalizeNfdText([/std/text/view/StringView] text) {
+        [String] buffer{decompose(text)}
+        return(encode(buffer))
+      }
+
+      [public return<String> effects(heap_alloc)]
+      normalizeNfcText([/std/text/view/StringView] text) {
+        [String] decomposed{decompose(text)}
+        [String] composed{compose(decomposed)}
+        return(encode(composed))
+      }
+
+      // ---- grapheme clusters ----
+
+      // Classes: 0 other, 1 CR, 2 LF, 3 Control, 4 Extend, 5 ZWJ, 6 Regional_Indicator, 7 Prepend, 8 SpacingMark,
+      // 9 L, 10 V, 11 T, 12 LV, 13 LVT, 14 Extended_Pictographic.
+      [return<i32>]
+      breakClass([i32] point) {
+        if(point >= 32i32 && point < 127i32) {
+          return(0i32)
+        }
+        if(point >= 44032i32 && point <= 55203i32) {
+          [i32] index{point - 44032i32}
+          if(index - index / 28i32 * 28i32 == 0i32) {
+            return(12i32)
+          }
+          return(13i32)
+        }
+        [/std/text/view/StringView] table{gcbTable()}
+        [i32 mut] low{0i32}
+        [i32 mut] high{table.count() / 13i32 - 1i32}
+        while(low <= high) {
+          [i32] middle{low + (high - low) / 2i32}
+          [i32] first{hexNumber(table, middle * 13i32, 6i32)}
+          if(point < first) {
+            high = middle - 1i32
+          } else {
+            [i32] last{hexNumber(table, middle * 13i32 + 6i32, 6i32)}
+            if(point > last) {
+              low = middle + 1i32
+            } else {
+              return(hexDigit(table.byteAt(middle * 13i32 + 12i32)))
+            }
+          }
+        }
+        return(0i32)
+      }
+
+      // The byte length of the extended grapheme cluster that starts at `offset` (a code point boundary).
+      [public return<i32>]
+      graphemeLengthAt([/std/text/view/StringView] text, [i32] offset) {
+        [i32 mut] position{offset + text.codePointLength(offset)}
+        [i32 mut] previous{breakClass(text.codePointAt(offset))}
+        [i32 mut] regionalRun{if(previous == 6i32, then() { 1i32 }, else() { 0i32 })}
+        [i32 mut] pictographic{if(previous == 14i32, then() { 1i32 }, else() { 0i32 })}
+        [bool mut] going{true}
+        while(going && position < text.count()) {
+          [i32] next{breakClass(text.codePointAt(position))}
+          [bool mut] joined{false}
+          if(previous == 1i32 && next == 2i32) {
+            joined = true
+          } else {
+            if(previous >= 1i32 && previous <= 3i32) {
+              joined = false
+            } else {
+              if(next >= 1i32 && next <= 3i32) {
+                joined = false
+              } else {
+                if(previous == 9i32 && (next == 9i32 || next == 10i32 || next == 12i32 || next == 13i32)) {
+                  joined = true
+                }
+                if((previous == 12i32 || previous == 10i32) && (next == 10i32 || next == 11i32)) {
+                  joined = true
+                }
+                if((previous == 13i32 || previous == 11i32) && next == 11i32) {
+                  joined = true
+                }
+                if(next == 4i32 || next == 5i32 || next == 8i32 || previous == 7i32) {
+                  joined = true
+                }
+                if(pictographic == 2i32 && next == 14i32) {
+                  joined = true
+                }
+                if(previous == 6i32 && next == 6i32 && regionalRun - regionalRun / 2i32 * 2i32 == 1i32) {
+                  joined = true
+                }
+              }
+            }
+          }
+          if(!joined) {
+            going = false
+          } else {
+            if(next == 6i32) {
+              regionalRun = if(previous == 6i32, then() { regionalRun + 1i32 }, else() { 1i32 })
+            } else {
+              regionalRun = 0i32
+            }
+            if(next == 14i32) {
+              pictographic = 1i32
+            } else {
+              if(pictographic == 1i32 && next == 4i32) {
+                pictographic = 1i32
+              } else {
+                if(pictographic == 1i32 && next == 5i32) {
+                  pictographic = 2i32
+                } else {
+                  pictographic = 0i32
+                }
+              }
+            }
+            previous = next
+            position = position + text.codePointLength(position)
+          }
+        }
+        return(position - offset)
+      }
+
+      [public return<i32>]
+      graphemeCountOf([/std/text/view/StringView] text) {
+        [i32 mut] count{0i32}
+        [i32 mut] offset{0i32}
+        while(offset < text.count()) {
+          offset = offset + graphemeLengthAt(text, offset)
+          count = count + 1i32
+        }
+        return(count)
+      }
+
+      // `view.normalizeNfc()`, `view.normalizeNfd()`, `view.isNfc()`, `view.graphemeCount()`, `view.graphemeLength(offset)`.
+      [public return<String> effects(heap_alloc)]
+      /std/text/view/StringView/normalizeNfc([/std/text/view/StringView] self) {
+        return(normalizeNfcText(self))
+      }
+
+      [public return<String> effects(heap_alloc)]
+      /std/text/view/StringView/normalizeNfd([/std/text/view/StringView] self) {
+        return(normalizeNfdText(self))
+      }
+
+      [public return<bool> effects(heap_alloc)]
+      /std/text/view/StringView/isNfc([/std/text/view/StringView] self) {
+        [String] normalized{normalizeNfcText(self)}
+        return(normalized.view().equals(self))
+      }
+
+      [public return<i32>]
+      /std/text/view/StringView/graphemeCount([/std/text/view/StringView] self) {
+        return(graphemeCountOf(self))
+      }
+
+      [public return<i32>]
+      /std/text/view/StringView/graphemeLength([/std/text/view/StringView] self, [i32] offset) {
+        return(graphemeLengthAt(self, offset))
+      }
+    }
+  }
+}

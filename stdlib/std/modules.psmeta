@@ -37,3 +37,11 @@ source_file = std/text/unicode_data.prime
 [module]
 root = /std/text/unicode
 source_file = std/text/unicode.prime
+
+[module]
+root = /std/text/unicode_norm_data
+source_file = std/text/unicode_norm_data.prime
+
+[module]
+root = /std/text/unicode_norm
+source_file = std/text/unicode_norm.prime

@@ -2092,6 +2092,7 @@ are left unarchived.
 | TODO-5629 | Bulk byte operations under `String` and `Slice<u8>` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 | TODO-5632 | Fused `+` chains: one allocation per expression | [2026-11.md](todo_archive/2026-11.md) | 2026-11-03 |
 | TODO-5633 | Unicode case mapping and case folding (lazy) | [2026-11.md](todo_archive/2026-11.md) | 2026-11-03 |
+| TODO-5634 | Unicode normalization and grapheme clusters (lazy) | [2026-11.md](todo_archive/2026-11.md) | 2026-11-03 |
 | TODO-5635 | `Secret`: a text that is not a String, compared in constant work, zeroed on destroy | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 | TODO-5636 | Interned `Symbol` for names and tags | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 | TODO-5637 | Fold string operations on literals at compile time | [2026-11.md](todo_archive/2026-11.md) | 2026-11-03 |

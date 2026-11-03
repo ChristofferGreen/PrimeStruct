@@ -2441,4 +2441,173 @@ TEST_CASE("a program that does not use the case module carries none of its table
   CHECK(used.find(firstLowerRecord) != std::string::npos);
 }
 
+// ---- Unicode normalization and grapheme clusters (/std/text/unicode_norm) ---------------------------------------------
+
+namespace {
+// Expected values come from Python's unicodedata.normalize (Unicode 15.0) and perl's \X (extended grapheme clusters).
+std::string normBlockProgram() {
+  return "import /std/text/*\nimport /std/text/view/*\nimport /std/text/unicode_norm/*\n\n"
+         "[return<void> effects(heap_alloc, io_out)]\nreport([String] text) {\n"
+         "  [i32 mut] h{17i32}\n  for([i32 mut] i{0i32}, i < text.count(), i++) {\n    h = h * 31i32 + convert<i32>(text[i])\n  }\n"
+         "  print_line(text.count())\n  print_line(h)\n}\n\n"
+         "[return<int> effects(heap_alloc, io_out)]\nmain() {\n"
+         "  [String mut] all{String{}}\n"
+         "  for([i32 mut] block{0i32}, block < 12i32, block++) {\n"
+         "    [i32 mut] first{0i32}\n    [i32 mut] last{0i32}\n    [i32 mut] step{1i32}\n"
+         "    if(block == 0i32) { first = 0i32 last = 880i32 }\n"
+         "    if(block == 1i32) { first = 880i32 last = 1280i32 }\n"
+         "    if(block == 2i32) { first = 2304i32 last = 3584i32 }\n"
+         "    if(block == 3i32) { first = 4352i32 last = 4608i32 }\n"
+         "    if(block == 4i32) { first = 7680i32 last = 8192i32 }\n"
+         "    if(block == 5i32) { first = 8448i32 last = 8704i32 }\n"
+         "    if(block == 6i32) { first = 12288i32 last = 12544i32 }\n"
+         "    if(block == 7i32) { first = 63744i32 last = 64336i32 }\n"
+         "    if(block == 8i32) { first = 65056i32 last = 65072i32 }\n"
+         "    if(block == 9i32) { first = 119040i32 last = 119376i32 }\n"
+         "    if(block == 10i32) { first = 194560i32 last = 195104i32 }\n"
+         "    if(block == 11i32) { first = 44032i32 last = 55204i32 step = 7i32 }\n"
+         "    for([i32 mut] p{first}, p < last, p = p + step) {\n"
+         "      if(p < 55296i32 || p > 57343i32) {\n        all.pushCodePoint(p)\n      }\n    }\n"
+         "  }\n"
+         "  [StringView] text{all.view()}\n"
+         "  report(all)\n  report(text.normalizeNfd())\n  report(text.normalizeNfc())\n"
+         "  return(0i32)\n}\n";
+}
+
+const char *NormBlockOracle = "20244\n-2100138606\n29856\n1281941301\n19973\n-323711121\n";
+
+// 400 strings of 1 to 12 code points from a pool of letters, marks, jamo, emoji and controls.
+std::string normRandomProgram() {
+  return "import /std/text/*\nimport /std/text/view/*\nimport /std/text/unicode_norm/*\n\n"
+         "[return<u64>]\nlcgStep([u64] seed) {\n"
+         "  [u64] raw{seed * 1664525u64 + 1013904223u64}\n"
+         "  return(raw - raw / 4294967296u64 * 4294967296u64)\n}\n\n"
+         "[return<u64>]\nbelow([u64] seed, [u64] bound) {\n"
+         "  [u64] value{seed / 256u64}\n"
+         "  return(value - value / bound * bound)\n}\n\n"
+         "[return<int> effects(heap_alloc, io_out)]\nmain() {\n"
+         "  [String mut] pool{String{}}\n  "
+         + std::string() +
+         "  pushPoint(pool, 97i32)\n"
+         "  pushPoint(pool, 101i32)\n"
+         "  pushPoint(pool, 65i32)\n"
+         "  pushPoint(pool, 111i32)\n"
+         "  pushPoint(pool, 110i32)\n"
+         "  pushPoint(pool, 120i32)\n"
+         "  pushPoint(pool, 768i32)\n"
+         "  pushPoint(pool, 769i32)\n"
+         "  pushPoint(pool, 770i32)\n"
+         "  pushPoint(pool, 771i32)\n"
+         "  pushPoint(pool, 776i32)\n"
+         "  pushPoint(pool, 778i32)\n"
+         "  pushPoint(pool, 803i32)\n"
+         "  pushPoint(pool, 807i32)\n"
+         "  pushPoint(pool, 808i32)\n"
+         "  pushPoint(pool, 837i32)\n"
+         "  pushPoint(pool, 795i32)\n"
+         "  pushPoint(pool, 790i32)\n"
+         "  pushPoint(pool, 820i32)\n"
+         "  pushPoint(pool, 824i32)\n"
+         "  pushPoint(pool, 836i32)\n"
+         "  pushPoint(pool, 4352i32)\n"
+         "  pushPoint(pool, 4370i32)\n"
+         "  pushPoint(pool, 4449i32)\n"
+         "  pushPoint(pool, 4469i32)\n"
+         "  pushPoint(pool, 4520i32)\n"
+         "  pushPoint(pool, 4546i32)\n"
+         "  pushPoint(pool, 44032i32)\n"
+         "  pushPoint(pool, 44033i32)\n"
+         "  pushPoint(pool, 55203i32)\n"
+         "  pushPoint(pool, 233i32)\n"
+         "  pushPoint(pool, 197i32)\n"
+         "  pushPoint(pool, 470i32)\n"
+         "  pushPoint(pool, 7785i32)\n"
+         "  pushPoint(pool, 8491i32)\n"
+         "  pushPoint(pool, 2392i32)\n"
+         "  pushPoint(pool, 2325i32)\n"
+         "  pushPoint(pool, 2364i32)\n"
+         "  pushPoint(pool, 8486i32)\n"
+         "  pushPoint(pool, 13i32)\n"
+         "  pushPoint(pool, 10i32)\n"
+         "  pushPoint(pool, 8205i32)\n"
+         "  pushPoint(pool, 8204i32)\n"
+         "  pushPoint(pool, 128104i32)\n"
+         "  pushPoint(pool, 128105i32)\n"
+         "  pushPoint(pool, 128102i32)\n"
+         "  pushPoint(pool, 127995i32)\n"
+         "  pushPoint(pool, 127465i32)\n"
+         "  pushPoint(pool, 127466i32)\n"
+         "  pushPoint(pool, 127467i32)\n"
+         "  pushPoint(pool, 1536i32)\n"
+         "  pushPoint(pool, 2307i32)\n"
+         "  pushPoint(pool, 3635i32)\n"
+         "  pushPoint(pool, 65039i32)\n"
+         "  pushPoint(pool, 1i32)\n"
+         "  pushPoint(pool, 10084i32)\n"
+         "  pushPoint(pool, 32i32)\n"
+         "  pushPoint(pool, 945i32)\n"
+         "  [u64 mut] seed{20261103u64}\n"
+         "  [i32 mut] nfdHash{17i32}\n  [i32 mut] nfdCount{0i32}\n  [i32 mut] nfcHash{17i32}\n  [i32 mut] nfcCount{0i32}\n"
+         "  [i32 mut] graphemeHash{17i32}\n  [i32 mut] graphemeSum{0i32}\n  [i32 mut] normalized{0i32}\n"
+         "  for([i32 mut] n{0i32}, n < 400i32, n++) {\n"
+         "    seed = lcgStep(seed)\n    [i32] length{1i32 + convert<i32>(below(seed, 12u64))}\n"
+         "    [String mut] text{String{}}\n"
+         "    for([i32 mut] k{0i32}, k < length, k++) {\n"
+         "      seed = lcgStep(seed)\n      text.pushCodePoint(pointAt(pool, convert<i32>(below(seed, convert<u64>(pointCount(pool))))))\n    }\n"
+         "    [StringView] view{text.view()}\n"
+         "    [String] nfd{view.normalizeNfd()}\n    [String] nfc{view.normalizeNfc()}\n"
+         "    for([i32 mut] i{0i32}, i < nfd.count(), i++) {\n      nfdHash = nfdHash * 31i32 + convert<i32>(nfd[i])\n    }\n"
+         "    nfdCount = nfdCount + nfd.count()\n"
+         "    for([i32 mut] i{0i32}, i < nfc.count(), i++) {\n      nfcHash = nfcHash * 31i32 + convert<i32>(nfc[i])\n    }\n"
+         "    nfcCount = nfcCount + nfc.count()\n"
+         "    [i32] clusters{view.graphemeCount()}\n    graphemeHash = graphemeHash * 31i32 + clusters\n    graphemeSum = graphemeSum + clusters\n"
+         "    if(view.isNfc()) {\n      normalized = normalized + 1i32\n    }\n"
+         "  }\n"
+         "  print_line(nfdCount)\n  print_line(nfdHash)\n  print_line(nfcCount)\n  print_line(nfcHash)\n"
+         "  print_line(graphemeSum)\n  print_line(graphemeHash)\n  print_line(normalized)\n"
+         "  return(0i32)\n}\n";
+}
+
+const char *NormRandomOracle = "7234\n1559919955\n6189\n1571407550\n1683\n-2041801810\n216\n";
+} // namespace
+
+TEST_CASE("normalization of whole Unicode blocks matches Python on the VM") {
+  CHECK(vmOutput(normBlockProgram()) == NormBlockOracle);
+}
+
+TEST_CASE("normalization of whole Unicode blocks matches Python through optexe") {
+  CHECK(optexeOutput("norm_blocks", normBlockProgram()) == NormBlockOracle);
+}
+
+TEST_CASE("normalization and grapheme clusters of random mixes match Python and perl on the VM") {
+  CHECK(vmOutput(normRandomProgram()) == NormRandomOracle);
+}
+
+TEST_CASE("normalization and grapheme clusters of random mixes match Python and perl through optexe") {
+  CHECK(optexeOutput("norm_random", normRandomProgram()) == NormRandomOracle);
+}
+
+TEST_CASE("a program that does not use the normalization module carries none of its tables") {
+  const auto bytecode = [](const std::string &name, const std::string &imports, const std::string &body) {
+    const std::string file = scratch(name + ".prime");
+    std::ofstream(file, std::ios::binary) << imports << "\n[return<int> effects(heap_alloc)]\nmain() {\n" << body << "}\n";
+    const std::string out = scratch(name + ".psir");
+    const std::string log = out + ".log";
+    REQUIRE_MESSAGE(run(shellQuote(Primec) + " --emit=ir " + shellQuote(file) + " -o " + shellQuote(out) + " > " + shellQuote(log) +
+                        " 2>&1") == 0,
+                    readFile(log));
+    return readFile(out);
+  };
+  const std::string plainImports = "import /std/text/*\nimport /std/text/view/*\n";
+  const std::string plainBody = "  [String] s{stringFromI32(5i32)}\n  return(s.count() - s.count())\n";
+  const std::string without = bytecode("norm_without", plainImports, plainBody);
+  const std::string unusedImport = bytecode("norm_unused", plainImports + "import /std/text/unicode_norm/*\n", plainBody);
+  const std::string used = bytecode("norm_used", plainImports + "import /std/text/unicode_norm/*\n",
+                                    "  [StringView] t{textOf(\"Ab\")}\n  [String] s{t.normalizeNfc()}\n  return(s.count() - s.count())\n");
+  const std::string firstClassRecord = "000300E6000301E6"; // U+0300 and U+0301 have class 230
+  CHECK(without.find(firstClassRecord) == std::string::npos);
+  CHECK(unusedImport.find(firstClassRecord) == std::string::npos);
+  CHECK(used.find(firstClassRecord) != std::string::npos);
+}
+
 TEST_SUITE_END();
