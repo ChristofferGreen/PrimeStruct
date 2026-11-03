@@ -113,7 +113,7 @@ of sync with them.
 | TODO-5638 | Shared immutable strings for threads (`SharedString`) | deferred | string-concurrency |
 | TODO-5645 | Real calls for struct-receiver methods (library code is inlined at every call site) | ready | lowering-gaps |
 | TODO-5647 | A StringView member named `opNotEqual` makes `StringMap<i32>.insert` fail to lower | ready | lowering-gaps |
-| TODO-5646 | `x.f().g(y) == 0` is parsed with the comparison applied to the wrong receiver | ready | lowering-gaps |
+| TODO-5648 | `Money{self.cents + other.cents}` fails under `ScriptEngine` but compiles under `primevm` | ready | lowering-gaps |
 | TODO-5603 | Startup audit: what a launch loads and does | ready | startup |
 | TODO-5586 | Native String heap: pooled blocks, statistics and limit | deferred | native-backend-strings |
 | TODO-5574 | Simple C++ emitters run bytes and strings | deferred | string-backends |
@@ -162,7 +162,7 @@ of sync with them.
 
 ### Priority Lanes
 
-- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5570, TODO-5569, TODO-5621, TODO-5645, TODO-5646, TODO-5647, TODO-5631, TODO-5630, TODO-5632, TODO-5633, TODO-5634, TODO-5637, TODO-5638, TODO-5567, TODO-5574
+- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5570, TODO-5569, TODO-5621, TODO-5645, TODO-5647, TODO-5648, TODO-5631, TODO-5630, TODO-5632, TODO-5633, TODO-5634, TODO-5637, TODO-5638, TODO-5567, TODO-5574
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Startup (docs/NativeUiPlan.md section 16): TODO-5603
@@ -385,16 +385,16 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - stop_rule: eligibility and emission for struct/pointer parameters; no inliner tuning beyond that.
 
 
-- [ ] TODO-5646: `x.f().g(y) == 0` is parsed with the comparison applied to the wrong receiver
+- [ ] TODO-5648: `Money{self.cents + other.cents}` fails under `ScriptEngine` but compiles under `primevm`
   - owner: ai
   - status: ready
   - created_at: 2026-11-03
   - phase: Strings and slices (docs/spec/strings-and-views.md), found building TODO-5643
   - parallel_track: lowering-gaps
-  - scope: `if(a.view().compare(b.view()) == 0i32)` fails with `argument count mismatch for builtin equal` (the printed form is `a.view().equal(compare(b.view()), 0i32)`), so a comparison after a method chain whose last call has arguments is rewritten as a method call on the head of the chain. Binding the result to a local first works. Reproduce with the three-line program in `tests/unit/language/test_string_owned.cpp` once added, find where the operator is attached to the chain (surface transform or the method-call rewrite) and fix it. Also look at why `Money{self.cents + other.cents}` in a struct constructor reports `expected i32 got array` under `ScriptEngine` but compiles under `primevm`.
+  - scope: Compiling `[struct] Money() { [i32] cents{0i32} }` and `/Money/opPlus([Money] self, [Money] other) { return(Money{self.cents + other.cents}) }` through `ScriptEngine::compileSource` reports `argument type mismatch for /Money parameter cents: expected i32 got array`, while the same source under `primevm --entry /main` compiles and returns the right value; binding the sum to an `[i32]` local first works around it. Find the difference between the two option sets (the `Options` defaults in `ScriptEngine::compileEntry` against the CLI's) and the construction-argument inference that turns `plus(a, b)` into an array.
   - acceptance:
-    - the comparison after a method chain compiles and runs; a regression test covers it and the constructor case; full release gate green
-  - stop_rule: the operator-after-method-chain parse/rewrite bug and the ScriptEngine difference; no other operator work.
+    - the brace construction compiles under both entry points; a regression test in `tests/unit/language/test_string_owned.cpp` uses the direct form; full release gate green
+  - stop_rule: the option difference or inference bug behind the one failure; nothing wider.
 
 
 - [ ] TODO-5647: A StringView member named `opNotEqual` makes `StringMap<i32>.insert` fail to lower

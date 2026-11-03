@@ -249,3 +249,16 @@ TEST_CASE("an operator on a struct without the matching member stays a numeric-o
   CHECK_FALSE(outcome.compiled);
   CHECK(outcome.diagnostics.find("comparisons require numeric, bool, or string operands") != std::string::npos);
 }
+
+TEST_CASE("a comparison after a method chain with arguments compares the chain") {
+  const std::string chain =
+      "[struct]\nBox() {\n  [i32] v{0i32}\n}\n\n"
+      "[return<Box>]\n/Box/same([Box] self) {\n  return(self)\n}\n\n"
+      "[return<i32>]\n/Box/cmp([Box] self, [Box] other) {\n  return(self.v - other.v)\n}\n";
+  CHECK(exitOf("  [Box] a{Box{3i32}}\n  [Box] b{Box{3i32}}\n"
+               "  return(if(a.same().cmp(b.same()) == 0i32, then() { 1i32 }, else() { 0i32 }))",
+               chain) == 1);
+  CHECK(exitOf("  [Box] a{Box{3i32}}\n  [Box] b{Box{5i32}}\n"
+               "  return(if(a.same().cmp(b.same()) < 0i32, then() { 1i32 }, else() { 0i32 }))",
+               chain) == 1);
+}

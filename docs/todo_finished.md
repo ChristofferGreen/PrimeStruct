@@ -2097,6 +2097,7 @@ are left unarchived.
 | TODO-5642 | A method of an imported struct in a sum-returning function failed to lower; `Maybe` results for `StringView` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-03 |
 | TODO-5643 | Operators and index sugar for stdlib types (`String + String`, `s[i]`) | [2026-11.md](todo_archive/2026-11.md) | 2026-11-03 |
 | TODO-5644 | Split `/std/text` so a plain `String` program compiles fast | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
+| TODO-5646 | `x.f().g(y) == 0` is parsed with the comparison applied to the wrong receiver | [2026-11.md](todo_archive/2026-11.md) | 2026-11-03 |
 
 <!-- INDEX-END -->
 
