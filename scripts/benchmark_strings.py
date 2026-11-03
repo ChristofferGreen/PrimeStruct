@@ -20,7 +20,8 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-WORKLOADS = ["append_bytes", "append_chunks", "short_strings", "insert_front", "copy_text", "replace_middle"]
+WORKLOADS = ["append_bytes", "append_chunks", "short_strings", "insert_front", "copy_text", "replace_middle", "request_heap",
+             "request_arena"]
 
 
 def run_timed(command, runs):

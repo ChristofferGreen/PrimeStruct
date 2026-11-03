@@ -22,6 +22,18 @@ bool isViewTypeName(const std::string &typeName) {
   return leaf == "Slice" || leaf == "ReadSlice" || leaf == "WriteSlice" || leaf == "StringView";
 }
 
+bool hasTypeLeaf(const Expr &expr, std::string_view leaf) {
+  if (!expr.isBinding) {
+    return false;
+  }
+  for (const Transform &transform : expr.transforms) {
+    if (leafName(transform.name) == leaf) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // Structs with a view field (directly or through another such struct) carry borrows, by leaf name.
 using CarrierSet = std::set<std::string>;
 
@@ -167,6 +179,12 @@ struct Checker {
   std::set<std::string> returnedRoots;
   std::set<std::string> viewParameters;
   std::set<std::string> viewLocals;
+  // Open string arenas: binding name and the scope depth that holds it; Strings made while one is open.
+  std::vector<std::pair<std::string, size_t>> arenas;
+  std::map<std::string, size_t> arenaStrings;  // String binding -> index into `arenas`
+  std::map<std::string, size_t> declarationOrder;  // binding -> position in the order of declaration
+  size_t declarationCount = 0;
+  std::vector<size_t> arenaOrder;  // declaration position of each open arena
   // names declared by each enclosing block, innermost last
   std::vector<std::set<std::string>> scopes;
 
@@ -270,6 +288,13 @@ struct Checker {
   bool checkBlock(const std::vector<Expr> &statements) {
     scopes.emplace_back();
     const bool ok = checkStatements(statements);
+    while (!arenas.empty() && arenas.back().second == scopes.size()) {
+      for (auto it = arenaStrings.begin(); it != arenaStrings.end();) {
+        it = it->second == arenas.size() - 1 ? arenaStrings.erase(it) : std::next(it);
+      }
+      arenas.pop_back();
+      arenaOrder.pop_back();
+    }
     scopes.pop_back();
     return ok;
   }
@@ -279,6 +304,13 @@ struct Checker {
       const Expr &statement = statements[i];
       if (statement.isBinding) {
         scopes.back().insert(statement.name);
+        declarationOrder[statement.name] = ++declarationCount;
+        if (hasTypeLeaf(statement, "StringArena")) {
+          arenas.emplace_back(statement.name, scopes.size());
+          arenaOrder.push_back(declarationCount);
+        } else if (hasTypeLeaf(statement, "String") && !arenas.empty()) {
+          arenaStrings[statement.name] = arenas.size() - 1;
+        }
       }
       if (isViewBinding(statement, carriers)) {
         viewLocals.insert(statement.name);
@@ -329,12 +361,60 @@ struct Checker {
 
   static std::string firstOf(const std::set<std::string> &roots) { return *roots.begin(); }
 
+  // A String made while an arena is open cannot be returned, assigned to a binding made before the arena, or pushed
+  // into a container made before it: its memory is freed when the arena ends.
+  bool checkArenaEscapes(const Expr &statement, const std::string &leaf) {
+    if (arenaStrings.empty()) {
+      return true;
+    }
+    auto arenaOf = [&](const Expr &value) -> const std::pair<std::string, size_t> * {
+      if (value.kind != Expr::Kind::Name) {
+        return nullptr;
+      }
+      const auto it = arenaStrings.find(value.name);
+      return it == arenaStrings.end() ? nullptr : &arenas[it->second];
+    };
+    auto arenaIndexOf = [&](const Expr &value) -> size_t {
+      return arenaStrings.find(value.name)->second;
+    };
+    auto madeBefore = [&](const std::string &name, size_t arenaIndex) {
+      const auto it = declarationOrder.find(name);
+      return it == declarationOrder.end() || it->second < arenaOrder[arenaIndex];
+    };
+    if (leaf == "return" && statement.args.size() == 1) {
+      if (const auto *arena = arenaOf(statement.args.front())) {
+        return fail("string escapes its arena via return (arena: " + arena->first + ")");
+      }
+    }
+    if (leaf == "assign" && statement.args.size() == 2 && statement.args[0].kind == Expr::Kind::Name) {
+      if (const auto *arena = arenaOf(statement.args[1])) {
+        if (madeBefore(statement.args[0].name, arenaIndexOf(statement.args[1]))) {
+          return fail("string escapes its arena via outer binding " + statement.args[0].name + " (arena: " + arena->first + ")");
+        }
+      }
+    }
+    if ((leaf == "push" || leaf == "insert") && statement.args.size() >= 2) {
+      const Expr *base = placeBase(statement.args.front());
+      for (size_t k = 1; k < statement.args.size(); ++k) {
+        if (const auto *arena = arenaOf(statement.args[k])) {
+          if (base->kind == Expr::Kind::Name && madeBefore(base->name, arenaIndexOf(statement.args[k]))) {
+            return fail("string escapes its arena via container " + base->name + " (arena: " + arena->first + ")");
+          }
+        }
+      }
+    }
+    return true;
+  }
+
   // A view cannot be stored in a field, a container or an outer binding, and cannot be returned when it borrows a local.
   bool checkEscapes(const Expr &statement) {
     if (statement.kind != Expr::Kind::Call || statement.isBinding) {
       return true;
     }
     const std::string leaf = leafName(statement.name);
+    if (!checkArenaEscapes(statement, leaf)) {
+      return false;
+    }
     if (leaf == "assign" && statement.args.size() == 2) {
       const Expr &target = statement.args[0];
       const Expr &value = statement.args[1];

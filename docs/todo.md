@@ -104,7 +104,7 @@ of sync with them.
 | TODO-5649 | Remaining slice loan rules: `mut`/`move` owners, `Write` conflicts, outer bindings | ready | slices |
 | TODO-5570 | Slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views | ready | slices |
 | TODO-5650 | A wildcard-imported struct type as a parameter type needs its full path | ready | lowering-gaps |
-| TODO-5630 | Request-scoped string arenas: `withStringArena` | blocked | string-arenas |
+| TODO-5651 | Pushing a named owning struct to a `[T move]` parameter shares its storage | ready | lowering-gaps |
 | TODO-5638 | Shared immutable strings for threads (`SharedString`) | deferred | string-concurrency |
 | TODO-5645 | Real calls for struct-receiver methods (library code is inlined at every call site) | ready | lowering-gaps |
 | TODO-5647 | A StringView member named `opNotEqual` makes `StringMap<i32>.insert` fail to lower | ready | lowering-gaps |
@@ -157,7 +157,7 @@ of sync with them.
 
 ### Priority Lanes
 
-- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5570, TODO-5645, TODO-5630, TODO-5638, TODO-5567, TODO-5574
+- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5570, TODO-5645, TODO-5638, TODO-5567, TODO-5574
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Startup (docs/NativeUiPlan.md section 16): TODO-5603
@@ -284,17 +284,16 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - the short spelling works for parameters, returns and fields; full release gate green
   - stop_rule: struct type name resolution for imported names; nothing wider.
 
-- [ ] TODO-5630: Request-scoped string arenas: `withStringArena`
+- [ ] TODO-5651: Pushing a named owning struct to a `[T move]` parameter shares its storage
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5618
-  - created_at: 2026-11-02
-  - phase: Strings and slices (docs/spec/strings-and-views.md, Beyond std::string)
-  - parallel_track: string-arenas
-  - scope: `withStringArena { ... }` allocates every `String` made inside the block (including those made by callees) bump-style from one arena and frees them all when the block ends, in O(1) with no per-string free. Strings and views that borrow arena text cannot escape the block (compile error naming the place); `String` values moved out of the block are copied to the ordinary heap at the boundary or rejected, as the spec section decides; the arena honors `setStringMemoryLimit`. Observable through `stringMemory()`.
+  - status: ready
+  - created_at: 2026-11-03
+  - phase: Strings and slices (docs/spec/strings-and-views.md), found building TODO-5630
+  - parallel_track: lowering-gaps
+  - scope: `parts.push(part)` on a `vector<String>` with `part` a named `String` that is destroyed at the end of its scope stores a shallow copy: the vector element and `part` then point to the same block, `part`'s destroy frees it, and the element reads zeroed (later reused) memory. `parts.push(move(part))` and pushing a call result work. `vectorPush<T>([Vector<T> mut] values, [T move] value)` should either copy a named argument through the type's `Copy` or reject a name without `move(...)`. Reproduce with four pushes of `stringFromI32(1000 + k)` and read `parts[k].byteAt(3)`.
   - acceptance:
-    - VM and `optexe` tests: many allocations then one release, nested arenas, escape negatives, a limit hit inside an arena; a benchmark in the TODO-5628 style shows the arena beats per-string allocation for a request-shaped workload; full release gate green
-  - stop_rule: arenas for `String` only; no other allocator surface.
+    - a named owning value pushed to a `[T move]` parameter is copied or rejected (a negative or positive test per choice); `vector<String>` pushes in stdlib and tests stay correct; full release gate green
+  - stop_rule: the named-argument-to-move-parameter case; nothing wider.
 
 - [ ] TODO-5638: Shared immutable strings for threads (`SharedString`)
   - owner: ai

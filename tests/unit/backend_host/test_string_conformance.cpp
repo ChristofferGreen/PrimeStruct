@@ -2649,4 +2649,59 @@ TEST_CASE("a parsed request of views runs without a copy through optexe") {
   CHECK(optexeOutput("request", requestProgram()) == requestOracle());
 }
 
+// ---- string arenas ------------------------------------------------------------------------------------------------------
+
+namespace {
+// Many allocations in an arena, nested arenas, a large block, and the heap after the arenas end.
+std::string arenaProgram() {
+  return "import /std/text/*\nimport /std/text/view/*\n\n"
+         "[return<void> effects(heap_alloc)]\nchurn([i32] count) {\n"
+         "  for([i32 mut] i{0i32}, i < count, i++) {\n    [String] s{stringFromI32(i)}\n  }\n}\n\n"
+         "[return<int> effects(heap_alloc, io_out)]\nmain() {\n"
+         "  [String] keep{stringFromI32(42i32)}\n  print_line(stringArenaDepth())\n"
+         "  if(true) {\n    [StringArena] outer{beginStringArena()}\n    churn(1000i32)\n"
+         "    print_line(stringArenaDepth())\n    print_line(convert<i32>(stringArenaBytes()))\n"
+         "    if(true) {\n      [StringArena] inner{beginStringArena()}\n      churn(500i32)\n"
+         "      print_line(stringArenaDepth())\n      print_line(convert<i32>(stringArenaBytes()))\n    }\n"
+         "    print_line(stringArenaDepth())\n    print_line(convert<i32>(stringArenaBytes()))\n"
+         "    [String] big{stringFilled(100000i32, 65u8)}\n    print_line(big.count())\n  }\n"
+         "  print_line(stringArenaDepth())\n  print_line(convert<i32>(stringArenaBytes()))\n"
+         "  print_line(stringHeapChunks())\n  print_line(stringHeapLargeBlocks())\n"
+         "  print_line(convert<i32>(stringHeapBytesInUse()))\n  print_line(keep.count())\n"
+         "  return(0i32)\n}\n";
+}
+
+const char *ArenaOracle = "0\n1\n32000\n2\n48000\n1\n32000\n100000\n0\n0\n1\n0\n32\n2\n";
+
+// The memory limit counts the regions of an arena and applies again when it ends.
+std::string arenaLimitProgram() {
+  return "import /std/text/*\nimport /std/text/view/*\n\n"
+         "[return<int> effects(heap_alloc, io_out)]\nmain() {\n"
+         "  setStringMemoryLimit(300000u64)\n"
+         "  if(true) {\n    [StringArena] arena{beginStringArena()}\n"
+         "    [String mut] first{String{}}\n    [String mut] second{String{}}\n"
+         "    print_line(if(first.tryReserve(200000i32), then() { 1i32 }, else() { 0i32 }))\n"
+         "    print_line(if(second.tryReserve(200000i32), then() { 1i32 }, else() { 0i32 }))\n  }\n"
+         "  [String mut] third{String{}}\n"
+         "  print_line(if(third.tryReserve(200000i32), then() { 1i32 }, else() { 0i32 }))\n"
+         "  return(0i32)\n}\n";
+}
+} // namespace
+
+TEST_CASE("string arenas free everything at the end and nest on the VM") {
+  CHECK(vmOutput(arenaProgram()) == ArenaOracle);
+}
+
+TEST_CASE("string arenas free everything at the end and nest through optexe") {
+  CHECK(optexeOutput("arenas", arenaProgram()) == ArenaOracle);
+}
+
+TEST_CASE("the memory limit counts arena regions on the VM") {
+  CHECK(vmOutput(arenaLimitProgram()) == "1\n0\n1\n");
+}
+
+TEST_CASE("the memory limit counts arena regions through optexe") {
+  CHECK(optexeOutput("arena_limit", arenaLimitProgram()) == "1\n0\n1\n");
+}
+
 TEST_SUITE_END();

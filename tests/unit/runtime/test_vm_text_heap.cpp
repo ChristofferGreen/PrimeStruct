@@ -5,6 +5,7 @@
 
 #include "third_party/doctest.h"
 
+#include <chrono>
 #include <cstring>
 #include <string>
 #include <vector>
@@ -352,4 +353,64 @@ TEST_CASE("the VM answers the string heap host functions without bindings") {
   REQUIRE_MESSAGE(Vm{}.execute(module, result, error, std::vector<std::string_view>{"prog"}), error);
   // 9 + 5 + bytesInUse (a 40-byte block).
   CHECK(static_cast<int32_t>(result) == 9 + 5 + 40);
+}
+
+TEST_CASE("a string arena takes blocks and gives them all back faster than the heap") {
+  // A request-shaped pattern: 400 blocks of five size classes, all released together at the end of the request.
+  constexpr int Requests = 400;
+  constexpr int BlocksPerRequest = 400;
+  using Clock = std::chrono::steady_clock;
+  Fixture f;
+  std::string error;
+  uint64_t address = 0;
+  std::vector<uint64_t> blocks;
+  const auto heapStart = Clock::now();
+  for (int r = 0; r < Requests; ++r) {
+    blocks.clear();
+    for (int k = 0; k < BlocksPerRequest; ++k) {
+      REQUIRE(f.heap.allocate(f.core, 20 + (k % 5) * 20, address, error));
+      blocks.push_back(address);
+    }
+    for (const uint64_t block : blocks) {
+      REQUIRE(f.heap.release(f.core, block, error));
+    }
+  }
+  const auto heapTime = Clock::now() - heapStart;
+  const auto arenaStart = Clock::now();
+  for (int r = 0; r < Requests; ++r) {
+    f.heap.beginArena();
+    for (int k = 0; k < BlocksPerRequest; ++k) {
+      REQUIRE(f.heap.allocate(f.core, 20 + (k % 5) * 20, address, error));
+    }
+    REQUIRE_MESSAGE(f.heap.endArena(f.core, error), error);
+  }
+  const auto arenaTime = Clock::now() - arenaStart;
+  MESSAGE("heap " << std::chrono::duration<double, std::milli>(heapTime).count() << " ms, arena "
+                  << std::chrono::duration<double, std::milli>(arenaTime).count() << " ms");
+  // Measured at about 18x; the check is loose so a loaded machine does not fail it.
+  CHECK(arenaTime * 2 < heapTime);
+  CHECK(f.heap.stats().arenaDepth == 0);
+  CHECK(f.heap.stats().bytesInUse == 0);
+}
+
+TEST_CASE("arena blocks are not freed one by one, survive nesting, and are invalid after the arena ends") {
+  Fixture f;
+  std::string error;
+  const uint64_t outside = f.alloc(40);
+  f.heap.beginArena();
+  const uint64_t first = f.alloc(40);
+  f.heap.beginArena();
+  const uint64_t second = f.alloc(40);
+  f.free(second);  // a no-op inside an arena
+  CHECK(f.heap.stats().arenaDepth == 2);
+  REQUIRE(f.heap.endArena(f.core, error));
+  CHECK(f.core.byteAt(first) != nullptr);
+  CHECK(f.core.byteAt(second) == nullptr);
+  CHECK(f.heap.stats().arenaDepth == 1);
+  REQUIRE(f.heap.endArena(f.core, error));
+  CHECK(f.core.byteAt(first) == nullptr);
+  CHECK(f.core.byteAt(outside) != nullptr);
+  CHECK_FALSE(f.heap.endArena(f.core, error));
+  f.free(outside);
+  CHECK(f.heap.stats().bytesInUse == 0);
 }

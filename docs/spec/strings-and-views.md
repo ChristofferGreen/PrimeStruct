@@ -202,8 +202,20 @@ Every operation keeps the text valid UTF-8.
   `string memory limit exceeded`, and `String.tryReserve(n)` returns `Result<void, TextError>` instead of faulting.
 - **Threads:** each thread has its own string heap; a `String` freed on another thread returns its block to the heap
   it came from.
-- **Later:** scoped arenas for batch work (`withStringArena { ... }`), whose `String`s are freed together and cannot
-  escape the block.
+- **Arenas:** `[StringArena] arena{beginStringArena()}` opens a string arena that ends when `arena` goes out of scope.
+  While it is open every `String` block is bump-allocated from regions of the arena (4 KiB at first, doubling to 256 KiB
+  per size class; large blocks get a region of their own), freeing a block does nothing, and ending the arena returns
+  all its regions at once: O(1) per region, no per-string free. Arenas nest (the innermost one is used), the memory
+  limit counts their regions, `stringArenaDepth()` and `stringArenaBytes()` report them, and `stringHeapAllocations()`
+  counts blocks. Text made in an arena must not outlive it: the checker rejects returning such a `String`, assigning it
+  to a binding made before the arena and pushing it into a container made before it (`string escapes its arena via
+  return|outer binding|container`), and any other use of the text after the arena ended faults, because its addresses
+  are invalid (releasing it reports `invalid string heap free address`). A `String` that is grown while an arena is open
+  takes its new block from the arena, so a `String` made before the arena should not be grown inside it and kept.
+  Measured at the allocator (`test_vm_text_heap.cpp`): 400 blocks of five size classes, taken and returned, run about 13
+  times faster in an arena than through the heap; in the language-level request benchmark
+  (`benchmarks/strings/request_arena.prime` against `request_heap.prime`) the two run alike, because `String`
+  operations and the `vector` dominate there.
 
 ### Current surface (VM)
 
@@ -223,8 +235,7 @@ is a valid `[host]` parameter and result type and crosses as the block's `u64` a
   current literal-backed `string`, read byte by byte; they become real views with TODO-5540.
 - `pushCodePoint(point)` appends the UTF-8 encoding of a code point (a surrogate or a value past U+10FFFF stops the
   program); `+` and the comparisons are the operators described under the text view below.
-- Not yet: `+=` (the language has no token), the `Result`-returning `tryReserve`, per-thread heaps and arenas
-  (TODO-5630). A `String` is never borrowed implicitly where a view is expected: write `s.view()`, so every borrow is visible.
+- Not yet: `+=` (the language has no token), the `Result`-returning `tryReserve` and per-thread heaps. A `String` is never borrowed implicitly where a view is expected: write `s.view()`, so every borrow is visible.
 
 ## Parity with `std::string` and `std::string_view`
 
@@ -284,7 +295,7 @@ Where the language's own rules let text be better than the C++ type, and the TOD
 | --- | --- | --- |
 | Borrow-checked views | no dangling `string_view`; no iterator invalidation | TODO-5569, TODO-5618 |
 | Structs that hold views | a parsed `Request` of views into its buffer: zero-copy and safe | TODO-5631 |
-| Request-scoped string arenas | all of a request's text freed in O(1) | TODO-5630 |
+| Request-scoped string arenas | all of a request's text freed in O(1) | done (`StringArena`) |
 | Fused `+` chains and one-allocation `format` | one block per expression, guaranteed | done (`opPlusMany`, `stringHeapAllocations()` counts blocks); `format` sizing TODO-5627 |
 | `Maybe`/`Result` APIs | no `npos`, no exceptions, no undefined behavior | TODO-5619, TODO-5620 |
 | Linear-time search | `find` never goes quadratic | TODO-5619 |

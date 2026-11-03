@@ -10,6 +10,8 @@ struct TextHeapStats {
   uint64_t largeBlocks = 0;
   uint64_t largeBytes = 0;
   uint64_t allocations = 0;  // blocks handed out since the heap was made (empty requests excluded)
+  uint64_t arenaDepth = 0;   // arenas begun and not yet ended
+  uint64_t arenaBytes = 0;   // bytes of blocks handed out by the arenas that are still open
 };
 
 class VmTextHeap {
@@ -32,6 +34,12 @@ public:
 
   TextHeapStats stats() const;
 
+  // String arenas: while one is open every block comes from a bump region of its own and `release` of such a block
+  // does nothing; `endArena` returns all the regions of the innermost arena at once. Text that outlives its arena has
+  // its addresses invalidated, so a later use faults. Arenas nest; the limit counts their regions.
+  void beginArena() { arenas_.emplace_back(); }
+  bool endArena(VmHeapCore &core, std::string &error);
+
   // The address of a module string literal's bytes (`__pstext_literal`): the literal is copied, NUL terminated,
   // into a byte region of its own the first time it is asked for, and the region lives as long as the heap.
   // `tableSize` is the number of literals of the module, `index` the one asked for; an empty literal has address 0.
@@ -48,9 +56,23 @@ private:
     uint64_t blockCount = 0;
     std::vector<uint32_t> freeBlocks;  // block indices, most recently freed last
     std::vector<uint8_t> isFree;       // per block: 1 while it is on freeBlocks (frees check it in O(1))
+    uint64_t bytes = ChunkBytes;       // size of the region (arena chunks start small and double)
+    bool arena = false;                // a chunk of an arena: blocks are never reused or freed one by one
+    uint64_t bump = 0;                 // arena chunks: offset of the next unused block (no free list)
   };
 
-  uint64_t heldBytes() const { return chunks_.size() * ChunkBytes + largeBytes_; }
+  struct Arena {
+    std::vector<uint64_t> chunks;         // byte offsets of the chunk regions it took
+    std::vector<uint64_t> large;          // addresses of its large blocks
+    std::map<uint64_t, uint64_t> current; // block size -> byte offset of the chunk it is filling
+    std::map<uint64_t, uint64_t> nextBytes; // block size -> size of the next chunk it takes
+    uint64_t lastBlockBytes = 0;          // the size class of the last allocation and the chunk it came from
+    Chunk *lastChunk = nullptr;
+    uint64_t bytes = 0;                   // bytes of the small blocks handed out
+  };
+  bool allocateInArena(VmHeapCore &core, uint64_t size, uint64_t &address, std::string &error);
+
+  uint64_t heldBytes() const { return chunkBytesHeld_ + largeBytes_; }
   Chunk *chunkWithFreeBlock(uint64_t blockBytes);
   std::map<uint64_t, Chunk>::iterator chunkContaining(uint64_t address);
   std::map<uint64_t, Chunk>::const_iterator chunkContaining(uint64_t address) const;
@@ -67,6 +89,9 @@ private:
   std::map<uint64_t, uint64_t> large_;
   uint64_t largeBytes_ = 0;
   uint64_t allocations_ = 0;
+  uint64_t chunkBytesHeld_ = 0;  // bytes of all chunk regions
+  std::vector<Arena> arenas_;
+  std::set<uint64_t> arenaLarge_;  // byte offsets of large blocks that belong to an arena
   uint64_t bytesInUse_ = 0;
   uint64_t limit_ = 0;
   // Region address of each literal asked for through `literal`, by string index (0 = none yet).
@@ -100,7 +125,7 @@ inline std::map<uint64_t, VmTextHeap::Chunk>::iterator VmTextHeap::chunkContaini
     return chunks_.end();
   }
   --it;
-  return offset < it->first + ChunkBytes ? it : chunks_.end();
+  return offset < it->first + it->second.bytes ? it : chunks_.end();
 }
 
 inline std::map<uint64_t, VmTextHeap::Chunk>::const_iterator VmTextHeap::chunkContaining(uint64_t address) const {
@@ -110,7 +135,7 @@ inline std::map<uint64_t, VmTextHeap::Chunk>::const_iterator VmTextHeap::chunkCo
     return chunks_.end();
   }
   --it;
-  return offset < it->first + ChunkBytes ? it : chunks_.end();
+  return offset < it->first + it->second.bytes ? it : chunks_.end();
 }
 
 inline VmTextHeap::Chunk *VmTextHeap::chunkWithFreeBlock(uint64_t blockBytes) {
@@ -127,6 +152,9 @@ inline bool VmTextHeap::allocate(VmHeapCore &core, uint64_t size, uint64_t &addr
     return true;
   }
   ++allocations_;
+  if (!arenas_.empty()) {
+    return allocateInArena(core, size, address, error);
+  }
   const uint64_t blockBytes = blockSizeFor(size);
   if (size > LargeThreshold) {
     if (limit_ != 0 && heldBytes() + blockBytes > limit_) {
@@ -163,6 +191,7 @@ inline bool VmTextHeap::allocate(VmHeapCore &core, uint64_t size, uint64_t &addr
     }
     fresh.isFree.assign(static_cast<size_t>(fresh.blockCount), uint8_t{1});
     chunk = &(chunks_[offsetOf(region)] = std::move(fresh));
+    chunkBytesHeld_ += ChunkBytes;
     withFree_[blockBytes].insert(offsetOf(region));
     ++emptyChunks_;
   }
@@ -180,6 +209,105 @@ inline bool VmTextHeap::allocate(VmHeapCore &core, uint64_t size, uint64_t &addr
   return true;
 }
 
+inline bool VmTextHeap::allocateInArena(VmHeapCore &core, uint64_t size, uint64_t &address, std::string &error) {
+  Arena &arena = arenas_.back();
+  const uint64_t blockBytes = blockSizeFor(size);
+  if (size > LargeThreshold) {
+    if (limit_ != 0 && heldBytes() + blockBytes > limit_) {
+      error = "string memory limit exceeded";
+      return false;
+    }
+    uint64_t region = 0;
+    if (!core.allocateBytes(blockBytes, region, error)) {
+      return false;
+    }
+    large_[offsetOf(region)] = blockBytes;
+    arenaLarge_.insert(offsetOf(region));
+    arena.large.push_back(region);
+    largeBytes_ += blockBytes;
+    bytesInUse_ += blockBytes;
+    address = region;
+    return true;
+  }
+  Chunk *chunk = nullptr;
+  if (arena.lastChunk != nullptr && arena.lastBlockBytes == blockBytes &&
+      arena.lastChunk->bump + blockBytes <= arena.lastChunk->blockCount * blockBytes) {
+    chunk = arena.lastChunk;
+  }
+  const auto current = chunk == nullptr ? arena.current.find(blockBytes) : arena.current.end();
+  if (current != arena.current.end()) {
+    Chunk &candidate = chunks_.find(current->second)->second;
+    if (candidate.bump + blockBytes <= candidate.blockCount * blockBytes) {
+      chunk = &candidate;
+    }
+  }
+  if (chunk == nullptr) {
+    // An arena's chunks start small (a request rarely needs a whole chunk) and double up to ChunkBytes.
+    uint64_t chunkBytes = arena.nextBytes.count(blockBytes) > 0 ? arena.nextBytes[blockBytes] : 0;
+    if (chunkBytes == 0) {
+      chunkBytes = std::max<uint64_t>(4096, blockBytes * 4);
+    }
+    chunkBytes = std::min<uint64_t>(chunkBytes, ChunkBytes);
+    arena.nextBytes[blockBytes] = std::min<uint64_t>(chunkBytes * 2, ChunkBytes);
+    if (limit_ != 0 && heldBytes() + chunkBytes > limit_) {
+      error = "string memory limit exceeded";
+      return false;
+    }
+    uint64_t region = 0;
+    if (!core.allocateBytes(chunkBytes, region, error)) {
+      return false;
+    }
+    Chunk fresh;
+    fresh.base = region;
+    fresh.blockBytes = blockBytes;
+    fresh.bytes = chunkBytes;
+    fresh.blockCount = chunkBytes / blockBytes;
+    fresh.arena = true;
+    chunk = &(chunks_[offsetOf(region)] = std::move(fresh));
+    chunkBytesHeld_ += chunkBytes;
+    arena.current[blockBytes] = offsetOf(region);
+    arena.chunks.push_back(offsetOf(region));
+  }
+  address = chunk->base + chunk->bump;
+  chunk->bump += blockBytes;
+  arena.lastBlockBytes = blockBytes;
+  arena.lastChunk = chunk;
+  bytesInUse_ += blockBytes;
+  arena.bytes += blockBytes;
+  return true;
+}
+
+inline bool VmTextHeap::endArena(VmHeapCore &core, std::string &error) {
+  if (arenas_.empty()) {
+    error = "string arena ended without one being open";
+    return false;
+  }
+  Arena arena = std::move(arenas_.back());
+  arenas_.pop_back();
+  for (const uint64_t offset : arena.chunks) {
+    const auto found = chunks_.find(offset);
+    const uint64_t base = found->second.base;
+    chunkBytesHeld_ -= found->second.bytes;
+    chunks_.erase(found);
+    if (!core.releaseBytes(base, error)) {
+      return false;
+    }
+  }
+  bytesInUse_ -= arena.bytes;
+  for (const uint64_t address : arena.large) {
+    const auto found = large_.find(offsetOf(address));
+    const uint64_t bytes = found->second;
+    large_.erase(found);
+    arenaLarge_.erase(offsetOf(address));
+    largeBytes_ -= bytes;
+    bytesInUse_ -= bytes;
+    if (!core.releaseBytes(address, error)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 inline bool VmTextHeap::release(VmHeapCore &core, uint64_t address, std::string &error) {
   if (address == 0) {
     return true;
@@ -189,6 +317,9 @@ inline bool VmTextHeap::release(VmHeapCore &core, uint64_t address, std::string 
     return false;
   }
   const auto large = large_.find(offsetOf(address));
+  if (large != large_.end() && arenaLarge_.count(offsetOf(address)) > 0) {
+    return true;  // freed with its arena
+  }
   if (large != large_.end()) {
     const uint64_t bytes = large->second;
     if (!core.releaseBytes(address, error)) {
@@ -205,6 +336,9 @@ inline bool VmTextHeap::release(VmHeapCore &core, uint64_t address, std::string 
     return false;
   }
   Chunk &chunk = found->second;
+  if (chunk.arena) {
+    return true;  // freed with its arena
+  }
   const uint64_t within = offsetOf(address) - found->first;
   if (within % chunk.blockBytes != 0 || ((address ^ chunk.base) >> VmHeapCore::GenerationShift) != 0) {
     error = "invalid string heap free address: " + std::to_string(address);
@@ -239,6 +373,7 @@ inline bool VmTextHeap::release(VmHeapCore &core, uint64_t address, std::string 
     if (emptyChunks_ > 1) {
       const uint64_t base = chunk.base;
       withFree_[chunk.blockBytes].erase(found->first);
+      chunkBytesHeld_ -= chunk.bytes;
       chunks_.erase(found);
       --emptyChunks_;
       return core.releaseBytes(base, error);
@@ -301,6 +436,10 @@ inline TextHeapStats VmTextHeap::stats() const {
   out.largeBlocks = large_.size();
   out.largeBytes = largeBytes_;
   out.allocations = allocations_;
+  out.arenaDepth = arenas_.size();
+  for (const Arena &arena : arenas_) {
+    out.arenaBytes += arena.bytes;
+  }
   return out;
 }
 
@@ -371,10 +510,23 @@ inline bool callTextHostFunction(VmTextHeap &heap,
     case 5:
       result = stats.allocations;
       return true;
+    case 6:
+      result = stats.arenaDepth;
+      return true;
+    case 7:
+      result = stats.arenaBytes;
+      return true;
     default:
       error = "unknown string heap statistic: " + std::to_string(args[0]);
       return false;
     }
+  }
+  if (name == "__pstext_arena_begin") {
+    heap.beginArena();
+    return true;
+  }
+  if (name == "__pstext_arena_end") {
+    return heap.endArena(core, error);
   }
   if (name == "__pstext_set_limit") {
     heap.setLimit(args[0]);

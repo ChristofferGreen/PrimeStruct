@@ -31,6 +31,14 @@ namespace std {
   __pstext_set_limit([u64] bytes) {
   }
 
+  [host return<void>]
+  __pstext_arena_begin() {
+  }
+
+  [host return<void>]
+  __pstext_arena_end() {
+  }
+
   // The entry argument at `index` (0 is the program name) copied into a fresh block; empty text when
   // there is no such argument.
   [host return</std/text/String>]
@@ -807,6 +815,36 @@ namespace std {
   [public return<u64>]
   stringHeapAllocations() {
     return(__pstext_stat(5u64))
+  }
+
+  // Strings made while a StringArena is open come from a bump region and are all freed when it ends, in O(1) with no
+  // per-string free. `[StringArena] arena{beginStringArena()}` opens one that ends when `arena` goes out of scope.
+  // Arenas nest, and the memory limit counts their regions. Text made in an arena must not outlive it: its addresses
+  // are invalid after the end, so a later use faults (and the checker rejects the plain escapes).
+  [public struct]
+  StringArena() {
+    [public i32 mut] marker{0i32}
+
+    Destroy() {
+      __pstext_arena_end()
+    }
+  }
+
+  [public return<StringArena>]
+  beginStringArena() {
+    __pstext_arena_begin()
+    return(StringArena{})
+  }
+
+  // The arenas that are open, and the bytes of blocks their strings hold.
+  [public return<i32>]
+  stringArenaDepth() {
+    return(convert<i32>(__pstext_stat(6u64)))
+  }
+
+  [public return<u64>]
+  stringArenaBytes() {
+    return(__pstext_stat(7u64))
   }
 
   [public return<void>]

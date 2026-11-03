@@ -41,13 +41,14 @@ namespace primec {
 // The host functions the VM answers itself (the stdlib `String` declares them with `[host]`):
 //   __pstext_alloc(size) -> Pointer<u8>      __pstext_try_alloc(size) -> Pointer<u8> (null on failure)
 //   __pstext_free(Pointer<u8>)               __pstext_capacity(Pointer<u8>) -> u64 (block size)
-//   __pstext_stat(which) -> u64              0 chunks, 1 bytesInUse, 2 bytesFree, 3 largeBlocks, 4 largeBytes
+//   __pstext_stat(which) -> u64              0 chunks, 1 bytesInUse, 2 bytesFree, 3 largeBlocks, 4 largeBytes, 5 allocations, 6 open arenas, 7 arena bytes
 //   __pstext_literal(string) -> Pointer<u8>: the address of a string literal's bytes (VM and optexe)
 //   __pstext_f64_ok(address, count) -> i32 / __pstext_parse_f64(address, count) -> f64: decimal text to double
 //   __pstext_move(dst, src, count) / __pstext_fill(dst, value, count) / __pstext_compare(a, b, count) -> i32 /
 //   __pstext_find(address, count, value) -> i32: bulk byte operations, one range check per call (VmHeapCore::byteSpan)
 //   __pstext_length(Pointer<u8>) -> i32 (text length)   __pstext_usable(Pointer<u8>) -> u64 (block size less the NUL)
 //   __pstext_set_limit(bytes)
+//   __pstext_arena_begin() / __pstext_arena_end(): open and close a string arena (the stdlib `StringArena`)
 inline constexpr std::string_view TextHostPrefix = "__pstext_";
 
 // The `__pstext_*` function an import names (the stdlib declares them inside a namespace, so the import

@@ -389,3 +389,32 @@ TEST_CASE("a struct of views is a loan on the buffers its views borrow") {
   CHECK_FALSE(outer.compiled);
   CHECK(outer.diagnostics.find("slice escapes via outer binding kept (root: inner)") != std::string::npos);
 }
+
+TEST_CASE("text made in a string arena is rejected where it would outlive the arena") {
+  const Outcome returned = runViews("  return(0i32)",
+                                    "[return<String> effects(heap_alloc)]\nleak() {\n  [StringArena] arena{beginStringArena()}\n"
+                                    "  [String] made{stringFromI32(7i32)}\n  return(made)\n}\n");
+  CHECK_FALSE(returned.compiled);
+  CHECK(returned.diagnostics.find("string escapes its arena via return (arena: arena)") != std::string::npos);
+
+  const Outcome outer = runViews("  [String mut] kept{String{}}\n  if(true) {\n    [StringArena] arena{beginStringArena()}\n"
+                                 "    [String] made{stringFromI32(7i32)}\n    kept = made\n  }\n  return(kept.count())");
+  CHECK_FALSE(outer.compiled);
+  CHECK(outer.diagnostics.find("string escapes its arena via outer binding kept (arena: arena)") != std::string::npos);
+
+  const Outcome container = runViews("  [vector<String> mut] all{vector<String>()}\n"
+                                     "  if(true) {\n    [StringArena] arena{beginStringArena()}\n"
+                                     "    [String] made{stringFromI32(7i32)}\n    all.push(made)\n  }\n  return(0i32)");
+  CHECK_FALSE(container.compiled);
+  CHECK(container.diagnostics.find("string escapes its arena via container all (arena: arena)") != std::string::npos);
+}
+
+TEST_CASE("text that outlives its arena through a call faults when it is released") {
+  const Outcome outlived = runViews("  [String] after{leak()}\n  return(after.count())",
+                                    "[return<String> effects(heap_alloc)]\npassThrough([String] text) {\n  return(text)\n}\n\n"
+                                    "[return<String> effects(heap_alloc)]\nleak() {\n  [StringArena] arena{beginStringArena()}\n"
+                                    "  [String] made{stringFromI32(777i32)}\n  return(passThrough(made))\n}\n");
+  REQUIRE(outlived.compiled);
+  CHECK_FALSE(outlived.ok);
+  CHECK(outlived.diagnostics.find("invalid string heap free address") != std::string::npos);
+}
