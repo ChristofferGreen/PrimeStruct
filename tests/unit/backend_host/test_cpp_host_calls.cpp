@@ -134,7 +134,7 @@ TEST_CASE("a program that is never given its host functions does not link") {
   CHECK(compiled.diagnostics.find("Failed to compile output executable") != std::string::npos);
 }
 
-TEST_CASE("a host function cannot return a string view, and the simple emitters name optexe for String") {
+TEST_CASE("a host function cannot return a string view, and the simple emitters take String through the optimized emitter") {
   const std::string source = scratch("text_result.prime");
   writeFile(source, R"([host return<string>]
 host_name() {
@@ -165,9 +165,11 @@ main() {
   return(name.count())
 }
 )");
-  const CompileResult simple = compile("cpp", textSource, scratch("text_string_cpp"));
-  CHECK(simple.status != 0);
-  CHECK_MESSAGE(simple.diagnostics.find("optimized C++ emitters") != std::string::npos, simple.diagnostics);
+  const std::string simpleOutput = scratch("text_string_cpp");
+  const CompileResult simple = compile("cpp", textSource, simpleOutput);
+  // A String-returning host is text: the simple emitters hand such a program to the optimized emitter.
+  REQUIRE_MESSAGE(simple.status == 0, simple.diagnostics);
+  CHECK(readFile(simpleOutput).find("ps_host_text_result") != std::string::npos);
 }
 
 TEST_CASE("only host imports the program reaches are declared") {

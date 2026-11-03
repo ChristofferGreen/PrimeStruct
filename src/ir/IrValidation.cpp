@@ -40,8 +40,8 @@ const char *wasmTargetName(IrValidationTarget target) {
   return "wasm";
 }
 
-// The byte-memory opcodes and the u8 wrap step: the VM, the optimized C++ emitters and the arm64
-// native emitter run them; the other backends reject them.
+// The byte-memory opcodes and the u8 wrap step: the VM, the C++ emitters (a module that uses them is emitted by the
+// optimized emitter) and the arm64 native emitter run them; the other backends reject them.
 bool isByteOpcode(IrOpcode op) {
   return op == IrOpcode::HeapAllocBytes || op == IrOpcode::LoadU8 || op == IrOpcode::StoreU8 ||
          op == IrOpcode::ZextU8;
@@ -207,28 +207,14 @@ bool validateFunction(const IrModule &module,
         return failInstruction(
             functionIndex, function.name, instructionIndex, "host import parameter count exceeds supported limit", error);
       }
-      if (target == IrValidationTarget::Cpp) {
-        auto vmOnlyKind = [](IrHostValueKind kind) { return kind == IrHostValueKind::U8 || kind == IrHostValueKind::Text; };
-        bool usesU8 = vmOnlyKind(hostImport.returnKind);
-        for (const IrHostValueKind parameter : hostImport.parameters) {
-          usesU8 = usesU8 || vmOnlyKind(parameter);
-        }
-        if (usesU8) {
-          return failInstruction(functionIndex,
-                                 function.name,
-                                 instructionIndex,
-                                 "u8 and text host values are only supported by the vm and the optimized C++ emitters (optexe, optcpp) yet (docs/todo.md, TODO-5574)",
-                                 error);
-        }
-      }
     }
     if (target != IrValidationTarget::Any && target != IrValidationTarget::Vm &&
         target != IrValidationTarget::Serialized && target != IrValidationTarget::OptCpp &&
-        !(target == IrValidationTarget::Native && nativeEmitsByteMemory()) && isByteOpcode(inst.op)) {
+        target != IrValidationTarget::Cpp && !(target == IrValidationTarget::Native && nativeEmitsByteMemory()) && isByteOpcode(inst.op)) {
       return failInstruction(functionIndex,
                              function.name,
                              instructionIndex,
-                             "u8 and byte memory opcodes are only supported by the vm, the optimized C++ emitters (optexe, optcpp) and the arm64 native backend yet (docs/todo.md, TODO-5574)",
+                             "u8 and byte memory opcodes are only supported by the vm, the C++ emitters and the arm64 native backend yet (docs/todo.md, TODO-5574)",
                              error);
     }
     if (isWasmTarget(target) && !isWasmOpcodeAllowedForTarget(inst.op, target)) {

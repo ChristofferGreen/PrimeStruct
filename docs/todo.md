@@ -111,7 +111,6 @@ of sync with them.
 | TODO-5648 | `Money{self.cents + other.cents}` fails under `ScriptEngine` but compiles under `primevm` | ready | lowering-gaps |
 | TODO-5603 | Startup audit: what a launch loads and does | ready | startup |
 | TODO-5586 | Native String heap: pooled blocks, statistics and limit | deferred | native-backend-strings |
-| TODO-5574 | Simple C++ emitters run bytes and strings | deferred | string-backends |
 | TODO-5536 | Small, lazily loaded bytecode for apps | ready | bytecode-startup |
 | TODO-5535 | Launch-time harness and reference Objective-C++ editor | ready | native-ui-launch |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
@@ -155,7 +154,7 @@ of sync with them.
 
 ### Priority Lanes
 
-- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5645, TODO-5638, TODO-5567, TODO-5652, TODO-5574
+- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5645, TODO-5638, TODO-5567, TODO-5652
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Startup (docs/NativeUiPlan.md section 16): TODO-5603
@@ -352,18 +351,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - `scripts/measure_startup.sh` prints the loaded-library count and the median time to the first window of a bundle over a number of launches; the plan records the baseline and what moved; a guard (a test or the script with a recorded limit) fails when a launch loads more libraries than the baseline; full release gate green
   - stop_rule: measurement, the guard and the launch-time work that can wait; no feature changes.
   - notes: system calls of a feature belong behind its window (the file associations only run when the settings window is built or a button is pressed).
-
-- [ ] TODO-5574: Simple C++ emitters run bytes and strings
-  - owner: ai
-  - status: deferred
-  - created_at: 2026-10-22
-  - phase: Strings and slices (docs/spec/strings-and-views.md)
-  - parallel_track: string-backends
-  - scope: Port the `u8` byte opcodes (HeapAllocBytes, LoadU8, StoreU8), the `__pstext_*` string heap and the Text host kind to the simple C++ emitters (`--emit=cpp`, `--emit=exe`), so `String`, `Slice` and `vector<u8>` programs run there as well as on the VM and the optimized C++ emitters (which TODO-5542 finished); replace `std::string_view` for `string` once TODO-5540 defines the view; remove the remaining "VM-only" limits from docs/spec/vm-design.md and docs/spec/backend-type-support.md. The arm64 native backend is TODO-5581 to TODO-5585.
-  - acceptance:
-    - the tests/unit/backend_host/test_cpp_strings.cpp programs also pass through `--emit=exe` with the VM's exit codes; full release gate green
-  - stop_rule: the simple C++ emitters only.
-  - notes: deferred: PrimeScroll compiles through the optimized C++ emitter, which needs none of this.
 
 - [ ] TODO-5586: Native String heap: pooled blocks, statistics and limit
   - owner: ai

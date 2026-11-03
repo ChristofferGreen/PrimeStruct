@@ -91,7 +91,7 @@ void matches(const std::string &name,
   const std::string source = programOf(body, definitions);
   const int vm = vmExit(source);
   CHECK_MESSAGE(vm == (expected & 0xFF), name << ": the VM returned " << vm);
-  std::vector<const char *> kinds = {"optexe"};
+  std::vector<const char *> kinds = {"optexe", "exe"};
   if (native && NativeRunsBytes) {
     kinds.push_back("native");
   }
@@ -284,11 +284,16 @@ TEST_CASE("entry arguments read as String agree on the VM, optexe and the arm64 
   }
 }
 
-TEST_CASE("the simple C++ emitters name the optimized ones for byte programs") {
+TEST_CASE("the simple C++ emitters hand byte programs to the optimized emitter") {
   const std::string source = programOf("  [String] s{/std/text/stringFrom(\"abc\")}\n  return(s.count())", "");
-  for (const char *kind : {"exe", "cpp"}) {
-    const Compiled compiled = compileWith(kind, "u8_simple", source);
-    CHECK_FALSE(compiled.status == 0);
-    CHECK_MESSAGE(compiled.diagnostics.find("optexe") != std::string::npos, kind << ": " << compiled.diagnostics);
-  }
+  const Compiled exe = compileWith("exe", "u8_simple", source);
+  REQUIRE_MESSAGE(exe.status == 0, exe.diagnostics);
+  CHECK(run(shellQuote(exe.program) + " > /dev/null 2>&1") == 3);
+  // --emit=cpp writes C++ with the optimized emitter's text runtime for a program that runs bytes or text.
+  const Compiled simple = compileWith("cpp", "u8_simple", source);
+  REQUIRE_MESSAGE(simple.status == 0, simple.diagnostics);
+  CHECK(readFile(simple.program).find("ps_text_") != std::string::npos);
+  const Compiled plain = compileWith("cpp", "u8_plain", programOf("  return(7i32)", ""));
+  REQUIRE_MESSAGE(plain.status == 0, plain.diagnostics);
+  CHECK(readFile(plain.program).find("ps_text_") == std::string::npos);
 }

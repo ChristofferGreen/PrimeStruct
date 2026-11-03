@@ -434,6 +434,30 @@ public:
   }
 };
 
+// A module that runs bytes or text (the u8 byte opcodes, u8 and text host values) is emitted by the optimized C++
+// emitter even for the plain cpp and exe kinds: only that emitter has the byte regions and the string heap.
+bool moduleNeedsOptimizedCppEmitter(const IrModule &module) {
+  for (const IrHostImport &hostImport : module.hostImports) {
+    if (hostImport.returnKind == IrHostValueKind::U8 || hostImport.returnKind == IrHostValueKind::Text) {
+      return true;
+    }
+    for (const IrHostValueKind parameter : hostImport.parameters) {
+      if (parameter == IrHostValueKind::U8 || parameter == IrHostValueKind::Text) {
+        return true;
+      }
+    }
+  }
+  for (const IrFunction &function : module.functions) {
+    for (const IrInstruction &instruction : function.instructions) {
+      if (instruction.op == IrOpcode::HeapAllocBytes || instruction.op == IrOpcode::LoadU8 ||
+          instruction.op == IrOpcode::StoreU8 || instruction.op == IrOpcode::ZextU8) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 class CppIrBackend final : public IrBackend {
 public:
   std::string_view emitKind() const override {
@@ -468,14 +492,25 @@ public:
             IrBackendEmitResult & /*result*/,
             std::string &error) const override {
     const IrModule prunedModule = pruneIrModuleToReachableFunctions(module);
-    IrToCppEmitter emitter;
     std::string cppSource;
-    if (!emitter.emitSource(prunedModule, cppSource, error)) {
-      if (error.empty()) {
-        error = "ir-to-cpp failed without diagnostic";
+    if (moduleNeedsOptimizedCppEmitter(prunedModule)) {
+      IrToOptCppEmitter optimizedEmitter;
+      if (!optimizedEmitter.emitSource(prunedModule, cppSource, error)) {
+        if (error.empty()) {
+          error = "ir-to-optcpp failed without diagnostic";
+        }
+        error = "ir-to-optcpp failed: " + error;
+        return false;
       }
-      error = "ir-to-cpp failed: " + error;
-      return false;
+    } else {
+      IrToCppEmitter emitter;
+      if (!emitter.emitSource(prunedModule, cppSource, error)) {
+        if (error.empty()) {
+          error = "ir-to-cpp failed without diagnostic";
+        }
+        error = "ir-to-cpp failed: " + error;
+        return false;
+      }
     }
     if (!writeTextFile(options.outputPath, cppSource)) {
       error = options.outputPath;
@@ -523,14 +558,26 @@ public:
     std::filesystem::path cppPath = outputPath;
     cppPath.replace_extension(".cpp");
 
-    IrToCppEmitter emitter;
     std::string cppSource;
-    if (!emitter.emitSource(prunedModule, cppSource, error)) {
-      if (error.empty()) {
-        error = "ir-to-cpp failed without diagnostic";
+    const bool optimized = moduleNeedsOptimizedCppEmitter(prunedModule);
+    if (optimized) {
+      IrToOptCppEmitter optimizedEmitter;
+      if (!optimizedEmitter.emitSource(prunedModule, cppSource, error)) {
+        if (error.empty()) {
+          error = "ir-to-optcpp failed without diagnostic";
+        }
+        error = "ir-to-optcpp failed: " + error;
+        return false;
       }
-      error = "ir-to-cpp failed: " + error;
-      return false;
+    } else {
+      IrToCppEmitter emitter;
+      if (!emitter.emitSource(prunedModule, cppSource, error)) {
+        if (error.empty()) {
+          error = "ir-to-cpp failed without diagnostic";
+        }
+        error = "ir-to-cpp failed: " + error;
+        return false;
+      }
     }
     if (!writeTextFile(cppPath.string(), cppSource)) {
       error = cppPath.string();
@@ -538,7 +585,10 @@ public:
     }
 
     const ProcessRunner &processRunner = systemProcessRunner();
-    if (!compileCppExecutable(processRunner, cppPath, outputPath, options.linkArgs)) {
+    const bool compiled = optimized ? compileCppExecutableOptimized(processRunner, cppPath, outputPath,
+                                                                    options.hostOptimizationLevel, options.linkArgs)
+                                    : compileCppExecutable(processRunner, cppPath, outputPath, options.linkArgs);
+    if (!compiled) {
       error = "Failed to compile output executable";
       return false;
     }

@@ -70,8 +70,8 @@
   `HeapRealloc` of a byte region counts bytes and copies the leading bytes, while a realloc of address 0 still
   allocates slots (a byte container starts with `HeapAllocBytes`). Byte memory and `ZextU8` run on the step kernel and the
   flat loop declines modules that use the three memory opcodes; the native JIT and the native, wasm and GLSL
-  backends do not support them yet (the validator says so; TODO-5574). The optimized C++ emitters (`optcpp`,
-  `optexe`) run them: their generated runtime pastes `VmHeapCore` (`VmHeapCoreSource`) and the string heap
+  backends do not support them yet (the validator says so). The C++ emitters run them: `optcpp` and `optexe` always, and
+  `cpp` and `exe` for a module that uses them (the optimized emitter writes it). The optimized emitters their generated runtime pastes `VmHeapCore` (`VmHeapCoreSource`) and the string heap
   (`VmTextHeapSource`, from `VmTextHeapBody.inc`), so byte addresses, faults and `stringMemory()` figures match the
   VM. `VmHeapCore` holds both arenas, so the debugger and the C++ runtimes that paste it share the same addresses.
 - **Native execution tier:** on Linux x86_64, `primevm` at `-O2` (its default) runs a module as native code in its own

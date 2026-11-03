@@ -45,8 +45,8 @@ Rules:
   `primec --emit=exe|optexe ... --link-arg <arg>` (repeatable) appends host libraries, search paths or sources to the
   C++ compiler command that links the program. The optimized emitters (`optcpp`, `optexe`) also pass a `String`
   parameter as a NUL-terminated `const char *` and take a `const char *` result as a new `String`; `u8` is
-  `uint8_t`. The simple emitters (`cpp`, `exe`) reject `u8` and text host values with a diagnostic that names
-  TODO-5574, and a host function that returns a `string` view is rejected by every C++ emitter.
+  `uint8_t`. The simple emitters (`cpp`, `exe`) hand a program that uses `u8` or text host values to the optimized emitter, and a
+  host function that returns a `string` view is rejected by every C++ emitter.
 - The embedder binds every declared function, by name, with a matching signature
   (`Script::bind` in `docs/Embedding.md`). A missing or mismatched binding fails
   before any instruction runs. A declared host function that is never called adds

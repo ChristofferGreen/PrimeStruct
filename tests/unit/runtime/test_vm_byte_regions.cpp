@@ -241,8 +241,9 @@ TEST_CASE("only the VM, the optimized C++ emitters and arm64 native accept the b
   CHECK(validateIrModule(module, IrValidationTarget::Vm, error));
   CHECK(validateIrModule(module, IrValidationTarget::Serialized, error));
   CHECK(validateIrModule(module, IrValidationTarget::OptCpp, error));
+  CHECK(validateIrModule(module, IrValidationTarget::Cpp, error));  // emitted by the optimized emitter
   CHECK(validateIrModule(module, IrValidationTarget::Native, error) == nativeHasBytes);
-  for (const IrValidationTarget target : {IrValidationTarget::Cpp, IrValidationTarget::Wasm, IrValidationTarget::Glsl}) {
+  for (const IrValidationTarget target : {IrValidationTarget::Wasm, IrValidationTarget::Glsl}) {
     error.clear();
     CHECK_FALSE(validateIrModule(module, target, error));
     CHECK(error.find("only supported by the vm") != std::string::npos);

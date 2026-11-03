@@ -63,7 +63,7 @@ Total: 10147 test cases across 569 files.
 - host calls compiled by the C++ emitters match the VM
 - the C++ sources declare host functions with C linkage and call them directly
 - a program that is never given its host functions does not link
-- a host function cannot return a string view, and the simple emitters name optexe for String
+- a host function cannot return a string view, and the simple emitters take String through the optimized emitter
 - only host imports the program reaches are declared
 - the native backend imports host functions by name on macOS/arm64 and rejects them elsewhere
 
@@ -87,7 +87,7 @@ Total: 10147 test cases across 569 files.
 - host functions that take and return String agree on the VM and optexe
 - libSystem host functions run on the arm64 native backend with the VM's result
 - entry arguments read as String agree on the VM, optexe and the arm64 native backend
-- the simple C++ emitters name the optimized ones for byte programs
+- the simple C++ emitters hand byte programs to the optimized emitter
 
 ### test_string_conformance.cpp
 
