@@ -104,7 +104,6 @@ of sync with them.
 | TODO-5649 | Remaining slice loan rules: `mut`/`move` owners, `Write` conflicts, outer bindings | ready | slices |
 | TODO-5652 | Views of `array<T>` and retiring the copying `slice(array, start, end)` | blocked | slices |
 | TODO-5650 | A wildcard-imported struct type as a parameter type needs its full path | ready | lowering-gaps |
-| TODO-5651 | Pushing a named owning struct to a `[T move]` parameter shares its storage | ready | lowering-gaps |
 | TODO-5638 | Shared immutable strings for threads (`SharedString`) | deferred | string-concurrency |
 | TODO-5645 | Real calls for struct-receiver methods (library code is inlined at every call site) | ready | lowering-gaps |
 | TODO-5647 | A StringView member named `opNotEqual` makes `StringMap<i32>.insert` fail to lower | ready | lowering-gaps |
@@ -281,17 +280,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - acceptance:
     - the short spelling works for parameters, returns and fields; full release gate green
   - stop_rule: struct type name resolution for imported names; nothing wider.
-
-- [ ] TODO-5651: Pushing a named owning struct to a `[T move]` parameter shares its storage
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-03
-  - phase: Strings and slices (docs/spec/strings-and-views.md), found building TODO-5630
-  - parallel_track: lowering-gaps
-  - scope: `parts.push(part)` on a `vector<String>` with `part` a named `String` that is destroyed at the end of its scope stores a shallow copy: the vector element and `part` then point to the same block, `part`'s destroy frees it, and the element reads zeroed (later reused) memory. `parts.push(move(part))` and pushing a call result work. `vectorPush<T>([Vector<T> mut] values, [T move] value)` should either copy a named argument through the type's `Copy` or reject a name without `move(...)`. Reproduce with four pushes of `stringFromI32(1000 + k)` and read `parts[k].byteAt(3)`.
-  - acceptance:
-    - a named owning value pushed to a `[T move]` parameter is copied or rejected (a negative or positive test per choice); `vector<String>` pushes in stdlib and tests stay correct; full release gate green
-  - stop_rule: the named-argument-to-move-parameter case; nothing wider.
 
 - [ ] TODO-5638: Shared immutable strings for threads (`SharedString`)
   - owner: ai

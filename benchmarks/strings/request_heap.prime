@@ -7,7 +7,7 @@ handleRequest([i32] request) {
   for([i32 mut] k{0i32}, k < 400i32, k++) {
     [String mut] part{/std/text/stringFromI32(request * 400i32 + k)}
     part.append("/segment")
-    parts.push(move(part))
+    parts.push(part)
   }
   [i32 mut] total{0i32}
   for([i32 mut] k{0i32}, k < 400i32, k++) {

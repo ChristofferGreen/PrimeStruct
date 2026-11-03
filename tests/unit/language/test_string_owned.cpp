@@ -418,3 +418,13 @@ TEST_CASE("text that outlives its arena through a call faults when it is release
   CHECK_FALSE(outlived.ok);
   CHECK(outlived.diagnostics.find("invalid string heap free address") != std::string::npos);
 }
+
+TEST_CASE("a named String pushed into a vector is moved into it and keeps its text") {
+  CHECK(exitOf("  [vector<String> mut] parts{vector<String>()}\n"
+               "  for([i32 mut] k{0i32}, k < 4i32, k++) {\n"
+               "    [String mut] part{stringFromI32(1000i32 + k)}\n    part.append(\"/s\")\n    parts.push(part)\n  }\n"
+               "  [i32 mut] total{0i32}\n"
+               "  for([i32 mut] k{0i32}, k < 4i32, k++) {\n    total = total + parts[k].count() * 100i32 + convert<i32>(parts[k].byteAt(3i32))\n  }\n"
+               "  return(total - 2400i32)",
+               "import /std/collections/vector/*\n") == (48 + 49 + 50 + 51));
+}

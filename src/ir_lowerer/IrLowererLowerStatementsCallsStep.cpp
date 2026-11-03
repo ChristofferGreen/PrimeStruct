@@ -496,6 +496,13 @@ VectorMutationStatementEmitResult tryEmitCanonicalVectorMutationStatement(
     return VectorMutationStatementEmitResult::Error;
   }
   instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(payloadLocal)});
+  // A named struct pushed into the vector is moved into it (`push` takes `[T move]`): the vector now owns what the
+  // name owned, so the name must not destroy it again at the end of its scope.
+  if (helperName == "push" && elemSlotCountForBuffer > 1 && payloadArg->kind == Expr::Kind::Name) {
+    emitReleaseDropFlag(localsIn, payloadArg->name, [&](IrOpcode op, uint64_t imm) {
+      instructions.push_back({op, imm});
+    });
+  }
 
   const int32_t countLocal = input.allocTempLocal();
   const int32_t capacityLocal = input.allocTempLocal();
