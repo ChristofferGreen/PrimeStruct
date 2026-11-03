@@ -11,6 +11,7 @@
 #include "SemanticsValidateBuiltinSoaRewrites.h"
 #include "SemanticsValidateCompileTimeIf.h"
 #include "SemanticsValidateConvertConstructors.h"
+#include "SemanticsValidateSliceLoans.h"
 #include "SemanticsValidateExperimentalGfxConstructors.h"
 #include "SemanticsValidateExperimentalSoaFieldViewRewrites.h"
 #include "SemanticsValidateExperimentalSoaMethodRewrites.h"
@@ -317,6 +318,9 @@ bool runSemanticValidationManifestValidatorPass(
 
   state.validationCounters = state.validator->validationCounters();
   eraseCompileTimeTypeBindings(state.program);
+  if (!semantics::validateSliceLoans(state.program, state.error)) {
+    return false;
+  }
   state.validatorPassCompleted = true;
   return true;
 }

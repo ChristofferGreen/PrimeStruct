@@ -77,6 +77,19 @@ Views), checked lexically until the slice's last use:
   that parameter. A definition whose returned view could come from more than one parameter must say which with
   `[returns_borrow<name>]`; without it, the return is rejected.
 
+The checker (`validateSliceLoans`, run after the validator) is lexical and name based. A binding of type `Slice`,
+`ReadSlice`, `WriteSlice` or `StringView` whose initializer is a call on a binding `o` (`o.view()`, `v.slice(a, b)`,
+`firstHalf(o)`) is a loan on `o`'s root, through any chain of views. The loan lasts until the last statement of the block
+that mentions the view; a statement before that one that pushes, pops, inserts, erases, appends, replaces, clears,
+reserves, resizes, sets, assigns or moves the owner (or a field of it) is rejected with `borrowed binding: <root> (root:
+<root>, sink: <view>)`. A view assigned to a field (`slice escapes via field <name> (root: <root>)`), pushed or inserted
+into a container (`slice escapes via container`) or returned from a definition while it borrows a local
+(`slice escapes via return`) is rejected. A definition that returns views of more than one parameter needs
+`[returns_borrow<name>]` (`returned view could borrow from more than one parameter`). Not checked yet: an owner passed
+to a `mut` or `move` parameter, the `Write` slice conflict rule, a view stored in an outer binding or a global, a view
+inside a struct constructor (TODO-5631), and the caller side of a returned borrow beyond treating the first argument as
+the owner.
+
 ### Current surface (VM)
 
 `Slice<T, Capability>` is implemented as a stdlib struct pair in `stdlib/std/collections/slice.prime`
@@ -89,7 +102,7 @@ no write operations and `WriteSlice<T>.readOnly()` gives a read view of the same
 `compare`, `startsWith`, `endsWith`, `findSlice`, `takeFirst`, `dropFirst`, `takeLast`, `dropLast`, `head`,
 `tail`, `splitPart(separator, n)`, `splitCount(separator)` and, on a write view, `set`, `fill`, `swap`,
 `reverse`, `copyFrom`, `sort`. Not yet: the `values.view()`/`slice()`/`sliceMut()` method spellings, `[i]` on
-a view, views of `array<T>` and the loan rules (docs/todo.md).
+a view and views of `array<T>` (docs/todo.md).
 
 ### Operations on every slice
 

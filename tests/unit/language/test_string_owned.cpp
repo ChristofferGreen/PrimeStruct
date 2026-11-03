@@ -275,3 +275,76 @@ TEST_CASE("a string field holds static text: literals and other strings are the 
       "[return<int>]\nrename([string] text) {\n  [Named mut] n{Named{}}\n  n.label = text\n  return(n.label.count())\n}\n";
   CHECK(exitOf("  return(rename(\"second\"))", named) == 6);
 }
+
+namespace {
+const std::string TextViews = "import /std/text/view/*\nimport /std/collections/vector/*\n";
+
+Outcome runViews(const std::string &body, const std::string &definitions = "") {
+  return runBody(body, TextViews + definitions);
+}
+} // namespace
+
+TEST_CASE("a view is a loan on its owner until its last use") {
+  const Outcome conflict = runViews("  [String mut] s{stringFromI32(12345i32)}\n  [StringView] v{s.view()}\n"
+                                    "  s.append(\"x\")\n  return(v.count())");
+  CHECK_FALSE(conflict.compiled);
+  CHECK(conflict.diagnostics.find("borrowed binding: s (root: s, sink: v)") != std::string::npos);
+
+  const Outcome viaNarrowed = runViews("  [String mut] s{stringFromI32(12345i32)}\n  [StringView] v{s.view()}\n"
+                                       "  [StringView] w{v.slice(1i32, 3i32)}\n  s.clear()\n  return(w.count())");
+  CHECK_FALSE(viaNarrowed.compiled);
+  CHECK(viaNarrowed.diagnostics.find("borrowed binding: s") != std::string::npos);
+
+  const Outcome assigned = runViews("  [String mut] s{stringFromI32(12345i32)}\n  [StringView] v{s.view()}\n"
+                                    "  s = stringFromI32(7i32)\n  return(v.count())");
+  CHECK_FALSE(assigned.compiled);
+  CHECK(assigned.diagnostics.find("borrowed binding: s") != std::string::npos);
+}
+
+TEST_CASE("views may overlap, narrow, and the owner changes again after the last use") {
+  CHECK(exitOf("  [String mut] s{stringFromI32(12345i32)}\n  [StringView] a{s.view()}\n  [StringView] b{s.view()}\n"
+               "  [StringView] c{a.slice(1i32, 3i32)}\n  [i32] n{a.count() + b.count() + c.count()}\n"
+               "  s.append(\"x\")\n  s.clear()\n  return(n)",
+               TextViews) == 12);
+  CHECK(exitOf("  [String mut] s{stringFromI32(12345i32)}\n  [StringView] v{s.view()}\n"
+               "  [i32] n{v.count()}\n  s.append(\"xyz\")\n  return(n + s.count())",
+               TextViews) == 13);
+}
+
+TEST_CASE("a view cannot be stored in a field, a container, or returned from a local owner") {
+  const std::string holder = "[struct]\nHolder() {\n  [StringView mut] kept{textOf(\"x\")}\n}\n";
+  const Outcome field = runViews("  [String] s{stringFromI32(12345i32)}\n  [StringView] v{s.view()}\n  [Holder mut] h{Holder{}}\n"
+                                 "  h.kept = v\n  return(0i32)",
+                                 holder);
+  CHECK_FALSE(field.compiled);
+  CHECK(field.diagnostics.find("slice escapes via field kept (root: s)") != std::string::npos);
+
+  const Outcome container = runViews("  [String] s{stringFromI32(12345i32)}\n  [StringView] v{s.view()}\n"
+                                     "  [vector<StringView> mut] views{vector<StringView>()}\n  views.push(v)\n  return(0i32)");
+  CHECK_FALSE(container.compiled);
+  CHECK(container.diagnostics.find("slice escapes via container (root: s)") != std::string::npos);
+
+  const std::string leaking = "[return<StringView> effects(heap_alloc)]\nleak() {\n  [String] s{stringFromI32(1i32)}\n"
+                              "  [StringView] v{s.view()}\n  return(v)\n}\n";
+  const Outcome returned = runViews("  [StringView] v{leak()}\n  return(v.count())", leaking);
+  CHECK_FALSE(returned.compiled);
+  CHECK(returned.diagnostics.find("slice escapes via return (root: s)") != std::string::npos);
+}
+
+TEST_CASE("a definition may return a view of one of its parameters") {
+  const std::string borrowing = "[return</std/text/view/StringView>]\nfirstHalf([/std/text/view/StringView] text) {\n"
+                                "  return(text.slice(0i32, text.count() / 2i32))\n}\n";
+  CHECK(exitOf("  [String] s{stringFromI32(12345i32)}\n  [StringView] half{firstHalf(s.view())}\n  return(half.count())",
+               TextViews + borrowing) == 2);
+
+  const std::string ambiguous = "[return<StringView>]\npickOne([StringView] a, [StringView] b, [bool] first) {\n"
+                                "  [StringView] left{a.slice(0i32, 1i32)}\n  [StringView] right{b.slice(0i32, 1i32)}\n"
+                                "  if(first) { return(left) }\n  return(right)\n}\n";
+  const Outcome rejected = runViews("  return(0i32)", ambiguous);
+  CHECK_FALSE(rejected.compiled);
+  CHECK(rejected.diagnostics.find("returned view could borrow from more than one parameter") != std::string::npos);
+
+  const std::string annotated = "[return</std/text/view/StringView> returns_borrow<a>]\npickOne([/std/text/view/StringView] a, [/std/text/view/StringView] b) {\n"
+                                "  return(a.slice(0i32, 1i32))\n}\n";
+  CHECK(exitOf("  return(pickOne(textOf(\"ab\"), textOf(\"cd\")).count())", TextViews + annotated) == 1);
+}

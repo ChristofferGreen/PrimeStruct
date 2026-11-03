@@ -269,6 +269,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidateExperimentalSoaMethodRewrites.cpp
   src/semantics/SemanticsValidateExperimentalSoaMethodRewritesBorrowedHelpers.cpp
   src/semantics/SemanticsValidateConvertConstructors.cpp
+  src/semantics/SemanticsValidateSliceLoans.cpp
   src/semantics/SemanticsValidateExperimentalGfxConstructors.cpp
   src/semantics/SemanticsValidateExperimentalGfxConstructorsContext.cpp
   src/semantics/SemanticsValidateOmittedStructInitializers.cpp

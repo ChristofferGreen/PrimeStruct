@@ -101,7 +101,7 @@ of sync with them.
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
 | TODO-5567 | Packed `array<u8>` | ready | bytes |
-| TODO-5569 | Slice loans, escapes and returned borrows | ready | slices |
+| TODO-5649 | Remaining slice loan rules: `mut`/`move` owners, `Write` conflicts, outer bindings | ready | slices |
 | TODO-5570 | Slice spellings: methods on `vector<T>`, `[i]`, `array<T>` views | ready | slices |
 | TODO-5631 | Structs that hold views (borrow-carrying aggregates) | blocked | string-borrows |
 | TODO-5630 | Request-scoped string arenas: `withStringArena` | blocked | string-arenas |
@@ -157,7 +157,7 @@ of sync with them.
 
 ### Priority Lanes
 
-- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5570, TODO-5569, TODO-5645, TODO-5631, TODO-5630, TODO-5638, TODO-5567, TODO-5574
+- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5570, TODO-5645, TODO-5631, TODO-5630, TODO-5638, TODO-5567, TODO-5574
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Startup (docs/NativeUiPlan.md section 16): TODO-5603
@@ -262,16 +262,16 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - tests for each spelling on `vector<i32>`, `vector<u8>` and `array<i32>` owners; docs/CodeExamples.md uses the method spellings; full release gate green
   - stop_rule: the spellings and array views on the VM; native and C++ are TODO-5574.
 
-- [ ] TODO-5569: Slice loans, escapes and returned borrows
+- [ ] TODO-5649: Remaining slice loan rules: `mut`/`move` owners, `Write` conflicts, outer bindings
   - owner: ai
   - status: ready
-  - created_at: 2026-10-22
-  - phase: Strings and slices (docs/spec/strings-and-views.md), second of two leaves for slices
+  - created_at: 2026-11-03
+  - phase: Strings and slices (docs/spec/strings-and-views.md), follow-up to TODO-5569
   - parallel_track: slices
-  - scope: The borrow rules of docs/spec/strings-and-views.md (Borrowing): a slice is a loan on its owner's root binding until its last use (the owner cannot be pushed, popped, reserved, cleared, assigned, moved, passed to a `mut` or `move` parameter or destroyed: `borrowed binding: <root>`); read slices may overlap, a `Write` slice conflicts with any other live slice of the owner; a slice cannot be stored in a field, container, outer binding or global (`slice escapes via <place> (root: <root>)`); a definition may return a slice derived from exactly one parameter, and `[returns_borrow<name>]` names which when it could come from several.
+  - scope: The loan rules TODO-5569 left out: passing the owner of a live view to a `mut` or `move` parameter, the `Write` slice conflict with any other live slice or reference into the same owner, a view assigned to a binding of an outer block or a global, and the caller side of a returned borrow using the callee's `returns_borrow<name>` (or its single borrowed parameter) instead of the first argument. This needs the callee's parameter list, so it belongs in the validator proper rather than the name-based pass.
   - acceptance:
-    - a negative test per diagnostic and a positive test per allowed shape (overlapping reads, returned borrow, narrowing a slice); full release gate green
-  - stop_rule: borrow checking for slices on the VM front end (the checks are backend independent).
+    - a negative test per rule and a positive test per allowed shape; full release gate green
+  - stop_rule: the four rules; struct-held views are TODO-5631.
 
 - [ ] TODO-5631: Structs that hold views (borrow-carrying aggregates)
   - owner: ai
