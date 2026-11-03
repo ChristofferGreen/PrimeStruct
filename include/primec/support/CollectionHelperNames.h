@@ -61,6 +61,7 @@ inline constexpr char kRootedVectorCount[] = "/vector/count";
 inline constexpr char kRootedVectorRemoveAt[] = "/vector/remove_at";
 
 // --- Canonical /std/collections paths ---
+inline constexpr char kCanonicalCollectionsRoot[] = "/std/collections/";
 inline constexpr char kCanonicalContainerErrorType[] = "/std/collections/ContainerError";
 inline constexpr char kCanonicalContainerErrorTypePrefix[] = "/std/collections/ContainerError/";
 inline constexpr char kCanonicalContainerErrorTypeCapacityExceeded[] = "/std/collections/ContainerError/capacity_exceeded";

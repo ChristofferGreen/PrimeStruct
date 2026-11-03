@@ -2704,4 +2704,24 @@ TEST_CASE("the memory limit counts arena regions through optexe") {
   CHECK(optexeOutput("arena_limit", arenaLimitProgram()) == "1\n0\n1\n");
 }
 
+// ---- real calls for read-only struct methods ---------------------------------------------------------------------------
+
+TEST_CASE("a read-only struct method called from several sites is one function, called with a copy of its receiver") {
+  const std::string source =
+      "[struct]\nPair() {\n  [i32] left{1i32}\n  [i32] right{2i32}\n\n  [return<i32>]\n  sum([i32] extra) {\n"
+      "    return(this.left + this.right + extra)\n  }\n}\n\n"
+      "[return<int>]\nmain() {\n  [Pair] p{Pair{3i32, 4i32}}\n  return(p.sum(10i32) + p.sum(100i32))\n}\n";
+  const std::string file = scratch("real_call_method.prime");
+  std::ofstream(file, std::ios::binary) << source;
+  const std::string dump = scratch("real_call_method.txt");
+  REQUIRE(run(shellQuote(Primec) + " --emit=vm --dump-stage ir-lowered " + shellQuote(file) + " > " + shellQuote(dump) + " 2>&1") == 0);
+  const std::string ir = readFile(dump);
+  CHECK(ir.find("function 1 /Pair/sum") != std::string::npos);
+  CHECK(ir.find("Call 1 /Pair/sum") != std::string::npos);
+  primec::embed::ScriptEngine engine;
+  const auto script = engine.compileSource("/real_call_method.prime", source);
+  REQUIRE_MESSAGE(script.valid(), script.diagnostics());
+  CHECK(script.run().exitCode == 124);
+}
+
 TEST_SUITE_END();

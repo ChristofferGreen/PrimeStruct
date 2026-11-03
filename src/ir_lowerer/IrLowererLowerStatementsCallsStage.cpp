@@ -183,8 +183,15 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
       input.locals->clear();
       *input.nextLocal = 0;
 
+      std::string helperParent;
+      const bool takesThis = input.structNames != nullptr &&
+                             isStructHelperDefinition(def, *input.structNames, helperParent) &&
+                             !definitionHasTransform(def, "static");
+      const size_t parameterCount = def.parameters.size() + (takesThis ? 1 : 0);
       input.function->name = def.fullPath;
-      input.function->parameterCount = static_cast<uint32_t>(def.parameters.size());
+      input.function->parameterCount = static_cast<uint32_t>(parameterCount);
+      int32_t receiverSlots = 0;
+      int32_t receiverBaseLocal = 0;
       // Match lowerCallableDefinitionOrchestration's precedence
       // (IrLowererStatementCallHelpers.cpp): prefer the semantic-product's
       // transitively-computed active effects/capabilities when available -
@@ -244,25 +251,59 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
       // resolves to a scalar type - re-derive it here with the identical
       // extraction rather than trusting that verdict blindly, and fail
       // loudly on a mismatch instead of silently miscompiling.
-      for (const Expr &param : def.parameters) {
-        const std::string typeName = extractParameterTypeNameStatic(param);
-        if (typeName.empty() || !isSupportedScalarTypeName(typeName)) {
-          errorOut = "internal error: real-call eligibility mismatch on parameter type for " + def.fullPath;
+      if (takesThis) {
+        // The implicit `this` (an address) and the scalar parameters, bound as for a callable definition.
+        Expr contextCall;
+        if (!input.buildDefinitionCallContext(def, *input.nextLocal, *input.locals, contextCall, errorOut)) {
+          if (errorOut.empty()) {
+            errorOut = "internal error: could not bind the parameters of real-call target " + def.fullPath;
+          }
           return false;
         }
-        LocalInfo info;
-        info.index = (*input.nextLocal)++;
-        info.kind = LocalInfo::Kind::Value;
-        info.valueKind = valueKindFromTypeName(typeName);
-        input.locals->emplace(param.name, info);
+        const auto thisIt = input.locals->find("this");
+        if (thisIt == input.locals->end() || thisIt->second.structSlotCount <= 0) {
+          errorOut = "internal error: real-call target has no receiver layout: " + def.fullPath;
+          return false;
+        }
+        receiverSlots = thisIt->second.structSlotCount;
+        receiverBaseLocal = (*input.nextLocal);
+        *input.nextLocal += receiverSlots;
+        // The caller leaves the receiver's slots and then the other arguments on the stack.
+        input.function->parameterCount = static_cast<uint32_t>(receiverSlots) + static_cast<uint32_t>(def.parameters.size());
+      } else {
+        for (const Expr &param : def.parameters) {
+          const std::string typeName = extractParameterTypeNameStatic(param);
+          if (typeName.empty() || !isSupportedScalarTypeName(typeName)) {
+            errorOut = "internal error: real-call eligibility mismatch on parameter type for " + def.fullPath;
+            return false;
+          }
+          LocalInfo info;
+          info.index = (*input.nextLocal)++;
+          info.kind = LocalInfo::Kind::Value;
+          info.valueKind = valueKindFromTypeName(typeName);
+          input.locals->emplace(param.name, info);
+        }
       }
       // Prologue: the caller left its evaluated arguments on the shared
       // operand stack in parameter order (see the real-call redirect in
       // IrLowererLowerInlineCalls.h) - pop them into locals 0..N-1, last
       // pushed first, matching the calling convention already used by every
       // existing Call/CallVoid site in the native/VM/C++ backends.
-      for (size_t i = def.parameters.size(); i-- > 0;) {
-        input.function->instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(i)});
+      if (takesThis) {
+        // Stack: receiver slots 0..N-1, then the other arguments. Pop the arguments, then the receiver slots into a
+        // block of this frame, and point `this` at the block.
+        for (size_t i = parameterCount; i-- > 1;) {
+          input.function->instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(i)});
+        }
+        for (int32_t slot = receiverSlots; slot-- > 0;) {
+          input.function->instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(receiverBaseLocal + slot)});
+        }
+        input.function->instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(receiverBaseLocal)});
+        input.function->instructions.push_back({IrOpcode::StoreLocal, 0});
+      } else {
+        for (size_t i = parameterCount; i-- > 0;) {
+          input.function->instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(i)});
+        }
       }
 
       auto emitBodyStatement = [&](const Expr &stmt) -> bool {

@@ -372,6 +372,15 @@ std::unordered_set<std::string> computeRealCallEligibleDefinitionPaths(const Pro
     return isStructHelperDefinition(def, structNames, parentStructPath) &&
            !definitionHasTransform(def, "static");
   };
+  // The receivers whose locals carry metadata a copied receiver would lose (element and key/value kinds of the
+  // collection records) keep their methods inline.
+  const auto receiverKeepsInline = [&](const Definition &def) {
+    std::string parentStructPath;
+    if (!isStructHelperDefinition(def, structNames, parentStructPath)) {
+      return false;
+    }
+    return parentStructPath.rfind(collection_helpers::kCanonicalCollectionsRoot, 0) == 0;
+  };
 
   std::unordered_set<std::string> eligible;
   for (const std::string &path : reachable) {
@@ -404,7 +413,15 @@ std::unordered_set<std::string> computeRealCallEligibleDefinitionPaths(const Pro
       continue;
     }
     if (takesImplicitThis(def)) {
-      continue;
+      // A read-only method with an implicit `this` and scalar parameters is a real call. Local addresses are relative
+      // to a frame, so the receiver goes as a copy of its slots (rebuilt in the callee's frame), not as an address; a
+      // `mut` method writes through the receiver and stays inline, and lifecycle helpers keep their own handling.
+      const size_t leafStart = def.fullPath.find_last_of('/');
+      const std::string leaf = leafStart == std::string::npos ? def.fullPath : def.fullPath.substr(leafStart + 1);
+      if (leaf == "Create" || leaf == "Destroy" || leaf == "Copy" || leaf == "Move" ||
+          definitionHasTransform(def, "mut") || receiverKeepsInline(def)) {
+        continue;
+      }
     }
     if (!hasOnlyScalarParameters(def) || !hasScalarOrVoidReturn(def)) {
       continue;

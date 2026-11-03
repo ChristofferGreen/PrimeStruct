@@ -346,10 +346,46 @@ bool emitInlineDefinitionCallImpl(
         error = "internal error: unexpected packed arguments for real-call target " + callee.fullPath;
         return false;
       }
-      for (const Expr *argExpr : realCallOrderedArgs) {
+      // A method takes its receiver (the implicit `this`, first among the ordered arguments) by address.
+      const bool calleeTakesThis = realCallParams.size() == callee.parameters.size() + 1;
+      for (size_t argIndex = 0; argIndex < realCallOrderedArgs.size(); ++argIndex) {
+        const Expr *argExpr = realCallOrderedArgs[argIndex];
         if (argExpr == nullptr) {
           error = "internal error: missing argument for real-call target " + callee.fullPath;
           return false;
+        }
+        if (calleeTakesThis && argIndex == 0) {
+          std::string receiverParent;
+          StructSlotLayoutInfo receiverLayout;
+          if (!isStructHelperDefinition(callee, structNames, receiverParent) ||
+              !resolveStructSlotLayout(receiverParent, receiverLayout) || receiverLayout.totalSlots <= 0) {
+            error = "internal error: no receiver layout for real-call target " + callee.fullPath;
+            return false;
+          }
+          bool pushedAddress = false;
+          if (argExpr->kind == Expr::Kind::Name) {
+            const auto receiverIt = callerLocals.find(argExpr->name);
+            if (receiverIt != callerLocals.end() &&
+                (receiverIt->second.kind == LocalInfo::Kind::Reference ||
+                 (receiverIt->second.kind == LocalInfo::Kind::Value && !receiverIt->second.structTypeName.empty()))) {
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(receiverIt->second.index)});
+              pushedAddress = true;
+            }
+          }
+          if (!pushedAddress && !emitExpr(*argExpr, callerLocals)) {
+            return false;
+          }
+          const int32_t receiverPtrLocal = allocTempLocal();
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(receiverPtrLocal)});
+          for (int32_t slot = 0; slot < receiverLayout.totalSlots; ++slot) {
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(receiverPtrLocal)});
+            if (slot != 0) {
+              function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(slot) * IrSlotBytes});
+              function.instructions.push_back({IrOpcode::AddI64, 0});
+            }
+            function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+          }
+          continue;
         }
         if (!emitExpr(*argExpr, callerLocals)) {
           return false;
