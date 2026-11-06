@@ -53,3 +53,7 @@ source_file = std/text/unicode_norm.prime
 [module]
 root = /std/os
 source_file = std/os/os.prime
+
+[module]
+root = /std/net
+source_file = std/net/net.prime

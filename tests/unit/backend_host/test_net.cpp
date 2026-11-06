@@ -1,4 +1,4 @@
-// The `net_io` effect (docs/spec/language-core.md, Effects).
+// The `net_io` effect (docs/spec/language-core.md, Effects) and /std/net (docs/spec/stdlib-reference.md, Network).
 #include "primec/embed/Script.h"
 #include "primec/embed/ScriptEngine.h"
 #include "primec/testing/TestScratch.h"
@@ -59,6 +59,19 @@ PrimecResult runPrimec(const std::string &name, const std::string &source, const
   return result;
 }
 
+const std::string Fixtures = std::string(PRIMESTRUCT_SOURCE_DIR) + "/tests/fixtures/host_calls/";
+const std::string NetShim = std::string(PRIMESTRUCT_SOURCE_DIR) + "/stdlib/std/net/native/net_shim.cpp";
+
+// Builds the fixture `name`.prime with --emit=optexe and the /std/net shim; returns the executable path.
+std::string buildWithNetShim(const std::string &name) {
+  const std::string exe = scratch(name);
+  const std::string log = exe + ".log";
+  const int status = run(shellQuote(Primec) + " --emit=optexe " + shellQuote(Fixtures + name + ".prime") + " -o " +
+                         shellQuote(exe) + " --link-arg " + shellQuote(NetShim) + " > " + shellQuote(log) + " 2>&1");
+  REQUIRE_MESSAGE(status == 0, readFile(log));
+  return exe;
+}
+
 const std::string NetEffectProgram = R"(
 [return<int> effects(net_io)]
 main() {
@@ -98,6 +111,17 @@ TEST_CASE("wasm and glsl reject the net_io effect") {
       runPrimec("net_effect_glsl", NetEffectProgram, "--emit=glsl -o " + shellQuote(scratch("net_effect.glsl")));
   CHECK(glsl.status != 0);
   CHECK_MESSAGE(glsl.output.find("unsupported effect mask bits for glsl target") != std::string::npos, glsl.output);
+}
+
+TEST_CASE("std/net builds with the POSIX shim on optexe and is unbound on the VM") {
+  CHECK(std::filesystem::exists(buildWithNetShim("net_echo")));
+
+  ScriptEngine engine;
+  const auto script = engine.compileFile(Fixtures + "net_echo.prime");
+  REQUIRE_MESSAGE(script.valid(), script.diagnostics());
+  const auto vm = script.run();
+  CHECK_FALSE(vm.ok);
+  CHECK_MESSAGE(vm.diagnostics.find("unbound host function: net_listen") != std::string::npos, vm.diagnostics);
 }
 
 TEST_SUITE_END();

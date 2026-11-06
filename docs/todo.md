@@ -101,8 +101,7 @@ of sync with them.
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
 | TODO-5656 | Thread-safe `SharedString` (atomic count, per-thread string heaps) | deferred | string-concurrency |
-| TODO-5684 | `/std/net` socket host functions and POSIX shim for optexe | ready | net-shim |
-| TODO-5685 | Loopback echo test over `/std/net` on optexe | blocked | net-echo |
+| TODO-5685 | Loopback echo test over `/std/net` on optexe | ready | net-echo |
 | TODO-5686 | HTTP hello-world example over `/std/net` | deferred | net-http-example |
 | TODO-5603 | Startup audit: what a launch loads and does | ready | startup |
 | TODO-5586 | Native String heap: pooled blocks, statistics and limit | deferred | native-backend-strings |
@@ -139,7 +138,7 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5684 (net-shim): `/std/net` socket host functions and POSIX shim for optexe
+- TODO-5685 (net-echo): loopback echo test over `/std/net` on optexe
 - TODO-5603 (startup): startup audit: what a launch loads and does
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
@@ -148,13 +147,12 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5684
-2. TODO-5685
-3. TODO-5603
-4. TODO-5536
-5. TODO-5535
-6. TODO-5510
-7. TODO-5524
+1. TODO-5685
+2. TODO-5603
+3. TODO-5536
+4. TODO-5535
+5. TODO-5510
+6. TODO-5524
 
 ### Priority Lanes
 
@@ -170,7 +168,7 @@ of sync with them.
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5669, TODO-5676, TODO-5677; collection fields found by closures: TODO-5681, TODO-5682
-- Web server (single-threaded, Docker image built with `--emit=optexe`): network leaf TODO-5684, TODO-5685, HTTP example TODO-5686; move-only handles TODO-5679; Result payloads for socket handles TODO-5527
+- Web server (single-threaded, Docker image built with `--emit=optexe`): network leaf TODO-5685, HTTP example TODO-5686; move-only handles TODO-5679; Result payloads for socket handles TODO-5527
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
 ### Execution Queue
@@ -179,23 +177,9 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 
 ### Task Blocks
 
-- [ ] TODO-5684: `/std/net` socket host functions and POSIX shim for optexe
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-06
-  - phase: Web server, network leaf 1
-  - parallel_track: net-shim
-  - scope: Add `/std/net` (`stdlib/std/net/net.prime`, registered in `stdlib/std/modules.psmeta`) with root-namespace `[host]` functions `net_listen`, `net_port`, `net_accept`, `net_recv`, `net_send`, `net_close`, `net_connect` and `std::net` wrappers carrying `effects(net_io)`. The host side is `stdlib/std/net/native/net_shim.cpp` (POSIX, `extern "C"`, no globals, no signal handlers: `/std/os` installs SIGTERM/SIGINT without SA_RESTART), linked with `--link-arg`. Byte buffers are `Pointer<u8>` + `u64` length (TODO-5678). Results are neutral codes: -1 timeout, -2 closed or reset, -3 again (EAGAIN), -4 interrupted (EINTR, check `/std/os` `stopRequested`), -100 - errno otherwise. Document in `docs/spec/stdlib-reference.md`; make sure installs ship the shim.
-  - acceptance:
-    - the module compiles with `--emit=optexe --link-arg stdlib/std/net/native/net_shim.cpp`
-    - the stdlib reference documents every wrapper and error code
-    - full release gate green
-  - stop_rule: raw `i32`/`i64` results; no `Result` types, `Listener`/`Connection` structs or HTTP.
-
 - [ ] TODO-5685: Loopback echo test over `/std/net` on optexe
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5684
+  - status: ready
   - created_at: 2026-11-06
   - phase: Web server, network leaf 1
   - parallel_track: net-echo

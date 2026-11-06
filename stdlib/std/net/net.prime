@@ -1,0 +1,114 @@
+// TCP sockets for single-threaded servers (docs/spec/stdlib-reference.md, /std/net). The host side is the POSIX shim
+// next to this file: build with
+//   primec --emit=optexe app.prime -o app --link-arg <stdlib>/std/net/native/net_shim.cpp
+// Every call that can block takes a timeout in milliseconds and returns a neutral error code instead of an errno:
+// timeoutCode() (-1), closedCode() (-2), againCode() (-3), interruptedCode() (-4, a signal arrived: check
+// /std/os stopRequested()), or -100 - errno for anything else.
+
+[host return<i32>]
+net_listen([i32] port, [i32] backlog, [i32] loopbackOnly) {
+}
+
+[host return<i32>]
+net_port([i32] socket) {
+}
+
+[host return<i32>]
+net_accept([i32] listener, [i32] timeoutMs) {
+}
+
+[host return<i64>]
+net_recv([i32] socket, [Pointer<u8>] buffer, [u64] length, [i32] timeoutMs) {
+}
+
+[host return<i64>]
+net_send([i32] socket, [Pointer<u8>] data, [u64] length, [i32] timeoutMs) {
+}
+
+[host return<i32>]
+net_close([i32] socket) {
+}
+
+[host return<i32>]
+net_connect([i32] port, [i32] timeoutMs) {
+}
+
+namespace std {
+namespace net {
+
+  // The call did not finish within its timeout.
+  [public return<i32>]
+  timeoutCode() {
+    return(-1i32)
+  }
+
+  // The peer closed or reset the connection.
+  [public return<i32>]
+  closedCode() {
+    return(-2i32)
+  }
+
+  // The socket is not ready; try again.
+  [public return<i32>]
+  againCode() {
+    return(-3i32)
+  }
+
+  // A signal interrupted the call (SIGTERM or SIGINT with /std/os linked): check stopRequested().
+  [public return<i32>]
+  interruptedCode() {
+    return(-4i32)
+  }
+
+  // A listening TCP socket on every interface at `port` (0 picks a free port), or a negative code.
+  [public return<i32> effects(net_io)]
+  listen([i32] port, [i32] backlog) {
+    return(net_listen(port, backlog, 0i32))
+  }
+
+  // A listening TCP socket on 127.0.0.1 only, for tests and local tools.
+  [public return<i32> effects(net_io)]
+  listenLoopback([i32] port, [i32] backlog) {
+    return(net_listen(port, backlog, 1i32))
+  }
+
+  // The local port a socket is bound to (the one picked for port 0), or a negative code.
+  [public return<i32> effects(net_io)]
+  localPort([i32] socket) {
+    return(net_port(socket))
+  }
+
+  // The next connection on `listener`, waiting at most `timeoutMs`; a negative code on timeout or error.
+  [public return<i32> effects(net_io)]
+  accept([i32] listener, [i32] timeoutMs) {
+    return(net_accept(listener, timeoutMs))
+  }
+
+  // Reads up to `length` bytes into `buffer` (a `vector<u8>` slice's `.data`). Returns the count read, 0 when the
+  // peer has closed the connection, or a negative code.
+  [public return<i64> effects(net_io)]
+  recv([i32] socket, [Pointer<u8>] buffer, [u64] length, [i32] timeoutMs) {
+    return(net_recv(socket, buffer, length, timeoutMs))
+  }
+
+  // Writes all `length` bytes of `data`. Returns `length`, the count written before a timeout or signal stopped it,
+  // or a negative code when nothing was written.
+  [public return<i64> effects(net_io)]
+  send([i32] socket, [Pointer<u8>] data, [u64] length, [i32] timeoutMs) {
+    return(net_send(socket, data, length, timeoutMs))
+  }
+
+  // Closes a socket. Returns 0 or a negative code.
+  [public return<i32> effects(net_io)]
+  close([i32] socket) {
+    return(net_close(socket))
+  }
+
+  // A client connection to 127.0.0.1:`port`, for tests and health checks; a negative code on timeout or error.
+  [public return<i32> effects(net_io)]
+  connectLoopback([i32] port, [i32] timeoutMs) {
+    return(net_connect(port, timeoutMs))
+  }
+
+}
+}

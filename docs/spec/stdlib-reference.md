@@ -468,3 +468,63 @@ main() {
   return(port.count())
 }
 ```
+
+### Network (`/std/net`)
+
+`import /std/net/*` gives a single-threaded server TCP sockets over IPv4. The `std::net` functions call `[host]`
+functions answered by the POSIX shim `stdlib/std/net/native/net_shim.cpp`, linked into an `--emit=optexe` program
+(usually together with `/std/os`, whose stop flag ends the accept loop):
+
+```bash
+primec --emit=optexe server.prime -o server --link-arg stdlib/std/net/native/net_shim.cpp \
+  --link-arg stdlib/std/os/os_posix.cpp
+```
+
+A socket is an `i32` descriptor. Byte buffers are a `vector<u8>` slice's `.data` followed by its `u64` length
+(docs/spec/host-and-core-library.md, Byte buffers). Every call that can block takes `timeoutMs` (negative waits
+forever), and every call returns a neutral negative code on failure instead of an errno, so the same checks work on
+Linux and macOS:
+
+| Code | Function | Meaning |
+| --- | --- | --- |
+| -1 | `timeoutCode()` | the call did not finish within `timeoutMs` |
+| -2 | `closedCode()` | the peer closed or reset the connection (`ECONNRESET`, `EPIPE`, `ENOTCONN`, `ECONNABORTED`) |
+| -3 | `againCode()` | the socket was not ready (`EAGAIN`) |
+| -4 | `interruptedCode()` | a signal arrived (`EINTR`): with `/std/os` linked, check `stopRequested()` |
+| -100 - errno | | anything else, for example -101 for `EPERM` when a sandbox forbids sockets |
+
+- `listen(port, backlog) -> i32`: a listening socket on every interface (`SO_REUSEADDR`); port 0 picks a free port.
+- `listenLoopback(port, backlog) -> i32`: the same on 127.0.0.1 only, for tests and local tools.
+- `localPort(socket) -> i32`: the port a socket is bound to (the one picked for port 0).
+- `accept(listener, timeoutMs) -> i32`: the next connection.
+- `recv(socket, buffer, length, timeoutMs) -> i64`: reads up to `length` bytes; 0 means the peer closed.
+- `send(socket, data, length, timeoutMs) -> i64`: writes all `length` bytes; a timeout or signal after some bytes
+  returns the count written so far. A peer that has gone gives `closedCode()`, never `SIGPIPE`.
+- `close(socket) -> i32`: 0 or a negative code.
+- `connectLoopback(port, timeoutMs) -> i32`: a client connection to 127.0.0.1, for tests and health checks.
+
+The wrappers carry `effects(net_io)` (docs/spec/language-core.md, Effects); wasm and GLSL reject that effect. The
+shim installs no signal handlers and keeps no state. The VM and `primevm` have no binding for the host functions and
+report `unbound host function: net_listen ...`; native, wasm and GLSL reject host calls. POSIX only.
+
+```prime
+import /std/collections/*
+import /std/net/*
+
+[return<int> effects(heap_alloc, net_io)]
+main() {
+  [i32] listener{listenLoopback(0i32, 4i32)}
+  [i32] client{connectLoopback(localPort(listener), 1000i32)}
+  [i32] server{accept(listener, 1000i32)}
+  [vector<u8> mut] message{vector<u8>(104u8, 105u8)}
+  [mut] outgoing{message.sliceMut(0i32, 2i32)}
+  send(client, outgoing.data, 2u64, 1000i32)
+  [vector<u8> mut] inbox{vector<u8>(0u8, 0u8, 0u8, 0u8)}
+  [mut] window{inbox.sliceMut(0i32, 4i32)}
+  [i64] count{recv(server, window.data, 4u64, 1000i32)}
+  close(client)
+  close(server)
+  close(listener)
+  return(convert<i32>(count))
+}
+```
