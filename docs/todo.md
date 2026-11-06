@@ -106,9 +106,10 @@ of sync with them.
 | TODO-5536 | Small, lazily loaded bytecode for apps | ready | bytecode-startup |
 | TODO-5535 | Launch-time harness and reference Objective-C++ editor | ready | native-ui-launch |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
-| TODO-5668 | Struct fields of collection type keep their elements across method calls | deferred | collections-fields |
 | TODO-5669 | `Function` from named definitions and at call sites | deferred | closures |
 | TODO-5673 | A callable field reached through `this` is called, not looked up as a method | blocked | closures-call-resolution |
+| TODO-5681 | A struct field built from a named vector local owns its storage once | ready | collections-fields |
+| TODO-5682 | Native: a mutating vector-field method inside an arithmetic expression returns the right value | ready | native-backend |
 | TODO-5675 | Struct fields that are vectors of structs lower on VM and native | ready | collections-fields |
 | TODO-5676 | Lambdas can state their return type | deferred | closures-return-types |
 | TODO-5677 | A `Function` whose closure holds a same-typed `Function` copies and destroys | deferred | closures-lifecycle |
@@ -167,7 +168,7 @@ of sync with them.
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
-- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5669, TODO-5676, TODO-5677; collection fields found by closures: TODO-5668
+- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5669, TODO-5676, TODO-5677; collection fields found by closures: TODO-5681, TODO-5682
 - Web server (single-threaded, Docker image built with `--emit=optexe`): handler and router blockers TODO-5675, then TODO-5673; network and OS TODO-5679; Result payloads for socket handles TODO-5527
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
@@ -176,18 +177,6 @@ of sync with them.
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 ### Task Blocks
-
-- [ ] TODO-5668: Struct fields of collection type keep their elements across method calls
-  - owner: ai
-  - status: deferred
-  - created_at: 2026-11-06
-  - phase: Closures follow-ups
-  - parallel_track: collections-fields
-  - scope: Found while building stateful closures (a closure that captures a `vector` and pushes to it is this shape). On VM and optexe, `[struct] KeepV { [vector<i32> mut] seen }` built as `KeepV{[seen] start}` from a local vector faults on `k.seen.push(1i32)` (`VM error: invalid heap free address in IR: 9223372036854775808`); built from `vector<i32>(5i32)` the push is lost (`k.seen.count()` is 0); a field default `[vector<i32> mut] seen{vector<i32>()}` is rejected with `argument type mismatch ... expected vector<i32>`; copying such a struct and pushing to the copy faults with `invalid heap realloc address`. Same on master before the closure work.
-  - acceptance:
-    - each repro runs on VM, native and optexe with the expected counts; a closure capturing a vector by `[mut values]` can push and count; matrix test
-    - full release gate green
-  - stop_rule: collection-typed struct fields (construction, method calls through the field, copy); no new collection API.
 
 - [ ] TODO-5669: `Function` from named definitions and at call sites
   - owner: ai
@@ -200,6 +189,31 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - a router of named handlers and a closure passed straight to a `[Function<i32, i32> mut]` parameter run on VM, native and optexe; negative test for a signature mismatch
     - full release gate green
   - stop_rule: conversion sites only; no change to the `Function` representation.
+
+- [ ] TODO-5681: A struct field built from a named vector local owns its storage once
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-06
+  - phase: Closures follow-ups (split from TODO-5668)
+  - parallel_track: collections-fields
+  - scope: `KeepV{[seen] start}` with `start` a local `vector<i32>` copies the 5-slot vector record into the field with `ownsData` still set in both, so the local and the struct both free the buffer (`VM error: invalid heap free address in IR: 9223372036854775808` on VM; same on optexe). Related: a plain local copy `[vector<i32> mut] b{a}` aliases `a` (after `b.push(2i32)`, `a.count()` is 2, not 1), while a struct copy (`[KeepV mut] copy{k}`) and the stdlib `Vector<T>` spelling copy elements. Brace construction from a named vector local must copy its elements (value semantics, docs/spec/value-lifecycle.md, Copies), and the `vector<T>` local copy must too.
+  - implementation_notes: the vector record layout is `IrLowererVectorRecordLayoutHelpers.h` (`ownsData` at slot 4); the struct copy of TODO-5668's matrix case `struct_vector_field_copy_and_closure` already copies a vector field's elements.
+  - acceptance:
+    - `KeepV{[seen] start}` then pushes on both run on VM, native and optexe with independent counts and no double free; `b{a}` then `b.push` leaves `a.count()` unchanged; a test that the original stays usable
+    - full release gate green
+  - stop_rule: vector copies at brace construction and local copy bindings; no change to move semantics.
+
+- [ ] TODO-5682: Native: a mutating vector-field method inside an arithmetic expression returns the right value
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-06
+  - phase: Closures follow-ups (split from TODO-5668)
+  - parallel_track: native-backend
+  - scope: With `KeepV { [vector<i32> mut] seen  add([i32] x) { this.seen.push(x)  return(this.seen.count()) } }`, `return(direct * 10i32 + m.add(6i32))` returns 18 on `--emit=native` and 22 on the VM and optexe; binding `[i32] second{m.add(6i32)}` first gives 22 everywhere. Present before TODO-5668's count fix, so the native backend likely clobbers a pending operand while lowering the inlined push.
+  - acceptance:
+    - the expression form returns 22 on native-O0 and native-O2 (matrix case)
+    - full release gate green
+  - stop_rule: operand preservation around inlined vector mutations on native.
 
 - [ ] TODO-5673: A callable field reached through `this` is called, not looked up as a method
   - owner: ai

@@ -619,10 +619,14 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
         expr.args.front().kind == Expr::Kind::Call &&
         getBuiltinCollectionName(expr.args.front(), targetCollectionName) &&
         targetCollectionName == "vector";
+    // A vector field of a struct lowers to the address of its inline record: the count is at slot 1 there too.
+    const bool isVectorFieldCountTarget =
+        expr.args.front().kind == Expr::Kind::Call && expr.args.front().isFieldAccess &&
+        isDynamicVectorCountTargetFn != nullptr && isDynamicVectorCountTargetFn(expr.args.front(), localsIn);
     if (!emitExpr(expr.args.front(), localsIn)) {
       return CountAccessCallEmitResult::Error;
     }
-    if (isVectorLiteralCountTarget) {
+    if (isVectorLiteralCountTarget || isVectorFieldCountTarget) {
       emitInstruction(IrOpcode::PushI64, IrSlotBytes);
       emitInstruction(IrOpcode::AddI64, 0);
     }

@@ -574,3 +574,12 @@ TEST_CASE("view equality against a String operand is still rejected") {
   CHECK_FALSE(mixed.compiled);
   CHECK(mixed.diagnostics.find("comparisons require numeric, bool, or string operands") != std::string::npos);
 }
+
+// TODO-5668: `count` through a struct field reads the vector record's count; a field that is no collection keeps its
+// diagnostic.
+TEST_CASE("count through a non-collection struct field is rejected") {
+  const Outcome scalar = runBody("  [KeepN mut] k{KeepN{[seen] 5i32}}\n  return(k.seen.count())",
+                                 "[struct]\nKeepN {\n  [i32 mut] seen\n}\n");
+  CHECK_FALSE(scalar.compiled);
+  CHECK(scalar.diagnostics.find("unknown method: /i32/count") != std::string::npos);
+}

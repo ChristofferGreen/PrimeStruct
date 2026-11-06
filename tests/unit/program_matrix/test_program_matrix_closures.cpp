@@ -480,6 +480,67 @@ main() {
                     11);
 }
 
+TEST_CASE("struct vector fields keep pushes through the field and through this") {
+  runClosureProgram("struct_vector_field_push_count", R"(
+import /std/collections/*
+
+[struct]
+KeepV {
+  [vector<i32> mut] seen
+
+  [mut return<i32> effects(heap_alloc)]
+  add([i32] x) {
+    this.seen.push(x)
+    return(this.seen.count())
+  }
+}
+
+[struct]
+Defaulted {
+  [vector<i32> mut] seen{vector<i32>()}
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [KeepV mut] k{KeepV{[seen] vector<i32>(5i32)}}
+  k.seen.push(1i32)
+  [i32] direct{k.seen.count()}
+  [i32] viaThis{k.add(7i32)}
+  [Defaulted mut] d{Defaulted{}}
+  d.seen.push(1i32)
+  return(direct * 100i32 + viaThis * 10i32 + d.seen.count())
+}
+)",
+                    231);
+}
+
+TEST_CASE("a copied struct's vector field is independent and a closure can own a vector") {
+  runClosureProgram("struct_vector_field_copy_and_closure", R"(
+import /std/collections/*
+
+[struct]
+KeepV {
+  [vector<i32> mut] seen
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [KeepV mut] k{KeepV{[seen] vector<i32>(5i32)}}
+  [KeepV mut] copy{k}
+  copy.seen.push(1i32)
+  [mut] log{[mut values{vector<i32>()}]([i32] x) {
+    values.push(x)
+    return(values.count())
+  }}
+  log(1i32)
+  log(2i32)
+  [i32] logged{log(3i32)}
+  return(copy.seen.count() * 100i32 + k.seen.count() * 10i32 + logged)
+}
+)",
+                    213);
+}
+
 TEST_CASE("return inside a Result.map lambda returns from the lambda") {
   runClosureProgram("closure_result_map_return", R"(
 [return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
