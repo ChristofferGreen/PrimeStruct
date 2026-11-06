@@ -645,7 +645,7 @@ bool rewriteBorrowedVectorBareHelperCall(Expr &expr,
                                          bool allowMathBare,
                                          Context &ctx) {
   if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.isBinding || expr.isFieldAccess ||
-      expr.args.empty() || !expr.templateArgs.empty() || !expr.namespacePrefix.empty() ||
+      expr.args.empty() || !expr.templateArgs.empty() ||
       expr.hasBodyArguments || !expr.bodyArguments.empty() || hasNamedCallArguments(expr)) {
     return false;
   }
@@ -653,6 +653,14 @@ bool rewriteBorrowedVectorBareHelperCall(Expr &expr,
   if (leaf.empty() || ctx.sourceDefs.count("/" + expr.name) > 0 ||
       ctx.helperOverloads.count("/" + expr.name) > 0) {
     return false;
+  }
+  // A bare call inside a namespace or a struct method (`vs[i]` in `/Holder/get`) carries that scope as
+  // its prefix; it is still the builtin helper unless the scope defines its own.
+  if (!expr.namespacePrefix.empty()) {
+    const std::string scoped = expr.namespacePrefix + "/" + expr.name;
+    if (ctx.sourceDefs.count(scoped) > 0 || ctx.helperOverloads.count(scoped) > 0) {
+      return false;
+    }
   }
   const std::string borrowedPath =
       std::string(collection_helpers::kCanonicalVectorPrefix) + std::string(leaf);

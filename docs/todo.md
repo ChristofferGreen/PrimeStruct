@@ -108,7 +108,6 @@ of sync with them.
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5668 | Struct fields of collection type keep their elements across method calls | deferred | collections-fields |
 | TODO-5669 | `Function` from named definitions and at call sites | deferred | closures |
-| TODO-5670 | A `[ref]`-captured vector of `Function`-holding structs passes to a parameter correctly | ready | closures-ref-captures |
 | TODO-5671 | A method call on a field of an indexed element binds to that field | ready | parser-member-chains |
 | TODO-5672 | A scalar call result is not a borrow of the call's view arguments | ready | slice-loans |
 | TODO-5673 | A callable field reached through `this` is called, not looked up as a method | blocked | closures-call-resolution |
@@ -148,9 +147,9 @@ of sync with them.
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5510 (control-returns): `return` returns from unit-variant pick arms correctly
 - TODO-5524 (result-error-structs): int-backed error structs round-trip through stdlib Result sums
-- TODO-5670 (closures-ref-captures): a `[ref]`-captured vector of `Function`-holding structs passes to a parameter correctly
 - TODO-5671 (parser-member-chains): a method call on a field of an indexed element binds to that field
 - TODO-5672 (slice-loans): a scalar call result is not a borrow of the call's view arguments
+- TODO-5674 (stringview-equality): `==` on a view taken from a `String` parameter compiles
 
 ### Immediate Next 10
 
@@ -159,11 +158,10 @@ of sync with them.
 3. TODO-5535
 4. TODO-5510
 5. TODO-5524
-6. TODO-5670
-7. TODO-5671
-8. TODO-5672
-9. TODO-5674
-10. TODO-5675
+6. TODO-5671
+7. TODO-5672
+8. TODO-5674
+9. TODO-5675
 
 ### Priority Lanes
 
@@ -179,7 +177,7 @@ of sync with them.
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5669, TODO-5676, TODO-5677; collection fields found by closures: TODO-5668
-- Web server (single-threaded, Docker image built with `--emit=optexe`): handler and router blockers TODO-5670, TODO-5671, TODO-5672, TODO-5674, TODO-5675, then TODO-5673; network and OS TODO-5678, TODO-5680, TODO-5679; Result payloads for socket handles TODO-5527
+- Web server (single-threaded, Docker image built with `--emit=optexe`): handler and router blockers TODO-5671, TODO-5672, TODO-5674, TODO-5675, then TODO-5673; network and OS TODO-5678, TODO-5680, TODO-5679; Result payloads for socket handles TODO-5527
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
 ### Execution Queue
@@ -211,19 +209,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - a router of named handlers and a closure passed straight to a `[Function<i32, i32> mut]` parameter run on VM, native and optexe; negative test for a signature mismatch
     - full release gate green
   - stop_rule: conversion sites only; no change to the `Function` representation.
-
-- [ ] TODO-5670: A `[ref]`-captured vector of `Function`-holding structs passes to a parameter correctly
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-06
-  - phase: Web server blockers (found probing closures for a request router)
-  - parallel_track: closures-ref-captures
-  - scope: With `[struct] Route { [i32] code  [Function<i32, i32> mut] handler }`, a local `[vector<Route> mut] routes{...}` holding two routes, `call_all([vector<Route> mut] routes, [i32] input)` that sums `routes[i].handler(input)`, and `[mut] app{[ref routes]([i32] x) { return(call_all(routes, x)) }}`, `app(10i32)` compiles but faults on VM and optexe with `VM error: unaligned indirect address in IR: 68`. Calling `call_all(routes, 10i32)` directly returns the right sum, and a `[ref values]` capture of a `vector<i32>` passed to a `[vector<i32> mut]` parameter works, so the fault is in forwarding the closure's reference field when the element type is a struct holding a `Function`. In the same area, indexing a `[ref values]` capture of a `vector<i32>` inside the lambda body (`values[input]`) is rejected with `unknown call target: /std/collections/map/at`.
-  - implementation_notes: ref captures are built in place as `/main__lambdaN{[name] location(name)}` (docs/spec/value-lifecycle.md, Lambdas; `src/semantics/SemanticsValidateLambdaClosures.cpp`); compare the lowered IR of the direct and the closure call with `--dump-stage`.
-  - acceptance:
-    - both repros run on VM, native and optexe with the expected values (matrix cases in `tests/unit/program_matrix/test_program_matrix_closures.cpp`)
-    - full release gate green
-  - stop_rule: forwarding and indexing `[ref]`-captured vectors; no change to capture semantics.
 
 - [ ] TODO-5671: A method call on a field of an indexed element binds to that field
   - owner: ai

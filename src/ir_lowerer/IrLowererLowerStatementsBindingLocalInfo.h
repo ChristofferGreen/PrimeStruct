@@ -376,17 +376,36 @@
         info.valueKind = LocalInfo::ValueKind::Int64;
       }
       info.isFileError = isFileErrorBinding(bindingTypeExprRef);
-      // A vector of structs stores each element inline; element access steps by its slot count.
-      if (info.kind == LocalInfo::Kind::Vector && info.valueKind == LocalInfo::ValueKind::Unknown &&
-          info.vectorStructElementSlotCount == 0) {
+      // A vector of structs stores each element inline; element access steps by its slot count. A
+      // `Reference<vector<T>>` / `Pointer<vector<T>>` local (a `[ref]` capture read in a closure body)
+      // records the same count, so element access and inlined parameters through it use the inline layout.
+      const bool referencesVector =
+          (info.kind == LocalInfo::Kind::Reference && info.referenceToVector) ||
+          (info.kind == LocalInfo::Kind::Pointer && info.pointerToVector);
+      if ((info.kind == LocalInfo::Kind::Vector || referencesVector) &&
+          info.valueKind == LocalInfo::ValueKind::Unknown && info.vectorStructElementSlotCount == 0) {
         for (const auto &transform : bindingTypeExprRef.transforms) {
-          if (transform.templateArgs.size() != 1 ||
-              normalizeCollectionBindingTypeName(transform.name) != "vector") {
+          if (transform.templateArgs.size() != 1) {
+            continue;
+          }
+          std::string elementTypeText;
+          if (normalizeCollectionBindingTypeName(transform.name) == "vector") {
+            elementTypeText = transform.templateArgs.front();
+          } else if (referencesVector && (transform.name == "Reference" || transform.name == "Pointer")) {
+            std::string wrappedBase;
+            std::string wrappedArg;
+            if (!splitTemplateTypeName(trimTemplateTypeText(transform.templateArgs.front()), wrappedBase,
+                                       wrappedArg) ||
+                normalizeCollectionBindingTypeName(wrappedBase) != "vector") {
+              break;
+            }
+            elementTypeText = wrappedArg;
+          } else {
             continue;
           }
           std::string elementStructPath;
           StructSlotLayoutInfo elementLayout;
-          if (resolveStructTypeName(trimTemplateTypeText(transform.templateArgs.front()),
+          if (resolveStructTypeName(trimTemplateTypeText(elementTypeText),
                                     bindingTypeExprRef.namespacePrefix,
                                     elementStructPath) &&
               resolveStructSlotLayout(elementStructPath, elementLayout)) {

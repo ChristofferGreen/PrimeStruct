@@ -358,6 +358,69 @@ main() {
                     22);
 }
 
+TEST_CASE("ref-captured vector of Function routes passes to a parameter") {
+  runClosureProgram("closure_ref_capture_struct_vector_parameter", R"(
+import /std/collections/*
+
+[struct]
+Route {
+  [i32] code
+  [Function<i32, i32> mut] handler
+}
+
+[return<i32> effects(heap_alloc)]
+call_all([vector<Route> mut] routes, [i32] input) {
+  [i32 mut] total{0i32}
+  [i32 mut] i{0i32}
+  while(i < routes.count()) {
+    total = total + routes[i].handler(input)
+    i = i + 1i32
+  }
+  return(total)
+}
+
+[return<i32> effects(heap_alloc)]
+through([Reference<vector<Route>> mut] routes, [i32] input) {
+  return(call_all(routes, input))
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [vector<Route> mut] routes{vector<Route>()}
+  routes.push(Route{[code] 1i32, [handler] Function<i32, i32>{[]([i32] x) { return(x + 1i32) }}})
+  routes.push(Route{[code] 2i32, [handler] Function<i32, i32>{[]([i32] x) { return(x * 2i32) }}})
+  [mut] app{[ref routes]([i32] x) { return(call_all(routes, x)) }}
+  return(app(10i32) + through(location(routes), 1i32))
+}
+)",
+                    35);
+}
+
+TEST_CASE("ref-captured vector is indexed in the lambda body and in a method") {
+  runClosureProgram("closure_ref_capture_vector_index", R"(
+import /std/collections/*
+
+[struct]
+Picker {
+  [i32] base
+
+  [return<i32>]
+  pick([Reference<vector<i32>>] values, [i32] input) {
+    return(values[input] + this.base)
+  }
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [vector<i32> mut] values{vector<i32>(5i32, 7i32, 9i32)}
+  [mut] pick{[ref values]([i32] input) { return(values[input]) }}
+  [Picker] picker{Picker{[base] 100i32}}
+  return(pick(1i32) + picker.pick(location(values), 2i32))
+}
+)",
+                    116);
+}
+
 TEST_CASE("return inside a Result.map lambda returns from the lambda") {
   runClosureProgram("closure_result_map_return", R"(
 [return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]

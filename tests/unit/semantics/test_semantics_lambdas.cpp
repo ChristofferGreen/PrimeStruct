@@ -255,4 +255,37 @@ main() {
   CHECK(error.find("borrowed binding: text (root: text, sink: reader)") != std::string::npos);
 }
 
+TEST_CASE("indexing a ref-captured vector resolves to the borrowed vector helper") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int> effects(heap_alloc)]
+main() {
+  [vector<i32> mut] values{vector<i32>(5i32, 7i32, 9i32)}
+  [mut] pick{[ref values]([i32] input) { return(values[input]) }}
+  return(pick(1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("indexing a ref-captured vector checks the index type") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int> effects(heap_alloc)]
+main() {
+  [vector<i32> mut] values{vector<i32>(5i32, 7i32, 9i32)}
+  [mut] pick{[ref values]([i32] input) { return(values[1.5f32]) }}
+  return(pick(1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("vectorAtRef") != std::string::npos);
+  CHECK(error.find("expected i32 got f32") != std::string::npos);
+}
+
 TEST_SUITE_END();
