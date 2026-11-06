@@ -223,6 +223,23 @@ bool IrLowerer::lower(const Program &program,
 
   const auto &structSlotResolutionAdapters = setupLocalsOrchestration.structSlotResolutionAdapters;
   auto resolveStructSlotLayout = structSlotResolutionAdapters.resolveStructSlotLayout;
+  // Element sizes of vector-of-struct fields for indexed access (IrLowererAccessTargetResolution.cpp).
+  const ir_lowerer::ScopedVectorElementSlotCount vectorElementSlots([&](const std::string &elementTypeText) {
+    std::string text = elementTypeText;
+    while (!text.empty() && text.back() == ' ') {
+      text.pop_back();
+    }
+    for (const std::string &path : {text, "/" + text}) {
+      if (path.empty() || path.front() != '/') {
+        continue;
+      }
+      ir_lowerer::StructSlotLayoutInfo layout;
+      if (resolveStructSlotLayout(path, layout) && layout.totalSlots > 0) {
+        return layout.totalSlots;
+      }
+    }
+    return int32_t{0};
+  });
 
   const auto &uninitializedResolutionAdapters = setupLocalsOrchestration.uninitializedResolutionAdapters;
   (void)uninitializedResolutionAdapters;

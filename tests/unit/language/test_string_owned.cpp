@@ -583,3 +583,14 @@ TEST_CASE("count through a non-collection struct field is rejected") {
   CHECK_FALSE(scalar.compiled);
   CHECK(scalar.diagnostics.find("unknown method: /i32/count") != std::string::npos);
 }
+
+// TODO-5675: a struct field can be a vector of structs; an element's unknown field is still reported.
+TEST_CASE("an unknown field of a vector-of-structs field element is rejected") {
+  const Outcome missing = runBody("  [Table mut] t{Table{[rows] vector<Named>()}}\n"
+                                  "  t.rows.push(Named{[code] 3i32, [name] stringFrom(\"abc\")})\n"
+                                  "  return(t.rows[0i32].missing)",
+                                  "import /std/collections/*\n\n[struct]\nNamed {\n  [i32] code\n  [String] name\n}\n\n"
+                                  "[struct]\nTable {\n  [vector<Named> mut] rows\n}\n");
+  CHECK_FALSE(missing.compiled);
+  CHECK(missing.diagnostics.find("unknown field: missing") != std::string::npos);
+}

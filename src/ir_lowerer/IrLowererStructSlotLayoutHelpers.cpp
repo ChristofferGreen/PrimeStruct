@@ -379,13 +379,8 @@ bool resolveStructSlotLayoutFromDefinitionFields(
     info.slotOffset = offset;
     if (!binding.typeTemplateArg.empty()) {
       if (isBuiltinVectorTypeName(binding.typeName)) {
-        const LocalInfo::ValueKind elementKind = valueKindFromTypeName(binding.typeTemplateArg);
-        if (elementKind == LocalInfo::ValueKind::Unknown) {
-          error = "native backend only supports numeric/bool/string vector fields on " + structPath;
-          layoutStack.erase(structPath);
-          return false;
-        }
-        info.valueKind = elementKind;
+        // A vector of structs keeps Unknown here; element access resolves the element layout from the field type.
+        info.valueKind = valueKindFromTypeName(binding.typeTemplateArg);
         info.structPath = normalizeVectorStructPath(binding.typeName);
         info.slotCount = 5;
       } else if (normalizeCollectionBindingTypeName(binding.typeName) == "soa") {

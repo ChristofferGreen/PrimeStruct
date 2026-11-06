@@ -83,6 +83,8 @@ struct ArrayVectorAccessTargetInfo {
   LocalInfo::Kind argsPackElementKind = LocalInfo::Kind::Value;
   int32_t elemSlotCount = 0;
   std::string structTypeName;
+  // The element type as the semantic product spells it (a vector of structs reached through a struct field).
+  std::string elementTypeText;
   // Set only when the receiver local is a record-boxed struct value (a
   // `Kind::Value` local whose `structTypeName` is the canonical Vector
   // backing-record path), as opposed to a raw primitive `Kind::Vector`
@@ -93,6 +95,19 @@ struct ArrayVectorAccessTargetInfo {
   // exact mix-up produced previously.
   bool isStructBoxedRecordTarget = false;
 };
+
+// The slots of one inline element of a vector of structs, from the element type text; installed for the duration of
+// one lowering (lowerer-scoped, per thread) because the access-target resolver has no layout resolver of its own.
+struct ScopedVectorElementSlotCount {
+  explicit ScopedVectorElementSlotCount(std::function<int32_t(const std::string &)> fn);
+  ~ScopedVectorElementSlotCount();
+  ScopedVectorElementSlotCount(const ScopedVectorElementSlotCount &) = delete;
+  ScopedVectorElementSlotCount &operator=(const ScopedVectorElementSlotCount &) = delete;
+
+private:
+  std::function<int32_t(const std::string &)> previous_;
+};
+int32_t vectorElementSlotCountFromTypeText(const std::string &elementTypeText);
 
 // A vector<u8> keeps its elements packed, one byte each, in a byte region (not one slot per element).
 inline bool isPackedByteVectorTarget(const ArrayVectorAccessTargetInfo &info) {

@@ -302,6 +302,7 @@ inline bool resolveSemanticArrayVectorAccessTargetInfo(
     const std::string elementTypeText = resolveAccessSemanticTypeText(
         semanticProgram, collectionFact->elementTypeText, collectionFact->elementTypeTextId);
     targetInfoOut.elemKind = valueKindFromTypeName(elementTypeText);
+    targetInfoOut.elementTypeText = elementTypeText;
     if (targetInfoOut.isSoaVector) {
       targetInfoOut.structTypeName =
           inferExperimentalSoaVectorStructPathFromTypeName(elementTypeText);

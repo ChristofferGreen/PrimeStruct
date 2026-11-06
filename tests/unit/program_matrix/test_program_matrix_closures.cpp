@@ -541,6 +541,86 @@ main() {
                     213);
 }
 
+TEST_CASE("a Router struct holds a vector of Function routes") {
+  runClosureProgram("struct_vector_of_function_routes", R"(
+import /std/collections/*
+
+[struct]
+Route {
+  [i32] code
+  [Function<i32, i32> mut] handler
+}
+
+[struct]
+Router {
+  [vector<Route> mut] routes
+
+  [mut effects(heap_alloc)]
+  add([i32] code, [Function<i32, i32> move] handler) {
+    this.routes.push(Route{[code] code, [handler] handler})
+  }
+
+  [return<i32> effects(heap_alloc)]
+  find([i32] code) {
+    [i32 mut] i{0i32}
+    while(i < this.routes.count()) {
+      if(this.routes[i].code == code) {
+        return(i)
+      }
+      i = i + 1i32
+    }
+    return(-1i32)
+  }
+}
+
+[return<i32> effects(heap_alloc)]
+route_to([Router mut] router, [i32] code, [i32] input) {
+  [i32] at{router.find(code)}
+  if(at < 0i32) {
+    return(404i32)
+  }
+  return(router.routes[at].handler(input))
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [Router mut] router{Router{[routes] vector<Route>()}}
+  router.add(1i32, Function<i32, i32>{[]([i32] x) { return(x + 1i32) }})
+  router.add(2i32, Function<i32, i32>{[]([i32] x) { return(x * 2i32) }})
+  return(route_to(router, 2i32, 20i32) + route_to(router, 1i32, 1i32) + router.routes.count())
+}
+)",
+                    44);
+}
+
+TEST_CASE("a struct field holds a vector of structs with String fields") {
+  runClosureProgram("struct_vector_of_named_rows", R"(
+import /std/collections/*
+import /std/text/*
+
+[struct]
+Named {
+  [i32] code
+  [String] name
+}
+
+[struct]
+Table {
+  [vector<Named> mut] rows
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [Table mut] t{Table{[rows] vector<Named>()}}
+  t.rows.push(Named{[code] 3i32, [name] stringFrom("abc")})
+  t.rows.push(Named{[code] 4i32, [name] stringFrom("hello")})
+  [Table] copy{t}
+  return(t.rows[1i32].code * 10i32 + t.rows[0i32].name.count() + copy.rows.count() * 100i32)
+}
+)",
+                    243);
+}
+
 TEST_CASE("return inside a Result.map lambda returns from the lambda") {
   runClosureProgram("closure_result_map_return", R"(
 [return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]

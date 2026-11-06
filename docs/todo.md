@@ -107,10 +107,9 @@ of sync with them.
 | TODO-5535 | Launch-time harness and reference Objective-C++ editor | ready | native-ui-launch |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5669 | `Function` from named definitions and at call sites | deferred | closures |
-| TODO-5673 | A callable field reached through `this` is called, not looked up as a method | blocked | closures-call-resolution |
+| TODO-5673 | A callable field reached through `this` is called, not looked up as a method | ready | closures-call-resolution |
 | TODO-5681 | A struct field built from a named vector local owns its storage once | ready | collections-fields |
 | TODO-5682 | Native: a mutating vector-field method inside an arithmetic expression returns the right value | ready | native-backend |
-| TODO-5675 | Struct fields that are vectors of structs lower on VM and native | ready | collections-fields |
 | TODO-5676 | Lambdas can state their return type | deferred | closures-return-types |
 | TODO-5677 | A `Function` whose closure holds a same-typed `Function` copies and destroys | deferred | closures-lifecycle |
 | TODO-5679 | Stdlib structs can be move-only | deferred | lifecycle-move-only |
@@ -143,7 +142,6 @@ of sync with them.
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5510 (control-returns): `return` returns from unit-variant pick arms correctly
 - TODO-5524 (result-error-structs): int-backed error structs round-trip through stdlib Result sums
-- TODO-5675 (collections-fields): struct fields that are vectors of structs lower on VM and native
 
 ### Immediate Next 10
 
@@ -152,8 +150,7 @@ of sync with them.
 3. TODO-5535
 4. TODO-5510
 5. TODO-5524
-6. TODO-5675
-7. TODO-5673
+6. TODO-5673
 
 ### Priority Lanes
 
@@ -169,7 +166,7 @@ of sync with them.
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5669, TODO-5676, TODO-5677; collection fields found by closures: TODO-5681, TODO-5682
-- Web server (single-threaded, Docker image built with `--emit=optexe`): handler and router blockers TODO-5675, then TODO-5673; network and OS TODO-5679; Result payloads for socket handles TODO-5527
+- Web server (single-threaded, Docker image built with `--emit=optexe`): handler and router blockers then TODO-5673; network and OS TODO-5679; Result payloads for socket handles TODO-5527
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
 ### Execution Queue
@@ -217,29 +214,15 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 
 - [ ] TODO-5673: A callable field reached through `this` is called, not looked up as a method
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5675
+  - status: ready
   - created_at: 2026-11-06
   - phase: Web server blockers (found probing closures for a request router)
   - parallel_track: closures-call-resolution
-  - scope: In a method of `[struct] Router { [vector<Route> mut] routes }` (with `Route` holding `[Function<i32, i32> mut] handler`), `this.routes[i].handler(input)` is rejected with `unknown method: /Route/handler`. The same expression on a parameter, `routes[i].handler(input)`, calls the field (docs/spec/value-lifecycle.md, Lambdas: a local, parameter or field whose type has `call`). Member chains that start at `this` must resolve a callable field the same way. Blocked because the `Router` struct itself cannot lower on VM/native until TODO-5675 lands.
+  - scope: In a method of `[struct] Router { [vector<Route> mut] routes }` (with `Route` holding `[Function<i32, i32> mut] handler`), `this.routes[i].handler(input)` is rejected with `unknown method: /Route/handler`. The same expression on a parameter, `routes[i].handler(input)`, calls the field (docs/spec/value-lifecycle.md, Lambdas: a local, parameter or field whose type has `call`). Member chains that start at `this` must resolve a callable field the same way.
   - acceptance:
     - a `Router` struct whose method calls `this.routes[i].handler(x)` runs on VM, native and optexe; a semantics test for `this.field(x)` and `this.items[i].field(x)`
     - full release gate green
   - stop_rule: call resolution of callable fields through `this`; no new callable forms.
-
-- [ ] TODO-5675: Struct fields that are vectors of structs lower on VM and native
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-06
-  - phase: Web server blockers (found probing closures for a request router)
-  - parallel_track: collections-fields
-  - depends_on: TODO-5668 (same lowering; do it first or together)
-  - scope: `[struct] Router { [vector<Route> mut] routes }`, where `Route` is a struct, stops at IR lowering with `vm backend only supports numeric/bool/string vector fields on /Router` (`native backend ...` for native and optexe). A request router, a server-state struct holding its connection table, and a closure that captures a `vector` of structs by value all need this. Lift the restriction to struct element types (including structs holding `String` and `Function` fields): construction, `push`, `count`, `[i]`, field access and method calls through the element, copy and destroy.
-  - acceptance:
-    - the `Router` shape (add routes, look one up, call its handler) and a struct holding `vector<Named>` (`i32` + `String` fields) run on VM, native and optexe with the expected values and no leaked or double-freed blocks
-    - full release gate green
-  - stop_rule: vector-of-struct fields; maps and other collection fields stay as they are.
 
 - [ ] TODO-5676: Lambdas can state their return type
   - owner: ai
