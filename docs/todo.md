@@ -113,6 +113,7 @@ of sync with them.
 | TODO-5676 | Lambdas can state their return type | deferred | closures-return-types |
 | TODO-5677 | A `Function` whose closure holds a same-typed `Function` copies and destroys | deferred | closures-lifecycle |
 | TODO-5679 | Stdlib structs can be move-only | deferred | lifecycle-move-only |
+| TODO-5698 | Serve static files with traversal-safe paths | deferred | web-static-files |
 | TODO-5510 | `return` returns from unit-variant pick arms correctly | ready | control-returns |
 | TODO-5524 | Int-backed error structs round-trip through stdlib Result sums | ready | result-error-structs |
 | TODO-5523 | A Result-returning main exits with its error code | deferred | result-main |
@@ -166,7 +167,7 @@ of sync with them.
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5669, TODO-5676, TODO-5677; collection fields found by closures: TODO-5681, TODO-5682
-- Web server (single-threaded, built with `--emit=optexe`): HTTP layer (struct-field argument gap code size per call site string fields of vector elements ); move-only handles TODO-5679; Result payloads for socket handles TODO-5527
+- Web server (single-threaded, built with `--emit=optexe`): move-only handles TODO-5679; Result payloads for socket handles TODO-5527; static file serving TODO-5698
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
 ### Execution Queue
@@ -259,6 +260,24 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - a move-only struct moves into a parameter, a field and a return; copying it is a compile error with a clear diagnostic; spec text with a runnable example
     - full release gate green
   - stop_rule: the move-only marker and its checks; `File` keeps its builtin rule unless switching it is free.
+  - options (written down for the decision; nothing is implemented):
+    1. A `[move_only]` struct transform. Explicit and greppable; a copy of a binding of that type (a by-value pass without `move(...)`, `[T copy]` parameters, assignment from a place, a field initializer from a local) is `move-only type '<T>' cannot be copied`. Needs a new transform name and a copy-site audit in semantics (the use-after-move analysis already tracks the sites).
+    2. Implicit rule: a struct that declares `Destroy` and no `Copy` is move-only. No new spelling, and it matches how `File<Mode>` already behaves, but it changes existing stdlib types that declare only `Destroy` and are bit-copied today (an audit of those is part of the cost), and a type cannot say "trivially copyable despite Destroy".
+    3. An explicit deleted copy: `Copy(other) = delete` or a `[no_copy]` marker on the helper. Closest to C++, needs parser support for the deleted body.
+    Recommendation: option 1 for the first network module, with the interim panicking `Copy` helper until it lands.
+
+- [ ] TODO-5698: Serve static files with traversal-safe paths
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-06
+  - phase: Web server (built with `--emit=optexe`)
+  - parallel_track: web-static-files
+  - scope: A handler that answers `GET /static/<path>` from a directory. Two parts are missing. (1) A run-time file read: `File<Read>` opens a module-table `string` path and reads one byte at a time, so a request path (a `String`/`StringView`) cannot name a file, and there is no `readAll`. (2) A path check: reject `..` segments, an absolute path, a NUL byte and a backslash before joining the request path to the root. The check is plain text work and can be written first (`safe_relative_path(StringView) -> bool`, tested on VM). Native file I/O still has TODO-5514 open (`writeLine` newline, errno), which does not affect `optexe` reads but should be fixed before documenting `--emit=native` servers.
+  - options for (1): a. host calls `ps_os_read_file([String] path) -> String` and `ps_os_file_size` in the `/std/os` shim (small, works on optexe only, no change to `File`); b. teach `File<Read>` to open a `String` path and add `readAll` in `/std/file` (all backends, but touches the Result/File lowering and TODO-5514 first); c. open and `sendfile` in the net shim (zero copy, but couples `/std/net` to the file system). Recommendation: a for the first slice.
+  - acceptance:
+    - `safe_relative_path` with tests for `..`, absolute, NUL, backslash, empty and nested paths; `serve_static(root)` handler with content types for html, css, js, json, png and text, 404 for a missing file and 403 for an unsafe path; a curl-style loopback test
+    - full release gate green
+  - stop_rule: the static handler and the file read it needs; no directory listings, ranges or caching.
 
 - [ ] TODO-5510: `return` returns from unit-variant pick arms correctly
   - owner: ai

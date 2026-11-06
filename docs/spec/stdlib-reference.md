@@ -585,8 +585,9 @@ one request per connection (`Connection: close`), and no chunked encoding, keep-
   }})
   router.call(request, location(response))
   ```
-- Each call of a function that takes a struct is a copy of its body in the lowered program (docs/spec/vm-design.md,
-  Real calls). A program should therefore parse in one place, such as the server loop, rather than at many call sites.
+- A definition with plain struct parameters and a plain struct result (such as `parseRequest`) is one real call on the
+  VM and under `--emit=optcpp`/`optexe` (docs/spec/vm-design.md, Real calls), so the number of call sites does not
+  multiply the generated code.
 
 ### HTTP server (`/std/http/server`)
 
@@ -647,5 +648,37 @@ main() {
   }})
   serve(withRequestLog(router), ServerConfig{[port] 8080i32})?
   return(0i32)
+}
+```
+
+### JSON writer (`/std/json`)
+
+`import /std/json/*` provides `Writer`, which builds JSON text in its public `out` `String`. It puts the commas and
+colons where they belong, nests objects and arrays, and escapes `"`, `\` and control bytes in strings (other bytes,
+such as UTF-8, pass through). It does not parse JSON and does not check that calls are balanced.
+
+- `beginObject()` / `endObject()`, `beginArray()` / `endArray()`
+- `key(name)` before each member value of an object
+- `stringValue(text)`, `i64Value(n)`, `boolValue(b)`, `nullValue()`; `text` is a `StringView`
+
+```prime
+import /std/json/*
+import /std/text/*
+import /std/text/view/*
+
+[return<int> effects(heap_alloc)]
+main() {
+  [Writer mut] w{Writer{}}
+  w.beginObject()
+  w.key(textOf("ok"))
+  w.boolValue(true)
+  w.key(textOf("ids"))
+  w.beginArray()
+  w.i64Value(1i64)
+  w.i64Value(2i64)
+  w.endArray()
+  w.endObject()
+  // w.out is {"ok":true,"ids":[1,2]}
+  return(w.out.count())
 }
 ```

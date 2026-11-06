@@ -630,3 +630,18 @@ TEST_CASE("string field of an indexed vector element binds as string") {
                "  return(p.run() + t.call_first() + t.call_first())",
                defs) == 22);
 }
+
+// The /std/json Writer puts commas and colons where they belong, nests objects and arrays, and escapes quotes,
+// backslashes and control bytes in strings.
+TEST_CASE("the json writer builds nested documents with escaped strings") {
+  CHECK(exitOf("  [Writer mut] w{Writer{}}\n"
+               "  w.beginObject()\n  w.key(textOf(\"name\"))\n"
+               "  [String mut] raw{String{}}\n  raw.append(\"a\\\"b\\\\c\\nd\")\n  raw.pushByte(1u8)\n"
+               "  w.stringValue(raw.view())\n"
+               "  w.key(textOf(\"n\"))\n  w.i64Value(-42i64)\n  w.key(textOf(\"list\"))\n  w.beginArray()\n"
+               "  w.boolValue(true)\n  w.nullValue()\n  w.beginObject()\n  w.endObject()\n  w.i64Value(7i64)\n"
+               "  w.endArray()\n  w.endObject()\n"
+               "  return(if(w.out.equalsText(\"{\\\"name\\\":\\\"a\\\\\\\"b\\\\\\\\c\\\\nd\\\\u0001\\\",\\\"n\\\":-42,"
+               "\\\"list\\\":[true,null,{},7]}\"), then() { 0i32 }, else() { 1i32 }))",
+               "import /std/json/*\nimport /std/text/*\nimport /std/text/view/*\n") == 0);
+}

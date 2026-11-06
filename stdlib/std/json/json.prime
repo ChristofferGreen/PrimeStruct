@@ -1,0 +1,144 @@
+// A minimal JSON writer (docs/spec/stdlib-reference.md, /std/json). It builds the text in a `String`, puts the commas
+// and colons where they belong, and escapes string contents. It does not parse JSON and does not check that calls are
+// balanced: `endObject` after `beginArray` writes a mismatched bracket.
+import /std/text/*
+import /std/text/view/*
+
+namespace std {
+namespace json {
+
+  [public struct]
+  Writer() {
+    // The JSON text written so far.
+    [public String mut] out{String{}}
+    // One byte per open object or array: 1 once it holds an item, so the next item is preceded by a comma.
+    [String mut] levels{String{}}
+    // Whether a key was just written, so the next value follows its colon without a comma.
+    [bool mut] afterKey{false}
+
+    // The comma before the next item of the innermost object or array, if it already holds one.
+    [mut effects(heap_alloc)]
+    separator() {
+      if(this.levels.count() == 0i32) {
+        return()
+      }
+      if(this.levels.back() == 1u8) {
+        this.out.append(",")
+      } else {
+        this.levels.popByte()
+        this.levels.pushByte(1u8)
+      }
+    }
+
+    // What every value starts with: nothing after a key, else the separator.
+    [mut effects(heap_alloc)]
+    beginValue() {
+      if(this.afterKey) {
+        this.afterKey = false
+        return()
+      }
+      this.separator()
+    }
+
+    [mut effects(heap_alloc)]
+    beginObject() {
+      this.beginValue()
+      this.out.append("{")
+      this.levels.pushByte(0u8)
+    }
+
+    [mut effects(heap_alloc)]
+    endObject() {
+      this.levels.popByte()
+      this.out.append("}")
+    }
+
+    [mut effects(heap_alloc)]
+    beginArray() {
+      this.beginValue()
+      this.out.append("[")
+      this.levels.pushByte(0u8)
+    }
+
+    [mut effects(heap_alloc)]
+    endArray() {
+      this.levels.popByte()
+      this.out.append("]")
+    }
+
+    // The key of the next member of an object; a value call must follow.
+    [mut effects(heap_alloc)]
+    key([StringView] name) {
+      this.separator()
+      this.quoted(name)
+      this.out.append(":")
+      this.afterKey = true
+    }
+
+    [mut effects(heap_alloc)]
+    stringValue([StringView] text) {
+      this.beginValue()
+      this.quoted(text)
+    }
+
+    [mut effects(heap_alloc)]
+    i64Value([i64] value) {
+      this.beginValue()
+      this.out.appendI64(value)
+    }
+
+    [mut effects(heap_alloc)]
+    boolValue([bool] value) {
+      this.beginValue()
+      if(value) {
+        this.out.append("true")
+      } else {
+        this.out.append("false")
+      }
+    }
+
+    [mut effects(heap_alloc)]
+    nullValue() {
+      this.beginValue()
+      this.out.append("null")
+    }
+
+    // `text` between quotes: quote, backslash and control bytes are escaped; other bytes (UTF-8) pass through.
+    [mut effects(heap_alloc)]
+    quoted([StringView] text) {
+      [StringView] digits{textOf("0123456789abcdef")}
+      this.out.append("\"")
+      [i32 mut] index{0i32}
+      while(index < text.count()) {
+        [u8] byte{text.byteAt(index)}
+        if(byte == 34u8) {
+          this.out.append("\\\"")
+        }
+        if(byte == 92u8) {
+          this.out.append("\\\\")
+        }
+        if(byte == 10u8) {
+          this.out.append("\\n")
+        }
+        if(byte == 13u8) {
+          this.out.append("\\r")
+        }
+        if(byte == 9u8) {
+          this.out.append("\\t")
+        }
+        if(byte < 32u8 && byte != 10u8 && byte != 13u8 && byte != 9u8) {
+          this.out.append("\\u00")
+          this.out.pushByte(digits.byteAt(convert<i32>(byte) / 16i32))
+          this.out.pushByte(digits.byteAt(convert<i32>(byte) - convert<i32>(byte) / 16i32 * 16i32))
+        }
+        if(byte >= 32u8 && byte != 34u8 && byte != 92u8) {
+          this.out.pushByte(byte)
+        }
+        index = index + 1i32
+      }
+      this.out.append("\"")
+    }
+  }
+
+}
+}
