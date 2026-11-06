@@ -164,7 +164,7 @@ of sync with them.
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5669, TODO-5676, TODO-5677; collection fields found by closures: TODO-5681, TODO-5682
-- Web server (single-threaded, Docker image built with `--emit=optexe`): move-only handles TODO-5679; Result payloads for socket handles TODO-5527
+- Web server (single-threaded, built with `--emit=optexe`): move-only handles TODO-5679; Result payloads for socket handles TODO-5527
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
 ### Execution Queue
@@ -238,7 +238,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - owner: ai
   - status: deferred
   - created_at: 2026-11-06
-  - phase: Web server (Docker image built with `--emit=optexe`)
+  - phase: Web server (built with `--emit=optexe`)
   - parallel_track: lifecycle-move-only
   - scope: Owning handles such as a listening socket and a connection must not be copied (a copy would close the descriptor twice). `File<Mode>` gets this from builtin code (docs/spec/errors-and-file-io.md: `Clone` is a compile error); a struct written in the stdlib has no way to say it. Specify a spelling in docs/spec/value-lifecycle.md, reject copies at compile time, and keep moves, `[T move]` parameters and returns working. Interim for a first network module: a `Copy` helper that panics. Deferred: needs the spelling decided.
   - acceptance:

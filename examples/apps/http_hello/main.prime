@@ -50,7 +50,7 @@ serve_connection([i32] connection) {
 main() {
   [String] portText{envOr(stringFrom("PORT"), stringFrom("8080"))}
   [i32] port{portText.view().parseI32Or(8080i32)}
-  // BIND=loopback keeps the server on 127.0.0.1 (tests, local use); a container needs every interface.
+  // BIND=loopback keeps the server on 127.0.0.1 (tests, local use); remote clients need every interface.
   [String] bind{envOr(stringFrom("BIND"), stringFrom("all"))}
   [i32] listener{if(bind.equalsText("loopback"), then() { listenLoopback(port, 16i32) }, else() { listen(port, 16i32) })}
   if(listener < 0i32) {

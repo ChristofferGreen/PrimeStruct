@@ -435,7 +435,7 @@ payload binding do not lower yet (TODO-5544).
 
 ### Operating system (`/std/os`)
 
-`import /std/os/*` gives a long-running program (a server in a container) its configuration, a clock and a clean
+`import /std/os/*` gives a long-running program such as a server its configuration, a clock and a clean
 stop. The functions are `[host]` calls answered by the POSIX shim `stdlib/std/os/os_posix.cpp`, linked into an
 `--emit=optexe` program:
 
