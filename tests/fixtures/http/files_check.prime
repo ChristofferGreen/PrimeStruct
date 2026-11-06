@@ -1,0 +1,39 @@
+// /std/http/files over a directory given in FILES_ROOT (tests/unit/backend_host/test_net.cpp). The exit code is the
+// number of the first failed check, or 0. FILES_ROOT holds a.txt ("hello file\n"), sub/ and bin.dat (00 01 ff 02).
+import /std/http/*
+import /std/os/*
+import /std/http/files/*
+import /std/text/*
+import /std/text/view/*
+
+[return<int> effects(file_read, heap_alloc)]
+main() {
+  [String] root{envOr(stringFrom("FILES_ROOT"), stringFrom(""))}
+  if(!safe_relative_path(textOf("a/b.txt"))) { return(1i32) }
+  if(safe_relative_path(textOf("../x"))) { return(2i32) }
+  if(safe_relative_path(textOf("a/../x"))) { return(3i32) }
+  if(safe_relative_path(textOf("/etc/passwd"))) { return(4i32) }
+  if(safe_relative_path(textOf(""))) { return(5i32) }
+  if(safe_relative_path(textOf("a\\b"))) { return(6i32) }
+  if(!safe_relative_path(textOf("a/..b/c.."))) { return(7i32) }
+  if(safe_relative_path(textOf(".."))) { return(8i32) }
+  [Response mut] r{Response{}}
+  serve_file(location(r), root.view(), textOf("a.txt"), 1000i32)
+  if(r.status != 200i32 || !r.body.equalsText("hello file\n")) { return(10i32) }
+  r.clear()
+  serve_file(location(r), root.view(), textOf("nope.txt"), 1000i32)
+  if(r.status != 404i32) { return(11i32) }
+  r.clear()
+  serve_file(location(r), root.view(), textOf("../a.txt"), 1000i32)
+  if(r.status != 403i32) { return(12i32) }
+  r.clear()
+  serve_file(location(r), root.view(), textOf("a.txt"), 3i32)
+  if(r.status != 413i32) { return(13i32) }
+  r.clear()
+  serve_file(location(r), root.view(), textOf("sub"), 1000i32)
+  if(r.status != 404i32) { return(14i32) }
+  r.clear()
+  serve_file(location(r), root.view(), textOf("bin.dat"), 1000i32)
+  if(r.status != 200i32 || r.body.count() != 4i32 || r.body.byteAt(2i32) != 255u8) { return(15i32) }
+  return(0i32)
+}

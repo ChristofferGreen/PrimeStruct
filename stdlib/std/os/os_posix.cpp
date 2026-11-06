@@ -1,5 +1,7 @@
 // POSIX host side of /std/os (stdlib/std/os/os.prime), linked into an --emit=optexe program with --link-arg.
+#include <fcntl.h>
 #include <signal.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include <cerrno>
@@ -61,5 +63,40 @@ int32_t ps_os_log_line(const char *line) {
     written += static_cast<size_t>(count);
   }
   return static_cast<int32_t>(written);
+}
+
+// The size of a regular file, or -1 (not a regular file) / -100 - errno.
+int64_t ps_os_file_size(const char *path) {
+  struct stat info = {};
+  if (stat(path, &info) != 0) {
+    return -100 - errno;
+  }
+  return S_ISREG(info.st_mode) ? static_cast<int64_t>(info.st_size) : -1;
+}
+
+// Reads up to `capacity` bytes of the file into `buffer`; the count read, or -100 - errno.
+int64_t ps_os_read_file(const char *path, uint8_t *buffer, uint64_t capacity) {
+  const int fd = open(path, O_RDONLY | O_CLOEXEC);
+  if (fd < 0) {
+    return -100 - errno;
+  }
+  uint64_t total = 0;
+  while (total < capacity) {
+    const ssize_t count = read(fd, buffer + total, capacity - total);
+    if (count < 0) {
+      if (errno == EINTR) {
+        continue;
+      }
+      const int code = errno;
+      close(fd);
+      return -100 - code;
+    }
+    if (count == 0) {
+      break;
+    }
+    total += static_cast<uint64_t>(count);
+  }
+  close(fd);
+  return static_cast<int64_t>(total);
 }
 }

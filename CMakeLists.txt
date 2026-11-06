@@ -1412,7 +1412,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_net
-                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+                       PROPERTIES TIMEOUT 900 LABELS "parallel-safe")
   # /std/http: the request parser, responses and the router (tests/unit/backend_host/test_http.cpp).
   add_test(
     NAME PrimeStruct_http

@@ -61,7 +61,7 @@ From `build-debug/`:
 ### apps
 - `examples/apps/http_hello/main.prime`: single-threaded HTTP hello-world server on `/std/http` (`Router`, `serve`, `withRequestLog`)
   (`--emit=optexe` with both POSIX shims linked; see the comment at the top of the file).
-- `examples/apps/web_app/main.prime`: single-threaded web app on `/std/http` serving `GET /healthz`, `GET /hello?name=` and `POST /echo` with request logging; stops with exit code 0 on SIGTERM/SIGINT (build line in the file header)
+- `examples/apps/web_app/main.prime`: single-threaded web app on `/std/http` serving `GET /healthz`, `GET /hello?name=`, `POST /echo` and `GET /static/<path>` with request logging; stops with exit code 0 on SIGTERM/SIGINT (build line in the file header)
 
 ### borrow_checker_negative
 - `examples/borrow_checker_negative/`: intentionally non-compiling borrow-checker examples.

@@ -452,7 +452,13 @@ primec --emit=optexe server.prime -o server --link-arg stdlib/std/os/os_posix.cp
 - `logLine(line) -> i32`: writes the `String` `line` and a line feed to stderr in one go. stderr is not buffered,
   so a supervisor sees the line at once. Returns the bytes written, or -1.
 
-These functions take no effect. Like every host call they leave the deterministic subset of the language
+- `fileSize(path) -> i64` (`file_read`): the size of the regular file `path` (a `String`), -1 for a file that is not
+  regular (a directory), or -100 - errno.
+- `readFile(path, out, maxBytes) -> i32` (`file_read`, `heap_alloc`): replaces the `String` `out` with the bytes of
+  the file (binary safe). Returns 0, -2 when the file is over `maxBytes`, or the negative code of `fileSize` or
+  -100 - errno of a failed read.
+
+The other functions take no effect. Like every host call they leave the deterministic subset of the language
 (docs/spec/host-and-core-library.md), and a program that never calls them links without the shim. The VM and
 `primevm` have no binding for them and report `unbound host function: ps_os_env_or ...`.
 
@@ -650,6 +656,26 @@ main() {
   return(0i32)
 }
 ```
+
+### Static files (`/std/http/files`)
+
+`import /std/http/files/*` answers a request from a directory, over `/std/os` `readFile` (link the `/std/os` shim).
+
+- `safe_relative_path(path) -> bool`: false for an empty path, an absolute path (leading `/`), a NUL or backslash
+  byte and any `..` segment. Percent escapes are not decoded.
+- `content_type_for(path) -> StringView`: by extension (html, css, js, json, png, jpg, svg, txt), else
+  `application/octet-stream`.
+- `serve_file(response, root, relative, maxBytes)` (`file_read`, `heap_alloc`): 200 with the file and its
+  `Content-Type`; 403 for an unsafe path; 404 for a missing file or a directory; 413 for a file over `maxBytes`. The
+  handler's enclosing definition needs `file_read` too, because `Function` values carry no effects.
+
+```prime
+router.get("/static/*", Function<void, Request, Reference<Response>>{[]([Request] request, [Reference<Response>] response) {
+  serve_file(response, textOf("public"), request.path.slice(8i32, request.path.count()), 1048576i32)
+}})
+```
+
+`examples/apps/web_app/main.prime` serves `$STATIC_DIR` this way.
 
 ### JSON writer (`/std/json`)
 

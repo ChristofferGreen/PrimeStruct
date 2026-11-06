@@ -6,9 +6,11 @@
 //   GET  /healthz          200 "ok"
 //   GET  /hello?name=Ada   200 "hello, Ada"; without a name, "hello, world"
 //   POST /echo             200 with the request body as the response body
+//   GET  /static/<path>    the file under $STATIC_DIR (default "public"): 403 for an unsafe path, 404 if missing
 // Any other path is 404 and a known path under another method is 405. Every request is logged to stderr as
 // "METHOD target STATUS Nms". The server stops with exit code 0 on SIGTERM or SIGINT.
 import /std/http/*
+import /std/http/files/*
 import /std/http/server/*
 import /std/os/*
 import /std/text/*
@@ -32,7 +34,7 @@ query_value([StringView] query, [StringView] key) {
   return(StringView{})
 }
 
-[return<Router> effects(heap_alloc)]
+[return<Router> effects(heap_alloc, file_read)]
 app_routes() {
   [Router mut] router{Router{}}
   router.get("/healthz", Function<void, Request, Reference<Response>>{[]([Request] request, [Reference<Response>] response) {
@@ -52,6 +54,10 @@ app_routes() {
   router.post("/echo", Function<void, Request, Reference<Response>>{[]([Request] request, [Reference<Response>] response) {
     response.text(request.body, textOf("application/octet-stream"))
   }})
+  router.get("/static/*", Function<void, Request, Reference<Response>>{[]([Request] request, [Reference<Response>] response) {
+    [String] root{envOr(stringFrom("STATIC_DIR"), stringFrom("public"))}
+    serve_file(response, root.view(), request.path.slice(8i32, request.path.count()), 1048576i32)
+  }})
   return(router)
 }
 
@@ -61,7 +67,7 @@ log_serve_error([ServeError] err) {
   print_line_error(err.why())
 }
 
-[return<int> effects(heap_alloc, io_err, net_io) on_error<ServeError, log_serve_error>]
+[return<int> effects(heap_alloc, io_err, net_io, file_read) on_error<ServeError, log_serve_error>]
 main() {
   [String] portText{envOr(stringFrom("PORT"), stringFrom("8080"))}
   [String] bind{envOr(stringFrom("BIND"), stringFrom("all"))}

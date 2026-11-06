@@ -1,0 +1,98 @@
+// Static file responses for /std/http (docs/spec/stdlib-reference.md, /std/http/files). Reads the file with /std/os
+// readFile, so the program links the /std/os shim. The request path is checked before it is joined to the root.
+import /std/http/*
+import /std/os/*
+import /std/text/*
+import /std/text/view/*
+
+namespace std {
+namespace http {
+namespace files {
+
+  // Whether `path` may be joined to a root directory: not empty, relative, no NUL or backslash byte, and no ".."
+  // segment. Percent escapes are not decoded, so "%2e%2e" is just an ordinary (missing) file name.
+  [public return<bool>]
+  safe_relative_path([StringView] path) {
+    if(path.empty()) {
+      return(false)
+    }
+    if(path.byteAt(0i32) == 47u8) {
+      return(false)
+    }
+    [i32 mut] segmentStart{0i32}
+    [i32 mut] index{0i32}
+    while(index <= path.count()) {
+      [bool] atEnd{index == path.count()}
+      [u8] byte{if(atEnd, then() { 47u8 }, else() { path.byteAt(index) })}
+      if(byte == 0u8 || byte == 92u8) {
+        return(false)
+      }
+      if(byte == 47u8) {
+        if(index - segmentStart == 2i32 && path.byteAt(segmentStart) == 46u8 && path.byteAt(segmentStart + 1i32) == 46u8) {
+          return(false)
+        }
+        segmentStart = index + 1i32
+      }
+      index = index + 1i32
+    }
+    return(true)
+  }
+
+  // The `Content-Type` for the extension of `path`: html, css, js, json, png, jpg, svg and txt are known; anything
+  // else is application/octet-stream.
+  [public return<StringView>]
+  content_type_for([StringView] path) {
+    if(path.endsWith(textOf(".html")) || path.endsWith(textOf(".htm"))) {
+      return(textOf("text/html; charset=utf-8"))
+    }
+    if(path.endsWith(textOf(".css"))) {
+      return(textOf("text/css; charset=utf-8"))
+    }
+    if(path.endsWith(textOf(".js"))) {
+      return(textOf("text/javascript; charset=utf-8"))
+    }
+    if(path.endsWith(textOf(".json"))) {
+      return(textOf("application/json"))
+    }
+    if(path.endsWith(textOf(".png"))) {
+      return(textOf("image/png"))
+    }
+    if(path.endsWith(textOf(".jpg")) || path.endsWith(textOf(".jpeg"))) {
+      return(textOf("image/jpeg"))
+    }
+    if(path.endsWith(textOf(".svg"))) {
+      return(textOf("image/svg+xml"))
+    }
+    if(path.endsWith(textOf(".txt"))) {
+      return(textOf("text/plain; charset=utf-8"))
+    }
+    return(textOf("application/octet-stream"))
+  }
+
+  // Answers `response` with the file `relative` under `root`: 200 and the bytes, 403 for an unsafe path, 404 for a
+  // missing or unreadable file or a directory, 413 for a file over `maxBytes`.
+  [public effects(file_read, heap_alloc)]
+  serve_file([Reference<Response>] response, [StringView] root, [StringView] relative, [i32] maxBytes) {
+    if(!safe_relative_path(relative)) {
+      response.status = 403i32
+      return()
+    }
+    [String mut] full{String{}}
+    full.appendBytes(root.data, root.count())
+    full.append("/")
+    full.appendBytes(relative.data, relative.count())
+    [i32] code{readFile(full, response.body, maxBytes)}
+    if(code == -2i32) {
+      response.status = 413i32
+      return()
+    }
+    if(code < 0i32) {
+      response.status = 404i32
+      return()
+    }
+    response.header(textOf("Content-Type"), content_type_for(relative))
+  }
+
+}
+}
+}

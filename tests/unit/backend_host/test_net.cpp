@@ -264,6 +264,9 @@ TEST_CASE("the web_app example serves /healthz, /hello and /echo, logs requests 
   REQUIRE_MESSAGE(status == 0, readFile(log));
 
   const std::string errors = exe + ".err";
+  const std::string staticDir = scratch("web_app_public");
+  std::filesystem::create_directories(staticDir);
+  writeFile(staticDir + "/page.html", "<h1>hi</h1>");
   const pid_t pid = fork();
   REQUIRE(pid >= 0);
   if (pid == 0) {
@@ -271,6 +274,7 @@ TEST_CASE("the web_app example serves /healthz, /hello and /echo, logs requests 
     dup2(errorFd, STDERR_FILENO);
     setenv("PORT", "0", 1);
     setenv("BIND", "loopback", 1);
+    setenv("STATIC_DIR", staticDir.c_str(), 1);
     execl(exe.c_str(), exe.c_str(), static_cast<char *>(nullptr));
     _exit(127);
   }
@@ -284,6 +288,9 @@ TEST_CASE("the web_app example serves /healthz, /hello and /echo, logs requests 
       usleep(25000);
     }
   }
+  std::string staticFile;
+  std::string staticMissing;
+  std::string staticEscape;
   std::string health;
   std::string hello;
   std::string helloDefault;
@@ -297,6 +304,9 @@ TEST_CASE("the web_app example serves /healthz, /hello and /echo, logs requests 
     echo = exchange(port, "POST /echo HTTP/1.1\r\nHost: x\r\nContent-Length: 9\r\n\r\nping=pong");
     missing = exchange(port, "GET /nope HTTP/1.1\r\nHost: x\r\n\r\n");
     wrongMethod = exchange(port, "POST /healthz HTTP/1.1\r\nHost: x\r\nContent-Length: 0\r\n\r\n");
+    staticFile = exchange(port, "GET /static/page.html HTTP/1.1\r\nHost: x\r\n\r\n");
+    staticMissing = exchange(port, "GET /static/none.html HTTP/1.1\r\nHost: x\r\n\r\n");
+    staticEscape = exchange(port, "GET /static/../page.html HTTP/1.1\r\nHost: x\r\n\r\n");
   }
   kill(pid, SIGTERM);
   int waitStatus = 0;
@@ -310,12 +320,35 @@ TEST_CASE("the web_app example serves /healthz, /hello and /echo, logs requests 
   CHECK(echo.find("\r\n\r\nping=pong") != std::string::npos);
   CHECK(missing.rfind("HTTP/1.1 404", 0) == 0);
   CHECK(wrongMethod.rfind("HTTP/1.1 405", 0) == 0);
+  CHECK_MESSAGE(staticFile.rfind("HTTP/1.1 200 OK\r\n", 0) == 0, staticFile);
+  CHECK(staticFile.find("Content-Type: text/html; charset=utf-8\r\n") != std::string::npos);
+  CHECK(staticFile.find("\r\n\r\n<h1>hi</h1>") != std::string::npos);
+  CHECK(staticMissing.rfind("HTTP/1.1 404", 0) == 0);
+  CHECK_MESSAGE(staticEscape.rfind("HTTP/1.1 403", 0) == 0, staticEscape);
   const std::string requestLog = readFile(errors);
   CHECK_MESSAGE(requestLog.find("GET /hello?name=Ada 200 ") != std::string::npos, requestLog);
   CHECK(requestLog.find("POST /echo 200 ") != std::string::npos);
   CHECK(requestLog.find("GET /nope 404 ") != std::string::npos);
   CHECK(WIFEXITED(waitStatus));
   CHECK(WEXITSTATUS(waitStatus) == 0);
+}
+
+TEST_CASE("serve_file checks paths and reads files, text and binary") {
+  const std::string osShim = std::string(PRIMESTRUCT_SOURCE_DIR) + "/stdlib/std/os/os_posix.cpp";
+  const std::string fixture = std::string(PRIMESTRUCT_SOURCE_DIR) + "/tests/fixtures/http/files_check.prime";
+  const std::string exe = scratch("files_check");
+  const std::string log = exe + ".log";
+  const std::string root = scratch("files_root");
+  std::filesystem::create_directories(root + "/sub");
+  writeFile(root + "/a.txt", "hello file\n");
+  writeFile(root + "/bin.dat", std::string("\x00\x01\xff\x02", 4));
+  const int status = run(shellQuote(Primec) + " --emit=optexe " + shellQuote(fixture) + " -o " + shellQuote(exe) +
+                         " --link-arg " + shellQuote(osShim) + " > " + shellQuote(log) + " 2>&1");
+  REQUIRE_MESSAGE(status == 0, readFile(log));
+  setenv("FILES_ROOT", root.c_str(), 1);
+  const int exitCode = run(shellQuote(exe));
+  unsetenv("FILES_ROOT");
+  CHECK_MESSAGE(exitCode == 0, "files_check failed at check " << exitCode);
 }
 
 TEST_SUITE_END();
