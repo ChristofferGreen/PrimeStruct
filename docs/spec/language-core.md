@@ -297,10 +297,11 @@ module {
   --default-effects <list>` supplies the default effect set for any definition/execution that omits `[effects]`
   (comma-separated list; `default` and `none` are supported tokens). If `[capabilities(...)]` is present it must be a
   subset of the active effects (explicit or default). VM/native accept `io_out`, `io_err`, `heap_alloc`, `file_read`,
-  `file_write`, `gpu_dispatch`, `task`, and `pathspace_*` effects (`pathspace_notify`, `pathspace_insert`,
+  `file_write`, `gpu_dispatch`, `task`, `net_io`, and `pathspace_*` effects (`pathspace_notify`, `pathspace_insert`,
   `pathspace_take`, `pathspace_bind`, `pathspace_schedule`); `file_write` also implies `file_read` for compatibility.
-  GLSL accepts
-  `io_out`, `io_err`, plus `pathspace_*` metadata effects/capabilities.
+  GLSL accepts `io_out`, `io_err`, plus `pathspace_*` metadata effects/capabilities. Wasm accepts `io_out`, `io_err`,
+  `heap_alloc`, `file_read` and `file_write` (wasm-browser accepts none), so it rejects `net_io`. In serialized IR the
+  effect mask bit for `net_io` is `1 << 12`; masks written before it was added stay valid.
 - **Execution effects:** executions may also carry `[effects(...)]`. The execution’s effects must be a subset of the
   enclosing definition’s active effects; otherwise it is a diagnostic. The default set is controlled by
   `--default-effects` in the compiler/VM.

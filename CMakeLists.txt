@@ -1352,6 +1352,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/backend_host/test_cpp_strings.cpp
     tests/unit/backend_host/test_string_conformance.cpp
     tests/unit/backend_host/test_cpp_native_ui.cpp
+    tests/unit/backend_host/test_net.cpp
   )
   add_dependencies(PrimeStruct_cpp_host_call_tests primec)
   target_include_directories(PrimeStruct_cpp_host_call_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
@@ -1399,6 +1400,15 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_cpp_native_ui
                        PROPERTIES TIMEOUT 900 LABELS "parallel-safe")
+  # The net_io effect and /std/net over loopback sockets (tests/unit/backend_host/test_net.cpp).
+  add_test(
+    NAME PrimeStruct_net
+    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+            "--test-suite=primestruct.backend.net"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_net
+                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
 
   # Native UI C ABI on the headless backend, and its ScriptEngine bindings.
   add_executable(PrimeStruct_native_ui_tests

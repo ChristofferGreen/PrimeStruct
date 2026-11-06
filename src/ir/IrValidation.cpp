@@ -20,10 +20,12 @@ constexpr uint32_t MaxCallParameterCount = 4096;
 constexpr uint64_t KnownEffectMask = EffectIoOut | EffectIoErr | EffectHeapAlloc | EffectPathSpaceNotify |
                                      EffectPathSpaceInsert | EffectPathSpaceTake | EffectFileWrite |
                                      EffectGpuDispatch | EffectPathSpaceBind | EffectPathSpaceSchedule |
-                                     EffectFileRead | EffectTask;
+                                     EffectFileRead | EffectTask | EffectNetIo;
 constexpr uint64_t KnownWasmWasiEffectMask =
     EffectIoOut | EffectIoErr | EffectHeapAlloc | EffectFileWrite | EffectFileRead;
 constexpr uint64_t KnownWasmBrowserEffectMask = 0ull;
+// Effects a shader can never have: GLSL has no sockets.
+constexpr uint64_t GlslRejectedEffectMask = EffectNetIo;
 
 bool isWasmTarget(IrValidationTarget target) {
   return target == IrValidationTarget::Wasm || target == IrValidationTarget::WasmBrowser;
@@ -168,6 +170,14 @@ bool validateFunction(const IrModule &module,
                           function.name,
                           "unsupported capability mask bits for " + std::string(wasmTargetName(target)) + " target",
                           error);
+    }
+  }
+  if (isGlslTarget(target)) {
+    if ((function.metadata.effectMask & GlslRejectedEffectMask) != 0u) {
+      return failFunction(functionIndex, function.name, "unsupported effect mask bits for glsl target", error);
+    }
+    if ((function.metadata.capabilityMask & GlslRejectedEffectMask) != 0u) {
+      return failFunction(functionIndex, function.name, "unsupported capability mask bits for glsl target", error);
     }
   }
 

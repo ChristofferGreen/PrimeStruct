@@ -75,6 +75,7 @@
   - **Memory:** `heap_alloc` (dynamic allocation), `global_write` (mutating global state).
   - **Assets:** `asset_read`, `asset_write` (asset/database I/O).
   - **GPU:** `gpu_dispatch` (host-side GPU submission/dispatch).
+  - **Network:** `net_io` (socket I/O through `/std/net`; VM/native/C++ only, rejected by wasm and GLSL).
   - **PathSpace (internal):** `pathspace_notify`, `pathspace_insert`, `pathspace_take`, `pathspace_bind`,
     `pathspace_schedule` (host metadata/event hooks; currently treated as backend metadata/no-op operations).
   - Unknown capability names are errors; capability identifiers are `lower_snake_case`.

@@ -101,8 +101,7 @@ of sync with them.
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
 | TODO-5656 | Thread-safe `SharedString` (atomic count, per-thread string heaps) | deferred | string-concurrency |
-| TODO-5683 | `net_io` effect reaches VM/native IR; wasm and GLSL reject it | ready | net-effect |
-| TODO-5684 | `/std/net` socket host functions and POSIX shim for optexe | blocked | net-shim |
+| TODO-5684 | `/std/net` socket host functions and POSIX shim for optexe | ready | net-shim |
 | TODO-5685 | Loopback echo test over `/std/net` on optexe | blocked | net-echo |
 | TODO-5686 | HTTP hello-world example over `/std/net` | deferred | net-http-example |
 | TODO-5603 | Startup audit: what a launch loads and does | ready | startup |
@@ -140,7 +139,7 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5683 (net-effect): `net_io` effect reaches VM/native IR; wasm and GLSL reject it
+- TODO-5684 (net-shim): `/std/net` socket host functions and POSIX shim for optexe
 - TODO-5603 (startup): startup audit: what a launch loads and does
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
@@ -149,14 +148,13 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5683
-2. TODO-5684
-3. TODO-5685
-4. TODO-5603
-5. TODO-5536
-6. TODO-5535
-7. TODO-5510
-8. TODO-5524
+1. TODO-5684
+2. TODO-5685
+3. TODO-5603
+4. TODO-5536
+5. TODO-5535
+6. TODO-5510
+7. TODO-5524
 
 ### Priority Lanes
 
@@ -172,7 +170,7 @@ of sync with them.
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5669, TODO-5676, TODO-5677; collection fields found by closures: TODO-5681, TODO-5682
-- Web server (single-threaded, Docker image built with `--emit=optexe`): network leaf TODO-5683, TODO-5684, TODO-5685, HTTP example TODO-5686; move-only handles TODO-5679; Result payloads for socket handles TODO-5527
+- Web server (single-threaded, Docker image built with `--emit=optexe`): network leaf TODO-5684, TODO-5685, HTTP example TODO-5686; move-only handles TODO-5679; Result payloads for socket handles TODO-5527
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
 ### Execution Queue
@@ -181,23 +179,9 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 
 ### Task Blocks
 
-- [ ] TODO-5683: `net_io` effect reaches VM/native IR; wasm and GLSL reject it
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-06
-  - phase: Web server, network leaf 1
-  - parallel_track: net-effect
-  - scope: Add a `net_io` effect for socket I/O. `EffectNetIo = 1ull << 12` in `include/primec/ir/Ir.h`, mapped in `effectBitForName`/`isSupportedEffect` (`src/ir_lowerer/IrLowererLowerEffects.cpp`), accepted by `KnownEffectMask` in `src/ir/IrValidation.cpp` but not by the wasm masks; GLSL keeps rejecting it. Document it in `docs/spec/language-core.md` (Effects). The mask is serialized, so this is an additive IR change (old masks stay valid).
-  - acceptance:
-    - `[effects(net_io)]` compiles to VM IR whose function effect mask has bit 12 set
-    - `--emit=wasm` and `--emit=glsl` reject `effects(net_io)` with a diagnostic naming `net_io`
-    - full release gate green
-  - stop_rule: the effect bit and its validation only; no host functions.
-
 - [ ] TODO-5684: `/std/net` socket host functions and POSIX shim for optexe
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5683
+  - status: ready
   - created_at: 2026-11-06
   - phase: Web server, network leaf 1
   - parallel_track: net-shim
