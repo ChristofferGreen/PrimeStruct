@@ -2129,6 +2129,7 @@ are left unarchived.
 | TODO-5666 | `Function<R, A...>` type-erased closures | [2026-11.md](todo_archive/2026-11.md) | 2026-11-06 |
 | TODO-5667 | Closure examples | [2026-11.md](todo_archive/2026-11.md) | 2026-11-06 |
 | TODO-5670 | A `[ref]`-captured vector of `Function`-holding structs passes to a parameter correctly | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5671 | A method call on a field of an indexed element binds to that field | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

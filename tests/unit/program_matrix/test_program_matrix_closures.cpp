@@ -421,6 +421,35 @@ main() {
                     116);
 }
 
+TEST_CASE("method calls on a field of an indexed element") {
+  runClosureProgram("indexed_element_field_method_chain", R"(
+import /std/collections/*
+import /std/text/*
+import /std/text/view/*
+
+[struct]
+Named {
+  [i32] code
+  [String] name
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [vector<Named> mut] all{vector<Named>()}
+  all.push(Named{[code] 1i32, [name] stringFrom("abc")})
+  all.push(Named{[code] 2i32, [name] stringFrom("hello")})
+  [i32 mut] sum{0i32}
+  [i32 mut] i{0i32}
+  while(i < all.count()) {
+    sum = sum + all[i].code + all[i].name.count()
+    i = i + 1i32
+  }
+  return(sum * 10i32 + all[1i32].name.view().count())
+}
+)",
+                    115);
+}
+
 TEST_CASE("return inside a Result.map lambda returns from the lambda") {
   runClosureProgram("closure_result_map_return", R"(
 [return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]

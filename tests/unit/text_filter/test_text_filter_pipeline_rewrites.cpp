@@ -539,4 +539,28 @@ TEST_CASE("rewrites assignment of a brace construction") {
   CHECK(output.find("assign(y, z)") != std::string::npos);
 }
 
+TEST_CASE("member chain after an indexed element stays one operand") {
+  const std::string source =
+      "main(){ sum = sum + all[i].code + all[i].name.count() }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("assign(sum, plus(plus(sum, all[i].code), all[i].name.count()))") != std::string::npos);
+  CHECK(output.find(")).count()") == std::string::npos);
+}
+
+TEST_CASE("member chain after an indexed element keeps call arguments and later operators") {
+  const std::string source =
+      "main(){ return(f(rows[0i32].name.view().count() * 2i32, rows[1i32].cells.at(3i32))) }\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("f(multiply(rows[0i32].name.view().count(), 2i32), rows[1i32].cells.at(3i32))") !=
+        std::string::npos);
+}
+
 TEST_SUITE_END();

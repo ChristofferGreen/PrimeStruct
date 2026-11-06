@@ -497,3 +497,16 @@ TEST_CASE("a SharedString is shared by copying, counted, and freed with its last
   CHECK(exitOf("  [SharedString] empty{SharedString{}}\n  [SharedString] other{empty}\n  return(empty.count() + empty.owners() + other.owners())",
                imports) == 0);
 }
+// TODO-5671: a method after `v[i].field` applies to that field, so an unknown one is reported for the field and not
+// for the whole rewritten assignment.
+TEST_CASE("an unknown method after an indexed element's field names that method") {
+  const Outcome missing = runBody("  [vector<Named> mut] all{vector<Named>()}\n"
+                                  "  all.push(Named{[code] 1i32, [name] stringFrom(\"abc\")})\n"
+                                  "  [i32 mut] sum{0i32}\n"
+                                  "  sum = sum + all[0i32].code + all[0i32].name.missingThing()\n"
+                                  "  return(sum)",
+                                  "import /std/collections/*\n\n[struct]\nNamed {\n  [i32] code\n  [String] name\n}\n");
+  CHECK_FALSE(missing.compiled);
+  CHECK(missing.diagnostics.find("unknown call target: missingThing") != std::string::npos);
+  CHECK(missing.diagnostics.find("receiver=Call:assign") == std::string::npos);
+}
