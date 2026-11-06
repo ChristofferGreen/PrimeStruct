@@ -1335,14 +1335,17 @@ if(PRIMESTRUCT_BUILD_TESTS)
   target_include_directories(PrimeStruct_u8_scalar_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
   target_link_libraries(PrimeStruct_u8_scalar_tests PRIVATE primec_embed_lib)
   primestructEnableWarnings(PrimeStruct_u8_scalar_tests)
-  add_test(
-    NAME PrimeStruct_u8_scalar
-    COMMAND $<TARGET_FILE:PrimeStruct_u8_scalar_tests>
-            "--test-suite=primestruct.language.u8_scalar,primestruct.language.u8_containers,primestruct.language.string_owned,primestruct.language.slices,primestruct.language.host_text"
-            "--order-by=file"
-  )
-  set_tests_properties(PrimeStruct_u8_scalar
-                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+  # One ctest entry per suite: together they ran long enough to hit the timeout under load.
+  foreach(u8ScalarSuite u8_scalar u8_containers string_owned slices host_text)
+    add_test(
+      NAME PrimeStruct_u8_scalar_${u8ScalarSuite}
+      COMMAND $<TARGET_FILE:PrimeStruct_u8_scalar_tests>
+              "--test-suite=primestruct.language.${u8ScalarSuite}"
+              "--order-by=file"
+    )
+    set_tests_properties(PrimeStruct_u8_scalar_${u8ScalarSuite}
+                         PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+  endforeach()
 
   # Host calls through the C++ emitters (exe/optexe/cpp/optcpp): compiled programs call
   # `extern "C"` host functions and match the VM (docs/NativeUiPlan.md goal).
