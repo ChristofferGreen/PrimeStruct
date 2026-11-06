@@ -220,4 +220,102 @@ TEST_CASE("the http_hello example answers GET / over loopback, logs it and exits
   CHECK(WEXITSTATUS(waitStatus) == 0);
 }
 
+namespace {
+// Sends `request` to 127.0.0.1:`port` and returns everything the server answers before it closes the connection.
+std::string exchange(int port, const std::string &request) {
+  std::string response;
+  const int client = socket(AF_INET, SOCK_STREAM, 0);
+  timeval timeout = {};
+  timeout.tv_sec = 5;
+  setsockopt(client, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+  sockaddr_in address = {};
+  address.sin_family = AF_INET;
+  address.sin_port = htons(static_cast<uint16_t>(port));
+  address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+  if (connect(client, reinterpret_cast<sockaddr *>(&address), sizeof(address)) == 0) {
+    send(client, request.data(), request.size(), 0);
+    char buffer[512];
+    ssize_t count = 0;
+    while ((count = recv(client, buffer, sizeof(buffer), 0)) > 0) {
+      response.append(buffer, static_cast<size_t>(count));
+    }
+  }
+  close(client);
+  return response;
+}
+} // namespace
+
+TEST_CASE("the web_app example serves /healthz, /hello and /echo, logs requests and exits 0 on SIGTERM") {
+  const int probe = socket(AF_INET, SOCK_STREAM, 0);
+  if (probe < 0 && (errno == EPERM || errno == EACCES)) {
+    MESSAGE("skipped: socket() is not permitted here (EPERM or EACCES)");
+    return;
+  }
+  REQUIRE(probe >= 0);
+  close(probe);
+
+  const std::string example = std::string(PRIMESTRUCT_SOURCE_DIR) + "/examples/apps/web_app/main.prime";
+  const std::string osShim = std::string(PRIMESTRUCT_SOURCE_DIR) + "/stdlib/std/os/os_posix.cpp";
+  const std::string exe = scratch("web_app");
+  const std::string log = exe + ".log";
+  const int status = run(shellQuote(Primec) + " --emit=optexe " + shellQuote(example) + " -o " + shellQuote(exe) +
+                         " --link-arg " + shellQuote(NetShim) + " --link-arg " + shellQuote(osShim) + " > " +
+                         shellQuote(log) + " 2>&1");
+  REQUIRE_MESSAGE(status == 0, readFile(log));
+
+  const std::string errors = exe + ".err";
+  const pid_t pid = fork();
+  REQUIRE(pid >= 0);
+  if (pid == 0) {
+    const int errorFd = open(errors.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    dup2(errorFd, STDERR_FILENO);
+    setenv("PORT", "0", 1);
+    setenv("BIND", "loopback", 1);
+    execl(exe.c_str(), exe.c_str(), static_cast<char *>(nullptr));
+    _exit(127);
+  }
+  int port = 0;
+  for (int attempt = 0; attempt < 200 && port == 0; ++attempt) {
+    const std::string text = readFile(errors);
+    const size_t at = text.find("listening on ");
+    if (at != std::string::npos && text.find('\n', at) != std::string::npos) {
+      port = std::atoi(text.c_str() + at + 13);
+    } else {
+      usleep(25000);
+    }
+  }
+  std::string health;
+  std::string hello;
+  std::string helloDefault;
+  std::string echo;
+  std::string missing;
+  std::string wrongMethod;
+  if (port > 0) {
+    health = exchange(port, "GET /healthz HTTP/1.1\r\nHost: x\r\n\r\n");
+    hello = exchange(port, "GET /hello?name=Ada HTTP/1.1\r\nHost: x\r\n\r\n");
+    helloDefault = exchange(port, "GET /hello HTTP/1.1\r\nHost: x\r\n\r\n");
+    echo = exchange(port, "POST /echo HTTP/1.1\r\nHost: x\r\nContent-Length: 9\r\n\r\nping=pong");
+    missing = exchange(port, "GET /nope HTTP/1.1\r\nHost: x\r\n\r\n");
+    wrongMethod = exchange(port, "POST /healthz HTTP/1.1\r\nHost: x\r\nContent-Length: 0\r\n\r\n");
+  }
+  kill(pid, SIGTERM);
+  int waitStatus = 0;
+  REQUIRE(waitpid(pid, &waitStatus, 0) == pid);
+  REQUIRE_MESSAGE(port > 0, readFile(errors));
+  CHECK_MESSAGE(health.rfind("HTTP/1.1 200 OK\r\n", 0) == 0, health);
+  CHECK(health.find("\r\n\r\nok\n") != std::string::npos);
+  CHECK(hello.find("\r\n\r\nhello, Ada\n") != std::string::npos);
+  CHECK(helloDefault.find("\r\n\r\nhello, world\n") != std::string::npos);
+  CHECK_MESSAGE(echo.rfind("HTTP/1.1 200 OK\r\n", 0) == 0, echo);
+  CHECK(echo.find("\r\n\r\nping=pong") != std::string::npos);
+  CHECK(missing.rfind("HTTP/1.1 404", 0) == 0);
+  CHECK(wrongMethod.rfind("HTTP/1.1 405", 0) == 0);
+  const std::string requestLog = readFile(errors);
+  CHECK_MESSAGE(requestLog.find("GET /hello?name=Ada 200 ") != std::string::npos, requestLog);
+  CHECK(requestLog.find("POST /echo 200 ") != std::string::npos);
+  CHECK(requestLog.find("GET /nope 404 ") != std::string::npos);
+  CHECK(WIFEXITED(waitStatus));
+  CHECK(WEXITSTATUS(waitStatus) == 0);
+}
+
 TEST_SUITE_END();
