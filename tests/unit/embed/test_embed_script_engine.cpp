@@ -1,3 +1,4 @@
+#include "embed_bytecode_normalize.h"
 #include "embed_fixture_bytecode.h"
 #include "embed_fixture_programs.h"
 #include "embed_test_support.h"
@@ -37,6 +38,7 @@ TEST_CASE("embed regenerates fixture bytecode when asked") {
     std::vector<uint8_t> bytes;
     std::string error;
     REQUIRE(script.saveBytecode(bytes, error));
+    bytes = embed_fixture::normalizedBytecode(bytes);
     out << "      {  // " << program.name << "\n";
     for (size_t i = 0; i < bytes.size(); ++i) {
       out << (i % 16 == 0 ? "          " : "") << "0x" << std::hex << (bytes[i] < 16 ? "0" : "") << int(bytes[i])
@@ -56,6 +58,7 @@ TEST_CASE("embed regenerates fixture bytecode when asked") {
   std::vector<uint8_t> bundleBytes;
   std::string bundleError;
   REQUIRE(bundle.saveBytecode(bundleBytes, bundleError));
+  bundleBytes = embed_fixture::normalizedBytecode(bundleBytes);
   out << "\n// Bundle of embedBundleSource() with exports add, scale and count_chars.\n"
          "inline const std::vector<uint8_t> &embedBundleBytecode() {\n"
          "  static const std::vector<uint8_t> bytes = {\n";
@@ -101,7 +104,7 @@ TEST_CASE("embed fixture bytecode matches a fresh compile") {
     std::vector<uint8_t> bytes;
     std::string error;
     REQUIRE(script.saveBytecode(bytes, error));
-    CHECK_MESSAGE(bytes == embedProgramBytecode()[i],
+    CHECK_MESSAGE(embed_fixture::normalizedBytecode(bytes) == embed_fixture::normalizedBytecode(embedProgramBytecode()[i]),
                   "refresh with PRIMESTRUCT_EMBED_REGEN_FIXTURES=<path>/embed_fixture_bytecode.h");
   }
 }
@@ -116,7 +119,8 @@ TEST_CASE("embed bundle fixture matches a fresh compile") {
   std::vector<uint8_t> bytes;
   std::string error;
   REQUIRE(script.saveBytecode(bytes, error));
-  CHECK_MESSAGE(bytes == embedBundleBytecode(),
+  // Stdlib source paths are compared from `stdlib/` on, so the fixture matches in any checkout.
+  CHECK_MESSAGE(embed_fixture::normalizedBytecode(bytes) == embed_fixture::normalizedBytecode(embedBundleBytecode()),
                 "refresh with PRIMESTRUCT_EMBED_REGEN_FIXTURES=<path>/embed_fixture_bytecode.h)");
 }
 
