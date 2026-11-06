@@ -438,6 +438,8 @@ bool IrLowerer::lower(const Program &program,
                             .realCallReservationIndex = &setupStage.realCallReservationIndex,
                             .entryReturnsVoidStorage =
                                 &setupStage.setupLocalsOrchestration.entryReturnConfig.returnsVoid,
+                            .realCallStructReturnStorage =
+                                &setupStage.setupLocalsOrchestration.entryReturnConfig.realCallStructReturn,
                         },
                         stageError);
                   },

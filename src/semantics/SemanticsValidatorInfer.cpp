@@ -270,7 +270,7 @@ ReturnKind SemanticsValidator::inferExprReturnKindImpl(const Expr &expr,
           structPath = inferStructReturnPath(receiver, params, locals);
           if (structPath.empty()) {
             // An indexed element (`items[i].name`): the vector helpers do not forward a struct return path,
-            // but the query type of the element is its struct (TODO-5696).
+            // but the query type of the element is its struct.
             std::string elementType;
             if (inferQueryExprTypeText(receiver, params, locals, elementType) && !elementType.empty()) {
               const std::string scope = !receiver.namespacePrefix.empty() || currentDefinitionContext_ == nullptr

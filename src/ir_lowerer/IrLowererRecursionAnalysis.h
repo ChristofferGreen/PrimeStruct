@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 
 #include "primec/ast/Ast.h"
@@ -75,5 +76,11 @@ std::string realCallStructParameterPath(const Definition &def,
                                         const Expr &param,
                                         const std::unordered_set<std::string> &structNames);
 std::string extractParameterTypeNameStatic(const Expr &paramExpr);
+// The struct a definition returns by value as a real call: the declared `return<T>` names a struct whose fields are
+// all scalars, pointers or such structs (so copying its slots needs no Copy/Move/Destroy), or empty when the result is
+// a scalar, void or not eligible. The callee copies the result into a heap block and the call site copies it back.
+std::string realCallStructReturnPath(const Definition &def,
+                                     const std::unordered_set<std::string> &structNames,
+                                     const std::unordered_map<std::string, const Definition *> &definitionsByPath);
 
 } // namespace primec::ir_lowerer

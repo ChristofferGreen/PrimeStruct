@@ -595,7 +595,7 @@ TEST_CASE("an unknown field of a vector-of-structs field element is rejected") {
   CHECK(missing.diagnostics.find("unknown field: missing") != std::string::npos);
 }
 
-// TODO-5694: inside a struct method, `this.field` and `this.method()` passed straight to a struct parameter keep
+// Inside a struct method, `this.field` and `this.method()` passed straight to a struct parameter keep
 // their struct type (the `this` Reference binding resolves to its target struct).
 TEST_CASE("this fields and method results pass to struct parameters") {
   const std::string defs =
@@ -610,7 +610,7 @@ TEST_CASE("this fields and method results pass to struct parameters") {
   CHECK(exitOf("  [Holder mut] h{Holder{}}\n  [i32] grown{h.grow(textOf(\"abc\"))}\n  return(grown + h.measure())", defs) == 3);
 }
 
-// TODO-5696: a `string` field read through an indexed vector element binds as `string`, at the root and in a
+// A `string` field read through an indexed vector element binds as `string`, at the root and in a
 // namespace, including for an element that holds a Function.
 TEST_CASE("string field of an indexed vector element binds as string") {
   const std::string defs =

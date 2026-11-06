@@ -236,3 +236,90 @@ main() {
   program.stdoutText = "59700\n200\n";
   program_matrix::runProgramMatrix(program);
 }
+
+// A definition with struct parameters and a struct result is one real call on the VM and the optimizing C++
+// backends, so its call sites do not each carry a copy of its body.
+namespace {
+std::string structCallProgram(int callSites) {
+  std::string source = R"([struct]
+Span() {
+  [i32] start{0i32}
+  [i32] stop{0i32}
+}
+
+[struct]
+Pair() {
+  [Span] left{Span{}}
+  [Span] right{Span{}}
+  [i32] weight{0i32}
+}
+
+[return<Pair>]
+split_span([Span] whole, [i32] cut) {
+  [i32 mut] weight{0i32}
+  [i32 mut] i{whole.start}
+  while(i < whole.stop) {
+    if(i < cut) {
+      weight = weight + i
+    } else {
+      weight = weight - 1i32
+    }
+    i = i + 1i32
+  }
+  return(Pair{[left] Span{[start] whole.start, [stop] cut}, [right] Span{[start] cut, [stop] whole.stop}, [weight] weight})
+}
+
+[return<int>]
+main() {
+  [i32 mut] total{0i32}
+)";
+  for (int i = 0; i < callSites; ++i) {
+    const std::string n = std::to_string(i);
+    source += "  [Pair] p" + n + "{split_span(Span{[start] " + n + "i32, [stop] 12i32}, " + std::to_string(i + 3) +
+              "i32)}\n  total = total + p" + n + ".weight + p" + n + ".right.start - p" + n + ".left.stop\n";
+  }
+  source += "  return(total + 100i32)\n}\n";
+  return source;
+}
+} // namespace
+
+TEST_CASE("struct parameters and results make one real call") {
+  program_matrix::ProgramCase program;
+  program.name = "struct_real_calls";
+  program.source = structCallProgram(6);
+  // Per call i: weight(i) = sum(i..i+2) - (12 - (i + 3)); right.start - left.stop = 0.
+  int expected = 100;
+  for (int i = 0; i < 6; ++i) {
+    int weight = 0;
+    for (int k = i; k < 12; ++k) {
+      weight += k < i + 3 ? k : -1;
+    }
+    expected += weight;
+  }
+  program.exitCode = expected;
+  program_matrix::runProgramMatrix(program);
+}
+
+// Release builds measure about 1.2 s for each compile here; the two compiles stay far below the 5 s guard.
+TEST_CASE("struct real calls keep the optcpp output from growing with the call sites") {
+  const auto emitted = [](int callSites) -> std::uintmax_t {
+    const std::filesystem::path dir =
+        primec::testing::testScratchPath("program_matrix/struct_real_call_size_" + std::to_string(callSites) + "/x")
+            .parent_path();
+    std::filesystem::create_directories(dir);
+    const std::filesystem::path source = dir / "program.prime";
+    {
+      std::ofstream file(source);
+      file << structCallProgram(callSites);
+    }
+    const std::filesystem::path output = dir / "program.cpp";
+    const int status = program_matrix::runShell("./primec --emit=optcpp " + program_matrix::quote(source.string()) +
+                                                " -o " + program_matrix::quote(output.string()) + " --entry /main");
+    CHECK(status == 0);
+    return std::filesystem::exists(output) ? std::filesystem::file_size(output) : 0;
+  };
+  const std::uintmax_t one = emitted(1);
+  const std::uintmax_t many = emitted(10);
+  CHECK(one > 0);
+  CHECK(many < one * 2);
+}

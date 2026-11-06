@@ -86,6 +86,8 @@ struct LowerStatementsCallsStageInput {
   // `return(...)` in that body gets validated against the entry's void-ness
   // instead of its own.
   bool *entryReturnsVoidStorage = nullptr;
+  // Points at entryReturnConfig.realCallStructReturn (see EntryReturnConfig).
+  bool *realCallStructReturnStorage = nullptr;
 };
 
 bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,

@@ -2148,6 +2148,7 @@ are left unarchived.
 | TODO-5692 | `/std/http/server` `serve` and `serveUntil` over loopback | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5693 | Request-log middleware and the http_hello example on `serve` | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5694 | A `String` field passed to a `[String mut]` parameter keeps its type | [2026-11.md](todo_archive/2026-11.md) | 2026-11-06 |
+| TODO-5695 | Definitions with struct parameters become real calls on the optimizing backends | [2026-11.md](todo_archive/2026-11.md) | 2026-11-06 |
 | TODO-5696 | A `string` field read through an indexed vector element binds as `string` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-06 |
 | TODO-5697 | `?` lowers when a struct with a vector field is a local of the callee chain | [2026-11.md](todo_archive/2026-11.md) | 2026-11-06 |
 

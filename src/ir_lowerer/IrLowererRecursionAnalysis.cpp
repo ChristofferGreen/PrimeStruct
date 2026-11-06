@@ -377,6 +377,118 @@ std::string realCallStructParameterPath(const Definition &def,
   return path;
 }
 
+namespace {
+
+// A struct type name as written inside `namespacePrefix`, resolved to its full path, or empty.
+std::string resolveStructTypeName(const std::string &typeName,
+                                  const std::string &namespacePrefix,
+                                  const std::unordered_set<std::string> &structNames) {
+  if (typeName.empty()) {
+    return {};
+  }
+  if (typeName.front() == '/') {
+    return structNames.count(typeName) != 0 ? typeName : std::string{};
+  }
+  std::string prefix = namespacePrefix;
+  while (true) {
+    const std::string candidate = prefix + "/" + typeName;
+    if (structNames.count(candidate) != 0) {
+      return candidate;
+    }
+    if (prefix.empty()) {
+      return {};
+    }
+    const size_t cut = prefix.find_last_of('/');
+    prefix = cut == std::string::npos ? std::string() : prefix.substr(0, cut);
+  }
+}
+
+// Whether every field of `structPath` is a scalar, a pointer or a plain struct, so the struct is just its slots.
+bool isPlainSlotStruct(const std::string &structPath,
+                       const std::unordered_set<std::string> &structNames,
+                       const std::unordered_map<std::string, const Definition *> &definitionsByPath,
+                       int depth) {
+  if (depth > 8 || structPath.rfind(collection_helpers::kCanonicalCollectionsRoot, 0) == 0) {
+    return false;
+  }
+  const auto defIt = definitionsByPath.find(structPath);
+  if (defIt == definitionsByPath.end() || defIt->second == nullptr) {
+    return false;
+  }
+  for (const char *helper : {"/Create", "/Copy", "/Move", "/Destroy"}) {
+    if (definitionsByPath.count(structPath + helper) != 0) {
+      return false;
+    }
+  }
+  const Definition &structDef = *defIt->second;
+  if (definitionHasTransform(structDef, "sum") || definitionHasTransform(structDef, "compute")) {
+    return false;
+  }
+  bool anyField = false;
+  for (const Expr &field : structDef.statements) {
+    if (!field.isBinding) {
+      continue;
+    }
+    bool isStatic = false;
+    bool fieldOk = false;
+    for (const Transform &transform : field.transforms) {
+      if (transform.name == "static") {
+        isStatic = true;
+        break;
+      }
+      if (transform.name == "mut" || transform.name == "public" || transform.name == "private" ||
+          transform.name == "align" || transform.name == "packed" || transform.name == "reflection") {
+        continue;
+      }
+      if (transform.name == "Pointer" && transform.templateArgs.size() == 1) {
+        fieldOk = true;
+      } else if (transform.templateArgs.empty() && transform.arguments.empty()) {
+        if (isSupportedScalarTypeName(transform.name)) {
+          fieldOk = true;
+        } else {
+          const std::string nested = resolveStructTypeName(transform.name, structDef.namespacePrefix, structNames);
+          fieldOk = !nested.empty() && isPlainSlotStruct(nested, structNames, definitionsByPath, depth + 1);
+        }
+      }
+      break;
+    }
+    if (isStatic) {
+      continue;
+    }
+    if (!fieldOk) {
+      return false;
+    }
+    anyField = true;
+  }
+  return anyField;
+}
+
+} // namespace
+
+std::string realCallStructReturnPath(const Definition &def,
+                                     const std::unordered_set<std::string> &structNames,
+                                     const std::unordered_map<std::string, const Definition *> &definitionsByPath) {
+  for (const Transform &transform : def.transforms) {
+    if (transform.name != "return") {
+      continue;
+    }
+    if (transform.templateArgs.size() != 1) {
+      return {};
+    }
+    const std::string returnType = trimTemplateTypeText(transform.templateArgs.front());
+    if (returnType.empty() || returnType.find('<') != std::string::npos || isSupportedScalarTypeName(returnType) ||
+        returnType == "void") {
+      return {};
+    }
+    const std::string path = resolveStructTypeName(returnType, def.namespacePrefix, structNames);
+    if (path.empty() || !isPlainSlotStruct(path, structNames, definitionsByPath, 0)) {
+      return {};
+    }
+    return path;
+  }
+  return {};
+}
+
 std::unordered_set<std::string> computeRealCallEligibleDefinitionPaths(const Program &program,
                                                                        const std::string &entryPath,
                                                                        bool allowMutReceivers) {
@@ -502,7 +614,9 @@ std::unordered_set<std::string> computeRealCallEligibleDefinitionPaths(const Pro
         break;
       }
     }
-    if (!parametersEligible || !hasScalarOrVoidReturn(def)) {
+    if (!parametersEligible ||
+        !(hasScalarOrVoidReturn(def) ||
+          (allowMutReceivers && !realCallStructReturnPath(def, structNames, byPath).empty()))) {
       continue;
     }
     if (definitionUsesTry(def)) {

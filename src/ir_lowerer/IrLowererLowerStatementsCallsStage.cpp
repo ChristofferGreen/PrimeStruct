@@ -162,6 +162,14 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
       bool savedValue;
       ~EntryReturnsVoidRestoreGuard() { *storage = savedValue; }
     } entryReturnsVoidRestoreGuard{input.entryReturnsVoidStorage, *input.entryReturnsVoidStorage};
+    if (input.realCallStructReturnStorage == nullptr) {
+      errorOut = "native backend missing statements-calls stage dependency: realCallStructReturnStorage";
+      return false;
+    }
+    struct StructReturnFlagResetGuard {
+      bool *storage;
+      ~StructReturnFlagResetGuard() { *storage = false; }
+    } structReturnFlagResetGuard{input.realCallStructReturnStorage};
 
     for (const std::string &path : *input.realCallEligibleOrder) {
       const auto defIt = input.defMap->find(path);
@@ -177,6 +185,9 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
         return false;
       }
       *input.entryReturnsVoidStorage = returnInfo.returnsVoid;
+      *input.realCallStructReturnStorage =
+          input.structNames != nullptr &&
+          !realCallStructReturnPath(def, *input.structNames, *input.defMap).empty();
 
       input.resetDefinitionLoweringState();
       *input.function = IrFunction{};

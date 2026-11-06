@@ -441,6 +441,46 @@ bool emitInlineDefinitionCallImpl(
       const uint64_t placeholderImm = (uint64_t(1) << 32) | realCallIt->second;
       function.instructions.push_back(
           {calleeReturnInfo.returnsVoid ? IrOpcode::CallVoid : IrOpcode::Call, placeholderImm});
+      // A struct result comes back as the address of a heap block: copy its slots into a block of this frame, free
+      // the heap block and leave the address of the frame block, the same value an inlined call leaves.
+      int32_t structResultSlots = 0;
+      if (const std::string resultStructPath =
+              ir_lowerer::realCallStructReturnPath(callee, structNames, setupStage.defMap);
+          !resultStructPath.empty()) {
+        StructSlotLayoutInfo resultLayout;
+        if (!resolveStructSlotLayout(resultStructPath, resultLayout) || resultLayout.totalSlots <= 0) {
+          error = "internal error: no struct layout for the result of real-call target " + callee.fullPath;
+          return false;
+        }
+        structResultSlots = resultLayout.totalSlots;
+      }
+      const auto finishStructResult = [&](int32_t heapResultLocal) {
+        const int32_t blockBase = allocTempLocal();
+        for (int32_t slot = 1; slot < structResultSlots; ++slot) {
+          (void)allocTempLocal();
+        }
+        const int32_t blockPtr = allocTempLocal();
+        function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(blockBase)});
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(blockPtr)});
+        for (int32_t slot = 0; slot < structResultSlots; ++slot) {
+          pushSlotAddress(blockPtr, slot);
+          pushSlotAddress(heapResultLocal, slot);
+          function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+          function.instructions.push_back({IrOpcode::StoreIndirect, 0});
+          function.instructions.push_back({IrOpcode::Pop, 0});
+        }
+        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(heapResultLocal)});
+        function.instructions.push_back({IrOpcode::HeapFree, 0});
+        if (requireValue) {
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(blockPtr)});
+        }
+      };
+      if (structResultSlots > 0 && !mutReceiverCall) {
+        const int32_t heapResultLocal = allocTempLocal();
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(heapResultLocal)});
+        finishStructResult(heapResultLocal);
+        return true;
+      }
       if (mutReceiverCall) {
         int32_t resultLocal = 0;
         if (!calleeReturnInfo.returnsVoid) {
@@ -457,6 +497,10 @@ bool emitInlineDefinitionCallImpl(
         }
         function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(mutStashLocal)});
         function.instructions.push_back({IrOpcode::HeapFree, 0});
+        if (structResultSlots > 0) {
+          finishStructResult(resultLocal);
+          return true;
+        }
         if (!calleeReturnInfo.returnsVoid && requireValue) {
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal)});
         }

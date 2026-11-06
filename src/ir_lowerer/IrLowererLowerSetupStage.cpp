@@ -51,7 +51,8 @@ bool runLowerSetupStage(const LowerSetupStageInput &input,
     std::vector<std::string> ordered;
     for (const std::string &path :
         computeRealCallEligibleDefinitionPaths(
-            *input.program, *input.entryPath, input.validationTarget == IrValidationTarget::Vm)) {
+            *input.program, *input.entryPath, input.validationTarget == IrValidationTarget::Vm ||
+                input.validationTarget == IrValidationTarget::OptCpp)) {
       ordered.push_back(path);
     }
     std::sort(ordered.begin(), ordered.end());

@@ -132,3 +132,8 @@
   the callee's frame), and a `mut` method gets the address of a heap copy of the receiver that the call site copies back
   after the call and frees. Structs with `Copy`/`Move`/`Destroy` helpers, `/std/collections/` receivers and definitions
   with a generated tail value stay inline.
+  The same applies to the optimizing C++ emitters (`optcpp`, `optexe`), which run the same IR. A definition may also
+  return a plain struct by value (every field a scalar, a pointer or such a struct; no lifecycle helpers): the callee
+  copies the result into a heap block, and the call site copies it into a block of its own frame and frees the heap
+  block. Measured with `/std/http` `parseRequest` under `--emit=optcpp`: one call site generates 889,100 bytes of C++,
+  ten call sites 1,027,656 bytes (before: 891,390 and 8,771,206).
