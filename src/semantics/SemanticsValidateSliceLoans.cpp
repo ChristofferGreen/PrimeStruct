@@ -430,6 +430,81 @@ struct Checker {
     return roots;
   }
 
+  // Whether a call's declared result type cannot carry a borrow: a number, `bool`, `void`, an owned `String`, or a
+  // struct with no view fields. Unknown or generic result types (a template parameter, `auto`) may borrow.
+  bool resultCannotBorrow(const Expr &expr, int depth = 0) const {
+    const Definition *callee = calleeOf(expr);
+    if (callee == nullptr) {
+      return false;
+    }
+    bool declared = false;
+    for (const Transform &transform : callee->transforms) {
+      declared = declared || transform.name == "return";
+    }
+    if (!declared) {
+      // An inferred result (a closure's `call`): its `return(...)` value is a number or `bool` expression.
+      return callee->returnExpr.has_value() && valueCannotBorrow(*callee->returnExpr, depth + 1);
+    }
+    for (const Transform &transform : callee->transforms) {
+      if (transform.name != "return" || transform.templateArgs.size() != 1) {
+        continue;
+      }
+      const std::string &type = transform.templateArgs.front();
+      if (type.find('<') != std::string::npos) {
+        return false;  // `Result<T, E>`, `Pointer<T>`, ...: leave to the existing rules
+      }
+      static constexpr std::array<std::string_view, 14> scalars = {
+          "i32", "i64", "u64", "u32", "u8", "f32", "f64", "bool", "int", "float", "void", "string", "String",
+          "integer"};
+      const std::string leaf = typeLeafName(type);
+      if (listed(scalars, leaf)) {
+        return true;
+      }
+      if (isViewTypeName(type, carriers)) {
+        return false;
+      }
+      // A struct of the program that is not a carrier holds no view.
+      const std::array<std::string, 3> candidates = {
+          type, "/" + type, callee->namespacePrefix + "/" + type};
+      for (const std::string &path : candidates) {
+        const auto found = definitions.find(path);
+        if (found == definitions.end()) {
+          continue;
+        }
+        for (const Transform &defTransform : found->second->transforms) {
+          if (defTransform.name == "struct") {
+            return found->second->templateArgs.empty();
+          }
+        }
+        return false;
+      }
+      return false;
+    }
+    return false;
+  }
+
+  // Whether a returned value is plainly a number or `bool`: a literal, arithmetic or a comparison, a count, or a call
+  // whose result cannot borrow.
+  bool valueCannotBorrow(const Expr &value, int depth) const {
+    if (depth > 4) {
+      return false;
+    }
+    if (value.kind == Expr::Kind::Literal || value.kind == Expr::Kind::BoolLiteral ||
+        value.kind == Expr::Kind::FloatLiteral) {
+      return true;
+    }
+    if (value.kind != Expr::Kind::Call || value.isBinding) {
+      return false;
+    }
+    static constexpr std::array<std::string_view, 15> numeric = {
+        "plus", "minus", "multiply", "divide", "negate", "equal", "not_equal", "less_than", "greater_than",
+        "less_equal", "greater_equal", "and", "or", "not", "count"};
+    if (listed(numeric, leafName(value.name))) {
+      return true;
+    }
+    return resultCannotBorrow(value, depth);
+  }
+
   // Whether `name` is a view or a carrier struct (a view-typed local or parameter).
   bool isViewish(const std::string &name) const { return loanRoots.count(name) > 0 || viewParameters.count(name) > 0; }
 
@@ -451,6 +526,11 @@ struct Checker {
     }
     if (isClosureFactory(expr) || isCarrierConstructor(expr)) {
       return closureRootsOf(expr);
+    }
+    // A call whose result cannot hold a borrow (a number, `bool`, an owned `String`, a struct without view fields)
+    // lends nothing, whatever views it takes: `total = total + score(req)`.
+    if (resultCannotBorrow(expr)) {
+      return {};
     }
     static constexpr std::array<std::string_view, 15> makers = {
         "view", "slice", "sliceMut", "readOnly", "takeFirst", "dropFirst", "takeLast", "dropLast",

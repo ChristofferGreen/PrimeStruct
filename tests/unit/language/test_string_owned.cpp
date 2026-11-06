@@ -510,3 +510,43 @@ TEST_CASE("an unknown method after an indexed element's field names that method"
   CHECK(missing.diagnostics.find("unknown call target: missingThing") != std::string::npos);
   CHECK(missing.diagnostics.find("receiver=Call:assign") == std::string::npos);
 }
+// TODO-5672: a call whose result cannot hold a borrow lends nothing, so a request loop can sum or count into an
+// outer binding while the request borrows a block-local buffer.
+const std::string ScoredRequest =
+    "import /std/text/view/*\n\n"
+    "[struct]\nReq {\n  [StringView] method\n  [StringView] target\n}\n\n"
+    "[return<i32>]\nscore([Req] req) {\n  return(req.method.count() + req.target.count())\n}\n\n"
+    "[return<bool>]\nis_get([Req] req) {\n  return(req.method.count() == 3i32)\n}\n\n"
+    "[return<i32>]\nmeasure([StringView] v) {\n  return(v.count())\n}\n\n"
+    "[return<StringView>]\nfirst_word([StringView] v) {\n  return(v.slice(0i32, 3i32))\n}\n";
+
+TEST_CASE("scalar call results over borrowed views assign to outer bindings") {
+  CHECK(exitOf("  [i32 mut] total{0i32}\n  [bool mut] sawGet{false}\n"
+               "  [mut] weigh{[]([Req] req, [StringView] extra) { return(req.target.count() + extra.count()) }}\n"
+               "  [i32 mut] i{0i32}\n"
+               "  while(i < 2i32) {\n"
+               "    [String] buffer{stringFrom(\"GET /x\")}\n"
+               "    [Req] req{Req{[method] buffer.view().slice(0i32, 3i32), [target] buffer.view().slice(4i32, 6i32)}}\n"
+               "    total = total + score(req)\n"
+               "    total = total + measure(buffer.view())\n"
+               "    total = total + weigh(req, buffer.view())\n"
+               "    sawGet = is_get(req)\n"
+               "    i = i + 1i32\n"
+               "  }\n"
+               "  return(if(sawGet, then() { total }, else() { 0i32 }))",
+               ScoredRequest) == 38);
+}
+
+TEST_CASE("a view-returning call over a block-local buffer still cannot reach an outer binding") {
+  const Outcome escaped = runBody("  [String] keep{stringFrom(\"abc\")}\n  [StringView mut] last{keep.view()}\n"
+                                  "  [i32 mut] i{0i32}\n"
+                                  "  while(i < 2i32) {\n"
+                                  "    [String] buffer{stringFrom(\"GET /x\")}\n"
+                                  "    last = first_word(buffer.view())\n"
+                                  "    i = i + 1i32\n"
+                                  "  }\n"
+                                  "  return(last.count())",
+                                  ScoredRequest);
+  CHECK_FALSE(escaped.compiled);
+  CHECK(escaped.diagnostics.find("slice escapes via outer binding last (root: buffer)") != std::string::npos);
+}

@@ -108,7 +108,6 @@ of sync with them.
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5668 | Struct fields of collection type keep their elements across method calls | deferred | collections-fields |
 | TODO-5669 | `Function` from named definitions and at call sites | deferred | closures |
-| TODO-5672 | A scalar call result is not a borrow of the call's view arguments | ready | slice-loans |
 | TODO-5673 | A callable field reached through `this` is called, not looked up as a method | blocked | closures-call-resolution |
 | TODO-5674 | `==` on a view taken from a `String` parameter compiles | ready | stringview-equality |
 | TODO-5675 | Struct fields that are vectors of structs lower on VM and native | ready | collections-fields |
@@ -146,7 +145,6 @@ of sync with them.
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5510 (control-returns): `return` returns from unit-variant pick arms correctly
 - TODO-5524 (result-error-structs): int-backed error structs round-trip through stdlib Result sums
-- TODO-5672 (slice-loans): a scalar call result is not a borrow of the call's view arguments
 - TODO-5674 (stringview-equality): `==` on a view taken from a `String` parameter compiles
 
 ### Immediate Next 10
@@ -156,9 +154,8 @@ of sync with them.
 3. TODO-5535
 4. TODO-5510
 5. TODO-5524
-6. TODO-5672
-7. TODO-5674
-8. TODO-5675
+6. TODO-5674
+7. TODO-5675
 
 ### Priority Lanes
 
@@ -174,7 +171,7 @@ of sync with them.
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5669, TODO-5676, TODO-5677; collection fields found by closures: TODO-5668
-- Web server (single-threaded, Docker image built with `--emit=optexe`): handler and router blockers TODO-5672, TODO-5674, TODO-5675, then TODO-5673; network and OS TODO-5678, TODO-5680, TODO-5679; Result payloads for socket handles TODO-5527
+- Web server (single-threaded, Docker image built with `--emit=optexe`): handler and router blockers TODO-5674, TODO-5675, then TODO-5673; network and OS TODO-5678, TODO-5680, TODO-5679; Result payloads for socket handles TODO-5527
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
 ### Execution Queue
@@ -206,19 +203,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - a router of named handlers and a closure passed straight to a `[Function<i32, i32> mut]` parameter run on VM, native and optexe; negative test for a signature mismatch
     - full release gate green
   - stop_rule: conversion sites only; no change to the `Function` representation.
-
-- [ ] TODO-5672: A scalar call result is not a borrow of the call's view arguments
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-06
-  - phase: Web server blockers (found probing closures for a request router)
-  - parallel_track: slice-loans
-  - scope: Inside a loop body, `total = total + score(req)` where `req` is a struct of `StringView`s into a block-local `String` and `score` returns `i32` is rejected with `slice escapes via outer binding total (root: buffer)`. The same happens for `total = total + f(buffer.view())`, and for a closure called with such arguments. Going through a local (`[i32] got{score(req)}` then `total = total + got`) passes. A call whose result type cannot hold a borrow (numbers, `bool`, structs without view fields) must not make its result a loan on the arguments' roots. Every request loop that counts or sums hits this.
-  - implementation_notes: call roots of `validateSliceLoans` (`src/semantics/SemanticsValidateSliceLoans.cpp`), next to the carrier rules of TODO-5631.
-  - acceptance:
-    - positive tests for an `i32` and a `bool` result of a function and of a closure taking a view and a carrier, assigned to an outer binding; the negative test for a view-returning call stays
-    - full release gate green
-  - stop_rule: result types that cannot carry a borrow; no change to the carrier rules.
 
 - [ ] TODO-5673: A callable field reached through `this` is called, not looked up as a method
   - owner: ai

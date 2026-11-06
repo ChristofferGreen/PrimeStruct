@@ -2130,6 +2130,7 @@ are left unarchived.
 | TODO-5667 | Closure examples | [2026-11.md](todo_archive/2026-11.md) | 2026-11-06 |
 | TODO-5670 | A `[ref]`-captured vector of `Function`-holding structs passes to a parameter correctly | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5671 | A method call on a field of an indexed element binds to that field | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5672 | A scalar call result is not a borrow of the call's view arguments | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 
