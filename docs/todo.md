@@ -101,6 +101,10 @@ of sync with them.
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
 | TODO-5656 | Thread-safe `SharedString` (atomic count, per-thread string heaps) | deferred | string-concurrency |
+| TODO-5683 | `net_io` effect reaches VM/native IR; wasm and GLSL reject it | ready | net-effect |
+| TODO-5684 | `/std/net` socket host functions and POSIX shim for optexe | blocked | net-shim |
+| TODO-5685 | Loopback echo test over `/std/net` on optexe | blocked | net-echo |
+| TODO-5686 | HTTP hello-world example over `/std/net` | deferred | net-http-example |
 | TODO-5603 | Startup audit: what a launch loads and does | ready | startup |
 | TODO-5586 | Native String heap: pooled blocks, statistics and limit | deferred | native-backend-strings |
 | TODO-5536 | Small, lazily loaded bytecode for apps | ready | bytecode-startup |
@@ -136,6 +140,7 @@ of sync with them.
 
 ### Ready Now
 
+- TODO-5683 (net-effect): `net_io` effect reaches VM/native IR; wasm and GLSL reject it
 - TODO-5603 (startup): startup audit: what a launch loads and does
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
@@ -144,11 +149,14 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5603
-2. TODO-5536
-3. TODO-5535
-4. TODO-5510
-5. TODO-5524
+1. TODO-5683
+2. TODO-5684
+3. TODO-5685
+4. TODO-5603
+5. TODO-5536
+6. TODO-5535
+7. TODO-5510
+8. TODO-5524
 
 ### Priority Lanes
 
@@ -164,7 +172,7 @@ of sync with them.
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5669, TODO-5676, TODO-5677; collection fields found by closures: TODO-5681, TODO-5682
-- Web server (single-threaded, Docker image built with `--emit=optexe`): handler and router blockers then; network and OS TODO-5679; Result payloads for socket handles TODO-5527
+- Web server (single-threaded, Docker image built with `--emit=optexe`): network leaf TODO-5683, TODO-5684, TODO-5685, HTTP example TODO-5686; move-only handles TODO-5679; Result payloads for socket handles TODO-5527
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
 ### Execution Queue
@@ -172,6 +180,61 @@ of sync with them.
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 ### Task Blocks
+
+- [ ] TODO-5683: `net_io` effect reaches VM/native IR; wasm and GLSL reject it
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-06
+  - phase: Web server, network leaf 1
+  - parallel_track: net-effect
+  - scope: Add a `net_io` effect for socket I/O. `EffectNetIo = 1ull << 12` in `include/primec/ir/Ir.h`, mapped in `effectBitForName`/`isSupportedEffect` (`src/ir_lowerer/IrLowererLowerEffects.cpp`), accepted by `KnownEffectMask` in `src/ir/IrValidation.cpp` but not by the wasm masks; GLSL keeps rejecting it. Document it in `docs/spec/language-core.md` (Effects). The mask is serialized, so this is an additive IR change (old masks stay valid).
+  - acceptance:
+    - `[effects(net_io)]` compiles to VM IR whose function effect mask has bit 12 set
+    - `--emit=wasm` and `--emit=glsl` reject `effects(net_io)` with a diagnostic naming `net_io`
+    - full release gate green
+  - stop_rule: the effect bit and its validation only; no host functions.
+
+- [ ] TODO-5684: `/std/net` socket host functions and POSIX shim for optexe
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5683
+  - created_at: 2026-11-06
+  - phase: Web server, network leaf 1
+  - parallel_track: net-shim
+  - scope: Add `/std/net` (`stdlib/std/net/net.prime`, registered in `stdlib/std/modules.psmeta`) with root-namespace `[host]` functions `net_listen`, `net_port`, `net_accept`, `net_recv`, `net_send`, `net_close`, `net_connect` and `std::net` wrappers carrying `effects(net_io)`. The host side is `stdlib/std/net/native/net_shim.cpp` (POSIX, `extern "C"`, no globals, no signal handlers: `/std/os` installs SIGTERM/SIGINT without SA_RESTART), linked with `--link-arg`. Byte buffers are `Pointer<u8>` + `u64` length (TODO-5678). Results are neutral codes: -1 timeout, -2 closed or reset, -3 again (EAGAIN), -4 interrupted (EINTR, check `/std/os` `stopRequested`), -100 - errno otherwise. Document in `docs/spec/stdlib-reference.md`; make sure installs ship the shim.
+  - acceptance:
+    - the module compiles with `--emit=optexe --link-arg stdlib/std/net/native/net_shim.cpp`
+    - the stdlib reference documents every wrapper and error code
+    - full release gate green
+  - stop_rule: raw `i32`/`i64` results; no `Result` types, `Listener`/`Connection` structs or HTTP.
+
+- [ ] TODO-5685: Loopback echo test over `/std/net` on optexe
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5684
+  - created_at: 2026-11-06
+  - phase: Web server, network leaf 1
+  - parallel_track: net-echo
+  - scope: A single-process optexe test: listen on an ephemeral loopback port, connect to it, accept, send, receive, echo back and compare, with a timeout on every call. Also checks the idle-accept timeout code and that `recv` after the peer closed returns 0. When `socket()` is denied the test skips with a message instead of failing. A negative test shows the VM reports an unbound host function for `net_listen`.
+  - acceptance:
+    - the echo program exits 0 under `--emit=optexe`; a denied socket prints an explicit skip
+    - `--emit=vm` fails with `unbound host function`
+    - test registered, inventory regenerated, full release gate green
+  - stop_rule: loopback only, one process, no fixed ports.
+
+- [ ] TODO-5686: HTTP hello-world example over `/std/net`
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-06
+  - phase: Web server, network leaf 1 follow-up
+  - parallel_track: net-http-example
+  - depends_on: TODO-5685
+  - scope: A small example program that accepts connections, parses the HTTP request line, writes a fixed `200 OK` response and exits cleanly when `/std/os` `stopRequested()` turns true (accept timeouts and the interrupted code wake the loop).
+  - acceptance:
+    - `curl` against the example returns the fixed body; SIGTERM ends it with exit 0
+    - a loopback test drives one request in-process
+    - full release gate green
+  - stop_rule: example and its test only; no `/std/http` module.
 
 - [ ] TODO-5669: `Function` from named definitions and at call sites
   - owner: ai
