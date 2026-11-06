@@ -2132,6 +2132,7 @@ are left unarchived.
 | TODO-5670 | A `[ref]`-captured vector of `Function`-holding structs passes to a parameter correctly | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5671 | A method call on a field of an indexed element binds to that field | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5672 | A scalar call result is not a borrow of the call's view arguments | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5673 | A callable field reached through `this` is called, not looked up as a method | [2026-11.md](todo_archive/2026-11.md) | 2026-11-06 |
 | TODO-5674 | `==` on a view taken from a `String` parameter compiles | [2026-11.md](todo_archive/2026-11.md) | 2026-11-06 |
 | TODO-5675 | Struct fields that are vectors of structs lower on VM and native | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5678 | `Pointer<u8>` host parameters reach C++ host functions as real byte pointers | [2026-11.md](todo_archive/2026-11.md) | 2026-11-06 |

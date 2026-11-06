@@ -288,4 +288,70 @@ main() {
   CHECK(error.find("expected i32 got f32") != std::string::npos);
 }
 
+TEST_CASE("callable fields reached through this are called") {
+  const std::string source = R"(
+import /std/collections/*
+
+[struct]
+Route {
+  [i32] code
+  [Function<i32, i32> mut] handler
+}
+
+[struct]
+Router {
+  [vector<Route> mut] routes
+  [Function<i32, i32> mut] fallback
+
+  [mut return<i32> effects(heap_alloc)]
+  call([i32] input) {
+    return(this.routes[0i32].handler(input) + this.fallback(input))
+  }
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [Router mut] router{Router{[routes] vector<Route>(), [fallback] Function<i32, i32>{[]([i32] x) { return(x) }}}}
+  router.routes.push(Route{[code] 1i32, [handler] Function<i32, i32>{[]([i32] x) { return(x + 1i32) }}})
+  return(router.call(2i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("a missing callable field reached through this is an unknown method") {
+  const std::string source = R"(
+import /std/collections/*
+
+[struct]
+Route {
+  [i32] code
+  [Function<i32, i32> mut] handler
+}
+
+[struct]
+Router {
+  [vector<Route> mut] routes
+  [Function<i32, i32> mut] fallback
+
+  [mut return<i32> effects(heap_alloc)]
+  call([i32] input) {
+    return(this.routes[0i32].missing(input) + this.fallback(input))
+  }
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [Router mut] router{Router{[routes] vector<Route>(), [fallback] Function<i32, i32>{[]([i32] x) { return(x) }}}}
+  router.routes.push(Route{[code] 1i32, [handler] Function<i32, i32>{[]([i32] x) { return(x + 1i32) }}})
+  return(router.call(2i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /Route/missing") != std::string::npos);
+}
+
 TEST_SUITE_END();

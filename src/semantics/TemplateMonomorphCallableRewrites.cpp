@@ -93,6 +93,40 @@ void rewriteCallableFieldCall(Expr &expr,
         receiverPath = resolveStructLikeTypePathForTemplatedVectorFallback(collectionInfo.typeTemplateArg,
                                                                            namespacePrefix, ctx);
       }
+      // `this.items[i].field(x)`: the collection is a field; its element type is in the field's declaration.
+      const Expr &collection = receiver.args.front();
+      if (receiverPath.empty() && collection.kind == Expr::Kind::Call && collection.isFieldAccess &&
+          collection.args.size() == 1) {
+        const Expr &owner = collection.args.front();
+        std::string ownerPath =
+            resolveStructLikeExprPathForTemplatedVectorFallback(owner, locals, namespacePrefix, ctx, allowMathBare);
+        if (ownerPath.empty() && owner.kind == Expr::Kind::Name && owner.name == "this") {
+          ownerPath = namespacePrefix;  // a method of the struct the `this` field belongs to
+        }
+        semantics::BindingInfo ownerInfo;
+        if (ownerPath.empty() &&
+            inferBindingTypeForMonomorph(owner, params, locals, allowMathBare, ctx, ownerInfo)) {
+          const bool borrowed = ownerInfo.typeName == "Reference" || ownerInfo.typeName == "Pointer";
+          ownerPath = resolveStructLikeTypePathForTemplatedVectorFallback(
+              borrowed ? ownerInfo.typeTemplateArg : ownerInfo.typeName, namespacePrefix, ctx);
+        }
+        const auto ownerIt = ownerPath.empty() ? ctx.sourceDefs.end() : ctx.sourceDefs.find(ownerPath);
+        if (ownerIt != ctx.sourceDefs.end()) {
+          for (const Expr &field : ownerIt->second.statements) {
+            if (!field.isBinding || field.name != collection.name) {
+              continue;
+            }
+            for (const Transform &transform : field.transforms) {
+              if (!isFieldQualifierTransformName(transform.name) && transform.templateArgs.size() == 1) {
+                receiverPath = resolveStructLikeTypePathForTemplatedVectorFallback(
+                    transform.templateArgs.front(), ownerIt->second.namespacePrefix, ctx);
+                break;
+              }
+            }
+            break;
+          }
+        }
+      }
     }
   }
   if (receiverPath.empty() || ctx.sourceDefs.count(receiverPath + "/" + expr.name) > 0) {

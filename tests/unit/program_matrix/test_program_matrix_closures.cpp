@@ -621,6 +621,67 @@ main() {
                     243);
 }
 
+TEST_CASE("a Router method calls a route handler through this") {
+  runClosureProgram("router_method_calls_route_handler", R"(
+import /std/collections/*
+
+[struct]
+Route {
+  [i32] code
+  [Function<i32, i32> mut] handler
+}
+
+[struct]
+Router {
+  [vector<Route> mut] routes
+
+  [mut effects(heap_alloc)]
+  add([i32] code, [Function<i32, i32> move] handler) {
+    this.routes.push(Route{[code] code, [handler] handler})
+  }
+
+  [return<i32> effects(heap_alloc)]
+  find([i32] code) {
+    [i32 mut] i{0i32}
+    while(i < this.routes.count()) {
+      if(this.routes[i].code == code) {
+        return(i)
+      }
+      i = i + 1i32
+    }
+    return(-1i32)
+  }
+
+  [mut return<i32> effects(heap_alloc)]
+  call([i32] code, [i32] input) {
+    [i32] at{this.find(code)}
+    if(at < 0i32) {
+      return(404i32)
+    }
+    return(this.routes[at].handler(input))
+  }
+}
+
+[return<i32> effects(heap_alloc)]
+route_to([Router mut] router, [i32] code, [i32] input) {
+  [i32] at{router.find(code)}
+  if(at < 0i32) {
+    return(404i32)
+  }
+  return(router.routes[at].handler(input))
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [Router mut] router{Router{[routes] vector<Route>()}}
+  router.add(1i32, Function<i32, i32>{[]([i32] x) { return(x + 1i32) }})
+  router.add(2i32, Function<i32, i32>{[]([i32] x) { return(x * 2i32) }})
+  return(router.call(2i32, 20i32) + router.call(1i32, 1i32) + router.routes.count())
+}
+)",
+                    44);
+}
+
 TEST_CASE("return inside a Result.map lambda returns from the lambda") {
   runClosureProgram("closure_result_map_return", R"(
 [return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
