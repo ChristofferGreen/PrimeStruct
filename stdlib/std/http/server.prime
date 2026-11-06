@@ -1,0 +1,159 @@
+// A single-threaded HTTP/1.1 server loop over /std/net (docs/spec/stdlib-reference.md, /std/http/server). Build an
+// app with both shims:
+//   primec --emit=optexe app.prime -o app --link-arg <stdlib>/std/net/native/net_shim.cpp \
+//     --link-arg <stdlib>/std/os/os_posix.cpp
+// One connection at a time: accept, read until the request is complete or rejected, call the handler, write the
+// response, close. Every call that can block has a timeout, so a slow or silent client cannot stall the loop for
+// longer than `readTimeoutMs`.
+import /std/collections/*
+import /std/http/*
+import /std/net/*
+import /std/os/*
+import /std/text/*
+import /std/text/view/*
+
+namespace std {
+namespace http {
+namespace server {
+
+  // How a server listens and how long it waits.
+  [public struct]
+  ServerConfig() {
+    // The TCP port; 0 picks a free one (see `announce`).
+    [public i32] port{8080i32}
+    // How many connections may wait to be accepted.
+    [public i32] backlog{64i32}
+    // The largest request, head and body together; a larger one is answered 413.
+    [public i32] maxRequestBytes{65536i32}
+    // How often the loop wakes up to check whether it should stop.
+    [public i32] acceptTimeoutMs{500i32}
+    // How long a client has to send its whole request.
+    [public i32] readTimeoutMs{5000i32}
+    // How long writing a response may take.
+    [public i32] writeTimeoutMs{5000i32}
+    // Listen on 127.0.0.1 only (tests, local tools) instead of every interface.
+    [public bool] loopbackOnly{false}
+    // Print "listening on <port>" to stderr once listening.
+    [public bool] announce{true}
+  }
+
+  // Why `serve` could not start: a /std/net code from listening.
+  [public struct]
+  ServeError() {
+    [public i32] code{0i32}
+  }
+
+  namespace ServeError {
+    [public return<string>]
+    why([ServeError] err) {
+      if(err.code == -101i32 || err.code == -113i32) {
+        return("cannot listen: sockets are not permitted here"utf8)
+      }
+      // EADDRINUSE is 48 on macOS and 98 on Linux.
+      if(err.code == -148i32 || err.code == -198i32) {
+        return("cannot listen: the port is in use"utf8)
+      }
+      return("cannot listen"utf8)
+    }
+  }
+
+  // Sends all of `text`, or as much as the timeout allows.
+  [effects(net_io)]
+  send_text([i32] connection, [String] text, [i32] timeoutMs) {
+    send(connection, text.data, convert<u64>(text.count()), timeoutMs)
+  }
+
+  // Reads one request from `connection` into `buffer`, answers it and closes the connection.
+  [effects(net_io, heap_alloc)]
+  serve_connection<Handler>([Handler mut] handler,
+                            [i32] connection,
+                            [ServerConfig] config,
+                            [vector<u8> mut] buffer,
+                            [Response mut] response) {
+    [i32] capacity{buffer.count()}
+    [i64] deadline{monotonicMs() + convert<i64>(config.readTimeoutMs)}
+    [i32 mut] received{0i32}
+    [i32 mut] answer{413i32}
+    [bool mut] reading{true}
+    while(reading && received < capacity) {
+      [i64] left{deadline - monotonicMs()}
+      [mut] window{buffer.sliceMut(received, capacity)}
+      [i64] got{if(left > 0i64, then() { recv(connection, window.data, convert<u64>(capacity - received), convert<i32>(left)) }, else() { -1i64 })}
+      if(got <= 0i64) {
+        // Closed, timed out, interrupted or failed before the request was complete: nothing to answer.
+        answer = 0i32
+        reading = false
+      } else {
+        received = received + convert<i32>(got)
+        [Request] request{parseRequestBytes(buffer.slice(0i32, received), config.maxRequestBytes)}
+        [i32] outcome{request.outcome()}
+        if(outcome == 0i32) {
+          response.clear()
+          handler(request, location(response))
+          [String] bytes{response.serialize()}
+          send_text(connection, bytes, config.writeTimeoutMs)
+          answer = 0i32
+          reading = false
+        }
+        if(outcome >= 400i32) {
+          answer = outcome
+          reading = false
+        }
+      }
+    }
+    // A rejected request, or one that did not fit in `maxRequestBytes` (413). Closing with unread input would reset
+    // the connection and could discard the answer, so read what is still arriving for a moment first.
+    if(answer != 0i32) {
+      [String] bytes{statusResponse(answer)}
+      send_text(connection, bytes, config.writeTimeoutMs)
+      [i32 mut] rounds{0i32}
+      while(rounds < 8i32) {
+        [mut] window{buffer.sliceMut(0i32, capacity)}
+        [i64] got{recv(connection, window.data, convert<u64>(capacity), 50i32)}
+        rounds = if(got > 0i64, then() { rounds + 1i32 }, else() { 8i32 })
+      }
+    }
+    close(connection)
+  }
+
+  // Serves requests with `handler`, any callable taking (Request, Reference<Response>), until `stop()` is true. The
+  // stop condition is checked at least every `acceptTimeoutMs` and whenever a signal interrupts the wait. Returns an
+  // error only when it cannot listen.
+  [public effects(net_io, heap_alloc, io_err) return<Result<ServeError>>]
+  serveUntil<Handler, Stop>([Handler mut] handler, [ServerConfig] config, [Stop mut] stop) {
+    [i32] listener{if(config.loopbackOnly, then() { listenLoopback(config.port, config.backlog) }, else() { listen(config.port, config.backlog) })}
+    if(listener < 0i32) {
+      return(listener)
+    }
+    if(config.announce) {
+      [i32] port{localPort(listener)}
+      print_error("listening on ")
+      print_line_error(port)
+    }
+    [vector<u8> mut] buffer{vector<u8>()}
+    [i32 mut] index{0i32}
+    while(index < config.maxRequestBytes) {
+      buffer.push(0u8)
+      index = index + 1i32
+    }
+    [Response mut] response{Response{}}
+    while(!stop()) {
+      [i32] connection{accept(listener, config.acceptTimeoutMs)}
+      if(connection >= 0i32) {
+        serve_connection(handler, connection, config, buffer, response)
+      }
+    }
+    close(listener)
+    return(Result.ok())
+  }
+
+  // Serves requests with `handler` until the process receives SIGTERM or SIGINT (/std/os stopRequested()).
+  [public effects(net_io, heap_alloc, io_err) return<Result<ServeError>>]
+  serve<Handler>([Handler mut] handler, [ServerConfig] config) {
+    [mut] untilSignal{[]() { return(stopRequested()) }}
+    return(serveUntil(handler, config, untilSignal))
+  }
+
+}
+}
+}

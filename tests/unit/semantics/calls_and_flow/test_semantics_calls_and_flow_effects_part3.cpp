@@ -185,4 +185,30 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("calling a Function value needs none of its closures' effects") {
+  // The closure's io_err comes from main; the holder that calls it through Function declares only heap_alloc.
+  const std::string source = R"(
+import /std/collections/*
+
+[struct]
+Holder {
+  [Function<i32, i32> mut] handler
+
+  [mut return<i32> effects(heap_alloc)]
+  run([i32] x) {
+    return(this.handler(x))
+  }
+}
+
+[return<int> effects(heap_alloc, io_err)]
+main() {
+  [Holder mut] holder{Holder{[handler] Function<i32, i32>{[]([i32] x) { return(x + 1i32) }}}}
+  return(holder.run(1i32))
+}
+)";
+  std::string error;
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
+  CHECK(error.empty());
+}
+
 TEST_SUITE_END();

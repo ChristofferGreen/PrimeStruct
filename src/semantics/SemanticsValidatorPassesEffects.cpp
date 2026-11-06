@@ -93,6 +93,12 @@ bool SemanticsValidator::validateCalleeEffects(const Expr &expr, const Definitio
   if (callee.fullPath.find(LambdaClosureStructPrefix) != std::string::npos) {
     return true;
   }
+  // A `Function<R, A...>` value's `call` (`/__FunctionN<...>/call`) only dispatches to the closures converted to it,
+  // each checked where it was written, so calling it needs no effects either. Its generated `[effects]` are the union
+  // of those closures' and would otherwise tie the caller (a stdlib Router) to whatever its handlers' creators hold.
+  if (callee.fullPath.rfind("/__Function", 0) == 0 && callee.name == "call") {
+    return true;
+  }
   std::vector<std::string> required;
   for (const auto &transform : callee.transforms) {
     if (transform.name == "effects" && transform.templateArgs.empty()) {

@@ -310,7 +310,8 @@ module {
   semantics, so every backend sees it, and covers plain calls, method calls and calls to monomorphized templates (a
   specialization keeps its template's `[effects]`). A callee without `[effects]` places no requirement on its
   caller: its default set is not propagated (the full transitive rule is deferred, see `docs/todo.md`). A lambda body
-  is checked against the effects of the definition the lambda is written in, and calling a lambda requires no effects.
+  is checked against the effects of the definition the lambda is written in, and calling a lambda, or a `Function`
+  value holding one, requires no effects.
   Calls in the arguments of a top-level execution are checked against that execution's effects. `[host]` functions
   carry no effects. The diagnostic names the callee, the missing effect and the caller:
   ```

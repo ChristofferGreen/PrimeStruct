@@ -585,3 +585,60 @@ one request per connection (`Connection: close`), and no chunked encoding, keep-
   ```
 - Each call of a function that takes a struct is a copy of its body in the lowered program (docs/spec/vm-design.md,
   Real calls). A program should therefore parse in one place, such as the server loop, rather than at many call sites.
+
+### HTTP server (`/std/http/server`)
+
+`import /std/http/server/*` runs the request loop over `/std/net`. It needs both shims at link time:
+
+```bash
+primec --emit=optexe app.prime -o app --link-arg stdlib/std/net/native/net_shim.cpp \
+  --link-arg stdlib/std/os/os_posix.cpp
+```
+
+- `serve(handler, config) -> Result<ServeError>` serves until the process receives SIGTERM or SIGINT (`/std/os`
+  `stopRequested()`), then returns `Result.ok()`.
+- `serveUntil(handler, config, stop)` serves until `stop()`, any callable returning `bool`, is true.
+- **Handlers:** `handler` is any callable taking `(Request, Reference<Response>)`, such as a lambda, a struct with
+  `call`, a `Router` or a middleware closure. It is a generic parameter, so the call is direct and the handler keeps
+  its state between requests.
+- **The loop** is single-threaded and handles one connection at a time:
+  1. Accept, waiting at most `acceptTimeoutMs`. That bounds how long the stop condition goes unchecked; a signal also
+     ends the wait at once.
+  2. Read until `parseRequestBytes` says the request is complete or rejected. The whole request must arrive within
+     `readTimeoutMs`, and a client that is closed, silent or too slow is dropped without an answer.
+  3. Call the handler with a cleared `Response`.
+  4. Write `serialize()` within `writeTimeoutMs`, then close.
+- **Rejected requests** get a bare status (`statusResponse`) and never reach the handler: 400, 413, 501 and 505, plus
+  413 for a request that does not fit in `maxRequestBytes`. The loop then reads for a moment before closing, so the
+  client sees the answer rather than a reset.
+- **`ServerConfig`** fields and their defaults:
+  - `port{8080}`; 0 picks a free port;
+  - `backlog{64}`;
+  - `maxRequestBytes{65536}`, the buffer that holds the head and body together;
+  - `acceptTimeoutMs{500}`, `readTimeoutMs{5000}` and `writeTimeoutMs{5000}`;
+  - `loopbackOnly{false}`, which listens on 127.0.0.1 only;
+  - `announce{true}`, which prints `listening on <port>` to stderr once listening.
+- **`ServeError`:** the only error is failing to listen. Its `code` is the `/std/net` code, and `why()` names the
+  common causes (sockets not permitted, port in use).
+- **Checking the result:** check it with `Result.error(served)` and `Result.why(served)` for now. A `?` on `serve`
+  fails to lower when a struct with a `vector` field (a `Router`) is a local in the callee chain (TODO-5697).
+
+```prime
+import /std/http/*
+import /std/http/server/*
+import /std/text/view/*
+
+[return<int> effects(heap_alloc, io_err, net_io)]
+main() {
+  [Router mut] router{Router{}}
+  router.get("/", Function<void, Request, Reference<Response>>{[]([Request] request, [Reference<Response>] response) {
+    response.text(textOf("hello\n"), textOf("text/plain"))
+  }})
+  [Result<ServeError>] served{serve(router, ServerConfig{[port] 8080i32})}
+  if(Result.error(served)) {
+    print_line_error(Result.why(served))
+    return(1i32)
+  }
+  return(0i32)
+}
+```
