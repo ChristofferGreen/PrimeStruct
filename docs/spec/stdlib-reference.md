@@ -626,25 +626,26 @@ primec --emit=optexe app.prime -o app --link-arg stdlib/std/net/native/net_shim.
   (TODO-5677).
 - **`ServeError`:** the only error is failing to listen. Its `code` is the `/std/net` code, and `why()` names the
   common causes (sockets not permitted, port in use).
-- **Checking the result:** check it with `Result.error(served)` and `Result.why(served)` for now. A `?` on `serve`
-  fails to lower when a struct with a `vector` field (a `Router`) is a local in the callee chain (TODO-5697).
+- **Checking the result:** use `serve(...)?` in a `main` with `on_error<ServeError, handler>`; the handler prints
+  `err.why()` and `main` exits with the error code.
 
 ```prime
 import /std/http/*
 import /std/http/server/*
 import /std/text/view/*
 
-[return<int> effects(heap_alloc, io_err, net_io)]
+[effects(io_err)]
+log_serve_error([ServeError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(heap_alloc, io_err, net_io) on_error<ServeError, log_serve_error>]
 main() {
   [Router mut] router{Router{}}
   router.get("/", Function<void, Request, Reference<Response>>{[]([Request] request, [Reference<Response>] response) {
     response.text(textOf("hello\n"), textOf("text/plain"))
   }})
-  [Result<ServeError>] served{serve(withRequestLog(router), ServerConfig{[port] 8080i32})}
-  if(Result.error(served)) {
-    print_line_error(Result.why(served))
-    return(1i32)
-  }
+  serve(withRequestLog(router), ServerConfig{[port] 8080i32})?
   return(0i32)
 }
 ```

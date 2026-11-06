@@ -321,7 +321,10 @@ bool resolveStructSlotLayoutFromDefinitionFields(
     }
     {
       const std::string canonicalVectorPath = vectorBackingTypePath();
+      // A `vector<T>` struct field records the builtin `/vector` path (normalizeVectorStructPath);
+      // it has the same five-slot layout as the backing Vector struct.
       if (structPath == canonicalVectorPath ||
+          structPath == vectorBuiltinStructNormalizedPath() ||
           structPath.rfind(canonicalVectorPath + "__", 0) == 0) {
         StructSlotLayoutInfo layout;
         layout.structPath = structPath;

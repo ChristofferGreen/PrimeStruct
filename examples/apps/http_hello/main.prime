@@ -30,17 +30,19 @@ hello_routes() {
   return(router)
 }
 
-[return<int> effects(heap_alloc, io_err, net_io)]
+// Prints why the server could not start; `main` then exits with the error code.
+[effects(io_err)]
+log_serve_error([ServeError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(heap_alloc, io_err, net_io) on_error<ServeError, log_serve_error>]
 main() {
   [String] portText{envOr(stringFrom("PORT"), stringFrom("8080"))}
   [String] bind{envOr(stringFrom("BIND"), stringFrom("all"))}
   // BIND=loopback keeps the server on 127.0.0.1 (tests, local use); a container needs every interface.
   [ServerConfig] config{ServerConfig{[port] portText.view().parseI32Or(8080i32), [loopbackOnly] bind.equalsText("loopback")}}
   [Router mut] router{hello_routes()}
-  [Result<ServeError>] served{serve(withRequestLog(router), config)}
-  if(Result.error(served)) {
-    print_line_error(Result.why(served))
-    return(1i32)
-  }
+  serve(withRequestLog(router), config)?
   return(0i32)
 }

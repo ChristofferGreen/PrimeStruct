@@ -1,14 +1,18 @@
 // An HTTP server for the loopback test in tests/unit/backend_host/test_http.cpp: /std/http/server on 127.0.0.1 with a
 // free port (printed as "listening on <port>"), small limits and a short read timeout. It stops with exit code 0 on
-// SIGTERM. When it cannot listen it prints why and exits with 1 (the test skips when the reason is that sockets are not
-// permitted). Build with the net and os shims. The result is checked without `?`: a `?` on a call whose callee chain
-// holds a struct with a vector field fails to lower (TODO-5697).
+// SIGTERM. When it cannot listen it prints why and exits with the error code (the test skips when the reason is that
+// sockets are not permitted). Build with the net and os shims.
 import /std/http/*
 import /std/http/server/*
 import /std/text/*
 import /std/text/view/*
 
-[return<int> effects(heap_alloc, io_err, net_io)]
+[effects(io_err)]
+log_serve_error([ServeError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(heap_alloc, io_err, net_io) on_error<ServeError, log_serve_error>]
 main() {
   [Router mut] router{Router{}}
   router.get("/", Function<void, Request, Reference<Response>>{[]([Request] request, [Reference<Response>] response) {
@@ -22,10 +26,6 @@ main() {
   }})
   [ServerConfig] config{ServerConfig{[port] 0i32, [maxRequestBytes] 1024i32, [readTimeoutMs] 300i32,
                                     [acceptTimeoutMs] 200i32, [loopbackOnly] true}}
-  [Result<ServeError>] served{serve(router, config)}
-  if(Result.error(served)) {
-    print_line_error(Result.why(served))
-    return(1i32)
-  }
+  serve(router, config)?
   return(0i32)
 }

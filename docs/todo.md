@@ -103,7 +103,6 @@ of sync with them.
 | TODO-5694 | A `String` field passed to a `[String mut]` parameter keeps its type | deferred | struct-field-args |
 | TODO-5695 | Definitions with struct parameters become real calls on the optimizing backends | deferred | ir-real-calls |
 | TODO-5696 | A `string` field read through an indexed vector element binds as `string` | deferred | collections-fields |
-| TODO-5697 | `?` lowers when a struct with a vector field is a local of the callee chain | ready | result-try-lowering |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
 | TODO-5656 | Thread-safe `SharedString` (atomic count, per-thread string heaps) | deferred | string-concurrency |
 | TODO-5603 | Startup audit: what a launch loads and does | ready | startup |
@@ -141,7 +140,6 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5697 (result-try-lowering): `?` lowers when a struct with a vector field is a local of the callee chain
 - TODO-5603 (startup): startup audit: what a launch loads and does
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
@@ -150,12 +148,11 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5697
-2. TODO-5603
-3. TODO-5536
-4. TODO-5535
-5. TODO-5510
-6. TODO-5524
+1. TODO-5603
+2. TODO-5536
+3. TODO-5535
+4. TODO-5510
+5. TODO-5524
 
 ### Priority Lanes
 
@@ -172,7 +169,7 @@ of sync with them.
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5669, TODO-5676, TODO-5677; collection fields found by closures: TODO-5681, TODO-5682
-- Web server (single-threaded, built with `--emit=optexe`): HTTP layer  (struct-field argument gap TODO-5694, code size per call site TODO-5695, string fields of vector elements TODO-5696, `?` over vector-field structs TODO-5697); move-only handles TODO-5679; Result payloads for socket handles TODO-5527
+- Web server (single-threaded, built with `--emit=optexe`): HTTP layer (struct-field argument gap TODO-5694, code size per call site TODO-5695, string fields of vector elements TODO-5696); move-only handles TODO-5679; Result payloads for socket handles TODO-5527
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
 ### Execution Queue
@@ -192,18 +189,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - a program that calls `parseRequest` from 10 sites generates less than twice the C++ of a program that calls it from one, and gives the same results on VM and optexe
     - full release gate green
   - stop_rule: call lowering for struct parameters and results; no change to the inliner heuristics for scalars.
-
-- [ ] TODO-5697: `?` lowers when a struct with a vector field is a local of the callee chain
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-06
-  - phase: Web server, HTTP layer (found while building serve)
-  - parallel_track: result-try-lowering
-  - scope: `check_box(1i32)?` in a `main` with `on_error<Err, log_err>`, where `check_box` returns `Result<Err>` and has a local `Box { [vector<i32> mut] items }`, fails with `VM lowering error: vm backend cannot resolve struct layout: /vector` (the same with the local in `main`, on optexe too, and before the HTTP changes). The same call without `?` lowers and runs. Backtrace: `tryLowerEmitExprTryHelper` -> inline call -> `runLowerReturnEmitStage` -> `resolveStructSlotLayoutFromDefinitionFields`, so the return-in-try path sizes the struct from its fields and resolves `vector<i32>` as a struct. `/std/http/server` users check the result with `Result.error`/`Result.why` until this is fixed.
-  - acceptance:
-    - the repro and `serve(router, config)?` with `on_error` lower and run on VM and optexe; a program-matrix case
-    - full release gate green
-  - stop_rule: the `?` lowering path for struct locals with collection fields.
 
 - [ ] TODO-5696: A `string` field read through an indexed vector element binds as `string`
   - owner: ai

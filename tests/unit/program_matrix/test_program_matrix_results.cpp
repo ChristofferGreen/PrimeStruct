@@ -299,4 +299,55 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("try over a call whose callee and caller hold a struct with a vector field") {
+  // TODO-5697: the try path sized the struct from its fields and looked up the
+  // vector<i32> field's /vector path as a struct.
+  program_matrix::ProgramCase program;
+  program.name = "result_try_vector_field_struct";
+  program.source = R"(
+import /std/collections/*
+
+[struct]
+Err() {
+  [i32] code{0i32}
+}
+
+[effects(io_err)]
+log_err([Err] err) {
+  print_line_error("err")
+}
+
+[struct]
+Box() {
+  [vector<i32> mut] items{vector<i32>()}
+}
+
+[Result<Err> effects(heap_alloc)]
+check_box([i32] value) {
+  [Box mut] box{Box{}}
+  box.items.push(value)
+  box.items.push(value + 1i32)
+  if(box.items.count() > value) {
+    return(7i32)
+  }
+  return(Result.ok())
+}
+
+[return<int> effects(heap_alloc, io_err, io_out) on_error<Err, log_err>]
+main() {
+  [Box mut] outer{Box{}}
+  outer.items.push(3i32)
+  check_box(5i32)?
+  print_line("first ok")
+  check_box(1i32)?
+  print_line("unreachable")
+  return(0i32)
+}
+)";
+  program.exitCode = 7;
+  program.stdoutText = "first ok\n";
+  program.vmStderr = "err\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();
