@@ -703,3 +703,100 @@ log_file_error([FileError] err) {
 )",
                     101);
 }
+
+// A namespaced struct with a vector of structs holding a Function: the element type is a bare name inside the
+// namespace (`vector<Item>` in /lib/Holder), both for the element size and for the field read through the indexed
+// element. The struct is imported, spelled by its short name and driven through a generic parameter.
+TEST_CASE("an imported namespaced holder calls a Function field of its vector elements") {
+  runClosureProgram("namespaced_holder_function_field", R"(
+import /std/collections/*
+
+namespace lib {
+  [public struct]
+  Item() {
+    [public i32] code{0i32}
+    [public Function<i32, i32> mut] fn
+  }
+
+  [public struct]
+  Holder() {
+    [public vector<Item> mut] items{vector<Item>()}
+
+    [mut effects(heap_alloc)]
+    add([i32] code, [Function<i32, i32> move] fn) {
+      this.items.push(Item{[code] code, [fn] fn})
+    }
+
+    [mut effects(heap_alloc) return<i32>]
+    call([i32] code) {
+      [i32 mut] index{0i32}
+      while(index < this.items.count()) {
+        if(this.items[index].code == code) {
+          return(this.items[index].fn(code))
+        }
+        index = index + 1i32
+      }
+      return(-1i32)
+    }
+  }
+}
+import /lib/*
+
+[effects(heap_alloc) return<i32>]
+apply<F>([F mut] f, [i32] x) {
+  return(f(x))
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [Holder mut] holder{Holder{}}
+  holder.add(1i32, Function<i32, i32>{[]([i32] x) { return(x + 10i32) }})
+  holder.add(2i32, Function<i32, i32>{[mut calls{0i32}]([i32] x) {
+    calls = calls + 1i32
+    return(x * 100i32 + calls)
+  }})
+  apply(holder, 2i32)
+  return(apply(holder, 1i32) + apply(holder, 2i32))
+}
+)",
+                    213);
+}
+
+// A generic instantiated with an imported struct's short name, whose parameters borrow other imported structs
+// (`[Reference<Out>]`): the specialization names one type with one spelling.
+TEST_CASE("a generic over an imported callable writes through an imported Reference parameter") {
+  runClosureProgram("generic_imported_callable_reference_param", R"(
+namespace lib {
+  [public struct]
+  Out() {
+    [public i32 mut] value{0i32}
+  }
+
+  [public struct]
+  Doubler() {
+    [public i32 mut] calls{0i32}
+
+    [mut]
+    call([i32] x, [Reference<Out>] out) {
+      this.calls = this.calls + 1i32
+      out.value = x * 2i32 + this.calls
+    }
+  }
+}
+import /lib/*
+
+drive<Handler>([Handler mut] handler, [i32] x, [Reference<Out>] out) {
+  handler(x, out)
+}
+
+[return<int>]
+main() {
+  [Doubler mut] doubler{Doubler{}}
+  [Out mut] out{Out{}}
+  drive(doubler, 5i32, location(out))
+  drive(doubler, 20i32, location(out))
+  return(out.value)
+}
+)",
+                    42);
+}

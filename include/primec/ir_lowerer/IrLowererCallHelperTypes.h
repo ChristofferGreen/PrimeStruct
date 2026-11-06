@@ -96,18 +96,20 @@ struct ArrayVectorAccessTargetInfo {
   bool isStructBoxedRecordTarget = false;
 };
 
-// The slots of one inline element of a vector of structs, from the element type text; installed for the duration of
-// one lowering (lowerer-scoped, per thread) because the access-target resolver has no layout resolver of its own.
+// The slots of one inline element of a vector of structs, from the element type text and the namespace of the code
+// that names it (a bare `Route` inside /std/http/Router is /std/http/Route); installed for the duration of one lowering
+// (lowerer-scoped, per thread) because the access-target resolver has no layout resolver of its own.
 struct ScopedVectorElementSlotCount {
-  explicit ScopedVectorElementSlotCount(std::function<int32_t(const std::string &)> fn);
+  explicit ScopedVectorElementSlotCount(
+      std::function<int32_t(const std::string &elementTypeText, const std::string &scope)> fn);
   ~ScopedVectorElementSlotCount();
   ScopedVectorElementSlotCount(const ScopedVectorElementSlotCount &) = delete;
   ScopedVectorElementSlotCount &operator=(const ScopedVectorElementSlotCount &) = delete;
 
 private:
-  std::function<int32_t(const std::string &)> previous_;
+  std::function<int32_t(const std::string &, const std::string &)> previous_;
 };
-int32_t vectorElementSlotCountFromTypeText(const std::string &elementTypeText);
+int32_t vectorElementSlotCountFromTypeText(const std::string &elementTypeText, const std::string &scope);
 
 // A vector<u8> keeps its elements packed, one byte each, in a byte region (not one slot per element).
 inline bool isPackedByteVectorTarget(const ArrayVectorAccessTargetInfo &info) {

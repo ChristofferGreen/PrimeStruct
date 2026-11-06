@@ -17,10 +17,11 @@
 namespace primec::ir_lowerer {
 
 namespace {
-thread_local std::function<int32_t(const std::string &)> activeVectorElementSlotCount;
+thread_local std::function<int32_t(const std::string &, const std::string &)> activeVectorElementSlotCount;
 } // namespace
 
-ScopedVectorElementSlotCount::ScopedVectorElementSlotCount(std::function<int32_t(const std::string &)> fn)
+ScopedVectorElementSlotCount::ScopedVectorElementSlotCount(
+    std::function<int32_t(const std::string &, const std::string &)> fn)
     : previous_(std::move(activeVectorElementSlotCount)) {
   activeVectorElementSlotCount = std::move(fn);
 }
@@ -29,8 +30,8 @@ ScopedVectorElementSlotCount::~ScopedVectorElementSlotCount() {
   activeVectorElementSlotCount = std::move(previous_);
 }
 
-int32_t vectorElementSlotCountFromTypeText(const std::string &elementTypeText) {
-  return activeVectorElementSlotCount ? activeVectorElementSlotCount(elementTypeText) : 0;
+int32_t vectorElementSlotCountFromTypeText(const std::string &elementTypeText, const std::string &scope) {
+  return activeVectorElementSlotCount ? activeVectorElementSlotCount(elementTypeText, scope) : 0;
 }
 using namespace access_target_internal;
 
@@ -589,7 +590,7 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
     // A vector-of-structs field (`this.routes[i]`) has no local to carry the element size: size the element type.
     if (info.isVectorTarget && !info.isSoaVector && info.elemKind == LocalInfo::ValueKind::Unknown &&
         info.elemSlotCount <= 0 && !info.elementTypeText.empty()) {
-      info.elemSlotCount = vectorElementSlotCountFromTypeText(info.elementTypeText);
+      info.elemSlotCount = vectorElementSlotCountFromTypeText(info.elementTypeText, target.namespacePrefix);
     }
     return info;
   }

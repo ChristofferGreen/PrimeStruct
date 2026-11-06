@@ -455,12 +455,21 @@
                 }
               }
               std::string candidateStructPath;
+              // A rewritten receiver (`this.items[i]` as a call of the vector's specialized `at` helper) may have lost
+              // its namespace; the collection it indexes still has it, so a bare element type in a namespaced struct
+              // (`vector<Item>` inside /lib/Holder) resolves there.
+              const std::string collectionNamespace =
+                  receiverExpr.kind == Expr::Kind::Call && !receiverExpr.args.empty()
+                      ? receiverExpr.args.front().namespacePrefix
+                      : std::string();
               if (resolveStructTypeName(normalizedTypeText,
                                         receiverExpr.namespacePrefix,
                                         candidateStructPath) ||
                   resolveStructTypeName(normalizedTypeText,
                                         function.name,
-                                        candidateStructPath)) {
+                                        candidateStructPath) ||
+                  (!collectionNamespace.empty() &&
+                   resolveStructTypeName(normalizedTypeText, collectionNamespace, candidateStructPath))) {
                 structPathOut = std::move(candidateStructPath);
                 return true;
               }

@@ -569,5 +569,19 @@ one request per connection (`Connection: close`), and no chunked encoding, keep-
   it does not know), the header lines, `Content-Length`, `Connection: close`, a blank line and the body. Statuses 1xx,
   204 and 304 get neither a `Content-Length` nor a body. `statusResponse(code)` is the bare answer to a rejected
   request.
+- `Router` is a handler that dispatches to other handlers. Each route is a method, a literal pattern (an exact path,
+  or a prefix ending in `*`) and a `Function<void, Request, Reference<Response>>`. Routes are added with
+  `get(pattern, handler)`, `post`, `put`, `delete` or `route(method, pattern, handler)`, and `call(request,
+  response)` runs the first route that matches. When none matches, the status is 405 if some route matches the path
+  under another method, and 404 otherwise. `Router` has a `call` method, so it can be passed wherever a handler is
+  expected, such as `serve`, middleware or a generic parameter.
+
+  ```prime
+  [Router mut] router{Router{}}
+  router.get("/health", Function<void, Request, Reference<Response>>{[]([Request] request, [Reference<Response>] response) {
+    response.text(textOf("ok"), textOf("text/plain"))
+  }})
+  router.call(request, location(response))
+  ```
 - Each call of a function that takes a struct is a copy of its body in the lowered program (docs/spec/vm-design.md,
   Real calls). A program should therefore parse in one place, such as the server loop, rather than at many call sites.

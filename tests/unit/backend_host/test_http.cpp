@@ -82,4 +82,14 @@ TEST_CASE("responses serialize byte for byte through optexe") {
   CHECK_MESSAGE(failed == 0, "response_bytes case " << failed << " failed (tests/fixtures/http/response_bytes.prime)");
 }
 
+TEST_CASE("a Router dispatches by method and path on the VM") {
+  const int failed = runOnVm("router_dispatch");
+  CHECK_MESSAGE(failed == 0, "router_dispatch case " << failed << " failed (tests/fixtures/http/router_dispatch.prime)");
+}
+
+TEST_CASE("a Router dispatches by method and path through optexe") {
+  const int failed = runThroughOptexe("router_dispatch");
+  CHECK_MESSAGE(failed == 0, "router_dispatch case " << failed << " failed (tests/fixtures/http/router_dispatch.prime)");
+}
+
 TEST_SUITE_END();

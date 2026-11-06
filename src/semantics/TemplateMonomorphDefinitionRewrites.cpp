@@ -653,6 +653,14 @@ void qualifyImportedStructTypes(Expr &expr, const std::string &namespacePrefix, 
         if (!path.empty()) {
           transform.name = path;
         }
+      } else if ((transform.name == "Reference" || transform.name == "Pointer") &&
+                 transform.templateArgs.size() == 1) {
+        // `[Reference<Response>] res`: the borrowed struct, like a bare one. Collection element types keep their
+        // spelling, which names the collection's instance.
+        const std::string path = importedStructPath(transform.templateArgs.front(), namespacePrefix, ctx);
+        if (!path.empty()) {
+          transform.templateArgs.front() = path;
+        }
       }
     }
   }
@@ -732,6 +740,11 @@ bool rewriteDefinition(Definition &def,
           def.parameters, mapping, allowedParams, def.namespacePrefix, ctx, error, locals, params, allowMathBare)) {
     restoreDefinitionPath();
     return false;
+  }
+  // A template parameter substituted with an imported struct's short name (`[Handler mut] h` with `Handler` =
+  // `Router` after `import /std/http/*`) gets the full path too.
+  for (Expr &param : def.parameters) {
+    qualifyImportedStructTypes(param, def.namespacePrefix, ctx);
   }
   if (locals.count("this") == 0) {
     // A struct method sees its receiver as `this`, so `ident(this.field)` can infer from the field's type.

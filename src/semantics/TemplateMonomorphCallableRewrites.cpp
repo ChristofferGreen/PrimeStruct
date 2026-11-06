@@ -41,7 +41,9 @@ bool isCallableStructTypeName(const std::string &typeName, const std::string &na
       return true;
     }
     if (scope.empty()) {
-      return false;
+      // An imported struct spelled by its short name (`import /std/http/*` then `Router`).
+      const std::string *imported = lookupScopedImportAliasForNamespace(name, namespacePrefix, ctx);
+      return imported != nullptr && hasCall(*imported);
     }
     const size_t slash = scope.rfind('/');
     scope = slash == std::string::npos ? std::string() : scope.substr(0, slash);

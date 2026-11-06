@@ -1,0 +1,84 @@
+// /std/http Router dispatch (tests/unit/backend_host/test_http.cpp). The exit code is the number of the first case
+// that failed, or 0. The requests go through one parse call and one generic dispatch call.
+import /std/collections/*
+import /std/http/*
+import /std/text/*
+import /std/text/view/*
+
+// The request of case `index`.
+[return<string>]
+case_request([i32] index) {
+  if(index == 1i32) {
+    return("GET /health HTTP/1.1\r\n\r\n")
+  }
+  if(index == 2i32) {
+    return("GET /static/app.js HTTP/1.1\r\n\r\n")
+  }
+  if(index == 3i32) {
+    return("POST /health HTTP/1.1\r\n\r\n")
+  }
+  if(index == 4i32) {
+    return("GET /missing HTTP/1.1\r\n\r\n")
+  }
+  return("POST /count HTTP/1.1\r\nContent-Length: 2\r\n\r\nhi")
+}
+
+// The status and body case `index` must answer. Cases 5 and 6 post to the same counting route.
+[return<bool>]
+answer_is([i32] index, [i32] status, [StringView] body) {
+  if(index == 1i32) {
+    return(status == 200i32 && body.equalsText("ok"))
+  }
+  if(index == 2i32) {
+    return(status == 200i32 && body.equalsText("static /static/app.js"))
+  }
+  if(index == 3i32) {
+    return(status == 405i32 && body.empty())
+  }
+  if(index == 4i32) {
+    return(status == 404i32 && body.empty())
+  }
+  if(index == 5i32) {
+    return(status == 201i32 && body.equalsText("1 hi"))
+  }
+  return(status == 201i32 && body.equalsText("2 hi"))
+}
+
+// Any handler: a Router here, called through a generic parameter as a server would.
+[effects(heap_alloc)]
+handle_with<Handler>([Handler mut] handler, [Request] request, [Reference<Response>] response) {
+  handler(request, response)
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [Router mut] router{Router{}}
+  router.get("/health", Function<void, Request, Reference<Response>>{[]([Request] request, [Reference<Response>] response) {
+    response.text(textOf("ok"), textOf("text/plain"))
+  }})
+  router.get("/static/*", Function<void, Request, Reference<Response>>{[]([Request] request, [Reference<Response>] response) {
+    response.body.append("static ")
+    response.body.appendBytes(request.path.data, request.path.count())
+  }})
+  router.post("/count", Function<void, Request, Reference<Response>>{[mut posts{0i32}]([Request] request, [Reference<Response>] response) {
+    posts = posts + 1i32
+    response.status = 201i32
+    response.body.appendI64(convert<i64>(posts))
+    response.body.append(" ")
+    response.body.appendBytes(request.body.data, request.body.count())
+  }})
+  [Response mut] response{Response{}}
+  [i32 mut] index{1i32}
+  while(index <= 6i32) {
+    [String] text{stringFrom(case_request(index))}
+    [Request] request{parseRequest(text.view(), 1024i32)}
+    response.clear()
+    handle_with(router, request, location(response))
+    [StringView] body{response.body.view()}
+    if(!answer_is(index, response.status, body)) {
+      return(index)
+    }
+    index = index + 1i32
+  }
+  return(0i32)
+}

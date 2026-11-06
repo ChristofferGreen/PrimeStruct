@@ -224,22 +224,36 @@ bool IrLowerer::lower(const Program &program,
   const auto &structSlotResolutionAdapters = setupLocalsOrchestration.structSlotResolutionAdapters;
   auto resolveStructSlotLayout = structSlotResolutionAdapters.resolveStructSlotLayout;
   // Element sizes of vector-of-struct fields for indexed access (IrLowererAccessTargetResolution.cpp).
-  const ir_lowerer::ScopedVectorElementSlotCount vectorElementSlots([&](const std::string &elementTypeText) {
-    std::string text = elementTypeText;
-    while (!text.empty() && text.back() == ' ') {
-      text.pop_back();
-    }
-    for (const std::string &path : {text, "/" + text}) {
-      if (path.empty() || path.front() != '/') {
-        continue;
-      }
-      ir_lowerer::StructSlotLayoutInfo layout;
-      if (resolveStructSlotLayout(path, layout) && layout.totalSlots > 0) {
-        return layout.totalSlots;
-      }
-    }
-    return int32_t{0};
-  });
+  const ir_lowerer::ScopedVectorElementSlotCount vectorElementSlots(
+      [&](const std::string &elementTypeText, const std::string &scope) {
+        std::string text = elementTypeText;
+        while (!text.empty() && text.back() == ' ') {
+          text.pop_back();
+        }
+        if (text.empty()) {
+          return int32_t{0};
+        }
+        // A full path as written; else the bare name in the innermost enclosing namespace that defines it.
+        std::vector<std::string> candidates;
+        if (text.front() == '/') {
+          candidates.push_back(text);
+        } else {
+          std::string prefix = scope;
+          while (!prefix.empty()) {
+            candidates.push_back(prefix + "/" + text);
+            const size_t slash = prefix.rfind('/');
+            prefix = slash == std::string::npos ? std::string() : prefix.substr(0, slash);
+          }
+          candidates.push_back("/" + text);
+        }
+        for (const std::string &path : candidates) {
+          ir_lowerer::StructSlotLayoutInfo layout;
+          if (resolveStructSlotLayout(path, layout) && layout.totalSlots > 0) {
+            return layout.totalSlots;
+          }
+        }
+        return int32_t{0};
+      });
 
   const auto &uninitializedResolutionAdapters = setupLocalsOrchestration.uninitializedResolutionAdapters;
   (void)uninitializedResolutionAdapters;

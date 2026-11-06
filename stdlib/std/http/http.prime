@@ -459,5 +459,79 @@ namespace http {
     return(out)
   }
 
+
+  // One route of a Router: a method, a pattern and the handler it calls.
+  [public struct]
+  Route() {
+    [public StringView] method{StringView{}}
+    [public StringView] pattern{StringView{}}
+    [public Function<void, Request, Reference<Response>> mut] handler
+  }
+
+  // Whether `path` matches `pattern`: the same text, or for a pattern ending in "*", any path that starts with the
+  // text before the "*".
+  [return<bool>]
+  pattern_matches([StringView] pattern, [StringView] path) {
+    if(pattern.endsWith(textOf("*"))) {
+      [StringView] prefix{pattern.slice(0i32, pattern.count() - 1i32)}
+      return(path.startsWith(prefix))
+    }
+    return(pattern.equals(path))
+  }
+
+  // Calls the handler of the first route whose method and pattern match the request. When no route matches, the
+  // response is 405 if a route matches the path under another method, else 404. A Router is itself a handler, so it
+  // can be passed to `serve` or wrapped in middleware.
+  [public struct]
+  Router() {
+    [public vector<Route> mut] routes{vector<Route>()}
+
+    // Adds a route for `method` (such as "GET") and `pattern` (a literal path, or a prefix ending in "*").
+    [mut effects(heap_alloc)]
+    route([string] method, [string] pattern, [Function<void, Request, Reference<Response>> move] handler) {
+      this.routes.push(Route{[method] textOf(method), [pattern] textOf(pattern), [handler] handler})
+    }
+
+    [mut effects(heap_alloc)]
+    get([string] pattern, [Function<void, Request, Reference<Response>> move] handler) {
+      this.route("GET", pattern, handler)
+    }
+
+    [mut effects(heap_alloc)]
+    post([string] pattern, [Function<void, Request, Reference<Response>> move] handler) {
+      this.route("POST", pattern, handler)
+    }
+
+    [mut effects(heap_alloc)]
+    put([string] pattern, [Function<void, Request, Reference<Response>> move] handler) {
+      this.route("PUT", pattern, handler)
+    }
+
+    [mut effects(heap_alloc)]
+    delete([string] pattern, [Function<void, Request, Reference<Response>> move] handler) {
+      this.route("DELETE", pattern, handler)
+    }
+
+    // Dispatches one request.
+    [mut effects(heap_alloc)]
+    call([Request] request, [Reference<Response>] response) {
+      [bool mut] pathMatched{false}
+      [i32 mut] index{0i32}
+      while(index < this.routes.count()) {
+        [StringView] pattern{this.routes[index].pattern}
+        [StringView] method{this.routes[index].method}
+        if(pattern_matches(pattern, request.path)) {
+          if(request.method.equals(method)) {
+            this.routes[index].handler(request, response)
+            return()
+          }
+          pathMatched = true
+        }
+        index = index + 1i32
+      }
+      response.status = if(pathMatched, then() { 405i32 }, else() { 404i32 })
+    }
+  }
+
 }
 }
