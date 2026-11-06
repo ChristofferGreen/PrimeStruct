@@ -100,7 +100,6 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5693 | Request-log middleware and the http_hello example on `serve` | ready | http-example |
 | TODO-5694 | A `String` field passed to a `[String mut]` parameter keeps its type | deferred | struct-field-args |
 | TODO-5695 | Definitions with struct parameters become real calls on the optimizing backends | deferred | ir-real-calls |
 | TODO-5696 | A `string` field read through an indexed vector element binds as `string` | deferred | collections-fields |
@@ -142,7 +141,6 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5693 (http-example): request-log middleware and the http_hello example on `serve`
 - TODO-5697 (result-try-lowering): `?` lowers when a struct with a vector field is a local of the callee chain
 - TODO-5603 (startup): startup audit: what a launch loads and does
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
@@ -152,13 +150,12 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5693
-2. TODO-5697
-3. TODO-5603
-4. TODO-5536
-5. TODO-5535
-6. TODO-5510
-7. TODO-5524
+1. TODO-5697
+2. TODO-5603
+3. TODO-5536
+4. TODO-5535
+5. TODO-5510
+6. TODO-5524
 
 ### Priority Lanes
 
@@ -175,7 +172,7 @@ of sync with them.
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5669, TODO-5676, TODO-5677; collection fields found by closures: TODO-5681, TODO-5682
-- Web server (single-threaded, built with `--emit=optexe`): HTTP layer TODO-5693 (struct-field argument gap TODO-5694, code size per call site TODO-5695, string fields of vector elements TODO-5696, `?` over vector-field structs TODO-5697); move-only handles TODO-5679; Result payloads for socket handles TODO-5527
+- Web server (single-threaded, built with `--emit=optexe`): HTTP layer  (struct-field argument gap TODO-5694, code size per call site TODO-5695, string fields of vector elements TODO-5696, `?` over vector-field structs TODO-5697); move-only handles TODO-5679; Result payloads for socket handles TODO-5527
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
 ### Execution Queue
@@ -183,19 +180,6 @@ of sync with them.
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 ### Task Blocks
-
-- [ ] TODO-5693: Request-log middleware and the http_hello example on `serve`
-  - owner: ai
-  - status: ready
-  - depends_on: TODO-5692
-  - created_at: 2026-11-06
-  - phase: Web server, HTTP layer
-  - parallel_track: http-example
-  - scope: `/std/os` `logLine(text)` (an unbuffered stderr line from a `String`; moved here from TODO-5692, which did not need it) and `withRequestLog<Next>(next)` in `/std/http/server`, a generic closure that logs `METHOD /path STATUS Nms` through it. Rewrite `examples/apps/http_hello/main.prime` on `Router` + `serve` + `withRequestLog`, and add a `docs/CodeExamples.md` example for a router-based server.
-  - acceptance:
-    - the http_hello loopback test still passes (GET / 200, 404, exit 0 on SIGTERM) and also checks the log line
-    - full release gate green
-  - stop_rule: middleware and example only.
 
 - [ ] TODO-5695: Definitions with struct parameters become real calls on the optimizing backends
   - owner: ai

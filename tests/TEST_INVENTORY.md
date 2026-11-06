@@ -109,7 +109,7 @@ Total: 10232 test cases across 573 files.
 - wasm and glsl reject the net_io effect
 - std/net builds with the POSIX shim on optexe and is unbound on the VM
 - a loopback echo through std/net round-trips bytes with timeouts on every call
-- the http_hello example answers GET / over loopback and exits 0 on SIGTERM
+- the http_hello example answers GET / over loopback, logs it and exits 0 on SIGTERM
 
 ### test_string_conformance.cpp
 

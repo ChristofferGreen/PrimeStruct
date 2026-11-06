@@ -2146,6 +2146,7 @@ are left unarchived.
 | TODO-5690 | `/std/http` `Response` and its wire form | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5691 | `/std/http` `Router` dispatch | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5692 | `/std/http/server` `serve` and `serveUntil` over loopback | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5693 | Request-log middleware and the http_hello example on `serve` | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

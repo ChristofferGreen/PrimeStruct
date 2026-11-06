@@ -1,9 +1,12 @@
 // POSIX host side of /std/os (stdlib/std/os/os.prime), linked into an --emit=optexe program with --link-arg.
 #include <signal.h>
+#include <unistd.h>
 
+#include <cerrno>
 #include <cstdint>
 #include <cstdlib>
 #include <ctime>
+#include <string>
 
 namespace {
 
@@ -42,4 +45,21 @@ int64_t ps_os_monotonic_ms(void) {
 }
 
 bool ps_os_stop_requested(void) { return stopFlag != 0; }
+
+int32_t ps_os_log_line(const char *line) {
+  std::string text(line);
+  text.push_back('\n');
+  size_t written = 0;
+  while (written < text.size()) {
+    const ssize_t count = write(STDERR_FILENO, text.data() + written, text.size() - written);
+    if (count < 0) {
+      if (errno == EINTR) {
+        continue;
+      }
+      return -1;
+    }
+    written += static_cast<size_t>(count);
+  }
+  return static_cast<int32_t>(written);
+}
 }

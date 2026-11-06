@@ -59,7 +59,7 @@ From `build-debug/`:
 - `examples/4.Transforms/trace_calls_consumer.prime`: imports the hook module and attaches `[trace_calls return<int>]`.
 
 ### apps
-- `examples/apps/http_hello/main.prime`: single-threaded HTTP hello-world server over `/std/net` and `/std/os`
+- `examples/apps/http_hello/main.prime`: single-threaded HTTP hello-world server on `/std/http` (`Router`, `serve`, `withRequestLog`)
   (`--emit=optexe` with both POSIX shims linked; see the comment at the top of the file).
 
 ### borrow_checker_negative

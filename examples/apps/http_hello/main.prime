@@ -1,71 +1,46 @@
-// A single-threaded HTTP hello-world server over /std/net. Build and run:
+// A single-threaded HTTP hello-world server on /std/http. Build and run:
 //   primec --emit=optexe examples/apps/http_hello/main.prime -o http_hello \
 //     --link-arg stdlib/std/net/native/net_shim.cpp --link-arg stdlib/std/os/os_posix.cpp
 //   PORT=8080 ./http_hello        (PORT=0 picks a free port; BIND=loopback listens on 127.0.0.1 only)
-// `GET /` answers 200 with "hello\n", any other path 404, and anything that is not a GET request line 400. The
-// accept loop wakes every 500 ms (and at once on SIGTERM or SIGINT), so it exits with 0 when stopRequested().
-import /std/collections/*
-import /std/net/*
+// `GET /` answers 200 with "hello\n", `GET /greet?<name>` greets <name> and counts visitors, and any other path 404.
+// Malformed requests get 400 from the server loop without reaching a handler. Every request is logged to stderr, and
+// the server exits with 0 on SIGTERM or SIGINT.
+import /std/http/*
+import /std/http/server/*
 import /std/os/*
 import /std/text/*
 import /std/text/view/*
 
-// Whether the request starts with "GET ".
-[return<bool>]
-is_get([vector<u8>] request, [i64] count) {
-  return(count >= 4i64 && request[0i32] == 71u8 && request[1i32] == 69u8 && request[2i32] == 84u8 &&
-         request[3i32] == 32u8)
-}
-
-// Whether the request line's path is exactly "/".
-[return<bool>]
-is_root_path([vector<u8>] request, [i64] count) {
-  return(count >= 6i64 && request[4i32] == 47u8 && request[5i32] == 32u8)
-}
-
-// Reads one request from `connection`, writes one response and closes it.
-[return<void> effects(heap_alloc, net_io)]
-serve_connection([i32] connection) {
-  [vector<u8> mut] request{vector<u8>()}
-  [i32 mut] index{0i32}
-  while(index < 1024i32) {
-    request.push(0u8)
-    index = index + 1i32
-  }
-  [mut] window{request.sliceMut(0i32, 1024i32)}
-  [i64] count{recv(connection, window.data, 1024u64, 2000i32)}
-  [String mut] response{stringFrom("HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")}
-  if(is_get(request, count)) {
-    if(is_root_path(request, count)) {
-      response = stringFrom("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 6\r\nConnection: close\r\n\r\nhello\n")
-    } else {
-      response = stringFrom("HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
-    }
-  }
-  send(connection, response.data, convert<u64>(response.count()), 2000i32)
-  close(connection)
+// The routes of the app.
+[return<Router> effects(heap_alloc)]
+hello_routes() {
+  [Router mut] router{Router{}}
+  router.get("/", Function<void, Request, Reference<Response>>{[]([Request] request, [Reference<Response>] response) {
+    response.text(textOf("hello\n"), textOf("text/plain"))
+  }})
+  router.get("/greet", Function<void, Request, Reference<Response>>{[mut greeted{0i32}]([Request] request, [Reference<Response>] response) {
+    greeted = greeted + 1i32
+    response.body.append("hello, ")
+    response.body.appendBytes(request.query.data, request.query.count())
+    response.body.append(" (visitor ")
+    response.body.appendI64(convert<i64>(greeted))
+    response.body.append(")\n")
+    response.header(textOf("Content-Type"), textOf("text/plain"))
+  }})
+  return(router)
 }
 
 [return<int> effects(heap_alloc, io_err, net_io)]
 main() {
   [String] portText{envOr(stringFrom("PORT"), stringFrom("8080"))}
-  [i32] port{portText.view().parseI32Or(8080i32)}
-  // BIND=loopback keeps the server on 127.0.0.1 (tests, local use); remote clients need every interface.
   [String] bind{envOr(stringFrom("BIND"), stringFrom("all"))}
-  [i32] listener{if(bind.equalsText("loopback"), then() { listenLoopback(port, 16i32) }, else() { listen(port, 16i32) })}
-  if(listener < 0i32) {
-    print_line_error("cannot listen")
+  // BIND=loopback keeps the server on 127.0.0.1 (tests, local use); a container needs every interface.
+  [ServerConfig] config{ServerConfig{[port] portText.view().parseI32Or(8080i32), [loopbackOnly] bind.equalsText("loopback")}}
+  [Router mut] router{hello_routes()}
+  [Result<ServeError>] served{serve(withRequestLog(router), config)}
+  if(Result.error(served)) {
+    print_line_error(Result.why(served))
     return(1i32)
   }
-  // Logs go to stderr, which is not buffered, so a supervisor sees the port at once.
-  print_error("listening on ")
-  print_line_error(localPort(listener))
-  while(!stopRequested()) {
-    [i32] connection{accept(listener, 500i32)}
-    if(connection >= 0i32) {
-      serve_connection(connection)
-    }
-  }
-  close(listener)
   return(0i32)
 }

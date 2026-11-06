@@ -39,6 +39,7 @@ Style-aligned surface code:
 - `stdlib/std/scene/*`
 - `stdlib/std/os/*`
 - `stdlib/std/net/*`
+- `stdlib/std/http/*`
 - `stdlib/std/collections/vector.prime`
 - `stdlib/std/collections/map.prime`
 - `stdlib/std/collections/errors.prime`
@@ -898,6 +899,46 @@ Why this is good:
   allocation per handler is visible where it happens.
 - The route keeps its own copy of `hits`, so its counter is independent of the
   local it was made from.
+
+### Router and Middleware for an HTTP Handler
+
+A web app is a handler: anything callable with `(Request, Reference<Response>)`. Put the routes in a `Router` and wrap
+it in middleware written as a generic function that returns a closure.
+
+```prime
+import /std/http/*
+import /std/text/*
+import /std/text/view/*
+
+[effects(heap_alloc)]
+with_server_name<Next>([Next move] next) {
+  return([mut inner{next}]([Request] request, [Reference<Response>] response) {
+    inner(request, response)
+    response.header(textOf("Server"), textOf("primestruct"))
+  })
+}
+
+[int effects(heap_alloc)]
+main() {
+  [Router mut] router{Router{}}
+  router.get("/health", Function<void, Request, Reference<Response>>{[]([Request] request, [Reference<Response>] response) {
+    response.text(textOf("ok"), textOf("text/plain"))
+  }})
+  [mut] app{with_server_name(router)}
+  [String] raw{stringFrom("GET /health HTTP/1.1\r\n\r\n")}
+  [Request] request{parseRequest(raw.view(), 1024)}
+  [Response mut] response{Response{}}
+  app(request, location(response))
+  return(response.status)
+}
+```
+
+Why this is good:
+- The middleware takes `Next` generically and captures it, so wrapping a `Router` costs no allocation and the call
+  is direct; `serve(with_server_name(router), config)` serves the same handler.
+- Each route's lambda is boxed once, explicitly, as a `Function<void, Request, Reference<Response>>`.
+- Handlers write through `Reference<Response>` and return nothing, so lambdas need no return-type annotation.
+- `parseRequest` gives a carrier of views into `raw`: the request allocates nothing.
 
 ## Safe Extents And Cursor Examples
 

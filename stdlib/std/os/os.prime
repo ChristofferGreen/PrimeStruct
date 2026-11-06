@@ -18,6 +18,10 @@ ps_os_monotonic_ms() {
 ps_os_stop_requested() {
 }
 
+[host return<i32>]
+ps_os_log_line([String] line) {
+}
+
 namespace std {
 namespace os {
 
@@ -37,6 +41,13 @@ namespace os {
   [public return<bool>]
   stopRequested() {
     return(ps_os_stop_requested())
+  }
+
+  // Writes `line` and a line feed to stderr at once (stderr is not buffered), for logs a supervisor reads as they
+  // happen. Returns the bytes written, or -1.
+  [public return<i32>]
+  logLine([String] line) {
+    return(ps_os_log_line(line))
   }
 
 }

@@ -449,6 +449,8 @@ primec --emit=optexe server.prime -o server --link-arg stdlib/std/os/os_posix.cp
 - `stopRequested() -> bool`: true once the process has received SIGTERM or SIGINT. The shim installs both handlers
   when the program starts; they set a flag and do not restart interrupted system calls (no `SA_RESTART`), so a
   blocking socket call returns `EINTR` and the loop around it can check the flag and stop.
+- `logLine(line) -> i32`: writes the `String` `line` and a line feed to stderr in one go. stderr is not buffered,
+  so a supervisor sees the line at once. Returns the bytes written, or -1.
 
 These functions take no effect. Like every host call they leave the deterministic subset of the language
 (docs/spec/host-and-core-library.md), and a program that never calls them links without the shim. The VM and
@@ -507,8 +509,8 @@ The wrappers carry `effects(net_io)` (docs/spec/language-core.md, Effects); wasm
 shim installs no signal handlers and keeps no state. The VM and `primevm` have no binding for the host functions and
 report `unbound host function: net_listen ...`; native, wasm and GLSL reject host calls. POSIX only.
 
-`examples/apps/http_hello/main.prime` is a complete server: it answers `GET /`, logs its port to stderr and leaves
-its accept loop (500 ms timeout) with exit code 0 once `stopRequested()` turns true.
+`examples/apps/http_hello/main.prime` is a complete server on `/std/http/server`: a `Router` behind
+`withRequestLog`, served until SIGTERM, with the port and bind address taken from the environment.
 
 ```prime
 import /std/collections/*
@@ -618,6 +620,10 @@ primec --emit=optexe app.prime -o app --link-arg stdlib/std/net/native/net_shim.
   - `acceptTimeoutMs{500}`, `readTimeoutMs{5000}` and `writeTimeoutMs{5000}`;
   - `loopbackOnly{false}`, which listens on 127.0.0.1 only;
   - `announce{true}`, which prints `listening on <port>` to stderr once listening.
+- **Middleware:** `withRequestLog(next)` wraps any handler and logs `METHOD target STATUS Nms` for each request
+  through `logLine`. Middleware is a generic function that returns a closure capturing `next`, so wrapping is
+  zero-cost and composes: `serve(withRequestLog(router), config)`. Do not erase a middleware chain into a `Function`
+  (TODO-5677).
 - **`ServeError`:** the only error is failing to listen. Its `code` is the `/std/net` code, and `why()` names the
   common causes (sockets not permitted, port in use).
 - **Checking the result:** check it with `Result.error(served)` and `Result.why(served)` for now. A `?` on `serve`
@@ -634,7 +640,7 @@ main() {
   router.get("/", Function<void, Request, Reference<Response>>{[]([Request] request, [Reference<Response>] response) {
     response.text(textOf("hello\n"), textOf("text/plain"))
   }})
-  [Result<ServeError>] served{serve(router, ServerConfig{[port] 8080i32})}
+  [Result<ServeError>] served{serve(withRequestLog(router), ServerConfig{[port] 8080i32})}
   if(Result.error(served)) {
     print_line_error(Result.why(served))
     return(1i32)

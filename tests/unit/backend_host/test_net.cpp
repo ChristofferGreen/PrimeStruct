@@ -146,7 +146,7 @@ TEST_CASE("a loopback echo through std/net round-trips bytes with timeouts on ev
   CHECK_MESSAGE(exitCode == 0, "net_echo failed at step " << exitCode);
 }
 
-TEST_CASE("the http_hello example answers GET / over loopback and exits 0 on SIGTERM") {
+TEST_CASE("the http_hello example answers GET / over loopback, logs it and exits 0 on SIGTERM") {
   const int probe = socket(AF_INET, SOCK_STREAM, 0);
   if (probe < 0 && (errno == EPERM || errno == EACCES)) {
     MESSAGE("skipped: socket() is not permitted here (EPERM or EACCES)");
@@ -213,6 +213,9 @@ TEST_CASE("the http_hello example answers GET / over loopback and exits 0 on SIG
   REQUIRE_MESSAGE(port > 0, readFile(errors));
   CHECK_MESSAGE(response.rfind("HTTP/1.1 200 OK\r\n", 0) == 0, response);
   CHECK(response.find("\r\n\r\nhello\n") != std::string::npos);
+  // withRequestLog writes one line per request to stderr.
+  const std::string requestLog = readFile(errors);
+  CHECK_MESSAGE(requestLog.find("GET / 200 ") != std::string::npos, requestLog);
   CHECK(WIFEXITED(waitStatus));
   CHECK(WEXITSTATUS(waitStatus) == 0);
 }

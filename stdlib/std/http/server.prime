@@ -154,6 +154,28 @@ namespace server {
     return(serveUntil(handler, config, untilSignal))
   }
 
+
+  // Middleware: a handler that calls `next` and then logs "METHOD target STATUS Nms" for the request through /std/os
+  // logLine. It is generic, so `next` is called directly; wrap a Router or any other handler.
+  [public effects(heap_alloc)]
+  withRequestLog<Next>([Next move] next) {
+    return([mut inner{next}]([Request] request, [Reference<Response>] response) {
+      [i64] start{monotonicMs()}
+      inner(request, response)
+      [i64] elapsed{monotonicMs() - start}
+      [String mut] line{String{}}
+      line.appendBytes(request.method.data, request.method.count())
+      line.append(" ")
+      line.appendBytes(request.target.data, request.target.count())
+      line.append(" ")
+      line.appendI64(convert<i64>(response.status))
+      line.append(" ")
+      line.appendI64(elapsed)
+      line.append("ms")
+      logLine(line)
+    })
+  }
+
 }
 }
 }
