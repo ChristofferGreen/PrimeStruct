@@ -22,9 +22,11 @@ None.
 ## Current Failures
 
 <!-- compile.sh:failing-tests:start -->
-- Last updated: `2026-11-06T13:05:44Z`
+- Last updated: `2026-11-06T19:54:14Z`
 - Build type: `Release`
 - Build dir: `build-release`
 - Command: `ctest --test-dir build-release --output-on-failure --parallel 22`
-- Result: no failing CTest cases.
+- Result: `ctest` failed with status `8`.
+- Failing CTest cases:
+  - `37`: `PrimeStruct_http`
 <!-- compile.sh:failing-tests:end -->

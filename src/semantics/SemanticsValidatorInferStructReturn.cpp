@@ -101,6 +101,24 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
     }
     return resolveExprConcreteCallPath(params, locals, callExpr, resolvedPath);
   };
+  // `this.field`, `this.method()` and `ref.field`: a Reference/Pointer binding reaches the members of its target struct.
+  auto inferReferenceReceiverStruct = [&](const Expr &receiver) -> std::string {
+    if (receiver.kind != Expr::Kind::Name) {
+      return "";
+    }
+    const BindingInfo *binding = findParamBinding(params, receiver.name);
+    if (binding == nullptr) {
+      const auto localIt = locals.find(receiver.name);
+      if (localIt != locals.end()) {
+        binding = &localIt->second;
+      }
+    }
+    if (binding == nullptr || (binding->typeName != "Reference" && binding->typeName != "Pointer") ||
+        binding->typeTemplateArg.empty()) {
+      return "";
+    }
+    return resolveInferStructTypePath(binding->typeTemplateArg, receiver.namespacePrefix);
+  };
   if (expr.kind == Expr::Kind::Call) {
     if (!expr.isMethodCall &&
         (isSimpleCallName(expr, "take") || isSimpleCallName(expr, "borrow")) &&
@@ -269,6 +287,9 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
         receiverStruct = inferStructReturnPath(expr.args.front(), params, locals);
       }
       if (receiverStruct.empty()) {
+        receiverStruct = inferReferenceReceiverStruct(expr.args.front());
+      }
+      if (receiverStruct.empty()) {
         return "";
       }
       auto defIt = defMap_.find(receiverStruct);
@@ -304,6 +325,9 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
         return "";
       }
       std::string receiverStruct = inferStructReturnPath(expr.args.front(), params, locals);
+      if (receiverStruct.empty()) {
+        receiverStruct = inferReferenceReceiverStruct(expr.args.front());
+      }
       if (receiverStruct.empty()) {
         return "";
       }

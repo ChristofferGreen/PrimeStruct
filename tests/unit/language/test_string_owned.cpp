@@ -594,3 +594,18 @@ TEST_CASE("an unknown field of a vector-of-structs field element is rejected") {
   CHECK_FALSE(missing.compiled);
   CHECK(missing.diagnostics.find("unknown field: missing") != std::string::npos);
 }
+
+// TODO-5694: inside a struct method, `this.field` and `this.method()` passed straight to a struct parameter keep
+// their struct type (the `this` Reference binding resolves to its target struct).
+TEST_CASE("this fields and method results pass to struct parameters") {
+  const std::string defs =
+      "import /std/text/*\nimport /std/text/view/*\n\n"
+      "[return<i32>]\nname_length([StringView] v) {\n  return(v.count())\n}\n\n"
+      "[struct]\nHolder() {\n"
+      "  [String mut] head{String{}}\n  [StringView mut] line{StringView{}}\n\n"
+      "  [return<StringView>]\n  pick() {\n    return(this.line)\n  }\n\n"
+      "  [return<i32> effects(heap_alloc)]\n  grow([StringView] name) {\n"
+      "    appendView(this.head, name)\n    return(this.head.count())\n  }\n\n"
+      "  [return<i32>]\n  measure() {\n    return(name_length(this.pick()) + name_length(this.line))\n  }\n}\n";
+  CHECK(exitOf("  [Holder mut] h{Holder{}}\n  [i32] grown{h.grow(textOf(\"abc\"))}\n  return(grown + h.measure())", defs) == 3);
+}

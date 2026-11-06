@@ -100,7 +100,6 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5694 | A `String` field passed to a `[String mut]` parameter keeps its type | deferred | struct-field-args |
 | TODO-5695 | Definitions with struct parameters become real calls on the optimizing backends | deferred | ir-real-calls |
 | TODO-5696 | A `string` field read through an indexed vector element binds as `string` | deferred | collections-fields |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
@@ -169,7 +168,7 @@ of sync with them.
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5669, TODO-5676, TODO-5677; collection fields found by closures: TODO-5681, TODO-5682
-- Web server (single-threaded, built with `--emit=optexe`): HTTP layer (struct-field argument gap TODO-5694, code size per call site TODO-5695, string fields of vector elements TODO-5696); move-only handles TODO-5679; Result payloads for socket handles TODO-5527
+- Web server (single-threaded, built with `--emit=optexe`): HTTP layer (struct-field argument gap code size per call site TODO-5695, string fields of vector elements TODO-5696); move-only handles TODO-5679; Result payloads for socket handles TODO-5527
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
 ### Execution Queue
@@ -201,18 +200,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - the `string` field read binds and runs on VM and optexe; reading a field of an element that also holds a `Function` does not copy and destroy the element
     - full release gate green
   - stop_rule: field reads through indexed elements of vector fields.
-
-- [ ] TODO-5694: A `String` field passed to a `[String mut]` parameter keeps its type
-  - owner: ai
-  - status: deferred
-  - created_at: 2026-11-06
-  - phase: Web server, HTTP layer (found while probing)
-  - parallel_track: struct-field-args
-  - scope: Inside a struct method, a member expression passed straight to a free function's struct parameter is typed `array`. Two cases: `appendView(this.head, name)`, where `head` is a `[String mut]` field and `appendView` takes `[String mut] out` (`argument type mismatch for /std/text/view/appendView parameter out: expected /std/text/String got array`), and `header_line_name(this.headerLine(index))`, where a method result is passed to a `[StringView]` parameter (same message). Binding the value to a local first works, and so does calling a method on the field (`this.head.appendBytes(...)`); `/std/http` uses both workarounds.
-  - acceptance:
-    - the call form compiles and runs on VM and optexe; a semantics test
-    - full release gate green
-  - stop_rule: argument typing of struct-field operands only.
 
 - [ ] TODO-5688: Calls require the callee's whole active effect set
   - owner: ai
