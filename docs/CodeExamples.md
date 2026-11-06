@@ -816,6 +816,87 @@ Current note:
 - The explicit constructor form `vector<T>{...}` remains valid, but docs no
   longer need it as a fallback for the readable vector loop example.
 
+### Stateful Closure Through a Generic Parameter
+
+A lambda is a closure value: its captures are fields and its body is a `call`
+method. Keep handler state in an init capture and pass the closure to a generic
+`mut` parameter when one function drives it.
+
+```prime
+[int]
+drive<Handler>([Handler mut] handler, [int] times) {
+  [int mut] total{0}
+  for([int mut] index{0}; index < times; ++index) {
+    total = total + handler(index)
+  }
+  return(total)
+}
+
+[int]
+main() {
+  step{2}
+  [mut] scaled{[step, mut calls{0}]([int] x) {
+    calls = calls + 1
+    return(x * step + calls)
+  }}
+  return(drive(scaled, 3) + scaled(0))
+}
+```
+
+Why this is good:
+- `[mut calls{0}]` keeps the counter inside the closure instead of in an outer
+  binding the caller has to remember.
+- `drive<Handler>` takes any lambda or struct with a `call` method and is
+  monomorphized per type, so the call is direct and nothing is allocated.
+- The closure stays a `mut` binding because calling it changes its state.
+
+### Handlers of Different Shapes in One Vector
+
+When one container holds different lambdas (a router table, a list of hooks),
+erase their types with `Function<R, A...>` and construct it explicitly.
+
+```prime
+import /std/collections/*
+
+[struct]
+Route {
+  [int] code
+  [Function<int, int> mut] handler
+}
+
+[int effects(heap_alloc)]
+answer([vector<Route> mut] routes, [int] code, [int] input) {
+  for([int mut] index{0}; index < routes.count(); ++index) {
+    if(routes[index].code == code) {
+      return(routes[index].handler(input))
+    }
+  }
+  return(404)
+}
+
+[int effects(heap_alloc)]
+main() {
+  base{100}
+  [mut] hits{[mut calls{0}]([int] input) {
+    calls = calls + 1
+    return(calls)
+  }}
+  [vector<Route> mut] routes{vector<Route>()}
+  routes.push(Route{[code] 1, [handler] Function<int, int>{hits}})
+  routes.push(Route{[code] 2, [handler] Function<int, int>{[base]([int] input) { return(input + base) }}})
+  answer(routes, 1, 0)
+  return(answer(routes, 1, 0) + answer(routes, 2, 5))
+}
+```
+
+Why this is good:
+- `Function<int, int>` names the call shape once, in the field type; each
+  route's lambda can capture something different.
+- Construction is explicit (`Function<int, int>{hits}`), so the one heap
+  allocation per handler is visible where it happens.
+- The route keeps its own copy of `hits`, so its counter is independent of the
+  local it was made from.
+
 ## Safe Extents And Cursor Examples
 
 These examples cover the safe-array-extent and cursor surfaces from

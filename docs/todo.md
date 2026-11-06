@@ -106,7 +106,9 @@ of sync with them.
 | TODO-5536 | Small, lazily loaded bytecode for apps | ready | bytecode-startup |
 | TODO-5535 | Launch-time harness and reference Objective-C++ editor | ready | native-ui-launch |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
-| TODO-5510 | `return` returns from pick arms and lambdas correctly | ready | control-returns |
+| TODO-5668 | Struct fields of collection type keep their elements across method calls | deferred | collections-fields |
+| TODO-5669 | `Function` from named definitions and at call sites | deferred | closures |
+| TODO-5510 | `return` returns from unit-variant pick arms correctly | ready | control-returns |
 | TODO-5524 | Int-backed error structs round-trip through stdlib Result sums | ready | result-error-structs |
 | TODO-5523 | A Result-returning main exits with its error code | deferred | result-main |
 | TODO-5525 | `Result.ok(x)` passes as a stdlib Result argument | deferred | result-arguments |
@@ -133,7 +135,7 @@ of sync with them.
 - TODO-5603 (startup): startup audit: what a launch loads and does
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
-- TODO-5510 (control-returns): `return` returns from pick arms and lambdas correctly
+- TODO-5510 (control-returns): `return` returns from unit-variant pick arms correctly
 - TODO-5524 (result-error-structs): int-backed error structs round-trip through stdlib Result sums
 
 ### Immediate Next 10
@@ -157,6 +159,7 @@ of sync with them.
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
+- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5669; collection fields found by closures: TODO-5668
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
 ### Execution Queue
@@ -165,17 +168,41 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 
 ### Task Blocks
 
-- [ ] TODO-5510: `return` returns from pick arms and lambdas correctly
+- [ ] TODO-5668: Struct fields of collection type keep their elements across method calls
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-06
+  - phase: Closures follow-ups
+  - parallel_track: collections-fields
+  - scope: Found while building stateful closures (a closure that captures a `vector` and pushes to it is this shape). On VM and optexe, `[struct] KeepV { [vector<i32> mut] seen }` built as `KeepV{[seen] start}` from a local vector faults on `k.seen.push(1i32)` (`VM error: invalid heap free address in IR: 9223372036854775808`); built from `vector<i32>(5i32)` the push is lost (`k.seen.count()` is 0); a field default `[vector<i32> mut] seen{vector<i32>()}` is rejected with `argument type mismatch ... expected vector<i32>`; copying such a struct and pushing to the copy faults with `invalid heap realloc address`. Same on master before the closure work.
+  - acceptance:
+    - each repro runs on VM, native and optexe with the expected counts; a closure capturing a vector by `[mut values]` can push and count; matrix test
+    - full release gate green
+  - stop_rule: collection-typed struct fields (construction, method calls through the field, copy); no new collection API.
+
+- [ ] TODO-5669: `Function` from named definitions and at call sites
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-06
+  - phase: Closures follow-ups
+  - parallel_track: closures
+  - scope: `Function<R, A...>` is built only by explicit brace construction from a closure or a struct with `call` (`docs/spec/value-lifecycle.md`, Function values). Add `Function<i32, i32>{/double}` for a named definition (a generated closure struct whose `call` forwards to it), and accept a closure where a `Function` parameter or field is expected by inserting the conversion.
+  - acceptance:
+    - a router of named handlers and a closure passed straight to a `[Function<i32, i32> mut]` parameter run on VM, native and optexe; negative test for a signature mismatch
+    - full release gate green
+  - stop_rule: conversion sites only; no change to the `Function` representation.
+
+- [ ] TODO-5510: `return` returns from unit-variant pick arms correctly
   - owner: ai
   - status: ready
   - created_at: 2026-10-06
   - phase: Correctness audit 2026-10
   - parallel_track: control-returns
-  - scope: `pick(m) { none { return(-1i32) } num(v) { return(v) } }` in statement position does not return from the unit-variant arm (rewritten to `none{-1}`, IR `PushI32 -1; Pop`); same for `Result<E>`'s `ok { return(...) }`. A lambda passed to `Result.map`/`and_then` with `if(x > 5i32) { return(100i32) }` returns from the enclosing function.
+  - scope: `pick(m) { none { return(-1i32) } num(v) { return(v) } }` in statement position does not return from the unit-variant arm (rewritten to `none{-1}`, IR `PushI32 -1; Pop`); same for `Result<E>`'s `ok { return(...) }`. (The lambda half is done: lambdas are closure structs, TODO-5663.)
   - acceptance:
-    - unit-variant pick arms return; lambda returns stay in the lambda; parse/semantic + matrix tests
+    - unit-variant pick arms return; parse/semantic + matrix tests
     - full release gate green
-  - stop_rule: return lowering in pick arms and lambdas.
+  - stop_rule: return lowering in pick arms.
 
 - [ ] TODO-5511: Safe code cannot reach container storage or unsafe stdlib helpers
   - owner: ai
