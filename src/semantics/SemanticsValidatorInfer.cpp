@@ -268,6 +268,17 @@ ReturnKind SemanticsValidator::inferExprReturnKindImpl(const Expr &expr,
           }
         } else if (receiver.kind == Expr::Kind::Call && !receiver.isBinding) {
           structPath = inferStructReturnPath(receiver, params, locals);
+          if (structPath.empty()) {
+            // An indexed element (`items[i].name`): the vector helpers do not forward a struct return path,
+            // but the query type of the element is its struct (TODO-5696).
+            std::string elementType;
+            if (inferQueryExprTypeText(receiver, params, locals, elementType) && !elementType.empty()) {
+              const std::string scope = !receiver.namespacePrefix.empty() || currentDefinitionContext_ == nullptr
+                                            ? receiver.namespacePrefix
+                                            : currentDefinitionContext_->fullPath;
+              (void)resolveStructPathFromType(elementType, scope, structPath);
+            }
+          }
         }
         if (structPath.empty()) {
           ReturnKind receiverKind = inferExprReturnKind(receiver, params, locals);

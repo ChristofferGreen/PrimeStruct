@@ -289,6 +289,18 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
       if (receiverStruct.empty()) {
         receiverStruct = inferReferenceReceiverStruct(expr.args.front());
       }
+      if (receiverStruct.empty() && expr.args.front().kind == Expr::Kind::Call && !expr.args.front().isBinding) {
+        // An indexed element (`items[i].name`): the vector helpers do not forward a struct return path, but the
+        // query type of the element is its struct (TODO-5696).
+        std::string elementType;
+        if (inferQueryExprTypeText(expr.args.front(), params, locals, elementType) && !elementType.empty()) {
+          const Expr &receiverCall = expr.args.front();
+          const std::string scope = !receiverCall.namespacePrefix.empty() || currentDefinitionContext_ == nullptr
+                                        ? receiverCall.namespacePrefix
+                                        : currentDefinitionContext_->fullPath;
+          receiverStruct = resolveInferStructTypePath(elementType, scope);
+        }
+      }
       if (receiverStruct.empty()) {
         return "";
       }

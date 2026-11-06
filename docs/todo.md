@@ -101,7 +101,6 @@ of sync with them.
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
 | TODO-5695 | Definitions with struct parameters become real calls on the optimizing backends | deferred | ir-real-calls |
-| TODO-5696 | A `string` field read through an indexed vector element binds as `string` | deferred | collections-fields |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
 | TODO-5656 | Thread-safe `SharedString` (atomic count, per-thread string heaps) | deferred | string-concurrency |
 | TODO-5603 | Startup audit: what a launch loads and does | ready | startup |
@@ -168,7 +167,7 @@ of sync with them.
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5669, TODO-5676, TODO-5677; collection fields found by closures: TODO-5681, TODO-5682
-- Web server (single-threaded, built with `--emit=optexe`): HTTP layer (struct-field argument gap code size per call site TODO-5695, string fields of vector elements TODO-5696); move-only handles TODO-5679; Result payloads for socket handles TODO-5527
+- Web server (single-threaded, built with `--emit=optexe`): HTTP layer (struct-field argument gap code size per call site TODO-5695, string fields of vector elements ); move-only handles TODO-5679; Result payloads for socket handles TODO-5527
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
 ### Execution Queue
@@ -188,18 +187,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - a program that calls `parseRequest` from 10 sites generates less than twice the C++ of a program that calls it from one, and gives the same results on VM and optexe
     - full release gate green
   - stop_rule: call lowering for struct parameters and results; no change to the inliner heuristics for scalars.
-
-- [ ] TODO-5696: A `string` field read through an indexed vector element binds as `string`
-  - owner: ai
-  - status: deferred
-  - created_at: 2026-11-06
-  - phase: Web server, HTTP layer (found while building Router)
-  - parallel_track: collections-fields
-  - scope: With `Item { [string] name{""} ... }` and `[vector<Item> mut] items` as a struct field, `[string] name{this.items[0i32].name}` in a method is rejected with `binding initializer type mismatch`, at the root and in a namespace. Inside a stdlib namespace the same read compiled but faulted at run time (`invalid heap free address`), apparently because the indexed element is copied out through `/std/collections/vector/at__t...` and destroyed with its `Function` field. `/std/http` `Route` stores `StringView`s instead, which read correctly.
-  - acceptance:
-    - the `string` field read binds and runs on VM and optexe; reading a field of an element that also holds a `Function` does not copy and destroy the element
-    - full release gate green
-  - stop_rule: field reads through indexed elements of vector fields.
 
 - [ ] TODO-5688: Calls require the callee's whole active effect set
   - owner: ai

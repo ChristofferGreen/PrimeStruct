@@ -609,3 +609,24 @@ TEST_CASE("this fields and method results pass to struct parameters") {
       "  [return<i32>]\n  measure() {\n    return(name_length(this.pick()) + name_length(this.line))\n  }\n}\n";
   CHECK(exitOf("  [Holder mut] h{Holder{}}\n  [i32] grown{h.grow(textOf(\"abc\"))}\n  return(grown + h.measure())", defs) == 3);
 }
+
+// TODO-5696: a `string` field read through an indexed vector element binds as `string`, at the root and in a
+// namespace, including for an element that holds a Function.
+TEST_CASE("string field of an indexed vector element binds as string") {
+  const std::string defs =
+      "import /std/collections/*\n\n"
+      "[struct]\nPlain() {\n  [string] label{\"x\"}\n  [i32] n{4i32}\n}\n\n"
+      "[struct]\nPlainBox() {\n  [vector<Plain> mut] items{vector<Plain>()}\n\n"
+      "  [return<i32> effects(heap_alloc)]\n  run() {\n    this.items.push(Plain{})\n"
+      "    [string] s{this.items[0i32].label}\n    return(this.items[0i32].n)\n  }\n}\n\n"
+      "namespace lib {\n  [struct]\n  Entry() {\n    [string] label{\"x\"}\n    [Function<i32, i32> mut] handler\n  }\n\n"
+      "  [struct]\n  Table() {\n    [vector<Entry> mut] entries{vector<Entry>()}\n\n"
+      "    [mut effects(heap_alloc)]\n    add([Function<i32, i32> move] handler) {\n"
+      "      this.entries.push(Entry{[label] \"tag\", [handler] handler})\n    }\n\n"
+      "    [return<i32> effects(heap_alloc)]\n    call_first() {\n"
+      "      [string] s{this.entries[0i32].label}\n      return(this.entries[0i32].handler(2i32))\n    }\n  }\n}\n";
+  CHECK(exitOf("  [PlainBox mut] p{PlainBox{}}\n  [/lib/Table mut] t{/lib/Table{}}\n"
+               "  t.add(Function<i32, i32>{[]([i32] x) { return(x + 7i32) }})\n"
+               "  return(p.run() + t.call_first() + t.call_first())",
+               defs) == 22);
+}
