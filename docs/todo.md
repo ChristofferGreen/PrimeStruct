@@ -100,6 +100,12 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
+| TODO-5690 | `/std/http` `Response` and its wire form | ready | http-response |
+| TODO-5691 | `/std/http` `Router` dispatch | ready | http-router |
+| TODO-5692 | `/std/http/server` `serve` and `serveUntil` over loopback | blocked | http-server |
+| TODO-5693 | Request-log middleware and the http_hello example on `serve` | blocked | http-example |
+| TODO-5694 | A `String` field passed to a `[String mut]` parameter keeps its type | deferred | struct-field-args |
+| TODO-5695 | Definitions with struct parameters become real calls on the optimizing backends | deferred | ir-real-calls |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
 | TODO-5656 | Thread-safe `SharedString` (atomic count, per-thread string heaps) | deferred | string-concurrency |
 | TODO-5603 | Startup audit: what a launch loads and does | ready | startup |
@@ -137,6 +143,8 @@ of sync with them.
 
 ### Ready Now
 
+- TODO-5690 (http-response): `/std/http` `Response` and its wire form
+- TODO-5691 (http-router): `/std/http` `Router` dispatch
 - TODO-5603 (startup): startup audit: what a launch loads and does
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
@@ -145,11 +153,15 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5603
-2. TODO-5536
-3. TODO-5535
-4. TODO-5510
-5. TODO-5524
+1. TODO-5690
+2. TODO-5691
+3. TODO-5692
+4. TODO-5693
+5. TODO-5603
+6. TODO-5536
+7. TODO-5535
+8. TODO-5510
+9. TODO-5524
 
 ### Priority Lanes
 
@@ -166,7 +178,7 @@ of sync with them.
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5669, TODO-5676, TODO-5677; collection fields found by closures: TODO-5681, TODO-5682
-- Web server (single-threaded, built with `--emit=optexe`): move-only handles TODO-5679; Result payloads for socket handles TODO-5527
+- Web server (single-threaded, built with `--emit=optexe`): HTTP layer TODO-5690, TODO-5691, TODO-5692, TODO-5693 (struct-field argument gap TODO-5694, code size per call site TODO-5695); move-only handles TODO-5679; Result payloads for socket handles TODO-5527
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
 ### Execution Queue
@@ -174,6 +186,82 @@ of sync with them.
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 ### Task Blocks
+
+- [ ] TODO-5690: `/std/http` `Response` and its wire form
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-06
+  - phase: Web server, HTTP layer
+  - parallel_track: http-response
+  - depends_on: TODO-5689
+  - scope: `Response` in `/std/http`: a public `status` (200 by default) and `String` `body`; `header(name, value)`, `text(body, contentType)`, `clear()`, and `serialize()`, which gives the status line with its reason phrase, the headers, `Content-Length`, `Connection: close`, a blank line and the body. Add `statusResponse(code)` for the bare error answers that the server sends.
+  - acceptance:
+    - byte-exact VM tests for 200 with a text body, a custom header, 404 with no body, and an unknown status code
+    - full release gate green
+  - stop_rule: building response bytes only.
+
+- [ ] TODO-5691: `/std/http` `Router` dispatch
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-06
+  - phase: Web server, HTTP layer
+  - parallel_track: http-router
+  - depends_on: TODO-5689, TODO-5690
+  - scope: `Router` in `/std/http`: a `vector` of routes holding a method, a literal pattern (exact path, or a prefix ending in `*`) and a `Function<void, Request, Reference<Response>>`. It has `get`, `post`, `put`, `delete`, `route(method, pattern, handler)`, and `call(req, res)`, so a `Router` is itself a handler. The first match wins; a path that matches only under another method answers 405, and no match answers 404.
+  - acceptance:
+    - a VM dispatch test (exact, prefix, 404, 405, a stateful handler counting calls, a `Router` passed to a generic handler parameter); the same on optexe
+    - full release gate green
+  - stop_rule: dispatch only; no path parameters.
+
+- [ ] TODO-5692: `/std/http/server` `serve` and `serveUntil` over loopback
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5691
+  - created_at: 2026-11-06
+  - phase: Web server, HTTP layer
+  - parallel_track: http-server
+  - scope: Add `stdlib/std/http/server.prime` (`import /std/http/server/*`) with `ServerConfig` (port, backlog, maxRequestBytes, accept/read/write timeouts, loopbackOnly, announce), `ServeError` (a `/std/net` code with `why()`), `serve<Handler>(handler, config)` (until `stopRequested()`) and `serveUntil<Handler, Stop>(handler, config, stop)`, each returning `Result<ServeError>`. The loop is single-threaded: accept, read until the parse is complete or rejected, call the handler, write, close. Rejected requests get a bare status, and connection errors close that connection. -4 (EINTR) and accept timeouts re-check the stop condition, and only a failed `listen` returns an error. `announce` prints `listening on <port>` to stderr. Add `/std/os` `logLine(text)` (an unbuffered stderr line from a view).
+  - acceptance:
+    - an optexe loopback test that forks a server on an ephemeral port and checks, with a timeout on every call: a routed 200, a 404, a malformed request (400), an oversized one (413), a client that sends nothing (cut off by the read timeout, server keeps serving), and exit 0 on SIGTERM; exit 77 / skip when sockets are denied
+    - full release gate green
+  - stop_rule: one connection at a time, `Connection: close`; no keep-alive, chunked encoding or TLS.
+
+- [ ] TODO-5693: Request-log middleware and the http_hello example on `serve`
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5692
+  - created_at: 2026-11-06
+  - phase: Web server, HTTP layer
+  - parallel_track: http-example
+  - scope: `withRequestLog<Next>(next)` in `/std/http/server`, a generic closure that logs `METHOD /path STATUS Nms` through `/std/os` `logLine`. Rewrite `examples/apps/http_hello/main.prime` on `Router` + `serve` + `withRequestLog`, and add a `docs/CodeExamples.md` example for a router-based server.
+  - acceptance:
+    - the http_hello loopback test still passes (GET / 200, 404, exit 0 on SIGTERM) and also checks the log line
+    - full release gate green
+  - stop_rule: middleware and example only.
+
+- [ ] TODO-5695: Definitions with struct parameters become real calls on the optimizing backends
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-06
+  - phase: Web server, HTTP layer (found while testing)
+  - parallel_track: ir-real-calls
+  - scope: Only definitions whose parameters and result are all scalar become real calls (`hasOnlyScalarParameters` / `hasScalarOrVoidReturn` in `src/ir_lowerer/IrLowererRecursionAnalysis.cpp`). Every other call is a copy of the callee's body, and so is every call of a struct method with `this`. `/std/http` `parseRequest` (a `StringView` in, a `Request` out) adds about 0.9 MB of C++ per call site under `--emit=optcpp`. A matrix fixture with 22 call sites generated 23 MB and did not compile within 5 minutes, and even a `bool`-returning helper with `string`/`i32` parameters around it was copied at each site. Pass small read-only structs (views, carriers) by value or by address in a real call, at least for the C++ emitters.
+  - acceptance:
+    - a program that calls `parseRequest` from 10 sites generates less than twice the C++ of a program that calls it from one, and gives the same results on VM and optexe
+    - full release gate green
+  - stop_rule: call lowering for struct parameters and results; no change to the inliner heuristics for scalars.
+
+- [ ] TODO-5694: A `String` field passed to a `[String mut]` parameter keeps its type
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-06
+  - phase: Web server, HTTP layer (found while probing)
+  - parallel_track: struct-field-args
+  - scope: Inside a struct method, a member expression passed straight to a free function's struct parameter is typed `array`. Two cases: `appendView(this.head, name)`, where `head` is a `[String mut]` field and `appendView` takes `[String mut] out` (`argument type mismatch for /std/text/view/appendView parameter out: expected /std/text/String got array`), and `header_line_name(this.headerLine(index))`, where a method result is passed to a `[StringView]` parameter (same message). Binding the value to a local first works, and so does calling a method on the field (`this.head.appendBytes(...)`); `/std/http` uses both workarounds.
+  - acceptance:
+    - the call form compiles and runs on VM and optexe; a semantics test
+    - full release gate green
+  - stop_rule: argument typing of struct-field operands only.
 
 - [ ] TODO-5688: Calls require the callee's whole active effect set
   - owner: ai

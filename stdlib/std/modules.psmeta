@@ -57,3 +57,7 @@ source_file = std/os/os.prime
 [module]
 root = /std/net
 source_file = std/net/net.prime
+
+[module]
+root = /std/http
+source_file = std/http/http.prime

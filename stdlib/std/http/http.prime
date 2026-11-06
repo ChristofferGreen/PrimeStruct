@@ -1,0 +1,309 @@
+// HTTP/1.1 requests and responses for single-threaded servers (docs/spec/stdlib-reference.md, /std/http). Pure code:
+// it parses bytes that have already arrived and builds response bytes, so it runs and is tested on the VM. The socket
+// loop is /std/http/server. The subset: `Content-Length` bodies, `Connection: close`; no chunked encoding.
+import /std/collections/*
+import /std/text/*
+import /std/text/view/*
+
+namespace std {
+namespace http {
+
+  // A parsed request: views into the bytes it was parsed from, so it allocates nothing and is valid while those
+  // bytes are. `outcome()` says whether the parse is complete; the other fields are set only when it is.
+  [public struct]
+  Request() {
+    // "GET", "POST", ...
+    [public StringView mut] method{StringView{}}
+    // The request target as sent: the path and the query.
+    [public StringView mut] target{StringView{}}
+    // The target before "?".
+    [public StringView mut] path{StringView{}}
+    // The target after "?", without it; empty when there is none.
+    [public StringView mut] query{StringView{}}
+    // "HTTP/1.1" or "HTTP/1.0".
+    [public StringView mut] version{StringView{}}
+    // The header lines, separated by CR LF, without the blank line that ends them.
+    [public StringView mut] headers{StringView{}}
+    // The `Content-Length` bytes after the head.
+    [public StringView mut] body{StringView{}}
+    [i32 mut] outcomeCode{1i32}
+    [i32 mut] byteCount{0i32}
+
+    // 0 when the request is complete, 1 when more bytes are needed, or the status to answer when the bytes are not an
+    // acceptable request: 400 (malformed), 413 (body too large), 501 (Transfer-Encoding), 505 (HTTP version).
+    [return<i32>]
+    outcome() {
+      return(this.outcomeCode)
+    }
+
+    [return<bool>]
+    isComplete() {
+      return(this.outcomeCode == 0i32)
+    }
+
+    [return<bool>]
+    needsMore() {
+      return(this.outcomeCode == 1i32)
+    }
+
+    // How many bytes the complete request took: the head and the body.
+    [return<i32>]
+    length() {
+      return(this.byteCount)
+    }
+
+    // The value of the first header called `name` (ASCII case-insensitive), without surrounding white space; empty
+    // when there is none.
+    [return<StringView>]
+    header([StringView] name) {
+      [i32 mut] index{0i32}
+      [i32] count{this.headerCount()}
+      while(index < count) {
+        [StringView] line{this.headerLine(index)}
+        [StringView] lineName{header_line_name(line)}
+        if(lineName.equalsIgnoreAsciiCase(name)) {
+          return(header_line_value(line))
+        }
+        index = index + 1i32
+      }
+      return(StringView{})
+    }
+
+    // Whether a header called `name` is present (ASCII case-insensitive).
+    [return<bool>]
+    hasHeader([StringView] name) {
+      [i32 mut] index{0i32}
+      [i32] count{this.headerCount()}
+      while(index < count) {
+        [StringView] line{this.headerLine(index)}
+        [StringView] lineName{header_line_name(line)}
+        if(lineName.equalsIgnoreAsciiCase(name)) {
+          return(true)
+        }
+        index = index + 1i32
+      }
+      return(false)
+    }
+
+    // How many header lines the request has.
+    [return<i32>]
+    headerCount() {
+      if(this.headers.empty()) {
+        return(0i32)
+      }
+      return(this.headers.splitCount(textOf("\r\n")))
+    }
+
+    // The name of header line `index` as sent.
+    [return<StringView>]
+    headerName([i32] index) {
+      [StringView] line{this.headerLine(index)}
+      return(header_line_name(line))
+    }
+
+    // The value of header line `index`, without surrounding white space.
+    [return<StringView>]
+    headerValue([i32] index) {
+      [StringView] line{this.headerLine(index)}
+      return(header_line_value(line))
+    }
+
+    [return<StringView>]
+    headerLine([i32] index) {
+      return(this.headers.splitPart(textOf("\r\n"), index))
+    }
+  }
+
+  // The part of a header line before its colon.
+  [return<StringView>]
+  header_line_name([StringView] line) {
+    [i32] colon{line.indexOfByte(58u8)}
+    if(colon < 0i32) {
+      return(line)
+    }
+    return(line.slice(0i32, colon))
+  }
+
+  // The part of a header line after its colon, trimmed.
+  [return<StringView>]
+  header_line_value([StringView] line) {
+    [i32] colon{line.indexOfByte(58u8)}
+    if(colon < 0i32) {
+      return(StringView{})
+    }
+    return(line.slice(colon + 1i32, line.count()).trim())
+  }
+
+  // A request that is not complete: `code` is 1 (need more bytes) or the status to answer.
+  [return<Request>]
+  incomplete_request([i32] code) {
+    return(Request{[outcomeCode] code})
+  }
+
+  // Whether `text` is a method token: one or more ASCII capital letters.
+  [return<bool>]
+  is_method_token([StringView] text) {
+    if(text.empty()) {
+      return(false)
+    }
+    [i32 mut] index{0i32}
+    while(index < text.count()) {
+      [u8] byte{text.byteAt(index)}
+      if(byte < 65u8 || byte > 90u8) {
+        return(false)
+      }
+      index = index + 1i32
+    }
+    return(true)
+  }
+
+  // Whether `text` is a header name: one or more visible ASCII bytes other than the colon.
+  [return<bool>]
+  is_header_name([StringView] text) {
+    if(text.empty()) {
+      return(false)
+    }
+    [i32 mut] index{0i32}
+    while(index < text.count()) {
+      [u8] byte{text.byteAt(index)}
+      if(byte <= 32u8 || byte >= 127u8 || byte == 58u8) {
+        return(false)
+      }
+      index = index + 1i32
+    }
+    return(true)
+  }
+
+  // Whether `text` is one or more ASCII digits.
+  [return<bool>]
+  is_digits([StringView] text) {
+    if(text.empty()) {
+      return(false)
+    }
+    [i32 mut] index{0i32}
+    while(index < text.count()) {
+      [u8] byte{text.byteAt(index)}
+      if(byte < 48u8 || byte > 57u8) {
+        return(false)
+      }
+      index = index + 1i32
+    }
+    return(true)
+  }
+
+  // 0 when every header line is well formed, else 400.
+  [return<i32>]
+  check_header_lines([StringView] headers) {
+    if(headers.empty()) {
+      return(0i32)
+    }
+    [i32] count{headers.splitCount(textOf("\r\n"))}
+    [i32 mut] index{0i32}
+    while(index < count) {
+      [StringView] line{headers.splitPart(textOf("\r\n"), index)}
+      [i32] colon{line.indexOfByte(58u8)}
+      if(colon <= 0i32) {
+        return(400i32)
+      }
+      [StringView] name{line.slice(0i32, colon)}
+      if(!is_header_name(name)) {
+        return(400i32)
+      }
+      index = index + 1i32
+    }
+    return(0i32)
+  }
+
+  // Parses one request from the start of `text`, the bytes that have arrived so far. A body over `maxBodyBytes`
+  // answers 413. Bytes after a complete request (a pipelined next one) are left alone: see `length()`.
+  [public return<Request>]
+  parseRequest([StringView] text, [i32] maxBodyBytes) {
+    [i32] headEnd{text.indexOf(textOf("\r\n\r\n"))}
+    [i32] lineEnd{text.indexOf(textOf("\r\n"))}
+    if(headEnd < 0i32) {
+      // A request line that is already complete can be rejected before the rest arrives.
+      if(lineEnd < 0i32) {
+        return(incomplete_request(1i32))
+      }
+    }
+    [StringView] line{text.slice(0i32, lineEnd)}
+    [i32] firstSpace{line.indexOfByte(32u8)}
+    if(firstSpace <= 0i32) {
+      return(incomplete_request(400i32))
+    }
+    [StringView] method{line.slice(0i32, firstSpace)}
+    [StringView] afterMethod{line.slice(firstSpace + 1i32, line.count())}
+    [i32] secondSpace{afterMethod.indexOfByte(32u8)}
+    if(secondSpace <= 0i32 || !is_method_token(method)) {
+      return(incomplete_request(400i32))
+    }
+    [StringView] target{afterMethod.slice(0i32, secondSpace)}
+    [StringView] version{afterMethod.slice(secondSpace + 1i32, afterMethod.count())}
+    if(target.byteAt(0i32) != 47u8 || version.indexOfByte(32u8) >= 0i32) {
+      return(incomplete_request(400i32))
+    }
+    if(!version.equalsText("HTTP/1.1") && !version.equalsText("HTTP/1.0")) {
+      if(version.startsWith(textOf("HTTP/"))) {
+        return(incomplete_request(505i32))
+      }
+      return(incomplete_request(400i32))
+    }
+    if(headEnd < 0i32) {
+      return(incomplete_request(1i32))
+    }
+    [StringView] headers{if(headEnd > lineEnd, then() { text.slice(lineEnd + 2i32, headEnd) }, else() { StringView{} })}
+    [i32] headerCheck{check_header_lines(headers)}
+    if(headerCheck != 0i32) {
+      return(incomplete_request(headerCheck))
+    }
+    [Request] head{Request{[headers] headers}}
+    if(head.hasHeader(textOf("Transfer-Encoding"))) {
+      return(incomplete_request(501i32))
+    }
+    [i32 mut] bodyLength{0i32}
+    if(head.hasHeader(textOf("Content-Length"))) {
+      [StringView] lengthText{head.header(textOf("Content-Length"))}
+      if(!is_digits(lengthText) || lengthText.count() > 9i32) {
+        if(is_digits(lengthText)) {
+          return(incomplete_request(413i32))
+        }
+        return(incomplete_request(400i32))
+      }
+      lengthText.parseI32Into(bodyLength)
+    }
+    if(bodyLength > maxBodyBytes) {
+      return(incomplete_request(413i32))
+    }
+    [i32] bodyStart{headEnd + 4i32}
+    if(text.count() - bodyStart < bodyLength) {
+      return(incomplete_request(1i32))
+    }
+    [i32] question{target.indexOfByte(63u8)}
+    [i32] pathEnd{if(question >= 0i32, then() { question }, else() { target.count() })}
+    [i32] queryStart{if(question >= 0i32, then() { question + 1i32 }, else() { target.count() })}
+    return(Request{[method] method, [target] target, [path] target.slice(0i32, pathEnd),
+                   [query] target.slice(queryStart, target.count()), [version] version, [headers] headers,
+                   [body] text.slice(bodyStart, bodyStart + bodyLength), [outcomeCode] 0i32,
+                   [byteCount] bodyStart + bodyLength})
+  }
+
+  // Parses one request from raw bytes, which may end inside a UTF-8 sequence that has not fully arrived. Bytes that
+  // are not UTF-8 answer 400.
+  [public return<Request>]
+  parseRequestBytes([ReadSlice<u8>] bytes, [i32] maxBodyBytes) {
+    [i32] count{bytes.count()}
+    [i32] bad{utf8ErrorOffset(bytes.data, count)}
+    [i32] validCount{if(bad < 0i32, then() { count }, else() { bad })}
+    [Request] request{parseRequest(StringView{[data] bytes.data, [fieldLength] validCount}, maxBodyBytes)}
+    if(bad < 0i32 || !request.needsMore()) {
+      return(request)
+    }
+    // More bytes may finish the sequence that starts at `bad`; a longer invalid run can never be valid.
+    if(count - bad < 4i32) {
+      return(incomplete_request(1i32))
+    }
+    return(incomplete_request(400i32))
+  }
+
+}
+}

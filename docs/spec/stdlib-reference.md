@@ -531,3 +531,33 @@ main() {
   return(convert<i32>(count))
 }
 ```
+
+### HTTP (`/std/http`)
+
+`import /std/http/*` parses HTTP/1.1 requests and builds responses. It is pure code over bytes that have already
+arrived, so it runs on the VM and every backend. The subset is deliberately small: bodies by `Content-Length` only,
+one request per connection (`Connection: close`), and no chunked encoding, keep-alive or TLS.
+
+- `parseRequest(text, maxBodyBytes) -> Request` parses one request from the start of a `StringView`. The request's
+  `outcome()` is 0 when it is complete (`isComplete()`), 1 when more bytes are needed (`needsMore()`), or the status
+  to answer:
+  - 400 for a malformed request line, header line or `Content-Length`;
+  - 413 for a body over `maxBodyBytes`;
+  - 501 for any `Transfer-Encoding`;
+  - 505 for a version other than `HTTP/1.0` or `HTTP/1.1`.
+
+  A request line that is already wrong is rejected before the head is complete. `length()` is how many bytes the
+  complete request took; bytes after it are left alone.
+- `parseRequestBytes(bytes, maxBodyBytes)` does the same over a `ReadSlice<u8>`, such as a receive buffer. Bytes that
+  end inside a UTF-8 sequence need more; bytes that cannot be UTF-8 answer 400.
+- `Request` is a carrier. Its fields are `StringView`s into the parsed bytes, so it allocates nothing and is valid
+  while those bytes are:
+  - `method`, `target`, `path` (the target before `?`), `query` (after it, without the `?`), `version` and `body`;
+  - `headers`, the header lines as sent.
+
+  `header(name)` gives the value of the first header with that name, compared ASCII case-insensitively, without
+  surrounding white space, or an empty view when the header is absent. The other header accessors are
+  `hasHeader(name)`, `headerCount()`, `headerName(i)` and `headerValue(i)`. Header lookups scan the header block; there
+  is no header table.
+- Each call of a function that takes a struct is a copy of its body in the lowered program (docs/spec/vm-design.md,
+  Real calls). A program should therefore parse in one place, such as the server loop, rather than at many call sites.

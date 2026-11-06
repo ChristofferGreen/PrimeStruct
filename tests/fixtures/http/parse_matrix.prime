@@ -1,0 +1,194 @@
+// The /std/http request parser over good, partial and malformed requests (tests/unit/backend_host/test_http.cpp).
+// The exit code is the number of the first case that failed, or 0. Every case goes through one parse call: each
+// call site of the parser is a copy of it in the lowered program.
+import /std/collections/*
+import /std/http/*
+import /std/text/*
+import /std/text/view/*
+
+// The bytes of case `index`; an empty string past the last case.
+[return<string>]
+case_text([i32] index) {
+  // Complete requests.
+  if(index == 1i32) {
+    return("GET /items?id=7&sort=asc HTTP/1.1\r\nHost: example\r\nAccept:   text/plain  \r\n\r\n")
+  }
+  if(index == 2i32) {
+    return("POST /submit HTTP/1.0\r\nContent-Length: 11\r\n\r\nhello=worldGET / HTTP/1.1\r\n")
+  }
+  if(index == 3i32) {
+    return("GET / HTTP/1.1\r\n\r\n")
+  }
+  // Need more bytes: nothing, half a request line, a head without its blank line, a body still arriving.
+  if(index == 10i32) {
+    return("")
+  }
+  if(index == 11i32) {
+    return("GET /in")
+  }
+  if(index == 12i32) {
+    return("GET / HTTP/1.1\r\nHost: a\r\n")
+  }
+  if(index == 13i32) {
+    return("POST / HTTP/1.1\r\nContent-Length: 10\r\n\r\n12345")
+  }
+  // 400: malformed request lines and headers.
+  if(index == 20i32) {
+    return("GET\r\n\r\n")
+  }
+  if(index == 21i32) {
+    return("get / HTTP/1.1\r\n\r\n")
+  }
+  if(index == 22i32) {
+    return("GET  / HTTP/1.1\r\n\r\n")
+  }
+  if(index == 23i32) {
+    return("GET relative HTTP/1.1\r\n\r\n")
+  }
+  if(index == 24i32) {
+    return("GET / HTTP/1.1 extra\r\n\r\n")
+  }
+  if(index == 25i32) {
+    return("GET / FTP/1.1\r\n\r\n")
+  }
+  if(index == 26i32) {
+    return("GET / HTTP/1.1\r\nNoColon\r\n\r\n")
+  }
+  if(index == 27i32) {
+    return("GET / HTTP/1.1\r\n: empty\r\n\r\n")
+  }
+  if(index == 28i32) {
+    return("GET / HTTP/1.1\r\nBad Name: x\r\n\r\n")
+  }
+  if(index == 29i32) {
+    return("POST / HTTP/1.1\r\nContent-Length: -1\r\n\r\n")
+  }
+  if(index == 30i32) {
+    return("POST / HTTP/1.1\r\nContent-Length: 1x\r\n\r\n")
+  }
+  // A request line that is already bad is rejected before the head is complete.
+  if(index == 31i32) {
+    return("BROKEN\r\nHost:")
+  }
+  // 413: a body over the limit (64 bytes here), or a length too long to be a number.
+  if(index == 40i32) {
+    return("POST / HTTP/1.1\r\nContent-Length: 65\r\n\r\n")
+  }
+  if(index == 41i32) {
+    return("POST / HTTP/1.1\r\nContent-Length: 99999999999\r\n\r\n")
+  }
+  // 501: chunked or any other transfer coding. 505: another HTTP version.
+  if(index == 50i32) {
+    return("POST / HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n")
+  }
+  if(index == 51i32) {
+    return("GET / HTTP/2.0\r\n\r\n")
+  }
+  return("")
+}
+
+// The outcome case `index` must have: 0 complete, 1 need more, or the status to answer.
+[return<i32>]
+case_outcome([i32] index) {
+  if(index < 10i32) {
+    return(0i32)
+  }
+  if(index < 20i32) {
+    return(1i32)
+  }
+  if(index < 40i32) {
+    return(400i32)
+  }
+  if(index < 50i32) {
+    return(413i32)
+  }
+  if(index == 50i32) {
+    return(501i32)
+  }
+  return(505i32)
+}
+
+// Whether `index` names a case.
+[return<bool>]
+is_case([i32] index) {
+  return((index >= 1i32 && index <= 3i32) || (index >= 10i32 && index <= 13i32) || (index >= 20i32 && index <= 31i32) ||
+         (index >= 40i32 && index <= 41i32) || (index >= 50i32 && index <= 51i32))
+}
+
+// The fields of the complete cases.
+[return<bool>]
+fields_match([i32] index, [Request] request, [i32] byteCount) {
+  if(index == 1i32) {
+    [StringView] accept{request.header(textOf("ACCEPT"))}
+    [StringView] firstName{request.headerName(0i32)}
+    [StringView] secondValue{request.headerValue(1i32)}
+    return(request.method.equalsText("GET") && request.path.equalsText("/items") &&
+           request.query.equalsText("id=7&sort=asc") && request.target.equalsText("/items?id=7&sort=asc") &&
+           request.version.equalsText("HTTP/1.1") && accept.equalsText("text/plain") && request.headerCount() == 2i32 &&
+           firstName.equalsText("Host") && secondValue.equalsText("text/plain") && request.body.empty() &&
+           request.length() == byteCount)
+  }
+  if(index == 2i32) {
+    // The pipelined "GET / HTTP/1.1\r\n" after the body is not part of this request.
+    return(request.method.equalsText("POST") && request.body.equalsText("hello=world") && request.query.empty() &&
+           request.length() == byteCount - 16i32)
+  }
+  if(index == 3i32) {
+    [StringView] host{request.header(textOf("Host"))}
+    return(host.empty() && !request.hasHeader(textOf("Host")) && request.headerCount() == 0i32 &&
+           request.path.equalsText("/"))
+  }
+  return(true)
+}
+
+// Bytes that end inside a UTF-8 sequence need more; bytes that cannot become UTF-8 answer 400.
+[return<bool> effects(heap_alloc)]
+partial_code_point_needs_more() {
+  [vector<u8> mut] bytes{vector<u8>()}
+  [String] text{stringFrom("GET /")}
+  [i32 mut] index{0i32}
+  while(index < text.count()) {
+    bytes.push(text.byteAt(index))
+    index = index + 1i32
+  }
+  // The first byte of a two-byte sequence, then (second round) bytes that cannot continue it.
+  bytes.push(195u8)
+  [i32 mut] round{0i32}
+  [bool mut] passed{true}
+  while(round < 2i32) {
+    [Request] request{parseRequestBytes(bytes.slice(0i32, bytes.count()), 64i32)}
+    if(round == 0i32) {
+      passed = passed && request.needsMore()
+      bytes.push(32u8)
+      bytes.push(255u8)
+      bytes.push(32u8)
+      bytes.push(32u8)
+    } else {
+      passed = passed && request.outcome() == 400i32
+    }
+    round = round + 1i32
+  }
+  return(passed)
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [i32 mut] index{1i32}
+  while(index <= 51i32) {
+    if(is_case(index)) {
+      [String] text{stringFrom(case_text(index))}
+      [Request] request{parseRequest(text.view(), 64i32)}
+      if(request.outcome() != case_outcome(index)) {
+        return(index)
+      }
+      if(!fields_match(index, request, text.count())) {
+        return(index)
+      }
+    }
+    index = index + 1i32
+  }
+  if(!partial_code_point_needs_more()) {
+    return(60i32)
+  }
+  return(0i32)
+}

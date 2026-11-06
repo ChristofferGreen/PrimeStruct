@@ -2142,6 +2142,7 @@ are left unarchived.
 | TODO-5685 | Loopback echo test over `/std/net` on optexe | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5686 | HTTP hello-world example over `/std/net` | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5687 | Calls require the effects their callee declares | [2026-11.md](todo_archive/2026-11.md) | 2026-11-06 |
+| TODO-5689 | `/std/http` request parser with a carrier `Request` | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

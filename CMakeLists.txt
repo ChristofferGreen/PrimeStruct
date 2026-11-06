@@ -1353,6 +1353,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/backend_host/test_string_conformance.cpp
     tests/unit/backend_host/test_cpp_native_ui.cpp
     tests/unit/backend_host/test_net.cpp
+    tests/unit/backend_host/test_http.cpp
   )
   add_dependencies(PrimeStruct_cpp_host_call_tests primec)
   target_include_directories(PrimeStruct_cpp_host_call_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
@@ -1409,6 +1410,15 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_net
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+  # /std/http: the request parser, responses and the router (tests/unit/backend_host/test_http.cpp).
+  add_test(
+    NAME PrimeStruct_http
+    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+            "--test-suite=primestruct.backend.http"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_http
+                       PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
 
   # Native UI C ABI on the headless backend, and its ScriptEngine bindings.
   add_executable(PrimeStruct_native_ui_tests
