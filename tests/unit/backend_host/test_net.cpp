@@ -124,4 +124,17 @@ TEST_CASE("std/net builds with the POSIX shim on optexe and is unbound on the VM
   CHECK_MESSAGE(vm.diagnostics.find("unbound host function: net_listen") != std::string::npos, vm.diagnostics);
 }
 
+TEST_CASE("a loopback echo through std/net round-trips bytes with timeouts on every call") {
+  // One process, one thread, an ephemeral port on 127.0.0.1 (no firewall prompt, no window), and a timeout on every
+  // call, so a broken step fails within seconds instead of hanging. The program's exit code names the failed step
+  // (tests/fixtures/host_calls/net_echo.prime); 77 means the environment forbids sockets.
+  const std::string exe = buildWithNetShim("net_echo");
+  const int exitCode = run(shellQuote(exe));
+  if (exitCode == 77) {
+    MESSAGE("skipped: socket() is not permitted here (EPERM or EACCES)");
+    return;
+  }
+  CHECK_MESSAGE(exitCode == 0, "net_echo failed at step " << exitCode);
+}
+
 TEST_SUITE_END();
