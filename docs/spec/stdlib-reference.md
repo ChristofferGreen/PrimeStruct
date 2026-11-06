@@ -559,5 +559,15 @@ one request per connection (`Connection: close`), and no chunked encoding, keep-
   surrounding white space, or an empty view when the header is absent. The other header accessors are
   `hasHeader(name)`, `headerCount()`, `headerName(i)` and `headerValue(i)`. Header lookups scan the header block; there
   is no header table.
+- `Response` is built by a handler and serialized by the server:
+  - `status` is 200 unless set, and `body` is a `String`;
+  - `header(name, value)` adds a header line, dropping CR and LF bytes so that a value cannot end the head;
+  - `text(body, contentType)` replaces the body and adds `Content-Type`;
+  - `clear()` makes it an empty 200 again and keeps its buffers.
+
+  `serialize()` gives the bytes to send: the status line with its reason phrase (`reasonPhrase(code)`, empty for codes
+  it does not know), the header lines, `Content-Length`, `Connection: close`, a blank line and the body. Statuses 1xx,
+  204 and 304 get neither a `Content-Length` nor a body. `statusResponse(code)` is the bare answer to a rejected
+  request.
 - Each call of a function that takes a struct is a copy of its body in the lowered program (docs/spec/vm-design.md,
   Real calls). A program should therefore parse in one place, such as the server loop, rather than at many call sites.

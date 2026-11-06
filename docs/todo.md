@@ -100,7 +100,6 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5690 | `/std/http` `Response` and its wire form | ready | http-response |
 | TODO-5691 | `/std/http` `Router` dispatch | ready | http-router |
 | TODO-5692 | `/std/http/server` `serve` and `serveUntil` over loopback | blocked | http-server |
 | TODO-5693 | Request-log middleware and the http_hello example on `serve` | blocked | http-example |
@@ -143,7 +142,6 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5690 (http-response): `/std/http` `Response` and its wire form
 - TODO-5691 (http-router): `/std/http` `Router` dispatch
 - TODO-5603 (startup): startup audit: what a launch loads and does
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
@@ -153,15 +151,14 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5690
-2. TODO-5691
-3. TODO-5692
-4. TODO-5693
-5. TODO-5603
-6. TODO-5536
-7. TODO-5535
-8. TODO-5510
-9. TODO-5524
+1. TODO-5691
+2. TODO-5692
+3. TODO-5693
+4. TODO-5603
+5. TODO-5536
+6. TODO-5535
+7. TODO-5510
+8. TODO-5524
 
 ### Priority Lanes
 
@@ -178,7 +175,7 @@ of sync with them.
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5669, TODO-5676, TODO-5677; collection fields found by closures: TODO-5681, TODO-5682
-- Web server (single-threaded, built with `--emit=optexe`): HTTP layer TODO-5690, TODO-5691, TODO-5692, TODO-5693 (struct-field argument gap TODO-5694, code size per call site TODO-5695); move-only handles TODO-5679; Result payloads for socket handles TODO-5527
+- Web server (single-threaded, built with `--emit=optexe`): HTTP layer TODO-5691, TODO-5692, TODO-5693 (struct-field argument gap TODO-5694, code size per call site TODO-5695); move-only handles TODO-5679; Result payloads for socket handles TODO-5527
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
 ### Execution Queue
@@ -186,19 +183,6 @@ of sync with them.
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 ### Task Blocks
-
-- [ ] TODO-5690: `/std/http` `Response` and its wire form
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-06
-  - phase: Web server, HTTP layer
-  - parallel_track: http-response
-  - depends_on: TODO-5689
-  - scope: `Response` in `/std/http`: a public `status` (200 by default) and `String` `body`; `header(name, value)`, `text(body, contentType)`, `clear()`, and `serialize()`, which gives the status line with its reason phrase, the headers, `Content-Length`, `Connection: close`, a blank line and the body. Add `statusResponse(code)` for the bare error answers that the server sends.
-  - acceptance:
-    - byte-exact VM tests for 200 with a text body, a custom header, 404 with no body, and an unknown status code
-    - full release gate green
-  - stop_rule: building response bytes only.
 
 - [ ] TODO-5691: `/std/http` `Router` dispatch
   - owner: ai

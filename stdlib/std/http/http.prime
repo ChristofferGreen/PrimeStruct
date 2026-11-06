@@ -305,5 +305,159 @@ namespace http {
     return(incomplete_request(400i32))
   }
 
+
+  // A response under construction. `serve` reuses one, calling `clear()` between requests.
+  [public struct]
+  Response() {
+    // The status code, 200 unless the handler sets another.
+    [public i32 mut] status{200i32}
+    // The body bytes.
+    [public String mut] body{String{}}
+    // The header lines added so far, each ending in CR LF.
+    [public String mut] headerLines{String{}}
+
+    // Adds a header line. CR and LF bytes are dropped from `name` and `value`, so a header cannot end the head early.
+    // `Content-Length` and `Connection` are written by `serialize()`; do not add them.
+    [mut effects(heap_alloc)]
+    header([StringView] name, [StringView] value) {
+      this.appendHeaderText(name)
+      this.headerLines.append(": ")
+      this.appendHeaderText(value)
+      this.headerLines.append("\r\n")
+    }
+
+    // Appends `text` to the header lines without its CR and LF bytes. A method rather than a function taking the
+    // field: a field passed to a `[String mut]` parameter is mistyped (TODO-5694).
+    [mut effects(heap_alloc)]
+    appendHeaderText([StringView] text) {
+      [i32 mut] index{0i32}
+      while(index < text.count()) {
+        [u8] byte{text.byteAt(index)}
+        if(byte != 13u8 && byte != 10u8) {
+          this.headerLines.pushByte(byte)
+        }
+        index = index + 1i32
+      }
+    }
+
+    // Replaces the body with `text` and sets its `Content-Type`.
+    [mut effects(heap_alloc)]
+    text([StringView] text, [StringView] contentType) {
+      this.body.clear()
+      this.body.appendBytes(text.data, text.count())
+      this.header(textOf("Content-Type"), contentType)
+    }
+
+    // Back to an empty 200 response, keeping the buffers for the next request.
+    [mut]
+    clear() {
+      this.status = 200i32
+      this.body.clear()
+      this.headerLines.clear()
+    }
+
+    // The response as sent: the status line, the header lines, `Content-Length` (except for 1xx, 204 and 304, which
+    // have no body), `Connection: close`, a blank line and the body.
+    [return<String> effects(heap_alloc)]
+    serialize() {
+      [String mut] out{String{}}
+      append_status_line(out, this.status)
+      out.appendBytes(this.headerLines.data, this.headerLines.count())
+      [bool] bodyless{status_has_no_body(this.status)}
+      if(!bodyless) {
+        out.append("Content-Length: ")
+        out.appendI64(convert<i64>(this.body.count()))
+        out.append("\r\n")
+      }
+      out.append("Connection: close\r\n\r\n")
+      if(!bodyless) {
+        out.appendBytes(this.body.data, this.body.count())
+      }
+      return(out)
+    }
+  }
+
+  // Whether a response with `code` has no body.
+  [return<bool>]
+  status_has_no_body([i32] code) {
+    return((code >= 100i32 && code < 200i32) || code == 204i32 || code == 304i32)
+  }
+
+  // Appends "HTTP/1.1 <code> <reason>\r\n".
+  [effects(heap_alloc)]
+  append_status_line([String mut] out, [i32] code) {
+    out.append("HTTP/1.1 ")
+    out.appendI64(convert<i64>(code))
+    out.append(" ")
+    out.append(reasonPhrase(code))
+    out.append("\r\n")
+  }
+
+  // The reason phrase of a status code (RFC 9110), or "" for a code without one here.
+  [public return<string>]
+  reasonPhrase([i32] code) {
+    if(code == 200i32) {
+      return("OK")
+    }
+    if(code == 201i32) {
+      return("Created")
+    }
+    if(code == 204i32) {
+      return("No Content")
+    }
+    if(code == 301i32) {
+      return("Moved Permanently")
+    }
+    if(code == 302i32) {
+      return("Found")
+    }
+    if(code == 304i32) {
+      return("Not Modified")
+    }
+    if(code == 400i32) {
+      return("Bad Request")
+    }
+    if(code == 401i32) {
+      return("Unauthorized")
+    }
+    if(code == 403i32) {
+      return("Forbidden")
+    }
+    if(code == 404i32) {
+      return("Not Found")
+    }
+    if(code == 405i32) {
+      return("Method Not Allowed")
+    }
+    if(code == 408i32) {
+      return("Request Timeout")
+    }
+    if(code == 413i32) {
+      return("Content Too Large")
+    }
+    if(code == 500i32) {
+      return("Internal Server Error")
+    }
+    if(code == 501i32) {
+      return("Not Implemented")
+    }
+    if(code == 503i32) {
+      return("Service Unavailable")
+    }
+    if(code == 505i32) {
+      return("HTTP Version Not Supported")
+    }
+    return("")
+  }
+
+  // A bare response with `code` and no body, as the server sends for a request it rejects.
+  [public return<String> effects(heap_alloc)]
+  statusResponse([i32] code) {
+    [String mut] out{String{}}
+    append_status_line(out, code)
+    out.append("Content-Length: 0\r\nConnection: close\r\n\r\n")
+    return(out)
+  }
+
 }
 }
