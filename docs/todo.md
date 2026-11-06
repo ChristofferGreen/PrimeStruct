@@ -108,6 +108,17 @@ of sync with them.
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5668 | Struct fields of collection type keep their elements across method calls | deferred | collections-fields |
 | TODO-5669 | `Function` from named definitions and at call sites | deferred | closures |
+| TODO-5670 | A `[ref]`-captured vector of `Function`-holding structs passes to a parameter correctly | ready | closures-ref-captures |
+| TODO-5671 | A method call on a field of an indexed element binds to that field | ready | parser-member-chains |
+| TODO-5672 | A scalar call result is not a borrow of the call's view arguments | ready | slice-loans |
+| TODO-5673 | A callable field reached through `this` is called, not looked up as a method | blocked | closures-call-resolution |
+| TODO-5674 | `==` on a view taken from a `String` parameter compiles | ready | stringview-equality |
+| TODO-5675 | Struct fields that are vectors of structs lower on VM and native | ready | collections-fields |
+| TODO-5676 | Lambdas can state their return type | deferred | closures-return-types |
+| TODO-5677 | A `Function` whose closure holds a same-typed `Function` copies and destroys | deferred | closures-lifecycle |
+| TODO-5678 | `Pointer<u8>` host parameters reach C++ host functions as real byte pointers | ready | host-bytes |
+| TODO-5679 | Stdlib structs can be move-only | deferred | lifecycle-move-only |
+| TODO-5680 | `/std/os`: environment, monotonic clock and a SIGTERM stop flag | ready | os-host |
 | TODO-5510 | `return` returns from unit-variant pick arms correctly | ready | control-returns |
 | TODO-5524 | Int-backed error structs round-trip through stdlib Result sums | ready | result-error-structs |
 | TODO-5523 | A Result-returning main exits with its error code | deferred | result-main |
@@ -137,6 +148,9 @@ of sync with them.
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5510 (control-returns): `return` returns from unit-variant pick arms correctly
 - TODO-5524 (result-error-structs): int-backed error structs round-trip through stdlib Result sums
+- TODO-5670 (closures-ref-captures): a `[ref]`-captured vector of `Function`-holding structs passes to a parameter correctly
+- TODO-5671 (parser-member-chains): a method call on a field of an indexed element binds to that field
+- TODO-5672 (slice-loans): a scalar call result is not a borrow of the call's view arguments
 
 ### Immediate Next 10
 
@@ -145,6 +159,11 @@ of sync with them.
 3. TODO-5535
 4. TODO-5510
 5. TODO-5524
+6. TODO-5670
+7. TODO-5671
+8. TODO-5672
+9. TODO-5674
+10. TODO-5675
 
 ### Priority Lanes
 
@@ -159,7 +178,8 @@ of sync with them.
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
-- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5669; collection fields found by closures: TODO-5668
+- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5669, TODO-5676, TODO-5677; collection fields found by closures: TODO-5668
+- Web server (single-threaded, Docker image built with `--emit=optexe`): handler and router blockers TODO-5670, TODO-5671, TODO-5672, TODO-5674, TODO-5675, then TODO-5673; network and OS TODO-5678, TODO-5680, TODO-5679; Result payloads for socket handles TODO-5527
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
 ### Execution Queue
@@ -191,6 +211,147 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - a router of named handlers and a closure passed straight to a `[Function<i32, i32> mut]` parameter run on VM, native and optexe; negative test for a signature mismatch
     - full release gate green
   - stop_rule: conversion sites only; no change to the `Function` representation.
+
+- [ ] TODO-5670: A `[ref]`-captured vector of `Function`-holding structs passes to a parameter correctly
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-06
+  - phase: Web server blockers (found probing closures for a request router)
+  - parallel_track: closures-ref-captures
+  - scope: With `[struct] Route { [i32] code  [Function<i32, i32> mut] handler }`, a local `[vector<Route> mut] routes{...}` holding two routes, `call_all([vector<Route> mut] routes, [i32] input)` that sums `routes[i].handler(input)`, and `[mut] app{[ref routes]([i32] x) { return(call_all(routes, x)) }}`, `app(10i32)` compiles but faults on VM and optexe with `VM error: unaligned indirect address in IR: 68`. Calling `call_all(routes, 10i32)` directly returns the right sum, and a `[ref values]` capture of a `vector<i32>` passed to a `[vector<i32> mut]` parameter works, so the fault is in forwarding the closure's reference field when the element type is a struct holding a `Function`. In the same area, indexing a `[ref values]` capture of a `vector<i32>` inside the lambda body (`values[input]`) is rejected with `unknown call target: /std/collections/map/at`.
+  - implementation_notes: ref captures are built in place as `/main__lambdaN{[name] location(name)}` (docs/spec/value-lifecycle.md, Lambdas; `src/semantics/SemanticsValidateLambdaClosures.cpp`); compare the lowered IR of the direct and the closure call with `--dump-stage`.
+  - acceptance:
+    - both repros run on VM, native and optexe with the expected values (matrix cases in `tests/unit/program_matrix/test_program_matrix_closures.cpp`)
+    - full release gate green
+  - stop_rule: forwarding and indexing `[ref]`-captured vectors; no change to capture semantics.
+
+- [ ] TODO-5671: A method call on a field of an indexed element binds to that field
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-06
+  - phase: Web server blockers (found probing closures for a request router)
+  - parallel_track: parser-member-chains
+  - scope: `sum = sum + routes[i].code + routes[i].name.count()` (a `vector` of structs with a `String` field `name`) is rejected with `validateExprMethodCallTarget failed name=count ... receiver=Call:assign`, so `.count()` was attached to the whole rewritten assignment. `return(all[0i32].name.view().count())` is rejected with `unknown call target: view`. A method call after `v[i].field` must apply to that field in every statement shape (assignment, `return`, call arguments) on every backend.
+  - implementation_notes: find whether the parser's postfix chain (`src/parser/ParserExpr.cpp`) or the operator rewriting of the text filter (`src/text_filter`, the TODO-5519 area) loses the receiver; `--dump-stage` on the repro shows the rewritten form.
+  - acceptance:
+    - parse/IR test of the rewritten form plus both repros running on VM and optexe with the expected values
+    - full release gate green
+  - stop_rule: method chains after an indexed element's field; other operator-rewriting precedence bugs stay in TODO-5519.
+
+- [ ] TODO-5672: A scalar call result is not a borrow of the call's view arguments
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-06
+  - phase: Web server blockers (found probing closures for a request router)
+  - parallel_track: slice-loans
+  - scope: Inside a loop body, `total = total + score(req)` where `req` is a struct of `StringView`s into a block-local `String` and `score` returns `i32` is rejected with `slice escapes via outer binding total (root: buffer)`. The same happens for `total = total + f(buffer.view())`, and for a closure called with such arguments. Going through a local (`[i32] got{score(req)}` then `total = total + got`) passes. A call whose result type cannot hold a borrow (numbers, `bool`, structs without view fields) must not make its result a loan on the arguments' roots. Every request loop that counts or sums hits this.
+  - implementation_notes: call roots of `validateSliceLoans` (`src/semantics/SemanticsValidateSliceLoans.cpp`), next to the carrier rules of TODO-5631.
+  - acceptance:
+    - positive tests for an `i32` and a `bool` result of a function and of a closure taking a view and a carrier, assigned to an outer binding; the negative test for a view-returning call stays
+    - full release gate green
+  - stop_rule: result types that cannot carry a borrow; no change to the carrier rules.
+
+- [ ] TODO-5673: A callable field reached through `this` is called, not looked up as a method
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5675
+  - created_at: 2026-11-06
+  - phase: Web server blockers (found probing closures for a request router)
+  - parallel_track: closures-call-resolution
+  - scope: In a method of `[struct] Router { [vector<Route> mut] routes }` (with `Route` holding `[Function<i32, i32> mut] handler`), `this.routes[i].handler(input)` is rejected with `unknown method: /Route/handler`. The same expression on a parameter, `routes[i].handler(input)`, calls the field (docs/spec/value-lifecycle.md, Lambdas: a local, parameter or field whose type has `call`). Member chains that start at `this` must resolve a callable field the same way. Blocked because the `Router` struct itself cannot lower on VM/native until TODO-5675 lands.
+  - acceptance:
+    - a `Router` struct whose method calls `this.routes[i].handler(x)` runs on VM, native and optexe; a semantics test for `this.field(x)` and `this.items[i].field(x)`
+    - full release gate green
+  - stop_rule: call resolution of callable fields through `this`; no new callable forms.
+
+- [ ] TODO-5674: `==` on a view taken from a `String` parameter compiles
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-06
+  - phase: Web server blockers (found probing closures for a request router)
+  - parallel_track: stringview-equality
+  - scope: `==` between two `StringView` bindings works in a function whose parameters are views or that builds them from a local `String`. In `same_field([String] owned, [StringView] wanted) { [StringView] mine{owned.view()} return(mine == wanted) }`, it is rejected with `comparisons require numeric, bool, or string operands`, with or without `effects(heap_alloc)`; `mine.equals(wanted)` works. `==` must resolve to `/StringView/opEqual` whatever the view came from.
+  - acceptance:
+    - the repro and the `owned.view() == wanted` form run on VM and optexe; a semantics test pinning the operator resolution
+    - full release gate green
+  - stop_rule: operator resolution for views of `String` parameters.
+
+- [ ] TODO-5675: Struct fields that are vectors of structs lower on VM and native
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-06
+  - phase: Web server blockers (found probing closures for a request router)
+  - parallel_track: collections-fields
+  - depends_on: TODO-5668 (same lowering; do it first or together)
+  - scope: `[struct] Router { [vector<Route> mut] routes }`, where `Route` is a struct, stops at IR lowering with `vm backend only supports numeric/bool/string vector fields on /Router` (`native backend ...` for native and optexe). A request router, a server-state struct holding its connection table, and a closure that captures a `vector` of structs by value all need this. Lift the restriction to struct element types (including structs holding `String` and `Function` fields): construction, `push`, `count`, `[i]`, field access and method calls through the element, copy and destroy.
+  - acceptance:
+    - the `Router` shape (add routes, look one up, call its handler) and a struct holding `vector<Named>` (`i32` + `String` fields) run on VM, native and optexe with the expected values and no leaked or double-freed blocks
+    - full release gate green
+  - stop_rule: vector-of-struct fields; maps and other collection fields stay as they are.
+
+- [ ] TODO-5676: Lambdas can state their return type
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-06
+  - phase: Closures follow-ups
+  - parallel_track: closures-return-types
+  - scope: A lambda has no return-type spelling, and inference fails for struct and `Result` returns. `Function<Result<i32, i32>, i32>{[]([i32] x) { return(Result<i32, i32>{[ok] x * 2i32}) }}` is rejected with `unable to infer return type on /main__lambda0/call`. In a generic wrapper whose lambda returns `inner(x) + seen` with `inner` a template-typed capture, the error is `return type inference cycle requires explicit annotation on /with_logging__lambda0__t.../call`, and there is no annotation to give. Specify a return annotation in docs/spec/value-lifecycle.md, and use the `R` of `Function<R, A...>` as the expected type when a lambda is converted. Deferred: handlers that return `void` and write into a `Reference<Response>` avoid it.
+  - acceptance:
+    - both repros run on VM and optexe; a negative test for a mismatched annotation; spec text with a runnable example
+    - full release gate green
+  - stop_rule: lambda return types only.
+
+- [ ] TODO-5677: A `Function` whose closure holds a same-typed `Function` copies and destroys
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-06
+  - phase: Closures follow-ups
+  - parallel_track: closures-lifecycle
+  - scope: `with_logging([Function<i32, i32> move] next)` returning `Function<i32, i32>{[mut inner{next}, mut seen{0i32}]([i32] x) { ... inner(x) ... }}` stops at lowering with `vm backend does not support recursive calls: /__Function1__t.../Copy` (and the native/optexe equivalent). The generated `Copy` and `Destroy` of that `Function` instance call themselves, and lifecycle helpers are lowered inline (`src/ir_lowerer/IrLowererInlineCallContextHelpers.cpp`), which rejects recursion; plain recursive functions work. Lower recursive lifecycle helpers as real calls. Deferred: generic middleware (a closure wrapping a template-typed handler) composes without erasure and runs today.
+  - acceptance:
+    - the repro (a two-level wrapped `Function` called, copied and destroyed) runs on VM, native and optexe with no leaked blocks
+    - full release gate green
+  - stop_rule: recursive generated lifecycle helpers.
+
+- [ ] TODO-5678: `Pointer<u8>` host parameters reach C++ host functions as real byte pointers
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-06
+  - phase: Web server (Docker image built with `--emit=optexe`), network leaf 1
+  - parallel_track: host-bytes
+  - scope: A `[host]` parameter of type `Pointer<u8>` lowers to `IrHostValueKind::U64` (`src/ir_lowerer/IrLowererLowerInlineCalls.cpp`), and the optimized C++ emitter passes the raw slot, so the host receives a tagged VM heap address. A shim that dereferences it segfaults. Add a `BytePointer` host kind: semantics requires each `Pointer<u8>` host parameter to be followed by a `u64` length; `src/backend/IrToOptCppEmitter.cpp` passes `uint8_t *` resolved with `rt.heap.byteSpan(address, length)` and faults with `invalid byte pointer passed to host function` on a bad span (address 0 with length 0 passes `nullptr`). `hostCType`, the IR serializer and printer, and `VmHost`/`Script::bind` (which reject the kind with a clear message) follow. Socket `recv`/`send` and any other byte-buffer host function need this.
+  - acceptance:
+    - an optexe test with a small C++ shim that fills and sums a `vector<u8>` buffer through `sliceMut`/`data`; a length past the buffer faults instead of reading; IR dump shows the new kind; docs/spec/host-and-core-library.md describes the convention
+    - full release gate green
+  - stop_rule: the host kind and its pairing rule; no socket code.
+
+- [ ] TODO-5679: Stdlib structs can be move-only
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-06
+  - phase: Web server (Docker image built with `--emit=optexe`)
+  - parallel_track: lifecycle-move-only
+  - scope: Owning handles such as a listening socket and a connection must not be copied (a copy would close the descriptor twice). `File<Mode>` gets this from builtin code (docs/spec/errors-and-file-io.md: `Clone` is a compile error); a struct written in the stdlib has no way to say it. Specify a spelling in docs/spec/value-lifecycle.md, reject copies at compile time, and keep moves, `[T move]` parameters and returns working. Interim for a first network module: a `Copy` helper that panics. Deferred: needs the spelling decided.
+  - acceptance:
+    - a move-only struct moves into a parameter, a field and a return; copying it is a compile error with a clear diagnostic; spec text with a runnable example
+    - full release gate green
+  - stop_rule: the move-only marker and its checks; `File` keeps its builtin rule unless switching it is free.
+
+- [ ] TODO-5680: `/std/os`: environment, monotonic clock and a SIGTERM stop flag
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-06
+  - phase: Web server (Docker image built with `--emit=optexe`), network leaf 2
+  - parallel_track: os-host
+  - scope: A container server needs its port from the environment, a monotonic clock for idle timeouts, and a clean stop on SIGTERM. Nothing like this exists in the stdlib. Add `/std/os` over `[host]` functions in a POSIX shim linked with `--link-arg` (the scheme of `tests/fixtures/host_calls/text_impl.cpp`):
+    - `envOr(name, fallback) -> String`
+    - `monotonicMs() -> i64`
+    - `stopRequested() -> bool`, backed by a `sigaction` handler for SIGTERM and SIGINT that sets a flag and leaves blocking socket calls to return interrupted
+    Decide in the spec whether these need an effect.
+  - acceptance:
+    - an optexe test reads a variable set by the test, sees the clock advance, and stops after the test sends SIGTERM to the child; docs/spec/stdlib-reference.md documents the module
+    - full release gate green
+  - stop_rule: the three functions and their shim; no process, file-system or time-zone API.
 
 - [ ] TODO-5510: `return` returns from unit-variant pick arms correctly
   - owner: ai
