@@ -100,6 +100,7 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
+| TODO-5699 | A Result local with a vector payload built from a call lowers | deferred | lifecycle-result-payloads |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
 | TODO-5656 | Thread-safe `SharedString` (atomic count, per-thread string heaps) | deferred | string-concurrency |
 | TODO-5603 | Startup audit: what a launch loads and does | ready | startup |
@@ -171,6 +172,18 @@ of sync with them.
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 ### Task Blocks
+
+- [ ] TODO-5699: A Result local with a vector payload built from a call lowers
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-06
+  - phase: Web server (found while finishing the Result payload lifecycle)
+  - parallel_track: lifecycle-result-payloads
+  - scope: `[Result<vector<i32>, i32>] r{make_vec()}` (a call returning `Result.ok(vector<i32>(...))`) fails in IR lowering with `stale semantic-product sum initializer type metadata: /std/result/Result__arity2__...` (`src/ir_lowerer/IrLowererLowerSumHelpers.cpp`, the initializer struct-path resolution). `try(make_vec())` on the temporary works (tests/unit/compile_run/vm/test_compile_run_vm_core_results_structs.cpp). The payload lifecycle itself (TODO-5527) is done for struct payloads, including structs that hold vectors.
+  - acceptance:
+    - the local binds, `try(r)` copies the vector, and the elements are freed once on VM, native and C++ (matrix case in test_program_matrix_lifecycle.cpp)
+    - full release gate green
+  - stop_rule: resolving the initializer shape for builtin collection payloads of a Result local.
 
 - [ ] TODO-5688: Calls require the callee's whole active effect set
   - owner: ai
