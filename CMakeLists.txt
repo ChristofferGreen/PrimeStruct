@@ -1526,7 +1526,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
                        PROPERTIES TIMEOUT 2400 LABELS "parallel-safe")
   if(PRIMESTRUCT_BUILD_NATIVE_UI AND APPLE)
     # Bundles an example, runs it against AppKit in snapshot mode and checks the
-    # PNG of the laid-out window (needs a window-server session). The windows are invisible; set
+    # PNG of the laid-out window (needs a window-server session). The windows are invisible and never take the
+    # keyboard focus; set
     # PRIMESTRUCT_SKIP_UI_WINDOWS=1 to skip these drivers, PRIMESTRUCT_TEST_UI_INTRUSIVE=1 to also run the
     # open-menu steps (cmake/NativeUiTestGuards.cmake).
     add_test(

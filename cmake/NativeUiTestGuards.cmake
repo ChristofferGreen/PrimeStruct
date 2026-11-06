@@ -1,9 +1,14 @@
 # Shared switches of the AppKit CTest drivers (NativeUiAppKitSmokeTest, NativeUiAppKitScrollTest,
-# NativeUiCompiledAppTest). These tests run the real AppKit backend; its windows are invisible in snapshot mode
-# (src/ui/appkit/NativeUiAppKit.mm, presentWindow), but a few steps cannot be:
+# NativeUiCompiledAppTest). These tests run the real AppKit backend. By default they stay out of the way of whoever
+# works at the machine: in snapshot mode the app can never become active (NSApplicationActivationPolicyProhibited)
+# and its windows are transparent, ignore the mouse and are ordered in without becoming key
+# (src/ui/appkit/NativeUiAppKit.mm, ps_ui_init and presentWindow), so the keyboard focus stays in the user's app.
+# A snapshot run that becomes active anyway exits with status 3, which fails the driver. Only the open-menu steps
+# cannot avoid activating, and they are opt-in:
 #
-#   PRIMESTRUCT_SKIP_UI_WINDOWS=1       skip the whole driver (use it while you work at the machine)
-#   PRIMESTRUCT_TEST_UI_INTRUSIVE=1     also run the steps that open a real menu and grab the mouse
+#   PRIMESTRUCT_TEST_UI_INTRUSIVE=1     also run the steps that open a real menu (they activate the app and grab
+#                                       the mouse for a moment)
+#   PRIMESTRUCT_SKIP_UI_WINDOWS=1       skip the whole driver (an opt-out; not needed for focus any more)
 #
 # Include this file near the top of a driver, then `if(PRIMESTRUCT_UI_SKIP) return() endif()` (a return() inside an
 # included file would only leave the include).

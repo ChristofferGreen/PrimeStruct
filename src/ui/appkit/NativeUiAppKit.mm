@@ -1925,11 +1925,35 @@ bool ps_ui_init(const char *appName) {
       s.prefOverridesActive = true;
     }
     [NSApplication sharedApplication];
-    // Snapshot runs stay out of the user's way: no Dock icon, no activation.
-    [NSApp setActivationPolicy:s.snapshotPath.empty() ? NSApplicationActivationPolicyRegular
-                                                      : NSApplicationActivationPolicyAccessory];
+    // Snapshot runs stay out of the user's way: no Dock icon and no activation, so the app the user works in keeps
+    // the keyboard. Accessory is not enough (the app still became active once its window was shown); Prohibited
+    // cannot become active at all. The open-menu snapshot (PRIMESTRUCT_UI_MENU) needs an active app to track the
+    // menu, so it keeps Accessory.
+    [NSApp setActivationPolicy:s.snapshotPath.empty()   ? NSApplicationActivationPolicyRegular
+                               : s.snapshotMenu.empty() ? NSApplicationActivationPolicyProhibited
+                                                        : NSApplicationActivationPolicyAccessory];
     NSApp.delegate = controller();
     buildApplicationMenu(toNSString(appName));
+    if (!s.snapshotPath.empty()) {
+      // A snapshot run that became the active app took the keyboard from the user. Outside the open-menu step that
+      // is a bug, so the run exits with status 3 at the end and every AppKit test driver fails on it
+      // (cmake/NativeUiTestGuards.cmake).
+      static bool tookFocus = false;
+      const bool mayActivate = !s.snapshotMenu.empty();
+      [[NSNotificationCenter defaultCenter] addObserverForName:NSApplicationDidBecomeActiveNotification
+                                                        object:NSApp
+                                                         queue:nil
+                                                    usingBlock:^(NSNotification *) {
+                                                      std::fprintf(stderr, "native ui: snapshot run took focus\n");
+                                                      tookFocus = !mayActivate;
+                                                    }];
+      std::atexit([] {
+        if (tookFocus) {
+          std::fflush(nullptr);
+          std::_Exit(3);
+        }
+      });
+    }
     [NSApp finishLaunching];
   }
   s.initialized = true;
@@ -2268,6 +2292,12 @@ static void presentWindow(NSWindow *w) {
     w.hasShadow = NO;
     w.collectionBehavior |= NSWindowCollectionBehaviorTransient | NSWindowCollectionBehaviorIgnoresCycle |
                             NSWindowCollectionBehaviorStationary;
+    if (state().snapshotMenu.empty()) {
+      // On screen (so it lays out and draws) without becoming key: the user's keyboard stays where it is. The
+      // harness sets the first responder and inserts text directly, which needs no key window.
+      [w orderFrontRegardless];
+      return;
+    }
   }
   [w makeKeyAndOrderFront:nil];
 }
