@@ -112,7 +112,6 @@ of sync with them.
 | TODO-5682 | Native: a mutating vector-field method inside an arithmetic expression returns the right value | ready | native-backend |
 | TODO-5676 | Lambdas can state their return type | deferred | closures-return-types |
 | TODO-5677 | A `Function` whose closure holds a same-typed `Function` copies and destroys | deferred | closures-lifecycle |
-| TODO-5679 | Stdlib structs can be move-only | deferred | lifecycle-move-only |
 | TODO-5510 | `return` returns from unit-variant pick arms correctly | ready | control-returns |
 | TODO-5524 | Int-backed error structs round-trip through stdlib Result sums | ready | result-error-structs |
 | TODO-5523 | A Result-returning main exits with its error code | deferred | result-main |
@@ -166,7 +165,7 @@ of sync with them.
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5669, TODO-5676, TODO-5677; collection fields found by closures: TODO-5681, TODO-5682
-- Web server (single-threaded, built with `--emit=optexe`): move-only handles TODO-5679; Result payloads for socket handles TODO-5527; static file serving 
+- Web server (single-threaded, built with `--emit=optexe`): move-only handles ; Result payloads for socket handles TODO-5527; static file serving 
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
 ### Execution Queue
@@ -247,23 +246,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - the repro (a two-level wrapped `Function` called, copied and destroyed) runs on VM, native and optexe with no leaked blocks
     - full release gate green
   - stop_rule: recursive generated lifecycle helpers.
-
-- [ ] TODO-5679: Stdlib structs can be move-only
-  - owner: ai
-  - status: deferred
-  - created_at: 2026-11-06
-  - phase: Web server (built with `--emit=optexe`)
-  - parallel_track: lifecycle-move-only
-  - scope: Owning handles such as a listening socket and a connection must not be copied (a copy would close the descriptor twice). `File<Mode>` gets this from builtin code (docs/spec/errors-and-file-io.md: `Clone` is a compile error); a struct written in the stdlib has no way to say it. Specify a spelling in docs/spec/value-lifecycle.md, reject copies at compile time, and keep moves, `[T move]` parameters and returns working. Interim for a first network module: a `Copy` helper that panics. Deferred: needs the spelling decided.
-  - acceptance:
-    - a move-only struct moves into a parameter, a field and a return; copying it is a compile error with a clear diagnostic; spec text with a runnable example
-    - full release gate green
-  - stop_rule: the move-only marker and its checks; `File` keeps its builtin rule unless switching it is free.
-  - options (written down for the decision; nothing is implemented):
-    1. A `[move_only]` struct transform. Explicit and greppable; a copy of a binding of that type (a by-value pass without `move(...)`, `[T copy]` parameters, assignment from a place, a field initializer from a local) is `move-only type '<T>' cannot be copied`. Needs a new transform name and a copy-site audit in semantics (the use-after-move analysis already tracks the sites).
-    2. Implicit rule: a struct that declares `Destroy` and no `Copy` is move-only. No new spelling, and it matches how `File<Mode>` already behaves, but it changes existing stdlib types that declare only `Destroy` and are bit-copied today (an audit of those is part of the cost), and a type cannot say "trivially copyable despite Destroy".
-    3. An explicit deleted copy: `Copy(other) = delete` or a `[no_copy]` marker on the helper. Closest to C++, needs parser support for the deleted body.
-    Recommendation: option 1 for the first network module, with the interim panicking `Copy` helper until it lands.
 
 - [ ] TODO-5510: `return` returns from unit-variant pick arms correctly
   - owner: ai

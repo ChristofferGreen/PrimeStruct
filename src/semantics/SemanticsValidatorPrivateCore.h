@@ -308,6 +308,16 @@
   // Whether values of `binding`'s type own resources: a container, a type that defines `Destroy`,
   // or one holding either. Such values are moved, not copied, when passed to a `move` parameter.
   bool bindingOwnsResources(const BindingInfo &binding, const std::string &namespacePrefix);
+  // The struct path of a move-only type (it defines `Destroy` and no `Copy`) when `value` is a place of that type (a
+  // binding, parameter, field or element, not a `Reference`), so using it as a value would copy it; else empty.
+  // Reports the copy of a move-only place as a diagnostic on `diagnosticExpr`; true when it did.
+  bool failIfMoveOnlyCopy(const Expr &diagnosticExpr,
+                          const Expr &value,
+                          const std::vector<ParameterInfo> &params,
+                          const std::unordered_map<std::string, BindingInfo> &locals);
+  std::string moveOnlyPlaceType(const Expr &value,
+                                const std::vector<ParameterInfo> &params,
+                                const std::unordered_map<std::string, BindingInfo> &locals);
   bool validateVectorIndexedRemovalHelperElementType(const BindingInfo &binding,
                                                      const std::string &helperName,
                                                      const std::string &namespacePrefix,

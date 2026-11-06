@@ -645,3 +645,28 @@ TEST_CASE("the json writer builds nested documents with escaped strings") {
                "\\\"list\\\":[true,null,{},7]}\"), then() { 0i32 }, else() { 1i32 }))",
                "import /std/json/*\nimport /std/text/*\nimport /std/text/view/*\n") == 0);
 }
+
+// A struct that defines `Destroy` and no `Copy` is move-only: copying it from a place is a compile error, moving it
+// (explicitly, from a temporary, by return, or by borrowing) is not.
+TEST_CASE("move-only structs move but do not copy") {
+  const std::string defs =
+      "[struct]\nHandle() {\n  [i32 mut] fd{7i32}\n  Destroy() {\n  }\n}\n\n"
+      "[struct]\nHolder() {\n  [Handle mut] h{Handle{}}\n}\n\n"
+      "[return<i32>]\nlook([Handle] h) {\n  return(h.fd)\n}\n\n"
+      "[return<i32>]\nown([Handle move] h) {\n  return(h.fd)\n}\n\n"
+      "[return<i32>]\nkeep([Handle copy] h) {\n  return(h.fd)\n}\n\n"
+      "[return<Handle>]\nmake() {\n  [Handle] a{Handle{}}\n  return(a)\n}\n";
+  CHECK(exitOf("  [Handle] a{Handle{}}\n  [i32] seen{look(a)}\n  [Handle] b{make()}\n  [Handle] c{move(a)}\n"
+               "  [Holder] holder{Holder{[h] make()}}\n  [Handle mut] d{Handle{}}\n  d = make()\n"
+               "  [i32] owned{own(move(b))}\n  [i32] kept{keep(move(c))}\n"
+               "  return(seen + owned + kept + holder.h.fd + d.fd)",
+               defs) == 35);
+  const auto rejected = [&](const std::string &body) {
+    const Outcome outcome = runBody(body, defs);
+    CHECK_FALSE(outcome.compiled);
+    CHECK(outcome.diagnostics.find("move-only type /Handle cannot be copied") != std::string::npos);
+  };
+  rejected("  [Handle] a{Handle{}}\n  [Handle] b{a}\n  return(0i32)");
+  rejected("  [Handle] a{Handle{}}\n  [Handle mut] b{Handle{}}\n  b = a\n  return(0i32)");
+  rejected("  [Handle] a{Handle{}}\n  return(keep(a))");
+}

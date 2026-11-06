@@ -1012,6 +1012,7 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
     if (reportAssignmentValueEscape(params, locals, expr)) {
       return false;
     }
+    if (failIfMoveOnlyCopy(expr, expr.args[1], params, locals)) { return false; }
     auto validateAssignedMapConstructorValue = [&]() -> bool {
       if (!targetIsName || expr.args[1].kind != Expr::Kind::Call ||
           expr.args[1].args.empty() || expr.args[1].args.size() % 2 != 0) {

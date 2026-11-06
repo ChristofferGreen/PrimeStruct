@@ -518,6 +518,9 @@ PhaseStatus SemanticsValidator::validateBindingPhase2([[maybe_unused]] const std
       isUnsupportedRootSoaToAosBindingInitializer()) {
     return st.done(failBindingDiagnostic("binding initializer type mismatch"));
   }
+  if (failIfMoveOnlyCopy(stmt, initializer, params, locals)) {
+    return st.done(false);
+  }
   st.entryArgInit = isEntryArgsAccess(initializer);
   [[maybe_unused]] auto &entryArgInit = st.entryArgInit;
   st.entryArgStringInit = isEntryArgStringBinding(locals, initializer);

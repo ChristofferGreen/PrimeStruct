@@ -21,6 +21,30 @@
   arbitrary expressions) and marks the source binding as moved-from while returning its value.
 - **Use-after-move:** any use of a moved-from binding is a compile error until it is re-initialized (e.g.,
   `assign(value, ...)`). The analysis is conservative across control flow.
+- **Move-only types:** a struct that defines `Destroy` and no `Copy` owns something that must be released exactly once
+  (a socket, a descriptor), so it cannot be duplicated. Using a place of such a type as a value is a compile error:
+  `move-only type /Handle cannot be copied: use move(a)`. The places are a binding initializer (`[Handle] b{a}`), an
+  assignment (`b = a`) and a `copy` parameter argument, where `a` is a binding, parameter, field or element. Moving
+  works: `move(a)`, a temporary (`make()`, `Handle{}`), a returned local, a `[T move]` parameter, and borrowing through
+  a plain `[T]` or `[T mut]` parameter. A type that wants copies defines `Copy`. Generic code (template instances) and the stdlib are exempt, because a
+  container copies elements of any type bitwise by design. `File<Mode>` keeps its builtin rule.
+
+  ```prime
+  [struct]
+  Handle() {
+    [i32 mut] fd{7i32}
+    Destroy() {
+    }
+  }
+
+  [return<int>]
+  main() {
+    [Handle] a{Handle{}}
+    [Handle] b{move(a)}
+    // [Handle] c{b} would not compile: move-only type /Handle cannot be copied
+    return(b.fd)
+  }
+  ```
 - **Pointer behavior:** pointers can be moved; moved-from pointers are treated as invalid without being auto-zeroed (no
   implicit `null` literal; `0x0` is just a numeric value).
 - **References:** `move(...)` rejects `Reference<T>` bindings; references do not participate in move semantics.

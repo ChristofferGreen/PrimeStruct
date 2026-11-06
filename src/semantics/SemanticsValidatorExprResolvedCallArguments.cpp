@@ -404,6 +404,17 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
     const auto it = locals.find(name);
     return it == locals.end() ? nullptr : &it->second;
   };
+  // A `copy` parameter duplicates its argument, which a move-only type cannot do.
+  for (size_t paramIndex = 0; paramIndex < calleeParams.size(); ++paramIndex) {
+    const ParameterInfo &param = calleeParams[paramIndex];
+    const Expr *arg = paramIndex < orderedArgs.size() ? orderedArgs[paramIndex] : nullptr;
+    if (paramIndex == packedParamIndex || arg == nullptr || arg == param.defaultExpr || !param.binding.isCopy) {
+      continue;
+    }
+    if (failIfMoveOnlyCopy(*arg, *arg, params, locals)) {
+      return false;
+    }
+  }
   // A `move` parameter takes ownership: a named argument of an owning type is moved-from after the
   // call (values of other types are copied), and a borrowed parameter cannot be handed over.
   for (size_t paramIndex = 0; paramIndex < calleeParams.size(); ++paramIndex) {

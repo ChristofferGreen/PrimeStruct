@@ -2136,6 +2136,7 @@ are left unarchived.
 | TODO-5674 | `==` on a view taken from a `String` parameter compiles | [2026-11.md](todo_archive/2026-11.md) | 2026-11-06 |
 | TODO-5675 | Struct fields that are vectors of structs lower on VM and native | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5678 | `Pointer<u8>` host parameters reach C++ host functions as real byte pointers | [2026-11.md](todo_archive/2026-11.md) | 2026-11-06 |
+| TODO-5679 | Stdlib structs can be move-only | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5680 | `/std/os`: environment, monotonic clock and a SIGTERM stop flag | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5683 | `net_io` effect reaches VM/native IR; wasm and GLSL reject it | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5684 | `/std/net` socket host functions and POSIX shim for optexe | [2026-11.md](todo_archive/2026-11.md) | - |
