@@ -145,13 +145,13 @@ wrapMap() {
   return(map<i32, i32>(1i32, 4i32))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 showValue() {
   [string] message{if(true, then(){ wrapMap()[1i32] }, else(){ "fallback"utf8 })}
   return(0i32)
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   return(showValue())
 }

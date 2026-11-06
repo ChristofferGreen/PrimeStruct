@@ -341,7 +341,7 @@ Wide() {
   [i32] f16{0i32}
 }
 
-[return<int>]
+[return<int> effects(heap_alloc)]
 main() {
   [/Wide/SoaSchemaStorage mut] storage{/Wide/SoaSchemaStorageNew()}
   [i32 mut] score{0i32}

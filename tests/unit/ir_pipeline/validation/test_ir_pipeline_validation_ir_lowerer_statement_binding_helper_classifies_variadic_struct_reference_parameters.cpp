@@ -378,7 +378,7 @@ score_refs([args<Reference<SoaVector<Particle>>>] values) {
   return(0i32)
 }
 
-[return<int>]
+[return<int> effects(heap_alloc)]
 main() {
   [SoaVector<Particle>] values{soaVectorNew<Particle>()}
   [Reference<SoaVector<Particle>>] borrowed{location(values)}
@@ -927,7 +927,7 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<int>]
+[return<int> effects(heap_alloc)]
 main() {
   [SoaVector<Particle>] a0{soaVectorNew<Particle>()}
   [Reference<SoaVector<Particle>>] r0{location(a0)}

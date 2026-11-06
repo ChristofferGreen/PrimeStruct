@@ -19,7 +19,7 @@ TEST_CASE("ring buffer construct, push, count, at overwrite oldest when full") {
   const std::string source = R"(
 import /std/collections/ring_buffer/*
 
-[return<int>]
+[return<int> effects(heap_alloc)]
 main() {
   [RingBuffer<i32> mut] buf{ring_buffer<i32>(3i32)}
   push<i32>(buf, 10i32)
@@ -52,7 +52,7 @@ TEST_CASE("ring buffer count grows without overwrite before reaching capacity") 
   const std::string source = R"(
 import /std/collections/ring_buffer/*
 
-[return<int>]
+[return<int> effects(heap_alloc)]
 main() {
   [RingBuffer<i32> mut] buf{ring_buffer<i32>(4i32)}
   [i32] emptyCount{count<i32>(buf)}

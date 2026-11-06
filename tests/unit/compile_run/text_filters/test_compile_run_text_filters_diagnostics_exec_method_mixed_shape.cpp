@@ -133,11 +133,12 @@ main() {
   return(0i32)
 }
 
-[return<void>]
+[return<void> effects(heap_alloc)]
 execute_repeat([i32] a, [i32] b) {
   return()
 }
 
+[effects(heap_alloc)]
 execute_repeat(wrapVector().count(), wrapMap().count())
 )";
   const std::string srcPath = writeTemp(
@@ -187,11 +188,12 @@ main() {
   return(0i32)
 }
 
-[return<void>]
+[return<void> effects(heap_alloc)]
 execute_repeat([i32] a, [i32] b) {
   return()
 }
 
+[effects(heap_alloc)]
 execute_repeat(wrapVector().count(), wrapMap().count())
 )";
   const std::string srcPath = writeTemp(
@@ -241,11 +243,12 @@ main() {
   return(0i32)
 }
 
-[return<void>]
+[return<void> effects(heap_alloc)]
 execute_repeat([i32] a, [i32] b) {
   return()
 }
 
+[effects(heap_alloc)]
 execute_repeat(wrapVector().count(true), wrapMap().count(true))
 )";
   const std::string srcPath = writeTemp(
@@ -293,11 +296,12 @@ main() {
   return(0i32)
 }
 
-[return<void>]
+[return<void> effects(heap_alloc)]
 execute_repeat([i32] a, [i32] b) {
   return()
 }
 
+[effects(heap_alloc)]
 execute_repeat(wrapVector().count(true), wrapMap().count(true))
 )";
   const std::string srcPath = writeTemp(
@@ -449,11 +453,12 @@ main() {
   return(0i32)
 }
 
-[return<void>]
+[return<void> effects(heap_alloc)]
 execute_repeat([i32] a, [i32] b) {
   return()
 }
 
+[effects(heap_alloc)]
 execute_repeat(wrapVector().count(), wrapMap().count(true))
 )";
   const std::string srcPath = writeTemp(
@@ -503,11 +508,12 @@ main() {
   return(0i32)
 }
 
-[return<void>]
+[return<void> effects(heap_alloc)]
 execute_repeat([i32] a, [i32] b) {
   return()
 }
 
+[effects(heap_alloc)]
 execute_repeat(wrapVector().count(), wrapMap().count(true))
 )";
   const std::string srcPath = writeTemp(

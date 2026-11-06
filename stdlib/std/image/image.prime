@@ -1452,7 +1452,7 @@ namespace std {
     return(code + offset)
   }
 
-  [return<i32>]
+  [return<i32> effects(heap_alloc)]
   pngHuffmanDecodeSymbol([vector<i32>] bytes, [i32 mut] byteIndex, [i32 mut] bitIndex, [vector<i32>] lengths,
                          [i32] maxBits, [i32 mut] symbolOut) {
     symbolOut = 0i32
@@ -1824,7 +1824,7 @@ namespace std {
     }
   }
 
-  [return<int>]
+  [return<int> effects(heap_alloc)]
   pngHuffmanDecodeSplitLiteralSymbol([vector<i32>] bytes, [i32 mut] byteIndex, [i32 mut] bitIndex,
                                      [vector<i32>] literalLengthsLow, [vector<i32>] literalLengthsHigh,
                                      [i32] maxBits, [i32 mut] symbolOut) {
@@ -2035,7 +2035,7 @@ namespace std {
     return(1i32)
   }
 
-  [return<int>]
+  [return<int> effects(heap_alloc)]
   pngDecodeFixedLiteralSymbol([vector<i32>] bytes, [i32 mut] byteIndex, [i32 mut] bitIndex, [i32 mut] symbolOut) {
     symbolOut = 0i32
     [mut] code{0i32}
@@ -2092,7 +2092,7 @@ namespace std {
     return(1i32)
   }
 
-  [return<int>]
+  [return<int> effects(heap_alloc)]
   pngDecodeFixedDistanceSymbol([vector<i32>] bytes, [i32 mut] byteIndex, [i32 mut] bitIndex, [i32 mut] symbolOut) {
     symbolOut = 0i32
     [mut] code{0i32}

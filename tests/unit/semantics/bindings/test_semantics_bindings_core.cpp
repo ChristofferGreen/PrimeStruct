@@ -773,7 +773,7 @@ TEST_CASE("public Map binding rejects MapValue initializer") {
 import /std/collections/*
 import /std/collections/map/*
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [Map<string, i32>] out{mapNew<string, i32>()}
   return(0i32)

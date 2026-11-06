@@ -71,6 +71,7 @@
   std::unordered_set<std::string> resolveEffects(const std::vector<Transform> &transforms, bool isEntry) const;
   bool validateCapabilitiesSubset(const std::vector<Transform> &transforms, const std::string &context);
   bool resolveExecutionEffects(const Expr &expr, std::unordered_set<std::string> &effectsOut);
+  bool validateCalleeEffects(const Expr &expr, const Definition &callee);
   bool exprUsesName(const Expr &expr, const std::string &name) const;
   bool statementsUseNameFrom(const std::vector<Expr> &statements, size_t startIndex, const std::string &name) const;
   struct BorrowLivenessRange {

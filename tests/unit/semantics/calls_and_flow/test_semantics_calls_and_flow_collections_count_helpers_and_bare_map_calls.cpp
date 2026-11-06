@@ -928,7 +928,7 @@ wrapMap() {
   return(mapSingle<i32, string>(1i32, "hello"utf8))
 }
 
-[effects(io_out), return<int>]
+[effects(io_out heap_alloc), return<int>]
 main() {
   print_line(wrapMap()[1i32])
   return(0i32)

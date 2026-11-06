@@ -81,11 +81,12 @@ main() {
   return(0i32)
 }
 
-[return<void>]
+[return<void> effects(heap_alloc)]
 execute_repeat([i32] a, [i32] b) {
   return()
 }
 
+[effects(heap_alloc)]
 execute_repeat(wrapVector().capacity(1i32, 2i32), wrapMap().count(1i32, 2i32))
 )";
   const std::string srcPath = writeTemp(
@@ -135,11 +136,12 @@ main() {
   return(0i32)
 }
 
-[return<void>]
+[return<void> effects(heap_alloc)]
 execute_repeat([i32] a, [i32] b) {
   return()
 }
 
+[effects(heap_alloc)]
 execute_repeat(wrapVector().capacity(1i32, 2i32), wrapMap().count(1i32, 2i32))
 )";
   const std::string srcPath = writeTemp(

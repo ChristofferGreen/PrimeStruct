@@ -651,7 +651,7 @@ TEST_CASE("rejects vm templated stdlib vector return envelope nested arg") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<vector<array<i32>>>]
+[return<vector<array<i32>>> effects(heap_alloc)]
 wrapVectorArray([i32] value) {
   return(/std/collections/vector/vector<i32>(value))
 }

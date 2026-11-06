@@ -385,7 +385,7 @@ wrapValues() {
   return(7i32)
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   return(wrapValues().count(1i32))
 }

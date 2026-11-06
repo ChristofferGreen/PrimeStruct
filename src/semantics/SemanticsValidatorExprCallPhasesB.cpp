@@ -650,6 +650,9 @@ PhaseStatus SemanticsValidator::validateExprCallPhase8([[maybe_unused]] const st
       return st.done(failExprRootDiagnostic("unknown call target: " +
                                     unknownCallTarget));
     }
+    if (!validateCalleeEffects(expr, *resolvedDefinition)) {
+      return st.done(false);
+    }
     const auto &calleeParams = calleeParamsIt->second;
     ExprResolvedCallSetup resolvedCallSetup;
     prepareExprResolvedCallSetup(

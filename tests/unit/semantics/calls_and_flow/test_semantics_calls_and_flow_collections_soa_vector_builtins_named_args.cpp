@@ -860,7 +860,7 @@ Particle() {
   [i32] x{7i32}
 }
 
-[return<SoaVector<Particle>>]
+[return<SoaVector<Particle>> effects(heap_alloc)]
 cloneValues() {
   return(soaVectorSingle<Particle>(Particle(7i32)))
 }
@@ -875,12 +875,12 @@ consume([int] value) {
   return(value)
 }
 
-[return<auto>]
+[effects(heap_alloc), return<auto>]
 pick() {
   return(count(cloneValues()))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [auto] item{count(cloneValues())}
   return(plus(item, plus(consume(count(cloneValues())), pick())))

@@ -1,8 +1,28 @@
 #include "SemanticsValidator.h"
+#include "SemanticsValidateLambdaClosures.h"
+
+#include <algorithm>
+#include <cctype>
 
 namespace primec::semantics {
 
 namespace {
+
+// `/keep__tead9077f04525e0f` -> `/keep`: the template a monomorphized definition was specialized from.
+std::string stripSpecializationSuffix(const std::string &path) {
+  const size_t lastSlash = path.find_last_of('/');
+  const size_t nameStart = lastSlash == std::string::npos ? 0 : lastSlash + 1;
+  const size_t suffix = path.find("__t", nameStart);
+  if (suffix == std::string::npos || suffix + 3 == path.size()) {
+    return path;
+  }
+  for (size_t i = suffix + 3; i < path.size(); ++i) {
+    if (std::isxdigit(static_cast<unsigned char>(path[i])) == 0) {
+      return path;
+    }
+  }
+  return path.substr(0, suffix);
+}
 
 void expandEffectImplications(std::unordered_set<std::string> &effects) {
   if (effects.count("file_write") != 0) {
@@ -62,6 +82,45 @@ bool SemanticsValidator::validateCapabilitiesSubset(const std::vector<Transform>
     if (currentValidationState_.context.activeEffects.count(capability) == 0) {
       return failPassesEffectsDiagnostic("capability requires matching effect on " + context + ": " + capability);
     }
+  }
+  return true;
+}
+
+bool SemanticsValidator::validateCalleeEffects(const Expr &expr, const Definition &callee) {
+  // docs/spec/language-core.md, Callee effects: every effect the callee declares must be active in the caller. A
+  // callee without `[effects]` places no requirement (its default set is not propagated, TODO-5688), and a lambda's
+  // closure `call` was already checked where the lambda is written, so calling it needs no effects.
+  if (callee.fullPath.find(LambdaClosureStructPrefix) != std::string::npos) {
+    return true;
+  }
+  std::vector<std::string> required;
+  for (const auto &transform : callee.transforms) {
+    if (transform.name == "effects" && transform.templateArgs.empty()) {
+      required.insert(required.end(), transform.arguments.begin(), transform.arguments.end());
+    }
+  }
+  if (required.empty()) {
+    return true;
+  }
+  std::sort(required.begin(), required.end());
+  const auto &active = currentValidationState_.context.activeEffects;
+  for (const auto &effect : required) {
+    if (active.count(effect) != 0) {
+      continue;
+    }
+    std::string caller = currentValidationState_.context.definitionPath;
+    std::string callerKind;
+    if (caller.empty()) {
+      caller = currentExecutionContext_ != nullptr ? currentExecutionContext_->fullPath : std::string("<execution>");
+      callerKind = "execution ";
+    } else if (const size_t lambdaPos = caller.find(LambdaClosureStructPrefix); lambdaPos != std::string::npos) {
+      caller = stripSpecializationSuffix(caller.substr(0, lambdaPos));
+      callerKind = "a lambda in ";
+    } else {
+      caller = stripSpecializationSuffix(caller);
+    }
+    return failExprDiagnostic(expr, stripSpecializationSuffix(callee.fullPath) + " requires " + effect +
+                                        " effect in " + callerKind + caller);
   }
   return true;
 }

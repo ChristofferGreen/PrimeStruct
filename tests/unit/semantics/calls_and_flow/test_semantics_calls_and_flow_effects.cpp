@@ -551,7 +551,7 @@ TEST_CASE("definition validation context isolates compute flag between definitio
   return(0i32)
 }
 
-[return<int>]
+[effects(gpu_dispatch) return<int>]
 main() {
   return(/host())
 }

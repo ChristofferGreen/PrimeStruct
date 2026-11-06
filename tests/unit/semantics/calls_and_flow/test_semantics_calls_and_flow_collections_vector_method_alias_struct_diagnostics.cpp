@@ -366,7 +366,7 @@ wrapMap() {
   return(plus(self, 40i32))
 }
 
-[return<auto>]
+[effects(heap_alloc), return<auto>]
 project() {
   return(wrapMap()./std/collections/map/at(2i32).tag())
 }

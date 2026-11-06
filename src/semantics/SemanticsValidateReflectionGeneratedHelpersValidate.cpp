@@ -607,6 +607,11 @@ bool emitReflectionSoaSchemaStorageHelpers(ReflectionGeneratedHelperContext &con
   context.definitionPaths.insert(storageReserveHelperPath);
 
   Definition storageClearHelper = makeHelper("SoaSchemaStorageClear", storageClearHelperPath, "void", false);
+  // The chunk Clear helpers declare heap_alloc, so the caller must too (language-core.md, Callee effects).
+  Transform clearEffects;
+  clearEffects.name = "effects";
+  clearEffects.arguments.push_back("heap_alloc");
+  storageClearHelper.transforms.push_back(std::move(clearEffects));
   storageClearHelper.parameters.push_back(makeTypeBinding("value", storageStructPath, storageClearHelper.namespacePrefix, true));
   for (size_t chunkIndex = 0; chunkIndex < chunkTemplateArgs.size(); ++chunkIndex) {
     storageClearHelper.statements.push_back(

@@ -350,7 +350,7 @@ Settings() {
 }
 
 // Builds the settings window (tabs General, Editor and Markdown) from the current preferences.
-[return<Settings>]
+[return<Settings> effects(heap_alloc)]
 build_settings([App] app) {
   [Window] created{app.window("Settings", 420i32, 260i32)}
   created.setSettingsStyle()
@@ -481,7 +481,7 @@ refresh_preferences([App] app, [Menu] viewMenu, [Menu] scrollMenu, [Settings] se
 }
 
 // A file named *.md or *.markdown shows its preview when the preference asks for it.
-[return<bool>]
+[return<bool> effects(heap_alloc)]
 ends_with_text([String] text, [string] suffix, [i32] length) {
   [i32] size{text.count()}
   [bool mut] same{false}
@@ -492,7 +492,7 @@ ends_with_text([String] text, [string] suffix, [i32] length) {
   return(same)
 }
 
-[return<bool>]
+[return<bool> effects(heap_alloc)]
 preview_if_markdown([App] app, [Window] tab, [String] path) {
   [bool mut] shown{false}
   if(app.boolPref("previewMarkdown", false)) {
@@ -585,7 +585,7 @@ build_script_toolbar([App] app) {
 
 // Which toolbar a window shows: 1 the markdown one (a markdown file, or its preview is on), 2 the script one (a
 // PrimeStruct file), 0 none.
-[return<i32>]
+[return<i32> effects(heap_alloc)]
 toolbar_kind([Window] tab) {
   [i32 mut] kind{0i32}
   if(tab.hasPreview()) {
@@ -606,7 +606,7 @@ toolbar_kind([Window] tab) {
 // Shows the toolbar of kind `wanted` (1 markdown, 2 script) on the document windows that want it (building it on the
 // first) and takes the toolbar off the windows that want none; returns the toolbar, which is built once. Call it once
 // for each kind.
-[return<Toolbar>]
+[return<Toolbar> effects(heap_alloc)]
 sync_toolbars([App] app, [u64] settingsWindow, [Toolbar] known, [i32] wanted) {
   [Toolbar mut] bar{known}
   [i32 mut] index{0i32}
@@ -637,7 +637,7 @@ sync_toolbars([App] app, [u64] settingsWindow, [Toolbar] known, [i32] wanted) {
 }
 
 // Runs the tab's text as a script; the pane under the editor shows the output.
-[return<bool>]
+[return<bool> effects(heap_alloc)]
 run_script([Window] tab) {
   [TextView] view{tab.content()}
   [String] source{view.text()}
@@ -710,7 +710,7 @@ save_document([App] app, [Window] tab, [bool] chooseFile) {
 }
 
 // True when the tab's unsaved text is dealt with (saved or given up).
-[return<bool>]
+[return<bool> effects(heap_alloc)]
 confirm_discard([App] app, [Window] tab) {
   [TextView] view{tab.content()}
   [bool mut] go{true}
@@ -726,7 +726,7 @@ confirm_discard([App] app, [Window] tab) {
   return(go)
 }
 
-[return<bool>]
+[return<bool> effects(heap_alloc)]
 close_tab([App] app, [Window] tab) {
   [bool] go{confirm_discard(app, tab)}
   if(go) {
@@ -737,7 +737,7 @@ close_tab([App] app, [Window] tab) {
 
 // Opens `chosen` in a new tab, or in this one while it is still an untouched
 // untitled document; a file that opened joins the recent files.
-[return<bool>]
+[return<bool> effects(heap_alloc)]
 open_path([App] app, [Window] tab, [String] chosen) {
   if(!chosen.empty()) {
     [TextView] current{tab.content()}
@@ -767,7 +767,7 @@ open_path([App] app, [Window] tab, [String] chosen) {
 
 // Opens `requested` (a file the system asks the app to open), or selects the tab that already holds it: macOS also
 // reports a file named on the command line as such a request.
-[return<bool>]
+[return<bool> effects(heap_alloc)]
 open_or_select([App] app, [Window] tab, [String] requested, [u64] settingsWindow) {
   [bool mut] found{false}
   [i32 mut] index{0i32}
@@ -788,7 +788,7 @@ open_or_select([App] app, [Window] tab, [String] requested, [u64] settingsWindow
 }
 
 // Asks for a file and opens it.
-[return<bool>]
+[return<bool> effects(heap_alloc)]
 open_document([App] app, [Window] tab) {
   [String] chosen{app.openPanel("Open")}
   [bool mut] opened{false}
@@ -851,7 +851,7 @@ restore_preview([App] app, [Window] tab, [i32] position) {
 
 // Opens the files the last session had open, one tab each in the same order, and selects the tab
 // that was active. A file that is gone is skipped. Returns how many tabs it opened.
-[return<i32>]
+[return<i32> effects(heap_alloc)]
 restore_session([App] app, [Window] first, [TextView] firstView) {
   [i32] saved{app.listCount("session.files")}
   [i32 mut] opened{0i32}

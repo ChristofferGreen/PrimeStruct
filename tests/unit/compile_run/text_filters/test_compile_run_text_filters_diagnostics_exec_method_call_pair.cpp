@@ -133,11 +133,12 @@ main() {
   return(0i32)
 }
 
-[return<void>]
+[return<void> effects(heap_alloc)]
 execute_repeat([i32] a, [i32] b) {
   return()
 }
 
+[effects(heap_alloc)]
 execute_repeat(wrapVector().capacity(true), wrapMap().count(true))
 )";
   const std::string srcPath =
@@ -188,11 +189,12 @@ main() {
   return(0i32)
 }
 
-[return<void>]
+[return<void> effects(heap_alloc)]
 execute_repeat([i32] a, [i32] b) {
   return()
 }
 
+[effects(heap_alloc)]
 execute_repeat(wrapVector().capacity(true), wrapMap().count(true))
 )";
   const std::string srcPath =

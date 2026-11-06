@@ -103,7 +103,7 @@ TEST_CASE("runs vm with templated stdlib collection return envelopes") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<vector<T>>]
+[return<vector<T>> effects(heap_alloc)]
 wrapVector<T>([T] value) {
   return(/std/collections/vector/vector<T>(value))
 }
@@ -135,7 +135,7 @@ TEST_CASE("runs vm templated stdlib return wrapper temporaries in expressions") 
 import /std/collections/*
 import /std/collections/map/*
 
-[return<vector<T>>]
+[return<vector<T>> effects(heap_alloc)]
 wrapVector<T>([T] value) {
   return(/std/collections/vector/vector<T>(value))
 }

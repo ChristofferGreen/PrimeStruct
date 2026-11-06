@@ -343,7 +343,7 @@
   return(/file/flush(self))
 }
 
-[public effects(file_write), return<Result<FileError>>]
+[public effects(file_read), return<Result<FileError>>]
 /File/close<Mode>([File<Mode>] self) {
   return(self.close())
 }

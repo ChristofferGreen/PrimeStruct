@@ -71,7 +71,7 @@ wrapVectorAuto() {
   return(values)
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   return(/std/collections/vector/count(wrapVectorAuto()))
 }
@@ -145,7 +145,7 @@ wrapMapAuto() {
   return(values)
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   return(wrapMapAuto()./std/collections/vector/count())
 }
@@ -164,7 +164,7 @@ wrapMapAuto() {
   return(values)
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   return(wrapMapAuto()./std/collections/vector/capacity())
 }

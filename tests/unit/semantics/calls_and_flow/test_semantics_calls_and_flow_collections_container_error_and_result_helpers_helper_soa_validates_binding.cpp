@@ -76,7 +76,7 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [soa<Particle>] values{soa<Particle>()}
   [Particle] direct{get(values, 0i32)}
@@ -201,7 +201,7 @@ Particle() {
 
 [struct]
 Holder() {
-  [return<SoaVector<Particle>>]
+  [return<SoaVector<Particle>> effects(heap_alloc)]
   cloneValues() {
     return(soaVectorSingle<Particle>(Particle(7i32)))
   }
@@ -231,7 +231,7 @@ Particle() {
 
 [struct]
 Holder() {
-  [return<SoaVector<Particle>>]
+  [return<SoaVector<Particle>> effects(heap_alloc)]
   cloneValues() {
     return(soaVectorNew<Particle>())
   }
@@ -261,7 +261,7 @@ Particle() {
 
 [struct]
 Holder() {
-  [return<SoaVector<Particle>>]
+  [return<SoaVector<Particle>> effects(heap_alloc)]
   cloneValues() {
     return(soaVectorNew<Particle>())
   }
@@ -290,7 +290,7 @@ Particle() {
 
 [struct]
 Holder() {
-  [return<SoaVector<Particle>>]
+  [return<SoaVector<Particle>> effects(heap_alloc)]
   cloneValues() {
     return(soaVectorNew<Particle>())
   }
@@ -341,7 +341,7 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [soa<Particle>] values{soa<Particle>()}
   [Particle] direct{ref(values, 0i32)}
@@ -445,13 +445,13 @@ Particle() {
 
 [struct]
 Holder() {
-  [return<SoaVector<Particle>>]
+  [return<SoaVector<Particle>> effects(heap_alloc)]
   cloneValues() {
     return(soaVectorNew<Particle>())
   }
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [Holder] holder{Holder{}}
   /std/collections/soa/ref(holder.cloneValues(), 0i32)
@@ -476,13 +476,13 @@ Particle() {
 
 [struct]
 Holder() {
-  [return<SoaVector<Particle>>]
+  [return<SoaVector<Particle>> effects(heap_alloc)]
   cloneValues() {
     return(soaVectorNew<Particle>())
   }
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [Holder] holder{Holder{}}
   ref(holder.cloneValues(), 0i32)
@@ -507,13 +507,13 @@ Particle() {
 
 [struct]
 Holder() {
-  [return<SoaVector<Particle>>]
+  [return<SoaVector<Particle>> effects(heap_alloc)]
   cloneValues() {
     return(soaVectorNew<Particle>())
   }
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [Holder] holder{Holder{}}
   holder.cloneValues().ref(0i32)
@@ -538,7 +538,7 @@ Particle() {
 
 [struct]
 Holder() {
-  [return<SoaVector<Particle>>]
+  [return<SoaVector<Particle>> effects(heap_alloc)]
   cloneValues() {
     return(soaVectorNew<Particle>())
   }
@@ -549,7 +549,7 @@ Holder() {
   return(Particle(7i32))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [Holder] holder{Holder{}}
   return(holder.cloneValues().ref(0i32).x)
@@ -572,7 +572,7 @@ Particle() {
 
 [struct]
 Holder() {
-  [return<SoaVector<Particle>>]
+  [return<SoaVector<Particle>> effects(heap_alloc)]
   cloneValues() {
     return(soaVectorNew<Particle>())
   }
@@ -614,7 +614,7 @@ Particle() {
 
 [struct]
 Holder() {
-  [return<SoaVector<Particle>>]
+  [return<SoaVector<Particle>> effects(heap_alloc)]
   cloneValues() {
     return(soaVectorNew<Particle>())
   }
@@ -650,7 +650,7 @@ Particle() {
 
 [struct]
 Holder() {
-  [return<SoaVector<Particle>>]
+  [return<SoaVector<Particle>> effects(heap_alloc)]
   cloneValues() {
     return(soaVectorNew<Particle>())
   }
@@ -727,7 +727,7 @@ Particle() {
 
 [struct]
 Holder() {
-  [return<SoaVector<Particle>>]
+  [return<SoaVector<Particle>> effects(heap_alloc)]
   cloneValues() {
     return(soaVectorNew<Particle>())
   }
@@ -763,7 +763,7 @@ Particle() {
 
 [struct]
 Holder() {
-  [return<SoaVector<Particle>>]
+  [return<SoaVector<Particle>> effects(heap_alloc)]
   cloneValues() {
     return(soaVectorNew<Particle>())
   }
@@ -798,7 +798,7 @@ Particle() {
 
 [struct]
 Holder() {
-  [return<SoaVector<Particle>>]
+  [return<SoaVector<Particle>> effects(heap_alloc)]
   cloneValues() {
     return(soaVectorNew<Particle>())
   }
@@ -834,7 +834,7 @@ Particle() {
 
 [struct]
 Holder() {
-  [return<SoaVector<Particle>>]
+  [return<SoaVector<Particle>> effects(heap_alloc)]
   cloneValues() {
     return(soaVectorNew<Particle>())
   }
@@ -869,7 +869,7 @@ Particle() {
 
 [struct]
 Holder() {
-  [return<SoaVector<Particle>>]
+  [return<SoaVector<Particle>> effects(heap_alloc)]
   cloneValues() {
     return(soaVectorNew<Particle>())
   }
@@ -905,7 +905,7 @@ Particle() {
 
 [struct]
 Holder() {
-  [return<SoaVector<Particle>>]
+  [return<SoaVector<Particle>> effects(heap_alloc)]
   cloneValues() {
     return(soaVectorNew<Particle>())
   }
@@ -941,7 +941,7 @@ Particle() {
 
 [struct]
 Holder() {
-  [return<SoaVector<Particle>>]
+  [return<SoaVector<Particle>> effects(heap_alloc)]
   cloneValues() {
     return(soaVectorNew<Particle>())
   }
@@ -1008,7 +1008,7 @@ Particle() {
 
 [struct]
 Holder() {
-  [return<SoaVector<Particle>>]
+  [return<SoaVector<Particle>> effects(heap_alloc)]
   cloneValues() {
     return(soaVectorNew<Particle>())
   }

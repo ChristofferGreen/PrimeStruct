@@ -242,7 +242,7 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<int>]
+[return<int> effects(heap_alloc)]
 main() {
   [soa<Particle>] values{soa<Particle>()}
   return(/std/collections/vector/count(/std/collections/soa/to_aos<Particle>(values)))
@@ -270,12 +270,12 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<SoaVector<Particle>>]
+[return<SoaVector<Particle>> effects(heap_alloc)]
 cloneValues() {
   return(soaVectorNew<Particle>())
 }
 
-[return<int>]
+[return<int> effects(heap_alloc)]
 main() {
   return(count(cloneValues()))
 }
@@ -304,7 +304,7 @@ Particle() {
 
 [struct]
 Holder() {
-  [return<SoaVector<Particle>>]
+  [return<SoaVector<Particle>> effects(heap_alloc)]
   cloneValues() {
     return(soaVectorSingle<Particle>(Particle(7i32)))
   }
@@ -340,7 +340,7 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<SoaVector<Particle>>]
+[return<SoaVector<Particle>> effects(heap_alloc)]
 cloneValues() {
   [SoaVector<Particle>, mut] values{soaVectorNew<Particle>()}
   values.push(Particle(7i32))
@@ -620,7 +620,7 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<void>]
+[return<void> effects(heap_alloc)]
 main() {
   [soa<Particle>] values{soa<Particle>()}
   [vector<Particle>] unpackedA{to_aos(values)}
@@ -670,7 +670,7 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<void>]
+[return<void> effects(heap_alloc)]
 main() {
   [soa<Particle>] values{soa<Particle>()}
   [vector<Particle>] unpackedA{values.to_aos()}
@@ -732,7 +732,7 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<int>]
+[return<int> effects(heap_alloc)]
 main() {
   [soa<Particle>] values{soa<Particle>()}
   [Particle] first{values.get(0i32)}
@@ -799,7 +799,7 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<int>]
+[return<int> effects(heap_alloc)]
 main() {
   [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(9i32))}
   [vector<Particle>] unpacked{values./std/collections/soa/to_aos()}
@@ -834,7 +834,7 @@ pickBorrowed([Reference<SoaVector<Particle>>] values) {
   return(values)
 }
 
-[return<int>]
+[return<int> effects(heap_alloc)]
 main() {
   [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
   values.push(Particle(7i32))
@@ -877,7 +877,7 @@ pickBorrowed([Reference<SoaVector<Particle>>] values) {
   return(values)
 }
 
-[return<int>]
+[return<int> effects(heap_alloc)]
 main() {
   [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
   values.push(Particle(7i32))

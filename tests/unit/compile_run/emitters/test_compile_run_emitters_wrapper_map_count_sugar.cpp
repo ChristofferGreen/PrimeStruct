@@ -72,7 +72,7 @@ wrapValues() {
   return(map<i32, i32>(1i32, 2i32))
 }
 
-[return<int>]
+[return<int> effects(heap_alloc)]
 main() {
   return(wrapValues().count(true))
 }
@@ -99,7 +99,7 @@ wrapValues() {
   return(map<i32, i32>(1i32, 2i32))
 }
 
-[return<int>]
+[return<int> effects(heap_alloc)]
 main() {
   return(wrapValues().count(1i32))
 }

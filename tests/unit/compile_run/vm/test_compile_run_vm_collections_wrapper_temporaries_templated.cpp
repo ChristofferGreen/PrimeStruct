@@ -12,7 +12,7 @@ TEST_CASE("rejects vm templated stdlib wrapper temporary unsafe parity missing a
   const std::string source = R"(
 import /std/collections/*
 
-[return<vector<T>>]
+[return<vector<T>> effects(heap_alloc)]
 wrapVector<T>([T] value) {
   return(/std/collections/vector/vector<T>(value))
 }
@@ -44,7 +44,7 @@ TEST_CASE("rejects vm templated stdlib wrapper temporary count capacity parity m
   const std::string source = R"(
 import /std/collections/*
 
-[return<vector<T>>]
+[return<vector<T>> effects(heap_alloc)]
 wrapVector<T>([T] value) {
   return(/std/collections/vector/vector<T>(value))
 }
@@ -363,12 +363,12 @@ TEST_CASE("rejects vm templated stdlib vector wrapper temporary call index misma
   const std::string source = R"(
 import /std/collections/*
 
-[return<vector<T>>]
+[return<vector<T>> effects(heap_alloc)]
 wrapVector<T>([T] value) {
   return(/std/collections/vector/vector<T>(value))
 }
 
-[return<int>]
+[return<int> effects(heap_alloc)]
 main() {
   return(/std/collections/vector/at<i32>(wrapVector<i32>(4i32), true))
 }

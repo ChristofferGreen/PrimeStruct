@@ -1265,7 +1265,7 @@ TEST_CASE("native templated stdlib vector wrapper temporary call forms") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<vector<T>>]
+[return<vector<T>> effects(heap_alloc)]
 wrapVector<T>([T] value) {
   return(/std/collections/vector/vector<T>(value))
 }
@@ -1294,7 +1294,7 @@ TEST_CASE("native templated stdlib vector wrapper temporary methods in expressio
   const std::string source = R"(
 import /std/collections/*
 
-[return<vector<T>>]
+[return<vector<T>> effects(heap_alloc)]
 wrapVector<T>([T] value) {
   return(/std/collections/vector/vector<T>(value))
 }

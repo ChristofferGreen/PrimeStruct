@@ -305,6 +305,23 @@ module {
 - **Execution effects:** executions may also carry `[effects(...)]`. The execution’s effects must be a subset of the
   enclosing definition’s active effects; otherwise it is a diagnostic. The default set is controlled by
   `--default-effects` in the compiler/VM.
+- **Callee effects:** every effect a callee *declares* with `[effects(...)]` must be active in the caller (its explicit
+  or default set, after implications, so a caller with `file_write` may call a `file_read` callee). The check runs in
+  semantics, so every backend sees it, and covers plain calls, method calls and calls to monomorphized templates (a
+  specialization keeps its template's `[effects]`). A callee without `[effects]` places no requirement on its
+  caller: its default set is not propagated (the full transitive rule is deferred, see `docs/todo.md`). A lambda body
+  is checked against the effects of the definition the lambda is written in, and calling a lambda requires no effects.
+  Calls in the arguments of a top-level execution are checked against that execution's effects. `[host]` functions
+  carry no effects. The diagnostic names the callee, the missing effect and the caller:
+  ```
+  import /std/net/*
+
+  [effects(net_io), int]
+  main() {
+    return(listen(0i32, 4i32))
+  }
+  ```
+  Without `effects(net_io)` on `main` this is rejected with `/std/net/listen requires net_io effect in /main`.
 - **Task effect prototype:** the first structured-concurrency surface uses `[effects(task)]` on definitions that request
   source-visible task work. The parser accepts `[spawn] f(...)` as an execution transform on call envelopes and parses
   `wait(task)` as the first task-handle join expression. The semantic pass publishes `Task<T>` binding facts for

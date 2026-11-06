@@ -51,7 +51,7 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [soa<Particle>] values{soa<Particle>()}
   [vector<Particle>] unpackedA{to_aos(values)}
@@ -79,7 +79,7 @@ copyValues() {
   return(out)
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [vector<Particle>] unpacked{copyValues()}
   return(count(unpacked))
@@ -292,12 +292,12 @@ Particle() {
 
 Holder() {}
 
-[return<SoaVector<Particle>>]
+[return<SoaVector<Particle>> effects(heap_alloc)]
 /Holder/cloneValues([Holder] self) {
   return(soaVectorNew<Particle>())
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [Holder] holder{Holder{}}
   [vector<Particle>] unpacked{holder.cloneValues().to_aos()}
@@ -344,7 +344,7 @@ Particle() {
 
 Holder() {}
 
-[return<SoaVector<Particle>>]
+[return<SoaVector<Particle>> effects(heap_alloc)]
 /Holder/cloneValues([Holder] self) {
   return(soaVectorNew<Particle>())
 }
@@ -355,7 +355,7 @@ Holder() {}
   return(shadowed)
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [Holder] holder{Holder{}}
   [vector<Particle>] unpacked{holder.cloneValues().to_aos()}
@@ -379,7 +379,7 @@ Particle() {
 
 Holder() {}
 
-[return<SoaVector<Particle>>]
+[return<SoaVector<Particle>> effects(heap_alloc)]
 /Holder/cloneValues([Holder] self) {
   return(soaVectorNew<Particle>())
 }
@@ -389,7 +389,7 @@ Holder() {}
   return(7i32)
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [Holder] holder{Holder{}}
   [auto] item{holder.cloneValues().to_aos()}

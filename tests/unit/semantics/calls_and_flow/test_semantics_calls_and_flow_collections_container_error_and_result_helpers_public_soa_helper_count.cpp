@@ -230,7 +230,7 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [soa<Particle>] values{soa<Particle>()}
   [i32] direct{count(values)}
@@ -315,13 +315,13 @@ Particle() {
 
 [struct]
 Holder() {
-  [return<soa<Particle>>]
+  [return<soa<Particle>> effects(heap_alloc)]
   cloneValues() {
     return(/std/collections/soa/single<Particle>(Particle(7i32)))
   }
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [Holder] holder{Holder{}}
   return(/std/collections/vector/count(/std/collections/soa/to_aos<Particle>(holder.cloneValues())))
@@ -344,13 +344,13 @@ Particle() {
 
 [struct]
 Holder() {
-  [return<SoaVector<Particle>>]
+  [return<SoaVector<Particle>> effects(heap_alloc)]
   cloneValues() {
     return(soaVectorSingle<Particle>(Particle(7i32)))
   }
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [Holder] holder{Holder{}}
   return(count(holder.cloneValues()))
@@ -374,13 +374,13 @@ Particle() {
 
 [struct]
 Holder() {
-  [return<SoaVector<Particle>>]
+  [return<SoaVector<Particle>> effects(heap_alloc)]
   cloneValues() {
     return(soaVectorSingle<Particle>(Particle(7i32)))
   }
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [Holder] holder{Holder{}}
   return(holder.cloneValues().count())
@@ -404,7 +404,7 @@ Particle() {
 
 [struct]
 Holder() {
-  [return<soa<Particle>>]
+  [return<soa<Particle>> effects(heap_alloc)]
   cloneValues() {
     return(/std/collections/soa/single<Particle>(Particle(7i32)))
   }
@@ -415,7 +415,7 @@ Holder() {
   return("shadow"utf8)
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [Holder] holder{Holder{}}
   return(holder.cloneValues().count())
@@ -438,7 +438,7 @@ Particle() {
 
 [struct]
 Holder() {
-  [return<SoaVector<Particle>>]
+  [return<SoaVector<Particle>> effects(heap_alloc)]
   cloneValues() {
     return(soaVectorSingle<Particle>(Particle(7i32)))
   }
@@ -449,7 +449,7 @@ Holder() {
   return("shadow"utf8)
 }
 
-[return<string>]
+[effects(heap_alloc), return<string>]
 main() {
   [Holder] holder{Holder{}}
   return(holder.cloneValues().count())
@@ -469,7 +469,7 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [SoaVector<Particle>] values{soaVectorNew<Particle>()}
   return(soaVectorCount<Particle>(values))
@@ -817,7 +817,7 @@ Particle17() {
   [i32] a16{0i32}
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   [SoaVector<Particle17>] values{soaVectorNew<Particle17>()}
   return(soaVectorCount<Particle17>(values))

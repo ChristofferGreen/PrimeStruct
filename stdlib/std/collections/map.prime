@@ -77,7 +77,7 @@ namespace std {
       }
     }
 
-    [public mut]
+    [public mut effects(heap_alloc)]
     Move([Reference<Self>] other) {
       this.keys = other.keys
       this.payloads = other.payloads

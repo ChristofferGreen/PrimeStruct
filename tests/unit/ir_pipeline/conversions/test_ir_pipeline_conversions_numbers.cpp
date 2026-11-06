@@ -526,7 +526,7 @@ log_file_error([FileError] err) {
   print_line_error(err.why())
 }
 
-[return<int> effects(file_read, io_out, io_err) on_error<FileError, /log_file_error>]
+[return<int> effects(file_read, file_write, io_out, io_err) on_error<FileError, /log_file_error>]
 main() {
   [File<Read>] openedA{File<Read>("input.txt"utf8)?}
   [File<Read>] mapped{try(Result.map(Result.ok(openedA), []([File<Read>] file) { return(file) }))}

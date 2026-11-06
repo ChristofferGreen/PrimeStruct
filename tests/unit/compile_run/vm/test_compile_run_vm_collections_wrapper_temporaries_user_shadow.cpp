@@ -268,7 +268,7 @@ TEST_CASE("rejects vm templated stdlib collection return envelope unsupported ar
   const std::string source = R"(
 import /std/collections/*
 
-[return<vector<Unknown>>]
+[return<vector<Unknown>> effects(heap_alloc)]
 wrapUnknown([i32] value) {
   return(/std/collections/vector/vector<i32>(value))
 }

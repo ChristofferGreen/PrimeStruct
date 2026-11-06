@@ -173,7 +173,7 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<SoaVector<Particle>>]
+[return<SoaVector<Particle>> effects(heap_alloc)]
 cloneValues() {
   return(soaVectorSingle<Particle>(Particle(7i32)))
 }
@@ -216,7 +216,7 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<SoaVector<Particle>>]
+[return<SoaVector<Particle>> effects(heap_alloc)]
 cloneValues() {
   return(soaVectorSingle<Particle>(Particle(7i32)))
 }
@@ -295,7 +295,7 @@ Particle() {
 [struct]
 Holder() {}
 
-[return<SoaVector<Particle>>]
+[return<SoaVector<Particle>> effects(heap_alloc)]
 /Holder/cloneValues([Holder] self) {
   return(soaVectorSingle<Particle>(Particle(7i32)))
 }
@@ -373,7 +373,7 @@ Particle() {
 
 [struct]
 Holder() {
-  [return<SoaVector<Particle>>]
+  [return<SoaVector<Particle>> effects(heap_alloc)]
   cloneValues() {
     return(soaVectorSingle<Particle>(Particle(7i32)))
   }
@@ -418,7 +418,7 @@ Particle() {
 
 [struct]
 Holder() {
-  [return<SoaVector<Particle>>]
+  [return<SoaVector<Particle>> effects(heap_alloc)]
   cloneValues() {
     return(soaVectorSingle<Particle>(Particle(7i32)))
   }

@@ -24,7 +24,7 @@ TEST_CASE("runs vm with templated stdlib vector wrapper temporary call forms") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<vector<T>>]
+[return<vector<T>> effects(heap_alloc)]
 wrapVector<T>([T] value) {
   return(/std/collections/vector/vector<T>(value))
 }
@@ -48,7 +48,7 @@ TEST_CASE("runs vm templated stdlib vector wrapper temporary methods in expressi
   const std::string source = R"(
 import /std/collections/*
 
-[return<vector<T>>]
+[return<vector<T>> effects(heap_alloc)]
 wrapVector<T>([T] value) {
   return(/std/collections/vector/vector<T>(value))
 }
@@ -78,7 +78,7 @@ TEST_CASE("runs vm with templated stdlib wrapper temporary index forms") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<vector<T>>]
+[return<vector<T>> effects(heap_alloc)]
 wrapVector<T>([T] value) {
   return(/std/collections/vector/vector<T>(value))
 }
@@ -108,7 +108,7 @@ TEST_CASE("runs vm with templated stdlib wrapper temporary syntax parity") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<vector<T>>]
+[return<vector<T>> effects(heap_alloc)]
 wrapVector<T>([T] value) {
   return(/std/collections/vector/vector<T>(value))
 }
@@ -146,7 +146,7 @@ TEST_CASE("runs vm with templated stdlib wrapper temporary unsafe parity") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<vector<T>>]
+[return<vector<T>> effects(heap_alloc)]
 wrapVector<T>([T] value) {
   return(/std/collections/vector/vector<T>(value))
 }
@@ -183,7 +183,7 @@ TEST_CASE("runs vm templated stdlib wrapper temporary count capacity parity") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<vector<T>>]
+[return<vector<T>> effects(heap_alloc)]
 wrapVector<T>([T] value) {
   return(/std/collections/vector/vector<T>(value))
 }

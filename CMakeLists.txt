@@ -2055,6 +2055,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/semantics/test_semantics_condensation_dag.cpp
     tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_effects.cpp
     tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_effects_part2.cpp
+    tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_effects_part3.cpp
     tests/unit/semantics/entry/test_semantics_entry_builtins_numeric.cpp
     tests/unit/semantics/entry/test_semantics_entry_entry.cpp
     tests/unit/semantics/entry/test_semantics_entry_executions.cpp

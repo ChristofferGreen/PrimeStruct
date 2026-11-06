@@ -24,7 +24,7 @@ wrapMap() {
   return(map<i32, i32>(1i32, 4i32))
 }
 
-[return<int>]
+[effects(heap_alloc), return<int>]
 main() {
   return(count(wrapMap()./std/collections/map/at(1i32)))
 }
