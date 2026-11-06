@@ -938,4 +938,169 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("a Result local destroys its struct payload once and try copies it out") {
+  program_matrix::ProgramCase program;
+  program.name = "result_payload_try_copy";
+  program.source = R"(import /std/result/*
+
+[struct]
+Noisy() {
+  [i32 mut] id{0i32}
+  [i64 mut] pad{0i64}
+  [public effects(io_out)]
+  Destroy() {
+    print_line(this.id)
+  }
+  [public effects(io_out)]
+  Copy([Reference<Self>] other) {
+    this.id = other.id + 100i32
+  }
+}
+
+[return<Result<Noisy, i32>> effects(io_out)]
+make([i32] id) {
+  return(Result.ok(Noisy{id, 0i64}))
+}
+
+[effects(io_out)]
+on_err([i32] err) {
+  print_line(1000i32 + err)
+}
+
+[return<i32> effects(io_out) on_error<i32, /on_err>]
+use_it() {
+  [Result<Noisy, i32>] r{make(1i32)}
+  [Noisy] v{try(r)}
+  print_line(10i32)
+  return(v.id)
+}
+
+[return<int> effects(io_out)]
+main() {
+  print_line(use_it())
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "10\n101\n1\n101\n";
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("a Result local destroys an unread or failed payload exactly once") {
+  program_matrix::ProgramCase program;
+  program.name = "result_payload_unread_error";
+  program.source = R"(import /std/result/*
+
+[struct]
+Noisy() {
+  [i32 mut] id{0i32}
+  [i64 mut] pad{0i64}
+  [public effects(io_out)]
+  Destroy() {
+    print_line(this.id)
+  }
+  [public effects(io_out)]
+  Copy([Reference<Self>] other) {
+    this.id = other.id + 100i32
+  }
+}
+
+[return<Result<Noisy, i32>> effects(io_out)]
+make([i32] id, [bool] fail) {
+  if(fail) {
+    return(/std/result/error<Noisy, i32>(7i32))
+  }
+  return(Result.ok(Noisy{id, 0i64}))
+}
+
+[return<Result<vector<i32>, i32>> effects(heap_alloc)]
+make_vec() {
+  [vector<i32> mut] v{vector<i32>(1i32, 2i32, 3i32)}
+  return(Result.ok(v))
+}
+
+[effects(io_out)]
+on_err([i32] err) {
+  print_line(1000i32 + err)
+}
+
+[return<i32> effects(io_out)]
+unused() {
+  [Result<Noisy, i32>] r{make(2i32, false)}
+  print_line(20i32)
+  return(0i32)
+}
+
+[return<i32> effects(io_out)]
+error_side() {
+  [Result<Noisy, i32>] r{make(3i32, true)}
+  print_line(Result.error(r))
+  return(0i32)
+}
+
+[return<i32> effects(io_out) on_error<i32, /on_err>]
+failing() {
+  [Result<Noisy, i32>] r{make(4i32, true)}
+  [Noisy] v{try(r)}
+  print_line(30i32)
+  return(v.id)
+}
+
+[return<int> effects(io_out, heap_alloc)]
+main() {
+  unused()
+  error_side()
+  print_line(failing())
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "20\n2\n1\n1007\n7\n";
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("a Result with a vector-holding struct payload copies on try and frees once") {
+  program_matrix::ProgramCase program;
+  program.name = "result_payload_vector_field";
+  program.source = R"(import /std/result/*
+import /std/collections/*
+
+[struct]
+Bag() {
+  [vector<i32> mut] items{vector<i32>()}
+}
+
+[return<Result<Bag, i32>> effects(heap_alloc)]
+make_bag() {
+  [Bag mut] bag{Bag{}}
+  bag.items.push(4i32)
+  bag.items.push(5i32)
+  return(Result.ok(bag))
+}
+
+[effects(io_out)]
+on_err([i32] err) {
+  print_line(1000i32 + err)
+}
+
+[return<i32> effects(io_out, heap_alloc) on_error<i32, /on_err>]
+read_bag() {
+  [Result<Bag, i32>] r{make_bag()}
+  [Bag mut] b{try(r)}
+  b.items.push(6i32)
+  return(b.items.count())
+}
+
+[return<int> effects(io_out, heap_alloc)]
+main() {
+  print_line(read_bag())
+  print_line(read_bag())
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "3\n3\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

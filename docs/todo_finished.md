@@ -2001,6 +2001,7 @@ are left unarchived.
 | TODO-5508 | User Copy helpers work for structs with owning fields | [2026-10.md](todo_archive/2026-10.md) | 2026-10-06 |
 | TODO-5509 | Self-assignment, user-Destroy fields, Maybe payloads and move parameters destroy correctly | [2026-10.md](todo_archive/2026-10.md) | 2026-10-06 |
 | TODO-5522 | Builtin vector<T> locals destroy their elements | [2026-10.md](todo_archive/2026-10.md) | 2026-10-06 |
+| TODO-5527 | Stdlib Result locals destroy their payload once | [2026-11.md](todo_archive/2026-11.md) | 2026-11-06 |
 | TODO-5528 | Native UI C ABI with a headless backend and engine bindings | [2026-10.md](todo_archive/2026-10.md) | 2026-10-08 |
 | TODO-5529 | `/std/ui/native` surface with an `AppEvent` loop | [2026-10.md](todo_archive/2026-10.md) | 2026-10-08 |
 | TODO-5530 | Read and write whole files as text | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |

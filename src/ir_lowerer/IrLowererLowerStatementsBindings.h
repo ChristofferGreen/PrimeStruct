@@ -725,10 +725,8 @@
           return false;
         }
         // A sum local built from a fresh value owns its payload and destroys it at scope end.
-        // Stdlib Result sums are left out: `try` copies their payload out without a copy helper.
         if (!fileScopeStack.empty() && !emittedSumMove && init.kind == Expr::Kind::Call &&
             !init.isFieldAccess && ir_lowerer::shouldDisarmStructCopySourceExpr(init) &&
-            !sumHelpers.isStdlibResultSumDefinition(*sumDef) &&
             sumHelpers.sumPayloadsNeedDestroy(*sumDef)) {
           info.dropFlagLocal = allocTempLocal();
           function.instructions.push_back({IrOpcode::PushI32, 1});

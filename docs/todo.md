@@ -117,7 +117,6 @@ of sync with them.
 | TODO-5523 | A Result-returning main exits with its error code | deferred | result-main |
 | TODO-5525 | `Result.ok(x)` passes as a stdlib Result argument | deferred | result-arguments |
 | TODO-5526 | Vectors of stdlib Result values keep their elements | deferred | result-containers |
-| TODO-5527 | Stdlib Result locals destroy their payload once | ready | lifecycle-result-payloads |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
 | TODO-5512 | Pointers and aliases count as borrows of their root | deferred | safety-borrows |
 | TODO-5513 | Methods through a dereferenced vector pointer read the right fields | deferred | collections-access |
@@ -157,7 +156,6 @@ of sync with them.
 - - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Startup (docs/NativeUiPlan.md section 16): TODO-5603
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
-- Lifecycle (docs/spec/value-lifecycle.md): TODO-5527
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5514, TODO-5516, TODO-5517
@@ -165,7 +163,7 @@ of sync with them.
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5669, TODO-5676, TODO-5677; collection fields found by closures: TODO-5681, TODO-5682
-- Web server (single-threaded, built with `--emit=optexe`): move-only handles ; Result payloads for socket handles TODO-5527; static file serving 
+- Web server (single-threaded, built with `--emit=optexe`): move-only handles ; Result payloads for socket handles ; static file serving 
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
 ### Execution Queue
@@ -384,18 +382,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - full release gate green
   - stop_rule: split into one leaf per platform before implementation.
   - notes: deferred: after the macOS editor works.
-
-- [ ] TODO-5527: Stdlib Result locals destroy their payload once
-  - owner: ai
-  - status: ready
-  - created_at: 2026-10-06
-  - phase: Correctness audit 2026-10
-  - parallel_track: lifecycle-result-payloads
-  - scope: Sum locals now destroy their active payload at scope end, except stdlib `Result` sums: `[Result<Noisy, i32>] r{...}` never destroys an ok `Noisy` (or a `Vector` payload's buffer), because `try(r)` and `[Noisy] v{try(r)}` copy the payload out without a copy helper, so destroying `r` too would destroy twice. Make `try` on a Result local copy (or move out and disarm) the payload, then register Result locals like other sums, and copy Result payloads taken from a place.
-  - acceptance:
-    - matrix cases with struct and `Vector` ok payloads read through `try`, `pick` and `Result.error` destroy each payload once on VM, native and C++
-    - full release gate green
-  - stop_rule: stdlib Result payload ownership only.
 
 - [ ] TODO-5524: Int-backed error structs round-trip through stdlib Result sums
   - owner: ai

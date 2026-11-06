@@ -504,6 +504,11 @@ bool shouldDisarmStructCopySourceExpr(const Expr &expr) {
   if (isSimpleCallName(expr, "dereference") || isSimpleCallName(expr, "location")) {
     return false;
   }
+  // `try(result)` on a named Result reads the payload out of the Result's own storage, which keeps owning it: the
+  // value is a copy of a place, not a temporary.
+  if (isSimpleCallName(expr, "try") && expr.args.size() == 1 && expr.args.front().kind == Expr::Kind::Name) {
+    return false;
+  }
   // Note: a builtin array/vector access call (e.g. `at(value, index)`) is
   // NOT excluded here - unlike `dereference`/`location`, it produces a
   // fresh by-value element copy, not a borrow into the receiver, so its
