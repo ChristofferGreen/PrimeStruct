@@ -222,6 +222,8 @@ std::string formatIrModule(const IrModule &module) {
       return "u8";
     case IrHostValueKind::Text:
       return "text";
+    case IrHostValueKind::BytePointer:
+      return "bytes";
     }
     return "?";
   };

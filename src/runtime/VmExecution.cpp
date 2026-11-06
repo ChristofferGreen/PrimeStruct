@@ -191,6 +191,7 @@ bool handleVmHostCall(const VmHostFunctions *hostFunctions,
   case IrHostValueKind::F64:
   case IrHostValueKind::String:
   case IrHostValueKind::Text:
+  case IrHostValueKind::BytePointer:
     stack.push_back(result);
     break;
   case IrHostValueKind::F32:

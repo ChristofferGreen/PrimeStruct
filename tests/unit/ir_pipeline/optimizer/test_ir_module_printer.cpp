@@ -81,6 +81,23 @@ TEST_CASE("calls, host imports, strings and print flags are named") {
   CHECK(text.find("FileOpenRead #0 \"/tmp/x\"") != std::string::npos);
 }
 
+TEST_CASE("byte pointer host parameters print as bytes") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction entry;
+  entry.name = "/main";
+  entry.instructions = assemble({"ReturnVoid"});
+  module.functions.push_back(std::move(entry));
+  primec::IrHostImport import;
+  import.name = "host_recv";
+  import.parameters = {primec::IrHostValueKind::I32, primec::IrHostValueKind::BytePointer,
+                       primec::IrHostValueKind::U64};
+  import.returnKind = primec::IrHostValueKind::I64;
+  module.hostImports.push_back(import);
+  const std::string text = primec::formatIrModule(module);
+  CHECK(text.find("host_imports: 1\n  0: host_recv(i32, bytes, u64) -> i64\n") != std::string::npos);
+}
+
 TEST_CASE("every opcode formats to its own name without crashing") {
   const primec::IrModule module;
   for (const primec::IrOpcodeInfo &info : primec::IrOpcodeTable) {

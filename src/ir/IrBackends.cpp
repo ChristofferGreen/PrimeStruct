@@ -442,7 +442,8 @@ bool moduleNeedsOptimizedCppEmitter(const IrModule &module) {
       return true;
     }
     for (const IrHostValueKind parameter : hostImport.parameters) {
-      if (parameter == IrHostValueKind::U8 || parameter == IrHostValueKind::Text) {
+      if (parameter == IrHostValueKind::U8 || parameter == IrHostValueKind::Text ||
+          parameter == IrHostValueKind::BytePointer) {
         return true;
       }
     }

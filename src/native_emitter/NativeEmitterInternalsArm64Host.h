@@ -97,6 +97,10 @@ inline bool Arm64Emitter::emitHostCall(const HostCallSite &site, std::string &er
       error = "native backend found a void host parameter";
       return false;
     }
+    if (kind == IrHostValueKind::BytePointer) {
+      error = "native backend does not pass Pointer<u8> byte buffers to host functions (use --emit=optexe)";
+      return false;
+    }
     const bool isFloat = kind == IrHostValueKind::F32 || kind == IrHostValueKind::F64;
     uint8_t &next = isFloat ? floatRegisters : integerRegisters;
     if (next >= 8) {

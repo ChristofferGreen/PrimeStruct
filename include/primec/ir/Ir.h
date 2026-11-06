@@ -7,7 +7,7 @@
 namespace primec {
 
 constexpr uint32_t IrSchemaMagic = 0x50534952u; // "PSIR"
-constexpr uint32_t IrSchemaVersion = 31u;
+constexpr uint32_t IrSchemaVersion = 32u;
 constexpr uint32_t IrSchemaMinimumSupportedVersion = IrSchemaVersion;
 constexpr uint32_t IrSchemaMaximumSupportedVersion = IrSchemaVersion;
 
@@ -293,9 +293,13 @@ enum class IrHostValueKind : uint8_t {
   // block (or of a module-table string, which is accepted in the same position). Result: the host returns
   // text, the VM copies it into a fresh string-heap block and pushes the block address (0 for empty text).
   Text,
+  // Parameters only: a `Pointer<u8>` into a byte region, always followed by its `u64` length. Compiled C++ hands
+  // the host a `uint8_t *` checked to cover the whole length (null for address 0 with length 0); the VM keeps the
+  // address.
+  BytePointer,
 };
 
-constexpr uint8_t IrHostValueKindMax = static_cast<uint8_t>(IrHostValueKind::Text);
+constexpr uint8_t IrHostValueKindMax = static_cast<uint8_t>(IrHostValueKind::BytePointer);
 
 struct IrHostImport {
   std::string name;

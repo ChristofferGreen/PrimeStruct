@@ -256,6 +256,21 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
           return failHost("host definition parameter must be i32, i64, u64, f32, f64, bool, or string: " + param.name);
         }
       }
+      // A `Pointer<u8>` reaches the host as a byte pointer whose length is the next parameter
+      // (docs/spec/host-and-core-library.md). The runtime's own `__pstext_*` functions keep their raw addresses.
+      if (def.name.rfind("__pstext_", 0) != 0) {
+        for (size_t i = 0; i < defParams.size(); ++i) {
+          const auto &param = defParams[i];
+          if (param.binding.typeName != "Pointer" || param.binding.typeTemplateArg != "u8") {
+            continue;
+          }
+          const bool lengthFollows = i + 1 < defParams.size() && defParams[i + 1].binding.typeName == "u64" &&
+                                     defParams[i + 1].binding.typeTemplateArg.empty();
+          if (!lengthFollows) {
+            return failHost("host definition Pointer<u8> parameter must be followed by its u64 length: " + param.name);
+          }
+        }
+      }
       return true;
     }
     if (structNames_.count(def.fullPath) == 0) {

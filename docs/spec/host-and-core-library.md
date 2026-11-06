@@ -47,6 +47,34 @@ Rules:
   parameter as a NUL-terminated `const char *` and take a `const char *` result as a new `String`; `u8` is
   `uint8_t`. The simple emitters (`cpp`, `exe`) hand a program that uses `u8` or text host values to the optimized emitter, and a
   host function that returns a `string` view is rejected by every C++ emitter.
+- **Byte buffers (PSIR v32).** A `Pointer<u8>` parameter must be followed by a `u64` parameter holding its length
+  (`[host return<i64>] host_recv([i32] fd, [Pointer<u8>] buffer, [u64] length)`); semantics rejects any other shape
+  with `host definition Pointer<u8> parameter must be followed by its u64 length`. It lowers to the `bytes` host value
+  kind (`IrHostValueKind::BytePointer`). The optimized emitters pass a `uint8_t *` to the first of `length` bytes
+  after checking that all of them lie in one live byte region (a `vector<u8>`'s storage, a `String`'s data, a slice
+  of either); an address that is not one, or a length past the region, is the runtime fault `invalid byte pointer
+  passed to host function`, and address 0 with length 0 passes `nullptr`. The C declaration is
+  `int64_t host_recv(int32_t, uint8_t *, uint64_t);`. The VM, `Script::bind` and the native backend do not pass byte
+  buffers and reject such an import with a message naming it. The runtime's own `__pstext_*` functions keep raw
+  addresses.
+
+```prime
+import /std/collections/*
+
+[host return<void>]
+host_fill([Pointer<u8>] buffer, [u64] length) {
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [vector<u8> mut] bytes{vector<u8>(0u8, 0u8, 0u8, 0u8)}
+  [mut] window{bytes.sliceMut(0i32, 4i32)}
+  host_fill(window.data, 4u64)
+  return(convert<i32>(bytes[3i32]))
+}
+```
+
+  Expected IR: `host_imports[0] = host_fill(bytes, u64) -> void`.
 - The embedder binds every declared function, by name, with a matching signature
   (`Script::bind` in `docs/Embedding.md`). A missing or mismatched binding fails
   before any instruction runs. A declared host function that is never called adds

@@ -25,8 +25,8 @@
   (recursive and larger functions), including recursion up to the VM's call-depth limit.
 - **GLSL note:** GLSL/SPIR-V emission routes through canonical IR (`glsl-ir`/`spirv-ir`) and `IrValidationTarget::Glsl`;
   these modes emit backend output directly without requiring PSIR serialization.
-- **PSIR versioning:** current portable IR is PSIR v31 (v24 to v31 are listed in `include/primec/ir/Ir.h`'s opcode
-  comments and the finished TODO log; v31 retires run-time string indices (a host function can no longer return `string`; same module layout); v30 appends the `text` host value kind; v29 appends the `u8` host value kind; v28 adds `HeapAllocBytes`, `LoadU8`, `StoreU8` and `ZextU8`). Before that, PSIR v23 (adds a per-function `parameter_count` field on top of v22’s
+- **PSIR versioning:** current portable IR is PSIR v32 (v24 to v32 are listed in `include/primec/ir/Ir.h`'s opcode
+  comments and the finished TODO log; v32 appends the `bytes` host value kind (`Pointer<u8>` host parameters); v31 retires run-time string indices (a host function can no longer return `string`; same module layout); v30 appends the `text` host value kind; v29 appends the `u8` host value kind; v28 adds `HeapAllocBytes`, `LoadU8`, `StoreU8` and `ZextU8`). Before that, PSIR v23 (adds a per-function `parameter_count` field on top of v22’s
   source-unit/file identity in source-map metadata, v21’s `HeapRealloc`, v20’s `FileReadByte` and
   `HeapFree`, v19’s per-instruction source-map metadata keyed by debug ID, v18’s instruction debug IDs, v17’s local
   debug slots, v16’s function-call opcodes `Call`/`CallVoid`, v15’s execution metadata, v14’s float return opcodes,
@@ -56,7 +56,9 @@
   them. They manage text blocks over byte regions: 256 KiB chunks of equal blocks in size classes (four per doubling from
   32 bytes to 64 KiB), a byte region of its own for text over 64 KiB, an optional byte limit (the runtime fault
   `string memory limit exceeded`) and statistics. A chunk whose blocks are all free is returned except one kept for
-  reuse. `Pointer<u8>` is a valid `[host]` parameter and result type (a `u64` byte address in the slot).
+  reuse. `Pointer<u8>` is a valid `[host]` parameter and result type (a `u64` byte address in the slot); outside the
+  runtime's own `__pstext_*` functions a `Pointer<u8>` parameter is the `bytes` host value kind (PSIR v32, see
+  docs/spec/host-and-core-library.md, Byte buffers).
 - **Byte regions (PSIR v28):** `HeapAllocBytes` pops a byte count and pushes the address of a zeroed region of that many
   bytes (0 for a count of 0); `LoadU8` pops an address and pushes the byte there, zero-extended; `StoreU8` pops a value
   and then an address, stores the value's low 8 bits and pushes the stored byte (as `StoreIndirect` pushes its value);

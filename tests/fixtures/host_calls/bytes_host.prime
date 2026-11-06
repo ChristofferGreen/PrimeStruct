@@ -1,0 +1,22 @@
+// Host functions that take a byte buffer (`Pointer<u8>` followed by its `u64` length), for --emit=optexe
+// (tests/unit/backend_host/test_cpp_strings.cpp). bytes_impl.cpp is the host side.
+import /std/collections/*
+
+[host return<void>]
+host_fill([Pointer<u8>] buffer, [u64] length) {
+}
+
+[host return<i32>]
+host_sum([Pointer<u8>] buffer, [u64] length) {
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [vector<u8> mut] bytes{vector<u8>(0u8, 0u8, 0u8, 0u8, 0u8)}
+  [mut] window{bytes.sliceMut(1i32, 5i32)}
+  host_fill(window.data, 4u64)
+  // bytes is now 0 1 2 3 4: the program sees what the host wrote, and the host reads it back.
+  [i32] seen{convert<i32>(bytes[4i32]) * 10i32 + convert<i32>(bytes[1i32])}
+  [mut] all{bytes.sliceMut(0i32, 5i32)}
+  return(seen + host_sum(all.data, 5u64))
+}

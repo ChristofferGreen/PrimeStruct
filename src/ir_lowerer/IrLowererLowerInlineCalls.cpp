@@ -154,7 +154,7 @@ bool emitInlineDefinitionCallImpl(
                              (transform.name == "Pointer" && transform.templateArgs.size() == 1 &&
                               transform.templateArgs.front() == "u8");
         }
-        const auto kind = bytePointerParam ? std::optional<IrHostValueKind>(IrHostValueKind::U64)
+        const auto kind = bytePointerParam ? std::optional<IrHostValueKind>(IrHostValueKind::BytePointer)
                                            : hostKind(extractParameterTypeNameStatic(param));
         if (!kind.has_value()) {
           error = "host definition parameter is not a primitive: " + callee.fullPath;

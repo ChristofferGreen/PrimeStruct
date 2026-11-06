@@ -543,6 +543,14 @@ private:
         case IrHostValueKind::Text:
           arg = "ps_host_text_arg(rt, ps_strings, PsStringCount, " + argSlot + ")";
           break;
+        case IrHostValueKind::BytePointer:
+          // The length is the next parameter (semantics requires a `u64` there).
+          if (i + 1 >= import.parameters.size() || import.parameters[i + 1] != IrHostValueKind::U64) {
+            error = "optexe found a byte pointer host parameter without a u64 length in " + function_.name;
+            return false;
+          }
+          arg = "ps_host_bytes(rt, " + argSlot + ", " + slot(base + static_cast<int64_t>(i) + 1) + ")";
+          break;
         case IrHostValueKind::Void:
           error = "optexe found a void host parameter in " + function_.name;
           return false;
@@ -581,6 +589,9 @@ private:
         break;
       case IrHostValueKind::String:
         error = "optexe found a host function returning text in " + function_.name;
+        return false;
+      case IrHostValueKind::BytePointer:
+        error = "optexe found a host function returning a byte pointer in " + function_.name;
         return false;
       }
       return true;

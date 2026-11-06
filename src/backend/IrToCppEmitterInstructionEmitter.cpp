@@ -624,6 +624,10 @@ bool emitInstruction(const IrInstruction &instruction,
             error = "IrToCppEmitter host import has a text parameter at instruction " + std::to_string(index) +
                     " (the plain IrToCppEmitter has no text values; text modules go through IrToOptCppEmitter)";
             return false;
+          case IrHostValueKind::BytePointer:
+            error = "IrToCppEmitter host import has a byte pointer parameter at instruction " +
+                    std::to_string(index) + " (byte modules go through IrToOptCppEmitter)";
+            return false;
           case IrHostValueKind::Void:
             error = "IrToCppEmitter host import has a void parameter at instruction " + std::to_string(index);
             return false;
@@ -662,6 +666,7 @@ bool emitInstruction(const IrInstruction &instruction,
                   " (the plain IrToCppEmitter has no text values; text modules go through IrToOptCppEmitter)";
           return false;
         case IrHostValueKind::String:
+        case IrHostValueKind::BytePointer:
           error = "IrToCppEmitter host import returns text at instruction " + std::to_string(index);
           return false;
       }

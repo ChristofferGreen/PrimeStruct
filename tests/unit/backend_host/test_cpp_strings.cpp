@@ -230,6 +230,52 @@ TEST_CASE("host functions that take and return String agree on the VM and optexe
   CHECK(readFile(output) == notes);
 }
 
+TEST_CASE("Pointer<u8> host parameters reach optexe hosts as checked byte pointers") {
+  const std::string fixtures = std::string(PRIMESTRUCT_SOURCE_DIR) + "/tests/fixtures/host_calls/";
+  const std::string impl = fixtures + "bytes_impl.cpp";
+  auto build = [&](const std::string &name) {
+    const std::string exe = scratch(name);
+    const std::string log = exe + ".log";
+    const int status = run(shellQuote(Primec) + " --emit=optexe " + shellQuote(fixtures + name + ".prime") + " -o " +
+                           shellQuote(exe) + " --link-arg " + shellQuote(impl) + " > " + shellQuote(log) + " 2>&1");
+    REQUIRE_MESSAGE(status == 0, readFile(log));
+    return exe;
+  };
+  // The host fills bytes 1..4 with 1 2 3 4 and sums all five: 4 * 10 + 1 + 10.
+  CHECK(run(shellQuote(build("bytes_host"))) == 51);
+
+  // A length past the buffer's byte region faults before the host runs.
+  const std::string overrun = build("bytes_host_overrun");
+  const std::string errors = overrun + ".err";
+  CHECK(run(shellQuote(overrun) + " 2> " + shellQuote(errors)) == 3);
+  CHECK(readFile(errors).find("invalid byte pointer passed to host function") != std::string::npos);
+
+  // The VM does not pass byte buffers to hosts and says so.
+  ScriptEngine engine;
+  const auto script = engine.compileFile(fixtures + "bytes_host.prime");
+  REQUIRE_MESSAGE(script.valid(), script.diagnostics());
+  const auto vm = script.run();
+  CHECK_FALSE(vm.ok);
+  CHECK(vm.diagnostics.find("host_fill takes a Pointer<u8> byte buffer") != std::string::npos);
+}
+
+TEST_CASE("a Pointer<u8> host parameter needs its u64 length next") {
+  ScriptEngine engine;
+  const auto script = engine.compileSource("/bytes_missing_length.prime", R"(
+[host return<void>]
+host_fill([Pointer<u8>] buffer, [i32] length) {
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)");
+  CHECK_FALSE(script.valid());
+  CHECK(script.diagnostics().find("host definition Pointer<u8> parameter must be followed by its u64 length: buffer") !=
+        std::string::npos);
+}
+
 TEST_CASE("libSystem host functions run on the arm64 native backend with the VM's result") {
   const std::string program = std::string(PRIMESTRUCT_SOURCE_DIR) + "/tests/fixtures/host_calls/libsystem_host.prime";
   ScriptEngine engine;

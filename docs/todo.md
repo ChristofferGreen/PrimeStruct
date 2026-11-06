@@ -112,7 +112,6 @@ of sync with them.
 | TODO-5675 | Struct fields that are vectors of structs lower on VM and native | ready | collections-fields |
 | TODO-5676 | Lambdas can state their return type | deferred | closures-return-types |
 | TODO-5677 | A `Function` whose closure holds a same-typed `Function` copies and destroys | deferred | closures-lifecycle |
-| TODO-5678 | `Pointer<u8>` host parameters reach C++ host functions as real byte pointers | ready | host-bytes |
 | TODO-5679 | Stdlib structs can be move-only | deferred | lifecycle-move-only |
 | TODO-5680 | `/std/os`: environment, monotonic clock and a SIGTERM stop flag | ready | os-host |
 | TODO-5510 | `return` returns from unit-variant pick arms correctly | ready | control-returns |
@@ -145,7 +144,6 @@ of sync with them.
 - TODO-5510 (control-returns): `return` returns from unit-variant pick arms correctly
 - TODO-5524 (result-error-structs): int-backed error structs round-trip through stdlib Result sums
 - TODO-5675 (collections-fields): struct fields that are vectors of structs lower on VM and native
-- TODO-5678 (host-bytes): `Pointer<u8>` host parameters reach C++ host functions as real byte pointers
 - TODO-5680 (os-host): `/std/os`: environment, monotonic clock and a SIGTERM stop flag
 
 ### Immediate Next 10
@@ -157,8 +155,7 @@ of sync with them.
 5. TODO-5524
 6. TODO-5675
 7. TODO-5673
-8. TODO-5678
-9. TODO-5680
+8. TODO-5680
 
 ### Priority Lanes
 
@@ -174,7 +171,7 @@ of sync with them.
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5669, TODO-5676, TODO-5677; collection fields found by closures: TODO-5668
-- Web server (single-threaded, Docker image built with `--emit=optexe`): handler and router blockers TODO-5675, then TODO-5673; network and OS TODO-5678, TODO-5680, TODO-5679; Result payloads for socket handles TODO-5527
+- Web server (single-threaded, Docker image built with `--emit=optexe`): handler and router blockers TODO-5675, then TODO-5673; network and OS TODO-5680, TODO-5679; Result payloads for socket handles TODO-5527
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
 ### Execution Queue
@@ -256,18 +253,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - the repro (a two-level wrapped `Function` called, copied and destroyed) runs on VM, native and optexe with no leaked blocks
     - full release gate green
   - stop_rule: recursive generated lifecycle helpers.
-
-- [ ] TODO-5678: `Pointer<u8>` host parameters reach C++ host functions as real byte pointers
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-06
-  - phase: Web server (Docker image built with `--emit=optexe`), network leaf 1
-  - parallel_track: host-bytes
-  - scope: A `[host]` parameter of type `Pointer<u8>` lowers to `IrHostValueKind::U64` (`src/ir_lowerer/IrLowererLowerInlineCalls.cpp`), and the optimized C++ emitter passes the raw slot, so the host receives a tagged VM heap address. A shim that dereferences it segfaults. Add a `BytePointer` host kind: semantics requires each `Pointer<u8>` host parameter to be followed by a `u64` length; `src/backend/IrToOptCppEmitter.cpp` passes `uint8_t *` resolved with `rt.heap.byteSpan(address, length)` and faults with `invalid byte pointer passed to host function` on a bad span (address 0 with length 0 passes `nullptr`). `hostCType`, the IR serializer and printer, and `VmHost`/`Script::bind` (which reject the kind with a clear message) follow. Socket `recv`/`send` and any other byte-buffer host function need this.
-  - acceptance:
-    - an optexe test with a small C++ shim that fills and sums a `vector<u8>` buffer through `sliceMut`/`data`; a length past the buffer faults instead of reading; IR dump shows the new kind; docs/spec/host-and-core-library.md describes the convention
-    - full release gate green
-  - stop_rule: the host kind and its pairing rule; no socket code.
 
 - [ ] TODO-5679: Stdlib structs can be move-only
   - owner: ai

@@ -224,6 +224,19 @@ inline const char *ps_host_text_arg(Rt &rt, const PsString *table, size_t count,
   ps_fault("invalid text passed to host function");
 }
 
+// A BytePointer argument: the `length` bytes at a byte-region address, all in one live region, or a fault (address 0
+// with length 0 is null).
+inline uint8_t *ps_host_bytes(Rt &rt, uint64_t address, uint64_t length) {
+  if (address == 0 && length == 0) {
+    return nullptr;
+  }
+  uint8_t *first = rt.heap.byteSpan(address, length);
+  if (first == nullptr) {
+    ps_fault("invalid byte pointer passed to host function");
+  }
+  return first;
+}
+
 // A Text result: the returned text copied into a fresh string-heap block the program owns (0 for empty).
 inline uint64_t ps_host_text_result(Rt &rt, const char *text) {
   const size_t size = text == nullptr ? 0 : std::strlen(text);
