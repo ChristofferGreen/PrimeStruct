@@ -121,6 +121,7 @@ void accumulateExprEstimate(const Expr &expr, ProgramHeapEstimateStats &stats) {
   for (const std::string &capture : expr.lambdaCaptures) {
     addStringEstimate(capture, stats);
   }
+  accumulateExprVectorEstimate(expr.lambdaInitCaptures, stats);
 }
 
 } // namespace

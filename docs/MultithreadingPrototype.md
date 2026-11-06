@@ -350,6 +350,11 @@ main() {
 
 The exact atomic, lock, and channel APIs are out of scope for this prototype.
 
+Lambdas are closure structs (`docs/spec/value-lifecycle.md`, Lambdas), so the same rule applies to them as values: a
+closure is sendable only when every capture is a by-value, init or `move` capture of a sendable type. A `[ref name]`
+or `[&]` capture is a borrow of the spawning frame and is never sendable; neither is a `Function<R, A...>` until it
+carries a sendable marker, since the erased type no longer shows its capture types.
+
 ## High-Level And Low-Level Layers
 
 The prototype intentionally starts with safe structured tasks. The long-term

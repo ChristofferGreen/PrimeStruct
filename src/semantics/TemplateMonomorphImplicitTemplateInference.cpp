@@ -47,6 +47,20 @@ bool inferBindingTypeForMonomorph(const Expr &initializer,
                                   bool allowMathBare,
                                   Context &ctx,
                                   semantics::BindingInfo &infoOut) {
+  // `location(x)` is a `Pointer` to x's type (a `[ref x]` closure capture passes one to its factory).
+  if (initializer.kind == Expr::Kind::Call && !initializer.isMethodCall && initializer.name == "location" &&
+      initializer.args.size() == 1 && initializer.args.front().kind == Expr::Kind::Name) {
+    semantics::BindingInfo pointee;
+    if (inferBindingTypeForMonomorph(initializer.args.front(), params, locals, allowMathBare, ctx, pointee)) {
+      const std::string pointeeText = bindingTypeToString(pointee);
+      if (!pointeeText.empty() && pointee.typeName != "Pointer" && pointee.typeName != "Reference") {
+        infoOut = semantics::BindingInfo{};
+        infoOut.typeName = "Pointer";
+        infoOut.typeTemplateArg = pointeeText;
+        return true;
+      }
+    }
+  }
   if (tryInferBindingTypeFromInitializer(initializer, params, locals, infoOut, allowMathBare)) {
     return true;
   }
@@ -1053,7 +1067,12 @@ bool inferImplicitTemplateArgs(const Definition &def,
       // whether this callsite must remain unresolved in this pass.
       return false;
     }
-    outArgs.push_back(it->second);
+    // Locals keep the spelling they were written with. A closure factory or Function box stores the argument in a
+    // struct field, so it names an imported struct by its full path (`[StringView] v` captured by a lambda) and the
+    // field and the value agree on one type.
+    const std::string defLeaf = def.fullPath.substr(def.fullPath.find_last_of('/') + 1);
+    const bool storesArgument = defLeaf.find("__lambda") != std::string::npos || defLeaf.rfind("__fn_box", 0) == 0;
+    outArgs.push_back(storesArgument ? qualifiedImportedStructTypeText(it->second, namespacePrefix, ctx) : it->second);
   }
   if (canConsumeImplicitInferenceFact) {
     ctx.implicitTemplateArgInferenceFacts[implicitInferenceFactKey] =

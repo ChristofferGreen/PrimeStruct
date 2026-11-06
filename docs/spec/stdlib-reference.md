@@ -344,7 +344,8 @@
     - `Result.and_then(result, fn)` (a.k.a. bind) applies `fn` to the success value and flattens the result.
     - `Result.map2(a, b, fn)` applies `fn` if both results are ok; otherwise returns the first error.
 
-Signature sketches (not surface syntax):
+Signature sketches (not surface syntax; a stored `T -> U` callable is spelled `Function<U, T>`, see
+value-lifecycle.md, Function values):
 ```
 Result.map      : Result<T, Error> x (T -> U) -> Result<U, Error>
 Result.and_then : Result<T, Error> x (T -> Result<U, Error>) -> Result<U, Error>

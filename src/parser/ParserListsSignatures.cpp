@@ -44,7 +44,9 @@ std::string nextVariadicPackTemplateName(const std::vector<std::string> &existin
 
 } // namespace
 
-bool Parser::parseLambdaCaptureList(std::vector<std::string> &captures) {
+bool Parser::parseLambdaCaptureList(std::vector<std::string> &captures,
+                                    std::vector<Expr> &initCaptures,
+                                    const std::string &namespacePrefix) {
   auto skipCommentsOnly = [&]() {
     while (tokens_[pos_].kind == TokenKind::Comment) {
       ++pos_;
@@ -84,6 +86,7 @@ bool Parser::parseLambdaCaptureList(std::vector<std::string> &captures) {
   };
 
   captures.clear();
+  initCaptures.clear();
   if (!expectRaw(TokenKind::LBracket, "expected '[' to start lambda capture list")) {
     return false;
   }
@@ -126,7 +129,38 @@ bool Parser::parseLambdaCaptureList(std::vector<std::string> &captures) {
     if (entry.empty()) {
       return fail("expected lambda capture");
     }
-    captures.push_back(std::move(entry));
+    if (matchRaw(TokenKind::LBrace)) {
+      // Init capture: `[name{expr}]` or `[mut name{expr}]` declares a closure field that only the lambda sees.
+      const size_t lastSpace = entry.rfind(' ');
+      const std::string qualifiers = lastSpace == std::string::npos ? std::string() : entry.substr(0, lastSpace);
+      Expr binding;
+      binding.kind = Expr::Kind::Call;
+      binding.isBinding = true;
+      binding.name = lastSpace == std::string::npos ? entry : entry.substr(lastSpace + 1);
+      binding.namespacePrefix = namespacePrefix;
+      binding.sourceLine = tokens_[pos_].line;
+      binding.sourceColumn = tokens_[pos_].column;
+      if (qualifiers == "mut") {
+        Transform mutTransform;
+        mutTransform.name = "mut";
+        binding.transforms.push_back(std::move(mutTransform));
+      } else if (!qualifiers.empty()) {
+        return fail("init capture accepts only the mut qualifier: " + entry);
+      }
+      std::vector<Expr> initializer;
+      if (!parseBraceExprList(initializer, namespacePrefix, false)) {
+        return false;
+      }
+      if (initializer.size() != 1) {
+        return fail("init capture requires exactly one initializer: " + binding.name);
+      }
+      binding.args.push_back(std::move(initializer.front()));
+      binding.argNames.push_back(std::nullopt);
+      binding.hasBodyArguments = false;
+      initCaptures.push_back(std::move(binding));
+    } else {
+      captures.push_back(std::move(entry));
+    }
     skipSeparators();
     if (matchRaw(TokenKind::RBracket)) {
       break;

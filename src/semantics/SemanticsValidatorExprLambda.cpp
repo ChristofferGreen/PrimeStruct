@@ -16,8 +16,11 @@ bool SemanticsValidator::validateLambdaExpr(const std::vector<ParameterInfo> &pa
                                   std::string message) -> bool {
     return failExprDiagnostic(diagnosticExpr, std::move(message));
   };
+  // Lambdas reaching this validator are the plain ones `Result.map`/`and_then`/`map2` inline (the lambda-closures
+  // pass turns every other lambda into a closure struct): their captures are copies, so a capture is read-only unless
+  // it is a reference.
   auto addCapturedBinding = [&](std::unordered_map<std::string, BindingInfo> &lambdaLocals,
-                                const std::string &name) -> bool {
+                                const std::string &name, bool byReference = false) -> bool {
     if (lambdaLocals.count(name) > 0) {
       return failLambdaDiagnostic(expr, "duplicate lambda capture: " + name);
     }
@@ -25,12 +28,16 @@ bool SemanticsValidator::validateLambdaExpr(const std::vector<ParameterInfo> &pa
       return failLambdaDiagnostic(expr, "use-after-move: " + name);
     }
     if (const BindingInfo *paramBinding = findParamBinding(params, name)) {
-      lambdaLocals.emplace(name, *paramBinding);
+      BindingInfo captured = *paramBinding;
+      captured.isMutable = captured.isMutable && byReference;
+      lambdaLocals.emplace(name, std::move(captured));
       return true;
     }
     auto it = locals.find(name);
     if (it != locals.end()) {
-      lambdaLocals.emplace(name, it->second);
+      BindingInfo captured = it->second;
+      captured.isMutable = captured.isMutable && byReference;
+      lambdaLocals.emplace(name, std::move(captured));
       return true;
     }
     return failLambdaDiagnostic(expr, "unknown capture: " + name);

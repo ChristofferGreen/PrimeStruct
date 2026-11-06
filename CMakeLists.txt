@@ -238,6 +238,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/TemplateMonomorphImplicitTemplateInferencePacks.cpp
   src/semantics/TemplateMonomorphImplicitTemplateInferenceSoa.cpp
   src/semantics/TemplateMonomorphExpressionRewrite.cpp
+  src/semantics/TemplateMonomorphCallableRewrites.cpp
   src/semantics/TemplateMonomorphExpressionRewritePhasesA.cpp
   src/semantics/TemplateMonomorphExpressionRewritePhasesB.cpp
   src/semantics/TemplateMonomorphExpressionRewritePhasesC.cpp
@@ -271,6 +272,8 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidateConvertConstructors.cpp
   src/semantics/SemanticsValidateSliceLoans.cpp
   src/semantics/SemanticsValidateExperimentalGfxConstructors.cpp
+  src/semantics/SemanticsValidateLambdaClosures.cpp
+  src/semantics/SemanticsValidateFunctionValues.cpp
   src/semantics/SemanticsValidateExperimentalGfxConstructorsContext.cpp
   src/semantics/SemanticsValidateOmittedStructInitializers.cpp
   src/semantics/SemanticsValidateReflectionGeneratedHelpersCloneDebug.cpp
@@ -1063,6 +1066,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   # the native backend and (opt-in) the C++ emitters via the built primec/primevm.
   add_executable(PrimeStruct_program_matrix_tests
     tests/unit/test_main.cpp
+    tests/unit/program_matrix/test_program_matrix_closures.cpp
     tests/unit/program_matrix/test_program_matrix_container_copies.cpp
     tests/unit/program_matrix/test_program_matrix_control.cpp
     tests/unit/program_matrix/test_program_matrix_lifecycle.cpp
@@ -3452,6 +3456,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     ${PrimeStructIrOptimizerTestSuites}
   )
   set(PrimeStructProgramMatrixTestSuites
+    primestruct.program_matrix.closures
     primestruct.program_matrix.container_copies
     primestruct.program_matrix.control
     primestruct.program_matrix.lifecycle

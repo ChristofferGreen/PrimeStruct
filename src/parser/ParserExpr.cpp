@@ -784,6 +784,26 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       call.args.push_back(std::move(indexExpr));
       call.argNames.resize(call.args.size());
       current = std::move(call);
+      if (match(TokenKind::LParen) && tokens_[pos_].line == tokens_[pos_ - 1].line) {
+        // `handlers[i](x)`: calling an indexed callable is its `call` method.
+        expect(TokenKind::LParen, "expected '('");
+        Expr invoke;
+        invoke.kind = Expr::Kind::Call;
+        invoke.name = "call";
+        invoke.sourceName = "call";
+        invoke.namespacePrefix = namespacePrefix;
+        invoke.isMethodCall = true;
+        invoke.sourceIsMethodCall = true;
+        if (!parseCallArgumentList(invoke.args, invoke.argNames, namespacePrefix)) {
+          return false;
+        }
+        if (!expect(TokenKind::RParen, "expected ')' to close call")) {
+          return false;
+        }
+        invoke.args.insert(invoke.args.begin(), current);
+        invoke.argNames.insert(invoke.argNames.begin(), std::nullopt);
+        current = std::move(invoke);
+      }
       continue;
     }
     if (match(TokenKind::Question)) {

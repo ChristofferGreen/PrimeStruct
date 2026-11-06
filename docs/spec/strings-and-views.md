@@ -96,7 +96,10 @@ A struct with a view field (a *carrier*, directly or through another carrier) is
 borrows `buffer` until the last use of `req`, and a constructor such as `Request{[method] line.slice(0, i)}` takes the
 roots of its view arguments. A carrier follows the same escape rules as a view (field, container, return of a local
 owner, outer binding of an inner owner) and the same `[returns_borrow<name>]` rule when it is returned. Parsing into a
-carrier allocates nothing: the `Request` parser test counts zero heap blocks.
+carrier allocates nothing: the `Request` parser test counts zero heap blocks. A closure is a carrier when it captures a
+view or carrier by value or any binding with `[ref name]` (value-lifecycle.md, Lambdas): `reader{[view]() {...}}`
+borrows the view's owner until `reader`'s last use, and such a closure cannot become a `Function<R, A...>` (`closure
+escapes via Function (root: <root>)`).
 
 ### Current surface (VM)
 

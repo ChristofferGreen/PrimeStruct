@@ -86,7 +86,8 @@ CarrierSet collectCarriers(const Program &program) {
   while (changed) {
     changed = false;
     for (const Definition &def : program.definitions) {
-      const std::string name = leafName(def.fullPath);
+      // By base leaf: a template instance (`Request__t12ab`) is looked up as `Request`.
+      const std::string name = typeLeafName(def.fullPath);
       if (carriers.count(name) > 0) {
         continue;
       }
@@ -97,8 +98,16 @@ CarrierSet collectCarriers(const Program &program) {
       if (!isStruct) {
         continue;
       }
+      // A closure struct (`__lambdaN`) with a reference field holds a `[ref name]` capture: it borrows that binding.
+      const bool isClosure = typeLeafName(name).find("__lambda") != std::string::npos;
       for (const Expr &statement : def.statements) {
-        if (isViewBinding(statement, carriers)) {
+        bool borrows = isViewBinding(statement, carriers);
+        if (!borrows && isClosure && statement.isBinding) {
+          for (const Transform &transform : statement.transforms) {
+            borrows = borrows || typeLeafName(transform.name) == "Reference";
+          }
+        }
+        if (borrows) {
           carriers.insert(name);
           changed = true;
           break;
@@ -300,12 +309,8 @@ struct Checker {
     if (expr.kind != Expr::Kind::Call || expr.isBinding) {
       return roots;
     }
-    if (expr.isBraceConstructor) {
-      for (const Expr &arg : expr.args) {
-        const std::set<std::string> inner = viewRootsOf(arg);
-        roots.insert(inner.begin(), inner.end());
-      }
-      return roots;
+    if (expr.isBraceConstructor || isCarrierConstructor(expr) || isClosureFactory(expr)) {
+      return closureRootsOf(expr);
     }
     // A callee that says which parameter its result borrows from (`[returns_borrow<name>]`) lends that argument's roots.
     if (!expr.isMethodCall && !expr.resolvedCallPath.empty()) {
@@ -337,6 +342,94 @@ struct Checker {
     return roots;
   }
 
+  // The definition a call runs, when it is in the program.
+  const Definition *calleeOf(const Expr &expr) const {
+    const std::string &path = expr.resolvedCallPath.empty() ? expr.name : expr.resolvedCallPath;
+    const auto found = definitions.find(path);
+    return found == definitions.end() ? nullptr : found->second;
+  }
+
+  // A closure factory (`/ns/__lambdaN_make`), made by the lambda-closures pass.
+  bool isClosureFactory(const Expr &expr) const {
+    if (expr.kind != Expr::Kind::Call || expr.isBinding || expr.isMethodCall) {
+      return false;
+    }
+    const Definition *callee = calleeOf(expr);
+    const std::string leaf = leafName(callee != nullptr ? callee->fullPath : expr.name);
+    return leaf.find("__lambda") != std::string::npos && leaf.find("_make") != std::string::npos;
+  }
+
+  // A constructor of a carrier struct: braces, or the call form it has after validation.
+  bool isCarrierConstructor(const Expr &expr) const {
+    if (expr.kind != Expr::Kind::Call || expr.isBinding || expr.isMethodCall) {
+      return false;
+    }
+    if (expr.isBraceConstructor) {
+      return isViewTypeName(expr.name, carriers);
+    }
+    const Definition *callee = calleeOf(expr);
+    if (callee == nullptr || !isViewTypeName(callee->fullPath, carriers)) {
+      return false;
+    }
+    for (const Transform &transform : callee->transforms) {
+      if (transform.name == "struct") {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Whether an untyped binding's initializer makes a carrier: a brace constructor of a carrier struct, or a call whose
+  // result type is one (a closure factory whose closure borrows).
+  bool initializerIsCarrier(const Expr &init) const {
+    if (init.kind != Expr::Kind::Call || init.isBinding) {
+      return false;
+    }
+    if (isCarrierConstructor(init)) {
+      return true;
+    }
+    const Definition *callee = calleeOf(init);
+    return callee != nullptr && isViewType(callee->transforms, carriers);
+  }
+
+  bool isViewLocal(const Expr &statement) const {
+    if (isViewBinding(statement, carriers)) {
+      return true;
+    }
+    if (!statement.isBinding || statement.args.size() != 1) {
+      return false;
+    }
+    for (const Transform &transform : statement.transforms) {
+      const std::string &name = transform.name;
+      if (name != "mut" && name != "public" && name != "private" && name != "static" && name != "copy" &&
+          name != "move" && name != "restrict" && name != "unsafe") {
+        return false;  // an explicit type that is not a carrier
+      }
+    }
+    return initializerIsCarrier(statement.args.front());
+  }
+
+  // The bindings a constructor or closure factory call borrows: each `location(name)` argument (a `[ref name]`
+  // capture) and the roots of each view argument.
+  std::set<std::string> closureRootsOf(const Expr &expr) const {
+    std::set<std::string> roots;
+    for (const Expr &arg : expr.args) {
+      if (arg.kind == Expr::Kind::Call && leafName(arg.name) == "location" && arg.args.size() == 1 &&
+          arg.args.front().kind == Expr::Kind::Name) {
+        const auto it = loanRoots.find(arg.args.front().name);
+        if (it != loanRoots.end()) {
+          roots.insert(it->second.begin(), it->second.end());
+        } else {
+          roots.insert(arg.args.front().name);
+        }
+        continue;
+      }
+      const std::set<std::string> inner = viewRootsOf(arg);
+      roots.insert(inner.begin(), inner.end());
+    }
+    return roots;
+  }
+
   // Whether `name` is a view or a carrier struct (a view-typed local or parameter).
   bool isViewish(const std::string &name) const { return loanRoots.count(name) > 0 || viewParameters.count(name) > 0; }
 
@@ -355,6 +448,9 @@ struct Checker {
     }
     if (expr.kind != Expr::Kind::Call || expr.isBinding || expr.args.empty()) {
       return {};
+    }
+    if (isClosureFactory(expr) || isCarrierConstructor(expr)) {
+      return closureRootsOf(expr);
     }
     static constexpr std::array<std::string_view, 15> makers = {
         "view", "slice", "sliceMut", "readOnly", "takeFirst", "dropFirst", "takeLast", "dropLast",
@@ -412,12 +508,28 @@ struct Checker {
           arenaOrder.push_back(declarationCount);
         } else if (hasTypeLeaf(statement, "String") && !arenas.empty()) {
           arenaStrings[statement.name] = arenas.size() - 1;
+        } else if (!arenas.empty() && statement.args.size() == 1 && isClosureFactory(statement.args.front())) {
+          // A closure that captures a String made in an open arena carries that String: same escape rules.
+          for (const Expr &arg : statement.args.front().args) {
+            const Expr *base = placeBase(arg);
+            if (arg.kind == Expr::Kind::Call && leafName(arg.name) == "move" && !arg.args.empty()) {
+              base = placeBase(arg.args.front());
+            }
+            if (base->kind == Expr::Kind::Name) {
+              const auto it = arenaStrings.find(base->name);
+              if (it != arenaStrings.end()) {
+                arenaStrings[statement.name] = it->second;
+                break;
+              }
+            }
+          }
         }
       }
-      if (isViewBinding(statement, carriers)) {
+      const bool viewLocal = isViewLocal(statement);
+      if (viewLocal) {
         viewLocals.insert(statement.name);
       }
-      if (isViewBinding(statement, carriers) && !statement.args.empty()) {
+      if (viewLocal && !statement.args.empty()) {
         std::set<std::string> roots = rootsOf(statement.args.front());
         roots.erase(statement.name);
         if (roots.empty()) {
@@ -537,8 +649,41 @@ struct Checker {
     return true;
   }
 
+  // `Function<R, A...>{closure}` moves the closure to the heap (`/__fn_box`): a closure that borrows cannot go there.
+  bool checkFunctionBoxes(const Expr &expr) {
+    if (expr.kind == Expr::Kind::Call && !expr.isBinding && !expr.isMethodCall && expr.args.size() == 1) {
+      const Definition *callee = calleeOf(expr);
+      const std::string leaf = leafName(callee != nullptr ? callee->fullPath : expr.name);
+      if (leaf.rfind("__fn_box", 0) == 0) {
+        const Expr *boxed = &expr.args.front();
+        if (boxed->kind == Expr::Kind::Call && boxed->name == "block" && boxed->bodyArguments.size() == 1) {
+          boxed = &boxed->bodyArguments.front();  // `Function<R>{closure}` parses as a value block
+        }
+        std::set<std::string> roots = viewRootsOf(*boxed);
+        if (roots.empty()) {
+          const Expr *base = placeBase(*boxed);
+          if (base->kind == Expr::Kind::Name && loanRoots.count(base->name) > 0) {
+            roots = loanRoots.at(base->name);
+          }
+        }
+        if (!roots.empty()) {
+          return fail("closure escapes via Function (root: " + firstOf(roots) + ")");
+        }
+      }
+    }
+    for (const Expr &arg : expr.args) {
+      if (!checkFunctionBoxes(arg)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   // A view cannot be stored in a field, a container or an outer binding, and cannot be returned when it borrows a local.
   bool checkEscapes(const Expr &statement) {
+    if (!checkFunctionBoxes(statement)) {
+      return false;
+    }
     if (statement.kind != Expr::Kind::Call || statement.isBinding) {
       return true;
     }

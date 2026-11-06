@@ -91,7 +91,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("lambda parameter default must be a literal or pure expression") != std::string::npos);
+  CHECK(error.find("parameter default must be a literal or pure expression") != std::string::npos);
 }
 
 TEST_CASE("lambda parameter default allows builtin array literal") {
@@ -143,7 +143,8 @@ main() {
   CHECK(error.find("unknown capture: missing") != std::string::npos);
 }
 
-TEST_CASE("lambda calls reject named arguments") {
+TEST_CASE("lambda calls accept named arguments") {
+  // A closure call is a call of its `call` method, so arguments may be labeled like any method call.
   const std::string source = R"(
 [return<int>]
 main() {
@@ -152,8 +153,106 @@ main() {
 }
 )";
   std::string error;
+  CHECK(validateProgram(source, "/main", error));
+}
+
+TEST_CASE("lambda rejects writing a capture that is not mut") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32 mut] count{0i32}
+  bump{[count]() {
+    assign(count, plus(count, 1i32))
+    return(count)
+  }}
+  return(bump())
+}
+)";
+  std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("named arguments not supported for lambda calls") != std::string::npos);
+  CHECK(error.find("assign target must be a mutable binding") != std::string::npos);
+}
+
+TEST_CASE("ref capture is a loan on the captured binding until the closure's last use") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int> effects(heap_alloc)]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  reader{[ref values]() { return(values.count()) }}
+  values.push(3i32)
+  return(reader())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("borrowed binding: values (root: values, sink: reader)") != std::string::npos);
+}
+
+TEST_CASE("ref capture allows changes after the closure's last use") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int> effects(heap_alloc)]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  reader{[ref values]() { return(values.count()) }}
+  [i32] before{reader()}
+  values.push(3i32)
+  return(plus(before, values.count()))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+}
+
+TEST_CASE("closure holding a ref capture cannot become a Function") {
+  const std::string source = R"(
+[return<int> effects(heap_alloc)]
+main() {
+  [i32 mut] hits{0i32}
+  reader{[ref hits]() { return(hits) }}
+  [Function<i32> mut] erased{Function<i32>{reader}}
+  return(erased())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("closure escapes via Function (root: hits)") != std::string::npos);
+}
+
+TEST_CASE("inline ref lambda cannot become a Function") {
+  const std::string source = R"(
+[return<int> effects(heap_alloc)]
+main() {
+  [i32 mut] hits{0i32}
+  [Function<i32> mut] erased{Function<i32>{[ref hits]() { return(hits) }}}
+  return(erased())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("closure escapes via Function (root: hits)") != std::string::npos);
+}
+
+TEST_CASE("closure capturing a view by value borrows the view's owner") {
+  const std::string source = R"(
+import /std/text/*
+import /std/text/view/*
+
+[return<int> effects(heap_alloc)]
+main() {
+  [String mut] text{/std/text/stringFrom("hello")}
+  [StringView] view{text.view()}
+  reader{[view]() { return(view.count()) }}
+  text.append("!")
+  return(reader())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("borrowed binding: text (root: text, sink: reader)") != std::string::npos);
 }
 
 TEST_SUITE_END();

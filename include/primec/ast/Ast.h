@@ -150,6 +150,9 @@ struct Expr {
   bool isFieldAccess = false;
   bool isLambda = false;
   std::vector<std::string> lambdaCaptures;
+  // Init captures (`[mut calls{0i32}]`): binding expressions whose single argument is the initializer, evaluated
+  // where the lambda is written. The lambda-closure pass turns them into closure fields.
+  std::vector<Expr> lambdaInitCaptures;
   bool isSpread = false;
   int sourceLine = 0;
   int sourceColumn = 0;

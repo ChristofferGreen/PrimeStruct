@@ -59,7 +59,9 @@ language/runtime-owned, which remain hybrid, and which should move fully into st
 - `core`
   Public types/surfaces: fixed-width scalars (planned: `u8`), `string`, `array<T>`, `Pointer<T>`, `Reference<T>`,
   and the capability view model around `Reference<T, Capability>` / `Slice<T, Capability>`. Planned: `string`
-  becomes the borrowed UTF-8 view of [Strings, Text and Slices](strings-and-views.md).
+  becomes the borrowed UTF-8 view of [Strings, Text and Slices](strings-and-views.md). Closures and
+  `Function<R, A...>` are core too: the compiler generates their structs and dispatch from lambdas and
+  conversions (value-lifecycle.md, Lambdas), with no stdlib source.
   Ownership rule: language/runtime owns both the public surface and the substrate because other
   features depend on them directly.
   Migration stance: treat these as stable substrate; delete workaround routing around them instead

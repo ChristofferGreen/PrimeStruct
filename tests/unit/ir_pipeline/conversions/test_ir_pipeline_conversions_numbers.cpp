@@ -100,16 +100,19 @@ main() {
   CHECK(error.find("native backend does not support string literal statements") != std::string::npos);
 }
 
-TEST_CASE("ir lowerer rejects lambda expressions") {
+TEST_CASE("ir lowerer lowers lambda closures") {
+  // A lambda is a closure struct with a `call` method by the time it reaches the lowerer
+  // (docs/spec/value-lifecycle.md, Lambdas).
   const std::string source = R"(
-[return<void>]
-holder([int] value) {
-  return()
+[return<i32>]
+apply<F>([F] f, [i32] value) {
+  return(f(value))
 }
 
-[return<void>]
+[return<int>]
 main() {
-  holder([]([i32] value) { plus(value, 1i32) })
+  [i32] base{2i32}
+  return(apply([base]([i32] value) { return(plus(value, base)) }, 1i32))
 }
 )";
   primec::Program program;
@@ -120,8 +123,8 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("IR backends do not support lambdas") != std::string::npos);
+  CHECK(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("ir lowerer supports Result.map builtin lambdas") {

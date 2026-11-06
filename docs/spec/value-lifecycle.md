@@ -226,13 +226,116 @@ bad_set() {
 ## Lambdas & Higher-Order Functions
 - **Syntax mirrors definitions:** lambdas omit the identifier (`[captures] <T>(params){ body }`). The capture list is
   required but may be empty (`[]`). Template arguments are optional.
-- **Capture semantics:** supported forms are `[]`, `[=]`, `[&]`, and explicit entries (`[name]`, `[value name]`, `[ref
-  name]`). Entries are comma/semicolon separated. Explicit names must resolve to parameters or locals in the enclosing
-  scope; duplicates are diagnostics. `=` or `&` capture-all tokens cannot be repeated. `ref` marks a by-reference
-  capture; otherwise captures are by value.
+- **A lambda is a closure value.** The `lambda-closures` semantic pass (before template monomorphization) turns each
+  lambda into a closure struct named after the definition it is written in (`/main__lambda0`): one field per capture
+  and a `call` method holding the body. The lambda expression becomes a call of a generated factory
+  (`/main__lambda0_make`) whose implicit template parameters are the capture types, so capture types are inferred from
+  the enclosing bindings like any implicit template argument. A closure with a `[ref name]` capture is built in place
+  instead (`/main__lambda0{[name] location(name)}`). Closure structs live in the enclosing definition's namespace,
+  next to a struct and never inside it. To every later stage they are ordinary structs, so closures run on every
+  backend that runs structs (VM, native, `optcpp`/`optexe`, `cpp`/`exe`).
+- **Capture forms** (comma or semicolon separated; duplicates and unknown names are diagnostics):
+
+  | Form | Meaning |
+  | --- | --- |
+  | `[name]`, `[value name]` | copy `name` into a field when the lambda expression runs; read-only in the body |
+  | `[mut name]` | copy, and the body may change the closure's own copy (never `name` itself) |
+  | `[move name]` | move `name` into the field; `name` is moved-from afterwards |
+  | `[ref name]` | borrow `name`: reads and (when `name` is `mut`) writes reach the binding itself |
+  | `[name{expr}]`, `[mut name{expr}]` | init capture: a field initialized by `expr`, evaluated where the lambda is written |
+  | `[=]`, `[&]` | capture by value / by reference every enclosing binding the body uses (not every local) |
+
+  A body that reads an enclosing binding it does not capture is `unknown identifier: name (the lambda does not
+  capture it; add [name])`; writing a non-`mut` capture is `assign target must be a mutable binding`. A `[ref name]`
+  of a binding that already is a `Reference` or `Pointer` copies that reference.
+- **Calling:** `f(x)` where `f` is a local, parameter or field whose type is a struct with a `call` method means
+  `f.call(x)`, with labeled arguments allowed; indexing then calling (`handlers[i]` followed by `(x)`) calls the
+  element. Lambdas and hand-written structs with `call` are therefore interchangeable: a generic
+  `drive<Handler>([Handler mut] handler)` takes either and is monomorphized per type (a direct call, no allocation).
+  `Holder{[handler] lambda}` infers `Holder<F>`'s template arguments from its field arguments.
+- **Mutable state:** `call` is a `mut` method when any value or init capture is `mut`, so such a closure must be held
+  in a `mut` binding, field or parameter to call it. State lives in the closure value: a closure passed to a `mut`
+  parameter is changed in place, and a copy has its own state. Writing through a `[ref name]` capture does not change
+  the closure, so it does not make `call` `mut`.
+- **`return`** inside a lambda returns from the lambda (its `call` method), never from the enclosing definition. This
+  holds for lambdas passed to `Result.map`/`and_then`/`map2` too: the pass gives those helpers a one-statement
+  trampoline lambda that calls the closure, so the body's early returns stay inside `call`.
 - **Parameters:** lambda parameters must use binding syntax. Defaults are allowed but must be literal/pure expressions
-  and may not use named arguments.
-- **Backend support (current):** lambdas are supported only by the C++ emitter, which lowers them to native C++ lambdas
-  with the same capture list. IR/VM/GLSL backends reject lambdas; use named definitions when targeting those backends.
-- **Inlining transforms:** standard transforms may inline pure lambdas in C++ emission paths; non-pure lambdas remain as
-  closures.
+  and may not use named arguments. A lambda parameter or body binding may not reuse a capture name.
+- **Effects:** the closure's `call` method (and its factory) take the `effects(...)` and `capabilities(...)` of the
+  definition the lambda is written in; a caller of the closure needs them like any method call.
+- **Copy, Move, Destroy:** field-wise, from the capture types, like any struct.
+- **Borrowing:** a closure with a `[ref name]` capture, or one that captures a view or carrier by value, is a carrier
+  (`strings-and-views.md`): it borrows those roots until its last use (`borrowed binding: name (root: name, sink:
+  closure)`), and it cannot be stored in a field, a container or an outer binding, returned, or converted to
+  `Function` (`closure escapes via Function (root: name)`). A closure that captures a String made inside an open
+  `StringArena` follows the String's arena rules. Its `call` always runs inline, in the frame that holds the borrowed
+  locals. A sendable closure for tasks (`MultithreadingPrototype.md`) is one with no `ref` captures and no `mut`
+  binding captured by reference.
+- **Type spelling:** a closure type has no source name. Pass closures through template parameters (`[F]`, `[F mut]`,
+  `Holder<F>` fields), or erase the type with `Function<R, A...>` (below).
+
+### Function values
+- **`Function<R, A0, ..., An>`** is a value that calls any closure (or struct with `call`) taking `A0..An` and
+  returning `R`; `Function<R>` takes no arguments. It holds the closure in one heap block, so one `vector`, struct
+  field or parameter type holds different lambdas. Converting is explicit brace construction:
+  `Function<i32, string>{handler}` or `Function<i32>{[mut n{0i32}]() { ... }}` (needs `heap_alloc`).
+- **Calling** `f(x)` dispatches to the stored closure; `call` is `mut` (the closure may change its state), so hold
+  the `Function` in a `mut` binding, field or parameter.
+- **Copy** clones the stored closure into a new block (the copy has its own state); **Move** hands the block over;
+  **Destroy** destroys the closure and frees the block.
+- **Lowering:** the closure pass spells `Function<R, A...>` as the struct `/__FunctionN<R, A...>` (a tag and the heap
+  address) and a conversion as `/__FunctionN<R, A...>{[tag] 0i32, [env] /__fn_box(closure)}`. After
+  monomorphization the `function-values` pass numbers the closure types converted to each `Function` instance and
+  writes its `call` (an `if` chain on the tag), `Copy` and `Destroy`. No IR change: dispatch is ordinary struct and
+  pointer code, so `Function` runs on the VM, native and `optexe` alike.
+- **Limits:** conversion is explicit (no implicit closure-to-`Function` at a call site); a named definition cannot be
+  converted yet; a borrowing closure cannot be converted (above).
+
+Example (runs on the VM, native and `optexe`):
+
+```prime
+import /std/collections/*
+
+[struct]
+Route {
+  [i32] code
+  [Function<i32, i32> mut] handler
+}
+
+[return<i32> effects(heap_alloc)]
+route_request([vector<Route> mut] routes, [i32] code, [i32] input) {
+  [i32 mut] i{0i32}
+  while(i < routes.count()) {
+    if(routes[i].code == code) {
+      return(routes[i].handler(input))
+    }
+    i = i + 1i32
+  }
+  return(404i32)
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [i32] base{100i32}
+  [mut] hits{[mut calls{0i32}]([i32] input) {
+    calls = calls + 1i32
+    return(calls)
+  }}
+  [vector<Route> mut] routes{vector<Route>()}
+  routes.push(Route{[code] 1i32, [handler] Function<i32, i32>{hits}})
+  routes.push(Route{[code] 2i32, [handler] Function<i32, i32>{[base]([i32] input) { return(input + base) }}})
+  route_request(routes, 1i32, 0i32)
+  [i32] second{route_request(routes, 1i32, 0i32)}     // 2: the route's copy of `hits` keeps counting
+  return(second + route_request(routes, 2i32, 5i32))  // 2 + 105
+}
+```
+
+Desugared closure shape (visible with `--dump-stage ast-semantic`):
+
+```prime
+[struct] /main__lambda0<C0>() { [C0, mut] calls }
+[mut] /main__lambda0/call([i32] input) { assign(this.calls, plus(this.calls, 1)) return this.calls }
+[return</main__lambda0<C0>>] /main__lambda0_make<C0>([C0] calls) { return /main__lambda0<C0>([calls] calls) }
+// the lambda expression: /main__lambda0_make(0i32)
+```

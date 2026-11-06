@@ -689,6 +689,13 @@ void qualifyImportedStructTypes(Definition &def, Context &ctx) {
 
 } // namespace
 
+std::string qualifiedImportedStructTypeText(const std::string &typeText,
+                                            const std::string &namespacePrefix,
+                                            Context &ctx) {
+  const std::string path = importedStructPath(typeText, namespacePrefix, ctx);
+  return path.empty() ? typeText : path;
+}
+
 bool rewriteDefinition(Definition &def,
                        const SubstMap &mapping,
                        const std::unordered_set<std::string> &allowedParams,
@@ -725,6 +732,21 @@ bool rewriteDefinition(Definition &def,
           def.parameters, mapping, allowedParams, def.namespacePrefix, ctx, error, locals, params, allowMathBare)) {
     restoreDefinitionPath();
     return false;
+  }
+  if (locals.count("this") == 0) {
+    // A struct method sees its receiver as `this`, so `ident(this.field)` can infer from the field's type.
+    auto ownerIt = ctx.sourceDefs.find(def.namespacePrefix);
+    if (ownerIt != ctx.sourceDefs.end() && ownerIt->second.templateArgs.empty() &&
+        isStructDefinition(ownerIt->second)) {
+      semantics::BindingInfo thisBinding;
+      thisBinding.typeName = def.namespacePrefix;
+      for (const Transform &transform : def.transforms) {
+        if (transform.name == "mut") {
+          thisBinding.isMutable = true;
+        }
+      }
+      locals.emplace("this", std::move(thisBinding));
+    }
   }
   for (size_t stmtIndex = 0; stmtIndex < def.statements.size(); ++stmtIndex) {
     auto &stmt = def.statements[stmtIndex];

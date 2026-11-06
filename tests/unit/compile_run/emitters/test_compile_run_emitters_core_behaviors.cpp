@@ -813,7 +813,7 @@ main() {
   CHECK(output.find("static int64_t ps_fn_0(") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter renders lambda captures") {
+TEST_CASE("C++ emitter compiles a closure with value and ref captures") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -829,13 +829,13 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "missing semantic-product local-auto fact: /main -> local holder") !=
-        std::string::npos);
+  // Lambdas are closure structs (docs/spec/value-lifecycle.md, Lambdas), so the IR-based emitter compiles them.
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(readFile(errPath).empty());
+  CHECK(!readFile(outPath).empty());
 }
 
-TEST_CASE("C++ emitter preserves explicit lambda captures") {
+TEST_CASE("C++ emitter compiles a closure with capture-all and an explicit ref capture") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -851,10 +851,10 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "missing semantic-product local-auto fact: /main -> local holder") !=
-        std::string::npos);
+  // Lambdas are closure structs (docs/spec/value-lifecycle.md, Lambdas), so the IR-based emitter compiles them.
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(readFile(errPath).empty());
+  CHECK(!readFile(outPath).empty());
 }
 
 TEST_SUITE_END();

@@ -16,8 +16,8 @@
   Linux/x86_64 native backend, Wasm and GLSL reject the byte opcodes and `u8`/text host values at validation. The simple
   C++ emitters (`cpp`, `exe`) accept them: a module that uses bytes or text is emitted by the optimized emitter (same
   runtime and output as `optcpp`/`optexe`), any other module by the simple emitter as before.
-- **VM/native emitter restrictions (current):** recursive calls are rejected; lambdas are rejected (use the C++
-  emitter); `equal`/`not_equal` on two strings lower to a real byte-by-byte comparison (reusing the same count()/at()
+- **VM/native emitter restrictions (current):** lambdas run as closure structs (`value-lifecycle.md`); `equal`/
+  `not_equal` on two strings lower to a real byte-by-byte comparison (reusing the same count()/at()
   builtins as the stdlib `/string/equal` helper), but ordered string comparisons (`less_than`, `greater_than`,
   `less_equal`, `greater_equal`) are still rejected, as is any comparison mixing a string operand with a non-string
   one; string literals are otherwise limited to print/count/index/map contexts; string

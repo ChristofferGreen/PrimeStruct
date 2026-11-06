@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "TemplateMonomorphAssignmentTargetResolution.h"
 #include "TemplateMonomorphBindingBlockInference.h"
 #include "TemplateMonomorphBindingCallInference.h"
@@ -185,7 +186,17 @@ bool specializeTemplateDefinitionFamily(const std::string &basePath,
                                         const std::string &cacheKey,
                                         Context &ctx,
                                         std::string &error) {
-  const std::vector<Definition> family = collectTemplateSpecializationFamily(basePath, ctx);
+  std::vector<Definition> family = collectTemplateSpecializationFamily(basePath, ctx);
+  // Rewrite the base definition first: its methods read field types of the instance through `this`
+  // (`ident(this.base)` infers from the field), so the instance struct is registered before they are rewritten.
+  size_t baseOriginalIndex = 0;
+  for (size_t i = 0; i < family.size(); ++i) {
+    if (family[i].fullPath == basePath) {
+      baseOriginalIndex = i;
+      break;
+    }
+  }
+  std::stable_partition(family.begin(), family.end(), [&](const Definition &def) { return def.fullPath == basePath; });
   const std::vector<TemplateRootInfo> nestedTemplates = collectNestedTemplateRoots(basePath, family);
   std::vector<Definition> clones;
   clones.reserve(family.size());
@@ -235,9 +246,27 @@ bool specializeTemplateDefinitionFamily(const std::string &basePath,
       ctx.specializationCache.erase(cacheKey);
       return false;
     }
+    if (def.fullPath == basePath && isStructDefinition(clone) && !replaceExistingShell &&
+        ctx.sourceDefs.count(clone.fullPath) == 0) {
+      ctx.sourceDefs.emplace(clone.fullPath, clone);
+      ctx.sourceDefsFamilyPathIndexValid = false;
+    }
     clones.push_back(std::move(clone));
     cloneOutputs.push_back(shouldOutputClone);
     replaceExistingShells.push_back(replaceExistingShell);
+  }
+  // Emit in the original family order (nested definitions before their parent).
+  if (baseOriginalIndex > 0 && baseOriginalIndex < clones.size()) {
+    std::rotate(clones.begin(), clones.begin() + 1, clones.begin() + static_cast<std::ptrdiff_t>(baseOriginalIndex) + 1);
+    auto rotateFlags = [&](std::vector<bool> &flags) {
+      const bool first = flags.front();
+      for (size_t i = 0; i < baseOriginalIndex; ++i) {
+        flags[i] = flags[i + 1];
+      }
+      flags[baseOriginalIndex] = first;
+    };
+    rotateFlags(cloneOutputs);
+    rotateFlags(replaceExistingShells);
   }
 
   for (size_t cloneIndex = 0; cloneIndex < clones.size(); ++cloneIndex) {

@@ -13,6 +13,8 @@
 #include "SemanticsValidateConvertConstructors.h"
 #include "SemanticsValidateSliceLoans.h"
 #include "SemanticsValidateExperimentalGfxConstructors.h"
+#include "SemanticsValidateLambdaClosures.h"
+#include "SemanticsValidateFunctionValues.h"
 #include "SemanticsValidateExperimentalSoaFieldViewRewrites.h"
 #include "SemanticsValidateExperimentalSoaMethodRewrites.h"
 #include "SemanticsValidateKeyValueRewrites.h"
@@ -373,6 +375,8 @@ bool runSemanticValidationManifestPass(
       return semantics::rewriteExperimentalGfxConstructors(state.program, state.error);
     case PassId::ReflectionGeneratedHelpers:
       return semantics::rewriteReflectionGeneratedHelpers(state.program, state.error);
+    case PassId::LambdaClosures:
+      return semantics::rewriteLambdaClosures(state.program, state.error);
     case PassId::BuiltinSoaConversionMethods:
       return rewriteBuiltinSoaConversionMethods(state.program, state.error);
     case PassId::BuiltinSoaToAosCalls:
@@ -421,6 +425,8 @@ bool runSemanticValidationManifestPass(
                       ex.what();
         return false;
       }
+    case PassId::FunctionValues:
+      return semantics::rewriteFunctionValues(state.program, state.error);
     case PassId::CompileTimeSpecializedBranchPruning:
       return rewriteCompileTimeIfBranches(state.program, false, state.error);
     case PassId::ReflectionMetadataQueries:

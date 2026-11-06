@@ -2,6 +2,7 @@
 #include "primec/frontend/StringLiteral.h"
 #include "TemplateMonomorphBindingBlockInference.h"
 #include "TemplateMonomorphBindingCallInference.h"
+#include "TemplateMonomorphCallableRewrites.h"
 #include "TemplateMonomorphDefinitionBindingSetup.h"
 #include "TemplateMonomorphDefinitionExperimentalCollectionRewrites.h"
 #include "TemplateMonomorphDefinitionReturnOrchestration.h"
@@ -40,6 +41,7 @@
 #include "TemplateMonomorphExpressionRewriteState.h"
 
 namespace primec {
+
 
 bool isCompileTimeTypeofPredicateArg(const std::string &arg) {
   const std::string trimmed = trimWhitespace(arg);
@@ -718,6 +720,7 @@ bool rewriteExpr(Expr &expr,
 PhaseStatus rewriteExprPhase1([[maybe_unused]] Expr &expr, [[maybe_unused]] const SubstMap &mapping, [[maybe_unused]] const std::unordered_set<std::string> &allowedParams, [[maybe_unused]] const std::string &namespacePrefix, [[maybe_unused]] Context &ctx, [[maybe_unused]] std::string &error, [[maybe_unused]] const LocalTypeMap &locals, [[maybe_unused]] const std::vector<semantics::ParameterInfo> &params, RewriteExprState &st) {
   [[maybe_unused]] auto &allowMathBare = st.allowMathBare;
   expr.namespacePrefix = namespacePrefix;
+  rewriteCallableShapes(expr, mapping, allowedParams, namespacePrefix, ctx, locals, params, allowMathBare);
   st.hadExplicitTemplateArgsOnEntry = !expr.templateArgs.empty();
   [[maybe_unused]] auto &hadExplicitTemplateArgsOnEntry = st.hadExplicitTemplateArgsOnEntry;
   if (!rewriteTransforms(expr.transforms, mapping, allowedParams, namespacePrefix, ctx, error)) {

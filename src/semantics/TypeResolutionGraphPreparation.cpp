@@ -2,6 +2,8 @@
 
 #include "SemanticsValidateConvertConstructors.h"
 #include "SemanticsValidateExperimentalGfxConstructors.h"
+#include "SemanticsValidateLambdaClosures.h"
+#include "SemanticsValidateFunctionValues.h"
 #include "SemanticsValidateReflectionGeneratedHelpers.h"
 #include "SemanticsValidateReflectionMetadata.h"
 #include "SemanticsValidateTransforms.h"
@@ -35,11 +37,17 @@ bool prepareProgramForTypeResolutionAnalysis(Program &program,
   if (!rewriteReflectionGeneratedHelpers(program, error)) {
     return false;
   }
+  if (!rewriteLambdaClosures(program, error)) {
+    return false;
+  }
   if (!monomorphizeTemplates(program,
                              entryPath,
                              error,
                              explicitTemplateArgFactHitCountOut,
                              implicitTemplateArgFactHitCountOut)) {
+    return false;
+  }
+  if (!rewriteFunctionValues(program, error)) {
     return false;
   }
   if (!rewriteReflectionGeneratedHelpersForPackSpecializations(program, error)) {

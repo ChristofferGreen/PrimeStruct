@@ -977,6 +977,11 @@ std::string resolveCalleePath(const Expr &expr,
       }
       prefix = prefix.substr(0, slash);
     }
+    // The walk above stops before the root scope: a struct method (`/Box/call`) or namespaced definition calling a
+    // root-level template (`/ident`) must still find it.
+    if (const std::string rootCandidate = "/" + expr.name; ctx.sourceDefs.count(rootCandidate) > 0) {
+      return finalizeResolvedPath(rootCandidate);
+    }
     if (const std::string *importAlias =
             lookupScopedImportAliasForNamespace(expr.name, namespacePrefix, ctx);
         importAlias != nullptr) {

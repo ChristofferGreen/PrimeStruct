@@ -102,6 +102,11 @@ bool expandTypePackHelperBindings(Definition &def, std::string &error);
 
 bool rejectUnsupportedTypePackStatementExpansions(const Definition &def, std::string &error);
 
+// A bare type name that reaches an imported struct (`StringView`) as its full path; any other text unchanged.
+std::string qualifiedImportedStructTypeText(const std::string &typeText,
+                                            const std::string &namespacePrefix,
+                                            Context &ctx);
+
 bool rewriteDefinition(Definition &def,
                        const SubstMap &mapping,
                        const std::unordered_set<std::string> &allowedParams,

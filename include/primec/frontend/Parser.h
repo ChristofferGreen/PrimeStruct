@@ -60,7 +60,9 @@ private:
   bool normalizeValueBlock(std::vector<Expr> &body);
   bool validateNamedArgumentOrdering(const std::vector<std::optional<std::string>> &argNames);
   bool parseReturnStatement(Expr &out, const std::string &namespacePrefix);
-  bool parseLambdaCaptureList(std::vector<std::string> &captures);
+  bool parseLambdaCaptureList(std::vector<std::string> &captures,
+                              std::vector<Expr> &initCaptures,
+                              const std::string &namespacePrefix);
   bool tryParseLambdaExpr(Expr &out, const std::string &namespacePrefix, bool &parsed);
   bool tryParseIfStatementSugar(Expr &out,
                                 const std::string &namespacePrefix,

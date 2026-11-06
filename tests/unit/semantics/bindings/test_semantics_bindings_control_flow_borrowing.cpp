@@ -295,20 +295,17 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("borrow checker rejects lambda-capture assign before later pointer alias use") {
+TEST_CASE("borrow checker rejects a write to a ref-captured binding while the closure is live") {
+  // A closure with a `[ref name]` capture is a loan on `name` until the closure's last use
+  // (docs/spec/value-lifecycle.md, Lambdas).
   const std::string source = R"(
-[return<void>]
+[return<int>]
 main() {
   [i32 mut] value{1i32}
   [Reference<i32>] ref{location(value)}
-  [Pointer<i32>] ptr{location(ref)}
-  [ref value, ref ref, ref ptr]([i32] x) {
-    [i32] observed{dereference(ptr)}
-    assign(value, 2i32)
-    return(plus(x, observed))
-  }
-  [i32] later{dereference(ptr)}
-  return()
+  observe{[ref value, ref]([i32] x) { return(plus(x, value)) }}
+  assign(value, 2i32)
+  return(observe(1i32))
 }
 )";
   std::string error;
@@ -316,19 +313,16 @@ main() {
   CHECK(error.find("borrowed binding: value") != std::string::npos);
 }
 
-TEST_CASE("borrow checker allows lambda-capture assign after last pointer alias use with no later use") {
+TEST_CASE("borrow checker allows a write to a ref-captured binding after the closure's last use") {
   const std::string source = R"(
-[return<void>]
+[return<int>]
 main() {
   [i32 mut] value{1i32}
   [Reference<i32>] ref{location(value)}
-  [Pointer<i32>] ptr{location(ref)}
-  [ref value, ref ref, ref ptr]([i32] x) {
-    [i32] observed{dereference(ptr)}
-    assign(value, 2i32)
-    return(plus(x, observed))
-  }
-  return()
+  observe{[ref value, ref]([i32] x) { return(plus(x, value)) }}
+  [i32] seen{observe(1i32)}
+  assign(value, 2i32)
+  return(plus(seen, value))
 }
 )";
   std::string error;

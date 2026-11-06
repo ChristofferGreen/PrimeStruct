@@ -415,7 +415,24 @@ std::unordered_set<std::string> computeRealCallEligibleDefinitionPaths(const Pro
     if (!isStructHelperDefinition(def, structNames, parentStructPath)) {
       return false;
     }
-    return parentStructPath.rfind(collection_helpers::kCanonicalCollectionsRoot, 0) == 0;
+    if (parentStructPath.rfind(collection_helpers::kCanonicalCollectionsRoot, 0) == 0) {
+      return true;
+    }
+    // A closure with a `[ref name]` capture holds the address of a local in the frame that made it, and a local
+    // address only means something in its own frame: its `call` runs inline, in that frame.
+    if (parentStructPath.find("__lambda") != std::string::npos) {
+      const auto structIt = byPath.find(parentStructPath);
+      if (structIt != byPath.end()) {
+        for (const Expr &field : structIt->second->statements) {
+          for (const Transform &transform : field.transforms) {
+            if (field.isBinding && (transform.name == "Reference" || transform.name == "Pointer")) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+    return false;
   };
 
   std::unordered_set<std::string> eligible;
