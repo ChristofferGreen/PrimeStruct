@@ -109,7 +109,6 @@ of sync with them.
 | TODO-5668 | Struct fields of collection type keep their elements across method calls | deferred | collections-fields |
 | TODO-5669 | `Function` from named definitions and at call sites | deferred | closures |
 | TODO-5673 | A callable field reached through `this` is called, not looked up as a method | blocked | closures-call-resolution |
-| TODO-5674 | `==` on a view taken from a `String` parameter compiles | ready | stringview-equality |
 | TODO-5675 | Struct fields that are vectors of structs lower on VM and native | ready | collections-fields |
 | TODO-5676 | Lambdas can state their return type | deferred | closures-return-types |
 | TODO-5677 | A `Function` whose closure holds a same-typed `Function` copies and destroys | deferred | closures-lifecycle |
@@ -145,7 +144,9 @@ of sync with them.
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5510 (control-returns): `return` returns from unit-variant pick arms correctly
 - TODO-5524 (result-error-structs): int-backed error structs round-trip through stdlib Result sums
-- TODO-5674 (stringview-equality): `==` on a view taken from a `String` parameter compiles
+- TODO-5675 (collections-fields): struct fields that are vectors of structs lower on VM and native
+- TODO-5678 (host-bytes): `Pointer<u8>` host parameters reach C++ host functions as real byte pointers
+- TODO-5680 (os-host): `/std/os`: environment, monotonic clock and a SIGTERM stop flag
 
 ### Immediate Next 10
 
@@ -154,8 +155,10 @@ of sync with them.
 3. TODO-5535
 4. TODO-5510
 5. TODO-5524
-6. TODO-5674
-7. TODO-5675
+6. TODO-5675
+7. TODO-5673
+8. TODO-5678
+9. TODO-5680
 
 ### Priority Lanes
 
@@ -171,7 +174,7 @@ of sync with them.
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5669, TODO-5676, TODO-5677; collection fields found by closures: TODO-5668
-- Web server (single-threaded, Docker image built with `--emit=optexe`): handler and router blockers TODO-5674, TODO-5675, then TODO-5673; network and OS TODO-5678, TODO-5680, TODO-5679; Result payloads for socket handles TODO-5527
+- Web server (single-threaded, Docker image built with `--emit=optexe`): handler and router blockers TODO-5675, then TODO-5673; network and OS TODO-5678, TODO-5680, TODO-5679; Result payloads for socket handles TODO-5527
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
 ### Execution Queue
@@ -216,18 +219,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - a `Router` struct whose method calls `this.routes[i].handler(x)` runs on VM, native and optexe; a semantics test for `this.field(x)` and `this.items[i].field(x)`
     - full release gate green
   - stop_rule: call resolution of callable fields through `this`; no new callable forms.
-
-- [ ] TODO-5674: `==` on a view taken from a `String` parameter compiles
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-06
-  - phase: Web server blockers (found probing closures for a request router)
-  - parallel_track: stringview-equality
-  - scope: `==` between two `StringView` bindings works in a function whose parameters are views or that builds them from a local `String`. In `same_field([String] owned, [StringView] wanted) { [StringView] mine{owned.view()} return(mine == wanted) }`, it is rejected with `comparisons require numeric, bool, or string operands`, with or without `effects(heap_alloc)`; `mine.equals(wanted)` works. `==` must resolve to `/StringView/opEqual` whatever the view came from.
-  - acceptance:
-    - the repro and the `owned.view() == wanted` form run on VM and optexe; a semantics test pinning the operator resolution
-    - full release gate green
-  - stop_rule: operator resolution for views of `String` parameters.
 
 - [ ] TODO-5675: Struct fields that are vectors of structs lower on VM and native
   - owner: ai

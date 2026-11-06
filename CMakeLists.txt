@@ -237,6 +237,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/TemplateMonomorphImplicitTemplateInference.cpp
   src/semantics/TemplateMonomorphImplicitTemplateInferencePacks.cpp
   src/semantics/TemplateMonomorphImplicitTemplateInferenceSoa.cpp
+  src/semantics/TemplateMonomorphBorrowedVectorRewrites.cpp
   src/semantics/TemplateMonomorphExpressionRewrite.cpp
   src/semantics/TemplateMonomorphCallableRewrites.cpp
   src/semantics/TemplateMonomorphExpressionRewritePhasesA.cpp

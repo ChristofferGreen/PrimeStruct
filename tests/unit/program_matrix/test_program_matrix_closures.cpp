@@ -450,6 +450,36 @@ main() {
                     115);
 }
 
+TEST_CASE("view equality inside a function with a String parameter") {
+  runClosureProgram("string_parameter_view_equality", R"(
+import /std/text/*
+import /std/text/view/*
+
+[return<bool> effects(heap_alloc)]
+same_field([String] owned, [StringView] wanted) {
+  [StringView] mine{owned.view()}
+  return(mine == wanted)
+}
+
+[return<bool> effects(heap_alloc)]
+same_inline([String] owned, [StringView] wanted) {
+  return(owned.view() == wanted)
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [String] a{stringFrom("host")}
+  [String] b{stringFrom("host")}
+  [String] c{stringFrom("port")}
+  [i32] first{if(same_field(a, b.view()), then() { 1i32 }, else() { 0i32 })}
+  [i32] second{if(same_inline(a, b.view()), then() { 10i32 }, else() { 0i32 })}
+  [i32] third{if(same_inline(a, c.view()), then() { 100i32 }, else() { 0i32 })}
+  return(first + second + third)
+}
+)",
+                    11);
+}
+
 TEST_CASE("return inside a Result.map lambda returns from the lambda") {
   runClosureProgram("closure_result_map_return", R"(
 [return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]

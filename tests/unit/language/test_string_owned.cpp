@@ -550,3 +550,27 @@ TEST_CASE("a view-returning call over a block-local buffer still cannot reach an
   CHECK_FALSE(escaped.compiled);
   CHECK(escaped.diagnostics.find("slice escapes via outer binding last (root: buffer)") != std::string::npos);
 }
+// TODO-5674: `==` on views resolves to /std/text/view/StringView/opEqual whether an operand is a parameter, a local
+// made from a String parameter, or a method call on one.
+TEST_CASE("view equality resolves to StringView opEqual next to a String parameter") {
+  const std::string defs =
+      "import /std/text/view/*\n\n"
+      "[return<bool> effects(heap_alloc)]\nsame_field([String] owned, [StringView] wanted) {\n"
+      "  [StringView] mine{owned.view()}\n  return(mine == wanted)\n}\n\n"
+      "[return<bool> effects(heap_alloc)]\nsame_inline([String] owned, [StringView] wanted) {\n"
+      "  return(owned.view() == wanted)\n}\n";
+  CHECK(exitOf("  [String] a{stringFrom(\"host\")}\n  [String] b{stringFrom(\"hosts\")}\n"
+               "  [i32] first{if(same_field(a, a.view()), then() { 1i32 }, else() { 0i32 })}\n"
+               "  [i32] second{if(same_inline(a, b.view()), then() { 10i32 }, else() { 0i32 })}\n"
+               "  return(first + second)",
+               defs) == 1);
+}
+
+TEST_CASE("view equality against a String operand is still rejected") {
+  const Outcome mixed = runBody("  [String] a{stringFrom(\"host\")}\n  return(if(mixed(a, a.view()), then() { 1i32 }, else() { 0i32 }))",
+                                "import /std/text/view/*\n\n"
+                                "[return<bool> effects(heap_alloc)]\nmixed([String] owned, [StringView] wanted) {\n"
+                                "  [StringView] mine{owned.view()}\n  return(mine == owned)\n}\n");
+  CHECK_FALSE(mixed.compiled);
+  CHECK(mixed.diagnostics.find("comparisons require numeric, bool, or string operands") != std::string::npos);
+}
