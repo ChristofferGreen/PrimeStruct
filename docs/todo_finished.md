@@ -2140,6 +2140,7 @@ are left unarchived.
 | TODO-5683 | `net_io` effect reaches VM/native IR; wasm and GLSL reject it | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5684 | `/std/net` socket host functions and POSIX shim for optexe | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5685 | Loopback echo test over `/std/net` on optexe | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5686 | HTTP hello-world example over `/std/net` | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

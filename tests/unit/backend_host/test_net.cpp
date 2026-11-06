@@ -5,7 +5,16 @@
 
 #include "third_party/doctest.h"
 
+#include <arpa/inet.h>
+#include <fcntl.h>
+#include <netinet/in.h>
+#include <signal.h>
+#include <sys/socket.h>
+#include <sys/time.h>
 #include <sys/wait.h>
+#include <unistd.h>
+
+#include <cerrno>
 
 #include <cstdlib>
 #include <filesystem>
@@ -135,6 +144,77 @@ TEST_CASE("a loopback echo through std/net round-trips bytes with timeouts on ev
     return;
   }
   CHECK_MESSAGE(exitCode == 0, "net_echo failed at step " << exitCode);
+}
+
+TEST_CASE("the http_hello example answers GET / over loopback and exits 0 on SIGTERM") {
+  const int probe = socket(AF_INET, SOCK_STREAM, 0);
+  if (probe < 0 && (errno == EPERM || errno == EACCES)) {
+    MESSAGE("skipped: socket() is not permitted here (EPERM or EACCES)");
+    return;
+  }
+  REQUIRE(probe >= 0);
+  close(probe);
+
+  const std::string example = std::string(PRIMESTRUCT_SOURCE_DIR) + "/examples/apps/http_hello/main.prime";
+  const std::string osShim = std::string(PRIMESTRUCT_SOURCE_DIR) + "/stdlib/std/os/os_posix.cpp";
+  const std::string exe = scratch("http_hello");
+  const std::string log = exe + ".log";
+  const int status = run(shellQuote(Primec) + " --emit=optexe " + shellQuote(example) + " -o " + shellQuote(exe) +
+                         " --link-arg " + shellQuote(NetShim) + " --link-arg " + shellQuote(osShim) + " > " +
+                         shellQuote(log) + " 2>&1");
+  REQUIRE_MESSAGE(status == 0, readFile(log));
+
+  // The server logs "listening on <port>" to stderr; PORT=0 picks a free port and BIND=loopback stays on 127.0.0.1.
+  const std::string errors = exe + ".err";
+  const pid_t pid = fork();
+  REQUIRE(pid >= 0);
+  if (pid == 0) {
+    const int errorFd = open(errors.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    dup2(errorFd, STDERR_FILENO);
+    setenv("PORT", "0", 1);
+    setenv("BIND", "loopback", 1);
+    execl(exe.c_str(), exe.c_str(), static_cast<char *>(nullptr));
+    _exit(127);
+  }
+  int port = 0;
+  for (int attempt = 0; attempt < 200 && port == 0; ++attempt) {
+    const std::string text = readFile(errors);
+    const size_t at = text.find("listening on ");
+    if (at != std::string::npos && text.find('\n', at) != std::string::npos) {
+      port = std::atoi(text.c_str() + at + 13);
+    } else {
+      usleep(25000);
+    }
+  }
+  std::string response;
+  if (port > 0) {
+    const int client = socket(AF_INET, SOCK_STREAM, 0);
+    timeval timeout = {};
+    timeout.tv_sec = 5;
+    setsockopt(client, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+    sockaddr_in address = {};
+    address.sin_family = AF_INET;
+    address.sin_port = htons(static_cast<uint16_t>(port));
+    address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    if (connect(client, reinterpret_cast<sockaddr *>(&address), sizeof(address)) == 0) {
+      const std::string request = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
+      CHECK(send(client, request.data(), request.size(), 0) == static_cast<ssize_t>(request.size()));
+      char buffer[512];
+      ssize_t count = 0;
+      while ((count = recv(client, buffer, sizeof(buffer), 0)) > 0) {
+        response.append(buffer, static_cast<size_t>(count));
+      }
+    }
+    close(client);
+  }
+  kill(pid, SIGTERM);
+  int waitStatus = 0;
+  REQUIRE(waitpid(pid, &waitStatus, 0) == pid);
+  REQUIRE_MESSAGE(port > 0, readFile(errors));
+  CHECK_MESSAGE(response.rfind("HTTP/1.1 200 OK\r\n", 0) == 0, response);
+  CHECK(response.find("\r\n\r\nhello\n") != std::string::npos);
+  CHECK(WIFEXITED(waitStatus));
+  CHECK(WEXITSTATUS(waitStatus) == 0);
 }
 
 TEST_SUITE_END();

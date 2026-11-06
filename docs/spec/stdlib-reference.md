@@ -507,6 +507,9 @@ The wrappers carry `effects(net_io)` (docs/spec/language-core.md, Effects); wasm
 shim installs no signal handlers and keeps no state. The VM and `primevm` have no binding for the host functions and
 report `unbound host function: net_listen ...`; native, wasm and GLSL reject host calls. POSIX only.
 
+`examples/apps/http_hello/main.prime` is a complete server: it answers `GET /`, logs its port to stderr and leaves
+its accept loop (500 ms timeout) with exit code 0 once `stopRequested()` turns true.
+
 ```prime
 import /std/collections/*
 import /std/net/*

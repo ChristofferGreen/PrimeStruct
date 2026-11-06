@@ -58,6 +58,10 @@ From `build-debug/`:
 - `examples/4.Transforms/trace_calls_transform.prime`: user-authored `FunctionAst` transform hook module.
 - `examples/4.Transforms/trace_calls_consumer.prime`: imports the hook module and attaches `[trace_calls return<int>]`.
 
+### apps
+- `examples/apps/http_hello/main.prime`: single-threaded HTTP hello-world server over `/std/net` and `/std/os`
+  (`--emit=optexe` with both POSIX shims linked; see the comment at the top of the file).
+
 ### borrow_checker_negative
 - `examples/borrow_checker_negative/`: intentionally non-compiling borrow-checker examples.
 - Each `.prime` file has a matching `.expected.txt` with required diagnostics JSON fragments.

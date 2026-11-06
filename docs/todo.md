@@ -101,7 +101,6 @@ of sync with them.
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
 | TODO-5656 | Thread-safe `SharedString` (atomic count, per-thread string heaps) | deferred | string-concurrency |
-| TODO-5686 | HTTP hello-world example over `/std/net` | deferred | net-http-example |
 | TODO-5603 | Startup audit: what a launch loads and does | ready | startup |
 | TODO-5586 | Native String heap: pooled blocks, statistics and limit | deferred | native-backend-strings |
 | TODO-5536 | Small, lazily loaded bytecode for apps | ready | bytecode-startup |
@@ -165,7 +164,7 @@ of sync with them.
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5669, TODO-5676, TODO-5677; collection fields found by closures: TODO-5681, TODO-5682
-- Web server (single-threaded, Docker image built with `--emit=optexe`): HTTP example over /std/net TODO-5686; move-only handles TODO-5679; Result payloads for socket handles TODO-5527
+- Web server (single-threaded, Docker image built with `--emit=optexe`): move-only handles TODO-5679; Result payloads for socket handles TODO-5527
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
 ### Execution Queue
@@ -173,20 +172,6 @@ of sync with them.
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 ### Task Blocks
-
-- [ ] TODO-5686: HTTP hello-world example over `/std/net`
-  - owner: ai
-  - status: deferred
-  - created_at: 2026-11-06
-  - phase: Web server, network leaf 1 follow-up
-  - parallel_track: net-http-example
-  - depends_on: TODO-5685
-  - scope: A small example program that accepts connections, parses the HTTP request line, writes a fixed `200 OK` response and exits cleanly when `/std/os` `stopRequested()` turns true (accept timeouts and the interrupted code wake the loop).
-  - acceptance:
-    - `curl` against the example returns the fixed body; SIGTERM ends it with exit 0
-    - a loopback test drives one request in-process
-    - full release gate green
-  - stop_rule: example and its test only; no `/std/http` module.
 
 - [ ] TODO-5669: `Function` from named definitions and at call sites
   - owner: ai
