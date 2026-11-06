@@ -1,0 +1,43 @@
+// Process environment, a monotonic clock and a stop flag for long-running programs (docs/spec/stdlib-reference.md,
+// /std/os). The host side is the POSIX shim next to this file: build with
+//   primec --emit=optexe app.prime -o app --link-arg <stdlib>/std/os/os_posix.cpp
+// The shim installs SIGTERM and SIGINT handlers when the program starts: they set the stop flag and do not restart
+// interrupted system calls, so a blocking socket call returns and the program can check stopRequested().
+
+import /std/text/*
+
+[host return<String>]
+ps_os_env_or([String] name, [String] fallback) {
+}
+
+[host return<i64>]
+ps_os_monotonic_ms() {
+}
+
+[host return<bool>]
+ps_os_stop_requested() {
+}
+
+namespace std {
+namespace os {
+
+  // The value of environment variable `name`, or `fallback` when it is not set.
+  [public return<String>]
+  envOr([String] name, [String] fallback) {
+    return(ps_os_env_or(name, fallback))
+  }
+
+  // Milliseconds on a clock that never goes backwards (not wall-clock time); differences measure elapsed time.
+  [public return<i64>]
+  monotonicMs() {
+    return(ps_os_monotonic_ms())
+  }
+
+  // Whether the process has received SIGTERM or SIGINT.
+  [public return<bool>]
+  stopRequested() {
+    return(ps_os_stop_requested())
+  }
+
+}
+}

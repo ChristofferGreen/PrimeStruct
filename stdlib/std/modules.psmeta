@@ -49,3 +49,7 @@ source_file = std/text/unicode_norm_data.prime
 [module]
 root = /std/text/unicode_norm
 source_file = std/text/unicode_norm.prime
+
+[module]
+root = /std/os
+source_file = std/os/os.prime

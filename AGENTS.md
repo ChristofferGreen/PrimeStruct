@@ -47,7 +47,7 @@ build and layout solidify.
 - For stdlib style work, follow the exact file-level boundary in
   `docs/CodeExamples.md`. In summary, treat `stdlib/std/math/*`,
   `stdlib/std/maybe/*`, `stdlib/std/file/*`, `stdlib/std/image/*`,
-  `stdlib/std/ui/*`, `stdlib/std/scene/*`,
+  `stdlib/std/ui/*`, `stdlib/std/scene/*`, `stdlib/std/os/*`,
   `stdlib/std/collections/vector.prime`,
   `stdlib/std/collections/map.prime`,
   `stdlib/std/collections/errors.prime`,

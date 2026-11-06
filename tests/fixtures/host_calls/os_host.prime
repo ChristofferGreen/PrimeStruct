@@ -1,0 +1,23 @@
+// /std/os on --emit=optexe with stdlib/std/os/os_posix.cpp linked (tests/unit/backend_host/test_cpp_strings.cpp):
+// reads PS_OS_TEST_PORT, waits for the monotonic clock to advance, prints "ready", then waits for SIGTERM.
+import /std/os/*
+import /std/text/*
+
+[return<int> effects(heap_alloc, io_out)]
+main() {
+  [String] port{envOr(stringFrom("PS_OS_TEST_PORT"), stringFrom("80"))}
+  [String] missing{envOr(stringFrom("PS_OS_TEST_UNSET"), stringFrom("fallback"))}
+  [i64] start{monotonicMs()}
+  [i64 mut] now{start}
+  while(now - start < 20i64) {
+    now = monotonicMs()
+  }
+  print_line("ready")
+  while(!stopRequested() && now - start < 20000i64) {
+    now = monotonicMs()
+  }
+  [i32] stopped{if(stopRequested(), then() { 100i32 }, else() { 0i32 })}
+  [i32] portOk{if(port.equalsText("8080"), then() { 10i32 }, else() { 0i32 })}
+  [i32] fallbackOk{if(missing.equalsText("fallback"), then() { 1i32 }, else() { 0i32 })}
+  return(stopped + portOk + fallbackOk)
+}

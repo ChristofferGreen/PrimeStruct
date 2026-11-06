@@ -432,3 +432,39 @@ main() {
 
 Copy a `pick` payload into a local before calling methods on it (`[Window] target{w}`): method calls directly on a
 payload binding do not lower yet (TODO-5544).
+
+### Operating system (`/std/os`)
+
+`import /std/os/*` gives a long-running program (a server in a container) its configuration, a clock and a clean
+stop. The functions are `[host]` calls answered by the POSIX shim `stdlib/std/os/os_posix.cpp`, linked into an
+`--emit=optexe` program:
+
+```bash
+primec --emit=optexe server.prime -o server --link-arg stdlib/std/os/os_posix.cpp
+```
+
+- `envOr(name, fallback) -> String`: the environment variable `name`, or `fallback` when it is not set.
+- `monotonicMs() -> i64`: milliseconds on `CLOCK_MONOTONIC`; it never goes backwards and is not wall-clock time, so
+  only differences mean anything (idle timeouts).
+- `stopRequested() -> bool`: true once the process has received SIGTERM or SIGINT. The shim installs both handlers
+  when the program starts; they set a flag and do not restart interrupted system calls (no `SA_RESTART`), so a
+  blocking socket call returns `EINTR` and the loop around it can check the flag and stop.
+
+These functions take no effect. Like every host call they leave the deterministic subset of the language
+(docs/spec/host-and-core-library.md), and a program that never calls them links without the shim. The VM and
+`primevm` have no binding for them and report `unbound host function: ps_os_env_or ...`.
+
+```prime
+import /std/os/*
+import /std/text/*
+
+[return<int> effects(heap_alloc, io_out)]
+main() {
+  [String] port{envOr(stringFrom("PORT"), stringFrom("8080"))}
+  [i64] start{monotonicMs()}
+  print_line("serving")
+  while(!stopRequested() && monotonicMs() - start < 1000i64) {
+  }
+  return(port.count())
+}
+```

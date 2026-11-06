@@ -113,7 +113,6 @@ of sync with them.
 | TODO-5676 | Lambdas can state their return type | deferred | closures-return-types |
 | TODO-5677 | A `Function` whose closure holds a same-typed `Function` copies and destroys | deferred | closures-lifecycle |
 | TODO-5679 | Stdlib structs can be move-only | deferred | lifecycle-move-only |
-| TODO-5680 | `/std/os`: environment, monotonic clock and a SIGTERM stop flag | ready | os-host |
 | TODO-5510 | `return` returns from unit-variant pick arms correctly | ready | control-returns |
 | TODO-5524 | Int-backed error structs round-trip through stdlib Result sums | ready | result-error-structs |
 | TODO-5523 | A Result-returning main exits with its error code | deferred | result-main |
@@ -144,7 +143,6 @@ of sync with them.
 - TODO-5510 (control-returns): `return` returns from unit-variant pick arms correctly
 - TODO-5524 (result-error-structs): int-backed error structs round-trip through stdlib Result sums
 - TODO-5675 (collections-fields): struct fields that are vectors of structs lower on VM and native
-- TODO-5680 (os-host): `/std/os`: environment, monotonic clock and a SIGTERM stop flag
 
 ### Immediate Next 10
 
@@ -155,7 +153,6 @@ of sync with them.
 5. TODO-5524
 6. TODO-5675
 7. TODO-5673
-8. TODO-5680
 
 ### Priority Lanes
 
@@ -171,7 +168,7 @@ of sync with them.
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5669, TODO-5676, TODO-5677; collection fields found by closures: TODO-5668
-- Web server (single-threaded, Docker image built with `--emit=optexe`): handler and router blockers TODO-5675, then TODO-5673; network and OS TODO-5680, TODO-5679; Result payloads for socket handles TODO-5527
+- Web server (single-threaded, Docker image built with `--emit=optexe`): handler and router blockers TODO-5675, then TODO-5673; network and OS TODO-5679; Result payloads for socket handles TODO-5527
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
 ### Execution Queue
@@ -265,22 +262,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - a move-only struct moves into a parameter, a field and a return; copying it is a compile error with a clear diagnostic; spec text with a runnable example
     - full release gate green
   - stop_rule: the move-only marker and its checks; `File` keeps its builtin rule unless switching it is free.
-
-- [ ] TODO-5680: `/std/os`: environment, monotonic clock and a SIGTERM stop flag
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-06
-  - phase: Web server (Docker image built with `--emit=optexe`), network leaf 2
-  - parallel_track: os-host
-  - scope: A container server needs its port from the environment, a monotonic clock for idle timeouts, and a clean stop on SIGTERM. Nothing like this exists in the stdlib. Add `/std/os` over `[host]` functions in a POSIX shim linked with `--link-arg` (the scheme of `tests/fixtures/host_calls/text_impl.cpp`):
-    - `envOr(name, fallback) -> String`
-    - `monotonicMs() -> i64`
-    - `stopRequested() -> bool`, backed by a `sigaction` handler for SIGTERM and SIGINT that sets a flag and leaves blocking socket calls to return interrupted
-    Decide in the spec whether these need an effect.
-  - acceptance:
-    - an optexe test reads a variable set by the test, sees the clock advance, and stops after the test sends SIGTERM to the child; docs/spec/stdlib-reference.md documents the module
-    - full release gate green
-  - stop_rule: the three functions and their shim; no process, file-system or time-zone API.
 
 - [ ] TODO-5510: `return` returns from unit-variant pick arms correctly
   - owner: ai

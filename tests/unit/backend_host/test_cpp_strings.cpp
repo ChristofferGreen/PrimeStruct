@@ -276,6 +276,48 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("std/os reads the environment, sees the clock advance and stops on SIGTERM") {
+  const std::string program = std::string(PRIMESTRUCT_SOURCE_DIR) + "/tests/fixtures/host_calls/os_host.prime";
+  const std::string shim = std::string(PRIMESTRUCT_SOURCE_DIR) + "/stdlib/std/os/os_posix.cpp";
+  const std::string exe = scratch("os_host_optexe");
+  const std::string log = exe + ".log";
+  const int status = run(shellQuote(Primec) + " --emit=optexe " + shellQuote(program) + " -o " + shellQuote(exe) +
+                         " --link-arg " + shellQuote(shim) + " > " + shellQuote(log) + " 2>&1");
+  REQUIRE_MESSAGE(status == 0, readFile(log));
+  // The child prints "ready" once the clock has advanced 20 ms; the script then sends SIGTERM and records the exit
+  // code (100 stopped + 10 port from the environment + 1 fallback for the unset variable).
+  const std::string output = exe + ".out";
+  const std::string code = exe + ".code";
+  const std::string script = "PS_OS_TEST_PORT=8080 " + shellQuote(exe) + " > " + shellQuote(output) +
+                             " & pid=$!; i=0; until grep -q ready " + shellQuote(output) +
+                             " 2>/dev/null || [ $i -ge 200 ]; do sleep 0.05; i=$((i+1)); done; kill -TERM $pid; "
+                             "wait $pid; echo $? > " + shellQuote(code);
+  const std::string scriptFile = exe + ".sh";
+  {
+    std::ofstream scriptOut(scriptFile);
+    scriptOut << script << "\n";
+  }
+  CHECK(run("sh " + shellQuote(scriptFile)) == 0);
+  CHECK(readFile(output) == "ready\n");
+  CHECK(readFile(code) == "111\n");
+}
+
+TEST_CASE("std/os host functions are unbound on the VM") {
+  ScriptEngine engine;
+  const auto script = engine.compileSource("/os_vm.prime", R"(
+import /std/os/*
+
+[return<int>]
+main() {
+  return(convert<i32>(monotonicMs()))
+}
+)");
+  REQUIRE_MESSAGE(script.valid(), script.diagnostics());
+  const auto result = script.run();
+  CHECK_FALSE(result.ok);
+  CHECK(result.diagnostics.find("unbound host function: ps_os_monotonic_ms") != std::string::npos);
+}
+
 TEST_CASE("libSystem host functions run on the arm64 native backend with the VM's result") {
   const std::string program = std::string(PRIMESTRUCT_SOURCE_DIR) + "/tests/fixtures/host_calls/libsystem_host.prime";
   ScriptEngine engine;
