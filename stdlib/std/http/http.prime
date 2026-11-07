@@ -91,7 +91,7 @@ namespace http {
       if(this.headers.empty()) {
         return(0i32)
       }
-      return(this.headers.splitCount(textOf("\r\n")))
+      return(this.headers.splitCount("\r\n"))
     }
 
     // The name of header line `index` as sent.
@@ -110,7 +110,7 @@ namespace http {
 
     [return<StringView>]
     headerLine([i32] index) {
-      return(this.headers.splitPart(textOf("\r\n"), index))
+      return(this.headers.splitPart("\r\n", index))
     }
   }
 
@@ -197,10 +197,10 @@ namespace http {
     if(headers.empty()) {
       return(0i32)
     }
-    [i32] count{headers.splitCount(textOf("\r\n"))}
+    [i32] count{headers.splitCount("\r\n")}
     [i32 mut] index{0i32}
     while(index < count) {
-      [StringView] line{headers.splitPart(textOf("\r\n"), index)}
+      [StringView] line{headers.splitPart("\r\n", index)}
       [i32] colon{line.indexOfByte(58u8)}
       if(colon <= 0i32) {
         return(400i32)
@@ -218,8 +218,8 @@ namespace http {
   // answers 413. Bytes after a complete request (a pipelined next one) are left alone: see `length()`.
   [public return<Request>]
   parseRequest([StringView] text, [i32] maxBodyBytes) {
-    [i32] headEnd{text.indexOf(textOf("\r\n\r\n"))}
-    [i32] lineEnd{text.indexOf(textOf("\r\n"))}
+    [i32] headEnd{text.indexOf("\r\n\r\n")}
+    [i32] lineEnd{text.indexOf("\r\n")}
     if(headEnd < 0i32) {
       // A request line that is already complete can be rejected before the rest arrives.
       if(lineEnd < 0i32) {
@@ -243,7 +243,7 @@ namespace http {
       return(incomplete_request(400i32))
     }
     if(!version.equalsText("HTTP/1.1") && !version.equalsText("HTTP/1.0")) {
-      if(version.startsWith(textOf("HTTP/"))) {
+      if(version.startsWith("HTTP/")) {
         return(incomplete_request(505i32))
       }
       return(incomplete_request(400i32))
@@ -257,12 +257,12 @@ namespace http {
       return(incomplete_request(headerCheck))
     }
     [Request] head{Request{[headers] headers}}
-    if(head.hasHeader(textOf("Transfer-Encoding"))) {
+    if(head.hasHeader("Transfer-Encoding")) {
       return(incomplete_request(501i32))
     }
     [i32 mut] bodyLength{0i32}
-    if(head.hasHeader(textOf("Content-Length"))) {
-      [StringView] lengthText{head.header(textOf("Content-Length"))}
+    if(head.hasHeader("Content-Length")) {
+      [StringView] lengthText{head.header("Content-Length")}
       if(!is_digits(lengthText) || lengthText.count() > 9i32) {
         if(is_digits(lengthText)) {
           return(incomplete_request(413i32))
@@ -345,7 +345,7 @@ namespace http {
     text([StringView] text, [StringView] contentType) {
       this.body.clear()
       this.body.appendBytes(text.data, text.count())
-      this.header(textOf("Content-Type"), contentType)
+      this.header("Content-Type", contentType)
     }
 
     // Back to an empty 200 response, keeping the buffers for the next request.
@@ -472,7 +472,7 @@ namespace http {
   // text before the "*".
   [return<bool>]
   pattern_matches([StringView] pattern, [StringView] path) {
-    if(pattern.endsWith(textOf("*"))) {
+    if(pattern.endsWith("*")) {
       [StringView] prefix{pattern.slice(0i32, pattern.count() - 1i32)}
       return(path.startsWith(prefix))
     }
@@ -489,7 +489,7 @@ namespace http {
     // Adds a route for `method` (such as "GET") and `pattern` (a literal path, or a prefix ending in "*").
     [mut effects(heap_alloc)]
     route([string] method, [string] pattern, [Function<void, Request, Reference<Response>> move] handler) {
-      this.routes.push(Route{[method] textOf(method), [pattern] textOf(pattern), [handler] handler})
+      this.routes.push(Route{[method] method, [pattern] pattern, [handler] handler})
     }
 
     [mut effects(heap_alloc)]

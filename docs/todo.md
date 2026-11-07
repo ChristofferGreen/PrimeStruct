@@ -100,7 +100,6 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5700 | A string literal passes where a `StringView` is expected | ready | text-literal-views |
 | TODO-5701 | `/std/html` writer, `Response.html` and `redirect` | ready | web-html |
 | TODO-5702 | Request query and form parameters with percent-decoding | ready | web-params |
 | TODO-5703 | `Router` path parameters | ready | web-routes |
@@ -123,6 +122,7 @@ of sync with them.
 | TODO-5713 | A lambda whose capture list starts with `mut` parses as a call argument | ready | closures-parse |
 | TODO-5714 | Native: a `Function` call nested in another call's arguments lowers | ready | native-backend |
 | TODO-5715 | `Function<R, A...>{move(closure)}` infers the boxed type | ready | closures |
+| TODO-5716 | A literal converts to a `StringView` at a call whose overloads differ there | deferred | text-literal-views |
 | TODO-5681 | A struct field built from a named vector local owns its storage once | ready | collections-fields |
 | TODO-5682 | Native: a mutating vector-field method inside an arithmetic expression returns the right value | ready | native-backend |
 | TODO-5676 | Lambdas can state their return type | deferred | closures-return-types |
@@ -149,7 +149,6 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5700 (text-literal-views): a string literal passes where a `StringView` is expected
 - TODO-5701 (web-html): `/std/html` writer, `Response.html` and `redirect`
 - TODO-5603 (startup): startup audit: what a launch loads and does
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
@@ -160,14 +159,13 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5700
-2. TODO-5701
-3. TODO-5709
-4. TODO-5603
-5. TODO-5536
-6. TODO-5535
-7. TODO-5510
-8. TODO-5524
+1. TODO-5701
+2. TODO-5709
+3. TODO-5603
+4. TODO-5536
+5. TODO-5535
+6. TODO-5510
+7. TODO-5524
 
 ### Priority Lanes
 
@@ -184,7 +182,7 @@ of sync with them.
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715; collection fields found by closures: TODO-5681, TODO-5682
 - Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5701, TODO-5702, TODO-5703, TODO-5704, TODO-5705, TODO-5706
-- Language surface for handlers (docs/WebAppsPlan.md): TODO-5700, TODO-5707, TODO-5708
+- Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716
 - Native UI handlers (docs/WebAppsPlan.md): TODO-5709, TODO-5710, TODO-5711
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
@@ -193,20 +191,6 @@ of sync with them.
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 ### Task Blocks
-
-- [ ] TODO-5700: A string literal passes where a `StringView` is expected
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-07
-  - phase: Language surface for handlers (docs/WebAppsPlan.md)
-  - parallel_track: text-literal-views
-  - scope: Every text API that takes a `StringView` needs `textOf("...")` around a literal: `response.text(textOf("hello"), textOf("text/plain"))`, `request.header(textOf("Host"))`. Convert a `string` literal (and a `string` value) to a `StringView` implicitly where a `[StringView]` parameter, field or binding is expected, as a `String` already converts with an implicit borrow (docs/spec/strings-and-views.md, Making one). Then drop the `textOf` calls from `/std/http`, `/std/json`, examples/apps/http_hello, examples/apps/web_app and docs/CodeExamples.md.
-  - acceptance:
-    - `response.text("hello", "text/plain")` and `request.header("Host")` compile and run on VM and optexe
-    - spec text in docs/spec/strings-and-views.md with a runnable example; a negative test for a non-text argument
-    - the stdlib web modules and both web examples use the literal form
-    - full release gate green
-  - stop_rule: literal and `string` to `StringView` conversion at expected-type sites only; no change to `StringView` layout.
 
 - [ ] TODO-5701: `/std/html` writer, `Response.html` and `redirect`
   - owner: ai
@@ -410,6 +394,19 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - the explicit and the implicit form with `move(adder)` run on VM and optexe, and `adder` is moved-from afterwards (a negative test for a use after the move)
     - full release gate green
   - stop_rule: `move` arguments of `/__fn_box` and the implicit sites.
+
+- [ ] TODO-5716: A literal converts to a `StringView` at a call whose overloads differ there
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-07
+  - phase: Language surface for handlers (docs/WebAppsPlan.md; found by TODO-5700)
+  - parallel_track: text-literal-views
+  - scope: A `string` converts to a `StringView` where one is expected (docs/spec/strings-and-views.md), but at a call of same-arity overloads only when every overload takes a `StringView` in that position. With `pick([i32])` and `pick([StringView])`, `pick("y")` reports no viable overload, and even `pick(textOf("y"))` is ambiguous, because overload selection types a nested call argument as unknown (`requirementOverloadArgumentTypeText` in src/semantics/TemplateMonomorphCoreUtilities.cpp). Give a call with a known non-generic return type, such as `textOf`, its type there, then let the conversion pick the `StringView` overload when no overload takes the `string` itself (`TextViewConversion::convert`).
+  - acceptance:
+    - `pick("y")` and `pick(textOf("y"))` select the `StringView` overload on VM and optexe; `describe([string])` next to `describe([StringView])` still takes the literal as a `string`
+    - full release gate green
+  - stop_rule: overload argument facts for calls with a declared return type and the literal conversion at such calls; no change to the specificity rule.
+  - notes: deferred: no stdlib family overloads `string` against `StringView` or another type today.
 
 - [ ] TODO-5681: A struct field built from a named vector local owns its storage once
   - owner: ai

@@ -2157,6 +2157,7 @@ are left unarchived.
 | TODO-5697 | `?` lowers when a struct with a vector field is a local of the callee chain | [2026-11.md](todo_archive/2026-11.md) | 2026-11-06 |
 | TODO-5698 | Serve static files with traversal-safe paths | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5699 | A Result local with a vector payload built from a call lowers | [2026-11.md](todo_archive/2026-11.md) | 2026-11-07 |
+| TODO-5700 | A string literal passes where a `StringView` is expected | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

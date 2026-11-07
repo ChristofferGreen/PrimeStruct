@@ -921,7 +921,7 @@ import /std/text/view/*
 with_server_name<Next>([Next move] next) {
   return([mut inner{next}]([Request] request, [Reference<Response>] response) {
     inner(request, response)
-    response.header(textOf("Server"), textOf("primestruct"))
+    response.header("Server", "primestruct")
   })
 }
 
@@ -929,7 +929,7 @@ with_server_name<Next>([Next move] next) {
 main() {
   [Router mut] router{Router{}}
   router.get("/health", []([Request] request, [Reference<Response>] response) {
-    response.text(textOf("ok"), textOf("text/plain"))
+    response.text("ok", "text/plain")
   })
   [mut] app{with_server_name(router)}
   [String] raw{stringFrom("GET /health HTTP/1.1\r\n\r\n")}

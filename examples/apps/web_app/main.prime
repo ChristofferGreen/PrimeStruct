@@ -21,7 +21,7 @@ import /std/text/view/*
 query_value([StringView] query, [StringView] key) {
   [i32 mut] index{0i32}
   while(true) {
-    [StringView] pair{query.splitPart(textOf("&"), index)}
+    [StringView] pair{query.splitPart("&", index)}
     if(pair.empty()) {
       return(StringView{})
     }
@@ -38,10 +38,10 @@ query_value([StringView] query, [StringView] key) {
 app_routes() {
   [Router mut] router{Router{}}
   router.get("/healthz", []([Request] request, [Reference<Response>] response) {
-    response.text(textOf("ok\n"), textOf("text/plain"))
+    response.text("ok\n", "text/plain")
   })
   router.get("/hello", []([Request] request, [Reference<Response>] response) {
-    [StringView] name{query_value(request.query, textOf("name"))}
+    [StringView] name{query_value(request.query, "name")}
     response.body.append("hello, ")
     if(name.empty()) {
       response.body.append("world")
@@ -49,10 +49,10 @@ app_routes() {
       response.body.appendBytes(name.data, name.count())
     }
     response.body.append("\n")
-    response.header(textOf("Content-Type"), textOf("text/plain"))
+    response.header("Content-Type", "text/plain")
   })
   router.post("/echo", []([Request] request, [Reference<Response>] response) {
-    response.text(request.body, textOf("application/octet-stream"))
+    response.text(request.body, "application/octet-stream")
   })
   router.get("/static/*", []([Request] request, [Reference<Response>] response) {
     [String] root{envOr(stringFrom("STATIC_DIR"), stringFrom("public"))}

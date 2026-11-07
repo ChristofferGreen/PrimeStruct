@@ -106,7 +106,7 @@ namespace json {
     // `text` between quotes: quote, backslash and control bytes are escaped; other bytes (UTF-8) pass through.
     [mut effects(heap_alloc)]
     quoted([StringView] text) {
-      [StringView] digits{textOf("0123456789abcdef")}
+      [StringView] digits{"0123456789abcdef"}
       this.out.append("\"")
       [i32 mut] index{0i32}
       while(index < text.count()) {

@@ -33,8 +33,9 @@ parameters yet, and the server reads one connection at a time.
 
 ## Target shape
 
-The spelling below needs TODO-5700 (literals as `StringView`) and TODO-5707 (`mut` parameters in `Function`
-types). A lambda or a named handler already passes where a `Function` is expected (TODO-5669, done).
+The spelling below needs TODO-5707 (`mut` parameters in `Function` types). A lambda or a named handler already
+passes where a `Function` is expected (TODO-5669, done), and a string literal where a `StringView` is expected
+(TODO-5700, done).
 
 ```prime
 [struct]
@@ -57,7 +58,7 @@ PrimeScroll can move one menu at a time.
 
 ## Order
 
-1. Language: TODO-5700 (TODO-5669 is done).
+1. Language: done (TODO-5669, TODO-5700).
 2. HTML and requests: TODO-5701 (writer, `Response.html`, `redirect`), TODO-5702 (query and form parameters),
    TODO-5703 (path parameters), then the todo-list example TODO-5704.
 3. Server: TODO-5705 (an idle connection does not stall the others).

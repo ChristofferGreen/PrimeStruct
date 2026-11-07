@@ -544,7 +544,9 @@ main() {
 
 `import /std/http/*` parses HTTP/1.1 requests and builds responses. It is pure code over bytes that have already
 arrived, so it runs on the VM and every backend. The subset is deliberately small: bodies by `Content-Length` only,
-one request per connection (`Connection: close`), and no chunked encoding, keep-alive or TLS.
+one request per connection (`Connection: close`), and no chunked encoding, keep-alive or TLS. Text parameters are
+`StringView`s, and a string literal passes to one as it is: `request.header("Host")`, `response.text("ok",
+"text/plain")` (docs/spec/strings-and-views.md, Current surface of the text view).
 
 - `parseRequest(text, maxBodyBytes) -> Request` parses one request from the start of a `StringView`. The request's
   `outcome()` is 0 when it is complete (`isComplete()`), 1 when more bytes are needed (`needsMore()`), or the status
@@ -588,7 +590,7 @@ one request per connection (`Connection: close`), and no chunked encoding, keep-
   ```prime
   [Router mut] router{Router{}}
   router.get("/health", []([Request] request, [Reference<Response>] response) {
-    response.text(textOf("ok"), textOf("text/plain"))
+    response.text("ok", "text/plain")
   })
   router.call(request, location(response))
   ```
@@ -651,7 +653,7 @@ log_serve_error([ServeError] err) {
 main() {
   [Router mut] router{Router{}}
   router.get("/", []([Request] request, [Reference<Response>] response) {
-    response.text(textOf("hello\n"), textOf("text/plain"))
+    response.text("hello\n", "text/plain")
   })
   serve(withRequestLog(router), ServerConfig{[port] 8080i32})?
   return(0i32)
@@ -672,7 +674,7 @@ main() {
 
 ```prime
 router.get("/static/*", []([Request] request, [Reference<Response>] response) {
-  serve_file(response, textOf("public"), request.path.slice(8i32, request.path.count()), 1048576i32)
+  serve_file(response, "public", request.path.slice(8i32, request.path.count()), 1048576i32)
 })
 ```
 
@@ -697,9 +699,9 @@ import /std/text/view/*
 main() {
   [Writer mut] w{Writer{}}
   w.beginObject()
-  w.key(textOf("ok"))
+  w.key("ok")
   w.boolValue(true)
-  w.key(textOf("ids"))
+  w.key("ids")
   w.beginArray()
   w.i64Value(1i64)
   w.i64Value(2i64)
