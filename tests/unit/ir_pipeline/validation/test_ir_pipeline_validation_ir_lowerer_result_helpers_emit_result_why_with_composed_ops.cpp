@@ -509,7 +509,33 @@ TEST_CASE("ir lowerer flow helpers classify borrowed struct copy sources") {
   accessCall.name = "at";
   accessCall.args.push_back(localName);
   accessCall.args.push_back(indexLiteral);
-  CHECK(primec::ir_lowerer::shouldDisarmStructCopySourceExpr(accessCall));
+  // An element access reads a place the container keeps owning: copy it, never disarm it.
+  CHECK(primec::ir_lowerer::isElementAccessCopySourceExpr(accessCall));
+  CHECK_FALSE(primec::ir_lowerer::shouldDisarmStructCopySourceExpr(accessCall));
+
+  primec::Expr methodAccessCall = accessCall;
+  methodAccessCall.isMethodCall = true;
+  CHECK_FALSE(primec::ir_lowerer::shouldDisarmStructCopySourceExpr(methodAccessCall));
+  // ...unless it resolves to a definition (a user `at`), whose result is a temporary.
+  const primec::Definition userAt = [] {
+    primec::Definition def;
+    def.fullPath = "/Maker/at";
+    return def;
+  }();
+  CHECK_FALSE(primec::ir_lowerer::isTemporaryStructCopySourceExpr(
+      methodAccessCall,
+      [](const primec::Expr &) -> const primec::Definition * { return nullptr; }));
+  CHECK(primec::ir_lowerer::isTemporaryStructCopySourceExpr(
+      methodAccessCall, [&](const primec::Expr &) { return &userAt; }));
+  CHECK(primec::ir_lowerer::isTemporaryStructCopySourceExpr(temporaryCall, {}));
+  CHECK_FALSE(primec::ir_lowerer::isTemporaryStructCopySourceExpr(localName, {}));
+
+  primec::Expr oneArgAt;
+  oneArgAt.kind = primec::Expr::Kind::Call;
+  oneArgAt.name = "at";
+  oneArgAt.args.push_back(localName);
+  CHECK_FALSE(primec::ir_lowerer::isElementAccessCopySourceExpr(oneArgAt));
+  CHECK(primec::ir_lowerer::shouldDisarmStructCopySourceExpr(oneArgAt));
 
   primec::Expr fieldAccessCall;
   fieldAccessCall.kind = primec::Expr::Kind::Call;

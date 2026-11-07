@@ -126,9 +126,9 @@ of sync with them.
 | TODO-5717 | One file imports two modules that export the same name | ready | import-conflicts |
 | TODO-5718 | All values of a repeated parameter and decoded path parameters | deferred | web-params |
 | TODO-5719 | `location(this.field)` passes directly as a `Function` call argument | ready | closures-arguments |
-| TODO-5720 | A binding from a vector element copies the element's owned fields | ready | collections-fields |
 | TODO-5721 | A string converts to a `StringView` at a field of a generic struct | ready | text-literal-views |
 | TODO-5681 | A struct field built from a named vector local owns its storage once | ready | collections-fields |
+| TODO-5726 | An indexed element of a stdlib `Vector<T>` of structs binds without a fault | ready | collections-access |
 | TODO-5682 | Native: a mutating vector-field method inside an arithmetic expression returns the right value | ready | native-backend |
 | TODO-5676 | Lambdas can state their return type | deferred | closures-return-types |
 | TODO-5677 | A `Function` whose closure holds a same-typed `Function` copies and destroys | deferred | closures-lifecycle |
@@ -155,7 +155,7 @@ of sync with them.
 ### Ready Now
 
 - TODO-5706 (web-fragments): fragment-swapping buttons without user JavaScript
-- TODO-5720 (collections-fields): a binding from a vector element copies the element's owned fields
+- TODO-5705 (web-server-loop): an idle connection does not stall the server
 - TODO-5603 (startup): startup audit: what a launch loads and does
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
@@ -166,7 +166,7 @@ of sync with them.
 ### Immediate Next 10
 
 1. TODO-5706
-2. TODO-5720
+2. TODO-5705
 3. TODO-5723
 4. TODO-5603
 5. TODO-5536
@@ -187,7 +187,7 @@ of sync with them.
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
-- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719; collection fields found by closures and the todo example: TODO-5681, TODO-5682, TODO-5720
+- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719; collection fields found by closures and the todo example: TODO-5681, TODO-5682, TODO-5726
 - Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5705, TODO-5706, TODO-5718, TODO-5722, TODO-5724
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721
 - Native UI handlers (docs/WebAppsPlan.md): TODO-5723, TODO-5709, TODO-5710, TODO-5711, TODO-5725
@@ -454,18 +454,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - full release gate green
   - stop_rule: `location` arguments of `Function` calls only.
 
-- [ ] TODO-5720: A binding from a vector element copies the element's owned fields
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-07
-  - phase: Collections (docs/spec/value-lifecycle.md, Copies; found by TODO-5704)
-  - parallel_track: collections-fields
-  - scope: `[Todo] todo{todos[0i32]}`, where `Todo` has a `String` field and no `Copy` of its own, bit-copies the element and destroys the copy at scope end, so a later `remove_at` or the vector's own destruction stops with `string heap block freed twice` on the VM and optexe. A binding from a local Todo copies correctly, as do `[String] title{todos[0i32].title}` and passing `todos[0i32]` to a `[Todo]` parameter. The binding branch treats the builtin element access as an owned temporary (`shouldDisarmStructCopySourceExpr` in src/ir_lowerer/IrLowererFlowControlHelpers.cpp) and skips the field-wise Copy. The todo example passes the element to a function instead.
-  - acceptance:
-    - a binding from a vector element of a struct with String and vector fields copies and frees once on the VM and optexe, checked by mutating the copy and the element apart
-    - full release gate green
-  - stop_rule: bindings from builtin element access only.
-
 - [ ] TODO-5721: A string converts to a `StringView` at a field of a generic struct
   - owner: ai
   - status: ready
@@ -490,6 +478,18 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - `KeepV{[seen] start}` then pushes on both run on VM, native and optexe with independent counts and no double free; `b{a}` then `b.push` leaves `a.count()` unchanged; a test that the original stays usable
     - full release gate green
   - stop_rule: vector copies at brace construction and local copy bindings; no change to move semantics.
+
+- [ ] TODO-5726: An indexed element of a stdlib `Vector<T>` of structs binds without a fault
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-07
+  - phase: Collections (docs/spec/value-lifecycle.md, Copies; found by TODO-5720)
+  - parallel_track: collections-access
+  - scope: With `[Vector<Noisy> mut] v{vector<Noisy>()}` filled by `vectorPush<Noisy>`, where `Noisy` is a struct (one `i32` field, or an `i32` and a `bool`), `[Noisy] a{v[0i32]}`, `at(v, 0i32)` and `v.at(0i32)` stop with `VM error: unaligned indirect address in IR: 1` (or `: 2`); `vectorAt<Noisy>(v, 0i32)` binds and copies once, and the builtin `vector<Noisy>` spelling works. Present before TODO-5720; likely the builtin element access reads the stdlib Vector record with the builtin record layout.
+  - acceptance:
+    - the three spellings bind, copy once and destroy once on the VM and optexe (matrix case)
+    - full release gate green
+  - stop_rule: indexed reads of stdlib `Vector<T>` struct elements only.
 
 - [ ] TODO-5682: Native: a mutating vector-field method inside an arithmetic expression returns the right value
   - owner: ai

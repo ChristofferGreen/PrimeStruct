@@ -152,7 +152,15 @@ bool emitVectorMoveSlot(
 bool emitDisarmTemporaryStructAfterCopy(const EmitInstructionFn &emitInstruction,
                                         int32_t srcPtrLocal,
                                         const std::string &structPath);
+// True for a call whose struct value is a temporary the copy takes over (and disarms); false for
+// a place: a name, field, `dereference`/`location`, or an element access.
 bool shouldDisarmStructCopySourceExpr(const Expr &expr);
+// An element access with a receiver and an index (`at(v, i)`, `v.at(i)`, `at_unsafe(v, i)`).
+bool isElementAccessCopySourceExpr(const Expr &expr);
+// shouldDisarmStructCopySourceExpr, except that a call shaped like an element access is a
+// temporary when it resolves to a definition (a user `at`): only the builtin access is a place.
+bool isTemporaryStructCopySourceExpr(
+    const Expr &expr, const std::function<const Definition *(const Expr &)> &resolveCallee);
 bool isOwnedTemporaryArgumentExpr(
     const Expr &expr, const std::function<const Definition *(const Expr &)> &resolveDefinitionCall);
 bool emitCompareToZero(std::vector<IrInstruction> &instructions,

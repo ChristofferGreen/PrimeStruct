@@ -253,6 +253,9 @@
                         emitInlineDefinitionCall,
                         ranCopyHelper,
                         error);
+                  },
+                  [&](const Expr &argExpr, const LocalMap &argLocals) {
+                    return isTemporaryStructCopySource(argExpr, argLocals);
                   })) {
             return false;
           }
@@ -373,7 +376,7 @@
         if (!emitStructCopySlots(baseLocal, srcPtrLocal, layout.totalSlots)) {
           return false;
         }
-        if (shouldDisarmStructCopySourceExpr(init)) {
+        if (isTemporaryStructCopySource(init, localsIn)) {
           ir_lowerer::emitDisarmTemporaryStructAfterCopy(
               [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
               srcPtrLocal,
@@ -452,6 +455,43 @@
           info.kind != LocalInfo::Kind::Reference) {
         error = "native backend requires typed bindings";
         return false;
+      }
+      // A struct whose fields are all one scalar kind lives as an array local, a pointer to its
+      // slots. Initialized from another such binding or from an element it gets slots of its own,
+      // so a write to either leaves the other intact (docs/spec/value-lifecycle.md, Copies); a
+      // temporary is taken over as is. (A static field such as `ColorFormat.Bgra8Unorm` lowers
+      // to its scalar value, not to an address, so other places keep the plain store.)
+      const auto isScalarStructPlaceSource = [&]() {
+        if (init.kind == Expr::Kind::Name) {
+          const auto sourceIt = localsIn.find(init.name);
+          return sourceIt != localsIn.end() && sourceIt->second.kind == LocalInfo::Kind::Array &&
+                 sourceIt->second.structTypeName == info.structTypeName;
+        }
+        return ir_lowerer::isElementAccessCopySourceExpr(init) &&
+               !isTemporaryStructCopySource(init, localsIn);
+      };
+      if (info.kind == LocalInfo::Kind::Array && info.structFieldCount > 0 &&
+          !info.structTypeName.empty() && isScalarStructPlaceSource()) {
+        StructSlotLayout layout;
+        if (!resolveStructSlotLayout(info.structTypeName, layout)) {
+          return false;
+        }
+        if (!emitExpr(init, localsIn)) {
+          return false;
+        }
+        const int32_t srcPtrLocal = allocTempLocal();
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
+        const int32_t baseLocal = nextLocal;
+        nextLocal += layout.totalSlots;
+        if (!emitStructCopySlots(baseLocal, srcPtrLocal, layout.totalSlots)) {
+          return false;
+        }
+        info.index = nextLocal++;
+        function.instructions.push_back(
+            {IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(info.index)});
+        localsIn.emplace(stmt.name, info);
+        return true;
       }
       if (!emitExpr(init, localsIn)) {
         return false;
@@ -842,7 +882,7 @@
           return false;
         }
         if (stableReturnValueExpr.kind == Expr::Kind::Name ||
-            shouldDisarmStructCopySourceExpr(stableReturnValueExpr)) {
+            isTemporaryStructCopySource(stableReturnValueExpr, *emittedReturnLocals)) {
           ir_lowerer::emitDisarmTemporaryStructAfterCopy(
               [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
               srcPtrLocal,

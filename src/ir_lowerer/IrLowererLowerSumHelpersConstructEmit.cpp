@@ -378,7 +378,9 @@ namespace primec::ir_lowerer {
           if (!emitStructCopyFromPtrs(destPtrLocal, srcPtrLocal, selection.payloadSlotCount)) {
             return false;
           }
-          if (shouldDisarmStructCopySourceExpr(*selection.payloadExpr)) {
+          if (isTemporaryStructCopySourceExpr(*selection.payloadExpr, [&](const Expr &callExpr) {
+                return resolveDefinitionCall(callExpr);
+              })) {
             ir_lowerer::emitDisarmTemporaryStructAfterCopy(
                 [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
                 srcPtrLocal,

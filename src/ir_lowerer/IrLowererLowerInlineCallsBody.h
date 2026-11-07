@@ -416,6 +416,14 @@
                     stateOut.emitInlineDefinitionCall,
                     ranCopyHelper,
                     error);
+              },
+              [&](const Expr &argExpr, const LocalMap &argLocals) {
+                return ir_lowerer::isTemporaryStructCopySourceExpr(
+                    argExpr, [&](const Expr &callExpr) {
+                      return callExpr.isMethodCall
+                                 ? resolveMethodCallDefinition(callExpr, argLocals)
+                                 : resolveDefinitionCall(callExpr);
+                    });
               })) {
         popFileScope();
         popInlineStack();

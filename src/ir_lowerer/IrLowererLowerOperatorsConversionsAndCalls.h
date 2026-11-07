@@ -100,7 +100,7 @@
                   const int32_t newPtrLocal = allocTempLocal();
                   emitInstruction(IrOpcode::AddressOfLocal, static_cast<uint64_t>(newBaseLocal));
                   emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(newPtrLocal));
-                  if (ir_lowerer::shouldDisarmStructCopySourceExpr(rhsExpr)) {
+                  if (isTemporaryStructCopySource(rhsExpr, localsIn)) {
                     ir_lowerer::emitDisarmTemporaryStructAfterCopy(
                         emitInstruction, srcPtrLocal, structPath);
                   } else {

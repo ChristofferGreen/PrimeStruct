@@ -509,13 +509,30 @@ bool shouldDisarmStructCopySourceExpr(const Expr &expr) {
   if (isSimpleCallName(expr, "try") && expr.args.size() == 1 && expr.args.front().kind == Expr::Kind::Name) {
     return false;
   }
-  // Note: a builtin array/vector access call (e.g. `at(value, index)`) is
-  // NOT excluded here - unlike `dereference`/`location`, it produces a
-  // fresh by-value element copy, not a borrow into the receiver, so its
-  // struct copy source must still be disarmed like any other temporary
-  // (see the "classify borrowed struct copy sources" test, which pins this
-  // for a non-method-call `at` access).
+  // An element access (`v[i]`, `at(v, i)`, `v.at(i)`) reads a place: the slots it yields are
+  // the element's own, which the container keeps owning, so a copy of them runs the Copy
+  // helpers instead of disarming the element (docs/spec/value-lifecycle.md, Copies).
+  if (isElementAccessCopySourceExpr(expr)) {
+    return false;
+  }
   return true;
+}
+
+bool isTemporaryStructCopySourceExpr(
+    const Expr &expr, const std::function<const Definition *(const Expr &)> &resolveCallee) {
+  if (isElementAccessCopySourceExpr(expr)) {
+    return resolveCallee && resolveCallee(expr) != nullptr;
+  }
+  return shouldDisarmStructCopySourceExpr(expr);
+}
+
+bool isElementAccessCopySourceExpr(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Call || expr.isFieldAccess || expr.args.size() != 2) {
+    return false;
+  }
+  std::string accessName;
+  return getBuiltinArrayAccessName(expr, accessName) || isSimpleCallName(expr, "at") ||
+         isSimpleCallName(expr, "at_unsafe");
 }
 
 // An argument that produces a value nobody else owns (a constructor, or a call returning a value

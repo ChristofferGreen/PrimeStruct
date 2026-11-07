@@ -1075,6 +1075,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/program_matrix/test_program_matrix_closures.cpp
     tests/unit/program_matrix/test_program_matrix_container_copies.cpp
     tests/unit/program_matrix/test_program_matrix_control.cpp
+    tests/unit/program_matrix/test_program_matrix_element_copies.cpp
     tests/unit/program_matrix/test_program_matrix_lifecycle.cpp
     tests/unit/program_matrix/test_program_matrix_optimizer.cpp
     tests/unit/program_matrix/test_program_matrix_parameter_modes.cpp
@@ -3493,6 +3494,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.program_matrix.closures
     primestruct.program_matrix.container_copies
     primestruct.program_matrix.control
+    primestruct.program_matrix.element_copies
     primestruct.program_matrix.lifecycle
     primestruct.program_matrix.optimizer
     primestruct.program_matrix.parameter_modes

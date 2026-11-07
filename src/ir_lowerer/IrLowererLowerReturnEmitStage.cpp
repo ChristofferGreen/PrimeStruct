@@ -282,6 +282,15 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
     return structPath;
   };
 
+  // Whether a struct value copied out of `sourceExpr` is a temporary the copy takes over (and
+  // disarms) rather than a place that keeps owning it (an element access, unless a user `at`).
+  auto isTemporaryStructCopySource = [&](const Expr &sourceExpr, const LocalMap &locals) {
+    return ir_lowerer::isTemporaryStructCopySourceExpr(sourceExpr, [&](const Expr &callExpr) {
+      return callExpr.isMethodCall ? resolveMethodCallDefinition(callExpr, locals)
+                                   : resolveDefinitionCall(callExpr);
+    });
+  };
+
   emitInlineDefinitionCall = [&](const Expr &callExpr,
                                  const Definition &callee,
                                  const LocalMap &callerLocals,

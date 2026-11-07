@@ -215,7 +215,8 @@ bool emitInlineStructDefinitionArguments(
     const EmitInstructionFn &emitInstruction,
     std::string &error,
     std::optional<int32_t> destBaseLocal,
-    const std::function<bool(int32_t, int32_t, const std::string &)> &emitPlaceCopyHelpers) {
+    const std::function<bool(int32_t, int32_t, const std::string &)> &emitPlaceCopyHelpers,
+    const std::function<bool(const Expr &, const LocalMap &)> &isTemporaryCopySource) {
   StructSlotLayoutInfo layout;
   if (!resolveStructSlotLayout(calleePath, layout)) {
     return false;
@@ -390,7 +391,9 @@ bool emitInlineStructDefinitionArguments(
     if (!emitStructCopySlots(baseLocal + field.slotOffset, srcPtrLocal, field.slotCount)) {
       return false;
     }
-    if (shouldDisarmStructCopySourceExpr(*arg)) {
+    const bool temporaryArg = isTemporaryCopySource ? isTemporaryCopySource(*arg, argLocals)
+                                                    : shouldDisarmStructCopySourceExpr(*arg);
+    if (temporaryArg) {
       emitDisarmTemporaryStructAfterCopy(emitInstruction, srcPtrLocal, field.structPath);
     } else if (emitPlaceCopyHelpers) {
       // A field initialized from an existing place owns a copy of it.

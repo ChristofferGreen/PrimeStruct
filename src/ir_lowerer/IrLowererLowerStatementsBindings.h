@@ -726,7 +726,7 @@
         }
         // A sum local built from a fresh value owns its payload and destroys it at scope end.
         if (!fileScopeStack.empty() && !emittedSumMove && init.kind == Expr::Kind::Call &&
-            !init.isFieldAccess && ir_lowerer::shouldDisarmStructCopySourceExpr(init) &&
+            !init.isFieldAccess && isTemporaryStructCopySource(init, localsIn) &&
             sumHelpers.sumPayloadsNeedDestroy(*sumDef)) {
           info.dropFlagLocal = allocTempLocal();
           function.instructions.push_back({IrOpcode::PushI32, 1});
