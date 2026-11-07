@@ -15,10 +15,11 @@ import /std/text/view/*
 [return<Router> effects(heap_alloc)]
 hello_routes() {
   [Router mut] router{Router{}}
-  router.get("/", Function<void, Request, Reference<Response>>{[]([Request] request, [Reference<Response>] response) {
+  router.get("/", []([Request] request, [Reference<Response>] response) {
     response.text(textOf("hello\n"), textOf("text/plain"))
-  }})
-  router.get("/greet", Function<void, Request, Reference<Response>>{[mut greeted{0i32}]([Request] request, [Reference<Response>] response) {
+  })
+  // The visitor count lives in the closure, so the route's handler keeps it between requests.
+  [mut] greet{[mut greeted{0i32}]([Request] request, [Reference<Response>] response) {
     greeted = greeted + 1i32
     response.body.append("hello, ")
     response.body.appendBytes(request.query.data, request.query.count())
@@ -26,7 +27,8 @@ hello_routes() {
     response.body.appendI64(convert<i64>(greeted))
     response.body.append(")\n")
     response.header(textOf("Content-Type"), textOf("text/plain"))
-  }})
+  }}
+  router.get("/greet", greet)
   return(router)
 }
 

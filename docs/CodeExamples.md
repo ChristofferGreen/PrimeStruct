@@ -856,7 +856,8 @@ Why this is good:
 ### Handlers of Different Shapes in One Vector
 
 When one container holds different lambdas (a router table, a list of hooks),
-erase their types with `Function<R, A...>` and construct it explicitly.
+erase their types with `Function<R, A...>` in the field type. A lambda, a
+struct with `call` or a named definition passed there converts to it.
 
 ```prime
 import /std/collections/*
@@ -877,6 +878,11 @@ answer([vector<Route> mut] routes, [int] code, [int] input) {
   return(404)
 }
 
+[int]
+double_it([int] input) {
+  return(input * 2)
+}
+
 [int effects(heap_alloc)]
 main() {
   base{100}
@@ -885,18 +891,19 @@ main() {
     return(calls)
   }}
   [vector<Route> mut] routes{vector<Route>()}
-  routes.push(Route{[code] 1, [handler] Function<int, int>{hits}})
-  routes.push(Route{[code] 2, [handler] Function<int, int>{[base]([int] input) { return(input + base) }}})
+  routes.push(Route{[code] 1, [handler] hits})
+  routes.push(Route{[code] 2, [handler] [base]([int] input) { return(input + base) }})
+  routes.push(Route{[code] 3, [handler] double_it})
   answer(routes, 1, 0)
-  return(answer(routes, 1, 0) + answer(routes, 2, 5))
+  return(answer(routes, 1, 0) + answer(routes, 2, 5) + answer(routes, 3, 4))
 }
 ```
 
 Why this is good:
 - `Function<int, int>` names the call shape once, in the field type; each
-  route's lambda can capture something different.
-- Construction is explicit (`Function<int, int>{hits}`), so the one heap
-  allocation per handler is visible where it happens.
+  route's handler can capture something different, or be a plain definition.
+- The conversion happens where the handler is stored, one heap allocation per
+  route; a closure that borrows (`[ref name]`) is rejected there.
 - The route keeps its own copy of `hits`, so its counter is independent of the
   local it was made from.
 
@@ -921,9 +928,9 @@ with_server_name<Next>([Next move] next) {
 [int effects(heap_alloc)]
 main() {
   [Router mut] router{Router{}}
-  router.get("/health", Function<void, Request, Reference<Response>>{[]([Request] request, [Reference<Response>] response) {
+  router.get("/health", []([Request] request, [Reference<Response>] response) {
     response.text(textOf("ok"), textOf("text/plain"))
-  }})
+  })
   [mut] app{with_server_name(router)}
   [String] raw{stringFrom("GET /health HTTP/1.1\r\n\r\n")}
   [Request] request{parseRequest(raw.view(), 1024)}
@@ -936,7 +943,8 @@ main() {
 Why this is good:
 - The middleware takes `Next` generically and captures it, so wrapping a `Router` costs no allocation and the call
   is direct; `serve(with_server_name(router), config)` serves the same handler.
-- Each route's lambda is boxed once, explicitly, as a `Function<void, Request, Reference<Response>>`.
+- Each route's lambda becomes the `Function<void, Request, Reference<Response>>` that `get` takes, boxed once when
+  the route is added; a named handler definition works the same way.
 - Handlers write through `Reference<Response>` and return nothing, so lambdas need no return-type annotation.
 - `parseRequest` gives a carrier of views into `raw`: the request allocates nothing.
 

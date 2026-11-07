@@ -37,10 +37,10 @@ query_value([StringView] query, [StringView] key) {
 [return<Router> effects(heap_alloc, file_read)]
 app_routes() {
   [Router mut] router{Router{}}
-  router.get("/healthz", Function<void, Request, Reference<Response>>{[]([Request] request, [Reference<Response>] response) {
+  router.get("/healthz", []([Request] request, [Reference<Response>] response) {
     response.text(textOf("ok\n"), textOf("text/plain"))
-  }})
-  router.get("/hello", Function<void, Request, Reference<Response>>{[]([Request] request, [Reference<Response>] response) {
+  })
+  router.get("/hello", []([Request] request, [Reference<Response>] response) {
     [StringView] name{query_value(request.query, textOf("name"))}
     response.body.append("hello, ")
     if(name.empty()) {
@@ -50,14 +50,14 @@ app_routes() {
     }
     response.body.append("\n")
     response.header(textOf("Content-Type"), textOf("text/plain"))
-  }})
-  router.post("/echo", Function<void, Request, Reference<Response>>{[]([Request] request, [Reference<Response>] response) {
+  })
+  router.post("/echo", []([Request] request, [Reference<Response>] response) {
     response.text(request.body, textOf("application/octet-stream"))
-  }})
-  router.get("/static/*", Function<void, Request, Reference<Response>>{[]([Request] request, [Reference<Response>] response) {
+  })
+  router.get("/static/*", []([Request] request, [Reference<Response>] response) {
     [String] root{envOr(stringFrom("STATIC_DIR"), stringFrom("public"))}
     serve_file(response, root.view(), request.path.slice(8i32, request.path.count()), 1048576i32)
-  }})
+  })
   return(router)
 }
 

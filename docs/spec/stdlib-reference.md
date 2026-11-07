@@ -579,16 +579,17 @@ one request per connection (`Connection: close`), and no chunked encoding, keep-
   request.
 - `Router` is a handler that dispatches to other handlers. Each route is a method, a literal pattern (an exact path,
   or a prefix ending in `*`) and a `Function<void, Request, Reference<Response>>`. Routes are added with
-  `get(pattern, handler)`, `post`, `put`, `delete` or `route(method, pattern, handler)`, and `call(request,
+  `get(pattern, handler)`, `post`, `put`, `delete` or `route(method, pattern, handler)`; the handler is a lambda, a
+  struct with `call` or a named definition, converted to the `Function` where it is passed. `call(request,
   response)` runs the first route that matches. When none matches, the status is 405 if some route matches the path
   under another method, and 404 otherwise. `Router` has a `call` method, so it can be passed wherever a handler is
   expected, such as `serve`, middleware or a generic parameter.
 
   ```prime
   [Router mut] router{Router{}}
-  router.get("/health", Function<void, Request, Reference<Response>>{[]([Request] request, [Reference<Response>] response) {
+  router.get("/health", []([Request] request, [Reference<Response>] response) {
     response.text(textOf("ok"), textOf("text/plain"))
-  }})
+  })
   router.call(request, location(response))
   ```
 - A definition with plain struct parameters and a plain struct result (such as `parseRequest`) is one real call on the
@@ -649,9 +650,9 @@ log_serve_error([ServeError] err) {
 [return<int> effects(heap_alloc, io_err, net_io) on_error<ServeError, log_serve_error>]
 main() {
   [Router mut] router{Router{}}
-  router.get("/", Function<void, Request, Reference<Response>>{[]([Request] request, [Reference<Response>] response) {
+  router.get("/", []([Request] request, [Reference<Response>] response) {
     response.text(textOf("hello\n"), textOf("text/plain"))
-  }})
+  })
   serve(withRequestLog(router), ServerConfig{[port] 8080i32})?
   return(0i32)
 }
@@ -670,9 +671,9 @@ main() {
   handler's enclosing definition needs `file_read` too, because `Function` values carry no effects.
 
 ```prime
-router.get("/static/*", Function<void, Request, Reference<Response>>{[]([Request] request, [Reference<Response>] response) {
+router.get("/static/*", []([Request] request, [Reference<Response>] response) {
   serve_file(response, textOf("public"), request.path.slice(8i32, request.path.count()), 1048576i32)
-}})
+})
 ```
 
 `examples/apps/web_app/main.prime` serves `$STATIC_DIR` this way.
