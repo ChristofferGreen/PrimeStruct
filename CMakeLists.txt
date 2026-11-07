@@ -1426,7 +1426,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_http
-                       PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
+                       PROPERTIES TIMEOUT 900 LABELS "parallel-safe")
 
   # Native UI C ABI on the headless backend, and its ScriptEngine bindings.
   add_executable(PrimeStruct_native_ui_tests

@@ -26,6 +26,8 @@ namespace http {
     [public StringView mut] headers{StringView{}}
     // The `Content-Length` bytes after the head.
     [public StringView mut] body{StringView{}}
+    // The pattern of the route that `Router.call` matched, which `pathParam` reads; empty outside a router.
+    [public StringView mut] route{StringView{}}
     [i32 mut] outcomeCode{1i32}
     [i32 mut] byteCount{0i32}
 
@@ -111,6 +113,13 @@ namespace http {
     [return<StringView>]
     headerLine([i32] index) {
       return(this.headers.splitPart("\r\n", index))
+    }
+
+    // The path segment that the `:name` segment of the matched route pattern stands for, as sent (not decoded), or an
+    // empty view when the pattern has no such segment or no route matched.
+    [return<StringView>]
+    pathParam([StringView] name) {
+      return(path_param(this.route, this.path, name))
     }
 
     // The first query parameter called `name`, decoded ("+" is a space, "%XX" the byte XX). Empty when the parameter
@@ -659,15 +668,75 @@ namespace http {
     [public Function<void, Request, Reference<Response>> mut] handler
   }
 
-  // Whether `path` matches `pattern`: the same text, or for a pattern ending in "*", any path that starts with the
-  // text before the "*".
+  // Whether `path` matches `pattern`: for a pattern ending in "*", any path that starts with the text before the "*";
+  // else the same segments, where a `:name` segment matches any one non-empty segment.
   [return<bool>]
   pattern_matches([StringView] pattern, [StringView] path) {
     if(pattern.endsWith("*")) {
       [StringView] prefix{pattern.slice(0i32, pattern.count() - 1i32)}
       return(path.startsWith(prefix))
     }
-    return(pattern.equals(path))
+    if(pattern.indexOfByte(58u8) < 0i32) {
+      return(pattern.equals(path))
+    }
+    [i32 mut] patternStart{0i32}
+    [i32 mut] pathStart{0i32}
+    while(true) {
+      [i32] patternEnd{segment_end(pattern, patternStart)}
+      [i32] pathEnd{segment_end(path, pathStart)}
+      [StringView] want{pattern.slice(patternStart, patternEnd)}
+      [StringView] got{path.slice(pathStart, pathEnd)}
+      if(want.startsWith(":")) {
+        if(got.empty()) {
+          return(false)
+        }
+      } else {
+        if(!want.equals(got)) {
+          return(false)
+        }
+      }
+      if(patternEnd == pattern.count() || pathEnd == path.count()) {
+        return(patternEnd == pattern.count() && pathEnd == path.count())
+      }
+      patternStart = patternEnd + 1i32
+      pathStart = pathEnd + 1i32
+    }
+    return(false)
+  }
+
+  // The segment of `path` at the place of the `:name` segment of `pattern`, or an empty view. `path` is one that
+  // matches `pattern`; a pattern ending in "*" has no parameters.
+  [return<StringView>]
+  path_param([StringView] pattern, [StringView] path, [StringView] name) {
+    if(pattern.endsWith("*")) {
+      return(StringView{})
+    }
+    [i32 mut] patternStart{0i32}
+    [i32 mut] pathStart{0i32}
+    while(patternStart < pattern.count() && pathStart <= path.count()) {
+      [i32] patternEnd{segment_end(pattern, patternStart)}
+      [i32] pathEnd{segment_end(path, pathStart)}
+      [StringView] want{pattern.slice(patternStart, patternEnd)}
+      if(want.startsWith(":")) {
+        [StringView] wantName{want.slice(1i32, want.count())}
+        if(wantName.equals(name)) {
+          return(path.slice(pathStart, pathEnd))
+        }
+      }
+      patternStart = patternEnd + 1i32
+      pathStart = pathEnd + 1i32
+    }
+    return(StringView{})
+  }
+
+  // The end of the "/"-separated segment of `text` that starts at `start`.
+  [return<i32>]
+  segment_end([StringView] text, [i32] start) {
+    [i32] slash{text.indexOfFrom("/", start)}
+    if(slash < 0i32) {
+      return(text.count())
+    }
+    return(slash)
   }
 
   // Calls the handler of the first route whose method and pattern match the request. When no route matches, the
@@ -677,7 +746,8 @@ namespace http {
   Router() {
     [public vector<Route> mut] routes{vector<Route>()}
 
-    // Adds a route for `method` (such as "GET") and `pattern` (a literal path, or a prefix ending in "*").
+    // Adds a route for `method` (such as "GET") and `pattern`: a path whose `:name` segments match any one segment
+    // (read them with `request.pathParam(name)`), or a literal prefix ending in "*".
     [mut effects(heap_alloc)]
     route([string] method, [string] pattern, [Function<void, Request, Reference<Response>> move] handler) {
       this.routes.push(Route{[method] method, [pattern] pattern, [handler] handler})
@@ -713,7 +783,9 @@ namespace http {
         [StringView] method{this.routes[index].method}
         if(pattern_matches(pattern, request.path)) {
           if(request.method.equals(method)) {
-            this.routes[index].handler(request, response)
+            [Request mut] routed{request}
+            routed.route = pattern
+            this.routes[index].handler(routed, response)
             return()
           }
           pathMatched = true

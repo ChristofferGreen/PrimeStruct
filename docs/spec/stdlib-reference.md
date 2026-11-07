@@ -564,6 +564,7 @@ one request per connection (`Connection: close`), and no chunked encoding, keep-
   while those bytes are:
   - `method`, `target`, `path` (the target before `?`), `query` (after it, without the `?`), `version` and `body`;
   - `headers`, the header lines as sent.
+  - `route`, the pattern of the route that `Router.call` matched (see `pathParam` below); empty otherwise.
 
   `header(name)` gives the value of the first header with that name, compared ASCII case-insensitively, without
   surrounding white space, or an empty view when the header is absent. The other header accessors are
@@ -606,18 +607,35 @@ one request per connection (`Connection: close`), and no chunked encoding, keep-
   it does not know), the header lines, `Content-Length`, `Connection: close`, a blank line and the body. Statuses 1xx,
   204 and 304 get neither a `Content-Length` nor a body. `statusResponse(code)` is the bare answer to a rejected
   request.
-- `Router` is a handler that dispatches to other handlers. Each route is a method, a literal pattern (an exact path,
-  or a prefix ending in `*`) and a `Function<void, Request, Reference<Response>>`. Routes are added with
+- `Router` is a handler that dispatches to other handlers. Each route is a method, a pattern and a
+  `Function<void, Request, Reference<Response>>`. A pattern is a prefix ending in `*`, which matches any path that
+  starts with the text before the `*` (its other bytes, `:` included, are literal), or else a path whose segments
+  (between `/`s) must match the request path's segments one for one: a `:name` segment matches any one non-empty
+  segment, every other segment only itself. So `/todos/:id` matches `/todos/7` but not `/todos`, `/todos/` or
+  `/todos/7/x`, and `/users/:user/posts/:post` matches `/users/ada/posts/3`. Routes are added with
   `get(pattern, handler)`, `post`, `put`, `delete` or `route(method, pattern, handler)`; the handler is a lambda, a
   struct with `call` or a named definition, converted to the `Function` where it is passed. `call(request,
-  response)` runs the first route that matches. When none matches, the status is 405 if some route matches the path
-  under another method, and 404 otherwise. `Router` has a `call` method, so it can be passed wherever a handler is
+  response)` runs the first route that matches, in the order the routes were added, so a literal `/todos/new` listed
+  before `/todos/:id` wins for that path. When none matches, the status is 405 if some route matches the path under
+  another method, and 404 otherwise. `Router` has a `call` method, so it can be passed wherever a handler is
   expected, such as `serve`, middleware or a generic parameter.
+
+  `request.pathParam(name)` is the request path's segment at the place of the `:name` segment, a `StringView` into the
+  path as sent (not percent-decoded), or an empty view when the matched pattern has no such segment. Before it calls
+  the handler, `call` sets the request's `route` field to the matched pattern, and `pathParam` walks that pattern and
+  the path again. The request is passed by value, so the handler gets its own copy with `route` set. Keeping the
+  pattern rather than a table of captured segments keeps `Request` a small carrier of views with no limit on the
+  number of parameters and nothing to copy per parameter; the pattern is a view into the program's string table, so
+  it stays valid. `route` is empty outside a router, so `pathParam` is then empty; a router inside another router's
+  handler sets it to its own pattern.
 
   ```prime
   [Router mut] router{Router{}}
   router.get("/health", []([Request] request, [Reference<Response>] response) {
     response.text("ok", "text/plain")
+  })
+  router.get("/todos/:id", []([Request] request, [Reference<Response>] response) {
+    response.text(request.pathParam("id"), "text/plain")
   })
   router.call(request, location(response))
   ```

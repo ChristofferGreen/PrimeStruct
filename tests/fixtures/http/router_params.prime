@@ -1,0 +1,115 @@
+// /std/http Router path parameters (tests/unit/backend_host/test_http.cpp). The exit code is the number of the first
+// case that failed, or 0. The requests go through one parse call and one dispatch call.
+import /std/collections/*
+import /std/http/*
+import /std/text/*
+import /std/text/view/*
+
+// The request of case `index`.
+[return<string>]
+case_request([i32] index) {
+  if(index == 1i32) {
+    return("GET /todos/7 HTTP/1.1\r\n\r\n")
+  }
+  if(index == 2i32) {
+    return("GET /todos HTTP/1.1\r\n\r\n")
+  }
+  if(index == 3i32) {
+    return("GET /todos/7/x HTTP/1.1\r\n\r\n")
+  }
+  if(index == 4i32) {
+    return("GET /todos/ HTTP/1.1\r\n\r\n")
+  }
+  if(index == 5i32) {
+    return("GET /todos/new HTTP/1.1\r\n\r\n")
+  }
+  if(index == 6i32) {
+    return("GET /users/ada/posts/3 HTTP/1.1\r\n\r\n")
+  }
+  if(index == 7i32) {
+    return("POST /todos/7 HTTP/1.1\r\n\r\n")
+  }
+  if(index == 8i32) {
+    return("GET /todos/a%20b?sort=asc HTTP/1.1\r\n\r\n")
+  }
+  if(index == 9i32) {
+    return("GET /users//posts/3 HTTP/1.1\r\n\r\n")
+  }
+  return("POST /todos/12/toggle HTTP/1.1\r\n\r\n")
+}
+
+// The status and body case `index` must answer.
+[return<bool>]
+answer_is([i32] index, [i32] status, [StringView] body) {
+  if(index == 1i32) {
+    return(status == 200i32 && body.equalsText("todo 7"))
+  }
+  if(index == 5i32) {
+    return(status == 200i32 && body.equalsText("new form"))
+  }
+  if(index == 6i32) {
+    return(status == 200i32 && body.equalsText("ada post 3"))
+  }
+  if(index == 7i32) {
+    return(status == 405i32 && body.empty())
+  }
+  if(index == 8i32) {
+    return(status == 200i32 && body.equalsText("todo a%20b"))
+  }
+  if(index == 10i32) {
+    return(status == 200i32 && body.equalsText("toggled 12"))
+  }
+  // 2, 3, 4 and 9: no route has that many non-empty segments.
+  return(status == 404i32 && body.empty())
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [Router mut] router{Router{}}
+  // Listed before "/todos/:id", so it wins for "/todos/new".
+  router.get("/todos/new", []([Request] request, [Reference<Response>] response) {
+    response.body.append("new form")
+  })
+  router.get("/todos/:id", []([Request] request, [Reference<Response>] response) {
+    [StringView] id{request.pathParam("id")}
+    [StringView] missing{request.pathParam("other")}
+    response.body.append("todo ")
+    response.body.appendBytes(id.data, id.count())
+    if(!missing.empty()) {
+      response.status = 500i32
+    }
+  })
+  router.get("/users/:user/posts/:post", []([Request] request, [Reference<Response>] response) {
+    [StringView] user{request.pathParam("user")}
+    [StringView] post{request.pathParam("post")}
+    response.body.appendBytes(user.data, user.count())
+    response.body.append(" post ")
+    response.body.appendBytes(post.data, post.count())
+  })
+  router.post("/todos/:id/toggle", []([Request] request, [Reference<Response>] response) {
+    [StringView] id{request.pathParam("id")}
+    response.body.append("toggled ")
+    response.body.appendBytes(id.data, id.count())
+  })
+  // Outside a router no route matched, so there are no parameters.
+  [String] plainText{stringFrom("GET /todos/7 HTTP/1.1\r\n\r\n")}
+  [Request] plain{parseRequest(plainText.view(), 64i32)}
+  [StringView] unrouted{plain.pathParam("id")}
+  if(!unrouted.empty()) {
+    return(20i32)
+  }
+  [Response mut] response{Response{}}
+  [i32 mut] index{1i32}
+  while(index <= 10i32) {
+    [String] text{stringFrom(case_request(index))}
+    [Request] request{parseRequest(text.view(), 64i32)}
+    response.clear()
+    router.call(request, location(response))
+    [StringView] body{response.body.view()}
+    if(!answer_is(index, response.status, body)) {
+      return(index)
+    }
+    index = index + 1i32
+  }
+  return(0i32)
+}

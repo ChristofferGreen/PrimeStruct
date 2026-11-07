@@ -100,8 +100,7 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5703 | `Router` path parameters | ready | web-routes |
-| TODO-5704 | A todo-list web app with pages and forms | blocked | web-example |
+| TODO-5704 | A todo-list web app with pages and forms | ready | web-example |
 | TODO-5705 | An idle connection does not stall the server | ready | web-server-loop |
 | TODO-5706 | Fragment-swapping buttons without user JavaScript | blocked | web-fragments |
 | TODO-5707 | `Function` types accept `mut` parameters | deferred | closures-mut-params |
@@ -122,6 +121,7 @@ of sync with them.
 | TODO-5715 | `Function<R, A...>{move(closure)}` infers the boxed type | ready | closures |
 | TODO-5716 | A literal converts to a `StringView` at a call whose overloads differ there | deferred | text-literal-views |
 | TODO-5717 | One file imports two modules that export the same name | ready | import-conflicts |
+| TODO-5718 | All values of a repeated parameter and decoded path parameters | deferred | web-params |
 | TODO-5681 | A struct field built from a named vector local owns its storage once | ready | collections-fields |
 | TODO-5682 | Native: a mutating vector-field method inside an arithmetic expression returns the right value | ready | native-backend |
 | TODO-5676 | Lambdas can state their return type | deferred | closures-return-types |
@@ -148,7 +148,7 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5703 (web-routes): `Router` path parameters
+- TODO-5704 (web-example): a todo-list web app with pages and forms
 - TODO-5603 (startup): startup audit: what a launch loads and does
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
@@ -158,7 +158,7 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5703
+1. TODO-5704
 2. TODO-5709
 3. TODO-5603
 4. TODO-5536
@@ -180,7 +180,7 @@ of sync with them.
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715; collection fields found by closures: TODO-5681, TODO-5682
-- Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5703, TODO-5704, TODO-5705, TODO-5706
+- Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5704, TODO-5705, TODO-5706, TODO-5718
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717
 - Native UI handlers (docs/WebAppsPlan.md): TODO-5709, TODO-5710, TODO-5711
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
@@ -191,22 +191,9 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 
 ### Task Blocks
 
-- [ ] TODO-5703: `Router` path parameters
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-07
-  - phase: Web apps (docs/WebAppsPlan.md)
-  - parallel_track: web-routes
-  - scope: `Router` patterns are an exact path or a prefix ending in `*`. Add named segments (`/todos/:id`) and `request.pathParam(name)` (a `StringView` into the path). The first matching route still wins; 405 versus 404 keeps its meaning. Document in docs/spec/stdlib-reference.md.
-  - acceptance:
-    - VM and optexe tests: `/todos/:id` matches `/todos/7` and not `/todos` or `/todos/7/x`; two parameters; a literal route listed first wins
-    - full release gate green
-  - stop_rule: segment parameters only; no regex or typed parameters.
-
 - [ ] TODO-5704: A todo-list web app with pages and forms
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5703
+  - status: ready
   - created_at: 2026-11-07
   - phase: Web apps (docs/WebAppsPlan.md)
   - parallel_track: web-example
@@ -393,6 +380,19 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - docs/PrimeStruct_SyntaxSpec.md (Imports) and docs/spec/stdlib-reference.md (HTML writer) updated
     - full release gate green
   - stop_rule: use-site conflict detection for wildcard and single-name imports; no import aliases or renaming syntax.
+
+- [ ] TODO-5718: All values of a repeated parameter and decoded path parameters
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-07
+  - phase: Web apps (docs/WebAppsPlan.md; found by TODO-5702 and TODO-5703)
+  - parallel_track: web-params
+  - scope: `queryParam` and `formParam` give the first of repeated parameters (`?tag=a&tag=b`), so a form with checkboxes or a multi-select cannot read every value; and `pathParam` returns the segment as sent, so `/files/a%20b` gives `a%20b`. Add a way to read every value of a name (a count plus an index, as the header accessors do, or a vector of Strings) and a decoded form of a path parameter with the same decoding and failure rules as `queryParam`. Defer until an example needs either.
+  - acceptance:
+    - VM and optexe tests: three values of a repeated query and form parameter in order; a `%20` and a malformed path segment
+    - docs/spec/stdlib-reference.md updated
+    - full release gate green
+  - stop_rule: repeated values and decoded path segments only; no typed parameters, no multipart.
 
 - [ ] TODO-5681: A struct field built from a named vector local owns its storage once
   - owner: ai

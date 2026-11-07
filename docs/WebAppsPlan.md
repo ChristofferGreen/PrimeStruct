@@ -5,10 +5,11 @@ Classification: **design direction**. The open work is in `docs/todo.md` (Web ap
 ## Where this starts
 
 `/std/net`, `/std/os`, `/std/http` (request parser with decoded query and form parameters, `Response` with `html` and
-`redirect`, `Router`, static files), `/std/http/server`, `/std/json` and `/std/html` (an escaping HTML writer with the
-form vocabulary) exist and run on the VM and `--emit=optexe` (docs/spec/stdlib-reference.md). Servers are
-single-threaded optexe binaries; containers are out of scope. There are no path parameters yet, and the server reads one
-connection at a time. One file cannot import both `/std/html` and `/std/json` yet: both export `Writer` (TODO-5717).
+`redirect`, `Router` with `:name` path parameters, static files), `/std/http/server`, `/std/json` and `/std/html` (an
+escaping HTML writer with the form vocabulary) exist and run on the VM and `--emit=optexe`
+(docs/spec/stdlib-reference.md). Servers are single-threaded optexe binaries; containers are out of scope. The server
+reads one connection at a time. One file cannot import both `/std/html` and `/std/json` yet: both export `Writer`
+(TODO-5717). Repeated parameters give their first value and path parameters are not decoded (TODO-5718).
 
 ## Principles
 
@@ -61,9 +62,10 @@ PrimeScroll can move one menu at a time.
 
 1. Language: done (TODO-5669, TODO-5700).
 2. HTML and requests: TODO-5701 (writer, `Response.html`, `redirect`; done), TODO-5702 (query and form parameters;
-   done), TODO-5703 (path parameters), then the todo-list example TODO-5704.
+   done), TODO-5703 (path parameters; done), then the todo-list example TODO-5704.
 3. Server: TODO-5705 (an idle connection does not stall the others).
 4. Fragments: TODO-5706.
 5. Native UI: TODO-5709 (handlers and `App.run`), TODO-5710 (PrimeScroll on handlers), TODO-5711 (retire the
    `/std/ui` prototype).
-6. Later: TODO-5707, TODO-5708 (type aliases), TODO-5717 (both writers in one file), sessions and cookies, keep-alive, concurrency once tasks schedule.
+6. Later: TODO-5707, TODO-5708 (type aliases), TODO-5717 (both writers in one file), TODO-5718 (repeated and decoded
+   parameters), sessions and cookies, keep-alive, concurrency once tasks schedule.
