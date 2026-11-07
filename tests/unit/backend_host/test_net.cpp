@@ -348,18 +348,28 @@ std::string formPost(const std::string &path, const std::string &body) {
          std::to_string(body.size()) + "\r\n\r\n" + body;
 }
 
-// The <li> of the todo page for todo `id` titled `title` (escaped), done or not.
+// The fetch of the /std/web fragment script for a form with data-ps-target="`target`", as a browser sends it: an
+// urlencoded body of the form's fields and the fragment header naming the region.
+std::string fragmentPost(const std::string &path, const std::string &target) {
+  return "POST " + path +
+         " HTTP/1.1\r\nHost: x\r\nContent-Type: application/x-www-form-urlencoded;charset=UTF-8\r\n"
+         "X-PrimeStruct-Fragment: " +
+         target + "\r\nOrigin: http://x\r\nReferer: http://x/\r\nContent-Length: 0\r\n\r\n";
+}
+
+// The <li> of the todo page for todo `id` titled `title` (escaped), done or not. Its forms swap the list.
 std::string todoItem(int id, const std::string &title, bool done) {
   const std::string route = "/todos/" + std::to_string(id);
   return std::string(done ? "<li class=\"done\">" : "<li>") + "<form method=\"post\" action=\"" +
-         route + "/toggle\"><button type=\"submit\">" + (done ? "Undo" : "Done") +
-         "</button></form><span>" + title + "</span><form method=\"post\" action=\"" + route +
-         "/delete\"><button type=\"submit\">Delete</button></form></li>";
+         route + "/toggle\" data-ps-target=\"todos\"><button type=\"submit\">" +
+         (done ? "Undo" : "Done") + "</button></form><span>" + title +
+         "</span><form method=\"post\" action=\"" + route +
+         "/delete\" data-ps-target=\"todos\"><button type=\"submit\">Delete</button></form></li>";
 }
 
 // The list of the todo page, from its items.
 std::string todoList(const std::string &items) {
-  return "<ul>" + items + "</ul></body></html>";
+  return "<ul id=\"todos\">" + items + "</ul></body></html>";
 }
 } // namespace
 
@@ -415,6 +425,12 @@ TEST_CASE("the todo_web example adds, toggles and deletes todos through forms ov
   std::string unknownId;
   std::string afterNoOps;
   std::string getDelete;
+  std::string script;
+  std::string fragmentToggle;
+  std::string afterFragment;
+  std::string unknownRegion;
+  std::string fragmentDelete;
+  std::string afterDelete;
   if (port > 0) {
     empty = ::exchange(port, get);
     addFirst = ::exchange(port, formPost("/todos", "title=Buy+milk+%26+%3Ceggs%3E"));
@@ -429,6 +445,12 @@ TEST_CASE("the todo_web example adds, toggles and deletes todos through forms ov
     unknownId = ::exchange(port, formPost("/todos/9/toggle", ""));
     afterNoOps = ::exchange(port, get);
     getDelete = ::exchange(port, "GET /todos/1/delete HTTP/1.1\r\nHost: x\r\n\r\n");
+    script = ::exchange(port, "GET /_web/app.js HTTP/1.1\r\nHost: x\r\n\r\n");
+    fragmentToggle = ::exchange(port, fragmentPost("/todos/1/toggle", "todos"));
+    afterFragment = ::exchange(port, get);
+    unknownRegion = ::exchange(port, fragmentPost("/todos/1/toggle", "nowhere"));
+    fragmentDelete = ::exchange(port, fragmentPost("/todos/1/delete", "todos"));
+    afterDelete = ::exchange(port, get);
   }
   kill(pid, SIGTERM);
   int waitStatus = 0;
@@ -442,6 +464,9 @@ TEST_CASE("the todo_web example adds, toggles and deletes todos through forms ov
   CHECK(emptyPage.rfind(
             "<!doctype html><html><head><meta charset=\"utf-8\"><title>Todos</title><style>", 0) ==
         0);
+  CHECK_MESSAGE(emptyPage.find("</style><script src=\"/_web/app.js\" defer></script></head>") !=
+                    std::string::npos,
+                emptyPage);
   CHECK_MESSAGE(
       emptyPage.find("<form method=\"post\" action=\"/todos\" class=\"add\"><input type=\"text\" "
                      "name=\"title\" value=\"\" placeholder=\"What needs doing?\" required><button "
@@ -468,8 +493,37 @@ TEST_CASE("the todo_web example adds, toggles and deletes todos through forms ov
   CHECK_MESSAGE(responseBody(afterNoOps).find(todoList(firstDone)) != std::string::npos,
                 afterNoOps);
   CHECK(getDelete.rfind("HTTP/1.1 405", 0) == 0);
+  // The app serves the fixed fragment script, the bytes of stdlib/std/web/app.js, within its budget.
+  const std::string asset =
+      readFile(std::string(PRIMESTRUCT_SOURCE_DIR) + "/stdlib/std/web/app.js");
+  CHECK_MESSAGE(
+      script.rfind("HTTP/1.1 200 OK\r\nContent-Type: text/javascript; charset=utf-8\r\n", 0) == 0,
+      script);
+  CHECK(!asset.empty());
+  CHECK(asset.size() <= 5120);
+  CHECK(responseBody(script) == asset);
+  // The script's fetch of a Done button: the toggle runs and the answer is the list's items alone, marked as a
+  // fragment, instead of a redirect.
+  CHECK_MESSAGE(fragmentToggle == "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\n"
+                                  "X-PrimeStruct-Fragment: todos\r\nContent-Length: " +
+                                      std::to_string(first.size()) +
+                                      "\r\nConnection: close\r\n\r\n" + first,
+                fragmentToggle);
+  CHECK_MESSAGE(responseBody(afterFragment).find(todoList(first)) != std::string::npos,
+                afterFragment);
+  // A region the app does not have keeps the redirect, which the script answers by loading the page.
+  CHECK_MESSAGE(
+      unknownRegion.rfind("HTTP/1.1 303 See Other\r\nLocation: /\r\nContent-Length: 0\r\n", 0) == 0,
+      unknownRegion);
+  CHECK_MESSAGE(fragmentDelete.rfind("HTTP/1.1 200 OK\r\nContent-Type: text/html; "
+                                     "charset=utf-8\r\nX-PrimeStruct-Fragment: todos\r\n"
+                                     "Content-Length: 0\r\n",
+                                     0) == 0,
+                fragmentDelete);
+  CHECK_MESSAGE(responseBody(afterDelete).find(todoList("")) != std::string::npos, afterDelete);
   const std::string requestLog = readFile(errors);
   CHECK_MESSAGE(requestLog.find("POST /todos/1/toggle 303 ") != std::string::npos, requestLog);
+  CHECK_MESSAGE(requestLog.find("POST /todos/1/toggle 200 ") != std::string::npos, requestLog);
   CHECK(WIFEXITED(waitStatus));
   CHECK(WEXITSTATUS(waitStatus) == 0);
 }

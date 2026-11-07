@@ -101,9 +101,8 @@ of sync with them.
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
 | TODO-5727 | Every struct copy site tells a place from a temporary by resolution | deferred | lifecycle-copy-sources |
-| TODO-5724 | Web hover and key handlers through the fragment script | blocked | web-controls |
+| TODO-5724 | Web hover and key handlers through the fragment script | ready | web-controls |
 | TODO-5725 | Native pointer and key events for control handlers | blocked | native-ui-events |
-| TODO-5706 | Fragment-swapping buttons without user JavaScript | ready | web-fragments |
 | TODO-5707 | `Function` types accept `mut` parameters | deferred | closures-mut-params |
 | TODO-5708 | Type aliases | deferred | type-aliases |
 | TODO-5709 | Native controls take handler closures and `App.run` | ready | native-ui-handlers |
@@ -130,6 +129,7 @@ of sync with them.
 | TODO-5728 | `slice` and `sliceMut` on a vector field of a struct resolve | ready | collections-access |
 | TODO-5730 | Elements of a `vector<String>` struct field read without a fault | ready | collections-access |
 | TODO-5731 | A `string` field of an element whose closure captures reads without a fault | ready | closures |
+| TODO-5732 | A method call on a reference parameter resolves in a generic struct's method | ready | generic-methods |
 | TODO-5682 | Native: a mutating vector-field method inside an arithmetic expression returns the right value | ready | native-backend |
 | TODO-5676 | Lambdas can state their return type | deferred | closures-return-types |
 | TODO-5677 | A `Function` whose closure holds a same-typed `Function` copies and destroys | deferred | closures-lifecycle |
@@ -155,7 +155,7 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5706 (web-fragments): fragment-swapping buttons without user JavaScript
+- TODO-5724 (web-controls): web hover and key handlers through the fragment script
 - TODO-5603 (startup): startup audit: what a launch loads and does
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
@@ -166,7 +166,7 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5706
+1. TODO-5724
 2. TODO-5709
 3. TODO-5603
 4. TODO-5536
@@ -189,8 +189,8 @@ of sync with them.
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719; collection fields found by closures and the todo example: TODO-5681, TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731
-- Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5706, TODO-5718, TODO-5724
-- Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721
+- Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5718, TODO-5724
+- Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732
 - Native UI handlers (docs/WebAppsPlan.md): TODO-5709, TODO-5710, TODO-5711, TODO-5725
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
@@ -214,8 +214,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 
 - [ ] TODO-5724: Web hover and key handlers through the fragment script
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5706
+  - status: ready
   - created_at: 2026-11-07
   - phase: Web apps (docs/WebAppsPlan.md)
   - parallel_track: web-controls
@@ -240,19 +239,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - docs/NativeUiPlan.md section 4 and the coverage matrix describe the new events
     - full release gate green
   - stop_rule: the listed events on the existing controls; no new widgets.
-
-- [ ] TODO-5706: Fragment-swapping buttons without user JavaScript
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-07
-  - phase: Web apps (docs/WebAppsPlan.md)
-  - parallel_track: web-fragments
-  - scope: Add the fragment layer of docs/WebAppsPlan.md (principle 4): `/std/html` attributes that name a route and a target element, one small fixed script served by a stdlib route, and responses that are HTML fragments. A button click calls a PrimeStruct handler and replaces part of the page. Without the script the same forms still work by post/redirect/get.
-  - acceptance:
-    - the todo example toggles an item through a fragment; a test checks the fragment bytes and that the plain form path still works
-    - the script is a fixed asset under stdlib/ with a size budget stated in the spec
-    - full release gate green
-  - stop_rule: the attributes, the script and one example use; no client-side state or templating.
 
 - [ ] TODO-5707: `Function` types accept `mut` parameters
   - owner: ai
@@ -499,6 +485,18 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - `ClickHandler.id` is a `string` and web_controls passes on the VM and optexe; a reduced program reading a `string` field beside a capturing `Function` field runs on the VM and optexe
     - full release gate green
   - stop_rule: the faulting field read; no `/std/web` API change.
+
+- [ ] TODO-5732: A method call on a reference parameter resolves in a generic struct's method
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-07
+  - phase: Language surface for handlers (docs/WebAppsPlan.md; found by TODO-5706)
+  - parallel_track: generic-methods
+  - scope: In a method of a generic struct, `response.clear()` on a `[Reference<Response>] response` parameter (`/std/http`) is rejected with `unknown call target: clear`, while `response.redirect("/")` in the same method and `response.clear()` in a free function both work. Repro: `Holder<T>` with `[mut effects(heap_alloc)] resetIt([Reference<Response>] response) { response.redirect("/") response.clear() }`, instantiated as `Holder<i32>` and called from `main`; the name `clear` likely takes a collection-helper path when the receiver's type is resolved during the template's instantiation. `WebApp.answerFragment` (stdlib/std/web/web.prime) resets the status and header lines by hand instead.
+  - acceptance:
+    - the repro runs on the VM and optexe and `answerFragment` calls `response.clear()`
+    - full release gate green
+  - stop_rule: method resolution on reference parameters in generic struct methods; no new methods.
 
 - [ ] TODO-5682: Native: a mutating vector-field method inside an arithmetic expression returns the right value
   - owner: ai

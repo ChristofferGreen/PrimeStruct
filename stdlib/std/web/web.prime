@@ -2,7 +2,8 @@
 // principle 7). A `WebApp<State>` routes like an `AppRouter<State>` and also keeps the app's controls: each is
 // registered once, at setup, with its handler, under a generated route that calls the handler. A page writes a
 // control with /std/html as a form that posts to that route, so a click works without JavaScript
-// (post/redirect/get).
+// (post/redirect/get). With the fragment script (`GET /_web/app.js`, the fixed asset stdlib/std/web/app.js) a form
+// that names a region posts with fetch, and the app answers with that region's HTML, which replaces it on the page.
 import /std/collections/*
 import /std/html/*
 import /std/http/*
@@ -21,6 +22,17 @@ namespace web {
   Control() {
     [public string] id{""}
     [public string] title{""}
+    // The id of the region a click replaces through the fragment script, or "" for a click that shows the page
+    // again. Set with `swapping`.
+    [public string] target{""}
+
+    // This control, with its clicks replacing region `target` (`WebApp.region`) instead of loading the page.
+    [public return<Control>]
+    swapping([string] target) {
+      [Control mut] control{this}
+      control.target = target
+      return(control)
+    }
 
     // The route a click on the control posts to: "/_on/<id>/click".
     [public return<String> effects(heap_alloc)]
@@ -29,11 +41,15 @@ namespace web {
     }
 
     // `<form method="post" action="/_on/<id>/click"><button type="submit">title</button></form>`, with the title
-    // escaped.
+    // escaped, and `data-ps-target="<target>"` on the form when the control swaps a region.
     [public effects(heap_alloc)]
     write([Writer mut] page) {
       [String] action{this.clickRoute()}
       page.beginForm("post", action.view())
+      [StringView] target{textOf(this.target)}
+      if(!target.empty()) {
+        page.fragmentTarget(target)
+      }
       page.button(textOf(this.title))
       page.endForm()
     }
@@ -54,6 +70,33 @@ namespace web {
   ClickHandler<State>() {
     [public StringView] id{StringView{}}
     [public Function<void, Reference<State>, PointerEvent> mut] handler
+  }
+
+  // A region of the app's pages: the id of the element that holds it and the function that writes its contents.
+  [public struct]
+  RegionRenderer<State>() {
+    [public StringView] id{StringView{}}
+    [public Function<void, Reference<Writer>, Reference<State>> mut] render
+  }
+
+  // The request header that asks for a fragment instead of a page. Its value is the id of the region to answer with,
+  // and the answer carries it back, so the script can tell a fragment from a page.
+  [public return<string>]
+  fragmentHeader() {
+    return("X-PrimeStruct-Fragment")
+  }
+
+  // The path the app serves the fragment script at.
+  [public return<string>]
+  fragmentScriptPath() {
+    return("/_web/app.js")
+  }
+
+  // `<script src="/_web/app.js" defer></script>`, for the head of a page whose forms swap regions. Without it the
+  // same forms post and redirect back.
+  [public effects(heap_alloc)]
+  writeFragmentScript([Writer mut] page) {
+    page.script(fragmentScriptPath())
   }
 
   // Where to send the browser after a control's POST: the path and query of the `Referer` header, the page the form
@@ -82,6 +125,7 @@ namespace web {
     [public State mut] state
     [public vector<AppRoute<State>> mut] routes{vector<AppRoute<State>>()}
     [public vector<ClickHandler<State>> mut] clicks{vector<ClickHandler<State>>()}
+    [public vector<RegionRenderer<State>> mut] regions{vector<RegionRenderer<State>>()}
 
     // Registers a button: its id, its label and the handler a click on it calls. Returns the control, which a page
     // writes. Each id is registered once: a second `button` with the same id prints "duplicate control id: <id>" and
@@ -99,6 +143,25 @@ namespace web {
       }
       this.clicks.push(ClickHandler<State>{[id] idView, [handler] handler})
       return(Control{[id] id, [title] title})
+    }
+
+    // Registers a region of the app's pages: `id` is the id of the element that holds it, and `render` writes that
+    // element's contents from the state. A page calls the same function inside the element, so one function writes
+    // the region in the page and as a fragment. A POST that names the region in the fragment header, and that its
+    // route or control answers with a redirect, is answered with `render`'s HTML instead. Each id is registered once:
+    // a second `region` with the same id prints "duplicate region id: <id>" and stops the program.
+    [mut effects(heap_alloc, io_err)]
+    region([string] id, [Function<void, Reference<Writer>, Reference<State>> move] render) {
+      [StringView] idView{textOf(id)}
+      for([i32 mut] index{0i32}; index < this.regions.count(); ++index) {
+        [StringView] existing{this.regions[index].id}
+        if(existing.equals(idView)) {
+          print_error("duplicate region id: ")
+          print_line_error(id)
+          panic(1i32)
+        }
+      }
+      this.regions.push(RegionRenderer<State>{[id] idView, [render] render})
     }
 
     // Adds a route as `AppRouter.route` does.
@@ -130,12 +193,18 @@ namespace web {
       this.route("DELETE", pattern, handler)
     }
 
-    // Dispatches one request: a control's route to its handler, anything else as `AppRouter.call` does.
+    // Dispatches one request: a control's route to its handler, "/_web/app.js" to the fragment script, anything else
+    // as `AppRouter.call` does. A redirect that answers a fragment request becomes the fragment (`answerFragment`).
     [mut effects(heap_alloc)]
     call([Request] request, [Reference<Response>] response) {
       [StringView] path{request.path}
       if(path.startsWith("/_on/")) {
         this.callControl(request, response)
+        this.answerFragment(request, response)
+        return()
+      }
+      if(path.startsWith("/_web/")) {
+        serve_web_asset(request, response)
         return()
       }
       [bool mut] pathMatched{false}
@@ -150,6 +219,7 @@ namespace web {
             // Through a local: `location(this.state)` written in the call's arguments does not lower (TODO-5719).
             [Reference<State>] state{location(this.state)}
             this.routes[index].handler(state, routed, response)
+            this.answerFragment(request, response)
             return()
           }
           pathMatched = true
@@ -183,6 +253,51 @@ namespace web {
       }
       response.status = 404i32
     }
+
+    // When `request` names a region in the fragment header and `response` is a 303 (post/redirect/get: the change
+    // is made, show the page again), answers 200 with the region's contents and the header instead. Any other answer,
+    // and an id that no `region` registered, is left as it is, and the script then loads the page.
+    [mut effects(heap_alloc)]
+    answerFragment([Request] request, [Reference<Response>] response) {
+      [StringView] target{request.header(fragmentHeader())}
+      if(target.empty() || response.status != 303i32) {
+        return()
+      }
+      for([i32 mut] index{0i32}; index < this.regions.count(); ++index) {
+        [StringView] id{this.regions[index].id}
+        if(id.equals(target)) {
+          [Writer mut] page{Writer{}}
+          [Reference<Writer>] out{location(page)}
+          [Reference<State>] state{location(this.state)}
+          this.regions[index].render(out, state)
+          // Not `response.clear()`: `clear` on a reference parameter does not resolve in a generic struct's method
+          // (TODO-5732).
+          response.status = 200i32
+          response.headerLines.clear()
+          response.html(page.out)
+          response.header(fragmentHeader(), id)
+          return()
+        }
+      }
+    }
+  }
+
+  // Answers a request under "/_web/": `GET /_web/app.js` is the fragment script, another method there is 405 and
+  // another path 404.
+  [effects(heap_alloc)]
+  serve_web_asset([Request] request, [Reference<Response>] response) {
+    [StringView] path{request.path}
+    [bool] script{path.equalsText(fragmentScriptPath())}
+    if(!script) {
+      response.status = 404i32
+      return()
+    }
+    [bool] got{request.method.equalsText("GET")}
+    if(!got) {
+      response.status = 405i32
+      return()
+    }
+    response.text(fragmentScript(), "text/javascript; charset=utf-8")
   }
 
 }

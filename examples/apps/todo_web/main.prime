@@ -1,4 +1,5 @@
-// A todo list in the browser: pages, a form and buttons on /std/http and /std/html, with no JavaScript. Build and run:
+// A todo list in the browser: pages, a form and buttons on /std/http, /std/html and /std/web, with no JavaScript of
+// its own. Build and run:
 //   primec --emit=optexe examples/apps/todo_web/main.prime -o todo_web \
 //     --link-arg stdlib/std/net/native/net_shim.cpp --link-arg stdlib/std/os/os_posix.cpp
 //   PORT=8080 ./todo_web     (PORT=0 picks a free port; BIND=loopback listens on 127.0.0.1 only)
@@ -8,7 +9,9 @@
 //   POST /todos/:id/toggle   marks todo `id` done, or not done again
 //   POST /todos/:id/delete   deletes todo `id`
 // Every POST answers 303 See Other to / (post/redirect/get), so reloading the page never submits a form twice. The
-// todos live in memory, in the router's state; the server is single-threaded, so the state needs no locking.
+// Done and Delete forms name the region "todos", the list: with the stdlib's fragment script, which the page loads,
+// they post with fetch and the app answers with the list alone, which replaces the old one in place. The todos live
+// in memory, in the app's state; the server is single-threaded, so the state needs no locking.
 import /std/collections/*
 import /std/html/*
 import /std/http/*
@@ -16,6 +19,7 @@ import /std/http/server/*
 import /std/os/*
 import /std/text/*
 import /std/text/view/*
+import /std/web/*
 
 // One todo. Its id stays the same while others are added and deleted, so a button can name it in its route.
 [struct]
@@ -88,10 +92,12 @@ todo_route([i32] id, [StringView] action) {
   return(route)
 }
 
-// A form with one button that posts to `action`: a button that runs a route and comes back to the page.
+// A form with one button that posts to `action` and replaces the list: a button that runs a route and comes back to
+// the page, or, with the fragment script, gets the new list.
 [effects(heap_alloc)]
 button_form([Writer mut] page, [String] action, [StringView] label) {
   page.beginForm("post", action.view())
+  page.fragmentTarget("todos")
   page.button(label)
   page.endForm()
 }
@@ -109,12 +115,22 @@ write_todo([Writer mut] page, [Todo] todo) {
   page.endElement("li")
 }
 
+// The region "todos": the items of the list. The page writes them inside `<ul id="todos">`, and the app answers a
+// Done or Delete button's fragment request with them.
+[effects(heap_alloc)]
+write_todos([Reference<Writer>] page, [Reference<TodoList>] list) {
+  for([i32 mut] index{0i32}; index < list.todos.count(); ++index) {
+    write_todo(page, list.todos[index])
+  }
+}
+
 // The whole page: the form that adds a todo, then the list.
 [return<String> effects(heap_alloc)]
 todo_page([Reference<TodoList>] list) {
   [Writer mut] page{Writer{}}
   page.beginPage("Todos")
   write_style(page)
+  writeFragmentScript(page)
   page.beginBody()
   page.element("h1", "Todos")
   page.beginForm("post", "/todos")
@@ -125,9 +141,8 @@ todo_page([Reference<TodoList>] list) {
   page.button("Add")
   page.endForm()
   page.beginElement("ul")
-  for([i32 mut] index{0i32}; index < list.todos.count(); ++index) {
-    write_todo(page, list.todos[index])
-  }
+  page.attribute("id", "todos")
+  write_todos(page, list)
   page.endElement("ul")
   page.endPage()
   return(page.out)
@@ -140,9 +155,10 @@ todo_id([Request] request) {
   return(id.parseI32Or(0i32))
 }
 
-[return<AppRouter<TodoList>> effects(heap_alloc)]
+[return<WebApp<TodoList>> effects(heap_alloc, io_err)]
 todo_app() {
-  [AppRouter<TodoList> mut] app{AppRouter<TodoList>{[state] TodoList{}}}
+  [WebApp<TodoList> mut] app{WebApp<TodoList>{[state] TodoList{}}}
+  app.region("todos", write_todos)
   app.get("/", []([Reference<TodoList>] list, [Request] request, [Reference<Response>] response) {
     response.html(todo_page(list))
   })

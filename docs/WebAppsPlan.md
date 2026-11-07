@@ -12,12 +12,18 @@ waits on all of its open connections at once with `poll`, so an idle connection 
 (TODO-5705). One file cannot import both `/std/html` and `/std/json` yet: both export `Writer`
 (TODO-5717). Repeated parameters give their first value and path parameters are not decoded (TODO-5718).
 `examples/apps/todo_web/main.prime` is the first app with pages, forms and buttons: an `AppRouter<TodoList>` whose
-POST routes change the list and redirect back (TODO-5704).
+POST routes change the list and redirect back (TODO-5704), since moved to a `WebApp<TodoList>` for fragments.
 `/std/ui/events` holds the event values handlers receive, `PointerEvent`, `KeyEvent`, `ChangeEvent` with
 `PointerButton`, `Key` and `Modifiers`, which compare with `==` and `!=` (TODO-5723).
 `/std/web` has `WebApp<State>`, an `AppRouter<State>` whose buttons take their click closures:
 `app.button(id, title, handler)` registers one at setup under `POST /_on/<id>/click` and returns the `Control` a page
 writes as a form; `examples/apps/hello_button/main.prime` uses it (TODO-5722).
+Fragments work without user JavaScript (TODO-5706): `app.region(id, render)` registers one function that writes a
+region's contents, for the page and for the fragment; a form names the region with `page.fragmentTarget(id)` (or a
+control with `swapping(id)`), and the fixed script `stdlib/std/web/app.js` (5120-byte budget), served at
+`GET /_web/app.js`, posts it with `fetch` and the header `X-PrimeStruct-Fragment: <id>`. The app turns the handler's
+post/redirect/get 303 into a 200 with the region's HTML, which replaces the element's contents; the todo example's
+Done and Delete buttons swap the list this way.
 
 ## Principles
 
@@ -95,7 +101,7 @@ so PrimeScroll can move one menu at a time.
    done), TODO-5703 (path parameters; done), then the todo-list example TODO-5704 (done, with `AppRouter<State>`).
 3. Server: TODO-5705 (an idle connection does not stall the others; done).
 4. Events and controls: TODO-5723 (shared event structs; done), TODO-5722 (web controls take click closures; done).
-5. Fragments: TODO-5706, then TODO-5724 (web hover and key handlers).
+5. Fragments: TODO-5706 (done), then TODO-5724 (web hover and key handlers).
 6. Native UI: TODO-5709 (controls take closures, `App.run`), TODO-5725 (pointer and key events in the C ABI),
    TODO-5710 (PrimeScroll on handlers), TODO-5711 (retire the `/std/ui` prototype).
 7. Later: TODO-5707, TODO-5708 (type aliases), TODO-5717 (both writers in one file), TODO-5718 (repeated and decoded

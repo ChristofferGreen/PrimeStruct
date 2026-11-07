@@ -739,11 +739,12 @@ directly (docs/WebAppsPlan.md, principle 7). Code that uses it also imports `/st
   `Function<void, Reference<State>, PointerEvent>` (`/std/ui/events`): a lambda, a named definition or a closure
   bound to a local, which may hold `mut` captures of its own. The id names the generated route
   `POST /_on/<id>/click`; paths that start with `/_on/` belong to the controls and never reach the routes.
-- A `Control` is the control's `id` and `title`, entries of the string table (`string`), so it owns and borrows
-  nothing and copies as two indices. A page
+- A `Control` is the control's `id`, `title` and `target`, entries of the string table (`string`), so it owns and
+  borrows nothing and copies as three indices. A page
   route captures it by value (a `[hello]` capture list) or receives it as a parameter, and writes it with `hello.write(page)`
   (a `/std/html` `Writer`): `<form method="post" action="/_on/hello/click"><button type="submit">Say hello</button>
-  </form>`, the title escaped. `clickRoute()` is the route as a `String`.
+  </form>`, the title escaped. `clickRoute()` is the route as a `String`. `swapping(id)` returns the control with
+  `target` set to a region's id (see Fragments below), and its form then carries `data-ps-target="id"`.
 - A POST to a control's route calls its handler with the app's state and a `PointerEvent` of the `primary` button
   with `clickCount` 1, no modifiers and no position (`hasPosition` false): a form post carries none. It then answers
   303 to `backPath(request)`, the path and query of the request's `Referer` (the page the form was on) or `/` when
@@ -777,8 +778,61 @@ hello_app() {
 
 `WebApp` is its own type in its own module rather than more methods on `AppRouter`, so that `/std/http` keeps
 depending on neither `/std/html` nor `/std/ui/events`, and the page layer, where routes, HTML and events meet, has one
-place to grow (fragments, TODO-5706; hover and key handlers, TODO-5724). `examples/apps/hello_button/main.prime` is a
+place to grow (fragments, below; hover and key handlers, TODO-5724). `examples/apps/hello_button/main.prime` is a
 whole app on it.
+
+**Fragments.** A click can replace part of a page instead of loading the page again, with no JavaScript written by
+the app (docs/WebAppsPlan.md, principle 4):
+
+- `app.region(id, render)` registers a region. `id` is the id of the element that holds it, and `render` is a
+  `Function<void, Reference<Writer>, Reference<State>>` that writes the element's contents from the state. The page
+  writes the element and calls the same function inside it, so one function writes the region in the page and as a
+  fragment, and the two cannot differ. A second `region` with a taken id prints `duplicate region id: <id>` and stops
+  the program, as `button` does.
+- A form names the region it replaces with `page.fragmentTarget(id)` (`/std/html`), which writes
+  `data-ps-target="id"` on the form's start tag; a `Control` made with `swapping(id)` writes it on its own form.
+- `writeFragmentScript(page)`, in the head, writes `<script src="/_web/app.js" defer></script>`
+  (`fragmentScriptPath()`; the header's name is `fragmentHeader()`, and the script itself `fragmentScript()`). Paths that start
+  with `/_web/` belong to the app: `GET /_web/app.js` answers the script as `text/javascript; charset=utf-8`, another
+  method there is 405 and another path 404.
+- The script handles the submit of a POST form that has `data-ps-target`: it stops the page load and posts the form's
+  fields with `fetch`, as an urlencoded body, to the form's `action`, with the header `X-PrimeStruct-Fragment: <id>`
+  and without following a redirect. An answer that carries the same header is a fragment: its body replaces the
+  contents (`innerHTML`) of the element with that id. Any other answer (a redirect, an error, a failed connection)
+  reloads the page, which then shows the state after the change. Requests go one at a time, so swaps land in the
+  order the clicks were made; the forms inside a swapped region work again, because the script listens on the
+  document.
+- On the server, when a route or a control answers a request whose fragment header names a registered region with a
+  303, the app replaces that answer with a 200: `Content-Type: text/html; charset=utf-8`,
+  `X-PrimeStruct-Fragment: <id>` and the region's HTML from `render`. Handlers do not change: they make the change
+  and redirect, as for a plain form, and the app turns the redirect into the fragment. Any other status, and a region
+  id that no `region` registered, is sent as it is.
+- Without the script (not loaded, blocked, or an old browser) the same forms post and redirect back, so every page
+  works the same with a full load.
+
+```prime
+[effects(heap_alloc)]
+write_todos([Reference<Writer>] page, [Reference<TodoList>] list) {
+  for([i32 mut] index{0i32}; index < list.todos.count(); ++index) {
+    write_todo(page, list.todos[index])            // each todo's forms call page.fragmentTarget("todos")
+  }
+}
+
+app.region("todos", write_todos)                   // at setup; the page writes <ul id="todos"> around write_todos
+```
+
+The region's id travels in the request, rather than in a table from route to region in the app, so that any POST
+route can answer a fragment, such as the Done button of each todo in `examples/apps/todo_web`, which is an ordinary
+route with the todo's id in its path rather than a control. Turning the redirect into the fragment, rather than
+letting handlers answer fragments themselves, keeps one handler for the plain form and the script. `render` writes
+the contents rather than the element, so the page chooses the element (a `ul` for a list) and the function needs no
+id. There is no client-side state or templating: the server writes all HTML, and the script only moves it.
+
+The script is the fixed asset `stdlib/std/web/app.js`. The program carries the same bytes in a raw literal
+(`stdlib/std/web/fragment_script.prime`), so a server binary reads no file to serve it. Its budget is **5120 bytes**
+(5 KB), unminified and with its comments; the fragment part alone is about 1.5 KB. `tests/unit/backend_host/test_web.cpp`
+checks the budget and that the literal holds the asset's bytes, and the todo_web loopback test that the server sends
+them.
 
 ### HTTP server (`/std/http/server`)
 
@@ -929,6 +983,9 @@ explicit `endAttributes()` would be one more call at every element, and forgetti
   attributes such as `id` or `required`; `button(text)`, a `<button type="submit">`; `beginSelect(name)`,
   `option(value, text, selected)` and `endSelect()`; `textarea(name, text)`, which writes an extra newline after the
   start tag when the text starts with one, because a browser drops the first
+- Scripts and fragments: `script(src)` writes `<script src="…" defer></script>`, a script that runs once the page is
+  parsed; `fragmentTarget(id)` writes `data-ps-target="id"` on an open form tag, the region that the fragment script
+  of `/std/web` replaces with the form's answer
 - Every name, text and value parameter is a `StringView`, so a literal passes as it is and a `String` passes as
   `s.view()`
 

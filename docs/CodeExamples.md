@@ -1002,8 +1002,10 @@ Why this is good:
 
 ### A Web Page With Buttons
 
-When routes share the app's state, keep it in an `AppRouter<State>`: each handler gets the state as its first
-parameter. A button that changes the state is a form that posts to its own route, which redirects back to the page.
+When routes share the app's state, keep it in a `WebApp<State>` (`/std/web`; an `AppRouter<State>` routes the same
+way): each handler gets the state as its first parameter. A button that changes the state is a form that posts to its
+own route, which redirects back to the page. When the change shows in one part of the page, register that part as a
+region and let the form name it: with the stdlib's fragment script the click then swaps only that part.
 `examples/apps/todo_web/main.prime` is the whole app; this is its core.
 
 ```prime
@@ -1014,17 +1016,28 @@ TodoList() {
   // add, toggle and remove change `todos`
 }
 
-// A form with one button that posts to `action`: a button that runs a route and comes back to the page.
+// A form with one button that posts to `action` and replaces the list: a button that runs a route and comes back to
+// the page, or, with the fragment script, gets the new list.
 [effects(heap_alloc)]
 button_form([Writer mut] page, [String] action, [StringView] label) {
   page.beginForm("post", action.view())
+  page.fragmentTarget("todos")
   page.button(label)
   page.endForm()
 }
 
-[return<AppRouter<TodoList>> effects(heap_alloc)]
+// The region "todos": the page writes it inside `<ul id="todos">`, and a fragment answer is the same items.
+[effects(heap_alloc)]
+write_todos([Reference<Writer>] page, [Reference<TodoList>] list) {
+  for([i32 mut] index{0i32}; index < list.todos.count(); ++index) {
+    write_todo(page, list.todos[index])
+  }
+}
+
+[return<WebApp<TodoList>> effects(heap_alloc, io_err)]
 todo_app() {
-  [AppRouter<TodoList> mut] app{AppRouter<TodoList>{[state] TodoList{}}}
+  [WebApp<TodoList> mut] app{WebApp<TodoList>{[state] TodoList{}}}
+  app.region("todos", write_todos)
   app.get("/", []([Reference<TodoList>] list, [Request] request, [Reference<Response>] response) {
     response.html(todo_page(list))
   })
@@ -1050,8 +1063,11 @@ Why this is good:
   them and answer. The server is single-threaded, so nothing needs locking.
 - Every POST answers `redirect("/")`, so the browser shows the page again with a GET and a reload never repeats a
   click. The buttons work with no JavaScript.
+- One function, `write_todos`, writes the list for the page and for the fragment, so the two cannot drift apart.
+  The handlers stay post/redirect/get: the app turns the redirect into the fragment when the script asks for one,
+  and the page (which loads the script with `writeFragmentScript(page)`) needs no JavaScript of its own.
 - Todos keep stable ids, so `/todos/:id/toggle` names one todo even after others are deleted.
-- `serve(withRequestLog(todo_app()), config)` serves it: an `AppRouter` is a handler like a `Router`.
+- `serve(withRequestLog(todo_app()), config)` serves it: a `WebApp` is a handler like a `Router`.
 
 ### A Button That Takes Its Click Handler
 

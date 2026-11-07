@@ -93,4 +93,55 @@ TEST_CASE("a duplicate control id stops the program at setup through optexe") {
   CHECK_MESSAGE(text.find("duplicate control id: hello\n") != std::string::npos, text);
 }
 
+TEST_CASE("web regions answer the fragment script's requests with fragments on the VM") {
+  ScriptEngine engine;
+  const auto script = engine.compileFile(Fixtures + "web_fragments.prime");
+  REQUIRE_MESSAGE(script.valid(), script.diagnostics());
+  const auto result = script.run();
+  REQUIRE_MESSAGE(result.ok, result.diagnostics);
+  CHECK_MESSAGE(result.exitCode == 0,
+                "web_fragments case " << result.exitCode
+                                      << " failed (tests/fixtures/http/web_fragments.prime)");
+}
+
+TEST_CASE("web regions answer the fragment script's requests with fragments through optexe") {
+  const std::string exe = buildOptexe("web_fragments");
+  const int failed = run(shellQuote(exe));
+  CHECK_MESSAGE(failed == 0,
+                "web_fragments case " << failed
+                                      << " failed (tests/fixtures/http/web_fragments.prime)");
+}
+
+TEST_CASE("a duplicate region id stops the program at setup on the VM") {
+  ScriptEngine engine;
+  const auto script = engine.compileFile(Fixtures + "web_duplicate_region.prime");
+  REQUIRE_MESSAGE(script.valid(), script.diagnostics());
+  std::string errors;
+  primec::embed::RunOptions options;
+  options.output = [&errors](int fd, std::string_view chunk) {
+    if (fd == 2) {
+      errors.append(chunk);
+    }
+  };
+  const auto result = script.run({}, options);
+  const bool trapped = !result.ok || (result.exitCode != 0 && result.exitCode != 7);
+  CHECK_MESSAGE(trapped, "exit code " << result.exitCode);
+  CHECK_MESSAGE(errors.find("duplicate region id: clicks\n") != std::string::npos, errors);
+}
+
+// The script is the fixed asset stdlib/std/web/app.js; stdlib/std/web/fragment_script.prime carries the same bytes
+// in a raw literal, which ends at the first "'".
+TEST_CASE("the fragment script is a fixed asset within its 5120-byte budget") {
+  const std::string webDir = std::string(PRIMESTRUCT_SOURCE_DIR) + "/stdlib/std/web/";
+  const std::string asset = readFile(webDir + "app.js");
+  REQUIRE(!asset.empty());
+  CHECK_MESSAGE(asset.size() <= 5120, "app.js has " << asset.size() << " bytes");
+  CHECK(asset.find('\'') == std::string::npos);
+  CHECK(asset.find("X-PrimeStruct-Fragment") != std::string::npos);
+  CHECK(asset.find("data-ps-target") != std::string::npos);
+  const std::string embedded = readFile(webDir + "fragment_script.prime");
+  CHECK_MESSAGE(embedded.find("return('" + asset + "'utf8)") != std::string::npos,
+                "fragment_script.prime does not hold the bytes of app.js");
+}
+
 TEST_SUITE_END();

@@ -1,0 +1,143 @@
+// /std/web: regions answered as fragments, controls that swap them, and the fragment script route
+// (tests/unit/backend_host/test_web.cpp). The exit code is the number of the first case that failed, or 0.
+import /std/html/*
+import /std/http/*
+import /std/text/*
+import /std/text/view/*
+import /std/ui/events/*
+import /std/web/*
+
+[struct]
+Panel() {
+  [i32 mut] presses{0i32}
+}
+
+// The region "count": its contents, which the page writes inside `<div id="count">` and a fragment answers with.
+[effects(heap_alloc)]
+write_count([Reference<Writer>] page, [Reference<Panel>] panel) {
+  [String mut] presses{String{}}
+  presses.appendI64(convert<i64>(panel.presses))
+  presses.append(" presses & counting")
+  page.element("p", presses.view())
+}
+
+// The request of case `index`. Case 1 is the bytes a browser sends for the fragment script's fetch of a click.
+[return<string>]
+case_request([i32] index) {
+  if(index == 1i32) {
+    return("POST /_on/press/click HTTP/1.1\r\nHost: localhost:8080\r\nContent-Type: application/x-www-form-urlencoded;charset=UTF-8\r\nX-PrimeStruct-Fragment: count\r\nOrigin: http://localhost:8080\r\nReferer: http://localhost:8080/panel\r\nContent-Length: 0\r\n\r\n")
+  }
+  if(index == 2i32) {
+    return("POST /_on/press/click HTTP/1.1\r\nReferer: http://localhost:8080/panel\r\nContent-Length: 0\r\n\r\n")
+  }
+  if(index == 3i32) {
+    return("POST /_on/press/click HTTP/1.1\r\nX-PrimeStruct-Fragment: elsewhere\r\nReferer: /panel\r\n\r\n")
+  }
+  if(index == 4i32) {
+    return("POST /panel/reset HTTP/1.1\r\nx-primestruct-fragment:  count \r\nContent-Length: 0\r\n\r\n")
+  }
+  if(index == 5i32) {
+    return("GET /panel HTTP/1.1\r\nX-PrimeStruct-Fragment: count\r\n\r\n")
+  }
+  if(index == 6i32) {
+    return("GET /_web/app.js HTTP/1.1\r\n\r\n")
+  }
+  if(index == 7i32) {
+    return("POST /_web/app.js HTTP/1.1\r\n\r\n")
+  }
+  if(index == 8i32) {
+    return("GET /_web/other.js HTTP/1.1\r\n\r\n")
+  }
+  return("POST /_on/missing/click HTTP/1.1\r\nX-PrimeStruct-Fragment: count\r\n\r\n")
+}
+
+// The page of `GET /panel` after `presses` presses.
+[return<String> effects(heap_alloc)]
+panel_page([i32] presses) {
+  [String mut] page{stringFrom("<script src=\"/_web/app.js\" defer></script><div id=\"count\"><p>")}
+  page.appendI64(convert<i64>(presses))
+  page.append(" presses &amp; counting</p></div><form method=\"post\" action=\"/_on/press/click\" data-ps-target=\"count\"><button type=\"submit\">Press</button></form><form method=\"post\" action=\"/_on/plain/click\"><button type=\"submit\">Plain</button></form>")
+  return(page)
+}
+
+// The status, headers and body case `index` must answer.
+[return<bool> effects(heap_alloc)]
+answer_is([i32] index, [Response] response) {
+  [StringView] body{response.body.view()}
+  [StringView] head{response.headerLines.view()}
+  [StringView] fragmentHead{"Content-Type: text/html; charset=utf-8\r\nX-PrimeStruct-Fragment: count\r\n"}
+  if(index == 1i32) {
+    return(response.status == 200i32 && head.equals(fragmentHead) && body.equalsText("<p>1 presses &amp; counting</p>"))
+  }
+  if(index == 2i32) {
+    return(response.status == 303i32 && head.equalsText("Location: /panel\r\n") && body.empty())
+  }
+  if(index == 3i32) {
+    return(response.status == 303i32 && head.equalsText("Location: /panel\r\n"))
+  }
+  if(index == 4i32) {
+    return(response.status == 200i32 && head.equals(fragmentHead) && body.equalsText("<p>0 presses &amp; counting</p>"))
+  }
+  if(index == 5i32) {
+    [String] expected{panel_page(0i32)}
+    return(response.status == 200i32 && body.equals(expected.view()))
+  }
+  if(index == 6i32) {
+    [StringView] script{textOf(fragmentScript())}
+    [bool] typed{head.equalsText("Content-Type: text/javascript; charset=utf-8\r\n")}
+    [bool] asIs{body.equals(script)}
+    [bool] marked{body.indexOfFrom("X-PrimeStruct-Fragment", 0i32) >= 0i32 && body.indexOfFrom("data-ps-target", 0i32) >= 0i32}
+    return(response.status == 200i32 && typed && asIs && marked && body.count() <= 5120i32)
+  }
+  if(index == 7i32) {
+    return(response.status == 405i32 && body.empty())
+  }
+  return(response.status == 404i32 && body.empty())
+}
+
+[return<int> effects(heap_alloc, io_err)]
+main() {
+  [WebApp<Panel> mut] app{WebApp<Panel>{[state] Panel{}}}
+  app.region("count", write_count)
+  [Control] press{app.button("press", "Press", []([Reference<Panel>] panel, [PointerEvent] event) {
+    panel.presses = panel.presses + 1i32
+  }).swapping("count")}
+  [Control] plain{app.button("plain", "Plain", []([Reference<Panel>] panel, [PointerEvent] event) {
+  })}
+  [StringView] target{textOf(press.target)}
+  [StringView] plainTarget{textOf(plain.target)}
+  [bool] swaps{target.equalsText("count")}
+  if(!swaps || !plainTarget.empty() || app.regions.count() != 1i32) {
+    return(20i32)
+  }
+  app.get("/panel", [press, plain]([Reference<Panel>] panel, [Request] request, [Reference<Response>] response) {
+    [Writer mut] page{Writer{}}
+    writeFragmentScript(page)
+    page.beginElement("div")
+    page.attribute("id", "count")
+    write_count(page, panel)
+    page.endElement("div")
+    press.write(page)
+    plain.write(page)
+    response.html(page.out)
+  })
+  app.post("/panel/reset", []([Reference<Panel>] panel, [Request] request, [Reference<Response>] response) {
+    panel.presses = 0i32
+    response.redirect("/panel")
+  })
+  [Response mut] response{Response{}}
+  for([i32 mut] index{1i32}; index <= 9i32; ++index) {
+    [String] text{stringFrom(case_request(index))}
+    [Request] request{parseRequest(text.view(), 64i32)}
+    response.clear()
+    app.call(request, location(response))
+    if(!answer_is(index, response)) {
+      return(index)
+    }
+  }
+  // Cases 1, 2 and 3 pressed, case 4 reset; case 9 named no control.
+  if(app.state.presses != 0i32) {
+    return(30i32)
+  }
+  return(0i32)
+}

@@ -164,6 +164,23 @@ namespace html {
       this.endElement("button")
     }
 
+    // ` data-ps-target="id"` on the open start tag of a form: with the fragment script of /std/web, submitting the
+    // form replaces the contents of element `id` with the answer instead of loading a page. Without the script the
+    // form posts as usual.
+    [mut effects(heap_alloc)]
+    fragmentTarget([StringView] id) {
+      this.attribute("data-ps-target", id)
+    }
+
+    // `<script src="..." defer></script>`: a script that runs once the page is parsed.
+    [mut effects(heap_alloc)]
+    script([StringView] src) {
+      this.beginElement("script")
+      this.attribute("src", src)
+      this.booleanAttribute("defer")
+      this.endElement("script")
+    }
+
     // `<select name="...">`, left open for attributes; `option` calls and `endSelect` follow.
     [mut effects(heap_alloc)]
     beginSelect([StringView] name) {
