@@ -1,0 +1,93 @@
+// A page with text and a button that adds a line each time it is clicked: a control that takes its click handler
+// directly (/std/web). Build and run:
+//   primec --emit=optexe examples/apps/hello_button/main.prime -o hello_button \
+//     --link-arg stdlib/std/net/native/net_shim.cpp --link-arg stdlib/std/os/os_posix.cpp
+//   PORT=8080 ./hello_button     (PORT=0 picks a free port; BIND=loopback listens on 127.0.0.1 only)
+// The button is registered once, at setup, with a closure. The app gives it the route POST /_on/hello/click, and the
+// page writes it as a form that posts there; each click calls the closure and redirects back to the page.
+import /std/html/*
+import /std/http/*
+import /std/http/server/*
+import /std/os/*
+import /std/text/*
+import /std/text/view/*
+import /std/ui/events/*
+import /std/web/*
+
+// The app's state: the page's text, one greeting per line.
+[struct]
+Greeter() {
+  [String mut] lines{String{}}
+
+  [mut effects(heap_alloc)]
+  say([String] line) {
+    this.lines.appendBytes(line.data, line.count())
+    this.lines.append("\n")
+  }
+}
+
+// The greeting of click number `count`.
+[return<String> effects(heap_alloc)]
+greeting([i32] count) {
+  if(count == 1i32) {
+    return(stringFrom("Hello!"))
+  }
+  [String mut] line{stringFrom("Hello again! That makes ")}
+  line.appendI64(convert<i64>(count))
+  line.append(".")
+  return(line)
+}
+
+// Each line of `text` as a paragraph.
+[effects(heap_alloc)]
+write_lines([Writer mut] page, [StringView] text) {
+  [i32 mut] start{0i32}
+  while(start < text.count()) {
+    [i32] end{text.indexOfFrom("\n", start)}
+    page.element("p", text.slice(start, end))
+    start = end + 1i32
+  }
+}
+
+// The page: a heading, the greetings so far and the button.
+[return<String> effects(heap_alloc)]
+greeting_page([Reference<Greeter>] greeter, [Control] hello) {
+  [Writer mut] page{Writer{}}
+  page.beginPage("Hello")
+  page.beginBody()
+  page.element("h1", "Hello, button")
+  write_lines(page, greeter.lines.view())
+  hello.write(page)
+  page.endPage()
+  return(page.out)
+}
+
+[return<WebApp<Greeter>> effects(heap_alloc, io_err)]
+hello_app() {
+  [WebApp<Greeter> mut] app{WebApp<Greeter>{[state] Greeter{}}}
+  // `said` belongs to this closure alone and lasts from click to click, because the closure is made once, here.
+  [mut] sayHello{[mut said{0i32}]([Reference<Greeter>] greeter, [PointerEvent] event) {
+    said = said + 1i32
+    greeter.say(greeting(said))
+  }}
+  [Control] hello{app.button("hello", "Say hello", sayHello)}
+  app.get("/", [hello]([Reference<Greeter>] greeter, [Request] request, [Reference<Response>] response) {
+    response.html(greeting_page(greeter, hello))
+  })
+  return(app)
+}
+
+// Prints why the server could not start; `main` then exits with the error code.
+[effects(io_err)]
+log_serve_error([ServeError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(heap_alloc, io_err, net_io) on_error<ServeError, log_serve_error>]
+main() {
+  [String] portText{envOr(stringFrom("PORT"), stringFrom("8080"))}
+  [String] bind{envOr(stringFrom("BIND"), stringFrom("all"))}
+  [ServerConfig] config{ServerConfig{[port] portText.view().parseI32Or(8080i32), [loopbackOnly] bind.equalsText("loopback")}}
+  serve(withRequestLog(hello_app()), config)?
+  return(0i32)
+}

@@ -1,0 +1,139 @@
+// /std/web: controls registered with their handlers, their generated routes and the HTML they write
+// (tests/unit/backend_host/test_web.cpp). The exit code is the number of the first case that failed, or 0.
+import /std/html/*
+import /std/http/*
+import /std/text/*
+import /std/text/view/*
+import /std/ui/events/*
+import /std/web/*
+
+[struct]
+Panel() {
+  [i32 mut] presses{0i32}
+  [i32 mut] resets{0i32}
+  // The last click event a handler received.
+  [PointerEvent mut] last{PointerEvent{}}
+}
+
+// A named click handler.
+[effects(heap_alloc)]
+reset_panel([Reference<Panel>] panel, [PointerEvent] event) {
+  panel.resets = panel.resets + 1i32
+  panel.presses = 0i32
+  panel.last = event
+}
+
+// The request of case `index`: method, path and an optional Referer.
+[return<string>]
+case_request([i32] index) {
+  if(index == 1i32) {
+    return("POST /_on/press/click HTTP/1.1\r\n\r\n")
+  }
+  if(index == 2i32) {
+    return("POST /_on/press/click HTTP/1.1\r\nReferer: http://localhost:8080/panel?tab=2\r\n\r\n")
+  }
+  if(index == 3i32) {
+    return("GET /panel HTTP/1.1\r\n\r\n")
+  }
+  if(index == 4i32) {
+    return("POST /_on/reset/click HTTP/1.1\r\nReferer: /panel\r\n\r\n")
+  }
+  if(index == 5i32) {
+    return("GET /_on/press/click HTTP/1.1\r\n\r\n")
+  }
+  if(index == 6i32) {
+    return("POST /_on/missing/click HTTP/1.1\r\n\r\n")
+  }
+  if(index == 7i32) {
+    return("POST /_on/press/click HTTP/1.1\r\nReferer: https://evil.example\r\n\r\n")
+  }
+  if(index == 8i32) {
+    return("POST /_on/press/click HTTP/1.1\r\nReferer: //evil.example/x\r\n\r\n")
+  }
+  if(index == 9i32) {
+    return("POST /panel HTTP/1.1\r\n\r\n")
+  }
+  return("GET /nowhere HTTP/1.1\r\n\r\n")
+}
+
+// The status, Location and body case `index` must answer.
+[return<bool>]
+answer_is([i32] index, [Response] response) {
+  [StringView] body{response.body.view()}
+  [StringView] head{response.headerLines.view()}
+  if(index == 1i32 || index == 7i32 || index == 8i32) {
+    return(response.status == 303i32 && head.equalsText("Location: /\r\n") && body.empty())
+  }
+  if(index == 2i32) {
+    return(response.status == 303i32 && head.equalsText("Location: /panel?tab=2\r\n"))
+  }
+  if(index == 3i32) {
+    return(response.status == 200i32 && body.equalsText(
+        "<p>2 presses</p><form method=\"post\" action=\"/_on/press/click\"><button type=\"submit\">Press &amp; hold</button></form><form method=\"post\" action=\"/_on/reset/click\"><button type=\"submit\">Reset</button></form>"))
+  }
+  if(index == 4i32) {
+    return(response.status == 303i32 && head.equalsText("Location: /panel\r\n"))
+  }
+  if(index == 5i32 || index == 9i32) {
+    return(response.status == 405i32 && body.empty())
+  }
+  return(response.status == 404i32 && body.empty())
+}
+
+[return<int> effects(heap_alloc, io_err)]
+main() {
+  [WebApp<Panel> mut] app{WebApp<Panel>{[state] Panel{}}}
+  // A closure with its own state: how often it ran, which the panel does not see.
+  [mut] press{[mut calls{0i32}]([Reference<Panel>] panel, [PointerEvent] event) {
+    calls = calls + 1i32
+    panel.presses = calls
+    panel.last = event
+  }}
+  [Control] pressButton{app.button("press", "Press & hold", press)}
+  [Control] resetButton{app.button("reset", "Reset", reset_panel)}
+  // Through locals: `!` before a method chain does not parse yet (TODO-5519).
+  [StringView] id{textOf(pressButton.id)}
+  [StringView] title{textOf(pressButton.title)}
+  [bool] idKept{id.equalsText("press")}
+  [bool] titleKept{title.equalsText("Press & hold")}
+  if(!idKept || !titleKept) {
+    return(20i32)
+  }
+  [String] pressRoute{pressButton.clickRoute()}
+  [bool] routeMade{pressRoute.view().equalsText("/_on/press/click")}
+  if(!routeMade || app.clicks.count() != 2i32) {
+    return(21i32)
+  }
+  app.get("/panel", [pressButton, resetButton]([Reference<Panel>] panel, [Request] request, [Reference<Response>] response) {
+    [Writer mut] page{Writer{}}
+    [String mut] presses{String{}}
+    presses.appendI64(convert<i64>(panel.presses))
+    presses.append(" presses")
+    page.element("p", presses.view())
+    pressButton.write(page)
+    resetButton.write(page)
+    response.html(page.out)
+  })
+  [Response mut] response{Response{}}
+  for([i32 mut] index{1i32}; index <= 10i32; ++index) {
+    [String] text{stringFrom(case_request(index))}
+    [Request] request{parseRequest(text.view(), 64i32)}
+    response.clear()
+    app.call(request, location(response))
+    if(!answer_is(index, response)) {
+      return(index)
+    }
+    // The handler got a click of the primary button with no position.
+    if(index == 1i32) {
+      [PointerEvent] last{app.state.last}
+      if(last.button != PointerButton.primary || last.hasPosition || last.clickCount != 1i32 || last.modifiers.any()) {
+        return(30i32)
+      }
+    }
+  }
+  // press ran four times (cases 1, 2, 7 and 8) and kept its own count across the reset; reset ran once.
+  if(app.state.presses != 4i32 || app.state.resets != 1i32) {
+    return(31i32)
+  }
+  return(0i32)
+}

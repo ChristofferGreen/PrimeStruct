@@ -1053,6 +1053,55 @@ Why this is good:
 - Todos keep stable ids, so `/todos/:id/toggle` names one todo even after others are deleted.
 - `serve(withRequestLog(todo_app()), config)` serves it: an `AppRouter` is a handler like a `Router`.
 
+### A Button That Takes Its Click Handler
+
+When a page has a button with one reaction, register the button with its handler closure on a `WebApp<State>`
+(`/std/web`) and let the app route the click. `examples/apps/hello_button/main.prime` is the whole app; this is its
+core.
+
+```prime
+[return<WebApp<Greeter>> effects(heap_alloc, io_err)]
+hello_app() {
+  [WebApp<Greeter> mut] app{WebApp<Greeter>{[state] Greeter{}}}
+  // `said` belongs to this closure alone and lasts from click to click, because the closure is made once, here.
+  [mut] sayHello{[mut said{0i32}]([Reference<Greeter>] greeter, [PointerEvent] event) {
+    said = said + 1i32
+    greeter.say(greeting(said))
+  }}
+  [Control] hello{app.button("hello", "Say hello", sayHello)}
+  app.get("/", [hello]([Reference<Greeter>] greeter, [Request] request, [Reference<Response>] response) {
+    response.html(greeting_page(greeter, hello))
+  })
+  return(app)
+}
+
+// The page writes the control it was given: a form that posts to the button's generated route.
+[return<String> effects(heap_alloc)]
+greeting_page([Reference<Greeter>] greeter, [Control] hello) {
+  [Writer mut] page{Writer{}}
+  page.beginPage("Hello")
+  page.beginBody()
+  page.element("h1", "Hello, button")
+  write_lines(page, greeter.lines.view())
+  hello.write(page)
+  page.endPage()
+  return(page.out)
+}
+```
+
+Why this is good:
+- The button and its reaction are one value at one place: there is no route string to keep in step between the form
+  and the handler. The app generates `POST /_on/hello/click`, calls the closure and redirects back to the page.
+- The closure keeps state only it needs in its own `mut` capture, and gets the shared state as its parameter, the same
+  `Function<void, Reference<State>, PointerEvent>` shape a native button takes.
+- The button is registered once, at setup, so `said` survives between requests; the page route only writes the
+  `Control` it captured, so it cannot write a button that has no handler.
+- The closure is bound to a local before it is passed: a lambda whose capture list starts with `mut` does not parse
+  as a call argument yet (TODO-5713).
+
+A row of buttons that each act on one record, such as the Done button of each todo above, stays a form that posts to
+a route with the record's id: a control is one button with one handler.
+
 ## Safe Extents And Cursor Examples
 
 These examples cover the safe-array-extent and cursor surfaces from

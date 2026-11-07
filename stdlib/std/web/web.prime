@@ -1,0 +1,189 @@
+// Web pages whose controls take handler closures (docs/spec/stdlib-reference.md, /std/web; docs/WebAppsPlan.md,
+// principle 7). A `WebApp<State>` routes like an `AppRouter<State>` and also keeps the app's controls: each is
+// registered once, at setup, with its handler, under a generated route that calls the handler. A page writes a
+// control with /std/html as a form that posts to that route, so a click works without JavaScript
+// (post/redirect/get).
+import /std/collections/*
+import /std/html/*
+import /std/http/*
+import /std/panic/*
+import /std/text/*
+import /std/text/view/*
+import /std/ui/events/*
+
+namespace std {
+namespace web {
+
+  // A control registered with a `WebApp`: what a page needs to write it. `WebApp.button` returns it; a page route
+  // captures it by value (`[hello](...)`) and writes it with `hello.write(page)`. Its id and title are entries of the
+  // program's string table, so it owns and borrows nothing and a copy is two indices.
+  [public struct]
+  Control() {
+    [public string] id{""}
+    [public string] title{""}
+
+    // The route a click on the control posts to: "/_on/<id>/click".
+    [public return<String> effects(heap_alloc)]
+    clickRoute() {
+      return(click_route(textOf(this.id)))
+    }
+
+    // `<form method="post" action="/_on/<id>/click"><button type="submit">title</button></form>`, with the title
+    // escaped.
+    [public effects(heap_alloc)]
+    write([Writer mut] page) {
+      [String] action{this.clickRoute()}
+      page.beginForm("post", action.view())
+      page.button(textOf(this.title))
+      page.endForm()
+    }
+  }
+
+  // "/_on/<id>/click".
+  [return<String> effects(heap_alloc)]
+  click_route([StringView] id) {
+    [String mut] route{stringFrom("/_on/")}
+    route.appendBytes(id.data, id.count())
+    route.append("/click")
+    return(route)
+  }
+
+  // The click handler of the control `id`. The id is a view here, not a `string` as in `Control`: reading a `string`
+  // field of an element whose `Function` holds a capturing closure faults on the VM (TODO-5731).
+  [public struct]
+  ClickHandler<State>() {
+    [public StringView] id{StringView{}}
+    [public Function<void, Reference<State>, PointerEvent> mut] handler
+  }
+
+  // Where to send the browser after a control's POST: the path and query of the `Referer` header, the page the form
+  // was on, or "/" when there is none. Only the path is kept, so the redirect stays on this server.
+  [public return<StringView>]
+  backPath([Request] request) {
+    [StringView] referer{request.header("Referer")}
+    [i32] scheme{referer.indexOfFrom("://", 0i32)}
+    [i32] start{if(scheme < 0i32, then() { 0i32 }, else() { referer.indexOfFrom("/", scheme + 3i32) })}
+    if(start < 0i32 || start >= referer.count()) {
+      return("/")
+    }
+    [StringView] path{referer.slice(start, referer.count())}
+    if(!path.startsWith("/") || path.startsWith("//")) {
+      return("/")
+    }
+    return(path)
+  }
+
+  // An `AppRouter<State>` with controls. Routes are added and matched as for `AppRouter` (`get`, `post`, `put`,
+  // `delete`, `route`; the same patterns, 404 and 405), and paths that start with "/_on/" belong to the controls. It
+  // has `call(request, response)`, so it is passed to `serve` or middleware as it is.
+  [public struct]
+  WebApp<State>() {
+    // The state that every route and control handler reads and changes.
+    [public State mut] state
+    [public vector<AppRoute<State>> mut] routes{vector<AppRoute<State>>()}
+    [public vector<ClickHandler<State>> mut] clicks{vector<ClickHandler<State>>()}
+
+    // Registers a button: its id, its label and the handler a click on it calls. Returns the control, which a page
+    // writes. Each id is registered once: a second `button` with the same id prints "duplicate control id: <id>" and
+    // stops the program, which happens at setup, before the server starts.
+    [mut effects(heap_alloc, io_err) return<Control>]
+    button([string] id, [string] title, [Function<void, Reference<State>, PointerEvent> move] handler) {
+      [StringView] idView{textOf(id)}
+      for([i32 mut] index{0i32}; index < this.clicks.count(); ++index) {
+        [StringView] existing{this.clicks[index].id}
+        if(existing.equals(idView)) {
+          print_error("duplicate control id: ")
+          print_line_error(id)
+          panic(1i32)
+        }
+      }
+      this.clicks.push(ClickHandler<State>{[id] idView, [handler] handler})
+      return(Control{[id] id, [title] title})
+    }
+
+    // Adds a route as `AppRouter.route` does.
+    [mut effects(heap_alloc)]
+    route([string] method,
+          [string] pattern,
+          [Function<void, Reference<State>, Request, Reference<Response>> move] handler) {
+      // `textOf` by hand: a string does not convert to a StringView at a field of a generic struct yet (TODO-5721).
+      this.routes.push(AppRoute<State>{[method] textOf(method), [pattern] textOf(pattern), [handler] handler})
+    }
+
+    [mut effects(heap_alloc)]
+    get([string] pattern, [Function<void, Reference<State>, Request, Reference<Response>> move] handler) {
+      this.route("GET", pattern, handler)
+    }
+
+    [mut effects(heap_alloc)]
+    post([string] pattern, [Function<void, Reference<State>, Request, Reference<Response>> move] handler) {
+      this.route("POST", pattern, handler)
+    }
+
+    [mut effects(heap_alloc)]
+    put([string] pattern, [Function<void, Reference<State>, Request, Reference<Response>> move] handler) {
+      this.route("PUT", pattern, handler)
+    }
+
+    [mut effects(heap_alloc)]
+    delete([string] pattern, [Function<void, Reference<State>, Request, Reference<Response>> move] handler) {
+      this.route("DELETE", pattern, handler)
+    }
+
+    // Dispatches one request: a control's route to its handler, anything else as `AppRouter.call` does.
+    [mut effects(heap_alloc)]
+    call([Request] request, [Reference<Response>] response) {
+      [StringView] path{request.path}
+      if(path.startsWith("/_on/")) {
+        this.callControl(request, response)
+        return()
+      }
+      [bool mut] pathMatched{false}
+      [i32 mut] index{0i32}
+      while(index < this.routes.count()) {
+        [StringView] pattern{this.routes[index].pattern}
+        [StringView] method{this.routes[index].method}
+        if(routeMatches(pattern, path)) {
+          if(request.method.equals(method)) {
+            [Request mut] routed{request}
+            routed.route = pattern
+            // Through a local: `location(this.state)` written in the call's arguments does not lower (TODO-5719).
+            [Reference<State>] state{location(this.state)}
+            this.routes[index].handler(state, routed, response)
+            return()
+          }
+          pathMatched = true
+        }
+        index = index + 1i32
+      }
+      response.status = if(pathMatched, then() { 405i32 }, else() { 404i32 })
+    }
+
+    // A POST to "/_on/<id>/click" calls the handler of control `id` with the state and a click of the primary button
+    // with no position (a form post has none), then answers 303 to `backPath(request)`. Another method on that path
+    // is 405; a path no control has is 404.
+    [mut effects(heap_alloc)]
+    callControl([Request] request, [Reference<Response>] response) {
+      for([i32 mut] index{0i32}; index < this.clicks.count(); ++index) {
+        [String] route{click_route(this.clicks[index].id)}
+        [StringView] path{request.path}
+        if(path.equals(route.view())) {
+          // Through a local: `!` before a method chain does not parse yet (TODO-5519).
+          [bool] posted{request.method.equalsText("POST")}
+          if(!posted) {
+            response.status = 405i32
+            return()
+          }
+          [PointerEvent] click{PointerEvent{[button] PointerButton.primary, [clickCount] 1i32}}
+          [Reference<State>] state{location(this.state)}
+          this.clicks[index].handler(state, click)
+          response.redirect(backPath(request))
+          return()
+        }
+      }
+      response.status = 404i32
+    }
+  }
+
+}
+}

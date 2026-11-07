@@ -474,6 +474,104 @@ TEST_CASE("the todo_web example adds, toggles and deletes todos through forms ov
   CHECK(WEXITSTATUS(waitStatus) == 0);
 }
 
+TEST_CASE(
+    "the hello_button example adds a line per click through its button closure over loopback") {
+  const int probe = socket(AF_INET, SOCK_STREAM, 0);
+  if (probe < 0 && (errno == EPERM || errno == EACCES)) {
+    MESSAGE("skipped: socket() is not permitted here (EPERM or EACCES)");
+    return;
+  }
+  REQUIRE(probe >= 0);
+  close(probe);
+
+  const std::string example =
+      std::string(PRIMESTRUCT_SOURCE_DIR) + "/examples/apps/hello_button/main.prime";
+  const std::string osShim = std::string(PRIMESTRUCT_SOURCE_DIR) + "/stdlib/std/os/os_posix.cpp";
+  const std::string exe = scratch("hello_button");
+  const std::string log = exe + ".log";
+  const int status = run(shellQuote(Primec) + " --emit=optexe " + shellQuote(example) + " -o " +
+                         shellQuote(exe) + " --link-arg " + shellQuote(NetShim) + " --link-arg " +
+                         shellQuote(osShim) + " > " + shellQuote(log) + " 2>&1");
+  REQUIRE_MESSAGE(status == 0, readFile(log));
+
+  const std::string errors = exe + ".err";
+  const pid_t pid = fork();
+  REQUIRE(pid >= 0);
+  if (pid == 0) {
+    const int errorFd = open(errors.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    dup2(errorFd, STDERR_FILENO);
+    setenv("PORT", "0", 1);
+    setenv("BIND", "loopback", 1);
+    execl(exe.c_str(), exe.c_str(), static_cast<char *>(nullptr));
+    _exit(127);
+  }
+  int port = 0;
+  for (int attempt = 0; attempt < 200 && port == 0; ++attempt) {
+    const std::string text = readFile(errors);
+    const size_t at = text.find("listening on ");
+    if (at != std::string::npos && text.find('\n', at) != std::string::npos) {
+      port = std::atoi(text.c_str() + at + 13);
+    } else {
+      usleep(25000);
+    }
+  }
+  const std::string get = "GET / HTTP/1.1\r\nHost: x\r\n\r\n";
+  // A browser's click: an empty form posted with the page as its Referer.
+  const std::string click =
+      "POST /_on/hello/click HTTP/1.1\r\nHost: x\r\nReferer: http://x/\r\nContent-Type: "
+      "application/x-www-form-urlencoded\r\nContent-Length: 0\r\n\r\n";
+  std::string before;
+  std::string firstClick;
+  std::string afterOne;
+  std::string afterTwo;
+  std::string afterThree;
+  std::string getClick;
+  std::string unknown;
+  if (port > 0) {
+    before = ::exchange(port, get);
+    firstClick = ::exchange(port, click);
+    afterOne = ::exchange(port, get);
+    ::exchange(port, click);
+    afterTwo = ::exchange(port, get);
+    ::exchange(port, click);
+    afterThree = ::exchange(port, get);
+    getClick = ::exchange(port, "GET /_on/hello/click HTTP/1.1\r\nHost: x\r\n\r\n");
+    unknown = ::exchange(port, formPost("/_on/goodbye/click", ""));
+  }
+  kill(pid, SIGTERM);
+  int waitStatus = 0;
+  REQUIRE(waitpid(pid, &waitStatus, 0) == pid);
+  REQUIRE_MESSAGE(port > 0, readFile(errors));
+
+  // The page: a heading, the lines so far and the button, a form posting to the generated route.
+  const std::string head =
+      "<!doctype html><html><head><meta charset=\"utf-8\"><title>Hello</title></head>"
+      "<body><h1>Hello, button</h1>";
+  const std::string button = "<form method=\"post\" action=\"/_on/hello/click\"><button "
+                             "type=\"submit\">Say hello</button></form></body></html>";
+  CHECK_MESSAGE(before.rfind("HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\n", 0) ==
+                    0,
+                before);
+  CHECK_MESSAGE(responseBody(before) == head + button, before);
+  // A click runs the closure and redirects back to the page it came from (post/redirect/get).
+  CHECK_MESSAGE(
+      firstClick.rfind("HTTP/1.1 303 See Other\r\nLocation: /\r\nContent-Length: 0\r\n", 0) == 0,
+      firstClick);
+  // Each click adds a line; the closure's own `said` counts across requests.
+  const std::string one = "<p>Hello!</p>";
+  const std::string two = "<p>Hello again! That makes 2.</p>";
+  const std::string three = "<p>Hello again! That makes 3.</p>";
+  CHECK_MESSAGE(responseBody(afterOne) == head + one + button, afterOne);
+  CHECK_MESSAGE(responseBody(afterTwo) == head + one + two + button, afterTwo);
+  CHECK_MESSAGE(responseBody(afterThree) == head + one + two + three + button, afterThree);
+  CHECK_MESSAGE(getClick.rfind("HTTP/1.1 405", 0) == 0, getClick);
+  CHECK_MESSAGE(unknown.rfind("HTTP/1.1 404", 0) == 0, unknown);
+  const std::string requestLog = readFile(errors);
+  CHECK_MESSAGE(requestLog.find("POST /_on/hello/click 303 ") != std::string::npos, requestLog);
+  CHECK(WIFEXITED(waitStatus));
+  CHECK(WEXITSTATUS(waitStatus) == 0);
+}
+
 TEST_CASE("serve_file checks paths and reads files, text and binary") {
   const std::string osShim = std::string(PRIMESTRUCT_SOURCE_DIR) + "/stdlib/std/os/os_posix.cpp";
   const std::string fixture = std::string(PRIMESTRUCT_SOURCE_DIR) + "/tests/fixtures/http/files_check.prime";

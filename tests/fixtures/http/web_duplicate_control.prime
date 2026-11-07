@@ -1,0 +1,24 @@
+// /std/web: registering a second control with an id that is taken stops the program at setup
+// (tests/unit/backend_host/test_web.cpp). Reaching the end is a failure: it exits 7.
+import /std/http/*
+import /std/ui/events/*
+import /std/web/*
+
+[struct]
+Counter() {
+  [i32 mut] clicks{0i32}
+}
+
+[effects(heap_alloc)]
+count_click([Reference<Counter>] counter, [PointerEvent] event) {
+  counter.clicks = counter.clicks + 1i32
+}
+
+[return<int> effects(heap_alloc, io_err)]
+main() {
+  [WebApp<Counter> mut] app{WebApp<Counter>{[state] Counter{}}}
+  [Control] first{app.button("hello", "Say hello", count_click)}
+  [Control] other{app.button("other", "Other", count_click)}
+  [Control] again{app.button("hello", "Hello again", count_click)}
+  return(7i32)
+}

@@ -15,6 +15,9 @@ waits on all of its open connections at once with `poll`, so an idle connection 
 POST routes change the list and redirect back (TODO-5704).
 `/std/ui/events` holds the event values handlers receive, `PointerEvent`, `KeyEvent`, `ChangeEvent` with
 `PointerButton`, `Key` and `Modifiers`, which compare with `==` and `!=` (TODO-5723).
+`/std/web` has `WebApp<State>`, an `AppRouter<State>` whose buttons take their click closures:
+`app.button(id, title, handler)` registers one at setup under `POST /_on/<id>/click` and returns the `Control` a page
+writes as a form; `examples/apps/hello_button/main.prime` uses it (TODO-5722).
 
 ## Principles
 
@@ -77,7 +80,7 @@ With controls that take closures (principle 7) a button and its reaction are one
   said = said + 1i32
   greeter.lines.append("Hello again!\n")
 }}
-app.button("hello", "Say hello", sayHello)        // web: a generated POST route (TODO-5722)
+[Control] hello{app.button("hello", "Say hello", sayHello)}   // web: a generated POST route (done, TODO-5722)
 [Button] native{window.button("Say hello")}
 native.onClick(sayHello)                          // native: App.run dispatches the click (TODO-5709)
 ```
@@ -91,7 +94,7 @@ so PrimeScroll can move one menu at a time.
 2. HTML and requests: TODO-5701 (writer, `Response.html`, `redirect`; done), TODO-5702 (query and form parameters;
    done), TODO-5703 (path parameters; done), then the todo-list example TODO-5704 (done, with `AppRouter<State>`).
 3. Server: TODO-5705 (an idle connection does not stall the others; done).
-4. Events and controls: TODO-5723 (shared event structs; done), TODO-5722 (web controls take click closures).
+4. Events and controls: TODO-5723 (shared event structs; done), TODO-5722 (web controls take click closures; done).
 5. Fragments: TODO-5706, then TODO-5724 (web hover and key handlers).
 6. Native UI: TODO-5709 (controls take closures, `App.run`), TODO-5725 (pointer and key events in the C ABI),
    TODO-5710 (PrimeScroll on handlers), TODO-5711 (retire the `/std/ui` prototype).

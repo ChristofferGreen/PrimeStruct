@@ -101,7 +101,6 @@ of sync with them.
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
 | TODO-5727 | Every struct copy site tells a place from a temporary by resolution | deferred | lifecycle-copy-sources |
-| TODO-5722 | Web controls take click closures | ready | web-controls |
 | TODO-5724 | Web hover and key handlers through the fragment script | blocked | web-controls |
 | TODO-5725 | Native pointer and key events for control handlers | blocked | native-ui-events |
 | TODO-5706 | Fragment-swapping buttons without user JavaScript | ready | web-fragments |
@@ -130,6 +129,7 @@ of sync with them.
 | TODO-5726 | An indexed element of a stdlib `Vector<T>` of structs binds without a fault | ready | collections-access |
 | TODO-5728 | `slice` and `sliceMut` on a vector field of a struct resolve | ready | collections-access |
 | TODO-5730 | Elements of a `vector<String>` struct field read without a fault | ready | collections-access |
+| TODO-5731 | A `string` field of an element whose closure captures reads without a fault | ready | closures |
 | TODO-5682 | Native: a mutating vector-field method inside an arithmetic expression returns the right value | ready | native-backend |
 | TODO-5676 | Lambdas can state their return type | deferred | closures-return-types |
 | TODO-5677 | A `Function` whose closure holds a same-typed `Function` copies and destroys | deferred | closures-lifecycle |
@@ -162,19 +162,18 @@ of sync with them.
 - TODO-5510 (control-returns): `return` returns from unit-variant pick arms correctly
 - TODO-5524 (result-error-structs): int-backed error structs round-trip through stdlib Result sums
 - TODO-5728 (collections-access): `slice` and `sliceMut` on a vector field of a struct resolve
-- TODO-5722 (web-controls): web controls take click closures
+- TODO-5709 (native-ui-handlers): native controls take handler closures and `App.run`
 
 ### Immediate Next 10
 
 1. TODO-5706
-2. TODO-5722
+2. TODO-5709
 3. TODO-5603
 4. TODO-5536
 5. TODO-5535
 6. TODO-5510
 7. TODO-5524
 8. TODO-5728
-9. TODO-5709 (ready; outside Ready Now while it is full)
 
 ### Priority Lanes
 
@@ -189,8 +188,8 @@ of sync with them.
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
-- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719; collection fields found by closures and the todo example: TODO-5681, TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730
-- Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5706, TODO-5718, TODO-5722, TODO-5724
+- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719; collection fields found by closures and the todo example: TODO-5681, TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731
+- Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5706, TODO-5718, TODO-5724
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721
 - Native UI handlers (docs/WebAppsPlan.md): TODO-5709, TODO-5710, TODO-5711, TODO-5725
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
@@ -213,23 +212,10 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - full release gate green
   - stop_rule: copy-source classification at the listed sites only.
 
-- [ ] TODO-5722: Web controls take click closures
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-07
-  - phase: Web apps (docs/WebAppsPlan.md)
-  - parallel_track: web-controls
-  - scope: A button on a web page should take its click handler directly, a closure that may have its own `mut` state (docs/WebAppsPlan.md, principle 7), instead of being joined to a hand-routed POST path by a string. Add a page layer over `AppRouter<State>` (`stdlib/std/http/http.prime`): controls are registered once at setup, `app.button(id, title, handler)` with `handler` a `Function<void, Reference<State>, PointerEvent>`, each under a generated route (for example `POST /_on/<id>/click`); rendering writes the control as a form posting there (post/redirect/get), and the router calls the stored closure with the state and a `PointerEvent` (primary button, no position, for a plain form POST). Registration at setup is required: a closure made while rendering would lose its `mut` captures every request. Rework examples/apps/todo_web or add examples/apps/hello_button (text on a page, a button that adds a line per click) to use it, with a loopback test, and add the CodeExamples entry.
-  - acceptance:
-    - a closure with a `[mut said{0i32}]` capture counts clicks across requests in a loopback test; the page HTML after each click is checked
-    - VM and optexe tests for registration, the generated routes and a duplicate id
-    - full release gate green
-  - stop_rule: click handlers over form POSTs; hover and key events are TODO-5724.
-
 - [ ] TODO-5724: Web hover and key handlers through the fragment script
   - owner: ai
   - status: blocked
-  - blocked_on: TODO-5722
+  - blocked_on: TODO-5706
   - created_at: 2026-11-07
   - phase: Web apps (docs/WebAppsPlan.md)
   - parallel_track: web-controls
@@ -501,6 +487,18 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - a program pushes Strings to a `vector<String>` field, binds, views and passes each element, directly and through a Reference, on the VM and optexe, each String freed once
     - full release gate green
   - stop_rule: element access of `vector<String>` fields; other element types are TODO-5726.
+
+- [ ] TODO-5731: A `string` field of an element whose closure captures reads without a fault
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-07
+  - phase: Closures (docs/spec/value-lifecycle.md, Lambdas; found by TODO-5722)
+  - parallel_track: closures
+  - scope: In `/std/web` `WebApp<State>.callControl`, a `[string] id{this.clicks[index].id}` read of a `string` field of an element of `vector<ClickHandler<State>>`, whose `Function<void, Reference<State>, PointerEvent>` field holds a closure with a capture (`[mut calls{0i32}]` or `[calls{0i32}]`), stops the VM with `invalid indirect address in IR: 9223372036854775856` before the handler runs; with a non-capturing lambda or a named handler it works, and with a `StringView` id field it works. A smaller non-namespaced repro (a generic Holder with a `string` id and the same Function) did not fault, so the trigger also needs something of the web layer: the element struct in another namespace, the second vector field of `AppRoute<State>`s, or the `Request` path through `call`. Repro: make `ClickHandler.id` a `string` again in stdlib/std/web/web.prime and run tests/fixtures/http/web_controls.prime on the VM.
+  - acceptance:
+    - `ClickHandler.id` is a `string` and web_controls passes on the VM and optexe; a reduced program reading a `string` field beside a capturing `Function` field runs on the VM and optexe
+    - full release gate green
+  - stop_rule: the faulting field read; no `/std/web` API change.
 
 - [ ] TODO-5682: Native: a mutating vector-field method inside an arithmetic expression returns the right value
   - owner: ai

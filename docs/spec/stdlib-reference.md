@@ -719,9 +719,66 @@ one request per connection (`Connection: close`), and no chunked encoding, keep-
   A lambda or a named definition converts to the handler `Function` at `get`, `post` and the others, as for
   `Router`: the implicit conversion happens at a method of a generic struct instance, whose parameter types are known
   once the struct is instantiated. `examples/apps/todo_web/main.prime` is a whole app on it.
+- `routeMatches(pattern, path)` tells whether a path matches a route pattern by the rules above, for page layers that
+  keep their own route table, such as `WebApp<State>` of `/std/web`.
 - A definition with plain struct parameters and a plain struct result (such as `parseRequest`) is one real call on the
   VM and under `--emit=optcpp`/`optexe` (docs/spec/vm-design.md, Real calls), so the number of call sites does not
   multiply the generated code.
+
+### Web controls (`/std/web`)
+
+`import /std/web/*` is the page layer over `/std/http` and `/std/html`: controls that take their handler closures
+directly (docs/WebAppsPlan.md, principle 7). Code that uses it also imports `/std/html`, `/std/http` and
+`/std/ui/events` for the types it names.
+
+- `WebApp<State>` routes exactly as `AppRouter<State>` does: a `state` field set at construction
+  (`WebApp<Greeter>{[state] Greeter{}}`), `get`, `post`, `put`, `delete` and `route` with handlers that take a
+  `Reference<State>` first, the same patterns, 404 and 405, and `call(request, response)`, so it is passed to `serve`
+  or middleware as it is. Moving an app from `AppRouter` to `WebApp` changes only the type.
+- `app.button(id, title, handler)` registers a button and returns its `Control`. `handler` is a
+  `Function<void, Reference<State>, PointerEvent>` (`/std/ui/events`): a lambda, a named definition or a closure
+  bound to a local, which may hold `mut` captures of its own. The id names the generated route
+  `POST /_on/<id>/click`; paths that start with `/_on/` belong to the controls and never reach the routes.
+- A `Control` is the control's `id` and `title`, entries of the string table (`string`), so it owns and borrows
+  nothing and copies as two indices. A page
+  route captures it by value (a `[hello]` capture list) or receives it as a parameter, and writes it with `hello.write(page)`
+  (a `/std/html` `Writer`): `<form method="post" action="/_on/hello/click"><button type="submit">Say hello</button>
+  </form>`, the title escaped. `clickRoute()` is the route as a `String`.
+- A POST to a control's route calls its handler with the app's state and a `PointerEvent` of the `primary` button
+  with `clickCount` 1, no modifiers and no position (`hasPosition` false): a form post carries none. It then answers
+  303 to `backPath(request)`, the path and query of the request's `Referer` (the page the form was on) or `/` when
+  there is none; only the path is kept, so the redirect stays on the server. Another method on a control's route is
+  405 and a `/_on/` path no control has is 404.
+- Each id is registered once. A second `button` with a taken id prints `duplicate control id: <id>` to stderr and
+  stops the program (`panic`), at setup, before the server listens; the language has no error that `button` could
+  return without every app writing `?` after each registration.
+
+Controls are registered once, when the app is set up, never while a page renders: the closure lives in the app, so
+its `mut` captures last from request to request, while a closure made during rendering would start again every
+request. The page gets the control from registration, so a page can only write a control that has a handler. A
+button that acts on one of many records, such as the Done button of each todo in `examples/apps/todo_web`, is still a
+form posting to a route with the record's id in its path: a control is one button with one handler.
+
+```prime
+[return<WebApp<Greeter>> effects(heap_alloc, io_err)]
+hello_app() {
+  [WebApp<Greeter> mut] app{WebApp<Greeter>{[state] Greeter{}}}
+  [mut] sayHello{[mut said{0i32}]([Reference<Greeter>] greeter, [PointerEvent] event) {
+    said = said + 1i32
+    greeter.say(greeting(said))
+  }}
+  [Control] hello{app.button("hello", "Say hello", sayHello)}
+  app.get("/", [hello]([Reference<Greeter>] greeter, [Request] request, [Reference<Response>] response) {
+    response.html(greeting_page(greeter, hello))
+  })
+  return(app)
+}
+```
+
+`WebApp` is its own type in its own module rather than more methods on `AppRouter`, so that `/std/http` keeps
+depending on neither `/std/html` nor `/std/ui/events`, and the page layer, where routes, HTML and events meet, has one
+place to grow (fragments, TODO-5706; hover and key handlers, TODO-5724). `examples/apps/hello_button/main.prime` is a
+whole app on it.
 
 ### HTTP server (`/std/http/server`)
 

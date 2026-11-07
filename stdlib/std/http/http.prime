@@ -704,6 +704,13 @@ namespace http {
     return(false)
   }
 
+  // Whether `path` matches the route pattern `pattern`, as `Router` and `AppRouter` match their routes. Page layers
+  // that keep their own route tables, such as /std/web, use it to match the same way.
+  [public return<bool>]
+  routeMatches([StringView] pattern, [StringView] path) {
+    return(pattern_matches(pattern, path))
+  }
+
   // The segment of `path` at the place of the `:name` segment of `pattern`, or an empty view. `path` is one that
   // matches `pattern`; a pattern ending in "*" has no parameters.
   [return<StringView>]

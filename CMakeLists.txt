@@ -1364,6 +1364,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/backend_host/test_net.cpp
     tests/unit/backend_host/test_http.cpp
     tests/unit/backend_host/test_ui_events.cpp
+    tests/unit/backend_host/test_web.cpp
   )
   add_dependencies(PrimeStruct_cpp_host_call_tests primec)
   target_include_directories(PrimeStruct_cpp_host_call_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
@@ -1416,7 +1417,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   # loaded machine, so every example case is a CTest entry of its own with a long timeout (TODO-5729) and
   # PrimeStruct_net runs the rest of the suite. A new example
   # case named "the <name> example ..." needs an entry here and an exclusion in PrimeStruct_net.
-  set(PRIMESTRUCT_NET_EXAMPLE_CASES http_hello web_app todo_web)
+  set(PRIMESTRUCT_NET_EXAMPLE_CASES http_hello web_app todo_web hello_button)
   set(PRIMESTRUCT_NET_EXAMPLE_EXCLUDES "")
   foreach(primestructNetExample IN LISTS PRIMESTRUCT_NET_EXAMPLE_CASES)
     add_test(
@@ -1470,6 +1471,16 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_http_loopback
                        PROPERTIES TIMEOUT 1200 LABELS "parallel-safe")
+
+  # /std/web: controls with click closures (tests/unit/backend_host/test_web.cpp); two of its cases build optexe programs.
+  add_test(
+    NAME PrimeStruct_web
+    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+            "--test-suite=primestruct.backend.web"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_web
+                       PROPERTIES TIMEOUT 1800 LABELS "parallel-safe")
 
   # /std/ui/events: the event values control handlers receive (tests/unit/backend_host/test_ui_events.cpp).
   add_test(
