@@ -240,6 +240,8 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/TemplateMonomorphBorrowedVectorRewrites.cpp
   src/semantics/TemplateMonomorphExpressionRewrite.cpp
   src/semantics/TemplateMonomorphCallableRewrites.cpp
+  src/semantics/TemplateMonomorphExpectedTypeSites.cpp
+  src/semantics/TemplateMonomorphTextViewConversions.cpp
   src/semantics/TemplateMonomorphExpressionRewritePhasesA.cpp
   src/semantics/TemplateMonomorphExpressionRewritePhasesB.cpp
   src/semantics/TemplateMonomorphExpressionRewritePhasesC.cpp
@@ -1078,6 +1080,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/program_matrix/test_program_matrix_parameter_modes.cpp
     tests/unit/program_matrix/test_program_matrix_results.cpp
     tests/unit/program_matrix/test_program_matrix_shared_programs.cpp
+    tests/unit/program_matrix/test_program_matrix_text_views.cpp
   )
   target_include_directories(PrimeStruct_program_matrix_tests PRIVATE third_party ${CMAKE_SOURCE_DIR}
                              tests/unit/program_matrix)
@@ -2079,6 +2082,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/semantics/entry/test_semantics_entry_tags.cpp
     tests/unit/semantics/test_semantics_enum.cpp
     tests/unit/semantics/test_semantics_lambdas.cpp
+    tests/unit/semantics/test_semantics_text_views.cpp
     tests/unit/semantics/test_semantics_move.cpp
     tests/unit/semantics/test_semantics_never_return.cpp
     tests/unit/semantics/test_semantics_transitive_collection_imports.cpp
@@ -2279,6 +2283,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.semantics.enum
     primestruct.semantics.imports
     primestruct.semantics.lambdas
+    primestruct.semantics.text_views
     primestruct.semantics.maybe
     primestruct.semantics.traits
     primestruct.semantics.move
@@ -3493,6 +3498,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.program_matrix.parameter_modes
     primestruct.program_matrix.results
     primestruct.program_matrix.shared_programs
+    primestruct.program_matrix.text_views
   )
   foreach(suite IN LISTS PrimeStructProgramMatrixTestSuites)
     string(REPLACE "." "_" suiteId "${suite}")

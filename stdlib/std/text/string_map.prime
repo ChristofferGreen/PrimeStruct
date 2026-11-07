@@ -1,5 +1,5 @@
 // A hash table from text keys to values (docs/spec/strings-and-views.md): `StringMap<V>`. Keys are copied in and
-// compared as bytes; lookups take a StringView, so a literal (`textOf("host")`) or a slice of a request needs no copy.
+// compared as bytes; lookups take a StringView, so a literal (`at("host")`) or a slice of a request needs no copy.
 // The table is open addressing with linear probing and backward-shift deletion (no tombstones), kept at most three
 // quarters full; the key bytes live in one pooled String, so an entry is a few numbers and `keyAt(i)` is a view.
 // Entries are dense: `valueAt(i)` and `keyAt(i)` visit every entry, in insertion order until an erase moves the last

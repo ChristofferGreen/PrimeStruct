@@ -3,6 +3,7 @@
 #include "TemplateMonomorphBindingBlockInference.h"
 #include "TemplateMonomorphBindingCallInference.h"
 #include "TemplateMonomorphCallableRewrites.h"
+#include "TemplateMonomorphTextViewConversions.h"
 #include "TemplateMonomorphDefinitionBindingSetup.h"
 #include "TemplateMonomorphDefinitionExperimentalCollectionRewrites.h"
 #include "TemplateMonomorphDefinitionReturnOrchestration.h"
@@ -654,9 +655,14 @@ PhaseStatus rewriteExprPhase1([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
   if (!rewriteTransforms(expr.transforms, mapping, allowedParams, namespacePrefix, ctx, error)) {
     return st.done(false);
   }
-  if (!rewriteImplicitFunctionConversions(
-          expr, mapping, allowedParams, namespacePrefix, ctx, locals, params, allowMathBare, error)) {
-    return st.done(false);
+  {
+    const FunctionValueConversion functionValues;
+    const TextViewConversion textViews;
+    const ExpectedTypeScope scope{
+        mapping, allowedParams, namespacePrefix, ctx, locals, params, allowMathBare};
+    if (!rewriteExpectedTypeSites(expr, {&functionValues, &textViews}, scope, error)) {
+      return st.done(false);
+    }
   }
   if (expr.kind == Expr::Kind::Call && expr.name == "ct_if" &&
       expr.args.size() == 3) {

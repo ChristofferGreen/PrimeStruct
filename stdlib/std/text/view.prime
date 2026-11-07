@@ -50,8 +50,9 @@ namespace std {
   }
 
   // A borrowed, read-only view of text: a pointer to its first byte and a byte count (docs/spec/strings-and-views.md).
-  // It copies nothing and owns nothing. A literal becomes a view with `textOf("...")`, a String with `s.view()`; the
-  // view is valid while that text is not changed or freed.
+  // It copies nothing and owns nothing. A literal (or any `string`) converts to a view where one is expected, or
+  // explicitly with `textOf("...")`; a String gives one with `s.view()`. The view is valid while that text is not
+  // changed or freed.
   [public struct]
   StringView() {
     [public Pointer<u8> mut] data{__pstext_alloc(0u64)}

@@ -25,6 +25,7 @@ list(APPEND PrimeStructManagedSemanticsSuites
   primestruct.semantics.calls_flow.effects
   primestruct.semantics.imports
   primestruct.semantics.lambdas
+  primestruct.semantics.text_views
   primestruct.semantics.maybe
   primestruct.semantics.type_resolution_graph
 )
@@ -278,6 +279,13 @@ addPrimeStructManagedDoctestSuite(
   ${PrimeStructManagedSemanticsCommon}
   TOTAL_CASES 27
   SHARD_PREFIX "lambdas"
+)
+
+addPrimeStructManagedDoctestSuite(
+  "primestruct.semantics.text_views"
+  ${PrimeStructManagedSemanticsCommon}
+  TOTAL_CASES 5
+  SHARD_PREFIX "text_views"
 )
 
 addPrimeStructManagedDoctestSuite(

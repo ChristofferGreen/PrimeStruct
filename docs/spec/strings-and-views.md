@@ -356,10 +356,50 @@ the stdlib struct `StringView` (`import /std/text/view/*`, a module of its own; 
 pointer to the first byte and a byte count. A program that only makes `String`s imports `/std/text/*` and does not pay
 to compile the view code. `TextView` is taken by the native-UI widget.
 
-- **Making one:** `s.view()` on a `String`, `textOf("literal")` for a literal, `s.slice(a, b)` or `v.slice(a, b)`
+- **Making one:** `s.view()` on a `String`, a literal where a view is expected or `textOf("literal")`, `s.slice(a, b)` or `v.slice(a, b)`
   for part of a text, `textFromBytes(bytes)` for bytes that are valid UTF-8. A literal's bytes get an address from the
   text host function `__pstext_literal` (a NUL-terminated byte region made the first time and kept for the run); an
   empty literal or empty String gives the null pointer and a count of 0.
+- **A `string` where a view is expected:** a string literal, or any `string` value, converts to a `StringView` where
+  one is expected, as if written `textOf(value)`: a call or method-call argument for a `[StringView]` parameter
+  (each value of an `[args<StringView>]` parameter too), a brace-constructor argument for a `StringView` field, the
+  initializer of a `[StringView]` binding, an assignment to a `StringView` local or parameter, and the value returned
+  from a definition that returns a `StringView`. Template monomorphization inserts the `textOf` call once it knows the
+  declared type, so the program lowers exactly as if the call were written out. Nothing else converts: a `String`
+  still needs `s.view()`, and a non-text argument is the usual `argument type mismatch ... expected
+  /std/text/view/StringView got i32`. At a call of same-arity overloads the literal converts only when every overload
+  takes a `StringView` in that position, so an overload that takes the `string` itself is the exact match and wins,
+  and one that takes something else leaves the literal as a `string`.
+
+  ```prime
+  import /std/text/view/*
+
+  [struct]
+  Label {
+    [StringView] text{StringView{}}
+  }
+
+  [return<i32>]
+  width([StringView] text) {
+    return(text.count())
+  }
+
+  [return<StringView>]
+  fallback() {
+    return("none")
+  }
+
+  [return<int>]
+  main() {
+    [string] word{"four"}
+    [StringView] bound{"seven"}
+    [Label] label{Label{[text] word}}
+    // 5 + 5 + 4 + 4
+    return(width("hello") + bound.count() + label.text.count() + fallback().count())
+  }
+  ```
+
+  The program exits with 18 on the VM and through `--emit=optexe` (the native backends have no `StringView` yet).
 - **Access:** `count()`, `empty()`, `byteAt(i)` (faults outside the text), `bytes()` (a `ReadSlice<u8>`), `isBoundary(i)`.
   A slice cut inside a code point, or outside the text, stops the program.
 - **Compare and search** (byte order, which orders UTF-8 by code point): `equals`, `equalsText`, `compare`,

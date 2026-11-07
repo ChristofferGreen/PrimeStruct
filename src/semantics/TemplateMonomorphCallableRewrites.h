@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "TemplateMonomorphContext.h"
+#include "TemplateMonomorphExpectedTypeSites.h"
 #include "primec/ast/Ast.h"
 
 namespace primec {
@@ -23,20 +24,20 @@ void rewriteCallableShapes(Expr &expr,
                            bool allowMathBare);
 
 // A closure passed where a `Function<R, A...>` is expected converts as if wrapped in `Function<R, A...>{...}`
-// (docs/spec/value-lifecycle.md, Function values): a call or method-call argument for a `Function` parameter, a
-// brace-constructor field argument, a binding initializer, an assignment to a `Function` local, and the value
-// returned from a definition that returns a `Function`. The argument is a lambda, a local or parameter of a callable
-// struct type, a value of such a type, or a named free function (through the forwarder the lambda-closures pass
-// generated for it). Runs on `expr` before its arguments are rewritten, so the inserted `/__fn_box` is
-// monomorphized like an explicit conversion.
-bool rewriteImplicitFunctionConversions(Expr &expr,
-                                        const SubstMap &mapping,
-                                        const std::unordered_set<std::string> &allowedParams,
-                                        const std::string &namespacePrefix,
-                                        Context &ctx,
-                                        const LocalTypeMap &locals,
-                                        const std::vector<semantics::ParameterInfo> &params,
-                                        bool allowMathBare,
-                                        std::string &error);
+// (docs/spec/value-lifecycle.md, Function values), at every site `rewriteExpectedTypeSites` finds. The argument is a
+// lambda, a local or parameter of a callable struct type, a value of such a type, or a named free function (through
+// the forwarder the lambda-closures pass generated for it). The inserted `/__fn_box` is monomorphized like an
+// explicit conversion. A call converts for its first same-arity candidate callee.
+class FunctionValueConversion final : public ExpectedTypeConversion {
+public:
+  bool enabled(const Context &ctx) const override;
+  bool mayBeTarget(const std::string &typeName) const override;
+  bool skipsConstructor(const std::string &structName) const override;
+  bool mayConvert(const Expr &arg, const ExpectedTypeScope &scope) const override;
+  bool convert(Expr &arg,
+               const std::vector<const ExpectedType *> &expected,
+               const ExpectedTypeScope &scope,
+               std::string &error) const override;
+};
 
 } // namespace primec
