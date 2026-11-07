@@ -24,6 +24,10 @@ control with `swapping(id)`), and the fixed script `stdlib/std/web/app.js` (5120
 `GET /_web/app.js`, posts it with `fetch` and the header `X-PrimeStruct-Fragment: <id>`. The app turns the handler's
 post/redirect/get 303 into a 200 with the region's HTML, which replaces the element's contents; the todo example's
 Done and Delete buttons swap the list this way.
+Controls take hover, press, release and key handlers too (TODO-5724): `app.onMouseOver(control, handler)`,
+`onMouseDown`, `onMouseUp`, `onKeyDown` and `onKeyUp` register them at setup; the same script posts each event to
+`/_on/<id>/<event>` with the fields of its `/std/ui/events` struct, waits for the pointer to rest 100 ms before a
+hover, sends keys for the focused control only, and swaps the control's region with the answer.
 
 ## Principles
 
@@ -101,7 +105,7 @@ so PrimeScroll can move one menu at a time.
    done), TODO-5703 (path parameters; done), then the todo-list example TODO-5704 (done, with `AppRouter<State>`).
 3. Server: TODO-5705 (an idle connection does not stall the others; done).
 4. Events and controls: TODO-5723 (shared event structs; done), TODO-5722 (web controls take click closures; done).
-5. Fragments: TODO-5706 (done), then TODO-5724 (web hover and key handlers).
+5. Fragments: TODO-5706 (done), then TODO-5724 (web hover and key handlers; done).
 6. Native UI: TODO-5709 (controls take closures, `App.run`), TODO-5725 (pointer and key events in the C ABI),
    TODO-5710 (PrimeScroll on handlers), TODO-5711 (retire the `/std/ui` prototype).
 7. Later: TODO-5707, TODO-5708 (type aliases), TODO-5717 (both writers in one file), TODO-5718 (repeated and decoded

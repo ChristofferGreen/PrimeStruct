@@ -1,0 +1,25 @@
+// /std/web: registering a second handler for one event of a control stops the program at setup
+// (tests/unit/backend_host/test_web.cpp). Reaching the end is a failure: it exits 7.
+import /std/http/*
+import /std/ui/events/*
+import /std/web/*
+
+[struct]
+Counter() {
+  [i32 mut] hovers{0i32}
+}
+
+[effects(heap_alloc)]
+count_hover([Reference<Counter>] counter, [PointerEvent] event) {
+  counter.hovers = counter.hovers + 1i32
+}
+
+[return<int> effects(heap_alloc, io_err)]
+main() {
+  [WebApp<Counter> mut] app{WebApp<Counter>{[state] Counter{}}}
+  [Control mut] hello{app.button("hello", "Say hello", count_hover)}
+  app.onMouseOver(hello, count_hover)
+  app.onMouseDown(hello, count_hover)
+  app.onMouseOver(hello, count_hover)
+  return(7i32)
+}

@@ -144,4 +144,67 @@ TEST_CASE("the fragment script is a fixed asset within its 5120-byte budget") {
                 "fragment_script.prime does not hold the bytes of app.js");
 }
 
+TEST_CASE("control event handlers decode the fragment script's requests on the VM") {
+  ScriptEngine engine;
+  const auto script = engine.compileFile(Fixtures + "web_events.prime");
+  REQUIRE_MESSAGE(script.valid(), script.diagnostics());
+  const auto result = script.run();
+  REQUIRE_MESSAGE(result.ok, result.diagnostics);
+  CHECK_MESSAGE(result.exitCode == 0,
+                "web_events case " << result.exitCode
+                                   << " failed (tests/fixtures/http/web_events.prime)");
+}
+
+TEST_CASE("control event handlers decode the fragment script's requests through optexe") {
+  const std::string exe = buildOptexe("web_events");
+  const int failed = run(shellQuote(exe));
+  CHECK_MESSAGE(failed == 0,
+                "web_events case " << failed << " failed (tests/fixtures/http/web_events.prime)");
+}
+
+TEST_CASE("a second handler for one event of a control stops the program at setup on the VM") {
+  ScriptEngine engine;
+  const auto script = engine.compileFile(Fixtures + "web_duplicate_handler.prime");
+  REQUIRE_MESSAGE(script.valid(), script.diagnostics());
+  std::string errors;
+  primec::embed::RunOptions options;
+  options.output = [&errors](int fd, std::string_view chunk) {
+    if (fd == 2) {
+      errors.append(chunk);
+    }
+  };
+  const auto result = script.run({}, options);
+  const bool trapped = !result.ok || (result.exitCode != 0 && result.exitCode != 7);
+  CHECK_MESSAGE(trapped, "exit code " << result.exitCode);
+  CHECK_MESSAGE(errors.find("duplicate handler: hello mouseover\n") != std::string::npos, errors);
+}
+
+// The request format web_events.prime decodes is the one the script writes: the event routes, the form fields of
+// PointerEvent and KeyEvent, the named keys with the codes of /std/ui/events Key, the debounce of hovers and key
+// events for the focused control only.
+TEST_CASE("the fragment script sends each control event in the format the app decodes") {
+  const std::string asset =
+      readFile(std::string(PRIMESTRUCT_SOURCE_DIR) + "/stdlib/std/web/app.js");
+  REQUIRE(!asset.empty());
+  for (const char *piece : {"\"/_on/\" + found.getAttribute(\"data-ps-id\") + \"/\" + kind",
+                            "data-ps-on",
+                            "{button: button, x: Math.round(event.clientX - box.left)",
+                            "y: Math.round(event.clientY - box.top)}",
+                            "fields.modifiers = (event.shiftKey ? 1 : 0) + (event.ctrlKey ? 2 : 0) "
+                            "+ (event.altKey ? 4 : 0) +",
+                            "(event.metaKey ? 8 : 0)",
+                            "{key: key, repeat: event.repeat ? 1 : 0}",
+                            "[0, 2, 1][event.button]",
+                            "pointer(found, \"mouseover\", event, -1); }, 100)",
+                            "control(document.activeElement, kind)",
+                            "[\"mousedown\", \"mouseup\"]",
+                            "[\"keydown\", \"keyup\"]",
+                            "Enter: -1, Tab: -2, Escape: -3, Backspace: -4, Delete: -5",
+                            "ArrowLeft: -6, ArrowRight: -7",
+                            "ArrowUp: -8, ArrowDown: -9, Home: -10, End: -11, PageUp: -12, "
+                            "PageDown: -13"}) {
+    CHECK_MESSAGE(asset.find(piece) != std::string::npos, "app.js lacks: " << piece);
+  }
+}
+
 TEST_SUITE_END();

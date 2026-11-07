@@ -101,7 +101,6 @@ of sync with them.
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
 | TODO-5727 | Every struct copy site tells a place from a temporary by resolution | deferred | lifecycle-copy-sources |
-| TODO-5724 | Web hover and key handlers through the fragment script | ready | web-controls |
 | TODO-5725 | Native pointer and key events for control handlers | blocked | native-ui-events |
 | TODO-5707 | `Function` types accept `mut` parameters | deferred | closures-mut-params |
 | TODO-5708 | Type aliases | deferred | type-aliases |
@@ -130,6 +129,7 @@ of sync with them.
 | TODO-5730 | Elements of a `vector<String>` struct field read without a fault | ready | collections-access |
 | TODO-5731 | A `string` field of an element whose closure captures reads without a fault | ready | closures |
 | TODO-5732 | A method call on a reference parameter resolves in a generic struct's method | ready | generic-methods |
+| TODO-5733 | An `i32` field of a later element of a vector of handler structs reads without a fault | ready | closures |
 | TODO-5682 | Native: a mutating vector-field method inside an arithmetic expression returns the right value | ready | native-backend |
 | TODO-5676 | Lambdas can state their return type | deferred | closures-return-types |
 | TODO-5677 | A `Function` whose closure holds a same-typed `Function` copies and destroys | deferred | closures-lifecycle |
@@ -155,7 +155,6 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5724 (web-controls): web hover and key handlers through the fragment script
 - TODO-5603 (startup): startup audit: what a launch loads and does
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
@@ -166,14 +165,13 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5724
-2. TODO-5709
-3. TODO-5603
-4. TODO-5536
-5. TODO-5535
-6. TODO-5510
-7. TODO-5524
-8. TODO-5728
+1. TODO-5709
+2. TODO-5603
+3. TODO-5536
+4. TODO-5535
+5. TODO-5510
+6. TODO-5524
+7. TODO-5728
 
 ### Priority Lanes
 
@@ -188,8 +186,8 @@ of sync with them.
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
-- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719; collection fields found by closures and the todo example: TODO-5681, TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731
-- Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5718, TODO-5724
+- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719; collection fields found by closures and the todo example: TODO-5681, TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
+- Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5718
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732
 - Native UI handlers (docs/WebAppsPlan.md): TODO-5709, TODO-5710, TODO-5711, TODO-5725
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
@@ -211,20 +209,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - matrix cases with a user `at` method feeding each listed site destroy every value exactly once on VM, native and optexe
     - full release gate green
   - stop_rule: copy-source classification at the listed sites only.
-
-- [ ] TODO-5724: Web hover and key handlers through the fragment script
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-07
-  - phase: Web apps (docs/WebAppsPlan.md)
-  - parallel_track: web-controls
-  - depends_on: TODO-5706
-  - scope: Extend the page layer of TODO-5722 with `onMouseOver`, `onMouseDown`/`onMouseUp` and `onKeyDown`/`onKeyUp` (the last only while the control has focus), each taking the matching struct of `/std/ui/events`. These events have no HTML-only form, so the fragment script of TODO-5706 sends them with the event's fields and swaps the returned fragment. Each event is a round trip: document that purely visual hover belongs in CSS, and debounce pointer moves in the script.
-  - acceptance:
-    - a test drives the script's request format for each event kind and checks the decoded `PointerEvent`/`KeyEvent` and the fragment answer
-    - the script stays within the size budget of TODO-5706
-    - full release gate green
-  - stop_rule: the event kinds listed; no drag and drop, no touch.
 
 - [ ] TODO-5725: Native pointer and key events for control handlers
   - owner: ai
@@ -497,6 +481,18 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - the repro runs on the VM and optexe and `answerFragment` calls `response.clear()`
     - full release gate green
   - stop_rule: method resolution on reference parameters in generic struct methods; no new methods.
+
+- [ ] TODO-5733: An `i32` field of a later element of a vector of handler structs reads without a fault
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-07
+  - phase: Closures (docs/spec/value-lifecycle.md, Lambdas; found by TODO-5724)
+  - parallel_track: closures
+  - scope: In `/std/web`, with `PointerHandler<State>` holding `[StringView] id`, `[i32] kind` and a `Function<void, Reference<State>, PointerEvent>` (in either field order), `[i32] kind{this.pointers[index].kind}` in a `WebApp<State>` method stops the VM with `invalid heap free address in IR` once `index` is 1 (the third `onMouseUp` after `onMouseOver` and `onMouseDown`), with named handlers as with closures; `this.pointers[index].id` reads fine at every index. A non-namespaced generic `App<State>` with the same element struct (id, kind, Function) did not fault, so the trigger also needs something of the web layer, as for TODO-5731. `WebApp` keeps the kinds in parallel `vector<i32>` fields (`pointerKinds`, `keyKinds`) instead. Repro: put `kind` back into `PointerHandler` in stdlib/std/web/web.prime, read it in `pointerIndex`, and run tests/fixtures/http/web_events.prime on the VM.
+  - acceptance:
+    - `PointerHandler` and `KeyHandler` carry their kind and web_events passes on the VM and optexe; a reduced program reading an `i32` field beside a `Function` field of the second element runs on the VM and optexe
+    - full release gate green
+  - stop_rule: the faulting element field read; no `/std/web` API change.
 
 - [ ] TODO-5682: Native: a mutating vector-field method inside an arithmetic expression returns the right value
   - owner: ai

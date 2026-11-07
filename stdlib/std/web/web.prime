@@ -17,7 +17,7 @@ namespace web {
 
   // A control registered with a `WebApp`: what a page needs to write it. `WebApp.button` returns it; a page route
   // captures it by value (`[hello](...)`) and writes it with `hello.write(page)`. Its id and title are entries of the
-  // program's string table, so it owns and borrows nothing and a copy is two indices.
+  // program's string table, so it owns and borrows nothing and a copy is three indices and a set of bits.
   [public struct]
   Control() {
     [public string] id{""}
@@ -25,6 +25,15 @@ namespace web {
     // The id of the region a click replaces through the fragment script, or "" for a click that shows the page
     // again. Set with `swapping`.
     [public string] target{""}
+    // The events other than the click that the control has handlers for, as the bits below. `WebApp.onMouseOver` and
+    // the others set them.
+    [public i32] events{0i32}
+
+    [public static i32] mouseOverEvent{1i32}
+    [public static i32] mouseDownEvent{2i32}
+    [public static i32] mouseUpEvent{4i32}
+    [public static i32] keyDownEvent{8i32}
+    [public static i32] keyUpEvent{16i32}
 
     // This control, with its clicks replacing region `target` (`WebApp.region`) instead of loading the page.
     [public return<Control>]
@@ -41,7 +50,9 @@ namespace web {
     }
 
     // `<form method="post" action="/_on/<id>/click"><button type="submit">title</button></form>`, with the title
-    // escaped, and `data-ps-target="<target>"` on the form when the control swaps a region.
+    // escaped, and `data-ps-target="<target>"` on the form when the control swaps a region. A control with other
+    // events also has `data-ps-id="<id>"` and `data-ps-on="<event> ..."` on its button, which the fragment script
+    // reads, and `tabindex="0"` when it has key handlers, so that every browser lets it take focus.
     [public effects(heap_alloc)]
     write([Writer mut] page) {
       [String] action{this.clickRoute()}
@@ -50,7 +61,19 @@ namespace web {
       if(!target.empty()) {
         page.fragmentTarget(target)
       }
-      page.button(textOf(this.title))
+      page.beginElement("button")
+      page.attribute("type", "submit")
+      if(this.events != 0i32) {
+        page.attribute("data-ps-id", textOf(this.id))
+        [String] names{event_names(this.events)}
+        page.attribute("data-ps-on", names.view())
+        [bool] keys{has_event(this.events, Control.keyDownEvent) || has_event(this.events, Control.keyUpEvent)}
+        if(keys) {
+          page.attribute("tabindex", "0")
+        }
+      }
+      page.text(textOf(this.title))
+      page.endElement("button")
       page.endForm()
     }
   }
@@ -70,6 +93,121 @@ namespace web {
   ClickHandler<State>() {
     [public StringView] id{StringView{}}
     [public Function<void, Reference<State>, PointerEvent> mut] handler
+  }
+
+  // The handler of a hover, press or release of the control `id`; which event it is lies in `WebApp.pointerKinds`
+  // at the same index. Ids are views for the reason given at `ClickHandler`. The kind is not a field here: reading an
+  // `i32` field of an element after the first faults on the VM (TODO-5733).
+  [public struct]
+  PointerHandler<State>() {
+    [public StringView] id{StringView{}}
+    [public Function<void, Reference<State>, PointerEvent> mut] handler
+  }
+
+  // The handler of a key down or up of the control `id`; its event lies in `WebApp.keyKinds` at the same index.
+  [public struct]
+  KeyHandler<State>() {
+    [public StringView] id{StringView{}}
+    [public Function<void, Reference<State>, KeyEvent> mut] handler
+  }
+
+  // Whether the bit `bit`, a power of two, is set in `events`. There are no bitwise operators.
+  [return<bool>]
+  has_event([i32] events, [i32] bit) {
+    [i32] above{events / bit}
+    return(above - (above / 2i32) * 2i32 == 1i32)
+  }
+
+  // The name of event bit `bit` in a control's routes and in `data-ps-on`: "mouseover", "mousedown", "mouseup",
+  // "keydown" or "keyup".
+  [return<string>]
+  event_name([i32] bit) {
+    if(bit == Control.mouseOverEvent) {
+      return("mouseover")
+    }
+    if(bit == Control.mouseDownEvent) {
+      return("mousedown")
+    }
+    if(bit == Control.mouseUpEvent) {
+      return("mouseup")
+    }
+    if(bit == Control.keyDownEvent) {
+      return("keydown")
+    }
+    return("keyup")
+  }
+
+  // The bit of the event called `name` in a route, 0 for "click", or -1 for a name no control has.
+  [return<i32>]
+  event_bit([StringView] name) {
+    if(name.equalsText("click")) {
+      return(0i32)
+    }
+    [i32 mut] bit{1i32}
+    while(bit <= Control.keyUpEvent) {
+      if(name.equalsText(event_name(bit))) {
+        return(bit)
+      }
+      bit = bit * 2i32
+    }
+    return(-1i32)
+  }
+
+  // The names of the events in `events`, separated by spaces, for `data-ps-on`.
+  [return<String> effects(heap_alloc)]
+  event_names([i32] events) {
+    [String mut] names{String{}}
+    [i32 mut] bit{1i32}
+    while(bit <= Control.keyUpEvent) {
+      if(has_event(events, bit)) {
+        if(!names.empty()) {
+          names.append(" ")
+        }
+        names.append(event_name(bit))
+      }
+      bit = bit * 2i32
+    }
+    return(names)
+  }
+
+  // The integer of form field `name` of `request`, or `otherwise` when it is missing or not an integer.
+  [return<i32> effects(heap_alloc)]
+  form_i32([Request] request, [StringView] name, [i32] otherwise) {
+    [String] text{request.formParam(name)}
+    return(text.view().parseI32Or(otherwise))
+  }
+
+  // The pointer event that the fragment script posts for a hover, press or release: the form fields `button` (-1 none,
+  // 0 primary, 1 secondary, 2 middle), `x` and `y` (the position in the control; `hasPosition` when `x` is present)
+  // and `modifiers` (the bits of `Modifiers`). A missing field takes the value of `PointerEvent{}`; `clickCount` is 0.
+  [public return<PointerEvent> effects(heap_alloc)]
+  pointerEventOf([Request] request) {
+    [i32] code{form_i32(request, "button", -1i32)}
+    [PointerButton mut] button{PointerButton.none}
+    if(code == 0i32) {
+      button = PointerButton.primary
+    }
+    if(code == 1i32) {
+      button = PointerButton.secondary
+    }
+    if(code == 2i32) {
+      button = PointerButton.middle
+    }
+    [i32] x{form_i32(request, "x", 0i32)}
+    [i32] y{form_i32(request, "y", 0i32)}
+    [bool] placed{request.hasFormParam("x")}
+    [Modifiers] modifiers{Modifiers{[bits] form_i32(request, "modifiers", 0i32)}}
+    return(PointerEvent{[button] button, [x] x, [y] y, [hasPosition] placed, [modifiers] modifiers})
+  }
+
+  // The key event that the fragment script posts for a key down or up: the form fields `key` (the key's `code`: a
+  // code point, or a named key below 0), `modifiers` and `repeat` (1 for a repeated key down).
+  [public return<KeyEvent> effects(heap_alloc)]
+  keyEventOf([Request] request) {
+    [Key] key{Key{[code] form_i32(request, "key", 0i32)}}
+    [Modifiers] modifiers{Modifiers{[bits] form_i32(request, "modifiers", 0i32)}}
+    [bool] repeated{form_i32(request, "repeat", 0i32) == 1i32}
+    return(KeyEvent{[key] key, [modifiers] modifiers, [isRepeat] repeated})
   }
 
   // A region of the app's pages: the id of the element that holds it and the function that writes its contents.
@@ -126,6 +264,11 @@ namespace web {
     [public vector<AppRoute<State>> mut] routes{vector<AppRoute<State>>()}
     [public vector<ClickHandler<State>> mut] clicks{vector<ClickHandler<State>>()}
     [public vector<RegionRenderer<State>> mut] regions{vector<RegionRenderer<State>>()}
+    [public vector<PointerHandler<State>> mut] pointers{vector<PointerHandler<State>>()}
+    // The event bit (`Control.mouseOverEvent` and the others) of each of `pointers`.
+    [public vector<i32> mut] pointerKinds{vector<i32>()}
+    [public vector<KeyHandler<State>> mut] keys{vector<KeyHandler<State>>()}
+    [public vector<i32> mut] keyKinds{vector<i32>()}
 
     // Registers a button: its id, its label and the handler a click on it calls. Returns the control, which a page
     // writes. Each id is registered once: a second `button` with the same id prints "duplicate control id: <id>" and
@@ -162,6 +305,78 @@ namespace web {
         }
       }
       this.regions.push(RegionRenderer<State>{[id] idView, [render] render})
+    }
+
+    // Registers the handler of the pointer resting on `control` (`POST /_on/<id>/mouseover`). These events, and the
+    // presses, releases and keys below, have no HTML-only form: the fragment script sends them, one request each,
+    // and the control's page shows the change through its region (`swapping`) or by loading again. `control` is the
+    // one `button` returned, which this marks so that it writes the event for the script; a page writes it after
+    // all its handlers are registered. A second handler for the same event of a control prints
+    // "duplicate handler: <id> <event>" and a control this app did not register "unknown control: <id>"; both stop
+    // the program.
+    [mut effects(heap_alloc, io_err)]
+    onMouseOver([Control mut] control, [Function<void, Reference<State>, PointerEvent> move] handler) {
+      this.addPointerHandler(control, Control.mouseOverEvent, handler)
+    }
+
+    // Registers the handler of a pointer button pressed on `control` (`POST /_on/<id>/mousedown`).
+    [mut effects(heap_alloc, io_err)]
+    onMouseDown([Control mut] control, [Function<void, Reference<State>, PointerEvent> move] handler) {
+      this.addPointerHandler(control, Control.mouseDownEvent, handler)
+    }
+
+    // Registers the handler of a pointer button released on `control` (`POST /_on/<id>/mouseup`).
+    [mut effects(heap_alloc, io_err)]
+    onMouseUp([Control mut] control, [Function<void, Reference<State>, PointerEvent> move] handler) {
+      this.addPointerHandler(control, Control.mouseUpEvent, handler)
+    }
+
+    // Registers the handler of a key pressed while `control` has focus (`POST /_on/<id>/keydown`).
+    [mut effects(heap_alloc, io_err)]
+    onKeyDown([Control mut] control, [Function<void, Reference<State>, KeyEvent> move] handler) {
+      this.addKeyHandler(control, Control.keyDownEvent, handler)
+    }
+
+    // Registers the handler of a key released while `control` has focus (`POST /_on/<id>/keyup`).
+    [mut effects(heap_alloc, io_err)]
+    onKeyUp([Control mut] control, [Function<void, Reference<State>, KeyEvent> move] handler) {
+      this.addKeyHandler(control, Control.keyUpEvent, handler)
+    }
+
+    [mut effects(heap_alloc, io_err)]
+    addPointerHandler([Control mut] control,
+                      [i32] bit,
+                      [Function<void, Reference<State>, PointerEvent> move] handler) {
+      this.checkNewHandler(control.id, bit)
+      control.events = control.events + bit
+      this.pointers.push(PointerHandler<State>{[id] textOf(control.id), [handler] handler})
+      this.pointerKinds.push(bit)
+    }
+
+    [mut effects(heap_alloc, io_err)]
+    addKeyHandler([Control mut] control, [i32] bit, [Function<void, Reference<State>, KeyEvent> move] handler) {
+      this.checkNewHandler(control.id, bit)
+      control.events = control.events + bit
+      this.keys.push(KeyHandler<State>{[id] textOf(control.id), [handler] handler})
+      this.keyKinds.push(bit)
+    }
+
+    // Stops the program when `control` is not one of this app's or already has a handler for event `bit`.
+    [effects(io_err)]
+    checkNewHandler([string] controlId, [i32] bit) {
+      [StringView] id{textOf(controlId)}
+      if(this.handlerIndex(id, 0i32) < 0i32) {
+        print_error("unknown control: ")
+        print_line_error(controlId)
+        panic(1i32)
+      }
+      if(this.handlerIndex(id, bit) >= 0i32) {
+        print_error("duplicate handler: ")
+        print_error(controlId)
+        print_error(" ")
+        print_line_error(event_name(bit))
+        panic(1i32)
+      }
     }
 
     // Adds a route as `AppRouter.route` does.
@@ -229,29 +444,93 @@ namespace web {
       response.status = if(pathMatched, then() { 405i32 }, else() { 404i32 })
     }
 
-    // A POST to "/_on/<id>/click" calls the handler of control `id` with the state and a click of the primary button
-    // with no position (a form post has none), then answers 303 to `backPath(request)`. Another method on that path
-    // is 405; a path no control has is 404.
+    // A POST to "/_on/<id>/<event>" calls the handler of that event of control `id` with the state and the event, then
+    // answers 303 to `backPath(request)`. A click is of the primary button with no position (a form post has none);
+    // the other events are decoded from the form fields the fragment script sends (`pointerEventOf`, `keyEventOf`).
+    // Another method on such a path is 405; a path no handler has is 404.
     [mut effects(heap_alloc)]
     callControl([Request] request, [Reference<Response>] response) {
-      for([i32 mut] index{0i32}; index < this.clicks.count(); ++index) {
-        [String] route{click_route(this.clicks[index].id)}
-        [StringView] path{request.path}
-        if(path.equals(route.view())) {
-          // Through a local: `!` before a method chain does not parse yet (TODO-5519).
-          [bool] posted{request.method.equalsText("POST")}
-          if(!posted) {
-            response.status = 405i32
-            return()
-          }
-          [PointerEvent] click{PointerEvent{[button] PointerButton.primary, [clickCount] 1i32}}
-          [Reference<State>] state{location(this.state)}
-          this.clicks[index].handler(state, click)
-          response.redirect(backPath(request))
-          return()
+      [StringView] path{request.path}
+      [i32] idEnd{path.indexOfFrom("/", 5i32)}
+      if(idEnd < 0i32) {
+        response.status = 404i32
+        return()
+      }
+      [StringView] id{path.slice(5i32, idEnd)}
+      [i32] bit{event_bit(path.slice(idEnd + 1i32, path.count()))}
+      [i32] found{this.handlerIndex(id, bit)}
+      if(found < 0i32) {
+        response.status = 404i32
+        return()
+      }
+      // Through a local: `!` before a method chain does not parse yet (TODO-5519).
+      [bool] posted{request.method.equalsText("POST")}
+      if(!posted) {
+        response.status = 405i32
+        return()
+      }
+      [Reference<State>] state{location(this.state)}
+      if(bit == 0i32) {
+        [PointerEvent] click{PointerEvent{[button] PointerButton.primary, [clickCount] 1i32}}
+        this.clicks[found].handler(state, click)
+      } else {
+        if(bit >= Control.keyDownEvent) {
+          [KeyEvent] key{keyEventOf(request)}
+          this.keys[found].handler(state, key)
+        } else {
+          [PointerEvent] pointer{pointerEventOf(request)}
+          this.pointers[found].handler(state, pointer)
         }
       }
-      response.status = 404i32
+      response.redirect(backPath(request))
+    }
+
+    // The index of the handler of event `bit` (0 for the click) of control `id` in `clicks`, `pointers` or `keys`, or
+    // -1 when there is none.
+    [return<i32>]
+    handlerIndex([StringView] id, [i32] bit) {
+      if(bit == 0i32) {
+        return(this.clickIndex(id))
+      }
+      if(bit >= Control.keyDownEvent) {
+        return(this.keyIndex(id, bit))
+      }
+      return(this.pointerIndex(id, bit))
+    }
+
+    [return<i32>]
+    clickIndex([StringView] id) {
+      for([i32 mut] index{0i32}; index < this.clicks.count(); ++index) {
+        [StringView] existing{this.clicks[index].id}
+        if(existing.equals(id)) {
+          return(index)
+        }
+      }
+      return(-1i32)
+    }
+
+    [return<i32>]
+    pointerIndex([StringView] id, [i32] bit) {
+      for([i32 mut] index{0i32}; index < this.pointers.count(); ++index) {
+        [StringView] existing{this.pointers[index].id}
+        [i32] kind{this.pointerKinds[index]}
+        if(existing.equals(id) && kind == bit) {
+          return(index)
+        }
+      }
+      return(-1i32)
+    }
+
+    [return<i32>]
+    keyIndex([StringView] id, [i32] bit) {
+      for([i32 mut] index{0i32}; index < this.keys.count(); ++index) {
+        [StringView] existing{this.keys[index].id}
+        [i32] kind{this.keyKinds[index]}
+        if(existing.equals(id) && kind == bit) {
+          return(index)
+        }
+      }
+      return(-1i32)
     }
 
     // When `request` names a region in the fragment header and `response` is a 303 (post/redirect/get: the change

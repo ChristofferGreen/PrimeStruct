@@ -739,8 +739,8 @@ directly (docs/WebAppsPlan.md, principle 7). Code that uses it also imports `/st
   `Function<void, Reference<State>, PointerEvent>` (`/std/ui/events`): a lambda, a named definition or a closure
   bound to a local, which may hold `mut` captures of its own. The id names the generated route
   `POST /_on/<id>/click`; paths that start with `/_on/` belong to the controls and never reach the routes.
-- A `Control` is the control's `id`, `title` and `target`, entries of the string table (`string`), so it owns and
-  borrows nothing and copies as three indices. A page
+- A `Control` is the control's `id`, `title` and `target`, entries of the string table (`string`), and its `events`
+  bits (see the handlers below), so it owns and borrows nothing and copies as three indices and an `i32`. A page
   route captures it by value (a `[hello]` capture list) or receives it as a parameter, and writes it with `hello.write(page)`
   (a `/std/html` `Writer`): `<form method="post" action="/_on/hello/click"><button type="submit">Say hello</button>
   </form>`, the title escaped. `clickRoute()` is the route as a `String`. `swapping(id)` returns the control with
@@ -778,7 +778,7 @@ hello_app() {
 
 `WebApp` is its own type in its own module rather than more methods on `AppRouter`, so that `/std/http` keeps
 depending on neither `/std/html` nor `/std/ui/events`, and the page layer, where routes, HTML and events meet, has one
-place to grow (fragments, below; hover and key handlers, TODO-5724). `examples/apps/hello_button/main.prime` is a
+place to grow (fragments and hover and key handlers, below). `examples/apps/hello_button/main.prime` is a
 whole app on it.
 
 **Fragments.** A click can replace part of a page instead of loading the page again, with no JavaScript written by
@@ -830,9 +830,53 @@ id. There is no client-side state or templating: the server writes all HTML, and
 
 The script is the fixed asset `stdlib/std/web/app.js`. The program carries the same bytes in a raw literal
 (`stdlib/std/web/fragment_script.prime`), so a server binary reads no file to serve it. Its budget is **5120 bytes**
-(5 KB), unminified and with its comments; the fragment part alone is about 1.5 KB. `tests/unit/backend_host/test_web.cpp`
-checks the budget and that the literal holds the asset's bytes, and the todo_web loopback test that the server sends
-them.
+(5 KB), unminified and with its comments; it is 4914 bytes, of which the fragment part is about 1.5 KB and the
+events below the rest. `tests/unit/backend_host/test_web.cpp` checks the budget and that the literal holds the
+asset's bytes, and the todo_web loopback test that the server sends them.
+
+**Hover, press, release and key handlers.** A control takes the other handlers of principle 7 too, registered at
+setup like its click:
+
+- `app.onMouseOver(control, handler)`, `onMouseDown` and `onMouseUp` take a
+  `Function<void, Reference<State>, PointerEvent>`; `app.onKeyDown(control, handler)` and `onKeyUp` take a
+  `Function<void, Reference<State>, KeyEvent>`. `control` is the `[Control mut]` that `button` returned: each
+  registration adds the event to its `events` bits (`Control.mouseOverEvent` 1, `mouseDownEvent` 2, `mouseUpEvent` 4,
+  `keyDownEvent` 8, `keyUpEvent` 16), so the page writes the control after its handlers are registered. A second
+  handler for one event of a control prints `duplicate handler: <id> <event>`, and a control of another app
+  `unknown control: <id>`; both stop the program.
+- A control with events writes `data-ps-id="<id>"` and `data-ps-on="mouseover mousedown ..."` on its button, and
+  `tabindex="0"` when it has a key handler, because some browsers leave a button out of the keyboard focus order.
+- These events have no HTML-only form: only the fragment script sends them, each as a POST to
+  `/_on/<id>/<event>` (`mouseover`, `mousedown`, `mouseup`, `keydown`, `keyup`) with an urlencoded body and, when the
+  control's form has `data-ps-target`, the fragment header naming that region. The app decodes the body
+  (`pointerEventOf(request)`, `keyEventOf(request)`), calls the handler and answers as for a click: 303 to the page,
+  or the region's fragment when the request names one. A control without a region therefore reloads its page after
+  each event, so a control that reacts to hover or keys should swap a region.
+
+  | Event | Body | Decoded as |
+  | --- | --- | --- |
+  | `mouseover` | `button=-1&x=12&y=5&modifiers=0` | `PointerEvent`, `button` `none`, `clickCount` 0 |
+  | `mousedown`, `mouseup` | `button=1&x=3&y=4&modifiers=9` | `button` -1 none, 0 primary, 1 secondary, 2 middle |
+  | `keydown`, `keyup` | `key=97&repeat=1&modifiers=1` | `KeyEvent`: `Key{[code] key}`, `isRepeat` when `repeat` is 1 |
+
+  `x` and `y` are the pointer's position in the control's box from its top left corner, rounded to whole pixels;
+  `hasPosition` is true when `x` is present. `modifiers` holds the bits of `Modifiers` (1 shift, 2 control, 4 alt,
+  8 meta). `key` is the code point of a key that types one character, or a named key's code (`Enter` -1 through
+  `PageDown` -13); the script sends no event for other keys, such as a modifier pressed alone, or for a pointer
+  button other than the three. A field that is missing takes the value of `PointerEvent{}` or `KeyEvent{}`.
+- **Round trips.** Every event is a request and an answer, so the script keeps them few: the pointer must rest on a
+  control for 100 ms before one `mouseover` is sent, and leaving it sooner sends nothing (moves within the control send
+  nothing either). Requests go one at a time, as for clicks. Hover that only changes how a control looks, such as a
+  highlight, belongs in CSS (`:hover`), which costs no request; a hover handler is for a change of the app's state.
+- **Focus.** Key events go to the focused control only: the script reads `document.activeElement`, and a press on a
+  control with key handlers focuses it, since some browsers do not focus a clicked button. When a swap replaces the
+  focused control, the new control with the same `data-ps-id` gets the focus back, so typing continues.
+
+```prime
+[Control mut] pad{app.button("pad", "Pad", on_click).swapping("pad")}
+app.onMouseOver(pad, show_hint)                    // ([Reference<Pad>] pad, [PointerEvent] event)
+app.onKeyDown(pad, move_cursor)                    // ([Reference<Pad>] pad, [KeyEvent] event), while focused
+```
 
 ### HTTP server (`/std/http/server`)
 

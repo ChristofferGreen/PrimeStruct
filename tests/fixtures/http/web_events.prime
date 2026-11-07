@@ -1,0 +1,206 @@
+// /std/web: hover, press, release and key handlers of a control, posted by the fragment script
+// (tests/unit/backend_host/test_web.cpp). Each request is the bytes a browser sends for the script's fetch of one
+// event (stdlib/std/web/app.js). The exit code is the number of the first case that failed, or 0.
+import /std/html/*
+import /std/http/*
+import /std/text/*
+import /std/text/view/*
+import /std/ui/events/*
+import /std/web/*
+
+[struct]
+Pad() {
+  // Which handler ran last: 1 mouseover, 2 mousedown, 3 mouseup, 4 keydown, 5 keyup.
+  [i32 mut] last{0i32}
+  [i32 mut] events{0i32}
+  [PointerEvent mut] pointer{PointerEvent{}}
+  [KeyEvent mut] key{KeyEvent{}}
+}
+
+// The region "pad": how many events arrived.
+[effects(heap_alloc)]
+write_pad([Reference<Writer>] page, [Reference<Pad>] pad) {
+  [String mut] text{stringFrom("events: ")}
+  text.appendI64(convert<i64>(pad.events))
+  page.element("p", text.view())
+}
+
+[effects(heap_alloc)]
+on_down([Reference<Pad>] pad, [PointerEvent] event) {
+  pad.last = 2i32
+  pad.events = pad.events + 1i32
+  pad.pointer = event
+}
+
+[effects(heap_alloc)]
+on_up([Reference<Pad>] pad, [PointerEvent] event) {
+  pad.last = 3i32
+  pad.events = pad.events + 1i32
+  pad.pointer = event
+}
+
+[effects(heap_alloc)]
+on_key_down([Reference<Pad>] pad, [KeyEvent] event) {
+  pad.last = 4i32
+  pad.events = pad.events + 1i32
+  pad.key = event
+}
+
+[effects(heap_alloc)]
+on_key_up([Reference<Pad>] pad, [KeyEvent] event) {
+  pad.last = 5i32
+  pad.events = pad.events + 1i32
+  pad.key = event
+}
+
+// A POST of `body` to `path` as the script's fetch sends it, naming the region "pad".
+[return<String> effects(heap_alloc)]
+script_post([string] path, [string] body) {
+  [StringView] bodyView{textOf(body)}
+  [String mut] request{stringFrom("POST ")}
+  request.append(path)
+  request.append(" HTTP/1.1\r\nHost: localhost:8080\r\nContent-Type: application/x-www-form-urlencoded;charset=UTF-8\r\nX-PrimeStruct-Fragment: pad\r\nReferer: http://localhost:8080/\r\nContent-Length: ")
+  request.appendI64(convert<i64>(bodyView.count()))
+  request.append("\r\n\r\n")
+  request.appendBytes(bodyView.data, bodyView.count())
+  return(request)
+}
+
+// The request of case `index`.
+[return<String> effects(heap_alloc)]
+case_request([i32] index) {
+  if(index == 1i32) {
+    return(script_post("/_on/pad/mouseover", "button=-1&x=12&y=5&modifiers=0"))
+  }
+  if(index == 2i32) {
+    return(script_post("/_on/pad/mousedown", "button=1&x=3&y=4&modifiers=9"))
+  }
+  if(index == 3i32) {
+    return(script_post("/_on/pad/mouseup", "button=2&x=0&y=0&modifiers=2"))
+  }
+  if(index == 4i32) {
+    return(script_post("/_on/pad/keydown", "key=97&repeat=1&modifiers=1"))
+  }
+  if(index == 5i32) {
+    return(script_post("/_on/pad/keyup", "key=-1&repeat=0&modifiers=0"))
+  }
+  if(index == 6i32) {
+    return(stringFrom("POST /_on/pad/keydown HTTP/1.1\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 17\r\n\r\nkey=128512&repeat"))
+  }
+  if(index == 7i32) {
+    return(stringFrom("GET /_on/pad/mouseover HTTP/1.1\r\n\r\n"))
+  }
+  if(index == 8i32) {
+    return(script_post("/_on/pad/drag", ""))
+  }
+  if(index == 9i32) {
+    return(script_post("/_on/plain/mouseover", "button=-1&x=1&y=1&modifiers=0"))
+  }
+  if(index == 10i32) {
+    return(script_post("/_on/pad", ""))
+  }
+  return(stringFrom("GET /pad HTTP/1.1\r\n\r\n"))
+}
+
+// Whether `response` is the fragment of region "pad" after `events` events.
+[return<bool> effects(heap_alloc)]
+is_fragment([Response] response, [i32] events) {
+  [String mut] expected{stringFrom("<p>events: ")}
+  expected.appendI64(convert<i64>(events))
+  expected.append("</p>")
+  [StringView] head{response.headerLines.view()}
+  [bool] marked{head.equalsText("Content-Type: text/html; charset=utf-8\r\nX-PrimeStruct-Fragment: pad\r\n")}
+  return(response.status == 200i32 && marked && response.body.view().equals(expected.view()))
+}
+
+// Whether case `index` was answered and decoded as it must be.
+[return<bool> effects(heap_alloc)]
+answer_is([i32] index, [Response] response, [Reference<Pad>] pad) {
+  [PointerEvent] pointer{pad.pointer}
+  [KeyEvent] key{pad.key}
+  if(index == 1i32) {
+    [bool] fields{pointer.button == PointerButton.none && pointer.x == 12i32 && pointer.y == 5i32 && pointer.hasPosition}
+    return(is_fragment(response, 1i32) && pad.last == 1i32 && fields && pointer.clickCount == 0i32 && !pointer.modifiers.any())
+  }
+  if(index == 2i32) {
+    [bool] fields{pointer.button == PointerButton.secondary && pointer.x == 3i32 && pointer.y == 4i32}
+    [bool] held{pointer.modifiers.shift() && pointer.modifiers.meta() && !pointer.modifiers.control()}
+    return(is_fragment(response, 2i32) && pad.last == 2i32 && fields && held)
+  }
+  if(index == 3i32) {
+    [bool] fields{pointer.button == PointerButton.middle && pointer.x == 0i32 && pointer.hasPosition}
+    return(is_fragment(response, 3i32) && pad.last == 3i32 && fields && pointer.modifiers.control())
+  }
+  if(index == 4i32) {
+    [bool] fields{key.key == characterKey(97i32) && key.isRepeat && key.modifiers.shift()}
+    return(is_fragment(response, 4i32) && pad.last == 4i32 && fields)
+  }
+  if(index == 5i32) {
+    [bool] fields{key.key == Key.enter && !key.isRepeat && !key.modifiers.any()}
+    return(is_fragment(response, 5i32) && pad.last == 5i32 && fields)
+  }
+  if(index == 6i32) {
+    // Without the fragment header the event redirects, as a click does; a bare `repeat` is no repeat.
+    [bool] fields{key.key == characterKey(128512i32) && !key.isRepeat}
+    return(response.status == 303i32 && pad.events == 6i32 && fields)
+  }
+  if(index == 7i32) {
+    return(response.status == 405i32 && pad.events == 6i32)
+  }
+  if(index == 11i32) {
+    return(response.status == 200i32 && response.body.view().equalsText(
+        "<div id=\"pad\"><p>events: 6</p></div><form method=\"post\" action=\"/_on/pad/click\" data-ps-target=\"pad\"><button type=\"submit\" data-ps-id=\"pad\" data-ps-on=\"mouseover mousedown mouseup keydown keyup\" tabindex=\"0\">Pad</button></form><form method=\"post\" action=\"/_on/hover/click\"><button type=\"submit\" data-ps-id=\"hover\" data-ps-on=\"mouseover\">Hover</button></form><form method=\"post\" action=\"/_on/plain/click\"><button type=\"submit\">Plain</button></form>"))
+  }
+  return(response.status == 404i32 && pad.events == 6i32)
+}
+
+[return<int> effects(heap_alloc, io_err)]
+main() {
+  [WebApp<Pad> mut] app{WebApp<Pad>{[state] Pad{}}}
+  app.region("pad", write_pad)
+  [Control mut] padButton{app.button("pad", "Pad", []([Reference<Pad>] pad, [PointerEvent] event) {
+  }).swapping("pad")}
+  // A closure with its own count, and named handlers.
+  [mut] hovered{[mut times{0i32}]([Reference<Pad>] pad, [PointerEvent] event) {
+    times = times + 1i32
+    pad.last = 1i32
+    pad.events = pad.events + times
+    pad.pointer = event
+  }}
+  app.onMouseOver(padButton, hovered)
+  app.onMouseDown(padButton, on_down)
+  app.onMouseUp(padButton, on_up)
+  app.onKeyDown(padButton, on_key_down)
+  app.onKeyUp(padButton, on_key_up)
+  [Control mut] hoverButton{app.button("hover", "Hover", []([Reference<Pad>] pad, [PointerEvent] event) {
+  })}
+  app.onMouseOver(hoverButton, on_down)
+  [Control] plainButton{app.button("plain", "Plain", []([Reference<Pad>] pad, [PointerEvent] event) {
+  })}
+  if(padButton.events != 31i32 || hoverButton.events != Control.mouseOverEvent || plainButton.events != 0i32) {
+    return(20i32)
+  }
+  app.get("/pad", [padButton, hoverButton, plainButton]([Reference<Pad>] pad, [Request] request, [Reference<Response>] response) {
+    [Writer mut] page{Writer{}}
+    page.beginElement("div")
+    page.attribute("id", "pad")
+    write_pad(page, pad)
+    page.endElement("div")
+    padButton.write(page)
+    hoverButton.write(page)
+    plainButton.write(page)
+    response.html(page.out)
+  })
+  [Response mut] response{Response{}}
+  for([i32 mut] index{1i32}; index <= 11i32; ++index) {
+    [String] text{case_request(index)}
+    [Request] request{parseRequest(text.view(), 256i32)}
+    response.clear()
+    app.call(request, location(response))
+    [Reference<Pad>] state{location(app.state)}
+    if(!answer_is(index, response, state)) {
+      return(index)
+    }
+  }
+  return(0i32)
+}
