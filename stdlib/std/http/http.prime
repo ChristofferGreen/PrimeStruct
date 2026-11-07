@@ -112,6 +112,52 @@ namespace http {
     headerLine([i32] index) {
       return(this.headers.splitPart("\r\n", index))
     }
+
+    // The first query parameter called `name`, decoded ("+" is a space, "%XX" the byte XX). Empty when the parameter
+    // is missing, has no value, holds a malformed escape or decodes to bytes that are not UTF-8; `hasQueryParam` tells
+    // a missing parameter from an empty one. A name is compared with the decoded parameter names.
+    [return<String> effects(heap_alloc)]
+    queryParam([StringView] name) {
+      return(urlencoded_value(urlencoded_pair(this.query, name)))
+    }
+
+    // Whether the query has a parameter called `name`, with or without a value.
+    [return<bool>]
+    hasQueryParam([StringView] name) {
+      [StringView] pair{urlencoded_pair(this.query, name)}
+      return(!pair.empty())
+    }
+
+    // The first parameter called `name` of an `application/x-www-form-urlencoded` body, decoded as `queryParam`
+    // decodes. Empty when the body is of another type (see `isFormBody`).
+    [return<String> effects(heap_alloc)]
+    formParam([StringView] name) {
+      if(!this.isFormBody()) {
+        return(String{})
+      }
+      return(urlencoded_value(urlencoded_pair(this.body, name)))
+    }
+
+    // Whether the body is a form with a parameter called `name`, with or without a value.
+    [return<bool>]
+    hasFormParam([StringView] name) {
+      if(!this.isFormBody()) {
+        return(false)
+      }
+      [StringView] pair{urlencoded_pair(this.body, name)}
+      return(!pair.empty())
+    }
+
+    // Whether `Content-Type` is `application/x-www-form-urlencoded` (ASCII case-insensitive), ignoring parameters
+    // such as `; charset=utf-8`.
+    [return<bool>]
+    isFormBody() {
+      [StringView] contentType{this.header("Content-Type")}
+      [i32] semicolon{contentType.indexOfByte(59u8)}
+      [i32] end{if(semicolon < 0i32, then() { contentType.count() }, else() { semicolon })}
+      [StringView] media{contentType.slice(0i32, end).trim()}
+      return(media.equalsIgnoreAsciiCase("application/x-www-form-urlencoded"))
+    }
   }
 
   // The part of a header line before its colon.
@@ -132,6 +178,117 @@ namespace http {
       return(StringView{})
     }
     return(line.slice(colon + 1i32, line.count()).trim())
+  }
+
+  // The first "&"-separated pair of `text` whose decoded name (the part before "=", or all of it) is `name`, or an
+  // empty view. A pair that matches is never empty, since an empty pair is skipped.
+  [return<StringView>]
+  urlencoded_pair([StringView] text, [StringView] name) {
+    [i32 mut] start{0i32}
+    while(start < text.count()) {
+      [i32] found{text.indexOfFrom("&", start)}
+      [i32] end{if(found < 0i32, then() { text.count() }, else() { found })}
+      [StringView] pair{text.slice(start, end)}
+      if(!pair.empty()) {
+        [i32] equals{pair.indexOfByte(61u8)}
+        [i32] keyEnd{if(equals < 0i32, then() { pair.count() }, else() { equals })}
+        [StringView] key{pair.slice(0i32, keyEnd)}
+        if(urlencoded_equals(key, name)) {
+          return(pair)
+        }
+      }
+      start = end + 1i32
+    }
+    return(StringView{})
+  }
+
+  // The decoded value of `pair` (the part after its first "="), or an empty String when it has none, holds a
+  // malformed escape or decodes to bytes that are not UTF-8.
+  [return<String> effects(heap_alloc)]
+  urlencoded_value([StringView] pair) {
+    [String mut] out{String{}}
+    [i32] equals{pair.indexOfByte(61u8)}
+    if(equals < 0i32) {
+      return(out)
+    }
+    [i32 mut] index{equals + 1i32}
+    while(index < pair.count()) {
+      [i32] byte{urlencoded_byte_at(pair, index)}
+      if(byte < 0i32) {
+        return(String{})
+      }
+      out.pushByte(convert<u8>(byte))
+      index = index + urlencoded_width_at(pair, index)
+    }
+    if(utf8ErrorOffset(out.data, out.count()) >= 0i32) {
+      return(String{})
+    }
+    return(out)
+  }
+
+  // Whether `encoded` decodes to exactly the bytes of `name`. A malformed escape matches nothing.
+  [return<bool>]
+  urlencoded_equals([StringView] encoded, [StringView] name) {
+    [i32 mut] index{0i32}
+    [i32 mut] matched{0i32}
+    while(index < encoded.count()) {
+      [i32] byte{urlencoded_byte_at(encoded, index)}
+      if(byte < 0i32 || matched >= name.count()) {
+        return(false)
+      }
+      if(convert<i32>(name.byteAt(matched)) != byte) {
+        return(false)
+      }
+      matched = matched + 1i32
+      index = index + urlencoded_width_at(encoded, index)
+    }
+    return(matched == name.count())
+  }
+
+  // The byte that the encoding at `index` of `text` stands for: a space for "+", XX for "%XX", else the byte itself;
+  // -1 for a "%" not followed by two hex digits.
+  [return<i32>]
+  urlencoded_byte_at([StringView] text, [i32] index) {
+    [u8] byte{text.byteAt(index)}
+    if(byte == 43u8) {
+      return(32i32)
+    }
+    if(byte != 37u8) {
+      return(convert<i32>(byte))
+    }
+    if(index + 2i32 >= text.count()) {
+      return(-1i32)
+    }
+    [i32] high{hex_digit_value(text.byteAt(index + 1i32))}
+    [i32] low{hex_digit_value(text.byteAt(index + 2i32))}
+    if(high < 0i32 || low < 0i32) {
+      return(-1i32)
+    }
+    return(high * 16i32 + low)
+  }
+
+  // How many bytes the encoding at `index` of `text` takes: 3 for "%XX", else 1.
+  [return<i32>]
+  urlencoded_width_at([StringView] text, [i32] index) {
+    if(text.byteAt(index) == 37u8) {
+      return(3i32)
+    }
+    return(1i32)
+  }
+
+  // The value of an ASCII hex digit, or -1.
+  [return<i32>]
+  hex_digit_value([u8] byte) {
+    if(byte >= 48u8 && byte <= 57u8) {
+      return(convert<i32>(byte) - 48i32)
+    }
+    if(byte >= 65u8 && byte <= 70u8) {
+      return(convert<i32>(byte) - 55i32)
+    }
+    if(byte >= 97u8 && byte <= 102u8) {
+      return(convert<i32>(byte) - 87i32)
+    }
+    return(-1i32)
   }
 
   // A request that is not complete: `code` is 1 (need more bytes) or the status to answer.

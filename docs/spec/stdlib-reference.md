@@ -569,6 +569,26 @@ one request per connection (`Connection: close`), and no chunked encoding, keep-
   surrounding white space, or an empty view when the header is absent. The other header accessors are
   `hasHeader(name)`, `headerCount()`, `headerName(i)` and `headerValue(i)`. Header lookups scan the header block; there
   is no header table.
+
+  Query and form parameters are read the same way, by scanning:
+  - `queryParam(name) -> String` gives the decoded value of the first parameter of `query` whose decoded name is
+    `name`; `formParam(name) -> String` does the same over the body when it is a form. Parameters are separated by
+    `&`; a parameter is `name=value` or a bare `name`, and its value is everything after the first `=`. Decoding
+    turns `+` into a space and `%XX` (two hex digits of either case) into that byte, in names and values alike.
+  - The value is always an owned `String`, also when nothing needed decoding: one return type is simpler than a view
+    or a copy depending on the bytes, and a parameter value is small. It is valid after the request bytes are reused.
+  - The value is empty when the parameter is missing, has no value (`a=` or `a`), holds a malformed escape (a `%` not
+    followed by two hex digits) or decodes to bytes that are not UTF-8. Reading a parameter never faults.
+  - `hasQueryParam(name)` and `hasFormParam(name)` tell a missing parameter from an empty one: they are true for `a=`
+    and `a`, and for a parameter whose value is malformed. With repeated parameters the first wins, as with headers.
+  - A body is a form when `isFormBody()`: its `Content-Type` is `application/x-www-form-urlencoded`, compared ASCII
+    case-insensitively after dropping parameters such as `; charset=utf-8` and surrounding white space. For any other
+    body `formParam` is empty and `hasFormParam` false. Multipart bodies are not decoded.
+
+  ```prime
+  [String] name{request.queryParam("name")}         // "/hello?name=Ada%20L" gives "Ada L"
+  [String] title{request.formParam("title")}        // a body "title=Buy+milk" gives "Buy milk"
+  ```
 - `Response` is built by a handler and serialized by the server:
   - `status` is 200 unless set, and `body` is a `String`;
   - `header(name, value)` adds a header line, dropping CR and LF bytes so that a value cannot end the head;

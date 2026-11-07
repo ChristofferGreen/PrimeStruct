@@ -299,7 +299,7 @@ TEST_CASE("the web_app example serves /healthz, /hello and /echo, logs requests 
   std::string wrongMethod;
   if (port > 0) {
     health = exchange(port, "GET /healthz HTTP/1.1\r\nHost: x\r\n\r\n");
-    hello = exchange(port, "GET /hello?name=Ada HTTP/1.1\r\nHost: x\r\n\r\n");
+    hello = exchange(port, "GET /hello?name=Ada%20L HTTP/1.1\r\nHost: x\r\n\r\n");
     helloDefault = exchange(port, "GET /hello HTTP/1.1\r\nHost: x\r\n\r\n");
     echo = exchange(port, "POST /echo HTTP/1.1\r\nHost: x\r\nContent-Length: 9\r\n\r\nping=pong");
     missing = exchange(port, "GET /nope HTTP/1.1\r\nHost: x\r\n\r\n");
@@ -314,7 +314,7 @@ TEST_CASE("the web_app example serves /healthz, /hello and /echo, logs requests 
   REQUIRE_MESSAGE(port > 0, readFile(errors));
   CHECK_MESSAGE(health.rfind("HTTP/1.1 200 OK\r\n", 0) == 0, health);
   CHECK(health.find("\r\n\r\nok\n") != std::string::npos);
-  CHECK(hello.find("\r\n\r\nhello, Ada\n") != std::string::npos);
+  CHECK_MESSAGE(hello.find("\r\n\r\nhello, Ada L\n") != std::string::npos, hello);
   CHECK(helloDefault.find("\r\n\r\nhello, world\n") != std::string::npos);
   CHECK_MESSAGE(echo.rfind("HTTP/1.1 200 OK\r\n", 0) == 0, echo);
   CHECK(echo.find("\r\n\r\nping=pong") != std::string::npos);
@@ -326,7 +326,7 @@ TEST_CASE("the web_app example serves /healthz, /hello and /echo, logs requests 
   CHECK(staticMissing.rfind("HTTP/1.1 404", 0) == 0);
   CHECK_MESSAGE(staticEscape.rfind("HTTP/1.1 403", 0) == 0, staticEscape);
   const std::string requestLog = readFile(errors);
-  CHECK_MESSAGE(requestLog.find("GET /hello?name=Ada 200 ") != std::string::npos, requestLog);
+  CHECK_MESSAGE(requestLog.find("GET /hello?name=Ada%20L 200 ") != std::string::npos, requestLog);
   CHECK(requestLog.find("POST /echo 200 ") != std::string::npos);
   CHECK(requestLog.find("GET /nope 404 ") != std::string::npos);
   CHECK(WIFEXITED(waitStatus));

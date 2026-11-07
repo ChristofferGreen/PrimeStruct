@@ -100,7 +100,6 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5702 | Request query and form parameters with percent-decoding | ready | web-params |
 | TODO-5703 | `Router` path parameters | ready | web-routes |
 | TODO-5704 | A todo-list web app with pages and forms | blocked | web-example |
 | TODO-5705 | An idle connection does not stall the server | ready | web-server-loop |
@@ -149,7 +148,6 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5702 (web-params): request query and form parameters with percent-decoding
 - TODO-5703 (web-routes): `Router` path parameters
 - TODO-5603 (startup): startup audit: what a launch loads and does
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
@@ -160,14 +158,13 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5702
-2. TODO-5703
-3. TODO-5709
-4. TODO-5603
-5. TODO-5536
-6. TODO-5535
-7. TODO-5510
-8. TODO-5524
+1. TODO-5703
+2. TODO-5709
+3. TODO-5603
+4. TODO-5536
+5. TODO-5535
+6. TODO-5510
+7. TODO-5524
 
 ### Priority Lanes
 
@@ -183,7 +180,7 @@ of sync with them.
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715; collection fields found by closures: TODO-5681, TODO-5682
-- Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5702, TODO-5703, TODO-5704, TODO-5705, TODO-5706
+- Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5703, TODO-5704, TODO-5705, TODO-5706
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717
 - Native UI handlers (docs/WebAppsPlan.md): TODO-5709, TODO-5710, TODO-5711
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
@@ -193,19 +190,6 @@ of sync with them.
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 ### Task Blocks
-
-- [ ] TODO-5702: Request query and form parameters with percent-decoding
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-07
-  - phase: Web apps (docs/WebAppsPlan.md)
-  - parallel_track: web-params
-  - scope: Add `Request.queryParam(name)` and `Request.formParam(name)` (`application/x-www-form-urlencoded` bodies) to `/std/http`, with `+` and `%XX` decoding. The value is a `StringView` into the request when nothing needs decoding and an owned `String` otherwise; pick one return type and document it (a `String` always is acceptable if the view case is not worth the API). Malformed escapes and non-UTF-8 results are an empty or absent value, never a fault. Replace `query_value` in examples/apps/web_app/main.prime with it.
-  - acceptance:
-    - VM and optexe tests for plain, `+`, `%20`, multi-byte UTF-8, repeated, missing and malformed parameters
-    - web_app's `/hello?name=Ada%20L` greets `Ada L` in its loopback test
-    - full release gate green
-  - stop_rule: query and urlencoded form bodies only; no multipart.
 
 - [ ] TODO-5703: `Router` path parameters
   - owner: ai
@@ -222,7 +206,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 - [ ] TODO-5704: A todo-list web app with pages and forms
   - owner: ai
   - status: blocked
-  - blocked_on: TODO-5702, TODO-5703
+  - blocked_on: TODO-5703
   - created_at: 2026-11-07
   - phase: Web apps (docs/WebAppsPlan.md)
   - parallel_track: web-example

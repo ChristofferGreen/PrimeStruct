@@ -4,7 +4,8 @@
 //   PORT=8080 ./server        (PORT=0 picks a free port; BIND=loopback listens on 127.0.0.1 only)
 // Routes:
 //   GET  /healthz          200 "ok"
-//   GET  /hello?name=Ada   200 "hello, Ada"; without a name, "hello, world"
+//   GET  /hello?name=Ada   200 "hello, Ada" (the name is decoded: ?name=Ada%20L greets "Ada L"); without one,
+//                          "hello, world"
 //   POST /echo             200 with the request body as the response body
 //   GET  /static/<path>    the file under $STATIC_DIR (default "public"): 403 for an unsafe path, 404 if missing
 // Any other path is 404 and a known path under another method is 405. Every request is logged to stderr as
@@ -16,24 +17,6 @@ import /std/os/*
 import /std/text/*
 import /std/text/view/*
 
-// The value of `key` in a query such as "name=Ada&lang=en", or an empty view when the key is missing.
-[return<StringView>]
-query_value([StringView] query, [StringView] key) {
-  [i32 mut] index{0i32}
-  while(true) {
-    [StringView] pair{query.splitPart("&", index)}
-    if(pair.empty()) {
-      return(StringView{})
-    }
-    [i32] equals{pair.indexOfByte(61u8)}
-    if(equals >= 0i32 && pair.slice(0i32, equals).equals(key)) {
-      return(pair.slice(equals + 1i32, pair.count()))
-    }
-    index = index + 1i32
-  }
-  return(StringView{})
-}
-
 [return<Router> effects(heap_alloc, file_read)]
 app_routes() {
   [Router mut] router{Router{}}
@@ -41,7 +24,7 @@ app_routes() {
     response.text("ok\n", "text/plain")
   })
   router.get("/hello", []([Request] request, [Reference<Response>] response) {
-    [StringView] name{query_value(request.query, "name")}
+    [String] name{request.queryParam("name")}
     response.body.append("hello, ")
     if(name.empty()) {
       response.body.append("world")

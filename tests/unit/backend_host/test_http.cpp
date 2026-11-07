@@ -232,6 +232,20 @@ TEST_CASE("a Router dispatches by method and path through optexe") {
   CHECK_MESSAGE(failed == 0, "router_dispatch case " << failed << " failed (tests/fixtures/http/router_dispatch.prime)");
 }
 
+TEST_CASE("query and form parameters decode and reject malformed values on the VM") {
+  const int failed = runOnVm("query_params");
+  CHECK_MESSAGE(failed == 0,
+                "query_params case " << failed
+                                     << " failed (tests/fixtures/http/query_params.prime)");
+}
+
+TEST_CASE("query and form parameters decode the same through optexe") {
+  const int failed = runThroughOptexe("query_params");
+  CHECK_MESSAGE(failed == 0,
+                "query_params case " << failed
+                                     << " failed (tests/fixtures/http/query_params.prime)");
+}
+
 TEST_CASE("serve answers routed, missing, malformed, oversized and silent clients over loopback") {
   if (!socketsPermitted()) {
     MESSAGE("skipped: socket() is not permitted here (EPERM or EACCES)");

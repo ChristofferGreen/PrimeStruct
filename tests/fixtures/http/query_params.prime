@@ -1,0 +1,193 @@
+// /std/http query and form parameters (tests/unit/backend_host/test_http.cpp). The exit code is the number of the
+// first case that failed, or 0. Every case goes through one parse call and one call of each accessor.
+import /std/collections/*
+import /std/http/*
+import /std/text/*
+import /std/text/view/*
+
+// The request of case `index`. Cases below 20 read the query, cases from 20 the form body (case 25 the query again).
+[return<string>]
+case_request([i32] index) {
+  if(index == 1i32 || index == 2i32) {
+    return("GET /p?name=Ada&lang=en HTTP/1.1\r\n\r\n")
+  }
+  if(index == 3i32) {
+    return("GET /p?q=a+b HTTP/1.1\r\n\r\n")
+  }
+  if(index == 4i32) {
+    return("GET /p?name=Ada%20L HTTP/1.1\r\n\r\n")
+  }
+  if(index == 5i32) {
+    return("GET /p?city=Z%C3%BCrich HTTP/1.1\r\n\r\n")
+  }
+  if(index == 6i32) {
+    return("GET /p?tag=a&tag=b HTTP/1.1\r\n\r\n")
+  }
+  if(index == 7i32) {
+    return("GET /p?a=1 HTTP/1.1\r\n\r\n")
+  }
+  if(index == 8i32 || index == 9i32) {
+    return("GET /p?a=&b HTTP/1.1\r\n\r\n")
+  }
+  if(index == 10i32) {
+    return("GET /p?a=%G1 HTTP/1.1\r\n\r\n")
+  }
+  if(index == 11i32) {
+    return("GET /p?a=x%2 HTTP/1.1\r\n\r\n")
+  }
+  if(index == 12i32) {
+    return("GET /p?a=%FF HTTP/1.1\r\n\r\n")
+  }
+  if(index == 13i32) {
+    return("GET /p?first%20name=Ada HTTP/1.1\r\n\r\n")
+  }
+  if(index == 14i32) {
+    return("GET /p?a=b=c HTTP/1.1\r\n\r\n")
+  }
+  if(index == 15i32) {
+    return("GET /p HTTP/1.1\r\n\r\n")
+  }
+  if(index == 16i32) {
+    return("GET /p?ab=1&&x=2 HTTP/1.1\r\n\r\n")
+  }
+  if(index == 17i32) {
+    return("GET /p?sum=1%2b1 HTTP/1.1\r\n\r\n")
+  }
+  if(index == 20i32) {
+    return("POST /p HTTP/1.1\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 21\r\n\r\ntitle=Buy+milk&done=1")
+  }
+  if(index == 21i32) {
+    return("POST /p HTTP/1.1\r\nContent-Type: Application/X-WWW-Form-Urlencoded ; charset=UTF-8\r\nContent-Length: 8\r\n\r\na=%C3%A9")
+  }
+  if(index == 22i32) {
+    return("POST /p HTTP/1.1\r\nContent-Type: text/plain\r\nContent-Length: 3\r\n\r\na=1")
+  }
+  if(index == 23i32) {
+    return("POST /p HTTP/1.1\r\nContent-Length: 3\r\n\r\na=1")
+  }
+  return("POST /p?a=q HTTP/1.1\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 3\r\n\r\nb=1")
+}
+
+// The parameter name case `index` asks for.
+[return<string>]
+case_name([i32] index) {
+  if(index == 1i32 || index == 4i32) {
+    return("name")
+  }
+  if(index == 2i32) {
+    return("lang")
+  }
+  if(index == 3i32) {
+    return("q")
+  }
+  if(index == 5i32) {
+    return("city")
+  }
+  if(index == 6i32) {
+    return("tag")
+  }
+  if(index == 7i32 || index == 9i32) {
+    return("b")
+  }
+  if(index == 13i32) {
+    return("first name")
+  }
+  if(index == 16i32) {
+    return("x")
+  }
+  if(index == 17i32) {
+    return("sum")
+  }
+  if(index == 20i32) {
+    return("title")
+  }
+  return("a")
+}
+
+// The decoded value case `index` must give.
+[return<string>]
+case_value([i32] index) {
+  if(index == 1i32 || index == 13i32) {
+    return("Ada")
+  }
+  if(index == 2i32) {
+    return("en")
+  }
+  if(index == 3i32) {
+    return("a b")
+  }
+  if(index == 4i32) {
+    return("Ada L")
+  }
+  if(index == 5i32) {
+    return("Zürich")
+  }
+  if(index == 6i32) {
+    return("a")
+  }
+  if(index == 14i32) {
+    return("b=c")
+  }
+  if(index == 16i32) {
+    return("2")
+  }
+  if(index == 17i32) {
+    return("1+1")
+  }
+  if(index == 20i32) {
+    return("Buy milk")
+  }
+  if(index == 21i32) {
+    return("é")
+  }
+  if(index == 25i32) {
+    return("q")
+  }
+  return("")
+}
+
+// Whether case `index` has the parameter: missing ones and those of a body that is not a form do not.
+[return<bool>]
+case_present([i32] index) {
+  return(index != 7i32 && index != 15i32 && index != 22i32 && index != 23i32 && index != 24i32)
+}
+
+// Whether case `index` reads the body rather than the query.
+[return<bool>]
+case_reads_form([i32] index) {
+  return(index >= 20i32 && index != 25i32)
+}
+
+[return<bool>]
+is_case([i32] index) {
+  return((index >= 1i32 && index <= 17i32) || (index >= 20i32 && index <= 25i32))
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [i32 mut] index{1i32}
+  while(index <= 25i32) {
+    if(is_case(index)) {
+      [String] text{stringFrom(case_request(index))}
+      [Request] request{parseRequest(text.view(), 256i32)}
+      [String] name{stringFrom(case_name(index))}
+      if(!request.isComplete()) {
+        return(index)
+      }
+      [String mut] value{String{}}
+      [bool mut] present{false}
+      if(case_reads_form(index)) {
+        value = request.formParam(name.view())
+        present = request.hasFormParam(name.view())
+      } else {
+        value = request.queryParam(name.view())
+        present = request.hasQueryParam(name.view())
+      }
+      if(!value.equalsText(case_value(index)) || present != case_present(index)) {
+        return(index)
+      }
+    }
+    index = index + 1i32
+  }
+  return(0i32)
+}
