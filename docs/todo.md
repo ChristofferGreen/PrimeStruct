@@ -100,6 +100,18 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
+| TODO-5700 | A string literal passes where a `StringView` is expected | ready | text-literal-views |
+| TODO-5701 | `/std/html` writer, `Response.html` and `redirect` | ready | web-html |
+| TODO-5702 | Request query and form parameters with percent-decoding | ready | web-params |
+| TODO-5703 | `Router` path parameters | ready | web-routes |
+| TODO-5704 | A todo-list web app with pages and forms | blocked | web-example |
+| TODO-5705 | An idle connection does not stall the server | ready | web-server-loop |
+| TODO-5706 | Fragment-swapping buttons without user JavaScript | blocked | web-fragments |
+| TODO-5707 | `Function` types accept `mut` parameters | deferred | closures-mut-params |
+| TODO-5708 | Type aliases | deferred | type-aliases |
+| TODO-5709 | Native UI handlers and `App.run` | blocked | native-ui-handlers |
+| TODO-5710 | PrimeScroll dispatches through handlers | blocked | native-ui-handlers |
+| TODO-5711 | Retire the `/std/ui` layout and command-list prototype | ready | ui-prototype-retire |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
 | TODO-5656 | Thread-safe `SharedString` (atomic count, per-thread string heaps) | deferred | string-concurrency |
 | TODO-5603 | Startup audit: what a launch loads and does | ready | startup |
@@ -107,7 +119,7 @@ of sync with them.
 | TODO-5536 | Small, lazily loaded bytecode for apps | ready | bytecode-startup |
 | TODO-5535 | Launch-time harness and reference Objective-C++ editor | ready | native-ui-launch |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
-| TODO-5669 | `Function` from named definitions and at call sites | deferred | closures |
+| TODO-5669 | `Function` from named definitions and at call sites | ready | closures |
 | TODO-5681 | A struct field built from a named vector local owns its storage once | ready | collections-fields |
 | TODO-5682 | Native: a mutating vector-field method inside an arithmetic expression returns the right value | ready | native-backend |
 | TODO-5676 | Lambdas can state their return type | deferred | closures-return-types |
@@ -134,6 +146,9 @@ of sync with them.
 
 ### Ready Now
 
+- TODO-5669 (closures): `Function` from named definitions and at call sites
+- TODO-5700 (text-literal-views): a string literal passes where a `StringView` is expected
+- TODO-5701 (web-html): `/std/html` writer, `Response.html` and `redirect`
 - TODO-5603 (startup): startup audit: what a launch loads and does
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
@@ -142,11 +157,14 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5603
-2. TODO-5536
-3. TODO-5535
-4. TODO-5510
-5. TODO-5524
+1. TODO-5669
+2. TODO-5700
+3. TODO-5701
+4. TODO-5603
+5. TODO-5536
+6. TODO-5535
+7. TODO-5510
+8. TODO-5524
 
 ### Priority Lanes
 
@@ -162,7 +180,9 @@ of sync with them.
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5669, TODO-5676, TODO-5677; collection fields found by closures: TODO-5681, TODO-5682
-- Web server (single-threaded, built with `--emit=optexe`): move-only handles ; Result payloads for socket handles ; static file serving 
+- Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5701, TODO-5702, TODO-5703, TODO-5704, TODO-5705, TODO-5706
+- Language surface for handlers (docs/WebAppsPlan.md): TODO-5669, TODO-5700, TODO-5707, TODO-5708
+- Native UI handlers (docs/WebAppsPlan.md): TODO-5709, TODO-5710, TODO-5711
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
 ### Execution Queue
@@ -170,6 +190,164 @@ of sync with them.
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 ### Task Blocks
+
+- [ ] TODO-5700: A string literal passes where a `StringView` is expected
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-07
+  - phase: Language surface for handlers (docs/WebAppsPlan.md)
+  - parallel_track: text-literal-views
+  - scope: Every text API that takes a `StringView` needs `textOf("...")` around a literal: `response.text(textOf("hello"), textOf("text/plain"))`, `request.header(textOf("Host"))`. Convert a `string` literal (and a `string` value) to a `StringView` implicitly where a `[StringView]` parameter, field or binding is expected, as a `String` already converts with an implicit borrow (docs/spec/strings-and-views.md, Making one). Then drop the `textOf` calls from `/std/http`, `/std/json`, examples/apps/http_hello, examples/apps/web_app and docs/CodeExamples.md.
+  - acceptance:
+    - `response.text("hello", "text/plain")` and `request.header("Host")` compile and run on VM and optexe
+    - spec text in docs/spec/strings-and-views.md with a runnable example; a negative test for a non-text argument
+    - the stdlib web modules and both web examples use the literal form
+    - full release gate green
+  - stop_rule: literal and `string` to `StringView` conversion at expected-type sites only; no change to `StringView` layout.
+
+- [ ] TODO-5701: `/std/html` writer, `Response.html` and `redirect`
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-07
+  - phase: Web apps (docs/WebAppsPlan.md)
+  - parallel_track: web-html
+  - scope: Add `/std/html`, a `Writer` in the style of `/std/json` (`stdlib/std/json/json.prime`): it builds a `String`, escapes text (`& < > "`) and attribute values by default, and has `raw(text)` as the only unescaped call. Cover elements with attributes, void elements, text, the document head (`<!doctype html>`, title, a stylesheet link) and the form vocabulary (`form`, `input`, `button`, `label`, `select`, `textarea`). Add `Response.html(writer or String)` (sets `text/html; charset=utf-8`) and `Response.redirect(status, location)` (303 by default for post/redirect/get) to `/std/http`. Document both in docs/spec/stdlib-reference.md.
+  - acceptance:
+    - a VM test writes a page with a form and checks the exact bytes, including escaped text and attributes
+    - the same program gives the same bytes through optexe
+    - a redirect response serializes with `Location` and no body
+    - full release gate green
+  - stop_rule: the writer and the two Response helpers; no templates, no DOM model.
+
+- [ ] TODO-5702: Request query and form parameters with percent-decoding
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-07
+  - phase: Web apps (docs/WebAppsPlan.md)
+  - parallel_track: web-params
+  - scope: Add `Request.queryParam(name)` and `Request.formParam(name)` (`application/x-www-form-urlencoded` bodies) to `/std/http`, with `+` and `%XX` decoding. The value is a `StringView` into the request when nothing needs decoding and an owned `String` otherwise; pick one return type and document it (a `String` always is acceptable if the view case is not worth the API). Malformed escapes and non-UTF-8 results are an empty or absent value, never a fault. Replace `query_value` in examples/apps/web_app/main.prime with it.
+  - acceptance:
+    - VM and optexe tests for plain, `+`, `%20`, multi-byte UTF-8, repeated, missing and malformed parameters
+    - web_app's `/hello?name=Ada%20L` greets `Ada L` in its loopback test
+    - full release gate green
+  - stop_rule: query and urlencoded form bodies only; no multipart.
+
+- [ ] TODO-5703: `Router` path parameters
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-07
+  - phase: Web apps (docs/WebAppsPlan.md)
+  - parallel_track: web-routes
+  - scope: `Router` patterns are an exact path or a prefix ending in `*`. Add named segments (`/todos/:id`) and `request.pathParam(name)` (a `StringView` into the path). The first matching route still wins; 405 versus 404 keeps its meaning. Document in docs/spec/stdlib-reference.md.
+  - acceptance:
+    - VM and optexe tests: `/todos/:id` matches `/todos/7` and not `/todos` or `/todos/7/x`; two parameters; a literal route listed first wins
+    - full release gate green
+  - stop_rule: segment parameters only; no regex or typed parameters.
+
+- [ ] TODO-5704: A todo-list web app with pages and forms
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5701
+  - created_at: 2026-11-07
+  - phase: Web apps (docs/WebAppsPlan.md)
+  - parallel_track: web-example
+  - depends_on: TODO-5702, TODO-5703
+  - scope: Add examples/apps/todo_web: a single-threaded optexe server that lists todos as an HTML page, adds one through a form POST, toggles and deletes through button forms, and redirects back after each POST. App state is a struct passed to the handlers as a parameter (docs/WebAppsPlan.md, principle 2), not captured by reference. Test it end to end over loopback like the http_hello test in tests/unit/backend_host/test_net.cpp.
+  - acceptance:
+    - the loopback test adds two todos, toggles one, deletes one and checks the page HTML after each step
+    - the example is the reference in docs/CodeExamples.md for a web page with buttons
+    - full release gate green
+  - stop_rule: the example, its test and its CodeExamples entry; library gaps found on the way become their own TODOs.
+
+- [ ] TODO-5705: An idle connection does not stall the server
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-07
+  - phase: Web apps (docs/WebAppsPlan.md)
+  - parallel_track: web-server-loop
+  - scope: `serveUntil` reads one connection to completion before accepting the next, with `readTimeoutMs` (5 s) per request. Browsers open spare connections and send nothing on them, so one idle connection should delay every other client by up to the read timeout. Confirm this with a loopback test first (open a connection and send nothing, then time a second client's GET). If confirmed, wait on the listener and every open connection together through one new host call (`poll` in stdlib/std/net/native/net_shim.cpp), keep a small fixed table of connections with their buffers, and serve whichever is ready. Still one thread.
+  - acceptance:
+    - the loopback test serves the second client in under 100 ms while the first stays idle, on optexe
+    - existing http_hello, web_app and server tests pass unchanged
+    - full release gate green
+  - stop_rule: readiness-driven accept and read in the existing loop; no threads, no keep-alive.
+
+- [ ] TODO-5706: Fragment-swapping buttons without user JavaScript
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5704
+  - created_at: 2026-11-07
+  - phase: Web apps (docs/WebAppsPlan.md)
+  - parallel_track: web-fragments
+  - scope: Add the fragment layer of docs/WebAppsPlan.md (principle 4): `/std/html` attributes that name a route and a target element, one small fixed script served by a stdlib route, and responses that are HTML fragments. A button click calls a PrimeStruct handler and replaces part of the page. Without the script the same forms still work by post/redirect/get.
+  - acceptance:
+    - the todo example toggles an item through a fragment; a test checks the fragment bytes and that the plain form path still works
+    - the script is a fixed asset under stdlib/ with a size budget stated in the spec
+    - full release gate green
+  - stop_rule: the attributes, the script and one example use; no client-side state or templating.
+
+- [ ] TODO-5707: `Function` types accept `mut` parameters
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-07
+  - phase: Language surface for handlers (docs/WebAppsPlan.md)
+  - parallel_track: closures-mut-params
+  - scope: Handlers stored in a `Function` take `Reference<Response>` because a `Function<R, A...>` type cannot say that a parameter is `mut`, while a generic handler can take `[Response mut]`. Specify a spelling for a mutable parameter in a `Function` type in docs/spec/value-lifecycle.md and lower it. Deferred: needs the spelling decided.
+  - acceptance:
+    - a `Router` route lambda takes `[Response mut] response` and runs on VM, native and optexe; spec text with a runnable example
+    - full release gate green
+  - stop_rule: the parameter mode in `Function` types only.
+
+- [ ] TODO-5708: Type aliases
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-07
+  - phase: Language surface for handlers (docs/WebAppsPlan.md)
+  - parallel_track: type-aliases
+  - scope: There is no way to name a type: `Function<void, Request, Reference<Response>>` is spelled out at every route and seven times in /std/http. Specify a public/private alias declaration (docs/spec/type-system.md), with generic aliases if cheap, and use it for the handler type. Deferred: needs the spelling decided.
+  - acceptance:
+    - an alias of a `Function` type and of a generic struct is used in parameters, fields and construction; a negative test for a cycle; spec text with a runnable example
+    - full release gate green
+  - stop_rule: alias declarations and their resolution only.
+
+- [ ] TODO-5709: Native UI handlers and `App.run`
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5669
+  - created_at: 2026-11-07
+  - phase: Native UI handlers (docs/WebAppsPlan.md)
+  - parallel_track: native-ui-handlers
+  - scope: Native UI events reach code as integer command ids and widget handles compared in an if-chain (examples/apps/text_editor/main.prime, the `pick(app.waitEvent())` loop). Add handler overloads to `/std/ui/native` (`Menu.item(title, shortcut, handler)`, `Button.onClick`, `CheckBox.onChange`, `Popup.onChange`, window close and text change) and `App.run(state)`, which allocates command ids, keeps a handler table and dispatches until quit. Handlers receive the app state as a parameter (docs/WebAppsPlan.md, principle 2). `waitEvent` stays. Document in docs/NativeUiPlan.md and docs/spec/stdlib-reference.md.
+  - acceptance:
+    - examples/native_ui/hello_window.prime has a handler form; it runs on the VM against the headless backend and as a compiled program with the same call log
+    - full release gate green
+  - stop_rule: the PrimeStruct surface over the existing C ABI; no ABI change.
+
+- [ ] TODO-5710: PrimeScroll dispatches through handlers
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5709
+  - created_at: 2026-11-07
+  - phase: Native UI handlers (docs/WebAppsPlan.md)
+  - parallel_track: native-ui-handlers
+  - scope: Move the text editor's menu, toolbar and settings-window dispatch from the if-chains on command ids and handles to the handlers of TODO-5709, one menu at a time.
+  - acceptance:
+    - every editor scenario (docs/NativeUiPlan.md section 13) leaves the same call log, exit code and files on the VM and the native build
+    - the dispatch loop in main.prime is gone or reduced to what has no handler form
+    - full release gate green
+  - stop_rule: the editor's dispatch only; no behavior change.
+
+- [ ] TODO-5711: Retire the `/std/ui` layout and command-list prototype
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-07
+  - phase: Native UI handlers (docs/WebAppsPlan.md)
+  - parallel_track: ui-prototype-retire
+  - scope: `stdlib/std/ui/ui.prime` (`LayoutTree`, `CommandList`, `HtmlCommandList`, `UiEventStream`, the login form) has no user: no app imports it and its HTML records have no consumer. Delete it with its tests (`test_compile_run_vm_core_ui.cpp`, the `core_ui_layout_*` native shards and the cases in `test_compile_run_vm_core_basic.cpp` that only exercise it), drop its sections from docs/Graphics_API_Design.md and docs/spec/architecture.md, and remove `stdlib/std/ui/*` from the style-aligned list in AGENTS.md and docs/CodeExamples.md (keeping `/std/ui/native`). Lowerer tests that only borrow its struct shapes keep a local copy of the shape.
+  - acceptance:
+    - nothing references the removed names; the test inventory and registration checks pass
+    - full release gate green
+  - stop_rule: deletion and doc alignment only.
 
 - [ ] TODO-5688: Calls require the callee's whole active effect set
   - owner: ai
@@ -185,7 +363,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 
 - [ ] TODO-5669: `Function` from named definitions and at call sites
   - owner: ai
-  - status: deferred
+  - status: ready
   - created_at: 2026-11-06
   - phase: Closures follow-ups
   - parallel_track: closures
