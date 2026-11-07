@@ -34,6 +34,16 @@ POST routes change the list and redirect back (TODO-5704).
    call.
 6. **Client-side PrimeStruct in the browser is not on this path.** The wasm backends have no `String` and reject
    `net_io`.
+7. **Controls take handler closures, with an event struct.** A button, menu item or check box takes its reaction
+   directly: `onClick`, `onMouseOver`, `onMouseDown`/`onMouseUp`, `onKeyDown`/`onKeyUp` (only while the control has
+   focus) and `onChange`. Each handler is a `Function<void, Reference<State>, Event>`: the closure's own `mut`
+   captures hold state only it uses (a click counter), the shared state comes in as the parameter, and the event is a
+   struct of `/std/ui/events` saying what happened (`PointerEvent`: which button, position, modifiers, click count;
+   `KeyEvent`: key, modifiers, repeat; `ChangeEvent`). Web and native use the same signatures, so one closure can be
+   attached to either. Handlers are registered once, when the app is set up, never while a page renders (a closure
+   made during rendering would lose its state every request); the control refers to its handler by an id the
+   library generates (a route on the web, a command id natively). On the web a click is a form POST, while hover and
+   key events go through the fragment script, one round trip each, so purely visual hover belongs in CSS.
 
 ## Target shape
 
@@ -57,9 +67,20 @@ app.post("/add", ([Counter mut] counter, [Request] request, [Response mut] respo
 })
 ```
 
-The native UI reads the same way: `menu.item("Save", "cmd+s", handler)` and `button.onClick(handler)`, with an
-`App.run(state)` that dispatches on command id. Command ids stay in the C ABI; `waitEvent` stays as the low level, so
-PrimeScroll can move one menu at a time.
+With controls that take closures (principle 7) a button and its reaction are one value, on the web and natively:
+
+```prime
+[mut] sayHello{[mut said{0i32}]([Reference<Greeter>] greeter, [PointerEvent] event) {
+  said = said + 1i32
+  greeter.lines.append("Hello again!\n")
+}}
+app.button("hello", "Say hello", sayHello)        // web: a generated POST route (TODO-5722)
+[Button] native{window.button("Say hello")}
+native.onClick(sayHello)                          // native: App.run dispatches the click (TODO-5709)
+```
+
+`App.run(state)` dispatches native events; command ids stay inside the C ABI, and `waitEvent` stays as the low level,
+so PrimeScroll can move one menu at a time.
 
 ## Order
 
@@ -67,8 +88,9 @@ PrimeScroll can move one menu at a time.
 2. HTML and requests: TODO-5701 (writer, `Response.html`, `redirect`; done), TODO-5702 (query and form parameters;
    done), TODO-5703 (path parameters; done), then the todo-list example TODO-5704 (done, with `AppRouter<State>`).
 3. Server: TODO-5705 (an idle connection does not stall the others).
-4. Fragments: TODO-5706.
-5. Native UI: TODO-5709 (handlers and `App.run`), TODO-5710 (PrimeScroll on handlers), TODO-5711 (retire the
-   `/std/ui` prototype).
-6. Later: TODO-5707, TODO-5708 (type aliases), TODO-5717 (both writers in one file), TODO-5718 (repeated and decoded
+4. Events and controls: TODO-5723 (shared event structs), TODO-5722 (web controls take click closures).
+5. Fragments: TODO-5706, then TODO-5724 (web hover and key handlers).
+6. Native UI: TODO-5709 (controls take closures, `App.run`), TODO-5725 (pointer and key events in the C ABI),
+   TODO-5710 (PrimeScroll on handlers), TODO-5711 (retire the `/std/ui` prototype).
+7. Later: TODO-5707, TODO-5708 (type aliases), TODO-5717 (both writers in one file), TODO-5718 (repeated and decoded
    parameters), sessions and cookies, keep-alive, concurrency once tasks schedule.

@@ -100,11 +100,15 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
+| TODO-5723 | Shared UI event structs for web and native handlers | ready | ui-events |
+| TODO-5722 | Web controls take click closures | blocked | web-controls |
+| TODO-5724 | Web hover and key handlers through the fragment script | blocked | web-controls |
+| TODO-5725 | Native pointer and key events for control handlers | blocked | native-ui-events |
 | TODO-5705 | An idle connection does not stall the server | ready | web-server-loop |
 | TODO-5706 | Fragment-swapping buttons without user JavaScript | ready | web-fragments |
 | TODO-5707 | `Function` types accept `mut` parameters | deferred | closures-mut-params |
 | TODO-5708 | Type aliases | deferred | type-aliases |
-| TODO-5709 | Native UI handlers and `App.run` | ready | native-ui-handlers |
+| TODO-5709 | Native controls take handler closures and `App.run` | blocked | native-ui-handlers |
 | TODO-5710 | PrimeScroll dispatches through handlers | blocked | native-ui-handlers |
 | TODO-5711 | Retire the `/std/ui` layout and command-list prototype | ready | ui-prototype-retire |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
@@ -157,13 +161,13 @@ of sync with them.
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5510 (control-returns): `return` returns from unit-variant pick arms correctly
 - TODO-5524 (result-error-structs): int-backed error structs round-trip through stdlib Result sums
-- TODO-5709 (native-ui-handlers): native UI handlers and `App.run`
+- TODO-5723 (ui-events): shared UI event structs for web and native handlers
 
 ### Immediate Next 10
 
 1. TODO-5706
 2. TODO-5720
-3. TODO-5709
+3. TODO-5723
 4. TODO-5603
 5. TODO-5536
 6. TODO-5535
@@ -184,9 +188,9 @@ of sync with them.
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719; collection fields found by closures and the todo example: TODO-5681, TODO-5682, TODO-5720
-- Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5705, TODO-5706, TODO-5718
+- Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5705, TODO-5706, TODO-5718, TODO-5722, TODO-5724
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721
-- Native UI handlers (docs/WebAppsPlan.md): TODO-5709, TODO-5710, TODO-5711
+- Native UI handlers (docs/WebAppsPlan.md): TODO-5723, TODO-5709, TODO-5710, TODO-5711, TODO-5725
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
 ### Execution Queue
@@ -194,6 +198,61 @@ of sync with them.
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 ### Task Blocks
+
+- [ ] TODO-5723: Shared UI event structs for web and native handlers
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-07
+  - phase: Native UI handlers (docs/WebAppsPlan.md)
+  - parallel_track: ui-events
+  - scope: Add `/std/ui/events` (`stdlib/std/ui/events/events.prime`) with the event values every control handler receives (docs/WebAppsPlan.md, principle 7): `PointerEvent` (`button` as a `PointerButton` enum: none, primary, secondary, middle; control-local `x`, `y`; `modifiers`; `clickCount`), `KeyEvent` (`key` as a `Key` value: named keys and characters; `modifiers`; `repeat`), `ChangeEvent` for check boxes, popups and lists (the new value or index), and `Modifiers` (shift, control, alt, meta). The retired `/std/ui` prototype's `UiEventStream` records (stdlib/std/ui/ui.prime) had the same fields and modifier bits; reuse their meaning. Pure data plus small helpers (`modifiers.shift()`), no host calls, so it runs on every backend. Document in docs/spec/stdlib-reference.md.
+  - acceptance:
+    - a VM and optexe test builds each event, reads every field and compares enum values
+    - full release gate green
+  - stop_rule: the event types only; no dispatch.
+
+- [ ] TODO-5722: Web controls take click closures
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5723
+  - created_at: 2026-11-07
+  - phase: Web apps (docs/WebAppsPlan.md)
+  - parallel_track: web-controls
+  - scope: A button on a web page should take its click handler directly, a closure that may have its own `mut` state (docs/WebAppsPlan.md, principle 7), instead of being joined to a hand-routed POST path by a string. Add a page layer over `AppRouter<State>` (`stdlib/std/http/http.prime`): controls are registered once at setup, `app.button(id, title, handler)` with `handler` a `Function<void, Reference<State>, PointerEvent>`, each under a generated route (for example `POST /_on/<id>/click`); rendering writes the control as a form posting there (post/redirect/get), and the router calls the stored closure with the state and a `PointerEvent` (primary button, no position, for a plain form POST). Registration at setup is required: a closure made while rendering would lose its `mut` captures every request. Rework examples/apps/todo_web or add examples/apps/hello_button (text on a page, a button that adds a line per click) to use it, with a loopback test, and add the CodeExamples entry.
+  - acceptance:
+    - a closure with a `[mut said{0i32}]` capture counts clicks across requests in a loopback test; the page HTML after each click is checked
+    - VM and optexe tests for registration, the generated routes and a duplicate id
+    - full release gate green
+  - stop_rule: click handlers over form POSTs; hover and key events are TODO-5724.
+
+- [ ] TODO-5724: Web hover and key handlers through the fragment script
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5722
+  - created_at: 2026-11-07
+  - phase: Web apps (docs/WebAppsPlan.md)
+  - parallel_track: web-controls
+  - depends_on: TODO-5706
+  - scope: Extend the page layer of TODO-5722 with `onMouseOver`, `onMouseDown`/`onMouseUp` and `onKeyDown`/`onKeyUp` (the last only while the control has focus), each taking the matching struct of `/std/ui/events`. These events have no HTML-only form, so the fragment script of TODO-5706 sends them with the event's fields and swaps the returned fragment. Each event is a round trip: document that purely visual hover belongs in CSS, and debounce pointer moves in the script.
+  - acceptance:
+    - a test drives the script's request format for each event kind and checks the decoded `PointerEvent`/`KeyEvent` and the fragment answer
+    - the script stays within the size budget of TODO-5706
+    - full release gate green
+  - stop_rule: the event kinds listed; no drag and drop, no touch.
+
+- [ ] TODO-5725: Native pointer and key events for control handlers
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5709
+  - created_at: 2026-11-07
+  - phase: Native UI handlers (docs/WebAppsPlan.md)
+  - parallel_track: native-ui-events
+  - scope: The C ABI (include/primec/ui/NativeUi.h, version 0) reports only menu commands, control changes, window close and text changes. Add hover enter and leave, mouse down and up with button, position and modifiers, and key down and up for the focused control, as a versioned ABI extension, in the AppKit and headless backends, and add `onMouseOver`, `onMouseDown`, `onMouseUp`, `onKeyDown`, `onKeyUp` to the `/std/ui/native` controls with `/std/ui/events` structs. Text views keep typing inside the widget; key handlers on them see only keys the widget does not consume.
+  - acceptance:
+    - headless scenarios deliver each event kind to a closure and check the struct fields; the compiled program gives the same call log
+    - docs/NativeUiPlan.md section 4 and the coverage matrix describe the new events
+    - full release gate green
+  - stop_rule: the listed events on the existing controls; no new widgets.
 
 - [ ] TODO-5705: An idle connection does not stall the server
   - owner: ai
@@ -245,18 +304,18 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - full release gate green
   - stop_rule: alias declarations and their resolution only.
 
-- [ ] TODO-5709: Native UI handlers and `App.run`
+- [ ] TODO-5709: Native controls take handler closures and `App.run`
   - owner: ai
-  - status: ready
+  - status: blocked
+  - blocked_on: TODO-5723
   - created_at: 2026-11-07
   - phase: Native UI handlers (docs/WebAppsPlan.md)
   - parallel_track: native-ui-handlers
-  - scope: Native UI events reach code as integer command ids and widget handles compared in an if-chain (examples/apps/text_editor/main.prime, the `pick(app.waitEvent())` loop). Add handler overloads to `/std/ui/native` (`Menu.item(title, shortcut, handler)`, `Button.onClick`, `CheckBox.onChange`, `Popup.onChange`, window close and text change) and `App.run(state)`, which allocates command ids, keeps a handler table and dispatches until quit. Handlers receive the app state as a parameter (docs/WebAppsPlan.md, principle 2). `waitEvent` stays. Document in docs/NativeUiPlan.md and docs/spec/stdlib-reference.md.
+  - scope: Native UI events reach code as integer command ids and widget handles compared in an if-chain (examples/apps/text_editor/main.prime, the `pick(app.waitEvent())` loop). Give the `/std/ui/native` controls handler closures over the events ABI version 0 already reports (docs/WebAppsPlan.md, principle 7): `Button.onClick`, `Menu.item(title, shortcut, handler)` and toolbar items (`PointerEvent`), `CheckBox.onChange`, `Popup.onChange`, `ItemList.onChange` (`ChangeEvent`), and window close and text change. Each handler is a `Function<void, Reference<State>, Event>`, so a closure may keep its own `mut` state while shared state comes in as the parameter. `App.run(state)` allocates command ids, keeps the handler table and dispatches until quit; app code never sees an id. `waitEvent` stays. Document in docs/NativeUiPlan.md and docs/spec/stdlib-reference.md.
   - acceptance:
-    - examples/native_ui/hello_window.prime has a handler form; it runs on the VM against the headless backend and as a compiled program with the same call log
+    - examples/native_ui/hello_window.prime has a handler form with a counting `[mut]` closure on a button; it runs on the VM against the headless backend and as a compiled program with the same call log
     - full release gate green
-  - stop_rule: the PrimeStruct surface over the existing C ABI; no ABI change.
-
+  - stop_rule: handlers over the existing C ABI events; pointer and key events are TODO-5725.
 - [ ] TODO-5710: PrimeScroll dispatches through handlers
   - owner: ai
   - status: blocked
