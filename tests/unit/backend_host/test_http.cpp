@@ -15,6 +15,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <cerrno>
 #include <chrono>
 
@@ -112,6 +113,15 @@ std::string roundTrip(int port, const std::string &request) {
   std::string response = readAll(client);
   close(client);
   return response;
+}
+
+// Sends `request` on a new connection and returns how long the whole response took; the response goes to `response`.
+std::chrono::milliseconds
+timedRoundTrip(int port, const std::string &request, std::string &response) {
+  const auto start = std::chrono::steady_clock::now();
+  response = roundTrip(port, request);
+  return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() -
+                                                               start);
 }
 
 bool socketsPermitted() {
@@ -316,6 +326,83 @@ TEST_CASE("serve answers routed, missing, malformed, oversized and silent client
   CHECK_MESSAGE(echoed.find("\r\n\r\n1 hi") != std::string::npos, echoed);
   const std::string again = roundTrip(server.port, "GET / HTTP/1.1\r\n\r\n");
   CHECK_MESSAGE(again.rfind("HTTP/1.1 200 OK\r\n", 0) == 0, again);
+
+  CHECK(stopServer(server) == 0);
+}
+
+// Browsers open spare connections and send nothing on them. The loop waits on every open connection at once, so a
+// silent one holds only its own slot (TODO-5705).
+TEST_CASE("an idle connection does not delay other clients over loopback") {
+  if (!socketsPermitted()) {
+    MESSAGE("skipped: socket() is not permitted here (EPERM or EACCES)");
+    return;
+  }
+  const std::string exe = buildServer(Fixtures + "http_idle_server.prime", "http_idle_server");
+  RunningServer server = startServer(exe, "");
+  if (server.port < 0 && readFile(server.errors).find("not permitted") != std::string::npos) {
+    MESSAGE("skipped: the server may not listen here: " << readFile(server.errors));
+    return;
+  }
+  REQUIRE_MESSAGE(server.port > 0, readFile(server.errors));
+  const std::string get = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
+
+  // Each attempt opens a silent connection first, gives the server time to accept it, then times a GET. The read
+  // timeout is 1500 ms, so a loop that waited on the silent connection would take that long every time.
+  std::chrono::milliseconds fastest(100000);
+  std::chrono::milliseconds slowest(0);
+  for (int attempt = 0; attempt < 3; ++attempt) {
+    const int idle = connectWithTimeouts(server.port);
+    REQUIRE(idle >= 0);
+    usleep(50000);
+    std::string hello;
+    const std::chrono::milliseconds took = timedRoundTrip(server.port, get, hello);
+    CHECK_MESSAGE(hello.rfind("HTTP/1.1 200 OK\r\n", 0) == 0, hello);
+    fastest = std::min(fastest, took);
+    slowest = std::max(slowest, took);
+    // The silent connection is still open and is answered once it sends its request.
+    send(idle, get.data(), get.size(), 0);
+    const std::string late = readAll(idle);
+    close(idle);
+    CHECK_MESSAGE(late.rfind("HTTP/1.1 200 OK\r\n", 0) == 0, late);
+  }
+  CHECK_MESSAGE(fastest < std::chrono::milliseconds(100),
+                "fastest GET took " << fastest.count() << " ms");
+  CHECK_MESSAGE(slowest < std::chrono::milliseconds(1000),
+                "slowest GET took " << slowest.count() << " ms");
+
+  // A request that arrives in two parts does not hold up a client that sends its request at once.
+  const int slow = connectWithTimeouts(server.port);
+  REQUIRE(slow >= 0);
+  send(slow, "GET / HTTP/1.1\r\n", 16, 0);
+  usleep(50000);
+  std::string quick;
+  const std::chrono::milliseconds took = timedRoundTrip(server.port, get, quick);
+  CHECK_MESSAGE(quick.rfind("HTTP/1.1 200 OK\r\n", 0) == 0, quick);
+  CHECK_MESSAGE(took < std::chrono::milliseconds(1000),
+                "GET beside a slow client took " << took.count() << " ms");
+  send(slow, "\r\n", 2, 0);
+  const std::string finished = readAll(slow);
+  close(slow);
+  CHECK_MESSAGE(finished.rfind("HTTP/1.1 200 OK\r\n", 0) == 0, finished);
+
+  // With both slots (maxConnections 2) held by silent clients, a new client waits in the backlog until the read
+  // timeout drops one of them, and is then served.
+  const int first = connectWithTimeouts(server.port);
+  const int second = connectWithTimeouts(server.port);
+  REQUIRE(first >= 0);
+  REQUIRE(second >= 0);
+  usleep(50000);
+  std::string queued;
+  const std::chrono::milliseconds waited = timedRoundTrip(server.port, get, queued);
+  CHECK_MESSAGE(queued.rfind("HTTP/1.1 200 OK\r\n", 0) == 0, queued);
+  CHECK_MESSAGE(waited >= std::chrono::milliseconds(1000),
+                "a GET with no free slot took " << waited.count() << " ms");
+  CHECK_MESSAGE(waited < std::chrono::milliseconds(3000),
+                "a GET with no free slot took " << waited.count() << " ms");
+  CHECK(readAll(first).empty());
+  CHECK(readAll(second).empty());
+  close(first);
+  close(second);
 
   CHECK(stopServer(server) == 0);
 }

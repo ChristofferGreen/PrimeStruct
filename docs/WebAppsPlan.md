@@ -8,7 +8,8 @@ Classification: **design direction**. The open work is in `docs/todo.md` (Web ap
 `redirect`, `Router` with `:name` path parameters, `AppRouter<State>` whose handlers get the app's state as a
 parameter, static files), `/std/http/server`, `/std/json` and `/std/html` (an escaping HTML writer with the form
 vocabulary) exist and run on the VM and `--emit=optexe` (docs/spec/stdlib-reference.md). Servers are single-threaded optexe binaries; containers are out of scope. The server
-reads one connection at a time. One file cannot import both `/std/html` and `/std/json` yet: both export `Writer`
+waits on all of its open connections at once with `poll`, so an idle connection does not stall the others
+(TODO-5705). One file cannot import both `/std/html` and `/std/json` yet: both export `Writer`
 (TODO-5717). Repeated parameters give their first value and path parameters are not decoded (TODO-5718).
 `examples/apps/todo_web/main.prime` is the first app with pages, forms and buttons: an `AppRouter<TodoList>` whose
 POST routes change the list and redirect back (TODO-5704).
@@ -87,7 +88,7 @@ so PrimeScroll can move one menu at a time.
 1. Language: done (TODO-5669, TODO-5700).
 2. HTML and requests: TODO-5701 (writer, `Response.html`, `redirect`; done), TODO-5702 (query and form parameters;
    done), TODO-5703 (path parameters; done), then the todo-list example TODO-5704 (done, with `AppRouter<State>`).
-3. Server: TODO-5705 (an idle connection does not stall the others).
+3. Server: TODO-5705 (an idle connection does not stall the others; done).
 4. Events and controls: TODO-5723 (shared event structs), TODO-5722 (web controls take click closures).
 5. Fragments: TODO-5706, then TODO-5724 (web hover and key handlers).
 6. Native UI: TODO-5709 (controls take closures, `App.run`), TODO-5725 (pointer and key events in the C ABI),

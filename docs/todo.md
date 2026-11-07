@@ -105,7 +105,6 @@ of sync with them.
 | TODO-5722 | Web controls take click closures | blocked | web-controls |
 | TODO-5724 | Web hover and key handlers through the fragment script | blocked | web-controls |
 | TODO-5725 | Native pointer and key events for control handlers | blocked | native-ui-events |
-| TODO-5705 | An idle connection does not stall the server | ready | web-server-loop |
 | TODO-5706 | Fragment-swapping buttons without user JavaScript | ready | web-fragments |
 | TODO-5707 | `Function` types accept `mut` parameters | deferred | closures-mut-params |
 | TODO-5708 | Type aliases | deferred | type-aliases |
@@ -130,6 +129,8 @@ of sync with them.
 | TODO-5721 | A string converts to a `StringView` at a field of a generic struct | ready | text-literal-views |
 | TODO-5681 | A struct field built from a named vector local owns its storage once | ready | collections-fields |
 | TODO-5726 | An indexed element of a stdlib `Vector<T>` of structs binds without a fault | ready | collections-access |
+| TODO-5728 | `slice` and `sliceMut` on a vector field of a struct resolve | ready | collections-access |
+| TODO-5729 | The web example loopback tests run in their own CTest entries | ready | web-tests |
 | TODO-5682 | Native: a mutating vector-field method inside an arithmetic expression returns the right value | ready | native-backend |
 | TODO-5676 | Lambdas can state their return type | deferred | closures-return-types |
 | TODO-5677 | A `Function` whose closure holds a same-typed `Function` copies and destroys | deferred | closures-lifecycle |
@@ -156,24 +157,24 @@ of sync with them.
 ### Ready Now
 
 - TODO-5706 (web-fragments): fragment-swapping buttons without user JavaScript
-- TODO-5705 (web-server-loop): an idle connection does not stall the server
 - TODO-5603 (startup): startup audit: what a launch loads and does
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5510 (control-returns): `return` returns from unit-variant pick arms correctly
 - TODO-5524 (result-error-structs): int-backed error structs round-trip through stdlib Result sums
 - TODO-5723 (ui-events): shared UI event structs for web and native handlers
+- TODO-5728 (collections-access): `slice` and `sliceMut` on a vector field of a struct resolve
 
 ### Immediate Next 10
 
 1. TODO-5706
-2. TODO-5705
-3. TODO-5723
-4. TODO-5603
-5. TODO-5536
-6. TODO-5535
-7. TODO-5510
-8. TODO-5524
+2. TODO-5723
+3. TODO-5603
+4. TODO-5536
+5. TODO-5535
+6. TODO-5510
+7. TODO-5524
+8. TODO-5728
 
 ### Priority Lanes
 
@@ -188,8 +189,8 @@ of sync with them.
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
-- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719; collection fields found by closures and the todo example: TODO-5681, TODO-5682, TODO-5726, TODO-5727
-- Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5705, TODO-5706, TODO-5718, TODO-5722, TODO-5724
+- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719; collection fields found by closures and the todo example: TODO-5681, TODO-5682, TODO-5726, TODO-5727, TODO-5728
+- Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5706, TODO-5729, TODO-5718, TODO-5722, TODO-5724
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721
 - Native UI handlers (docs/WebAppsPlan.md): TODO-5723, TODO-5709, TODO-5710, TODO-5711, TODO-5725
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
@@ -267,18 +268,17 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - full release gate green
   - stop_rule: the listed events on the existing controls; no new widgets.
 
-- [ ] TODO-5705: An idle connection does not stall the server
+- [ ] TODO-5729: The web example loopback tests run in their own CTest entries
   - owner: ai
   - status: ready
   - created_at: 2026-11-07
-  - phase: Web apps (docs/WebAppsPlan.md)
-  - parallel_track: web-server-loop
-  - scope: `serveUntil` reads one connection to completion before accepting the next, with `readTimeoutMs` (5 s) per request. Browsers open spare connections and send nothing on them, so one idle connection should delay every other client by up to the read timeout. Confirm this with a loopback test first (open a connection and send nothing, then time a second client's GET). If confirmed, wait on the listener and every open connection together through one new host call (`poll` in stdlib/std/net/native/net_shim.cpp), keep a small fixed table of connections with their buffers, and serve whichever is ready. Still one thread.
+  - phase: Web apps (docs/WebAppsPlan.md; found by TODO-5705)
+  - parallel_track: web-tests
+  - scope: The ctest `PrimeStruct_net` runs the whole primestruct.backend.net suite, which builds five optexe programs (net_echo twice, http_hello, web_app, todo_web, serve_file); todo_web alone takes about 250 s (the frontend about 50 s, clang++ about 80 s of CPU plus load). On 2026-11-07 the suite took 365 s alone and 879 s and over 900 s (timeout) in two release gates with load averages up to 90, so it fails under load. Register the example tests (http_hello, web_app, todo_web) as separate CTest entries filtered by `--test-case`, like PrimeStruct_string_conformance_optexe, and keep the registration guard and inventory in sync.
   - acceptance:
-    - the loopback test serves the second client in under 100 ms while the first stays idle, on optexe
-    - existing http_hello, web_app and server tests pass unchanged
+    - each example's loopback test is its own ctest entry with its own timeout, and the union still covers every primestruct.backend.net case (scripts/check_test_registration.py passes)
     - full release gate green
-  - stop_rule: readiness-driven accept and read in the existing loop; no threads, no keep-alive.
+  - stop_rule: CTest registration of the net suite only; no change to the tests themselves.
 
 - [ ] TODO-5706: Fragment-swapping buttons without user JavaScript
   - owner: ai
@@ -503,6 +503,18 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - the three spellings bind, copy once and destroy once on the VM and optexe (matrix case)
     - full release gate green
   - stop_rule: indexed reads of stdlib `Vector<T>` struct elements only.
+
+- [ ] TODO-5728: `slice` and `sliceMut` on a vector field of a struct resolve
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-07
+  - phase: Collections (docs/spec/strings-and-views.md, slices; found by TODO-5705)
+  - parallel_track: collections-access
+  - scope: With `[Holder mut] holder{Holder{}}` where `Holder` has a field `[vector<u8> mut] bytes`, `holder.bytes.slice(0i32, 2i32)` and `holder.bytes.sliceMut(0i32, 2i32)` fail with `unknown call target: slice` / `sliceMut` (PSC1005), while `push`, `count` and indexing on the same field work and the same calls on a `vector<u8>` local or parameter work. The /std/http/server connection table keeps its buffers in a separate `vector<u8>` parameter because of this.
+  - acceptance:
+    - `slice` and `sliceMut` on a vector field of a local struct and of a `mut` struct parameter read and write the field's storage on the VM and optexe, with a positive and a negative (out of range) case
+    - full release gate green
+  - stop_rule: method resolution of the slice calls on struct fields only.
 
 - [ ] TODO-5682: Native: a mutating vector-field method inside an arithmetic expression returns the right value
   - owner: ai

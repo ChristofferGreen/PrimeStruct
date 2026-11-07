@@ -10,6 +10,7 @@
 
 #include <cerrno>
 #include <cstdint>
+#include <vector>
 
 namespace {
 
@@ -162,6 +163,30 @@ int64_t net_send(int32_t fd, uint8_t *data, uint64_t length, int32_t timeoutMs) 
     sent += static_cast<uint64_t>(count);
   }
   return static_cast<int64_t>(sent);
+}
+
+// `interest` has one byte per descriptor: a nonzero byte at index fd waits for fd to become readable. On return each
+// watched byte is 2 when its descriptor is ready (data, a pending connection, end of input or an error) and 1 when it
+// is not. Returns how many are ready, or a negative code (TimeoutCode when none became ready in time).
+int32_t net_poll(uint8_t *interest, uint64_t length, int32_t timeoutMs) {
+  std::vector<pollfd> entries;
+  for (uint64_t fd = 0; fd < length && fd <= INT32_MAX; ++fd) {
+    if (interest[fd] != 0) {
+      pollfd entry = {};
+      entry.fd = static_cast<int>(fd);
+      entry.events = POLLIN;
+      entries.push_back(entry);
+    }
+  }
+  const int ready =
+      poll(entries.data(), static_cast<nfds_t>(entries.size()), timeoutMs < 0 ? -1 : timeoutMs);
+  if (ready < 0) {
+    return codeOf(errno);
+  }
+  for (const pollfd &entry : entries) {
+    interest[entry.fd] = entry.revents != 0 ? 2 : 1;
+  }
+  return ready == 0 ? TimeoutCode : ready;
 }
 
 int32_t net_close(int32_t fd) { return close(fd) == 0 ? 0 : codeOf(errno); }

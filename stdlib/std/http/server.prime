@@ -2,9 +2,10 @@
 // app with both shims:
 //   primec --emit=optexe app.prime -o app --link-arg <stdlib>/std/net/native/net_shim.cpp \
 //     --link-arg <stdlib>/std/os/os_posix.cpp
-// One connection at a time: accept, read until the request is complete or rejected, call the handler, write the
-// response, close. Every call that can block has a timeout, so a slow or silent client cannot stall the loop for
-// longer than `readTimeoutMs`.
+// One thread waits on the listener and up to `maxConnections` open connections at once and serves whichever is
+// ready: accept, read what has arrived until the request is complete or rejected, call the handler, write the
+// response, close. A silent or slow client holds only its own slot, for at most `readTimeoutMs`; only writing a
+// response blocks the loop, for at most `writeTimeoutMs`.
 import /std/collections/*
 import /std/http/*
 import /std/net/*
@@ -35,6 +36,8 @@ namespace server {
     [public bool] loopbackOnly{false}
     // Print "listening on <port>" to stderr once listening.
     [public bool] announce{true}
+    // How many connections are read at once. While all are open, new connections wait in the listen backlog.
+    [public i32] maxConnections{16i32}
   }
 
   // Why `serve` could not start: a /std/net code from listening.
@@ -63,57 +66,160 @@ namespace server {
     send(connection, text.data, convert<u64>(text.count()), timeoutMs)
   }
 
-  // Reads one request from `connection` into `buffer`, answers it and closes the connection.
+  // The open connections of `serveUntil`. Slot i holds one socket (-1 when free), its state (0 free, 1 reading a
+  // request, 2 draining after a rejected request), its deadline and a count (bytes read while reading, rounds of
+  // input while draining). Its bytes are [i * maxRequestBytes, (i + 1) * maxRequestBytes) of the loop's `buffers`,
+  // which grows to cover slot i the first time it is used.
+  [struct]
+  Connections() {
+    [vector<i32> mut] sockets{vector<i32>()}
+    [vector<i32> mut] states{vector<i32>()}
+    [vector<i64> mut] deadlines{vector<i64>()}
+    [vector<i32> mut] counts{vector<i32>()}
+  }
+
+  // How long a rejected connection is drained between rounds of input, and how many rounds it may take.
+  [return<i64>]
+  drain_wait_ms() {
+    return(50i64)
+  }
+
+  [return<i32>]
+  drain_rounds() {
+    return(8i32)
+  }
+
+  // Whether a recv result means "nothing yet" rather than data, end of input or a failure.
+  [return<bool>]
+  not_ready([i64] got) {
+    return(got == convert<i64>(timeoutCode()) || got == convert<i64>(againCode()) || got == convert<i64>(interruptedCode()))
+  }
+
+  // Marks `socket` in `interest` (one byte per descriptor, grown with zeros as needed) to be watched by `poll`.
+  [effects(heap_alloc)]
+  watch_socket([vector<u8> mut] interest, [i32] socket) {
+    while(interest.count() <= socket) {
+      interest.push(0u8)
+    }
+    interest[socket] = 1u8
+  }
+
+  // Whether `socket` was ready in the last `poll` over `interest`; clears its byte so it is no longer watched.
+  [return<bool>]
+  take_ready([vector<u8> mut] interest, [i32] socket) {
+    if(socket < 0i32 || socket >= interest.count()) {
+      return(false)
+    }
+    [bool] ready{interest[socket] == 2u8}
+    interest[socket] = 0u8
+    return(ready)
+  }
+
+  // Waits on the sockets marked in `interest`; a timeout or a signal leaves nothing ready.
+  [effects(net_io)]
+  wait_ready([vector<u8> mut] interest, [i64] timeoutMs) {
+    [i32] length{interest.count()}
+    [mut] window{interest.sliceMut(0i32, length)}
+    poll(window.data, convert<u64>(length), convert<i32>(timeoutMs))
+  }
+
+  // Closes the socket in `slot` and frees the slot.
+  [effects(net_io)]
+  close_slot([Connections mut] table, [i32] slot) {
+    close(table.sockets[slot])
+    table.sockets[slot] = -1i32
+    table.states[slot] = 0i32
+  }
+
+  // Puts a new connection in the first free slot (the caller checked that one is free).
+  [effects(heap_alloc)]
+  open_slot([Connections mut] table, [vector<u8> mut] buffers, [i32] connection, [ServerConfig] config) {
+    [i32 mut] slot{0i32}
+    while(table.states[slot] != 0i32) {
+      slot = slot + 1i32
+    }
+    [i32] end{(slot + 1i32) * config.maxRequestBytes}
+    while(buffers.count() < end) {
+      buffers.push(0u8)
+    }
+    table.sockets[slot] = connection
+    table.states[slot] = 1i32
+    table.counts[slot] = 0i32
+    table.deadlines[slot] = monotonicMs() + convert<i64>(config.readTimeoutMs)
+  }
+
+  // Answers a rejected request with a bare status. Closing with unread input would reset the connection and could
+  // discard the answer, so the slot drains what is still arriving for a moment first.
   [effects(net_io, heap_alloc)]
-  serve_connection<Handler>([Handler mut] handler,
-                            [i32] connection,
-                            [ServerConfig] config,
-                            [vector<u8> mut] buffer,
-                            [Response mut] response) {
-    [i32] capacity{buffer.count()}
-    [i64] deadline{monotonicMs() + convert<i64>(config.readTimeoutMs)}
-    [i32 mut] received{0i32}
-    [i32 mut] answer{413i32}
-    [bool mut] reading{true}
-    while(reading && received < capacity) {
-      [i64] left{deadline - monotonicMs()}
-      [mut] window{buffer.sliceMut(received, capacity)}
-      [i64] got{if(left > 0i64, then() { recv(connection, window.data, convert<u64>(capacity - received), convert<i32>(left)) }, else() { -1i64 })}
-      if(got <= 0i64) {
-        // Closed, timed out, interrupted or failed before the request was complete: nothing to answer.
-        answer = 0i32
-        reading = false
-      } else {
-        received = received + convert<i32>(got)
-        [Request] request{parseRequestBytes(buffer.slice(0i32, received), config.maxRequestBytes)}
-        [i32] outcome{request.outcome()}
-        if(outcome == 0i32) {
-          response.clear()
-          handler(request, location(response))
-          [String] bytes{response.serialize()}
-          send_text(connection, bytes, config.writeTimeoutMs)
-          answer = 0i32
-          reading = false
-        }
-        if(outcome >= 400i32) {
-          answer = outcome
-          reading = false
-        }
-      }
+  reject_slot([Connections mut] table, [i32] slot, [i32] status, [ServerConfig] config) {
+    [String] bytes{statusResponse(status)}
+    send_text(table.sockets[slot], bytes, config.writeTimeoutMs)
+    table.states[slot] = 2i32
+    table.counts[slot] = 0i32
+    table.deadlines[slot] = monotonicMs() + drain_wait_ms()
+  }
+
+  // Reads what has arrived on a ready reading slot. A complete request is handed to the handler, answered and
+  // closed; a rejected one, or one that does not fit in `maxRequestBytes` (413), is answered and drained; a closed or
+  // failed connection is dropped without an answer.
+  [effects(net_io, heap_alloc)]
+  read_slot<Handler>([Handler mut] handler,
+                     [Connections mut] table,
+                     [vector<u8> mut] buffers,
+                     [i32] slot,
+                     [ServerConfig] config,
+                     [Response mut] response) {
+    [i32] capacity{config.maxRequestBytes}
+    [i32] base{slot * capacity}
+    [i32] connection{table.sockets[slot]}
+    [i32] received{table.counts[slot]}
+    [mut] window{buffers.sliceMut(base + received, base + capacity)}
+    [i64] got{recv(connection, window.data, convert<u64>(capacity - received), 0i32)}
+    if(not_ready(got)) {
+      return()
     }
-    // A rejected request, or one that did not fit in `maxRequestBytes` (413). Closing with unread input would reset
-    // the connection and could discard the answer, so read what is still arriving for a moment first.
-    if(answer != 0i32) {
-      [String] bytes{statusResponse(answer)}
+    if(got <= 0i64) {
+      close_slot(table, slot)
+      return()
+    }
+    [i32] total{received + convert<i32>(got)}
+    table.counts[slot] = total
+    [Request] request{parseRequestBytes(buffers.slice(base, base + total), capacity)}
+    [i32] outcome{request.outcome()}
+    if(outcome == 0i32) {
+      response.clear()
+      handler(request, location(response))
+      [String] bytes{response.serialize()}
       send_text(connection, bytes, config.writeTimeoutMs)
-      [i32 mut] rounds{0i32}
-      while(rounds < 8i32) {
-        [mut] window{buffer.sliceMut(0i32, capacity)}
-        [i64] got{recv(connection, window.data, convert<u64>(capacity), 50i32)}
-        rounds = if(got > 0i64, then() { rounds + 1i32 }, else() { 8i32 })
-      }
+      close_slot(table, slot)
+      return()
     }
-    close(connection)
+    if(outcome >= 400i32) {
+      reject_slot(table, slot, outcome, config)
+      return()
+    }
+    if(total >= capacity) {
+      reject_slot(table, slot, 413i32, config)
+    }
+  }
+
+  // Discards what has arrived on a ready draining slot; closes it at end of input or after `drain_rounds()` rounds.
+  [effects(net_io)]
+  drain_slot([Connections mut] table, [vector<u8> mut] buffers, [i32] slot, [ServerConfig] config) {
+    [i32] capacity{config.maxRequestBytes}
+    [i32] base{slot * capacity}
+    [mut] window{buffers.sliceMut(base, base + capacity)}
+    [i64] got{recv(table.sockets[slot], window.data, convert<u64>(capacity), 0i32)}
+    if(not_ready(got)) {
+      return()
+    }
+    [i32] rounds{table.counts[slot] + 1i32}
+    if(got <= 0i64 || rounds >= drain_rounds()) {
+      close_slot(table, slot)
+      return()
+    }
+    table.counts[slot] = rounds
+    table.deadlines[slot] = monotonicMs() + drain_wait_ms()
   }
 
   // Serves requests with `handler`, any callable taking (Request, Reference<Response>), until `stop()` is true. The
@@ -130,18 +236,74 @@ namespace server {
       print_error("listening on ")
       print_line_error(port)
     }
-    [vector<u8> mut] buffer{vector<u8>()}
-    [i32 mut] index{0i32}
-    while(index < config.maxRequestBytes) {
-      buffer.push(0u8)
-      index = index + 1i32
+    [i32] slots{if(config.maxConnections > 0i32, then() { config.maxConnections }, else() { 1i32 })}
+    [Connections mut] table{Connections{}}
+    [i32 mut] slot{0i32}
+    while(slot < slots) {
+      table.sockets.push(-1i32)
+      table.states.push(0i32)
+      table.deadlines.push(0i64)
+      table.counts.push(0i32)
+      slot = slot + 1i32
     }
+    [vector<u8> mut] buffers{vector<u8>()}
+    [vector<u8> mut] interest{vector<u8>()}
     [Response mut] response{Response{}}
     while(!stop()) {
-      [i32] connection{accept(listener, config.acceptTimeoutMs)}
-      if(connection >= 0i32) {
-        serve_connection(handler, connection, config, buffer, response)
+      // Wait on every open connection, and on the listener while a slot is free, until the first deadline.
+      [i64] now{monotonicMs()}
+      [i64 mut] wait{convert<i64>(config.acceptTimeoutMs)}
+      [i32 mut] open{0i32}
+      slot = 0i32
+      while(slot < slots) {
+        if(table.states[slot] != 0i32) {
+          watch_socket(interest, table.sockets[slot])
+          open = open + 1i32
+          [i64] remaining{table.deadlines[slot] - now}
+          [i64] left{if(remaining > 0i64, then() { remaining }, else() { 0i64 })}
+          if(wait < 0i64 || left < wait) {
+            wait = left
+          }
+        }
+        slot = slot + 1i32
       }
+      [bool] room{open < slots}
+      if(room) {
+        watch_socket(interest, listener)
+      }
+      // After a timeout or a signal nothing is ready; the loop then checks deadlines and `stop()`.
+      wait_ready(interest, wait)
+      [i64] after{monotonicMs()}
+      slot = 0i32
+      while(slot < slots) {
+        if(table.states[slot] != 0i32) {
+          if(take_ready(interest, table.sockets[slot])) {
+            if(table.states[slot] == 1i32) {
+              read_slot(handler, table, buffers, slot, config, response)
+            } else {
+              drain_slot(table, buffers, slot, config)
+            }
+          }
+          // A reading slot gets `readTimeoutMs` for its whole request; a draining slot waits briefly for more input.
+          if(table.states[slot] != 0i32 && after >= table.deadlines[slot]) {
+            close_slot(table, slot)
+          }
+        }
+        slot = slot + 1i32
+      }
+      if(room && take_ready(interest, listener)) {
+        [i32] connection{accept(listener, 0i32)}
+        if(connection >= 0i32) {
+          open_slot(table, buffers, connection, config)
+        }
+      }
+    }
+    slot = 0i32
+    while(slot < slots) {
+      if(table.states[slot] != 0i32) {
+        close_slot(table, slot)
+      }
+      slot = slot + 1i32
     }
     close(listener)
     return(Result.ok())

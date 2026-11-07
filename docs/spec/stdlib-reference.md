@@ -508,6 +508,11 @@ Linux and macOS:
 - `recv(socket, buffer, length, timeoutMs) -> i64`: reads up to `length` bytes; 0 means the peer closed.
 - `send(socket, data, length, timeoutMs) -> i64`: writes all `length` bytes; a timeout or signal after some bytes
   returns the count written so far. A peer that has gone gives `closedCode()`, never `SIGPIPE`.
+- `poll(interest, length, timeoutMs) -> i32`: waits until one of the marked sockets is readable: a listener has a
+  connection waiting, or a connection has data, end of input or an error. `interest` is a byte buffer with one byte
+  per descriptor (`length` bytes); a nonzero byte at index fd watches fd. On return each watched byte is 2 when that
+  socket is ready and 1 when it is not. Returns how many sockets are ready, `timeoutCode()` when none became ready in
+  time, or `interruptedCode()` when a signal arrived.
 - `close(socket) -> i32`: 0 or a negative code.
 - `connectLoopback(port, timeoutMs) -> i32`: a client connection to 127.0.0.1, for tests and health checks.
 
@@ -689,23 +694,31 @@ primec --emit=optexe app.prime -o app --link-arg stdlib/std/net/native/net_shim.
 - **Handlers:** `handler` is any callable taking `(Request, Reference<Response>)`, such as a lambda, a struct with
   `call`, a `Router`, an `AppRouter` or a middleware closure. It is a generic parameter, so the call is direct and the
   handler keeps its state between requests.
-- **The loop** is single-threaded and handles one connection at a time:
-  1. Accept, waiting at most `acceptTimeoutMs`. That bounds how long the stop condition goes unchecked; a signal also
-     ends the wait at once.
-  2. Read until `parseRequestBytes` says the request is complete or rejected. The whole request must arrive within
-     `readTimeoutMs`, and a client that is closed, silent or too slow is dropped without an answer.
-  3. Call the handler with a cleared `Response`.
-  4. Write `serialize()` within `writeTimeoutMs`, then close.
+- **The loop** is single-threaded. It waits with `poll` on the listener and every open connection together and
+  serves whichever is ready, so a client that connects and sends nothing (a browser's spare connection) or sends
+  slowly holds only its own slot:
+  1. Wait until a socket is ready or the first deadline passes, at most `acceptTimeoutMs`. That bounds how long the
+     stop condition goes unchecked; a signal also ends the wait at once.
+  2. Accept a waiting connection into a free slot. Up to `maxConnections` are open at once; while all are, new
+     connections wait in the listen backlog until a slot frees (they are not answered 503).
+  3. Read what has arrived on a ready connection until `parseRequestBytes` says the request is complete or
+     rejected. The whole request must arrive within `readTimeoutMs` of the accept, and a client that is closed,
+     silent or too slow is dropped without an answer.
+  4. Call the handler with a cleared `Response`, write `serialize()` and close. Writing blocks the loop, for at most
+     `writeTimeoutMs`; a response that fits in the socket's send buffer, as most do, is written at once.
 - **Rejected requests** get a bare status (`statusResponse`) and never reach the handler: 400, 413, 501 and 505, plus
-  413 for a request that does not fit in `maxRequestBytes`. The loop then reads for a moment before closing, so the
-  client sees the answer rather than a reset.
+  413 for a request that does not fit in `maxRequestBytes`. The connection keeps its slot and its input is read and
+  discarded until it pauses for 50 ms (at most 8 rounds), so the client sees the answer rather than a reset.
+- **Memory:** each slot has its own `maxRequestBytes` buffer, allocated the first time the slot is used, so the
+  buffers take at most `maxConnections * maxRequestBytes` (1 MiB with the defaults).
 - **`ServerConfig`** fields and their defaults:
   - `port{8080}`; 0 picks a free port;
   - `backlog{64}`;
   - `maxRequestBytes{65536}`, the buffer that holds the head and body together;
   - `acceptTimeoutMs{500}`, `readTimeoutMs{5000}` and `writeTimeoutMs{5000}`;
   - `loopbackOnly{false}`, which listens on 127.0.0.1 only;
-  - `announce{true}`, which prints `listening on <port>` to stderr once listening.
+  - `announce{true}`, which prints `listening on <port>` to stderr once listening;
+  - `maxConnections{16}`, how many connections are open at once (a value below 1 means 1).
 - **Middleware:** `withRequestLog(next)` wraps any handler and logs `METHOD target STATUS Nms` for each request
   through `logLine`. Middleware is a generic function that returns a closure capturing `next`, so wrapping is
   zero-cost and composes: `serve(withRequestLog(router), config)`. Do not erase a middleware chain into a `Function`

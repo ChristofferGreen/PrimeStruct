@@ -1,0 +1,24 @@
+// An HTTP server for the idle-connection loopback test in tests/unit/backend_host/test_http.cpp: /std/http/server on
+// 127.0.0.1 with a free port (printed as "listening on <port>"), a 1500 ms read timeout and room for two connections
+// at once. It stops with exit code 0 on SIGTERM. Build with the net and os shims.
+import /std/http/*
+import /std/http/server/*
+import /std/text/*
+import /std/text/view/*
+
+[effects(io_err)]
+log_serve_error([ServeError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(heap_alloc, io_err, net_io) on_error<ServeError, log_serve_error>]
+main() {
+  [Router mut] router{Router{}}
+  router.get("/", Function<void, Request, Reference<Response>>{[]([Request] request, [Reference<Response>] response) {
+    response.text(textOf("hello\n"), textOf("text/plain"))
+  }})
+  [ServerConfig] config{ServerConfig{[port] 0i32, [readTimeoutMs] 1500i32, [acceptTimeoutMs] 200i32,
+                                    [maxConnections] 2i32, [loopbackOnly] true}}
+  serve(router, config)?
+  return(0i32)
+}
