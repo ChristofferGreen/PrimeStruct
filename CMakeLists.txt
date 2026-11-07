@@ -1363,6 +1363,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/backend_host/test_cpp_native_ui.cpp
     tests/unit/backend_host/test_net.cpp
     tests/unit/backend_host/test_http.cpp
+    tests/unit/backend_host/test_ui_events.cpp
   )
   add_dependencies(PrimeStruct_cpp_host_call_tests primec)
   target_include_directories(PrimeStruct_cpp_host_call_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
@@ -1469,6 +1470,16 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_http_loopback
                        PROPERTIES TIMEOUT 1200 LABELS "parallel-safe")
+
+  # /std/ui/events: the event values control handlers receive (tests/unit/backend_host/test_ui_events.cpp).
+  add_test(
+    NAME PrimeStruct_ui_events
+    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+            "--test-suite=primestruct.backend.ui_events"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_ui_events
+                       PROPERTIES TIMEOUT 900 LABELS "parallel-safe")
 
   # Native UI C ABI on the headless backend, and its ScriptEngine bindings.
   add_executable(PrimeStruct_native_ui_tests

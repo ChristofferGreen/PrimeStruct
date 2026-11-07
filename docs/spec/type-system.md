@@ -578,6 +578,9 @@ Colors() {
 ```
 
 Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to brace construction (`Colors{[value] 5i32}`).
+Entries compare with `==` and `!=` when the enum also carries `generate(Equal, NotEqual)` (`[public enum
+generate(Equal, NotEqual)]`, as `/std/ui/events` `PointerButton` does); the comparison is the generated field-wise
+helper over `value` (docs/spec/transforms.md).
 
 ### Ownership and Mutability
 - `mut` marks writeable bindings.

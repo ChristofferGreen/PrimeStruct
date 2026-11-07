@@ -148,12 +148,13 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
     return anyDefinitionFamilyPathStartsWith(pathText + "<") ||
            anyDefinitionFamilyPathStartsWith(pathText + "__t");
   };
-  if (candidatePath == "/equal" || candidatePath == "equal") {
+  const bool isEqualCandidate = candidatePath == "/equal" || candidatePath == "equal";
+  if (isEqualCandidate || candidatePath == "/not_equal" || candidatePath == "not_equal") {
     std::string reflectedStructEqualityHelperPath;
     if (resolveReflectedStructEqualityHelperPath(params,
                                                  locals,
                                                  expr,
-                                                 "equal",
+                                                 isEqualCandidate ? "equal" : "not_equal",
                                                  reflectedStructEqualityHelperPath) &&
         pathExists(reflectedStructEqualityHelperPath)) {
       return reflectedStructEqualityHelperPath;

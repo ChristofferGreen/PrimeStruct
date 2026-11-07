@@ -1,0 +1,113 @@
+// /std/ui/events: every event built, every field read and the enum values compared
+// (tests/unit/backend_host/test_ui_events.cpp). The exit code is the number of the first check that failed, or 0.
+import /std/ui/events/*
+
+// A handler-shaped reader: what a click handler would decide from its event.
+[return<i32>]
+describe_click([PointerEvent] event) {
+  if(event.button == PointerButton.secondary) {
+    return(2i32)
+  }
+  if(event.button != PointerButton.primary) {
+    return(0i32)
+  }
+  if(event.modifiers.shift()) {
+    return(3i32)
+  }
+  return(1i32)
+}
+
+[return<int>]
+main() {
+  // Defaults: no button, no position, no modifiers, no click.
+  [PointerEvent] idle{PointerEvent{}}
+  if(idle.button != PointerButton.none || idle.hasPosition || idle.modifiers.any() || idle.clickCount != 0i32) {
+    return(1i32)
+  }
+  if(idle.x != 0i32 || idle.y != 0i32) {
+    return(2i32)
+  }
+  // A double click with the secondary button at (12, 34), shift and meta held.
+  [Modifiers] shiftMeta{Modifiers{[bits] Modifiers.shiftBit + Modifiers.metaBit}}
+  [PointerEvent] context{PointerEvent{[button] PointerButton.secondary, [x] 12i32, [y] 34i32, [hasPosition] true,
+                                       [modifiers] shiftMeta, [clickCount] 2i32}}
+  if(context.button != PointerButton.secondary || context.button == PointerButton.primary) {
+    return(3i32)
+  }
+  if(context.x != 12i32 || context.y != 34i32 || !context.hasPosition || context.clickCount != 2i32) {
+    return(4i32)
+  }
+  [Modifiers] held{context.modifiers}
+  [bool] shift{held.shift()}
+  [bool] control{held.control()}
+  [bool] alt{held.alt()}
+  [bool] meta{held.meta()}
+  if(!shift || control || alt || !meta || held.bits != 9i32) {
+    return(5i32)
+  }
+  // Each modifier bit alone, and all of them.
+  [Modifiers] onlyControl{Modifiers{[bits] Modifiers.controlBit}}
+  [Modifiers] onlyAlt{Modifiers{[bits] Modifiers.altBit}}
+  [Modifiers] all{Modifiers{[bits] 15i32}}
+  [bool] controlShift{onlyControl.shift()}
+  [bool] altMeta{onlyAlt.meta()}
+  if(!onlyControl.control() || controlShift || !onlyAlt.alt() || altMeta) {
+    return(6i32)
+  }
+  if(!all.shift() || !all.control() || !all.alt() || !all.meta()) {
+    return(7i32)
+  }
+  if(held != shiftMeta || held == all || Modifiers{} != Modifiers{[bits] 0i32}) {
+    return(8i32)
+  }
+  // The enum's values and comparisons.
+  if(PointerButton.none.value != -1i32 || PointerButton.primary.value != 0i32 || PointerButton.secondary.value != 1i32 ||
+     PointerButton.middle.value != 2i32) {
+    return(9i32)
+  }
+  if(PointerButton.middle == PointerButton.primary || PointerButton.middle != PointerButton.middle) {
+    return(10i32)
+  }
+  // A handler deciding from its event.
+  [PointerEvent] click{PointerEvent{[button] PointerButton.primary, [clickCount] 1i32}}
+  [PointerEvent] shiftClick{PointerEvent{[button] PointerButton.primary, [modifiers] Modifiers{[bits] 1i32}, [clickCount] 1i32}}
+  if(describe_click(click) != 1i32 || describe_click(context) != 2i32 || describe_click(shiftClick) != 3i32 ||
+     describe_click(idle) != 0i32) {
+    return(11i32)
+  }
+  // Keys: characters by code point, named keys below zero.
+  [KeyEvent] typed{KeyEvent{[key] characterKey(97i32), [modifiers] onlyControl}}
+  if(!typed.key.isCharacter() || typed.key.character() != 97i32 || typed.key != characterKey(97i32)) {
+    return(12i32)
+  }
+  if(typed.key == characterKey(98i32) || typed.isRepeat || !typed.modifiers.control()) {
+    return(13i32)
+  }
+  [KeyEvent] heldEnter{KeyEvent{[key] Key.enter, [isRepeat] true}}
+  if(heldEnter.key != Key.enter || heldEnter.key == Key.escape || heldEnter.key.isCharacter()) {
+    return(14i32)
+  }
+  if(heldEnter.key.character() != -1i32 || !heldEnter.isRepeat || heldEnter.modifiers.any()) {
+    return(15i32)
+  }
+  if(Key.enter.code != -1i32 || Key.tab.code != -2i32 || Key.escape.code != -3i32 || Key.backspace.code != -4i32 ||
+     Key.delete.code != -5i32) {
+    return(16i32)
+  }
+  if(Key.left.code != -6i32 || Key.right.code != -7i32 || Key.up.code != -8i32 || Key.down.code != -9i32 ||
+     Key.home.code != -10i32 || Key.end.code != -11i32 || Key.pageUp.code != -12i32 || Key.pageDown.code != -13i32) {
+    return(17i32)
+  }
+  [Key] space{characterKey(32i32)}
+  if(space == Key.tab || !space.isCharacter()) {
+    return(18i32)
+  }
+  // Changes: a check box and a list.
+  [ChangeEvent] unchanged{ChangeEvent{}}
+  [ChangeEvent] checkedBox{ChangeEvent{[checked] true}}
+  [ChangeEvent] picked{ChangeEvent{[index] 3i32}}
+  if(unchanged.checked || unchanged.index != -1i32 || !checkedBox.checked || picked.index != 3i32 || picked.checked) {
+    return(19i32)
+  }
+  return(0i32)
+}

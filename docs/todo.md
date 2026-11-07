@@ -101,14 +101,13 @@ of sync with them.
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
 | TODO-5727 | Every struct copy site tells a place from a temporary by resolution | deferred | lifecycle-copy-sources |
-| TODO-5723 | Shared UI event structs for web and native handlers | ready | ui-events |
-| TODO-5722 | Web controls take click closures | blocked | web-controls |
+| TODO-5722 | Web controls take click closures | ready | web-controls |
 | TODO-5724 | Web hover and key handlers through the fragment script | blocked | web-controls |
 | TODO-5725 | Native pointer and key events for control handlers | blocked | native-ui-events |
 | TODO-5706 | Fragment-swapping buttons without user JavaScript | ready | web-fragments |
 | TODO-5707 | `Function` types accept `mut` parameters | deferred | closures-mut-params |
 | TODO-5708 | Type aliases | deferred | type-aliases |
-| TODO-5709 | Native controls take handler closures and `App.run` | blocked | native-ui-handlers |
+| TODO-5709 | Native controls take handler closures and `App.run` | ready | native-ui-handlers |
 | TODO-5710 | PrimeScroll dispatches through handlers | blocked | native-ui-handlers |
 | TODO-5711 | Retire the `/std/ui` layout and command-list prototype | ready | ui-prototype-retire |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
@@ -130,6 +129,7 @@ of sync with them.
 | TODO-5681 | A struct field built from a named vector local owns its storage once | ready | collections-fields |
 | TODO-5726 | An indexed element of a stdlib `Vector<T>` of structs binds without a fault | ready | collections-access |
 | TODO-5728 | `slice` and `sliceMut` on a vector field of a struct resolve | ready | collections-access |
+| TODO-5730 | Elements of a `vector<String>` struct field read without a fault | ready | collections-access |
 | TODO-5682 | Native: a mutating vector-field method inside an arithmetic expression returns the right value | ready | native-backend |
 | TODO-5676 | Lambdas can state their return type | deferred | closures-return-types |
 | TODO-5677 | A `Function` whose closure holds a same-typed `Function` copies and destroys | deferred | closures-lifecycle |
@@ -161,19 +161,20 @@ of sync with them.
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5510 (control-returns): `return` returns from unit-variant pick arms correctly
 - TODO-5524 (result-error-structs): int-backed error structs round-trip through stdlib Result sums
-- TODO-5723 (ui-events): shared UI event structs for web and native handlers
 - TODO-5728 (collections-access): `slice` and `sliceMut` on a vector field of a struct resolve
+- TODO-5722 (web-controls): web controls take click closures
 
 ### Immediate Next 10
 
 1. TODO-5706
-2. TODO-5723
+2. TODO-5722
 3. TODO-5603
 4. TODO-5536
 5. TODO-5535
 6. TODO-5510
 7. TODO-5524
 8. TODO-5728
+9. TODO-5709 (ready; outside Ready Now while it is full)
 
 ### Priority Lanes
 
@@ -188,10 +189,10 @@ of sync with them.
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
-- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719; collection fields found by closures and the todo example: TODO-5681, TODO-5682, TODO-5726, TODO-5727, TODO-5728
+- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719; collection fields found by closures and the todo example: TODO-5681, TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730
 - Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5706, TODO-5718, TODO-5722, TODO-5724
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721
-- Native UI handlers (docs/WebAppsPlan.md): TODO-5723, TODO-5709, TODO-5710, TODO-5711, TODO-5725
+- Native UI handlers (docs/WebAppsPlan.md): TODO-5709, TODO-5710, TODO-5711, TODO-5725
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
 ### Execution Queue
@@ -212,22 +213,9 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - full release gate green
   - stop_rule: copy-source classification at the listed sites only.
 
-- [ ] TODO-5723: Shared UI event structs for web and native handlers
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-07
-  - phase: Native UI handlers (docs/WebAppsPlan.md)
-  - parallel_track: ui-events
-  - scope: Add `/std/ui/events` (`stdlib/std/ui/events/events.prime`) with the event values every control handler receives (docs/WebAppsPlan.md, principle 7): `PointerEvent` (`button` as a `PointerButton` enum: none, primary, secondary, middle; control-local `x`, `y`; `modifiers`; `clickCount`), `KeyEvent` (`key` as a `Key` value: named keys and characters; `modifiers`; `repeat`), `ChangeEvent` for check boxes, popups and lists (the new value or index), and `Modifiers` (shift, control, alt, meta). The retired `/std/ui` prototype's `UiEventStream` records (stdlib/std/ui/ui.prime) had the same fields and modifier bits; reuse their meaning. Pure data plus small helpers (`modifiers.shift()`), no host calls, so it runs on every backend. Document in docs/spec/stdlib-reference.md.
-  - acceptance:
-    - a VM and optexe test builds each event, reads every field and compares enum values
-    - full release gate green
-  - stop_rule: the event types only; no dispatch.
-
 - [ ] TODO-5722: Web controls take click closures
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5723
+  - status: ready
   - created_at: 2026-11-07
   - phase: Web apps (docs/WebAppsPlan.md)
   - parallel_track: web-controls
@@ -306,8 +294,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 
 - [ ] TODO-5709: Native controls take handler closures and `App.run`
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5723
+  - status: ready
   - created_at: 2026-11-07
   - phase: Native UI handlers (docs/WebAppsPlan.md)
   - parallel_track: native-ui-handlers
@@ -502,6 +489,18 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - `slice` and `sliceMut` on a vector field of a local struct and of a `mut` struct parameter read and write the field's storage on the VM and optexe, with a positive and a negative (out of range) case
     - full release gate green
   - stop_rule: method resolution of the slice calls on struct fields only.
+
+- [ ] TODO-5730: Elements of a `vector<String>` struct field read without a fault
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-07
+  - phase: Collections (docs/spec/value-lifecycle.md; found by TODO-5723)
+  - parallel_track: collections-access
+  - scope: A struct with a builtin `[vector<String> mut] lines` field can `push` and `count`, but binding an element (`[String] line{greeter.lines[0i32]}`) stops with `VM error: unaligned indirect address in IR: 4` on the VM and in optexe's build, and `greeter.lines[0i32].view()` fails to lower (`struct parameter type mismatch`); passing the element to a `[String]` parameter faults the same way, through a `Reference<Greeter>` too, and `page.element("p", greeter.lines[i].view())` is rejected (`expected StringView got array`). A local `vector<String>` works, as does a `vector<Todo>` field whose struct holds a String. The hello_button example of TODO-5722 keeps its lines in one `String` instead. Repro: `[Greeter mut] g{Greeter{}}`, `g.lines.push(stringFrom("x"))`, `[String] back{g.lines[0i32]}`.
+  - acceptance:
+    - a program pushes Strings to a `vector<String>` field, binds, views and passes each element, directly and through a Reference, on the VM and optexe, each String freed once
+    - full release gate green
+  - stop_rule: element access of `vector<String>` fields; other element types are TODO-5726.
 
 - [ ] TODO-5682: Native: a mutating vector-field method inside an arithmetic expression returns the right value
   - owner: ai

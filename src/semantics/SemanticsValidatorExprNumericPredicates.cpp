@@ -214,10 +214,13 @@ bool SemanticsValidator::resolveReflectedStructEqualityHelperPath(
     const std::string &builtinName,
     std::string &helperPathOut) const {
   helperPathOut.clear();
-  if (builtinName != "equal" || expr.kind != Expr::Kind::Call ||
+  // `==` routes through a generated `Equal`, `!=` through a generated `NotEqual`.
+  const bool isEqual = builtinName == "equal";
+  if ((!isEqual && builtinName != "not_equal") || expr.kind != Expr::Kind::Call ||
       expr.args.size() != 2) {
     return false;
   }
+  const std::string generatorName = isEqual ? "Equal" : "NotEqual";
 
   auto *mutableSelf = const_cast<SemanticsValidator *>(this);
   const std::string leftStructPath =
@@ -242,7 +245,7 @@ bool SemanticsValidator::resolveReflectedStructEqualityHelperPath(
       continue;
     }
     for (const std::string &arg : transform.arguments) {
-      if (arg == "Equal") {
+      if (arg == generatorName) {
         hasGeneratedEqual = true;
         break;
       }
@@ -255,7 +258,7 @@ bool SemanticsValidator::resolveReflectedStructEqualityHelperPath(
     return false;
   }
 
-  const std::string helperPath = leftStructPath + "/Equal";
+  const std::string helperPath = leftStructPath + "/" + generatorName;
   if (defMap_.count(helperPath) == 0 && paramsByDef_.count(helperPath) == 0) {
     return false;
   }

@@ -318,6 +318,61 @@ main() {
         "/Pair/Equal");
 }
 
+TEST_CASE("reflected NotEqual operator inequality resolves through generated helper") {
+  const std::string source = R"(
+[struct reflect generate(Equal, NotEqual)]
+Pair() {
+  [i32] x{1i32}
+  [bool] ok{true}
+}
+
+[return<bool>]
+main() {
+  [Pair] left{Pair()}
+  [Pair] right{Pair()}
+  return(not_equal(left, right))
+}
+)";
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(
+      program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+  CHECK(error.empty());
+
+  const primec::SemanticProgramDirectCallTarget *notEqualTarget = nullptr;
+  for (const auto *entry : primec::semanticProgramDirectCallTargetView(semanticProgram)) {
+    if (entry != nullptr && entry->scopePath == "/main" && entry->callName == "not_equal") {
+      notEqualTarget = entry;
+      break;
+    }
+  }
+  REQUIRE(notEqualTarget != nullptr);
+  CHECK(primec::semanticProgramDirectCallTargetResolvedPath(semanticProgram, *notEqualTarget) ==
+        "/Pair/NotEqual");
+
+  // Equal alone does not make `!=` valid: it needs NotEqual.
+  const std::string equalOnly = R"(
+[struct reflect generate(Equal)]
+Pair() {
+  [i32] x{1i32}
+}
+
+[return<bool>]
+main() {
+  [Pair] left{Pair()}
+  [Pair] right{Pair()}
+  return(not_equal(left, right))
+}
+)";
+  std::string equalOnlyError;
+  CHECK_FALSE(validateProgram(equalOnly, "/main", equalOnlyError));
+  CHECK(equalOnlyError.find("comparisons require numeric, bool, or string operands") !=
+        std::string::npos);
+}
+
 TEST_CASE("struct equality still rejects reflected structs without Equal generation") {
   const std::string source = R"(
 [struct reflect]

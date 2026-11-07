@@ -367,6 +367,50 @@ sum_two_files([string] a, [string] b) {
 }
 ```
 
+### UI events (`/std/ui/events`)
+
+`import /std/ui/events/*` gives the values a control's handler receives (docs/WebAppsPlan.md, principle 7). Web pages
+(`/std/web`) and native windows pass the same structs, so a handler written as a
+`Function<void, Reference<State>, PointerEvent>` can be attached to either. The module is pure data with small helpers
+and no host calls, so it runs on the VM, the native backend and optexe.
+
+- `PointerButton` is an enum: `none` (-1), `primary` (0), `secondary` (1), `middle` (2), the values of the retired
+  `/std/ui` event records. `none` is a pointer that moved, or a click no button made, such as a key that activated a
+  button.
+- `Modifiers` holds the modifier keys as `bits`: 1 shift, 2 control, 4 alt (option), 8 meta (command), also named
+  `Modifiers.shiftBit`, `controlBit`, `altBit` and `metaBit`. `shift()`, `control()`, `alt()` and `meta()` test one
+  key and `any()` whether any is held. A set is written by adding bits:
+  `Modifiers{[bits] Modifiers.shiftBit + Modifiers.metaBit}` (there are no bitwise operators).
+- `Key` is a character, by its Unicode code point (`code` 0 or more), or a named key (`code` below 0): `Key.enter`,
+  `tab`, `escape`, `backspace`, `delete`, `left`, `right`, `up`, `down`, `home`, `end`, `pageUp` and `pageDown`
+  (-1 to -13). `characterKey(codePoint)` makes the key of a character; `isCharacter()` and `character()` (the code
+  point, or -1) read it.
+- `PointerEvent` (`onClick`, `onMouseDown`, `onMouseUp`, `onMouseOver`): `button`; `x` and `y` in the control's own
+  coordinates from its top left corner, valid when `hasPosition`; `modifiers`; `clickCount` (1 for a single click, 2
+  for a double click, 0 for a press, release or move that is not a click). A web form post has no position.
+- `KeyEvent` (`onKeyDown`, `onKeyUp`, while the control has focus): `key`, `modifiers` and `isRepeat`, true for a key
+  down the system repeats while the key is held (`repeat` is a loop keyword, so the field is not called that).
+- `ChangeEvent` (`onChange`): `checked`, the new state of a check box, and `index`, the newly selected item of a popup
+  or list (-1 when none). Each control sets the field it has.
+
+The enums and `Key` and `Modifiers` compare with `==` and `!=`: they are declared with `generate(Equal, NotEqual)`,
+and `==` on such a struct calls its generated `Equal`, `!=` its generated `NotEqual` (docs/spec/transforms.md). A
+`PointerButton` is an enum rather than a sum because its alternatives carry no payload, and an enum entry reads as a
+value (`PointerButton.secondary`) in a comparison, where a sum would need a `pick`. A handler reads:
+
+```prime
+[effects(heap_alloc)]
+on_click([Reference<Editor>] editor, [PointerEvent] event) {
+  if(event.button == PointerButton.secondary) {
+    editor.showMenu(event.x, event.y)
+  } else {
+    if(event.modifiers.shift()) {
+      editor.extendSelection()
+    }
+  }
+}
+```
+
 ### Native UI (`/std/ui/native`)
 
 `import /std/ui/native/*` brings in the native-widget surface of the version-0 C ABI

@@ -137,7 +137,7 @@ addPrimeStructManagedDoctestSuite(
   # documented for SoaColumnsN in TODO-4706/TODO-4713
   # (docs/TestRuntimeOptimization.md), not a hang or test bug.
   TIMEOUT 300
-  TOTAL_CASES 115
+  TOTAL_CASES 116
   SHARD_PREFIX "effects"
 )
 

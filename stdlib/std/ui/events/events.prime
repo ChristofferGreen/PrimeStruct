@@ -1,0 +1,141 @@
+// What happened to a control, as its handler receives it (docs/spec/stdlib-reference.md, /std/ui/events). Web pages
+// and native windows pass the same values, so one closure can be attached to either. Pure data with small helpers: no
+// host calls, so it runs on every backend.
+namespace std {
+namespace ui {
+namespace events {
+
+  // Which pointer button an event is about. `none` is a pointer that moved, or a click that no button made, such as a
+  // key that activated a button. The values are those of the retired /std/ui event records: -1 for no button, then
+  // 0, 1 and 2.
+  [public enum generate(Equal, NotEqual)]
+  PointerButton() {
+    none = -1i32
+    primary
+    secondary
+    middle
+  }
+
+  // The modifier keys held during an event, as bits: 1 shift, 2 control, 4 alt (option), 8 meta (command).
+  [public struct generate(Equal, NotEqual)]
+  Modifiers() {
+    [public i32] bits{0i32}
+
+    [public static i32] shiftBit{1i32}
+    [public static i32] controlBit{2i32}
+    [public static i32] altBit{4i32}
+    [public static i32] metaBit{8i32}
+
+    [public return<bool>]
+    shift() {
+      return(this.has(Modifiers.shiftBit))
+    }
+
+    [public return<bool>]
+    control() {
+      return(this.has(Modifiers.controlBit))
+    }
+
+    [public return<bool>]
+    alt() {
+      return(this.has(Modifiers.altBit))
+    }
+
+    [public return<bool>]
+    meta() {
+      return(this.has(Modifiers.metaBit))
+    }
+
+    // Whether any modifier is held.
+    [public return<bool>]
+    any() {
+      return(this.bits != 0i32)
+    }
+
+    // Whether `bit`, a power of two, is set. There are no bitwise operators, so the bit is taken by division.
+    [return<bool>]
+    has([i32] bit) {
+      [i32] above{this.bits / bit}
+      return(above - (above / 2i32) * 2i32 == 1i32)
+    }
+  }
+
+  // A key: a character, by its Unicode code point (`code` 0 or more), or a named key (`code` below 0). Compare with
+  // the named keys (`event.key == Key.enter`) or with `characterKey`.
+  [public struct generate(Equal, NotEqual)]
+  Key() {
+    [public i32] code{0i32}
+
+    [public static Key] enter{Key{[code] -1i32}}
+    [public static Key] tab{Key{[code] -2i32}}
+    [public static Key] escape{Key{[code] -3i32}}
+    [public static Key] backspace{Key{[code] -4i32}}
+    [public static Key] delete{Key{[code] -5i32}}
+    [public static Key] left{Key{[code] -6i32}}
+    [public static Key] right{Key{[code] -7i32}}
+    [public static Key] up{Key{[code] -8i32}}
+    [public static Key] down{Key{[code] -9i32}}
+    [public static Key] home{Key{[code] -10i32}}
+    [public static Key] end{Key{[code] -11i32}}
+    [public static Key] pageUp{Key{[code] -12i32}}
+    [public static Key] pageDown{Key{[code] -13i32}}
+
+    // Whether the key types a character, such as "a" or a space.
+    [public return<bool>]
+    isCharacter() {
+      return(this.code >= 0i32)
+    }
+
+    // The code point the key types, or -1 for a named key.
+    [public return<i32>]
+    character() {
+      if(this.code >= 0i32) {
+        return(this.code)
+      }
+      return(-1i32)
+    }
+  }
+
+  // The key that types the character `codePoint`, such as `characterKey(97i32)` for "a".
+  [public return<Key>]
+  characterKey([i32] codePoint) {
+    return(Key{[code] codePoint})
+  }
+
+  // A pointer event: a click (`onClick`), a press or release (`onMouseDown`, `onMouseUp`) or the pointer entering the
+  // control (`onMouseOver`).
+  [public struct]
+  PointerEvent() {
+    // The button that changed; `none` for a pointer that only moved.
+    [public PointerButton] button{PointerButton.none}
+    // The position in the control's own coordinates, from its top left corner, when `hasPosition`.
+    [public i32] x{0i32}
+    [public i32] y{0i32}
+    // False when the event has no position, such as a web form posted by a click or by the keyboard.
+    [public bool] hasPosition{false}
+    [public Modifiers] modifiers{Modifiers{}}
+    // 1 for a single click, 2 for a double click and so on; 0 for a press, a release or a move without a click.
+    [public i32] clickCount{0i32}
+  }
+
+  // A key pressed or released while the control has focus (`onKeyDown`, `onKeyUp`).
+  [public struct]
+  KeyEvent() {
+    [public Key] key{Key{}}
+    [public Modifiers] modifiers{Modifiers{}}
+    // True for a key down that the system repeats while the key is held. (`repeat` is a loop keyword.)
+    [public bool] isRepeat{false}
+  }
+
+  // The user changed a control's value (`onChange`): a check box sets `checked`, a popup or a list sets `index`.
+  [public struct]
+  ChangeEvent() {
+    // The new state of a check box.
+    [public bool] checked{false}
+    // The newly selected item of a popup or a list, or -1 when none is selected.
+    [public i32] index{-1i32}
+  }
+
+}
+}
+}
