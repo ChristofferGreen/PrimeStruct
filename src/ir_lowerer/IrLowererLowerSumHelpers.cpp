@@ -4,6 +4,7 @@
 
 #include "IrLowererCountAccessClassifiers.h"
 #include "primec/ir_lowerer/IrLowererFlowHelpers.h"
+#include "primec/ir_lowerer/IrLowererBindingTypeHelpers.h"
 #include "primec/ir_lowerer/IrLowererHelpers.h"
 #include "primec/ir_lowerer/IrLowererSetupTypeCollectionHelpers.h"
 #include "primec/ir_lowerer/IrLowererSetupTypeHelpers.h"
@@ -255,6 +256,8 @@ SumHelpersContext::SumHelpersContext(LowerSetupStageState &setupStageIn,
       return nullptr;
     }
 
+    static bool resolveVectorPayloadStructPath(const std::string &typeText, std::string &pathOut);
+
     void SumHelpersContext::applyStdlibResultSumInfoToLocal(const Definition &sumDef, LocalInfo &info) {
       if (!isStdlibResultSumDefinition(sumDef)) {
         return;
@@ -276,7 +279,8 @@ SumHelpersContext::SumHelpersContext(LowerSetupStageState &setupStageIn,
           std::string valueStructPath;
           if (resolveStructTypeName(valueTypeText,
                                     sumDef.namespacePrefix,
-                                    valueStructPath)) {
+                                    valueStructPath) ||
+              resolveVectorPayloadStructPath(valueTypeText, valueStructPath)) {
             info.resultValueStructType = std::move(valueStructPath);
           }
         }
@@ -284,6 +288,23 @@ SumHelpersContext::SumHelpersContext(LowerSetupStageState &setupStageIn,
       if (errorVariant != nullptr && errorVariant->hasPayload) {
         info.resultErrorType = sumPayloadTypeText(*errorVariant);
       }
+    }
+
+    // A `vector<T>` payload is stored as the specialized vector record, an aggregate whose
+    // copy and destroy helpers are the stdlib vector's own.
+    static bool resolveVectorPayloadStructPath(const std::string &typeText, std::string &pathOut) {
+      std::string base;
+      std::string argText;
+      if (!splitTemplateTypeName(trimTemplateTypeText(typeText), base, argText) ||
+          normalizeCollectionBindingTypeName(trimTemplateTypeText(base)) != "vector") {
+        return false;
+      }
+      std::vector<std::string> args;
+      if (!splitTemplateArgs(argText, args) || args.size() != 1) {
+        return false;
+      }
+      pathOut = specializedCollectionVectorRecordPathForElementType(trimTemplateTypeText(args.front()));
+      return !pathOut.empty();
     }
 
     bool SumHelpersContext::resolveSumPayloadStorageInfo(const Definition &sumDef,
@@ -311,7 +332,8 @@ SumHelpersContext::SumHelpersContext(LowerSetupStageState &setupStageIn,
       std::string payloadStructPath;
       if (!resolveStructTypeName(payloadTypeText,
                                  sumDef.namespacePrefix,
-                                 payloadStructPath)) {
+                                 payloadStructPath) &&
+          !resolveVectorPayloadStructPath(payloadTypeText, payloadStructPath)) {
         return false;
       }
       StructSlotLayout payloadLayout;
@@ -350,7 +372,8 @@ SumHelpersContext::SumHelpersContext(LowerSetupStageState &setupStageIn,
       std::string payloadStructPath;
       if (!resolveStructTypeName(payloadTypeText,
                                  sumDef.namespacePrefix,
-                                 payloadStructPath)) {
+                                 payloadStructPath) &&
+          !resolveVectorPayloadStructPath(payloadTypeText, payloadStructPath)) {
         return false;
       }
       StructSlotLayout payloadLayout;

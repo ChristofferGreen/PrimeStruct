@@ -1103,4 +1103,58 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("a Result local with a vector payload copies on try and frees once") {
+  program_matrix::ProgramCase program;
+  program.name = "result_payload_vector_local";
+  program.source = R"(import /std/result/*
+import /std/collections/*
+
+[return<Result<vector<i32>, i32>> effects(heap_alloc)]
+make_vec([bool] fail) {
+  if(fail) {
+    return(/std/result/error<vector<i32>, i32>(9i32))
+  }
+  return(Result.ok(vector<i32>(1i32, 2i32, 3i32)))
+}
+
+[effects(io_out)]
+on_err([i32] err) {
+  print_line(1000i32 + err)
+}
+
+[return<i32> effects(io_out, heap_alloc) on_error<i32, /on_err>]
+read_vec() {
+  [Result<vector<i32>, i32>] r{make_vec(false)}
+  [vector<i32> mut] v{try(r)}
+  v.push(4i32)
+  return(v.count() * 10i32 + v.at(3i32))
+}
+
+[return<i32> effects(io_out, heap_alloc)]
+unread_vec() {
+  [Result<vector<i32>, i32>] r{make_vec(false)}
+  return(5i32)
+}
+
+[return<i32> effects(io_out, heap_alloc) on_error<i32, /on_err>]
+failing_vec() {
+  [Result<vector<i32>, i32>] r{make_vec(true)}
+  [vector<i32>] v{try(r)}
+  return(v.count())
+}
+
+[return<int> effects(io_out, heap_alloc)]
+main() {
+  print_line(read_vec())
+  print_line(unread_vec())
+  print_line(failing_vec())
+  print_line(read_vec())
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "44\n5\n1009\n9\n44\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

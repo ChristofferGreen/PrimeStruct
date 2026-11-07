@@ -146,6 +146,18 @@
             valueResultInfo.valueStructType.clear();
           };
           normalizeSpecializedMapResultInfo(resultInfo);
+          // A `Result<vector<T>, E>` sum stores its ok payload as the specialized vector record.
+          auto payloadIsVectorRecordOfResultValue = [&](const LoweredSumPayloadStorageInfo &payload) {
+            if (resultInfo.valueCollectionKind != LocalInfo::Kind::Vector ||
+                resultInfo.valueMapKeyKind != LocalInfo::ValueKind::Unknown ||
+                resultInfo.valueIsFileHandle || !resultInfo.valueStructType.empty() ||
+                !payload.isAggregate) {
+              return false;
+            }
+            const std::string elementType = typeNameForValueKind(resultInfo.valueKind);
+            return !elementType.empty() &&
+                   payload.structPath == specializedCollectionVectorRecordPathForElementType(elementType);
+          };
           auto stdlibResultSumMatchesTryInfo = [&](const Definition &candidateDef) -> bool {
             if (!sumHelpers.isStdlibResultSumDefinition(candidateDef)) {
               return false;
@@ -169,6 +181,9 @@
               return false;
             }
             auto payloadMatchesValue = [&](const LoweredSumPayloadStorageInfo &payload) {
+              if (payloadIsVectorRecordOfResultValue(payload)) {
+                return true;
+              }
               if (resultInfo.valueCollectionKind != LocalInfo::Kind::Value ||
                   resultInfo.valueMapKeyKind != LocalInfo::ValueKind::Unknown ||
                   resultInfo.valueIsFileHandle) {
@@ -365,6 +380,9 @@
 
             auto resultValueMatchesPayload =
                 [&](const LoweredSumPayloadStorageInfo &payload) -> bool {
+              if (payloadIsVectorRecordOfResultValue(payload)) {
+                return true;
+              }
               if (resultInfo.valueCollectionKind != LocalInfo::Kind::Value ||
                   resultInfo.valueMapKeyKind != LocalInfo::ValueKind::Unknown ||
                   resultInfo.valueIsFileHandle) {
