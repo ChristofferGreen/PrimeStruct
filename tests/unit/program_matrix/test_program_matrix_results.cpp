@@ -350,4 +350,68 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("file open errors report errno, writeLine ends lines and a missing png is invalid") {
+  program_matrix::ProgramCase program;
+  program.name = "file_io_errno_newline_png";
+  program.source = R"(
+import /std/file/*
+import /std/image/*
+import /std/collections/*
+
+[effects(io_out)]
+on_file_err([FileError] err) {
+  print_line(err.status())
+}
+
+[return<int> effects(io_out, file_read) on_error<FileError, /on_file_err>]
+open_missing() {
+  [File<Read>] file{File<Read>("/nonexistent_primestruct_dir/missing.txt")?}
+  return(0i32)
+}
+
+[return<Result<FileError>> effects(file_write, io_out) on_error<FileError, /on_file_err>]
+write_lines() {
+  [File<Write>] file{File<Write>("program_matrix_file_io_probe.txt")?}
+  file.write("ab")?
+  file.writeLine("cd")?
+  file.writeLine("e")?
+  return(Result.ok())
+}
+
+[return<i32> effects(io_out, file_read) on_error<FileError, /on_file_err>]
+read_one([File<Read>] file) {
+  [i32 mut] byte{0i32}
+  file.readByte(byte)?
+  return(byte)
+}
+
+[return<int> effects(io_out, file_read) on_error<FileError, /on_file_err>]
+read_lines() {
+  [File<Read>] file{File<Read>("program_matrix_file_io_probe.txt")?}
+  [i32 mut] index{0i32}
+  while(index < 7i32) {
+    print_line(read_one(file))
+    index = index + 1i32
+  }
+  return(0i32)
+}
+
+[return<int> effects(io_out, file_read, file_write, heap_alloc)]
+main() {
+  print_line(open_missing())
+  write_lines()
+  print_line(read_lines())
+  [i32 mut] width{0i32}
+  [i32 mut] height{0i32}
+  [vector<i32> mut] pixels{vector<i32>()}
+  [Result<ImageError>] status{/std/image/png/read(width, height, pixels, "/nonexistent_primestruct_dir/missing.png"utf8)}
+  print_line(Result.why(status))
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "2\n2\n97\n98\n99\n100\n10\n101\n10\n0\nimage_invalid_operation\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

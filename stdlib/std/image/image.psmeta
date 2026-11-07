@@ -742,22 +742,22 @@ content_hash = 27ee55834cdfd1bd
 path = /std/image/png/readImpl
 start_line = 2543
 end_line = 2682
-content_hash = 5fb00b8bc43d8cad
+content_hash = 21ab2cace66ca73b
 
 [symbol]
 path = /std/image/png/read
 start_line = 2684
-end_line = 2697
-content_hash = 2927e2274cc1ba72
+end_line = 2698
+content_hash = a8235f6bab9c0260
 
 [symbol]
 path = /std/image/png/writeImpl
-start_line = 2699
-end_line = 2724
+start_line = 2700
+end_line = 2725
 content_hash = c3f11255cf875f2d
 
 [symbol]
 path = /std/image/png/write
-start_line = 2726
-end_line = 2733
+start_line = 2727
+end_line = 2734
 content_hash = 2782ce2e39207879

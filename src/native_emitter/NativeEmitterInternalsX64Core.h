@@ -536,9 +536,10 @@ inline void X64Emitter::emitWriteNewline(uint64_t fd, uint32_t scratchOffset) {
 }
 
 inline void X64Emitter::emitWriteNewlineReg(uint8_t fdReg, uint32_t scratchOffset) {
+  // The newline goes through reg0, not reg3: callers keep the fd in reg3 (rbx).
   emitLoadFrameOffset(1, scratchOffset);
-  emitMovRegImm64(3, '\n');
-  emitStoreMemByte(1, 0, 3);
+  emitMovRegImm64(0, '\n');
+  emitStoreMemByte(1, 0, 0);
   emitMovRegImm64(2, 1);
   emitWriteSyscallReg(fdReg, 1, 2);
 }

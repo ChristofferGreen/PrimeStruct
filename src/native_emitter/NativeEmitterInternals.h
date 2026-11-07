@@ -334,6 +334,7 @@ class Arm64Emitter {
   size_t emitPrintStringPlaceholderReg(uint64_t lengthBytes, uint32_t scratchOffset, bool newline, uint8_t fdReg);
   size_t emitFileOpenPlaceholder(uint64_t flags, uint64_t mode);
   size_t emitFileOpenDynamicPlaceholder(uint64_t offsetTableDelta, uint64_t flags, uint64_t mode);
+  void emitOpenResultFromSyscall();
   void emitFileWriteI32(uint32_t scratchOffset, uint32_t scratchBytes);
   void emitFileWriteI64(uint32_t scratchOffset, uint32_t scratchBytes);
   void emitFileWriteU64(uint32_t scratchOffset, uint32_t scratchBytes);

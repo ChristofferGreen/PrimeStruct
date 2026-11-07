@@ -222,7 +222,8 @@ inline size_t X64Emitter::emitFileOpenPlaceholder(uint64_t flags, uint64_t mode)
   emitSyscall();
   emitCmpRegImm32(0, 0);
   const size_t jumpNonNegative = emitCondJumpPlaceholder(CondCode::Ge);
-  emitMovRegImm64(1, 1); // error flag
+  emitMovRegReg(1, 0); // status = errno (the syscall returned -errno)
+  emitNegReg(1);
   emitMovRegImm64(0, 0);
   const size_t jumpAfterError = emitJumpPlaceholderRaw();
   patchCondJumpHere(jumpNonNegative);
@@ -244,7 +245,8 @@ inline size_t X64Emitter::emitFileOpenDynamicPlaceholder(uint64_t offsetTableDel
   emitSyscall();
   emitCmpRegImm32(0, 0);
   const size_t jumpNonNegative = emitCondJumpPlaceholder(CondCode::Ge);
-  emitMovRegImm64(1, 1);
+  emitMovRegReg(1, 0);
+  emitNegReg(1);
   emitMovRegImm64(0, 0);
   const size_t jumpAfterError = emitJumpPlaceholderRaw();
   patchCondJumpHere(jumpNonNegative);
@@ -324,7 +326,7 @@ inline void X64Emitter::emitFileReadByte(uint32_t localIndex, uint32_t scratchOf
   const size_t successBranch = emitCondJumpPlaceholder(CondCode::Eq);
   emitCmpRegImm32(0, 0);
   const size_t eofBranch = emitCondJumpPlaceholder(CondCode::Eq);
-  emitMovRegImm64(0, 1);
+  emitNegReg(0); // status = errno (the syscall returned -errno)
   const size_t afterError = emitJumpPlaceholderRaw();
 
   patchCondJumpHere(successBranch);

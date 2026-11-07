@@ -185,12 +185,13 @@ main() {
   // TODO-4757 (fixed): Result.why() now reports the real per-variant
   // message instead of an empty string. ppm/png write() report a generic
   // "image_invalid_operation" (their own why() has no dedicated variant
-  // for the failure this repro hits), and png/read() reports
-  // "image_read_unsupported" since PNG decoding isn't implemented.
+  // for the failure this repro hits), and png/read() of a missing file
+  // reports "image_invalid_operation" too (the open errno is not a PNG
+  // decoding limit).
   CHECK(readFile(outPath) ==
         "image_invalid_operation\n"
         "image_invalid_operation\n"
-        "image_read_unsupported\n"
+        "image_invalid_operation\n"
         "image_invalid_operation\n");
 }
 

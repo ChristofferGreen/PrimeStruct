@@ -120,7 +120,6 @@ of sync with them.
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
 | TODO-5512 | Pointers and aliases count as borrows of their root | deferred | safety-borrows |
 | TODO-5513 | Methods through a dereferenced vector pointer read the right fields | deferred | collections-access |
-| TODO-5514 | Native file I/O writes newlines and reports errno | deferred | native-io |
 | TODO-5515 | Native Result.ok(Buffer) reads as ok | deferred | native-result |
 | TODO-5516 | Integer narrowing and float-to-int conversion agree across backends | deferred | numeric-conversions |
 | TODO-5517 | Runtime faults exit the same way on every backend | deferred | runtime-faults |
@@ -158,7 +157,7 @@ of sync with them.
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
-- Backend parity: TODO-5514, TODO-5516, TODO-5517
+- Backend parity: TODO-5516, TODO-5517
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
@@ -294,19 +293,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - count/capacity/at through `dereference(p)` match the direct calls; matrix case
     - full release gate green
   - stop_rule: receiver offset handling only.
-  - notes: deferred: queued behind the Ready Now cap.
-
-- [ ] TODO-5514: Native file I/O writes newlines and reports errno
-  - owner: ai
-  - status: deferred
-  - created_at: 2026-10-06
-  - phase: Correctness audit 2026-10
-  - parallel_track: native-io
-  - scope: Native `writeLine` never writes the newline (`emitFileWriteNewline` pops the fd into a register that `emitWriteNewlineReg` overwrites with `'\n'`, so it writes to fd 10); native file open/read errors always report 1 (EPERM) instead of the syscall errno (`emitFileOpenPlaceholder`, `emitFileOpenDynamicPlaceholder`, `emitFileReadByte` in `src/native_emitter/NativeEmitterInternalsX64Io.h`). Also `png.read` of a missing file returns `image_read_unsupported` on VM/C++ because ENOENT (2) collides with readImpl's status 2.
-  - acceptance:
-    - native writeLine and missing-file errors match VM and C++ (matrix cases); missing PNG reports `image_invalid_operation` everywhere
-    - full release gate green
-  - stop_rule: native I/O emitter and png status mapping.
   - notes: deferred: queued behind the Ready Now cap.
 
 - [ ] TODO-5656: Thread-safe `SharedString` (atomic count, per-thread string heaps)

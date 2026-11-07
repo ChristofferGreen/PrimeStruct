@@ -2657,7 +2657,7 @@ namespace std {
                 return(1i32)
               }
               if(inflateStatus == 2i32) {
-                return(2i32)
+                return(1000000i32)
               }
               if(colorType == 3i32 && count(plteBytes) == 0i32) {
                 return(1i32)
@@ -2669,7 +2669,7 @@ namespace std {
               }
               if(decodeStatus == 2i32) {
                 resetReadOutputs(width, height, pixels)
-                return(2i32)
+                return(1000000i32)
               }
               width = parsedWidth
               height = parsedHeight
@@ -2685,11 +2685,12 @@ namespace std {
     read([i32 mut] width, [i32 mut] height, [vector<i32> mut] pixels, [string] path) {
       resetReadOutputs(width, height, pixels)
       status{readImpl(width, height, pixels, path)}
-      if(status == 1i32) {
+      if(status != 0i32 && status != 1000000i32) {
         resetReadOutputs(width, height, pixels)
         return(invalidOperation())
       }
-      if(status == 2i32) {
+      // 1000000 marks an unsupported PNG; every smaller status, a FileError errno included, is invalid.
+      if(status == 1000000i32) {
         resetReadOutputs(width, height, pixels)
         return(unsupported_read())
       }

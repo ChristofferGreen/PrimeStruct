@@ -577,7 +577,7 @@ TEST_CASE("C++ emitter supports image api contract deterministically") {
   CHECK(readFile(outPath) ==
         "image_invalid_operation\n"
         "image_invalid_operation\n"
-        "image_read_unsupported\n"
+        "image_invalid_operation\n"
         "image_invalid_operation\n");
 }
 

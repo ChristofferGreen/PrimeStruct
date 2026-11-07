@@ -101,6 +101,25 @@ inline size_t Arm64Emitter::emitPrintStringPlaceholderReg(uint64_t lengthBytes,
   return fixupIndex;
 }
 
+// Packs the result of the open syscall just issued: the fd, or the errno in the high 32 bits.
+// Darwin reports a failed syscall by setting the carry flag and returning the errno in x0, so the
+// branch on carry must directly follow the svc.
+inline void Arm64Emitter::emitOpenResultFromSyscall() {
+  size_t failed = emitCondBranchPlaceholder(CondCode::Hs);
+  emitMovImm64(1, 0);
+  size_t afterError = emitJumpPlaceholder();
+  size_t failedIndex = currentWordIndex();
+  patchCondBranch(failed, static_cast<int32_t>(failedIndex - failed), CondCode::Hs);
+  emitMovReg(1, 0);
+  emitMovImm64(0, 0);
+  size_t afterIndex = currentWordIndex();
+  patchJump(afterError, static_cast<int32_t>(afterIndex - afterError));
+  emitMovImm64(2, 4294967296ull);
+  emitMulReg(1, 1, 2);
+  emitAddReg(0, 0, 1);
+  emitPushReg(0);
+}
+
 inline size_t Arm64Emitter::emitFileOpenPlaceholder(uint64_t flags, uint64_t mode) {
   size_t fixupIndex = emitAdrPlaceholder(1);
   emitMovReg(0, 1);
@@ -108,20 +127,7 @@ inline size_t Arm64Emitter::emitFileOpenPlaceholder(uint64_t flags, uint64_t mod
   emitMovImm64(2, mode);
   emitMovImm64(16, SysOpen);
   emit(encodeSvc());
-  emitCompareRegZero(0);
-  size_t nonNegative = emitCondBranchPlaceholder(CondCode::Ge);
-  emitMovImm64(1, 1);
-  emitMovImm64(0, 0);
-  size_t afterError = emitJumpPlaceholder();
-  size_t nonNegativeIndex = currentWordIndex();
-  patchCondBranch(nonNegative, static_cast<int32_t>(nonNegativeIndex - nonNegative), CondCode::Ge);
-  emitMovImm64(1, 0);
-  size_t afterIndex = currentWordIndex();
-  patchJump(afterError, static_cast<int32_t>(afterIndex - afterError));
-  emitMovImm64(2, 4294967296ull);
-  emitMulReg(1, 1, 2);
-  emitAddReg(0, 0, 1);
-  emitPushReg(0);
+  emitOpenResultFromSyscall();
   return fixupIndex;
 }
 
@@ -142,20 +148,7 @@ inline size_t Arm64Emitter::emitFileOpenDynamicPlaceholder(uint64_t offsetTableD
   emitMovImm64(2, mode);
   emitMovImm64(16, SysOpen);
   emit(encodeSvc());
-  emitCompareRegZero(0);
-  size_t nonNegative = emitCondBranchPlaceholder(CondCode::Ge);
-  emitMovImm64(1, 1);
-  emitMovImm64(0, 0);
-  size_t afterError = emitJumpPlaceholder();
-  size_t nonNegativeIndex = currentWordIndex();
-  patchCondBranch(nonNegative, static_cast<int32_t>(nonNegativeIndex - nonNegative), CondCode::Ge);
-  emitMovImm64(1, 0);
-  size_t afterIndex = currentWordIndex();
-  patchJump(afterError, static_cast<int32_t>(afterIndex - afterError));
-  emitMovImm64(2, 4294967296ull);
-  emitMulReg(1, 1, 2);
-  emitAddReg(0, 0, 1);
-  emitPushReg(0);
+  emitOpenResultFromSyscall();
   return fixupIndex;
 }
 
@@ -234,6 +227,8 @@ inline void Arm64Emitter::emitFileReadByte(uint32_t localIndex, uint32_t scratch
   emitLoadFrameOffset(1, scratchOffset);
   emitMovImm64(2, 1);
   emitReadSyscallReg(3, 1, 2);
+  // A failed read sets the carry flag and returns the errno, which is the reported status.
+  size_t failedBranch = emitCondBranchPlaceholder(CondCode::Hs);
 
   emitMovImm64(2, 1);
   emitCompareReg(0, 2);
@@ -257,6 +252,7 @@ inline void Arm64Emitter::emitFileReadByte(uint32_t localIndex, uint32_t scratch
   emitMovImm64(0, FileReadEofCode);
 
   size_t afterIndex = currentWordIndex();
+  patchCondBranch(failedBranch, static_cast<int32_t>(afterIndex - failedBranch), CondCode::Hs);
   patchJump(afterError, static_cast<int32_t>(afterIndex - afterError));
   patchJump(afterSuccess, static_cast<int32_t>(afterIndex - afterSuccess));
   emitPushReg(0);
