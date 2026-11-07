@@ -654,6 +654,10 @@ PhaseStatus rewriteExprPhase1([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
   if (!rewriteTransforms(expr.transforms, mapping, allowedParams, namespacePrefix, ctx, error)) {
     return st.done(false);
   }
+  if (!rewriteImplicitFunctionConversions(
+          expr, mapping, allowedParams, namespacePrefix, ctx, locals, params, allowMathBare, error)) {
+    return st.done(false);
+  }
   if (expr.kind == Expr::Kind::Call && expr.name == "ct_if" &&
       expr.args.size() == 3) {
     if (!rewriteCompileTimePredicateExpr(

@@ -1,5 +1,7 @@
 #include "SemanticsValidateLambdaClosures.h"
 
+#include "SemanticsValidateFunctionForwarders.h"
+
 #include "SemanticsHelpers.h"
 #include "primec/frontend/Lexer.h"
 #include "primec/frontend/Parser.h"
@@ -393,6 +395,7 @@ public:
     if (!rewriteFunctionValues()) {
       return false;
     }
+    generateFunctionForwarders(program_, structPaths_, generated_);
     const size_t originalCount = program_.definitions.size();
     for (size_t index = 0; index < originalCount; ++index) {
       // Copy out: generated definitions are appended to program_.definitions while this one is rewritten.

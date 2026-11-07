@@ -274,6 +274,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidateSliceLoans.cpp
   src/semantics/SemanticsValidateExperimentalGfxConstructors.cpp
   src/semantics/SemanticsValidateLambdaClosures.cpp
+  src/semantics/SemanticsValidateFunctionForwarders.cpp
   src/semantics/SemanticsValidateFunctionValues.cpp
   src/semantics/SemanticsValidateExperimentalGfxConstructorsContext.cpp
   src/semantics/SemanticsValidateOmittedStructInitializers.cpp

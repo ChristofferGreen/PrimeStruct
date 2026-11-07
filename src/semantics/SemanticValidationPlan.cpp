@@ -51,7 +51,8 @@ const std::vector<SemanticValidationPassManifestEntry> &semanticValidationPassMa
        SemanticValidationPassOwnership::SemanticCanonicalAst,
        SemanticValidationPassAction::MutatesAst,
        false,
-       "turn lambdas into closure structs with a call method and a capture-typed factory"},
+       "turn lambdas into closure structs with a call method and a capture-typed factory; give named "
+       "definitions used as values a forwarding closure"},
       {"builtin-soa-conversion-methods",
        SemanticValidationPassId::BuiltinSoaConversionMethods,
        SemanticValidationPassKind::CompatibilityRewrite,
@@ -195,7 +196,7 @@ const std::vector<SemanticValidationPassManifestEntry> &semanticValidationPassMa
        SemanticValidationPassOwnership::SemanticCanonicalAst,
        SemanticValidationPassAction::MutatesAst,
        false,
-       "monomorphize templates after pre-template AST rewrites"},
+       "monomorphize templates after pre-template AST rewrites; box closures where a Function is expected"},
       {"function-values",
        SemanticValidationPassId::FunctionValues,
        SemanticValidationPassKind::CoreCanonicalization,
@@ -203,7 +204,8 @@ const std::vector<SemanticValidationPassManifestEntry> &semanticValidationPassMa
        SemanticValidationPassOwnership::SemanticCanonicalAst,
        SemanticValidationPassAction::MutatesAst,
        false,
-       "number the closure types converted to each Function instance and write its call, Copy and Destroy"},
+       "number the closure types converted to each Function instance, check their call signatures, and "
+       "write its call, Copy and Destroy"},
       {"compile-time-specialized-branch-pruning",
        SemanticValidationPassId::CompileTimeSpecializedBranchPruning,
        SemanticValidationPassKind::CoreCanonicalization,

@@ -276,7 +276,7 @@ addPrimeStructManagedDoctestSuite(
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.lambdas"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 22
+  TOTAL_CASES 27
   SHARD_PREFIX "lambdas"
 )
 

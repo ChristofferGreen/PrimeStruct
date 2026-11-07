@@ -304,8 +304,24 @@ bad_set() {
 ### Function values
 - **`Function<R, A0, ..., An>`** is a value that calls any closure (or struct with `call`) taking `A0..An` and
   returning `R`; `Function<R>` takes no arguments. It holds the closure in one heap block, so one `vector`, struct
-  field or parameter type holds different lambdas. Converting is explicit brace construction:
-  `Function<i32, string>{handler}` or `Function<i32>{[mut n{0i32}]() { ... }}` (needs `heap_alloc`).
+  field or parameter type holds different lambdas. Converting copies the closure into that block (needs
+  `heap_alloc`); brace construction spells it out: `Function<i32, string>{handler}` or
+  `Function<i32>{[mut n{0i32}]() { ... }}`.
+- **Implicit conversion:** a closure written where a `Function<R, A...>` is expected converts as if wrapped in
+  `Function<R, A...>{...}`. The expected-type sites are a parameter (`apply(lambda, 1i32)`, `router.add(1i32,
+  handler)`), a brace-constructor field (`Route{[handler] hits}`), a binding with a declared `Function` type, an
+  assignment to a `Function` local and the value returned from a definition whose `return<...>` is a `Function`. The
+  closure there is a lambda, a local or parameter whose type is a closure or a struct with `call`, or a brace
+  constructor of such a struct (`apply(Tripler{}, 2i32)`). A `Function` value passes as it is.
+- **Named definitions:** `Function<i32, i32>{/double}` (or `{double}`) holds the free function `/double`: the closure
+  pass generates a closure struct without fields, `/double__fnref`, whose `call` forwards its arguments. A bare
+  definition name converts the same way at an implicit site (`router.add(1i32, double)`). A definition that is
+  generic, a struct method, or carries transforms other than `return`, `effects`, `capabilities`, `public` and
+  `private` stays a name and does not convert.
+- **Signatures:** the closure's `call` must take the `Function`'s argument count, and its parameter types must accept
+  the `Function`'s argument types: `Function<i32, i32> cannot hold /main__lambda0 in /main: its parameter text is
+  string, the Function passes i32` or `... cannot hold /add in /main: it takes 2 arguments, the Function passes 1`.
+  An explicit `return<T>` on `call` (a named definition, a hand-written struct) is checked against `R` the same way.
 - **Calling** `f(x)` dispatches to the stored closure; `call` is `mut` (the closure may change its state), so hold
   the `Function` in a `mut` binding, field or parameter.
 - **Copy** clones the stored closure into a new block (the copy has its own state); **Move** hands the block over;
@@ -315,8 +331,12 @@ bad_set() {
   monomorphization the `function-values` pass numbers the closure types converted to each `Function` instance and
   writes its `call` (an `if` chain on the tag), `Copy` and `Destroy`. No IR change: dispatch is ordinary struct and
   pointer code, so `Function` runs on the VM, native and `optexe` alike.
-- **Limits:** conversion is explicit (no implicit closure-to-`Function` at a call site); a named definition cannot be
-  converted yet; a borrowing closure cannot be converted (above).
+- **Limits:** a borrowing closure cannot be converted, explicitly or at an implicit site (`closure escapes via Function
+  (root: name)`, above). An implicit conversion needs the expected type without inference: it does not happen for a
+  parameter of a generic definition, a field of a generic struct, an element pushed onto a `vector<Function<...>>`, or
+  a closure produced by an arbitrary call (bind it to a local or construct the `Function` explicitly). A lambda whose
+  capture list starts with `mut` cannot yet be written directly as a call argument (the parser reads `[mut ...]` as
+  an argument label); bind it to a local first.
 
 Example (runs on the VM, native and `optexe`):
 
@@ -354,6 +374,35 @@ main() {
   route_request(routes, 1i32, 0i32)
   [i32] second{route_request(routes, 1i32, 0i32)}     // 2: the route's copy of `hits` keeps counting
   return(second + route_request(routes, 2i32, 5i32))  // 2 + 105
+}
+```
+
+The same conversions without the wrapper, at a parameter, a field and a binding, with a named definition (runs on
+the VM, native and `optexe`):
+
+```prime
+[struct]
+Hook {
+  [Function<i32, i32> mut] run
+}
+
+[return<i32>]
+apply([Function<i32, i32> mut] f, [i32] x) {
+  return(f(x))
+}
+
+[return<i32>]
+double([i32] x) {
+  return(x * 2i32)
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [i32] base{3i32}
+  [i32] added{apply([base]([i32] x) { return(x + base) }, 1i32)}  // 4
+  [Hook mut] hook{Hook{[run] double}}
+  [Function<i32, i32> mut] named{Function<i32, i32>{/double}}
+  return(added + apply(double, 5i32) + apply(hook.run, 1i32) + named(2i32))  // 4 + 10 + 2 + 4
 }
 ```
 

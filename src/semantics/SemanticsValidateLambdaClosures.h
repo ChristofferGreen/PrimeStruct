@@ -15,4 +15,8 @@ bool rewriteLambdaClosures(Program &program, std::string &error);
 // Marker in the name of every closure struct the pass generates (`/ns/main__lambda3`, after its enclosing definition).
 inline constexpr const char *LambdaClosureStructPrefix = "__lambda";
 
+// Suffix of the closure struct the pass generates for a named definition used as a `Function` value
+// (`/double__fnref`): a struct without fields whose `call` forwards to the definition.
+inline constexpr const char *FunctionForwarderSuffix = "__fnref";
+
 } // namespace primec::semantics

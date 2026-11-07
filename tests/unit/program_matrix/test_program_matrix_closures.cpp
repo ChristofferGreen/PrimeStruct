@@ -295,6 +295,119 @@ main() {
                     616);
 }
 
+TEST_CASE("a closure passes straight to a Function parameter") {
+  runClosureProgram("function_implicit_parameter", R"(
+[return<i32>]
+apply_twice([Function<i32, i32> mut] f, [i32] x) {
+  [i32] once{f(x)}
+  return(f(once))
+}
+
+[return<i32>]
+double([i32] x) {
+  return(x * 2i32)
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [i32] base{3i32}
+  [i32] added{apply_twice([base]([i32] x) { return(x + base) }, 1i32)}
+  [mut] counter{[mut calls{0i32}]([i32] x) {
+    calls = calls + 1i32
+    return(x + calls)
+  }}
+  [i32] counted{apply_twice(counter, 10i32)}
+  [Function<i32, i32> mut] doubler{Function<i32, i32>{/double}}
+  // 7 + 13 + 12 + 8 + 1: the parameter got a copy of `counter`, whose own count is still 0
+  return(added + counted + apply_twice(double, 3i32) + doubler(4i32) + counter(0i32))
+}
+)",
+                    41);
+}
+
+TEST_CASE("a router of named handlers and closures converts at every expected-type site") {
+  runClosureProgram("function_router_named_handlers", R"(
+import /std/collections/*
+
+[struct]
+Route {
+  [i32] code
+  [Function<i32, i32> mut] handler
+}
+
+[struct]
+Router {
+  [vector<Route> mut] routes{vector<Route>()}
+
+  [mut effects(heap_alloc)]
+  add([i32] code, [Function<i32, i32> move] handler) {
+    this.routes.push(Route{[code] code, [handler] handler})
+  }
+
+  [mut return<i32> effects(heap_alloc)]
+  answer([i32] code, [i32] input) {
+    [i32 mut] i{0i32}
+    while(i < this.routes.count()) {
+      if(this.routes[i].code == code) {
+        return(this.routes[i].handler(input))
+      }
+      i = i + 1i32
+    }
+    return(404i32)
+  }
+}
+
+[return<i32>]
+double([i32] x) {
+  return(x * 2i32)
+}
+
+[return<i32>]
+increment([i32] x) {
+  return(x + 1i32)
+}
+
+[struct]
+Tripler {
+  [return<i32>]
+  call([i32] x) {
+    return(x * 3i32)
+  }
+}
+
+[return<Function<i32, i32>> effects(heap_alloc)]
+make_adder([i32] base) {
+  return([base]([i32] x) { return(x + base) })
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [Router mut] router{Router{}}
+  router.add(1i32, double)
+  router.add(2i32, increment)
+  [mut] counter{[mut calls{0i32}]([i32] x) {
+    calls = calls + 1i32
+    return(calls * 100i32 + x)
+  }}
+  router.add(3i32, counter)
+  [Tripler] tripler{Tripler{}}
+  router.add(4i32, tripler)
+  router.add(5i32, []([i32] x) { return(x - 1i32) })
+  router.routes.push(Route{[code] 6i32, [handler] double})
+  [Function<i32, i32> mut] made{make_adder(7i32)}
+  [Function<i32, i32> mut] later{increment}
+  later = double
+  router.answer(3i32, 0i32)
+  // 10 + 6 + 201 + 15 + 9 + 4 + 8 + 10 = 263
+  [i32] named{router.answer(1i32, 5i32) + router.answer(2i32, 5i32)}
+  [i32] closures{router.answer(3i32, 1i32) + router.answer(4i32, 5i32) + router.answer(5i32, 10i32)}
+  [i32] others{router.answer(6i32, 2i32) + made(1i32) + later(5i32)}
+  return(named + closures + others - 200i32)
+}
+)",
+                    63);
+}
+
 TEST_CASE("Function parameter and zero-argument hooks") {
   runClosureProgram("function_parameter_hooks", R"(
 import /std/collections/*

@@ -236,6 +236,117 @@ main() {
   CHECK(error.find("closure escapes via Function (root: hits)") != std::string::npos);
 }
 
+TEST_CASE("a closure converts to a Function parameter, field and binding") {
+  const std::string source = R"(
+[struct]
+Hook {
+  [Function<i32, i32> mut] run
+}
+
+[return<i32>]
+apply([Function<i32, i32> mut] f, [i32] x) {
+  return(f(x))
+}
+
+[return<i32>]
+double([i32] x) {
+  return(multiply(x, 2i32))
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [i32] base{1i32}
+  [Hook mut] hook{Hook{[run] double}}
+  [Function<i32, i32> mut] named{Function<i32, i32>{/double}}
+  [Function<i32, i32> mut] bound{[base]([i32] x) { return(plus(x, base)) }}
+  return(plus(apply([base]([i32] x) { return(plus(x, base)) }, 1i32), apply(double, 2i32)))
+}
+)";
+  std::string error;
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
+}
+
+TEST_CASE("a closure with the wrong parameter type cannot become a Function parameter") {
+  const std::string source = R"(
+[return<i32>]
+apply([Function<i32, i32> mut] f, [i32] x) {
+  return(f(x))
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  return(apply([]([string] text) { return(1i32) }, 1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_MESSAGE(error.find("Function<i32, i32> cannot hold /main__lambda0 in /main: its parameter text is string, "
+                           "the Function passes i32") != std::string::npos,
+                error);
+}
+
+TEST_CASE("a named definition with the wrong arity cannot become a Function") {
+  const std::string source = R"(
+[return<i32>]
+apply([Function<i32, i32> mut] f, [i32] x) {
+  return(f(x))
+}
+
+[return<i32>]
+add([i32] a, [i32] b) {
+  return(plus(a, b))
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  return(apply(add, 1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_MESSAGE(error.find("Function<i32, i32> cannot hold /add in /main: it takes 2 arguments, the Function passes 1") !=
+                    std::string::npos,
+                error);
+}
+
+TEST_CASE("a ref lambda passed to a Function parameter escapes") {
+  const std::string source = R"(
+[return<i32>]
+apply([Function<i32, i32> mut] f, [i32] x) {
+  return(f(x))
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [i32 mut] hits{0i32}
+  return(apply([ref hits]([i32] x) { return(plus(x, hits)) }, 1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_MESSAGE(error.find("closure escapes via Function (root: hits)") != std::string::npos, error);
+}
+
+TEST_CASE("a borrowing closure stored in a Function field escapes") {
+  const std::string source = R"(
+[struct]
+Hook {
+  [Function<i32, i32> mut] run
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [i32 mut] hits{0i32}
+  reader{[ref hits]([i32] x) { return(plus(x, hits)) }}
+  [Hook mut] hook{Hook{[run] reader}}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_MESSAGE(error.find("closure escapes via Function (root: hits)") != std::string::npos, error);
+}
+
 TEST_CASE("closure capturing a view by value borrows the view's owner") {
   const std::string source = R"(
 import /std/text/*

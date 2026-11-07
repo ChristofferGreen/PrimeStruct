@@ -109,7 +109,7 @@ of sync with them.
 | TODO-5706 | Fragment-swapping buttons without user JavaScript | blocked | web-fragments |
 | TODO-5707 | `Function` types accept `mut` parameters | deferred | closures-mut-params |
 | TODO-5708 | Type aliases | deferred | type-aliases |
-| TODO-5709 | Native UI handlers and `App.run` | blocked | native-ui-handlers |
+| TODO-5709 | Native UI handlers and `App.run` | ready | native-ui-handlers |
 | TODO-5710 | PrimeScroll dispatches through handlers | blocked | native-ui-handlers |
 | TODO-5711 | Retire the `/std/ui` layout and command-list prototype | ready | ui-prototype-retire |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
@@ -119,7 +119,10 @@ of sync with them.
 | TODO-5536 | Small, lazily loaded bytecode for apps | ready | bytecode-startup |
 | TODO-5535 | Launch-time harness and reference Objective-C++ editor | ready | native-ui-launch |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
-| TODO-5669 | `Function` from named definitions and at call sites | ready | closures |
+| TODO-5712 | A callable field of a local struct is called | ready | closures-field-calls |
+| TODO-5713 | A lambda whose capture list starts with `mut` parses as a call argument | ready | closures-parse |
+| TODO-5714 | Native: a `Function` call nested in another call's arguments lowers | ready | native-backend |
+| TODO-5715 | `Function<R, A...>{move(closure)}` infers the boxed type | ready | closures |
 | TODO-5681 | A struct field built from a named vector local owns its storage once | ready | collections-fields |
 | TODO-5682 | Native: a mutating vector-field method inside an arithmetic expression returns the right value | ready | native-backend |
 | TODO-5676 | Lambdas can state their return type | deferred | closures-return-types |
@@ -146,7 +149,6 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5669 (closures): `Function` from named definitions and at call sites
 - TODO-5700 (text-literal-views): a string literal passes where a `StringView` is expected
 - TODO-5701 (web-html): `/std/html` writer, `Response.html` and `redirect`
 - TODO-5603 (startup): startup audit: what a launch loads and does
@@ -154,12 +156,13 @@ of sync with them.
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5510 (control-returns): `return` returns from unit-variant pick arms correctly
 - TODO-5524 (result-error-structs): int-backed error structs round-trip through stdlib Result sums
+- TODO-5709 (native-ui-handlers): native UI handlers and `App.run`
 
 ### Immediate Next 10
 
-1. TODO-5669
-2. TODO-5700
-3. TODO-5701
+1. TODO-5700
+2. TODO-5701
+3. TODO-5709
 4. TODO-5603
 5. TODO-5536
 6. TODO-5535
@@ -179,9 +182,9 @@ of sync with them.
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
-- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5669, TODO-5676, TODO-5677; collection fields found by closures: TODO-5681, TODO-5682
+- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715; collection fields found by closures: TODO-5681, TODO-5682
 - Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5701, TODO-5702, TODO-5703, TODO-5704, TODO-5705, TODO-5706
-- Language surface for handlers (docs/WebAppsPlan.md): TODO-5669, TODO-5700, TODO-5707, TODO-5708
+- Language surface for handlers (docs/WebAppsPlan.md): TODO-5700, TODO-5707, TODO-5708
 - Native UI handlers (docs/WebAppsPlan.md): TODO-5709, TODO-5710, TODO-5711
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
@@ -312,8 +315,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 
 - [ ] TODO-5709: Native UI handlers and `App.run`
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5669
+  - status: ready
   - created_at: 2026-11-07
   - phase: Native UI handlers (docs/WebAppsPlan.md)
   - parallel_track: native-ui-handlers
@@ -361,17 +363,53 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - full release gate green
   - stop_rule: call-site effect checks only; no new effects.
 
-- [ ] TODO-5669: `Function` from named definitions and at call sites
+- [ ] TODO-5712: A callable field of a local struct is called
   - owner: ai
   - status: ready
-  - created_at: 2026-11-06
-  - phase: Closures follow-ups
-  - parallel_track: closures
-  - scope: `Function<R, A...>` is built only by explicit brace construction from a closure or a struct with `call` (`docs/spec/value-lifecycle.md`, Function values). Add `Function<i32, i32>{/double}` for a named definition (a generated closure struct whose `call` forwards to it), and accept a closure where a `Function` parameter or field is expected by inserting the conversion.
+  - created_at: 2026-11-07
+  - phase: Closures follow-ups (found by TODO-5669)
+  - parallel_track: closures-field-calls
+  - scope: With `[Route mut] direct{Route{[code] 6i32, [handler] double}}` and `Route` holding `[Function<i32, i32> mut] handler`, `direct.handler(2i32)` (as a statement, a binding initializer or a return argument) fails with `unknown method: /Route/handler`. The same call through an indexed element (`routes[i].handler(x)`) or `this` works (`rewriteCallableFieldCall` in src/semantics/TemplateMonomorphCallableRewrites.cpp), so the receiver of a plain local struct does not resolve there.
   - acceptance:
-    - a router of named handlers and a closure passed straight to a `[Function<i32, i32> mut]` parameter run on VM, native and optexe; negative test for a signature mismatch
+    - `direct.handler(2i32)` on a local, a parameter and a `Reference` to the struct calls the field on VM, native and optexe (matrix case in test_program_matrix_closures.cpp)
     - full release gate green
-  - stop_rule: conversion sites only; no change to the `Function` representation.
+  - stop_rule: receiver resolution for callable fields; no change to method lookup.
+
+- [ ] TODO-5713: A lambda whose capture list starts with `mut` parses as a call argument
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-07
+  - phase: Closures follow-ups (found by TODO-5669)
+  - parallel_track: closures-parse
+  - scope: `router.add(3i32, [mut calls{0i32}]([i32] x) { ... })` fails with `Parse error: reserved keyword cannot be used as identifier: mut`: in argument position `[` starts an argument label. `[base](...)` and `[seed{5i32}](...)` parse, and the same lambda parses inside braces (`Function<i32, i32>{[mut calls{0i32}](...) {...}}`) and as a binding initializer. Since TODO-5669 a lambda passes straight to a `Function` parameter, so this is the remaining reason to bind a stateful handler first (examples/apps/http_hello `/greet`). Disambiguate a label from a capture list when `[` is followed by a parameter list and a body.
+  - acceptance:
+    - a `mut`-capture lambda and a `[mut x, y]` lambda as call arguments parse and run on VM and optexe; labeled arguments still parse; a parser test for each
+    - full release gate green
+  - stop_rule: argument-position lambda parsing only.
+
+- [ ] TODO-5714: Native: a `Function` call nested in another call's arguments lowers
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-07
+  - phase: Closures follow-ups (found by TODO-5669)
+  - parallel_track: native-backend
+  - scope: `apply_twice([Function<i32, i32> mut] f, [i32] x) { return(f(f(x))) }` fails on `--emit=native` with `native backend does not support recursive calls: /__Function1__t.../call`, with the explicit `Function<i32, i32>{...}` too; the VM and optexe return the right value, and `[i32] once{f(x)} return(f(once))` works on native. The native lowering treats a call of `call` inside the arguments of the same `call` as recursion.
+  - acceptance:
+    - `f(f(x))` on a `Function` parameter returns the right value on native-O0 and native-O2 (matrix case)
+    - full release gate green
+  - stop_rule: the native recursion check for nested calls of one definition.
+
+- [ ] TODO-5715: `Function<R, A...>{move(closure)}` infers the boxed type
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-07
+  - phase: Closures follow-ups (found by TODO-5669)
+  - parallel_track: closures
+  - scope: `Function<i32, i32>{move(adder)}` with `adder` a closure local fails with `unable to infer implicit template arguments for /__fn_box`: implicit template inference does not see through `move(...)`. A copy (`Function<i32, i32>{adder}`) works. Once it infers, accept `move(name)` at the implicit conversion sites too (`isClosureArgument` in src/semantics/TemplateMonomorphCallableRewrites.cpp).
+  - acceptance:
+    - the explicit and the implicit form with `move(adder)` run on VM and optexe, and `adder` is moved-from afterwards (a negative test for a use after the move)
+    - full release gate green
+  - stop_rule: `move` arguments of `/__fn_box` and the implicit sites.
 
 - [ ] TODO-5681: A struct field built from a named vector local owns its storage once
   - owner: ai

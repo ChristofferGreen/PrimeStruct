@@ -1,6 +1,8 @@
 #include "TemplateMonomorphCallableRewrites.h"
 
+#include "SemanticsValidateLambdaClosures.h"
 #include "TemplateMonomorphFallbackTypeInference.h"
+#include "TemplateMonomorphMethodTargets.h"
 #include "TemplateMonomorphImplicitTemplateInference.h"
 #include "TemplateMonomorphTypeResolution.h"
 
@@ -315,7 +317,417 @@ void rewriteCallableBindingCall(Expr &expr,
   expr.isMethodCall = true;
 }
 
+std::string pathLeaf(const std::string &path) {
+  const size_t slash = path.rfind('/');
+  return slash == std::string::npos ? path : path.substr(slash + 1);
+}
+
+bool isFunctionTypePath(const std::string &typeName) {
+  return pathLeaf(typeName).rfind("__Function", 0) == 0;
+}
+
+const Transform *bindingTypeTransform(const Expr &binding) {
+  for (const Transform &transform : binding.transforms) {
+    if (!isFieldQualifierTransformName(transform.name)) {
+      return &transform;
+    }
+  }
+  return nullptr;
+}
+
+// The concrete Function instance (`/__Function1__t...`) a declared type names, resolved in the declaring scope the
+// way the monomorphizer resolves the declaration itself; empty for any other type or one that is not concrete.
+std::string functionInstanceOf(const Transform &type,
+                               const SubstMap &mapping,
+                               const std::unordered_set<std::string> &allowedParams,
+                               const std::string &namespacePrefix,
+                               Context &ctx) {
+  if (!isFunctionTypePath(type.name)) {
+    return {};
+  }
+  std::vector<Transform> resolved{type};
+  std::string resolveError;
+  if (!rewriteTransforms(resolved, mapping, allowedParams, namespacePrefix, ctx, resolveError) ||
+      !resolveError.empty() || !resolved.front().templateArgs.empty() ||
+      !isFunctionTypePath(resolved.front().name) || resolved.front().name.find("__t") == std::string::npos) {
+    return {};
+  }
+  return resolved.front().name;
+}
+
+// Whether a binding type is a callable struct other than a Function.
+bool isClosureTypeName(std::string typeName,
+                       const std::string &typeTemplateArg,
+                       const std::string &namespacePrefix,
+                       const Context &ctx) {
+  if (typeName == "Reference" || typeName == "Pointer") {
+    return false;  // a borrowed closure is not moved into a Function
+  }
+  if (!typeTemplateArg.empty() && typeName.find('<') == std::string::npos) {
+    typeName += "<" + typeTemplateArg + ">";
+  }
+  return !isFunctionTypePath(typeName) && isCallableStructTypeName(typeName, namespacePrefix, ctx);
+}
+
+// Whether `arg` is a closure value that must be boxed to become a Function: a lambda, a local or parameter of a
+// callable struct type, a callable struct's brace constructor, or a named free function with a forwarder (whose path
+// is stored in `forwarderOut`). Other expressions are left alone: bind them to a local first.
+bool isClosureArgument(const Expr &arg,
+                       const std::string &namespacePrefix,
+                       const Context &ctx,
+                       const LocalTypeMap &locals,
+                       const std::vector<semantics::ParameterInfo> &params,
+                       std::string &forwarderOut) {
+  if (arg.isSpread || arg.isBinding || arg.isLambda) {
+    return false;
+  }
+  if (arg.kind == Expr::Kind::Name) {
+    const semantics::BindingInfo *binding = nullptr;
+    if (auto localIt = locals.find(arg.name); localIt != locals.end()) {
+      binding = &localIt->second;
+    } else {
+      for (const semantics::ParameterInfo &param : params) {
+        if (param.name == arg.name) {
+          binding = &param.binding;
+          break;
+        }
+      }
+    }
+    if (binding != nullptr) {
+      return isClosureTypeName(binding->typeName, binding->typeTemplateArg, namespacePrefix, ctx);
+    }
+    const std::string target = resolveNameToPath(arg.name, namespacePrefix,
+                                                 scopedImportAliasesForNamespace(namespacePrefix, ctx), ctx.sourceDefs);
+    if (target.empty() || ctx.sourceDefs.count(target + semantics::FunctionForwarderSuffix) == 0) {
+      return false;
+    }
+    forwarderOut = target + semantics::FunctionForwarderSuffix;
+    return true;
+  }
+  if (arg.kind != Expr::Kind::Call || arg.isFieldAccess || arg.isMethodCall) {
+    return false;
+  }
+  if (pathLeaf(arg.name).find(semantics::LambdaClosureStructPrefix) != std::string::npos) {
+    return true;  // a lambda: its factory call, or the in-place constructor of a closure with `ref` captures
+  }
+  return arg.isBraceConstructor && !isFunctionTypePath(arg.name) &&
+         isCallableStructTypeName(arg.name, namespacePrefix, ctx);
+}
+
+// Whether `arg` is a closure value that must be boxed to become a Function; a named free function is replaced by the
+// constructor of its forwarder.
+bool closureArgument(Expr &arg,
+                     const std::string &namespacePrefix,
+                     Context &ctx,
+                     const LocalTypeMap &locals,
+                     const std::vector<semantics::ParameterInfo> &params) {
+  std::string forwarder;
+  if (!isClosureArgument(arg, namespacePrefix, ctx, locals, params, forwarder)) {
+    return false;
+  }
+  if (!forwarder.empty()) {
+    Expr construct;
+    construct.kind = Expr::Kind::Call;
+    construct.name = forwarder;
+    construct.sourceName = arg.name;
+    construct.namespacePrefix = arg.namespacePrefix;
+    construct.isBraceConstructor = true;
+    construct.sourceLine = arg.sourceLine;
+    construct.sourceColumn = arg.sourceColumn;
+    arg = std::move(construct);
+  }
+  return true;
+}
+
+// `arg` becomes `/__Function1__t...{[tag] 0i32, [env] /__fn_box(arg)}`, the shape of the explicit conversion.
+void boxIntoFunction(Expr &arg, const std::string &functionPath) {
+  Expr tag;
+  tag.kind = Expr::Kind::Literal;
+  tag.literalValue = 0;
+  tag.intWidth = 32;
+  tag.namespacePrefix = arg.namespacePrefix;
+  tag.sourceLine = arg.sourceLine;
+  tag.sourceColumn = arg.sourceColumn;
+  Expr box;
+  box.kind = Expr::Kind::Call;
+  box.name = "/__fn_box";
+  box.sourceName = "Function";
+  box.namespacePrefix = arg.namespacePrefix;
+  box.sourceLine = arg.sourceLine;
+  box.sourceColumn = arg.sourceColumn;
+  Expr function;
+  function.kind = Expr::Kind::Call;
+  function.name = functionPath;
+  function.sourceName = "Function";
+  function.namespacePrefix = arg.namespacePrefix;
+  function.isBraceConstructor = true;
+  function.sourceLine = arg.sourceLine;
+  function.sourceColumn = arg.sourceColumn;
+  box.args.push_back(std::move(arg));
+  box.argNames.push_back(std::nullopt);
+  function.args.push_back(std::move(tag));
+  function.argNames.push_back(std::string("tag"));
+  function.args.push_back(std::move(box));
+  function.argNames.push_back(std::string("env"));
+  arg = std::move(function);
+}
+
+bool convertArgument(Expr &arg,
+                     const std::string &functionPath,
+                     const std::string &namespacePrefix,
+                     Context &ctx,
+                     const LocalTypeMap &locals,
+                     const std::vector<semantics::ParameterInfo> &params,
+                     std::string &error) {
+  if (functionPath.empty() || !closureArgument(arg, namespacePrefix, ctx, locals, params)) {
+    return true;
+  }
+  // A lambda with `[ref name]` captures is built in place from `location(name)`: it borrows, so it cannot move into
+  // the Function's heap block. (A named closure that borrows is caught by the loan check of `/__fn_box`.)
+  if (arg.kind == Expr::Kind::Call && arg.isBraceConstructor) {
+    for (const Expr &field : arg.args) {
+      if (field.kind == Expr::Kind::Call && field.name == "location" && field.args.size() == 1 &&
+          field.args.front().kind == Expr::Kind::Name) {
+        error = "closure escapes via Function (root: " + field.args.front().name + ")";
+        if (ctx.currentRewriteDefinition != nullptr) {
+          error += " in " + ctx.currentRewriteDefinition->fullPath;
+        }
+        return false;
+      }
+    }
+  }
+  boxIntoFunction(arg, functionPath);
+  return true;
+}
+
+// The definition a call or method call targets, before monomorphization; null when unknown or generic.
+const Definition *conversionCallee(const Expr &expr,
+                                   const std::string &namespacePrefix,
+                                   Context &ctx,
+                                   const LocalTypeMap &locals,
+                                   const std::vector<semantics::ParameterInfo> &params,
+                                   bool allowMathBare) {
+  std::string path;
+  if (expr.isMethodCall) {
+    std::string receiverPath = resolveStructLikeExprPathForTemplatedVectorFallback(
+        expr.args.front(), locals, namespacePrefix, ctx, allowMathBare);
+    if (receiverPath.empty()) {
+      semantics::BindingInfo receiverInfo;
+      if (!inferBindingTypeForMonomorph(expr.args.front(), params, locals, allowMathBare, ctx, receiverInfo)) {
+        return nullptr;
+      }
+      const bool borrowed = receiverInfo.typeName == "Reference" || receiverInfo.typeName == "Pointer";
+      receiverPath = resolveStructLikeTypePathForTemplatedVectorFallback(
+          borrowed ? receiverInfo.typeTemplateArg : receiverInfo.typeName, namespacePrefix, ctx);
+    }
+    if (receiverPath.empty() || receiverPath.front() != '/') {
+      return nullptr;
+    }
+    path = receiverPath + "/" + expr.name;
+  } else {
+    path = resolveCalleePath(expr, namespacePrefix, ctx, &locals, &params);
+  }
+  auto defIt = ctx.sourceDefs.find(path);
+  if (defIt == ctx.sourceDefs.end()) {
+    auto overloadIt = ctx.helperOverloads.find(path);
+    if (overloadIt == ctx.helperOverloads.end()) {
+      return nullptr;
+    }
+    const size_t argumentCount = expr.args.size() - (expr.isMethodCall ? 1 : 0);
+    for (const HelperOverloadEntry &entry : overloadIt->second) {
+      if (!entry.isVariadic && entry.parameterCount == argumentCount) {
+        defIt = ctx.sourceDefs.find(entry.internalPath);
+        break;
+      }
+    }
+    if (defIt == ctx.sourceDefs.end()) {
+      return nullptr;
+    }
+  }
+  if (!defIt->second.templateArgs.empty()) {
+    return nullptr;
+  }
+  return &defIt->second;
+}
+
+// Whether any parameter or field of `def` is declared with a Function type: the cheap test before resolving a call.
+bool declaresFunctionBinding(const std::vector<Expr> &bindings) {
+  for (const Expr &binding : bindings) {
+    if (!binding.isBinding) {
+      continue;
+    }
+    const Transform *type = bindingTypeTransform(binding);
+    if (type != nullptr && isFunctionTypePath(type->name)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 } // namespace
+
+bool rewriteImplicitFunctionConversions(Expr &expr,
+                                        const SubstMap &mapping,
+                                        const std::unordered_set<std::string> &allowedParams,
+                                        const std::string &namespacePrefix,
+                                        Context &ctx,
+                                        const LocalTypeMap &locals,
+                                        const std::vector<semantics::ParameterInfo> &params,
+                                        bool allowMathBare,
+                                        std::string &error) {
+  if (expr.kind != Expr::Kind::Call || expr.args.empty() || !anySourceDefStartsWith(ctx, "/__Function")) {
+    return true;  // no Function type in the program
+  }
+  // `[Function<R, A...> mut] f{closure}`: the binding's own type, already rewritten.
+  if (expr.isBinding) {
+    if (expr.args.size() == 1) {
+      if (const Transform *type = bindingTypeTransform(expr)) {
+        if (!convertArgument(expr.args.front(),
+                             functionInstanceOf(*type, mapping, allowedParams, namespacePrefix, ctx), namespacePrefix,
+                             ctx, locals, params, error)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+  if (expr.isFieldAccess || expr.isLambda) {
+    return true;
+  }
+  // `return(closure)` from a definition that returns a Function.
+  if (!expr.isMethodCall && !expr.isBraceConstructor && expr.args.size() == 1 && expr.name == "return") {
+    const Definition *current = ctx.currentRewriteDefinition;
+    if (current == nullptr) {
+      return true;
+    }
+    for (const Transform &transform : current->transforms) {
+      if (transform.name != "return" || transform.templateArgs.size() != 1 ||
+          !isFunctionTypePath(transform.templateArgs.front())) {
+        continue;
+      }
+      Transform type;
+      type.name = transform.templateArgs.front();
+      std::string base;
+      std::string argText;
+      if (semantics::splitTemplateTypeName(type.name, base, argText)) {
+        std::vector<std::string> args;
+        if (!semantics::splitTopLevelTemplateArgs(argText, args)) {
+          return true;
+        }
+        type.name = base;
+        type.templateArgs = std::move(args);
+      }
+      if (!convertArgument(expr.args.front(), functionInstanceOf(type, mapping, allowedParams, namespacePrefix, ctx),
+                           namespacePrefix, ctx, locals, params, error)) {
+        return false;
+      }
+    }
+    return true;
+  }
+  // `f = closure` for a Function local.
+  if (!expr.isMethodCall && !expr.isBraceConstructor && expr.args.size() == 2 && expr.name == "assign" &&
+      expr.args.front().kind == Expr::Kind::Name) {
+    auto localIt = locals.find(expr.args.front().name);
+    if (localIt != locals.end() && isFunctionTypePath(localIt->second.typeName) &&
+        localIt->second.typeTemplateArg.empty() && localIt->second.typeName.find("__t") != std::string::npos) {
+      if (!convertArgument(expr.args[1], localIt->second.typeName, namespacePrefix, ctx, locals, params, error)) {
+        return false;
+      }
+    }
+    return true;
+  }
+  // `Route{[handler] closure}`: the field's type.
+  if (expr.isBraceConstructor) {
+    if (isFunctionTypePath(expr.name)) {
+      return true;
+    }
+    const std::string path = resolveCalleePath(expr, namespacePrefix, ctx, &locals, &params);
+    auto defIt = ctx.sourceDefs.find(path);
+    if (defIt == ctx.sourceDefs.end() || !defIt->second.templateArgs.empty() || !isStructDefinition(defIt->second) ||
+        !declaresFunctionBinding(defIt->second.statements)) {
+      return true;
+    }
+    const Definition &structDef = defIt->second;
+    std::vector<const Expr *> fields;
+    for (const Expr &stmt : structDef.statements) {
+      bool isStatic = false;
+      for (const Transform &transform : stmt.transforms) {
+        isStatic = isStatic || transform.name == "static";
+      }
+      if (stmt.isBinding && !isStatic) {
+        fields.push_back(&stmt);
+      }
+    }
+    size_t positional = 0;
+    for (size_t i = 0; i < expr.args.size(); ++i) {
+      const Expr *field = nullptr;
+      if (i < expr.argNames.size() && expr.argNames[i].has_value()) {
+        for (const Expr *candidate : fields) {
+          if (candidate->name == *expr.argNames[i]) {
+            field = candidate;
+            break;
+          }
+        }
+      } else if (positional < fields.size()) {
+        field = fields[positional++];
+      }
+      const Transform *type = field == nullptr ? nullptr : bindingTypeTransform(*field);
+      if (type != nullptr) {
+        if (!convertArgument(expr.args[i], functionInstanceOf(*type, SubstMap{}, {}, structDef.namespacePrefix, ctx),
+                             namespacePrefix, ctx, locals, params, error)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+  // A call or method call: the parameter's type. Resolve the callee only when an argument can be a closure.
+  if (expr.name.empty()) {
+    return true;
+  }
+  bool anyClosure = false;
+  std::string ignoredForwarder;
+  for (size_t i = expr.isMethodCall ? 1 : 0; i < expr.args.size() && !anyClosure; ++i) {
+    anyClosure = isClosureArgument(expr.args[i], namespacePrefix, ctx, locals, params, ignoredForwarder);
+  }
+  if (!anyClosure) {
+    return true;
+  }
+  const Definition *callee = conversionCallee(expr, namespacePrefix, ctx, locals, params, allowMathBare);
+  if (callee == nullptr || isStructDefinition(*callee) || !declaresFunctionBinding(callee->parameters)) {
+    return true;
+  }
+  size_t offset = 0;
+  if (expr.isMethodCall && (callee->parameters.size() < expr.args.size() || callee->parameters.empty() ||
+                            callee->parameters.front().name != "self")) {
+    offset = 1;  // the receiver is the implicit `this`
+  }
+  size_t positional = 0;
+  for (size_t i = offset; i < expr.args.size(); ++i) {
+    if (expr.args[i].isSpread) {
+      break;
+    }
+    const Expr *param = nullptr;
+    if (i < expr.argNames.size() && expr.argNames[i].has_value()) {
+      for (const Expr &candidate : callee->parameters) {
+        if (candidate.name == *expr.argNames[i]) {
+          param = &candidate;
+          break;
+        }
+      }
+    } else if (positional < callee->parameters.size()) {
+      param = &callee->parameters[positional++];
+    }
+    const Transform *type = param == nullptr ? nullptr : bindingTypeTransform(*param);
+    if (type != nullptr) {
+      if (!convertArgument(expr.args[i], functionInstanceOf(*type, SubstMap{}, {}, callee->namespacePrefix, ctx),
+                           namespacePrefix, ctx, locals, params, error)) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
 
 void rewriteCallableShapes(Expr &expr,
                            const SubstMap &mapping,

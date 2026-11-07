@@ -1,14 +1,18 @@
 #include "SemanticsValidateFunctionValues.h"
 
 #include "SemanticsHelpers.h"
+#include "SemanticsValidateLambdaClosures.h"
 #include "primec/frontend/Lexer.h"
 #include "primec/frontend/Parser.h"
 
+#include <algorithm>
+#include <cctype>
 #include <cstddef>
 #include <map>
 #include <optional>
 #include <set>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -66,6 +70,9 @@ struct FunctionValueRewriter {
   std::unordered_map<std::string, size_t> definitionIndex;
   // Function instance path -> converted closure types, in order of first conversion (tag = position + 1).
   std::map<std::string, std::vector<std::string>> variants;
+  // (Function instance, closure type) -> the definition of its first conversion, for diagnostics.
+  std::map<std::pair<std::string, std::string>, std::string> convertedIn;
+  std::string currentDefinition;
 
   const Definition *find(const std::string &path) const {
     const auto it = definitionIndex.find(path);
@@ -125,8 +132,155 @@ struct FunctionValueRewriter {
     }
     if (index == known.size()) {
       known.push_back(closureType);
+      convertedIn.emplace(std::make_pair(functionPath, closureType), currentDefinition);
     }
     tag->literalValue = index + 1;
+  }
+
+  // A type as written for a diagnostic and for comparison: namespaces and template-instance suffixes dropped
+  // (`/std/http/Request` and `Request` agree; `/Box__t1a2b` reads `Box`).
+  static std::string plainTypeText(const std::string &text) {
+    std::string out;
+    std::string token;
+    auto flush = [&]() {
+      const size_t slash = token.rfind('/');
+      std::string leaf = slash == std::string::npos ? token : token.substr(slash + 1);
+      const size_t instance = leaf.find("__t");
+      if (instance != std::string::npos && instance > 0) {
+        leaf.resize(instance);
+      }
+      out += leaf;
+      token.clear();
+    };
+    for (char ch : text) {
+      if (ch == '<' || ch == '>' || ch == ',' || ch == ' ') {
+        flush();
+        out.push_back(ch);
+      } else {
+        token.push_back(ch);
+      }
+    }
+    flush();
+    return out;
+  }
+
+  static bool isNumericType(const std::string &type) {
+    // Plain arrays, not static containers: those would be built in the compile arena and freed after it.
+    static constexpr std::string_view Numeric[] = {"i8",  "i16", "i32", "i64", "u8",   "u16",  "u32",
+                                                   "u64", "f32", "f64", "int", "bool", "float"};
+    return std::find(std::begin(Numeric), std::end(Numeric), type) != std::end(Numeric);
+  }
+
+  // Whether a value of `passed` can never bind to `declared`. Numeric types widen and text and borrowed types
+  // convert, so those pairs are left to the validator; numbers against anything else and distinct struct types
+  // are certain mismatches.
+  static bool certainlyMismatched(const std::string &declared, const std::string &passed) {
+    if (declared == passed || declared.empty() || passed.empty()) {
+      return false;
+    }
+    const bool declaredNumeric = isNumericType(declared);
+    const bool passedNumeric = isNumericType(passed);
+    if (declaredNumeric || passedNumeric) {
+      return declaredNumeric != passedNumeric;
+    }
+    auto base = [](const std::string &type) {
+      std::string name = type.substr(0, type.find('<'));
+      for (char &ch : name) {
+        ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
+      }
+      return name;
+    };
+    // Text, borrows and collections have more than one spelling or convert implicitly.
+    static constexpr std::string_view Converting[] = {"string", "stringview", "reference", "pointer",
+                                                      "auto",   "vector",     "map",       "array"};
+    auto converts = [&](const std::string &type) {
+      return std::find(std::begin(Converting), std::end(Converting), base(type)) != std::end(Converting);
+    };
+    if (converts(declared) || converts(passed)) {
+      return false;
+    }
+    return base(declared) != base(passed);
+  }
+
+  // A diagnostic name for a converted closure type: the definition a forwarder calls, or the struct.
+  static std::string closureDisplayName(const std::string &closureType) {
+    std::string name = closureType;
+    const size_t angle = name.find('<');
+    if (angle != std::string::npos) {
+      name.resize(angle);
+    }
+    const size_t instance = name.rfind("__t");
+    if (instance != std::string::npos && instance > name.rfind('/')) {
+      name.resize(instance);
+    }
+    const std::string forwarder = FunctionForwarderSuffix;
+    if (name.size() > forwarder.size() && name.compare(name.size() - forwarder.size(), forwarder.size(), forwarder) == 0) {
+      return name.substr(0, name.size() - forwarder.size());
+    }
+    return name;
+  }
+
+  // The closure's `call` must take the Function's arguments (`Function<i32, i32>` cannot hold a closure that takes a
+  // string or two numbers); checked here, where both are concrete, so the diagnostic names the conversion.
+  bool checkSignature(const std::string &functionPath, const std::string &closure) {
+    const Definition *functionCall = find(functionPath + "/call");
+    const Definition *closureCall = find(closure + "/call");
+    if (functionCall == nullptr || closureCall == nullptr || !closureCall->templateArgs.empty()) {
+      return true;
+    }
+    for (const Expr &param : closureCall->parameters) {
+      if (param.isSpread || !param.isBinding) {
+        return true;
+      }
+    }
+    const std::string returnType = returnTypeOf(*functionCall);
+    std::string functionName = "Function<" + plainTypeText(returnType);
+    for (const Expr &param : functionCall->parameters) {
+      functionName += ", " + plainTypeText(bindingTypeText(param));
+    }
+    functionName += ">";
+    const auto siteIt = convertedIn.find(std::make_pair(functionPath, closure));
+    const std::string site =
+        siteIt == convertedIn.end() || siteIt->second.empty() ? std::string() : " in " + siteIt->second;
+    const std::string prefix = functionName + " cannot hold " + closureDisplayName(closure) + site + ": ";
+    const size_t passed = functionCall->parameters.size();
+    // A `call` written outside its struct takes the receiver as an explicit `self` first.
+    const size_t first =
+        !closureCall->parameters.empty() && closureCall->parameters.front().name == "self" ? 1 : 0;
+    const size_t takes = closureCall->parameters.size() - first;
+    size_t required = 0;
+    for (size_t i = first; i < closureCall->parameters.size(); ++i) {
+      if (closureCall->parameters[i].args.empty()) {
+        ++required;
+      }
+    }
+    if (passed < required || passed > takes) {
+      error = prefix + "it takes " + std::to_string(takes) + " argument" + (takes == 1 ? "" : "s") +
+              ", the Function passes " + std::to_string(passed);
+      return false;
+    }
+    for (size_t i = 0; i < passed; ++i) {
+      const Expr &param = closureCall->parameters[first + i];
+      const std::string declared = plainTypeText(bindingTypeText(param));
+      const std::string given = plainTypeText(bindingTypeText(functionCall->parameters[i]));
+      if (certainlyMismatched(declared, given)) {
+        error = prefix + "its parameter " + param.name + " is " + declared + ", the Function passes " + given;
+        return false;
+      }
+    }
+    bool explicitReturn = false;
+    for (const Transform &transform : closureCall->transforms) {
+      explicitReturn = explicitReturn || transform.name == "return";
+    }
+    if (explicitReturn && returnType != "void") {
+      const std::string returned = plainTypeText(returnTypeOf(*closureCall));
+      const std::string expected = plainTypeText(returnType);
+      if (returned == "void" || certainlyMismatched(expected, returned)) {
+        error = prefix + "it returns " + returned + ", the Function returns " + expected;
+        return false;
+      }
+    }
+    return true;
   }
 
   bool parseBody(const std::string &body, std::vector<Expr> &statements) {
@@ -292,6 +446,7 @@ struct FunctionValueRewriter {
       return true;
     }
     for (Definition &def : program.definitions) {
+      currentDefinition = def.fullPath;
       for (Expr &stmt : def.statements) {
         collect(stmt);
       }
@@ -299,12 +454,18 @@ struct FunctionValueRewriter {
         collect(*def.returnExpr);
       }
     }
+    currentDefinition.clear();
     for (Execution &exec : program.executions) {
       for (Expr &arg : exec.arguments) {
         collect(arg);
       }
     }
     for (const std::string &instance : instances) {
+      for (const std::string &closure : variants[instance]) {
+        if (!checkSignature(instance, closure)) {
+          return false;
+        }
+      }
       if (!completeInstance(instance, variants[instance])) {
         return false;
       }
@@ -316,7 +477,7 @@ struct FunctionValueRewriter {
 } // namespace
 
 bool rewriteFunctionValues(Program &program, std::string &error) {
-  FunctionValueRewriter rewriter{program, error, {}, {}};
+  FunctionValueRewriter rewriter{program, error, {}, {}, {}, {}};
   return rewriter.run();
 }
 
