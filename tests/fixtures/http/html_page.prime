@@ -1,0 +1,72 @@
+// /std/html pages and Response.html, byte for byte (tests/unit/backend_host/test_http.cpp). The exit code is the
+// number of the first case that failed, or 0.
+import /std/html/*
+import /std/http/*
+import /std/text/*
+import /std/text/view/*
+
+// A page with a list, a form of every control and text that needs escaping in both content and attributes.
+[return<String> effects(heap_alloc)]
+todo_page([StringView] title, [StringView] draft) {
+  [Writer mut] page{Writer{}}
+  page.beginPage(title)
+  page.stylesheet("/static/site.css")
+  page.beginBody()
+  page.element("h1", title)
+  page.beginElement("ul")
+  page.element("li", "Buy <milk> & \"eggs\"")
+  page.element("li", "Ada's list")
+  page.endElement("ul")
+  page.beginForm("post", "/todos")
+  page.label("title", "New todo")
+  page.input("text", "title", draft)
+  page.attribute("id", "title")
+  page.booleanAttribute("required")
+  page.beginSelect("priority")
+  page.option("low", "Low", false)
+  page.option("high", "High", true)
+  page.endSelect()
+  page.textarea("notes", "\nfirst line")
+  page.button("Add")
+  page.endForm()
+  page.raw("<hr>")
+  page.endPage()
+  return(page.out)
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [String] page{todo_page("Todos & <more>", "Ada's \"x\" <y> & z")}
+  if(!page.equalsText("<!doctype html><html><head><meta charset=\"utf-8\"><title>Todos &amp; &lt;more&gt;</title><link rel=\"stylesheet\" href=\"/static/site.css\"></head><body><h1>Todos &amp; &lt;more&gt;</h1><ul><li>Buy &lt;milk&gt; &amp; &quot;eggs&quot;</li><li>Ada's list</li></ul><form method=\"post\" action=\"/todos\"><label for=\"title\">New todo</label><input type=\"text\" name=\"title\" value=\"Ada&#39;s &quot;x&quot; &lt;y&gt; &amp; z\" id=\"title\" required><select name=\"priority\"><option value=\"low\">Low</option><option value=\"high\" selected>High</option></select><textarea name=\"notes\">\n\nfirst line</textarea><button type=\"submit\">Add</button></form><hr></body></html>")) {
+    return(1i32)
+  }
+  // Names keep only name bytes, so they cannot end the tag; an attribute after the tag is closed is ignored.
+  [Writer mut] names{Writer{}}
+  names.beginElement("p onclick=\"x\"")
+  names.attribute("data-id\" onclick=\"y", "7")
+  names.text("t")
+  names.attribute("late", "no")
+  names.voidElement("br")
+  names.endElement("p")
+  [bool] namesKept{names.out.equalsText("<ponclickx data-idonclicky=\"7\">t<br></p>")}
+  if(!namesKept) {
+    return(2i32)
+  }
+  // Response.html sets the body and the content type.
+  [Writer mut] small{Writer{}}
+  small.element("p", "hi")
+  [Response mut] response{Response{}}
+  response.html(small.out)
+  [String] sent{response.serialize()}
+  if(!sent.equalsText("HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: 9\r\nConnection: close\r\n\r\n<p>hi</p>")) {
+    return(3i32)
+  }
+  // The whole page through a response: its bytes are the body unchanged.
+  response.clear()
+  response.html(page)
+  [bool] same{response.body.view().equals(page.view())}
+  if(!same) {
+    return(4i32)
+  }
+  return(0i32)
+}

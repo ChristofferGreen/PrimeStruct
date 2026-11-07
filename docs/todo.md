@@ -100,7 +100,6 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5701 | `/std/html` writer, `Response.html` and `redirect` | ready | web-html |
 | TODO-5702 | Request query and form parameters with percent-decoding | ready | web-params |
 | TODO-5703 | `Router` path parameters | ready | web-routes |
 | TODO-5704 | A todo-list web app with pages and forms | blocked | web-example |
@@ -123,6 +122,7 @@ of sync with them.
 | TODO-5714 | Native: a `Function` call nested in another call's arguments lowers | ready | native-backend |
 | TODO-5715 | `Function<R, A...>{move(closure)}` infers the boxed type | ready | closures |
 | TODO-5716 | A literal converts to a `StringView` at a call whose overloads differ there | deferred | text-literal-views |
+| TODO-5717 | One file imports two modules that export the same name | ready | import-conflicts |
 | TODO-5681 | A struct field built from a named vector local owns its storage once | ready | collections-fields |
 | TODO-5682 | Native: a mutating vector-field method inside an arithmetic expression returns the right value | ready | native-backend |
 | TODO-5676 | Lambdas can state their return type | deferred | closures-return-types |
@@ -149,7 +149,8 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5701 (web-html): `/std/html` writer, `Response.html` and `redirect`
+- TODO-5702 (web-params): request query and form parameters with percent-decoding
+- TODO-5703 (web-routes): `Router` path parameters
 - TODO-5603 (startup): startup audit: what a launch loads and does
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
@@ -159,13 +160,14 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5701
-2. TODO-5709
-3. TODO-5603
-4. TODO-5536
-5. TODO-5535
-6. TODO-5510
-7. TODO-5524
+1. TODO-5702
+2. TODO-5703
+3. TODO-5709
+4. TODO-5603
+5. TODO-5536
+6. TODO-5535
+7. TODO-5510
+8. TODO-5524
 
 ### Priority Lanes
 
@@ -181,8 +183,8 @@ of sync with them.
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715; collection fields found by closures: TODO-5681, TODO-5682
-- Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5701, TODO-5702, TODO-5703, TODO-5704, TODO-5705, TODO-5706
-- Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716
+- Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5702, TODO-5703, TODO-5704, TODO-5705, TODO-5706
+- Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717
 - Native UI handlers (docs/WebAppsPlan.md): TODO-5709, TODO-5710, TODO-5711
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
@@ -191,20 +193,6 @@ of sync with them.
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 ### Task Blocks
-
-- [ ] TODO-5701: `/std/html` writer, `Response.html` and `redirect`
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-07
-  - phase: Web apps (docs/WebAppsPlan.md)
-  - parallel_track: web-html
-  - scope: Add `/std/html`, a `Writer` in the style of `/std/json` (`stdlib/std/json/json.prime`): it builds a `String`, escapes text (`& < > "`) and attribute values by default, and has `raw(text)` as the only unescaped call. Cover elements with attributes, void elements, text, the document head (`<!doctype html>`, title, a stylesheet link) and the form vocabulary (`form`, `input`, `button`, `label`, `select`, `textarea`). Add `Response.html(writer or String)` (sets `text/html; charset=utf-8`) and `Response.redirect(status, location)` (303 by default for post/redirect/get) to `/std/http`. Document both in docs/spec/stdlib-reference.md.
-  - acceptance:
-    - a VM test writes a page with a form and checks the exact bytes, including escaped text and attributes
-    - the same program gives the same bytes through optexe
-    - a redirect response serializes with `Location` and no body
-    - full release gate green
-  - stop_rule: the writer and the two Response helpers; no templates, no DOM model.
 
 - [ ] TODO-5702: Request query and form parameters with percent-decoding
   - owner: ai
@@ -234,7 +222,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 - [ ] TODO-5704: A todo-list web app with pages and forms
   - owner: ai
   - status: blocked
-  - blocked_on: TODO-5701
+  - blocked_on: TODO-5702, TODO-5703
   - created_at: 2026-11-07
   - phase: Web apps (docs/WebAppsPlan.md)
   - parallel_track: web-example
@@ -407,6 +395,20 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - full release gate green
   - stop_rule: overload argument facts for calls with a declared return type and the literal conversion at such calls; no change to the specificity rule.
   - notes: deferred: no stdlib family overloads `string` against `StringView` or another type today.
+
+- [ ] TODO-5717: One file imports two modules that export the same name
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-07
+  - phase: Language surface for handlers (docs/WebAppsPlan.md; found by TODO-5701)
+  - parallel_track: import-conflicts
+  - scope: `/std/html` and `/std/json` both export `Writer`. `import /std/html/*` next to `import /std/json/*` (or `import /std/json/Writer`) fails with `import creates name conflict: Writer` (src/semantics/SemanticsValidatorBuildImports.cpp), even when the program names one of them by its full path, and a full path such as `/std/json/Writer` into a module that is not imported is `unsupported binding type`. A web app that serves pages and JSON needs both writers in one file. Report the conflict where the bare name is used instead of at the import, so `/std/html/Writer` and `/std/json/Writer` work side by side; an unqualified use of the shared name stays an error that names both paths.
+  - acceptance:
+    - a program importing both modules builds an HTML page and a JSON value through their full paths on VM and optexe
+    - an unqualified `Writer` in that program is a diagnostic naming `/std/html/Writer` and `/std/json/Writer`
+    - docs/PrimeStruct_SyntaxSpec.md (Imports) and docs/spec/stdlib-reference.md (HTML writer) updated
+    - full release gate green
+  - stop_rule: use-site conflict detection for wildcard and single-name imports; no import aliases or renaming syntax.
 
 - [ ] TODO-5681: A struct field built from a named vector local owns its storage once
   - owner: ai

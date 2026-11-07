@@ -245,4 +245,66 @@ main() {
   }
 }
 
+// A method declared in the struct body overloads by arity with its implicit `this` counted, as a method call counts
+// its receiver; a literal still converts to the StringView an overload expects.
+TEST_CASE("struct body methods overload by arity and take literals as views") {
+  const std::string source = R"(
+import /std/text/view/*
+
+[struct]
+Sink() {
+  [i32 mut] seen{0i32}
+
+  [mut]
+  put([StringView] text) {
+    this.put(1i32, text)
+  }
+
+  [mut]
+  put([i32] times, [StringView] text) {
+    this.seen = this.seen + times * text.count()
+  }
+}
+
+[return<int>]
+main() {
+  [Sink mut] sink{Sink{}}
+  sink.put("ab")
+  sink.put(3i32, "abc")
+  return(sink.seen)
+}
+)";
+  std::string error;
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
+}
+
+TEST_CASE("struct body methods with the same parameter types are still duplicates") {
+  const std::string source = R"(
+[struct]
+Sink() {
+  [i32 mut] seen{0i32}
+
+  [mut]
+  put([i32] amount) {
+    assign(this.seen, amount)
+  }
+
+  [mut]
+  put([i32] other) {
+    assign(this.seen, other)
+  }
+}
+
+[return<int>]
+main() {
+  [Sink mut] sink{Sink{}}
+  sink.put(1i32)
+  return(sink.seen)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_MESSAGE(error.find("duplicate definition: /Sink/put") != std::string::npos, error);
+}
+
 TEST_SUITE_END();

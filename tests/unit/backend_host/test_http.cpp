@@ -1,4 +1,5 @@
-// /std/http (docs/spec/stdlib-reference.md, HTTP): the request parser, responses and the router on the VM and optexe.
+// /std/http and /std/html (docs/spec/stdlib-reference.md): the request parser, responses, the router and the HTML
+// writer on the VM and optexe.
 #include "primec/embed/Script.h"
 #include "primec/embed/ScriptEngine.h"
 #include "primec/testing/TestScratch.h"
@@ -207,6 +208,18 @@ TEST_CASE("responses serialize byte for byte on the VM") {
 TEST_CASE("responses serialize byte for byte through optexe") {
   const int failed = runThroughOptexe("response_bytes");
   CHECK_MESSAGE(failed == 0, "response_bytes case " << failed << " failed (tests/fixtures/http/response_bytes.prime)");
+}
+
+TEST_CASE("an html page with a form and its response are byte for byte on the VM") {
+  const int failed = runOnVm("html_page");
+  CHECK_MESSAGE(failed == 0,
+                "html_page case " << failed << " failed (tests/fixtures/http/html_page.prime)");
+}
+
+TEST_CASE("an html page with a form and its response are byte for byte through optexe") {
+  const int failed = runThroughOptexe("html_page");
+  CHECK_MESSAGE(failed == 0,
+                "html_page case " << failed << " failed (tests/fixtures/http/html_page.prime)");
 }
 
 TEST_CASE("a Router dispatches by method and path on the VM") {

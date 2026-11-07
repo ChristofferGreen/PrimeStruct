@@ -1174,3 +1174,49 @@ main() {
   program.stdoutText = "100\n101\n";
   program_matrix::runProgramMatrix(program);
 }
+
+// Struct methods overload by arity, declared in the struct body (`this` is implicit) or outside it with an explicit
+// `self`; a method call counts its receiver (docs/spec/language-core.md, Helper overloading).
+TEST_CASE("struct methods overload by arity in the body and with self") {
+  program_matrix::ProgramCase program;
+  program.name = "struct_method_arity_overloads";
+  program.source = R"(
+[struct]
+Meter() {
+  [i32 mut] total{0i32}
+
+  [mut]
+  add([i32] amount) {
+    this.add(amount, 1i32)
+  }
+
+  [mut]
+  add([i32] amount, [i32] times) {
+    this.total = this.total + amount * times
+  }
+}
+
+[return<i32>]
+/Meter/scaled([Meter] self) {
+  return(self.total)
+}
+
+[return<i32>]
+/Meter/scaled([Meter] self, [i32] factor) {
+  return(self.total * factor)
+}
+
+[effects(io_out) return<int>]
+main() {
+  [Meter mut] meter{Meter{}}
+  meter.add(2i32)
+  meter.add(3i32, 4i32)
+  print_line(meter.total)
+  print_line(meter.scaled())
+  return(meter.scaled(2i32))
+}
+)";
+  program.exitCode = 28;
+  program.stdoutText = "14\n14\n";
+  program_matrix::runProgramMatrix(program);
+}

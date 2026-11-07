@@ -1,5 +1,5 @@
-// /std/http responses, byte for byte (tests/unit/backend_host/test_http.cpp). The exit code is the number of the first
-// case that failed, or 0.
+// /std/http responses and redirects, byte for byte (tests/unit/backend_host/test_http.cpp). The exit code is the
+// number of the first case that failed, or 0.
 import /std/http/*
 import /std/text/*
 import /std/text/view/*
@@ -42,6 +42,20 @@ main() {
   [String] tooLarge{statusResponse(413i32)}
   if(!tooLarge.equalsText("HTTP/1.1 413 Content Too Large\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")) {
     return(6i32)
+  }
+  // A redirect after a form POST: 303 with Location, and no body even if one was written.
+  response.clear()
+  response.body.append("stale")
+  response.redirect("/todos")
+  [String] seeOther{response.serialize()}
+  if(!seeOther.equalsText("HTTP/1.1 303 See Other\r\nLocation: /todos\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")) {
+    return(7i32)
+  }
+  response.clear()
+  response.redirect(308i32, "/new\r\nInjected: yes")
+  [String] permanent{response.serialize()}
+  if(!permanent.equalsText("HTTP/1.1 308 Permanent Redirect\r\nLocation: /newInjected: yes\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")) {
+    return(8i32)
   }
   return(0i32)
 }

@@ -1,0 +1,260 @@
+// A minimal HTML writer (docs/spec/stdlib-reference.md, /std/html). It builds the page in a `String` and escapes as it
+// goes: text and attribute values are escaped, element and attribute names keep only name bytes, and `raw` is the
+// only call that writes its text as given. It does not check that calls are balanced or that an element is allowed
+// where it is written: `endElement("p")` after `beginElement("div")` writes a mismatched end tag.
+import /std/text/*
+import /std/text/view/*
+
+namespace std {
+namespace html {
+
+  [public struct]
+  Writer() {
+    // The HTML written so far.
+    [public String mut] out{String{}}
+    // Whether the last start tag still lacks its ">", so attribute calls may follow it.
+    [bool mut] tagOpen{false}
+
+    // Writes the ">" of a start tag that is still open. Every call that writes content or a tag starts here.
+    [mut effects(heap_alloc)]
+    closeTag() {
+      if(this.tagOpen) {
+        this.out.append(">")
+        this.tagOpen = false
+      }
+    }
+
+    // `<name`, left open: attribute calls may follow, and the next other call writes the ">".
+    [mut effects(heap_alloc)]
+    beginElement([StringView] name) {
+      this.closeTag()
+      this.out.append("<")
+      this.appendName(name)
+      this.tagOpen = true
+    }
+
+    // `</name>`.
+    [mut effects(heap_alloc)]
+    endElement([StringView] name) {
+      this.closeTag()
+      this.out.append("</")
+      this.appendName(name)
+      this.out.append(">")
+    }
+
+    // A void element such as `br`, `img` or `meta`: a start tag, left open for attributes, and no end tag.
+    [mut effects(heap_alloc)]
+    voidElement([StringView] name) {
+      this.beginElement(name)
+    }
+
+    // `<name>text</name>`, with `text` escaped.
+    [mut effects(heap_alloc)]
+    element([StringView] name, [StringView] text) {
+      this.beginElement(name)
+      this.text(text)
+      this.endElement(name)
+    }
+
+    // ` name="value"` on the open start tag, with `value` escaped. Ignored when no start tag is open.
+    [mut effects(heap_alloc)]
+    attribute([StringView] name, [StringView] value) {
+      if(!this.tagOpen) {
+        return()
+      }
+      this.out.append(" ")
+      this.appendName(name)
+      this.out.append("=\"")
+      this.escaped(value, true)
+      this.out.append("\"")
+    }
+
+    // A boolean attribute such as `required`, `checked` or `selected`, on the open start tag.
+    [mut effects(heap_alloc)]
+    booleanAttribute([StringView] name) {
+      if(!this.tagOpen) {
+        return()
+      }
+      this.out.append(" ")
+      this.appendName(name)
+    }
+
+    // Text content, with `& < > "` escaped.
+    [mut effects(heap_alloc)]
+    text([StringView] text) {
+      this.closeTag()
+      this.escaped(text, false)
+    }
+
+    // `markup` as given, unescaped: HTML the program wrote itself, never text that came from a request.
+    [mut effects(heap_alloc)]
+    raw([StringView] markup) {
+      this.closeTag()
+      this.out.appendBytes(markup.data, markup.count())
+    }
+
+    // `<!doctype html>`, then `<html>` and the start of the head: `<meta charset="utf-8">` and the title. Head
+    // elements such as `stylesheet` may follow until `beginBody`.
+    [mut effects(heap_alloc)]
+    beginPage([StringView] title) {
+      this.closeTag()
+      this.out.append("<!doctype html><html><head><meta charset=\"utf-8\">")
+      this.element("title", title)
+    }
+
+    // `<link rel="stylesheet" href="...">` in the head.
+    [mut effects(heap_alloc)]
+    stylesheet([StringView] href) {
+      this.voidElement("link")
+      this.attribute("rel", "stylesheet")
+      this.attribute("href", href)
+    }
+
+    // Ends the head and starts the body.
+    [mut effects(heap_alloc)]
+    beginBody() {
+      this.closeTag()
+      this.out.append("</head><body>")
+    }
+
+    // Ends the body and the page.
+    [mut effects(heap_alloc)]
+    endPage() {
+      this.closeTag()
+      this.out.append("</body></html>")
+    }
+
+    // `<form method="..." action="...">`, left open for attributes.
+    [mut effects(heap_alloc)]
+    beginForm([StringView] method, [StringView] action) {
+      this.beginElement("form")
+      this.attribute("method", method)
+      this.attribute("action", action)
+    }
+
+    [mut effects(heap_alloc)]
+    endForm() {
+      this.endElement("form")
+    }
+
+    // `<label for="...">text</label>`, naming the `id` of the control it labels.
+    [mut effects(heap_alloc)]
+    label([StringView] forId, [StringView] text) {
+      this.beginElement("label")
+      this.attribute("for", forId)
+      this.text(text)
+      this.endElement("label")
+    }
+
+    // `<input type="..." name="..." value="...">`, left open for attributes such as `id` or `required`.
+    [mut effects(heap_alloc)]
+    input([StringView] type, [StringView] name, [StringView] value) {
+      this.voidElement("input")
+      this.attribute("type", type)
+      this.attribute("name", name)
+      this.attribute("value", value)
+    }
+
+    // `<button type="submit">text</button>`: it submits the form it is in.
+    [mut effects(heap_alloc)]
+    button([StringView] text) {
+      this.beginElement("button")
+      this.attribute("type", "submit")
+      this.text(text)
+      this.endElement("button")
+    }
+
+    // `<select name="...">`, left open for attributes; `option` calls and `endSelect` follow.
+    [mut effects(heap_alloc)]
+    beginSelect([StringView] name) {
+      this.beginElement("select")
+      this.attribute("name", name)
+    }
+
+    // `<option value="...">text</option>`, with `selected` when `selected` is true.
+    [mut effects(heap_alloc)]
+    option([StringView] value, [StringView] text, [bool] selected) {
+      this.beginElement("option")
+      this.attribute("value", value)
+      if(selected) {
+        this.booleanAttribute("selected")
+      }
+      this.text(text)
+      this.endElement("option")
+    }
+
+    [mut effects(heap_alloc)]
+    endSelect() {
+      this.endElement("select")
+    }
+
+    // `<textarea name="...">text</textarea>`. A browser drops one newline right after the start tag, so text that
+    // starts with a newline gets an extra one and keeps its own.
+    [mut effects(heap_alloc)]
+    textarea([StringView] name, [StringView] text) {
+      this.beginElement("textarea")
+      this.attribute("name", name)
+      this.closeTag()
+      [i32] first{if(text.count() > 0i32, then() { convert<i32>(text.byteAt(0i32)) }, else() { -1i32 })}
+      if(first == 10i32) {
+        this.out.pushByte(10u8)
+      }
+      this.text(text)
+      this.endElement("textarea")
+    }
+
+    // The bytes of an element or attribute name that are ASCII letters, digits, `-`, `_`, `:` or `.`; the others are
+    // dropped, so a name cannot end the tag or start another attribute.
+    [mut effects(heap_alloc)]
+    appendName([StringView] name) {
+      [i32 mut] index{0i32}
+      while(index < name.count()) {
+        [u8] byte{name.byteAt(index)}
+        [bool] letter{(byte >= 97u8 && byte <= 122u8) || (byte >= 65u8 && byte <= 90u8)}
+        [bool] digit{byte >= 48u8 && byte <= 57u8}
+        [bool] mark{byte == 45u8 || byte == 95u8 || byte == 58u8 || byte == 46u8}
+        if(letter || digit || mark) {
+          this.out.pushByte(byte)
+        }
+        index = index + 1i32
+      }
+    }
+
+    // `text` with `&`, `<`, `>` and `"` as character references, and `'` too in an attribute value. Other bytes
+    // (UTF-8) pass through.
+    [mut effects(heap_alloc)]
+    escaped([StringView] text, [bool] inAttribute) {
+      [i32 mut] index{0i32}
+      while(index < text.count()) {
+        [u8] byte{text.byteAt(index)}
+        [bool mut] plain{true}
+        if(byte == 38u8) {
+          this.out.append("&amp;")
+          plain = false
+        }
+        if(byte == 60u8) {
+          this.out.append("&lt;")
+          plain = false
+        }
+        if(byte == 62u8) {
+          this.out.append("&gt;")
+          plain = false
+        }
+        if(byte == 34u8) {
+          this.out.append("&quot;")
+          plain = false
+        }
+        if(byte == 39u8 && inAttribute) {
+          this.out.append("&#39;")
+          plain = false
+        }
+        if(plain) {
+          this.out.pushByte(byte)
+        }
+        index = index + 1i32
+      }
+    }
+  }
+
+}
+}

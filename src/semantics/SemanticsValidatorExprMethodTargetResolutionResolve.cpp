@@ -46,6 +46,12 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
                                              std::string &resolvedOut,
                                              bool &isBuiltinOut) {
   isBuiltinOut = false;
+  // Template monomorphization binds a method call of an overloaded helper to one overload (`/Type/name__ovN`).
+  if (methodName.size() > 1 && methodName.front() == '/' &&
+      methodName.find("__ov") != std::string::npos && defMap_.count(methodName) > 0) {
+    resolvedOut = methodName;
+    return true;
+  }
   auto hasDefinitionFamilyPath = [&](std::string_view path) {
     const std::string pathText(path);
     if (defMap_.count(pathText) > 0 || definitionFamilyPathIndex().count(pathText) > 0) {

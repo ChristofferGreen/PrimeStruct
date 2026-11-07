@@ -348,6 +348,31 @@ namespace http {
       this.header("Content-Type", contentType)
     }
 
+    // Replaces the body with `page`, such as the `out` of a /std/html `Writer`, and sets
+    // `Content-Type: text/html; charset=utf-8`. The bytes are copied into the body, whose buffer is kept between
+    // requests.
+    [mut effects(heap_alloc)]
+    html([String] page) {
+      this.body.clear()
+      this.body.appendBytes(page.data, page.count())
+      this.header("Content-Type", "text/html; charset=utf-8")
+    }
+
+    // A 303 See Other to `location`: the answer to a form POST, which the browser follows with a GET of `location`
+    // (post/redirect/get).
+    [mut effects(heap_alloc)]
+    redirect([StringView] location) {
+      this.redirect(303i32, location)
+    }
+
+    // A redirect with `status` (such as 301, 302, 307 or 308) to `location`. It sets `Location` and empties the body.
+    [mut effects(heap_alloc)]
+    redirect([i32] status, [StringView] location) {
+      this.status = status
+      this.body.clear()
+      this.header("Location", location)
+    }
+
     // Back to an empty 200 response, keeping the buffers for the next request.
     [mut]
     clear() {
@@ -411,8 +436,17 @@ namespace http {
     if(code == 302i32) {
       return("Found")
     }
+    if(code == 303i32) {
+      return("See Other")
+    }
     if(code == 304i32) {
       return("Not Modified")
+    }
+    if(code == 307i32) {
+      return("Temporary Redirect")
+    }
+    if(code == 308i32) {
+      return("Permanent Redirect")
     }
     if(code == 400i32) {
       return("Bad Request")

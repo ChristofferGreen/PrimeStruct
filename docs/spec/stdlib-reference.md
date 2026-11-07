@@ -573,6 +573,13 @@ one request per connection (`Connection: close`), and no chunked encoding, keep-
   - `status` is 200 unless set, and `body` is a `String`;
   - `header(name, value)` adds a header line, dropping CR and LF bytes so that a value cannot end the head;
   - `text(body, contentType)` replaces the body and adds `Content-Type`;
+  - `html(page)` replaces the body with `page`, a `String` such as the `out` of a `/std/html` `Writer`, and adds
+    `Content-Type: text/html; charset=utf-8`. It takes the `String` rather than the `Writer` so that `/std/http` does
+    not depend on `/std/html` and a page can come from anywhere; the bytes are copied into the body, whose buffer is
+    kept between requests;
+  - `redirect(location)` answers 303 See Other with a `Location` header, the reply to a form POST that the browser
+    follows with a GET (post/redirect/get); `redirect(status, location)` takes another status, such as 301, 302, 307
+    or 308. Both empty the body, so the response serializes with `Content-Length: 0`;
   - `clear()` makes it an empty 200 again and keeps its buffers.
 
   `serialize()` gives the bytes to send: the status line with its reason phrase (`reasonPhrase(code)`, empty for codes
@@ -711,3 +718,72 @@ main() {
   return(w.out.count())
 }
 ```
+
+### HTML writer (`/std/html`)
+
+`import /std/html/*` provides `Writer`, which builds an HTML page in its public `out` `String`, in the style of the JSON
+writer. Escaping is the default: text and attribute values are escaped as they are written (`&`, `<`, `>` and `"` as
+character references, and `'` too in attribute values; other bytes, such as UTF-8, pass through), and element and
+attribute names keep only ASCII letters, digits, `-`, `_`, `:` and `.`, so a name cannot end a tag. `raw(markup)` is
+the only call that writes its text unescaped; it is for markup the program wrote itself, never for text from a
+request. The writer does not check that calls are balanced or that an element is allowed where it is written.
+
+**Attributes follow the start tag they belong to.** A call that writes a start tag and nothing after it
+(`beginElement`, `voidElement`, `input`, `beginForm`, `beginSelect`, `stylesheet`) leaves the tag open, then
+`attribute(name, value)` and `booleanAttribute(name)` add to it, and the next call of any other kind writes the `>`.
+An attribute call with no open tag is ignored. This reads like the markup it writes, one call per attribute and no
+closing call, and it costs one `bool` of state. An attribute-list value would need a vector of pairs per element. An
+explicit `endAttributes()` would be one more call at every element, and forgetting it would put content inside the tag.
+
+- Elements: `beginElement(name)` / `endElement(name)`, `voidElement(name)` for an element without an end tag (`br`,
+  `img`, `meta`), and `element(name, text)` for `<name>text</name>`
+- Attributes: `attribute(name, value)`, `booleanAttribute(name)`
+- Content: `text(text)` (escaped), `raw(markup)` (unescaped)
+- Page: `beginPage(title)` writes `<!doctype html><html><head><meta charset="utf-8"><title>…</title>`;
+  `stylesheet(href)` writes `<link rel="stylesheet" href="…">` in the head; `beginBody()` ends the head and starts the
+  body; `endPage()` ends the body and the page
+- Forms: `beginForm(method, action)` / `endForm()`; `label(forId, text)`; `input(type, name, value)`, left open for
+  attributes such as `id` or `required`; `button(text)`, a `<button type="submit">`; `beginSelect(name)`,
+  `option(value, text, selected)` and `endSelect()`; `textarea(name, text)`, which writes an extra newline after the
+  start tag when the text starts with one, because a browser drops the first
+- Every name, text and value parameter is a `StringView`, so a literal passes as it is and a `String` passes as
+  `s.view()`
+
+A page is a function that returns the writer's `out`, and a handler passes it to `Response.html`. A button is a
+`<button>` in a `<form method="post">` whose route redirects back:
+
+```prime
+import /std/html/*
+import /std/http/*
+import /std/text/*
+import /std/text/view/*
+
+[return<String> effects(heap_alloc)]
+counter_page([i32] clicks) {
+  [Writer mut] page{Writer{}}
+  page.beginPage("Counter")
+  page.beginBody()
+  [String] count{stringFromI32(clicks)}
+  page.element("p", count.view())
+  page.beginForm("post", "/add")
+  page.button("Add one")
+  page.endForm()
+  page.endPage()
+  return(page.out)
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [Response mut] response{Response{}}
+  response.html(counter_page(3i32))
+  // The body is <!doctype html>...<p>3</p><form method="post" action="/add"><button type="submit">Add one</button>...
+  [Response mut] added{Response{}}
+  added.redirect("/")
+  // added serializes as HTTP/1.1 303 See Other, Location: /, Content-Length: 0
+  return(response.status)
+}
+```
+
+`/std/html` and `/std/json` both name their writer `Writer`. Importing both is an `import creates name conflict: Writer`
+error today, even where the program names one of them by its full path, so one file cannot use both writers yet
+(TODO-5717).

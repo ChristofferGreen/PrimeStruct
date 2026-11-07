@@ -213,6 +213,10 @@ explicit `utf8`/`ascii` suffix.** `ascii` enforces 7-bit ASCII (the compiler rej
     resolution runs after import expansion and namespace expansion; unresolved names remain diagnostics.
   - **Helper overloading:** non-struct definitions may reuse the same public helper path when their exact parameter
     counts differ. Call resolution picks the exact-arity match before template specialization and method-call lowering.
+    Struct methods overload the same way, and the count includes the receiver on both sides: a method declared in the
+    struct body counts its implicit `this`, one declared outside as `/Type/name([Type] self, ...)` counts `self`, and
+    a method call counts the value before the dot, so `response.redirect("/")` selects `redirect([StringView]
+    location)` next to `redirect([i32] status, [StringView] location)`.
     Same-path same-arity definitions may also coexist when their parameter-type signatures are pairwise distinct
     (an unbound template parameter counts as one generic marker); the call site then selects the candidate whose
     parameter types match the argument types exactly, with a specificity tie-break when several candidates remain

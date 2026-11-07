@@ -130,7 +130,8 @@ std::vector<const Definition *> conversionCallees(const Expr &expr, const Expect
   if (overloadIt == ctx.helperOverloads.end()) {
     return {};
   }
-  const size_t argumentCount = expr.args.size() - (expr.isMethodCall ? 1 : 0);
+  // An overload's arity counts the receiver of a method (`this` or `self`), as the call's arguments do.
+  const size_t argumentCount = expr.args.size();
   std::vector<const Definition *> candidates;
   for (const HelperOverloadEntry &entry : overloadIt->second) {
     if (entry.isVariadic || entry.parameterCount != argumentCount) {

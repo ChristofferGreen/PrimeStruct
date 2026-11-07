@@ -149,6 +149,26 @@ bool initializeTemplateMonomorphSourceDefinitions(Context &ctx,
       continue;
     }
 
+    // A method declared in a struct body gets its `this` parameter later, in the validator. A method call counts its
+    // receiver as an argument, so the overload's arity counts `this` too.
+    auto overloadParameterCount = [&](const Definition &def) -> size_t {
+      const size_t declared = def.parameters.size();
+      const size_t slash = def.fullPath.find_last_of('/');
+      if (!def.isNested || slash == std::string::npos || slash == 0) {
+        return declared;
+      }
+      for (const auto &transform : def.transforms) {
+        if (transform.name == "static") {
+          return declared;
+        }
+      }
+      auto parentIt = definitionsByPath.find(def.fullPath.substr(0, slash));
+      if (parentIt == definitionsByPath.end() || parentIt->second.size() != 1 ||
+          !isStructDefinition(*parentIt->second.front())) {
+        return declared;
+      }
+      return declared + 1;
+    };
     bool allowHelperOverloadFamily = true;
     std::unordered_map<size_t, std::size_t> parameterCountFrequencies;
     std::unordered_map<size_t, std::size_t> parameterCountOrdinals;
@@ -159,7 +179,7 @@ bool initializeTemplateMonomorphSourceDefinitions(Context &ctx,
         allowHelperOverloadFamily = false;
         break;
       }
-      ++parameterCountFrequencies[def->parameters.size()];
+      ++parameterCountFrequencies[overloadParameterCount(*def)];
     }
     auto helperOverloadParameterTypeSignature = [](const Definition &def) {
       const std::unordered_set<std::string> templateParams(
@@ -189,8 +209,7 @@ bool initializeTemplateMonomorphSourceDefinitions(Context &ctx,
       }
       bool hasRequirementConstrainedCandidate = false;
       for (const Definition *def : family) {
-        if (def->parameters.size() == parameterCount &&
-            definitionHasRequireTransform(*def)) {
+        if (overloadParameterCount(*def) == parameterCount && definitionHasRequireTransform(*def)) {
           hasRequirementConstrainedCandidate = true;
           break;
         }
@@ -205,7 +224,7 @@ bool initializeTemplateMonomorphSourceDefinitions(Context &ctx,
       std::unordered_set<std::string> signatures;
       bool signaturesDistinct = true;
       for (const Definition *def : family) {
-        if (def->parameters.size() != parameterCount) {
+        if (overloadParameterCount(*def) != parameterCount) {
           continue;
         }
         if (!signatures.insert(helperOverloadParameterTypeSignature(*def)).second) {
@@ -223,7 +242,7 @@ bool initializeTemplateMonomorphSourceDefinitions(Context &ctx,
       return false;
     }
     for (const Definition *def : family) {
-      const size_t parameterCount = def->parameters.size();
+      const size_t parameterCount = overloadParameterCount(*def);
       const std::size_t ordinal = parameterCountOrdinals[parameterCount]++;
       std::string internalPath = helperOverloadInternalPath(publicPath, parameterCount);
       if (parameterCountFrequencies[parameterCount] > 1) {

@@ -40,6 +40,7 @@ Style-aligned surface code:
 - `stdlib/std/os/*`
 - `stdlib/std/net/*`
 - `stdlib/std/http/*`
+- `stdlib/std/html/*`
 - `stdlib/std/collections/vector.prime`
 - `stdlib/std/collections/map.prime`
 - `stdlib/std/collections/errors.prime`
@@ -947,6 +948,57 @@ Why this is good:
   the route is added; a named handler definition works the same way.
 - Handlers write through `Reference<Response>` and return nothing, so lambdas need no return-type annotation.
 - `parseRequest` gives a carrier of views into `raw`: the request allocates nothing.
+
+### A Page With a Form and a Button
+
+Write a page with the `/std/html` `Writer` in a function that returns its `out`, and answer with `response.html`. A
+button is a `<button>` in a `<form method="post">`; its route changes the state and redirects back to the page.
+
+```prime
+import /std/html/*
+import /std/http/*
+import /std/text/*
+import /std/text/view/*
+
+[return<String> effects(heap_alloc)]
+greeting_page([StringView] name) {
+  [Writer mut] page{Writer{}}
+  page.beginPage("Greeting")
+  page.beginBody()
+  page.element("h1", name)
+  page.beginForm("post", "/rename")
+  page.label("name", "Name")
+  page.input("text", "name", name)
+  page.attribute("id", "name")
+  page.button("Rename")
+  page.endForm()
+  page.endPage()
+  return(page.out)
+}
+
+[int effects(heap_alloc)]
+main() {
+  [Router mut] router{Router{}}
+  router.get("/", []([Request] request, [Reference<Response>] response) {
+    response.html(greeting_page("<Ada>"))
+  })
+  router.post("/rename", []([Request] request, [Reference<Response>] response) {
+    response.redirect("/")
+  })
+  [String] raw{stringFrom("GET / HTTP/1.1\r\n\r\n")}
+  [Request] request{parseRequest(raw.view(), 1024)}
+  [Response mut] response{Response{}}
+  router.call(request, location(response))
+  return(response.status)
+}
+```
+
+Why this is good:
+- The page reads in the order of its markup: each attribute call follows the start tag it belongs to, and the next
+  content call closes the tag.
+- Text and attribute values are escaped as they are written, so `<Ada>` shows as text in both the heading and the
+  input's value; only `raw` writes markup unescaped.
+- The POST route answers `redirect("/")`, a 303, so reloading the page does not submit the form again.
 
 ## Safe Extents And Cursor Examples
 
