@@ -100,6 +100,7 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
+| TODO-5734 | Web apps build in seconds, not minutes, on optexe | ready | ir-real-calls |
 | TODO-5727 | Every struct copy site tells a place from a temporary by resolution | deferred | lifecycle-copy-sources |
 | TODO-5725 | Native pointer and key events for control handlers | blocked | native-ui-events |
 | TODO-5707 | `Function` types accept `mut` parameters | deferred | closures-mut-params |
@@ -187,7 +188,7 @@ of sync with them.
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719; collection fields found by closures and the todo example: TODO-5681, TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
-- Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5718
+- Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5734, TODO-5718
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732
 - Native UI handlers (docs/WebAppsPlan.md): TODO-5709, TODO-5710, TODO-5711, TODO-5725
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
@@ -197,6 +198,19 @@ of sync with them.
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 ### Task Blocks
+
+- [ ] TODO-5734: Web apps build in seconds, not minutes, on optexe
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-08
+  - phase: Web apps (docs/WebAppsPlan.md)
+  - parallel_track: ir-real-calls
+  - scope: Nearly every call in a web app is still a copy of the callee's body. Measured 2026-11-08 with `primec --emit=optcpp` at 24b0650d0: examples/apps/todo_web generates 12.7 MB of C++ (509,680 lines), of which the entry function `ps_f0` is 507,773 lines and only about 41 functions exist at all; primec takes over 2 minutes and clang about 16 CPU minutes (the `--emit=optexe` build took 20 minutes wall). The `AppRouter` version of todo_web (983137899) generates 5.7 MB in 40 s, hello_button 6.6 MB in 83 s, web_app 2.3 MB and http_hello 1.8 MB. TODO-5695 made plain struct parameters and results real calls; struct methods with `this`, methods of generic structs (`WebApp<State>`, `AppRouter<State>`), closure `call` methods, the `Function` dispatch written by the `function-values` pass and stdlib helpers such as `String.append` or `Writer.element` evidently still inline at every call site. Find which call shapes still inline (an IR dump of todo_web listing inlined callees by count), make them real calls on the VM and the optimizing C++ emitters, and keep small leaf helpers inlinable where that is cheaper.
+  - acceptance:
+    - todo_web's generated C++ is under 1.5 MB and its `--emit=optexe` build takes under 2 minutes of CPU on this machine; hello_button and the other web examples shrink similarly; record before/after numbers in docs/OptimizingBackendsPlan.md
+    - the web examples' loopback tests and the program matrix give the same results on VM and optexe
+    - full release gate green
+  - stop_rule: call lowering for the shapes found; no change to the language surface.
 
 - [ ] TODO-5727: Every struct copy site tells a place from a temporary by resolution
   - owner: ai
