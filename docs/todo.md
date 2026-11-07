@@ -100,6 +100,7 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
+| TODO-5727 | Every struct copy site tells a place from a temporary by resolution | deferred | lifecycle-copy-sources |
 | TODO-5723 | Shared UI event structs for web and native handlers | ready | ui-events |
 | TODO-5722 | Web controls take click closures | blocked | web-controls |
 | TODO-5724 | Web hover and key handlers through the fragment script | blocked | web-controls |
@@ -187,7 +188,7 @@ of sync with them.
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
-- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719; collection fields found by closures and the todo example: TODO-5681, TODO-5682, TODO-5726
+- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719; collection fields found by closures and the todo example: TODO-5681, TODO-5682, TODO-5726, TODO-5727
 - Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5705, TODO-5706, TODO-5718, TODO-5722, TODO-5724
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721
 - Native UI handlers (docs/WebAppsPlan.md): TODO-5723, TODO-5709, TODO-5710, TODO-5711, TODO-5725
@@ -198,6 +199,18 @@ of sync with them.
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 ### Task Blocks
+
+- [ ] TODO-5727: Every struct copy site tells a place from a temporary by resolution
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-07
+  - phase: Lifecycle (found while fixing TODO-5720)
+  - parallel_track: lifecycle-copy-sources
+  - scope: TODO-5720 added `isTemporaryStructCopySourceExpr` (src/ir_lowerer/IrLowererFlowControlHelpers.cpp), which resolves a call before deciding whether a struct value is a place to copy or a temporary to move; bindings, assignments, returns, brace fields and sum payloads use it. Parameter and packed arguments, the collection receiver, sum mapping, `pick` and the method-call form of a sum payload still classify syntactically, so a user-defined `at` method whose result feeds one of them would be copied and its temporary leaked. Route those sites through the same resolver.
+  - acceptance:
+    - matrix cases with a user `at` method feeding each listed site destroy every value exactly once on VM, native and optexe
+    - full release gate green
+  - stop_rule: copy-source classification at the listed sites only.
 
 - [ ] TODO-5723: Shared UI event structs for web and native handlers
   - owner: ai
