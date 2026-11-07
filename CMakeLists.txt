@@ -1410,24 +1410,65 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_cpp_native_ui
                        PROPERTIES TIMEOUT 900 LABELS "parallel-safe")
-  # The net_io effect and /std/net over loopback sockets (tests/unit/backend_host/test_net.cpp).
+  # The net_io effect and /std/net over loopback sockets (tests/unit/backend_host/test_net.cpp). Each web example's
+  # loopback test builds one optexe program, which takes about 4 minutes alone for todo_web and over 15 in a gate on a
+  # loaded machine, so every example case is a CTest entry of its own with a long timeout (TODO-5729) and
+  # PrimeStruct_net runs the rest of the suite. A new example
+  # case named "the <name> example ..." needs an entry here and an exclusion in PrimeStruct_net.
+  set(PRIMESTRUCT_NET_EXAMPLE_CASES http_hello web_app todo_web)
+  set(PRIMESTRUCT_NET_EXAMPLE_EXCLUDES "")
+  foreach(primestructNetExample IN LISTS PRIMESTRUCT_NET_EXAMPLE_CASES)
+    add_test(
+      NAME PrimeStruct_net_${primestructNetExample}
+      COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+              "--test-suite=primestruct.backend.net"
+              "--test-case=the ${primestructNetExample} example *"
+              "--order-by=file"
+    )
+    set_tests_properties(PrimeStruct_net_${primestructNetExample}
+                         PROPERTIES TIMEOUT 1800 LABELS "parallel-safe")
+    list(APPEND PRIMESTRUCT_NET_EXAMPLE_EXCLUDES "the ${primestructNetExample} example *")
+  endforeach()
+  list(JOIN PRIMESTRUCT_NET_EXAMPLE_EXCLUDES "," PRIMESTRUCT_NET_EXAMPLE_EXCLUDE_FILTER)
   add_test(
     NAME PrimeStruct_net
     COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
             "--test-suite=primestruct.backend.net"
+            "--test-case-exclude=${PRIMESTRUCT_NET_EXAMPLE_EXCLUDE_FILTER}"
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_net
-                       PROPERTIES TIMEOUT 900 LABELS "parallel-safe")
-  # /std/http: the request parser, responses and the router (tests/unit/backend_host/test_http.cpp).
+                       PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
+  # /std/http: the request parser, responses and the router (tests/unit/backend_host/test_http.cpp). Its cases run on
+  # the VM, build a fixture "through optexe" or serve "over loopback"; the last two build optexe programs, so they are
+  # CTest entries of their own and PrimeStruct_http runs the VM cases.
   add_test(
     NAME PrimeStruct_http
     COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
             "--test-suite=primestruct.backend.http"
+            "--test-case-exclude=*through optexe*,*over loopback*"
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_http
-                       PROPERTIES TIMEOUT 900 LABELS "parallel-safe")
+                       PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
+  add_test(
+    NAME PrimeStruct_http_optexe
+    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+            "--test-suite=primestruct.backend.http"
+            "--test-case=*through optexe*"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_http_optexe
+                       PROPERTIES TIMEOUT 1800 LABELS "parallel-safe")
+  add_test(
+    NAME PrimeStruct_http_loopback
+    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+            "--test-suite=primestruct.backend.http"
+            "--test-case=*over loopback*"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_http_loopback
+                       PROPERTIES TIMEOUT 1200 LABELS "parallel-safe")
 
   # Native UI C ABI on the headless backend, and its ScriptEngine bindings.
   add_executable(PrimeStruct_native_ui_tests

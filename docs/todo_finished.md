@@ -2164,6 +2164,7 @@ are left unarchived.
 | TODO-5704 | A todo-list web app with pages and forms | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5705 | An idle connection does not stall the server | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5720 | A binding from a vector element copies the element's owned fields | [2026-11.md](todo_archive/2026-11.md) | 2026-11-07 |
+| TODO-5729 | The web example loopback tests run in their own CTest entries | [2026-11.md](todo_archive/2026-11.md) | 2026-11-07 |
 
 <!-- INDEX-END -->
 

@@ -130,7 +130,6 @@ of sync with them.
 | TODO-5681 | A struct field built from a named vector local owns its storage once | ready | collections-fields |
 | TODO-5726 | An indexed element of a stdlib `Vector<T>` of structs binds without a fault | ready | collections-access |
 | TODO-5728 | `slice` and `sliceMut` on a vector field of a struct resolve | ready | collections-access |
-| TODO-5729 | The web example loopback tests run in their own CTest entries | ready | web-tests |
 | TODO-5682 | Native: a mutating vector-field method inside an arithmetic expression returns the right value | ready | native-backend |
 | TODO-5676 | Lambdas can state their return type | deferred | closures-return-types |
 | TODO-5677 | A `Function` whose closure holds a same-typed `Function` copies and destroys | deferred | closures-lifecycle |
@@ -190,7 +189,7 @@ of sync with them.
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719; collection fields found by closures and the todo example: TODO-5681, TODO-5682, TODO-5726, TODO-5727, TODO-5728
-- Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5706, TODO-5729, TODO-5718, TODO-5722, TODO-5724
+- Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5706, TODO-5718, TODO-5722, TODO-5724
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721
 - Native UI handlers (docs/WebAppsPlan.md): TODO-5723, TODO-5709, TODO-5710, TODO-5711, TODO-5725
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
@@ -267,18 +266,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - docs/NativeUiPlan.md section 4 and the coverage matrix describe the new events
     - full release gate green
   - stop_rule: the listed events on the existing controls; no new widgets.
-
-- [ ] TODO-5729: The web example loopback tests run in their own CTest entries
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-07
-  - phase: Web apps (docs/WebAppsPlan.md; found by TODO-5705)
-  - parallel_track: web-tests
-  - scope: The ctest `PrimeStruct_net` runs the whole primestruct.backend.net suite, which builds five optexe programs (net_echo twice, http_hello, web_app, todo_web, serve_file); todo_web alone takes about 250 s (the frontend about 50 s, clang++ about 80 s of CPU plus load). On 2026-11-07 the suite took 365 s alone and 879 s and over 900 s (timeout) in two release gates with load averages up to 90, so it fails under load. Register the example tests (http_hello, web_app, todo_web) as separate CTest entries filtered by `--test-case`, like PrimeStruct_string_conformance_optexe, and keep the registration guard and inventory in sync.
-  - acceptance:
-    - each example's loopback test is its own ctest entry with its own timeout, and the union still covers every primestruct.backend.net case (scripts/check_test_registration.py passes)
-    - full release gate green
-  - stop_rule: CTest registration of the net suite only; no change to the tests themselves.
 
 - [ ] TODO-5706: Fragment-swapping buttons without user JavaScript
   - owner: ai
