@@ -386,6 +386,8 @@ TEST_CASE("ir lowerer struct type helpers resolve setup import paths") {
   const std::unordered_set<std::string> structNames = {
       "/pkg/Foo",
       "/alias/Foo",
+      "/Counter",
+      "/pkg/Shared",
   };
   const std::unordered_map<std::string, std::string> importAliases = {
       {"AliasFoo", "/alias/Foo"},
@@ -402,6 +404,12 @@ TEST_CASE("ir lowerer struct type helpers resolve setup import paths") {
             "AliasFoo", "", structNames, importAliases) == "/alias/Foo");
   CHECK(primec::ir_lowerer::resolveStructTypePathCandidateFromScope(
             "Missing", "/pkg", structNames, importAliases) == "/pkg/Missing");
+  // A type argument written at the root and substituted into a generic struct of /pkg/inner (TODO-5704), and a
+  // struct of an enclosing namespace.
+  CHECK(primec::ir_lowerer::resolveStructTypePathCandidateFromScope(
+            "Counter", "/pkg/inner", structNames, importAliases) == "/Counter");
+  CHECK(primec::ir_lowerer::resolveStructTypePathCandidateFromScope(
+            "Shared", "/pkg/inner", structNames, importAliases) == "/pkg/Shared");
 
   primec::Definition thingDef;
   thingDef.fullPath = "/pkg/Thing";

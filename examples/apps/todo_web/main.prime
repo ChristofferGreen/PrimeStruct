@@ -1,0 +1,180 @@
+// A todo list in the browser: pages, a form and buttons on /std/http and /std/html, with no JavaScript. Build and run:
+//   primec --emit=optexe examples/apps/todo_web/main.prime -o todo_web \
+//     --link-arg stdlib/std/net/native/net_shim.cpp --link-arg stdlib/std/os/os_posix.cpp
+//   PORT=8080 ./todo_web     (PORT=0 picks a free port; BIND=loopback listens on 127.0.0.1 only)
+// Routes:
+//   GET  /                   the list, a form that adds a todo, and a Done and a Delete button per todo
+//   POST /todos              adds the form's `title`
+//   POST /todos/:id/toggle   marks todo `id` done, or not done again
+//   POST /todos/:id/delete   deletes todo `id`
+// Every POST answers 303 See Other to / (post/redirect/get), so reloading the page never submits a form twice. The
+// todos live in memory, in the router's state; the server is single-threaded, so the state needs no locking.
+import /std/collections/*
+import /std/html/*
+import /std/http/*
+import /std/http/server/*
+import /std/os/*
+import /std/text/*
+import /std/text/view/*
+
+// One todo. Its id stays the same while others are added and deleted, so a button can name it in its route.
+[struct]
+Todo() {
+  [i32] id{0i32}
+  [String] title{String{}}
+  [bool mut] done{false}
+}
+
+// The app's state: the todos in the order they were added, and the id the next one gets.
+[struct]
+TodoList() {
+  [vector<Todo> mut] todos{vector<Todo>()}
+  [i32 mut] nextId{1i32}
+
+  [mut effects(heap_alloc)]
+  add([String] title) {
+    this.todos.push(Todo{[id] this.nextId, [title] title})
+    this.nextId = this.nextId + 1i32
+  }
+
+  // The index of todo `id`, or -1 when there is none.
+  [return<i32>]
+  indexOf([i32] id) {
+    for([i32 mut] index{0i32}; index < this.todos.count(); ++index) {
+      if(this.todos[index].id == id) {
+        return(index)
+      }
+    }
+    return(-1i32)
+  }
+
+  [mut]
+  toggle([i32] id) {
+    [i32] index{this.indexOf(id)}
+    if(index >= 0i32) {
+      [bool] done{this.todos[index].done}
+      this.todos[index].done = !done
+    }
+  }
+
+  [mut effects(heap_alloc)]
+  remove([i32] id) {
+    [i32] index{this.indexOf(id)}
+    if(index >= 0i32) {
+      this.todos.remove_at(index)
+    }
+  }
+}
+
+// The page's stylesheet, inline in its head: markup the program wrote, so `raw` writes it as it is.
+[effects(heap_alloc)]
+write_style([Writer mut] page) {
+  page.beginElement("style")
+  page.raw("body{font:16px/1.5 system-ui,sans-serif;max-width:32rem;margin:2rem auto;padding:0 1rem;color:#222}")
+  page.raw("form{margin:0}form.add{display:flex;gap:.5rem}form.add input{flex:1;padding:.4rem}")
+  page.raw("ul{list-style:none;padding:0}li{display:flex;gap:.5rem;align-items:center;padding:.25rem 0}")
+  page.raw("li span{flex:1}li.done span{text-decoration:line-through;color:#888}")
+  page.raw("button{padding:.3rem .7rem;border:1px solid #bbb;border-radius:4px;background:#f6f6f6}")
+  page.endElement("style")
+}
+
+// The route of a button that acts on todo `id`: "/todos/<id>/<action>".
+[return<String> effects(heap_alloc)]
+todo_route([i32] id, [StringView] action) {
+  [String mut] route{stringFrom("/todos/")}
+  route.appendI64(convert<i64>(id))
+  route.append("/")
+  route.appendBytes(action.data, action.count())
+  return(route)
+}
+
+// A form with one button that posts to `action`: a button that runs a route and comes back to the page.
+[effects(heap_alloc)]
+button_form([Writer mut] page, [String] action, [StringView] label) {
+  page.beginForm("post", action.view())
+  page.button(label)
+  page.endForm()
+}
+
+// One todo: its title between a button that toggles it and one that deletes it.
+[effects(heap_alloc)]
+write_todo([Writer mut] page, [Todo] todo) {
+  page.beginElement("li")
+  if(todo.done) {
+    page.attribute("class", "done")
+  }
+  button_form(page, todo_route(todo.id, "toggle"), if(todo.done, then() { "Undo" }, else() { "Done" }))
+  page.element("span", todo.title.view())
+  button_form(page, todo_route(todo.id, "delete"), "Delete")
+  page.endElement("li")
+}
+
+// The whole page: the form that adds a todo, then the list.
+[return<String> effects(heap_alloc)]
+todo_page([Reference<TodoList>] list) {
+  [Writer mut] page{Writer{}}
+  page.beginPage("Todos")
+  write_style(page)
+  page.beginBody()
+  page.element("h1", "Todos")
+  page.beginForm("post", "/todos")
+  page.attribute("class", "add")
+  page.input("text", "title", "")
+  page.attribute("placeholder", "What needs doing?")
+  page.booleanAttribute("required")
+  page.button("Add")
+  page.endForm()
+  page.beginElement("ul")
+  for([i32 mut] index{0i32}; index < list.todos.count(); ++index) {
+    write_todo(page, list.todos[index])
+  }
+  page.endElement("ul")
+  page.endPage()
+  return(page.out)
+}
+
+// The id in a /todos/:id/... route, or 0, which no todo has.
+[return<i32>]
+todo_id([Request] request) {
+  [StringView] id{request.pathParam("id")}
+  return(id.parseI32Or(0i32))
+}
+
+[return<AppRouter<TodoList>> effects(heap_alloc)]
+todo_app() {
+  [AppRouter<TodoList> mut] app{AppRouter<TodoList>{[state] TodoList{}}}
+  app.get("/", []([Reference<TodoList>] list, [Request] request, [Reference<Response>] response) {
+    response.html(todo_page(list))
+  })
+  app.post("/todos", []([Reference<TodoList>] list, [Request] request, [Reference<Response>] response) {
+    [String] title{request.formParam("title")}
+    if(!title.empty()) {
+      list.add(title)
+    }
+    response.redirect("/")
+  })
+  app.post("/todos/:id/toggle", []([Reference<TodoList>] list, [Request] request, [Reference<Response>] response) {
+    list.toggle(todo_id(request))
+    response.redirect("/")
+  })
+  app.post("/todos/:id/delete", []([Reference<TodoList>] list, [Request] request, [Reference<Response>] response) {
+    list.remove(todo_id(request))
+    response.redirect("/")
+  })
+  return(app)
+}
+
+// Prints why the server could not start; `main` then exits with the error code.
+[effects(io_err)]
+log_serve_error([ServeError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(heap_alloc, io_err, net_io) on_error<ServeError, log_serve_error>]
+main() {
+  [String] portText{envOr(stringFrom("PORT"), stringFrom("8080"))}
+  [String] bind{envOr(stringFrom("BIND"), stringFrom("all"))}
+  [ServerConfig] config{ServerConfig{[port] portText.view().parseI32Or(8080i32), [loopbackOnly] bind.equalsText("loopback")}}
+  serve(withRequestLog(todo_app()), config)?
+  return(0i32)
+}

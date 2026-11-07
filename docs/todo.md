@@ -100,9 +100,8 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5704 | A todo-list web app with pages and forms | ready | web-example |
 | TODO-5705 | An idle connection does not stall the server | ready | web-server-loop |
-| TODO-5706 | Fragment-swapping buttons without user JavaScript | blocked | web-fragments |
+| TODO-5706 | Fragment-swapping buttons without user JavaScript | ready | web-fragments |
 | TODO-5707 | `Function` types accept `mut` parameters | deferred | closures-mut-params |
 | TODO-5708 | Type aliases | deferred | type-aliases |
 | TODO-5709 | Native UI handlers and `App.run` | ready | native-ui-handlers |
@@ -122,6 +121,9 @@ of sync with them.
 | TODO-5716 | A literal converts to a `StringView` at a call whose overloads differ there | deferred | text-literal-views |
 | TODO-5717 | One file imports two modules that export the same name | ready | import-conflicts |
 | TODO-5718 | All values of a repeated parameter and decoded path parameters | deferred | web-params |
+| TODO-5719 | `location(this.field)` passes directly as a `Function` call argument | ready | closures-arguments |
+| TODO-5720 | A binding from a vector element copies the element's owned fields | ready | collections-fields |
+| TODO-5721 | A string converts to a `StringView` at a field of a generic struct | ready | text-literal-views |
 | TODO-5681 | A struct field built from a named vector local owns its storage once | ready | collections-fields |
 | TODO-5682 | Native: a mutating vector-field method inside an arithmetic expression returns the right value | ready | native-backend |
 | TODO-5676 | Lambdas can state their return type | deferred | closures-return-types |
@@ -148,7 +150,8 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5704 (web-example): a todo-list web app with pages and forms
+- TODO-5706 (web-fragments): fragment-swapping buttons without user JavaScript
+- TODO-5720 (collections-fields): a binding from a vector element copies the element's owned fields
 - TODO-5603 (startup): startup audit: what a launch loads and does
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
@@ -158,13 +161,14 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5704
-2. TODO-5709
-3. TODO-5603
-4. TODO-5536
-5. TODO-5535
-6. TODO-5510
-7. TODO-5524
+1. TODO-5706
+2. TODO-5720
+3. TODO-5709
+4. TODO-5603
+5. TODO-5536
+6. TODO-5535
+7. TODO-5510
+8. TODO-5524
 
 ### Priority Lanes
 
@@ -179,9 +183,9 @@ of sync with them.
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
-- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715; collection fields found by closures: TODO-5681, TODO-5682
-- Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5704, TODO-5705, TODO-5706, TODO-5718
-- Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717
+- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719; collection fields found by closures and the todo example: TODO-5681, TODO-5682, TODO-5720
+- Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5705, TODO-5706, TODO-5718
+- Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721
 - Native UI handlers (docs/WebAppsPlan.md): TODO-5709, TODO-5710, TODO-5711
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
@@ -190,20 +194,6 @@ of sync with them.
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 ### Task Blocks
-
-- [ ] TODO-5704: A todo-list web app with pages and forms
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-07
-  - phase: Web apps (docs/WebAppsPlan.md)
-  - parallel_track: web-example
-  - depends_on: TODO-5702, TODO-5703
-  - scope: Add examples/apps/todo_web: a single-threaded optexe server that lists todos as an HTML page, adds one through a form POST, toggles and deletes through button forms, and redirects back after each POST. App state is a struct passed to the handlers as a parameter (docs/WebAppsPlan.md, principle 2), not captured by reference. Test it end to end over loopback like the http_hello test in tests/unit/backend_host/test_net.cpp.
-  - acceptance:
-    - the loopback test adds two todos, toggles one, deletes one and checks the page HTML after each step
-    - the example is the reference in docs/CodeExamples.md for a web page with buttons
-    - full release gate green
-  - stop_rule: the example, its test and its CodeExamples entry; library gaps found on the way become their own TODOs.
 
 - [ ] TODO-5705: An idle connection does not stall the server
   - owner: ai
@@ -220,8 +210,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 
 - [ ] TODO-5706: Fragment-swapping buttons without user JavaScript
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5704
+  - status: ready
   - created_at: 2026-11-07
   - phase: Web apps (docs/WebAppsPlan.md)
   - parallel_track: web-fragments
@@ -393,6 +382,42 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - docs/spec/stdlib-reference.md updated
     - full release gate green
   - stop_rule: repeated values and decoded path segments only; no typed parameters, no multipart.
+
+- [ ] TODO-5719: `location(this.field)` passes directly as a `Function` call argument
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-07
+  - phase: Closures (docs/spec/value-lifecycle.md, Function values; found by TODO-5704)
+  - parallel_track: closures-arguments
+  - scope: In a method, `this.handler(location(this.state), x)`, where `handler` is a `Function<void, Reference<S>, i32>` field, fails VM lowering with `struct parameter type mismatch: expected /S, got <unknown>`; binding `[Reference<S>] state{location(this.state)}` first and passing `state` works, and `handler(location(local), x)` on a local works. `AppRouter.call` in stdlib/std/http/http.prime uses the local. Make the lowerer infer the struct type of a `location(...)` of a field in a `Function` call's arguments.
+  - acceptance:
+    - the direct form runs on the VM and optexe, and `AppRouter.call` drops its local
+    - full release gate green
+  - stop_rule: `location` arguments of `Function` calls only.
+
+- [ ] TODO-5720: A binding from a vector element copies the element's owned fields
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-07
+  - phase: Collections (docs/spec/value-lifecycle.md, Copies; found by TODO-5704)
+  - parallel_track: collections-fields
+  - scope: `[Todo] todo{todos[0i32]}`, where `Todo` has a `String` field and no `Copy` of its own, bit-copies the element and destroys the copy at scope end, so a later `remove_at` or the vector's own destruction stops with `string heap block freed twice` on the VM and optexe. A binding from a local Todo copies correctly, as do `[String] title{todos[0i32].title}` and passing `todos[0i32]` to a `[Todo]` parameter. The binding branch treats the builtin element access as an owned temporary (`shouldDisarmStructCopySourceExpr` in src/ir_lowerer/IrLowererFlowControlHelpers.cpp) and skips the field-wise Copy. The todo example passes the element to a function instead.
+  - acceptance:
+    - a binding from a vector element of a struct with String and vector fields copies and frees once on the VM and optexe, checked by mutating the copy and the element apart
+    - full release gate green
+  - stop_rule: bindings from builtin element access only.
+
+- [ ] TODO-5721: A string converts to a `StringView` at a field of a generic struct
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-07
+  - phase: Language surface for handlers (docs/spec/strings-and-views.md; found by TODO-5704)
+  - parallel_track: text-literal-views
+  - scope: A `string` value or literal converts to a `StringView` at a brace-constructor field of a non-generic struct (TODO-5700), but not of a generic one: `AppRoute<State>{[method] method}` with a `[string] method` fails with `argument type mismatch ... expected /std/text/view/StringView`, so `AppRouter.route` wraps both in `textOf`. Insert the conversion once the instance's field types are known.
+  - acceptance:
+    - a generic struct's StringView field takes a literal and a `string` value without `textOf` on the VM and optexe, and `AppRouter.route` drops its `textOf`
+    - full release gate green
+  - stop_rule: fields of generic struct instances only.
 
 - [ ] TODO-5681: A struct field built from a named vector local owns its storage once
   - owner: ai

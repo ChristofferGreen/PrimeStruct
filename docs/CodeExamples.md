@@ -1000,6 +1000,59 @@ Why this is good:
   input's value; only `raw` writes markup unescaped.
 - The POST route answers `redirect("/")`, a 303, so reloading the page does not submit the form again.
 
+### A Web Page With Buttons
+
+When routes share the app's state, keep it in an `AppRouter<State>`: each handler gets the state as its first
+parameter. A button that changes the state is a form that posts to its own route, which redirects back to the page.
+`examples/apps/todo_web/main.prime` is the whole app; this is its core.
+
+```prime
+[struct]
+TodoList() {
+  [vector<Todo> mut] todos{vector<Todo>()}
+  [i32 mut] nextId{1i32}
+  // add, toggle and remove change `todos`
+}
+
+// A form with one button that posts to `action`: a button that runs a route and comes back to the page.
+[effects(heap_alloc)]
+button_form([Writer mut] page, [String] action, [StringView] label) {
+  page.beginForm("post", action.view())
+  page.button(label)
+  page.endForm()
+}
+
+[return<AppRouter<TodoList>> effects(heap_alloc)]
+todo_app() {
+  [AppRouter<TodoList> mut] app{AppRouter<TodoList>{[state] TodoList{}}}
+  app.get("/", []([Reference<TodoList>] list, [Request] request, [Reference<Response>] response) {
+    response.html(todo_page(list))
+  })
+  app.post("/todos", []([Reference<TodoList>] list, [Request] request, [Reference<Response>] response) {
+    [String] title{request.formParam("title")}
+    if(!title.empty()) {
+      list.add(title)
+    }
+    response.redirect("/")
+  })
+  app.post("/todos/:id/toggle", []([Reference<TodoList>] list, [Request] request, [Reference<Response>] response) {
+    list.toggle(todo_id(request))
+    response.redirect("/")
+  })
+  return(app)
+}
+```
+
+Why this is good:
+- The state is a parameter, never a capture: a stored handler cannot borrow an outer binding, and a value capture
+  would give each route its own copy. The router owns the one `TodoList` and lends it to the handler for the call.
+- The state is a plain struct with methods (`add`, `toggle`, `remove`); handlers only read the request, call one of
+  them and answer. The server is single-threaded, so nothing needs locking.
+- Every POST answers `redirect("/")`, so the browser shows the page again with a GET and a reload never repeats a
+  click. The buttons work with no JavaScript.
+- Todos keep stable ids, so `/todos/:id/toggle` names one todo even after others are deleted.
+- `serve(withRequestLog(todo_app()), config)` serves it: an `AppRouter` is a handler like a `Router`.
+
 ## Safe Extents And Cursor Examples
 
 These examples cover the safe-array-extent and cursor surfaces from

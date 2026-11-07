@@ -639,6 +639,37 @@ one request per connection (`Connection: close`), and no chunked encoding, keep-
   })
   router.call(request, location(response))
   ```
+- `AppRouter<State>` is a `Router` that also holds the app's state and passes it to every handler, so routes can
+  share and change it. Its `state` field is a `State`, set at construction (`AppRouter<TodoList>{[state]
+  TodoList{}}`) and readable afterwards (`app.state`). Each route's handler is a
+  `Function<void, Reference<State>, Request, Reference<Response>>`: the state comes first, as a reference to the
+  router's own field. Routes are added and matched exactly as for `Router` (`get`, `post`, `put`, `delete`, `route`,
+  the same patterns, 404 and 405, `pathParam`), and `AppRouter` has the same `call(request, response)`, so it is
+  passed to `serve` or middleware as it is: `serve(withRequestLog(app), config)`.
+
+  The state is a parameter rather than a capture because a handler stored in a `Function` cannot hold a `[ref]`
+  capture (docs/spec/value-lifecycle.md, Lambdas): a closure that borrowed an outer `TodoList` could outlive it. A
+  value capture would give each route its own copy, so a todo added by one route would be invisible to another. The
+  router owns the one copy and lends it to the handler for the length of the call; the server is single-threaded, so
+  that needs no locking. Keeping the state in the router, rather than passing it to `serve` next to the router, keeps
+  `serve` and middleware unchanged: they see one handler. `Router` stays as it is for handlers without state.
+
+  ```prime
+  [struct]
+  Counter() {
+    [i32 mut] clicks{0i32}
+  }
+
+  [AppRouter<Counter> mut] app{AppRouter<Counter>{[state] Counter{}}}
+  app.post("/click", []([Reference<Counter>] counter, [Request] request, [Reference<Response>] response) {
+    counter.clicks = counter.clicks + 1i32
+    response.redirect("/")
+  })
+  ```
+
+  A lambda or a named definition converts to the handler `Function` at `get`, `post` and the others, as for
+  `Router`: the implicit conversion happens at a method of a generic struct instance, whose parameter types are known
+  once the struct is instantiated. `examples/apps/todo_web/main.prime` is a whole app on it.
 - A definition with plain struct parameters and a plain struct result (such as `parseRequest`) is one real call on the
   VM and under `--emit=optcpp`/`optexe` (docs/spec/vm-design.md, Real calls), so the number of call sites does not
   multiply the generated code.
@@ -656,8 +687,8 @@ primec --emit=optexe app.prime -o app --link-arg stdlib/std/net/native/net_shim.
   `stopRequested()`), then returns `Result.ok()`.
 - `serveUntil(handler, config, stop)` serves until `stop()`, any callable returning `bool`, is true.
 - **Handlers:** `handler` is any callable taking `(Request, Reference<Response>)`, such as a lambda, a struct with
-  `call`, a `Router` or a middleware closure. It is a generic parameter, so the call is direct and the handler keeps
-  its state between requests.
+  `call`, a `Router`, an `AppRouter` or a middleware closure. It is a generic parameter, so the call is direct and the
+  handler keeps its state between requests.
 - **The loop** is single-threaded and handles one connection at a time:
   1. Accept, waiting at most `acceptTimeoutMs`. That bounds how long the stop condition goes unchecked; a signal also
      ends the wait at once.

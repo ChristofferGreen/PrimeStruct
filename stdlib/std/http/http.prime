@@ -796,5 +796,75 @@ namespace http {
     }
   }
 
+  // One route of an AppRouter: a Route whose handler also takes the app's state.
+  [public struct]
+  AppRoute<State>() {
+    [public StringView] method{StringView{}}
+    [public StringView] pattern{StringView{}}
+    [public Function<void, Reference<State>, Request, Reference<Response>> mut] handler
+  }
+
+  // A Router that holds the app's state and passes it to each handler as a `Reference<State>` first argument. A
+  // stored handler cannot capture the state by reference, so this is how routes share it. It is a handler itself.
+  [public struct]
+  AppRouter<State>() {
+    // The state every route reads and changes, such as a struct of the app's records.
+    [public State mut] state
+    [public vector<AppRoute<State>> mut] routes{vector<AppRoute<State>>()}
+
+    // Adds a route as `Router.route` does; the handler takes the state first.
+    [mut effects(heap_alloc)]
+    route([string] method,
+          [string] pattern,
+          [Function<void, Reference<State>, Request, Reference<Response>> move] handler) {
+      // `textOf` by hand: a string does not convert to a StringView at a field of a generic struct yet (TODO-5721).
+      this.routes.push(AppRoute<State>{[method] textOf(method), [pattern] textOf(pattern), [handler] handler})
+    }
+
+    [mut effects(heap_alloc)]
+    get([string] pattern, [Function<void, Reference<State>, Request, Reference<Response>> move] handler) {
+      this.route("GET", pattern, handler)
+    }
+
+    [mut effects(heap_alloc)]
+    post([string] pattern, [Function<void, Reference<State>, Request, Reference<Response>> move] handler) {
+      this.route("POST", pattern, handler)
+    }
+
+    [mut effects(heap_alloc)]
+    put([string] pattern, [Function<void, Reference<State>, Request, Reference<Response>> move] handler) {
+      this.route("PUT", pattern, handler)
+    }
+
+    [mut effects(heap_alloc)]
+    delete([string] pattern, [Function<void, Reference<State>, Request, Reference<Response>> move] handler) {
+      this.route("DELETE", pattern, handler)
+    }
+
+    // Dispatches one request as `Router.call` does, passing the state to the handler.
+    [mut effects(heap_alloc)]
+    call([Request] request, [Reference<Response>] response) {
+      [bool mut] pathMatched{false}
+      [i32 mut] index{0i32}
+      while(index < this.routes.count()) {
+        [StringView] pattern{this.routes[index].pattern}
+        [StringView] method{this.routes[index].method}
+        if(pattern_matches(pattern, request.path)) {
+          if(request.method.equals(method)) {
+            [Request mut] routed{request}
+            routed.route = pattern
+            // Through a local: `location(this.state)` written in the call's arguments does not lower (TODO-5719).
+            [Reference<State>] state{location(this.state)}
+            this.routes[index].handler(state, routed, response)
+            return()
+          }
+          pathMatched = true
+        }
+        index = index + 1i32
+      }
+      response.status = if(pathMatched, then() { 405i32 }, else() { 404i32 })
+    }
+  }
+
 }
 }

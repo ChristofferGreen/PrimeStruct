@@ -1,0 +1,120 @@
+// /std/http AppRouter: routes that share the app's state as a parameter (tests/unit/backend_host/test_http.cpp). The
+// exit code is the number of the first case that failed, or 0. The state is a struct of this file, at the root, while
+// AppRouter lives in /std/http; its handlers index a vector of the state, as an app does.
+import /std/collections/*
+import /std/http/*
+import /std/text/*
+import /std/text/view/*
+
+[struct]
+Shelf() {
+  [i32 mut] visits{0i32}
+  [vector<i32> mut] items{vector<i32>()}
+
+  // The sum of the items, read through indexing.
+  [return<i32>]
+  total() {
+    [i32 mut] sum{0i32}
+    for([i32 mut] index{0i32}; index < this.items.count(); ++index) {
+      sum = sum + this.items[index]
+    }
+    return(sum)
+  }
+}
+
+// A named handler: "<visits> <total>".
+[effects(heap_alloc)]
+show_shelf([Reference<Shelf>] shelf, [Request] request, [Reference<Response>] response) {
+  shelf.visits = shelf.visits + 1i32
+  response.body.appendI64(convert<i64>(shelf.visits))
+  response.body.append(" ")
+  response.body.appendI64(convert<i64>(shelf.total()))
+}
+
+// The request of case `index`.
+[return<string>]
+case_request([i32] index) {
+  if(index == 1i32) {
+    return("GET / HTTP/1.1\r\n\r\n")
+  }
+  if(index == 2i32) {
+    return("POST /items/5 HTTP/1.1\r\n\r\n")
+  }
+  if(index == 3i32) {
+    return("POST /items/7 HTTP/1.1\r\n\r\n")
+  }
+  if(index == 4i32) {
+    return("GET / HTTP/1.1\r\n\r\n")
+  }
+  if(index == 5i32) {
+    return("POST /items/0/drop HTTP/1.1\r\n\r\n")
+  }
+  if(index == 6i32) {
+    return("GET / HTTP/1.1\r\n\r\n")
+  }
+  if(index == 7i32) {
+    return("DELETE / HTTP/1.1\r\n\r\n")
+  }
+  return("GET /missing HTTP/1.1\r\n\r\n")
+}
+
+// The status and body case `index` must answer.
+[return<bool>]
+answer_is([i32] index, [i32] status, [StringView] body) {
+  if(index == 1i32) {
+    return(status == 200i32 && body.equalsText("1 0"))
+  }
+  if(index == 2i32 || index == 3i32 || index == 5i32) {
+    return(status == 303i32 && body.empty())
+  }
+  if(index == 4i32) {
+    return(status == 200i32 && body.equalsText("2 12"))
+  }
+  if(index == 6i32) {
+    return(status == 200i32 && body.equalsText("3 7"))
+  }
+  if(index == 7i32) {
+    return(status == 405i32 && body.empty())
+  }
+  return(status == 404i32 && body.empty())
+}
+
+// Any handler, called through a generic parameter as `serve` calls it.
+[effects(heap_alloc)]
+handle_with<Handler>([Handler mut] handler, [Request] request, [Reference<Response>] response) {
+  handler(request, response)
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [AppRouter<Shelf> mut] app{AppRouter<Shelf>{[state] Shelf{}}}
+  app.get("/", show_shelf)
+  app.post("/items/:value", []([Reference<Shelf>] shelf, [Request] request, [Reference<Response>] response) {
+    [StringView] value{request.pathParam("value")}
+    shelf.items.push(value.parseI32Or(0i32))
+    response.redirect("/")
+  })
+  app.post("/items/:index/drop", []([Reference<Shelf>] shelf, [Request] request, [Reference<Response>] response) {
+    [StringView] index{request.pathParam("index")}
+    shelf.items.remove_at(index.parseI32Or(0i32))
+    response.redirect("/")
+  })
+  [Response mut] response{Response{}}
+  [i32 mut] index{1i32}
+  while(index <= 8i32) {
+    [String] text{stringFrom(case_request(index))}
+    [Request] request{parseRequest(text.view(), 64i32)}
+    response.clear()
+    handle_with(app, request, location(response))
+    [StringView] body{response.body.view()}
+    if(!answer_is(index, response.status, body)) {
+      return(index)
+    }
+    index = index + 1i32
+  }
+  // The state stays in the router: three page views and one item left.
+  if(app.state.visits != 3i32 || app.state.items.count() != 1i32) {
+    return(20i32)
+  }
+  return(0i32)
+}

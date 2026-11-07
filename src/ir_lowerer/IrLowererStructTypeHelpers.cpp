@@ -386,6 +386,18 @@ std::string resolveStructTypePathCandidateFromScope(
   if (importIt != importAliases.end()) {
     return primec::normalizeSyntaxImportAliasTargetPath(importIt->second);
   }
+  // A struct declared in an enclosing namespace or at the root, as resolveStructTypePathFromScope finds it: a field
+  // of a generic struct instantiated with a type argument written elsewhere, such as `/std/http/AppRouter<Counter>`
+  // at the root, names that type bare inside the generic struct's namespace.
+  std::string prefix = namespacePrefix;
+  while (!prefix.empty()) {
+    const size_t lastSlash = prefix.find_last_of('/');
+    prefix = lastSlash == std::string::npos ? std::string{} : prefix.substr(0, lastSlash);
+    const std::string candidate = prefix + "/" + typeName;
+    if (structNames.count(candidate) > 0) {
+      return candidate;
+    }
+  }
   return resolved;
 }
 

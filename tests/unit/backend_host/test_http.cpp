@@ -246,6 +246,18 @@ TEST_CASE("Router path parameters match the same through optexe") {
                                       << " failed (tests/fixtures/http/router_params.prime)");
 }
 
+TEST_CASE("an AppRouter passes its state to every route on the VM") {
+  const int failed = runOnVm("app_router");
+  CHECK_MESSAGE(failed == 0,
+                "app_router case " << failed << " failed (tests/fixtures/http/app_router.prime)");
+}
+
+TEST_CASE("an AppRouter passes its state to every route through optexe") {
+  const int failed = runThroughOptexe("app_router");
+  CHECK_MESSAGE(failed == 0,
+                "app_router case " << failed << " failed (tests/fixtures/http/app_router.prime)");
+}
+
 TEST_CASE("query and form parameters decode and reject malformed values on the VM") {
   const int failed = runOnVm("query_params");
   CHECK_MESSAGE(failed == 0,

@@ -334,7 +334,9 @@ bad_set() {
 - **Limits:** a borrowing closure cannot be converted, explicitly or at an implicit site (`closure escapes via Function
   (root: name)`, above). An implicit conversion needs the expected type without inference: it does not happen for a
   parameter of a generic definition, a field of a generic struct, an element pushed onto a `vector<Function<...>>`, or
-  a closure produced by an arbitrary call (bind it to a local or construct the `Function` explicitly). A lambda whose
+  a closure produced by an arbitrary call (bind it to a local or construct the `Function` explicitly). A parameter of a
+  method of a generic struct does convert, since its type is known once the struct is instantiated
+  (`AppRouter<Counter>.get`, docs/spec/stdlib-reference.md). A lambda whose
   capture list starts with `mut` cannot yet be written directly as a call argument (the parser reads `[mut ...]` as
   an argument label); bind it to a local first.
 

@@ -5,11 +5,13 @@ Classification: **design direction**. The open work is in `docs/todo.md` (Web ap
 ## Where this starts
 
 `/std/net`, `/std/os`, `/std/http` (request parser with decoded query and form parameters, `Response` with `html` and
-`redirect`, `Router` with `:name` path parameters, static files), `/std/http/server`, `/std/json` and `/std/html` (an
-escaping HTML writer with the form vocabulary) exist and run on the VM and `--emit=optexe`
-(docs/spec/stdlib-reference.md). Servers are single-threaded optexe binaries; containers are out of scope. The server
+`redirect`, `Router` with `:name` path parameters, `AppRouter<State>` whose handlers get the app's state as a
+parameter, static files), `/std/http/server`, `/std/json` and `/std/html` (an escaping HTML writer with the form
+vocabulary) exist and run on the VM and `--emit=optexe` (docs/spec/stdlib-reference.md). Servers are single-threaded optexe binaries; containers are out of scope. The server
 reads one connection at a time. One file cannot import both `/std/html` and `/std/json` yet: both export `Writer`
 (TODO-5717). Repeated parameters give their first value and path parameters are not decoded (TODO-5718).
+`examples/apps/todo_web/main.prime` is the first app with pages, forms and buttons: an `AppRouter<TodoList>` whose
+POST routes change the list and redirect back (TODO-5704).
 
 ## Principles
 
@@ -35,9 +37,10 @@ reads one connection at a time. One file cannot import both `/std/html` and `/st
 
 ## Target shape
 
-The spelling below needs TODO-5707 (`mut` parameters in `Function` types). A lambda or a named handler already
-passes where a `Function` is expected (TODO-5669, done), and a string literal where a `StringView` is expected
-(TODO-5700, done).
+`AppRouter<State>` (TODO-5704) gives this shape today, spelled `[Reference<Counter>] counter` and
+`[Reference<Response>] response`; the spelling below needs TODO-5707 (`mut` parameters in `Function` types). A lambda
+or a named handler already passes where a `Function` is expected (TODO-5669, done), and a string literal where a
+`StringView` is expected (TODO-5700, done).
 
 ```prime
 [struct]
@@ -45,11 +48,11 @@ Counter() {
   [i32 mut] clicks{0i32}
 }
 
-router.get("/", ([Counter mut] app, [Request] request, [Response mut] response) {
-  response.html(counter_page(app.clicks))
+app.get("/", ([Counter mut] counter, [Request] request, [Response mut] response) {
+  response.html(counter_page(counter.clicks))
 })
-router.post("/add", ([Counter mut] app, [Request] request, [Response mut] response) {
-  app.clicks = app.clicks + 1i32
+app.post("/add", ([Counter mut] counter, [Request] request, [Response mut] response) {
+  counter.clicks = counter.clicks + 1i32
   response.redirect("/")
 })
 ```
@@ -62,7 +65,7 @@ PrimeScroll can move one menu at a time.
 
 1. Language: done (TODO-5669, TODO-5700).
 2. HTML and requests: TODO-5701 (writer, `Response.html`, `redirect`; done), TODO-5702 (query and form parameters;
-   done), TODO-5703 (path parameters; done), then the todo-list example TODO-5704.
+   done), TODO-5703 (path parameters; done), then the todo-list example TODO-5704 (done, with `AppRouter<State>`).
 3. Server: TODO-5705 (an idle connection does not stall the others).
 4. Fragments: TODO-5706.
 5. Native UI: TODO-5709 (handlers and `App.run`), TODO-5710 (PrimeScroll on handlers), TODO-5711 (retire the

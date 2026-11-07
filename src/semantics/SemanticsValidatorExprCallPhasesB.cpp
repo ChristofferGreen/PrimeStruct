@@ -304,6 +304,36 @@ PhaseStatus SemanticsValidator::validateExprCallPhase7([[maybe_unused]] const st
         calleeParamsIt = firstMatchIt;
       }
     }
+    // A vector access (`values[i]`, `at`, `at_unsafe`) of a builtin vector, outside a specialization of the helper,
+    // that found only a specialization for another element type (such as `at<Route>`, made by /std/http, for a
+    // `vector<i32>`): the late builtin fallback validates it, as when no specialization exists, rather than the
+    // other element type's parameters.
+    auto elementTypeLeaf = [](std::string type) {
+      type.erase(std::remove_if(type.begin(),
+                                type.end(),
+                                [](unsigned char c) { return std::isspace(c) != 0; }),
+                 type.end());
+      const size_t slash = type.find_last_of('/');
+      return slash == std::string::npos ? type : type.substr(slash + 1);
+    };
+    if (it == defMap_.end() && resolvedDefinition != nullptr &&
+        calleeParamsIt != paramsByDef_.end() && !calleeParamsIt->second.empty() &&
+        !matchesActiveSpecialization(resolvedDefinition->fullPath) &&
+        (isStdNamespacedVectorCompatibilityHelperPath(resolved, "at") ||
+         isStdNamespacedVectorCompatibilityHelperPath(resolved, "at_unsafe")) &&
+        !expr.args.empty() && dispatchBootstrap.dispatchResolvers.resolveVectorTarget) {
+      std::string receiverElemType;
+      std::string candidateElemType;
+      if (dispatchBootstrap.dispatchResolvers.resolveVectorTarget(expr.args.front(),
+                                                                  receiverElemType) &&
+          extractCollectionVectorElementType(calleeParamsIt->second.front().binding,
+                                             candidateElemType) &&
+          !receiverElemType.empty() && !candidateElemType.empty() &&
+          elementTypeLeaf(receiverElemType) != elementTypeLeaf(candidateElemType)) {
+        resolvedDefinition = nullptr;
+        calleeParamsIt = paramsByDef_.end();
+      }
+    }
     if (!expr.isMethodCall && isResolvedKeyValueConstructorPath(resolved) &&
         expr.templateArgs.size() == 2) {
       std::string keyError;

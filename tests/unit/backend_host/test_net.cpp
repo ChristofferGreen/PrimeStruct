@@ -333,6 +333,147 @@ TEST_CASE("the web_app example serves /healthz, /hello and /echo, logs requests 
   CHECK(WEXITSTATUS(waitStatus) == 0);
 }
 
+namespace {
+// The body of a response: everything after the blank line that ends the head.
+std::string responseBody(const std::string &response) {
+  const size_t headEnd = response.find("\r\n\r\n");
+  return headEnd == std::string::npos ? std::string() : response.substr(headEnd + 4);
+}
+
+// A form POST of `body` to `path`.
+std::string formPost(const std::string &path, const std::string &body) {
+  return "POST " + path +
+         " HTTP/1.1\r\nHost: x\r\nContent-Type: "
+         "application/x-www-form-urlencoded\r\nContent-Length: " +
+         std::to_string(body.size()) + "\r\n\r\n" + body;
+}
+
+// The <li> of the todo page for todo `id` titled `title` (escaped), done or not.
+std::string todoItem(int id, const std::string &title, bool done) {
+  const std::string route = "/todos/" + std::to_string(id);
+  return std::string(done ? "<li class=\"done\">" : "<li>") + "<form method=\"post\" action=\"" +
+         route + "/toggle\"><button type=\"submit\">" + (done ? "Undo" : "Done") +
+         "</button></form><span>" + title + "</span><form method=\"post\" action=\"" + route +
+         "/delete\"><button type=\"submit\">Delete</button></form></li>";
+}
+
+// The list of the todo page, from its items.
+std::string todoList(const std::string &items) {
+  return "<ul>" + items + "</ul></body></html>";
+}
+} // namespace
+
+TEST_CASE("the todo_web example adds, toggles and deletes todos through forms over loopback") {
+  const int probe = socket(AF_INET, SOCK_STREAM, 0);
+  if (probe < 0 && (errno == EPERM || errno == EACCES)) {
+    MESSAGE("skipped: socket() is not permitted here (EPERM or EACCES)");
+    return;
+  }
+  REQUIRE(probe >= 0);
+  close(probe);
+
+  const std::string example =
+      std::string(PRIMESTRUCT_SOURCE_DIR) + "/examples/apps/todo_web/main.prime";
+  const std::string osShim = std::string(PRIMESTRUCT_SOURCE_DIR) + "/stdlib/std/os/os_posix.cpp";
+  const std::string exe = scratch("todo_web");
+  const std::string log = exe + ".log";
+  const int status = run(shellQuote(Primec) + " --emit=optexe " + shellQuote(example) + " -o " +
+                         shellQuote(exe) + " --link-arg " + shellQuote(NetShim) + " --link-arg " +
+                         shellQuote(osShim) + " > " + shellQuote(log) + " 2>&1");
+  REQUIRE_MESSAGE(status == 0, readFile(log));
+
+  const std::string errors = exe + ".err";
+  const pid_t pid = fork();
+  REQUIRE(pid >= 0);
+  if (pid == 0) {
+    const int errorFd = open(errors.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    dup2(errorFd, STDERR_FILENO);
+    setenv("PORT", "0", 1);
+    setenv("BIND", "loopback", 1);
+    execl(exe.c_str(), exe.c_str(), static_cast<char *>(nullptr));
+    _exit(127);
+  }
+  int port = 0;
+  for (int attempt = 0; attempt < 200 && port == 0; ++attempt) {
+    const std::string text = readFile(errors);
+    const size_t at = text.find("listening on ");
+    if (at != std::string::npos && text.find('\n', at) != std::string::npos) {
+      port = std::atoi(text.c_str() + at + 13);
+    } else {
+      usleep(25000);
+    }
+  }
+  // `::exchange`: with std::string arguments, a bare call would also find std::exchange.
+  const std::string get = "GET / HTTP/1.1\r\nHost: x\r\n\r\n";
+  std::string empty;
+  std::string addFirst;
+  std::string withOne;
+  std::string withTwo;
+  std::string toggled;
+  std::string deleted;
+  std::string emptyTitle;
+  std::string unknownId;
+  std::string afterNoOps;
+  std::string getDelete;
+  if (port > 0) {
+    empty = ::exchange(port, get);
+    addFirst = ::exchange(port, formPost("/todos", "title=Buy+milk+%26+%3Ceggs%3E"));
+    withOne = ::exchange(port, get);
+    ::exchange(port, formPost("/todos", "title=Walk"));
+    withTwo = ::exchange(port, get);
+    ::exchange(port, formPost("/todos/1/toggle", ""));
+    toggled = ::exchange(port, get);
+    ::exchange(port, formPost("/todos/2/delete", ""));
+    deleted = ::exchange(port, get);
+    emptyTitle = ::exchange(port, formPost("/todos", "title="));
+    unknownId = ::exchange(port, formPost("/todos/9/toggle", ""));
+    afterNoOps = ::exchange(port, get);
+    getDelete = ::exchange(port, "GET /todos/1/delete HTTP/1.1\r\nHost: x\r\n\r\n");
+  }
+  kill(pid, SIGTERM);
+  int waitStatus = 0;
+  REQUIRE(waitpid(pid, &waitStatus, 0) == pid);
+  REQUIRE_MESSAGE(port > 0, readFile(errors));
+
+  // The page: a doctype, the inline style, the form that adds a todo and the (empty) list.
+  CHECK_MESSAGE(
+      empty.rfind("HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\n", 0) == 0, empty);
+  const std::string emptyPage = responseBody(empty);
+  CHECK(emptyPage.rfind(
+            "<!doctype html><html><head><meta charset=\"utf-8\"><title>Todos</title><style>", 0) ==
+        0);
+  CHECK_MESSAGE(
+      emptyPage.find("<form method=\"post\" action=\"/todos\" class=\"add\"><input type=\"text\" "
+                     "name=\"title\" value=\"\" placeholder=\"What needs doing?\" required><button "
+                     "type=\"submit\">Add</button></form>") != std::string::npos,
+      emptyPage);
+  CHECK(emptyPage.find(todoList("")) != std::string::npos);
+  // Each POST answers 303 to / (post/redirect/get); the title is decoded, then escaped on the page.
+  CHECK_MESSAGE(
+      addFirst.rfind("HTTP/1.1 303 See Other\r\nLocation: /\r\nContent-Length: 0\r\n", 0) == 0,
+      addFirst);
+  const std::string first = todoItem(1, "Buy milk &amp; &lt;eggs&gt;", false);
+  CHECK_MESSAGE(responseBody(withOne).find(todoList(first)) != std::string::npos, withOne);
+  CHECK_MESSAGE(responseBody(withTwo).find(todoList(first + todoItem(2, "Walk", false))) !=
+                    std::string::npos,
+                withTwo);
+  const std::string firstDone = todoItem(1, "Buy milk &amp; &lt;eggs&gt;", true);
+  CHECK_MESSAGE(responseBody(toggled).find(todoList(firstDone + todoItem(2, "Walk", false))) !=
+                    std::string::npos,
+                toggled);
+  CHECK_MESSAGE(responseBody(deleted).find(todoList(firstDone)) != std::string::npos, deleted);
+  // An empty title adds nothing and an unknown id changes nothing; both still redirect.
+  CHECK(emptyTitle.rfind("HTTP/1.1 303 See Other\r\n", 0) == 0);
+  CHECK(unknownId.rfind("HTTP/1.1 303 See Other\r\n", 0) == 0);
+  CHECK_MESSAGE(responseBody(afterNoOps).find(todoList(firstDone)) != std::string::npos,
+                afterNoOps);
+  CHECK(getDelete.rfind("HTTP/1.1 405", 0) == 0);
+  const std::string requestLog = readFile(errors);
+  CHECK_MESSAGE(requestLog.find("POST /todos/1/toggle 303 ") != std::string::npos, requestLog);
+  CHECK(WIFEXITED(waitStatus));
+  CHECK(WEXITSTATUS(waitStatus) == 0);
+}
+
 TEST_CASE("serve_file checks paths and reads files, text and binary") {
   const std::string osShim = std::string(PRIMESTRUCT_SOURCE_DIR) + "/stdlib/std/os/os_posix.cpp";
   const std::string fixture = std::string(PRIMESTRUCT_SOURCE_DIR) + "/tests/fixtures/http/files_check.prime";
