@@ -617,6 +617,9 @@ bool emitNativeFunctions(const IrModule &module,
       case IrOpcode::ReturnVoid:
         emitter.emitReturnVoidWithFrameAndLink(layout.framePointerLocalIndex, layout.linkLocalIndex);
         break;
+      case IrOpcode::Trap:
+        emitter.emitTrap(static_cast<int32_t>(inst.imm));
+        break;
       case IrOpcode::ReturnI32:
         if constexpr (!kIsArm64) {
           emitter.emitSignExtendTop32();

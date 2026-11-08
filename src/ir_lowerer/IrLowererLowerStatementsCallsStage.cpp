@@ -172,8 +172,8 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
       ~StructReturnFlagResetGuard() { *storage = -1; }
     } structReturnFlagResetGuard{input.realCallStructReturnStorage};
 
-    // A runtime error in a called function ends the program, not just the function (address ABI targets).
-    const RuntimeErrorsTrapScope trapScope(input.realCallAddressAbi);
+    // A runtime error in a called function ends the program, not just the function (targets that run `Trap`).
+    const RuntimeErrorsTrapScope trapScope(input.runtimeErrorsTrap);
     // Lowering a body can reserve further definitions (its own call sites), which append to the order: walk it by
     // index until no new reservation appears.
     for (size_t orderIndex = 0; orderIndex < input.realCallEligibleOrder->size(); ++orderIndex) {

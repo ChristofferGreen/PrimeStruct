@@ -436,6 +436,12 @@ inline void Arm64Emitter::emitReturnWithFrameAndLink(uint32_t frameLocalIndex,
   emit(encodeRet());
 }
 
+inline void Arm64Emitter::emitTrap(int32_t code) {
+  emitMovImm64(0, static_cast<uint64_t>(static_cast<int64_t>(code)));
+  emitMovImm64(16, SysExit);
+  emit(encodeSvc());
+}
+
 inline void Arm64Emitter::emitReturnVoidWithFrameAndLink(uint32_t frameLocalIndex,
                                                          uint32_t linkLocalIndex) {
   flushValueStackCache();

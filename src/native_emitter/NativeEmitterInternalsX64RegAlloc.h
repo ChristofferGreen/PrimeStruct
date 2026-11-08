@@ -1012,6 +1012,10 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
         }
         break;
       }
+      case IrOpcode::Trap:
+        endsWithBranch = true;
+        emitTrap(static_cast<int32_t>(ir.imm));
+        break;
       case IrOpcode::ReturnI32:
       case IrOpcode::ReturnI64:
       case IrOpcode::ReturnF32:

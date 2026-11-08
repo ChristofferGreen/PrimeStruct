@@ -437,6 +437,8 @@ bool IrLowerer::lower(const Program &program,
                             .realCallEligibleOrder = &setupStage.realCallEligibleOrder,
                             .realCallReservationIndex = &setupStage.realCallReservationIndex,
                             .realCallAddressAbi = setupStage.realCallAllowStructs,
+                            .runtimeErrorsTrap = setupStage.realCallAllowStructs ||
+                                                 validationTarget == IrValidationTarget::Native,
                             .entryReturnsVoidStorage =
                                 &setupStage.setupLocalsOrchestration.entryReturnConfig.returnsVoid,
                             .realCallStructReturnStorage =

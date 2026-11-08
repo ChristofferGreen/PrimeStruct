@@ -184,6 +184,11 @@ NativeJitResult runNativeJit(const IrModule &module, const std::vector<std::stri
   case 9:
     outcome.error = host.error();
     break;
+  case 10:
+    // A trap is not a fault: the program ends with its exit code, as the VM's `Trap` does.
+    outcome.ok = true;
+    outcome.result = argument;
+    break;
   default:
     outcome.error = "native JIT fault " + std::to_string(fault);
     break;

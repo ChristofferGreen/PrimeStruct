@@ -72,6 +72,7 @@ inline bool nativeJitRunsOpcodeInline(IrOpcode op) {
   case IrOpcode::ReturnI64:
   case IrOpcode::ReturnF32:
   case IrOpcode::ReturnF64:
+  case IrOpcode::Trap:
   case IrOpcode::PrintI32:
   case IrOpcode::PrintI64:
   case IrOpcode::PrintU64:

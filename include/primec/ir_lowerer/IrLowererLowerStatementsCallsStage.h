@@ -79,6 +79,9 @@ struct LowerStatementsCallsStageInput {
   // The address ABI (LowerSetupStageState::realCallAllowStructs): every parameter, and the receiver, arrives as one
   // slot holding what the inlined call would have bound - a scalar or an address.
   bool realCallAddressAbi = false;
+  // A runtime error in a real-call body ends the program with `Trap 3` (targets that run `Trap`: the VM, the optimizing
+  // C++ emitters and native) instead of returning 3 to the caller.
+  bool runtimeErrorsTrap = false;
 
   // Points at LowerSetupStageState::setupLocalsOrchestration.entryReturnConfig.returnsVoid
   // - the return-statement lowering machinery reached via `emitStatement`

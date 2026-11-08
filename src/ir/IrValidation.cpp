@@ -188,11 +188,12 @@ bool validateFunction(const IrModule &module,
       return failInstruction(functionIndex, function.name, instructionIndex, "unsupported opcode", error);
     }
     if (inst.op == IrOpcode::Trap && target != IrValidationTarget::Vm &&
-        target != IrValidationTarget::Serialized && target != IrValidationTarget::OptCpp) {
+        target != IrValidationTarget::Serialized && target != IrValidationTarget::OptCpp &&
+        target != IrValidationTarget::Native) {
       return failInstruction(functionIndex,
                              function.name,
                              instructionIndex,
-                             "traps are only supported by the vm target, the optimized C++ target "
+                             "traps are only supported by the vm, native and optimized C++ targets "
                              "and serialized bytecode",
                              error);
     }

@@ -742,6 +742,15 @@ inline void X64Emitter::emitExitSyscall() {
   emitSyscall();
 }
 
+inline void X64Emitter::emitTrap(int32_t code) {
+  if (jitMode_) {
+    emitJitFault(JitFault::Trap, static_cast<uint32_t>(code));
+    return;
+  }
+  emitMovRegImm64(0, static_cast<uint64_t>(static_cast<int64_t>(code)));
+  emitExitSyscall();
+}
+
 inline void X64Emitter::emitReturn() {
   emitPopReg(0);
   if (isEntryFunction_ && !jitMode_) {

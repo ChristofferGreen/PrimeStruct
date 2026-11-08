@@ -897,7 +897,9 @@ main() {
   primec::IrModule module;
   REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
-  CHECK(primec::validateIrModule(module, primec::IrValidationTarget::Any, error));
+  // Lowered for the default (native) target, whose real-call bodies end a runtime error with `Trap`, which the
+  // backend-neutral target does not accept.
+  CHECK(primec::validateIrModule(module, primec::IrValidationTarget::Native, error));
   CHECK(error.empty());
 }
 

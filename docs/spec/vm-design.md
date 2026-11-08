@@ -94,7 +94,7 @@
   handlers; the heap the runtime keeps uses the VM's addresses and the code reads and writes it directly. The VM's
   runtime faults (division by zero, string index out of bounds, invalid string index, unaligned or invalid indirect
   address, heap misuse, I/O handler errors, more than 4096 frames, a missing return) are reported with the VM's
-  messages and exit code 3; `INT64_MIN / -1` wraps as in the VM. Modules importing host functions are interpreted.
+  messages and exit code 3, and a `Trap` ends the run with its code as the VM's does; `INT64_MIN / -1` wraps as in the VM. Modules importing host functions are interpreted.
   `PRIMEVM_JIT=0` (or `PRIMEVM_KERNEL=step`, `-O0`/`-O1`, any debug mode) keeps the interpreter, and `--opt-report`
   prints `execution_tier=native` or `execution_tier=interpreter reason=...`.
 - **Float comparisons:** `CmpEq/Ne/Lt/Le/Gt/GeF32/F64` follow IEEE 754: when either operand is NaN, every comparison is
@@ -131,8 +131,11 @@
 - **Errors:** guard rails emit errors by printing to stderr and returning error codes (e.g., bounds checks), while VM
   runtime faults (stack underflow, invalid addresses) surface as `VM error:` with exit code 3. Inside a function that
   lowering calls rather than inlines, a guard rail ends with `Trap 3` instead of a return, which ends the program with
-  exit code 3 from that frame; `panic` traps the same way. `Trap` (PSIR v33) runs on the VM, serialized bytecode and
-  `optcpp`/`optexe`; the other targets never receive it.
+  exit code 3 from that frame; `panic` traps the same way. `Trap` (PSIR v33) runs on the VM, serialized bytecode,
+  `optcpp`/`optexe` (`exit` after flushing stdout), `--emit=native` (the exit syscall: `exit` on macOS arm64,
+  `exit_group` on Linux x86_64; output is already written) and the Linux x86_64 JIT (which hands the code back to
+  `primevm` as the program's result). The simple C++ (`cpp`/`exe`), Wasm and GLSL targets never receive it; on `exe` a
+  runtime error in a called function still returns 3 to its caller (TODO-5744).
 - **Deployment target:** the VM serves as the sandboxed runtime for user-supplied scripts (e.g., on iOS) where native
   code generation is unavailable. Effect masks and capabilities enforce per-platform restrictions.
 

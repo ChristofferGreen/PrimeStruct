@@ -134,6 +134,7 @@ class X64Emitter {
      UnalignedIndirectAddress = 7, // argument: the address
      InvalidIndirectAddress = 8,   // argument: the address
      HostFault = 9,                // the bridge failed; the runtime holds the message
+     Trap = 10,                    // argument: the exit code; ends the program
    };
    void setJitMode(bool enabled) {
      jitMode_ = enabled;
@@ -338,6 +339,9 @@ class X64Emitter {
   void emitReturnVoidWithLink(uint32_t linkLocalIndex);
   void emitReturnWithFrameAndLink(uint32_t frameLocalIndex, uint32_t linkLocalIndex);
   void emitReturnVoidWithFrameAndLink(uint32_t frameLocalIndex, uint32_t linkLocalIndex);
+  // `Trap`: ends the program with `code` from any frame - exit_group, or in the JIT the Trap fault, which the
+  // runtime reports as the program's result.
+  void emitTrap(int32_t code);
 
   void emitPrintSigned(uint32_t scratchOffset, uint32_t scratchBytes, bool newline, uint64_t fd);
   void emitPrintSignedRegFromValue(uint32_t scratchOffset, uint32_t scratchBytes, bool newline, uint8_t fdReg);

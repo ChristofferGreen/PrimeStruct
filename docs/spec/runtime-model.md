@@ -11,6 +11,11 @@
   unwinds the current definition. In value blocks, `return(value)` exits the block and yields its value. Implicit
   `return(void)` fires if a definition body reaches the end.
 - **Indirect alignment:** indirect addresses must be 16-byte aligned; misaligned dereferences are VM runtime errors.
+- **Runtime errors end the program:** a guard rail (an index out of bounds, a missing map key) or `panic` prints its
+  message to stderr and ends the whole program with exit code 3, whichever frame it runs in. In the entry that is a
+  return of 3; in a definition lowered as a real call it is `Trap 3`, which the VM, `optcpp`/`optexe`, `--emit=native`
+  and the Linux x86_64 JIT run (see [vm-design.md](vm-design.md), Errors). The simple C++ (`exe`), Wasm and GLSL targets do
+  not have `Trap` yet (TODO-5744).
 - **Transform boundaries:** text/semantic rewrites decide where bodies inline; IR lowering preserves left-to-right
   argument evaluation inside the active frame.
 - **Resource handles:** handles live inside frame slots as opaque values; lifetimes follow lexical scope.

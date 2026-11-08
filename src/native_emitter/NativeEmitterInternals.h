@@ -37,6 +37,7 @@ constexpr uint64_t SysMmap = SYS_mmap;
 constexpr uint64_t SysMmap = 197;
 #endif
 constexpr uint64_t SysMunmap = SYS_munmap;
+constexpr uint64_t SysExit = SYS_exit;
 constexpr uint64_t MmapProtReadWrite = static_cast<uint64_t>(PROT_READ | PROT_WRITE);
 #if defined(MAP_ANON)
 constexpr uint64_t MmapFlagsPrivateAnon = static_cast<uint64_t>(MAP_PRIVATE | MAP_ANON);
@@ -51,6 +52,7 @@ constexpr uint64_t SysClose = 0;
 constexpr uint64_t SysFsync = 0;
 constexpr uint64_t SysMmap = 0;
 constexpr uint64_t SysMunmap = 0;
+constexpr uint64_t SysExit = 0;
 constexpr uint64_t MmapProtReadWrite = 0;
 constexpr uint64_t MmapFlagsPrivateAnon = 0;
 #endif
@@ -320,6 +322,8 @@ class Arm64Emitter {
   void emitReturnVoidWithLink(uint32_t linkLocalIndex);
   void emitReturnWithFrameAndLink(uint32_t frameLocalIndex, uint32_t linkLocalIndex);
   void emitReturnVoidWithFrameAndLink(uint32_t frameLocalIndex, uint32_t linkLocalIndex);
+  // `Trap`: ends the program with `code` from any frame (the exit syscall; output is already written).
+  void emitTrap(int32_t code);
 
   void emitPrintSigned(uint32_t scratchOffset, uint32_t scratchBytes, bool newline, uint64_t fd);
   void emitPrintSignedRegFromValue(uint32_t scratchOffset, uint32_t scratchBytes, bool newline, uint8_t fdReg);
