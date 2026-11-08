@@ -192,8 +192,15 @@ TEST_CASE("native backend reports instrumentation counters per function") {
   helperFn.instructions.push_back({primec::IrOpcode::PushI32, 3});
   helperFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
 
+  // No call reaches it (lowering inlined it everywhere, say), so it is not emitted.
+  primec::IrFunction unusedFn;
+  unusedFn.name = "/unused";
+  unusedFn.instructions.push_back({primec::IrOpcode::PushI32, 9});
+  unusedFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
   module.functions.push_back(std::move(mainFn));
   module.functions.push_back(std::move(helperFn));
+  module.functions.push_back(std::move(unusedFn));
 
   primec::NativeEmitter emitter;
   primec::NativeEmitterInstrumentation instrumentation;
@@ -201,7 +208,8 @@ TEST_CASE("native backend reports instrumentation counters per function") {
   const std::string exePath = irSerializationControlFlowPath("primec_native_ir_instrumentation_exec").string();
   REQUIRE(emitter.emitExecutable(module, exePath, error, &instrumentation));
   CHECK(error.empty());
-  REQUIRE(instrumentation.perFunction.size() == 2);
+  CHECK(runIrPipelineNativeBinary(exePath) == 7);
+  REQUIRE(instrumentation.perFunction.size() == 3);
 
   CHECK(instrumentation.perFunction[0].functionName == "/main");
   CHECK(instrumentation.perFunction[0].instructionTotal == 4u);
@@ -217,7 +225,11 @@ TEST_CASE("native backend reports instrumentation counters per function") {
   CHECK(instrumentation.perFunction[1].spillCount == 0u);
   CHECK(instrumentation.perFunction[1].reloadCount == 0u);
 
-  CHECK(instrumentation.totalInstructionCount == 6u);
+  CHECK(instrumentation.perFunction[2].functionName == "/unused");
+  CHECK(instrumentation.perFunction[2].instructionTotal == 2u);
+  CHECK(instrumentation.perFunction[2].valueStackPushCount == 0u);
+
+  CHECK(instrumentation.totalInstructionCount == 8u);
   CHECK(instrumentation.totalValueStackPushCount == 4u);
   CHECK(instrumentation.totalValueStackPopCount == 4u);
   CHECK(instrumentation.totalSpillCount == 1u);

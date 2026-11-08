@@ -231,11 +231,28 @@ bool buildNativeImage(const IrModule &module,
   const uint64_t stringOffsetTableSize = static_cast<uint64_t>(module.stringTable.size()) * sizeof(uint64_t);
   std::vector<size_t> functionOffsets(module.functions.size(), 0);
   std::vector<std::vector<size_t>> instOffsets(module.functions.size());
+  // Only the functions a call reaches from the entry are emitted: lowering inlines most calls
+  // (struct methods always, here), and a function inlined at every call site would otherwise
+  // sit in the executable unused, once per level of a chain of inlined methods.
+  std::vector<bool> reachable(module.functions.size(), false);
+  std::vector<size_t> pending{entryIndex};
+  reachable[entryIndex] = true;
+  while (!pending.empty()) {
+    const size_t caller = pending.back();
+    pending.pop_back();
+    for (const IrInstruction &inst : module.functions[caller].instructions) {
+      if ((inst.op == IrOpcode::Call || inst.op == IrOpcode::CallVoid) &&
+          inst.imm < module.functions.size() && !reachable[static_cast<size_t>(inst.imm)]) {
+        reachable[static_cast<size_t>(inst.imm)] = true;
+        pending.push_back(static_cast<size_t>(inst.imm));
+      }
+    }
+  }
   std::vector<size_t> emitOrder;
   emitOrder.reserve(module.functions.size());
   emitOrder.push_back(entryIndex);
   for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
-    if (functionIndex != entryIndex) {
+    if (functionIndex != entryIndex && reachable[functionIndex]) {
       emitOrder.push_back(functionIndex);
     }
   }

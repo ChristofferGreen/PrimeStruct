@@ -2175,6 +2175,7 @@ are left unarchived.
 | TODO-5734 | Web apps build in seconds, not minutes, on optexe | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5742 | `==` on generated-`Equal` structs and enums resolves in lambda bodies | [2026-11.md](todo_archive/2026-11.md) | 2026-11-08 |
 | TODO-5743 | A runtime error in a native real call ends the program | [2026-11.md](todo_archive/2026-11.md) | 2026-11-08 |
+| TODO-5747 | The native backend leaves out functions that nothing calls | [2026-11.md](todo_archive/2026-11.md) | 2026-11-08 |
 
 <!-- INDEX-END -->
 

@@ -110,8 +110,8 @@ of sync with them.
 | TODO-5711 | Retire the `/std/ui` layout and command-list prototype | ready | ui-prototype-retire |
 | TODO-5745 | A labeled value that is a call parses in every position | ready | parser-labeled-values |
 | TODO-5746 | A parameterless `mut` method whose body is only bindings is a method | ready | diagnostics |
-| TODO-5747 | The native backend leaves out functions that nothing calls | ready | native-code-size |
 | TODO-5748 | Methods with a `Function` parameter become real calls on the VM and optexe | ready | ir-real-calls |
+| TODO-5749 | PrimeScroll on handlers uses no more memory than its loop did | ready | native-ui-memory |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
 | TODO-5656 | Thread-safe `SharedString` (atomic count, per-thread string heaps) | deferred | string-concurrency |
 | TODO-5603 | Startup audit: what a launch loads and does | ready | startup |
@@ -170,11 +170,11 @@ of sync with them.
 - TODO-5510 (control-returns): `return` returns from unit-variant pick arms correctly
 - TODO-5524 (result-error-structs): int-backed error structs round-trip through stdlib Result sums
 - TODO-5728 (collections-access): `slice` and `sliceMut` on a vector field of a struct resolve
-- TODO-5747 (native-code-size): the native backend leaves out functions that nothing calls
+- TODO-5749 (native-ui-memory): PrimeScroll on handlers uses no more memory than its loop did
 
 ### Immediate Next 10
 
-1. TODO-5747
+1. TODO-5749
 2. TODO-5603
 3. TODO-5536
 4. TODO-5535
@@ -185,7 +185,7 @@ of sync with them.
 ### Priority Lanes
 
 - Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5656
-- Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5747, TODO-5586
+- Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5749, TODO-5586
 - - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Startup (docs/NativeUiPlan.md section 16): TODO-5603
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
@@ -328,17 +328,17 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - full release gate green
   - stop_rule: the field-only rule and its diagnostic.
 
-- [ ] TODO-5747: The native backend leaves out functions that nothing calls
+- [ ] TODO-5749: PrimeScroll on handlers uses no more memory than its loop did
   - owner: ai
   - status: ready
   - created_at: 2026-11-08
   - phase: Native PrimeScroll, direct native backend (found in TODO-5710)
-  - parallel_track: native-code-size
-  - scope: `--emit=native` inlines struct methods (TODO-5740) yet still emits every function of the module, so a function inlined at its one call site is in the binary twice and a chain of methods inlined into each other once per link. PrimeScroll on handlers has 863K lowered IR instructions for native against 178K before (`main` 211K, the inlined `App.run`, `AppHandlers.run` and `Function` call bodies as unused functions of 115K, 115K, 57K and 39K) and its native executable is 15.1 MB against 3.4 MB. Drop the functions that are reachable from no call, function address or entry after lowering, for native (and check the VM and C++ emitters, which do not need them either).
+  - parallel_track: native-ui-memory
+  - scope: Since TODO-5710 the headless editor's peak memory footprint (`/usr/bin/time -l`, scenario `close:1`) is 3.0 MB natively against 1.6 MB before, and 2.0 MB against 1.5 MB with optexe; the AppKit native editor's peak resident set is 118.1 MB against 114.3 MB, with the same time to the first window. The likely cause is frame size: the native backend inlines `AppHandlers.run`, every closure (twice per `Function` call) and their `Editor` methods into a few functions whose frames hold every inlined local. Measure where the memory goes (frame sizes of `main` and the `Function` call bodies, heap blocks of the handler vectors) and cut it, for example by reusing the slots of inlined scopes that have ended.
   - acceptance:
-    - the native editor's executable and function count shrink, measured before and after; no call log, exit code or file changes in the editor scenarios
+    - the editor's native and optexe peak footprint is back within 0.2 MB of the loop version, measured the same way; the editor scenarios keep their call logs
     - full release gate green
-  - stop_rule: unreachable-function removal only; no inlining policy change.
+  - stop_rule: the memory of the handler dispatch; no change to the handler API.
 
 - [ ] TODO-5748: Methods with a `Function` parameter become real calls on the VM and optexe
   - owner: ai
