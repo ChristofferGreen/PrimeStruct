@@ -758,6 +758,13 @@ Toolbar() {
     return(ps_ui_toolbar_add_button(this.handle, title, symbol, commandId))
   }
 
+  // A button that calls the handler of `command` (`AppHandlers.command`). Not an overload of `button`: a same-arity
+  // overload does not resolve when an argument is a call (TODO-5735).
+  [public return<bool>]
+  commandButton([string] title, [string] symbol, [Command] command) {
+    return(ps_ui_toolbar_add_button(this.handle, title, symbol, command.id))
+  }
+
   // Segments titled by `titles` (separated by |) with the commands firstCommandId, firstCommandId + 1, ...
   [public return<bool>]
   segments([string] titles, [i32] firstCommandId) {
@@ -784,10 +791,22 @@ Menu() {
     return(ps_ui_menu_add_item(this.handle, title, shortcut, commandId))
   }
 
+  // An item that calls the handler of `command` (`AppHandlers.command`) when it is chosen. Not an overload of `item`:
+  // a same-arity overload does not resolve when an argument is a call (TODO-5735).
+  [public return<bool>]
+  commandItem([string] title, [string] shortcut, [Command] command) {
+    return(ps_ui_menu_add_item(this.handle, title, shortcut, command.id))
+  }
+
   // Puts or removes a check mark on the items added with `commandId`.
   [public return<bool>]
   setChecked([i32] commandId, [bool] checked) {
     return(ps_ui_menu_set_checked(this.handle, commandId, checked))
+  }
+
+  [public return<bool>]
+  setCommandChecked([Command] command, [bool] checked) {
+    return(ps_ui_menu_set_checked(this.handle, command.id, checked))
   }
 
   // The check mark of the items with `commandId` shows whether the active window has a preview.
@@ -1224,6 +1243,14 @@ App() {
   [public return<bool>]
   setPreviewScrollMode([i32] mode) {
     return(ps_ui_preview_set_scroll_mode(mode))
+  }
+
+  // Waits on the events and calls the handlers registered in `handlers` until the app quits (handlers.prime,
+  // `AppHandlers.run`). The low level beside it is `waitEvent`. The parameter is any `Handlers` rather than an
+  // `AppHandlers<State>`: `State` is not inferred through a generic struct parameter yet (TODO-5737).
+  [public effects(heap_alloc)]
+  run<Handlers>([Handlers mut] handlers) {
+    handlers.run()
   }
 
   [public return<AppEvent>]

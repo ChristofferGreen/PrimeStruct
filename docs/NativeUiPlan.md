@@ -184,6 +184,54 @@ The names follow `docs/CodeExamples.md`. The surface as built (TODO-5529) is in 
 ("Native UI"): `start_app(name)` replaces `App.start(name)` (a type-qualified static call does not resolve through
 an import yet), and `AppEvent` lists `quitRequested` first because a default sum value needs a unit first variant.
 
+**Handlers (TODO-5709).** Controls also take handler closures, so a program need not write the loop above
+(docs/WebAppsPlan.md, principle 7). An `AppHandlers<State>` (stdlib/std/ui/native/handlers.prime) holds the app's
+state and a table of handlers registered once, at setup; `app.run(handlers)` loops on `ps_ui_wait_event` and calls
+the handler of each event until the app quits. Each handler is a `Function<void, Reference<State>, Event>`: its own
+`mut` captures keep what only it needs, the shared state comes in as the parameter, and the event is a
+`/std/ui/events` struct, the same types a `/std/web` control takes. No ABI change: the table maps the version-0
+events back to their handlers.
+
+| Event (ABI v0) | Registration | The handler gets |
+| --- | --- | --- |
+| `command` | `handlers.command(handler)` returns a `Command`, added with `menu.commandItem(title, shortcut, command)`, `toolbar.commandButton(title, symbol, command)` (`menu.setCommandChecked(command, bool)`) | a `PointerEvent` of the primary button, no position, `clickCount` 1 |
+| `control_changed` of a `Button` | `handlers.onClick(button, handler)` | the same `PointerEvent` |
+| `control_changed` of a `CheckBox`, `Popup`, `ItemList` | `onCheckBoxChange`, `onPopupChange`, `onListChange(control, handler)` | a `ChangeEvent`: `checked`, or `index` (the first selected row of a list, -1 for none), read from the control |
+| `window_close_requested` | `onWindowClose(handler)`, for every window | the `Window`; without a handler the window closes |
+| `text_changed` | `onTextChange(handler)` | the `Window` |
+| `open_file` | `onOpenFile(handler)` | the path, a `String` |
+| `quit_requested` | `onQuit(handler)`, a `Function<bool, Reference<State>>` | nothing; `true` lets `run` return |
+
+- **Ids stay inside.** `command` hands out ids from `first_command_id()` (1000000) up, above the ids programs pick
+  for `waitEvent`; app code holds the `Command`. One `Command` in a menu and a toolbar calls one closure, so its `mut`
+  captures are shared between the two. A command id without a handler (a hand-picked one, recent files, toolbar
+  segments) is dropped by `run`, as is a control change of a control without one.
+- **When `run` returns.** On a request to quit that no quit handler refuses, and after a close request (handled or
+  not) when no window is open any more (`ps_ui_window_count() == 0`).
+- **`waitEvent` stays.** `run` reads the same events, so a program keeps its own loop, or moves to handlers one
+  control at a time (TODO-5710); one program uses one of the two.
+- **As built, and why so.** The table and the state live in a generic struct, not in `App`, `Button` or `Menu`: those
+  are `u64` handles with nowhere to keep closures, and there is no global state, so registration goes through the one
+  object that knows `State`; this is the shape of `WebApp<State>` (`state` field, controls registered on it). The
+  per-control `onChange` names and `commandItem`/`commandButton` are separate methods, not overloads of `onChange`,
+  `item` and `button`: same-arity overloads of struct methods do not resolve yet (TODO-5735). `run` reads the ABI
+  event kinds itself instead of `pick`ing an `AppEvent` (TODO-5736).
+
+```prime
+[AppHandlers<Greeter> mut] handlers{AppHandlers<Greeter>{[state] Greeter{[button] hello}}}
+[mut] sayHello{[mut said{0i32}]([Reference<Greeter>] greeter, [PointerEvent] event) {
+  said = said + 1i32
+  greeter.say(greeting(said))
+}}
+handlers.onClick(hello, sayHello)
+window.show()
+app.run(handlers)
+```
+
+`examples/native_ui/hello_button.prime` is the whole program; `tests/fixtures/ui/handlers.prime` uses every row of the
+table. `PrimeStruct_cpp_native_ui` runs both on the VM against the headless backend and compiled with `optexe`, with
+the same call logs.
+
 ## 6. The text editor example
 
 `examples/apps/text_editor/main.prime` is a single-window plain-text editor:

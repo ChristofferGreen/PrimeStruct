@@ -116,6 +116,68 @@ TEST_CASE("the native UI hello_window runs through optexe on the headless backen
   checkScenario(SourceDir + "/examples/native_ui/hello_window.prime", "hello", "cmd:7;type:0: more;cmd:3;close:1");
 }
 
+namespace {
+// The calls of the VM run of the last scenario that match `prefix`.
+std::vector<std::string> loggedCalls(const std::string &prefix) {
+  std::vector<std::string> calls;
+  for (const std::string &line : headless::callLog()) {
+    if (line.rfind(prefix, 0) == 0) {
+      calls.push_back(line);
+    }
+  }
+  return calls;
+}
+} // namespace
+
+TEST_CASE("the native UI hello_button click closure counts through optexe") {
+  // Window 1 holds button 2; the closure's own `said` counts the clicks, and the default close ends `run`.
+  checkScenario(SourceDir + "/examples/native_ui/hello_button.prime",
+                "hello_button",
+                "click:2;click:2;click:2;close:1");
+  CHECK(loggedCalls("ps_ui_button_set_title") ==
+        std::vector<std::string>{
+            "ps_ui_button_set_title(2, \"Hello!\") -> true",
+            "ps_ui_button_set_title(2, \"Hello again! That makes 2.\") -> true",
+            "ps_ui_button_set_title(2, \"Hello again! That makes 3.\") -> true",
+        });
+  CHECK(headless::windowState(1).closed);
+}
+
+TEST_CASE("native UI app handlers get every event kind through optexe") {
+  // tests/fixtures/ui/handlers.prime: command 1000000 is the first one `AppHandlers.command` hands out, and command 7
+  // has no handler. The first close request of window 3 and the first quit request are refused.
+  const std::string actions = "cmd:1000000;cmd:7;check:4;popup:5:2;rows:6:1;click:7;type:2:x;"
+                              "openfile:/docs/a.md;cmd:1000000;close:3;close:3;quit";
+  checkScenario(SourceDir + "/tests/fixtures/ui/handlers.prime", "handlers", actions);
+  const std::vector<std::string> titles{"save 1",
+                                        "wrap 1",
+                                        "size 2",
+                                        "file 1",
+                                        "go 1",
+                                        "typed in 1",
+                                        "/docs/a.md",
+                                        "save 2",
+                                        "close 1",
+                                        "close 2",
+                                        "quit 1",
+                                        "quit 2"};
+  std::vector<std::string> expected;
+  for (const std::string &title : titles) {
+    expected.push_back("ps_ui_window_set_title(1, \"" + title + "\") -> true");
+  }
+  CHECK(loggedCalls("ps_ui_window_set_title") == expected);
+  CHECK(headless::windowState(3).closed);
+  CHECK_FALSE(headless::windowState(1).closed);
+  // The menu item and the toolbar button carry the one command.
+  CHECK(loggedCalls("ps_ui_menu_add_item") ==
+        std::vector<std::string>{"ps_ui_menu_add_item(9, \"Save\", \"cmd+s\", 1000000) -> true"});
+  CHECK(loggedCalls("ps_ui_menu_set_checked") ==
+        std::vector<std::string>{"ps_ui_menu_set_checked(9, 1000000, true) -> true"});
+  CHECK(loggedCalls("ps_ui_toolbar_add_button") ==
+        std::vector<std::string>{
+            "ps_ui_toolbar_add_button(10, \"Save\", \"square.and.arrow.down\", 1000000) -> true"});
+}
+
 TEST_CASE("the editor types and saves through optexe with the VM's call log") {
   const std::string out = scratch("typed.txt");
   checkScenario(editor(), "editor", "type:0:hello;cmd:3;save:" + out + ";close:1");

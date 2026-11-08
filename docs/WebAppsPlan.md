@@ -28,6 +28,11 @@ Controls take hover, press, release and key handlers too (TODO-5724): `app.onMou
 `onMouseDown`, `onMouseUp`, `onKeyDown` and `onKeyUp` register them at setup; the same script posts each event to
 `/_on/<id>/<event>` with the fields of its `/std/ui/events` struct, waits for the pointer to rest 100 ms before a
 hover, sends keys for the focused control only, and swaps the control's region with the answer.
+Native controls take the same closures (TODO-5709): an `AppHandlers<State>` (`/std/ui/native`) holds the state and the
+handlers, `handlers.onClick(button, handler)`, `onCheckBoxChange`, `onPopupChange`, `onListChange`, `command(handler)`
+for menu items and toolbar buttons, `onWindowClose`, `onTextChange`, `onOpenFile` and `onQuit` register them at setup,
+and `app.run(handlers)` dispatches the version-0 events to them until the app quits;
+`examples/native_ui/hello_button.prime` uses it (docs/NativeUiPlan.md section 5).
 
 ## Principles
 
@@ -91,12 +96,14 @@ With controls that take closures (principle 7) a button and its reaction are one
   greeter.lines.append("Hello again!\n")
 }}
 [Control] hello{app.button("hello", "Say hello", sayHello)}   // web: a generated POST route (done, TODO-5722)
-[Button] native{window.button("Say hello")}
-native.onClick(sayHello)                          // native: App.run dispatches the click (TODO-5709)
+[Button] native{nativeApp.button("Say hello")}
+handlers.onClick(native, sayHello)                // native: app.run(handlers) dispatches the click (done, TODO-5709)
 ```
 
-`App.run(state)` dispatches native events; command ids stay inside the C ABI, and `waitEvent` stays as the low level,
-so PrimeScroll can move one menu at a time.
+Natively the handlers live in an `AppHandlers<Greeter>` beside the platform `App`, which owns the state the way a
+`WebApp` does: `Button` and `Menu` are bare handles with nowhere to keep a closure. `app.run(handlers)` dispatches
+the events; command ids stay inside the table (`handlers.command(handler)` returns a `Command` for menu items and
+toolbar buttons), and `waitEvent` stays as the low level, so PrimeScroll can move one menu at a time (TODO-5710).
 
 ## Order
 
@@ -106,7 +113,7 @@ so PrimeScroll can move one menu at a time.
 3. Server: TODO-5705 (an idle connection does not stall the others; done).
 4. Events and controls: TODO-5723 (shared event structs; done), TODO-5722 (web controls take click closures; done).
 5. Fragments: TODO-5706 (done), then TODO-5724 (web hover and key handlers; done).
-6. Native UI: TODO-5709 (controls take closures, `App.run`), TODO-5725 (pointer and key events in the C ABI),
+6. Native UI: TODO-5709 (controls take closures, `app.run(handlers)`; done), TODO-5725 (pointer and key events in the C ABI),
    TODO-5710 (PrimeScroll on handlers), TODO-5711 (retire the `/std/ui` prototype).
 7. Later: TODO-5707, TODO-5708 (type aliases), TODO-5717 (both writers in one file), TODO-5718 (repeated and decoded
    parameters), sessions and cookies, keep-alive, concurrency once tasks schedule.

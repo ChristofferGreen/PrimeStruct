@@ -477,6 +477,52 @@ main() {
 Copy a `pick` payload into a local before calling methods on it (`[Window] target{w}`): method calls directly on a
 payload binding do not lower yet (TODO-5544).
 
+#### Handlers (`AppHandlers<State>`)
+
+Controls take handler closures instead of a loop over `waitEvent` (docs/WebAppsPlan.md, principle 7; the table of
+events is in [Native UI plan](../NativeUiPlan.md) section 5). `AppHandlers<State>{[state] value}` holds the app's
+state and the handlers, each registered once at setup, and `app.run(handlers)` waits on the events and calls their
+handlers until the app quits. A handler is a `Function<void, Reference<State>, Event>`, with `Event` a
+`/std/ui/events` struct (`import /std/ui/events/*`), the type a `/std/web` control takes too:
+
+- `command(handler) -> Command` (a `PointerEvent` handler) and `Menu.commandItem(title, shortcut, command)`,
+  `Toolbar.commandButton(title, symbol, command)`, `Menu.setCommandChecked(command, checked)`: a menu item and a
+  toolbar button with the same `Command` call the same closure. The event is a click of the primary button with no
+  position (`clickCount` 1): the version-0 ABI reports no pointer details. Ids start at `first_command_id()`
+  (1000000).
+- `onClick(button, handler)` (`PointerEvent`, as above); `onCheckBoxChange(checkBox, handler)`,
+  `onPopupChange(popup, handler)`, `onListChange(itemList, handler)` (`ChangeEvent`: `checked`, or `index`, the
+  first selected row of a list or -1).
+- `onWindowClose(handler)` and `onTextChange(handler)` (`Function<void, Reference<State>, Window>`, for every
+  window); without a close handler a close request closes the window. `onOpenFile(handler)` gets the path as a
+  `String`. `onQuit(handler)` is a `Function<bool, Reference<State>>`: `run` returns when it gives `true`.
+- `run` returns on a request to quit that no quit handler refuses, and after a close request when no window is open.
+  Events without a handler are dropped. The last `onWindowClose`, `onTextChange`, `onOpenFile` or `onQuit` registered
+  is the one called. `waitEvent` stays for programs with their own loop.
+
+Example (`examples/native_ui/hello_button.prime`):
+```
+[return<int> effects(heap_alloc)]
+main() {
+  [App] app{start_app("Hello Button")}
+  [Window] window{app.window("Hello", 320i32, 120i32)}
+  [Button] hello{app.button("Say hello")}
+  window.setContentWidget(hello.widget())
+  [AppHandlers<Greeter> mut] handlers{AppHandlers<Greeter>{[state] Greeter{[button] hello}}}
+  [mut] sayHello{[mut said{0i32}]([Reference<Greeter>] greeter, [PointerEvent] event) {
+    said = said + 1i32
+    greeter.say(greeting(said))
+  }}
+  handlers.onClick(hello, sayHello)
+  window.show()
+  app.run(handlers)
+  return(0i32)
+}
+```
+
+The closure is bound to a local before it is passed, because a lambda whose capture list starts with `mut` does not
+parse as a call argument yet (TODO-5713); a lambda with `[]` or plain captures can be written in the call.
+
 ### Operating system (`/std/os`)
 
 `import /std/os/*` gives a long-running program such as a server its configuration, a clock and a clean

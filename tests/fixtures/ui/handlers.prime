@@ -1,0 +1,106 @@
+// Every handler kind of `AppHandlers` (/std/ui/native) on the headless backend: a command shared by a menu item and a
+// toolbar button, a button, a check box, a pop-up, a list, text changes, close requests, an open-file request and a
+// quit request that is refused once. Each handler writes what it saw into the title of window 1, so the call log
+// shows it; the exit code is the number of events the handlers saw. tests/unit/backend_host/test_cpp_native_ui.cpp
+// runs it on the VM and compiled, with the handles 1 (window), 2 (its text view), 3 (the settings window), 4 (check
+// box), 5 (pop-up), 6 (list), 7 (button), 8 (form), 9 (menu) and 10 (toolbar).
+import /std/text/*
+import /std/ui/events/*
+import /std/ui/native/*
+
+[struct]
+Report() {
+  [Window] window{Window{}}
+  [i32 mut] events{0i32}
+
+  [mut effects(heap_alloc)]
+  note([String] line) {
+    this.events = this.events + 1i32
+    this.window.setTitle(line)
+  }
+}
+
+[return<String> effects(heap_alloc)]
+described([string] what, [i32] value) {
+  [String mut] line{stringFrom(what)}
+  line.append(" ")
+  line.appendI64(convert<i64>(value))
+  return(line)
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [App] app{start_app("Handlers")}
+  [Window] window{app.window("Handlers", 400i32, 300i32)}
+  [TextView] text{app.textView()}
+  window.setContent(text)
+  [Window] settings{app.window("Settings", 300i32, 200i32)}
+  [CheckBox] wrap{app.checkBox("Wrap", false)}
+  [Popup] size{app.popup()}
+  size.addItem("Small")
+  size.addItem("Large")
+  size.addItem("Huge")
+  [ItemList] files{app.itemList()}
+  files.addItem(stringFrom("a.txt"))
+  files.addItem(stringFrom("b.txt"))
+  [Button] go{app.button("Go")}
+  [Form] form{app.form()}
+  form.control(wrap.widget())
+  form.row("Size", size.widget())
+  form.control(files.widget())
+  form.control(go.widget())
+  settings.setContentWidget(form.widget())
+  [Menu] file{app.menu("File")}
+  [Toolbar] bar{app.toolbar()}
+
+  [AppHandlers<Report> mut] handlers{AppHandlers<Report>{[state] Report{[window] window}}}
+  // One command in the menu and the toolbar: both call this closure, so they share `saves`.
+  [mut] save{[mut saves{0i32}]([Reference<Report>] report, [PointerEvent] event) {
+    saves = saves + 1i32
+    report.note(described("save", saves))
+  }}
+  [Command] saveCommand{handlers.command(save)}
+  file.commandItem("Save", "cmd+s", saveCommand)
+  file.setCommandChecked(saveCommand, true)
+  file.addToBar()
+  bar.commandButton("Save", "square.and.arrow.down", saveCommand)
+  window.setToolbar(bar)
+  handlers.onClick(go, []([Reference<Report>] report, [PointerEvent] event) {
+    report.note(described("go", event.clickCount))
+  })
+  handlers.onCheckBoxChange(wrap, []([Reference<Report>] report, [ChangeEvent] event) {
+    report.note(described("wrap", if(event.checked, then() { 1i32 }, else() { 0i32 })))
+  })
+  handlers.onPopupChange(size, []([Reference<Report>] report, [ChangeEvent] event) {
+    report.note(described("size", event.index))
+  })
+  handlers.onListChange(files, []([Reference<Report>] report, [ChangeEvent] event) {
+    report.note(described("file", event.index))
+  })
+  handlers.onTextChange([]([Reference<Report>] report, [Window] changed) {
+    report.note(described("typed in", convert<i32>(changed.handle)))
+  })
+  handlers.onOpenFile([]([Reference<Report>] report, [String] path) {
+    report.note(path)
+  })
+  // The first request to close a window keeps it open; the next one closes it.
+  [mut] close{[mut asked{0i32}]([Reference<Report>] report, [Window] closing) {
+    asked = asked + 1i32
+    report.note(described("close", asked))
+    if(asked > 1i32) {
+      closing.close()
+    }
+  }}
+  handlers.onWindowClose(close)
+  // The first request to quit is refused.
+  [mut] quit{[mut requests{0i32}]([Reference<Report>] report) {
+    requests = requests + 1i32
+    report.note(described("quit", requests))
+    return(requests > 1i32)
+  }}
+  handlers.onQuit(quit)
+  window.show()
+  settings.show()
+  app.run(handlers)
+  return(handlers.state.events)
+}

@@ -102,11 +102,10 @@ of sync with them.
 | --- | --- | --- | --- |
 | TODO-5734 | Web apps build in seconds, not minutes, on optexe | ready | ir-real-calls |
 | TODO-5727 | Every struct copy site tells a place from a temporary by resolution | deferred | lifecycle-copy-sources |
-| TODO-5725 | Native pointer and key events for control handlers | blocked | native-ui-events |
+| TODO-5725 | Native pointer and key events for control handlers | ready | native-ui-events |
 | TODO-5707 | `Function` types accept `mut` parameters | deferred | closures-mut-params |
 | TODO-5708 | Type aliases | deferred | type-aliases |
-| TODO-5709 | Native controls take handler closures and `App.run` | ready | native-ui-handlers |
-| TODO-5710 | PrimeScroll dispatches through handlers | blocked | native-ui-handlers |
+| TODO-5710 | PrimeScroll dispatches through handlers | ready | native-ui-handlers |
 | TODO-5711 | Retire the `/std/ui` layout and command-list prototype | ready | ui-prototype-retire |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
 | TODO-5656 | Thread-safe `SharedString` (atomic count, per-thread string heaps) | deferred | string-concurrency |
@@ -131,6 +130,9 @@ of sync with them.
 | TODO-5731 | A `string` field of an element whose closure captures reads without a fault | ready | closures |
 | TODO-5732 | A method call on a reference parameter resolves in a generic struct's method | ready | generic-methods |
 | TODO-5733 | An `i32` field of a later element of a vector of handler structs reads without a fault | ready | closures |
+| TODO-5735 | Same-arity overloads of struct methods resolve by argument type | ready | method-overloads |
+| TODO-5736 | `pick` and sum parameters in a generic struct's method lower | ready | generic-methods |
+| TODO-5737 | Implicit template arguments infer through a generic struct parameter | ready | template-inference |
 | TODO-5682 | Native: a mutating vector-field method inside an arithmetic expression returns the right value | ready | native-backend |
 | TODO-5676 | Lambdas can state their return type | deferred | closures-return-types |
 | TODO-5677 | A `Function` whose closure holds a same-typed `Function` copies and destroys | deferred | closures-lifecycle |
@@ -162,17 +164,19 @@ of sync with them.
 - TODO-5510 (control-returns): `return` returns from unit-variant pick arms correctly
 - TODO-5524 (result-error-structs): int-backed error structs round-trip through stdlib Result sums
 - TODO-5728 (collections-access): `slice` and `sliceMut` on a vector field of a struct resolve
-- TODO-5709 (native-ui-handlers): native controls take handler closures and `App.run`
+- TODO-5710 (native-ui-handlers): PrimeScroll dispatches through handlers
+- TODO-5725 (native-ui-events): native pointer and key events for control handlers
 
 ### Immediate Next 10
 
-1. TODO-5709
+1. TODO-5710
 2. TODO-5603
 3. TODO-5536
 4. TODO-5535
 5. TODO-5510
 6. TODO-5524
 7. TODO-5728
+8. TODO-5725
 
 ### Priority Lanes
 
@@ -189,8 +193,8 @@ of sync with them.
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719; collection fields found by closures and the todo example: TODO-5681, TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
 - Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5734, TODO-5718
-- Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732
-- Native UI handlers (docs/WebAppsPlan.md): TODO-5709, TODO-5710, TODO-5711, TODO-5725
+- Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732, TODO-5735, TODO-5736, TODO-5737
+- Native UI handlers (docs/WebAppsPlan.md): TODO-5710, TODO-5711, TODO-5725
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe
 
 ### Execution Queue
@@ -226,8 +230,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 
 - [ ] TODO-5725: Native pointer and key events for control handlers
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5709
+  - status: ready
   - created_at: 2026-11-07
   - phase: Native UI handlers (docs/WebAppsPlan.md)
   - parallel_track: native-ui-events
@@ -262,21 +265,9 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - full release gate green
   - stop_rule: alias declarations and their resolution only.
 
-- [ ] TODO-5709: Native controls take handler closures and `App.run`
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-07
-  - phase: Native UI handlers (docs/WebAppsPlan.md)
-  - parallel_track: native-ui-handlers
-  - scope: Native UI events reach code as integer command ids and widget handles compared in an if-chain (examples/apps/text_editor/main.prime, the `pick(app.waitEvent())` loop). Give the `/std/ui/native` controls handler closures over the events ABI version 0 already reports (docs/WebAppsPlan.md, principle 7): `Button.onClick`, `Menu.item(title, shortcut, handler)` and toolbar items (`PointerEvent`), `CheckBox.onChange`, `Popup.onChange`, `ItemList.onChange` (`ChangeEvent`), and window close and text change. Each handler is a `Function<void, Reference<State>, Event>`, so a closure may keep its own `mut` state while shared state comes in as the parameter. `App.run(state)` allocates command ids, keeps the handler table and dispatches until quit; app code never sees an id. `waitEvent` stays. Document in docs/NativeUiPlan.md and docs/spec/stdlib-reference.md.
-  - acceptance:
-    - examples/native_ui/hello_window.prime has a handler form with a counting `[mut]` closure on a button; it runs on the VM against the headless backend and as a compiled program with the same call log
-    - full release gate green
-  - stop_rule: handlers over the existing C ABI events; pointer and key events are TODO-5725.
 - [ ] TODO-5710: PrimeScroll dispatches through handlers
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5709
+  - status: ready
   - created_at: 2026-11-07
   - phase: Native UI handlers (docs/WebAppsPlan.md)
   - parallel_track: native-ui-handlers
@@ -286,6 +277,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - the dispatch loop in main.prime is gone or reduced to what has no handler form
     - full release gate green
   - stop_rule: the editor's dispatch only; no behavior change.
+  - notes: the handlers are `AppHandlers<State>` (stdlib/std/ui/native/handlers.prime, docs/NativeUiPlan.md section 5). `run` drops a command id that `AppHandlers.command` did not hand out, so the editor's toolbar segments (`Toolbar.segments`), recent-file items (`Menu.addRecentFiles`) and the script runner's `endCommand`, which take consecutive raw ids, have no handler form yet; give them one (for example a range of commands from one registration) or keep them as they are, and say which in the result. A program uses either `run` or its own `waitEvent` loop, not both.
 
 - [ ] TODO-5711: Retire the `/std/ui` layout and command-list prototype
   - owner: ai
@@ -495,6 +487,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - the repro runs on the VM and optexe and `answerFragment` calls `response.clear()`
     - full release gate green
   - stop_rule: method resolution on reference parameters in generic struct methods; no new methods.
+  - notes: TODO-5709 hit the same name on a field: `this.closes.clear()` on a `vector<NativeWindowHandler<State>>` field in a method of `AppHandlers<State>` is `unknown call target: clear`, so the single-handler fields keep every registration and use the last.
 
 - [ ] TODO-5733: An `i32` field of a later element of a vector of handler structs reads without a fault
   - owner: ai
@@ -507,6 +500,43 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - `PointerHandler` and `KeyHandler` carry their kind and web_events passes on the VM and optexe; a reduced program reading an `i32` field beside a `Function` field of the second element runs on the VM and optexe
     - full release gate green
   - stop_rule: the faulting element field read; no `/std/web` API change.
+
+- [ ] TODO-5735: Same-arity overloads of struct methods resolve by argument type
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-08
+  - phase: Language surface for handlers (docs/WebAppsPlan.md; found by TODO-5709)
+  - parallel_track: method-overloads
+  - scope: docs/spec/language-core.md (Helper overloading) lets struct methods overload by parameter type, but a same-arity family declared in a struct body does not resolve. `evaluateRequirementOverloadViability` (src/semantics/TemplateMonomorphCoreUtilities.cpp) pairs the method's parameters, which have no implicit `this` yet, with the call's arguments, which start with the receiver, so `box.add("a", 3i32)` beside `add([string], [Tag])` is `no viable overload`; the struct-method path of `resolveMethodCallTemplateTarget` (src/semantics/TemplateMonomorphMethodTargets.cpp) passes no locals to `selectHelperOverloadPath`, so a struct-typed local is `unknown` and both candidates stay viable (`ambiguous`); a call argument is `unknown` too (as in TODO-5716), so `Menu.item([string], [string], [Command])` beside `item(..., [i32])` breaks the editor's `item(title, shortcut, command_save())`; and in a generic struct, `holder.on(tag, lambda)` with `on([Tag], [Function<...>])` beside `on([Other], [Function<...>])` is `unknown method: /Holder__t.../on`, and the lambda does not convert to the `Function` parameter. Skipping one argument when `expr.isMethodCall` and the call has one argument more than the method has parameters, and passing `&locals` at that `selectHelperOverloadPath`, resolved the non-generic local case in a trial. `/std/ui/native` uses separate names until then: `Menu.commandItem`, `Toolbar.commandButton`, `Menu.setCommandChecked`, `AppHandlers.onCheckBoxChange`, `onPopupChange`, `onListChange`.
+  - acceptance:
+    - same-arity struct method overloads resolve by a literal, a local, a parameter and a call with a declared return type, in a struct and in a generic struct, including a `Function` parameter given a lambda, on the VM and optexe; a no-viable and an ambiguous negative test
+    - `Menu.item`, `Toolbar.button` and `AppHandlers.onChange` take a `Command` or a control as overloads, and the editor builds unchanged
+    - full release gate green
+  - stop_rule: overload selection of struct methods; no change to free-function overloads or to the specificity rule.
+
+- [ ] TODO-5736: `pick` and sum parameters in a generic struct's method lower
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-08
+  - phase: Language surface for handlers (docs/WebAppsPlan.md; found by TODO-5709)
+  - parallel_track: generic-methods
+  - scope: In a method of a generic struct, a `pick` stops VM lowering with `block arguments require a definition target: /Holder__t.../pick`, and passing a value of a namespaced sum type to a parameter declared `[AppEvent] event` (in `/std/ui/native`'s `AppHandlers<State>`) stops it with `struct parameter type mismatch: expected AppEvent, got /std/ui/native/AppEvent`. Repro: `[sum] Event { none [i32] number }`, a `Holder<S>` with `[S mut] state` and `[return<i32>] value([Event] event) { [i32 mut] total{0i32} pick(event) { number(n) { total = n } none { total = 1i32 } } return(total) }`, called on a `Holder<i32>` from `main` (the same `pick` in a free function works). `AppHandlers.deliverNext` (stdlib/std/ui/native/handlers.prime) reads the C ABI event kinds itself instead of picking `app.waitEvent()`.
+  - acceptance:
+    - the repro and a namespaced sum parameter run on the VM and optexe; `deliverNext` picks `app.waitEvent()`
+    - full release gate green
+  - stop_rule: `pick` and sum-typed parameters in methods of generic structs.
+
+- [ ] TODO-5737: Implicit template arguments infer through a generic struct parameter
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-08
+  - phase: Language surface for handlers (docs/WebAppsPlan.md; found by TODO-5709)
+  - parallel_track: template-inference
+  - scope: `size_of_holder<S>([Holder<S>] holder)` called as `size_of_holder(holder)` with a `Holder<i32>` local fails with `unable to infer implicit template arguments for /size_of_holder`, while a `[T]` parameter infers. `App.run` (stdlib/std/ui/native/native.prime) is therefore `run<Handlers>([Handlers mut] handlers)` and accepts any value with a `run()` method. Infer `S` from the argument's instance type.
+  - acceptance:
+    - a free function and a struct method with a `[Holder<S>]` parameter infer `S` on the VM and optexe; a negative test for an argument that is not a `Holder`; `App.run` takes `[AppHandlers<State> mut]`
+    - full release gate green
+  - stop_rule: inference through one generic struct parameter; no change to explicit template arguments.
 
 - [ ] TODO-5682: Native: a mutating vector-field method inside an arithmetic expression returns the right value
   - owner: ai

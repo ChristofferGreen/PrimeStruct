@@ -1118,6 +1118,53 @@ Why this is good:
 A row of buttons that each act on one record, such as the Done button of each todo above, stays a form that posts to
 a route with the record's id: a control is one button with one handler.
 
+### A Native Button That Takes Its Click Handler
+
+A native window's controls take their handlers the same way: register them on an `AppHandlers<State>`
+(`/std/ui/native`) and let `app.run(handlers)` dispatch the events. `examples/native_ui/hello_button.prime` is the
+whole program; this is its core.
+
+```prime
+[struct]
+Greeter() {
+  [Button] button{Button{}}
+
+  [effects(heap_alloc)]
+  say([String] line) {
+    this.button.setTitle(line)
+  }
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [App] app{start_app("Hello Button")}
+  [Window] window{app.window("Hello", 320i32, 120i32)}
+  [Button] hello{app.button("Say hello")}
+  window.setContentWidget(hello.widget())
+  [AppHandlers<Greeter> mut] handlers{AppHandlers<Greeter>{[state] Greeter{[button] hello}}}
+  // `said` belongs to this closure alone and lasts from click to click, because the closure is made once, here.
+  [mut] sayHello{[mut said{0i32}]([Reference<Greeter>] greeter, [PointerEvent] event) {
+    said = said + 1i32
+    greeter.say(greeting(said))
+  }}
+  handlers.onClick(hello, sayHello)
+  window.show()
+  // Until the window closes or the app quits.
+  app.run(handlers)
+  return(0i32)
+}
+```
+
+Why this is good:
+- There is no event loop and no comparison of widget handles: the button and its reaction are joined once, at
+  setup, and `run` calls the closure for each click.
+- `sayHello` has the type of the web button's handler, `Function<void, Reference<Greeter>, PointerEvent>`, so the
+  same closure could be given to `WebApp.button`.
+- The state is a parameter, and the window closes and `run` returns without a handler for it: only the reaction the
+  app cares about is written.
+- A menu item and a toolbar button that do the same thing share one `Command` (`handlers.command(handler)`, then
+  `menu.commandItem(...)` and `toolbar.commandButton(...)`), so they call one closure with one set of captures.
+
 ## Safe Extents And Cursor Examples
 
 These examples cover the safe-array-extent and cursor surfaces from

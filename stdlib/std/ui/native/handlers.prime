@@ -1,0 +1,289 @@
+// Native controls that take handler closures (docs/spec/stdlib-reference.md, Native UI; docs/WebAppsPlan.md,
+// principle 7). An `AppHandlers<State>` holds the app's state and a table of handlers, each registered once, at setup:
+// a click handler for a button, a change handler for a check box, pop-up or list, and the commands of menu items and
+// toolbar buttons. `app.run(handlers)` then waits on the version-0 events and calls the handler of each, until the
+// app quits. The command ids and widget handles that `App.waitEvent` reports stay inside this table.
+import /std/collections/*
+import /std/text/*
+import /std/ui/events/*
+
+namespace std {
+namespace ui {
+namespace native {
+
+  // A command that `AppHandlers.command` registered with its handler: a menu item (`Menu.commandItem(title, shortcut,
+  // command)`) or a toolbar button (`Toolbar.commandButton(title, symbol, command)`) that the user chooses calls it.
+  // One command may sit in a menu and a toolbar at once; both call the same closure. The id is the one the C ABI
+  // carries.
+  [public struct]
+  Command() {
+    [public i32] id{0i32}
+  }
+
+  // The handler of a command or of a button's click. Command `first_command_id() + i` is `commands[i]`; the
+  // button of `clicks[i]` is `clickWidgets[i]`: reading a `u64` or `i32` field of an element after the first faults
+  // on the VM (TODO-5733), so the keys are a vector of their own.
+  [public struct]
+  NativeClickHandler<State>() {
+    [public Function<void, Reference<State>, PointerEvent> mut] handler
+  }
+
+  // The handler of a check box's, pop-up's or list's change; its widget and kind lie in `AppHandlers.changeWidgets`
+  // and `changeKinds` at the same index.
+  [public struct]
+  NativeChangeHandler<State>() {
+    [public Function<void, Reference<State>, ChangeEvent> mut] handler
+  }
+
+  // The handler of a request to close a window, or of the user's change of a window's text.
+  [public struct]
+  NativeWindowHandler<State>() {
+    [public Function<void, Reference<State>, Window> mut] handler
+  }
+
+  // The handler of the system's request to open a file (`AppEvent.openFile`): it gets the file's path.
+  [public struct]
+  NativeFileHandler<State>() {
+    [public Function<void, Reference<State>, /std/text/String> mut] handler
+  }
+
+  // The handler of a request to quit: true lets the app quit, false keeps it running.
+  [public struct]
+  NativeQuitHandler<State>() {
+    [public Function<bool, Reference<State>> mut] handler
+  }
+
+  // The state of a native app and the handlers of its controls. Build it with the state (`AppHandlers<Counter>{[state]
+  // Counter{}}`), register the handlers while the windows are set up, and pass it to `app.run(handlers)`.
+  [public struct]
+  AppHandlers<State>() {
+    // The state that every handler reads and changes; it comes to each handler as its first argument.
+    [public State mut] state
+    [public vector<NativeClickHandler<State>> mut] commands{vector<NativeClickHandler<State>>()}
+    [public vector<NativeClickHandler<State>> mut] clicks{vector<NativeClickHandler<State>>()}
+    [public vector<u64> mut] clickWidgets{vector<u64>()}
+    [public vector<NativeChangeHandler<State>> mut] changes{vector<NativeChangeHandler<State>>()}
+    [public vector<u64> mut] changeWidgets{vector<u64>()}
+    // 1 for a check box, 2 for a pop-up, 3 for a list: how the change event of each of `changes` is read
+    // (`change_event`).
+    [public vector<i32> mut] changeKinds{vector<i32>()}
+    // The last handler registered of each is the one called (`clear` on these fields does not resolve, TODO-5732).
+    [public vector<NativeWindowHandler<State>> mut] closes{vector<NativeWindowHandler<State>>()}
+    [public vector<NativeWindowHandler<State>> mut] edits{vector<NativeWindowHandler<State>>()}
+    [public vector<NativeFileHandler<State>> mut] opens{vector<NativeFileHandler<State>>()}
+    [public vector<NativeQuitHandler<State>> mut] quits{vector<NativeQuitHandler<State>>()}
+
+    // Registers `handler` as a command and returns it, to add to menus and toolbars. Choosing the command calls the
+    // handler with a click of the primary button without a position: the C ABI reports no pointer details. The ids
+    // count up from `first_command_id()` (1000000), above the ones programs pick by hand for `waitEvent`.
+    [mut effects(heap_alloc) return<Command>]
+    command([Function<void, Reference<State>, PointerEvent> move] handler) {
+      [i32] id{first_command_id() + this.commands.count()}
+      this.commands.push(NativeClickHandler<State>{[handler] handler})
+      return(Command{[id] id})
+    }
+
+    // Registers the handler of a click on `button`; the event is a primary-button click without a position.
+    [mut effects(heap_alloc)]
+    onClick([Button] button, [Function<void, Reference<State>, PointerEvent> move] handler) {
+      this.clicks.push(NativeClickHandler<State>{[handler] handler})
+      this.clickWidgets.push(button.handle)
+    }
+
+    // The change handlers have a name per control rather than one `onChange` overloaded on the control: same-arity
+    // overloads of a generic struct's methods do not resolve yet (TODO-5735).
+
+    // Registers the handler of the user's click on `box`; the event's `checked` is the box's new state.
+    [mut effects(heap_alloc)]
+    onCheckBoxChange([CheckBox] box, [Function<void, Reference<State>, ChangeEvent> move] handler) {
+      this.addChange(box.handle, 1i32, handler)
+    }
+
+    // Registers the handler of the user's choice in `popup`; the event's `index` is the chosen item.
+    [mut effects(heap_alloc)]
+    onPopupChange([Popup] popup, [Function<void, Reference<State>, ChangeEvent> move] handler) {
+      this.addChange(popup.handle, 2i32, handler)
+    }
+
+    // Registers the handler of the user's change of the selection of `list`; the event's `index` is the first
+    // selected row, or -1 when none is.
+    [mut effects(heap_alloc)]
+    onListChange([ItemList] list, [Function<void, Reference<State>, ChangeEvent> move] handler) {
+      this.addChange(list.handle, 3i32, handler)
+    }
+
+    [mut effects(heap_alloc)]
+    addChange([u64] widget, [i32] kind, [Function<void, Reference<State>, ChangeEvent> move] handler) {
+      this.changes.push(NativeChangeHandler<State>{[handler] handler})
+      this.changeWidgets.push(widget)
+      this.changeKinds.push(kind)
+    }
+
+    // Registers the handler of a request to close any of the app's windows (its close button, or a standard Close
+    // item); it gets the window and closes it or keeps it open. Without one, the window closes. A later handler
+    // replaces an earlier one.
+    [mut effects(heap_alloc)]
+    onWindowClose([Function<void, Reference<State>, Window> move] handler) {
+      this.closes.push(NativeWindowHandler<State>{[handler] handler})
+    }
+
+    // Registers the handler of the user's change of the text in any window's text view; it gets the window.
+    [mut effects(heap_alloc)]
+    onTextChange([Function<void, Reference<State>, Window> move] handler) {
+      this.edits.push(NativeWindowHandler<State>{[handler] handler})
+    }
+
+    // Registers the handler of the system's request to open a file (a file dropped on the app's icon, or opened
+    // with it); it gets the path.
+    [mut effects(heap_alloc)]
+    onOpenFile([Function<void, Reference<State>, /std/text/String> move] handler) {
+      this.opens.push(NativeFileHandler<State>{[handler] handler})
+    }
+
+    // Registers the handler of a request to quit (the Quit item, or the system's): `run` returns when it gives
+    // true. Without one, a request to quit ends `run`.
+    [mut effects(heap_alloc)]
+    onQuit([Function<bool, Reference<State>> move] handler) {
+      this.quits.push(NativeQuitHandler<State>{[handler] handler})
+    }
+
+    // Waits on the app's events and calls their handlers until the app quits: a request to quit that no `onQuit`
+    // handler refuses, or a close request after which no window is open. Events without a handler are dropped,
+    // except a close request, which closes its window.
+    [mut effects(heap_alloc)]
+    run() {
+      [bool mut] running{true}
+      while(running) {
+        running = this.deliverNext()
+      }
+    }
+
+    // Waits for the next event and calls its handler; false when the app should stop. It reads the event kinds of
+    // the C ABI as `App.waitEvent` does (a kind it does not know is a request to quit), without the `AppEvent` sum:
+    // a `pick` in a method of a generic struct does not lower yet (TODO-5736).
+    [mut effects(heap_alloc) return<bool>]
+    deliverNext() {
+      [i32] kind{ps_ui_wait_event()}
+      if(kind == 1i32) {
+        this.dispatchCommand(ps_ui_event_command())
+        return(true)
+      }
+      if(kind == 2i32) {
+        return(this.dispatchClose(Window{[handle] ps_ui_event_window()}))
+      }
+      if(kind == 3i32) {
+        this.dispatchTextChange(Window{[handle] ps_ui_event_window()})
+        return(true)
+      }
+      if(kind == 5i32) {
+        this.dispatchControl(ps_ui_event_widget())
+        return(true)
+      }
+      if(kind == 6i32) {
+        this.dispatchOpenFile()
+        return(true)
+      }
+      return(this.dispatchQuit())
+    }
+
+    // Calls the handler of command `id`; an id that `command` did not hand out has none.
+    [mut effects(heap_alloc)]
+    dispatchCommand([i32] id) {
+      [i32] found{id - first_command_id()}
+      if(found >= 0i32 && found < this.commands.count()) {
+        [Reference<State>] state{location(this.state)}
+        [PointerEvent] click{PointerEvent{[button] PointerButton.primary, [clickCount] 1i32}}
+        this.commands[found].handler(state, click)
+      }
+    }
+
+    // Calls the close handler, or closes `window`; false when no window is open afterwards.
+    [mut effects(heap_alloc) return<bool>]
+    dispatchClose([Window] window) {
+      if(this.closes.count() > 0i32) {
+        [Reference<State>] state{location(this.state)}
+        this.closes[this.closes.count() - 1i32].handler(state, window)
+      } else {
+        window.close()
+      }
+      return(ps_ui_window_count() > 0i32)
+    }
+
+    [mut effects(heap_alloc)]
+    dispatchTextChange([Window] window) {
+      if(this.edits.count() > 0i32) {
+        [Reference<State>] state{location(this.state)}
+        this.edits[this.edits.count() - 1i32].handler(state, window)
+      }
+    }
+
+    [mut effects(heap_alloc)]
+    dispatchOpenFile() {
+      if(this.opens.count() > 0i32) {
+        [Reference<State>] state{location(this.state)}
+        [/std/text/String] path{ps_ui_event_text()}
+        this.opens[this.opens.count() - 1i32].handler(state, path)
+      }
+    }
+
+    // False when the app should quit: always without a quit handler, otherwise when the handler says so.
+    [mut effects(heap_alloc) return<bool>]
+    dispatchQuit() {
+      if(this.quits.count() > 0i32) {
+        [Reference<State>] state{location(this.state)}
+        [bool] quitting{this.quits[this.quits.count() - 1i32].handler(state)}
+        return(!quitting)
+      }
+      return(false)
+    }
+
+    // Calls the click or change handler of the control `widget`.
+    [mut effects(heap_alloc)]
+    dispatchControl([u64] widget) {
+      [Reference<State>] state{location(this.state)}
+      for([i32 mut] index{0i32}; index < this.clickWidgets.count(); ++index) {
+        [u64] button{this.clickWidgets[index]}
+        if(button == widget) {
+          [PointerEvent] click{PointerEvent{[button] PointerButton.primary, [clickCount] 1i32}}
+          this.clicks[index].handler(state, click)
+          return()
+        }
+      }
+      for([i32 mut] index{0i32}; index < this.changeWidgets.count(); ++index) {
+        [u64] control{this.changeWidgets[index]}
+        if(control == widget) {
+          [ChangeEvent] change{change_event(control, this.changeKinds[index])}
+          this.changes[index].handler(state, change)
+          return()
+        }
+      }
+    }
+  }
+
+  // The id `AppHandlers.command` gives its first command; the next one gets the next id, and so on.
+  [public return<i32>]
+  first_command_id() {
+    return(1000000i32)
+  }
+
+  // The change event of `widget`, read from it now: a check box (`kind` 1), a pop-up (2) or a list (3).
+  [return<ChangeEvent>]
+  change_event([u64] widget, [i32] kind) {
+    if(kind == 1i32) {
+      return(ChangeEvent{[checked] ps_ui_checkbox_checked(widget)})
+    }
+    if(kind == 2i32) {
+      return(ChangeEvent{[index] ps_ui_popup_selected(widget)})
+    }
+    [i32] rows{ps_ui_list_item_count(widget)}
+    for([i32 mut] row{0i32}; row < rows; ++row) {
+      if(ps_ui_list_is_selected(widget, row)) {
+        return(ChangeEvent{[index] row})
+      }
+    }
+    return(ChangeEvent{})
+  }
+
+}
+}
+}

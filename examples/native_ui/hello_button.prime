@@ -1,45 +1,52 @@
 import /std/text/*
+import /std/ui/events/*
 import /std/ui/native/*
 
-// A window with one button; clicking it prints "Hello, world!".
+// A window with one button that greets on every click: a native control that takes its click handler directly.
 //
 //   primestruct_app examples/native_ui/hello_button.prime
+//
+// The handler has the same type as the web button's in examples/apps/hello_button/main.prime, so the same closure
+// could be attached to either.
 
-[return<int> effects(heap_alloc, io_out)]
+// The app's state: the button, whose title shows the latest greeting.
+[struct]
+Greeter() {
+  [Button] button{Button{}}
+
+  [effects(heap_alloc)]
+  say([String] line) {
+    this.button.setTitle(line)
+  }
+}
+
+// The greeting of click number `count`.
+[return<String> effects(heap_alloc)]
+greeting([i32] count) {
+  if(count == 1i32) {
+    return(stringFrom("Hello!"))
+  }
+  [String mut] line{stringFrom("Hello again! That makes ")}
+  line.appendI64(convert<i64>(count))
+  line.append(".")
+  return(line)
+}
+
+[return<int> effects(heap_alloc)]
 main() {
   [App] app{start_app("Hello Button")}
   [Window] window{app.window("Hello", 320i32, 120i32)}
-  [Button] hello{app.button("Say Hello")}
+  [Button] hello{app.button("Say hello")}
   window.setContentWidget(hello.widget())
+  [AppHandlers<Greeter> mut] handlers{AppHandlers<Greeter>{[state] Greeter{[button] hello}}}
+  // `said` belongs to this closure alone and lasts from click to click, because the closure is made once, here.
+  [mut] sayHello{[mut said{0i32}]([Reference<Greeter>] greeter, [PointerEvent] event) {
+    said = said + 1i32
+    greeter.say(greeting(said))
+  }}
+  handlers.onClick(hello, sayHello)
   window.show()
-  [mut] running{true}
-  while(running) {
-    pick(app.waitEvent()) {
-      controlChanged(widget) {
-        [Widget] clicked{widget}
-        if(clicked.handle == hello.handle) {
-          print_line("Hello, world!"utf8)
-        }
-      }
-      windowCloseRequested(w) {
-        [Window] target{w}
-        target.close()
-        running = false
-      }
-      quitRequested {
-        running = false
-      }
-      command(id) {
-        running = running
-      }
-      textChanged(w) {
-        [Window] target{w}
-        target.setEdited(true)
-      }
-      openFile(request) {
-        running = running
-      }
-    }
-  }
+  // Until the window closes or the app quits.
+  app.run(handlers)
   return(0i32)
 }

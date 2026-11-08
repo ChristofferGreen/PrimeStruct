@@ -2,7 +2,7 @@
 //
 //   native_ui_headless_runner program.prime [--command N] [--type TEXT]
 //       [--close-window HANDLE] [--quit] [--open-answer PATH]
-//       [--save-answer PATH] [--alert BUTTON] [--log]
+//       [--save-answer PATH] [--alert BUTTON] [--click HANDLE] [--log]
 //
 // Scripted user actions are replayed in the order given. The program's exit
 // code becomes the runner's; --log prints every recorded ABI call afterwards.
@@ -37,6 +37,8 @@ int main(int argc, char **argv) {
       headless::pushTypeText(0, argv[++i]);
     } else if (arg == "--close-window" && hasValue) {
       headless::pushCloseWindow(static_cast<uint64_t>(std::strtoull(argv[++i], nullptr, 10)));
+    } else if (arg == "--click" && hasValue) {
+      headless::pushClickButton(static_cast<uint64_t>(std::strtoull(argv[++i], nullptr, 10)));
     } else if (arg == "--quit") {
       headless::pushQuit();
     } else if (arg == "--open-answer" && hasValue) {
