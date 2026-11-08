@@ -148,8 +148,17 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
     return anyDefinitionFamilyPathStartsWith(pathText + "<") ||
            anyDefinitionFamilyPathStartsWith(pathText + "__t");
   };
-  const bool isEqualCandidate = candidatePath == "/equal" || candidatePath == "equal";
-  if (isEqualCandidate || candidatePath == "/not_equal" || candidatePath == "not_equal") {
+  // `==`/`!=` on a struct with a generated `Equal`/`NotEqual` call it. Inside a struct method (and so in a lambda body,
+  // the `call` method of its closure struct) the builtin resolves to the scoped `/Owner/equal`, which names no
+  // definition: it is still the builtin comparison.
+  std::string comparisonName;
+  const bool isBuiltinComparisonCall =
+      !expr.isMethodCall && getBuiltinComparisonName(expr, comparisonName) &&
+      (comparisonName == "equal" || comparisonName == "not_equal") && !pathExists(candidatePath);
+  const bool isEqualCandidate = candidatePath == "/equal" || candidatePath == "equal" ||
+                                (isBuiltinComparisonCall && comparisonName == "equal");
+  if (isEqualCandidate || candidatePath == "/not_equal" || candidatePath == "not_equal" ||
+      isBuiltinComparisonCall) {
     std::string reflectedStructEqualityHelperPath;
     if (resolveReflectedStructEqualityHelperPath(params,
                                                  locals,

@@ -28,6 +28,7 @@ Report() {
   }
 }
 
+// The button's number in a log line: -1 for none, then 0, 1 and 2.
 [return<i32>]
 button_code([PointerButton] button) {
   if(button == PointerButton.primary) {
@@ -91,7 +92,7 @@ main() {
   [AppHandlers<Report> mut] handlers{AppHandlers<Report>{[state] Report{[window] window}}}
   handlers.onMouseOver(go.widget(), []([Reference<Report>] report, [PointerEvent] event) {
     report.note(pointer_line("over", event))
-    if(event.hasPosition && button_code(event.button) == -1i32 && event.clickCount == 0i32) {
+    if(event.hasPosition && event.button == PointerButton.none && event.clickCount == 0i32) {
       report.saw(1i32)
     }
   })
@@ -101,13 +102,13 @@ main() {
   })
   handlers.onMouseDown(go.widget(), []([Reference<Report>] report, [PointerEvent] event) {
     report.note(pointer_line("down", event))
-    if(button_code(event.button) == 0i32 && event.x == 10i32 && event.y == 5i32 && event.clickCount == 1i32) {
+    if(event.button == PointerButton.primary && event.x == 10i32 && event.y == 5i32 && event.clickCount == 1i32) {
       report.saw(2i32)
     }
   })
   handlers.onMouseUp(go.widget(), []([Reference<Report>] report, [PointerEvent] event) {
     report.note(pointer_line("up", event))
-    if(button_code(event.button) == 0i32) {
+    if(event.button == PointerButton.primary) {
       report.saw(4i32)
     }
   })
@@ -122,7 +123,7 @@ main() {
   })
   handlers.onKeyDown(text.widget(), []([Reference<Report>] report, [KeyEvent] event) {
     report.note(key_line("key", event))
-    if(event.key.code == Key.escape.code) {
+    if(event.key == Key.escape) {
       report.saw(16i32)
     }
     if(event.key.isCharacter() && !event.modifiers.meta()) {
@@ -132,7 +133,7 @@ main() {
   })
   handlers.onKeyUp(text.widget(), []([Reference<Report>] report, [KeyEvent] event) {
     report.note(key_line("key up", event))
-    if(event.key.code == Key.escape.code) {
+    if(event.key == Key.escape) {
       report.saw(32i32)
     }
   })

@@ -595,4 +595,128 @@ main() {
   CHECK_FALSE(returnExpr.boolValue);
 }
 
+TEST_CASE("reflected Equal and NotEqual operators resolve in struct methods and lambda bodies") {
+  // A struct method's `==` resolves to the scoped `/Holder/equal`, and a lambda body is the `call` method of its
+  // closure struct: both still reach the generated helpers.
+  const std::string source = R"(
+[struct generate(Equal, NotEqual)]
+Pair() {
+  [i32] x{1i32}
+}
+
+[struct]
+Holder() {
+  [Pair] kept{Pair{}}
+
+  [return<bool>]
+  same([Pair] other) {
+    return(equal(this.kept, other))
+  }
+}
+
+[return<bool> effects(heap_alloc)]
+main() {
+  [Holder] holder{Holder{}}
+  [Function<bool, Pair>] differs{[]([Pair] other) {
+    [Pair] mine{Pair{[x] 2i32}}
+    return(not_equal(mine, other))
+  }}
+  return(and(holder.same(Pair{}), differs(Pair{})))
+}
+)";
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE_MESSAGE(
+      semantics.validate(
+          program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram),
+      error);
+  CHECK(error.empty());
+
+  std::string methodTarget;
+  std::string lambdaTarget;
+  for (const auto *entry : primec::semanticProgramDirectCallTargetView(semanticProgram)) {
+    if (entry == nullptr) {
+      continue;
+    }
+    if (entry->scopePath == "/Holder/same" && entry->callName == "equal") {
+      methodTarget =
+          std::string(primec::semanticProgramDirectCallTargetResolvedPath(semanticProgram, *entry));
+    }
+    if (entry->scopePath.find("__lambda") != std::string::npos && entry->callName == "not_equal") {
+      lambdaTarget =
+          std::string(primec::semanticProgramDirectCallTargetResolvedPath(semanticProgram, *entry));
+    }
+  }
+  CHECK(methodTarget == "/Pair/Equal");
+  CHECK(lambdaTarget == "/Pair/NotEqual");
+}
+
+TEST_CASE("struct equality in a lambda body still rejects structs without Equal generation") {
+  const std::string source = R"(
+[struct reflect]
+Pair() {
+  [i32] x{1i32}
+}
+
+[return<bool> effects(heap_alloc)]
+main() {
+  [Function<bool, Pair>] same{[]([Pair] other) {
+    [Pair] mine{Pair{}}
+    return(equal(mine, other))
+  }}
+  return(same(Pair{}))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("comparisons require numeric, bool, or string operands") != std::string::npos);
+}
+
+TEST_CASE("a namespaced definition named equal keeps its own calls") {
+  // The builtin fallback only applies when the scoped path names no definition.
+  const std::string source = R"(
+[struct generate(Equal)]
+Pair() {
+  [i32] x{1i32}
+}
+
+namespace geo {
+  [return<bool>]
+  equal([Pair] left, [Pair] right) {
+    return(true)
+  }
+
+  [return<bool>]
+  check([Pair] other) {
+    return(equal(other, other))
+  }
+}
+
+[return<bool>]
+main() {
+  return(/geo/check(Pair{}))
+}
+)";
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE_MESSAGE(
+      semantics.validate(
+          program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram),
+      error);
+  std::string checkTarget;
+  for (const auto *entry : primec::semanticProgramDirectCallTargetView(semanticProgram)) {
+    if (entry != nullptr && entry->scopePath == "/geo/check" && entry->callName == "equal") {
+      checkTarget =
+          std::string(primec::semanticProgramDirectCallTargetResolvedPath(semanticProgram, *entry));
+    }
+  }
+  CHECK(checkTarget == "/geo/equal");
+}
+
 TEST_SUITE_END();

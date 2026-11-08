@@ -913,3 +913,53 @@ main() {
 )",
                     42);
 }
+
+TEST_CASE("a lambda compares generated-Equal structs and enums with operators") {
+  // `==` and `!=` in a lambda body (the closure's `call` method) and in a struct method go through the generated
+  // `Equal`/`NotEqual`, as in a free function.
+  runClosureProgram("lambda_generated_equal_operators",
+                    R"(
+import /std/ui/events/*
+
+[struct]
+Filter() {
+  [Key] wanted{Key.escape}
+
+  [return<bool>]
+  matches([KeyEvent] event) {
+    return(event.key == this.wanted)
+  }
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [Function<bool, KeyEvent>] isEscape{[]([KeyEvent] event) { return(event.key == Key.escape) }}
+  [Function<bool, PointerEvent>] notSecondary{[]([PointerEvent] event) {
+    return(event.button != PointerButton.secondary)
+  }}
+  [KeyEvent] escape{KeyEvent{[key] Key.escape}}
+  [KeyEvent] typed{KeyEvent{[key] characterKey(97i32)}}
+  [PointerEvent] right{PointerEvent{[button] PointerButton.secondary}}
+  [PointerEvent] left{PointerEvent{[button] PointerButton.primary}}
+  [Filter] filter{Filter{}}
+  [i32 mut] seen{0i32}
+  if(isEscape(escape)) {
+    seen = seen + 1i32
+  }
+  if(isEscape(typed)) {
+    seen = seen + 2i32
+  }
+  if(notSecondary(right)) {
+    seen = seen + 4i32
+  }
+  if(notSecondary(left)) {
+    seen = seen + 8i32
+  }
+  if(filter.matches(escape) && !filter.matches(typed)) {
+    seen = seen + 16i32
+  }
+  return(seen)
+}
+)",
+                    25);
+}
