@@ -659,6 +659,12 @@ Window() {
     return(ps_ui_script_run(this.handle, name, text, endCommand))
   }
 
+  // The same run whose end calls the handler of `end` (`AppHandlers.command`).
+  [public return<bool>]
+  runScriptCommand([/std/text/String] name, [/std/text/String] text, [Command] end) {
+    return(ps_ui_script_run(this.handle, name, text, end.id))
+  }
+
   [public return<bool>]
   stopScript() {
     return(ps_ui_script_stop(this.handle))
@@ -683,6 +689,11 @@ Window() {
   [public return<bool>]
   selectToolbarItem([i32] commandId) {
     return(ps_ui_window_toolbar_select(this.handle, commandId))
+  }
+
+  [public return<bool>]
+  selectToolbarCommand([Command] command) {
+    return(ps_ui_window_toolbar_select(this.handle, command.id))
   }
 
   [public return<bool>]
@@ -816,6 +827,13 @@ Toolbar() {
     return(ps_ui_toolbar_add_segments(this.handle, titles, firstCommandId))
   }
 
+  // Segments that call the handler of `commands` (`AppHandlers.commandRange`) with the offset of the chosen one; the
+  // range has one command per title.
+  [public return<bool>]
+  commandSegments([string] titles, [CommandRange] commands) {
+    return(ps_ui_toolbar_add_segments(this.handle, titles, commands.first))
+  }
+
   [public return<bool>]
   menu([string] title, [string] symbol, [Menu] items) {
     return(ps_ui_toolbar_add_menu(this.handle, title, symbol, items.handle))
@@ -860,6 +878,11 @@ Menu() {
     return(ps_ui_menu_follow_preview(this.handle, commandId))
   }
 
+  [public return<bool>]
+  followPreviewCommand([Command] command) {
+    return(ps_ui_menu_follow_preview(this.handle, command.id))
+  }
+
   // Adds an item that opens `child`, a menu that is not in the bar.
   [public return<bool>]
   submenu([string] title, [Menu] child) {
@@ -876,6 +899,13 @@ Menu() {
   [public return<i32>]
   addRecentFiles([i32] firstCommandId, [i32] maxItems) {
     return(ps_ui_menu_add_recent_files(this.handle, firstCommandId, maxItems))
+  }
+
+  // The same items with the commands of `commands` (`AppHandlers.commandRange`), at most one per command: choosing
+  // the file at offset i calls the range's handler with i, the index `App.recentPath` takes.
+  [public return<i32>]
+  addRecentFileCommands([CommandRange] commands) {
+    return(ps_ui_menu_add_recent_files(this.handle, commands.first, commands.count))
   }
 
   [public return<bool>]

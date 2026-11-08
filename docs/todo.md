@@ -107,8 +107,11 @@ of sync with them.
 | TODO-5727 | Every struct copy site tells a place from a temporary by resolution | deferred | lifecycle-copy-sources |
 | TODO-5707 | `Function` types accept `mut` parameters | deferred | closures-mut-params |
 | TODO-5708 | Type aliases | deferred | type-aliases |
-| TODO-5710 | PrimeScroll dispatches through handlers | ready | native-ui-handlers |
 | TODO-5711 | Retire the `/std/ui` layout and command-list prototype | ready | ui-prototype-retire |
+| TODO-5745 | A labeled value that is a call parses in every position | ready | parser-labeled-values |
+| TODO-5746 | A parameterless `mut` method whose body is only bindings is a method | ready | diagnostics |
+| TODO-5747 | The native backend leaves out functions that nothing calls | ready | native-code-size |
+| TODO-5748 | Methods with a `Function` parameter become real calls on the VM and optexe | ready | ir-real-calls |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
 | TODO-5656 | Thread-safe `SharedString` (atomic count, per-thread string heaps) | deferred | string-concurrency |
 | TODO-5603 | Startup audit: what a launch loads and does | ready | startup |
@@ -167,11 +170,11 @@ of sync with them.
 - TODO-5510 (control-returns): `return` returns from unit-variant pick arms correctly
 - TODO-5524 (result-error-structs): int-backed error structs round-trip through stdlib Result sums
 - TODO-5728 (collections-access): `slice` and `sliceMut` on a vector field of a struct resolve
-- TODO-5710 (native-ui-handlers): PrimeScroll dispatches through handlers
+- TODO-5747 (native-code-size): the native backend leaves out functions that nothing calls
 
 ### Immediate Next 10
 
-1. TODO-5710
+1. TODO-5747
 2. TODO-5603
 3. TODO-5536
 4. TODO-5535
@@ -182,7 +185,7 @@ of sync with them.
 ### Priority Lanes
 
 - Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5656
-- Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
+- Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5747, TODO-5586
 - - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Startup (docs/NativeUiPlan.md section 16): TODO-5603
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
@@ -191,12 +194,12 @@ of sync with them.
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
 - macOS support: TODO-5543, TODO-5545 (need macOS)
-- Language gaps found by native UI: TODO-5544
+- Language gaps found by native UI: TODO-5544, TODO-5745, TODO-5746
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719; collection fields found by closures and the todo example: TODO-5681, TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
 - Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5738, TODO-5718
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732, TODO-5735, TODO-5736, TODO-5737
-- Native UI handlers (docs/WebAppsPlan.md): TODO-5710, TODO-5711
-- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe; real calls and struct copies TODO-5739, TODO-5740, TODO-5741
+- Native UI handlers (docs/WebAppsPlan.md): TODO-5711
+- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe; real calls and struct copies TODO-5739, TODO-5740, TODO-5741, TODO-5748
 
 ### Execution Queue
 
@@ -239,6 +242,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - native and JIT run the real-call matrix cases with struct, `mut` and Reference parameters; the native web_app build is measured
     - full release gate green
   - stop_rule: local addressing and real-call shapes on native and the JIT.
+  - notes: since TODO-5710 PrimeScroll's native build (the installed app) inlines its whole handler dispatch: each `Editor` method into its closure, and every closure of a `Function` type at each call site of that type; `AppHandlers.run` calls each handler vector from one place to keep that to one copy, and TODO-5747 drops the unused copies.
 
 - [ ] TODO-5741: `string` parameters become real calls on the VM and optexe
   - owner: ai
@@ -300,19 +304,53 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - full release gate green
   - stop_rule: alias declarations and their resolution only.
 
-- [ ] TODO-5710: PrimeScroll dispatches through handlers
+- [ ] TODO-5745: A labeled value that is a call parses in every position
   - owner: ai
   - status: ready
-  - created_at: 2026-11-07
-  - phase: Native UI handlers (docs/WebAppsPlan.md)
-  - parallel_track: native-ui-handlers
-  - scope: Move the text editor's menu, toolbar and settings-window dispatch from the if-chains on command ids and handles to the handlers of TODO-5709, one menu at a time.
+  - created_at: 2026-11-08
+  - phase: Language gaps found by native UI (TODO-5710)
+  - parallel_track: parser-labeled-values
+  - scope: Three shapes fail to parse although their parts parse alone. A labeled brace argument whose value is a call followed by an operator: `Pair{[a] five() + 1i32}` fails with "invalid character: '+'" (`Pair{[a] 4i32 + x}` parses). An assignment whose right side is a brace construction with a call as a labeled value: `window = Win{[handle] h()}` fails with "unexpected token in expression" at `=` (`[Win] w{Win{[handle] h()}}` and `p = Pair{[a] 2i32}` parse). An assignment whose right side passes a lambda whose body starts with a binding: `a = apply([]([i32] x) { [i32] y{x} ... })` fails the same way (a call statement or a binding initializer with that lambda parses). handlers.prime and the editor bind a local first.
   - acceptance:
-    - every editor scenario (docs/NativeUiPlan.md section 13) leaves the same call log, exit code and files on the VM and the native build
-    - the dispatch loop in main.prime is gone or reduced to what has no handler form
+    - the three shapes parse and run on the VM, with a parser test each
     - full release gate green
-  - stop_rule: the editor's dispatch only; no behavior change.
-  - notes: the handlers are `AppHandlers<State>` (stdlib/std/ui/native/handlers.prime, docs/NativeUiPlan.md section 5). `run` drops a command id that `AppHandlers.command` did not hand out, so the editor's toolbar segments (`Toolbar.segments`), recent-file items (`Menu.addRecentFiles`) and the script runner's `endCommand`, which take consecutive raw ids, have no handler form yet; give them one (for example a range of commands from one registration) or keep them as they are, and say which in the result. A program uses either `run` or its own `waitEvent` loop, not both.
+  - stop_rule: the parser's labeled-value and assignment paths only.
+
+- [ ] TODO-5746: A parameterless `mut` method whose body is only bindings is a method
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-08
+  - phase: Language gaps found by native UI (TODO-5710)
+  - parallel_track: diagnostics
+  - scope: A nested definition with no parameters and a body of bindings only is taken as a field-only struct, so `[mut] touch() { [i32] x{1i32} [i32] y{x} }` inside a struct fails with "mut transform is only supported on struct helpers: /Box/touch", which names neither the cause nor the fix. Either a definition with a method transform (`mut`, `return<T>`, `effects`) is never field-only, or the diagnostic says the body was read as a struct's fields (docs/spec/transforms.md).
+  - acceptance:
+    - the case of tests/unit compiles as a method, or fails with a diagnostic that names the field-only reading; spec text matches
+    - full release gate green
+  - stop_rule: the field-only rule and its diagnostic.
+
+- [ ] TODO-5747: The native backend leaves out functions that nothing calls
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-08
+  - phase: Native PrimeScroll, direct native backend (found in TODO-5710)
+  - parallel_track: native-code-size
+  - scope: `--emit=native` inlines struct methods (TODO-5740) yet still emits every function of the module, so a function inlined at its one call site is in the binary twice and a chain of methods inlined into each other once per link. PrimeScroll on handlers has 863K lowered IR instructions for native against 178K before (`main` 211K, the inlined `App.run`, `AppHandlers.run` and `Function` call bodies as unused functions of 115K, 115K, 57K and 39K) and its native executable is 15.1 MB against 3.4 MB. Drop the functions that are reachable from no call, function address or entry after lowering, for native (and check the VM and C++ emitters, which do not need them either).
+  - acceptance:
+    - the native editor's executable and function count shrink, measured before and after; no call log, exit code or file changes in the editor scenarios
+    - full release gate green
+  - stop_rule: unreachable-function removal only; no inlining policy change.
+
+- [ ] TODO-5748: Methods with a `Function` parameter become real calls on the VM and optexe
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-08
+  - phase: Optimizing backends: real calls (found in TODO-5710)
+  - parallel_track: ir-real-calls
+  - scope: The real-call shape check (src/ir_lowerer/IrLowererRecursionAnalysis.h) refuses a parameter type with template arguments, so `AppHandlers.command`, `commandRange`, `onClick` and the other registrations, which take a `Function<...>`, inline their vector push and growth at every call: about 1,500 VM instructions per registration. PrimeScroll registers 43 handlers, and its VM bytecode grew from 28K to 122K instructions (`main` from 7K to 68K). A `Function` value is a struct (its layout is a closure pointer and a table), so it can pass like one.
+  - acceptance:
+    - a method taking a `Function` by `move` is one real call on the VM and optexe; the editor's VM instruction count is measured before and after; the editor scenarios keep their call logs
+    - full release gate green
+  - stop_rule: `Function` parameters in the shape check and the real-call ABI only.
 
 - [ ] TODO-5711: Retire the `/std/ui` layout and command-list prototype
   - owner: ai

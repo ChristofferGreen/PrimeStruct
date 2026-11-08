@@ -16,7 +16,7 @@
 // loads a file into the first text view and highlights it (the window title
 // becomes the path), and PRIMESTRUCT_UI_MENU=File pops that menu-bar menu open
 // and draws its window into the picture (no Screen Recording permission needed).
-// PRIMESTRUCT_UI_COMMANDS=1,1 delivers those menu command ids to the program
+// PRIMESTRUCT_UI_COMMANDS=1000000,1000000 delivers those menu command ids to the program
 // first (for the editor, two New commands: two more tabs).
 
 #import <AppKit/AppKit.h>

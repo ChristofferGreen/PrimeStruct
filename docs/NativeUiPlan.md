@@ -202,31 +202,46 @@ only widgets with such handlers.
 
 | Event (ABI v0) | Registration | The handler gets |
 | --- | --- | --- |
-| `command` | `handlers.command(handler)` returns a `Command`, added with `menu.commandItem(title, shortcut, command)`, `toolbar.commandButton(title, symbol, command)` (`menu.setCommandChecked(command, bool)`) | a `PointerEvent` of the primary button, no position, `clickCount` 1 |
+| `command` | `handlers.command(handler)` returns a `Command`, added with `menu.commandItem(title, shortcut, command)`, `toolbar.commandButton(title, symbol, command)` (`menu.setCommandChecked(command, bool)`, `menu.followPreviewCommand(command)`, `window.selectToolbarCommand(command)`, `window.runScriptCommand(name, text, command)` for the end of a script run) | a `PointerEvent` of the primary button, no position, `clickCount` 1 |
+| `command`, one of a row | `handlers.commandRange(count, handler)` returns a `CommandRange` (`first`, `count`) of consecutive ids: `toolbar.commandSegments(titles, range)`, `menu.addRecentFileCommands(range)` (one recent file per command), or one of them, `range.at(offset)`, as a `Command` | the offset of the chosen command in the range, an `i32` |
 | `control_changed` of a `Button` | `handlers.onClick(button, handler)` | the same `PointerEvent` |
 | `control_changed` of a `CheckBox`, `Popup`, `ItemList` | `onCheckBoxChange`, `onPopupChange`, `onListChange(control, handler)` | a `ChangeEvent`: `checked`, or `index` (the first selected row of a list, -1 for none), read from the control |
+| `control_changed` of a control made after setup | `onClickOf`, `onCheckBoxChangeOf`, `onPopupChangeOf`, `onListChangeOf(find, handler)`: `find`, a `Function<u64, Reference<State>>`, gives the control's handle from the state when an event comes (0 while there is none) | as above |
 | `window_close_requested` | `onWindowClose(handler)`, for every window | the `Window`; without a handler the window closes |
 | `text_changed` | `onTextChange(handler)` | the `Window` |
 | `open_file` | `onOpenFile(handler)` | the path, a `String` |
 | `quit_requested` | `onQuit(handler)`, a `Function<bool, Reference<State>>` | nothing; `true` lets `run` return |
+| every event | `afterEvent(handler)`, a `Function<bool, Reference<State>>`, after the event's handler (or none) | nothing; `false` ends `run` |
 | `pointer_enter` (feature 1) | `onMouseOver(widget, handler)`, any control or text view as a `Widget` (`button.widget()`, `text.widget()`) | a `PointerEvent`: no button, the position, the modifiers, `clickCount` 0 |
 | `mouse_down`, `mouse_up` | `onMouseDown`, `onMouseUp(widget, handler)` | a `PointerEvent`: the button, the position, the modifiers, the click count |
 | `key_down`, `key_up` | `onKeyDown`, `onKeyUp(widget, handler)`, while the widget has focus | a `KeyEvent`: the key, the modifiers, `isRepeat`; a text view's handlers see only the keys it does not keep |
 
-- **Ids stay inside.** `command` hands out ids from `first_command_id()` (1000000) up, above the ids programs pick
-  for `waitEvent`; app code holds the `Command`. One `Command` in a menu and a toolbar calls one closure, so its `mut`
-  captures are shared between the two. A command id without a handler (a hand-picked one, recent files, toolbar
-  segments) is dropped by `run`, as is a control change of a control without one.
+- **Ids stay inside.** `command` and `commandRange` hand out ids from `first_command_id()` (1000000) up, in the order
+  of registration, above the ids programs pick for `waitEvent`; app code holds the `Command` or `CommandRange`. One
+  `Command` in a menu and a toolbar calls one closure, so its `mut` captures are shared between the two. The controls
+  that take consecutive ids (toolbar segments, recent files) take a range, whose one handler gets the offset; so does a
+  family of items that differ by a number (Show Tab 1 to 9). A command id without a handler (a hand-picked one) is
+  dropped by `run`, as is a control change of a control without one.
+- **Controls made later.** Handlers are registered once, at setup (principle 7), but a window built on first use
+  (PrimeScroll's settings window) has no controls yet then. The `...Of` registrations take a `find` closure instead of
+  the control: `run` asks it for the control's handle when a control changes, so the state holds the handles and the
+  handlers stay registered once.
+- **After every event.** `afterEvent(handler)` runs after each event, whether a handler took it or not. It is where an
+  app brings what its handlers changed on screen once (PrimeScroll: the toolbars follow the windows, the session is
+  saved after a command, Open Recent is rebuilt), so each handler does its own work and sets a flag in the state.
 - **When `run` returns.** On a request to quit that no quit handler refuses, and after a close request (handled or
-  not) when no window is open any more (`ps_ui_window_count() == 0`).
-- **`waitEvent` stays.** `run` reads the same events, so a program keeps its own loop, or moves to handlers one
-  control at a time (TODO-5710); one program uses one of the two.
+  not) when no window is open any more (`ps_ui_window_count() == 0`). With an `afterEvent` handler, the app decides:
+  `run` returns when it gives false (and still on an unrefused quit request), and the window count is not asked.
+- **`waitEvent` stays.** `run` reads the same events, so a program keeps its own loop or uses handlers; one program
+  uses one of the two. PrimeScroll moved to handlers (TODO-5710, below).
 - **As built, and why so.** The table and the state live in a generic struct, not in `App`, `Button` or `Menu`: those
   are `u64` handles with nowhere to keep closures, and there is no global state, so registration goes through the one
   object that knows `State`; this is the shape of `WebApp<State>` (`state` field, controls registered on it). The
   per-control `onChange` names and `commandItem`/`commandButton` are separate methods, not overloads of `onChange`,
   `item` and `button`: same-arity overloads of struct methods do not resolve yet (TODO-5735). `run` reads the ABI
-  event kinds itself instead of `pick`ing an `AppEvent` (TODO-5736).
+  event kinds itself instead of `pick`ing an `AppEvent` (TODO-5736). The handlers of one type share one vector and
+  `run` calls each vector from one place: the native backend inlines struct methods (TODO-5740) and a `Function`
+  call with every closure of its type, at each call site, so this keeps an app's handlers compiled once there.
 
 ```prime
 [AppHandlers<Greeter> mut] handlers{AppHandlers<Greeter>{[state] Greeter{[button] hello}}}
@@ -267,7 +282,17 @@ the same call logs.
   one of several tabs drops it from the session).
 - **Open Recent:** File > Open Recent lists up to ten recently used files (opened or saved by the editor, or given on
   the command line), most recent first, with a Clear Menu item. The submenu is rebuilt after every open, save and
-  clear with `Menu.clear()` and `Menu.addRecentFiles(...)`; choosing a file opens it like Open does.
+  clear with `Menu.clear()` and `Menu.addRecentFileCommands(range)`; choosing a file opens it like Open does.
+- **Dispatch (TODO-5710).** The editor runs on handlers (section 5): its state is an `Editor` (the app, the menus and
+  toolbars that follow the documents, the settings window, the commands as `EditorCommands`), every menu item and
+  toolbar button is a `handlers.command` or one of a `handlers.commandRange` (scroll modes, view modes, format
+  operations, headings, tables, alignments, Show Tab 1 to 9, recent files), the settings window's controls, built on
+  first use, are found through `onCheckBoxChangeOf` and its siblings, and one `afterEvent` handler does what follows
+  every event (the preferences shown again, Open Recent rebuilt, the toolbars synced, the session saved after a
+  command, the tabs closed after Quit, the app ended with the last document). The ids come from `AppHandlers`
+  (1000000 up) instead of the editor's own numbers; the call logs are otherwise those of the `waitEvent` loop, without
+  the queries it made for nothing (the active window before each wait, the settings-window check before an event that
+  did not use it).
 
 ## 7. Runtime gaps and how this plan closes them
 
@@ -407,7 +432,8 @@ Hand checks on a Mac (typing, shortcuts, real panels, cursor stepping over graph
   `PRIMESTRUCT_UI_TRACE=1` logs the document and styling calls to the unified log (subsystem `com.primestruct.ui`).
   `PRIMESTRUCT_UI_OPEN_PANEL=file` makes the Open panel answer with that path, and `PRIMESTRUCT_UI_TARGET_LAST=1`
   aims the open/type hooks and the picture at the newest tab (the tab bar does draw in these pictures when the app
-  has run the New command, e.g. `PRIMESTRUCT_UI_COMMANDS=2,2` opens a file into the first and a second tab).
+  has run the New command, e.g. `PRIMESTRUCT_UI_COMMANDS=1000000,1000000` opens a file into the first and a second
+  tab; the editor's command ids are listed with `EditorCommands` in main.prime).
 
 **Unicode (TODO-5548).** Text crosses the ABI as UTF-8 and files are read and written byte for byte by the backend
 (no newline translation, a missing final newline stays missing, invalid UTF-8 is refused with `ps_ui_last_error()`).
@@ -484,7 +510,7 @@ page follows the text as it is edited. It is done when the installed native Prim
   `preview:1`, and the smoke test checks the other follows. The View item's check
   mark follows the active tab through `validateMenuItem:`. A snapshot (`PRIMESTRUCT_UI_SNAPSHOT`) waits for the page
   and draws the web view through `takeSnapshotWithConfiguration:`; the smoke test takes one of
-  `tests/fixtures/ui/screenshot/preview.md` with `PRIMESTRUCT_UI_COMMANDS=10`.
+  `tests/fixtures/ui/screenshot/preview.md` with `PRIMESTRUCT_UI_COMMANDS=1000008` (Show Markdown Preview).
 - **ABI.** Four functions (section 4): `ps_ui_window_set_preview(window, on)`, `ps_ui_window_has_preview(window)`,
   `ps_ui_window_refresh_preview(window)` and `ps_ui_menu_follow_preview(menu, commandId)`. The backend owns the
   preview view; the editor decides when it shows (View > Show Markdown Preview, one preview per tab, its check mark
@@ -655,12 +681,12 @@ that opens windows is an app of its own.
   main thread (`dispatch_async` plus a wake-up event, since `ps_ui_wait_event` sleeps in `nextEvent`) and enqueues the end
   command. Turning a preview on closes the pane first. `scripts/bundle_macos_app.sh` copies `primestruct_app` into
   `Contents/MacOS/PrimeScriptRunner` and `stdlib/` into `Contents/Resources`. Nothing is started at launch. The harness
-  delivers `PRIMESTRUCT_UI_COMMANDS=+120` after `PRIMESTRUCT_UI_OPEN` has loaded its file and a snapshot waits for a
-  running script.
-- **Editor (TODO-5616, done).** A `.prime` window gets a toolbar with Run (`play.fill`, command 120), Stop
-  (`stop.fill`, 121) and, after a separator, Output (`rectangle.bottomhalf.inset.filled`, 122: hides or shows the
-  output pane, the same command as the menu's Show Output); the Run menu has Run Cmd+R, Stop Cmd+period and Show Output (Cmd+Option+O, 122); the end of a run
-  is command 123 (nothing to do). The text run is the tab's text as it is, saved or not, named by the tab's path (or
+  delivers `PRIMESTRUCT_UI_COMMANDS=+1000058` (Run) after `PRIMESTRUCT_UI_OPEN` has loaded its file and a snapshot
+  waits for a running script.
+- **Editor (TODO-5616, done).** A `.prime` window gets a toolbar with Run (`play.fill`), Stop (`stop.fill`) and,
+  after a separator, Output (`rectangle.bottomhalf.inset.filled`: hides or shows the output pane, the same command as
+  the menu's Show Output); the Run menu has Run Cmd+R, Stop Cmd+period and Show Output (Cmd+Option+O); the end of a run
+  is the command `scriptDone` (`window.runScriptCommand`; nothing to do but what follows every command). The text run is the tab's text as it is, saved or not, named by the tab's path (or
   "untitled.prime"). `sync_toolbars` takes the kind of toolbar (1 markdown, 2 script) and is called once for each; a
   window of neither kind has none. The Run menu shifts the handles of every window created after the menus by one.
   A compiled (optexe) editor crashed freeing a reassigned `String` local, so `run_script` builds its strings with

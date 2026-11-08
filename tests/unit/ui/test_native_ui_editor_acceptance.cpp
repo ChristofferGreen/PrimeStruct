@@ -28,9 +28,10 @@ using primec::embed::ScriptEngine;
 TEST_SUITE_BEGIN("primestruct.ui.editor_acceptance");
 
 namespace {
-constexpr int32_t CommandOpen = 2;
-constexpr int32_t CommandSave = 3;
-constexpr int32_t CommandSaveAs = 4;
+// Command ids of examples/apps/text_editor/main.prime (`EditorCommands`).
+constexpr int32_t CommandOpen = 1000001;
+constexpr int32_t CommandSave = 1000002;
+constexpr int32_t CommandSaveAs = 1000003;
 constexpr uint64_t EditorWindow = 1;
 
 std::string scratchPath(const std::string &name) {
@@ -288,11 +289,11 @@ TEST_CASE("acceptance: the menu bar has the standard macOS structure and shortcu
   CHECK(countCalls("ps_ui_menu_bar_add_role(") == 3);
   // The editor's commands carry the ids the program dispatches on.
   const auto items = headless::menuBarItems();
-  for (const char *item : {"File>New (cmd+n) #1", "File>Open... (cmd+o) #2", "File>Save (cmd+s) #3",
-                           "File>Save As... (cmd+shift+s) #4", "File>Close (cmd+w) #5",
-                           "View>Show Line Numbers (cmd+shift+l) #7", "View>Wrap Lines #9 [checked]",
-                           "File>Open Recent>Clear Menu #210",
-                           "PrimeScroll>Settings... (cmd+,) #8"}) {
+  for (const char *item : {"File>New (cmd+n) #1000000", "File>Open... (cmd+o) #1000001", "File>Save (cmd+s) #1000002",
+                           "File>Save As... (cmd+shift+s) #1000003", "File>Close (cmd+w) #1000004",
+                           "View>Show Line Numbers (cmd+shift+l) #1000005", "View>Wrap Lines #1000007 [checked]",
+                           "File>Open Recent>Clear Menu #1000072",
+                           "PrimeScroll>Settings... (cmd+,) #1000006"}) {
     CHECK_MESSAGE(std::find(items.begin(), items.end(), item) != items.end(), item);
   }
 }

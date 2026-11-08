@@ -221,13 +221,13 @@ TEST_CASE("native UI pointer and key handlers get their event structs through op
 
 TEST_CASE("the editor types and saves through optexe with the VM's call log") {
   const std::string out = scratch("typed.txt");
-  checkScenario(editor(), "editor", "type:0:hello;cmd:3;save:" + out + ";close:1");
+  checkScenario(editor(), "editor", "type:0:hello;cmd:1000002;save:" + out + ";close:1");
   CHECK(readFile(out) == "hello");
 }
 
 TEST_CASE("the editor opens a chosen file through optexe with the VM's call log") {
   const std::string in = writeScratch("existing.txt", "h\xC3\xA9llo\nworld\n");
-  checkScenario(editor(), "editor", "cmd:2;open:" + in + ";close:1");
+  checkScenario(editor(), "editor", "cmd:1000001;open:" + in + ";close:1");
 }
 
 TEST_CASE("the editor opens the file named on the command line through optexe") {
@@ -236,7 +236,7 @@ TEST_CASE("the editor opens the file named on the command line through optexe") 
 }
 
 TEST_CASE("the editor reports a file that cannot be opened through optexe") {
-  checkScenario(editor(), "editor", "cmd:2;open:/definitely/not/here.txt;alert:0;close:1");
+  checkScenario(editor(), "editor", "cmd:1000001;open:/definitely/not/here.txt;alert:0;close:1");
 }
 
 TEST_CASE("the editor asks before closing unsaved text through optexe") {

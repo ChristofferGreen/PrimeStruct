@@ -27,7 +27,9 @@ using primec::ui::Language;
 TEST_SUITE_BEGIN("primestruct.ui.editor_acceptance");
 
 namespace {
-constexpr int32_t CommandOpen = 2;
+// Command ids of examples/apps/text_editor/main.prime (`EditorCommands`).
+constexpr int32_t CommandNew = 1000000;
+constexpr int32_t CommandOpen = 1000001;
 constexpr uint64_t EditorWindow = 1;
 constexpr uint64_t EditorView = 2;
 
@@ -498,7 +500,7 @@ TEST_CASE("highlight: a file opened into a fresh New tab is styled") {
   headless::reset();
   headless::pushCommand(CommandOpen);
   headless::pushOpenPanelAnswer(md);
-  headless::pushCommand(1); // New: a second, untitled tab (window 18, text view 19: the first markdown file built the toolbar and its three menus)
+  headless::pushCommand(CommandNew); // New: a second, untitled tab (window 18, text view 19: the first markdown file built the toolbar and its three menus)
   headless::pushCommand(CommandOpen);
   headless::pushOpenPanelAnswer(md);
   headless::pushCloseWindow(19);

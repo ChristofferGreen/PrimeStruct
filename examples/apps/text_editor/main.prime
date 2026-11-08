@@ -1,4 +1,5 @@
 import /std/text/*
+import /std/ui/events/*
 import /std/ui/native/*
 
 // PrimeScroll: a plain-text editor with one native tab per document
@@ -6,142 +7,61 @@ import /std/ui/native/*
 // from the platform's own text view. This program owns the documents' life
 // cycle: Open/Save/Save As, and asking before unsaved text is discarded. Each
 // tab is a window whose document path the backend stores, so the program keeps
-// no per-document variables and works on the active tab.
+// no per-document variables and works on the active tab. Every menu item, toolbar
+// button and control has its own handler (`AppHandlers<Editor>`, docs/NativeUiPlan.md
+// section 5); `app.run(handlers)` dispatches the events.
 //
 //   primestruct_app examples/apps/text_editor/main.prime
 //
 // A file named after the program on the command line opens in the first tab.
 
-[return<i32>]
-command_new() {
-  return(1i32)
-}
-
-[return<i32>]
-command_open() {
-  return(2i32)
-}
-
-[return<i32>]
-command_save() {
-  return(3i32)
-}
-
-[return<i32>]
-command_save_as() {
-  return(4i32)
-}
-
-[return<i32>]
-command_close() {
-  return(5i32)
-}
-
-[return<i32>]
-command_quit() {
-  return(6i32)
-}
-
-// View > Show Line Numbers toggles the bar of line numbers in every tab; the application menu's
-// Settings... (Command-Comma) opens the settings window, where that and the other preferences live.
-[return<i32>]
-command_line_numbers() {
-  return(7i32)
-}
-
-[return<i32>]
-command_settings() {
-  return(8i32)
-}
-
-// View > Wrap Lines (on by default) and File > Open Recent: the recent files are the commands
-// command_recent() + 0 ... + 9, and Clear Menu empties the list.
-[return<i32>]
-command_wrap() {
-  return(9i32)
-}
-
-// View > Show Markdown Preview (Command-Shift-M) splits the active tab into its text and the rendered
-// markdown; the item's check mark follows the active tab, and the preview follows the text.
-[return<i32>]
-command_preview() {
-  return(10i32)
-}
-
-// View > Scroll Preview: command_scroll() + 0 ... + 3 are the scroll modes (independently, linearly, by block,
-// with the cursor); the chosen one carries a check mark and is the `scrollMode` preference.
-[return<i32>]
-command_scroll() {
-  return(20i32)
-}
-
-// The markdown toolbar and the Format menu (docs/NativeUiPlan.md section 17): View > Editor, Split View and Preview are
-// command_mode() + 0 ... + 2 (the toolbar's segments too); a format command is command_format() + the operation of
-// ps_ui_text_view_markdown_edit (bold 0, italic 1, ... table format 14); Heading is command_heading() + the level
-// (0 for a paragraph); Insert Table is command_table() + 0 ... + 3 (2 by 2, 3 by 3, 4 by 3, 5 by 4); Align is
-// command_align() + 1 ... + 3 (left, center, right).
-[return<i32>]
-command_mode() {
-  return(30i32)
-}
-
-[return<i32>]
-command_format() {
-  return(40i32)
-}
-
-[return<i32>]
-command_heading() {
-  return(70i32)
-}
-
-[return<i32>]
-command_table() {
-  return(80i32)
-}
-
-[return<i32>]
-command_align() {
-  return(90i32)
-}
-
-// Running a script (docs/NativeUiPlan.md section 18): Run executes the tab's text on the embedded interpreter and shows
-// its output in the pane under the editor; Stop ends a run that does not end; Show Output toggles the pane; the end of a
-// run arrives as command_script_done() (nothing to do: the pane already shows how it ended).
-[return<i32>]
-command_run() {
-  return(120i32)
-}
-
-[return<i32>]
-command_stop() {
-  return(121i32)
-}
-
-[return<i32>]
-command_output() {
-  return(122i32)
-}
-
-[return<i32>]
-command_script_done() {
-  return(123i32)
-}
-
-[return<i32>]
-command_recent() {
-  return(200i32)
-}
-
-[return<i32>]
-command_recent_clear() {
-  return(210i32)
-}
-
-// Cmd+1 ... Cmd+9 are command_tab() + 1 ... + 9.
-[return<i32>]
-command_tab() {
-  return(100i32)
+// The editor's commands, which `AppHandlers` hands out in the order `main` registers them (from 1000000); a menu item
+// and a toolbar button that do the same share one. A range is a row of commands with one handler, which gets the
+// offset of the chosen one:
+// - `scroll`: View > Scroll Preview, the scroll modes (independently, linearly, by block, with the cursor); the chosen
+//   one carries a check mark and is the `scrollMode` preference.
+// - `mode`: View > Editor, Split View and Preview, and the markdown toolbar's segments (docs/NativeUiPlan.md
+//   section 17).
+// - `format`: the operation of ps_ui_text_view_markdown_edit (bold 0, italic 1, ... table format 14); `heading`: the
+//   level, 0 for a paragraph; `table`: Insert Table 2 by 2, 3 by 3, 4 by 3, 5 by 4; `align`: left, center, right.
+// - `tab`: Cmd+1 ... Cmd+8 and Cmd+9, the last tab; `recent`: File > Open Recent, most recent first.
+// With the ids in this order, tests and the snapshot harness (`PRIMESTRUCT_UI_COMMANDS`) name a command by number:
+// New 1000000, Open 1000001, Save 1000002, Save As 1000003, Close 1000004, Show Line Numbers 1000005, Settings
+// 1000006, Wrap Lines 1000007, Show Markdown Preview 1000008, `scroll` 1000009, `mode` 1000013, `format` 1000016,
+// `heading` 1000038, `table` 1000042, `align` 1000046, `tab` 1000049, Run 1000058, Stop 1000059, Show Output 1000060,
+// `scriptDone` 1000061, `recent` 1000062, Clear Menu 1000072.
+// Running a script (docs/NativeUiPlan.md section 18): `run` executes the tab's text on the embedded interpreter and
+// shows its output in the pane under the editor, `stop` ends a run that does not end, `output` toggles the pane, and
+// the end of a run arrives as `scriptDone` (the pane already shows how it ended).
+[struct]
+EditorCommands() {
+  [public Command] newTab{Command{}}
+  [public Command] open{Command{}}
+  [public Command] save{Command{}}
+  [public Command] saveAs{Command{}}
+  [public Command] close{Command{}}
+  // View > Show Line Numbers toggles the bar of line numbers in every tab; the application menu's Settings...
+  // (Command-Comma) opens the settings window, where that and the other preferences live; View > Wrap Lines is on by
+  // default.
+  [public Command] lineNumbers{Command{}}
+  [public Command] settings{Command{}}
+  [public Command] wrap{Command{}}
+  // View > Show Markdown Preview (Command-Shift-M) splits the active tab into its text and the rendered markdown; the
+  // item's check mark follows the active tab, and the preview follows the text.
+  [public Command] preview{Command{}}
+  [public CommandRange] scroll{CommandRange{}}
+  [public CommandRange] mode{CommandRange{}}
+  [public CommandRange] format{CommandRange{}}
+  [public CommandRange] heading{CommandRange{}}
+  [public CommandRange] table{CommandRange{}}
+  [public CommandRange] align{CommandRange{}}
+  [public CommandRange] tab{CommandRange{}}
+  [public Command] run{Command{}}
+  [public Command] stop{Command{}}
+  [public Command] output{Command{}}
+  [public Command] scriptDone{Command{}}
+  [public CommandRange] recent{CommandRange{}}
+  [public Command] recentClear{Command{}}
 }
 
 // 0 = Save, 1 = Don't Save, 2 = Cancel.
@@ -451,35 +371,6 @@ document_window([App] app, [u64] settingsWindow) {
   return(found)
 }
 
-// Every document shows the editor preferences; the View menu and the settings window show them too.
-[return<bool>]
-refresh_preferences([App] app, [Menu] viewMenu, [Menu] scrollMenu, [Settings] settings) {
-  [i32 mut] index{0i32}
-  while(index < app.windowCount()) {
-    [Window] each{app.windowAt(index)}
-    if(each.handle != settings.window) {
-      [TextView] eachView{each.content()}
-      apply_preferences(app, eachView)
-    }
-    index = index + 1i32
-  }
-  viewMenu.setChecked(command_line_numbers(), app.boolPref("lineNumbers", false))
-  viewMenu.setChecked(command_wrap(), app.boolPref("wrapLines", true))
-  [CheckBox] numbersBox{[handle] settings.numbers}
-  numbersBox.setChecked(app.boolPref("lineNumbers", false))
-  [CheckBox] wrapBox{[handle] settings.wrap}
-  wrapBox.setChecked(app.boolPref("wrapLines", true))
-  [i32] mode{app.intPref("scrollMode", 2i32)}
-  [i32 mut] choice{0i32}
-  while(choice < 4i32) {
-    scrollMenu.setChecked(command_scroll() + choice, choice == mode)
-    choice = choice + 1i32
-  }
-  [Popup] scrollChoice{[handle] settings.lock}
-  scrollChoice.select(mode)
-  return(true)
-}
-
 // A file named *.md or *.markdown shows its preview when the preference asks for it.
 [return<bool> effects(heap_alloc)]
 ends_with_text([String] text, [string] suffix, [i32] length) {
@@ -505,81 +396,81 @@ preview_if_markdown([App] app, [Window] tab, [String] path) {
 
 // The Heading and Table menus, built once for the toolbar and once for the Format menu (a menu has one parent).
 [return<bool>]
-add_heading_items([Menu] menu) {
-  menu.item("Heading 1", "", command_heading() + 1i32)
-  menu.item("Heading 2", "", command_heading() + 2i32)
-  menu.item("Heading 3", "", command_heading() + 3i32)
+add_heading_items([Menu] menu, [CommandRange] heading) {
+  menu.commandItem("Heading 1", "", heading.at(1i32))
+  menu.commandItem("Heading 2", "", heading.at(2i32))
+  menu.commandItem("Heading 3", "", heading.at(3i32))
   menu.separator()
-  menu.item("Paragraph", "", command_heading())
+  menu.commandItem("Paragraph", "", heading.at(0i32))
   return(true)
 }
 
 [return<bool>]
-add_block_items([Menu] menu) {
-  menu.item("Bulleted List", "", command_format() + 7i32)
-  menu.item("Numbered List", "", command_format() + 8i32)
-  menu.item("Task List", "", command_format() + 9i32)
+add_block_items([Menu] menu, [CommandRange] format) {
+  menu.commandItem("Bulleted List", "", format.at(7i32))
+  menu.commandItem("Numbered List", "", format.at(8i32))
+  menu.commandItem("Task List", "", format.at(9i32))
   menu.separator()
-  menu.item("Quote", "", command_format() + 10i32)
-  menu.item("Code Block", "", command_format() + 11i32)
-  menu.item("Horizontal Rule", "", command_format() + 12i32)
+  menu.commandItem("Quote", "", format.at(10i32))
+  menu.commandItem("Code Block", "", format.at(11i32))
+  menu.commandItem("Horizontal Rule", "", format.at(12i32))
   return(true)
 }
 
 [return<bool>]
-add_table_items([Menu] menu) {
-  menu.item("Insert 2 by 2", "", command_table())
-  menu.item("Insert 3 by 3", "", command_table() + 1i32)
-  menu.item("Insert 4 by 3", "", command_table() + 2i32)
-  menu.item("Insert 5 by 4", "", command_table() + 3i32)
+add_table_items([Menu] menu, [EditorCommands] commands) {
+  menu.commandItem("Insert 2 by 2", "", commands.table.at(0i32))
+  menu.commandItem("Insert 3 by 3", "", commands.table.at(1i32))
+  menu.commandItem("Insert 4 by 3", "", commands.table.at(2i32))
+  menu.commandItem("Insert 5 by 4", "", commands.table.at(3i32))
   menu.separator()
-  menu.item("Format Table", "", command_format() + 14i32)
-  menu.item("Add Row", "", command_format() + 15i32)
-  menu.item("Add Column", "", command_format() + 16i32)
-  menu.item("Delete Row", "", command_format() + 17i32)
-  menu.item("Delete Column", "", command_format() + 18i32)
+  menu.commandItem("Format Table", "", commands.format.at(14i32))
+  menu.commandItem("Add Row", "", commands.format.at(15i32))
+  menu.commandItem("Add Column", "", commands.format.at(16i32))
+  menu.commandItem("Delete Row", "", commands.format.at(17i32))
+  menu.commandItem("Delete Column", "", commands.format.at(18i32))
   menu.separator()
-  menu.item("Align Left", "", command_align() + 1i32)
-  menu.item("Align Center", "", command_align() + 2i32)
-  menu.item("Align Right", "", command_align() + 3i32)
+  menu.commandItem("Align Left", "", commands.align.at(0i32))
+  menu.commandItem("Align Center", "", commands.align.at(1i32))
+  menu.commandItem("Align Right", "", commands.align.at(2i32))
   return(true)
 }
 
 // The toolbar of a markdown window, built when the first one needs it: the view mode, the inline marks, a heading menu,
 // a menu of block formats and the tables (menus keep it short enough for a window of the default width).
 [return<Toolbar>]
-build_toolbar([App] app) {
+build_toolbar([App] app, [EditorCommands] commands) {
   [Toolbar] bar{app.toolbar()}
-  bar.segments("Editor|Split|Preview", command_mode())
+  bar.commandSegments("Editor|Split|Preview", commands.mode)
   bar.separator()
-  bar.button("Bold", "bold", command_format())
-  bar.button("Italic", "italic", command_format() + 1i32)
-  bar.button("Strikethrough", "strikethrough", command_format() + 2i32)
-  bar.button("Code", "chevron.left.forwardslash.chevron.right", command_format() + 3i32)
-  bar.button("Link", "link", command_format() + 4i32)
-  bar.button("Image", "photo", command_format() + 5i32)
+  bar.commandButton("Bold", "bold", commands.format.at(0i32))
+  bar.commandButton("Italic", "italic", commands.format.at(1i32))
+  bar.commandButton("Strikethrough", "strikethrough", commands.format.at(2i32))
+  bar.commandButton("Code", "chevron.left.forwardslash.chevron.right", commands.format.at(3i32))
+  bar.commandButton("Link", "link", commands.format.at(4i32))
+  bar.commandButton("Image", "photo", commands.format.at(5i32))
   bar.separator()
   [Menu] headings{app.menu("Heading")}
-  [bool] headingItems{add_heading_items(headings)}
+  [bool] headingItems{add_heading_items(headings, commands.heading)}
   bar.menu("Heading", "textformat.size", headings)
   [Menu] blocks{app.menu("Blocks")}
-  [bool] blockItems{add_block_items(blocks)}
+  [bool] blockItems{add_block_items(blocks, commands.format)}
   bar.menu("Blocks", "list.bullet", blocks)
   bar.separator()
   [Menu] tables{app.menu("Table")}
-  [bool] tableItems{add_table_items(tables)}
+  [bool] tableItems{add_table_items(tables, commands)}
   bar.menu("Table", "tablecells", tables)
   return(bar)
 }
 
 // The toolbar of a script window: Run and Stop, and a button that hides or shows the output pane.
 [return<Toolbar>]
-build_script_toolbar([App] app) {
+build_script_toolbar([App] app, [EditorCommands] commands) {
   [Toolbar] bar{app.toolbar()}
-  bar.button("Run", "play.fill", command_run())
-  bar.button("Stop", "stop.fill", command_stop())
+  bar.commandButton("Run", "play.fill", commands.run)
+  bar.commandButton("Stop", "stop.fill", commands.stop)
   bar.separator()
-  bar.button("Output", "rectangle.bottomhalf.inset.filled", command_output())
+  bar.commandButton("Output", "rectangle.bottomhalf.inset.filled", commands.output)
   return(bar)
 }
 
@@ -607,7 +498,7 @@ toolbar_kind([Window] tab) {
 // first) and takes the toolbar off the windows that want none; returns the toolbar, which is built once. Call it once
 // for each kind.
 [return<Toolbar> effects(heap_alloc)]
-sync_toolbars([App] app, [u64] settingsWindow, [Toolbar] known, [i32] wanted) {
+sync_toolbars([App] app, [u64] settingsWindow, [Toolbar] known, [i32] wanted, [EditorCommands] commands) {
   [Toolbar mut] bar{known}
   [i32 mut] index{0i32}
   while(index < app.windowCount()) {
@@ -617,14 +508,15 @@ sync_toolbars([App] app, [u64] settingsWindow, [Toolbar] known, [i32] wanted) {
       if(kind == wanted) {
         if(bar.handle == 0u64) {
           if(wanted == 1i32) {
-            bar = build_toolbar(app)
+            bar = build_toolbar(app, commands)
           } else {
-            bar = build_script_toolbar(app)
+            bar = build_script_toolbar(app, commands)
           }
         }
         [bool] shown{each.setToolbar(bar)}
         if(wanted == 1i32) {
-          [bool] selected{each.selectToolbarItem(command_mode() + each.previewMode())}
+          [Command] mode{commands.mode.at(each.previewMode())}
+          [bool] selected{each.selectToolbarCommand(mode)}
         }
       }
       if(kind == 0i32) {
@@ -636,19 +528,20 @@ sync_toolbars([App] app, [u64] settingsWindow, [Toolbar] known, [i32] wanted) {
   return(bar)
 }
 
-// Runs the tab's text as a script; the pane under the editor shows the output.
+// Runs the tab's text as a script; the pane under the editor shows the output, and the end of the run is the command
+// `done`.
 [return<bool> effects(heap_alloc)]
-run_script([Window] tab) {
+run_script([Window] tab, [Command] done) {
   [TextView] view{tab.content()}
   [String] source{view.text()}
   [bool mut] started{false}
   if(tab.hasPath()) {
     [String] path{tab.path()}
-    started = tab.runScript(path, source, command_script_done())
+    started = tab.runScriptCommand(path, source, done)
   } else {
     [String mut] untitled{String{}}
     untitled.append("untitled.prime")
-    started = tab.runScript(untitled, source, command_script_done())
+    started = tab.runScriptCommand(untitled, source, done)
   }
   return(started)
 }
@@ -891,22 +784,449 @@ restore_session([App] app, [Window] first, [TextView] firstView) {
   return(opened)
 }
 
-// Rebuilds File > Open Recent from the recent files list; returns how many files it shows.
-[return<i32>]
-refresh_recent([Menu] recent) {
-  recent.clear()
-  [i32] shown{recent.addRecentFiles(command_recent(), 10i32)}
-  if(shown > 0i32) {
-    recent.separator()
+// The state the handlers share: the app, the menus and toolbars that follow the documents and the preferences, the
+// settings window, and the commands whose items they mark. Each tab keeps its own document path in the backend, so
+// there are no per-document fields. A handler does its own work and says what else it changed; `afterEvent` then
+// brings the menus, toolbars and session up to date once.
+[struct]
+Editor() {
+  [public App] app{App{}}
+  [public EditorCommands] commands{EditorCommands{}}
+  [public Menu] viewMenu{Menu{}}
+  [public Menu] scrollMenu{Menu{}}
+  [public Menu] recentMenu{Menu{}}
+  [public Settings mut] settings{Settings{}}
+  // The toolbars, each built when the first window needs it.
+  [public Toolbar mut] markdownBar{Toolbar{}}
+  [public Toolbar mut] scriptBar{Toolbar{}}
+  // What the last event changed: a command ran (the toolbars follow the windows, the session is saved), a file opened
+  // by request (the toolbars follow), the preferences, the recent files.
+  [public bool mut] commanded{false}
+  [public bool mut] documentsChanged{false}
+  [public bool mut] preferencesChanged{false}
+  [public bool mut] recentChanged{false}
+  // Quit was asked for: the tabs close after the event.
+  [public bool mut] quitRequested{false}
+  // False once the last document has closed: the app ends then.
+  [public bool mut] running{true}
+
+  // A command starts: the toolbars follow and the session is saved after it. Gives the window the command acts on: the
+  // active one, or the first document while the settings window is active (the commands of its menu act on a
+  // document), except that Close (`closing`) closes the settings window itself.
+  [mut effects(heap_alloc) return<Window>]
+  startCommand([bool] closing) {
+    this.commanded = true
+    [Window mut] tab{this.app.activeWindow()}
+    if(tab.handle == this.settings.window && !closing) {
+      tab = document_window(this.app, this.settings.window)
+    }
+    return(tab)
   }
-  recent.item("Clear Menu", "", command_recent_clear())
-  return(shown)
+
+  // Every document shows the editor preferences; the View menu and the settings window show them too.
+  [return<bool>]
+  refreshPreferences() {
+    [i32 mut] index{0i32}
+    while(index < this.app.windowCount()) {
+      [Window] each{this.app.windowAt(index)}
+      if(each.handle != this.settings.window) {
+        [TextView] eachView{each.content()}
+        apply_preferences(this.app, eachView)
+      }
+      index = index + 1i32
+    }
+    this.viewMenu.setCommandChecked(this.commands.lineNumbers, this.app.boolPref("lineNumbers", false))
+    this.viewMenu.setCommandChecked(this.commands.wrap, this.app.boolPref("wrapLines", true))
+    [CheckBox] numbersBox{[handle] this.settings.numbers}
+    numbersBox.setChecked(this.app.boolPref("lineNumbers", false))
+    [CheckBox] wrapBox{[handle] this.settings.wrap}
+    wrapBox.setChecked(this.app.boolPref("wrapLines", true))
+    [i32] mode{this.app.intPref("scrollMode", 2i32)}
+    [i32 mut] choice{0i32}
+    while(choice < 4i32) {
+      [Command] scrollItem{this.commands.scroll.at(choice)}
+      this.scrollMenu.setCommandChecked(scrollItem, choice == mode)
+      choice = choice + 1i32
+    }
+    [Popup] scrollChoice{[handle] this.settings.lock}
+    scrollChoice.select(mode)
+    return(true)
+  }
+
+  // Rebuilds File > Open Recent from the recent files list; returns how many files it shows.
+  [return<i32>]
+  refreshRecent() {
+    this.recentMenu.clear()
+    [i32] shown{this.recentMenu.addRecentFileCommands(this.commands.recent)}
+    if(shown > 0i32) {
+      this.recentMenu.separator()
+    }
+    this.recentMenu.commandItem("Clear Menu", "", this.commands.recentClear)
+    return(shown)
+  }
+
+  // The toolbars follow what each window holds: a markdown file or its preview, or a script.
+  [mut effects(heap_alloc)]
+  syncToolbars() {
+    this.markdownBar = sync_toolbars(this.app, this.settings.window, this.markdownBar, 1i32, this.commands)
+    this.scriptBar = sync_toolbars(this.app, this.settings.window, this.scriptBar, 2i32, this.commands)
+  }
+
+  // After every event: what the handlers changed shows, and the session is saved after a command. Closing the last
+  // tab ends the app like Quit does, so the session stays as it was before it closed; the settings window is not a
+  // document and goes with the last one. False when the app ends.
+  [mut effects(heap_alloc) return<bool>]
+  afterEvent() {
+    if(this.preferencesChanged) {
+      [bool] shown{this.refreshPreferences()}
+    }
+    if(this.recentChanged) {
+      [i32] listed{this.refreshRecent()}
+    }
+    if(this.commanded || this.documentsChanged || this.quitRequested) {
+      this.syncToolbars()
+    }
+    if(this.commanded && count_documents(this.app, this.settings.window) > 0i32) {
+      [bool] remembered{save_session(this.app, document_window(this.app, this.settings.window))}
+    }
+    if(this.quitRequested) {
+      this.closeAll()
+    }
+    this.commanded = false
+    this.documentsChanged = false
+    this.preferencesChanged = false
+    this.recentChanged = false
+    this.quitRequested = false
+    if(count_documents(this.app, this.settings.window) == 0i32) {
+      if(this.settings.window != 0u64) {
+        [Window] leaving{[handle] this.settings.window}
+        leaving.close()
+      }
+      this.running = false
+    }
+    return(this.running)
+  }
+
+  [mut effects(heap_alloc)]
+  showSettings() {
+    this.commanded = true
+    if(this.settings.window == 0u64) {
+      this.settings = build_settings(this.app)
+    } else {
+      [Window] again{[handle] this.settings.window}
+      again.show()
+    }
+  }
+
+  [mut effects(heap_alloc)]
+  newTab() {
+    [Window] tab{this.startCommand(false)}
+    new_tab(this.app, tab)
+  }
+
+  [mut effects(heap_alloc)]
+  openDocument() {
+    [Window] tab{this.startCommand(false)}
+    [bool] opened{open_document(this.app, tab)}
+    this.recentChanged = true
+  }
+
+  // File > Open Recent: `index` is the file's place in the list, most recent first.
+  [mut effects(heap_alloc)]
+  openRecent([i32] index) {
+    [Window] tab{this.startCommand(false)}
+    [String] picked{this.app.recentPath(index)}
+    [bool] reopened{open_path(this.app, tab, picked)}
+    this.recentChanged = true
+  }
+
+  [mut effects(heap_alloc)]
+  clearRecent() {
+    this.commanded = true
+    this.app.clearRecent()
+    this.recentChanged = true
+  }
+
+  // Save, or Save As (`chooseFile`).
+  [mut effects(heap_alloc)]
+  saveDocument([bool] chooseFile) {
+    [Window] tab{this.startCommand(false)}
+    [bool] saved{save_document(this.app, tab, chooseFile)}
+    this.recentChanged = true
+  }
+
+  // File > Close: the active window closes, the settings window too.
+  [mut effects(heap_alloc)]
+  closeActive() {
+    [Window] tab{this.startCommand(true)}
+    this.closeWindow(tab)
+  }
+
+  // File > Close and a window's close button: `tab` asks about its unsaved text and closes.
+  [mut effects(heap_alloc)]
+  closeWindow([Window] tab) {
+    this.commanded = true
+    [bool] closed{close_tab(this.app, tab)}
+    if(closed && tab.handle == this.settings.window) {
+      this.settings = Settings{}
+    }
+  }
+
+  [mut effects(heap_alloc)]
+  togglePreview() {
+    [Window] tab{this.startCommand(false)}
+    tab.setPreview(!tab.hasPreview())
+  }
+
+  // View > Editor, Split View or Preview: `mode` 0, 1 or 2.
+  [mut effects(heap_alloc)]
+  showMode([i32] mode) {
+    [Window] tab{this.startCommand(false)}
+    [bool] moded{tab.setPreviewMode(mode)}
+  }
+
+  [mut effects(heap_alloc)]
+  runScript() {
+    [Window] tab{this.startCommand(false)}
+    run_script(tab, this.commands.scriptDone)
+  }
+
+  [mut effects(heap_alloc)]
+  stopScript() {
+    [Window] tab{this.startCommand(false)}
+    tab.stopScript()
+  }
+
+  [mut effects(heap_alloc)]
+  toggleOutput() {
+    [Window] tab{this.startCommand(false)}
+    tab.setOutputVisible(!tab.outputVisible())
+  }
+
+  // Cmd+1 ... Cmd+9: `number` 1 to 9.
+  [mut effects(heap_alloc)]
+  selectTab([i32] number) {
+    [Window] tab{this.startCommand(false)}
+    [bool] switched{select_tab(tab, number)}
+  }
+
+  // A command that needs no window: the end of a script run (the pane already shows how it ended).
+  [mut]
+  noteCommand() {
+    this.commanded = true
+  }
+
+  // A markdown edit of ps_ui_text_view_markdown_edit on the tab's text.
+  [mut effects(heap_alloc)]
+  formatText([i32] operation, [i32] a, [i32] b) {
+    [Window] tab{this.startCommand(false)}
+    [bool] formatted{format_text(tab, operation, a, b)}
+  }
+
+  // Insert Table: `size` 0 to 3 is 2 by 2, 3 by 3, 4 by 3 or 5 by 4 (columns by rows).
+  [mut effects(heap_alloc)]
+  insertTable([i32] size) {
+    [i32 mut] columns{2i32}
+    [i32 mut] rows{2i32}
+    if(size == 1i32) {
+      columns = 3i32
+      rows = 3i32
+    }
+    if(size == 2i32) {
+      columns = 4i32
+      rows = 3i32
+    }
+    if(size == 3i32) {
+      columns = 5i32
+      rows = 4i32
+    }
+    this.formatText(13i32, columns, rows)
+  }
+
+  // The scroll mode 0 to 3: the settings window's choice, or View > Scroll Preview (`command`).
+  [mut effects(heap_alloc)]
+  chooseScrollMode([i32] mode, [bool] command) {
+    if(command) {
+      this.commanded = true
+    }
+    this.app.setIntPref("scrollMode", mode)
+    this.app.setPreviewScrollMode(mode)
+    this.preferencesChanged = true
+  }
+
+  // View > Show Line Numbers and Wrap Lines flip their preference (`fallback` before the first choice).
+  [mut effects(heap_alloc)]
+  togglePreference([string] name, [bool] fallback) {
+    this.commanded = true
+    this.setBoolPreference(name, !this.app.boolPref(name, fallback))
+  }
+
+  // A preference of the settings window, or of a View item that flips it.
+  [mut effects(heap_alloc)]
+  setBoolPreference([string] name, [bool] value) {
+    this.app.setBoolPref(name, value)
+    this.preferencesChanged = true
+  }
+
+  [mut effects(heap_alloc)]
+  chooseFontSize([i32] index) {
+    this.app.setIntPref("fontSize", font_size_at(index))
+    this.preferencesChanged = true
+  }
+
+  // The system asks the app to open `requested`: a file dropped on its icon, opened with it, or named on the command
+  // line.
+  [mut effects(heap_alloc)]
+  openRequested([String] requested) {
+    [Window] target{document_window(this.app, this.settings.window)}
+    [bool] opened{open_or_select(this.app, target, requested, this.settings.window)}
+    this.recentChanged = true
+    this.documentsChanged = true
+  }
+
+  // Quit: the session is what the tabs hold now; every tab gets its say, and Cancel stops the quit (the app ends when
+  // no document is left).
+  [mut effects(heap_alloc)]
+  closeAll() {
+    [bool] remembered{save_session(this.app, document_window(this.app, this.settings.window))}
+    [bool mut] go{true}
+    while(go && count_documents(this.app, this.settings.window) > 0i32) {
+      [Window] next{document_window(this.app, this.settings.window)}
+      go = close_tab(this.app, next)
+    }
+    if(count_documents(this.app, this.settings.window) > 0i32) {
+      [bool] again{save_session(this.app, document_window(this.app, this.settings.window))}
+    }
+  }
+
+  // A request to quit: `afterEvent` closes the tabs and ends the app when none is left, so the handler itself keeps
+  // it running.
+  [mut return<bool>]
+  requestQuit() {
+    this.quitRequested = true
+    return(false)
+  }
+
+  // Make Default: the application becomes the default of the file types selected in the Files list.
+  [mut effects(heap_alloc)]
+  makeDefault() {
+    [String] chosenApp{this.app.appPath()}
+    [ItemList] picks{[handle] this.settings.list}
+    [i32] pickCount{picks.count()}
+    [i32 mut] pickAt{0i32}
+    [String mut] pickedExtensions{String{}}
+    while(pickAt < pickCount) {
+      if(picks.isSelected(pickAt)) {
+        [String] typeExtensions{this.app.documentTypeExtensions(pickAt)}
+        if(!pickedExtensions.empty()) {
+          pickedExtensions.append(",")
+        }
+        pickedExtensions.appendString(typeExtensions)
+      }
+      pickAt = pickAt + 1i32
+    }
+    if(!pickedExtensions.empty()) {
+      this.app.setDefaultApp(pickedExtensions, chosenApp)
+    }
+    [bool] listed{refresh_files(this.app, this.settings.list)}
+    this.preferencesChanged = true
+  }
 }
 
 [return<int> effects(heap_alloc)]
 main([array<string>] args) {
   [App] app{start_app("PrimeScroll")}
-  [Settings mut] settings{Settings{}}
+
+  // The commands, in the order of their ids (EditorCommands); each handler gets the editor.
+  [AppHandlers<Editor> mut] handlers{AppHandlers<Editor>{[state] Editor{}}}
+  [EditorCommands mut] commands{EditorCommands{}}
+  commands.newTab = handlers.command([]([Reference<Editor>] editor, [PointerEvent] event) { editor.newTab() })
+  commands.open = handlers.command([]([Reference<Editor>] editor, [PointerEvent] event) { editor.openDocument() })
+  commands.save = handlers.command([]([Reference<Editor>] editor, [PointerEvent] event) { editor.saveDocument(false) })
+  commands.saveAs = handlers.command([]([Reference<Editor>] editor, [PointerEvent] event) { editor.saveDocument(true) })
+  commands.close = handlers.command([]([Reference<Editor>] editor, [PointerEvent] event) { editor.closeActive() })
+  commands.lineNumbers = handlers.command([]([Reference<Editor>] editor, [PointerEvent] event) {
+    editor.togglePreference("lineNumbers", false)
+  })
+  commands.settings = handlers.command([]([Reference<Editor>] editor, [PointerEvent] event) { editor.showSettings() })
+  commands.wrap = handlers.command([]([Reference<Editor>] editor, [PointerEvent] event) {
+    editor.togglePreference("wrapLines", true)
+  })
+  commands.preview = handlers.command([]([Reference<Editor>] editor, [PointerEvent] event) { editor.togglePreview() })
+  commands.scroll = handlers.commandRange(4i32, []([Reference<Editor>] editor, [i32] mode) {
+    editor.chooseScrollMode(mode, true)
+  })
+  commands.mode = handlers.commandRange(3i32, []([Reference<Editor>] editor, [i32] mode) { editor.showMode(mode) })
+  commands.format = handlers.commandRange(22i32, []([Reference<Editor>] editor, [i32] operation) {
+    editor.formatText(operation, 0i32, 0i32)
+  })
+  commands.heading = handlers.commandRange(4i32, []([Reference<Editor>] editor, [i32] level) {
+    editor.formatText(6i32, level, 0i32)
+  })
+  commands.table = handlers.commandRange(4i32, []([Reference<Editor>] editor, [i32] size) { editor.insertTable(size) })
+  commands.align = handlers.commandRange(3i32, []([Reference<Editor>] editor, [i32] side) {
+    editor.formatText(19i32, side + 1i32, 0i32)
+  })
+  commands.tab = handlers.commandRange(9i32, []([Reference<Editor>] editor, [i32] index) {
+    editor.selectTab(index + 1i32)
+  })
+  commands.run = handlers.command([]([Reference<Editor>] editor, [PointerEvent] event) { editor.runScript() })
+  commands.stop = handlers.command([]([Reference<Editor>] editor, [PointerEvent] event) { editor.stopScript() })
+  commands.output = handlers.command([]([Reference<Editor>] editor, [PointerEvent] event) { editor.toggleOutput() })
+  commands.scriptDone = handlers.command([]([Reference<Editor>] editor, [PointerEvent] event) { editor.noteCommand() })
+  commands.recent = handlers.commandRange(10i32, []([Reference<Editor>] editor, [i32] index) {
+    editor.openRecent(index)
+  })
+  commands.recentClear = handlers.command([]([Reference<Editor>] editor, [PointerEvent] event) {
+    editor.clearRecent()
+  })
+
+  // The settings window is built when it is first opened, so its controls are found in the editor.
+  handlers.onCheckBoxChangeOf([]([Reference<Editor>] editor) { return(editor.settings.restore) },
+                              []([Reference<Editor>] editor, [ChangeEvent] event) {
+    editor.setBoolPreference("restoreSession", event.checked)
+  })
+  handlers.onCheckBoxChangeOf([]([Reference<Editor>] editor) { return(editor.settings.numbers) },
+                              []([Reference<Editor>] editor, [ChangeEvent] event) {
+    editor.setBoolPreference("lineNumbers", event.checked)
+  })
+  handlers.onCheckBoxChangeOf([]([Reference<Editor>] editor) { return(editor.settings.wrap) },
+                              []([Reference<Editor>] editor, [ChangeEvent] event) {
+    editor.setBoolPreference("wrapLines", event.checked)
+  })
+  handlers.onCheckBoxChangeOf([]([Reference<Editor>] editor) { return(editor.settings.preview) },
+                              []([Reference<Editor>] editor, [ChangeEvent] event) {
+    editor.setBoolPreference("previewMarkdown", event.checked)
+  })
+  handlers.onPopupChangeOf([]([Reference<Editor>] editor) { return(editor.settings.lock) },
+                           []([Reference<Editor>] editor, [ChangeEvent] event) {
+    editor.chooseScrollMode(event.index, false)
+  })
+  handlers.onPopupChangeOf([]([Reference<Editor>] editor) { return(editor.settings.size) },
+                           []([Reference<Editor>] editor, [ChangeEvent] event) { editor.chooseFontSize(event.index) })
+  // Every change in the settings window shows the preferences again, a new selection of file types too.
+  handlers.onListChangeOf([]([Reference<Editor>] editor) { return(editor.settings.list) },
+                          []([Reference<Editor>] editor, [ChangeEvent] event) { editor.preferencesChanged = true })
+  handlers.onClickOf([]([Reference<Editor>] editor) { return(editor.settings.apply) },
+                     []([Reference<Editor>] editor, [PointerEvent] event) { editor.makeDefault() })
+
+  handlers.onWindowClose([]([Reference<Editor>] editor, [Window] closing) { editor.closeWindow(closing) })
+  handlers.onTextChange([]([Reference<Editor>] editor, [Window] changed) {
+    changed.setEdited(true)
+    [TextView] view{changed.content()}
+    view.highlight(changed.path())
+    changed.refreshPreview()
+  })
+  handlers.onOpenFile([]([Reference<Editor>] editor, [String] requested) { editor.openRequested(requested) })
+  handlers.onQuit([]([Reference<Editor>] editor) {
+    [bool] quitting{editor.requestQuit()}
+    return(quitting)
+  })
+  handlers.afterEvent([]([Reference<Editor>] editor) {
+    [bool] going{editor.afterEvent()}
+    return(going)
+  })
+
   app.setPreviewScrollMode(app.intPref("scrollMode", 2i32))
   [Window] first{app.window("Untitled", 880i32, 480i32)}
   first.setAutosaveName("PrimeScroll")
@@ -918,7 +1238,7 @@ main([array<string>] args) {
   [Menu] application{app.menu("PrimeScroll")}
   application.about()
   application.separator()
-  application.item("Settings...", "cmd+,", command_settings())
+  application.commandItem("Settings...", "cmd+,", commands.settings)
   application.separator()
   application.hide()
   application.hideOthers()
@@ -927,16 +1247,16 @@ main([array<string>] args) {
   application.addToBarAsApp()
 
   [Menu] file{app.menu("File")}
-  file.item("New Tab", "cmd+t", command_new())
-  file.item("New", "cmd+n", command_new())
-  file.item("Open...", "cmd+o", command_open())
+  file.commandItem("New Tab", "cmd+t", commands.newTab)
+  file.commandItem("New", "cmd+n", commands.newTab)
+  file.commandItem("Open...", "cmd+o", commands.open)
   [Menu] recentMenu{app.menu("Open Recent")}
   file.submenu("Open Recent", recentMenu)
   file.separator()
-  file.item("Save", "cmd+s", command_save())
-  file.item("Save As...", "cmd+shift+s", command_save_as())
+  file.commandItem("Save", "cmd+s", commands.save)
+  file.commandItem("Save As...", "cmd+shift+s", commands.saveAs)
   file.separator()
-  file.item("Close", "cmd+w", command_close())
+  file.commandItem("Close", "cmd+w", commands.close)
   file.addToBar()
 
   [Menu] edit{app.menu("Edit")}
@@ -952,51 +1272,51 @@ main([array<string>] args) {
   edit.addToBar()
 
   [Menu] formatMenu{app.menu("Format")}
-  formatMenu.item("Bold", "cmd+b", command_format())
-  formatMenu.item("Italic", "cmd+i", command_format() + 1i32)
-  formatMenu.item("Strikethrough", "cmd+shift+x", command_format() + 2i32)
-  formatMenu.item("Code", "cmd+e", command_format() + 3i32)
+  formatMenu.commandItem("Bold", "cmd+b", commands.format.at(0i32))
+  formatMenu.commandItem("Italic", "cmd+i", commands.format.at(1i32))
+  formatMenu.commandItem("Strikethrough", "cmd+shift+x", commands.format.at(2i32))
+  formatMenu.commandItem("Code", "cmd+e", commands.format.at(3i32))
   formatMenu.separator()
-  formatMenu.item("Link", "cmd+k", command_format() + 4i32)
-  formatMenu.item("Image", "", command_format() + 5i32)
+  formatMenu.commandItem("Link", "cmd+k", commands.format.at(4i32))
+  formatMenu.commandItem("Image", "", commands.format.at(5i32))
   formatMenu.separator()
   [Menu] headingMenu{app.menu("Heading")}
-  [bool] headingItems{add_heading_items(headingMenu)}
+  [bool] headingItems{add_heading_items(headingMenu, commands.heading)}
   formatMenu.submenu("Heading", headingMenu)
-  formatMenu.item("Bulleted List", "", command_format() + 7i32)
-  formatMenu.item("Numbered List", "", command_format() + 8i32)
-  formatMenu.item("Task List", "", command_format() + 9i32)
-  formatMenu.item("Quote", "", command_format() + 10i32)
-  formatMenu.item("Code Block", "", command_format() + 11i32)
-  formatMenu.item("Horizontal Rule", "", command_format() + 12i32)
+  formatMenu.commandItem("Bulleted List", "", commands.format.at(7i32))
+  formatMenu.commandItem("Numbered List", "", commands.format.at(8i32))
+  formatMenu.commandItem("Task List", "", commands.format.at(9i32))
+  formatMenu.commandItem("Quote", "", commands.format.at(10i32))
+  formatMenu.commandItem("Code Block", "", commands.format.at(11i32))
+  formatMenu.commandItem("Horizontal Rule", "", commands.format.at(12i32))
   formatMenu.separator()
   [Menu] tableMenu{app.menu("Table")}
-  [bool] tableItems{add_table_items(tableMenu)}
+  [bool] tableItems{add_table_items(tableMenu, commands)}
   formatMenu.submenu("Table", tableMenu)
   formatMenu.addToBar()
 
   [Menu] runMenu{app.menu("Run")}
-  runMenu.item("Run", "cmd+r", command_run())
-  runMenu.item("Stop", "cmd+.", command_stop())
+  runMenu.commandItem("Run", "cmd+r", commands.run)
+  runMenu.commandItem("Stop", "cmd+.", commands.stop)
   runMenu.separator()
-  runMenu.item("Show Output", "cmd+alt+o", command_output())
+  runMenu.commandItem("Show Output", "cmd+alt+o", commands.output)
   runMenu.addToBar()
 
   [Menu] viewMenu{app.menu("View")}
   viewMenu.fullScreen()
   viewMenu.showTabBar()
-  viewMenu.item("Show Line Numbers", "cmd+shift+l", command_line_numbers())
-  viewMenu.item("Wrap Lines", "", command_wrap())
-  viewMenu.item("Show Markdown Preview", "cmd+shift+m", command_preview())
-  viewMenu.followPreview(command_preview())
-  viewMenu.item("Editor", "cmd+alt+1", command_mode())
-  viewMenu.item("Split View", "cmd+alt+2", command_mode() + 1i32)
-  viewMenu.item("Preview", "cmd+alt+3", command_mode() + 2i32)
+  viewMenu.commandItem("Show Line Numbers", "cmd+shift+l", commands.lineNumbers)
+  viewMenu.commandItem("Wrap Lines", "", commands.wrap)
+  viewMenu.commandItem("Show Markdown Preview", "cmd+shift+m", commands.preview)
+  viewMenu.followPreviewCommand(commands.preview)
+  viewMenu.commandItem("Editor", "cmd+alt+1", commands.mode.at(0i32))
+  viewMenu.commandItem("Split View", "cmd+alt+2", commands.mode.at(1i32))
+  viewMenu.commandItem("Preview", "cmd+alt+3", commands.mode.at(2i32))
   [Menu] scrollMenu{app.menu("Scroll Preview")}
-  scrollMenu.item("Independently", "", command_scroll())
-  scrollMenu.item("Linearly", "", command_scroll() + 1i32)
-  scrollMenu.item("By Block", "", command_scroll() + 2i32)
-  scrollMenu.item("With the Cursor", "", command_scroll() + 3i32)
+  scrollMenu.commandItem("Independently", "", commands.scroll.at(0i32))
+  scrollMenu.commandItem("Linearly", "", commands.scroll.at(1i32))
+  scrollMenu.commandItem("By Block", "", commands.scroll.at(2i32))
+  scrollMenu.commandItem("With the Cursor", "", commands.scroll.at(3i32))
   viewMenu.submenu("Scroll Preview", scrollMenu)
   viewMenu.addToBar()
 
@@ -1009,15 +1329,15 @@ main([array<string>] args) {
   windowMenu.moveTabToNewWindow()
   windowMenu.mergeAllWindows()
   windowMenu.separator()
-  windowMenu.item("Show Tab 1", "cmd+1", command_tab() + 1i32)
-  windowMenu.item("Show Tab 2", "cmd+2", command_tab() + 2i32)
-  windowMenu.item("Show Tab 3", "cmd+3", command_tab() + 3i32)
-  windowMenu.item("Show Tab 4", "cmd+4", command_tab() + 4i32)
-  windowMenu.item("Show Tab 5", "cmd+5", command_tab() + 5i32)
-  windowMenu.item("Show Tab 6", "cmd+6", command_tab() + 6i32)
-  windowMenu.item("Show Tab 7", "cmd+7", command_tab() + 7i32)
-  windowMenu.item("Show Tab 8", "cmd+8", command_tab() + 8i32)
-  windowMenu.item("Show Last Tab", "cmd+9", command_tab() + 9i32)
+  windowMenu.commandItem("Show Tab 1", "cmd+1", commands.tab.at(0i32))
+  windowMenu.commandItem("Show Tab 2", "cmd+2", commands.tab.at(1i32))
+  windowMenu.commandItem("Show Tab 3", "cmd+3", commands.tab.at(2i32))
+  windowMenu.commandItem("Show Tab 4", "cmd+4", commands.tab.at(3i32))
+  windowMenu.commandItem("Show Tab 5", "cmd+5", commands.tab.at(4i32))
+  windowMenu.commandItem("Show Tab 6", "cmd+6", commands.tab.at(5i32))
+  windowMenu.commandItem("Show Tab 7", "cmd+7", commands.tab.at(6i32))
+  windowMenu.commandItem("Show Tab 8", "cmd+8", commands.tab.at(7i32))
+  windowMenu.commandItem("Show Last Tab", "cmd+9", commands.tab.at(8i32))
   windowMenu.separator()
   windowMenu.bringAllToFront()
   windowMenu.addToBarAsWindow()
@@ -1025,6 +1345,9 @@ main([array<string>] args) {
   [Menu] helpMenu{app.menu("Help")}
   helpMenu.help()
   helpMenu.addToBarAsHelp()
+
+  [Editor mut] editor{Editor{[app] app, [commands] commands, [viewMenu] viewMenu, [scrollMenu] scrollMenu,
+                             [recentMenu] recentMenu}}
 
   // A file named on the command line opens in the first tab.
   if(args.count() > 1i32) {
@@ -1040,8 +1363,8 @@ main([array<string>] args) {
     }
   }
 
-  [bool] shown{refresh_preferences(app, viewMenu, scrollMenu, settings)}
-  [i32] recentShown{refresh_recent(recentMenu)}
+  [bool] shown{editor.refreshPreferences()}
+  [i32] recentShown{editor.refreshRecent()}
 
   first.show()
 
@@ -1050,237 +1373,8 @@ main([array<string>] args) {
     [i32] restored{restore_session(app, first, firstView)}
   }
 
-  [Toolbar mut] markdownBar{Toolbar{}}
-  [Toolbar mut] scriptBar{Toolbar{}}
-  markdownBar = sync_toolbars(app, settings.window, markdownBar, 1i32)
-  scriptBar = sync_toolbars(app, settings.window, scriptBar, 2i32)
-
-  [bool mut] running{true}
-  while(running) {
-    [i32 mut] intent{0i32}
-    [bool mut] documentsChanged{false}
-    [u64 mut] changedControl{0u64}
-    [Window mut] tab{app.activeWindow()}
-    pick(app.waitEvent()) {
-      command(id) {
-        intent = id
-        [Window] active{app.activeWindow()}
-        tab = active
-      }
-      windowCloseRequested(w) {
-        intent = command_close()
-        [Window] closing{w}
-        tab = closing
-      }
-      textChanged(w) {
-        [Window] changed{w}
-        changed.setEdited(true)
-        [TextView] view{changed.content()}
-        view.highlight(changed.path())
-        changed.refreshPreview()
-      }
-      controlChanged(widget) {
-        [Widget] changed{widget}
-        changedControl = changed.handle
-      }
-      openFile(request) {
-        [String] requested{app.eventText()}
-        [Window] target{document_window(app, settings.window)}
-        [bool] openedRequest{open_or_select(app, target, requested, settings.window)}
-        [i32] listedRecent{refresh_recent(recentMenu)}
-        documentsChanged = true
-      }
-      quitRequested {
-        intent = command_quit()
-      }
-    }
-
-    // Commands of the settings window's menu act on a document, except closing the window itself.
-    if(tab.handle == settings.window && intent != command_close()) {
-      [Window] working{document_window(app, settings.window)}
-      tab = working
-    }
-
-    // The settings window's controls are the preferences, applied at once.
-    if(changedControl != 0u64) {
-      [CheckBox] restoreBox{[handle] settings.restore}
-      [CheckBox] numbersBox{[handle] settings.numbers}
-      [CheckBox] wrapBox{[handle] settings.wrap}
-      [CheckBox] previewBox{[handle] settings.preview}
-      [Popup] lockChoice{[handle] settings.lock}
-      [Popup] sizeChoice{[handle] settings.size}
-      if(changedControl == settings.restore) {
-        app.setBoolPref("restoreSession", restoreBox.isChecked())
-      }
-      if(changedControl == settings.numbers) {
-        app.setBoolPref("lineNumbers", numbersBox.isChecked())
-      }
-      if(changedControl == settings.wrap) {
-        app.setBoolPref("wrapLines", wrapBox.isChecked())
-      }
-      if(changedControl == settings.preview) {
-        app.setBoolPref("previewMarkdown", previewBox.isChecked())
-      }
-      if(changedControl == settings.lock) {
-        app.setIntPref("scrollMode", lockChoice.selected())
-        app.setPreviewScrollMode(lockChoice.selected())
-      }
-      if(changedControl == settings.size) {
-        app.setIntPref("fontSize", font_size_at(sizeChoice.selected()))
-      }
-      if(settings.apply != 0u64 && changedControl == settings.apply) {
-        [String] chosenApp{app.appPath()}
-        [ItemList] picks{[handle] settings.list}
-        [i32] pickCount{picks.count()}
-        [i32 mut] pickAt{0i32}
-        [String mut] pickedExtensions{String{}}
-        while(pickAt < pickCount) {
-          if(picks.isSelected(pickAt)) {
-            [String] typeExtensions{app.documentTypeExtensions(pickAt)}
-            if(!pickedExtensions.empty()) {
-              pickedExtensions.append(",")
-            }
-            pickedExtensions.appendString(typeExtensions)
-          }
-          pickAt = pickAt + 1i32
-        }
-        if(!pickedExtensions.empty()) {
-          app.setDefaultApp(pickedExtensions, chosenApp)
-        }
-        [bool] pickShown{refresh_files(app, settings.list)}
-      }
-      [bool] controlsApplied{refresh_preferences(app, viewMenu, scrollMenu, settings)}
-    }
-
-    [bool mut] recentsChanged{false}
-    if(intent == command_settings()) {
-      if(settings.window == 0u64) {
-        settings = build_settings(app)
-      } else {
-        [Window] again{[handle] settings.window}
-        again.show()
-      }
-    }
-    if(intent == command_new()) {
-      [Window] fresh{new_tab(app, tab)}
-    }
-    if(intent == command_open()) {
-      [bool] opened{open_document(app, tab)}
-      recentsChanged = true
-    }
-    if(intent >= command_recent() && intent < command_recent() + 10i32) {
-      [String] picked{app.recentPath(intent - command_recent())}
-      [bool] reopened{open_path(app, tab, picked)}
-      recentsChanged = true
-    }
-    if(intent == command_recent_clear()) {
-      app.clearRecent()
-      recentsChanged = true
-    }
-    if(intent == command_preview()) {
-      [bool] previewing{tab.setPreview(!tab.hasPreview())}
-    }
-    if(intent >= command_mode() && intent < command_mode() + 3i32) {
-      [bool] moded{tab.setPreviewMode(intent - command_mode())}
-    }
-    if(intent == command_run()) {
-      [bool] started{run_script(tab)}
-    }
-    if(intent == command_stop()) {
-      [bool] stopped{tab.stopScript()}
-    }
-    if(intent == command_output()) {
-      [bool] toggled{tab.setOutputVisible(!tab.outputVisible())}
-    }
-    if(intent >= command_format() && intent < command_format() + 22i32) {
-      [bool] formatted{format_text(tab, intent - command_format(), 0i32, 0i32)}
-    }
-    if(intent >= command_heading() && intent < command_heading() + 4i32) {
-      [bool] headed{format_text(tab, 6i32, intent - command_heading(), 0i32)}
-    }
-    if(intent >= command_align() + 1i32 && intent < command_align() + 4i32) {
-      [bool] aligned{format_text(tab, 19i32, intent - command_align(), 0i32)}
-    }
-    if(intent >= command_table() && intent < command_table() + 4i32) {
-      [i32] size{intent - command_table()}
-      [i32 mut] columns{2i32}
-      [i32 mut] rows{2i32}
-      if(size == 1i32) {
-        columns = 3i32
-        rows = 3i32
-      }
-      if(size == 2i32) {
-        columns = 4i32
-        rows = 3i32
-      }
-      if(size == 3i32) {
-        columns = 5i32
-        rows = 4i32
-      }
-      [bool] tabled{format_text(tab, 13i32, columns, rows)}
-    }
-    if(intent >= command_scroll() && intent < command_scroll() + 4i32) {
-      app.setIntPref("scrollMode", intent - command_scroll())
-      app.setPreviewScrollMode(intent - command_scroll())
-      [bool] scrollChosen{refresh_preferences(app, viewMenu, scrollMenu, settings)}
-    }
-    if(intent == command_wrap()) {
-      app.setBoolPref("wrapLines", !app.boolPref("wrapLines", true))
-      [bool] wrapped{refresh_preferences(app, viewMenu, scrollMenu, settings)}
-    }
-    if(intent == command_line_numbers()) {
-      app.setBoolPref("lineNumbers", !app.boolPref("lineNumbers", false))
-      [bool] numbered{refresh_preferences(app, viewMenu, scrollMenu, settings)}
-    }
-    if(intent == command_save()) {
-      [bool] saved{save_document(app, tab, false)}
-      recentsChanged = true
-    }
-    if(intent == command_save_as()) {
-      [bool] saved{save_document(app, tab, true)}
-      recentsChanged = true
-    }
-    if(recentsChanged) {
-      [i32] shownNow{refresh_recent(recentMenu)}
-    }
-    if(intent == command_close()) {
-      [bool] closed{close_tab(app, tab)}
-      if(closed && tab.handle == settings.window) {
-        settings = Settings{}
-      }
-    }
-    if(intent > command_tab() && intent <= command_tab() + 9i32) {
-      [bool] switched{select_tab(tab, intent - command_tab())}
-    }
-    // The toolbar follows what each window holds: a markdown file or its preview, or a script.
-    if(intent != 0i32 || documentsChanged) {
-      markdownBar = sync_toolbars(app, settings.window, markdownBar, 1i32)
-      scriptBar = sync_toolbars(app, settings.window, scriptBar, 2i32)
-    }
-    // Closing the last tab ends the app like Quit does, so the session stays as it was before it closed.
-    if(intent != 0i32 && intent != command_quit() && count_documents(app, settings.window) > 0i32) {
-      [bool] remembered{save_session(app, document_window(app, settings.window))}
-    }
-    if(intent == command_quit()) {
-      // The session is what the tabs hold now; every tab gets its say, and Cancel stops the quit.
-      [bool] rememberedQuit{save_session(app, document_window(app, settings.window))}
-      [bool mut] go{true}
-      while(go && count_documents(app, settings.window) > 0i32) {
-        [Window] next{document_window(app, settings.window)}
-        go = close_tab(app, next)
-      }
-      if(count_documents(app, settings.window) > 0i32) {
-        [bool] again{save_session(app, document_window(app, settings.window))}
-      }
-    }
-    // The settings window is not a document: it goes with the last one.
-    if(count_documents(app, settings.window) == 0i32) {
-      if(settings.window != 0u64) {
-        [Window] leaving{[handle] settings.window}
-        leaving.close()
-      }
-      running = false
-    }
-  }
+  editor.syncToolbars()
+  handlers.state = editor
+  app.run(handlers)
   return(0i32)
 }

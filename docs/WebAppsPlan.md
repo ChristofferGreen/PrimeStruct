@@ -106,7 +106,10 @@ handlers.onClick(native, sayHello)                // native: app.run(handlers) d
 Natively the handlers live in an `AppHandlers<Greeter>` beside the platform `App`, which owns the state the way a
 `WebApp` does: `Button` and `Menu` are bare handles with nowhere to keep a closure. `app.run(handlers)` dispatches
 the events; command ids stay inside the table (`handlers.command(handler)` returns a `Command` for menu items and
-toolbar buttons), and `waitEvent` stays as the low level, so PrimeScroll can move one menu at a time (TODO-5710).
+toolbar buttons, `handlers.commandRange(count, handler)` a row of them whose handler gets the offset), and `waitEvent`
+stays as the low level. PrimeScroll runs on handlers (TODO-5710): one closure per command or control, the controls of
+its lazily built settings window found through the state (`onCheckBoxChangeOf(find, handler)`), and one `afterEvent`
+handler that brings the menus, toolbars and session up to date after each event.
 
 ## Order
 
@@ -117,6 +120,6 @@ toolbar buttons), and `waitEvent` stays as the low level, so PrimeScroll can mov
 4. Events and controls: TODO-5723 (shared event structs; done), TODO-5722 (web controls take click closures; done).
 5. Fragments: TODO-5706 (done), then TODO-5724 (web hover and key handlers; done).
 6. Native UI: TODO-5709 (controls take closures, `app.run(handlers)`; done), TODO-5725 (pointer and key events in the C ABI; done),
-   TODO-5710 (PrimeScroll on handlers), TODO-5711 (retire the `/std/ui` prototype).
+   TODO-5710 (PrimeScroll on handlers; done), TODO-5711 (retire the `/std/ui` prototype).
 7. Later: TODO-5707, TODO-5708 (type aliases), TODO-5717 (both writers in one file), TODO-5718 (repeated and decoded
    parameters), sessions and cookies, keep-alive, concurrency once tasks schedule.

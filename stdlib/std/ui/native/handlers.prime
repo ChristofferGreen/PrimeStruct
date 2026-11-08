@@ -1,9 +1,9 @@
 // Native controls that take handler closures (docs/spec/stdlib-reference.md, Native UI; docs/WebAppsPlan.md,
 // principle 7). An `AppHandlers<State>` holds the app's state and a table of handlers, each registered once, at setup:
 // a click handler for a button, a change handler for a check box, pop-up or list, the commands of menu items and
-// toolbar buttons, and the pointer and key handlers of any control or text view. `app.run(handlers)` then waits on
-// the events and calls the handler of each, until the app quits. The command ids and widget handles that
-// `App.waitEvent` reports stay inside this table.
+// toolbar buttons, a range of commands for items that come in a row (toolbar segments, recent files), and the pointer
+// and key handlers of any control or text view. `app.run(handlers)` then waits on the events and calls the handler of
+// each, until the app quits. The command ids and widget handles that `App.waitEvent` reports stay inside this table.
 import /std/collections/*
 import /std/text/*
 import /std/ui/events/*
@@ -21,12 +21,40 @@ namespace native {
     [public i32] id{0i32}
   }
 
-  // The handler of a command or of a button's click. Command `first_command_id() + i` is `commands[i]`; the
-  // button of `clicks[i]` is `clickWidgets[i]`: reading a `u64` or `i32` field of an element after the first faults
-  // on the VM (TODO-5733), so the keys are a vector of their own.
+  // `count` commands in a row that `AppHandlers.commandRange` registered with one handler, which gets the offset of
+  // the chosen one (0 for the first). The controls that take consecutive ids take the whole range
+  // (`Toolbar.commandSegments(titles, range)`, `Menu.addRecentFileCommands(range)`); a menu item or a toolbar button
+  // takes one of them as a `Command` (`range.at(offset)`).
+  [public struct]
+  CommandRange() {
+    [public i32] first{0i32}
+    [public i32] count{0i32}
+
+    // The command at `offset`, 0 to count - 1.
+    [public return<Command>]
+    at([i32] offset) {
+      [i32] id{this.first + offset}
+      return(Command{[id] id})
+    }
+  }
+
+  // The handler of a command, of a button's click or of a pointer event.
   [public struct]
   NativeClickHandler<State>() {
     [public Function<void, Reference<State>, PointerEvent> mut] handler
+  }
+
+  // The handler of a range of commands: it gets the offset of the chosen command in the range.
+  [public struct]
+  NativeRangeHandler<State>() {
+    [public Function<void, Reference<State>, i32> mut] handler
+  }
+
+  // Finds a control the state holds, for controls made after setup: it gives the control's handle, or 0 while there
+  // is none.
+  [public struct]
+  NativeFindHandler<State>() {
+    [public Function<u64, Reference<State>> mut] handler
   }
 
   // The handler of a check box's, pop-up's or list's change; its widget and kind lie in `AppHandlers.changeWidgets`
@@ -55,7 +83,8 @@ namespace native {
     [public Function<void, Reference<State>, /std/text/String> mut] handler
   }
 
-  // The handler of a request to quit: true lets the app quit, false keeps it running.
+  // The handler of a request to quit: true lets the app quit, false keeps it running. An `afterEvent` handler has the
+  // same type: true keeps `run` going.
   [public struct]
   NativeQuitHandler<State>() {
     [public Function<bool, Reference<State>> mut] handler
@@ -63,47 +92,94 @@ namespace native {
 
   // The state of a native app and the handlers of its controls. Build it with the state (`AppHandlers<Counter>{[state]
   // Counter{}}`), register the handlers while the windows are set up, and pass it to `app.run(handlers)`.
+  //
+  // The handlers of one type sit in one vector and `run` calls each vector from one place: the native backend inlines
+  // a `Function` call with every closure of its type, at each call site (struct methods are not real calls there yet,
+  // TODO-5740), so an app's handlers are compiled once. The keys (widgets, kinds, command ids) are vectors of their
+  // own: reading a `u64` or `i32` field of an element after the first faults on the VM (TODO-5733).
   [public struct]
   AppHandlers<State>() {
     // The state that every handler reads and changes; it comes to each handler as its first argument.
     [public State mut] state
-    [public vector<NativeClickHandler<State>> mut] commands{vector<NativeClickHandler<State>>()}
+    // Every handler that gets a `PointerEvent`: the commands, the clicks of buttons, the pointer handlers.
     [public vector<NativeClickHandler<State>> mut] clicks{vector<NativeClickHandler<State>>()}
+    // What each command id handed out calls: command `first_command_id() + i` is `clicks[commandSlots[i]]` when that
+    // slot is 0 or more, and otherwise one of the range `ranges[-1 - commandSlots[i]]`, whose first command is
+    // `first_command_id() + rangeFirsts[-1 - commandSlots[i]]`.
+    [public vector<i32> mut] commandSlots{vector<i32>()}
+    [public vector<NativeRangeHandler<State>> mut] ranges{vector<NativeRangeHandler<State>>()}
+    [public vector<i32> mut] rangeFirsts{vector<i32>()}
+    // The buttons with a click handler, and the handler's index in `clicks`.
     [public vector<u64> mut] clickWidgets{vector<u64>()}
+    [public vector<i32> mut] clickHandlers{vector<i32>()}
+    // The change handlers; `changeWidgets[i]` is the control of `changes[i]` (0 for one that `changeFinds` finds) and
+    // `changeKinds[i]` says how its event is read: 1 for a check box, 2 for a pop-up, 3 for a list (`change_event`).
     [public vector<NativeChangeHandler<State>> mut] changes{vector<NativeChangeHandler<State>>()}
     [public vector<u64> mut] changeWidgets{vector<u64>()}
-    // 1 for a check box, 2 for a pop-up, 3 for a list: how the change event of each of `changes` is read
-    // (`change_event`).
     [public vector<i32> mut] changeKinds{vector<i32>()}
-    // The last handler registered of each is the one called (`clear` on these fields does not resolve, TODO-5732).
-    [public vector<NativeWindowHandler<State>> mut] closes{vector<NativeWindowHandler<State>>()}
-    [public vector<NativeWindowHandler<State>> mut] edits{vector<NativeWindowHandler<State>>()}
+    // The controls the state holds (`onClickOf`, `on...ChangeOf`): `finds[i]` finds the control of the click handler
+    // `clicks[findTargets[i]]` when `findIsClick[i]`, otherwise of the change handler `changes[findTargets[i]]`.
+    [public vector<NativeFindHandler<State>> mut] finds{vector<NativeFindHandler<State>>()}
+    [public vector<bool> mut] findIsClick{vector<bool>()}
+    [public vector<i32> mut] findTargets{vector<i32>()}
+    // The close and text handlers, and which one of each is called (the last registered; -1 for none).
+    [public vector<NativeWindowHandler<State>> mut] windowHandlers{vector<NativeWindowHandler<State>>()}
+    [public i32 mut] closeHandler{-1i32}
+    [public i32 mut] textHandler{-1i32}
     [public vector<NativeFileHandler<State>> mut] opens{vector<NativeFileHandler<State>>()}
-    [public vector<NativeQuitHandler<State>> mut] quits{vector<NativeQuitHandler<State>>()}
-    // The pointer and key handlers: `pointers[i]` handles the event `pointerKinds[i]` of the widget
+    // The quit and after-event handlers, and which one of each is called.
+    [public vector<NativeQuitHandler<State>> mut] decisions{vector<NativeQuitHandler<State>>()}
+    [public i32 mut] quitHandler{-1i32}
+    [public i32 mut] afterHandler{-1i32}
+    // The pointer and key handlers: `clicks[pointerHandlers[i]]` handles the event `pointerKinds[i]` of the widget
     // `pointerWidgets[i]`, `keys[i]` the event `keyKinds[i]` of `keyWidgets[i]`. The kinds are the bits of
     // `ps_ui_widget_watch`: 1 the pointer entering, 2 a press, 4 a release, 8 a key down, 16 a key up.
-    [public vector<NativeClickHandler<State>> mut] pointers{vector<NativeClickHandler<State>>()}
     [public vector<u64> mut] pointerWidgets{vector<u64>()}
     [public vector<i32> mut] pointerKinds{vector<i32>()}
+    [public vector<i32> mut] pointerHandlers{vector<i32>()}
     [public vector<NativeKeyHandler<State>> mut] keys{vector<NativeKeyHandler<State>>()}
     [public vector<u64> mut] keyWidgets{vector<u64>()}
     [public vector<i32> mut] keyKinds{vector<i32>()}
 
     // Registers `handler` as a command and returns it, to add to menus and toolbars. Choosing the command calls the
     // handler with a click of the primary button without a position: the C ABI reports no pointer details. The ids
-    // count up from `first_command_id()` (1000000), above the ones programs pick by hand for `waitEvent`.
+    // count up from `first_command_id()` (1000000), above the ones programs pick by hand for `waitEvent`, in the
+    // order of registration, shared with `commandRange`.
     [mut effects(heap_alloc) return<Command>]
     command([Function<void, Reference<State>, PointerEvent> move] handler) {
-      [i32] id{first_command_id() + this.commands.count()}
-      this.commands.push(NativeClickHandler<State>{[handler] handler})
+      [i32] id{first_command_id() + this.commandSlots.count()}
+      this.commandSlots.push(this.addClick(handler))
       return(Command{[id] id})
+    }
+
+    // Registers `count` commands in a row with one handler and returns them; choosing one calls the handler with its
+    // offset in the range. For the controls that take consecutive ids (`Toolbar.commandSegments`,
+    // `Menu.addRecentFileCommands`), and for items that differ by a number, such as Show Tab 1 to 9.
+    [mut effects(heap_alloc) return<CommandRange>]
+    commandRange([i32] count, [Function<void, Reference<State>, i32> move] handler) {
+      [i32] first{this.commandSlots.count()}
+      [i32] slot{-1i32 - this.ranges.count()}
+      for([i32 mut] index{0i32}; index < count; ++index) {
+        this.commandSlots.push(slot)
+      }
+      this.ranges.push(NativeRangeHandler<State>{[handler] handler})
+      this.rangeFirsts.push(first)
+      [i32] firstId{first_command_id() + first}
+      return(CommandRange{[first] firstId, [count] count})
+    }
+
+    // Adds a handler of a `PointerEvent` and gives its index in `clicks`.
+    [mut effects(heap_alloc) return<i32>]
+    addClick([Function<void, Reference<State>, PointerEvent> move] handler) {
+      [i32] index{this.clicks.count()}
+      this.clicks.push(NativeClickHandler<State>{[handler] handler})
+      return(index)
     }
 
     // Registers the handler of a click on `button`; the event is a primary-button click without a position.
     [mut effects(heap_alloc)]
     onClick([Button] button, [Function<void, Reference<State>, PointerEvent> move] handler) {
-      this.clicks.push(NativeClickHandler<State>{[handler] handler})
+      this.clickHandlers.push(this.addClick(handler))
       this.clickWidgets.push(button.handle)
     }
 
@@ -113,27 +189,66 @@ namespace native {
     // Registers the handler of the user's click on `box`; the event's `checked` is the box's new state.
     [mut effects(heap_alloc)]
     onCheckBoxChange([CheckBox] box, [Function<void, Reference<State>, ChangeEvent> move] handler) {
-      this.addChange(box.handle, 1i32, handler)
+      [i32] index{this.addChange(box.handle, 1i32, handler)}
     }
 
     // Registers the handler of the user's choice in `popup`; the event's `index` is the chosen item.
     [mut effects(heap_alloc)]
     onPopupChange([Popup] popup, [Function<void, Reference<State>, ChangeEvent> move] handler) {
-      this.addChange(popup.handle, 2i32, handler)
+      [i32] index{this.addChange(popup.handle, 2i32, handler)}
     }
 
     // Registers the handler of the user's change of the selection of `list`; the event's `index` is the first
     // selected row, or -1 when none is.
     [mut effects(heap_alloc)]
     onListChange([ItemList] list, [Function<void, Reference<State>, ChangeEvent> move] handler) {
-      this.addChange(list.handle, 3i32, handler)
+      [i32] index{this.addChange(list.handle, 3i32, handler)}
     }
 
-    [mut effects(heap_alloc)]
+    // Adds a change handler and gives its index in `changes`.
+    [mut effects(heap_alloc) return<i32>]
     addChange([u64] widget, [i32] kind, [Function<void, Reference<State>, ChangeEvent> move] handler) {
+      [i32] index{this.changes.count()}
       this.changes.push(NativeChangeHandler<State>{[handler] handler})
       this.changeWidgets.push(widget)
       this.changeKinds.push(kind)
+      return(index)
+    }
+
+    // The same handlers for controls that do not exist yet at setup, such as the controls of a window the app builds
+    // when the user first asks for it: `find` gives the control's handle from the state when an event comes (0 while
+    // there is none), so the handler is still registered once, at setup.
+
+    // Registers the handler of a click on the button that `find` gives.
+    [mut effects(heap_alloc)]
+    onClickOf([Function<u64, Reference<State>> move] find,
+              [Function<void, Reference<State>, PointerEvent> move] handler) {
+      this.addFind(find, true, this.addClick(handler))
+    }
+
+    [mut effects(heap_alloc)]
+    onCheckBoxChangeOf([Function<u64, Reference<State>> move] find,
+                       [Function<void, Reference<State>, ChangeEvent> move] handler) {
+      this.addFind(find, false, this.addChange(0u64, 1i32, handler))
+    }
+
+    [mut effects(heap_alloc)]
+    onPopupChangeOf([Function<u64, Reference<State>> move] find,
+                    [Function<void, Reference<State>, ChangeEvent> move] handler) {
+      this.addFind(find, false, this.addChange(0u64, 2i32, handler))
+    }
+
+    [mut effects(heap_alloc)]
+    onListChangeOf([Function<u64, Reference<State>> move] find,
+                   [Function<void, Reference<State>, ChangeEvent> move] handler) {
+      this.addFind(find, false, this.addChange(0u64, 3i32, handler))
+    }
+
+    [mut effects(heap_alloc)]
+    addFind([Function<u64, Reference<State>> move] find, [bool] isClick, [i32] target) {
+      this.finds.push(NativeFindHandler<State>{[handler] find})
+      this.findIsClick.push(isClick)
+      this.findTargets.push(target)
     }
 
     // The pointer and key handlers take any control or text view as a `Widget` (`button.widget()`, `text.widget()`),
@@ -181,7 +296,7 @@ namespace native {
 
     [mut effects(heap_alloc)]
     addPointerHandler([Widget] control, [i32] bit, [Function<void, Reference<State>, PointerEvent> move] handler) {
-      this.pointers.push(NativeClickHandler<State>{[handler] handler})
+      this.pointerHandlers.push(this.addClick(handler))
       this.pointerWidgets.push(control.handle)
       this.pointerKinds.push(bit)
       this.watchWidget(control.handle)
@@ -220,13 +335,20 @@ namespace native {
     // replaces an earlier one.
     [mut effects(heap_alloc)]
     onWindowClose([Function<void, Reference<State>, Window> move] handler) {
-      this.closes.push(NativeWindowHandler<State>{[handler] handler})
+      this.closeHandler = this.addWindowHandler(handler)
     }
 
     // Registers the handler of the user's change of the text in any window's text view; it gets the window.
     [mut effects(heap_alloc)]
     onTextChange([Function<void, Reference<State>, Window> move] handler) {
-      this.edits.push(NativeWindowHandler<State>{[handler] handler})
+      this.textHandler = this.addWindowHandler(handler)
+    }
+
+    [mut effects(heap_alloc) return<i32>]
+    addWindowHandler([Function<void, Reference<State>, Window> move] handler) {
+      [i32] index{this.windowHandlers.count()}
+      this.windowHandlers.push(NativeWindowHandler<State>{[handler] handler})
+      return(index)
     }
 
     // Registers the handler of the system's request to open a file (a file dropped on the app's icon, or opened
@@ -240,161 +362,188 @@ namespace native {
     // true. Without one, a request to quit ends `run`.
     [mut effects(heap_alloc)]
     onQuit([Function<bool, Reference<State>> move] handler) {
-      this.quits.push(NativeQuitHandler<State>{[handler] handler})
+      this.quitHandler = this.addDecision(handler)
+    }
+
+    // Registers the handler that runs after every event, whether a handler took it or not: the place to bring what
+    // the handlers changed on screen once (menus and toolbars that follow the documents, a saved session). `run`
+    // returns when it gives false. With one, the app decides when it ends, so a close request after which no window
+    // is open no longer ends `run` by itself (a request to quit that no `onQuit` handler refuses still does, after
+    // this handler). A later handler replaces an earlier one.
+    [mut effects(heap_alloc)]
+    afterEvent([Function<bool, Reference<State>> move] handler) {
+      this.afterHandler = this.addDecision(handler)
+    }
+
+    [mut effects(heap_alloc) return<i32>]
+    addDecision([Function<bool, Reference<State>> move] handler) {
+      [i32] index{this.decisions.count()}
+      this.decisions.push(NativeQuitHandler<State>{[handler] handler})
+      return(index)
     }
 
     // Waits on the app's events and calls their handlers until the app quits: a request to quit that no `onQuit`
-    // handler refuses, or a close request after which no window is open. Events without a handler are dropped,
-    // except a close request, which closes its window.
+    // handler refuses, a close request after which no window is open, or, with `afterEvent`, an event after which its
+    // handler gives false. Events without a handler are dropped, except a close request, which closes its window. It
+    // reads the event kinds of the C ABI as `App.waitEvent` does (a kind it does not know is a request to quit),
+    // without the `AppEvent` sum: a `pick` in a method of a generic struct does not lower yet (TODO-5736).
     [mut effects(heap_alloc)]
     run() {
+      [Reference<State>] state{location(this.state)}
       [bool mut] running{true}
       while(running) {
-        running = this.deliverNext()
-      }
-    }
-
-    // Waits for the next event and calls its handler; false when the app should stop. It reads the event kinds of
-    // the C ABI as `App.waitEvent` does (a kind it does not know is a request to quit), without the `AppEvent` sum:
-    // a `pick` in a method of a generic struct does not lower yet (TODO-5736).
-    [mut effects(heap_alloc) return<bool>]
-    deliverNext() {
-      [i32] kind{ps_ui_wait_event()}
-      if(kind == 1i32) {
-        this.dispatchCommand(ps_ui_event_command())
-        return(true)
-      }
-      if(kind == 2i32) {
-        return(this.dispatchClose(Window{[handle] ps_ui_event_window()}))
-      }
-      if(kind == 3i32) {
-        this.dispatchTextChange(Window{[handle] ps_ui_event_window()})
-        return(true)
-      }
-      if(kind == 5i32) {
-        this.dispatchControl(ps_ui_event_widget())
-        return(true)
-      }
-      if(kind == 6i32) {
-        this.dispatchOpenFile()
-        return(true)
-      }
-      // The pointer entering (7) or leaving (8) a widget, a press (9) or release (10) on it, a key down (11) or up
-      // (12) in it; they come only for widgets with such handlers.
-      if(kind >= 7i32 && kind <= 10i32) {
-        this.dispatchPointer(pointer_watch_bit(kind), ps_ui_event_widget())
-        return(true)
-      }
-      if(kind == 11i32 || kind == 12i32) {
-        this.dispatchKey(key_watch_bit(kind), ps_ui_event_widget())
-        return(true)
-      }
-      return(this.dispatchQuit())
-    }
-
-    // Calls the handler of command `id`; an id that `command` did not hand out has none.
-    [mut effects(heap_alloc)]
-    dispatchCommand([i32] id) {
-      [i32] found{id - first_command_id()}
-      if(found >= 0i32 && found < this.commands.count()) {
-        [Reference<State>] state{location(this.state)}
-        [PointerEvent] click{PointerEvent{[button] PointerButton.primary, [clickCount] 1i32}}
-        this.commands[found].handler(state, click)
-      }
-    }
-
-    // Calls the close handler, or closes `window`; false when no window is open afterwards.
-    [mut effects(heap_alloc) return<bool>]
-    dispatchClose([Window] window) {
-      if(this.closes.count() > 0i32) {
-        [Reference<State>] state{location(this.state)}
-        this.closes[this.closes.count() - 1i32].handler(state, window)
-      } else {
-        window.close()
-      }
-      return(ps_ui_window_count() > 0i32)
-    }
-
-    [mut effects(heap_alloc)]
-    dispatchTextChange([Window] window) {
-      if(this.edits.count() > 0i32) {
-        [Reference<State>] state{location(this.state)}
-        this.edits[this.edits.count() - 1i32].handler(state, window)
-      }
-    }
-
-    [mut effects(heap_alloc)]
-    dispatchOpenFile() {
-      if(this.opens.count() > 0i32) {
-        [Reference<State>] state{location(this.state)}
-        [/std/text/String] path{ps_ui_event_text()}
-        this.opens[this.opens.count() - 1i32].handler(state, path)
-      }
-    }
-
-    // False when the app should quit: always without a quit handler, otherwise when the handler says so.
-    [mut effects(heap_alloc) return<bool>]
-    dispatchQuit() {
-      if(this.quits.count() > 0i32) {
-        [Reference<State>] state{location(this.state)}
-        [bool] quitting{this.quits[this.quits.count() - 1i32].handler(state)}
-        return(!quitting)
-      }
-      return(false)
-    }
-
-    // Calls the last handler registered for the pointer event `bit` of `widget` (0, the pointer leaving, has none).
-    [mut effects(heap_alloc)]
-    dispatchPointer([i32] bit, [u64] widget) {
-      [i32 mut] index{this.pointerWidgets.count() - 1i32}
-      while(index >= 0i32) {
-        [u64] control{this.pointerWidgets[index]}
-        [i32] kind{this.pointerKinds[index]}
-        if(control == widget && kind == bit) {
-          [Reference<State>] state{location(this.state)}
-          [PointerEvent] event{pointer_event()}
-          this.pointers[index].handler(state, event)
-          return()
+        [i32] kind{ps_ui_wait_event()}
+        // What the event calls, found first so that each kind of handler is called from one place below: an index
+        // into `clicks`, `ranges`, `changes`, `windowHandlers` or `keys` (-1 for none), with its event.
+        [i32 mut] click{-1i32}
+        [PointerEvent mut] pointer{PointerEvent{[button] PointerButton.primary, [clickCount] 1i32}}
+        [i32 mut] range{-1i32}
+        [i32 mut] offset{0i32}
+        [i32 mut] change{-1i32}
+        [u64 mut] changed{0u64}
+        [i32 mut] windowHandler{-1i32}
+        [Window mut] window{Window{}}
+        [i32 mut] key{-1i32}
+        [bool mut] quitting{false}
+        if(kind == 1i32) {
+          [i32] id{ps_ui_event_command()}
+          [i32] at{id - first_command_id()}
+          // An id that `command` or `commandRange` did not hand out has no handler.
+          if(at >= 0i32 && at < this.commandSlots.count()) {
+            [i32] slot{this.commandSlots[at]}
+            if(slot >= 0i32) {
+              click = slot
+            } else {
+              range = -1i32 - slot
+              offset = at - this.rangeFirsts[range]
+            }
+          }
         }
-        index = index - 1i32
-      }
-    }
+        if(kind == 2i32) {
+          [Window] closing{[handle] ps_ui_event_window()}
+          window = closing
+          windowHandler = this.closeHandler
+          if(windowHandler < 0i32) {
+            window.close()
+          }
+        }
+        if(kind == 3i32) {
+          [Window] edited{[handle] ps_ui_event_window()}
+          window = edited
+          windowHandler = this.textHandler
+        }
+        if(kind == 5i32) {
+          [u64] widget{ps_ui_event_widget()}
+          for([i32 mut] index{0i32}; click < 0i32 && index < this.clickWidgets.count(); ++index) {
+            [u64] button{this.clickWidgets[index]}
+            if(button == widget) {
+              click = this.clickHandlers[index]
+            }
+          }
+          for([i32 mut] index{0i32}; click < 0i32 && change < 0i32 && index < this.changeWidgets.count(); ++index) {
+            [u64] control{this.changeWidgets[index]}
+            if(control != 0u64 && control == widget) {
+              change = index
+            }
+          }
+          for([i32 mut] index{0i32}; click < 0i32 && change < 0i32 && index < this.finds.count(); ++index) {
+            [u64] control{this.finds[index].handler(state)}
+            if(control != 0u64 && control == widget) {
+              [i32] target{this.findTargets[index]}
+              if(this.findIsClick[index]) {
+                click = target
+              } else {
+                change = target
+              }
+            }
+          }
+          changed = widget
+        }
+        if(kind == 6i32) {
+          if(this.opens.count() > 0i32) {
+            [/std/text/String] path{ps_ui_event_text()}
+            this.opens[this.opens.count() - 1i32].handler(state, path)
+          }
+        }
+        if(kind >= 7i32 && kind <= 10i32) {
+          // The pointer entering (7) or leaving (8) a widget, a press (9) or release (10) on it; they come only for
+          // widgets with such handlers. The last handler registered for the event of the widget is called (the
+          // pointer leaving, bit 0, has none).
+          [i32] bit{pointer_watch_bit(kind)}
+          [u64] widget{ps_ui_event_widget()}
+          [i32 mut] index{this.pointerWidgets.count() - 1i32}
+          while(click < 0i32 && index >= 0i32) {
+            [u64] control{this.pointerWidgets[index]}
+            [i32] watched{this.pointerKinds[index]}
+            if(control == widget && watched == bit) {
+              click = this.pointerHandlers[index]
+              pointer = pointer_event()
+            }
+            index = index - 1i32
+          }
+        }
+        if(kind == 11i32 || kind == 12i32) {
+          // A key down (11) or up (12) in a widget with such a handler.
+          [i32] bit{key_watch_bit(kind)}
+          [u64] widget{ps_ui_event_widget()}
+          [i32 mut] index{this.keyWidgets.count() - 1i32}
+          while(key < 0i32 && index >= 0i32) {
+            [u64] control{this.keyWidgets[index]}
+            [i32] watched{this.keyKinds[index]}
+            if(control == widget && watched == bit) {
+              key = index
+            }
+            index = index - 1i32
+          }
+        }
+        if(kind == 4i32 || kind < 1i32 || kind > 12i32) {
+          quitting = true
+        }
 
-    // Calls the last handler registered for the key event `bit` of `widget`.
-    [mut effects(heap_alloc)]
-    dispatchKey([i32] bit, [u64] widget) {
-      [i32 mut] index{this.keyWidgets.count() - 1i32}
-      while(index >= 0i32) {
-        [u64] control{this.keyWidgets[index]}
-        [i32] kind{this.keyKinds[index]}
-        if(control == widget && kind == bit) {
-          [Reference<State>] state{location(this.state)}
+        if(click >= 0i32) {
+          this.clicks[click].handler(state, pointer)
+        }
+        if(range >= 0i32) {
+          this.ranges[range].handler(state, offset)
+        }
+        if(change >= 0i32) {
+          [ChangeEvent] event{change_event(changed, this.changeKinds[change])}
+          this.changes[change].handler(state, event)
+        }
+        if(windowHandler >= 0i32) {
+          this.windowHandlers[windowHandler].handler(state, window)
+        }
+        if(key >= 0i32) {
           [KeyEvent] event{key_event()}
-          this.keys[index].handler(state, event)
-          return()
+          this.keys[key].handler(state, event)
         }
-        index = index - 1i32
-      }
-    }
-
-    // Calls the click or change handler of the control `widget`.
-    [mut effects(heap_alloc)]
-    dispatchControl([u64] widget) {
-      [Reference<State>] state{location(this.state)}
-      for([i32 mut] index{0i32}; index < this.clickWidgets.count(); ++index) {
-        [u64] button{this.clickWidgets[index]}
-        if(button == widget) {
-          [PointerEvent] click{PointerEvent{[button] PointerButton.primary, [clickCount] 1i32}}
-          this.clicks[index].handler(state, click)
-          return()
+        // A close request ends `run` when no window is open afterwards, unless the app decides (`afterEvent`).
+        if(kind == 2i32 && this.afterHandler < 0i32) {
+          running = ps_ui_window_count() > 0i32
         }
-      }
-      for([i32 mut] index{0i32}; index < this.changeWidgets.count(); ++index) {
-        [u64] control{this.changeWidgets[index]}
-        if(control == widget) {
-          [ChangeEvent] change{change_event(control, this.changeKinds[index])}
-          this.changes[index].handler(state, change)
-          return()
+        // The quit handler, then the after-event handler, from one call site: a quit request that the quit handler
+        // does not refuse ends `run`, as does an after-event handler that gives false.
+        [i32 mut] step{0i32}
+        if(!quitting) {
+          step = 1i32
+        }
+        while(step < 2i32) {
+          [i32 mut] decision{this.afterHandler}
+          if(step == 0i32) {
+            decision = this.quitHandler
+            if(decision < 0i32) {
+              running = false
+            }
+          }
+          if(decision >= 0i32) {
+            [bool] said{this.decisions[decision].handler(state)}
+            if(step == 0i32) {
+              running = running && !said
+            } else {
+              running = running && said
+            }
+          }
+          step = step + 1i32
         }
       }
     }

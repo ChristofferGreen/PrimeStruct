@@ -433,7 +433,7 @@ functions (`primec/ui/NativeUiBindings.h`) to a backend (headless in tests, AppK
   `clearStyles()` / `addStyle(startByte, endByte, rgb, flags)` (colour and bold/italic over UTF-8 byte ranges), and `highlight(path)` (syntax highlighting chosen by the file
   name's extension).
 - Controls for a settings window (`Widget`, `Label`, `CheckBox`, `Popup`, `Form`, `Tabs`, made by `App.label(text)`, `checkBox(title, checked)`, `popup()`, `form()`, `tabs()`): each has `widget()`; `CheckBox`: `setChecked(bool)`, `isChecked()`; `Popup`: `addItem(title)`, `select(index)`, `selected() -> i32`; `Form`: `heading(title)`, `row(label, widget)`, `control(widget)`; `Tabs`: `add(title, widget)`, `select(index)`; `Label`: `setText(text)`. `Window.setContentWidget(widget)` and `setSettingsStyle()`, `TextView.setFontSize(points)`, `App.setPreviewScrollMode(mode)` (0 independently, 1 linearly, 2 by block, 3 the page follows the text cursor), and the event `AppEvent.controlChanged` (the `Widget` the user changed). `ItemList` (`App.itemList()`; `widget()`, `addItem(text)`, `setItem(index, text)`, `count()`, `setSelected(index, bool)`, `isSelected(index)`; the user's change of the selection is a `controlChanged`, the program's own changes make no event), `Button` (`App.button(title)`; `widget()`, `setTitle(text)`; a click is a `controlChanged`), `AppEvent.openFile` (the system asks the app to open a file; `App.eventText()` is its path), and the file types: `App.documentTypeCount()`, `documentTypeName(i)`, `documentTypeExtensions(i)` (the types the app declares), `appPath()`, `defaultApp(extension)`, `setDefaultApp(extensions, application)` (comma separated extensions; "" is this app).
-- `Menu`: `item(title, shortcut, commandId)`, `setChecked(commandId, bool)` (a check mark on those items), `followPreview(commandId)` (the check mark shows whether the active window has a preview), `submenu(title, menu)`, `clear()`, `addRecentFiles(firstCommandId, maxItems) -> i32` (one item per recent file), `separator()`, the standard items `undo redo cut copy paste selectAll
+- `Menu`: `item(title, shortcut, commandId)`, `setChecked(commandId, bool)` (a check mark on those items), `followPreview(commandId)` (the check mark shows whether the active window has a preview), `submenu(title, menu)`, `clear()`, `addRecentFiles(firstCommandId, maxItems) -> i32` (one item per recent file; `addRecentFileCommands(range)` with handlers), `separator()`, the standard items `undo redo cut copy paste selectAll
   find quit about hide hideOthers minimize zoom bringAllToFront fullScreen help showTabBar mergeAllWindows
   moveTabToNewWindow nextTab previousTab`, and `addToBar()`,
   `addToBarAsApp()`, `addToBarAsWindow()`, `addToBarAsHelp()`. Shortcuts are portable (`"cmd+s"`).
@@ -489,10 +489,20 @@ handlers until the app quits. A handler is a `Function<void, Reference<State>, E
 - `command(handler) -> Command` (a `PointerEvent` handler) and `Menu.commandItem(title, shortcut, command)`,
   `Toolbar.commandButton(title, symbol, command)`, `Menu.setCommandChecked(command, checked)`: a menu item and a
   toolbar button with the same `Command` call the same closure. The event is a click of the primary button with no
-  position (`clickCount` 1): a command carries no pointer details. Ids start at `first_command_id()` (1000000).
+  position (`clickCount` 1): a command carries no pointer details. Ids start at `first_command_id()` (1000000), in
+  the order of registration. `Menu.followPreviewCommand(command)`, `Window.selectToolbarCommand(command)` and
+  `Window.runScriptCommand(name, text, command)` (the command arrives when the run ends) take a `Command` too.
+- `commandRange(count, handler) -> CommandRange` (`first`, `count`; `at(offset) -> Command`): `count` consecutive
+  commands with one `Function<void, Reference<State>, i32>` handler, which gets the offset of the chosen one. The
+  controls that take consecutive ids take the range: `Toolbar.commandSegments(titles, range)` (one segment per
+  command) and `Menu.addRecentFileCommands(range) -> i32` (at most one recent file per command; the offset is the
+  index `App.recentPath` takes).
 - `onClick(button, handler)` (`PointerEvent`, as above); `onCheckBoxChange(checkBox, handler)`,
   `onPopupChange(popup, handler)`, `onListChange(itemList, handler)` (`ChangeEvent`: `checked`, or `index`, the
-  first selected row of a list or -1).
+  first selected row of a list or -1). For a control made after setup (a window built on first use),
+  `onClickOf(find, handler)`, `onCheckBoxChangeOf`, `onPopupChangeOf` and `onListChangeOf(find, handler)` take a
+  `find` closure (`Function<u64, Reference<State>>`) that gives the control's handle from the state when a control
+  changes, 0 while there is none.
 - `onMouseOver(widget, handler)`, `onMouseDown`, `onMouseUp` (`PointerEvent`) and `onKeyDown`, `onKeyUp`
   (`KeyEvent`, while the widget has focus) take any control or text view as a `Widget` (`button.widget()`,
   `textView.widget()`). The pointer events have a position from the widget's top left corner (a text view's visible
@@ -503,8 +513,10 @@ handlers until the app quits. A handler is a `Function<void, Reference<State>, E
   release and click handlers in that order. and `onTextChange(handler)` (`Function<void, Reference<State>, Window>`, for every
   window); without a close handler a close request closes the window. `onOpenFile(handler)` gets the path as a
   `String`. `onQuit(handler)` is a `Function<bool, Reference<State>>`: `run` returns when it gives `true`.
-- `run` returns on a request to quit that no quit handler refuses, and after a close request when no window is open.
-  Events without a handler are dropped. The last `onWindowClose`, `onTextChange`, `onOpenFile` or `onQuit` registered
+- `afterEvent(handler)` (`Function<bool, Reference<State>>`) runs after every event, whether a handler took it or
+  not: the place to bring what the handlers changed on screen once. `run` returns when it gives `false`.
+- `run` returns on a request to quit that no quit handler refuses, and after a close request when no window is open
+  (with an `afterEvent` handler, when that gives `false` instead). Events without a handler are dropped. The last `onWindowClose`, `onTextChange`, `onOpenFile` or `onQuit` registered
   is the one called. `waitEvent` stays for programs with their own loop.
 
 Example (`examples/native_ui/hello_button.prime`):

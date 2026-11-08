@@ -23,12 +23,17 @@ using primec::embed::ScriptEngine;
 TEST_SUITE_BEGIN("primestruct.ui.editor");
 
 namespace {
-// Command ids of examples/apps/text_editor/main.prime.
-constexpr int32_t CommandNew = 1;
-constexpr int32_t CommandOpen = 2;
-constexpr int32_t CommandSave = 3;
-constexpr int32_t CommandSaveAs = 4;
-constexpr int32_t CommandPreview = 10;
+// Command ids of examples/apps/text_editor/main.prime: `AppHandlers` hands them out from 1000000
+// in the order the editor registers them (`EditorCommands`).
+constexpr int32_t CommandNew = 1000000;
+constexpr int32_t CommandOpen = 1000001;
+constexpr int32_t CommandSave = 1000002;
+constexpr int32_t CommandSaveAs = 1000003;
+constexpr int32_t CommandLineNumbers = 1000005;
+constexpr int32_t CommandWrap = 1000007;
+constexpr int32_t CommandPreview = 1000008;
+constexpr int32_t CommandRecent = 1000062; // + 0 ... 9, most recent first
+constexpr int32_t CommandRecentClear = 1000072;
 
 // Handles in creation order: the window, then its text view.
 constexpr uint64_t EditorWindow = 1;
@@ -92,7 +97,7 @@ TEST_CASE("editor builds its window, menus and standard edit items") {
   CHECK(headless::isMonospace(2));
   // The whole menu structure is asserted by the editor acceptance gate.
   const auto items = headless::menuBarItems();
-  CHECK(std::find(items.begin(), items.end(), "File>Save As... (cmd+shift+s) #4") != items.end());
+  CHECK(std::find(items.begin(), items.end(), "File>Save As... (cmd+shift+s) #1000003") != items.end());
   CHECK(countCalls("ps_ui_alert(") == 0);
 }
 
@@ -321,7 +326,7 @@ TEST_CASE("editor Command-number selects that tab and Command-9 the last") {
   const std::string pathA = scratchPath("number_a.txt");
   const std::string pathB = scratchPath("number_b.txt");
   const std::string pathC = scratchPath("number_c.txt");
-  constexpr int32_t CommandTab = 100;
+  constexpr int32_t CommandTab = 1000048; // Command-n is CommandTab + n
   headless::reset();
   headless::pushTypeText(EditorWindow + 1, "A");
   headless::pushCommand(CommandNew);
@@ -429,43 +434,43 @@ TEST_CASE("editor reports a file that cannot be saved") {
 // with text view 11. Commands: 1 New, 7 View > Show Line Numbers, 8 Start with Line Numbers.
 TEST_CASE("editor toggles the line number bar in every tab from the View menu") {
   headless::reset();
-  headless::pushCommand(1);
-  headless::pushCommand(7);
+  headless::pushCommand(CommandNew);
+  headless::pushCommand(CommandLineNumbers);
   headless::pushCloseWindow(11);
   headless::pushCloseWindow(EditorWindow);
   runEditor();
   CHECK_FALSE(headless::lineNumbersVisible(2) == false);
   CHECK(headless::lineNumbersVisible(2));
   CHECK(headless::lineNumbersVisible(SecondView));
-  CHECK(headless::menuItemChecked(7));
+  CHECK(headless::menuItemChecked(CommandLineNumbers));
 
   headless::reset();
-  headless::pushCommand(1);
-  headless::pushCommand(7);
-  headless::pushCommand(7);
+  headless::pushCommand(CommandNew);
+  headless::pushCommand(CommandLineNumbers);
+  headless::pushCommand(CommandLineNumbers);
   headless::pushCloseWindow(11);
   headless::pushCloseWindow(EditorWindow);
   runEditor();
   CHECK_FALSE(headless::lineNumbersVisible(2));
   CHECK_FALSE(headless::lineNumbersVisible(SecondView));
-  CHECK_FALSE(headless::menuItemChecked(7));
+  CHECK_FALSE(headless::menuItemChecked(CommandLineNumbers));
 }
 
 TEST_CASE("editor starts with the line number bar when the preference says so") {
   headless::reset();
   headless::setBoolPref("lineNumbers", true);
-  headless::pushCommand(1);
+  headless::pushCommand(CommandNew);
   headless::pushCloseWindow(11);
   headless::pushCloseWindow(EditorWindow);
   runEditor();
   CHECK(headless::lineNumbersVisible(2));
   CHECK(headless::lineNumbersVisible(SecondView));  // a new tab follows the current setting
-  CHECK(headless::menuItemChecked(7));
+  CHECK(headless::menuItemChecked(CommandLineNumbers));
 }
 
 TEST_CASE("editor keeps the line number choice for the next launch") {
   headless::reset();
-  headless::pushCommand(7);
+  headless::pushCommand(CommandLineNumbers);
   headless::pushCloseWindow(EditorWindow);
   runEditor();
   CHECK(headless::boolPref("lineNumbers", false));
@@ -489,7 +494,7 @@ constexpr uint64_t SettingsTabs = 25;
 constexpr uint64_t FileTypeList = 28;
 constexpr uint64_t MakeDefaultButton = 29;
 constexpr uint64_t TabAfterSettings = 30; // a New command after the settings window: window 30, view 31
-constexpr int32_t CommandSettings = 8;
+constexpr int32_t CommandSettings = 1000006;
 
 // The file types of the headless backend (examples/apps/text_editor/file_types.txt) and the buttons of the Files tab.
 struct HeadlessFileType {
@@ -600,7 +605,7 @@ TEST_CASE("settings window can be closed and opened again") {
 
 TEST_CASE("settings toggles line numbers and wrapping in every tab at once") {
   headless::reset();
-  headless::pushCommand(1);
+  headless::pushCommand(CommandNew);
   headless::pushCommand(CommandSettings);
   headless::pushToggleCheckBox(NumbersBox + 2); // the second tab took the handles 10 and 11
   headless::pushToggleCheckBox(WrapBox + 2);
@@ -614,15 +619,15 @@ TEST_CASE("settings toggles line numbers and wrapping in every tab at once") {
   CHECK_FALSE(headless::lineWrapping(2));
   CHECK_FALSE(headless::lineWrapping(SecondView));
   // The View menu follows the check boxes.
-  CHECK(headless::menuItemChecked(7));
-  CHECK_FALSE(headless::menuItemChecked(9));
+  CHECK(headless::menuItemChecked(CommandLineNumbers));
+  CHECK_FALSE(headless::menuItemChecked(CommandWrap));
 }
 
 TEST_CASE("the View menu and the settings window stay in step") {
   headless::reset();
   headless::pushCommand(CommandSettings);
-  headless::pushCommand(7);
-  headless::pushCommand(9);
+  headless::pushCommand(CommandLineNumbers);
+  headless::pushCommand(CommandWrap);
   headless::pushCloseWindow(EditorWindow);
   runEditor();
   CHECK(headless::checkBoxChecked(NumbersBox));
@@ -635,7 +640,7 @@ TEST_CASE("settings changes the font size of every tab and of new tabs") {
   headless::reset();
   headless::pushCommand(CommandSettings);
   headless::pushSelectPopupItem(SizePopup, 6);
-  headless::pushCommand(1);
+  headless::pushCommand(CommandNew);
   headless::pushCloseWindow(TabAfterSettings);
   headless::pushCloseWindow(EditorWindow);
   runEditor();
@@ -653,8 +658,8 @@ TEST_CASE("the first launch uses the default preferences") {
   CHECK(headless::lineWrapping(2));
   CHECK(headless::fontSize(2) == 13);
   CHECK(headless::previewScrollMode() == 2);
-  CHECK_FALSE(headless::menuItemChecked(7));
-  CHECK(headless::menuItemChecked(9));
+  CHECK_FALSE(headless::menuItemChecked(CommandLineNumbers));
+  CHECK(headless::menuItemChecked(CommandWrap));
 }
 
 TEST_CASE("the saved font size and scroll mode apply at launch") {
@@ -742,7 +747,7 @@ TEST_CASE("settings turns the markdown preview preference on and off") {
 
 TEST_CASE("the app ends after the last document closes with the settings window open") {
   headless::reset();
-  headless::pushCommand(1);
+  headless::pushCommand(CommandNew);
   headless::pushCommand(CommandSettings);
   headless::pushCloseWindow(EditorWindow);
   headless::pushCloseWindow(SecondWindow);
@@ -755,7 +760,7 @@ TEST_CASE("the app ends after the last document closes with the settings window 
 TEST_CASE("commands that arrive while the settings window is active act on a document") {
   headless::reset();
   headless::pushCommand(CommandSettings);
-  headless::pushCommand(1);
+  headless::pushCommand(CommandNew);
   headless::pushCloseWindow(TabAfterSettings);
   headless::pushCloseWindow(EditorWindow);
   runEditor();
@@ -767,25 +772,25 @@ TEST_CASE("commands that arrive while the settings window is active act on a doc
 // Commands: 9 View > Wrap Lines, 200 to 209 the recent files, 210 Clear Menu.
 TEST_CASE("editor wraps lines until View > Wrap Lines is switched off, in every tab") {
   headless::reset();
-  headless::pushCommand(1);
-  headless::pushCommand(9);
+  headless::pushCommand(CommandNew);
+  headless::pushCommand(CommandWrap);
   headless::pushCloseWindow(SecondWindow);
   headless::pushCloseWindow(EditorWindow);
   runEditor();
   CHECK_FALSE(headless::lineWrapping(2));
   CHECK_FALSE(headless::lineWrapping(SecondView));
-  CHECK_FALSE(headless::menuItemChecked(9));
+  CHECK_FALSE(headless::menuItemChecked(CommandWrap));
 
   headless::reset();
-  headless::pushCommand(1);
-  headless::pushCommand(9);
-  headless::pushCommand(9);
+  headless::pushCommand(CommandNew);
+  headless::pushCommand(CommandWrap);
+  headless::pushCommand(CommandWrap);
   headless::pushCloseWindow(SecondWindow);
   headless::pushCloseWindow(EditorWindow);
   runEditor();
   CHECK(headless::lineWrapping(2));
   CHECK(headless::lineWrapping(SecondView));
-  CHECK(headless::menuItemChecked(9));
+  CHECK(headless::menuItemChecked(CommandWrap));
 }
 
 TEST_CASE("editor lists the recent files under File > Open Recent") {
@@ -797,20 +802,20 @@ TEST_CASE("editor lists the recent files under File > Open Recent") {
   headless::pushCloseWindow(EditorWindow);
   runEditor();
   const auto items = headless::menuBarItems();
-  CHECK(std::find(items.begin(), items.end(), "File>Open Recent>recent_b.txt #200") != items.end());
-  CHECK(std::find(items.begin(), items.end(), "File>Open Recent>recent_a.txt #201") != items.end());
-  CHECK(std::find(items.begin(), items.end(), "File>Open Recent>Clear Menu #210") != items.end());
+  CHECK(std::find(items.begin(), items.end(), "File>Open Recent>recent_b.txt #1000062") != items.end());
+  CHECK(std::find(items.begin(), items.end(), "File>Open Recent>recent_a.txt #1000063") != items.end());
+  CHECK(std::find(items.begin(), items.end(), "File>Open Recent>Clear Menu #1000072") != items.end());
 }
 
 TEST_CASE("editor adds a file it opened or saved to the recent files") {
   const std::string opened = writeScratch("recent_opened.txt", "text");
   const std::string saved = scratchPath("recent_saved.txt");
   headless::reset();
-  headless::pushCommand(2);
+  headless::pushCommand(CommandOpen);
   headless::pushOpenPanelAnswer(opened);
-  headless::pushCommand(1);
+  headless::pushCommand(CommandNew);
   headless::pushTypeText(SecondView, "new text");
-  headless::pushCommand(3);
+  headless::pushCommand(CommandSave);
   headless::pushSavePanelAnswer(saved);
   headless::pushCloseWindow(SecondWindow);
   headless::pushCloseWindow(EditorWindow);
@@ -820,15 +825,15 @@ TEST_CASE("editor adds a file it opened or saved to the recent files") {
   CHECK(recent[0] == saved);
   CHECK(recent[1] == opened);
   const auto items = headless::menuBarItems();
-  CHECK(std::find(items.begin(), items.end(), "File>Open Recent>recent_saved.txt #200") != items.end());
-  CHECK(std::find(items.begin(), items.end(), "File>Open Recent>recent_opened.txt #201") != items.end());
+  CHECK(std::find(items.begin(), items.end(), "File>Open Recent>recent_saved.txt #1000062") != items.end());
+  CHECK(std::find(items.begin(), items.end(), "File>Open Recent>recent_opened.txt #1000063") != items.end());
 }
 
 TEST_CASE("editor reopens a recent file from the menu and can clear the list") {
   const std::string b = writeScratch("recent_again.txt", "again");
   headless::reset();
   headless::pushRecentFile(b);
-  headless::pushCommand(200);
+  headless::pushCommand(CommandRecent);
   headless::pushCloseWindow(EditorWindow);
   runEditor();
   CHECK(headless::windowPath(EditorWindow) == b);
@@ -838,7 +843,7 @@ TEST_CASE("editor reopens a recent file from the menu and can clear the list") {
 
   headless::reset();
   headless::pushRecentFile(b);
-  headless::pushCommand(210);
+  headless::pushCommand(CommandRecentClear);
   headless::pushCloseWindow(EditorWindow);
   runEditor();
   CHECK(headless::recentFiles().empty());
@@ -846,7 +851,7 @@ TEST_CASE("editor reopens a recent file from the menu and can clear the list") {
   for (const std::string &item : items) {
     CHECK(item.rfind("File>Open Recent>recent_again.txt", 0) != 0);
   }
-  CHECK(std::find(items.begin(), items.end(), "File>Open Recent>Clear Menu #210") != items.end());
+  CHECK(std::find(items.begin(), items.end(), "File>Open Recent>Clear Menu #1000072") != items.end());
 }
 
 
@@ -1222,11 +1227,11 @@ TEST_CASE("a file the system asks to open goes to a document while the settings 
 // the format commands; the Format menu offers the same commands.
 namespace {
 // Command ids of the markdown toolbar.
-constexpr int32_t CommandMode = 30;   // + 0 editor, 1 split, 2 preview
-constexpr int32_t CommandFormat = 40; // + the operation of ps_ui_text_view_markdown_edit
-constexpr int32_t CommandHeading = 70; // + the level
-constexpr int32_t CommandTable = 80;  // + 0 ... 3, the sizes
-constexpr int32_t CommandAlign = 90;  // + 1 left, 2 center, 3 right
+constexpr int32_t CommandMode = 1000013;    // + 0 editor, 1 split, 2 preview
+constexpr int32_t CommandFormat = 1000016;  // + the operation of ps_ui_text_view_markdown_edit
+constexpr int32_t CommandHeading = 1000038; // + the level
+constexpr int32_t CommandTable = 1000042;   // + 0 ... 3, the sizes
+constexpr int32_t CommandAlign = 1000045;   // + 1 left, 2 center, 3 right
 constexpr uint64_t EditorView = 2;
 
 std::string viewText(uint64_t view) { return ps_ui_text_view_get_text(view); }
@@ -1283,45 +1288,45 @@ TEST_CASE("editor shows the markdown toolbar for markdown windows only") {
 TEST_CASE("editor's toolbar offers the view modes and the markdown formats") {
   const std::string md = writeScratch("toolbar_outline.md", "# t");
   runMarkdownEditor(md, {});
-  const std::vector<std::string> outline{"segments Editor|Split|Preview #30 [selected 0]",
+  const std::vector<std::string> outline{"segments Editor|Split|Preview #1000013 [selected 0]",
                                          "-",
-                                         "button Bold [bold] #40",
-                                         "button Italic [italic] #41",
-                                         "button Strikethrough [strikethrough] #42",
-                                         "button Code [chevron.left.forwardslash.chevron.right] #43",
-                                         "button Link [link] #44",
-                                         "button Image [photo] #45",
+                                         "button Bold [bold] #1000016",
+                                         "button Italic [italic] #1000017",
+                                         "button Strikethrough [strikethrough] #1000018",
+                                         "button Code [chevron.left.forwardslash.chevron.right] #1000019",
+                                         "button Link [link] #1000020",
+                                         "button Image [photo] #1000021",
                                          "-",
                                          "menu Heading [textformat.size]",
-                                         "  Heading 1 #71",
-                                         "  Heading 2 #72",
-                                         "  Heading 3 #73",
+                                         "  Heading 1 #1000039",
+                                         "  Heading 2 #1000040",
+                                         "  Heading 3 #1000041",
                                          "  -",
-                                         "  Paragraph #70",
+                                         "  Paragraph #1000038",
                                          "menu Blocks [list.bullet]",
-                                         "  Bulleted List #47",
-                                         "  Numbered List #48",
-                                         "  Task List #49",
+                                         "  Bulleted List #1000023",
+                                         "  Numbered List #1000024",
+                                         "  Task List #1000025",
                                          "  -",
-                                         "  Quote #50",
-                                         "  Code Block #51",
-                                         "  Horizontal Rule #52",
+                                         "  Quote #1000026",
+                                         "  Code Block #1000027",
+                                         "  Horizontal Rule #1000028",
                                          "-",
                                          "menu Table [tablecells]",
-                                         "  Insert 2 by 2 #80",
-                                         "  Insert 3 by 3 #81",
-                                         "  Insert 4 by 3 #82",
-                                         "  Insert 5 by 4 #83",
+                                         "  Insert 2 by 2 #1000042",
+                                         "  Insert 3 by 3 #1000043",
+                                         "  Insert 4 by 3 #1000044",
+                                         "  Insert 5 by 4 #1000045",
                                          "  -",
-                                         "  Format Table #54",
-                                         "  Add Row #55",
-                                         "  Add Column #56",
-                                         "  Delete Row #57",
-                                         "  Delete Column #58",
+                                         "  Format Table #1000030",
+                                         "  Add Row #1000031",
+                                         "  Add Column #1000032",
+                                         "  Delete Row #1000033",
+                                         "  Delete Column #1000034",
                                          "  -",
-                                         "  Align Left #91",
-                                         "  Align Center #92",
-                                         "  Align Right #93"};
+                                         "  Align Left #1000046",
+                                         "  Align Center #1000047",
+                                         "  Align Right #1000048"};
   CHECK(headless::toolbarOutline(EditorWindow) == outline);
   // One toolbar serves every markdown window.
   CHECK(countCalls("ps_ui_toolbar_create(") == 1);
@@ -1331,11 +1336,11 @@ TEST_CASE("editor's view modes switch between the text, both and the preview alo
   const std::string md = writeScratch("toolbar_modes.md", "# t");
   runMarkdownEditor(md, {CommandMode + 1});
   CHECK(headless::windowState(EditorWindow).previewMode == PS_UI_PREVIEW_SPLIT);
-  CHECK(headless::toolbarOutline(EditorWindow).front() == "segments Editor|Split|Preview #30 [selected 1]");
+  CHECK(headless::toolbarOutline(EditorWindow).front() == "segments Editor|Split|Preview #1000013 [selected 1]");
   runMarkdownEditor(md, {CommandMode + 2});
   CHECK(headless::windowState(EditorWindow).previewMode == PS_UI_PREVIEW_ONLY);
   CHECK(headless::windowState(EditorWindow).preview);
-  CHECK(headless::toolbarOutline(EditorWindow).front() == "segments Editor|Split|Preview #30 [selected 2]");
+  CHECK(headless::toolbarOutline(EditorWindow).front() == "segments Editor|Split|Preview #1000013 [selected 2]");
   runMarkdownEditor(md, {CommandMode + 2, CommandMode});
   CHECK(headless::windowState(EditorWindow).previewMode == PS_UI_PREVIEW_TEXT);
   CHECK_FALSE(headless::windowState(EditorWindow).preview);
@@ -1426,16 +1431,16 @@ TEST_CASE("editor remembers the preview mode of every tab") {
   runEditor();
   CHECK(headless::windowState(EditorWindow).previewMode == PS_UI_PREVIEW_ONLY);
   CHECK(headless::windowState(SecondWindow).previewMode == PS_UI_PREVIEW_SPLIT);
-  CHECK(headless::toolbarOutline(EditorWindow).front() == "segments Editor|Split|Preview #30 [selected 2]");
-  CHECK(headless::toolbarOutline(SecondWindow).front() == "segments Editor|Split|Preview #30 [selected 1]");
+  CHECK(headless::toolbarOutline(EditorWindow).front() == "segments Editor|Split|Preview #1000013 [selected 2]");
+  CHECK(headless::toolbarOutline(SecondWindow).front() == "segments Editor|Split|Preview #1000013 [selected 1]");
 }
 
 // Running scripts (docs/NativeUiPlan.md section 18): a PrimeStruct file gets a toolbar with Run and Stop, and Run shows
 // the output under the editor.
 namespace {
-constexpr int32_t CommandRun = 120;
-constexpr int32_t CommandStop = 121;
-constexpr int32_t CommandOutput = 122;
+constexpr int32_t CommandRun = 1000058;
+constexpr int32_t CommandStop = 1000059;
+constexpr int32_t CommandOutput = 1000060;
 
 // Like runMarkdownEditor, and lets a running script end (its output arrives) before the window closes.
 void runScriptEditor(const std::string &path, const std::vector<int32_t> &commands) {
@@ -1461,10 +1466,10 @@ TEST_CASE("editor shows a Run toolbar for PrimeStruct files only") {
   const std::string script = writeScratch("run_toolbar.prime", HelloScript);
   const std::string txt = writeScratch("run_toolbar.txt", "t");
   runMarkdownEditor(script, {});
-  const std::vector<std::string> outline = {"button Run [play.fill] #120",
-                                            "button Stop [stop.fill] #121",
+  const std::vector<std::string> outline = {"button Run [play.fill] #1000058",
+                                            "button Stop [stop.fill] #1000059",
                                             "-",
-                                            "button Output [rectangle.bottomhalf.inset.filled] #122"};
+                                            "button Output [rectangle.bottomhalf.inset.filled] #1000060"};
   CHECK(headless::toolbarOutline(EditorWindow) == outline);
   runMarkdownEditor(txt, {});
   CHECK(headless::toolbarOutline(EditorWindow).empty());
