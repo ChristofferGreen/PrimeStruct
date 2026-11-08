@@ -99,11 +99,23 @@ struct Window {
   uint64_t group = 0; // tab group id; 0 when the window is not in a tab group
 };
 
+// The fields of a pointer or key event (PS_UI_EVENT_POINTER_ENTER ... PS_UI_EVENT_KEY_UP), NativeUiHeadlessInput.cpp.
+struct InputFields {
+  int32_t button = PS_UI_BUTTON_NONE;
+  int32_t x = 0;
+  int32_t y = 0;
+  int32_t modifiers = 0;
+  int32_t clickCount = 0;
+  int32_t key = 0;
+  bool repeat = false;
+};
+
 struct Action {
-  enum class Kind { Command, TypeText, CloseWindow, Quit, Activate, Toggle, Select, Click, OpenFile, Rows, Selection, TextChanged, WaitScript } kind = Kind::Quit;
-  int32_t command = 0;
+  enum class Kind { Command, TypeText, CloseWindow, Quit, Activate, Toggle, Select, Click, OpenFile, Rows, Selection, TextChanged, WaitScript, Input } kind = Kind::Quit;
+  int32_t command = 0; // the event kind of an Input action
   uint64_t handle = 0;
   std::string text;
+  InputFields input;
 };
 
 struct State {
@@ -136,6 +148,9 @@ struct State {
   uint64_t eventWidget = 0;
   int32_t eventCommand = 0;
   std::string eventText;
+  InputFields eventInput;
+  std::map<uint64_t, int32_t> watches;            // widget -> PS_UI_WATCH_* bits (ps_ui_widget_watch)
+  std::set<std::pair<uint64_t, int32_t>> keysPassed; // (text view, key) whose key down the view did not keep
   std::string returnedText;
   std::string lastError;
   bool panelChosen = false;
@@ -254,6 +269,18 @@ inline const char *eventName(int32_t kind) {
     return "control_changed";
   case PS_UI_EVENT_OPEN_FILE:
     return "open_file";
+  case PS_UI_EVENT_POINTER_ENTER:
+    return "pointer_enter";
+  case PS_UI_EVENT_POINTER_LEAVE:
+    return "pointer_leave";
+  case PS_UI_EVENT_MOUSE_DOWN:
+    return "mouse_down";
+  case PS_UI_EVENT_MOUSE_UP:
+    return "mouse_up";
+  case PS_UI_EVENT_KEY_DOWN:
+    return "key_down";
+  case PS_UI_EVENT_KEY_UP:
+    return "key_up";
   default:
     return "none";
   }
@@ -323,6 +350,8 @@ inline uint64_t windowOfControl(uint64_t handle) {
 // With no user action left: waits for the running script of the first window that has one, appends its output to the
 // window's output text and delivers the end command. False when no script runs.
 bool deliverScriptEvent();
+// A queued pointer or key action: true when it produced an event (the widget watches it), NativeUiHeadlessInput.cpp.
+bool deliverInputAction(const Action &action);
 
 inline bool activeWindowHasPreview() {
   const Window *w = liveWindow(state().activeWindow);
@@ -346,6 +375,7 @@ inline void setEvent(int32_t kind, uint64_t window = 0, uint64_t widget = 0, int
   s.eventWindow = window;
   s.eventWidget = widget;
   s.eventCommand = command;
+  s.eventInput = InputFields{};
 }
 
 // Applies queued actions until one produces an event. Returns false when the
@@ -438,6 +468,11 @@ inline bool deliverNextEvent() {
       }
       break;
     }
+    case Action::Kind::Input:
+      if (deliverInputAction(action)) {
+        return true;
+      }
+      break;
     case Action::Kind::WaitScript:
       if (deliverScriptEvent()) {
         return true;

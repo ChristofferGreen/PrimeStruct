@@ -1,0 +1,147 @@
+// The pointer and key handlers of `AppHandlers` (/std/ui/native): the pointer entering a button, presses and releases
+// on it, its click and keys while it has focus, and keys in a text view, which keeps the keys it types. Each handler
+// writes what it saw into the title of window 1, so the call log shows it, and the exit code has a bit per kind of
+// event seen as expected (127 when all were). tests/unit/backend_host/test_cpp_native_ui.cpp runs it on the VM and
+// compiled against the headless backend, cmake/NativeUiCompiledAppTest.cmake on AppKit; the handles are 1 (window),
+// 2 (its text view), 3 (the controls window), 4 (button), 5 (form) and 6 (a second button without handlers).
+import /std/text/*
+import /std/ui/events/*
+import /std/ui/native/*
+
+[struct]
+Report() {
+  [Window] window{Window{}}
+  [i32 mut] seen{0i32}
+
+  [mut effects(heap_alloc)]
+  note([String] line) {
+    this.window.setTitle(line)
+  }
+
+  // Adds `bit` to `seen`, once.
+  [mut]
+  saw([i32] bit) {
+    [i32] above{this.seen / bit}
+    if(above - (above / 2i32) * 2i32 == 0i32) {
+      this.seen = this.seen + bit
+    }
+  }
+}
+
+[return<i32>]
+button_code([PointerButton] button) {
+  if(button == PointerButton.primary) {
+    return(0i32)
+  }
+  if(button == PointerButton.secondary) {
+    return(1i32)
+  }
+  if(button == PointerButton.middle) {
+    return(2i32)
+  }
+  return(-1i32)
+}
+
+[return<String> effects(heap_alloc)]
+with_field([String] line, [string] name, [i32] value) {
+  [String mut] out{line}
+  out.append(" ")
+  out.append(name)
+  out.appendI64(convert<i64>(value))
+  return(out)
+}
+
+// "down b0 x10 y5 m0 c1 p1": the button, the position, the modifier bits, the click count and whether it has a position.
+[return<String> effects(heap_alloc)]
+pointer_line([string] what, [PointerEvent] event) {
+  [String mut] line{stringFrom(what)}
+  line = with_field(line, "b", button_code(event.button))
+  line = with_field(line, "x", event.x)
+  line = with_field(line, "y", event.y)
+  line = with_field(line, "m", event.modifiers.bits)
+  line = with_field(line, "c", event.clickCount)
+  line = with_field(line, "p", if(event.hasPosition, then() { 1i32 }, else() { 0i32 }))
+  return(line)
+}
+
+// "key k-3 m0 r0": the key's code, the modifier bits and whether the key repeats.
+[return<String> effects(heap_alloc)]
+key_line([string] what, [KeyEvent] event) {
+  [String mut] line{stringFrom(what)}
+  line = with_field(line, "k", event.key.code)
+  line = with_field(line, "m", event.modifiers.bits)
+  line = with_field(line, "r", if(event.isRepeat, then() { 1i32 }, else() { 0i32 }))
+  return(line)
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [App] app{start_app("Input")}
+  [Window] window{app.window("Input", 400i32, 300i32)}
+  [TextView] text{app.textView()}
+  window.setContent(text)
+  [Window] controls{app.window("Controls", 300i32, 200i32)}
+  [Button] go{app.button("Go")}
+  [Form] form{app.form()}
+  form.control(go.widget())
+  [Button] idle{app.button("Idle")}
+  form.control(idle.widget())
+  controls.setContentWidget(form.widget())
+
+  [AppHandlers<Report> mut] handlers{AppHandlers<Report>{[state] Report{[window] window}}}
+  handlers.onMouseOver(go.widget(), []([Reference<Report>] report, [PointerEvent] event) {
+    report.note(pointer_line("over", event))
+    if(event.hasPosition && button_code(event.button) == -1i32 && event.clickCount == 0i32) {
+      report.saw(1i32)
+    }
+  })
+  // Replaced by the next one: the later handler of an event is the one called.
+  handlers.onMouseDown(go.widget(), []([Reference<Report>] report, [PointerEvent] event) {
+    report.note(stringFrom("replaced"))
+  })
+  handlers.onMouseDown(go.widget(), []([Reference<Report>] report, [PointerEvent] event) {
+    report.note(pointer_line("down", event))
+    if(button_code(event.button) == 0i32 && event.x == 10i32 && event.y == 5i32 && event.clickCount == 1i32) {
+      report.saw(2i32)
+    }
+  })
+  handlers.onMouseUp(go.widget(), []([Reference<Report>] report, [PointerEvent] event) {
+    report.note(pointer_line("up", event))
+    if(button_code(event.button) == 0i32) {
+      report.saw(4i32)
+    }
+  })
+  [mut] click{[mut clicks{0i32}]([Reference<Report>] report, [PointerEvent] event) {
+    clicks = clicks + 1i32
+    report.note(with_field(stringFrom("click"), "n", clicks))
+    report.saw(8i32)
+  }}
+  handlers.onClick(go, click)
+  handlers.onKeyDown(go.widget(), []([Reference<Report>] report, [KeyEvent] event) {
+    report.note(key_line("go key", event))
+  })
+  handlers.onKeyDown(text.widget(), []([Reference<Report>] report, [KeyEvent] event) {
+    report.note(key_line("key", event))
+    if(event.key.code == Key.escape.code) {
+      report.saw(16i32)
+    }
+    if(event.key.isCharacter() && !event.modifiers.meta()) {
+      // The text view types a character without Command itself.
+      report.saw(128i32)
+    }
+  })
+  handlers.onKeyUp(text.widget(), []([Reference<Report>] report, [KeyEvent] event) {
+    report.note(key_line("key up", event))
+    if(event.key.code == Key.escape.code) {
+      report.saw(32i32)
+    }
+  })
+  handlers.onTextChange([]([Reference<Report>] report, [Window] changed) {
+    report.note(stringFrom("typed"))
+    report.saw(64i32)
+  })
+  window.show()
+  controls.show()
+  app.run(handlers)
+  return(handlers.state.seen)
+}

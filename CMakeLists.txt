@@ -834,7 +834,8 @@ add_library(primec_ui_headless_lib src/ui/headless/NativeUiHeadless.cpp
                                   src/ui/headless/NativeUiHeadlessControl.cpp
                                   src/ui/headless/NativeUiHeadlessControls.cpp
                                   src/ui/headless/NativeUiHeadlessToolbar.cpp
-                                  src/ui/headless/NativeUiHeadlessScript.cpp)
+                                  src/ui/headless/NativeUiHeadlessScript.cpp
+                                  src/ui/headless/NativeUiHeadlessInput.cpp)
 target_include_directories(primec_ui_headless_lib PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
@@ -896,6 +897,8 @@ endif()
 # backend with scripted user actions (see its header comment).
 add_executable(native_ui_headless_runner tools/native_ui_headless_runner/main.cpp)
 target_link_libraries(native_ui_headless_runner PRIVATE primec_ui_lib primec_embed_lib)
+# The pointer and key options replay entries of tests/fixtures/host_calls/scenario.h.
+target_include_directories(native_ui_headless_runner PRIVATE ${CMAKE_SOURCE_DIR})
 primestructEnableWarnings(native_ui_headless_runner)
 
 # Install rules + CMake package so a host project can
@@ -1541,6 +1544,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
                                                 src/ui/headless/NativeUiHeadlessControls.cpp
                                                 src/ui/headless/NativeUiHeadlessToolbar.cpp
                                                 src/ui/headless/NativeUiHeadlessScript.cpp
+                                                src/ui/headless/NativeUiHeadlessInput.cpp
                                                 tests/fixtures/host_calls/headless_log_dump.cpp)
     set_target_properties(primec_ui_headless_dylib PROPERTIES OUTPUT_NAME ps_ui_headless)
     target_include_directories(primec_ui_headless_dylib PRIVATE ${CMAKE_SOURCE_DIR}/include

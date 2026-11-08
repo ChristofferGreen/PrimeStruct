@@ -24,6 +24,15 @@ template <class Binder> void forEachBinding(Binder &&bindOne) {
   bindOne("ps_ui_event_window", [] { return ps_ui_event_window(); });
   bindOne("ps_ui_event_widget", [] { return ps_ui_event_widget(); });
   bindOne("ps_ui_event_command", [] { return ps_ui_event_command(); });
+  bindOne("ps_ui_supports", [](int32_t feature) { return ps_ui_supports(feature); });
+  bindOne("ps_ui_widget_watch", [](uint64_t widget, int32_t mask) { return ps_ui_widget_watch(widget, mask); });
+  bindOne("ps_ui_event_button", [] { return ps_ui_event_button(); });
+  bindOne("ps_ui_event_x", [] { return ps_ui_event_x(); });
+  bindOne("ps_ui_event_y", [] { return ps_ui_event_y(); });
+  bindOne("ps_ui_event_modifiers", [] { return ps_ui_event_modifiers(); });
+  bindOne("ps_ui_event_click_count", [] { return ps_ui_event_click_count(); });
+  bindOne("ps_ui_event_key", [] { return ps_ui_event_key(); });
+  bindOne("ps_ui_event_repeat", [] { return ps_ui_event_repeat(); });
 
   bindOne("ps_ui_window_create", [](std::string_view title, int32_t width, int32_t height) {
     return ps_ui_window_create(text(title).c_str(), width, height);

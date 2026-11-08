@@ -38,6 +38,44 @@ ps_ui_event_widget() {
 ps_ui_event_command() {
 }
 
+// The pointer and key events (PS_UI_FEATURE_INPUT_EVENTS, feature 1): `AppHandlers` watches the widgets it has such
+// handlers for and reads the fields of each event.
+[host return<bool>]
+ps_ui_supports([i32] feature) {
+}
+
+[host return<bool>]
+ps_ui_widget_watch([u64] widget, [i32] mask) {
+}
+
+[host return<i32>]
+ps_ui_event_button() {
+}
+
+[host return<i32>]
+ps_ui_event_x() {
+}
+
+[host return<i32>]
+ps_ui_event_y() {
+}
+
+[host return<i32>]
+ps_ui_event_modifiers() {
+}
+
+[host return<i32>]
+ps_ui_event_click_count() {
+}
+
+[host return<i32>]
+ps_ui_event_key() {
+}
+
+[host return<bool>]
+ps_ui_event_repeat() {
+}
+
 [host return<u64>]
 ps_ui_window_create([string] title, [i32] width, [i32] height) {
 }
@@ -656,6 +694,13 @@ Window() {
 [public struct]
 TextView() {
   [public u64] handle{0u64}
+
+  // The generic handle of the view, for the pointer and key handlers of `AppHandlers` (`onKeyDown(text.widget(), h)`).
+  [public return<Widget>]
+  widget() {
+    [Widget] generic{[handle] this.handle}
+    return(generic)
+  }
 
   [public return</std/text/String>]
   text() {

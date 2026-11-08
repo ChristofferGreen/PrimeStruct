@@ -75,6 +75,21 @@ if(NOT helloHeader STREQUAL helloDirectHeader)
                       "(${helloDirectHeader} against ${helloHeader})")
 endif()
 
+# Pointer and key handlers (TODO-5725, tests/fixtures/ui/input_handlers.prime): the harness moves the pointer onto
+# button 4 (its tracking area's owner hears of it), presses and releases it at (10, 5) (found by hit testing, not
+# handed to the button) and clicks it, then types "a" and Escape into text view 2, which types the first itself and
+# hands the second to the program. Nothing takes focus: the keys go to a window that is not key. The exit code has a
+# bit per kind of event the handlers saw as expected; 127 is all of them.
+build_app("${SOURCE_DIR}/tests/fixtures/ui/input_handlers.prime" InputNative)
+set(ENV{PRIMESTRUCT_UI_SNAPSHOT} "${WORK_DIR}/input.png")
+set(ENV{PRIMESTRUCT_UI_CLICK} "enter:4:10:5;press:4:10:5;button:4;key:2:97:0;key:2:-3:0")
+execute_process(COMMAND "${WORK_DIR}/InputNative" RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err TIMEOUT 60)
+unset(ENV{PRIMESTRUCT_UI_CLICK})
+if(NOT rc EQUAL 127)
+  message(FATAL_ERROR "compiled input handlers exited with '${rc}' instead of 127 (a bit per event seen): ${out}${err}")
+endif()
+check_png("${WORK_DIR}/input.png" 2000)
+
 build_app("${SOURCE_DIR}/examples/apps/text_editor/main.prime" EditorNative)
 
 # WebKit is loaded when a preview turns on, never linked: neither the compiled editor nor the AppKit dylib

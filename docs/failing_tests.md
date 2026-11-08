@@ -17,14 +17,16 @@ triage notes live in `docs/todo_archive/failing_tests_history.md`.
 
 ## Open Failures
 
-None.
+- `PrimeStruct_primestruct_program_matrix_parameter_modes`: tests/unit/program_matrix/test_program_matrix_parameter_modes.cpp, case "a runtime error inside a real call stops the program" (added by e52fdaa9d, TODO-5734), fails on native-O0 and native-O2: `primec --emit=native` of the case's program prints the bounds error, then `3` and `99`, and exits 0. The native emitter has no `Trap`, so a runtime error in a real-call callee returns 3 to the caller instead of ending the program; fails the same way at e52fdaa9d without other changes. Tracked by TODO-5743.
 
 ## Current Failures
 
 <!-- compile.sh:failing-tests:start -->
-- Last updated: `2026-11-07T12:38:53Z`
+- Last updated: `2026-11-08T03:09:54Z`
 - Build type: `Release`
 - Build dir: `build-release`
 - Command: `ctest --test-dir build-release --output-on-failure --parallel 22`
-- Result: no failing CTest cases.
+- Result: `ctest` failed with status `8`.
+- Failing CTest cases:
+  - `1896`: `PrimeStruct_primestruct_program_matrix_parameter_modes`
 <!-- compile.sh:failing-tests:end -->

@@ -14,7 +14,11 @@
  * ps_ui_save_panel, ps_ui_last_error, ps_ui_recent_path, ps_ui_pref_list_get). Copy it before then.
  *
  * Versioning: additions append functions; changing an existing signature bumps
- * ps_ui_abi_version().
+ * ps_ui_abi_version(). An addition that a version-0 program could notice comes
+ * behind a feature (ps_ui_supports): the pointer and key events of
+ * PS_UI_FEATURE_INPUT_EVENTS reach a program only for the widgets it asked for
+ * with ps_ui_widget_watch, so a program that never calls it sees version 0
+ * exactly.
  */
 
 #include <stdbool.h>
@@ -52,7 +56,69 @@ enum {
   PS_UI_EVENT_CONTROL_CHANGED = 5,
   /* The system asks the app to open a file (a double click in the Finder, Open With, a file dropped on the app's
    * icon): its path is ps_ui_event_text(). */
-  PS_UI_EVENT_OPEN_FILE = 6
+  PS_UI_EVENT_OPEN_FILE = 6,
+  /* The pointer and key events of PS_UI_FEATURE_INPUT_EVENTS. Each arrives only for a widget the program watches
+   * for it (ps_ui_widget_watch), as ps_ui_event_widget() (inside ps_ui_event_window()); the fields are read with
+   * ps_ui_event_button() and the accessors after it. */
+  /* The pointer moved onto the widget, or off it (PS_UI_WATCH_HOVER): a position, the modifiers, no button. */
+  PS_UI_EVENT_POINTER_ENTER = 7,
+  PS_UI_EVENT_POINTER_LEAVE = 8,
+  /* A pointer button was pressed on the widget, or the press released (PS_UI_WATCH_MOUSE_DOWN, _MOUSE_UP): the
+   * button, the position, the modifiers and the click count (2 for the second press of a double click). The release
+   * goes to the widget the press went to. */
+  PS_UI_EVENT_MOUSE_DOWN = 9,
+  PS_UI_EVENT_MOUSE_UP = 10,
+  /* A key was pressed or released while the widget had focus (PS_UI_WATCH_KEY_DOWN, _KEY_UP): the key, the
+   * modifiers and, for a key down, whether it repeats. A text view keeps the keys it uses (typing, editing and
+   * moving keys, its shortcuts): it reports only the others (Escape, Command combinations it has no use for), and
+   * the release of a key only when it reported the press. */
+  PS_UI_EVENT_KEY_DOWN = 11,
+  PS_UI_EVENT_KEY_UP = 12
+};
+
+/* ps_ui_supports() features. */
+enum {
+  /* ps_ui_widget_watch and the PS_UI_EVENT_POINTER_ENTER ... PS_UI_EVENT_KEY_UP events. */
+  PS_UI_FEATURE_INPUT_EVENTS = 1
+};
+
+/* The events ps_ui_widget_watch asks for, as bits (the bits of a /std/web control's events). */
+enum {
+  PS_UI_WATCH_HOVER = 1,
+  PS_UI_WATCH_MOUSE_DOWN = 2,
+  PS_UI_WATCH_MOUSE_UP = 4,
+  PS_UI_WATCH_KEY_DOWN = 8,
+  PS_UI_WATCH_KEY_UP = 16
+};
+
+/* ps_ui_event_button() results. */
+enum {
+  PS_UI_BUTTON_NONE = -1,
+  PS_UI_BUTTON_PRIMARY = 0,
+  PS_UI_BUTTON_SECONDARY = 1,
+  PS_UI_BUTTON_MIDDLE = 2
+};
+
+/* ps_ui_event_modifiers() bits. */
+enum { PS_UI_MOD_SHIFT = 1, PS_UI_MOD_CONTROL = 2, PS_UI_MOD_ALT = 4, PS_UI_MOD_META = 8 };
+
+/* ps_ui_event_key() results: a character key is its Unicode code point (0 or more, as typed with Shift but without
+ * the other modifiers); a named key is below 0, as /std/ui/events Key. Keys outside this list (function keys) are
+ * not reported. */
+enum {
+  PS_UI_KEY_ENTER = -1,
+  PS_UI_KEY_TAB = -2,
+  PS_UI_KEY_ESCAPE = -3,
+  PS_UI_KEY_BACKSPACE = -4,
+  PS_UI_KEY_DELETE = -5,
+  PS_UI_KEY_LEFT = -6,
+  PS_UI_KEY_RIGHT = -7,
+  PS_UI_KEY_UP = -8,
+  PS_UI_KEY_DOWN = -9,
+  PS_UI_KEY_HOME = -10,
+  PS_UI_KEY_END = -11,
+  PS_UI_KEY_PAGE_UP = -12,
+  PS_UI_KEY_PAGE_DOWN = -13
 };
 
 /* Standard menu items for ps_ui_menu_add_standard. They map to the platform's
@@ -109,6 +175,8 @@ bool ps_ui_init(const char *appName);
 /* Ends the app: later waits return PS_UI_EVENT_QUIT_REQUESTED. */
 void ps_ui_quit(void);
 int32_t ps_ui_platform(void);
+/* Whether this backend has a PS_UI_FEATURE_*. */
+bool ps_ui_supports(int32_t feature);
 
 /* Events ---------------------------------------------------------------- */
 
@@ -123,6 +191,23 @@ int32_t ps_ui_event_command(void);
 /* The text of the event: the path of a PS_UI_EVENT_OPEN_FILE; "" for the other kinds. See the lifetime note
  * above. */
 const char *ps_ui_event_text(void);
+
+/* Pointer and key events (PS_UI_FEATURE_INPUT_EVENTS) --------------------- */
+
+/* Asks for the PS_UI_WATCH_* events of `widget`, a control or a text view; the mask replaces the earlier one and 0
+ * stops them. A backend installs what it needs for them (tracking areas, key handling) only here, so a program that
+ * watches nothing pays nothing for this. False for a bad handle, a widget of another kind, bits outside the
+ * PS_UI_WATCH_* ones, or a backend without the feature. */
+bool ps_ui_widget_watch(uint64_t widget, int32_t mask);
+/* The fields of the pointer and key events; for the other kinds the button reads PS_UI_BUTTON_NONE and the rest 0.
+ * The position is in the widget's own points from its top left corner (a text view's: the visible part). */
+int32_t ps_ui_event_button(void);
+int32_t ps_ui_event_x(void);
+int32_t ps_ui_event_y(void);
+int32_t ps_ui_event_modifiers(void);
+int32_t ps_ui_event_click_count(void);
+int32_t ps_ui_event_key(void);
+bool ps_ui_event_repeat(void);
 
 /* Window ---------------------------------------------------------------- */
 

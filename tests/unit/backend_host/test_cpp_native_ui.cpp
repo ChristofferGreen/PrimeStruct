@@ -1,6 +1,7 @@
 #include "primec/embed/Script.h"
 #include "primec/embed/ScriptEngine.h"
 #include "primec/testing/TestScratch.h"
+#include "primec/ui/NativeUi.h"
 #include "primec/ui/NativeUiBindings.h"
 #include "primec/ui/NativeUiHeadless.h"
 
@@ -176,6 +177,46 @@ TEST_CASE("native UI app handlers get every event kind through optexe") {
   CHECK(loggedCalls("ps_ui_toolbar_add_button") ==
         std::vector<std::string>{
             "ps_ui_toolbar_add_button(10, \"Save\", \"square.and.arrow.down\", 1000000) -> true"});
+}
+
+TEST_CASE("native UI pointer and key handlers get their event structs through optexe") {
+  // tests/fixtures/ui/input_handlers.prime: button 4 has hover, press, release, click and key-down handlers, text view
+  // 2 key-down and key-up ones, button 6 none. The pointer leaving has no handler; button 6 is not watched, so its
+  // hover is skipped; the text view types "a" itself and keeps the left arrow; button 4 does not watch key ups.
+  const std::string actions = "enter:4:10:5:0;enter:6:1:1:0;leave:4:3:4:0;down:4:0:10:5:0:1;up:4:0:11:6:0:1;click:4;"
+                              "down:4:1:2:3:1:2;keydown:4:32:0:0;keyup:4:32:0;keydown:2:97:0:0;keyup:2:97:0;"
+                              "keydown:2:-3:0:0;keydown:2:-3:0:1;keyup:2:-3:0;keydown:2:115:8:0;keyup:2:115:8;"
+                              "keydown:2:-6:0:0;keyup:2:-6:0;quit";
+  checkScenario(SourceDir + "/tests/fixtures/ui/input_handlers.prime", "input_handlers", actions);
+  CHECK(loggedCalls("ps_ui_window_set_title") ==
+        std::vector<std::string>{
+            "ps_ui_window_set_title(1, \"over b-1 x10 y5 m0 c0 p1\") -> true",
+            "ps_ui_window_set_title(1, \"down b0 x10 y5 m0 c1 p1\") -> true",
+            "ps_ui_window_set_title(1, \"up b0 x11 y6 m0 c1 p1\") -> true",
+            "ps_ui_window_set_title(1, \"click n1\") -> true",
+            "ps_ui_window_set_title(1, \"down b1 x2 y3 m1 c2 p1\") -> true",
+            "ps_ui_window_set_title(1, \"go key k32 m0 r0\") -> true",
+            "ps_ui_window_set_title(1, \"typed\") -> true",
+            "ps_ui_window_set_title(1, \"key k-3 m0 r0\") -> true",
+            "ps_ui_window_set_title(1, \"key k-3 m0 r1\") -> true",
+            "ps_ui_window_set_title(1, \"key up k-3 m0 r0\") -> true",
+            "ps_ui_window_set_title(1, \"key k115 m8 r0\") -> true",
+            "ps_ui_window_set_title(1, \"key up k115 m8 r0\") -> true",
+        });
+  // Each registration tells the backend which events of the widget have handlers.
+  CHECK(loggedCalls("ps_ui_widget_watch") == std::vector<std::string>{
+                                                 "ps_ui_widget_watch(4, 1) -> true",
+                                                 "ps_ui_widget_watch(4, 3) -> true",
+                                                 "ps_ui_widget_watch(4, 3) -> true",
+                                                 "ps_ui_widget_watch(4, 7) -> true",
+                                                 "ps_ui_widget_watch(4, 15) -> true",
+                                                 "ps_ui_widget_watch(2, 8) -> true",
+                                                 "ps_ui_widget_watch(2, 24) -> true",
+                                             });
+  CHECK(headless::watchedEvents(4) == 15);
+  CHECK(headless::watchedEvents(2) == 24);
+  CHECK(headless::watchedEvents(6) == 0);
+  CHECK(std::string(ps_ui_text_view_get_text(2)) == "a");
 }
 
 TEST_CASE("the editor types and saves through optexe with the VM's call log") {

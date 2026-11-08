@@ -133,12 +133,14 @@ is callable only on the thread that called `ps_ui_init`, the main thread on macO
 | Controls and forms | `ps_ui_label_create(text)`, `_set_text`; `ps_ui_checkbox_create(title, checked)`, `_set_checked`, `_checked`; `ps_ui_popup_create()`, `_add_item(popup, title)`, `_select(popup, index)`, `_selected(popup) -> i32` (the first item added is chosen); `ps_ui_form_create()`, `_add_heading(form, title)`, `_add_row(form, label, control)` (the labels line up in one column, the controls in the next), `_add_control(form, control)` (a control alone in the controls' column, such as a check box); `ps_ui_tabs_create()`, `_add(tabs, title, content)`, `_select(tabs, index)` (the first page added is shown). A control is held by one form or tabs, or is a window's content (`ps_ui_window_set_content` takes any of them). The user's click on a check box or choice in a pop-up is `PS_UI_EVENT_CONTROL_CHANGED` with the control as the event's widget and its window; the program's own changes make no event. `ps_ui_window_set_style(window, PS_UI_WINDOW_SETTINGS)` makes a window that is never a tab and fits its content. `ps_ui_text_view_set_font_size(view, points)` (6 to 96). The headless backend keeps all of it in memory, answers scripted user actions (`headless::pushToggleCheckBox`, `pushSelectPopupItem`; `check:H` and `popup:H:I` in a scenario) and shows a control tree as text (`headless::controlOutline(root)`); the AppKit backend answers the controls with TODO-5593 |
 | Markdown preview | `ps_ui_window_set_preview(window, bool)` (the window shows its text view and, beside it, the markdown of that text rendered as a page; the backend builds the preview only when it is turned on; false for a bad window or one with no text view; on while on is a no-op), `ps_ui_window_has_preview(window) -> bool`, `ps_ui_window_refresh_preview(window) -> bool` (render again from the current text; false without a preview; a backend may coalesce refreshes), `ps_ui_menu_follow_preview(menu, commandId) -> bool` (the items' check mark shows whether the active window has a preview, so it stays right when the user clicks another tab). The headless backend records the page (`headless::previewPage(window)`) and how often it was built (`WindowState::previewRenders`) |
 | Toolbar and markdown edits | `ps_ui_toolbar_create/add_button/add_segments/add_menu/add_separator` (every item is a command: a click is `PS_UI_EVENT_COMMAND`; segments are `Editor|Split|Preview` with consecutive command ids), `ps_ui_window_set_toolbar(window, toolbar)` (0 hides), `ps_ui_window_toolbar_select(window, commandId)`, `ps_ui_window_set_preview_mode/preview_mode` (`PS_UI_PREVIEW_TEXT/SPLIT/ONLY`; `set_preview` is TEXT or SPLIT), `ps_ui_text_view_markdown_edit(view, PS_UI_MARKDOWN_*, a, b)` (one change through `primec::ui::markdownEdit`, modified, `PS_UI_EVENT_TEXT_CHANGED`) and `ps_ui_text_view_set_markdown_editing` (Tab moves between table cells). The headless backend keeps `headless::toolbarOutline(window)`, the selection (`headless::pushSelectText`, `selection`, `select:H:S:E` in scenarios) and applies the edits; AppKit builds an `NSToolbar` per window (SF Symbols, an `NSToolbarItemGroup` for the segments, `NSMenuToolbarItem` for the menus), hides the text scroll view in the preview-only mode, applies an edit through `shouldChangeText`/`didChangeText` (one undo) and tells the program about undo and redo with a text-changed event |
+| Pointer and keys (feature 1) | `ps_ui_supports(PS_UI_FEATURE_INPUT_EVENTS) -> bool`; `ps_ui_widget_watch(widget, mask) -> bool` asks for the `PS_UI_WATCH_*` events of a control or text view (1 hover, 2 press, 4 release, 8 key down, 16 key up: the bits of a `/std/web` control's events; the mask replaces the earlier one, 0 stops them); the kinds `pointer_enter` (7), `pointer_leave` (8), `mouse_down` (9), `mouse_up` (10), `key_down` (11), `key_up` (12) arrive for watched widgets only, with the widget and its window; `ps_ui_event_button() -> i32` (-1 none, 0 primary, 1 secondary, 2 middle), `_x`, `_y` (points from the widget's top left corner; a text view's visible part), `_modifiers` (1 shift, 2 control, 4 alt, 8 meta), `_click_count` (2 for the second press of a double click), `_key` (a code point, or a named key below 0 as `/std/ui/events` `Key`; function keys are not reported), `_repeat -> bool`. A release goes to the widget the press went to. A text view keeps the keys it uses (typing, editing and moving keys, its shortcuts) and reports only the others (Escape, Command combinations it has no binding for), and a key up only after it reported the key down. The headless backend replays `headless::pushPointerEnter/Leave`, `pushMouseDown/Up`, `pushKeyDown/Up` (`enter:H:X:Y:M`, `down:H:B:X:Y:M:C`, `keydown:H:K:M:R` ... in scenarios, `--enter`, `--down`, `--keydown` ... in `native_ui_headless_runner`), delivers an action only when its event is watched, and models a text view's keys: a character, Enter or Tab without Control and Command is typed, Escape and Command keys are reported, the rest kept |
 | Dialogs | `ps_ui_open_panel(title) -> String`, `ps_ui_save_panel(title, suggestedName) -> String` (empty means cancelled), `ps_ui_panel_chosen() -> bool` (whether the last panel returned a path), `ps_ui_alert(message, detail, buttons) -> i32` |
 
 - **Events.** `ps_ui_wait_event` blocks in the platform's run loop until something the program should handle happens,
   then returns its kind; the accessors read the fields of that event until the next wait. Kinds: `command` (a menu
-  item or shortcut, with its command id), `window_close_requested`, `text_changed`, `quit_requested`. Everything
-  else (typing, selection, scrolling, copy and paste, undo) is handled by the native widget and never reaches the
+  item or shortcut, with its command id), `window_close_requested`, `text_changed`, `quit_requested`,
+  `control_changed`, `open_file`, and the pointer and key kinds of the widgets the program watches. Everything else
+  (typing, selection, scrolling, copy and paste, undo) is handled by the native widget and never reaches the
   program.
 - **Shortcuts** are written portably (`"cmd+s"`, `"cmd+shift+s"`); `cmd` means Command on macOS and Ctrl elsewhere.
 - **Standard items** (`undo`, `redo`, `cut`, `copy`, `paste`, `select_all`, `find`, `quit`, `about`) map to the
@@ -147,10 +149,14 @@ is callable only on the thread that called `ps_ui_init`, the main thread on macO
   is a `const char *` valid until the next text-returning call, `ps_ui_alert` takes button titles separated by `\n` and
   returns the pressed index, and `ps_ui_init` returns false when the app is already running. The headless backend
   (`primec/ui/NativeUiHeadless.h`) ends a scripted run with `quit_requested` once its action list is empty.
-  `primec/ui/NativeUiBindings.h` binds all 103 functions into a `ScriptEngine` or `Script` under their ABI names. The
+  `primec/ui/NativeUiBindings.h` binds all 128 functions into a `ScriptEngine` or `Script` under their ABI names. The
   three text-file functions (TODO-5546) let the editor open and save before owned `String` exists (TODO-5530).
 - **Versioning.** `ps_ui_abi_version() -> i32` returns 0 for this table. Additions append functions; a change to an
-  existing signature bumps the version.
+  existing signature bumps the version. An addition a version-0 program could notice comes behind a feature that
+  `ps_ui_supports(feature) -> bool` reports: the pointer and key events (`PS_UI_FEATURE_INPUT_EVENTS`, TODO-5725)
+  reach a program only for the widgets it watches, so a program that never calls `ps_ui_widget_watch` gets exactly
+  the version-0 events, and every version-0 function is unchanged. A backend without the feature answers false and
+  fails every watch.
 
 ## 5. The PrimeStruct surface
 
@@ -189,8 +195,10 @@ an import yet), and `AppEvent` lists `quitRequested` first because a default sum
 state and a table of handlers registered once, at setup; `app.run(handlers)` loops on `ps_ui_wait_event` and calls
 the handler of each event until the app quits. Each handler is a `Function<void, Reference<State>, Event>`: its own
 `mut` captures keep what only it needs, the shared state comes in as the parameter, and the event is a
-`/std/ui/events` struct, the same types a `/std/web` control takes. No ABI change: the table maps the version-0
-events back to their handlers.
+`/std/ui/events` struct, the same types a `/std/web` control takes. The table maps the version-0 events back to
+their handlers; the pointer and key handlers (TODO-5725) use the events of `PS_UI_FEATURE_INPUT_EVENTS`, and
+registering one watches its widget (`ps_ui_widget_watch` with the events that have handlers), so the platform tracks
+only widgets with such handlers.
 
 | Event (ABI v0) | Registration | The handler gets |
 | --- | --- | --- |
@@ -201,6 +209,9 @@ events back to their handlers.
 | `text_changed` | `onTextChange(handler)` | the `Window` |
 | `open_file` | `onOpenFile(handler)` | the path, a `String` |
 | `quit_requested` | `onQuit(handler)`, a `Function<bool, Reference<State>>` | nothing; `true` lets `run` return |
+| `pointer_enter` (feature 1) | `onMouseOver(widget, handler)`, any control or text view as a `Widget` (`button.widget()`, `text.widget()`) | a `PointerEvent`: no button, the position, the modifiers, `clickCount` 0 |
+| `mouse_down`, `mouse_up` | `onMouseDown`, `onMouseUp(widget, handler)` | a `PointerEvent`: the button, the position, the modifiers, the click count |
+| `key_down`, `key_up` | `onKeyDown`, `onKeyUp(widget, handler)`, while the widget has focus | a `KeyEvent`: the key, the modifiers, `isRepeat`; a text view's handlers see only the keys it does not keep |
 
 - **Ids stay inside.** `command` hands out ids from `first_command_id()` (1000000) up, above the ids programs pick
   for `waitEvent`; app code holds the `Command`. One `Command` in a menu and a toolbar calls one closure, so its `mut`
@@ -284,6 +295,8 @@ the same call logs.
 | Standard edit items | responder chain | recorded | `WM_*` messages | GTK actions | system edit menu |
 | Open/Save panels | `NSOpenPanel`/`NSSavePanel` | scripted | common dialogs | `GtkFileDialog` | document picker |
 | Alerts | `NSAlert` | scripted | `MessageBox` | `GtkAlertDialog` | `UIAlertController` |
+| Pointer hover, press, release on a watched widget (feature 1) | `NSTrackingArea` added by the watch; presses read off the pumped events | scripted (`enter`, `down`, `up`) | `WM_MOUSEMOVE`/`TrackMouseEvent`, `WM_*BUTTON*` | `GtkEventControllerMotion`, `GtkGestureClick` | touches (no hover) |
+| Keys of the focused watched widget (feature 1) | key events read off the pump; a text view's unused commands through its delegate | scripted (`keydown`, `keyup`), a modelled text view | `WM_KEYDOWN`/`WM_KEYUP` | `GtkEventControllerKey` | hardware keyboard `pressesBegan` |
 
 Planned columns are design intent; only macOS and headless are in the first slices.
 
@@ -404,6 +417,20 @@ flag or a base letter with combining marks is one cursor step, and bidirectional
 Checked by the gate cases in `tests/unit/ui/test_native_ui_editor_acceptance.cpp` (round trips of
 `tests/fixtures/ui/unicode_sample.txt`, CRLF, no final newline, empty file, typed text, invalid UTF-8) and, for
 rendering, by the snapshot of TODO-5553; stepping the cursor over clusters by hand is part of TODO-5545.
+
+**Pointer and key events (TODO-5725).** Nothing is installed at launch: `ps_ui_wait_event` hands each pumped event
+to `NSApp` at once while no widget is watched. `ps_ui_widget_watch` with the hover bit adds an `NSTrackingArea`
+(entered and exited, active in the active app, the visible rect) to the widget's view, whose owner reports
+`pointer_enter` and `pointer_leave`; dropping the bit removes it. With any watch, the pump looks at presses, releases
+and keys before AppKit handles them, so the controls keep their own behaviour: a press is hit-tested to the innermost
+watched widget, and when a control's tracking loop (a button's) takes the release from the queue the release is
+reported once the loop returns, ahead of the click the control made of it. A key goes to the watched widget that
+holds the window's first responder; a text view gets the key first, and the program hears of it only when the view
+had no use for it: its delegate sees `noop:` (an unbound combination), `cancelOperation:` (Escape) or a command the
+view does not implement while the key is handed to it. Snapshot runs drive it through `PRIMESTRUCT_UI_CLICK`
+(`enter:H:X:Y`, `leave:H:X:Y`, `press:H:X:Y` hit-tested but not handed to the control, `key:H:K:M` sent to a window
+that is not key, so nothing takes focus); `PrimeStruct_native_ui_compiled_app` runs
+`tests/fixtures/ui/input_handlers.prime` that way.
 
 Smoke checklist (macOS 27, arm64, 2026-10-08): window and title, text view with preset text, bundle launch from
 bytecode, snapshot, quit request ending the loop: checked by the automated smoke. Typing, menu shortcuts, open/save

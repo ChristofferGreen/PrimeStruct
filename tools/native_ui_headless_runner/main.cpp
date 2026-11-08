@@ -3,6 +3,12 @@
 //   native_ui_headless_runner program.prime [--command N] [--type TEXT]
 //       [--close-window HANDLE] [--quit] [--open-answer PATH]
 //       [--save-answer PATH] [--alert BUTTON] [--click HANDLE] [--log]
+//       [--enter H:X:Y:M] [--leave H:X:Y:M] [--down H:B:X:Y:M:C] [--up H:B:X:Y:M:C]
+//       [--keydown H:K:M:R] [--keyup H:K:M]
+//
+// The pointer and key options take the fields of the scenario entries of the same names
+// (tests/fixtures/host_calls/scenario.h, primec/ui/NativeUiHeadless.h): `--down 4:0:5:6:0:1` presses
+// the primary button at (5, 6) on widget 4, `--keydown 2:-3:0:0` presses Escape in widget 2.
 //
 // Scripted user actions are replayed in the order given. The program's exit
 // code becomes the runner's; --log prints every recorded ABI call afterwards.
@@ -10,6 +16,8 @@
 #include "primec/embed/ScriptEngine.h"
 #include "primec/ui/NativeUiBindings.h"
 #include "primec/ui/NativeUiHeadless.h"
+
+#include "tests/fixtures/host_calls/scenario.h"
 
 #include <algorithm>
 #include <chrono>
@@ -39,6 +47,10 @@ int main(int argc, char **argv) {
       headless::pushCloseWindow(static_cast<uint64_t>(std::strtoull(argv[++i], nullptr, 10)));
     } else if (arg == "--click" && hasValue) {
       headless::pushClickButton(static_cast<uint64_t>(std::strtoull(argv[++i], nullptr, 10)));
+    } else if ((arg == "--enter" || arg == "--leave" || arg == "--down" || arg == "--up" || arg == "--keydown" ||
+                arg == "--keyup") &&
+               hasValue) {
+      applyHeadlessScenario(arg.substr(2) + ":" + argv[++i]);
     } else if (arg == "--quit") {
       headless::pushQuit();
     } else if (arg == "--open-answer" && hasValue) {

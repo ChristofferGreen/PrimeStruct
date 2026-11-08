@@ -162,7 +162,7 @@ main() {
 
 TEST_CASE("native ui bindings cover every ABI function once") {
   const auto signatures = primec::ui::nativeUiBindingSignatures();
-  CHECK(signatures.size() == 119);
+  CHECK(signatures.size() == 128);
   for (const char *expected : {"ps_ui_init(string) -> bool", "ps_ui_window_create(string, i32, i32) -> u64",
                                "ps_ui_text_view_get_text(u64) -> text", "ps_ui_window_set_edited(u64, bool) -> bool",
                                "ps_ui_menu_add_item(u64, string, string, i32) -> bool",
@@ -210,7 +210,11 @@ TEST_CASE("native ui bindings cover every ABI function once") {
                                "ps_ui_list_create() -> u64", "ps_ui_list_add_item(u64, text) -> bool",
                                "ps_ui_list_set_item(u64, i32, text) -> bool", "ps_ui_list_item_count(u64) -> i32",
                                "ps_ui_list_set_selected(u64, i32, bool) -> bool",
-                               "ps_ui_list_is_selected(u64, i32) -> bool"}) {
+                               "ps_ui_list_is_selected(u64, i32) -> bool", "ps_ui_supports(i32) -> bool",
+                               "ps_ui_widget_watch(u64, i32) -> bool", "ps_ui_event_button() -> i32",
+                               "ps_ui_event_x() -> i32", "ps_ui_event_y() -> i32", "ps_ui_event_modifiers() -> i32",
+                               "ps_ui_event_click_count() -> i32", "ps_ui_event_key() -> i32",
+                               "ps_ui_event_repeat() -> bool"}) {
     CHECK_MESSAGE(std::find(signatures.begin(), signatures.end(), expected) != signatures.end(), expected);
   }
   std::vector<std::string> names;

@@ -105,7 +105,8 @@ of sync with them.
 | TODO-5740 | Native and the Linux JIT number local addresses across frames | deferred | native-real-calls |
 | TODO-5741 | `string` parameters become real calls on the VM and optexe | ready | ir-real-calls |
 | TODO-5727 | Every struct copy site tells a place from a temporary by resolution | deferred | lifecycle-copy-sources |
-| TODO-5725 | Native pointer and key events for control handlers | ready | native-ui-events |
+| TODO-5742 | `==` on generated-`Equal` structs and enums resolves in lambda bodies | ready | lambda-struct-compare |
+| TODO-5743 | A runtime error in a native real call ends the program | ready | native-real-calls |
 | TODO-5707 | `Function` types accept `mut` parameters | deferred | closures-mut-params |
 | TODO-5708 | Type aliases | deferred | type-aliases |
 | TODO-5710 | PrimeScroll dispatches through handlers | ready | native-ui-handlers |
@@ -168,7 +169,7 @@ of sync with them.
 - TODO-5524 (result-error-structs): int-backed error structs round-trip through stdlib Result sums
 - TODO-5728 (collections-access): `slice` and `sliceMut` on a vector field of a struct resolve
 - TODO-5710 (native-ui-handlers): PrimeScroll dispatches through handlers
-- TODO-5725 (native-ui-events): native pointer and key events for control handlers
+- TODO-5742 (lambda-struct-compare): `==` on generated-`Equal` structs and enums resolves in lambda bodies
 
 ### Immediate Next 10
 
@@ -179,7 +180,7 @@ of sync with them.
 5. TODO-5510
 6. TODO-5524
 7. TODO-5728
-8. TODO-5725
+8. TODO-5742
 
 ### Priority Lanes
 
@@ -196,9 +197,9 @@ of sync with them.
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719; collection fields found by closures and the todo example: TODO-5681, TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
 - Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5738, TODO-5718
-- Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732, TODO-5735, TODO-5736, TODO-5737
-- Native UI handlers (docs/WebAppsPlan.md): TODO-5710, TODO-5711, TODO-5725
-- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe; real calls and struct copies TODO-5739, TODO-5740, TODO-5741
+- Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732, TODO-5735, TODO-5736, TODO-5737, TODO-5742
+- Native UI handlers (docs/WebAppsPlan.md): TODO-5710, TODO-5711
+- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe; real calls and struct copies TODO-5739, TODO-5740, TODO-5741, TODO-5743
 
 ### Execution Queue
 
@@ -266,18 +267,29 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - full release gate green
   - stop_rule: copy-source classification at the listed sites only.
 
-- [ ] TODO-5725: Native pointer and key events for control handlers
+- [ ] TODO-5743: A runtime error in a native real call ends the program
   - owner: ai
   - status: ready
-  - created_at: 2026-11-07
-  - phase: Native UI handlers (docs/WebAppsPlan.md)
-  - parallel_track: native-ui-events
-  - scope: The C ABI (include/primec/ui/NativeUi.h, version 0) reports only menu commands, control changes, window close and text changes. Add hover enter and leave, mouse down and up with button, position and modifiers, and key down and up for the focused control, as a versioned ABI extension, in the AppKit and headless backends, and add `onMouseOver`, `onMouseDown`, `onMouseUp`, `onKeyDown`, `onKeyUp` to the `/std/ui/native` controls with `/std/ui/events` structs. Text views keep typing inside the widget; key handlers on them see only keys the widget does not consume.
+  - created_at: 2026-11-08
+  - phase: Optimizing backends (found while gating TODO-5725)
+  - parallel_track: native-real-calls
+  - scope: TODO-5734 added the `Trap` opcode so that a runtime error (an index out of bounds) inside a called function ends the program, but `emitRuntimeError` (src/ir_lowerer/IrLowererRuntimeErrorHelpers.cpp) emits it only under `RuntimeErrorsTrapScope(input.realCallAddressAbi)`, which is false for `--emit=native`, and the native emitters (arm64, x64) and the Linux JIT have no `Trap`. On native a real-call callee's runtime error prints its message and returns 3 to the caller, which carries on: the program of "a runtime error inside a real call stops the program" (tests/unit/program_matrix/test_program_matrix_parameter_modes.cpp) prints `20 30`, the error, `3`, `99` and exits 0 instead of exiting 3 after the error. CTest PrimeStruct_primestruct_program_matrix_parameter_modes fails on native-O0 and native-O2 since e52fdaa9d (docs/failing_tests.md). Emit `Trap` for runtime errors in every real-call body on native and lower it in the arm64 and x64 emitters (exit with the code, as the entry's return does) and the JIT, or keep such bodies inline on targets without it.
   - acceptance:
-    - headless scenarios deliver each event kind to a closure and check the struct fields; the compiled program gives the same call log
-    - docs/NativeUiPlan.md section 4 and the coverage matrix describe the new events
+    - the program matrix case passes on native-O0 and native-O2 (exit 3, stdout `20\n30\n`), on macOS arm64 and Linux x64
     - full release gate green
-  - stop_rule: the listed events on the existing controls; no new widgets.
+  - stop_rule: runtime errors in real calls on the native targets only.
+
+- [ ] TODO-5742: `==` on generated-`Equal` structs and enums resolves in lambda bodies
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-08
+  - phase: Language surface for handlers (docs/WebAppsPlan.md; found by TODO-5725)
+  - parallel_track: lambda-struct-compare
+  - scope: docs/spec/stdlib-reference.md (/std/ui/events) says `event.key == Key.escape` and `event.button == PointerButton.secondary` compare through the generated `Equal`; they do in a free function (tests/fixtures/ui/events.prime), but the same comparison in a lambda body is `comparisons require numeric, bool, or string operands` (PSC1005) at `/main__lambda0/call`: `[Function<bool, KeyEvent>] check{[]([KeyEvent] event) { return(event.key == Key.escape) }}`. Handlers are lambdas, so this is where the comparison is written; tests/fixtures/ui/input_handlers.prime compares `event.key.code == Key.escape.code` and a `button_code` helper instead. Make the `==`/`!=` rewrite to the generated `Equal`/`NotEqual` (and the enum comparison) run for lambda bodies as for definitions.
+  - acceptance:
+    - a lambda compares a `Key` with `==` and a `PointerButton` with `!=` on the VM, native and optexe; tests/fixtures/ui/input_handlers.prime uses `event.key == Key.escape`
+    - full release gate green
+  - stop_rule: generated comparisons in lambda bodies only.
 
 - [ ] TODO-5707: `Function` types accept `mut` parameters
   - owner: ai

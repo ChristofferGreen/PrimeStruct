@@ -387,7 +387,8 @@ and no host calls, so it runs on the VM, the native backend and optexe.
   point, or -1) read it.
 - `PointerEvent` (`onClick`, `onMouseDown`, `onMouseUp`, `onMouseOver`): `button`; `x` and `y` in the control's own
   coordinates from its top left corner, valid when `hasPosition`; `modifiers`; `clickCount` (1 for a single click, 2
-  for a double click, 0 for a press, release or move that is not a click). A web form post has no position.
+  for a double click; for a native press or release, the count of the click it belongs to, 2 for the second press
+  of a double click; 0 for a move, and for a press or release on the web). A web form post has no position.
 - `KeyEvent` (`onKeyDown`, `onKeyUp`, while the control has focus): `key`, `modifiers` and `isRepeat`, true for a key
   down the system repeats while the key is held (`repeat` is a loop keyword, so the field is not called that).
 - `ChangeEvent` (`onChange`): `checked`, the new state of a check box, and `index`, the newly selected item of a popup
@@ -426,7 +427,7 @@ functions (`primec/ui/NativeUiBindings.h`) to a backend (headless in tests, AppK
 - `Window`: `setPreview(bool)`, `hasPreview()` and `refreshPreview()` (the markdown preview beside the window's text view), `setAutosaveName(name)` (remember the window's frame between runs), `setTitle`, `setContent(textView)`, `content() -> TextView`, `setEdited(bool)`, `show()`, `close()`,
   `addTab(window)` (joins that window to this one's tab group), and the document path kept with the window:
   `setPath(file)`, `path()`, `hasPath()`, `tabCount()`, `tabAt(index)` (tab-bar order) and `select()`. `App` adds `activeWindow()`, `windowCount()`, `windowAt(index)`.
-- `TextView`: `text()`, `setText(text)`, `setMonospace(bool)`, `setLineNumbers(bool)` (a bar of line numbers, one per paragraph, left of the text), `setWrapping(bool)` (wrap long lines, the default), `isModified()`, `clearModified()`, and
+- `TextView`: `text()`, `setText(text)`, `widget()` (for the pointer and key handlers), `setMonospace(bool)`, `setLineNumbers(bool)` (a bar of line numbers, one per paragraph, left of the text), `setWrapping(bool)` (wrap long lines, the default), `isModified()`, `clearModified()`, and
   `loadFile(path)` / `saveFile(path)` (the backend reads or writes the UTF-8 file itself; `false` means see
   `app.lastError()`; a successful load leaves the view unmodified, a save does not clear the modified flag), and
   `clearStyles()` / `addStyle(startByte, endByte, rgb, flags)` (colour and bold/italic over UTF-8 byte ranges), and `highlight(path)` (syntax highlighting chosen by the file
@@ -488,12 +489,18 @@ handlers until the app quits. A handler is a `Function<void, Reference<State>, E
 - `command(handler) -> Command` (a `PointerEvent` handler) and `Menu.commandItem(title, shortcut, command)`,
   `Toolbar.commandButton(title, symbol, command)`, `Menu.setCommandChecked(command, checked)`: a menu item and a
   toolbar button with the same `Command` call the same closure. The event is a click of the primary button with no
-  position (`clickCount` 1): the version-0 ABI reports no pointer details. Ids start at `first_command_id()`
-  (1000000).
+  position (`clickCount` 1): a command carries no pointer details. Ids start at `first_command_id()` (1000000).
 - `onClick(button, handler)` (`PointerEvent`, as above); `onCheckBoxChange(checkBox, handler)`,
   `onPopupChange(popup, handler)`, `onListChange(itemList, handler)` (`ChangeEvent`: `checked`, or `index`, the
   first selected row of a list or -1).
-- `onWindowClose(handler)` and `onTextChange(handler)` (`Function<void, Reference<State>, Window>`, for every
+- `onMouseOver(widget, handler)`, `onMouseDown`, `onMouseUp` (`PointerEvent`) and `onKeyDown`, `onKeyUp`
+  (`KeyEvent`, while the widget has focus) take any control or text view as a `Widget` (`button.widget()`,
+  `textView.widget()`). The pointer events have a position from the widget's top left corner (a text view's visible
+  part) and the modifiers; a press or release has its button and click count, the pointer entering has no button
+  and `clickCount` 0. A text view keeps the keys it uses: its key handlers see only the others, such as Escape and
+  Command combinations it has no binding for. Only widgets with such handlers are watched by the platform, and the
+  last handler registered for an event of a widget is the one called. A whole click on a button calls its press,
+  release and click handlers in that order. and `onTextChange(handler)` (`Function<void, Reference<State>, Window>`, for every
   window); without a close handler a close request closes the window. `onOpenFile(handler)` gets the path as a
   `String`. `onQuit(handler)` is a `Function<bool, Reference<State>>`: `run` returns when it gives `true`.
 - `run` returns on a request to quit that no quit handler refuses, and after a close request when no window is open.

@@ -49,6 +49,22 @@ void pushClickButton(uint64_t button);
 void pushSelectListRows(uint64_t list, std::vector<int32_t> rows);
 std::vector<int32_t> listSelection(uint64_t list);
 void pushOpenFile(std::string path);
+// The user's pointer and keys (PS_UI_FEATURE_INPUT_EVENTS): the pointer moves onto or off `widget` (`enter:H:X:Y:M`,
+// `leave:H:X:Y:M`), presses or releases `button` on it (`down:H:B:X:Y:M:C`, `up:H:B:X:Y:M:C`; a whole click is a
+// down, an up and, for a button, `click:H`), or presses or releases `key` (a code of PS_UI_KEY_* or a code point)
+// while it has focus (`keydown:H:K:M:R`, `keyup:H:K:M`). An action is delivered only when the program watches that
+// event of the widget (ps_ui_widget_watch) at replay time, and skipped otherwise. A text view keeps the keys it uses,
+// as a platform's does: a character, Enter or Tab without Command is typed (the text changes and
+// PS_UI_EVENT_TEXT_CHANGED is delivered); the other named keys without Command are kept too (the caret is not
+// modelled); only Escape and keys with Command reach the program, and a key up only after its key down did.
+void pushPointerEnter(uint64_t widget, int32_t x, int32_t y, int32_t modifiers = 0);
+void pushPointerLeave(uint64_t widget, int32_t x, int32_t y, int32_t modifiers = 0);
+void pushMouseDown(uint64_t widget, int32_t button, int32_t x, int32_t y, int32_t modifiers = 0, int32_t clickCount = 1);
+void pushMouseUp(uint64_t widget, int32_t button, int32_t x, int32_t y, int32_t modifiers = 0, int32_t clickCount = 1);
+void pushKeyDown(uint64_t widget, int32_t key, int32_t modifiers = 0, bool repeat = false);
+void pushKeyUp(uint64_t widget, int32_t key, int32_t modifiers = 0);
+// The PS_UI_WATCH_* bits the program asked for on `widget` (0 for none or a bad handle).
+int32_t watchedEvents(uint64_t widget);
 std::string defaultApp(const std::string &extension);
 // The open windows of the tab group `window` belongs to, in tab order; empty when it is in none.
 std::vector<uint64_t> tabGroup(uint64_t window);

@@ -39,6 +39,61 @@ TEST_CASE("headless backend reports its version and platform") {
   CHECK(ps_ui_platform() == PS_UI_PLATFORM_HEADLESS);
 }
 
+TEST_CASE("headless backend delivers pointer and key events only for watched widgets") {
+  startApp();
+  CHECK(ps_ui_supports(PS_UI_FEATURE_INPUT_EVENTS));
+  CHECK_FALSE(ps_ui_supports(2));
+  const uint64_t window = ps_ui_window_create("W", 200, 100);
+  const uint64_t view = ps_ui_text_view_create();
+  REQUIRE(ps_ui_window_set_content(window, view));
+  const uint64_t button = ps_ui_button_create("Go");
+  const uint64_t menu = ps_ui_menu_create("File");
+  CHECK_FALSE(ps_ui_widget_watch(window, PS_UI_WATCH_HOVER)); // a window is not a widget
+  CHECK_FALSE(ps_ui_widget_watch(menu, PS_UI_WATCH_HOVER));
+  CHECK_FALSE(ps_ui_widget_watch(button, 32));                 // not a watch bit
+  CHECK(ps_ui_widget_watch(button, PS_UI_WATCH_HOVER | PS_UI_WATCH_MOUSE_DOWN));
+  CHECK(ps_ui_widget_watch(view, PS_UI_WATCH_KEY_DOWN));
+  CHECK(headless::watchedEvents(button) == 3);
+
+  headless::pushMouseUp(button, PS_UI_BUTTON_PRIMARY, 1, 2); // not watched: skipped
+  headless::pushMouseDown(button, PS_UI_BUTTON_MIDDLE, 7, 8, PS_UI_MOD_ALT | PS_UI_MOD_CONTROL, 3);
+  headless::pushKeyDown(view, 'q', PS_UI_MOD_META, true);
+  headless::pushKeyDown(view, 'x'); // typed by the view
+  headless::pushKeyDown(view, PS_UI_KEY_RIGHT); // kept by the view
+  headless::pushPointerEnter(button, 4, 5);
+  CHECK(ps_ui_wait_event() == PS_UI_EVENT_MOUSE_DOWN);
+  CHECK(ps_ui_event_widget() == button);
+  CHECK(ps_ui_event_button() == PS_UI_BUTTON_MIDDLE);
+  CHECK(ps_ui_event_x() == 7);
+  CHECK(ps_ui_event_y() == 8);
+  CHECK(ps_ui_event_modifiers() == (PS_UI_MOD_ALT | PS_UI_MOD_CONTROL));
+  CHECK(ps_ui_event_click_count() == 3);
+  CHECK(ps_ui_wait_event() == PS_UI_EVENT_KEY_DOWN);
+  CHECK(ps_ui_event_widget() == view);
+  CHECK(ps_ui_event_window() == window);
+  CHECK(ps_ui_event_key() == 'q');
+  CHECK(ps_ui_event_modifiers() == PS_UI_MOD_META);
+  CHECK(ps_ui_event_repeat());
+  CHECK(ps_ui_event_button() == PS_UI_BUTTON_NONE);
+  CHECK(ps_ui_wait_event() == PS_UI_EVENT_TEXT_CHANGED);
+  CHECK(std::string(ps_ui_text_view_get_text(view)) == "x");
+  CHECK(ps_ui_event_key() == 0); // fields of another kind read as 0
+  CHECK(ps_ui_wait_event() == PS_UI_EVENT_POINTER_ENTER);
+  CHECK(ps_ui_event_x() == 4);
+  CHECK(ps_ui_event_y() == 5);
+  CHECK(ps_ui_event_click_count() == 0);
+  CHECK(ps_ui_wait_event() == PS_UI_EVENT_QUIT_REQUESTED);
+  CHECK(headless::pushedScenario() == "up:" + std::to_string(button) + ":0:1:2:0:1;down:" + std::to_string(button) +
+                                          ":2:7:8:6:3;keydown:" + std::to_string(view) + ":113:8:1;keydown:" +
+                                          std::to_string(view) + ":120:0:0;keydown:" + std::to_string(view) +
+                                          ":-7:0:0;enter:" + std::to_string(button) + ":4:5:0");
+  // Stopping the watch stops the events.
+  CHECK(ps_ui_widget_watch(button, 0));
+  CHECK(headless::watchedEvents(button) == 0);
+  headless::pushPointerEnter(button, 1, 1);
+  CHECK(ps_ui_wait_event() == PS_UI_EVENT_QUIT_REQUESTED);
+}
+
 TEST_CASE("headless backend starts once and rejects calls before init") {
   headless::reset();
   CHECK(ps_ui_window_create("Early", 100, 100) == 0);

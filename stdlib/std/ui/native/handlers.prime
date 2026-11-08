@@ -1,8 +1,9 @@
 // Native controls that take handler closures (docs/spec/stdlib-reference.md, Native UI; docs/WebAppsPlan.md,
 // principle 7). An `AppHandlers<State>` holds the app's state and a table of handlers, each registered once, at setup:
-// a click handler for a button, a change handler for a check box, pop-up or list, and the commands of menu items and
-// toolbar buttons. `app.run(handlers)` then waits on the version-0 events and calls the handler of each, until the
-// app quits. The command ids and widget handles that `App.waitEvent` reports stay inside this table.
+// a click handler for a button, a change handler for a check box, pop-up or list, the commands of menu items and
+// toolbar buttons, and the pointer and key handlers of any control or text view. `app.run(handlers)` then waits on
+// the events and calls the handler of each, until the app quits. The command ids and widget handles that
+// `App.waitEvent` reports stay inside this table.
 import /std/collections/*
 import /std/text/*
 import /std/ui/events/*
@@ -33,6 +34,13 @@ namespace native {
   [public struct]
   NativeChangeHandler<State>() {
     [public Function<void, Reference<State>, ChangeEvent> mut] handler
+  }
+
+  // The handler of a key pressed or released in a widget; its widget and event lie in `AppHandlers.keyWidgets` and
+  // `keyKinds` at the same index.
+  [public struct]
+  NativeKeyHandler<State>() {
+    [public Function<void, Reference<State>, KeyEvent> mut] handler
   }
 
   // The handler of a request to close a window, or of the user's change of a window's text.
@@ -72,6 +80,15 @@ namespace native {
     [public vector<NativeWindowHandler<State>> mut] edits{vector<NativeWindowHandler<State>>()}
     [public vector<NativeFileHandler<State>> mut] opens{vector<NativeFileHandler<State>>()}
     [public vector<NativeQuitHandler<State>> mut] quits{vector<NativeQuitHandler<State>>()}
+    // The pointer and key handlers: `pointers[i]` handles the event `pointerKinds[i]` of the widget
+    // `pointerWidgets[i]`, `keys[i]` the event `keyKinds[i]` of `keyWidgets[i]`. The kinds are the bits of
+    // `ps_ui_widget_watch`: 1 the pointer entering, 2 a press, 4 a release, 8 a key down, 16 a key up.
+    [public vector<NativeClickHandler<State>> mut] pointers{vector<NativeClickHandler<State>>()}
+    [public vector<u64> mut] pointerWidgets{vector<u64>()}
+    [public vector<i32> mut] pointerKinds{vector<i32>()}
+    [public vector<NativeKeyHandler<State>> mut] keys{vector<NativeKeyHandler<State>>()}
+    [public vector<u64> mut] keyWidgets{vector<u64>()}
+    [public vector<i32> mut] keyKinds{vector<i32>()}
 
     // Registers `handler` as a command and returns it, to add to menus and toolbars. Choosing the command calls the
     // handler with a click of the primary button without a position: the C ABI reports no pointer details. The ids
@@ -117,6 +134,85 @@ namespace native {
       this.changes.push(NativeChangeHandler<State>{[handler] handler})
       this.changeWidgets.push(widget)
       this.changeKinds.push(kind)
+    }
+
+    // The pointer and key handlers take any control or text view as a `Widget` (`button.widget()`, `text.widget()`),
+    // not one method per control: same-arity overloads of a generic struct's methods do not resolve yet (TODO-5735).
+    // Registering one asks the platform for that event of the widget (`ps_ui_widget_watch`); widgets without such
+    // handlers are not watched, so the platform tracks nothing for them. A later handler for the same event of a
+    // widget replaces an earlier one. The events have a position from the widget's top left corner (a text view's
+    // visible part) and the modifiers held.
+
+    // Registers the handler of the pointer moving onto `control`; the event has no button and `clickCount` 0. The
+    // pointer leaving it calls nothing.
+    [mut effects(heap_alloc)]
+    onMouseOver([Widget] control, [Function<void, Reference<State>, PointerEvent> move] handler) {
+      this.addPointerHandler(control, 1i32, handler)
+    }
+
+    // Registers the handler of a pointer button pressed on `control`; `clickCount` is 2 for the second press of a
+    // double click.
+    [mut effects(heap_alloc)]
+    onMouseDown([Widget] control, [Function<void, Reference<State>, PointerEvent> move] handler) {
+      this.addPointerHandler(control, 2i32, handler)
+    }
+
+    // Registers the handler of the release of a press on `control` (wherever the pointer is then). A whole click on a
+    // button calls its press, its release and then its `onClick` handler.
+    [mut effects(heap_alloc)]
+    onMouseUp([Widget] control, [Function<void, Reference<State>, PointerEvent> move] handler) {
+      this.addPointerHandler(control, 4i32, handler)
+    }
+
+    // Registers the handler of a key pressed while `control` has focus. A text view keeps the keys it uses (typing,
+    // editing and moving keys, its shortcuts): its handler sees only the others, such as Escape and Command
+    // combinations it has no use for.
+    [mut effects(heap_alloc)]
+    onKeyDown([Widget] control, [Function<void, Reference<State>, KeyEvent> move] handler) {
+      this.addKeyHandler(control, 8i32, handler)
+    }
+
+    // Registers the handler of a key released while `control` has focus (in a text view, a key whose press it did not
+    // keep).
+    [mut effects(heap_alloc)]
+    onKeyUp([Widget] control, [Function<void, Reference<State>, KeyEvent> move] handler) {
+      this.addKeyHandler(control, 16i32, handler)
+    }
+
+    [mut effects(heap_alloc)]
+    addPointerHandler([Widget] control, [i32] bit, [Function<void, Reference<State>, PointerEvent> move] handler) {
+      this.pointers.push(NativeClickHandler<State>{[handler] handler})
+      this.pointerWidgets.push(control.handle)
+      this.pointerKinds.push(bit)
+      this.watchWidget(control.handle)
+    }
+
+    [mut effects(heap_alloc)]
+    addKeyHandler([Widget] control, [i32] bit, [Function<void, Reference<State>, KeyEvent> move] handler) {
+      this.keys.push(NativeKeyHandler<State>{[handler] handler})
+      this.keyWidgets.push(control.handle)
+      this.keyKinds.push(bit)
+      this.watchWidget(control.handle)
+    }
+
+    // Asks the platform for the events of `widget` that have handlers.
+    watchWidget([u64] widget) {
+      [i32 mut] mask{0i32}
+      for([i32 mut] index{0i32}; index < this.pointerWidgets.count(); ++index) {
+        [u64] control{this.pointerWidgets[index]}
+        [i32] bit{this.pointerKinds[index]}
+        if(control == widget && !has_watch_bit(mask, bit)) {
+          mask = mask + bit
+        }
+      }
+      for([i32 mut] index{0i32}; index < this.keyWidgets.count(); ++index) {
+        [u64] control{this.keyWidgets[index]}
+        [i32] bit{this.keyKinds[index]}
+        if(control == widget && !has_watch_bit(mask, bit)) {
+          mask = mask + bit
+        }
+      }
+      ps_ui_widget_watch(widget, mask)
     }
 
     // Registers the handler of a request to close any of the app's windows (its close button, or a standard Close
@@ -183,6 +279,16 @@ namespace native {
         this.dispatchOpenFile()
         return(true)
       }
+      // The pointer entering (7) or leaving (8) a widget, a press (9) or release (10) on it, a key down (11) or up
+      // (12) in it; they come only for widgets with such handlers.
+      if(kind >= 7i32 && kind <= 10i32) {
+        this.dispatchPointer(pointer_watch_bit(kind), ps_ui_event_widget())
+        return(true)
+      }
+      if(kind == 11i32 || kind == 12i32) {
+        this.dispatchKey(key_watch_bit(kind), ps_ui_event_widget())
+        return(true)
+      }
       return(this.dispatchQuit())
     }
 
@@ -237,6 +343,40 @@ namespace native {
       return(false)
     }
 
+    // Calls the last handler registered for the pointer event `bit` of `widget` (0, the pointer leaving, has none).
+    [mut effects(heap_alloc)]
+    dispatchPointer([i32] bit, [u64] widget) {
+      [i32 mut] index{this.pointerWidgets.count() - 1i32}
+      while(index >= 0i32) {
+        [u64] control{this.pointerWidgets[index]}
+        [i32] kind{this.pointerKinds[index]}
+        if(control == widget && kind == bit) {
+          [Reference<State>] state{location(this.state)}
+          [PointerEvent] event{pointer_event()}
+          this.pointers[index].handler(state, event)
+          return()
+        }
+        index = index - 1i32
+      }
+    }
+
+    // Calls the last handler registered for the key event `bit` of `widget`.
+    [mut effects(heap_alloc)]
+    dispatchKey([i32] bit, [u64] widget) {
+      [i32 mut] index{this.keyWidgets.count() - 1i32}
+      while(index >= 0i32) {
+        [u64] control{this.keyWidgets[index]}
+        [i32] kind{this.keyKinds[index]}
+        if(control == widget && kind == bit) {
+          [Reference<State>] state{location(this.state)}
+          [KeyEvent] event{key_event()}
+          this.keys[index].handler(state, event)
+          return()
+        }
+        index = index - 1i32
+      }
+    }
+
     // Calls the click or change handler of the control `widget`.
     [mut effects(heap_alloc)]
     dispatchControl([u64] widget) {
@@ -264,6 +404,68 @@ namespace native {
   [public return<i32>]
   first_command_id() {
     return(1000000i32)
+  }
+
+  // Whether the watch bit `bit`, a power of two, is set in `mask`. There are no bitwise operators.
+  [return<bool>]
+  has_watch_bit([i32] mask, [i32] bit) {
+    [i32] above{mask / bit}
+    return(above - (above / 2i32) * 2i32 == 1i32)
+  }
+
+  // The watch bit of a pointer event kind: 1 for the pointer entering (7), 2 for a press (9), 4 for a release (10);
+  // 0 for the pointer leaving (8), which has no handler.
+  [return<i32>]
+  pointer_watch_bit([i32] kind) {
+    if(kind == 7i32) {
+      return(1i32)
+    }
+    if(kind == 9i32) {
+      return(2i32)
+    }
+    if(kind == 10i32) {
+      return(4i32)
+    }
+    return(0i32)
+  }
+
+  // The watch bit of a key event kind: 8 for a key down (11), 16 for a key up (12).
+  [return<i32>]
+  key_watch_bit([i32] kind) {
+    if(kind == 11i32) {
+      return(8i32)
+    }
+    return(16i32)
+  }
+
+  // The pointer event the platform reports now.
+  [return<PointerEvent>]
+  pointer_event() {
+    [i32] code{ps_ui_event_button()}
+    [PointerButton mut] button{PointerButton.none}
+    if(code == 0i32) {
+      button = PointerButton.primary
+    }
+    if(code == 1i32) {
+      button = PointerButton.secondary
+    }
+    if(code == 2i32) {
+      button = PointerButton.middle
+    }
+    [i32] x{ps_ui_event_x()}
+    [i32] y{ps_ui_event_y()}
+    [Modifiers] modifiers{Modifiers{[bits] ps_ui_event_modifiers()}}
+    [i32] clicks{ps_ui_event_click_count()}
+    return(PointerEvent{[button] button, [x] x, [y] y, [hasPosition] true, [modifiers] modifiers, [clickCount] clicks})
+  }
+
+  // The key event the platform reports now.
+  [return<KeyEvent>]
+  key_event() {
+    [Key] key{Key{[code] ps_ui_event_key()}}
+    [Modifiers] modifiers{Modifiers{[bits] ps_ui_event_modifiers()}}
+    [bool] repeated{ps_ui_event_repeat()}
+    return(KeyEvent{[key] key, [modifiers] modifiers, [isRepeat] repeated})
   }
 
   // The change event of `widget`, read from it now: a check box (`kind` 1), a pop-up (2) or a list (3).

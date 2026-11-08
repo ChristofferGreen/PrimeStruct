@@ -31,8 +31,11 @@ hover, sends keys for the focused control only, and swaps the control's region w
 Native controls take the same closures (TODO-5709): an `AppHandlers<State>` (`/std/ui/native`) holds the state and the
 handlers, `handlers.onClick(button, handler)`, `onCheckBoxChange`, `onPopupChange`, `onListChange`, `command(handler)`
 for menu items and toolbar buttons, `onWindowClose`, `onTextChange`, `onOpenFile` and `onQuit` register them at setup,
-and `app.run(handlers)` dispatches the version-0 events to them until the app quits;
-`examples/native_ui/hello_button.prime` uses it (docs/NativeUiPlan.md section 5).
+and `app.run(handlers)` dispatches the events to them until the app quits;
+`examples/native_ui/hello_button.prime` uses it (docs/NativeUiPlan.md section 5). `onMouseOver`, `onMouseDown`,
+`onMouseUp`, `onKeyDown` and `onKeyUp` take any control or text view (TODO-5725): the C ABI reports them for the
+widgets the program watches (`ps_ui_widget_watch`, feature `PS_UI_FEATURE_INPUT_EVENTS`), and a text view's key
+handlers see only the keys it does not keep.
 
 ## Principles
 
@@ -113,7 +116,7 @@ toolbar buttons), and `waitEvent` stays as the low level, so PrimeScroll can mov
 3. Server: TODO-5705 (an idle connection does not stall the others; done).
 4. Events and controls: TODO-5723 (shared event structs; done), TODO-5722 (web controls take click closures; done).
 5. Fragments: TODO-5706 (done), then TODO-5724 (web hover and key handlers; done).
-6. Native UI: TODO-5709 (controls take closures, `app.run(handlers)`; done), TODO-5725 (pointer and key events in the C ABI),
+6. Native UI: TODO-5709 (controls take closures, `app.run(handlers)`; done), TODO-5725 (pointer and key events in the C ABI; done),
    TODO-5710 (PrimeScroll on handlers), TODO-5711 (retire the `/std/ui` prototype).
 7. Later: TODO-5707, TODO-5708 (type aliases), TODO-5717 (both writers in one file), TODO-5718 (repeated and decoded
    parameters), sessions and cookies, keep-alive, concurrency once tasks schedule.
