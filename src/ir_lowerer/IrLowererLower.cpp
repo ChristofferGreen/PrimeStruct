@@ -436,10 +436,11 @@ bool IrLowerer::lower(const Program &program,
                                 [&]() { perBodyResetState.reset(); },
                             .realCallEligibleOrder = &setupStage.realCallEligibleOrder,
                             .realCallReservationIndex = &setupStage.realCallReservationIndex,
+                            .realCallAddressAbi = setupStage.realCallAllowStructs,
                             .entryReturnsVoidStorage =
                                 &setupStage.setupLocalsOrchestration.entryReturnConfig.returnsVoid,
                             .realCallStructReturnStorage =
-                                &setupStage.setupLocalsOrchestration.entryReturnConfig.realCallStructReturn,
+                                &setupStage.setupLocalsOrchestration.entryReturnConfig.realCallStructReturnLocal,
                         },
                         stageError);
                   },

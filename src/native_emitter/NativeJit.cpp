@@ -39,6 +39,18 @@ bool nativeJitAccepts(const IrModule &module, std::string &reason) {
     return false;
   }
   for (const IrFunction &function : module.functions) {
+    // The JIT resolves a local address against the current frame, while the VM numbers all live locals together
+    // (docs/spec/vm-design.md, Real calls): a function that takes a local address and calls may hand it to a callee.
+    bool takesAddress = false;
+    bool calls = false;
+    for (const IrInstruction &instruction : function.instructions) {
+      takesAddress = takesAddress || instruction.op == IrOpcode::AddressOfLocal;
+      calls = calls || instruction.op == IrOpcode::Call || instruction.op == IrOpcode::CallVoid;
+    }
+    if (takesAddress && calls) {
+      reason = "local address passed to a call in " + function.name;
+      return false;
+    }
     for (const IrInstruction &instruction : function.instructions) {
       if (!native_emitter::nativeJitRunsOpcodeInline(instruction.op) &&
           !native_emitter::nativeJitBridgesOpcode(instruction.op)) {

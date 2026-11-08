@@ -203,11 +203,13 @@ bool executeVmFastKernel(const IrModule &module,
     if ((address & (uint64_t{1} << 63)) != 0) {
       return host.resolveIndirectAddress(address, noLocals, slot, error);
     }
+    // Local addresses number the locals arena, so an address of a caller's local stays valid in its callees.
+    // Every live frame's locals lie below the end of the current frame's.
     const uint64_t index = address / slotBytes;
-    if (index >= current->localCount) [[unlikely]] {
+    if (index >= localsBase + current->localCount) [[unlikely]] {
       return addressFault(error, "invalid indirect address in IR: ", address);
     }
-    slot = locals + index;
+    slot = localsArena.data() + index;
     return true;
   };
 
@@ -379,7 +381,7 @@ bool executeVmFastKernel(const IrModule &module,
       DISPATCH();
     case OP(AddressOfLocal):
     lbl_AddressOfLocal:
-      *sp++ = inst.imm * slotBytes;
+      *sp++ = (localsBase + inst.imm) * slotBytes;
       ++ip;
       DISPATCH();
     case OP(Dup):
@@ -759,7 +761,7 @@ bool executeVmFastKernel(const IrModule &module,
       ++ip;
       DISPATCH();
 
-    // Indirect accesses: a frame-local address indexes this frame's locals, a heap address
+    // Indirect accesses: a local address indexes the locals arena (any live frame), a heap address
     // (bit 63 set) goes through the host. Faults build their messages out of line.
     case OP(LoadIndirect):
     lbl_LoadIndirect: {
@@ -859,30 +861,22 @@ bool executeVmFastKernel(const IrModule &module,
       const size_t callerTop = localsBase + current->localCount;
       frames.push_back({current, ip + 1, localsBase, inst.op == OP(Call)});
       localsBase = callerTop;
-      if (localsBase + callee.localCount > localsArena.size()) {
-        localsArena.resize(std::max(localsArena.size() * 2, localsBase + callee.localCount), 0);
+      // The arena always has room for four slots past the callee's locals' start.
+      if (localsBase + std::max<size_t>(callee.localCount, 4) > localsArena.size()) {
+        localsArena.resize(
+            std::max(localsArena.size() * 2, localsBase + std::max<size_t>(callee.localCount, 4)), 0);
       }
       locals = localsArena.data() + localsBase;
       // Locals start at zero. Most functions have a handful, which a memset call would cost
-      // more to clear than the stores do.
-      switch (callee.localCount) {
-      case 4:
-        locals[3] = 0;
-        [[fallthrough]];
-      case 3:
-        locals[2] = 0;
-        [[fallthrough]];
-      case 2:
-        locals[1] = 0;
-        [[fallthrough]];
-      case 1:
-        locals[0] = 0;
-        [[fallthrough]];
-      case 0:
-        break;
-      default:
-        std::fill_n(locals, callee.localCount, uint64_t{0});
-        break;
+      // more to clear than the stores do: the first four are cleared unconditionally (slots past
+      // the callee's locals belong to no live frame), so the compiler cannot fold the stores into
+      // a variable-length memset.
+      locals[0] = 0;
+      locals[1] = 0;
+      locals[2] = 0;
+      locals[3] = 0;
+      if (callee.localCount > 4) [[unlikely]] {
+        std::fill_n(locals + 4, callee.localCount - 4, uint64_t{0});
       }
       current = &callee;
       ip = callee.code.data();

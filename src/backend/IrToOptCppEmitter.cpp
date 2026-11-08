@@ -311,11 +311,11 @@ public:
       }
       out_ << ";\n";
     }
-    // Locals are scalars unless the function can address its frame: the VM
-    // resolves LoadIndirect/StoreIndirect against the *current* frame, so any
-    // function with an indirect access (not just AddressOfLocal) needs one.
+    // Locals are scalars unless the function can address its frame (AddressOfLocal) or reads through an address
+    // (LoadIndirect/StoreIndirect, which resolve against this frame first).
     localCount_ = 0;
     frameMode_ = false;
+    addressable_ = false;
     for (const IrInstruction &instruction : function_.instructions) {
       switch (instruction.op) {
       case IrOpcode::LoadLocal:
@@ -325,6 +325,7 @@ public:
       case IrOpcode::AddressOfLocal:
         localCount_ = std::max<uint32_t>(localCount_, static_cast<uint32_t>(instruction.imm) + 1);
         frameMode_ = true;
+        addressable_ = true;
         break;
       case IrOpcode::LoadIndirect:
       case IrOpcode::StoreIndirect:
@@ -347,6 +348,15 @@ public:
     }
     out_ << "  if (rt.depth >= PsMaxCallDepth) {\n    ps_fault(\"VM call stack overflow\");\n  }\n";
     out_ << "  ++rt.depth;\n";
+    // Locals are numbered as in the VM: this frame's first local follows the caller's last. A frame whose locals
+    // have addresses is registered, so a callee can reach them through those addresses.
+    if (localCount_ > 0) {
+      out_ << "  const uint64_t psBase = rt.localsTop;\n";
+      out_ << "  rt.localsTop = psBase + " << localCount_ << ";\n";
+    }
+    if (addressable_) {
+      out_ << "  rt.frames[rt.frameCount++] = PsFrameRef{psBase, " << localCount_ << ", frame};\n";
+    }
 
     for (const IrCfgBlock &block : cfg.blocks) {
       if (!block.reachable) {
@@ -381,8 +391,19 @@ private:
 
   // Epilogue shared by every return: pop the frame, then yield the slot value.
   void emitReturn(const std::string &value) {
+    if (addressable_) {
+      line("--rt.frameCount;");
+    }
+    if (localCount_ > 0) {
+      line("rt.localsTop = psBase;");
+    }
     line("--rt.depth;");
     line("return " + value + ";");
+  }
+
+  // This frame's first local and local count for ps_resolve: an unaddressable frame matches no address itself.
+  std::string frameArgs() const {
+    return addressable_ ? "frame, psBase, " + std::to_string(localCount_) : "frame, 0, 0";
   }
 
   std::string local(uint64_t index) const {
@@ -437,6 +458,11 @@ private:
       return true;
     case IrOpcode::JumpIfZero:
       line("if (" + slot(depth - 1) + " == 0) goto " + label(instruction.imm) + ";");
+      return true;
+    case IrOpcode::Trap:
+      line("std::fflush(stdout);");
+      line("std::exit(" + std::to_string(static_cast<int>(static_cast<int32_t>(instruction.imm))) +
+           ");");
       return true;
     case IrOpcode::ReturnVoid:
       emitReturn("0");
@@ -620,15 +646,15 @@ private:
       return true;
     }
     case IrOpcode::AddressOfLocal:
-      line(slot(depth) + " = UINT64_C(" + std::to_string(instruction.imm * IrSlotBytes) + ");");
+      line(slot(depth) + " = (psBase + UINT64_C(" + std::to_string(instruction.imm) +
+           ")) * PsSlotBytes;");
       return true;
     case IrOpcode::LoadIndirect:
-      line(slot(depth - 1) + " = *ps_resolve(rt, frame, " + std::to_string(localCount_) + ", " +
-           slot(depth - 1) + ");");
+      line(slot(depth - 1) + " = *ps_resolve(rt, " + frameArgs() + ", " + slot(depth - 1) + ");");
       return true;
     case IrOpcode::StoreIndirect:
-      line("*ps_resolve(rt, frame, " + std::to_string(localCount_) + ", " + slot(depth - 2) +
-           ") = " + slot(depth - 1) + ";");
+      line("*ps_resolve(rt, " + frameArgs() + ", " + slot(depth - 2) + ") = " + slot(depth - 1) +
+           ";");
       line(slot(depth - 2) + " = " + slot(depth - 1) + ";");
       return true;
     case IrOpcode::HeapAlloc:
@@ -638,12 +664,11 @@ private:
       line(slot(depth - 1) + " = ps_heap_alloc_bytes(rt, " + slot(depth - 1) + ");");
       return true;
     case IrOpcode::LoadU8:
-      line(slot(depth - 1) + " = ps_load_u8(rt, frame, " + std::to_string(localCount_) + ", " +
-           slot(depth - 1) + ");");
+      line(slot(depth - 1) + " = ps_load_u8(rt, " + frameArgs() + ", " + slot(depth - 1) + ");");
       return true;
     case IrOpcode::StoreU8:
-      line(slot(depth - 2) + " = ps_store_u8(rt, frame, " + std::to_string(localCount_) + ", " +
-           slot(depth - 2) + ", " + slot(depth - 1) + ");");
+      line(slot(depth - 2) + " = ps_store_u8(rt, " + frameArgs() + ", " + slot(depth - 2) + ", " +
+           slot(depth - 1) + ");");
       return true;
     case IrOpcode::HeapFree:
       line("ps_heap_free(rt, " + slot(depth - 1) + ");");
@@ -757,6 +782,7 @@ private:
   std::ostringstream &out_;
   uint32_t localCount_ = 0;
   bool frameMode_ = false;
+  bool addressable_ = false;
 };
 
 } // namespace

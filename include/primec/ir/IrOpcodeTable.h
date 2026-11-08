@@ -134,7 +134,8 @@ namespace primec {
   X(HeapAllocBytes, 0, 0, 0)                                                                       \
   X(LoadU8, 0, 0, 0)                                                                               \
   X(StoreU8, 0, 0, 0)                                                                              \
-  X(ZextU8, 0, 0, 0)
+  X(ZextU8, 0, 0, 0)                                                                               \
+  X(Trap, 0, 0, 0)
 
 struct IrOpcodeInfo {
   IrOpcode op;

@@ -208,6 +208,7 @@ std::vector<EffectCase> buildCases() {
   add(IrOpcode::ReturnI64, 0, {pushI32(5)});
   add(IrOpcode::ReturnF32, 0, {pushF32(F32TwoPointFive)});
   add(IrOpcode::ReturnF64, 0, {pushF64(F64TwoPointFive)});
+  add(IrOpcode::Trap, 0, {pushI32(5)});
   add(IrOpcode::Call, 1, {pushI32(7), pushI32(3)}, "(two parameters)");
   add(IrOpcode::CallVoid, 2, {pushI32(7)}, "(one parameter)");
   add(IrOpcode::CallHost, 0, {pushI32(4), pushI32(5)}, "(i32,i32 -> i32)");

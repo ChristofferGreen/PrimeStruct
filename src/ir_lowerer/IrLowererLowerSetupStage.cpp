@@ -47,12 +47,12 @@ bool runLowerSetupStage(const LowerSetupStageInput &input,
   stateOut.allowDynamicStrings = input.validationTarget == IrValidationTarget::Vm;
   stateOut.realCallEligibleOrder.clear();
   stateOut.realCallReservationIndex.clear();
+  stateOut.realCallAllowStructs = input.validationTarget == IrValidationTarget::Vm ||
+                                  input.validationTarget == IrValidationTarget::OptCpp;
   {
     std::vector<std::string> ordered;
-    for (const std::string &path :
-        computeRealCallEligibleDefinitionPaths(
-            *input.program, *input.entryPath, input.validationTarget == IrValidationTarget::Vm ||
-                input.validationTarget == IrValidationTarget::OptCpp)) {
+    for (const std::string &path : computeRealCallEligibleDefinitionPaths(
+             *input.program, *input.entryPath, stateOut.realCallAllowStructs)) {
       ordered.push_back(path);
     }
     std::sort(ordered.begin(), ordered.end());

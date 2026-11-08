@@ -24,6 +24,7 @@
 #include "primec/support/SourceLocationMapper.h"
 
 #include <limits>
+#include <optional>
 
 namespace primec::ir_lowerer {
 
@@ -317,8 +318,28 @@ bool emitInlineDefinitionCallImpl(
       }
       return true;
     }
+    if (setupStage.realCallAllowStructs && realCallReservationIndex.count(callee.fullPath) == 0 &&
+        &callee != setupStage.entryDef && !ir_lowerer::isTinyInlineLeaf(callee) &&
+        ir_lowerer::isRealCallShapeEligible(
+            callee,
+            ir_lowerer::RealCallShapeContext{
+                &setupStage.defMap, &structNames, setupStage.realCallAllowStructs})) {
+      // The first call of a definition with a real-call shape reserves it; its body is lowered once, after the entry.
+      realCallReservationIndex.emplace(
+          callee.fullPath, static_cast<uint64_t>(setupStage.realCallEligibleOrder.size()));
+      setupStage.realCallEligibleOrder.push_back(callee.fullPath);
+    }
+    // The address ABI (the VM and the optimizing C++ emitters): the call site binds the parameters exactly as an
+    // inlined call would, in its own frame, and passes each parameter local's value - a scalar, or the address of a
+    // struct, a `mut` place or a referenced value. A local address names the same slot in every frame, so the callee
+    // reads and writes the caller's places through it. The call itself is emitted after that binding, below.
+    std::optional<uint64_t> addressAbiCallImm;
     if (const auto realCallIt = realCallReservationIndex.find(callee.fullPath);
-        realCallIt != realCallReservationIndex.end()) {
+        realCallIt != realCallReservationIndex.end() && setupStage.realCallAllowStructs) {
+      addressAbiCallImm = (uint64_t(1) << 32) | realCallIt->second;
+    }
+    if (const auto realCallIt = realCallReservationIndex.find(callee.fullPath);
+        realCallIt != realCallReservationIndex.end() && !addressAbiCallImm.has_value()) {
       ReturnInfo calleeReturnInfo;
       if (!getReturnInfo(callee.fullPath, calleeReturnInfo)) {
         error = "internal error: missing return info for real-call target " + callee.fullPath;
@@ -346,42 +367,30 @@ bool emitInlineDefinitionCallImpl(
         error = "internal error: unexpected packed arguments for real-call target " + callee.fullPath;
         return false;
       }
-      // Phase 1 evaluates the receiver (the implicit `this`, first among the ordered arguments) and the arguments
-      // into temporaries: a scalar is a value, a struct (receiver or by-value parameter) is the address of its
-      // slots. Phase 2 pushes them in parameter order, so an argument that changes the receiver is seen by the callee.
+      // The scalar ABI (the other targets): the receiver of a read-only method is its slots, rebuilt in a block of
+      // the callee's frame, and every parameter is a scalar. Phase 1 evaluates the receiver (first among the ordered
+      // arguments) and the arguments into temporaries; phase 2 pushes them in parameter order, so an argument that
+      // changes the receiver is seen by the callee.
       const bool calleeTakesThis = realCallParams.size() == callee.parameters.size() + 1;
-      const bool mutReceiverCall = calleeTakesThis && definitionHasTransform(callee, "mut");
-      struct RealCallArg {
-        int32_t local = 0;
-        int32_t structSlots = 0;  // 0: a scalar value
-      };
-      std::vector<RealCallArg> realCallArgs;
-      realCallArgs.reserve(realCallOrderedArgs.size());
+      std::vector<int32_t> argLocals;
+      argLocals.reserve(realCallOrderedArgs.size());
+      int32_t receiverSlots = 0;
       for (size_t argIndex = 0; argIndex < realCallOrderedArgs.size(); ++argIndex) {
         const Expr *argExpr = realCallOrderedArgs[argIndex];
         if (argExpr == nullptr) {
           error = "internal error: missing argument for real-call target " + callee.fullPath;
           return false;
         }
-        std::string structPath;
+        bool pushedAddress = false;
         if (calleeTakesThis && argIndex == 0) {
-          if (!isStructHelperDefinition(callee, structNames, structPath)) {
+          std::string structPath;
+          StructSlotLayoutInfo layout;
+          if (!isStructHelperDefinition(callee, structNames, structPath) ||
+              !resolveStructSlotLayout(structPath, layout) || layout.totalSlots <= 0) {
             error = "internal error: no receiver layout for real-call target " + callee.fullPath;
             return false;
           }
-        } else {
-          const size_t paramIndex = calleeTakesThis ? argIndex - 1 : argIndex;
-          structPath = ir_lowerer::realCallStructParameterPath(callee, callee.parameters[paramIndex], structNames);
-        }
-        RealCallArg realArg;
-        if (!structPath.empty()) {
-          StructSlotLayoutInfo layout;
-          if (!resolveStructSlotLayout(structPath, layout) || layout.totalSlots <= 0) {
-            error = "internal error: no struct layout for real-call target " + callee.fullPath;
-            return false;
-          }
-          realArg.structSlots = layout.totalSlots;
-          bool pushedAddress = false;
+          receiverSlots = layout.totalSlots;
           if (argExpr->kind == Expr::Kind::Name) {
             const auto localIt = callerLocals.find(argExpr->name);
             if (localIt != callerLocals.end() &&
@@ -391,121 +400,34 @@ bool emitInlineDefinitionCallImpl(
               pushedAddress = true;
             }
           }
-          if (!pushedAddress && !emitExpr(*argExpr, callerLocals)) {
-            return false;
-          }
-        } else if (!emitExpr(*argExpr, callerLocals)) {
+        }
+        if (!pushedAddress && !emitExpr(*argExpr, callerLocals)) {
           return false;
         }
-        realArg.local = allocTempLocal();
-        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(realArg.local)});
-        realCallArgs.push_back(realArg);
+        argLocals.push_back(allocTempLocal());
+        function.instructions.push_back(
+            {IrOpcode::StoreLocal, static_cast<uint64_t>(argLocals.back())});
       }
-      // A slot of a struct or of its heap copy: the base address plus the slot offset.
-      const auto pushSlotAddress = [&](int32_t baseLocal, int32_t slot) {
-        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(baseLocal)});
-        if (slot != 0) {
-          function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(slot) * IrSlotBytes});
-          function.instructions.push_back({IrOpcode::AddI64, 0});
-        }
-      };
-      const auto pushStructSlots = [&](const RealCallArg &realArg) {
-        for (int32_t slot = 0; slot < realArg.structSlots; ++slot) {
-          pushSlotAddress(realArg.local, slot);
-          function.instructions.push_back({IrOpcode::LoadIndirect, 0});
-        }
-      };
-      int32_t mutStashLocal = 0;
-      for (size_t argIndex = 0; argIndex < realCallArgs.size(); ++argIndex) {
-        const RealCallArg &realArg = realCallArgs[argIndex];
-        if (mutReceiverCall && argIndex == 0) {
-          // The callee works on a heap copy of the receiver and the call site copies it back afterwards.
-          mutStashLocal = allocTempLocal();
-          function.instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(realArg.structSlots)});
-          function.instructions.push_back({IrOpcode::HeapAlloc, 0});
-          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(mutStashLocal)});
-          for (int32_t slot = 0; slot < realArg.structSlots; ++slot) {
-            pushSlotAddress(mutStashLocal, slot);
-            pushSlotAddress(realArg.local, slot);
+      for (size_t argIndex = 0; argIndex < argLocals.size(); ++argIndex) {
+        if (calleeTakesThis && argIndex == 0) {
+          for (int32_t slot = 0; slot < receiverSlots; ++slot) {
+            function.instructions.push_back(
+                {IrOpcode::LoadLocal, static_cast<uint64_t>(argLocals[argIndex])});
+            if (slot != 0) {
+              function.instructions.push_back(
+                  {IrOpcode::PushI64, static_cast<uint64_t>(slot) * IrSlotBytes});
+              function.instructions.push_back({IrOpcode::AddI64, 0});
+            }
             function.instructions.push_back({IrOpcode::LoadIndirect, 0});
-            function.instructions.push_back({IrOpcode::StoreIndirect, 0});
-            function.instructions.push_back({IrOpcode::Pop, 0});
           }
-          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(mutStashLocal)});
-        } else if (realArg.structSlots > 0) {
-          pushStructSlots(realArg);
         } else {
-          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(realArg.local)});
+          function.instructions.push_back(
+              {IrOpcode::LoadLocal, static_cast<uint64_t>(argLocals[argIndex])});
         }
       }
       const uint64_t placeholderImm = (uint64_t(1) << 32) | realCallIt->second;
       function.instructions.push_back(
           {calleeReturnInfo.returnsVoid ? IrOpcode::CallVoid : IrOpcode::Call, placeholderImm});
-      // A struct result comes back as the address of a heap block: copy its slots into a block of this frame, free
-      // the heap block and leave the address of the frame block, the same value an inlined call leaves.
-      int32_t structResultSlots = 0;
-      if (const std::string resultStructPath =
-              ir_lowerer::realCallStructReturnPath(callee, structNames, setupStage.defMap);
-          !resultStructPath.empty()) {
-        StructSlotLayoutInfo resultLayout;
-        if (!resolveStructSlotLayout(resultStructPath, resultLayout) || resultLayout.totalSlots <= 0) {
-          error = "internal error: no struct layout for the result of real-call target " + callee.fullPath;
-          return false;
-        }
-        structResultSlots = resultLayout.totalSlots;
-      }
-      const auto finishStructResult = [&](int32_t heapResultLocal) {
-        const int32_t blockBase = allocTempLocal();
-        for (int32_t slot = 1; slot < structResultSlots; ++slot) {
-          (void)allocTempLocal();
-        }
-        const int32_t blockPtr = allocTempLocal();
-        function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(blockBase)});
-        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(blockPtr)});
-        for (int32_t slot = 0; slot < structResultSlots; ++slot) {
-          pushSlotAddress(blockPtr, slot);
-          pushSlotAddress(heapResultLocal, slot);
-          function.instructions.push_back({IrOpcode::LoadIndirect, 0});
-          function.instructions.push_back({IrOpcode::StoreIndirect, 0});
-          function.instructions.push_back({IrOpcode::Pop, 0});
-        }
-        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(heapResultLocal)});
-        function.instructions.push_back({IrOpcode::HeapFree, 0});
-        if (requireValue) {
-          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(blockPtr)});
-        }
-      };
-      if (structResultSlots > 0 && !mutReceiverCall) {
-        const int32_t heapResultLocal = allocTempLocal();
-        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(heapResultLocal)});
-        finishStructResult(heapResultLocal);
-        return true;
-      }
-      if (mutReceiverCall) {
-        int32_t resultLocal = 0;
-        if (!calleeReturnInfo.returnsVoid) {
-          resultLocal = allocTempLocal();
-          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(resultLocal)});
-        }
-        const RealCallArg &receiverArg = realCallArgs.front();
-        for (int32_t slot = 0; slot < receiverArg.structSlots; ++slot) {
-          pushSlotAddress(receiverArg.local, slot);
-          pushSlotAddress(mutStashLocal, slot);
-          function.instructions.push_back({IrOpcode::LoadIndirect, 0});
-          function.instructions.push_back({IrOpcode::StoreIndirect, 0});
-          function.instructions.push_back({IrOpcode::Pop, 0});
-        }
-        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(mutStashLocal)});
-        function.instructions.push_back({IrOpcode::HeapFree, 0});
-        if (structResultSlots > 0) {
-          finishStructResult(resultLocal);
-          return true;
-        }
-        if (!calleeReturnInfo.returnsVoid && requireValue) {
-          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal)});
-        }
-        return true;
-      }
       if (!calleeReturnInfo.returnsVoid && !requireValue) {
         function.instructions.push_back({IrOpcode::Pop, 0});
       }
@@ -602,6 +524,63 @@ bool emitInlineDefinitionCallImpl(
                  leaf == collectionWrapperAlias("vector", "Oct");
         };
 #include "IrLowererLowerInlineCallsBody.h"
+    if (addressAbiCallImm.has_value()) {
+      for (const Expr &param : callParams) {
+        const auto paramIt = calleeLocals.find(param.name);
+        if (paramIt == calleeLocals.end() || paramIt->second.index < 0) {
+          error = "internal error: real-call parameter is not bound: " + param.name + " of " +
+                  callee.fullPath;
+          popInlineStack();
+          return false;
+        }
+        function.instructions.push_back(
+            {IrOpcode::LoadLocal, static_cast<uint64_t>(paramIt->second.index)});
+      }
+      // A struct result is written into a block of this frame, whose address is the last argument; the callee
+      // returns that address, the value an inlined call leaves.
+      bool structResult = false;
+      if (const std::string resultStructPath =
+              ir_lowerer::realCallStructReturnPath(callee, structNames, setupStage.defMap);
+          !resultStructPath.empty() && !returnInfo.returnsVoid) {
+        StructSlotLayoutInfo resultLayout;
+        if (!resolveStructSlotLayout(resultStructPath, resultLayout) ||
+            resultLayout.totalSlots <= 0) {
+          error = "internal error: no struct layout for the result of real-call target " +
+                  callee.fullPath;
+          popInlineStack();
+          return false;
+        }
+        const int32_t blockBase = nextLocal;
+        nextLocal += resultLayout.totalSlots;
+        function.instructions.push_back(
+            {IrOpcode::AddressOfLocal, static_cast<uint64_t>(blockBase)});
+        structResult = true;
+      }
+      function.instructions.push_back(
+          {returnInfo.returnsVoid ? IrOpcode::CallVoid : IrOpcode::Call, *addressAbiCallImm});
+      // Temporaries the parameters own (a call result or constructor passed as an argument) end with the call; the
+      // result waits in a local while they are destroyed. A frame's size is its highest local index, so the address
+      // of a result block also goes into a local allocated after the block, which keeps the block inside the frame.
+      const bool ownsTemporaries = !fileScopeStack.back().empty();
+      int32_t resultLocal = -1;
+      if (!returnInfo.returnsVoid && (ownsTemporaries || !requireValue || structResult)) {
+        if (requireValue) {
+          resultLocal = allocTempLocal();
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(resultLocal)});
+        } else {
+          function.instructions.push_back({IrOpcode::Pop, 0});
+        }
+      }
+      emitFileScopeCleanup(fileScopeStack.back());
+      popFileScope();
+      popInlineStack();
+      // A reserved definition is never inlined, so it needs no callable body besides its real-call function.
+      loweredCallTargets.erase(callee.fullPath);
+      if (resultLocal >= 0) {
+        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal)});
+      }
+      return true;
+    }
     if (!ir_lowerer::runLowerInlineCallGpuLocalsStep(
             {
                 .callerLocals = &callerLocals,

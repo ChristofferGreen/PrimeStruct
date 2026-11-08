@@ -109,4 +109,126 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+// Real calls (docs/spec/vm-design.md, Real calls): on the VM and optexe a definition with more than a tiny body is
+// lowered once and called. The receiver and every struct, `mut` and Reference argument pass as an address of the
+// caller's place, so writes through them reach the caller, and a String result moves back to the call site.
+TEST_CASE("real calls write the caller's places through receiver, mut and Reference parameters") {
+  program_matrix::ProgramCase program;
+  program.name = "real_call_places";
+  program.source = R"(
+import /std/text/*
+
+[struct]
+Log() {
+  [String mut] text{String{}}
+  [i32 mut] lines{0i32}
+
+  [mut effects(heap_alloc)]
+  add([i32] value) {
+    this.text.append("[")
+    this.text.appendI64(convert<i64>(value))
+    this.text.append("]")
+    this.lines = this.lines + 1i32
+  }
+
+  [return<i32>]
+  total() {
+    [i32 mut] sum{0i32}
+    for([i32 mut] i{0i32}; i < this.text.count(); ++i) {
+      sum = sum + 1i32
+    }
+    return(sum + this.lines * 100i32)
+  }
+}
+
+[struct]
+Pair() {
+  [i32 mut] left{0i32}
+  [i32 mut] right{0i32}
+}
+
+[effects(heap_alloc)]
+record_twice([Log mut] log, [i32] value) {
+  log.add(value)
+  log.add(value + 1i32)
+  log.lines = log.lines + 10i32
+}
+
+swap_pair([Reference<Pair>] pair) {
+  [i32] left{pair.left}
+  pair.left = pair.right
+  pair.right = left
+}
+
+bump([i32 mut] counter, [i32] by) {
+  counter = counter + by
+  counter = counter * 2i32
+  counter = counter - 1i32
+}
+
+[return<String> effects(heap_alloc)]
+label([i32] id, [Pair] pair) {
+  [String mut] out{String{}}
+  out.append("#")
+  out.appendI64(convert<i64>(id))
+  out.append(":")
+  out.appendI64(convert<i64>(pair.left + pair.right))
+  return(out)
+}
+
+[effects(io_out, heap_alloc) return<int>]
+main() {
+  [Log mut] log{Log{}}
+  record_twice(log, 1i32)
+  record_twice(log, 5i32)
+  log.add(9i32)
+  print_line(log.lines)
+  print_line(log.total())
+  [Pair mut] pair{Pair{[left] 3i32, [right] 4i32}}
+  swap_pair(location(pair))
+  print_line(pair.left)
+  print_line(pair.right)
+  [i32 mut] counter{1i32}
+  bump(counter, 2i32)
+  bump(counter, 3i32)
+  print_line(counter)
+  [String] first{label(7i32, pair)}
+  [String] second{label(8i32, Pair{[left] 1i32, [right] 1i32})}
+  print_line(first.count() + second.count())
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "25\n2515\n4\n3\n15\n8\n";
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("a runtime error inside a real call stops the program") {
+  program_matrix::ProgramCase program;
+  program.name = "real_call_runtime_error";
+  program.source = R"(
+[return<i32>]
+pick([i32] index, [i32] offset) {
+  [array<i32>] values{array<i32>(10i32, 20i32, 30i32)}
+  [i32] at{index + offset}
+  [i32] doubled{at * 2i32}
+  return(values[doubled - at])
+}
+
+[effects(io_out) return<int>]
+main() {
+  print_line(pick(1i32, 0i32))
+  print_line(pick(1i32, 1i32))
+  print_line(pick(5i32, 0i32))
+  print_line(99i32)
+  return(0i32)
+}
+)";
+  program.exitCode = 3;
+  program.stdoutText = "20\n30\n";
+  program.vmStderr = "array index out of bounds\n";
+  program.nativeStderr = "array index out of bounds\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

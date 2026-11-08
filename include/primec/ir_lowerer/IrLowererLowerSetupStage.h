@@ -80,8 +80,12 @@ struct LowerSetupStageState {
   // lowering loop later in the pipeline. Empty when nothing is eligible
   // (the common case today - this is a purely additive, deliberately
   // conservative candidate set).
+  // A call site whose callee has a real-call shape (isRealCallShapeEligible) and is not a tiny leaf appends it here
+  // while lowering, so the set grows to every such definition the program actually calls.
   std::vector<std::string> realCallEligibleOrder;
   std::unordered_map<std::string, uint64_t> realCallReservationIndex;
+  // Struct parameters and results and `mut` receivers take real calls (the VM and the optimizing C++ emitters).
+  bool realCallAllowStructs = false;
 };
 
 bool runLowerSetupStage(const LowerSetupStageInput &input,

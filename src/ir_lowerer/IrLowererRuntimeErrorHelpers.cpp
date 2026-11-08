@@ -9,14 +9,29 @@
 namespace primec::ir_lowerer {
 
 namespace {
+// Lowering runs on one thread per program; the flag is per thread so concurrent compiles do not share it.
+thread_local bool runtimeErrorsTrap = false;
+
 void emitRuntimeError(IrFunction &function, const std::string &message, const InternRuntimeErrorStringFn &internString) {
   uint64_t flags = encodePrintFlags(true, true);
   int32_t msgIndex = internString(message);
   function.instructions.push_back({IrOpcode::PrintString, encodePrintStringImm(static_cast<uint64_t>(msgIndex), flags)});
+  if (runtimeErrorsTrap) {
+    function.instructions.push_back({IrOpcode::Trap, 3});
+    return;
+  }
   function.instructions.push_back({IrOpcode::PushI32, 3});
   function.instructions.push_back({IrOpcode::ReturnI32, 0});
 }
 } // namespace
+
+RuntimeErrorsTrapScope::RuntimeErrorsTrapScope(bool trap) : saved_(runtimeErrorsTrap) {
+  runtimeErrorsTrap = trap;
+}
+
+RuntimeErrorsTrapScope::~RuntimeErrorsTrapScope() {
+  runtimeErrorsTrap = saved_;
+}
 
 RuntimeErrorAndStringLiteralSetup makeRuntimeErrorAndStringLiteralSetup(
     std::vector<std::string> &stringTable,

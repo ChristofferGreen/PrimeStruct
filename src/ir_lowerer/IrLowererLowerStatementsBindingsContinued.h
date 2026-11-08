@@ -860,25 +860,33 @@
           !aggregateStructPath.empty() &&
           !declaredReturnIsPointerLikeHandle &&
           (stableReturnValueExpr.kind == Expr::Kind::Call || stableReturnValueExpr.kind == Expr::Kind::Name);
-      if (realCallStructReturn && !returnInlineContext.has_value() && !shouldStabilizeAggregateReturn) {
+      if (realCallStructReturnLocal >= 0 && !returnInlineContext.has_value() && !shouldStabilizeAggregateReturn) {
         error = "a real call that returns a struct needs a struct value to return: " + function.name;
         return false;
       }
       if (shouldStabilizeAggregateReturn) {
-        const int32_t baseLocal = nextLocal;
-        nextLocal += layout.totalSlots;
-        const int32_t ptrLocal = nextLocal++;
-        function.instructions.push_back(
-            {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(layout.totalSlots - 1))});
-        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal)});
-        function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
-        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+        // A real call returns the struct in the caller's result block, whose address is its last parameter (this
+        // frame's blocks go away with the call): the value is copied straight there.
+        const bool intoCallerBlock = realCallStructReturnLocal >= 0 && !returnInlineContext.has_value();
+        int32_t baseLocal = -1;
+        int32_t ptrLocal = realCallStructReturnLocal;
+        if (!intoCallerBlock) {
+          baseLocal = nextLocal;
+          nextLocal += layout.totalSlots;
+          ptrLocal = nextLocal++;
+          function.instructions.push_back(
+              {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(layout.totalSlots - 1))});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal)});
+          function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+        }
         const int32_t srcPtrLocal = allocTempLocal();
         if (!emitExpr(stableReturnValueExpr, *emittedReturnLocals)) {
           return false;
         }
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
-        if (!emitStructCopySlots(baseLocal, srcPtrLocal, layout.totalSlots)) {
+        if (intoCallerBlock ? !emitStructCopyFromPtrs(ptrLocal, srcPtrLocal, layout.totalSlots)
+                            : !emitStructCopySlots(baseLocal, srcPtrLocal, layout.totalSlots)) {
           return false;
         }
         if (stableReturnValueExpr.kind == Expr::Kind::Name ||
@@ -911,29 +919,7 @@
             return false;
           }
         }
-        int32_t returnedAddressLocal = ptrLocal;
-        if (realCallStructReturn && !returnInlineContext.has_value()) {
-          // A real call returns the struct in a heap block: a local address stops meaning anything when the callee's
-          // frame goes away. The call site copies the slots back and frees the block.
-          returnedAddressLocal = allocTempLocal();
-          function.instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(layout.totalSlots)});
-          function.instructions.push_back({IrOpcode::HeapAlloc, 0});
-          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(returnedAddressLocal)});
-          for (int32_t slot = 0; slot < layout.totalSlots; ++slot) {
-            for (const int32_t baseOfSlot : {returnedAddressLocal, ptrLocal}) {
-              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(baseOfSlot)});
-              if (slot != 0) {
-                function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(slot) * IrSlotBytes});
-                function.instructions.push_back({IrOpcode::AddI64, 0});
-              }
-              if (baseOfSlot == ptrLocal) {
-                function.instructions.push_back({IrOpcode::LoadIndirect, 0});
-              }
-            }
-            function.instructions.push_back({IrOpcode::StoreIndirect, 0});
-            function.instructions.push_back({IrOpcode::Pop, 0});
-          }
-        }
+        const int32_t returnedAddressLocal = ptrLocal;
         rewrittenReturnLocals = localsIn;
         LocalInfo returnInfo;
         returnInfo.kind = LocalInfo::Kind::Value;

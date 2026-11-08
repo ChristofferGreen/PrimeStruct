@@ -6,6 +6,7 @@
 #include "primec/ir_lowerer/IrLowererLowerStatementsEntryExecutionStep.h"
 #include "primec/ir_lowerer/IrLowererLowerStatementsEntryStatementStep.h"
 #include "primec/ir_lowerer/IrLowererLowerStatementsFunctionTableStep.h"
+#include "primec/ir_lowerer/IrLowererRuntimeErrorHelpers.h"
 #include "IrLowererRecursionAnalysis.h"
 #include "primec/ir_lowerer/IrLowererSemanticProductTargetAdapters.h"
 #include "primec/ir_lowerer/IrLowererSetupTypeHelpers.h"
@@ -167,11 +168,16 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
       return false;
     }
     struct StructReturnFlagResetGuard {
-      bool *storage;
-      ~StructReturnFlagResetGuard() { *storage = false; }
+      int32_t *storage;
+      ~StructReturnFlagResetGuard() { *storage = -1; }
     } structReturnFlagResetGuard{input.realCallStructReturnStorage};
 
-    for (const std::string &path : *input.realCallEligibleOrder) {
+    // A runtime error in a called function ends the program, not just the function (address ABI targets).
+    const RuntimeErrorsTrapScope trapScope(input.realCallAddressAbi);
+    // Lowering a body can reserve further definitions (its own call sites), which append to the order: walk it by
+    // index until no new reservation appears.
+    for (size_t orderIndex = 0; orderIndex < input.realCallEligibleOrder->size(); ++orderIndex) {
+      const std::string path = (*input.realCallEligibleOrder)[orderIndex];
       const auto defIt = input.defMap->find(path);
       if (defIt == input.defMap->end() || defIt->second == nullptr) {
         errorOut = "internal error: missing definition for real-call target " + path;
@@ -185,9 +191,9 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
         return false;
       }
       *input.entryReturnsVoidStorage = returnInfo.returnsVoid;
-      *input.realCallStructReturnStorage =
-          input.structNames != nullptr &&
-          !realCallStructReturnPath(def, *input.structNames, *input.defMap).empty();
+      *input.realCallStructReturnStorage = -1;
+      const bool returnsStruct = input.realCallAddressAbi && input.structNames != nullptr &&
+                                 !realCallStructReturnPath(def, *input.structNames, *input.defMap).empty();
 
       input.resetDefinitionLoweringState();
       *input.function = IrFunction{};
@@ -198,8 +204,6 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
       const bool takesThis = input.structNames != nullptr &&
                              isStructHelperDefinition(def, *input.structNames, helperParent) &&
                              !definitionHasTransform(def, "static");
-      // A `mut` method receives the address of a heap copy of its receiver; the call site copies it back.
-      const bool mutReceiver = takesThis && definitionHasTransform(def, "mut");
       const size_t parameterCount = def.parameters.size() + (takesThis ? 1 : 0);
       input.function->name = def.fullPath;
       input.function->parameterCount = static_cast<uint32_t>(parameterCount);
@@ -258,25 +262,10 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
               ? InstrumentationTailExecution
               : 0;
 
-      // The eligibility scan already verified every parameter is a scalar, or a struct passed by value - re-derive
-      // it here and fail loudly on a mismatch instead of silently miscompiling.
-      std::vector<std::string> structParamPaths(def.parameters.size());
-      bool anyStructParam = false;
-      for (size_t i = 0; i < def.parameters.size(); ++i) {
-        if (input.structNames != nullptr) {
-          structParamPaths[i] = realCallStructParameterPath(def, def.parameters[i], *input.structNames);
-        }
-        anyStructParam = anyStructParam || !structParamPaths[i].empty();
-        if (structParamPaths[i].empty()) {
-          const std::string typeName = extractParameterTypeNameStatic(def.parameters[i]);
-          if (typeName.empty() || !isSupportedScalarTypeName(typeName)) {
-            errorOut = "internal error: real-call eligibility mismatch on parameter type for " + def.fullPath;
-            return false;
-          }
-        }
-      }
-      if (takesThis || anyStructParam) {
-        // The implicit `this` (an address) and the parameters, bound as for a callable definition.
+      if (input.realCallAddressAbi) {
+        // The parameters (and the receiver first) are bound as for a callable definition; each arrives as one slot,
+        // the value the inlined call binds. A `mut` scalar or struct parameter is the address of the caller's place,
+        // as in an inlined call.
         Expr contextCall;
         if (!input.buildDefinitionCallContext(def, *input.nextLocal, *input.locals, contextCall, errorOut)) {
           if (errorOut.empty()) {
@@ -284,77 +273,109 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
           }
           return false;
         }
+        std::vector<int32_t> parameterLocals;
+        if (takesThis) {
+          const auto thisIt = input.locals->find("this");
+          if (thisIt == input.locals->end()) {
+            errorOut = "internal error: real-call target has no receiver: " + def.fullPath;
+            return false;
+          }
+          parameterLocals.push_back(thisIt->second.index);
+        }
+        for (const Expr &param : def.parameters) {
+          const auto localIt = input.locals->find(param.name);
+          if (localIt == input.locals->end()) {
+            errorOut =
+                "internal error: real-call target has no local for parameter: " + def.fullPath;
+            return false;
+          }
+          LocalInfo &info = localIt->second;
+          if (info.kind == LocalInfo::Kind::Value && info.isMutable && !info.isFileHandle &&
+              (!info.structTypeName.empty() || (!info.isFileError && !info.isResult &&
+                                                info.valueKind != LocalInfo::ValueKind::Unknown &&
+                                                info.valueKind != LocalInfo::ValueKind::String))) {
+            info.kind = LocalInfo::Kind::Reference;
+          }
+          parameterLocals.push_back(info.index);
+        }
+        if (returnsStruct) {
+          // The address of the caller's result block comes last; a return copies the result there.
+          *input.realCallStructReturnStorage = (*input.nextLocal)++;
+          parameterLocals.push_back(*input.realCallStructReturnStorage);
+        }
+        for (size_t i = parameterLocals.size(); i-- > 0;) {
+          input.function->instructions.push_back(
+              {IrOpcode::StoreLocal, static_cast<uint64_t>(parameterLocals[i])});
+        }
+        input.function->parameterCount = static_cast<uint32_t>(parameterLocals.size());
       } else {
+        // The scalar ABI: the eligibility scan already verified every parameter is a scalar - re-derive it here and
+        // fail loudly on a mismatch instead of silently miscompiling.
         for (const Expr &param : def.parameters) {
           const std::string typeName = extractParameterTypeNameStatic(param);
-          LocalInfo info;
-          info.index = (*input.nextLocal)++;
-          info.kind = LocalInfo::Kind::Value;
-          info.valueKind = valueKindFromTypeName(typeName);
-          input.locals->emplace(param.name, info);
+          if (typeName.empty() || !isSupportedScalarTypeName(typeName)) {
+            errorOut = "internal error: real-call eligibility mismatch on parameter type for " +
+                       def.fullPath;
+            return false;
+          }
         }
-      }
-      // Prologue: the caller left its evaluated arguments on the shared operand stack in parameter order - a
-      // scalar is one slot, a struct passed by value is its slots, and a read-only receiver is its slots while a
-      // `mut` receiver is the address of a heap copy. Pop them last pushed first. Local addresses are relative to a
-      // frame, so each struct is rebuilt in a block of this frame and its local points at the block.
-      uint32_t stackSlots = 0;
-      const auto popStruct = [&](const std::string &localName, int32_t slotCount) -> bool {
-        const auto localIt = input.locals->find(localName);
-        if (localIt == input.locals->end()) {
-          errorOut = "internal error: real-call target has no local for " + localName + ": " + def.fullPath;
-          return false;
+        if (takesThis) {
+          // The implicit `this` (an address) and the parameters, bound as for a callable definition.
+          Expr contextCall;
+          if (!input.buildDefinitionCallContext(
+                  def, *input.nextLocal, *input.locals, contextCall, errorOut)) {
+            if (errorOut.empty()) {
+              errorOut = "internal error: could not bind the parameters of real-call target " +
+                         def.fullPath;
+            }
+            return false;
+          }
+        } else {
+          for (const Expr &param : def.parameters) {
+            const std::string typeName = extractParameterTypeNameStatic(param);
+            LocalInfo info;
+            info.index = (*input.nextLocal)++;
+            info.kind = LocalInfo::Kind::Value;
+            info.valueKind = valueKindFromTypeName(typeName);
+            input.locals->emplace(param.name, info);
+          }
         }
-        const int32_t base = *input.nextLocal;
-        *input.nextLocal += slotCount;
-        for (int32_t slot = slotCount; slot-- > 0;) {
-          input.function->instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(base + slot)});
-        }
-        input.function->instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(base)});
-        input.function->instructions.push_back(
-            {IrOpcode::StoreLocal, static_cast<uint64_t>(localIt->second.index)});
-        return true;
-      };
-      for (size_t i = def.parameters.size(); i-- > 0;) {
-        const auto localIt = input.locals->find(def.parameters[i].name);
-        if (localIt == input.locals->end()) {
-          errorOut = "internal error: real-call target has no local for parameter: " + def.fullPath;
-          return false;
-        }
-        if (structParamPaths[i].empty()) {
+        // Prologue: the caller left its evaluated arguments on the shared operand stack in parameter order - a
+        // scalar is one slot and the receiver is its slots. Pop them last pushed first. The receiver is rebuilt in a
+        // block of this frame and `this` points at the block.
+        uint32_t stackSlots = 0;
+        for (size_t i = def.parameters.size(); i-- > 0;) {
+          const auto localIt = input.locals->find(def.parameters[i].name);
+          if (localIt == input.locals->end()) {
+            errorOut =
+                "internal error: real-call target has no local for parameter: " + def.fullPath;
+            return false;
+          }
           input.function->instructions.push_back(
               {IrOpcode::StoreLocal, static_cast<uint64_t>(localIt->second.index)});
           stackSlots += 1;
-        } else {
-          const int32_t slotCount = localIt->second.structSlotCount;
-          if (slotCount <= 0) {
-            errorOut = "internal error: real-call target has no struct layout for parameter: " + def.fullPath;
+        }
+        if (takesThis) {
+          const auto thisIt = input.locals->find("this");
+          if (thisIt == input.locals->end() || thisIt->second.structSlotCount <= 0) {
+            errorOut = "internal error: real-call target has no receiver layout: " + def.fullPath;
             return false;
           }
-          if (!popStruct(def.parameters[i].name, slotCount)) {
-            return false;
+          const int32_t slotCount = thisIt->second.structSlotCount;
+          const int32_t base = *input.nextLocal;
+          *input.nextLocal += slotCount;
+          for (int32_t slot = slotCount; slot-- > 0;) {
+            input.function->instructions.push_back(
+                {IrOpcode::StoreLocal, static_cast<uint64_t>(base + slot)});
           }
-          stackSlots += static_cast<uint32_t>(slotCount);
-        }
-      }
-      if (takesThis) {
-        const auto thisIt = input.locals->find("this");
-        if (thisIt == input.locals->end() || thisIt->second.structSlotCount <= 0) {
-          errorOut = "internal error: real-call target has no receiver layout: " + def.fullPath;
-          return false;
-        }
-        if (mutReceiver) {
+          input.function->instructions.push_back(
+              {IrOpcode::AddressOfLocal, static_cast<uint64_t>(base)});
           input.function->instructions.push_back(
               {IrOpcode::StoreLocal, static_cast<uint64_t>(thisIt->second.index)});
-          stackSlots += 1;
-        } else {
-          if (!popStruct("this", thisIt->second.structSlotCount)) {
-            return false;
-          }
-          stackSlots += static_cast<uint32_t>(thisIt->second.structSlotCount);
+          stackSlots += static_cast<uint32_t>(slotCount);
         }
+        input.function->parameterCount = stackSlots;
       }
-      input.function->parameterCount = stackSlots;
 
       auto emitBodyStatement = [&](const Expr &stmt) -> bool {
         return runLowerStatementsEntryStatementStep(

@@ -1014,8 +1014,10 @@ than changing `exe`/`cpp` in place:
 form directly, using the shared CFG (`IrCfg.h`) for per-block stack depths: stack depth *d* is the C++ variable
 `s<d>`, locals are `l<n>`, blocks are labels, jumps are `goto`. Because depths are proven consistent at joins no
 moves are needed, and the host compiler does the register allocation. Functions with `AddressOfLocal`,
-`LoadIndirect` or `StoreIndirect` use a `uint64_t frame[N]` array (the VM resolves indirect addresses against the
-current frame even when the address came from the caller, so any indirect access needs one). The heap keeps the
+`LoadIndirect` or `StoreIndirect` use a `uint64_t frame[N]` array. Local addresses follow the VM's numbering of all
+live frames' locals (docs/spec/vm-design.md, Frames & stack): each function takes its first local number from
+`rt.localsTop`, and a function that takes local addresses registers its frame in `rt.frames`, so an address a caller
+passes resolves in the callee (`ps_resolve` checks the current frame, then the registered ones). The heap keeps the
 VM's address encoding and fault text but resolves addresses through an owner table in constant time.
 
 Coverage: every opcode except `CallHost` (host imports; rejected with a diagnostic naming opcode and function).
@@ -1053,6 +1055,45 @@ the VM kept the 64-bit slot (so `total < 0` was false), `exe` wrapped in `int32_
 The language rule is now wrapping i32: lowering emits the pure `SextI32` opcode (schema v27) after user-level i32
 add/sub/mul/div/negate (and increment, decrement, abs, pow), and every backend implements it, so the reproducer prints
 `-2147483648 1 0 1 -2147483648 -2147483648` on vm, native, optexe and exe (program-matrix cases `i32_wrap_*`).
+
+#### Real calls for web apps (TODO-5734, 2026-11-08)
+
+Until this change almost every call in a web app was a copy of the callee's body: only definitions with two static
+call sites and scalar (or plain-struct) parameters were real calls, and reachability ignored method calls, so a
+helper called once from a method that was itself inlined 500 times was copied 500 times. Counting inline expansions
+per callee during lowering (todo_web at 24b0650d0) showed the shapes: `Pointer<u8>` parameters (`twoWayFind`,
+`textLoad`), `never` results (`panic`, 2,220 copies), methods reached only through other methods (`isBoundary`,
+`slice`), `mut` struct parameters (`[Writer mut] page`), `mut` receivers of structs with lifecycle helpers
+(`String.growFor`), struct results with lifecycle helpers (`String`) and generic handler parameters (`serve`).
+
+What changed (docs/spec/vm-design.md, Real calls and Frames & stack):
+
+- A local address numbers all live frames' locals, so an address of a caller's local is valid in a callee (step kernel,
+  fast kernel, `optcpp`/`optexe`); the receiver and every struct, `mut` or Reference argument pass as an address, bound
+  at the call site by the same code an inlined call uses.
+- The first call site of a definition with that shape reserves it as a real call, unless it is a tiny leaf (at most two
+  statements and 12 expression nodes), which stays inline.
+- Struct results come back through a block in the caller's frame (the callee's `return` copies straight into it), not a
+  heap block copied at every call site.
+- A runtime error inside a called function ends the program with the new `Trap` opcode (PSIR v33) instead of returning
+  3 from that function.
+
+Generated C++ (`--emit=optcpp`), `primec` time for it, and CPU time (user + sys, `primec` and clang) of the whole
+`--emit=optexe` build, on this machine (macOS arm64):
+
+| Program | before: C++ | before: primec | before: optexe CPU | after: C++ | after: primec | after: optexe CPU |
+| --- | --- | --- | --- | --- | --- | --- |
+| todo_web | 12.7 MB | over 2 min | about 16 min | 1.38 MB | 4 s | 7.3 s |
+| hello_button | 6.60 MB | 106 s | 290 s | 1.25 MB | 3 s | 7.6 s |
+| web_app | 2.27 MB | 29 s | 72 s | 0.92 MB | 2 s | 4.9 s |
+| http_hello | 1.83 MB | 14 s | 42 s | 0.75 MB | 3 s | 4.9 s |
+
+(todo_web's before figures are the ones measured when TODO-5734 was filed; the others were rebuilt at 044f95077.) The
+VM is not slower: the run time of the benchmark programs (`primec --emit=vm` CPU less `--emit=ir`, median of 5,
+before/after) is aggregate 36.3/25.4 ms, json_scan 33.2/31.0, json_parse 71.0/69.2, call_fib 54.4/54.1 and
+float_series 102.0/98.3, and the whole `--emit=vm` run of the HTTP fixtures takes 3.50 s/0.98 s (parse_matrix) and
+1.48 s/1.03 s (response_bytes), mostly from compiling less. What is left in todo_web's C++: `main` still inlines
+`serve` and `serveUntil` (a `Result` result, TODO-5738), and struct copies are unrolled per slot (TODO-5739).
 
 Suggested order: Phase 0.1-0.3 (flags, pass manager, dumps), Phase 1.1
 (shared CFG), then this emitter (done), then the matrix runner (0.5) to run the corpus through it. Phase 3

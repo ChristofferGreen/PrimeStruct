@@ -76,6 +76,9 @@ struct LowerStatementsCallsStageInput {
   // Null/empty when nothing is eligible (the common case today).
   const std::vector<std::string> *realCallEligibleOrder = nullptr;
   const std::unordered_map<std::string, uint64_t> *realCallReservationIndex = nullptr;
+  // The address ABI (LowerSetupStageState::realCallAllowStructs): every parameter, and the receiver, arrives as one
+  // slot holding what the inlined call would have bound - a scalar or an address.
+  bool realCallAddressAbi = false;
 
   // Points at LowerSetupStageState::setupLocalsOrchestration.entryReturnConfig.returnsVoid
   // - the return-statement lowering machinery reached via `emitStatement`
@@ -86,8 +89,8 @@ struct LowerStatementsCallsStageInput {
   // `return(...)` in that body gets validated against the entry's void-ness
   // instead of its own.
   bool *entryReturnsVoidStorage = nullptr;
-  // Points at entryReturnConfig.realCallStructReturn (see EntryReturnConfig).
-  bool *realCallStructReturnStorage = nullptr;
+  // Points at entryReturnConfig.realCallStructReturnLocal (see EntryReturnConfig).
+  int32_t *realCallStructReturnStorage = nullptr;
 };
 
 bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,

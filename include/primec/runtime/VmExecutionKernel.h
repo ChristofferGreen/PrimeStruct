@@ -84,6 +84,9 @@ struct VmKernelFrame {
   const IrFunction *function = nullptr;
   size_t functionIndex = 0;
   std::vector<uint64_t> locals;
+  // The frame's first local in the run's one numbering of all live locals: the caller's base plus the caller's
+  // local count. A local address is (localsBase + index) * slot bytes, so it names the same slot in every frame.
+  size_t localsBase = 0;
   size_t ip = 0;
   bool returnValueToCaller = false;
 };

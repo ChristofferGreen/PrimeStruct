@@ -13,6 +13,31 @@ namespace primec::vm_detail {
 
 namespace {
 
+// A local address names a slot of some live frame (docs/spec/vm-design.md, Real calls). Rewrites it to an address
+// relative to that frame and selects its locals; a heap address, or a local address outside every live frame, is
+// left as it is against the current frame's locals (the host then faults on the latter).
+inline void localizeVmAddress(std::vector<VmKernelFrame> &frames,
+                              uint64_t slotBytes,
+                              uint64_t &address,
+                              std::vector<uint64_t> *&locals) {
+  VmKernelFrame &top = frames.back();
+  locals = &top.locals;
+  if ((address & (uint64_t{1} << 63)) != 0) {
+    return;
+  }
+  const uint64_t index = address / slotBytes;
+  for (size_t i = frames.size(); i-- > 0;) {
+    VmKernelFrame &frame = frames[i];
+    if (index >= frame.localsBase) {
+      if (index - frame.localsBase < frame.locals.size()) {
+        address -= static_cast<uint64_t>(frame.localsBase) * slotBytes;
+        locals = &frame.locals;
+      }
+      return;
+    }
+  }
+}
+
 } // namespace
 
 bool isVmKernelPrintOpcode(IrOpcode op) {
@@ -114,6 +139,7 @@ template <bool TrackEvents>
   }
   if (controlFlowOutcome.result == VmControlFlowOpcodeResult::Call) {
     VmKernelFrame calleeFrame;
+    calleeFrame.localsBase = frame.localsBase + locals.size();
     calleeFrame.functionIndex = controlFlowOutcome.targetFunctionIndex;
     calleeFrame.function = &module.functions[controlFlowOutcome.targetFunctionIndex];
     calleeFrame.locals.assign(localCounts[controlFlowOutcome.targetFunctionIndex], 0);
@@ -194,7 +220,8 @@ template <bool TrackEvents>
       error = "invalid local index in IR";
       return VmKernelStepOutcome::Fault;
     }
-    stack.push_back(static_cast<uint64_t>(inst.imm) * host.slotBytes());
+    stack.push_back((static_cast<uint64_t>(frame.localsBase) + static_cast<uint64_t>(inst.imm)) *
+                    host.slotBytes());
     ip += 1;
     return VmKernelStepOutcome::Continue;
   }
@@ -203,10 +230,12 @@ template <bool TrackEvents>
       error = "IR stack underflow on load indirect";
       return VmKernelStepOutcome::Fault;
     }
-    const uint64_t address = stack.back();
+    uint64_t address = stack.back();
     stack.pop_back();
     uint64_t *slot = nullptr;
-    if (!host.resolveIndirectAddress(address, locals, slot, error)) {
+    std::vector<uint64_t> *addressLocals = nullptr;
+    localizeVmAddress(frames, host.slotBytes(), address, addressLocals);
+    if (!host.resolveIndirectAddress(address, *addressLocals, slot, error)) {
       return VmKernelStepOutcome::Fault;
     }
     stack.push_back(*slot);
@@ -220,10 +249,12 @@ template <bool TrackEvents>
     }
     const uint64_t value = stack.back();
     stack.pop_back();
-    const uint64_t address = stack.back();
+    uint64_t address = stack.back();
     stack.pop_back();
     uint64_t *slot = nullptr;
-    if (!host.resolveIndirectAddress(address, locals, slot, error)) {
+    std::vector<uint64_t> *addressLocals = nullptr;
+    localizeVmAddress(frames, host.slotBytes(), address, addressLocals);
+    if (!host.resolveIndirectAddress(address, *addressLocals, slot, error)) {
       return VmKernelStepOutcome::Fault;
     }
     *slot = value;
@@ -266,10 +297,12 @@ template <bool TrackEvents>
       error = "IR stack underflow on load u8";
       return VmKernelStepOutcome::Fault;
     }
-    const uint64_t address = stack.back();
+    uint64_t address = stack.back();
     stack.pop_back();
     uint8_t byte = 0;
-    if (!host.loadHeapByte(address, locals, byte, error)) {
+    std::vector<uint64_t> *addressLocals = nullptr;
+    localizeVmAddress(frames, host.slotBytes(), address, addressLocals);
+    if (!host.loadHeapByte(address, *addressLocals, byte, error)) {
       return VmKernelStepOutcome::Fault;
     }
     stack.push_back(static_cast<uint64_t>(byte));
@@ -283,10 +316,12 @@ template <bool TrackEvents>
     }
     const uint64_t value = stack.back();
     stack.pop_back();
-    const uint64_t address = stack.back();
+    uint64_t address = stack.back();
     stack.pop_back();
     const uint8_t byte = static_cast<uint8_t>(value & 0xFFull);
-    if (!host.storeHeapByte(address, locals, byte, error)) {
+    std::vector<uint64_t> *addressLocals = nullptr;
+    localizeVmAddress(frames, host.slotBytes(), address, addressLocals);
+    if (!host.storeHeapByte(address, *addressLocals, byte, error)) {
       return VmKernelStepOutcome::Fault;
     }
     stack.push_back(static_cast<uint64_t>(byte));

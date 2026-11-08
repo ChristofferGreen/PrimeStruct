@@ -5,9 +5,10 @@
 namespace primec {
 namespace {
 
+// A return, or a trap, which also leaves the function (it ends the program).
 bool isReturnOpcode(IrOpcode op) {
   return op == IrOpcode::ReturnVoid || op == IrOpcode::ReturnI32 || op == IrOpcode::ReturnI64 ||
-         op == IrOpcode::ReturnF32 || op == IrOpcode::ReturnF64;
+         op == IrOpcode::ReturnF32 || op == IrOpcode::ReturnF64 || op == IrOpcode::Trap;
 }
 
 bool isJumpOpcode(IrOpcode op) {
@@ -168,6 +169,7 @@ bool computeIrStackEffect(const IrInstruction &instruction,
   case IrOpcode::Jump:
   case IrOpcode::ReturnVoid:
   case IrOpcode::PrintString:
+  case IrOpcode::Trap:
     return set(0, 0);
   case IrOpcode::Call:
   case IrOpcode::CallVoid: {

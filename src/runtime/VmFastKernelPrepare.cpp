@@ -388,6 +388,10 @@ bool prepareFunction(const IrModule &module, const IrFunction &function, FastFun
         instruction.op == IrOpcode::StoreU8) {
       return false;
     }
+    // So do traps, which end the run from any frame.
+    if (instruction.op == IrOpcode::Trap) {
+      return false;
+    }
     // A call to a missing function is left to the step kernel, which faults on it when (and only
     // if) it runs, so the loop needs no target check.
     if ((instruction.op == IrOpcode::Call || instruction.op == IrOpcode::CallVoid) &&

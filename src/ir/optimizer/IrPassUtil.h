@@ -13,8 +13,8 @@ inline bool isJump(IrOpcode op) {
 }
 
 inline bool isReturn(IrOpcode op) {
-  return op == IrOpcode::ReturnVoid || op == IrOpcode::ReturnI32 || op == IrOpcode::ReturnI64 ||
-         op == IrOpcode::ReturnF32 || op == IrOpcode::ReturnF64;
+  return op == IrOpcode::Trap || op == IrOpcode::ReturnVoid || op == IrOpcode::ReturnI32 ||
+         op == IrOpcode::ReturnI64 || op == IrOpcode::ReturnF32 || op == IrOpcode::ReturnF64;
 }
 
 // Marks every instruction index that some jump targets. The extra last entry

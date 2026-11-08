@@ -25,7 +25,8 @@ bool hasCallOpcode(const IrFunction &function) {
 
 bool hasControlFlowOpcode(const IrFunction &function) {
   for (const auto &instruction : function.instructions) {
-    if (instruction.op == IrOpcode::Jump || instruction.op == IrOpcode::JumpIfZero) {
+    if (instruction.op == IrOpcode::Jump || instruction.op == IrOpcode::JumpIfZero ||
+        instruction.op == IrOpcode::Trap) {
       return true;
     }
   }

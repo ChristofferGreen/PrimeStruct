@@ -7,7 +7,7 @@
 namespace primec {
 
 constexpr uint32_t IrSchemaMagic = 0x50534952u; // "PSIR"
-constexpr uint32_t IrSchemaVersion = 32u;
+constexpr uint32_t IrSchemaVersion = 33u;
 constexpr uint32_t IrSchemaMinimumSupportedVersion = IrSchemaVersion;
 constexpr uint32_t IrSchemaMaximumSupportedVersion = IrSchemaVersion;
 
@@ -147,6 +147,10 @@ enum class IrOpcode : uint8_t {
   // Pops one value and pushes its low 8 bits zero-extended: the wrap step after u8
   // arithmetic, the way SextI32 is for i32.
   ZextU8,
+  // Ends the whole program with exit code imm, from any frame (docs/spec/vm-design.md, Real calls): a runtime error
+  // (a failed bounds check, `panic`) inside a function the lowering calls instead of inlining, where a return would
+  // only leave that function. The VM, serialized bytecode and the optimized C++ emitter run it. Added in PSIR v33.
+  Trap,
 };
 
 enum class IrStructFieldCategory : uint8_t {

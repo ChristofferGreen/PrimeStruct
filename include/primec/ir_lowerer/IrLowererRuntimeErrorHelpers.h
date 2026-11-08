@@ -13,6 +13,20 @@ namespace primec::ir_lowerer {
 
 using InternRuntimeErrorStringFn = std::function<int32_t(const std::string &)>;
 
+// A runtime error prints its message and returns 3 from the function being lowered, which ends the program when that
+// is the entry. While a scope with `trap` set is open (the lowering emits the body of a function it calls instead of
+// inlining), it ends the program with a Trap instead, from whatever frame runs it.
+class RuntimeErrorsTrapScope {
+public:
+  explicit RuntimeErrorsTrapScope(bool trap);
+  ~RuntimeErrorsTrapScope();
+  RuntimeErrorsTrapScope(const RuntimeErrorsTrapScope &) = delete;
+  RuntimeErrorsTrapScope &operator=(const RuntimeErrorsTrapScope &) = delete;
+
+private:
+  bool saved_ = false;
+};
+
 struct RuntimeErrorEmitters {
   ActionFn emitArrayIndexOutOfBounds{};
   ActionFn emitPointerIndexOutOfBounds{};

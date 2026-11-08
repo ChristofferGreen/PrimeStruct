@@ -106,7 +106,7 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
 
   const auto &entryReturnConfig = setupLocalsOrchestration.entryReturnConfig;
   const bool &returnsVoid = entryReturnConfig.returnsVoid;
-  const bool &realCallStructReturn = entryReturnConfig.realCallStructReturn;
+  const int32_t &realCallStructReturnLocal = entryReturnConfig.realCallStructReturnLocal;
 
   const auto &entryCountAccessSetup = setupLocalsOrchestration.entryCountAccessSetup;
   const bool &hasEntryArgs = entryCountAccessSetup.hasEntryArgs;

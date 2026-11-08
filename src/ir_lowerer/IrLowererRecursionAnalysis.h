@@ -59,26 +59,38 @@ std::unordered_set<std::string> findReachableDefinitionPaths(const Program &prog
 // that actually lower a body should still re-verify each parameter/return
 // kind with the authoritative inference machinery and fail loudly on a
 // mismatch rather than silently miscompile.
-// `allowMutReceivers` admits `mut` methods: the call site hands them the address of a heap copy of the receiver and
-// copies it back after the call, so the target must have a heap (the VM).
+// `allowMutReceivers` selects the address ABI shapes (isRealCallShapeEligible with allowStructs): the VM and the
+// optimizing C++ emitters, where a local address names the same slot in every frame.
 std::unordered_set<std::string> computeRealCallEligibleDefinitionPaths(const Program &program,
                                                                        const std::string &entryPath,
                                                                        bool allowMutReceivers = false);
+
+// What the real-call shape check needs to know about the program.
+struct RealCallShapeContext {
+  const std::unordered_map<std::string, const Definition *> *definitionsByPath = nullptr;
+  const std::unordered_set<std::string> *structNames = nullptr;
+  // Struct parameters, struct results and `mut` receivers (the VM and the optimizing C++ emitters).
+  bool allowStructs = false;
+};
+
+// Whether `def` can be lowered once as a function and called (the parameter, receiver and result shapes above),
+// leaving aside how often it is called. A call site whose callee passes this and is not a tiny leaf reserves it.
+bool isRealCallShapeEligible(const Definition &def, const RealCallShapeContext &context);
+
+// A body of at most two statements and this many expression nodes is cheaper inlined than called: it stays inline at
+// every call site unless it is recursive.
+inline constexpr size_t TinyInlineLeafMaxNodes = 12;
+bool isTinyInlineLeaf(const Definition &def);
 
 // Exposed so real-call body lowering (which must build the exact same
 // parameter/return LocalInfo::ValueKind this eligibility scan already
 // validated) can reuse the identical extraction instead of a second,
 // possibly-diverging implementation.
 bool isSupportedScalarTypeName(const std::string &typeName);
-// The struct a by-value parameter passes (its full path), or empty when the parameter is a scalar or not eligible: a
-// plain struct name, no `mut`, not a collection record.
-std::string realCallStructParameterPath(const Definition &def,
-                                        const Expr &param,
-                                        const std::unordered_set<std::string> &structNames);
 std::string extractParameterTypeNameStatic(const Expr &paramExpr);
-// The struct a definition returns by value as a real call: the declared `return<T>` names a struct whose fields are
-// all scalars, pointers or such structs (so copying its slots needs no Copy/Move/Destroy), or empty when the result is
-// a scalar, void or not eligible. The callee copies the result into a heap block and the call site copies it back.
+// The struct a definition returns by value as a real call: the declared `return<T>` names a struct (not a sum, not a
+// collection record, not a packed error struct), or empty when the result is a scalar, void or not eligible. The
+// callee moves or copies the result into a heap block and the call site moves it into a block of its frame.
 std::string realCallStructReturnPath(const Definition &def,
                                      const std::unordered_set<std::string> &structNames,
                                      const std::unordered_map<std::string, const Definition *> &definitionsByPath);

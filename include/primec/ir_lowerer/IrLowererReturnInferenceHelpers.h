@@ -23,9 +23,9 @@ struct ReturnInferenceOptions {
 struct EntryReturnConfig {
   bool hasReturnTransform = false;
   bool returnsVoid = false;
-  // Set while a real-call body that returns a struct by value is lowered: its return copies the struct's slots into a
-  // heap block (a local address does not outlive the call frame) and returns the block's address.
-  bool realCallStructReturn = false;
+  // While a real-call body that returns a struct by value is lowered, the local that holds the address of the caller's
+  // result block (its last parameter): a return copies the struct's slots there and returns that address. -1 otherwise.
+  int32_t realCallStructReturnLocal = -1;
   bool hasResultInfo = false;
   ResultReturnInfo resultInfo{};
 };

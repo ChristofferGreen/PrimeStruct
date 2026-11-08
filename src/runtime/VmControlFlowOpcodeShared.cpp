@@ -111,6 +111,13 @@ VmControlFlowOpcodeOutcome handleSharedVmControlFlowOpcode(const IrInstruction &
                                        : VmControlFlowOpcodeResult::Return;
       return outcome;
     }
+    case IrOpcode::Trap: {
+      // The program ends here with the trap's exit code, whatever frame runs it.
+      outcome.returnValue = inst.imm;
+      outcome.returnValueToCaller = false;
+      outcome.result = VmControlFlowOpcodeResult::Exit;
+      return outcome;
+    }
     default:
       outcome.result = VmControlFlowOpcodeResult::NotHandled;
       return outcome;

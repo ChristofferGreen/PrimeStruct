@@ -187,6 +187,15 @@ bool validateFunction(const IrModule &module,
     if (opcodeValue < MinOpcode || opcodeValue > MaxOpcode) {
       return failInstruction(functionIndex, function.name, instructionIndex, "unsupported opcode", error);
     }
+    if (inst.op == IrOpcode::Trap && target != IrValidationTarget::Vm &&
+        target != IrValidationTarget::Serialized && target != IrValidationTarget::OptCpp) {
+      return failInstruction(functionIndex,
+                             function.name,
+                             instructionIndex,
+                             "traps are only supported by the vm target, the optimized C++ target "
+                             "and serialized bytecode",
+                             error);
+    }
     if (inst.op == IrOpcode::CallHost) {
       // The arm64 native backend answers the string heap functions itself and imports any other host function
       // as a C function by name.

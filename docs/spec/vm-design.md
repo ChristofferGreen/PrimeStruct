@@ -25,8 +25,9 @@
   (recursive and larger functions), including recursion up to the VM's call-depth limit.
 - **GLSL note:** GLSL/SPIR-V emission routes through canonical IR (`glsl-ir`/`spirv-ir`) and `IrValidationTarget::Glsl`;
   these modes emit backend output directly without requiring PSIR serialization.
-- **PSIR versioning:** current portable IR is PSIR v32 (v24 to v32 are listed in `include/primec/ir/Ir.h`'s opcode
-  comments and the finished TODO log; v32 appends the `bytes` host value kind (`Pointer<u8>` host parameters); v31 retires run-time string indices (a host function can no longer return `string`; same module layout); v30 appends the `text` host value kind; v29 appends the `u8` host value kind; v28 adds `HeapAllocBytes`, `LoadU8`, `StoreU8` and `ZextU8`). Before that, PSIR v23 (adds a per-function `parameter_count` field on top of v22’s
+- **PSIR versioning:** current portable IR is PSIR v33 (v24 to v33 are listed in `include/primec/ir/Ir.h`'s opcode
+  comments and the finished TODO log; v33 appends `Trap` and numbers local addresses across all live frames (see
+  Frames & stack); v32 appends the `bytes` host value kind (`Pointer<u8>` host parameters); v31 retires run-time string indices (a host function can no longer return `string`; same module layout); v30 appends the `text` host value kind; v29 appends the `u8` host value kind; v28 adds `HeapAllocBytes`, `LoadU8`, `StoreU8` and `ZextU8`). Before that, PSIR v23 (adds a per-function `parameter_count` field on top of v22’s
   source-unit/file identity in source-map metadata, v21’s `HeapRealloc`, v20’s `FileReadByte` and
   `HeapFree`, v19’s per-instruction source-map metadata keyed by debug ID, v18’s instruction debug IDs, v17’s local
   debug slots, v16’s function-call opcodes `Call`/`CallVoid`, v15’s execution metadata, v14’s float return opcodes,
@@ -34,8 +35,15 @@
   `PrintArgvUnsafe`, `PrintArgv`, `PushArgc`, pointer helpers, `ReturnVoid`, and print opcode upgrades).
 - **Frames & stack:** VM/native execution starts at the entry frame and pushes/pops frames for `Call`/`CallVoid`; each
   frame stores locals in 16-byte slots while the operand stack stores raw `u64` values interpreted by opcode (ints,
-  floats as bits, and indices). Indirect addresses are byte offsets into the active frame’s local slot space and must be
-  16-byte aligned.
+  floats as bits, and indices). A local address (`AddressOfLocal`) is `(base + index) * 16`, where a frame's `base` is
+  its caller's base plus the caller's local count (the entry frame's base is 0): the live frames' locals form one
+  numbering, so an address of a caller's local names the same slot in every callee, which reads and writes it through
+  `LoadIndirect`/`StoreIndirect`. An address beyond the live frames faults (`invalid indirect address in IR`).
+  Indirect addresses must be 16-byte aligned. The step kernel resolves a local address against the current frame first
+  and then the frames below it; the fast kernel and the optimized C++ emitter keep the same numbering (the fast kernel's
+  locals arena is laid out that way, and generated C++ registers each addressable frame). The native backends and the
+  Linux JIT still resolve local addresses against the current frame; the JIT refuses a function that takes a local
+  address and calls.
 - **Heap:** `HeapAlloc`/`HeapRealloc` return heap addresses `bit 63 | generation << 48 | slot * 16` (generation in bits
   48-62, slot offset in bits 0-47; zero slots allocate nothing and return 0). A live allocation never moves, so an
   address a program has seen stays valid until the program frees or reallocates that allocation; `HeapRealloc` returns
@@ -121,19 +129,30 @@
   `1024` local dynamic-capacity limit. No
   reference counting is performed.
 - **Errors:** guard rails emit errors by printing to stderr and returning error codes (e.g., bounds checks), while VM
-  runtime faults (stack underflow, invalid addresses) surface as `VM error:` with exit code 3.
+  runtime faults (stack underflow, invalid addresses) surface as `VM error:` with exit code 3. Inside a function that
+  lowering calls rather than inlines, a guard rail ends with `Trap 3` instead of a return, which ends the program with
+  exit code 3 from that frame; `panic` traps the same way. `Trap` (PSIR v33) runs on the VM, serialized bytecode and
+  `optcpp`/`optexe`; the other targets never receive it.
 - **Deployment target:** the VM serves as the sandboxed runtime for user-supplied scripts (e.g., on iOS) where native
   code generation is unavailable. Effect masks and capabilities enforce per-platform restrictions.
 
-- Real calls for methods: a definition with scalar parameters is lowered once as a function and called, not inlined at
-  every call site, when it has two or more call sites. For the VM target this also covers a method with an implicit
-  `this` and a struct passed by value. A local address is an index into the current frame, so a callee cannot write
-  through its caller's address: a read-only method gets the receiver's slots on the operand stack (rebuilt in a block of
-  the callee's frame), and a `mut` method gets the address of a heap copy of the receiver that the call site copies back
-  after the call and frees. Structs with `Copy`/`Move`/`Destroy` helpers, `/std/collections/` receivers and definitions
-  with a generated tail value stay inline.
-  The same applies to the optimizing C++ emitters (`optcpp`, `optexe`), which run the same IR. A definition may also
-  return a plain struct by value (every field a scalar, a pointer or such a struct; no lifecycle helpers): the callee
-  copies the result into a heap block, and the call site copies it into a block of its own frame and frees the heap
-  block. Measured with `/std/http` `parseRequest` under `--emit=optcpp`: one call site generates 889,100 bytes of C++,
-  ten call sites 1,027,656 bytes (before: 891,390 and 8,771,206).
+- Real calls: the VM and the optimizing C++ emitters (`optcpp`, `optexe`) lower a definition once as a function and
+  call it from every call site when its body is more than a tiny leaf (more than two statements or more than 12
+  expression nodes; a tiny leaf stays inline unless it is recursive) and its shape allows it (below).
+  The first call site that meets such a definition reserves it, so every definition the program reaches is decided,
+  not only those with two static call sites. Arguments pass by the address ABI: the call site binds the parameters
+  exactly as an inlined call would, in its own frame, and passes each parameter local's value - a scalar, or the
+  address of a struct, of a `mut` place or of a referenced value; the receiver passes as its address, `mut` or not. A
+  local address names the same slot in every frame (Frames & stack), so writes through these addresses reach the
+  caller. A temporary argument is destroyed after the call, where an inlined call destroys it at the end of the callee's
+  body. A struct result (any struct but a sum or a collection record, with or without lifecycle helpers) is returned
+  through a block of the caller's frame whose address is the last argument: the callee's `return` moves or copies the
+  value there (as it would into the inlined call's result) and returns the address. Shapes that stay inline: `copy`,
+  `move`, args-pack, `string`, collection, `File` and template-typed parameters; sum results (`Result`, `Maybe`);
+  definitions with `on_error`, `require`, `try`/`?` or a generated tail value; `/std/collections/` definitions and
+  methods of their records; lifecycle helpers; and the `call` of a closure with a `[ref]` capture
+  (docs/spec/value-lifecycle.md, Borrowing).
+  The other targets keep the scalar ABI: a definition with scalar parameters and result and two or more call sites (or
+  a recursive one) is a real call, a read-only method passing its receiver as slots rebuilt in the callee's frame.
+  Measured for the web examples under `--emit=optcpp` in docs/OptimizingBackendsPlan.md (section 9, Real calls for web
+  apps): `examples/apps/todo_web` went from 12.7 MB of C++ to under 1.4 MB.

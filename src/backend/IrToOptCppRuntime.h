@@ -36,12 +36,24 @@ constexpr uint64_t PsSlotBytes = 16;
 constexpr unsigned PsMaxCallDepth = 4096;
 constexpr uint32_t PsFileReadEof = 65536u;
 
+// A live frame that can be addressed: its first local in the one numbering of all live locals the VM uses (the
+// caller's base plus the caller's local count) and its slots.
+struct PsFrameRef {
+  uint64_t base;
+  uint64_t count;
+  uint64_t *slots;
+};
+
 struct Rt {
   int argc;
   char **argv;
   unsigned depth;
   VmHeapCore heap;
   VmTextHeap text;
+  // The base the next call's locals get, and the frames whose locals have addresses, innermost last.
+  uint64_t localsTop = 0;
+  unsigned frameCount = 0;
+  PsFrameRef frames[PsMaxCallDepth + 1] = {};
 };
 
 [[noreturn]] void ps_fault(const char *message) {
@@ -146,9 +158,23 @@ inline uint64_t ps_heap_realloc(Rt &rt, uint64_t address, uint64_t count) {
   return fresh;
 }
 
+// The slot of local `index` (in the VM's numbering of all live locals) in an enclosing frame.
+[[gnu::noinline]] uint64_t *ps_resolve_outer(Rt &rt, uint64_t index, uint64_t address) {
+  for (unsigned i = rt.frameCount; i-- > 0;) {
+    const PsFrameRef &outer = rt.frames[i];
+    if (index >= outer.base) {
+      if (index - outer.base < outer.count) {
+        return outer.slots + (index - outer.base);
+      }
+      break;
+    }
+  }
+  ps_fault("invalid indirect address in IR: " + std::to_string(address));
+}
+
 // Resolves a byte address to the slot it names: a tagged heap address, or a
-// frame offset in functions that take local addresses.
-inline uint64_t *ps_resolve(Rt &rt, uint64_t *frame, size_t frameCount, uint64_t address) {
+// local of this frame (`base` is its first local) or of an enclosing one.
+inline uint64_t *ps_resolve(Rt &rt, uint64_t *frame, uint64_t base, size_t frameCount, uint64_t address) {
   if (VmHeapCore::isByteAddress(address)) {
     ps_fault("slot access to a byte region in IR: " + std::to_string(address));
   }
@@ -163,10 +189,10 @@ inline uint64_t *ps_resolve(Rt &rt, uint64_t *frame, size_t frameCount, uint64_t
     return slot;
   }
   const uint64_t index = address / PsSlotBytes;
-  if (index >= frameCount) {
-    ps_fault("invalid indirect address in IR: " + std::to_string(address));
+  if (index - base < frameCount) {
+    return &frame[static_cast<size_t>(index - base)];
   }
-  return &frame[static_cast<size_t>(index)];
+  return ps_resolve_outer(rt, index, address);
 }
 
 [[noreturn]] void ps_byte_fault(uint64_t address) {
@@ -178,9 +204,9 @@ inline uint64_t *ps_resolve(Rt &rt, uint64_t *frame, size_t frameCount, uint64_t
 
 // A byte address names a byte of a byte region; a slot address (a u8 local or slot field) names its
 // slot's low byte.
-inline uint64_t ps_load_u8(Rt &rt, uint64_t *frame, size_t frameCount, uint64_t address) {
+inline uint64_t ps_load_u8(Rt &rt, uint64_t *frame, uint64_t base, size_t frameCount, uint64_t address) {
   if (!VmHeapCore::isByteAddress(address)) {
-    return *ps_resolve(rt, frame, frameCount, address) & UINT64_C(0xff);
+    return *ps_resolve(rt, frame, base, frameCount, address) & UINT64_C(0xff);
   }
   const uint8_t *byte = rt.heap.byteAt(address);
   if (byte == nullptr) {
@@ -189,10 +215,11 @@ inline uint64_t ps_load_u8(Rt &rt, uint64_t *frame, size_t frameCount, uint64_t 
   return *byte;
 }
 
-inline uint64_t ps_store_u8(Rt &rt, uint64_t *frame, size_t frameCount, uint64_t address, uint64_t raw) {
+inline uint64_t ps_store_u8(Rt &rt, uint64_t *frame, uint64_t base, size_t frameCount, uint64_t address,
+                           uint64_t raw) {
   const uint8_t value = static_cast<uint8_t>(raw & UINT64_C(0xff));
   if (!VmHeapCore::isByteAddress(address)) {
-    *ps_resolve(rt, frame, frameCount, address) = value;
+    *ps_resolve(rt, frame, base, frameCount, address) = value;
     return value;
   }
   uint8_t *byte = rt.heap.byteAt(address);

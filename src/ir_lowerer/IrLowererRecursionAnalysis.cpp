@@ -342,41 +342,6 @@ std::unordered_set<std::string> findReachableDefinitionPaths(const Program &prog
   return reachable;
 }
 
-std::string realCallStructParameterPath(const Definition &def,
-                                        const Expr &param,
-                                        const std::unordered_set<std::string> &structNames) {
-  if (isArgsPackBinding(param) || paramHasMutTransform(param) || !param.args.empty()) {
-    return {};
-  }
-  const std::string typeName = extractParameterTypeNameStatic(param);
-  if (typeName.empty() || isSupportedScalarTypeName(typeName)) {
-    return {};
-  }
-  std::string path;
-  if (typeName.front() == '/') {
-    path = typeName;
-  } else {
-    std::string prefix = def.namespacePrefix;
-    while (true) {
-      const std::string candidate = prefix + "/" + typeName;
-      if (structNames.count(candidate) != 0) {
-        path = candidate;
-        break;
-      }
-      if (prefix.empty()) {
-        break;
-      }
-      const size_t cut = prefix.find_last_of('/');
-      prefix = cut == std::string::npos ? std::string() : prefix.substr(0, cut);
-    }
-  }
-  if (path.empty() || structNames.count(path) == 0 ||
-      path.rfind(collection_helpers::kCanonicalCollectionsRoot, 0) == 0) {
-    return {};
-  }
-  return path;
-}
-
 namespace {
 
 // A struct type name as written inside `namespacePrefix`, resolved to its full path, or empty.
@@ -403,66 +368,6 @@ std::string resolveStructTypeName(const std::string &typeName,
   }
 }
 
-// Whether every field of `structPath` is a scalar, a pointer or a plain struct, so the struct is just its slots.
-bool isPlainSlotStruct(const std::string &structPath,
-                       const std::unordered_set<std::string> &structNames,
-                       const std::unordered_map<std::string, const Definition *> &definitionsByPath,
-                       int depth) {
-  if (depth > 8 || structPath.rfind(collection_helpers::kCanonicalCollectionsRoot, 0) == 0) {
-    return false;
-  }
-  const auto defIt = definitionsByPath.find(structPath);
-  if (defIt == definitionsByPath.end() || defIt->second == nullptr) {
-    return false;
-  }
-  for (const char *helper : {"/Create", "/Copy", "/Move", "/Destroy"}) {
-    if (definitionsByPath.count(structPath + helper) != 0) {
-      return false;
-    }
-  }
-  const Definition &structDef = *defIt->second;
-  if (definitionHasTransform(structDef, "sum") || definitionHasTransform(structDef, "compute")) {
-    return false;
-  }
-  bool anyField = false;
-  for (const Expr &field : structDef.statements) {
-    if (!field.isBinding) {
-      continue;
-    }
-    bool isStatic = false;
-    bool fieldOk = false;
-    for (const Transform &transform : field.transforms) {
-      if (transform.name == "static") {
-        isStatic = true;
-        break;
-      }
-      if (transform.name == "mut" || transform.name == "public" || transform.name == "private" ||
-          transform.name == "align" || transform.name == "packed" || transform.name == "reflection") {
-        continue;
-      }
-      if (transform.name == "Pointer" && transform.templateArgs.size() == 1) {
-        fieldOk = true;
-      } else if (transform.templateArgs.empty() && transform.arguments.empty()) {
-        if (isSupportedScalarTypeName(transform.name)) {
-          fieldOk = true;
-        } else {
-          const std::string nested = resolveStructTypeName(transform.name, structDef.namespacePrefix, structNames);
-          fieldOk = !nested.empty() && isPlainSlotStruct(nested, structNames, definitionsByPath, depth + 1);
-        }
-      }
-      break;
-    }
-    if (isStatic) {
-      continue;
-    }
-    if (!fieldOk) {
-      return false;
-    }
-    anyField = true;
-  }
-  return anyField;
-}
-
 } // namespace
 
 std::string realCallStructReturnPath(const Definition &def,
@@ -480,8 +385,18 @@ std::string realCallStructReturnPath(const Definition &def,
         returnType == "void") {
       return {};
     }
+    // The callee moves (or copies) the result into a heap block and the call site moves it into its own frame, so a
+    // struct with lifecycle helpers returns the same way as a plain one.
     const std::string path = resolveStructTypeName(returnType, def.namespacePrefix, structNames);
-    if (path.empty() || !isPlainSlotStruct(path, structNames, definitionsByPath, 0)) {
+    if (path.empty() || isPackedErrorStructTypeName(returnType) ||
+        isPackedErrorStructTypeName(path) ||
+        path.rfind(collection_helpers::kCanonicalCollectionsRoot, 0) == 0) {
+      return {};
+    }
+    const auto defIt = definitionsByPath.find(path);
+    if (defIt == definitionsByPath.end() || defIt->second == nullptr ||
+        definitionHasTransform(*defIt->second, "sum") ||
+        definitionHasTransform(*defIt->second, "compute")) {
       return {};
     }
     return path;
@@ -489,63 +404,247 @@ std::string realCallStructReturnPath(const Definition &def,
   return {};
 }
 
-std::unordered_set<std::string> computeRealCallEligibleDefinitionPaths(const Program &program,
-                                                                       const std::string &entryPath,
-                                                                       bool allowMutReceivers) {
-  const std::unordered_set<std::string> recursive = findRecursiveDefinitionPaths(program);
-  const std::unordered_set<std::string> reachable = findReachableDefinitionPaths(program, entryPath);
-  const std::unordered_map<std::string, size_t> callSiteCounts = countCallSitesByDefinitionPath(program);
+namespace {
 
-  std::unordered_map<std::string, const Definition *> byPath;
-  byPath.reserve(program.definitions.size());
-  for (const Definition &def : program.definitions) {
-    byPath.emplace(def.fullPath, &def);
-  }
-
-  // Struct helpers (nested methods and lifecycle helpers) take an implicit
-  // `this` (a Reference<Struct>) that is not in `def.parameters` - see
-  // buildInlineCallParameterList. hasOnlyScalarParameters cannot see it,
-  // and the real-call body lowering only binds `def.parameters`, so such a
-  // helper lowered as a real Call fails with "does not know identifier:
-  // this". Keep them on the inline path, matching the existing
-  // scalar-parameters-only real-call rule; `static` helpers have no `this`.
-  std::unordered_set<std::string> structNames;
-  for (const Definition &def : program.definitions) {
-    if (isStructDefinition(def)) {
-      structNames.insert(def.fullPath);
-    }
-  }
-  const auto takesImplicitThis = [&](const Definition &def) {
-    std::string parentStructPath;
-    return isStructHelperDefinition(def, structNames, parentStructPath) &&
-           !definitionHasTransform(def, "static");
-  };
-  // The receivers whose locals carry metadata a copied receiver would lose (element and key/value kinds of the
-  // collection records) keep their methods inline.
-  const auto receiverKeepsInline = [&](const Definition &def) {
-    std::string parentStructPath;
-    if (!isStructHelperDefinition(def, structNames, parentStructPath)) {
-      return false;
-    }
-    if (parentStructPath.rfind(collection_helpers::kCanonicalCollectionsRoot, 0) == 0) {
+bool paramHasTransformNamed(const Expr &param, const char *name) {
+  for (const Transform &transform : param.transforms) {
+    if (transform.name == name) {
       return true;
     }
-    // A closure with a `[ref name]` capture holds the address of a local in the frame that made it, and a local
-    // address only means something in its own frame: its `call` runs inline, in that frame.
+  }
+  return false;
+}
+
+// A struct (by its full path) whose values the address ABI passes: a struct definition outside the collections, which
+// keep element metadata in their locals.
+bool isAddressAbiStruct(const std::string &path,
+                        const std::unordered_set<std::string> &structNames) {
+  return !path.empty() && structNames.count(path) != 0 &&
+         path.rfind(collection_helpers::kCanonicalCollectionsRoot, 0) != 0;
+}
+
+// A parameter type the address ABI passes as one slot: a scalar, a struct (its address), or a Pointer or Reference to
+// a scalar or such a struct (the address).
+bool isAddressAbiParameter(const Definition &def,
+                           const Expr &param,
+                           const std::unordered_set<std::string> &structNames) {
+  if (isArgsPackBinding(param) || !param.args.empty() || paramHasTransformNamed(param, "copy") ||
+      paramHasTransformNamed(param, "move")) {
+    return false;
+  }
+  for (const Transform &transform : param.transforms) {
+    if (transform.name == "mut" || transform.name == "public" || transform.name == "private" ||
+        transform.name == "static" || transform.name == "shared" || transform.name == "placement" ||
+        transform.name == "align" || transform.name == "packed" || transform.name == "reflection" ||
+        transform.name == "effects" || transform.name == "capabilities") {
+      continue;
+    }
+    if (!transform.arguments.empty()) {
+      return false;
+    }
+    std::string target = transform.name;
+    if (transform.name == "Pointer" || transform.name == "Reference") {
+      if (transform.templateArgs.size() != 1) {
+        return false;
+      }
+      target = trimTemplateTypeText(transform.templateArgs.front());
+    } else if (!transform.templateArgs.empty()) {
+      return false;
+    }
+    if (target.find('<') != std::string::npos) {
+      return false;
+    }
+    return isSupportedScalarTypeName(target) ||
+           isAddressAbiStruct(resolveStructTypeName(target, def.namespacePrefix, structNames),
+                              structNames);
+  }
+  return false;
+}
+
+// The shape rules of the address ABI (the VM and the optimizing C++ emitters, where a local address names the same
+// slot in every frame): the receiver and every struct, `mut` or Reference argument are passed as an address.
+bool hasTransformReturnType(const Definition &def, const char *typeName) {
+  for (const Transform &transform : def.transforms) {
+    if (transform.name == "return" && transform.templateArgs.size() == 1 &&
+        trimTemplateTypeText(transform.templateArgs.front()) == typeName) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool isAddressAbiRealCallShape(const Definition &def, const RealCallShapeContext &context) {
+  const auto &byPath = *context.definitionsByPath;
+  const auto &structNames = *context.structNames;
+  if (definitionHasTransform(def, "host") || definitionHasTransform(def, "struct") ||
+      definitionHasTransform(def, "sum") || definitionHasTransform(def, "compute") ||
+      definitionHasTransform(def, "on_error") || definitionHasTransform(def, "require")) {
+    return false;
+  }
+  if (def.fullPath.rfind(collection_helpers::kCanonicalCollectionsRoot, 0) == 0) {
+    return false;
+  }
+  std::string parentStructPath;
+  if (isStructHelperDefinition(def, structNames, parentStructPath) &&
+      !definitionHasTransform(def, "static")) {
+    const size_t leafStart = def.fullPath.find_last_of('/');
+    const std::string leaf =
+        leafStart == std::string::npos ? def.fullPath : def.fullPath.substr(leafStart + 1);
+    if (leaf == "Create" || leaf == "Destroy" || leaf == "Copy" || leaf == "Move" ||
+        !isAddressAbiStruct(parentStructPath, structNames)) {
+      return false;
+    }
+    // A closure with a `[ref name]` capture runs its `call` inline, in the frame that holds the borrowed locals
+    // (docs/spec/value-lifecycle.md, Borrowing).
     if (parentStructPath.find("__lambda") != std::string::npos) {
       const auto structIt = byPath.find(parentStructPath);
-      if (structIt != byPath.end()) {
+      if (structIt != byPath.end() && structIt->second != nullptr) {
         for (const Expr &field : structIt->second->statements) {
           for (const Transform &transform : field.transforms) {
             if (field.isBinding && (transform.name == "Reference" || transform.name == "Pointer")) {
-              return true;
+              return false;
             }
           }
         }
       }
     }
+  }
+  for (const Expr &param : def.parameters) {
+    if (!isAddressAbiParameter(def, param, structNames)) {
+      return false;
+    }
+  }
+  // A `never` result (panic) is a void call: the callee ends the program with a trap.
+  if (!hasScalarOrVoidReturn(def) && !hasTransformReturnType(def, "never") &&
+      realCallStructReturnPath(def, structNames, byPath).empty()) {
     return false;
-  };
+  }
+  if (definitionUsesTry(def)) {
+    return false;
+  }
+  if (def.returnExpr.has_value() &&
+      (def.statements.empty() || def.statements.back().kind != Expr::Kind::Call ||
+       def.statements.back().name != "return")) {
+    return false; // a generated tail value; the real-call body lowering only runs the statements
+  }
+  return true;
+}
+
+} // namespace
+
+bool isRealCallShapeEligible(const Definition &def, const RealCallShapeContext &context) {
+  if (context.allowStructs) {
+    return isAddressAbiRealCallShape(def, context);
+  }
+  // The scalar ABI (the other targets): scalar parameters and result, and a read-only receiver passed as its slots.
+  const auto &byPath = *context.definitionsByPath;
+  const auto &structNames = *context.structNames;
+  if (definitionHasTransform(def, "host")) {
+    return false; // lowered to CallHost at each call site, never as a function
+  }
+  if (definitionHasTransform(def, "struct") || definitionHasTransform(def, "sum") ||
+      definitionHasTransform(def, "compute") || definitionHasTransform(def, "on_error")) {
+    return false;
+  }
+  // Struct helpers (nested methods and lifecycle helpers) take an implicit `this` (a Reference<Struct>) that is not in
+  // `def.parameters` - see buildInlineCallParameterList; `static` helpers have none.
+  std::string parentStructPath;
+  if (isStructHelperDefinition(def, structNames, parentStructPath) &&
+      !definitionHasTransform(def, "static")) {
+    // A read-only method gets a copy of the receiver's slots, rebuilt in the callee's frame (a local address names
+    // a slot of its own frame on these targets); `mut` methods and lifecycle helpers stay inline.
+    const size_t leafStart = def.fullPath.find_last_of('/');
+    const std::string leaf =
+        leafStart == std::string::npos ? def.fullPath : def.fullPath.substr(leafStart + 1);
+    if (leaf == "Create" || leaf == "Destroy" || leaf == "Copy" || leaf == "Move" ||
+        definitionHasTransform(def, "mut")) {
+      return false;
+    }
+    // The receivers whose locals carry metadata a copied receiver would lose (element and key/value kinds of the
+    // collection records) keep their methods inline.
+    if (parentStructPath.rfind(collection_helpers::kCanonicalCollectionsRoot, 0) == 0) {
+      return false;
+    }
+    // A closure with a `[ref name]` capture holds the address of a local in the frame that made it: its `call` runs
+    // inline, in that frame.
+    if (parentStructPath.find("__lambda") != std::string::npos) {
+      const auto structIt = byPath.find(parentStructPath);
+      if (structIt != byPath.end() && structIt->second != nullptr) {
+        for (const Expr &field : structIt->second->statements) {
+          for (const Transform &transform : field.transforms) {
+            if (field.isBinding && (transform.name == "Reference" || transform.name == "Pointer")) {
+              return false;
+            }
+          }
+        }
+      }
+    }
+  }
+  if (!hasOnlyScalarParameters(def) || !hasScalarOrVoidReturn(def) || definitionUsesTry(def)) {
+    return false;
+  }
+  if (def.returnExpr.has_value() &&
+      (def.statements.empty() || def.statements.back().kind != Expr::Kind::Call ||
+       def.statements.back().name != "return")) {
+    return false; // a generated tail value; the real-call body lowering only runs the statements
+  }
+  return true;
+}
+
+namespace {
+
+size_t countExprNodes(const Expr &expr, size_t limit) {
+  size_t count = 1;
+  for (const Expr &arg : expr.args) {
+    if (count > limit) {
+      return count;
+    }
+    count += countExprNodes(arg, limit - count);
+  }
+  for (const Expr &arg : expr.bodyArguments) {
+    if (count > limit) {
+      return count;
+    }
+    count += countExprNodes(arg, limit - count);
+  }
+  return count;
+}
+
+} // namespace
+
+bool isTinyInlineLeaf(const Definition &def) {
+  if (def.statements.size() > 2) {
+    return false;
+  }
+  size_t nodes = 0;
+  for (const Expr &stmt : def.statements) {
+    nodes += countExprNodes(stmt, TinyInlineLeafMaxNodes + 1);
+    if (nodes > TinyInlineLeafMaxNodes) {
+      return false;
+    }
+  }
+  return true;
+}
+
+std::unordered_set<std::string> computeRealCallEligibleDefinitionPaths(const Program &program,
+                                                                       const std::string &entryPath,
+                                                                       bool allowMutReceivers) {
+  const std::unordered_set<std::string> recursive = findRecursiveDefinitionPaths(program);
+  const std::unordered_set<std::string> reachable =
+      findReachableDefinitionPaths(program, entryPath);
+  const std::unordered_map<std::string, size_t> callSiteCounts =
+      countCallSitesByDefinitionPath(program);
+
+  std::unordered_map<std::string, const Definition *> byPath;
+  byPath.reserve(program.definitions.size());
+  std::unordered_set<std::string> structNames;
+  for (const Definition &def : program.definitions) {
+    byPath.emplace(def.fullPath, &def);
+    if (isStructDefinition(def)) {
+      structNames.insert(def.fullPath);
+    }
+  }
+  const RealCallShapeContext context{&byPath, &structNames, allowMutReceivers};
 
   std::unordered_set<std::string> eligible;
   for (const std::string &path : reachable) {
@@ -566,66 +665,8 @@ std::unordered_set<std::string> computeRealCallEligibleDefinitionPaths(const Pro
       }
     }
     const auto defIt = byPath.find(path);
-    if (defIt == byPath.end()) {
+    if (defIt == byPath.end() || !isRealCallShapeEligible(*defIt->second, context)) {
       continue;
-    }
-    const Definition &def = *defIt->second;
-    if (definitionHasTransform(def, "host")) {
-      continue;  // lowered to CallHost at each call site, never as a function
-    }
-    if (definitionHasTransform(def, "struct") || definitionHasTransform(def, "sum") ||
-        definitionHasTransform(def, "compute") || definitionHasTransform(def, "on_error")) {
-      continue;
-    }
-    if (takesImplicitThis(def)) {
-      // A method with an implicit `this` and scalar parameters is a real call. Local addresses are relative to a
-      // frame, so a read-only method gets a copy of the receiver's slots (rebuilt in the callee's frame) and a `mut`
-      // method gets the address of a heap copy that the call site copies back; lifecycle helpers keep their own
-      // handling.
-      const size_t leafStart = def.fullPath.find_last_of('/');
-      const std::string leaf = leafStart == std::string::npos ? def.fullPath : def.fullPath.substr(leafStart + 1);
-      if (leaf == "Create" || leaf == "Destroy" || leaf == "Copy" || leaf == "Move" ||
-          (definitionHasTransform(def, "mut") && !allowMutReceivers) || receiverKeepsInline(def)) {
-        continue;
-      }
-    }
-    bool parametersEligible = true;
-    for (const Expr &param : def.parameters) {
-      if (allowMutReceivers) {
-        const std::string structPath = realCallStructParameterPath(def, param, structNames);
-        if (!structPath.empty()) {
-          // A struct passed by value is its slots; a struct with lifecycle helpers is copied and destroyed by them,
-          // which only the inline path runs.
-          if (byPath.count(structPath + "/Copy") != 0 || byPath.count(structPath + "/Move") != 0 ||
-              byPath.count(structPath + "/Destroy") != 0) {
-            parametersEligible = false;
-            break;
-          }
-          continue;
-        }
-      }
-      const Definition scalarProbe = [&]() {
-        Definition probe;
-        probe.parameters.push_back(param);
-        return probe;
-      }();
-      if (!hasOnlyScalarParameters(scalarProbe)) {
-        parametersEligible = false;
-        break;
-      }
-    }
-    if (!parametersEligible ||
-        !(hasScalarOrVoidReturn(def) ||
-          (allowMutReceivers && !realCallStructReturnPath(def, structNames, byPath).empty()))) {
-      continue;
-    }
-    if (definitionUsesTry(def)) {
-      continue;
-    }
-    if (def.returnExpr.has_value() &&
-        (def.statements.empty() || def.statements.back().kind != Expr::Kind::Call ||
-         def.statements.back().name != "return")) {
-      continue;  // a generated tail value; the real-call body lowering only runs the statements
     }
     eligible.insert(path);
   }
