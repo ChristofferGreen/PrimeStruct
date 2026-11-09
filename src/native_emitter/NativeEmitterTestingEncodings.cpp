@@ -4,6 +4,21 @@
 
 namespace primec::testing {
 
+namespace {
+
+std::vector<uint32_t> arm64Words(const native_emitter::Arm64Emitter &emitter) {
+  const std::vector<uint8_t> bytes = emitter.finalize();
+  std::vector<uint32_t> words;
+  for (size_t i = 0; i + 4 <= bytes.size(); i += 4) {
+    words.push_back(static_cast<uint32_t>(bytes[i]) | (static_cast<uint32_t>(bytes[i + 1]) << 8) |
+                    (static_cast<uint32_t>(bytes[i + 2]) << 16) |
+                    (static_cast<uint32_t>(bytes[i + 3]) << 24));
+  }
+  return words;
+}
+
+} // namespace
+
 std::vector<uint32_t> arm64TemplateWords(IrOpcode op) {
   native_emitter::Arm64Emitter emitter;
   switch (op) {
@@ -49,14 +64,30 @@ std::vector<uint32_t> arm64TemplateWords(IrOpcode op) {
   default:
     return {};
   }
-  const std::vector<uint8_t> bytes = emitter.finalize();
-  std::vector<uint32_t> words;
-  for (size_t i = 0; i + 4 <= bytes.size(); i += 4) {
-    words.push_back(static_cast<uint32_t>(bytes[i]) | (static_cast<uint32_t>(bytes[i + 1]) << 8) |
-                    (static_cast<uint32_t>(bytes[i + 2]) << 16) |
-                    (static_cast<uint32_t>(bytes[i + 3]) << 24));
+  return arm64Words(emitter);
+}
+
+std::vector<uint32_t> arm64ConstantWords(uint8_t rd, uint64_t value) {
+  native_emitter::Arm64Emitter emitter;
+  emitter.emitMovImm64Public(rd, value);
+  return arm64Words(emitter);
+}
+
+std::vector<uint32_t> arm64StackAdjustWords(uint64_t amount, bool add) {
+  native_emitter::Arm64Emitter emitter;
+  emitter.emitAdjustSpPublic(amount, add);
+  return arm64Words(emitter);
+}
+
+bool arm64ImmediateOperandWords(IrOpcode op, uint64_t constant, std::vector<uint32_t> &words) {
+  native_emitter::Arm64Emitter emitter;
+  emitter.setValueStackCacheEnabled(false);
+  if (!emitter.tryEmitImmediateOperand(op, constant)) {
+    words.clear();
+    return false;
   }
-  return words;
+  words = arm64Words(emitter);
+  return true;
 }
 
 bool buildMachOImportProbe(const std::string &symbol, std::vector<uint8_t> &image, std::string &error) {

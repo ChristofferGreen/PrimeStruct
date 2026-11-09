@@ -856,6 +856,22 @@ bool emitNativeFunctions(const IrModule &module,
       }
       const auto &inst = fn.instructions[index];
       instOffsets[functionIndex][index] = emitter.currentWordIndex();
+      if constexpr (kIsArm64) {
+        // An integer constant feeding AddI*/SubI* or an integer comparison becomes that
+        // instruction's immediate operand.
+        if ((inst.op == IrOpcode::PushI32 || inst.op == IrOpcode::PushI64) &&
+            index + 1 < fn.instructions.size() && !branchTargets[index + 1]) {
+          const uint64_t constant =
+              inst.op == IrOpcode::PushI32
+                  ? static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(inst.imm)))
+                  : inst.imm;
+          if (emitter.tryEmitImmediateOperand(fn.instructions[index + 1].op, constant)) {
+            ++index;
+            instOffsets[functionIndex][index] = emitter.currentWordIndex();
+            continue;
+          }
+        }
+      }
       if constexpr (!kIsArm64) {
         if (deferOperands) {
           // `if (compare) { local = local +/- constant }` is branchless: the guarded

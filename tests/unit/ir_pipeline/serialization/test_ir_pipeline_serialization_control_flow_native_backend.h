@@ -293,10 +293,12 @@ TEST_CASE("native backend integer stack cache preserves parity and reduces spill
   CHECK(runIrPipelineNativeBinary(exePath) == 13);
   REQUIRE(instrumentation.perFunction.size() == 1);
   const auto &mainStats = instrumentation.perFunction[0];
-  CHECK(mainStats.valueStackPushCount == 7u);
-  CHECK(mainStats.valueStackPopCount == 7u);
-  CHECK(mainStats.spillCount == 3u);
-  CHECK(mainStats.reloadCount == 3u);
+  // `+ 2` and `+ 4` take their constants as immediates (one pop and one push each), so only
+  // 1, 3, the product and the sums go through the stack; 3 spills 1 and MulI32 reloads it.
+  CHECK(mainStats.valueStackPushCount == 5u);
+  CHECK(mainStats.valueStackPopCount == 5u);
+  CHECK(mainStats.spillCount == 1u);
+  CHECK(mainStats.reloadCount == 1u);
   CHECK(mainStats.spillCount < mainStats.valueStackPushCount);
   CHECK(mainStats.reloadCount < mainStats.valueStackPopCount);
 }

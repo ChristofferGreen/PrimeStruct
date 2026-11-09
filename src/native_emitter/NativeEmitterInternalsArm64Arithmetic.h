@@ -315,11 +315,7 @@ inline void Arm64Emitter::emitCompareAndPushFloat(bool isF64, CondCode cond) {
     emit(encodeFmovSW(1, 0));
     emit(kFcmpS0S1);
   }
-  emit(encodeBCond(6, static_cast<uint8_t>(cond)));
-  emitMovImm64(0, 0);
-  emit(encodeB(5));
-  emitMovImm64(0, 1);
-  emitPushReg(0);
+  emitCompareFlagsAndPush(cond);
 }
 
 inline void Arm64Emitter::emitConvertIntToFloat(bool toF64, bool isUnsigned) {
@@ -406,9 +402,108 @@ inline void Arm64Emitter::emitCompareAndPush(CondCode cond) {
   emitPopReg(0);
   emitPopReg(1);
   emit(encodeSubsReg(31, 1, 0));
-  emit(encodeBCond(6, static_cast<uint8_t>(cond)));
+  emitCompareFlagsAndPush(cond);
+}
+
+// Pushes 1 when the flags satisfy `cond`, else 0.
+inline void Arm64Emitter::emitCompareFlagsAndPush(CondCode cond) {
+  const size_t branchTrue = currentWordIndex();
+  emit(encodeBCond(0, static_cast<uint8_t>(cond)));
   emitMovImm64(0, 0);
-  emit(encodeB(5));
+  const size_t branchDone = currentWordIndex();
+  emit(encodeB(0));
+  patchWord(branchTrue,
+            encodeBCond(static_cast<int32_t>(currentWordIndex() - branchTrue),
+                        static_cast<uint8_t>(cond)));
   emitMovImm64(0, 1);
+  patchWord(branchDone, encodeB(static_cast<int32_t>(currentWordIndex() - branchDone)));
   emitPushReg(0);
+}
+
+inline bool Arm64Emitter::tryEmitImmediateOperand(IrOpcode op, uint64_t constant) {
+  bool isAdd = false;
+  bool isSub = false;
+  CondCode cond = CondCode::Eq;
+  switch (op) {
+  case IrOpcode::AddI32:
+  case IrOpcode::AddI64:
+    isAdd = true;
+    break;
+  case IrOpcode::SubI32:
+  case IrOpcode::SubI64:
+    isSub = true;
+    break;
+  case IrOpcode::CmpEqI32:
+  case IrOpcode::CmpEqI64:
+    cond = CondCode::Eq;
+    break;
+  case IrOpcode::CmpNeI32:
+  case IrOpcode::CmpNeI64:
+    cond = CondCode::Ne;
+    break;
+  case IrOpcode::CmpLtI32:
+  case IrOpcode::CmpLtI64:
+    cond = CondCode::Lt;
+    break;
+  case IrOpcode::CmpLeI32:
+  case IrOpcode::CmpLeI64:
+    cond = CondCode::Le;
+    break;
+  case IrOpcode::CmpGtI32:
+  case IrOpcode::CmpGtI64:
+    cond = CondCode::Gt;
+    break;
+  case IrOpcode::CmpGeI32:
+  case IrOpcode::CmpGeI64:
+    cond = CondCode::Ge;
+    break;
+  case IrOpcode::CmpLtU64:
+    cond = CondCode::Lo;
+    break;
+  case IrOpcode::CmpLeU64:
+    cond = CondCode::Ls;
+    break;
+  case IrOpcode::CmpGtU64:
+    cond = CondCode::Hi;
+    break;
+  case IrOpcode::CmpGeU64:
+    cond = CondCode::Hs;
+    break;
+  default:
+    return false;
+  }
+  uint16_t imm = 0;
+  bool shifted = false;
+  const uint64_t negated = 0 - constant;
+  if (isAdd || isSub) {
+    if (constant == 0) {
+      return true; // the operand stays as it is
+    }
+    uint32_t base = 0;
+    if (addSubImmediate(constant, imm, shifted)) {
+      base = isAdd ? AddImmBase : SubImmBase;
+    } else if (addSubImmediate(negated, imm, shifted)) {
+      base = isAdd ? SubImmBase : AddImmBase;
+    } else {
+      return false;
+    }
+    emitPopReg(0);
+    emit(encodeAddSubImm(base, 0, 0, imm, shifted));
+    emitPushReg(0);
+    return true;
+  }
+  // x - c and x + (-c) set the same flags for every c but 0 and the most negative value, so CMN of
+  // the negated constant stands in for CMP when only the negation fits.
+  uint32_t base = 0;
+  if (addSubImmediate(constant, imm, shifted)) {
+    base = SubsImmBase;
+  } else if (constant != (uint64_t{1} << 63) && addSubImmediate(negated, imm, shifted)) {
+    base = AddsImmBase;
+  } else {
+    return false;
+  }
+  emitPopReg(0);
+  emit(encodeAddSubImm(base, 31, 0, imm, shifted));
+  emitCompareFlagsAndPush(cond);
+  return true;
 }

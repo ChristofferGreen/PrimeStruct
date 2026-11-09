@@ -19,4 +19,14 @@ bool buildMachOImportProbe(const std::string &symbol, std::vector<uint8_t> &imag
 // SextI32 and the F32/F64 comparisons; any other opcode yields no words.
 std::vector<uint32_t> arm64TemplateWords(IrOpcode op);
 
+// The arm64 words that build the 64-bit constant `value` in x`rd` (MOVZ, MOVN, MOVK, ORR).
+std::vector<uint32_t> arm64ConstantWords(uint8_t rd, uint64_t value);
+
+// The arm64 words that move the stack pointer by `amount` bytes, up (`add`) or down.
+std::vector<uint32_t> arm64StackAdjustWords(uint64_t amount, bool add);
+
+// The arm64 words of `op` taking the pushed `constant` as its immediate operand, from an empty
+// buffer with the value-stack cache off. False when the constant stays a register operand.
+bool arm64ImmediateOperandWords(IrOpcode op, uint64_t constant, std::vector<uint32_t> &words);
+
 } // namespace primec::testing

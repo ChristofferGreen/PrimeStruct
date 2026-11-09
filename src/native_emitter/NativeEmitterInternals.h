@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+#include <bit>
 #include <cstdint>
 #include <string>
 #include <string_view>
@@ -134,23 +136,34 @@ class Arm64Emitter {
   }
 
   void emitPushI32(int32_t value) {
-    emitMovImm64(0, static_cast<uint64_t>(static_cast<int64_t>(value)));
-    emitPushReg(0);
+    emitPushImm64(static_cast<uint64_t>(static_cast<int64_t>(value)));
   }
 
   void emitPushI64(uint64_t value) {
-    emitMovImm64(0, value);
-    emitPushReg(0);
+    emitPushImm64(value);
   }
 
   void emitPushF32(uint32_t bits) {
-    emitMovImm64(0, bits);
-    emitPushReg(0);
+    emitPushImm64(bits);
   }
 
   void emitPushF64(uint64_t bits) {
-    emitMovImm64(0, bits);
-    emitPushReg(0);
+    emitPushImm64(bits);
+  }
+
+  // A pushed integer constant feeding AddI*/SubI* or an integer comparison, as the instruction's
+  // immediate operand: `add`/`sub` of a 12-bit immediate (or `#imm, lsl #12`, or the
+  // negated constant through the other instruction), `cmp`/`cmn` for the comparisons. A constant 0
+  // added or subtracted emits nothing. False, with nothing emitted, for any other opcode or a
+  // constant without such an encoding.
+  bool tryEmitImmediateOperand(IrOpcode op, uint64_t constant);
+
+  // For encoder tests (primec/testing/NativeEmitterEncodings.h).
+  void emitMovImm64Public(uint8_t rd, uint64_t value) {
+    emitMovImm64(rd, value);
+  }
+  void emitAdjustSpPublic(uint64_t amount, bool add) {
+    emitAdjustSp(amount, add);
   }
 
   void emitLoadLocal(uint32_t index) {
@@ -478,7 +491,11 @@ class Arm64Emitter {
   void emitPushReg(uint8_t reg);
   void emitPopReg(uint8_t reg);
   void emitMovImm64(uint8_t rd, uint64_t value);
+  void emitPushImm64(uint64_t value);
+  void emitCompareFlagsAndPush(CondCode cond);
   void emitAdjustSp(uint64_t amount, bool add);
+  static bool addSubImmediate(uint64_t value, uint16_t &imm12, bool &shifted);
+  static bool encodeLogicalImmediate64(uint64_t value, uint32_t &field);
   size_t emitAdrPlaceholder(uint8_t rd);
   void emitMovReg(uint8_t rd, uint8_t rn);
   void emitAddRegImm(uint8_t rd, uint8_t rn, uint16_t imm);
@@ -534,6 +551,14 @@ class Arm64Emitter {
 
   static uint32_t encodeAddSpImm(uint16_t imm);
   static uint32_t encodeSubSpImm(uint16_t imm);
+  static uint32_t encodeAddSpImmShifted(uint16_t imm);
+  static uint32_t encodeSubSpImmShifted(uint16_t imm);
+  static constexpr uint32_t AddImmBase = 0x91000000;
+  static constexpr uint32_t AddsImmBase = 0xB1000000;
+  static constexpr uint32_t SubImmBase = 0xD1000000;
+  static constexpr uint32_t SubsImmBase = 0xF1000000;
+  static uint32_t
+  encodeAddSubImm(uint32_t base, uint8_t rd, uint8_t rn, uint16_t imm, bool shifted);
   static uint32_t encodeAddRegImm(uint8_t rd, uint8_t rn, uint16_t imm);
   static uint32_t encodeSubRegImm(uint8_t rd, uint8_t rn, uint16_t imm);
   static uint32_t encodeStrRegBase(uint8_t rt, uint8_t rn, uint16_t offsetBytes);
@@ -546,6 +571,9 @@ class Arm64Emitter {
   static uint32_t encodeUdivReg(uint8_t rd, uint8_t rn, uint8_t rm);
   static uint32_t encodeMovz(uint8_t rd, uint16_t imm, uint8_t shift);
   static uint32_t encodeMovk(uint8_t rd, uint16_t imm, uint8_t shift);
+  static uint32_t encodeMovn(uint8_t rd, uint16_t imm, uint8_t shift);
+  static uint32_t encodeMovnW(uint8_t rd, uint16_t imm, uint8_t shift);
+  static uint32_t encodeOrrImm64(uint8_t rd, uint8_t rn, uint32_t logicalField);
   static uint32_t encodeFmovDX(uint8_t d, uint8_t x);
   static uint32_t encodeFmovXD(uint8_t x, uint8_t d);
   static uint32_t encodeFmovSW(uint8_t s, uint8_t w);

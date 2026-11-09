@@ -295,6 +295,333 @@ TEST_CASE("optimized native code is only built on Linux x86_64") {
 
 #endif
 
+// arm64 constants take the fewest instructions. A small interpreter of the move forms
+// (MOVZ, MOVN, MOVK, 32-bit MOVN and ORR from xzr) checks that the words build the value.
+namespace {
+
+uint64_t arm64DecodeBitMask(uint32_t n, uint32_t immr, uint32_t imms) {
+  const uint32_t combined = (n << 6) | (~imms & 0x3Fu);
+  uint32_t length = 6;
+  while (length > 0 && (combined & (1u << length)) == 0) {
+    --length;
+  }
+  const uint32_t size = 1u << length;
+  const uint32_t levels = size - 1;
+  const uint32_t ones = (imms & levels) + 1;
+  const uint32_t rotation = immr & levels;
+  const uint64_t elementMask = size == 64 ? ~uint64_t{0} : (uint64_t{1} << size) - 1;
+  const uint64_t run = ones == 64 ? ~uint64_t{0} : (uint64_t{1} << ones) - 1;
+  uint64_t element =
+      rotation == 0 ? run : ((run >> rotation) | (run << (size - rotation))) & elementMask;
+  uint64_t value = 0;
+  for (uint32_t shift = 0; shift < 64; shift += size) {
+    value |= element << shift;
+  }
+  return value;
+}
+
+// The value the words leave in x0, or nothing when a word is not one of the move forms.
+bool arm64RunMoves(const std::vector<uint32_t> &words, uint64_t &x0) {
+  for (const uint32_t word : words) {
+    if ((word & 0x1Fu) != 0) {
+      return false;
+    }
+    const uint64_t imm16 = (word >> 5) & 0xFFFFu;
+    const uint32_t shift = ((word >> 21) & 0x3u) * 16;
+    if ((word & 0xFF800000u) == 0xD2800000u) { // MOVZ x
+      x0 = imm16 << shift;
+    } else if ((word & 0xFF800000u) == 0x92800000u) { // MOVN x
+      x0 = ~(imm16 << shift);
+    } else if ((word & 0xFF800000u) == 0xF2800000u) { // MOVK x
+      x0 = (x0 & ~(uint64_t{0xFFFF} << shift)) | (imm16 << shift);
+    } else if ((word & 0xFFC00000u) == 0x12800000u) { // MOVN w, shift 0 or 16
+      x0 = ~(imm16 << shift) & 0xFFFFFFFFu;
+    } else if ((word & 0xFF8003E0u) == 0xB20003E0u) { // ORR x, xzr, #bitmask
+      x0 = arm64DecodeBitMask((word >> 22) & 1u, (word >> 16) & 0x3Fu, (word >> 10) & 0x3Fu);
+    } else {
+      return false;
+    }
+  }
+  return true;
+}
+
+size_t movWordsNeeded(uint64_t value) {
+  size_t zero = 0;
+  size_t ones = 0;
+  for (int i = 0; i < 4; ++i) {
+    const uint64_t half = (value >> (16 * i)) & 0xFFFFu;
+    zero += half == 0 ? 1 : 0;
+    ones += half == 0xFFFF ? 1 : 0;
+  }
+  return std::max<size_t>(1, 4 - std::max(zero, ones));
+}
+
+} // namespace
+
+TEST_CASE("arm64 constants take one instruction where one encodes them") {
+  struct Expected {
+    uint64_t value;
+    std::vector<uint32_t> words;
+  };
+  // Encodings from the system assembler.
+  const std::vector<Expected> table = {
+      {0, {0xD2800000u}},                                // mov x0, #0
+      {1, {0xD2800020u}},                                // mov x0, #1
+      {~uint64_t{0}, {0x92800000u}},                     // movn x0, #0: -1
+      {0xFFFF0000u, {0xD2BFFFE0u}},                      // movz x0, #0xffff, lsl #16
+      {0x12345678u, {0xD28ACF00u, 0xF2A24680u}},         // movz; movk lsl #16
+      {0x5555555555555555u, {0xB200F3E0u}},              // orr x0, xzr, #0x5555...
+      {0x00FF00FF00FF00FFu, {0xB2009FE0u}},              // orr x0, xzr, #0x00ff...
+      {0x0000FFFFFFFF0000u, {0xB2707FE0u}},              // orr, not movz and movk
+      {0xFFFFFFFFu, {0x12A00000u}},                      // movn w0, #0, lsl #16
+      {0xFFFF1234u, {0x129DB960u}},                      // movn w0, #0xedcb
+      {static_cast<uint64_t>(-2), {0x92800020u}},        // movn x0, #1
+      {0xFFFFFFFF12345678u, {0x929530E0u, 0xF2A24680u}}, // movn x0, #0xa987; movk lsl #16
+      {static_cast<uint64_t>(-4096), {0x9281FFE0u}},     // movn x0, #0xfff
+      {0x8000000000000000u, {0xD2F00000u}},              // movz x0, #0x8000, lsl #48
+      {0x7FFFFFFFFFFFFFFFu, {0x92F00000u}},              // movn x0, #0x8000, lsl #48
+  };
+  for (const Expected &expected : table) {
+    CAPTURE(expected.value);
+    CHECK(primec::testing::arm64ConstantWords(0, expected.value) == expected.words);
+  }
+  // The destination register goes in Rd: mov x26, #42.
+  CHECK(primec::testing::arm64ConstantWords(26, 42) == std::vector<uint32_t>{0xD280055Au});
+}
+
+TEST_CASE("arm64 constants without a short form keep a full move sequence") {
+  // Every half distinct and none 0 or 0xFFFF, and no bitmask: MOVZ plus three MOVKs.
+  for (const uint64_t value : {uint64_t{0x123456789ABCDEF0u},
+                               uint64_t{0x0123456789ABCDEFu},
+                               uint64_t{0xFEDCBA9876543211u}}) {
+    CAPTURE(value);
+    const std::vector<uint32_t> words = primec::testing::arm64ConstantWords(0, value);
+    REQUIRE(words.size() == 4);
+    CHECK((words[0] & 0xFF800000u) == 0xD2800000u);
+    for (size_t i = 1; i < words.size(); ++i) {
+      CHECK((words[i] & 0xFF800000u) == 0xF2800000u);
+    }
+    uint64_t built = 0;
+    REQUIRE(arm64RunMoves(words, built));
+    CHECK(built == value);
+  }
+}
+
+TEST_CASE("arm64 constants build every value in at most the MOVZ or MOVN count") {
+  std::vector<uint64_t> values = {0,
+                                  1,
+                                  ~uint64_t{0},
+                                  0xFFFFu,
+                                  0x10000u,
+                                  0xFFFF0000u,
+                                  0xFFFFFFFFu,
+                                  0x100000000u,
+                                  0x8000000000000000u,
+                                  0x7FFFFFFFFFFFFFFFu,
+                                  0xFFFF0000FFFF0000u,
+                                  0x0000FFFF0000FFFFu,
+                                  0xAAAAAAAAAAAAAAAAu,
+                                  0x0F0F0F0F0F0F0F0Fu,
+                                  0x00000000FFFFFFFEu,
+                                  0xFFFFFFFF00000000u};
+  uint64_t state = 0x9E3779B97F4A7C15u;
+  for (int i = 0; i < 4000; ++i) {
+    state = state * 6364136223846793005u + 1442695040888963407u;
+    uint64_t value = state;
+    // Bias toward the shapes the forms target: clear or set whole halves.
+    const uint64_t halves = (state >> 7) & 0xFFu;
+    for (int half = 0; half < 4; ++half) {
+      const uint64_t mode = (halves >> (2 * half)) & 3u;
+      const uint64_t mask = uint64_t{0xFFFF} << (16 * half);
+      if (mode == 1) {
+        value &= ~mask;
+      } else if (mode == 2) {
+        value |= mask;
+      }
+    }
+    values.push_back(value);
+  }
+  for (const uint64_t value : values) {
+    CAPTURE(value);
+    const std::vector<uint32_t> words = primec::testing::arm64ConstantWords(0, value);
+    uint64_t built = 0x5A5A5A5A5A5A5A5Au;
+    REQUIRE(arm64RunMoves(words, built));
+    CHECK(built == value);
+    CHECK(words.size() <= movWordsNeeded(value));
+  }
+}
+
+TEST_CASE("arm64 stack adjustments take a shifted step and the remainder") {
+  using primec::testing::arm64StackAdjustWords;
+  CHECK(arm64StackAdjustWords(0, false).empty());
+  CHECK(arm64StackAdjustWords(16, false) == std::vector<uint32_t>{0xD10043FFu});
+  CHECK(arm64StackAdjustWords(16, true) == std::vector<uint32_t>{0x910043FFu});
+  // The entry function's 1 MiB value stack and 16 bytes of locals.
+  CHECK(arm64StackAdjustWords(1024 * 1024 + 16, false) ==
+        std::vector<uint32_t>{0xD14403FFu,
+                              0xD10043FFu}); // sub sp, sp, #256, lsl #12; sub sp, sp, #16
+  CHECK(arm64StackAdjustWords(1024 * 1024 + 16, true) ==
+        std::vector<uint32_t>{0x914403FFu, 0x910043FFu});
+  CHECK(arm64StackAdjustWords(4096, false) == std::vector<uint32_t>{0xD14007FFu});
+  // More than 0xFFF pages takes several shifted steps.
+  const std::vector<uint32_t> large =
+      arm64StackAdjustWords((uint64_t{0xFFF} << 12) + (uint64_t{2} << 12), false);
+  CHECK(large == std::vector<uint32_t>{0xD17FFFFFu, 0xD1400BFFu});
+}
+
+TEST_CASE("arm64 integer constants become immediate operands of add, sub and compares") {
+  using primec::IrOpcode;
+  const auto opWord = [](IrOpcode op, uint64_t constant, uint32_t &word) {
+    std::vector<uint32_t> words;
+    if (!primec::testing::arm64ImmediateOperandWords(op, constant, words)) {
+      return false;
+    }
+    // ldr x0, [x28, #8]; add x28, x28, #16 (the pop), then the operation.
+    REQUIRE(words.size() >= 3);
+    word = words[2];
+    return true;
+  };
+  uint32_t word = 0;
+  REQUIRE(opWord(IrOpcode::AddI64, 1, word));
+  CHECK(word == 0x91000400u); // add x0, x0, #1
+  REQUIRE(opWord(IrOpcode::AddI32, static_cast<uint64_t>(-1), word));
+  CHECK(word == 0xD1000400u); // sub x0, x0, #1
+  REQUIRE(opWord(IrOpcode::SubI64, 1, word));
+  CHECK(word == 0xD1000400u); // sub x0, x0, #1
+  REQUIRE(opWord(IrOpcode::AddI64, 4 << 12, word));
+  CHECK(word == 0x91401000u); // add x0, x0, #4, lsl #12
+  REQUIRE(opWord(IrOpcode::CmpLtI64, 10, word));
+  CHECK(word == 0xF100281Fu); // cmp x0, #10
+  REQUIRE(opWord(IrOpcode::CmpEqI32, static_cast<uint64_t>(-1), word));
+  CHECK(word == 0xB100041Fu); // cmn x0, #1
+  REQUIRE(opWord(IrOpcode::CmpGeU64, 4096, word));
+  CHECK(word == 0xF140041Fu); // cmp x0, #1, lsl #12
+
+  // Adding or subtracting 0 leaves the operand alone: no words at all.
+  std::vector<uint32_t> words{1};
+  CHECK(primec::testing::arm64ImmediateOperandWords(IrOpcode::AddI64, 0, words));
+  CHECK(words.empty());
+  CHECK(primec::testing::arm64ImmediateOperandWords(IrOpcode::SubI32, 0, words));
+  CHECK(words.empty());
+
+  // A compare's 0 or 1 is one MOVZ each, around a B.cond that skips to the 1.
+  REQUIRE(primec::testing::arm64ImmediateOperandWords(IrOpcode::CmpGtI32, 0, words));
+  CHECK(words == std::vector<uint32_t>{0xF9400780u,
+                                       0x9100439Cu,
+                                       0xF100001Fu,
+                                       0x5400006Cu,
+                                       0xD2800000u,
+                                       0x14000002u,
+                                       0xD2800020u,
+                                       0xD100439Cu,
+                                       0xF9000780u});
+}
+
+TEST_CASE("arm64 constants without an immediate form stay register operands") {
+  using primec::IrOpcode;
+  std::vector<uint32_t> words;
+  // Neither the constant nor its negation fits 12 bits, plain or shifted.
+  CHECK_FALSE(primec::testing::arm64ImmediateOperandWords(IrOpcode::AddI64, 0x1001, words));
+  CHECK_FALSE(primec::testing::arm64ImmediateOperandWords(IrOpcode::SubI64, 0x1000001, words));
+  CHECK_FALSE(primec::testing::arm64ImmediateOperandWords(IrOpcode::CmpLtI64, 0x123456, words));
+  // The most negative value has no CMN form: its negation is itself.
+  CHECK_FALSE(
+      primec::testing::arm64ImmediateOperandWords(IrOpcode::CmpEqI64, uint64_t{1} << 63, words));
+  // Only integer add, sub and compares take immediates.
+  CHECK_FALSE(primec::testing::arm64ImmediateOperandWords(IrOpcode::MulI64, 2, words));
+  CHECK_FALSE(primec::testing::arm64ImmediateOperandWords(IrOpcode::CmpLtF64, 0, words));
+  CHECK_FALSE(primec::testing::arm64ImmediateOperandWords(IrOpcode::DivI64, 1, words));
+}
+
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
+// The constant forms and immediate operands run: every add, sub and comparison of edge values with
+// edge constants prints what the VM prints.
+TEST_CASE("arm64 native constants and immediate operands match the VM") {
+  using primec::IrInstruction;
+  using primec::IrOpcode;
+  const std::vector<uint64_t> lefts = {0,
+                                       1,
+                                       static_cast<uint64_t>(-1),
+                                       4095,
+                                       4096,
+                                       0x7FFFFFFFFFFFFFFFu,
+                                       0x8000000000000000u,
+                                       0xFFFFFFFFu,
+                                       static_cast<uint64_t>(-4096)};
+  const std::vector<uint64_t> constants = {0,
+                                           1,
+                                           static_cast<uint64_t>(-1),
+                                           4095,
+                                           4096,
+                                           0xFFF000,
+                                           0x1001,
+                                           static_cast<uint64_t>(-4095),
+                                           static_cast<uint64_t>(-4096),
+                                           0x8000000000000000u,
+                                           0x7FFFFFFFFFFFFFFFu,
+                                           0xFFFF0000u,
+                                           0x5555555555555555u,
+                                           0x123456789ABCDEF0u};
+  const std::vector<IrOpcode> ops = {IrOpcode::AddI64,
+                                     IrOpcode::SubI64,
+                                     IrOpcode::CmpEqI64,
+                                     IrOpcode::CmpNeI64,
+                                     IrOpcode::CmpLtI64,
+                                     IrOpcode::CmpLeI64,
+                                     IrOpcode::CmpGtI64,
+                                     IrOpcode::CmpGeI64,
+                                     IrOpcode::CmpLtU64,
+                                     IrOpcode::CmpLeU64,
+                                     IrOpcode::CmpGtU64,
+                                     IrOpcode::CmpGeU64};
+  std::vector<IrInstruction> body;
+  for (const uint64_t left : lefts) {
+    for (const uint64_t constant : constants) {
+      for (const IrOpcode op : ops) {
+        body.push_back({IrOpcode::PushI64, left});
+        body.push_back({IrOpcode::PushI64, constant});
+        body.push_back({op, 0});
+        body.push_back({IrOpcode::PrintI64, 1});
+      }
+    }
+  }
+  // i32 forms: a sign-extended constant on a sign-extended operand.
+  for (const int32_t left : {0, 1, -1, 2147483647, -2147483647 - 1}) {
+    for (const int32_t constant : {0, 1, -1, 4095, -4096, 2147483647, -2147483647 - 1}) {
+      for (const IrOpcode op :
+           {IrOpcode::AddI32, IrOpcode::SubI32, IrOpcode::CmpLtI32, IrOpcode::CmpEqI32}) {
+        body.push_back({IrOpcode::PushI32, static_cast<uint64_t>(static_cast<uint32_t>(left))});
+        body.push_back({IrOpcode::PushI32, static_cast<uint64_t>(static_cast<uint32_t>(constant))});
+        body.push_back({op, 0});
+        body.push_back({IrOpcode::SextI32, 0});
+        body.push_back({IrOpcode::PrintI64, 1});
+      }
+    }
+  }
+  body.push_back({IrOpcode::PushI32, 7});
+  body.push_back({IrOpcode::ReturnI32, 0});
+  primec::IrModule module;
+  module.entryIndex = 0;
+  module.functions.push_back(optimizer_test::functionOf("/main", std::move(body)));
+
+  const optimizer_test::Outcome vm = optimizer_test::run(module);
+  REQUIRE_MESSAGE(vm.ok, vm.error);
+  const std::filesystem::path binary =
+      primec::testing::testScratchPath("native_codegen/arm64_immediates");
+  std::filesystem::create_directories(binary.parent_path());
+  std::string error;
+  REQUIRE_MESSAGE(primec::NativeEmitter().emitExecutable(module, binary.string(), error), error);
+  const std::filesystem::path outPath = binary.string() + ".stdout";
+  const int status =
+      std::system(("'" + binary.string() + "' > '" + outPath.string() + "' 2>/dev/null").c_str());
+  CHECK((WIFEXITED(status) ? WEXITSTATUS(status) : -1) == 7);
+  std::ifstream file(outPath, std::ios::binary);
+  std::stringstream buffer;
+  buffer << file.rdbuf();
+  CHECK(buffer.str() == vm.output);
+}
+#endif
+
 // TODO-5483: the arm64 backend cannot run here, so its encodings are pinned. SextI32 is SXTW x0,
 // w0 (SBFM x0, x0, #0, #31). Float comparisons branch on the fcmp flags with the conditions that
 // are false for an unordered pair: EQ, NE (true), MI for <, LS for <=, GT and GE.

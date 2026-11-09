@@ -104,8 +104,7 @@ of sync with them.
 | TODO-5739 | Large struct copies lower to a slot loop | ready | ir-struct-copies |
 | TODO-5752 | x86_64 native and the Linux JIT take the address ABI of real calls | deferred | native-real-calls |
 | TODO-5741 | `string` parameters become real calls on the VM and optexe | ready | ir-real-calls |
-| TODO-5770 | arm64 native constants take one instruction where they fit | ready | native-arm64-isel |
-| TODO-5771 | arm64 template operands stay in the register that computed them | blocked | native-arm64-isel |
+| TODO-5771 | arm64 template operands stay in the register that computed them | ready | native-arm64-isel |
 | TODO-5772 | arm64 native allocates registers for integer code | ready | native-arm64-regalloc |
 | TODO-5773 | arm64 register allocation keeps floats in d-registers | blocked | native-arm64-regalloc |
 | TODO-5774 | arm64 register allocation spans calls and passes arguments in registers | blocked | native-arm64-regalloc |
@@ -204,7 +203,7 @@ of sync with them.
 4. TODO-5510
 5. TODO-5524
 6. TODO-5728
-7. TODO-5770
+7. TODO-5772
 
 ### Priority Lanes
 
@@ -221,16 +220,16 @@ of sync with them.
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719; collection fields found by closures and the todo example: TODO-5681, TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
 - Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5738, TODO-5718
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732, TODO-5735, TODO-5736, TODO-5737
-- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe; real calls and struct copies TODO-5739, TODO-5741, TODO-5752; native code quality (section 12, after the startup lane) TODO-5770, TODO-5772, TODO-5777, TODO-5776, TODO-5771, TODO-5774, TODO-5773, TODO-5775
-- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane and TODO-5770, TODO-5772): TODO-5807, TODO-5790, TODO-5791, TODO-5792, TODO-5793, TODO-5794, TODO-5795, TODO-5796, TODO-5797, TODO-5798, TODO-5656, TODO-5802, TODO-5803, TODO-5799, TODO-5800, TODO-5801; deferred TODO-5804, TODO-5805, TODO-5806
+- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe; real calls and struct copies TODO-5739, TODO-5741, TODO-5752; native code quality (section 12, after the startup lane) TODO-5772, TODO-5777, TODO-5776, TODO-5771, TODO-5774, TODO-5773, TODO-5775
+- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane and TODO-5772): TODO-5807, TODO-5790, TODO-5791, TODO-5792, TODO-5793, TODO-5794, TODO-5795, TODO-5796, TODO-5797, TODO-5798, TODO-5656, TODO-5802, TODO-5803, TODO-5799, TODO-5800, TODO-5801; deferred TODO-5804, TODO-5805, TODO-5806
 
 ### Execution Queue
 
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
-Native code quality (docs/OptimizingBackendsPlan.md section 12), after the startup lane, in this order: TODO-5770 (one-instruction constants, about 22% less native code), TODO-5772 (arm64 register allocation for integer code, about 5x on scalar loops), TODO-5777 (IR dumps for the `--emit` target), TODO-5776 (`local-sroa`: non-escaping local addresses become local accesses), TODO-5771 (template operand cache and compare-branch fusion), TODO-5774 (registers across calls), TODO-5773 (floats in d-registers), TODO-5775 (address-taking functions).
+Native code quality (docs/OptimizingBackendsPlan.md section 12), after the startup lane, in this order (TODO-5770, one-instruction constants, is done: 39% less native code), TODO-5772 (arm64 register allocation for integer code, about 5x on scalar loops), TODO-5777 (IR dumps for the `--emit` target), TODO-5776 (`local-sroa`: non-escaping local addresses become local accesses), TODO-5771 (template operand cache and compare-branch fusion), TODO-5774 (registers across calls), TODO-5773 (floats in d-registers), TODO-5775 (address-taking functions).
 
-Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane and after TODO-5770 and TODO-5772 above; not above them in Ready Now or Immediate Next 10. In this order: TODO-5807 (destructure multi-wait results), TODO-5790 (sendable spawn arguments, checked by type), TODO-5791 (every `Function` sendable by construction), TODO-5792 (VM tasks under a deterministic scheduler; `TaskSpawn`/`TaskWait` IR), TODO-5793 (byte-region checks without a map search), TODO-5794 (`optexe` per-thread heap arenas), TODO-5795 (`optexe` threads for `[spawn]`), TODO-5796 (`Atomic`), TODO-5797 (`Mutex`), TODO-5798 (`Channel`), TODO-5656 (atomic `SharedString` count), TODO-5802 (`serveWorkers`), TODO-5803 (apps on workers, measured), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5807, TODO-5790, TODO-5792 and TODO-5793 are ready and independent of each other. Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions).
+Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane and after TODO-5772 above; not above them in Ready Now or Immediate Next 10. In this order: TODO-5807 (destructure multi-wait results), TODO-5790 (sendable spawn arguments, checked by type), TODO-5791 (every `Function` sendable by construction), TODO-5792 (VM tasks under a deterministic scheduler; `TaskSpawn`/`TaskWait` IR), TODO-5793 (byte-region checks without a map search), TODO-5794 (`optexe` per-thread heap arenas), TODO-5795 (`optexe` threads for `[spawn]`), TODO-5796 (`Atomic`), TODO-5797 (`Mutex`), TODO-5798 (`Channel`), TODO-5656 (atomic `SharedString` count), TODO-5802 (`serveWorkers`), TODO-5803 (apps on workers, measured), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5807, TODO-5790, TODO-5792 and TODO-5793 are ready and independent of each other. Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions).
 
 ### Task Blocks
 
@@ -282,24 +281,9 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
     - full release gate green
   - stop_rule: `string` parameters of real calls only.
 
-- [ ] TODO-5770: arm64 native constants take one instruction where they fit
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-09
-  - phase: Optimizing backends, native code quality (docs/OptimizingBackendsPlan.md section 12)
-  - parallel_track: native-arm64-isel
-  - scope: `Arm64Emitter::emitMovImm64` always writes `movz` and three `movk`, so 0 or 1 is four instructions; `movk xN, #0` is 22% of PrimeScroll's `__text` (42,845 of 192,191 words). Emit `movz` or `movn` plus only the `movk`s whose half differs, use the 12-bit add/sub/cmp immediate forms when a pushed constant feeds AddI*/SubI*/Cmp*, and make `emitAdjustSp` use `#imm, lsl #12` plus a remainder (the entry function's 1 MB value stack is 257 `sub sp` today, and as many `add sp` at every return).
-  - implementation_notes: src/native_emitter/NativeEmitterInternalsArm64Core.h (`emitMovImm64`, `emitAdjustSp`), NativeEmitterInternalsArm64Arithmetic.h; pin the new encodings in `primestruct.ir.native_codegen` through `primec/testing/NativeEmitterEncodings.h`. Measure with `otool -tv` and `/usr/bin/time -l` (instructions retired), as in section 12.
-  - acceptance:
-    - PrimeScroll (`primec --emit=native examples/apps/text_editor/main.prime`) `__text` at most 610 KB (2026-11-09: 768,764 bytes)
-    - `benchmarks/aggregate.prime` native retires at least 15% fewer instructions (2026-11-09: 467.7M); every benchmark prints the same result
-    - full release gate green on macOS arm64
-  - stop_rule: constant materialization, immediate operand forms and stack-pointer adjustment only; no change to the value-stack cache.
-
 - [ ] TODO-5771: arm64 template operands stay in the register that computed them
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5770
+  - status: ready
   - created_at: 2026-11-09
   - phase: Optimizing backends, native code quality (docs/OptimizingBackendsPlan.md section 12)
   - parallel_track: native-arm64-isel

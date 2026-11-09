@@ -6,7 +6,8 @@ semantics, local escape analysis, five passes (see `docs/spec/source-pipeline.md
 the `optexe`/`optcpp` emit kinds (section 9.1), the flat VM kernel with fused instructions (Phase 4), and register
 locals plus deferred operands in the x86_64 native emitter (Phase 3, first steps). Not started: the register form,
 a full register-allocating native code generator, and arm64 versions of the native steps. Section 12 (2026-11-09)
-measures what the arm64 native code costs today and ranks the next steps (TODO-5770..5777).
+measures what the arm64 native code costs today and ranks the next steps (TODO-5770..5777); TODO-5770
+(one-instruction constants) is done, 12.6.
 
 This document records what the direct native backend (`--emit=native`) and the PrimeScript
 VM (`--emit=vm`, `primevm`) do today, why they are slow, and a phased plan to
@@ -1292,3 +1293,37 @@ changes pick an encoding from the value alone. Nothing reads timing, host addres
 Recommended order: TODO-5770 first (small, shrinks every native binary including PrimeScroll, no risk to the startup
 work), then the register allocator for integer code (TODO-5772), where most of the speed is. TODO-5777 and TODO-5776
 make struct and vector code eligible, then TODO-5771, TODO-5774, TODO-5773 and TODO-5775.
+
+### 12.6 Result: one-instruction constants (TODO-5770, 2026-11-09)
+
+`Arm64Emitter::emitMovImm64` now writes `movz` or `movn` of one half plus a `movk` only for each half that differs
+from the background (0 or 0xFFFF), `movn w` for a 32-bit value with one 0xFFFF half, and `orr xN, xzr, #bitmask`
+when the value is a logical immediate and both move forms need two or more words. A constant push builds its value
+straight in the cache register x26. A `PushI32`/`PushI64` that feeds `AddI*`/`SubI*` or an integer comparison (and is
+not a branch target) becomes that instruction's 12-bit immediate (`add`/`sub`/`cmp`, `#imm, lsl #12`, or the negated
+constant through `sub`/`add`/`cmn`); adding or subtracting 0 emits nothing. `emitAdjustSp` moves the stack pointer by
+`#pages, lsl #12` and then the low 12 bits, so the entry function's 1 MB value stack is two instructions instead of
+257. The compare templates branch over the actual length of their 0 and 1 constants instead of fixed offsets. The
+encodings are pinned in `primestruct.ir.native_codegen` (expected words from the system assembler, an interpreter of
+the move forms over 4,000 values, and a native run of every add, sub and comparison of edge values against the VM).
+
+Measured with the release `primec` before (f13448ea9) and after, macOS arm64 (M3 Pro); instructions retired are
+deterministic; cycles are the lowest of five runs, base and new back to back at load average 11.9 to 12.2:
+
+| | before | after | change |
+| --- | --- | --- | --- |
+| PrimeScroll `__text` (bytes) | 787,480 | 483,008 | -38.7% |
+| PrimeScroll executable (bytes) | 824,362 | 512,458 | -37.8% |
+| PrimeScroll arm64 instructions | 196,870 | 120,752 | -38.7% |
+| PrimeScroll `movk #0` / `sub sp` and `add sp` | 43,931 / 2,167 | 0 / 273 | |
+| aggregate instructions retired (M) | 469.0 | 317.8 | -32.2% |
+| call_fib | 486.5 | 337.8 | -30.6% |
+| float_series | 1941.0 | 1436.1 | -26.0% |
+| json_scan | 736.7 | 448.6 | -39.1% |
+| json_parse | 990.5 | 564.3 | -43.0% |
+| aggregate cycles (M) | 79.4 | 53.4 | 1.49x fewer |
+| call_fib / float_series / json_scan / json_parse cycles (M) | 100.4 / 462.2 / 110.9 / 145.1 | 83.7 / 418.9 / 92.2 / 109.0 | 1.1-1.33x fewer |
+
+PrimeScroll's `__text` had grown from the 768,764 bytes of 12.1 to 787,480 by the time of the change. Every benchmark
+prints the same result. The rest of 12.1's shape is unchanged: the x0/x26 shuffles, the value-stack bumps and the
+two-word conditional branches are TODO-5771.
