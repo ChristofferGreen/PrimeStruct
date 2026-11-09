@@ -109,7 +109,6 @@ of sync with them.
 | TODO-5708 | Type aliases | deferred | type-aliases |
 | TODO-5745 | A labeled value that is a call parses in every position | ready | parser-labeled-values |
 | TODO-5746 | A parameterless `mut` method whose body is only bindings is a method | ready | diagnostics |
-| TODO-5749 | PrimeScroll on handlers uses no more memory than its loop did | ready | native-ui-memory |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
 | TODO-5656 | Thread-safe `SharedString` (atomic count, per-thread string heaps) | deferred | string-concurrency |
 | TODO-5603 | Startup audit: what a launch loads and does | ready | startup |
@@ -162,7 +161,6 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5749 (native-ui-memory): PrimeScroll on handlers uses no more memory than its loop did
 - TODO-5603 (startup): startup audit: what a launch loads and does
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
@@ -172,18 +170,17 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5749
-2. TODO-5603
-3. TODO-5536
-4. TODO-5535
-5. TODO-5510
-6. TODO-5524
-7. TODO-5728
+1. TODO-5603
+2. TODO-5536
+3. TODO-5535
+4. TODO-5510
+5. TODO-5524
+6. TODO-5728
 
 ### Priority Lanes
 
 - Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5656
-- Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5749, TODO-5586
+- Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Startup (docs/NativeUiPlan.md section 16): TODO-5603
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
@@ -323,19 +320,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - the case of tests/unit compiles as a method, or fails with a diagnostic that names the field-only reading; spec text matches
     - full release gate green
   - stop_rule: the field-only rule and its diagnostic.
-
-- [ ] TODO-5749: PrimeScroll on handlers uses no more memory than its loop did
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-08
-  - phase: Native PrimeScroll, direct native backend (found in TODO-5710)
-  - parallel_track: native-ui-memory
-  - scope: Since TODO-5710 the headless editor's peak memory footprint (`/usr/bin/time -l`, scenario `close:1`) is 3.0 MB natively against 1.6 MB before, and 2.0 MB against 1.5 MB with optexe; the AppKit native editor's peak resident set is 118.1 MB against 114.3 MB, with the same time to the first window. The likely cause is frame size: the native backend inlines `AppHandlers.run`, every closure (twice per `Function` call) and their `Editor` methods into a few functions whose frames hold every inlined local. Measure where the memory goes (frame sizes of `main` and the `Function` call bodies, heap blocks of the handler vectors) and cut it, for example by reusing the slots of inlined scopes that have ended.
-  - acceptance:
-    - the editor's native and optexe peak footprint is back within 0.2 MB of the loop version, measured the same way; the editor scenarios keep their call logs
-    - full release gate green
-  - stop_rule: the memory of the handler dispatch; no change to the handler API.
-  - notes: measurements and the split in docs/todo_log.md (TODO-5749).
 
 - [ ] TODO-5688: Calls require the callee's whole active effect set
   - owner: ai
@@ -705,7 +689,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - acceptance:
     - the string_heap program of tests/unit/backend_host/test_cpp_strings.cpp (reuse and figures) also runs through `--emit=native` with the VM's exit codes; a 100000-String loop uses no more than a few MB; full release gate green
   - stop_rule: the native String heap's allocator and its statistics.
-  - notes: deferred to keep Ready Now at eight. PrimeScroll ships from the native build, so every String it makes takes a mapping of its own; the writable data segment this needs exists (`MachOData::stateBytes`), and since TODO-5750 slot blocks are pooled there (src/native_emitter/NativeEmitterInternalsArm64Heap.h: chunks shared by all size classes, free lists in the data segment), which text blocks could share.
+  - notes: deferred to keep Ready Now at eight. PrimeScroll ships from the native build, so every String it makes takes a mapping of its own; the writable data segment this needs exists (`MachOData::stateBytes`), and since TODO-5750 slot blocks are pooled there (src/native_emitter/NativeEmitterInternalsArm64Heap.h: chunks shared by all size classes, free lists in the data segment), which text blocks could share. After TODO-5749 the text blocks are most of what native PrimeScroll on handlers still holds above its loop version (untagged dirty memory 0.41 MB in 11 regions against 0.28 MB in 5, of a 0.2 MB footprint gap).
 
 - [ ] TODO-5536: Small, lazily loaded bytecode for apps
   - owner: ai
