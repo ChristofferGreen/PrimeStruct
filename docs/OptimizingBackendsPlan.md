@@ -1101,7 +1101,9 @@ PrimeScroll's 43 registrations copied the vector push and growth code. They are 
 closure. PrimeScroll on the VM target: 121,989 lowered instructions to 58,274 (44,950 after the optimizer, from
 107,534); its `--emit=optcpp` source 2.38 MB to 1.17 MB and its optexe headless build 1.26 MB to 1.03 MB. The web
 examples take no closures by `move` and are unchanged (todo_web 1.38 MB, hello_button 1.25 MB, web_app 0.92 MB,
-http_hello 0.75 MB); native has no address ABI yet (TODO-5740), so the native editor stays at 5.7 MB.
+http_hello 0.75 MB); native has no address ABI yet (TODO-5740), so the native editor stays at 5.7 MB. Since
+TODO-5740 the arm64 native backend takes the address ABI too: the native editor went from 5.39 MB to 0.79 MB (after
+the pooled heap of TODO-5750), its loop version from 2.19 MB to 0.36 MB.
 
 Suggested order: Phase 0.1-0.3 (flags, pass manager, dumps), Phase 1.1
 (shared CFG), then this emitter (done), then the matrix runner (0.5) to run the corpus through it. Phase 3

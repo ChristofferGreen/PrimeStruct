@@ -102,14 +102,14 @@ of sync with them.
 | --- | --- | --- | --- |
 | TODO-5738 | Sum results return through the caller's block in real calls | ready | ir-real-calls |
 | TODO-5739 | Large struct copies lower to a slot loop | ready | ir-struct-copies |
-| TODO-5740 | Native and the Linux JIT number local addresses across frames | deferred | native-real-calls |
+| TODO-5752 | x86_64 native and the Linux JIT take the address ABI of real calls | deferred | native-real-calls |
 | TODO-5741 | `string` parameters become real calls on the VM and optexe | ready | ir-real-calls |
 | TODO-5727 | Every struct copy site tells a place from a temporary by resolution | deferred | lifecycle-copy-sources |
 | TODO-5707 | `Function` types accept `mut` parameters | deferred | closures-mut-params |
 | TODO-5708 | Type aliases | deferred | type-aliases |
 | TODO-5745 | A labeled value that is a call parses in every position | ready | parser-labeled-values |
 | TODO-5746 | A parameterless `mut` method whose body is only bindings is a method | ready | diagnostics |
-| TODO-5749 | PrimeScroll on handlers uses no more memory than its loop did | blocked | native-ui-memory |
+| TODO-5749 | PrimeScroll on handlers uses no more memory than its loop did | ready | native-ui-memory |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
 | TODO-5656 | Thread-safe `SharedString` (atomic count, per-thread string heaps) | deferred | string-concurrency |
 | TODO-5603 | Startup audit: what a launch loads and does | ready | startup |
@@ -162,6 +162,7 @@ of sync with them.
 
 ### Ready Now
 
+- TODO-5749 (native-ui-memory): PrimeScroll on handlers uses no more memory than its loop did
 - TODO-5603 (startup): startup audit: what a launch loads and does
 - TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
@@ -171,17 +172,18 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5603
-2. TODO-5536
-3. TODO-5535
-4. TODO-5510
-5. TODO-5524
-6. TODO-5728
+1. TODO-5749
+2. TODO-5603
+3. TODO-5536
+4. TODO-5535
+5. TODO-5510
+6. TODO-5524
+7. TODO-5728
 
 ### Priority Lanes
 
 - Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5656
-- Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5749 (blocked on TODO-5740), TODO-5586
+- Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5749, TODO-5586
 - - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Startup (docs/NativeUiPlan.md section 16): TODO-5603
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
@@ -194,7 +196,7 @@ of sync with them.
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719; collection fields found by closures and the todo example: TODO-5681, TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
 - Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5738, TODO-5718
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732, TODO-5735, TODO-5736, TODO-5737
-- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe; real calls and struct copies TODO-5739, TODO-5740, TODO-5741
+- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe; real calls and struct copies TODO-5739, TODO-5741, TODO-5752
 
 ### Execution Queue
 
@@ -226,18 +228,17 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - full release gate green
   - stop_rule: struct slot copies only.
 
-- [ ] TODO-5740: Native and the Linux JIT number local addresses across frames
+- [ ] TODO-5752: x86_64 native and the Linux JIT take the address ABI of real calls
   - owner: ai
   - status: deferred
-  - created_at: 2026-11-08
-  - phase: Optimizing backends (found while finishing TODO-5734)
+  - created_at: 2026-11-09
+  - phase: Optimizing backends (split from TODO-5740)
   - parallel_track: native-real-calls
-  - scope: The address ABI of real calls (docs/spec/vm-design.md, Real calls) needs a local address to name the same slot in every frame. The VM and optcpp/optexe do that now; `--emit=native` and the Linux x86_64 JIT still resolve a local address against the current frame, so native keeps the scalar ABI (struct methods inline) and the JIT refuses a module with a function that takes a local address and calls. Give native frames real stack addresses (or the VM numbering) and enable the address ABI there. Deferred: web apps build with optexe; no native web target yet.
+  - scope: Since TODO-5740 the arm64 native backend takes the address ABI of real calls (docs/spec/vm-design.md, Real calls): its locals live at machine addresses in frames that stay in place while callees run, so the lowering sets `realCallAllowStructs` for `IrValidationTarget::Native` on an arm64 macOS host only (src/ir_lowerer/IrLowererLowerSetupStage.cpp). The x86_64 native backend also addresses locals by machine address (rbp-relative), but its register allocator and local promotion were never run with cross-frame addresses, and the Linux JIT translates VM-numbered addresses against the current frame and refuses a function that takes a local address and calls. Enable the address ABI for x86_64 native (checking that address-taken locals stay in memory across calls) and number the JIT's local addresses across frames as the VM does. Deferred: needs a Linux x86_64 machine to run.
   - acceptance:
-    - native and JIT run the real-call matrix cases with struct, `mut` and Reference parameters; the native web_app build is measured
-    - full release gate green
-  - stop_rule: local addressing and real-call shapes on native and the JIT.
-  - notes: since TODO-5710 PrimeScroll's native build (the installed app) inlines its whole handler dispatch: each `Editor` method into its closure, and every closure of a `Function` type at each call site of that type; `AppHandlers.run` calls each handler vector from one place to keep that to one copy, and TODO-5747 drops the unused copies.
+    - x86_64 native and the JIT run the real-call program-matrix cases (struct, `mut` and Reference parameters, struct results, runtime errors) with real calls; the JIT no longer refuses such modules
+    - full release gate green on Linux x86_64
+  - stop_rule: local addressing and real calls on x86_64 native and the JIT.
 
 - [ ] TODO-5741: `string` parameters become real calls on the VM and optexe
   - owner: ai
@@ -325,8 +326,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 
 - [ ] TODO-5749: PrimeScroll on handlers uses no more memory than its loop did
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5740
+  - status: ready
   - created_at: 2026-11-08
   - phase: Native PrimeScroll, direct native backend (found in TODO-5710)
   - parallel_track: native-ui-memory

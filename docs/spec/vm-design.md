@@ -41,9 +41,11 @@
   `LoadIndirect`/`StoreIndirect`. An address beyond the live frames faults (`invalid indirect address in IR`).
   Indirect addresses must be 16-byte aligned. The step kernel resolves a local address against the current frame first
   and then the frames below it; the fast kernel and the optimized C++ emitter keep the same numbering (the fast kernel's
-  locals arena is laid out that way, and generated C++ registers each addressable frame). The native backends and the
-  Linux JIT still resolve local addresses against the current frame; the JIT refuses a function that takes a local
-  address and calls.
+  locals arena is laid out that way, and generated C++ registers each addressable frame). The arm64 native backend
+  uses machine addresses: a local's address is its place in its frame on the machine stack, and a caller's frame stays
+  in place while its callees run, so it too names the same slot in every frame. The x86_64 native backend and the Linux
+  JIT still resolve local addresses against the current frame (TODO-5752); the JIT refuses a function that takes a
+  local address and calls.
 - **Heap:** `HeapAlloc`/`HeapRealloc` return heap addresses `bit 63 | generation << 48 | slot * 16` (generation in bits
   48-62, slot offset in bits 0-47; zero slots allocate nothing and return 0). A live allocation never moves, so an
   address a program has seen stays valid until the program frees or reallocates that allocation; `HeapRealloc` returns
@@ -149,9 +151,9 @@
 - **Deployment target:** the VM serves as the sandboxed runtime for user-supplied scripts (e.g., on iOS) where native
   code generation is unavailable. Effect masks and capabilities enforce per-platform restrictions.
 
-- Real calls: the VM and the optimizing C++ emitters (`optcpp`, `optexe`) lower a definition once as a function and
-  call it from every call site when its body is more than a tiny leaf (more than two statements or more than 12
-  expression nodes; a tiny leaf stays inline unless it is recursive) and its shape allows it (below).
+- Real calls: the VM, the optimizing C++ emitters (`optcpp`, `optexe`) and the arm64 native backend lower a definition
+  once as a function and call it from every call site when its body is more than a tiny leaf (more than two statements
+  or more than 12 expression nodes; a tiny leaf stays inline unless it is recursive) and its shape allows it (below).
   The first call site that meets such a definition reserves it, so every definition the program reaches is decided,
   not only those with two static call sites. Arguments pass by the address ABI: the call site binds the parameters
   exactly as an inlined call would, in its own frame, and passes each parameter local's value - a scalar, or the

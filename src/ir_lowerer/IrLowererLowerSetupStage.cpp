@@ -48,8 +48,19 @@ bool runLowerSetupStage(const LowerSetupStageInput &input,
   stateOut.allowDynamicStrings = input.validationTarget == IrValidationTarget::Vm;
   stateOut.realCallEligibleOrder.clear();
   stateOut.realCallReservationIndex.clear();
-  stateOut.realCallAllowStructs = input.validationTarget == IrValidationTarget::Vm ||
-                                  input.validationTarget == IrValidationTarget::OptCpp;
+  // The address ABI needs a local address that names the same slot in every frame: the VM and optcpp number all live
+  // locals, and the arm64 native backend addresses locals by their machine address (a caller's frame stays in place
+  // while its callees run). The x86_64 native backend and its JIT keep the scalar ABI for now (TODO-5752).
+  constexpr bool NativeHasFrameAddresses =
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
+      true;
+#else
+      false;
+#endif
+  stateOut.realCallAllowStructs =
+      input.validationTarget == IrValidationTarget::Vm ||
+      input.validationTarget == IrValidationTarget::OptCpp ||
+      (NativeHasFrameAddresses && input.validationTarget == IrValidationTarget::Native);
   {
     std::vector<std::string> ordered;
     for (const std::string &path : computeRealCallEligibleDefinitionPaths(

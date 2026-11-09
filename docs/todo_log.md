@@ -38,6 +38,9 @@ open-work-only scope rule as `docs/todo.md` itself.
   in-place growth): optexe median 1.75 MB against 1.57 MB (15 runs
   each; 1.88 MB before). The heap's touched slot storage is 64 KB; the
   rest of the gap is main's larger frame and allocator noise.
+- 2026-11-09, after TODO-5740 (address ABI on arm64 native): native
+  median 1.70 MB against 1.52 MB (15 runs each); executables 0.79 MB
+  and 0.36 MB.
 
 ## TODO-4737
 

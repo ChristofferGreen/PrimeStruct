@@ -93,9 +93,9 @@ namespace native {
   // The state of a native app and the handlers of its controls. Build it with the state (`AppHandlers<Counter>{[state]
   // Counter{}}`), register the handlers while the windows are set up, and pass it to `app.run(handlers)`.
   //
-  // The handlers of one type sit in one vector and `run` calls each vector from one place: the native backend inlines
-  // a `Function` call with every closure of its type, at each call site (struct methods are not real calls there yet,
-  // TODO-5740), so an app's handlers are compiled once. The keys (widgets, kinds, command ids) are vectors of their
+  // The handlers of one type sit in one vector and `run` calls each vector from one place: a target without real calls
+  // for struct methods (x86_64 native, TODO-5752) inlines a `Function` call with every closure of its type at each call
+  // site, so an app's handlers are compiled once there. The keys (widgets, kinds, command ids) are vectors of their
   // own: reading a `u64` or `i32` field of an element after the first faults on the VM (TODO-5733).
   [public struct]
   AppHandlers<State>() {

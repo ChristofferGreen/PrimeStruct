@@ -222,7 +222,7 @@ main() {
   CHECK(error.find("recursive") != std::string::npos);
 }
 
-TEST_CASE("native backend rejects recursive definition calls with a mut out-parameter") {
+TEST_CASE("native backend keeps the writeback of a recursive mut out-parameter") {
   // Regression test: [T mut] is PrimeStruct's out-parameter mechanism (the
   // inline path passes the caller's local by address, so mutations are
   // visible to the caller after the call returns - see e.g.
@@ -231,7 +231,10 @@ TEST_CASE("native backend rejects recursive definition calls with a mut out-para
   // name, so this recursive definition was treated as an ordinary eligible
   // scalar and got a real Call that copies by value into a separate locals
   // array, silently discarding the writeback. Now excluded, keeping the
-  // same fallback rejection as before real-call support existed.
+  // same fallback rejection as before real-call support existed. Where the
+  // native backend takes the address ABI (arm64, TODO-5740) the parameter
+  // passes as the address of the caller's local, so the call is real and
+  // the writeback stays.
   const std::string source = R"(
 [return<i32>]
 accumulate([i32] n, [i32 mut] total) {
@@ -256,8 +259,16 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(result == 6); // 3 + 2 + 1 + 0, accumulated in the caller's `result`
+#else
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.find("recursive") != std::string::npos);
+#endif
 }
 
 TEST_CASE("native backend emits a real call for self-recursive scalar definitions") {

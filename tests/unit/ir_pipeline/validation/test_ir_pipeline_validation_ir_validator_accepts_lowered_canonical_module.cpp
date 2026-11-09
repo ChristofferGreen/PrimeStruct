@@ -131,7 +131,7 @@ main() {
   primec::IrModule module;
   REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
-  CHECK(primec::validateIrModule(module, primec::IrValidationTarget::Any, error));
+  CHECK(primec::validateIrModule(module, primec::IrValidationTarget::Native, error));
   CHECK(error.empty());
   CHECK(std::find(module.stringTable.begin(), module.stringTable.end(), "map key not found") == module.stringTable.end());
 }
@@ -169,7 +169,7 @@ main() {
   primec::IrModule module;
   REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
-  CHECK(primec::validateIrModule(module, primec::IrValidationTarget::Any, error));
+  CHECK(primec::validateIrModule(module, primec::IrValidationTarget::Native, error));
   CHECK(error.empty());
   CHECK(std::find(module.stringTable.begin(), module.stringTable.end(), "map key not found") == module.stringTable.end());
 }

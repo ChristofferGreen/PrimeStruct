@@ -240,8 +240,9 @@ only widgets with such handlers.
   per-control `onChange` names and `commandItem`/`commandButton` are separate methods, not overloads of `onChange`,
   `item` and `button`: same-arity overloads of struct methods do not resolve yet (TODO-5735). `run` reads the ABI
   event kinds itself instead of `pick`ing an `AppEvent` (TODO-5736). The handlers of one type share one vector and
-  `run` calls each vector from one place: the native backend inlines struct methods (TODO-5740) and a `Function`
-  call with every closure of its type, at each call site, so this keeps an app's handlers compiled once there.
+  `run` calls each vector from one place. The arm64 native backend makes struct methods and closure calls real calls
+  (TODO-5740); a target with the scalar ABI (x86_64 native, TODO-5752) inlines them and a `Function` call with every
+  closure of its type at each call site, so this keeps an app's handlers compiled once there.
 
 ```prime
 [AppHandlers<Greeter> mut] handlers{AppHandlers<Greeter>{[state] Greeter{[button] hello}}}

@@ -439,7 +439,9 @@ bool isFunctionStructPath(const std::string &path) {
 bool isAddressAbiParameter(const Definition &def,
                            const Expr &param,
                            const std::unordered_set<std::string> &structNames) {
-  if (isArgsPackBinding(param) || !param.args.empty()) {
+  // A default (`[i32] limit{3i32}`) is fine: the call site binds the parameter, default included, as an inlined call
+  // would, and the callee gets its value.
+  if (isArgsPackBinding(param) || param.args.size() > 1) {
     return false;
   }
   const bool ownedParam =

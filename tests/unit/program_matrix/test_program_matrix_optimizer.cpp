@@ -323,3 +323,45 @@ TEST_CASE("struct real calls keep the optcpp output from growing with the call s
   CHECK(one > 0);
   CHECK(many < one * 2);
 }
+
+// The arm64 native backend addresses locals by their machine address, so it takes the address ABI too (TODO-5740):
+// each call site of `split_span` adds a call, not a copy of its body. `--opt-report` gives the lowered instruction
+// count. The other native targets keep inlining it (TODO-5752).
+TEST_CASE("struct real calls keep the native program from growing with the call sites") {
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
+  const auto lowered = [](int callSites) -> long {
+    const std::filesystem::path dir =
+        primec::testing::testScratchPath("program_matrix/native_struct_real_call_" +
+                                         std::to_string(callSites) + "/x")
+            .parent_path();
+    std::filesystem::create_directories(dir);
+    const std::filesystem::path source = dir / "program.prime";
+    {
+      std::ofstream file(source);
+      file << structCallProgram(callSites);
+    }
+    const std::filesystem::path output = dir / "program";
+    const std::filesystem::path report = dir / "report.txt";
+    const int status = program_matrix::runShell(
+        "./primec --emit=native " + program_matrix::quote(source.string()) + " -o " +
+        program_matrix::quote(output.string()) + " --entry /main --opt-report > " +
+        program_matrix::quote(report.string()) + " 2>&1");
+    REQUIRE(status == 0);
+    int expected = 100;
+    for (int i = 0; i < callSites; ++i) {
+      for (int k = i; k < 12; ++k) {
+        expected += k < i + 3 ? k : -1;
+      }
+    }
+    CHECK(program_matrix::runShell(program_matrix::quote(output.string())) == (expected & 0xFF));
+    const std::string text = program_matrix::readText(report);
+    const size_t at = text.find("instructions_before=");
+    REQUIRE(at != std::string::npos);
+    return std::stol(text.substr(at + std::string("instructions_before=").size()));
+  };
+  const long one = lowered(1);
+  const long many = lowered(10);
+  CHECK(one > 0);
+  CHECK(many < one * 5); // ten inlined bodies would be about ten times one
+#endif
+}

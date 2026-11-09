@@ -85,7 +85,8 @@ struct LowerSetupStageState {
   // while lowering, so the set grows to every such definition the program actually calls.
   std::vector<std::string> realCallEligibleOrder;
   std::unordered_map<std::string, uint64_t> realCallReservationIndex;
-  // Struct parameters and results and `mut` receivers take real calls (the VM and the optimizing C++ emitters).
+  // Struct parameters and results and `mut` receivers take real calls (the VM, the optimizing C++ emitters and the
+  // arm64 native backend).
   bool realCallAllowStructs = false;
 };
 
