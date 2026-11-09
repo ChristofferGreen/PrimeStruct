@@ -77,6 +77,23 @@ open-work-only scope rule as `docs/todo.md` itself.
   path with the probe (`scripts/measure_startup.sh --open`), the first
   Finder launch after an install, a launch after a reboot, Instruments
   App Launch.
+- 2026-11-09, the guard: dyld's `DYLD_PRINT_LIBRARIES` lines include
+  "move delayed to loaded: name" (105 of them for PrimeScroll), which the
+  earlier counts took for images: the distinct image paths are 1164 for
+  PrimeScroll, 1161 for a plain AppKit program with one window and text
+  view (tools/startup_probe/reference_app.m). Images PrimeScroll loads
+  and the reference does not: libps_ui_appkit.dylib, MenuBarClientCore
+  and (not every run) CampoUIServices. Linking AVKit adds AVKit,
+  AVKitCore and PIP (checked with DYLD_INSERT_LIBRARIES on PrimeScroll:
+  6 extra images against the guard's limit of 4). CTest
+  `PrimeStruct_native_ui_startup_guard` builds hello_window and
+  PrimeScroll natively and runs `scripts/measure_startup.sh --runs 3
+  --reference <reference_app> --max-extra-images 4` on each (about 20 s;
+  hello_window 2 extra images, PrimeScroll 2). The probe also reports the
+  peak resident set (101 to 105 MB in snapshot mode), so
+  `scripts/measure_app_startup.sh` (whose mean included the snapshot's
+  600 ms idle wait) is removed. The probe imports the calls a backend may
+  predate weakly, so it loads into an app built before them.
 
 
 

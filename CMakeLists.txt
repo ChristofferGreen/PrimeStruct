@@ -1663,6 +1663,20 @@ if(PRIMESTRUCT_BUILD_TESTS)
                          PROPERTIES TIMEOUT 900 RESOURCE_LOCK native_ui_appkit
                          SKIP_REGULAR_EXPRESSION "PRIMESTRUCT_UI_SKIPPED")
   endif()
+  # The launch guard (TODO-5603): hello_window and PrimeScroll, built natively, may load only a few images more than
+  # a plain AppKit program (cmake/NativeUiStartupGuardTest.cmake). Snapshot mode: nothing shows on screen.
+  add_test(
+    NAME PrimeStruct_native_ui_startup_guard
+    COMMAND ${CMAKE_COMMAND}
+            -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
+            -DBUILD_DIR=${CMAKE_BINARY_DIR}
+            -DWORK_DIR=${CMAKE_BINARY_DIR}/native_ui_startup_guard
+            -DGUARD_ENABLED=$<AND:$<BOOL:${PRIMESTRUCT_BUILD_NATIVE_UI}>,$<BOOL:${APPLE}>>
+            -P ${CMAKE_SOURCE_DIR}/cmake/NativeUiStartupGuardTest.cmake
+  )
+  set_tests_properties(PrimeStruct_native_ui_startup_guard
+                       PROPERTIES TIMEOUT 600 RESOURCE_LOCK native_ui_appkit
+                       SKIP_REGULAR_EXPRESSION "PRIMESTRUCT_UI_SKIPPED")
 
   set(PrimeStructBackendAllTestSources
     tests/unit/ir_pipeline/test_ir_pipeline.cpp

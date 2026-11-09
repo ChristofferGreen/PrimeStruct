@@ -10,7 +10,8 @@
  *   text          the first -[NSTextView drawRect:] (the first drawn text)
  *   frame         ps_ui_wait_event returned PS_UI_EVENT_FIRST_FRAME (a program that does work after its first frame)
  *   settled       the program's next wait after that: the work after the first frame is done
- * plus the time spent inside the interposed calls before the loop (and, as late_*, between the loop and `settled`), the page faults, and (PS_PROBE_SAMPLE_US) a
+ * plus the time spent inside the interposed calls before the loop (and, as late_*, between the loop and `settled`),
+ * the peak resident set at the end (maxrss_kb), the page faults, and (PS_PROBE_SAMPLE_US) a
  * sample of the main thread every that many microseconds, counted per symbol for each phase.
  *
  * Environment:
@@ -203,7 +204,9 @@ static void report(void) {
   fprintf(out, "phase main_ms=%.1f app_init_ms=%.1f loop_ms=%.1f window_ms=%.1f text_ms=%.1f frame_ms=%.1f settled_ms=%.1f"
                " end_ms=%.1f",
           REL(g_main), REL(g_init_out), REL(g_loop), REL(g_window), REL(g_text), REL(g_frame), REL(g_settled), REL(end));
-  fprintf(out, " majflt=%ld minflt=%ld", g_majflt_loop, g_minflt_loop);
+  struct rusage usage;
+  getrusage(RUSAGE_SELF, &usage);
+  fprintf(out, " majflt=%ld minflt=%ld maxrss_kb=%ld", g_majflt_loop, g_minflt_loop, (long)(usage.ru_maxrss / 1024));
   for (int i = 0; i < CallCount; i++) {
     fprintf(out, " %s=%d/%.1f", g_call_names[i], g_call_n[i], g_call_ms[i]);
   }

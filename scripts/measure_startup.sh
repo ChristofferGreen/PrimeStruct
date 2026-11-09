@@ -11,14 +11,19 @@
 #   window    the first window display;  text  the first drawn text
 #   frame     the program got PS_UI_EVENT_FIRST_FRAME;  settled  its next wait: the work after the first frame is done
 # then the time inside the ps_ui calls that dominate a launch (before the event loop, and after it until `settled`),
-# and the number of images dyld loads.
+# the peak resident set, and the number of images dyld loads (distinct paths; with --reference, also those of a plain
+# AppKit program and the images only the app loads).
 # The snapshot's own idle wait (about 600 ms before the PNG is written) is not part of any phase.
 #
 # Usage: scripts/measure_startup.sh [options] <App.app | executable>
 #   --runs N             launches to measure (default 10), after one discarded warm-up launch
 #   --file PATH          pass PATH as the program's first argument (a document opened at launch)
 #   --session A:B:...    restore these files as the last session (PS_PROBE_SESSION); --previews 0:1:2 per file
-#   --max-libraries N    exit 1 when the launch loads more than N images (the guard of TODO-5603)
+#   --max-libraries N    exit 1 when the launch loads more than N images
+#   --reference EXE      also count the images of EXE (a plain AppKit program, tools/startup_probe/reference_app.m,
+#                        which exits by itself), and list the images only the app loads
+#   --max-extra-images N exit 1 when the app loads more than N images the reference does not (the guard of TODO-5603:
+#                        a new framework link or an eager system lookup adds images)
 #   --sample             sample the main thread every millisecond and print the top symbols per phase
 #   --open               launch through Launch Services (`open -n -W`) with the real preferences and session; the
 #                        app shows its window and takes focus, and quits right after its first drawn text. For a
@@ -34,6 +39,8 @@ FILE=""
 SESSION=""
 PREVIEWS=""
 MAX_LIBRARIES=""
+REFERENCE=""
+MAX_EXTRA=""
 SAMPLE=0
 OPEN=0
 WORK=""
@@ -51,6 +58,8 @@ while [[ $# -gt 0 ]]; do
     --session) SESSION="$2"; shift 2 ;;
     --previews) PREVIEWS="$2"; shift 2 ;;
     --max-libraries) MAX_LIBRARIES="$2"; shift 2 ;;
+    --reference) REFERENCE="$2"; shift 2 ;;
+    --max-extra-images) MAX_EXTRA="$2"; shift 2 ;;
     --sample) SAMPLE=1; shift ;;
     --open) OPEN=1; shift ;;
     --work-dir) WORK="$2"; shift 2 ;;
@@ -119,17 +128,31 @@ for ((i = 0; i < RUNS; i++)); do
   launch
 done
 
+# The distinct images of a launch: dyld prints a line per image it loads, "dyld[pid]: <uuid> path", and lines for the
+# images whose initialization it defers and later runs ("move loaded to delayed: name", "move delayed to loaded:
+# name"), which are not images of their own (the earlier count of 1266 to 1274 included the second kind).
+images_of() { # images_of <out-file> <exe> [args...]
+  local out="$1"
+  shift
+  env DYLD_PRINT_LIBRARIES=1 PRIMESTRUCT_UI_SNAPSHOT="$SNAPSHOT" "$@" >/dev/null 2>"$out.raw" || true
+  grep '^dyld\[[0-9]*\]: <' "$out.raw" | sed 's/^dyld\[[0-9]*\]: <[^>]*> //' | sort -u >"$out"
+}
 LIBRARIES=""
+EXTRA=""
 if [[ $OPEN -eq 0 ]]; then
-  env DYLD_PRINT_LIBRARIES=1 PRIMESTRUCT_UI_SNAPSHOT="$SNAPSHOT" "$EXE" >/dev/null 2>"$WORK/libraries.txt" || true
-  # dyld prints one line per image it loads, and one "move loaded to delayed" line per image whose
-  # initialization it defers; the images are the first kind.
-  LIBRARIES="$(grep '^dyld' "$WORK/libraries.txt" | grep -vc 'move loaded to delayed' || true)"
+  images_of "$WORK/libraries.txt" "$EXE"
+  LIBRARIES="$(wc -l <"$WORK/libraries.txt" | tr -d ' ')"
+  if [[ -n "$REFERENCE" ]]; then
+    images_of "$WORK/reference_libraries.txt" "$REFERENCE"
+    # The executables themselves differ by name; every other image the app loads and the reference does not counts.
+    comm -13 "$WORK/reference_libraries.txt" "$WORK/libraries.txt" | grep -vxF "$EXE" >"$WORK/extra_libraries.txt" || true
+    EXTRA="$(wc -l <"$WORK/extra_libraries.txt" | tr -d ' ')"
+  fi
 fi
 
-python3 - "$REPORT" "$RUNS" "${WARMUP_MAIN:-}" "${LIBRARIES:-}" "$(sysctl -n vm.loadavg)" <<'EOF'
+python3 - "$REPORT" "$RUNS" "${WARMUP_MAIN:-}" "${LIBRARIES:-}" "$(sysctl -n vm.loadavg)" "${EXTRA:-}" "$WORK" <<'EOF'
 import re, statistics, sys
-report, runs, warmup_main, libraries, load = sys.argv[1:6]
+report, runs, warmup_main, libraries, load, extra, work = sys.argv[1:8]
 phases = ["main", "app_init", "loop", "window", "text", "frame", "settled"]
 values = {p: [] for p in phases}
 calls = {}
@@ -163,8 +186,14 @@ if warmup_main:
     note = (" (new code, the app's or the probe's, was assessed by Gatekeeper on this first load)"
             if float(warmup_main) > 150 else "")
     print("warm-up launch: main at %s ms%s" % (warmup_main, note))
+rss = [float(m.group(1)) for line in lines for m in [re.search(r"\bmaxrss_kb=([0-9]+)", line)] if m]
+if rss:
+    print("peak resident set: median %.1f MB, max %.1f MB" % (statistics.median(rss) / 1024, max(rss) / 1024))
 if libraries:
     print("images loaded: %s" % libraries)
+if extra:
+    names = [l.strip() for l in open(work + "/extra_libraries.txt") if l.strip()]
+    print("images the reference does not load: %s%s" % (extra, "".join("\n  " + n for n in names)))
 for line in lines:
     if line.startswith("samples") or line.startswith("  "):
         print(line)
@@ -173,4 +202,14 @@ EOF
 if [[ -n "$MAX_LIBRARIES" && -n "$LIBRARIES" && "$LIBRARIES" -gt "$MAX_LIBRARIES" ]]; then
   echo "measure_startup.sh: the launch loads $LIBRARIES images, more than the limit of $MAX_LIBRARIES" >&2
   exit 1
+fi
+if [[ -n "$MAX_EXTRA" ]]; then
+  if [[ -z "$EXTRA" ]]; then
+    echo "measure_startup.sh: --max-extra-images needs --reference" >&2
+    exit 64
+  fi
+  if [[ "$EXTRA" -gt "$MAX_EXTRA" ]]; then
+    echo "measure_startup.sh: the launch loads $EXTRA images the reference does not, more than $MAX_EXTRA" >&2
+    exit 1
+  fi
 fi

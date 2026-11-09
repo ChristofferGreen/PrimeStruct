@@ -138,7 +138,8 @@ of sync with them.
 | TODO-5805 | The server keeps connections alive between requests | deferred | web-keepalive |
 | TODO-5806 | Sessions: a cookie and per-session state | deferred | web-sessions |
 | TODO-5821 | The first toolbar of a launch does not hold up the first frame | deferred | startup-toolbar |
-| TODO-5603 | Launch-time guard and the real-launch baseline | ready | startup |
+| TODO-5822 | The std/os SIGTERM test does not race the program's start | ready | test-flakes |
+| TODO-5603 | The real-launch baseline, measured by a person | ready | startup |
 | TODO-5757 | Build and test gates leave interactive launches their speed | deferred | startup-machine |
 | TODO-5586 | Native String heap: pooled blocks, statistics and limit | deferred | native-backend-strings |
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
@@ -190,7 +191,8 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5603 (startup): launch-time guard and the real-launch baseline
+- TODO-5603 (startup): the real-launch baseline, measured by a person
+- TODO-5822 (test-flakes): the std/os SIGTERM test does not race the program's start
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5510 (control-returns): `return` returns from unit-variant pick arms correctly
 - TODO-5524 (result-error-structs): int-backed error structs round-trip through stdlib Result sums
@@ -198,15 +200,16 @@ of sync with them.
 ### Immediate Next 10
 
 1. TODO-5603
-2. TODO-5535
-3. TODO-5510
-4. TODO-5524
-5. TODO-5728
-6. TODO-5770
+2. TODO-5822
+3. TODO-5535
+4. TODO-5510
+5. TODO-5524
+6. TODO-5728
+7. TODO-5770
 
 ### Priority Lanes
 
-- Startup, first (docs/NativeUiPlan.md section 1, "Where a launch goes"): TODO-5603, TODO-5535, TODO-5757, TODO-5821
+- Startup, first (docs/NativeUiPlan.md section 1, "Where a launch goes"): TODO-5603, TODO-5535, TODO-5757, TODO-5821, TODO-5822
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - Native UI (docs/NativeUiPlan.md): TODO-5808, TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
@@ -1058,6 +1061,18 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
     - to be set when the leaf is un-deferred
   - stop_rule: sessions in `WebApp`.
 
+- [ ] TODO-5822: The std/os SIGTERM test does not race the program's start
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-09
+  - phase: Test reliability (found in the release gates of TODO-5754 to TODO-5756)
+  - parallel_track: test-flakes
+  - scope: `std/os reads the environment, sees the clock advance and stops on SIGTERM` (tests/unit/backend_host/test_cpp_strings.cpp, CTest `PrimeStruct_cpp_host_calls`) failed in two of four release gates under load (load average 50 to 150), with exit code 11 instead of 111: the program printed `ready` and ended without seeing the SIGTERM as a stop (100). Both times it passed alone. Find the race (when the handler is installed against when `ready` is printed and the signal sent, or the program finishing first) and make the test wait on what it needs.
+  - acceptance:
+    - the case passes in 20 runs of `PrimeStruct_cpp_host_calls` while a release gate runs, and in the gate; full release gate green
+  - stop_rule: this test and the std/os signal handling it checks.
+  - notes: not listed under Open Failures: it passes alone, and docs/failing_tests.md fails on a listed case that passes.
+
 - [ ] TODO-5821: The first toolbar of a launch does not hold up the first frame
   - owner: human
   - status: deferred
@@ -1070,17 +1085,17 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
   - stop_rule: the launch document's toolbar only.
   - notes: deferred for the user's choice: the cheap options change what the first frame shows.
 
-- [ ] TODO-5603: Launch-time guard and the real-launch baseline
-  - owner: ai
+- [ ] TODO-5603: The real-launch baseline, measured by a person
+  - owner: human
   - status: ready
   - created_at: 2026-10-26
   - phase: Native PrimeScroll startup (docs/NativeUiPlan.md section 1)
   - parallel_track: startup
-  - scope: The audit is done (docs/NativeUiPlan.md section 1, "Where a launch goes"; raw data in docs/todo_log.md) and `scripts/measure_startup.sh` with its probe exists. Left: (1) a guard: a ctest entry that builds hello_window and PrimeScroll natively and runs `scripts/measure_startup.sh --runs 3 --max-libraries <limit>` on each (limits: the 2026-11-09 counts, 1266 and 1269 images, plus 5), so a framework link or eager system lookup that adds images fails; (2) retire `scripts/measure_app_startup.sh` (its mean includes the snapshot's 600 ms idle wait) in favor of `measure_startup.sh`, updating its callers and the plan; (3) record a real Launch Services baseline from a person's run of `scripts/measure_startup.sh --open --runs 10 ~/Applications/PrimeScroll.app` (and `--file <small.txt>`) in the plan, and the first `--open` launch right after an install (`scripts/measure_startup.sh --open --runs 1 ~/Applications/PrimeScroll.app` twice, the install having run `scripts/warm_macos_app.sh` on the installed copy; TODO-5755 expects the first within 50 ms of the second), and a sampled real launch for TODO-5756 (`scripts/measure_startup.sh --open --sample --runs 3 ~/Applications/PrimeScroll.app`: `app_init` at most 150 ms with load under 4, and no `SafariPlatformSupport.Helper` or Writing Tools activity before the first drawn text in the unified log).
+  - scope: The audit, the guard (CTest `PrimeStruct_native_ui_startup_guard`: images beyond a plain AppKit program) and `scripts/measure_startup.sh` are done (docs/todo_log.md under TODO-5603); `scripts/measure_app_startup.sh` is gone. Left, for a person at the Mac (an `--open` launch shows the window and takes focus, which agents and tests must not do), after reinstalling PrimeScroll and running `bash scripts/warm_macos_app.sh ~/Applications/PrimeScroll.app` on the installed copy: (1) the Launch Services baseline, `scripts/measure_startup.sh --open --runs 10 ~/Applications/PrimeScroll.app` and `scripts/measure_startup.sh --open --runs 10 --file <a small .txt> ~/Applications/PrimeScroll.app`; (2) the first launch after an install (TODO-5755), `scripts/measure_startup.sh --open --runs 1 ~/Applications/PrimeScroll.app` twice right after the install and warm-up (the warm-up line of the first is the one to compare; expected within 50 ms of the second); (3) a sampled real launch for TODO-5756, `scripts/measure_startup.sh --open --sample --runs 3 ~/Applications/PrimeScroll.app` with load under 4 (expected `app_init` at most 150 ms), and in the unified log (`log show --last 2m --predicate 'process == "PrimeScroll" OR process == "SafariPlatformSupport.Helper"'`) no AutoFill helper, Writing Tools or window restoration before the first drawn text.
   - acceptance:
-    - the guard runs in the release gate on macOS (skipped elsewhere with a message) and fails on one extra framework link (checked once by hand); `measure_app_startup.sh` is gone or delegates; the plan has the `--open` baseline; full release gate green
-  - stop_rule: measurement and the guard; launch work itself is TODO-5753, TODO-5754, TODO-5755 and TODO-5756.
-  - notes: the guard counts images, not milliseconds: timing medians move by 30 ms or more between runs and with the machine's load.
+    - the numbers of (1) to (3), with the load average, are in docs/NativeUiPlan.md section 1 and docs/todo_log.md; anything over its expectation gets a TODO
+  - stop_rule: measurement only.
+  - notes: needs a person at the Mac; the guard counts images, not milliseconds.
 
 - [ ] TODO-5757: Build and test gates leave interactive launches their speed
   - owner: human

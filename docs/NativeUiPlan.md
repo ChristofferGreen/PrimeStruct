@@ -27,7 +27,7 @@ the same UI (the reference build in TODO-5535), and shows the text of a 1 MB fil
 | Precompiled bytecode on the runtime-only VM (406 KB executable) | 4.5 ms | 80 ms |
 | Compile the source at launch, then run | 68 ms | 3.7 s |
 
-**Measured on the Mac, 2026-10-22** (`scripts/measure_app_startup.sh`, 10 runs of the editor in the AppKit backend's
+**Measured on the Mac, 2026-10-22** (`scripts/measure_app_startup.sh`, retired since for `scripts/measure_startup.sh`; 10 runs of the editor in the AppKit backend's
 snapshot mode, so wall time to the first laid-out and drawn window including the snapshot itself, and the peak
 resident set; not the 5 ms budget measurement, which is TODO-5535):
 
@@ -149,9 +149,16 @@ install, which is when cause 1 applies; the steps for measuring the real Launch 
   after the first frame, or leave them off by default.
 - No child processes, no network or iCloud lookups and no open panel during launch.
 
-**How it is measured** (TODO-5535): a launch harness starts an app, records the time until its first window is on
-screen (window-list polling) and until the text is drawn (a signpost from the app), for cold and warm launches. It runs
-the PrimeStruct editor, the reference Objective-C++ editor, and installed editors (TextEdit and others) for comparison.
+**How it is measured.** `scripts/measure_startup.sh` times the phases of a launch with its probe (snapshot mode, or a
+person's Launch Services launch with `--open`), the ps_ui calls before the event loop and after it until the program
+settles, the peak resident set, and the distinct images dyld loads (about 1164 for PrimeScroll on macOS 27.0.1; the
+earlier count of about 1270 included dyld's lines for deferred initializers). CTest
+`PrimeStruct_native_ui_startup_guard` (TODO-5603) builds hello_window and PrimeScroll natively and fails when either
+loads more than 4 images that a plain AppKit program (`tools/startup_probe/reference_app.m`) does not: today
+`libps_ui_appkit.dylib` and the menu bar's MenuBarClientCore and sometimes CampoUIServices; one more framework link
+adds about 3 (AVKit adds AVKit, AVKitCore and PIP). It counts images, not milliseconds, which move by 30 ms or more
+between runs and with the machine's load. The rest of the harness (cold launches, window-list polling, a reference
+editor with the same UI, installed editors for comparison) is TODO-5535.
 
 ## 2. Principles
 
