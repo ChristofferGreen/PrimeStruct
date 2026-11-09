@@ -7,12 +7,16 @@
 // the memory value stack (x28): its operands are pushed there first and its results popped into their
 // locations afterwards, with the template-clobbered registers live across it saved in their frame slots.
 //
-// Only functions without calls, float values or local addresses come here (TODO-5774, TODO-5773 and
-// TODO-5775 take the rest), so nothing is kept in a register across a call.
+// Only functions without float values or local addresses come here (TODO-5773 and TODO-5775 take
+// the rest). A call saves every register live across it in its frame slot and restores it after
+// (callees, allocated or not, may change any of x0-x25); the result arrives in x0. A callee whose
+// callers are all register-allocated takes its first eight arguments in x0-x7, the
+// rest on the value stack as template callees take them all.
 //
 // Registers: x0 and x1 are the scratch registers for spilled values, immediates, parallel-move cycles
 // (x0) and slot-to-slot copies (x1); string addresses are built in x1 (patchAdr writes x1). x17 builds
-// frame addresses past the 32 KB reach of `ldr`/`str`. x16 is the syscall number, x18 the platform
+// frame addresses past the 32 KB reach of `ldr`/`str`. x16 is the syscall number and breaks the
+// cycles of argument moves (whose registers include x0), x18 the platform
 // register, x26 the template operand cache (off here), x27 the frame, x28 the value stack, x29/x30
 // the frame record and link register (saved in the frame's link local at entry).
 
@@ -26,6 +30,9 @@ inline const std::vector<uint8_t> Arm64RegAllocPool = {
 inline const std::vector<uint8_t> Arm64RegAllocPoolWithArgRegs = {
     21, 22, 23, 24, 25, 19, 20, 9, 10, 11, 12, 13, 14, 15, 3, 4, 5, 6, 7, 8};
 
+// Arguments a register-argument callee takes in x0-x7.
+inline constexpr size_t Arm64RegAllocArgumentRegisters = 8;
+
 // Whether a template (or the C function or heap routine it calls) may change `reg`.
 inline bool arm64TemplateClobbers(uint8_t reg) {
   return reg < 19;
@@ -35,9 +42,6 @@ inline bool arm64TemplateClobbers(uint8_t reg) {
 inline std::string arm64RegisterAllocationBlocker(const IrFunction &function) {
   for (const IrInstruction &instruction : function.instructions) {
     switch (instruction.op) {
-    case IrOpcode::Call:
-    case IrOpcode::CallVoid:
-      return "calls a function (TODO-5774)";
     case IrOpcode::AddressOfLocal:
       return "takes a local address (TODO-5775)";
     case IrOpcode::PushF32:
@@ -98,6 +102,7 @@ inline bool Arm64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
                                                         std::string &error) {
   constexpr uint8_t X0 = 0;
   constexpr uint8_t X1 = 1;
+  constexpr uint8_t X16 = 16;
   constexpr uint8_t X17 = 17;
   constexpr uint8_t Zr = 31; // xzr where an encoding reads register 31 as zero
   constexpr uint8_t Frame = 27;
@@ -218,20 +223,8 @@ inline bool Arm64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
     }
     frameStore(reg, spillBaseLocal + destination.slot);
   };
-  const auto emitEdgeMoves = [&](const RegAllocEdge &edge) {
-    std::vector<PendingMove> moves;
-    for (const RegAllocMove &move : edge.moves) {
-      const RegAllocLocation &destination = location(move.destination);
-      if (destination.kind != RegAllocLocationKind::Reg &&
-          destination.kind != RegAllocLocationKind::Slot) {
-        continue;
-      }
-      const RegAllocLocation &source = location(move.source);
-      if (sameLocation(source, destination)) {
-        continue;
-      }
-      moves.push_back({source, destination});
-    }
+  // Runs `moves` as parallel copies, breaking cycles through `park` (a register no move names).
+  const auto emitParallelMoves = [&](std::vector<PendingMove> moves, uint8_t park) {
     while (!moves.empty()) {
       bool progressed = false;
       for (size_t i = 0; i < moves.size(); ++i) {
@@ -253,18 +246,40 @@ inline bool Arm64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
         continue;
       }
       // Every destination is still some source: a cycle. Park the first destination's value in
-      // x0 and let its readers take it from there.
+      // `park` and let its readers take it from there.
       const RegAllocLocation parked = moves.front().destination;
-      RegAllocLocation x0;
-      x0.kind = RegAllocLocationKind::Reg;
-      x0.reg = X0;
-      emitCopy(parked, x0);
+      RegAllocLocation parking;
+      parking.kind = RegAllocLocationKind::Reg;
+      parking.reg = park;
+      emitCopy(parked, parking);
       for (PendingMove &move : moves) {
         if (sameLocation(move.source, parked)) {
-          move.source = x0;
+          move.source = parking;
         }
       }
     }
+  };
+  const auto emitEdgeMoves = [&](const RegAllocEdge &edge) {
+    std::vector<PendingMove> moves;
+    for (const RegAllocMove &move : edge.moves) {
+      const RegAllocLocation &destination = location(move.destination);
+      if (destination.kind != RegAllocLocationKind::Reg &&
+          destination.kind != RegAllocLocationKind::Slot) {
+        continue;
+      }
+      const RegAllocLocation &source = location(move.source);
+      if (sameLocation(source, destination)) {
+        continue;
+      }
+      moves.push_back({source, destination});
+    }
+    emitParallelMoves(std::move(moves), X0);
+  };
+  const auto registerLocation = [](uint8_t reg) {
+    RegAllocLocation where;
+    where.kind = RegAllocLocationKind::Reg;
+    where.reg = reg;
+    return where;
   };
 
   // Branches. Targets are blocks; a conditional jump into a block that needs edge copies goes
@@ -486,11 +501,24 @@ inline bool Arm64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
     emit(encodeRet());
   };
 
-  // Entry: the parameters come off the value stack, top (the last) first; locals read before any
-  // store start at zero.
+  // Entry: the register arguments go home first (x16 breaks cycles), then the other parameters
+  // come off the value stack, top (the last) first; locals read before any store start at zero.
   if (!plan.blocks.empty() && plan.blocks[0].reachable) {
     const RegAllocBlock &first = plan.blocks[0];
-    for (size_t k = first.entryValues.size(); k-- > 0;) {
+    const size_t inRegisters = hooks.argumentsInRegisters ? std::min(Arm64RegAllocArgumentRegisters,
+                                                                     first.entryValues.size())
+                                                          : 0;
+    std::vector<PendingMove> arguments;
+    for (size_t k = 0; k < inRegisters; ++k) {
+      const RegAllocLocation &destination = location(first.entryValues[k]);
+      if ((destination.kind == RegAllocLocationKind::Reg ||
+           destination.kind == RegAllocLocationKind::Slot) &&
+          !sameLocation(registerLocation(static_cast<uint8_t>(k)), destination)) {
+        arguments.push_back({registerLocation(static_cast<uint8_t>(k)), destination});
+      }
+    }
+    emitParallelMoves(std::move(arguments), X16);
+    for (size_t k = first.entryValues.size(); k-- > inRegisters;) {
       const RegAllocLocation &where = location(first.entryValues[k]);
       if (where.kind == RegAllocLocationKind::Reg) {
         emitReloadReg(where.reg);
@@ -757,6 +785,47 @@ inline bool Arm64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
         emitEdgeMoves(*edge);
         if (target != blockIndex + 1) {
           emitEdgeJump(blockIndex, *edge, JumpFixup{});
+        }
+        break;
+      }
+      case IrOpcode::Call:
+      case IrOpcode::CallVoid: {
+        // Every register still needed afterwards is saved around the call: any callee may change
+        // x0-x25. Arguments past the register ones go on the value stack first (through x0),
+        // then the first eight move into x0-x7 as parallel copies (x16 breaks cycles).
+        const std::vector<uint8_t> saved =
+            regAllocRegistersLiveAcross(plan, blockIndex, instruction.irIndex);
+        for (const uint8_t reg : saved) {
+          frameStore(reg, saveBaseLocal + reg);
+        }
+        const size_t inRegisters =
+            hooks.calleeTakesRegisterArguments && hooks.calleeTakesRegisterArguments(ir.imm)
+                ? std::min(Arm64RegAllocArgumentRegisters, instruction.uses.size())
+                : 0;
+        for (size_t k = inRegisters; k < instruction.uses.size(); ++k) {
+          emitSpillReg(valueReg(instruction.uses[k], X0));
+        }
+        std::vector<PendingMove> arguments;
+        for (size_t k = 0; k < inRegisters; ++k) {
+          const RegAllocLocation &source = location(instruction.uses[k]);
+          const RegAllocLocation destination = registerLocation(static_cast<uint8_t>(k));
+          if (!sameLocation(source, destination)) {
+            arguments.push_back({source, destination});
+          }
+        }
+        emitParallelMoves(std::move(arguments), X16);
+        if (!hooks.recordCallFixup || !hooks.recordCallFixup(emitCallPlaceholder(), ir.imm)) {
+          if (error.empty()) {
+            error = "native backend detected invalid call target";
+          }
+          valueStackCacheEnabled_ = savedCache;
+          return false;
+        }
+        if (ir.op == IrOpcode::Call && !instruction.defs.empty()) {
+          storeValue(instruction.defs[0], X0);
+        }
+        for (const uint8_t reg : saved) {
+          frameLoad(reg, saveBaseLocal + reg);
         }
         break;
       }

@@ -451,8 +451,9 @@ TEST_CASE("arm64 register allocation spills values past its pool to frame slots"
   CHECK(report.perFunction[0].registerAllocationSpillSlots > 0);
 }
 
-TEST_CASE("arm64 functions with calls, floats or local addresses stay on templates") {
-  // main calls the others; /leaf is the only function the allocator takes.
+TEST_CASE("arm64 functions with floats or local addresses stay on templates") {
+  // main calls the others; /address and /float stay on templates, main (which calls)
+  // and /leaf are register-allocated.
   primec::IrModule module;
   module.entryIndex = 0;
   module.functions.push_back(optimizer_test::functionOf("/main",
@@ -496,13 +497,192 @@ TEST_CASE("arm64 functions with calls, floats or local addresses stay on templat
   const primec::NativeEmitterInstrumentation report =
       arm64AllocationReport(module, "regalloc_fallbacks");
   REQUIRE(report.perFunction.size() == 4);
-  CHECK_FALSE(report.perFunction[0].registerAllocated);
-  CHECK(report.perFunction[0].registerAllocationFallback == "calls a function (TODO-5774)");
+  CHECK(report.perFunction[0].registerAllocated);
   CHECK_FALSE(report.perFunction[1].registerAllocated);
   CHECK(report.perFunction[1].registerAllocationFallback == "takes a local address (TODO-5775)");
   CHECK_FALSE(report.perFunction[2].registerAllocated);
   CHECK(report.perFunction[2].registerAllocationFallback == "float values (TODO-5773)");
   CHECK(report.perFunction[3].registerAllocated);
+}
+
+TEST_CASE("arm64 register allocation keeps values live across calls and passes arguments") {
+  // /main holds 16 values across two calls of /wide (16 parameters: eight in x0-x7, eight on the
+  // value stack), once in reverse order, and prints them all after. /wide's own values take
+  // x3-x8 too, so the registers main keeps are overwritten. /floats (a template function) also
+  // calls /weights, which then takes every argument on the value stack although its other
+  // caller, /main, is register-allocated.
+  constexpr uint64_t Values = 16;
+  std::vector<primec::IrInstruction> main;
+  for (uint64_t k = 0; k < Values; ++k) {
+    main.push_back({primec::IrOpcode::PushI64, k * 7 + 1});
+    main.push_back({primec::IrOpcode::StoreLocal, k});
+  }
+  for (uint64_t k = 0; k < Values; ++k) {
+    main.push_back({primec::IrOpcode::LoadLocal, Values - 1 - k});
+  }
+  main.push_back({primec::IrOpcode::Call, 1});
+  main.push_back({primec::IrOpcode::PrintI64, primec::PrintFlagNewline});
+  for (uint64_t k = 0; k < Values; ++k) {
+    main.push_back({primec::IrOpcode::LoadLocal, k});
+  }
+  main.push_back({primec::IrOpcode::Call, 1});
+  main.push_back({primec::IrOpcode::PrintI64, primec::PrintFlagNewline});
+  main.push_back({primec::IrOpcode::PushI64, 5});
+  main.push_back({primec::IrOpcode::LoadLocal, 3});
+  main.push_back({primec::IrOpcode::Call, 2});
+  main.push_back({primec::IrOpcode::PrintI64, primec::PrintFlagNewline});
+  main.push_back({primec::IrOpcode::CallVoid, 3});
+  for (uint64_t k = 0; k < Values; ++k) {
+    main.push_back({primec::IrOpcode::LoadLocal, k});
+    main.push_back({primec::IrOpcode::PrintI64, primec::PrintFlagNewline});
+  }
+  main.push_back({primec::IrOpcode::PushI32, 0});
+  main.push_back({primec::IrOpcode::ReturnI32, 0});
+  // /wide: the sum of parameter k times k + 1 plus its square (squares kept in locals 16..31).
+  std::vector<primec::IrInstruction> wide;
+  for (uint64_t k = Values; k-- > 0;) {
+    wide.push_back({primec::IrOpcode::StoreLocal, k});
+  }
+  for (uint64_t k = 0; k < Values; ++k) {
+    wide.push_back({primec::IrOpcode::LoadLocal, k});
+    wide.push_back({primec::IrOpcode::LoadLocal, k});
+    wide.push_back({primec::IrOpcode::MulI64, 0});
+    wide.push_back({primec::IrOpcode::StoreLocal, Values + k});
+  }
+  wide.push_back({primec::IrOpcode::PushI64, 0});
+  for (uint64_t k = 0; k < Values; ++k) {
+    wide.push_back({primec::IrOpcode::LoadLocal, k});
+    wide.push_back({primec::IrOpcode::PushI64, k + 1});
+    wide.push_back({primec::IrOpcode::MulI64, 0});
+    wide.push_back({primec::IrOpcode::AddI64, 0});
+    wide.push_back({primec::IrOpcode::LoadLocal, Values + k});
+    wide.push_back({primec::IrOpcode::AddI64, 0});
+  }
+  wide.push_back({primec::IrOpcode::ReturnI64, 0});
+  primec::IrModule module;
+  module.entryIndex = 0;
+  module.functions.push_back(optimizer_test::functionOf("/main", std::move(main)));
+  module.functions.push_back(optimizer_test::functionOf("/wide", std::move(wide), Values));
+  // /weights(a, b) = a * 1000 + b
+  module.functions.push_back(optimizer_test::functionOf("/weights",
+                                                        optimizer_test::assemble({"StoreLocal 1",
+                                                                                  "StoreLocal 0",
+                                                                                  "LoadLocal 0",
+                                                                                  "PushI64 1000",
+                                                                                  "MulI64",
+                                                                                  "LoadLocal 1",
+                                                                                  "AddI64",
+                                                                                  "ReturnI64"}),
+                                                        2));
+  // /floats prints weights(7, 2.0 converted to an integer).
+  module.functions.push_back(optimizer_test::functionOf("/floats",
+                                                        optimizer_test::assemble({"PushI64 7",
+                                                                                  "PushI64 1",
+                                                                                  "ConvertI64ToF64",
+                                                                                  "Dup",
+                                                                                  "AddF64",
+                                                                                  "ConvertF64ToI64",
+                                                                                  "Call 2",
+                                                                                  "PrintI64 1",
+                                                                                  "ReturnVoid"})));
+  expectNativeMatchesVm(module, "regalloc_calls");
+
+  const primec::NativeEmitterInstrumentation report =
+      arm64AllocationReport(module, "regalloc_calls");
+  REQUIRE(report.perFunction.size() == 4);
+  CHECK(report.perFunction[0].registerAllocated);
+  CHECK(report.perFunction[1].registerAllocated);
+  CHECK(report.perFunction[2].registerAllocated);
+  CHECK_FALSE(report.perFunction[3].registerAllocated);
+  CHECK(report.perFunction[3].registerAllocationFallback == "float values (TODO-5773)");
+}
+
+TEST_CASE("arm64 register allocation emits a recursive function on registers") {
+  // fib(n) = n < 2 ? n : fib(n - 1) + fib(n - 2)
+  primec::IrModule module;
+  module.entryIndex = 0;
+  module.functions.push_back(optimizer_test::functionOf(
+      "/main",
+      optimizer_test::assemble({"PushI32 20", "Call 1", "PrintI32 1", "PushI32 0", "ReturnI32"})));
+  module.functions.push_back(optimizer_test::functionOf("/fib",
+                                                        optimizer_test::assemble({"StoreLocal 0",
+                                                                                  "LoadLocal 0",
+                                                                                  "PushI32 2",
+                                                                                  "CmpLtI32",
+                                                                                  "JumpIfZero 7",
+                                                                                  "LoadLocal 0",
+                                                                                  "ReturnI32",
+                                                                                  "LoadLocal 0",
+                                                                                  "PushI32 1",
+                                                                                  "SubI32",
+                                                                                  "Call 1",
+                                                                                  "LoadLocal 0",
+                                                                                  "PushI32 2",
+                                                                                  "SubI32",
+                                                                                  "Call 1",
+                                                                                  "AddI32",
+                                                                                  "ReturnI32"}),
+                                                        1));
+  expectNativeMatchesVm(module, "regalloc_fib");
+  const primec::NativeEmitterInstrumentation report = arm64AllocationReport(module, "regalloc_fib");
+  REQUIRE(report.perFunction.size() == 2);
+  CHECK(report.perFunction[0].registerAllocated);
+  CHECK(report.perFunction[1].registerAllocated);
+
+  // /fib follows /main, whose code ends at its only `ret`; /fib ends at its second `ret`.
+  const std::vector<DisassembledInstruction> code =
+      disassemble(primec::testing::testScratchPath("native_codegen/regalloc_fib.opt"));
+  size_t start = 0;
+  while (start < code.size() && code[start].text != "ret") {
+    ++start;
+  }
+  std::vector<std::string> fib;
+  size_t returns = 0;
+  for (size_t i = start + 1; i < code.size() && returns < 2; ++i) {
+    const std::string &text = code[i].text;
+    // Branch targets are addresses; keep the mnemonic only.
+    fib.push_back(text.substr(0, std::min(text.size(), text.find(" 0x"))));
+    returns += text == "ret" ? 1 : 0;
+  }
+  std::string listing;
+  for (const std::string &line : fib) {
+    listing += line + "\n";
+  }
+  INFO(listing);
+  // n arrives in x0 and lives in x23; it is saved in its frame slot across the first call
+  // only, and the first result (x22) across the second. Arguments and results pass in x0.
+  const std::vector<std::string> expected = {"add x21, x27, #0x0",
+                                             "sub sp, sp, #0x230",
+                                             "mov x27, sp",
+                                             "str x21, [x27, #0x18]",
+                                             "str x30, [x27, #0x28]",
+                                             "mov x23, x0",
+                                             "cmp x23, #0x2",
+                                             "b.ge",
+                                             "mov x0, x23",
+                                             "ldr x30, [x27, #0x28]",
+                                             "ldr x27, [x27, #0x18]",
+                                             "add sp, sp, #0x230",
+                                             "ret",
+                                             "sub x21, x23, #0x1",
+                                             "str x23, [x27, #0x1a8]",
+                                             "mov x0, x21",
+                                             "bl",
+                                             "mov x22, x0",
+                                             "ldr x23, [x27, #0x1a8]",
+                                             "sub x23, x23, #0x2",
+                                             "str x22, [x27, #0x198]",
+                                             "mov x0, x23",
+                                             "bl",
+                                             "mov x21, x0",
+                                             "ldr x22, [x27, #0x198]",
+                                             "add x22, x22, x21",
+                                             "mov x0, x22",
+                                             "ldr x30, [x27, #0x28]",
+                                             "ldr x27, [x27, #0x18]",
+                                             "add sp, sp, #0x230",
+                                             "ret"};
+  CHECK(fib == expected);
 }
 
 TEST_CASE("arm64 register-allocated functions run with two-word conditional branches") {

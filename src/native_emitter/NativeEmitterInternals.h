@@ -201,12 +201,16 @@ class Arm64Emitter {
     emitStoreLocalFromReg(index, 0);
   }
 
-  void emitStoreLocalFromReg(uint32_t index, uint8_t reg) {
+  // A frame slot past the reach of `str` is addressed through `tmp` (x1, or x2 when storing
+  // x1, unless given): the prologue of a function taking register arguments passes x17.
+  void emitStoreLocalFromReg(uint32_t index, uint8_t reg, uint8_t tmp = 0xFF) {
     uint64_t offset = localOffset(index);
     if (offset <= MaxLdrStrOffsetBytes) {
       emit(encodeStrRegBase(reg, 27, static_cast<uint16_t>(offset)));
     } else {
-      uint8_t tmp = (reg == 1) ? 2 : 1;
+      if (tmp == 0xFF) {
+        tmp = (reg == 1) ? 2 : 1;
+      }
       emitMovImm64(tmp, offset);
       emit(encodeAddReg(tmp, 27, tmp));
       emit(encodeStrRegBase(reg, tmp, 0));
@@ -449,6 +453,11 @@ class Arm64Emitter {
     // its target; the caller rolls the function back (checkpoint) and emits it again this way.
     bool farBranches = false;
     bool *branchOutOfRange = nullptr;
+    // The first Arm64RegAllocArgumentRegisters arguments arrive in x0-x7 instead of on the
+    // value stack (every caller is register-allocated).
+    bool argumentsInRegisters = false;
+    std::function<bool(uint64_t target)> calleeTakesRegisterArguments;
+    std::function<bool(size_t fixupIndex, uint64_t target)> recordCallFixup;
   };
   // Emits `fn`'s body from `plan` (after beginFunction and the prologue's local stores). Spill
   // slot k and the save slot of register r are the frame slots of pseudo-locals

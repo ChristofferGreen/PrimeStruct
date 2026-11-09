@@ -86,13 +86,13 @@ bool emitNativeFunctions(const IrModule &module,
   // emitted, so calls know how their callee takes its arguments.
   std::vector<RegAllocFunctionPlan> regAllocPlans(module.functions.size());
   std::vector<bool> registerAllocated(module.functions.size(), false);
-  // Functions whose first three arguments arrive in rax, rcx and rdx (the others still on the
-  // operand stack): not the entry, and every caller register-allocated (the template callers
-  // pass arguments on the operand stack).
+  // Functions whose first arguments arrive in registers (x86_64: rax, rcx and rdx; arm64: x0-x7;
+  // the others still on the operand stack): not the entry, and every caller register-allocated
+  // (the template callers pass arguments on the operand stack).
   std::vector<bool> registerArguments(module.functions.size(), false);
   if constexpr (kIsArm64) {
-    // arm64 (NativeEmitterInternalsArm64RegAlloc.h): functions without calls, float values or
-    // local addresses; the others keep their templates, with the reason in --opt-report.
+    // arm64 (NativeEmitterInternalsArm64RegAlloc.h): functions without float values or local
+    // addresses; the others keep their templates, with the reason in --opt-report.
     if (emitter.registerAllocationEnabled()) {
       for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
         const IrFunction &function = module.functions[functionIndex];
@@ -149,20 +149,22 @@ bool emitNativeFunctions(const IrModule &module,
               registerAllocated[functionIndex] ? std::string() : planError;
         }
       }
-      for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
-        const RegAllocFunctionPlan &plan = regAllocPlans[functionIndex];
-        registerArguments[functionIndex] =
-            registerAllocated[functionIndex] && functionIndex != entryIndex && !plan.blocks.empty();
+    }
+  }
+  if (emitter.registerAllocationEnabled()) {
+    for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
+      const RegAllocFunctionPlan &plan = regAllocPlans[functionIndex];
+      registerArguments[functionIndex] =
+          registerAllocated[functionIndex] && functionIndex != entryIndex && !plan.blocks.empty();
+    }
+    for (size_t caller = 0; caller < module.functions.size(); ++caller) {
+      if (registerAllocated[caller]) {
+        continue;
       }
-      for (size_t caller = 0; caller < module.functions.size(); ++caller) {
-        if (registerAllocated[caller]) {
-          continue;
-        }
-        for (const IrInstruction &inst : module.functions[caller].instructions) {
-          if ((inst.op == IrOpcode::Call || inst.op == IrOpcode::CallVoid) &&
-              inst.imm < module.functions.size()) {
-            registerArguments[static_cast<size_t>(inst.imm)] = false;
-          }
+      for (const IrInstruction &inst : module.functions[caller].instructions) {
+        if ((inst.op == IrOpcode::Call || inst.op == IrOpcode::CallVoid) &&
+            inst.imm < module.functions.size()) {
+          registerArguments[static_cast<size_t>(inst.imm)] = false;
         }
       }
     }
@@ -220,8 +222,9 @@ bool emitNativeFunctions(const IrModule &module,
       if (layout.needsArgv) {
         emitter.emitStoreLocalFromReg(layout.argvLocalIndex, 20);
       }
-      emitter.emitStoreLocalFromReg(layout.framePointerLocalIndex, 21);
-      emitter.emitStoreLocalFromReg(layout.linkLocalIndex, 30);
+      // x17 addresses a far slot: x0-x7 may hold register arguments here.
+      emitter.emitStoreLocalFromReg(layout.framePointerLocalIndex, 21, 17);
+      emitter.emitStoreLocalFromReg(layout.linkLocalIndex, 30, 17);
     } else {
       // X64Emitter::emitCaptureEntryArgs() already placed argc/argv in
       // r12/r13; framePointerLocalIndex/linkLocalIndex have no x86_64
@@ -849,6 +852,18 @@ bool emitNativeFunctions(const IrModule &module,
         bool branchOutOfRange = false;
         hooks.branchOutOfRange = &branchOutOfRange;
         hooks.farBranches = emitter.registerAllocationFarBranches();
+        hooks.argumentsInRegisters = registerArguments[functionIndex];
+        hooks.calleeTakesRegisterArguments = [&](uint64_t target) {
+          return target < registerArguments.size() && registerArguments[target];
+        };
+        hooks.recordCallFixup = [&](size_t fixupIndex, uint64_t target) {
+          if (target >= module.functions.size()) {
+            error = "native backend detected invalid call target";
+            return false;
+          }
+          callFixups.push_back({fixupIndex, static_cast<size_t>(target)});
+          return true;
+        };
         // A function whose conditional branches cannot all reach their targets in one word is
         // emitted again with two-word branches.
         const auto checkpoint = emitter.checkpoint();

@@ -1382,3 +1382,62 @@ already did at -O0 (missing host libraries and VM fault checks native has never 
 json_parse runs at about 8 cycles per character against about 5 for C. It is not loop overhead: enabling `loop-rotate`
 for native took 4.5M instructions off and no cycles. What is left is the data-dependent branch cascade of its
 character dispatch, which is code layout, not register allocation.
+
+### 12.9 Result: registers across calls on arm64 (TODO-5774, 2026-11-09)
+
+The arm64 allocator now takes functions that call. A `Call`/`CallVoid` stores every register live across it
+(`regAllocRegistersLiveAcross`) in that register's frame save slot and reloads it after the `bl`: any callee may change
+x0-x25 (allocated callees use x21-x25 and x3-x15, template callees x0-x15 and x21, host calls x0-x18), so nothing
+survives a call in a register. The result comes back in x0. A function that is not the entry and whose callers are
+all register-allocated takes its first eight arguments in x0-x7 instead of on the x28 value stack; the caller moves
+them there and the callee moves them home as parallel copies (cycles go through x16, since x0 is an argument), and any
+further arguments stay on the value stack as template callees take them all. The prologue stores the caller's frame
+and link registers through x17 when their slots are out of `str`'s reach, so it cannot overwrite an argument.
+
+A callee-saved split of the pool was not needed: caller saves cost a store and a load per value live across a call,
+which is what a callee-saved register costs in the callee's prologue and epilogue, and leaf functions, where the hot
+loops are, pay nothing. `/fib` of call_fib is now:
+
+```text
+mov  x23, x0              ; n
+cmp  x23, #2
+b.ge 1f
+mov  x0, x23              ; return n
+...                       ; ldr x30; ldr x27; add sp; ret
+1: sub x21, x23, #1
+sxtw x21, w21
+str  x23, [x27, #0x1c8]   ; n survives the first call in its save slot
+mov  x0, x21
+bl   fib
+mov  x22, x0
+ldr  x23, [x27, #0x1c8]
+sub  x23, x23, #2
+sxtw x23, w23
+str  x22, [x27, #0x1b8]   ; fib(n - 1) survives the second call
+mov  x0, x23
+bl   fib
+mov  x21, x0
+ldr  x22, [x27, #0x1b8]
+add  x22, x22, x21
+sxtw x22, w22
+mov  x0, x22              ; return
+```
+
+Measured with the release `primec` before (381b2bc25) and after, back to back, macOS arm64 (M3 Pro), load average
+10.4 to 10.9; instructions retired are deterministic, cycles the lowest of five runs:
+
+| | instructions before | after | cycles before | after | change |
+| --- | --- | --- | --- | --- | --- |
+| call_fib | 337.6M | 160.3M | 69.9M | 30.9M | 2.3x fewer cycles |
+| aggregate, json_scan, json_parse | 53.0M, 88.0M, 121.3M | 52.2M, 88.0M, 121.3M | 13.8M, 24.1M, 45.7M | 13.3M, 23.9M, 45.9M | unchanged (no calls in their loops) |
+| float_series | 1434.0M | 1444.5M | 396.1M | 399.7M | unchanged (floats, TODO-5773) |
+| struct method (`a.dot(b)`, 5M calls, 12.3) | 553.3M | 553.2M | 89.8M | 96.8M | unchanged: the loop is in a `/main` that takes a local address |
+| closure call (`Function<int, int>`, 2M calls) | 206.4M | 204.8M | 36.3M | 34.5M | unchanged, for the same reason |
+
+The struct-method and closure-call rows are loops of the shape 12.3 names, written again for this measurement
+(`Vec3.dot` called 5M times; a `Function<int, int>` holding a definition, called 2M times through a helper), not
+the programs measured there. call_fib's native cycles are now below optexe's 78.6M of 12.3. PrimeScroll: `register_allocated` 109 to 131 of 245
+(the other 114 take a local address, TODO-5775), `__text` 479,688 to 473,796 bytes; the snapshot launch medians of
+the two builds (`scripts/measure_startup.sh`, ten launches each, alternated twice at load 9 to 14) were within the
+run-to-run spread of each other. Every benchmark prints the same result; `scripts/differential_opt_check.py --native`,
+also with `PRIMESTRUCT_NATIVE_REGALLOC=1`, matches in 490 programs and differs in the same six -O0 programs as before.

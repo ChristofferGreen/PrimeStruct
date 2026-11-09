@@ -2189,6 +2189,7 @@ are left unarchived.
 | TODO-5757 | Build and test gates leave interactive launches their speed | [2026-11.md](todo_archive/2026-11.md) | 2026-11-09 |
 | TODO-5770 | arm64 native constants take one instruction where they fit | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5772 | arm64 native allocates registers for integer code | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5774 | arm64 register allocation spans calls and passes arguments in registers | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5777 | IR dumps show the IR the `--emit` target gets | [2026-11.md](todo_archive/2026-11.md) | 2026-11-09 |
 | TODO-5820 | Snapshot runs and the UI tests show nothing on screen | [2026-11.md](todo_archive/2026-11.md) | - |
 

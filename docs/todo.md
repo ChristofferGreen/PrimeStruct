@@ -106,7 +106,6 @@ of sync with them.
 | TODO-5741 | `string` parameters become real calls on the VM and optexe | ready | ir-real-calls |
 | TODO-5771 | arm64 template operands stay in the register that computed them | ready | native-arm64-isel |
 | TODO-5773 | arm64 register allocation keeps floats in d-registers | ready | native-arm64-regalloc |
-| TODO-5774 | arm64 register allocation spans calls and passes arguments in registers | ready | native-arm64-regalloc |
 | TODO-5775 | arm64 register allocation takes address-taking functions | ready | native-arm64-regalloc |
 | TODO-5776 | A local address that never leaves its function becomes local accesses | ready | ir-local-sroa |
 | TODO-5727 | Every struct copy site tells a place from a temporary by resolution | deferred | lifecycle-copy-sources |
@@ -202,7 +201,6 @@ of sync with them.
 5. TODO-5524
 6. TODO-5728
 7. TODO-5776
-8. TODO-5774
 
 ### Priority Lanes
 
@@ -219,14 +217,14 @@ of sync with them.
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719; collection fields found by closures and the todo example: TODO-5681, TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
 - Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5738, TODO-5718
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732, TODO-5735, TODO-5736, TODO-5737
-- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe; real calls and struct copies TODO-5739, TODO-5741, TODO-5752; native code quality (section 12, after the startup lane) TODO-5776, TODO-5771, TODO-5774, TODO-5773, TODO-5775
+- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe; real calls and struct copies TODO-5739, TODO-5741, TODO-5752; native code quality (section 12, after the startup lane) TODO-5776, TODO-5771, TODO-5773, TODO-5775
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5807, TODO-5790, TODO-5791, TODO-5792, TODO-5793, TODO-5794, TODO-5795, TODO-5796, TODO-5797, TODO-5798, TODO-5656, TODO-5802, TODO-5803, TODO-5799, TODO-5800, TODO-5801; deferred TODO-5804, TODO-5805, TODO-5806
 
 ### Execution Queue
 
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
-Native code quality (docs/OptimizingBackendsPlan.md section 12), after the startup lane (TODO-5770, one-instruction constants, TODO-5777, IR dumps for the `--emit` target, and TODO-5772, arm64 register allocation for integer code, are done), in this order: TODO-5776 (`local-sroa`: non-escaping local addresses become local accesses), TODO-5771 (template operand cache and compare-branch fusion), TODO-5774 (registers across calls), TODO-5773 (floats in d-registers), TODO-5775 (address-taking functions).
+Native code quality (docs/OptimizingBackendsPlan.md section 12), after the startup lane (TODO-5770, one-instruction constants, TODO-5777, IR dumps for the `--emit` target, TODO-5772, arm64 register allocation for integer code, and TODO-5774, registers across calls, are done), in this order: TODO-5776 (`local-sroa`: non-escaping local addresses become local accesses), TODO-5771 (template operand cache and compare-branch fusion), TODO-5773 (floats in d-registers), TODO-5775 (address-taking functions).
 
 Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order: TODO-5807 (destructure multi-wait results), TODO-5790 (sendable spawn arguments, checked by type), TODO-5791 (every `Function` sendable by construction), TODO-5792 (VM tasks under a deterministic scheduler; `TaskSpawn`/`TaskWait` IR), TODO-5793 (byte-region checks without a map search), TODO-5794 (`optexe` per-thread heap arenas), TODO-5795 (`optexe` threads for `[spawn]`), TODO-5796 (`Atomic`), TODO-5797 (`Mutex`), TODO-5798 (`Channel`), TODO-5656 (atomic `SharedString` count), TODO-5802 (`serveWorkers`), TODO-5803 (apps on workers, measured), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5807, TODO-5790, TODO-5792 and TODO-5793 are ready and independent of each other. Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions).
 
@@ -305,20 +303,6 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
     - float_series `/main` register-allocated on arm64 and at most 2x optexe's cycles, back to back with the load average recorded (2026-11-09: 8.2-8.4x)
     - float compile-run and math conformance suites green on macOS arm64
   - stop_rule: float values in functions TODO-5772 already allocates.
-
-- [ ] TODO-5774: arm64 register allocation spans calls and passes arguments in registers
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-09
-  - phase: Optimizing backends, native code quality (docs/OptimizingBackendsPlan.md section 12)
-  - parallel_track: native-arm64-regalloc
-  - scope: Take functions with `Call`/`CallVoid` and the return opcodes into the arm64 allocator: save the registers live across a call, take the result from x0, and when every caller of a callee is register-allocated pass its first arguments in registers instead of the memory value stack (x86_64 uses three; arm64 can use more).
-  - implementation_notes: the TODO-5772 allocator (NativeEmitterInternalsArm64RegAlloc.h) keeps nothing across a call: its callees use x21-x25 (which every template keeps) and x3-x15, so an allocated caller must save its live registers around a `bl` as x86_64 does (`regAllocRegistersLiveAcross`), or the pool must be split into caller- and callee-saved halves. Entry values arrive on the x28 value stack today.
-  - acceptance:
-    - call_fib's `/fib` register-allocated and at least 1.5x fewer cycles than the TODO-5772 build, back to back with the load average recorded
-    - the struct-method and closure-call loops of docs/OptimizingBackendsPlan.md section 12.3 retire fewer instructions than before; same output
-    - release gate green on macOS arm64
-  - stop_rule: calls between functions without local addresses; address-taking functions are TODO-5775.
 
 - [ ] TODO-5775: arm64 register allocation takes address-taking functions
   - owner: ai
