@@ -111,9 +111,14 @@ of sync with them.
 | TODO-5746 | A parameterless `mut` method whose body is only bindings is a method | ready | diagnostics |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
 | TODO-5656 | Thread-safe `SharedString` (atomic count, per-thread string heaps) | deferred | string-concurrency |
-| TODO-5603 | Startup audit: what a launch loads and does | ready | startup |
+| TODO-5753 | PrimeScroll draws its first window before it restores the session | ready | startup-session |
+| TODO-5755 | The first launch after an install does not wait on Gatekeeper | ready | startup-install |
+| TODO-5754 | Restored tabs, toolbars and previews cost less in the AppKit backend | ready | startup-backend |
+| TODO-5603 | Launch-time guard and the real-launch baseline | ready | startup |
+| TODO-5756 | AppKit's launch work in a real launch fits the budget | ready | startup-appkit |
+| TODO-5757 | Build and test gates leave interactive launches their speed | deferred | startup-machine |
 | TODO-5586 | Native String heap: pooled blocks, statistics and limit | deferred | native-backend-strings |
-| TODO-5536 | Small, lazily loaded bytecode for apps | ready | bytecode-startup |
+| TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
 | TODO-5535 | Launch-time harness and reference Objective-C++ editor | ready | native-ui-launch |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5712 | A callable field of a local struct is called | ready | closures-field-calls |
@@ -161,28 +166,33 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5603 (startup): startup audit: what a launch loads and does
-- TODO-5536 (bytecode-startup): small, lazily loaded bytecode for apps
+- TODO-5753 (startup-session): PrimeScroll draws its first window before it restores the session
+- TODO-5755 (startup-install): the first launch after an install does not wait on Gatekeeper
+- TODO-5754 (startup-backend): restored tabs, toolbars and previews cost less in the AppKit backend
+- TODO-5603 (startup): launch-time guard and the real-launch baseline
+- TODO-5756 (startup-appkit): AppKit's launch work in a real launch fits the budget
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5510 (control-returns): `return` returns from unit-variant pick arms correctly
 - TODO-5524 (result-error-structs): int-backed error structs round-trip through stdlib Result sums
-- TODO-5728 (collections-access): `slice` and `sliceMut` on a vector field of a struct resolve
 
 ### Immediate Next 10
 
-1. TODO-5603
-2. TODO-5536
-3. TODO-5535
-4. TODO-5510
-5. TODO-5524
-6. TODO-5728
+1. TODO-5753
+2. TODO-5755
+3. TODO-5754
+4. TODO-5603
+5. TODO-5756
+6. TODO-5535
+7. TODO-5510
+8. TODO-5524
+9. TODO-5728
 
 ### Priority Lanes
 
+- Startup, first (docs/NativeUiPlan.md section 1, "Where a launch goes"): TODO-5753, TODO-5755, TODO-5754, TODO-5603, TODO-5756, TODO-5535, TODO-5757
 - Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5656
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
-- - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
-- Startup (docs/NativeUiPlan.md section 16): TODO-5603
+- Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
@@ -667,17 +677,83 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - stop_rule: not started.
 
 
-- [ ] TODO-5603: Startup audit: what a launch loads and does
+- [ ] TODO-5753: PrimeScroll draws its first window before it restores the session
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-09
+  - phase: Native PrimeScroll startup (docs/NativeUiPlan.md section 1)
+  - parallel_track: startup-session
+  - scope: `main` in examples/apps/text_editor/main.prime calls `restore_session` (and `editor.syncToolbars()`) after `first.show()` but before `app.run(handlers)`, so every restored tab, its toolbar and a markdown preview are built before the first frame; and a launch from Finder delivers its document as an open-file event (args has one element), so the session is restored first and the requested file then opens in a new tab. Move the restore behind the first frame: the backend reports when the first window has been drawn (an addition to the C ABI behind `ps_ui_supports`, for instance an event after the first display, or a command the program posts to itself that the backend delivers after the next display), `AppHandlers` gets a handler for it, and PrimeScroll restores the session and syncs toolbars there. A document named at launch (argument or the first open-file event) loads into the first window, and restored tabs are added behind it without taking the selection from it. Keep the behavior otherwise (same tabs, same order, active tab when no document was requested).
+  - implementation_notes: measure with `scripts/measure_startup.sh --session <a:b:c> --previews 0:0:1 <bundle>` (the probe answers `session.files`/`session.previews` in snapshot mode) and with `--file`; the AppKit backend is src/ui/appkit/NativeUiAppKit.mm (`ps_ui_wait_event`), the headless backend and src/ui/NativeUiBindings.cpp need the same addition; handlers in stdlib/std/ui/native/handlers.prime.
+  - acceptance:
+    - with a 3-file session (2 KB text, 50 KB `.prime`, 70 KB markdown in split preview) the snapshot `loop` and `text` medians are within 15 ms of the no-session run (2026-11-09: loop 559 against 167 ms, +392)
+    - a document opened at launch with a session present is drawn within 100 ms of the first frame and is the selected tab; the restored tabs are all there after it
+    - an AppKit snapshot test covers restore-after-first-frame (tab count and order) and a headless test the new event; full release gate green
+  - stop_rule: the ordering of launch work; the cost of a tab or a toolbar itself is TODO-5754.
+
+- [ ] TODO-5755: The first launch after an install does not wait on Gatekeeper
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-09
+  - phase: Native PrimeScroll startup (docs/NativeUiPlan.md section 1)
+  - parallel_track: startup-install
+  - scope: Every build is new ad-hoc signed code, so the first exec of the installed executable waits for syspolicyd's Gatekeeper assessment (a notarization-ticket lookup over the network, request timeout 3 s, then an XProtect scan): +320 to 500 ms for the executable and +170 to 250 ms for a new `libps_ui_appkit.dylib`, up to seconds on a slow network. Make the install pay it instead of the user: `scripts/bundle_macos_app.sh` (and the reinstall recipe it serves) runs the signed bundle's executable once in snapshot mode with no document right after signing, so the assessment is cached before anyone opens the app; and the dylib is copied and re-signed only when its bytes changed, so an install that does not touch the backend keeps its cdhash. Record whether a first Launch Services launch after this is as fast as a later one (a person runs `scripts/measure_startup.sh --open --runs 1` right after an install, twice).
+  - implementation_notes: the cache is per cdhash; the warm-up must run the installed copy's code (same bytes as the bundle, so running the bundle before the `ditto` is enough only when the files are copied byte for byte). Snapshot mode never activates and exits by itself (`PRIMESTRUCT_UI_SNAPSHOT=<scratch png>`); tests that build bundles set `PS_NO_DOCUMENT_TYPES=1`.
+  - acceptance:
+    - after `scripts/bundle_macos_app.sh --native`, the bundle's next direct launch has `main` within 30 ms of a repeated launch (2026-11-09: 428 against 26 ms)
+    - a first `--open` launch after an install is within 50 ms of the second (owner records both numbers in docs/todo_log.md)
+    - full release gate green
+  - stop_rule: the install path; notarization or a Developer ID signature is out of scope.
+  - notes: linking the AppKit backend into the executable (one image, one assessment) would also halve it but needs a linker on the direct native path; file it only if the warm-up does not cover Launch Services launches.
+
+- [ ] TODO-5754: Restored tabs, toolbars and previews cost less in the AppKit backend
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-09
+  - phase: Native PrimeScroll startup (docs/NativeUiPlan.md section 1)
+  - parallel_track: startup-backend
+  - scope: Measured on a launch that restores three files: `ps_ui_window_add_tab` 80 to 130 ms per tab (tab-group layout under `-[NSWindow _addTabbedWindow:ordered:]`), `ps_ui_window_set_toolbar` 30 to 60 ms per markdown or script toolbar (61 ms to open one `.prime` file at launch), `ps_ui_window_set_preview_mode` 95 to 250 ms for a markdown preview (WebKit and a WKWebView). Make a tab that is not shown cheap (add it to the tab group without laying it out until it is selected), build each kind of toolbar's items once and reuse them, and create a preview's web view when its tab is first shown. Profile with `scripts/measure_startup.sh --sample` first.
+  - implementation_notes: src/ui/appkit/NativeUiAppKit.mm; the editor builds toolbars in `sync_toolbars` (examples/apps/text_editor/main.prime); keep the snapshot tests' images unchanged.
+  - acceptance:
+    - with the 3-file session of TODO-5753, the ps_ui calls before the event loop total at most 120 ms (2026-11-09: about 430 ms in add_tab, set_toolbar and set_preview_mode alone); `add_tab` at most 20 ms per background tab; opening a `.prime` file at launch spends at most 15 ms in `set_toolbar`
+    - switching to a restored tab shows its text, toolbar and preview as before (AppKit snapshot tests); full release gate green
+  - stop_rule: the cost of tabs, toolbars and previews; their order at launch is TODO-5753.
+
+- [ ] TODO-5603: Launch-time guard and the real-launch baseline
   - owner: ai
   - status: ready
   - created_at: 2026-10-26
-  - phase: Native PrimeScroll (docs/NativeUiPlan.md)
+  - phase: Native PrimeScroll startup (docs/NativeUiPlan.md section 1)
   - parallel_track: startup
-  - scope: Take stock of what PrimeScroll loads and does on the way to its first window, and keep it minimal (the user asked for this pass after the file-association work, where a framework link and system lookups had to be checked against the launch time). Measure first: the libraries dyld loads (`DYLD_PRINT_LIBRARIES=1` on a launch with `PRIMESTRUCT_UI_SNAPSHOT` set; the baseline of 2026-10-26 is 1404 lines for both the installed build and the one with the file-type code, UniformTypeIdentifiers included because AppKit loads it) and the time to the first window over repeated launches of the installed app, as a script (`scripts/measure_startup.sh`) so the numbers can be compared. Then list the work a launch does before the first window (preference and session reads, building every menu, the Info.plist, the runtime's setup: the native String heap, the host-call table, the highlighter) and move whatever can wait behind first use, as the markdown preview's web view already does. Record the before and after numbers in docs/NativeUiPlan.md.
+  - scope: The audit is done (docs/NativeUiPlan.md section 1, "Where a launch goes"; raw data in docs/todo_log.md) and `scripts/measure_startup.sh` with its probe exists. Left: (1) a guard: a ctest entry that builds hello_window and PrimeScroll natively and runs `scripts/measure_startup.sh --runs 3 --max-libraries <limit>` on each (limits: the 2026-11-09 counts, 1266 and 1269 images, plus 5), so a framework link or eager system lookup that adds images fails; (2) retire `scripts/measure_app_startup.sh` (its mean includes the snapshot's 600 ms idle wait) in favor of `measure_startup.sh`, updating its callers and the plan; (3) record a real Launch Services baseline from a person's run of `scripts/measure_startup.sh --open --runs 10 ~/Applications/PrimeScroll.app` (and `--file <small.txt>`) in the plan.
   - acceptance:
-    - `scripts/measure_startup.sh` prints the loaded-library count and the median time to the first window of a bundle over a number of launches; the plan records the baseline and what moved; a guard (a test or the script with a recorded limit) fails when a launch loads more libraries than the baseline; full release gate green
-  - stop_rule: measurement, the guard and the launch-time work that can wait; no feature changes.
-  - notes: system calls of a feature belong behind its window (the file associations only run when the settings window is built or a button is pressed).
+    - the guard runs in the release gate on macOS (skipped elsewhere with a message) and fails on one extra framework link (checked once by hand); `measure_app_startup.sh` is gone or delegates; the plan has the `--open` baseline; full release gate green
+  - stop_rule: measurement and the guard; launch work itself is TODO-5753, TODO-5754, TODO-5755 and TODO-5756.
+  - notes: the guard counts images, not milliseconds: timing medians move by 30 ms or more between runs and with the machine's load.
+
+- [ ] TODO-5756: AppKit's launch work in a real launch fits the budget
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-09
+  - phase: Native PrimeScroll startup (docs/NativeUiPlan.md section 1)
+  - parallel_track: startup-appkit
+  - scope: In the user's launches (unified log) `finishLaunching` takes 275 to 440 ms from Launch Services check-in, against 90 to 110 ms for all of `ps_ui_init` in snapshot mode. Seen in it: AppIntents registration that linkd rejects four times for the ad-hoc bundle, Writing Tools and Generative Models availability, a Spotlight donation for each recent document (`noteNewRecentDocumentURL`), window-restoration lookups, and the AutoFill helper process (`SafariPlatformSupport.Helper`) about 0.5 s in. First get a sampled real launch (a person runs `scripts/measure_startup.sh --open --sample --runs 3 <bundle>`; the probe quits the app after its first drawn text), then turn off what PrimeScroll does not use (for example text completion and AutoFill on the text view, Writing Tools, state restoration) and move `noteNewRecentDocumentURL` behind the first frame.
+  - acceptance:
+    - a real launch's `app_init` is at most 150 ms on a quiet machine (load under 4), and no helper process starts before the first drawn text (unified log)
+    - the editor keeps undo, find, spelling as configured, and its menus; full release gate green
+  - stop_rule: AppKit configuration at launch; nothing that removes an editor feature the user has.
+
+- [ ] TODO-5757: Build and test gates leave interactive launches their speed
+  - owner: human
+  - status: deferred
+  - created_at: 2026-11-09
+  - phase: Native PrimeScroll startup (docs/NativeUiPlan.md section 1)
+  - parallel_track: startup-machine
+  - scope: While a release gate ran (load average 85 to 126, 2.8 GB swapped) a plain AppKit editor took 0.47 to 1.06 s to its first text instead of 0.19 s, and a launch that paged AppKit back in took 1.17 s to its first window. Run the heavy gates at background priority (`taskpolicy -b` around `cmake --build` and `ctest` in `scripts/compile.sh`, or `nice` on Linux) so a launched app keeps the CPU and the gate yields; measure how much longer the gate takes.
+  - acceptance:
+    - with a release gate running, PrimeScroll's snapshot `text` median is at most 1.5 times the quiet median; the gate's duration change is recorded; full release gate green
+  - stop_rule: the priority of the gates.
+  - notes: deferred: AGENTS.md keeps `scripts/compile.sh` to its current contract unless the user asks for the change, so the user decides.
 
 - [ ] TODO-5586: Native String heap: pooled blocks, statistics and limit
   - owner: ai
@@ -693,7 +769,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 
 - [ ] TODO-5536: Small, lazily loaded bytecode for apps
   - owner: ai
-  - status: ready
+  - status: deferred
   - created_at: 2026-10-08
   - phase: Native UI (docs/NativeUiPlan.md)
   - parallel_track: bytecode-startup
@@ -702,6 +778,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - the startup benchmark is in `scripts/benchmark.sh` with a baseline; the PNG program's bytecode shrinks at least 4x and loads at least 4x faster, with identical program output
     - full release gate green
   - stop_rule: bytecode size and load time only; split lazy loading out if the size change is large.
+  - notes: deferred out of the startup lane on 2026-11-09: PrimeScroll ships the direct native build, which has no bytecode, so this is not on its launch path (the startup audit of TODO-5603 found the 0.79 MB executable's size makes no measurable difference warm). It matters for bytecode bundles (`primestruct_app_runtime` with `app.psir`).
 
 - [ ] TODO-5535: Launch-time harness and reference Objective-C++ editor
   - owner: ai
@@ -709,12 +786,12 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - created_at: 2026-10-08
   - phase: Native UI (docs/NativeUiPlan.md)
   - parallel_track: native-ui-launch
-  - scope: A macOS launch harness (`tools/launch_bench/`) that starts an app N times, cold and warm, and records the time to its first on-screen window (window-list polling) and to the first drawn text (an `os_signpost` the app emits), plus a reference editor written directly in Objective-C++ with the same UI and startup rules; compare the PrimeStruct editor, the reference and installed editors (TextEdit and others).
+  - scope: `scripts/measure_startup.sh` and its probe (TODO-5603) time PrimeStruct apps in snapshot mode and through Launch Services. Left: a reference editor written directly in Objective-C++ (`tools/launch_bench/reference_editor.mm`: the same window, tab, menu, toolbar and text view setup as PrimeScroll and the startup rules of section 1, with its own phase marks in the probe's format), so the budget "within 5 ms of a pure Objective-C++ editor" can be checked; and a cold-launch mode for the script (a launch after `purge` is not possible without root, so a fresh copy of the bundle at a new path, which also measures new-code assessment, and a person's run after a reboot). Compare PrimeScroll, the reference and TextEdit (`--open` against `/System/Applications/TextEdit.app` with window polling for apps without the probe).
   - acceptance:
-    - the harness prints a table per app; the owner records a Mac run in docs/NativeUiPlan.md section 1, and the PrimeStruct editor meets the budget or gets follow-up TODOs for each gap
+    - the reference editor builds with clang from the script; a table of PrimeScroll, reference and TextEdit (snapshot where possible, `--open` for all) is recorded in docs/NativeUiPlan.md section 1; PrimeScroll's snapshot `text` median is within 30 ms of the reference (2026-11-09 with a one-text-view prototype: 217 against 192 ms) or each gap has a TODO
     - full release gate green
   - stop_rule: measurement tooling and the reference editor only.
-  - notes: needs a Mac to run.
+  - notes: needs a Mac; the `--open` runs need a person at the machine (they show a window and take focus).
 
 - [ ] TODO-5533: Windows and Linux native UI backends
   - owner: ai

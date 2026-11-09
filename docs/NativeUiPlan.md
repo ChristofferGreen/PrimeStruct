@@ -49,6 +49,59 @@ larger than the VM's own cost, so the launch harness of TODO-5535 is still the w
 So the VM itself costs about 1 ms; compiling at launch is never acceptable; and bytecode size is the cost that
 matters. The large program's size comes from lowering inlining almost every call, which TODO-5536 addresses.
 
+**Where a launch goes** (2026-11-09, TODO-5603; raw data in `docs/todo_log.md` under TODO-5603). The user reported
+launches that often take 3 to 5 s. `scripts/measure_startup.sh` loads a probe (`tools/startup_probe/startup_probe.c`)
+into the app with `DYLD_INSERT_LIBRARIES` and times each phase from the process start: dyld done (`main`), `ps_ui_init`
+returned (`app_init`), the program's first `ps_ui_wait_event` (`loop`), the first window display and the first drawn
+text. The earlier figure of about 900 ms (`scripts/measure_app_startup.sh`) was mostly the snapshot mode's own idle
+wait of 12 slices of 50 ms before it writes the PNG; the probe leaves that out. Medians, snapshot mode, M3 Pro,
+macOS 27.0.1, load average about 10:
+
+| Program | main | app_init | loop | first text |
+| --- | --- | --- | --- | --- |
+| Reference Objective-C++ editor (one window and text view) | 13 | 92 | 150 | 192 ms |
+| PrimeScroll, master 06268bdc7 (0.79 MB executable), no file | 26 | 113 | 167 | 217 ms |
+| PrimeScroll, installed build of 2026-10-27 (3.6 MB), no file | 32 | 121 | 175 | 220 ms |
+| PrimeScroll master, a 50 KB `.prime` file as argument | 28 | 117 | 241 | 279 ms |
+| PrimeScroll master, a 3-file session with a markdown preview | 22 | 109 | 559 | 254 ms (window shown mid-restore) |
+
+On a warm launch with no document PrimeScroll is within the run-to-run noise (about 30 ms) of a plain AppKit editor:
+both load about 1270 images (AppKit's closure on macOS 27 includes WebKit whether or not a program uses it; the editor
+adds 6), and the program's own work before its event loop (registering every handler, building 120 menu items) is
+under 2 ms of the 50 ms between `app_init` and `loop`; the rest is `ps_ui_window_create` (35 ms) and the text view.
+The handler dispatch of 2cead3370 made no measurable difference against its loop version (179 against 213 ms, noise).
+The causes of the slow launches, by what they cost when they happen:
+
+1. **The first launch after every install (macOS, triggered by the workflow).** The kernel holds the exec of code with
+   a cdhash it has not seen until syspolicyd finishes a Gatekeeper assessment: a notarization-ticket lookup over the
+   network (150 ms on a warm connection; its request timeout is 3 s) and an XProtect scan. Ad-hoc signed, every build
+   is new code: +320 to 500 ms for the executable and +170 to 250 ms more for a new `libps_ui_appkit.dylib`, the same
+   for a 50 KB plain C program; the first launch of the master bundle above started `main` at 428 ms against 26 ms.
+   With a slow or cold network each lookup can approach its 3 s timeout. TODO-5755.
+2. **Load from build and test gates (machine, not PrimeScroll).** At load averages of 85 to 126 with 2.8 GB swapped,
+   the reference editor took 0.47 to 1.06 s to its first text instead of 0.19 s, and a launch that had to page AppKit
+   back in (3916 major faults) took 1.17 s to its first window. TODO-5757.
+3. **Session restore before the first frame (PrimeScroll).** `restore_session` runs after `first.show()` but before
+   `app.run`, and it also runs when Finder opens a file (a document arrives as an open-file event, not an argument).
+   Each restored tab costs `ps_ui_window_add_tab` 80 to 130 ms (tab-group layout), the markdown and script toolbars
+   about 30 to 60 ms per `ps_ui_window_set_toolbar`, and a markdown preview 95 to 250 ms (WebKit); with three files
+   the event loop starts 390 to 450 ms later, and the requested file then opens in a new tab (+100 ms). Opening one
+   `.prime` file at launch spends 61 ms building the script toolbar. TODO-5753 and TODO-5754.
+4. **AppKit's own launch in a real (regular) launch.** The unified log of the user's launches shows 275 to 440 ms
+   between Launch Services check-in and `finishLaunching` returning, against 90 to 110 ms for all of `ps_ui_init` in
+   snapshot mode: AppIntents registration that linkd rejects four times for an ad-hoc bundle, Writing Tools and
+   Generative Models availability, a Spotlight donation for the recent document, and the AutoFill helper process
+   (`SafariPlatformSupport.Helper`) that starts about 0.5 s in. TODO-5756.
+5. **Process start.** Launch Services to exec is about 20 ms, then amfid checks the ad-hoc executable and dylib on every
+   launch, and dyld takes 20 to 35 ms; the executable's size (0.8 MB now, 3.6 MB installed) makes no measurable
+   difference warm. Not PrimeScroll-specific.
+
+The seven user launches still in the unified log (2026-11-07 to 11-09) checked in with Launch Services 61 to 207 ms
+after the launch request, and the two with a full trace showed the window active about 0.5 and 0.9 s after it (load
+near 100 at the time). The launch at login, by "reopen windows when logging back in", took 5.6 s to check in: the
+login window starts the app stopped at a background role. None of the logged launches was a first launch after an
+install, which is when cause 1 applies; the steps for measuring the real Launch Services path are in TODO-5603.
+
 **Rules for the app path:**
 - Ship precompiled bytecode only. The runner links `primec_embed_runtime_lib` (no compiler) into one executable, with
   the bytecode embedded in it or next to it; compiling at launch exists only for development.
