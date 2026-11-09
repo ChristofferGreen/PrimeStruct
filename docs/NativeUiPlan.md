@@ -484,7 +484,15 @@ Hand checks on a Mac (typing, shortcuts, real panels, cursor stepping over graph
   on Apple, OFF elsewhere) controls the Objective-C++ targets.
 - **Snapshots without Screen Recording permission.** With `PRIMESTRUCT_UI_SNAPSHOT=/path/out.png`, the first shown
   window is rendered by its own view hierarchy (`cacheDisplayInRect`) into a PNG once its layout has settled, and the
-  program is then told to quit. The app runs as an accessory (no Dock icon, no activation). CTest
+  program is then told to quit. The app cannot become active (`NSApplicationActivationPolicyProhibited`; a run that
+  does exits with status 3), and nothing appears on screen (TODO-5820): every window is transparent from its creation,
+  casts no shadow, ignores the mouse and, once ordered in, is parked past the bottom right corner of the screens
+  (AppKit keeps a corner of about 40 by 32 points of a titled window on a screen; leaving every screen would change
+  the backing scale of the picture and mark the window occluded, which stops a web view from drawing). It still lays
+  out and draws as for a user, so the pictures and the launch phases are unchanged (both checked pixel for pixel and
+  by `scripts/measure_startup.sh`). `PRIMESTRUCT_UI_SHOW_WINDOWS=1` shows the windows, for a person watching a run;
+  the bundles the UI drivers build are agent apps (`PS_UI_ELEMENT=1` makes `scripts/bundle_macos_app.sh` write
+  `LSUIElement`), so their Launch Services launches show no Dock icon either. CTest
   `PrimeStruct_native_ui_appkit_smoke` bundles `examples/native_ui/hello_window.prime`, runs the bundle in snapshot
   mode and checks the PNG; it also bundles the editor and checks two pictures of it (below).
 - **Snapshot hooks for pictures of the editor.** `PRIMESTRUCT_UI_TYPE=text` types into the first text view,

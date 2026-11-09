@@ -17,7 +17,11 @@
 // becomes the path), and PRIMESTRUCT_UI_MENU=File pops that menu-bar menu open
 // and draws its window into the picture (no Screen Recording permission needed).
 // PRIMESTRUCT_UI_COMMANDS=1000000,1000000 delivers those menu command ids to the program
-// first (for the editor, two New commands: two more tabs).
+// first (for the editor, two New commands: two more tabs). A snapshot run's windows
+// are transparent from creation, cast no shadow, take no mouse events and are parked
+// past the bottom right corner of the screens, so nothing appears to the user
+// (presentWindow); PRIMESTRUCT_UI_SHOW_WINDOWS=1 shows them instead, for a person
+// watching a run.
 
 #import <AppKit/AppKit.h>
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
@@ -392,6 +396,43 @@ NSView *windowContentFor(uint64_t handle) {
 }
 
 // A settings window is as large as its content needs, and stays centered.
+// A snapshot run's window, once ordered in, is parked past the bottom right corner of the screens. AppKit keeps a
+// corner of a titled window on a screen (about 40 by 32 points of it here), and that corner is transparent. Leaving
+// every screen would change the picture (the window would take another screen's backing scale) and would mark the
+// window occluded, which stops a web view from drawing; so the window stays on its screen, out of the way, and still
+// lays out and draws as it would for the user. PRIMESTRUCT_UI_SHOW_WINDOWS=1 and the open-menu step leave it where it
+// is.
+// A snapshot run's window: transparent (unless PRIMESTRUCT_UI_SHOW_WINDOWS asks to see it), no shadow, no mouse
+// events, and out of the window cycle.
+bool snapshotWindowsHidden();
+void prepareSnapshotWindow(NSWindow *w) {
+  w.alphaValue = snapshotWindowsHidden() || !state().snapshotMenu.empty() ? 0 : 1;
+  w.ignoresMouseEvents = YES;
+  w.hasShadow = NO;
+  w.collectionBehavior |= NSWindowCollectionBehaviorTransient | NSWindowCollectionBehaviorIgnoresCycle |
+                          NSWindowCollectionBehaviorStationary;
+}
+
+bool snapshotWindowsHidden() {
+  const State &s = state();
+  static const bool shown = [] {
+    const char *show = std::getenv("PRIMESTRUCT_UI_SHOW_WINDOWS");
+    return show != nullptr && *show != '\0' && std::strcmp(show, "0") != 0;
+  }();
+  return !s.snapshotPath.empty() && s.snapshotMenu.empty() && !shown;
+}
+
+void placeSnapshotWindow(NSWindow *w) {
+  if (!snapshotWindowsHidden()) {
+    return;
+  }
+  NSRect screens = NSZeroRect;
+  for (NSScreen *screen in [NSScreen screens]) {
+    screens = NSUnionRect(screens, screen.frame);
+  }
+  [w setFrameOrigin:NSMakePoint(NSMaxX(screens) + 2000, NSMinY(screens))];
+}
+
 void fitSettingsWindow(NSWindow *w, uint64_t window) {
   State &s = state();
   const auto content = s.windowContent.find(window);
@@ -405,6 +446,7 @@ void fitSettingsWindow(NSWindow *w, uint64_t window) {
   size.height += 2 * margin;
   [w setContentSize:size];
   [w center];
+  placeSnapshotWindow(w);
 }
 
 // Snapshot runs: "check:6" clicks check box 6, "popup:8:3" chooses item 3 of pop-up 8, through the controls'
@@ -2804,6 +2846,10 @@ uint64_t ps_ui_window_create(const char *title, int32_t width, int32_t height) {
     window.tabbingMode = NSWindowTabbingModePreferred;
     window.tabbingIdentifier = @"PrimeStructDocument";
     [window center];
+    if (!s.snapshotPath.empty()) {
+      // Before anything can order it in (joining a tab group does): a snapshot window never shows.
+      prepareSnapshotWindow(window);
+    }
     const uint64_t handle = s.nextHandle++;
     tag(window, handle);
     s.windows[handle] = window;
@@ -2867,19 +2913,17 @@ bool ps_ui_window_set_edited(uint64_t window, bool edited) {
 }
 
 // Brings a window to the front. A snapshot run (the tests) only needs the window to lay out and draw itself into a
-// picture, so there it stays transparent and takes no mouse events: a test run neither flashes windows nor changes
-// the pointer's cursor under the user's hand. (The open-menu snapshot is the one step that cannot be invisible.)
+// picture, so there it stays transparent, takes no mouse events and is parked in a corner: a test run neither shows
+// windows nor changes the pointer's cursor under the user's hand. (The open-menu snapshot is the one step that cannot
+// be invisible; PRIMESTRUCT_UI_SHOW_WINDOWS=1 shows the windows on purpose.)
 static void presentWindow(NSWindow *w) {
   if (!state().snapshotPath.empty()) {
-    w.alphaValue = 0;
-    w.ignoresMouseEvents = YES;
-    w.hasShadow = NO;
-    w.collectionBehavior |= NSWindowCollectionBehaviorTransient | NSWindowCollectionBehaviorIgnoresCycle |
-                            NSWindowCollectionBehaviorStationary;
+    prepareSnapshotWindow(w);
     if (state().snapshotMenu.empty()) {
-      // On screen (so it lays out and draws) without becoming key: the user's keyboard stays where it is. The
+      // Ordered in (so it lays out and draws) without becoming key: the user's keyboard stays where it is. The
       // harness sets the first responder and inserts text directly, which needs no key window.
       [w orderFrontRegardless];
+      placeSnapshotWindow(w);
       return;
     }
   }

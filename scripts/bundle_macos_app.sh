@@ -75,6 +75,13 @@ if [[ -z "${PS_NO_DOCUMENT_TYPES:-}" && -f "$TYPES_FILE" ]]; then
   DOCUMENT_KEYS="$(python3 "$ROOT_DIR/scripts/document_types_plist.py" "$TYPES_FILE")"
 fi
 
+# PS_UI_ELEMENT=1 makes an agent app (LSUIElement): no Dock icon and no menu bar of its own when Launch Services starts
+# it. For the bundles the UI tests build, so a test's launch never shows anything; never for an app people use.
+ELEMENT_KEY=""
+if [[ -n "${PS_UI_ELEMENT:-}" && "${PS_UI_ELEMENT}" != "0" ]]; then
+  ELEMENT_KEY="<key>LSUIElement</key><true/>"
+fi
+
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -86,6 +93,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleExecutable</key><string>$NAME</string>
   $ICON_KEY
   $DOCUMENT_KEYS
+  $ELEMENT_KEY
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleVersion</key><string>1</string>
   <key>CFBundleShortVersionString</key><string>1.0</string>

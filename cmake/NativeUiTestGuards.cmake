@@ -10,6 +10,9 @@
 #                                       the mouse for a moment)
 #   PRIMESTRUCT_SKIP_UI_WINDOWS=1       skip the whole driver (an opt-out; not needed for focus any more)
 #
+# Every snapshot window is also transparent and parked beyond the bottom right corner of the screens, and the bundles
+# the drivers build are agent apps (PS_UI_ELEMENT=1: LSUIElement, so a Launch Services launch shows no Dock icon).
+#
 # Include this file near the top of a driver, then `if(PRIMESTRUCT_UI_SKIP) return() endif()` (a return() inside an
 # included file would only leave the include).
 
@@ -26,3 +29,6 @@ if(DEFINED ENV{PRIMESTRUCT_TEST_UI_INTRUSIVE} AND NOT "$ENV{PRIMESTRUCT_TEST_UI_
    NOT "$ENV{PRIMESTRUCT_TEST_UI_INTRUSIVE}" STREQUAL "0")
   set(PRIMESTRUCT_UI_INTRUSIVE ON)
 endif()
+
+# The bundles the drivers build never show a Dock icon (scripts/bundle_macos_app.sh).
+set(ENV{PS_UI_ELEMENT} "1")
