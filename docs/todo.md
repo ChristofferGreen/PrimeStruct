@@ -107,7 +107,6 @@ of sync with them.
 | TODO-5727 | Every struct copy site tells a place from a temporary by resolution | deferred | lifecycle-copy-sources |
 | TODO-5707 | `Function` types accept `mut` parameters | deferred | closures-mut-params |
 | TODO-5708 | Type aliases | deferred | type-aliases |
-| TODO-5711 | Retire the `/std/ui` layout and command-list prototype | ready | ui-prototype-retire |
 | TODO-5745 | A labeled value that is a call parses in every position | ready | parser-labeled-values |
 | TODO-5746 | A parameterless `mut` method whose body is only bindings is a method | ready | diagnostics |
 | TODO-5748 | Methods with a `Function` parameter become real calls on the VM and optexe | ready | ir-real-calls |
@@ -198,7 +197,6 @@ of sync with them.
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719; collection fields found by closures and the todo example: TODO-5681, TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
 - Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5738, TODO-5718
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732, TODO-5735, TODO-5736, TODO-5737
-- Native UI handlers (docs/WebAppsPlan.md): TODO-5711
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe; real calls and struct copies TODO-5739, TODO-5740, TODO-5741, TODO-5748
 
 ### Execution Queue
@@ -351,18 +349,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - a method taking a `Function` by `move` is one real call on the VM and optexe; the editor's VM instruction count is measured before and after; the editor scenarios keep their call logs
     - full release gate green
   - stop_rule: `Function` parameters in the shape check and the real-call ABI only.
-
-- [ ] TODO-5711: Retire the `/std/ui` layout and command-list prototype
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-07
-  - phase: Native UI handlers (docs/WebAppsPlan.md)
-  - parallel_track: ui-prototype-retire
-  - scope: `stdlib/std/ui/ui.prime` (`LayoutTree`, `CommandList`, `HtmlCommandList`, `UiEventStream`, the login form) has no user: no app imports it and its HTML records have no consumer. Delete it with its tests (`test_compile_run_vm_core_ui.cpp`, the `core_ui_layout_*` native shards and the cases in `test_compile_run_vm_core_basic.cpp` that only exercise it), drop its sections from docs/Graphics_API_Design.md and docs/spec/architecture.md, and remove `stdlib/std/ui/*` from the style-aligned list in AGENTS.md and docs/CodeExamples.md (keeping `/std/ui/native`). Lowerer tests that only borrow its struct shapes keep a local copy of the shape.
-  - acceptance:
-    - nothing references the removed names; the test inventory and registration checks pass
-    - full release gate green
-  - stop_rule: deletion and doc alignment only.
 
 - [ ] TODO-5688: Calls require the callee's whole active effect set
   - owner: ai

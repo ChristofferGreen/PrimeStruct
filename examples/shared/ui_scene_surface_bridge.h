@@ -110,7 +110,7 @@ inline bool readUiSceneRecord(const std::vector<std::int32_t> &words,
   int nodeCount = 0;
   if (!reader.readInt(version) || version != UiSceneRecordVersion || !reader.readInt(nodeCount) ||
       nodeCount < 0) {
-    errorOut = "ui scene bridge expected UiScene.serialize() version 1 and a non-negative node count";
+    errorOut = "ui scene bridge expected scene records of version 1 and a non-negative node count";
     return false;
   }
   nodesOut.clear();
@@ -179,7 +179,8 @@ inline bool readUiTextOverlayRecords(const std::vector<std::int32_t> &words,
   int overlayCount = 0;
   if (!reader.readInt(version) || version != UiSceneRecordVersion || !reader.readInt(overlayCount) ||
       overlayCount < 0) {
-    errorOut = "ui scene bridge expected UiSceneTextOverlays.serialize() version 1 and a non-negative overlay count";
+    errorOut = "ui scene bridge expected text overlay records of version 1 "
+               "and a non-negative overlay count";
     return false;
   }
   overlaysOut.clear();

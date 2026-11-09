@@ -1881,8 +1881,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/compile_run/native_backend/test_compile_run_native_backend_core_result_and_vector_variadics.cpp
     tests/unit/compile_run/native_backend/test_compile_run_native_backend_core_result_payloads_and_strings.cpp
     tests/unit/compile_run/native_backend/test_compile_run_native_backend_core_runtime_and_ir_paths.cpp
-    tests/unit/compile_run/native_backend/test_compile_run_native_backend_core_ui_layout_basic_call.cpp
-    tests/unit/compile_run/native_backend/test_compile_run_native_backend_core_ui_layout_scene_model.cpp
+    tests/unit/compile_run/native_backend/test_compile_run_native_backend_core_strings_and_frames.cpp
     tests/unit/compile_run/native_backend/test_compile_run_native_backend_core_vector_and_experimental_map_variadics.cpp
     tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections.cpp
     tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_alias_diagnostics_vector_wrapper.cpp
@@ -1967,7 +1966,6 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/compile_run/vm/test_compile_run_vm_bounds.cpp
     tests/unit/compile_run/vm/test_compile_run_vm_core.cpp
     tests/unit/compile_run/vm/test_compile_run_vm_core_basic.cpp
-    tests/unit/compile_run/vm/test_compile_run_vm_core_ui.cpp
     tests/unit/compile_run/vm/test_compile_run_vm_core_runtime.cpp
     tests/unit/compile_run/vm/test_compile_run_vm_core_results_basic.cpp
     tests/unit/compile_run/vm/test_compile_run_vm_core_results_structs.cpp
@@ -3147,7 +3145,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.core"
                                       TIMEOUT 300
                                       SHARD_PREFIX "apple_core"
-                                      TOTAL_CASES 215
+                                      TOTAL_CASES 202
                                       CASES_PER_SHARD 10)
     addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.math_numeric"
                                       TIMEOUT 300
@@ -3169,8 +3167,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
     set(PrimeStructAppleNativeKnownFailingShards
       core_apple_core_1_10
       core_apple_core_131_140
-      core_apple_core_201_210
-      core_apple_core_211_215
+      core_apple_core_191_200
+      core_apple_core_201_202
       math_numeric_apple_math_numeric_41_49
       collections_apple_collections_71_80
       collections_apple_collections_101_110

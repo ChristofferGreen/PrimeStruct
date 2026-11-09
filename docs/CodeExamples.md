@@ -35,7 +35,8 @@ Style-aligned surface code:
 - `stdlib/std/maybe/*`
 - `stdlib/std/file/*`
 - `stdlib/std/image/*`
-- `stdlib/std/ui/*`
+- `stdlib/std/ui/native/*`
+- `stdlib/std/ui/events/*`
 - `stdlib/std/scene/*`
 - `stdlib/std/os/*`
 - `stdlib/std/net/*`

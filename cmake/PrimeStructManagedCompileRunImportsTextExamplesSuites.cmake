@@ -135,31 +135,31 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.examples"
                                   SHARD_PREFIX "spinning_cube_argument_validation"
                                   SOURCE_FILE "*test_compile_run_examples_*.cpp"
                                   RANGE_FIRST 31
-                                  RANGE_LAST 50
+                                  RANGE_LAST 46
                                   CASES_PER_SHARD 5)
-# Cases 51-55 together took 20-28s against the 30s ceiling and timed out under
-# full-suite load, so run them one per shard. Case 52 alone takes ~15s and is
+# Cases 47-51 together took 20-28s against the 30s ceiling and timed out under
+# full-suite load, so run them one per shard. Case 48 alone takes ~15s and is
 # scheduled first, when machine load peaks, so it doubles; allow 120s.
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.examples"
                                   TIMEOUT 300
                                   SHARD_PREFIX "spinning_cube_argument_validation"
                                   SOURCE_FILE "*test_compile_run_examples_*.cpp"
-                                  RANGE_FIRST 51
-                                  RANGE_LAST 55
+                                  RANGE_FIRST 47
+                                  RANGE_LAST 51
                                   CASES_PER_SHARD 1)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.examples"
                                   TIMEOUT 300
                                   SHARD_PREFIX "native_window_launcher_and_preflight"
                                   SOURCE_FILE "*test_compile_run_examples_*.cpp"
-                                  RANGE_FIRST 56
-                                  RANGE_LAST 71
+                                  RANGE_FIRST 52
+                                  RANGE_LAST 67
                                   CASES_PER_SHARD 1)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.examples"
                                   TIMEOUT 300
                                   SHARD_PREFIX "metal_pipeline_and_borrow_checker"
                                   SOURCE_FILE "*test_compile_run_examples_*.cpp"
-                                  RANGE_FIRST 72
-                                  RANGE_LAST 78
+                                  RANGE_FIRST 68
+                                  RANGE_LAST 74
                                   CASES_PER_SHARD 1)
 # TODO-4711: measured ~32s real worst case for this shard; 120s = ~4x margin,
 # still above the 30s ceiling (see TODO-4710/TODO-5230 for the per-compile
@@ -168,15 +168,15 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.examples"
                                   TIMEOUT 300
                                   SHARD_PREFIX "language_level_examples"
                                   SOURCE_FILE "*test_compile_run_examples_*.cpp"
-                                  RANGE_FIRST 79
-                                  RANGE_LAST 84
+                                  RANGE_FIRST 75
+                                  RANGE_LAST 80
                                   CASES_PER_SHARD 1)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.examples"
                                   TIMEOUT 300
                                   SHARD_PREFIX "metal_pipeline_and_borrow_checker"
                                   SOURCE_FILE "*test_compile_run_examples_*.cpp"
-                                  RANGE_FIRST 85
-                                  RANGE_LAST 86
+                                  RANGE_FIRST 81
+                                  RANGE_LAST 82
                                   CASES_PER_SHARD 1)
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.math_conformance"

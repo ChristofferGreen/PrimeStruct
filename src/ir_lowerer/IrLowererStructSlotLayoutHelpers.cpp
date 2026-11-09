@@ -49,24 +49,6 @@ bool isMapValueTypeName(const std::string &typeName) {
          typeName.rfind(collection_paths::memberPath(collection_paths::kMapFolder, "MapValue") + "__", 0) == 0;
 }
 
-bool isKnownStdUiStructAlias(const std::string &typeName) {
-  return typeName.find('/') == std::string::npos &&
-         (typeName == "CommandList" || typeName == "HtmlCommandList" ||
-          typeName == "LayoutTree" || typeName == "LoginFormNodes" ||
-          typeName == "Rgba8" || typeName == "UiEventStream" ||
-          typeName == "UiScene" || typeName == "UiSceneTextOverlays");
-}
-
-std::string resolveStructSlotLookupPath(
-    const std::string &structPath,
-    const StructLayoutFieldIndex &fieldIndex) {
-  if (fieldIndex.count(structPath) > 0 || !isKnownStdUiStructAlias(structPath)) {
-    return structPath;
-  }
-  const std::string stdUiPath = "/std/ui/" + structPath;
-  return fieldIndex.count(stdUiPath) > 0 ? stdUiPath : structPath;
-}
-
 std::string normalizeVectorStructPath(const std::string &typeName) {
   if (isBuiltinVectorTypeName(typeName)) {
     return vectorBuiltinStructNormalizedPath();
@@ -504,10 +486,7 @@ bool resolveStructSlotLayoutFromDefinitionFieldIndex(
     std::unordered_set<std::string> &layoutStack,
     StructSlotLayoutInfo &out,
     std::string &error) {
-  const std::string resolvedStructPath =
-      resolveStructSlotLookupPath(structPath, fieldIndex);
-  if (auto defIt = defMap.find(resolvedStructPath);
-      defIt != defMap.end() && defIt->second != nullptr) {
+  if (auto defIt = defMap.find(structPath); defIt != defMap.end() && defIt->second != nullptr) {
     const Definition &def = *defIt->second;
     const bool isSumDefinition =
         std::any_of(def.transforms.begin(), def.transforms.end(),
@@ -549,15 +528,15 @@ bool resolveStructSlotLayoutFromDefinitionFieldIndex(
         maxPayloadSlots = std::max(maxPayloadSlots, payloadLayout.totalSlots);
       }
       StructSlotLayoutInfo layout;
-      layout.structPath = resolvedStructPath;
+      layout.structPath = structPath;
       layout.totalSlots = 2 + maxPayloadSlots;
       out = layout;
-      layoutCache[resolvedStructPath] = layout;
+      layoutCache[structPath] = layout;
       return true;
     }
   }
   return resolveStructSlotLayoutFromDefinitionFields(
-      resolvedStructPath,
+      structPath,
       [&](const std::string &structPathIn, std::vector<StructLayoutFieldInfo> &fieldsOut) {
         return collectStructLayoutFieldsFromIndex(fieldIndex, structPathIn, fieldsOut);
       },
@@ -609,10 +588,8 @@ bool resolveStructFieldSlotFromDefinitionFieldIndex(
     std::unordered_set<std::string> &layoutStack,
     StructSlotFieldInfo &out,
     std::string &error) {
-  const std::string resolvedStructPath =
-      resolveStructSlotLookupPath(structPath, fieldIndex);
   return resolveStructFieldSlotFromDefinitionFields(
-      resolvedStructPath,
+      structPath,
       fieldName,
       [&](const std::string &structPathIn, std::vector<StructLayoutFieldInfo> &fieldsOut) {
         return collectStructLayoutFieldsFromIndex(fieldIndex, structPathIn, fieldsOut);

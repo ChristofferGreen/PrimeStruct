@@ -67,25 +67,6 @@ bool isBuiltinSoaToAosStructMatch(const std::string &calleePath,
   return isCanonicalBuiltinSoaBridgePath(calleePath);
 }
 
-bool isKnownStdUiStructAlias(std::string_view bareName) {
-  return bareName == "CommandList" || bareName == "HtmlCommandList" ||
-         bareName == "LayoutTree" || bareName == "LoginFormNodes" ||
-         bareName == "Rgba8" || bareName == "UiEventStream" ||
-         bareName == "UiScene" || bareName == "UiSceneTextOverlays";
-}
-
-bool isStdUiStructAliasMatch(const std::string &expectedStruct,
-                             const std::string &argStruct) {
-  auto matchesBareToQualified = [](const std::string &bare,
-                                   const std::string &qualified) {
-    return bare.find('/') == std::string::npos &&
-           isKnownStdUiStructAlias(bare) &&
-           qualified == std::string("/std/ui/") + bare;
-  };
-  return matchesBareToQualified(expectedStruct, argStruct) ||
-         matchesBareToQualified(argStruct, expectedStruct);
-}
-
 bool isKnownStdGfxStructAlias(std::string_view bareName) {
   return bareName == "GraphicsSubstrate" || bareName == "SubstrateWindowConfig" ||
          bareName == "SubstrateDeviceConfig" || bareName == "SubstrateSwapchainConfig" ||
@@ -117,7 +98,7 @@ bool isStdTextStructAliasMatch(const std::string &expected, const std::string &a
 // `[SubstrateDeviceConfig] config`) whose argument resolves to that struct's qualified path
 // matches in isStructParamMatch, but the parameter's stored structTypeName stays bare and a
 // layout lookup keyed on it fails; canonicalize to the qualified spelling before storing it.
-// Only the rooted-slash and std-ui/std-gfx/std-text alias matches: the builtin vector-to-soa
+// Only the rooted-slash and std-gfx/std-text alias matches: the builtin vector-to-soa
 // bridges keep the collection's generic backing-type spelling.
 std::string canonicalStructTypeName(const std::string &expectedStruct,
                                      const std::string &argStruct) {
@@ -128,7 +109,6 @@ std::string canonicalStructTypeName(const std::string &expectedStruct,
       !argStruct.empty() && argStruct.front() == '/' &&
       (argStruct.substr(1) == expectedStruct ||
        isStdTextStructAliasMatch(expectedStruct, argStruct) ||
-       isStdUiStructAliasMatch(expectedStruct, argStruct) ||
        isStdGfxStructAliasMatch(expectedStruct, argStruct))) {
     return argStruct;
   }
@@ -151,7 +131,6 @@ bool isStructParamMatch(const std::string &calleePath,
          isBuiltinVectorStructMatch(expectedStruct, argStruct) ||
          isBuiltinSoaToAosStructMatch(calleePath, expectedStruct, argStruct) ||
          isStdTextStructAliasMatch(expectedStruct, argStruct) ||
-         isStdUiStructAliasMatch(expectedStruct, argStruct) ||
          isStdGfxStructAliasMatch(expectedStruct, argStruct);
 }
 

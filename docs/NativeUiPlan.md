@@ -5,8 +5,8 @@ Status: in progress (2026-10-08). The C ABI header, the headless backend and the
 
 PrimeStruct programs get desktop GUIs built from **platform-native widgets**: an `NSTextView` on macOS, an `EDIT`
 control or RichEdit on Windows, a `GtkTextView` on Linux. The first target is macOS and the first example is a plain
-text editor. This plan is separate from `docs/Graphics_API_Design.md`, whose `/std/ui` command lists and `/std/scene`
-graph stay the path for custom-drawn UI (games, canvases, the web host); native widgets never go through the scene
+text editor. This plan is separate from `docs/Graphics_API_Design.md`, whose `/std/scene` graph stays the path for
+custom-drawn UI (games, canvases, the web host); native widgets never go through the scene
 renderer.
 
 ## 1. Startup time comes first

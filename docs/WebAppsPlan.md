@@ -41,7 +41,7 @@ handlers see only the keys it does not keep.
 
 1. **One handler model, not one widget tree.** Web pages and native windows do not share widgets: HTML and AppKit
    differ in layout, text and focus, and a common tree collapses to the lowest denominator (the `/std/ui` prototype,
-   `stdlib/std/ui/ui.prime`, stopped at a login form). What they share is how events reach code: a handler is a
+   `stdlib/std/ui/ui.prime`, stopped at a login form and was retired in TODO-5711). What they share is how events reach code: a handler is a
    closure that takes the event and the state it acts on, it is registered in a table, and a loop dispatches to it.
    `Router` already works this way; the native UI moves to it too.
 2. **State comes in through a parameter, never through a capture.** A closure with a `[ref]` capture cannot be stored
@@ -120,6 +120,6 @@ handler that brings the menus, toolbars and session up to date after each event.
 4. Events and controls: TODO-5723 (shared event structs; done), TODO-5722 (web controls take click closures; done).
 5. Fragments: TODO-5706 (done), then TODO-5724 (web hover and key handlers; done).
 6. Native UI: TODO-5709 (controls take closures, `app.run(handlers)`; done), TODO-5725 (pointer and key events in the C ABI; done),
-   TODO-5710 (PrimeScroll on handlers; done), TODO-5711 (retire the `/std/ui` prototype).
+   TODO-5710 (PrimeScroll on handlers; done), TODO-5711 (retire the `/std/ui` prototype; done).
 7. Later: TODO-5707, TODO-5708 (type aliases), TODO-5717 (both writers in one file), TODO-5718 (repeated and decoded
    parameters), sessions and cookies, keep-alive, concurrency once tasks schedule.

@@ -67,28 +67,15 @@
   Add a concrete TODO before changing that graphics backend/runtime seam; current spinning-cube execution
   therefore still mixes shared `.prime` simulation with browser/native/Metal host glue outside the fully canonical
   package path.
-- **Layered UI/rendering roadmap:** the first `/std/ui/*` foundation now includes deterministic command-list rendering,
-  a two-pass layout tree contract, basic control emission, a basic panel container primitive, and the first composite
-  widget helper, plus deterministic HTML/backend adapter records and deterministic platform input records
-  (`CommandList`, `draw_text`, `draw_rounded_rect`, `push_clip`, `pop_clip`, `draw_label`, `draw_button`, `draw_input`,
-  `begin_panel`, `end_panel`, `draw_login_form`, `HtmlCommandList`, `emit_panel`, `emit_label`, `emit_button`,
-  `emit_input`, `bind_event`, `emit_login_form`, `UiEventStream`, `push_pointer_move`, `push_pointer_down`,
-  `push_pointer_up`, `push_key_down`, `push_key_up`, `push_ime_preedit`, `push_ime_commit`, `push_resize`,
-  `push_focus_gained`, `push_focus_lost`, `LayoutTree`, `LoginFormNodes`, `UiScene`, `UiSceneNodes`,
-  `UiSceneTextOverlays`, `append_root_column`, `append_column`, `append_leaf`, `append_label`, `append_button`,
-  `append_input`, `append_panel`, `append_login_form`, `emit_scene_panel`, `emit_scene_label`, `emit_scene_button`,
-  `emit_scene_panel_button`, `measure`, `arrange`, deterministic `serialize()` output), and the current host bridge can
-  blit a deterministic BGRA8 software
-  surface through the native window presenter and macOS Metal host paths. The `--software-surface-ui-demo` mode now
-  renders the checked-in PrimeStruct-authored `UiScene` fixture through `ui_scene_surface_bridge.h` into the same BGRA8
-  presenter path while the shared widget/layout model can also
-  emit deterministic HTML/backend adapter records and normalize pointer, keyboard, IME, resize, and focus input into
-  deterministic UI event-stream records. The scene renderer boundary is now locked as a UI producer contract rather
-  than a UI-specific software renderer: `/std/ui/*` owns rect/layout/state/event logic and now emits deterministic
-  `UiScene` scene records plus `UiSceneTextOverlays` records for panel, label, and raised button presentation,
-  `/std/scene` owns renderer-facing `Scene`, `Node`, `Transform`, `Camera`, `Material`, `Light`, and
-  primitive descriptor concepts, and `/std/ui/CommandList.serialize()` remains a stable adapter path. The first
-  source-level `/std/scene` model is data-only: it authors and serializes stable ids, parent-before-child node order,
+- **Layered UI/rendering roadmap:** native windows use platform widgets through `/std/ui/native` and its handlers, with
+  the event values of `/std/ui/events` (docs/NativeUiPlan.md), and web pages use `/std/web` (docs/WebAppsPlan.md). The
+  first `/std/ui` prototype (command lists, a layout tree, widgets, HTML adapter records, an input event stream and a
+  login form) had no user and was retired in TODO-5711. The host bridge can blit a deterministic BGRA8 software surface
+  through the native window presenter and macOS Metal host paths; its `--software-surface-ui-demo` mode renders a fixed
+  scene-record fixture through `ui_scene_surface_bridge.h` into the same presenter path. Custom-drawn UI is locked as a
+  scene producer contract rather than a UI-specific software renderer: `/std/scene` owns renderer-facing `Scene`,
+  `Node`, `Transform`, `Camera`, `Material`, `Light`, and primitive descriptor concepts. The first source-level
+  `/std/scene` model is data-only: it authors and serializes stable ids, parent-before-child node order,
   painter order, local `z`, local transform metadata, orthographic camera config, materials, lights, and primitive
   descriptors. The shared CPU BGRA8 renderer consumes that serialized `/std/scene` record stream from
   `examples/shared/scene_bgra8_renderer.h` and emits validated `SoftwareSurfaceFrame` output for flat rect/plane
@@ -105,9 +92,7 @@
   selection, fixture atlas coverage, and BGRA8 source-over composition behind renderer-owned HarfBuzz-class,
   FreeType-class, and ICU/FriBidi-class wrappers, and the first UI light
   rig is fixed ambient-plus-key (`0.55` ambient, `0.45` upper-left/front key, no shadows, no stochastic sampling, no
-  author lights). No active TODO currently tracks platform/runtime consumption of that shared event stream. Add a
-  concrete TODO before changing that UI runtime seam; composite-widget composition remains locked to the basic
-  widget/container APIs rather than raw draw-command helpers or raw HTML record append helpers.
+  author lights).
 - **IR definition (stable, PSIR v27):**
   - **Module:** `{ string_table, struct_layouts, functions, instruction_source_map, host_imports, entry_index, version }`.
     The canonical contract constants live in `include/primec/Ir.h` as `IrSchemaMagic`,

@@ -119,7 +119,8 @@ bridge-oriented, or substrate-heavy while ownership migrations are still in
 flight.
 
 - **Style-aligned surface code:** `stdlib/std/math/*`, `stdlib/std/maybe/*`,
-  `stdlib/std/file/*`, `stdlib/std/image/*`, `stdlib/std/ui/*`,
+  `stdlib/std/file/*`, `stdlib/std/image/*`, `stdlib/std/ui/native/*`,
+  `stdlib/std/ui/events/*`,
   `stdlib/std/scene/*`,
   `stdlib/std/collections/vector.prime`,
   `stdlib/std/collections/map.prime`,

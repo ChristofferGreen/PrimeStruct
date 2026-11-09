@@ -47,8 +47,7 @@ spinning-cube sample.
   runs one offscreen frame, and requires `frame_rendered=1`.
 - `--software-surface-demo` skips shader/metallib compilation, runs the shared
   software-surface path, and requires `software_surface_presented=1`.
-- `--software-surface-ui-demo` renders the checked-in PrimeStruct `/std/ui`
-  scene-record fixture through the shared UI scene bridge before the same
+- `--software-surface-ui-demo` renders a fixed scene-record fixture through the shared UI scene bridge before the same
   software-surface upload path.
 - `--snapshot-code` and `--parity-check` compile only the host and forward the
   requested deterministic helper mode through the shared

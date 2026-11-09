@@ -976,16 +976,25 @@ TEST_CASE(
     "ir lowerer statement binding helper canonicalizes imported bare struct "
     "parameter semantic types") {
   const std::string source = R"(
-import /std/ui/*
+import /std/collections/*
+import /shapes/*
+
+namespace shapes {
+  [public struct]
+  NodeTree() {
+    [public vector<i32> mut] kinds{vector<i32>()}
+    [public vector<i32> mut] parentIndices{vector<i32>()}
+  }
+}
 
 [return<int>]
-use_layout([LayoutTree mut] layout) {
+use_layout([NodeTree mut] layout) {
   return(0i32)
 }
 
 [return<int>]
 main([array<string>] args) {
-  [LayoutTree mut] layout{LayoutTree{}}
+  [NodeTree mut] layout{NodeTree{}}
   return(use_layout(layout))
 }
 )";
@@ -999,7 +1008,7 @@ main([array<string>] args) {
   const primec::Definition *useLayoutDef = findDefinitionByPath(program, "/use_layout");
   REQUIRE(useLayoutDef != nullptr);
   REQUIRE(useLayoutDef->parameters.size() == 1);
-  const primec::Definition *layoutTreeDef = findDefinitionByPath(program, "/std/ui/LayoutTree");
+  const primec::Definition *layoutTreeDef = findDefinitionByPath(program, "/shapes/NodeTree");
   REQUIRE(layoutTreeDef != nullptr);
 
   std::unordered_map<std::string, const primec::Definition *> defMap;
@@ -1042,7 +1051,7 @@ main([array<string>] args) {
       &semanticProductTargets));
   CHECK(error.empty());
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Value);
-  CHECK(info.structTypeName == "/std/ui/LayoutTree");
+  CHECK(info.structTypeName == "/shapes/NodeTree");
 }
 
 TEST_CASE(

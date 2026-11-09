@@ -2166,6 +2166,7 @@ are left unarchived.
 | TODO-5706 | Fragment-swapping buttons without user JavaScript | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5709 | Native controls take handler closures and `App.run` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-08 |
 | TODO-5710 | PrimeScroll dispatches through handlers | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5711 | Retire the `/std/ui` layout and command-list prototype | [2026-11.md](todo_archive/2026-11.md) | 2026-11-09 |
 | TODO-5720 | A binding from a vector element copies the element's owned fields | [2026-11.md](todo_archive/2026-11.md) | 2026-11-07 |
 | TODO-5722 | Web controls take click closures | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5723 | Shared UI event structs for web and native handlers | [2026-11.md](todo_archive/2026-11.md) | 2026-11-07 |

@@ -77,25 +77,6 @@ bool isCompatibleInternalSoaStorageFieldPath(const std::string &expectedStructPa
   return expectedLeaf == normalizedInternalSoaStorageLeaf(actualStructPath);
 }
 
-bool isKnownStdUiStructAlias(std::string_view bareName) {
-  return bareName == "CommandList" || bareName == "HtmlCommandList" ||
-         bareName == "LayoutTree" || bareName == "LoginFormNodes" ||
-         bareName == "Rgba8" || bareName == "UiEventStream" ||
-         bareName == "UiScene" || bareName == "UiSceneTextOverlays";
-}
-
-bool isStdUiStructAliasMatch(const std::string &expectedStructPath,
-                             const std::string &actualStructPath) {
-  auto matchesBareToQualified = [](const std::string &bare,
-                                   const std::string &qualified) {
-    return bare.find('/') == std::string::npos &&
-           isKnownStdUiStructAlias(bare) &&
-           qualified == std::string("/std/ui/") + bare;
-  };
-  return matchesBareToQualified(expectedStructPath, actualStructPath) ||
-         matchesBareToQualified(actualStructPath, expectedStructPath);
-}
-
 bool isCompatibleInlineStructFieldPath(const std::string &expectedStructPath,
                                        const std::string &actualStructPath) {
   if (expectedStructPath == actualStructPath) {
@@ -108,9 +89,6 @@ bool isCompatibleInlineStructFieldPath(const std::string &expectedStructPath,
     return true;
   }
   if (isCompatibleInternalSoaStorageFieldPath(expectedStructPath, actualStructPath)) {
-    return true;
-  }
-  if (isStdUiStructAliasMatch(expectedStructPath, actualStructPath)) {
     return true;
   }
   return stripGeneratedStructSuffix(expectedStructPath) ==

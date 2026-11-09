@@ -62,8 +62,8 @@ readiness metadata consumed by the shared Metal host.
 The software-surface demo reuses the same window presenter path, uploads a
 deterministic BGRA8 software buffer into a shared Metal texture, and blits it
 into the drawable.
-The UI scene software-surface demo first renders the checked-in PrimeStruct
-`/std/ui` scene-record fixture through the shared UI scene bridge, then uses the
+The UI scene software-surface demo first renders a fixed scene-record fixture
+through the shared UI scene bridge, then uses the
 same upload and presenter path.
 
 Expected diagnostics include:

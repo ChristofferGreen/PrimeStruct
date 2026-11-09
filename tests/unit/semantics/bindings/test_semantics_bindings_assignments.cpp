@@ -263,16 +263,16 @@ TEST_CASE("assign to namespaced indexed vector field succeeds") {
   const std::string source = R"(
 import /std/collections/*
 
-namespace std {
-namespace ui {
+namespace shapes {
+namespace grid {
 [public struct]
-LayoutTree() {
+Grid() {
   [vector<i32> mut] rectXs{vector<i32>()}
 }
 
-namespace LayoutTree {
+namespace Grid {
   [return<void>]
-  assign_rect([LayoutTree mut] self, [i32] nodeId, [i32] x) {
+  assign_rect([Grid mut] self, [i32] nodeId, [i32] x) {
     self.rectXs[nodeId] = x
   }
 }
@@ -281,7 +281,7 @@ namespace LayoutTree {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [/std/ui/LayoutTree mut] tree{/std/ui/LayoutTree()}
+  [/shapes/grid/Grid mut] tree{/shapes/grid/Grid()}
   /std/collections/vector/push(tree.rectXs, 1i32)
   tree.assign_rect(0i32, 9i32)
   return(tree.rectXs[0i32])
