@@ -25,6 +25,9 @@
  */
 #include "primec/ui/NativeUi.h"
 
+/* Calls a backend may predate: the probe still loads into an app built before them. */
+extern bool ps_ui_window_add_background_tab(uint64_t host, uint64_t tab) __attribute__((weak_import));
+
 #include <dlfcn.h>
 #include <mach/mach.h>
 #include <objc/message.h>
@@ -48,9 +51,10 @@ static double g_start, g_main, g_init_out, g_loop, g_window, g_text, g_frame, g_
 static long g_majflt_loop, g_minflt_loop;
 static int g_reported;
 
-enum { CallInit, CallWindowCreate, CallWindowShow, CallAddTab, CallSetToolbar, CallSetPreview, CallSetPreviewMode,
+enum { CallInit, CallWindowCreate, CallWindowShow, CallAddTab, CallAddBackgroundTab, CallSetToolbar, CallSetPreview, CallSetPreviewMode,
        CallTextViewCreate, CallLoadFile, CallHighlight, CallCount };
-static const char *g_call_names[CallCount] = {"init", "window_create", "window_show", "add_tab", "set_toolbar",
+static const char *g_call_names[CallCount] = {"init", "window_create", "window_show", "add_tab", "background_tab",
+                                              "set_toolbar",
                                               "set_preview", "set_preview_mode", "text_view_create", "load_file",
                                               "highlight"};
 static double g_call_ms[CallCount];
@@ -277,6 +281,9 @@ static bool probe_init(const char *name) {
 static uint64_t probe_window_create(const char *t, int32_t w, int32_t h) { TIMED(CallWindowCreate, ps_ui_window_create(t, w, h)) }
 static bool probe_window_show(uint64_t w) { TIMED(CallWindowShow, ps_ui_window_show(w)) }
 static bool probe_add_tab(uint64_t host, uint64_t tab) { TIMED(CallAddTab, ps_ui_window_add_tab(host, tab)) }
+static bool probe_add_background_tab(uint64_t host, uint64_t tab) {
+  TIMED(CallAddBackgroundTab, ps_ui_window_add_background_tab(host, tab))
+}
 static bool probe_set_toolbar(uint64_t w, uint64_t t) { TIMED(CallSetToolbar, ps_ui_window_set_toolbar(w, t)) }
 static bool probe_set_preview(uint64_t w, bool on) { TIMED(CallSetPreview, ps_ui_window_set_preview(w, on)) }
 static bool probe_set_preview_mode(uint64_t w, int32_t m) { TIMED(CallSetPreviewMode, ps_ui_window_set_preview_mode(w, m)) }
@@ -378,6 +385,7 @@ __attribute__((used)) static const struct interpose g_interposers[] __attribute_
     {(const void *)probe_window_create, (const void *)ps_ui_window_create},
     {(const void *)probe_window_show, (const void *)ps_ui_window_show},
     {(const void *)probe_add_tab, (const void *)ps_ui_window_add_tab},
+    {(const void *)probe_add_background_tab, (const void *)ps_ui_window_add_background_tab},
     {(const void *)probe_set_toolbar, (const void *)ps_ui_window_set_toolbar},
     {(const void *)probe_set_preview, (const void *)ps_ui_window_set_preview},
     {(const void *)probe_set_preview_mode, (const void *)ps_ui_window_set_preview_mode},

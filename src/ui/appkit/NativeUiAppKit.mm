@@ -137,6 +137,10 @@ struct State {
   int32_t previewScrollMode = PS_UI_SCROLL_BLOCKS;         // how the source and the page scroll together
   std::unordered_map<uint64_t, bool> previewRefreshPending;
   std::unordered_map<uint64_t, int32_t> previewModes; // PS_UI_PREVIEW_* of the windows whose preview is on
+  // A tab behind the selected one gets its preview's web view and its toolbar when it is first shown (TODO-5754):
+  // until then its split view holds a placeholder where the page goes, and the toolbar waits here.
+  std::unordered_map<uint64_t, NSView *> previewPlaceholders;
+  std::unordered_map<uint64_t, uint64_t> pendingToolbars;
   // Running scripts (ps_ui_script_run) and the output pane under the window's content.
   struct ScriptSession {
     PsScriptRun *run = nullptr;
@@ -431,6 +435,13 @@ void placeSnapshotWindow(NSWindow *w) {
     screens = NSUnionRect(screens, screen.frame);
   }
   [w setFrameOrigin:NSMakePoint(NSMaxX(screens) + 2000, NSMinY(screens))];
+}
+
+// A tab of a group other than its selected one: AppKit has not ordered it in and does not lay it out, and its toolbar
+// and preview page wait until it is shown (TODO-5754).
+bool isBackgroundTab(NSWindow *w) {
+  NSWindowTabGroup *group = w.tabGroup;
+  return group != nil && group.windows.count > 1 && group.selectedWindow != nil && group.selectedWindow != w;
 }
 
 void fitSettingsWindow(NSWindow *w, uint64_t window) {
@@ -1038,6 +1049,7 @@ void dropPreviewState(uint64_t window) {
   }
   s.previews.erase(window);
   s.previewModes.erase(window);
+  s.previewPlaceholders.erase(window);
   s.previewSplits.erase(window);
   s.previewWebs.erase(window);
   s.previewLoading.erase(window);
@@ -2082,7 +2094,8 @@ void dumpViews(NSView *view, int depth) {
 }
 
 // PRIMESTRUCT_UI_TABS_REPORT: the tabs of the snapshot window in tab-bar order, one line each (its path, or its
-// title when it has none, with "*" before the selected one), and how many windows there were at the first frame.
+// title when it has none, with "*" before the selected one; whether it has its toolbar and preview page, or they
+// wait until it is shown), and how many windows there were at the first frame.
 void writeTabsReport() {
   State &s = state();
   NSWindow *window = liveWindow(s.snapshotWindow);
@@ -2094,7 +2107,12 @@ void writeTabsReport() {
     const uint64_t handle = handleOf(tab);
     const auto path = s.windowPaths.find(handle);
     NSString *name = path != s.windowPaths.end() ? toNSString(path->second.c_str()) : tab.title;
-    [body appendFormat:@"tab=%@%@\n", tab == selected ? @"*" : @"", name];
+    // What the tab has built: its toolbar (or one waiting until it is shown) and its preview's page.
+    NSString *toolbar = tab.toolbar != nil ? @"yes" : s.pendingToolbars.count(handle) != 0 ? @"waiting" : @"none";
+    NSString *page = s.previewWebs.count(handle) != 0           ? @"web"
+                     : s.previewPlaceholders.count(handle) != 0 ? @"waiting"
+                                                                 : @"none";
+    [body appendFormat:@"tab=%@%@ toolbar=%@ page=%@\n", tab == selected ? @"*" : @"", name, toolbar, page];
   }
   [body writeToFile:toNSString(s.snapshotTabsReportPath.c_str()) atomically:YES encoding:NSUTF8StringEncoding error:nil];
 }
@@ -2497,6 +2515,46 @@ void ps_ui_quit(void) {
 
 int32_t ps_ui_platform(void) { return PS_UI_PLATFORM_MACOS; }
 
+namespace {
+bool attachPreviewWeb(uint64_t window);
+
+// A tab that was behind the selected one and is shown now gets what it was waiting for: its toolbar (with the segment
+// the program chose) and its preview's web view.
+void realizeShownTabs() {
+  State &s = state();
+  if (s.pendingToolbars.empty() && s.previewPlaceholders.empty()) {
+    return;
+  }
+  std::vector<uint64_t> ready;
+  for (const auto &entry : s.pendingToolbars) {
+    NSWindow *w = liveWindow(entry.first);
+    if (w != nil && !isBackgroundTab(w)) {
+      ready.push_back(entry.first);
+    }
+  }
+  for (const uint64_t window : ready) {
+    const uint64_t toolbar = s.pendingToolbars[window];
+    s.pendingToolbars.erase(window);
+    const auto chosen = s.toolbarSelected.find(window);
+    const int32_t command = chosen != s.toolbarSelected.end() ? chosen->second : -1;
+    ps_ui_window_set_toolbar(window, toolbar);
+    if (command >= 0) {
+      ps_ui_window_toolbar_select(window, command);
+    }
+  }
+  ready.clear();
+  for (const auto &entry : s.previewPlaceholders) {
+    NSWindow *w = liveWindow(entry.first);
+    if (w != nil && !isBackgroundTab(w)) {
+      ready.push_back(entry.first);
+    }
+  }
+  for (const uint64_t window : ready) {
+    attachPreviewWeb(window);
+  }
+}
+} // namespace
+
 int32_t ps_ui_wait_event(void) {
   if (!usable()) {
     return PS_UI_EVENT_NONE;
@@ -2524,6 +2582,8 @@ int32_t ps_ui_wait_event(void) {
         dispatchEvent(event);
       }
       [NSApp updateWindows];
+      // A click on a tab (or a shortcut) shows it before the next display: its toolbar and page come now.
+      realizeShownTabs();
       if (snapshotting && event == nil) {
         ++s.snapshotIdleSlices;
         if (!s.snapshotSelect.empty() && !s.snapshotSelected && s.snapshotIdleSlices >= 1) {
@@ -2969,9 +3029,24 @@ bool ps_ui_window_close(uint64_t window) {
   state().windowPaths.erase(window);
   state().windowTitles.erase(window);
   state().windowToolbars.erase(window);
+  state().pendingToolbars.erase(window);
   dropPreviewState(window);
   return true;
 }
+
+namespace {
+// Puts `tab` right after `host` in host's tab group. Inserting into the group lays out only the tab bar (about 3 ms a
+// tab, against 20 to 30 ms for -[NSWindow addTabbedWindow:ordered:], which lays out the whole group).
+void joinTabGroup(NSWindow *host, NSWindow *tab) {
+  NSWindowTabGroup *group = host.tabGroup;
+  if (group == nil) {
+    [host addTabbedWindow:tab ordered:NSWindowAbove];
+    return;
+  }
+  const NSUInteger at = [group.windows indexOfObject:host];
+  [group insertWindow:tab atIndex:at == NSNotFound ? group.windows.count : at + 1];
+}
+} // namespace
 
 bool ps_ui_window_add_tab(uint64_t host, uint64_t tab) {
   NSWindow *h = usable() ? liveWindow(host) : nil;
@@ -2980,8 +3055,23 @@ bool ps_ui_window_add_tab(uint64_t host, uint64_t tab) {
       h.tabbingMode == NSWindowTabbingModeDisallowed || t.tabbingMode == NSWindowTabbingModeDisallowed) {
     return false; // a settings window is never a tab
   }
-  [h addTabbedWindow:t ordered:NSWindowAbove];
+  joinTabGroup(h, t);
   presentWindow(t);
+  realizeShownTabs();
+  return true;
+}
+
+bool ps_ui_window_add_background_tab(uint64_t host, uint64_t tab) {
+  NSWindow *h = usable() ? liveWindow(host) : nil;
+  NSWindow *t = usable() ? liveWindow(tab) : nil;
+  if (h == nil || t == nil || h == t || t.tabbedWindows.count > 1 ||
+      h.tabbingMode == NSWindowTabbingModeDisallowed || t.tabbingMode == NSWindowTabbingModeDisallowed) {
+    return false;
+  }
+  if (!state().snapshotPath.empty()) {
+    prepareSnapshotWindow(t);
+  }
+  joinTabGroup(h, t); // not ordered in: AppKit lays it out when the user picks it
   return true;
 }
 
@@ -3041,6 +3131,7 @@ bool ps_ui_window_select(uint64_t window) {
     w.tabGroup.selectedWindow = w;
   }
   presentWindow(w);
+  realizeShownTabs();
   return true;
 }
 
@@ -3551,6 +3642,7 @@ bool ps_ui_window_set_toolbar(uint64_t window, uint64_t toolbar) {
       static_cast<PSToolbarDelegate *>(shown->second.delegate).toolbarHandle == toolbar) {
     return true; // the same toolbar again changes nothing
   }
+  s.pendingToolbars.erase(window);
   if (toolbar == 0) {
     w.toolbar = nil;
     s.windowToolbars.erase(window);
@@ -3559,6 +3651,13 @@ bool ps_ui_window_set_toolbar(uint64_t window, uint64_t toolbar) {
     return true;
   }
   s.toolbarSelected.erase(window);
+  if (isBackgroundTab(w)) {
+    // Its toolbar (tens of milliseconds of layout each) comes when the tab is first shown.
+    w.toolbar = nil;
+    s.windowToolbars.erase(window);
+    s.pendingToolbars[window] = toolbar;
+    return true;
+  }
   @autoreleasepool {
     NSToolbar *bar = [[NSToolbar alloc]
         initWithIdentifier:[NSString stringWithFormat:@"ps.toolbar.%llu.%llu", toolbar, window]];
@@ -3803,11 +3902,16 @@ bool ps_ui_window_output_visible(uint64_t window) {
 bool ps_ui_window_toolbar_select(uint64_t window, int32_t commandId) {
   NSWindow *w = usable() ? liveWindow(window) : nil;
   const auto bar = state().windowToolbars.find(window);
-  if (w == nil || bar == state().windowToolbars.end()) {
+  const auto pending = state().pendingToolbars.find(window);
+  if (w == nil || (bar == state().windowToolbars.end() && pending == state().pendingToolbars.end())) {
     return false;
   }
-  // The control may not exist yet (items are built when the toolbar first needs them): remember the choice too.
-  const auto described = state().toolbarDescs.find(((PSToolbarDelegate *)bar->second.delegate).toolbarHandle);
+  // The control may not exist yet (items are built when the toolbar first needs them, or the whole toolbar when a
+  // tab behind the selected one is shown): remember the choice too.
+  const uint64_t handle = bar != state().windowToolbars.end()
+                              ? ((PSToolbarDelegate *)bar->second.delegate).toolbarHandle
+                              : pending->second;
+  const auto described = state().toolbarDescs.find(handle);
   bool known = false;
   if (described != state().toolbarDescs.end()) {
     for (const ToolbarItemDesc &item : described->second.items) {
@@ -3819,6 +3923,9 @@ bool ps_ui_window_toolbar_select(uint64_t window, int32_t commandId) {
     return false;
   }
   state().toolbarSelected[window] = commandId;
+  if (bar == state().windowToolbars.end()) {
+    return true;
+  }
   for (NSToolbarItem *item in bar->second.items) {
     NSSegmentedControl *segments = [item.view isKindOfClass:[NSSegmentedControl class]] ? (NSSegmentedControl *)item.view : nil;
     if (segments != nil && commandId >= segments.tag && commandId < segments.tag + segments.segmentCount) {
@@ -3926,6 +4033,57 @@ int32_t ps_ui_window_preview_mode(uint64_t window) {
   return mode != state().previewModes.end() ? mode->second : PS_UI_PREVIEW_SPLIT;
 }
 
+namespace {
+// The web view of a preview whose split view holds a placeholder: made, put in the placeholder's place, and given the
+// page. False when WebKit is missing.
+bool attachPreviewWeb(uint64_t window) {
+  State &s = state();
+  const auto placeholder = s.previewPlaceholders.find(window);
+  if (placeholder == s.previewPlaceholders.end()) {
+    return true;
+  }
+  Class configurationClass = webKitClass(@"WKWebViewConfiguration");
+  Class webClass = dropWebViewClass();
+  if (webClass == Nil) {
+    webClass = webKitClass(@"WKWebView");
+  }
+  NSScrollView *scroll = previewTextScroll(window);
+  if (configurationClass == Nil || webClass == Nil || scroll == nil) {
+    return false;
+  }
+  @autoreleasepool {
+    NSView *spot = placeholder->second;
+    id configuration = [[configurationClass alloc] init];
+    // The page is fixed text: nothing in it runs.
+    [[configuration valueForKey:@"defaultWebpagePreferences"] setValue:@NO forKey:@"allowsContentJavaScript"];
+    NSView *web = ((id(*)(id, SEL, NSRect, id))objc_msgSend)([webClass alloc],
+                                                             NSSelectorFromString(@"initWithFrame:configuration:"),
+                                                             spot.frame, configuration);
+    static id delegate = [[previewDelegateClass() alloc] init];
+    [web setValue:delegate forKey:@"navigationDelegate"];
+    tag(web, window);
+    [web registerForDraggedTypes:@[ NSPasteboardTypeFileURL ]];
+    [spot.superview replaceSubview:spot with:web];
+    s.previewPlaceholders.erase(window);
+    s.previewWebs[window] = web;
+    // The page follows the text view when it scrolls (the text view follows the page through the monitor).
+    scroll.contentView.postsBoundsChangedNotifications = YES;
+    s.previewObservers[window] =
+        [NSNotificationCenter.defaultCenter addObserverForName:NSViewBoundsDidChangeNotification
+                                                        object:scroll.contentView
+                                                         queue:nil
+                                                    usingBlock:^(NSNotification *) {
+                                                      if (!state().previewSyncing[window]) {
+                                                        syncWebFromText(window, false);
+                                                      }
+                                                    }];
+    ensurePreviewEventMonitor();
+    renderPreview(window);
+  }
+  return true;
+}
+} // namespace
+
 bool ps_ui_window_set_preview(uint64_t window, bool on) {
   NSWindow *w = usable() ? liveWindow(window) : nil;
   if (w == nil) {
@@ -3943,7 +4101,12 @@ bool ps_ui_window_set_preview(uint64_t window, bool on) {
   contentRect.origin = NSZeroPoint;
   if (!on) {
     // The text view alone again.
-    [s.previewWebs[window] removeFromSuperview];
+    if (const auto web = s.previewWebs.find(window); web != s.previewWebs.end()) {
+      [web->second removeFromSuperview];
+    }
+    if (const auto placeholder = s.previewPlaceholders.find(window); placeholder != s.previewPlaceholders.end()) {
+      [placeholder->second removeFromSuperview];
+    }
     if (scroll != nil) {
       scroll.hidden = NO;
       [scroll removeFromSuperview];
@@ -3958,51 +4121,29 @@ bool ps_ui_window_set_preview(uint64_t window, bool on) {
   if (view == nil || scroll == nil) {
     return false;
   }
-  Class configurationClass = webKitClass(@"WKWebViewConfiguration");
-  Class webClass = dropWebViewClass();
-  if (webClass == Nil) {
-    webClass = webKitClass(@"WKWebView");
-  }
-  if (configurationClass == Nil || webClass == Nil) {
+  if (webKitClass(@"WKWebViewConfiguration") == Nil || (dropWebViewClass() == Nil && webKitClass(@"WKWebView") == Nil)) {
     return false;
   }
   @autoreleasepool {
-    id configuration = [[configurationClass alloc] init];
-    // The page is fixed text: nothing in it runs.
-    [[configuration valueForKey:@"defaultWebpagePreferences"] setValue:@NO forKey:@"allowsContentJavaScript"];
-    NSView *web = ((id(*)(id, SEL, NSRect, id))objc_msgSend)([webClass alloc],
-                                                             NSSelectorFromString(@"initWithFrame:configuration:"),
-                                                             contentRect, configuration);
-    static id delegate = [[previewDelegateClass() alloc] init];
-    [web setValue:delegate forKey:@"navigationDelegate"];
-    tag(web, window);
-    [web registerForDraggedTypes:@[ NSPasteboardTypeFileURL ]];
     NSSplitView *split = [[NSSplitView alloc] initWithFrame:contentRect];
     split.vertical = YES;
     split.dividerStyle = NSSplitViewDividerStyleThin;
     split.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
     w.contentView = split;
     [split addSubview:scroll];
-    [split addSubview:web];
+    // A tab behind the selected one shows no page yet: a plain view holds its place until the tab is first shown,
+    // so restoring a session with previews loads no web view for the tabs nobody looks at.
+    NSView *placeholder = [[NSView alloc] initWithFrame:contentRect];
+    [split addSubview:placeholder];
     [split setPosition:contentRect.size.width / 2 ofDividerAtIndex:0];
     [w makeFirstResponder:view];
     s.previews[window] = true;
     s.previewModes[window] = PS_UI_PREVIEW_SPLIT;
     s.previewSplits[window] = split;
-    s.previewWebs[window] = web;
-    // The page follows the text view when it scrolls (the text view follows the page through the monitor).
-    scroll.contentView.postsBoundsChangedNotifications = YES;
-    s.previewObservers[window] =
-        [NSNotificationCenter.defaultCenter addObserverForName:NSViewBoundsDidChangeNotification
-                                                        object:scroll.contentView
-                                                         queue:nil
-                                                    usingBlock:^(NSNotification *) {
-                                                      if (!state().previewSyncing[window]) {
-                                                        syncWebFromText(window, false);
-                                                      }
-                                                    }];
-    ensurePreviewEventMonitor();
-    renderPreview(window);
+    s.previewPlaceholders[window] = placeholder;
+    if (!isBackgroundTab(w)) {
+      attachPreviewWeb(window);
+    }
   }
   return true;
 }

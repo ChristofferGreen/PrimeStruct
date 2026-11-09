@@ -138,7 +138,7 @@ of sync with them.
 | TODO-5805 | The server keeps connections alive between requests | deferred | web-keepalive |
 | TODO-5806 | Sessions: a cookie and per-session state | deferred | web-sessions |
 | TODO-5755 | The first launch after an install does not wait on Gatekeeper | ready | startup-install |
-| TODO-5754 | Restored tabs, toolbars and previews cost less in the AppKit backend | ready | startup-backend |
+| TODO-5821 | The first toolbar of a launch does not hold up the first frame | deferred | startup-toolbar |
 | TODO-5603 | Launch-time guard and the real-launch baseline | ready | startup |
 | TODO-5756 | AppKit's launch work in a real launch fits the budget | ready | startup-appkit |
 | TODO-5757 | Build and test gates leave interactive launches their speed | deferred | startup-machine |
@@ -193,7 +193,6 @@ of sync with them.
 ### Ready Now
 
 - TODO-5755 (startup-install): the first launch after an install does not wait on Gatekeeper
-- TODO-5754 (startup-backend): restored tabs, toolbars and previews cost less in the AppKit backend
 - TODO-5603 (startup): launch-time guard and the real-launch baseline
 - TODO-5756 (startup-appkit): AppKit's launch work in a real launch fits the budget
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
@@ -203,18 +202,17 @@ of sync with them.
 ### Immediate Next 10
 
 1. TODO-5755
-2. TODO-5754
-3. TODO-5603
-4. TODO-5756
-5. TODO-5535
-6. TODO-5510
-7. TODO-5524
-8. TODO-5728
-9. TODO-5770
+2. TODO-5603
+3. TODO-5756
+4. TODO-5535
+5. TODO-5510
+6. TODO-5524
+7. TODO-5728
+8. TODO-5770
 
 ### Priority Lanes
 
-- Startup, first (docs/NativeUiPlan.md section 1, "Where a launch goes"): TODO-5755, TODO-5754, TODO-5603, TODO-5756, TODO-5535, TODO-5757
+- Startup, first (docs/NativeUiPlan.md section 1, "Where a launch goes"): TODO-5755, TODO-5603, TODO-5756, TODO-5535, TODO-5757, TODO-5821
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - Native UI (docs/NativeUiPlan.md): TODO-5808, TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
@@ -1081,18 +1079,17 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
   - stop_rule: the install path; notarization or a Developer ID signature is out of scope.
   - notes: linking the AppKit backend into the executable (one image, one assessment) would also halve it but needs a linker on the direct native path; file it only if the warm-up does not cover Launch Services launches.
 
-- [ ] TODO-5754: Restored tabs, toolbars and previews cost less in the AppKit backend
-  - owner: ai
-  - status: ready
+- [ ] TODO-5821: The first toolbar of a launch does not hold up the first frame
+  - owner: human
+  - status: deferred
   - created_at: 2026-11-09
   - phase: Native PrimeScroll startup (docs/NativeUiPlan.md section 1)
-  - parallel_track: startup-backend
-  - scope: Measured on a launch that restores three files: `ps_ui_window_add_tab` 80 to 130 ms per tab (tab-group layout under `-[NSWindow _addTabbedWindow:ordered:]`), `ps_ui_window_set_toolbar` 30 to 60 ms per markdown or script toolbar (61 ms to open one `.prime` file at launch), `ps_ui_window_set_preview_mode` 95 to 250 ms for a markdown preview (WebKit and a WKWebView). Make a tab that is not shown cheap (add it to the tab group without laying it out until it is selected), build each kind of toolbar's items once and reuse them, and create a preview's web view when its tab is first shown. Profile with `scripts/measure_startup.sh --sample` first.
-  - implementation_notes: src/ui/appkit/NativeUiAppKit.mm; the editor builds toolbars in `sync_toolbars` (examples/apps/text_editor/main.prime); keep the snapshot tests' images unchanged.
+  - parallel_track: startup-toolbar
+  - scope: A `.prime` or markdown file opened at launch spends 45 to 70 ms in `ps_ui_window_set_toolbar` before the first frame: the first `NSToolbar` of a process costs that much whatever it holds (measured 2026-11-09 in a scratch AppKit program: an empty toolbar, items without images, every `toolbarStyle`, and a titlebar accessory view of buttons instead were no cheaper). Choose between attaching the toolbar right after the first frame (the window then grows its title bar a frame later: a visible shift), drawing the controls inside the content view, or keeping it before the frame.
   - acceptance:
-    - with the 3-file session of TODO-5753, the ps_ui calls of the launch (before the event loop, and the restore after the first frame: the `late_` calls of `scripts/measure_startup.sh`) total at most 120 ms (2026-11-09: about 430 ms in add_tab, set_toolbar and set_preview_mode alone); `add_tab` at most 20 ms per background tab; opening a `.prime` file at launch spends at most 15 ms in `set_toolbar`
-    - switching to a restored tab shows its text, toolbar and preview as before (AppKit snapshot tests); full release gate green
-  - stop_rule: the cost of tabs, toolbars and previews; their order at launch is TODO-5753.
+    - opening a `.prime` file at launch spends at most 15 ms of ps_ui calls on its toolbar before the first frame, or the plan records why it stays (the person's choice); full release gate green
+  - stop_rule: the launch document's toolbar only.
+  - notes: deferred for the user's choice: the cheap options change what the first frame shows.
 
 - [ ] TODO-5603: Launch-time guard and the real-launch baseline
   - owner: ai

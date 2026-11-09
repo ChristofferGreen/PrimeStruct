@@ -250,6 +250,13 @@ bool ps_ui_window_close(uint64_t window);
  * macOS) and makes it the active tab. False when either window is bad, they are
  * the same, or `tab` is already in a group. */
 bool ps_ui_window_add_tab(uint64_t host, uint64_t tab);
+/* Joins `tab` to the tab group of `host`, right after `host`, behind the
+ * selected tab: it is neither shown nor selected (the active window stays), so
+ * a backend need not lay it out, nor build its toolbar or preview page, until
+ * it is selected (by the user, or ps_ui_window_select). For opening many
+ * documents at once, such as a restored session. False as for
+ * ps_ui_window_add_tab. */
+bool ps_ui_window_add_background_tab(uint64_t host, uint64_t tab);
 /* The window the user is working in (the key window, or the selected tab of its
  * group); 0 when no window is open. Menu commands act on it. */
 uint64_t ps_ui_active_window(void);

@@ -444,6 +444,39 @@ TEST_CASE("headless tab groups hold windows in tab order and select the newest t
   CHECK_FALSE(ps_ui_window_add_tab(999, first));
 }
 
+TEST_CASE("headless background tabs join after their host and leave the selection alone") {
+  startApp();
+  const uint64_t first = ps_ui_window_create("One", 100, 100);
+  const uint64_t second = ps_ui_window_create("Two", 100, 100);
+  const uint64_t third = ps_ui_window_create("Three", 100, 100);
+  REQUIRE(ps_ui_window_show(first));
+  CHECK(ps_ui_window_add_background_tab(first, second));
+  CHECK(ps_ui_active_window() == first);
+  // Right after its host, not at the end of the group.
+  CHECK(ps_ui_window_add_background_tab(first, third));
+  CHECK(ps_ui_active_window() == first);
+  const std::vector<uint64_t> group{first, third, second};
+  CHECK(headless::tabGroup(first) == group);
+  CHECK(ps_ui_window_select(second));
+  CHECK(ps_ui_active_window() == second);
+}
+
+TEST_CASE("headless background tabs are refused like other tabs") {
+  startApp();
+  const uint64_t first = ps_ui_window_create("One", 100, 100);
+  const uint64_t second = ps_ui_window_create("Two", 100, 100);
+  REQUIRE(ps_ui_window_add_background_tab(first, second));
+  CHECK_FALSE(ps_ui_window_add_background_tab(first, first));
+  CHECK_FALSE(ps_ui_window_add_background_tab(first, second)); // already in a group
+  CHECK_FALSE(ps_ui_window_add_background_tab(first, 999));
+  CHECK_FALSE(ps_ui_window_add_background_tab(999, first));
+  const uint64_t settings = ps_ui_window_create("Settings", 100, 100);
+  REQUIRE(ps_ui_window_set_style(settings, PS_UI_WINDOW_SETTINGS));
+  CHECK_FALSE(ps_ui_window_add_background_tab(first, settings)); // a settings window is never a tab
+  headless::reset();
+  CHECK_FALSE(ps_ui_window_add_background_tab(1, 2)); // before ps_ui_init
+}
+
 TEST_CASE("headless windows enumerate in creation order and the active window follows closes") {
   startApp();
   CHECK(ps_ui_active_window() == 0);

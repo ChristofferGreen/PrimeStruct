@@ -169,13 +169,20 @@ function(check_session_tabs name expected)
     message(FATAL_ERROR "the ${name} launch has these tabs:\n${tabs}\ninstead of:\n${expected}")
   endif()
 endfunction()
+# The tabs behind the selected one wait with their toolbar and preview page (TODO-5754): the selected script has its
+# toolbar, the markdown note behind it has neither yet.
 check_session_tabs(session
-  "first_frame=1\nwindows_at_first_frame=1\ntab=${sessionText}\ntab=*${sessionScript}\ntab=${sessionNote}\n")
+  "first_frame=1\nwindows_at_first_frame=1\ntab=${sessionText} toolbar=none page=none\ntab=*${sessionScript} toolbar=yes page=none\ntab=${sessionNote} toolbar=waiting page=waiting\n")
+# Command-3 then shows the note: its toolbar and page are built as it is shown.
+set(ENV{PRIMESTRUCT_UI_COMMANDS} "1000051")
+check_session_tabs(switched
+  "first_frame=1\nwindows_at_first_frame=1\ntab=${sessionText} toolbar=none page=none\ntab=${sessionScript} toolbar=yes page=none\ntab=*${sessionNote} toolbar=yes page=web\n")
+unset(ENV{PRIMESTRUCT_UI_COMMANDS})
 # Finder launches the app to open a document: the request is there before the first wait, the document opens in the
 # first window, and the session's tabs open behind it without taking the selection.
 set(ENV{PRIMESTRUCT_UI_OPEN_FILE_EVENT} "!${launchDocument}")
 check_session_tabs(launch
-  "first_frame=1\nwindows_at_first_frame=1\ntab=*${launchDocument}\ntab=${sessionText}\ntab=${sessionScript}\ntab=${sessionNote}\n")
+  "first_frame=1\nwindows_at_first_frame=1\ntab=*${launchDocument} toolbar=yes page=none\ntab=${sessionText} toolbar=none page=none\ntab=${sessionScript} toolbar=waiting page=none\ntab=${sessionNote} toolbar=waiting page=waiting\n")
 unset(ENV{PRIMESTRUCT_UI_OPEN_FILE_EVENT})
 
 # The native bundle: Name.app holds the compiled executable (no runtime, no bytecode) and launches.

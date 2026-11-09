@@ -569,6 +569,19 @@ new_tab([App] app, [Window] host) {
   return(created)
 }
 
+// A document of a restored session: a tab right after `host`, behind the selected one, so nothing of it is laid out
+// or built (its toolbar, its preview's page) until the user picks it.
+[return<Window>]
+background_tab([App] app, [Window] host) {
+  [Window] created{app.window("Untitled", 880i32, 480i32)}
+  [TextView] view{app.textView()}
+  view.setMonospace(true)
+  apply_preferences(app, view)
+  created.setContent(view)
+  [bool] joined{host.addBackgroundTab(created)}
+  return(created)
+}
+
 // Writes the tab's text to its file (asking for one with Save As, or when it has
 // none yet). True when the text was saved.
 [return<bool>]
@@ -752,8 +765,7 @@ restore_session([App] app, [Window] first) {
   [bool] keepFirst{first.hasPath() || firstView.isModified()}
   [i32] saved{app.listCount("session.files")}
   [i32 mut] opened{0i32}
-  [i32 mut] added{0i32}
-  // Each tab opens right after the one before it (a tab joins its host's group just after the host).
+  // Each tab opens right after the one before it, behind the selected one.
   [Window mut] last{first}
   [i32 mut] position{0i32}
   while(position < saved) {
@@ -775,7 +787,7 @@ restore_session([App] app, [Window] first) {
           opened = 1i32
         }
       } else {
-        [Window] extra{new_tab(app, last)}
+        [Window] extra{background_tab(app, last)}
         [TextView] extraView{extra.content()}
         if(extraView.loadFile(path)) {
           extra.setPath(path)
@@ -784,7 +796,6 @@ restore_session([App] app, [Window] first) {
           [bool] extraPreviewed{preview_if_markdown(app, extra, path)}
           [bool] extraRestored{restore_preview(app, extra, position)}
           opened = opened + 1i32
-          added = added + 1i32
           last = extra
         } else {
           extra.close()
@@ -793,11 +804,9 @@ restore_session([App] app, [Window] first) {
     }
     position = position + 1i32
   }
-  if(keepFirst) {
-    if(added > 0i32) {
-      [bool] reselected{first.select()}
-    }
-  } else {
+  // The session's tabs open behind the first one: a document opened at launch keeps the selection, otherwise the
+  // tab that was active is selected.
+  if(!keepFirst) {
     [i32] active{app.intPref("session.active", 0i32)}
     if(opened > 1i32 && active >= 0i32 && active < first.tabCount()) {
       [Window] chosen{first.tabAt(active)}
@@ -1407,8 +1416,8 @@ main([array<string>] args) {
   // Without a file on the command line the last session comes back after the first frame (`restoreSession`), unless the
   // preferences say no: the window is on screen before the session's tabs, toolbars and previews are built.
   editor.sessionPending = args.count() <= 1i32 && app.boolPref("restoreSession", true)
-  editor.syncToolbars()
   first.show()
+  editor.syncToolbars()
 
   handlers.state = editor
   app.run(handlers)

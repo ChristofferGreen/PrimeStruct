@@ -162,7 +162,7 @@ main() {
 
 TEST_CASE("native ui bindings cover every ABI function once") {
   const auto signatures = primec::ui::nativeUiBindingSignatures();
-  CHECK(signatures.size() == 129);
+  CHECK(signatures.size() == 130);
   for (const char *expected : {"ps_ui_init(string) -> bool",
                                "ps_ui_window_create(string, i32, i32) -> u64",
                                "ps_ui_text_view_get_text(u64) -> text",
@@ -238,7 +238,8 @@ TEST_CASE("native ui bindings cover every ABI function once") {
                                "ps_ui_event_click_count() -> i32",
                                "ps_ui_event_key() -> i32",
                                "ps_ui_event_repeat() -> bool",
-                               "ps_ui_watch_first_frame() -> bool"}) {
+                               "ps_ui_watch_first_frame() -> bool",
+                               "ps_ui_window_add_background_tab(u64, u64) -> bool"}) {
     CHECK_MESSAGE(std::find(signatures.begin(), signatures.end(), expected) != signatures.end(),
                   expected);
   }

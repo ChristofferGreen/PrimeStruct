@@ -153,6 +153,10 @@ ps_ui_text_view_save_file([u64] view, [/std/text/String] path) {
 ps_ui_window_add_tab([u64] host, [u64] tab) {
 }
 
+[host return<bool>]
+ps_ui_window_add_background_tab([u64] host, [u64] tab) {
+}
+
 [host return<u64>]
 ps_ui_active_window() {
 }
@@ -575,6 +579,13 @@ Window() {
   [public return<bool>]
   addTab([Window] tab) {
     return(ps_ui_window_add_tab(this.handle, tab.handle))
+  }
+
+  // Joins `tab` to this window's tab group right after this window, behind the selected tab: it is neither shown nor
+  // selected, and the platform builds what it shows (layout, toolbar, preview page) when the user first picks it.
+  [public return<bool>]
+  addBackgroundTab([Window] tab) {
+    return(ps_ui_window_add_background_tab(this.handle, tab.handle))
   }
 
   // The tabs of this window's group in tab-bar order (1 when it has no group).

@@ -175,6 +175,8 @@ template <class Binder> void forEachBinding(Binder &&bindOne) {
     return ps_ui_text_view_save_file(view, text(path).c_str());
   });
   bindOne("ps_ui_window_add_tab", [](uint64_t host, uint64_t tab) { return ps_ui_window_add_tab(host, tab); });
+  bindOne("ps_ui_window_add_background_tab",
+          [](uint64_t host, uint64_t tab) { return ps_ui_window_add_background_tab(host, tab); });
   bindOne("ps_ui_active_window", [] { return ps_ui_active_window(); });
   bindOne("ps_ui_window_tab_count", [](uint64_t window) { return ps_ui_window_tab_count(window); });
   bindOne("ps_ui_window_tab_at", [](uint64_t window, int32_t index) { return ps_ui_window_tab_at(window, index); });

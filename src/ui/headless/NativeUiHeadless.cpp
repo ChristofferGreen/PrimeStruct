@@ -247,6 +247,28 @@ uint64_t ps_ui_window_at(int32_t index) {
   return loggedHandle("ps_ui_window_at(" + std::to_string(index) + ")", found);
 }
 
+// A tab behind the selected one: it joins after `host` and the active window stays.
+bool ps_ui_window_add_background_tab(uint64_t host, uint64_t tab) {
+  const std::string call =
+      "ps_ui_window_add_background_tab(" + std::to_string(host) + ", " + std::to_string(tab) + ")";
+  State &s = state();
+  Window *h = usable() ? liveWindow(host) : nullptr;
+  Window *t = usable() ? liveWindow(tab) : nullptr;
+  const bool ok = h != nullptr && t != nullptr && host != tab && t->group == 0 &&
+                  h->state.style == PS_UI_WINDOW_DOCUMENT &&
+                  t->state.style == PS_UI_WINDOW_DOCUMENT;
+  if (ok) {
+    if (h->group == 0) {
+      h->group = s.nextGroup++;
+      s.tabGroups[h->group].push_back(host);
+    }
+    t->group = h->group;
+    std::vector<uint64_t> &tabs = s.tabGroups[h->group];
+    tabs.insert(std::find(tabs.begin(), tabs.end(), host) + 1, tab);
+  }
+  return loggedFlag(call, ok);
+}
+
 bool ps_ui_window_add_tab(uint64_t host, uint64_t tab) {
   const std::string call = "ps_ui_window_add_tab(" + std::to_string(host) + ", " + std::to_string(tab) + ")";
   State &s = state();

@@ -425,7 +425,9 @@ functions (`primec/ui/NativeUiBindings.h`) to a backend (headless in tests, AppK
   `alert(message, detail, buttons) -> i32` (button titles separated by `\n`, returns the pressed index), `quit()`,
   the preferences `boolPref(key, fallback) -> bool` / `setBoolPref(key, value) -> bool` (booleans kept between runs), and integers and lists of texts `intPref(key, fallback)`, `setIntPref`, `listClear(key)`, `listAdd(key, item)`, `listCount(key)`, `listGet(key, index) -> String`, and the recent files `addRecent(path)`, `recentPath(index) -> String`, `clearRecent()`.
 - `Window`: `setPreview(bool)`, `hasPreview()` and `refreshPreview()` (the markdown preview beside the window's text view), `setAutosaveName(name)` (remember the window's frame between runs), `setTitle`, `setContent(textView)`, `content() -> TextView`, `setEdited(bool)`, `show()`, `close()`,
-  `addTab(window)` (joins that window to this one's tab group), and the document path kept with the window:
+  `addTab(window)` (joins that window to this one's tab group and selects it), `addBackgroundTab(window)` (joins it
+  right after this window, neither shown nor selected: the platform builds it when it is first picked; for a restored
+  session), and the document path kept with the window:
   `setPath(file)`, `path()`, `hasPath()`, `tabCount()`, `tabAt(index)` (tab-bar order) and `select()`. `App` adds `activeWindow()`, `windowCount()`, `windowAt(index)`.
 - `TextView`: `text()`, `setText(text)`, `widget()` (for the pointer and key handlers), `setMonospace(bool)`, `setLineNumbers(bool)` (a bar of line numbers, one per paragraph, left of the text), `setWrapping(bool)` (wrap long lines, the default), `isModified()`, `clearModified()`, and
   `loadFile(path)` / `saveFile(path)` (the backend reads or writes the UTF-8 file itself; `false` means see

@@ -905,7 +905,8 @@ TEST_CASE("editor restores the session after its first frame") {
   CHECK(at("ps_ui_window_show(1)") < at("ps_ui_watch_first_frame()"));
   CHECK(at("ps_ui_watch_first_frame() -> true") < at("ps_ui_wait_event() -> first_frame"));
   CHECK(at("ps_ui_wait_event() -> first_frame") < at("ps_ui_text_view_load_file("));
-  CHECK(at("ps_ui_wait_event() -> first_frame") < at("ps_ui_window_add_tab("));
+  CHECK(at("ps_ui_wait_event() -> first_frame") < at("ps_ui_window_add_background_tab("));
+  CHECK(countCalls("ps_ui_window_add_tab(") == 0); // the session's tabs open behind the first one
   CHECK(headless::windowPath(EditorWindow) == a);
   CHECK(headless::windowPath(SecondWindow) == b);
 }
