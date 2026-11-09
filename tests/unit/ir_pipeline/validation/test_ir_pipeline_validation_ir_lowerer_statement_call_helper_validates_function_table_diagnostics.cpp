@@ -2,54 +2,6 @@
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
-TEST_CASE("ir lowerer statement call helper validates function table diagnostics") {
-  using Result = primec::ir_lowerer::FunctionTableFinalizationResult;
-
-  primec::Program program;
-  primec::Definition entry;
-  entry.fullPath = "/main/entry";
-  primec::Definition target;
-  target.fullPath = "/main/target";
-  program.definitions = {entry, target};
-
-  primec::IrFunction entryFunction;
-  entryFunction.name = "/main/entry";
-  std::unordered_set<std::string> loweredCallTargets = {"/main/target"};
-  int32_t nextLocal = 4;
-  std::vector<primec::IrFunction> outFunctions;
-  int32_t entryIndex = -1;
-  std::string error;
-  CHECK(primec::ir_lowerer::finalizeEntryFunctionTableAndLowerCallables(
-            program,
-            program.definitions.front(),
-            entryFunction,
-            loweredCallTargets,
-            [](const primec::Definition &) { return false; },
-            [](const std::string &, primec::ir_lowerer::ReturnInfo &info) {
-              info.returnsVoid = false;
-              info.kind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-              return true;
-            },
-            {},
-            {},
-            [](const primec::Expr &) { return false; },
-            []() {},
-            [](const primec::Definition &, int32_t &, primec::ir_lowerer::LocalMap &, primec::Expr &, std::string &) {
-              return true;
-            },
-            [](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &, bool) {
-              return true;
-            },
-            nextLocal,
-            outFunctions,
-            entryIndex,
-            error) == Result::Error);
-  CHECK(error == "native backend does not support return type on /main/target");
-  CHECK(entryIndex == 0);
-  REQUIRE(outFunctions.size() == 1);
-  CHECK(outFunctions[0].name == "/main/entry");
-}
-
 TEST_CASE("ir lowerer arithmetic helper emits integer add opcode") {
   primec::Expr left;
   left.kind = primec::Expr::Kind::Literal;

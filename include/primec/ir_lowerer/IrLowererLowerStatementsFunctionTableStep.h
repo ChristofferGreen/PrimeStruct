@@ -1,34 +1,15 @@
 #pragma once
 
-#include <functional>
+#include <cstdint>
 #include <string>
-#include <unordered_set>
 #include <vector>
 
 #include "primec/ir_lowerer/IrLowererStatementCallHelpers.h"
-#include "primec/support/CallbackTypes.h"
 
 namespace primec::ir_lowerer {
 
 struct LowerStatementsFunctionTableStepInput {
-  const Program *program = nullptr;
-  const Definition *entryDef = nullptr;
-  const SemanticProgram *semanticProgram = nullptr;
   IrFunction *function = nullptr;
-  const std::unordered_set<std::string> *loweredCallTargets = nullptr;
-
-  std::function<bool(const Definition &)> isStructDefinition;
-  std::function<bool(const std::string &, ReturnInfo &)> getReturnInfo;
-
-  const std::vector<std::string> *defaultEffects = nullptr;
-  const std::vector<std::string> *entryDefaultEffects = nullptr;
-  ExprPredicateFn isTailCallCandidate;
-
-  ActionFn resetDefinitionLoweringState;
-  std::function<bool(const Definition &, int32_t &, LocalMap &, Expr &, std::string &)> buildDefinitionCallContext;
-  std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> emitInlineDefinitionCall;
-
-  int32_t *nextLocal = nullptr;
   std::vector<IrFunction> *outFunctions = nullptr;
   int32_t *entryIndex = nullptr;
 };

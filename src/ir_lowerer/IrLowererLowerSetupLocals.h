@@ -9,7 +9,6 @@
   int32_t nextLocal = 0;
   int32_t onErrorTempCounter = 0;
   std::vector<std::string> stringTable;
-  std::unordered_set<std::string> loweredCallTargets;
   std::unordered_map<std::string, std::vector<InstructionSourceRange>> instructionSourceRangesByFunction;
   std::unordered_map<std::string, FunctionSyntaxProvenance> functionSyntaxProvenanceByName;
   functionSyntaxProvenanceByName.reserve(defMap.size());

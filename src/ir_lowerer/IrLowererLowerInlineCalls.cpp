@@ -62,7 +62,6 @@ bool emitInlineDefinitionCallImpl(
     auto &function = setupStage.function;
     auto &nextLocal = setupStage.nextLocal;
     auto &structNames = setupStage.structNames;
-    auto &loweredCallTargets = setupStage.loweredCallTargets;
     auto &fileScopeStack = setupStage.fileScopeStack;
     auto &currentOnError = setupStage.currentOnError;
     auto &currentReturnResult = setupStage.currentReturnResult;
@@ -574,8 +573,6 @@ bool emitInlineDefinitionCallImpl(
       emitFileScopeCleanup(fileScopeStack.back());
       popFileScope();
       popInlineStack();
-      // A reserved definition is never inlined, so it needs no callable body besides its real-call function.
-      loweredCallTargets.erase(callee.fullPath);
       if (resultLocal >= 0) {
         function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal)});
       }

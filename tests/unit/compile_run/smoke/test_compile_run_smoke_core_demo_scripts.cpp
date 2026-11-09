@@ -101,17 +101,23 @@ main() {
 TEST_CASE("primevm debug-dap accepts instruction breakpoints and rejects post-exit locals") {
   const std::string source = R"(
 [return<int>]
-helper() {
+helper([int] seed) {
   [int mut] inner{7i32}
+  assign(inner, plus(inner, seed))
+  assign(inner, multiply(inner, 2i32))
   return(inner)
 }
 
 [return<int>]
-main() {
+main([array<string>] args) {
   [int mut] outer{9i32}
-  return(helper())
+  if(greater_than(args.count(), 5i32)) {
+    return(helper(outer))
+  }
+  return(outer)
 }
 )";
+  // The breakpoint is in /helper (function 1), a real call this run never reaches, so the program runs to its exit.
   const std::string srcPath = writeTemp("primevm_debug_dap_non_top_locals.prime", source);
 
   const std::string requests = makeDapFrame(R"({"seq":1,"type":"request","command":"initialize","arguments":{}})") +

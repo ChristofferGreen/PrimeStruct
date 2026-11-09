@@ -399,7 +399,7 @@ main() {
   primec::IrModule module;
   REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
-  REQUIRE(module.functions.size() == 2);
+  REQUIRE(module.functions.size() == 1);
   CHECK((module.functions[0].metadata.instrumentationFlags & primec::InstrumentationTailExecution) != 0u);
 }
 
@@ -922,7 +922,7 @@ main() {
   primec::IrModule module;
   REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
-  REQUIRE(module.functions.size() == 2);
+  REQUIRE(module.functions.size() == 1);
   CHECK((module.functions[0].metadata.instrumentationFlags & primec::InstrumentationTailExecution) != 0u);
 }
 

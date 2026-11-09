@@ -1506,7 +1506,7 @@ bodies the lowering emits, with `parameter_count` 0, for definitions that stay i
 PrimeScroll or in any of the 92 example and benchmark programs scanned, so nothing reads a dead frame. A called
 function returns only addresses that came in as parameters: a struct result goes back through the caller's block
 (docs/spec/vm-design.md, Real calls), pinned by the program-matrix case "a struct result outlives the callee frame
-that built it". Dropping the uncalled bodies is TODO-5825.
+that built it". The uncalled bodies are gone since TODO-5825 (12.12).
 
 Measured with the release `primec` of TODO-5775 (aaf9d37f8) and after, back to back, macOS arm64 (M3 Pro), load
 average 9.8 to 14.6; instructions retired are deterministic, cycles the lowest of five runs:
@@ -1528,3 +1528,38 @@ rewritten), an address passed to a real call and an address past the frame (both
 
 What is left in vector_sum is the bounds check and the element load through the heap address; native still runs 5x
 the cycles of C there, which is template code and the two-way branch per check (TODO-5771).
+
+### 12.12 Result: no standalone body for a definition that stays inline (TODO-5825, 2026-11-09)
+
+The lowering no longer emits a function for a definition it inlines at its call sites
+(`lowerCallableDefinitionOrchestration` and the `loweredCallTargets` set are gone): the module holds the entry,
+function 0, and the bodies of real calls, appended after it in reservation order. A definition reserved up front for
+the scalar ABI whose call sites all went another way (a folded branch, a builtin path; `/std/panic/panic` in
+`examples/3.Surface/features_overview.prime`) is dropped after the call fixup, the order of the rest kept, so every
+function but the entry is reached by a `Call`/`CallVoid`. IR validation now rejects a function that a `Call` reaches
+and that returns an address of its own frame (a forward analysis from `AddressOfLocal` through locals, `Dup` and
+`AddI*`/`SubI*`; addresses stored in memory and read back are not followed), so the use-after-return shape the
+dropped bodies had cannot come back in a called function.
+
+PrimeScroll (`examples/apps/text_editor/main.prime`), release `primec` of 6aa47b811 and after:
+
+| | before | after |
+| --- | --- | --- |
+| IR functions, `--emit=native` and `--emit=vm` (-O2) | 245 (104 reached by a call) | 104 |
+| IR instructions after the passes, native and vm | 60,242 | 54,154 |
+| IR functions, `--emit=ir` (`app.psir`, scalar ABI) | 396 (13 reached) | 13 |
+| IR instructions, `--emit=ir` | 900,955 | 214,489 |
+| `app.psir` (the VM bundle's program) | 122,955,582 bytes | 29,494,998 bytes |
+| native executable, `__text` | 241,316 bytes | 241,316 bytes (byte-identical file) |
+
+The native emitter already emitted only the functions a call reaches from the entry
+(src/native_emitter/NativeEmitterEmit.cpp), so the native executable does not change and neither does its launch; the
+`functions=` count of `--opt-report` drops from 245 to 104 (all register-allocated). The optimizing C++ emitters
+pruned the same way (`pruneIrModuleToReachableFunctions`). What shrinks is what the VM loads and what every pass,
+validation and the serializer work through: `--emit=native` compile time stayed within noise (2.94 s and 2.96 s, the
+lowest of five, load 8 to 27), `--emit=ir` went from 11.4 s to 5.5 s. Over the 58 example and benchmark programs that
+lower for the VM, 1,123 functions became 634, all reached; over the 53 that lower for native, 572 became 258. Tests
+that leaned on the dropped bodies now use a real call: the GLSL helper-call cases and the `primevm --debug-dap` case
+whose breakpoint sits in a function the run never reaches; the embed bytecode fixture was regenerated.
+`scripts/differential_opt_check.py --native --levels 1,2`, also with `PRIMESTRUCT_NATIVE_REGALLOC=1`, matches in 491
+programs (the benchmarks among them) and differs in the same six -O0 programs as before.

@@ -52,7 +52,7 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.serialization"
   LABEL "parallel-safe"
   TIMEOUT 300
   RANGE_FIRST 111
-  RANGE_LAST 121
+  RANGE_LAST 122
   CASES_PER_SHARD 4
 )
 
@@ -230,7 +230,7 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.validation"
   TARGET PrimeStruct_backend_ir_tests
   LABEL "parallel-safe"
   TIMEOUT 300
-  TOTAL_CASES 1345
+  TOTAL_CASES 1340
   CASES_PER_SHARD 10
 )
 

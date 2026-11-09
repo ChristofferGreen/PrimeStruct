@@ -304,7 +304,6 @@
             [&](const std::string &path, ReturnInfo &infoOut) { return getReturnInfo(path, infoOut); },
             [&](const Definition &candidate) { return isStructDefinition(candidate); },
             inlineStack,
-            loweredCallTargets,
             onErrorByDef,
             callSetup,
             error)) {

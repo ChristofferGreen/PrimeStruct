@@ -30,29 +30,18 @@ main() {
   primec::IrModule module;
   REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
-  REQUIRE(module.functions.size() == 2);
+  // A definition inlined at every call site gets no standalone body: no Call could reach it.
+  REQUIRE(module.functions.size() == 1);
   CHECK(module.functions[0].name == "/main");
-  CHECK(module.functions[1].name == "/addOne");
   CHECK(module.functions[0].instructions.size() > 2);
   bool sawAdd = false;
-  bool sawCalleeAdd = false;
-  bool sawReturn = false;
   for (const auto &inst : module.functions[0].instructions) {
     if (inst.op == primec::IrOpcode::AddI32) {
       sawAdd = true;
     }
-  }
-  for (const auto &inst : module.functions[1].instructions) {
-    if (inst.op == primec::IrOpcode::AddI32) {
-      sawCalleeAdd = true;
-    }
-    if (inst.op == primec::IrOpcode::ReturnI32) {
-      sawReturn = true;
-    }
+    CHECK(inst.op != primec::IrOpcode::Call);
   }
   CHECK(sawAdd);
-  CHECK(sawCalleeAdd);
-  CHECK(sawReturn);
 
   primec::Vm vm;
   uint64_t result = 0;
@@ -83,24 +72,16 @@ main() {
   primec::IrModule module;
   REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
-  REQUIRE(module.functions.size() == 2);
+  REQUIRE(module.functions.size() == 1);
   CHECK(module.functions[0].name == "/main");
-  CHECK(module.functions[1].name == "/sum3");
   CHECK(module.functions[0].instructions.size() > 2);
   int addCount = 0;
-  bool sawReturn = false;
   for (const auto &inst : module.functions[0].instructions) {
     if (inst.op == primec::IrOpcode::AddI32) {
       addCount++;
     }
   }
-  for (const auto &inst : module.functions[1].instructions) {
-    if (inst.op == primec::IrOpcode::ReturnI32) {
-      sawReturn = true;
-    }
-  }
   CHECK(addCount >= 2);
-  CHECK(sawReturn);
 
   primec::Vm vm;
   uint64_t result = 0;
@@ -131,11 +112,8 @@ main() {
   primec::IrModule module;
   REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
-  REQUIRE(module.functions.size() == 2);
+  REQUIRE(module.functions.size() == 1);
   CHECK(module.functions[0].name == "/main");
-  CHECK(module.functions[1].name == "/touch");
-  REQUIRE(!module.functions[1].instructions.empty());
-  CHECK(module.functions[1].instructions.back().op == primec::IrOpcode::ReturnVoid);
 
   primec::Vm vm;
   uint64_t result = 0;
@@ -172,24 +150,82 @@ main() {
   primec::IrModule module;
   REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
   CHECK(error.empty());
-  REQUIRE(module.functions.size() == 2);
+  // Neither the struct nor the inlined helper gets a function.
+  REQUIRE(module.functions.size() == 1);
   CHECK(module.functions[0].name == "/main");
-  CHECK(module.functions[1].name == "/helper");
   CHECK(module.functions[0].instructions.size() > 2);
   bool sawPush = false;
-  bool sawReturn = false;
   for (const auto &inst : module.functions[0].instructions) {
     if (inst.op == primec::IrOpcode::PushF64) {
       sawPush = true;
     }
   }
-  for (const auto &inst : module.functions[1].instructions) {
-    if (inst.op == primec::IrOpcode::ReturnF64) {
-      sawReturn = true;
+  CHECK(sawPush);
+}
+
+TEST_CASE("ir keeps the body of a called definition and none for inlined ones") {
+  // `square` stays inline at its one call site, in the body of `sum_squares`; `sum_squares` is a real call. Only the
+  // called definition gets a function, and each Call names it.
+  const std::string source = R"(
+[return<int>]
+square([i32] x) {
+  return(multiply(x, x))
+}
+
+[return<int>]
+sum_squares([i32] n) {
+  [i32 mut] total{0i32}
+  [i32 mut] i{1i32}
+  while(less_equal(i, n)) {
+    assign(total, plus(total, square(i)))
+    assign(i, plus(i, 1i32))
+  }
+  return(total)
+}
+
+[return<int>]
+main() {
+  return(plus(sum_squares(3i32), sum_squares(4i32)))
+}
+)";
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program,
+                        &semanticProgram,
+                        "/main",
+                        {},
+                        {},
+                        module,
+                        error,
+                        nullptr,
+                        primec::IrValidationTarget::Vm));
+  CHECK(error.empty());
+  REQUIRE(module.functions.size() == 2);
+  CHECK(module.functions[0].name == "/main");
+  CHECK(module.functions[1].name == "/sum_squares");
+  CHECK(module.functions[1].parameterCount == 1u);
+  int calls = 0;
+  for (const auto &function : module.functions) {
+    for (const auto &inst : function.instructions) {
+      if (inst.op == primec::IrOpcode::Call || inst.op == primec::IrOpcode::CallVoid) {
+        CHECK(inst.imm == 1u);
+        ++calls;
+      }
     }
   }
-  CHECK(sawPush);
-  CHECK(sawReturn);
+  CHECK(calls == 2);
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 44); // 14 + 30
 }
 
 TEST_CASE("native backend rejects recursive definition calls with a non-scalar parameter") {

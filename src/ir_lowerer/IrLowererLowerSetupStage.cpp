@@ -35,7 +35,6 @@ bool runLowerSetupStage(const LowerSetupStageInput &input,
   stateOut.nextLocal = 0;
   stateOut.onErrorTempCounter = 0;
   stateOut.stringTable.clear();
-  stateOut.loweredCallTargets.clear();
   stateOut.instructionSourceRangesByFunction.clear();
   stateOut.functionSyntaxProvenanceByName.clear();
   stateOut.expandedSource = nullptr;

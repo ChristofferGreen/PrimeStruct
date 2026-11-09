@@ -4,6 +4,7 @@
 #include "primec/ir/IrNativeTextHost.h"
 #include "primec/ir/IrOpcodeTable.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <limits>
 #include <sstream>
@@ -364,6 +365,128 @@ bool validateStackBalance(const IrModule &module,
   return failInstruction(functionIndex, function.name, cfgError.instructionIndex, message, error);
 }
 
+// A called function's frame is gone once it returns, so an address of it must not be its result: a struct result goes
+// back through the caller's block, whose address came in as a parameter (docs/spec/vm-design.md, Real calls). A
+// forward analysis over the CFG marks every operand and local that may hold an address of this frame: an
+// AddressOfLocal, copied through locals and Dup, and moved by any amount with AddI*/SubI*. A Return of such a value
+// fails. Addresses stored in memory and read back are not followed; the lowering never stores a frame address into a
+// struct result. Only functions that take an address are analyzed.
+bool validateNoOwnFrameAddressReturn(const IrModule &module,
+                                     size_t functionIndex,
+                                     const IrFunction &function,
+                                     std::string &error) {
+  uint64_t frameSlots = 0;
+  bool takesAddress = false;
+  for (const IrInstruction &inst : function.instructions) {
+    if (inst.op == IrOpcode::AddressOfLocal) {
+      takesAddress = true;
+    }
+    if (inst.op == IrOpcode::LoadLocal || inst.op == IrOpcode::StoreLocal ||
+        inst.op == IrOpcode::AddressOfLocal) {
+      frameSlots = std::max(frameSlots, inst.imm + 1);
+    }
+  }
+  if (!takesAddress) {
+    return true;
+  }
+  IrCfg cfg;
+  IrCfgError cfgError;
+  if (!buildIrCfg(function, module, cfg, cfgError)) {
+    return true; // validateStackBalance reports it
+  }
+  struct State {
+    std::vector<bool> locals;
+    std::vector<bool> stack;
+  };
+  std::vector<State> entry(cfg.blocks.size());
+  std::vector<bool> seen(cfg.blocks.size(), false);
+  if (cfg.blocks.empty()) {
+    return true;
+  }
+  entry[0].locals.assign(static_cast<size_t>(frameSlots), false);
+  entry[0].stack.assign(function.parameterCount, false);
+  seen[0] = true;
+  std::vector<size_t> worklist = {0};
+  while (!worklist.empty()) {
+    const size_t b = worklist.back();
+    worklist.pop_back();
+    State state = entry[b];
+    const IrCfgBlock &block = cfg.blocks[b];
+    for (size_t i = block.start; i < block.end; ++i) {
+      const IrInstruction &inst = function.instructions[i];
+      auto &stack = state.stack;
+      switch (inst.op) {
+      case IrOpcode::AddressOfLocal:
+        stack.push_back(true);
+        continue;
+      case IrOpcode::LoadLocal:
+        stack.push_back(state.locals[static_cast<size_t>(inst.imm)]);
+        continue;
+      case IrOpcode::StoreLocal:
+        state.locals[static_cast<size_t>(inst.imm)] = stack.back();
+        stack.pop_back();
+        continue;
+      case IrOpcode::Dup:
+        stack.push_back(stack.back());
+        continue;
+      case IrOpcode::AddI32:
+      case IrOpcode::AddI64:
+      case IrOpcode::SubI32:
+      case IrOpcode::SubI64: {
+        const bool address = stack[stack.size() - 1] || stack[stack.size() - 2];
+        stack.pop_back();
+        stack.back() = address;
+        continue;
+      }
+      case IrOpcode::ReturnI32:
+      case IrOpcode::ReturnI64:
+        if (stack.back()) {
+          return failInstruction(functionIndex,
+                                 function.name,
+                                 i,
+                                 "a called function returns an address of its own frame",
+                                 error);
+        }
+        break;
+      default:
+        break;
+      }
+      IrStackEffect effect;
+      if (!computeIrStackEffect(inst, module, effect)) {
+        return true;
+      }
+      stack.resize(stack.size() - effect.pops);
+      stack.insert(stack.end(), effect.pushes, false);
+    }
+    for (const size_t successor : block.successors) {
+      if (!seen[successor]) {
+        entry[successor] = state;
+        seen[successor] = true;
+        worklist.push_back(successor);
+        continue;
+      }
+      State &into = entry[successor];
+      bool changed = false;
+      for (size_t k = 0; k < into.locals.size(); ++k) {
+        if (state.locals[k] && !into.locals[k]) {
+          into.locals[k] = true;
+          changed = true;
+        }
+      }
+      for (size_t k = 0; k < into.stack.size() && k < state.stack.size(); ++k) {
+        if (state.stack[k] && !into.stack[k]) {
+          into.stack[k] = true;
+          changed = true;
+        }
+      }
+      if (changed) {
+        worklist.push_back(successor);
+      }
+    }
+  }
+  return true;
+}
+
 // GLSL/shader targets fundamentally forbid recursive function calls (direct
 // or mutual) - unlike the VM/native/C++/wasm backends, there is no call-stack
 // mechanism to bound recursion depth. Detects a cycle in the Call/CallVoid
@@ -455,6 +578,23 @@ bool validateIrModule(const IrModule &module, IrValidationTarget target, std::st
       return false;
     }
     if (!validateStackBalance(module, functionIndex, function, error)) {
+      return false;
+    }
+  }
+
+  std::vector<bool> called(module.functions.size(), false);
+  for (const IrFunction &function : module.functions) {
+    for (const IrInstruction &inst : function.instructions) {
+      if ((inst.op == IrOpcode::Call || inst.op == IrOpcode::CallVoid) &&
+          inst.imm < module.functions.size()) {
+        called[static_cast<size_t>(inst.imm)] = true;
+      }
+    }
+  }
+  for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
+    if (called[functionIndex] &&
+        !validateNoOwnFrameAddressReturn(
+            module, functionIndex, module.functions[functionIndex], error)) {
       return false;
     }
   }

@@ -494,7 +494,6 @@ TEST_CASE("ir lowerer inline call context helper prepares scoped setup") {
   handler.handlerPath = "/pkg/on_error";
 
   std::unordered_set<std::string> inlineStack;
-  std::unordered_set<std::string> loweredCallTargets;
   primec::ir_lowerer::OnErrorByDefinition onErrorByDef;
   onErrorByDef.emplace(callee.fullPath, handler);
 
@@ -512,7 +511,6 @@ TEST_CASE("ir lowerer inline call context helper prepares scoped setup") {
       },
       [](const primec::Definition &) { return false; },
       inlineStack,
-      loweredCallTargets,
       onErrorByDef,
       out,
       error));
@@ -528,7 +526,6 @@ TEST_CASE("ir lowerer inline call context helper prepares scoped setup") {
   CHECK(out.scopedResult->isResult);
   CHECK_FALSE(out.scopedResult->hasValue);
   CHECK(inlineStack.count(callee.fullPath) == 1u);
-  CHECK(loweredCallTargets.count(callee.fullPath) == 1u);
 }
 
 TEST_CASE("ir lowerer inline call context helper reports setup diagnostics") {
@@ -539,7 +536,6 @@ TEST_CASE("ir lowerer inline call context helper reports setup diagnostics") {
   std::string error;
 
   std::unordered_set<std::string> inlineStack;
-  std::unordered_set<std::string> loweredCallTargets;
   primec::ir_lowerer::OnErrorByDefinition onErrorByDef;
 
   CHECK_FALSE(primec::ir_lowerer::prepareInlineDefinitionCallContext(
@@ -552,13 +548,11 @@ TEST_CASE("ir lowerer inline call context helper reports setup diagnostics") {
       },
       [](const primec::Definition &) { return false; },
       inlineStack,
-      loweredCallTargets,
       onErrorByDef,
       out,
       error));
   CHECK(error == "void call not allowed in expression context: /pkg/do_work");
   CHECK(inlineStack.empty());
-  CHECK(loweredCallTargets.empty());
 
   error.clear();
   inlineStack.insert(callee.fullPath);
@@ -572,12 +566,10 @@ TEST_CASE("ir lowerer inline call context helper reports setup diagnostics") {
       },
       [](const primec::Definition &) { return false; },
       inlineStack,
-      loweredCallTargets,
       onErrorByDef,
       out,
       error));
   CHECK(error == "native backend does not support recursive calls: /pkg/do_work");
-  CHECK(loweredCallTargets.empty());
 
   primec::Definition generatedVectorStruct;
   generatedVectorStruct.fullPath = "/std/collections/vector/Vector__ti32";
@@ -594,7 +586,6 @@ TEST_CASE("ir lowerer inline call context helper reports setup diagnostics") {
       },
       [](const primec::Definition &) { return true; },
       inlineStack,
-      loweredCallTargets,
       onErrorByDef,
       out,
       error));
@@ -602,13 +593,11 @@ TEST_CASE("ir lowerer inline call context helper reports setup diagnostics") {
   CHECK(out.structDefinition);
   CHECK_FALSE(out.insertedInlineStackEntry);
   CHECK(inlineStack.count(generatedVectorStruct.fullPath) == 1u);
-  CHECK(loweredCallTargets.count(generatedVectorStruct.fullPath) == 1u);
 
   primec::Definition generatedVectorCtorHelper;
   generatedVectorCtorHelper.fullPath = "/std/collections/experimental_vector/vector__ti32";
   error.clear();
   inlineStack.clear();
-  loweredCallTargets.clear();
   inlineStack.insert(generatedVectorCtorHelper.fullPath);
   CHECK(primec::ir_lowerer::prepareInlineDefinitionCallContext(
       generatedVectorCtorHelper,
@@ -620,7 +609,6 @@ TEST_CASE("ir lowerer inline call context helper reports setup diagnostics") {
       },
       [](const primec::Definition &) { return false; },
       inlineStack,
-      loweredCallTargets,
       onErrorByDef,
       out,
       error));
@@ -628,7 +616,6 @@ TEST_CASE("ir lowerer inline call context helper reports setup diagnostics") {
   CHECK_FALSE(out.structDefinition);
   CHECK_FALSE(out.insertedInlineStackEntry);
   CHECK(inlineStack.count(generatedVectorCtorHelper.fullPath) == 1u);
-  CHECK(loweredCallTargets.count(generatedVectorCtorHelper.fullPath) == 1u);
 
   for (const std::string generatedVectorHelperPath :
        {"/std/collections/experimental_vector/vectorInitSlot__ti32",
@@ -638,7 +625,6 @@ TEST_CASE("ir lowerer inline call context helper reports setup diagnostics") {
     generatedVectorHelper.fullPath = generatedVectorHelperPath;
     error.clear();
     inlineStack.clear();
-    loweredCallTargets.clear();
     inlineStack.insert(generatedVectorHelper.fullPath);
     CHECK(primec::ir_lowerer::prepareInlineDefinitionCallContext(
         generatedVectorHelper,
@@ -650,7 +636,6 @@ TEST_CASE("ir lowerer inline call context helper reports setup diagnostics") {
         },
         [](const primec::Definition &) { return false; },
         inlineStack,
-        loweredCallTargets,
         onErrorByDef,
         out,
         error));
@@ -658,14 +643,12 @@ TEST_CASE("ir lowerer inline call context helper reports setup diagnostics") {
     CHECK_FALSE(out.structDefinition);
     CHECK_FALSE(out.insertedInlineStackEntry);
     CHECK(inlineStack.count(generatedVectorHelper.fullPath) == 1u);
-    CHECK(loweredCallTargets.count(generatedVectorHelper.fullPath) == 1u);
   }
 
   primec::Definition generatedVectorMoveHelper;
   generatedVectorMoveHelper.fullPath = "/std/collections/vector/Vector__ti32/Move";
   error.clear();
   inlineStack.clear();
-  loweredCallTargets.clear();
   inlineStack.insert(generatedVectorMoveHelper.fullPath);
   CHECK_FALSE(primec::ir_lowerer::prepareInlineDefinitionCallContext(
       generatedVectorMoveHelper,
@@ -677,29 +660,24 @@ TEST_CASE("ir lowerer inline call context helper reports setup diagnostics") {
       },
       [](const primec::Definition &) { return false; },
       inlineStack,
-      loweredCallTargets,
       onErrorByDef,
       out,
       error));
   CHECK(error == "native backend does not support recursive calls: " + generatedVectorMoveHelper.fullPath);
-  CHECK(loweredCallTargets.empty());
 
   error.clear();
   inlineStack.clear();
-  loweredCallTargets.clear();
   CHECK_FALSE(primec::ir_lowerer::prepareInlineDefinitionCallContext(
       callee,
       false,
       [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return false; },
       [](const primec::Definition &) { return false; },
       inlineStack,
-      loweredCallTargets,
       onErrorByDef,
       out,
       error));
   CHECK(error.empty());
   CHECK(inlineStack.empty());
-  CHECK(loweredCallTargets.empty());
 }
 
 TEST_CASE("ir lowerer inline struct arg helper emits struct constructor argument flow") {

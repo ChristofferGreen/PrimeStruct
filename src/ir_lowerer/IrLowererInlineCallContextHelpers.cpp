@@ -89,7 +89,6 @@ bool prepareInlineDefinitionCallContext(
     const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
     const std::function<bool(const Definition &)> &isStructDefinition,
     std::unordered_set<std::string> &inlineStack,
-    std::unordered_set<std::string> &loweredCallTargets,
     const OnErrorByDefinition &onErrorByDef,
     InlineDefinitionCallContextSetup &out,
     std::string &error) {
@@ -123,7 +122,6 @@ bool prepareInlineDefinitionCallContext(
     inlineStack.insert(callee.fullPath);
     out.insertedInlineStackEntry = true;
   }
-  loweredCallTargets.insert(callee.fullPath);
 
   auto onErrorIt = onErrorByDef.find(callee.fullPath);
   if (onErrorIt != onErrorByDef.end() && onErrorIt->second.has_value()) {

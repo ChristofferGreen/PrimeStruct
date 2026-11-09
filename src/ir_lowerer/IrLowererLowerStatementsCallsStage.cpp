@@ -11,6 +11,8 @@
 #include "primec/ir_lowerer/IrLowererSemanticProductTargetAdapters.h"
 #include "primec/ir_lowerer/IrLowererSetupTypeHelpers.h"
 
+#include <algorithm>
+
 namespace primec::ir_lowerer {
 
 namespace {
@@ -44,12 +46,12 @@ struct CallableBodyToLower {
 bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
                                   std::string &errorOut) {
   if (input.program == nullptr || input.entryDef == nullptr || input.semanticProgram == nullptr ||
-      input.defaultEffects == nullptr || input.entryDefaultEffects == nullptr || input.defMap == nullptr ||
-      input.structNames == nullptr || input.onErrorByDef == nullptr || input.stringTable == nullptr ||
-      input.loweredCallTargets == nullptr || input.instructionSourceRangesByFunction == nullptr ||
-      input.functionSyntaxProvenanceByName == nullptr ||
-      input.currentOnError == nullptr || input.currentReturnResult == nullptr ||
-      input.sawReturn == nullptr || input.nextLocal == nullptr || input.onErrorTempCounter == nullptr ||
+      input.defaultEffects == nullptr || input.entryDefaultEffects == nullptr ||
+      input.defMap == nullptr || input.structNames == nullptr || input.onErrorByDef == nullptr ||
+      input.stringTable == nullptr || input.instructionSourceRangesByFunction == nullptr ||
+      input.functionSyntaxProvenanceByName == nullptr || input.currentOnError == nullptr ||
+      input.currentReturnResult == nullptr || input.sawReturn == nullptr ||
+      input.nextLocal == nullptr || input.onErrorTempCounter == nullptr ||
       input.entryResultInfo == nullptr || input.function == nullptr || input.locals == nullptr ||
       input.outModule == nullptr) {
     errorOut = "native backend missing statements-calls stage input";
@@ -109,20 +111,7 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
 
   if (!runLowerStatementsFunctionTableStep(
           {
-              .program = input.program,
-              .entryDef = input.entryDef,
-              .semanticProgram = input.semanticProgram,
               .function = input.function,
-              .loweredCallTargets = input.loweredCallTargets,
-              .isStructDefinition = input.isStructDefinition,
-              .getReturnInfo = input.getReturnInfo,
-              .defaultEffects = input.defaultEffects,
-              .entryDefaultEffects = input.entryDefaultEffects,
-              .isTailCallCandidate = input.isTailCallCandidate,
-              .resetDefinitionLoweringState = input.resetDefinitionLoweringState,
-              .buildDefinitionCallContext = input.buildDefinitionCallContext,
-              .emitInlineDefinitionCall = input.emitInlineDefinitionCall,
-              .nextLocal = input.nextLocal,
               .outFunctions = &input.outModule->functions,
               .entryIndex = &input.outModule->entryIndex,
           },
@@ -434,9 +423,8 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
 
     // Fixup pass: rewrite every placeholder Call/CallVoid imm
     // ((1<<32)|reservationIndex) emitted by the real-call redirect - by
-    // either the entry, an orchestration-lowered callable, or one of the
-    // bodies just lowered above (mutual recursion) - to its target's final
-    // index in input.outModule->functions.
+    // either the entry or one of the bodies just lowered above (mutual
+    // recursion) - to its target's final index in input.outModule->functions.
     for (IrFunction &fn : input.outModule->functions) {
       for (IrInstruction &inst : fn.instructions) {
         if ((inst.op == IrOpcode::Call || inst.op == IrOpcode::CallVoid) && (inst.imm >> 32) == 1ull) {
@@ -444,6 +432,46 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
           inst.imm = baseFunctionIndex + reservationIndex;
         }
       }
+    }
+
+    // A definition reserved up front (the scalar ABI's eligible set) whose call sites all ended up elsewhere (a
+    // folded branch, a builtin path) has a body no Call reaches: drop it, keeping the order of the rest.
+    std::vector<IrFunction> &functions = input.outModule->functions;
+    const size_t entryIndex = static_cast<size_t>(input.outModule->entryIndex);
+    std::vector<bool> reached(functions.size(), false);
+    std::vector<size_t> pending = {entryIndex};
+    reached[entryIndex] = true;
+    while (!pending.empty()) {
+      const size_t caller = pending.back();
+      pending.pop_back();
+      for (const IrInstruction &inst : functions[caller].instructions) {
+        if ((inst.op == IrOpcode::Call || inst.op == IrOpcode::CallVoid) &&
+            inst.imm < functions.size() && !reached[static_cast<size_t>(inst.imm)]) {
+          reached[static_cast<size_t>(inst.imm)] = true;
+          pending.push_back(static_cast<size_t>(inst.imm));
+        }
+      }
+    }
+    if (std::find(reached.begin(), reached.end(), false) != reached.end()) {
+      std::vector<uint64_t> newIndex(functions.size(), 0);
+      std::vector<IrFunction> kept;
+      kept.reserve(functions.size());
+      for (size_t i = 0; i < functions.size(); ++i) {
+        if (reached[i]) {
+          newIndex[i] = kept.size();
+          kept.push_back(std::move(functions[i]));
+        }
+      }
+      for (IrFunction &fn : kept) {
+        for (IrInstruction &inst : fn.instructions) {
+          if ((inst.op == IrOpcode::Call || inst.op == IrOpcode::CallVoid) &&
+              inst.imm < newIndex.size()) {
+            inst.imm = newIndex[static_cast<size_t>(inst.imm)];
+          }
+        }
+      }
+      input.outModule->entryIndex = static_cast<int32_t>(newIndex[entryIndex]);
+      functions = std::move(kept);
     }
   }
 

@@ -254,16 +254,21 @@ main() {
 TEST_CASE("glsl-ir emitter writes IR-lowered shader for helper-call subset") {
   const std::string source = R"(
 [return<i32>]
-helper() {
-  return(7i32)
+helper([i32] x) {
+  [i32] a{plus(x, 1i32)}
+  [i32] b{multiply(a, 2i32)}
+  [i32] c{minus(b, 3i32)}
+  return(plus(c, a))
 }
 
 [return<void>]
 main() {
-  [i32] value{helper()}
+  [i32] value{helper(7i32)}
+  [i32] other{helper(value)}
   return()
 }
 )";
+  // A helper inlined at its only call site has no function; this one is a real call.
   const std::string srcPath = writeTemp("compile_glsl_ir_helper_call_subset.prime", source);
   const std::string outPath =
       (testScratchPath("") / "primec_glsl_ir_helper_call_subset.glsl").string();
@@ -279,16 +284,21 @@ main() {
 TEST_CASE("glsl emitter uses ir backend for helper-call subset") {
   const std::string source = R"(
 [return<i32>]
-helper() {
-  return(7i32)
+helper([i32] x) {
+  [i32] a{plus(x, 1i32)}
+  [i32] b{multiply(a, 2i32)}
+  [i32] c{minus(b, 3i32)}
+  return(plus(c, a))
 }
 
 [return<void>]
 main() {
-  [i32] value{helper()}
+  [i32] value{helper(7i32)}
+  [i32] other{helper(value)}
   return()
 }
 )";
+  // A helper inlined at its only call site has no function; this one is a real call.
   const std::string srcPath = writeTemp("compile_glsl_helper_call_ir_first.prime", source);
   const std::string outPath =
       (testScratchPath("") / "primec_glsl_helper_call_ir_first.glsl").string();

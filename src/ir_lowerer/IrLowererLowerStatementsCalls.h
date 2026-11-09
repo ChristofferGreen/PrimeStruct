@@ -79,7 +79,6 @@
               .entryDef = entryDef,
               .semanticProgram = semanticProgram,
               .function = &function,
-              .loweredCallTargets = &loweredCallTargets,
               .isStructDefinition = [&](const Definition &def) { return isStructDefinition(def); },
               .getReturnInfo =
                   [&](const std::string &definitionPath, ReturnInfo &returnInfo) {

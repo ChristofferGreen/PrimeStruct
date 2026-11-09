@@ -167,7 +167,6 @@ bool IrLowerer::lower(const Program &program,
   int32_t &nextLocal = setupStage.nextLocal;
   int32_t &onErrorTempCounter = setupStage.onErrorTempCounter;
   auto &stringTable = setupStage.stringTable;
-  auto &loweredCallTargets = setupStage.loweredCallTargets;
   auto &instructionSourceRangesByFunction = setupStage.instructionSourceRangesByFunction;
   auto &functionSyntaxProvenanceByName = setupStage.functionSyntaxProvenanceByName;
   auto &fileScopeStack = setupStage.fileScopeStack;
@@ -310,7 +309,6 @@ bool IrLowerer::lower(const Program &program,
                             .structNames = &structNames,
                             .onErrorByDef = &onErrorByDef,
                             .stringTable = &stringTable,
-                            .loweredCallTargets = &loweredCallTargets,
                             .instructionSourceRangesByFunction = &instructionSourceRangesByFunction,
                             .functionSyntaxProvenanceByName = &functionSyntaxProvenanceByName,
                             .currentOnError = &currentOnError,

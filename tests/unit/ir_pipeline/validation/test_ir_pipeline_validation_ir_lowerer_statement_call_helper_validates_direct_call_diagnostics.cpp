@@ -629,192 +629,6 @@ TEST_CASE("ir lowerer statement call helper preserves struct slot counts for var
   CHECK(callExpr.args.front().name == "values");
 }
 
-TEST_CASE("ir lowerer statement call helper orchestrates callable lowering") {
-  using Result = primec::ir_lowerer::CallableDefinitionOrchestrationResult;
-
-  primec::Program program;
-  primec::Definition entry;
-  entry.fullPath = "/main/entry";
-  primec::Definition target;
-  target.fullPath = "/main/target";
-  program.definitions = {entry, target};
-
-  std::unordered_set<std::string> loweredCallTargets = {"/main/target"};
-  primec::IrFunction function;
-  int32_t nextLocal = 123;
-  std::vector<primec::IrFunction> outFunctions;
-  int resetCalls = 0;
-  bool sawBuildStartAtZero = false;
-  bool sawExpectValueFalse = false;
-  std::string error;
-
-  CHECK(primec::ir_lowerer::lowerCallableDefinitionOrchestration(
-            program,
-            program.definitions.front(),
-            loweredCallTargets,
-            [](const primec::Definition &) { return false; },
-            [](const std::string &, primec::ir_lowerer::ReturnInfo &info) {
-              info.returnsVoid = true;
-              return true;
-            },
-            {},
-            {},
-            [](const primec::Expr &) { return false; },
-            [&]() { ++resetCalls; },
-            [&](const primec::Definition &def, int32_t &localCursor, primec::ir_lowerer::LocalMap &locals, primec::Expr &callExpr, std::string &) {
-              sawBuildStartAtZero = (localCursor == 0);
-              localCursor = 1;
-              locals.clear();
-              callExpr = {};
-              callExpr.kind = primec::Expr::Kind::Call;
-              callExpr.name = def.fullPath;
-              return true;
-            },
-            [&](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &, bool expectValue) {
-              sawExpectValueFalse = !expectValue;
-              function.instructions.push_back({primec::IrOpcode::PushI32, 9});
-              return true;
-            },
-            function,
-            nextLocal,
-            outFunctions,
-            error) == Result::Emitted);
-  CHECK(error.empty());
-  CHECK(resetCalls == 1);
-  CHECK(sawBuildStartAtZero);
-  CHECK(sawExpectValueFalse);
-  REQUIRE(outFunctions.size() == 1);
-  CHECK(outFunctions.front().name == "/main/target");
-  REQUIRE(outFunctions.front().instructions.size() == 2);
-  CHECK(outFunctions.front().instructions[0].op == primec::IrOpcode::PushI32);
-  CHECK(outFunctions.front().instructions[1].op == primec::IrOpcode::ReturnVoid);
-
-  outFunctions.clear();
-  error.clear();
-  CHECK(primec::ir_lowerer::lowerCallableDefinitionOrchestration(
-            program,
-            program.definitions.front(),
-            loweredCallTargets,
-            [](const primec::Definition &) { return false; },
-            [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return false; },
-            {},
-            {},
-            [](const primec::Expr &) { return false; },
-            []() {},
-            [](const primec::Definition &, int32_t &, primec::ir_lowerer::LocalMap &, primec::Expr &, std::string &) {
-              return true;
-            },
-            [](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &, bool) {
-              return true;
-            },
-            function,
-            nextLocal,
-            outFunctions,
-            error) == Result::Error);
-}
-
-TEST_CASE("ir lowerer statement call helper prefers semantic callable inventory") {
-  using Result = primec::ir_lowerer::CallableDefinitionOrchestrationResult;
-
-  primec::Program program;
-  primec::Definition entry;
-  entry.fullPath = "/main/entry";
-  primec::Definition skipped;
-  skipped.fullPath = "/main/skipped";
-  primec::Definition sum;
-  sum.fullPath = "/main/Maybe__ti32";
-  primec::Definition target;
-  target.fullPath = "/main/target";
-  program.definitions = {entry, skipped, sum, target};
-
-  primec::SemanticProgram semanticProgram;
-  semanticProgram.definitions.push_back(
-      {.name = "entry", .fullPath = "/main/entry", .namespacePrefix = "/main"});
-  semanticProgram.definitions.push_back(
-      {.name = "Maybe__ti32", .fullPath = "/main/Maybe__ti32", .namespacePrefix = "/main"});
-  semanticProgram.definitions.push_back(
-      {.name = "target", .fullPath = "/main/target", .namespacePrefix = "/main"});
-  semanticProgram.typeMetadata.push_back(primec::SemanticProgramTypeMetadata{
-      .fullPath = "/main/Maybe__ti32",
-      .category = "sum",
-      .isPublic = true,
-  });
-  // TODO-4950: findSemanticProductCallableSummary looks a definition's
-  // callable summary up via publishedRoutingLookups.callableSummaryIndicesByPathId
-  // (keyed by the interned fullPathId), not by a linear scan of
-  // callableSummaries - pushing the summary alone (as this fixture used to)
-  // left that routing index empty, so the real lowerCallableDefinitionOrchestration
-  // never found it ("missing semantic-product callable summary: /main/target",
-  // verified via doctest run). Register the routing entry alongside the
-  // summary, mirroring how every other SemanticProgram*Fact fixture in this
-  // suite pairs its push_back with a publishedRoutingLookups entry.
-  const auto targetFullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main/target");
-  const std::size_t targetCallableSummaryIndex = semanticProgram.callableSummaries.size();
-  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
-      .isExecution = false,
-      .returnKind = "void",
-      .isCompute = false,
-      .isUnsafe = false,
-      .activeEffects = {},
-      .activeCapabilities = {},
-      .hasResultType = false,
-      .resultTypeHasValue = false,
-      .resultValueType = "",
-      .resultErrorType = "",
-      .hasOnError = false,
-      .onErrorHandlerPath = "",
-      .onErrorErrorType = "",
-      .onErrorBoundArgCount = 0,
-      .semanticNodeId = 0,
-      .provenanceHandle = 0,
-      .fullPathId = targetFullPathId,
-  });
-  semanticProgram.publishedRoutingLookups.callableSummaryIndicesByPathId.insert_or_assign(
-      targetFullPathId, targetCallableSummaryIndex);
-
-  std::unordered_set<std::string> loweredCallTargets = {
-      "/main/skipped",
-      "/main/Maybe__ti32",
-      "/main/target",
-  };
-  primec::IrFunction function;
-  int32_t nextLocal = 0;
-  std::vector<primec::IrFunction> outFunctions;
-  int buildCalls = 0;
-  std::string builtPath;
-  std::string error;
-
-  CHECK(primec::ir_lowerer::lowerCallableDefinitionOrchestration(
-            program,
-            program.definitions.front(),
-            &semanticProgram,
-            loweredCallTargets,
-            [](const primec::Definition &) { return false; },
-            [](const std::string &, primec::ir_lowerer::ReturnInfo &info) {
-              info.returnsVoid = true;
-              return true;
-            },
-            {},
-            {},
-            [](const primec::Expr &) { return false; },
-            []() {},
-            [&](const primec::Definition &def, int32_t &, primec::ir_lowerer::LocalMap &, primec::Expr &, std::string &) {
-              ++buildCalls;
-              builtPath = def.fullPath;
-              return true;
-            },
-            [](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &, bool) {
-              return true;
-            },
-            function,
-            nextLocal,
-            outFunctions,
-            error) == Result::Emitted);
-  CHECK(error.empty());
-  CHECK(buildCalls == 1);
-  CHECK(builtPath == "/main/target");
-}
-
 TEST_CASE("ir lowerer statement call helper orchestrates entry execution cleanup") {
   using Result = primec::ir_lowerer::EntryCallableExecutionResult;
 
@@ -926,80 +740,20 @@ TEST_CASE("ir lowerer statement call helper validates entry execution diagnostic
 }
 
 TEST_CASE("ir lowerer statement call helper finalizes function table wiring") {
-  using Result = primec::ir_lowerer::FunctionTableFinalizationResult;
-
-  primec::Program program;
-  primec::Definition entry;
-  entry.fullPath = "/main/entry";
-  primec::Definition target;
-  target.fullPath = "/main/target";
-  program.definitions = {entry, target};
-
+  // The entry becomes function 0. A definition inlined at its call sites gets no standalone body: no Call reaches
+  // one; real-call bodies are appended later by the calls stage.
   primec::IrFunction entryFunction;
   entryFunction.name = "/main/entry";
   entryFunction.instructions.push_back({primec::IrOpcode::PushI32, 7});
 
-  std::unordered_set<std::string> loweredCallTargets = {"/main/target"};
-  int32_t nextLocal = 17;
   std::vector<primec::IrFunction> outFunctions;
   int32_t entryIndex = -1;
-  int resetCalls = 0;
-  int buildCalls = 0;
-  int emitInlineCalls = 0;
-  bool sawBuildStartAtZero = false;
-  bool sawExpectValueFalse = false;
-  std::string error;
-  CHECK(primec::ir_lowerer::finalizeEntryFunctionTableAndLowerCallables(
-            program,
-            program.definitions.front(),
-            entryFunction,
-            loweredCallTargets,
-            [](const primec::Definition &) { return false; },
-            [](const std::string &, primec::ir_lowerer::ReturnInfo &info) {
-              info.returnsVoid = true;
-              return true;
-            },
-            {},
-            {},
-            [](const primec::Expr &) { return false; },
-            [&]() { ++resetCalls; },
-            [&](const primec::Definition &def,
-                int32_t &localCursor,
-                primec::ir_lowerer::LocalMap &locals,
-                primec::Expr &callExpr,
-                std::string &) {
-              ++buildCalls;
-              sawBuildStartAtZero = (localCursor == 0);
-              localCursor = 1;
-              locals.clear();
-              callExpr = {};
-              callExpr.kind = primec::Expr::Kind::Call;
-              callExpr.name = def.fullPath;
-              return true;
-            },
-            [&](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &, bool expectValue) {
-              ++emitInlineCalls;
-              sawExpectValueFalse = !expectValue;
-              return true;
-            },
-            nextLocal,
-            outFunctions,
-            entryIndex,
-            error) == Result::Emitted);
-  CHECK(error.empty());
+  primec::ir_lowerer::finalizeEntryFunctionTable(entryFunction, outFunctions, entryIndex);
   CHECK(entryIndex == 0);
-  CHECK(resetCalls == 1);
-  CHECK(buildCalls == 1);
-  CHECK(emitInlineCalls == 1);
-  CHECK(sawBuildStartAtZero);
-  CHECK(sawExpectValueFalse);
-  REQUIRE(outFunctions.size() == 2);
+  REQUIRE(outFunctions.size() == 1);
   CHECK(outFunctions[0].name == "/main/entry");
   REQUIRE(outFunctions[0].instructions.size() == 1);
   CHECK(outFunctions[0].instructions[0].op == primec::IrOpcode::PushI32);
-  CHECK(outFunctions[1].name == "/main/target");
-  REQUIRE(outFunctions[1].instructions.size() == 1);
-  CHECK(outFunctions[1].instructions[0].op == primec::IrOpcode::ReturnVoid);
 }
 
 TEST_SUITE_END();

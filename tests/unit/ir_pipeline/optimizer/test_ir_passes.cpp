@@ -1006,6 +1006,63 @@ TEST_CASE("validateIrModule rejects unbalanced operand stacks for every target")
   CHECK_MESSAGE(primec::validateIrModule(fine, primec::IrValidationTarget::Vm, error), error);
 }
 
+TEST_CASE("validateIrModule rejects a called function that returns an address of its own frame") {
+  // The callee's frame is gone once it returns (docs/spec/vm-design.md, Real calls).
+  const auto moduleWithCallee = [](std::vector<primec::IrInstruction> calleeBody, bool called) {
+    primec::IrModule module;
+    module.entryIndex = 0;
+    primec::IrFunction mainFunction;
+    mainFunction.name = "/main";
+    mainFunction.instructions =
+        called ? assemble({"PushI64 0", "Call 1", "Pop", "PushI32 0", "ReturnI32"})
+               : assemble({"PushI32 0", "ReturnI32"});
+    primec::IrFunction callee;
+    callee.name = "/callee";
+    callee.parameterCount = 1;
+    callee.instructions = std::move(calleeBody);
+    module.functions = {mainFunction, callee};
+    return module;
+  };
+  struct Case {
+    const char *name;
+    std::vector<primec::IrInstruction> body;
+    bool called;
+    bool valid;
+  };
+  const std::vector<Case> cases = {
+      {"own address", assemble({"StoreLocal 0", "AddressOfLocal 1", "ReturnI64"}), true, false},
+      {"own address through a local and an offset",
+       assemble({"StoreLocal 0", "AddressOfLocal 1", "StoreLocal 2", "LoadLocal 2", "PushI64 16", "AddI64",
+                 "ReturnI64"}),
+       true,
+       false},
+      {"own address on one path only",
+       assemble({"StoreLocal 0", "LoadLocal 0", "JumpIfZero 5", "AddressOfLocal 1", "ReturnI64", "LoadLocal 0",
+                 "ReturnI64"}),
+       true,
+       false},
+      {"the caller's block that came in as a parameter",
+       assemble({"StoreLocal 0", "AddressOfLocal 1", "Pop", "LoadLocal 0", "ReturnI64"}),
+       true,
+       true},
+      {"own address in a function no Call reaches",
+       assemble({"StoreLocal 0", "AddressOfLocal 1", "ReturnI64"}),
+       false,
+       true},
+  };
+  for (const Case &c : cases) {
+    CAPTURE(c.name);
+    std::string error;
+    const bool valid =
+        primec::validateIrModule(moduleWithCallee(c.body, c.called), primec::IrValidationTarget::Vm, error);
+    CHECK_MESSAGE(valid == c.valid, error);
+    if (!c.valid) {
+      CHECK_MESSAGE(error.find("returns an address of its own frame") != std::string::npos, error);
+      CHECK_MESSAGE(error.find("/callee") != std::string::npos, error);
+    }
+  }
+}
+
 TEST_CASE("SextI32 is folded on constants and dropped after canonical values") {
   expectGolden("const-fold",
                {"a constant is wrapped at fold time",

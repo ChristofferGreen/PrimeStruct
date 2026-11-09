@@ -27,7 +27,6 @@ bool prepareInlineDefinitionCallContext(
     const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
     const std::function<bool(const Definition &)> &isStructDefinition,
     std::unordered_set<std::string> &inlineStack,
-    std::unordered_set<std::string> &loweredCallTargets,
     const OnErrorByDefinition &onErrorByDef,
     InlineDefinitionCallContextSetup &out,
     std::string &error);
@@ -37,7 +36,6 @@ bool prepareInlineDefinitionCallContext(
     const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
     const std::function<bool(const Definition &)> &isStructDefinition,
     std::unordered_set<std::string> &inlineStack,
-    std::unordered_set<std::string> &loweredCallTargets,
     const std::unordered_map<std::string, std::optional<OnErrorHandler>> &onErrorByDef,
     InlineDefinitionCallContextSetup &out,
     std::string &error);
