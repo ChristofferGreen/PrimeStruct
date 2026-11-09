@@ -353,7 +353,7 @@ inline bool Arm64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
       break;
     case BranchKind::Cond:
       if (hooks.farBranches) {
-        patchCondBranch(fixup.codeIndex, static_cast<int32_t>(delta), fixup.cond);
+        patchFarCondBranch(fixup.codeIndex, static_cast<int32_t>(delta), fixup.cond);
       } else if (delta < MinCond || delta > MaxCond) {
         outOfRange = true;
       } else {

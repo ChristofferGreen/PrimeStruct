@@ -29,4 +29,17 @@ std::vector<uint32_t> arm64StackAdjustWords(uint64_t amount, bool add);
 // buffer with the value-stack cache off. False when the constant stays a register operand.
 bool arm64ImmediateOperandWords(IrOpcode op, uint64_t constant, std::vector<uint32_t> &words);
 
+// One step of an arm64 value-stack sequence: push or pop a register, or take a label (the word
+// index a branch could target) at that point.
+struct Arm64ValueStackStep {
+  enum class Kind { Push, Pop, Label };
+  Kind kind = Kind::Push;
+  uint8_t reg = 0;
+};
+
+// The arm64 words the native emitter writes for `steps` with the value-stack cache off (the form
+// register-allocated functions run templates in): a push followed by its pop becomes a move unless
+// a label or a write of the pushed register comes between them.
+std::vector<uint32_t> arm64ValueStackWords(const std::vector<Arm64ValueStackStep> &steps);
+
 } // namespace primec::testing

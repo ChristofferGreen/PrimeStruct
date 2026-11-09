@@ -243,7 +243,7 @@ inline size_t Arm64Emitter::emitCallPlaceholder() {
 inline size_t Arm64Emitter::emitJumpIfZeroPlaceholder() {
   emitPopReg(0);
   emitCompareRegZero(0);
-  return emitCondBranchPlaceholder(CondCode::Eq);
+  return emitFarCondBranchPlaceholder(CondCode::Eq);
 }
 
 inline void Arm64Emitter::patchJump(size_t index, int32_t offsetWords) {
@@ -255,7 +255,7 @@ inline void Arm64Emitter::patchCall(size_t index, int32_t offsetWords) {
 }
 
 inline void Arm64Emitter::patchJumpIfZero(size_t index, int32_t offsetWords) {
-  patchCondBranch(index, offsetWords, CondCode::Eq);
+  patchFarCondBranch(index, offsetWords, CondCode::Eq);
 }
 
 inline void Arm64Emitter::emitPushReg0() {
@@ -371,11 +371,22 @@ inline size_t Arm64Emitter::emitCondBranchPlaceholder(CondCode cond) {
   flushValueStackCache();
   size_t index = currentWordIndex();
   emit(encodeBCond(0, static_cast<uint8_t>(cond)));
-  emit(encodeB(0));
   return index;
 }
 
 inline void Arm64Emitter::patchCondBranch(size_t index, int32_t offsetWords, CondCode cond) {
+  patchWord(index, encodeBCond(offsetWords, static_cast<uint8_t>(cond)));
+}
+
+inline size_t Arm64Emitter::emitFarCondBranchPlaceholder(CondCode cond) {
+  flushValueStackCache();
+  size_t index = currentWordIndex();
+  emit(encodeBCond(0, static_cast<uint8_t>(cond)));
+  emit(encodeB(0));
+  return index;
+}
+
+inline void Arm64Emitter::patchFarCondBranch(size_t index, int32_t offsetWords, CondCode cond) {
   constexpr int32_t kMinCond = -(1 << 18);
   constexpr int32_t kMaxCond = (1 << 18) - 1;
   if (offsetWords >= kMinCond && offsetWords <= kMaxCond) {
@@ -405,18 +416,9 @@ inline void Arm64Emitter::emitCompareAndPush(CondCode cond) {
   emitCompareFlagsAndPush(cond);
 }
 
-// Pushes 1 when the flags satisfy `cond`, else 0.
+// Pushes 1 when the flags satisfy `cond`, else 0: `cset x0, cond` (csinc x0, xzr, xzr, !cond).
 inline void Arm64Emitter::emitCompareFlagsAndPush(CondCode cond) {
-  const size_t branchTrue = currentWordIndex();
-  emit(encodeBCond(0, static_cast<uint8_t>(cond)));
-  emitMovImm64(0, 0);
-  const size_t branchDone = currentWordIndex();
-  emit(encodeB(0));
-  patchWord(branchTrue,
-            encodeBCond(static_cast<int32_t>(currentWordIndex() - branchTrue),
-                        static_cast<uint8_t>(cond)));
-  emitMovImm64(0, 1);
-  patchWord(branchDone, encodeB(static_cast<int32_t>(currentWordIndex() - branchDone)));
+  emit(0x9A9F07E0u | (static_cast<uint32_t>(invertCond(cond)) << 12));
   emitPushReg(0);
 }
 

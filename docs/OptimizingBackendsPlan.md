@@ -1276,7 +1276,7 @@ allocator (section 5, Phase 3) measured the same order of gain there: aggregate 
 | 2 | Register allocation on arm64: the x86_64 allocator's plan with an arm64 pool and arm64 emission, integer code first | native-only machine pass; the plan (`planNativeRegisterAllocation`, on the shared register form) is already target-independent | about 5x on aggregate (variant D), 3x or more on json_parse; the x86_64 numbers agree | large; split by integer code, calls, floats and address-taking functions | TODO-5772, TODO-5774, TODO-5773, TODO-5775 |
 | 3 | IR dumps for the `--emit` target | CLI driver | none by itself; needed to measure 4 and to read what native gets | small | TODO-5777 |
 | 4 | Scalar replacement of local addresses that never leave the function (`local-sroa`): their `LoadIndirect`/`StoreIndirect` become `LoadLocal`/`StoreLocal` and the function stops pinning its slots | shared IR pass (VM, optexe, native) | the vector loop's 50 IR instructions per element down by a third or more on every backend; unlocks `copy-prop`, `dead-store` and register promotion in inlined struct and vector code | medium | TODO-5776 |
-| 5 | Template operand cache that names the register holding the top instead of copying it to x26; pre- and post-indexed value stack; compare-and-branch fusion and `cset`; one-word conditional branches with relaxation | native arm64 template emitter | 1.5-1.7x on template code (variant B) and about another 30% of code size; matters for every function the allocator leaves on templates | medium | TODO-5771 |
+| 5 | Template operand cache that names the register holding the top instead of copying it to x26; pre- and post-indexed value stack; compare-and-branch fusion and `cset`; one-word conditional branches with relaxation | native arm64 template emitter | 1.5-1.7x on template code (variant B) and about another 30% of code size; matters for every function the allocator leaves on templates | medium | TODO-5771 (built only for the value stack of the templates left after the allocator, 12.13) |
 | 6 | Dead stores of frame slots | already an IR pass (`dead-store`); blocked by the pin-everything escape rule | follows from 4 and from decision 11.5 | | (TODO-5776) |
 | 7 | Dead code and unreachable functions | done for native (TODO-5747); cold error paths (`PrintString; PushI32 3; ReturnI32` after each bounds check) could be shared per function | small size gain | small | not filed |
 | 8 | Code layout (loop alignment, branch placement) | native arm64 | under 1% in the experiment (A'); Apple cores did not show the alignment effects section 5 found on x86_64 | small | not filed |
@@ -1563,3 +1563,56 @@ that leaned on the dropped bodies now use a real call: the GLSL helper-call case
 whose breakpoint sits in a function the run never reaches; the embed bytecode fixture was regenerated.
 `scripts/differential_opt_check.py --native --levels 1,2`, also with `PRIMESTRUCT_NATIVE_REGALLOC=1`, matches in 491
 programs (the benchmarks among them) and differs in the same six -O0 programs as before.
+
+### 12.13 Result: the value stack of the templates that are left (TODO-5771, 2026-11-09)
+
+TODO-5771 was planned when every arm64 function ran on templates: variant B of 12.4 (1.5-1.7x fewer cycles on
+template code) and about 30% less code. Restated against the build of 12.12 (96e2a234a) before starting, its
+acceptance was already met by the allocator work: aggregate retires 52.4M instructions (the bound was 170M) in
+3.6x fewer cycles than after TODO-5770, and PrimeScroll's `__text` is 241,316 bytes, half of the 483,008 after
+TODO-5770 (the bound was 25% less). What still runs on templates:
+
+- **Whole functions with float values** (float_series; none in PrimeScroll). The operand cache that names the
+  register holding the top, compare-and-branch fusion and the x0/x26 shuffles would all be rewritten by TODO-5773,
+  which moves these functions onto the allocator with floats in d-registers. Not built; fusing a float compare
+  into its branch is now part of TODO-5773.
+- **Template opcodes inside allocated functions** (prints, heap routines, host calls, string conversions). Their
+  operands go onto the x28 value stack and come straight back off: PrimeScroll had 1,651 pushes and 1,651 pops at
+  two instructions each (`sub x28` + `str`, `ldr` + `add x28`), 6,604 of its 60,329 instructions (11%), plus 368
+  `b` to the next instruction after the two-word conditional branches inside templates. None of the benchmark
+  loops runs a template, so the gain is code size, not speed: worth the small change below, not the planned
+  operand cache.
+
+What changed (`NativeEmitterInternalsArm64Core.h`, `NativeEmitterInternalsArm64Arithmetic.h`):
+
+- The value stack keeps its top at `[x28]` instead of `[x28, #8]`: a push is `str reg, [x28, #-16]!` and a pop
+  `ldr reg, [x28], #16`, one instruction each.
+- A pop that follows its push becomes `mov` (`add rd, rn, #0`), or nothing for the same register: the push's
+  store is removed from the buffer. This also holds for a run of pushes popped in reverse (two operands of a host
+  call), unless a move of the run writes the register an earlier push saved. Any other word ends the run, and so
+  does reading `currentWordIndex()`, through which every label, branch site and instruction offset is taken, so a
+  path that jumps between a push and its pop always finds the store.
+- Conditional branches inside a template are one `b.cond` word (their targets are in the same template); only
+  `JumpIfZero` of a template function, whose target may be past 1 MB, keeps the two-word form.
+- A template comparison's 0 or 1 is `cset` instead of two constants and two branches.
+
+`primestruct.ir.native_codegen` pins the words (fused pushes and pops; a label and a clobbered register that keep
+the store) and the disassembly of a print in an allocated function: `add x0, x22, #0x0; cmp x0, xzr; b.ge`, and no
+access through x28 in the whole function.
+
+Measured with the release `primec` before (96e2a234a) and after, back to back, macOS arm64 (M3 Pro), load average
+28 to 31; instructions retired are deterministic, cycles the lowest of five runs:
+
+| | before | after | change |
+| --- | --- | --- | --- |
+| PrimeScroll `__text` (bytes) | 241,316 | 220,928 | -8.4% |
+| PrimeScroll arm64 instructions | 60,329 | 55,232 | -8.4% |
+| PrimeScroll value-stack pushes / pops (instructions each) | 1,651 / 1,651 (2) | 224 / 224 (1) | |
+| PrimeScroll `b` to the next instruction | 368 | 0 | |
+| float_series instructions retired / cycles (M) | 1433.6 / 394.5 | 1293.4 / 395.7 | -9.8% instructions, cycles unchanged |
+| aggregate, call_fib, json_scan, json_parse, vector_sum | | | unchanged (within 0.2% instructions, 5% cycles); no template in their loops |
+
+float_series retires 140M fewer instructions in the same cycles: its loop is bound by the stores and reloads through
+the value stack and frame slots (12.3), which only TODO-5773 removes. Every benchmark prints the same result;
+`scripts/differential_opt_check.py --native --levels 1,2`, also with `PRIMESTRUCT_NATIVE_REGALLOC=1`, matches in 491
+programs and differs in the same six -O0 programs as before.

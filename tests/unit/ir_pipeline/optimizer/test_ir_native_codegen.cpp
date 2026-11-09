@@ -400,6 +400,17 @@ TEST_CASE("arm64 register allocation keeps a counting loop's locals in registers
   std::ostringstream loop;
   loop << "b 0x" << std::hex << code[start + 2].address;
   CHECK(code[start + 6].text == loop.str());
+
+  // TODO-5771: the print template takes sum straight from its register (its push and pop became
+  // one move) and branches on the sign with one word; nothing touches the value stack.
+  REQUIRE(start + 11 <= code.size());
+  CHECK(code[start + 7].text == "add x0, x22, #0x0");
+  CHECK(code[start + 8].text == "cmp x0, xzr");
+  CHECK(code[start + 9].text.rfind("b.ge 0x", 0) == 0);
+  CHECK(code[start + 10].text.rfind("b ", 0) != 0);
+  for (const DisassembledInstruction &instruction : code) {
+    CHECK(instruction.text.find("[x28") == std::string::npos);
+  }
 }
 
 TEST_CASE("arm64 register allocation spills values past its pool to frame slots") {
@@ -1001,9 +1012,9 @@ TEST_CASE("arm64 integer constants become immediate operands of add, sub and com
     if (!primec::testing::arm64ImmediateOperandWords(op, constant, words)) {
       return false;
     }
-    // ldr x0, [x28, #8]; add x28, x28, #16 (the pop), then the operation.
-    REQUIRE(words.size() >= 3);
-    word = words[2];
+    // ldr x0, [x28], #16 (the pop), then the operation.
+    REQUIRE(words.size() >= 2);
+    word = words[1];
     return true;
   };
   uint32_t word = 0;
@@ -1029,17 +1040,12 @@ TEST_CASE("arm64 integer constants become immediate operands of add, sub and com
   CHECK(primec::testing::arm64ImmediateOperandWords(IrOpcode::SubI32, 0, words));
   CHECK(words.empty());
 
-  // A compare's 0 or 1 is one MOVZ each, around a B.cond that skips to the 1.
+  // A compare's 0 or 1 is one CSET, pushed by a pre-indexed store.
   REQUIRE(primec::testing::arm64ImmediateOperandWords(IrOpcode::CmpGtI32, 0, words));
-  CHECK(words == std::vector<uint32_t>{0xF9400780u,
-                                       0x9100439Cu,
-                                       0xF100001Fu,
-                                       0x5400006Cu,
-                                       0xD2800000u,
-                                       0x14000002u,
-                                       0xD2800020u,
-                                       0xD100439Cu,
-                                       0xF9000780u});
+  CHECK(words == std::vector<uint32_t>{0xF8410780u,   // ldr x0, [x28], #16
+                                       0xF100001Fu,   // cmp x0, #0
+                                       0x9A9FD7E0u,   // cset x0, gt
+                                       0xF81F0F80u}); // str x0, [x28, #-16]!
 }
 
 TEST_CASE("arm64 constants without an immediate form stay register operands") {
@@ -1056,6 +1062,41 @@ TEST_CASE("arm64 constants without an immediate form stay register operands") {
   CHECK_FALSE(primec::testing::arm64ImmediateOperandWords(IrOpcode::MulI64, 2, words));
   CHECK_FALSE(primec::testing::arm64ImmediateOperandWords(IrOpcode::CmpLtF64, 0, words));
   CHECK_FALSE(primec::testing::arm64ImmediateOperandWords(IrOpcode::DivI64, 1, words));
+}
+
+// TODO-5771: the value stack is one pre-indexed store per push and one post-indexed load per pop,
+// and a pop that follows its push becomes a register move.
+TEST_CASE("arm64 value-stack pushes and pops are one word and fuse into moves") {
+  using Step = primec::testing::Arm64ValueStackStep;
+  using Kind = Step::Kind;
+  // Two pushes popped right after into the template's registers: two moves, no memory.
+  CHECK(primec::testing::arm64ValueStackWords(
+            {{Kind::Push, 21}, {Kind::Push, 22}, {Kind::Pop, 1}, {Kind::Pop, 15}}) ==
+        std::vector<uint32_t>{0x910002C1u,   // add x1, x22, #0
+                              0x910002AFu}); // add x15, x21, #0
+  // A pop into the pushed register itself leaves nothing.
+  CHECK(primec::testing::arm64ValueStackWords({{Kind::Push, 3}, {Kind::Pop, 3}}).empty());
+  // A pop with nothing pushed before it in the run loads from memory.
+  CHECK(primec::testing::arm64ValueStackWords({{Kind::Pop, 0}}) ==
+        std::vector<uint32_t>{0xF8410780u}); // ldr x0, [x28], #16
+}
+
+TEST_CASE("arm64 value-stack pushes stay in memory across labels and clobbers") {
+  using Step = primec::testing::Arm64ValueStackStep;
+  using Kind = Step::Kind;
+  // A label between the push and the pop: another path may reach the pop with its own value on
+  // the stack, so both stay memory accesses.
+  CHECK(
+      primec::testing::arm64ValueStackWords({{Kind::Push, 21}, {Kind::Label, 0}, {Kind::Pop, 0}}) ==
+      std::vector<uint32_t>{0xF81F0F95u,   // str x21, [x28, #-16]!
+                            0xF8410780u}); // ldr x0, [x28], #16
+  // The first pop's move writes x21, the register the earlier push saved: that push stays a store
+  // and its pop a load.
+  CHECK(primec::testing::arm64ValueStackWords(
+            {{Kind::Push, 21}, {Kind::Push, 22}, {Kind::Pop, 21}, {Kind::Pop, 15}}) ==
+        std::vector<uint32_t>{0xF81F0F95u,   // str x21, [x28, #-16]!
+                              0x910002D5u,   // add x21, x22, #0
+                              0xF841078Fu}); // ldr x15, [x28], #16
 }
 
 #if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
@@ -1150,14 +1191,15 @@ TEST_CASE("arm64 native constants and immediate operands match the VM") {
 // TODO-5483: the arm64 backend cannot run here, so its encodings are pinned. SextI32 is SXTW x0,
 // w0 (SBFM x0, x0, #0, #31). Float comparisons branch on the fcmp flags with the conditions that
 // are false for an unordered pair: EQ, NE (true), MI for <, LS for <=, GT and GE.
-TEST_CASE("arm64 SXTW and float comparison branches keep their encodings") {
+TEST_CASE("arm64 SXTW and float comparison results keep their encodings") {
   const std::vector<uint32_t> sext = primec::testing::arm64TemplateWords(primec::IrOpcode::SextI32);
   CHECK(std::find(sext.begin(), sext.end(), 0x93407C00u) != sext.end());
 
-  const auto branchCondition = [](primec::IrOpcode op) -> int {
+  // The condition of the comparison's CSET (CSINC x0, xzr, xzr with the inverted condition).
+  const auto resultCondition = [](primec::IrOpcode op) -> int {
     for (const uint32_t word : primec::testing::arm64TemplateWords(op)) {
-      if ((word & 0xFF000010u) == 0x54000000u) { // B.cond
-        return static_cast<int>(word & 0xFu);
+      if ((word & 0xFFFF0FFFu) == 0x9A9F07E0u) {
+        return static_cast<int>(((word >> 12) & 0xFu) ^ 1u);
       }
     }
     return -1;
@@ -1175,7 +1217,7 @@ TEST_CASE("arm64 SXTW and float comparison branches keep their encodings") {
                                    Expected{primec::IrOpcode::CmpLtF32, 0x4},
                                    Expected{primec::IrOpcode::CmpLeF32, 0x9}}) {
     CAPTURE(static_cast<int>(expected.op));
-    CHECK(branchCondition(expected.op) == expected.condition);
+    CHECK(resultCondition(expected.op) == expected.condition);
   }
 }
 

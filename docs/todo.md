@@ -104,7 +104,6 @@ of sync with them.
 | TODO-5739 | Large struct copies lower to a slot loop | ready | ir-struct-copies |
 | TODO-5752 | x86_64 native and the Linux JIT take the address ABI of real calls | deferred | native-real-calls |
 | TODO-5741 | `string` parameters become real calls on the VM and optexe | ready | ir-real-calls |
-| TODO-5771 | arm64 template operands stay in the register that computed them | ready | native-arm64-isel |
 | TODO-5773 | arm64 register allocation keeps floats in d-registers | ready | native-arm64-regalloc |
 | TODO-5824 | A null or stray local address faults on the VM | deferred | vm-addresses |
 | TODO-5727 | Every struct copy site tells a place from a temporary by resolution | deferred | lifecycle-copy-sources |
@@ -196,7 +195,7 @@ of sync with them.
 3. TODO-5510
 4. TODO-5524
 5. TODO-5728
-6. TODO-5771
+6. TODO-5773
 
 ### Priority Lanes
 
@@ -213,14 +212,14 @@ of sync with them.
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719; collection fields found by closures and the todo example: TODO-5681, TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
 - Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5738, TODO-5718
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732, TODO-5735, TODO-5736, TODO-5737
-- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe; real calls and struct copies TODO-5739, TODO-5741, TODO-5752; VM address checks TODO-5824; native code quality (section 12, after the startup lane) TODO-5771, TODO-5773
+- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe; real calls and struct copies TODO-5739, TODO-5741, TODO-5752; VM address checks TODO-5824; native code quality (section 12, after the startup lane) TODO-5773
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5807, TODO-5790, TODO-5791, TODO-5792, TODO-5793, TODO-5794, TODO-5795, TODO-5796, TODO-5797, TODO-5798, TODO-5656, TODO-5802, TODO-5803, TODO-5799, TODO-5800, TODO-5801; deferred TODO-5804, TODO-5805, TODO-5806
 
 ### Execution Queue
 
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
-Native code quality (docs/OptimizingBackendsPlan.md section 12), after the startup lane (TODO-5770, one-instruction constants, TODO-5777, IR dumps for the `--emit` target, TODO-5772, arm64 register allocation for integer code, TODO-5774, registers across calls, TODO-5775, address-taking functions, and TODO-5776, `local-sroa`, are done), in this order: TODO-5771 (template operand cache and compare-branch fusion), TODO-5773 (floats in d-registers).
+Native code quality (docs/OptimizingBackendsPlan.md section 12), after the startup lane (TODO-5770, one-instruction constants, TODO-5777, IR dumps for the `--emit` target, TODO-5772, arm64 register allocation for integer code, TODO-5774, registers across calls, TODO-5775, address-taking functions, TODO-5776, `local-sroa`, and TODO-5771, the value stack of the templates that are left, are done): TODO-5773 (floats in d-registers, with float compares fused into their branches).
 
 Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order: TODO-5807 (destructure multi-wait results), TODO-5790 (sendable spawn arguments, checked by type), TODO-5791 (every `Function` sendable by construction), TODO-5792 (VM tasks under a deterministic scheduler; `TaskSpawn`/`TaskWait` IR), TODO-5793 (byte-region checks without a map search), TODO-5794 (`optexe` per-thread heap arenas), TODO-5795 (`optexe` threads for `[spawn]`), TODO-5796 (`Atomic`), TODO-5797 (`Mutex`), TODO-5798 (`Channel`), TODO-5656 (atomic `SharedString` count), TODO-5802 (`serveWorkers`), TODO-5803 (apps on workers, measured), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5807, TODO-5790, TODO-5792 and TODO-5793 are ready and independent of each other. Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions).
 
@@ -286,27 +285,13 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
     - full release gate green
   - stop_rule: `string` parameters of real calls only.
 
-- [ ] TODO-5771: arm64 template operands stay in the register that computed them
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-09
-  - phase: Optimizing backends, native code quality (docs/OptimizingBackendsPlan.md section 12)
-  - parallel_track: native-arm64-isel
-  - scope: The arm64 template emitter copies every pushed value into x26 and every popped value back out (`add x26, x0, #0; add x0, x26, #0`, 25% of PrimeScroll's code), bumps x28 separately from each value-stack load and store, materializes compare results as 0/1 constants with two branches before `JumpIfZero` tests them, and pads every conditional branch with a `b` to the next instruction. Let the cache name whichever register holds the top, use pre- and post-indexed `str`/`ldr` on x28, fuse a compare that feeds `JumpIfZero` into `cmp` + `b.cond`, use `cset` for a compare used as a value, and emit one-word conditional branches, relaxing only those out of range.
-  - implementation_notes: models variant B of section 12.4 (aggregate 1.5-1.7x fewer cycles, 142.6M instructions). Since TODO-5775 the allocator takes every PrimeScroll function (245 of 245, `__text` 250,788 bytes); what still runs these templates is float code (until TODO-5773) and the opcodes an allocated function runs as templates on the value stack (prints, heap, host calls), so re-measure the gain and restate the acceptance against the TODO-5775 build before starting.
-  - acceptance:
-    - aggregate native at most 170M instructions retired and at least 1.4x fewer cycles than the TODO-5770 build, measured back to back with the load average recorded
-    - PrimeScroll `__text` at least 25% smaller than after TODO-5770; same output on every benchmark and the native compile-run suites
-    - full release gate green on macOS arm64
-  - stop_rule: template emitter only; no register allocation and no IR changes.
-
 - [ ] TODO-5773: arm64 register allocation keeps floats in d-registers
   - owner: ai
   - status: ready
   - created_at: 2026-11-09
   - phase: Optimizing backends, native code quality (docs/OptimizingBackendsPlan.md section 12)
   - parallel_track: native-arm64-regalloc
-  - scope: arm64 float templates move both operands from general registers to d0/d1 and back for every operation (`fmov`), and float_series runs 8x the cycles of optexe. Colour float-only classes from v8-v31 (saving them around templates and calls), emit float arithmetic, compares, negation and conversions on them, and float constants without a general-register round trip, as the x86_64 allocator does with xmm2-xmm15.
+  - scope: arm64 float templates move both operands from general registers to d0/d1 and back for every operation (`fmov`), and float_series runs 8x the cycles of optexe. Colour float-only classes from v8-v31 (saving them around templates and calls), emit float arithmetic, compares, negation and conversions on them, and float constants without a general-register round trip, as the x86_64 allocator does with xmm2-xmm15. A float compare that feeds `JumpIfZero` becomes `fcmp` + `b.cond` (taken over from TODO-5771, whose template operand cache and compare-branch fusion would only have served float functions; docs/OptimizingBackendsPlan.md 12.13).
   - acceptance:
     - float_series `/main` register-allocated on arm64 and at most 2x optexe's cycles, back to back with the load average recorded (2026-11-09: 8.2-8.4x)
     - float compile-run and math conformance suites green on macOS arm64

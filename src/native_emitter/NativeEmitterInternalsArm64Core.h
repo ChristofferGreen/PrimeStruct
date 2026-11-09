@@ -706,16 +706,46 @@ inline uint64_t Arm64Emitter::localOffset(uint32_t index) {
   return static_cast<uint64_t>(index) * 16u + 8u;
 }
 
+// The value stack grows down from x28 in 16-byte slots, the top value at [x28]: a push is one
+// pre-indexed store and a pop one post-indexed load.
 inline void Arm64Emitter::emitSpillReg(uint8_t reg) {
   counters_.spillCount += 1;
-  emit(encodeSubRegImm(28, 28, 16));
-  emit(encodeStrRegBase(reg, 28, 8));
+  if (pendingSpillEnd_ != code_.size()) {
+    pendingSpills_.clear();
+    pendingMoveTargets_.clear();
+  }
+  pendingSpills_.push_back({code_.size(), reg});
+  emit(0xF81F0F80u | (static_cast<uint32_t>(reg) & 0x1Fu)); // str reg, [x28, #-16]!
+  pendingSpillEnd_ = code_.size();
 }
 
+// A pop that follows its push with only pushes and such moves between them (no label, branch site
+// or other word) moves the pushed register instead of going through memory: the push is removed
+// and the move appended, unless a move after the push writes the pushed register. Nothing has
+// taken the index of a word after the push, and the slot it wrote is dead once popped.
 inline void Arm64Emitter::emitReloadReg(uint8_t reg) {
+  if (pendingSpillEnd_ == code_.size() && !pendingSpills_.empty()) {
+    const PendingSpill spill = pendingSpills_.back();
+    bool clobbered = false;
+    // Every move of the run counts, also one before this push (conservative).
+    for (const uint8_t target : pendingMoveTargets_) {
+      clobbered = clobbered || target == spill.reg;
+    }
+    if (!clobbered) {
+      pendingSpills_.pop_back();
+      code_.erase(code_.begin() + static_cast<std::ptrdiff_t>(spill.word));
+      counters_.spillCount -= 1;
+      if (reg != spill.reg) {
+        emitMovReg(reg, spill.reg);
+        pendingMoveTargets_.push_back(reg);
+      }
+      pendingSpillEnd_ = code_.size();
+      return;
+    }
+  }
+  pendingSpillEnd_ = SIZE_MAX;
   counters_.reloadCount += 1;
-  emit(encodeLdrRegBase(reg, 28, 8));
-  emit(encodeAddRegImm(28, 28, 16));
+  emit(0xF8410780u | (static_cast<uint32_t>(reg) & 0x1Fu)); // ldr reg, [x28], #16
 }
 
 inline void Arm64Emitter::flushValueStackCache() {

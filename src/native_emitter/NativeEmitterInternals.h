@@ -167,6 +167,12 @@ class Arm64Emitter {
   void emitAdjustSpPublic(uint64_t amount, bool add) {
     emitAdjustSp(amount, add);
   }
+  void emitPushRegPublic(uint8_t reg) {
+    emitPushReg(reg);
+  }
+  void emitPopRegPublic(uint8_t reg) {
+    emitPopReg(reg);
+  }
 
   void emitLoadLocal(uint32_t index) {
     emitLoadLocalToReg(0, index);
@@ -353,7 +359,10 @@ class Arm64Emitter {
   void patchJumpIfZero(size_t index, int32_t offsetWords);
   void emitPushReg0();
 
+  // Every label, branch site and instruction offset is read here, so reading it also ends the
+  // window in which a push may be fused with the pop that follows it (emitReloadReg).
   size_t currentWordIndex() const {
+    pendingSpillEnd_ = SIZE_MAX;
     return code_.size();
   }
 
@@ -489,6 +498,7 @@ class Arm64Emitter {
   }
   void rollBack(const Checkpoint &point) {
     code_.resize(point.codeSize);
+    pendingSpillEnd_ = SIZE_MAX;
     heapAllocCalls_.resize(point.heapAllocCalls);
     heapFreeCalls_.resize(point.heapFreeCalls);
     heapReallocCalls_.resize(point.heapReallocCalls);
@@ -554,8 +564,14 @@ class Arm64Emitter {
   void emitConvertFloatToFloat(bool fromF64);
   void emitCompareRegZero(uint8_t reg);
   void emitCompareReg(uint8_t left, uint8_t right);
+  // A template's own conditional branch: one `b.cond` word, patched to a target inside the same
+  // template (always within its +-1 MB reach).
   size_t emitCondBranchPlaceholder(CondCode cond);
   void patchCondBranch(size_t index, int32_t offsetWords, CondCode cond);
+  // A conditional branch to an IR target, which may lie past that reach: `b.cond` and a `b`,
+  // patched to `b.cond target; b next` or, when far, `b.!cond next; b target`.
+  size_t emitFarCondBranchPlaceholder(CondCode cond);
+  void patchFarCondBranch(size_t index, int32_t offsetWords, CondCode cond);
   size_t emitCbzPlaceholder(uint8_t reg);
   void patchCbz(size_t index, uint8_t reg, int32_t offsetWords);
   void emitCompareAndPush(CondCode cond);
@@ -670,6 +686,16 @@ class Arm64Emitter {
   uint64_t codeBaseOffset_ = 0;
   Arm64InstrumentationCounters counters_;
   static constexpr uint8_t valueStackCacheReg_ = 26;
+  // Pushes a pop may still turn into a move (emitReloadReg): the run of words that ends at
+  // pendingSpillEnd_ holds only these pushes (`str reg, [x28, #-16]!`, by word index) and the moves
+  // earlier pops became. Any other word, label or branch site ends the run (SIZE_MAX).
+  struct PendingSpill {
+    size_t word = 0;
+    uint8_t reg = 0;
+  };
+  mutable size_t pendingSpillEnd_ = SIZE_MAX;
+  std::vector<PendingSpill> pendingSpills_;
+  std::vector<uint8_t> pendingMoveTargets_;
   bool hasValueStackCache_ = false;
   bool valueStackCacheEnabled_ = true;
   // The BL sites of the heap instructions, patched to the routines by emitHeapRuntime, and the state fixups.

@@ -90,6 +90,25 @@ bool arm64ImmediateOperandWords(IrOpcode op, uint64_t constant, std::vector<uint
   return true;
 }
 
+std::vector<uint32_t> arm64ValueStackWords(const std::vector<Arm64ValueStackStep> &steps) {
+  native_emitter::Arm64Emitter emitter;
+  emitter.setValueStackCacheEnabled(false);
+  for (const Arm64ValueStackStep &step : steps) {
+    switch (step.kind) {
+    case Arm64ValueStackStep::Kind::Push:
+      emitter.emitPushRegPublic(step.reg);
+      break;
+    case Arm64ValueStackStep::Kind::Pop:
+      emitter.emitPopRegPublic(step.reg);
+      break;
+    case Arm64ValueStackStep::Kind::Label:
+      (void)emitter.currentWordIndex();
+      break;
+    }
+  }
+  return arm64Words(emitter);
+}
+
 bool buildMachOImportProbe(const std::string &symbol, std::vector<uint8_t> &image, std::string &error) {
 #if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
   using native_emitter::MachOData;
