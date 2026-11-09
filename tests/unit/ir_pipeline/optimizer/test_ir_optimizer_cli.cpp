@@ -204,6 +204,60 @@ TEST_CASE("dump-stage prints the lowered module before and after optimization") 
   CHECK(run("./primec --dump-stage ir-optimized " + source).out == lowered.out);
 }
 
+// The optimized dump is the IR the `--emit` target gets: native runs its target-only
+// if-convert (the stepped local becomes a multiply, its branch goes away), the VM does not, and
+// the dump has as many instructions as the native --opt-report counts after the passes.
+TEST_CASE("dump-stage ir-optimized shows the IR of the --emit target") {
+  const std::string source = writeSource("if_convert_dump.prime", R"(
+[return<int> effects(io_out)]
+main() {
+  [i64 mut] count{0i64}
+  [i64 mut] value{0i64}
+  repeat(10i32) {
+    if(greater_than(value, 4i64)) {
+      assign(count, plus(count, 3i64))
+    }
+    assign(value, plus(value, 1i64))
+  }
+  print_line(count)
+  return(0i32)
+}
+)");
+  const auto count = [](const std::string &text, const std::string &needle) {
+    size_t found = 0;
+    for (size_t at = text.find(needle); at != std::string::npos; at = text.find(needle, at + 1)) {
+      ++found;
+    }
+    return found;
+  };
+  const CommandResult native =
+      run("./primec --emit=native -O2 --dump-stage ir-optimized " + source);
+  const CommandResult vm = run("./primec --emit=vm -O2 --dump-stage ir-optimized " + source);
+  const CommandResult neutral = run("./primec -O2 --dump-stage ir-optimized " + source);
+  REQUIRE(native.exitCode == 0);
+  REQUIRE(vm.exitCode == 0);
+  REQUIRE(neutral.exitCode == 0);
+  CHECK(count(native.out, "MulI64") == 1);
+  CHECK(count(vm.out, "MulI64") == 0);
+  CHECK(count(neutral.out, "MulI64") == 0);
+  CHECK(count(native.out, "JumpIfZero") < count(neutral.out, "JumpIfZero"));
+
+  const std::string binary =
+      primec::testing::testScratchPath("optimizer_cli/if_convert_dump").string();
+  const CommandResult report =
+      run("./primec --emit=native -O2 " + source + " -o " + binary + " --opt-report");
+  REQUIRE(report.exitCode == 0);
+  // The sum of the `instructions=` counts of the listed functions.
+  size_t listed = 0;
+  for (size_t at = native.out.find(" instructions="); at != std::string::npos;
+       at = native.out.find(" instructions=", at + 1)) {
+    listed += std::stoul(native.out.substr(at + 14));
+  }
+  CHECK(listed > 0);
+  CHECK(contains(report.err, "instructions_after=" + std::to_string(listed) + "\n"));
+  CHECK(run("'" + binary + "'").out == "15\n");
+}
+
 TEST_CASE("serialized output is unchanged at -O0 and shrinks at -O1 with the same behavior") {
   const std::string source = writeSource("fold_psir.prime", FoldableProgram);
   const std::string plain = primec::testing::testScratchPath("optimizer_cli/plain.psir").string();

@@ -52,13 +52,17 @@ std::vector<std::string> makeIrBackendNotes(const IrBackendDiagnostics &diagnost
 bool isIrModuleDumpStage(const Options &options);
 
 // Lowers and validates like a backend would (the optimization phase runs only
-// for ir-optimized) and prints the listing to `out`. Returns the process exit
-// code; failures are reported to `err` in the usual CLI format.
+// for ir-optimized) and prints the listing to `out`. `target` is the target the
+// `--emit` kind selects, so the listing is the IR that backend receives: its
+// lowering, its validation and its target-only passes; `Any` (no `--emit`) gives
+// the backend-neutral listing. Returns the process exit code; failures are
+// reported to `err` in the usual CLI format.
 int runIrModuleDump(std::ostream &out,
                     std::ostream &err,
                     Program &program,
                     const SemanticProgram *semanticProgram,
                     const ExpandedSource *expandedSource,
-                    const Options &options);
+                    const Options &options,
+                    IrValidationTarget target = IrValidationTarget::Any);
 
 } // namespace primec

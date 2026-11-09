@@ -70,6 +70,9 @@ Pipeline operating rules:
 - `--dump-stage=ir-lowered` and `--dump-stage=ir-optimized` print the lowered IR module as text (`ir_module_v1`: string
   table, host imports, struct layouts, and one numbered instruction per line). `ir-lowered` is the module as lowering
   produced it; `ir-optimized` applies the selected `-O` level and passes first. Both work with `primec` and `primevm`.
+  With `--emit=<kind>` the module is lowered, validated and optimized for that kind's target, so the listing is the IR
+  that backend receives (target-only passes such as `if-convert` on native and `loop-rotate` on the VM included, and
+  host calls accepted where the target takes them); without `--emit`, and in `primevm`, the listing is backend-neutral.
 - Release validation failures are tracked in `docs/failing_tests.md`. Every
   release test run must record newly failing doctest cases there before new
   implementation work starts, and the TODO queue must prioritize fixing those

@@ -298,7 +298,8 @@ int runIrModuleDump(std::ostream &out,
                     Program &program,
                     const SemanticProgram *semanticProgram,
                     const ExpandedSource *expandedSource,
-                    const Options &options) {
+                    const Options &options,
+                    IrValidationTarget target) {
   Options prepareOptions = options;
   const bool optimized = options.dumpStage == "ir-optimized" || options.dumpStage == "ir_optimized";
   if (!optimized) {
@@ -307,13 +308,8 @@ int runIrModuleDump(std::ostream &out,
   }
   IrModule ir;
   IrPreparationFailure failure;
-  if (!prepareIrModule(program,
-                       semanticProgram,
-                       prepareOptions,
-                       IrValidationTarget::Any,
-                       ir,
-                       failure,
-                       expandedSource)) {
+  if (!prepareIrModule(
+          program, semanticProgram, prepareOptions, target, ir, failure, expandedSource)) {
     // The listing is backend-neutral, so describe failures with generic IR
     // prefixes rather than a backend's own.
     IrBackendDiagnostics diagnostics;

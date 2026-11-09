@@ -7,7 +7,7 @@ the `optexe`/`optcpp` emit kinds (section 9.1), the flat VM kernel with fused in
 locals plus deferred operands in the x86_64 native emitter (Phase 3, first steps). Not started: the register form,
 a full register-allocating native code generator, and arm64 versions of the native steps. Section 12 (2026-11-09)
 measures what the arm64 native code costs today and ranks the next steps (TODO-5770..5777); TODO-5770
-(one-instruction constants) is done, 12.6.
+(one-instruction constants, 12.6) and TODO-5777 (dumps for the `--emit` target, 12.7) are done.
 
 This document records what the direct native backend (`--emit=native`) and the PrimeScript
 VM (`--emit=vm`, `primevm`) do today, why they are slow, and a phased plan to
@@ -1212,10 +1212,10 @@ What the IR leaves on the table:
 - **Single-use temporaries survive.** `fib`'s argument binding is `StoreLocal 1; LoadLocal 1; Call`, a temporary read
   once; `dead-store` keeps it because it is read. A register allocator folds it away; the VM and the template emitter
   pay for it.
-- **`--dump-stage=ir-optimized` does not show what the native backend gets.** The dump prepares the module for
-  `IrValidationTarget::Any` (`runIrModuleDump` in `src/pipeline/CliDriver.cpp`), so target-only passes (`if-convert`)
-  are missing from it, and a program with host calls (PrimeScroll) fails with "host calls are only supported by the vm
-  target".
+- **`--dump-stage=ir-optimized` did not show what the native backend gets** (fixed by TODO-5777, 12.7). The dump
+  prepared the module for `IrValidationTarget::Any` (`runIrModuleDump` in `src/pipeline/CliDriver.cpp`), so
+  target-only passes (`if-convert`) were missing from it, and a program with host calls (PrimeScroll) failed with
+  "host calls are only supported by the vm target".
 
 At the machine level arm64 has no register allocation, no operand deferral, no immediate operand forms, no
 compare-and-branch fusion, no `cset`, no pre- or post-indexed addressing and no branch relaxation (every conditional
@@ -1327,3 +1327,13 @@ deterministic; cycles are the lowest of five runs, base and new back to back at 
 PrimeScroll's `__text` had grown from the 768,764 bytes of 12.1 to 787,480 by the time of the change. Every benchmark
 prints the same result. The rest of 12.1's shape is unchanged: the x0/x26 shuffles, the value-stack bumps and the
 two-word conditional branches are TODO-5771.
+
+### 12.7 Result: IR dumps for the `--emit` target (TODO-5777, 2026-11-09)
+
+`runIrModuleDump` takes the validation target of the backend `--emit` selects (`IrBackend::validationTarget`), and
+lowering, validation and the pass pipeline run for it; without `--emit` (and in `primevm`) the target stays `Any`.
+`primec --emit=native -O2 --dump-stage=ir-optimized examples/apps/text_editor/main.prime` now prints PrimeScroll's
+module (245 functions, 46,180 instructions, the `instructions_after` of its native `--opt-report`) where it failed on
+host calls before. `primestruct.ir.optimizer_cli` pins it on a loop with a stepped local: the native dump has the
+`if-convert` multiply and one branch fewer, the VM and target-neutral dumps do not, and the native dump's instruction
+count equals the native `--opt-report`.

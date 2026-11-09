@@ -338,7 +338,9 @@ static int emitCompiledProgram(primec::Options &options,
         program,
         pipelineOutput.hasSemanticProgram ? &pipelineOutput.semanticProgram : nullptr,
         &pipelineOutput.expandedSource,
-        options);
+        options,
+        irBackend != nullptr ? irBackend->validationTarget(options)
+                             : primec::IrValidationTarget::Any);
   }
 
   if (irBackend != nullptr && irBackend->requiresOutputPath() && !options.outputPath.empty()) {
