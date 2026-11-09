@@ -742,44 +742,67 @@ restore_preview([App] app, [Window] tab, [i32] position) {
   return(shown)
 }
 
-// Opens the files the last session had open, one tab each in the same order, and selects the tab
-// that was active. A file that is gone is skipped. Returns how many tabs it opened.
+// Opens the files the last session had open, one tab each in the same order, and selects the tab that was active. A
+// file that is gone is skipped. It runs after the first frame, so the window is on screen first: when the first window
+// holds a document by then (the file the system asked the app to open at launch), the session's tabs open behind it,
+// without that file twice, and the first window stays selected. Returns how many tabs hold a file of the session.
 [return<i32> effects(heap_alloc)]
-restore_session([App] app, [Window] first, [TextView] firstView) {
+restore_session([App] app, [Window] first) {
+  [TextView] firstView{first.content()}
+  [bool] keepFirst{first.hasPath() || firstView.isModified()}
   [i32] saved{app.listCount("session.files")}
   [i32 mut] opened{0i32}
+  [i32 mut] added{0i32}
+  // Each tab opens right after the one before it (a tab joins its host's group just after the host).
+  [Window mut] last{first}
   [i32 mut] position{0i32}
   while(position < saved) {
     [String] path{app.listGet("session.files", position)}
-    if(opened == 0i32) {
-      if(firstView.loadFile(path)) {
-        first.setPath(path)
-        first.setTitle(path)
-        firstView.highlight(path)
-        [bool] firstPreviewed{preview_if_markdown(app, first, path)}
-        [bool] firstRestored{restore_preview(app, first, position)}
-        opened = 1i32
-      }
+    [bool mut] already{false}
+    if(first.hasPath()) {
+      already = same_text(first.path(), path)
+    }
+    if(already) {
+      opened = opened + 1i32
     } else {
-      [Window] extra{new_tab(app, first)}
-      [TextView] extraView{extra.content()}
-      if(extraView.loadFile(path)) {
-        extra.setPath(path)
-        extra.setTitle(path)
-        extraView.highlight(path)
-        [bool] extraPreviewed{preview_if_markdown(app, extra, path)}
-        [bool] extraRestored{restore_preview(app, extra, position)}
-        opened = opened + 1i32
+      if(opened == 0i32 && !keepFirst) {
+        if(firstView.loadFile(path)) {
+          first.setPath(path)
+          first.setTitle(path)
+          firstView.highlight(path)
+          [bool] firstPreviewed{preview_if_markdown(app, first, path)}
+          [bool] firstRestored{restore_preview(app, first, position)}
+          opened = 1i32
+        }
       } else {
-        extra.close()
+        [Window] extra{new_tab(app, last)}
+        [TextView] extraView{extra.content()}
+        if(extraView.loadFile(path)) {
+          extra.setPath(path)
+          extra.setTitle(path)
+          extraView.highlight(path)
+          [bool] extraPreviewed{preview_if_markdown(app, extra, path)}
+          [bool] extraRestored{restore_preview(app, extra, position)}
+          opened = opened + 1i32
+          added = added + 1i32
+          last = extra
+        } else {
+          extra.close()
+        }
       }
     }
     position = position + 1i32
   }
-  [i32] active{app.intPref("session.active", 0i32)}
-  if(opened > 1i32 && active >= 0i32 && active < first.tabCount()) {
-    [Window] chosen{first.tabAt(active)}
-    chosen.select()
+  if(keepFirst) {
+    if(added > 0i32) {
+      [bool] reselected{first.select()}
+    }
+  } else {
+    [i32] active{app.intPref("session.active", 0i32)}
+    if(opened > 1i32 && active >= 0i32 && active < first.tabCount()) {
+      [Window] chosen{first.tabAt(active)}
+      chosen.select()
+    }
   }
   return(opened)
 }
@@ -807,6 +830,8 @@ Editor() {
   [public bool mut] recentChanged{false}
   // Quit was asked for: the tabs close after the event.
   [public bool mut] quitRequested{false}
+  // The last session comes back after the first frame; until then the session is not saved over.
+  [public bool mut] sessionPending{false}
   // False once the last document has closed: the app ends then.
   [public bool mut] running{true}
 
@@ -886,7 +911,7 @@ Editor() {
     if(this.commanded || this.documentsChanged || this.quitRequested) {
       this.syncToolbars()
     }
-    if(this.commanded && count_documents(this.app, this.settings.window) > 0i32) {
+    if(this.commanded && !this.sessionPending && count_documents(this.app, this.settings.window) > 0i32) {
       [bool] remembered{save_session(this.app, document_window(this.app, this.settings.window))}
     }
     if(this.quitRequested) {
@@ -905,6 +930,16 @@ Editor() {
       this.running = false
     }
     return(this.running)
+  }
+
+  // The first frame is on screen: the last session comes back now, when the launch asked for it.
+  [mut effects(heap_alloc)]
+  restoreSession([Window] first) {
+    if(this.sessionPending) {
+      this.sessionPending = false
+      [i32] restored{restore_session(this.app, first)}
+      this.documentsChanged = true
+    }
   }
 
   [mut effects(heap_alloc)]
@@ -1088,13 +1123,15 @@ Editor() {
   // no document is left).
   [mut effects(heap_alloc)]
   closeAll() {
-    [bool] remembered{save_session(this.app, document_window(this.app, this.settings.window))}
+    if(!this.sessionPending) {
+      [bool] remembered{save_session(this.app, document_window(this.app, this.settings.window))}
+    }
     [bool mut] go{true}
     while(go && count_documents(this.app, this.settings.window) > 0i32) {
       [Window] next{document_window(this.app, this.settings.window)}
       go = close_tab(this.app, next)
     }
-    if(count_documents(this.app, this.settings.window) > 0i32) {
+    if(!this.sessionPending && count_documents(this.app, this.settings.window) > 0i32) {
       [bool] again{save_session(this.app, document_window(this.app, this.settings.window))}
     }
   }
@@ -1218,6 +1255,7 @@ main([array<string>] args) {
     changed.refreshPreview()
   })
   handlers.onOpenFile([]([Reference<Editor>] editor, [String] requested) { editor.openRequested(requested) })
+  handlers.onFirstFrame([]([Reference<Editor>] editor, [Window] drawn) { editor.restoreSession(drawn) })
   handlers.onQuit([]([Reference<Editor>] editor) {
     [bool] quitting{editor.requestQuit()}
     return(quitting)
@@ -1366,14 +1404,12 @@ main([array<string>] args) {
   [bool] shown{editor.refreshPreferences()}
   [i32] recentShown{editor.refreshRecent()}
 
+  // Without a file on the command line the last session comes back after the first frame (`restoreSession`), unless the
+  // preferences say no: the window is on screen before the session's tabs, toolbars and previews are built.
+  editor.sessionPending = args.count() <= 1i32 && app.boolPref("restoreSession", true)
+  editor.syncToolbars()
   first.show()
 
-  // Without a file on the command line the last session comes back, unless the preferences say no.
-  if(args.count() <= 1i32 && app.boolPref("restoreSession", true)) {
-    [i32] restored{restore_session(app, first, firstView)}
-  }
-
-  editor.syncToolbars()
   handlers.state = editor
   app.run(handlers)
   return(0i32)

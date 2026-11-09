@@ -40,6 +40,7 @@
 #include <cstring>
 #include <deque>
 #include <dlfcn.h>
+#include <limits>
 #include <string>
 #include <thread>
 #include <unordered_map>
@@ -208,6 +209,15 @@ struct State {
   bool snapshotTaken = false;
   uint64_t snapshotWindow = 0;
   int snapshotIdleSlices = 0;
+  std::string snapshotTabsReportPath; // PRIMESTRUCT_UI_TABS_REPORT=path: the snapshot window's tabs, in order
+  // The first frame (PS_UI_FEATURE_FIRST_FRAME): the first window shown, and the run loop observer that delivers
+  // PS_UI_EVENT_FIRST_FRAME once that window has been drawn; nothing is installed until the program asks.
+  uint64_t firstShown = 0;
+  bool firstFrameWatched = false;
+  bool firstFrameDelivered = false;
+  CFRunLoopObserverRef firstFrameObserver = nullptr;
+  CFRunLoopTimerRef firstFrameTimer = nullptr;
+  size_t windowsAtFirstFrame = 0; // how many windows existed when it was delivered (the tabs report shows it)
 };
 
 State &state() {
@@ -2029,6 +2039,24 @@ void dumpViews(NSView *view, int depth) {
   }
 }
 
+// PRIMESTRUCT_UI_TABS_REPORT: the tabs of the snapshot window in tab-bar order, one line each (its path, or its
+// title when it has none, with "*" before the selected one), and how many windows there were at the first frame.
+void writeTabsReport() {
+  State &s = state();
+  NSWindow *window = liveWindow(s.snapshotWindow);
+  NSMutableString *body = [NSMutableString stringWithFormat:@"first_frame=%d\nwindows_at_first_frame=%zu\n",
+                                                            s.firstFrameDelivered ? 1 : 0, s.windowsAtFirstFrame];
+  NSArray<NSWindow *> *tabs = window == nil ? @[] : window.tabbedWindows.count > 0 ? window.tabbedWindows : @[ window ];
+  NSWindow *selected = window.tabGroup != nil ? window.tabGroup.selectedWindow : window;
+  for (NSWindow *tab in tabs) {
+    const uint64_t handle = handleOf(tab);
+    const auto path = s.windowPaths.find(handle);
+    NSString *name = path != s.windowPaths.end() ? toNSString(path->second.c_str()) : tab.title;
+    [body appendFormat:@"tab=%@%@\n", tab == selected ? @"*" : @"", name];
+  }
+  [body writeToFile:toNSString(s.snapshotTabsReportPath.c_str()) atomically:YES encoding:NSUTF8StringEncoding error:nil];
+}
+
 // Snapshot of the window with the named menu-bar menu open.
 void captureWithOpenMenu(const std::string &name) {
   State &s = state();
@@ -2309,7 +2337,16 @@ bool ps_ui_init(const char *appName) {
       s.snapshotDropPreview = drop;
     }
     if (const char *request = std::getenv("PRIMESTRUCT_UI_OPEN_FILE_EVENT"); request != nullptr && *request != '\0') {
-      s.snapshotOpenFileEvent = request;
+      if (request[0] == '!') {
+        // "!path": the request is there before the program's first wait, as when the Finder launches the app to open
+        // a document.
+        enqueue(PS_UI_EVENT_OPEN_FILE, 0, 0, 0, request + 1);
+      } else {
+        s.snapshotOpenFileEvent = request;
+      }
+    }
+    if (const char *tabs = std::getenv("PRIMESTRUCT_UI_TABS_REPORT"); tabs != nullptr && *tabs != '\0') {
+      s.snapshotTabsReportPath = tabs;
     }
     if (const char *report = std::getenv("PRIMESTRUCT_UI_REPORT"); report != nullptr && *report != '\0') {
       s.snapshotReportPath = report;
@@ -2334,6 +2371,28 @@ bool ps_ui_init(const char *appName) {
           s.intOverrides[item.substr(0, equals)] = std::atoi(item.substr(equals + 1).c_str());
         }
         start = comma + 1;
+      }
+    }
+    if (const char *lists = std::getenv("PRIMESTRUCT_UI_LISTS"); lists != nullptr) {
+      // PRIMESTRUCT_UI_LISTS=session.files=/a:/b;session.previews=0:1 presets list preferences.
+      s.prefOverridesActive = true;
+      const std::string all = lists;
+      for (size_t start = 0; start < all.size();) {
+        size_t semicolon = all.find(';', start);
+        semicolon = semicolon == std::string::npos ? all.size() : semicolon;
+        const std::string item = all.substr(start, semicolon - start);
+        const size_t equals = item.find('=');
+        if (equals != std::string::npos) {
+          std::vector<std::string> &values = s.listOverrides[item.substr(0, equals)];
+          const std::string list = item.substr(equals + 1);
+          for (size_t from = 0; from < list.size();) {
+            size_t colon = list.find(':', from);
+            colon = colon == std::string::npos ? list.size() : colon;
+            values.push_back(list.substr(from, colon - from));
+            from = colon + 1;
+          }
+        }
+        start = semicolon + 1;
       }
     }
     if (const char *recent = std::getenv("PRIMESTRUCT_UI_RECENT"); recent != nullptr) {
@@ -2576,6 +2635,9 @@ int32_t ps_ui_wait_event(void) {
               s.snapshotWindow = std::max(s.snapshotWindow, entry.first);
             }
           }
+          if (!s.snapshotTabsReportPath.empty()) {
+            writeTabsReport();
+          }
           if (s.snapshotMenu.empty()) {
             captureSnapshot();
           } else {
@@ -2597,7 +2659,62 @@ uint64_t ps_ui_event_window(void) { return usable() ? state().current.window : 0
 uint64_t ps_ui_event_widget(void) { return usable() ? state().current.widget : 0; }
 int32_t ps_ui_event_command(void) { return usable() ? state().current.command : 0; }
 
-bool ps_ui_supports(int32_t feature) { return feature == PS_UI_FEATURE_INPUT_EVENTS; }
+bool ps_ui_supports(int32_t feature) {
+  return feature == PS_UI_FEATURE_INPUT_EVENTS || feature == PS_UI_FEATURE_FIRST_FRAME;
+}
+
+// The first frame: an observer of the main run loop that runs after AppKit has displayed the windows that needed it
+// and Core Animation has committed them. Both happen as the run loop goes to sleep or leaves (the first display is
+// often on the way out of the first pump, with no sleep in it), so it observes both moments with the highest order.
+// The first such moment after the first window was shown, with that window's views no longer waiting to be drawn, is
+// the first frame: the event is queued behind what came before it (a file the system asked the app to open at
+// launch), and the observer goes away. A window that is not drawn soon (a launch into the background) gets the event
+// from a timer after FirstFrameLimit instead, so a program never waits on it for long.
+namespace {
+void wakeEventLoop();
+constexpr CFTimeInterval FirstFrameLimit = 0.5;
+
+void deliverFirstFrame(bool drawnOnly) {
+  State &s = state();
+  NSWindow *window = s.firstShown != 0 ? liveWindow(s.firstShown) : nil;
+  if (!s.firstFrameWatched || s.firstFrameDelivered || window == nil || (drawnOnly && window.viewsNeedDisplay)) {
+    return;
+  }
+  s.firstFrameDelivered = true;
+  s.windowsAtFirstFrame = s.windows.size();
+  enqueue(PS_UI_EVENT_FIRST_FRAME, s.firstShown);
+  if (s.firstFrameObserver != nullptr) {
+    CFRunLoopObserverInvalidate(s.firstFrameObserver);
+    CFRelease(s.firstFrameObserver);
+    s.firstFrameObserver = nullptr;
+  }
+  if (s.firstFrameTimer != nullptr) {
+    CFRunLoopTimerInvalidate(s.firstFrameTimer);
+    CFRelease(s.firstFrameTimer);
+    s.firstFrameTimer = nullptr;
+  }
+  wakeEventLoop();
+}
+} // namespace
+
+bool ps_ui_watch_first_frame(void) {
+  State &s = state();
+  if (!usable() || s.firstFrameDelivered) {
+    return false;
+  }
+  s.firstFrameWatched = true;
+  if (s.firstFrameObserver == nullptr) {
+    s.firstFrameObserver = CFRunLoopObserverCreateWithHandler(
+        kCFAllocatorDefault, kCFRunLoopBeforeWaiting | kCFRunLoopExit, true, std::numeric_limits<CFIndex>::max(),
+        ^(CFRunLoopObserverRef, CFRunLoopActivity) { deliverFirstFrame(true); });
+    CFRunLoopAddObserver(CFRunLoopGetMain(), s.firstFrameObserver, kCFRunLoopCommonModes);
+    s.firstFrameTimer = CFRunLoopTimerCreateWithHandler(kCFAllocatorDefault,
+                                                        CFAbsoluteTimeGetCurrent() + FirstFrameLimit, 0, 0, 0,
+                                                        ^(CFRunLoopTimerRef) { deliverFirstFrame(false); });
+    CFRunLoopAddTimer(CFRunLoopGetMain(), s.firstFrameTimer, kCFRunLoopCommonModes);
+  }
+  return true;
+}
 
 // Adds the tracking area of a hover watch, or removes it with the hover bit; keys and presses need nothing installed.
 bool ps_ui_widget_watch(uint64_t widget, int32_t mask) {
@@ -2776,6 +2893,9 @@ bool ps_ui_window_show(uint64_t window) {
   }
   State &s = state();
   presentWindow(w);
+  if (s.firstShown == 0) {
+    s.firstShown = window;
+  }
   if (s.snapshotPath.empty()) {
     [NSApp activateIgnoringOtherApps:YES];
   } else if (s.snapshotWindow == 0) {

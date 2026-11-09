@@ -142,6 +142,42 @@ if(NOT rc EQUAL 0)
 endif()
 check_png("${WORK_DIR}/editor_argument.png" 50000)
 
+# The last session comes back after the first frame (TODO-5753): the window is drawn with no tab of the session, then
+# the tabs open in their order and the active one is selected (PRIMESTRUCT_UI_TABS_REPORT lists them at the picture,
+# with how many windows there were when the first frame came).
+set(sessionText "${SOURCE_DIR}/tests/fixtures/ui/unicode_sample.txt")
+set(sessionScript "${SOURCE_DIR}/tests/fixtures/ui/screenshot/showcase.prime")
+set(sessionNote "${SOURCE_DIR}/tests/fixtures/ui/screenshot/preview.md")
+set(launchDocument "${SOURCE_DIR}/tests/fixtures/ui/screenshot/toolbar_demo.prime")
+function(check_session_tabs name expected)
+  set(ENV{PRIMESTRUCT_UI_SNAPSHOT} "${WORK_DIR}/editor_${name}.png")
+  set(ENV{PRIMESTRUCT_UI_LISTS} "session.files=${sessionText}:${sessionScript}:${sessionNote};session.previews=0:0:1")
+  set(ENV{PRIMESTRUCT_UI_PREFS} "session.active=1")
+  set(ENV{PRIMESTRUCT_UI_TABS_REPORT} "${WORK_DIR}/${name}_tabs.txt")
+  execute_process(COMMAND "${WORK_DIR}/EditorNative" RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err TIMEOUT 90)
+  unset(ENV{PRIMESTRUCT_UI_LISTS})
+  unset(ENV{PRIMESTRUCT_UI_PREFS})
+  unset(ENV{PRIMESTRUCT_UI_TABS_REPORT})
+  if(NOT rc EQUAL 0)
+    message(FATAL_ERROR "compiled editor ${name} run exited with '${rc}': ${out}${err}")
+  endif()
+  # The picture is of the first window, which is a tab behind the selected one in the session run, so its text need
+  # not be laid out: only check that it was drawn.
+  check_png("${WORK_DIR}/editor_${name}.png" 5000)
+  file(READ "${WORK_DIR}/${name}_tabs.txt" tabs)
+  if(NOT tabs STREQUAL expected)
+    message(FATAL_ERROR "the ${name} launch has these tabs:\n${tabs}\ninstead of:\n${expected}")
+  endif()
+endfunction()
+check_session_tabs(session
+  "first_frame=1\nwindows_at_first_frame=1\ntab=${sessionText}\ntab=*${sessionScript}\ntab=${sessionNote}\n")
+# Finder launches the app to open a document: the request is there before the first wait, the document opens in the
+# first window, and the session's tabs open behind it without taking the selection.
+set(ENV{PRIMESTRUCT_UI_OPEN_FILE_EVENT} "!${launchDocument}")
+check_session_tabs(launch
+  "first_frame=1\nwindows_at_first_frame=1\ntab=*${launchDocument}\ntab=${sessionText}\ntab=${sessionScript}\ntab=${sessionNote}\n")
+unset(ENV{PRIMESTRUCT_UI_OPEN_FILE_EVENT})
+
 # The native bundle: Name.app holds the compiled executable (no runtime, no bytecode) and launches.
 execute_process(
   COMMAND bash "${SOURCE_DIR}/scripts/bundle_macos_app.sh" --native

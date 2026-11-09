@@ -8,7 +8,8 @@
 // panel, `alert:N` answers the next alert, `activate:W` makes window W the active one and `quit`
 // asks the app to quit, `check:H` clicks check box H and `popup:H:I` chooses item I of pop-up H, `pref:key=1` presets a boolean preference and `select:H:S:E` selects bytes S to E of text view H, `recent:path` notes a recent file, `pint:key=3` and `plist:key=a,b` preset an integer and a list preference. Text may carry %XX escapes (for ';', '%' and line breaks).
 // The pointer and keys (headless::pushPointerEnter and the others): `enter:H:X:Y:M`, `leave:H:X:Y:M`,
-// `down:H:B:X:Y:M:C`, `up:H:B:X:Y:M:C`, `keydown:H:K:M:R` and `keyup:H:K:M`.
+// `down:H:B:X:Y:M:C`, `up:H:B:X:Y:M:C`, `keydown:H:K:M:R` and `keyup:H:K:M`. `frame` places the first frame
+// (headless::pushFirstFrame).
 #pragma once
 
 #include "primec/ui/NativeUiHeadless.h"
@@ -75,6 +76,8 @@ inline void applyHeadlessScenario(std::string_view scenario) {
                                  std::atoi(rest.substr(second + 1, third - second - 1).c_str()),
                                  std::atoi(rest.substr(third + 1).c_str()));
       }
+    } else if (key == "frame") {
+      headless::pushFirstFrame();
     } else if (key == "wait") {
       headless::pushWaitScript();
     } else if (key == "close") {

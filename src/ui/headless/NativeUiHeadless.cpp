@@ -146,6 +146,9 @@ bool ps_ui_window_show(uint64_t window) {
   if (w != nullptr) {
     w->state.shown = true;
     state().activeWindow = window;
+    if (state().firstShown == 0) {
+      state().firstShown = window;
+    }
   }
   return loggedFlag(call, w != nullptr);
 }

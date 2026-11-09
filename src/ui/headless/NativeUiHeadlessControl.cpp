@@ -51,6 +51,13 @@ void pushTypeText(uint64_t widget, std::string text) {
   a.text = std::move(text);
   state().actions.push_back(std::move(a));
 }
+void pushFirstFrame() {
+  Action a;
+  a.kind = Action::Kind::FirstFrame;
+  recordScenario("frame");
+  state().firstFramePlaced = true;
+  state().actions.push_back(std::move(a));
+}
 void pushWaitScript() {
   Action a;
   a.kind = Action::Kind::WaitScript;

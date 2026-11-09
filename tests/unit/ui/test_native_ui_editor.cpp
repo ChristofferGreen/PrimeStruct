@@ -886,6 +886,67 @@ TEST_CASE("editor brings back the last session's tabs and selects the active one
   CHECK(countCalls("ps_ui_alert(") == 0);
 }
 
+// The session comes back after the first frame (TODO-5753): the window is drawn before any restored tab is built.
+TEST_CASE("editor restores the session after its first frame") {
+  const std::string a = writeScratch("frame_a.txt", "a");
+  const std::string b = writeScratch("frame_b.txt", "b");
+  headless::reset();
+  headless::setPrefList("session.files", {a, b});
+  headless::pushCloseWindow(SecondWindow);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  const auto &log = headless::callLog();
+  const auto at = [&](const std::string &prefix) {
+    return std::find_if(log.begin(),
+                        log.end(),
+                        [&](const std::string &entry) { return entry.rfind(prefix, 0) == 0; }) -
+           log.begin();
+  };
+  CHECK(at("ps_ui_window_show(1)") < at("ps_ui_watch_first_frame()"));
+  CHECK(at("ps_ui_watch_first_frame() -> true") < at("ps_ui_wait_event() -> first_frame"));
+  CHECK(at("ps_ui_wait_event() -> first_frame") < at("ps_ui_text_view_load_file("));
+  CHECK(at("ps_ui_wait_event() -> first_frame") < at("ps_ui_window_add_tab("));
+  CHECK(headless::windowPath(EditorWindow) == a);
+  CHECK(headless::windowPath(SecondWindow) == b);
+}
+
+// Finder launches the app to open a document: the request arrives before the first frame, opens in the first window,
+// and the session's tabs come back behind it (without the document twice) while it stays selected.
+TEST_CASE(
+    "editor opens a document asked for at launch in the first window and the session behind it") {
+  const std::string a = writeScratch("launch_a.txt", "a");
+  const std::string b = writeScratch("launch_b.txt", "b");
+  const std::string doc = writeScratch("launch_doc.txt", "doc");
+  headless::reset();
+  headless::setPrefList("session.files", {a, doc, b});
+  headless::setIntPref("session.active", 2);
+  headless::pushOpenFile(doc);
+  headless::pushFirstFrame();
+  headless::pushQuit();
+  runEditor();
+  CHECK(headless::windowPath(EditorWindow) == doc);
+  // Quitting saved the tabs as they were: the document first and selected, the rest of the session behind it.
+  CHECK(headless::prefList("session.files") == std::vector<std::string>{doc, a, b});
+  CHECK(headless::intPref("session.active", -1) == 0);
+  CHECK(countCalls("ps_ui_alert(") == 0);
+}
+
+// A quit before the first frame (the session not restored yet) leaves the saved session alone.
+TEST_CASE("editor keeps the saved session when it quits before its first frame") {
+  const std::string a = writeScratch("early_a.txt", "a");
+  const std::string b = writeScratch("early_b.txt", "b");
+  headless::reset();
+  headless::setPrefList("session.files", {a, b});
+  headless::setIntPref("session.active", 1);
+  headless::pushQuit();
+  headless::pushFirstFrame();
+  runEditor();
+  CHECK(countCalls("ps_ui_wait_event() -> first_frame") == 0);
+  CHECK(countCalls("ps_ui_text_view_load_file(") == 0);
+  CHECK(headless::prefList("session.files") == std::vector<std::string>{a, b});
+  CHECK(headless::intPref("session.active", -1) == 1);
+}
+
 TEST_CASE("editor skips a remembered file that is gone") {
   const std::string b = writeScratch("restore_only.txt", "b");
   headless::reset();

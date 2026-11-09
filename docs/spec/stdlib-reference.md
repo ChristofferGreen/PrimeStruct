@@ -510,7 +510,12 @@ handlers until the app quits. A handler is a `Function<void, Reference<State>, E
   and `clickCount` 0. A text view keeps the keys it uses: its key handlers see only the others, such as Escape and
   Command combinations it has no binding for. Only widgets with such handlers are watched by the platform, and the
   last handler registered for an event of a widget is the one called. A whole click on a button calls its press,
-  release and click handlers in that order. and `onTextChange(handler)` (`Function<void, Reference<State>, Window>`, for every
+  release and click handlers in that order.
+- `onFirstFrame(handler)` (`Function<void, Reference<State>, Window>`) runs once, after the first window the app
+  showed has been drawn, with that window: the place for launch work the first frame does not need, such as restoring
+  the last session (PrimeScroll). A file the system asked the app to open at launch comes to `onOpenFile` before it.
+  On a platform that cannot report the first frame (`PS_UI_FEATURE_FIRST_FRAME` of the C ABI) it runs before the
+  first event. and `onTextChange(handler)` (`Function<void, Reference<State>, Window>`, for every
   window); without a close handler a close request closes the window. `onOpenFile(handler)` gets the path as a
   `String`. `onQuit(handler)` is a `Function<bool, Reference<State>>`: `run` returns when it gives `true`.
 - `afterEvent(handler)` (`Function<bool, Reference<State>>`) runs after every event, whether a handler took it or

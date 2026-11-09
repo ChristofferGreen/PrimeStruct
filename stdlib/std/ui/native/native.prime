@@ -76,6 +76,11 @@ ps_ui_event_key() {
 ps_ui_event_repeat() {
 }
 
+// The first frame (PS_UI_FEATURE_FIRST_FRAME, feature 2): `AppHandlers.onFirstFrame` asks for it.
+[host return<bool>]
+ps_ui_watch_first_frame() {
+}
+
 [host return<u64>]
 ps_ui_window_create([string] title, [i32] width, [i32] height) {
 }

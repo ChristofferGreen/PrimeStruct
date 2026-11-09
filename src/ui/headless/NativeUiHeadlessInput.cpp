@@ -204,7 +204,19 @@ InputFields fields() { return usable() ? state().eventInput : InputFields{}; }
 extern "C" {
 
 bool ps_ui_supports(int32_t feature) {
-  return loggedFlag("ps_ui_supports(" + std::to_string(feature) + ")", feature == PS_UI_FEATURE_INPUT_EVENTS);
+  return loggedFlag("ps_ui_supports(" + std::to_string(feature) + ")",
+                    feature == PS_UI_FEATURE_INPUT_EVENTS || feature == PS_UI_FEATURE_FIRST_FRAME);
+}
+
+// The headless "screen" draws a window as soon as it is shown: the first frame comes at the first wait after the
+// first ps_ui_window_show, ahead of the scripted actions, or where the scenario put it (pushFirstFrame).
+bool ps_ui_watch_first_frame(void) {
+  State &s = state();
+  const bool ok = usable() && !s.firstFrameDelivered;
+  if (ok) {
+    s.firstFrameWatched = true;
+  }
+  return loggedFlag("ps_ui_watch_first_frame()", ok);
 }
 
 bool ps_ui_widget_watch(uint64_t widget, int32_t mask) {

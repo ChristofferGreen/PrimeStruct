@@ -137,7 +137,6 @@ of sync with them.
 | TODO-5804 | GET handlers that only read the state run at the same time under `RwLock` | deferred | mt-server |
 | TODO-5805 | The server keeps connections alive between requests | deferred | web-keepalive |
 | TODO-5806 | Sessions: a cookie and per-session state | deferred | web-sessions |
-| TODO-5753 | PrimeScroll draws its first window before it restores the session | ready | startup-session |
 | TODO-5755 | The first launch after an install does not wait on Gatekeeper | ready | startup-install |
 | TODO-5754 | Restored tabs, toolbars and previews cost less in the AppKit backend | ready | startup-backend |
 | TODO-5603 | Launch-time guard and the real-launch baseline | ready | startup |
@@ -193,7 +192,6 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5753 (startup-session): PrimeScroll draws its first window before it restores the session
 - TODO-5755 (startup-install): the first launch after an install does not wait on Gatekeeper
 - TODO-5754 (startup-backend): restored tabs, toolbars and previews cost less in the AppKit backend
 - TODO-5603 (startup): launch-time guard and the real-launch baseline
@@ -204,20 +202,19 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5753
-2. TODO-5755
-3. TODO-5754
-4. TODO-5603
-5. TODO-5756
-6. TODO-5535
-7. TODO-5510
-8. TODO-5524
-9. TODO-5728
-10. TODO-5770
+1. TODO-5755
+2. TODO-5754
+3. TODO-5603
+4. TODO-5756
+5. TODO-5535
+6. TODO-5510
+7. TODO-5524
+8. TODO-5728
+9. TODO-5770
 
 ### Priority Lanes
 
-- Startup, first (docs/NativeUiPlan.md section 1, "Where a launch goes"): TODO-5753, TODO-5755, TODO-5754, TODO-5603, TODO-5756, TODO-5535, TODO-5757
+- Startup, first (docs/NativeUiPlan.md section 1, "Where a launch goes"): TODO-5755, TODO-5754, TODO-5603, TODO-5756, TODO-5535, TODO-5757
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - Native UI (docs/NativeUiPlan.md): TODO-5808, TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
@@ -1069,20 +1066,6 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
     - to be set when the leaf is un-deferred
   - stop_rule: sessions in `WebApp`.
 
-- [ ] TODO-5753: PrimeScroll draws its first window before it restores the session
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-09
-  - phase: Native PrimeScroll startup (docs/NativeUiPlan.md section 1)
-  - parallel_track: startup-session
-  - scope: `main` in examples/apps/text_editor/main.prime calls `restore_session` (and `editor.syncToolbars()`) after `first.show()` but before `app.run(handlers)`, so every restored tab, its toolbar and a markdown preview are built before the first frame; and a launch from Finder delivers its document as an open-file event (args has one element), so the session is restored first and the requested file then opens in a new tab. Move the restore behind the first frame: the backend reports when the first window has been drawn (an addition to the C ABI behind `ps_ui_supports`, for instance an event after the first display, or a command the program posts to itself that the backend delivers after the next display), `AppHandlers` gets a handler for it, and PrimeScroll restores the session and syncs toolbars there. A document named at launch (argument or the first open-file event) loads into the first window, and restored tabs are added behind it without taking the selection from it. Keep the behavior otherwise (same tabs, same order, active tab when no document was requested).
-  - implementation_notes: measure with `scripts/measure_startup.sh --session <a:b:c> --previews 0:0:1 <bundle>` (the probe answers `session.files`/`session.previews` in snapshot mode) and with `--file`; the AppKit backend is src/ui/appkit/NativeUiAppKit.mm (`ps_ui_wait_event`), the headless backend and src/ui/NativeUiBindings.cpp need the same addition; handlers in stdlib/std/ui/native/handlers.prime.
-  - acceptance:
-    - with a 3-file session (2 KB text, 50 KB `.prime`, 70 KB markdown in split preview) the snapshot `loop` and `text` medians are within 15 ms of the no-session run (2026-11-09: loop 559 against 167 ms, +392)
-    - a document opened at launch with a session present is drawn within 100 ms of the first frame and is the selected tab; the restored tabs are all there after it
-    - an AppKit snapshot test covers restore-after-first-frame (tab count and order) and a headless test the new event; full release gate green
-  - stop_rule: the ordering of launch work; the cost of a tab or a toolbar itself is TODO-5754.
-
 - [ ] TODO-5755: The first launch after an install does not wait on Gatekeeper
   - owner: ai
   - status: ready
@@ -1107,7 +1090,7 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
   - scope: Measured on a launch that restores three files: `ps_ui_window_add_tab` 80 to 130 ms per tab (tab-group layout under `-[NSWindow _addTabbedWindow:ordered:]`), `ps_ui_window_set_toolbar` 30 to 60 ms per markdown or script toolbar (61 ms to open one `.prime` file at launch), `ps_ui_window_set_preview_mode` 95 to 250 ms for a markdown preview (WebKit and a WKWebView). Make a tab that is not shown cheap (add it to the tab group without laying it out until it is selected), build each kind of toolbar's items once and reuse them, and create a preview's web view when its tab is first shown. Profile with `scripts/measure_startup.sh --sample` first.
   - implementation_notes: src/ui/appkit/NativeUiAppKit.mm; the editor builds toolbars in `sync_toolbars` (examples/apps/text_editor/main.prime); keep the snapshot tests' images unchanged.
   - acceptance:
-    - with the 3-file session of TODO-5753, the ps_ui calls before the event loop total at most 120 ms (2026-11-09: about 430 ms in add_tab, set_toolbar and set_preview_mode alone); `add_tab` at most 20 ms per background tab; opening a `.prime` file at launch spends at most 15 ms in `set_toolbar`
+    - with the 3-file session of TODO-5753, the ps_ui calls of the launch (before the event loop, and the restore after the first frame: the `late_` calls of `scripts/measure_startup.sh`) total at most 120 ms (2026-11-09: about 430 ms in add_tab, set_toolbar and set_preview_mode alone); `add_tab` at most 20 ms per background tab; opening a `.prime` file at launch spends at most 15 ms in `set_toolbar`
     - switching to a restored tab shows its text, toolbar and preview as before (AppKit snapshot tests); full release gate green
   - stop_rule: the cost of tabs, toolbars and previews; their order at launch is TODO-5753.
 

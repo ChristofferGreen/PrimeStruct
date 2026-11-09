@@ -8,7 +8,9 @@
  *   loop          the program's first ps_ui_wait_event: everything before the event loop is done
  *   window        the first -[NSWindow displayIfNeeded]
  *   text          the first -[NSTextView drawRect:] (the first drawn text)
- * plus the time spent inside the interposed calls before the loop, the page faults, and (PS_PROBE_SAMPLE_US) a
+ *   frame         ps_ui_wait_event returned PS_UI_EVENT_FIRST_FRAME (a program that does work after its first frame)
+ *   settled       the program's next wait after that: the work after the first frame is done
+ * plus the time spent inside the interposed calls before the loop (and, as late_*, between the loop and `settled`), the page faults, and (PS_PROBE_SAMPLE_US) a
  * sample of the main thread every that many microseconds, counted per symbol for each phase.
  *
  * Environment:
@@ -42,7 +44,7 @@ static double now_us(void) {
   return t.tv_sec * 1e6 + t.tv_nsec / 1e3;
 }
 
-static double g_start, g_main, g_init_out, g_loop, g_window, g_text;
+static double g_start, g_main, g_init_out, g_loop, g_window, g_text, g_frame, g_settled;
 static long g_majflt_loop, g_minflt_loop;
 static int g_reported;
 
@@ -53,6 +55,8 @@ static const char *g_call_names[CallCount] = {"init", "window_create", "window_s
                                               "highlight"};
 static double g_call_ms[CallCount];
 static int g_call_n[CallCount];
+static double g_late_ms[CallCount];
+static int g_late_n[CallCount];
 
 #define TIMED(index, expr)                                                                                          \
   double t0 = now_us();                                                                                             \
@@ -60,6 +64,9 @@ static int g_call_n[CallCount];
   if (!g_loop) {                                                                                                    \
     g_call_ms[index] += (now_us() - t0) / 1000.0;                                                                   \
     g_call_n[index]++;                                                                                              \
+  } else if (!g_settled) {                                                                                          \
+    g_late_ms[index] += (now_us() - t0) / 1000.0;                                                                   \
+    g_late_n[index]++;                                                                                              \
   }                                                                                                                 \
   return r;
 
@@ -189,17 +196,24 @@ static void report(void) {
     return;
   }
 #define REL(x) ((x) ? ((x)-g_start) / 1000.0 : -1.0)
-  fprintf(out, "phase main_ms=%.1f app_init_ms=%.1f loop_ms=%.1f window_ms=%.1f text_ms=%.1f end_ms=%.1f", REL(g_main),
-          REL(g_init_out), REL(g_loop), REL(g_window), REL(g_text), REL(end));
+  fprintf(out, "phase main_ms=%.1f app_init_ms=%.1f loop_ms=%.1f window_ms=%.1f text_ms=%.1f frame_ms=%.1f settled_ms=%.1f"
+               " end_ms=%.1f",
+          REL(g_main), REL(g_init_out), REL(g_loop), REL(g_window), REL(g_text), REL(g_frame), REL(g_settled), REL(end));
   fprintf(out, " majflt=%ld minflt=%ld", g_majflt_loop, g_minflt_loop);
   for (int i = 0; i < CallCount; i++) {
     fprintf(out, " %s=%d/%.1f", g_call_names[i], g_call_n[i], g_call_ms[i]);
+  }
+  for (int i = 0; i < CallCount; i++) {
+    fprintf(out, " late_%s=%d/%.1f", g_call_names[i], g_late_n[i], g_late_ms[i]);
   }
   fprintf(out, "\n");
   if (g_nsamples > 0) {
     report_samples(out, "app_init", g_main, g_init_out);
     report_samples(out, "before_loop", g_init_out, g_loop);
     report_samples(out, "first_frame", g_loop, g_text ? g_text : g_window);
+    if (g_frame && g_settled) {
+      report_samples(out, "after_first_frame", g_frame, g_settled);
+    }
   }
   if (out != stderr) {
     fclose(out);
@@ -278,7 +292,14 @@ static int32_t probe_wait_event(void) {
     g_majflt_loop = usage.ru_majflt;
     g_minflt_loop = usage.ru_minflt;
   }
-  return ps_ui_wait_event();
+  if (g_frame && !g_settled) {
+    g_settled = now_us();
+  }
+  int32_t kind = ps_ui_wait_event();
+  if (kind == PS_UI_EVENT_FIRST_FRAME && !g_frame) {
+    g_frame = now_us();
+  }
+  return kind;
 }
 
 static const char *session_list(const char *key) {

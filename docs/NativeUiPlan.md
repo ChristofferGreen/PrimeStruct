@@ -87,6 +87,11 @@ The causes of the slow launches, by what they cost when they happen:
    about 30 to 60 ms per `ps_ui_window_set_toolbar`, and a markdown preview 95 to 250 ms (WebKit); with three files
    the event loop starts 390 to 450 ms later, and the requested file then opens in a new tab (+100 ms). Opening one
    `.prime` file at launch spends 61 ms building the script toolbar. TODO-5753 and TODO-5754.
+   Since TODO-5753 the restore runs after the first frame (`onFirstFrame`), and a file Finder opens at launch goes
+   into the first window with the session's tabs behind it. Same session, 7 snapshot runs each, load about 10:
+   before, loop 621 and first text 273 ms (window shown mid-restore); after, loop 158, first text 211, the first
+   frame event 239 and the restore done at 613 ms (the 455 ms of `add_tab`, `set_toolbar` and `set_preview_mode` now
+   follow the frame); no session, after: loop 146, first text 187 ms.
 4. **AppKit's own launch in a real (regular) launch.** The unified log of the user's launches shows 275 to 440 ms
    between Launch Services check-in and `finishLaunching` returning, against 90 to 110 ms for all of `ps_ui_init` in
    snapshot mode: AppIntents registration that linkd rejects four times for an ad-hoc bundle, Writing Tools and
@@ -187,6 +192,7 @@ is callable only on the thread that called `ps_ui_init`, the main thread on macO
 | Markdown preview | `ps_ui_window_set_preview(window, bool)` (the window shows its text view and, beside it, the markdown of that text rendered as a page; the backend builds the preview only when it is turned on; false for a bad window or one with no text view; on while on is a no-op), `ps_ui_window_has_preview(window) -> bool`, `ps_ui_window_refresh_preview(window) -> bool` (render again from the current text; false without a preview; a backend may coalesce refreshes), `ps_ui_menu_follow_preview(menu, commandId) -> bool` (the items' check mark shows whether the active window has a preview, so it stays right when the user clicks another tab). The headless backend records the page (`headless::previewPage(window)`) and how often it was built (`WindowState::previewRenders`) |
 | Toolbar and markdown edits | `ps_ui_toolbar_create/add_button/add_segments/add_menu/add_separator` (every item is a command: a click is `PS_UI_EVENT_COMMAND`; segments are `Editor|Split|Preview` with consecutive command ids), `ps_ui_window_set_toolbar(window, toolbar)` (0 hides), `ps_ui_window_toolbar_select(window, commandId)`, `ps_ui_window_set_preview_mode/preview_mode` (`PS_UI_PREVIEW_TEXT/SPLIT/ONLY`; `set_preview` is TEXT or SPLIT), `ps_ui_text_view_markdown_edit(view, PS_UI_MARKDOWN_*, a, b)` (one change through `primec::ui::markdownEdit`, modified, `PS_UI_EVENT_TEXT_CHANGED`) and `ps_ui_text_view_set_markdown_editing` (Tab moves between table cells). The headless backend keeps `headless::toolbarOutline(window)`, the selection (`headless::pushSelectText`, `selection`, `select:H:S:E` in scenarios) and applies the edits; AppKit builds an `NSToolbar` per window (SF Symbols, an `NSToolbarItemGroup` for the segments, `NSMenuToolbarItem` for the menus), hides the text scroll view in the preview-only mode, applies an edit through `shouldChangeText`/`didChangeText` (one undo) and tells the program about undo and redo with a text-changed event |
 | Pointer and keys (feature 1) | `ps_ui_supports(PS_UI_FEATURE_INPUT_EVENTS) -> bool`; `ps_ui_widget_watch(widget, mask) -> bool` asks for the `PS_UI_WATCH_*` events of a control or text view (1 hover, 2 press, 4 release, 8 key down, 16 key up: the bits of a `/std/web` control's events; the mask replaces the earlier one, 0 stops them); the kinds `pointer_enter` (7), `pointer_leave` (8), `mouse_down` (9), `mouse_up` (10), `key_down` (11), `key_up` (12) arrive for watched widgets only, with the widget and its window; `ps_ui_event_button() -> i32` (-1 none, 0 primary, 1 secondary, 2 middle), `_x`, `_y` (points from the widget's top left corner; a text view's visible part), `_modifiers` (1 shift, 2 control, 4 alt, 8 meta), `_click_count` (2 for the second press of a double click), `_key` (a code point, or a named key below 0 as `/std/ui/events` `Key`; function keys are not reported), `_repeat -> bool`. A release goes to the widget the press went to. A text view keeps the keys it uses (typing, editing and moving keys, its shortcuts) and reports only the others (Escape, Command combinations it has no binding for), and a key up only after it reported the key down. The headless backend replays `headless::pushPointerEnter/Leave`, `pushMouseDown/Up`, `pushKeyDown/Up` (`enter:H:X:Y:M`, `down:H:B:X:Y:M:C`, `keydown:H:K:M:R` ... in scenarios, `--enter`, `--down`, `--keydown` ... in `native_ui_headless_runner`), delivers an action only when its event is watched, and models a text view's keys: a character, Enter or Tab without Control and Command is typed, Escape and Command keys are reported, the rest kept |
+| First frame (feature 2) | `ps_ui_supports(PS_UI_FEATURE_FIRST_FRAME) -> bool`; `ps_ui_watch_first_frame() -> bool` asks for `first_frame` (13): it arrives once, after the first window the program showed has been drawn (at the next wait when that has happened), with that window as `ps_ui_event_window()`; events that came before the drawing (a file the system asks the app to open at launch) are delivered first. False when it came already or the backend lacks the feature. AppKit observes the main run loop, after Core Animation's commit, as it goes to sleep or leaves (the first display is often on the way out of the first pump) and delivers once the window's views no longer need display, or after 0.5 s from a timer (a window that is not drawn soon, as in a launch into the background). The headless backend delivers it at the first wait after the first `ps_ui_window_show`, ahead of the scripted actions, or where the scenario places it (`headless::pushFirstFrame`, `frame`) |
 | Dialogs | `ps_ui_open_panel(title) -> String`, `ps_ui_save_panel(title, suggestedName) -> String` (empty means cancelled), `ps_ui_panel_chosen() -> bool` (whether the last panel returned a path), `ps_ui_alert(message, detail, buttons) -> i32` |
 
 - **Events.** `ps_ui_wait_event` blocks in the platform's run loop until something the program should handle happens,
@@ -202,13 +208,14 @@ is callable only on the thread that called `ps_ui_init`, the main thread on macO
   is a `const char *` valid until the next text-returning call, `ps_ui_alert` takes button titles separated by `\n` and
   returns the pressed index, and `ps_ui_init` returns false when the app is already running. The headless backend
   (`primec/ui/NativeUiHeadless.h`) ends a scripted run with `quit_requested` once its action list is empty.
-  `primec/ui/NativeUiBindings.h` binds all 128 functions into a `ScriptEngine` or `Script` under their ABI names. The
+  `primec/ui/NativeUiBindings.h` binds all 129 functions into a `ScriptEngine` or `Script` under their ABI names. The
   three text-file functions (TODO-5546) let the editor open and save before owned `String` exists (TODO-5530).
 - **Versioning.** `ps_ui_abi_version() -> i32` returns 0 for this table. Additions append functions; a change to an
   existing signature bumps the version. An addition a version-0 program could notice comes behind a feature that
   `ps_ui_supports(feature) -> bool` reports: the pointer and key events (`PS_UI_FEATURE_INPUT_EVENTS`, TODO-5725)
   reach a program only for the widgets it watches, so a program that never calls `ps_ui_widget_watch` gets exactly
-  the version-0 events, and every version-0 function is unchanged. A backend without the feature answers false and
+  the version-0 events, and every version-0 function is unchanged; the first frame (`PS_UI_FEATURE_FIRST_FRAME`,
+  TODO-5753) reaches only a program that called `ps_ui_watch_first_frame`. A backend without the feature answers false and
   fails every watch.
 
 ## 5. The PrimeStruct surface
@@ -268,6 +275,7 @@ only widgets with such handlers.
 | `pointer_enter` (feature 1) | `onMouseOver(widget, handler)`, any control or text view as a `Widget` (`button.widget()`, `text.widget()`) | a `PointerEvent`: no button, the position, the modifiers, `clickCount` 0 |
 | `mouse_down`, `mouse_up` | `onMouseDown`, `onMouseUp(widget, handler)` | a `PointerEvent`: the button, the position, the modifiers, the click count |
 | `key_down`, `key_up` | `onKeyDown`, `onKeyUp(widget, handler)`, while the widget has focus | a `KeyEvent`: the key, the modifiers, `isRepeat`; a text view's handlers see only the keys it does not keep |
+| `first_frame` (feature 2) | `onFirstFrame(handler)`, a `Function<void, Reference<State>, Window>`; registering one makes `run` ask for the event, and a backend without the feature has the handler called before the first wait | the first window the app showed, drawn; once |
 
 - **Ids stay inside.** `command` and `commandRange` hand out ids from `first_command_id()` (1000000) up, in the order
   of registration, above the ids programs pick for `waitEvent`; app code holds the `Command` or `CommandRange`. One
@@ -333,7 +341,11 @@ the same call logs.
   `session.active`, saved after every command and before the tabs close on quit; the next launch reopens them one
   tab each and selects the active one (a file that is gone is skipped, a file named on the command line replaces the
   restore, and closing the last tab leaves the session as it was, since the app ends then like it does on quit; closing
-  one of several tabs drops it from the session).
+  one of several tabs drops it from the session). The restore waits for the first frame (`onFirstFrame`, TODO-5753):
+  the empty first window is drawn first, then the tabs come back. A file the system asks the app to open at launch (a
+  double click in the Finder) arrives before the first frame and opens in the first window; the session's tabs then
+  open behind it, without that file twice, and it stays selected. Until the restore has run the session is not saved
+  over.
 - **Open Recent:** File > Open Recent lists up to ten recently used files (opened or saved by the editor, or given on
   the command line), most recent first, with a Clear Menu item. The submenu is rebuilt after every open, save and
   clear with `Menu.clear()` and `Menu.addRecentFileCommands(range)`; choosing a file opens it like Open does.

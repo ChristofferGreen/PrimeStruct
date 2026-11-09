@@ -1,8 +1,8 @@
 // Native controls that take handler closures (docs/spec/stdlib-reference.md, Native UI; docs/WebAppsPlan.md,
 // principle 7). An `AppHandlers<State>` holds the app's state and a table of handlers, each registered once, at setup:
 // a click handler for a button, a change handler for a check box, pop-up or list, the commands of menu items and
-// toolbar buttons, a range of commands for items that come in a row (toolbar segments, recent files), and the pointer
-// and key handlers of any control or text view. `app.run(handlers)` then waits on the events and calls the handler of
+// toolbar buttons, a range of commands for items that come in a row (toolbar segments, recent files), the pointer
+// and key handlers of any control or text view, and the handler of the first frame. `app.run(handlers)` then waits on the events and calls the handler of
 // each, until the app quits. The command ids and widget handles that `App.waitEvent` reports stay inside this table.
 import /std/collections/*
 import /std/text/*
@@ -126,6 +126,7 @@ namespace native {
     [public vector<NativeWindowHandler<State>> mut] windowHandlers{vector<NativeWindowHandler<State>>()}
     [public i32 mut] closeHandler{-1i32}
     [public i32 mut] textHandler{-1i32}
+    [public i32 mut] firstFrameHandler{-1i32}
     [public vector<NativeFileHandler<State>> mut] opens{vector<NativeFileHandler<State>>()}
     // The quit and after-event handlers, and which one of each is called.
     [public vector<NativeQuitHandler<State>> mut] decisions{vector<NativeQuitHandler<State>>()}
@@ -344,6 +345,15 @@ namespace native {
       this.textHandler = this.addWindowHandler(handler)
     }
 
+    // Registers the handler of the first frame: it runs once, after the first window the app showed has been drawn, so
+    // the work the first frame does not need (restoring the last session, say) waits until the window is on screen.
+    // It gets that window. A platform that cannot tell calls it before the first event instead. A later handler
+    // replaces an earlier one.
+    [mut effects(heap_alloc)]
+    onFirstFrame([Function<void, Reference<State>, Window> move] handler) {
+      this.firstFrameHandler = this.addWindowHandler(handler)
+    }
+
     [mut effects(heap_alloc) return<i32>]
     addWindowHandler([Function<void, Reference<State>, Window> move] handler) {
       [i32] index{this.windowHandlers.count()}
@@ -391,8 +401,19 @@ namespace native {
     run() {
       [Reference<State>] state{location(this.state)}
       [bool mut] running{true}
+      // With a first-frame handler the platform is asked for that event; one that cannot report it gets the handler
+      // called now, as if the event came first.
+      [bool mut] frameNow{false}
+      if(this.firstFrameHandler >= 0i32) {
+        frameNow = !ps_ui_watch_first_frame()
+      }
       while(running) {
-        [i32] kind{ps_ui_wait_event()}
+        [i32 mut] kind{13i32}
+        if(frameNow) {
+          frameNow = false
+        } else {
+          kind = ps_ui_wait_event()
+        }
         // What the event calls, found first so that each kind of handler is called from one place below: an index
         // into `clicks`, `ranges`, `changes`, `windowHandlers` or `keys` (-1 for none), with its event.
         [i32 mut] click{-1i32}
@@ -496,7 +517,17 @@ namespace native {
             index = index - 1i32
           }
         }
-        if(kind == 4i32 || kind < 1i32 || kind > 12i32) {
+        if(kind == 13i32) {
+          // The first frame (only after `ps_ui_watch_first_frame`): the window that was drawn, or the active one.
+          [u64 mut] drawn{ps_ui_event_window()}
+          if(drawn == 0u64) {
+            drawn = ps_ui_active_window()
+          }
+          [Window] shown{[handle] drawn}
+          window = shown
+          windowHandler = this.firstFrameHandler
+        }
+        if(kind == 4i32 || kind < 1i32 || kind > 13i32) {
           quitting = true
         }
 

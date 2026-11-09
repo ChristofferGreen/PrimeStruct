@@ -9,7 +9,9 @@
 #   app_init  ps_ui_init returned (NSApplication, the menu bar, finishLaunching)
 #   loop      the program reached its event loop: everything it does before the first frame is done
 #   window    the first window display;  text  the first drawn text
-# then the time inside the ps_ui calls that dominate a launch, and the number of images dyld loads.
+#   frame     the program got PS_UI_EVENT_FIRST_FRAME;  settled  its next wait: the work after the first frame is done
+# then the time inside the ps_ui calls that dominate a launch (before the event loop, and after it until `settled`),
+# and the number of images dyld loads.
 # The snapshot's own idle wait (about 600 ms before the PNG is written) is not part of any phase.
 #
 # Usage: scripts/measure_startup.sh [options] <App.app | executable>
@@ -128,7 +130,7 @@ fi
 python3 - "$REPORT" "$RUNS" "${WARMUP_MAIN:-}" "${LIBRARIES:-}" "$(sysctl -n vm.loadavg)" <<'EOF'
 import re, statistics, sys
 report, runs, warmup_main, libraries, load = sys.argv[1:6]
-phases = ["main", "app_init", "loop", "window", "text"]
+phases = ["main", "app_init", "loop", "window", "text", "frame", "settled"]
 values = {p: [] for p in phases}
 calls = {}
 lines = open(report).read().splitlines()
@@ -151,10 +153,12 @@ for p in phases:
         print("%-9s %8s" % (p, "-"))
 busy = [(name, statistics.median([c[1] for c in v]), v[0][0]) for name, v in calls.items()]
 busy = [b for b in busy if b[2] > 0]
-if busy:
-    print("time in ps_ui calls before the event loop (median ms, calls):")
-    for name, ms, n in sorted(busy, key=lambda b: -b[1]):
-        print("  %-18s %7.1f  x%d" % (name, ms, n))
+for title, late in (("before the event loop", False), ("after it, until the program settled", True)):
+    part = [b for b in busy if b[0].startswith("late_") == late]
+    if part:
+        print("time in ps_ui calls %s (median ms, calls): %.1f in all" % (title, sum(b[1] for b in part)))
+        for name, ms, n in sorted(part, key=lambda b: -b[1]):
+            print("  %-18s %7.1f  x%d" % (name[5:] if late else name, ms, n))
 if warmup_main:
     note = (" (new code, the app's or the probe's, was assessed by Gatekeeper on this first load)"
             if float(warmup_main) > 150 else "")

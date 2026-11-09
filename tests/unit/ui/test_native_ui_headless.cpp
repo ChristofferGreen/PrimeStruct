@@ -42,7 +42,7 @@ TEST_CASE("headless backend reports its version and platform") {
 TEST_CASE("headless backend delivers pointer and key events only for watched widgets") {
   startApp();
   CHECK(ps_ui_supports(PS_UI_FEATURE_INPUT_EVENTS));
-  CHECK_FALSE(ps_ui_supports(2));
+  CHECK_FALSE(ps_ui_supports(3));
   const uint64_t window = ps_ui_window_create("W", 200, 100);
   const uint64_t view = ps_ui_text_view_create();
   REQUIRE(ps_ui_window_set_content(window, view));
@@ -92,6 +92,63 @@ TEST_CASE("headless backend delivers pointer and key events only for watched wid
   CHECK(headless::watchedEvents(button) == 0);
   headless::pushPointerEnter(button, 1, 1);
   CHECK(ps_ui_wait_event() == PS_UI_EVENT_QUIT_REQUESTED);
+}
+
+TEST_CASE("headless backend reports the first frame once, after the first shown window") {
+  startApp();
+  CHECK(ps_ui_supports(PS_UI_FEATURE_FIRST_FRAME));
+  const uint64_t first = ps_ui_window_create("First", 200, 100);
+  const uint64_t second = ps_ui_window_create("Second", 200, 100);
+  CHECK(ps_ui_watch_first_frame());
+  CHECK(ps_ui_window_show(first));
+  CHECK(ps_ui_window_show(second));
+  headless::pushCommand(7);
+  // The window is drawn as soon as it is shown: the first frame comes ahead of the user's actions, with the first
+  // window shown.
+  CHECK(ps_ui_wait_event() == PS_UI_EVENT_FIRST_FRAME);
+  CHECK(ps_ui_event_window() == first);
+  CHECK(ps_ui_wait_event() == PS_UI_EVENT_COMMAND);
+  CHECK(ps_ui_wait_event() == PS_UI_EVENT_QUIT_REQUESTED);
+  // It came once: asking again is refused.
+  CHECK_FALSE(ps_ui_watch_first_frame());
+  CHECK(headless::callLog().back() == "ps_ui_watch_first_frame() -> false");
+}
+
+TEST_CASE("headless backend places the first frame where the scenario puts it") {
+  startApp();
+  const uint64_t window = ps_ui_window_create("W", 200, 100);
+  CHECK(ps_ui_window_show(window));
+  CHECK(ps_ui_watch_first_frame());
+  headless::pushOpenFile(
+      "/launch/doc.txt"); // a file the system asked to open before the window was drawn
+  headless::pushFirstFrame();
+  CHECK(ps_ui_wait_event() == PS_UI_EVENT_OPEN_FILE);
+  CHECK(ps_ui_wait_event() == PS_UI_EVENT_FIRST_FRAME);
+  CHECK(ps_ui_event_window() == window);
+  CHECK(ps_ui_wait_event() == PS_UI_EVENT_QUIT_REQUESTED);
+  CHECK(headless::pushedScenario() == "openfile:/launch/doc.txt;frame");
+}
+
+TEST_CASE("headless backend sends no first frame unasked or without a shown window") {
+  startApp();
+  const uint64_t window = ps_ui_window_create("W", 200, 100);
+  CHECK(ps_ui_window_show(window));
+  headless::pushCommand(3);
+  headless::pushFirstFrame(); // placed, but the program never asked: skipped
+  CHECK(ps_ui_wait_event() == PS_UI_EVENT_COMMAND);
+  CHECK(ps_ui_wait_event() == PS_UI_EVENT_QUIT_REQUESTED);
+
+  // Asked for, but no window was shown: nothing to draw, so no event.
+  startApp();
+  CHECK(ps_ui_window_create("Hidden", 200, 100) != 0);
+  CHECK(ps_ui_watch_first_frame());
+  headless::pushCommand(4);
+  CHECK(ps_ui_wait_event() == PS_UI_EVENT_COMMAND);
+  CHECK(ps_ui_wait_event() == PS_UI_EVENT_QUIT_REQUESTED);
+
+  // Before ps_ui_init the request fails.
+  headless::reset();
+  CHECK_FALSE(ps_ui_watch_first_frame());
 }
 
 TEST_CASE("headless backend starts once and rejects calls before init") {

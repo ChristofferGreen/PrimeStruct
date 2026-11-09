@@ -18,7 +18,8 @@
  * behind a feature (ps_ui_supports): the pointer and key events of
  * PS_UI_FEATURE_INPUT_EVENTS reach a program only for the widgets it asked for
  * with ps_ui_widget_watch, so a program that never calls it sees version 0
- * exactly.
+ * exactly; PS_UI_EVENT_FIRST_FRAME of PS_UI_FEATURE_FIRST_FRAME arrives only
+ * after ps_ui_watch_first_frame.
  */
 
 #include <stdbool.h>
@@ -73,13 +74,19 @@ enum {
    * moving keys, its shortcuts): it reports only the others (Escape, Command combinations it has no use for), and
    * the release of a key only when it reported the press. */
   PS_UI_EVENT_KEY_DOWN = 11,
-  PS_UI_EVENT_KEY_UP = 12
+  PS_UI_EVENT_KEY_UP = 12,
+  /* The first frame (PS_UI_FEATURE_FIRST_FRAME, after ps_ui_watch_first_frame): the first window the program showed,
+   * ps_ui_event_window(), has been drawn and handed to the screen. It arrives once, so a program can show its window
+   * first and do the work the first frame does not need (restoring a session) when it comes. */
+  PS_UI_EVENT_FIRST_FRAME = 13
 };
 
 /* ps_ui_supports() features. */
 enum {
   /* ps_ui_widget_watch and the PS_UI_EVENT_POINTER_ENTER ... PS_UI_EVENT_KEY_UP events. */
-  PS_UI_FEATURE_INPUT_EVENTS = 1
+  PS_UI_FEATURE_INPUT_EVENTS = 1,
+  /* ps_ui_watch_first_frame and the PS_UI_EVENT_FIRST_FRAME event. */
+  PS_UI_FEATURE_FIRST_FRAME = 2
 };
 
 /* The events ps_ui_widget_watch asks for, as bits (the bits of a /std/web control's events). */
@@ -208,6 +215,14 @@ int32_t ps_ui_event_modifiers(void);
 int32_t ps_ui_event_click_count(void);
 int32_t ps_ui_event_key(void);
 bool ps_ui_event_repeat(void);
+
+/* The first frame (PS_UI_FEATURE_FIRST_FRAME) ------------------------------ */
+
+/* Asks for PS_UI_EVENT_FIRST_FRAME: it arrives once, after the first window the program showed has been drawn (at
+ * the next wait when that has happened already); events that came before the drawing, such as a file the system
+ * asks the app to open at launch, are delivered first. Without a shown window it does not arrive. True when the event will come; false when it came already or the backend lacks
+ * the feature (a program then does that work at once). */
+bool ps_ui_watch_first_frame(void);
 
 /* Window ---------------------------------------------------------------- */
 

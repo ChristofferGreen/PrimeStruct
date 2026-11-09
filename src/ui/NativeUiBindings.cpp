@@ -33,6 +33,7 @@ template <class Binder> void forEachBinding(Binder &&bindOne) {
   bindOne("ps_ui_event_click_count", [] { return ps_ui_event_click_count(); });
   bindOne("ps_ui_event_key", [] { return ps_ui_event_key(); });
   bindOne("ps_ui_event_repeat", [] { return ps_ui_event_repeat(); });
+  bindOne("ps_ui_watch_first_frame", [] { return ps_ui_watch_first_frame(); });
 
   bindOne("ps_ui_window_create", [](std::string_view title, int32_t width, int32_t height) {
     return ps_ui_window_create(text(title).c_str(), width, height);

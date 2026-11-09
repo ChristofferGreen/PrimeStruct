@@ -111,7 +111,23 @@ struct InputFields {
 };
 
 struct Action {
-  enum class Kind { Command, TypeText, CloseWindow, Quit, Activate, Toggle, Select, Click, OpenFile, Rows, Selection, TextChanged, WaitScript, Input } kind = Kind::Quit;
+  enum class Kind {
+    Command,
+    TypeText,
+    CloseWindow,
+    Quit,
+    Activate,
+    Toggle,
+    Select,
+    Click,
+    OpenFile,
+    Rows,
+    Selection,
+    TextChanged,
+    WaitScript,
+    Input,
+    FirstFrame
+  } kind = Kind::Quit;
   int32_t command = 0; // the event kind of an Input action
   uint64_t handle = 0;
   std::string text;
@@ -151,6 +167,13 @@ struct State {
   InputFields eventInput;
   std::map<uint64_t, int32_t> watches;            // widget -> PS_UI_WATCH_* bits (ps_ui_widget_watch)
   std::set<std::pair<uint64_t, int32_t>> keysPassed; // (text view, key) whose key down the view did not keep
+  // The first frame (PS_UI_FEATURE_FIRST_FRAME): the first window shown, whether the program asked for the event,
+  // whether it was delivered, and whether the scenario places it itself (pushFirstFrame); otherwise it comes at the
+  // first wait after the first window was shown.
+  uint64_t firstShown = 0;
+  bool firstFrameWatched = false;
+  bool firstFrameDelivered = false;
+  bool firstFramePlaced = false;
   std::string returnedText;
   std::string lastError;
   bool panelChosen = false;
@@ -281,6 +304,8 @@ inline const char *eventName(int32_t kind) {
     return "key_down";
   case PS_UI_EVENT_KEY_UP:
     return "key_up";
+  case PS_UI_EVENT_FIRST_FRAME:
+    return "first_frame";
   default:
     return "none";
   }
@@ -380,8 +405,22 @@ inline void setEvent(int32_t kind, uint64_t window = 0, uint64_t widget = 0, int
 
 // Applies queued actions until one produces an event. Returns false when the
 // queue ran dry.
+// Delivers the first frame when the program asked for it and a window was shown.
+inline bool deliverFirstFrame() {
+  State &s = state();
+  if (!s.firstFrameWatched || s.firstFrameDelivered || s.firstShown == 0) {
+    return false;
+  }
+  s.firstFrameDelivered = true;
+  setEvent(PS_UI_EVENT_FIRST_FRAME, s.firstShown);
+  return true;
+}
+
 inline bool deliverNextEvent() {
   State &s = state();
+  if (!s.firstFramePlaced && deliverFirstFrame()) {
+    return true;
+  }
   while (!s.actions.empty()) {
     const Action action = std::move(s.actions.front());
     s.actions.pop_front();
@@ -475,6 +514,11 @@ inline bool deliverNextEvent() {
       break;
     case Action::Kind::WaitScript:
       if (deliverScriptEvent()) {
+        return true;
+      }
+      break;
+    case Action::Kind::FirstFrame:
+      if (deliverFirstFrame()) {
         return true;
       }
       break;
