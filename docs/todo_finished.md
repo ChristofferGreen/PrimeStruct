@@ -2190,6 +2190,7 @@ are left unarchived.
 | TODO-5770 | arm64 native constants take one instruction where they fit | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5771 | arm64 template operands stay in the register that computed them | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5772 | arm64 native allocates registers for integer code | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5773 | arm64 register allocation keeps floats in d-registers | [2026-11.md](todo_archive/2026-11.md) | 2026-11-10 |
 | TODO-5774 | arm64 register allocation spans calls and passes arguments in registers | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5775 | arm64 register allocation takes address-taking functions | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5776 | A local address that never leaves its function becomes local accesses | [2026-11.md](todo_archive/2026-11.md) | - |

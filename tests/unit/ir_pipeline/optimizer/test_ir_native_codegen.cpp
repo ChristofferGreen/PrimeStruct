@@ -462,9 +462,9 @@ TEST_CASE("arm64 register allocation spills values past its pool to frame slots"
   CHECK(report.perFunction[0].registerAllocationSpillSlots > 0);
 }
 
-TEST_CASE("arm64 functions with float values stay on templates") {
-  // main calls the others; /float stays on templates, main (which calls), /address (which takes
-  // a local address) and /leaf are register-allocated.
+TEST_CASE("arm64 register allocation takes calls, addresses and floats") {
+  // main calls the others; main (which calls), /address (which takes a local address), /float
+  // (float values) and /leaf are all register-allocated.
   primec::IrModule module;
   module.entryIndex = 0;
   module.functions.push_back(optimizer_test::functionOf("/main",
@@ -510,17 +510,16 @@ TEST_CASE("arm64 functions with float values stay on templates") {
   REQUIRE(report.perFunction.size() == 4);
   CHECK(report.perFunction[0].registerAllocated);
   CHECK(report.perFunction[1].registerAllocated);
-  CHECK_FALSE(report.perFunction[2].registerAllocated);
-  CHECK(report.perFunction[2].registerAllocationFallback == "float values (TODO-5773)");
+  CHECK(report.perFunction[2].registerAllocated);
   CHECK(report.perFunction[3].registerAllocated);
 }
 
 TEST_CASE("arm64 register allocation keeps values live across calls and passes arguments") {
   // /main holds 16 values across two calls of /wide (16 parameters: eight in x0-x7, eight on the
   // value stack), once in reverse order, and prints them all after. /wide's own values take
-  // x3-x8 too, so the registers main keeps are overwritten. /floats (a template function) also
-  // calls /weights, which then takes every argument on the value stack although its other
-  // caller, /main, is register-allocated.
+  // x3-x8 too, so the registers main keeps are overwritten. /floats, with float values, also
+  // calls /weights; it is register-allocated like /main, so /weights takes its arguments in
+  // registers from both.
   constexpr uint64_t Values = 16;
   std::vector<primec::IrInstruction> main;
   for (uint64_t k = 0; k < Values; ++k) {
@@ -603,8 +602,324 @@ TEST_CASE("arm64 register allocation keeps values live across calls and passes a
   CHECK(report.perFunction[0].registerAllocated);
   CHECK(report.perFunction[1].registerAllocated);
   CHECK(report.perFunction[2].registerAllocated);
-  CHECK_FALSE(report.perFunction[3].registerAllocated);
-  CHECK(report.perFunction[3].registerAllocationFallback == "float values (TODO-5773)");
+  CHECK(report.perFunction[3].registerAllocated);
+}
+
+namespace {
+
+// The instructions of the function that starts after the `skip`th `ret` of `code`, up to and
+// including its own `returns`th `ret`, with branch and call targets cut off.
+std::vector<std::string>
+functionListing(const std::vector<DisassembledInstruction> &code, size_t skip, size_t returns) {
+  size_t start = 0;
+  for (size_t seen = 0; start < code.size() && seen < skip; ++start) {
+    seen += code[start].text == "ret" ? 1 : 0;
+  }
+  std::vector<std::string> lines;
+  size_t seenReturns = 0;
+  for (size_t i = start; i < code.size() && seenReturns < returns; ++i) {
+    const std::string &text = code[i].text;
+    lines.push_back(text.substr(0, std::min(text.size(), text.find(" 0x"))));
+    seenReturns += text == "ret" ? 1 : 0;
+  }
+  return lines;
+}
+
+std::string joinLines(const std::vector<std::string> &lines) {
+  std::string out;
+  for (const std::string &line : lines) {
+    out += line + "\n";
+  }
+  return out;
+}
+
+} // namespace
+
+TEST_CASE("arm64 register allocation keeps a float loop in d registers") {
+  // sum = 0.0; x = 1.0; while (x < 10.5) { sum = sum + x; x = x + 0.5 }; print (i64)sum
+  primec::IrModule module =
+      optimizer_test::moduleOf(optimizer_test::assemble({"PushF64 0x0",
+                                                         "StoreLocal 0",
+                                                         "PushF64 0x3ff0000000000000",
+                                                         "StoreLocal 1",
+                                                         "LoadLocal 1",
+                                                         "PushF64 0x4025000000000000",
+                                                         "CmpLtF64",
+                                                         "JumpIfZero 17",
+                                                         "LoadLocal 0",
+                                                         "LoadLocal 1",
+                                                         "AddF64",
+                                                         "StoreLocal 0",
+                                                         "LoadLocal 1",
+                                                         "PushF64 0x3fe0000000000000",
+                                                         "AddF64",
+                                                         "StoreLocal 1",
+                                                         "Jump 4",
+                                                         "LoadLocal 0",
+                                                         "ConvertF64ToI64",
+                                                         "PrintI64 1",
+                                                         "PushI32 0",
+                                                         "ReturnI32"}));
+  module.functions[0].metadata.effectMask = primec::EffectIoOut;
+  const Outcome vm = optimizer_test::run(module);
+  REQUIRE_MESSAGE(vm.ok, vm.error);
+  CHECK(vm.output == "104\n");
+  expectNativeMatchesVm(module, "regalloc_float_loop");
+  const primec::NativeEmitterInstrumentation report =
+      arm64AllocationReport(module, "regalloc_float_loop");
+  REQUIRE(report.perFunction.size() == 1);
+  CHECK(report.perFunction[0].registerAllocated);
+  CHECK(report.perFunction[0].registerAllocationSpillSlots == 0);
+
+  // Both locals live in d registers from d8 on; the compare is fused into its branch (b.pl: not
+  // less, or unordered) and the constants are fmov immediates. Nothing goes through a general
+  // register, a frame slot or the value stack inside the loop.
+  const std::vector<std::string> code = functionListing(
+      disassemble(primec::testing::testScratchPath("native_codegen/regalloc_float_loop.opt")),
+      0,
+      1);
+  INFO(joinLines(code));
+  const std::vector<std::string> expected = {"fmov d9, xzr",
+                                             "fmov d8, #1.00000000",
+                                             "fmov d1, #10.50000000",
+                                             "fcmp d8, d1",
+                                             "b.pl",
+                                             "fadd d9, d9, d8",
+                                             "fmov d1, #0.50000000",
+                                             "fadd d8, d8, d1",
+                                             "b",
+                                             "fcvtzs x21, d9"};
+  const auto first = std::find(code.begin(), code.end(), expected.front());
+  REQUIRE(first != code.end());
+  REQUIRE(static_cast<size_t>(code.end() - first) >= expected.size());
+  CHECK(std::vector<std::string>(first, first + static_cast<std::ptrdiff_t>(expected.size())) ==
+        expected);
+}
+
+TEST_CASE("arm64 register allocation keeps floats live across calls and mixes argument kinds") {
+  // /main: a = (f64)3, b = a / 8.0; n is printed (a template) while a and b are live, then
+  // c = /scale(5, a) with an integer and a float argument; prints (i64)((c + a + b) * 1000).
+  // /scale(n, x) = x * (f64)n + 0.25.
+  primec::IrModule module;
+  module.entryIndex = 0;
+  module.functions.push_back(
+      optimizer_test::functionOf("/main",
+                                 optimizer_test::assemble({"PushI64 3",
+                                                           "ConvertI64ToF64",
+                                                           "StoreLocal 0",
+                                                           "LoadLocal 0",
+                                                           "PushF64 0x4020000000000000",
+                                                           "DivF64",
+                                                           "StoreLocal 1",
+                                                           "PushI64 5",
+                                                           "PrintI64 1",
+                                                           "PushI64 5",
+                                                           "LoadLocal 0",
+                                                           "Call 1",
+                                                           "LoadLocal 0",
+                                                           "AddF64",
+                                                           "LoadLocal 1",
+                                                           "AddF64",
+                                                           "PushF64 0x408f400000000000",
+                                                           "MulF64",
+                                                           "ConvertF64ToI64",
+                                                           "PrintI64 1",
+                                                           "PushI32 0",
+                                                           "ReturnI32"})));
+  module.functions.push_back(
+      optimizer_test::functionOf("/scale",
+                                 optimizer_test::assemble({"StoreLocal 1",
+                                                           "StoreLocal 0",
+                                                           "LoadLocal 1",
+                                                           "LoadLocal 0",
+                                                           "ConvertI64ToF64",
+                                                           "MulF64",
+                                                           "PushF64 0x3fd0000000000000",
+                                                           "AddF64",
+                                                           "ReturnF64"}),
+                                 2));
+  module.functions[0].metadata.effectMask = primec::EffectIoOut;
+  const Outcome vm = optimizer_test::run(module);
+  REQUIRE_MESSAGE(vm.ok, vm.error);
+  CHECK(vm.output == "5\n18625\n");
+  expectNativeMatchesVm(module, "regalloc_float_calls");
+  const primec::NativeEmitterInstrumentation report =
+      arm64AllocationReport(module, "regalloc_float_calls");
+  REQUIRE(report.perFunction.size() == 2);
+  CHECK(report.perFunction[0].registerAllocated);
+  CHECK(report.perFunction[1].registerAllocated);
+
+  const std::vector<DisassembledInstruction> code =
+      disassemble(primec::testing::testScratchPath("native_codegen/regalloc_float_calls.opt"));
+  const std::vector<std::string> main = functionListing(code, 0, 1);
+  INFO(joinLines(main));
+  // a and b live in d9 and d10, which the print template (C-preserved registers) leaves alone:
+  // they are saved only around the call, which may change every register, and a goes to the
+  // callee in x1 as its bit pattern.
+  const auto at = [&](const std::string &text) {
+    return static_cast<size_t>(std::find(main.begin(), main.end(), text) - main.begin());
+  };
+  const size_t call = at("bl");
+  REQUIRE(call < main.size());
+  size_t stores = 0;
+  for (size_t i = 0; i < main.size(); ++i) {
+    if (main[i].rfind("str d", 0) == 0) {
+      ++stores;
+      CHECK(i < call);
+      CHECK(i + 5 > call);
+    }
+  }
+  CHECK(stores == 2);
+  CHECK(std::find(main.begin(), main.begin() + static_cast<std::ptrdiff_t>(call), "fmov x1, d9") !=
+        main.begin() + static_cast<std::ptrdiff_t>(call));
+  CHECK(main[call + 1].rfind("fmov d", 0) == 0); // the result, from x0
+  CHECK(main[call + 1].find(", x0") != std::string::npos);
+  CHECK(main[call + 2].rfind("ldr d", 0) == 0);
+  CHECK(main[call + 3].rfind("ldr d", 0) == 0);
+  // /scale takes n in x0 and x in x1: n goes home to x21 and converts from there, x moves to a d
+  // register, and the result returns in x0 as its bit pattern.
+  const std::vector<std::string> scale = functionListing(code, 1, 1);
+  INFO(joinLines(scale));
+  const std::vector<std::string> body = {"mov x21, x0",
+                                         "fmov d9, x1",
+                                         "scvtf d8, x21",
+                                         "fmul d9, d9, d8",
+                                         "fmov d1, #0.25000000",
+                                         "fadd d9, d9, d1",
+                                         "fmov x0, d9"};
+  const auto first = std::find(scale.begin(), scale.end(), body.front());
+  REQUIRE(first != scale.end());
+  REQUIRE(static_cast<size_t>(scale.end() - first) >= body.size());
+  CHECK(std::vector<std::string>(first, first + static_cast<std::ptrdiff_t>(body.size())) == body);
+}
+
+TEST_CASE("arm64 float registers match the VM on edge values") {
+  // Every comparison of f64 and f32 edge values (zeros of both signs, NaN, infinity), each as a
+  // `cset` and fused into a branch, against a register and an immediate operand; arithmetic,
+  // negation and conversions on register operands.
+  using primec::IrInstruction;
+  using primec::IrOpcode;
+  const std::vector<uint64_t> doubles = {0x0,
+                                         0x8000000000000000u,
+                                         0x3ff8000000000000u,  // 1.5
+                                         0xc002000000000000u,  // -2.25
+                                         0x7ff0000000000000u,  // inf
+                                         0x7ff8000000000000u}; // NaN
+  const std::vector<uint64_t> floats = {0x0,
+                                        0x80000000u,
+                                        0x3fc00000u,  // 1.5
+                                        0xc0100000u,  // -2.25
+                                        0x7f800000u,  // inf
+                                        0x7fc00000u}; // NaN
+  const std::vector<IrOpcode> doubleCompares = {IrOpcode::CmpEqF64,
+                                                IrOpcode::CmpNeF64,
+                                                IrOpcode::CmpLtF64,
+                                                IrOpcode::CmpLeF64,
+                                                IrOpcode::CmpGtF64,
+                                                IrOpcode::CmpGeF64};
+  const std::vector<IrOpcode> floatCompares = {IrOpcode::CmpEqF32,
+                                               IrOpcode::CmpNeF32,
+                                               IrOpcode::CmpLtF32,
+                                               IrOpcode::CmpLeF32,
+                                               IrOpcode::CmpGtF32,
+                                               IrOpcode::CmpGeF32};
+  std::vector<IrInstruction> body;
+  // `value * 1.0` keeps the value (sign, NaN and infinity included) and puts it in a register.
+  const auto pushRegister = [&](uint64_t bits, bool isF64) {
+    body.push_back({isF64 ? IrOpcode::PushF64 : IrOpcode::PushF32, bits});
+    body.push_back(
+        {isF64 ? IrOpcode::PushF64 : IrOpcode::PushF32, isF64 ? 0x3ff0000000000000u : 0x3f800000u});
+    body.push_back({isF64 ? IrOpcode::MulF64 : IrOpcode::MulF32, 0});
+  };
+  for (const bool isF64 : {true, false}) {
+    const std::vector<uint64_t> &values = isF64 ? doubles : floats;
+    for (const uint64_t left : values) {
+      for (const uint64_t right : values) {
+        for (const IrOpcode op : isF64 ? doubleCompares : floatCompares) {
+          for (const bool rightImmediate : {false, true}) {
+            for (const bool fused : {false, true}) {
+              pushRegister(left, isF64);
+              if (rightImmediate) {
+                body.push_back({isF64 ? IrOpcode::PushF64 : IrOpcode::PushF32, right});
+              } else {
+                pushRegister(right, isF64);
+              }
+              body.push_back({op, 0});
+              if (!fused) {
+                body.push_back({IrOpcode::PrintI64, primec::PrintFlagNewline});
+                continue;
+              }
+              // JumpIfZero over `print 1` to `print 0`.
+              const uint64_t jumpIfZero = body.size();
+              body.push_back({IrOpcode::JumpIfZero, jumpIfZero + 4});
+              body.push_back({IrOpcode::PushI64, 1});
+              body.push_back({IrOpcode::PrintI64, primec::PrintFlagNewline});
+              body.push_back({IrOpcode::Jump, jumpIfZero + 6});
+              body.push_back({IrOpcode::PushI64, 0});
+              body.push_back({IrOpcode::PrintI64, primec::PrintFlagNewline});
+            }
+          }
+        }
+      }
+    }
+  }
+  // Arithmetic on finite operands, printed as (i64)(result * 1000) through f64.
+  const std::vector<uint64_t> finiteDoubles = {
+      0x3ff8000000000000u, 0xc002000000000000u, 0x4008000000000000u, 0x3fe0000000000000u};
+  const std::vector<uint64_t> finiteFloats = {0x3fc00000u, 0xc0100000u, 0x40400000u, 0x3f000000u};
+  for (const bool isF64 : {true, false}) {
+    const std::vector<uint64_t> &values = isF64 ? finiteDoubles : finiteFloats;
+    const std::vector<IrOpcode> ops =
+        isF64 ? std::vector<IrOpcode>{IrOpcode::AddF64,
+                                      IrOpcode::SubF64,
+                                      IrOpcode::MulF64,
+                                      IrOpcode::DivF64}
+              : std::vector<IrOpcode>{
+                    IrOpcode::AddF32, IrOpcode::SubF32, IrOpcode::MulF32, IrOpcode::DivF32};
+    for (const uint64_t left : values) {
+      for (const uint64_t right : values) {
+        for (const IrOpcode op : ops) {
+          pushRegister(left, isF64);
+          pushRegister(right, isF64);
+          body.push_back({op, 0});
+          body.push_back({isF64 ? IrOpcode::NegF64 : IrOpcode::NegF32, 0});
+          if (!isF64) {
+            body.push_back({IrOpcode::ConvertF32ToF64, 0});
+          }
+          body.push_back({IrOpcode::PushF64, 0x408f400000000000u}); // 1000.0
+          body.push_back({IrOpcode::MulF64, 0});
+          body.push_back({IrOpcode::ConvertF64ToI64, 0});
+          body.push_back({IrOpcode::PrintI64, primec::PrintFlagNewline});
+        }
+      }
+    }
+  }
+  // Conversions: integers to both float widths and back, f64 narrowed to f32, unsigned forms.
+  for (const int64_t value : {int64_t{0}, int64_t{7}, int64_t{-123456789}, int64_t{1} << 40}) {
+    body.push_back({IrOpcode::PushI64, static_cast<uint64_t>(value)});
+    body.push_back({IrOpcode::ConvertI64ToF64, 0});
+    body.push_back({IrOpcode::ConvertF64ToF32, 0});
+    body.push_back({IrOpcode::ConvertF32ToI64, 0});
+    body.push_back({IrOpcode::PrintI64, primec::PrintFlagNewline});
+    body.push_back({IrOpcode::PushI64, static_cast<uint64_t>(value)});
+    body.push_back({IrOpcode::ConvertI64ToF32, 0});
+    body.push_back({IrOpcode::ConvertF32ToF64, 0});
+    body.push_back({IrOpcode::ConvertF64ToI64, 0});
+    body.push_back({IrOpcode::PrintI64, primec::PrintFlagNewline});
+    body.push_back({IrOpcode::PushI64, static_cast<uint64_t>(value) & 0xFFFFFFFFFFFFu});
+    body.push_back({IrOpcode::ConvertU64ToF64, 0});
+    body.push_back({IrOpcode::ConvertF64ToU64, 0});
+    body.push_back({IrOpcode::PrintI64, primec::PrintFlagNewline});
+  }
+  body.push_back({IrOpcode::PushI32, 0});
+  body.push_back({IrOpcode::ReturnI32, 0});
+  primec::IrModule module = optimizer_test::moduleOf(std::move(body));
+  module.functions[0].metadata.effectMask = primec::EffectIoOut;
+  expectNativeMatchesVm(module, "regalloc_float_edges");
+  const primec::NativeEmitterInstrumentation report =
+      arm64AllocationReport(module, "regalloc_float_edges");
+  REQUIRE(report.perFunction.size() == 1);
+  CHECK(report.perFunction[0].registerAllocated);
 }
 
 TEST_CASE("arm64 register allocation emits a recursive function on registers") {

@@ -1616,3 +1616,67 @@ float_series retires 140M fewer instructions in the same cycles: its loop is bou
 the value stack and frame slots (12.3), which only TODO-5773 removes. Every benchmark prints the same result;
 `scripts/differential_opt_check.py --native --levels 1,2`, also with `PRIMESTRUCT_NATIVE_REGALLOC=1`, matches in 491
 programs and differs in the same six -O0 programs as before.
+
+### 12.14 Result: floats in d-registers (TODO-5773, 2026-11-10)
+
+The arm64 allocator now takes functions with float values, the last kind it left on templates: every function of
+every benchmark and of PrimeScroll is register-allocated. The plan is the x86_64 one: a class that only float
+operations touch is coloured from a float pool, the others stay in general registers as before. What changed:
+
+- `planNativeRegisterAllocation` takes the target's float registers (`RegAllocFloatRegisters`: a pool, and whether
+  a float comparison before its `JumpIfZero` is fused into the branch) instead of a switch that turned the xmm
+  pool off; x86_64 passes its xmm2-xmm15 pool and no fusion, as before. `regAllocRegistersLiveAcross` numbers float
+  registers from a base the target names (x86_64 16, arm64 32).
+- arm64 pool: d8-d15 first, then d16-d31 and d2-d7; d0 and d1 are the scratch registers, as in the float
+  templates. AAPCS64 has C functions keep the low 64 bits of d8-d15, so no template, host call or heap routine
+  changes them and a value there is never saved around one; a live d16-d31 or d2-d7 is saved in its frame slot
+  around a template. Across a `Call` every live float register is saved, d8-d15 too, as every general register
+  is: allocated callees use the same pool and save nothing (12.9 measured callee-saved splits as not worth it).
+  A function with float registers gets 64 register save slots (dN at 32 + N) instead of 32.
+- A float value in a d register holds the bit pattern a general register would: an f32 in the low 32 bits (every
+  write of an s register clears the rest, so `fmov` to a general register gives the template's value). Values
+  move with `fmov` where a template, call, return, edge copy or integer operation takes them; arguments of real
+  calls stay in x0-x7 whatever their type, so a callee's float parameter starts with `fmov dN, xK`.
+- Inline: `fadd`/`fsub`/`fmul`/`fdiv` (three-address), `fneg`, `scvtf`/`ucvtf` and `fcvtzs`/`fcvtzu` from and to
+  the whole 64-bit register as the templates convert (an f32 converts directly: the templates' widening to f64 is
+  exact), `fcvt` between widths, `ldr`/`str dN` for pinned locals and spill slots, and returns. A float compare is
+  `fcmp` (`fcmp dN, #0.0` against +0.0) and `cset`, or `fcmp` + `b.cond` fused into its `JumpIfZero`, with MI for
+  < and LS for <= so that every comparison but != is false on NaN, as the templates and the VM.
+- Float constants: `fmov dN, xzr` for +0.0, `fmov dN, #imm` (or `fmov sN, #imm` for an f32) when the 8-bit float
+  immediate builds the pattern, otherwise the integer move sequence into x1 and `fmov dN, x1`.
+
+float_series' loop is now eight instructions, every value in a register (`sum` d11, `sign` d9, `denominator`
+d10, the counter x21):
+
+```text
+cmp   x21, #0x0
+b.le  done
+fdiv  d8, d9, d10
+fadd  d11, d11, d8
+fneg  d9, d9
+fmov  d1, #2.0
+fadd  d10, d10, d1
+sub   x21, x21, #0x1
+b     loop
+```
+
+Measured with the release `primec` before (5ed613999) and after, back to back, macOS arm64 (M3 Pro), load average
+14.1 to 15.6; instructions retired are deterministic, cycles the lowest of five runs:
+
+| | instructions before | after | cycles before | after | change |
+| --- | --- | --- | --- | --- | --- |
+| float_series native | 1294.8M | 192.3M | 410.5M | 54.4M | 7.5x fewer cycles |
+| float_series optexe | | 153.6M | | 50.7M | native at 1.07x optexe's cycles (8.2-8.4x in 12.3) |
+| aggregate, call_fib, json_scan, json_parse, vector_sum | | | | | byte-identical executables |
+
+PrimeScroll has no float values: `register_allocated` 104 of 104 and `__text` 220,928 bytes before and after, the
+executable byte-identical. Every benchmark prints the same result. `primestruct.ir.native_codegen` pins the exact
+disassembly of a float loop (locals in d8/d9, `fcmp d8, d1; b.pl` fused, `fmov` immediates), floats live across a
+print (not saved) and a call (saved and restored as `str`/`ldr d`) with an integer and a float argument, the
+callee's `fmov d9, x1` and `scvtf`, and every f32 and f64 comparison of zeros of both signs, NaN and infinity (as
+`cset` and fused, against a register and an immediate), arithmetic and conversions against the VM.
+`scripts/differential_opt_check.py --native --levels 1,2`, also with `PRIMESTRUCT_NATIVE_REGALLOC=1` (which now
+allocates float functions at -O0 too), matches in 491 programs and differs in the same six -O0 programs as before.
+
+What is left: a float constant that has no 8-bit immediate is built through x1 at each use, also inside a loop
+(no constant pool and no hoisting); none of the benchmark loops has one.

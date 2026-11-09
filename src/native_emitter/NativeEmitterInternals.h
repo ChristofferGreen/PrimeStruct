@@ -771,6 +771,7 @@ class Arm64Emitter {
 #include "NativeEmitterInternalsArm64Io.h"
 #include "NativeEmitterInternalsArm64Host.h"
 #include "NativeEmitterInternalsArm64Heap.h"
+#include "NativeEmitterInternalsArm64FloatRegisters.h"
 #include "NativeEmitterInternalsArm64RegAlloc.h"
 
 bool computeMaxStackDepth(const IrFunction &fn, const IrModule &module, int64_t &maxDepth, std::string &error);

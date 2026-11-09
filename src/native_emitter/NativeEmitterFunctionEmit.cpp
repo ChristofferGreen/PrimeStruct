@@ -91,12 +91,12 @@ bool emitNativeFunctions(const IrModule &module,
   // (the template callers pass arguments on the operand stack).
   std::vector<bool> registerArguments(module.functions.size(), false);
   if constexpr (kIsArm64) {
-    // arm64 (NativeEmitterInternalsArm64RegAlloc.h): functions without float values; the others
-    // keep their templates, with the reason in --opt-report.
+    // arm64 (NativeEmitterInternalsArm64RegAlloc.h): every function whose register form builds;
+    // the others keep their templates, with the reason in --opt-report.
     if (emitter.registerAllocationEnabled()) {
       for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
         const IrFunction &function = module.functions[functionIndex];
-        std::string planError = arm64RegisterAllocationBlocker(function);
+        std::string planError;
         for (const IrInstruction &inst : function.instructions) {
           if (inst.op == IrOpcode::LoadStringByte && inst.imm >= module.stringTable.size()) {
             planError = "string index out of range";
@@ -110,7 +110,7 @@ bool emitNativeFunctions(const IrModule &module,
                                      regAllocPlans[functionIndex],
                                      planError,
                                      true,
-                                     false);
+                                     Arm64RegAllocFloatRegisters);
         if (instrumentation != nullptr) {
           auto &functionInstrumentation = instrumentation->perFunction[functionIndex];
           functionInstrumentation.registerAllocated = registerAllocated[functionIndex];
@@ -186,8 +186,21 @@ bool emitNativeFunctions(const IrModule &module,
       }
     }
     const uint32_t spillBaseLocal = static_cast<uint32_t>(layout.localCount + layout.scratchSlots);
+    // arm64 numbers its float registers 32-63 there (regAllocRegistersLiveAcross), so a function
+    // with float registers has 64 save slots.
+    uint64_t saveSlots = 32;
+    if constexpr (kIsArm64) {
+      for (const RegAllocLocation &where : regAllocPlan.locations) {
+        if (where.kind == RegAllocLocationKind::Xmm) {
+          saveSlots = 64;
+          break;
+        }
+      }
+    }
     const uint64_t regAllocBytes =
-        useRegisterAllocation ? (static_cast<uint64_t>(regAllocPlan.spillSlotCount) + 32) * 16 : 0;
+        useRegisterAllocation
+            ? (static_cast<uint64_t>(regAllocPlan.spillSlotCount) + saveSlots) * 16
+            : 0;
     uint64_t frameSize = alignTo(layout.frameSize + regAllocBytes, 16);
     if (isEntryFunction) {
       constexpr uint64_t ValueStackBytes = 1024ull * 1024ull;

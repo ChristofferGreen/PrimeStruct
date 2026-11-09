@@ -33,10 +33,27 @@ bool isIntegerComparison(IrOpcode op) {
   }
 }
 
-constexpr uint32_t NoPosition = std::numeric_limits<uint32_t>::max();
+bool isFloatComparison(IrOpcode op) {
+  switch (op) {
+  case IrOpcode::CmpEqF32:
+  case IrOpcode::CmpNeF32:
+  case IrOpcode::CmpLtF32:
+  case IrOpcode::CmpLeF32:
+  case IrOpcode::CmpGtF32:
+  case IrOpcode::CmpGeF32:
+  case IrOpcode::CmpEqF64:
+  case IrOpcode::CmpNeF64:
+  case IrOpcode::CmpLtF64:
+  case IrOpcode::CmpLeF64:
+  case IrOpcode::CmpGtF64:
+  case IrOpcode::CmpGeF64:
+    return true;
+  default:
+    return false;
+  }
+}
 
-// xmm0 and xmm1 are the float scratch registers of the inline code and the templates.
-constexpr uint8_t XmmPool[] = {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+constexpr uint32_t NoPosition = std::numeric_limits<uint32_t>::max();
 
 bool isFloatOperation(IrOpcode op) {
   switch (op) {
@@ -132,7 +149,7 @@ bool planNativeRegisterAllocation(const IrModule &module,
                                   RegAllocFunctionPlan &out,
                                   std::string &error,
                                   bool promoteLocals,
-                                  bool floatRegisters) {
+                                  const RegAllocFloatRegisters &floatRegisters) {
   out = {};
   error.clear();
   IrVirtualRegisterFunction registerForm;
@@ -252,7 +269,9 @@ bool planNativeRegisterAllocation(const IrModule &module,
       const RegAllocInstruction &branch = block.instructions[i + 1];
       const IrOpcode compareOp = module.functions[functionIndex].instructions[compare.irIndex].op;
       const IrOpcode branchOp = module.functions[functionIndex].instructions[branch.irIndex].op;
-      if (compare.folded || !isIntegerComparison(compareOp) || branchOp != IrOpcode::JumpIfZero ||
+      const bool fusable = isIntegerComparison(compareOp) ||
+                           (floatRegisters.fuseCompares && isFloatComparison(compareOp));
+      if (compare.folded || !fusable || branchOp != IrOpcode::JumpIfZero ||
           compare.defs.size() != 1 || branch.uses.size() != 1 ||
           branch.uses.front() != compare.defs.front() || readers[compare.defs.front()] != 1) {
         continue;
@@ -579,7 +598,7 @@ bool planNativeRegisterAllocation(const IrModule &module,
   };
   const auto firstFree = [&](uint64_t used, RegAllocLocationKind kind) -> int {
     if (kind == RegAllocLocationKind::Xmm) {
-      for (const uint8_t reg : XmmPool) {
+      for (const uint8_t reg : floatRegisters.pool) {
         if ((used & (uint64_t{1} << (32 + reg))) == 0) {
           return reg;
         }
@@ -602,7 +621,7 @@ bool planNativeRegisterAllocation(const IrModule &module,
       floats = floats || floatAccess[member];
       integers = integers || integerAccess[member];
     }
-    const RegAllocLocationKind kind = floatRegisters && floats && !integers
+    const RegAllocLocationKind kind = !floatRegisters.pool.empty() && floats && !integers
                                           ? RegAllocLocationKind::Xmm
                                           : RegAllocLocationKind::Reg;
     int chosen = -1;
@@ -650,8 +669,10 @@ bool planNativeRegisterAllocation(const IrModule &module,
   return true;
 }
 
-std::vector<uint8_t>
-regAllocRegistersLiveAcross(const RegAllocFunctionPlan &plan, size_t blockIndex, size_t index) {
+std::vector<uint8_t> regAllocRegistersLiveAcross(const RegAllocFunctionPlan &plan,
+                                                 size_t blockIndex,
+                                                 size_t index,
+                                                 uint8_t floatBase) {
   std::vector<uint8_t> registers;
   const uint32_t use = regAllocUsePosition(index);
   const uint32_t def = regAllocDefPosition(index);
@@ -661,7 +682,7 @@ regAllocRegistersLiveAcross(const RegAllocFunctionPlan &plan, size_t blockIndex,
       if (location.kind == RegAllocLocationKind::Reg) {
         registers.push_back(location.reg);
       } else if (location.kind == RegAllocLocationKind::Xmm) {
-        registers.push_back(static_cast<uint8_t>(16 + location.reg));
+        registers.push_back(static_cast<uint8_t>(floatBase + location.reg));
       }
     }
   }

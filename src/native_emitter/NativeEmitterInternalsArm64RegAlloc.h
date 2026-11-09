@@ -1,13 +1,17 @@
 #pragma once
 
 // Register-allocated function bodies for the arm64 emitter (NativeEmitterRegAlloc.h has the plan;
-// docs/OptimizingBackendsPlan.md section 12). Integer arithmetic, comparisons (fused into the branch
-// or as `cset`), branches, constants as immediates, frame locals, byte and word memory accesses and
-// string bytes are emitted on the planned registers; every other opcode runs its ordinary template on
-// the memory value stack (x28): its operands are pushed there first and its results popped into their
-// locations afterwards, with the template-clobbered registers live across it saved in their frame slots.
+// docs/OptimizingBackendsPlan.md section 12). Integer and float arithmetic, comparisons (fused into
+// the branch or as `cset`), conversions, branches, constants as immediates, frame locals, byte and
+// word memory accesses and string bytes are emitted on the planned registers; every other opcode runs
+// its ordinary template on the memory value stack (x28): its operands are pushed there first and its
+// results popped into their locations afterwards, with the template-clobbered registers live across
+// it saved in their frame slots.
 //
-// Only functions without float values come here (TODO-5773 takes the rest). In a function that
+// Float values live in d-registers as the bit pattern a general register would hold:
+// an f32 in the low 32 bits (every write of an s register clears the rest), an f64 in all 64. They
+// move to and from general registers with `fmov` where a template, call, return or integer
+// operation takes them. In a function that
 // takes a local address every local stays in its frame slot (IrLocalEscape pins them all), so a
 // write through an address, here or in a callee given it, is what the next LoadLocal reads;
 // operands and edge values still live in registers.
@@ -22,7 +26,8 @@
 // frame addresses past the 32 KB reach of `ldr`/`str`. x16 is the syscall number and breaks the
 // cycles of argument moves (whose registers include x0), x18 the platform
 // register, x26 the template operand cache (off here), x27 the frame, x28 the value stack, x29/x30
-// the frame record and link register (saved in the frame's link local at entry).
+// the frame record and link register (saved in the frame's link local at entry). d0 and d1 are the
+// float scratch registers (the float templates use them too).
 
 // Allocatable registers, the hottest classes first: x21-x25 are kept by every template, host call
 // (AAPCS64 callee-saved) and heap routine, so values there are never saved around a template; x21 holds
@@ -37,61 +42,14 @@ inline const std::vector<uint8_t> Arm64RegAllocPoolWithArgRegs = {
 // Arguments a register-argument callee takes in x0-x7.
 inline constexpr size_t Arm64RegAllocArgumentRegisters = 8;
 
-// Whether a template (or the C function or heap routine it calls) may change `reg`.
+// Whether a template (or the C function or heap routine it calls) may change `reg` (numbered as
+// regAllocRegistersLiveAcross numbers them: float register dN as 32 + N).
 inline bool arm64TemplateClobbers(uint8_t reg) {
-  return reg < 19;
-}
-
-// Why the arm64 register allocator leaves `function` on templates; empty when it takes it.
-inline std::string arm64RegisterAllocationBlocker(const IrFunction &function) {
-  for (const IrInstruction &instruction : function.instructions) {
-    switch (instruction.op) {
-    case IrOpcode::PushF32:
-    case IrOpcode::PushF64:
-    case IrOpcode::AddF32:
-    case IrOpcode::SubF32:
-    case IrOpcode::MulF32:
-    case IrOpcode::DivF32:
-    case IrOpcode::NegF32:
-    case IrOpcode::AddF64:
-    case IrOpcode::SubF64:
-    case IrOpcode::MulF64:
-    case IrOpcode::DivF64:
-    case IrOpcode::NegF64:
-    case IrOpcode::CmpEqF32:
-    case IrOpcode::CmpNeF32:
-    case IrOpcode::CmpLtF32:
-    case IrOpcode::CmpLeF32:
-    case IrOpcode::CmpGtF32:
-    case IrOpcode::CmpGeF32:
-    case IrOpcode::CmpEqF64:
-    case IrOpcode::CmpNeF64:
-    case IrOpcode::CmpLtF64:
-    case IrOpcode::CmpLeF64:
-    case IrOpcode::CmpGtF64:
-    case IrOpcode::CmpGeF64:
-    case IrOpcode::ConvertI32ToF32:
-    case IrOpcode::ConvertI32ToF64:
-    case IrOpcode::ConvertI64ToF32:
-    case IrOpcode::ConvertI64ToF64:
-    case IrOpcode::ConvertU64ToF32:
-    case IrOpcode::ConvertU64ToF64:
-    case IrOpcode::ConvertF32ToI32:
-    case IrOpcode::ConvertF32ToI64:
-    case IrOpcode::ConvertF32ToU64:
-    case IrOpcode::ConvertF64ToI32:
-    case IrOpcode::ConvertF64ToI64:
-    case IrOpcode::ConvertF64ToU64:
-    case IrOpcode::ConvertF32ToF64:
-    case IrOpcode::ConvertF64ToF32:
-    case IrOpcode::ReturnF32:
-    case IrOpcode::ReturnF64:
-      return "float values (TODO-5773)";
-    default:
-      break;
-    }
+  if (reg >= Arm64RegAllocFloatBase) {
+    const uint8_t floatReg = static_cast<uint8_t>(reg - Arm64RegAllocFloatBase);
+    return floatReg < 8 || floatReg >= 16;
   }
-  return {};
+  return reg < 19;
 }
 
 inline bool Arm64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
@@ -108,6 +66,9 @@ inline bool Arm64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
   constexpr uint8_t X17 = 17;
   constexpr uint8_t Zr = 31; // xzr where an encoding reads register 31 as zero
   constexpr uint8_t Frame = 27;
+  constexpr uint8_t D0 = 0;
+  constexpr uint8_t D1 = 1;
+  constexpr uint32_t DoubleType = 1u << 22; // the ftype bit of a float instruction on d registers
   // The templates must see a plain memory value stack.
   flushValueStackCache();
   const bool savedCache = valueStackCacheEnabled_;
@@ -144,7 +105,68 @@ inline bool Arm64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
     emit(encodeAddReg(X17, Frame, X17));
     emit(encodeStrRegBase(reg, X17, 0));
   };
-  // The register holding `value`, loading it into `scratch` when it is spilled or a constant.
+  // A d register's frame slot `local`: `ldr`/`str dN` (opcode), through x17 past the reach.
+  const auto floatFrameAccess = [&](uint32_t opcode, uint8_t reg, uint32_t local) {
+    const uint64_t offset = localOffset(local);
+    uint8_t base = Frame;
+    uint64_t imm = offset;
+    if (offset > MaxLdrStrOffsetBytes) {
+      emitMovImm64(X17, offset);
+      emit(encodeAddReg(X17, Frame, X17));
+      base = X17;
+      imm = 0;
+    }
+    emit(opcode | (static_cast<uint32_t>(imm / 8) << 10) | (static_cast<uint32_t>(base) << 5) |
+         reg);
+  };
+  const auto floatLoad = [&](uint8_t reg, uint32_t local) {
+    floatFrameAccess(0xFD400000u, reg, local); // LDR dN
+  };
+  const auto floatStore = [&](uint8_t reg, uint32_t local) {
+    floatFrameAccess(0xFD000000u, reg, local); // STR dN
+  };
+  // Saves and restores a register numbered as regAllocRegistersLiveAcross numbers them.
+  const auto saveRegister = [&](uint8_t reg) {
+    if (reg >= Arm64RegAllocFloatBase) {
+      floatStore(static_cast<uint8_t>(reg - Arm64RegAllocFloatBase), saveBaseLocal + reg);
+    } else {
+      frameStore(reg, saveBaseLocal + reg);
+    }
+  };
+  const auto restoreRegister = [&](uint8_t reg) {
+    if (reg >= Arm64RegAllocFloatBase) {
+      floatLoad(static_cast<uint8_t>(reg - Arm64RegAllocFloatBase), saveBaseLocal + reg);
+    } else {
+      frameLoad(reg, saveBaseLocal + reg);
+    }
+  };
+  const auto fmovFloat = [&](uint8_t rd, uint8_t rn) {
+    if (rd != rn) {
+      emit(0x1E604000u | (static_cast<uint32_t>(rn) << 5) | rd); // FMOV dd, dn
+    }
+  };
+  // Builds the bit pattern `bits` in d register `reg`: `fmov` of zero or of an 8-bit immediate (as
+  // a double, or as a single whose upper half is zero), otherwise through x1.
+  const auto floatConstant = [&](uint8_t reg, uint64_t bits) {
+    if (bits == 0) {
+      emit(encodeFmovDX(reg, Zr));
+      return;
+    }
+    int imm8 = arm64FloatImmediate(bits, true);
+    if (imm8 >= 0) {
+      emit(0x1E601000u | (static_cast<uint32_t>(imm8) << 13) | reg); // FMOV dN, #imm
+      return;
+    }
+    imm8 = (bits >> 32) == 0 ? arm64FloatImmediate(bits, false) : -1;
+    if (imm8 >= 0) {
+      emit(0x1E201000u | (static_cast<uint32_t>(imm8) << 13) | reg); // FMOV sN, #imm
+      return;
+    }
+    emitMovImm64(X1, bits);
+    emit(encodeFmovDX(reg, X1));
+  };
+  // The register holding `value`, loading it into `scratch` when it is spilled, a constant or in
+  // a d register.
   const auto valueReg = [&](uint32_t value, uint8_t scratch) -> uint8_t {
     const RegAllocLocation &where = location(value);
     switch (where.kind) {
@@ -157,6 +179,8 @@ inline bool Arm64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
       emitMovImm64(scratch, where.imm);
       return scratch;
     case RegAllocLocationKind::Xmm:
+      emit(encodeFmovXD(scratch, where.reg));
+      return scratch;
     case RegAllocLocationKind::None:
       break;
     }
@@ -169,7 +193,46 @@ inline bool Arm64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
       movReg(where.reg, reg);
     } else if (where.kind == RegAllocLocationKind::Slot) {
       frameStore(reg, spillBaseLocal + where.slot);
+    } else if (where.kind == RegAllocLocationKind::Xmm) {
+      emit(encodeFmovDX(where.reg, reg));
     }
+  };
+  // The float counterparts: the d register holding `value` (built in d register `scratch` unless
+  // it lives in one), writing `value` from a d register, and where to compute it (its own d
+  // register, otherwise d0).
+  const auto floatReg = [&](uint32_t value, uint8_t scratch) -> uint8_t {
+    const RegAllocLocation &where = location(value);
+    switch (where.kind) {
+    case RegAllocLocationKind::Xmm:
+      return where.reg;
+    case RegAllocLocationKind::Reg:
+      emit(encodeFmovDX(scratch, where.reg));
+      return scratch;
+    case RegAllocLocationKind::Slot:
+      floatLoad(scratch, spillBaseLocal + where.slot);
+      return scratch;
+    case RegAllocLocationKind::Imm:
+      floatConstant(scratch, where.imm);
+      return scratch;
+    case RegAllocLocationKind::None:
+      break;
+    }
+    floatConstant(scratch, 0);
+    return scratch;
+  };
+  const auto storeFloat = [&](uint32_t value, uint8_t reg) {
+    const RegAllocLocation &where = location(value);
+    if (where.kind == RegAllocLocationKind::Xmm) {
+      fmovFloat(where.reg, reg);
+    } else if (where.kind == RegAllocLocationKind::Reg) {
+      emit(encodeFmovXD(where.reg, reg));
+    } else if (where.kind == RegAllocLocationKind::Slot) {
+      floatStore(reg, spillBaseLocal + where.slot);
+    }
+  };
+  const auto floatTarget = [&](uint32_t value) -> uint8_t {
+    const RegAllocLocation &where = location(value);
+    return where.kind == RegAllocLocationKind::Xmm ? where.reg : D0;
   };
   // Where to compute `value`: its own register, otherwise x0.
   const auto targetReg = [&](uint32_t value) -> uint8_t {
@@ -187,7 +250,7 @@ inline bool Arm64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
     if (a.kind != b.kind) {
       return false;
     }
-    if (a.kind == RegAllocLocationKind::Reg) {
+    if (a.kind == RegAllocLocationKind::Reg || a.kind == RegAllocLocationKind::Xmm) {
       return a.reg == b.reg;
     }
     if (a.kind == RegAllocLocationKind::Slot) {
@@ -196,8 +259,22 @@ inline bool Arm64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
     return false;
   };
   const auto emitCopy = [&](const RegAllocLocation &source, const RegAllocLocation &destination) {
+    if (destination.kind == RegAllocLocationKind::Xmm) {
+      if (source.kind == RegAllocLocationKind::Xmm) {
+        fmovFloat(destination.reg, source.reg);
+      } else if (source.kind == RegAllocLocationKind::Reg) {
+        emit(encodeFmovDX(destination.reg, source.reg));
+      } else if (source.kind == RegAllocLocationKind::Imm) {
+        floatConstant(destination.reg, source.imm);
+      } else if (source.kind == RegAllocLocationKind::Slot) {
+        floatLoad(destination.reg, spillBaseLocal + source.slot);
+      }
+      return;
+    }
     if (destination.kind == RegAllocLocationKind::Reg) {
-      if (source.kind == RegAllocLocationKind::Reg) {
+      if (source.kind == RegAllocLocationKind::Xmm) {
+        emit(encodeFmovXD(destination.reg, source.reg));
+      } else if (source.kind == RegAllocLocationKind::Reg) {
         movReg(destination.reg, source.reg);
       } else if (source.kind == RegAllocLocationKind::Imm) {
         emitMovImm64(destination.reg, source.imm);
@@ -207,6 +284,10 @@ inline bool Arm64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
       return;
     }
     if (destination.kind != RegAllocLocationKind::Slot) {
+      return;
+    }
+    if (source.kind == RegAllocLocationKind::Xmm) {
+      floatStore(source.reg, spillBaseLocal + destination.slot);
       return;
     }
     uint8_t reg = X1;
@@ -266,7 +347,8 @@ inline bool Arm64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
     for (const RegAllocMove &move : edge.moves) {
       const RegAllocLocation &destination = location(move.destination);
       if (destination.kind != RegAllocLocationKind::Reg &&
-          destination.kind != RegAllocLocationKind::Slot) {
+          destination.kind != RegAllocLocationKind::Slot &&
+          destination.kind != RegAllocLocationKind::Xmm) {
         continue;
       }
       const RegAllocLocation &source = location(move.source);
@@ -378,7 +460,8 @@ inline bool Arm64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
       for (const RegAllocMove &move : edge.moves) {
         const RegAllocLocation &destination = location(move.destination);
         if ((destination.kind == RegAllocLocationKind::Reg ||
-             destination.kind == RegAllocLocationKind::Slot) &&
+             destination.kind == RegAllocLocationKind::Slot ||
+             destination.kind == RegAllocLocationKind::Xmm) &&
             !sameLocation(location(move.source), destination)) {
           fixup.trampoline = trampolines.size();
           trampolines.push_back(
@@ -434,10 +517,70 @@ inline bool Arm64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
       return false;
     }
   };
+  // The condition under which a float comparison is true. fcmp sets NZCV to 0011 for an unordered
+  // pair, so less-than is MI and less-or-equal LS (false on NaN, as the templates and the VM).
+  const auto floatCompareCondition = [](IrOpcode op, CondCode &cond, bool &isF64) {
+    isF64 = true;
+    switch (op) {
+    case IrOpcode::CmpEqF32:
+      isF64 = false;
+      [[fallthrough]];
+    case IrOpcode::CmpEqF64:
+      cond = CondCode::Eq;
+      return true;
+    case IrOpcode::CmpNeF32:
+      isF64 = false;
+      [[fallthrough]];
+    case IrOpcode::CmpNeF64:
+      cond = CondCode::Ne;
+      return true;
+    case IrOpcode::CmpLtF32:
+      isF64 = false;
+      [[fallthrough]];
+    case IrOpcode::CmpLtF64:
+      cond = CondCode::Mi;
+      return true;
+    case IrOpcode::CmpLeF32:
+      isF64 = false;
+      [[fallthrough]];
+    case IrOpcode::CmpLeF64:
+      cond = CondCode::Ls;
+      return true;
+    case IrOpcode::CmpGtF32:
+      isF64 = false;
+      [[fallthrough]];
+    case IrOpcode::CmpGtF64:
+      cond = CondCode::Gt;
+      return true;
+    case IrOpcode::CmpGeF32:
+      isF64 = false;
+      [[fallthrough]];
+    case IrOpcode::CmpGeF64:
+      cond = CondCode::Ge;
+      return true;
+    default:
+      return false;
+    }
+  };
   // Sets the flags from `compare`'s operands (64-bit, as the templates compare); returns the
   // condition under which it is true. A constant right operand is a `cmp`/`cmn` immediate: x - c
-  // and x + (-c) set the same flags for every c but 0 and the most negative value.
+  // and x + (-c) set the same flags for every c but 0 and the most negative value. A float
+  // comparison is `fcmp` of the operands' d (or s) registers, `fcmp dN, #0.0` against +0.0.
   const auto emitCompareFlags = [&](const RegAllocInstruction &compare, CondCode &cond) {
+    bool isF64 = false;
+    if (floatCompareCondition(fn.instructions[compare.irIndex].op, cond, isF64)) {
+      const uint32_t type = isF64 ? DoubleType : 0u;
+      const uint8_t left = floatReg(compare.uses[0], D0);
+      const RegAllocLocation &right = location(compare.uses[1]);
+      if (right.kind == RegAllocLocationKind::Imm && right.imm == 0) {
+        emit(0x1E202008u | type | (static_cast<uint32_t>(left) << 5)); // FCMP left, #0.0
+        return;
+      }
+      const uint8_t rightReg = floatReg(compare.uses[1], D1);
+      emit(0x1E202000u | type | (static_cast<uint32_t>(rightReg) << 16) |
+           (static_cast<uint32_t>(left) << 5)); // FCMP left, right
+      return;
+    }
     compareCondition(fn.instructions[compare.irIndex].op, cond);
     const uint8_t left = valueReg(compare.uses[0], X0);
     const RegAllocLocation &right = location(compare.uses[1]);
@@ -465,14 +608,15 @@ inline bool Arm64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
                                 const auto &body) -> bool {
     std::vector<uint8_t> saved;
     if (saveLive) {
-      for (const uint8_t reg : regAllocRegistersLiveAcross(plan, blockIndex, instruction.irIndex)) {
+      for (const uint8_t reg : regAllocRegistersLiveAcross(
+               plan, blockIndex, instruction.irIndex, Arm64RegAllocFloatBase)) {
         if (arm64TemplateClobbers(reg)) {
           saved.push_back(reg);
         }
       }
     }
     for (const uint8_t reg : saved) {
-      frameStore(reg, saveBaseLocal + reg);
+      saveRegister(reg);
     }
     for (const uint32_t use : instruction.uses) {
       emitSpillReg(valueReg(use, X0));
@@ -490,7 +634,7 @@ inline bool Arm64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
       }
     }
     for (const uint8_t reg : saved) {
-      frameLoad(reg, saveBaseLocal + reg);
+      restoreRegister(reg);
     }
     return true;
   };
@@ -514,7 +658,8 @@ inline bool Arm64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
     for (size_t k = 0; k < inRegisters; ++k) {
       const RegAllocLocation &destination = location(first.entryValues[k]);
       if ((destination.kind == RegAllocLocationKind::Reg ||
-           destination.kind == RegAllocLocationKind::Slot) &&
+           destination.kind == RegAllocLocationKind::Slot ||
+           destination.kind == RegAllocLocationKind::Xmm) &&
           !sameLocation(registerLocation(static_cast<uint8_t>(k)), destination)) {
         arguments.push_back({registerLocation(static_cast<uint8_t>(k)), destination});
       }
@@ -533,6 +678,8 @@ inline bool Arm64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
       const RegAllocLocation &where = location(value);
       if (where.kind == RegAllocLocationKind::Reg) {
         emitMovImm64(where.reg, 0);
+      } else if (where.kind == RegAllocLocationKind::Xmm) {
+        floatConstant(where.reg, 0);
       } else if (where.kind == RegAllocLocationKind::Slot) {
         frameStore(Zr, spillBaseLocal + where.slot);
       }
@@ -658,7 +805,19 @@ inline bool Arm64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
       case IrOpcode::CmpLtU64:
       case IrOpcode::CmpLeU64:
       case IrOpcode::CmpGtU64:
-      case IrOpcode::CmpGeU64: {
+      case IrOpcode::CmpGeU64:
+      case IrOpcode::CmpEqF32:
+      case IrOpcode::CmpNeF32:
+      case IrOpcode::CmpLtF32:
+      case IrOpcode::CmpLeF32:
+      case IrOpcode::CmpGtF32:
+      case IrOpcode::CmpGeF32:
+      case IrOpcode::CmpEqF64:
+      case IrOpcode::CmpNeF64:
+      case IrOpcode::CmpLtF64:
+      case IrOpcode::CmpLeF64:
+      case IrOpcode::CmpGtF64:
+      case IrOpcode::CmpGeF64: {
         CondCode cond = CondCode::Eq;
         emitCompareFlags(instruction, cond);
         const uint32_t d = instruction.defs[0];
@@ -666,6 +825,95 @@ inline bool Arm64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
         // CSET target, cond (CSINC target, xzr, xzr, !cond).
         emit(0x9A9F07E0u | (static_cast<uint32_t>(invertCond(cond)) << 12) | target);
         storeValue(d, target);
+        break;
+      }
+      case IrOpcode::AddF32:
+      case IrOpcode::SubF32:
+      case IrOpcode::MulF32:
+      case IrOpcode::DivF32:
+      case IrOpcode::AddF64:
+      case IrOpcode::SubF64:
+      case IrOpcode::MulF64:
+      case IrOpcode::DivF64: {
+        // Three-address on d (or s) registers; d0 and d1 hold operands that live elsewhere.
+        uint32_t base = 0x1E201800u; // FDIV
+        if (ir.op == IrOpcode::AddF32 || ir.op == IrOpcode::AddF64) {
+          base = 0x1E202800u;
+        } else if (ir.op == IrOpcode::SubF32 || ir.op == IrOpcode::SubF64) {
+          base = 0x1E203800u;
+        } else if (ir.op == IrOpcode::MulF32 || ir.op == IrOpcode::MulF64) {
+          base = 0x1E200800u;
+        }
+        const bool isF64 = ir.op == IrOpcode::AddF64 || ir.op == IrOpcode::SubF64 ||
+                           ir.op == IrOpcode::MulF64 || ir.op == IrOpcode::DivF64;
+        const uint32_t d = instruction.defs[0];
+        const uint8_t left = floatReg(instruction.uses[0], D0);
+        const uint8_t right = floatReg(instruction.uses[1], D1);
+        const uint8_t target = floatTarget(d);
+        emit(base | (isF64 ? DoubleType : 0u) | (static_cast<uint32_t>(right) << 16) |
+             (static_cast<uint32_t>(left) << 5) | target);
+        storeFloat(d, target);
+        break;
+      }
+      case IrOpcode::NegF32:
+      case IrOpcode::NegF64: {
+        const uint32_t d = instruction.defs[0];
+        const uint8_t source = floatReg(instruction.uses[0], D0);
+        const uint8_t target = floatTarget(d);
+        emit(0x1E214000u | (ir.op == IrOpcode::NegF64 ? DoubleType : 0u) |
+             (static_cast<uint32_t>(source) << 5) | target); // FNEG
+        storeFloat(d, target);
+        break;
+      }
+      case IrOpcode::ConvertI32ToF32:
+      case IrOpcode::ConvertI64ToF32:
+      case IrOpcode::ConvertU64ToF32:
+      case IrOpcode::ConvertI32ToF64:
+      case IrOpcode::ConvertI64ToF64:
+      case IrOpcode::ConvertU64ToF64: {
+        // SCVTF/UCVTF from the whole 64-bit register, as the templates convert (an i32 is
+        // sign-extended there).
+        const bool isUnsigned =
+            ir.op == IrOpcode::ConvertU64ToF32 || ir.op == IrOpcode::ConvertU64ToF64;
+        const bool toF64 = ir.op == IrOpcode::ConvertI32ToF64 ||
+                           ir.op == IrOpcode::ConvertI64ToF64 || ir.op == IrOpcode::ConvertU64ToF64;
+        const uint32_t d = instruction.defs[0];
+        const uint8_t source = valueReg(instruction.uses[0], X0);
+        const uint8_t target = floatTarget(d);
+        emit((isUnsigned ? 0x9E230000u : 0x9E220000u) | (toF64 ? DoubleType : 0u) |
+             (static_cast<uint32_t>(source) << 5) | target);
+        storeFloat(d, target);
+        break;
+      }
+      case IrOpcode::ConvertF32ToI32:
+      case IrOpcode::ConvertF32ToI64:
+      case IrOpcode::ConvertF32ToU64:
+      case IrOpcode::ConvertF64ToI32:
+      case IrOpcode::ConvertF64ToI64:
+      case IrOpcode::ConvertF64ToU64: {
+        // FCVTZS/FCVTZU to a 64-bit register, as the templates convert. They widen an f32 to f64
+        // first; that widening is exact, so converting the f32 directly gives the same result.
+        const bool isUnsigned =
+            ir.op == IrOpcode::ConvertF32ToU64 || ir.op == IrOpcode::ConvertF64ToU64;
+        const bool fromF64 = ir.op == IrOpcode::ConvertF64ToI32 ||
+                             ir.op == IrOpcode::ConvertF64ToI64 ||
+                             ir.op == IrOpcode::ConvertF64ToU64;
+        const uint32_t d = instruction.defs[0];
+        const uint8_t source = floatReg(instruction.uses[0], D0);
+        const uint8_t target = targetReg(d);
+        emit((isUnsigned ? 0x9E390000u : 0x9E380000u) | (fromF64 ? DoubleType : 0u) |
+             (static_cast<uint32_t>(source) << 5) | target);
+        storeValue(d, target);
+        break;
+      }
+      case IrOpcode::ConvertF32ToF64:
+      case IrOpcode::ConvertF64ToF32: {
+        const uint32_t d = instruction.defs[0];
+        const uint8_t source = floatReg(instruction.uses[0], D0);
+        const uint8_t target = floatTarget(d);
+        emit((ir.op == IrOpcode::ConvertF32ToF64 ? 0x1E22C000u : 0x1E624000u) |
+             (static_cast<uint32_t>(source) << 5) | target); // FCVT
+        storeFloat(d, target);
         break;
       }
       case IrOpcode::AddressOfLocal: {
@@ -720,6 +968,10 @@ inline bool Arm64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
       case IrOpcode::LoadLocal: {
         // A local some memory access can reach stays in its frame slot.
         const uint32_t d = instruction.defs[0];
+        if (location(d).kind == RegAllocLocationKind::Xmm) {
+          floatLoad(location(d).reg, static_cast<uint32_t>(ir.imm));
+          break;
+        }
         const uint8_t target = targetReg(d);
         frameLoad(target, static_cast<uint32_t>(ir.imm));
         storeValue(d, target);
@@ -727,6 +979,10 @@ inline bool Arm64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
       }
       case IrOpcode::StoreLocal: {
         const RegAllocLocation &value = location(instruction.uses[0]);
+        if (value.kind == RegAllocLocationKind::Xmm) {
+          floatStore(value.reg, static_cast<uint32_t>(ir.imm));
+          break;
+        }
         const uint8_t source = value.kind == RegAllocLocationKind::Imm && value.imm == 0
                                    ? Zr
                                    : valueReg(instruction.uses[0], X0);
@@ -811,12 +1067,12 @@ inline bool Arm64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
       case IrOpcode::Call:
       case IrOpcode::CallVoid: {
         // Every register still needed afterwards is saved around the call: any callee may change
-        // x0-x25. Arguments past the register ones go on the value stack first (through x0),
+        // x0-x25 and every d register but d8-d15, and an allocated callee those too. Arguments past the register ones go on the value stack first (through x0),
         // then the first eight move into x0-x7 as parallel copies (x16 breaks cycles).
-        const std::vector<uint8_t> saved =
-            regAllocRegistersLiveAcross(plan, blockIndex, instruction.irIndex);
+        const std::vector<uint8_t> saved = regAllocRegistersLiveAcross(
+            plan, blockIndex, instruction.irIndex, Arm64RegAllocFloatBase);
         for (const uint8_t reg : saved) {
-          frameStore(reg, saveBaseLocal + reg);
+          saveRegister(reg);
         }
         const size_t inRegisters =
             hooks.calleeTakesRegisterArguments && hooks.calleeTakesRegisterArguments(ir.imm)
@@ -845,7 +1101,7 @@ inline bool Arm64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
           storeValue(instruction.defs[0], X0);
         }
         for (const uint8_t reg : saved) {
-          frameLoad(reg, saveBaseLocal + reg);
+          restoreRegister(reg);
         }
         break;
       }
@@ -854,8 +1110,11 @@ inline bool Arm64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
         emitTrap(static_cast<int32_t>(ir.imm));
         break;
       case IrOpcode::ReturnI32:
-      case IrOpcode::ReturnI64: {
-        // The result in x0 as the templates return it (an i32 already sign-extended).
+      case IrOpcode::ReturnI64:
+      case IrOpcode::ReturnF32:
+      case IrOpcode::ReturnF64: {
+        // The result in x0 as the templates return it (an i32 already sign-extended, a float as
+        // its bit pattern).
         endsWithBranch = true;
         movReg(X0, valueReg(instruction.uses[0], X0));
         emitReturnSequence();

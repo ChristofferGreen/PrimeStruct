@@ -386,8 +386,8 @@ TEST_CASE("opt-report lists the native functions that were register-allocated") 
     CHECK_FALSE(contains(result.err, ": template"));
   }
 #if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
-  // arm64 allocates functions that call, names what keeps a function on templates,
-  // and PRIMESTRUCT_NATIVE_REGALLOC=0 turns the allocator off.
+  // arm64 allocates functions that call and functions with floats, and
+  // PRIMESTRUCT_NATIVE_REGALLOC=0 turns the allocator off.
   result = run("./primec --emit=native '" + (benchmarks / "call_fib.prime").string() + "' -o " +
                exePath + " --opt-report");
   CHECK(result.exitCode == 0);
@@ -396,7 +396,8 @@ TEST_CASE("opt-report lists the native functions that were register-allocated") 
   result = run("./primec --emit=native '" + (benchmarks / "float_series.prime").string() + "' -o " +
                exePath + " --opt-report");
   CHECK(result.exitCode == 0);
-  CHECK(contains(result.err, "function /main: template (float values (TODO-5773))\n"));
+  CHECK(contains(result.err, "function /main: registers "));
+  CHECK_FALSE(contains(result.err, ": template"));
   result = run("PRIMESTRUCT_NATIVE_REGALLOC=0 ./primec --emit=native " + source + " -o " + exePath +
                " --opt-report");
   CHECK(result.exitCode == 0);
