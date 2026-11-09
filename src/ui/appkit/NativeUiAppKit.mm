@@ -225,6 +225,8 @@ struct State {
   bool firstFrameDelivered = false;
   CFRunLoopObserverRef firstFrameObserver = nullptr;
   CFRunLoopTimerRef firstFrameTimer = nullptr;
+  bool firstFrameDone = false;                    // the first shown window has been drawn
+  std::vector<std::string> recentAfterFirstFrame; // recent-document entries kept for after it
   size_t windowsAtFirstFrame = 0; // how many windows existed when it was delivered (the tabs report shows it)
 };
 
@@ -2101,6 +2103,23 @@ void writeTabsReport() {
   NSWindow *window = liveWindow(s.snapshotWindow);
   NSMutableString *body = [NSMutableString stringWithFormat:@"first_frame=%d\nwindows_at_first_frame=%zu\n",
                                                             s.firstFrameDelivered ? 1 : 0, s.windowsAtFirstFrame];
+  // The launch work turned off (TODO-5756): window restoration, and on the first text view completion, inline
+  // predictions and Writing Tools.
+  const auto content = s.windowContent.find(s.snapshotWindow);
+  NSTextView *firstText = content != s.windowContent.end() ? textView(content->second) : nil;
+  if (firstText != nil) {
+    int predictions = 0;
+    int writingTools = 0;
+    if (@available(macOS 14.0, *)) {
+      predictions = firstText.inlinePredictionType == NSTextInputTraitTypeNo ? 0 : 1;
+    }
+    if (@available(macOS 15.0, *)) {
+      writingTools = firstText.writingToolsBehavior == NSWritingToolsBehaviorNone ? 0 : 1;
+    }
+    [body appendFormat:@"restoration=%d completion=%d predictions=%d writing_tools=%d\n",
+                       [NSUserDefaults.standardUserDefaults boolForKey:@"ApplePersistenceIgnoreState"] ? 0 : 1,
+                       firstText.automaticTextCompletionEnabled ? 1 : 0, predictions, writingTools];
+  }
   NSArray<NSWindow *> *tabs = window == nil ? @[] : window.tabbedWindows.count > 0 ? window.tabbedWindows : @[ window ];
   NSWindow *selected = window.tabGroup != nil ? window.tabGroup.selectedWindow : window;
   for (NSWindow *tab in tabs) {
@@ -2470,6 +2489,19 @@ bool ps_ui_init(const char *appName) {
     if (!s.snapshotPath.empty()) {
       s.prefOverridesActive = true;
     }
+    // Launch work an editor has no use for (TODO-5756): no window restoration (the program brings its session back
+    // itself; AppKit would look its saved state up), no AutoFill heuristics on the text views (they start the AutoFill
+    // helper process), and no Writing Tools items added to the menus. Registered defaults, so a person's own setting
+    // still wins.
+    [NSUserDefaults.standardUserDefaults registerDefaults:@{
+      @"ApplePersistenceIgnoreState" : @YES,
+      @"ApplePersistenceIgnoreStateQuietly" : @YES,
+      @"NSQuitAlwaysKeepsWindows" : @NO,
+      @"NSAutoFillHeuristicsEnabled" : @NO,
+      @"NSEnableTextInputContextBasedAutoFill" : @NO,
+      @"NSAutoFillSystemInsertMenuEnabled" : @NO,
+      @"NSMenuDoesNotAutomaticallyInsertWritingToolsItems" : @YES,
+    }];
     [NSApplication sharedApplication];
     // Snapshot runs stay out of the user's way: no Dock icon and no activation, so the app the user works in keeps
     // the keyboard. Accessory is not enough (the app still became active once its window was shown); Prohibited
@@ -2769,22 +2801,21 @@ bool ps_ui_supports(int32_t feature) {
 // and Core Animation has committed them. Both happen as the run loop goes to sleep or leaves (the first display is
 // often on the way out of the first pump, with no sleep in it), so it observes both moments with the highest order.
 // The first such moment after the first window was shown, with that window's views no longer waiting to be drawn, is
-// the first frame: the event is queued behind what came before it (a file the system asked the app to open at
-// launch), and the observer goes away. A window that is not drawn soon (a launch into the background) gets the event
-// from a timer after FirstFrameLimit instead, so a program never waits on it for long.
+// the first frame: the work kept for after it runs (the system's recent-document entry), the program's event is queued
+// behind what came before it (a file the system asked the app to open at launch), and the observer goes away. A window
+// that is not drawn soon (a launch into the background) reaches it from a timer after FirstFrameLimit instead, so
+// nothing waits on it for long. Nothing is installed until a program asks for the event or work is kept for it.
 namespace {
 void wakeEventLoop();
 constexpr CFTimeInterval FirstFrameLimit = 0.5;
 
-void deliverFirstFrame(bool drawnOnly) {
+void reachFirstFrame(bool drawnOnly) {
   State &s = state();
   NSWindow *window = s.firstShown != 0 ? liveWindow(s.firstShown) : nil;
-  if (!s.firstFrameWatched || s.firstFrameDelivered || window == nil || (drawnOnly && window.viewsNeedDisplay)) {
+  if (s.firstFrameDone || window == nil || (drawnOnly && window.viewsNeedDisplay)) {
     return;
   }
-  s.firstFrameDelivered = true;
-  s.windowsAtFirstFrame = s.windows.size();
-  enqueue(PS_UI_EVENT_FIRST_FRAME, s.firstShown);
+  s.firstFrameDone = true;
   if (s.firstFrameObserver != nullptr) {
     CFRunLoopObserverInvalidate(s.firstFrameObserver);
     CFRelease(s.firstFrameObserver);
@@ -2795,7 +2826,31 @@ void deliverFirstFrame(bool drawnOnly) {
     CFRelease(s.firstFrameTimer);
     s.firstFrameTimer = nullptr;
   }
-  wakeEventLoop();
+  // The system's recent-document entry (a Spotlight donation and the document controller) waits for the first frame.
+  for (const std::string &path : s.recentAfterFirstFrame) {
+    [NSDocumentController.sharedDocumentController noteNewRecentDocumentURL:[NSURL fileURLWithPath:toNSString(path.c_str())]];
+  }
+  s.recentAfterFirstFrame.clear();
+  if (s.firstFrameWatched && !s.firstFrameDelivered) {
+    s.firstFrameDelivered = true;
+    s.windowsAtFirstFrame = s.windows.size();
+    enqueue(PS_UI_EVENT_FIRST_FRAME, s.firstShown);
+    wakeEventLoop();
+  }
+}
+
+void watchForFirstFrame() {
+  State &s = state();
+  if (s.firstFrameDone || s.firstFrameObserver != nullptr) {
+    return;
+  }
+  s.firstFrameObserver = CFRunLoopObserverCreateWithHandler(
+      kCFAllocatorDefault, kCFRunLoopBeforeWaiting | kCFRunLoopExit, true, std::numeric_limits<CFIndex>::max(),
+      ^(CFRunLoopObserverRef, CFRunLoopActivity) { reachFirstFrame(true); });
+  CFRunLoopAddObserver(CFRunLoopGetMain(), s.firstFrameObserver, kCFRunLoopCommonModes);
+  s.firstFrameTimer = CFRunLoopTimerCreateWithHandler(kCFAllocatorDefault, CFAbsoluteTimeGetCurrent() + FirstFrameLimit,
+                                                      0, 0, 0, ^(CFRunLoopTimerRef) { reachFirstFrame(false); });
+  CFRunLoopAddTimer(CFRunLoopGetMain(), s.firstFrameTimer, kCFRunLoopCommonModes);
 }
 } // namespace
 
@@ -2805,16 +2860,14 @@ bool ps_ui_watch_first_frame(void) {
     return false;
   }
   s.firstFrameWatched = true;
-  if (s.firstFrameObserver == nullptr) {
-    s.firstFrameObserver = CFRunLoopObserverCreateWithHandler(
-        kCFAllocatorDefault, kCFRunLoopBeforeWaiting | kCFRunLoopExit, true, std::numeric_limits<CFIndex>::max(),
-        ^(CFRunLoopObserverRef, CFRunLoopActivity) { deliverFirstFrame(true); });
-    CFRunLoopAddObserver(CFRunLoopGetMain(), s.firstFrameObserver, kCFRunLoopCommonModes);
-    s.firstFrameTimer = CFRunLoopTimerCreateWithHandler(kCFAllocatorDefault,
-                                                        CFAbsoluteTimeGetCurrent() + FirstFrameLimit, 0, 0, 0,
-                                                        ^(CFRunLoopTimerRef) { deliverFirstFrame(false); });
-    CFRunLoopAddTimer(CFRunLoopGetMain(), s.firstFrameTimer, kCFRunLoopCommonModes);
+  if (s.firstFrameDone) {
+    // Drawn already: the event comes at the next wait.
+    s.firstFrameDelivered = true;
+    s.windowsAtFirstFrame = s.windows.size();
+    enqueue(PS_UI_EVENT_FIRST_FRAME, s.firstShown);
+    return true;
   }
+  watchForFirstFrame();
   return true;
 }
 
@@ -3192,6 +3245,15 @@ uint64_t ps_ui_text_view_create(void) {
     view.automaticDashSubstitutionEnabled = NO;
     view.automaticTextReplacementEnabled = NO;
     view.automaticSpellingCorrectionEnabled = NO;
+    // Nothing that starts a helper process or a model as the view appears: no completion while typing, no inline
+    // predictions, no Writing Tools (TODO-5756). Spelling stays as the system has it.
+    view.automaticTextCompletionEnabled = NO;
+    if (@available(macOS 14.0, *)) {
+      view.inlinePredictionType = NSTextInputTraitTypeNo;
+    }
+    if (@available(macOS 15.0, *)) {
+      view.writingToolsBehavior = NSWritingToolsBehaviorNone;
+    }
     view.textContainerInset = NSMakeSize(8, 8);
     view.delegate = controller();
     // Undo and redo change the text without the view telling its delegate: the program hears of them here.
@@ -4823,7 +4885,14 @@ bool ps_ui_recent_add(const char *path) {
     paths.resize(10);
   }
   storeRecentFilePaths(paths);
-  [NSDocumentController.sharedDocumentController noteNewRecentDocumentURL:[NSURL fileURLWithPath:toNSString(path)]];
+  if (s.firstFrameDone) {
+    [NSDocumentController.sharedDocumentController noteNewRecentDocumentURL:[NSURL fileURLWithPath:toNSString(path)]];
+  } else {
+    // A document opened at launch: the system's entry (the document controller and a Spotlight donation) comes after
+    // the first frame.
+    s.recentAfterFirstFrame.emplace_back(path);
+    watchForFirstFrame();
+  }
   return true;
 }
 

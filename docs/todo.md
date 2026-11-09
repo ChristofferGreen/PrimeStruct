@@ -139,7 +139,6 @@ of sync with them.
 | TODO-5806 | Sessions: a cookie and per-session state | deferred | web-sessions |
 | TODO-5821 | The first toolbar of a launch does not hold up the first frame | deferred | startup-toolbar |
 | TODO-5603 | Launch-time guard and the real-launch baseline | ready | startup |
-| TODO-5756 | AppKit's launch work in a real launch fits the budget | ready | startup-appkit |
 | TODO-5757 | Build and test gates leave interactive launches their speed | deferred | startup-machine |
 | TODO-5586 | Native String heap: pooled blocks, statistics and limit | deferred | native-backend-strings |
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
@@ -192,7 +191,6 @@ of sync with them.
 ### Ready Now
 
 - TODO-5603 (startup): launch-time guard and the real-launch baseline
-- TODO-5756 (startup-appkit): AppKit's launch work in a real launch fits the budget
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5510 (control-returns): `return` returns from unit-variant pick arms correctly
 - TODO-5524 (result-error-structs): int-backed error structs round-trip through stdlib Result sums
@@ -200,16 +198,15 @@ of sync with them.
 ### Immediate Next 10
 
 1. TODO-5603
-2. TODO-5756
-3. TODO-5535
-4. TODO-5510
-5. TODO-5524
-6. TODO-5728
-7. TODO-5770
+2. TODO-5535
+3. TODO-5510
+4. TODO-5524
+5. TODO-5728
+6. TODO-5770
 
 ### Priority Lanes
 
-- Startup, first (docs/NativeUiPlan.md section 1, "Where a launch goes"): TODO-5603, TODO-5756, TODO-5535, TODO-5757, TODO-5821
+- Startup, first (docs/NativeUiPlan.md section 1, "Where a launch goes"): TODO-5603, TODO-5535, TODO-5757, TODO-5821
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - Native UI (docs/NativeUiPlan.md): TODO-5808, TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
@@ -1079,23 +1076,11 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
   - created_at: 2026-10-26
   - phase: Native PrimeScroll startup (docs/NativeUiPlan.md section 1)
   - parallel_track: startup
-  - scope: The audit is done (docs/NativeUiPlan.md section 1, "Where a launch goes"; raw data in docs/todo_log.md) and `scripts/measure_startup.sh` with its probe exists. Left: (1) a guard: a ctest entry that builds hello_window and PrimeScroll natively and runs `scripts/measure_startup.sh --runs 3 --max-libraries <limit>` on each (limits: the 2026-11-09 counts, 1266 and 1269 images, plus 5), so a framework link or eager system lookup that adds images fails; (2) retire `scripts/measure_app_startup.sh` (its mean includes the snapshot's 600 ms idle wait) in favor of `measure_startup.sh`, updating its callers and the plan; (3) record a real Launch Services baseline from a person's run of `scripts/measure_startup.sh --open --runs 10 ~/Applications/PrimeScroll.app` (and `--file <small.txt>`) in the plan, and the first `--open` launch right after an install (`scripts/measure_startup.sh --open --runs 1 ~/Applications/PrimeScroll.app` twice, the install having run `scripts/warm_macos_app.sh` on the installed copy; TODO-5755 expects the first within 50 ms of the second).
+  - scope: The audit is done (docs/NativeUiPlan.md section 1, "Where a launch goes"; raw data in docs/todo_log.md) and `scripts/measure_startup.sh` with its probe exists. Left: (1) a guard: a ctest entry that builds hello_window and PrimeScroll natively and runs `scripts/measure_startup.sh --runs 3 --max-libraries <limit>` on each (limits: the 2026-11-09 counts, 1266 and 1269 images, plus 5), so a framework link or eager system lookup that adds images fails; (2) retire `scripts/measure_app_startup.sh` (its mean includes the snapshot's 600 ms idle wait) in favor of `measure_startup.sh`, updating its callers and the plan; (3) record a real Launch Services baseline from a person's run of `scripts/measure_startup.sh --open --runs 10 ~/Applications/PrimeScroll.app` (and `--file <small.txt>`) in the plan, and the first `--open` launch right after an install (`scripts/measure_startup.sh --open --runs 1 ~/Applications/PrimeScroll.app` twice, the install having run `scripts/warm_macos_app.sh` on the installed copy; TODO-5755 expects the first within 50 ms of the second), and a sampled real launch for TODO-5756 (`scripts/measure_startup.sh --open --sample --runs 3 ~/Applications/PrimeScroll.app`: `app_init` at most 150 ms with load under 4, and no `SafariPlatformSupport.Helper` or Writing Tools activity before the first drawn text in the unified log).
   - acceptance:
     - the guard runs in the release gate on macOS (skipped elsewhere with a message) and fails on one extra framework link (checked once by hand); `measure_app_startup.sh` is gone or delegates; the plan has the `--open` baseline; full release gate green
   - stop_rule: measurement and the guard; launch work itself is TODO-5753, TODO-5754, TODO-5755 and TODO-5756.
   - notes: the guard counts images, not milliseconds: timing medians move by 30 ms or more between runs and with the machine's load.
-
-- [ ] TODO-5756: AppKit's launch work in a real launch fits the budget
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-09
-  - phase: Native PrimeScroll startup (docs/NativeUiPlan.md section 1)
-  - parallel_track: startup-appkit
-  - scope: In the user's launches (unified log) `finishLaunching` takes 275 to 440 ms from Launch Services check-in, against 90 to 110 ms for all of `ps_ui_init` in snapshot mode. Seen in it: AppIntents registration that linkd rejects four times for the ad-hoc bundle, Writing Tools and Generative Models availability, a Spotlight donation for each recent document (`noteNewRecentDocumentURL`), window-restoration lookups, and the AutoFill helper process (`SafariPlatformSupport.Helper`) about 0.5 s in. First get a sampled real launch (a person runs `scripts/measure_startup.sh --open --sample --runs 3 <bundle>`; the probe quits the app after its first drawn text), then turn off what PrimeScroll does not use (for example text completion and AutoFill on the text view, Writing Tools, state restoration) and move `noteNewRecentDocumentURL` behind the first frame.
-  - acceptance:
-    - a real launch's `app_init` is at most 150 ms on a quiet machine (load under 4), and no helper process starts before the first drawn text (unified log)
-    - the editor keeps undo, find, spelling as configured, and its menus; full release gate green
-  - stop_rule: AppKit configuration at launch; nothing that removes an editor feature the user has.
 
 - [ ] TODO-5757: Build and test gates leave interactive launches their speed
   - owner: human

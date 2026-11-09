@@ -114,6 +114,15 @@ The causes of the slow launches, by what they cost when they happen:
    snapshot mode: AppIntents registration that linkd rejects four times for an ad-hoc bundle, Writing Tools and
    Generative Models availability, a Spotlight donation for the recent document, and the AutoFill helper process
    (`SafariPlatformSupport.Helper`) that starts about 0.5 s in. TODO-5756.
+   Since TODO-5756 `ps_ui_init` registers defaults that turn off window restoration (`ApplePersistenceIgnoreState`,
+   `NSQuitAlwaysKeepsWindows`), the AutoFill heuristics and AutoFill menu items (`NSAutoFillHeuristicsEnabled`,
+   `NSEnableTextInputContextBasedAutoFill`, `NSAutoFillSystemInsertMenuEnabled`) and the Writing Tools items AppKit
+   adds to menus (`NSMenuDoesNotAutomaticallyInsertWritingToolsItems`); being registered defaults, a person's own
+   setting still wins. Text views have no completion while typing, no inline predictions and no Writing Tools; spelling,
+   undo, find and the program's menus are unchanged. The system's recent-document entry (`noteNewRecentDocumentURL`,
+   the document controller and a Spotlight donation) of a document opened at launch waits for the first frame. In
+   snapshot mode (no recent documents, no restoration) launches are unchanged within noise (first text 220 against
+   210 ms, 3 interleaved rounds of 9); the effect is on a real launch, which a person measures (TODO-5603).
 5. **Process start.** Launch Services to exec is about 20 ms, then amfid checks the ad-hoc executable and dylib on every
    launch, and dyld takes 20 to 35 ms; the executable's size (0.8 MB now, 3.6 MB installed) makes no measurable
    difference warm. Not PrimeScroll-specific.
