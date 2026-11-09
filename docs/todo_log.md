@@ -34,6 +34,10 @@ open-work-only scope rule as `docs/todo.md` itself.
 - 2026-11-09, after TODO-5750 (pooled arm64 heap): native 1.97-1.98 MB
   against 1.64-1.67 MB for the loop version (untagged 0.41 MB against
   0.28 MB; stack unchanged at 459 KB against 229 KB). optexe unchanged.
+- 2026-11-09, after TODO-5751 (VmHeapCore reserved, zeroed storage and
+  in-place growth): optexe median 1.75 MB against 1.57 MB (15 runs
+  each; 1.88 MB before). The heap's touched slot storage is 64 KB; the
+  rest of the gap is main's larger frame and allocator noise.
 
 ## TODO-4737
 

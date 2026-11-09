@@ -12,12 +12,41 @@ public:
   static constexpr uint64_t MaxSlots = (OffsetMask + 1) / SlotBytes;
   static constexpr uint16_t LiveBit = 0x8000;
 
+  // The storage of the slots and their states: memory from calloc, which is zero already, so growing the vectors
+  // writes nothing (a value-initialized element is left as it is). A large block comes as zero pages from the system,
+  // which cost nothing until they are written: the parts of an allocation a program never stores to stay free.
+  template <typename T>
+  struct ZeroedAllocator {
+    using value_type = T;
+    ZeroedAllocator() = default;
+    template <typename U>
+    ZeroedAllocator(const ZeroedAllocator<U> &) {}
+    T *allocate(std::size_t count) {
+      void *memory = std::calloc(count, sizeof(T));
+      if (memory == nullptr) {
+        throw std::bad_alloc();
+      }
+      return static_cast<T *>(memory);
+    }
+    void deallocate(T *memory, std::size_t) { std::free(memory); }
+    template <typename U>
+    void construct(U *) {}
+    template <typename U, typename... Args>
+    void construct(U *place, Args &&...args) {
+      ::new (static_cast<void *>(place)) U(std::forward<Args>(args)...);
+    }
+    template <typename U>
+    bool operator==(const ZeroedAllocator<U> &) const { return true; }
+    template <typename U>
+    bool operator!=(const ZeroedAllocator<U> &) const { return false; }
+  };
+
   // One value per slot, and per slot `LiveBit | generation` while an allocation holds it, or the
   // generation it was last allocated with once freed (zero if never allocated). A live address
   // is Tag | generation << 48 | slot * 16, so `states[slot] == address >> 48` exactly when the
   // address names a live slot with the generation it was allocated with.
-  std::vector<uint64_t> slots;
-  std::vector<uint16_t> states;
+  std::vector<uint64_t, ZeroedAllocator<uint64_t>> slots;
+  std::vector<uint16_t, ZeroedAllocator<uint16_t>> states;
 
   // The slot a tagged, 16-byte aligned address names, or null when it is outside the heap,
   // free, or from an earlier allocation of the slot.
@@ -63,8 +92,7 @@ public:
         takeFree(base, tailFree);
         reused = true;
       }
-      slots.resize(static_cast<size_t>(base + count), 0);
-      states.resize(static_cast<size_t>(base + count), 0);
+      growStorage(base + count);
     }
     if (reused) {
       // A generation no earlier allocation of these slots had (until it wraps).
@@ -252,6 +280,9 @@ public:
     }
     const uint64_t oldBase = found->first;
     const uint64_t oldCount = found->second.first;
+    if (count > oldCount && growInPlace(found, count, newAddress)) {
+      return true;
+    }
     if (!allocate(count, newAddress, error)) {
       return false;
     }
@@ -277,6 +308,58 @@ private:
   std::map<uint64_t, uint64_t> freeByBase_;
   std::set<std::pair<uint64_t, uint64_t>> freeBySize_;
 
+  // The slot storage holds at least `size` slots (new ones zero). It is reserved ahead in large steps (ReservedSlots,
+  // then doubling), so a growing heap is rarely copied and leaves no buffers of earlier sizes behind in the allocator;
+  // a reservation costs memory only where slots are written.
+  static constexpr uint64_t ReservedSlots = uint64_t{1} << 20;
+  void growStorage(uint64_t size) {
+    if (size > slots.capacity()) {
+      const uint64_t reserved =
+          std::max(std::max(size, static_cast<uint64_t>(slots.capacity()) * 2), ReservedSlots);
+      slots.reserve(static_cast<size_t>(reserved));
+      states.reserve(static_cast<size_t>(reserved));
+    }
+    slots.resize(static_cast<size_t>(size));
+    states.resize(static_cast<size_t>(size));
+  }
+
+  // Grows a live allocation to `count` slots where it is when the slots after it are free (a free run long enough,
+  // or one that reaches the end of the heap, which then grows): its values stay, the new slots are zero, and all of
+  // them take a generation none of them had, so the old address faults as after a moving realloc.
+  bool growInPlace(LiveMap::iterator allocation, uint64_t count, uint64_t & address) {
+    const uint64_t base = allocation->first;
+    const uint64_t end = base + allocation->second.first;
+    const uint64_t extra = count - allocation->second.first;
+    uint64_t runLength = 0;
+    const auto run = freeByBase_.find(end);
+    if (run != freeByBase_.end()) {
+      runLength = run->second;
+    }
+    if (runLength < extra && end + runLength != slots.size()) {
+      return false;
+    }
+    if (count > MaxSlots || base > MaxSlots - count) {
+      return false;
+    }
+    if (runLength != 0) {
+      takeFree(end, std::min(runLength, extra));
+    }
+    if (base + count > slots.size()) {
+      growStorage(base + count);
+    }
+    uint64_t generation = 0;
+    for (uint64_t i = base; i < base + count; ++i) {
+      generation = std::max<uint64_t>(generation, states[static_cast<size_t>(i)] & GenerationMask);
+    }
+    generation = (generation + 1) & GenerationMask;
+    for (uint64_t i = base; i < base + count; ++i) {
+      states[static_cast<size_t>(i)] = static_cast<uint16_t>(LiveBit | generation);
+    }
+    allocation->second = std::make_pair(count, generation);
+    address = Tag | (generation << GenerationShift) | (base * SlotBytes);
+    return true;
+  }
+
   LiveMap::iterator liveAllocationAt(uint64_t address) {
     if ((address & Tag) == 0 || address % SlotBytes != 0) {
       return live_.end();
@@ -294,7 +377,9 @@ private:
     uint64_t count = allocation->second.first;
     const uint16_t generation = static_cast<uint16_t>(allocation->second.second);
     for (uint64_t i = base; i < base + count; ++i) {
-      slots[static_cast<size_t>(i)] = 0;
+      if (slots[static_cast<size_t>(i)] != 0) {
+        slots[static_cast<size_t>(i)] = 0; // a slot never written stays an untouched page
+      }
       states[static_cast<size_t>(i)] = generation;
     }
     live_.erase(allocation);

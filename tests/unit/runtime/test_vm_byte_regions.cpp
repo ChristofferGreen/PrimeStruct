@@ -334,6 +334,69 @@ TEST_CASE("heap core rejects freeing an address it does not hold") {
   CHECK_FALSE(heap.reallocate(region, 8, out, error));
 }
 
+TEST_CASE("heap core grows a slot allocation in place when the slots after it are free") {
+  VmHeapCore heap;
+  std::string error;
+  uint64_t a = 0, b = 0, grown = 0;
+  REQUIRE(heap.allocate(2, a, error));
+  REQUIRE(heap.allocate(3, b, error));
+  *heap.slotAt(a) = 11;
+  *heap.slotAt(a + VmHeapCore::SlotBytes) = 12;
+  REQUIRE(heap.release(b, error));
+  // The free run after `a` holds the two new slots: same first slot, next generation, values kept.
+  REQUIRE(heap.reallocate(a, 4, grown, error));
+  CHECK((grown & VmHeapCore::OffsetMask) == (a & VmHeapCore::OffsetMask));
+  CHECK(grown != a);
+  CHECK(heap.slotAt(a) == nullptr);
+  CHECK(*heap.slotAt(grown) == 11);
+  CHECK(*heap.slotAt(grown + VmHeapCore::SlotBytes) == 12);
+  CHECK(*heap.slotAt(grown + 3 * VmHeapCore::SlotBytes) == 0);
+  CHECK(heap.slots.size() == 5); // one slot of the free run is left
+  // At the end of the heap the storage grows under it.
+  uint64_t tail = 0, tailGrown = 0;
+  REQUIRE(heap.allocate(1, tail, error));
+  CHECK((tail & VmHeapCore::OffsetMask) == 4 * VmHeapCore::SlotBytes);
+  REQUIRE(heap.reallocate(tail, 100, tailGrown, error));
+  CHECK((tailGrown & VmHeapCore::OffsetMask) == 4 * VmHeapCore::SlotBytes);
+  CHECK(heap.slots.size() == 104);
+  CHECK_FALSE(heap.release(tail, error)); // the address from before the realloc
+  REQUIRE(heap.release(tailGrown, error));
+}
+
+TEST_CASE("heap core moves a growing allocation whose next slots are live") {
+  VmHeapCore heap;
+  std::string error;
+  uint64_t a = 0, b = 0, grown = 0;
+  REQUIRE(heap.allocate(2, a, error));
+  REQUIRE(heap.allocate(2, b, error));
+  *heap.slotAt(a) = 7;
+  REQUIRE(heap.reallocate(a, 3, grown, error));
+  CHECK((grown & VmHeapCore::OffsetMask) == 4 * VmHeapCore::SlotBytes);
+  CHECK(*heap.slotAt(grown) == 7);
+  CHECK(heap.slotAt(a) == nullptr);
+  CHECK(*heap.slotAt(b) == 0);
+  uint64_t again = 0;
+  CHECK_FALSE(heap.reallocate(a, 8, again, error));
+  CHECK(error.find("invalid heap realloc address in IR") != std::string::npos);
+}
+
+TEST_CASE("heap core reserves its slot storage ahead instead of copying it as it grows") {
+  VmHeapCore heap;
+  std::string error;
+  uint64_t first = 0;
+  REQUIRE(heap.allocate(1, first, error));
+  const uint64_t *storage = heap.slots.data();
+  CHECK(heap.slots.capacity() >= (size_t{1} << 20));
+  CHECK(heap.states.capacity() >= (size_t{1} << 20));
+  for (int i = 0; i < 1000; ++i) {
+    uint64_t address = 0;
+    REQUIRE(heap.allocate(64, address, error));
+    CHECK(*heap.slotAt(address + 63 * VmHeapCore::SlotBytes) == 0);
+  }
+  CHECK(heap.slots.data() == storage);
+  CHECK(heap.slots.size() == 64001);
+}
+
 TEST_CASE("heap core refuses a byte allocation that cannot be addressed") {
   VmHeapCore heap;
   std::string error;

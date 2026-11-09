@@ -2,8 +2,10 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <cstdlib>
 #include <iterator>
 #include <map>
+#include <new>
 #include <set>
 #include <string>
 #include <utility>

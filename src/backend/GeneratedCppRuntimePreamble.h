@@ -24,11 +24,13 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <cstring>
 #include <deque>
 #include <fcntl.h>
 #include <iostream>
 #include <limits>
+#include <new>
 #include <string>
 #include <unistd.h>
 #include <vector>

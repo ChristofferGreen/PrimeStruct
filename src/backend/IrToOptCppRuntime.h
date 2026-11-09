@@ -21,6 +21,7 @@ inline constexpr const char *OptCppRuntimeHeaders = R"CPP(#include <algorithm>
 #include <string_view>
 #include <iterator>
 #include <map>
+#include <new>
 #include <set>
 #include <unistd.h>
 #include <utility>

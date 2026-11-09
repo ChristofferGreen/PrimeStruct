@@ -51,7 +51,12 @@
   later allocations (best fit among free runs, adjacent runs merged, a free run at the end of the heap extended), and a
   reuse gives the slots the next generation, so an address from before the free still faults (`invalid indirect
   address`, `invalid heap free address`, `invalid heap realloc address`) instead of reaching the new object; the
-  generation wraps after 32,768 reuses of the same slot. Slots never allocated before carry generation 0. The VM, the
+  generation wraps after 32,768 reuses of the same slot. Slots never allocated before carry generation 0. A
+  `HeapRealloc` that grows an allocation whose next slots are free (a free run long enough, or the end of the heap)
+  grows it where it is: the values stay, and all its slots take a new generation, so the old address faults as after a
+  moving realloc. The slot storage is reserved ahead (a million slots, then doubling) from zeroed memory that is
+  written only where a program stores a value or a free clears one, so a growing heap is not copied and the slots of
+  an allocation that are never written cost no memory. The VM, the
   debugger, the native execution tier and the IR-to-C++ and optexe runtimes share one implementation
   (`include/primec/runtime/VmHeapCore.h`), so all of them produce the same addresses. The arm64 native backend uses
   machine addresses instead: a block of up to 8 KiB (header included) comes from 256 KiB chunks that every size class

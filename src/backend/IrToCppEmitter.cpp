@@ -279,11 +279,13 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
   body << "#include <algorithm>\n";
   body << "#include <cstddef>\n";
   body << "#include <cstdint>\n";
+  body << "#include <cstdlib>\n";
   body << "#include <limits>\n";
   body << "#include <string>\n";
   body << "#include <deque>\n";
   body << "#include <iterator>\n";
   body << "#include <map>\n";
+  body << "#include <new>\n";
   body << "#include <set>\n";
   body << "#include <utility>\n";
   body << "#include <vector>\n";
