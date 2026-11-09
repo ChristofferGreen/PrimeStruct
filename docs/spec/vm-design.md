@@ -53,7 +53,12 @@
   address`, `invalid heap free address`, `invalid heap realloc address`) instead of reaching the new object; the
   generation wraps after 32,768 reuses of the same slot. Slots never allocated before carry generation 0. The VM, the
   debugger, the native execution tier and the IR-to-C++ and optexe runtimes share one implementation
-  (`include/primec/runtime/VmHeapCore.h`), so all of them produce the same addresses.
+  (`include/primec/runtime/VmHeapCore.h`), so all of them produce the same addresses. The arm64 native backend uses
+  machine addresses instead: a block of up to 8 KiB (header included) comes from 256 KiB chunks that every size class
+  shares (exact sizes up to 128 bytes, then four classes per doubling), a freed one goes on its class's free list and
+  is handed out again zeroed, and a larger block has a mapping of its own; a double free or a realloc of a freed block
+  prints `invalid heap free address` / `invalid heap realloc address` and exits with code 3
+  (`src/native_emitter/NativeEmitterInternalsArm64Heap.h`). The x86_64 native backend maps every block on its own.
 - **Host text (PSIR v30):** `IrHostValueKind::Text` is owned text at the host boundary. A `[host]` definition may name
   the stdlib `String` as a parameter or result type. A `String` argument passes its data block: the VM gives the host
   a pointer to the NUL-terminated bytes without a copy (a module-table string literal is accepted in the same

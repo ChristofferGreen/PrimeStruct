@@ -110,7 +110,6 @@ of sync with them.
 | TODO-5745 | A labeled value that is a call parses in every position | ready | parser-labeled-values |
 | TODO-5746 | A parameterless `mut` method whose body is only bindings is a method | ready | diagnostics |
 | TODO-5749 | PrimeScroll on handlers uses no more memory than its loop did | blocked | native-ui-memory |
-| TODO-5750 | Native heap blocks share pages | ready | native-heap |
 | TODO-5751 | The VM heap of optexe keeps the handler table without a doubled high-water | ready | vm-heap |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
 | TODO-5656 | Thread-safe `SharedString` (atomic count, per-thread string heaps) | deferred | string-concurrency |
@@ -170,24 +169,22 @@ of sync with them.
 - TODO-5510 (control-returns): `return` returns from unit-variant pick arms correctly
 - TODO-5524 (result-error-structs): int-backed error structs round-trip through stdlib Result sums
 - TODO-5728 (collections-access): `slice` and `sliceMut` on a vector field of a struct resolve
-- TODO-5750 (native-heap): native heap blocks share pages
 - TODO-5751 (vm-heap): the VM heap of optexe keeps the handler table without a doubled high-water
 
 ### Immediate Next 10
 
-1. TODO-5750
-2. TODO-5751
-3. TODO-5603
-4. TODO-5536
-5. TODO-5535
-6. TODO-5510
-7. TODO-5524
-8. TODO-5728
+1. TODO-5751
+2. TODO-5603
+3. TODO-5536
+4. TODO-5535
+5. TODO-5510
+6. TODO-5524
+7. TODO-5728
 
 ### Priority Lanes
 
 - Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5656
-- Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5749 (blocked on TODO-5750, TODO-5751, TODO-5740), TODO-5750, TODO-5751, TODO-5586
+- Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5749 (blocked on TODO-5751, TODO-5740), TODO-5751, TODO-5586
 - - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5535, TODO-5533
 - Startup (docs/NativeUiPlan.md section 16): TODO-5603
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
@@ -329,17 +326,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - full release gate green
   - stop_rule: the field-only rule and its diagnostic.
 
-- [ ] TODO-5750: Native heap blocks share pages
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-09
-  - phase: Native PrimeScroll, direct native backend (found in TODO-5749)
-  - parallel_track: native-heap
-  - scope: The arm64 native `HeapAlloc` (src/native_emitter/NativeEmitterInternalsArm64Core.h, `emitHeapAllocFromSlotCountReg`) maps every block on its own (`mmap` of the slot count plus a header, `munmap` on free), so each struct box, vector buffer and `Function` closure box costs at least one 16 KiB page and a syscall. PrimeScroll on handlers holds about 80 such pages at exit against 17 for the loop version: 1.31 MB against 0.28 MB of untagged dirty memory, the bulk of its 2.90 MB native footprint (1.62 MB for the loop version), measured with a probe dylib (`DYLD_INSERT_LIBRARIES`) that sums `mach_vm_region_recurse` dirty pages by region tag at exit, scenario `close:1`. Pool small slot blocks in chunks per size class, with the allocator state in the writable data segment, as TODO-5586 plans for text blocks (and share the pool if that lands first); `HeapRealloc` and `HeapFree` follow, a double free faults; x86_64 and the JIT keep working.
-  - acceptance:
-    - the native editor's peak footprint for `close:1` drops by at least 0.8 MB with the same call logs; a loop that allocates and frees 100000 small structs stays within a few MB; full release gate green
-  - stop_rule: the native slot-heap allocator (alloc, realloc, free); no change to text blocks unless shared with TODO-5586.
-
 - [ ] TODO-5751: The VM heap of optexe keeps the handler table without a doubled high-water
   - owner: ai
   - status: ready
@@ -354,7 +340,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 - [ ] TODO-5749: PrimeScroll on handlers uses no more memory than its loop did
   - owner: ai
   - status: blocked
-  - blocked_on: TODO-5750, TODO-5751, TODO-5740
+  - blocked_on: TODO-5751, TODO-5740
   - created_at: 2026-11-08
   - phase: Native PrimeScroll, direct native backend (found in TODO-5710)
   - parallel_track: native-ui-memory
@@ -733,7 +719,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
   - acceptance:
     - the string_heap program of tests/unit/backend_host/test_cpp_strings.cpp (reuse and figures) also runs through `--emit=native` with the VM's exit codes; a 100000-String loop uses no more than a few MB; full release gate green
   - stop_rule: the native String heap's allocator and its statistics.
-  - notes: deferred to keep Ready Now at eight. PrimeScroll ships from the native build, so every String it makes takes a mapping of its own; the writable data segment this needs exists (`MachOData::stateBytes`).
+  - notes: deferred to keep Ready Now at eight. PrimeScroll ships from the native build, so every String it makes takes a mapping of its own; the writable data segment this needs exists (`MachOData::stateBytes`), and since TODO-5750 slot blocks are pooled there (src/native_emitter/NativeEmitterInternalsArm64Heap.h: chunks shared by all size classes, free lists in the data segment), which text blocks could share.
 
 - [ ] TODO-5536: Small, lazily loaded bytecode for apps
   - owner: ai

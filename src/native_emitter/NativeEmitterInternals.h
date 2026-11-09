@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "primec/ir/Ir.h"
@@ -60,6 +61,17 @@ constexpr uint64_t HeapHeaderMagic = 0x5053484541503031ull;
 // The header magic of a byte region (HeapAllocBytes): the same block layout as a slot allocation, but
 // HeapRealloc counts its size in bytes.
 constexpr uint64_t HeapHeaderMagicBytes = 0x5053484541503032ull;
+// arm64 (NativeEmitterInternalsArm64Heap.h): the magics of pooled blocks of the two kinds (a mapped block's magic
+// plus 2) and of a pooled block on a free list, the largest pooled block (slots, header included), the pool's
+// chunk size and its size classes, and the allocator state in the data segment (chunk cursor and end, then one
+// free-list head per class).
+constexpr uint64_t HeapHeaderMagicPooled = HeapHeaderMagic + 2;
+constexpr uint64_t HeapHeaderMagicPooledBytes = HeapHeaderMagicBytes + 2;
+constexpr uint64_t HeapHeaderMagicFree = 0x5053484541503046ull;
+constexpr uint64_t HeapPoolMaxSlots = 512;
+constexpr uint64_t HeapPoolChunkBytes = 256 * 1024;
+constexpr uint64_t HeapPoolClassCount = 31;
+constexpr uint64_t HeapStateBytes = 16 + 8 * HeapPoolClassCount;
 
 inline uint64_t alignTo(uint64_t value, uint64_t alignment) {
   if (alignment == 0) {
@@ -205,6 +217,16 @@ class Arm64Emitter {
   // Byte memory: a zeroed region of the popped byte count (0 for a count of 0), a byte load that
   // zero-extends, a byte store that leaves the stored byte, and the u8 wrap.
   void emitHeapAllocBytes();
+  // The heap routines every heap instruction calls (NativeEmitterInternalsArm64Heap.h), emitted once after the
+  // functions when any heap instruction was; the ADRP/ADD pairs that address the allocator state need the data
+  // segment's address (heapStateFixups).
+  void emitHeapRuntime();
+  bool usesHeapRuntime() const {
+    return !heapAllocCalls_.empty() || !heapFreeCalls_.empty() || !heapReallocCalls_.empty();
+  }
+  const std::vector<size_t> &heapStateFixups() const {
+    return heapStateFixups_;
+  }
   // An imported C function (CallHost): see NativeEmitterInternalsArm64Host.h.
   struct HostCallSite {
     const std::vector<IrHostValueKind> *parameters = nullptr;
@@ -465,8 +487,8 @@ class Arm64Emitter {
   void emitSubReg(uint8_t rd, uint8_t rn, uint8_t rm);
   void emitMulReg(uint8_t rd, uint8_t rn, uint8_t rm);
   void emitUdivReg(uint8_t rd, uint8_t rn, uint8_t rm);
-  void emitHeapAllocFromSlotCountReg(uint8_t slotCountReg, uint8_t resultReg, uint64_t magic = HeapHeaderMagic);
-  void emitHeapFreeFromAddressReg(uint8_t addressReg);
+  void emitHeapPoolClass();
+  void emitHeapStateAddress();
 
   void emitStrbRegBase(uint8_t rt, uint8_t rn, uint16_t offsetBytes);
   void emitWriteSyscall(uint64_t fd, uint8_t bufferReg, uint8_t lengthReg);
@@ -550,12 +572,18 @@ class Arm64Emitter {
   static constexpr uint8_t valueStackCacheReg_ = 26;
   bool hasValueStackCache_ = false;
   bool valueStackCacheEnabled_ = true;
+  // The BL sites of the heap instructions, patched to the routines by emitHeapRuntime, and the state fixups.
+  std::vector<size_t> heapAllocCalls_;
+  std::vector<size_t> heapFreeCalls_;
+  std::vector<size_t> heapReallocCalls_;
+  std::vector<size_t> heapStateFixups_;
 };
 
 #include "NativeEmitterInternalsArm64Arithmetic.h"
 #include "NativeEmitterInternalsArm64Core.h"
 #include "NativeEmitterInternalsArm64Io.h"
 #include "NativeEmitterInternalsArm64Host.h"
+#include "NativeEmitterInternalsArm64Heap.h"
 
 bool computeMaxStackDepth(const IrFunction &fn, const IrModule &module, int64_t &maxDepth, std::string &error);
 

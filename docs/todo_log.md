@@ -31,6 +31,9 @@ open-work-only scope rule as `docs/todo.md` itself.
 - The first suspicion, frame size, explains only the 0.23 MB native
   stack part. Close this when TODO-5750, TODO-5751 and TODO-5740 land
   and the editor is measured again.
+- 2026-11-09, after TODO-5750 (pooled arm64 heap): native 1.97-1.98 MB
+  against 1.64-1.67 MB for the loop version (untagged 0.41 MB against
+  0.28 MB; stack unchanged at 459 KB against 229 KB). optexe unchanged.
 
 ## TODO-4737
 

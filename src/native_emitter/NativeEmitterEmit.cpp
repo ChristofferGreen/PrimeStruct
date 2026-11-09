@@ -288,6 +288,9 @@ bool buildNativeImage(const IrModule &module,
   if (jit != nullptr) {
     jit->trampolineOffset = emitter.emitJitRuntime(functionOffsets[entryIndex]);
   }
+#else
+  // The heap routines follow the functions; their allocator state takes the data segment's runtime state.
+  emitter.emitHeapRuntime();
 #endif
   if (instrumentation != nullptr) {
     for (const auto &functionInstrumentation : instrumentation->perFunction) {
@@ -358,6 +361,7 @@ bool buildNativeImage(const IrModule &module,
   MachOData machOData;
   machOData.imports = hostImports.symbols;
   machOData.dylibs = options.dylibs;
+  machOData.stateBytes = emitter.usesHeapRuntime() ? HeapStateBytes : 0;
   uint32_t codeBaseOffset = computeMachOCodeOffset(&machOData);
   emitter.setCodeBaseOffset(codeBaseOffset);
 #endif
@@ -475,9 +479,10 @@ bool buildNativeImage(const IrModule &module,
 #endif
   std::vector<uint8_t> image;
 #if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
-  if (!hostImports.fixups.empty()) {
+  if (!hostImports.fixups.empty() || !emitter.heapStateFixups().empty()) {
     // The pointer slots sit at the start of the data segment, which follows the code (all of it, string
-    // table included, so the address is known only now). Point each slot load at its slot.
+    // table included, so the address is known only now). Point each slot load at its slot, and each
+    // ADRP/ADD of the heap routines at the allocator state after the slots.
     const uint32_t codeOffset = computeMachOCodeOffset(&machOData);
     const uint64_t dataVmAddr = machODataVmAddr(codeOffset, code.size());
     constexpr int64_t AdrpMin = -(1LL << 20);
@@ -509,6 +514,25 @@ bool buildNativeImage(const IrModule &module,
       const uint32_t ldr = readWord(fixup.codeIndex + 1);
       writeWord(fixup.codeIndex + 1,
                 (ldr & ~(0xFFFu << 10)) | (static_cast<uint32_t>((slotAddr & 0xFFFull) / 8) << 10));
+    }
+    const uint64_t stateAddr = dataVmAddr + machOData.imports.size() * 8;
+    for (const size_t codeIndex : emitter.heapStateFixups()) {
+      const uint64_t pc = TextVmAddr + codeOffset + codeIndex * 4;
+      const int64_t pages =
+          (static_cast<int64_t>(stateAddr & ~0xFFFull) - static_cast<int64_t>(pc & ~0xFFFull)) >>
+          12;
+      if (pages < AdrpMin || pages > AdrpMax) {
+        error = "native backend heap state out of range";
+        return false;
+      }
+      const uint32_t adrp = readWord(codeIndex);
+      writeWord(codeIndex,
+                (adrp & ~((3u << 29) | (0x7FFFFu << 5))) |
+                    ((static_cast<uint32_t>(pages) & 3u) << 29) |
+                    (((static_cast<uint32_t>(pages) >> 2) & 0x7FFFFu) << 5));
+      const uint32_t add = readWord(codeIndex + 1);
+      writeWord(codeIndex + 1,
+                (add & ~(0xFFFu << 10)) | (static_cast<uint32_t>(stateAddr & 0xFFFull) << 10));
     }
   }
   if (!buildMachO(code, image, error, &machOData)) {

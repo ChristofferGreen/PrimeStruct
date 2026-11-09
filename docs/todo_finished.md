@@ -2178,6 +2178,7 @@ are left unarchived.
 | TODO-5743 | A runtime error in a native real call ends the program | [2026-11.md](todo_archive/2026-11.md) | 2026-11-08 |
 | TODO-5747 | The native backend leaves out functions that nothing calls | [2026-11.md](todo_archive/2026-11.md) | 2026-11-08 |
 | TODO-5748 | Methods with a `Function` parameter become real calls on the VM and optexe | [2026-11.md](todo_archive/2026-11.md) | 2026-11-09 |
+| TODO-5750 | Native heap blocks share pages | [2026-11.md](todo_archive/2026-11.md) | 2026-11-09 |
 
 <!-- INDEX-END -->
 
