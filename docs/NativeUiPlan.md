@@ -529,7 +529,13 @@ Hand checks on a Mac (typing, shortcuts, real panels, cursor stepping over graph
   the bundles the UI drivers build are agent apps (`PS_UI_ELEMENT=1` makes `scripts/bundle_macos_app.sh` write
   `LSUIElement`), so their Launch Services launches show no Dock icon either. CTest
   `PrimeStruct_native_ui_appkit_smoke_*` bundles `examples/native_ui/hello_window.prime`, runs the bundle in snapshot
-  mode and checks the PNG; it also bundles the editor and checks two pictures of it (below).
+  mode and checks the PNG; it also bundles the editor and checks two pictures of it (below). A snapshot run never
+  outlives the process that started it (TODO-5823): it watches its parent (or `PRIMESTRUCT_UI_WATCH_PID`, for a
+  Launch Services launch, whose parent is launchd) with a kqueue `NOTE_EXIT` and exits with status 70 once that
+  process is gone, so a driver CTest kills at its limit leaves no app behind; the drivers set no time limit of their
+  own, and a snapshot waits for a loading preview page without a slice cap. `PRIMESTRUCT_UI_SNAPSHOT_HOLD=1` keeps
+  the picture from being taken; `PrimeStruct_native_ui_appkit_smoke_orphan` uses it to check the guard
+  (`scripts/start_orphaned_snapshot_run.py`).
 - **Snapshot hooks for pictures of the editor.** `PRIMESTRUCT_UI_TYPE=text` types into the first text view,
   `PRIMESTRUCT_UI_OPEN=file` loads a file into it and highlights it (the title becomes the path), and
   `PRIMESTRUCT_UI_MENU=File` pops that menu-bar menu open for the picture. A pop-up menu is a window of its own
@@ -607,7 +613,7 @@ page follows the text as it is edited. It is done when the installed native Prim
   the position is put back by mode (together: to the text view; with the cursor: to the cursor's line; independent: to
   where it was), the mode can be chosen from View > Scroll Preview as well as Settings, and a document opens with its
   cursor at the start. The top line of the text view is read from its TextKit 2 layout fragments, not from a character
-  index (after an edit that returned the end of the text). `PrimeStruct_native_ui_appkit_scroll` asserts the modes
+  index (after an edit that returned the end of the text). `PrimeStruct_native_ui_appkit_scroll_*` asserts the modes
   with the snapshot harness (`PRIMESTRUCT_UI_CARET`, `PRIMESTRUCT_UI_TYPE_AFTER_SCROLL`, `PRIMESTRUCT_UI_REPORT`);
   `docs/PreviewScrollTests.md` lists the scenarios and the by-hand checks. The session remembers which tabs had their
   preview on (`session.previews`, "1" or "0" per tab with a file, in the order of `session.files`) and the next launch

@@ -35,3 +35,10 @@ endif()
 # a third slower. NativeUiCompiledAppTest turns it back on for its native bundle.
 set(ENV{PS_UI_ELEMENT} "1")
 set(ENV{PS_NO_WARMUP} "1")
+
+# A snapshot run ends as soon as the process that started it is gone (TODO-5823, guardSnapshotRun in
+# NativeUiAppKit.mm), so a driver that CTest kills at its time limit leaves no app behind. That process is the app's
+# parent, the driver, except for a launch through Launch Services (`open -a`), whose parent is launchd: such a launch
+# passes --env PRIMESTRUCT_UI_WATCH_PID=${PRIMESTRUCT_UI_DRIVER_PID}, the pid of this cmake process (the parent of
+# the shell below). The drivers wait for each run without a time limit of their own; CTest's limit bounds the entry.
+execute_process(COMMAND sh -c "echo $PPID" OUTPUT_VARIABLE PRIMESTRUCT_UI_DRIVER_PID OUTPUT_STRIP_TRAILING_WHITESPACE)

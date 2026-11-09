@@ -14,7 +14,7 @@ A page that is reloaded (every edit rebuilds it) starts at the top, so after eac
 mode: scrolled together it goes to where the text view is, with the cursor to the cursor's line, independent to where
 it was.
 
-## Automated: `PrimeStruct_native_ui_appkit_scroll` (macOS, window server needed)
+## Automated: `PrimeStruct_native_ui_appkit_scroll_*` (macOS, window server needed)
 
 `cmake/NativeUiAppKitScrollTest.cmake` runs the bundled editor in snapshot mode on `tests/fixtures/ui/screenshot/preview_long.md`
 (211 lines of even sections) or `preview_uneven.md` (a 40 line code block and a 15 row table), with the preview on and
@@ -22,6 +22,8 @@ it was.
 `preview:0.5`), puts the cursor on a line (`PRIMESTRUCT_UI_CARET=N`), types (`PRIMESTRUCT_UI_TYPE`, after the scroll with
 `PRIMESTRUCT_UI_TYPE_AFTER_SCROLL`) and writes where both views ended up (`PRIMESTRUCT_UI_REPORT`: `text_line`,
 `text_fraction`, `caret_line`, `text_lines`, `web_line`, `web_y`, `web_max`); the script asserts on those numbers.
+Each mode is a CTest entry of its own (`_independent`, `_linear`, `_blocks`, `_cursor`), and they run the editor bundle
+that `PrimeStruct_native_ui_appkit_editor_bundle` builds once.
 
 | Scenario | Mode | What is asserted |
 | --- | --- | --- |

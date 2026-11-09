@@ -49,7 +49,7 @@ function(guard_app program name)
   execute_process(
     COMMAND bash "${SOURCE_DIR}/scripts/measure_startup.sh" --runs 3 --work-dir "${WORK_DIR}/${name}_measure"
             --reference "${WORK_DIR}/reference_app" --max-extra-images ${maxExtraImages} "${WORK_DIR}/${name}/${name}"
-    RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err TIMEOUT 300)
+    RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err)
   message(STATUS "${name}:\n${out}")
   if(NOT rc EQUAL 0)
     message(FATAL_ERROR "the launch guard failed for ${name} (${rc}): ${err}")

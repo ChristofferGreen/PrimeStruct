@@ -1628,33 +1628,64 @@ if(PRIMESTRUCT_BUILD_TESTS)
     # open-menu steps (cmake/NativeUiTestGuards.cmake).
     # One entry per part of the driver (a handful of snapshot runs each), so each stays well inside its limit
     # on a loaded machine.
-    foreach(smokePart hello editor_views editor_scroll editor_scroll_uneven run files open settings file_types toolbar)
+    # The editor is compiled and bundled once for the parts and scroll entries that run it (a CTest fixture), and
+    # unregistered from Launch Services and deleted after them.
+    set(appkitEditorDir ${CMAKE_BINARY_DIR}/native_ui_appkit_smoke/editor_bundle)
+    foreach(bundleStep editor_bundle editor_bundle_cleanup)
+      add_test(
+        NAME PrimeStruct_native_ui_appkit_${bundleStep}
+        COMMAND ${CMAKE_COMMAND}
+                -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
+                -DBUILD_DIR=${CMAKE_BINARY_DIR}
+                -DWORK_DIR=${CMAKE_BINARY_DIR}/native_ui_appkit_smoke/${bundleStep}_work
+                -DEDITOR_DIR=${appkitEditorDir}
+                -DPART=${bundleStep}
+                -P ${CMAKE_SOURCE_DIR}/cmake/NativeUiAppKitSmokeTest.cmake
+      )
+      set_tests_properties(PrimeStruct_native_ui_appkit_${bundleStep}
+                           PROPERTIES TIMEOUT 300 SKIP_REGULAR_EXPRESSION "PRIMESTRUCT_UI_SKIPPED")
+    endforeach()
+    set_tests_properties(PrimeStruct_native_ui_appkit_editor_bundle
+                         PROPERTIES FIXTURES_SETUP native_ui_appkit_editor)
+    set_tests_properties(PrimeStruct_native_ui_appkit_editor_bundle_cleanup
+                         PROPERTIES FIXTURES_CLEANUP native_ui_appkit_editor)
+    foreach(smokePart hello orphan editor_views editor_scroll editor_scroll_uneven run files open settings file_types toolbar)
       add_test(
         NAME PrimeStruct_native_ui_appkit_smoke_${smokePart}
         COMMAND ${CMAKE_COMMAND}
                 -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
                 -DBUILD_DIR=${CMAKE_BINARY_DIR}
                 -DWORK_DIR=${CMAKE_BINARY_DIR}/native_ui_appkit_smoke/${smokePart}
+                -DEDITOR_DIR=${appkitEditorDir}
                 -DPART=${smokePart}
                 -P ${CMAKE_SOURCE_DIR}/cmake/NativeUiAppKitSmokeTest.cmake
       )
       set_tests_properties(PrimeStruct_native_ui_appkit_smoke_${smokePart}
                            PROPERTIES TIMEOUT 300 RESOURCE_LOCK native_ui_appkit
                            SKIP_REGULAR_EXPRESSION "PRIMESTRUCT_UI_SKIPPED")
+      if(smokePart MATCHES "^(editor_views|editor_scroll|editor_scroll_uneven|files|open)$")
+        set_tests_properties(PrimeStruct_native_ui_appkit_smoke_${smokePart}
+                             PROPERTIES FIXTURES_REQUIRED native_ui_appkit_editor)
+      endif()
     endforeach()
     # The preview's scroll modes (independent, linear, by block, with the cursor): scroll a view, move the
-    # cursor, type, and assert where both views end up (docs/PreviewScrollTests.md).
-    add_test(
-      NAME PrimeStruct_native_ui_appkit_scroll
-      COMMAND ${CMAKE_COMMAND}
-              -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
-              -DBUILD_DIR=${CMAKE_BINARY_DIR}
-              -DWORK_DIR=${CMAKE_BINARY_DIR}/native_ui_appkit_scroll
-              -P ${CMAKE_SOURCE_DIR}/cmake/NativeUiAppKitScrollTest.cmake
-    )
-    set_tests_properties(PrimeStruct_native_ui_appkit_scroll
-                         PROPERTIES TIMEOUT 900 RESOURCE_LOCK native_ui_appkit
-                         SKIP_REGULAR_EXPRESSION "PRIMESTRUCT_UI_SKIPPED")
+    # cursor, type, and assert where both views end up (docs/PreviewScrollTests.md). One entry per mode.
+    foreach(scrollMode independent linear blocks cursor)
+      add_test(
+        NAME PrimeStruct_native_ui_appkit_scroll_${scrollMode}
+        COMMAND ${CMAKE_COMMAND}
+                -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
+                -DBUILD_DIR=${CMAKE_BINARY_DIR}
+                -DWORK_DIR=${CMAKE_BINARY_DIR}/native_ui_appkit_scroll/${scrollMode}
+                -DEDITOR_DIR=${appkitEditorDir}
+                -DPART=${scrollMode}
+                -P ${CMAKE_SOURCE_DIR}/cmake/NativeUiAppKitScrollTest.cmake
+      )
+      set_tests_properties(PrimeStruct_native_ui_appkit_scroll_${scrollMode}
+                           PROPERTIES TIMEOUT 300 RESOURCE_LOCK native_ui_appkit
+                           FIXTURES_REQUIRED native_ui_appkit_editor
+                           SKIP_REGULAR_EXPRESSION "PRIMESTRUCT_UI_SKIPPED")
+    endforeach()
     # The same programs compiled to native executables (no VM, no bytecode).
     add_test(
       NAME PrimeStruct_native_ui_compiled_app

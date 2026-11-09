@@ -3,29 +3,47 @@
 # the report the harness writes (PRIMESTRUCT_UI_REPORT: text_line, text_fraction, caret_line, text_lines, web_line,
 # web_y, web_max). docs/PreviewScrollTests.md lists the scenarios and what stays a by-hand test.
 #
-#   cmake -DSOURCE_DIR=<repo> -DBUILD_DIR=<build> -DWORK_DIR=<scratch> -P NativeUiAppKitScrollTest.cmake
+#   cmake -DSOURCE_DIR=<repo> -DBUILD_DIR=<build> -DWORK_DIR=<scratch> [-DEDITOR_DIR=<dir>] [-DPART=<mode>]
+#         -P NativeUiAppKitScrollTest.cmake
+#
+# PART runs the scenarios of one mode (independent, linear, blocks, cursor), one CTest entry each
+# (PrimeStruct_native_ui_appkit_scroll_<mode>), so each entry stays short on a loaded machine; the default, all, runs
+# them all. EDITOR_DIR names a directory with the editor already bundled (EditorSmoke.app, built once by the
+# PrimeStruct_native_ui_appkit_editor_bundle fixture of NativeUiAppKitSmokeTest.cmake); without it the driver bundles
+# its own copy.
 foreach(var SOURCE_DIR BUILD_DIR WORK_DIR)
   if(NOT DEFINED ${var})
     message(FATAL_ERROR "NativeUiAppKitScrollTest: ${var} is required")
   endif()
 endforeach()
+if(NOT DEFINED PART)
+  set(PART all)
+endif()
+if(NOT PART MATCHES "^(all|independent|linear|blocks|cursor)$")
+  message(FATAL_ERROR "NativeUiAppKitScrollTest: unknown PART '${PART}' (one of: all independent linear blocks cursor)")
+endif()
 
 include("${CMAKE_CURRENT_LIST_DIR}/NativeUiTestGuards.cmake")
 if(PRIMESTRUCT_UI_SKIP)
   return()
 endif()
 
-# This test does not look at the bundle's document types: leave them out, so the bundle cannot become the handler of
-# the user's files in Launch Services.
-set(ENV{PS_NO_DOCUMENT_TYPES} "1")
 file(REMOVE_RECURSE "${WORK_DIR}")
 file(MAKE_DIRECTORY "${WORK_DIR}")
-execute_process(
-  COMMAND bash "${SOURCE_DIR}/scripts/bundle_macos_app.sh"
-          "${SOURCE_DIR}/examples/apps/text_editor/main.prime" ScrollSmoke "${WORK_DIR}" "${BUILD_DIR}"
-  RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err)
-if(NOT rc EQUAL 0)
-  message(FATAL_ERROR "editor bundle failed (${rc}): ${out}${err}")
+if(DEFINED EDITOR_DIR AND EXISTS "${EDITOR_DIR}/EditorSmoke.app/Contents/MacOS/EditorSmoke")
+  set(EditorExe "${EDITOR_DIR}/EditorSmoke.app/Contents/MacOS/EditorSmoke")
+else()
+  # This test does not look at the bundle's document types: leave them out, so the bundle cannot become the handler
+  # of the user's files in Launch Services.
+  set(ENV{PS_NO_DOCUMENT_TYPES} "1")
+  execute_process(
+    COMMAND bash "${SOURCE_DIR}/scripts/bundle_macos_app.sh"
+            "${SOURCE_DIR}/examples/apps/text_editor/main.prime" ScrollSmoke "${WORK_DIR}" "${BUILD_DIR}"
+    RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err)
+  if(NOT rc EQUAL 0)
+    message(FATAL_ERROR "editor bundle failed (${rc}): ${out}${err}")
+  endif()
+  set(EditorExe "${WORK_DIR}/ScrollSmoke.app/Contents/MacOS/ScrollSmoke")
 endif()
 
 set(Long "${SOURCE_DIR}/tests/fixtures/ui/screenshot/preview_long.md")
@@ -58,9 +76,8 @@ function(run name mode note)
     unset(ENV{PRIMESTRUCT_UI_TYPE_AFTER_SCROLL})
   endif()
   execute_process(
-    COMMAND "${WORK_DIR}/ScrollSmoke.app/Contents/MacOS/ScrollSmoke"
-    RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err
-    TIMEOUT 90)
+    COMMAND "${EditorExe}"
+    RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err)
   if(NOT rc EQUAL 0 OR NOT EXISTS "${report}")
     message(FATAL_ERROR "scenario ${name}: run exited with '${rc}' and no report: ${out}${err}")
   endif()
@@ -92,6 +109,7 @@ endfunction()
 # Modes: 0 independent, 1 linear, 2 by block, 3 with the cursor.
 
 # Independent: scrolling one view leaves the other where it was.
+if(PART MATCHES "^(all|independent)$")
 run(off_text 0 "${Long}" SCROLL text:0.5)
 expect(off_text "the source scrolled" "text_line > 40")
 expect(off_text "the page stayed" "web_y == 0")
@@ -101,8 +119,10 @@ expect(off_page "the source stayed" "text_line < 1")
 # ... and a reload after typing keeps an independent page where it was.
 run(off_page_type 0 "${Long}" SCROLL preview:0.5 CARET 20 TYPE x AFTER_SCROLL)
 expect(off_page_type "the page is still scrolled after the reload" "web_y > 100")
+endif()
 
 # Linear: the same fraction of what each can scroll.
+if(PART MATCHES "^(all|linear)$")
 run(linear_text 1 "${Long}" SCROLL text:0.5)
 expect(linear_text "the source is halfway" "abs(text_fraction - 0.5) < 0.02")
 expect(linear_text "the page is at the same fraction" "web_max > 0 and abs(web_y / web_max - text_fraction) < 0.03")
@@ -112,8 +132,10 @@ expect(linear_page "the source is at the same fraction" "abs(text_fraction - web
 run(linear_type 1 "${Long}" SCROLL text:0.5 CARET 100 TYPE x AFTER_SCROLL)
 expect(linear_type "after the reload the page is back at the source's fraction"
        "web_max > 0 and abs(web_y / web_max - text_fraction) < 0.06 and text_fraction > 0.3 and text_fraction < 0.7")
+endif()
 
 # By block: the same source line.
+if(PART MATCHES "^(all|blocks)$")
 run(blocks_text 2 "${Long}" SCROLL text:0.5)
 expect(blocks_text "the source scrolled" "text_line > 40")
 expect(blocks_text "the page is at the same line" "abs(web_line - text_line) < 3")
@@ -131,8 +153,10 @@ expect(blocks_page_end "the end of the page is the end of the source" "text_frac
 run(blocks_type 2 "${Long}" SCROLL text:0.5 CARET 100 TYPE x AFTER_SCROLL)
 expect(blocks_type "after the reload the page is back at the source's line (not at the top or the end)"
        "text_line > 60 and text_line < 150 and web_y > 100 and web_max - web_y > 100 and abs(web_line - text_line) < 4")
+endif()
 
 # With the cursor: the page follows the cursor; scrolling a view alone moves nothing.
+if(PART MATCHES "^(all|cursor)$")
 run(cursor_caret 3 "${Long}" CARET 150)
 expect(cursor_caret "the cursor is on line 150" "caret_line == 150")
 expect(cursor_caret "the page shows the cursor's line" "web_y > 100 and web_line <= 150 and 150 - web_line < 60")
@@ -146,6 +170,7 @@ expect(cursor_type "an edit does not send the page to the top" "web_y > 100 and 
 expect(cursor_type "the source's top line is believable" "text_line > 100 and text_line < 200")
 run(cursor_uneven 3 "${Uneven}" CARET 100)
 expect(cursor_uneven "the page shows the cursor's line in a page of tall blocks" "web_y > 100 and web_line <= 100")
+endif()
 
 if(NOT Failures STREQUAL "")
   message(FATAL_ERROR "preview scroll scenarios failed:${Failures}")

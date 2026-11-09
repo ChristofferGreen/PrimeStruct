@@ -2,16 +2,25 @@
 # as a .app, runs its bytecode-only executable in snapshot mode, and checks that
 # a PNG of the laid-out window was written.
 #
-#   cmake -DSOURCE_DIR=<repo> -DBUILD_DIR=<build> -DWORK_DIR=<scratch> -DPART=<part> -P NativeUiAppKitSmokeTest.cmake
+#   cmake -DSOURCE_DIR=<repo> -DBUILD_DIR=<build> -DWORK_DIR=<scratch> [-DEDITOR_DIR=<dir>] -DPART=<part>
+#         -P NativeUiAppKitSmokeTest.cmake
 #
 # The driver is split into parts, one CTest entry each (PrimeStruct_native_ui_appkit_smoke_<part>, CMakeLists.txt), so
 # every entry launches a handful of snapshot runs and stays well inside its time limit on a loaded machine; the whole
 # driver took about 100 s alone and timed out at 300 s under load. PART=all runs every part in order.
+#
+# The editor bundle (EditorSmoke.app, with the editor's declared file types) lives in EDITOR_DIR (default WORK_DIR).
+# Compiling the editor takes about 10 s of CPU, so in CTest one fixture entry builds it once (PART=editor_bundle,
+# PrimeStruct_native_ui_appkit_editor_bundle) for the parts that run it and the scroll driver, and a cleanup entry
+# (PART=editor_bundle_cleanup) unregisters it from Launch Services and deletes it after them.
 foreach(var SOURCE_DIR BUILD_DIR WORK_DIR)
   if(NOT DEFINED ${var})
     message(FATAL_ERROR "NativeUiAppKitSmokeTest: ${var} is required")
   endif()
 endforeach()
+if(NOT DEFINED EDITOR_DIR)
+  set(EDITOR_DIR "${WORK_DIR}")
+endif()
 
 include("${CMAKE_CURRENT_LIST_DIR}/NativeUiTestGuards.cmake")
 if(PRIMESTRUCT_UI_SKIP)
@@ -21,27 +30,53 @@ endif()
 if(NOT DEFINED PART)
   set(PART all)
 endif()
-set(smokeParts hello editor_views editor_scroll editor_scroll_uneven run files open settings file_types toolbar)
-if(NOT PART STREQUAL "all" AND NOT PART IN_LIST smokeParts)
-  message(FATAL_ERROR "NativeUiAppKitSmokeTest: unknown PART '${PART}' (one of: all ${smokeParts})")
+set(smokeParts hello orphan editor_views editor_scroll editor_scroll_uneven run files open settings file_types toolbar)
+if(NOT PART STREQUAL "all" AND NOT PART IN_LIST smokeParts AND NOT PART STREQUAL "editor_bundle" AND
+   NOT PART STREQUAL "editor_bundle_cleanup")
+  message(FATAL_ERROR "NativeUiAppKitSmokeTest: unknown PART '${PART}' (one of: all ${smokeParts} editor_bundle "
+                      "editor_bundle_cleanup)")
+endif()
+
+set(lsregister "/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister")
+# Launch Services must not keep a bundle of these tests that declares document types: one in a build directory could
+# otherwise become the handler of the user's .prime and configuration files. It registers an app again whenever it
+# finds it on disk, so the bundle is deleted too.
+function(smoke_forget_bundle app)
+  if(EXISTS "${lsregister}" AND EXISTS "${app}")
+    execute_process(COMMAND "${lsregister}" -u "${app}" OUTPUT_QUIET ERROR_QUIET)
+  endif()
+  file(REMOVE_RECURSE "${app}")
+endfunction()
+
+if(PART STREQUAL "editor_bundle_cleanup")
+  smoke_forget_bundle("${EDITOR_DIR}/EditorSmoke.app")
+  message(STATUS "the shared editor bundle is unregistered and deleted")
+  return()
 endif()
 
 file(REMOVE_RECURSE "${WORK_DIR}")
 file(MAKE_DIRECTORY "${WORK_DIR}")
 
-# The text editor bundled once per run of the driver (EditorSmoke, with the editor's declared file types).
+# The text editor, bundled once into EDITOR_DIR (by the fixture entry in CTest, else by the first part that needs it).
 function(smoke_bundle_editor)
-  if(EXISTS "${WORK_DIR}/EditorSmoke.app/Contents/Info.plist")
+  if(EXISTS "${EDITOR_DIR}/EditorSmoke.app/Contents/Info.plist")
     return()
   endif()
   execute_process(
     COMMAND bash "${SOURCE_DIR}/scripts/bundle_macos_app.sh"
-            "${SOURCE_DIR}/examples/apps/text_editor/main.prime" EditorSmoke "${WORK_DIR}" "${BUILD_DIR}"
+            "${SOURCE_DIR}/examples/apps/text_editor/main.prime" EditorSmoke "${EDITOR_DIR}" "${BUILD_DIR}"
     RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err)
   if(NOT rc EQUAL 0)
     message(FATAL_ERROR "editor bundle failed (${rc}): ${out}${err}")
   endif()
 endfunction()
+
+if(PART STREQUAL "editor_bundle")
+  smoke_forget_bundle("${EDITOR_DIR}/EditorSmoke.app") # (a run that was cut short leaves an old one)
+  smoke_bundle_editor()
+  message(STATUS "editor bundled once for the AppKit drivers: ${EDITOR_DIR}/EditorSmoke.app")
+  return()
+endif()
 
 # Part hello: The hello window example in a bundle draws its window.
 if(PART STREQUAL "all" OR PART STREQUAL "hello")
@@ -57,8 +92,7 @@ if(PART STREQUAL "all" OR PART STREQUAL "hello")
   set(ENV{PRIMESTRUCT_UI_SNAPSHOT} "${snapshot}")
   execute_process(
     COMMAND "${WORK_DIR}/HelloSmoke.app/Contents/MacOS/HelloSmoke"
-    RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err
-    TIMEOUT 60)
+    RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err)
   if(NOT rc EQUAL 0)
     message(FATAL_ERROR "bundled app exited with '${rc}': ${out}${err}")
   endif()
@@ -76,7 +110,40 @@ if(PART STREQUAL "all" OR PART STREQUAL "hello")
   message(STATUS "AppKit smoke test passed (${size} byte snapshot)")
 endif()
 
-# Part editor_views: The editor: line numbers, highlighted code, tabs and the markdown preview.
+# Part orphan: A snapshot run whose driver is gone ends by itself (TODO-5823). The hello window runs held (it never
+# takes its picture) as the child of a script that leaves it behind once the app's guard watches the script; the app
+# keeps the script's stderr, so this step returns only when the app has ended, which the guard must do at once. Without
+# the guard the app runs until CTest's limit and the entry fails.
+if(PART STREQUAL "all" OR PART STREQUAL "orphan")
+  execute_process(
+    COMMAND "${BUILD_DIR}/primec" --emit=ir "${SOURCE_DIR}/examples/native_ui/hello_window.prime"
+            -o "${WORK_DIR}/hello_orphan.psir"
+    RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err)
+  if(NOT rc EQUAL 0)
+    message(FATAL_ERROR "hello window did not compile (${rc}): ${out}${err}")
+  endif()
+  set(ENV{PRIMESTRUCT_UI_SNAPSHOT} "${WORK_DIR}/orphan.png")
+  set(ENV{PRIMESTRUCT_UI_SNAPSHOT_HOLD} "1")
+  execute_process(
+    COMMAND python3 -I "${SOURCE_DIR}/scripts/start_orphaned_snapshot_run.py"
+            "${BUILD_DIR}/primestruct_app_runtime" "${WORK_DIR}/hello_orphan.psir"
+    RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err)
+  unset(ENV{PRIMESTRUCT_UI_SNAPSHOT_HOLD})
+  unset(ENV{PRIMESTRUCT_UI_SNAPSHOT})
+  if(NOT rc EQUAL 0)
+    message(FATAL_ERROR "the held snapshot run did not start (${rc}): ${out}${err}")
+  endif()
+  string(FIND "${err}" "snapshot run ended: the process that started it" ended)
+  if(ended EQUAL -1)
+    message(FATAL_ERROR "the orphaned snapshot run did not end through its guard: ${out}${err}")
+  endif()
+  if(EXISTS "${WORK_DIR}/orphan.png")
+    message(FATAL_ERROR "the held snapshot run took its picture")
+  endif()
+  message(STATUS "an orphaned snapshot run ends as soon as its driver is gone")
+endif()
+
+# Part editor_views:The editor: line numbers, highlighted code, tabs and the markdown preview.
 if(PART STREQUAL "all" OR PART STREQUAL "editor_views")
   # The editor with a highlighted Unicode file, and with its File menu open: both
   # pictures must be real PNGs with the text drawn in them (a blank window is a few
@@ -146,9 +213,8 @@ if(PART STREQUAL "all" OR PART STREQUAL "editor_views")
       unset(ENV{PRIMESTRUCT_UI_PREFS})
     endif()
     execute_process(
-      COMMAND "${WORK_DIR}/EditorSmoke.app/Contents/MacOS/EditorSmoke"
-      RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err
-      TIMEOUT 90)
+      COMMAND "${EDITOR_DIR}/EditorSmoke.app/Contents/MacOS/EditorSmoke"
+      RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err)
     if(NOT rc EQUAL 0)
       message(FATAL_ERROR "editor ${shot} snapshot run exited with '${rc}': ${out}${err}")
     endif()
@@ -241,9 +307,8 @@ if(PART STREQUAL "all" OR PART STREQUAL "editor_scroll" OR PART STREQUAL "editor
       unset(ENV{PRIMESTRUCT_UI_PREFS})
     endif()
     execute_process(
-      COMMAND "${WORK_DIR}/EditorSmoke.app/Contents/MacOS/EditorSmoke"
-      RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err
-      TIMEOUT 90)
+      COMMAND "${EDITOR_DIR}/EditorSmoke.app/Contents/MacOS/EditorSmoke"
+      RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err)
     if(NOT rc EQUAL 0)
       message(FATAL_ERROR "editor ${shot} snapshot run exited with '${rc}': ${out}${err}")
     endif()
@@ -298,8 +363,7 @@ if(PART STREQUAL "all" OR PART STREQUAL "run")
   set(ENV{PRIMESTRUCT_UI_SNAPSHOT} "${snapshot}")
   execute_process(
     COMMAND "${WORK_DIR}/EditorRun.app/Contents/MacOS/EditorRun"
-    RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err
-    TIMEOUT 90)
+    RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err)
   if(NOT rc EQUAL 0)
     message(FATAL_ERROR "editor run snapshot run exited with '${rc}': ${out}${err}")
   endif()
@@ -314,8 +378,7 @@ if(PART STREQUAL "all" OR PART STREQUAL "run")
   unset(ENV{PRIMESTRUCT_UI_COMMANDS})
   execute_process(
     COMMAND "${WORK_DIR}/EditorRun.app/Contents/MacOS/EditorRun"
-    RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err
-    TIMEOUT 90)
+    RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err)
   if(NOT rc EQUAL 0)
     message(FATAL_ERROR "editor no-run snapshot run exited with '${rc}': ${out}${err}")
   endif()
@@ -347,9 +410,8 @@ if(PART STREQUAL "all" OR PART STREQUAL "files")
       set(ENV{PRIMESTRUCT_UI_CLICK} "tab:25:3")
     endif()
     execute_process(
-      COMMAND "${WORK_DIR}/EditorSmoke.app/Contents/MacOS/EditorSmoke"
-      RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err
-      TIMEOUT 90)
+      COMMAND "${EDITOR_DIR}/EditorSmoke.app/Contents/MacOS/EditorSmoke"
+      RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err)
     if(NOT rc EQUAL 0 OR NOT EXISTS "${snapshot}")
       message(FATAL_ERROR "editor ${shot} snapshot run exited with '${rc}' and no picture: ${out}${err}")
     endif()
@@ -371,7 +433,7 @@ if(PART STREQUAL "all" OR PART STREQUAL "files")
 
   # The editor's bundle declares its file types (file_types.txt next to the program): the document types, and the
   # exported type of .prime; the plist must be valid.
-  file(READ "${WORK_DIR}/EditorSmoke.app/Contents/Info.plist" editorPlist)
+  file(READ "${EDITOR_DIR}/EditorSmoke.app/Contents/Info.plist" editorPlist)
   foreach(needle "CFBundleDocumentTypes" "UTExportedTypeDeclarations" "org.primestruct.prime-source" "public.data"
                  "<string>Any file</string>"
                  "<string>Markdown</string>" "<string>prime</string>" "<string>markdown</string>")
@@ -380,7 +442,7 @@ if(PART STREQUAL "all" OR PART STREQUAL "files")
       message(FATAL_ERROR "the editor's Info.plist does not contain ${needle}")
     endif()
   endforeach()
-  execute_process(COMMAND plutil -lint "${WORK_DIR}/EditorSmoke.app/Contents/Info.plist"
+  execute_process(COMMAND plutil -lint "${EDITOR_DIR}/EditorSmoke.app/Contents/Info.plist"
                   RESULT_VARIABLE lintRc OUTPUT_VARIABLE lintOut ERROR_VARIABLE lintErr)
   if(NOT lintRc EQUAL 0)
     message(FATAL_ERROR "the editor's Info.plist is not valid: ${lintOut}${lintErr}")
@@ -402,9 +464,8 @@ if(PART STREQUAL "all" OR PART STREQUAL "files")
   set(ENV{PRIMESTRUCT_UI_SNAPSHOT} "${WORK_DIR}/editor_plan.png")
   set(ENV{PRIMESTRUCT_UI_CLICK} "tab:25:3;rows:28:0,1,2,3,4,5,6,7,8,9,10;button:29")
   execute_process(
-    COMMAND "${WORK_DIR}/EditorSmoke.app/Contents/MacOS/EditorSmoke"
-    RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err
-    TIMEOUT 90)
+    COMMAND "${EDITOR_DIR}/EditorSmoke.app/Contents/MacOS/EditorSmoke"
+    RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err)
   foreach(var COMMANDS TARGET_LAST DEFAULT_APP_PLAN CLICK PREFS)
     unset(ENV{PRIMESTRUCT_UI_${var}})
   endforeach()
@@ -451,15 +512,19 @@ if(PART STREQUAL "all" OR PART STREQUAL "open")
     endif()
     if(shot STREQUAL "openfinder")
       execute_process(
-        COMMAND open -n -W -a "${WORK_DIR}/EditorSmoke.app"
-                --env "PRIMESTRUCT_UI_SNAPSHOT=${snapshot}" --env "PRIMESTRUCT_UI_PREFS=restoreSession=0" "${unknownFile}"
-        RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err
-        TIMEOUT 90)
+        COMMAND open -n -W -a "${EDITOR_DIR}/EditorSmoke.app"
+                --env "PRIMESTRUCT_UI_SNAPSHOT=${snapshot}" --env "PRIMESTRUCT_UI_PREFS=restoreSession=0"
+                --env "PRIMESTRUCT_UI_WATCH_PID=${PRIMESTRUCT_UI_DRIVER_PID}" "${unknownFile}"
+        RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err)
+      # The launch registered the shared bundle, which declares document types: unregister it at once (the cleanup
+      # entry deletes it once every driver that runs it is done).
+      if(EXISTS "${lsregister}")
+        execute_process(COMMAND "${lsregister}" -u "${EDITOR_DIR}/EditorSmoke.app" OUTPUT_QUIET ERROR_QUIET)
+      endif()
     else()
       execute_process(
-        COMMAND "${WORK_DIR}/EditorSmoke.app/Contents/MacOS/EditorSmoke"
-        RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err
-        TIMEOUT 90)
+        COMMAND "${EDITOR_DIR}/EditorSmoke.app/Contents/MacOS/EditorSmoke"
+        RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err)
     endif()
     if(NOT rc EQUAL 0 OR NOT EXISTS "${snapshot}")
       message(FATAL_ERROR "editor ${shot} run exited with '${rc}' and no picture: ${out}${err}")
@@ -493,9 +558,8 @@ if(PART STREQUAL "all" OR PART STREQUAL "open")
       unset(ENV{PRIMESTRUCT_UI_DROP_PREVIEW})
     endif()
     execute_process(
-      COMMAND "${WORK_DIR}/EditorSmoke.app/Contents/MacOS/EditorSmoke"
-      RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err
-      TIMEOUT 90)
+      COMMAND "${EDITOR_DIR}/EditorSmoke.app/Contents/MacOS/EditorSmoke"
+      RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err)
     if(NOT rc EQUAL 0 OR NOT EXISTS "${snapshot}")
       message(FATAL_ERROR "editor ${shot} run exited with '${rc}' and no picture: ${out}${err}")
     endif()
@@ -537,8 +601,7 @@ if(PART STREQUAL "all" OR PART STREQUAL "settings")
     endif()
     execute_process(
       COMMAND "${WORK_DIR}/SettingsDemo.app/Contents/MacOS/SettingsDemo"
-      RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err
-      TIMEOUT 90)
+      RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err)
     if(NOT rc EQUAL 0)
       message(FATAL_ERROR "settings demo ${shot} run exited with '${rc}': ${out}${err}")
     endif()
@@ -582,8 +645,7 @@ if(PART STREQUAL "all" OR PART STREQUAL "file_types")
   set(ENV{PRIMESTRUCT_UI_OPEN_FILE_EVENT} "${SOURCE_DIR}/tests/fixtures/ui/screenshot/preview.md")
   execute_process(
     COMMAND "${WORK_DIR}/FileTypesDemo.app/Contents/MacOS/FileTypesDemo" "${typesReport}"
-    RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err
-    TIMEOUT 90)
+    RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err)
   unset(ENV{PRIMESTRUCT_UI_OPEN_FILE_EVENT})
   if(NOT rc EQUAL 0 OR NOT EXISTS "${typesReport}")
     message(FATAL_ERROR "file types demo exited with '${rc}' and no report: ${out}${err}")
@@ -606,8 +668,7 @@ if(PART STREQUAL "all" OR PART STREQUAL "file_types")
   set(ENV{PRIMESTRUCT_UI_SNAPSHOT} "${WORK_DIR}/types_by_path.png")
   execute_process(
     COMMAND "${BUILD_DIR}/primestruct_app_runtime" "${WORK_DIR}/FileTypesDemo.app/Contents/Resources/app.psir" "${pathReport}"
-    RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err
-    TIMEOUT 90)
+    RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err)
   if(NOT rc EQUAL 0 OR NOT EXISTS "${pathReport}")
     message(FATAL_ERROR "the runner outside a bundle exited with '${rc}' and no report: ${out}${err}")
   endif()
@@ -668,8 +729,7 @@ if(PART STREQUAL "all" OR PART STREQUAL "toolbar")
     endforeach()
     execute_process(
       COMMAND "${WORK_DIR}/ToolbarDemo.app/Contents/MacOS/ToolbarDemo" "${textReport}" "${modeReport}"
-      RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err
-      TIMEOUT 90)
+      RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err)
     if(NOT rc EQUAL 0)
       message(FATAL_ERROR "toolbar demo ${name} run exited with '${rc}': ${out}${err}")
     endif()
@@ -736,14 +796,9 @@ if(PART STREQUAL "all" OR PART STREQUAL "toolbar")
   message(STATUS "a toolbar's commands edit the text through the selection, undo as one edit and switch the preview mode")
 endif()
 
-# The editor and file types bundles of this test declare document types. Launch Services must not keep them: a bundle
-# in a build directory could otherwise become the handler of the user's .prime and configuration files.
-set(lsregister "/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister")
-if(EXISTS "${lsregister}")
-  foreach(bundle EditorSmoke FileTypesDemo)
-    execute_process(COMMAND "${lsregister}" -u "${WORK_DIR}/${bundle}.app" OUTPUT_QUIET ERROR_QUIET)
-  endforeach()
+# The bundles that declare document types leave Launch Services and the disk (the pictures and reports stay for
+# looking at). A shared editor bundle stays for the other entries; its cleanup entry deletes it.
+smoke_forget_bundle("${WORK_DIR}/FileTypesDemo.app")
+if(EDITOR_DIR STREQUAL WORK_DIR)
+  smoke_forget_bundle("${EDITOR_DIR}/EditorSmoke.app")
 endif()
-# Launch Services registers an app again whenever it finds it on disk, so the bundles that declare types are deleted
-# (the pictures and reports stay for looking at).
-file(REMOVE_RECURSE "${WORK_DIR}/EditorSmoke.app" "${WORK_DIR}/FileTypesDemo.app")

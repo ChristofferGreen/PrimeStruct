@@ -22,6 +22,14 @@
 // past the bottom right corner of the screens, so nothing appears to the user
 // (presentWindow); PRIMESTRUCT_UI_SHOW_WINDOWS=1 shows them instead, for a person
 // watching a run.
+//
+// A snapshot run never outlives the process that started it (TODO-5823): it watches
+// its parent (or the process PRIMESTRUCT_UI_WATCH_PID names, for a run that Launch
+// Services started, whose parent is launchd) with a kqueue NOTE_EXIT and ends as
+// soon as that process is gone, so a test driver killed at its time limit leaves no
+// app behind (guardSnapshotRun). Its steps wait for events (the event queue going
+// quiet, a page loaded, a report written), never for a deadline.
+// PRIMESTRUCT_UI_SNAPSHOT_HOLD=1 keeps the picture from being taken (the guard's test).
 
 #import <AppKit/AppKit.h>
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
@@ -42,6 +50,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <cerrno>
 #include <deque>
 #include <dlfcn.h>
 #include <limits>
@@ -50,6 +59,9 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+
+#include <sys/event.h>
+#include <unistd.h>
 
 #import <os/log.h>
 
@@ -217,6 +229,7 @@ struct State {
   bool snapshotTaken = false;
   uint64_t snapshotWindow = 0;
   int snapshotIdleSlices = 0;
+  bool snapshotHold = false; // PRIMESTRUCT_UI_SNAPSHOT_HOLD=1: the picture is never taken (the orphan guard's test)
   std::string snapshotTabsReportPath; // PRIMESTRUCT_UI_TABS_REPORT=path: the snapshot window's tabs, in order
   // The first frame (PS_UI_FEATURE_FIRST_FRAME): the first window shown, and the run loop observer that delivers
   // PS_UI_EVENT_FIRST_FRAME once that window has been drawn; nothing is installed until the program asks.
@@ -943,6 +956,14 @@ Class previewDelegateClass() {
                       imp_implementationWithBlock(^(id, id web, id, id) { state().previewLoading[handleOf(web)] = false; }),
                       "v@:@@@");
     }
+    // A web content process that ends (a crash, or the system reclaiming it) finishes no navigation: the page is not
+    // loading any more, so a snapshot does not wait for it.
+    class_addMethod(made, NSSelectorFromString(@"webViewWebContentProcessDidTerminate:"),
+                    imp_implementationWithBlock(^(id, id web) {
+                      std::fprintf(stderr, "native ui: the markdown preview's web content process ended\n");
+                      state().previewLoading[handleOf(web)] = false;
+                    }),
+                    "v@:@");
     objc_registerClassPair(made);
     return made;
   }();
@@ -975,6 +996,8 @@ void renderPreview(uint64_t window) {
   const auto content = s.windowContent.find(window);
   NSTextView *view = content != s.windowContent.end() ? textView(content->second) : nil;
   if (web == s.previewWebs.end() || view == nil) {
+    // No page to load (a preview not attached yet renders when it is): nothing for a snapshot to wait for.
+    s.previewLoading[window] = false;
     return;
   }
   const char *text = view.string.UTF8String;
@@ -2367,6 +2390,51 @@ static NSUInteger countNewlines(NSString *text, NSUInteger from, NSUInteger to) 
 
 @end
 
+namespace {
+// What a snapshot run exits with when the process it watches is gone (TODO-5823).
+constexpr int OrphanedSnapshotExit = 70;
+
+[[noreturn]] void endOrphanedSnapshotRun(pid_t watched) {
+  std::fprintf(stderr, "native ui: snapshot run ended: the process that started it (pid %d) is gone\n",
+               static_cast<int>(watched));
+  std::_Exit(OrphanedSnapshotExit);
+}
+
+// Ends a snapshot run as soon as the process that started it exits (CTest killing a driver at its time limit, a shell
+// that started the app in the background and left): a thread blocked on a kqueue NOTE_EXIT of that process. It is the
+// parent, or PRIMESTRUCT_UI_WATCH_PID for a run that Launch Services started (`open -a`: the parent is launchd, which
+// is not watched). A process already gone when the watch starts ends the run at once.
+void guardSnapshotRun() {
+  pid_t watched = getppid();
+  if (const char *pid = std::getenv("PRIMESTRUCT_UI_WATCH_PID"); pid != nullptr && *pid != '\0') {
+    watched = static_cast<pid_t>(std::atoi(pid));
+  }
+  if (watched <= 1) {
+    return;
+  }
+  const int queue = kqueue();
+  if (queue < 0) {
+    return;
+  }
+  struct kevent change;
+  EV_SET(&change, static_cast<uintptr_t>(watched), EVFILT_PROC, EV_ADD | EV_ONESHOT, NOTE_EXIT, 0, nullptr);
+  if (kevent(queue, &change, 1, nullptr, 0, nullptr) != 0) {
+    const int error = errno;
+    close(queue);
+    if (error == ESRCH) {
+      endOrphanedSnapshotRun(watched);
+    }
+    return;
+  }
+  std::thread([queue, watched] {
+    struct kevent fired;
+    while (kevent(queue, nullptr, 0, &fired, 1, nullptr) < 0 && errno == EINTR) {
+    }
+    endOrphanedSnapshotRun(watched);
+  }).detach();
+}
+} // namespace
+
 extern "C" {
 
 int32_t ps_ui_abi_version(void) { return PS_UI_ABI_VERSION; }
@@ -2379,6 +2447,13 @@ bool ps_ui_init(const char *appName) {
   @autoreleasepool {
     if (const char *path = std::getenv("PRIMESTRUCT_UI_SNAPSHOT"); path != nullptr && *path != '\0') {
       s.snapshotPath = path;
+      s.snapshotHold = std::getenv("PRIMESTRUCT_UI_SNAPSHOT_HOLD") != nullptr;
+      guardSnapshotRun();
+      if (s.snapshotHold) {
+        // The guard watches its process now (scripts/start_orphaned_snapshot_run.py waits for this line).
+        std::fputs("native ui: snapshot run held\n", stdout);
+        std::fflush(stdout);
+      }
     }
     if (const char *open = std::getenv("PRIMESTRUCT_UI_OPEN"); open != nullptr && *open != '\0') {
       s.snapshotOpenPath = open;
@@ -2752,7 +2827,7 @@ int32_t ps_ui_wait_event(void) {
           s.snapshotIdleSlices = 0;
           applySnapshotScroll(s.snapshotWindow, s.snapshotScroll);
         } else if (!s.snapshotReportPath.empty() && !s.snapshotReportStarted && s.snapshotIdleSlices >= 12 &&
-                   (!anyPreviewLoading() || s.snapshotIdleSlices >= 400)) {
+                   !anyPreviewLoading()) {
           // Writes where both views are, once everything has settled; the picture follows.
           if (std::getenv("PRIMESTRUCT_UI_TARGET_LAST") != nullptr) {
             for (const auto &entry : s.windows) {
@@ -2761,9 +2836,10 @@ int32_t ps_ui_wait_event(void) {
           }
           s.snapshotReportStarted = true;
           startSnapshotReport(s.snapshotWindow);
-        } else if (s.snapshotIdleSlices >= 12 && (!anyPreviewLoading() || s.snapshotIdleSlices >= 400) &&
+        } else if (s.snapshotIdleSlices >= 12 && !anyPreviewLoading() && !s.snapshotHold &&
                    (s.snapshotReportPath.empty() || s.snapshotReportDone)) {
-          // (A preview still loading its page is waited for, up to twenty seconds.)
+          // (A preview still loading its page is waited for, however long a loaded machine takes: its navigation
+          // ends in didFinish, didFail or the end of its web content process, all of which clear the flag.)
           if (std::getenv("PRIMESTRUCT_UI_TARGET_LAST") != nullptr) {
             for (const auto &entry : s.windows) {
               s.snapshotWindow = std::max(s.snapshotWindow, entry.first);
@@ -4227,6 +4303,8 @@ bool ps_ui_window_refresh_preview(uint64_t window) {
       state().previewRefreshPending[window] = false;
       if (previewOn(window)) {
         renderPreview(window);
+      } else {
+        state().previewLoading[window] = false;
       }
     });
   }
