@@ -1208,7 +1208,8 @@ What the IR leaves on the table:
   (`values[index]`, everything inlined) the vector record's address is copied through three locals and the record is
   reread through `LoadIndirect` on every element: 50 IR instructions per element, about 180 arm64 instructions on
   native and 139 on optexe, which resolves each indirect access through its frame table (section 9.1). None of those
-  addresses leaves the function, so the indirect accesses could be plain local accesses (`local-sroa`, 12.5).
+  addresses leaves the function, so the indirect accesses could be plain local accesses (`local-sroa`, 12.5; done
+  in 12.11).
 - **Single-use temporaries survive.** `fib`'s argument binding is `StoreLocal 1; LoadLocal 1; Call`, a temporary read
   once; `dead-store` keeps it because it is read. A register allocator folds it away; the VM and the template emitter
   pay for it.
@@ -1470,3 +1471,50 @@ as before; the compiled native editor leaves the same headless call logs as the 
 
 Only float code (TODO-5773) is left on templates. Template opcodes inside allocated functions (prints, heap routines,
 host calls) still go through the x28 value stack, which is what TODO-5771 now has left to improve.
+
+### 12.11 Result: local addresses that stay in their function (TODO-5776, 2026-11-09)
+
+The shared IR pass `local-sroa` (`src/ir/optimizer/IrPassLocalSroa.cpp`, -O2, every target but GLSL, before
+`copy-prop`) runs a forward analysis over the CFG that gives every local and every operand-stack entry one of three
+values: not an address, the frame address of byte offset `k` (from `AddressOfLocal`, copied through
+`LoadLocal`/`StoreLocal` and moved by a constant pushed right before an `AddI*`/`SubI*`), or "an address on some path
+and not on another". When every address value is only the address of a `LoadIndirect`/`StoreIndirect` or dropped by a
+`Pop`, names one aligned slot of the frame on every path, and never meets a different value at a join, the indirect
+accesses become `LoadLocal`/`StoreLocal` of that slot (`StoreIndirect` pushes its value, so it becomes `StoreLocal`
+with the following `Pop` removed, or `Dup; StoreLocal`), and the address computations disappear. One address that
+reaches anything else (a call, a store as data, a comparison, a print, a return, a slot outside the frame) leaves the
+whole function as it is, and so does a read or write through an address built only from constants: the gfx smoke
+programs (`test_compile_run_smoke_core_gfx_entrypoints.cpp`) read a field through a reference left at 0 (`0 + 16`),
+which the VM resolves to slot 1 of the entry frame and native faults on; rewriting that `/main` made `dead-store`
+drop the slot the stray read saw, and the VM result changed from 90 to 2. Other addresses are taken not to name the
+frame, the rule `IrLocalEscape` already applies to every function without `AddressOfLocal`. Exact: the rewritten access touches the slot the address named, and an in-range, aligned
+frame address cannot fault. With no `AddressOfLocal` left, `IrLocalEscape` pins nothing, so `copy-prop`,
+`dead-store`, the optcpp scalar locals and the native allocators treat the slots as ordinary locals.
+
+`benchmarks/vector_sum.prime` (new, with C and C++ references; 1,000 values summed by index 20,000 times): the record
+of the vector (count, capacity, storage at slots 1-3) was read through its address, copied into two locals per
+element. `/main` now has no `AddressOfLocal`; the inner loop is 33 IR instructions instead of 47, and an element
+executes 27 instead of 41 (-34%). PrimeScroll (`--emit=native -O2`): 21 of the 114 functions that took a local
+address no longer do; the other 93 pass the address to a real call (the address ABI, 39 functions) or return it
+(the closure `make` helpers and the UI app constructors), which is where a finer analysis would have to go.
+
+Measured with the release `primec` of TODO-5775 (aaf9d37f8) and after, back to back, macOS arm64 (M3 Pro), load
+average 9.8 to 14.6; instructions retired are deterministic, cycles the lowest of five runs:
+
+| | instructions before | after | cycles before | after | change |
+| --- | --- | --- | --- | --- | --- |
+| vector_sum native | 732.9M | 292.7M | 134.3M | 66.9M | 2.0x fewer cycles |
+| vector_sum optexe | 2154.5M | 754.0M | 360.5M | 94.4M | 3.8x |
+| vector_sum `primevm` (compile and run) | 97.93G | 62.97G | 17.40G | 10.84G | 1.6x |
+| vector_sum C (`cc -O3`) / C++ (`c++ -O3`) | 40.8M / 33.5M | | 12.9M / 11.8M | | |
+| aggregate, call_fib, float_series, json_scan, json_parse native | | | | | unchanged (no local addresses; within 0.1% instructions, 5% cycles) |
+
+PrimeScroll: IR after the passes 46,180 to 43,398 instructions, `__text` 250,788 to 241,316 bytes (-3.8%),
+`register_allocated` 245 of 245 before and after. Every benchmark prints the same result;
+`scripts/differential_opt_check.py --native --levels 1,2`, also with `PRIMESTRUCT_NATIVE_REGALLOC=1`, matches in 491
+programs (490 and the new benchmark) and differs in the same six -O0 programs as before. Program-matrix cases
+(`primestruct.program_matrix.optimizer`) cover struct fields and vector reads and writes through local addresses (both
+rewritten), an address passed to a real call and an address past the frame (both left alone) on every config.
+
+What is left in vector_sum is the bounds check and the element load through the heap address; native still runs 5x
+the cycles of C there, which is template code and the two-way branch per check (TODO-5771).

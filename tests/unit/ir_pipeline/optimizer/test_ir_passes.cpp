@@ -1145,3 +1145,192 @@ TEST_CASE("loop-rotate leaves other loop shapes alone") {
                           "ReturnI32"})},
                primec::IrValidationTarget::Vm);
 }
+
+TEST_CASE("local-sroa turns accesses through a local address into local accesses") {
+  // A record at slots 0..2 whose address is copied into local 3; reads and
+  // writes of its fields become plain local accesses.
+  expectGolden(
+      "local-sroa",
+      {"fields through a copied address",
+       assemble({"PushI64 3",    "StoreLocal 1", "PushI64 4",  "StoreLocal 2", "AddressOfLocal 0",
+                 "StoreLocal 3", "LoadLocal 3",  "PushI64 16", "AddI64",       "LoadIndirect",
+                 "LoadLocal 3",  "PushI64 32",   "AddI64",     "PushI64 9",    "StoreIndirect",
+                 "Pop",          "LoadLocal 3",  "PushI64 32", "AddI64",       "LoadIndirect",
+                 "AddI64",       "ReturnI64"}),
+       assemble({"PushI64 3",
+                 "StoreLocal 1",
+                 "PushI64 4",
+                 "StoreLocal 2",
+                 "LoadLocal 1",
+                 "PushI64 9",
+                 "StoreLocal 2",
+                 "LoadLocal 2",
+                 "AddI64",
+                 "ReturnI64"})});
+  expectGolden("local-sroa",
+               {"a store whose result is used keeps its value",
+                assemble({"AddressOfLocal 1",
+                          "PushI64 5",
+                          "StoreIndirect",
+                          "PushI64 1",
+                          "AddI64",
+                          "AddressOfLocal 0",
+                          "PushI64 16",
+                          "AddI64",
+                          "LoadIndirect",
+                          "AddI64",
+                          "ReturnI64"}),
+                assemble({"PushI64 5",
+                          "Dup",
+                          "StoreLocal 1",
+                          "PushI64 1",
+                          "AddI64",
+                          "LoadLocal 1",
+                          "AddI64",
+                          "ReturnI64"})});
+  // The address is stored before a loop and read in it; a negative step that
+  // stays in the frame is fine, and jumps to removed instructions land on the
+  // next one that is left.
+  expectGolden(
+      "local-sroa",
+      {"an address used across a loop",
+       assemble({"AddressOfLocal 2", "StoreLocal 3", "PushI32 4",     "StoreLocal 0", "LoadLocal 3",
+                 "PushI64 -16",      "AddI64",       "LoadIndirect",  "PushI32 10",   "CmpLtI32",
+                 "JumpIfZero 20",    "LoadLocal 3",  "PushI64 16",    "SubI64",       "LoadLocal 0",
+                 "PushI32 1",        "AddI32",       "StoreIndirect", "Pop",          "Jump 4",
+                 "LoadLocal 0",      "ReturnI32"}),
+       assemble({"PushI32 4",
+                 "StoreLocal 0",
+                 "LoadLocal 1",
+                 "PushI32 10",
+                 "CmpLtI32",
+                 "JumpIfZero 11",
+                 "LoadLocal 0",
+                 "PushI32 1",
+                 "AddI32",
+                 "StoreLocal 1",
+                 "Jump 2",
+                 "LoadLocal 0",
+                 "ReturnI32"})});
+}
+
+TEST_CASE("local-sroa leaves functions whose addresses leave them alone") {
+  const std::vector<primec::IrInstruction> unchanged[] = {
+      // an address printed
+      assemble({"PushI32 1",
+                "StoreLocal 0",
+                "AddressOfLocal 0",
+                "PrintI64 1",
+                "PushI32 0",
+                "ReturnI32"}),
+      // an address returned
+      assemble({"PushI32 1", "StoreLocal 0", "AddressOfLocal 0", "ReturnI64"}),
+      // an address compared
+      assemble({"AddressOfLocal 0", "AddressOfLocal 1", "CmpEqI64", "ReturnI32"}),
+      // an address stored as data
+      assemble({"AddressOfLocal 1",
+                "AddressOfLocal 0",
+                "StoreIndirect",
+                "Pop",
+                "LoadLocal 1",
+                "LoadIndirect",
+                "ReturnI64"}),
+  };
+  for (const std::vector<primec::IrInstruction> &body : unchanged) {
+    expectGolden("local-sroa", {"left alone", body, body});
+  }
+
+  // An address passed to a call can be written through by the callee.
+  primec::IrModule module = moduleOf(assemble(
+      {"PushI64 2", "StoreLocal 0", "AddressOfLocal 0", "CallVoid 1", "LoadLocal 0", "ReturnI64"}));
+  primec::IrFunction callee;
+  callee.name = "/bump";
+  callee.parameterCount = 1;
+  callee.instructions =
+      assemble({"StoreLocal 0", "LoadLocal 0", "PushI64 7", "StoreIndirect", "Pop", "ReturnVoid"});
+  module.functions.push_back(callee);
+  const std::string before = listing(module);
+  primec::OptimizationOptions options;
+  options.enabledPasses = {"local-sroa"};
+  options.verifyEachPass = true;
+  primec::IrOptimizationReport report;
+  std::string error;
+  REQUIRE_MESSAGE(
+      primec::optimizeIrModule(module, options, primec::IrValidationTarget::Any, report, error),
+      error);
+  CHECK(listing(module) == before);
+  CHECK(report.runs.size() == 1);
+  CHECK_FALSE(report.runs.front().changed);
+}
+
+TEST_CASE("local-sroa leaves addresses it cannot name exactly alone") {
+  const std::vector<primec::IrInstruction> unchanged[] = {
+      // an offset past the frame
+      assemble({"PushI32 1",
+                "StoreLocal 1",
+                "AddressOfLocal 0",
+                "PushI64 160",
+                "AddI64",
+                "LoadIndirect",
+                "ReturnI64"}),
+      // an offset before the frame
+      assemble({"PushI32 1",
+                "StoreLocal 1",
+                "AddressOfLocal 0",
+                "PushI64 -16",
+                "AddI64",
+                "LoadIndirect",
+                "ReturnI64"}),
+      // an unaligned offset
+      assemble({"PushI32 1",
+                "StoreLocal 1",
+                "AddressOfLocal 0",
+                "PushI64 8",
+                "AddI64",
+                "LoadIndirect",
+                "ReturnI64"}),
+      // an offset that is not a constant
+      assemble({"PushI32 1",
+                "StoreLocal 1",
+                "AddressOfLocal 0",
+                "LoadLocal 1",
+                "AddI64",
+                "LoadIndirect",
+                "ReturnI64"}),
+      // two addresses meeting in one local
+      assemble({"LoadLocal 0",
+                "JumpIfZero 5",
+                "AddressOfLocal 1",
+                "StoreLocal 3",
+                "Jump 7",
+                "AddressOfLocal 2",
+                "StoreLocal 3",
+                "LoadLocal 3",
+                "LoadIndirect",
+                "ReturnI64"}),
+      // a local holding an address on one path only
+      assemble({"LoadLocal 0",
+                "JumpIfZero 4",
+                "AddressOfLocal 1",
+                "StoreLocal 3",
+                "LoadLocal 3",
+                "LoadIndirect",
+                "ReturnI64"}),
+      // a read through an address built from a constant (a null reference plus a field
+      // offset), which the VM resolves to a slot of the entry frame
+      assemble({"PushI32 0", "StoreLocal 2", "PushI64 7", "StoreLocal 1", "AddressOfLocal 0",
+                "PushI64 16", "AddI64", "LoadIndirect", "LoadLocal 2", "PushI64 16", "AddI64",
+                "LoadIndirect", "AddI64", "ReturnI64"}),
+      // an address left on the stack on one path of a join
+      assemble({"LoadLocal 0",
+                "JumpIfZero 4",
+                "AddressOfLocal 1",
+                "Jump 5",
+                "LoadLocal 2",
+                "LoadIndirect",
+                "ReturnI64"}),
+  };
+  for (const std::vector<primec::IrInstruction> &body : unchanged) {
+    expectGolden("local-sroa", {"left alone", body, body});
+  }
+}

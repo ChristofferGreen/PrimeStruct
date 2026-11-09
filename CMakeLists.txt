@@ -466,6 +466,7 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ir/optimizer/IrPassIfConvert.cpp
   src/ir/optimizer/IrPassConstFold.cpp
   src/ir/optimizer/IrPassCopyProp.cpp
+  src/ir/optimizer/IrPassLocalSroa.cpp
   src/ir/optimizer/IrPassDeadStore.cpp
   src/ir/optimizer/IrPassPeephole.cpp
   src/ir/IrPrinterHelpers.cpp
@@ -3627,7 +3628,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   # after the suite is its case count, which ctest PrimeStruct_test_registration checks.
   set(PrimeStructProgramMatrixCaseCounts
     closures=8 closures_callables=7 closures_references=4 closures_fields=3 closures_routers=7 container_copies=8
-    control=37 element_copies=7 lifecycle=24 optimizer=11 parameter_modes=6 results=9 shared_programs=16
+    control=37 element_copies=7 lifecycle=24 optimizer=15 parameter_modes=6 results=9 shared_programs=16
     text_views=2)
   foreach(suite IN LISTS PrimeStructProgramMatrixTestSuites)
     string(REPLACE "." "_" suiteId "${suite}")

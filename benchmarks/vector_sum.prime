@@ -1,0 +1,21 @@
+import /std/collections/*
+
+[return<int> effects(io_out, heap_alloc)]
+main() {
+  [vector<i64> mut] values{vector<i64>()}
+  [i32 mut] fill{0i32}
+  while(fill < 1000i32) {
+    values.push(convert<i64>(fill))
+    fill = fill + 1i32
+  }
+  [i64 mut] total{0i64}
+  repeat(20000i32) {
+    [i32 mut] index{0i32}
+    while(index < 1000i32) {
+      total = total + values[index]
+      index = index + 1i32
+    }
+  }
+  print_line(total)
+  return(0i32)
+}

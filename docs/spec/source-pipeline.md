@@ -51,8 +51,12 @@ Pipeline operating rules:
     arithmetic, comparisons and conversions of constants, with the VM's exact semantics), `peephole` (dead push/pop
     pairs, `dup; store; pop`, `x+0`, `x*1`, `x/1`, double negation, and `cmp; push 0; ne` on a comparison result),
     and `dead-store` (stores to locals that are never read, for locals not reachable through memory), all enabled from
-    `-O1`; and `copy-prop` (loads of a copy read the original local, using a forward analysis over the CFG; skipped for
-    functions that take local addresses) and `loop-rotate` (a loop whose header is two pure pushes, an integer comparison
+    `-O1`; and `local-sroa` (in a function whose every local address, copied through locals and moved by constant
+    offsets, is only read or written through and names one aligned slot of its own frame on every path, those
+    accesses become `LoadLocal`/`StoreLocal` and the addresses disappear, so the function's slots are no longer
+    pinned; an address that reaches a call, a store as data, a comparison, a return or a slot outside the frame,
+    or an access through an address built only from constants, leaves the whole function unchanged), `copy-prop` (loads of a copy read the original local, using a forward
+    analysis over the CFG; skipped for functions that take local addresses) and `loop-rotate` (a loop whose header is two pure pushes, an integer comparison
     and the exit branch gets that test copied, inverted, onto its back edge, removing one jump per iteration; VM target
     only) and `if-convert` (a local stepped by a constant under an integer comparison becomes straight-line
     code that adds the comparison times the step; native target only), enabled from `-O2`. `-O3` currently selects the

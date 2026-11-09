@@ -93,6 +93,20 @@ Files:
 - `benchmarks/float_series.rs`
 - `benchmarks/float_series.prime`
 
+## Vector Sum (indexed reads of a vector)
+
+This benchmark fills a `vector<i64>` with 1,000 values and sums it by index
+(`total = total + values[index]`) 20,000 times. Every read of the vector's
+count and storage goes through the vector record's address, so it measures
+how well the backends handle local addresses (`local-sroa`,
+docs/OptimizingBackendsPlan.md section 12). It is run by
+`scripts/benchmark_backends.py`; `scripts/benchmark.sh` does not include it.
+
+Files:
+- `benchmarks/vector_sum.c`
+- `benchmarks/vector_sum.cpp`
+- `benchmarks/vector_sum.prime`
+
 ## Compile Speed (large source)
 
 This benchmark generates a large PrimeStruct source file (default 100,000 lines)

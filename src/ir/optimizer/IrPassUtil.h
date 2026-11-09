@@ -123,6 +123,10 @@ bool runPeepholePass(IrModule &module,
                      const IrPassContext &context,
                      bool &changed,
                      std::string &error);
+bool runLocalSroaPass(IrModule &module,
+                      const IrPassContext &context,
+                      bool &changed,
+                      std::string &error);
 bool runCopyPropPass(IrModule &module,
                      const IrPassContext &context,
                      bool &changed,

@@ -138,8 +138,8 @@ TEST_CASE("opt-report describes the selected passes and what changed") {
   CHECK(result.exitCode == 0);
   CHECK(result.out == "10\n");
   CHECK(contains(result.err,
-                 "level=2\nselected_passes=cfg-simplify,const-fold,peephole,copy-prop,dead-store,"
-                 "loop-rotate\n"));
+                 "level=2\nselected_passes=cfg-simplify,const-fold,peephole,local-sroa,copy-prop,"
+                 "dead-store,loop-rotate\n"));
 
   // At -O0 nothing is selected, but the report is still produced on request.
   result = run("./primevm " + source + " -O0 --opt-report");
@@ -256,6 +256,53 @@ main() {
   CHECK(listed > 0);
   CHECK(contains(report.err, "instructions_after=" + std::to_string(listed) + "\n"));
   CHECK(run("'" + binary + "'").out == "15\n");
+}
+
+// local-sroa (TODO-5776): the loop of benchmarks/vector_sum.prime reads the vector record through its address; at
+// -O2 those reads become local reads on every target, and only the element load stays indirect.
+TEST_CASE("local-sroa removes the vector record's address from a summing loop") {
+  const std::string source = writeSource("vector_sum.prime", R"(import /std/collections/*
+
+[return<int> effects(io_out, heap_alloc)]
+main() {
+  [vector<i64> mut] values{vector<i64>()}
+  [i32 mut] fill{0i32}
+  while(fill < 100i32) {
+    values.push(convert<i64>(fill))
+    fill = fill + 1i32
+  }
+  [i64 mut] total{0i64}
+  [i32 mut] index{0i32}
+  while(index < 100i32) {
+    total = total + values[index]
+    index = index + 1i32
+  }
+  print_line(total)
+  return(0i32)
+}
+)");
+  const auto count = [](const std::string &text, const std::string &needle) {
+    size_t found = 0;
+    for (size_t at = text.find(needle); at != std::string::npos; at = text.find(needle, at + 1)) {
+      ++found;
+    }
+    return found;
+  };
+  for (const char *target : {"native", "vm", "optexe"}) {
+    CAPTURE(target);
+    const std::string emit =
+        std::string("./primec --emit=") + target + " -O2 --dump-stage ir-optimized ";
+    const CommandResult with = run(emit + source);
+    const CommandResult without = run(emit + source + " --no-opt-pass=local-sroa");
+    REQUIRE(with.exitCode == 0);
+    REQUIRE(without.exitCode == 0);
+    CHECK(count(without.out, "AddressOfLocal") > 0);
+    CHECK(count(with.out, "AddressOfLocal") == 0);
+    // Left: the element load of each loop (a heap address).
+    CHECK(count(with.out, "LoadIndirect") == 1);
+    CHECK(count(without.out, "LoadIndirect") > count(with.out, "LoadIndirect"));
+  }
+  CHECK(run("./primevm " + source).out == "4950\n");
 }
 
 TEST_CASE("serialized output is unchanged at -O0 and shrinks at -O1 with the same behavior") {

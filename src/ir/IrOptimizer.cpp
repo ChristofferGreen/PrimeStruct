@@ -81,6 +81,12 @@ const std::vector<IrOptimizationPass> &irOptimizationPasses() {
         1,
         IrTargetsNoGpu},
        &ir_opt::runPeepholePass},
+      {{"local-sroa",
+        "read and write locals directly instead of through local addresses that never leave the "
+        "function, so the function's slots stop being pinned",
+        2,
+        IrTargetsNoGpu},
+       &ir_opt::runLocalSroaPass},
       {{"copy-prop",
         "read the original local instead of a copy of it, so the copy can die",
         2,

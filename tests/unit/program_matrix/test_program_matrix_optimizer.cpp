@@ -365,3 +365,140 @@ TEST_CASE("struct real calls keep the native program from growing with the call 
   CHECK(many < one * 5); // ten inlined bodies would be about ten times one
 #endif
 }
+
+// local-sroa (TODO-5776): addresses of locals that never leave their function become local accesses at -O2;
+// addresses that reach a call or point outside the frame leave their function as it is. Every config must agree.
+TEST_CASE("struct fields through a local address") {
+  program_matrix::ProgramCase program;
+  program.name = "sroa_struct_fields";
+  program.source = R"([struct]
+Point() {
+  [i64 mut] x{0i64}
+  [i64 mut] y{0i64}
+
+  [return<i64>]
+  sum() {
+    return(this.x + this.y)
+  }
+}
+
+[return<int> effects(io_out)]
+main() {
+  [Point mut] p{Point{[x] 3i64, [y] 4i64}}
+  [i64 mut] total{0i64}
+  [i32 mut] i{0i32}
+  while(i < 10i32) {
+    p.x = p.x + convert<i64>(i)
+    p.y = p.y - 1i64
+    total = total + p.sum()
+    i = i + 1i32
+  }
+  print_line(total)
+  print_line(p.y)
+  [i64 mut] value{2i64}
+  [Pointer<i64> mut] ptr{location(value)}
+  dereference(ptr) = dereference(ptr) + 5i64
+  print_line(value)
+  return(convert<i32>(p.x))
+}
+)";
+  program.exitCode = 48;
+  program.stdoutText = "180\n-6\n7\n";
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("vector reads and writes through a local address") {
+  program_matrix::ProgramCase program;
+  program.name = "sroa_vector_access";
+  program.source = R"(import /std/collections/*
+
+[return<int> effects(io_out, heap_alloc)]
+main() {
+  [vector<i64> mut] values{vector<i64>()}
+  [i32 mut] fill{0i32}
+  while(fill < 12i32) {
+    values.push(convert<i64>(fill * fill))
+    fill = fill + 1i32
+  }
+  values[3i32] = 100i64
+  [i64 mut] total{0i64}
+  [i32 mut] index{0i32}
+  while(index < values.count()) {
+    total = total + values[index]
+    index = index + 1i32
+  }
+  print_line(total)
+  print_line(values.count())
+  return(convert<i32>(values[11i32]))
+}
+)";
+  program.exitCode = 121;
+  program.stdoutText = "597\n12\n";
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("a local address passed to a call stays in memory") {
+  program_matrix::ProgramCase program;
+  program.name = "sroa_address_to_call";
+  program.source = R"([struct]
+Counter() {
+  [i64 mut] hits{0i64}
+  [i64 mut] last{0i64}
+
+  [mut]
+  record([i64] value) {
+    this.hits = this.hits + 1i64
+    this.last = value
+  }
+}
+
+[return<int> effects(io_out)]
+main() {
+  [Counter mut] counter{Counter{}}
+  [i64 mut] sum{0i64}
+  [i32 mut] i{0i32}
+  while(i < 6i32) {
+    counter.record(convert<i64>(i) * 3i64)
+    sum = sum + counter.last + counter.hits
+    i = i + 1i32
+  }
+  print_line(sum)
+  counter.record(100i64)
+  print_line(counter.last)
+  return(convert<i32>(counter.hits))
+}
+)";
+  // Two call sites make `record` a real call that receives the counter's address.
+  program.exitCode = 7;
+  program.stdoutText = "66\n100\n";
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("an address outside the frame keeps its function in memory") {
+  // `far` points past the frame; it is never dereferenced at run time, but the function keeps all of its addresses.
+  program_matrix::ProgramCase program;
+  program.name = "sroa_out_of_frame";
+  program.source = R"([effects(io_out)]
+report_far([i32] flag) {
+  [i64 mut] first{11i64}
+  [i64 mut] second{22i64}
+  [Pointer<i64> mut] near{plus(location(first), 16i64)}
+  print_line(dereference(near))
+  if(flag > 0i32) {
+    [Pointer<i64>] far{plus(location(first), 16000i64)}
+    print_line(dereference(far))
+  }
+  second = second + dereference(near)
+  print_line(second)
+}
+
+[return<int> effects(io_out)]
+main() {
+  report_far(0i32)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "22\n44\n";
+  program_matrix::runProgramMatrix(program);
+}
