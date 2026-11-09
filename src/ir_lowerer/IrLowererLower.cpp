@@ -311,10 +311,8 @@ bool IrLowerer::lower(const Program &program,
                             .onErrorByDef = &onErrorByDef,
                             .stringTable = &stringTable,
                             .loweredCallTargets = &loweredCallTargets,
-                            .instructionSourceRangesByFunction =
-                                &instructionSourceRangesByFunction,
-                            .functionSyntaxProvenanceByName =
-                                &functionSyntaxProvenanceByName,
+                            .instructionSourceRangesByFunction = &instructionSourceRangesByFunction,
+                            .functionSyntaxProvenanceByName = &functionSyntaxProvenanceByName,
                             .currentOnError = &currentOnError,
                             .currentReturnResult = &currentReturnResult,
                             .sawReturn = &sawReturn,
@@ -334,9 +332,10 @@ bool IrLowerer::lower(const Program &program,
                                 [&](const Expr &valueExpr, const LocalMap &valueLocals) {
                                   return emitExpr(valueExpr, valueLocals);
                                 },
-                            .emitStatement = [&](const Expr &stmt, LocalMap &localsIn) {
-                              return emitStatement(stmt, localsIn);
-                            },
+                            .emitStatement =
+                                [&](const Expr &stmt, LocalMap &localsIn) {
+                                  return emitStatement(stmt, localsIn);
+                                },
                             .allocTempLocal = [&]() { return allocTempLocal(); },
                             .appendInstructionSourceRange = appendInstructionSourceRange,
                             .pushFileScope = [&]() { pushFileScope(); },
@@ -350,7 +349,9 @@ bool IrLowerer::lower(const Program &program,
                                   return resolveMethodCallDefinition(callExpr, callLocals);
                                 },
                             .resolveDefinitionCall =
-                                [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); },
+                                [&](const Expr &callExpr) {
+                                  return resolveDefinitionCall(callExpr);
+                                },
                             .getReturnInfo =
                                 [&](const std::string &definitionPath, ReturnInfo &returnInfo) {
                                   return getReturnInfo(definitionPath, returnInfo);
@@ -432,17 +433,35 @@ bool IrLowerer::lower(const Program &program,
                                       },
                                       callError);
                                 },
-                            .resetDefinitionLoweringState =
-                                [&]() { perBodyResetState.reset(); },
+                            .resetDefinitionLoweringState = [&]() { perBodyResetState.reset(); },
                             .realCallEligibleOrder = &setupStage.realCallEligibleOrder,
                             .realCallReservationIndex = &setupStage.realCallReservationIndex,
                             .realCallAddressAbi = setupStage.realCallAllowStructs,
+                            .registerOwnedParameters =
+                                [&](const Definition &def,
+                                    LocalMap &bodyLocals,
+                                    std::string &ownError) {
+                                  return ir_lowerer::registerRealCallOwnedParameters(
+                                      def,
+                                      bodyLocals,
+                                      setupStage.defMap,
+                                      [&](const std::string &structPath,
+                                          ir_lowerer::StructSlotLayoutInfo &layoutOut) {
+                                        return resolveStructSlotLayout(structPath, layoutOut);
+                                      },
+                                      [&]() { return allocTempLocal(); },
+                                      function.instructions,
+                                      setupStage.dropEntries,
+                                      fileScopeStack,
+                                      ownError);
+                                },
                             .runtimeErrorsTrap = setupStage.realCallAllowStructs ||
                                                  validationTarget == IrValidationTarget::Native,
                             .entryReturnsVoidStorage =
                                 &setupStage.setupLocalsOrchestration.entryReturnConfig.returnsVoid,
                             .realCallStructReturnStorage =
-                                &setupStage.setupLocalsOrchestration.entryReturnConfig.realCallStructReturnLocal,
+                                &setupStage.setupLocalsOrchestration.entryReturnConfig
+                                     .realCallStructReturnLocal,
                         },
                         stageError);
                   },

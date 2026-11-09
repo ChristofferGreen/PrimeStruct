@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -91,5 +92,20 @@ struct LowerSetupStageState {
 bool runLowerSetupStage(const LowerSetupStageInput &input,
                         LowerSetupStageState &stateOut,
                         std::string &errorOut);
+
+// The `copy` and `move` parameters of a real-call body under the address ABI belong to the body, as they belong to an
+// inlined body (docs/spec/value-lifecycle.md, Ownership): each struct parameter that needs destroying gets a drop flag,
+// set here, and a drop entry in the innermost file scope (the body's, just pushed), so the body destroys it on every
+// exit unless it moves the value on. The call site only binds them.
+bool registerRealCallOwnedParameters(
+    const Definition &def,
+    LocalMap &bodyLocals,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
+    const std::function<int32_t()> &allocTempLocal,
+    std::vector<IrInstruction> &instructions,
+    std::vector<LowerSetupStageState::DropEntry> &dropEntries,
+    std::vector<std::vector<int32_t>> &fileScopeStack,
+    std::string &errorOut);
 
 } // namespace primec::ir_lowerer

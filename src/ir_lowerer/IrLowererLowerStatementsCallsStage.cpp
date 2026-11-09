@@ -388,23 +388,41 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
             errorOut);
       };
 
-      if (!runLowerStatementsEntryExecutionStep(
-              {
-                  .entryDef = &def,
-                  .returnsVoid = returnInfo.returnsVoid,
-                  .sawReturn = input.sawReturn,
-                  .onErrorByDef = input.onErrorByDef,
-                  .currentOnError = input.currentOnError,
-                  .currentReturnResult = input.currentReturnResult,
-                  .entryHasResultInfo = false,
-                  .entryResultInfo = nullptr,
-                  .emitEntryStatement = emitBodyStatement,
-                  .pushFileScope = input.pushFileScope,
-                  .emitCurrentFileScopeCleanup = input.emitCurrentFileScopeCleanup,
-                  .popFileScope = input.popFileScope,
-                  .instructions = &input.function->instructions,
-              },
-              errorOut)) {
+      // The body's own scope (the first one pushed) holds the drop flags of its `copy` and `move` parameters.
+      bool bodyScopePushed = false;
+      std::string ownedParametersError;
+      const ActionFn pushBodyScope = [&]() {
+        input.pushFileScope();
+        if (!bodyScopePushed && input.realCallAddressAbi && input.registerOwnedParameters &&
+            !input.registerOwnedParameters(def, *input.locals, ownedParametersError) &&
+            ownedParametersError.empty()) {
+          ownedParametersError =
+              "internal error: could not own the parameters of real-call target " + def.fullPath;
+        }
+        bodyScopePushed = true;
+      };
+      const bool bodyEmitted = runLowerStatementsEntryExecutionStep(
+          {
+              .entryDef = &def,
+              .returnsVoid = returnInfo.returnsVoid,
+              .sawReturn = input.sawReturn,
+              .onErrorByDef = input.onErrorByDef,
+              .currentOnError = input.currentOnError,
+              .currentReturnResult = input.currentReturnResult,
+              .entryHasResultInfo = false,
+              .entryResultInfo = nullptr,
+              .emitEntryStatement = emitBodyStatement,
+              .pushFileScope = pushBodyScope,
+              .emitCurrentFileScopeCleanup = input.emitCurrentFileScopeCleanup,
+              .popFileScope = input.popFileScope,
+              .instructions = &input.function->instructions,
+          },
+          errorOut);
+      if (!ownedParametersError.empty()) {
+        errorOut = ownedParametersError;
+        return false;
+      }
+      if (!bodyEmitted) {
         if (errorOut.empty()) {
           errorOut = "lower statements entry execution failed without diagnostic for real-call target " + path;
         }

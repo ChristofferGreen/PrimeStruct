@@ -231,4 +231,85 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+// A method that takes a `Function` by `move` is a real call on the VM and optexe (TODO-5748): the call site binds the
+// closure in its own frame and the body owns it, destroying it unless it moves it on (here into a vector, or on to
+// another `move` parameter). The closure's captures are destroyed once, as in the inlined call.
+TEST_CASE("a Function moved into a method is owned by the call") {
+  program_matrix::ProgramCase program;
+  program.name = "real_call_function_move";
+  program.source = R"(
+import /std/collections/*
+
+[struct]
+Counter() {
+  [i32 mut] total{0i32}
+}
+
+[struct]
+Noisy() {
+  [i32] id{0i32}
+
+  [effects(io_out)]
+  Destroy() {
+    print_line(this.id)
+  }
+}
+
+[struct]
+Slot<State>() {
+  [Function<void, Reference<State>, i32> mut] handler
+}
+
+[struct]
+Table<State>() {
+  [State mut] state
+  [vector<Slot<State>> mut] slots{vector<Slot<State>>()}
+
+  [mut effects(heap_alloc) return<i32>]
+  add([Function<void, Reference<State>, i32> move] handler) {
+    [i32] index{this.slots.count()}
+    this.slots.push(Slot<State>{[handler] handler})
+    return(index)
+  }
+
+  [mut effects(heap_alloc) return<i32>]
+  addTwice([Function<void, Reference<State>, i32> move] handler) {
+    [i32] first{this.add(handler)}
+    return(first)
+  }
+
+  [mut effects(heap_alloc)]
+  fire([i32] index, [i32] amount) {
+    [Reference<State>] state{location(this.state)}
+    this.slots[index].handler(state, amount)
+  }
+}
+
+[effects(heap_alloc, io_out) return<int>]
+run() {
+  [Table<Counter> mut] table{Table<Counter>{[state] Counter{}}}
+  [Noisy] noisy{Noisy{[id] 7i32}}
+  [i32] a{table.add([noisy]([Reference<Counter>] c, [i32] n) { c.total = c.total + n * noisy.id })}
+  [i32] b{table.addTwice([]([Reference<Counter>] c, [i32] n) { c.total = c.total - n })}
+  [Function<void, Reference<Counter>, i32>] named{[]([Reference<Counter>] c, [i32] n) { c.total = c.total + 100i32 * n }}
+  [i32] c{table.add(move(named))}
+  table.fire(a, 2i32)
+  table.fire(b, 1i32)
+  table.fire(c, 1i32)
+  print_line(table.state.total)
+  return(table.state.total + a + b + c)
+}
+
+[effects(heap_alloc, io_out) return<int>]
+main() {
+  [i32] result{run()}
+  print_line(99i32)
+  return(result)
+}
+)";
+  program.exitCode = 116;
+  program.stdoutText = "7\n113\n7\n99\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

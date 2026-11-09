@@ -1095,6 +1095,14 @@ float_series 102.0/98.3, and the whole `--emit=vm` run of the HTTP fixtures take
 1.48 s/1.03 s (response_bytes), mostly from compiling less. What is left in todo_web's C++: `main` still inlines
 `serve` and `serveUntil` (a `Result` result, TODO-5738), and struct copies are unrolled per slot (TODO-5739).
 
+`Function` parameters taken by `move` or `copy` (TODO-5748, 2026-11-09): the native UI handler registrations
+(`AppHandlers.command`, `commandRange`, `onClick`, ...) take their closure by `move`, which kept them inline, so each of
+PrimeScroll's 43 registrations copied the vector push and growth code. They are real calls now; the body owns the
+closure. PrimeScroll on the VM target: 121,989 lowered instructions to 58,274 (44,950 after the optimizer, from
+107,534); its `--emit=optcpp` source 2.38 MB to 1.17 MB and its optexe headless build 1.26 MB to 1.03 MB. The web
+examples take no closures by `move` and are unchanged (todo_web 1.38 MB, hello_button 1.25 MB, web_app 0.92 MB,
+http_hello 0.75 MB); native has no address ABI yet (TODO-5740), so the native editor stays at 5.7 MB.
+
 Suggested order: Phase 0.1-0.3 (flags, pass manager, dumps), Phase 1.1
 (shared CFG), then this emitter (done), then the matrix runner (0.5) to run the corpus through it. Phase 3
 (register form, native code generator) is the next consumer of the middle end.

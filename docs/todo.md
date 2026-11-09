@@ -109,7 +109,6 @@ of sync with them.
 | TODO-5708 | Type aliases | deferred | type-aliases |
 | TODO-5745 | A labeled value that is a call parses in every position | ready | parser-labeled-values |
 | TODO-5746 | A parameterless `mut` method whose body is only bindings is a method | ready | diagnostics |
-| TODO-5748 | Methods with a `Function` parameter become real calls on the VM and optexe | ready | ir-real-calls |
 | TODO-5749 | PrimeScroll on handlers uses no more memory than its loop did | ready | native-ui-memory |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
 | TODO-5656 | Thread-safe `SharedString` (atomic count, per-thread string heaps) | deferred | string-concurrency |
@@ -197,7 +196,7 @@ of sync with them.
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719; collection fields found by closures and the todo example: TODO-5681, TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
 - Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5738, TODO-5718
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732, TODO-5735, TODO-5736, TODO-5737
-- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe; real calls and struct copies TODO-5739, TODO-5740, TODO-5741, TODO-5748
+- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe; real calls and struct copies TODO-5739, TODO-5740, TODO-5741
 
 ### Execution Queue
 
@@ -337,18 +336,6 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
     - the editor's native and optexe peak footprint is back within 0.2 MB of the loop version, measured the same way; the editor scenarios keep their call logs
     - full release gate green
   - stop_rule: the memory of the handler dispatch; no change to the handler API.
-
-- [ ] TODO-5748: Methods with a `Function` parameter become real calls on the VM and optexe
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-08
-  - phase: Optimizing backends: real calls (found in TODO-5710)
-  - parallel_track: ir-real-calls
-  - scope: The real-call shape check (src/ir_lowerer/IrLowererRecursionAnalysis.h) refuses a parameter type with template arguments, so `AppHandlers.command`, `commandRange`, `onClick` and the other registrations, which take a `Function<...>`, inline their vector push and growth at every call: about 1,500 VM instructions per registration. PrimeScroll registers 43 handlers, and its VM bytecode grew from 28K to 122K instructions (`main` from 7K to 68K). A `Function` value is a struct (its layout is a closure pointer and a table), so it can pass like one.
-  - acceptance:
-    - a method taking a `Function` by `move` is one real call on the VM and optexe; the editor's VM instruction count is measured before and after; the editor scenarios keep their call logs
-    - full release gate green
-  - stop_rule: `Function` parameters in the shape check and the real-call ABI only.
 
 - [ ] TODO-5688: Calls require the callee's whole active effect set
   - owner: ai

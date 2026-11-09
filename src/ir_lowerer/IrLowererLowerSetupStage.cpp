@@ -1,6 +1,7 @@
 #include "primec/ir_lowerer/IrLowererLowerSetupStage.h"
 
 #include "primec/ir_lowerer/IrLowererHelpers.h"
+#include "primec/ir_lowerer/IrLowererFlowHelpers.h"
 #include "primec/ir_lowerer/IrLowererBindingTransformHelpers.h"
 #include "primec/ir_lowerer/IrLowererLowerEntrySetup.h"
 #include "primec/ir_lowerer/IrLowererLowerImportsStructsSetup.h"
@@ -199,6 +200,44 @@ bool runLowerSetupStage(const LowerSetupStageInput &input,
     return false;
   }
 
+  return true;
+}
+
+bool registerRealCallOwnedParameters(
+    const Definition &def,
+    LocalMap &bodyLocals,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
+    const std::function<int32_t()> &allocTempLocal,
+    std::vector<IrInstruction> &instructions,
+    std::vector<LowerSetupStageState::DropEntry> &dropEntries,
+    std::vector<std::vector<int32_t>> &fileScopeStack,
+    std::string &errorOut) {
+  if (fileScopeStack.empty()) {
+    errorOut = "internal error: no scope for the parameters of real-call target " + def.fullPath;
+    return false;
+  }
+  for (const Expr &param : def.parameters) {
+    if (!parameterHasTransform(param, "copy") && !parameterHasTransform(param, "move")) {
+      continue;
+    }
+    auto ownedIt = bodyLocals.find(param.name);
+    if (ownedIt == bodyLocals.end() || ownedIt->second.structTypeName.empty() ||
+        (ownedIt->second.kind != LocalInfo::Kind::Value &&
+         ownedIt->second.kind != LocalInfo::Kind::Reference) ||
+        !structNeedsDestroyHelpers(
+            ownedIt->second.structTypeName,
+            [&](const std::string &path) { return findStackDestroyHelper(defMap, path); },
+            resolveStructSlotLayout)) {
+      continue;
+    }
+    LocalInfo &ownedInfo = ownedIt->second;
+    ownedInfo.dropFlagLocal = allocTempLocal();
+    instructions.push_back({IrOpcode::PushI32, 1});
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ownedInfo.dropFlagLocal)});
+    dropEntries.push_back({ownedInfo.index, ownedInfo.dropFlagLocal, ownedInfo.structTypeName});
+    fileScopeStack.back().push_back(-static_cast<int32_t>(dropEntries.size()));
+  }
   return true;
 }
 

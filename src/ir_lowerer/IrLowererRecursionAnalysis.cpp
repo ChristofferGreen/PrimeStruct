@@ -7,6 +7,7 @@
 #include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
 #include "primec/support/CollectionHelperNames.h"
 
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -423,21 +424,41 @@ bool isAddressAbiStruct(const std::string &path,
          path.rfind(collection_helpers::kCanonicalCollectionsRoot, 0) != 0;
 }
 
+// Whether `path` names the struct of a `Function` type (`/__FunctionN__t...`, docs/spec/value-lifecycle.md, Lambdas).
+bool isFunctionStructPath(const std::string &path) {
+  const size_t leafStart = path.find_last_of('/');
+  const std::string_view leaf = leafStart == std::string::npos
+                                    ? std::string_view(path)
+                                    : std::string_view(path).substr(leafStart + 1);
+  return leaf.rfind("__Function", 0) == 0;
+}
+
 // A parameter type the address ABI passes as one slot: a scalar, a struct (its address), or a Pointer or Reference to
-// a scalar or such a struct (the address).
+// a scalar or such a struct (the address). A `copy` or `move` parameter is taken only for a `Function`: the call site
+// binds it (copying or moving the argument) in its own frame, and the body owns and destroys it.
 bool isAddressAbiParameter(const Definition &def,
                            const Expr &param,
                            const std::unordered_set<std::string> &structNames) {
-  if (isArgsPackBinding(param) || !param.args.empty() || paramHasTransformNamed(param, "copy") ||
-      paramHasTransformNamed(param, "move")) {
+  if (isArgsPackBinding(param) || !param.args.empty()) {
     return false;
   }
+  const bool ownedParam =
+      paramHasTransformNamed(param, "copy") || paramHasTransformNamed(param, "move");
   for (const Transform &transform : param.transforms) {
     if (transform.name == "mut" || transform.name == "public" || transform.name == "private" ||
         transform.name == "static" || transform.name == "shared" || transform.name == "placement" ||
         transform.name == "align" || transform.name == "packed" || transform.name == "reflection" ||
-        transform.name == "effects" || transform.name == "capabilities") {
+        transform.name == "effects" || transform.name == "capabilities" ||
+        transform.name == "copy" || transform.name == "move") {
       continue;
+    }
+    if (ownedParam) {
+      if (!transform.arguments.empty() || !transform.templateArgs.empty()) {
+        return false;
+      }
+      const std::string path =
+          resolveStructTypeName(transform.name, def.namespacePrefix, structNames);
+      return isFunctionStructPath(path) && isAddressAbiStruct(path, structNames);
     }
     if (!transform.arguments.empty()) {
       return false;

@@ -372,4 +372,38 @@ TEST_CASE("eligibility rejects a recursive definition using try") {
   CHECK(eligible.empty());
 }
 
+namespace {
+// A definition `register([<structPath> <mode>] handler)` and the address-ABI shape check (the VM and optexe).
+bool ownedParameterShapeEligible(const std::string &structPath, const std::string &mode) {
+  primec::Definition registerDef = makeDef("/main/register");
+  primec::Expr param = makeScalarParam("handler", structPath);
+  primec::Transform modeTransform;
+  modeTransform.name = mode;
+  param.transforms.push_back(modeTransform);
+  registerDef.parameters.push_back(param);
+  primec::Definition structDef = makeDef(structPath);
+  primec::Transform structTransform;
+  structTransform.name = "struct";
+  structDef.transforms.push_back(structTransform);
+  const std::unordered_map<std::string, const primec::Definition *> byPath = {
+      {registerDef.fullPath, &registerDef},
+      {structDef.fullPath, &structDef},
+  };
+  const std::unordered_set<std::string> structNames = {structPath};
+  return primec::ir_lowerer::isRealCallShapeEligible(
+      registerDef, primec::ir_lowerer::RealCallShapeContext{&byPath, &structNames, true});
+}
+} // namespace
+
+TEST_CASE("address ABI accepts a Function parameter taken by move or copy") {
+  CHECK(ownedParameterShapeEligible("/__Function2__t0123456789abcdef", "move"));
+  CHECK(ownedParameterShapeEligible("/__Function2__t0123456789abcdef", "copy"));
+}
+
+TEST_CASE("address ABI keeps other structs taken by move or copy inline") {
+  CHECK_FALSE(ownedParameterShapeEligible("/main/Holder", "move"));
+  CHECK_FALSE(ownedParameterShapeEligible("/main/Holder", "copy"));
+  CHECK(ownedParameterShapeEligible("/main/Holder", "mut"));
+}
+
 TEST_SUITE_END();

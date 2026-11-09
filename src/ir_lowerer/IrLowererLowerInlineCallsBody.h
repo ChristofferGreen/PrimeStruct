@@ -580,9 +580,14 @@
                                                           *argExpr, [&](const Expr &candidate) {
                                                             return resolveDefinitionCall(candidate);
                                                           });
-      if (fileScopeStack.empty() ||
-          (!ir_lowerer::parameterHasTransform(param, "copy") &&
-           !ir_lowerer::parameterHasTransform(param, "move") && !temporaryArg)) {
+      const bool ownedParam = ir_lowerer::parameterHasTransform(param, "copy") ||
+                              ir_lowerer::parameterHasTransform(param, "move");
+      if (fileScopeStack.empty() || (!ownedParam && !temporaryArg)) {
+        continue;
+      }
+      // A real call's body owns its `copy` and `move` parameters and destroys them itself (it may move them on);
+      // the call site only binds them.
+      if (ownedParam && addressAbiCallImm.has_value()) {
         continue;
       }
       auto ownedIt = calleeLocals.find(param.name);
