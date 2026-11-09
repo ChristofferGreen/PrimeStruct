@@ -22,10 +22,19 @@
 TEST_SUITE_BEGIN("primestruct.ir.native_codegen");
 
 // The direct native emitter has an optimizing mode (locals in registers, deferred
-// operands, fused compare-and-branch). Every program here must print the same
-// output in that mode, in the plain template mode, and in the VM.
+// operands, fused compare-and-branch on x86_64; the register allocator on arm64, TODO-5772).
+// Every program here must print the same output in that mode, in the plain template mode, and
+// in the VM.
 
-#if defined(__linux__) && defined(__x86_64__)
+#if (defined(__linux__) && defined(__x86_64__)) ||                                                 \
+    (defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__)))
+#define PRIMESTRUCT_NATIVE_CODEGEN_RUNS 1
+#endif
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
+#define PRIMESTRUCT_NATIVE_CODEGEN_ARM64 1
+#endif
+
+#if defined(PRIMESTRUCT_NATIVE_CODEGEN_RUNS)
 
 namespace {
 
@@ -46,6 +55,9 @@ compileNativeAndRun(const primec::IrModule &module, const std::string &name, boo
   primec::NativeEmitterOptions options;
   options.promoteLocals = optimized;
   options.deferOperands = optimized;
+#if defined(PRIMESTRUCT_NATIVE_CODEGEN_ARM64)
+  options.registerAllocation = optimized;
+#endif
   if (!primec::NativeEmitter().emitExecutable(
           module, binary.string(), run.error, nullptr, options)) {
     return run;
@@ -223,6 +235,8 @@ TEST_CASE("native heap realloc keeps the common prefix when shrinking and growin
   expectNativeMatchesVm(module, "heap_realloc");
 }
 
+#if !defined(PRIMESTRUCT_NATIVE_CODEGEN_ARM64)
+// x86_64 only: the arm64 templates print and return the whole 64-bit slot.
 TEST_CASE("i32 slots print and return as 32-bit values, as in the VM") {
   // 2147483647 + 1 stays 2147483648 in the 64-bit slot; the VM reads the low 32
   // bits when printing, writing to a file and returning.
@@ -240,6 +254,7 @@ TEST_CASE("i32 slots print and return as 32-bit values, as in the VM") {
   module.functions[0].metadata.effectMask = primec::EffectIoOut;
   expectNativeMatchesVm(module, "i32_widths");
 }
+#endif
 
 TEST_CASE("SextI32 wraps i32 results in registers, deferred operands and promoted updates") {
   // The loop body updates two locals with `local = local OP constant; sext`, the
@@ -287,9 +302,282 @@ TEST_CASE("SextI32 wraps i32 results in registers, deferred operands and promote
   expectNativeMatchesVm(module, "sext_i32");
 }
 
+#if defined(PRIMESTRUCT_NATIVE_CODEGEN_ARM64)
+// arm64 register allocation (TODO-5772): which functions it takes, the code it writes for a loop,
+// spills past the pool, and the two-word branches of a function too large for one-word ones.
+namespace {
+
+// The register allocation report of `module` emitted with the allocator on.
+primec::NativeEmitterInstrumentation arm64AllocationReport(const primec::IrModule &module,
+                                                           const std::string &name) {
+  primec::NativeEmitterInstrumentation instrumentation;
+  primec::NativeEmitterOptions options;
+  options.registerAllocation = true;
+  std::string error;
+  const std::filesystem::path binary =
+      primec::testing::testScratchPath("native_codegen/" + name + ".report");
+  std::filesystem::create_directories(binary.parent_path());
+  CHECK_MESSAGE(primec::NativeEmitter().emitExecutable(
+                    module, binary.string(), error, &instrumentation, options),
+                error);
+  return instrumentation;
+}
+
+struct DisassembledInstruction {
+  uint64_t address = 0;
+  std::string text; // mnemonic and operands, one space apart
+};
+
+// `otool -tv` of the executable, one entry per instruction.
+std::vector<DisassembledInstruction> disassemble(const std::filesystem::path &binary) {
+  const std::filesystem::path listingPath = binary.string() + ".otool";
+  std::system(
+      ("otool -tv '" + binary.string() + "' > '" + listingPath.string() + "' 2>/dev/null").c_str());
+  std::ifstream listing(listingPath);
+  std::vector<DisassembledInstruction> instructions;
+  std::string line;
+  while (std::getline(listing, line)) {
+    const size_t tab = line.find('\t');
+    if (tab == std::string::npos || tab == 0) {
+      continue;
+    }
+    DisassembledInstruction instruction;
+    instruction.address = std::stoull(line.substr(0, tab), nullptr, 16);
+    std::string text = line.substr(tab + 1);
+    std::replace(text.begin(), text.end(), '\t', ' ');
+    instruction.text = text;
+    instructions.push_back(instruction);
+  }
+  return instructions;
+}
+
+} // namespace
+
+TEST_CASE("arm64 register allocation keeps a counting loop's locals in registers") {
+  // sum = 0; count = 10; while (count > 0) { sum = sum + count; count = count - 1 }; print sum
+  primec::IrModule module = optimizer_test::moduleOf(optimizer_test::assemble(
+      {"PushI64 0",   "StoreLocal 0",  "PushI64 10",  "StoreLocal 1", "LoadLocal 1", "PushI64 0",
+       "CmpGtI64",    "JumpIfZero 17", "LoadLocal 0", "LoadLocal 1",  "AddI64",      "StoreLocal 0",
+       "LoadLocal 1", "PushI64 1",     "SubI64",      "StoreLocal 1", "Jump 4",      "LoadLocal 0",
+       "PrintI64 1",  "PushI32 0",     "ReturnI32"}));
+  module.functions[0].metadata.effectMask = primec::EffectIoOut;
+  expectNativeMatchesVm(module, "regalloc_loop");
+
+  const primec::NativeEmitterInstrumentation report =
+      arm64AllocationReport(module, "regalloc_loop");
+  REQUIRE(report.perFunction.size() == 1);
+  CHECK(report.perFunction[0].registerAllocated);
+  CHECK(report.perFunction[0].registerAllocationSpillSlots == 0);
+
+  // The loop is the compare fused into its branch, the two updates on their registers and the
+  // jump back: no frame slot or value-stack access. count is the hottest class, so it takes the
+  // first register of the pool (x21), sum the second.
+  const std::vector<DisassembledInstruction> code =
+      disassemble(primec::testing::testScratchPath("native_codegen/regalloc_loop.opt"));
+  size_t start = 0;
+  while (start < code.size() && code[start].text != "mov x22, #0x0") {
+    ++start;
+  }
+  REQUIRE(start + 7 <= code.size());
+  const std::vector<std::string> expected = {"mov x22, #0x0",
+                                             "mov x21, #0xa",
+                                             "cmp x21, #0x0",
+                                             "b.le",
+                                             "add x22, x22, x21",
+                                             "sub x21, x21, #0x1",
+                                             "b"};
+  for (size_t i = 0; i < expected.size(); ++i) {
+    CAPTURE(i);
+    const std::string &text = code[start + i].text;
+    CHECK(text.substr(0, std::min(text.size(), text.find(" 0x"))) == expected[i]);
+  }
+  // b.le leaves the loop for the print after it; b goes back to the compare.
+  CHECK(code[start + 3].text == "b.le 0x" + [&] {
+    std::ostringstream hex;
+    hex << std::hex << code[start + 7].address;
+    return hex.str();
+  }());
+  std::ostringstream loop;
+  loop << "b 0x" << std::hex << code[start + 2].address;
+  CHECK(code[start + 6].text == loop.str());
+}
+
+TEST_CASE("arm64 register allocation spills values past its pool to frame slots") {
+  // 40 locals live across a loop exceed the 18 registers of the pool.
+  constexpr uint64_t Locals = 40;
+  std::vector<primec::IrInstruction> body;
+  for (uint64_t k = 0; k < Locals; ++k) {
+    body.push_back({primec::IrOpcode::PushI64, k * 7 + 1});
+    body.push_back({primec::IrOpcode::StoreLocal, k});
+  }
+  const uint64_t counter = Locals;
+  body.push_back({primec::IrOpcode::PushI64, 5});
+  body.push_back({primec::IrOpcode::StoreLocal, counter});
+  const uint64_t header = body.size();
+  body.push_back({primec::IrOpcode::LoadLocal, counter});
+  const size_t exitBranch = body.size();
+  body.push_back({primec::IrOpcode::JumpIfZero, 0});
+  for (uint64_t k = 0; k < Locals; ++k) {
+    // local[k] = local[k] * 3 + local[k - 1] - k
+    body.push_back({primec::IrOpcode::LoadLocal, k});
+    body.push_back({primec::IrOpcode::PushI64, 3});
+    body.push_back({primec::IrOpcode::MulI64, 0});
+    body.push_back({primec::IrOpcode::LoadLocal, (k + Locals - 1) % Locals});
+    body.push_back({primec::IrOpcode::AddI64, 0});
+    body.push_back({primec::IrOpcode::PushI64, k});
+    body.push_back({primec::IrOpcode::SubI64, 0});
+    body.push_back({primec::IrOpcode::StoreLocal, k});
+  }
+  body.push_back({primec::IrOpcode::LoadLocal, counter});
+  body.push_back({primec::IrOpcode::PushI64, 1});
+  body.push_back({primec::IrOpcode::SubI64, 0});
+  body.push_back({primec::IrOpcode::StoreLocal, counter});
+  body.push_back({primec::IrOpcode::Jump, header});
+  body[exitBranch].imm = body.size();
+  for (uint64_t k = 0; k < Locals; ++k) {
+    body.push_back({primec::IrOpcode::LoadLocal, k});
+    body.push_back({primec::IrOpcode::PrintI64, primec::PrintFlagNewline});
+  }
+  body.push_back({primec::IrOpcode::PushI32, 0});
+  body.push_back({primec::IrOpcode::ReturnI32, 0});
+  primec::IrModule module = optimizer_test::moduleOf(std::move(body));
+  module.functions[0].metadata.effectMask = primec::EffectIoOut;
+  expectNativeMatchesVm(module, "regalloc_spills");
+
+  const primec::NativeEmitterInstrumentation report =
+      arm64AllocationReport(module, "regalloc_spills");
+  REQUIRE(report.perFunction.size() == 1);
+  CHECK(report.perFunction[0].registerAllocated);
+  CHECK(report.perFunction[0].registerAllocationSpillSlots > 0);
+}
+
+TEST_CASE("arm64 functions with calls, floats or local addresses stay on templates") {
+  // main calls the others; /leaf is the only function the allocator takes.
+  primec::IrModule module;
+  module.entryIndex = 0;
+  module.functions.push_back(optimizer_test::functionOf("/main",
+                                                        optimizer_test::assemble({"PushI64 6",
+                                                                                  "Call 1",
+                                                                                  "PrintI64 1",
+                                                                                  "PushI64 7",
+                                                                                  "Call 2",
+                                                                                  "PrintI64 1",
+                                                                                  "PushI64 8",
+                                                                                  "Call 3",
+                                                                                  "PrintI64 1",
+                                                                                  "PushI32 0",
+                                                                                  "ReturnI32"})));
+  // /address: local 1 = argument, then written and read back through its address.
+  module.functions.push_back(
+      optimizer_test::functionOf("/address",
+                                 optimizer_test::assemble({"StoreLocal 1",
+                                                           "AddressOfLocal 1",
+                                                           "LoadLocal 1",
+                                                           "PushI64 100",
+                                                           "AddI64",
+                                                           "StoreIndirect",
+                                                           "Pop",
+                                                           "LoadLocal 1",
+                                                           "ReturnI64"}),
+                                 1));
+  // /float: the argument converted, doubled as a float and converted back.
+  module.functions.push_back(optimizer_test::functionOf(
+      "/float",
+      optimizer_test::assemble(
+          {"ConvertI64ToF64", "Dup", "AddF64", "ConvertF64ToI64", "ReturnI64"}),
+      1));
+  module.functions.push_back(optimizer_test::functionOf(
+      "/leaf",
+      optimizer_test::assemble(
+          {"StoreLocal 0", "LoadLocal 0", "LoadLocal 0", "MulI64", "ReturnI64"}),
+      1));
+  expectNativeMatchesVm(module, "regalloc_fallbacks");
+
+  const primec::NativeEmitterInstrumentation report =
+      arm64AllocationReport(module, "regalloc_fallbacks");
+  REQUIRE(report.perFunction.size() == 4);
+  CHECK_FALSE(report.perFunction[0].registerAllocated);
+  CHECK(report.perFunction[0].registerAllocationFallback == "calls a function (TODO-5774)");
+  CHECK_FALSE(report.perFunction[1].registerAllocated);
+  CHECK(report.perFunction[1].registerAllocationFallback == "takes a local address (TODO-5775)");
+  CHECK_FALSE(report.perFunction[2].registerAllocated);
+  CHECK(report.perFunction[2].registerAllocationFallback == "float values (TODO-5773)");
+  CHECK(report.perFunction[3].registerAllocated);
+}
+
+TEST_CASE("arm64 register-allocated functions run with two-word conditional branches") {
+  // Every function with the far form, as a function too large for b.cond falls back to.
+  setenv("PRIMESTRUCT_NATIVE_REGALLOC_FAR_BRANCHES", "1", 1);
+  std::vector<primec::IrFunction> bodies;
+  for (uint64_t seed = 0; seed < 20; ++seed) {
+    bodies.push_back(optimizer_test::makeModule(seed + 61000).functions[0]);
+    bodies.back().name = "/program" + std::to_string(seed);
+  }
+  expectNativeMatchesVm(optimizer_test::driverModule(std::move(bodies)), "regalloc_far");
+  expectNativeMatchesVm(optimizer_test::fusedFormsProgram(), "regalloc_far_fused");
+  unsetenv("PRIMESTRUCT_NATIVE_REGALLOC_FAR_BRANCHES");
+}
+
+TEST_CASE("arm64 register allocation re-emits a function past the reach of b.cond") {
+  // A loop whose exit branch jumps over more than 1 MB of code (cbz and b.cond reach +-1 MB): the
+  // function is emitted again with two-word branches and still runs. The body runs once (local 0
+  // counts down from 1), so the exit condition is a register, not a constant.
+  std::vector<primec::IrInstruction> body = optimizer_test::assemble({"PushI64 1",
+                                                                      "StoreLocal 0",
+                                                                      "PushI64 0",
+                                                                      "StoreLocal 1",
+                                                                      "LoadLocal 0",
+                                                                      "JumpIfZero 0",
+                                                                      "LoadLocal 0",
+                                                                      "PushI64 1",
+                                                                      "SubI64",
+                                                                      "StoreLocal 0"});
+  const size_t branch = 5;
+  for (int i = 0; i < 27000; ++i) {
+    // x = x * c1 + c2 with four-word constants: ten words.
+    body.push_back({primec::IrOpcode::LoadLocal, 1});
+    body.push_back({primec::IrOpcode::PushI64, 0x123456789ABCDEF1ull + static_cast<uint64_t>(i)});
+    body.push_back({primec::IrOpcode::MulI64, 0});
+    body.push_back({primec::IrOpcode::PushI64, 0x0FEDCBA987654321ull});
+    body.push_back({primec::IrOpcode::AddI64, 0});
+    body.push_back({primec::IrOpcode::StoreLocal, 1});
+  }
+  body.push_back({primec::IrOpcode::Jump, 4});
+  body[branch].imm = body.size();
+  body.push_back({primec::IrOpcode::LoadLocal, 1});
+  body.push_back({primec::IrOpcode::PrintI64, primec::PrintFlagNewline});
+  body.push_back({primec::IrOpcode::PushI32, 0});
+  body.push_back({primec::IrOpcode::ReturnI32, 0});
+  primec::IrModule large = optimizer_test::moduleOf(std::move(body));
+  large.functions[0].metadata.effectMask = primec::EffectIoOut;
+  expectNativeMatchesVm(large, "regalloc_far_large");
+  const primec::NativeEmitterInstrumentation report =
+      arm64AllocationReport(large, "regalloc_far_large");
+  REQUIRE(report.perFunction.size() == 1);
+  CHECK(report.perFunction[0].registerAllocated);
+  // The exit branch took the two-word form out of range: `cmp`, then `b.ne` over the `b` to the
+  // exit (patchCondBranch inverts the condition when the target is beyond b.cond's reach).
+  const std::vector<DisassembledInstruction> code =
+      disassemble(primec::testing::testScratchPath("native_codegen/regalloc_far_large.opt"));
+  bool farExit = false;
+  std::string head;
+  for (size_t i = 0; i < code.size() && i < 20; ++i) {
+    head += code[i].text + "\n";
+  }
+  INFO(head);
+  for (size_t i = 0; i + 2 < code.size() && i < 64; ++i) {
+    if (code[i].text.rfind("cmp x", 0) == 0 && code[i].text.find(", xzr") != std::string::npos &&
+        code[i + 1].text.rfind("b.ne ", 0) == 0 && code[i + 2].text.rfind("b ", 0) == 0) {
+      farExit = true;
+    }
+  }
+  CHECK(farExit);
+}
+#endif
+
 #else
 
-TEST_CASE("optimized native code is only built on Linux x86_64") {
+TEST_CASE("optimized native code is only built on Linux x86_64 and macOS arm64") {
   CHECK(true);
 }
 

@@ -9,7 +9,10 @@
 
 namespace primec::native_emitter {
 
-// Register allocation for the x86_64 native emitter (docs/OptimizingBackendsPlan.md, Phase 3).
+// Register allocation for the native emitters (docs/OptimizingBackendsPlan.md, Phase 3 and
+// section 12): x86_64 (NativeEmitterInternalsX64RegAlloc.h) and arm64
+// (NativeEmitterInternalsArm64RegAlloc.h). The plan is target-independent; the pool names the
+// target's registers.
 //
 // A function is lowered to the block register form with promoted locals
 // (IrVirtualRegisterLowering.h). Copies are folded away before allocation: a constant push
@@ -92,13 +95,16 @@ inline uint32_t regAllocDefPosition(size_t index) {
 
 // Plans `functionIndex` of `module` over the registers in `pool`. Returns false (with a reason in
 // `error`) when the function's register form cannot be built, in which case the caller emits the
-// function the template way. With `promoteLocals` false every local stays in its frame slot.
+// function the template way. With `promoteLocals` false every local stays in its frame slot. With
+// `floatRegisters` false no class is coloured from the xmm pool: every home is a general register
+// (numbered below 32) or a slot.
 bool planNativeRegisterAllocation(const IrModule &module,
                                   size_t functionIndex,
                                   const std::vector<uint8_t> &pool,
                                   RegAllocFunctionPlan &out,
                                   std::string &error,
-                                  bool promoteLocals = true);
+                                  bool promoteLocals = true,
+                                  bool floatRegisters = true);
 
 // The machine registers holding a value that must survive instruction `index` of block
 // `blockIndex` (live before and after it, and not written by it): general registers by number,

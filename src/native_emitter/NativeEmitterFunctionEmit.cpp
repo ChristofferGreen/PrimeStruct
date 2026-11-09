@@ -90,7 +90,38 @@ bool emitNativeFunctions(const IrModule &module,
   // operand stack): not the entry, and every caller register-allocated (the template callers
   // pass arguments on the operand stack).
   std::vector<bool> registerArguments(module.functions.size(), false);
-  if constexpr (!kIsArm64) {
+  if constexpr (kIsArm64) {
+    // arm64 (NativeEmitterInternalsArm64RegAlloc.h): functions without calls, float values or
+    // local addresses; the others keep their templates, with the reason in --opt-report.
+    if (emitter.registerAllocationEnabled()) {
+      for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
+        const IrFunction &function = module.functions[functionIndex];
+        std::string planError = arm64RegisterAllocationBlocker(function);
+        for (const IrInstruction &inst : function.instructions) {
+          if (inst.op == IrOpcode::LoadStringByte && inst.imm >= module.stringTable.size()) {
+            planError = "string index out of range";
+          }
+        }
+        registerAllocated[functionIndex] =
+            planError.empty() && planNativeRegisterAllocation(
+                                     module,
+                                     functionIndex,
+                                     argRegsFree ? Arm64RegAllocPoolWithArgRegs : Arm64RegAllocPool,
+                                     regAllocPlans[functionIndex],
+                                     planError,
+                                     true,
+                                     false);
+        if (instrumentation != nullptr) {
+          auto &functionInstrumentation = instrumentation->perFunction[functionIndex];
+          functionInstrumentation.registerAllocated = registerAllocated[functionIndex];
+          functionInstrumentation.registerAllocationSpillSlots =
+              registerAllocated[functionIndex] ? regAllocPlans[functionIndex].spillSlotCount : 0;
+          functionInstrumentation.registerAllocationFallback =
+              registerAllocated[functionIndex] ? std::string() : planError;
+        }
+      }
+    }
+  } else {
     if (emitter.registerAllocationEnabled()) {
       for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
         bool stringsValid = true;
@@ -809,7 +840,54 @@ bool emitNativeFunctions(const IrModule &module,
       deferOperands = emitter.operandDeferralEnabled();
     }
     if (useRegisterAllocation) {
-      if constexpr (!kIsArm64) {
+      if constexpr (kIsArm64) {
+        typename EmitterT::RegAllocHooks hooks;
+        hooks.emitTemplate = emitTemplateInstruction;
+        hooks.recordStringFixup = [&](size_t fixupIndex, uint32_t stringIndex) {
+          stringFixups.push_back({fixupIndex, stringIndex});
+        };
+        bool branchOutOfRange = false;
+        hooks.branchOutOfRange = &branchOutOfRange;
+        hooks.farBranches = emitter.registerAllocationFarBranches();
+        // A function whose conditional branches cannot all reach their targets in one word is
+        // emitted again with two-word branches.
+        const auto checkpoint = emitter.checkpoint();
+        const size_t branchFixupCount = branchFixups.size();
+        const size_t callFixupCount = callFixups.size();
+        const size_t stringFixupCount = stringFixups.size();
+        const size_t stringTableFixupCount = stringTableFixups.size();
+        const size_t hostFixupCount = hostImports.fixups.size();
+        if (!emitter.emitRegisterAllocatedFunction(fn,
+                                                   regAllocPlan,
+                                                   spillBaseLocal,
+                                                   layout.framePointerLocalIndex,
+                                                   layout.linkLocalIndex,
+                                                   instOffsets[functionIndex],
+                                                   hooks,
+                                                   error)) {
+          if (!branchOutOfRange || hooks.farBranches) {
+            return false;
+          }
+          emitter.rollBack(checkpoint);
+          branchFixups.resize(branchFixupCount);
+          callFixups.resize(callFixupCount);
+          stringFixups.resize(stringFixupCount);
+          stringTableFixups.resize(stringTableFixupCount);
+          hostImports.fixups.resize(hostFixupCount);
+          error.clear();
+          hooks.farBranches = true;
+          if (!emitter.emitRegisterAllocatedFunction(fn,
+                                                     regAllocPlan,
+                                                     spillBaseLocal,
+                                                     layout.framePointerLocalIndex,
+                                                     layout.linkLocalIndex,
+                                                     instOffsets[functionIndex],
+                                                     hooks,
+                                                     error)) {
+            return false;
+          }
+        }
+      } else {
         typename EmitterT::RegAllocHooks hooks;
         hooks.emitTemplate = emitTemplateInstruction;
         hooks.recordStringFixup = [&](size_t fixupIndex, uint32_t stringIndex) {

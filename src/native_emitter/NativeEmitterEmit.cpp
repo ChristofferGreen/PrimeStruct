@@ -200,15 +200,22 @@ bool buildNativeImage(const IrModule &module,
   X64Emitter emitter;
 #endif
   emitter.setValueStackCacheEnabled(options.enableRegisterCache);
-#if !(defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__)))
-  emitter.setLocalPromotionEnabled(options.promoteLocals);
-  emitter.setOperandDeferralEnabled(options.deferOperands);
   bool registerAllocation = options.registerAllocation;
   if (const char *forced = std::getenv("PRIMESTRUCT_NATIVE_REGALLOC"); forced != nullptr) {
     registerAllocation = std::string_view(forced) == "1";
   }
+#if !(defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__)))
+  emitter.setLocalPromotionEnabled(options.promoteLocals);
+  emitter.setOperandDeferralEnabled(options.deferOperands);
   emitter.setRegisterAllocationEnabled(registerAllocation || jit != nullptr);
   emitter.setJitMode(jit != nullptr);
+#else
+  emitter.setRegisterAllocationEnabled(registerAllocation);
+  // Testing: every register-allocated function with two-word conditional branches, the form a
+  // function too large for one-word branches falls back to.
+  if (const char *far = std::getenv("PRIMESTRUCT_NATIVE_REGALLOC_FAR_BRANCHES"); far != nullptr) {
+    emitter.setRegisterAllocationFarBranches(std::string_view(far) == "1");
+  }
 #endif
   std::vector<NativeEmitterBranchFixup> branchFixups;
   std::vector<NativeEmitterCallFixup> callFixups;

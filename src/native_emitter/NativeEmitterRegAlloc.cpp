@@ -131,7 +131,8 @@ bool planNativeRegisterAllocation(const IrModule &module,
                                   const std::vector<uint8_t> &pool,
                                   RegAllocFunctionPlan &out,
                                   std::string &error,
-                                  bool promoteLocals) {
+                                  bool promoteLocals,
+                                  bool floatRegisters) {
   out = {};
   error.clear();
   IrVirtualRegisterFunction registerForm;
@@ -546,53 +547,54 @@ bool planNativeRegisterAllocation(const IrModule &module,
   });
   std::vector<RegAllocLocation> home(valueCount);
   uint32_t slotCount = 0;
-  // Registers as bits: general register r is bit r, xmm register x is bit 16 + x.
+  // Registers as bits: general register r (x86_64 or arm64 numbering, below 32) is bit r, xmm
+  // register x is bit 32 + x.
   const auto registerBit = [](const RegAllocLocation &where) -> int {
     if (where.kind == RegAllocLocationKind::Reg) {
       return where.reg;
     }
     if (where.kind == RegAllocLocationKind::Xmm) {
-      return 16 + where.reg;
+      return 32 + where.reg;
     }
     return -1;
   };
   const auto registersAround = [&](uint32_t value, uint32_t root) {
-    uint32_t used = 0;
+    uint64_t used = 0;
     for (const uint32_t other : neighbours[value]) {
       const int bit = registerBit(home[other]);
       if (find(other) != root && bit >= 0) {
-        used |= 1u << bit;
+        used |= uint64_t{1} << bit;
       }
     }
     return used;
   };
-  const auto preferredRegister = [&](uint32_t value, uint32_t used, RegAllocLocationKind kind) {
+  const auto preferredRegister = [&](uint32_t value, uint64_t used, RegAllocLocationKind kind) {
     for (const uint32_t partner : preferred[value]) {
       const int bit = registerBit(home[partner]);
-      if (home[partner].kind == kind && (used & (1u << bit)) == 0) {
+      if (home[partner].kind == kind && (used & (uint64_t{1} << bit)) == 0) {
         return static_cast<int>(home[partner].reg);
       }
     }
     return -1;
   };
-  const auto firstFree = [&](uint32_t used, RegAllocLocationKind kind) -> int {
+  const auto firstFree = [&](uint64_t used, RegAllocLocationKind kind) -> int {
     if (kind == RegAllocLocationKind::Xmm) {
       for (const uint8_t reg : XmmPool) {
-        if ((used & (1u << (16 + reg))) == 0) {
+        if ((used & (uint64_t{1} << (32 + reg))) == 0) {
           return reg;
         }
       }
       return -1;
     }
     for (const uint8_t reg : pool) {
-      if ((used & (1u << reg)) == 0) {
+      if ((used & (uint64_t{1} << reg)) == 0) {
         return reg;
       }
     }
     return -1;
   };
   for (const uint32_t root : classes) {
-    uint32_t used = 0;
+    uint64_t used = 0;
     bool floats = false;
     bool integers = false;
     for (const uint32_t member : members[root]) {
@@ -600,8 +602,9 @@ bool planNativeRegisterAllocation(const IrModule &module,
       floats = floats || floatAccess[member];
       integers = integers || integerAccess[member];
     }
-    const RegAllocLocationKind kind =
-        floats && !integers ? RegAllocLocationKind::Xmm : RegAllocLocationKind::Reg;
+    const RegAllocLocationKind kind = floatRegisters && floats && !integers
+                                          ? RegAllocLocationKind::Xmm
+                                          : RegAllocLocationKind::Reg;
     int chosen = -1;
     for (const uint32_t member : members[root]) {
       chosen = preferredRegister(member, used, kind);

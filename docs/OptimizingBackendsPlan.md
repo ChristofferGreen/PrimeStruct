@@ -1337,3 +1337,48 @@ module (245 functions, 46,180 instructions, the `instructions_after` of its nati
 host calls before. `primestruct.ir.optimizer_cli` pins it on a loop with a stepped local: the native dump has the
 `if-convert` multiply and one branch fewer, the VM and target-neutral dumps do not, and the native dump's instruction
 count equals the native `--opt-report`.
+
+### 12.8 Result: register allocation for integer code on arm64 (TODO-5772, 2026-11-09)
+
+`Arm64Emitter::emitRegisterAllocatedFunction` (`src/native_emitter/NativeEmitterInternalsArm64RegAlloc.h`) emits the
+plan `planNativeRegisterAllocation` already builds for x86_64. The plan is unchanged but for 64-bit register masks
+(arm64 numbers registers up to 28) and a switch that keeps every class out of the xmm pool. arm64 takes a function
+when it has no `Call`/`CallVoid`, no float opcode and no `AddressOfLocal`; `--opt-report` names the reason otherwise
+(`calls a function (TODO-5774)`, `float values (TODO-5773)`, `takes a local address (TODO-5775)`).
+`PRIMESTRUCT_NATIVE_REGALLOC=0|1` forces it as on x86_64; it is on at `-O2`, the native default.
+
+- Pool, hottest classes first: x21-x25, which no template, host call (AAPCS64 callee-saved) or heap routine changes;
+  x19/x20 when no function reads argc/argv; then the template scratch registers x9-x15 and x3-x8, saved in frame
+  slots around a template only while live across it. x0/x1 are the scratch registers (x0 also breaks parallel-move
+  cycles, x1 carries slot copies and string addresses for `patchAdr`), x17 frame offsets past `ldr`'s 32 KB reach.
+  A class that finds no register everywhere gets one frame slot, as on x86_64.
+- Inline: integer add, sub, mul, div and neg (three-address, so no two-address copies), `sxtw`, `uxtb`, constants as
+  12-bit add/sub/cmp/cmn immediates, a compare fused into `cmp` + `b.cond` before its `JumpIfZero` and `cset`
+  otherwise, word and byte loads and stores, `LoadStringByte` (`adrp`/`add` and a register-offset `ldrb`), frame
+  slots of pinned locals, edge parallel moves (a conditional jump with moves goes through a trampoline after the
+  body), returns and `Trap`. Every other opcode runs its template on the x28 value stack with the cache register off.
+- Branches are one word (`b.cond`, `cbz`). When one cannot reach (a function over 1 MB), the emitter state is
+  rolled back to a checkpoint and the function emitted again with two-word branches;
+  `PRIMESTRUCT_NATIVE_REGALLOC_FAR_BRANCHES=1` forces that form for tests.
+
+aggregate's loop is now the shape of variant D in 12.4, every local in a register: `cmp x23, #0; b.le` out, then
+`add x24, x24, x22; mul x21, x22, x22; add x25, x25, x21; add x22, x22, #1; sub x23, x23, #1; b` back (D fuses the
+multiply-add into `madd` and tests at the bottom). Measured with the release `primec`, the allocator off (`PRIMESTRUCT_NATIVE_REGALLOC=0`, identical to the
+TODO-5770 build) and on, back to back, macOS arm64 (M3 Pro), load average 11.0 to 14.7; instructions retired are
+deterministic, cycles the lowest of five runs:
+
+| | instructions before | after | cycles before | after | change |
+| --- | --- | --- | --- | --- | --- |
+| aggregate | 317.3M | 52.1M | 49.3M | 12.9M | 3.8x fewer cycles |
+| json_scan | 446.8M | 89.2M | 79.2M | 23.8M | 3.3x |
+| json_parse | 564.7M | 122.6M | 99.5M | 44.8M | 2.2x (4.4x against the 196.6M of 12.3) |
+| call_fib, float_series | | | | | unchanged (`/fib` and `/main` call; float_series is floats) |
+
+PrimeScroll: `register_allocated` 0 to 109 of 245 functions (35 call, 101 take a local address), `__text` 483,008 to
+479,688 bytes. Every benchmark prints the same result; `scripts/differential_opt_check.py --native` (also with
+`PRIMESTRUCT_NATIVE_REGALLOC=1`, which forces the allocator at -O0) differs from the VM only in the six programs it
+already did at -O0 (missing host libraries and VM fault checks native has never made).
+
+json_parse runs at about 8 cycles per character against about 5 for C. It is not loop overhead: enabling `loop-rotate`
+for native took 4.5M instructions off and no cycles. What is left is the data-dependent branch cascade of its
+character dispatch, which is code layout, not register allocation.

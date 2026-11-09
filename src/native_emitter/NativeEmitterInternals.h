@@ -3,11 +3,13 @@
 #include <algorithm>
 #include <bit>
 #include <cstdint>
+#include <functional>
 #include <string>
 #include <string_view>
 #include <vector>
 
 #include "primec/ir/Ir.h"
+#include "NativeEmitterRegAlloc.h"
 
 #if defined(__APPLE__)
 #include <sys/mman.h>
@@ -424,6 +426,67 @@ class Arm64Emitter {
     return counters_;
   }
 
+  // Register-allocated function bodies (NativeEmitterRegAlloc.h,
+  // NativeEmitterInternalsArm64RegAlloc.h).
+  void setRegisterAllocationEnabled(bool enabled) {
+    registerAllocationEnabled_ = enabled;
+  }
+  bool registerAllocationEnabled() const {
+    return registerAllocationEnabled_;
+  }
+  void setRegisterAllocationFarBranches(bool enabled) {
+    registerAllocationFarBranches_ = enabled;
+  }
+  bool registerAllocationFarBranches() const {
+    return registerAllocationFarBranches_;
+  }
+  struct RegAllocHooks {
+    // Emits instruction `index` with its ordinary template on the memory value stack.
+    std::function<bool(size_t index)> emitTemplate;
+    std::function<void(size_t fixupIndex, uint32_t stringIndex)> recordStringFixup;
+    // Conditional branches take two words (b.cond over a b) and reach the whole image instead of
+    // +-1 MB. The emitter sets `branchOutOfRange` and fails when a one-word branch cannot reach
+    // its target; the caller rolls the function back (checkpoint) and emits it again this way.
+    bool farBranches = false;
+    bool *branchOutOfRange = nullptr;
+  };
+  // Emits `fn`'s body from `plan` (after beginFunction and the prologue's local stores). Spill
+  // slot k and the save slot of register r are the frame slots of pseudo-locals
+  // spillBaseLocal + k and spillBaseLocal + plan.spillSlotCount + r.
+  bool emitRegisterAllocatedFunction(const IrFunction &fn,
+                                     const RegAllocFunctionPlan &plan,
+                                     uint32_t spillBaseLocal,
+                                     uint32_t frameLocalIndex,
+                                     uint32_t linkLocalIndex,
+                                     std::vector<size_t> &instOffsets,
+                                     const RegAllocHooks &hooks,
+                                     std::string &error);
+  // The emitter state a register-allocated function can change, to emit it again.
+  struct Checkpoint {
+    size_t codeSize = 0;
+    size_t heapAllocCalls = 0;
+    size_t heapFreeCalls = 0;
+    size_t heapReallocCalls = 0;
+    size_t heapStateFixups = 0;
+    Arm64InstrumentationCounters counters;
+  };
+  Checkpoint checkpoint() const {
+    return {code_.size(),
+            heapAllocCalls_.size(),
+            heapFreeCalls_.size(),
+            heapReallocCalls_.size(),
+            heapStateFixups_.size(),
+            counters_};
+  }
+  void rollBack(const Checkpoint &point) {
+    code_.resize(point.codeSize);
+    heapAllocCalls_.resize(point.heapAllocCalls);
+    heapFreeCalls_.resize(point.heapFreeCalls);
+    heapReallocCalls_.resize(point.heapReallocCalls);
+    heapStateFixups_.resize(point.heapStateFixups);
+    counters_ = point.counters;
+  }
+
  private:
    enum class CondCode : uint8_t {
      Eq = 0x0,
@@ -605,6 +668,8 @@ class Arm64Emitter {
   std::vector<size_t> heapFreeCalls_;
   std::vector<size_t> heapReallocCalls_;
   std::vector<size_t> heapStateFixups_;
+  bool registerAllocationEnabled_ = false;
+  bool registerAllocationFarBranches_ = false;
 };
 
 #include "NativeEmitterInternalsArm64Arithmetic.h"
@@ -612,6 +677,7 @@ class Arm64Emitter {
 #include "NativeEmitterInternalsArm64Io.h"
 #include "NativeEmitterInternalsArm64Host.h"
 #include "NativeEmitterInternalsArm64Heap.h"
+#include "NativeEmitterInternalsArm64RegAlloc.h"
 
 bool computeMaxStackDepth(const IrFunction &fn, const IrModule &module, int64_t &maxDepth, std::string &error);
 
