@@ -10,6 +10,28 @@ open-work-only scope rule as `docs/todo.md` itself.
 
 
 
+## TODO-5749
+
+- 2026-11-09: measured after TODO-5748, both versions (main.prime at
+  2cead3370 and at its parent 279a3d4b3) built by the same primec,
+  headless scenario `close:1`, with a probe dylib loaded through
+  `DYLD_INSERT_LIBRARIES` that sums private dirty pages per VM region
+  tag (`mach_vm_region_recurse`) at exit and reads `phys_footprint`.
+- Native: 2.90 MB against 1.62 MB. Untagged pages 1.31 MB against
+  0.28 MB (+1.03 MB): the native `HeapAlloc` maps every block on its
+  own, about 80 pages of 16 KiB against 17 (Function boxes and handler
+  vectors) - TODO-5750. Stack 459 KB against 229 KB (+0.23 MB): main's
+  frame is 40,312 locals of 16 bytes against 16,672 because native
+  inlines every registration and closure - TODO-5740. Malloc regions
+  are the same.
+- optexe: 1.90 MB against 1.54 MB (2.0 MB before TODO-5748).
+  MALLOC_SMALL 0.51 MB against 0.21 MB (+0.30 MB): the optexe runtime's
+  `VmHeapCore` slot vector - TODO-5751. Stack +16 KB (main's frame 3632
+  slots against 1541).
+- The first suspicion, frame size, explains only the 0.23 MB native
+  stack part. Close this when TODO-5750, TODO-5751 and TODO-5740 land
+  and the editor is measured again.
+
 ## TODO-4737
 
 - 2026-07-23c: implemented the safe, verifiable slice of option (b)
