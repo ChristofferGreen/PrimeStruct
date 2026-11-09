@@ -244,12 +244,42 @@ bool SemanticsValidator::validateStructLayouts() {
         continue;
       }
       const bool fieldIsStatic = isStaticField(stmt);
-      if (fieldIsStatic) {
-        continue;
-      }
       BindingInfo binding;
       if (!resolveStructFieldBinding(def, stmt, binding)) {
         return failPassesStructLayoutsDiagnostic(error_);
+      }
+      // A struct-typed field (static or not) initialized with a bare scalar
+      // (`[ShaderLibrary] shader{0i32}`) is not a construction: the scalar
+      // would stand in for the struct's address. Require a struct value.
+      if (def.templateArgs.empty() && stmt.args.size() == 1 && binding.typeTemplateArg.empty() &&
+          !hasNamedArguments(stmt.argNames)) {
+        const std::string fieldTypeName = normalizeBindingTypeName(binding.typeName);
+        const std::string expectedStruct =
+            semantics::resolveStructTypePath(fieldTypeName, def.namespacePrefix, structNames_);
+        if (!expectedStruct.empty() && structNames_.count(expectedStruct) > 0 &&
+            returnKindForTypeName(fieldTypeName) == ReturnKind::Unknown) {
+          const std::vector<ParameterInfo> noParams;
+          const std::unordered_map<std::string, BindingInfo> noLocals;
+          switch (inferExprReturnKind(stmt.args.front(), noParams, noLocals)) {
+          case ReturnKind::Int:
+          case ReturnKind::Int64:
+          case ReturnKind::UInt64:
+          case ReturnKind::UInt8:
+          case ReturnKind::Float32:
+          case ReturnKind::Float64:
+          case ReturnKind::Bool:
+          case ReturnKind::String:
+            return failPassesStructLayoutsDiagnostic(
+                "struct field initializer type mismatch: " + def.fullPath + "/" + stmt.name +
+                " expected " + expectedStruct +
+                ", got a scalar; construct it with labeled entries or " + fieldTypeName + "{...}");
+          default:
+            break;
+          }
+        }
+      }
+      if (fieldIsStatic) {
+        continue;
       }
       if (def.templateArgs.empty() && stmt.args.size() == 1 &&
           binding.typeTemplateArg.empty()) {

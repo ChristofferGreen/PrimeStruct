@@ -388,7 +388,7 @@ Foo() {
 
 [return<int>]
 main() {
-  [Foo] value{1i32}
+  [Foo] value{[field] 1i32}
   return(1i32)
 }
 )";
@@ -766,6 +766,99 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("struct field initializer type mismatch") != std::string::npos);
+}
+
+// A bare scalar in a struct binding's braces is the value, not a field entry;
+// lowering bound it as the struct's address, so field reads went through a
+// number (the gfx ShaderLibrary.CubeBasic null reference).
+TEST_CASE("struct binding rejects a bare scalar initializer") {
+  const std::string source = R"(
+[struct]
+Lib() {
+  [i32] value{0i32}
+}
+
+[return<int>]
+main() {
+  [Lib] lib{5i32}
+  return(lib.value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("binding initializer type mismatch: /Lib needs a struct value") !=
+        std::string::npos);
+}
+
+TEST_CASE("struct fields reject bare scalar initializers, static or not") {
+  const std::string staticSource = R"(
+[struct]
+Lib() {
+  [i32] value{0i32}
+
+  [static Lib] Basic{5i32}
+}
+
+[return<int>]
+main() {
+  return(Lib.Basic.value)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(staticSource, "/main", error));
+  CHECK(error.find(
+            "struct field initializer type mismatch: /Lib/Basic expected /Lib, got a scalar") !=
+        std::string::npos);
+
+  const std::string fieldSource = R"(
+[struct]
+Lib() {
+  [i32] value{0i32}
+}
+
+[struct]
+Holder() {
+  [Lib] lib{7i32}
+}
+
+[return<int>]
+main() {
+  [Holder] holder{Holder{}}
+  return(holder.lib.value)
+}
+)";
+  error.clear();
+  CHECK_FALSE(validateProgram(fieldSource, "/main", error));
+  CHECK(error.find(
+            "struct field initializer type mismatch: /Holder/lib expected /Lib, got a scalar") !=
+        std::string::npos);
+}
+
+TEST_CASE("struct bindings and static fields accept constructed values") {
+  const std::string source = R"(
+[struct]
+Lib() {
+  [i32] value{0i32}
+
+  [static Lib] Basic{[value] 5i32}
+}
+
+[struct]
+Holder() {
+  [Lib] lib{Lib{7i32}}
+}
+
+[return<int>]
+main() {
+  [Lib] lib{[value] 6i32}
+  [Lib] copy{lib}
+  [Holder] holder{Holder{}}
+  return(plus(plus(copy.value, Lib.Basic.value), holder.lib.value))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("public Map binding rejects MapValue initializer") {

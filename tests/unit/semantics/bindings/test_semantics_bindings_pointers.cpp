@@ -717,7 +717,7 @@ thing() {
 
 [return<int>]
 main() {
-  [thing] item{1i32}
+  [thing] item{[value] 1i32}
   return(1i32)
 }
 )";
@@ -1254,7 +1254,7 @@ namespace demo {
 
   [return<int>]
   main() {
-    [widget] item{1i32}
+    [widget] item{[value] 1i32}
     return(1i32)
   }
 }

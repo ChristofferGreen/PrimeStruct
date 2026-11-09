@@ -356,7 +356,7 @@ thing() {
 
 [return<bool>]
 main() {
-  [thing] item{1i32}
+  [thing] item{[value] 1i32}
   return(equal(item, item))
 }
 )";

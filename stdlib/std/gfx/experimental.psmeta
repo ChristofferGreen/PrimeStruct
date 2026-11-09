@@ -10,25 +10,25 @@
 path = /std/gfx/experimental/ColorFormat
 start_line = 11
 end_line = 16
-content_hash = 53f0afe507aba328
+content_hash = 16cf885815afffa2
 
 [symbol]
 path = /std/gfx/experimental/DepthFormat
 start_line = 18
 end_line = 23
-content_hash = 41ac8119145d8fd
+content_hash = 61d8a7337206db37
 
 [symbol]
 path = /std/gfx/experimental/PresentMode
 start_line = 25
 end_line = 30
-content_hash = 17677f6aaac3b2cd
+content_hash = 6b5250f69ca44edd
 
 [symbol]
 path = /std/gfx/experimental/ShaderLibrary
 start_line = 32
 end_line = 37
-content_hash = 2f45742e0e114a50
+content_hash = d8fab0f56e4de662
 
 [symbol]
 path = /std/gfx/experimental/Window
@@ -94,7 +94,7 @@ content_hash = 9504faa031ccb1db
 path = /std/gfx/experimental/Swapchain
 start_line = 142
 end_line = 158
-content_hash = 81691b14f2946a49
+content_hash = a4c1ffabe1820479
 
 [symbol]
 path = /std/gfx/experimental/Swapchain/frame
@@ -280,7 +280,7 @@ content_hash = 6ec75ef4cb557e68
 path = /std/gfx/experimental/SubstrateSwapchainConfig
 start_line = 346
 end_line = 354
-content_hash = 3f645bda7d2489d1
+content_hash = 2ea13ee95786dc71
 
 [symbol]
 path = /std/gfx/experimental/SubstrateMeshConfig
@@ -292,7 +292,7 @@ content_hash = 4a61f7cd21bfe909
 path = /std/gfx/experimental/SubstratePipelineConfig
 start_line = 363
 end_line = 369
-content_hash = 6918c22d15184943
+content_hash = 708b86226c0aaa73
 
 [symbol]
 path = /std/gfx/experimental/SubstrateFrameConfig
@@ -304,7 +304,7 @@ content_hash = e751c800a79070c8
 path = /std/gfx/experimental/SubstrateRenderPassConfig
 start_line = 377
 end_line = 383
-content_hash = 9f7f31fcde02d3a4
+content_hash = a6249f62698f1cce
 
 [symbol]
 path = /std/gfx/experimental/SubstrateDrawMeshConfig

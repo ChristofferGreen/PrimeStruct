@@ -247,7 +247,7 @@ Foo() {
 
 [return<int>]
 main() {
-  [Foo] item{1i32}
+  [Foo] item{[value] 1i32}
   return(item.plus([rhs] 2i32))
 }
 )";

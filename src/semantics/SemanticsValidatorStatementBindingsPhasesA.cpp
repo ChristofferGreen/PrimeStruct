@@ -14,6 +14,26 @@
 namespace primec::semantics {
 using namespace statementBindingsHelpers;
 
+namespace {
+
+bool isPrimitiveScalarReturnKind(ReturnKind kind) {
+  switch (kind) {
+  case ReturnKind::Int:
+  case ReturnKind::Int64:
+  case ReturnKind::UInt64:
+  case ReturnKind::UInt8:
+  case ReturnKind::Float32:
+  case ReturnKind::Float64:
+  case ReturnKind::Bool:
+  case ReturnKind::String:
+    return true;
+  default:
+    return false;
+  }
+}
+
+} // namespace
+
 PhaseStatus SemanticsValidator::validateBindingPhase3([[maybe_unused]] const std::vector<ParameterInfo> &params, [[maybe_unused]] std::unordered_map<std::string, BindingInfo> &locals, [[maybe_unused]] const Expr &stmt, [[maybe_unused]] const std::string &namespacePrefix, [[maybe_unused]] bool &handled, ValidateBindingState &st) {
   [[maybe_unused]] auto &allowBindings = st.allowBindings;
   [[maybe_unused]] auto &allowCompileTimeTypeBindings = st.allowCompileTimeTypeBindings;
@@ -343,6 +363,16 @@ PhaseStatus SemanticsValidator::validateBindingPhase3([[maybe_unused]] const std
             actualStruct.substr(0, actualStruct.find("__t")) !=
                 expectedStruct.substr(0, expectedStruct.find("__t"))) {
           return st.done(failBindingDiagnostic("binding initializer type mismatch"));
+        }
+        // A single unlabeled entry in a struct binding's braces is the value itself, not a
+        // field entry (`[Lib] x{5i32}` is not `Lib{5i32}`). A scalar there would be bound as
+        // the struct's address, so field reads go through a number (a null or stray reference).
+        if (expectedKind == ReturnKind::Unknown && structNames_.count(expectedStruct) > 0 &&
+            isPrimitiveScalarReturnKind(initKind)) {
+          return st.done(
+              failBindingDiagnostic("binding initializer type mismatch: " + expectedStruct +
+                                    " needs a struct value; construct it with labeled entries or " +
+                                    expectedType + "{...}"));
         }
       }
     }

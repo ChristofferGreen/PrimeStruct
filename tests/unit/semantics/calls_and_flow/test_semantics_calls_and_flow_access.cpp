@@ -67,7 +67,7 @@ Foo() {
 
 [return<int>]
 main() {
-  [Foo] item{1i32}
+  [Foo] item{[value] 1i32}
   return(count(item))
 }
 )";
@@ -238,7 +238,7 @@ Foo() {
 
 [return<int>]
 main() {
-  [Foo] item{1i32}
+  [Foo] item{[value] 1i32}
   return(count(item))
 }
 )";

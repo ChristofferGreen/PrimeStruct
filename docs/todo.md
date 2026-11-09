@@ -106,6 +106,7 @@ of sync with them.
 | TODO-5741 | `string` parameters become real calls on the VM and optexe | ready | ir-real-calls |
 | TODO-5771 | arm64 template operands stay in the register that computed them | ready | native-arm64-isel |
 | TODO-5773 | arm64 register allocation keeps floats in d-registers | ready | native-arm64-regalloc |
+| TODO-5824 | A null or stray local address faults on the VM | deferred | vm-addresses |
 | TODO-5727 | Every struct copy site tells a place from a temporary by resolution | deferred | lifecycle-copy-sources |
 | TODO-5707 | `Function` types accept `mut` parameters | deferred | closures-mut-params |
 | TODO-5708 | Type aliases | deferred | type-aliases |
@@ -212,7 +213,7 @@ of sync with them.
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719; collection fields found by closures and the todo example: TODO-5681, TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
 - Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5738, TODO-5718
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732, TODO-5735, TODO-5736, TODO-5737
-- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe; real calls and struct copies TODO-5739, TODO-5741, TODO-5752; native code quality (section 12, after the startup lane) TODO-5771, TODO-5773
+- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe; real calls and struct copies TODO-5739, TODO-5741, TODO-5752; VM address checks TODO-5824; native code quality (section 12, after the startup lane) TODO-5771, TODO-5773
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5807, TODO-5790, TODO-5791, TODO-5792, TODO-5793, TODO-5794, TODO-5795, TODO-5796, TODO-5797, TODO-5798, TODO-5656, TODO-5802, TODO-5803, TODO-5799, TODO-5800, TODO-5801; deferred TODO-5804, TODO-5805, TODO-5806
 
 ### Execution Queue
@@ -260,6 +261,18 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
     - x86_64 native and the JIT run the real-call program-matrix cases (struct, `mut` and Reference parameters, struct results, runtime errors) with real calls; the JIT no longer refuses such modules
     - full release gate green on Linux x86_64
   - stop_rule: local addressing and real calls on x86_64 native and the JIT.
+
+- [ ] TODO-5824: A null or stray local address faults on the VM
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-09
+  - phase: Optimizing backends (found while checking TODO-5776)
+  - parallel_track: vm-addresses
+  - scope: A local address is `(base + index) * 16` with the entry frame's base 0 (docs/spec/vm-design.md, Frames & stack), so address 0 is the entry frame's slot 0 and `0 + 16` its slot 1: a null reference reads or writes a live slot on the VM (the gfx `ShaderLibrary.CubeBasic` bug returned 90 instead of faulting), while arm64 native faults on it. Start the numbering at base 1 (or reserve the entry frame's slot 0) in the step kernel, the fast kernel's locals arena and the optcpp frame registry, so an address below the first frame faults with `invalid indirect address in IR` (exit 3). Deferred: the gfx case is fixed at its source and no known program reaches a null local address now.
+  - acceptance:
+    - `LoadIndirect`/`StoreIndirect` of address 0 and 16 fault with exit 3 on the VM step and fast kernels and on optexe; a program-matrix case pins it, and every program-matrix and compile-run case keeps its result
+    - full release gate green
+  - stop_rule: local address numbering on the VM and optcpp only; no change to heap addresses or native.
 
 - [ ] TODO-5741: `string` parameters become real calls on the VM and optexe
   - owner: ai

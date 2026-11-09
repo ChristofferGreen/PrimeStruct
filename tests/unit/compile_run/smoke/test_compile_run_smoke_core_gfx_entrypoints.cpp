@@ -622,19 +622,16 @@ main() {
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
-  // TODO-4761 (fixed): SubstrateDeviceConfig now type-unifies against its
-  // fully-qualified spelling on all three backends, so this compiles.
-  // TODO-4763 follow-up: exe/vm now run but report pipeline.token as
-  // mismatched (score stops at 90, the first failing check) - a separate,
-  // still-open struct-field data-corruption bug (see the Device+
-  // ShaderLibrary local-corruption repro in docs/todo.md) resurfaces once
-  // compilation succeeds. The native binary segfaults deterministically
-  // instead of running. Re-pinned to this verified behavior.
+  // ShaderLibrary.CubeBasic used to be declared `{0i32}`: a bare scalar in
+  // a struct binding's braces, bound as the struct's address, so
+  // `shader.value` read address 0 + 16 (slot 1 of the VM entry frame, a
+  // segfault on native). The stdlib now constructs it and the validator
+  // rejects the scalar form; every backend scores 2.
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 90);
-  CHECK(runCommand(runVmCmd) == 90);
+  CHECK(runCommand(exePath) == 2);
+  CHECK(runCommand(runVmCmd) == 2);
   CHECK(runCommand(compileNativeCmd) == 0);
-  CHECK(runCommand(nativePath) == 139);
+  CHECK(runCommand(nativePath) == 2);
 }
 
 TEST_CASE("canonical gfx pipeline entry point runs across backends") {
@@ -682,20 +679,16 @@ main() {
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
-  // TODO-4763 (fixed): the "missing struct slot layout for
-  // SubstrateDeviceConfig" internal error on the canonical gfx surface is
-  // fixed, so this now compiles on all three backends.
-  // TODO-4763 follow-up: exe/vm now run but report pipeline.token as
-  // mismatched (score stops at 90, the first failing check) - a separate,
-  // still-open struct-field data-corruption bug (see the Device+
-  // ShaderLibrary local-corruption repro in docs/todo.md) resurfaces once
-  // compilation succeeds. The native binary segfaults deterministically
-  // instead of running. Re-pinned to this verified behavior.
+  // ShaderLibrary.CubeBasic used to be declared `{0i32}`: a bare scalar in
+  // a struct binding's braces, bound as the struct's address, so
+  // `shader.value` read address 0 + 16 (slot 1 of the VM entry frame, a
+  // segfault on native). The stdlib now constructs it and the validator
+  // rejects the scalar form; every backend scores 2.
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 90);
-  CHECK(runCommand(runVmCmd) == 90);
+  CHECK(runCommand(exePath) == 2);
+  CHECK(runCommand(runVmCmd) == 2);
   CHECK(runCommand(compileNativeCmd) == 0);
-  CHECK(runCommand(nativePath) == 139);
+  CHECK(runCommand(nativePath) == 2);
 }
 
 

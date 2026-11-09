@@ -24,7 +24,7 @@ thing() {
 
 [return<int>]
 main() {
-  [thing] item{1i32}
+  [thing] item{[value] 1i32}
   return(plus(item, item))
 }
 )";

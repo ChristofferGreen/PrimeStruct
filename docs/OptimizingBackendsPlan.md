@@ -1485,8 +1485,12 @@ with the following `Pop` removed, or `Dup; StoreLocal`), and the address computa
 reaches anything else (a call, a store as data, a comparison, a print, a return, a slot outside the frame) leaves the
 whole function as it is, and so does a read or write through an address built only from constants: the gfx smoke
 programs (`test_compile_run_smoke_core_gfx_entrypoints.cpp`) read a field through a reference left at 0 (`0 + 16`),
-which the VM resolves to slot 1 of the entry frame and native faults on; rewriting that `/main` made `dead-store`
-drop the slot the stray read saw, and the VM result changed from 90 to 2. Other addresses are taken not to name the
+which the VM resolved to slot 1 of the entry frame and native faulted on; rewriting that `/main` made `dead-store`
+drop the slot the stray read saw, and the VM result changed from 90 to 2. The 0 was `ShaderLibrary.CubeBasic`,
+declared `{0i32}`: a bare scalar in a struct binding's braces is the value, not a field entry, so the struct was
+bound as the number 0 and read as its address. The stdlib now constructs it (`{[value] 0i32}`), the validator rejects
+a scalar initializer for a struct binding or field, and the programs score 2 on every backend. Address 0 is still
+the entry frame's slot 0 on the VM, so a null address reads a slot instead of faulting (TODO-5824). Other addresses are taken not to name the
 frame, the rule `IrLocalEscape` already applies to every function without `AddressOfLocal`. Exact: the rewritten access touches the slot the address named, and an in-range, aligned
 frame address cannot fault. With no `AddressOfLocal` left, `IrLocalEscape` pins nothing, so `copy-prop`,
 `dead-store`, the optcpp scalar locals and the native allocators treat the slots as ordinary locals.

@@ -12,28 +12,28 @@ namespace std {
   ColorFormat() {
     [public i32] value{0i32}
 
-    [public static ColorFormat] Bgra8Unorm{0i32}
+    [public static ColorFormat] Bgra8Unorm{[value] 0i32}
   }
 
   [public struct]
   DepthFormat() {
     [public i32] value{0i32}
 
-    [public static DepthFormat] Depth32F{0i32}
+    [public static DepthFormat] Depth32F{[value] 0i32}
   }
 
   [public struct]
   PresentMode() {
     [public i32] value{0i32}
 
-    [public static PresentMode] Fifo{0i32}
+    [public static PresentMode] Fifo{[value] 0i32}
   }
 
   [public struct]
   ShaderLibrary() {
     [public i32] value{0i32}
 
-    [public static ShaderLibrary] CubeBasic{0i32}
+    [public static ShaderLibrary] CubeBasic{[value] 0i32}
   }
 
   [public struct]
@@ -142,9 +142,9 @@ namespace std {
   [public struct]
   Swapchain() {
     [public i32] token{0i32}
-    [public ColorFormat] colorFormat{0i32}
-    [public DepthFormat] depthFormat{0i32}
-    [public PresentMode] presentMode{0i32}
+    [public ColorFormat] colorFormat{[value] 0i32}
+    [public DepthFormat] depthFormat{[value] 0i32}
+    [public PresentMode] presentMode{[value] 0i32}
 
     [public return<Result<Frame, GfxError>> on_error<GfxError, /std/gfx/experimental/ignoreGfxError>]
     frame() {
@@ -348,9 +348,9 @@ namespace std {
     [public Window] window{[token] 0i32, [width] 0i32, [height] 0i32}
     [public Device] device{[token] 0i32}
     [public i32] swapchainToken{0i32}
-    [public ColorFormat] colorFormat{0i32}
-    [public DepthFormat] depthFormat{0i32}
-    [public PresentMode] presentMode{0i32}
+    [public ColorFormat] colorFormat{[value] 0i32}
+    [public DepthFormat] depthFormat{[value] 0i32}
+    [public PresentMode] presentMode{[value] 0i32}
   }
 
   [public struct]
@@ -363,9 +363,9 @@ namespace std {
   [public struct]
   SubstratePipelineConfig() {
     [public i32] pipelineToken{0i32}
-    [public ShaderLibrary] shader{0i32}
-    [public ColorFormat] colorFormat{0i32}
-    [public DepthFormat] depthFormat{0i32}
+    [public ShaderLibrary] shader{[value] 0i32}
+    [public ColorFormat] colorFormat{[value] 0i32}
+    [public DepthFormat] depthFormat{[value] 0i32}
   }
 
   [public struct]
@@ -378,7 +378,7 @@ namespace std {
   SubstrateRenderPassConfig() {
     [public Frame] frame{[token] 0i32}
     [public i32] renderPassToken{0i32}
-    [public ColorRGBA] clearColor{0.0f32, 0.0f32, 0.0f32, 1.0f32}
+    [public ColorRGBA] clearColor{ColorRGBA{0.0f32, 0.0f32, 0.0f32, 1.0f32}}
     [public f32] clearDepth{1.0f32}
   }
 

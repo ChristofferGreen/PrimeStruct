@@ -26,7 +26,7 @@ main() {
 
 [return<int>]
 use() {
-  [main] item{1i32}
+  [main] item{[value] 1i32}
   return(1i32)
 }
 )";

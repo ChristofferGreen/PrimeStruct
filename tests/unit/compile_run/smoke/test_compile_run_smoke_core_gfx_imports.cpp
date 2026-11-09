@@ -382,19 +382,17 @@ main() {
   // TODO-4761 (fixed): the SubstrateDeviceConfig binding now type-unifies
   // against its fully-qualified spelling, so this compiles on both vm and
   // native.
-  // TODO-4763 follow-up: vm now runs but scores 9/10 - swapchain.colorFormat
-  // reads back as the window's hostToken (11) instead of
-  // ColorFormat.Bgra8Unorm's value (0), a separate, still-open struct-field
-  // data-corruption bug exposed once compilation succeeds. The native
-  // binary compiles but segfaults deterministically instead of running.
-  // Re-pinned to this verified behavior.
+  // The gfx enum-like statics (ColorFormat.Bgra8Unorm, ...) used to be
+  // declared `{0i32}`, a bare scalar bound as the struct's address, so
+  // swapchain.colorFormat read the window's hostToken (11) on the VM and
+  // native segfaulted. They are constructed now: 10 of 10 everywhere.
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + vmErrPath;
-  CHECK(runCommand(runVmCmd) == 9);
+  CHECK(runCommand(runVmCmd) == 10);
 
   const std::string compileNativeCmd =
       "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main 2> " + nativeErrPath;
   CHECK(runCommand(compileNativeCmd) == 0);
-  CHECK(runCommand(nativePath) == 139);
+  CHECK(runCommand(nativePath) == 10);
 }
 
 

@@ -20,7 +20,10 @@
   `ColorGrade(...)` are ordinary executions and do not construct values. Use `ColorGrade{[hue_shift] 0.1f32 [exposure]
   0.95f32}` or a context-typed binding initializer such as `[ColorGrade] grade{[hue_shift] 0.1f32 [exposure] 0.95f32}`.
   Labeled entries map to fields, and every field must have either an explicit entry or an envelope-provided default
-  before validation.
+  before validation. A single unlabeled entry in a binding's braces is the initializer value itself, not a field entry:
+  `[Lib] copy{other}` copies a `Lib`, and a scalar there (`[Lib] lib{5i32}`, also for a struct or `static` field) is a
+  semantic error (`binding initializer type mismatch` / `struct field initializer type mismatch`); write
+  `[Lib] lib{[value] 5i32}` or `[Lib] lib{Lib{5i32}}`.
   - **Defaults & validation:** struct constructors accept positional and labeled arguments. Missing fields are filled
     from their field initializers; if a field has no initializer, zero-arg construction requires a `Create()` helper to
     assign it. Extra arguments are a semantic error (`argument count mismatch`).
@@ -44,8 +47,8 @@
   }
 
   [Circle] circleA{[radius] 3.4}
-  [Circle] circleB{3.4}
-  [Circle] circleC{3.4}
+  [Circle] circleB{Circle{3.4}}
+  [Circle] circleC{[radius] 3.4}
   [Shape] a{[circle] circleA}
   [Shape] b{[circle] circleB}
   [Shape] c{circleC}
