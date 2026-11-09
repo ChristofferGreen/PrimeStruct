@@ -7,7 +7,7 @@ Classification: **design direction**. The open work is in `docs/todo.md` (Web ap
 `/std/net`, `/std/os`, `/std/http` (request parser with decoded query and form parameters, `Response` with `html` and
 `redirect`, `Router` with `:name` path parameters, `AppRouter<State>` whose handlers get the app's state as a
 parameter, static files), `/std/http/server`, `/std/json` and `/std/html` (an escaping HTML writer with the form
-vocabulary) exist and run on the VM and `--emit=optexe` (docs/spec/stdlib-reference.md). Servers are single-threaded optexe binaries; containers are out of scope. The server
+vocabulary) exist and run on the VM and `--emit=optexe` (docs/spec/stdlib-reference.md). Servers are single-threaded optexe binaries (a multi-core server is planned: Concurrency below); containers are out of scope. The server
 waits on all of its open connections at once with `poll`, so an idle connection does not stall the others
 (TODO-5705). One file cannot import both `/std/html` and `/std/json` yet: both export `Writer`
 (TODO-5717). Repeated parameters give their first value and path parameters are not decoded (TODO-5718).
@@ -52,8 +52,8 @@ handlers see only the keys it does not keep.
    with no JavaScript at all.
 4. **Then fragments, still without user JavaScript.** The stdlib serves one small fixed script. Elements carry
    attributes that say which route to call and which element to replace; the route answers with an HTML fragment.
-   A button then has a PrimeStruct handler and nothing else. Because the server is single-threaded, app state is
-   plain struct fields with no locking.
+   A button then has a PrimeStruct handler and nothing else. App state is plain struct fields with no locking: the
+   server is single-threaded, and the multi-core server takes the lock for the handler (Concurrency below).
 5. **Escaping is the default.** The HTML writer escapes text and attribute values; raw HTML is a separately named
    call.
 6. **Client-side PrimeStruct in the browser is not on this path.** The wasm backends have no `String` and reject
@@ -121,5 +121,20 @@ handler that brings the menus, toolbars and session up to date after each event.
 5. Fragments: TODO-5706 (done), then TODO-5724 (web hover and key handlers; done).
 6. Native UI: TODO-5709 (controls take closures, `app.run(handlers)`; done), TODO-5725 (pointer and key events in the C ABI; done),
    TODO-5710 (PrimeScroll on handlers; done), TODO-5711 (retire the `/std/ui` prototype; done).
-7. Later: TODO-5707, TODO-5708 (type aliases), TODO-5717 (both writers in one file), TODO-5718 (repeated and decoded
-   parameters), sessions and cookies, keep-alive, concurrency once tasks schedule.
+7. Concurrency (docs/MultithreadingPrototype.md, Threads For Real; after the PrimeScroll startup lane and TODO-5770,
+   TODO-5772): sendable values TODO-5790, TODO-5791; VM tasks TODO-5792; `optexe` heaps and threads TODO-5793,
+   TODO-5794, TODO-5795; `Atomic`, `Mutex`, `Channel` TODO-5796, TODO-5797, TODO-5798; then `serveWorkers`
+   TODO-5802 and the apps on it, measured, TODO-5803. Deferred: read-only handlers under `RwLock` TODO-5804,
+   keep-alive TODO-5805, sessions TODO-5806.
+8. Later: TODO-5707, TODO-5708 (type aliases), TODO-5717 (both writers in one file), TODO-5718 (repeated and decoded
+   parameters).
+
+## Concurrency
+
+The server uses one core today. `serveWorkers(handler, config)` (docs/MultithreadingPrototype.md, The Server) keeps
+one thread polling and accepting and hands each readable connection to `config.workers` worker threads over a
+`Channel`; workers receive, parse, serialize and send in parallel, and call the handler inside a `Mutex` that holds
+the whole app, so `WebApp<State>` and `AppRouter<State>` apps keep plain struct state with no locking of their own
+(principle 2 still holds: the state comes in as the handler's parameter). Writing a page's HTML happens inside the
+handler, so it stays serialized until handlers that only read the state share a read lock (TODO-5804). Running
+several processes on one port was rejected: each would have its own copy of the state.

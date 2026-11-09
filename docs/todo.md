@@ -118,7 +118,25 @@ of sync with them.
 | TODO-5745 | A labeled value that is a call parses in every position | ready | parser-labeled-values |
 | TODO-5746 | A parameterless `mut` method whose body is only bindings is a method | ready | diagnostics |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
-| TODO-5656 | Thread-safe `SharedString` (atomic count, per-thread string heaps) | deferred | string-concurrency |
+| TODO-5807 | `[left right] wait(a, b)` destructures the results of several tasks | ready | mt-tasks |
+| TODO-5790 | Spawn arguments are checked by type: only sendable values cross to a task | ready | mt-sendable |
+| TODO-5791 | `SendableFunction<R, A...>` holds only sendable closures | blocked | mt-closures |
+| TODO-5792 | The VM runs spawned tasks under a deterministic scheduler | ready | mt-vm-tasks |
+| TODO-5793 | Byte-region accesses check liveness without a map search or a write | ready | mt-heap-optexe |
+| TODO-5794 | `optexe` heaps are per-thread arenas with remote frees | blocked | mt-heap-optexe |
+| TODO-5795 | `optexe` runs spawned tasks on threads | blocked | mt-optexe-threads |
+| TODO-5796 | `Atomic<i32>` and `Atomic<i64>` with the `atomic` effect | blocked | mt-primitives |
+| TODO-5797 | `Mutex<T>` with scoped `locked(body)` and the `lock` effect | blocked | mt-primitives |
+| TODO-5798 | Bounded `Channel<T>` with the `channel` effect | blocked | mt-primitives |
+| TODO-5656 | Thread-safe `SharedString`: an atomic owner count | blocked | string-concurrency |
+| TODO-5802 | `serveWorkers`: one thread polls and accepts, N workers answer | blocked | mt-server |
+| TODO-5803 | The web apps run on workers and their gain is measured | blocked | mt-server |
+| TODO-5799 | arm64 native runs spawned tasks on pthreads, its heap behind a lock | blocked | mt-native |
+| TODO-5800 | arm64 native heaps are per thread, with remote frees | blocked | mt-native |
+| TODO-5801 | arm64 native runs `Atomic`, `Mutex` and `Channel` | blocked | mt-native |
+| TODO-5804 | GET handlers that only read the state run at the same time under `RwLock` | deferred | mt-server |
+| TODO-5805 | The server keeps connections alive between requests | deferred | web-keepalive |
+| TODO-5806 | Sessions: a cookie and per-session state | deferred | web-sessions |
 | TODO-5753 | PrimeScroll draws its first window before it restores the session | ready | startup-session |
 | TODO-5755 | The first launch after an install does not wait on Gatekeeper | ready | startup-install |
 | TODO-5754 | Restored tabs, toolbars and previews cost less in the AppKit backend | ready | startup-backend |
@@ -199,7 +217,6 @@ of sync with them.
 ### Priority Lanes
 
 - Startup, first (docs/NativeUiPlan.md section 1, "Where a launch goes"): TODO-5753, TODO-5755, TODO-5754, TODO-5603, TODO-5756, TODO-5535, TODO-5757
-- Strings and slices (docs/spec/strings-and-views.md; first leg of the PrimeScroll native goal below): TODO-5656
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
@@ -213,12 +230,15 @@ of sync with them.
 - Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5738, TODO-5718
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732, TODO-5735, TODO-5736, TODO-5737
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe; real calls and struct copies TODO-5739, TODO-5741, TODO-5752; native code quality (section 12, after the startup lane) TODO-5770, TODO-5772, TODO-5777, TODO-5776, TODO-5771, TODO-5774, TODO-5773, TODO-5775
+- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane and TODO-5770, TODO-5772): TODO-5807, TODO-5790, TODO-5791, TODO-5792, TODO-5793, TODO-5794, TODO-5795, TODO-5796, TODO-5797, TODO-5798, TODO-5656, TODO-5802, TODO-5803, TODO-5799, TODO-5800, TODO-5801; deferred TODO-5804, TODO-5805, TODO-5806
 
 ### Execution Queue
 
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 Native code quality (docs/OptimizingBackendsPlan.md section 12), after the startup lane, in this order: TODO-5770 (one-instruction constants, about 22% less native code), TODO-5772 (arm64 register allocation for integer code, about 5x on scalar loops), TODO-5777 (IR dumps for the `--emit` target), TODO-5776 (`local-sroa`: non-escaping local addresses become local accesses), TODO-5771 (template operand cache and compare-branch fusion), TODO-5774 (registers across calls), TODO-5773 (floats in d-registers), TODO-5775 (address-taking functions).
+
+Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane and after TODO-5770 and TODO-5772 above; not above them in Ready Now or Immediate Next 10. In this order: TODO-5807 (destructure multi-wait results), TODO-5790 (sendable spawn arguments), TODO-5791 (`SendableFunction`), TODO-5792 (VM tasks under a deterministic scheduler; `TaskSpawn`/`TaskWait` IR), TODO-5793 (byte-region checks without a map search), TODO-5794 (`optexe` per-thread heap arenas), TODO-5795 (`optexe` threads for `[spawn]`), TODO-5796 (`Atomic`), TODO-5797 (`Mutex`), TODO-5798 (`Channel`), TODO-5656 (atomic `SharedString` count), TODO-5802 (`serveWorkers`), TODO-5803 (apps on workers, measured), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5807, TODO-5790, TODO-5792 and TODO-5793 are ready and independent of each other. Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions).
 
 ### Task Blocks
 
@@ -786,17 +806,266 @@ Native code quality (docs/OptimizingBackendsPlan.md section 12), after the start
   - stop_rule: receiver offset handling only.
   - notes: deferred: queued behind the Ready Now cap.
 
-- [ ] TODO-5656: Thread-safe `SharedString` (atomic count, per-thread string heaps)
+- [ ] TODO-5807: `[left right] wait(a, b)` destructures the results of several tasks
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-09
+  - phase: Multithreading (docs/MultithreadingPrototype.md, Multi-Wait)
+  - parallel_track: mt-tasks
+  - scope: The prototype documents `[leftResult rightResult] wait(left, right)` as implemented, but the task-handle check rejects it with `task handles cannot escape their spawning function: left` (checked 2026-11-09 with build-release/primec); only `both{wait(left, right)}` with `both[0i32]` works. Treat a destructuring binding of `wait(...)` like any other consuming `wait`, so the handles are waited and the names bind the results in order.
+  - implementation_notes: src/semantics/SemanticsValidatorTaskHandles.cpp (the escape check), the tuple-destructuring binding path; the lazy stdlib import must still find `/std/tuple` for it.
+  - acceptance:
+    - positive: a semantic test and a VM compile-run test destructure `wait(left, right)` of two `Task<i32>` and of a `Task<i32>` with a `Task<i64>`, and print both results
+    - negative: destructuring into three names from two tasks is a diagnostic; using `left` after the destructuring `wait` is `task handle already waited: left`
+    - full release gate green
+  - stop_rule: destructuring of `wait` results only.
+
+- [ ] TODO-5790: Spawn arguments are checked by type: only sendable values cross to a task
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-09
+  - phase: Multithreading (docs/MultithreadingPrototype.md, Sendable Values)
+  - parallel_track: mt-sendable
+  - scope: `validateTaskSpawnCall` checks only argument names (a `mut` binding, a `Reference`, a task handle, `location`/`borrow`/`dereference`); a `Pointer`, a `StringView`, a borrowing closure or a struct holding one passes. Add the structural `sendable` predicate of the design (primitives, `string`, enums, stdlib containers of sendable types, structs of sendable fields; not `Reference`, `Pointer`, views, carriers, `Function`, `Task`), the `[sendable]` struct transform (asserts it for a struct with `Pointer` fields; outside `stdlib/` only with `unsafe`) and `[thread_bound]` (the native UI handle structs), and check the type of every spawn argument expression. Mark the stdlib `String`, `vector`, `map` and their kin `[sendable]` and the `/std/ui/native` handles `[thread_bound]`. A `String` made in an open `StringArena` passed to a spawn is `string escapes its arena via spawn`.
+  - implementation_notes: src/semantics/SemanticsValidatorTaskHandles.cpp; the arena escape check lives with the existing `string escapes its arena via ...` diagnostics. Keep the `mut`-binding rejection and add a hint naming `Mutex`, `Atomic` and `Channel`.
+  - acceptance:
+    - positive: semantic tests spawn calls taking a `String`, a `vector<i32>`, a struct of both and an enum, and all examples/ and stdlib programs still compile
+    - negative: semantic tests reject a `Pointer<u8>` argument, a `StringView`, a closure with a `[ref]` capture, a `Function<i32, i32>`, a struct with a `Reference` field, a native UI `Window`, `[sendable]` on a user struct without `unsafe`, and an arena-made `String`, each with the diagnostic shape of the design (`spawn argument is not sendable: <type> (argument N of /callee)`)
+    - full release gate green
+  - stop_rule: the sendable predicate, the two transforms and the spawn-site check; `Mutex`, `Channel` and `SendableFunction` sites come with their own leaves.
+
+- [ ] TODO-5791: `SendableFunction<R, A...>` holds only sendable closures
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5790
+  - created_at: 2026-11-09
+  - phase: Multithreading (docs/MultithreadingPrototype.md, Sendable Functions)
+  - parallel_track: mt-closures
+  - scope: A `Function` hides its closure's capture types, so it is never sendable. Add `SendableFunction<R, A...>`: the same layout and lowering as `Function` (its own `/__SendableFunctionN` family in the closure pass, numbered by the `function-values` pass), whose conversions, explicit and implicit, accept only closures whose captures are all sendable (TODO-5790's predicate), and which is sendable itself. No conversion between `Function` and `SendableFunction` (open question 1 of the design).
+  - acceptance:
+    - positive: a lambda with value and `mut` captures of sendable types and a named definition convert to `SendableFunction<i64, i64>` at a parameter, a field and a binding, and run on the VM, native and `optexe`; a `SendableFunction` passes as a spawn argument
+    - negative: a closure capturing a `Pointer`, a `Function` or a `[thread_bound]` handle is `closure cannot become a SendableFunction: capture <name> is <type> ...`; a `SendableFunction` assigned to a `Function` is a type error
+    - full release gate green
+  - stop_rule: the type and its conversions; the stdlib routers switch to it with TODO-5802.
+
+- [ ] TODO-5792: The VM runs spawned tasks under a deterministic scheduler
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-09
+  - phase: Multithreading (docs/MultithreadingPrototype.md, Runtime Model and VM Scheduler)
+  - parallel_track: mt-vm-tasks
+  - scope: `[spawn] f(...)` is lowered inline today (IrLowererLowerStatementsBindings.h) and `Task<void>` fails in lowering (`void call not allowed in expression context`). Add the IR opcodes `TaskSpawn <function>` (arguments copied into a heap task block, pushes the handle) and `TaskWait` (pushes the result, frees the block), with a PSIR version bump and a note in docs/spec/vm-design.md. The VM runs each task on its own call stack in one OS thread: switch points at spawn and `wait`, the eager default schedule (a new task runs until it ends or blocks, so every existing program prints what it prints now), `--vm-schedule-seed <n>` (and `PRIMESTRUCT_VM_SCHEDULE_SEED`) for seeded schedules, and `deadlock: every task is waiting` (exit 3). Every other backend lowers `TaskSpawn`/`TaskWait` as an inline call and a load, as today. Spawned callees become real calls.
+  - implementation_notes: the spawned callee's arguments are copies (or moves) owned by the task block; its parameters borrow them. Keep the semantic-product task facts as the lowering's input. A callee whose parameters or result real calls cannot take yet (sum results, TODO-5738; `string` parameters, TODO-5741) keeps running inline with an `--opt-report` reason, which is a legal schedule.
+  - acceptance:
+    - positive: VM compile-run tests of two `Task<i64>` sums, a `Task<void>`, a spawn inside a loop waited per iteration, and the existing task tests give the same output on the default schedule and on seeds 1 to 8; native and `optexe` run the same programs inline with the same output
+    - negative: waiting a handle twice and letting one escape are still rejected; an IR validation test rejects `TaskWait` on a value that is not a task handle; `--vm-schedule-seed` without a number is a CLI error; a module of the previous PSIR version still loads (the deadlock fault is covered by TODO-5798's channel test, since task handles cannot cross to let two tasks wait on each other)
+    - full release gate green
+  - stop_rule: the IR opcodes, the VM scheduler and inline lowering elsewhere; threads on `optexe` are TODO-5795, on native TODO-5799.
+
+- [ ] TODO-5793: Byte-region accesses check liveness without a map search or a write
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-09
+  - phase: Multithreading (docs/MultithreadingPrototype.md, Heaps)
+  - parallel_track: mt-heap-optexe
+  - scope: `VmHeapCore::byteAt` (include/primec/runtime/VmHeapCoreBody.inc) finds a byte region with a `std::map` search unless the address is in the last region found, and writes that cache on every lookup, so even a read mutates the heap and a loop over two regions searches the map on every byte. Give byte regions a state table indexed by the address, like the slots' (`states`): the region's generation for each granule, so a check is one array load and compare and writes nothing. Keep the addresses, the fault messages and the VM/`optexe` parity.
+  - acceptance:
+    - a VM benchmark that copies between two byte regions byte by byte (add it under benchmarks/) runs at least 2x faster; `benchmarks/aggregate.prime` and the strings benchmarks are no slower on the VM and `optexe`
+    - positive: tests/unit/runtime/test_vm_byte_regions.cpp gains a case that interleaves accesses to three regions and checks every byte; negative: an access to a freed region, to a region reused with a new generation and one byte past a region's end still fault with today's messages
+    - the PrimeScroll `optexe` peak footprint (close:1 median, as in TODO-5751) grows by at most 5%; full release gate green
+  - stop_rule: the byte-region liveness check; arenas and threads are TODO-5794.
+
+- [ ] TODO-5794: `optexe` heaps are per-thread arenas with remote frees
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5793
+  - created_at: 2026-11-09
+  - phase: Multithreading (docs/MultithreadingPrototype.md, Heaps)
+  - parallel_track: mt-heap-optexe
+  - scope: Make the generated program's heap usable from several threads: one `VmHeapCore` arena per thread with the arena number in address bits 41 to 46 (arena 0 keeps today's addresses), storage that does not move once a second arena exists, liveness reads with relaxed atomic loads of the state tables and a per-thread region cache, a remote-free queue per arena (behind the arena's lock, drained by the owner at its next allocation), and at most 64 arenas (a 65th thread shares the last behind its lock). Each thread gets its own `VmTextHeap` (its `StringArena` stack and literal cache), whose blocks freed elsewhere go back the same way.
+  - implementation_notes: include/primec/runtime/VmHeapCore*.{h,inc}, VmTextHeap*.{h,inc}, src/backend/IrToOptCppRuntime.h (`Rt` splits into per-thread state and the shared arena table). The VM keeps one arena and no locks.
+  - acceptance:
+    - positive: a runtime unit test runs 4 `std::thread`s that each allocate, read and free 100000 slot and byte blocks and free a quarter of another thread's blocks, and checks live counts and contents at the end; a single-threaded `optexe` program gives the same addresses as the VM (the existing parity tests)
+    - negative: a block freed twice from two threads faults with `invalid heap free address` when the owner drains; an address of a freed block read from another thread faults
+    - single-threaded `optexe` benchmarks within 3% of before; the unit test passes under ThreadSanitizer in one manual run, recorded in docs/todo_log.md; full release gate green
+  - stop_rule: the `optexe` heap and string heap; starting threads is TODO-5795.
+
+- [ ] TODO-5795: `optexe` runs spawned tasks on threads
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5794, TODO-5792
+  - created_at: 2026-11-09
+  - phase: Multithreading (docs/MultithreadingPrototype.md, Runtime Model)
+  - parallel_track: mt-optexe-threads
+  - scope: Lower `TaskSpawn` in IrToOptCppEmitter to a `std::thread` per task over a per-thread `Rt` (call depth, local-address frames, heap arena) and `TaskWait` to a join that copies the result out. `ps_fault` flushes and leaves with `std::_Exit(3)`; a print writes its line and newline in one call.
+  - acceptance:
+    - positive: two `sum_range` tasks of about one second each finish in at most 0.65 times the time of the same work on one task (wall clock, back to back, load recorded); every VM task test gives the same output on `optexe`; a task that allocates and returns a `String` hands it to the waiter, which frees it
+    - negative: a fault in a task exits 3 with the VM's message while another task is still running; 4 tasks printing 1000 lines each never produce a mixed line
+    - full release gate green
+  - stop_rule: threads for `[spawn]` on `optexe`; the sharing primitives are TODO-5796 to TODO-5798.
+
+- [ ] TODO-5796: `Atomic<i32>` and `Atomic<i64>` with the `atomic` effect
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5795, TODO-5790
+  - created_at: 2026-11-09
+  - phase: Multithreading (docs/MultithreadingPrototype.md, Atomic)
+  - parallel_track: mt-primitives
+  - scope: Add `/std/sync` with `Atomic<i32>` and `Atomic<i64>` (`load`, `store`, `add` and `exchange` returning the previous value, `compareExchange`), sequentially consistent, copies sharing one heap cell with an atomic handle count, `[sendable]`, and the effect `atomic`. IR opcodes `AtomicLoad`, `AtomicStore`, `AtomicAdd`, `AtomicExchange`, `AtomicCompareExchange` (32/64-bit, heap address) on the VM (a switch point under a seed) and `optexe` (`std::atomic_ref`); arm64 native comes with TODO-5801, other backends reject them.
+  - acceptance:
+    - positive: 4 tasks adding 1 to a shared `Atomic<i64>` 100000 times each end at 400000 on the VM (default schedule and seeds 1 to 8) and on `optexe`; a compare-exchange spin counter gives the same total; dropping every copy frees the cell (heap statistics)
+    - negative: an `Atomic` method in a definition without `atomic` is `atomic operation requires atomic effect`; `Atomic<f32>` and `Atomic<String>` are diagnostics; native and Wasm reject a module using atomics with a message naming the backend
+    - full release gate green
+  - stop_rule: the two atomic types on the VM and `optexe`.
+
+- [ ] TODO-5797: `Mutex<T>` with scoped `locked(body)` and the `lock` effect
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5796
+  - created_at: 2026-11-09
+  - phase: Multithreading (docs/MultithreadingPrototype.md, Mutex)
+  - parallel_track: mt-primitives
+  - scope: `Mutex<T>` in `/std/sync`: owns a sendable `T` in a heap cell, `locked<Body>(body)` locks, calls `body` with a `Reference<T>`, unlocks on every way out and returns what `body` returns; copies share it (atomic handle count). The lock is a runtime host function: on the VM a scheduler-aware lock (switch points at lock and unlock, blocked tasks count for deadlock detection), on `optexe` `std::mutex` with the holder recorded. Locking it again inside its own body faults with `mutex locked again by the task that holds it`.
+  - acceptance:
+    - positive: the design's `Tally` example prints 7 on the VM (all seeds) and `optexe`; 8 tasks each appending 1000 entries to a `vector<i64>` inside one mutex leave 8000 entries; `locked` returning an `i64` and a body with a `[ref]` capture both work
+    - negative: a non-sendable `T` (`Mutex<StringView>`) is `Mutex element type is not sendable`; returning or storing the body's `Reference<T>` is the existing borrowed-parameter diagnostic; `locked` without the `lock` effect is a diagnostic; a nested `locked` on the same mutex faults with exit 3 on both backends; two tasks locking two mutexes in opposite order report `deadlock: every task is waiting` on a VM seed that interleaves them
+    - full release gate green
+  - stop_rule: `Mutex` on the VM and `optexe`; `RwLock` is TODO-5804.
+
+- [ ] TODO-5798: Bounded `Channel<T>` with the `channel` effect
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5797
+  - created_at: 2026-11-09
+  - phase: Multithreading (docs/MultithreadingPrototype.md, Channel)
+  - parallel_track: mt-primitives
+  - scope: `Channel<T>{[capacity] n}` in `/std/sync`: a bounded FIFO of a sendable `T` in a heap cell, `send` (moves in, blocks while full), `receive` (a `Maybe<T>`, blocks while empty and open, `none` once closed and drained), `close` (a later send faults with `send on a closed channel`), copies sharing it. Built from the lock of TODO-5797 and two condition waits (VM scheduler, `std::condition_variable` on `optexe`). Backends that run tasks inline reject channels.
+  - acceptance:
+    - positive: the design's producer and `sum_jobs` example prints 4950 for 100 jobs through a channel of capacity 4 on the VM (all seeds) and `optexe`; 3 producers and 3 consumers move 30000 `String`s and every one arrives exactly once; a `String` sent and freed by the receiver leaves the heap statistics balanced
+    - negative: send after close faults with exit 3; a task receiving from a channel nobody sends on reports the VM deadlock fault; `Channel<Pointer<u8>>` and sending an arena-made `String` are diagnostics; native, Wasm and the JIT reject a module with channels
+    - full release gate green
+  - stop_rule: `Channel` on the VM and `optexe`.
+
+- [ ] TODO-5656: Thread-safe `SharedString`: an atomic owner count
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5796
+  - created_at: 2026-11-03
+  - phase: Multithreading (docs/MultithreadingPrototype.md, Heaps; docs/spec/strings-and-views.md, Beyond std::string)
+  - parallel_track: string-concurrency
+  - scope: `SharedString` (stdlib/std/text/shared.prime, TODO-5638) keeps its owner count as a plain `i32` right after the text's 0 byte, at an unaligned offset, so it may be shared on one thread only. Move the count to an aligned place in the block, count with the atomic operations of TODO-5796 (`add` on copy, `add(-1)` on destroy, the last owner frees), and mark the type `[sendable]`. Freeing on a thread other than the allocating one is the heaps' remote free (TODO-5794 on `optexe`, TODO-5800 on native). Update the strings-and-views status table.
+  - acceptance:
+    - positive: 4 tasks each copy and destroy one `SharedString` 100000 times and `owners()` is 1 at the end on the VM (all seeds) and `optexe`; a `SharedString` passes as a spawn argument and through a `Channel`; the single-threaded `SharedString` tests are unchanged
+    - negative: a `SharedString` made inside a `StringArena` still cannot be sent (`string escapes its arena via spawn`)
+    - full release gate green
+  - stop_rule: the owner count and sendability; native follows with TODO-5800.
+
+- [ ] TODO-5802: `serveWorkers`: one thread polls and accepts, N workers answer
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5798, TODO-5791
+  - created_at: 2026-11-09
+  - phase: Multithreading and Web apps (docs/MultithreadingPrototype.md, The Server; docs/WebAppsPlan.md, Concurrency)
+  - parallel_track: mt-server
+  - scope: In `/std/http/server` add `serveWorkers(handler, config)` and `serveWorkersUntil(handler, config, stop)` (effects `net_io`, `heap_alloc`, `io_err`, `task`) and `ServerConfig.workers` (0 = one per core); `/std/os` gets `cpuCount()` and a way for a worker thread to block `SIGINT`/`SIGTERM`; `/std/net` gets a wake pipe. The poller watches the listener, the open connections and the wake pipe, and hands a readable connection's slot to the workers over a `Channel`; a worker receives, parses, calls the handler inside a `Mutex` that holds the whole handler, serializes, sends and closes, and returns the slot (or returns an incomplete request to be watched again). `Router`, `AppRouter<State>` and `WebApp<State>` store `SendableFunction` handlers. `serve` and `serveUntil` stay as they are.
+  - acceptance:
+    - positive: an `optexe` test with 4 workers answers 16 concurrent clients sending 50 requests each, and a counter app's count equals the number of POSTs; a client that sends half a request and stalls does not delay the others with 1 worker; a VM test serves 2 workers deterministically on the default schedule; examples/apps/todo_web and hello_button compile with `serveWorkers` without changing their handlers
+    - negative: a handler capturing a `Pointer` is `serveWorkers needs a sendable handler`; SIGTERM stops the server within `acceptTimeoutMs` while all workers are busy
+    - full release gate green
+  - stop_rule: the library server; switching the examples and measuring is TODO-5803.
+
+- [ ] TODO-5803: The web apps run on workers and their gain is measured
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5802
+  - created_at: 2026-11-09
+  - phase: Multithreading and Web apps (docs/WebAppsPlan.md, Concurrency)
+  - parallel_track: mt-server
+  - scope: Add a load generator (`scripts/http_load.py`, Python standard library only: N concurrent connections for a fixed time, requests per second and p50/p99) and server benchmarks under benchmarks/http/; switch examples/apps/todo_web and hello_button to `serveWorkers` (their comments say the server is single-threaded today) and record the numbers in docs/WebAppsPlan.md.
+  - acceptance:
+    - with 16 concurrent clients on a machine with at least 4 cores, each measured against `serve` back to back with the load average recorded: todo_web's list page with 200 items at least 1.5x the requests per second with 4 workers; a POST of a 32 KB form whose handler does little at least 2.5x; a handler doing about 1 ms of CPU work under the lock recorded as the baseline for TODO-5804 (about 1x expected); 1 worker at least 0.9x `serve`
+    - negative: the load generator exits non-zero when any response is not 2xx or 3xx, and a run against a server that refuses connections fails with a message
+    - full release gate green
+  - stop_rule: the examples, the load generator and the numbers.
+
+- [ ] TODO-5799: arm64 native runs spawned tasks on pthreads, its heap behind a lock
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5792
+  - created_at: 2026-11-09
+  - phase: Multithreading (docs/MultithreadingPrototype.md, Runtime Model and Heaps)
+  - parallel_track: mt-native
+  - scope: Bind `pthread_create`, `pthread_join` and `pthread_attr_init`/`pthread_attr_setstacksize` from libSystem through the existing dyld pointer slots, and emit a thread trampoline (C ABI: saves callee-saved registers, sets x19/x20 from the saved argc/argv, sets up a frame with its own 1 MiB value stack on an 8 MiB thread stack, copies the arguments from the task block, calls the function, stores the result). `TaskSpawn` starts it and `TaskWait` joins. In a module with `TaskSpawn` the heap routines take one LSE spin lock; a module without it emits today's code byte for byte.
+  - implementation_notes: the trampoline must establish whatever register state the arm64 register allocator of TODO-5772 assumes at a function entry; src/native_emitter/NativeEmitterMachO.cpp (imports), NativeEmitterInternalsArm64Heap.h, NativeEmitterInternalsArm64Host.h.
+  - acceptance:
+    - positive: two one-second `sum_range` tasks finish in at most 0.65 times the one-task time (back to back, load recorded); every VM task test gives the same output on native; 4 tasks allocating and freeing 100000 blocks each end with the heap balanced
+    - negative: a heap fault in a task exits 3 with the VM's message; PrimeScroll's `__text` and launch library count are unchanged (the TODO-5603 guard)
+    - full release gate green on macOS arm64
+  - stop_rule: threads and a locked heap on arm64 native; per-thread heaps are TODO-5800.
+
+- [ ] TODO-5800: arm64 native heaps are per thread, with remote frees
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5799
+  - created_at: 2026-11-09
+  - phase: Multithreading (docs/MultithreadingPrototype.md, Heaps)
+  - parallel_track: mt-native
+  - scope: Replace the lock of TODO-5799: each spawned thread takes an allocator state (today's layout plus a remote-free head) from a pool that is never unmapped and finds it through a pthread key (`pthread_getspecific`, null meaning the main thread's data-segment state); pooled chunks are mapped aligned to 256 KiB and start with their owner's state pointer; `HeapFree` of another thread's block pushes it onto the owner's remote list with `casal`, and the owner takes that list back with `swpal` when a size class is empty. The lock remains only for taking a state from the pool.
+  - acceptance:
+    - a 4-thread benchmark that allocates and frees small blocks (a quarter freed by another thread) runs at least 3x faster than with the TODO-5799 lock, and a 1-thread run is no slower than before TODO-5799
+    - positive: blocks made on a thread that has ended are freed by another without a fault; negative: a double free across threads still exits 3 with `invalid heap free address`
+    - full release gate green on macOS arm64
+  - stop_rule: the native allocator.
+
+- [ ] TODO-5801: arm64 native runs `Atomic`, `Mutex` and `Channel`
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5800, TODO-5798
+  - created_at: 2026-11-09
+  - phase: Multithreading (docs/MultithreadingPrototype.md, Atomic, Mutex, Channel)
+  - parallel_track: mt-native
+  - scope: Emit the atomic opcodes with LSE (`ldar`/`stlr`, `ldaddal`, `swpal`, `casal`) and answer the lock and condition host functions with `pthread_mutex_*` and `pthread_cond_*` bound from libSystem, so the `/std/sync` types and `SharedString` run on arm64 native.
+  - acceptance:
+    - positive: the `Atomic`, `Mutex`, `Channel` and `SharedString` compile-run tests of TODO-5796, TODO-5797, TODO-5798 and TODO-5656 pass on native with the `optexe` output
+    - negative: a nested `locked` on one mutex and a send after close exit 3 with the VM's messages
+    - full release gate green on macOS arm64
+  - stop_rule: the primitives on arm64 native; x86_64 native stays inline.
+
+- [ ] TODO-5804: GET handlers that only read the state run at the same time under `RwLock`
   - owner: ai
   - status: deferred
-  - created_at: 2026-11-03
-  - phase: Strings and slices (docs/spec/strings-and-views.md, Beyond std::string)
-  - parallel_track: string-concurrency
-  - scope: Make `SharedString` (TODO-5638) safe to send between threads: an atomic count and string blocks that may be freed on a thread other than the one that made them. Deferred until the concurrency model (docs/MultithreadingPrototype.md) has a scheduler, atomics and per-thread string heaps; scope it again then.
+  - created_at: 2026-11-09
+  - phase: Multithreading and Web apps (docs/MultithreadingPrototype.md, The Server)
+  - parallel_track: mt-server
+  - depends_on: TODO-5803, TODO-5735
+  - scope: Under TODO-5802 every handler holds the app's mutex, so page rendering runs one request at a time. Add `RwLock<T>` (`read(body)` with a read-only `T`, `write(body)` with a `Reference<T>`), let a handler say it only reads (its state parameter `[State] state` against `[Reference<State>] state`, which needs same-arity overloads by argument type, TODO-5735; or a named registration, open question 7 of the design), and run read-only handlers under the read lock. Deferred: decide the registration form first, and measure TODO-5803's baseline.
+  - acceptance:
+    - the TODO-5803 CPU-bound GET handler at least 2.5x `serve` with 4 workers; a read-only handler that writes its state is a compile error
+  - stop_rule: read-only handlers and `RwLock`.
+
+- [ ] TODO-5805: The server keeps connections alive between requests
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-09
+  - phase: Web apps (docs/WebAppsPlan.md, Concurrency)
+  - parallel_track: web-keepalive
+  - depends_on: TODO-5802
+  - scope: `serve` and `serveWorkers` close every connection after one response. Honor HTTP/1.1 persistent connections (`Connection: keep-alive` by default, `close` on request, an idle timeout and a request cap per connection), with an answered connection going back to the poller. Deferred until the worker server exists.
+  - acceptance:
+    - to be set when the leaf is un-deferred; at least: a client reusing one connection for 100 requests gets 100 answers, and an idle connection closes after its timeout
+  - stop_rule: persistent connections.
+
+- [ ] TODO-5806: Sessions: a cookie and per-session state
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-09
+  - phase: Web apps (docs/WebAppsPlan.md, Concurrency)
+  - parallel_track: web-sessions
+  - depends_on: TODO-5802
+  - scope: Give `WebApp<State>` sessions: a random session id in a cookie (HttpOnly, SameSite), a session store in the app state with expiry, and handlers that receive their session's data. Deferred: needs the cookie parsing and a random source, and the design of how a handler names its session type.
   - acceptance:
     - to be set when the leaf is un-deferred
-  - stop_rule: not started.
-
+  - stop_rule: sessions in `WebApp`.
 
 - [ ] TODO-5753: PrimeScroll draws its first window before it restores the session
   - owner: ai
