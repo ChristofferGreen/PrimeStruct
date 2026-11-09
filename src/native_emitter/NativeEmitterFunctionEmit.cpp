@@ -91,8 +91,8 @@ bool emitNativeFunctions(const IrModule &module,
   // (the template callers pass arguments on the operand stack).
   std::vector<bool> registerArguments(module.functions.size(), false);
   if constexpr (kIsArm64) {
-    // arm64 (NativeEmitterInternalsArm64RegAlloc.h): functions without float values or local
-    // addresses; the others keep their templates, with the reason in --opt-report.
+    // arm64 (NativeEmitterInternalsArm64RegAlloc.h): functions without float values; the others
+    // keep their templates, with the reason in --opt-report.
     if (emitter.registerAllocationEnabled()) {
       for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
         const IrFunction &function = module.functions[functionIndex];

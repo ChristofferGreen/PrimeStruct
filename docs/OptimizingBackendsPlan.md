@@ -1441,3 +1441,32 @@ the programs measured there. call_fib's native cycles are now below optexe's 78.
 the two builds (`scripts/measure_startup.sh`, ten launches each, alternated twice at load 9 to 14) were within the
 run-to-run spread of each other. Every benchmark prints the same result; `scripts/differential_opt_check.py --native`,
 also with `PRIMESTRUCT_NATIVE_REGALLOC=1`, matches in 490 programs and differs in the same six -O0 programs as before.
+
+### 12.10 Result: address-taking functions on arm64 (TODO-5775, 2026-11-09)
+
+The arm64 allocator now takes functions that execute `AddressOfLocal`, the last integer blocker. Nothing in the plan
+changed: `IrLocalEscape` already pins every local of a function that takes an address, so its plan keeps all locals in
+their frame slots and only operands, call results and edge values in registers. `AddressOfLocal` is emitted inline as
+`add xd, x27, #offset` (the shifted form, or through x17, for far slots); `LoadIndirect` and `StoreIndirect` were
+inline already. A write through an address, in the function itself or in a callee it passed the address to (the
+address ABI of real calls), lands in the frame slot the next `LoadLocal` reads; the save slots of 12.9 lie past every
+local, where no valid address reaches.
+
+Measured with the release `primec` of TODO-5774 (67eb29445) and after, back to back, macOS arm64 (M3 Pro), load
+average 5.5; instructions retired are deterministic, cycles the lowest of five runs:
+
+| | instructions before | after | cycles before | after | change |
+| --- | --- | --- | --- | --- | --- |
+| struct method (`Vec3.dot`, 5M calls; 12.9) | 552.4M | 327.2M | 91.9M | 47.9M | 1.9x fewer cycles |
+| closure call (`Function<int, int>`, 2M calls; 12.9) | 204.3M | 116.5M | 35.0M | 24.0M | 1.46x |
+| call_fib, aggregate, json_scan, json_parse, float_series | | | | | unchanged (no local addresses) |
+
+PrimeScroll: `register_allocated` 131 to 245 of 245 functions, `__text` 473,796 to 250,788 bytes (-47%; 483,008 after
+TODO-5770). Snapshot launch medians of the two builds (`scripts/measure_startup.sh`, direct exec, ten launches each,
+alternated twice, load 4 to 6): event loop reached at 185 and 178 ms before, 168 and 165 ms after; first frame 253 and
+250 ms before, 237 and 230 ms after. Every benchmark prints the same result; `scripts/differential_opt_check.py
+--native`, also with `PRIMESTRUCT_NATIVE_REGALLOC=1`, matches in 490 programs and differs in the same six -O0 programs
+as before; the compiled native editor leaves the same headless call logs as the VM (`PrimeStruct_native_ui_editor`).
+
+Only float code (TODO-5773) is left on templates. Template opcodes inside allocated functions (prints, heap routines,
+host calls) still go through the x28 value stack, which is what TODO-5771 now has left to improve.

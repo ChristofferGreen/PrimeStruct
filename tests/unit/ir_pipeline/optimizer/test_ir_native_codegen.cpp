@@ -451,9 +451,9 @@ TEST_CASE("arm64 register allocation spills values past its pool to frame slots"
   CHECK(report.perFunction[0].registerAllocationSpillSlots > 0);
 }
 
-TEST_CASE("arm64 functions with floats or local addresses stay on templates") {
-  // main calls the others; /address and /float stay on templates, main (which calls)
-  // and /leaf are register-allocated.
+TEST_CASE("arm64 functions with float values stay on templates") {
+  // main calls the others; /float stays on templates, main (which calls), /address (which takes
+  // a local address) and /leaf are register-allocated.
   primec::IrModule module;
   module.entryIndex = 0;
   module.functions.push_back(optimizer_test::functionOf("/main",
@@ -498,8 +498,7 @@ TEST_CASE("arm64 functions with floats or local addresses stay on templates") {
       arm64AllocationReport(module, "regalloc_fallbacks");
   REQUIRE(report.perFunction.size() == 4);
   CHECK(report.perFunction[0].registerAllocated);
-  CHECK_FALSE(report.perFunction[1].registerAllocated);
-  CHECK(report.perFunction[1].registerAllocationFallback == "takes a local address (TODO-5775)");
+  CHECK(report.perFunction[1].registerAllocated);
   CHECK_FALSE(report.perFunction[2].registerAllocated);
   CHECK(report.perFunction[2].registerAllocationFallback == "float values (TODO-5773)");
   CHECK(report.perFunction[3].registerAllocated);
@@ -683,6 +682,64 @@ TEST_CASE("arm64 register allocation emits a recursive function on registers") {
                                              "add sp, sp, #0x230",
                                              "ret"};
   CHECK(fib == expected);
+}
+
+TEST_CASE("arm64 register allocation keeps address-taken locals in their frame slots") {
+  // /main takes the address of local 0 and keeps it in local 1. Each of four iterations passes
+  // the address to /bump, which doubles the local through it and adds the counter, then reads
+  // the local directly into a running sum held in a register, and writes it once more through
+  // the address (minus 3) before printing it as a local. Every read of local 0 must see the
+  // last write, whichever way it was made.
+  primec::IrModule module;
+  module.entryIndex = 0;
+  module.functions.push_back(optimizer_test::functionOf(
+      "/main",
+      optimizer_test::assemble({"PushI64 5",   "StoreLocal 0", "AddressOfLocal 0", "StoreLocal 1",
+                                "PushI64 0",   "StoreLocal 2", "PushI64 0",        "StoreLocal 3",
+                                "LoadLocal 2", "PushI64 4",    "CmpLtI64",         "JumpIfZero 32",
+                                "LoadLocal 1", "LoadLocal 2",  "CallVoid 1",       "LoadLocal 3",
+                                "LoadLocal 0", "AddI64",       "StoreLocal 3",     "LoadLocal 1",
+                                "LoadLocal 0", "PushI64 3",    "SubI64",           "StoreIndirect",
+                                "Pop",         "LoadLocal 0",  "PrintI64 1",       "LoadLocal 2",
+                                "PushI64 1",   "AddI64",       "StoreLocal 2",     "Jump 8",
+                                "LoadLocal 3", "PrintI64 1",   "PushI32 0",        "ReturnI32"})));
+  // /bump(address, k): *address = *address * 2 + k
+  module.functions.push_back(optimizer_test::functionOf("/bump",
+                                                        optimizer_test::assemble({"StoreLocal 1",
+                                                                                  "StoreLocal 0",
+                                                                                  "LoadLocal 0",
+                                                                                  "LoadLocal 0",
+                                                                                  "LoadIndirect",
+                                                                                  "PushI64 2",
+                                                                                  "MulI64",
+                                                                                  "LoadLocal 1",
+                                                                                  "AddI64",
+                                                                                  "StoreIndirect",
+                                                                                  "Pop",
+                                                                                  "ReturnVoid"}),
+                                                        2));
+  const Outcome vm = optimizer_test::run(module);
+  REQUIRE_MESSAGE(vm.ok, vm.error);
+  // 5 -> 10 (sum 10) -> 7; 15 (sum 25) -> 12; 26 (sum 51) -> 23; 49 (sum 100) -> 46
+  CHECK(vm.output == "7\n12\n23\n46\n100\n");
+  expectNativeMatchesVm(module, "regalloc_address");
+
+  const primec::NativeEmitterInstrumentation report =
+      arm64AllocationReport(module, "regalloc_address");
+  REQUIRE(report.perFunction.size() == 2);
+  CHECK(report.perFunction[0].registerAllocated);
+  CHECK(report.perFunction[1].registerAllocated);
+  // The address is x27 plus the slot's offset, built inline.
+  const std::vector<DisassembledInstruction> code =
+      disassemble(primec::testing::testScratchPath("native_codegen/regalloc_address.opt"));
+  bool inlineAddress = false;
+  for (const DisassembledInstruction &instruction : code) {
+    if (instruction.text.rfind("add x", 0) == 0 &&
+        instruction.text.find(", x27, #0x") != std::string::npos) {
+      inlineAddress = true;
+    }
+  }
+  CHECK(inlineAddress);
 }
 
 TEST_CASE("arm64 register-allocated functions run with two-word conditional branches") {

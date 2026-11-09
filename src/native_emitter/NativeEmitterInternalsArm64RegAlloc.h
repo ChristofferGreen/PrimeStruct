@@ -7,11 +7,15 @@
 // the memory value stack (x28): its operands are pushed there first and its results popped into their
 // locations afterwards, with the template-clobbered registers live across it saved in their frame slots.
 //
-// Only functions without float values or local addresses come here (TODO-5773 and TODO-5775 take
-// the rest). A call saves every register live across it in its frame slot and restores it after
-// (callees, allocated or not, may change any of x0-x25); the result arrives in x0. A callee whose
-// callers are all register-allocated takes its first eight arguments in x0-x7, the
-// rest on the value stack as template callees take them all.
+// Only functions without float values come here (TODO-5773 takes the rest). In a function that
+// takes a local address every local stays in its frame slot (IrLocalEscape pins them all), so a
+// write through an address, here or in a callee given it, is what the next LoadLocal reads;
+// operands and edge values still live in registers.
+//
+// A call saves every register live across it in its frame slot and restores it after (callees,
+// allocated or not, may change any of x0-x25); the result arrives in x0. A callee whose callers
+// are all register-allocated takes its first eight arguments in x0-x7, the rest on the value
+// stack as template callees take them all.
 //
 // Registers: x0 and x1 are the scratch registers for spilled values, immediates, parallel-move cycles
 // (x0) and slot-to-slot copies (x1); string addresses are built in x1 (patchAdr writes x1). x17 builds
@@ -42,8 +46,6 @@ inline bool arm64TemplateClobbers(uint8_t reg) {
 inline std::string arm64RegisterAllocationBlocker(const IrFunction &function) {
   for (const IrInstruction &instruction : function.instructions) {
     switch (instruction.op) {
-    case IrOpcode::AddressOfLocal:
-      return "takes a local address (TODO-5775)";
     case IrOpcode::PushF32:
     case IrOpcode::PushF64:
     case IrOpcode::AddF32:
@@ -663,6 +665,24 @@ inline bool Arm64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
         const uint8_t target = targetReg(d);
         // CSET target, cond (CSINC target, xzr, xzr, !cond).
         emit(0x9A9F07E0u | (static_cast<uint32_t>(invertCond(cond)) << 12) | target);
+        storeValue(d, target);
+        break;
+      }
+      case IrOpcode::AddressOfLocal: {
+        // x27 + the slot's offset (the address the template pushes).
+        const uint32_t d = instruction.defs[0];
+        const uint8_t target = targetReg(d);
+        const uint64_t offset = localOffset(static_cast<uint32_t>(ir.imm));
+        uint16_t imm = 0;
+        bool shifted = false;
+        if (offset <= 4095) {
+          emit(encodeAddRegImm(target, Frame, static_cast<uint16_t>(offset)));
+        } else if (addSubImmediate(offset, imm, shifted)) {
+          emit(encodeAddSubImm(AddImmBase, target, Frame, imm, shifted));
+        } else {
+          emitMovImm64(X17, offset);
+          emit(encodeAddReg(target, Frame, X17));
+        }
         storeValue(d, target);
         break;
       }
