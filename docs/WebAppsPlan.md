@@ -122,7 +122,7 @@ handler that brings the menus, toolbars and session up to date after each event.
 6. Native UI: TODO-5709 (controls take closures, `app.run(handlers)`; done), TODO-5725 (pointer and key events in the C ABI; done),
    TODO-5710 (PrimeScroll on handlers; done), TODO-5711 (retire the `/std/ui` prototype; done).
 7. Concurrency (docs/MultithreadingPrototype.md, Threads For Real; after the PrimeScroll startup lane and TODO-5770,
-   TODO-5772): sendable values TODO-5790, TODO-5791; VM tasks TODO-5792; `optexe` heaps and threads TODO-5793,
+   TODO-5772): sendable values TODO-5790 and `Function` sendable by construction TODO-5791; VM tasks TODO-5792; `optexe` heaps and threads TODO-5793,
    TODO-5794, TODO-5795; `Atomic`, `Mutex`, `Channel` TODO-5796, TODO-5797, TODO-5798; then `serveWorkers`
    TODO-5802 and the apps on it, measured, TODO-5803. Deferred: read-only handlers under `RwLock` TODO-5804,
    keep-alive TODO-5805, sessions TODO-5806.

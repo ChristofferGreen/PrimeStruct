@@ -120,7 +120,7 @@ of sync with them.
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
 | TODO-5807 | `[left right] wait(a, b)` destructures the results of several tasks | ready | mt-tasks |
 | TODO-5790 | Spawn arguments are checked by type: only sendable values cross to a task | ready | mt-sendable |
-| TODO-5791 | `SendableFunction<R, A...>` holds only sendable closures | blocked | mt-closures |
+| TODO-5791 | Every `Function` is sendable by construction: the conversion rejects non-sendable captures | blocked | mt-closures |
 | TODO-5792 | The VM runs spawned tasks under a deterministic scheduler | ready | mt-vm-tasks |
 | TODO-5793 | Byte-region accesses check liveness without a map search or a write | ready | mt-heap-optexe |
 | TODO-5794 | `optexe` heaps are per-thread arenas with remote frees | blocked | mt-heap-optexe |
@@ -146,6 +146,7 @@ of sync with them.
 | TODO-5586 | Native String heap: pooled blocks, statistics and limit | deferred | native-backend-strings |
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
 | TODO-5535 | Launch-time harness and reference Objective-C++ editor | ready | native-ui-launch |
+| TODO-5808 | `ps_ui_*` entry points fault when called off the main thread | ready | native-ui-threads |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5712 | A callable field of a local struct is called | ready | closures-field-calls |
 | TODO-5713 | A lambda whose capture list starts with `mut` parses as a call argument | ready | closures-parse |
@@ -218,7 +219,7 @@ of sync with them.
 
 - Startup, first (docs/NativeUiPlan.md section 1, "Where a launch goes"): TODO-5753, TODO-5755, TODO-5754, TODO-5603, TODO-5756, TODO-5535, TODO-5757
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
-- Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5533
+- Native UI (docs/NativeUiPlan.md): TODO-5808, TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
@@ -238,7 +239,7 @@ Run `ready` leaves in the order listed under Immediate Next 10. Lanes are indepe
 
 Native code quality (docs/OptimizingBackendsPlan.md section 12), after the startup lane, in this order: TODO-5770 (one-instruction constants, about 22% less native code), TODO-5772 (arm64 register allocation for integer code, about 5x on scalar loops), TODO-5777 (IR dumps for the `--emit` target), TODO-5776 (`local-sroa`: non-escaping local addresses become local accesses), TODO-5771 (template operand cache and compare-branch fusion), TODO-5774 (registers across calls), TODO-5773 (floats in d-registers), TODO-5775 (address-taking functions).
 
-Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane and after TODO-5770 and TODO-5772 above; not above them in Ready Now or Immediate Next 10. In this order: TODO-5807 (destructure multi-wait results), TODO-5790 (sendable spawn arguments), TODO-5791 (`SendableFunction`), TODO-5792 (VM tasks under a deterministic scheduler; `TaskSpawn`/`TaskWait` IR), TODO-5793 (byte-region checks without a map search), TODO-5794 (`optexe` per-thread heap arenas), TODO-5795 (`optexe` threads for `[spawn]`), TODO-5796 (`Atomic`), TODO-5797 (`Mutex`), TODO-5798 (`Channel`), TODO-5656 (atomic `SharedString` count), TODO-5802 (`serveWorkers`), TODO-5803 (apps on workers, measured), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5807, TODO-5790, TODO-5792 and TODO-5793 are ready and independent of each other. Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions).
+Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane and after TODO-5770 and TODO-5772 above; not above them in Ready Now or Immediate Next 10. In this order: TODO-5807 (destructure multi-wait results), TODO-5790 (sendable spawn arguments, checked by type), TODO-5791 (every `Function` sendable by construction), TODO-5792 (VM tasks under a deterministic scheduler; `TaskSpawn`/`TaskWait` IR), TODO-5793 (byte-region checks without a map search), TODO-5794 (`optexe` per-thread heap arenas), TODO-5795 (`optexe` threads for `[spawn]`), TODO-5796 (`Atomic`), TODO-5797 (`Mutex`), TODO-5798 (`Channel`), TODO-5656 (atomic `SharedString` count), TODO-5802 (`serveWorkers`), TODO-5803 (apps on workers, measured), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5807, TODO-5790, TODO-5792 and TODO-5793 are ready and independent of each other. Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions).
 
 ### Task Blocks
 
@@ -826,27 +827,28 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
   - created_at: 2026-11-09
   - phase: Multithreading (docs/MultithreadingPrototype.md, Sendable Values)
   - parallel_track: mt-sendable
-  - scope: `validateTaskSpawnCall` checks only argument names (a `mut` binding, a `Reference`, a task handle, `location`/`borrow`/`dereference`); a `Pointer`, a `StringView`, a borrowing closure or a struct holding one passes. Add the structural `sendable` predicate of the design (primitives, `string`, enums, stdlib containers of sendable types, structs of sendable fields; not `Reference`, `Pointer`, views, carriers, `Function`, `Task`), the `[sendable]` struct transform (asserts it for a struct with `Pointer` fields; outside `stdlib/` only with `unsafe`) and `[thread_bound]` (the native UI handle structs), and check the type of every spawn argument expression. Mark the stdlib `String`, `vector`, `map` and their kin `[sendable]` and the `/std/ui/native` handles `[thread_bound]`. A `String` made in an open `StringArena` passed to a spawn is `string escapes its arena via spawn`.
-  - implementation_notes: src/semantics/SemanticsValidatorTaskHandles.cpp; the arena escape check lives with the existing `string escapes its arena via ...` diagnostics. Keep the `mut`-binding rejection and add a hint naming `Mutex`, `Atomic` and `Channel`.
+  - scope: `validateTaskSpawnCall` checks only argument names (a `mut` binding, a `Reference`, a task handle, `location`/`borrow`/`dereference`); a `Pointer`, a `StringView`, a borrowing closure or a struct holding one passes, and a copied `mut` binding is rejected although spawn copies its arguments. Add the structural `sendable` predicate of the design (primitives, `string`, enums, `String`, `vector`, `map`, `Maybe`, `Result`, tuples and structs of sendable types, every `Function`; not `Reference`, `Pointer`, `StringView`, slices, a closure struct with a `[ref]` capture, `Task`, `SharedString` until TODO-5656), one `[sendable]` struct transform (asserts it for a struct with `Pointer` fields; outside `stdlib/` only on a definition that also carries `unsafe`; no opt-out marker), and check the type of every spawn argument expression. Mark the stdlib `String`, `vector`, `map` and their kin `[sendable]`. Drop the `mut`-binding rejection: a `mut` argument is copied, as in any call. No marker on the native UI handles (their thread check is TODO-5808). A `String` made in an open `StringArena` passed to a spawn is `string escapes its arena via spawn`.
+  - implementation_notes: src/semantics/SemanticsValidatorTaskHandles.cpp (the validator passes run after template monomorphization, so argument types are concrete); the arena escape check lives with the existing `string escapes its arena via ...` diagnostics. Diagnostics name the path to the leaf: `spawn argument `buffer` of /fill is not sendable: field `data` is Pointer<u8>`, with the chain of fields through nested structs, and `(instantiated from /pump at main.prime:12)` when the type came through a template argument; each carries the note `sharing between tasks needs Mutex, Atomic or Channel`. Make the predicate a reusable unit (`.h/.cpp`) since TODO-5791, TODO-5797 and TODO-5798 call it.
   - acceptance:
-    - positive: semantic tests spawn calls taking a `String`, a `vector<i32>`, a struct of both and an enum, and all examples/ and stdlib programs still compile
-    - negative: semantic tests reject a `Pointer<u8>` argument, a `StringView`, a closure with a `[ref]` capture, a `Function<i32, i32>`, a struct with a `Reference` field, a native UI `Window`, `[sendable]` on a user struct without `unsafe`, and an arena-made `String`, each with the diagnostic shape of the design (`spawn argument is not sendable: <type> (argument N of /callee)`)
+    - positive: semantic tests spawn calls taking a `String`, a `vector<i32>`, a struct of both, an enum, a `Function<i32, i32>` and a `mut` binding (the spawner's copy is unchanged after `wait`), and all examples/ and stdlib programs still compile
+    - negative: semantic tests reject a `Pointer<u8>` argument, a `StringView`, a closure with a `[ref]` capture, a struct with a `Reference` field, a struct nested two levels deep holding a `Pointer` (the message names both fields), a generic callee instantiated with a `Slice<i32>` (the message carries the instantiation chain), `[sendable]` on a user struct without `unsafe`, and an arena-made `String`, each with the diagnostic shape of the design
     - full release gate green
-  - stop_rule: the sendable predicate, the two transforms and the spawn-site check; `Mutex`, `Channel` and `SendableFunction` sites come with their own leaves.
+  - stop_rule: the sendable predicate, the `[sendable]` transform and the spawn-site check; the `Function` conversion, `Mutex` and `Channel` sites come with their own leaves.
 
-- [ ] TODO-5791: `SendableFunction<R, A...>` holds only sendable closures
+- [ ] TODO-5791: Every `Function` is sendable by construction: the conversion rejects non-sendable captures
   - owner: ai
   - status: blocked
   - blocked_on: TODO-5790
   - created_at: 2026-11-09
-  - phase: Multithreading (docs/MultithreadingPrototype.md, Sendable Functions)
+  - phase: Multithreading (docs/MultithreadingPrototype.md, Functions Are Sendable)
   - parallel_track: mt-closures
-  - scope: A `Function` hides its closure's capture types, so it is never sendable. Add `SendableFunction<R, A...>`: the same layout and lowering as `Function` (its own `/__SendableFunctionN` family in the closure pass, numbered by the `function-values` pass), whose conversions, explicit and implicit, accept only closures whose captures are all sendable (TODO-5790's predicate), and which is sendable itself. No conversion between `Function` and `SendableFunction` (open question 1 of the design).
+  - scope: A `Function<R, A...>` erases its closure's type, so sendability cannot be read off a `Function` value; instead every conversion to `Function`, explicit (`Function<i64>{closure}`) and implicit (a closure at an expected-type site), rejects a closure with a capture that is not sendable (TODO-5790's predicate): a `Pointer`, a `StringView`, a slice, a struct holding one. `[ref]` captures are already rejected (`closure escapes via Function`). `Function` itself is then sendable, with no second function type and no per-instance inference. Routers, `AppRouter`, `WebApp`, `AppHandlers` and `serveWorkers` keep plain `Function`.
+  - implementation_notes: the conversion sites (src/semantics/TemplateMonomorphCallableRewrites.cpp, `convertArgument`; src/semantics/SemanticsValidateLambdaClosures.cpp, `rewriteFunctionTypes`) rewrite the closure into `/__fn_box(closure)` while the closure struct's field types are still the template parameters the factory call infers, so the check runs in the `function-values` pass (src/semantics/SemanticsValidateFunctionValues.cpp, `rewriteFunctionValues`), which runs after template monomorphization and already visits every `/__fn_box` with its concrete closure struct; report at the box's source position, which is the closure's. The loan-based check in src/semantics/SemanticsValidateSliceLoans.cpp (`checkFunctionBoxes`) stays.
   - acceptance:
-    - positive: a lambda with value and `mut` captures of sendable types and a named definition convert to `SendableFunction<i64, i64>` at a parameter, a field and a binding, and run on the VM, native and `optexe`; a `SendableFunction` passes as a spawn argument
-    - negative: a closure capturing a `Pointer`, a `Function` or a `[thread_bound]` handle is `closure cannot become a SendableFunction: capture <name> is <type> ...`; a `SendableFunction` assigned to a `Function` is a type error
+    - positive: a lambda with value and `mut` captures of sendable types (a `String`, a `vector<i64>`, a struct of both) and a named definition convert to `Function<i64, i64>` at a parameter, a field and a binding, and run on the VM, native and `optexe`; a `Function` passes as a spawn argument; all examples/ and stdlib programs still compile
+    - negative: a closure capturing a `Pointer<u8>`, a `StringView` or a struct with a `Pointer` field is `closure cannot be a Function: capture `view` is a StringView` (with the field path for the struct), at the closure's line, at an explicit `Function<...>{...}` and at an implicit site, and under single-threaded `serve` too
     - full release gate green
-  - stop_rule: the type and its conversions; the stdlib routers switch to it with TODO-5802.
+  - stop_rule: the capture check at `Function` conversion; no new function type.
 
 - [ ] TODO-5792: The VM runs spawned tasks under a deterministic scheduler
   - owner: ai
@@ -928,7 +930,7 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
   - scope: `Mutex<T>` in `/std/sync`: owns a sendable `T` in a heap cell, `locked<Body>(body)` locks, calls `body` with a `Reference<T>`, unlocks on every way out and returns what `body` returns; copies share it (atomic handle count). The lock is a runtime host function: on the VM a scheduler-aware lock (switch points at lock and unlock, blocked tasks count for deadlock detection), on `optexe` `std::mutex` with the holder recorded. Locking it again inside its own body faults with `mutex locked again by the task that holds it`.
   - acceptance:
     - positive: the design's `Tally` example prints 7 on the VM (all seeds) and `optexe`; 8 tasks each appending 1000 entries to a `vector<i64>` inside one mutex leave 8000 entries; `locked` returning an `i64` and a body with a `[ref]` capture both work
-    - negative: a non-sendable `T` (`Mutex<StringView>`) is `Mutex element type is not sendable`; returning or storing the body's `Reference<T>` is the existing borrowed-parameter diagnostic; `locked` without the `lock` effect is a diagnostic; a nested `locked` on the same mutex faults with exit 3 on both backends; two tasks locking two mutexes in opposite order report `deadlock: every task is waiting` on a VM seed that interleaves them
+    - negative: a non-sendable `T` is `Mutex element StringView is not sendable` and, for a struct, `Mutex element Record is not sendable: field `next` is Reference<Record>`; returning or storing the body's `Reference<T>` is the existing borrowed-parameter diagnostic; `locked` without the `lock` effect is a diagnostic; a nested `locked` on the same mutex faults with exit 3 on both backends; two tasks locking two mutexes in opposite order report `deadlock: every task is waiting` on a VM seed that interleaves them
     - full release gate green
   - stop_rule: `Mutex` on the VM and `optexe`; `RwLock` is TODO-5804.
 
@@ -967,10 +969,10 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
   - created_at: 2026-11-09
   - phase: Multithreading and Web apps (docs/MultithreadingPrototype.md, The Server; docs/WebAppsPlan.md, Concurrency)
   - parallel_track: mt-server
-  - scope: In `/std/http/server` add `serveWorkers(handler, config)` and `serveWorkersUntil(handler, config, stop)` (effects `net_io`, `heap_alloc`, `io_err`, `task`) and `ServerConfig.workers` (0 = one per core); `/std/os` gets `cpuCount()` and a way for a worker thread to block `SIGINT`/`SIGTERM`; `/std/net` gets a wake pipe. The poller watches the listener, the open connections and the wake pipe, and hands a readable connection's slot to the workers over a `Channel`; a worker receives, parses, calls the handler inside a `Mutex` that holds the whole handler, serializes, sends and closes, and returns the slot (or returns an incomplete request to be watched again). `Router`, `AppRouter<State>` and `WebApp<State>` store `SendableFunction` handlers. `serve` and `serveUntil` stay as they are.
+  - scope: In `/std/http/server` add `serveWorkers(handler, config)` and `serveWorkersUntil(handler, config, stop)` (effects `net_io`, `heap_alloc`, `io_err`, `task`) and `ServerConfig.workers` (0 = one per core); `/std/os` gets `cpuCount()` and a way for a worker thread to block `SIGINT`/`SIGTERM`; `/std/net` gets a wake pipe. The poller watches the listener, the open connections and the wake pipe, and hands a readable connection's slot to the workers over a `Channel`; a worker receives, parses, calls the handler inside a `Mutex` that holds the whole handler, serializes, sends and closes, and returns the slot (or returns an incomplete request to be watched again). `Router`, `AppRouter<State>` and `WebApp<State>` keep their plain `Function` handlers, sendable by construction (TODO-5791), so an app is sendable when its `State` is; the `Mutex<Handler>` element check (TODO-5797) is what rejects an app that is not. `serve` and `serveUntil` stay as they are.
   - acceptance:
     - positive: an `optexe` test with 4 workers answers 16 concurrent clients sending 50 requests each, and a counter app's count equals the number of POSTs; a client that sends half a request and stalls does not delay the others with 1 worker; a VM test serves 2 workers deterministically on the default schedule; examples/apps/todo_web and hello_button compile with `serveWorkers` without changing their handlers
-    - negative: a handler capturing a `Pointer` is `serveWorkers needs a sendable handler`; SIGTERM stops the server within `acceptTimeoutMs` while all workers are busy
+    - negative: a `WebApp<State>` whose `State` has a `Pointer<u8>` field passed to `serveWorkers` is `Mutex element WebApp<State> is not sendable: field `state` of WebApp<State>, field `bytes` is Pointer<u8>` (a handler capturing a `Pointer` never gets this far: TODO-5791 rejects it where it is written); SIGTERM stops the server within `acceptTimeoutMs` while all workers are busy
     - full release gate green
   - stop_rule: the library server; switching the examples and measuring is TODO-5803.
 
@@ -1038,7 +1040,7 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
   - phase: Multithreading and Web apps (docs/MultithreadingPrototype.md, The Server)
   - parallel_track: mt-server
   - depends_on: TODO-5803, TODO-5735
-  - scope: Under TODO-5802 every handler holds the app's mutex, so page rendering runs one request at a time. Add `RwLock<T>` (`read(body)` with a read-only `T`, `write(body)` with a `Reference<T>`), let a handler say it only reads (its state parameter `[State] state` against `[Reference<State>] state`, which needs same-arity overloads by argument type, TODO-5735; or a named registration, open question 7 of the design), and run read-only handlers under the read lock. Deferred: decide the registration form first, and measure TODO-5803's baseline.
+  - scope: Under TODO-5802 every handler holds the app's mutex, so page rendering runs one request at a time. Add `RwLock<T>` (`read(body)` with a read-only `T`, `write(body)` with a `Reference<T>`), let a handler say it only reads (its state parameter `[State] state` against `[Reference<State>] state`, which needs same-arity overloads by argument type, TODO-5735; or a named registration, open question 5 of the design), and run read-only handlers under the read lock. Deferred: decide the registration form first, and measure TODO-5803's baseline.
   - acceptance:
     - the TODO-5803 CPU-bound GET handler at least 2.5x `serve` with 4 workers; a read-only handler that writes its state is a compile error
   - stop_rule: read-only handlers and `RwLock`.
@@ -1182,6 +1184,20 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
     - full release gate green
   - stop_rule: measurement tooling and the reference editor only.
   - notes: needs a Mac; the `--open` runs need a person at the machine (they show a window and take focus).
+
+- [ ] TODO-5808: `ps_ui_*` entry points fault when called off the main thread
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-09
+  - phase: Native UI (docs/NativeUiPlan.md, The C ABI; docs/MultithreadingPrototype.md, Sendable Values)
+  - parallel_track: native-ui-threads
+  - scope: The C ABI says every function is callable only on the thread that called `ps_ui_init` (AppKit objects belong to the main thread), but nothing checks it: a UI handle is a `u64` and sendable, so once tasks run on threads (TODO-5795, TODO-5799) a spawned task can call `ps_ui_window_add_tab` on a worker thread and corrupt AppKit state. The multithreading design has no type marker for UI handles; the check is at run time. The AppKit backend records the calling thread in `ps_ui_init` and every other entry point faults (exit code 3, through the program's fault path) with `ui call off the main thread: ps_ui_window_add_tab` when called from another thread; the headless backend does the same, so the rule is testable without a screen. Cost: one thread-id compare per call.
+  - implementation_notes: src/ui/appkit/NativeUiAppKit.mm (`ps_ui_init`; `pthread_main_np` or the recorded `pthread_self`), src/ui/headless/NativeUiHeadless*.cpp, the binding layer in src/ui/NativeUiBindings.cpp if the check is shared; tests in tests/unit/ui/test_native_ui_headless.cpp.
+  - acceptance:
+    - positive: a headless test initializes the UI and calls `ps_ui_window_create` and `ps_ui_window_add_tab` on the same thread and succeeds; the PrimeScroll scenarios are unchanged
+    - negative: a headless test initializes the UI on one `std::thread` and calls `ps_ui_window_add_tab` from another, and observes the fault with that message through a fault hook the headless backend gets for this (a callback the test installs; without one it exits 3 like the program's fault path); `ps_ui_init` itself called again from a second thread is the same fault
+    - full release gate green
+  - stop_rule: the thread check in the two backends; no marker in the type system.
 
 - [ ] TODO-5533: Windows and Linux native UI backends
   - owner: ai

@@ -315,32 +315,36 @@ policy so early error propagation remains ergonomic without leaks.
 
 ## Captures And Shared State
 
-The first safe rule should be strict:
+A spawned call is a call: its arguments are evaluated on the spawning thread and
+copied (or moved with `move(x)`) into the task. The rule is therefore the rule
+for any value that another thread may own, [Sendable Values](#sendable-values):
 
-- immutable values may be copied or moved into a task if their type is sendable
-- mutable bindings may not be captured by spawned work by default
-- references may not cross into spawned work by default
-- raw pointers and unchecked shared state require future unsafe APIs
+- a value may be copied or moved into a task if its type is sendable
+- references, pointers and views may not cross into spawned work
+- a `mut` binding is an ordinary argument: the task gets a copy, as any call
+  would, and the spawner keeps its own
+- sharing one value between tasks happens only through `Mutex`, `Atomic` and
+  `Channel`, which are sendable handles
 
-This should reject:
+So this is accepted, and prints the spawner's `counter` plus the task's result,
+each from its own copy:
 
 ```prime
 [effects(task), return<int>]
 main() {
   [mut] counter{0}
-
+  counter = counter + 1
   [Task<int>] left{[spawn] increment(counter)};
   result{wait(left)}
-
-  return(result)
+  return(result + counter)
 }
 ```
 
-Expected diagnostic shape:
-
-```text
-mutable binding `counter` cannot be captured by spawned task
-```
+The check today rejects the `mut` argument with `mutable binding cannot be
+captured by spawned task: counter` (and checks argument names, not types);
+TODO-5790 drops that rule with the type-based check. A spawn diagnostic that
+rejects a value says how to share instead: the message for a non-sendable
+argument ends with `sharing between tasks needs Mutex, Atomic or Channel`.
 
 Safe shared-state primitives make sharing explicit; their API is settled in
 [Threads For Real](#threads-for-real):
@@ -356,10 +360,9 @@ main() {
 ```
 
 Lambdas are closure structs (`docs/spec/value-lifecycle.md`, Lambdas), so the same rule applies to them as values: a
-closure is sendable only when every capture is a by-value, init or `move` capture of a sendable type. A `[ref name]`
-or `[&]` capture is a borrow of the spawning frame and is never sendable; neither is a `Function<R, A...>`, since the
-erased type no longer shows its capture types. `SendableFunction<R, A...>` is the marked form
-([Sendable Functions](#sendable-functions)).
+closure is sendable when every capture is a by-value, init or `move` capture of a sendable type. A `[ref name]` or
+`[&]` capture is a borrow of the spawning frame and is never sendable. A `Function<R, A...>` is always sendable,
+because its conversion accepts only sendable closures ([Functions Are Sendable](#functions-are-sendable)).
 
 ## High-Level And Low-Level Layers
 
@@ -544,52 +547,120 @@ The design is per-thread arenas, with a lock only on a shared slow path:
 
 ### Sendable Values
 
-A value is **sendable** when another thread may own it. The rule is structural:
+There is one concept: a value is **sendable** when another thread may own it. It is structural and inferred; a
+user never writes it on a type. Decided 2026-11-09 after a review of what Rust's `Send`/`Sync` cost its users
+([What Rust Taught Us](#what-rust-taught-us)).
 
 | Sendable | Not sendable |
 | --- | --- |
 | `bool`, integers, floats, `string` (an index into the immutable string table), enums | `Reference<T>`, `Pointer<T>` |
-| `String`, `vector<T>`, `map<K, V>`, `Maybe<T>`, `Result`, tuples of sendable types | views and carriers (`StringView`, slices, closures with a `[ref]` capture) |
-| structs whose fields are all sendable | `Function<R, A...>` (its closure type is erased) |
-| `SendableFunction<R, A...>`, `Mutex<T>`, `Atomic<T>`, `Channel<T>` | `Task<T>`; structs marked `[thread_bound]` (native UI handles: AppKit objects belong to the main thread) |
-| | `SharedString` until TODO-5656 |
+| `String`, `vector<T>`, `map<K, V>`, `Maybe<T>`, `Result`, tuples of sendable types | views and carriers (`StringView`, slices) |
+| structs whose fields are all sendable | a closure, as a bare closure struct, with a `[ref]` capture |
+| every `Function<R, A...>` ([Functions Are Sendable](#functions-are-sendable)) | `Task<T>` |
+| `Mutex<T>`, `Atomic<T>`, `Channel<T>` | `SharedString` until TODO-5656 gives it an atomic owner count |
 
-- `[sendable]` on a struct asserts that it is sendable although it holds a `Pointer` (the stdlib `String`,
-  `vector`, `map`, `Mutex`, `Atomic`, `Channel`). Outside the stdlib it needs `unsafe` (open question 2).
-- **Where it is checked:** every argument of a spawned call, by the type of the argument expression (today only
-  argument names are checked: `mutable binding cannot be captured by spawned task`); the element type of
-  `Mutex<T>` and `Channel<T>`; a closure converted to `SendableFunction`; the handler of `serveWorkers`.
-- A `mut` binding stays rejected as a spawn argument, as above: it would be copied, which reads like sharing. The
-  diagnostic points at `Mutex`, `Atomic` and `Channel`.
+- **No `Sync`.** A `Reference` never crosses to another thread, so no value is ever read by two threads through
+  references. Sharing happens only through `Mutex`, `Atomic` and `Channel`, which are sendable handles; copying one
+  of them shares the cell. That is why one concept is enough.
+- **Checked only at the boundary:** every argument of a spawned call, by the type of the argument expression (today
+  only argument names are checked, see [Captures And Shared State](#captures-and-shared-state)); the element type of
+  `Mutex<T>` and `Channel<T>`; and a closure converted to `Function`. There are no sendability bounds in generic
+  signatures: templates are monomorphized, so the check runs on the concrete instance, and when the offending type
+  came in through a template argument the diagnostic carries the instantiation chain.
+- **`mut` arguments are allowed.** A spawn argument is copied, as in any call; the task and the spawner each have
+  their own value. A diagnostic for a non-sendable argument carries the note `sharing between tasks needs Mutex,
+  Atomic or Channel`.
+- **`[sendable]`** on a struct asserts that it is sendable although it holds a `Pointer`: the stdlib uses it on
+  `String`, `vector`, `map`, `Mutex`, `Atomic` and `Channel`, whose pointers are owned by the value (or counted).
+  Outside the stdlib it needs `unsafe` on the definition, like every other unchecked promise. There is no opt-out
+  marker (`[not_sendable]` or similar) until a real case needs one: a struct of sendable fields with a reason not to
+  cross threads has not come up, and the native UI handles, the one candidate, are checked at run time instead.
+- **UI handles are not marked.** AppKit objects belong to the main thread, but a `Window` is a `u64` handle and so
+  sendable. Instead of a type marker, every `ps_ui_*` entry point faults when called off the thread that called
+  `ps_ui_init` (`docs/NativeUiPlan.md` already states the rule): `ui call off the main thread: ps_ui_window_add_tab`.
+  That is a runtime check of the native UI lane, TODO-5808, with a positive and a negative test on the headless
+  backend.
 - A `String` made while a `StringArena` is open cannot be a spawn argument or be sent: `string escapes its arena
   via spawn` (or `via channel`), next to the existing return, outer-binding and container cases.
 
-Expected diagnostic shapes:
-
-```text
-spawn argument is not sendable: Pointer<u8> (argument 1 of /fill)
-Mutex element type is not sendable: StringView
-closure cannot become a SendableFunction: capture `window` is a Window, which is thread_bound
+```prime
+[unsafe sendable struct]
+PixelRows() {
+  [Pointer<u8>] bytes{Pointer<u8>{}}
+  [i32] stride{0i32}
+}
 ```
 
-### Sendable Functions
+**Diagnostics name the path to the leaf.** Rust's `*mut u8 cannot be sent between threads safely` names the leaf
+type and leaves the search for which field, in which struct, to the reader; PrimeStruct's messages name the
+argument or element, then each field on the way to the offending type:
 
-`SendableFunction<R, A...>` is a `Function<R, A...>` whose conversion accepts only sendable closures, and which is
-sendable itself. It has `Function`'s layout and lowering: the closure pass spells it as its own struct family
-(`/__SendableFunctionN`) and the `function-values` pass numbers the closures converted to each instance. A plain
-`Function` stays not sendable. Inferring sendability for each `Function` instance from every closure converted to
-it was considered and rejected: a closure added anywhere in the program could then break a spawn site far away,
-with an error that does not point at the cause.
+```text
+spawn argument `buffer` of /fill is not sendable: field `data` is Pointer<u8>
+spawn argument `job` of /render is not sendable: field `rows` of Job, field `bytes` of PixelRows is Pointer<u8>
+closure cannot be a Function: capture `view` is a StringView
+Mutex element Record is not sendable: field `next` is Reference<Record>
+Channel<Slice<i32>>: Slice<i32> is not sendable (instantiated from /pump at main.prime:12)
+```
+
+### Functions Are Sendable
+
+Every `Function<R, A...>` is sendable **by construction**: the conversion of a closure to `Function`, explicit
+(`Function<i64>{closure}`) or implicit (a closure written where a `Function` is expected), rejects a closure that
+captures a `Pointer`, a view (`StringView`, a slice) or any other non-sendable value. A `[ref name]` or `[&]` capture
+already cannot be stored in a `Function` (`closure escapes via Function`, `docs/spec/value-lifecycle.md`, Lambdas).
+So the error appears where the closure is written, not at a distant spawn site; and routers, `AppRouter`, `WebApp`,
+`AppHandlers` and `serveWorkers` keep storing plain `Function`.
 
 ```prime
 [return<i64>]
-apply_twice([SendableFunction<i64, i64> mut] step, [i64] start) {
+apply_twice([Function<i64, i64> mut] step, [i64] start) {
   return(step(step(start)))
 }
 ```
 
-`call` stays `mut`. Sendable means the value may move to another thread, not that two threads may call it at
-once; a handler shared between threads is called inside `Mutex.locked`.
+```prime
+[effects(heap_alloc), return<Function<i64>>]
+length_of([StringView] view) {
+  return(Function<i64>{[view]() { return(view.length()) }})
+}
+```
+
+The second is rejected with `closure cannot be a Function: capture `view` is a StringView`; capturing a `String`
+instead is accepted.
+
+- **Rejected: inferring sendability per `Function` instance** from the closures converted to it. A closure added
+  anywhere in the program could then break a spawn site far away, with an error that does not point at the cause.
+  This is the opposite of Rust's async problem, where a future stops being `Send` because of a value held across an
+  `.await` deep inside it and the error surfaces at `tokio::spawn`. Sendable by construction costs one restriction
+  (a `Function` cannot hold a pointer or a view) that no example or stdlib handler needs.
+- **Where the check goes.** The lambda-closures pass spells each lambda as a closure struct whose field types are
+  template parameters that the factory call infers (`SemanticsValidateLambdaClosures.cpp`); the conversion itself
+  (`TemplateMonomorphCallableRewrites.cpp` for implicit sites, the closure pass for `Function<R, A...>{...}`) rewrites
+  the closure into `/__fn_box(closure)` while those types are still parameters, so it can only see syntactic facts
+  such as a `ref` capture. The `function-values` pass (`SemanticsValidateFunctionValues.cpp`) runs after template
+  monomorphization and already visits every `/__fn_box` with its concrete closure struct to number it per `Function`
+  instance; the sendable check of each capture field goes there, reported at the box's source position, which is
+  the closure's. The loan-based `closure escapes via Function` check stays where it is
+  (`SemanticsValidateSliceLoans.cpp`).
+- `call` stays `mut` when a capture is `mut`. Sendable means the value may move to another thread, not that two
+  threads may call it at once; a handler shared between threads is called inside `Mutex.locked`.
+
+### What Rust Taught Us
+
+Rust is the one widely used language with checked thread safety; its design is right in the large and costly in the
+small, and PrimeStruct keeps the former.
+
+| Rust | What it cost | PrimeStruct |
+| --- | --- | --- |
+| `Send` is an auto trait, inferred structurally | nothing: it worked | kept, as "sendable" |
+| `unsafe impl Send for T` | a visible unchecked promise | `[sendable]` under `unsafe` |
+| `spawn` requires `'static`; `thread::scope` came in 1.63 (2022) | every shared value went into `Arc` for years | tasks are structured from the start: a spawn argument is a copy and `wait` is required, so no `'static` and no `Arc` |
+| `Send` and `Sync` as a pair; `Mutex<T>: Sync iff T: Send` | a second concept and its interaction rules | no cross-thread `Reference`, so no `Sync` |
+| `Rc` against `Arc`, `RefCell` against `Mutex` | a choice per value, and a conversion when the choice changes | one `SharedString`, one `Mutex` that shares on copy |
+| a future "cannot be sent between threads safely" | the error is at `spawn`, the cause is a value held across an `.await` far away | `Function` is sendable by construction: the error is at the closure |
+| `T: Send` bounds through every generic signature | bounds written and propagated by hand | checked on monomorphized instances; the diagnostic carries the instantiation chain |
+| `MutexGuard` held across `.await` or leaked | deadlocks and `Send` errors from a guard's lifetime | `locked(body)` has no guard value |
 
 ### Mutex
 
@@ -712,7 +783,7 @@ sum_jobs([Channel<i64>] jobs) {
 | `channel` | `send`, `receive` and `close` on a `Channel` |
 
 Making a `Mutex`, `Atomic` or `Channel` also needs `heap_alloc`. `lock` and `channel` are the effects that can
-block on another task; merging them is open question 3.
+block on another task; merging them is open question 1.
 
 ### The Server
 
@@ -739,7 +810,8 @@ main() {
 - **The handler runs under a mutex:** the handler value (for a `WebApp<State>` its state, its routes and their
   closures' own `mut` captures) moves into a `Mutex`, and every request calls it inside `locked`. Existing
   `WebApp<State>`, `AppRouter<State>` and `Router` apps need no change beyond the call and `task` in `main`; their
-  route tables store `SendableFunction` so the app is sendable.
+  route tables store plain `Function` handlers, which are sendable by construction, so the app is sendable when its
+  `State` is. A handler that captures a `Pointer` is already rejected where it is written, under `serve` too.
 - **What runs in parallel:** receiving, parsing, serializing the response and sending. What does not: everything
   the handler does, including writing the page's HTML, which happens inside handlers. A handler that does heavy
   work therefore gains little until handlers that only read the state share a read lock (TODO-5804); the server
@@ -754,25 +826,23 @@ main() {
 
 ### Open Questions
 
-Each needs the user's decision; the recommendation is the plan's default.
+Each needs the user's decision; the recommendation is the plan's default. Decided 2026-11-09 and recorded in
+[Sendable Values](#sendable-values): one inferred "sendable" concept and no `Sync`; every `Function` is sendable by
+construction, so there is no `SendableFunction` and the routers keep plain `Function`; `[sendable]` outside the
+stdlib needs `unsafe`; `mut` spawn arguments are copied, not rejected; UI handles carry no marker and the `ps_ui_*`
+entry points check the thread at run time.
 
-1. **Sendable `Function` spelling.** A separate type `SendableFunction<R, A...>` (recommended), or a marker on
-   `Function` itself. Also: do `Router`, `AppRouter` and `WebApp` store `SendableFunction` for every app? That
-   makes a handler capturing a `Pointer` or a UI handle fail at setup even under single-threaded `serve`; no
-   example does. Recommended: yes, one handler type for both servers, with no implicit conversion between the two
-   `Function` types.
-2. **`[sendable]` outside the stdlib.** Recommended: only with `unsafe`, like other unchecked promises.
-3. **Effect names.** Recommended: four effects, `task`, `atomic`, `lock` and `channel`, as fine-grained as the I/O
+1. **Effect names.** Recommended: four effects, `task`, `atomic`, `lock` and `channel`, as fine-grained as the I/O
    effects. The alternative is one `blocking` effect for `lock` and `channel`.
-4. **Sharing a primitive.** Recommended: copying a `Mutex`, `Atomic` or `Channel` shares it (atomic handle
+2. **Sharing a primitive.** Recommended: copying a `Mutex`, `Atomic` or `Channel` shares it (atomic handle
    count), so a spawn argument just works. The alternative is an explicit `share()` and non-copyable handles.
-5. **Threads.** Recommended: one OS thread per task now, no pool, because tasks block on locks and channels.
-6. **Handlers serialized in the first server.** Recommended: accept that page rendering runs one request at a time
+3. **Threads.** Recommended: one OS thread per task now, no pool, because tasks block on locks and channels.
+4. **Handlers serialized in the first server.** Recommended: accept that page rendering runs one request at a time
    until TODO-5804, since it keeps every existing app correct with no change.
-7. **How a handler says it only reads.** Recommended: by its state parameter, `[State] state` (a read-only borrow)
+5. **How a handler says it only reads.** Recommended: by its state parameter, `[State] state` (a read-only borrow)
    against `[Reference<State>] state`, which needs overloads by `Function` type (TODO-5735); the alternative is a
    separately named registration such as `app.view(pattern, handler)`.
-8. **VM default schedule.** Recommended: eager (today's order) by default, seeds on request; the alternative is a
+6. **VM default schedule.** Recommended: eager (today's order) by default, seeds on request; the alternative is a
    fixed seed by default, which changes the output order of existing programs that print from tasks.
 
 ## First Implementation Checklist
@@ -785,7 +855,9 @@ The first implementation slices now cover:
 - infer `wait(Task<T>) -> T`
 - track task handle states through statements and returns
 - reject double wait, escaped handles, and missing waits before return
-- reject mutable/reference captures by default
+- reject reference captures, and `mut` bindings by name (the `mut` rejection
+  goes with TODO-5790: a spawn argument is a copy, [Captures And Shared
+  State](#captures-and-shared-state))
 - add positive and negative semantic tests
 - add semantic-product coverage for task facts
 - add first VM/native single-task runtime execution
