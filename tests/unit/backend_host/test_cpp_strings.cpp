@@ -281,24 +281,32 @@ TEST_CASE("std/os reads the environment, sees the clock advance and stops on SIG
   const std::string shim = std::string(PRIMESTRUCT_SOURCE_DIR) + "/stdlib/std/os/os_posix.cpp";
   const std::string exe = scratch("os_host_optexe");
   const std::string log = exe + ".log";
-  const int status = run(shellQuote(Primec) + " --emit=optexe " + shellQuote(program) + " -o " + shellQuote(exe) +
-                         " --link-arg " + shellQuote(shim) + " > " + shellQuote(log) + " 2>&1");
+  const int status =
+      run(shellQuote(Primec) + " --emit=optexe " + shellQuote(program) + " -o " + shellQuote(exe) +
+          " --link-arg " + shellQuote(shim) + " > " + shellQuote(log) + " 2>&1");
   REQUIRE_MESSAGE(status == 0, readFile(log));
-  // The child prints "ready" once the clock has advanced 20 ms; the script then sends SIGTERM and records the exit
-  // code (100 stopped + 10 port from the environment + 1 fallback for the unset variable).
+  // The child logs "ready" to stderr (unbuffered) once the clock has advanced 20 ms, then waits for the stop with no
+  // time limit; the script waits for that line, however long a loaded machine takes, sends SIGTERM and records the
+  // exit code (100 stopped + 10 port from the environment + 1 fallback for the unset variable). A child that dies
+  // before it is ready ends the wait too. (It used to print to stdout, which a file buffers until exit, so the script
+  // always gave up waiting after 200 polls and the child's own 20 s limit could pass first under load.)
   const std::string output = exe + ".out";
+  const std::string errorsPath = exe + ".err";
   const std::string code = exe + ".code";
-  const std::string script = "PS_OS_TEST_PORT=8080 " + shellQuote(exe) + " > " + shellQuote(output) +
-                             " & pid=$!; i=0; until grep -q ready " + shellQuote(output) +
-                             " 2>/dev/null || [ $i -ge 200 ]; do sleep 0.05; i=$((i+1)); done; kill -TERM $pid; "
-                             "wait $pid; echo $? > " + shellQuote(code);
+  const std::string script =
+      "PS_OS_TEST_PORT=8080 " + shellQuote(exe) + " > " + shellQuote(output) + " 2> " +
+      shellQuote(errorsPath) + " & pid=$!; until grep -q ready " + shellQuote(errorsPath) +
+      " 2>/dev/null || ! kill -0 $pid 2>/dev/null; do sleep 0.05; done; kill -TERM $pid; "
+      "wait $pid; echo $? > " +
+      shellQuote(code);
   const std::string scriptFile = exe + ".sh";
   {
     std::ofstream scriptOut(scriptFile);
     scriptOut << script << "\n";
   }
   CHECK(run("sh " + shellQuote(scriptFile)) == 0);
-  CHECK(readFile(output) == "ready\n");
+  CHECK(readFile(errorsPath) == "ready\n");
+  CHECK(readFile(output).empty());
   CHECK(readFile(code) == "111\n");
 }
 

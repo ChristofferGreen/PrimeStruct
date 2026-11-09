@@ -133,8 +133,8 @@ of sync with them.
 | TODO-5804 | GET handlers that only read the state run at the same time under `RwLock` | deferred | mt-server |
 | TODO-5805 | The server keeps connections alive between requests | deferred | web-keepalive |
 | TODO-5806 | Sessions: a cookie and per-session state | deferred | web-sessions |
+| TODO-5823 | AppKit snapshot runs finish under an overloaded machine and never outlive their test | ready | test-flakes |
 | TODO-5821 | The first toolbar of a launch does not hold up the first frame | deferred | startup-toolbar |
-| TODO-5822 | The std/os SIGTERM test does not race the program's start | ready | test-flakes |
 | TODO-5603 | The real-launch baseline, measured by a person | ready | startup |
 | TODO-5586 | Native String heap: pooled blocks, statistics and limit | deferred | native-backend-strings |
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
@@ -187,15 +187,15 @@ of sync with them.
 ### Ready Now
 
 - TODO-5603 (startup): the real-launch baseline, measured by a person
-- TODO-5822 (test-flakes): the std/os SIGTERM test does not race the program's start
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5510 (control-returns): `return` returns from unit-variant pick arms correctly
 - TODO-5524 (result-error-structs): int-backed error structs round-trip through stdlib Result sums
+- TODO-5823 (test-flakes): AppKit snapshot runs finish under an overloaded machine and never outlive their test
 
 ### Immediate Next 10
 
 1. TODO-5603
-2. TODO-5822
+2. TODO-5823
 3. TODO-5535
 4. TODO-5510
 5. TODO-5524
@@ -204,7 +204,8 @@ of sync with them.
 
 ### Priority Lanes
 
-- Startup, first (docs/NativeUiPlan.md section 1, "Where a launch goes"): TODO-5603, TODO-5535, TODO-5821, TODO-5822
+- Test reliability (AGENTS.md, No flaky tests): TODO-5823
+- Startup, first (docs/NativeUiPlan.md section 1, "Where a launch goes"): TODO-5603, TODO-5535, TODO-5821
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - Native UI (docs/NativeUiPlan.md): TODO-5808, TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
@@ -999,17 +1000,17 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
     - to be set when the leaf is un-deferred
   - stop_rule: sessions in `WebApp`.
 
-- [ ] TODO-5822: The std/os SIGTERM test does not race the program's start
+- [ ] TODO-5823: AppKit snapshot runs finish under an overloaded machine and never outlive their test
   - owner: ai
   - status: ready
   - created_at: 2026-11-09
-  - phase: Test reliability (found in the release gates of TODO-5754 to TODO-5756)
+  - phase: Test reliability (found in the release gates of the flaky-test fixes after TODO-5774)
   - parallel_track: test-flakes
-  - scope: `std/os reads the environment, sees the clock advance and stops on SIGTERM` (tests/unit/backend_host/test_cpp_strings.cpp, CTest `PrimeStruct_cpp_host_calls`) failed in two of four release gates under load (load average 50 to 150), with exit code 11 instead of 111: the program printed `ready` and ended without seeing the SIGTERM as a stop (100). Both times it passed alone. Find the race (when the handler is installed against when `ready` is printed and the signal sent, or the program finishing first) and make the test wait on what it needs.
+  - scope: In a release gate at load average 300 (other work on the machine; the same code passed the gates before and after it at load 8 to 237) `PrimeStruct_native_ui_appkit_smoke_editor_scroll`, `_editor_scroll_uneven` and `_open` timed out, and CTest reported them after 1426, 518 and 927 s against their 300 s limit: CTest kills the `cmake -P` driver, but the snapshot app it started keeps the output pipe open until it ends by itself. Their markdown preview runs wait for WebKit in 0.05 s run-loop slices (`snapshotIdleSlices`, up to 400 slices for a loading page), so they take 25 to 35 s each under load 100 and far longer at 300. Give a snapshot run a wall-clock bound that ends it with a clear error (instead of counting slices), have the drivers end the app when their own step times out, and cut what the preview runs wait for, so each entry stays well inside its limit at load 300.
   - acceptance:
-    - the case passes in 20 runs of `PrimeStruct_cpp_host_calls` while a release gate runs, and in the gate; full release gate green
-  - stop_rule: this test and the std/os signal handling it checks.
-  - notes: not listed under Open Failures: it passes alone, and docs/failing_tests.md fails on a listed case that passes.
+    - each `PrimeStruct_native_ui_appkit_smoke_<part>` entry under 100 s at load 300 (measured while other gates run), and a run killed by its timeout leaves no app behind
+    - full release gate green
+  - stop_rule: the snapshot harness of the AppKit backend and the smoke and scroll drivers.
 
 - [ ] TODO-5821: The first toolbar of a launch does not hold up the first frame
   - owner: human

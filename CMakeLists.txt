@@ -1626,17 +1626,22 @@ if(PRIMESTRUCT_BUILD_TESTS)
     # keyboard focus; set
     # PRIMESTRUCT_SKIP_UI_WINDOWS=1 to skip these drivers, PRIMESTRUCT_TEST_UI_INTRUSIVE=1 to also run the
     # open-menu steps (cmake/NativeUiTestGuards.cmake).
-    add_test(
-      NAME PrimeStruct_native_ui_appkit_smoke
-      COMMAND ${CMAKE_COMMAND}
-              -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
-              -DBUILD_DIR=${CMAKE_BINARY_DIR}
-              -DWORK_DIR=${CMAKE_BINARY_DIR}/native_ui_appkit_smoke
-              -P ${CMAKE_SOURCE_DIR}/cmake/NativeUiAppKitSmokeTest.cmake
-    )
-    set_tests_properties(PrimeStruct_native_ui_appkit_smoke
-                         PROPERTIES TIMEOUT 300 RESOURCE_LOCK native_ui_appkit
-                         SKIP_REGULAR_EXPRESSION "PRIMESTRUCT_UI_SKIPPED")
+    # One entry per part of the driver (a handful of snapshot runs each), so each stays well inside its limit
+    # on a loaded machine.
+    foreach(smokePart hello editor_views editor_scroll editor_scroll_uneven run files open settings file_types toolbar)
+      add_test(
+        NAME PrimeStruct_native_ui_appkit_smoke_${smokePart}
+        COMMAND ${CMAKE_COMMAND}
+                -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
+                -DBUILD_DIR=${CMAKE_BINARY_DIR}
+                -DWORK_DIR=${CMAKE_BINARY_DIR}/native_ui_appkit_smoke/${smokePart}
+                -DPART=${smokePart}
+                -P ${CMAKE_SOURCE_DIR}/cmake/NativeUiAppKitSmokeTest.cmake
+      )
+      set_tests_properties(PrimeStruct_native_ui_appkit_smoke_${smokePart}
+                           PROPERTIES TIMEOUT 300 RESOURCE_LOCK native_ui_appkit
+                           SKIP_REGULAR_EXPRESSION "PRIMESTRUCT_UI_SKIPPED")
+    endforeach()
     # The preview's scroll modes (independent, linear, by block, with the cursor): scroll a view, move the
     # cursor, type, and assert where both views end up (docs/PreviewScrollTests.md).
     add_test(
@@ -3571,6 +3576,10 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set(PrimeStructProgramMatrixTestSuites
     primestruct.program_matrix.closures
+    primestruct.program_matrix.closures_callables
+    primestruct.program_matrix.closures_references
+    primestruct.program_matrix.closures_fields
+    primestruct.program_matrix.closures_routers
     primestruct.program_matrix.container_copies
     primestruct.program_matrix.control
     primestruct.program_matrix.element_copies

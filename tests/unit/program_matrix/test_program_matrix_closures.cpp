@@ -180,6 +180,10 @@ main() {
                     34);
 }
 
+// Callable structs, generic functions and `Function` values and parameters. (a suite and CTest entry of its own, so each entry stays short under a loaded gate).
+TEST_SUITE_END();
+TEST_SUITE_BEGIN("primestruct.program_matrix.closures_callables");
+
 TEST_CASE("hand-written struct with a call method is callable") {
   runClosureProgram("closure_callable_struct", R"(
 [struct]
@@ -449,6 +453,10 @@ main() {
                     54);
 }
 
+// `[ref]` captures and indexed elements. (a suite and CTest entry of its own, so each entry stays short under a loaded gate).
+TEST_SUITE_END();
+TEST_SUITE_BEGIN("primestruct.program_matrix.closures_references");
+
 TEST_CASE("ref capture writes the enclosing binding") {
   runClosureProgram("closure_ref_capture_writes", R"(
 [return<i32>]
@@ -563,6 +571,10 @@ main() {
                     115);
 }
 
+// Views and struct vector fields (a suite and CTest entry of its own, so each entry stays short under a loaded gate).
+TEST_SUITE_END();
+TEST_SUITE_BEGIN("primestruct.program_matrix.closures_fields");
+
 TEST_CASE("view equality inside a function with a String parameter") {
   runClosureProgram("string_parameter_view_equality", R"(
 import /std/text/*
@@ -653,6 +665,10 @@ main() {
 )",
                     213);
 }
+
+// Routers of `Function` handlers, `Result.map` lambdas and imported holders. (a suite and CTest entry of its own, so each entry stays short under a loaded gate).
+TEST_SUITE_END();
+TEST_SUITE_BEGIN("primestruct.program_matrix.closures_routers");
 
 TEST_CASE("a Router struct holds a vector of Function routes") {
   runClosureProgram("struct_vector_of_function_routes", R"(
@@ -963,3 +979,5 @@ main() {
 )",
                     25);
 }
+
+TEST_SUITE_END();

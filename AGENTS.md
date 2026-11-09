@@ -209,6 +209,15 @@ build and layout solidify.
   `*_over=`). A test that compares two `--dump-stage` outputs must wrap both
   sides in `primec::testing::stripDumpTimings` (`primec/testing/DumpNormalization.h`);
   ctest `PrimeStruct_dump_comparison_audit` fails on a raw comparison.
+- **No flaky tests:** a test that fails nondeterministically is fixed or
+  deleted in the same change that finds it. A test that fails in the gate
+  and passes when rerun alone is a bug in the test (a race, a fixed sleep,
+  a poll limit, buffered output it waits for) or in the code, never an
+  accepted outcome; "passed alone" and "timed out under load" are not
+  reasons to land a change. A test that needs more time under a loaded gate
+  is split into focused cases or CTest entries, or made cheaper; raising its
+  timeout is not the fix. Delete a test only when it cannot be made
+  deterministic without losing its point, and say why in the commit.
 - **Doctest runtime guardrail:** if a doctest case with multiple subcases takes more than 5 seconds in routine release validation, split it into smaller focused cases; if a single-focus doctest still takes more than 5 seconds, optimize it or add a brief justification in the test source or nearby registration.
 
 ## TODO slicing workflow
@@ -353,9 +362,11 @@ these steps when a release run fails:
    - Collect the authoritative failing list and per-test output from
      `build-release/Testing/Temporary/LastTestsFailed.log` and
      `build-release/Testing/Temporary/LastTest.log`.
-   - Treat `LastTestsFailed.log` as a reproduction pointer, not proof that a
-     failure is still active after focused reruns; confirm entries with a
-     targeted release-mode rerun before fixing or reporting them as current.
+   - Treat `LastTestsFailed.log` as the authoritative list. Rerun a failing
+     case alone to get its output quickly, but a case that then passes is
+     still a failure: it fails nondeterministically, and the "No flaky
+     tests" rule (Tests section) applies - find the cause (load, ordering,
+     timing, shared state) and fix or delete the test in the same change.
 
 2. Record failures
    - Immediately add every failing case under "Open Failures" in

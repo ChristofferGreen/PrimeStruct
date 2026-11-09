@@ -483,7 +483,7 @@ executable (about 0.5 MB) and the AppKit dylib, both ad-hoc signed, and `codesig
 "The text editor is acceptable" means CTest `PrimeStruct_native_ui_editor_acceptance` passes (it runs the doctest
 suites `primestruct.ui.editor` and `primestruct.ui.editor_acceptance` of `PrimeStruct_native_ui_tests` against the
 headless backend, so it is part of `./scripts/compile.sh --release` on every platform), plus the Apple-only
-`PrimeStruct_native_ui_appkit_smoke`. Requirement to test:
+`PrimeStruct_native_ui_appkit_smoke_*`. Requirement to test:
 
 | # | Requirement | Where it is checked |
 | --- | --- | --- |
@@ -491,7 +491,7 @@ headless backend, so it is part of `./scripts/compile.sh --release` on every pla
 | 2 | Unicode: load, display, save | `test_native_ui_editor_acceptance.cpp`: byte-exact round trips of `tests/fixtures/ui/unicode_sample.txt` (accents, CJK, emoji, combining marks, RTL), CRLF, no final newline, empty file, typed text, invalid UTF-8 refused with the error shown; grapheme-cluster cursor and selection come from `NSTextView` (section 12); display in the smoke picture below |
 | 3 | Saving and loading | `test_native_ui_editor.cpp` (type then save, save as, cancelled save and open panels, open, failing open and save with the error in an alert, close/new with each prompt answer) and `test_native_ui_editor_acceptance.cpp` (open, edit, save, reopen equality; save-as copy) |
 | 4 | Standard menus and shortcuts | `acceptance: the menu bar has the standard macOS structure and shortcuts`: the exact `headless::menuBarOutline()` of App, File, Edit, View, Window and Help, and the command ids |
-| 5 | Screenshots | `PrimeStruct_native_ui_appkit_smoke` bundles the editor and checks two drawn PNGs, the highlighted Unicode file and the File menu open (hooks in section 12); the menu structure itself is requirement 4 |
+| 5 | Screenshots | `PrimeStruct_native_ui_appkit_smoke_*` bundles the editor and checks two drawn PNGs, the highlighted Unicode file and the File menu open (hooks in section 12); the menu structure itself is requirement 4 |
 
 Highlighted languages and their extensions (one asserted fixture each in `test_native_ui_editor_highlight.cpp`):
 PrimeStruct `.prime .ps`; C/C++/Objective-C `.c .h .cc .cpp .cxx .hpp .hh .hxx .m .mm`; Python `.py .pyw`; JSON `.json`;
@@ -528,7 +528,7 @@ Hand checks on a Mac (typing, shortcuts, real panels, cursor stepping over graph
   by `scripts/measure_startup.sh`). `PRIMESTRUCT_UI_SHOW_WINDOWS=1` shows the windows, for a person watching a run;
   the bundles the UI drivers build are agent apps (`PS_UI_ELEMENT=1` makes `scripts/bundle_macos_app.sh` write
   `LSUIElement`), so their Launch Services launches show no Dock icon either. CTest
-  `PrimeStruct_native_ui_appkit_smoke` bundles `examples/native_ui/hello_window.prime`, runs the bundle in snapshot
+  `PrimeStruct_native_ui_appkit_smoke_*` bundles `examples/native_ui/hello_window.prime`, runs the bundle in snapshot
   mode and checks the PNG; it also bundles the editor and checks two pictures of it (below).
 - **Snapshot hooks for pictures of the editor.** `PRIMESTRUCT_UI_TYPE=text` types into the first text view,
   `PRIMESTRUCT_UI_OPEN=file` loads a file into it and highlights it (the title becomes the path), and
