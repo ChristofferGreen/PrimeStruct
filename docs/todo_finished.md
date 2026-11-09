@@ -2184,6 +2184,7 @@ are left unarchived.
 | TODO-5751 | The VM heap of optexe keeps the handler table without a doubled high-water | [2026-11.md](todo_archive/2026-11.md) | 2026-11-09 |
 | TODO-5753 | PrimeScroll draws its first window before it restores the session | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5754 | Restored tabs, toolbars and previews cost less in the AppKit backend | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5755 | The first launch after an install does not wait on Gatekeeper | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5820 | Snapshot runs and the UI tests show nothing on screen | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->

@@ -137,7 +137,6 @@ of sync with them.
 | TODO-5804 | GET handlers that only read the state run at the same time under `RwLock` | deferred | mt-server |
 | TODO-5805 | The server keeps connections alive between requests | deferred | web-keepalive |
 | TODO-5806 | Sessions: a cookie and per-session state | deferred | web-sessions |
-| TODO-5755 | The first launch after an install does not wait on Gatekeeper | ready | startup-install |
 | TODO-5821 | The first toolbar of a launch does not hold up the first frame | deferred | startup-toolbar |
 | TODO-5603 | Launch-time guard and the real-launch baseline | ready | startup |
 | TODO-5756 | AppKit's launch work in a real launch fits the budget | ready | startup-appkit |
@@ -192,7 +191,6 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5755 (startup-install): the first launch after an install does not wait on Gatekeeper
 - TODO-5603 (startup): launch-time guard and the real-launch baseline
 - TODO-5756 (startup-appkit): AppKit's launch work in a real launch fits the budget
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
@@ -201,18 +199,17 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5755
-2. TODO-5603
-3. TODO-5756
-4. TODO-5535
-5. TODO-5510
-6. TODO-5524
-7. TODO-5728
-8. TODO-5770
+1. TODO-5603
+2. TODO-5756
+3. TODO-5535
+4. TODO-5510
+5. TODO-5524
+6. TODO-5728
+7. TODO-5770
 
 ### Priority Lanes
 
-- Startup, first (docs/NativeUiPlan.md section 1, "Where a launch goes"): TODO-5755, TODO-5603, TODO-5756, TODO-5535, TODO-5757, TODO-5821
+- Startup, first (docs/NativeUiPlan.md section 1, "Where a launch goes"): TODO-5603, TODO-5756, TODO-5535, TODO-5757, TODO-5821
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - Native UI (docs/NativeUiPlan.md): TODO-5808, TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
@@ -1064,21 +1061,6 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
     - to be set when the leaf is un-deferred
   - stop_rule: sessions in `WebApp`.
 
-- [ ] TODO-5755: The first launch after an install does not wait on Gatekeeper
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-09
-  - phase: Native PrimeScroll startup (docs/NativeUiPlan.md section 1)
-  - parallel_track: startup-install
-  - scope: Every build is new ad-hoc signed code, so the first exec of the installed executable waits for syspolicyd's Gatekeeper assessment (a notarization-ticket lookup over the network, request timeout 3 s, then an XProtect scan): +320 to 500 ms for the executable and +170 to 250 ms for a new `libps_ui_appkit.dylib`, up to seconds on a slow network. Make the install pay it instead of the user: `scripts/bundle_macos_app.sh` (and the reinstall recipe it serves) runs the signed bundle's executable once in snapshot mode with no document right after signing, so the assessment is cached before anyone opens the app; and the dylib is copied and re-signed only when its bytes changed, so an install that does not touch the backend keeps its cdhash. Record whether a first Launch Services launch after this is as fast as a later one (a person runs `scripts/measure_startup.sh --open --runs 1` right after an install, twice).
-  - implementation_notes: the cache is per cdhash; the warm-up must run the installed copy's code (same bytes as the bundle, so running the bundle before the `ditto` is enough only when the files are copied byte for byte). Snapshot mode never activates and exits by itself (`PRIMESTRUCT_UI_SNAPSHOT=<scratch png>`); tests that build bundles set `PS_NO_DOCUMENT_TYPES=1`.
-  - acceptance:
-    - after `scripts/bundle_macos_app.sh --native`, the bundle's next direct launch has `main` within 30 ms of a repeated launch (2026-11-09: 428 against 26 ms)
-    - a first `--open` launch after an install is within 50 ms of the second (owner records both numbers in docs/todo_log.md)
-    - full release gate green
-  - stop_rule: the install path; notarization or a Developer ID signature is out of scope.
-  - notes: linking the AppKit backend into the executable (one image, one assessment) would also halve it but needs a linker on the direct native path; file it only if the warm-up does not cover Launch Services launches.
-
 - [ ] TODO-5821: The first toolbar of a launch does not hold up the first frame
   - owner: human
   - status: deferred
@@ -1097,7 +1079,7 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
   - created_at: 2026-10-26
   - phase: Native PrimeScroll startup (docs/NativeUiPlan.md section 1)
   - parallel_track: startup
-  - scope: The audit is done (docs/NativeUiPlan.md section 1, "Where a launch goes"; raw data in docs/todo_log.md) and `scripts/measure_startup.sh` with its probe exists. Left: (1) a guard: a ctest entry that builds hello_window and PrimeScroll natively and runs `scripts/measure_startup.sh --runs 3 --max-libraries <limit>` on each (limits: the 2026-11-09 counts, 1266 and 1269 images, plus 5), so a framework link or eager system lookup that adds images fails; (2) retire `scripts/measure_app_startup.sh` (its mean includes the snapshot's 600 ms idle wait) in favor of `measure_startup.sh`, updating its callers and the plan; (3) record a real Launch Services baseline from a person's run of `scripts/measure_startup.sh --open --runs 10 ~/Applications/PrimeScroll.app` (and `--file <small.txt>`) in the plan.
+  - scope: The audit is done (docs/NativeUiPlan.md section 1, "Where a launch goes"; raw data in docs/todo_log.md) and `scripts/measure_startup.sh` with its probe exists. Left: (1) a guard: a ctest entry that builds hello_window and PrimeScroll natively and runs `scripts/measure_startup.sh --runs 3 --max-libraries <limit>` on each (limits: the 2026-11-09 counts, 1266 and 1269 images, plus 5), so a framework link or eager system lookup that adds images fails; (2) retire `scripts/measure_app_startup.sh` (its mean includes the snapshot's 600 ms idle wait) in favor of `measure_startup.sh`, updating its callers and the plan; (3) record a real Launch Services baseline from a person's run of `scripts/measure_startup.sh --open --runs 10 ~/Applications/PrimeScroll.app` (and `--file <small.txt>`) in the plan, and the first `--open` launch right after an install (`scripts/measure_startup.sh --open --runs 1 ~/Applications/PrimeScroll.app` twice, the install having run `scripts/warm_macos_app.sh` on the installed copy; TODO-5755 expects the first within 50 ms of the second).
   - acceptance:
     - the guard runs in the release gate on macOS (skipped elsewhere with a message) and fails on one extra framework link (checked once by hand); `measure_app_startup.sh` is gone or delegates; the plan has the `--open` baseline; full release gate green
   - stop_rule: measurement and the guard; launch work itself is TODO-5753, TODO-5754, TODO-5755 and TODO-5756.

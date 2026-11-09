@@ -116,4 +116,10 @@ if [[ $NATIVE -eq 1 ]]; then
   fi
 fi
 codesign --force --sign - "$APP" >/dev/null 2>&1 || echo "warning: ad-hoc signing failed" >&2
+
+# The first launch of new code waits for Gatekeeper's assessment; the bundle pays it here (scripts/warm_macos_app.sh,
+# TODO-5755). PS_NO_WARMUP=1 skips it.
+if [[ -z "${PS_NO_WARMUP:-}" ]]; then
+  bash "$ROOT_DIR/scripts/warm_macos_app.sh" "$APP"
+fi
 echo "$APP"

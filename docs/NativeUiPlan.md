@@ -78,6 +78,14 @@ The causes of the slow launches, by what they cost when they happen:
    is new code: +320 to 500 ms for the executable and +170 to 250 ms more for a new `libps_ui_appkit.dylib`, the same
    for a 50 KB plain C program; the first launch of the master bundle above started `main` at 428 ms against 26 ms.
    With a slow or cold network each lookup can approach its 3 s timeout. TODO-5755.
+   Since TODO-5755 `scripts/bundle_macos_app.sh` ends with `scripts/warm_macos_app.sh`, which launches the bundle once
+   in snapshot mode (nothing on screen) and starts its script runner, so the assessment is paid at bundling: the next
+   direct launch then starts `main` at 17 to 22 ms against 28 to 38 ms for the launches after it (a bundle that was
+   not warmed: 383 ms). The verdict belongs to the file, not to the code hash alone: a moved bundle keeps it (20 ms),
+   one re-signed in place almost does (45 ms), but a copy (`ditto`, as the install does) is assessed again (357 ms).
+   So an install that copies the bundle runs `scripts/warm_macos_app.sh` on the installed copy after its last
+   `codesign` (a warmed installed copy started at 22 ms). Ad-hoc signing the same bytes gives the same code hash, so a
+   dylib whose bytes did not change keeps its hash without a check in the script.
 2. **Load from build and test gates (machine, not PrimeScroll).** At load averages of 85 to 126 with 2.8 GB swapped,
    the reference editor took 0.47 to 1.06 s to its first text instead of 0.19 s, and a launch that had to page AppKit
    back in (3916 major faults) took 1.17 s to its first window. TODO-5757.
