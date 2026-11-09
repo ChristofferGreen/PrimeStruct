@@ -5,7 +5,8 @@ executables), the pass manager and manifest, the `ir-lowered`/`ir-optimized` dum
 semantics, local escape analysis, five passes (see `docs/spec/source-pipeline.md` for the user-facing description),
 the `optexe`/`optcpp` emit kinds (section 9.1), the flat VM kernel with fused instructions (Phase 4), and register
 locals plus deferred operands in the x86_64 native emitter (Phase 3, first steps). Not started: the register form,
-a full register-allocating native code generator, and arm64 versions of the native steps.
+a full register-allocating native code generator, and arm64 versions of the native steps. Section 12 (2026-11-09)
+measures what the arm64 native code costs today and ranks the next steps (TODO-5770..5777).
 
 This document records what the direct native backend (`--emit=native`) and the PrimeScript
 VM (`--emit=vm`, `primevm`) do today, why they are slow, and a phased plan to
@@ -1129,3 +1130,165 @@ Suggested order: Phase 0.1-0.3 (flags, pass manager, dumps), Phase 1.1
 3. Whether a PSIR v27 (local extents, shift/bitwise opcodes) is acceptable, or
    the schema must stay frozen for this work.
 4. Access to a macOS arm64 machine for Phase 3.6 validation.
+5. Whether pointer arithmetic may leave the object a local address names (section 12.5): forbidding it would let the
+   escape analysis pin only the addressed object's slots instead of the whole frame, without a PSIR change.
+
+## 12. Native code quality (arm64, 2026-11-09)
+
+Measured on macOS arm64 (Apple M3 Pro, 11 cores) with the release `primec` at 06268bdc7, which includes the address ABI
+of real calls on arm64 (TODO-5740). Everything here can be reproduced with `primec --emit=native`, `otool -tv` and
+`/usr/bin/time -l`, which reports the instructions retired and cycles of one process. Those counters were used instead
+of wall time because a release gate was running in another worktree; load averages are given with each run.
+
+### 12.1 What the arm64 code is
+
+The x86_64 work of Phase 3 (promoted locals, deferred operands, the register allocator of `NativeEmitterRegAlloc` and
+`NativeEmitterInternalsX64RegAlloc.h`) never reached arm64: every `if constexpr (!kIsArm64)` in
+`NativeEmitterFunctionEmit.cpp` skips it, and the `--opt-report` of PrimeScroll ends with `functions=246
+register_allocated=0`. arm64 output is the plain template expander: every IR value goes through a one-register
+top-of-stack cache (x26) and a memory value stack (x28), every local is a load or store of its frame slot (x27), and
+nothing stays in a register from one IR instruction to the next.
+
+`benchmarks/aggregate.prime`, the first statement of the loop body (`sum = sum + value`, IR `LoadLocal 1; LoadLocal 3;
+AddI64; StoreLocal 1`):
+
+```text
+ldr  x0, [x27, #0x18]     ; LoadLocal sum
+add  x26, x0, #0x0        ;   push: into the cache register
+ldr  x0, [x27, #0x38]     ; LoadLocal value
+sub  x28, x28, #0x10      ;   push: spill the cached sum to the value stack
+str  x26, [x28, #0x8]
+add  x26, x0, #0x0        ;   and cache value
+add  x0, x26, #0x0        ; AddI64: pop value
+ldr  x1, [x28, #0x8]      ;   pop sum
+add  x28, x28, #0x10
+add  x0, x1, x0
+add  x26, x0, #0x0        ;   push the result
+add  x0, x26, #0x0        ; StoreLocal sum: pop it
+str  x0, [x27, #0x18]
+```
+
+With registers this is `add x10, x10, x12`. The loop test (`LoadLocal 4; PushI32 0; CmpGtI32; JumpIfZero`) is 28
+instructions: the constant 0 is `movz` plus three `movk #0`, the comparison materializes 0 or 1 with two more
+four-instruction constants and two branches, `JumpIfZero` compares that with zero, and the conditional branch is
+followed by a `b` to the next instruction (the second word of the range-extension placeholder,
+`emitCondBranchPlaceholder`). `cmp x9, #0; b.le` would do.
+
+Shape of the code, by instruction kind:
+
+| | aggregate loop (23 IR instructions) | PrimeScroll `__text` (44,950 IR instructions) |
+| --- | --- | --- |
+| arm64 instructions | 96 (4.2 per IR instruction) | 192,191 (4.3 per IR instruction, 769 KB) |
+| `add xN, xM, #0` moves | 28 (29%), all x0/x26 cache shuffles | 52,548 (27%), 47,903 of them x0/x26 |
+| `movk xN, #0, lsl #k` (zero halves of a constant) | 15 (16%) | 42,845 (22%) |
+| value-stack loads and stores | 12 (13%) | 16,393 (9%) |
+| value-stack pointer bumps (`sub`/`add x28, x28, #16`) | 12 (13%) | 16,393 (9%) |
+| frame-slot loads and stores | 12 (13%) | 17,011 (9%) |
+| instructions doing the program's work | 5 | |
+
+Further static findings in PrimeScroll: 2,174 `sub sp`/`add sp` instructions, because `emitAdjustSp` moves the stack
+pointer in 4,080-byte steps and the entry function's 1 MB value stack takes 257 of them on entry and at every return
+(`sub sp, sp, #imm, lsl #12` does it in two); 1,138 branches to the next instruction; 674 compare results materialized
+with two four-instruction constants where `cset` is one instruction.
+
+### 12.2 What the IR passes do and do not do
+
+At `-O2` the native target runs `cfg-simplify`, `const-fold`, `peephole`, `copy-prop`, `dead-store` and `if-convert`
+(`src/ir/IrOptimizer.cpp`); `loop-rotate` is VM-only. On PrimeScroll they take 58,274 lowered instructions to 44,950,
+cfg-simplify doing most of it. Unreachable functions are not emitted on native since TODO-5747 (3b6c7e162). There is no
+inlining pass beyond the lowerer's, no CSE, no LICM and no tail-call pass.
+
+What the IR leaves on the table:
+
+- **Address-taking functions get nothing.** `IrLocalEscape` pins every slot of a function as soon as it executes one
+  `AddressOfLocal` (negative offsets are legal, section 6), and `copy-prop`, `dead-store` and register promotion skip
+  pinned slots. Struct methods, vector code and the address ABI make that most functions: of the 108 functions in
+  PrimeScroll's `--emit=optcpp` output, 101 keep a `frame[]` array. In a loop summing a vector by index
+  (`values[index]`, everything inlined) the vector record's address is copied through three locals and the record is
+  reread through `LoadIndirect` on every element: 50 IR instructions per element, about 180 arm64 instructions on
+  native and 139 on optexe, which resolves each indirect access through its frame table (section 9.1). None of those
+  addresses leaves the function, so the indirect accesses could be plain local accesses (`local-sroa`, 12.5).
+- **Single-use temporaries survive.** `fib`'s argument binding is `StoreLocal 1; LoadLocal 1; Call`, a temporary read
+  once; `dead-store` keeps it because it is read. A register allocator folds it away; the VM and the template emitter
+  pay for it.
+- **`--dump-stage=ir-optimized` does not show what the native backend gets.** The dump prepares the module for
+  `IrValidationTarget::Any` (`runIrModuleDump` in `src/pipeline/CliDriver.cpp`), so target-only passes (`if-convert`)
+  are missing from it, and a program with host calls (PrimeScroll) fails with "host calls are only supported by the vm
+  target".
+
+At the machine level arm64 has no register allocation, no operand deferral, no immediate operand forms, no
+compare-and-branch fusion, no `cset`, no pre- or post-indexed addressing and no branch relaxation (every conditional
+branch reserves two words).
+
+### 12.3 Where the time goes
+
+Instructions retired (millions; deterministic) and cycles (millions, the lowest of five runs at load average 6.2 / 8.9 /
+19.2) per whole process. An empty program costs 12-13M instructions and 7-8M cycles of process start in every column.
+optexe is `--emit=optexe` (the stack IR through clang `-O2`); C is the benchmark's C reference at `cc -O3`. The last
+column gives the cycle ratio of this run and of a first run taken earlier the same day (load not recorded).
+
+| program | native instr | optexe instr | C instr | native cycles | optexe cycles | C cycles | native / optexe cycles |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| aggregate | 467.7 | 13.7 (folded) | 13.2 (folded) | 73.0 | 9.1 | 8.5 | (5x+ vs 12.4 variant D) |
+| call_fib | 485.2 | 221.7 | 78.7 | 113.0 | 78.6 | 31.2 | 1.4-1.8x |
+| float_series | 1937.5 | 154.0 | 134.4 | 485.9 | 59.5 | 54.1 | 8.2-8.4x |
+| json_scan | 736.2 | 13.5 (folded) | 13.0 (folded) | 143.7 | 7.7 | 6.8 | (folded) |
+| json_parse | 991.0 | 118.2 | 117.0 | 196.6 | 32.6 | 29.8 | 4.3-6.0x |
+| vector sum by index (1,000 elements, 20,000 times) | 3644.5 | 2779.6 | | 636.2 | 504.0 | | 1.0-1.3x |
+| struct method (`a.dot(b)`, 5M calls) | 1233.0 | 689.1 | | 196.3 | 101.8 | | 1.6-1.9x |
+| closure call (`Function<int, int>`, 2M calls) | 306.8 | 219.9 | | 51.6 | 36.7 | | 1.4-1.5x |
+
+clang folds aggregate and json_scan to a constant (their inputs are constants), so optexe is no ceiling there; 12.4
+gives a hand-written one. The scalar loops (aggregate, json_parse, float_series) are 4x to 8x behind; calls, struct
+methods and closures 1.4x to 1.9x; the vector loop is about even because both backends run 50 IR instructions per
+element.
+
+The core hides much of the template overhead: native code retires 4 to 8 instructions per cycle, against 2.5 to 4 for
+optexe and C on the scalar benchmarks. Removing instructions therefore buys less than their count suggests; what costs
+cycles is the chain of stores and reloads through the value stack and the frame slots that every loop-carried value
+takes.
+
+### 12.4 What each technique would buy: a hand-written experiment
+
+To settle how much each step is worth on this core without rebuilding `primec`, aggregate's loop was assembled four
+ways (`cc` on a `.s` file; variant A is extracted verbatim from the `otool` listing; all variants compute the same
+result). Cycles in millions for 5M iterations, including about 7.5M cycles of process start, first run (load not
+recorded) / second run (load 6.2):
+
+| variant | what it models | instructions | cycles | vs today |
+| --- | --- | --- | --- | --- |
+| A | today's template output | 467.9M | 70.7 / 73.0 | 1x |
+| A' | A without the `b` to the next instruction after each `b.cond` | 462.6M | 71.5 | 1x |
+| B | peepholes on the stack machine: one-instruction constants and immediate operands, no x0/x26 shuffles, pre- and post-indexed value-stack accesses, compare fused into the branch | 142.6M | 40.8 / 47.5 | 1.5-1.7x |
+| C | B plus a block-local operand cache: operands in registers inside a block, locals still loaded and stored at every use | 112.6M | 22.5 / 36.3 | 2-3x |
+| D | register allocation: the four locals in registers across the loop (`add; madd; add; sub; cmp; b`) | 47.7M | 12.7 / 14.6 | 5-5.6x |
+
+Without process start, D runs the loop in about 1 cycle per iteration against 12.6 for A. The x86_64 register
+allocator (section 5, Phase 3) measured the same order of gain there: aggregate 30 to 3.9 ms, json_parse 50 to 13 ms.
+
+### 12.5 Candidates, ranked by gain over effort
+
+| rank | candidate | where it lives | estimated gain | effort | TODO |
+| --- | --- | --- | --- | --- | --- |
+| 1 | Short immediates and stack adjustments: `movz`/`movn` plus only the nonzero `movk`s, add/sub/cmp immediate forms for a constant operand, `sub sp, sp, #imm, lsl #12` | native arm64 template encoders (`NativeEmitterInternalsArm64Core.h`, `NativeEmitterInternalsArm64Arithmetic.h`) | about 22% less code in every native binary (PrimeScroll `__text` 769 KB to about 600 KB); 15 of aggregate's 96 loop instructions | small | TODO-5770 |
+| 2 | Register allocation on arm64: the x86_64 allocator's plan with an arm64 pool and arm64 emission, integer code first | native-only machine pass; the plan (`planNativeRegisterAllocation`, on the shared register form) is already target-independent | about 5x on aggregate (variant D), 3x or more on json_parse; the x86_64 numbers agree | large; split by integer code, calls, floats and address-taking functions | TODO-5772, TODO-5774, TODO-5773, TODO-5775 |
+| 3 | IR dumps for the `--emit` target | CLI driver | none by itself; needed to measure 4 and to read what native gets | small | TODO-5777 |
+| 4 | Scalar replacement of local addresses that never leave the function (`local-sroa`): their `LoadIndirect`/`StoreIndirect` become `LoadLocal`/`StoreLocal` and the function stops pinning its slots | shared IR pass (VM, optexe, native) | the vector loop's 50 IR instructions per element down by a third or more on every backend; unlocks `copy-prop`, `dead-store` and register promotion in inlined struct and vector code | medium | TODO-5776 |
+| 5 | Template operand cache that names the register holding the top instead of copying it to x26; pre- and post-indexed value stack; compare-and-branch fusion and `cset`; one-word conditional branches with relaxation | native arm64 template emitter | 1.5-1.7x on template code (variant B) and about another 30% of code size; matters for every function the allocator leaves on templates | medium | TODO-5771 |
+| 6 | Dead stores of frame slots | already an IR pass (`dead-store`); blocked by the pin-everything escape rule | follows from 4 and from decision 11.5 | | (TODO-5776) |
+| 7 | Dead code and unreachable functions | done for native (TODO-5747); cold error paths (`PrintString; PushI32 3; ReturnI32` after each bounds check) could be shared per function | small size gain | small | not filed |
+| 8 | Code layout (loop alignment, branch placement) | native arm64 | under 1% in the experiment (A'); Apple cores did not show the alignment effects section 5 found on x86_64 | small | not filed |
+| 9 | Tail calls (`tail-self-loop`) | shared IR pass | none on the benchmarks or PrimeScroll; bounded stack depth for self-recursive user code | small | not filed |
+| 10 | Instruction scheduling | would be a native pass over the register form | none measurable: template code already retires 6-8 instructions per cycle and the bound is store-to-load latency, which scheduling cannot remove | | not filed |
+
+A separate peephole pass over the emitted words would not add anything cheaper than 1 and 5: the redundancy is created
+by the templates (a push followed by the pop of the same value), so it is removed where the templates are written,
+without rescanning words and rebuilding branch targets and fixups.
+
+Determinism: every candidate is a function of the IR and the target only. IR passes iterate in instruction and
+function order like the existing ones; the allocator colours classes in the fixed order the x86_64 one uses; encoder
+changes pick an encoding from the value alone. Nothing reads timing, host addresses or unordered containers.
+
+Recommended order: TODO-5770 first (small, shrinks every native binary including PrimeScroll, no risk to the startup
+work), then the register allocator for integer code (TODO-5772), where most of the speed is. TODO-5777 and TODO-5776
+make struct and vector code eligible, then TODO-5771, TODO-5774, TODO-5773 and TODO-5775.
