@@ -1500,7 +1500,13 @@ of the vector (count, capacity, storage at slots 1-3) was read through its addre
 element. `/main` now has no `AddressOfLocal`; the inner loop is 33 IR instructions instead of 47, and an element
 executes 27 instead of 41 (-34%). PrimeScroll (`--emit=native -O2`): 21 of the 114 functions that took a local
 address no longer do; the other 93 pass the address to a real call (the address ABI, 39 functions) or return it
-(the closure `make` helpers and the UI app constructors), which is where a finer analysis would have to go.
+(the closure `make` helpers and the UI app constructors), which is where a finer analysis would have to go. The
+functions that return an address of their own frame (48 in PrimeScroll, on the VM and native targets alike) are the
+bodies the lowering emits, with `parameter_count` 0, for definitions that stay inline: no `Call` reaches them in
+PrimeScroll or in any of the 92 example and benchmark programs scanned, so nothing reads a dead frame. A called
+function returns only addresses that came in as parameters: a struct result goes back through the caller's block
+(docs/spec/vm-design.md, Real calls), pinned by the program-matrix case "a struct result outlives the callee frame
+that built it". Dropping the uncalled bodies is TODO-5825.
 
 Measured with the release `primec` of TODO-5775 (aaf9d37f8) and after, back to back, macOS arm64 (M3 Pro), load
 average 9.8 to 14.6; instructions retired are deterministic, cycles the lowest of five runs:

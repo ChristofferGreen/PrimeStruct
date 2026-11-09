@@ -162,7 +162,10 @@
   caller. A temporary argument is destroyed after the call, where an inlined call destroys it at the end of the callee's
   body. A struct result (any struct but a sum or a collection record, with or without lifecycle helpers) is returned
   through a block of the caller's frame whose address is the last argument: the callee's `return` moves or copies the
-  value there (as it would into the inlined call's result) and returns the address. A `Function` parameter taken by
+  value there (as it would into the inlined call's result) and returns the address. A called function therefore never
+  returns an address of its own frame, which is gone once it returns: what it returns came in as a parameter. (The
+  module also holds a body, with `parameter_count` 0, for each definition that stays inline; such a body returns its
+  inline result's address in its own frame, but no `Call` reaches it.) A `Function` parameter taken by
   `copy` or `move` is bound (copied or moved) by the call site too, but belongs to the callee: its body holds the drop
   flag and destroys the closure on every exit unless it moves it on, as the inlined body does. Shapes that stay inline:
   `copy` and `move` parameters of other types, args-pack, `string`, collection, `File` and template-typed parameters;

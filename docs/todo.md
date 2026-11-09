@@ -107,6 +107,7 @@ of sync with them.
 | TODO-5771 | arm64 template operands stay in the register that computed them | ready | native-arm64-isel |
 | TODO-5773 | arm64 register allocation keeps floats in d-registers | ready | native-arm64-regalloc |
 | TODO-5824 | A null or stray local address faults on the VM | deferred | vm-addresses |
+| TODO-5825 | Definitions that stay inline get no standalone body | deferred | ir-real-calls |
 | TODO-5727 | Every struct copy site tells a place from a temporary by resolution | deferred | lifecycle-copy-sources |
 | TODO-5707 | `Function` types accept `mut` parameters | deferred | closures-mut-params |
 | TODO-5708 | Type aliases | deferred | type-aliases |
@@ -213,7 +214,7 @@ of sync with them.
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719; collection fields found by closures and the todo example: TODO-5681, TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
 - Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5738, TODO-5718
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732, TODO-5735, TODO-5736, TODO-5737
-- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe; real calls and struct copies TODO-5739, TODO-5741, TODO-5752; VM address checks TODO-5824; native code quality (section 12, after the startup lane) TODO-5771, TODO-5773
+- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe; real calls and struct copies TODO-5739, TODO-5741, TODO-5752, TODO-5825; VM address checks TODO-5824; native code quality (section 12, after the startup lane) TODO-5771, TODO-5773
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5807, TODO-5790, TODO-5791, TODO-5792, TODO-5793, TODO-5794, TODO-5795, TODO-5796, TODO-5797, TODO-5798, TODO-5656, TODO-5802, TODO-5803, TODO-5799, TODO-5800, TODO-5801; deferred TODO-5804, TODO-5805, TODO-5806
 
 ### Execution Queue
@@ -273,6 +274,18 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
     - `LoadIndirect`/`StoreIndirect` of address 0 and 16 fault with exit 3 on the VM step and fast kernels and on optexe; a program-matrix case pins it, and every program-matrix and compile-run case keeps its result
     - full release gate green
   - stop_rule: local address numbering on the VM and optcpp only; no change to heap addresses or native.
+
+- [ ] TODO-5825: Definitions that stay inline get no standalone body
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-09
+  - phase: Optimizing backends (found while checking TODO-5776)
+  - parallel_track: ir-real-calls
+  - scope: `lowerCallableDefinitionOrchestration` (src/ir_lowerer/IrLowererStatementCallHelpers.cpp) lowers a body, with `parameter_count` 0, for every definition in `loweredCallTargets`, including those that stay inline at every call site. No `Call` reaches them (141 of PrimeScroll's 246 functions on `--emit=native -O2`), yet every backend compiles them, and the 48 of them with a struct result return an address of their own frame (harmless only because they are never called). Emit only bodies that a `Call`/`CallVoid` reaches (or that a tool such as the debugger names), keeping function indices deterministic.
+  - acceptance:
+    - PrimeScroll's native `__text` and the IR function count shrink, measured; no function left in any example or benchmark module returns an address of its own frame
+    - same results on every backend; full release gate green
+  - stop_rule: dropping uncalled bodies only; no change to which definitions are real calls.
 
 - [ ] TODO-5741: `string` parameters become real calls on the VM and optexe
   - owner: ai

@@ -502,3 +502,56 @@ main() {
   program.stdoutText = "22\n44\n";
   program_matrix::runProgramMatrix(program);
 }
+
+TEST_CASE("a struct result outlives the callee frame that built it") {
+  // Under the address ABI a struct result is written into a block of the caller's frame (the
+  // callee's last argument) and the callee returns that address, never one of its own frame.
+  // The calls between the result and its reads reuse the callee's stack area, so a result left
+  // in the dead frame would read back clobbered values (docs/spec/vm-design.md, Real calls).
+  program_matrix::ProgramCase program;
+  program.name = "struct_result_outlives_callee_frame";
+  program.source = R"([struct]
+Pair() {
+  [i32] a{0i32}
+  [i32] b{0i32}
+}
+
+[return<Pair>]
+make_pair([i32] x, [i32] y) {
+  [i32] sum{x + y}
+  [i32] diff{x - y}
+  [Pair] pair{[a] sum, [b] diff}
+  return(pair)
+}
+
+[return<int>]
+clobber([i32] seed) {
+  [i32 mut] a{seed * 3i32}
+  [i32 mut] b{seed * 5i32}
+  [i32 mut] c{seed * 7i32}
+  [i32 mut] d{seed * 11i32}
+  a = a + b + c + d
+  return(a)
+}
+
+[return<int> effects(io_out)]
+main() {
+  [Pair] p{make_pair(10i32, 4i32)}
+  [i32] noise{clobber(9i32)}
+  [Pair] q{make_pair(1i32, 2i32)}
+  [i32] more{clobber(13i32)}
+  [i32] base{5i32}
+  add{[base]([i32] x) { return(x + base) }}
+  [i32] last{clobber(17i32)}
+  print_line(p.a)
+  print_line(p.b)
+  print_line(q.a)
+  print_line(q.b)
+  print_line(noise + more + last)
+  return(add(2i32))
+}
+)";
+  program.exitCode = 7;
+  program.stdoutText = "14\n6\n3\n-1\n1014\n";
+  program_matrix::runProgramMatrix(program);
+}
