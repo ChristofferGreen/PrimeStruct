@@ -88,7 +88,9 @@ The causes of the slow launches, by what they cost when they happen:
    dylib whose bytes did not change keeps its hash without a check in the script.
 2. **Load from build and test gates (machine, not PrimeScroll).** At load averages of 85 to 126 with 2.8 GB swapped,
    the reference editor took 0.47 to 1.06 s to its first text instead of 0.19 s, and a launch that had to page AppKit
-   back in (3916 major faults) took 1.17 s to its first window. TODO-5757.
+   back in (3916 major faults) took 1.17 s to its first window. TODO-5757. Since TODO-5757 `scripts/compile.sh` builds and tests under
+   `nice -n 10`: PrimeScroll's first text during a gate went from a median of 1.85 to 1.5 times its quiet time, and
+   the gate took no longer.
 3. **Session restore before the first frame (PrimeScroll).** `restore_session` runs after `first.show()` but before
    `app.run`, and it also runs when Finder opens a file (a document arrives as an open-file event, not an argument).
    Each restored tab costs `ps_ui_window_add_tab` 80 to 130 ms (tab-group layout), the markdown and script toolbars

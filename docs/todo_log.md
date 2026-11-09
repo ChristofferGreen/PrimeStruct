@@ -7,6 +7,22 @@ resolution note in `docs/todo_finished.md` and delete its section
 here - this file only ever tracks OPEN tasks' history, same
 open-work-only scope rule as `docs/todo.md` itself.
 
+## TODO-5757
+
+- 2026-11-09: PrimeScroll master bundle (06268bdc7-era code, the same
+  bundle throughout), `scripts/measure_startup.sh --runs 9`, snapshot
+  first-text medians, load average in brackets. Quiet: 186 (9), 195 (15),
+  210 (10), 218 (15). Gates at normal priority: 604 (99), 514 (114),
+  360 (76), 370 (70), 231 (57). Gates with the whole of compile.sh under
+  `nice` (default 10): 406 (46), 280 (59), 306 (154), 254 (113), 294
+  (45); with compile.sh's own `nice -n 10`: 319 (210), 356 (206), 219
+  (168). `taskpolicy -c utility ./scripts/compile.sh --release`: 258 (41),
+  but 21 tests in 7 minutes and PrimeStruct_embed_exports timed out;
+  stopped. ctest totals: normal 1217 s (with these measurements running)
+  and 1067 s; nice 944 s and 1082 s. Timeouts seen: smoke driver at
+  normal priority (load ~100) and under nice (load ~200), closures matrix
+  under nice (load ~200); each passed alone (smoke 100 s, closures 85 s).
+
 ## TODO-5603
 
 - 2026-11-09: launch audit (M3 Pro, 11 cores, 18 GB, macOS 27.0.1

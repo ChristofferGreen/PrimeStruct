@@ -104,7 +104,8 @@ build and layout solidify.
 - **Primary entry:** `./scripts/compile.sh --release` (Release build in `build-release`, runs all tests).
 - **Debug entry:** `./scripts/compile.sh` (Debug build in `build-debug`, runs tests).
 - **`compile.sh` options:** `--release` selects `build-release`; `--skip-tests` keeps configure/build but skips `ctest`.
-- **`compile.sh` stability rule:** keep `scripts/compile.sh` limited to its current contract (default debug build+test plus the documented `--release` and `--skip-tests` options) and do not expand or refactor it unless the user explicitly asks for that change.
+- **`compile.sh` priority:** `scripts/compile.sh` runs `cmake --build` and `ctest` under `nice -n 10` on every system (TODO-5757), so an app someone launches while a gate runs keeps its speed; `taskpolicy -c utility` on macOS confined the gate to the efficiency cores and tests timed out. Wrap ad hoc heavy commands the same way (`nice ctest ...`) when someone works at the machine.
+- **`compile.sh` stability rule:** keep `scripts/compile.sh` limited to its current contract (default debug build+test plus the documented `--release` and `--skip-tests` options, built and tested at the lower priority above) and do not expand or refactor it unless the user explicitly asks for that change.
 - **Hard RAM safety rule (non-negotiable):** never launch more than one heavy build/test command at the same time. Treat `./scripts/compile.sh`, `cmake --build`, `ctest`, and any `PrimeStruct_*_tests` binary as heavy commands and run them strictly sequentially.
 - **No parallel heavy-tool orchestration:** do not use parallel tool execution for heavy build/test commands; if additional inspection commands are needed, wait until the active heavy command completes first.
 - **No approval-prompt workflow actions:** do not run commands or use tools that

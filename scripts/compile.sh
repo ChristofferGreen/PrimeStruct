@@ -183,11 +183,19 @@ done
 
 JOBS="$(detect_jobs)"
 
+# The build and the tests run at a lower CPU priority (nice 10), so an app someone launches while a gate runs keeps
+# its speed and the gate takes the cores it leaves (TODO-5757; measured in docs/todo_log.md: PrimeScroll's first text
+# during a gate went from about 1.85 to 1.5 times its quiet time, and the gate took no longer). `taskpolicy -c utility`
+# on macOS confines work to the efficiency cores: test timeouts followed, so nice is used on every system.
+low_priority() {
+  nice -n 10 "$@"
+}
+
 cmake -S "$ROOT_DIR" -B "$BUILD_DIR" \
   -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
   -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
-cmake --build "$BUILD_DIR" --parallel "$JOBS"
+low_priority cmake --build "$BUILD_DIR" --parallel "$JOBS"
 
 if [[ "$SKIP_TESTS" -eq 1 ]]; then
   echo "Skipping tests."
@@ -197,7 +205,7 @@ fi
 DEFAULT_CTEST_JOBS=$(detect_ctest_jobs)
 CTEST_JOBS="${CTEST_PARALLEL_LEVEL:-$DEFAULT_CTEST_JOBS}"
 set +e
-ctest --test-dir "$BUILD_DIR" --output-on-failure --parallel "$CTEST_JOBS"
+low_priority ctest --test-dir "$BUILD_DIR" --output-on-failure --parallel "$CTEST_JOBS"
 CTEST_STATUS=$?
 set -e
 

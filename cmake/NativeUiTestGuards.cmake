@@ -30,5 +30,8 @@ if(DEFINED ENV{PRIMESTRUCT_TEST_UI_INTRUSIVE} AND NOT "$ENV{PRIMESTRUCT_TEST_UI_
   set(PRIMESTRUCT_UI_INTRUSIVE ON)
 endif()
 
-# The bundles the drivers build never show a Dock icon (scripts/bundle_macos_app.sh).
+# The bundles the drivers build never show a Dock icon (scripts/bundle_macos_app.sh), and skip the Gatekeeper warm-up
+# launch (scripts/warm_macos_app.sh): the drivers launch every bundle themselves, and the warm-ups made the smoke driver
+# a third slower. NativeUiCompiledAppTest turns it back on for its native bundle.
 set(ENV{PS_UI_ELEMENT} "1")
+set(ENV{PS_NO_WARMUP} "1")

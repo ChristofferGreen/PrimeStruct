@@ -185,7 +185,9 @@ check_session_tabs(launch
   "first_frame=1\nwindows_at_first_frame=1\nrestoration=0 completion=0 predictions=0 writing_tools=0\ntab=*${launchDocument} toolbar=yes page=none\ntab=${sessionText} toolbar=none page=none\ntab=${sessionScript} toolbar=waiting page=none\ntab=${sessionNote} toolbar=waiting page=waiting\n")
 unset(ENV{PRIMESTRUCT_UI_OPEN_FILE_EVENT})
 
-# The native bundle: Name.app holds the compiled executable (no runtime, no bytecode) and launches.
+# The native bundle: Name.app holds the compiled executable (no runtime, no bytecode) and launches. Bundling ends with
+# the Gatekeeper warm-up launch (scripts/warm_macos_app.sh), which the other drivers skip.
+unset(ENV{PS_NO_WARMUP})
 execute_process(
   COMMAND bash "${SOURCE_DIR}/scripts/bundle_macos_app.sh" --native
           "${SOURCE_DIR}/examples/apps/text_editor/main.prime" NativeBundle "${WORK_DIR}" "${BUILD_DIR}"

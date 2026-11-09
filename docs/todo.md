@@ -140,7 +140,6 @@ of sync with them.
 | TODO-5821 | The first toolbar of a launch does not hold up the first frame | deferred | startup-toolbar |
 | TODO-5822 | The std/os SIGTERM test does not race the program's start | ready | test-flakes |
 | TODO-5603 | The real-launch baseline, measured by a person | ready | startup |
-| TODO-5757 | Build and test gates leave interactive launches their speed | deferred | startup-machine |
 | TODO-5586 | Native String heap: pooled blocks, statistics and limit | deferred | native-backend-strings |
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
 | TODO-5535 | Launch-time harness and reference Objective-C++ editor | ready | native-ui-launch |
@@ -209,7 +208,7 @@ of sync with them.
 
 ### Priority Lanes
 
-- Startup, first (docs/NativeUiPlan.md section 1, "Where a launch goes"): TODO-5603, TODO-5535, TODO-5757, TODO-5821, TODO-5822
+- Startup, first (docs/NativeUiPlan.md section 1, "Where a launch goes"): TODO-5603, TODO-5535, TODO-5821, TODO-5822
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - Native UI (docs/NativeUiPlan.md): TODO-5808, TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
@@ -1096,18 +1095,6 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
     - the numbers of (1) to (3), with the load average, are in docs/NativeUiPlan.md section 1 and docs/todo_log.md; anything over its expectation gets a TODO
   - stop_rule: measurement only.
   - notes: needs a person at the Mac; the guard counts images, not milliseconds.
-
-- [ ] TODO-5757: Build and test gates leave interactive launches their speed
-  - owner: human
-  - status: deferred
-  - created_at: 2026-11-09
-  - phase: Native PrimeScroll startup (docs/NativeUiPlan.md section 1)
-  - parallel_track: startup-machine
-  - scope: While a release gate ran (load average 85 to 126, 2.8 GB swapped) a plain AppKit editor took 0.47 to 1.06 s to its first text instead of 0.19 s, and a launch that paged AppKit back in took 1.17 s to its first window. Run the heavy gates at background priority (`taskpolicy -b` around `cmake --build` and `ctest` in `scripts/compile.sh`, or `nice` on Linux) so a launched app keeps the CPU and the gate yields; measure how much longer the gate takes.
-  - acceptance:
-    - with a release gate running, PrimeScroll's snapshot `text` median is at most 1.5 times the quiet median; the gate's duration change is recorded; full release gate green
-  - stop_rule: the priority of the gates.
-  - notes: deferred: AGENTS.md keeps `scripts/compile.sh` to its current contract unless the user asks for the change, so the user decides.
 
 - [ ] TODO-5586: Native String heap: pooled blocks, statistics and limit
   - owner: ai
