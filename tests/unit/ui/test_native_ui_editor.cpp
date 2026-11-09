@@ -38,12 +38,17 @@ constexpr int32_t CommandRecentClear = 1000072;
 // Handles in creation order: the window, then its text view.
 constexpr uint64_t EditorWindow = 1;
 
+// The editor compiled once per process (every case compiled it again: 739 s of a loaded gate for the suite, 11 s
+// alone now). A Script is cheap to copy and runs repeatedly without recompiling, and each run starts a fresh VM.
 Script compileEditor() {
-  ScriptEngine engine;
-  primec::ui::bindNativeUi(engine);
-  Script script = engine.compileFile(std::string(PRIMESTRUCT_SOURCE_DIR) + "/examples/apps/text_editor/main.prime");
-  REQUIRE_MESSAGE(script.valid(), script.diagnostics());
-  return script;
+  static const Script compiled = [] {
+    ScriptEngine engine;
+    primec::ui::bindNativeUi(engine);
+    return engine.compileFile(std::string(PRIMESTRUCT_SOURCE_DIR) +
+                              "/examples/apps/text_editor/main.prime");
+  }();
+  REQUIRE_MESSAGE(compiled.valid(), compiled.diagnostics());
+  return compiled;
 }
 
 std::string scratchPath(const std::string &name) {

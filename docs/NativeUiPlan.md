@@ -352,7 +352,7 @@ app.run(handlers)
 ```
 
 `examples/native_ui/hello_button.prime` is the whole program; `tests/fixtures/ui/handlers.prime` uses every row of the
-table. `PrimeStruct_cpp_native_ui` runs both on the VM against the headless backend and compiled with `optexe`, with
+table. `PrimeStruct_cpp_native_ui_*` runs both on the VM against the headless backend and compiled with `optexe`, with
 the same call logs.
 
 ## 6. The text editor example
@@ -445,7 +445,7 @@ shortcut is taken for text on the way.
 
 Status: the build path exists. `scripts/build_native_app.sh app.prime out` compiles a program with
 `primec --emit=optexe` and links the AppKit backend (`--backend headless` links the scripted test backend), so the
-result is a native executable with no VM or compiler in it; `PrimeStruct_cpp_native_ui` replays hello_window and the
+result is a native executable with no VM or compiler in it; `PrimeStruct_cpp_native_ui_*` replays hello_window and the
 editor's scenarios on the VM and as compiled programs with identical call logs, and
 `PrimeStruct_native_ui_compiled_app` snapshots the compiled AppKit builds. Every scenario of the editor gate
 (section 13: the `primestruct.ui.editor` and `primestruct.ui.editor_acceptance` suites, highlight samples included)
@@ -480,9 +480,10 @@ executable (about 0.5 MB) and the AppKit dylib, both ad-hoc signed, and `codesig
 
 ## 13. Editor acceptance gate
 
-"The text editor is acceptable" means CTest `PrimeStruct_native_ui_editor_acceptance` passes (it runs the doctest
-suites `primestruct.ui.editor` and `primestruct.ui.editor_acceptance` of `PrimeStruct_native_ui_tests` against the
-headless backend, so it is part of `./scripts/compile.sh --release` on every platform), plus the Apple-only
+"The text editor is acceptable" means the CTest entries `PrimeStruct_native_ui_editor` and `_editor_acceptance`
+pass (`ctest -R native_ui_editor`: the doctest suites `primestruct.ui.editor` and `primestruct.ui.editor_acceptance`
+of `PrimeStruct_native_ui_tests`, run against the headless backend, so they are part of
+`./scripts/compile.sh --release` on every platform), plus the Apple-only
 `PrimeStruct_native_ui_appkit_smoke_*`. Requirement to test:
 
 | # | Requirement | Where it is checked |

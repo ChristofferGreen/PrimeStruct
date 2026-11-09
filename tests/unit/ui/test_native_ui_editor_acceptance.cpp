@@ -55,10 +55,14 @@ int countCalls(const std::string &prefix) {
 }
 
 // Runs the editor program once against the scripted headless backend.
+// (The editor is compiled once per process: a Script is cheap to copy and each run starts a fresh VM.)
 void runEditor() {
-  ScriptEngine engine;
-  primec::ui::bindNativeUi(engine);
-  const Script script = engine.compileFile(std::string(PRIMESTRUCT_SOURCE_DIR) + "/examples/apps/text_editor/main.prime");
+  static const Script script = [] {
+    ScriptEngine engine;
+    primec::ui::bindNativeUi(engine);
+    return engine.compileFile(std::string(PRIMESTRUCT_SOURCE_DIR) +
+                              "/examples/apps/text_editor/main.prime");
+  }();
   REQUIRE_MESSAGE(script.valid(), script.diagnostics());
   compiled_editor::Mirror mirror;
   const auto result = script.run();

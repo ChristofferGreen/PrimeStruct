@@ -35,12 +35,19 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.imports"
                                   SOURCE_FILE "*test_compile_run_imports_operations.cpp"
                                   TOTAL_CASES 58
                                   CASES_PER_SHARD 2)
-addPrimeStructManagedDoctestSuite("primestruct.compile.run.imports"
-                                  TIMEOUT 300
-                                  SHARD_PREFIX "operations_and_collections_part2"
-                                  SOURCE_FILE "*test_compile_run_imports_operations_part2.cpp"
-                                  TOTAL_CASES 131
-                                  CASES_PER_SHARD 2)
+# Cases 29 to 32 and 67 to 70 took 61 to 127 s per pair in a loaded gate, so they are single-case shards.
+foreach(importsPart2Range "1;28;2" "29;32;1" "33;66;2" "67;70;1" "71;131;2")
+  list(GET importsPart2Range 0 importsPart2First)
+  list(GET importsPart2Range 1 importsPart2Last)
+  list(GET importsPart2Range 2 importsPart2PerShard)
+  addPrimeStructManagedDoctestSuite("primestruct.compile.run.imports"
+                                    TIMEOUT 300
+                                    SHARD_PREFIX "operations_and_collections_part2"
+                                    SOURCE_FILE "*test_compile_run_imports_operations_part2.cpp"
+                                    RANGE_FIRST ${importsPart2First}
+                                    RANGE_LAST ${importsPart2Last}
+                                    CASES_PER_SHARD ${importsPart2PerShard})
+endforeach()
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.text_filters"
                                   TIMEOUT 300

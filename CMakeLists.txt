@@ -995,6 +995,25 @@ if(PRIMESTRUCT_BUILD_TESTS)
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
   enable_testing()
 
+  # primestructAddDoctestShards(<name> <target> <total> <per-shard> <timeout> <doctest filter args...>) registers
+  # the cases a doctest filter selects as CTest entries <name>_<first>_<last> of at most <per-shard> cases each
+  # (--order-by=file, --first/--last), labelled parallel-safe. A suite too slow for one entry under a loaded gate is
+  # split this way (AGENTS.md, No flaky tests) rather than given more time. <total> must be the filter's case count:
+  # ctest PrimeStruct_test_registration fails when the shards do not tile it.
+  function(primestructAddDoctestShards name target total perShard timeout)
+    math(EXPR lastIndex "(${total} + ${perShard} - 1) / ${perShard} - 1")
+    foreach(index RANGE ${lastIndex})
+      math(EXPR first "${index} * ${perShard} + 1")
+      math(EXPR last "${first} + ${perShard} - 1")
+      if(last GREATER total)
+        set(last ${total})
+      endif()
+      add_test(NAME ${name}_${first}_${last}
+               COMMAND $<TARGET_FILE:${target}> ${ARGN} "--order-by=file" "--first=${first}" "--last=${last}")
+      set_tests_properties(${name}_${first}_${last} PROPERTIES TIMEOUT ${timeout} LABELS "parallel-safe")
+    endforeach()
+  endfunction()
+
   # This source-lock test is intentionally large and does not benefit from
   # Release optimization; keeping it at O0 avoids long optimizer stalls.
   if(MSVC)
@@ -1231,14 +1250,9 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_embed_host_language
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
-  add_test(
-    NAME PrimeStruct_embed_exports
-    COMMAND $<TARGET_FILE:PrimeStruct_embed_tests>
-            "--test-suite=primestruct.embed.exports"
-            "--order-by=file"
-  )
-  set_tests_properties(PrimeStruct_embed_exports
-                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+  # 29 cases, 98 s in a loaded gate: shards of ten.
+  primestructAddDoctestShards(PrimeStruct_embed_exports PrimeStruct_embed_tests 29 10 300
+                              "--test-suite=primestruct.embed.exports")
   add_test(
     NAME PrimeStruct_embed_lifetime
     COMMAND $<TARGET_FILE:PrimeStruct_embed_tests>
@@ -1345,7 +1359,12 @@ if(PRIMESTRUCT_BUILD_TESTS)
   target_link_libraries(PrimeStruct_u8_scalar_tests PRIVATE primec_embed_lib)
   primestructEnableWarnings(PrimeStruct_u8_scalar_tests)
   # One ctest entry per suite: together they ran long enough to hit the timeout under load.
-  foreach(u8ScalarSuite u8_scalar u8_containers string_owned slices host_text)
+  # string_owned (43 cases, 171 s in a loaded gate) and slices (21 cases, 67 s) are shards of ten cases.
+  primestructAddDoctestShards(PrimeStruct_u8_scalar_string_owned PrimeStruct_u8_scalar_tests 43 10 300
+                              "--test-suite=primestruct.language.string_owned")
+  primestructAddDoctestShards(PrimeStruct_u8_scalar_slices PrimeStruct_u8_scalar_tests 21 10 300
+                              "--test-suite=primestruct.language.slices")
+  foreach(u8ScalarSuite u8_scalar u8_containers host_text)
     add_test(
       NAME PrimeStruct_u8_scalar_${u8ScalarSuite}
       COMMAND $<TARGET_FILE:PrimeStruct_u8_scalar_tests>
@@ -1378,43 +1397,22 @@ if(PRIMESTRUCT_BUILD_TESTS)
     PRIMESTRUCT_UI_HIGHLIGHT_LIB="$<TARGET_FILE:primec_ui_highlight_lib>")
   target_link_libraries(PrimeStruct_cpp_host_call_tests PRIVATE primec_ui_lib primec_embed_lib)
   primestructEnableWarnings(PrimeStruct_cpp_host_call_tests)
-  add_test(
-    NAME PrimeStruct_cpp_host_calls
-    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
-            "--test-suite=primestruct.backend.cpp_host_calls,primestruct.backend.cpp_strings"
-            "--order-by=file"
-  )
-  set_tests_properties(PrimeStruct_cpp_host_calls
-                       PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
+  # The entries below are shards of the cases each filter selects (primestructAddDoctestShards), sized to stay short
+  # under a loaded gate: in one gate (load up to 40) host calls took 185 s for 20 cases, the VM string conformance
+  # cases 419 s for 50, the optexe ones 458 s for 37 and the native UI cases 310 s for 9.
+  primestructAddDoctestShards(PrimeStruct_cpp_host_calls PrimeStruct_cpp_host_call_tests 20 5 600
+                              "--test-suite=primestruct.backend.cpp_host_calls,primestruct.backend.cpp_strings")
   # The String / StringView differential suite (tests/unit/backend_host/test_string_conformance.cpp). Most of its time is
-  # the host C++ compiler building optexe programs, so the cases that go through optexe are a CTest entry of their own
-  # and run beside the VM ones.
-  add_test(
-    NAME PrimeStruct_string_conformance_vm
-    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
-            "--test-suite=primestruct.backend.string_conformance"
-            "--test-case-exclude=*through optexe*"
-            "--order-by=file"
-  )
-  set_tests_properties(PrimeStruct_string_conformance_vm
-                       PROPERTIES TIMEOUT 900 LABELS "parallel-safe")
-  add_test(
-    NAME PrimeStruct_string_conformance_optexe
-    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
-            "--test-suite=primestruct.backend.string_conformance"
-            "--test-case=*through optexe*"
-            "--order-by=file"
-  )
-  set_tests_properties(PrimeStruct_string_conformance_optexe
-                       PROPERTIES TIMEOUT 1200 LABELS "parallel-safe")
-  add_test(
-    NAME PrimeStruct_cpp_native_ui
-    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
-            "--test-suite=primestruct.backend.cpp_native_ui"
-            "--order-by=file"
-  )
-  set_tests_properties(PrimeStruct_cpp_native_ui
-                       PROPERTIES TIMEOUT 900 LABELS "parallel-safe")
+  # the host C++ compiler building optexe programs, so the cases that go through optexe are entries of their own and
+  # run beside the VM ones.
+  primestructAddDoctestShards(PrimeStruct_string_conformance_vm PrimeStruct_cpp_host_call_tests 50 5 600
+                              "--test-suite=primestruct.backend.string_conformance"
+                              "--test-case-exclude=*through optexe*")
+  primestructAddDoctestShards(PrimeStruct_string_conformance_optexe PrimeStruct_cpp_host_call_tests 37 4 600
+                              "--test-suite=primestruct.backend.string_conformance"
+                              "--test-case=*through optexe*")
+  primestructAddDoctestShards(PrimeStruct_cpp_native_ui PrimeStruct_cpp_host_call_tests 9 1 600
+                              "--test-suite=primestruct.backend.cpp_native_ui")
   # The net_io effect and /std/net over loopback sockets (tests/unit/backend_host/test_net.cpp). Each web example's
   # loopback test builds one optexe program, which takes about 4 minutes alone for todo_web and over 15 in a gate on a
   # loaded machine, so every example case is a CTest entry of its own with a long timeout (TODO-5729) and
@@ -1456,15 +1454,10 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_http
                        PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
-  add_test(
-    NAME PrimeStruct_http_optexe
-    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
-            "--test-suite=primestruct.backend.http"
-            "--test-case=*through optexe*"
-            "--order-by=file"
-  )
-  set_tests_properties(PrimeStruct_http_optexe
-                       PROPERTIES TIMEOUT 1800 LABELS "parallel-safe")
+  # (7 cases, 135 s in a loaded gate: shards of two.)
+  primestructAddDoctestShards(PrimeStruct_http_optexe PrimeStruct_cpp_host_call_tests 7 2 900
+                              "--test-suite=primestruct.backend.http"
+                              "--test-case=*through optexe*")
   add_test(
     NAME PrimeStruct_http_loopback
     COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
@@ -1476,14 +1469,9 @@ if(PRIMESTRUCT_BUILD_TESTS)
                        PROPERTIES TIMEOUT 1200 LABELS "parallel-safe")
 
   # /std/web: controls with click closures (tests/unit/backend_host/test_web.cpp); two of its cases build optexe programs.
-  add_test(
-    NAME PrimeStruct_web
-    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
-            "--test-suite=primestruct.backend.web"
-            "--order-by=file"
-  )
-  set_tests_properties(PrimeStruct_web
-                       PROPERTIES TIMEOUT 1800 LABELS "parallel-safe")
+  # (12 cases, 268 s in a loaded gate: shards of two.)
+  primestructAddDoctestShards(PrimeStruct_web PrimeStruct_cpp_host_call_tests 12 2 900
+                              "--test-suite=primestruct.backend.web")
 
   # /std/ui/events: the event values control handlers receive (tests/unit/backend_host/test_ui_events.cpp).
   add_test(
@@ -1602,6 +1590,9 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_native_ui_stdlib
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+  # The editor scenarios and the editor acceptance suite (TODO-5552..5554); `ctest -R native_ui_editor` runs both.
+  # Each case used to compile the editor again (739 s of a loaded gate for the scenarios, and the acceptance entry ran
+  # them a second time); now each process compiles it once and the two suites take 11 s and 8 s alone.
   add_test(
     NAME PrimeStruct_native_ui_editor
     COMMAND $<TARGET_FILE:PrimeStruct_native_ui_tests>
@@ -1609,17 +1600,15 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_native_ui_editor
-                       PROPERTIES TIMEOUT 2400 LABELS "parallel-safe")
-  # The editor acceptance gate (docs/todo.md TODO-5552..5554): the editor
-  # scenarios plus the acceptance suite, in one release-gate entry.
+                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   add_test(
     NAME PrimeStruct_native_ui_editor_acceptance
     COMMAND $<TARGET_FILE:PrimeStruct_native_ui_tests>
-            "--test-suite=primestruct.ui.editor,primestruct.ui.editor_acceptance"
+            "--test-suite=primestruct.ui.editor_acceptance"
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_native_ui_editor_acceptance
-                       PROPERTIES TIMEOUT 2400 LABELS "parallel-safe")
+                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   if(PRIMESTRUCT_BUILD_NATIVE_UI AND APPLE)
     # Bundles an example, runs it against AppKit in snapshot mode and checks the
     # PNG of the laid-out window (needs a window-server session). The windows are invisible and never take the
@@ -3192,11 +3181,18 @@ if(PRIMESTRUCT_BUILD_TESTS)
   # source-level guards in tests/unit/compile_run/native_backend), so their
   # shards are registered only there; they do not exist in Linux/x86_64 builds.
   if(APPLE AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64)$")
-    addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.core"
-                                      TIMEOUT 300
-                                      SHARD_PREFIX "apple_core"
-                                      TOTAL_CASES 202
-                                      CASES_PER_SHARD 10)
+    # Cases 71 to 100 took 78 to 108 s per ten in a loaded gate, so they are shards of five.
+    foreach(appleCoreRange "1;70;10" "71;100;5" "101;202;10")
+      list(GET appleCoreRange 0 appleCoreFirst)
+      list(GET appleCoreRange 1 appleCoreLast)
+      list(GET appleCoreRange 2 appleCorePerShard)
+      addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.core"
+                                        TIMEOUT 300
+                                        SHARD_PREFIX "apple_core"
+                                        RANGE_FIRST ${appleCoreFirst}
+                                        RANGE_LAST ${appleCoreLast}
+                                        CASES_PER_SHARD ${appleCorePerShard})
+    endforeach()
     addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.math_numeric"
                                       TIMEOUT 300
                                       SHARD_PREFIX "apple_math_numeric"
@@ -3596,6 +3592,11 @@ if(PRIMESTRUCT_BUILD_TESTS)
   foreach(suite IN LISTS PrimeStructIrOptimizerTestSuites)
     string(REPLACE "." "_" suiteId "${suite}")
     set(testName "PrimeStruct_${suiteId}")
+    if(suite STREQUAL "primestruct.ir.optexe")
+      # 8 cases that each build optexe programs: 66 to 111 s in loaded gates as one entry, so shards of two.
+      primestructAddDoctestShards("${testName}" PrimeStruct_ir_optimizer_tests 8 2 300 "--test-suite=${suite}")
+      continue()
+    endif()
     add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_ir_optimizer_tests> "--test-suite=${suite}")
     set_tests_properties("${testName}" PROPERTIES TIMEOUT 300)
   endforeach()
@@ -3621,11 +3622,28 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.program_matrix.shared_programs
     primestruct.program_matrix.text_views
   )
+  # Every program runs through each execution config (several compiles per case), so a whole suite took 60 to 110 s
+  # in loaded gates (load 40 to 140). Each suite is shards of three cases (primestructAddDoctestShards); the number
+  # after the suite is its case count, which ctest PrimeStruct_test_registration checks.
+  set(PrimeStructProgramMatrixCaseCounts
+    closures=8 closures_callables=7 closures_references=4 closures_fields=3 closures_routers=7 container_copies=8
+    control=37 element_copies=7 lifecycle=24 optimizer=11 parameter_modes=6 results=9 shared_programs=16
+    text_views=2)
   foreach(suite IN LISTS PrimeStructProgramMatrixTestSuites)
     string(REPLACE "." "_" suiteId "${suite}")
     set(testName "PrimeStruct_${suiteId}")
-    add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_program_matrix_tests> "--test-suite=${suite}")
-    set_tests_properties("${testName}" PROPERTIES TIMEOUT 300)
+    string(REPLACE "primestruct.program_matrix." "" suiteShort "${suite}")
+    set(suiteCases "")
+    foreach(entry IN LISTS PrimeStructProgramMatrixCaseCounts)
+      if(entry MATCHES "^${suiteShort}=([0-9]+)$")
+        set(suiteCases "${CMAKE_MATCH_1}")
+      endif()
+    endforeach()
+    if(suiteCases STREQUAL "")
+      message(FATAL_ERROR "program matrix suite ${suite} has no case count in PrimeStructProgramMatrixCaseCounts")
+    endif()
+    primestructAddDoctestShards("${testName}" PrimeStruct_program_matrix_tests ${suiteCases} 3 300
+                                "--test-suite=${suite}")
   endforeach()
   addPrimeStructSuiteRegistration(
     PrimeStruct_program_matrix_suite_registration

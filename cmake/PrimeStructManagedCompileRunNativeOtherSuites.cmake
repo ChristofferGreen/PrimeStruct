@@ -38,11 +38,11 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.import
                                   TOTAL_CASES 24
                                   CASES_PER_SHARD 5)
 # TODO-4711: measured ~68.5s real worst case for this shard (single-case
-# shards, TOTAL_CASES 23/CASES_PER_SHARD 1); 210s = ~3x margin, still above
-# the 30s ceiling (see TODO-4710/TODO-5230 for the per-compile subprocess
-# cost root cause).
+# shards, TOTAL_CASES 25/CASES_PER_SHARD 1; the SoaSchema storage case is three, one
+# per backend, since together they took 183 s in a loaded gate; see TODO-4710/TODO-5230
+# for the per-compile subprocess cost root cause).
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.reflection_codegen"
                                   TIMEOUT 300
                                   SHARD_PREFIX "reflection_codegen"
-                                  TOTAL_CASES 23
+                                  TOTAL_CASES 25
                                   CASES_PER_SHARD 1)

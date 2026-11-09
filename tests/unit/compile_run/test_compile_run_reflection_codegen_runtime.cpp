@@ -316,7 +316,10 @@ main() {
   CHECK(runCommand(quoteShellArg(nativePath)) == 127);
 }
 
-TEST_CASE("reflection SoaSchema storage helper runtime stays aligned across backends") {
+// The SoaSchema storage program, built and run once per backend: a case (and so a CTest shard) per backend, since the
+// three builds together took 183 s in a loaded gate. Each case writes its own source file, so shards running at the
+// same time do not share one.
+static std::string writeSoaSchemaStorageSource(const std::string &backend) {
   const std::string source = R"(
 import /std/collections/soa_storage/*
 
@@ -357,23 +360,32 @@ main() {
   return(score)
 }
 )";
-  const std::string srcPath = writeTemp("compile_reflection_soa_schema_storage_runtime.prime", source);
-
   // TODO-4767 (fixed): drop() is deliberately restricted to
   // uninitialized<T> storage; `storage` here is an ordinary mut local
   // (constructed via SoaSchemaStorageNew(), not the uninitialized<T>
   // init/take idiom), so it never needed an explicit drop() call - the
   // original source's trailing `drop(storage)` was stale. Removing it
   // restores the originally-intended passing behavior on all backends.
+  return writeTemp("compile_reflection_soa_schema_storage_runtime_" + backend + ".prime", source);
+}
+
+TEST_CASE("reflection SoaSchema storage helper runtime stays aligned across backends") {
+  const std::string srcPath = writeSoaSchemaStorageSource("vm");
   const std::string vmCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main";
   CHECK(runCommand(vmCmd) == 127);
+}
 
+TEST_CASE("reflection SoaSchema storage helper runtime stays aligned across backends on exe") {
+  const std::string srcPath = writeSoaSchemaStorageSource("exe");
   const std::string exePath = (testScratchPath("") / "primec_reflection_soa_schema_storage_exe").string();
   const std::string exeCompileCmd = "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " +
                                     quoteShellArg(exePath) + " --entry /main";
   CHECK(runCommand(exeCompileCmd) == 0);
   CHECK(runCommand(quoteShellArg(exePath)) == 127);
+}
 
+TEST_CASE("reflection SoaSchema storage helper runtime stays aligned across backends on native") {
+  const std::string srcPath = writeSoaSchemaStorageSource("native");
   const std::string nativePath = (testScratchPath("") / "primec_reflection_soa_schema_storage_native").string();
   const std::string nativeCompileCmd = "./primec --emit=native " + quoteShellArg(srcPath) + " -o " +
                                        quoteShellArg(nativePath) + " --entry /main";

@@ -33,6 +33,18 @@ constexpr int32_t CommandOpen = 1000001;
 constexpr uint64_t EditorWindow = 1;
 constexpr uint64_t EditorView = 2;
 
+// The editor compiled once per process: a Script is cheap to copy and each run starts a fresh VM.
+Script compiledEditor() {
+  static const Script compiled = [] {
+    ScriptEngine engine;
+    primec::ui::bindNativeUi(engine);
+    return engine.compileFile(std::string(PRIMESTRUCT_SOURCE_DIR) +
+                              "/examples/apps/text_editor/main.prime");
+  }();
+  REQUIRE_MESSAGE(compiled.valid(), compiled.diagnostics());
+  return compiled;
+}
+
 std::string fixturePath(const std::string &name) {
   return std::string(PRIMESTRUCT_SOURCE_DIR) + "/tests/fixtures/ui/highlight/" + name;
 }
@@ -53,10 +65,7 @@ std::vector<headless::StyleRun> openInEditor(const std::string &path, const std:
     headless::pushAlertAnswer(1);
   }
   headless::pushCloseWindow(EditorWindow);
-  ScriptEngine engine;
-  primec::ui::bindNativeUi(engine);
-  const Script script = engine.compileFile(std::string(PRIMESTRUCT_SOURCE_DIR) + "/examples/apps/text_editor/main.prime");
-  REQUIRE_MESSAGE(script.valid(), script.diagnostics());
+  const Script script = compiledEditor();
   compiled_editor::Mirror mirror;
   const auto result = script.run();
   REQUIRE_MESSAGE(result.ok, result.diagnostics);
@@ -452,10 +461,7 @@ TEST_CASE("highlight: each tab is styled for its own file") {
   headless::pushOpenPanelAnswer(json);
   headless::pushCloseWindow(15);
   headless::pushCloseWindow(EditorWindow);
-  ScriptEngine engine;
-  primec::ui::bindNativeUi(engine);
-  const Script script = engine.compileFile(std::string(PRIMESTRUCT_SOURCE_DIR) + "/examples/apps/text_editor/main.prime");
-  REQUIRE_MESSAGE(script.valid(), script.diagnostics());
+  const Script script = compiledEditor();
   compiled_editor::Mirror mirror;
   const auto result = script.run();
   REQUIRE_MESSAGE(result.ok, result.diagnostics);
@@ -505,10 +511,7 @@ TEST_CASE("highlight: a file opened into a fresh New tab is styled") {
   headless::pushOpenPanelAnswer(md);
   headless::pushCloseWindow(19);
   headless::pushCloseWindow(EditorWindow);
-  ScriptEngine engine;
-  primec::ui::bindNativeUi(engine);
-  const Script script = engine.compileFile(std::string(PRIMESTRUCT_SOURCE_DIR) + "/examples/apps/text_editor/main.prime");
-  REQUIRE_MESSAGE(script.valid(), script.diagnostics());
+  const Script script = compiledEditor();
   compiled_editor::Mirror mirror;
   const auto result = script.run();
   REQUIRE_MESSAGE(result.ok, result.diagnostics);
