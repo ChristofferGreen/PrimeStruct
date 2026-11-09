@@ -1090,6 +1090,14 @@ TEST_CASE("arm64 value-stack pushes stay in memory across labels and clobbers") 
       primec::testing::arm64ValueStackWords({{Kind::Push, 21}, {Kind::Label, 0}, {Kind::Pop, 0}}) ==
       std::vector<uint32_t>{0xF81F0F95u,   // str x21, [x28, #-16]!
                             0xF8410780u}); // ldr x0, [x28], #16
+  // Any read of the buffer size counts as a label, not only currentWordIndex(): a template that
+  // records an index directly, or a checkpoint, must not see the push removed under it.
+  for (const Kind observer : {Kind::CodeSize, Kind::Checkpoint}) {
+    CHECK(
+        primec::testing::arm64ValueStackWords({{Kind::Push, 21}, {observer, 0}, {Kind::Pop, 0}}) ==
+        std::vector<uint32_t>{0xF81F0F95u,   // str x21, [x28, #-16]!
+                              0xF8410780u}); // ldr x0, [x28], #16
+  }
   // The first pop's move writes x21, the register the earlier push saved: that push stays a store
   // and its pop a load.
   CHECK(primec::testing::arm64ValueStackWords(

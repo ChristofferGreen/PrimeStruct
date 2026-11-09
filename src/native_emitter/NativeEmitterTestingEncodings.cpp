@@ -104,6 +104,12 @@ std::vector<uint32_t> arm64ValueStackWords(const std::vector<Arm64ValueStackStep
     case Arm64ValueStackStep::Kind::Label:
       (void)emitter.currentWordIndex();
       break;
+    case Arm64ValueStackStep::Kind::CodeSize:
+      (void)emitter.codeWordCountPublic();
+      break;
+    case Arm64ValueStackStep::Kind::Checkpoint:
+      (void)emitter.checkpoint();
+      break;
     }
   }
   return arm64Words(emitter);

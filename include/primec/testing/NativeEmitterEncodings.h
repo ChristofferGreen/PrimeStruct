@@ -29,10 +29,10 @@ std::vector<uint32_t> arm64StackAdjustWords(uint64_t amount, bool add);
 // buffer with the value-stack cache off. False when the constant stays a register operand.
 bool arm64ImmediateOperandWords(IrOpcode op, uint64_t constant, std::vector<uint32_t> &words);
 
-// One step of an arm64 value-stack sequence: push or pop a register, or take a label (the word
-// index a branch could target) at that point.
+// One step of an arm64 value-stack sequence: push or pop a register, take a label (the word
+// index a branch could target), read the code buffer's size directly, or take a checkpoint.
 struct Arm64ValueStackStep {
-  enum class Kind { Push, Pop, Label };
+  enum class Kind { Push, Pop, Label, CodeSize, Checkpoint };
   Kind kind = Kind::Push;
   uint8_t reg = 0;
 };

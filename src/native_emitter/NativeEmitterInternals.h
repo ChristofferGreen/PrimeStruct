@@ -92,6 +92,62 @@ struct Arm64InstrumentationCounters {
   uint64_t reloadCount = 0;
 };
 
+// The word buffer of Arm64Emitter. A value-stack pop may erase the push before it
+// (Arm64Emitter::emitReloadReg), which shifts every word after the push, so the push may only be
+// erased while nobody has read a word index since it was written. Every read of size() (labels,
+// branch sites, checkpoints, instruction offsets, whichever accessor a template uses) and every
+// resize() ends that window; only the fusion itself goes through the non-observing accessors.
+class Arm64CodeWords {
+public:
+  size_t size() const {
+    fusionEnd_ = SIZE_MAX;
+    return words_.size();
+  }
+  void resize(size_t count) {
+    fusionEnd_ = SIZE_MAX;
+    words_.resize(count);
+  }
+  void push_back(uint32_t word) {
+    words_.push_back(word);
+  }
+  // Writes a word at an index read earlier (a branch patch); no index moves.
+  void patch(size_t index, uint32_t word) {
+    if (index < words_.size()) {
+      words_[index] = word;
+    }
+  }
+  std::vector<uint32_t>::const_iterator begin() const {
+    return words_.begin();
+  }
+  std::vector<uint32_t>::const_iterator end() const {
+    return words_.end();
+  }
+
+  // The fusion window: opened at the current end after a push or a fused pop, open while no
+  // word was added and no index read since.
+  void openFusionWindow() {
+    fusionEnd_ = words_.size();
+  }
+  void closeFusionWindow() {
+    fusionEnd_ = SIZE_MAX;
+  }
+  bool fusionWindowOpen() const {
+    return fusionEnd_ == words_.size();
+  }
+  // The index the next word gets, without closing the window: only for the fusion's own record
+  // of the push it may erase.
+  size_t nextIndexForFusion() const {
+    return words_.size();
+  }
+  void eraseFusedPush(size_t index) {
+    words_.erase(words_.begin() + static_cast<std::ptrdiff_t>(index));
+  }
+
+private:
+  std::vector<uint32_t> words_;
+  mutable size_t fusionEnd_ = SIZE_MAX;
+};
+
 class Arm64Emitter {
  public:
   static constexpr uint32_t MaxLdrStrOffsetBytes = 0xFFFu * 8u;
@@ -172,6 +228,11 @@ class Arm64Emitter {
   }
   void emitPopRegPublic(uint8_t reg) {
     emitPopReg(reg);
+  }
+  // Reads the buffer size directly, as a template might instead of currentWordIndex(): pins that
+  // such a read also keeps a pending push in place.
+  size_t codeWordCountPublic() const {
+    return code_.size();
   }
 
   void emitLoadLocal(uint32_t index) {
@@ -359,10 +420,10 @@ class Arm64Emitter {
   void patchJumpIfZero(size_t index, int32_t offsetWords);
   void emitPushReg0();
 
-  // Every label, branch site and instruction offset is read here, so reading it also ends the
-  // window in which a push may be fused with the pop that follows it (emitReloadReg).
+  // Every label, branch site and instruction offset is read here; like any read of the buffer
+  // size it ends the window in which a push may be fused with the pop that follows it
+  // (Arm64CodeWords, emitReloadReg).
   size_t currentWordIndex() const {
-    pendingSpillEnd_ = SIZE_MAX;
     return code_.size();
   }
 
@@ -498,7 +559,6 @@ class Arm64Emitter {
   }
   void rollBack(const Checkpoint &point) {
     code_.resize(point.codeSize);
-    pendingSpillEnd_ = SIZE_MAX;
     heapAllocCalls_.resize(point.heapAllocCalls);
     heapFreeCalls_.resize(point.heapFreeCalls);
     heapReallocCalls_.resize(point.heapReallocCalls);
@@ -681,19 +741,18 @@ class Arm64Emitter {
   void emitReloadReg(uint8_t reg);
   void flushValueStackCache();
 
-  std::vector<uint32_t> code_;
+  Arm64CodeWords code_;
   uint64_t frameSize_ = 0;
   uint64_t codeBaseOffset_ = 0;
   Arm64InstrumentationCounters counters_;
   static constexpr uint8_t valueStackCacheReg_ = 26;
-  // Pushes a pop may still turn into a move (emitReloadReg): the run of words that ends at
-  // pendingSpillEnd_ holds only these pushes (`str reg, [x28, #-16]!`, by word index) and the moves
-  // earlier pops became. Any other word, label or branch site ends the run (SIZE_MAX).
+  // Pushes a pop may still turn into a move (emitReloadReg): while code_'s fusion window is open,
+  // the words since the run began are only these pushes (`str reg, [x28, #-16]!`, by word index)
+  // and the moves earlier pops became. Any other word or any read of a word index closes it.
   struct PendingSpill {
     size_t word = 0;
     uint8_t reg = 0;
   };
-  mutable size_t pendingSpillEnd_ = SIZE_MAX;
   std::vector<PendingSpill> pendingSpills_;
   std::vector<uint8_t> pendingMoveTargets_;
   bool hasValueStackCache_ = false;

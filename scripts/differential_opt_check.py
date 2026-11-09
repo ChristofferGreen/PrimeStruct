@@ -9,7 +9,7 @@ stderr differs. A program that behaves differently between two -O0 runs is
 reported as unstable and skipped.
 
     python3 scripts/differential_opt_check.py --build-dir build-release [--levels 1,2,3]
-                                              [--jobs 4] [--limit N] [--keep-dir DIR]
+                                              [--jobs 4] [--limit N] [--work-dir DIR] [--keep-dir DIR]
                                               [--optexe [--optexe-levels 0,2]] [--native [--native-levels 0,2]]
                                               [--baseline-kernel step]
 
@@ -18,6 +18,11 @@ With --optexe each program is also compiled with `primec --emit=optexe` (at each
 compared against the -O0 VM run; --native does the same for `primec --emit=native`
 executables (Linux x86_64 and macOS arm64). Programs a backend rejects are counted
 separately and skipped.
+
+Programs and binaries are written to a fresh directory under --work-dir
+(default: <build-dir>/differential_opt_check), never the system temp
+directory, and the compilers run with TMPDIR pointing there too. The directory
+is removed afterwards unless a program differs (or --keep-dir names it).
 
 Run from anywhere; `primevm` is executed with the build directory as its working
 directory, as the compile-run tests do. Exit status 0 when every program
@@ -31,6 +36,7 @@ import concurrent.futures
 import hashlib
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -81,8 +87,15 @@ KNOWN_NATIVE_GAPS = {
 }
 
 
-def run_vm(build_dir: Path, source_path: Path, flags: list[str], kernel: str = "") -> tuple[int, str, str]:
+def scratch_env(source_path: Path) -> dict[str, str]:
+    """Environment for child processes: temporary files go to the work directory."""
     env = dict(os.environ)
+    env["TMPDIR"] = str(source_path.parent)
+    return env
+
+
+def run_vm(build_dir: Path, source_path: Path, flags: list[str], kernel: str = "") -> tuple[int, str, str]:
+    env = scratch_env(source_path)
     if kernel:
         env["PRIMEVM_KERNEL"] = kernel
     try:
@@ -115,6 +128,7 @@ def run_emitted(build_dir: Path, source_path: Path, kind: str, level: int) -> tu
             cwd=build_dir,
             capture_output=True,
             timeout=TIMEOUT_SECONDS * 4,
+            env=scratch_env(source_path),
         )
     except subprocess.TimeoutExpired:
         return "frontend"
@@ -123,7 +137,8 @@ def run_emitted(build_dir: Path, source_path: Path, kind: str, level: int) -> tu
         rejected = "optexe does not support" in message or "native backend" in message or "IR lowering error" in message
         return "unsupported" if rejected else "frontend"
     try:
-        completed = subprocess.run([str(binary)], cwd=build_dir, capture_output=True, timeout=TIMEOUT_SECONDS)
+        completed = subprocess.run([str(binary)], cwd=build_dir, capture_output=True, timeout=TIMEOUT_SECONDS,
+                                   env=scratch_env(source_path))
     except subprocess.TimeoutExpired:
         binary.unlink(missing_ok=True)
         return (-999, "", "timeout")
@@ -211,7 +226,10 @@ def main() -> int:
                         help="run the -O0 baseline on the step kernel (PRIMEVM_KERNEL=step) to compare it with the fast kernel")
     parser.add_argument("--jobs", type=int, default=4)
     parser.add_argument("--limit", type=int, default=0, help="check only the first N programs")
-    parser.add_argument("--keep-dir", type=Path, default=None, help="directory for programs that differ")
+    parser.add_argument("--work-dir", type=Path, default=None,
+                        help="parent of the scratch directory (default: <build-dir>/differential_opt_check)")
+    parser.add_argument("--keep-dir", type=Path, default=None,
+                        help="use this directory as the scratch directory and keep it afterwards")
     args = parser.parse_args()
 
     build_dir = args.build_dir.resolve()
@@ -225,8 +243,13 @@ def main() -> int:
     if args.limit > 0:
         sources = sources[: args.limit]
 
-    work_root = args.keep_dir if args.keep_dir else Path(tempfile.mkdtemp(prefix="primec_diff_"))
-    work_root.mkdir(parents=True, exist_ok=True)
+    if args.keep_dir:
+        work_root = args.keep_dir.resolve()
+        work_root.mkdir(parents=True, exist_ok=True)
+    else:
+        work_parent = (args.work_dir or build_dir / "differential_opt_check").resolve()
+        work_parent.mkdir(parents=True, exist_ok=True)
+        work_root = Path(tempfile.mkdtemp(prefix="run_", dir=work_parent))
     jobs = [(label, text, build_dir, work_root, levels, optexe_levels, native_levels, args.baseline_kernel) for label, text in sources]
 
     counts = {"ok": 0, "unstable": 0, "unsupported": 0, "DIFF": 0}
@@ -244,6 +267,12 @@ def main() -> int:
     if failures:
         print(f"differing programs are kept in {work_root}")
         return 1
+    if not args.keep_dir:
+        shutil.rmtree(work_root, ignore_errors=True)
+        try:
+            work_root.parent.rmdir()  # only when no other run left anything there
+        except OSError:
+            pass
     return 0
 
 

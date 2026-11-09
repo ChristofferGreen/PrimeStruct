@@ -315,9 +315,7 @@ inline void Arm64Emitter::emit(uint32_t word) {
 }
 
 inline void Arm64Emitter::patchWord(size_t index, uint32_t word) {
-  if (index < code_.size()) {
-    code_[index] = word;
-  }
+  code_.patch(index, word);
 }
 
 inline void Arm64Emitter::emitPushReg(uint8_t reg) {
@@ -710,13 +708,13 @@ inline uint64_t Arm64Emitter::localOffset(uint32_t index) {
 // pre-indexed store and a pop one post-indexed load.
 inline void Arm64Emitter::emitSpillReg(uint8_t reg) {
   counters_.spillCount += 1;
-  if (pendingSpillEnd_ != code_.size()) {
+  if (!code_.fusionWindowOpen()) {
     pendingSpills_.clear();
     pendingMoveTargets_.clear();
   }
-  pendingSpills_.push_back({code_.size(), reg});
+  pendingSpills_.push_back({code_.nextIndexForFusion(), reg});
   emit(0xF81F0F80u | (static_cast<uint32_t>(reg) & 0x1Fu)); // str reg, [x28, #-16]!
-  pendingSpillEnd_ = code_.size();
+  code_.openFusionWindow();
 }
 
 // A pop that follows its push with only pushes and such moves between them (no label, branch site
@@ -724,7 +722,7 @@ inline void Arm64Emitter::emitSpillReg(uint8_t reg) {
 // and the move appended, unless a move after the push writes the pushed register. Nothing has
 // taken the index of a word after the push, and the slot it wrote is dead once popped.
 inline void Arm64Emitter::emitReloadReg(uint8_t reg) {
-  if (pendingSpillEnd_ == code_.size() && !pendingSpills_.empty()) {
+  if (code_.fusionWindowOpen() && !pendingSpills_.empty()) {
     const PendingSpill spill = pendingSpills_.back();
     bool clobbered = false;
     // Every move of the run counts, also one before this push (conservative).
@@ -733,17 +731,17 @@ inline void Arm64Emitter::emitReloadReg(uint8_t reg) {
     }
     if (!clobbered) {
       pendingSpills_.pop_back();
-      code_.erase(code_.begin() + static_cast<std::ptrdiff_t>(spill.word));
+      code_.eraseFusedPush(spill.word);
       counters_.spillCount -= 1;
       if (reg != spill.reg) {
         emitMovReg(reg, spill.reg);
         pendingMoveTargets_.push_back(reg);
       }
-      pendingSpillEnd_ = code_.size();
+      code_.openFusionWindow();
       return;
     }
   }
-  pendingSpillEnd_ = SIZE_MAX;
+  code_.closeFusionWindow();
   counters_.reloadCount += 1;
   emit(0xF8410780u | (static_cast<uint32_t>(reg) & 0x1Fu)); // ldr reg, [x28], #16
 }
