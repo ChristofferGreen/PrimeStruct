@@ -548,24 +548,29 @@ The VM runs tasks on its one OS thread, so conformance tests stay reproducible (
 
 ### Heaps
 
-Today every allocator is one unsynchronized structure:
-
-- arm64 native (`src/native_emitter/NativeEmitterInternalsArm64Heap.h`): the chunk cursor and end and one
-  free-list head per size class sit in the writable data segment (`HeapStateBytes`).
-- `optexe` (`include/primec/runtime/VmHeapCore*.{h,inc}`, `VmTextHeap*`): one `VmHeapCore` in `Rt`, whose slot
-  and byte storage are `std::vector`s that move when they grow, with live and free runs in `std::map`/`std::set`;
-  a byte access reads a per-granule state table and writes nothing (TODO-5793). One `VmTextHeap` holds the `StringArena` stack and a
-  literal cache filled on first use.
+The arm64 native allocator is still one unsynchronized structure
+(`src/native_emitter/NativeEmitterInternalsArm64Heap.h`): the chunk cursor and end and one free-list head per
+size class sit in the writable data segment (`HeapStateBytes`). The VM has one `VmHeapCore` and one
+`VmTextHeap` and no locks.
 
 The design is per-thread arenas, with a lock only on a shared slow path:
 
-- **optexe:** one `VmHeapCore` arena per thread. The arena number goes in address bits 41 to 46, so arena 0
-  (the main thread, and the VM) keeps today's addresses and the VM/`optexe` parity tests do not change. Once a
-  second thread exists, storage never moves (a reservation, not a growing vector). A liveness check reads only a
-  state table, with relaxed atomic loads: slots have one already, and byte regions have one per 64 bytes
-  since TODO-5793, which removed the map search and the last-region cache, so no read writes anything. Each thread has its own
-  `VmTextHeap`, so a `StringArena` opened on one thread never catches another thread's strings, and its own
-  literal cache. At most 64 arenas; a 65th thread shares the last one behind its lock.
+- **optexe** (done, TODO-5794; `include/primec/runtime/VmHeapCore*.{h,inc}`, `VmTextHeap*`,
+  `VmHeapArenas*`): one arena per thread, a `VmHeapCore` and a `VmTextHeap`, handed out by `VmHeapArenas`
+  (`acquire`, `release`; an arena whose thread ended is reused, its live blocks stay). The arena number goes in
+  address bits 41 to 46, so arena 0 (the main thread, and the VM) keeps today's addresses and the VM/`optexe`
+  parity tests do not change. Until a second arena is asked for, arena 0 is exactly the single-threaded heap:
+  growing vectors and no lock. The first `acquire` pins it: every arena reserves its address space once (64 GiB
+  of bytes and 2^32 slots by default, mapped without commit), so storage never moves again, and an arena that
+  fills its reservation faults with `VM heap allocation overflow`. A liveness check reads only a state table,
+  with relaxed atomic loads (slots have one state each, byte regions one per 64 bytes since TODO-5793), so no
+  read writes anything and there is no per-thread region cache; an address of another arena is answered by
+  that arena's tables, found through a table of 64 arena pointers. Allocation, free and the few map lookups
+  (a byte in a granule two regions share, a span over 128 bytes, a block's size) take the arena's lock, which
+  only its owner and remote frees contend for. Each thread has its own `VmTextHeap`, so a `StringArena` opened
+  on one thread never catches another thread's strings, and its own literal cache. At most 64 arenas; a 65th
+  thread shares the last one behind its lock, and that arena's `StringArena` scopes are switched off (two
+  threads would release each other's strings).
 - **arm64 native:** each thread has its own allocator state (today's layout plus a remote-free head). The main
   thread keeps the data-segment state; a spawned thread takes one from a pool of states that is never unmapped,
   because a block can outlive its thread. Heap routines find the state through a pthread key
@@ -577,7 +582,9 @@ The design is per-thread arenas, with a lock only on a shared slow path:
 - **Freed by another thread:** a block freed by a thread other than its owner goes on the owner's remote-free
   list (native: a compare-and-swap push with LSE `casal`; `optexe`: a queue behind the arena's lock), which the
   owner drains when it next allocates (native: when a size class's list is empty). A double free found while
-  draining faults with the usual message. Large blocks (their own mapping) are unmapped by whoever frees them.
+  draining faults with the usual message (on `optexe` in the owner's thread, `invalid heap free address`; a
+  string block goes back through the owner's `VmTextHeap`, so its size class and arena records stay right).
+  A block reallocated by another thread is copied into the caller's arena and the old one freed remotely. Large blocks (their own mapping) are unmapped by whoever frees them.
 - **Native thread stacks:** a secondary pthread gets 512 KiB of stack on macOS by default, but an entry frame
   reserves a 1 MiB value stack, so the thread trampoline asks for 8 MiB (`pthread_attr_setstacksize`), like the
   main thread.

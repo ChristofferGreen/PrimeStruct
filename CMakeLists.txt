@@ -1337,6 +1337,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   add_executable(PrimeStruct_vm_byte_tests
     tests/unit/test_main.cpp
     tests/unit/runtime/test_vm_byte_regions.cpp
+    tests/unit/runtime/test_vm_heap_arenas.cpp
     tests/unit/runtime/test_vm_text_heap.cpp
     tests/unit/runtime/test_vm_tasks.cpp
   )
@@ -1350,6 +1351,15 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_vm_byte_regions
+                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+  # The per-thread heap arenas of generated programs (VmHeapArenas.h), driven by std::threads.
+  add_test(
+    NAME PrimeStruct_vm_heap_arenas
+    COMMAND $<TARGET_FILE:PrimeStruct_vm_byte_tests>
+            "--test-suite=primestruct.runtime.heap_arenas"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_vm_heap_arenas
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
 
   # The `u8` scalar on the VM: literals, wrapping arithmetic, conversions, fields, host calls.

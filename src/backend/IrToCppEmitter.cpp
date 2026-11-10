@@ -285,10 +285,12 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
   body << "#include <deque>\n";
   body << "#include <iterator>\n";
   body << "#include <map>\n";
+  body << "#include <mutex>\n";
   body << "#include <new>\n";
   body << "#include <set>\n";
   body << "#include <utility>\n";
   body << "#include <vector>\n";
+  body << "#include <sys/mman.h>\n";
   if (needsClampI32ConvertHelpers || needsClampI64ConvertHelpers || needsClampU64ConvertHelpers) {
     body << "#include <cmath>\n";
   }

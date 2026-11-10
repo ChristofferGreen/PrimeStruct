@@ -1,6 +1,6 @@
 // The string heap that backs `String`, written once and used twice (see VmTextHeap.h): compiled into the VM,
 // and pasted as text into the programs the optimized C++ backend generates. It must stay self-contained:
-// standard headers (algorithm, map, set, string, string_view, vector) and VmHeapCore only, no preprocessor lines,
+// standard headers (algorithm, map, mutex, set, string, string_view, vector) and VmHeapCore only, no preprocessor lines,
 // balanced parentheses.
 PRIMEC_VM_TEXT_HEAP_BODY(
 struct TextHeapStats {
@@ -26,19 +26,50 @@ public:
 
   // A zeroed block of at least `size` bytes (address 0 for zero). Fails with
   // "string memory limit exceeded" when the limit would be passed.
-  bool allocate(VmHeapCore &core, uint64_t size, uint64_t &address, std::string &error);
+  // The heap of a thread arena first frees the blocks other threads freed for it, so a block freed twice fails here.
+  bool allocate(VmHeapCore &core, uint64_t size, uint64_t &address, std::string &error) {
+    if (lock_ == nullptr) [[likely]] {
+      return allocateOwn(core, size, address, error);
+    }
+    return allocateShared(core, size, address, error);
+  }
   // Returns a block; address 0 is a no-op.
-  bool release(VmHeapCore &core, uint64_t address, std::string &error);
+  bool release(VmHeapCore &core, uint64_t address, std::string &error) {
+    if (lock_ == nullptr) [[likely]] {
+      return releaseOwn(core, address, error);
+    }
+    return releaseShared(core, address, error);
+  }
   // The size of the block at `address` (a block start).
-  bool blockSize(uint64_t address, uint64_t &size, std::string &error) const;
+  bool blockSize(uint64_t address, uint64_t &size, std::string &error) const {
+    if (lock_ == nullptr) [[likely]] {
+      return blockSizeOwn(address, size, error);
+    }
+    const VmHeapCore::Guard guard(lock_);
+    return blockSizeOwn(address, size, error);
+  }
 
   TextHeapStats stats() const;
 
   // String arenas: while one is open every block comes from a bump region of its own and `release` of such a block
   // does nothing; `endArena` returns all the regions of the innermost arena at once. Text that outlives its arena has
   // its addresses invalidated, so a later use faults. Arenas nest; the limit counts their regions.
-  void beginArena() { arenas_.emplace_back(); }
+  void beginArena() {
+    const VmHeapCore::Guard guard(lock_);
+    if (arenasOff_) {
+      ++arenasOffDepth_;
+    } else {
+      arenas_.emplace_back();
+    }
+  }
   bool endArena(VmHeapCore &core, std::string &error);
+
+  // Thread heaps (VmHeapArenas.h). With a lock set, every operation takes it: the heap of an arena whose blocks
+  // other threads ask the size of, or which several threads share. `disableArenas` is for a shared heap, where one
+  // thread's string arena would take the other threads' blocks: begin and end then only count, and every block is an
+  // ordinary one.
+  void setLock(std::mutex *lock) { lock_ = lock; }
+  void disableArenas() { arenasOff_ = true; }
 
   // The address of a module string literal's bytes (`__pstext_literal`): the literal is copied, NUL terminated,
   // into a byte region of its own the first time it is asked for, and the region lives as long as the heap.
@@ -70,6 +101,12 @@ private:
     Chunk *lastChunk = nullptr;
     uint64_t bytes = 0;                   // bytes of the small blocks handed out
   };
+  // The operations themselves, with the lock (if there is one) held.
+  bool allocateOwn(VmHeapCore &core, uint64_t size, uint64_t &address, std::string &error);
+  bool releaseOwn(VmHeapCore &core, uint64_t address, std::string &error);
+  bool blockSizeOwn(uint64_t address, uint64_t &size, std::string &error) const;
+  bool allocateShared(VmHeapCore &core, uint64_t size, uint64_t &address, std::string &error);
+  bool releaseShared(VmHeapCore &core, uint64_t address, std::string &error);
   bool allocateInArena(VmHeapCore &core, uint64_t size, uint64_t &address, std::string &error);
 
   uint64_t heldBytes() const { return chunkBytesHeld_ + largeBytes_; }
@@ -96,6 +133,9 @@ private:
   uint64_t limit_ = 0;
   // Region address of each literal asked for through `literal`, by string index (0 = none yet).
   std::vector<uint64_t> literalAddresses_;
+  std::mutex *lock_ = nullptr;
+  bool arenasOff_ = false;
+  uint64_t arenasOffDepth_ = 0;
 };
 
 inline uint64_t VmTextHeap::blockSizeFor(uint64_t size) {
@@ -146,7 +186,7 @@ inline VmTextHeap::Chunk *VmTextHeap::chunkWithFreeBlock(uint64_t blockBytes) {
   return &chunks_.find(*candidates->second.begin())->second;
 }
 
-inline bool VmTextHeap::allocate(VmHeapCore &core, uint64_t size, uint64_t &address, std::string &error) {
+inline bool VmTextHeap::allocateOwn(VmHeapCore &core, uint64_t size, uint64_t &address, std::string &error) {
   address = 0;
   if (size == 0) {
     return true;
@@ -278,6 +318,11 @@ inline bool VmTextHeap::allocateInArena(VmHeapCore &core, uint64_t size, uint64_
 }
 
 inline bool VmTextHeap::endArena(VmHeapCore &core, std::string &error) {
+  const VmHeapCore::Guard guard(lock_);
+  if (arenasOff_ && arenasOffDepth_ != 0) {
+    --arenasOffDepth_;
+    return true;
+  }
   if (arenas_.empty()) {
     error = "string arena ended without one being open";
     return false;
@@ -308,7 +353,7 @@ inline bool VmTextHeap::endArena(VmHeapCore &core, std::string &error) {
   return true;
 }
 
-inline bool VmTextHeap::release(VmHeapCore &core, uint64_t address, std::string &error) {
+inline bool VmTextHeap::releaseOwn(VmHeapCore &core, uint64_t address, std::string &error) {
   if (address == 0) {
     return true;
   }
@@ -382,7 +427,7 @@ inline bool VmTextHeap::release(VmHeapCore &core, uint64_t address, std::string 
   return true;
 }
 
-inline bool VmTextHeap::blockSize(uint64_t address, uint64_t &size, std::string &error) const {
+inline bool VmTextHeap::blockSizeOwn(uint64_t address, uint64_t &size, std::string &error) const {
   size = 0;
   if (address == 0) {
     return true;
@@ -411,6 +456,7 @@ inline bool VmTextHeap::literal(VmHeapCore &core, uint64_t index, uint64_t table
   if (size == 0) {
     return true;
   }
+  const VmHeapCore::Guard guard(lock_);
   if (literalAddresses_.size() < tableSize) {
     literalAddresses_.resize(static_cast<size_t>(tableSize), 0);
   }
@@ -428,6 +474,7 @@ inline bool VmTextHeap::literal(VmHeapCore &core, uint64_t index, uint64_t table
 
 inline TextHeapStats VmTextHeap::stats() const {
   TextHeapStats out;
+  const VmHeapCore::Guard guard(lock_);
   out.chunks = chunks_.size();
   out.bytesInUse = bytesInUse_;
   for (const auto &entry : chunks_) {
@@ -443,6 +490,57 @@ inline TextHeapStats VmTextHeap::stats() const {
   return out;
 }
 
+// Frees the blocks other threads freed for this heap's thread (VmHeapCore::releaseRemote). The owner calls it
+// before it allocates when `core.hasRemoteFrees()`; a block freed twice fails here with the usual message.
+inline bool drainRemoteFrees(VmTextHeap &text, VmHeapCore &core, std::string &error) {
+  std::vector<std::pair<uint64_t, bool>> pending;
+  core.takeRemoteFrees(pending);
+  for (const std::pair<uint64_t, bool> &entry : pending) {
+    if (!(entry.second ? text.release(core, entry.first, error) : core.release(entry.first, error))) {
+      return false;
+    }
+  }
+  return true;
+}
+
+inline bool VmTextHeap::allocateShared(VmHeapCore &core, uint64_t size, uint64_t &address, std::string &error) {
+  address = 0;
+  if (core.hasRemoteFrees() && !drainRemoteFrees(*this, core, error)) {
+    return false;
+  }
+  const VmHeapCore::Guard guard(lock_);
+  return allocateOwn(core, size, address, error);
+}
+
+inline bool VmTextHeap::releaseShared(VmHeapCore &core, uint64_t address, std::string &error) {
+  if (address != 0 && VmHeapCore::isByteAddress(address) && core.isRemote(address)) {
+    return core.releaseRemote(address, true, error);  // its owner frees it before its next allocation
+  }
+  const VmHeapCore::Guard guard(lock_);
+  return releaseOwn(core, address, error);
+}
+
+// The size of a text block of another thread: its own string heap answers.
+[[gnu::noinline]] inline bool textBlockSizeRemote(const VmHeapCore &core, uint64_t address, uint64_t &size,
+                                                  std::string &error) {
+  const VmHeapCore *owner = core.arenaOf(address);
+  if (owner == nullptr) {
+    size = 0;
+    error = "invalid string heap address: " + std::to_string(address);
+    return false;
+  }
+  return static_cast<const VmTextHeap *>(owner->companion())->blockSize(address, size, error);
+}
+
+// The size of a text block, which may be another thread's.
+inline bool textBlockSize(const VmTextHeap &heap, const VmHeapCore &core, uint64_t address, uint64_t &size,
+                          std::string &error) {
+  if (core.threaded() && core.isRemote(address)) [[unlikely]] {
+    return textBlockSizeRemote(core, address, size, error);
+  }
+  return heap.blockSize(address, size, error);
+}
+
 inline bool callTextHostFunction(VmTextHeap &heap,
                           VmHeapCore &core,
                           std::string_view name,
@@ -456,6 +554,9 @@ inline bool callTextHostFunction(VmTextHeap &heap,
     return heap.allocate(core, args[0], result, error);
   }
   if (name == "__pstext_try_alloc") {
+    if (core.threaded() && core.hasRemoteFrees() && !drainRemoteFrees(heap, core, error)) {
+      return false;
+    }
     std::string ignored;
     if (!heap.allocate(core, args[0], result, ignored)) {
       result = 0;
@@ -466,12 +567,12 @@ inline bool callTextHostFunction(VmTextHeap &heap,
     return heap.release(core, args[0], error);
   }
   if (name == "__pstext_capacity") {
-    return heap.blockSize(args[0], result, error);
+    return textBlockSize(heap, core, args[0], result, error);
   }
   if (name == "__pstext_length") {
     // The text length of a block: bytes before the NUL, within the block.
     uint64_t size = 0;
-    if (!heap.blockSize(args[0], size, error)) {
+    if (!textBlockSize(heap, core, args[0], size, error)) {
       return false;
     }
     const uint8_t *first = args[0] == 0 ? nullptr : core.byteAt(args[0]);
@@ -483,7 +584,7 @@ inline bool callTextHostFunction(VmTextHeap &heap,
   if (name == "__pstext_usable") {
     // The bytes of text a block holds: its size less the NUL byte (0 for the null block).
     uint64_t size = 0;
-    if (!heap.blockSize(args[0], size, error)) {
+    if (!textBlockSize(heap, core, args[0], size, error)) {
       return false;
     }
     result = size == 0 ? 0 : size - 1;

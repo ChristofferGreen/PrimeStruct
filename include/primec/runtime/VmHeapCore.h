@@ -5,11 +5,14 @@
 #include <cstdlib>
 #include <iterator>
 #include <map>
+#include <mutex>
 #include <new>
 #include <set>
 #include <string>
 #include <utility>
 #include <vector>
+
+#include <sys/mman.h>
 
 // The VM heap (docs/spec/vm-design.md): heap addresses, allocation with reuse of freed memory,
 // and the checks every runtime that mirrors the VM's heap makes. The class body lives in

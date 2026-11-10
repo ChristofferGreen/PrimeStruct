@@ -4,7 +4,9 @@
 // IrToOptCppEmitter. It mirrors the VM's observable behavior: the same fault
 // messages (reported as `VM error: ...` with exit code 3), the same heap
 // address encoding, the same file-handle packing and I/O error codes. The heap is
-// the VM's own allocator (VmHeapCore) and string heap (VmTextHeap), pasted in between the two halves below.
+// the VM's own allocator (VmHeapCore) and string heap (VmTextHeap), pasted in between the two halves below, with the
+// per-thread arenas (VmHeapArenas) after them: a program runs on arena 0, which is the VM's heap exactly until a
+// second thread gets an arena.
 
 namespace primec {
 
@@ -21,8 +23,10 @@ inline constexpr const char *OptCppRuntimeHeaders = R"CPP(#include <algorithm>
 #include <string_view>
 #include <iterator>
 #include <map>
+#include <mutex>
 #include <new>
 #include <set>
+#include <sys/mman.h>
 #include <unistd.h>
 #include <utility>
 #include <vector>
@@ -49,8 +53,10 @@ struct Rt {
   int argc;
   char **argv;
   unsigned depth;
-  VmHeapCore heap;
-  VmTextHeap text;
+  // The heap and string heap of this thread's arena, and all the arenas of the program.
+  VmHeapCore &heap;
+  VmTextHeap &text;
+  VmHeapArenas &arenas;
   // The base the next call's locals get, and the frames whose locals have addresses, innermost last.
   uint64_t localsTop = 0;
   unsigned frameCount = 0;
@@ -125,7 +131,18 @@ inline const char *ps_host_text(const PsString *table, size_t count, uint64_t in
 
 // ---- heap and indirect addressing ----------------------------------------
 
+// Blocks of this thread's arena that other threads freed are freed before the next allocation.
+inline void ps_heap_drain(Rt &rt) {
+  if (rt.heap.threaded() && rt.heap.hasRemoteFrees()) [[unlikely]] {
+    std::string error;
+    if (!drainRemoteFrees(rt.text, rt.heap, error)) {
+      ps_fault(error);
+    }
+  }
+}
+
 inline uint64_t ps_heap_alloc_bytes(Rt &rt, uint64_t count) {
+  ps_heap_drain(rt);
   uint64_t address = 0;
   std::string error;
   if (!rt.heap.allocateBytes(count, address, error)) {
@@ -135,6 +152,7 @@ inline uint64_t ps_heap_alloc_bytes(Rt &rt, uint64_t count) {
 }
 
 inline uint64_t ps_heap_alloc(Rt &rt, uint64_t count) {
+  ps_heap_drain(rt);
   uint64_t address = 0;
   std::string error;
   if (!rt.heap.allocate(count, address, error)) {
@@ -151,6 +169,7 @@ inline void ps_heap_free(Rt &rt, uint64_t address) {
 }
 
 inline uint64_t ps_heap_realloc(Rt &rt, uint64_t address, uint64_t count) {
+  ps_heap_drain(rt);
   uint64_t fresh = 0;
   std::string error;
   if (!rt.heap.reallocate(address, count, fresh, error)) {
@@ -159,8 +178,9 @@ inline uint64_t ps_heap_realloc(Rt &rt, uint64_t address, uint64_t count) {
   return fresh;
 }
 
-// The slot of local `index` (in the VM's numbering of all live locals) in an enclosing frame.
-[[gnu::noinline]] uint64_t *ps_resolve_outer(Rt &rt, uint64_t index, uint64_t address) {
+// The slot of local `index` (in the VM's numbering of all live locals) in an enclosing frame, or null.
+// It only reads, and says so: see ps_resolve.
+[[gnu::noinline, gnu::pure]] uint64_t *ps_resolve_outer(const Rt &rt, uint64_t index) {
   for (unsigned i = rt.frameCount; i-- > 0;) {
     const PsFrameRef &outer = rt.frames[i];
     if (index >= outer.base) {
@@ -170,11 +190,15 @@ inline uint64_t ps_heap_realloc(Rt &rt, uint64_t address, uint64_t count) {
       break;
     }
   }
-  ps_fault("invalid indirect address in IR: " + std::to_string(address));
+  return nullptr;
 }
 
 // Resolves a byte address to the slot it names: a tagged heap address, or a
 // local of this frame (`base` is its first local) or of an enclosing one.
+// The calls on its rare paths (a slot of another arena, a local of an enclosing frame) are of functions marked pure,
+// so a loop need not read rt.heap again after one. Keep its five arguments: with a sixth, or with a local for the
+// heap in every function, the compiler stopped inlining small functions and strings/append_chunks ran 19% more
+// instructions.
 inline uint64_t *ps_resolve(Rt &rt, uint64_t *frame, uint64_t base, size_t frameCount, uint64_t address) {
   if (VmHeapCore::isByteAddress(address)) {
     ps_fault("slot access to a byte region in IR: " + std::to_string(address));
@@ -193,7 +217,11 @@ inline uint64_t *ps_resolve(Rt &rt, uint64_t *frame, uint64_t base, size_t frame
   if (index - base < frameCount) {
     return &frame[static_cast<size_t>(index - base)];
   }
-  return ps_resolve_outer(rt, index, address);
+  uint64_t *slot = ps_resolve_outer(rt, index);
+  if (slot == nullptr) {
+    ps_fault("invalid indirect address in IR: " + std::to_string(address));
+  }
+  return slot;
 }
 
 [[noreturn]] void ps_byte_fault(uint64_t address) {
@@ -206,8 +234,14 @@ inline uint64_t *ps_resolve(Rt &rt, uint64_t *frame, uint64_t base, size_t frame
 // A byte address names a byte of a byte region; a slot address (a u8 local or slot field) names its
 // slot's low byte.
 // byteAt checks the tag bits itself, so a byte of a live region needs no other test.
+// The check stays out of line: inlined into the byte loops of a large function, strings/append_chunks took
+// 15% more CPU time (as TODO-5840 found too).
+[[gnu::noinline]] uint8_t *ps_byte_at(Rt &rt, uint64_t address) {
+  return rt.heap.byteAt(address);
+}
+
 inline uint64_t ps_load_u8(Rt &rt, uint64_t *frame, uint64_t base, size_t frameCount, uint64_t address) {
-  if (const uint8_t *byte = rt.heap.byteAt(address)) {
+  if (const uint8_t *byte = ps_byte_at(rt, address)) {
     return *byte;
   }
   if (!VmHeapCore::isByteAddress(address)) {
@@ -219,7 +253,7 @@ inline uint64_t ps_load_u8(Rt &rt, uint64_t *frame, uint64_t base, size_t frameC
 inline uint64_t ps_store_u8(Rt &rt, uint64_t *frame, uint64_t base, size_t frameCount, uint64_t address,
                            uint64_t raw) {
   const uint8_t value = static_cast<uint8_t>(raw & UINT64_C(0xff));
-  if (uint8_t *byte = rt.heap.byteAt(address)) {
+  if (uint8_t *byte = ps_byte_at(rt, address)) {
     *byte = value;
     return value;
   }

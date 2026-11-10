@@ -6,6 +6,7 @@
 
 #include "IrToCppHostImports.h"
 #include "IrToOptCppRuntime.h"
+#include "primec/runtime/VmHeapArenas.h"
 #include "primec/runtime/VmHeapCore.h"
 #include "primec/runtime/VmTextHeap.h"
 
@@ -806,7 +807,10 @@ bool IrToOptCppEmitter::emitSource(const IrModule &module,
   // The `[host]` functions are plain C functions supplied at link time, so they are
   // declared before the runtime opens its unnamed namespace.
   source << OptCppRuntimeHeaders << hostImportDeclarations(module.hostImports) << "namespace {\n"
-         << VmHeapCoreSource << "\n" << VmTextHeapSource << "\n" << OptCppRuntimePreamble;
+         << VmHeapCoreSource << "\n"
+         << VmTextHeapSource << "\n"
+         << VmHeapArenasSource << "\n"
+         << OptCppRuntimePreamble;
   source << "namespace {\n\n";
   source << "const PsString ps_strings[] = {";
   for (const std::string &text : module.stringTable) {
@@ -829,7 +833,9 @@ bool IrToOptCppEmitter::emitSource(const IrModule &module,
   }
   source << "} // namespace\n\n";
   source << "int main(int argc, char **argv) {\n";
-  source << "  Rt rt{argc, argv, 0};\n";
+  // The arenas live until the process ends: threads may still use their heaps while main returns.
+  source << "  VmHeapArenas &arenas = *new VmHeapArenas();\n";
+  source << "  Rt rt{argc, argv, 0, arenas.main().core, arenas.main().text, arenas};\n";
   source << "  return static_cast<int>(static_cast<int32_t>("
          << functionSymbol(static_cast<size_t>(module.entryIndex)) << "(rt)));\n";
   source << "}\n";
