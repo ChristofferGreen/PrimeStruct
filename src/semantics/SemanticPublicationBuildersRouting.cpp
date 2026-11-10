@@ -70,6 +70,16 @@ bool classifyCollectionSpecialization(std::string typeText,
       typeText = normalizeBindingTypeName(args.front());
       continue;
     }
+    // Storage of a collection that is not constructed yet (`Pointer<uninitialized<vector<T>>>`
+    // in the stdlib buffer helpers) is classified like the collection, as the lowerer expects.
+    if (base == "uninitialized") {
+      std::vector<std::string> args;
+      if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+        return false;
+      }
+      typeText = normalizeBindingTypeName(args.front());
+      continue;
+    }
     if (base == "vector") {
       std::vector<std::string> args;
       if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {

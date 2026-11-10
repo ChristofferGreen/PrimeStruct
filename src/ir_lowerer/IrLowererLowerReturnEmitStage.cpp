@@ -346,6 +346,53 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
         error);
   };
 
+  // The struct (or nested builtin vector) path of a vector element type that `pop` or `clear`
+  // destroys when it drops an element; empty when the element owns nothing.
+  auto resolveDroppedVectorElementStructPath = [&](const std::string &elementText,
+                                                   const std::string &namespacePrefix,
+                                                   std::string &structPathOut) {
+    structPathOut.clear();
+    std::string elementPath;
+    if (!ir_lowerer::resolveBuiltinVectorElementStructPath(
+            elementText,
+            namespacePrefix,
+            [&](const std::string &typeName, const std::string &prefix, std::string &pathOut) {
+              return resolveStructTypeName(typeName, prefix, pathOut);
+            },
+            elementPath)) {
+      return false;
+    }
+    if (!elementPath.empty() && ir_lowerer::structNeedsDestroyHelpers(
+                                    elementPath,
+                                    [&](const std::string &path) {
+                                      return ir_lowerer::findStackDestroyHelper(defMap, path);
+                                    },
+                                    [&](const std::string &path, StructSlotLayoutInfo &layoutOut) {
+                                      return resolveStructSlotLayout(path, layoutOut);
+                                    })) {
+      structPathOut = elementPath;
+    }
+    return true;
+  };
+
+  // Destroys the value of `structPath` at the address in `valuePtrLocal`.
+  auto emitStructDestroyFromPtr = [&](int32_t valuePtrLocal,
+                                      const std::string &structPath,
+                                      const LocalMap &locals) {
+    return ir_lowerer::emitStructDestroyHelpersFromPtr(
+        valuePtrLocal,
+        structPath,
+        [&](const std::string &path) { return ir_lowerer::findStackDestroyHelper(defMap, path); },
+        [&](const std::string &path, StructSlotLayoutInfo &layoutOut) {
+          return resolveStructSlotLayout(path, layoutOut);
+        },
+        [&]() { return allocTempLocal(); },
+        function.instructions,
+        locals,
+        emitInlineDefinitionCall,
+        error);
+  };
+
   // Whether a struct value copied out of `sourceExpr` is a temporary the copy takes over (and
   // disarms) rather than a place that keeps owning it (an element access, unless a user `at`).
   auto isTemporaryStructCopySource = [&](const Expr &sourceExpr, const LocalMap &locals) {
@@ -460,6 +507,8 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
                 [&](const Expr &valueExpr, const LocalMap &valueLocals) {
                   return isTemporaryStructCopySource(valueExpr, valueLocals);
                 },
+            .resolveDroppedVectorElementStructPath = resolveDroppedVectorElementStructPath,
+            .emitStructDestroyFromPtr = emitStructDestroyFromPtr,
             .instructions = &function.instructions,
         },
         stmt,

@@ -2211,6 +2211,7 @@ are left unarchived.
 | TODO-5831 | An inner vector of a builtin `vector<vector<T>>` mutates in place | [2026-11.md](todo_archive/2026-11.md) | 2026-11-10 |
 | TODO-5832 | A binding pushed into a builtin vector is moved-from afterwards | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5833 | A builtin vector pushes its own elements, and its views keep it from changing | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5834 | `pop`, `clear` and direct `push(v, x)` work on builtin vectors of structs and vectors | [2026-11.md](todo_archive/2026-11.md) | 2026-11-10 |
 
 <!-- INDEX-END -->
 

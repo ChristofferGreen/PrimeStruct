@@ -146,7 +146,8 @@
   `assign` of an owning value destroys the old value and copies the new one. A `copy` or `move` parameter is
   destroyed by the callee when its body ends (the caller does not destroy a binding it passed to a `move` parameter),
   `init(slot, x)` hands `x` to the storage, and dropping a container slot (`pop`, `clear`, `Destroy` of the container)
-  destroys the element. Error propagation (`?`) needs no extra cleanup: a handler does not flow into nested blocks, so
+  destroys the element, also on a builtin `vector<T>` of structs or vectors held in a local, a field
+  (`grid.rows.pop()`) or an outer vector (`a[i].clear()`), and in the direct forms `pop(v)` and `clear(v)`. Error propagation (`?`) needs no extra cleanup: a handler does not flow into nested blocks, so
   `?` only runs at the top level of the body that declares `on_error`, and leaving through it destroys that body's
   owning locals like a `return`.
 

@@ -823,4 +823,57 @@ main() {
   CHECK(error.find("borrowed binding: rows (root: rows, sink: view)") != std::string::npos);
 }
 
+TEST_CASE("vector fields pop and clear through a mutable root") {
+  std::string error;
+  CHECK(validateWithPush(R"(
+[struct]
+Grid {
+  [vector<vector<i32>> mut] rows
+  [vector<Named> mut] names
+
+  [effects(heap_alloc)]
+  trim() {
+    this.rows.pop()
+    this.names.clear()
+  }
+}
+
+[effects(heap_alloc) return<int>]
+main() {
+  [Grid mut] grid{Grid{[rows] vector<vector<i32>>(), [names] vector<Named>()}}
+  grid.rows.push(vector<i32>(1i32))
+  grid.rows.pop()
+  grid.names.push(Named{[code] 1i32})
+  grid.names.clear()
+  pop(grid.rows)
+  grid.trim()
+  [vector<vector<i32>> mut] rows{vector<vector<i32>>()}
+  [vector<i32> mut] row{vector<i32>(2i32)}
+  push(rows, row)
+  clear(rows)
+  return(grid.rows.count() + rows.count())
+}
+)",
+                         error));
+  CHECK(error.empty());
+
+  error.clear();
+  CHECK_FALSE(validateWithPush(R"(
+[struct]
+Grid {
+  [vector<Named> mut] names
+}
+
+[effects(heap_alloc) return<int>]
+main() {
+  [Grid] grid{Grid{[names] vector<Named>()}}
+  grid.names.clear()
+  return(0i32)
+}
+)",
+                               error));
+  CHECK(error.find("clear changes grid, which is not mutable: declare it [Grid mut] grid") !=
+        std::string::npos);
+}
+
 TEST_SUITE_END();

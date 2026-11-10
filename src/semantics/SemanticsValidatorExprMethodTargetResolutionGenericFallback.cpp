@@ -349,6 +349,11 @@ bool SemanticsValidator::resolveMethodTargetGenericFallback(
       resolvedOut = legacyVectorMethodTarget;
       return true;
     }
+    // A mutator on a builtin vector field (`grid.rows.pop()`) takes the canonical vector helper,
+    // as a named vector receiver does, instead of a path under the receiver's own type.
+    if (isPublishedVectorMutatorHelperName(normalizedMethodName)) {
+      return setCollectionMethodTarget(canonicalVectorHelperTarget(normalizedMethodName));
+    }
   }
   const bool isConcreteExperimentalSoaReceiver =
       isExperimentalSoaVectorSpecializedTypePath(resolvedType);

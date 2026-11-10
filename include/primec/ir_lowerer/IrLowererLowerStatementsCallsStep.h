@@ -51,6 +51,13 @@ struct LowerStatementsCallsStepInput {
   // Whether a struct-valued payload is a temporary the vector takes over (a constructor or a call
   // result) rather than a place that keeps owning it.
   std::function<bool(const Expr &, const LocalMap &)> isTemporaryStructSource;
+  // The struct path (or nested builtin vector path) of a vector element type that needs
+  // destroying when `pop` or `clear` drops it; empty when the element owns nothing. Returns false
+  // when the element type cannot be resolved.
+  std::function<bool(const std::string &, const std::string &, std::string &)>
+      resolveDroppedVectorElementStructPath;
+  // Destroys the value of `structPath` at the address in the given local.
+  std::function<bool(int32_t, const std::string &, const LocalMap &)> emitStructDestroyFromPtr;
 
   std::vector<IrInstruction> *instructions = nullptr;
 };

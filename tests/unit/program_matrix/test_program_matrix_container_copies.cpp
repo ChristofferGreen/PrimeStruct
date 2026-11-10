@@ -816,4 +816,180 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+// `pop`, `clear` and the direct `push(v, x)` / `pop(v)` / `clear(v)` forms on builtin vectors of
+// structs and of vectors, as locals, struct fields (also through `this`) and inner vectors, destroy
+// the elements they drop: Strings and inner buffers are freed (TODO-5834). Shared by the two
+// cases below.
+const char *const DroppingVectorMutationSource = R"(
+import /std/collections/*
+import /std/text/*
+
+[struct]
+Named {
+  [i32] code{0i32}
+  [String] name{String{}}
+}
+
+[struct]
+Grid {
+  [vector<vector<i32>> mut] rows
+  [vector<Named> mut] names
+
+  [effects(heap_alloc)]
+  trim() {
+    this.rows.pop()
+    this.names.pop()
+  }
+}
+
+[effects(heap_alloc) return<int>]
+dropping_round() {
+  [vector<Named> mut] v{vector<Named>()}
+  v.push(Named{[code] 1i32, [name] stringFrom("one heap string here")})
+  v.push(Named{[code] 2i32, [name] stringFrom("two heap string here")})
+  v.push(Named{[code] 3i32, [name] stringFrom("three heap string here")})
+  v.pop()
+  pop(v)
+  [i32] a{v.count()}
+  v.clear()
+  v.push(Named{[code] 4i32, [name] stringFrom("four heap string here")})
+  [vector<vector<i32>> mut] rows{vector<vector<i32>>()}
+  [vector<i32> mut] row{vector<i32>(1i32, 2i32)}
+  push(rows, row)
+  push(rows, vector<i32>(4i32))
+  rows.push(vector<i32>(5i32, 6i32))
+  rows.pop()
+  [i32] b{rows.count()}
+  clear(rows)
+  rows.push(vector<i32>(7i32))
+  [Grid mut] g{Grid{[rows] vector<vector<i32>>(), [names] vector<Named>()}}
+  g.rows.push(vector<i32>(1i32))
+  g.rows.push(vector<i32>(2i32, 3i32))
+  g.names.push(Named{[code] 5i32, [name] stringFrom("five heap string here")})
+  g.names.push(Named{[code] 6i32, [name] stringFrom("six heap string here")})
+  g.trim()
+  g.rows.push(vector<i32>(8i32))
+  g.rows.pop()
+  g.names.clear()
+  g.names.push(Named{[code] 7i32, [name] stringFrom("seven heap string here")})
+  [vector<vector<Named>> mut] table{vector<vector<Named>>()}
+  table.push(vector<Named>())
+  table[0i32].push(Named{[code] 8i32, [name] stringFrom("eight heap string here")})
+  table[0i32].push(Named{[code] 9i32, [name] stringFrom("nine heap string here")})
+  table[0i32].pop()
+  table.push(vector<Named>())
+  table[1i32].push(Named{[code] 10i32, [name] stringFrom("ten heap string here")})
+  table[1i32].clear()
+  table.pop()
+  return(a * 1000000i32 + b * 100000i32 + v[0i32].code * 10000i32 + rows[0i32][0i32] * 1000i32 +
+         g.rows.count() * 100i32 + g.names[0i32].code * 10i32 + table[0i32][0i32].code - 8i32)
+}
+)";
+
+TEST_CASE("pop and clear drop elements of vectors of structs and vectors") {
+  program_matrix::ProgramCase program;
+  program.name = "dropping_vector_mutations";
+  program.source = std::string(DroppingVectorMutationSource) + R"(
+[return<int> effects(heap_alloc)]
+main() {
+  [i32 mut] total{0i32}
+  repeat(50i32) {
+    total = dropping_round() - 1247170i32
+  }
+  return(total + 9i32)
+}
+)";
+  program.exitCode = 9;
+  program.onlyConfigs = {"vm-step-O0", "vm-O0", "vm-O2", "optexe-O2"};
+  if (program_matrix::nativeSupported()) {
+    program.onlyConfigs.push_back("native-O0");
+    program.onlyConfigs.push_back("native-O2");
+  }
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("pop and clear free every dropped element") {
+  program_matrix::ProgramCase program;
+  program.name = "dropping_vector_mutations_heap_flat";
+  program.source = std::string(DroppingVectorMutationSource) + R"(
+[return<int> effects(heap_alloc)]
+main() {
+  [i32] first{dropping_round()}
+  [i32] before{heapLiveBlocks()}
+  [u64] textBefore{stringHeapBytesInUse()}
+  repeat(100i32) {
+    dropping_round()
+  }
+  [i32] leakedBlocks{heapLiveBlocks() - before}
+  [i32] leakedText{convert<i32>(stringHeapBytesInUse() - textBefore)}
+  return(first - 1247170i32 + 29i32 + leakedBlocks * 1000i32 + leakedText * 1000i32)
+}
+)";
+  program.exitCode = 29;
+  program.onlyConfigs = {"vm-step-O0", "vm-O0", "vm-O2", "optexe-O2"};
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("pop and clear run the Destroy helper of each dropped element once") {
+  program_matrix::ProgramCase program;
+  program.name = "dropping_vector_mutations_destroy";
+  program.source = R"(
+import /std/collections/*
+
+[struct]
+Noisy {
+  [i32] id{0i32}
+
+  [effects(io_out)]
+  Destroy() {
+    print_line(this.id)
+  }
+}
+
+[struct]
+Holder {
+  [vector<Noisy> mut] items
+}
+
+[effects(heap_alloc io_out)]
+drop_last([vector<Noisy> mut] values) {
+  values.pop()
+}
+
+[effects(heap_alloc io_out) return<int>]
+main() {
+  [vector<Noisy> mut] v{vector<Noisy>()}
+  v.push(Noisy{[id] 1i32})
+  v.push(Noisy{[id] 2i32})
+  v.push(Noisy{[id] 3i32})
+  v.pop()
+  print_line(100i32)
+  v.clear()
+  print_line(101i32)
+  v.push(Noisy{[id] 4i32})
+  v.push(Noisy{[id] 10i32})
+  drop_last(v)
+  [Holder mut] h{Holder{[items] vector<Noisy>()}}
+  h.items.push(Noisy{[id] 5i32})
+  h.items.push(Noisy{[id] 6i32})
+  pop(h.items)
+  print_line(102i32)
+  [vector<vector<Noisy>> mut] t{vector<vector<Noisy>>()}
+  t.push(vector<Noisy>())
+  t[0i32].push(Noisy{[id] 7i32})
+  t[0i32].push(Noisy{[id] 8i32})
+  t[0i32].pop()
+  print_line(103i32)
+  t.push(vector<Noisy>())
+  t[1i32].push(Noisy{[id] 9i32})
+  t.pop()
+  print_line(104i32)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "3\n100\n1\n2\n101\n10\n6\n102\n8\n103\n9\n104\n7\n5\n4\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

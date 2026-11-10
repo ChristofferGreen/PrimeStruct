@@ -1,5 +1,6 @@
 #include "primec/ir_lowerer/IrLowererLowerStatementsCallsStep.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <limits>
 #include <string_view>
@@ -268,8 +269,25 @@ VectorMutationStatementEmitResult tryEmitCanonicalVectorMutationStatement(
       errorOut = helperName + " requires vector binding";
       return VectorMutationStatementEmitResult::Error;
     }
-    if (!isSemanticMatch || targetInfo.elemSlotCount > 1) {
+    if (!isSemanticMatch) {
       return VectorMutationStatementEmitResult::NotMatched;
+    }
+    // A vector of structs or of vectors destroys the elements it drops (their Destroy helpers
+    // run, their Strings and inner buffers are freed; docs/spec/value-lifecycle.md, Ownership).
+    const int32_t elementSlots = std::max<int32_t>(1, targetInfo.elemSlotCount);
+    std::string droppedElementStructPath;
+    if (elementSlots > 1) {
+      if (!input.resolveDroppedVectorElementStructPath || !input.emitStructDestroyFromPtr) {
+        return VectorMutationStatementEmitResult::NotMatched;
+      }
+      const std::string &elementText = !targetInfo.elementTypeText.empty()
+                                           ? targetInfo.elementTypeText
+                                           : targetInfo.structTypeName;
+      if (elementText.empty() || !input.resolveDroppedVectorElementStructPath(
+                                     elementText, stmt.namespacePrefix, droppedElementStructPath)) {
+        errorOut = "native backend cannot resolve vector element type for " + helperName;
+        return VectorMutationStatementEmitResult::Error;
+      }
     }
 
     const int32_t valuesPtrLocal = input.allocTempLocal();
@@ -277,6 +295,49 @@ VectorMutationStatementEmitResult tryEmitCanonicalVectorMutationStatement(
       return VectorMutationStatementEmitResult::Error;
     }
     instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(valuesPtrLocal)});
+    // Points `elementPtrLocal` at the element `indexLocal` of the vector's buffer.
+    auto emitElementPointer = [&](int32_t indexLocal, int32_t elementPtrLocal) {
+      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valuesPtrLocal)});
+      instructions.push_back({IrOpcode::PushI64, 3 * IrSlotBytes});
+      instructions.push_back({IrOpcode::AddI64, 0});
+      instructions.push_back({IrOpcode::LoadIndirect, 0});
+      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+      instructions.push_back(
+          {IrOpcode::PushI32, static_cast<uint64_t>(elementSlots * IrSlotBytesI32)});
+      instructions.push_back({IrOpcode::MulI32, 0});
+      instructions.push_back({IrOpcode::AddI64, 0});
+      instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(elementPtrLocal)});
+    };
+
+    if (helperName == "clear" && !droppedElementStructPath.empty()) {
+      // for (index = 0; index < count; ++index) destroy(data[index]); then count = 0
+      const int32_t countLocal = input.allocTempLocal();
+      const int32_t indexLocal = input.allocTempLocal();
+      const int32_t elementPtrLocal = input.allocTempLocal();
+      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valuesPtrLocal)});
+      instructions.push_back({IrOpcode::PushI64, IrSlotBytes});
+      instructions.push_back({IrOpcode::AddI64, 0});
+      instructions.push_back({IrOpcode::LoadIndirect, 0});
+      instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(countLocal)});
+      instructions.push_back({IrOpcode::PushI32, 0});
+      instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal)});
+      const size_t loopStart = instructions.size();
+      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+      instructions.push_back({IrOpcode::CmpLtI32, 0});
+      const size_t loopExit = instructions.size();
+      instructions.push_back({IrOpcode::JumpIfZero, 0});
+      emitElementPointer(indexLocal, elementPtrLocal);
+      if (!input.emitStructDestroyFromPtr(elementPtrLocal, droppedElementStructPath, localsIn)) {
+        return VectorMutationStatementEmitResult::Error;
+      }
+      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
+      instructions.push_back({IrOpcode::PushI32, 1});
+      instructions.push_back({IrOpcode::AddI32, 0});
+      instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal)});
+      instructions.push_back({IrOpcode::Jump, static_cast<uint64_t>(loopStart)});
+      instructions[loopExit].imm = static_cast<uint64_t>(instructions.size());
+    }
 
     if (helperName == "clear") {
       instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valuesPtrLocal)});
@@ -315,6 +376,19 @@ VectorMutationStatementEmitResult tryEmitCanonicalVectorMutationStatement(
     instructions.push_back({IrOpcode::SubI32, 0});
     instructions.push_back({IrOpcode::StoreIndirect, 0});
     instructions.push_back({IrOpcode::Pop, 0});
+    if (!droppedElementStructPath.empty()) {
+      // The popped element is the one past the new count.
+      const int32_t lastIndexLocal = input.allocTempLocal();
+      const int32_t elementPtrLocal = input.allocTempLocal();
+      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+      instructions.push_back({IrOpcode::PushI32, 1});
+      instructions.push_back({IrOpcode::SubI32, 0});
+      instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(lastIndexLocal)});
+      emitElementPointer(lastIndexLocal, elementPtrLocal);
+      if (!input.emitStructDestroyFromPtr(elementPtrLocal, droppedElementStructPath, localsIn)) {
+        return VectorMutationStatementEmitResult::Error;
+      }
+    }
     return VectorMutationStatementEmitResult::Emitted;
   }
 

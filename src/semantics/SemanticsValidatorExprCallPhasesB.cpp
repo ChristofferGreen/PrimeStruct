@@ -94,15 +94,17 @@ PhaseStatus SemanticsValidator::validateExprCallPhase6([[maybe_unused]] const st
       return st.done(false);
     }
     if (rewrittenDirectCollectionFallbackCall.has_value()) {
-      // A rewritten mutator on an element of a builtin vector of vectors (`a[i].clear()`) stays a
-      // statement; elements of a variadic pack have no in-place mutation.
+      // A rewritten mutator on an element of a builtin vector of vectors (`a[i].clear()`) or on a
+      // vector field (`grid.rows.pop()`) stays a statement; elements of a variadic pack have no
+      // in-place mutation.
       bool keepsStatementContext = false;
       if (const Expr &receiver = rewrittenDirectCollectionFallbackCall->args.empty()
                                      ? expr
                                      : rewrittenDirectCollectionFallbackCall->args.front();
-          receiver.kind == Expr::Kind::Call && !receiver.isFieldAccess &&
-          receiver.args.size() == 2 &&
-          (isSimpleCallName(receiver, "at") || isSimpleCallName(receiver, "at_unsafe"))) {
+          receiver.kind == Expr::Kind::Call &&
+          ((receiver.isFieldAccess && receiver.args.size() == 1) ||
+           (!receiver.isFieldAccess && receiver.args.size() == 2 &&
+            (isSimpleCallName(receiver, "at") || isSimpleCallName(receiver, "at_unsafe"))))) {
         const Expr *root = containerPlaceRoot(receiver);
         const BindingInfo *rootBinding =
             root->kind == Expr::Kind::Name ? findParamBinding(params, root->name) : nullptr;
