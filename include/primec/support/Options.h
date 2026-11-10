@@ -65,6 +65,9 @@ struct Options {
   // --link-arg: extra arguments for the host C++ compiler when it links an exe or optexe output,
   // such as a host library the program's `[host]` functions come from.
   std::vector<std::string> linkArgs;
+  // --vm-schedule-seed (or PRIMESTRUCT_VM_SCHEDULE_SEED): the VM's task schedule; none is the eager default
+  // (docs/spec/vm-design.md, Tasks).
+  std::optional<uint64_t> vmScheduleSeed;
   bool skipSemanticProductForNonConsumingPath = false;
   std::optional<bool> benchmarkForceSemanticProduct;
   bool benchmarkSemanticNoFactEmission = false;

@@ -731,6 +731,7 @@ int main(int argc, char **argv) {
   }
 
   primec::Vm vm;
+  vm.setScheduleSeed(options.vmScheduleSeed);
   std::vector<std::string_view> args;
   args.reserve(1 + options.programArgs.size());
   args.push_back(options.inputPath);

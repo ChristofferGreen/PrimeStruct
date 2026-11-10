@@ -122,6 +122,7 @@ std::string formatIrInstruction(const IrModule &module, const IrInstruction &ins
     break;
   case IrOpcode::Call:
   case IrOpcode::CallVoid:
+  case IrOpcode::TaskSpawn:
     text += " " + std::to_string(imm);
     if (imm < module.functions.size()) {
       text += " " + module.functions[static_cast<size_t>(imm)].name;

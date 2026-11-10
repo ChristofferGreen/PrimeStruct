@@ -209,11 +209,16 @@ public:
                       const std::vector<std::string_view> *args,
                       const VmHostFunctions *hostFunctions,
                       const VmOutputSink *outputSink,
-                      const std::atomic<bool> *cancel)
-      : argCount_(argCount), hostFunctions_(hostFunctions), args_(args), outputSink_(outputSink), cancel_(cancel) {
+                      const std::atomic<bool> *cancel,
+                      std::optional<uint64_t> scheduleSeed)
+      : argCount_(argCount), hostFunctions_(hostFunctions), args_(args), outputSink_(outputSink),
+        cancel_(cancel), scheduleSeed_(scheduleSeed) {
   }
 
   const std::atomic<bool> *cancelFlag() const override { return cancel_; }
+  std::optional<uint64_t> scheduleSeed() const override {
+    return scheduleSeed_;
+  }
 
   uint64_t argumentCount() const override { return argCount_; }
   uint64_t slotBytes() const override { return IrSlotBytes; }
@@ -282,6 +287,7 @@ private:
   const std::vector<std::string_view> *args_ = nullptr;
   const VmOutputSink *outputSink_ = nullptr;
   const std::atomic<bool> *cancel_ = nullptr;
+  std::optional<uint64_t> scheduleSeed_;
   VmHeapCore heap_;
   VmTextHeap textHeap_;
 };
@@ -295,7 +301,8 @@ bool executeVmModule(const IrModule &module,
                      const std::vector<std::string_view> *args,
                      const VmHostFunctions *hostFunctions,
                      const VmOutputSink *outputSink,
-                     const std::atomic<bool> *cancel) {
+                     const std::atomic<bool> *cancel,
+                     std::optional<uint64_t> scheduleSeed) {
   if (!module.hostImports.empty()) {
     // Not a function-local static: statics must not hold arena-allocated state.
     const VmHostFunctions noBindings;
@@ -303,7 +310,7 @@ bool executeVmModule(const IrModule &module,
       return false;
     }
   }
-  RuntimeVmKernelHost host(argCount, args, hostFunctions, outputSink, cancel);
+  RuntimeVmKernelHost host(argCount, args, hostFunctions, outputSink, cancel, scheduleSeed);
   return executeVmKernel(module, host, result, error);
 }
 

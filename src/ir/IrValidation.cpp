@@ -198,6 +198,15 @@ bool validateFunction(const IrModule &module,
                              "and serialized bytecode",
                              error);
     }
+    if ((inst.op == IrOpcode::TaskSpawn || inst.op == IrOpcode::TaskWait) &&
+        target != IrValidationTarget::Vm && target != IrValidationTarget::Serialized) {
+      return failInstruction(
+          functionIndex,
+          function.name,
+          instructionIndex,
+          "task opcodes are only supported by the vm target and serialized bytecode",
+          error);
+    }
     if (inst.op == IrOpcode::CallHost) {
       // The arm64 native backend answers the string heap functions itself and imports any other host function
       // as a C function by name.
@@ -271,6 +280,20 @@ bool validateFunction(const IrModule &module,
         if (module.functions[static_cast<size_t>(inst.imm)].parameterCount > MaxCallParameterCount) {
           return failInstruction(
               functionIndex, function.name, instructionIndex, "call target parameter count exceeds supported limit", error);
+        }
+        break;
+      case IrOpcode::TaskSpawn:
+        if (inst.imm >= module.functions.size()) {
+          return failInstruction(
+              functionIndex, function.name, instructionIndex, "invalid task function", error);
+        }
+        if (module.functions[static_cast<size_t>(inst.imm)].parameterCount >
+            MaxCallParameterCount) {
+          return failInstruction(functionIndex,
+                                 function.name,
+                                 instructionIndex,
+                                 "task function parameter count exceeds supported limit",
+                                 error);
         }
         break;
       case IrOpcode::LoadLocal:
@@ -487,6 +510,106 @@ bool validateNoOwnFrameAddressReturn(const IrModule &module,
   return true;
 }
 
+// A TaskWait consumes the handle a TaskSpawn pushed (docs/spec/vm-design.md, Tasks). A forward must-analysis over
+// the CFG tracks which operands and locals hold a handle on every path: a TaskSpawn result, copied through locals and
+// Dup. Any other value reaching a TaskWait fails. Only functions with a TaskWait are analyzed.
+bool validateTaskWaitOperands(const IrModule &module,
+                              size_t functionIndex,
+                              const IrFunction &function,
+                              std::string &error) {
+  uint64_t frameSlots = 0;
+  bool waits = false;
+  for (const IrInstruction &inst : function.instructions) {
+    waits = waits || inst.op == IrOpcode::TaskWait;
+    if (inst.op == IrOpcode::LoadLocal || inst.op == IrOpcode::StoreLocal ||
+        inst.op == IrOpcode::AddressOfLocal) {
+      frameSlots = std::max(frameSlots, inst.imm + 1);
+    }
+  }
+  if (!waits) {
+    return true;
+  }
+  IrCfg cfg;
+  IrCfgError cfgError;
+  if (!buildIrCfg(function, module, cfg, cfgError) || cfg.blocks.empty()) {
+    return true; // validateStackBalance reports it
+  }
+  struct State {
+    std::vector<bool> locals;
+    std::vector<bool> stack;
+  };
+  std::vector<State> entry(cfg.blocks.size());
+  std::vector<bool> seen(cfg.blocks.size(), false);
+  entry[0].locals.assign(static_cast<size_t>(frameSlots), false);
+  entry[0].stack.assign(function.parameterCount, false);
+  seen[0] = true;
+  std::vector<size_t> worklist = {0};
+  while (!worklist.empty()) {
+    const size_t b = worklist.back();
+    worklist.pop_back();
+    State state = entry[b];
+    const IrCfgBlock &block = cfg.blocks[b];
+    for (size_t i = block.start; i < block.end; ++i) {
+      const IrInstruction &inst = function.instructions[i];
+      auto &stack = state.stack;
+      switch (inst.op) {
+      case IrOpcode::LoadLocal:
+        stack.push_back(state.locals[static_cast<size_t>(inst.imm)]);
+        continue;
+      case IrOpcode::StoreLocal:
+        state.locals[static_cast<size_t>(inst.imm)] = stack.back();
+        stack.pop_back();
+        continue;
+      case IrOpcode::Dup:
+        stack.push_back(stack.back());
+        continue;
+      case IrOpcode::TaskWait:
+        if (!stack.back()) {
+          return failInstruction(
+              functionIndex, function.name, i, "task wait operand is not a task handle", error);
+        }
+        stack.back() = false;
+        continue;
+      default:
+        break;
+      }
+      IrStackEffect effect;
+      if (!computeIrStackEffect(inst, module, effect)) {
+        return true;
+      }
+      stack.resize(stack.size() - effect.pops);
+      stack.insert(stack.end(), effect.pushes, inst.op == IrOpcode::TaskSpawn);
+    }
+    for (const size_t successor : block.successors) {
+      if (!seen[successor]) {
+        entry[successor] = state;
+        seen[successor] = true;
+        worklist.push_back(successor);
+        continue;
+      }
+      // A value is a handle at a join only when it is one on every path into it.
+      State &into = entry[successor];
+      bool changed = false;
+      for (size_t k = 0; k < into.locals.size(); ++k) {
+        if (into.locals[k] && !state.locals[k]) {
+          into.locals[k] = false;
+          changed = true;
+        }
+      }
+      for (size_t k = 0; k < into.stack.size() && k < state.stack.size(); ++k) {
+        if (into.stack[k] && !state.stack[k]) {
+          into.stack[k] = false;
+          changed = true;
+        }
+      }
+      if (changed) {
+        worklist.push_back(successor);
+      }
+    }
+  }
+  return true;
+}
+
 // GLSL/shader targets fundamentally forbid recursive function calls (direct
 // or mutual) - unlike the VM/native/C++/wasm backends, there is no call-stack
 // mechanism to bound recursion depth. Detects a cycle in the Call/CallVoid
@@ -580,12 +703,16 @@ bool validateIrModule(const IrModule &module, IrValidationTarget target, std::st
     if (!validateStackBalance(module, functionIndex, function, error)) {
       return false;
     }
+    if (!validateTaskWaitOperands(module, functionIndex, function, error)) {
+      return false;
+    }
   }
 
   std::vector<bool> called(module.functions.size(), false);
   for (const IrFunction &function : module.functions) {
     for (const IrInstruction &inst : function.instructions) {
-      if ((inst.op == IrOpcode::Call || inst.op == IrOpcode::CallVoid) &&
+      if ((inst.op == IrOpcode::Call || inst.op == IrOpcode::CallVoid ||
+           inst.op == IrOpcode::TaskSpawn) &&
           inst.imm < module.functions.size()) {
         called[static_cast<size_t>(inst.imm)] = true;
       }

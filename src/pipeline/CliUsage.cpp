@@ -65,6 +65,7 @@ void printEffectsAndIrSection(std::ostream &err) {
   err << "Effects / IR:\n";
   flagLine(err, "--default-effects <list>", "Default effect set for definitions without one");
   flagLine(err, "--ir-inline", "Inline eligible calls during IR lowering");
+  flagLine(err, "--vm-schedule-seed <n>", "Run VM tasks under the schedule seed n picks");
   flagLine(err, "--dump-stage <stage>", "Dump a compiler stage and exit; one of:");
   flagLine(err, "", "pre_ast, ast, ast-semantic, semantic-product, type-graph, ir,");
   flagLine(err, "", "ir-lowered, ir-optimized");

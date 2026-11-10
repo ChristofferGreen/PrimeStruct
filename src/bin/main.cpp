@@ -240,6 +240,7 @@ bool runIrBackend(const primec::IrBackend &backend,
   emitOptions.hostOptimizationLevel =
       options.optimization.levelSpecified ? options.optimization.level : 2;
   emitOptions.collectReport = options.optimization.report;
+  emitOptions.vmScheduleSeed = options.vmScheduleSeed;
   const bool emitted = backend.emit(ir, emitOptions, result, error);
   if (options.optimization.report && !result.report.empty()) {
     std::cerr << result.report;

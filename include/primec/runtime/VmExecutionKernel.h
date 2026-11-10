@@ -3,6 +3,7 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -19,6 +20,11 @@ public:
   virtual size_t maxCallDepth() const = 0;
   // A host that can be cancelled answers the flag a run polls (null: never cancelled; see Vm::setCancelFlag).
   virtual const std::atomic<bool> *cancelFlag() const { return nullptr; }
+  // The schedule of a module with tasks (docs/spec/vm-design.md, Tasks): none is the eager default, a seed picks the
+  // next task at every switch point with a generator seeded by it.
+  virtual std::optional<uint64_t> scheduleSeed() const {
+    return std::nullopt;
+  }
 
   virtual bool resolveIndirectAddress(uint64_t address,
                                       std::vector<uint64_t> &locals,

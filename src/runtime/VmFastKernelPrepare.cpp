@@ -388,8 +388,9 @@ bool prepareFunction(const IrModule &module, const IrFunction &function, FastFun
         instruction.op == IrOpcode::StoreU8) {
       return false;
     }
-    // So do traps, which end the run from any frame.
-    if (instruction.op == IrOpcode::Trap) {
+    // So do traps, which end the run from any frame, and tasks, which the scheduler runs.
+    if (instruction.op == IrOpcode::Trap || instruction.op == IrOpcode::TaskSpawn ||
+        instruction.op == IrOpcode::TaskWait) {
       return false;
     }
     // A call to a missing function is left to the step kernel, which faults on it when (and only

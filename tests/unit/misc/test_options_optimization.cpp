@@ -3,6 +3,8 @@
 
 #include "third_party/doctest.h"
 
+#include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -186,4 +188,39 @@ TEST_CASE("optimization flags after the program-args separator belong to the pro
   CHECK_FALSE(options.optimization.levelSpecified);
   CHECK_FALSE(options.optimization.report);
   CHECK(options.programArgs == std::vector<std::string>{"-O3", "--opt-report"});
+}
+
+TEST_CASE("the vm schedule seed takes a number for primec and primevm") {
+  primec::Options options;
+  std::string error;
+  REQUIRE(parsePrimec(
+      {"primec", "--emit=vm", "--vm-schedule-seed", "7", "/tmp/input.prime"}, options, error));
+  CHECK(options.vmScheduleSeed == std::optional<uint64_t>{7});
+  primec::Options vmOptions;
+  REQUIRE(parsePrimevm({"primevm", "--vm-schedule-seed=0", "/tmp/input.prime"}, vmOptions, error));
+  CHECK(vmOptions.vmScheduleSeed == std::optional<uint64_t>{0});
+
+  struct Bad {
+    std::vector<std::string> args;
+    std::string expected;
+  };
+  const std::vector<Bad> cases = {
+      {{"primec", "/tmp/input.prime", "--vm-schedule-seed"},
+       "--vm-schedule-seed requires a number"},
+      {{"primec", "--vm-schedule-seed=", "/tmp/input.prime"},
+       "--vm-schedule-seed requires a number"},
+      {{"primec", "--vm-schedule-seed", "/tmp/input.prime"},
+       "invalid --vm-schedule-seed value: /tmp/input.prime"},
+      {{"primec", "--vm-schedule-seed=-1", "/tmp/input.prime"},
+       "invalid --vm-schedule-seed value: -1"},
+      {{"primec", "--vm-schedule-seed=99999999999999999999", "/tmp/input.prime"},
+       "invalid --vm-schedule-seed value: 99999999999999999999"},
+  };
+  for (const Bad &bad : cases) {
+    CAPTURE(bad.expected);
+    primec::Options badOptions;
+    std::string badError;
+    CHECK_FALSE(parsePrimec(bad.args, badOptions, badError));
+    CHECK(badError == bad.expected);
+  }
 }

@@ -455,6 +455,11 @@ TEST_CASE("every opcode has a stack effect case and a table entry") {
   const primec::IrModule module;
   for (const primec::IrOpcodeInfo &info : primec::IrOpcodeTable) {
     CAPTURE(info.name);
+    // The task opcodes run under the VM's scheduler, which a debug session does not step; their effects are
+    // checked below and run in tests/unit/runtime/test_vm_tasks.cpp.
+    if (info.op == IrOpcode::TaskSpawn || info.op == IrOpcode::TaskWait) {
+      continue;
+    }
     CHECK_MESSAGE(covered.count(static_cast<uint8_t>(info.op)) == 1,
                   "add a VM cross-check case for ",
                   info.name);
@@ -463,6 +468,23 @@ TEST_CASE("every opcode has a stack effect case and a table entry") {
                   "computeIrStackEffect has no entry for ",
                   info.name);
   }
+  // A spawn moves the task function's parameters to the task and pushes the handle; a wait swaps the handle for
+  // the result.
+  primec::IrModule taskModule;
+  primec::IrFunction entry;
+  entry.name = "/main";
+  primec::IrFunction task;
+  task.name = "/task";
+  task.parameterCount = 2;
+  taskModule.functions = {entry, task};
+  primec::IrStackEffect spawn;
+  REQUIRE(primec::computeIrStackEffect({IrOpcode::TaskSpawn, 1}, taskModule, spawn));
+  CHECK(spawn.pops == 2);
+  CHECK(spawn.pushes == 1);
+  primec::IrStackEffect wait;
+  REQUIRE(primec::computeIrStackEffect({IrOpcode::TaskWait, 0}, taskModule, wait));
+  CHECK(wait.pops == 1);
+  CHECK(wait.pushes == 1);
 }
 
 TEST_CASE("dup reads its operand without consuming it") {

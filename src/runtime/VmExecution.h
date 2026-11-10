@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -28,7 +29,8 @@ bool executeVmModule(const IrModule &module,
                      const std::vector<std::string_view> *args,
                      const VmHostFunctions *hostFunctions = nullptr,
                      const VmOutputSink *outputSink = nullptr,
-                     const std::atomic<bool> *cancel = nullptr);
+                     const std::atomic<bool> *cancel = nullptr,
+                     std::optional<uint64_t> scheduleSeed = std::nullopt);
 
 // Executes IrOpcode::CallHost against `hostFunctions` (null = nothing bound):
 // pops the import's parameters, invokes the binding and pushes its result.

@@ -111,8 +111,7 @@ of sync with them.
 | TODO-5745 | A labeled value that is a call parses in every position | ready | parser-labeled-values |
 | TODO-5746 | A parameterless `mut` method whose body is only bindings is a method | ready | diagnostics |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
-| TODO-5792 | The VM runs `TaskSpawn`/`TaskWait` IR under a deterministic scheduler | ready | mt-vm-tasks |
-| TODO-5835 | `[spawn]` lowers to `TaskSpawn`/`TaskWait` for the VM | blocked | mt-vm-tasks |
+| TODO-5835 | `[spawn]` lowers to `TaskSpawn`/`TaskWait` for the VM | ready | mt-vm-tasks |
 | TODO-5793 | Byte-region accesses check liveness without a map search or a write | ready | mt-heap-optexe |
 | TODO-5794 | `optexe` heaps are per-thread arenas with remote frees | blocked | mt-heap-optexe |
 | TODO-5795 | `optexe` runs spawned tasks on threads | blocked | mt-optexe-threads |
@@ -208,13 +207,13 @@ of sync with them.
 - Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5738, TODO-5718
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732, TODO-5735, TODO-5736, TODO-5737
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe; real calls and struct copies TODO-5739, TODO-5741, TODO-5752; VM address checks TODO-5824
-- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5792, TODO-5835, TODO-5793, TODO-5794, TODO-5795, TODO-5796, TODO-5797, TODO-5798, TODO-5656, TODO-5802, TODO-5803, TODO-5799, TODO-5800, TODO-5801; deferred TODO-5804, TODO-5805, TODO-5806
+- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5835, TODO-5793, TODO-5794, TODO-5795, TODO-5796, TODO-5797, TODO-5798, TODO-5656, TODO-5802, TODO-5803, TODO-5799, TODO-5800, TODO-5801; deferred TODO-5804, TODO-5805, TODO-5806
 
 ### Execution Queue
 
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
-Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order: TODO-5792 (VM tasks under a deterministic scheduler; `TaskSpawn`/`TaskWait` IR), TODO-5835 (`[spawn]` lowers to them), TODO-5793 (byte-region checks without a map search), TODO-5794 (`optexe` per-thread heap arenas), TODO-5795 (`optexe` threads for `[spawn]`), TODO-5796 (`Atomic`), TODO-5797 (`Mutex`), TODO-5798 (`Channel`), TODO-5656 (atomic `SharedString` count), TODO-5802 (`serveWorkers`), TODO-5803 (apps on workers, measured), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5792 and TODO-5793 are ready and independent of each other (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, are done). Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions).
+Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order: TODO-5835 (`[spawn]` lowers to the `TaskSpawn`/`TaskWait` IR the VM schedules, TODO-5792 done), TODO-5793 (byte-region checks without a map search), TODO-5794 (`optexe` per-thread heap arenas), TODO-5795 (`optexe` threads for `[spawn]`), TODO-5796 (`Atomic`), TODO-5797 (`Mutex`), TODO-5798 (`Channel`), TODO-5656 (atomic `SharedString` count), TODO-5802 (`serveWorkers`), TODO-5803 (apps on workers, measured), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5835 and TODO-5793 are ready and independent of each other (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, are done). Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions).
 
 ### Task Blocks
 
@@ -671,24 +670,9 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
   - stop_rule: receiver offset handling only.
   - notes: deferred: queued behind the Ready Now cap.
 
-- [ ] TODO-5792: The VM runs `TaskSpawn`/`TaskWait` IR under a deterministic scheduler
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-09
-  - phase: Multithreading (docs/MultithreadingPrototype.md, Runtime Model and VM Scheduler)
-  - parallel_track: mt-vm-tasks
-  - scope: Add the IR opcodes `TaskSpawn <function>` (pops the function's parameters into the new task's own call stack, pushes the handle) and `TaskWait` (pops a handle, pushes the result, 0 for a void task; the handle is consumed), PSIR v34 (a v33 module still loads; the version note in docs/spec/vm-design.md). IR validation accepts them only for the vm target and serialized bytecode and rejects a `TaskWait` whose operand is not a `TaskSpawn` result on every path. The VM runs each task on its own call stack in one OS thread: switch points at spawn, wait and a task's end; the eager default schedule (a new task runs until it ends or blocks, then its spawner continues); `--vm-schedule-seed <n>` (and `PRIMESTRUCT_VM_SCHEDULE_SEED`) for seeded schedules; `deadlock: every task is waiting` (exit 3); a trap in any task ends the program. Lowering is unchanged in this slice (TODO-5835).
-  - implementation_notes: src/runtime/VmExecutionKernel.cpp (`VmTaskScheduler`, used only for a module with task opcodes; the flat kernel and the JIT decline such modules), src/ir/IrValidation.cpp (`validateTaskWaitOperands`), src/ir/IrSerializer.cpp, src/support/OptionsParser.cpp.
-  - acceptance:
-    - positive: hand-built IR runtime tests (tests/unit/runtime/test_vm_tasks.cpp): the default schedule prints what inline calls print; seeds 0 to 31 are reproducible, keep each task's own order and pick more than one interleaving; a task that spawns and waits its own task; a void task; 10000 tasks spawned and waited in a loop; a trap in a task
-    - negative: waiting a handle twice, a value that is not a handle and a missing task function fault; an IR validation test rejects `TaskWait` on a value that is not a task handle (directly and after a join) and the task opcodes on every other target; `--vm-schedule-seed` without a number is a CLI error; a v33 module still loads and a v33 module with task opcodes does not (the deadlock fault is covered by TODO-5798's channel test, since task handles cannot cross to let two tasks wait on each other)
-    - full release gate green
-  - stop_rule: the IR opcodes, their validation and serialization, and the VM scheduler; lowering `[spawn]` to them is TODO-5835.
-
 - [ ] TODO-5835: `[spawn]` lowers to `TaskSpawn`/`TaskWait` for the VM
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5792
+  - status: ready
   - created_at: 2026-11-10
   - phase: Multithreading (docs/MultithreadingPrototype.md, Runtime Model and VM Scheduler)
   - parallel_track: mt-vm-tasks

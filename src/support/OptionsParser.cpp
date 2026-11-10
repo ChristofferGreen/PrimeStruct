@@ -4,7 +4,9 @@
 #include "primec/support/Options.h"
 #include "primec/support/TransformRegistry.h"
 
+#include <algorithm>
 #include <cctype>
+#include <cstdlib>
 #include <filesystem>
 #include <limits>
 #include <string>
@@ -460,6 +462,37 @@ bool parsePositiveUint32(const std::string &text, uint32_t &out, std::string &er
   }
 }
 
+// A schedule seed: any unsigned 64-bit number, 0 included.
+bool parseScheduleSeed(const std::string &text,
+                       uint64_t &out,
+                       std::string &error,
+                       const char *source) {
+  const std::string normalized = trimWhitespace(text);
+  if (normalized.empty()) {
+    error = std::string(source) + " requires a number";
+    return false;
+  }
+  if (!std::all_of(normalized.begin(), normalized.end(), [](unsigned char c) {
+        return std::isdigit(c) != 0;
+      })) {
+    error = std::string("invalid ") + source + " value: " + normalized;
+    return false;
+  }
+  try {
+    size_t consumed = 0;
+    const unsigned long long parsed = std::stoull(normalized, &consumed);
+    if (consumed != normalized.size()) {
+      error = std::string("invalid ") + source + " value: " + normalized;
+      return false;
+    }
+    out = static_cast<uint64_t>(parsed);
+    return true;
+  } catch (...) {
+    error = std::string("invalid ") + source + " value: " + normalized;
+    return false;
+  }
+}
+
 void applyNoTransformFlags(Options &out, bool noTransforms, bool noTextTransforms, bool noSemanticTransforms) {
   if (noTransforms) {
     out.textFilters.clear();
@@ -866,6 +899,24 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
       return false;
     } else if (arg.rfind("--link-arg=", 0) == 0) {
       out.linkArgs.push_back(arg.substr(std::string("--link-arg=").size()));
+    } else if (arg == "--vm-schedule-seed" && i + 1 < argc) {
+      uint64_t seed = 0;
+      if (!parseScheduleSeed(argv[++i], seed, error, "--vm-schedule-seed")) {
+        return false;
+      }
+      out.vmScheduleSeed = seed;
+    } else if (arg == "--vm-schedule-seed") {
+      error = "--vm-schedule-seed requires a number";
+      return false;
+    } else if (arg.rfind("--vm-schedule-seed=", 0) == 0) {
+      uint64_t seed = 0;
+      if (!parseScheduleSeed(arg.substr(std::string("--vm-schedule-seed=").size()),
+                             seed,
+                             error,
+                             "--vm-schedule-seed")) {
+        return false;
+      }
+      out.vmScheduleSeed = seed;
     } else if (arg == "--ir-inline") {
       out.inlineIrCalls = true;
     } else if (arg.rfind("-O", 0) == 0) {
@@ -916,6 +967,17 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
         return false;
       }
       out.inputPath = arg;
+    }
+  }
+
+  if (!out.vmScheduleSeed.has_value()) {
+    if (const char *seedText = std::getenv("PRIMESTRUCT_VM_SCHEDULE_SEED");
+        seedText != nullptr && *seedText != '\0') {
+      uint64_t seed = 0;
+      if (!parseScheduleSeed(seedText, seed, error, "PRIMESTRUCT_VM_SCHEDULE_SEED")) {
+        return false;
+      }
+      out.vmScheduleSeed = seed;
     }
   }
 

@@ -209,6 +209,12 @@ public:
   void setCancelFlag(const std::atomic<bool> *flag) {
     cancelFlag_ = flag;
   }
+  // The schedule of a module that spawns tasks (docs/spec/vm-design.md, Tasks): none (the default) runs a new task
+  // eagerly until it ends or blocks; a seed picks the next task at every switch point with a generator seeded by it,
+  // so the same seed gives the same run (--vm-schedule-seed, PRIMESTRUCT_VM_SCHEDULE_SEED).
+  void setScheduleSeed(std::optional<uint64_t> seed) {
+    scheduleSeed_ = seed;
+  }
 
   bool execute(const IrModule &module, uint64_t &result, std::string &error, uint64_t argCount = 0) const;
   bool execute(const IrModule &module,
@@ -227,6 +233,7 @@ public:
 private:
   VmOutputSink outputSink_{};
   const std::atomic<bool> *cancelFlag_ = nullptr;
+  std::optional<uint64_t> scheduleSeed_;
 };
 
 class VmDebugSession {

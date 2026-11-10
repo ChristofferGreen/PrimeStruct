@@ -107,9 +107,12 @@ bool readString(const std::vector<uint8_t> &data,
 
 bool serializeIr(const IrModule &module, std::vector<uint8_t> &out, std::string &error) {
   out.clear();
-  if (module.schemaVersion != IrSchemaVersion) {
+  // A module loaded from an older supported version is written as the current one, which can hold everything it has.
+  if (module.schemaVersion < IrSchemaMinimumSupportedVersion ||
+      module.schemaVersion > IrSchemaVersion) {
     error = "unsupported IR schema version " + std::to_string(module.schemaVersion) +
-            " for serialization (supported " + std::to_string(IrSchemaVersion) + ")";
+            " for serialization (supported " + std::to_string(IrSchemaMinimumSupportedVersion) +
+            ".." + std::to_string(IrSchemaVersion) + ")";
     return false;
   }
   if (module.entryIndex < 0 || static_cast<size_t>(module.entryIndex) >= module.functions.size()) {
@@ -450,7 +453,8 @@ bool deserializeIr(const std::vector<uint8_t> &data, IrModule &out, std::string 
       IrInstruction inst;
       const uint8_t opcodeValue = data[offset];
       const uint8_t minOpcode = IrOpcodeMin;
-      const uint8_t maxOpcode = IrOpcodeMax;
+      // A module of an older version can only hold the opcodes that version had: v34 appended the task opcodes.
+      const uint8_t maxOpcode = version < 34u ? static_cast<uint8_t>(IrOpcode::Trap) : IrOpcodeMax;
       if (opcodeValue < minOpcode || opcodeValue > maxOpcode) {
         error = "unsupported IR opcode";
         return false;

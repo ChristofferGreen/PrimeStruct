@@ -25,8 +25,10 @@
   (recursive and larger functions), including recursion up to the VM's call-depth limit.
 - **GLSL note:** GLSL/SPIR-V emission routes through canonical IR (`glsl-ir`/`spirv-ir`) and `IrValidationTarget::Glsl`;
   these modes emit backend output directly without requiring PSIR serialization.
-- **PSIR versioning:** current portable IR is PSIR v33 (v24 to v33 are listed in `include/primec/ir/Ir.h`'s opcode
-  comments and the finished TODO log; v33 appends `Trap` and numbers local addresses across all live frames (see
+- **PSIR versioning:** current portable IR is PSIR v34 (v24 to v34 are listed in `include/primec/ir/Ir.h`'s opcode
+  comments and the finished TODO log; v34 appends `TaskSpawn` and `TaskWait` (see Tasks) and is the first version
+  that also loads the previous one: a v33 module has the same layout and cannot hold the task opcodes, which the
+  loader refuses in it, and it is written back as v34; v33 appends `Trap` and numbers local addresses across all live frames (see
   Frames & stack); v32 appends the `bytes` host value kind (`Pointer<u8>` host parameters); v31 retires run-time string indices (a host function can no longer return `string`; same module layout); v30 appends the `text` host value kind; v29 appends the `u8` host value kind; v28 adds `HeapAllocBytes`, `LoadU8`, `StoreU8` and `ZextU8`). Before that, PSIR v23 (adds a per-function `parameter_count` field on top of v22’s
   source-unit/file identity in source-map metadata, v21’s `HeapRealloc`, v20’s `FileReadByte` and
   `HeapFree`, v19’s per-instruction source-map metadata keyed by debug ID, v18’s instruction debug IDs, v17’s local
@@ -46,6 +48,25 @@
   in place while its callees run, so it too names the same slot in every frame. The x86_64 native backend and the Linux
   JIT still resolve local addresses against the current frame (TODO-5752); the JIT refuses a function that takes a
   local address and calls.
+- **Tasks (PSIR v34):** `TaskSpawn f` pops function `f`'s parameters, in order, and starts a task: a call stack of
+  its own whose operand stack starts with them, which `f`'s first instructions store as its parameters. It pushes the
+  task handle (tagged bits 48-62, a generation in bits 32-47, the task's slot in bits 0-31; never a heap or local
+  address). `TaskWait` pops a handle, waits until that task has ended and pushes its result (0 when `f` returns
+  nothing); the handle is consumed, so a second wait faults (`task handle already waited`), as does a value that is
+  not a handle (`invalid task handle in IR`). Each call stack numbers its own locals from 0, so a local address does
+  not cross to another task; all tasks share the heap. The VM runs every task on its one OS thread
+  (`VmTaskScheduler` in `src/runtime/VmExecutionKernel.cpp`) and switches only at a spawn, a wait and a task's end.
+  The default schedule is eager: a spawn runs the new task until it ends or blocks, then its spawner continues, so a
+  program prints exactly what it prints with each spawned call run inline; a blocked task yields to the
+  lowest-numbered runnable task (tasks are numbered in spawn order, the main task is 0). `--vm-schedule-seed <n>`
+  (`primec --emit=vm`, `primevm`) or `PRIMESTRUCT_VM_SCHEDULE_SEED` picks the next runnable task at every switch point
+  with a splitmix64 generator seeded by `n`, so the same seed gives the same run; tests run several seeds and expect
+  the same output to show a program is free of races. When no task can run the VM faults with `deadlock: every task
+  is waiting` (exit code 3); the main task's return ends the program, and a `Trap` in any task ends it with its code.
+  Only the vm target and serialized bytecode accept the task opcodes; validation also rejects a `TaskWait` whose
+  operand is not a `TaskSpawn` result on every path (through locals and `Dup`). A module with task opcodes runs on the
+  step kernel (the flat loop and the native JIT decline it), and a debug session faults on them (`tasks run only in a
+  plain VM run, not in a debug session`).
 - **Heap:** `HeapAlloc`/`HeapRealloc` return heap addresses `bit 63 | generation << 48 | slot * 16` (generation in bits
   48-62, slot offset in bits 0-47; zero slots allocate nothing and return 0). A live allocation never moves, so an
   address a program has seen stays valid until the program frees or reallocates that allocation; `HeapRealloc` returns

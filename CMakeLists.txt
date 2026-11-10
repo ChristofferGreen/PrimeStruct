@@ -1331,11 +1331,12 @@ if(PRIMESTRUCT_BUILD_TESTS)
   set_tests_properties(PrimeStruct_embed_runtime_only
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
 
-  # IR byte opcodes and the VM's byte regions, with hand-built IR.
+  # IR byte opcodes, the VM's byte regions and its task scheduler, with hand-built IR.
   add_executable(PrimeStruct_vm_byte_tests
     tests/unit/test_main.cpp
     tests/unit/runtime/test_vm_byte_regions.cpp
     tests/unit/runtime/test_vm_text_heap.cpp
+    tests/unit/runtime/test_vm_tasks.cpp
   )
   target_include_directories(PrimeStruct_vm_byte_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
   target_link_libraries(PrimeStruct_vm_byte_tests PRIVATE primec_embed_lib)
@@ -1343,7 +1344,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   add_test(
     NAME PrimeStruct_vm_byte_regions
     COMMAND $<TARGET_FILE:PrimeStruct_vm_byte_tests>
-            "--test-suite=primestruct.runtime.byte_regions,primestruct.runtime.text_heap"
+            "--test-suite=primestruct.runtime.byte_regions,primestruct.runtime.text_heap,primestruct.runtime.tasks"
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_vm_byte_regions

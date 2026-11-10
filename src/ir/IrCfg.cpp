@@ -179,6 +179,16 @@ bool computeIrStackEffect(const IrInstruction &instruction,
     }
     return set(parameterCount, instruction.op == IrOpcode::Call ? 1u : 0u);
   }
+  case IrOpcode::TaskSpawn: {
+    // The task's arguments move to its own stack; the spawner gets the handle.
+    uint32_t parameterCount = 0;
+    if (instruction.imm < module.functions.size()) {
+      parameterCount = module.functions[static_cast<size_t>(instruction.imm)].parameterCount;
+    }
+    return set(parameterCount, 1);
+  }
+  case IrOpcode::TaskWait:
+    return set(1, 1);
   case IrOpcode::CallHost: {
     uint32_t parameterCount = 0;
     uint32_t pushes = 0;

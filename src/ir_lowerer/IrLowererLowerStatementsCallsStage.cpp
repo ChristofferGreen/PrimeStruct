@@ -427,7 +427,9 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
     // recursion) - to its target's final index in input.outModule->functions.
     for (IrFunction &fn : input.outModule->functions) {
       for (IrInstruction &inst : fn.instructions) {
-        if ((inst.op == IrOpcode::Call || inst.op == IrOpcode::CallVoid) && (inst.imm >> 32) == 1ull) {
+        if ((inst.op == IrOpcode::Call || inst.op == IrOpcode::CallVoid ||
+             inst.op == IrOpcode::TaskSpawn) &&
+            (inst.imm >> 32) == 1ull) {
           const uint64_t reservationIndex = inst.imm & 0xFFFFFFFFull;
           inst.imm = baseFunctionIndex + reservationIndex;
         }
@@ -445,7 +447,8 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
       const size_t caller = pending.back();
       pending.pop_back();
       for (const IrInstruction &inst : functions[caller].instructions) {
-        if ((inst.op == IrOpcode::Call || inst.op == IrOpcode::CallVoid) &&
+        if ((inst.op == IrOpcode::Call || inst.op == IrOpcode::CallVoid ||
+             inst.op == IrOpcode::TaskSpawn) &&
             inst.imm < functions.size() && !reached[static_cast<size_t>(inst.imm)]) {
           reached[static_cast<size_t>(inst.imm)] = true;
           pending.push_back(static_cast<size_t>(inst.imm));
@@ -464,7 +467,8 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
       }
       for (IrFunction &fn : kept) {
         for (IrInstruction &inst : fn.instructions) {
-          if ((inst.op == IrOpcode::Call || inst.op == IrOpcode::CallVoid) &&
+          if ((inst.op == IrOpcode::Call || inst.op == IrOpcode::CallVoid ||
+               inst.op == IrOpcode::TaskSpawn) &&
               inst.imm < newIndex.size()) {
             inst.imm = newIndex[static_cast<size_t>(inst.imm)];
           }

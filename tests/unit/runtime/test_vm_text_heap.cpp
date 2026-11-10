@@ -355,7 +355,7 @@ TEST_CASE("the VM answers the string heap host functions without bindings") {
   CHECK(static_cast<int32_t>(result) == 9 + 5 + 40);
 }
 
-TEST_CASE("a string arena takes blocks and gives them all back faster than the heap") {
+TEST_CASE("a string arena takes blocks and gives them all back at its end") {
   // A request-shaped pattern: 400 blocks of five size classes, all released together at the end of the request.
   constexpr int Requests = 400;
   constexpr int BlocksPerRequest = 400;
@@ -387,8 +387,8 @@ TEST_CASE("a string arena takes blocks and gives them all back faster than the h
   const auto arenaTime = Clock::now() - arenaStart;
   MESSAGE("heap " << std::chrono::duration<double, std::milli>(heapTime).count() << " ms, arena "
                   << std::chrono::duration<double, std::milli>(arenaTime).count() << " ms");
-  // Measured at about 18x; the check is loose so a loaded machine does not fail it.
-  CHECK(arenaTime * 2 < heapTime);
+  // Measured at about 18x on an idle machine. The times are reported, not compared: a wall-clock comparison failed
+  // in a release gate at load 70, and a test must not depend on timing (AGENTS.md, No flaky tests).
   CHECK(f.heap.stats().arenaDepth == 0);
   CHECK(f.heap.stats().bytesInUse == 0);
 }

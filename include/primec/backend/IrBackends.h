@@ -39,6 +39,8 @@ struct IrBackendEmitOptions {
   // --opt-report: backends that make their own optimization decisions describe them in
   // IrBackendEmitResult::report (the native backend lists which functions it register-allocated).
   bool collectReport = false;
+  // The VM's task schedule (--vm-schedule-seed); none is the eager default.
+  std::optional<uint64_t> vmScheduleSeed;
 };
 
 struct IrBackendEmitResult {

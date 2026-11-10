@@ -16,7 +16,8 @@ bool isReturnOpcode(IrOpcode opcode) {
 
 bool hasCallOpcode(const IrFunction &function) {
   for (const auto &instruction : function.instructions) {
-    if (instruction.op == IrOpcode::Call || instruction.op == IrOpcode::CallVoid) {
+    if (instruction.op == IrOpcode::Call || instruction.op == IrOpcode::CallVoid ||
+        instruction.op == IrOpcode::TaskSpawn) {
       return true;
     }
   }

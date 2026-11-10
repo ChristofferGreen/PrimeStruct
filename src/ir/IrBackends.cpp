@@ -74,7 +74,8 @@ IrModule pruneIrModuleToReachableFunctions(const IrModule &module) {
     pending.pop_front();
     const auto &function = module.functions[functionIndex];
     for (const auto &instruction : function.instructions) {
-      if (instruction.op != IrOpcode::Call && instruction.op != IrOpcode::CallVoid) {
+      if (instruction.op != IrOpcode::Call && instruction.op != IrOpcode::CallVoid &&
+          instruction.op != IrOpcode::TaskSpawn) {
         continue;
       }
       const std::size_t targetIndex = static_cast<std::size_t>(instruction.imm);
@@ -117,7 +118,8 @@ IrModule pruneIrModuleToReachableFunctions(const IrModule &module) {
         }
         continue;
       }
-      if (instruction.op != IrOpcode::Call && instruction.op != IrOpcode::CallVoid) {
+      if (instruction.op != IrOpcode::Call && instruction.op != IrOpcode::CallVoid &&
+          instruction.op != IrOpcode::TaskSpawn) {
         continue;
       }
       const std::size_t oldTarget = static_cast<std::size_t>(instruction.imm);
@@ -164,6 +166,7 @@ public:
     for (const auto &arg : options.programArgs) {
       args.push_back(arg);
     }
+    vm.setScheduleSeed(options.vmScheduleSeed);
     uint64_t vmResult = 0;
     if (!vm.execute(module, vmResult, error, args)) {
       return false;

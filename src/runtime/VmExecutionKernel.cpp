@@ -405,6 +405,11 @@ template <bool TrackEvents>
     ip += 1;
     return VmKernelStepOutcome::Continue;
   }
+  case IrOpcode::TaskSpawn:
+  case IrOpcode::TaskWait:
+    // executeVmKernel's scheduler runs these; a debug session steps one call stack.
+    error = "tasks run only in a plain VM run, not in a debug session";
+    return VmKernelStepOutcome::Fault;
   case IrOpcode::LoadStringLength: {
     if (stack.empty()) {
       error = "IR stack underflow on string index";
@@ -485,6 +490,279 @@ VmKernelStepOutcome stepVmKernel(const IrModule &module,
   return stepImpl<true>(module, host, stack, frames, localCounts, result, event, error);
 }
 
+namespace {
+
+bool moduleUsesTasks(const IrModule &module) {
+  for (const IrFunction &function : module.functions) {
+    for (const IrInstruction &inst : function.instructions) {
+      if (inst.op == IrOpcode::TaskSpawn || inst.op == IrOpcode::TaskWait) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+// A task handle: a tag in bits 48-62 (bit 63 clear, so it is never a heap address), the slot's generation in bits
+// 32-47 and the task slot in bits 0-31. A slot is reused once its task was waited, with the next generation.
+constexpr uint64_t TaskHandleTag = uint64_t{0x7A5C} << 48;
+constexpr uint64_t TaskHandleTagMask = uint64_t{0xFFFF} << 48;
+
+// The VM's tasks (docs/spec/vm-design.md, Tasks): each is a call stack of its own; all run on this one thread and
+// share the heap. A task switch happens only at a spawn, a wait and a task's end. The default schedule is eager: a
+// spawn runs the new task until it ends or blocks, then its spawner continues, so a program prints what it prints
+// with every spawned call run inline; a blocked task yields to the lowest-numbered runnable task. A seed picks the
+// next task at every switch point with a splitmix64 generator, so the same seed gives the same run.
+class VmTaskScheduler {
+public:
+  VmTaskScheduler(const IrModule &module,
+                  VmKernelHost &host,
+                  const std::vector<size_t> &localCounts,
+                  std::optional<uint64_t> seed)
+      : module_(module), host_(host), localCounts_(localCounts), seeded_(seed.has_value()),
+        rng_(seed.value_or(0)) {
+  }
+
+  bool run(uint64_t &result, std::string &error) {
+    const size_t mainSlot = createTask(static_cast<size_t>(module_.entryIndex), {}, NoTask);
+    current_ = mainSlot;
+    VmKernelStepEvent event;
+    const std::atomic<bool> *cancel = host_.cancelFlag();
+    uint32_t steps = 0;
+    while (true) {
+      if (cancel != nullptr && (++steps & 0x3FF) == 0 && cancel->load(std::memory_order_relaxed)) {
+        error = "execution stopped";
+        return false;
+      }
+      Task &task = tasks_[current_];
+      const VmKernelFrame &top = task.frames.back();
+      if (top.ip < top.function->instructions.size()) {
+        const IrOpcode op = top.function->instructions[top.ip].op;
+        if (op == IrOpcode::TaskSpawn) {
+          if (!spawn(top.function->instructions[top.ip].imm, error)) {
+            return false;
+          }
+          continue;
+        }
+        if (op == IrOpcode::TaskWait) {
+          if (!wait(error)) {
+            return false;
+          }
+          continue;
+        }
+      }
+      uint64_t value = 0;
+      switch (stepImpl<false>(
+          module_, host_, task.stack, task.frames, localCounts_, value, event, error)) {
+      case VmKernelStepOutcome::Continue:
+        continue;
+      case VmKernelStepOutcome::Fault:
+        return false;
+      case VmKernelStepOutcome::Exit:
+        break;
+      }
+      // The main task's return, or a trap in any task, ends the program; another task's return ends that task.
+      const VmKernelFrame &exitFrame = tasks_[current_].frames.back();
+      const bool trapped = exitFrame.ip < exitFrame.function->instructions.size() &&
+                           exitFrame.function->instructions[exitFrame.ip].op == IrOpcode::Trap;
+      if (current_ == mainSlot || trapped) {
+        result = value;
+        return true;
+      }
+      if (!finishCurrent(value, error)) {
+        return false;
+      }
+    }
+  }
+
+private:
+  static constexpr size_t NoTask = static_cast<size_t>(-1);
+  static constexpr size_t MaxLiveTasks = size_t{1} << 20;
+  enum class TaskState : uint8_t { Runnable, Waiting, Done, Free };
+  struct Task {
+    std::vector<uint64_t> stack;
+    std::vector<VmKernelFrame> frames;
+    TaskState state = TaskState::Free;
+    // Tasks are numbered in spawn order (the main task is 0); a slot gets a new number when it is reused.
+    uint64_t number = 0;
+    uint16_t generation = 0;
+    size_t spawner = NoTask;
+    size_t waiter = NoTask;
+    uint64_t result = 0;
+  };
+
+  uint64_t nextRandom() {
+    uint64_t z = (rng_ += 0x9E3779B97F4A7C15ull);
+    z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ull;
+    z = (z ^ (z >> 27)) * 0x94D049BB133111EBull;
+    return z ^ (z >> 31);
+  }
+
+  size_t createTask(size_t functionIndex, std::vector<uint64_t> arguments, size_t spawner) {
+    size_t slot = 0;
+    if (!freeSlots_.empty()) {
+      slot = freeSlots_.back();
+      freeSlots_.pop_back();
+    } else {
+      slot = tasks_.size();
+      tasks_.emplace_back();
+    }
+    Task &task = tasks_[slot];
+    // The arguments are the task's operand stack, where the function's first instructions store its parameters.
+    task.stack = std::move(arguments);
+    task.frames.clear();
+    VmKernelFrame frame;
+    frame.functionIndex = functionIndex;
+    frame.function = &module_.functions[functionIndex];
+    frame.locals.assign(localCounts_[functionIndex], 0);
+    // Each call stack numbers its own locals from 0, so a local address does not name a slot of another task.
+    frame.localsBase = 0;
+    task.frames.push_back(std::move(frame));
+    task.state = TaskState::Runnable;
+    task.number = nextNumber_++;
+    task.spawner = spawner;
+    task.waiter = NoTask;
+    task.result = 0;
+    addRunnable(slot);
+    return slot;
+  }
+
+  // runnable_ holds the tasks that may run (not waiting, not ended), ordered by number.
+  void addRunnable(size_t slot) {
+    const std::pair<uint64_t, size_t> key{tasks_[slot].number, slot};
+    runnable_.insert(std::lower_bound(runnable_.begin(), runnable_.end(), key), key);
+  }
+
+  void removeRunnable(size_t slot) {
+    const std::pair<uint64_t, size_t> key{tasks_[slot].number, slot};
+    const auto it = std::lower_bound(runnable_.begin(), runnable_.end(), key);
+    if (it != runnable_.end() && *it == key) {
+      runnable_.erase(it);
+    }
+  }
+
+  // A switch point of a seeded schedule: any runnable task may run next.
+  void pickSeeded() {
+    current_ = runnable_[static_cast<size_t>(nextRandom() % runnable_.size())].second;
+  }
+
+  // The current task cannot go on. The default schedule runs `preferred` (the spawner of a task that ended) when it
+  // can, else the lowest-numbered runnable task.
+  bool pickAfterStop(size_t preferred, std::string &error) {
+    if (runnable_.empty()) {
+      error = "deadlock: every task is waiting";
+      return false;
+    }
+    if (seeded_) {
+      pickSeeded();
+    } else if (preferred != NoTask && tasks_[preferred].state == TaskState::Runnable) {
+      current_ = preferred;
+    } else {
+      current_ = runnable_.front().second;
+    }
+    return true;
+  }
+
+  bool spawn(uint64_t functionImm, std::string &error) {
+    if (functionImm >= module_.functions.size()) {
+      error = "invalid task function in IR";
+      return false;
+    }
+    const size_t functionIndex = static_cast<size_t>(functionImm);
+    const size_t parameterCount = module_.functions[functionIndex].parameterCount;
+    const size_t spawner = current_;
+    std::vector<uint64_t> &spawnerStack = tasks_[spawner].stack;
+    if (spawnerStack.size() < parameterCount) {
+      error = "IR stack underflow on task spawn";
+      return false;
+    }
+    if (tasks_.size() - freeSlots_.size() >= MaxLiveTasks) {
+      error = "too many live tasks";
+      return false;
+    }
+    std::vector<uint64_t> arguments(
+        spawnerStack.end() - static_cast<std::ptrdiff_t>(parameterCount), spawnerStack.end());
+    spawnerStack.resize(spawnerStack.size() - parameterCount);
+    // createTask may grow tasks_, so the spawner is found again by its slot afterwards.
+    const size_t child = createTask(functionIndex, std::move(arguments), spawner);
+    Task &task = tasks_[spawner];
+    task.stack.push_back(TaskHandleTag | (static_cast<uint64_t>(tasks_[child].generation) << 32) |
+                         static_cast<uint64_t>(child));
+    task.frames.back().ip += 1;
+    if (seeded_) {
+      pickSeeded();
+    } else {
+      current_ = child;
+    }
+    return true;
+  }
+
+  bool wait(std::string &error) {
+    Task &task = tasks_[current_];
+    if (task.stack.empty()) {
+      error = "IR stack underflow on task wait";
+      return false;
+    }
+    const uint64_t handle = task.stack.back();
+    const size_t slot = static_cast<size_t>(handle & 0xFFFFFFFFull);
+    const uint16_t generation = static_cast<uint16_t>((handle >> 32) & 0xFFFFull);
+    if ((handle & TaskHandleTagMask) != TaskHandleTag || slot >= tasks_.size() ||
+        slot == current_) {
+      error = "invalid task handle in IR";
+      return false;
+    }
+    Task &target = tasks_[slot];
+    if (target.generation != generation || target.state == TaskState::Free ||
+        (target.waiter != NoTask && target.waiter != current_)) {
+      error = "task handle already waited";
+      return false;
+    }
+    if (target.state == TaskState::Done) {
+      task.stack.back() = target.result;
+      task.frames.back().ip += 1;
+      target.state = TaskState::Free;
+      target.generation = static_cast<uint16_t>(target.generation + 1);
+      freeSlots_.push_back(slot);
+      if (seeded_) {
+        pickSeeded();
+      }
+      return true;
+    }
+    // Block until the task ends; this wait then runs again and finds it done.
+    target.waiter = current_;
+    task.state = TaskState::Waiting;
+    removeRunnable(current_);
+    return pickAfterStop(NoTask, error);
+  }
+
+  bool finishCurrent(uint64_t value, std::string &error) {
+    Task &task = tasks_[current_];
+    task.result = value;
+    removeRunnable(current_);
+    task.state = TaskState::Done;
+    task.frames = {};
+    task.stack = {};
+    if (task.waiter != NoTask) {
+      tasks_[task.waiter].state = TaskState::Runnable;
+      addRunnable(task.waiter);
+    }
+    return pickAfterStop(task.spawner, error);
+  }
+
+  const IrModule &module_;
+  VmKernelHost &host_;
+  const std::vector<size_t> &localCounts_;
+  bool seeded_ = false;
+  uint64_t rng_ = 0;
+  std::vector<Task> tasks_;
+  std::vector<size_t> freeSlots_;
+  std::vector<std::pair<uint64_t, size_t>> runnable_;
+  uint64_t nextNumber_ = 0;
+  size_t current_ = 0;
+};
+
+} // namespace
+
 bool executeVmKernel(const IrModule &module,
                      VmKernelHost &host,
                      uint64_t &result,
@@ -493,6 +771,15 @@ bool executeVmKernel(const IrModule &module,
       static_cast<size_t>(module.entryIndex) >= module.functions.size()) {
     error = "invalid IR entry index";
     return false;
+  }
+
+  if (moduleUsesTasks(module)) {
+    std::vector<size_t> localCounts(module.functions.size(), 0);
+    for (size_t i = 0; i < module.functions.size(); ++i) {
+      localCounts[i] = computeVmKernelLocalCount(module.functions[i]);
+    }
+    VmTaskScheduler scheduler(module, host, localCounts, host.scheduleSeed());
+    return scheduler.run(result, error);
   }
 
   if (vmFastKernelEnabled() && host.cancelFlag() == nullptr) {
