@@ -944,6 +944,10 @@ bool IrToOptCppEmitter::emitSource(const IrModule &module,
   source << "\n";
   // A module without atomic or mutex opcodes gets none of this either. A lock is an atomic slot.
   const bool usesMutexes = moduleUsesMutexes(module);
+  const bool usesTasks = moduleUsesTasks(module);
+  if (usesMutexes || usesTasks) {
+    source << OptCppWaitRuntime;
+  }
   if (usesMutexes || moduleUsesAtomics(module)) {
     source << OptCppAtomicRuntime;
   }
@@ -951,7 +955,6 @@ bool IrToOptCppEmitter::emitSource(const IrModule &module,
     source << OptCppMutexRuntime;
   }
   // A module without task opcodes gets none of this, so a single-threaded program's source keeps its shape.
-  const bool usesTasks = moduleUsesTasks(module);
   if (usesTasks) {
     source << OptCppTaskRuntime;
     std::vector<bool> spawned(module.functions.size(), false);

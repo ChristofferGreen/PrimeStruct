@@ -658,6 +658,7 @@ TEST_CASE("only an optexe module with task opcodes gets the task runtime") {
        sumTo()}));
   CHECK_FALSE(contains(plain, "ps_task_spawn"));
   CHECK_FALSE(contains(plain, "pthread_create"));
+  CHECK_FALSE(contains(plain, "PsWaits"));
   CHECK_FALSE(contains(plain, "std::_Exit(code)"));
 
   const std::string tasks = emitted(moduleOf({functionOf("/main",
@@ -1099,6 +1100,158 @@ main() {
       runCommand("./primevm '" + sourcePath.string() + "' --entry /main", "spawn_mutex_vm");
   CHECK(vmRun.exitCode == 0);
   CHECK(vmRun.out == "2000\n");
+}
+
+namespace {
+
+// Locals 0 and 1 of a main that starts with these are the addresses of two fresh heap slots: two free locks.
+std::vector<IrInstruction> withTwoLocks(std::vector<IrInstruction> body) {
+  std::vector<IrInstruction> instructions = {{IrOpcode::PushI32, 1},
+                                             {IrOpcode::HeapAlloc, 0},
+                                             {IrOpcode::StoreLocal, 0},
+                                             {IrOpcode::PushI32, 1},
+                                             {IrOpcode::HeapAlloc, 0},
+                                             {IrOpcode::StoreLocal, 1}};
+  instructions.insert(instructions.end(), body.begin(), body.end());
+  return instructions;
+}
+
+// section(lock): takes the lock, prints 1 and 2 and frees it.
+IrFunction lockedSection() {
+  return functionOf("/section",
+                    1,
+                    {{IrOpcode::StoreLocal, 0},
+                     {IrOpcode::LoadLocal, 0},
+                     {IrOpcode::MutexLock, 0},
+                     {IrOpcode::PushI32, 1},
+                     {IrOpcode::PrintI32, Newline},
+                     {IrOpcode::PushI32, 2},
+                     {IrOpcode::PrintI32, Newline},
+                     {IrOpcode::LoadLocal, 0},
+                     {IrOpcode::MutexUnlock, 0},
+                     {IrOpcode::ReturnVoid, 0}});
+}
+
+} // namespace
+
+TEST_CASE("an optexe waiter that holds the lock its task needs faults like the vm") {
+  // No schedule matters in these: the task cannot pass the lock before main frees it, and main never frees it in
+  // the second module; in the third the task ends with the lock.
+  {
+    // main: lock, spawn section (it waits), print 5, unlock, wait the task.
+    const IrModule module = moduleOf({functionOf("/main",
+                                                 0,
+                                                 withTwoLocks({{IrOpcode::LoadLocal, 0},
+                                                               {IrOpcode::MutexLock, 0},
+                                                               {IrOpcode::LoadLocal, 0},
+                                                               {IrOpcode::TaskSpawn, 1},
+                                                               {IrOpcode::StoreLocal, 2},
+                                                               {IrOpcode::PushI32, 5},
+                                                               {IrOpcode::PrintI32, Newline},
+                                                               {IrOpcode::LoadLocal, 0},
+                                                               {IrOpcode::MutexUnlock, 0},
+                                                               {IrOpcode::LoadLocal, 2},
+                                                               {IrOpcode::TaskWait, 0},
+                                                               {IrOpcode::Pop, 0},
+                                                               {IrOpcode::PushI32, 0},
+                                                               {IrOpcode::ReturnI32, 0}})),
+                                      lockedSection()});
+    CHECK(optimizer_test::run(module, {"program"}).output == "5\n1\n2\n");
+    expectMatchesVm(module, "lock_handed_to_task");
+  }
+  {
+    // main: lock, spawn section, wait the task while still holding the lock.
+    const IrModule module = moduleOf({functionOf("/main",
+                                                 0,
+                                                 withTwoLocks({{IrOpcode::LoadLocal, 0},
+                                                               {IrOpcode::MutexLock, 0},
+                                                               {IrOpcode::LoadLocal, 0},
+                                                               {IrOpcode::TaskSpawn, 1},
+                                                               {IrOpcode::TaskWait, 0},
+                                                               {IrOpcode::Pop, 0},
+                                                               {IrOpcode::PushI32, 0},
+                                                               {IrOpcode::ReturnI32, 0}})),
+                                      lockedSection()});
+    const optimizer_test::Outcome vm = optimizer_test::run(module, {"program"});
+    CHECK_FALSE(vm.ok);
+    CHECK(vm.error == "deadlock: every task is waiting");
+    CHECK(vm.output.empty());
+    expectMatchesVm(module, "waiter_holds_lock");
+  }
+  {
+    // keep(lock) takes the lock and ends with it; main waits the task and then needs the lock. The last thread
+    // that runs is the one that finds nobody left to free it.
+    const IrModule module = moduleOf({functionOf("/main",
+                                                 0,
+                                                 withTwoLocks({{IrOpcode::LoadLocal, 0},
+                                                               {IrOpcode::TaskSpawn, 1},
+                                                               {IrOpcode::TaskWait, 0},
+                                                               {IrOpcode::Pop, 0},
+                                                               {IrOpcode::LoadLocal, 0},
+                                                               {IrOpcode::MutexLock, 0},
+                                                               {IrOpcode::PushI32, 0},
+                                                               {IrOpcode::ReturnI32, 0}})),
+                                      functionOf("/keep",
+                                                 1,
+                                                 {{IrOpcode::StoreLocal, 0},
+                                                  {IrOpcode::LoadLocal, 0},
+                                                  {IrOpcode::MutexLock, 0},
+                                                  {IrOpcode::ReturnVoid, 0}})});
+    const optimizer_test::Outcome vm = optimizer_test::run(module, {"program"});
+    CHECK_FALSE(vm.ok);
+    CHECK(vm.error == "deadlock: every task is waiting");
+    expectMatchesVm(module, "lock_kept_by_ended_task");
+  }
+}
+
+TEST_CASE("two optexe tasks that each hold the lock the other needs fault as a deadlock") {
+  // both(first, second, ready): takes first, adds 1 to the atomic slot `ready` and turns until it holds 2, then
+  // takes second. Each of the two tasks therefore holds its first lock before either asks for its second, on every
+  // schedule; no thread sleeps for a time. The VM's default schedule would turn in the first task for ever, so only
+  // the compiled program runs.
+  const IrFunction both = functionOf("/both",
+                                     3,
+                                     {/* 0*/ {IrOpcode::StoreLocal, 2},
+                                      /* 1*/ {IrOpcode::StoreLocal, 1},
+                                      /* 2*/ {IrOpcode::StoreLocal, 0},
+                                      /* 3*/ {IrOpcode::LoadLocal, 0},
+                                      /* 4*/ {IrOpcode::MutexLock, 0},
+                                      /* 5*/ {IrOpcode::LoadLocal, 2},
+                                      /* 6*/ {IrOpcode::PushI64, 1},
+                                      /* 7*/ {IrOpcode::AtomicAdd, 64},
+                                      /* 8*/ {IrOpcode::Pop, 0},
+                                      /* 9*/ {IrOpcode::LoadLocal, 2},
+                                      /*10*/ {IrOpcode::AtomicLoad, 64},
+                                      /*11*/ {IrOpcode::PushI64, 2},
+                                      /*12*/ {IrOpcode::CmpLtI64, 0},
+                                      /*13*/ {IrOpcode::JumpIfZero, 15},
+                                      /*14*/ {IrOpcode::Jump, 9},
+                                      /*15*/ {IrOpcode::LoadLocal, 1},
+                                      /*16*/ {IrOpcode::MutexLock, 0},
+                                      /*17*/ {IrOpcode::LoadLocal, 1},
+                                      /*18*/ {IrOpcode::MutexUnlock, 0},
+                                      /*19*/ {IrOpcode::LoadLocal, 0},
+                                      /*20*/ {IrOpcode::MutexUnlock, 0},
+                                      /*21*/ {IrOpcode::ReturnVoid, 0}});
+  // main: local 2 is the `ready` slot, locals 3 and 4 the two handles.
+  const IrModule module = moduleOf(
+      {functionOf(
+           "/main",
+           0,
+           withTwoLocks(
+               {{IrOpcode::PushI32, 1},    {IrOpcode::HeapAlloc, 0},  {IrOpcode::StoreLocal, 2},
+                {IrOpcode::LoadLocal, 0},  {IrOpcode::LoadLocal, 1},  {IrOpcode::LoadLocal, 2},
+                {IrOpcode::TaskSpawn, 1},  {IrOpcode::StoreLocal, 3}, {IrOpcode::LoadLocal, 1},
+                {IrOpcode::LoadLocal, 0},  {IrOpcode::LoadLocal, 2},  {IrOpcode::TaskSpawn, 1},
+                {IrOpcode::StoreLocal, 4}, {IrOpcode::LoadLocal, 3},  {IrOpcode::TaskWait, 0},
+                {IrOpcode::Pop, 0},        {IrOpcode::LoadLocal, 4},  {IrOpcode::TaskWait, 0},
+                {IrOpcode::Pop, 0},        {IrOpcode::PushI32, 0},    {IrOpcode::ReturnI32, 0}})),
+       both});
+  const ProgramRun actual = compileAndRun(module, "opposite_order_deadlock");
+  REQUIRE_MESSAGE(actual.built, actual.buildError);
+  CHECK(actual.exitCode == 3);
+  CHECK(actual.out.empty());
+  CHECK(actual.err == "VM error: deadlock: every task is waiting\n");
 }
 
 TEST_SUITE_END();

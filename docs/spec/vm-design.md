@@ -145,7 +145,8 @@
   nobody waits for is one atomic operation on the slot, and a thread that finds the lock held sleeps on a
   condition variable of the program that an unlock signals (`OptCppMutexRuntime` in
   `src/backend/IrToOptCppRuntime.h`, pasted only into a module with mutex opcodes, so other programs are
-  unchanged). IR validation accepts the opcodes for the VM, serialized IR and the C++ emitters and rejects them
+  unchanged). A thread that sleeps for a lock counts as waiting (Tasks on threads, below), so a wait that can
+  never finish is the VM's `deadlock: every task is waiting` there too. IR validation accepts the opcodes for the VM, serialized IR and the C++ emitters and rejects them
   for native, Wasm and GLSL: `mutex operations are not supported by the native backend` (`wasm`, `wasm-browser`,
   `glsl`). The effect mask bit of `lock` is `1 << 14`.
 - **Tasks on threads (`optexe`, `optcpp`):** the optimized C++ emitter runs each `TaskSpawn` on an OS thread of its
@@ -153,16 +154,21 @@
   task opcodes, so a program without tasks is unchanged). The spawner copies the arguments into a task block,
   acquires a heap arena for the task and starts a pthread with an 8 MiB stack (the main thread's size; a secondary
   thread's default is 512 KiB on macOS, too little for 4096 calls); the thread builds its own `Rt` (call depth,
-  local-address frames, the arena's heap and string heap) and calls the function. `TaskWait` joins the thread,
-  copies the result out and frees the task block. Handles, their checks and the fault messages are the VM's (a
+  local-address frames, the arena's heap and string heap) and calls the function. `TaskWait` sleeps until the
+  task's function has returned, joins the thread, copies the result out and frees the task block. Handles, their checks and the fault messages are the VM's (a
   table of slots with generations behind one mutex). A block a task allocated stays valid after the task ends, so
   a task can return a heap or string heap address and the waiter frees it (the free is queued to the owning
   arena). Tasks run in parallel, so the order of what two live tasks print is not fixed; a line (a print with its
   newline) is written in one call and is never mixed with another task's. A fault on any thread flushes `stdout`,
   writes the VM's message and leaves with `_Exit(3)` while the other threads still run (only the first fault
   reports); a `Trap` and the entry function's return leave through `_Exit` the same way in a program with tasks.
-  A wait that can never finish (two tasks waiting each other through handles passed in heap memory) hangs instead
-  of faulting with `deadlock: every task is waiting`. There is no thread pool: each live task is one thread, and
+  A wait that can never finish faults with the VM's `deadlock: every task is waiting` (exit code 3). The
+  program counts the threads that run its code and the ones that wait (`OptCppWaitRuntime`, pasted into a module
+  with task or mutex opcodes): a thread waits in `TaskWait` for a task that still runs or in `MutexLock` for a lock
+  another thread holds, all on one condition variable that an unlock and the end of a task signal. A signal clears
+  the count and every waiter that still has to wait counts itself again, so the thread that makes the count reach
+  the number of running threads is the last one that could have changed anything, and it faults. A thread inside
+  a host call (a read, an `accept`) counts as running. There is no thread pool: each live task is one thread, and
   threads past the 64 heap arenas share the last one (`VmHeapArenas`).
 - **Heap:** `HeapAlloc`/`HeapRealloc` return heap addresses `bit 63 | generation << 48 | slot * 16` (generation in bits
   48-62, slot offset in bits 0-47; zero slots allocate nothing and return 0). A live allocation never moves, so an

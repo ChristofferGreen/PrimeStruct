@@ -473,6 +473,51 @@ inline uint64_t ps_file_write_newline(uint64_t handle) {
 
 )CPP";
 
+// What a thread that waits shares with the others, written inside the program's unnamed namespace when the module
+// has task or mutex opcodes. A thread waits for a lock another thread holds or for a task that still runs; both sleep
+// on one condition variable, which an unlock and the end of a task signal. `live` is the threads that run program
+// code and `blocked` the ones that found what they wait for unchanged since the last signal. When the last running
+// thread joins them nothing can change any more, and it faults with the VM's message.
+inline constexpr const char *OptCppWaitRuntime = R"CPP(
+struct PsWaits {
+  pthread_mutex_t gate = PTHREAD_MUTEX_INITIALIZER;
+  pthread_cond_t changed = PTHREAD_COND_INITIALIZER;
+  // The threads that sleep for a lock or are about to. Written with the gate held, read by an unlock without it.
+  std::atomic<uint64_t> sleepers{0};
+  // The rest is read and written with the gate held.
+  uint64_t live = 1;
+  uint64_t blocked = 0;
+  uint64_t round = 1;
+};
+
+// Never destroyed: the process may end while tasks still run.
+PsWaits &ps_waits() {
+  static PsWaits *waits = new PsWaits();
+  return *waits;
+}
+
+// Sleeps until the next signal. The caller holds the gate and has just found what it waits for unchanged; `counted`
+// is the round it was last counted in (0 before its first sleep), so a wakeup without a signal counts it once.
+inline void ps_wait_sleep(PsWaits &waits, uint64_t &counted) {
+  if (counted != waits.round) {
+    counted = waits.round;
+    if (++waits.blocked == waits.live) {
+      ps_fault("deadlock: every task is waiting");
+    }
+  }
+  pthread_cond_wait(&waits.changed, &waits.gate);
+}
+
+// Something a sleeper may wait for changed; the caller holds the gate. Every sleeper looks again and counts itself
+// again if it still has to wait.
+inline void ps_wait_signal(PsWaits &waits) {
+  ++waits.round;
+  waits.blocked = 0;
+  pthread_cond_broadcast(&waits.changed);
+}
+
+)CPP";
+
 // Tasks on threads (docs/MultithreadingPrototype.md, Runtime Model), written inside the program's unnamed
 // namespace when the module has task opcodes. A spawned task is one OS thread with an `Rt` of its own: call depth
 // and local numbering start at 0, as on the VM (a local address means nothing on another stack), and its heap is an
@@ -496,6 +541,8 @@ struct PsTask {
   VmHeapArenas *arenas = nullptr;
   VmHeapArena *arena = nullptr;
   uint64_t result = 0;
+  // Set with the gate of ps_waits() held when the task's code has returned.
+  bool done = false;
   std::vector<uint64_t> arguments;
 };
 
@@ -522,6 +569,12 @@ void *ps_task_main(void *raw) {
   task.result = task.entry(rt, task.arguments.data());
   // The arena's live blocks stay valid: a result the task allocated is freed by whoever holds it.
   task.arenas->release(task.arena);
+  PsWaits &waits = ps_waits();
+  pthread_mutex_lock(&waits.gate);
+  task.done = true;
+  --waits.live;
+  ps_wait_signal(waits);
+  pthread_mutex_unlock(&waits.gate);
   return nullptr;
 }
 
@@ -559,6 +612,12 @@ uint64_t ps_task_spawn(Rt &rt, PsTaskEntry entry, const uint64_t *arguments, siz
   if (task->arena == nullptr) {
     ps_fault(error);
   }
+  {
+    PsWaits &waits = ps_waits();
+    pthread_mutex_lock(&waits.gate);
+    ++waits.live;
+    pthread_mutex_unlock(&waits.gate);
+  }
   pthread_attr_t attributes;
   int rc = pthread_attr_init(&attributes);
   if (rc == 0) {
@@ -575,7 +634,8 @@ uint64_t ps_task_spawn(Rt &rt, PsTaskEntry entry, const uint64_t *arguments, siz
   return handle;
 }
 
-// TaskWait: joins the task's thread, copies the result out and frees the task block. The handle is consumed.
+// TaskWait: sleeps until the task's code has returned, joins its thread, copies the result out and frees the task
+// block. The handle is consumed.
 uint64_t ps_task_wait(uint64_t handle) {
   PsTask *task = nullptr;
   {
@@ -594,6 +654,15 @@ uint64_t ps_task_wait(uint64_t handle) {
     entry.task = nullptr;
     entry.generation = static_cast<uint16_t>(entry.generation + 1);
     tasks.freeSlots.push_back(slot);
+  }
+  {
+    PsWaits &waits = ps_waits();
+    pthread_mutex_lock(&waits.gate);
+    uint64_t counted = 0;
+    while (!task->done) {
+      ps_wait_sleep(waits, counted);
+    }
+    pthread_mutex_unlock(&waits.gate);
   }
   const int rc = pthread_join(task->thread, nullptr);
   if (rc != 0) {
@@ -661,35 +730,23 @@ inline uint64_t ps_atomic_compare_exchange(uint64_t *slot, uint64_t expected, ui
 
 )CPP";
 
-// The mutex opcodes (docs/spec/vm-design.md, Mutexes), written after OptCppAtomicRuntime when the module has one.
-// The lock is its heap slot: 0 while free, the holder (the address of its thread's Rt) otherwise. Taking a free lock
-// and freeing one nobody waits for is one atomic operation on the slot. A thread that finds the lock held sleeps on
-// one condition variable of the program, which an unlock signals when any thread sleeps.
+// The mutex opcodes (docs/spec/vm-design.md, Mutexes), written after OptCppWaitRuntime and OptCppAtomicRuntime when
+// the module has one. The lock is its heap slot: 0 while free, the holder (the address of its thread's Rt) otherwise.
+// Taking a free lock and freeing one nobody waits for is one atomic operation on the slot. A thread that finds the
+// lock held sleeps in ps_waits(), which an unlock signals when any thread sleeps for a lock.
 inline constexpr const char *OptCppMutexRuntime = R"CPP(
-struct PsLockWaits {
-  pthread_mutex_t gate = PTHREAD_MUTEX_INITIALIZER;
-  pthread_cond_t changed = PTHREAD_COND_INITIALIZER;
-  // The threads that sleep or are about to. Written with the gate held, read by an unlock without it.
-  std::atomic<uint64_t> sleepers{0};
-};
-
-// Never destroyed: the process may end while tasks still run.
-PsLockWaits &ps_lock_waits() {
-  static PsLockWaits *waits = new PsLockWaits();
-  return *waits;
-}
-
 [[gnu::noinline]] void ps_mutex_lock_slow(PsAtomicSlot lock, uint64_t holder) {
-  PsLockWaits &waits = ps_lock_waits();
+  PsWaits &waits = ps_waits();
   pthread_mutex_lock(&waits.gate);
   // Counted before the lock is tried again: an unlock that frees it after this try sees the sleeper and signals.
   waits.sleepers.fetch_add(1);
+  uint64_t counted = 0;
   for (;;) {
     uint64_t held = 0;
     if (lock.compare_exchange_strong(held, holder)) {
       break;
     }
-    pthread_cond_wait(&waits.changed, &waits.gate);
+    ps_wait_sleep(waits, counted);
   }
   waits.sleepers.fetch_sub(1);
   pthread_mutex_unlock(&waits.gate);
@@ -714,10 +771,10 @@ inline void ps_mutex_unlock(Rt &rt, uint64_t *slot) {
     ps_fault("mutex unlocked by a task that does not hold it");
   }
   lock.store(0);
-  PsLockWaits &waits = ps_lock_waits();
+  PsWaits &waits = ps_waits();
   if (waits.sleepers.load() != 0) {
     pthread_mutex_lock(&waits.gate);
-    pthread_cond_broadcast(&waits.changed);
+    ps_wait_signal(waits);
     pthread_mutex_unlock(&waits.gate);
   }
 }

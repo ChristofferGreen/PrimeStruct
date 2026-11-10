@@ -2222,6 +2222,7 @@ are left unarchived.
 | TODO-5838 | Three gate entries time out on a loaded machine | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5839 | A 17-field `SoaSchemaStorage` program builds as `exe` in under 5 s | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5845 | A spawned call with a `String` or struct parameter or result runs as a task | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5846 | `optexe` faults when every task waits on another | [2026-11.md](todo_archive/2026-11.md) | 2026-11-10 |
 
 <!-- INDEX-END -->
 

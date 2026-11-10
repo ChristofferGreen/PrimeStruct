@@ -809,7 +809,9 @@ of two `Task<void>` does not compile yet (TODO-5852).
   argument is a copy, which is how a task gets the mutex.
 - `T` must be sendable. Locking a mutex again inside its own `locked` body faults with `mutex locked again by the
   task that holds it` (the VM and `optexe` record the holder). Two mutexes locked in opposite orders deadlock; the
-  VM reports it (`deadlock: every task is waiting`), threads hang until TODO-5846.
+  VM and `optexe` report it (`deadlock: every task is waiting`, exit code 3). On `optexe` the program counts its
+  running and its waiting threads, and the last running one that has to wait faults (docs/spec/vm-design.md,
+  Tasks on threads).
 - The lock is two IR opcodes, `MutexLock` and `MutexUnlock` (docs/spec/vm-design.md, Mutexes), on a heap slot
   of the mutex's control cell; the unlock is the `Destroy` of a local of `locked`. On `optexe` an uncontended
   lock or unlock is one atomic operation on that slot and a waiter sleeps on a condition variable, where the

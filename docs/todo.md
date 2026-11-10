@@ -118,7 +118,6 @@ of sync with them.
 | TODO-5847 | A spawned call with a collection or a `copy` parameter runs as a task | ready | mt-vm-tasks |
 | TODO-5848 | `return(wait(task))` returns a `String` task result | ready | mt-wait-types |
 | TODO-5849 | A destructured multi-wait keeps each result's own type | ready | mt-wait-types |
-| TODO-5846 | `optexe` faults when every task waits on another | ready | mt-optexe-threads |
 | TODO-5798 | Bounded `Channel<T>` with the `channel` effect | ready | mt-primitives |
 | TODO-5850 | A call that returns a `Reference` is a closure argument | ready | closures-references |
 | TODO-5851 | A `[ref]` closure written in a generic call infers the closure type | ready | closures-references |
@@ -220,13 +219,13 @@ of sync with them.
 - Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5738, TODO-5718
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732, TODO-5735, TODO-5736, TODO-5737
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5840, TODO-5844; real calls and struct copies TODO-5739, TODO-5741, TODO-5752; VM address checks TODO-5824
-- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5846, TODO-5798, TODO-5656, TODO-5802, TODO-5803, TODO-5799, TODO-5800, TODO-5801, TODO-5847, TODO-5848, TODO-5849, TODO-5852; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854
+- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5798, TODO-5656, TODO-5802, TODO-5803, TODO-5799, TODO-5800, TODO-5801, TODO-5847, TODO-5848, TODO-5849, TODO-5852; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854
 
 ### Execution Queue
 
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
-Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order (TODO-5792 and TODO-5835, VM tasks and their lowering, are done, and so are TODO-5793, byte-region checks without a map search, TODO-5794, `optexe` per-thread heap arenas, TODO-5795, `optexe` threads for `[spawn]`, `Atomic<i32>` and `Atomic<i64>` in `/std/sync`, and TODO-5797, `Mutex<T>` with `locked(body)`): TODO-5846 (`optexe` faults on a wait cycle, reachable now that `Mutex` blocks), TODO-5798 (`Channel`), TODO-5656 (atomic `SharedString` count), TODO-5802 (`serveWorkers`), TODO-5803 (apps on workers, measured), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5798, TODO-5656 and TODO-5799 are ready and independent of each other, and so are TODO-5848 (`return(wait(t))` of a `String` task result is rejected as a return type mismatch), TODO-5849 (a destructured multi-wait of tasks with different result types loses the later results' types) and TODO-5847 (spawned calls with collection or `copy` parameters or collection results run as tasks, which today run inline; TODO-5845, the same for `String`, struct and closure values, is done) (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, are done). Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions), TODO-5854 (a `Mutex` or `Atomic` handle keeps a copy of its first value). Found with `Mutex` and ready: TODO-5852 (`wait(a, b)` of two `Task<void>`), and in the closures lane TODO-5850 (a `Reference`-returning call as a closure argument) and TODO-5851 (a `[ref]` closure written in a generic call).
+Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order (TODO-5792 and TODO-5835, VM tasks and their lowering, are done, and so are TODO-5793, byte-region checks without a map search, TODO-5794, `optexe` per-thread heap arenas, TODO-5795, `optexe` threads for `[spawn]`, `Atomic<i32>` and `Atomic<i64>` in `/std/sync`, TODO-5797, `Mutex<T>` with `locked(body)`, and TODO-5846, `optexe` faults when every task waits): TODO-5798 (`Channel`), TODO-5656 (atomic `SharedString` count), TODO-5802 (`serveWorkers`), TODO-5803 (apps on workers, measured), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5798, TODO-5656 and TODO-5799 are ready and independent of each other, and so are TODO-5848 (`return(wait(t))` of a `String` task result is rejected as a return type mismatch), TODO-5849 (a destructured multi-wait of tasks with different result types loses the later results' types) and TODO-5847 (spawned calls with collection or `copy` parameters or collection results run as tasks, which today run inline; TODO-5845, the same for `String`, struct and closure values, is done) (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, are done). Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions), TODO-5854 (a `Mutex` or `Atomic` handle keeps a copy of its first value). Found with `Mutex` and ready: TODO-5852 (`wait(a, b)` of two `Task<void>`), and in the closures lane TODO-5850 (a `Reference`-returning call as a closure argument) and TODO-5851 (a `[ref]` closure written in a generic call).
 
 ### Task Blocks
 
@@ -778,19 +777,6 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
     - negative: a field the struct does not have is still `unknown field`; a destructured multi-wait in a program without the tuple import either compiles or is one diagnostic with a source location that names `/std/tuple`
     - full release gate green
   - stop_rule: the types of destructured multi-wait bindings and the missing-import message; no change to `get<I>` or bracket indexing of the tuple.
-
-- [ ] TODO-5846: `optexe` faults when every task waits on another
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-10
-  - phase: Multithreading (docs/MultithreadingPrototype.md, Runtime Model)
-  - parallel_track: mt-optexe-threads
-  - scope: The VM ends a program whose tasks all wait on each other with `deadlock: every task is waiting` (exit code 3); on `optexe` the threads block in `ps_task_wait` and the program hangs. With `[spawn]` and `wait` alone a wait cycle needs a task handle to reach another task, which the sendable check rejects, so this becomes reachable with `Mutex` and `Channel` (TODO-5797, TODO-5798). Count running and blocked tasks in the task table and fault with the VM's message when the last running one blocks.
-  - acceptance:
-    - positive: programs free of wait cycles print what they print now, and a single-threaded benchmark keeps its instruction count
-    - negative: a program whose tasks all block faults with the VM's message and exit code 3 on `optexe`, tested without sleeps
-    - full release gate green
-  - stop_rule: the wait-cycle fault on `optexe`. `Mutex` (the first blocking primitive) exists, so this is ready.
 
 - [ ] TODO-5850: A call that returns a `Reference` is a closure argument
   - owner: ai
