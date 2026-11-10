@@ -1,7 +1,8 @@
 # AI Workflow: Plan
 
-Classification: **design direction**. Nothing here is implemented or scheduled yet; the slices in section 9 become
-`docs/todo.md` entries once the open decisions in section 10 are made.
+Classification: **design direction**. Nothing here is implemented yet. The first filed leaves are TODO-5841,
+TODO-5843 and TODO-5842 (namespaces as envelopes, and summaries); the other slices in section 9 become `docs/todo.md`
+entries as the open decisions in section 10 are made.
 
 ## 1. Goal
 
@@ -55,7 +56,7 @@ What is missing:
 | --- | --- |
 | Full path, kind (function, struct, enum, method), visibility | semantic product |
 | Signature with concrete or template types | semantic product |
-| Summary line | doc comment (section 6.2) |
+| Summary text, stale flag | `[summary]` (section 6.2), metadata (section 4.3) |
 | Source unit and span | provenance ledger |
 | Declared effects, used effects, transitive effects | semantic product plus a call-graph closure |
 | Purity level (section 5.1) | derived |
@@ -85,10 +86,71 @@ A view in PrimeScroll for a `.prime` project.
   (section 7).
 - **No call-edge drawing in the first version.** Callers and callees are lists on the selected box. Graph layout is
   the expensive part and is often unreadable.
-- **Rendering:** HTML in the existing web view, written with `/std/html`, fed by the outline from the embedded
-  compiler. This needs no new drawing stack.
+- **Header:** entering a box shows a report at the top of the window: its summary, the effects used anywhere inside
+  it (with the definitions responsible), and its purity and trust levels.
+- **Rendering:** not HTML. The view is described in a small display language (section 4.2) and drawn natively.
 - **Startup:** the view and the compiler work behind it load only when the view is first opened, so the editor's
   launch time does not change.
+
+### 4.1 Opening a project
+
+Decided:
+
+- **File > Open PrimeStruct Project…** opens a folder, and the folder is the project.
+- **The first version watches the folder** for changes made outside the editor (an AI editing the files on disk).
+  A change rebuilds the outline and reloads open tabs that have no unsaved edits; a tab with unsaved edits is marked
+  as changed on disk and is not overwritten. The watcher starts when a project is opened, never at launch.
+
+Proposed, not yet decided:
+
+- **Contents:** every `.prime` file under the folder; the folder is an import root (as `--import-path`).
+- **Entry point:** `main.prime` at the root when present; otherwise the project is a library and the outline covers
+  its public definitions. A project file is added only when a real project needs more.
+- **Window:** a project window shows the box view first; files open as tabs from it. Recent projects join
+  File > Open Recent and a project window is restored like tabs are.
+- **Refresh on save:** saving a file in the editor rebuilds the outline too.
+
+Needed first: a choose-folder call in the UI ABI (`openPanel` picks files only), a directory listing in the stdlib
+(none found in `/std/os` or `/std/file`), a folder-watch call and event in the UI ABI, and the display view of
+section 4.2.
+
+### 4.2 The display language
+
+Decided: the box view is not drawn in a web view. PrimeStruct code turns the outline and the active lens into a
+simple JSON display description, and a renderer draws it with native components or in a Metal view.
+
+Proposed shape:
+
+- **Vocabulary:** box, text, badge, color token, an id for clicks, children. No scripts, no styles beyond tokens.
+- **Layout in PrimeStruct, once:** a shared step turns the hierarchy into rectangles, so a renderer only draws
+  rectangles and text and reports clicks by id. A second renderer then costs little.
+- **Tests:** the description is deterministic JSON, so the view is snapshot-tested without a window.
+
+The renderer is open (section 10). Today the native UI has no label, box or canvas widget, and `/std/scene` has no
+text. Three routes:
+
+| Route | Text | Cost |
+| --- | --- | --- |
+| One native view per box and label | the platform's | many views; zooming between levels is awkward |
+| One native canvas view that draws the description with the platform's 2D and text drawing | the platform's | one new widget in the UI ABI |
+| A Metal view over `/std/scene` | has to be built | a scene widget plus text rendering |
+
+### 4.3 Project metadata
+
+`ProjectRoot/.ps/metadata.json` holds facts about a project that are not in its source. It is committed with the
+project, written with sorted keys so it merges and diffs cleanly, and carries a format version.
+
+Per definition path:
+
+- **Reviewed:** the canonical-form hash of the definition when a person marked it reviewed, and the date. A real
+  change to the definition clears the mark; a respelling does not.
+- **Summary stamp:** the canonical-form hash of the definition when its summary text last changed (section 6.2),
+  recorded automatically when the outline is rebuilt.
+
+The hash covers a definition's own signature and body, not its callees or its template instances, and names the
+hash scheme, so a compiler upgrade that changes lowering does not silently clear every review.
+
+## 5. Lenses
 
 ## 5. Lenses
 
@@ -127,6 +189,7 @@ A ladder, so the lens is useful before any proof support exists:
 | Level | Evidence |
 | --- | --- |
 | None | It compiles |
+| Reviewed | A person marked it reviewed and it has not changed since (section 4.3) |
 | Tested | Reached by at least one test |
 | Contracted | Has `require` or `ensure` contracts, checked at run time |
 | Property-tested | Contracts exercised with generated inputs |
@@ -154,8 +217,25 @@ A ladder, so the lens is useful before any proof support exists:
 
 ### 5.6 The review queue
 
-A combined filter rather than a color: changed boxes that are impure and have trust level None or Tested. This is the
-list of code a person should read themselves.
+A combined filter rather than a color: boxes that are impure, not reviewed, and have trust level None or Tested.
+This is the list of code a person should read themselves. Reviewed is tracked next to the machine evidence, not
+instead of it: a box can be both tested and unreviewed.
+
+### 5.7 Structure
+
+From the outline alone:
+
+- **Dead code:** not reachable from the entry point or from any public definition.
+- **Duplicates:** definitions whose bodies have the same canonical-form hash.
+- **Size:** box area follows code size.
+
+### 5.8 Run time
+
+Filled in by running the program from the editor; held in memory only and gone when the app closes.
+
+- **Profile:** instructions and allocations per box.
+- **Replay:** boxes light up as a recorded run moves through them.
+- **Faults:** a fault is shown as a path through boxes.
 
 ## 6. Language changes
 
@@ -167,10 +247,24 @@ mismatch. Decision: a comma always separates. No `.prime` file under `stdlib/` o
 The digit separator becomes `_` (`1_000_000`, `0xFF_FFu64`), between digits only, in the integer part of integer
 and float literals. A dot was rejected because it collides with float literals: `1.000` already means 1.0.
 
-### 6.2 Doc comments
+### 6.2 Summaries
 
-A comment form the lexer keeps and attaches to the next definition or field (`///`, or a `[doc("...")]` transform).
-The first line is the summary on the box face. A lint can require one on every public definition.
+A `[summary("...")]` transform on a definition carries the text shown on its box. It is an ordinary transform, so
+the lexer still drops comments.
+
+```
+[summary("A tab's text, file path and saved state.") struct]
+Document() { ... }
+```
+
+- A summary is a claim, not a checked fact, and the view draws the two differently. Usage examples go in the
+  summary; they are not run.
+- A summary is **stale** when the definition's canonical-form hash differs from its summary stamp (section 4.3).
+  The outline lists stale and missing summaries, so a periodic AI pass rewrites only those.
+- The toolchain ships a default `summary.md`: instructions for an AI on how to write a summary. A project can
+  replace it.
+- A namespace carries a summary the same way, because a namespace is a definition (section 6.5):
+  `[namespace summary("Text buffers and cursors.")] model { ... }`. TODO-5842 makes `summary` a checked transform.
 
 ### 6.3 `[pure]`, `[test]`, `ensure(...)`
 
@@ -180,6 +274,59 @@ As described in sections 5.1, 5.2 and 5.3.
 
 A project setting: public signatures and struct fields carry explicit types; bodies may infer. Box faces stay
 precise and inference cannot silently change a public type.
+
+### 6.5 Namespaces are envelopes
+
+Every construct is an envelope, `[transforms] name<templates>(parameters) { body }`. `namespace name { ... }` is
+not: it is a keyword with its own grammar production (`namespace_decl`) and parser function, and it leaves nothing
+in the AST, so it cannot carry a transform list.
+
+The envelope form already works (checked on the VM, 2026-11-10):
+
+```
+[return<void>]
+demo() {
+  [struct] Point() { [public i32] x{3} }
+  [return<i32>] one() { return(7) }
+  [return<i32>] two() { return(one()) }
+}
+```
+
+`/demo/one`, `/demo/two` and `/demo/Point` exist, siblings call each other by bare name, `import /demo/*` works,
+containers nest, and a slash-path name (`/a/b() { ... }`) works. After parsing, the members are definitions with
+slash paths and the container is an empty definition at `/demo`; that is already the canonical form a namespace
+needs. Three things are missing:
+
+| Gap | Today |
+| --- | --- |
+| The container is a real function | `demo()` can be called and lowers to an empty function |
+| It cannot be opened twice | "duplicate definition: /demo"; the stdlib opens `namespace std` in 50 files |
+| Members of an untagged container can be read as struct helpers | `demo() { one() { return(7) } }` gives `/demo/one` an implicit `this` |
+
+Proposal: **`namespace` is a transform.**
+
+```
+[namespace summary("Text buffers and cursors.")]
+model {
+  [struct] Document() { ... }
+  [return<i32>] line_count([Document] doc) { ... }
+}
+```
+
+- A `[namespace]` definition's body holds only definitions. It has no parameters, template list or `return`, is
+  not callable and not a type, gives its members no implicit `this`, and lowers to nothing.
+- Definitions with `namespace` at one path are one namespace; their transform lists are joined.
+- It carries any transform, `summary` first. What member-affecting transforms mean on it is open (section 10).
+- A path has one envelope that owns its transforms. A `[namespace]` block may share a path with a struct, enum or
+  function, as `namespace P { ... }` next to `[struct] P` does today, but then it is `namespace` alone and the
+  transforms go on the other definition.
+- `namespace model { ... }` stays as surface sugar for `[namespace] model { ... }`, like `if(...) { ... }` for the
+  canonical `if` call. A transform list goes on the envelope spelling; the keyword form takes none.
+- The AST gets no new node and the canonical dump keeps its shape: `[namespace ...] /model() { }` plus the members.
+
+TODO-5841 adds the transform, TODO-5843 turns the keyword form into sugar and removes `namespace_decl` from the
+grammar. After both, the top-level items are `import`, definitions and executions. `import` is the remaining form
+that is not an envelope; it is resolved on the source text before parsing and is out of scope here.
 
 ## 7. Lowered view
 
@@ -206,24 +353,34 @@ precise and inference cannot silently change a public type.
 Each is one or more TODO leaves when scheduled.
 
 1. **Comma fix** (6.1). Small and independent; removes a trap every AI falls into.
-2. **Doc comments** (6.2).
+2. **Namespaces as envelopes** (6.5) and **`[summary]`** (6.2): TODO-5841, TODO-5843, TODO-5842.
 3. **Outline v1** (section 3): paths, kinds, visibility, signatures, summaries, spans, declared and transitive
    effects, callees.
-4. **Box view v1** (section 4): hierarchy, box faces with effect badges, click to source.
-5. **Purity lens** (5.1), then `[pure]`.
-6. **Change lens** (5.5) and canonical hashes in the outline.
-7. **Lowered view** (section 7), definition-filtered dump first.
-8. **Raise lint** and **level lens** (section 8, 5.4).
-9. **`[test]` and the coverage lens** (5.2).
-10. **`ensure(...)` and the trust lens** (5.3) up to Contracted; review queue (5.6).
-11. **Formatter** (section 8).
-12. Later: property testing, static proof, call-edge drawing, instructing the AI from a box.
+4. **Open PrimeStruct Project** (4.1) and **box view v1** (4, 4.2): hierarchy, box faces with effect badges, the
+   header report, click to source.
+5. **Canonical hashes** in the outline, the **structure lens** (5.7) and **project metadata** with the Reviewed
+   mark (4.3).
+6. **Purity lens** (5.1), then `[pure]`.
+7. **Change lens** (5.5).
+8. **Lowered view** (section 7), definition-filtered dump first.
+9. **Raise lint** and **level lens** (section 8, 5.4).
+10. **`[test]` and the coverage lens** (5.2).
+11. **`ensure(...)` and the trust lens** (5.3) up to Contracted; review queue (5.6).
+12. **Formatter** (section 8).
+13. Later: run-time lenses (5.8), property testing, static proof, call-edge drawing, instructing the AI from a box.
 
 Slices 1 to 4 give a usable first result: a box view of a project with "touches the network" badges.
 
 ## 10. Open decisions
 
-- **Doc comment spelling:** `///` or `[doc("...")]`.
+- **Renderer for the display language** (4.2): native views, one native canvas view, or a Metal view.
+- **Whether the keyword form `namespace name { ... }` stays** as sugar for good or is retired later (about 150
+  blocks in the stdlib and examples, more in tests).
+- **What other transforms mean on a namespace.** TODO-5841 carries them without applying them to members.
+  `[effects(...)] namespace` as an upper bound for its members would be the namespace rule below.
+- **Namespace rules:** the compiler checks each call against its caller's effects, but nothing stops an edit from
+  adding an effect to a definition and to its callers. Whether a project can state "nothing under this namespace
+  may use `net_io`" is open; the header report (section 4) makes such a change visible either way.
 - **Project structure:** whether namespaces are enough or a project or module manifest sits above them. PrimeScroll
   would need namespaces before its own box view is useful.
 - **Whether a contract change is a breaking change** for callers.

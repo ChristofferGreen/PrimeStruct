@@ -176,6 +176,9 @@ of sync with them.
 | TODO-5543 | Repair or retire the disabled Apple/arm64 native backend test shards | deferred | native-arm64-tests |
 | TODO-5544 | Method calls on `pick` payload bindings lower | deferred | pick-bindings |
 | TODO-5545 | Record the macOS AppKit manual smoke checklist | deferred | native-ui-macos-manual |
+| TODO-5841 | `[namespace] name { ... }` is a definition | ready | namespace-envelope |
+| TODO-5843 | `namespace name { ... }` is sugar for the `[namespace]` definition | blocked | namespace-envelope |
+| TODO-5842 | `summary("...")` is a checked transform on definitions | blocked | summary-transform |
 
 ### Ready Now
 
@@ -183,6 +186,7 @@ of sync with them.
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5510 (control-returns): `return` returns from unit-variant pick arms correctly
 - TODO-5524 (result-error-structs): int-backed error structs round-trip through stdlib Result sums
+- TODO-5841 (namespace-envelope): `[namespace] name { ... }` is a definition
 
 ### Immediate Next 10
 
@@ -191,6 +195,7 @@ of sync with them.
 3. TODO-5510
 4. TODO-5524
 5. TODO-5728
+6. TODO-5841
 
 ### Priority Lanes
 
@@ -198,6 +203,7 @@ of sync with them.
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - Native UI (docs/NativeUiPlan.md): TODO-5808, TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
+- AI workflow (docs/AiWorkflowPlan.md): TODO-5841, TODO-5843, TODO-5842
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
@@ -1180,3 +1186,52 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
   - acceptance:
     - each item is recorded as passed or filed as a follow-up TODO
   - stop_rule: recording the manual run only.
+
+- [ ] TODO-5841: `[namespace] name { ... }` is a definition
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-10
+  - phase: AI workflow (docs/AiWorkflowPlan.md section 6.5)
+  - parallel_track: namespace-envelope
+  - scope: A definition body already works as a namespace: in `[return<void>] demo() { [return<i32>] one() { return(7i32) } }` the member is `/demo/one`, siblings call each other by bare name, `import /demo/*` works, and containers nest. But `/demo` is then a callable void function, it cannot be opened twice ("duplicate definition: /demo"), and `[namespace] demo() { ... }` fails with "expected transform identifier" because `namespace` is a keyword token. Add `namespace` as a definition transform: `[namespace] demo { ... }` (and `demo() { ... }`, a slash-path name, and a nested one) is a definition whose body holds only definitions. It takes no parameters, template list or `return`; a binding or statement in its body is a diagnostic; calling it or using it as a type is a diagnostic; its members get no implicit `this`. Definitions with `namespace` at one path are one namespace: the parser folds them into the first, in source order, with their transform lists joined. A `[namespace]` definition may share its path with a struct, enum or function (as `namespace P { ... }` next to `[struct] P` does today) only when its list is `namespace` alone. It lowers to nothing.
+  - implementation_notes: `parseTransformList` must take the `KeywordNamespace` token as a transform name. Top-level definitions already accept a body without `()`; `tryParseNestedDefinition` (src/parser/ParserCoreDefinitionBodies.cpp) takes a nested `name { ... }` only for the `isNoReturnDefinitionTransform` names (struct-like and `sum`), so `namespace` joins that test. Members of a container are already flattened to slash paths with the container left as an empty definition (`--dump-stage ast`), so no AST type is added. Follow how field-less struct definitions are kept out of lowering. The keyword form (`Parser::parseNamespace`) is not touched here.
+  - acceptance:
+    - `[namespace] demo { ... }` with a function, a struct and a nested `[namespace]` runs on the VM; members resolve by path, by sibling bare name and through `import /demo/*`
+    - two `[namespace] demo` blocks merge; `--dump-stage ast` shows one `[namespace] /demo` (golden test)
+    - parameters, a template list, `return`, a statement in the body, a call of the namespace, and extra transforms on a path that is also a struct are diagnostics (one test each)
+    - `--dump-stage ir-lowered` has no function for the namespace
+    - docs/PrimeStruct_SyntaxSpec.md and docs/spec/transforms.md describe the transform with a runnable example
+    - full release gate green
+  - stop_rule: the `namespace` transform only; the keyword form keeps its own parser path until TODO-5843, and no other transform gets a meaning for a namespace's members.
+
+- [ ] TODO-5843: `namespace name { ... }` is sugar for the `[namespace]` definition
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5841
+  - created_at: 2026-11-10
+  - phase: AI workflow (docs/AiWorkflowPlan.md section 6.5)
+  - parallel_track: namespace-envelope
+  - scope: `namespace name { ... }` has its own grammar production (`namespace_decl`) and parser function, which pushes a prefix and leaves no definition. It becomes surface sugar: the parser reads it as `[namespace] name { ... }` and goes through the definition path of TODO-5841, so the grammar has no top-level item besides `import`, definitions and executions. Executions inside a namespace block keep their prefix as today. The stdlib and the examples keep the keyword spelling.
+  - implementation_notes: `Parser::parseNamespace` and `namespaceStack_` (src/parser/ParserCoreDefinitions.cpp, ParserCore.cpp). `namespace std` is opened in 50 stdlib files, so the fold of TODO-5841 carries the load. The parser skips `import` inside a namespace block today; keep that.
+  - acceptance:
+    - `namespace_decl` is gone from the grammar in docs/PrimeStruct_SyntaxSpec.md; section 3.2 gives the keyword form as sugar with its rewritten form
+    - `--dump-stage ast` of a keyword namespace shows the `[namespace]` definition (golden test)
+    - `--dump-stage ir-lowered` of examples/apps/text_editor/main.prime and of one stdlib-heavy test program is identical before and after (compared through `stripDumpTimings`)
+    - full release gate green
+  - stop_rule: the keyword's parser path and the grammar text only; no source file is rewritten to the envelope spelling.
+
+- [ ] TODO-5842: `summary("...")` is a checked transform on definitions
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5841
+  - created_at: 2026-11-10
+  - phase: AI workflow (docs/AiWorkflowPlan.md section 6.2)
+  - parallel_track: summary-transform
+  - scope: `[summary("One.") return<i32>] one() { ... }` already passes semantics, but only because the transform is not checked: nothing documents it, validates its argument or publishes it. `summary` becomes a documented transform that carries a text for tools and has no effect on generated code. It takes exactly one string literal, appears at most once per list, and is valid on every definition: functions, structs, enums and `[namespace]` definitions (TODO-5841). Blocks of one namespace that carry two summaries are a diagnostic that names both positions. The semantic product publishes the summary of each definition.
+  - acceptance:
+    - docs/spec/transforms.md documents `summary` with a runnable example
+    - wrong argument count, a non-literal argument, a repeated `summary`, and two summaries for one namespace are diagnostics (one test each)
+    - `--dump-stage semantic-product` shows the summaries of a function, a struct and a namespace (golden test)
+    - `--dump-stage ir-lowered` is identical with and without the summaries (compared through `stripDumpTimings`)
+    - full release gate green
+  - stop_rule: the `summary` transform only; no summary on fields or parameters, no outline output, no staleness tracking.
