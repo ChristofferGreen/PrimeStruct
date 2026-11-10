@@ -22,15 +22,9 @@ None.
 ## Current Failures
 
 <!-- compile.sh:failing-tests:start -->
-- Last updated: `2026-11-10T10:09:39Z`
+- Last updated: `2026-11-10T10:21:58Z`
 - Build type: `Release`
 - Build dir: `build-release`
 - Command: `ctest --test-dir build-release --output-on-failure --parallel 22`
-- Result: `ctest` failed with status `8`.
-- Failing CTest cases:
-  - `13`: `PrimeStruct_embed_script_engine`
-  - `187`: `PrimeStruct_primestruct_ir_pipeline_to_cpp_cases_1_10`
-  - `1055`: `PrimeStruct_primestruct_compile_run_vm_outputs_ir_and_output_modes_emitters_33_44`
-  - `1759`: `PrimeStruct_primestruct_compile_run_glsl_glsl_36_40`
-  - `2057`: `PrimeStruct_todo_references`
+- Result: no failing CTest cases.
 <!-- compile.sh:failing-tests:end -->
