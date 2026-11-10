@@ -162,6 +162,10 @@ bool effectBitForName(const std::string &name, uint64_t &outBit) {
     outBit = EffectLock;
     return true;
   }
+  if (name == "channel") {
+    outBit = EffectChannel;
+    return true;
+  }
   return false;
 }
 
@@ -170,7 +174,7 @@ bool isSupportedEffect(const std::string &name) {
          name == "pathspace_notify" || name == "pathspace_insert" || name == "pathspace_take" ||
          name == "pathspace_bind" || name == "pathspace_schedule" || name == "file_write" ||
          name == "file_read" || name == "gpu_dispatch" || name == "task" || name == "net_io" ||
-         name == "atomic" || name == "lock";
+         name == "atomic" || name == "lock" || name == "channel";
 }
 
 std::unordered_set<std::string> resolveActiveEffects(const std::vector<Transform> &transforms,

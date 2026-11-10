@@ -144,7 +144,9 @@ namespace primec {
   X(AtomicExchange, 0, 0, 0)                                                                       \
   X(AtomicCompareExchange, 0, 0, 0)                                                                \
   X(MutexLock, 0, 0, 0)                                                                            \
-  X(MutexUnlock, 0, 0, 0)
+  X(MutexUnlock, 0, 0, 0)                                                                          \
+  X(ConditionWait, 0, 0, 0)                                                                        \
+  X(ConditionNotify, 0, 0, 0)
 
 struct IrOpcodeInfo {
   IrOpcode op;

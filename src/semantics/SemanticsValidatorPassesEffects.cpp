@@ -139,6 +139,13 @@ bool SemanticsValidator::validateCalleeEffects(const Expr &expr, const Definitio
           "mutex operation requires lock effect: " + stripSpecializationSuffix(callee.fullPath) +
               " in " + callerKind + caller);
     }
+    if (effect == "channel") {
+      // `send`, `receive` and `close` of /std/sync/Channel (docs/spec/stdlib-reference.md, std/sync).
+      return failExprDiagnostic(expr,
+                                "channel operation requires channel effect: " +
+                                    stripSpecializationSuffix(callee.fullPath) + " in " +
+                                    callerKind + caller);
+    }
     return failExprDiagnostic(expr, stripSpecializationSuffix(callee.fullPath) + " requires " + effect +
                                         " effect in " + callerKind + caller);
   }

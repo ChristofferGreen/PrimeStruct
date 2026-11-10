@@ -25,11 +25,12 @@
   (recursive and larger functions), including recursion up to the VM's call-depth limit.
 - **GLSL note:** GLSL/SPIR-V emission routes through canonical IR (`glsl-ir`/`spirv-ir`) and `IrValidationTarget::Glsl`;
   these modes emit backend output directly without requiring PSIR serialization.
-- **PSIR versioning:** current portable IR is PSIR v36 (v24 to v36 are listed in `include/primec/ir/Ir.h`'s opcode
-  comments and the finished TODO log; v36 appends `MutexLock` and `MutexUnlock` (see Mutexes) and the effect mask
-  bit of `lock`. Migration: the module layout is unchanged, so a v33, v34 or v35 module still loads and is written
-  back as v36; the loader refuses an opcode newer than the module's version, and a v36 module does not load in an
-  older build. v35 appends the five atomic opcodes (see Atomics). v34 appends `TaskSpawn` and
+- **PSIR versioning:** current portable IR is PSIR v37 (v24 to v37 are listed in `include/primec/ir/Ir.h`'s opcode
+  comments and the finished TODO log; v37 appends `ConditionWait` and `ConditionNotify` (see Conditions) and the
+  effect mask bit of `channel`. Migration: the module layout is unchanged, so a v33 to v36 module still loads and
+  is written back as v37; the loader refuses an opcode newer than the module's version, and a v37 module does not
+  load in an older build. v36 appends `MutexLock` and `MutexUnlock` (see Mutexes) and the effect mask bit of
+  `lock`. v35 appends the five atomic opcodes (see Atomics). v34 appends `TaskSpawn` and
   `TaskWait` (see Tasks) and is the first version
   that also loads the previous one: a v33 module has the same layout and cannot hold the task opcodes, which the
   loader refuses in it; v33 appends `Trap` and numbers local addresses across all live frames (see
@@ -149,6 +150,39 @@
   never finish is the VM's `deadlock: every task is waiting` there too. IR validation accepts the opcodes for the VM, serialized IR and the C++ emitters and rejects them
   for native, Wasm and GLSL: `mutex operations are not supported by the native backend` (`wasm`, `wasm-browser`,
   `glsl`). The effect mask bit of `lock` is `1 << 14`.
+- **Conditions (PSIR v37):** `ConditionWait` and `ConditionNotify` let a task that holds a lock wait until another
+  task has changed what the lock guards. A condition is the address of one heap slot. `ConditionWait` pops the
+  address of a lock the task holds (on top) and the address of a condition, frees the lock and leaves the task
+  waiting until the next `ConditionNotify` on that condition; it does not take the lock again, the `MutexLock`
+  that follows it does. `ConditionNotify` pops the address of a condition and wakes every task that waits on it.
+  Both push nothing (immediate 0). A wait by a task that does not hold the lock faults with `condition wait by a
+  task that does not hold the lock`. A notify wakes only the tasks that already wait, so a waiter checks what it
+  waits for in a loop with the lock held, and the notifier changes it with the lock held. Their source is
+  `Channel<T>` of `/std/sync` (docs/spec/stdlib-reference.md, Shared state), through the `[host]` definitions
+  `/std/sync/__pscondition_wait` and `__pscondition_notify`; a wait in `receive` is
+
+  ```
+  LoadLocal <condition>
+  LoadLocal <cell>
+  ConditionWait
+  LoadLocal <cell>
+  MutexLock
+  ```
+
+  The third `[host]` definition of a channel, `/std/sync/__pschannel_send_closed`, is no opcode: the lowerer
+  writes the runtime error `send on a closed channel` (a line on `stderr` and exit code 3, as for an array index
+  out of bounds). On the VM a waiting task is blocked on the condition's address, and a notify makes the tasks
+  blocked on it runnable; the slot's value is not used. A wait and a notify are switch points under a schedule
+  seed, and a task that waits counts for `deadlock: every task is waiting`. Where one call stack runs (a module
+  without tasks) a notify does nothing and a wait is that deadlock. The fast kernel leaves functions with
+  condition opcodes to the stepping kernel. On `optexe` the slot counts the notifies: a wait reads the count and
+  frees the lock with the program's wait gate held, then sleeps on the program's condition variable until the
+  count has changed, and a notify adds one and signals when a thread sleeps (`OptCppConditionRuntime` in
+  `src/backend/IrToOptCppRuntime.h`, pasted only into a module with condition opcodes, so other programs are
+  unchanged). A thread that sleeps for a notify counts as waiting (Tasks on threads, below). IR validation
+  accepts the opcodes for the VM, serialized IR and the C++ emitters and rejects them for native, Wasm and GLSL
+  before it looks at the atomic and mutex opcodes of the same module: `channel operations are not supported by
+  the native backend` (`wasm`, `wasm-browser`, `glsl`). The effect mask bit of `channel` is `1 << 15`.
 - **Tasks on threads (`optexe`, `optcpp`):** the optimized C++ emitter runs each `TaskSpawn` on an OS thread of its
   own (`OptCppTaskRuntime` in `src/backend/IrToOptCppRuntime.h`, pasted into the program only when the module has
   task opcodes, so a program without tasks is unchanged). The spawner copies the arguments into a task block,
@@ -164,8 +198,9 @@
   reports); a `Trap` and the entry function's return leave through `_Exit` the same way in a program with tasks.
   A wait that can never finish faults with the VM's `deadlock: every task is waiting` (exit code 3). The
   program counts the threads that run its code and the ones that wait (`OptCppWaitRuntime`, pasted into a module
-  with task or mutex opcodes): a thread waits in `TaskWait` for a task that still runs or in `MutexLock` for a lock
-  another thread holds, all on one condition variable that an unlock and the end of a task signal. A signal clears
+  with task, mutex or condition opcodes): a thread waits in `TaskWait` for a task that still runs, in `MutexLock`
+  for a lock another thread holds or in `ConditionWait` for a notify, all on one condition variable that an
+  unlock, a notify and the end of a task signal. A signal clears
   the count and every waiter that still has to wait counts itself again, so the thread that makes the count reach
   the number of running threads is the last one that could have changed anything, and it faults. A thread inside
   a host call (a read, an `accept`) counts as running. There is no thread pool: each live task is one thread, and

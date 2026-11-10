@@ -194,7 +194,10 @@ bool computeIrStackEffect(const IrInstruction &instruction,
     return set(2, 0);
   case IrOpcode::MutexLock:
   case IrOpcode::MutexUnlock:
+  case IrOpcode::ConditionNotify:
     return set(1, 0);
+  case IrOpcode::ConditionWait:
+    return set(2, 0);
   case IrOpcode::AtomicAdd:
   case IrOpcode::AtomicExchange:
     return set(2, 1);

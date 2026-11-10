@@ -506,6 +506,36 @@ template <bool TrackEvents>
     ip += 1;
     return VmKernelStepOutcome::Continue;
   }
+  case IrOpcode::ConditionWait:
+  case IrOpcode::ConditionNotify: {
+    // Reached only where one call stack runs, as the mutex opcodes above: a notify wakes nobody, and a wait can
+    // never be notified (docs/spec/vm-design.md, Conditions).
+    const size_t operands = inst.op == IrOpcode::ConditionWait ? 2 : 1;
+    if (stack.size() < operands) {
+      error = "IR stack underflow on condition operation";
+      return VmKernelStepOutcome::Fault;
+    }
+    for (size_t operand = 0; operand < operands; ++operand) {
+      uint64_t address = stack.back();
+      stack.pop_back();
+      uint64_t *slot = nullptr;
+      std::vector<uint64_t> *addressLocals = nullptr;
+      localizeVmAddress(frames, host.slotBytes(), address, addressLocals);
+      if (!host.resolveIndirectAddress(address, *addressLocals, slot, error)) {
+        return VmKernelStepOutcome::Fault;
+      }
+      if (inst.op == IrOpcode::ConditionWait && operand == 0 && *slot != 1) {
+        error = "condition wait by a task that does not hold the lock";
+        return VmKernelStepOutcome::Fault;
+      }
+    }
+    if (inst.op == IrOpcode::ConditionWait) {
+      error = "deadlock: every task is waiting";
+      return VmKernelStepOutcome::Fault;
+    }
+    ip += 1;
+    return VmKernelStepOutcome::Continue;
+  }
   case IrOpcode::LoadStringLength: {
     if (stack.empty()) {
       error = "IR stack underflow on string index";
@@ -657,6 +687,12 @@ public:
           }
           continue;
         }
+        if (op == IrOpcode::ConditionWait || op == IrOpcode::ConditionNotify) {
+          if (!conditionStep(op == IrOpcode::ConditionWait, error)) {
+            return false;
+          }
+          continue;
+        }
       }
       // An atomic operation is a switch point of a seeded schedule: any runnable task may run after it.
       const bool atomicStep = seeded_ && top.ip < top.function->instructions.size() &&
@@ -703,6 +739,8 @@ private:
     size_t waiter = NoTask;
     // The lock slot this task waits for (it is Waiting then), or 0.
     uint64_t lockAddress = 0;
+    // The condition slot this task waits on (it is Waiting then), or 0.
+    uint64_t conditionAddress = 0;
     uint64_t result = 0;
   };
 
@@ -738,6 +776,7 @@ private:
     task.spawner = spawner;
     task.waiter = NoTask;
     task.lockAddress = 0;
+    task.conditionAddress = 0;
     task.result = 0;
     addRunnable(slot);
     return slot;
@@ -902,6 +941,68 @@ private:
       pickSeeded();
     }
     return true;
+  }
+
+  // ConditionWait and ConditionNotify (docs/spec/vm-design.md, Conditions). A wait frees the lock the task holds and
+  // leaves the task waiting, which counts for deadlock detection, until a notify on that condition slot; the task's
+  // next instruction takes the lock again. A notify is a switch point of a seeded schedule.
+  bool conditionStep(bool wait, std::string &error) {
+    Task &task = tasks_[current_];
+    const size_t operands = wait ? 2 : 1;
+    if (task.stack.size() < operands) {
+      error = "IR stack underflow on condition operation";
+      return false;
+    }
+    auto resolve = [&](uint64_t address, uint64_t *&slot) {
+      std::vector<uint64_t> *addressLocals = nullptr;
+      localizeVmAddress(task.frames, host_.slotBytes(), address, addressLocals);
+      return host_.resolveIndirectAddress(address, *addressLocals, slot, error);
+    };
+    const uint64_t conditionAddress = task.stack[task.stack.size() - operands];
+    uint64_t *conditionSlot = nullptr;
+    if (!resolve(conditionAddress, conditionSlot)) {
+      return false;
+    }
+    if (!wait) {
+      for (size_t waiting = 0; waiting < tasks_.size(); ++waiting) {
+        Task &other = tasks_[waiting];
+        if (other.state == TaskState::Waiting && other.conditionAddress == conditionAddress) {
+          other.conditionAddress = 0;
+          other.state = TaskState::Runnable;
+          addRunnable(waiting);
+        }
+      }
+      task.stack.pop_back();
+      task.frames.back().ip += 1;
+      if (seeded_) {
+        pickSeeded();
+      }
+      return true;
+    }
+    const uint64_t lockAddress = task.stack.back();
+    uint64_t *lockSlot = nullptr;
+    if (!resolve(lockAddress, lockSlot)) {
+      return false;
+    }
+    if (*lockSlot != task.number + 1) {
+      error = "condition wait by a task that does not hold the lock";
+      return false;
+    }
+    *lockSlot = 0;
+    for (size_t waiting = 0; waiting < tasks_.size(); ++waiting) {
+      Task &other = tasks_[waiting];
+      if (other.state == TaskState::Waiting && other.lockAddress == lockAddress) {
+        other.lockAddress = 0;
+        other.state = TaskState::Runnable;
+        addRunnable(waiting);
+      }
+    }
+    task.stack.resize(task.stack.size() - operands);
+    task.frames.back().ip += 1;
+    task.conditionAddress = conditionAddress;
+    task.state = TaskState::Waiting;
+    removeRunnable(current_);
+    return pickAfterStop(NoTask, error);
   }
 
   bool finishCurrent(uint64_t value, std::string &error) {

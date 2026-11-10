@@ -384,12 +384,13 @@ bool prepareFunction(const IrModule &module, const IrFunction &function, FastFun
   out.code.reserve(function.instructions.size() + 1);
   for (const IrInstruction &instruction : function.instructions) {
     // Tasks, which the scheduler runs, stay on the step kernel, and so do atomics (switch points under a seed) and
-    // mutexes (a task may have to wait).
+    // mutexes and conditions (a task may have to wait).
     if (instruction.op == IrOpcode::TaskSpawn || instruction.op == IrOpcode::TaskWait ||
         instruction.op == IrOpcode::AtomicLoad || instruction.op == IrOpcode::AtomicStore ||
         instruction.op == IrOpcode::AtomicAdd || instruction.op == IrOpcode::AtomicExchange ||
         instruction.op == IrOpcode::AtomicCompareExchange ||
-        instruction.op == IrOpcode::MutexLock || instruction.op == IrOpcode::MutexUnlock) {
+        instruction.op == IrOpcode::MutexLock || instruction.op == IrOpcode::MutexUnlock ||
+        instruction.op == IrOpcode::ConditionWait || instruction.op == IrOpcode::ConditionNotify) {
       return false;
     }
     // A call to a missing function is left to the step kernel, which faults on it when (and only

@@ -187,6 +187,10 @@ void emitVectorIndexOutOfBounds(IrFunction &function, const InternRuntimeErrorSt
   emitRuntimeError(function, "container index out of bounds", internString);
 }
 
+void emitSendOnClosedChannel(IrFunction &function, const InternRuntimeErrorStringFn &internString) {
+  emitRuntimeError(function, "send on a closed channel", internString);
+}
+
 void emitVectorPopOnEmpty(IrFunction &function, const InternRuntimeErrorStringFn &internString) {
   emitRuntimeError(function, "container empty", internString);
 }

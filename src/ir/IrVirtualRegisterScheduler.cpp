@@ -128,6 +128,8 @@ bool isSchedulingBarrierOpcode(IrOpcode op) {
     case IrOpcode::AtomicCompareExchange:
     case IrOpcode::MutexLock:
     case IrOpcode::MutexUnlock:
+    case IrOpcode::ConditionWait:
+    case IrOpcode::ConditionNotify:
     case IrOpcode::FileOpenRead:
     case IrOpcode::FileOpenWrite:
     case IrOpcode::FileOpenAppend:

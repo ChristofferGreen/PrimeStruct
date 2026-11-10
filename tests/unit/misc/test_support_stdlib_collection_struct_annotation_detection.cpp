@@ -434,23 +434,11 @@ TEST_SUITE_BEGIN("primestruct.stdlib.collection_registry_dynamic_discovery");
 
 TEST_CASE("a newly added collection_type annotated file appears as a domain==Collections "
           "surface with no dedicated enum member, without any registry source edits") {
-  // Locate the real stdlib/std/collections directory via the same
-  // production discovery entry point exercised elsewhere in this file,
-  // rather than duplicating its directory-walk logic here.
-  const auto discovered = primec::detectStdlibCollectionStructAnnotationsAcrossDiscoveredFiles();
-  REQUIRE(!discovered.empty());
-  const std::filesystem::path collectionsDir = discovered.front().file.parent_path();
-
-  const std::filesystem::path spikePath =
-      collectionsDir / "todo4689_spike_dynamic_registry_type.prime";
-
-  struct SpikeFileGuard {
-    std::filesystem::path path;
-    ~SpikeFileGuard() {
-      std::error_code ec;
-      std::filesystem::remove(path, ec);
-    }
-  } spikeFileGuard{spikePath};
+  // The file lives in the test scratch directory and is handed to the
+  // derivation as one more discovered file: a file written into the real
+  // stdlib/std/collections would be seen by the tests that run in parallel.
+  const std::filesystem::path spikePath = primec::testing::testScratchPath(
+      "collection_struct_annotation_detection/todo4689_spike_dynamic_registry_type.prime");
 
   {
     std::ofstream out(spikePath);
@@ -474,7 +462,7 @@ namespace std {
 )PRIME";
   }
 
-  const auto snapshots = primec::rediscoverStdlibCollectionsSurfacesForTesting();
+  const auto snapshots = primec::rediscoverStdlibCollectionsSurfacesForTesting({spikePath});
 
   const primec::StdlibCollectionSurfaceSnapshot *helperSurface = nullptr;
   for (const auto &snapshot : snapshots) {

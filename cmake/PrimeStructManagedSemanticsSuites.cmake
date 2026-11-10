@@ -26,6 +26,7 @@ list(APPEND PrimeStructManagedSemanticsSuites
   primestruct.semantics.calls_flow.sendable
   primestruct.semantics.calls_flow.atomics
   primestruct.semantics.calls_flow.mutexes
+  primestruct.semantics.calls_flow.channels
   primestruct.semantics.imports
   primestruct.semantics.lambdas
   primestruct.semantics.text_views
@@ -287,6 +288,13 @@ addPrimeStructManagedDoctestSuite(
   ${PrimeStructManagedSemanticsCommon}
   TOTAL_CASES 7
   SHARD_PREFIX "calls_flow_mutexes"
+)
+
+addPrimeStructManagedDoctestSuite(
+  "primestruct.semantics.calls_flow.channels"
+  ${PrimeStructManagedSemanticsCommon}
+  TOTAL_CASES 6
+  SHARD_PREFIX "calls_flow_channels"
 )
 
 addPrimeStructManagedDoctestSuite(

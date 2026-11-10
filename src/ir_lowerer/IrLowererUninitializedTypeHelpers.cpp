@@ -606,6 +606,16 @@ bool resolveUninitializedStorageAccessWithDefinitions(
             auto pointerIt = localsIn.find(candidate.name);
             if (pointerIt != localsIn.end()) {
               if (resolveUninitializedTypeInfoFromPointerTargetLocal(pointerIt->second, typeInfoOut)) {
+                // A pointer local can carry its pointee struct as written (`String` behind an import): resolve
+                // the name in the scope of the use so the layout lookup gets the struct's path.
+                if (!typeInfoOut.structPath.empty() && typeInfoOut.structPath.front() != '/') {
+                  UninitializedTypeInfo scoped;
+                  if (resolveUninitializedTypeInfo(
+                          typeInfoOut.structPath, candidate.namespacePrefix, scoped) &&
+                      !scoped.structPath.empty()) {
+                    typeInfoOut.structPath = scoped.structPath;
+                  }
+                }
                 pointerOut = &pointerIt->second;
                 pointerResolvedOut = true;
               }

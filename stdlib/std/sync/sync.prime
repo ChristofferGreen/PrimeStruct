@@ -13,6 +13,15 @@
 // the value, and the last one destroyed destroys it. `locked` needs the `lock` effect. Locking a mutex again inside
 // its own body faults. The `__psmutex_*` functions lower to the MutexLock and MutexUnlock IR opcodes
 // (docs/spec/vm-design.md, Mutexes).
+//
+// `Channel<T>{[capacity] 4i32}` is a bounded queue of a sendable type between tasks: `send(value)` moves the value
+// in and waits while the channel is full, `receive()` gives a `Maybe<T>` and waits while the channel is empty and
+// open, `close()` ends it. A Channel is a handle too: copies share the queue, and the last one destroyed destroys
+// what is still queued. The three operations need the `channel` effect. The queue is a ring of `capacity` items
+// behind a lock; the `__pscondition_*` functions lower to the ConditionWait and ConditionNotify IR opcodes
+// (docs/spec/vm-design.md, Conditions).
+
+import /std/maybe/*
 
 namespace std {
   namespace sync {
@@ -62,6 +71,22 @@ namespace std {
 
   [host return<void>]
   __psmutex_unlock([Pointer<i64>] cell) {
+  }
+
+  // Frees `lock`, which the task holds, and waits for the next notify on `condition`. The task takes the lock again
+  // itself.
+  [host return<void>]
+  __pscondition_wait([Pointer<i64>] condition, [Pointer<i64>] lock) {
+  }
+
+  // Wakes every task that waits on `condition`.
+  [host return<void>]
+  __pscondition_notify([Pointer<i64>] condition) {
+  }
+
+  // The fault of a send on a closed channel.
+  [host return<void>]
+  __pschannel_send_closed() {
   }
 
   // The width of an operation follows the type of its value; `load` passes a value of the type only to choose.
@@ -221,6 +246,180 @@ namespace std {
     Destroy() {
       if(this.live) {
         mutexRelease<T>(this.cell, this.value)
+        this.live = false
+      }
+    }
+  }
+
+  // The control cell of a channel is eight heap slots: the lock, the number of handles, the condition a receiver
+  // waits on, the condition a sender waits on, the ring index of the oldest item, the number of items, whether the
+  // channel is closed, and the capacity. All but the handle count are read and written with the lock held.
+  [unsafe effects(heap_alloc), return<Pointer<i64>>]
+  channelCellAlloc([i32] capacity) {
+    [Pointer<i64>] cell{/std/intrinsics/memory/alloc<i64>(8i32)}
+    [i32 mut] index{0i32}
+    while(index < 8i32) {
+      __psatomic_store_i64(/std/intrinsics/memory/at_unsafe(cell, index), 0i64)
+      index = index + 1i32
+    }
+    __psatomic_store_i64(/std/intrinsics/memory/at_unsafe(cell, 1i32), 1i64)
+    __psatomic_store_i64(/std/intrinsics/memory/at_unsafe(cell, 7i32), convert<i64>(channelCapacity(capacity)))
+    return(cell)
+  }
+
+  // A channel holds at least one item.
+  [return<i32>]
+  channelCapacity([i32] capacity) {
+    if(capacity < 1i32) {
+      return(1i32)
+    }
+    return(capacity)
+  }
+
+  [unsafe effects(heap_alloc), return<Pointer<uninitialized<T>>>]
+  channelItemsAlloc<T>([i32] capacity) {
+    return(/std/intrinsics/memory/alloc<uninitialized<T>>(channelCapacity(capacity)))
+  }
+
+  [unsafe return<Pointer<i64>>]
+  channelField([Pointer<i64>] cell, [i32] index) {
+    return(/std/intrinsics/memory/at_unsafe(cell, index))
+  }
+
+  [unsafe return<i64>]
+  channelGet([Pointer<i64>] cell, [i32] index) {
+    return(__psatomic_load_i64(/std/intrinsics/memory/at_unsafe(cell, index)))
+  }
+
+  [unsafe return<void>]
+  channelSet([Pointer<i64>] cell, [i32] index, [i64] value) {
+    __psatomic_store_i64(/std/intrinsics/memory/at_unsafe(cell, index), value)
+  }
+
+  // The ring index `steps` after `index`, for `steps` up to the capacity.
+  [return<i64>]
+  channelWrap([i64] index, [i64] steps, [i64] capacity) {
+    [i64] next{index + steps}
+    if(next >= capacity) {
+      return(next - capacity)
+    }
+    return(next)
+  }
+
+  // Puts `value` behind the newest item. The caller holds the lock and has found room.
+  [unsafe return<void>]
+  channelPut<T>([Pointer<i64>] cell, [Pointer<uninitialized<T>>] items, [T move] value) {
+    [i64] capacity{channelGet(cell, 7i32)}
+    [i64] count{channelGet(cell, 5i32)}
+    [i64] index{channelWrap(channelGet(cell, 4i32), count, capacity)}
+    [Pointer<uninitialized<T>> mut] slot{/std/intrinsics/memory/at_unsafe(items, convert<i32>(index))}
+    init(*slot, value)
+    channelSet(cell, 5i32, count + 1i64)
+  }
+
+  // Takes the oldest item. The caller holds the lock and has found one.
+  [unsafe return<T>]
+  channelTake<T>([Pointer<i64>] cell, [Pointer<uninitialized<T>>] items) {
+    [i64] head{channelGet(cell, 4i32)}
+    [Pointer<uninitialized<T>> mut] slot{/std/intrinsics/memory/at_unsafe(items, convert<i32>(head))}
+    channelSet(cell, 4i32, channelWrap(head, 1i64, channelGet(cell, 7i32)))
+    channelSet(cell, 5i32, channelGet(cell, 5i32) - 1i64)
+    return(take(*slot))
+  }
+
+  // A handle is gone; the last one destroys the items still queued and frees the ring and the cell.
+  [unsafe effects(heap_alloc), return<void>]
+  channelRelease<T>([Pointer<i64>] cell, [Pointer<uninitialized<T>>] items) {
+    if(__psatomic_add_i64(/std/intrinsics/memory/at_unsafe(cell, 1i32), -1i64) == 1i64) {
+      [i64] capacity{channelGet(cell, 7i32)}
+      [i64 mut] index{channelGet(cell, 4i32)}
+      [i64 mut] left{channelGet(cell, 5i32)}
+      while(left > 0i64) {
+        [Pointer<uninitialized<T>> mut] slot{/std/intrinsics/memory/at_unsafe(items, convert<i32>(index))}
+        drop(*slot)
+        index = channelWrap(index, 1i64, capacity)
+        left = left - 1i64
+      }
+      /std/intrinsics/memory/free(items)
+      /std/intrinsics/memory/free(cell)
+    }
+  }
+
+  // `Channel<i64>{[capacity] 4i32}` makes a channel that holds up to four items. `T` is a sendable type.
+  [public struct sendable]
+  Channel<T>() {
+    [i32] capacity{1i32}
+    [private Pointer<i64> mut] cell{channelCellAlloc(capacity)}
+    [private Pointer<uninitialized<T>> mut] items{channelItemsAlloc<T>(capacity)}
+    [private bool mut] live{true}
+
+    // Moves `value` into the channel. Waits while the channel is full; faults when it is closed.
+    [effects(channel), return<void>]
+    send([T move] value) {
+      __psmutex_lock(this.cell)
+      [MutexHold] hold{MutexHold{this.cell}}
+      while(channelGet(this.cell, 6i32) == 0i64 && channelGet(this.cell, 5i32) == channelGet(this.cell, 7i32)) {
+        __pscondition_wait(channelField(this.cell, 3i32), this.cell)
+        __psmutex_lock(this.cell)
+      }
+      if(channelGet(this.cell, 6i32) != 0i64) {
+        __pschannel_send_closed()
+      }
+      channelPut<T>(this.cell, this.items, value)
+      __pscondition_notify(channelField(this.cell, 2i32))
+    }
+
+    // The oldest item. Waits while the channel is empty and open; `none` once it is closed and empty.
+    [effects(channel), return<Maybe<T>>]
+    receive() {
+      __psmutex_lock(this.cell)
+      [MutexHold] hold{MutexHold{this.cell}}
+      while(channelGet(this.cell, 6i32) == 0i64 && channelGet(this.cell, 5i32) == 0i64) {
+        __pscondition_wait(channelField(this.cell, 2i32), this.cell)
+        __psmutex_lock(this.cell)
+      }
+      if(channelGet(this.cell, 5i32) == 0i64) {
+        return(none<T>())
+      }
+      [Maybe<T>] item{[some] channelTake<T>(this.cell, this.items)}
+      __pscondition_notify(channelField(this.cell, 3i32))
+      return(item)
+    }
+
+    // Ends the channel: a later send faults, and receivers get what is queued and then `none`.
+    [effects(channel), return<void>]
+    close() {
+      __psmutex_lock(this.cell)
+      [MutexHold] hold{MutexHold{this.cell}}
+      channelSet(this.cell, 6i32, 1i64)
+      __pscondition_notify(channelField(this.cell, 2i32))
+      __pscondition_notify(channelField(this.cell, 3i32))
+    }
+
+    [mut]
+    Copy([Reference<Self>] other) {
+      this.capacity = other.capacity
+      this.cell = other.cell
+      this.items = other.items
+      this.live = other.live
+      if(other.live) {
+        atomicCellShare(other.cell)
+      }
+    }
+
+    [mut]
+    Move([Reference<Self>] other) {
+      this.capacity = other.capacity
+      this.cell = other.cell
+      this.items = other.items
+      this.live = other.live
+      other.live = false
+    }
+
+    [mut effects(heap_alloc)]
+    Destroy() {
+      if(this.live) {
+        channelRelease<T>(this.cell, this.items)
         this.live = false
       }
     }

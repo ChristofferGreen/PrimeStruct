@@ -6,10 +6,10 @@ and its lifetime checks, the sendable check of spawn arguments ([Sendable
 Values](#sendable-values)), tasks of scalar callees under the VM's scheduler,
 and the same tasks on one OS thread each on `optexe` (other spawned calls, and
 every other backend, run inline, one after another), and `Atomic<i32>`,
-`Atomic<i64>` and `Mutex<T>` of `/std/sync` on the VM and `optexe`. Approved
-but not implemented: the rest of [Threads For Real](#threads-for-real)
-(`Channel`, tasks and atomics on arm64 native, a multi-core web server); its
-work is the Multithreading lane of `docs/todo.md`.
+`Atomic<i64>`, `Mutex<T>` and `Channel<T>` of `/std/sync` on the VM and
+`optexe`. Approved but not implemented: the rest of
+[Threads For Real](#threads-for-real) (tasks and atomics on arm64 native, a
+multi-core web server); its work is the Multithreading lane of `docs/todo.md`.
 
 This document captures the language-level multithreading model.
 When the design is stable enough, fold the accepted parts into
@@ -535,8 +535,9 @@ cross to another thread, and three safe sharing primitives.
 - **IR:** `TaskSpawn <function>` pops the callee's arguments into a new task block and pushes the task handle;
   `TaskWait` pops a handle and pushes the result; atomic opcodes are below. That is a PSIR version bump. Backends
   without threads (x86_64 native, the Linux JIT, Wasm, GLSL, the simple C++ emitters) keep running a spawned call
-  inline, which is a legal schedule for programs without channels, and reject `Channel` ("channels need a backend
-  that runs tasks"), because inline execution can deadlock on one. GPU targets keep rejecting `task`.
+  inline, which is a legal schedule for programs without channels, and reject `Channel` (`channel operations are
+  not supported by the native backend`), because inline execution can deadlock on one. GPU targets keep rejecting
+  `task`.
 
 ### VM Scheduler
 
@@ -628,8 +629,8 @@ user never writes it on a type. Decided 2026-11-09 after a review of what Rust's
   A diagnostic for a non-sendable argument carries the note `sharing between tasks needs Mutex,
   Atomic or Channel`.
 - **`[sendable]`** on a struct asserts that it is sendable although it holds a `Pointer`: the stdlib uses it on
-  `String`, `Vector` (and through it `map`), `RingBuffer` and `SoaColumn` today, and on `Mutex`, `Atomic` and
-  `Channel` when they come, whose pointers are owned by the value (or counted). The check still looks through those
+  `String`, `Vector` (and through it `map`), `RingBuffer` and `SoaColumn`, and on `Mutex`, `Atomic` and
+  `Channel`, whose pointers are owned by the value (or counted). The check still looks through those
   pointers at the element type, so `vector<StringView>` is not sendable.
   Outside the stdlib it needs `unsafe` on the definition, like every other unchecked promise. There is no opt-out
   marker (`[not_sendable]` or similar) until a real case needs one: a struct of sendable fields with a reason not to
@@ -681,12 +682,12 @@ spawn argument `value` of /consume<ReadSlice<i32>> is not sendable: it is ReadSl
   /relay<ReadSlice<i32>>, instantiated from /main)
 closure cannot be a Function: capture `view` is StringView
 Mutex element Record is not sendable: field `next` is Reference<Record>
-Channel<Slice<i32>>: Slice<i32> is not sendable (instantiated from /pump)
+Channel element Slice<i32> is not sendable
 ```
 
 The spawn and `Function` lines are the messages of today's checks (each spawn line ends with `; sharing between
-tasks needs Mutex, Atomic or Channel`); the `Mutex` line is the message of `Mutex<T>` and the `Channel` line is
-the shape its leaf (TODO-5798) follows. Every field on the path names its struct; a closure's fields are its captures; an element of a
+tasks needs Mutex, Atomic or Channel`); the `Mutex` and `Channel` lines are the messages of `Mutex<T>` and
+`Channel<T>`. Every field on the path names its struct; a closure's fields are its captures; an element of a
 builtin container is `element of vector<StringView>`. The instantiation chain names the definition that first
 requested each template instance; it carries no line yet, because the message text cannot map a position of the
 expanded source back to its file.
@@ -904,9 +905,22 @@ sum_jobs([Channel<i64>] jobs) {
   full; `receive()` blocks while it is empty and open and gives `none` once it is closed and drained; `close()`
   ends it, and a send after that faults with `send on a closed channel`. Any number of tasks may send and receive.
 - Copying shares the channel. Effect `channel`; making one needs `heap_alloc`.
-- It is stdlib code over a lock and two condition waits, which are host functions: the VM's scheduler, `optexe`'s
-  `std::mutex` and `std::condition_variable`, and `pthread_mutex_*`/`pthread_cond_*` bound from libSystem on native
-  (the native backend already binds libSystem functions through dyld pointer slots).
+- Implemented on the VM and `optexe` (`stdlib/std/sync/sync.prime`; the library reference is
+  docs/spec/stdlib-reference.md, Shared state). A `Channel` is a handle of a control cell (the lock, the number of
+  handles, two conditions, the ring's head and count, the closed flag and the capacity) and a ring of `capacity`
+  uninitialized `T` slots: `send` moves the value into a slot and `receive` moves it out, so an item is never
+  copied on its way, and the last handle destroyed destroys the items still queued. The handle keeps no value of
+  its own. A sender that waits on a full channel when it is closed faults like a send after the close.
+- It is stdlib code over the lock of `Mutex` and two condition waits. A wait is the `ConditionWait` opcode, which
+  gives up the lock and parks the task on a heap slot, and `ConditionNotify` wakes every task parked on a slot
+  (PSIR v37; docs/spec/vm-design.md, Conditions): the VM's scheduler keeps the parked tasks, `optexe` counts the
+  notifies in the slot and sleeps on a `std::condition_variable` until the count changes, and native will bind `pthread_cond_*` from libSystem (the native backend
+  already binds libSystem functions through dyld pointer slots). A woken task takes the lock again and tests its
+  condition again, so a wake-up without cause is harmless. A task parked on a condition counts as waiting for the
+  deadlock fault (`deadlock: every task is waiting`) on both backends.
+- A method called in a definition without the effect is `channel operation requires channel effect: <method> in
+  <definition>`. An element that is not sendable is `Channel element Pointer<u8> is not sendable`, and sending a
+  `String` made in an open `StringArena` is `string escapes its arena via channel (arena: <name>)`.
 
 ### Effects
 

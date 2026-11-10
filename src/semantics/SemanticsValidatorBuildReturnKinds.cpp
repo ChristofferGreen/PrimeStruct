@@ -315,9 +315,11 @@ bool SemanticsValidator::buildDefinitionReturnKinds(const std::unordered_set<std
   };
   for (const auto &def : program_.definitions) {
     DefinitionContextScope definitionScope(*this, def);
-    if (def.instanceOfTemplate == "/std/sync/Mutex" && def.instanceTemplateArgs.size() == 1 &&
-        structNames_.count(def.fullPath) > 0) {
-      // Every task that locks the mutex reaches the value, so its type is sendable. Checked here, ahead of
+    const bool channelInstance = def.instanceOfTemplate == "/std/sync/Channel";
+    if ((def.instanceOfTemplate == "/std/sync/Mutex" || channelInstance) &&
+        def.instanceTemplateArgs.size() == 1 && structNames_.count(def.fullPath) > 0) {
+      // Every task that locks the mutex reaches the value, and what is sent on a channel is received by another
+      // task, so the type is sendable. Checked here, ahead of
       // the return kinds: the helpers a Mutex instantiates have no return kind for some such types.
       // The element is spelled as the program wrote it, so an imported name resolves through its import.
       std::string element = def.instanceTemplateArgs.front();
@@ -327,7 +329,8 @@ bool SemanticsValidator::buildDefinitionReturnKinds(const std::unordered_set<std
       std::string violation = sendableViolation(element, def.namespacePrefix, sendableTypeLookup());
       if (!violation.empty()) {
         const std::string elementText = diagnosticTypeText(element);
-        std::string message = "Mutex element " + elementText + " is not sendable";
+        std::string message = std::string(channelInstance ? "Channel" : "Mutex") + " element " +
+                              elementText + " is not sendable";
         if (violation.rfind("it is ", 0) != 0) {
           // The first step names the element again (`field `next` of Record`); the message already has.
           const std::string owner = " of " + elementText;

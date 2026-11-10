@@ -197,10 +197,15 @@ static std::vector<std::filesystem::path> orderCollectionFilesForDerivation(
   return ordered;
 }
 
-static std::vector<ManifestSurfaceData> deriveCollectionsSurfaceData() {
+static std::vector<ManifestSurfaceData>
+deriveCollectionsSurfaceData(const std::vector<std::filesystem::path> &extraFiles = {}) {
   std::vector<ManifestSurfaceData> derived;
   const std::vector<std::filesystem::path> collectionFiles =
-      orderCollectionFilesForDerivation(listStdlibCollectionFiles());
+      orderCollectionFilesForDerivation([&extraFiles] {
+        std::vector<std::filesystem::path> files = listStdlibCollectionFiles();
+        files.insert(files.end(), extraFiles.begin(), extraFiles.end());
+        return files;
+      }());
   derived.reserve(collectionFiles.size() * 2);
 
   for (const auto &path : collectionFiles) {
@@ -820,9 +825,13 @@ std::span<const StdlibSurfaceMetadata> stdlibSurfaceRegistry() {
 // [collection_type]/[key_value_type]-annotated *.prime file and immediately
 // observe it becoming a domain==Collections surface, proving the dynamic-
 // discovery property stdlibSurfaceRegistry() itself relies on, regardless
-// of process/test execution order.
-std::vector<StdlibCollectionSurfaceSnapshot> rediscoverStdlibCollectionsSurfacesForTesting() {
-  const std::vector<ManifestSurfaceData> backing = deriveCollectionsSurfaceData();
+// of process/test execution order. `extraFiles` are derived after the files of
+// stdlib/std/collections/, as files found there would be: a test keeps its
+// file in its scratch directory, since a file written into the stdlib is seen
+// by every test and compile that runs at the same time.
+std::vector<StdlibCollectionSurfaceSnapshot> rediscoverStdlibCollectionsSurfacesForTesting(
+    const std::vector<std::filesystem::path> &extraFiles) {
+  const std::vector<ManifestSurfaceData> backing = deriveCollectionsSurfaceData(extraFiles);
   const std::vector<StdlibSurfaceMetadata> entries = buildCollectionsSurfaceMetadata(backing);
   std::vector<StdlibCollectionSurfaceSnapshot> result;
   result.reserve(entries.size());

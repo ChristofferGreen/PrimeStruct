@@ -474,15 +474,17 @@ inline uint64_t ps_file_write_newline(uint64_t handle) {
 )CPP";
 
 // What a thread that waits shares with the others, written inside the program's unnamed namespace when the module
-// has task or mutex opcodes. A thread waits for a lock another thread holds or for a task that still runs; both sleep
-// on one condition variable, which an unlock and the end of a task signal. `live` is the threads that run program
+// has task, mutex or condition opcodes. A thread waits for a lock another thread holds, for a task that still runs
+// or for a notify on a condition slot; all sleep on one condition variable, which an unlock, the end of a task and a
+// notify signal. `live` is the threads that run program
 // code and `blocked` the ones that found what they wait for unchanged since the last signal. When the last running
 // thread joins them nothing can change any more, and it faults with the VM's message.
 inline constexpr const char *OptCppWaitRuntime = R"CPP(
 struct PsWaits {
   pthread_mutex_t gate = PTHREAD_MUTEX_INITIALIZER;
   pthread_cond_t changed = PTHREAD_COND_INITIALIZER;
-  // The threads that sleep for a lock or are about to. Written with the gate held, read by an unlock without it.
+  // The threads that sleep for a lock or a condition or are about to. Written with the gate held, read by an unlock
+  // and a notify without it.
   std::atomic<uint64_t> sleepers{0};
   // The rest is read and written with the gate held.
   uint64_t live = 1;
@@ -771,6 +773,45 @@ inline void ps_mutex_unlock(Rt &rt, uint64_t *slot) {
     ps_fault("mutex unlocked by a task that does not hold it");
   }
   lock.store(0);
+  PsWaits &waits = ps_waits();
+  if (waits.sleepers.load() != 0) {
+    pthread_mutex_lock(&waits.gate);
+    ps_wait_signal(waits);
+    pthread_mutex_unlock(&waits.gate);
+  }
+}
+
+)CPP";
+
+// The condition opcodes (docs/spec/vm-design.md, Conditions), written after OptCppMutexRuntime when the module has
+// one. A condition is its heap slot, a count of the notifies so far. A waiter reads the count and frees its lock with
+// the gate of ps_waits() held, then sleeps until the count has changed; a notify changes the count and signals when
+// any thread sleeps. The waiter is counted as a sleeper before it frees the lock, and whoever changes what it waits
+// for needs that lock first, so the notify that follows the change sees the sleeper.
+inline constexpr const char *OptCppConditionRuntime = R"CPP(
+[[gnu::noinline]] void ps_condition_wait(Rt &rt, uint64_t *conditionSlot, uint64_t *lockSlot) {
+  PsAtomicSlot condition(*conditionSlot);
+  PsAtomicSlot lock(*lockSlot);
+  if (lock.load() != reinterpret_cast<uint64_t>(&rt)) {
+    ps_fault("condition wait by a task that does not hold the lock");
+  }
+  PsWaits &waits = ps_waits();
+  pthread_mutex_lock(&waits.gate);
+  waits.sleepers.fetch_add(1);
+  const uint64_t seen = condition.load();
+  lock.store(0);
+  // The threads that sleep for the lock look again.
+  ps_wait_signal(waits);
+  uint64_t counted = 0;
+  while (condition.load() == seen) {
+    ps_wait_sleep(waits, counted);
+  }
+  waits.sleepers.fetch_sub(1);
+  pthread_mutex_unlock(&waits.gate);
+}
+
+inline void ps_condition_notify(uint64_t *slot) {
+  PsAtomicSlot(*slot).fetch_add(1);
   PsWaits &waits = ps_waits();
   if (waits.sleepers.load() != 0) {
     pthread_mutex_lock(&waits.gate);

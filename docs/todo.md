@@ -118,14 +118,15 @@ of sync with them.
 | TODO-5847 | A spawned call with a collection or a `copy` parameter runs as a task | ready | mt-vm-tasks |
 | TODO-5848 | `return(wait(task))` returns a `String` task result | ready | mt-wait-types |
 | TODO-5849 | A destructured multi-wait keeps each result's own type | ready | mt-wait-types |
-| TODO-5798 | Bounded `Channel<T>` with the `channel` effect | ready | mt-primitives |
 | TODO-5850 | A call that returns a `Reference` is a closure argument | ready | closures-references |
 | TODO-5851 | A `[ref]` closure written in a generic call infers the closure type | ready | closures-references |
 | TODO-5852 | `wait(a, b)` takes `Task<void>` handles | ready | mt-wait-types |
 | TODO-5853 | A borrowed `Reference` parameter stored through a `[ref]` capture is diagnosed | deferred | closures-references |
 | TODO-5854 | A `Mutex` or `Atomic` handle does not keep the value it was made from | deferred | mt-primitives |
+| TODO-5855 | A method call on a `pick` payload of struct type lowers | ready | pick-payloads |
+| TODO-5856 | `pick` on a call result frees an owning payload | ready | pick-payloads |
 | TODO-5656 | Thread-safe `SharedString`: an atomic owner count | ready | string-concurrency |
-| TODO-5802 | `serveWorkers`: one thread polls and accepts, N workers answer | blocked | mt-server |
+| TODO-5802 | `serveWorkers`: one thread polls and accepts, N workers answer | ready | mt-server |
 | TODO-5803 | The web apps run on workers and their gain is measured | blocked | mt-server |
 | TODO-5799 | arm64 native runs spawned tasks on pthreads, its heap behind a lock | ready | mt-native |
 | TODO-5800 | arm64 native heaps are per thread, with remote frees | blocked | mt-native |
@@ -209,7 +210,7 @@ of sync with them.
 - Native UI (docs/NativeUiPlan.md): TODO-5808, TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - AI workflow (docs/AiWorkflowPlan.md): TODO-5841, TODO-5843, TODO-5842
-- Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
+- Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526, TODO-5855, TODO-5856
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
@@ -219,13 +220,13 @@ of sync with them.
 - Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5738, TODO-5718
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732, TODO-5735, TODO-5736, TODO-5737
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5840, TODO-5844; real calls and struct copies TODO-5739, TODO-5741, TODO-5752; VM address checks TODO-5824
-- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5798, TODO-5656, TODO-5802, TODO-5803, TODO-5799, TODO-5800, TODO-5801, TODO-5847, TODO-5848, TODO-5849, TODO-5852; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854
+- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5656, TODO-5802, TODO-5803, TODO-5799, TODO-5800, TODO-5801, TODO-5847, TODO-5848, TODO-5849, TODO-5852; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854
 
 ### Execution Queue
 
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
-Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order (TODO-5792 and TODO-5835, VM tasks and their lowering, are done, and so are TODO-5793, byte-region checks without a map search, TODO-5794, `optexe` per-thread heap arenas, TODO-5795, `optexe` threads for `[spawn]`, `Atomic<i32>` and `Atomic<i64>` in `/std/sync`, TODO-5797, `Mutex<T>` with `locked(body)`, and TODO-5846, `optexe` faults when every task waits): TODO-5798 (`Channel`), TODO-5656 (atomic `SharedString` count), TODO-5802 (`serveWorkers`), TODO-5803 (apps on workers, measured), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5798, TODO-5656 and TODO-5799 are ready and independent of each other, and so are TODO-5848 (`return(wait(t))` of a `String` task result is rejected as a return type mismatch), TODO-5849 (a destructured multi-wait of tasks with different result types loses the later results' types) and TODO-5847 (spawned calls with collection or `copy` parameters or collection results run as tasks, which today run inline; TODO-5845, the same for `String`, struct and closure values, is done) (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, are done). Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions), TODO-5854 (a `Mutex` or `Atomic` handle keeps a copy of its first value). Found with `Mutex` and ready: TODO-5852 (`wait(a, b)` of two `Task<void>`), and in the closures lane TODO-5850 (a `Reference`-returning call as a closure argument) and TODO-5851 (a `[ref]` closure written in a generic call).
+Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order (TODO-5792 and TODO-5835, VM tasks and their lowering, are done, and so are TODO-5793, byte-region checks without a map search, TODO-5794, `optexe` per-thread heap arenas, TODO-5795, `optexe` threads for `[spawn]`, `Atomic<i32>` and `Atomic<i64>` in `/std/sync`, TODO-5797, `Mutex<T>` with `locked(body)`, TODO-5846, `optexe` faults when every task waits, and TODO-5798, bounded `Channel<T>`): TODO-5656 (atomic `SharedString` count), TODO-5802 (`serveWorkers`), TODO-5803 (apps on workers, measured), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5656, TODO-5802 and TODO-5799 are ready and independent of each other, and so are TODO-5848 (`return(wait(t))` of a `String` task result is rejected as a return type mismatch), TODO-5849 (a destructured multi-wait of tasks with different result types loses the later results' types) and TODO-5847 (spawned calls with collection or `copy` parameters or collection results run as tasks, which today run inline; TODO-5845, the same for `String`, struct and closure values, is done) (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, are done). Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions), TODO-5854 (a `Mutex` or `Atomic` handle keeps a copy of its first value). Found with `Mutex` and ready: TODO-5852 (`wait(a, b)` of two `Task<void>`), and in the closures lane TODO-5850 (a `Reference`-returning call as a closure argument) and TODO-5851 (a `[ref]` closure written in a generic call). Found with `Channel` and ready, in the Result and control flow lane: TODO-5855 (a method call on a `pick` payload of struct type) and TODO-5856 (`pick` on a call result frees an owning payload).
 
 ### Task Blocks
 
@@ -848,18 +849,33 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
     - full release gate green
   - stop_rule: the handle layout of `Mutex` and `Atomic`.
 
-- [ ] TODO-5798: Bounded `Channel<T>` with the `channel` effect
+- [ ] TODO-5855: A method call on a `pick` payload of struct type lowers
   - owner: ai
   - status: ready
-  - created_at: 2026-11-09
-  - phase: Multithreading (docs/MultithreadingPrototype.md, Channel)
-  - parallel_track: mt-primitives
-  - scope: `Channel<T>{[capacity] n}` in `/std/sync`: a bounded FIFO of a sendable `T` in a heap cell, `send` (moves in, blocks while full), `receive` (a `Maybe<T>`, blocks while empty and open, `none` once closed and drained), `close` (a later send faults with `send on a closed channel`), copies sharing it. Built from the lock of TODO-5797 and two condition waits (VM scheduler, `std::condition_variable` on `optexe`). Backends that run tasks inline reject channels.
+  - created_at: 2026-11-10
+  - phase: Result and control flow (docs/spec/errors-and-file-io.md)
+  - parallel_track: pick-payloads
+  - scope: In `pick(held) { some(box) { box.twice() } }` with `held` a `Maybe<Box>` and `twice` a method of the struct `Box`, lowering stops with `missing semantic-product method-call target: /main -> twice`; the same happens for a `String` payload (`line.byteAt(0i32)`). Field access on the payload and passing it to a function work, and so does the method after `[Box] owned{box}`. Publish the method-call target for a receiver that is a `pick` payload binding.
+  - implementation_notes: The payload binding has no binding fact the method-target publisher finds; compare how a `[Box] owned{box}` local gets one. Reproduce with a `[struct] Box` that has `[return<i32>] twice()` and `[Maybe<Box>] held{[some] Box{}}`.
   - acceptance:
-    - positive: the design's producer and `sum_jobs` example prints 4950 for 100 jobs through a channel of capacity 4 on the VM (all seeds) and `optexe`; 3 producers and 3 consumers move 30000 `String`s and every one arrives exactly once; a `String` sent and freed by the receiver leaves the heap statistics balanced
-    - negative: send after close faults with exit 3; a task receiving from a channel nobody sends on reports the VM deadlock fault; `Channel<Pointer<u8>>` and sending an arena-made `String` are diagnostics; native, Wasm and the JIT reject a module with channels
+    - positive: the `Box` program prints 6 on the VM and `optexe`; `line.byteAt(0i32)` on a `Maybe<String>` payload prints the byte; a payload of a user sum with a struct variant works the same way
+    - negative: a method the struct does not have is still `unknown method`
     - full release gate green
-  - stop_rule: `Channel` on the VM and `optexe`.
+  - stop_rule: method calls on `pick` payload bindings.
+
+- [ ] TODO-5856: `pick` on a call result frees an owning payload
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-10
+  - phase: Result and control flow (docs/spec/errors-and-file-io.md)
+  - parallel_track: pick-payloads
+  - scope: `pick(get()) { none { } some(line) { } }` with `get` returning a `Maybe<String>` leaves the `String`'s bytes allocated on the VM and `optexe` (`stringHeapBytesInUse()` is 32 higher afterwards); `[Maybe<String>] got{get()}` followed by `pick(got)` frees them. A `pick` whose subject is a temporary must destroy the temporary (or the payload it moved out) at the end of the arm. Then drop the "bind the result first" note of `Channel.receive` in docs/spec/stdlib-reference.md and pick straight on `receive()` in tests/unit/program_matrix/test_program_matrix_channels.cpp.
+  - implementation_notes: Lowering of `pick` over a call expression (src/ir_lowerer); compare with the bound-local path, which destroys the local at scope end.
+  - acceptance:
+    - positive: the `get()` program leaves `stringHeapBytesInUse()` and `heapLiveBlocks()` unchanged on the VM and `optexe`, also for a `Maybe<vector<i32>>` and a user sum with a `String` variant; the channel heap-balance test passes with `pick(lines.receive())`
+    - negative: a payload moved out of the arm (returned, or bound with `move`) is destroyed once, not twice
+    - full release gate green
+  - stop_rule: temporaries as `pick` subjects.
 
 - [ ] TODO-5656: Thread-safe `SharedString`: an atomic owner count
   - owner: ai
@@ -876,8 +892,7 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
 
 - [ ] TODO-5802: `serveWorkers`: one thread polls and accepts, N workers answer
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5798
+  - status: ready
   - created_at: 2026-11-09
   - phase: Multithreading and Web apps (docs/MultithreadingPrototype.md, The Server; docs/WebAppsPlan.md, Concurrency)
   - parallel_track: mt-server
@@ -933,7 +948,7 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
 - [ ] TODO-5801: arm64 native runs `Atomic`, `Mutex` and `Channel`
   - owner: ai
   - status: blocked
-  - blocked_on: TODO-5800, TODO-5798
+  - blocked_on: TODO-5800
   - created_at: 2026-11-09
   - phase: Multithreading (docs/MultithreadingPrototype.md, Atomic, Mutex, Channel)
   - parallel_track: mt-native

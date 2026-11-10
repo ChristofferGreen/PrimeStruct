@@ -437,9 +437,9 @@ public:
   }
 };
 
-// A module that runs bytes, text, atomics or mutexes (the u8 byte opcodes, u8 and text host values, the atomic and
-// mutex opcodes) is emitted by the optimized C++ emitter even for the plain cpp and exe kinds: only that emitter has
-// the byte regions, the string heap, the atomic operations and the locks.
+// A module that runs bytes, text, atomics, mutexes or conditions (the u8 byte opcodes, u8 and text host values, the
+// atomic, mutex and condition opcodes) is emitted by the optimized C++ emitter even for the plain cpp and exe kinds:
+// only that emitter has the byte regions, the string heap, the atomic operations, the locks and the condition waits.
 bool moduleNeedsOptimizedCppEmitter(const IrModule &module) {
   for (const IrHostImport &hostImport : module.hostImports) {
     if (hostImport.returnKind == IrHostValueKind::U8 || hostImport.returnKind == IrHostValueKind::Text) {
@@ -459,7 +459,9 @@ bool moduleNeedsOptimizedCppEmitter(const IrModule &module) {
           instruction.op == IrOpcode::AtomicLoad || instruction.op == IrOpcode::AtomicStore ||
           instruction.op == IrOpcode::AtomicAdd || instruction.op == IrOpcode::AtomicExchange ||
           instruction.op == IrOpcode::AtomicCompareExchange ||
-          instruction.op == IrOpcode::MutexLock || instruction.op == IrOpcode::MutexUnlock) {
+          instruction.op == IrOpcode::MutexLock || instruction.op == IrOpcode::MutexUnlock ||
+          instruction.op == IrOpcode::ConditionWait ||
+          instruction.op == IrOpcode::ConditionNotify) {
         return true;
       }
     }

@@ -42,6 +42,14 @@ inline bool isMutexIntrinsicHostPath(std::string_view fullPath) {
   return fullPath.rfind("/std/sync/__psmutex_", 0) == 0;
 }
 
+// The condition operations and the closed-send fault of a `/std/sync` Channel (docs/spec/vm-design.md, Conditions):
+// `__pscondition_wait` and `__pscondition_notify` lower to ConditionWait and ConditionNotify on `Pointer<i64>` slots,
+// `__pschannel_send_closed` to the runtime error `send on a closed channel`.
+inline bool isChannelIntrinsicHostPath(std::string_view fullPath) {
+  return fullPath.rfind("/std/sync/__pscondition_", 0) == 0 ||
+         fullPath.rfind("/std/sync/__pschannel_", 0) == 0;
+}
+
 // The stdlib `String` crosses the boundary as owned text (IrHostValueKind::Text).
 inline bool isHostStringTypeText(std::string_view typeText) {
   return typeText == "String" || typeText == "std/text/String" || typeText == "/std/text/String";

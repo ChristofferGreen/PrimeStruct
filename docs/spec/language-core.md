@@ -301,7 +301,7 @@ module {
   --default-effects <list>` supplies the default effect set for any definition/execution that omits `[effects]`
   (comma-separated list; `default` and `none` are supported tokens). If `[capabilities(...)]` is present it must be a
   subset of the active effects (explicit or default). VM/native accept `io_out`, `io_err`, `heap_alloc`, `file_read`,
-  `file_write`, `gpu_dispatch`, `task`, `atomic`, `lock`, `net_io`, and `pathspace_*` effects (`pathspace_notify`, `pathspace_insert`,
+  `file_write`, `gpu_dispatch`, `task`, `atomic`, `lock`, `channel`, `net_io`, and `pathspace_*` effects (`pathspace_notify`, `pathspace_insert`,
   `pathspace_take`, `pathspace_bind`, `pathspace_schedule`); `file_write` also implies `file_read` for compatibility.
   GLSL accepts `io_out`, `io_err`, plus `pathspace_*` metadata effects/capabilities. Wasm accepts `io_out`, `io_err`,
   `heap_alloc`, `file_read` and `file_write` (wasm-browser accepts none), so it rejects `net_io`. In serialized IR the
@@ -310,7 +310,9 @@ module {
   operation requires atomic effect`. The effect is accepted everywhere, but only the VM and `optexe` run the
   operations; native, Wasm and GLSL reject a module that has them (docs/spec/vm-design.md, Atomics). `lock`
   (`1 << 14`) is the effect of `Mutex.locked` of `/std/sync`, with the same rule (`mutex operation requires lock
-  effect`) and the same backends (docs/spec/vm-design.md, Mutexes).
+  effect`) and the same backends (docs/spec/vm-design.md, Mutexes). `channel` (`1 << 15`) is the effect of `send`,
+  `receive` and `close` of a `Channel` of `/std/sync`, again with the same rule (`channel operation requires
+  channel effect`) and the same backends (docs/spec/vm-design.md, Conditions).
 - **Execution effects:** executions may also carry `[effects(...)]`. The execution’s effects must be a subset of the
   enclosing definition’s active effects; otherwise it is a diagnostic. The default set is controlled by
   `--default-effects` in the compiler/VM.
@@ -339,7 +341,7 @@ module {
   binds the results in task order), requires the `task` effect for both operations, and rejects live task handles on return, double waits, task-handle escapes, and
   spawn arguments that are not sendable. VM/native lower the structured runtime slice by storing spawned call results in task handle bindings,
   lowering `wait(handle)` to return that stored result, and lowering multi-wait to ordinary stdlib tuple construction.
-  Detached tasks, task groups, channels, scheduler controls, and true parallel scheduling remain future work.
+  Detached tasks, task groups and scheduler controls remain future work; tasks hand values to each other through a `Channel` of `/std/sync` (docs/spec/stdlib-reference.md, Shared state).
 - **Sendable spawn arguments:** a value crosses to a task only when its type is sendable
   (`docs/MultithreadingPrototype.md`, Sendable Values): scalars, `string`, enums, `Function` (a closure converts to
   one only when its captures are sendable, `value-lifecycle.md`, Function values), `String`, `vector`,

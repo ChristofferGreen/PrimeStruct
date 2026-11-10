@@ -237,6 +237,9 @@ std::vector<EffectCase> buildCases() {
       0,
       {{IrOpcode::AddressOfLocal, 1}, {IrOpcode::MutexLock, 0}, {IrOpcode::AddressOfLocal, 1}});
 
+  // A notify with no waiter, on a local's slot.
+  add(IrOpcode::ConditionNotify, 0, {{IrOpcode::AddressOfLocal, 1}});
+
   // Printing. imm 0 means stdout without a newline.
   add(IrOpcode::PrintI32, 0, {pushI32(5)});
   add(IrOpcode::PrintI64, 0, {pushI32(5)});
@@ -470,8 +473,10 @@ TEST_CASE("every opcode has a stack effect case and a table entry") {
   for (const primec::IrOpcodeInfo &info : primec::IrOpcodeTable) {
     CAPTURE(info.name);
     // The task opcodes run under the VM's scheduler, which a debug session does not step; their effects are
-    // checked below and run in tests/unit/runtime/test_vm_tasks.cpp.
-    if (info.op == IrOpcode::TaskSpawn || info.op == IrOpcode::TaskWait) {
+    // checked below and run in tests/unit/runtime/test_vm_tasks.cpp. A condition wait needs a second task to
+    // end it (tests/unit/runtime/test_vm_conditions.cpp).
+    if (info.op == IrOpcode::TaskSpawn || info.op == IrOpcode::TaskWait ||
+        info.op == IrOpcode::ConditionWait) {
       continue;
     }
     CHECK_MESSAGE(covered.count(static_cast<uint8_t>(info.op)) == 1,
@@ -499,6 +504,11 @@ TEST_CASE("every opcode has a stack effect case and a table entry") {
   REQUIRE(primec::computeIrStackEffect({IrOpcode::TaskWait, 0}, taskModule, wait));
   CHECK(wait.pops == 1);
   CHECK(wait.pushes == 1);
+  // A condition wait pops the condition and the lock and pushes nothing.
+  primec::IrStackEffect conditionWait;
+  REQUIRE(primec::computeIrStackEffect({IrOpcode::ConditionWait, 0}, taskModule, conditionWait));
+  CHECK(conditionWait.pops == 2);
+  CHECK(conditionWait.pushes == 0);
 }
 
 TEST_CASE("dup reads its operand without consuming it") {

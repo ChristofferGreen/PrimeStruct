@@ -237,6 +237,60 @@ bool emitInlineDefinitionCallImpl(
       function.instructions.push_back({*opcode, 0});
       return true;
     }
+    if (isHostDefinition(callee) && isChannelIntrinsicHostPath(callee.fullPath)) {
+      // What a /std/sync Channel is built from besides its lock (docs/spec/vm-design.md, Conditions): the condition
+      // slot address (and for a wait the lock slot address after it) on the stack, then the opcode; or the runtime
+      // error of a send on a closed channel.
+      const std::string_view operation =
+          std::string_view(callee.fullPath).substr(std::string_view("/std/sync/").size());
+      std::optional<IrOpcode> opcode;
+      size_t operandCount = 0;
+      if (operation == "__pscondition_wait") {
+        opcode = IrOpcode::ConditionWait;
+        operandCount = 2;
+      } else if (operation == "__pscondition_notify") {
+        opcode = IrOpcode::ConditionNotify;
+        operandCount = 1;
+      } else if (operation != "__pschannel_send_closed") {
+        error = "unknown channel operation: " + callee.fullPath;
+        return false;
+      }
+      std::vector<Expr> channelParams;
+      std::vector<const Expr *> channelOrderedArgs;
+      std::vector<const Expr *> channelPackedArgs;
+      size_t channelPackedParamIndex = 0;
+      if (!ir_lowerer::buildInlineCallOrderedArguments(callExpr,
+                                                       callee,
+                                                       structNames,
+                                                       callerLocals,
+                                                       channelParams,
+                                                       channelOrderedArgs,
+                                                       channelPackedArgs,
+                                                       channelPackedParamIndex,
+                                                       error)) {
+        return false;
+      }
+      if (!channelPackedArgs.empty() || channelOrderedArgs.size() != operandCount ||
+          callee.parameters.size() != operandCount) {
+        error = "channel operation argument mismatch for " + callee.fullPath;
+        return false;
+      }
+      for (const Expr *argExpr : channelOrderedArgs) {
+        if (argExpr == nullptr) {
+          error = "internal error: missing argument for channel operation " + callee.fullPath;
+          return false;
+        }
+        if (!emitExpr(*argExpr, callerLocals)) {
+          return false;
+        }
+      }
+      if (opcode.has_value()) {
+        function.instructions.push_back({*opcode, 0});
+      } else {
+        ir_lowerer::emitSendOnClosedChannel(function, internString);
+      }
+      return true;
+    }
     if (isHostDefinition(callee)) {
       const auto hostKind = [](std::string_view typeName) -> std::optional<IrHostValueKind> {
         const auto canonical = canonicalHostTypeName(typeName);

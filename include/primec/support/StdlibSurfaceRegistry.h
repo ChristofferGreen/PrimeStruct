@@ -89,7 +89,8 @@ struct StdlibCollectionSurfaceSnapshot {
   std::string canonicalPath;
   std::string bridgeKey;
 };
-std::vector<StdlibCollectionSurfaceSnapshot> rediscoverStdlibCollectionsSurfacesForTesting();
+std::vector<StdlibCollectionSurfaceSnapshot> rediscoverStdlibCollectionsSurfacesForTesting(
+    const std::vector<std::filesystem::path> &extraFiles = {});
 const StdlibSurfaceMetadata *findStdlibSurfaceMetadata(StdlibSurfaceId id);
 const StdlibSurfaceMetadata *findStdlibSurfaceMetadataByCanonicalPath(std::string_view canonicalPath);
 const StdlibSurfaceMetadata *findStdlibSurfaceMetadataByBridgeKey(std::string_view bridgeKey);

@@ -1042,8 +1042,8 @@ router.get("/static/*", []([Request] request, [Reference<Response>] response) {
 
 ### Shared state (`/std/sync`)
 
-`import /std/sync/*` provides `Atomic<i32>` and `Atomic<i64>` and `Mutex<T>` (below). The atomics are integer cells that several tasks read and change
-without losing an update (docs/MultithreadingPrototype.md, Atomic). An `Atomic` is a handle: a copy shares the cell,
+`import /std/sync/*` provides `Atomic<i32>` and `Atomic<i64>`, `Mutex<T>` and `Channel<T>` (below). The atomics
+are integer cells that several tasks read and change without losing an update (docs/MultithreadingPrototype.md, Atomic). An `Atomic` is a handle: a copy shares the cell,
 so a task that is given one works on the same integer as its spawner, and the cell is freed when its last handle is
 destroyed. The type is `[sendable]`.
 
@@ -1143,6 +1143,78 @@ This prints `7` on the VM, under every schedule seed, and on `optexe`.
   ends the program with `deadlock: every task is waiting` (exit code 3).
 - The lock and unlock are IR opcodes (docs/spec/vm-design.md, Mutexes); native, Wasm and GLSL reject the program
   with `mutex operations are not supported by the native backend`.
+
+`Channel<T>` is a bounded queue of a sendable type `T` that tasks use to hand values to each other
+(docs/MultithreadingPrototype.md, Channel). `Channel<i64>{[capacity] 4i32}` makes one that holds up to four items
+(a capacity below 1 is 1). It is a handle like `Mutex`: a copy shares the queue, so a spawned call that takes one
+sends to and receives from the same queue as its spawner, and the last handle destroyed destroys the items still
+queued. The type is `[sendable]`.
+
+| Method | Result |
+| --- | --- |
+| `send(value)` | Moves `value` into the queue. Waits while the queue is full. |
+| `receive()` | A `Maybe<T>`: the oldest item, waiting while the queue is empty and open; `none` once the channel is closed and empty. |
+| `close()` | Ends the channel. Receivers get what is queued and then `none`. Closing twice is allowed. |
+
+The three need the `channel` effect (`channel operation requires channel effect`); making a `Channel` needs
+`heap_alloc`. Items arrive in the order they were sent, and each item is received once, whichever task receives it.
+
+```prime
+import /std/sync/*
+
+[effects(channel)]
+produce([Channel<i64>] jobs, [i64] count) {
+  [i64 mut] i{0i64}
+  while(i < count) {
+    jobs.send(i)
+    i = i + 1i64
+  }
+  jobs.close()
+}
+
+[effects(channel), return<i64>]
+sum_jobs([Channel<i64>] jobs) {
+  [i64 mut] sum{0i64}
+  [bool mut] open{true}
+  while(open) {
+    pick(jobs.receive()) {
+      none {
+        open = false
+      }
+      some(job) {
+        sum = sum + job
+      }
+    }
+  }
+  return(sum)
+}
+
+[effects(task, channel, heap_alloc, io_out), return<int>]
+main() {
+  jobs{Channel<i64>{[capacity] 4i32}}
+  [Task<void>] producer{[spawn] produce(jobs, 100i64)}
+  [Task<i64>] consumer{[spawn] sum_jobs(jobs)}
+  wait(producer)
+  print_line(wait(consumer))
+  return(0i32)
+}
+```
+
+This prints `4950` on the VM, under every schedule seed, and on `optexe`.
+
+- A send on a closed channel ends the program with `send on a closed channel` (exit code 3); so does a send that
+  was waiting on a full channel when it was closed.
+- `T` must be sendable: `Channel<Pointer<u8>>` is `Channel element Pointer<u8> is not sendable`. A `String`,
+  a struct of sendable fields and another handle (`Atomic`, `Mutex`, `Channel`) are sendable.
+- A `String` made while a `StringArena` is open cannot be sent, since the arena frees it when the scope ends:
+  `string escapes its arena via channel (arena: arena)`.
+- A received item that owns memory (a `String`) is freed where it is received. Bind the result first,
+  `[Maybe<String>] got{lines.receive()}` then `pick(got)`: a `pick` straight on a call that returns a `Maybe` of an
+  owning type does not free the payload yet (TODO-5856).
+- A task that receives from an open channel nobody sends on waits for ever: the VM and `optexe` end the program
+  with `deadlock: every task is waiting` (exit code 3) once every task waits.
+- The waits are IR opcodes (docs/spec/vm-design.md, Conditions); native, Wasm and GLSL reject the program with
+  `channel operations are not supported by the native backend`.
 
 ### JSON writer (`/std/json`)
 

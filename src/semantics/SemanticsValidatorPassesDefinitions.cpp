@@ -242,16 +242,18 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
         default:
           return failHost("host definition return type must be i32, i64, u64, u8, f32, f64, bool, String, or void");
       }
-      const bool atomicIntrinsic =
-          isAtomicIntrinsicHostPath(def.fullPath) || isMutexIntrinsicHostPath(def.fullPath);
+      const bool channelIntrinsic = isChannelIntrinsicHostPath(def.fullPath);
+      const bool atomicIntrinsic = isAtomicIntrinsicHostPath(def.fullPath) ||
+                                   isMutexIntrinsicHostPath(def.fullPath) || channelIntrinsic;
       for (const auto &param : defParams) {
         if (param.defaultExpr != nullptr) {
           return failHost("host definition parameter cannot have a default: " + param.name);
         }
-        // An atomic or lock operation of /std/sync takes its cell as a Pointer<i64>.
-        const bool atomicCellParam = atomicIntrinsic && &param == &defParams.front() &&
-                                     param.binding.typeName == "Pointer" &&
-                                     param.binding.typeTemplateArg == "i64";
+        // An atomic or lock operation of /std/sync takes its cell as a Pointer<i64>; a condition wait takes the
+        // condition slot and the lock slot.
+        const bool atomicCellParam =
+            atomicIntrinsic && (channelIntrinsic || &param == &defParams.front()) &&
+            param.binding.typeName == "Pointer" && param.binding.typeTemplateArg == "i64";
         const bool bytePointerParam =
             atomicCellParam ||
             (param.binding.typeName == "Pointer" && param.binding.typeTemplateArg == "u8") ||

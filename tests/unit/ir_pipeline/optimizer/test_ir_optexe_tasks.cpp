@@ -1254,4 +1254,133 @@ TEST_CASE("two optexe tasks that each hold the lock the other needs fault as a d
   CHECK(actual.err == "VM error: deadlock: every task is waiting\n");
 }
 
+TEST_CASE("only an optexe module with condition opcodes gets the condition runtime") {
+  const auto emitted = [](const IrModule &module) {
+    std::string source;
+    std::string error;
+    REQUIRE_MESSAGE(primec::IrToOptCppEmitter().emitSource(module, source, error), error);
+    return source;
+  };
+  const std::string locking =
+      emitted(moduleOf({functionOf("/main",
+                                   0,
+                                   withTwoLocks({{IrOpcode::LoadLocal, 0},
+                                                 {IrOpcode::MutexLock, 0},
+                                                 {IrOpcode::LoadLocal, 0},
+                                                 {IrOpcode::MutexUnlock, 0},
+                                                 {IrOpcode::PushI32, 0},
+                                                 {IrOpcode::ReturnI32, 0}}))}));
+  CHECK_FALSE(contains(locking, "ps_condition_"));
+
+  // waiter(lock, condition, flag): takes the lock, waits until the flag is set, prints 2 and frees the lock.
+  const IrFunction waiter = functionOf("/waiter",
+                                       3,
+                                       {/*0*/ {IrOpcode::StoreLocal, 2},
+                                        /*1*/ {IrOpcode::StoreLocal, 1},
+                                        /*2*/ {IrOpcode::StoreLocal, 0},
+                                        /*3*/ {IrOpcode::LoadLocal, 0},
+                                        /*4*/ {IrOpcode::MutexLock, 0},
+                                        /*5*/ {IrOpcode::LoadLocal, 2},
+                                        /*6*/ {IrOpcode::AtomicLoad, 64},
+                                        /*7*/ {IrOpcode::PushI64, 0},
+                                        /*8*/ {IrOpcode::CmpEqI64, 0},
+                                        /*9*/ {IrOpcode::JumpIfZero, 16},
+                                        /*10*/ {IrOpcode::LoadLocal, 1},
+                                        /*11*/ {IrOpcode::LoadLocal, 0},
+                                        /*12*/ {IrOpcode::ConditionWait, 0},
+                                        /*13*/ {IrOpcode::LoadLocal, 0},
+                                        /*14*/ {IrOpcode::MutexLock, 0},
+                                        /*15*/ {IrOpcode::Jump, 5},
+                                        /*16*/ {IrOpcode::PushI32, 2},
+                                        /*17*/ {IrOpcode::PrintI32, Newline},
+                                        /*18*/ {IrOpcode::LoadLocal, 0},
+                                        /*19*/ {IrOpcode::MutexUnlock, 0},
+                                        /*20*/ {IrOpcode::ReturnVoid, 0}});
+  // main: local 2 is the flag slot. Spawns the waiter, then sets the flag, prints 5 and notifies with the lock
+  // held: the waiter prints 2 only after it has seen the flag, so 5 is first on every schedule.
+  const IrModule waiting = moduleOf(
+      {functionOf(
+           "/main", 0, withTwoLocks({{IrOpcode::PushI32, 1},         {IrOpcode::HeapAlloc, 0},
+                                     {IrOpcode::StoreLocal, 2},      {IrOpcode::LoadLocal, 0},
+                                     {IrOpcode::LoadLocal, 1},       {IrOpcode::LoadLocal, 2},
+                                     {IrOpcode::TaskSpawn, 1},       {IrOpcode::StoreLocal, 3},
+                                     {IrOpcode::LoadLocal, 0},       {IrOpcode::MutexLock, 0},
+                                     {IrOpcode::LoadLocal, 2},       {IrOpcode::PushI64, 1},
+                                     {IrOpcode::AtomicStore, 64},    {IrOpcode::PushI32, 5},
+                                     {IrOpcode::PrintI32, Newline},  {IrOpcode::LoadLocal, 1},
+                                     {IrOpcode::ConditionNotify, 0}, {IrOpcode::LoadLocal, 0},
+                                     {IrOpcode::MutexUnlock, 0},     {IrOpcode::LoadLocal, 3},
+                                     {IrOpcode::TaskWait, 0},        {IrOpcode::Pop, 0},
+                                     {IrOpcode::PushI32, 0},         {IrOpcode::ReturnI32, 0}})),
+       waiter});
+  const std::string conditions = emitted(waiting);
+  CHECK(contains(conditions, "ps_condition_wait(rt, ps_resolve(rt, "));
+  CHECK(contains(conditions, "ps_condition_notify(ps_resolve(rt, "));
+  const ProgramRun actual = compileAndRun(waiting, "condition_wait_notify");
+  REQUIRE_MESSAGE(actual.built, actual.buildError);
+  CHECK(actual.exitCode == 0);
+  CHECK(actual.out == "5\n2\n");
+  expectMatchesVm(waiting, "condition_wait_notify_vm");
+}
+
+TEST_CASE("primec runs a spawned call with a Channel argument as a task") {
+  const std::string source = R"(
+import /std/sync/*
+
+[effects(channel), return<i64>]
+first([Channel<i64>] jobs) {
+  [i64 mut] got{0i64}
+  pick(jobs.receive()) {
+    none {
+    }
+    some(job) {
+      got = job
+    }
+  }
+  return(got)
+}
+
+[effects(task, channel, heap_alloc, io_out), return<int>]
+main() {
+  jobs{Channel<i64>{[capacity] 1i32}}
+  [Task<i64>] taker{[spawn] first(jobs)}
+  jobs.send(41i64)
+  jobs.close()
+  print_line(wait(taker) + 1i64)
+  return(0i32)
+}
+)";
+  const std::filesystem::path sourcePath = scratch("spawn_channel.prime");
+  std::ofstream(sourcePath) << source;
+  // Neither backend that runs tasks keeps the call inline: the report has no note.
+  const std::filesystem::path cppPath = scratch("spawn_channel.cpp");
+  const ProgramRun emit =
+      runCommand("./primec --emit=optcpp '" + sourcePath.string() +
+                     "' --entry /main --opt-report -o '" + cppPath.string() + "'",
+                 "spawn_channel_emit");
+  REQUIRE_MESSAGE(emit.exitCode == 0, emit.err);
+  CHECK_FALSE(contains(emit.err, "runs inline"));
+  const std::string cpp = readText(cppPath);
+  CHECK(contains(cpp, "= ps_task_spawn(rt, ps_t"));
+  CHECK(contains(cpp, "ps_condition_wait("));
+  const ProgramRun vmEmit = runCommand("./primec --emit=vm '" + sourcePath.string() +
+                                           "' --entry /main --opt-report -o '" +
+                                           scratch("spawn_channel.psir").string() + "'",
+                                       "spawn_channel_vm_emit");
+  REQUIRE_MESSAGE(vmEmit.exitCode == 0, vmEmit.err);
+  CHECK_FALSE(contains(vmEmit.err, "runs inline"));
+  const ProgramRun vmRun =
+      runCommand("./primevm '" + sourcePath.string() + "' --entry /main", "spawn_channel_vm");
+  CHECK(vmRun.exitCode == 0);
+  CHECK(vmRun.out == "42\n");
+  const std::filesystem::path binary = scratch("spawn_channel.bin");
+  const ProgramRun build = runCommand("./primec --emit=optexe '" + sourcePath.string() +
+                                          "' --entry /main -o '" + binary.string() + "'",
+                                      "spawn_channel_build");
+  REQUIRE_MESSAGE(build.exitCode == 0, build.err);
+  const ProgramRun actual = runCommand("'" + binary.string() + "'", "spawn_channel_run");
+  CHECK(actual.exitCode == 0);
+  CHECK(actual.out == "42\n");
+}
+
 TEST_SUITE_END();

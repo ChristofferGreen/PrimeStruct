@@ -203,22 +203,32 @@ bool SemanticsValidator::inferTaskSpawnCallBinding(
     const std::unordered_map<std::string, BindingInfo> &locals,
     BindingInfo &bindingOut) {
   BindingInfo resultBinding;
-  // A callee that declares return<void> is void whatever its body holds: initializer inference would
-  // answer with the struct of a lambda the body creates.
-  auto declaresVoidReturn = [&]() {
+  // A callee that declares return<void> or a scalar return is that type whatever its body holds: initializer
+  // inference would answer with the struct of a lambda the body creates.
+  auto declaredPlainReturn = [&]() -> std::string {
     const auto defIt = defMap_.find(resolveCalleePath(spawnedCall));
     if (defIt == defMap_.end() || defIt->second == nullptr) {
-      return false;
+      return {};
     }
     for (const auto &transform : defIt->second->transforms) {
       if (transform.name == "return" && transform.templateArgs.size() == 1) {
-        return normalizeBindingTypeName(transform.templateArgs.front()) == "void";
+        const std::string declared = normalizeBindingTypeName(transform.templateArgs.front());
+        if (declared == "void") {
+          return declared;
+        }
+        const ReturnKind kind = returnKindForTypeName(declared);
+        if (kind == ReturnKind::Int || kind == ReturnKind::Int64 || kind == ReturnKind::UInt64 ||
+            kind == ReturnKind::UInt8 || kind == ReturnKind::Float32 ||
+            kind == ReturnKind::Float64 || kind == ReturnKind::Bool) {
+          return declared;
+        }
+        return {};
       }
     }
-    return false;
+    return {};
   };
-  if (declaresVoidReturn()) {
-    resultBinding.typeName = "void";
+  if (const std::string declared = declaredPlainReturn(); !declared.empty()) {
+    resultBinding.typeName = declared;
   } else if (!inferCallInitializerBinding(spawnedCall, params, locals, resultBinding)) {
     std::string resolvedPath = resolveCalleePath(spawnedCall);
     const std::string concretePath =

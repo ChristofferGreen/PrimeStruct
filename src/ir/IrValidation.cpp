@@ -21,7 +21,8 @@ constexpr uint32_t MaxCallParameterCount = 4096;
 constexpr uint64_t KnownEffectMask =
     EffectIoOut | EffectIoErr | EffectHeapAlloc | EffectPathSpaceNotify | EffectPathSpaceInsert |
     EffectPathSpaceTake | EffectFileWrite | EffectGpuDispatch | EffectPathSpaceBind |
-    EffectPathSpaceSchedule | EffectFileRead | EffectTask | EffectNetIo | EffectAtomic | EffectLock;
+    EffectPathSpaceSchedule | EffectFileRead | EffectTask | EffectNetIo | EffectAtomic |
+    EffectLock | EffectChannel;
 constexpr uint64_t KnownWasmWasiEffectMask =
     EffectIoOut | EffectIoErr | EffectHeapAlloc | EffectFileWrite | EffectFileRead;
 constexpr uint64_t KnownWasmBrowserEffectMask = 0ull;
@@ -55,7 +56,12 @@ bool isMutexOpcode(IrOpcode op) {
   return op == IrOpcode::MutexLock || op == IrOpcode::MutexUnlock;
 }
 
-// The backend a module with atomic or mutex opcodes is rejected for, or nullptr for a target that runs them.
+// The condition opcodes (docs/spec/vm-design.md, Conditions), which a `/std/sync` Channel waits with.
+bool isConditionOpcode(IrOpcode op) {
+  return op == IrOpcode::ConditionWait || op == IrOpcode::ConditionNotify;
+}
+
+// The backend a module with atomic, mutex or condition opcodes is rejected for, or nullptr for a target that runs them.
 const char *atomicRejectingBackendName(IrValidationTarget target) {
   switch (target) {
   case IrValidationTarget::Native:
@@ -733,6 +739,22 @@ bool validateIrModule(const IrModule &module, IrValidationTarget target, std::st
 
   // Checked before anything else about a function, so the message names the backend rather than an effect bit.
   if (const char *backendName = atomicRejectingBackendName(target)) {
+    // A channel is built from a lock and conditions: a module with a condition opcode is rejected as one with
+    // channels, wherever its first lock operation is.
+    for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
+      const IrFunction &function = module.functions[functionIndex];
+      for (size_t instructionIndex = 0; instructionIndex < function.instructions.size();
+           ++instructionIndex) {
+        if (isConditionOpcode(function.instructions[instructionIndex].op)) {
+          return failInstruction(functionIndex,
+                                 function.name,
+                                 instructionIndex,
+                                 "channel operations are not supported by the " +
+                                     std::string(backendName) + " backend",
+                                 error);
+        }
+      }
+    }
     for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
       const IrFunction &function = module.functions[functionIndex];
       for (size_t instructionIndex = 0; instructionIndex < function.instructions.size();

@@ -273,6 +273,7 @@ struct Checker {
   std::map<std::string, size_t> declarationOrder;  // binding -> position in the order of declaration
   size_t declarationCount = 0;
   std::vector<size_t> arenaOrder;  // declaration position of each open arena
+  std::set<std::string> channelNames; // parameters and bindings whose type is a /std/sync Channel
   // names declared by each enclosing block, innermost last
   std::vector<std::set<std::string>> scopes;
 
@@ -280,6 +281,9 @@ struct Checker {
       : def(definition), carriers(carrierSet), definitions(definitionMap) {
     for (const Expr &param : def.parameters) {
       parameterNames.insert(param.name);
+      if (hasTypeLeaf(param, "Channel")) {
+        channelNames.insert(param.name);
+      }
       if (isViewBinding(param, carriers)) {
         viewParameters.insert(param.name);
       }
@@ -557,6 +561,22 @@ struct Checker {
     return false;
   }
 
+  // A binding typed as a Channel, made from one (`jobs{Channel<i64>{[capacity] 4i32}}`) or copied from one.
+  bool isChannelBinding(const Expr &statement) const {
+    if (hasTypeLeaf(statement, "Channel")) {
+      return true;
+    }
+    if (statement.args.size() != 1) {
+      return false;
+    }
+    const Expr &initializer = statement.args.front();
+    if (initializer.kind == Expr::Kind::Name) {
+      return channelNames.count(initializer.name) > 0;
+    }
+    return initializer.kind == Expr::Kind::Call && !initializer.isBinding &&
+           typeLeafName(initializer.name) == "Channel";
+  }
+
   bool checkBlock(const std::vector<Expr> &statements) {
     scopes.emplace_back();
     blockPosition.push_back(0);
@@ -583,6 +603,9 @@ struct Checker {
       if (statement.isBinding) {
         scopes.back().insert(statement.name);
         declarationOrder[statement.name] = ++declarationCount;
+        if (isChannelBinding(statement)) {
+          channelNames.insert(statement.name);
+        }
         if (hasTypeLeaf(statement, "StringArena")) {
           arenas.emplace_back(statement.name, scopes.size());
           arenaOrder.push_back(declarationCount);
@@ -759,6 +782,34 @@ struct Checker {
     return true;
   }
 
+  // What is sent on a channel is received by a task that may outlive the arena, so a String made in an open arena
+  // cannot be sent (`jobs.send(line)` or `jobs.send(move(line))`).
+  bool checkArenaSends(const Expr &expr) {
+    if (arenaStrings.empty() || channelNames.empty() || expr.kind != Expr::Kind::Call) {
+      return true;
+    }
+    if (!expr.isBinding && leafName(expr.name) == "send" && expr.args.size() == 2 &&
+        expr.args[0].kind == Expr::Kind::Name && channelNames.count(expr.args[0].name) > 0) {
+      const Expr *sent = &expr.args[1];
+      if (sent->kind == Expr::Kind::Call && leafName(sent->name) == "move" &&
+          sent->args.size() == 1) {
+        sent = &sent->args.front();
+      }
+      if (sent->kind == Expr::Kind::Name) {
+        if (const auto it = arenaStrings.find(sent->name); it != arenaStrings.end()) {
+          return fail("string escapes its arena via channel (arena: " + arenas[it->second].first +
+                      ")");
+        }
+      }
+    }
+    for (const Expr &arg : expr.args) {
+      if (!checkArenaSends(arg)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   // `Function<R, A...>{closure}` moves the closure to the heap (`/__fn_box`): a closure that borrows cannot go there.
   bool checkFunctionBoxes(const Expr &expr) {
     if (expr.kind == Expr::Kind::Call && !expr.isBinding && !expr.isMethodCall && expr.args.size() == 1) {
@@ -795,6 +846,9 @@ struct Checker {
       return false;
     }
     if (!checkArenaSpawns(statement)) {
+      return false;
+    }
+    if (!checkArenaSends(statement)) {
       return false;
     }
     if (statement.kind != Expr::Kind::Call || statement.isBinding) {

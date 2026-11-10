@@ -314,6 +314,18 @@ bool moduleUsesMutexes(const IrModule &module) {
   return false;
 }
 
+bool moduleUsesConditions(const IrModule &module) {
+  for (const IrFunction &function : module.functions) {
+    for (const IrInstruction &instruction : function.instructions) {
+      if (instruction.op == IrOpcode::ConditionWait ||
+          instruction.op == IrOpcode::ConditionNotify) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 std::string parameterList(uint32_t count, bool withTypes) {
   std::string out = withTypes ? "Rt &rt" : "rt";
   for (uint32_t i = 0; i < count; ++i) {
@@ -380,6 +392,8 @@ public:
       case IrOpcode::AtomicCompareExchange:
       case IrOpcode::MutexLock:
       case IrOpcode::MutexUnlock:
+      case IrOpcode::ConditionWait:
+      case IrOpcode::ConditionNotify:
         frameMode_ = true;
         break;
       default:
@@ -577,6 +591,13 @@ private:
       line(
           std::string(instruction.op == IrOpcode::MutexLock ? "ps_mutex_lock" : "ps_mutex_unlock") +
           "(rt, ps_resolve(rt, " + frameArgs() + ", " + slot(depth - 1) + "));");
+      return true;
+    case IrOpcode::ConditionWait:
+      line("ps_condition_wait(rt, ps_resolve(rt, " + frameArgs() + ", " + slot(depth - 2) +
+           "), ps_resolve(rt, " + frameArgs() + ", " + slot(depth - 1) + "));");
+      return true;
+    case IrOpcode::ConditionNotify:
+      line("ps_condition_notify(ps_resolve(rt, " + frameArgs() + ", " + slot(depth - 1) + "));");
       return true;
     case IrOpcode::ReturnVoid:
       emitReturn("0");
@@ -942,8 +963,10 @@ bool IrToOptCppEmitter::emitSource(const IrModule &module,
            << parameterList(module.functions[i].parameterCount, true) << ");\n";
   }
   source << "\n";
-  // A module without atomic or mutex opcodes gets none of this either. A lock is an atomic slot.
-  const bool usesMutexes = moduleUsesMutexes(module);
+  // A module without atomic, mutex or condition opcodes gets none of this either. A lock is an atomic slot, and a
+  // condition is waited on with a lock held.
+  const bool usesConditions = moduleUsesConditions(module);
+  const bool usesMutexes = usesConditions || moduleUsesMutexes(module);
   const bool usesTasks = moduleUsesTasks(module);
   if (usesMutexes || usesTasks) {
     source << OptCppWaitRuntime;
@@ -953,6 +976,9 @@ bool IrToOptCppEmitter::emitSource(const IrModule &module,
   }
   if (usesMutexes) {
     source << OptCppMutexRuntime;
+  }
+  if (usesConditions) {
+    source << OptCppConditionRuntime;
   }
   // A module without task opcodes gets none of this, so a single-threaded program's source keeps its shape.
   if (usesTasks) {
