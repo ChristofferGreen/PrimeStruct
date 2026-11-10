@@ -2199,6 +2199,7 @@ are left unarchived.
 | TODO-5790 | Spawn arguments are checked by type: only sendable values cross to a task | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5791 | Every `Function` is sendable by construction: the conversion rejects non-sendable captures | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5792 | The VM runs `TaskSpawn`/`TaskWait` IR under a deterministic scheduler | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5793 | Byte-region accesses check liveness without a map search or a write | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5807 | `[left right] wait(a, b)` destructures the results of several tasks | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5820 | Snapshot runs and the UI tests show nothing on screen | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5822 | The std/os SIGTERM test does not race the program's start | [2026-11.md](todo_archive/2026-11.md) | 2026-11-09 |

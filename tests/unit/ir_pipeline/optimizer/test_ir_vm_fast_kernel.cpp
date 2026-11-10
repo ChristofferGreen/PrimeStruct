@@ -12,6 +12,7 @@
 #include <filesystem>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 TEST_SUITE_BEGIN("primestruct.ir.vm_fast_kernel");
@@ -304,6 +305,100 @@ TEST_CASE("fused string byte loads match the step kernel, including their faults
       }
     }
   }
+}
+
+TEST_CASE("byte-region loads and stores match the step kernel, including their faults") {
+  using optimizer_test::assembleOne;
+  using optimizer_test::moduleOf;
+  // Region A (20 bytes) in local 0 and region B (5 bytes, in A's last granule) in local 1.
+  const std::vector<std::string> prologue = {"PushI32 20",
+                                             "HeapAllocBytes",
+                                             "StoreLocal 0",
+                                             "PushI32 5",
+                                             "HeapAllocBytes",
+                                             "StoreLocal 1",
+                                             "LoadLocal 0",
+                                             "PushI32 3",
+                                             "AddI64",
+                                             "PushI32 300",
+                                             "StoreU8",
+                                             "Pop",
+                                             "LoadLocal 1",
+                                             "PushI32 4",
+                                             "AddI64",
+                                             "PushI32 7",
+                                             "StoreU8",
+                                             "Pop"};
+  const std::vector<std::pair<const char *, std::vector<std::string>>> tails = {
+      {"both bytes",
+       {"LoadLocal 0",
+        "PushI32 3",
+        "AddI64",
+        "LoadU8",
+        "LoadLocal 1",
+        "PushI32 4",
+        "AddI64",
+        "LoadU8",
+        "AddI32",
+        "ReturnI32"}},
+      {"one past A", {"LoadLocal 0", "PushI32 20", "AddI64", "LoadU8", "ReturnI32"}},
+      {"one past B", {"LoadLocal 1", "PushI32 5", "AddI64", "PushI32 1", "StoreU8", "ReturnI32"}},
+      {"freed B", {"LoadLocal 1", "HeapFree", "LoadLocal 1", "LoadU8", "ReturnI32"}},
+      {"u8 local",
+       {"AddressOfLocal 2",
+        "PushI32 513",
+        "StoreU8",
+        "Pop",
+        "AddressOfLocal 2",
+        "LoadU8",
+        "ReturnI32"}},
+      {"unaligned local", {"AddressOfLocal 2", "PushI32 1", "AddI64", "LoadU8", "ReturnI32"}},
+      {"slot region", {"PushI32 1", "HeapAlloc", "LoadU8", "ReturnI32"}},
+  };
+  for (const auto &[name, tail] : tails) {
+    std::vector<primec::IrInstruction> code;
+    for (const std::string &line : prologue) {
+      code.push_back(assembleOne(line.c_str()));
+    }
+    for (const std::string &line : tail) {
+      code.push_back(assembleOne(line.c_str()));
+    }
+    const primec::IrModule module = moduleOf(std::move(code));
+    REQUIRE(primec::testing::vmFastKernelAccepts(module));
+    const BothKernels both = runBoth(module);
+    INFO(name);
+    CHECK(both.fast == both.step);
+    const std::string kind = name;
+    CHECK(both.step.ok == (kind == "both bytes" || kind == "u8 local" || kind == "slot region"));
+  }
+}
+
+TEST_CASE("a trap ends the run with its code from any frame on both kernels") {
+  using optimizer_test::assemble;
+  using optimizer_test::moduleOf;
+  // In main with an operand left on the stack.
+  const primec::IrModule direct = moduleOf(assemble({"PushI32 9", "Trap 3"}));
+  REQUIRE(primec::testing::vmFastKernelAccepts(direct));
+  const BothKernels inMain = runBoth(direct);
+  CHECK(inMain.fast == inMain.step);
+  CHECK(inMain.step.ok);
+  CHECK(inMain.step.result == 3);
+  // Two frames down, after printing, with the callers' code never reached.
+  primec::IrModule nested = moduleOf(assemble({"PushI32 1", "PrintI32 1", "Call 1", "ReturnI32"}));
+  primec::IrFunction middle;
+  middle.name = "/middle";
+  middle.instructions = assemble({"CallVoid 2", "PushI32 7", "ReturnI32"});
+  primec::IrFunction fails;
+  fails.name = "/fails";
+  fails.instructions = assemble({"PushI32 2", "PrintI32 1", "Trap 4"});
+  nested.functions.push_back(std::move(middle));
+  nested.functions.push_back(std::move(fails));
+  REQUIRE(primec::testing::vmFastKernelAccepts(nested));
+  const BothKernels deep = runBoth(nested);
+  CHECK(deep.fast == deep.step);
+  CHECK(deep.step.ok);
+  CHECK(deep.step.result == 4);
+  CHECK(deep.step.output == "1\n2\n");
 }
 
 TEST_CASE("fused sext forms match the step kernel over wrapping operands") {

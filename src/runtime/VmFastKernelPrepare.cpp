@@ -383,14 +383,8 @@ bool prepareFunction(const IrModule &module, const IrFunction &function, FastFun
   out.function = &function;
   out.code.reserve(function.instructions.size() + 1);
   for (const IrInstruction &instruction : function.instructions) {
-    // Byte memory runs on the step kernel only; the loop has no byte heap handlers.
-    if (instruction.op == IrOpcode::HeapAllocBytes || instruction.op == IrOpcode::LoadU8 ||
-        instruction.op == IrOpcode::StoreU8) {
-      return false;
-    }
-    // So do traps, which end the run from any frame, and tasks, which the scheduler runs.
-    if (instruction.op == IrOpcode::Trap || instruction.op == IrOpcode::TaskSpawn ||
-        instruction.op == IrOpcode::TaskWait) {
+    // Tasks, which the scheduler runs, stay on the step kernel.
+    if (instruction.op == IrOpcode::TaskSpawn || instruction.op == IrOpcode::TaskWait) {
       return false;
     }
     // A call to a missing function is left to the step kernel, which faults on it when (and only

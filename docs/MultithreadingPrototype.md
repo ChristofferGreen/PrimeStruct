@@ -554,7 +554,7 @@ Today every allocator is one unsynchronized structure:
   free-list head per size class sit in the writable data segment (`HeapStateBytes`).
 - `optexe` (`include/primec/runtime/VmHeapCore*.{h,inc}`, `VmTextHeap*`): one `VmHeapCore` in `Rt`, whose slot
   and byte storage are `std::vector`s that move when they grow, with live and free runs in `std::map`/`std::set`;
-  `byteAt` even writes its last-region cache on a read. One `VmTextHeap` holds the `StringArena` stack and a
+  a byte access reads a per-granule state table and writes nothing (TODO-5793). One `VmTextHeap` holds the `StringArena` stack and a
   literal cache filled on first use.
 
 The design is per-thread arenas, with a lock only on a shared slow path:
@@ -562,8 +562,8 @@ The design is per-thread arenas, with a lock only on a shared slow path:
 - **optexe:** one `VmHeapCore` arena per thread. The arena number goes in address bits 41 to 46, so arena 0
   (the main thread, and the VM) keeps today's addresses and the VM/`optexe` parity tests do not change. Once a
   second thread exists, storage never moves (a reservation, not a growing vector). A liveness check reads only a
-  state table, with relaxed atomic loads: slots have one already, and byte regions get one instead of the map
-  search (TODO-5793); no read writes anything, and the last-region cache is per thread. Each thread has its own
+  state table, with relaxed atomic loads: slots have one already, and byte regions have one per 64 bytes
+  since TODO-5793, which removed the map search and the last-region cache, so no read writes anything. Each thread has its own
   `VmTextHeap`, so a `StringArena` opened on one thread never catches another thread's strings, and its own
   literal cache. At most 64 arenas; a 65th thread shares the last one behind its lock.
 - **arm64 native:** each thread has its own allocator state (today's layout plus a remote-free head). The main

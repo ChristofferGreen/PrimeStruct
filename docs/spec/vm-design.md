@@ -114,11 +114,14 @@
   arena, so `address + i` names byte `i`, and bit 47 puts the offset far beyond any slot index, which is why a slot
   access to a byte address (`slot access to a byte region`) and a byte access to a slot, frame or unknown address
   (`byte access to a slot region`, `invalid byte address`) fault instead of reading the wrong memory. A region is
-  checked on every access (inside a live region, same generation); regions are reused best fit and merged like slot
-  runs, and a reuse takes a new generation, so an address from before a free faults. `HeapFree` accepts both kinds;
+  checked on every access (inside a live region, same generation) without writing anything: a table holds one state
+  per 64 bytes, the generation of the one live region whose bytes lie there and the range they fill, so an access
+  costs one load and compare, and only bytes that share 64 bytes with another region ask the map of live regions.
+  Regions are reused best fit and merged like slot runs, and a reuse takes a new generation, so an address from before
+  a free faults. `HeapFree` accepts both kinds;
   `HeapRealloc` of a byte region counts bytes and copies the leading bytes, while a realloc of address 0 still
-  allocates slots (a byte container starts with `HeapAllocBytes`). Byte memory and `ZextU8` run on the step kernel and the
-  flat loop declines modules that use the three memory opcodes; the native JIT and the native, wasm and GLSL
+  allocates slots (a byte container starts with `HeapAllocBytes`). Byte memory and `ZextU8` run on both kernels (the flat loop
+  since TODO-5793); the native JIT and the native, wasm and GLSL
   backends do not support them yet (the validator says so). The C++ emitters run them: `optcpp` and `optexe` always, and
   `cpp` and `exe` for a module that uses them (the optimized emitter writes it). The optimized emitters their generated runtime pastes `VmHeapCore` (`VmHeapCoreSource`) and the string heap
   (`VmTextHeapSource`, from `VmTextHeapBody.inc`), so byte addresses, faults and `stringMemory()` figures match the
@@ -143,8 +146,8 @@
   passes the shared CFG analysis (consistent stack depths, valid jump targets, balanced returns, an entry without
   parameters): it keeps the instruction pointer, operand-stack pointer and locals pointer in registers, fuses common
   sequences inside a basic block into single instructions (including three-address forms that store a result straight
-  into a local), and turns chains of three or more `local == constant` tests into one table lookup. Debug sessions and any module the analysis rejects use the
-  checked step kernel. Both produce the same results, output and fault messages; `PRIMEVM_KERNEL=step` forces the step
+  into a local), and turns chains of three or more `local == constant` tests into one table lookup. Debug sessions, modules with tasks and any module the analysis rejects use
+  the checked step kernel; a `Trap` ends the flat loop with its code as it ends the step kernel. Both produce the same results, output and fault messages; `PRIMEVM_KERNEL=step` forces the step
   kernel for comparison (see `docs/OptimizingBackendsPlan.md`, Phase 4).
 - **Module layout:** `IrModule` bundles functions, string table, and struct layouts; lowering emits entry instructions
   plus reachable non-entry callable function bodies so function names/metadata and executable IR survive serialization.

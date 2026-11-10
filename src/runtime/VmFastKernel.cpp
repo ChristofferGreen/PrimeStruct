@@ -3,6 +3,7 @@
 
 #include "primec/ir/IrCfg.h"
 #include "primec/ir/IrPureSemantics.h"
+#include "primec/runtime/VmHeapCore.h"
 #include "primec/runtime/VmStringLookup.h"
 #include "primec/testing/VmKernelSelection.h"
 
@@ -312,6 +313,9 @@ bool executeVmFastKernel(const IrModule &module,
   table[OP(CmpGeU64)] = &&lbl_CmpGeU64;
   table[OP(LoadIndirect)] = &&lbl_LoadIndirect;
   table[OP(StoreIndirect)] = &&lbl_StoreIndirect;
+  table[OP(LoadU8)] = &&lbl_LoadU8;
+  table[OP(StoreU8)] = &&lbl_StoreU8;
+  table[OP(HeapAllocBytes)] = &&lbl_HeapAllocBytes;
   table[OP(HeapAlloc)] = &&lbl_HeapAlloc;
   table[OP(HeapFree)] = &&lbl_HeapFree;
   table[OP(HeapRealloc)] = &&lbl_HeapRealloc;
@@ -321,6 +325,7 @@ bool executeVmFastKernel(const IrModule &module,
   table[OP(Call)] = &&lbl_Call;
   table[OP(CallVoid)] = &&lbl_CallVoid;
   table[OP(ReturnVoid)] = &&lbl_ReturnVoid;
+  table[OP(Trap)] = &&lbl_Trap;
   table[OP(ReturnI32)] = &&lbl_ReturnI32;
   table[OP(ReturnI64)] = &&lbl_ReturnI64;
   table[OP(ReturnF32)] = &&lbl_ReturnF32;
@@ -786,6 +791,62 @@ bool executeVmFastKernel(const IrModule &module,
       DISPATCH();
     }
 
+    // Byte accesses: a byte-region address goes to the heap, which checks it with one granule-state load
+    // (VmHeapCore::byteAt); any other address names a slot (a u8 local or slot field) and its low byte, as on the
+    // step kernel.
+    case OP(LoadU8):
+    lbl_LoadU8:
+      {
+        const uint64_t address = sp[-1];
+        if (VmHeapCore::isByteAddress(address)) {
+          uint8_t byte = 0;
+          if (!host.loadHeapByte(address, noLocals, byte, error)) [[unlikely]] {
+            return false;
+          }
+          sp[-1] = byte;
+        } else {
+          uint64_t *slot = nullptr;
+          if (!indirectSlot(address, slot)) [[unlikely]] {
+            return false;
+          }
+          sp[-1] = *slot & 0xFFu;
+        }
+        ++ip;
+        DISPATCH();
+      }
+    case OP(StoreU8):
+    lbl_StoreU8:
+      {
+        const uint64_t address = sp[-2];
+        const uint8_t byte = static_cast<uint8_t>(sp[-1] & 0xFFu);
+        if (VmHeapCore::isByteAddress(address)) {
+          if (!host.storeHeapByte(address, noLocals, byte, error)) [[unlikely]] {
+            return false;
+          }
+        } else {
+          uint64_t *slot = nullptr;
+          if (!indirectSlot(address, slot)) [[unlikely]] {
+            return false;
+          }
+          *slot = byte;
+        }
+        sp[-2] = byte;
+        --sp;
+        ++ip;
+        DISPATCH();
+      }
+    case OP(HeapAllocBytes):
+    lbl_HeapAllocBytes:
+      {
+        uint64_t address = 0;
+        if (!host.allocateHeapBytes(sp[-1], address, error)) {
+          return false;
+        }
+        sp[-1] = address;
+        ++ip;
+        DISPATCH();
+      }
+
     case OP(HeapAlloc):
     lbl_HeapAlloc: {
       uint64_t address = 0;
@@ -890,6 +951,11 @@ bool executeVmFastKernel(const IrModule &module,
     lbl_ReturnVoid:
       returnValue = 0;
       goto return_to_caller;
+    // A trap ends the program with its exit code from any frame, as on the step kernel.
+    case OP(Trap):
+    lbl_Trap:
+      result = inst.imm;
+      return true;
     case OP(ReturnI32):
     lbl_ReturnI32:
       returnValue = sext32(*--sp);

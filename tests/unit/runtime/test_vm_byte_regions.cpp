@@ -404,3 +404,114 @@ TEST_CASE("heap core refuses a byte allocation that cannot be addressed") {
   CHECK_FALSE(heap.allocateBytes(VmHeapCore::ByteOffsetMask + 1, address, error));
   CHECK(error == "VM heap allocation overflow");
 }
+
+TEST_CASE("heap core keeps every byte of three interleaved regions apart") {
+  // Sizes that share 16-byte granules (37 bytes at 0, 5 at 37 and 50 at 42), accessed in turn on every byte
+  // (TODO-5793).
+  VmHeapCore heap;
+  std::string error;
+  const uint64_t sizes[3] = {37, 5, 50};
+  uint64_t regions[3] = {0, 0, 0};
+  for (int r = 0; r < 3; ++r) {
+    REQUIRE(heap.allocateBytes(sizes[r], regions[r], error));
+  }
+  for (uint64_t i = 0; i < 50; ++i) {
+    for (int r = 0; r < 3; ++r) {
+      if (i < sizes[r]) {
+        uint8_t *byte = heap.byteAt(regions[r] + i);
+        REQUIRE(byte != nullptr);
+        *byte = static_cast<uint8_t>(r * 64 + i);
+      }
+    }
+  }
+  for (uint64_t i = 0; i < 50; ++i) {
+    for (int r = 0; r < 3; ++r) {
+      if (i < sizes[r]) {
+        CHECK(*heap.byteAt(regions[r] + i) == static_cast<uint8_t>(r * 64 + i));
+      }
+    }
+  }
+  for (int r = 0; r < 3; ++r) {
+    CHECK(heap.byteAt(regions[r] + sizes[r]) ==
+          nullptr); // the next region's first byte, or past the heap
+    CHECK(heap.byteSpan(regions[r], sizes[r]) == heap.byteAt(regions[r]));
+    CHECK(heap.byteSpan(regions[r], sizes[r] + 1) == nullptr);
+    CHECK(heap.byteSpan(regions[r] + 1, sizes[r] - 1) == heap.byteAt(regions[r] + 1));
+  }
+  // Freeing the middle one leaves its neighbours' bytes and checks as they were.
+  REQUIRE(heap.release(regions[1], error));
+  CHECK(heap.byteAt(regions[1]) == nullptr);
+  CHECK(heap.byteSpan(regions[1], 2) == nullptr);
+  CHECK(*heap.byteAt(regions[0] + 36) == 36);
+  CHECK(heap.byteAt(regions[0] + 37) == nullptr);
+  CHECK(*heap.byteAt(regions[2]) == 128);
+  CHECK(heap.byteSpan(regions[2], 50) != nullptr);
+  CHECK_FALSE(heap.release(regions[1], error));
+  CHECK(error == "invalid heap free address in IR: " + std::to_string(regions[1]));
+}
+
+TEST_CASE("byte accesses fault one past a region, after its free and after its reuse") {
+  // Three adjacent 8-byte regions sharing granules, in locals 0, 1 and 2.
+  const std::vector<IrInstruction> prologue = {{IrOpcode::PushI32, 8},
+                                               {Alloc, 0},
+                                               {IrOpcode::StoreLocal, 0},
+                                               {IrOpcode::PushI32, 8},
+                                               {Alloc, 0},
+                                               {IrOpcode::StoreLocal, 1},
+                                               {IrOpcode::PushI32, 8},
+                                               {Alloc, 0},
+                                               {IrOpcode::StoreLocal, 2}};
+  const auto withTail = [&](std::vector<IrInstruction> tail) {
+    std::vector<IrInstruction> all = prologue;
+    all.insert(all.end(), tail.begin(), tail.end());
+    return run(moduleOf(std::move(all)));
+  };
+  // One past the first region is the second region's first byte, under the first one's generation.
+  const Run past = withTail({{IrOpcode::LoadLocal, 0},
+                             {IrOpcode::PushI32, 8},
+                             {IrOpcode::AddI64, 0},
+                             {IrOpcode::LoadU8, 0},
+                             {IrOpcode::ReturnI32, 0}});
+  CHECK_FALSE(past.ok);
+  CHECK(past.error.find("invalid byte address in IR: ") != std::string::npos);
+  const Run freed = withTail({{IrOpcode::LoadLocal, 1},
+                              {IrOpcode::HeapFree, 0},
+                              {IrOpcode::LoadLocal, 1},
+                              {IrOpcode::LoadU8, 0},
+                              {IrOpcode::ReturnI32, 0}});
+  CHECK_FALSE(freed.ok);
+  CHECK(freed.error.find("invalid byte address in IR: ") != std::string::npos);
+  // The middle region is freed and its bytes go to a new region (local 3): the new address works, the old one,
+  // a different generation of the same bytes, faults.
+  const std::vector<IrInstruction> reuse = {{IrOpcode::LoadLocal, 1},
+                                            {IrOpcode::HeapFree, 0},
+                                            {IrOpcode::PushI32, 8},
+                                            {Alloc, 0},
+                                            {IrOpcode::StoreLocal, 3},
+                                            {IrOpcode::LoadLocal, 3},
+                                            {IrOpcode::PushI32, 7},
+                                            {IrOpcode::AddI64, 0},
+                                            {IrOpcode::PushI32, 5},
+                                            {IrOpcode::StoreU8, 0},
+                                            {IrOpcode::Pop, 0}};
+  std::vector<IrInstruction> fresh = reuse;
+  fresh.insert(fresh.end(),
+               {{IrOpcode::LoadLocal, 3},
+                {IrOpcode::PushI32, 7},
+                {IrOpcode::AddI64, 0},
+                {IrOpcode::LoadU8, 0},
+                {IrOpcode::ReturnI32, 0}});
+  const Run reused = withTail(fresh);
+  CHECK(reused.ok);
+  CHECK(reused.value == 5);
+  std::vector<IrInstruction> stale = reuse;
+  stale.insert(stale.end(),
+               {{IrOpcode::LoadLocal, 1},
+                {IrOpcode::PushI32, 7},
+                {IrOpcode::AddI64, 0},
+                {IrOpcode::LoadU8, 0},
+                {IrOpcode::ReturnI32, 0}});
+  const Run old = withTail(stale);
+  CHECK_FALSE(old.ok);
+  CHECK(old.error.find("invalid byte address in IR: ") != std::string::npos);
+}

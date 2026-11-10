@@ -205,30 +205,29 @@ inline uint64_t *ps_resolve(Rt &rt, uint64_t *frame, uint64_t base, size_t frame
 
 // A byte address names a byte of a byte region; a slot address (a u8 local or slot field) names its
 // slot's low byte.
+// byteAt checks the tag bits itself, so a byte of a live region needs no other test.
 inline uint64_t ps_load_u8(Rt &rt, uint64_t *frame, uint64_t base, size_t frameCount, uint64_t address) {
+  if (const uint8_t *byte = rt.heap.byteAt(address)) {
+    return *byte;
+  }
   if (!VmHeapCore::isByteAddress(address)) {
     return *ps_resolve(rt, frame, base, frameCount, address) & UINT64_C(0xff);
   }
-  const uint8_t *byte = rt.heap.byteAt(address);
-  if (byte == nullptr) {
-    ps_byte_fault(address);
-  }
-  return *byte;
+  ps_byte_fault(address);
 }
 
 inline uint64_t ps_store_u8(Rt &rt, uint64_t *frame, uint64_t base, size_t frameCount, uint64_t address,
                            uint64_t raw) {
   const uint8_t value = static_cast<uint8_t>(raw & UINT64_C(0xff));
+  if (uint8_t *byte = rt.heap.byteAt(address)) {
+    *byte = value;
+    return value;
+  }
   if (!VmHeapCore::isByteAddress(address)) {
     *ps_resolve(rt, frame, base, frameCount, address) = value;
     return value;
   }
-  uint8_t *byte = rt.heap.byteAt(address);
-  if (byte == nullptr) {
-    ps_byte_fault(address);
-  }
-  *byte = value;
-  return value;
+  ps_byte_fault(address);
 }
 
 // ---- text across the host boundary ----------------------------------------

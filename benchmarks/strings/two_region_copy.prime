@@ -1,0 +1,23 @@
+import /std/text/*
+
+// Copies one String into another byte by byte. The two blocks come from different chunks (a 1000-byte text and a
+// 4000-byte buffer), so the reads and writes alternate between two byte regions of the heap (TODO-5793).
+[return<int> effects(heap_alloc, io_out)]
+main() {
+  [String mut] source{/std/text/stringFrom("")}
+  for([i32 mut] i{0i32}, i < 1000i32, i++) {
+    source.pushByte(convert<u8>(97i32 + i - i / 26i32 * 26i32))
+  }
+  [String mut] target{/std/text/stringFrom("")}
+  target.reserve(4000i32)
+  [i32 mut] total{0i32}
+  for([i32 mut] round{0i32}, round < 1000i32, round++) {
+    target.clear()
+    for([i32 mut] i{0i32}, i < 1000i32, i++) {
+      target.pushByte(source.byteAt(i))
+    }
+    total = total + convert<i32>(target.byteAt(round))
+  }
+  print_line(total)
+  return(0i32)
+}

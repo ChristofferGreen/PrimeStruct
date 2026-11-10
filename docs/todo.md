@@ -113,8 +113,8 @@ of sync with them.
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
 | TODO-5836 | A spawned definition without a `return` transform is a `Task<void>` | deferred | mt-vm-tasks |
 | TODO-5837 | VM debug sessions step programs that spawn tasks | deferred | vm-debugger |
-| TODO-5793 | Byte-region accesses check liveness without a map search or a write | ready | mt-heap-optexe |
-| TODO-5794 | `optexe` heaps are per-thread arenas with remote frees | blocked | mt-heap-optexe |
+| TODO-5794 | `optexe` heaps are per-thread arenas with remote frees | ready | mt-heap-optexe |
+| TODO-5840 | A byte loop over one large region on `optexe` runs as fast as before the granule table | ready | optexe-bytes |
 | TODO-5795 | `optexe` runs spawned tasks on threads | blocked | mt-optexe-threads |
 | TODO-5796 | `Atomic<i32>` and `Atomic<i64>` with the `atomic` effect | blocked | mt-primitives |
 | TODO-5797 | `Mutex<T>` with scoped `locked(body)` and the `lock` effect | blocked | mt-primitives |
@@ -207,14 +207,14 @@ of sync with them.
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719; collection fields found by closures and the todo example: TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
 - Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5738, TODO-5718
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732, TODO-5735, TODO-5736, TODO-5737
-- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe; real calls and struct copies TODO-5739, TODO-5741, TODO-5752; VM address checks TODO-5824
-- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5793, TODO-5794, TODO-5795, TODO-5796, TODO-5797, TODO-5798, TODO-5656, TODO-5802, TODO-5803, TODO-5799, TODO-5800, TODO-5801; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837
+- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5840; real calls and struct copies TODO-5739, TODO-5741, TODO-5752; VM address checks TODO-5824
+- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5794, TODO-5795, TODO-5796, TODO-5797, TODO-5798, TODO-5656, TODO-5802, TODO-5803, TODO-5799, TODO-5800, TODO-5801; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837
 
 ### Execution Queue
 
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
-Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order (TODO-5792 and TODO-5835, VM tasks and their lowering, are done): TODO-5793 (byte-region checks without a map search), TODO-5794 (`optexe` per-thread heap arenas), TODO-5795 (`optexe` threads for `[spawn]`), TODO-5796 (`Atomic`), TODO-5797 (`Mutex`), TODO-5798 (`Channel`), TODO-5656 (atomic `SharedString` count), TODO-5802 (`serveWorkers`), TODO-5803 (apps on workers, measured), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5793 and TODO-5799 are ready and independent of each other (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, are done). Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions).
+Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order (TODO-5792 and TODO-5835, VM tasks and their lowering, are done, and so is TODO-5793, byte-region checks without a map search): TODO-5794 (`optexe` per-thread heap arenas), TODO-5795 (`optexe` threads for `[spawn]`), TODO-5796 (`Atomic`), TODO-5797 (`Mutex`), TODO-5798 (`Channel`), TODO-5656 (atomic `SharedString` count), TODO-5802 (`serveWorkers`), TODO-5803 (apps on workers, measured), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5793 and TODO-5799 are ready and independent of each other (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, are done). Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions).
 
 ### Task Blocks
 
@@ -698,28 +698,27 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
   - stop_rule: the debug session on the default schedule; seeded schedules in the debugger are later work.
   - notes: deferred: no debugger user needs tasks yet.
 
-- [ ] TODO-5793: Byte-region accesses check liveness without a map search or a write
+- [ ] TODO-5840: A byte loop over one large region on `optexe` runs as fast as before the granule table
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-10
+  - phase: Optimizing backends (found in TODO-5793)
+  - parallel_track: optexe-bytes
+  - scope: TODO-5793 replaced `VmHeapCore`'s last-region cache (three compares against members, but written on every miss) with a per-granule state table (one dependent load and compare, no write). On `optexe` `benchmarks/strings/append_chunks.prime` (43-byte appends into one String growing to 8.6 MB, byte by byte through `ps_store_u8`) takes 10% more CPU time (51.8 ms against 56.9 ms, median of 31 interleaved runs); every other string benchmark is within 4% and two_region_copy is 13% faster. With the check removed entirely both versions are within 2%, so the cost is the check in the hot loop: the generated program calls `VmHeapCore::byteAt` out of line, and forcing it inline (fast path inline, map search out of line) made append_chunks 15-20% slower, not faster. Find where the time goes (instruction count of the String.append loop in the generated code, the inlining of `textStore`) and win it back without a write on the read path.
+  - implementation_notes: include/primec/runtime/VmHeapCoreBody.inc (`byteAt`, `byteAtEdge`), src/backend/IrToOptCppRuntime.h (`ps_load_u8`, `ps_store_u8`); measure with CPU time of interleaved runs (wall time on a shared machine varied by 50%).
+  - acceptance:
+    - `append_chunks` on `optexe` within 2% of the pre-TODO-5793 build; the other string benchmarks and two_region_copy no slower than now
+    - no write on the byte read path; full release gate green
+  - stop_rule: the optexe byte check; VM changes only if the shared heap code needs them.
+
+- [ ] TODO-5794: `optexe` heaps are per-thread arenas with remote frees
   - owner: ai
   - status: ready
   - created_at: 2026-11-09
   - phase: Multithreading (docs/MultithreadingPrototype.md, Heaps)
   - parallel_track: mt-heap-optexe
-  - scope: `VmHeapCore::byteAt` (include/primec/runtime/VmHeapCoreBody.inc) finds a byte region with a `std::map` search unless the address is in the last region found, and writes that cache on every lookup, so even a read mutates the heap and a loop over two regions searches the map on every byte. Give byte regions a state table indexed by the address, like the slots' (`states`): the region's generation for each granule, so a check is one array load and compare and writes nothing. Keep the addresses, the fault messages and the VM/`optexe` parity.
-  - acceptance:
-    - a VM benchmark that copies between two byte regions byte by byte (add it under benchmarks/) runs at least 2x faster; `benchmarks/aggregate.prime` and the strings benchmarks are no slower on the VM and `optexe`
-    - positive: tests/unit/runtime/test_vm_byte_regions.cpp gains a case that interleaves accesses to three regions and checks every byte; negative: an access to a freed region, to a region reused with a new generation and one byte past a region's end still fault with today's messages
-    - the PrimeScroll `optexe` peak footprint (close:1 median, as in TODO-5751) grows by at most 5%; full release gate green
-  - stop_rule: the byte-region liveness check; arenas and threads are TODO-5794.
-
-- [ ] TODO-5794: `optexe` heaps are per-thread arenas with remote frees
-  - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5793
-  - created_at: 2026-11-09
-  - phase: Multithreading (docs/MultithreadingPrototype.md, Heaps)
-  - parallel_track: mt-heap-optexe
   - scope: Make the generated program's heap usable from several threads: one `VmHeapCore` arena per thread with the arena number in address bits 41 to 46 (arena 0 keeps today's addresses), storage that does not move once a second arena exists, liveness reads with relaxed atomic loads of the state tables and a per-thread region cache, a remote-free queue per arena (behind the arena's lock, drained by the owner at its next allocation), and at most 64 arenas (a 65th thread shares the last behind its lock). Each thread gets its own `VmTextHeap` (its `StringArena` stack and literal cache), whose blocks freed elsewhere go back the same way.
-  - implementation_notes: include/primec/runtime/VmHeapCore*.{h,inc}, VmTextHeap*.{h,inc}, src/backend/IrToOptCppRuntime.h (`Rt` splits into per-thread state and the shared arena table). The VM keeps one arena and no locks.
+  - implementation_notes: include/primec/runtime/VmHeapCore*.{h,inc}, VmTextHeap*.{h,inc}, src/backend/IrToOptCppRuntime.h (`Rt` splits into per-thread state and the shared arena table). The VM keeps one arena and no locks. Since TODO-5793 a byte access reads `byteStates` (one state per 64 bytes, indexed by the byte offset, address bits 0 to 46): arena bits 41 to 46 lie inside that offset, so each arena needs its own `bytes`/`byteStates` and the lookup must drop the arena bits first (or the table index becomes huge).
   - acceptance:
     - positive: a runtime unit test runs 4 `std::thread`s that each allocate, read and free 100000 slot and byte blocks and free a quarter of another thread's blocks, and checks live counts and contents at the end; a single-threaded `optexe` program gives the same addresses as the VM (the existing parity tests)
     - negative: a block freed twice from two threads faults with `invalid heap free address` when the owner drains; an address of a freed block read from another thread faults

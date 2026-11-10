@@ -121,6 +121,21 @@ public:
 
   std::vector<uint8_t> bytes;
 
+  // One state per 64-byte granule of `bytes`, which answers a byte access with one load and compare and writes
+  // nothing (the slots' `states` do the same for slots). While the bytes of exactly one live region lie in a granule,
+  // its state is that region's `address >> 47` (Tag, generation and ByteRegionBit) in bits 15 to 31, the first and
+  // one past the last of its bytes in the granule (lo in bits 0 to 5, hi in bits 8 to 14), and GranuleStartBit when
+  // the region begins in the granule. A granule that holds no live byte, or bytes of two regions, is 0, and the
+  // live-region map answers for it, exactly. (64 bytes rather than 16: a quarter of the state writes on allocation and
+  // free, and 6% of the byte storage.)
+  static constexpr unsigned GranuleShift = 6;
+  static constexpr uint64_t GranuleBytes = uint64_t{1} << GranuleShift;
+  static constexpr uint32_t GranuleStartBit = 0x80;
+  static constexpr uint32_t GranuleRangeMask = 0x7F;
+  static constexpr uint32_t FullGranule =
+      static_cast<uint32_t>(GranuleBytes << 8); // the whole granule: lo 0, hi 64, no start bit
+  std::vector<uint32_t, ZeroedAllocator<uint32_t>> byteStates;
+
   static bool isByteAddress(uint64_t address) {
     return (address & Tag) != 0 && (address & ByteRegionBit) != 0;
   }
@@ -128,38 +143,52 @@ public:
   // The byte a byte-region address names, or null when the address is not one, is outside every
   // live region, or comes from an earlier allocation of those bytes.
   uint8_t *byteAt(uint64_t address) {
-    if (!isByteAddress(address)) {
-      return nullptr;
-    }
     const uint64_t offset = address & ByteOffsetMask;
-    const uint64_t generation = (address >> GenerationShift) & GenerationMask;
-    // The region of the last successful lookup answers repeated accesses (a byte loop over one block) without
-    // the map search; releaseByteRegion forgets it.
-    if (offset >= lastBegin_ && offset < lastEnd_ && generation == lastGeneration_) {
+    const uint64_t granule = offset >> GranuleShift;
+    if (granule < byteStates.size() &&
+        (byteStates[static_cast<size_t>(granule)] | GranuleStartBit) ==
+            ((static_cast<uint32_t>(address >> 47) << 15) | FullGranule | GranuleStartBit)) {
       return &bytes[static_cast<size_t>(offset)];
     }
-    auto region = byteLive_.upper_bound(offset);
-    if (region == byteLive_.begin()) {
-      return nullptr;
-    }
-    --region;
-    if (offset >= region->first + region->second.first || region->second.second != generation) {
-      return nullptr;
-    }
-    lastBegin_ = region->first;
-    lastEnd_ = region->first + region->second.first;
-    lastGeneration_ = generation;
-    return &bytes[static_cast<size_t>(offset)];
+    return byteAtEdge(address);
   }
 
   // The first of `count` bytes starting at a byte-region address, or null unless every one of them lies in the one
-  // live region of that address (byteAt leaves that region's end in lastEnd_).
+  // live region of that address. A short span is checked granule by granule; a long one asks the map once, which
+  // costs less than walking its granules.
+  static constexpr uint64_t SpanGranuleCheckBytes = 128;
   uint8_t *byteSpan(uint64_t address, uint64_t count) {
-    uint8_t *first = byteAt(address);
-    if (first == nullptr) {
-      return nullptr;
+    const uint64_t offset = address & ByteOffsetMask;
+    if (count > 1 && count <= SpanGranuleCheckBytes) {
+      const uint64_t last = offset + count - 1;
+      const uint64_t first = offset >> GranuleShift;
+      const uint64_t lastGranule = last >> GranuleShift;
+      if (lastGranule < byteStates.size()) {
+        const uint32_t key = static_cast<uint32_t>(address >> 47);
+        const uint32_t full = (key << 15) | FullGranule;
+        uint32_t state = byteStates[static_cast<size_t>(first)];
+        bool fits =
+            (state >> 15) == key && (offset & (GranuleBytes - 1)) >= (state & GranuleRangeMask);
+        if (fits && lastGranule != first) {
+          fits = ((state >> 8) & GranuleRangeMask) == GranuleBytes;
+          for (uint64_t g = first + 1; fits && g < lastGranule; ++g) {
+            fits = byteStates[static_cast<size_t>(g)] == full;
+          }
+          state = byteStates[static_cast<size_t>(lastGranule)];
+          fits =
+              fits && (state >> 15) == key && (state & (GranuleStartBit | GranuleRangeMask)) == 0;
+        }
+        if (fits && (last & (GranuleBytes - 1)) < ((state >> 8) & GranuleRangeMask)) {
+          return &bytes[static_cast<size_t>(offset)];
+        }
+      }
     }
-    return count <= lastEnd_ - (address & ByteOffsetMask) ? first : nullptr;
+    uint8_t *byte = byteAt(address);
+    if (byte == nullptr || count <= 1) {
+      return byte;
+    }
+    const auto region = std::prev(byteLive_.upper_bound(offset));
+    return count <= region->first + region->second.first - offset ? byte : nullptr;
   }
 
   // Live byte-region bytes, for tests and instrumentation.
@@ -196,11 +225,13 @@ public:
         takeByteFree(base, tailFree);
       }
       bytes.resize(static_cast<size_t>(base + count), 0);
+      byteStates.resize(static_cast<size_t>((bytes.size() + GranuleBytes - 1) >> GranuleShift));
     }
     byteGeneration_ = (byteGeneration_ + 1) & GenerationMask;
     byteLive_[base] = std::make_pair(count, byteGeneration_);
     liveBytes_ += count;
     address = Tag | ByteRegionBit | (byteGeneration_ << GenerationShift) | base;
+    markGranules(base, count, static_cast<uint32_t>(address >> 47));
     return true;
   }
 
@@ -298,10 +329,6 @@ public:
   }
 
 private:
-  // The byte region the last byteAt found (an empty range when none): [lastBegin_, lastEnd_) at lastGeneration_.
-  uint64_t lastBegin_ = 0;
-  uint64_t lastEnd_ = 0;
-  uint64_t lastGeneration_ = 0;
   using LiveMap = std::map<uint64_t, std::pair<uint64_t, uint64_t>>;
 
   // Live allocations by first slot: slot count and generation.
@@ -425,9 +452,75 @@ private:
     return found;
   }
 
+  // A byte access byteAt's one compare did not answer (a granule its region only partly fills, or a fault): the granule state answers while the bytes of one region alone lie in it, else the map does.
+  uint8_t *byteAtEdge(uint64_t address) {
+    const uint64_t granule = (address & ByteOffsetMask) >> GranuleShift;
+    if (granule < byteStates.size()) {
+      const uint32_t state = byteStates[static_cast<size_t>(granule)];
+      const uint32_t within = static_cast<uint32_t>(address & (GranuleBytes - 1));
+      if ((state >> 15) == (address >> 47) &&
+          within - (state & GranuleRangeMask) <
+              ((state >> 8) & GranuleRangeMask) - (state & GranuleRangeMask)) {
+        return &bytes[static_cast<size_t>(address & ByteOffsetMask)];
+      }
+    }
+    if (!isByteAddress(address)) {
+      return nullptr;
+    }
+    const uint64_t offset = address & ByteOffsetMask;
+    auto region = byteLive_.upper_bound(offset);
+    if (region == byteLive_.begin()) {
+      return nullptr;
+    }
+    --region;
+    if (offset >= region->first + region->second.first ||
+        region->second.second != ((address >> GenerationShift) & GenerationMask)) {
+      return nullptr;
+    }
+    return &bytes[static_cast<size_t>(offset)];
+  }
+
+  // The granule states of the `count` bytes at `base`, which just became live with `key` (an address >> 47) or,
+  // with key 0, free. A granule wholly inside the run takes its state directly; the first and the last one may hold
+  // bytes of a neighbour and are worked out from the map.
+  void markGranules(uint64_t base, uint64_t count, uint32_t key) {
+    const uint64_t first = base >> GranuleShift;
+    const uint64_t lastGranule = (base + count - 1) >> GranuleShift;
+    const uint32_t full = key == 0 ? 0 : (key << 15) | FullGranule;
+    for (uint64_t g = first + 1; g < lastGranule; ++g) {
+      byteStates[static_cast<size_t>(g)] = full;
+    }
+    refreshGranule(first);
+    if (lastGranule != first) {
+      refreshGranule(lastGranule);
+    }
+  }
+
+  void refreshGranule(uint64_t granule) {
+    const uint64_t begin = granule << GranuleShift;
+    const uint64_t end = begin + GranuleBytes;
+    auto region = byteLive_.upper_bound(begin);
+    if (region != byteLive_.begin() &&
+        std::prev(region)->first + std::prev(region)->second.first > begin) {
+      --region;
+    }
+    uint32_t state = 0;
+    if (region != byteLive_.end() && region->first < end) {
+      const auto next = std::next(region);
+      if (next == byteLive_.end() || next->first >= end) {
+        const uint64_t regionEnd = region->first + region->second.first;
+        const uint64_t lo = region->first > begin ? region->first - begin : 0;
+        const uint64_t hi = (regionEnd < end ? regionEnd : end) - begin;
+        const uint64_t key =
+            (Tag | ByteRegionBit | (region->second.second << GenerationShift)) >> 47;
+        state = static_cast<uint32_t>((key << 15) | (hi << 8) | lo) |
+                (region->first >= begin ? GranuleStartBit : 0);
+      }
+    }
+    byteStates[static_cast<size_t>(granule)] = state;
+  }
+
   void releaseByteRegion(LiveMap::iterator region) {
-    lastBegin_ = 0;
-    lastEnd_ = 0;
     uint64_t base = region->first;
     uint64_t count = region->second.first;
     for (uint64_t i = base; i < base + count; ++i) {
@@ -435,6 +528,7 @@ private:
     }
     liveBytes_ -= count;
     byteLive_.erase(region);
+    markGranules(base, count, 0);
     const auto next = byteFreeByBase_.find(base + count);
     if (next != byteFreeByBase_.end()) {
       count += next->second;
