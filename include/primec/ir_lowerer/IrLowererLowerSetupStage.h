@@ -87,6 +87,11 @@ struct LowerSetupStageState {
   // Struct parameters and results and `mut` receivers take real calls (the VM, the optimizing C++ emitters and the
   // arm64 native backend).
   bool realCallAllowStructs = false;
+  // The target's runtime schedules tasks (the vm target and serialized bytecode): `[spawn] f(...)` becomes TaskSpawn
+  // when f's shape allows it (IrLowererTaskSpawn.h).
+  bool tasksRunOnScheduler = false;
+  // --opt-report lines about lowering decisions (a spawned call that runs inline and why); null when not reported.
+  std::vector<std::string> *loweringNotes = nullptr;
 };
 
 bool runLowerSetupStage(const LowerSetupStageInput &input,

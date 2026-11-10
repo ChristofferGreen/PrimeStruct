@@ -41,6 +41,8 @@ struct ExecutionConfig {
   // Slow to build (host C++ compiler): only with PRIMESTRUCT_MATRIX_CONFIGS=all
   // or when a case lists the config explicitly.
   bool slow = false;
+  // Extra primevm flags of a VM config, e.g. a task schedule seed.
+  std::vector<std::string> vmFlags = {};
 };
 
 struct ProgramCase {
@@ -155,6 +157,9 @@ inline Outcome runConfig(const ProgramCase &program, const ExecutionConfig &conf
   case Backend::VmStep:
   case Backend::Vm: {
     const std::string env = config.backend == Backend::VmStep ? "env PRIMEVM_KERNEL=step " : "";
+    for (const std::string &flag : config.vmFlags) {
+      flags += " " + quote(flag);
+    }
     return runCaptured(
         env + "./primevm " + src + entry + " -O" + std::to_string(config.level) + flags, stem);
   }

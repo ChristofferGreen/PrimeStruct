@@ -88,6 +88,16 @@ inline int expectedProcessExitCode(int code) {
 #endif
 }
 
+// The VM schedules a program with tasks runs under (docs/spec/vm-design.md, Tasks): the eager default and seeds 1 to
+// 8, as `primec --emit=vm` flags. A program free of races prints the same on all of them.
+inline std::vector<std::string> vmTaskScheduleFlags() {
+  std::vector<std::string> flags = {""};
+  for (int seed = 1; seed <= 8; ++seed) {
+    flags.push_back(" --vm-schedule-seed " + std::to_string(seed));
+  }
+  return flags;
+}
+
 inline std::string readFile(const std::string &path) {
   std::ifstream file(path);
   std::stringstream buffer;

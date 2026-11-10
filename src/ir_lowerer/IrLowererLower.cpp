@@ -113,7 +113,8 @@ bool IrLowerer::lower(const Program &program,
                       std::string &error,
                       DiagnosticSinkReport *diagnosticInfo,
                       IrValidationTarget validationTarget,
-                      const ExpandedSource *expandedSource) const {
+                      const ExpandedSource *expandedSource,
+                      std::vector<std::string> *loweringNotes) const {
   out = IrModule{};
   error.clear();
   const SemanticProductIndexCacheScope semanticIndexCacheScope;
@@ -158,6 +159,7 @@ bool IrLowerer::lower(const Program &program,
     return false;
   }
 
+  setupStage.loweringNotes = loweringNotes;
   const Definition *entryDef = setupStage.entryDef;
   auto &defMap = setupStage.defMap;
   auto &structNames = setupStage.structNames;

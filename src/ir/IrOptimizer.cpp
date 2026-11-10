@@ -236,6 +236,9 @@ std::string IrOptimizationReport::format(bool includeTimings) const {
     }
     out << "\n";
   }
+  for (const std::string &note : loweringNotes) {
+    out << "lowering: " << note << "\n";
+  }
   return out.str();
 }
 
@@ -245,7 +248,10 @@ bool optimizeIrModuleWithPasses(IrModule &module,
                                 IrValidationTarget target,
                                 IrOptimizationReport &report,
                                 std::string &error) {
+  // The lowering's notes come before the passes run; keep them.
+  std::vector<std::string> loweringNotes = std::move(report.loweringNotes);
   report = {};
+  report.loweringNotes = std::move(loweringNotes);
   report.level = options.level;
   report.instructionsBefore = countInstructions(module);
   report.instructionsAfter = report.instructionsBefore;

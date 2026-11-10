@@ -111,7 +111,8 @@ of sync with them.
 | TODO-5745 | A labeled value that is a call parses in every position | ready | parser-labeled-values |
 | TODO-5746 | A parameterless `mut` method whose body is only bindings is a method | ready | diagnostics |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
-| TODO-5835 | `[spawn]` lowers to `TaskSpawn`/`TaskWait` for the VM | ready | mt-vm-tasks |
+| TODO-5836 | A spawned definition without a `return` transform is a `Task<void>` | deferred | mt-vm-tasks |
+| TODO-5837 | VM debug sessions step programs that spawn tasks | deferred | vm-debugger |
 | TODO-5793 | Byte-region accesses check liveness without a map search or a write | ready | mt-heap-optexe |
 | TODO-5794 | `optexe` heaps are per-thread arenas with remote frees | blocked | mt-heap-optexe |
 | TODO-5795 | `optexe` runs spawned tasks on threads | blocked | mt-optexe-threads |
@@ -121,7 +122,7 @@ of sync with them.
 | TODO-5656 | Thread-safe `SharedString`: an atomic owner count | blocked | string-concurrency |
 | TODO-5802 | `serveWorkers`: one thread polls and accepts, N workers answer | blocked | mt-server |
 | TODO-5803 | The web apps run on workers and their gain is measured | blocked | mt-server |
-| TODO-5799 | arm64 native runs spawned tasks on pthreads, its heap behind a lock | blocked | mt-native |
+| TODO-5799 | arm64 native runs spawned tasks on pthreads, its heap behind a lock | ready | mt-native |
 | TODO-5800 | arm64 native heaps are per thread, with remote frees | blocked | mt-native |
 | TODO-5801 | arm64 native runs `Atomic`, `Mutex` and `Channel` | blocked | mt-native |
 | TODO-5804 | GET handlers that only read the state run at the same time under `RwLock` | deferred | mt-server |
@@ -207,13 +208,13 @@ of sync with them.
 - Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5738, TODO-5718
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732, TODO-5735, TODO-5736, TODO-5737
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe; real calls and struct copies TODO-5739, TODO-5741, TODO-5752; VM address checks TODO-5824
-- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5835, TODO-5793, TODO-5794, TODO-5795, TODO-5796, TODO-5797, TODO-5798, TODO-5656, TODO-5802, TODO-5803, TODO-5799, TODO-5800, TODO-5801; deferred TODO-5804, TODO-5805, TODO-5806
+- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5793, TODO-5794, TODO-5795, TODO-5796, TODO-5797, TODO-5798, TODO-5656, TODO-5802, TODO-5803, TODO-5799, TODO-5800, TODO-5801; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837
 
 ### Execution Queue
 
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
-Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order: TODO-5835 (`[spawn]` lowers to the `TaskSpawn`/`TaskWait` IR the VM schedules, TODO-5792 done), TODO-5793 (byte-region checks without a map search), TODO-5794 (`optexe` per-thread heap arenas), TODO-5795 (`optexe` threads for `[spawn]`), TODO-5796 (`Atomic`), TODO-5797 (`Mutex`), TODO-5798 (`Channel`), TODO-5656 (atomic `SharedString` count), TODO-5802 (`serveWorkers`), TODO-5803 (apps on workers, measured), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5835 and TODO-5793 are ready and independent of each other (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, are done). Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions).
+Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order (TODO-5792 and TODO-5835, VM tasks and their lowering, are done): TODO-5793 (byte-region checks without a map search), TODO-5794 (`optexe` per-thread heap arenas), TODO-5795 (`optexe` threads for `[spawn]`), TODO-5796 (`Atomic`), TODO-5797 (`Mutex`), TODO-5798 (`Channel`), TODO-5656 (atomic `SharedString` count), TODO-5802 (`serveWorkers`), TODO-5803 (apps on workers, measured), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5793 and TODO-5799 are ready and independent of each other (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, are done). Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions).
 
 ### Task Blocks
 
@@ -670,19 +671,32 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
   - stop_rule: receiver offset handling only.
   - notes: deferred: queued behind the Ready Now cap.
 
-- [ ] TODO-5835: `[spawn]` lowers to `TaskSpawn`/`TaskWait` for the VM
+- [ ] TODO-5836: A spawned definition without a `return` transform is a `Task<void>`
   - owner: ai
-  - status: ready
+  - status: deferred
   - created_at: 2026-11-10
-  - phase: Multithreading (docs/MultithreadingPrototype.md, Runtime Model and VM Scheduler)
+  - phase: Multithreading (found while doing TODO-5835)
   - parallel_track: mt-vm-tasks
-  - scope: `[spawn] f(...)` is lowered inline today (IrLowererLowerStatementsBindings.h) and `Task<void>` fails in lowering (`void call not allowed in expression context`). For the vm target and serialized bytecode, a spawned callee whose parameters and result real calls take as scalars becomes a real call started with `TaskSpawn` (its arguments evaluated in the spawner and copied to the task), and every read of the handle (`wait(t)`, the multi-wait tuple, `[a b] wait(x, y)`, `return(wait(t))`) is a `TaskWait`; `Task<void>` works. Every other backend keeps running the spawned call inline, as today.
-  - implementation_notes: Keep the semantic-product task facts as the lowering's input. A callee whose parameters or result real calls cannot take yet (struct and sum results, TODO-5738; `string` parameters, TODO-5741; `mut` parameters) keeps running inline with an `--opt-report` reason, which is a legal schedule.
+  - scope: `[Task<void>] t{[spawn] hello(5i32)}` where `hello` has `[effects(io_out)]` and no `return<...>` is rejected with `spawn requires call target with inferred return type` (src/semantics/SemanticsValidatorTaskHandles.cpp, `inferTaskSpawnCallBinding`), although a definition without a `return` transform is void everywhere else; `[effects(io_out), return<void>]` works.
   - acceptance:
-    - positive: VM compile-run tests of two `Task<i64>` sums, a `Task<void>`, a spawn inside a loop waited per iteration, and the existing task tests give the same output on the default schedule and on seeds 1 to 8; native and `optexe` run the same programs inline with the same output; `--opt-report` names a spawn that runs inline and why
-    - negative: waiting a handle twice and letting one escape are still rejected
+    - a semantic test spawns a definition without a `return` transform into a `Task<void>` and waits it; a VM compile-run test prints its output
+    - binding it as `Task<i32>` is still rejected
     - full release gate green
-  - stop_rule: the lowering for the VM; threads on `optexe` are TODO-5795, on native TODO-5799.
+  - stop_rule: the spawn binding inference only.
+  - notes: deferred: no example needs it; `return<void>` is the workaround.
+
+- [ ] TODO-5837: VM debug sessions step programs that spawn tasks
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-10
+  - phase: Multithreading (found while doing TODO-5792)
+  - parallel_track: vm-debugger
+  - scope: A debug session (`VmDebugSession`, `--debug-json`, `--debug-dap`, `--debug-trace`) steps one call stack with `stepVmKernel`, so it faults on `TaskSpawn`/`TaskWait` with `tasks run only in a plain VM run, not in a debug session`. Give the session the scheduler's task table (the eager default schedule is enough: a spawn pushes the task's call stack and the session steps it until it ends), with the call stack, snapshots and breakpoints of the running task.
+  - acceptance:
+    - a debug session of a program with two tasks stops at a breakpoint inside a task, shows that task's frames, and continues to the same output as a plain run
+    - full release gate green
+  - stop_rule: the debug session on the default schedule; seeded schedules in the debugger are later work.
+  - notes: deferred: no debugger user needs tasks yet.
 
 - [ ] TODO-5793: Byte-region accesses check liveness without a map search or a write
   - owner: ai
@@ -715,7 +729,7 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
 - [ ] TODO-5795: `optexe` runs spawned tasks on threads
   - owner: ai
   - status: blocked
-  - blocked_on: TODO-5794, TODO-5835
+  - blocked_on: TODO-5794
   - created_at: 2026-11-09
   - phase: Multithreading (docs/MultithreadingPrototype.md, Runtime Model)
   - parallel_track: mt-optexe-threads
@@ -812,8 +826,7 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
 
 - [ ] TODO-5799: arm64 native runs spawned tasks on pthreads, its heap behind a lock
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5835
+  - status: ready
   - created_at: 2026-11-09
   - phase: Multithreading (docs/MultithreadingPrototype.md, Runtime Model and Heaps)
   - parallel_track: mt-native

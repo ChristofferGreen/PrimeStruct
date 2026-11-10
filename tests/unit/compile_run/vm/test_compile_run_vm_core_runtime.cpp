@@ -64,8 +64,11 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_single_task_spawn_wait.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 24);
+  for (const std::string &schedule : vmTaskScheduleFlags()) {
+    CAPTURE(schedule);
+    const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main" + schedule;
+    CHECK(runCommand(runCmd) == 24);
+  }
 }
 
 TEST_CASE("runs vm with multi task wait tuple") {
@@ -91,8 +94,11 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_multi_task_wait_tuple.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 24);
+  for (const std::string &schedule : vmTaskScheduleFlags()) {
+    CAPTURE(schedule);
+    const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main" + schedule;
+    CHECK(runCommand(runCmd) == 24);
+  }
 }
 
 TEST_CASE("runs vm with chained method calls") {

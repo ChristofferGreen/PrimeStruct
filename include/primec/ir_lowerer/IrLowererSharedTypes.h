@@ -54,6 +54,9 @@ struct LocalInfo {
   bool targetsUninitializedStorage = false;
   bool isSoaVector = false;
   bool usesBuiltinCollectionLayout = false;
+  // A `Task<T>` binding the VM's scheduler runs (docs/spec/vm-design.md, Tasks): the local holds the handle TaskSpawn
+  // pushed, and reading it is waiting the task (TaskWait), whose result has `valueKind` (Unknown for `Task<void>`).
+  bool isTaskHandle = false;
 };
 
 inline bool hasKeyValueKinds(const LocalInfo &info) {

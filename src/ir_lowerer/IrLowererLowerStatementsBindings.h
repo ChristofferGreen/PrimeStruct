@@ -464,6 +464,80 @@
       Expr spawnedTaskCall;
       if (extractTaskResultType(*bindingTypeExpr, taskResultType) &&
           extractTaskSpawnInitializer(init, spawnedTaskCall)) {
+        if (setupStage.tasksRunOnScheduler) {
+          // The VM runs the spawned call as a task when a real call takes its shape: the arguments are evaluated
+          // here and become the task's, and the binding holds the handle (docs/spec/vm-design.md, Tasks).
+          const Definition *spawnedCallee = resolveDefinitionCall(spawnedTaskCall);
+          std::string inlineReason = "it is not a definition";
+          if (spawnedCallee != nullptr &&
+              ir_lowerer::taskSpawnRunsOnScheduler(*spawnedCallee, setupStage, inlineReason)) {
+            std::vector<Expr> taskParams;
+            std::vector<const Expr *> taskArgs;
+            std::vector<const Expr *> taskPackedArgs;
+            size_t taskPackedParamIndex = 0;
+            if (!ir_lowerer::buildInlineCallOrderedArguments(spawnedTaskCall,
+                                                             *spawnedCallee,
+                                                             structNames,
+                                                             localsIn,
+                                                             taskParams,
+                                                             taskArgs,
+                                                             taskPackedArgs,
+                                                             taskPackedParamIndex,
+                                                             error)) {
+              return false;
+            }
+            if (!taskPackedArgs.empty() || taskArgs.size() != spawnedCallee->parameters.size()) {
+              error = "internal error: unexpected arguments for spawned task " +
+                      spawnedCallee->fullPath;
+              return false;
+            }
+            for (const Expr *taskArg : taskArgs) {
+              if (taskArg == nullptr) {
+                error =
+                    "internal error: missing argument for spawned task " + spawnedCallee->fullPath;
+                return false;
+              }
+              if (!emitExpr(*taskArg, localsIn)) {
+                return false;
+              }
+            }
+            const uint64_t reservation =
+                ir_lowerer::reserveTaskSpawnTarget(setupStage, *spawnedCallee);
+            function.instructions.push_back(
+                {IrOpcode::TaskSpawn, (uint64_t(1) << 32) | reservation});
+            LocalInfo handleInfo;
+            handleInfo.kind = LocalInfo::Kind::Value;
+            handleInfo.isTaskHandle = true;
+            handleInfo.valueKind = taskResultType == "void" ? LocalInfo::ValueKind::Unknown
+                                                            : valueKindFromTypeName(taskResultType);
+            handleInfo.index = nextLocal++;
+            function.instructions.push_back(
+                {IrOpcode::StoreLocal, static_cast<uint64_t>(handleInfo.index)});
+            localsIn.emplace(stmt.name, handleInfo);
+            return true;
+          }
+          if (setupStage.loweringNotes != nullptr) {
+            setupStage.loweringNotes->push_back(
+                "spawn of " +
+                (spawnedCallee != nullptr ? spawnedCallee->fullPath : spawnedTaskCall.name) +
+                " runs inline: " + inlineReason);
+          }
+        }
+        if (taskResultType == "void") {
+          // Run inline, a `Task<void>` spawn is its call as a statement; the binding holds 0, which its wait
+          // statement reads and drops.
+          if (!emitStatement(spawnedTaskCall, localsIn)) {
+            return false;
+          }
+          LocalInfo doneInfo;
+          doneInfo.kind = LocalInfo::Kind::Value;
+          doneInfo.index = nextLocal++;
+          function.instructions.push_back({IrOpcode::PushI32, 0});
+          function.instructions.push_back(
+              {IrOpcode::StoreLocal, static_cast<uint64_t>(doneInfo.index)});
+          localsIn.emplace(stmt.name, doneInfo);
+          return true;
+        }
         Expr loweredTaskResultStmt = stmt;
         loweredTaskResultStmt.transforms = bindingTypeExpr->transforms;
         loweredTaskResultStmt.args.front() = std::move(spawnedTaskCall);

@@ -529,9 +529,13 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_destructured_multi_task_wait.prime", source);
   const std::string outPath = testScratchPath("vm_destructured_multi_task_wait.out").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + quoteShellArg(outPath);
-  CHECK(runCommand(runCmd) == 0);
-  CHECK(readFile(outPath) == "7\n9\n7\n11\n");
+  for (const std::string &schedule : vmTaskScheduleFlags()) {
+    CAPTURE(schedule);
+    const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main" + schedule +
+                               " > " + quoteShellArg(outPath);
+    CHECK(runCommand(runCmd) == 0);
+    CHECK(readFile(outPath) == "7\n9\n7\n11\n");
+  }
 }
 
 TEST_CASE("runs vm with sendable spawn arguments copied into the task") {
@@ -566,9 +570,13 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_sendable_spawn_arguments.prime", source);
   const std::string outPath = testScratchPath("vm_sendable_spawn_arguments.out").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + quoteShellArg(outPath);
-  CHECK(runCommand(runCmd) == 0);
-  CHECK(readFile(outPath) == "3\n2\n3\n");
+  for (const std::string &schedule : vmTaskScheduleFlags()) {
+    CAPTURE(schedule);
+    const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main" + schedule +
+                               " > " + quoteShellArg(outPath);
+    CHECK(runCommand(runCmd) == 0);
+    CHECK(readFile(outPath) == "3\n2\n3\n");
+  }
 }
 
 TEST_CASE("runs vm returning a waited task result next to a struct local") {
@@ -599,10 +607,59 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_return_wait_struct_local.prime", source);
   const std::string outPath = testScratchPath("vm_return_wait_struct_local.out").string();
-  const std::string runCmd =
-      "./primec --emit=vm " + srcPath + " --entry /main > " + quoteShellArg(outPath);
+  for (const std::string &schedule : vmTaskScheduleFlags()) {
+    CAPTURE(schedule);
+    const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main" + schedule +
+                               " > " + quoteShellArg(outPath);
+    CHECK(runCommand(runCmd) == 0);
+    CHECK(readFile(outPath) == "4\n7\n");
+  }
+}
+
+TEST_CASE("the opt report names a spawned call that runs inline on the vm") {
+  const std::string source = R"(
+[return<i32>]
+bump([i32 copy mut] value) {
+  value = value + 1i32
+  return(value)
+}
+
+[return<i64>]
+twice([i64] value) {
+  [i64 mut] result{value}
+  result = result * 2i64
+  return(result)
+}
+
+[effects(task, io_out), return<int>]
+main() {
+  [Task<i32>] bumped{[spawn] bump(4i32)};
+  [Task<i64>] doubled{[spawn] twice(21i64)};
+  print_line(wait(bumped))
+  print_line(wait(doubled))
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_spawn_opt_report.prime", source);
+  const std::string outPath = testScratchPath("vm_spawn_opt_report.out").string();
+  const std::string errPath = testScratchPath("vm_spawn_opt_report.err").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main --opt-report > " +
+                             quoteShellArg(outPath) + " 2> " + quoteShellArg(errPath);
   CHECK(runCommand(runCmd) == 0);
-  CHECK(readFile(outPath) == "4\n7\n");
+  CHECK(readFile(outPath) == "5\n42\n");
+  const std::string report = readFile(errPath);
+  // `copy mut` keeps bump inline; twice runs as a task, so the report does not name it.
+  CHECK(report.find("lowering: spawn of /bump runs inline: a parameter or the result is not a "
+                    "scalar a real call "
+                    "takes\n") != std::string::npos);
+  CHECK(report.find("/twice") == std::string::npos);
+  // The spawn of twice is a TaskSpawn in the lowered IR.
+  const std::string dumpPath = testScratchPath("vm_spawn_opt_report.ir").string();
+  CHECK(runCommand("./primec --emit=vm " + srcPath + " --entry /main --dump-stage ir-lowered > " +
+                   quoteShellArg(dumpPath)) == 0);
+  const std::string dump = readFile(dumpPath);
+  CHECK(dump.find("TaskSpawn 1 /twice") != std::string::npos);
+  CHECK(dump.find("TaskWait") != std::string::npos);
 }
 
 TEST_SUITE_END();

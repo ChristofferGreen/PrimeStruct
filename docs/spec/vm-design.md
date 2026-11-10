@@ -66,7 +66,13 @@
   Only the vm target and serialized bytecode accept the task opcodes; validation also rejects a `TaskWait` whose
   operand is not a `TaskSpawn` result on every path (through locals and `Dup`). A module with task opcodes runs on the
   step kernel (the flat loop and the native JIT decline it), and a debug session faults on them (`tasks run only in a
-  plain VM run, not in a debug session`).
+  plain VM run, not in a debug session`, TODO-5837). Lowering for the vm target and serialized bytecode turns
+  `[Task<T>] t{[spawn] f(args)}` into the arguments, evaluated in the spawner, and `TaskSpawn f` stored in `t`, when
+  every parameter of `f` is a plain scalar and its result a scalar or void (f becomes a real call even when it is a
+  tiny leaf); every read of `t` (`wait(t)`, a name in a multi-wait tuple) is `LoadLocal t; TaskWait`. Any other spawned
+  call (a `mut` or `copy mut` parameter, a `String`, struct or collection parameter, a struct or sum result, a method)
+  runs inline, which is a legal schedule, and `--opt-report` says so: `lowering: spawn of /f runs inline: <reason>`.
+  Every other backend runs every spawned call inline; a `Task<void>` spawn there is the call as a statement.
 - **Heap:** `HeapAlloc`/`HeapRealloc` return heap addresses `bit 63 | generation << 48 | slot * 16` (generation in bits
   48-62, slot offset in bits 0-47; zero slots allocate nothing and return 0). A live allocation never moves, so an
   address a program has seen stays valid until the program frees or reallocates that allocation; `HeapRealloc` returns

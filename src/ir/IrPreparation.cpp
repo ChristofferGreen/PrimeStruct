@@ -179,7 +179,9 @@ bool prepareIrModule(Program &program,
                      error,
                      &failure.diagnosticInfo,
                      validationTarget,
-                     expandedSource)) {
+                     expandedSource,
+                     optimizationReport != nullptr ? &optimizationReport->loweringNotes
+                                                   : nullptr)) {
     failure.stage = IrPreparationFailureStage::Lowering;
     failure.message = std::move(error);
     return false;

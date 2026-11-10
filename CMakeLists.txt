@@ -561,6 +561,7 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ir_lowerer/IrLowererOperatorPowAbsSignHelpers.cpp
   src/ir_lowerer/IrLowererOperatorSaturateRoundingRootsHelpers.cpp
   src/ir_lowerer/IrLowererRecursionAnalysis.cpp
+  src/ir_lowerer/IrLowererTaskSpawn.cpp
   src/ir_lowerer/IrLowererRequirementContractHelpers.cpp
   src/ir_lowerer/IrLowererReturnInferenceHelpers.cpp
   src/ir_lowerer/IrLowererResultMetadataHelpers.cpp
@@ -1106,6 +1107,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/program_matrix/test_program_matrix_parameter_modes.cpp
     tests/unit/program_matrix/test_program_matrix_results.cpp
     tests/unit/program_matrix/test_program_matrix_shared_programs.cpp
+    tests/unit/program_matrix/test_program_matrix_tasks.cpp
     tests/unit/program_matrix/test_program_matrix_text_views.cpp
   )
   target_include_directories(PrimeStruct_program_matrix_tests PRIVATE third_party ${CMAKE_SOURCE_DIR}
@@ -3626,6 +3628,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.program_matrix.parameter_modes
     primestruct.program_matrix.results
     primestruct.program_matrix.shared_programs
+    primestruct.program_matrix.tasks
     primestruct.program_matrix.text_views
   )
   # Every program runs through each execution config (several compiles per case), so a whole suite took 60 to 110 s
@@ -3634,7 +3637,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   set(PrimeStructProgramMatrixCaseCounts
     closures=8 closures_callables=8 closures_references=4 closures_fields=12 closures_routers=7 container_copies=19
     control=37 element_copies=7 lifecycle=26 optimizer=16 parameter_modes=8 results=9 shared_programs=16
-    text_views=2)
+    tasks=5 text_views=2)
   foreach(suite IN LISTS PrimeStructProgramMatrixTestSuites)
     string(REPLACE "." "_" suiteId "${suite}")
     set(testName "PrimeStruct_${suiteId}")

@@ -47,6 +47,7 @@
 #include "primec/ir_lowerer/IrLowererStructTypeHelpers.h"
 #include "primec/ir_lowerer/IrLowererStringLiteralHelpers.h"
 #include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
+#include "IrLowererTaskSpawn.h"
 #include "primec/ir_lowerer/IrLowererUninitializedTypeHelpers.h"
 #include "IrLowererVectorRecordLayoutHelpers.h"
 

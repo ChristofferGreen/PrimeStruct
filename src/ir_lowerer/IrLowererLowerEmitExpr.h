@@ -105,6 +105,12 @@
         auto it = localsIn.find(expr.name);
         if (it != localsIn.end()) {
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
+          if (it->second.isTaskHandle) {
+            // The only read of a task handle the checker allows is a wait (`wait(t)`, or a name in a multi-wait
+            // tuple), and it consumes the handle. A `Task<void>` wait pushes 0, which its statement pops.
+            function.instructions.push_back({IrOpcode::TaskWait, 0});
+            return true;
+          }
           const bool isAggregateReference =
               it->second.kind == LocalInfo::Kind::Reference &&
               (!it->second.structTypeName.empty() || it->second.referenceToArray ||

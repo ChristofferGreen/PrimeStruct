@@ -125,6 +125,9 @@ the handle to be waited before return and reject double wait or escaping
 handles, so future scheduler-backed tasks can preserve the same source
 contract.
 
+Since TODO-5835 the VM runs such a spawn as a task of its scheduler (Threads For
+Real, VM Scheduler; docs/spec/vm-design.md, Tasks) when the callee takes and
+returns scalars; other callees, and every other backend, keep the inline form.
 This runtime slice deliberately does not start an OS thread, detach work, or
 schedule multiple tasks concurrently. It exists so the task handle lifetime
 rules and stdlib tuple integration can settle before scheduler-backed tasks are
@@ -485,8 +488,9 @@ through `get<I>`, bracket indexing, or tuple destructuring.
 Classification: **design direction**, approved 2026-11-09 for a web server that
 uses several cores (`docs/WebAppsPlan.md`, Concurrency). Implemented so far: the
 sendable check of spawn arguments (TODO-5790) and the `TaskSpawn`/`TaskWait` IR
-with the VM scheduler below (TODO-5792, docs/spec/vm-design.md, Tasks); lowering
-`[spawn]` to them is TODO-5835. The leaves are the Multithreading lane of `docs/todo.md`, which
+with the VM scheduler below (TODO-5792, docs/spec/vm-design.md, Tasks), and the
+VM lowering of `[spawn]` to them for scalar callees, `Task<void>` included
+(TODO-5835). The leaves are the Multithreading lane of `docs/todo.md`, which
 comes after the PrimeScroll startup lane and the first two native optimization
 leaves (TODO-5770, TODO-5772).
 

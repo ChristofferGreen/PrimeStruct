@@ -84,6 +84,8 @@ struct IrOptimizationReport {
   std::vector<IrOptimizationPassReport> runs;
   uint64_t instructionsBefore = 0;
   uint64_t instructionsAfter = 0;
+  // Lowering decisions worth reporting, in lowering order (a spawned call that runs inline, and why).
+  std::vector<std::string> loweringNotes;
 
   // Deterministic text for --opt-report; timings are included only on request
   // because they vary between runs.

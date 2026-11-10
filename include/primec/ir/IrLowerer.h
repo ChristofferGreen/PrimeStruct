@@ -15,16 +15,19 @@ struct ExpandedSource;
 
 class IrLowerer {
  public:
-  bool lower(const Program &program,
-             const SemanticProgram *semanticProgram,
-             const std::string &entryPath,
-             const std::vector<std::string> &defaultEffects,
-             const std::vector<std::string> &entryDefaultEffects,
-             IrModule &out,
-             std::string &error,
-             DiagnosticSinkReport *diagnosticInfo = nullptr,
-             IrValidationTarget validationTarget = IrValidationTarget::Native,
-             const ExpandedSource *expandedSource = nullptr) const;
+   bool
+   lower(const Program &program,
+         const SemanticProgram *semanticProgram,
+         const std::string &entryPath,
+         const std::vector<std::string> &defaultEffects,
+         const std::vector<std::string> &entryDefaultEffects,
+         IrModule &out,
+         std::string &error,
+         DiagnosticSinkReport *diagnosticInfo = nullptr,
+         IrValidationTarget validationTarget = IrValidationTarget::Native,
+         const ExpandedSource *expandedSource = nullptr,
+         // --opt-report lines about lowering decisions (a spawned call that runs inline, and why).
+         std::vector<std::string> *loweringNotes = nullptr) const;
 };
 
 } // namespace primec
