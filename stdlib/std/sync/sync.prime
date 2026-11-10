@@ -6,6 +6,13 @@
 //
 // The cell is two heap slots: the integer and the number of handles. The `__psatomic_*` functions below are not host
 // calls: the compiler lowers each to one atomic IR opcode (docs/spec/vm-design.md, Atomics).
+//
+// `Mutex<T>` owns one value of a sendable type and lets one task at a time work on it:
+// `tally.locked([amount]([Reference<Tally>] state) { state.total = state.total + amount })` locks, calls the body
+// with a reference to the value, unlocks and returns what the body returns. A Mutex is a handle too: copies share
+// the value, and the last one destroyed destroys it. `locked` needs the `lock` effect. Locking a mutex again inside
+// its own body faults. The `__psmutex_*` functions lower to the MutexLock and MutexUnlock IR opcodes
+// (docs/spec/vm-design.md, Mutexes).
 
 namespace std {
   namespace sync {
@@ -47,6 +54,14 @@ namespace std {
 
   [host return<bool>]
   __psatomic_compare_exchange_i64([Pointer<i64>] cell, [i64] expected, [i64] desired) {
+  }
+
+  [host return<void>]
+  __psmutex_lock([Pointer<i64>] cell) {
+  }
+
+  [host return<void>]
+  __psmutex_unlock([Pointer<i64>] cell) {
   }
 
   // The width of an operation follows the type of its value; `load` passes a value of the type only to choose.
@@ -120,6 +135,94 @@ namespace std {
   atomicCellRelease([Pointer<i64>] cell) {
     if(__psatomic_add_i64(/std/intrinsics/memory/at_unsafe(cell, 1i32), -1i64) == 1i64) {
       /std/intrinsics/memory/free(cell)
+    }
+  }
+
+  // The control cell of a mutex is two heap slots: the lock (0 while free) and the number of handles.
+  [unsafe effects(heap_alloc), return<Pointer<i64>>]
+  mutexCellAlloc() {
+    [Pointer<i64>] cell{/std/intrinsics/memory/alloc<i64>(2i32)}
+    __psatomic_store_i64(cell, 0i64)
+    __psatomic_store_i64(/std/intrinsics/memory/at_unsafe(cell, 1i32), 1i64)
+    return(cell)
+  }
+
+  // The heap cell of the value a mutex owns, holding a copy of `value`.
+  [unsafe effects(heap_alloc), return<Pointer<uninitialized<T>>>]
+  mutexValueAlloc<T>([T copy] value) {
+    [Pointer<uninitialized<T>> mut] slot{/std/intrinsics/memory/alloc<uninitialized<T>>(1i32)}
+    init(*slot, value)
+    return(slot)
+  }
+
+  [return<Reference<T>>]
+  mutexValueBorrow<T>([Pointer<uninitialized<T>>] slot) {
+    return(borrow(*slot))
+  }
+
+  // A handle is gone; the last one destroys the value and frees both cells.
+  [unsafe effects(heap_alloc), return<void>]
+  mutexRelease<T>([Pointer<i64>] cell, [Pointer<uninitialized<T>>] slot) {
+    if(__psatomic_add_i64(/std/intrinsics/memory/at_unsafe(cell, 1i32), -1i64) == 1i64) {
+      drop(*slot)
+      /std/intrinsics/memory/free(slot)
+      /std/intrinsics/memory/free(cell)
+    }
+  }
+
+  // Holds a mutex's lock for a scope: destroying it unlocks.
+  [struct]
+  MutexHold() {
+    [Pointer<i64>] cell
+
+    [mut]
+    Destroy() {
+      __psmutex_unlock(this.cell)
+    }
+  }
+
+  // `Mutex<Tally>{Tally{}}` makes a mutex owning a copy of that value. `T` is a sendable type.
+  [public struct sendable]
+  Mutex<T>() {
+    [T mut] initial
+    [private Pointer<i64> mut] cell{mutexCellAlloc()}
+    [private Pointer<uninitialized<T>> mut] value{mutexValueAlloc<T>(initial)}
+    [private bool mut] live{true}
+
+    // Locks, calls `body` with a reference to the value, unlocks and returns what `body` returns. Another task that
+    // calls `locked` meanwhile waits.
+    [effects(lock), return<auto>]
+    locked<Body>([Body mut] body) {
+      __psmutex_lock(this.cell)
+      [MutexHold] hold{MutexHold{this.cell}}
+      [Reference<T>] target{mutexValueBorrow<T>(this.value)}
+      return(body(target))
+    }
+
+    [mut]
+    Copy([Reference<Self>] other) {
+      this.cell = other.cell
+      this.value = other.value
+      this.live = other.live
+      if(other.live) {
+        atomicCellShare(other.cell)
+      }
+    }
+
+    [mut]
+    Move([Reference<Self>] other) {
+      this.cell = other.cell
+      this.value = other.value
+      this.live = other.live
+      other.live = false
+    }
+
+    [mut effects(heap_alloc)]
+    Destroy() {
+      if(this.live) {
+        mutexRelease<T>(this.cell, this.value)
+        this.live = false
+      }
     }
   }
 

@@ -419,6 +419,7 @@ private:
     bool definitionReturnIsInferred = false;
     size_t callOrdinal = 0;
     size_t localAutoOrdinal = 0;
+    const Definition *definition = nullptr;
   };
 
   const Program &program_;
@@ -656,12 +657,46 @@ private:
     return "/" + expr.name;
   }
 
-  bool isGraphCallSite(const Expr &expr, std::string &resolvedPathOut) const {
+  // The method `expr` calls when its receiver is a parameter of the definition being traversed whose written type
+  // is a struct with that method: `body.call(x)` in an instance of `apply<Body>([Body mut] body)`. Several structs
+  // can have a method of one name (every closure has `call`), which the by-name lookup above cannot tell apart.
+  std::string resolveParameterMethodTargetPath(const Expr &expr,
+                                               const TraversalContext &context) const {
+    if (context.definition == nullptr || !expr.isMethodCall || expr.isFieldAccess ||
+        expr.args.empty() || expr.args.front().kind != Expr::Kind::Name || expr.name.empty() ||
+        expr.name.find('/') != std::string::npos) {
+      return {};
+    }
+    for (const auto &param : context.definition->parameters) {
+      if (param.name != expr.args.front().name) {
+        continue;
+      }
+      for (const auto &transform : param.transforms) {
+        if (transform.name.empty() || transform.name.front() != '/') {
+          continue;
+        }
+        std::string candidate = transform.name + "/" + expr.name;
+        if (callableDefinitionPaths_.count(candidate) > 0) {
+          return candidate;
+        }
+      }
+      return {};
+    }
+    return {};
+  }
+
+  bool isGraphCallSite(const Expr &expr,
+                       const TraversalContext &context,
+                       std::string &resolvedPathOut) const {
     if (expr.kind != Expr::Kind::Call || expr.isBinding) {
       return false;
     }
     resolvedPathOut = resolveCallTargetPath(expr);
-    return callableDefinitionPaths_.count(resolvedPathOut) > 0;
+    if (callableDefinitionPaths_.count(resolvedPathOut) > 0) {
+      return true;
+    }
+    resolvedPathOut = resolveParameterMethodTargetPath(expr, context);
+    return !resolvedPathOut.empty();
   }
 
   void appendCollectedCalls(std::vector<uint32_t> *callIdsOut, const std::vector<uint32_t> &callIds) {
@@ -715,7 +750,7 @@ private:
     }
 
     std::string resolvedPath;
-    if (isGraphCallSite(expr, resolvedPath)) {
+    if (isGraphCallSite(expr, context, resolvedPath)) {
       const std::string label =
           context.scopePath + "::call#" + std::to_string(context.callOrdinal++);
       const uint32_t callNodeId = addNode(
@@ -745,6 +780,7 @@ private:
   void traverseDefinition(const Definition &def) {
     TraversalContext context;
     context.scopePath = def.fullPath;
+    context.definition = &def;
     auto definitionNodeIt = definitionReturnNodeIds_.find(def.fullPath);
     if (definitionNodeIt != definitionReturnNodeIds_.end()) {
       context.definitionReturnNodeId = definitionNodeIt->second;

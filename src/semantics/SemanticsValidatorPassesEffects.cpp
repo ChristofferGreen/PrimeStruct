@@ -132,6 +132,13 @@ bool SemanticsValidator::validateCalleeEffects(const Expr &expr, const Definitio
           "atomic operation requires atomic effect: " + stripSpecializationSuffix(callee.fullPath) +
               " in " + callerKind + caller);
     }
+    if (effect == "lock") {
+      // `locked` of /std/sync/Mutex (docs/spec/stdlib-reference.md, std/sync).
+      return failExprDiagnostic(
+          expr,
+          "mutex operation requires lock effect: " + stripSpecializationSuffix(callee.fullPath) +
+              " in " + callerKind + caller);
+    }
     return failExprDiagnostic(expr, stripSpecializationSuffix(callee.fullPath) + " requires " + effect +
                                         " effect in " + callerKind + caller);
   }

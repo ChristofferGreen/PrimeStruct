@@ -1,5 +1,6 @@
 #include "SemanticsValidator.h"
 
+#include "SemanticsSendable.h"
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "primec/support/CollectionHelperNames.h"
 
@@ -314,6 +315,32 @@ bool SemanticsValidator::buildDefinitionReturnKinds(const std::unordered_set<std
   };
   for (const auto &def : program_.definitions) {
     DefinitionContextScope definitionScope(*this, def);
+    if (def.instanceOfTemplate == "/std/sync/Mutex" && def.instanceTemplateArgs.size() == 1 &&
+        structNames_.count(def.fullPath) > 0) {
+      // Every task that locks the mutex reaches the value, so its type is sendable. Checked here, ahead of
+      // the return kinds: the helpers a Mutex instantiates have no return kind for some such types.
+      // The element is spelled as the program wrote it, so an imported name resolves through its import.
+      std::string element = def.instanceTemplateArgs.front();
+      if (const auto aliasIt = importAliases_.find(element); aliasIt != importAliases_.end()) {
+        element = aliasIt->second;
+      }
+      std::string violation = sendableViolation(element, def.namespacePrefix, sendableTypeLookup());
+      if (!violation.empty()) {
+        const std::string elementText = diagnosticTypeText(element);
+        std::string message = "Mutex element " + elementText + " is not sendable";
+        if (violation.rfind("it is ", 0) != 0) {
+          // The first step names the element again (`field `next` of Record`); the message already has.
+          const std::string owner = " of " + elementText;
+          const size_t ownerAt = violation.find(owner);
+          const size_t firstStepEnd = std::min(violation.find(", "), violation.find(" is "));
+          if (ownerAt != std::string::npos && ownerAt + owner.size() == firstStepEnd) {
+            violation.erase(ownerAt, owner.size());
+          }
+          message += ": " + violation;
+        }
+        return failDefinitionDiagnostic(def, std::move(message));
+      }
+    }
     if (structNames_.count(def.fullPath) > 0) {
       returnStructs_[def.fullPath] = def.fullPath;
       continue;

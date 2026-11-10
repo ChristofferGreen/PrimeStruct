@@ -303,6 +303,17 @@ bool moduleUsesAtomics(const IrModule &module) {
   return false;
 }
 
+bool moduleUsesMutexes(const IrModule &module) {
+  for (const IrFunction &function : module.functions) {
+    for (const IrInstruction &instruction : function.instructions) {
+      if (instruction.op == IrOpcode::MutexLock || instruction.op == IrOpcode::MutexUnlock) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 std::string parameterList(uint32_t count, bool withTypes) {
   std::string out = withTypes ? "Rt &rt" : "rt";
   for (uint32_t i = 0; i < count; ++i) {
@@ -367,6 +378,8 @@ public:
       case IrOpcode::AtomicAdd:
       case IrOpcode::AtomicExchange:
       case IrOpcode::AtomicCompareExchange:
+      case IrOpcode::MutexLock:
+      case IrOpcode::MutexUnlock:
         frameMode_ = true;
         break;
       default:
@@ -559,6 +572,12 @@ private:
       }
       return true;
     }
+    case IrOpcode::MutexLock:
+    case IrOpcode::MutexUnlock:
+      line(
+          std::string(instruction.op == IrOpcode::MutexLock ? "ps_mutex_lock" : "ps_mutex_unlock") +
+          "(rt, ps_resolve(rt, " + frameArgs() + ", " + slot(depth - 1) + "));");
+      return true;
     case IrOpcode::ReturnVoid:
       emitReturn("0");
       return true;
@@ -923,9 +942,13 @@ bool IrToOptCppEmitter::emitSource(const IrModule &module,
            << parameterList(module.functions[i].parameterCount, true) << ");\n";
   }
   source << "\n";
-  // A module without atomic opcodes gets none of this either.
-  if (moduleUsesAtomics(module)) {
+  // A module without atomic or mutex opcodes gets none of this either. A lock is an atomic slot.
+  const bool usesMutexes = moduleUsesMutexes(module);
+  if (usesMutexes || moduleUsesAtomics(module)) {
     source << OptCppAtomicRuntime;
+  }
+  if (usesMutexes) {
+    source << OptCppMutexRuntime;
   }
   // A module without task opcodes gets none of this, so a single-threaded program's source keeps its shape.
   const bool usesTasks = moduleUsesTasks(module);

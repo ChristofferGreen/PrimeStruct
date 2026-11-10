@@ -907,6 +907,19 @@ bool emitConversionsAndCallsMemoryAndPointerExpr(
             context.currentScopePath);
       }
       if (resolvedStructType.empty()) {
+        // A `vector<T>` target is its specialized record.
+        std::string vectorBase;
+        std::string vectorArg;
+        if (splitTemplateTypeName(targetTypeName, vectorBase, vectorArg) &&
+            normalizeCollectionBindingTypeName(trimTemplateTypeText(vectorBase)) == "vector") {
+          std::string elementType = trimTemplateTypeText(vectorArg);
+          if (!elementType.empty() && elementType.front() == '/') {
+            elementType.erase(elementType.begin());
+          }
+          resolvedStructType = specializedCollectionVectorRecordPathForElementType(elementType);
+        }
+      }
+      if (resolvedStructType.empty()) {
         error = "native backend does not support alloc target type: " + targetTypeName;
         return false;
       }

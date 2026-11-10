@@ -25,10 +25,11 @@
   (recursive and larger functions), including recursion up to the VM's call-depth limit.
 - **GLSL note:** GLSL/SPIR-V emission routes through canonical IR (`glsl-ir`/`spirv-ir`) and `IrValidationTarget::Glsl`;
   these modes emit backend output directly without requiring PSIR serialization.
-- **PSIR versioning:** current portable IR is PSIR v35 (v24 to v35 are listed in `include/primec/ir/Ir.h`'s opcode
-  comments and the finished TODO log; v35 appends the five atomic opcodes (see Atomics). Migration: the module
-  layout is unchanged, so a v33 or v34 module still loads and is written back as v35; the loader refuses an opcode
-  newer than the module's version, and a v35 module does not load in an older build. v34 appends `TaskSpawn` and
+- **PSIR versioning:** current portable IR is PSIR v36 (v24 to v36 are listed in `include/primec/ir/Ir.h`'s opcode
+  comments and the finished TODO log; v36 appends `MutexLock` and `MutexUnlock` (see Mutexes) and the effect mask
+  bit of `lock`. Migration: the module layout is unchanged, so a v33, v34 or v35 module still loads and is written
+  back as v36; the loader refuses an opcode newer than the module's version, and a v36 module does not load in an
+  older build. v35 appends the five atomic opcodes (see Atomics). v34 appends `TaskSpawn` and
   `TaskWait` (see Tasks) and is the first version
   that also loads the previous one: a v33 module has the same layout and cannot hold the task opcodes, which the
   loader refuses in it; v33 appends `Trap` and numbers local addresses across all live frames (see
@@ -120,6 +121,33 @@
   so other programs are unchanged. IR validation accepts the opcodes for the VM, serialized IR and the C++
   emitters and rejects them for native, Wasm and GLSL: `atomic operations are not supported by the native
   backend` (`wasm`, `wasm-browser`, `glsl`). The effect mask bit of `atomic` is `1 << 13`.
+- **Mutexes (PSIR v36):** `MutexLock` and `MutexUnlock` each pop the address of one heap slot, the lock, and push
+  nothing (immediate 0). The slot holds 0 while the lock is free. `MutexLock` takes a free lock, waits for a held
+  one, and faults with `mutex locked again by the task that holds it` when the caller holds it; `MutexUnlock`
+  frees it and faults with `mutex unlocked by a task that does not hold it` otherwise. Their source is
+  `Mutex<T>.locked` of `/std/sync` (docs/spec/stdlib-reference.md, Shared state), through the `[host]`
+  definitions `/std/sync/__psmutex_lock` and `__psmutex_unlock`, which the lowerer turns into the opcodes as it
+  does for atomics: `locked` is
+
+  ```
+  LoadLocal <cell>
+  MutexLock
+  ... the body, called with a reference to the value ...
+  LoadLocal <cell>
+  MutexUnlock
+  ```
+
+  where the unlock is the `Destroy` of a local that holds the lock, so it runs on every way out of the body.
+  On the VM the slot holds the holder's task number plus one. Both opcodes are switch points under a schedule
+  seed; a task that finds the lock held is blocked on it and runs again when it is freed, and blocked tasks count
+  for `deadlock: every task is waiting`. The fast kernel leaves functions with mutex opcodes to the stepping
+  kernel. `optexe` stores the holder's thread state address in the slot: taking a free lock and freeing one that
+  nobody waits for is one atomic operation on the slot, and a thread that finds the lock held sleeps on a
+  condition variable of the program that an unlock signals (`OptCppMutexRuntime` in
+  `src/backend/IrToOptCppRuntime.h`, pasted only into a module with mutex opcodes, so other programs are
+  unchanged). IR validation accepts the opcodes for the VM, serialized IR and the C++ emitters and rejects them
+  for native, Wasm and GLSL: `mutex operations are not supported by the native backend` (`wasm`, `wasm-browser`,
+  `glsl`). The effect mask bit of `lock` is `1 << 14`.
 - **Tasks on threads (`optexe`, `optcpp`):** the optimized C++ emitter runs each `TaskSpawn` on an OS thread of its
   own (`OptCppTaskRuntime` in `src/backend/IrToOptCppRuntime.h`, pasted into the program only when the module has
   task opcodes, so a program without tasks is unchanged). The spawner copies the arguments into a task block,

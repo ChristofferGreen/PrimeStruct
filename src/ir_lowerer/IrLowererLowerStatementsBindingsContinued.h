@@ -729,6 +729,17 @@
     if (pickStatementResult == LoweredSumPickEmitResult::Emitted) {
       return true;
     }
+    if (isReturnCall(stmt) && stmt.args.size() == 1 &&
+        (activeInlineContext ? activeInlineContext->returnsVoid : returnsVoid)) {
+      // An inferred-void definition forwarding a void call: run the call, then return.
+      if (!emitStatement(stmt.args.front(), localsIn)) {
+        return false;
+      }
+      Expr bareReturn = stmt;
+      bareReturn.args.clear();
+      bareReturn.argNames.clear();
+      return emitStatement(bareReturn, localsIn);
+    }
     if (isReturnCall(stmt) && stmt.args.size() == 1) {
       // A local whose value the return hands to the caller (returned itself, wrapped by
       // Result.ok or a variant helper, or as an if branch's value) must not be destroyed by its

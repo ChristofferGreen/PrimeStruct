@@ -5,10 +5,10 @@ spec. Implemented: the `[spawn]`, `Task<T>`, `wait` and `effects(task)` surface
 and its lifetime checks, the sendable check of spawn arguments ([Sendable
 Values](#sendable-values)), tasks of scalar callees under the VM's scheduler,
 and the same tasks on one OS thread each on `optexe` (other spawned calls, and
-every other backend, run inline, one after another), and `Atomic<i32>` and
-`Atomic<i64>` of `/std/sync` on the VM and `optexe`. Approved but not
-implemented: the rest of [Threads For Real](#threads-for-real) (`Mutex`,
-`Channel`, tasks and atomics on arm64 native, a multi-core web server); its
+every other backend, run inline, one after another), and `Atomic<i32>`,
+`Atomic<i64>` and `Mutex<T>` of `/std/sync` on the VM and `optexe`. Approved
+but not implemented: the rest of [Threads For Real](#threads-for-real)
+(`Channel`, tasks and atomics on arm64 native, a multi-core web server); its
 work is the Multithreading lane of `docs/todo.md`.
 
 This document captures the language-level multithreading model.
@@ -685,8 +685,8 @@ Channel<Slice<i32>>: Slice<i32> is not sendable (instantiated from /pump)
 ```
 
 The spawn and `Function` lines are the messages of today's checks (each spawn line ends with `; sharing between
-tasks needs Mutex, Atomic or Channel`); the `Mutex` and `Channel` lines are the shape their leaves (TODO-5797,
-TODO-5798) follow. Every field on the path names its struct; a closure's fields are its captures; an element of a
+tasks needs Mutex, Atomic or Channel`); the `Mutex` line is the message of `Mutex<T>` and the `Channel` line is
+the shape its leaf (TODO-5798) follows. Every field on the path names its struct; a closure's fields are its captures; an element of a
 builtin container is `element of vector<StringView>`. The instantiation chain names the definition that first
 requested each template instance; it carries no line yet, because the message text cannot map a position of the
 expanded source back to its file.
@@ -770,7 +770,7 @@ Tally() {
   [i32 mut] entries{0i32}
 }
 
-[effects(lock)]
+[effects(lock), return<void>]
 record([Mutex<Tally>] tally, [i64] amount) {
   tally.locked([amount]([Reference<Tally>] state) {
     state.total = state.total + amount
@@ -781,24 +781,41 @@ record([Mutex<Tally>] tally, [i64] amount) {
 [effects(task, lock, heap_alloc, io_out), return<int>]
 main() {
   tally{Mutex<Tally>{Tally{}}}
-  [Task<void>] left{[spawn] record(tally, 3i64)};
-  [Task<void>] right{[spawn] record(tally, 4i64)};
-  wait(left, right)
+  [Task<void>] left{[spawn] record(tally, 3i64)}
+  [Task<void>] right{[spawn] record(tally, 4i64)}
+  wait(left)
+  wait(right)
   [i64] total{tally.locked([]([Reference<Tally>] state) { return(state.total) })}
   print_line(total)
-  return(0)
+  return(0i32)
 }
 ```
 
+This prints `7`. Implemented on the VM and `optexe` (`stdlib/std/sync/sync.prime`); the library reference is
+docs/spec/stdlib-reference.md, Shared state. The two waits are separate statements because `wait(left, right)`
+of two `Task<void>` does not compile yet (TODO-5852).
+
 - `locked` is generic over the closure type (`locked<Body>([Body mut] body)`), so `body` may borrow the caller's
-  locals with `[ref name]`: it runs inline, on the calling thread. `locked` returns what `body` returns.
+  locals with `[ref name]`: it runs inline, on the calling thread. `locked` returns what `body` returns. Today
+  a `[ref]` closure is bound to a local and passed by name; written in the call it is not accepted yet
+  (TODO-5851).
 - The `Reference<T>` is a borrowed parameter of `body`, so the existing rules (`borrowed parameter escapes via
-  return` / `via assignment`) keep it inside.
+  return` / `via assignment`) keep it inside. As implemented: a body whose parameter is the value type borrowed
+  (`[vector<i64>] values`) and returns it gets `borrowed parameter escapes via return: values`; a body that
+  returns its `Reference<T>` parameter returns a copy of the value, and a `Reference<T>` binding of the result is
+  refused (`Reference bindings require location(...)`). Storing the reference into a struct field a `[ref]`
+  capture reaches is not diagnosed yet (TODO-5853).
 - **Copying a `Mutex` shares it:** the handle carries an atomic count, and the last copy destroys `T`. A spawn
   argument is a copy, which is how a task gets the mutex.
 - `T` must be sendable. Locking a mutex again inside its own `locked` body faults with `mutex locked again by the
   task that holds it` (the VM and `optexe` record the holder). Two mutexes locked in opposite orders deadlock; the
-  VM reports it, threads hang.
+  VM reports it (`deadlock: every task is waiting`), threads hang until TODO-5846.
+- The lock is two IR opcodes, `MutexLock` and `MutexUnlock` (docs/spec/vm-design.md, Mutexes), on a heap slot
+  of the mutex's control cell; the unlock is the `Destroy` of a local of `locked`. On `optexe` an uncontended
+  lock or unlock is one atomic operation on that slot and a waiter sleeps on a condition variable, where the
+  first sketch said `std::mutex`: the slot has to hold the holder for the locked-again fault either way.
+- Each handle also keeps the value it was made from (the struct's `initial` field), so a `Mutex<T>` handle is as
+  large as a `T` plus two pointers and a `T` is destroyed with each handle (TODO-5854).
 - Effect `lock`; making one needs `heap_alloc`. `RwLock<T>` follows the same shape later, with `read(body)` taking
   a read-only `T` (TODO-5804).
 

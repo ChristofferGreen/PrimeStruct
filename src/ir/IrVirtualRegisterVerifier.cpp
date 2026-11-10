@@ -92,6 +92,8 @@ bool verifyBarrierOrdering(const IrVirtualRegisterBlock &originalBlock,
       case IrOpcode::AtomicAdd:
       case IrOpcode::AtomicExchange:
       case IrOpcode::AtomicCompareExchange:
+      case IrOpcode::MutexLock:
+      case IrOpcode::MutexUnlock:
       case IrOpcode::FileOpenRead:
       case IrOpcode::FileOpenWrite:
       case IrOpcode::FileOpenAppend:

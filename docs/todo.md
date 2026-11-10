@@ -118,9 +118,13 @@ of sync with them.
 | TODO-5847 | A spawned call with a collection or a `copy` parameter runs as a task | ready | mt-vm-tasks |
 | TODO-5848 | `return(wait(task))` returns a `String` task result | ready | mt-wait-types |
 | TODO-5849 | A destructured multi-wait keeps each result's own type | ready | mt-wait-types |
-| TODO-5846 | `optexe` faults when every task waits on another | deferred | mt-optexe-threads |
-| TODO-5797 | `Mutex<T>` with scoped `locked(body)` and the `lock` effect | ready | mt-primitives |
-| TODO-5798 | Bounded `Channel<T>` with the `channel` effect | blocked | mt-primitives |
+| TODO-5846 | `optexe` faults when every task waits on another | ready | mt-optexe-threads |
+| TODO-5798 | Bounded `Channel<T>` with the `channel` effect | ready | mt-primitives |
+| TODO-5850 | A call that returns a `Reference` is a closure argument | ready | closures-references |
+| TODO-5851 | A `[ref]` closure written in a generic call infers the closure type | ready | closures-references |
+| TODO-5852 | `wait(a, b)` takes `Task<void>` handles | ready | mt-wait-types |
+| TODO-5853 | A borrowed `Reference` parameter stored through a `[ref]` capture is diagnosed | deferred | closures-references |
+| TODO-5854 | A `Mutex` or `Atomic` handle does not keep the value it was made from | deferred | mt-primitives |
 | TODO-5656 | Thread-safe `SharedString`: an atomic owner count | ready | string-concurrency |
 | TODO-5802 | `serveWorkers`: one thread polls and accepts, N workers answer | blocked | mt-server |
 | TODO-5803 | The web apps run on workers and their gain is measured | blocked | mt-server |
@@ -212,17 +216,17 @@ of sync with them.
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544, TODO-5745, TODO-5746
-- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719; collection fields found by closures and the todo example: TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
+- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719, TODO-5850, TODO-5851, TODO-5853; collection fields found by closures and the todo example: TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
 - Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5738, TODO-5718
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732, TODO-5735, TODO-5736, TODO-5737
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5840, TODO-5844; real calls and struct copies TODO-5739, TODO-5741, TODO-5752; VM address checks TODO-5824
-- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5797, TODO-5798, TODO-5656, TODO-5802, TODO-5803, TODO-5799, TODO-5800, TODO-5801, TODO-5847, TODO-5848, TODO-5849; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5846
+- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5846, TODO-5798, TODO-5656, TODO-5802, TODO-5803, TODO-5799, TODO-5800, TODO-5801, TODO-5847, TODO-5848, TODO-5849, TODO-5852; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854
 
 ### Execution Queue
 
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
-Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order (TODO-5792 and TODO-5835, VM tasks and their lowering, are done, and so are TODO-5793, byte-region checks without a map search, TODO-5794, `optexe` per-thread heap arenas, TODO-5795, `optexe` threads for `[spawn]`, and `Atomic<i32>` and `Atomic<i64>` in `/std/sync`): TODO-5797 (`Mutex`), TODO-5798 (`Channel`), TODO-5656 (atomic `SharedString` count), TODO-5802 (`serveWorkers`), TODO-5803 (apps on workers, measured), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5797, TODO-5656 (both waited for the atomics) and TODO-5799 are ready and independent of each other, and so are TODO-5848 (`return(wait(t))` of a `String` task result is rejected as a return type mismatch), TODO-5849 (a destructured multi-wait of tasks with different result types loses the later results' types) and TODO-5847 (spawned calls with collection or `copy` parameters or collection results run as tasks, which today run inline; TODO-5845, the same for `String`, struct and closure values, is done) (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, are done). Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions), TODO-5846 (`optexe` faults on a wait cycle).
+Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order (TODO-5792 and TODO-5835, VM tasks and their lowering, are done, and so are TODO-5793, byte-region checks without a map search, TODO-5794, `optexe` per-thread heap arenas, TODO-5795, `optexe` threads for `[spawn]`, `Atomic<i32>` and `Atomic<i64>` in `/std/sync`, and TODO-5797, `Mutex<T>` with `locked(body)`): TODO-5846 (`optexe` faults on a wait cycle, reachable now that `Mutex` blocks), TODO-5798 (`Channel`), TODO-5656 (atomic `SharedString` count), TODO-5802 (`serveWorkers`), TODO-5803 (apps on workers, measured), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5798, TODO-5656 and TODO-5799 are ready and independent of each other, and so are TODO-5848 (`return(wait(t))` of a `String` task result is rejected as a return type mismatch), TODO-5849 (a destructured multi-wait of tasks with different result types loses the later results' types) and TODO-5847 (spawned calls with collection or `copy` parameters or collection results run as tasks, which today run inline; TODO-5845, the same for `String`, struct and closure values, is done) (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, are done). Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions), TODO-5854 (a `Mutex` or `Atomic` handle keeps a copy of its first value). Found with `Mutex` and ready: TODO-5852 (`wait(a, b)` of two `Task<void>`), and in the closures lane TODO-5850 (a `Reference`-returning call as a closure argument) and TODO-5851 (a `[ref]` closure written in a generic call).
 
 ### Task Blocks
 
@@ -777,7 +781,7 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
 
 - [ ] TODO-5846: `optexe` faults when every task waits on another
   - owner: ai
-  - status: deferred
+  - status: ready
   - created_at: 2026-11-10
   - phase: Multithreading (docs/MultithreadingPrototype.md, Runtime Model)
   - parallel_track: mt-optexe-threads
@@ -786,25 +790,81 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
     - positive: programs free of wait cycles print what they print now, and a single-threaded benchmark keeps its instruction count
     - negative: a program whose tasks all block faults with the VM's message and exit code 3 on `optexe`, tested without sleeps
     - full release gate green
-  - stop_rule: the wait-cycle fault on `optexe`; deferred until a blocking primitive exists.
+  - stop_rule: the wait-cycle fault on `optexe`. `Mutex` (the first blocking primitive) exists, so this is ready.
 
-- [ ] TODO-5797: `Mutex<T>` with scoped `locked(body)` and the `lock` effect
+- [ ] TODO-5850: A call that returns a `Reference` is a closure argument
   - owner: ai
   - status: ready
-  - created_at: 2026-11-09
+  - created_at: 2026-11-10
+  - phase: Closures (docs/spec/value-lifecycle.md, Lambdas)
+  - parallel_track: closures-references
+  - scope: Calling a closure with the result of a call that returns `Reference<T>` (`body(borrow_of(slot))`, `borrow_of` a `[return<Reference<T>>]` definition over `borrow(dereference(slot))`) hands the body a wrong address: the body reads and writes something other than the value. Binding the result first (`[Reference<T>] target{borrow_of(slot)}` then `body(target)`) works, which is what `Mutex.locked` in stdlib/std/sync/sync.prime does. Make the direct form pass the same reference.
+  - implementation_notes: found while writing `Mutex.locked` (the direct form printed the old value after a body assigned through its parameter). Closure calls lower in src/ir_lowerer/IrLowererLowerInlineCalls.cpp; compare the argument materialisation of a `Reference` binding with that of a `Reference`-returning call. Tests: tests/unit/program_matrix/test_program_matrix_closures_references.cpp.
+  - acceptance:
+    - positive: a generic `apply<Body>([Body mut] body, [Pointer<uninitialized<i64>>] slot)` that calls `body(borrow_of(slot))` with a body that adds 1 leaves the slot one larger on the VM and `optexe`; `Mutex.locked` passes the call directly and its tests still pass
+    - negative: a closure whose parameter is a value still gets a copy
+    - full release gate green
+  - stop_rule: `Reference`-returning calls as closure arguments.
+
+- [ ] TODO-5851: A `[ref]` closure written in a generic call infers the closure type
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-10
+  - phase: Closures (docs/spec/value-lifecycle.md, Lambdas)
+  - parallel_track: closures-references
+  - scope: `cell.locked([ref seen]([Reference<i64>] value) { seen = value })` (any method or definition with an inferred closure template parameter, `locked<Body>([Body mut] body)`) is rejected with `template arguments required for /main__lambda0`, while the same closure bound first (`[mut] look{[ref seen](...) {...}}` then `cell.locked(look)`) and a closure with value captures written in the call both work. Infer the template argument for a by-reference closure written in the call.
+  - implementation_notes: the by-reference closure struct is itself a template over its captures' lifetimes or types (hence the message); implicit template inference runs before the main validator (AGENTS.md, Semantics pipeline note). Tests: tests/unit/semantics/lambdas, tests/unit/program_matrix/test_program_matrix_closures_references.cpp; then drop the binding in the `[ref]` case of tests/unit/program_matrix/test_program_matrix_mutexes.cpp and the note in docs/spec/stdlib-reference.md (Shared state).
+  - acceptance:
+    - positive: the call above compiles and sets `seen` on the VM and `optexe`; the same for a free generic definition taking `[Body mut] body`
+    - negative: a `[ref]` closure passed where the parameter is a `Function` is still the existing diagnostic
+    - full release gate green
+  - stop_rule: inference for inline by-reference closures.
+
+- [ ] TODO-5852: `wait(a, b)` takes `Task<void>` handles
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-10
+  - phase: Multithreading (docs/MultithreadingPrototype.md, Runtime Model)
+  - parallel_track: mt-wait-types
+  - scope: `wait(left, right)` with two `Task<void>` handles fails with `unsupported binding type: void` from stdlib/std/tuple/tuple.prime, because the multi-wait builds a `tuple<void, void>`. The design's `Mutex` example uses this form. A multi-wait whose tasks are all `Task<void>` waits each in order and has no result; mixed with value tasks, either the void ones have no tuple element or the mix is one clear diagnostic at the `wait`.
+  - implementation_notes: multi-wait typing is in src/semantics/SemanticsValidatorTaskHandles.cpp. Tests: tests/unit/program_matrix/test_program_matrix_tasks.cpp. Then use `wait(left, right)` in the `Mutex` examples (docs/MultithreadingPrototype.md, docs/spec/stdlib-reference.md).
+  - acceptance:
+    - positive: `wait(left, right)` of two `Task<void>` runs both on the VM (default schedule and seeds 1 to 8) and on `optexe`
+    - negative: the mixed form is the chosen behaviour, tested; a non-task argument is still its diagnostic
+    - full release gate green
+  - stop_rule: void tasks in a multi-wait.
+
+- [ ] TODO-5853: A borrowed `Reference` parameter stored through a `[ref]` capture is diagnosed
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-10
+  - phase: Closures (docs/spec/value-lifecycle.md, Lambdas)
+  - parallel_track: closures-references
+  - scope: A closure `[ref keeper]([Reference<i64>] value) { keeper.kept = value }` with `keeper` a struct that has a `[Reference<i64>] kept` field is accepted; the assignment copies or rebinds in a way that does not alias the parameter today, but nothing says a borrowed parameter cannot be stored. Decide what assigning to a `Reference` field means (rebind or write through) and diagnose storing a borrowed parameter with the existing `borrowed parameter escapes via assignment`. Also: a closure that returns its `Reference<T>` parameter returns a copy of the value without a diagnostic, and `return(location(value))` is `unable to infer return type`.
+  - implementation_notes: found with `Mutex.locked`, whose body gets a `Reference<T>` that must stay in the body (docs/MultithreadingPrototype.md, Mutex). The escape checks are in src/semantics (search `borrowed parameter escapes`). Deferred: needs the decision on `Reference` field assignment.
+  - acceptance:
+    - positive: reading through the parameter and assigning through it still work
+    - negative: the closure above is `borrowed parameter escapes via assignment: value`
+    - full release gate green
+  - stop_rule: the escape diagnostic for `Reference` parameters of closures.
+
+- [ ] TODO-5854: A `Mutex` or `Atomic` handle does not keep the value it was made from
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-10
   - phase: Multithreading (docs/MultithreadingPrototype.md, Mutex)
   - parallel_track: mt-primitives
-  - scope: `Mutex<T>` in `/std/sync`: owns a sendable `T` in a heap cell, `locked<Body>(body)` locks, calls `body` with a `Reference<T>`, unlocks on every way out and returns what `body` returns; copies share it (atomic handle count). The lock is a runtime host function: on the VM a scheduler-aware lock (switch points at lock and unlock, blocked tasks count for deadlock detection), on `optexe` `std::mutex` with the holder recorded. Locking it again inside its own body faults with `mutex locked again by the task that holds it`.
+  - scope: `Mutex<T>{value}` maps `value` to the struct's first field, `initial`, and the heap cell gets a copy of it; the field then stays in every handle. A `Mutex<vector<i64>>` handle therefore owns a vector of its own, a handle copy copies that vector, and each handle destroys one. Make the handle two pointers and a flag: the value moves into the cell when the mutex is made. `Atomic<T>` keeps its `initial` the same way (an integer, so only the size matters).
+  - implementation_notes: stdlib/std/sync/sync.prime. Needs a way for a struct to take a construction argument that is not a stored field, or `Create` to move a field out and leave it empty; tests/unit/program_matrix/test_program_matrix_mutexes.cpp ("locked returns the body's value...") prints the copies and destroys of a `Noisy` element and must then show one copy at most and one destroy.
   - acceptance:
-    - positive: the design's `Tally` example prints 7 on the VM (all seeds) and `optexe`; 8 tasks each appending 1000 entries to a `vector<i64>` inside one mutex leave 8000 entries; `locked` returning an `i64` and a body with a `[ref]` capture both work
-    - negative: a non-sendable `T` is `Mutex element StringView is not sendable` and, for a struct, `Mutex element Record is not sendable: field `next` is Reference<Record>`; returning or storing the body's `Reference<T>` is the existing borrowed-parameter diagnostic; `locked` without the `lock` effect is a diagnostic; a nested `locked` on the same mutex faults with exit 3 on both backends; two tasks locking two mutexes in opposite order report `deadlock: every task is waiting` on a VM seed that interleaves them
+    - positive: the `Noisy` program prints no `copy` for a handle copy and one `destroy` in all; heap statistics stay balanced
+    - negative: `Mutex<T>{}` without a value for a `T` that has no default is still a diagnostic
     - full release gate green
-  - stop_rule: `Mutex` on the VM and `optexe`; `RwLock` is TODO-5804.
+  - stop_rule: the handle layout of `Mutex` and `Atomic`.
 
 - [ ] TODO-5798: Bounded `Channel<T>` with the `channel` effect
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5797
+  - status: ready
   - created_at: 2026-11-09
   - phase: Multithreading (docs/MultithreadingPrototype.md, Channel)
   - parallel_track: mt-primitives

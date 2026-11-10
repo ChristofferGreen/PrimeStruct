@@ -1042,7 +1042,7 @@ router.get("/static/*", []([Request] request, [Reference<Response>] response) {
 
 ### Shared state (`/std/sync`)
 
-`import /std/sync/*` provides `Atomic<i32>` and `Atomic<i64>`, integer cells that several tasks read and change
+`import /std/sync/*` provides `Atomic<i32>` and `Atomic<i64>` and `Mutex<T>` (below). The atomics are integer cells that several tasks read and change
 without losing an update (docs/MultithreadingPrototype.md, Atomic). An `Atomic` is a handle: a copy shares the cell,
 so a task that is given one works on the same integer as its spawner, and the cell is freed when its last handle is
 destroyed. The type is `[sendable]`.
@@ -1085,6 +1085,64 @@ main() {
 This prints `2000` on the VM, under every schedule seed, and on `optexe`, where the two tasks are threads. The
 operations are IR opcodes (docs/spec/vm-design.md, Atomics); native, Wasm and GLSL do not have them yet and reject
 the program with `atomic operations are not supported by the native backend`.
+
+`Mutex<T>` owns a value of a sendable type `T` in a heap cell and lets one task at a time reach it
+(docs/MultithreadingPrototype.md, Mutex). `Mutex<Tally>{Tally{}}` makes one holding a copy of that value. It is a
+handle like `Atomic`: a copy shares the value, so a spawned call that takes one works on the same value as its
+spawner, and the last handle destroyed destroys the value. The type is `[sendable]`.
+
+Its one method is `locked(body)`: it locks, calls the closure `body` with a `Reference<T>` to the value, unlocks
+on every way out of `body`, and returns what `body` returns (nothing, for a body that returns nothing). A task that
+calls `locked` while another holds the lock waits. `body` runs on the calling task, so it may borrow the caller's
+locals with `[ref name]`. `locked` needs the `lock` effect (`mutex operation requires lock effect`); making a
+`Mutex` needs `heap_alloc`.
+
+```prime
+import /std/sync/*
+
+[struct]
+Tally() {
+  [i64 mut] total{0i64}
+  [i32 mut] entries{0i32}
+}
+
+[effects(lock), return<void>]
+record([Mutex<Tally>] tally, [i64] amount) {
+  tally.locked([amount]([Reference<Tally>] state) {
+    state.total = state.total + amount
+    state.entries = state.entries + 1i32
+  })
+}
+
+[effects(task, lock, heap_alloc, io_out), return<int>]
+main() {
+  tally{Mutex<Tally>{Tally{}}}
+  [Task<void>] left{[spawn] record(tally, 3i64)}
+  [Task<void>] right{[spawn] record(tally, 4i64)}
+  wait(left)
+  wait(right)
+  [i64] total{tally.locked([]([Reference<Tally>] state) { return(state.total) })}
+  print_line(total)
+  return(0i32)
+}
+```
+
+This prints `7` on the VM, under every schedule seed, and on `optexe`.
+
+- A body that assigns to a scalar value declares its parameter `[Reference<i64> mut] value`; fields of a struct
+  are assigned through a plain `[Reference<Tally>] state`.
+- A body that captures by reference is bound to a local first and passed by name:
+  `[mut] look{[ref seen]([Reference<Tally>] state) { seen = state.total }}` then `tally.locked(look)`
+  (a `[ref]` closure written in the call is not accepted yet, TODO-5851).
+- `T` must be sendable: `Mutex<StringView>` is `Mutex element StringView is not sendable`, and a struct names the
+  field, ``Mutex element Record is not sendable: field `next` is Reference<Record>``.
+- The reference stays in the body. A body that takes the value as a borrowed parameter and returns it gets
+  `borrowed parameter escapes via return`; returning a `Reference<T>` parameter returns a copy of the value.
+- Locking a mutex again inside its own body ends the program with `mutex locked again by the task that holds it`
+  (exit code 3). Two tasks that lock two mutexes in opposite orders can wait for each other for ever: the VM
+  ends the program with `deadlock: every task is waiting` (exit code 3).
+- The lock and unlock are IR opcodes (docs/spec/vm-design.md, Mutexes); native, Wasm and GLSL reject the program
+  with `mutex operations are not supported by the native backend`.
 
 ### JSON writer (`/std/json`)
 

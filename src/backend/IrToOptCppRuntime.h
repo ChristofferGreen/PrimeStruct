@@ -661,4 +661,67 @@ inline uint64_t ps_atomic_compare_exchange(uint64_t *slot, uint64_t expected, ui
 
 )CPP";
 
+// The mutex opcodes (docs/spec/vm-design.md, Mutexes), written after OptCppAtomicRuntime when the module has one.
+// The lock is its heap slot: 0 while free, the holder (the address of its thread's Rt) otherwise. Taking a free lock
+// and freeing one nobody waits for is one atomic operation on the slot. A thread that finds the lock held sleeps on
+// one condition variable of the program, which an unlock signals when any thread sleeps.
+inline constexpr const char *OptCppMutexRuntime = R"CPP(
+struct PsLockWaits {
+  pthread_mutex_t gate = PTHREAD_MUTEX_INITIALIZER;
+  pthread_cond_t changed = PTHREAD_COND_INITIALIZER;
+  // The threads that sleep or are about to. Written with the gate held, read by an unlock without it.
+  std::atomic<uint64_t> sleepers{0};
+};
+
+// Never destroyed: the process may end while tasks still run.
+PsLockWaits &ps_lock_waits() {
+  static PsLockWaits *waits = new PsLockWaits();
+  return *waits;
+}
+
+[[gnu::noinline]] void ps_mutex_lock_slow(PsAtomicSlot lock, uint64_t holder) {
+  PsLockWaits &waits = ps_lock_waits();
+  pthread_mutex_lock(&waits.gate);
+  // Counted before the lock is tried again: an unlock that frees it after this try sees the sleeper and signals.
+  waits.sleepers.fetch_add(1);
+  for (;;) {
+    uint64_t held = 0;
+    if (lock.compare_exchange_strong(held, holder)) {
+      break;
+    }
+    pthread_cond_wait(&waits.changed, &waits.gate);
+  }
+  waits.sleepers.fetch_sub(1);
+  pthread_mutex_unlock(&waits.gate);
+}
+
+inline void ps_mutex_lock(Rt &rt, uint64_t *slot) {
+  const uint64_t holder = reinterpret_cast<uint64_t>(&rt);
+  PsAtomicSlot lock(*slot);
+  uint64_t held = 0;
+  if (lock.compare_exchange_strong(held, holder)) {
+    return;
+  }
+  if (held == holder) {
+    ps_fault("mutex locked again by the task that holds it");
+  }
+  ps_mutex_lock_slow(lock, holder);
+}
+
+inline void ps_mutex_unlock(Rt &rt, uint64_t *slot) {
+  PsAtomicSlot lock(*slot);
+  if (lock.load() != reinterpret_cast<uint64_t>(&rt)) {
+    ps_fault("mutex unlocked by a task that does not hold it");
+  }
+  lock.store(0);
+  PsLockWaits &waits = ps_lock_waits();
+  if (waits.sleepers.load() != 0) {
+    pthread_mutex_lock(&waits.gate);
+    pthread_cond_broadcast(&waits.changed);
+    pthread_mutex_unlock(&waits.gate);
+  }
+}
+
+)CPP";
+
 } // namespace primec

@@ -242,12 +242,13 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
         default:
           return failHost("host definition return type must be i32, i64, u64, u8, f32, f64, bool, String, or void");
       }
-      const bool atomicIntrinsic = isAtomicIntrinsicHostPath(def.fullPath);
+      const bool atomicIntrinsic =
+          isAtomicIntrinsicHostPath(def.fullPath) || isMutexIntrinsicHostPath(def.fullPath);
       for (const auto &param : defParams) {
         if (param.defaultExpr != nullptr) {
           return failHost("host definition parameter cannot have a default: " + param.name);
         }
-        // An atomic operation of /std/sync takes its cell as a Pointer<i64>.
+        // An atomic or lock operation of /std/sync takes its cell as a Pointer<i64>.
         const bool atomicCellParam = atomicIntrinsic && &param == &defParams.front() &&
                                      param.binding.typeName == "Pointer" &&
                                      param.binding.typeTemplateArg == "i64";

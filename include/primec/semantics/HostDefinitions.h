@@ -36,6 +36,12 @@ inline bool isAtomicIntrinsicHostPath(std::string_view fullPath) {
   return fullPath.rfind("/std/sync/__psatomic_", 0) == 0;
 }
 
+// The lock operations of a `/std/sync` Mutex (docs/spec/vm-design.md, Mutexes) are declared the same way: each lowers
+// to MutexLock or MutexUnlock on the lock slot, a `Pointer<i64>`.
+inline bool isMutexIntrinsicHostPath(std::string_view fullPath) {
+  return fullPath.rfind("/std/sync/__psmutex_", 0) == 0;
+}
+
 // The stdlib `String` crosses the boundary as owned text (IrHostValueKind::Text).
 inline bool isHostStringTypeText(std::string_view typeText) {
   return typeText == "String" || typeText == "std/text/String" || typeText == "/std/text/String";

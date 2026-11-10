@@ -7,9 +7,9 @@
 namespace primec {
 
 constexpr uint32_t IrSchemaMagic = 0x50534952u; // "PSIR"
-constexpr uint32_t IrSchemaVersion = 35u;
-// v34 only appends TaskSpawn and TaskWait and v35 only appends the Atomic* opcodes, so a v33 or v34 module loads
-// unchanged (it cannot hold the opcodes added after it).
+constexpr uint32_t IrSchemaVersion = 36u;
+// v34 only appends TaskSpawn and TaskWait, v35 only the Atomic* opcodes and v36 only MutexLock and MutexUnlock, so a
+// v33, v34 or v35 module loads unchanged (it cannot hold the opcodes added after it).
 constexpr uint32_t IrSchemaMinimumSupportedVersion = 33u;
 constexpr uint32_t IrSchemaMaximumSupportedVersion = IrSchemaVersion;
 
@@ -177,6 +177,15 @@ enum class IrOpcode : uint8_t {
   // Pops a desired value, an expected value, then an address. Stores the desired value if the slot holds the expected
   // one and pushes 1; pushes 0 and stores nothing otherwise.
   AtomicCompareExchange,
+  // The lock of a `/std/sync` Mutex is one heap slot (docs/spec/vm-design.md, Mutexes): 0 while free, the holder
+  // otherwise. The VM (a switch point under a schedule seed; a task that finds the lock held waits and counts for
+  // deadlock detection), serialized bytecode and the optimized C++ emitter run them; every other backend rejects a
+  // module that has one. Added in PSIR v36.
+  // Pops an address and takes the lock there, waiting while another task holds it. Faults when the running task
+  // already holds it.
+  MutexLock,
+  // Pops an address and frees the lock there, which the running task must hold.
+  MutexUnlock,
 };
 
 enum class IrStructFieldCategory : uint8_t {
@@ -214,6 +223,7 @@ constexpr uint64_t EffectFileRead = 1ull << 10;
 constexpr uint64_t EffectTask = 1ull << 11;
 constexpr uint64_t EffectNetIo = 1ull << 12;
 constexpr uint64_t EffectAtomic = 1ull << 13;
+constexpr uint64_t EffectLock = 1ull << 14;
 constexpr uint32_t FileReadEofCode = 65536u;
 
 struct IrStructField {

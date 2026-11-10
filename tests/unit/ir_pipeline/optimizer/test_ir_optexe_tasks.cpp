@@ -1015,4 +1015,90 @@ main() {
   CHECK(vmRun.out == "2000\n1\n");
 }
 
+TEST_CASE("only an optexe module with mutex opcodes gets the mutex runtime") {
+  const auto emitted = [](const IrModule &module) {
+    std::string source;
+    std::string error;
+    REQUIRE_MESSAGE(primec::IrToOptCppEmitter().emitSource(module, source, error), error);
+    return source;
+  };
+  const std::string atomics = emitted(moduleOf({functionOf("/main",
+                                                           0,
+                                                           {{IrOpcode::PushI32, 1},
+                                                            {IrOpcode::HeapAlloc, 0},
+                                                            {IrOpcode::AtomicLoad, 64},
+                                                            {IrOpcode::ReturnI32, 0}})}));
+  CHECK_FALSE(contains(atomics, "ps_mutex_"));
+
+  const IrModule locking = moduleOf({functionOf("/main",
+                                                0,
+                                                {{IrOpcode::PushI32, 1},
+                                                 {IrOpcode::HeapAlloc, 0},
+                                                 {IrOpcode::StoreLocal, 0},
+                                                 {IrOpcode::LoadLocal, 0},
+                                                 {IrOpcode::MutexLock, 0},
+                                                 {IrOpcode::PushI32, 4},
+                                                 {IrOpcode::PrintI32, Newline},
+                                                 {IrOpcode::LoadLocal, 0},
+                                                 {IrOpcode::MutexUnlock, 0},
+                                                 {IrOpcode::PushI32, 0},
+                                                 {IrOpcode::ReturnI32, 0}})});
+  const std::string mutexes = emitted(locking);
+  CHECK(contains(mutexes, "ps_mutex_lock(rt, ps_resolve(rt, "));
+  CHECK(contains(mutexes, "ps_mutex_unlock(rt, ps_resolve(rt, "));
+  // No task opcode, so no task runtime.
+  CHECK_FALSE(contains(mutexes, "pthread_create"));
+  CHECK(optimizer_test::run(locking, {"program"}).output == "4\n");
+  expectMatchesVm(locking, "mutex_lock_unlock");
+}
+
+TEST_CASE("primec runs a spawned call with a Mutex argument as a task") {
+  const std::string source = R"(
+import /std/sync/*
+
+[effects(lock), return<void>]
+add_many([Mutex<i64>] counter, [i32] rounds) {
+  [i32 mut] i{0i32}
+  while(i < rounds) {
+    counter.locked([]([Reference<i64> mut] value) { value = value + 1i64 })
+    i = i + 1i32
+  }
+}
+
+[effects(lock, heap_alloc, io_out, task), return<int>]
+main() {
+  counter{Mutex<i64>{0i64}}
+  [Task<void>] a{[spawn] add_many(counter, 1000i32)}
+  [Task<void>] b{[spawn] add_many(counter, 1000i32)}
+  wait(a)
+  wait(b)
+  print_line(counter.locked([]([Reference<i64>] value) { return(value + 0i64) }))
+  return(0i32)
+}
+)";
+  const std::filesystem::path sourcePath = scratch("spawn_mutex.prime");
+  std::ofstream(sourcePath) << source;
+  // Neither backend that runs tasks keeps the calls inline: the report has no note.
+  const std::filesystem::path cppPath = scratch("spawn_mutex.cpp");
+  const ProgramRun emit =
+      runCommand("./primec --emit=optcpp '" + sourcePath.string() +
+                     "' --entry /main --opt-report -o '" + cppPath.string() + "'",
+                 "spawn_mutex_emit");
+  REQUIRE_MESSAGE(emit.exitCode == 0, emit.err);
+  CHECK_FALSE(contains(emit.err, "runs inline"));
+  const std::string cpp = readText(cppPath);
+  CHECK(contains(cpp, "= ps_task_spawn(rt, ps_t"));
+  CHECK(contains(cpp, "ps_mutex_lock("));
+  const ProgramRun vmEmit = runCommand("./primec --emit=vm '" + sourcePath.string() +
+                                           "' --entry /main --opt-report -o '" +
+                                           scratch("spawn_mutex.psir").string() + "'",
+                                       "spawn_mutex_vm_emit");
+  REQUIRE_MESSAGE(vmEmit.exitCode == 0, vmEmit.err);
+  CHECK_FALSE(contains(vmEmit.err, "runs inline"));
+  const ProgramRun vmRun =
+      runCommand("./primevm '" + sourcePath.string() + "' --entry /main", "spawn_mutex_vm");
+  CHECK(vmRun.exitCode == 0);
+  CHECK(vmRun.out == "2000\n");
+}
+
 TEST_SUITE_END();

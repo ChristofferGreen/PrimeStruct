@@ -375,7 +375,7 @@ TEST_CASE("task opcodes survive serialization and a v33 module still loads") {
   CHECK(error == "unsupported IR opcode");
   setVersion(bytes, 32u);
   CHECK_FALSE(deserializeIr(bytes, rejected, error));
-  CHECK(error == "unsupported IR schema version 32 (supported 33..35)");
+  CHECK(error == "unsupported IR schema version 32 (supported 33..36)");
 }
 
 TEST_SUITE_END();

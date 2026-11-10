@@ -142,7 +142,9 @@ namespace primec {
   X(AtomicStore, 0, 0, 0)                                                                          \
   X(AtomicAdd, 0, 0, 0)                                                                            \
   X(AtomicExchange, 0, 0, 0)                                                                       \
-  X(AtomicCompareExchange, 0, 0, 0)
+  X(AtomicCompareExchange, 0, 0, 0)                                                                \
+  X(MutexLock, 0, 0, 0)                                                                            \
+  X(MutexUnlock, 0, 0, 0)
 
 struct IrOpcodeInfo {
   IrOpcode op;

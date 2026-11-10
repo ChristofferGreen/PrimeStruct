@@ -42,6 +42,7 @@ Style-aligned surface code:
 - `stdlib/std/net/*`
 - `stdlib/std/http/*`
 - `stdlib/std/html/*`
+- `stdlib/std/sync/*`
 - `stdlib/std/collections/vector.prime`
 - `stdlib/std/collections/map.prime`
 - `stdlib/std/collections/errors.prime`

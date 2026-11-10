@@ -39,9 +39,41 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
   if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
     return failReturnDiagnostic("return does not accept block arguments");
   }
+  auto declaresAutoReturn = [&]() {
+    auto defIt = defMap_.find(currentValidationState_.context.definitionPath);
+    if (defIt == defMap_.end() || defIt->second == nullptr) {
+      return false;
+    }
+    for (const auto &transform : defIt->second->transforms) {
+      if (transform.name == "return" && transform.templateArgs.size() == 1 &&
+          transform.templateArgs.front() == "auto") {
+        return true;
+      }
+    }
+    return false;
+  };
   if (returnKind == ReturnKind::Void) {
     if (!stmt.args.empty()) {
-      return failReturnDiagnostic("return value not allowed for void definition");
+      // A `return<auto>` definition that forwards a call (a generic one
+      // calling its closure parameter) infers void when that call is void;
+      // the call then runs as a statement before the return.
+      const bool forwardsVoidCall =
+          stmt.args.size() == 1 && stmt.args.front().kind == Expr::Kind::Call &&
+          declaresAutoReturn() &&
+          inferExprReturnKind(stmt.args.front(), params, locals) == ReturnKind::Void;
+      if (!forwardsVoidCall) {
+        return failReturnDiagnostic("return value not allowed for void definition");
+      }
+      if (!validateStatement(params,
+                             locals,
+                             stmt.args.front(),
+                             returnKind,
+                             false,
+                             true,
+                             nullptr,
+                             namespacePrefix)) {
+        return false;
+      }
     }
     if (!validateNoLiveTaskHandlesAtReturn(stmt)) {
       return false;
@@ -50,19 +82,6 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
     if (stmt.args.size() != 1) {
       return failReturnDiagnostic("return requires exactly one argument");
     }
-    auto declaresAutoReturn = [&]() {
-      auto defIt = defMap_.find(currentValidationState_.context.definitionPath);
-      if (defIt == defMap_.end() || defIt->second == nullptr) {
-        return false;
-      }
-      for (const auto &transform : defIt->second->transforms) {
-        if (transform.name == "return" && transform.templateArgs.size() == 1 &&
-            transform.templateArgs.front() == "auto") {
-          return true;
-        }
-      }
-      return false;
-    };
     if (!validateExpr(params, locals, stmt.args.front())) {
       if (declaresAutoReturn() &&
           isUnknownBorrowedKeyValueAccessMethodDiagnostic(error_)) {

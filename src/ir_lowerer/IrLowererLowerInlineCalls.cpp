@@ -196,6 +196,47 @@ bool emitInlineDefinitionCallImpl(
       }
       return true;
     }
+    if (isHostDefinition(callee) && isMutexIntrinsicHostPath(callee.fullPath)) {
+      // A lock operation of a /std/sync Mutex: the lock slot address on the stack, then MutexLock or MutexUnlock
+      // (docs/spec/vm-design.md, Mutexes).
+      const std::string_view operation =
+          std::string_view(callee.fullPath).substr(std::string_view("/std/sync/__psmutex_").size());
+      std::optional<IrOpcode> opcode;
+      if (operation == "lock") {
+        opcode = IrOpcode::MutexLock;
+      } else if (operation == "unlock") {
+        opcode = IrOpcode::MutexUnlock;
+      }
+      if (!opcode.has_value()) {
+        error = "unknown mutex operation: " + callee.fullPath;
+        return false;
+      }
+      std::vector<Expr> mutexParams;
+      std::vector<const Expr *> mutexOrderedArgs;
+      std::vector<const Expr *> mutexPackedArgs;
+      size_t mutexPackedParamIndex = 0;
+      if (!ir_lowerer::buildInlineCallOrderedArguments(callExpr,
+                                                       callee,
+                                                       structNames,
+                                                       callerLocals,
+                                                       mutexParams,
+                                                       mutexOrderedArgs,
+                                                       mutexPackedArgs,
+                                                       mutexPackedParamIndex,
+                                                       error)) {
+        return false;
+      }
+      if (!mutexPackedArgs.empty() || mutexOrderedArgs.size() != 1 ||
+          callee.parameters.size() != 1 || mutexOrderedArgs.front() == nullptr) {
+        error = "mutex operation argument mismatch for " + callee.fullPath;
+        return false;
+      }
+      if (!emitExpr(*mutexOrderedArgs.front(), callerLocals)) {
+        return false;
+      }
+      function.instructions.push_back({*opcode, 0});
+      return true;
+    }
     if (isHostDefinition(callee)) {
       const auto hostKind = [](std::string_view typeName) -> std::optional<IrHostValueKind> {
         const auto canonical = canonicalHostTypeName(typeName);

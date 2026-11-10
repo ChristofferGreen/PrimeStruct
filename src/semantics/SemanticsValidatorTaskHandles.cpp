@@ -203,7 +203,23 @@ bool SemanticsValidator::inferTaskSpawnCallBinding(
     const std::unordered_map<std::string, BindingInfo> &locals,
     BindingInfo &bindingOut) {
   BindingInfo resultBinding;
-  if (!inferCallInitializerBinding(spawnedCall, params, locals, resultBinding)) {
+  // A callee that declares return<void> is void whatever its body holds: initializer inference would
+  // answer with the struct of a lambda the body creates.
+  auto declaresVoidReturn = [&]() {
+    const auto defIt = defMap_.find(resolveCalleePath(spawnedCall));
+    if (defIt == defMap_.end() || defIt->second == nullptr) {
+      return false;
+    }
+    for (const auto &transform : defIt->second->transforms) {
+      if (transform.name == "return" && transform.templateArgs.size() == 1) {
+        return normalizeBindingTypeName(transform.templateArgs.front()) == "void";
+      }
+    }
+    return false;
+  };
+  if (declaresVoidReturn()) {
+    resultBinding.typeName = "void";
+  } else if (!inferCallInitializerBinding(spawnedCall, params, locals, resultBinding)) {
     std::string resolvedPath = resolveCalleePath(spawnedCall);
     const std::string concretePath =
         resolveExprConcreteCallPath(params, locals, spawnedCall, resolvedPath);

@@ -50,6 +50,7 @@ build and layout solidify.
   `stdlib/std/ui/native/*`, `stdlib/std/ui/events/*`,
   `stdlib/std/scene/*`, `stdlib/std/os/*`,
   `stdlib/std/net/*`, `stdlib/std/http/*`, `stdlib/std/html/*`,
+  `stdlib/std/sync/*`,
   `stdlib/std/collections/vector.prime`,
   `stdlib/std/collections/map.prime`,
   `stdlib/std/collections/errors.prime`,

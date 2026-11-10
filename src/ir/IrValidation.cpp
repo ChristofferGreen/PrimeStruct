@@ -21,7 +21,7 @@ constexpr uint32_t MaxCallParameterCount = 4096;
 constexpr uint64_t KnownEffectMask =
     EffectIoOut | EffectIoErr | EffectHeapAlloc | EffectPathSpaceNotify | EffectPathSpaceInsert |
     EffectPathSpaceTake | EffectFileWrite | EffectGpuDispatch | EffectPathSpaceBind |
-    EffectPathSpaceSchedule | EffectFileRead | EffectTask | EffectNetIo | EffectAtomic;
+    EffectPathSpaceSchedule | EffectFileRead | EffectTask | EffectNetIo | EffectAtomic | EffectLock;
 constexpr uint64_t KnownWasmWasiEffectMask =
     EffectIoOut | EffectIoErr | EffectHeapAlloc | EffectFileWrite | EffectFileRead;
 constexpr uint64_t KnownWasmBrowserEffectMask = 0ull;
@@ -50,7 +50,12 @@ bool isAtomicOpcode(IrOpcode op) {
          op == IrOpcode::AtomicExchange || op == IrOpcode::AtomicCompareExchange;
 }
 
-// The backend a module with atomic opcodes is rejected for, or nullptr for a target that runs them.
+// The mutex opcodes (docs/spec/vm-design.md, Mutexes) run where the atomic ones do.
+bool isMutexOpcode(IrOpcode op) {
+  return op == IrOpcode::MutexLock || op == IrOpcode::MutexUnlock;
+}
+
+// The backend a module with atomic or mutex opcodes is rejected for, or nullptr for a target that runs them.
 const char *atomicRejectingBackendName(IrValidationTarget target) {
   switch (target) {
   case IrValidationTarget::Native:
@@ -732,11 +737,13 @@ bool validateIrModule(const IrModule &module, IrValidationTarget target, std::st
       const IrFunction &function = module.functions[functionIndex];
       for (size_t instructionIndex = 0; instructionIndex < function.instructions.size();
            ++instructionIndex) {
-        if (isAtomicOpcode(function.instructions[instructionIndex].op)) {
+        const IrOpcode op = function.instructions[instructionIndex].op;
+        if (isAtomicOpcode(op) || isMutexOpcode(op)) {
           return failInstruction(functionIndex,
                                  function.name,
                                  instructionIndex,
-                                 "atomic operations are not supported by the " +
+                                 std::string(isMutexOpcode(op) ? "mutex" : "atomic") +
+                                     " operations are not supported by the " +
                                      std::string(backendName) + " backend",
                                  error);
         }

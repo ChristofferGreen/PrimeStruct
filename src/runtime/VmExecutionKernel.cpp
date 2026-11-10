@@ -473,6 +473,39 @@ template <bool TrackEvents>
     ip += 1;
     return VmKernelStepOutcome::Continue;
   }
+  case IrOpcode::MutexLock:
+  case IrOpcode::MutexUnlock: {
+    // Reached only where one call stack runs (a program without tasks, a debug session): executeVmKernel's
+    // scheduler runs these itself when there are tasks (docs/spec/vm-design.md, Mutexes). The lock slot holds 0
+    // while free and the holder's task number plus one otherwise; this lone call stack is task 0.
+    if (stack.empty()) {
+      error = "IR stack underflow on mutex operation";
+      return VmKernelStepOutcome::Fault;
+    }
+    uint64_t address = stack.back();
+    stack.pop_back();
+    uint64_t *slot = nullptr;
+    std::vector<uint64_t> *addressLocals = nullptr;
+    localizeVmAddress(frames, host.slotBytes(), address, addressLocals);
+    if (!host.resolveIndirectAddress(address, *addressLocals, slot, error)) {
+      return VmKernelStepOutcome::Fault;
+    }
+    if (inst.op == IrOpcode::MutexLock) {
+      if (*slot != 0) {
+        error = "mutex locked again by the task that holds it";
+        return VmKernelStepOutcome::Fault;
+      }
+      *slot = 1;
+    } else {
+      if (*slot != 1) {
+        error = "mutex unlocked by a task that does not hold it";
+        return VmKernelStepOutcome::Fault;
+      }
+      *slot = 0;
+    }
+    ip += 1;
+    return VmKernelStepOutcome::Continue;
+  }
   case IrOpcode::LoadStringLength: {
     if (stack.empty()) {
       error = "IR stack underflow on string index";
@@ -618,6 +651,12 @@ public:
           }
           continue;
         }
+        if (op == IrOpcode::MutexLock || op == IrOpcode::MutexUnlock) {
+          if (!lockStep(op == IrOpcode::MutexLock, error)) {
+            return false;
+          }
+          continue;
+        }
       }
       // An atomic operation is a switch point of a seeded schedule: any runnable task may run after it.
       const bool atomicStep = seeded_ && top.ip < top.function->instructions.size() &&
@@ -662,6 +701,8 @@ private:
     uint16_t generation = 0;
     size_t spawner = NoTask;
     size_t waiter = NoTask;
+    // The lock slot this task waits for (it is Waiting then), or 0.
+    uint64_t lockAddress = 0;
     uint64_t result = 0;
   };
 
@@ -696,6 +737,7 @@ private:
     task.number = nextNumber_++;
     task.spawner = spawner;
     task.waiter = NoTask;
+    task.lockAddress = 0;
     task.result = 0;
     addRunnable(slot);
     return slot;
@@ -807,6 +849,59 @@ private:
     task.state = TaskState::Waiting;
     removeRunnable(current_);
     return pickAfterStop(NoTask, error);
+  }
+
+  // MutexLock and MutexUnlock (docs/spec/vm-design.md, Mutexes). The lock slot holds 0 while free and the holder's
+  // task number plus one otherwise. A task that finds the lock held waits, which counts for deadlock detection, and
+  // runs its MutexLock again once the holder unlocked. Both are switch points of a seeded schedule.
+  bool lockStep(bool lock, std::string &error) {
+    Task &task = tasks_[current_];
+    if (task.stack.empty()) {
+      error = "IR stack underflow on mutex operation";
+      return false;
+    }
+    const uint64_t lockAddress = task.stack.back();
+    uint64_t address = lockAddress;
+    uint64_t *slot = nullptr;
+    std::vector<uint64_t> *addressLocals = nullptr;
+    localizeVmAddress(task.frames, host_.slotBytes(), address, addressLocals);
+    if (!host_.resolveIndirectAddress(address, *addressLocals, slot, error)) {
+      return false;
+    }
+    const uint64_t holder = task.number + 1;
+    if (lock) {
+      if (*slot == holder) {
+        error = "mutex locked again by the task that holds it";
+        return false;
+      }
+      if (*slot != 0) {
+        task.lockAddress = lockAddress;
+        task.state = TaskState::Waiting;
+        removeRunnable(current_);
+        return pickAfterStop(NoTask, error);
+      }
+      *slot = holder;
+    } else {
+      if (*slot != holder) {
+        error = "mutex unlocked by a task that does not hold it";
+        return false;
+      }
+      *slot = 0;
+      for (size_t waiting = 0; waiting < tasks_.size(); ++waiting) {
+        Task &other = tasks_[waiting];
+        if (other.state == TaskState::Waiting && other.lockAddress == lockAddress) {
+          other.lockAddress = 0;
+          other.state = TaskState::Runnable;
+          addRunnable(waiting);
+        }
+      }
+    }
+    task.stack.pop_back();
+    task.frames.back().ip += 1;
+    if (seeded_) {
+      pickSeeded();
+    }
+    return true;
   }
 
   bool finishCurrent(uint64_t value, std::string &error) {

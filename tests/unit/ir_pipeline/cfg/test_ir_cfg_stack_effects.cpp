@@ -231,6 +231,12 @@ std::vector<EffectCase> buildCases() {
   add(IrOpcode::AtomicExchange, 64, {{IrOpcode::AddressOfLocal, 1}, pushI32(5)});
   add(IrOpcode::AtomicCompareExchange, 32, {{IrOpcode::AddressOfLocal, 0}, pushI32(0), pushI32(5)});
 
+  // Mutexes, on a local's slot: local 1 holds 0, a free lock. The unlock frees a lock its setup took.
+  add(IrOpcode::MutexLock, 0, {{IrOpcode::AddressOfLocal, 1}});
+  add(IrOpcode::MutexUnlock,
+      0,
+      {{IrOpcode::AddressOfLocal, 1}, {IrOpcode::MutexLock, 0}, {IrOpcode::AddressOfLocal, 1}});
+
   // Printing. imm 0 means stdout without a newline.
   add(IrOpcode::PrintI32, 0, {pushI32(5)});
   add(IrOpcode::PrintI64, 0, {pushI32(5)});
