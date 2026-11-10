@@ -436,6 +436,58 @@ bool tryExpandTupleDestructuringStatement(const Expr &stmt,
   return true;
 }
 
+// `[leftResult rightResult] wait(left, right)` binds the results of several tasks: it splits into a hidden binding of
+// the result tuple, `__wait_resultsN{wait(left, right)}`, and the destructuring `[leftResult rightResult]
+// __wait_resultsN`, which then expand as any tuple destructuring does (docs/MultithreadingPrototype.md, Multi-Wait).
+bool trySplitWaitDestructuringStatement(const Expr &stmt,
+                                        const std::string &namespacePrefix,
+                                        const Context &ctx,
+                                        size_t ordinal,
+                                        std::vector<Expr> &splitOut) {
+  splitOut.clear();
+  if (stmt.kind != Expr::Kind::Call || stmt.isBinding || stmt.isMethodCall || stmt.isFieldAccess ||
+      stmt.transforms.empty() || stmt.args.size() < 2 || stmt.hasBodyArguments ||
+      !stmt.bodyArguments.empty() || !stmt.templateArgs.empty() ||
+      !semantics::isSimpleCallName(stmt, "wait")) {
+    return false;
+  }
+  for (const Transform &transform : stmt.transforms) {
+    if (isKnownTupleDestructuringBracketEntry(transform, namespacePrefix, ctx)) {
+      return false;
+    }
+  }
+  const std::string tupleName = "__wait_results" + std::to_string(ordinal);
+
+  Expr waitCall = stmt;
+  waitCall.transforms.clear();
+  Expr binding;
+  binding.kind = Expr::Kind::Call;
+  binding.isBinding = true;
+  binding.name = tupleName;
+  binding.sourceName = tupleName;
+  binding.namespacePrefix = stmt.namespacePrefix;
+  // At the first handle's position: local-auto type facts are keyed by position, and the destructured names take the
+  // statement's.
+  binding.sourceLine = stmt.args.front().sourceLine;
+  binding.sourceColumn = stmt.args.front().sourceColumn;
+  binding.args.push_back(std::move(waitCall));
+  binding.argNames.push_back(std::nullopt);
+
+  Expr destructuring;
+  destructuring.kind = Expr::Kind::Call;
+  destructuring.isBinding = true;
+  destructuring.name = tupleName;
+  destructuring.sourceName = tupleName;
+  destructuring.namespacePrefix = stmt.namespacePrefix;
+  destructuring.sourceLine = stmt.sourceLine;
+  destructuring.sourceColumn = stmt.sourceColumn;
+  destructuring.transforms = stmt.transforms;
+
+  splitOut.push_back(std::move(binding));
+  splitOut.push_back(std::move(destructuring));
+  return true;
+}
+
 bool hasTypePackExpansionTransform(const Expr &expr) {
   for (const Transform &transform : expr.transforms) {
     if (transform.isPackExpansion) {
@@ -761,8 +813,21 @@ bool rewriteDefinition(Definition &def,
       locals.emplace("this", std::move(thisBinding));
     }
   }
+  size_t waitDestructuringOrdinal = 0;
   for (size_t stmtIndex = 0; stmtIndex < def.statements.size(); ++stmtIndex) {
     auto &stmt = def.statements[stmtIndex];
+    std::vector<Expr> waitDestructuringSplit;
+    if (!isStructDefinition(def) &&
+        trySplitWaitDestructuringStatement(
+            stmt, def.namespacePrefix, ctx, waitDestructuringOrdinal, waitDestructuringSplit)) {
+      ++waitDestructuringOrdinal;
+      def.statements.erase(def.statements.begin() + static_cast<std::ptrdiff_t>(stmtIndex));
+      def.statements.insert(def.statements.begin() + static_cast<std::ptrdiff_t>(stmtIndex),
+                            std::make_move_iterator(waitDestructuringSplit.begin()),
+                            std::make_move_iterator(waitDestructuringSplit.end()));
+      --stmtIndex;
+      continue;
+    }
     std::vector<Expr> tupleDestructuringExpansion;
     if (!isStructDefinition(def) &&
         !tryExpandTupleDestructuringStatement(stmt,

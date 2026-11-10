@@ -493,4 +493,45 @@ main() {
   CHECK(runCommand(runCmd) == 24);
 }
 
+TEST_CASE("runs vm with destructured multi task wait") {
+  const std::string source = R"(
+import /std/tuple/*
+
+[return<i32>]
+compute_left() {
+  return(7i32)
+}
+
+[return<i32>]
+compute_middle() {
+  return(9i32)
+}
+
+[return<i64>]
+compute_right() {
+  return(11i64)
+}
+
+[effects(task, io_out), return<int>]
+main() {
+  [Task<i32>] left{[spawn] compute_left()};
+  [Task<i32>] middle{[spawn] compute_middle()};
+  [leftResult middleResult] wait(left, middle)
+  print_line(leftResult)
+  print_line(middleResult)
+  [Task<i32>] first{[spawn] compute_left()};
+  [Task<i64>] second{[spawn] compute_right()};
+  [firstResult secondResult] wait(first, second)
+  print_line(firstResult)
+  print_line(secondResult)
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_destructured_multi_task_wait.prime", source);
+  const std::string outPath = testScratchPath("vm_destructured_multi_task_wait.out").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + quoteShellArg(outPath);
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "7\n9\n7\n11\n");
+}
+
 TEST_SUITE_END();

@@ -168,8 +168,9 @@ same `get<I, Ts...>` helper path. In this context, destructuring follows the
 bracket-list name binding rule in `docs/PrimeStruct.md`: known bracket entries
 keep their existing meaning, while fresh identifiers introduce names because
 the grammar expects a binding pattern. The current implementation keeps the
-scope narrow: the operand must be an existing named tuple value, and borrowed
-tuple destructuring remains a follow-up.
+scope narrow: the operand must be an existing named tuple value or a multi-task
+`wait(left, right, ...)` (`docs/MultithreadingPrototype.md`, Multi-Wait), and
+borrowed tuple destructuring remains a follow-up.
 
 ## Construction
 

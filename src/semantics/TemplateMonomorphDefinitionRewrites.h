@@ -78,6 +78,12 @@ bool tryExpandTupleDestructuringStatement(const Expr &stmt,
                                           std::string &error,
                                           std::vector<Expr> &expandedOut);
 
+bool trySplitWaitDestructuringStatement(const Expr &stmt,
+                                        const std::string &namespacePrefix,
+                                        const Context &ctx,
+                                        size_t ordinal,
+                                        std::vector<Expr> &splitOut);
+
 bool hasTypePackExpansionTransform(const Expr &expr);
 
 std::string generatedPackFieldName(const std::string &sourceName,

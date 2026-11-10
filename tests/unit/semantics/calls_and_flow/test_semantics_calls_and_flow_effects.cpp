@@ -303,6 +303,66 @@ main() {
   CHECK(error.find("task handle already waited: left") != std::string::npos);
 }
 
+namespace {
+
+std::string destructuredWaitSource(const std::string &rightType,
+                                   const std::string &rightValue,
+                                   const std::string &tail) {
+  return R"(
+import /std/tuple/*
+
+[return<i32>]
+compute_left() {
+  return(7i32)
+}
+
+[return<)" + rightType + R"(>]
+compute_right() {
+  return()" + rightValue + R"()
+}
+
+[effects(task, io_out), return<int>]
+main() {
+  [Task<i32>] left{[spawn] compute_left()};
+  [Task<)" + rightType + R"(>] right{[spawn] compute_right()};
+)" + tail + R"(
+}
+)";
+}
+
+} // namespace
+
+TEST_CASE("destructured multi wait binds each task result") {
+  const std::string tail = R"(  [leftResult rightResult] wait(left, right)
+  print_line(leftResult)
+  print_line(rightResult)
+  return(0i32))";
+  std::string error;
+  CHECK(validateProgram(destructuredWaitSource("i32", "11i32", tail), "/main", error));
+  CHECK(error.empty());
+  error.clear();
+  CHECK(validateProgram(destructuredWaitSource("i64", "11i64", tail), "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("destructured multi wait rejects an arity mismatch") {
+  const std::string tail = R"(  [leftResult rightResult extra] wait(left, right)
+  return(0i32))";
+  std::string error;
+  CHECK_FALSE(validateProgram(destructuredWaitSource("i32", "11i32", tail), "/main", error));
+  CHECK(error.find("tuple destructuring arity mismatch: pattern has 3 names but tuple has 2 elements") !=
+        std::string::npos);
+}
+
+TEST_CASE("destructured multi wait consumes each task handle") {
+  const std::string tail = R"(  [leftResult rightResult] wait(left, right)
+  print_line(rightResult)
+  return(wait(left)))";
+  std::string error;
+  CHECK_FALSE(validateProgram(destructuredWaitSource("i32", "11i32", tail), "/main", error));
+  CHECK(error.find("task handle already waited: left") != std::string::npos);
+}
+
 TEST_CASE("task handles cannot escape through return") {
   const std::string source = R"(
 [effects(task), return<i32>]

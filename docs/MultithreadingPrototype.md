@@ -433,9 +433,29 @@ main() {
 }
 ```
 
-Destructuring the result, `[leftResult rightResult] wait(left, right)`, is
-rejected today with `task handles cannot escape their spawning function: left`
-(checked 2026-11-09); TODO-5807 makes it work.
+The results can also be bound by name in task order, which waits both handles
+like any other consuming `wait`:
+
+```prime
+import /std/tuple/*
+
+[effects(task, io_out), return<int>]
+main() {
+  [Task<i32>] left{[spawn] computeLeft()};
+  [Task<i64>] right{[spawn] computeRight()};
+
+  [leftResult rightResult] wait(left, right)
+
+  print_line(leftResult)
+  print_line(rightResult)
+  return(0i32)
+}
+```
+
+The statement is sugar for a hidden tuple binding of `wait(left, right)`
+followed by tuple destructuring of it, so a pattern with the wrong number of
+names is `tuple destructuring arity mismatch: pattern has 3 names but tuple has
+2 elements`, and a later `wait(left)` is `task handle already waited: left`.
 
 Semantically:
 
