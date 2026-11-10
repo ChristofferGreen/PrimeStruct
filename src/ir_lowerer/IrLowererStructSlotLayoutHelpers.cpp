@@ -202,6 +202,28 @@ bool resolveNestedStructLayout(
   return true;
 }
 
+// Records the element type of a builtin `vector<T>` field: a scalar, or a struct by its path. Other
+// elements (a nested collection) stay unknown, and a copy keeps sharing their buffer.
+void resolveBuiltinVectorFieldElement(const std::string &elementTypeText,
+                                      const std::string &namespacePrefix,
+                                      const ResolveStructTypeNameFn &resolveStructTypeName,
+                                      StructSlotFieldInfo &info) {
+  const std::string elementText = trimTemplateTypeText(elementTypeText);
+  if (valueKindFromTypeName(elementText) != LocalInfo::ValueKind::Unknown) {
+    std::string base;
+    std::string arg;
+    if (!splitTemplateTypeName(elementText, base, arg)) {
+      info.builtinVectorElementKnown = true;
+    }
+    return;
+  }
+  std::string elementStruct;
+  if (resolveStructTypeName(elementText, namespacePrefix, elementStruct)) {
+    info.builtinVectorElementKnown = true;
+    info.builtinVectorElementStructPath = elementStruct;
+  }
+}
+
 } // namespace
 
 bool resolveStructSlotFieldByName(const std::vector<StructSlotFieldInfo> &fields,
@@ -368,6 +390,8 @@ bool resolveStructSlotLayoutFromDefinitionFields(
         info.valueKind = valueKindFromTypeName(binding.typeTemplateArg);
         info.structPath = normalizeVectorStructPath(binding.typeName);
         info.slotCount = 5;
+        resolveBuiltinVectorFieldElement(
+            binding.typeTemplateArg, namespacePrefix, resolveStructTypeName, info);
       } else if (normalizeCollectionBindingTypeName(binding.typeName) == "soa") {
         info.structPath = resolveSoaVectorFieldStructPath(binding.typeName, binding.typeTemplateArg);
         info.slotCount = 5;
@@ -411,6 +435,8 @@ bool resolveStructSlotLayoutFromDefinitionFields(
         info.valueKind = valueKindFromTypeName(inlineTemplateArg);
         info.structPath = normalizeVectorStructPath(inlineTemplateBase);
         info.slotCount = 5;
+        resolveBuiltinVectorFieldElement(
+            inlineTemplateArg, namespacePrefix, resolveStructTypeName, info);
         layout.fields.push_back(info);
         offset += info.slotCount;
         continue;

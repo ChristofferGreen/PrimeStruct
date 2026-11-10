@@ -37,8 +37,9 @@ bool emitInlineStructDefinitionArguments(
     std::string &error,
     std::optional<int32_t> destBaseLocal = std::nullopt,
     // Runs the `Copy` helpers for a field initialized from an
-    // existing place: (destPtrLocal, srcPtrLocal, structPath).
-    const std::function<bool(int32_t, int32_t, const std::string &)> &emitPlaceCopyHelpers = {},
+    // existing place: (destPtrLocal, srcPtrLocal, field).
+    const std::function<bool(int32_t, int32_t, const StructSlotFieldInfo &)> &emitPlaceCopyHelpers =
+        {},
     // Whether a field's argument is a temporary the field takes over rather than a place it
     // copies; shouldDisarmStructCopySourceExpr when unset.
     const std::function<bool(const Expr &, const LocalMap &)> &isTemporaryCopySource = {});

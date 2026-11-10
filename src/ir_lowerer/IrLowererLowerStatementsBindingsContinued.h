@@ -232,12 +232,12 @@
                   [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
                   error,
                   baseLocal,
-                  [&](int32_t destPtrLocal, int32_t srcPtrLocal, const std::string &structPath) {
+                  [&](int32_t destPtrLocal, int32_t srcPtrLocal, const StructSlotFieldInfo &field) {
                     bool ranCopyHelper = false;
-                    return ir_lowerer::emitStructCopyHelpersFromPtrs(
+                    return ir_lowerer::emitStructFieldCopyHelpersFromPtrs(
                         destPtrLocal,
                         srcPtrLocal,
-                        structPath,
+                        field,
                         [&](const std::string &path) -> const Definition * {
                           auto copyIt = defMap.find(path + "/Copy");
                           return copyIt == defMap.end() ? nullptr : copyIt->second;
@@ -246,9 +246,7 @@
                           return resolveStructSlotLayout(path, layoutOut);
                         },
                         [&]() { return allocTempLocal(); },
-                        [&](IrOpcode op, uint64_t imm) {
-                          function.instructions.push_back({op, imm});
-                        },
+                        function.instructions,
                         localsIn,
                         emitInlineDefinitionCall,
                         ranCopyHelper,
@@ -407,7 +405,7 @@
                     return resolveStructSlotLayout(path, layoutOut);
                   },
                   [&]() { return allocTempLocal(); },
-                  [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+                  function.instructions,
                   localsIn,
                   emitInlineDefinitionCall,
                   ranCopyHelper,
@@ -498,29 +496,87 @@
       }
       info.index = nextLocal++;
       function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(info.index)});
-      // A builtin vector local that owns its record destroys its elements and frees its buffer
-      // at scope end, like a stdlib Vector local (docs/spec/value-lifecycle.md).
-      if (initializerMakesFreshBuiltinVector(info, init)) {
-        std::string elementStructPath;
+      // The element struct of a `vector<T>` binding, when `T` is a struct.
+      std::string vectorElementStructPath;
+      bool vectorElementTypeFound = false;
+      if (info.kind == LocalInfo::Kind::Vector && !info.isSoaVector) {
         for (const auto &transform : stmt.transforms) {
           if (transform.templateArgs.size() == 1 &&
               normalizeCollectionBindingTypeName(transform.name) == "vector") {
-            std::string resolvedPath;
-            if (resolveStructTypeName(trimTemplateTypeText(transform.templateArgs.front()),
-                                      stmt.namespacePrefix,
-                                      resolvedPath) &&
-                ir_lowerer::structNeedsDestroyHelpers(
-                    resolvedPath,
-                    [&](const std::string &path) {
-                      return ir_lowerer::findStackDestroyHelper(defMap, path);
-                    },
-                    [&](const std::string &path, StructSlotLayoutInfo &layoutOut) {
-                      return resolveStructSlotLayout(path, layoutOut);
-                    })) {
-              elementStructPath = std::move(resolvedPath);
+            vectorElementTypeFound = true;
+            const std::string elementText = trimTemplateTypeText(transform.templateArgs.front());
+            if (!resolveStructTypeName(
+                    elementText, stmt.namespacePrefix, vectorElementStructPath)) {
+              vectorElementStructPath.clear();
+              std::string base;
+              std::string arg;
+              if (valueKindFromTypeName(elementText) == LocalInfo::ValueKind::Unknown ||
+                  splitTemplateTypeName(elementText, base, arg)) {
+                vectorElementTypeFound = false; // a nested collection: no element copy
+              }
             }
             break;
           }
+        }
+      }
+      // A mutable `vector<T>` binding initialized from another vector local owns a copy of its
+      // elements (docs/spec/value-lifecycle.md, Copies); a read-only one stays a view of it.
+      bool copiedNamedVector = false;
+      if (vectorElementTypeFound && info.isMutable && !fileScopeStack.empty() &&
+          init.kind == Expr::Kind::Name) {
+        const auto sourceIt = localsIn.find(init.name);
+        copiedNamedVector = sourceIt != localsIn.end() &&
+                            sourceIt->second.kind == LocalInfo::Kind::Vector &&
+                            !sourceIt->second.isSoaVector;
+      }
+      if (copiedNamedVector) {
+        constexpr int32_t VectorRecordSlots = 5;
+        const int32_t recordBaseLocal = nextLocal;
+        nextLocal += VectorRecordSlots;
+        if (!emitStructCopySlots(recordBaseLocal, info.index, VectorRecordSlots)) {
+          return false;
+        }
+        const int32_t recordPtrLocal = allocTempLocal();
+        function.instructions.push_back(
+            {IrOpcode::AddressOfLocal, static_cast<uint64_t>(recordBaseLocal)});
+        function.instructions.push_back(
+            {IrOpcode::StoreLocal, static_cast<uint64_t>(recordPtrLocal)});
+        if (!ir_lowerer::emitBuiltinVectorCopyFromPtrs(
+                recordPtrLocal,
+                info.index,
+                vectorElementStructPath,
+                [&](const std::string &path) -> const Definition * {
+                  auto copyIt = defMap.find(path + "/Copy");
+                  return copyIt == defMap.end() ? nullptr : copyIt->second;
+                },
+                [&](const std::string &path, StructSlotLayoutInfo &layoutOut) {
+                  return resolveStructSlotLayout(path, layoutOut);
+                },
+                [&]() { return allocTempLocal(); },
+                function.instructions,
+                localsIn,
+                emitInlineDefinitionCall,
+                error)) {
+          return false;
+        }
+        function.instructions.push_back(
+            {IrOpcode::LoadLocal, static_cast<uint64_t>(recordPtrLocal)});
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(info.index)});
+      }
+      // A builtin vector local that owns its record destroys its elements and frees its buffer
+      // at scope end, like a stdlib Vector local (docs/spec/value-lifecycle.md).
+      if (copiedNamedVector || initializerMakesFreshBuiltinVector(info, init)) {
+        std::string elementStructPath;
+        if (!vectorElementStructPath.empty() &&
+            ir_lowerer::structNeedsDestroyHelpers(
+                vectorElementStructPath,
+                [&](const std::string &path) {
+                  return ir_lowerer::findStackDestroyHelper(defMap, path);
+                },
+                [&](const std::string &path, StructSlotLayoutInfo &layoutOut) {
+                  return resolveStructSlotLayout(path, layoutOut);
+                })) {
+          elementStructPath = vectorElementStructPath;
         }
         info.dropFlagLocal = allocTempLocal();
         function.instructions.push_back({IrOpcode::PushI32, 1});
@@ -911,7 +967,7 @@
                     return resolveStructSlotLayout(path, layoutOut);
                   },
                   [&]() { return allocTempLocal(); },
-                  [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+                  function.instructions,
                   *emittedReturnLocals,
                   emitInlineDefinitionCall,
                   ranCopyHelper,

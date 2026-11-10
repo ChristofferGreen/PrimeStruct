@@ -721,6 +721,120 @@ main() {
                     213);
 }
 
+// A builtin `vector<T>` copied from a place gets a buffer of its own (TODO-5681): before, the copy shared the
+// source's buffer, so a push that grew one left the other with a freed address.
+TEST_CASE("a struct field built from a named vector local owns its elements") {
+  runClosureProgram("struct_vector_field_from_named_local", R"(
+import /std/collections/*
+
+[struct]
+KeepV {
+  [vector<i32> mut] seen
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [vector<i32> mut] start{vector<i32>(5i32)}
+  [KeepV mut] k{KeepV{[seen] start}}
+  k.seen.push(1i32)
+  start.push(2i32)
+  start.push(3i32)
+  [KeepV mut] copy{k}
+  copy.seen.push(4i32)
+  k.seen.push(5i32)
+  k.seen.push(6i32)
+  [i32] values{start[2i32] + k.seen[3i32] + copy.seen[2i32]}
+  return(start.count() * 50i32 + k.seen.count() * 10i32 + copy.seen.count() + values)
+}
+)",
+                    206);
+}
+
+TEST_CASE("a mutable vector local copy owns its elements and the original stays usable") {
+  runClosureProgram("vector_local_copy_binding", R"(
+import /std/collections/*
+
+[return<int> effects(heap_alloc)]
+main() {
+  [vector<i32> mut] a{vector<i32>(5i32)}
+  [vector<i32> mut] b{a}
+  b.push(2i32)
+  b.push(3i32)
+  a.push(7i32)
+  [vector<i32>] view{a}
+  [vector<i32> mut] empty{vector<i32>()}
+  [vector<i32> mut] fromEmpty{empty}
+  fromEmpty.push(1i32)
+  return(a.count() * 100i32 + b.count() * 10i32 + a[1i32] + b[2i32] + view.count() + fromEmpty.count() * 0i32 +
+         empty.count())
+}
+)",
+                    242);
+}
+
+TEST_CASE("a [mut values] vector capture pushes to the closure's own copy") {
+  runClosureProgram("closure_mut_vector_capture_push", R"(
+import /std/collections/*
+
+[return<int> effects(heap_alloc)]
+main() {
+  [vector<i64> mut] values{vector<i64>(7i64)}
+  [Function<i32, i64> mut] boxed{Function<i32, i64>{[mut values]([i64] x) {
+    values.push(x)
+    return(values.count())
+  }}}
+  [mut] direct{[mut values]([i64] x) {
+    values.push(x)
+    values.push(x)
+    return(values.count())
+  }}
+  reader{[values]() { return(values.count()) }}
+  boxed(1i64)
+  [i32] b{boxed(2i64)}
+  [i32] d{direct(3i64)}
+  values.push(9i64)
+  [i32] r{reader()}
+  return(b * 50i32 + d * 10i32 + r + values.count())
+}
+)",
+                    183);
+}
+
+TEST_CASE("a vector of String structs copies each element into a field, a struct copy and a local") {
+  runClosureProgram("struct_vector_of_strings_copies", R"(
+import /std/collections/*
+import /std/text/*
+
+[struct]
+Named {
+  [i32] code
+  [String] name
+}
+
+[struct]
+Table {
+  [vector<Named> mut] rows
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [vector<Named> mut] start{vector<Named>()}
+  start.push(Named{[code] 1i32, [name] stringFrom("ab")})
+  [Table mut] t{Table{[rows] start}}
+  t.rows.push(Named{[code] 2i32, [name] stringFrom("cde")})
+  [Table mut] u{t}
+  u.rows.push(Named{[code] 3i32, [name] stringFrom("f")})
+  start.push(Named{[code] 4i32, [name] stringFrom("ghij")})
+  [vector<Named> mut] other{start}
+  other.push(Named{[code] 5i32, [name] stringFrom("k")})
+  [i32] lengths{start[1i32].name.count() + t.rows[1i32].name.count() + u.rows[2i32].name.count() +
+                other[2i32].name.count() + u.rows[0i32].name.count()}
+  return(start.count() * 64i32 + t.rows.count() * 16i32 + u.rows.count() * 4i32 + other.count() + lengths)
+}
+)",
+                    186);
+}
+
 // Routers of `Function` handlers, `Result.map` lambdas and imported holders. (a suite and CTest entry of its own, so each entry stays short under a loaded gate).
 TEST_SUITE_END();
 TEST_SUITE_BEGIN("primestruct.program_matrix.closures_routers");

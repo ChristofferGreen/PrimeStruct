@@ -193,7 +193,7 @@ bool emitInlineStructDefinitionArguments(
     const EmitInstructionFn &emitInstruction,
     std::string &error,
     std::optional<int32_t> destBaseLocal,
-    const std::function<bool(int32_t, int32_t, const std::string &)> &emitPlaceCopyHelpers,
+    const std::function<bool(int32_t, int32_t, const StructSlotFieldInfo &)> &emitPlaceCopyHelpers,
     const std::function<bool(const Expr &, const LocalMap &)> &isTemporaryCopySource) {
   StructSlotLayoutInfo layout;
   if (!resolveStructSlotLayout(calleePath, layout)) {
@@ -379,7 +379,7 @@ bool emitInlineStructDefinitionArguments(
       emitInstruction(IrOpcode::AddressOfLocal,
                       static_cast<uint64_t>(baseLocal + field.slotOffset));
       emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal));
-      if (!emitPlaceCopyHelpers(destPtrLocal, srcPtrLocal, field.structPath)) {
+      if (!emitPlaceCopyHelpers(destPtrLocal, srcPtrLocal, field)) {
         return false;
       }
     }

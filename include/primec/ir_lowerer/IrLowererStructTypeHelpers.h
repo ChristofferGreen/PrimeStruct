@@ -58,6 +58,10 @@ struct StructSlotFieldInfo {
   int32_t slotCount = 0;
   LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
   std::string structPath;
+  // A builtin `vector<T>` field whose element type is known: a scalar `T` (empty path) or the
+  // struct path of `T`. A copy from a place gives the field its own element buffer.
+  bool builtinVectorElementKnown = false;
+  std::string builtinVectorElementStructPath{};
 };
 
 struct StructLayoutFieldInfo {

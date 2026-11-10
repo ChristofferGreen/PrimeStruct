@@ -144,11 +144,19 @@ bool emitMoveHelperFromPtrs(
 
 namespace {
 
+bool isCopyableBuiltinVectorField(const StructSlotFieldInfo &field) {
+  return field.builtinVectorElementKnown && field.slotCount == 5 &&
+         field.structPath == vectorBuiltinStructNormalizedPath();
+}
+
+// `withBuiltinVectors` also counts builtin `vector<T>` fields, which a copy gives their own
+// buffer; a destroy leaves them alone.
 bool structNeedsCopyHelpers(
     const std::string &structPath,
     const std::function<const Definition *(const std::string &)> &findCopyHelper,
     const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
-    int depth) {
+    int depth,
+    bool withBuiltinVectors) {
   if (structPath.empty() || depth > 16) {
     return false;
   }
@@ -160,8 +168,14 @@ bool structNeedsCopyHelpers(
     return false;
   }
   for (const StructSlotFieldInfo &field : layout.fields) {
-    if (structNeedsCopyHelpers(
-            field.structPath, findCopyHelper, resolveStructSlotLayout, depth + 1)) {
+    if (withBuiltinVectors && isCopyableBuiltinVectorField(field)) {
+      return true;
+    }
+    if (structNeedsCopyHelpers(field.structPath,
+                               findCopyHelper,
+                               resolveStructSlotLayout,
+                               depth + 1,
+                               withBuiltinVectors)) {
       return true;
     }
   }
@@ -175,7 +189,164 @@ bool emitStructCopyHelpersAtDepth(
     const std::function<const Definition *(const std::string &)> &findCopyHelper,
     const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
     const Int32ProviderFn &allocTempLocal,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    std::vector<IrInstruction> &instructions,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)>
+        &emitInlineDefinitionCall,
+    bool &ranHelper,
+    std::string &error,
+    int depth);
+
+// The record at `destPtrLocal` (count, capacity, data and ownsData in slots 1-4) is a slot copy of
+// the one at `srcPtrLocal`, so both name one buffer. Give `dest` a buffer of its own that holds a
+// copy of each element (docs/spec/value-lifecycle.md, Copies).
+bool emitBuiltinVectorCopyAtDepth(
+    int32_t destPtrLocal,
+    int32_t srcPtrLocal,
+    const std::string &elementStructPath,
+    const std::function<const Definition *(const std::string &)> &findCopyHelper,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
+    const Int32ProviderFn &allocTempLocal,
+    std::vector<IrInstruction> &instructions,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)>
+        &emitInlineDefinitionCall,
+    bool &ranHelper,
+    std::string &error,
+    int depth) {
+  int32_t elementSlots = 1;
+  bool elementNeedsCopy = false;
+  if (!elementStructPath.empty()) {
+    StructSlotLayoutInfo elementLayout;
+    if (!resolveStructSlotLayout(elementStructPath, elementLayout) ||
+        elementLayout.totalSlots <= 0) {
+      error = "native backend cannot resolve vector element layout: " + elementStructPath;
+      return false;
+    }
+    elementSlots = elementLayout.totalSlots;
+    elementNeedsCopy = structNeedsCopyHelpers(
+        elementStructPath, findCopyHelper, resolveStructSlotLayout, depth + 1, true);
+  }
+  auto emit = [&](IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); };
+  auto pushFieldAddress = [&](int32_t recordPtrLocal, uint64_t slot) {
+    emit(IrOpcode::LoadLocal, static_cast<uint64_t>(recordPtrLocal));
+    emit(IrOpcode::PushI64, slot * IrSlotBytes);
+    emit(IrOpcode::AddI64, 0);
+  };
+  auto storeDestField = [&](uint64_t slot, int32_t valueLocal) {
+    pushFieldAddress(destPtrLocal, slot);
+    emit(IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal));
+    emit(IrOpcode::StoreIndirect, 0);
+    emit(IrOpcode::Pop, 0);
+  };
+  // The address of slot `indexLocal * stride` in the buffer at `dataLocal`.
+  auto pushSlotAddress = [&](int32_t dataLocal, int32_t indexLocal, int32_t strideSlots) {
+    emit(IrOpcode::LoadLocal, static_cast<uint64_t>(dataLocal));
+    emit(IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal));
+    emit(IrOpcode::PushI32, static_cast<uint64_t>(strideSlots * IrSlotBytesI32));
+    emit(IrOpcode::MulI32, 0);
+    emit(IrOpcode::AddI64, 0);
+  };
+  // for (index = 0; index < limit; ++index) body()
+  auto emitCountedLoop =
+      [&](int32_t indexLocal, int32_t limitLocal, const std::function<bool()> &body) {
+        emit(IrOpcode::PushI32, 0);
+        emit(IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal));
+        const size_t loopStart = instructions.size();
+        emit(IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal));
+        emit(IrOpcode::LoadLocal, static_cast<uint64_t>(limitLocal));
+        emit(IrOpcode::CmpLtI32, 0);
+        const size_t loopExit = instructions.size();
+        emit(IrOpcode::JumpIfZero, 0);
+        if (!body()) {
+          return false;
+        }
+        emit(IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal));
+        emit(IrOpcode::PushI32, 1);
+        emit(IrOpcode::AddI32, 0);
+        emit(IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal));
+        emit(IrOpcode::Jump, static_cast<uint64_t>(loopStart));
+        instructions[loopExit].imm = static_cast<uint64_t>(instructions.size());
+        return true;
+      };
+  const int32_t countLocal = allocTempLocal();
+  const int32_t capacityLocal = allocTempLocal();
+  const int32_t slotTotalLocal = allocTempLocal();
+  const int32_t srcDataLocal = allocTempLocal();
+  const int32_t destDataLocal = allocTempLocal();
+  const int32_t indexLocal = allocTempLocal();
+  const int32_t ownsLocal = allocTempLocal();
+  pushFieldAddress(srcPtrLocal, 1);
+  emit(IrOpcode::LoadIndirect, 0);
+  emit(IrOpcode::StoreLocal, static_cast<uint64_t>(countLocal));
+  pushFieldAddress(srcPtrLocal, 3);
+  emit(IrOpcode::LoadIndirect, 0);
+  emit(IrOpcode::StoreLocal, static_cast<uint64_t>(srcDataLocal));
+  // capacity = count, or 1 for an empty vector, so the new buffer is never empty.
+  emit(IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal));
+  emit(IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal));
+  emit(IrOpcode::PushI32, 0);
+  emit(IrOpcode::CmpEqI32, 0);
+  emit(IrOpcode::AddI32, 0);
+  emit(IrOpcode::StoreLocal, static_cast<uint64_t>(capacityLocal));
+  emit(IrOpcode::LoadLocal, static_cast<uint64_t>(capacityLocal));
+  emit(IrOpcode::PushI32, static_cast<uint64_t>(elementSlots));
+  emit(IrOpcode::MulI32, 0);
+  emit(IrOpcode::HeapAlloc, 0);
+  emit(IrOpcode::StoreLocal, static_cast<uint64_t>(destDataLocal));
+  emit(IrOpcode::PushI32, 1);
+  emit(IrOpcode::StoreLocal, static_cast<uint64_t>(ownsLocal));
+  storeDestField(2, capacityLocal);
+  storeDestField(3, destDataLocal);
+  storeDestField(4, ownsLocal);
+  // Copy the element slots, then run each element's copy helpers on its copy.
+  emit(IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal));
+  emit(IrOpcode::PushI32, static_cast<uint64_t>(elementSlots));
+  emit(IrOpcode::MulI32, 0);
+  emit(IrOpcode::StoreLocal, static_cast<uint64_t>(slotTotalLocal));
+  if (!emitCountedLoop(indexLocal, slotTotalLocal, [&]() {
+        pushSlotAddress(destDataLocal, indexLocal, 1);
+        pushSlotAddress(srcDataLocal, indexLocal, 1);
+        emit(IrOpcode::LoadIndirect, 0);
+        emit(IrOpcode::StoreIndirect, 0);
+        emit(IrOpcode::Pop, 0);
+        return true;
+      })) {
+    return false;
+  }
+  if (!elementNeedsCopy) {
+    return true;
+  }
+  const int32_t elementDestPtrLocal = allocTempLocal();
+  const int32_t elementSrcPtrLocal = allocTempLocal();
+  return emitCountedLoop(indexLocal, countLocal, [&]() {
+    pushSlotAddress(destDataLocal, indexLocal, elementSlots);
+    emit(IrOpcode::StoreLocal, static_cast<uint64_t>(elementDestPtrLocal));
+    pushSlotAddress(srcDataLocal, indexLocal, elementSlots);
+    emit(IrOpcode::StoreLocal, static_cast<uint64_t>(elementSrcPtrLocal));
+    return emitStructCopyHelpersAtDepth(elementDestPtrLocal,
+                                        elementSrcPtrLocal,
+                                        elementStructPath,
+                                        findCopyHelper,
+                                        resolveStructSlotLayout,
+                                        allocTempLocal,
+                                        instructions,
+                                        localsIn,
+                                        emitInlineDefinitionCall,
+                                        ranHelper,
+                                        error,
+                                        depth + 1);
+  });
+}
+
+bool emitStructCopyHelpersAtDepth(
+    int32_t destPtrLocal,
+    int32_t srcPtrLocal,
+    const std::string &structPath,
+    const std::function<const Definition *(const std::string &)> &findCopyHelper,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
+    const Int32ProviderFn &allocTempLocal,
+    std::vector<IrInstruction> &instructions,
     const LocalMap &localsIn,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)>
         &emitInlineDefinitionCall,
@@ -191,33 +362,49 @@ bool emitStructCopyHelpersAtDepth(
     layout.fields.clear();
   }
   for (const StructSlotFieldInfo &field : layout.fields) {
-    if (!structNeedsCopyHelpers(
-            field.structPath, findCopyHelper, resolveStructSlotLayout, depth + 1)) {
+    const bool builtinVector = isCopyableBuiltinVectorField(field);
+    if (!builtinVector &&
+        !structNeedsCopyHelpers(
+            field.structPath, findCopyHelper, resolveStructSlotLayout, depth + 1, true)) {
       continue;
     }
     const uint64_t offsetBytes = static_cast<uint64_t>(field.slotOffset) * IrSlotBytes;
     const int32_t fieldDestPtrLocal = allocTempLocal();
     const int32_t fieldSrcPtrLocal = allocTempLocal();
-    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(destPtrLocal));
-    emitInstruction(IrOpcode::PushI64, offsetBytes);
-    emitInstruction(IrOpcode::AddI64, 0);
-    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(fieldDestPtrLocal));
-    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(srcPtrLocal));
-    emitInstruction(IrOpcode::PushI64, offsetBytes);
-    emitInstruction(IrOpcode::AddI64, 0);
-    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(fieldSrcPtrLocal));
-    if (!emitStructCopyHelpersAtDepth(fieldDestPtrLocal,
-                                      fieldSrcPtrLocal,
-                                      field.structPath,
-                                      findCopyHelper,
-                                      resolveStructSlotLayout,
-                                      allocTempLocal,
-                                      emitInstruction,
-                                      localsIn,
-                                      emitInlineDefinitionCall,
-                                      ranHelper,
-                                      error,
-                                      depth + 1)) {
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(destPtrLocal)});
+    instructions.push_back({IrOpcode::PushI64, offsetBytes});
+    instructions.push_back({IrOpcode::AddI64, 0});
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(fieldDestPtrLocal)});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(srcPtrLocal)});
+    instructions.push_back({IrOpcode::PushI64, offsetBytes});
+    instructions.push_back({IrOpcode::AddI64, 0});
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(fieldSrcPtrLocal)});
+    const bool copied = builtinVector
+                            ? emitBuiltinVectorCopyAtDepth(fieldDestPtrLocal,
+                                                           fieldSrcPtrLocal,
+                                                           field.builtinVectorElementStructPath,
+                                                           findCopyHelper,
+                                                           resolveStructSlotLayout,
+                                                           allocTempLocal,
+                                                           instructions,
+                                                           localsIn,
+                                                           emitInlineDefinitionCall,
+                                                           ranHelper,
+                                                           error,
+                                                           depth + 1)
+                            : emitStructCopyHelpersAtDepth(fieldDestPtrLocal,
+                                                           fieldSrcPtrLocal,
+                                                           field.structPath,
+                                                           findCopyHelper,
+                                                           resolveStructSlotLayout,
+                                                           allocTempLocal,
+                                                           instructions,
+                                                           localsIn,
+                                                           emitInlineDefinitionCall,
+                                                           ranHelper,
+                                                           error,
+                                                           depth + 1);
+    if (!copied) {
       return false;
     }
   }
@@ -260,7 +447,7 @@ bool emitStructDestroyHelpersAtDepth(
   }
   for (auto fieldIt = layout.fields.rbegin(); fieldIt != layout.fields.rend(); ++fieldIt) {
     if (!structNeedsCopyHelpers(
-            fieldIt->structPath, findDestroyHelper, resolveStructSlotLayout, depth + 1)) {
+            fieldIt->structPath, findDestroyHelper, resolveStructSlotLayout, depth + 1, false)) {
       continue;
     }
     const int32_t fieldPtrLocal = allocTempLocal();
@@ -324,7 +511,7 @@ bool structNeedsDestroyHelpers(
     const std::function<const Definition *(const std::string &)> &findDestroyHelper,
     const std::function<bool(const std::string &, StructSlotLayoutInfo &)>
         &resolveStructSlotLayout) {
-  return structNeedsCopyHelpers(structPath, findDestroyHelper, resolveStructSlotLayout, 0);
+  return structNeedsCopyHelpers(structPath, findDestroyHelper, resolveStructSlotLayout, 0, false);
 }
 
 bool emitStructDestroyHelpersFromPtr(
@@ -357,7 +544,7 @@ bool emitStructCopyHelpersFromPtrs(
     const std::function<const Definition *(const std::string &)> &findCopyHelper,
     const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
     const Int32ProviderFn &allocTempLocal,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    std::vector<IrInstruction> &instructions,
     const LocalMap &localsIn,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)>
         &emitInlineDefinitionCall,
@@ -370,12 +557,88 @@ bool emitStructCopyHelpersFromPtrs(
                                       findCopyHelper,
                                       resolveStructSlotLayout,
                                       allocTempLocal,
-                                      emitInstruction,
+                                      instructions,
                                       localsIn,
                                       emitInlineDefinitionCall,
                                       ranHelper,
                                       error,
                                       0);
+}
+
+bool emitStructFieldCopyHelpersFromPtrs(
+    int32_t destPtrLocal,
+    int32_t srcPtrLocal,
+    const StructSlotFieldInfo &field,
+    const std::function<const Definition *(const std::string &)> &findCopyHelper,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
+    const Int32ProviderFn &allocTempLocal,
+    std::vector<IrInstruction> &instructions,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)>
+        &emitInlineDefinitionCall,
+    bool &ranHelper,
+    std::string &error) {
+  if (!isCopyableBuiltinVectorField(field)) {
+    return emitStructCopyHelpersFromPtrs(destPtrLocal,
+                                         srcPtrLocal,
+                                         field.structPath,
+                                         findCopyHelper,
+                                         resolveStructSlotLayout,
+                                         allocTempLocal,
+                                         instructions,
+                                         localsIn,
+                                         emitInlineDefinitionCall,
+                                         ranHelper,
+                                         error);
+  }
+  ranHelper = false;
+  return emitBuiltinVectorCopyAtDepth(destPtrLocal,
+                                      srcPtrLocal,
+                                      field.builtinVectorElementStructPath,
+                                      findCopyHelper,
+                                      resolveStructSlotLayout,
+                                      allocTempLocal,
+                                      instructions,
+                                      localsIn,
+                                      emitInlineDefinitionCall,
+                                      ranHelper,
+                                      error,
+                                      0);
+}
+
+bool emitBuiltinVectorCopyFromPtrs(
+    int32_t destPtrLocal,
+    int32_t srcPtrLocal,
+    const std::string &elementStructPath,
+    const std::function<const Definition *(const std::string &)> &findCopyHelper,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
+    const Int32ProviderFn &allocTempLocal,
+    std::vector<IrInstruction> &instructions,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)>
+        &emitInlineDefinitionCall,
+    std::string &error) {
+  bool ranHelper = false;
+  return emitBuiltinVectorCopyAtDepth(destPtrLocal,
+                                      srcPtrLocal,
+                                      elementStructPath,
+                                      findCopyHelper,
+                                      resolveStructSlotLayout,
+                                      allocTempLocal,
+                                      instructions,
+                                      localsIn,
+                                      emitInlineDefinitionCall,
+                                      ranHelper,
+                                      error,
+                                      0);
+}
+
+bool structNeedsCopyHelpersOrVectorCopies(
+    const std::string &structPath,
+    const std::function<const Definition *(const std::string &)> &findCopyHelper,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)>
+        &resolveStructSlotLayout) {
+  return structNeedsCopyHelpers(structPath, findCopyHelper, resolveStructSlotLayout, 0, true);
 }
 
 bool emitStructCopyFromPtrs(std::vector<IrInstruction> &instructions,

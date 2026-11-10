@@ -396,12 +396,12 @@
               [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
               error,
               std::nullopt,
-              [&](int32_t destPtrLocal, int32_t srcPtrLocal, const std::string &structPath) {
+              [&](int32_t destPtrLocal, int32_t srcPtrLocal, const StructSlotFieldInfo &field) {
                 bool ranCopyHelper = false;
-                return ir_lowerer::emitStructCopyHelpersFromPtrs(
+                return ir_lowerer::emitStructFieldCopyHelpersFromPtrs(
                     destPtrLocal,
                     srcPtrLocal,
-                    structPath,
+                    field,
                     [&](const std::string &path) -> const Definition * {
                       auto copyIt = setupStage.defMap.find(path + "/Copy");
                       return copyIt == setupStage.defMap.end() ? nullptr : copyIt->second;
@@ -410,7 +410,7 @@
                       return resolveStructSlotLayout(path, layoutOut);
                     },
                     [&]() { return allocTempLocal(); },
-                    [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+                    function.instructions,
                     callerLocals,
                     stateOut.emitInlineDefinitionCall,
                     ranCopyHelper,
@@ -550,7 +550,7 @@
                     return resolveStructSlotLayout(path, layoutOut);
                   },
                   [&]() { return allocTempLocal(); },
-                  [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+                  function.instructions,
                   callerLocals,
                   stateOut.emitInlineDefinitionCall,
                   ranHelper,

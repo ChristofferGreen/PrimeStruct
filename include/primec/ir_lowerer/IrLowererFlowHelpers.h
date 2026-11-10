@@ -67,6 +67,7 @@ bool emitMoveHelperFromPtrs(
     const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
     std::string &error);
 struct StructSlotLayoutInfo;
+struct StructSlotFieldInfo;
 // The helper that destroys a `structPath` value on the stack (`DestroyStack`, else `Destroy`), or
 // null when there is none or its body is empty (nothing to run).
 const Definition *
@@ -101,7 +102,8 @@ bool emitStructDestroyHelpersFromPtr(
     std::string &error);
 // Finishes copying a struct value whose slots were already copied from `srcPtrLocal` to
 // `destPtrLocal`: runs the type's `Copy` helper when it has one, otherwise the copies of its
-// fields that need one (docs/spec/value-lifecycle.md, Copies). Sets `ranHelper` when any ran.
+// fields that need one (docs/spec/value-lifecycle.md, Copies). A builtin `vector<T>` field with a
+// known element type gets a buffer of its own. Sets `ranHelper` when a `Copy` helper ran.
 bool emitStructCopyHelpersFromPtrs(
     int32_t destPtrLocal,
     int32_t srcPtrLocal,
@@ -109,12 +111,48 @@ bool emitStructCopyHelpersFromPtrs(
     const std::function<const Definition *(const std::string &)> &findCopyHelper,
     const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
     const Int32ProviderFn &allocTempLocal,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    std::vector<IrInstruction> &instructions,
     const LocalMap &localsIn,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)>
         &emitInlineDefinitionCall,
     bool &ranHelper,
     std::string &error);
+// The same for one struct field whose slots were copied: a builtin `vector<T>` field gets a buffer
+// of its own, any other field runs `emitStructCopyHelpersFromPtrs` for its struct type.
+bool emitStructFieldCopyHelpersFromPtrs(
+    int32_t destPtrLocal,
+    int32_t srcPtrLocal,
+    const StructSlotFieldInfo &field,
+    const std::function<const Definition *(const std::string &)> &findCopyHelper,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
+    const Int32ProviderFn &allocTempLocal,
+    std::vector<IrInstruction> &instructions,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)>
+        &emitInlineDefinitionCall,
+    bool &ranHelper,
+    std::string &error);
+// Gives the builtin vector record at `destPtrLocal`, a slot copy of the one at `srcPtrLocal`, a
+// buffer of its own holding a copy of each element (`elementStructPath` is empty for scalars).
+bool emitBuiltinVectorCopyFromPtrs(
+    int32_t destPtrLocal,
+    int32_t srcPtrLocal,
+    const std::string &elementStructPath,
+    const std::function<const Definition *(const std::string &)> &findCopyHelper,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
+    const Int32ProviderFn &allocTempLocal,
+    std::vector<IrInstruction> &instructions,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)>
+        &emitInlineDefinitionCall,
+    std::string &error);
+// Whether copying a `structPath` value runs any code beyond the slot copy: a copy helper, or a
+// field (recursively) with one or a builtin `vector<T>` field.
+bool structNeedsCopyHelpersOrVectorCopies(
+    const std::string &structPath,
+    const std::function<const Definition *(const std::string &)> &findCopyHelper,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)>
+        &resolveStructSlotLayout);
 bool emitStructCopyFromPtrs(std::vector<IrInstruction> &instructions,
                             int32_t destPtrLocal,
                             int32_t srcPtrLocal,

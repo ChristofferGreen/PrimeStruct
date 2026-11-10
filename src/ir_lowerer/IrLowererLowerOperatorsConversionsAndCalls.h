@@ -85,7 +85,7 @@
                   };
                   const bool needsDestroy = ir_lowerer::structNeedsDestroyHelpers(
                       structPath, findDestroyHelper, resolveLayout);
-                  const bool needsCopy = ir_lowerer::structNeedsDestroyHelpers(
+                  const bool needsCopy = ir_lowerer::structNeedsCopyHelpersOrVectorCopies(
                       structPath, findCopyHelper, resolveLayout);
                   if (!needsDestroy && !needsCopy) {
                     return emitStructCopyFromPtrs(destPtrLocal, srcPtrLocal, slotCount);
@@ -111,7 +111,7 @@
                                                                    findCopyHelper,
                                                                    resolveLayout,
                                                                    allocTempLocal,
-                                                                   emitInstruction,
+                                                                   function.instructions,
                                                                    localsIn,
                                                                    emitInlineDefinitionCall,
                                                                    ranCopyHelper,

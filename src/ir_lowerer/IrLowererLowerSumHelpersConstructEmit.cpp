@@ -399,7 +399,7 @@ namespace primec::ir_lowerer {
                     },
                     resolveStructSlotLayout,
                     allocTempLocal,
-                    [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+                    function.instructions,
                     selectedLocals,
                     emitInlineDefinitionCall,
                     ranCopyHelper,
