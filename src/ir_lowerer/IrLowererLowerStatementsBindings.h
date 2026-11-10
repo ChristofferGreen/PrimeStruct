@@ -469,8 +469,10 @@
           // here and become the task's, and the binding holds the handle (docs/spec/vm-design.md, Tasks).
           const Definition *spawnedCallee = resolveDefinitionCall(spawnedTaskCall);
           std::string inlineReason = "it is not a definition";
+          ir_lowerer::TaskSpawnShape taskShape;
           if (spawnedCallee != nullptr &&
-              ir_lowerer::taskSpawnRunsOnScheduler(*spawnedCallee, setupStage, inlineReason)) {
+              ir_lowerer::taskSpawnRunsOnScheduler(
+                  *spawnedCallee, setupStage, taskShape, inlineReason)) {
             std::vector<Expr> taskParams;
             std::vector<const Expr *> taskArgs;
             std::vector<const Expr *> taskPackedArgs;
@@ -486,7 +488,8 @@
                                                              error)) {
               return false;
             }
-            if (!taskPackedArgs.empty() || taskArgs.size() != spawnedCallee->parameters.size()) {
+            if (!taskPackedArgs.empty() || taskArgs.size() != spawnedCallee->parameters.size() ||
+                taskArgs.size() != taskShape.parameters.size()) {
               error = "internal error: unexpected arguments for spawned task " +
                       spawnedCallee->fullPath;
               return false;
@@ -497,23 +500,202 @@
                     "internal error: missing argument for spawned task " + spawnedCallee->fullPath;
                 return false;
               }
-              if (!emitExpr(*taskArg, localsIn)) {
+            }
+            const bool usesTaskBlock =
+                !taskShape.resultStructPath.empty() ||
+                std::any_of(taskShape.parameters.begin(),
+                            taskShape.parameters.end(),
+                            [](const ir_lowerer::TaskSpawnParameterShape &parameter) {
+                              return parameter.kind !=
+                                     ir_lowerer::TaskSpawnParameterShape::Kind::Scalar;
+                            });
+            if (!usesTaskBlock) {
+              for (const Expr *taskArg : taskArgs) {
+                if (!emitExpr(*taskArg, localsIn)) {
+                  return false;
+                }
+              }
+              const uint64_t reservation =
+                  ir_lowerer::reserveTaskSpawnTarget(setupStage, *spawnedCallee);
+              function.instructions.push_back(
+                  {IrOpcode::TaskSpawn, (uint64_t(1) << 32) | reservation});
+              LocalInfo handleInfo;
+              handleInfo.kind = LocalInfo::Kind::Value;
+              handleInfo.isTaskHandle = true;
+              handleInfo.valueKind = taskResultType == "void"
+                                         ? LocalInfo::ValueKind::Unknown
+                                         : valueKindFromTypeName(taskResultType);
+              handleInfo.index = nextLocal++;
+              function.instructions.push_back(
+                  {IrOpcode::StoreLocal, static_cast<uint64_t>(handleInfo.index)});
+              localsIn.emplace(stmt.name, handleInfo);
+              return true;
+            }
+            // Structs cross in a heap block (LowerSetupStageState::TaskSpawnSite): every argument is evaluated here
+            // first, a struct into a hidden binding of this scope that owns the copy (or the moved or temporary
+            // value), whose slots the block then aliases for the task to read.
+            LowerSetupStageState::TaskSpawnSite site;
+            const int32_t siteIndex = static_cast<int32_t>(setupStage.taskSpawnSites.size());
+            StructSlotLayout resultLayout;
+            if (!taskShape.resultStructPath.empty()) {
+              if (!resolveStructSlotLayout(taskShape.resultStructPath, resultLayout) ||
+                  resultLayout.totalSlots <= 0) {
+                error = "internal error: no struct layout for the result of spawned task " +
+                        spawnedCallee->fullPath;
                 return false;
               }
+              site.resultSlots = resultLayout.totalSlots;
+            }
+            struct TaskArgument {
+              int32_t local = -1;
+              int32_t slots = 0;
+              int32_t blockOffset = 0;
+            };
+            std::vector<TaskArgument> taskArguments(taskArgs.size());
+            int32_t blockSlots = site.resultSlots;
+            for (size_t argIndex = 0; argIndex < taskArgs.size(); ++argIndex) {
+              const ir_lowerer::TaskSpawnParameterShape &parameter = taskShape.parameters[argIndex];
+              TaskArgument &argument = taskArguments[argIndex];
+              if (parameter.kind == ir_lowerer::TaskSpawnParameterShape::Kind::Scalar) {
+                if (!emitExpr(*taskArgs[argIndex], localsIn)) {
+                  return false;
+                }
+                argument.local = allocTempLocal();
+                function.instructions.push_back(
+                    {IrOpcode::StoreLocal, static_cast<uint64_t>(argument.local)});
+                continue;
+              }
+              StructSlotLayout argumentLayout;
+              if (!resolveStructSlotLayout(parameter.structPath, argumentLayout) ||
+                  argumentLayout.totalSlots <= 0) {
+                error = "internal error: no struct layout for an argument of spawned task " +
+                        spawnedCallee->fullPath;
+                return false;
+              }
+              Expr argumentBinding = stmt;
+              argumentBinding.name =
+                  "__task_argument_" + std::to_string(siteIndex) + "_" + std::to_string(argIndex);
+              argumentBinding.transforms.clear();
+              Transform argumentType;
+              argumentType.name = parameter.structPath;
+              argumentBinding.transforms.push_back(std::move(argumentType));
+              Transform argumentMut;
+              argumentMut.name = "mut";
+              argumentBinding.transforms.push_back(std::move(argumentMut));
+              argumentBinding.args.front() = *taskArgs[argIndex];
+              argumentBinding.semanticNodeId = 0;
+              if (!emitStatement(argumentBinding, localsIn)) {
+                return false;
+              }
+              const auto argumentIt = localsIn.find(argumentBinding.name);
+              if (argumentIt == localsIn.end() || argumentIt->second.structTypeName.empty()) {
+                error = "internal error: struct argument of spawned task " +
+                        spawnedCallee->fullPath + " is not a struct local";
+                return false;
+              }
+              argument.local = argumentIt->second.index;
+              argument.slots = argumentLayout.totalSlots;
+              argument.blockOffset = blockSlots;
+              blockSlots += argument.slots;
+              if (argumentIt->second.dropFlagLocal >= 0) {
+                // While the task may read the value its owner must not destroy it; an owned (`copy` or `move`)
+                // parameter is the task's to destroy.
+                function.instructions.push_back({IrOpcode::PushI32, 0});
+                function.instructions.push_back(
+                    {IrOpcode::StoreLocal,
+                     static_cast<uint64_t>(argumentIt->second.dropFlagLocal)});
+                if (parameter.kind == ir_lowerer::TaskSpawnParameterShape::Kind::Struct) {
+                  site.lentArgumentDropFlags.push_back(argumentIt->second.dropFlagLocal);
+                }
+              }
+            }
+            site.blockLocal = allocTempLocal();
+            function.instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(blockSlots)});
+            function.instructions.push_back({IrOpcode::HeapAlloc, 0});
+            function.instructions.push_back(
+                {IrOpcode::StoreLocal, static_cast<uint64_t>(site.blockLocal)});
+            const auto emitBlockAddress = [&](int32_t slotOffset) {
+              function.instructions.push_back(
+                  {IrOpcode::LoadLocal, static_cast<uint64_t>(site.blockLocal)});
+              if (slotOffset != 0) {
+                function.instructions.push_back(
+                    {IrOpcode::PushI64, static_cast<uint64_t>(slotOffset) * IrSlotBytes});
+                function.instructions.push_back({IrOpcode::AddI64, 0});
+              }
+            };
+            for (size_t argIndex = 0; argIndex < taskArguments.size(); ++argIndex) {
+              const TaskArgument &argument = taskArguments[argIndex];
+              if (argument.slots == 0) {
+                continue;
+              }
+              const int32_t destPtrLocal = allocTempLocal();
+              emitBlockAddress(argument.blockOffset);
+              function.instructions.push_back(
+                  {IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
+              if (!ir_lowerer::emitStructCopyFromPtrs(
+                      function.instructions, destPtrLocal, argument.local, argument.slots)) {
+                return false;
+              }
+            }
+            for (const TaskArgument &argument : taskArguments) {
+              if (argument.slots == 0) {
+                function.instructions.push_back(
+                    {IrOpcode::LoadLocal, static_cast<uint64_t>(argument.local)});
+              } else {
+                emitBlockAddress(argument.blockOffset);
+              }
+            }
+            if (site.resultSlots > 0) {
+              emitBlockAddress(0);
             }
             const uint64_t reservation =
                 ir_lowerer::reserveTaskSpawnTarget(setupStage, *spawnedCallee);
             function.instructions.push_back(
                 {IrOpcode::TaskSpawn, (uint64_t(1) << 32) | reservation});
-            LocalInfo handleInfo;
-            handleInfo.kind = LocalInfo::Kind::Value;
-            handleInfo.isTaskHandle = true;
-            handleInfo.valueKind = taskResultType == "void" ? LocalInfo::ValueKind::Unknown
-                                                            : valueKindFromTypeName(taskResultType);
-            handleInfo.index = nextLocal++;
+            site.handleLocal = nextLocal++;
             function.instructions.push_back(
-                {IrOpcode::StoreLocal, static_cast<uint64_t>(handleInfo.index)});
-            localsIn.emplace(stmt.name, handleInfo);
+                {IrOpcode::StoreLocal, static_cast<uint64_t>(site.handleLocal)});
+            LocalInfo taskInfo;
+            taskInfo.kind = LocalInfo::Kind::Value;
+            taskInfo.taskSpawnSite = siteIndex;
+            if (site.resultSlots == 0) {
+              taskInfo.isTaskHandle = true;
+              taskInfo.valueKind = taskResultType == "void" ? LocalInfo::ValueKind::Unknown
+                                                            : valueKindFromTypeName(taskResultType);
+              taskInfo.index = site.handleLocal;
+            } else {
+              // The binding is the struct local the wait fills: a block of this frame, owned (and destroyed with
+              // this scope) once the result is in it.
+              const int32_t resultBase = nextLocal;
+              nextLocal += site.resultSlots;
+              taskInfo.index = nextLocal++;
+              function.instructions.push_back(
+                  {IrOpcode::AddressOfLocal, static_cast<uint64_t>(resultBase)});
+              function.instructions.push_back(
+                  {IrOpcode::StoreLocal, static_cast<uint64_t>(taskInfo.index)});
+              taskInfo.structTypeName = taskShape.resultStructPath;
+              taskInfo.structSlotCount = site.resultSlots;
+              if (!fileScopeStack.empty() &&
+                  ir_lowerer::structNeedsDestroyHelpers(
+                      taskInfo.structTypeName,
+                      [&](const std::string &path) {
+                        return ir_lowerer::findStackDestroyHelper(defMap, path);
+                      },
+                      [&](const std::string &path, StructSlotLayoutInfo &layoutOut) {
+                        return resolveStructSlotLayout(path, layoutOut);
+                      })) {
+                taskInfo.dropFlagLocal = allocTempLocal();
+                function.instructions.push_back({IrOpcode::PushI32, 0});
+                function.instructions.push_back(
+                    {IrOpcode::StoreLocal, static_cast<uint64_t>(taskInfo.dropFlagLocal)});
+                setupStage.dropEntries.push_back(
+                    {taskInfo.index, taskInfo.dropFlagLocal, taskInfo.structTypeName});
+                fileScopeStack.back().push_back(
+                    -static_cast<int32_t>(setupStage.dropEntries.size()));
+              }
+            }
+            setupStage.taskSpawnSites.push_back(std::move(site));
+            localsIn.emplace(stmt.name, taskInfo);
             return true;
           }
           if (setupStage.loweringNotes != nullptr) {

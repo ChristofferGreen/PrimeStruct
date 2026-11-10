@@ -7,7 +7,9 @@ namespace primec::ir_lowerer {
 
 bool taskSpawnRunsOnScheduler(const Definition &callee,
                               const LowerSetupStageState &setupStage,
+                              TaskSpawnShape &shapeOut,
                               std::string &reasonOut) {
+  shapeOut = {};
   reasonOut.clear();
   if (&callee == setupStage.entryDef) {
     reasonOut = "it is the entry definition";
@@ -23,16 +25,21 @@ bool taskSpawnRunsOnScheduler(const Definition &callee,
     reasonOut = "it is a method";
     return false;
   }
-  // The scalar shape: every parameter a plain scalar (no `mut`), a scalar or void result. On the address ABI targets
-  // the body is lowered with that ABI's rules too, so it must take that shape as well.
+  if (setupStage.realCallAllowStructs) {
+    // The address ABI: scalars by value, structs through a heap block the spawner fills.
+    return resolveTaskSpawnShape(
+        callee,
+        RealCallShapeContext{&setupStage.defMap, &setupStage.structNames, true},
+        shapeOut,
+        reasonOut);
+  }
+  // The scalar ABI: every parameter a plain scalar (no `mut`), a scalar or void result.
   if (!isRealCallShapeEligible(
-          callee, RealCallShapeContext{&setupStage.defMap, &setupStage.structNames, false}) ||
-      (setupStage.realCallAllowStructs &&
-       !isRealCallShapeEligible(
-           callee, RealCallShapeContext{&setupStage.defMap, &setupStage.structNames, true}))) {
+          callee, RealCallShapeContext{&setupStage.defMap, &setupStage.structNames, false})) {
     reasonOut = "a parameter or the result is not a scalar a real call takes";
     return false;
   }
+  shapeOut.parameters.resize(callee.parameters.size());
   return true;
 }
 

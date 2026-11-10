@@ -938,6 +938,11 @@ bool shouldDisarmStructCopySourceExpr(const Expr &expr) {
   if (isSimpleCallName(expr, "try") && expr.args.size() == 1 && expr.args.front().kind == Expr::Kind::Name) {
     return false;
   }
+  // `wait(task)` reads the result out of the task binding, which owns it (docs/spec/vm-design.md, Tasks).
+  if (isSimpleCallName(expr, "wait") && expr.args.size() == 1 && !expr.isMethodCall &&
+      expr.args.front().kind == Expr::Kind::Name) {
+    return false;
+  }
   // An element access (`v[i]`, `at(v, i)`, `v.at(i)`) reads a place: the slots it yields are
   // the element's own, which the container keeps owning, so a copy of them runs the Copy
   // helpers instead of disarming the element (docs/spec/value-lifecycle.md, Copies).

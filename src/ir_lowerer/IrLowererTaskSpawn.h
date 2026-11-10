@@ -3,17 +3,19 @@
 #include <cstdint>
 #include <string>
 
+#include "IrLowererRecursionAnalysis.h"
 #include "primec/ast/Ast.h"
 #include "primec/ir_lowerer/IrLowererLowerSetupStage.h"
 
 namespace primec::ir_lowerer {
 
 // `[spawn] f(...)` on the targets whose runtime runs tasks (the vm target, serialized bytecode and the optimized C++
-// emitter, docs/spec/vm-design.md, Tasks): f becomes a real call that TaskSpawn starts when its parameters and
-// result are scalars a real call takes. Otherwise `reasonOut` says why the spawned call runs inline, which is a
-// legal schedule.
+// emitter, docs/spec/vm-design.md, Tasks): f becomes a real call that TaskSpawn starts when a real call takes its
+// parameters and result and none of them names a place of the spawner; `shapeOut` says how each crosses to the task.
+// Otherwise `reasonOut` says why the spawned call runs inline, which is a legal schedule.
 bool taskSpawnRunsOnScheduler(const Definition &callee,
                               const LowerSetupStageState &setupStage,
+                              TaskSpawnShape &shapeOut,
                               std::string &reasonOut);
 
 // The reservation index of `callee` as a real call, reserving it first if no call site has: TaskSpawn needs the

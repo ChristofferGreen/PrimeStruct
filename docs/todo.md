@@ -115,7 +115,7 @@ of sync with them.
 | TODO-5837 | VM debug sessions step programs that spawn tasks | deferred | vm-debugger |
 | TODO-5840 | A byte loop over one large region on `optexe` runs as fast as before the granule table | ready | optexe-bytes |
 | TODO-5844 | Short-string `optexe` benchmarks take the cycles they took before the heap arenas | ready | optexe-bytes |
-| TODO-5845 | A spawned call with a `String` or struct parameter or result runs as a task | ready | mt-vm-tasks |
+| TODO-5847 | A spawned call with a collection or a `copy` parameter runs as a task | ready | mt-vm-tasks |
 | TODO-5846 | `optexe` faults when every task waits on another | deferred | mt-optexe-threads |
 | TODO-5796 | `Atomic<i32>` and `Atomic<i64>` with the `atomic` effect | ready | mt-primitives |
 | TODO-5797 | `Mutex<T>` with scoped `locked(body)` and the `lock` effect | blocked | mt-primitives |
@@ -215,13 +215,13 @@ of sync with them.
 - Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5738, TODO-5718
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732, TODO-5735, TODO-5736, TODO-5737
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5840, TODO-5844; real calls and struct copies TODO-5739, TODO-5741, TODO-5752; VM address checks TODO-5824
-- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5796, TODO-5797, TODO-5798, TODO-5656, TODO-5802, TODO-5803, TODO-5799, TODO-5800, TODO-5801, TODO-5845; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5846
+- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5796, TODO-5797, TODO-5798, TODO-5656, TODO-5802, TODO-5803, TODO-5799, TODO-5800, TODO-5801, TODO-5847; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5846
 
 ### Execution Queue
 
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
-Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order (TODO-5792 and TODO-5835, VM tasks and their lowering, are done, and so are TODO-5793, byte-region checks without a map search, TODO-5794, `optexe` per-thread heap arenas, and TODO-5795, `optexe` threads for `[spawn]`): TODO-5796 (`Atomic`), TODO-5797 (`Mutex`), TODO-5798 (`Channel`), TODO-5656 (atomic `SharedString` count), TODO-5802 (`serveWorkers`), TODO-5803 (apps on workers, measured), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5796 and TODO-5799 are ready and independent of each other, and so is TODO-5845 (spawned calls with `String` or struct parameters or results run as tasks, which today run inline) (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, are done). Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions), TODO-5846 (`optexe` faults on a wait cycle).
+Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order (TODO-5792 and TODO-5835, VM tasks and their lowering, are done, and so are TODO-5793, byte-region checks without a map search, TODO-5794, `optexe` per-thread heap arenas, and TODO-5795, `optexe` threads for `[spawn]`): TODO-5796 (`Atomic`), TODO-5797 (`Mutex`), TODO-5798 (`Channel`), TODO-5656 (atomic `SharedString` count), TODO-5802 (`serveWorkers`), TODO-5803 (apps on workers, measured), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5796 and TODO-5799 are ready and independent of each other, and so is TODO-5847 (spawned calls with collection or `copy` parameters or collection results run as tasks, which today run inline; TODO-5845, the same for `String`, struct and closure values, is done) (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, are done). Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions), TODO-5846 (`optexe` faults on a wait cycle).
 
 ### Task Blocks
 
@@ -732,19 +732,19 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
     - full release gate green
   - stop_rule: the generated program's single-threaded cost; the arenas' design stays.
 
-- [ ] TODO-5845: A spawned call with a `String` or struct parameter or result runs as a task
+- [ ] TODO-5847: A spawned call with a collection or a `copy` parameter runs as a task
   - owner: ai
   - status: ready
   - created_at: 2026-11-10
   - phase: Multithreading (docs/MultithreadingPrototype.md, Runtime Model)
   - parallel_track: mt-vm-tasks
-  - scope: `[spawn] f(...)` lowers to `TaskSpawn` only when the callee has the scalar real-call shape (`taskSpawnRunsOnScheduler`, src/ir_lowerer/IrLowererTaskSpawn.h); a callee that takes or returns a `String`, a struct or a vector runs inline at the spawn, with a `--opt-report` note, on the VM and on `optexe`. So a web handler that builds a `String` on a task still runs on the spawning thread. Lower those spawns to `TaskSpawn` too: the arguments are copied (or moved) into the task before it starts, the result is handed to the waiter, and the waiter owns and frees it. On `optexe` the block was allocated in the task's arena and the waiter's free is a remote free.
-  - implementation_notes: the real-call work for `string` parameters is TODO-5741; struct results come back through a caller-provided address, which for a task must be a block the task owns until `wait` copies it out. The IR-level heap handoff (a task returns a heap, text-heap or slot block and the waiter frees it) already passes on `optexe` (tests/unit/ir_pipeline/optimizer/test_ir_optexe_tasks.cpp).
+  - scope: A spawned call runs as a task on the VM and `optexe` when its parameters and result are scalars, `String`s, other structs outside the collections, or closures (`resolveTaskSpawnShape`, src/ir_lowerer/IrLowererRecursionAnalysis.h). It still runs inline, with an `--opt-report` note, when a parameter or the result is a `vector`, a `map` or another collection, and when a parameter is `[T copy]`, `[T copy mut]` or `[T move]` of a scalar or of a struct that is not a `Function`: the address ABI has no real call for those shapes, and `[String copy mut]` is what the checker tells a user to write for a task that changes its argument. Give those shapes a real call and lower their spawns to `TaskSpawn` through the task block the struct shapes use (`LowerSetupStageState::TaskSpawnSite`): a collection argument is copied (or moved) in the spawner, the task reads it through the block, an owned parameter is destroyed by the task, and a collection result is taken over by the waiter.
+  - implementation_notes: `isAddressAbiParameter` (src/ir_lowerer/IrLowererRecursionAnalysis.cpp) rejects template types and `copy`/`move` of anything but a `Function`; a collection local carries element metadata (`LocalInfo`) the callee's parameter needs. A `string` parameter is TODO-5741: once a real call takes it, drop the `string` reason in `resolveTaskSpawnShape` and pass the module string index as a scalar. Tests: tests/unit/program_matrix/test_program_matrix_tasks.cpp, tests/unit/ir_pipeline/optimizer/test_ir_optexe_tasks.cpp (the notes for /total, /numbers and /bump there turn into tasks).
   - acceptance:
-    - positive: a task that builds and returns a `String` gives the waiter the text, on the VM (default schedule and seeds 1 to 8) and on `optexe`, and the heap is empty at exit (heap statistics); the same for a struct with a `String` field and for a `String` argument; `--opt-report` has no inline note for these spawns
-    - negative: a spawn whose callee shape still cannot run as a task keeps its `--opt-report` note naming the reason
+    - positive: a task that takes a `vector<i32>` and one that returns a `vector<String>` give the waiter the values on the VM (default schedule and seeds 1 to 8) and on `optexe`, with the heap empty afterwards (heap statistics); a task with a `[String copy mut]` parameter changes its own copy and the spawner's value is unchanged; `--opt-report` has no inline note for these spawns
+    - negative: a spawned call that still runs inline keeps its note naming the reason
     - full release gate green
-  - stop_rule: `String`, struct and vector parameters and results of spawned calls on the VM and `optexe`; native is TODO-5799.
+  - stop_rule: collection and `copy`/`move` parameters and collection results of spawned calls on the VM and `optexe`; `string` parameters are TODO-5741 and native is TODO-5799.
 
 - [ ] TODO-5846: `optexe` faults when every task waits on another
   - owner: ai

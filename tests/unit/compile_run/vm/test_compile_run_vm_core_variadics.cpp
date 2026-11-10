@@ -649,9 +649,9 @@ main() {
   CHECK(readFile(outPath) == "5\n42\n");
   const std::string report = readFile(errPath);
   // `copy mut` keeps bump inline; twice runs as a task, so the report does not name it.
-  CHECK(report.find("lowering: spawn of /bump runs inline: a parameter or the result is not a "
-                    "scalar a real call "
-                    "takes\n") != std::string::npos);
+  CHECK(report.find(
+            "lowering: spawn of /bump runs inline: parameter `value` is a `copy` or `move` scalar, "
+            "which no real call takes yet\n") != std::string::npos);
   CHECK(report.find("/twice") == std::string::npos);
   // The spawn of twice is a TaskSpawn in the lowered IR.
   const std::string dumpPath = testScratchPath("vm_spawn_opt_report.ir").string();

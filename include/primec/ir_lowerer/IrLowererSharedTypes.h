@@ -57,6 +57,10 @@ struct LocalInfo {
   // A `Task<T>` binding the VM's scheduler runs (docs/spec/vm-design.md, Tasks): the local holds the handle TaskSpawn
   // pushed, and reading it is waiting the task (TaskWait), whose result has `valueKind` (Unknown for `Task<void>`).
   bool isTaskHandle = false;
+  // A `Task<T>` binding whose spawn passed structs through a heap block: its entry in
+  // LowerSetupStageState::taskSpawnSites, or -1. With a struct result the binding is an owning struct local (not a
+  // task handle) that the wait fills.
+  int32_t taskSpawnSite = -1;
 };
 
 inline bool hasKeyValueKinds(const LocalInfo &info) {

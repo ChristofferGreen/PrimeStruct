@@ -128,9 +128,13 @@ contract.
 
 Since TODO-5835 the VM runs such a spawn as a task of its scheduler (Threads For
 Real, VM Scheduler; docs/spec/vm-design.md, Tasks) when the callee takes and
-returns scalars, and `optexe` runs it on an OS thread of its own (Threads For
-Real, Runtime Model); other callees, and every other backend, keep the inline
-form, which starts no thread and runs the calls one after another.
+returns scalars, `String`s, other structs outside the collections, or closures
+(TODO-5845; a struct argument is copied in the spawner before the task starts,
+and the waiter owns the result), and `optexe` runs it on an OS thread of its own
+(Threads For Real, Runtime Model); other callees (collection or `copy`
+parameters, TODO-5847; `string` parameters, TODO-5741), and every other backend,
+keep the inline form, which starts no thread and runs the calls one after
+another.
 
 ## Required Effect
 
@@ -489,7 +493,8 @@ uses several cores (`docs/WebAppsPlan.md`, Concurrency). Implemented so far: the
 sendable check of spawn arguments (TODO-5790) and the `TaskSpawn`/`TaskWait` IR
 with the VM scheduler below (TODO-5792, docs/spec/vm-design.md, Tasks), and the
 VM lowering of `[spawn]` to them for scalar callees, `Task<void>` included
-(TODO-5835), the per-thread heap arenas of `optexe` (TODO-5794), and `optexe`
+(TODO-5835), and for callees with `String`, struct and closure parameters and
+results (TODO-5845), the per-thread heap arenas of `optexe` (TODO-5794), and `optexe`
 running those tasks on one OS thread each (TODO-5795, docs/spec/vm-design.md,
 Tasks on threads). The leaves are the Multithreading lane of `docs/todo.md`, which
 comes after the PrimeScroll startup lane and the first two native optimization

@@ -455,6 +455,12 @@ std::string resolveSemanticExprStructPath(const Expr &expr,
   if (!hasSemanticTypeFactOut || typeText.empty()) {
     return "";
   }
+  // The only read of a task handle is its wait (a name in a multi-wait tuple), whose value is the task's result.
+  constexpr std::string_view TaskPrefix = "Task<";
+  if (expr.kind == Expr::Kind::Name && typeText.size() > TaskPrefix.size() &&
+      typeText.compare(0, TaskPrefix.size(), TaskPrefix) == 0 && typeText.back() == '>') {
+    typeText = typeText.substr(TaskPrefix.size(), typeText.size() - TaskPrefix.size() - 1);
+  }
   return inferUninitializedTargetStructPath(typeText, expr.namespacePrefix, resolveStructTypeName);
 }
 

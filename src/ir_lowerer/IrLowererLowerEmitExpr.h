@@ -104,11 +104,46 @@
       case Expr::Kind::Name: {
         auto it = localsIn.find(expr.name);
         if (it != localsIn.end()) {
+          // The wait of a task whose structs crossed in a heap block (LowerSetupStageState::TaskSpawnSite) hands
+          // the arguments it lent back to their owners and frees the block.
+          const auto emitTaskBlockRelease = [&](const LowerSetupStageState::TaskSpawnSite &site) {
+            for (const int32_t dropFlagLocal : site.lentArgumentDropFlags) {
+              function.instructions.push_back({IrOpcode::PushI32, 1});
+              function.instructions.push_back(
+                  {IrOpcode::StoreLocal, static_cast<uint64_t>(dropFlagLocal)});
+            }
+            function.instructions.push_back(
+                {IrOpcode::LoadLocal, static_cast<uint64_t>(site.blockLocal)});
+            function.instructions.push_back({IrOpcode::HeapFree, 0});
+          };
+          if (it->second.taskSpawnSite >= 0 && !it->second.isTaskHandle) {
+            // A struct result: the task wrote it at the block's start, and the binding's own block takes it over.
+            const LowerSetupStageState::TaskSpawnSite &site =
+                setupStage.taskSpawnSites[static_cast<size_t>(it->second.taskSpawnSite)];
+            function.instructions.push_back(
+                {IrOpcode::LoadLocal, static_cast<uint64_t>(site.handleLocal)});
+            function.instructions.push_back({IrOpcode::TaskWait, 0});
+            function.instructions.push_back({IrOpcode::Pop, 0});
+            if (!ir_lowerer::emitStructCopyFromPtrs(
+                    function.instructions, it->second.index, site.blockLocal, site.resultSlots)) {
+              return false;
+            }
+            if (it->second.dropFlagLocal >= 0) {
+              function.instructions.push_back({IrOpcode::PushI32, 1});
+              function.instructions.push_back(
+                  {IrOpcode::StoreLocal, static_cast<uint64_t>(it->second.dropFlagLocal)});
+            }
+            emitTaskBlockRelease(site);
+          }
           function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
           if (it->second.isTaskHandle) {
             // The only read of a task handle the checker allows is a wait (`wait(t)`, or a name in a multi-wait
             // tuple), and it consumes the handle. A `Task<void>` wait pushes 0, which its statement pops.
             function.instructions.push_back({IrOpcode::TaskWait, 0});
+            if (it->second.taskSpawnSite >= 0) {
+              emitTaskBlockRelease(
+                  setupStage.taskSpawnSites[static_cast<size_t>(it->second.taskSpawnSite)]);
+            }
             return true;
           }
           const bool isAggregateReference =

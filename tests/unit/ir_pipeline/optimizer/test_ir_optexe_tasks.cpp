@@ -719,8 +719,8 @@ main() {
   CHECK(contains(cpp, "= ps_task_wait("));
   CHECK(contains(
       emit.err,
-      "lowering: spawn of /bump runs inline: a parameter or the result is not a scalar a real "
-      "call takes\n"));
+      "lowering: spawn of /bump runs inline: parameter `value` is a `copy` or `move` scalar, which "
+      "no real call takes yet\n"));
   CHECK_FALSE(contains(emit.err, "/twice"));
 
   const std::filesystem::path binary = scratch("spawn_scalar.bin");
@@ -731,6 +731,121 @@ main() {
   const ProgramRun actual = runCommand("'" + binary.string() + "'", "spawn_scalar_run");
   CHECK(actual.exitCode == 0);
   CHECK(actual.out == "42\n5\n");
+  CHECK(actual.err.empty());
+}
+
+TEST_CASE("primec lowers a spawned call with String and struct values to a task") {
+  // Positive: a `String` parameter, a `String` result and a struct result with a `String` field run as tasks, with
+  // no inline note. Negative: a collection parameter or result and a `string` parameter keep the call inline, and
+  // the report names the reason.
+  const std::string source = R"(
+import /std/text/*
+import /std/collections/*
+
+[struct]
+Reply() {
+  [String] body{String{}}
+  [i32] code{0i32}
+}
+
+[return<String> effects(heap_alloc)]
+greet([String] name) {
+  [String mut] out{String{}}
+  out.append("hello ")
+  out.appendString(name)
+  return(out)
+}
+
+[return<Reply> effects(heap_alloc)]
+make_reply([String] text, [i32] code) {
+  [String mut] body{String{}}
+  body.appendString(text)
+  return(Reply{body, code})
+}
+
+[return<i32>]
+total([vector<i32>] values) {
+  return(values.count())
+}
+
+[return<i32>]
+label_size([string] label) {
+  return(label.count())
+}
+
+[return<vector<i32>> effects(heap_alloc)]
+numbers([i32] count) {
+  [vector<i32> mut] out{vector<i32>()}
+  out.push(count)
+  return(out)
+}
+
+[effects(task, io_out, heap_alloc), return<int>]
+main() {
+  [String mut] who{String{}}
+  who.append("a name long enough to live on the string heap")
+  [Task<String>] greeting{[spawn] greet(who)};
+  [Task<Reply>] reply{[spawn] make_reply(who, 7i32)};
+  [String] text{wait(greeting)}
+  [Reply] made{wait(reply)}
+  print_line(text.count())
+  print_line(made.body.count() + made.code)
+  [vector<i32> mut] values{vector<i32>()}
+  values.push(4i32)
+  [Task<i32>] counted{[spawn] total(values)};
+  print_line(wait(counted))
+  [Task<i32>] labeled{[spawn] label_size("four")};
+  print_line(wait(labeled))
+  [Task<vector<i32>>] listed{[spawn] numbers(3i32)};
+  [vector<i32>] list{wait(listed)}
+  print_line(list.count())
+  return(0i32)
+}
+)";
+  const std::filesystem::path sourcePath = scratch("spawn_structs.prime");
+  std::ofstream(sourcePath) << source;
+  const std::string expectedOut = "51\n52\n1\n4\n1\n";
+  const auto checkNotes = [](const std::string &report) {
+    CHECK_FALSE(contains(report, "/greet"));
+    CHECK_FALSE(contains(report, "/make_reply"));
+    CHECK(contains(
+        report,
+        "lowering: spawn of /total runs inline: parameter `values` is a collection or another "
+        "template type\n"));
+    CHECK(contains(report,
+                   "lowering: spawn of /label_size runs inline: parameter `label` is a `string`, "
+                   "which no real "
+                   "call takes yet\n"));
+    CHECK(contains(report,
+                   "lowering: spawn of /numbers runs inline: its result is not a scalar or a "
+                   "struct a real call "
+                   "returns\n"));
+  };
+
+  const std::filesystem::path cppPath = scratch("spawn_structs.cpp");
+  const ProgramRun emit =
+      runCommand("./primec --emit=optcpp '" + sourcePath.string() +
+                     "' --entry /main --opt-report -o '" + cppPath.string() + "'",
+                 "spawn_structs_emit");
+  REQUIRE_MESSAGE(emit.exitCode == 0, emit.err);
+  checkNotes(emit.err);
+  CHECK(contains(readText(cppPath), "= ps_task_spawn(rt, ps_t"));
+
+  const ProgramRun vm =
+      runCommand("./primec --emit=vm '" + sourcePath.string() + "' --entry /main --opt-report",
+                 "spawn_structs_vm");
+  CHECK(vm.exitCode == 0);
+  CHECK(vm.out == expectedOut);
+  checkNotes(vm.err);
+
+  const std::filesystem::path binary = scratch("spawn_structs.bin");
+  const ProgramRun build = runCommand("./primec --emit=optexe '" + sourcePath.string() +
+                                          "' --entry /main -o '" + binary.string() + "'",
+                                      "spawn_structs_build");
+  REQUIRE_MESSAGE(build.exitCode == 0, build.err);
+  const ProgramRun actual = runCommand("'" + binary.string() + "'", "spawn_structs_run");
+  CHECK(actual.exitCode == 0);
+  CHECK(actual.out == expectedOut);
   CHECK(actual.err.empty());
 }
 

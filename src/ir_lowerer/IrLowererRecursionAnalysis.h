@@ -3,6 +3,7 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 #include "primec/ast/Ast.h"
 
@@ -82,6 +83,25 @@ struct RealCallShapeContext {
 // Whether `def` can be lowered once as a function and called (the parameter, receiver and result shapes above),
 // leaving aside how often it is called. A call site whose callee passes this and is not a tiny leaf reserves it.
 bool isRealCallShapeEligible(const Definition &def, const RealCallShapeContext &context);
+
+// How a spawned call's parameters and result cross to its task on the address ABI targets (IrLowererTaskSpawn.h): a
+// scalar is passed as its value; a struct is copied (or moved) into a heap block by the spawner, since a local
+// address does not cross to another call stack, and the task gets the block's address; a struct result is written to
+// such a block too (`resultStructPath`, empty for a scalar or void result).
+struct TaskSpawnParameterShape {
+  enum class Kind { Scalar, Struct, OwnedStruct } kind = Kind::Scalar;
+  std::string structPath;
+};
+struct TaskSpawnShape {
+  std::vector<TaskSpawnParameterShape> parameters;
+  std::string resultStructPath;
+};
+// False with the reason in `reasonOut` when `def` cannot run as a task: a `mut`, Pointer, Reference, `string` or
+// collection parameter, or a definition the address ABI does not call.
+bool resolveTaskSpawnShape(const Definition &def,
+                           const RealCallShapeContext &context,
+                           TaskSpawnShape &shapeOut,
+                           std::string &reasonOut);
 
 // A body of at most two statements and this many expression nodes is cheaper inlined than called: it stays inline at
 // every call site unless it is recursive.

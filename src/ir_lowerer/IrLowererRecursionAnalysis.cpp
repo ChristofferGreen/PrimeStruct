@@ -555,6 +555,111 @@ bool isAddressAbiRealCallShape(const Definition &def, const RealCallShapeContext
 
 } // namespace
 
+bool resolveTaskSpawnShape(const Definition &def,
+                           const RealCallShapeContext &context,
+                           TaskSpawnShape &shapeOut,
+                           std::string &reasonOut) {
+  shapeOut = {};
+  reasonOut.clear();
+  const auto &structNames = *context.structNames;
+  for (const Expr &param : def.parameters) {
+    const std::string subject = "parameter `" + param.name + "` ";
+    if (isArgsPackBinding(param) || param.args.size() > 1) {
+      reasonOut = subject + "is an argument pack";
+      return false;
+    }
+    const bool ownedParam =
+        paramHasTransformNamed(param, "copy") || paramHasTransformNamed(param, "move");
+    if (!ownedParam && paramHasTransformNamed(param, "mut")) {
+      reasonOut = subject + "is `mut`, and a task has no place of its spawner to write";
+      return false;
+    }
+    const Transform *typeTransform = nullptr;
+    for (const Transform &transform : param.transforms) {
+      if (transform.name == "mut" || transform.name == "public" || transform.name == "private" ||
+          transform.name == "static" || transform.name == "shared" ||
+          transform.name == "placement" || transform.name == "align" ||
+          transform.name == "packed" || transform.name == "reflection" ||
+          transform.name == "effects" || transform.name == "capabilities" ||
+          transform.name == "copy" || transform.name == "move") {
+        continue;
+      }
+      typeTransform = &transform;
+      break;
+    }
+    if (typeTransform == nullptr) {
+      reasonOut = subject + "has no type a real call takes";
+      return false;
+    }
+    if (typeTransform->name == "Pointer" || typeTransform->name == "Reference") {
+      reasonOut = subject + "is a Pointer or Reference, which may name a local of its spawner";
+      return false;
+    }
+    if (typeTransform->name == "string") {
+      reasonOut = subject + "is a `string`, which no real call takes yet";
+      return false;
+    }
+    if (!typeTransform->templateArgs.empty() || !typeTransform->arguments.empty() ||
+        typeTransform->name.find('<') != std::string::npos) {
+      reasonOut = subject + "is a collection or another template type";
+      return false;
+    }
+    TaskSpawnParameterShape parameter;
+    if (isSupportedScalarTypeName(typeTransform->name)) {
+      if (ownedParam) {
+        reasonOut = subject + "is a `copy` or `move` scalar, which no real call takes yet";
+        return false;
+      }
+    } else {
+      parameter.structPath =
+          resolveStructTypeName(typeTransform->name, def.namespacePrefix, structNames);
+      if (parameter.structPath.empty()) {
+        reasonOut = subject + "has no type a real call takes";
+        return false;
+      }
+      if (!isAddressAbiStruct(parameter.structPath, structNames)) {
+        reasonOut = subject + "is a collection";
+        return false;
+      }
+      if (ownedParam && !isFunctionStructPath(parameter.structPath)) {
+        reasonOut = subject + "is a `copy` or `move` struct, which no real call takes yet";
+        return false;
+      }
+      parameter.kind = ownedParam ? TaskSpawnParameterShape::Kind::OwnedStruct
+                                  : TaskSpawnParameterShape::Kind::Struct;
+    }
+    shapeOut.parameters.push_back(std::move(parameter));
+  }
+  const bool scalarOrVoidResult = hasScalarOrVoidReturn(def);
+  if (!scalarOrVoidResult) {
+    shapeOut.resultStructPath =
+        realCallStructReturnPath(def, structNames, *context.definitionsByPath);
+    if (shapeOut.resultStructPath.empty()) {
+      reasonOut = "its result is not a scalar or a struct a real call returns";
+      return false;
+    }
+  }
+  if (definitionHasTransform(def, "on_error")) {
+    reasonOut = "it has an `on_error` handler";
+    return false;
+  }
+  if (definitionHasTransform(def, "require")) {
+    reasonOut = "it has a `require` contract";
+    return false;
+  }
+  if (definitionUsesTry(def)) {
+    reasonOut = "it uses `try`";
+    return false;
+  }
+  RealCallShapeContext addressContext = context;
+  addressContext.allowStructs = true;
+  if (!isAddressAbiRealCallShape(def, addressContext)) {
+    reasonOut = "it is not a definition a real call takes";
+    return false;
+  }
+  return true;
+}
+
 bool isRealCallShapeEligible(const Definition &def, const RealCallShapeContext &context) {
   if (context.allowStructs) {
     return isAddressAbiRealCallShape(def, context);

@@ -70,9 +70,22 @@
   optimized C++ emitter turns
   `[Task<T>] t{[spawn] f(args)}` into the arguments, evaluated in the spawner, and `TaskSpawn f` stored in `t`, when
   every parameter of `f` is a plain scalar and its result a scalar or void (f becomes a real call even when it is a
-  tiny leaf); every read of `t` (`wait(t)`, a name in a multi-wait tuple) is `LoadLocal t; TaskWait`. Any other spawned
-  call (a `mut` or `copy mut` parameter, a `String`, struct or collection parameter, a struct or sum result, a method)
-  runs inline, which is a legal schedule, and `--opt-report` says so: `lowering: spawn of /f runs inline: <reason>`.
+  tiny leaf); every read of `t` (`wait(t)`, a name in a multi-wait tuple) is `LoadLocal t; TaskWait`.
+  A parameter or result that is a `String`, another struct outside the collections, or a closure (a `Function`,
+  borrowed or `copy`/`move`) crosses in one heap block per spawn (`LowerSetupStageState::TaskSpawnSite`), since a
+  local address does not cross: the spawner binds each struct argument in a hidden local of its own scope (a copy
+  of a named value, a temporary taken over), allocates the block (`HeapAlloc`: the result's slots, then each struct
+  argument's slots, which alias the hidden local), and passes the block addresses as the task's parameters, the
+  block's start last as the result address of the address ABI. While the task may run, the drop flag of a lent
+  argument is off; an owned (`copy`, `move`) closure is destroyed by the task. With a struct result `t` is a struct
+  local of the spawner's frame whose drop flag starts off, and a read of `t` is `TaskWait`, a copy of the result
+  slots from the block into `t`, the drop flags of `t` and of the lent arguments turned on, and `HeapFree` of the
+  block; `wait(t)` then reads that place, so a binding or call argument copies from it and `t` destroys its value
+  when its scope ends. What the task allocated for the result (a `String`'s bytes) is freed by the spawner; on
+  `optexe` that free is queued to the task's arena. Any other spawned call (a `mut` parameter, a `copy` or `move`
+  parameter that is not a closure, a `string`, a collection parameter or result, a sum result, a callee with
+  `on_error`, `require` or `try`, a method) runs inline, which is a legal schedule, and `--opt-report` says so:
+  `lowering: spawn of /f runs inline: <reason>`.
   Every other backend runs every spawned call inline; a `Task<void>` spawn there is the call as a statement.
 - **Tasks on threads (`optexe`, `optcpp`):** the optimized C++ emitter runs each `TaskSpawn` on an OS thread of its
   own (`OptCppTaskRuntime` in `src/backend/IrToOptCppRuntime.h`, pasted into the program only when the module has

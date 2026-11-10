@@ -94,6 +94,18 @@ struct LowerSetupStageState {
   // The target's runtime runs tasks (the vm target and serialized bytecode under the VM's scheduler, the optimized
   // C++ emitter on threads): `[spawn] f(...)` becomes TaskSpawn when f's shape allows it (IrLowererTaskSpawn.h).
   bool tasksRunOnScheduler = false;
+  // A spawn whose struct arguments or struct result cross to the task in a heap block (a local address does not
+  // cross to another call stack). The block holds the result's slots first, then each struct argument's. The
+  // spawner keeps owning the arguments it lends: their drop flags are cleared while the task may read them and set
+  // again by the wait, which also copies the result out and frees the block. A task that is never waited leaks the
+  // block and what it holds instead of freeing memory a running task reads.
+  struct TaskSpawnSite {
+    int32_t handleLocal = -1;
+    int32_t blockLocal = -1;
+    int32_t resultSlots = 0;
+    std::vector<int32_t> lentArgumentDropFlags;
+  };
+  std::vector<TaskSpawnSite> taskSpawnSites;
   // --opt-report lines about lowering decisions (a spawned call that runs inline and why); null when not reported.
   std::vector<std::string> *loweringNotes = nullptr;
 };
