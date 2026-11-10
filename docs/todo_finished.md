@@ -2206,6 +2206,7 @@ are left unarchived.
 | TODO-5826 | `return(wait(task))` waits once in a definition with a struct local | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5827 | A builtin `vector<T>` struct field frees its buffer when the struct is destroyed | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5829 | A builtin `[vector<T> copy]` parameter owns a buffer of its own | [2026-11.md](todo_archive/2026-11.md) | 2026-11-10 |
+| TODO-5830 | A discarded struct constructor statement destroys its temporary | [2026-11.md](todo_archive/2026-11.md) | 2026-11-10 |
 
 <!-- INDEX-END -->
 

@@ -282,6 +282,34 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
     return structPath;
   };
 
+  // The struct path of the owning value a statement discards: a call result (above), or a
+  // constructor such as `Named{...}` or a bindings-only definition called as `round()` (an
+  // implicit struct), whose temporary is destroyed at the end of the statement
+  // (docs/spec/value-lifecycle.md, Ownership).
+  auto discardedTemporaryStructPath = [&](const Expr &stmtExpr, const LocalMap &locals) {
+    if (std::string structPath = ownedTemporaryStructPath(stmtExpr, locals); !structPath.empty()) {
+      return structPath;
+    }
+    if (stmtExpr.kind != Expr::Kind::Call || stmtExpr.isBinding ||
+        !ir_lowerer::isStructConstructorCallShape(stmtExpr)) {
+      return std::string{};
+    }
+    const Definition *callee = resolveDefinitionCall(stmtExpr);
+    if (callee == nullptr || !ir_lowerer::isStructDefinition(*callee) ||
+        sumHelpers.resolveSumDefinitionByPath(callee->fullPath) != nullptr ||
+        !ir_lowerer::structNeedsDestroyHelpers(
+            callee->fullPath,
+            [&](const std::string &path) {
+              return ir_lowerer::findStackDestroyHelper(defMap, path);
+            },
+            [&](const std::string &path, StructSlotLayoutInfo &layoutOut) {
+              return resolveStructSlotLayout(path, layoutOut);
+            })) {
+      return std::string{};
+    }
+    return callee->fullPath;
+  };
+
   // Whether a struct value copied out of `sourceExpr` is a temporary the copy takes over (and
   // disarms) rather than a place that keeps owning it (an element access, unless a user `at`).
   auto isTemporaryStructCopySource = [&](const Expr &sourceExpr, const LocalMap &locals) {

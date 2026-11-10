@@ -72,8 +72,10 @@
   parameter. Using the caller's binding afterwards is a `use-after-move` error until it is reassigned. A temporary
   argument may be passed to any mode. A temporary (a constructor or a call returning a value, not a reference) has no
   other owner, so it is destroyed exactly once at the end of its full expression: the callee owns and destroys it
-  whatever the parameter mode (a `copy` parameter takes it over without running `Copy`), a discarded call result is
-  destroyed at the end of its statement, and a temporary field-access receiver (`make().id`) is destroyed once the
+  whatever the parameter mode (a `copy` parameter takes it over without running `Copy`), a discarded temporary is
+  destroyed at the end of its statement (a call result, a constructor statement such as `Named{...}`, a bindings-only
+  definition called as a statement, which constructs its implicit struct, and a fresh `vector<T>(...)` or call
+  returning one, whose elements are destroyed and buffer freed), and a temporary field-access receiver (`make().id`) is destroyed once the
   field is read.
 - **Copies:** `copy` duplicates through the type's `Copy` helper when it has one (collections copy their elements),
   otherwise bitwise for `Copy` types; a struct without a `Copy` helper copies its fields, running the helpers of the

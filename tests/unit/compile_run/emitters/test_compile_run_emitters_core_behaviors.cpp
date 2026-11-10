@@ -381,7 +381,9 @@ main() {
 
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2> " + errPath;
   CHECK(runCommand(runVmCmd) == 0);
-  CHECK(readFile(outPath).empty());
+  // Braces do not run Create; the discarded temporary is destroyed at the end of its statement
+  // (docs/spec/value-lifecycle.md, Ownership).
+  CHECK(readFile(outPath) == "2\n");
   CHECK(readFile(errPath).empty());
 }
 

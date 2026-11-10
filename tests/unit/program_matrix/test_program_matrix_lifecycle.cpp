@@ -1157,4 +1157,151 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+// A discarded temporary is destroyed at the end of its statement (docs/spec/value-lifecycle.md, Ownership): a
+// constructor statement, a bindings-only definition called as a statement (it constructs its implicit struct), and a
+// fresh vector or a call returning one. Before TODO-5830 these leaked their String and vector buffers.
+TEST_CASE("discarded constructor and vector temporaries free what they own") {
+  program_matrix::ProgramCase program;
+  program.name = "discarded_temporaries_heap_flat";
+  program.source = R"(
+import /std/collections/*
+import /std/text/*
+
+[struct]
+Named {
+  [i32] code{0i32}
+  [String] name{String{}}
+}
+
+[struct]
+KeepV {
+  [vector<i32> mut] seen
+
+  [effects(heap_alloc) return<vector<i32>>]
+  fresh() {
+    return(vector<i32>(1i32, 2i32))
+  }
+}
+
+[struct]
+Outer {
+  [KeepV] inner
+  [Named] label
+}
+
+[effects(heap_alloc)]
+bindings_only() {
+  [vector<i32> mut] v{vector<i32>(1i32)}
+  [String] s{stringFrom("a bindings-only definition owns its strings too")}
+}
+
+[effects(heap_alloc) return<vector<Named>>]
+make_rows() {
+  [vector<Named> mut] rows{vector<Named>()}
+  rows.push(Named{[code] 1i32, [name] stringFrom("a row returned by a call and dropped there")})
+  return(rows)
+}
+
+[effects(heap_alloc) return<int>]
+round() {
+  [vector<i32> mut] a{vector<i32>(1i32, 2i32)}
+  [String] s{stringFrom("a local string that a constructor statement copies")}
+  [KeepV] keep{KeepV{[seen] vector<i32>(5i32)}}
+  Named{[code] 1i32, [name] stringFrom("a string long enough to live on the heap for sure")}
+  Named{[code] 2i32, [name] s}
+  KeepV{[seen] vector<i32>(1i32)}
+  KeepV{[seen] a}
+  KeepV{[seen] keep.seen}
+  Outer{[inner] KeepV{[seen] vector<i32>(3i32)}, [label] Named{[code] 3i32, [name] s}}
+  Outer{[inner] keep, [label] Named{[code] 4i32, [name] s}}
+  bindings_only()
+  vector<i32>(1i32, 2i32)
+  make_rows()
+  keep.fresh()
+  a.push(3i32)
+  KeepV{[seen] move(a)}
+  return(s.count() + keep.seen.count() * 100i32)
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [i32] first{round()}
+  [i32] before{heapLiveBlocks()}
+  [u64] textBefore{stringHeapBytesInUse()}
+  repeat(300i32) {
+    round()
+  }
+  [i32] leakedBlocks{heapLiveBlocks() - before}
+  [i32] leakedText{convert<i32>(stringHeapBytesInUse() - textBefore)}
+  return(first - 127i32 + leakedBlocks * 1000i32 + leakedText * 1000i32)
+}
+)";
+  program.exitCode = 23;
+  program.onlyConfigs = {"vm-step-O0", "vm-O0", "vm-O2", "optexe-O2"};
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("a discarded constructor statement runs Destroy once at its end") {
+  program_matrix::ProgramCase program;
+  program.name = "discarded_constructor_destroy_once";
+  program.source = R"(
+import /std/collections/*
+
+[struct]
+Noisy() {
+  [i32 mut] id{0i32}
+
+  [public effects(io_out)]
+  Destroy() {
+    print_line(this.id)
+  }
+}
+
+[struct]
+KeepV {
+  [vector<i32> mut] seen
+}
+
+[effects(heap_alloc)]
+bindings_only() {
+  [vector<i32> mut] v{vector<i32>(1i32, 2i32)}
+}
+
+[effects(heap_alloc) return<int>]
+round() {
+  [vector<i32> mut] a{vector<i32>(1i32, 2i32)}
+  KeepV{[seen] a}
+  KeepV{[seen] vector<i32>(4i32)}
+  bindings_only()
+  vector<i32>(1i32, 2i32)
+  a.push(3i32)
+  KeepV{[seen] move(a)}
+  return(3i32)
+}
+
+[return<int> effects(io_out, heap_alloc)]
+main() {
+  Noisy{[id] 5i32}
+  print_line(1i32)
+  [Noisy] kept{Noisy{[id] 7i32}}
+  Noisy{[id] 6i32}
+  print_line(2i32)
+  [i32 mut] total{0i32}
+  repeat(500i32) {
+    total = total + round()
+  }
+  print_line(total)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "5\n1\n6\n2\n1500\n7\n";
+  program.onlyConfigs = {"vm-step-O0", "vm-O0", "vm-O2", "optexe-O2"};
+  if (program_matrix::nativeSupported()) {
+    program.onlyConfigs.push_back("native-O0");
+    program.onlyConfigs.push_back("native-O2");
+  }
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

@@ -406,7 +406,7 @@
       }
       // A discarded owning struct result (a call whose value nobody binds) is destroyed at the
       // end of its statement (docs/spec/value-lifecycle.md).
-      if (const std::string discardedStruct = ownedTemporaryStructPath(stmt, localsIn);
+      if (const std::string discardedStruct = discardedTemporaryStructPath(stmt, localsIn);
           !discardedStruct.empty()) {
         if (!emitExpr(stmt, localsIn)) {
           return false;
@@ -428,5 +428,83 @@
             localsIn,
             emitInlineDefinitionCall,
             error);
+      }
+      // A discarded fresh builtin vector (`vector<T>(...)`, or a user definition or method
+      // returning one) frees its buffer and destroys its elements at the end of its statement.
+      auto returnsBuiltinVector = [&](const Definition &callee) {
+        for (const auto &transform : callee.transforms) {
+          std::string base;
+          std::string argText;
+          if (transform.name == "return" && transform.templateArgs.size() == 1 &&
+              splitTemplateTypeName(
+                  trimTemplateTypeText(transform.templateArgs.front()), base, argText)) {
+            return normalizeCollectionBindingTypeName(trimTemplateTypeText(base)) == "vector";
+          }
+        }
+        return false;
+      };
+      const Definition *discardedVectorMethod = nullptr;
+      if (stmt.isMethodCall && !stmt.isFieldAccess) {
+        discardedVectorMethod = resolveMethodCallDefinition(stmt, localsIn);
+        if (discardedVectorMethod != nullptr &&
+            (discardedVectorMethod->fullPath.rfind("/std/", 0) == 0 ||
+             !returnsBuiltinVector(*discardedVectorMethod))) {
+          discardedVectorMethod = nullptr;
+        }
+      }
+      if (discardedVectorMethod != nullptr ||
+          ir_lowerer::isFreshBuiltinVectorExpr(
+              stmt, [&](const Expr &candidate) { return resolveDefinitionCall(candidate); })) {
+        std::string elementText;
+        std::string elementNamespace = stmt.namespacePrefix;
+        std::string collectionName;
+        if (discardedVectorMethod == nullptr && getBuiltinCollectionName(stmt, collectionName)) {
+          if (stmt.templateArgs.size() == 1) {
+            elementText = trimTemplateTypeText(stmt.templateArgs.front());
+          }
+        } else if (const Definition *callee = discardedVectorMethod != nullptr
+                                                  ? discardedVectorMethod
+                                                  : resolveDefinitionCall(stmt);
+                   callee != nullptr) {
+          elementNamespace = callee->namespacePrefix;
+          for (const auto &transform : callee->transforms) {
+            std::string base;
+            if (transform.name == "return" && transform.templateArgs.size() == 1 &&
+                splitTemplateTypeName(
+                    trimTemplateTypeText(transform.templateArgs.front()), base, elementText)) {
+              elementText = trimTemplateTypeText(elementText);
+              break;
+            }
+          }
+        }
+        std::string elementStructPath;
+        int32_t elementSlots = 1;
+        if (!elementText.empty() &&
+            resolveStructTypeName(elementText, elementNamespace, elementStructPath)) {
+          StructSlotLayoutInfo elementLayout;
+          if (resolveStructSlotLayout(elementStructPath, elementLayout) &&
+              elementLayout.totalSlots > 0) {
+            elementSlots = elementLayout.totalSlots;
+          }
+          if (!ir_lowerer::structNeedsDestroyHelpers(
+                  elementStructPath,
+                  [&](const std::string &path) {
+                    return ir_lowerer::findStackDestroyHelper(defMap, path);
+                  },
+                  [&](const std::string &path, StructSlotLayoutInfo &layoutOut) {
+                    return resolveStructSlotLayout(path, layoutOut);
+                  })) {
+            elementStructPath.clear();
+          }
+        }
+        if (!emitExpr(stmt, localsIn)) {
+          return false;
+        }
+        const int32_t recordPtrLocal = allocTempLocal();
+        function.instructions.push_back(
+            {IrOpcode::StoreLocal, static_cast<uint64_t>(recordPtrLocal)});
+        LowerSetupStageState::DropEntry entry{recordPtrLocal, -1, elementStructPath};
+        entry.builtinVectorElementSlots = elementSlots;
+        return emitBuiltinVectorDrop(entry);
       }
     }
