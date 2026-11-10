@@ -1023,7 +1023,7 @@ passes resolves in the callee (`ps_resolve` checks the current frame, then the r
 VM's address encoding and fault text but resolves addresses through an owner table in constant time.
 
 Coverage: every opcode except `CallHost` (host imports; rejected with a diagnostic naming opcode and function).
-The host compile flag is `-O<n>` from the command line (default `-O2`) with `-ffp-contract=off`.
+The host compile flag is `-O<n>` from the command line (default `-O2`) with `-ffp-contract=off` and `-pthread`.
 
 Verification: pure-opcode results over ~6,000 edge-case operand pairs, 60 random programs (plain and IR-optimized),
 heap/indirect, string/argv/file and fault tests all compare with the VM (`primestruct.ir.optexe`), and

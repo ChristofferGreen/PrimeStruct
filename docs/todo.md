@@ -115,8 +115,9 @@ of sync with them.
 | TODO-5837 | VM debug sessions step programs that spawn tasks | deferred | vm-debugger |
 | TODO-5840 | A byte loop over one large region on `optexe` runs as fast as before the granule table | ready | optexe-bytes |
 | TODO-5844 | Short-string `optexe` benchmarks take the cycles they took before the heap arenas | ready | optexe-bytes |
-| TODO-5795 | `optexe` runs spawned tasks on threads | ready | mt-optexe-threads |
-| TODO-5796 | `Atomic<i32>` and `Atomic<i64>` with the `atomic` effect | blocked | mt-primitives |
+| TODO-5845 | A spawned call with a `String` or struct parameter or result runs as a task | ready | mt-vm-tasks |
+| TODO-5846 | `optexe` faults when every task waits on another | deferred | mt-optexe-threads |
+| TODO-5796 | `Atomic<i32>` and `Atomic<i64>` with the `atomic` effect | ready | mt-primitives |
 | TODO-5797 | `Mutex<T>` with scoped `locked(body)` and the `lock` effect | blocked | mt-primitives |
 | TODO-5798 | Bounded `Channel<T>` with the `channel` effect | blocked | mt-primitives |
 | TODO-5656 | Thread-safe `SharedString`: an atomic owner count | blocked | string-concurrency |
@@ -214,13 +215,13 @@ of sync with them.
 - Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5738, TODO-5718
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732, TODO-5735, TODO-5736, TODO-5737
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5840, TODO-5844; real calls and struct copies TODO-5739, TODO-5741, TODO-5752; VM address checks TODO-5824
-- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5795, TODO-5796, TODO-5797, TODO-5798, TODO-5656, TODO-5802, TODO-5803, TODO-5799, TODO-5800, TODO-5801; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837
+- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5796, TODO-5797, TODO-5798, TODO-5656, TODO-5802, TODO-5803, TODO-5799, TODO-5800, TODO-5801, TODO-5845; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5846
 
 ### Execution Queue
 
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
-Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order (TODO-5792 and TODO-5835, VM tasks and their lowering, are done, and so are TODO-5793, byte-region checks without a map search, and TODO-5794, `optexe` per-thread heap arenas): TODO-5795 (`optexe` threads for `[spawn]`), TODO-5796 (`Atomic`), TODO-5797 (`Mutex`), TODO-5798 (`Channel`), TODO-5656 (atomic `SharedString` count), TODO-5802 (`serveWorkers`), TODO-5803 (apps on workers, measured), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5795 and TODO-5799 are ready and independent of each other (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, are done). Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions).
+Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order (TODO-5792 and TODO-5835, VM tasks and their lowering, are done, and so are TODO-5793, byte-region checks without a map search, TODO-5794, `optexe` per-thread heap arenas, and TODO-5795, `optexe` threads for `[spawn]`): TODO-5796 (`Atomic`), TODO-5797 (`Mutex`), TODO-5798 (`Channel`), TODO-5656 (atomic `SharedString` count), TODO-5802 (`serveWorkers`), TODO-5803 (apps on workers, measured), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5796 and TODO-5799 are ready and independent of each other, and so is TODO-5845 (spawned calls with `String` or struct parameters or results run as tasks, which today run inline) (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, are done). Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions), TODO-5846 (`optexe` faults on a wait cycle).
 
 ### Task Blocks
 
@@ -731,23 +732,36 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
     - full release gate green
   - stop_rule: the generated program's single-threaded cost; the arenas' design stays.
 
-- [ ] TODO-5795: `optexe` runs spawned tasks on threads
+- [ ] TODO-5845: A spawned call with a `String` or struct parameter or result runs as a task
   - owner: ai
   - status: ready
-  - created_at: 2026-11-09
+  - created_at: 2026-11-10
+  - phase: Multithreading (docs/MultithreadingPrototype.md, Runtime Model)
+  - parallel_track: mt-vm-tasks
+  - scope: `[spawn] f(...)` lowers to `TaskSpawn` only when the callee has the scalar real-call shape (`taskSpawnRunsOnScheduler`, src/ir_lowerer/IrLowererTaskSpawn.h); a callee that takes or returns a `String`, a struct or a vector runs inline at the spawn, with a `--opt-report` note, on the VM and on `optexe`. So a web handler that builds a `String` on a task still runs on the spawning thread. Lower those spawns to `TaskSpawn` too: the arguments are copied (or moved) into the task before it starts, the result is handed to the waiter, and the waiter owns and frees it. On `optexe` the block was allocated in the task's arena and the waiter's free is a remote free.
+  - implementation_notes: the real-call work for `string` parameters is TODO-5741; struct results come back through a caller-provided address, which for a task must be a block the task owns until `wait` copies it out. The IR-level heap handoff (a task returns a heap, text-heap or slot block and the waiter frees it) already passes on `optexe` (tests/unit/ir_pipeline/optimizer/test_ir_optexe_tasks.cpp).
+  - acceptance:
+    - positive: a task that builds and returns a `String` gives the waiter the text, on the VM (default schedule and seeds 1 to 8) and on `optexe`, and the heap is empty at exit (heap statistics); the same for a struct with a `String` field and for a `String` argument; `--opt-report` has no inline note for these spawns
+    - negative: a spawn whose callee shape still cannot run as a task keeps its `--opt-report` note naming the reason
+    - full release gate green
+  - stop_rule: `String`, struct and vector parameters and results of spawned calls on the VM and `optexe`; native is TODO-5799.
+
+- [ ] TODO-5846: `optexe` faults when every task waits on another
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-10
   - phase: Multithreading (docs/MultithreadingPrototype.md, Runtime Model)
   - parallel_track: mt-optexe-threads
-  - scope: Lower `TaskSpawn` in IrToOptCppEmitter to a `std::thread` per task over a per-thread `Rt` (call depth, local-address frames, heap arena) and `TaskWait` to a join that copies the result out. `ps_fault` flushes and leaves with `std::_Exit(3)`; a print writes its line and newline in one call.
+  - scope: The VM ends a program whose tasks all wait on each other with `deadlock: every task is waiting` (exit code 3); on `optexe` the threads block in `ps_task_wait` and the program hangs. With `[spawn]` and `wait` alone a wait cycle needs a task handle to reach another task, which the sendable check rejects, so this becomes reachable with `Mutex` and `Channel` (TODO-5797, TODO-5798). Count running and blocked tasks in the task table and fault with the VM's message when the last running one blocks.
   - acceptance:
-    - positive: two `sum_range` tasks of about one second each finish in at most 0.65 times the time of the same work on one task (wall clock, back to back, load recorded); every VM task test gives the same output on `optexe`; a task that allocates and returns a `String` hands it to the waiter, which frees it
-    - negative: a fault in a task exits 3 with the VM's message while another task is still running; 4 tasks printing 1000 lines each never produce a mixed line
+    - positive: programs free of wait cycles print what they print now, and a single-threaded benchmark keeps its instruction count
+    - negative: a program whose tasks all block faults with the VM's message and exit code 3 on `optexe`, tested without sleeps
     - full release gate green
-  - stop_rule: threads for `[spawn]` on `optexe`; the sharing primitives are TODO-5796 to TODO-5798.
+  - stop_rule: the wait-cycle fault on `optexe`; deferred until a blocking primitive exists.
 
 - [ ] TODO-5796: `Atomic<i32>` and `Atomic<i64>` with the `atomic` effect
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5795
+  - status: ready
   - created_at: 2026-11-09
   - phase: Multithreading (docs/MultithreadingPrototype.md, Atomic)
   - parallel_track: mt-primitives

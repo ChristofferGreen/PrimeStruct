@@ -2,12 +2,13 @@
 
 Classification: **design direction**, not yet part of the canonical language
 spec. Implemented: the `[spawn]`, `Task<T>`, `wait` and `effects(task)` surface
-and its lifetime checks, with spawned calls run inline, one after another (no
-threads), and the sendable check of spawn arguments ([Sendable
-Values](#sendable-values)). Approved but not implemented: [Threads For
-Real](#threads-for-real) (parallel tasks, thread-safe heaps, `Mutex`, `Atomic`,
-`Channel`, a multi-core web server); its work is the Multithreading lane of
-`docs/todo.md`.
+and its lifetime checks, the sendable check of spawn arguments ([Sendable
+Values](#sendable-values)), tasks of scalar callees under the VM's scheduler,
+and the same tasks on one OS thread each on `optexe` (other spawned calls, and
+every other backend, run inline, one after another). Approved but not
+implemented: the rest of [Threads For Real](#threads-for-real) (`Mutex`,
+`Atomic`, `Channel`, tasks on arm64 native, a multi-core web server); its work
+is the Multithreading lane of `docs/todo.md`.
 
 This document captures the language-level multithreading model.
 When the design is stable enough, fold the accepted parts into
@@ -127,11 +128,9 @@ contract.
 
 Since TODO-5835 the VM runs such a spawn as a task of its scheduler (Threads For
 Real, VM Scheduler; docs/spec/vm-design.md, Tasks) when the callee takes and
-returns scalars; other callees, and every other backend, keep the inline form.
-This runtime slice deliberately does not start an OS thread, detach work, or
-schedule multiple tasks concurrently. It exists so the task handle lifetime
-rules and stdlib tuple integration can settle before scheduler-backed tasks are
-introduced.
+returns scalars, and `optexe` runs it on an OS thread of its own (Threads For
+Real, Runtime Model); other callees, and every other backend, keep the inline
+form, which starts no thread and runs the calls one after another.
 
 ## Required Effect
 
@@ -490,7 +489,9 @@ uses several cores (`docs/WebAppsPlan.md`, Concurrency). Implemented so far: the
 sendable check of spawn arguments (TODO-5790) and the `TaskSpawn`/`TaskWait` IR
 with the VM scheduler below (TODO-5792, docs/spec/vm-design.md, Tasks), and the
 VM lowering of `[spawn]` to them for scalar callees, `Task<void>` included
-(TODO-5835). The leaves are the Multithreading lane of `docs/todo.md`, which
+(TODO-5835), the per-thread heap arenas of `optexe` (TODO-5794), and `optexe`
+running those tasks on one OS thread each (TODO-5795, docs/spec/vm-design.md,
+Tasks on threads). The leaves are the Multithreading lane of `docs/todo.md`, which
 comes after the PrimeScroll startup lane and the first two native optimization
 leaves (TODO-5770, TODO-5772).
 
@@ -503,8 +504,9 @@ cross to another thread, and three safe sharing primitives.
 
 ### Runtime Model
 
-- **One OS thread per spawned task** on `optexe` (`std::thread`) and arm64 native (`pthread_create`), joined by
-  `wait`. Not a fixed pool: a task may block in `Mutex.locked` or a `Channel`, and a pool whose threads are all
+- **One OS thread per spawned task** on `optexe` and arm64 native (`pthread_create`, on `optexe` too: a
+  `std::thread` cannot be given a stack size, and a secondary thread's default of 512 KiB on macOS is too little
+  for the call depth the main thread has), joined by `wait`. Not a fixed pool: a task may block in `Mutex.locked` or a `Channel`, and a pool whose threads are all
   blocked on work queued behind them deadlocks. A pool for tasks that never block can come later if the cost of
   starting a thread (tens of microseconds) shows up in a profile.
 - **Spawn copies its arguments.** The arguments are evaluated on the spawning thread and copied into a task block
@@ -519,10 +521,10 @@ cross to another thread, and three safe sharing primitives.
   starts after the previous one on that mutex ended; a value is received after it was sent; atomic operations are
   sequentially consistent. There is no weaker memory order in safe code.
 - **Faults:** a runtime fault on any task ends the program with exit code 3 after flushing, as on one thread.
-  `optexe` must leave through `std::_Exit`, not `std::exit` (which `ps_fault` uses today and which runs static
-  destructors while other threads still run).
+  `optexe` leaves through `std::_Exit`, not `std::exit` (which runs static destructors while other threads
+  still run): `ps_fault` always, and a trap or the entry's return in a program that spawns.
 - **Output:** a print writes its line in one write, so lines of different tasks never mix within a line
-  (`optexe`'s `ps_emit` writes the newline with a second call today).
+  (`optexe`'s `ps_emit` puts the text and its newline in one `fwrite`).
 - **IR:** `TaskSpawn <function>` pops the callee's arguments into a new task block and pushes the task handle;
   `TaskWait` pops a handle and pushes the result; atomic opcodes are below. That is a PSIR version bump. Backends
   without threads (x86_64 native, the Linux JIT, Wasm, GLSL, the simple C++ emitters) keep running a spawned call

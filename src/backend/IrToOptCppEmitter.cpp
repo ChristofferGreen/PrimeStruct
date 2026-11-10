@@ -274,6 +274,22 @@ std::string functionSymbol(size_t index) {
   return "ps_f" + std::to_string(index);
 }
 
+// The function a task's thread enters: it unpacks the task block's arguments into the call.
+std::string taskEntrySymbol(size_t index) {
+  return "ps_t" + std::to_string(index);
+}
+
+bool moduleUsesTasks(const IrModule &module) {
+  for (const IrFunction &function : module.functions) {
+    for (const IrInstruction &instruction : function.instructions) {
+      if (instruction.op == IrOpcode::TaskSpawn || instruction.op == IrOpcode::TaskWait) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 std::string parameterList(uint32_t count, bool withTypes) {
   std::string out = withTypes ? "Rt &rt" : "rt";
   for (uint32_t i = 0; i < count; ++i) {
@@ -285,8 +301,9 @@ std::string parameterList(uint32_t count, bool withTypes) {
 
 class FunctionEmitter {
 public:
-  FunctionEmitter(const IrModule &module, size_t index, std::ostringstream &out)
-      : module_(module), index_(index), function_(module.functions[index]), out_(out) {
+  FunctionEmitter(const IrModule &module, size_t index, bool usesTasks, std::ostringstream &out)
+      : module_(module), index_(index), function_(module.functions[index]), usesTasks_(usesTasks),
+        out_(out) {
   }
 
   bool emit(std::string &error) {
@@ -461,9 +478,33 @@ private:
       line("if (" + slot(depth - 1) + " == 0) goto " + label(instruction.imm) + ";");
       return true;
     case IrOpcode::Trap:
+      // With tasks the program leaves without running static destructors and atexit handlers, which would run
+      // while the other threads still do (as a fault leaves, see ps_fault).
       line("std::fflush(stdout);");
-      line("std::exit(" + std::to_string(static_cast<int>(static_cast<int32_t>(instruction.imm))) +
-           ");");
+      line(std::string(usesTasks_ ? "std::_Exit(" : "std::exit(") +
+           std::to_string(static_cast<int>(static_cast<int32_t>(instruction.imm))) + ");");
+      return true;
+    case IrOpcode::TaskSpawn: {
+      if (instruction.imm >= module_.functions.size()) {
+        line("ps_fault(\"invalid task function in IR\");");
+        return true;
+      }
+      const IrFunction &callee = module_.functions[static_cast<size_t>(instruction.imm)];
+      const int64_t base = depth - static_cast<int64_t>(callee.parameterCount);
+      std::string args = "{0";
+      for (uint32_t i = 0; i < callee.parameterCount; ++i) {
+        args += ", " + slot(base + i);
+      }
+      line("{");
+      line("  const uint64_t targs[] = " + args + "};");
+      line("  " + slot(base) + " = ps_task_spawn(rt, " +
+           taskEntrySymbol(static_cast<size_t>(instruction.imm)) + ", targs + 1, " +
+           std::to_string(callee.parameterCount) + ");");
+      line("}");
+      return true;
+    }
+    case IrOpcode::TaskWait:
+      line(slot(depth - 1) + " = ps_task_wait(" + slot(depth - 1) + ");");
       return true;
     case IrOpcode::ReturnVoid:
       emitReturn("0");
@@ -641,9 +682,12 @@ private:
         line("ps_fault(\"invalid string index in IR\");");
         return true;
       }
-      const std::string &text = module_.stringTable[static_cast<size_t>(stringIndex)];
+      // A line's newline is part of the literal, so the line goes out in one call (see ps_emit_line).
+      const uint64_t flags = decodePrintFlags(instruction.imm);
+      const std::string text = module_.stringTable[static_cast<size_t>(stringIndex)] +
+                               ((flags & PrintFlagNewline) != 0 ? "\n" : "");
       line("ps_emit(" + quote(text) + ", " + std::to_string(text.size()) + ", " +
-           std::to_string(decodePrintFlags(instruction.imm)) + ");");
+           std::to_string(flags & ~static_cast<uint64_t>(PrintFlagNewline)) + ");");
       return true;
     }
     case IrOpcode::AddressOfLocal:
@@ -780,6 +824,7 @@ private:
   const IrModule &module_;
   size_t index_;
   const IrFunction &function_;
+  bool usesTasks_ = false;
   std::ostringstream &out_;
   uint32_t localCount_ = 0;
   bool frameMode_ = false;
@@ -825,8 +870,34 @@ bool IrToOptCppEmitter::emitSource(const IrModule &module,
            << parameterList(module.functions[i].parameterCount, true) << ");\n";
   }
   source << "\n";
+  // A module without task opcodes gets none of this, so a single-threaded program's source keeps its shape.
+  const bool usesTasks = moduleUsesTasks(module);
+  if (usesTasks) {
+    source << OptCppTaskRuntime;
+    std::vector<bool> spawned(module.functions.size(), false);
+    for (const IrFunction &function : module.functions) {
+      for (const IrInstruction &instruction : function.instructions) {
+        if (instruction.op == IrOpcode::TaskSpawn && instruction.imm < module.functions.size()) {
+          spawned[static_cast<size_t>(instruction.imm)] = true;
+        }
+      }
+    }
+    for (size_t i = 0; i < module.functions.size(); ++i) {
+      if (!spawned[i]) {
+        continue;
+      }
+      const uint32_t parameterCount = module.functions[i].parameterCount;
+      source << "uint64_t " << taskEntrySymbol(i) << "(Rt &rt, const uint64_t *"
+             << (parameterCount > 0 ? "a" : "") << ") {\n  return " << functionSymbol(i) << "(rt";
+      for (uint32_t parameter = 0; parameter < parameterCount; ++parameter) {
+        source << ", a[" << parameter << "]";
+      }
+      source << ");\n}\n";
+    }
+    source << "\n";
+  }
   for (size_t i = 0; i < module.functions.size(); ++i) {
-    FunctionEmitter emitter(module, i, source);
+    FunctionEmitter emitter(module, i, usesTasks, source);
     if (!emitter.emit(error)) {
       return false;
     }
@@ -836,8 +907,17 @@ bool IrToOptCppEmitter::emitSource(const IrModule &module,
   // The arenas live until the process ends: threads may still use their heaps while main returns.
   source << "  VmHeapArenas &arenas = *new VmHeapArenas();\n";
   source << "  Rt rt{argc, argv, 0, arenas.main().core, arenas.main().text, arenas};\n";
-  source << "  return static_cast<int>(static_cast<int32_t>("
-         << functionSymbol(static_cast<size_t>(module.entryIndex)) << "(rt)));\n";
+  if (usesTasks) {
+    // The entry function's return ends the program while tasks may still run, so it leaves the way a Trap does.
+    source << "  const int code = static_cast<int>(static_cast<int32_t>("
+           << functionSymbol(static_cast<size_t>(module.entryIndex)) << "(rt)));\n";
+    source << "  std::fflush(stdout);\n";
+    source << "  std::fflush(stderr);\n";
+    source << "  std::_Exit(code);\n";
+  } else {
+    source << "  return static_cast<int>(static_cast<int32_t>("
+           << functionSymbol(static_cast<size_t>(module.entryIndex)) << "(rt)));\n";
+  }
   source << "}\n";
   out = source.str();
   return true;

@@ -1085,6 +1085,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/ir_pipeline/optimizer/test_ir_optimizer_random.cpp
     tests/unit/ir_pipeline/optimizer/test_ir_optimizer_cli.cpp
     tests/unit/ir_pipeline/optimizer/test_ir_optexe.cpp
+    tests/unit/ir_pipeline/optimizer/test_ir_optexe_tasks.cpp
     tests/unit/ir_pipeline/optimizer/test_ir_vm_fast_kernel.cpp
     tests/unit/ir_pipeline/optimizer/test_ir_native_codegen.cpp
     tests/unit/ir_pipeline/optimizer/test_ir_register_locals.cpp
@@ -3601,6 +3602,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.ir.optimizer_random
     primestruct.ir.optimizer_cli
     primestruct.ir.optexe
+    primestruct.ir.optexe_tasks
     primestruct.ir.vm_fast_kernel
     primestruct.ir.native_codegen
     primestruct.ir.register_locals
@@ -3615,6 +3617,11 @@ if(PRIMESTRUCT_BUILD_TESTS)
     set(testName "PrimeStruct_${suiteId}")
     if(suite STREQUAL "primestruct.ir.optexe")
       # 8 cases that each build optexe programs: 66 to 111 s in loaded gates as one entry, so shards of two.
+      primestructAddDoctestShards("${testName}" PrimeStruct_ir_optimizer_tests 8 2 300 "--test-suite=${suite}")
+      continue()
+    endif()
+    if(suite STREQUAL "primestruct.ir.optexe_tasks")
+      # 8 cases, most of which build one or two optexe programs with the host compiler: shards of two as above.
       primestructAddDoctestShards("${testName}" PrimeStruct_ir_optimizer_tests 8 2 300 "--test-suite=${suite}")
       continue()
     endif()

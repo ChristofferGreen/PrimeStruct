@@ -46,7 +46,8 @@ bool runLowerSetupStage(const LowerSetupStageInput &input,
   stateOut.expandedSource = input.expandedSource;
   stateOut.allowDynamicStrings = input.validationTarget == IrValidationTarget::Vm;
   stateOut.tasksRunOnScheduler = input.validationTarget == IrValidationTarget::Vm ||
-                                 input.validationTarget == IrValidationTarget::Serialized;
+                                 input.validationTarget == IrValidationTarget::Serialized ||
+                                 input.validationTarget == IrValidationTarget::OptCpp;
   stateOut.realCallEligibleOrder.clear();
   stateOut.realCallReservationIndex.clear();
   // The address ABI needs a local address that names the same slot in every frame: the VM and optcpp number all live

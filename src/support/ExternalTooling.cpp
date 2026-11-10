@@ -69,6 +69,7 @@ bool compileCppExecutableOptimized(const ProcessRunner &runner,
                                    "-std=c++23",
                                    "-O" + std::to_string(level),
                                    "-ffp-contract=off",
+                                   "-pthread",
                                    cppPath.string(),
                                    "-o",
                                    outputPath.string()};

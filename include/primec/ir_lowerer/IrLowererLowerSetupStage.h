@@ -91,8 +91,8 @@ struct LowerSetupStageState {
   // these targets a `never` definition (panic) is a real call too; elsewhere it returns an error code to its caller,
   // so it stays inline.
   bool runtimeErrorsTrap = false;
-  // The target's runtime schedules tasks (the vm target and serialized bytecode): `[spawn] f(...)` becomes TaskSpawn
-  // when f's shape allows it (IrLowererTaskSpawn.h).
+  // The target's runtime runs tasks (the vm target and serialized bytecode under the VM's scheduler, the optimized
+  // C++ emitter on threads): `[spawn] f(...)` becomes TaskSpawn when f's shape allows it (IrLowererTaskSpawn.h).
   bool tasksRunOnScheduler = false;
   // --opt-report lines about lowering decisions (a spawned call that runs inline and why); null when not reported.
   std::vector<std::string> *loweringNotes = nullptr;

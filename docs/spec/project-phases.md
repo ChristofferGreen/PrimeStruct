@@ -131,7 +131,7 @@ module {
 - `primec --emit=optcpp input.prime -o hello.cpp` and `primec --emit=optexe input.prime -o hello`
   - Emit structured C++ from the shared IR instead of re-implementing the stack machine: each operand-stack depth and
     local is a C++ variable, each basic block a label, jumps are `goto`, calls are C++ calls. The host compiler does
-    register allocation; `-O<n>` also selects its optimization level (default `-O2`, `-ffp-contract=off`).
+    register allocation; `-O<n>` also selects its optimization level (default `-O2`, `-ffp-contract=off`, `-pthread`).
   - Matches the VM's output, exit code and `VM error:` fault text; `CallHost` (VM host imports) is rejected with a
     diagnostic. `exe`/`cpp` stay unchanged and serve as an independent oracle.
 - `primec --emit=native input.prime -o hello`

@@ -63,16 +63,33 @@
   with a splitmix64 generator seeded by `n`, so the same seed gives the same run; tests run several seeds and expect
   the same output to show a program is free of races. When no task can run the VM faults with `deadlock: every task
   is waiting` (exit code 3); the main task's return ends the program, and a `Trap` in any task ends it with its code.
-  Only the vm target and serialized bytecode accept the task opcodes; validation also rejects a `TaskWait` whose
-  operand is not a `TaskSpawn` result on every path (through locals and `Dup`). A module with task opcodes runs on the
+  The vm and optimized C++ targets and serialized bytecode accept the task opcodes; validation also rejects a
+  `TaskWait` whose operand is not a `TaskSpawn` result on every path (through locals and `Dup`). A module with task opcodes runs on the
   step kernel (the flat loop and the native JIT decline it), and a debug session faults on them (`tasks run only in a
-  plain VM run, not in a debug session`, TODO-5837). Lowering for the vm target and serialized bytecode turns
+  plain VM run, not in a debug session`, TODO-5837). Lowering for the vm target, serialized bytecode and the
+  optimized C++ emitter turns
   `[Task<T>] t{[spawn] f(args)}` into the arguments, evaluated in the spawner, and `TaskSpawn f` stored in `t`, when
   every parameter of `f` is a plain scalar and its result a scalar or void (f becomes a real call even when it is a
   tiny leaf); every read of `t` (`wait(t)`, a name in a multi-wait tuple) is `LoadLocal t; TaskWait`. Any other spawned
   call (a `mut` or `copy mut` parameter, a `String`, struct or collection parameter, a struct or sum result, a method)
   runs inline, which is a legal schedule, and `--opt-report` says so: `lowering: spawn of /f runs inline: <reason>`.
   Every other backend runs every spawned call inline; a `Task<void>` spawn there is the call as a statement.
+- **Tasks on threads (`optexe`, `optcpp`):** the optimized C++ emitter runs each `TaskSpawn` on an OS thread of its
+  own (`OptCppTaskRuntime` in `src/backend/IrToOptCppRuntime.h`, pasted into the program only when the module has
+  task opcodes, so a program without tasks is unchanged). The spawner copies the arguments into a task block,
+  acquires a heap arena for the task and starts a pthread with an 8 MiB stack (the main thread's size; a secondary
+  thread's default is 512 KiB on macOS, too little for 4096 calls); the thread builds its own `Rt` (call depth,
+  local-address frames, the arena's heap and string heap) and calls the function. `TaskWait` joins the thread,
+  copies the result out and frees the task block. Handles, their checks and the fault messages are the VM's (a
+  table of slots with generations behind one mutex). A block a task allocated stays valid after the task ends, so
+  a task can return a heap or string heap address and the waiter frees it (the free is queued to the owning
+  arena). Tasks run in parallel, so the order of what two live tasks print is not fixed; a line (a print with its
+  newline) is written in one call and is never mixed with another task's. A fault on any thread flushes `stdout`,
+  writes the VM's message and leaves with `_Exit(3)` while the other threads still run (only the first fault
+  reports); a `Trap` and the entry function's return leave through `_Exit` the same way in a program with tasks.
+  A wait that can never finish (two tasks waiting each other through handles passed in heap memory) hangs instead
+  of faulting with `deadlock: every task is waiting`. There is no thread pool: each live task is one thread, and
+  threads past the 64 heap arenas share the last one (`VmHeapArenas`).
 - **Heap:** `HeapAlloc`/`HeapRealloc` return heap addresses `bit 63 | generation << 48 | slot * 16` (generation in bits
   48-62, slot offset in bits 0-47; zero slots allocate nothing and return 0). A live allocation never moves, so an
   address a program has seen stays valid until the program frees or reallocates that allocation; `HeapRealloc` returns

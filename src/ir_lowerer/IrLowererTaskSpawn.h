@@ -8,9 +8,10 @@
 
 namespace primec::ir_lowerer {
 
-// `[spawn] f(...)` on the targets whose runtime schedules tasks (the vm target and serialized bytecode,
-// docs/spec/vm-design.md, Tasks): f becomes a real call that TaskSpawn starts when its parameters and result are
-// scalars a real call takes. Otherwise `reasonOut` says why the spawned call runs inline, which is a legal schedule.
+// `[spawn] f(...)` on the targets whose runtime runs tasks (the vm target, serialized bytecode and the optimized C++
+// emitter, docs/spec/vm-design.md, Tasks): f becomes a real call that TaskSpawn starts when its parameters and
+// result are scalars a real call takes. Otherwise `reasonOut` says why the spawned call runs inline, which is a
+// legal schedule.
 bool taskSpawnRunsOnScheduler(const Definition &callee,
                               const LowerSetupStageState &setupStage,
                               std::string &reasonOut);

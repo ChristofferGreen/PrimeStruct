@@ -319,19 +319,19 @@ TEST_CASE("validation rejects a wait whose operand is not a task handle on every
   CHECK(error.find("invalid task function") != std::string::npos);
 }
 
-TEST_CASE("only the vm target and serialized bytecode accept the task opcodes") {
+TEST_CASE("only the vm and optcpp targets and serialized bytecode accept the task opcodes") {
   std::string error;
   CHECK(validateIrModule(twoTasks(), IrValidationTarget::Vm, error));
   CHECK(validateIrModule(twoTasks(), IrValidationTarget::Serialized, error));
+  CHECK(validateIrModule(twoTasks(), IrValidationTarget::OptCpp, error));
   for (const IrValidationTarget target : {IrValidationTarget::Native,
-                                          IrValidationTarget::OptCpp,
                                           IrValidationTarget::Cpp,
                                           IrValidationTarget::Wasm,
                                           IrValidationTarget::Glsl}) {
     error.clear();
     CHECK_FALSE(validateIrModule(twoTasks(), target, error));
-    CHECK(error.find("task opcodes are only supported by the vm target and serialized bytecode") !=
-          std::string::npos);
+    CHECK(error.find("task opcodes are only supported by the vm and optimized C++ targets and "
+                     "serialized bytecode") != std::string::npos);
   }
 }
 

@@ -465,7 +465,7 @@
       if (extractTaskResultType(*bindingTypeExpr, taskResultType) &&
           extractTaskSpawnInitializer(init, spawnedTaskCall)) {
         if (setupStage.tasksRunOnScheduler) {
-          // The VM runs the spawned call as a task when a real call takes its shape: the arguments are evaluated
+          // The runtime runs the spawned call as a task when a real call takes its shape: the arguments are evaluated
           // here and become the task's, and the binding holds the handle (docs/spec/vm-design.md, Tasks).
           const Definition *spawnedCallee = resolveDefinitionCall(spawnedTaskCall);
           std::string inlineReason = "it is not a definition";

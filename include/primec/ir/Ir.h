@@ -153,8 +153,9 @@ enum class IrOpcode : uint8_t {
   // only leave that function. The VM, serialized bytecode and the optimized C++ emitter run it. Added in PSIR v33.
   Trap,
   // Starts a task running function imm (docs/spec/vm-design.md, Tasks): pops the function's parameters, in order,
-  // into the task's own call stack and pushes the task handle. The VM runs tasks under its scheduler; only the vm
-  // target and serialized bytecode accept it (every other backend runs a spawned call inline). Added in PSIR v34.
+  // into the task's own call stack and pushes the task handle. The VM runs tasks under its scheduler and the
+  // optimized C++ emitter runs each on a thread; the vm and optcpp targets and serialized bytecode accept it (every
+  // other backend runs a spawned call inline). Added in PSIR v34.
   TaskSpawn,
   // Pops a task handle (the value of a TaskSpawn), waits until that task has ended, and pushes its result (0 for a
   // task whose function returns nothing). The handle is consumed: waiting it again faults. Added in PSIR v34.

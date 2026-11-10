@@ -3,8 +3,8 @@
 TEST_SUITE_BEGIN("primestruct.program_matrix.tasks");
 
 // Spawned tasks (docs/spec/vm-design.md, Tasks): the VM runs them under its scheduler, on the eager default schedule
-// and on seeds 1 to 8, and native and optexe run the spawned calls inline. A program free of races prints the same on
-// every schedule. Each case builds one optexe binary (host C++ compiler), which takes a few seconds.
+// and on seeds 1 to 8, optexe runs each on a thread, and native runs the spawned calls inline. A program free of races
+// prints the same on every schedule. Each case builds one optexe binary (host C++ compiler), which takes a few seconds.
 
 namespace {
 

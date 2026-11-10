@@ -6,11 +6,13 @@
 // address encoding, the same file-handle packing and I/O error codes. The heap is
 // the VM's own allocator (VmHeapCore) and string heap (VmTextHeap), pasted in between the two halves below, with the
 // per-thread arenas (VmHeapArenas) after them: a program runs on arena 0, which is the VM's heap exactly until a
-// second thread gets an arena.
+// second thread gets an arena. A spawned task runs on a thread of its own (OptCppTaskRuntime, pasted in only for a
+// module with task opcodes), so everything here that is not per thread (`Rt`) is safe to call from several threads.
 
 namespace primec {
 
 inline constexpr const char *OptCppRuntimeHeaders = R"CPP(#include <algorithm>
+#include <atomic>
 #include <bit>
 #include <cerrno>
 #include <charconv>
@@ -25,6 +27,7 @@ inline constexpr const char *OptCppRuntimeHeaders = R"CPP(#include <algorithm>
 #include <map>
 #include <mutex>
 #include <new>
+#include <pthread.h>
 #include <set>
 #include <sys/mman.h>
 #include <unistd.h>
@@ -49,6 +52,7 @@ struct PsFrameRef {
   uint64_t *slots;
 };
 
+// The state of one thread: the main thread's lives in `main`, a task's on its own thread's stack.
 struct Rt {
   int argc;
   char **argv;
@@ -63,11 +67,20 @@ struct Rt {
   PsFrameRef frames[PsMaxCallDepth + 1] = {};
 };
 
+// A fault ends the program from whichever thread it happens on. Only the first one reports (a thread that faults
+// meanwhile waits for the exit), and it leaves through _Exit: exit would run static destructors and atexit
+// handlers while the other threads still run.
 [[noreturn]] void ps_fault(const char *message) {
+  static std::atomic<bool> faulted{false};
+  if (faulted.exchange(true)) {
+    for (;;) {
+      ::pause();
+    }
+  }
   std::fflush(stdout);
   std::fprintf(stderr, "VM error: %s\n", message);
   std::fflush(stderr);
-  std::exit(3);
+  std::_Exit(3);
 }
 
 [[noreturn]] void ps_fault(const std::string &message) {
@@ -103,16 +116,37 @@ inline uint64_t ps_div_u64(uint64_t lhs, uint64_t rhs) {
   return lhs / rhs;
 }
 
-inline void ps_emit(const char *text, size_t size, uint64_t flags) {
-  FILE *out = (flags & 2) != 0 ? stderr : stdout;
-  std::fwrite(text, 1, size, out);
-  if ((flags & 1) != 0) {
-    std::fputc('\n', out);
+// A line goes out with its newline in one call (stdio locks the stream for a call), so lines printed by different
+// threads never mix within a line.
+[[gnu::noinline]] void ps_emit_line(const char *text, size_t size, FILE *out) {
+  char small[512];
+  if (size < sizeof(small)) {
+    std::memcpy(small, text, size);
+    small[size] = '\n';
+    std::fwrite(small, 1, size + 1, out);
+    return;
   }
+  std::string line;
+  line.reserve(size + 1);
+  line.append(text, size);
+  line.push_back('\n');
+  std::fwrite(line.data(), 1, line.size(), out);
 }
 
-inline void ps_emit(const std::string &text, uint64_t flags) {
-  ps_emit(text.data(), text.size(), flags);
+inline void ps_emit(const char *text, size_t size, uint64_t flags) {
+  FILE *out = (flags & 2) != 0 ? stderr : stdout;
+  if ((flags & 1) != 0) {
+    ps_emit_line(text, size, out);
+    return;
+  }
+  std::fwrite(text, 1, size, out);
+}
+
+inline void ps_emit(std::string &&text, uint64_t flags) {
+  if ((flags & 1) != 0) {
+    text.push_back('\n');
+  }
+  std::fwrite(text.data(), 1, text.size(), (flags & 2) != 0 ? stderr : stdout);
 }
 
 // ---- strings -------------------------------------------------------------
@@ -436,6 +470,139 @@ inline uint64_t ps_file_write_newline(uint64_t handle) {
 }
 
 } // namespace
+
+)CPP";
+
+// Tasks on threads (docs/MultithreadingPrototype.md, Runtime Model), written inside the program's unnamed
+// namespace when the module has task opcodes. A spawned task is one OS thread with an `Rt` of its own: call depth
+// and local numbering start at 0, as on the VM (a local address means nothing on another stack), and its heap is an
+// arena the spawner acquired for it. The handle has the VM's encoding (a tag in bits 48-62, the slot's generation in
+// bits 32-47, the slot in bits 0-31) and the VM's faults.
+inline constexpr const char *OptCppTaskRuntime = R"CPP(
+constexpr uint64_t PsTaskHandleTag = uint64_t{0x7A5C} << 48;
+constexpr uint64_t PsTaskHandleTagMask = uint64_t{0xFFFF} << 48;
+constexpr size_t PsMaxLiveTasks = size_t{1} << 20;
+// The main thread's stack size: a task may recurse as deep as the entry function (PsMaxCallDepth), and its Rt is
+// on its stack. The default of a secondary thread is 512 KiB on macOS.
+constexpr size_t PsTaskStackBytes = size_t{8} << 20;
+
+using PsTaskEntry = uint64_t (*)(Rt &, const uint64_t *);
+
+struct PsTask {
+  pthread_t thread{};
+  PsTaskEntry entry = nullptr;
+  int argc = 0;
+  char **argv = nullptr;
+  VmHeapArenas *arenas = nullptr;
+  VmHeapArena *arena = nullptr;
+  uint64_t result = 0;
+  std::vector<uint64_t> arguments;
+};
+
+struct PsTaskSlot {
+  PsTask *task = nullptr;
+  uint16_t generation = 0;
+};
+
+struct PsTasks {
+  std::mutex lock;
+  std::vector<PsTaskSlot> slots;
+  std::vector<size_t> freeSlots;
+};
+
+// Never destroyed: the process may end while tasks still run.
+PsTasks &ps_tasks() {
+  static PsTasks *tasks = new PsTasks();
+  return *tasks;
+}
+
+void *ps_task_main(void *raw) {
+  PsTask &task = *static_cast<PsTask *>(raw);
+  Rt rt{task.argc, task.argv, 0, task.arena->core, task.arena->text, *task.arenas};
+  task.result = task.entry(rt, task.arguments.data());
+  // The arena's live blocks stay valid: a result the task allocated is freed by whoever holds it.
+  task.arenas->release(task.arena);
+  return nullptr;
+}
+
+// TaskSpawn: the arguments are copied into the task block, and the task starts on a thread of its own.
+uint64_t ps_task_spawn(Rt &rt, PsTaskEntry entry, const uint64_t *arguments, size_t count) {
+  PsTask *task = new PsTask();
+  task->entry = entry;
+  task->argc = rt.argc;
+  task->argv = rt.argv;
+  task->arenas = &rt.arenas;
+  task->arguments.assign(arguments, arguments + count);
+  uint64_t handle = 0;
+  {
+    PsTasks &tasks = ps_tasks();
+    std::lock_guard<std::mutex> guard(tasks.lock);
+    if (tasks.slots.size() - tasks.freeSlots.size() >= PsMaxLiveTasks) {
+      ps_fault("too many live tasks");
+    }
+    size_t slot = 0;
+    if (!tasks.freeSlots.empty()) {
+      slot = tasks.freeSlots.back();
+      tasks.freeSlots.pop_back();
+    } else {
+      slot = tasks.slots.size();
+      tasks.slots.emplace_back();
+    }
+    tasks.slots[slot].task = task;
+    handle = PsTaskHandleTag | (static_cast<uint64_t>(tasks.slots[slot].generation) << 32) |
+             static_cast<uint64_t>(slot);
+  }
+  // The arena is acquired here, not on the new thread: the first call moves the main arena's storage into its
+  // reservation, which must happen while this is the only thread.
+  std::string error;
+  task->arena = rt.arenas.acquire(error);
+  if (task->arena == nullptr) {
+    ps_fault(error);
+  }
+  pthread_attr_t attributes;
+  int rc = pthread_attr_init(&attributes);
+  if (rc == 0) {
+    rc = pthread_attr_setstacksize(&attributes, PsTaskStackBytes);
+    if (rc == 0) {
+      // Nobody else has the handle yet, so nothing reads task->thread before pthread_create has written it.
+      rc = pthread_create(&task->thread, &attributes, ps_task_main, task);
+    }
+    pthread_attr_destroy(&attributes);
+  }
+  if (rc != 0) {
+    ps_fault(std::string("cannot start a task thread: ") + std::strerror(rc));
+  }
+  return handle;
+}
+
+// TaskWait: joins the task's thread, copies the result out and frees the task block. The handle is consumed.
+uint64_t ps_task_wait(uint64_t handle) {
+  PsTask *task = nullptr;
+  {
+    PsTasks &tasks = ps_tasks();
+    std::lock_guard<std::mutex> guard(tasks.lock);
+    const size_t slot = static_cast<size_t>(handle & UINT64_C(0xFFFFFFFF));
+    const uint16_t generation = static_cast<uint16_t>((handle >> 32) & UINT64_C(0xFFFF));
+    if ((handle & PsTaskHandleTagMask) != PsTaskHandleTag || slot >= tasks.slots.size()) {
+      ps_fault("invalid task handle in IR");
+    }
+    PsTaskSlot &entry = tasks.slots[slot];
+    if (entry.task == nullptr || entry.generation != generation) {
+      ps_fault("task handle already waited");
+    }
+    task = entry.task;
+    entry.task = nullptr;
+    entry.generation = static_cast<uint16_t>(entry.generation + 1);
+    tasks.freeSlots.push_back(slot);
+  }
+  const int rc = pthread_join(task->thread, nullptr);
+  if (rc != 0) {
+    ps_fault(std::string("cannot join a task thread: ") + std::strerror(rc));
+  }
+  const uint64_t result = task->result;
+  delete task;
+  return result;
+}
 
 )CPP";
 
