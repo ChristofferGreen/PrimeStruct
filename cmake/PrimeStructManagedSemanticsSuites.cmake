@@ -268,7 +268,7 @@ addPrimeStructManagedDoctestSuite(
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.calls_flow.sendable"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 17
+  TOTAL_CASES 22
   SHARD_PREFIX "calls_flow_sendable"
 )
 

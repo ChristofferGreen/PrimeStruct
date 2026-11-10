@@ -336,7 +336,8 @@ module {
   lowering `wait(handle)` to return that stored result, and lowering multi-wait to ordinary stdlib tuple construction.
   Detached tasks, task groups, channels, scheduler controls, and true parallel scheduling remain future work.
 - **Sendable spawn arguments:** a value crosses to a task only when its type is sendable
-  (`docs/MultithreadingPrototype.md`, Sendable Values): scalars, `string`, enums, `Function`, `String`, `vector`,
+  (`docs/MultithreadingPrototype.md`, Sendable Values): scalars, `string`, enums, `Function` (a closure converts to
+  one only when its captures are sendable, `value-lifecycle.md`, Function values), `String`, `vector`,
   `map`, tuples, sums and structs of sendable types are; `Reference`, `Pointer`, `StringView`, slices, `Task`,
   `SharedString` and a closure with a `[ref]` capture are not. The check runs on the concrete parameter types of the
   spawned callee instance and names the path to the value that is not sendable; a `mut` binding is an ordinary

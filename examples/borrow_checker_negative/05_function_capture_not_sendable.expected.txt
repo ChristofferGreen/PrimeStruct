@@ -1,0 +1,4 @@
+"code":"PSC1005"
+"message":"closure cannot be a Function: capture `view` is StringView"
+"line":8,"column":10
+"notes":["stage: semantic"]

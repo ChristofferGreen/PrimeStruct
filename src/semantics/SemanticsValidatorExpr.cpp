@@ -164,6 +164,9 @@ PhaseStatus SemanticsValidator::validateExprCallPhase1([[maybe_unused]] const st
     if (!validateTaskHandleArgumentEscapes(params, locals, expr)) {
       return st.done(false);
     }
+    if (!validateFunctionBoxSendable(expr)) {
+      return st.done(false);
+    }
     if (isSimpleCallName(expr, "move")) {
       bool handledMoveBuiltin = false;
       if (!validateExprMutationBorrowBuiltins(

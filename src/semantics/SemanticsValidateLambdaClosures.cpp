@@ -317,9 +317,11 @@ std::string functionShellText(size_t arity) {
          "}\n";
 }
 
+// The box takes its own copy of the closure (a `copy` parameter) and hands it to the heap block, so the block owns
+// every capture: a borrowed closure would leave the caller and the block both destroying a `String` capture.
 const char *FunctionBoxText =
     "[unsafe effects(heap_alloc) return<Pointer<i32>>]\n"
-    "__fn_box<C>([C] closure) {\n"
+    "__fn_box<C>([C copy] closure) {\n"
     "  [Pointer<uninitialized<C>> mut] slot{/std/intrinsics/memory/alloc<uninitialized<C>>(1i32)}\n"
     "  init(dereference(slot), closure)\n"
     "  return(/std/intrinsics/memory/reinterpret<i32>(slot))\n"

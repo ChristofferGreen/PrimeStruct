@@ -219,7 +219,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("closure escapes via Function (root: hits)") != std::string::npos);
+  // A named closure reaches the conversion as a value: its capture is checked like any other (it is not sendable).
+  CHECK_MESSAGE(error.find("closure cannot be a Function: capture `hits` is Reference<i32>") !=
+                    std::string::npos,
+                error);
 }
 
 TEST_CASE("inline ref lambda cannot become a Function") {
@@ -344,7 +347,9 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_MESSAGE(error.find("closure escapes via Function (root: hits)") != std::string::npos, error);
+  CHECK_MESSAGE(error.find("closure cannot be a Function: capture `hits` is Reference<i32>") !=
+                    std::string::npos,
+                error);
 }
 
 TEST_CASE("closure capturing a view by value borrows the view's owner") {

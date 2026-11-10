@@ -294,7 +294,8 @@ bad_set() {
 - **Borrowing:** a closure with a `[ref name]` capture, or one that captures a view or carrier by value, is a carrier
   (`strings-and-views.md`): it borrows those roots until its last use (`borrowed binding: name (root: name, sink:
   closure)`), and it cannot be stored in a field, a container or an outer binding, returned, or converted to
-  `Function` (`closure escapes via Function (root: name)`). A closure that captures a String made inside an open
+  `Function` (`closure escapes via Function (root: name)` for a `[ref]` lambda written at the conversion, `closure
+  cannot be a Function: capture `name` is Reference<T>` for a named one, below). A closure that captures a String made inside an open
   `StringArena` follows the String's arena rules. Its `call` always runs inline, in the frame that holds the borrowed
   locals. A sendable closure for tasks (`MultithreadingPrototype.md`) is one with no `ref` captures and no `mut`
   binding captured by reference.
@@ -331,6 +332,14 @@ bad_set() {
   monomorphization the `function-values` pass numbers the closure types converted to each `Function` instance and
   writes its `call` (an `if` chain on the tag), `Copy` and `Destroy`. No IR change: dispatch is ordinary struct and
   pointer code, so `Function` runs on the VM, native and `optexe` alike.
+- **Sendable by construction:** a `Function` may cross to another task (`MultithreadingPrototype.md`, Functions Are
+  Sendable), so every conversion, explicit or implicit, accepts only a closure whose captures are sendable (the
+  spawn-argument rule of `language-core.md`): a capture that is a `Pointer`, a `Reference`, a view (`StringView`, a
+  slice), a `Task` or a struct holding one is rejected where the closure is converted, with the path to it:
+  `closure cannot be a Function: capture `view` is StringView`, `closure cannot be a Function: capture `rows`, field
+  `bytes` of PixelRows is Pointer<u8>`. This holds whether or not the program uses tasks. State a handler works on
+  comes in through its parameters (`Reference<State>`), not through a captured pointer. The heap block holds its own
+  copy of the closure, so a `String` or `vector` capture belongs to the `Function` (example below).
 - **Limits:** a borrowing closure cannot be converted, explicitly or at an implicit site (`closure escapes via Function
   (root: name)`, above). An implicit conversion needs the expected type without inference: it does not happen for a
   parameter of a generic definition, a field of a generic struct, an element pushed onto a `vector<Function<...>>`, or
@@ -405,6 +414,36 @@ main() {
   [Hook mut] hook{Hook{[run] double}}
   [Function<i32, i32> mut] named{Function<i32, i32>{/double}}
   return(added + apply(double, 5i32) + apply(hook.run, 1i32) + named(2i32))  // 4 + 10 + 2 + 4
+}
+```
+
+A `Function` owns sendable captures, a `String` and a struct holding a `vector` (runs on the VM, native and
+`optexe`; capturing a `StringView` or a `Pointer` instead is rejected at the closure):
+
+```prime
+import /std/text/*
+import /std/collections/*
+
+[struct]
+Tally {
+  [String] label{String{}}
+  [vector<i64>] values{vector<i64>()}
+}
+
+[return<i64>]
+apply([Function<i64, i64> mut] step, [i64] value) {
+  return(step(value))
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [String] name{stringFrom("abcd")}
+  [Tally mut] tally{Tally{}}
+  tally.values.push(7i64)
+  byName{[name]([i64] x) { return(x + convert<i64>(name.count())) }}
+  [Function<i64, i64> mut] byTally{[tally]([i64] x) { return(x + convert<i64>(tally.values.count())) }}
+  [Function<i64, i64> mut] twin{byTally}
+  return(convert<i32>(apply(byName, 1i64) + byTally(10i64) + twin(0i64)))  // 5 + 11 + 1
 }
 ```
 

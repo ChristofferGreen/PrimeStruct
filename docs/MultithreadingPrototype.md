@@ -598,7 +598,7 @@ user never writes it on a type. Decided 2026-11-09 after a review of what Rust's
   of them shares the cell. That is why one concept is enough.
 - **Checked only at the boundary:** every argument of a spawned call, by the concrete type of the callee parameter
   that receives it (implemented, TODO-5790, `src/semantics/SemanticsSendable.{h,cpp}`); the element type of
-  `Mutex<T>` and `Channel<T>`; and a closure converted to `Function`. There are no sendability bounds in generic
+  `Mutex<T>` and `Channel<T>`; and a closure converted to `Function` (implemented). There are no sendability bounds in generic
   signatures: templates are monomorphized, so the check runs on the concrete instance, and when the offending type
   came in through a template argument the diagnostic carries the instantiation chain.
 - **`mut` arguments are allowed.** A spawn argument is copied; the task and the spawner each have their own value
@@ -657,13 +657,13 @@ spawn argument `view` of /measure is not sendable: it is StringView
 spawn argument `step` of /run<closure> is not sendable: capture `total` is Reference<i32> (instantiated from /main)
 spawn argument `value` of /consume<ReadSlice<i32>> is not sendable: it is ReadSlice<i32> (instantiated from
   /relay<ReadSlice<i32>>, instantiated from /main)
-closure cannot be a Function: capture `view` is a StringView
+closure cannot be a Function: capture `view` is StringView
 Mutex element Record is not sendable: field `next` is Reference<Record>
 Channel<Slice<i32>>: Slice<i32> is not sendable (instantiated from /pump)
 ```
 
-The spawn lines are the messages of today's check (each ends with `; sharing between tasks needs Mutex, Atomic or
-Channel`); the `Function`, `Mutex` and `Channel` lines are the shape their leaves (TODO-5791, TODO-5797,
+The spawn and `Function` lines are the messages of today's checks (each spawn line ends with `; sharing between
+tasks needs Mutex, Atomic or Channel`); the `Mutex` and `Channel` lines are the shape their leaves (TODO-5797,
 TODO-5798) follow. Every field on the path names its struct; a closure's fields are its captures; an element of a
 builtin container is `element of vector<StringView>`. The instantiation chain names the definition that first
 requested each template instance; it carries no line yet, because the message text cannot map a position of the
@@ -692,23 +692,28 @@ length_of([StringView] view) {
 }
 ```
 
-The second is rejected with `closure cannot be a Function: capture `view` is a StringView`; capturing a `String`
-instead is accepted.
+The second (with `import /std/text/*` and `import /std/text/view/*`) is rejected with `closure cannot be a Function:
+capture `view` is StringView` at the closure; capturing a `String` instead is accepted. A route handler that
+captures a `Pointer` is rejected the same way where it is written, also for a single-threaded `serve`. A named
+closure with a `[ref name]` capture converted to a `Function` reports `capture `name` is Reference<T>`; a `[ref]`
+lambda written at the conversion keeps `closure escapes via Function (root: name)`.
 
 - **Rejected: inferring sendability per `Function` instance** from the closures converted to it. A closure added
   anywhere in the program could then break a spawn site far away, with an error that does not point at the cause.
   This is the opposite of Rust's async problem, where a future stops being `Send` because of a value held across an
   `.await` deep inside it and the error surfaces at `tokio::spawn`. Sendable by construction costs one restriction
   (a `Function` cannot hold a pointer or a view) that no example or stdlib handler needs.
-- **Where the check goes.** The lambda-closures pass spells each lambda as a closure struct whose field types are
-  template parameters that the factory call infers (`SemanticsValidateLambdaClosures.cpp`); the conversion itself
-  (`TemplateMonomorphCallableRewrites.cpp` for implicit sites, the closure pass for `Function<R, A...>{...}`) rewrites
-  the closure into `/__fn_box(closure)` while those types are still parameters, so it can only see syntactic facts
-  such as a `ref` capture. The `function-values` pass (`SemanticsValidateFunctionValues.cpp`) runs after template
-  monomorphization and already visits every `/__fn_box` with its concrete closure struct to number it per `Function`
-  instance; the sendable check of each capture field goes there, reported at the box's source position, which is
-  the closure's. The loan-based `closure escapes via Function` check stays where it is
-  (`SemanticsValidateSliceLoans.cpp`).
+- **Where the check goes** (implemented). The lambda-closures pass spells each lambda as a closure struct whose
+  field types are template parameters that the factory call infers (`SemanticsValidateLambdaClosures.cpp`); the
+  conversion itself (`TemplateMonomorphCallableRewrites.cpp` for implicit sites, the closure pass for
+  `Function<R, A...>{...}`) rewrites the closure into `/__fn_box(closure)` while those types are still parameters.
+  After template monomorphization every `/__fn_box` instance takes its concrete closure struct, and the validator
+  checks that parameter type with the spawn-argument predicate when it validates the call
+  (`validateFunctionBoxSendable`, `SemanticsValidatorTaskHandles.cpp`), so struct fields resolve as at a spawn and
+  the diagnostic sits at the box's source position, which is the closure's (or the conversion's, for a named
+  closure). The loan-based `closure escapes via Function` check stays where it is (`SemanticsValidateSliceLoans.cpp`).
+  The box takes the closure as a `copy` parameter: the heap block owns its own copy of every capture, so a `String`
+  capture is not freed twice.
 - `call` stays `mut` when a capture is `mut`. Sendable means the value may move to another thread, not that two
   threads may call it at once; a handler shared between threads is called inside `Mutex.locked`.
 
@@ -927,8 +932,10 @@ The first implementation slices now cover:
 - track task handle states through statements and returns
 - reject double wait, escaped handles, and missing waits before return
 - reject task-handle arguments by name, and every argument whose parameter
-  type is not sendable by type (TODO-5790, [Sendable Values](#sendable-values));
+  type is not sendable by type ([Sendable Values](#sendable-values));
   `mut` bindings are ordinary arguments
+- reject a closure converted to `Function` whose captures are not sendable
+  ([Functions Are Sendable](#functions-are-sendable))
 - add positive and negative semantic tests
 - add semantic-product coverage for task facts
 - add first VM/native single-task runtime execution
@@ -936,7 +943,7 @@ The first implementation slices now cover:
 
 Remaining implementation work:
 
-- parallel tasks, thread-safe heaps, the `Function` capture check, `Mutex`, `Atomic`,
+- parallel tasks, thread-safe heaps, `Mutex`, `Atomic`,
   `Channel` and the multi-core server: [Threads For Real](#threads-for-real),
   lane Multithreading in `docs/todo.md`
 - task groups, detached tasks and scheduler controls: not designed yet

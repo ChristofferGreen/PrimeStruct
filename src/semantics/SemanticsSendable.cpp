@@ -59,7 +59,7 @@ public:
         return leafText(normalized);
       }
       if (leaf == "Function") {
-        return std::nullopt;  // sendable by construction (TODO-5791 checks the conversion)
+        return std::nullopt; // sendable by construction: the conversion checks the captures
       }
       if (lookup_.resolveDefinition(normalizedBase, namespacePrefix) == nullptr) {
         // A builtin template (`vector`, `map`, `array`, `Maybe`, `Result`, `uninitialized`, ...): its elements.
@@ -85,8 +85,8 @@ public:
       return leafText(def->fullPath);
     }
     if (typeLeafName(def->fullPath).rfind("__Function", 0) == 0) {
-      // `Function<R, A...>` erases its closure behind a pointer; it is sendable by construction (TODO-5791 checks
-      // the captures where a closure is converted).
+      // `Function<R, A...>` erases its closure behind a pointer; it is sendable by construction, since the
+      // validator checks the captures where a closure is converted (`validateFunctionBoxSendable`).
       return std::nullopt;
     }
     if (!visiting_.insert(def->fullPath).second) {

@@ -299,6 +299,61 @@ main() {
                     616);
 }
 
+TEST_CASE("Function values own sendable captures: a String, a vector and a struct of both") {
+  runClosureProgram("function_sendable_captures",
+                    R"(
+import /std/text/*
+import /std/collections/*
+
+[struct]
+Tally() {
+  [String] label{String{}}
+  [vector<i64>] values{vector<i64>()}
+}
+
+[struct]
+Hook() {
+  [Function<i64, i64> mut] run
+}
+
+[return<i64>]
+apply([Function<i64, i64> mut] step, [i64] value) {
+  return(step(value))
+}
+
+[return<i64>]
+triple([i64] x) {
+  return(x * 3i64)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [String] name{stringFrom("abcd")}
+  [vector<i64> mut] values{vector<i64>()}
+  values.push(5i64)
+  [Tally mut] tally{Tally{}}
+  tally.values.push(7i64)
+  tally.values.push(8i64)
+  byName{[name]([i64] x) { return(x + convert<i64>(name.count())) }}
+  [mut] counted{[mut seen{vector<i64>()}, values]([i64] x) {
+    seen.push(x)
+    return(convert<i64>(seen.count()) + values[0i32])
+  }}
+  byTally{[tally]([i64] x) { return(x + convert<i64>(tally.values.count())) }}
+  [i64] atParameter{apply(byName, 1i64)}
+  [Hook mut] hook{Hook{[run] counted}}
+  [i64] first{apply(hook.run, 9i64)}
+  [i64] second{apply(hook.run, 9i64)}
+  [Function<i64, i64> mut] bound{byTally}
+  [Function<i64, i64> mut] twin{bound}
+  [Function<i64, i64> mut] named{Function<i64, i64>{triple}}
+  // 5 + 6 + 7 + 12 + 6 + 3 + 2: the field's closure keeps its `seen` between calls, the copy owns its own Tally
+  return(convert<i32>(atParameter + first + second + bound(10i64) + named(2i64) + apply(triple, 1i64) + twin(0i64)))
+}
+)",
+                    41);
+}
+
 TEST_CASE("a closure passes straight to a Function parameter") {
   runClosureProgram("function_implicit_parameter", R"(
 [return<i32>]

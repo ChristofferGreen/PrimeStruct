@@ -428,6 +428,68 @@ std::string SemanticsValidator::diagnosticInstantiationChain(const std::string &
   return chain.empty() ? chain : " (" + chain + ")";
 }
 
+SendableTypeLookup SemanticsValidator::sendableTypeLookup() {
+  SendableTypeLookup lookup;
+  lookup.resolveDefinition = [this](const std::string &typeText,
+                                    const std::string &namespacePrefix) -> const Definition * {
+    std::string path = resolveStructTypePath(typeText, namespacePrefix, structNames_);
+    if (path.empty()) {
+      path = resolveStructTypePath(typeText, namespacePrefix, sumNames_);
+    }
+    if (path.empty()) {
+      return nullptr;
+    }
+    const auto defIt = defMap_.find(path);
+    return defIt == defMap_.end() ? nullptr : defIt->second;
+  };
+  lookup.fieldType =
+      [this](const Definition &structDef, const Expr &fieldStmt, std::string &typeTextOut) {
+        if (isCompileTimeTypeBinding(fieldStmt)) {
+          return false;
+        }
+        BindingInfo fieldBinding;
+        if (!resolveStructFieldBinding(structDef, fieldStmt, fieldBinding)) {
+          return false;
+        }
+        typeTextOut = task_binding_type_text(fieldBinding);
+        return true;
+      };
+  lookup.display = [this](const std::string &typeText) { return diagnosticTypeText(typeText); };
+  return lookup;
+}
+
+bool SemanticsValidator::validateFunctionBoxSendable(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Call || expr.isBinding || expr.isMethodCall || expr.isFieldAccess ||
+      expr.args.size() != 1) {
+    return true;
+  }
+  const size_t slash = expr.name.find_last_of('/');
+  const std::string_view leaf = slash == std::string::npos
+                                    ? std::string_view(expr.name)
+                                    : std::string_view(expr.name).substr(slash + 1);
+  if (leaf.rfind("__fn_box", 0) != 0) {
+    return true;
+  }
+  const std::string boxPath = resolveCalleePath(expr);
+  const auto paramsIt = paramsByDef_.find(boxPath);
+  if (paramsIt == paramsByDef_.end() || paramsIt->second.empty()) {
+    return true;
+  }
+  const std::string closureType = task_binding_type_text(paramsIt->second.front().binding);
+  if (closureType.empty()) {
+    return true;
+  }
+  const auto defIt = defMap_.find(boxPath);
+  const std::string boxNamespace = defIt == defMap_.end() || defIt->second == nullptr
+                                       ? std::string()
+                                       : defIt->second->namespacePrefix;
+  const std::string violation = sendableViolation(closureType, boxNamespace, sendableTypeLookup());
+  if (violation.empty()) {
+    return true;
+  }
+  return failExprDiagnostic(expr, "closure cannot be a Function: " + violation);
+}
+
 bool SemanticsValidator::validateTaskSpawnArgumentsSendable(
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals,
@@ -452,31 +514,7 @@ bool SemanticsValidator::validateTaskSpawnArgumentsSendable(
   }
   const std::vector<ParameterInfo> &calleeParams = paramsIt->second;
 
-  SendableTypeLookup lookup;
-  lookup.resolveDefinition = [&](const std::string &typeText,
-                                 const std::string &namespacePrefix) -> const Definition * {
-    std::string path = resolveStructTypePath(typeText, namespacePrefix, structNames_);
-    if (path.empty()) {
-      path = resolveStructTypePath(typeText, namespacePrefix, sumNames_);
-    }
-    if (path.empty()) {
-      return nullptr;
-    }
-    const auto defIt = defMap_.find(path);
-    return defIt == defMap_.end() ? nullptr : defIt->second;
-  };
-  lookup.fieldType = [&](const Definition &structDef, const Expr &fieldStmt, std::string &typeTextOut) {
-    if (isCompileTimeTypeBinding(fieldStmt)) {
-      return false;
-    }
-    BindingInfo fieldBinding;
-    if (!resolveStructFieldBinding(structDef, fieldStmt, fieldBinding)) {
-      return false;
-    }
-    typeTextOut = task_binding_type_text(fieldBinding);
-    return true;
-  };
-  lookup.display = [&](const std::string &typeText) { return diagnosticTypeText(typeText); };
+  const SendableTypeLookup lookup = sendableTypeLookup();
 
   const std::string calleeNamespace = [&]() -> std::string {
     const auto defIt = defMap_.find(calleePath);

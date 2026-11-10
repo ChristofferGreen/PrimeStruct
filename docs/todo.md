@@ -111,7 +111,6 @@ of sync with them.
 | TODO-5745 | A labeled value that is a call parses in every position | ready | parser-labeled-values |
 | TODO-5746 | A parameterless `mut` method whose body is only bindings is a method | ready | diagnostics |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
-| TODO-5791 | Every `Function` is sendable by construction: the conversion rejects non-sendable captures | ready | mt-closures |
 | TODO-5792 | The VM runs spawned tasks under a deterministic scheduler | ready | mt-vm-tasks |
 | TODO-5793 | Byte-region accesses check liveness without a map search or a write | ready | mt-heap-optexe |
 | TODO-5794 | `optexe` heaps are per-thread arenas with remote frees | blocked | mt-heap-optexe |
@@ -209,13 +208,13 @@ of sync with them.
 - Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5738, TODO-5718
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732, TODO-5735, TODO-5736, TODO-5737
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe; real calls and struct copies TODO-5739, TODO-5741, TODO-5752; VM address checks TODO-5824
-- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5791, TODO-5792, TODO-5793, TODO-5794, TODO-5795, TODO-5796, TODO-5797, TODO-5798, TODO-5656, TODO-5802, TODO-5803, TODO-5799, TODO-5800, TODO-5801; deferred TODO-5804, TODO-5805, TODO-5806
+- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5792, TODO-5793, TODO-5794, TODO-5795, TODO-5796, TODO-5797, TODO-5798, TODO-5656, TODO-5802, TODO-5803, TODO-5799, TODO-5800, TODO-5801; deferred TODO-5804, TODO-5805, TODO-5806
 
 ### Execution Queue
 
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
-Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order: TODO-5791 (every `Function` sendable by construction), TODO-5792 (VM tasks under a deterministic scheduler; `TaskSpawn`/`TaskWait` IR), TODO-5793 (byte-region checks without a map search), TODO-5794 (`optexe` per-thread heap arenas), TODO-5795 (`optexe` threads for `[spawn]`), TODO-5796 (`Atomic`), TODO-5797 (`Mutex`), TODO-5798 (`Channel`), TODO-5656 (atomic `SharedString` count), TODO-5802 (`serveWorkers`), TODO-5803 (apps on workers, measured), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5791, TODO-5792 and TODO-5793 are ready and independent of each other (TODO-5807, destructured multi-wait, and TODO-5790, sendable spawn arguments, are done). Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions).
+Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order: TODO-5792 (VM tasks under a deterministic scheduler; `TaskSpawn`/`TaskWait` IR), TODO-5793 (byte-region checks without a map search), TODO-5794 (`optexe` per-thread heap arenas), TODO-5795 (`optexe` threads for `[spawn]`), TODO-5796 (`Atomic`), TODO-5797 (`Mutex`), TODO-5798 (`Channel`), TODO-5656 (atomic `SharedString` count), TODO-5802 (`serveWorkers`), TODO-5803 (apps on workers, measured), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5792 and TODO-5793 are ready and independent of each other (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, are done). Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions).
 
 ### Task Blocks
 
@@ -483,6 +482,7 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
   - parallel_track: collections-fields
   - scope: `KeepV{[seen] start}` with `start` a local `vector<i32>` copies the 5-slot vector record into the field with `ownsData` still set in both, so the local and the struct both free the buffer (`VM error: invalid heap free address in IR: 9223372036854775808` on VM; same on optexe). Related: a plain local copy `[vector<i32> mut] b{a}` aliases `a` (after `b.push(2i32)`, `a.count()` is 2, not 1), while a struct copy (`[KeepV mut] copy{k}`) and the stdlib `Vector<T>` spelling copy elements. Brace construction from a named vector local must copy its elements (value semantics, docs/spec/value-lifecycle.md, Copies), and the `vector<T>` local copy must too.
   - implementation_notes: the vector record layout is `IrLowererVectorRecordLayoutHelpers.h` (`ownsData` at slot 4); the struct copy of TODO-5668's matrix case `struct_vector_field_copy_and_closure` already copies a vector field's elements.
+  - notes: the same fault shows with a closure: `[mut values]` capturing a `vector<i64>` local, then `values.push(x)` in the body and one call, stops the VM with `invalid heap free address in IR: 9223372036854792192` (found while testing TODO-5791; an init capture `[mut seen{vector<i64>()}]` and a read-only `[values]` capture work).
   - acceptance:
     - `KeepV{[seen] start}` then pushes on both run on VM, native and optexe with independent counts and no double free; `b{a}` then `b.push` leaves `a.count()` unchanged; a test that the original stays usable
     - full release gate green
@@ -685,20 +685,6 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
   - stop_rule: receiver offset handling only.
   - notes: deferred: queued behind the Ready Now cap.
 
-- [ ] TODO-5791: Every `Function` is sendable by construction: the conversion rejects non-sendable captures
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-09
-  - phase: Multithreading (docs/MultithreadingPrototype.md, Functions Are Sendable)
-  - parallel_track: mt-closures
-  - scope: A `Function<R, A...>` erases its closure's type, so sendability cannot be read off a `Function` value; instead every conversion to `Function`, explicit (`Function<i64>{closure}`) and implicit (a closure at an expected-type site), rejects a closure with a capture that is not sendable (TODO-5790's predicate): a `Pointer`, a `StringView`, a slice, a struct holding one. `[ref]` captures are already rejected (`closure escapes via Function`). `Function` itself is then sendable, with no second function type and no per-instance inference. Routers, `AppRouter`, `WebApp`, `AppHandlers` and `serveWorkers` keep plain `Function`.
-  - implementation_notes: the conversion sites (src/semantics/TemplateMonomorphCallableRewrites.cpp, `convertArgument`; src/semantics/SemanticsValidateLambdaClosures.cpp, `rewriteFunctionTypes`) rewrite the closure into `/__fn_box(closure)` while the closure struct's field types are still the template parameters the factory call infers, so the check runs in the `function-values` pass (src/semantics/SemanticsValidateFunctionValues.cpp, `rewriteFunctionValues`), which runs after template monomorphization and already visits every `/__fn_box` with its concrete closure struct; report at the box's source position, which is the closure's. The loan-based check in src/semantics/SemanticsValidateSliceLoans.cpp (`checkFunctionBoxes`) stays.
-  - acceptance:
-    - positive: a lambda with value and `mut` captures of sendable types (a `String`, a `vector<i64>`, a struct of both) and a named definition convert to `Function<i64, i64>` at a parameter, a field and a binding, and run on the VM, native and `optexe`; a `Function` passes as a spawn argument; all examples/ and stdlib programs still compile
-    - negative: a closure capturing a `Pointer<u8>`, a `StringView` or a struct with a `Pointer` field is `closure cannot be a Function: capture `view` is a StringView` (with the field path for the struct), at the closure's line, at an explicit `Function<...>{...}` and at an implicit site, and under single-threaded `serve` too
-    - full release gate green
-  - stop_rule: the capture check at `Function` conversion; no new function type.
-
 - [ ] TODO-5792: The VM runs spawned tasks under a deterministic scheduler
   - owner: ai
   - status: ready
@@ -814,7 +800,7 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
 - [ ] TODO-5802: `serveWorkers`: one thread polls and accepts, N workers answer
   - owner: ai
   - status: blocked
-  - blocked_on: TODO-5798, TODO-5791
+  - blocked_on: TODO-5798
   - created_at: 2026-11-09
   - phase: Multithreading and Web apps (docs/MultithreadingPrototype.md, The Server; docs/WebAppsPlan.md, Concurrency)
   - parallel_track: mt-server

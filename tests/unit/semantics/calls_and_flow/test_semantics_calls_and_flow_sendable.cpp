@@ -486,4 +486,141 @@ main() {
                 "task handle already waited: t");
 }
 
+// A `Function` erases its closure, so it is sendable by construction: converting a closure to a `Function` checks
+// every capture with the same predicate as a spawn argument.
+
+TEST_CASE("a Function holds closures whose captures are sendable") {
+  checkAccepted(R"(
+import /std/text/*
+import /std/collections/*
+
+[struct]
+Tally() {
+  [String] label{String{}}
+  [vector<i64>] values{vector<i64>()}
+}
+
+[struct]
+Hook() {
+  [Function<i64, i64> mut] run
+}
+
+[return<i64>]
+apply([Function<i64, i64> mut] step, [i64] value) {
+  return(step(value))
+}
+
+[return<i64>]
+triple([i64] x) {
+  return(x * 3i64)
+}
+
+[return<i64>]
+run_twice([Function<i64, i64> copy mut] step, [i64] value) {
+  return(step(step(value)))
+}
+
+[effects(heap_alloc, task), return<int>]
+main() {
+  [String] name{stringFrom("abcd")}
+  [vector<i64> mut] values{vector<i64>()}
+  values.push(5i64)
+  [Tally mut] tally{Tally{}}
+  tally.values.push(7i64)
+  byName{[name]([i64] x) { return(x + convert<i64>(name.count())) }}
+  [mut] counted{[mut seen{vector<i64>()}, values]([i64] x) {
+    seen.push(x)
+    return(convert<i64>(seen.count()) + values[0i32])
+  }}
+  byTally{[tally]([i64] x) { return(x + convert<i64>(tally.values.count())) }}
+  [i64] atParameter{apply(byName, 1i64)}
+  [Hook mut] hook{Hook{[run] counted}}
+  [Function<i64, i64> mut] bound{byTally}
+  [Function<i64, i64> mut] named{Function<i64, i64>{triple}}
+  [Task<i64>] task{[spawn] run_twice(bound, 1i64)};
+  [i64] spawned{wait(task)}
+  return(convert<i32>(atParameter + apply(hook.run, 9i64) + named(2i64) + spawned))
+}
+)");
+}
+
+TEST_CASE("an explicit Function rejects a Pointer capture") {
+  checkRejected(R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [u8 mut] byte{1u8}
+  [Pointer<u8>] raw{location(byte)}
+  [Function<i32> mut] read{Function<i32>{[raw]() { return(7i32) }}}
+  return(read())
+}
+)",
+                "closure cannot be a Function: capture `raw` is Pointer<u8>");
+}
+
+TEST_CASE("an implicit Function names the field of a captured struct") {
+  checkRejected(
+      R"(
+[struct]
+PixelRows() {
+  [Pointer<u8>] bytes
+  [i32] stride{4i32}
+}
+
+[return<i64>]
+apply([Function<i64, i64> mut] step, [i64] value) {
+  return(step(value))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [u8 mut] byte{1u8}
+  [PixelRows] rows{PixelRows{[bytes] location(byte)}}
+  reader{[rows]([i64] x) { return(plus(x, convert<i64>(rows.stride))) }}
+  return(convert<i32>(apply(reader, 1i64)))
+}
+)",
+      "closure cannot be a Function: capture `rows`, field `bytes` of PixelRows is Pointer<u8>");
+}
+
+TEST_CASE("a Function returned from a definition rejects a StringView capture") {
+  checkRejected(R"(
+import /std/text/*
+import /std/text/view/*
+
+[effects(heap_alloc), return<Function<i64>>]
+length_of([StringView] view) {
+  return(Function<i64>{[view]() { return(convert<i64>(view.count())) }})
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Function<i64> mut] length{length_of("abc")}
+  return(convert<i32>(length()))
+}
+)",
+                "closure cannot be a Function: capture `view` is StringView");
+}
+
+TEST_CASE("a route handler capturing a Pointer is rejected under single-threaded serve") {
+  checkRejected(R"(
+import /std/http/*
+import /std/http/server/*
+import /std/text/*
+
+[return<int> effects(heap_alloc, io_err, net_io)]
+main() {
+  [u8 mut] byte{1u8}
+  [Pointer<u8>] raw{location(byte)}
+  [Router mut] router{Router{}}
+  router.get("/", [raw]([Request] request, [Reference<Response>] response) {
+    response.text("hello\n", "text/plain")
+  })
+  [ServerConfig] config{ServerConfig{[port] 0i32, [loopbackOnly] true}}
+  serve(router, config)
+  return(0i32)
+}
+)",
+                "closure cannot be a Function: capture `raw` is Pointer<u8>");
+}
+
 TEST_SUITE_END();

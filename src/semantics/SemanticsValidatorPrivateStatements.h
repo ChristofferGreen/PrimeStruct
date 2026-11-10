@@ -160,6 +160,11 @@
   bool validateTaskSpawnArgumentsSendable(const std::vector<ParameterInfo> &params,
                                           const std::unordered_map<std::string, BindingInfo> &locals,
                                           const Expr &spawnedCall);
+  // A `Function` is sendable by construction: a closure converted to one (`/__fn_box(closure)`, explicit or at an
+  // implicit site) must have only sendable captures, checked on the concrete closure struct of the box instance.
+  bool validateFunctionBoxSendable(const Expr &expr);
+  // The validator's struct, sum and field-type lookups for `sendableViolation`.
+  SendableTypeLookup sendableTypeLookup();
   // A readable type for diagnostics: template instances as `Name<Args>`, struct paths by their leaf.
   std::string diagnosticTypeText(const std::string &typeText);
   // `/consume<Slice<i32>>` for a template instance, else the definition path.

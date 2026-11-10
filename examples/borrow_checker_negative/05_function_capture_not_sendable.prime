@@ -1,0 +1,15 @@
+// A `Function` may cross to another task, so a closure converted to one cannot capture a view: the diagnostic names
+// the capture, at the closure.
+import /std/text/*
+import /std/text/view/*
+
+[effects(heap_alloc), return<Function<i64>>]
+length_of([StringView] view) {
+  return(Function<i64>{[view]() { return(convert<i64>(view.count())) }})
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Function<i64> mut] length{length_of("abc")}
+  return(convert<i32>(length()))
+}
