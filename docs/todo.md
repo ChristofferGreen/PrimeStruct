@@ -111,6 +111,7 @@ of sync with them.
 | TODO-5745 | A labeled value that is a call parses in every position | ready | parser-labeled-values |
 | TODO-5746 | A parameterless `mut` method whose body is only bindings is a method | ready | diagnostics |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
+| TODO-5838 | Three gate entries time out on a loaded machine | ready | test-timeouts |
 | TODO-5836 | A spawned definition without a `return` transform is a `Task<void>` | deferred | mt-vm-tasks |
 | TODO-5837 | VM debug sessions step programs that spawn tasks | deferred | vm-debugger |
 | TODO-5793 | Byte-region accesses check liveness without a map search or a write | ready | mt-heap-optexe |
@@ -670,6 +671,18 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
     - full release gate green
   - stop_rule: receiver offset handling only.
   - notes: deferred: queued behind the Ready Now cap.
+
+- [ ] TODO-5838: Three gate entries time out on a loaded machine
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-10
+  - phase: Test hygiene (found while gating TODO-5835)
+  - parallel_track: test-timeouts
+  - scope: At load 65, `PrimeStruct_primestruct_semantics_move` and `PrimeStruct_primestruct_stdlib_symbol_manifest` hit their 30 s timeouts (2.4 s and 2.7 s alone, 13 s in a gate at load 50) and `PrimeStruct_primestruct_compile_run_reflection_codegen_reflection_codegen_24_24` hit 300 s (22 s alone, one case over the 5 s guardrail). The next gate at load 80 passed. Under the No flaky tests rule, split or cheapen them rather than raise the timeouts.
+  - acceptance:
+    - each entry runs in under a third of its timeout alone, measured and recorded in docs/todo_log.md; reflection_codegen case 24 is split into focused cases under 5 s
+    - full release gate green
+  - stop_rule: those three entries.
 
 - [ ] TODO-5836: A spawned definition without a `return` transform is a `Task<void>`
   - owner: ai
