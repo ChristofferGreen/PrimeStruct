@@ -220,6 +220,9 @@ struct LazyStdlibModule {
   std::filesystem::path sourceFile;
   std::vector<StdlibSymbolManifestEntry> entries;
   std::unordered_set<std::string> includedPaths;
+  // The module source, read and text-filtered on its first extracted symbol
+  // and shared by the rest (empty path until then).
+  ManifestModuleSource loadedSource;
 };
 
 // Builds the symbol closure for every lazy-eligible module referenced by

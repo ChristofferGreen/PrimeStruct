@@ -29,6 +29,7 @@ list(APPEND PrimeStructManagedSemanticsSuites
   primestruct.semantics.text_views
   primestruct.semantics.maybe
   primestruct.semantics.type_resolution_graph
+  primestruct.semantics.move
 )
 
 set(PrimeStructManagedSemanticsCommon
@@ -308,4 +309,15 @@ addPrimeStructManagedDoctestSuite(
   ${PrimeStructManagedSemanticsCommon}
   TOTAL_CASES 169
   SHARD_PREFIX "type_resolution_graph"
+)
+
+# TODO-5838: one 23-case entry took 2.4 s alone and timed out (30 s) at
+# load 65; the later cases validate through the stdlib import pipeline.
+addPrimeStructManagedDoctestSuite(
+  "primestruct.semantics.move"
+  TARGET PrimeStruct_semantics_tests
+  TIMEOUT 30
+  LABEL "parallel-safe"
+  TOTAL_CASES 23
+  CASES_PER_SHARD 6
 )

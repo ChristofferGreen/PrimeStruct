@@ -559,9 +559,13 @@ bool computeLazyStdlibModuleClosureSource(std::vector<LazyStdlibModule> &modules
         if (!matched) {
           continue;
         }
+        if (module.loadedSource.path.empty() &&
+            !loadManifestModuleSource(module.sourceFile.string(), module.loadedSource, error)) {
+          return false;
+        }
         std::string extractedText;
         if (!extractAndVerifyManifestedSymbolSource(
-                entry, module.sourceFile.string(), extractedText, error)) {
+                entry, module.loadedSource, extractedText, error)) {
           return false;
         }
         module.includedPaths.insert(entry.path);

@@ -375,6 +375,9 @@ TEST_CASE("reflection SoaSchema storage helper runtime stays aligned across back
   CHECK(runCommand(vmCmd) == 127);
 }
 
+// Over the 5 s guardrail (19 s alone, 2026-11-10) and not splittable: one exe build is the whole cost. The IR lowerer
+// inlines the 17 column constructors into /main (84k instructions), the exe emitter turns that into 45 MB of C++, and
+// clang++ -O0 takes ~18 s on it. A program without the checks is still 20 MB. TODO-5839 makes that build smaller.
 TEST_CASE("reflection SoaSchema storage helper runtime stays aligned across backends on exe") {
   const std::string srcPath = writeSoaSchemaStorageSource("exe");
   const std::string exePath = (testScratchPath("") / "primec_reflection_soa_schema_storage_exe").string();

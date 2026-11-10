@@ -3286,8 +3286,11 @@ if(PRIMESTRUCT_BUILD_TESTS)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "growth_limits_and_syntax"
                                  SOURCE_FILE "*test_compile_run_vm_collections_*.cpp" FIRST 332 LAST 352)
     elseif(suite STREQUAL "primestruct.compile.run.vm.bounds")
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 30 SHARD_NAME "bounds_and_safety"
-                                 SOURCE_FILE "*test_compile_run_vm_bounds.cpp")
+      # TODO-5838: one 35-case entry took 2.7 s alone and 10 s in a loaded gate (30 s timeout).
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 30 SHARD_NAME "bounds_and_safety_1_18"
+                                 SOURCE_FILE "*test_compile_run_vm_bounds.cpp" FIRST 1 LAST 18)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 30 SHARD_NAME "bounds_and_safety_19_35"
+                                 SOURCE_FILE "*test_compile_run_vm_bounds.cpp" FIRST 19 LAST 35)
     elseif(suite STREQUAL "primestruct.compile.run.vm.cursor")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 60 SHARD_NAME "forward_traversal"
                                  SOURCE_FILE "*test_compile_run_vm_cursor.cpp")

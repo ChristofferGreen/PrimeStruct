@@ -49,11 +49,16 @@ TEST_CASE("real stdlib manifests load and every entry extracts and hash-verifies
     REQUIRE(primec::readStdlibSymbolManifest(module.manifestPath.string(), entries, error));
     CHECK_FALSE(entries.empty());
 
+    // Read and text-filter the module once, as the lazy import does; the
+    // per-path overload re-filters the whole module for every symbol.
+    primec::ManifestModuleSource moduleSource;
+    REQUIRE(primec::loadManifestModuleSource(module.sourcePath.string(), moduleSource, error));
+
     for (const auto &entry : entries) {
       INFO("symbol: " << entry.path);
       std::string sourceText;
-      const bool ok = primec::extractAndVerifyManifestedSymbolSource(
-          entry, module.sourcePath.string(), sourceText, error);
+      const bool ok =
+          primec::extractAndVerifyManifestedSymbolSource(entry, moduleSource, sourceText, error);
       CHECK(ok);
       CHECK_FALSE(sourceText.empty());
       if (!ok) {

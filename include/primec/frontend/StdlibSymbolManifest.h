@@ -70,4 +70,22 @@ bool extractAndVerifyManifestedSymbolSource(const StdlibSymbolManifestEntry &ent
                                             std::string &outSourceText,
                                             std::string &error);
 
+// A module's source, read and text-filtered once and split into 1-indexed
+// lines, so extracting many of its symbols does not re-read and re-filter
+// the whole module per symbol.
+struct ManifestModuleSource {
+  std::string path;
+  std::vector<std::string> lines;
+};
+
+bool loadManifestModuleSource(const std::string &moduleSourcePath,
+                              ManifestModuleSource &out,
+                              std::string &error);
+
+// extractAndVerifyManifestedSymbolSource over an already loaded module.
+bool extractAndVerifyManifestedSymbolSource(const StdlibSymbolManifestEntry &entry,
+                                            const ManifestModuleSource &moduleSource,
+                                            std::string &outSourceText,
+                                            std::string &error);
+
 } // namespace primec

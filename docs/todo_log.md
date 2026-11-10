@@ -7,6 +7,18 @@ resolution note in `docs/todo_finished.md` and delete its section
 here - this file only ever tracks OPEN tasks' history, same
 open-work-only scope rule as `docs/todo.md` itself.
 
+## TODO-5839
+
+- 2026-11-10 (from TODO-5838): `reflection_codegen_24_24` (300 s timeout)
+  alone 19.0, 18.2, 20.4, 25.2 s (load 20-40); 148.9 s in a gate at load
+  45-60. `primec --emit=cpp` of the program 0.86 s, 44876498 bytes,
+  1569378 lines; `--dump-stage ir-lowered`: /main 84131 instructions, 9293
+  locals, /Wide/SoaSchemaStorageClear 17296. Without the checks (storage
+  only) 79k instructions, 20 MB of C++. `-O2` IR: 31.8 MB. clang++ -O0
+  -c: 22.0 s; with straight-line cases falling through 17.7 s; also
+  without `psEnsureStack` 16.0 s; `-fsyntax-only` 6.9 s. VM build and run
+  0.8 s, native 1.2 s.
+
 ## TODO-5757
 
 - 2026-11-09: PrimeScroll master bundle (06268bdc7-era code, the same

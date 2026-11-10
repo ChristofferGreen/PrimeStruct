@@ -199,10 +199,9 @@ bool readStdlibSymbolManifest(const std::string &manifestPath,
   return true;
 }
 
-bool extractAndVerifyManifestedSymbolSource(const StdlibSymbolManifestEntry &entry,
-                                            const std::string &moduleSourcePath,
-                                            std::string &outSourceText,
-                                            std::string &error) {
+bool loadManifestModuleSource(const std::string &moduleSourcePath,
+                              ManifestModuleSource &out,
+                              std::string &error) {
   std::string rawSource;
   if (!readFile(moduleSourcePath, rawSource)) {
     error = "could not read stdlib module source: " + moduleSourcePath;
@@ -214,7 +213,28 @@ bool extractAndVerifyManifestedSymbolSource(const StdlibSymbolManifestEntry &ent
     return false;
   }
 
-  const std::vector<std::string> lines = splitSourceIntoLines(filteredSource);
+  out.path = moduleSourcePath;
+  out.lines = splitSourceIntoLines(filteredSource);
+  return true;
+}
+
+bool extractAndVerifyManifestedSymbolSource(const StdlibSymbolManifestEntry &entry,
+                                            const std::string &moduleSourcePath,
+                                            std::string &outSourceText,
+                                            std::string &error) {
+  ManifestModuleSource moduleSource;
+  if (!loadManifestModuleSource(moduleSourcePath, moduleSource, error)) {
+    return false;
+  }
+  return extractAndVerifyManifestedSymbolSource(entry, moduleSource, outSourceText, error);
+}
+
+bool extractAndVerifyManifestedSymbolSource(const StdlibSymbolManifestEntry &entry,
+                                            const ManifestModuleSource &moduleSource,
+                                            std::string &outSourceText,
+                                            std::string &error) {
+  const std::string &moduleSourcePath = moduleSource.path;
+  const std::vector<std::string> &lines = moduleSource.lines;
   if (entry.startLine < 1 || entry.endLine < entry.startLine ||
       entry.endLine >= static_cast<int>(lines.size())) {
     error = "manifest entry " + entry.path +
