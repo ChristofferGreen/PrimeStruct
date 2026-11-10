@@ -107,7 +107,21 @@ public:
   bool tryEmitLoweredSumMoveIntoLocal(int32_t baseLocal, const Definition &sumDef, const Expr &initializer, const LocalMap &valueLocals, bool &emittedOut);
   bool isMutableLocalExpr(const Expr &candidate, const LocalMap &localsIn);
   bool makePickPayloadLocalInfo(const Definition &sumDef, const SumVariant &variant, LocalInfo &payloadInfoOut);
-  bool bindPickPayload(const Definition &sumDef, const SumVariant &variant, const Expr &binderExpr, int32_t sumPtrLocal, LocalMap &branchLocals, bool isMutable);
+  bool bindPickPayload(const Definition &sumDef,
+                       const SumVariant &variant,
+                       const Expr &binderExpr,
+                       int32_t sumPtrLocal,
+                       LocalMap &branchLocals,
+                       bool isMutable,
+                       int32_t ownerDropFlagLocal);
+  bool isOwnedTemporaryPickSubject(const Expr &subject, const LocalMap &valueLocals);
+  int32_t pickSubjectDropFlagLocal(const Expr &subject, const LocalMap &valueLocals);
+  bool beginOwnedPickSubjectScope(const Expr &subject,
+                                  const Definition &sumDef,
+                                  int32_t sumPtrLocal,
+                                  const LocalMap &valueLocals,
+                                  int32_t &dropFlagLocalOut);
+  void endOwnedPickSubjectScope();
   bool isPickCall(const Expr &candidate);
   bool isPickArmEnvelopeBase(const Expr &candidate);
   bool isPayloadPickArmEnvelope(const Expr &candidate);
@@ -124,6 +138,8 @@ public:
   LoweredSumPickEmitResult tryEmitPickStatement(const Expr &stmt, LocalMap &localsIn);
 
 private:
+  LowerSetupStageState &setupStage;
+  LowerReturnEmitStageState &returnEmitStage;
   const CallResolutionAdapters &callResolutionAdapters;
   std::string &error;
   IrFunction &function;

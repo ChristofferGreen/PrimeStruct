@@ -132,7 +132,11 @@
   (`Maybe<T>`, a user `[sum]`, the stdlib `Result`) initialized from a fresh value destroys its active payload the same
   way (`try(r)` on a named `Result` copies the ok payload out through its `Copy` helper, so `r` and the copy each destroy
   their own), and a payload
-  taken from a place is copied in like a struct field. An owning local (a struct with `Destroy`, `DestroyStack` or a field that has one, including containers) is
+  taken from a place is copied in like a struct field. A `pick` whose subject is a fresh value (`pick(get())`, a method
+  call included, or a constructor) owns it for as long as the `pick` runs and destroys its active payload when the
+  `pick` ends or a `return` in an arm leaves the function. The payload binding of an arm stands for what the sum owns:
+  moving it out (`move(line)`, `return(line)`, the arm's value in a `pick` expression) leaves nothing for the sum to
+  destroy, for a fresh subject and for a sum local alike, so the payload is destroyed once, by its new owner. An owning local (a struct with `Destroy`, `DestroyStack` or a field that has one, including containers) is
   destroyed when its scope ends on every exit path (fall-through, `return`, including from nested blocks of an inlined
   callee), last declared first, unless its value was moved out (`move(x)`, a `move` parameter) or named in the returned
   value; a per-local drop flag tracks this at run time. A builtin `vector<T>` local initialized by a constructor or a

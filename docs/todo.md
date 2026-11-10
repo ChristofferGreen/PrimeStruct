@@ -124,7 +124,10 @@ of sync with them.
 | TODO-5853 | A borrowed `Reference` parameter stored through a `[ref]` capture is diagnosed | deferred | closures-references |
 | TODO-5854 | A `Mutex` or `Atomic` handle does not keep the value it was made from | deferred | mt-primitives |
 | TODO-5855 | A method call on a `pick` payload of struct type lowers | ready | pick-payloads |
-| TODO-5856 | `pick` on a call result frees an owning payload | ready | pick-payloads |
+| TODO-5857 | A `vector<T>` payload of a sum reads its count and elements in a `pick` arm | ready | pick-payloads |
+| TODO-5858 | `some<Vector<i32>>(vector<i32>(1i32, 2i32))` frees the vector it copies from | ready | pick-payloads |
+| TODO-5859 | A `pick` expression yields a vector | ready | pick-payloads |
+| TODO-5860 | Moving a `pick` payload binding does not poison a later binding of the same name | ready | pick-payloads |
 | TODO-5656 | Thread-safe `SharedString`: an atomic owner count | ready | string-concurrency |
 | TODO-5802 | `serveWorkers`: one thread polls and accepts, N workers answer | ready | mt-server |
 | TODO-5803 | The web apps run on workers and their gain is measured | blocked | mt-server |
@@ -210,7 +213,7 @@ of sync with them.
 - Native UI (docs/NativeUiPlan.md): TODO-5808, TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - AI workflow (docs/AiWorkflowPlan.md): TODO-5841, TODO-5843, TODO-5842
-- Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526, TODO-5855, TODO-5856
+- Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526, TODO-5855, TODO-5857, TODO-5858, TODO-5859, TODO-5860
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
@@ -226,7 +229,7 @@ of sync with them.
 
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
-Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order (TODO-5792 and TODO-5835, VM tasks and their lowering, are done, and so are TODO-5793, byte-region checks without a map search, TODO-5794, `optexe` per-thread heap arenas, TODO-5795, `optexe` threads for `[spawn]`, `Atomic<i32>` and `Atomic<i64>` in `/std/sync`, TODO-5797, `Mutex<T>` with `locked(body)`, TODO-5846, `optexe` faults when every task waits, and TODO-5798, bounded `Channel<T>`): TODO-5656 (atomic `SharedString` count), TODO-5802 (`serveWorkers`), TODO-5803 (apps on workers, measured), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5656, TODO-5802 and TODO-5799 are ready and independent of each other, and so are TODO-5848 (`return(wait(t))` of a `String` task result is rejected as a return type mismatch), TODO-5849 (a destructured multi-wait of tasks with different result types loses the later results' types) and TODO-5847 (spawned calls with collection or `copy` parameters or collection results run as tasks, which today run inline; TODO-5845, the same for `String`, struct and closure values, is done) (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, are done). Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions), TODO-5854 (a `Mutex` or `Atomic` handle keeps a copy of its first value). Found with `Mutex` and ready: TODO-5852 (`wait(a, b)` of two `Task<void>`), and in the closures lane TODO-5850 (a `Reference`-returning call as a closure argument) and TODO-5851 (a `[ref]` closure written in a generic call). Found with `Channel` and ready, in the Result and control flow lane: TODO-5855 (a method call on a `pick` payload of struct type) and TODO-5856 (`pick` on a call result frees an owning payload).
+Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order (TODO-5792 and TODO-5835, VM tasks and their lowering, are done, and so are TODO-5793, byte-region checks without a map search, TODO-5794, `optexe` per-thread heap arenas, TODO-5795, `optexe` threads for `[spawn]`, `Atomic<i32>` and `Atomic<i64>` in `/std/sync`, TODO-5797, `Mutex<T>` with `locked(body)`, TODO-5846, `optexe` faults when every task waits, and TODO-5798, bounded `Channel<T>`): TODO-5656 (atomic `SharedString` count), TODO-5802 (`serveWorkers`), TODO-5803 (apps on workers, measured), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5656, TODO-5802 and TODO-5799 are ready and independent of each other, and so are TODO-5848 (`return(wait(t))` of a `String` task result is rejected as a return type mismatch), TODO-5849 (a destructured multi-wait of tasks with different result types loses the later results' types) and TODO-5847 (spawned calls with collection or `copy` parameters or collection results run as tasks, which today run inline; TODO-5845, the same for `String`, struct and closure values, is done) (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, are done). Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions), TODO-5854 (a `Mutex` or `Atomic` handle keeps a copy of its first value). Found with `Mutex` and ready: TODO-5852 (`wait(a, b)` of two `Task<void>`), and in the closures lane TODO-5850 (a `Reference`-returning call as a closure argument) and TODO-5851 (a `[ref]` closure written in a generic call). Found with `Channel` and ready, in the Result and control flow lane: TODO-5855 (a method call on a `pick` payload of struct type); TODO-5856 (`pick` on a call result frees an owning payload) is done, and found with it and ready: TODO-5857 (a `vector<T>` payload reads its count in a `pick` arm), TODO-5858 (`some<Vector<i32>>` of a fresh vector frees it), TODO-5859 (a `pick` expression yields a vector) and TODO-5860 (moving a payload binding does not poison a later binding of the same name).
 
 ### Task Blocks
 
@@ -863,19 +866,61 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
     - full release gate green
   - stop_rule: method calls on `pick` payload bindings.
 
-- [ ] TODO-5856: `pick` on a call result frees an owning payload
+- [ ] TODO-5857: A `vector<T>` payload of a sum reads its count and elements in a `pick` arm
   - owner: ai
   - status: ready
   - created_at: 2026-11-10
   - phase: Result and control flow (docs/spec/errors-and-file-io.md)
   - parallel_track: pick-payloads
-  - scope: `pick(get()) { none { } some(line) { } }` with `get` returning a `Maybe<String>` leaves the `String`'s bytes allocated on the VM and `optexe` (`stringHeapBytesInUse()` is 32 higher afterwards); `[Maybe<String>] got{get()}` followed by `pick(got)` frees them. A `pick` whose subject is a temporary must destroy the temporary (or the payload it moved out) at the end of the arm. Then drop the "bind the result first" note of `Channel.receive` in docs/spec/stdlib-reference.md and pick straight on `receive()` in tests/unit/program_matrix/test_program_matrix_channels.cpp.
-  - implementation_notes: Lowering of `pick` over a call expression (src/ir_lowerer); compare with the bound-local path, which destroys the local at scope end.
+  - scope: With `get_values` returning a `Maybe<vector<i32>>` that holds two elements, `[Maybe<vector<i32>>] got{get_values(4i32)}` and `pick(got) { none { } some(values) { print_line(vectorCount<i32>(values)) } }` prints 896 (an address) on the VM and `optexe` instead of 2; `[vector<i32>] own{values}` then `own.count()` prints the same number and `own[1i32]` prints 2, the count. A `Maybe<Vector<i32>>` payload reads 2. The payload is destroyed correctly in both spellings. Make the payload binding of a `vector<T>` variant a vector the arm can read.
+  - implementation_notes: The payload is stored as the specialized vector record (`resolveVectorPayloadStructPath`, src/ir_lowerer/IrLowererLowerSumHelpers.cpp) and `makePickPayloadLocalInfo` (src/ir_lowerer/IrLowererLowerSumHelpersPickAndDiagnostics.cpp) binds it as a struct pointer, while the arm's uses are typed `vector<i32>`.
   - acceptance:
-    - positive: the `get()` program leaves `stringHeapBytesInUse()` and `heapLiveBlocks()` unchanged on the VM and `optexe`, also for a `Maybe<vector<i32>>` and a user sum with a `String` variant; the channel heap-balance test passes with `pick(lines.receive())`
-    - negative: a payload moved out of the arm (returned, or bound with `move`) is destroyed once, not twice
+    - positive: the program prints 2 on the VM and `optexe`, `values[1i32]` prints the second element, and `[vector<i32>] own{values}` copies the two elements; the heap statistics stay balanced
+    - negative: a `Maybe<Vector<i32>>` payload keeps reading 2
     - full release gate green
-  - stop_rule: temporaries as `pick` subjects.
+  - stop_rule: `vector<T>` payload bindings of `pick` arms.
+
+- [ ] TODO-5858: `some<Vector<i32>>(vector<i32>(1i32, 2i32))` frees the vector it copies from
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-10
+  - phase: Result and control flow (docs/spec/errors-and-file-io.md)
+  - parallel_track: pick-payloads
+  - scope: `if(true) { [Maybe<Vector<i32>>] got{some<Vector<i32>>(vector<i32>(1i32, 2i32))} }` leaves `heapLiveBlocks()` one higher on the VM and `optexe`, with or without a `pick` on it: the vector passed to `some` is copied into the sum and the original's buffer is never freed. Take the fresh vector over, or free it after the copy.
+  - implementation_notes: Compare with a `[vector<T> copy]` parameter, which takes a fresh vector over (docs/spec/value-lifecycle.md), and with `some<String>(text)`, which is balanced. tests/unit/program_matrix/test_program_matrix_lifecycle.cpp has the `Maybe<Vector<i32>>` case without a heap check.
+  - acceptance:
+    - positive: the block leaves `heapLiveBlocks()` unchanged on the VM and `optexe`, also when the `Maybe` is returned from a function and picked
+    - negative: `some<Vector<i32>>(kept)` of a named vector leaves `kept` usable and frees both at scope end
+    - full release gate green
+  - stop_rule: a fresh `Vector` passed as a sum payload.
+
+- [ ] TODO-5859: A `pick` expression yields a vector
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-10
+  - phase: Result and control flow (docs/spec/errors-and-file-io.md)
+  - parallel_track: pick-payloads
+  - scope: `[vector<i32>] kept{pick(get_values(7i32)) { none { vector<i32>{} } some(values) { values } }}` with `get_values` returning a `Maybe<vector<i32>>` stops lowering with `stale semantic-product pick aggregate result metadata: /std/maybe/Maybe__.../none` on the VM and `optexe`. A `String` or struct result works. Publish the aggregate result of a `pick` whose arms yield a vector and lower it; the yielded payload is taken over, not copied (as for a `String`).
+  - implementation_notes: `tryEmitPickExpr` and `inferPickAggregateResult` in src/ir_lowerer/IrLowererLowerSumHelpersPickAndDiagnostics.cpp; do TODO-5857 first, since the yielded binding must be a readable vector.
+  - acceptance:
+    - positive: the program prints `kept.count()` 2 and its elements on the VM and `optexe`, with the heap statistics balanced
+    - negative: arms that yield a vector and an `i32` are still a type error
+    - full release gate green
+  - stop_rule: vector results of `pick` expressions.
+
+- [ ] TODO-5860: Moving a `pick` payload binding does not poison a later binding of the same name
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-10
+  - phase: Result and control flow (docs/spec/errors-and-file-io.md)
+  - parallel_track: pick-payloads
+  - scope: `pick(get(5i32)) { none { } some(line) { [String] owned{move(line)} } }` followed by a second `pick(get(6i32)) { none { } some(line) { [String] copied{line} } }` in the same function is rejected with `use-after-move: line was moved at ...`: the move is recorded for the name, not for the binding of the first arm. Naming the first binder differently compiles. End a payload binding's move state with its arm.
+  - implementation_notes: The use-after-move check of src/semantics; compare with a `[String] line{...}` declared in two sibling `if` blocks, which is accepted.
+  - acceptance:
+    - positive: the two picks compile and print both bytes on the VM; so do two arms of one `pick` that bind the same name and one of which moves it
+    - negative: `move(line)` followed by a use of `line` in the same arm is still `use-after-move`
+    - full release gate green
+  - stop_rule: move state of `pick` payload bindings.
 
 - [ ] TODO-5656: Thread-safe `SharedString`: an atomic owner count
   - owner: ai

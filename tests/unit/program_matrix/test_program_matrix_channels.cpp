@@ -135,8 +135,7 @@ consume([Channel<String>] lines, [Mutex<vector<i32>>] seen) {
   [i32 mut] received{0i32}
   [bool mut] open{true}
   while(open) {
-    [Maybe<String>] got{lines.receive()}
-    pick(got) {
+    pick(lines.receive()) {
       none {
         open = false
       }
@@ -301,8 +300,7 @@ consume([Channel<String>] lines) {
   [i32 mut] total{0i32}
   [bool mut] open{true}
   while(open) {
-    [Maybe<String>] got{lines.receive()}
-    pick(got) {
+    pick(lines.receive()) {
       none {
         open = false
       }

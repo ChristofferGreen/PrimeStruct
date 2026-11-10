@@ -505,16 +505,22 @@ namespace primec::ir_lowerer {
     }
 
     bool SumHelpersContext::bindPickPayload(const Definition &sumDef,
-            const SumVariant &variant,
-            const Expr &binderExpr,
-            int32_t sumPtrLocal,
-            LocalMap &branchLocals,
-            bool isMutable) {
+                                            const SumVariant &variant,
+                                            const Expr &binderExpr,
+                                            int32_t sumPtrLocal,
+                                            LocalMap &branchLocals,
+                                            bool isMutable,
+                                            int32_t ownerDropFlagLocal) {
       LocalInfo payloadInfo;
       if (!makePickPayloadLocalInfo(sumDef, variant, payloadInfo)) {
         return false;
       }
       payloadInfo.isMutable = isMutable;
+      // The payload is what the sum owns in this arm, so the binding shares the sum's drop flag: moving the
+      // payload out (`move(line)`, `return(line)`, the arm's value) leaves nothing for the sum to destroy.
+      if (!payloadInfo.structTypeName.empty()) {
+        payloadInfo.dropFlagLocal = ownerDropFlagLocal;
+      }
       payloadInfo.index = nextLocal++;
       if (!payloadInfo.structTypeName.empty()) {
         function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(sumPtrLocal)});
@@ -526,6 +532,87 @@ namespace primec::ir_lowerer {
       function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(payloadInfo.index)});
       branchLocals.emplace(binderExpr.name, payloadInfo);
       return true;
+    }
+
+    // Whether the subject of a `pick` is a value nobody else owns: a constructor, or a call (a method call
+    // included) of a definition that returns a value rather than a reference or pointer. A name, a field, an
+    // element and anything unresolved is a place that keeps owning its value.
+    bool SumHelpersContext::isOwnedTemporaryPickSubject(const Expr &subject,
+                                                        const LocalMap &valueLocals) {
+      if (!ir_lowerer::shouldDisarmStructCopySourceExpr(subject) ||
+          isSimpleCallName(subject, "move") || isSimpleCallName(subject, "borrow") ||
+          isSimpleCallName(subject, "at") || isSimpleCallName(subject, "at_unsafe")) {
+        return false;
+      }
+      if (subject.isBraceConstructor) {
+        return true;
+      }
+      const auto &resolveMethodCallDefinition =
+          setupStage.inferenceSetupBootstrap.resolveMethodCallDefinition;
+      const Definition *callee = nullptr;
+      if (subject.isMethodCall) {
+        callee = resolveMethodCallDefinition ? resolveMethodCallDefinition(subject, valueLocals)
+                                             : nullptr;
+      } else if (resolveDefinitionCall) {
+        callee = resolveDefinitionCall(subject);
+      }
+      if (callee == nullptr) {
+        return false;
+      }
+      for (const auto &transform : callee->transforms) {
+        if (transform.name != "return" || transform.templateArgs.size() != 1) {
+          continue;
+        }
+        std::string base;
+        std::string argText;
+        if (splitTemplateTypeName(
+                trimTemplateTypeText(transform.templateArgs.front()), base, argText)) {
+          const std::string normalizedBase = trimTemplateTypeText(base);
+          return normalizedBase != "Reference" && normalizedBase != "Pointer";
+        }
+      }
+      return true;
+    }
+
+    // The drop flag of the sum local a `pick` reads, or -1 when the subject is not an owning local.
+    int32_t SumHelpersContext::pickSubjectDropFlagLocal(const Expr &subject,
+                                                        const LocalMap &valueLocals) {
+      if (subject.kind != Expr::Kind::Name) {
+        return -1;
+      }
+      const auto it = valueLocals.find(subject.name);
+      return it == valueLocals.end() ? -1 : it->second.dropFlagLocal;
+    }
+
+    // A `pick` on a temporary owns it: the sum at `sumPtrLocal` gets a drop flag and a scope of its own, so its
+    // active payload is destroyed when the `pick` ends or a `return` in an arm leaves the function, unless the arm
+    // moved the payload out (docs/spec/value-lifecycle.md). Returns whether a scope was opened.
+    bool SumHelpersContext::beginOwnedPickSubjectScope(const Expr &subject,
+                                                       const Definition &sumDef,
+                                                       int32_t sumPtrLocal,
+                                                       const LocalMap &valueLocals,
+                                                       int32_t &dropFlagLocalOut) {
+      dropFlagLocalOut = pickSubjectDropFlagLocal(subject, valueLocals);
+      if (setupStage.fileScopeStack.empty() || !isOwnedTemporaryPickSubject(subject, valueLocals) ||
+          !sumPayloadsNeedDestroy(sumDef)) {
+        return false;
+      }
+      returnEmitStage.pushFileScope();
+      dropFlagLocalOut = allocTempLocal();
+      function.instructions.push_back({IrOpcode::PushI32, 1});
+      function.instructions.push_back(
+          {IrOpcode::StoreLocal, static_cast<uint64_t>(dropFlagLocalOut)});
+      LowerSetupStageState::DropEntry entry{sumPtrLocal, dropFlagLocalOut, sumDef.fullPath};
+      entry.sumDef = &sumDef;
+      setupStage.dropEntries.push_back(std::move(entry));
+      setupStage.fileScopeStack.back().push_back(
+          -static_cast<int32_t>(setupStage.dropEntries.size()));
+      return true;
+    }
+
+    void SumHelpersContext::endOwnedPickSubjectScope() {
+      returnEmitStage.emitFileScopeCleanup(setupStage.fileScopeStack.back());
+      returnEmitStage.popFileScope();
     }
 
     bool SumHelpersContext::isPickCall(const Expr &candidate) {
@@ -825,6 +912,9 @@ namespace primec::ir_lowerer {
         return LoweredSumPickEmitResult::Error;
       }
       function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(sumPtrLocal)});
+      int32_t subjectDropFlagLocal = -1;
+      const bool ownsSubject = beginOwnedPickSubjectScope(
+          expr.args.front(), *sumDef, sumPtrLocal, valueLocals, subjectDropFlagLocal);
       std::string aggregateResultStructPath;
       StructSlotLayout aggregateResultLayout;
       if (!inferPickAggregateResult(expr,
@@ -873,13 +963,13 @@ namespace primec::ir_lowerer {
         const size_t nextArmJump = function.instructions.size();
         function.instructions.push_back({IrOpcode::JumpIfZero, 0});
         LocalMap branchLocals = valueLocals;
-        if (payloadArm &&
-            !bindPickPayload(*sumDef,
-                             *variant,
-                             arm.args.front(),
-                             sumPtrLocal,
-                             branchLocals,
-                             isMutableLocalExpr(expr.args.front(), valueLocals))) {
+        if (payloadArm && !bindPickPayload(*sumDef,
+                                           *variant,
+                                           arm.args.front(),
+                                           sumPtrLocal,
+                                           branchLocals,
+                                           isMutableLocalExpr(expr.args.front(), valueLocals),
+                                           subjectDropFlagLocal)) {
           return LoweredSumPickEmitResult::Error;
         }
         const Expr *valueExpr = findPickArmValueExpr(arm);
@@ -902,6 +992,12 @@ namespace primec::ir_lowerer {
                 [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
                 srcPtrLocal,
                 aggregateResultStructPath);
+          } else if (valueExpr->kind == Expr::Kind::Name) {
+            // The arm's value is a local (the payload binding, for example): the result takes it over.
+            ir_lowerer::emitReleaseDropFlag(
+                branchLocals, valueExpr->name, [&](IrOpcode op, uint64_t imm) {
+                  function.instructions.push_back({op, imm});
+                });
           }
         } else {
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(resultLocal)});
@@ -914,6 +1010,9 @@ namespace primec::ir_lowerer {
       for (size_t jumpIndex : endJumps) {
         function.instructions[jumpIndex].imm =
             static_cast<uint64_t>(function.instructions.size());
+      }
+      if (ownsSubject) {
+        endOwnedPickSubjectScope();
       }
       function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal)});
       return LoweredSumPickEmitResult::Emitted;
@@ -942,6 +1041,9 @@ namespace primec::ir_lowerer {
         return LoweredSumPickEmitResult::Error;
       }
       function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(sumPtrLocal)});
+      int32_t subjectDropFlagLocal = -1;
+      const bool ownsSubject = beginOwnedPickSubjectScope(
+          stmt.args.front(), *sumDef, sumPtrLocal, localsIn, subjectDropFlagLocal);
       std::vector<size_t> endJumps;
       for (const Expr &arm : stmt.bodyArguments) {
         const bool payloadArm = isPayloadPickArmEnvelope(arm);
@@ -969,13 +1071,13 @@ namespace primec::ir_lowerer {
         const size_t nextArmJump = function.instructions.size();
         function.instructions.push_back({IrOpcode::JumpIfZero, 0});
         LocalMap branchLocals = localsIn;
-        if (payloadArm &&
-            !bindPickPayload(*sumDef,
-                             *variant,
-                             arm.args.front(),
-                             sumPtrLocal,
-                             branchLocals,
-                             isMutableLocalExpr(stmt.args.front(), localsIn))) {
+        if (payloadArm && !bindPickPayload(*sumDef,
+                                           *variant,
+                                           arm.args.front(),
+                                           sumPtrLocal,
+                                           branchLocals,
+                                           isMutableLocalExpr(stmt.args.front(), localsIn),
+                                           subjectDropFlagLocal)) {
           return LoweredSumPickEmitResult::Error;
         }
         for (const Expr *bodyExprPtr : pickArmBodyExprs(arm)) {
@@ -991,6 +1093,9 @@ namespace primec::ir_lowerer {
       for (size_t jumpIndex : endJumps) {
         function.instructions[jumpIndex].imm =
             static_cast<uint64_t>(function.instructions.size());
+      }
+      if (ownsSubject) {
+        endOwnedPickSubjectScope();
       }
       return LoweredSumPickEmitResult::Emitted;
     }

@@ -1208,9 +1208,8 @@ This prints `4950` on the VM, under every schedule seed, and on `optexe`.
   a struct of sendable fields and another handle (`Atomic`, `Mutex`, `Channel`) are sendable.
 - A `String` made while a `StringArena` is open cannot be sent, since the arena frees it when the scope ends:
   `string escapes its arena via channel (arena: arena)`.
-- A received item that owns memory (a `String`) is freed where it is received. Bind the result first,
-  `[Maybe<String>] got{lines.receive()}` then `pick(got)`: a `pick` straight on a call that returns a `Maybe` of an
-  owning type does not free the payload yet (TODO-5856).
+- A received item that owns memory (a `String`) is freed where it is received: `pick(lines.receive())` destroys
+  the payload when the `pick` ends, unless an arm moved it out (`[String] owned{move(line)}`).
 - A task that receives from an open channel nobody sends on waits for ever: the VM and `optexe` end the program
   with `deadlock: every task is waiting` (exit code 3) once every task waits.
 - The waits are IR opcodes (docs/spec/vm-design.md, Conditions); native, Wasm and GLSL reject the program with

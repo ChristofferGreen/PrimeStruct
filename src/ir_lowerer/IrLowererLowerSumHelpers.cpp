@@ -14,33 +14,27 @@
 
 namespace primec::ir_lowerer {
 
-
 SumHelpersContext::SumHelpersContext(LowerSetupStageState &setupStageIn,
                                      LowerReturnEmitStageState &stateOutIn,
                                      const CallResolutionAdapters &callResolutionAdaptersIn,
                                      std::string &errorIn)
-    : callResolutionAdapters(callResolutionAdaptersIn),
-      error(errorIn),
-      function(setupStageIn.function),
-      nextLocal(setupStageIn.nextLocal),
-      defMap(setupStageIn.defMap),
-      emitExpr(stateOutIn.emitExpr),
-      emitStatement(stateOutIn.emitStatement),
-      allocTempLocal(stateOutIn.allocTempLocal),
+    : setupStage(setupStageIn), returnEmitStage(stateOutIn),
+      callResolutionAdapters(callResolutionAdaptersIn), error(errorIn),
+      function(setupStageIn.function), nextLocal(setupStageIn.nextLocal),
+      defMap(setupStageIn.defMap), emitExpr(stateOutIn.emitExpr),
+      emitStatement(stateOutIn.emitStatement), allocTempLocal(stateOutIn.allocTempLocal),
       resolveDefinitionCall(stateOutIn.resolveDefinitionCall),
-      resolveStructTypeName(
-          setupStageIn.setupLocalsOrchestration.setupTypeAndStructTypeAdapters
-              .structTypeResolutionAdapters.resolveStructTypeName),
-      resolveStructSlotLayout(
-          setupStageIn.setupLocalsOrchestration.structSlotResolutionAdapters
-              .resolveStructSlotLayout),
+      resolveStructTypeName(setupStageIn.setupLocalsOrchestration.setupTypeAndStructTypeAdapters
+                                .structTypeResolutionAdapters.resolveStructTypeName),
+      resolveStructSlotLayout(setupStageIn.setupLocalsOrchestration.structSlotResolutionAdapters
+                                  .resolveStructSlotLayout),
       resolveExprPath(callResolutionAdaptersIn.resolveExprPath),
       inferExprKind(setupStageIn.inferenceSetupBootstrap.inferExprKind),
-      inferStructExprPath(
-          setupStageIn.setupLocalsOrchestration.uninitializedResolutionAdapters
-              .inferStructExprPath),
+      inferStructExprPath(setupStageIn.setupLocalsOrchestration.uninitializedResolutionAdapters
+                              .inferStructExprPath),
       emitStructCopyFromPtrs(stateOutIn.emitStructCopyFromPtrs),
-      emitInlineDefinitionCall(stateOutIn.emitInlineDefinitionCall) {}
+      emitInlineDefinitionCall(stateOutIn.emitInlineDefinitionCall) {
+}
 
     bool SumHelpersContext::isLowerableSumDefinition(const Definition &def) {
       return ir_lowerer::definitionHasTransform(def, "sum");
