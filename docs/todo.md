@@ -144,6 +144,7 @@ of sync with them.
 | TODO-5719 | `location(this.field)` passes directly as a `Function` call argument | ready | closures-arguments |
 | TODO-5721 | A string converts to a `StringView` at a field of a generic struct | ready | text-literal-views |
 | TODO-5828 | A builtin `vector<vector<T>>` lowers, copies and frees its inner vectors | ready | collections-fields |
+| TODO-5830 | A discarded struct constructor statement destroys its temporary | ready | lifecycle-temporaries |
 | TODO-5726 | An indexed element of a stdlib `Vector<T>` of structs binds without a fault | ready | collections-access |
 | TODO-5728 | `slice` and `sliceMut` on a vector field of a struct resolve | ready | collections-access |
 | TODO-5730 | Elements of a `vector<String>` struct field read without a fault | ready | collections-access |
@@ -204,7 +205,7 @@ of sync with them.
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544, TODO-5745, TODO-5746
-- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719; collection fields found by closures and the todo example: TODO-5828, TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
+- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719; collection fields found by closures and the todo example: TODO-5828, TODO-5830, TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
 - Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5738, TODO-5718
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732, TODO-5735, TODO-5736, TODO-5737
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe; real calls and struct copies TODO-5739, TODO-5741, TODO-5752; VM address checks TODO-5824
@@ -485,6 +486,18 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
     - `vector<vector<i32>>` locals and struct fields push, index, count, copy (each inner vector its own buffer) and destroy (every inner buffer freed, `heapLiveBlocks()` flat over a loop) on the VM, native and optexe
     - full release gate green
   - stop_rule: builtin vectors whose element is a builtin vector; the stdlib `Vector<Vector<T>>` spelling is out of scope.
+
+- [ ] TODO-5830: A discarded struct constructor statement destroys its temporary
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-10
+  - phase: Collections (docs/spec/value-lifecycle.md, Ownership; found by TODO-5829)
+  - parallel_track: lifecycle-temporaries
+  - scope: A struct constructor used as a statement, whose value is discarded, is never destroyed: `repeat(10i32) { Named{[name] stringFrom("...")} }` keeps 480 bytes of String on the heap and `KeepV{[seen] vector<i32>(1i32)}` one vector buffer per round (`stringHeapBytesInUse()` / `heapLiveBlocks()`, VM). The same shape hides in a definition whose body is only bindings, such as `[effects(heap_alloc)] round() { [vector<i32> mut] v{vector<i32>(1i32)} }`: the lowering treats it as an implicit struct and `round()` as a discarded constructor, so its owning bindings leak. A discarded call result (`make_keep()`) is destroyed. The spec says a discarded temporary is destroyed at the end of its statement.
+  - acceptance:
+    - discarded `Named{...}` and `KeepV{...}` statements and a bindings-only definition called as a statement leave `heapLiveBlocks()` and `stringHeapBytesInUse()` flat over a loop on the VM and optexe, and run without a double free on native
+    - full release gate green
+  - stop_rule: destroying discarded constructor temporaries; whether a bindings-only definition should be a struct at all is out of scope.
 
 - [ ] TODO-5726: An indexed element of a stdlib `Vector<T>` of structs binds without a fault
   - owner: ai

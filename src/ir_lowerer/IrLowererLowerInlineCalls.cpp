@@ -100,6 +100,9 @@ bool emitInlineDefinitionCallImpl(
     auto &emitStringValueForCall = stateOut.emitStringValueForCall;
     auto &allocTempLocal = stateOut.allocTempLocal;
     auto &resolveDefinitionCall = stateOut.resolveDefinitionCall;
+    const auto &structTypeResolutionAdapters =
+        setupLocalsOrchestration.setupTypeAndStructTypeAdapters.structTypeResolutionAdapters;
+    auto &resolveStructTypeName = structTypeResolutionAdapters.resolveStructTypeName;
     auto &emitStructCopySlots = stateOut.emitStructCopySlots;
     auto &emitFileScopeCleanup = stateOut.emitFileScopeCleanup;
 

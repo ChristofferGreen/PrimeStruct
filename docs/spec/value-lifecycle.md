@@ -98,7 +98,9 @@
   other types are copied). Stdlib container entry points that store their argument (push, insert, slot writes) take
   it as `move`. A `copy` parameter gets its own storage: scalars by value, structs slot by slot and then through the
   type's `Copy` helper when it defines one (or its fields' helpers); a `move(v)` argument is handed over without a
-  copy. The stdlib `Vector`, `RingBuffer` and `SoaColumn` `Copy` helpers allocate their own storage and copy each
+  copy. A builtin `[vector<T> copy]` parameter gets a buffer of its own holding a copy of each element, except from a
+  fresh vector (a constructor or a call returning one) or `move(v)`, which it takes over; the callee frees it when
+  its body ends, and a fresh vector passed to a read-only `vector<T>` parameter is freed there too. The stdlib `Vector`, `RingBuffer` and `SoaColumn` `Copy` helpers allocate their own storage and copy each
   element. A struct's own `Destroy` runs first and its fields are destroyed after it, last declared first. A sum local
   (`Maybe<T>`, a user `[sum]`, the stdlib `Result`) initialized from a fresh value destroys its active payload the same
   way (`try(r)` on a named `Result` copies the ok payload out through its `Copy` helper, so `r` and the copy each destroy

@@ -1,5 +1,6 @@
 #include "primec/ir_lowerer/IrLowererFlowHelpers.h"
 
+#include "primec/ir_lowerer/IrLowererBindingTypeHelpers.h"
 #include "primec/ir_lowerer/IrLowererHelpers.h"
 #include "primec/ir_lowerer/IrLowererSetupTypeCollectionHelpers.h"
 #include "primec/ir_lowerer/IrLowererStructTypeHelpers.h"
@@ -968,6 +969,37 @@ bool isOwnedTemporaryArgumentExpr(
     }
   }
   return true;
+}
+
+bool isFreshBuiltinVectorExpr(
+    const Expr &expr,
+    const std::function<const Definition *(const Expr &)> &resolveDefinitionCall) {
+  if (expr.kind != Expr::Kind::Call || expr.isFieldAccess || expr.isMethodCall) {
+    return false;
+  }
+  std::string collectionName;
+  if (getBuiltinCollectionName(expr, collectionName)) {
+    return collectionName == "vector";
+  }
+  const Definition *callee = resolveDefinitionCall ? resolveDefinitionCall(expr) : nullptr;
+  if (callee == nullptr) {
+    return false;
+  }
+  if (callee->fullPath.rfind("/std/", 0) == 0) {
+    std::string leaf = callee->fullPath.substr(callee->fullPath.find_last_of('/') + 1);
+    leaf.erase(std::min(leaf.find("__"), leaf.size()));
+    return callee->fullPath.rfind(vectorBackingMemberRoot(), 0) == 0 && leaf == "vector";
+  }
+  for (const auto &transform : callee->transforms) {
+    std::string base;
+    std::string argText;
+    if (transform.name == "return" && transform.templateArgs.size() == 1 &&
+        splitTemplateTypeName(
+            trimTemplateTypeText(transform.templateArgs.front()), base, argText)) {
+      return normalizeCollectionBindingTypeName(trimTemplateTypeText(base)) == "vector";
+    }
+  }
+  return false;
 }
 
 } // namespace primec::ir_lowerer

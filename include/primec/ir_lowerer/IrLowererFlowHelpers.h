@@ -202,6 +202,10 @@ bool isTemporaryStructCopySourceExpr(
     const Expr &expr, const std::function<const Definition *(const Expr &)> &resolveCallee);
 bool isOwnedTemporaryArgumentExpr(
     const Expr &expr, const std::function<const Definition *(const Expr &)> &resolveDefinitionCall);
+// Whether `expr` makes a fresh builtin `vector<T>` nobody else owns: the vector constructor or a
+// user definition returning a vector, never a name, field, element or stdlib accessor result.
+bool isFreshBuiltinVectorExpr(
+    const Expr &expr, const std::function<const Definition *(const Expr &)> &resolveDefinitionCall);
 bool emitCompareToZero(std::vector<IrInstruction> &instructions,
                        LocalInfo::ValueKind kind,
                        bool equals,

@@ -579,6 +579,102 @@
                                                           *argExpr, [&](const Expr &candidate) {
                                                             return resolveDefinitionCall(candidate);
                                                           });
+      // A builtin `vector<T>` `copy` parameter gets a buffer of its own, except from a fresh vector
+      // (a constructor or a call returning one) or `move(x)`, which the callee takes over; a fresh vector passed
+      // to a read-only parameter belongs to the callee too. The callee's scope frees it
+      // (docs/spec/value-lifecycle.md, Ownership).
+      if (const auto vectorIt = calleeLocals.find(param.name);
+          !fileScopeStack.empty() && argExpr != nullptr && vectorIt != calleeLocals.end() &&
+          vectorIt->second.kind == LocalInfo::Kind::Vector && !vectorIt->second.isSoaVector &&
+          !ir_lowerer::parameterHasTransform(param, "move") &&
+          !ir_lowerer::parameterHasTransform(param, "mut")) {
+        const bool copyParam = ir_lowerer::parameterHasTransform(param, "copy");
+        // `move(x)` hands the caller's vector over (its drop flag is released): no copy.
+        const bool freshArg =
+            (copyParam && isSimpleCallName(*argExpr, "move")) ||
+            ir_lowerer::isFreshBuiltinVectorExpr(
+                *argExpr, [&](const Expr &candidate) { return resolveDefinitionCall(candidate); });
+        std::string elementStructPath;
+        bool elementKnown = false;
+        for (const auto &transform : param.transforms) {
+          if (transform.templateArgs.size() != 1 ||
+              normalizeCollectionBindingTypeName(transform.name) != "vector") {
+            continue;
+          }
+          const std::string elementText = trimTemplateTypeText(transform.templateArgs.front());
+          std::string base;
+          std::string arg;
+          if (resolveStructTypeName(elementText, param.namespacePrefix, elementStructPath)) {
+            elementKnown = true;
+          } else if (valueKindFromTypeName(elementText) != LocalInfo::ValueKind::Unknown &&
+                     !splitTemplateTypeName(elementText, base, arg)) {
+            elementStructPath.clear();
+            elementKnown = true;
+          }
+          break;
+        }
+        if (elementKnown && (copyParam || freshArg)) {
+          LocalInfo &vectorInfo = vectorIt->second;
+          if (!freshArg) {
+            constexpr int32_t VectorRecordSlots = 5;
+            const int32_t recordBaseLocal = nextLocal;
+            nextLocal += VectorRecordSlots;
+            if (!emitStructCopySlots(recordBaseLocal, vectorInfo.index, VectorRecordSlots)) {
+              return false;
+            }
+            const int32_t recordPtrLocal = allocTempLocal();
+            function.instructions.push_back(
+                {IrOpcode::AddressOfLocal, static_cast<uint64_t>(recordBaseLocal)});
+            function.instructions.push_back(
+                {IrOpcode::StoreLocal, static_cast<uint64_t>(recordPtrLocal)});
+            if (!ir_lowerer::emitBuiltinVectorCopyFromPtrs(
+                    recordPtrLocal,
+                    vectorInfo.index,
+                    elementStructPath,
+                    [&](const std::string &path) -> const Definition * {
+                      auto copyIt = setupStage.defMap.find(path + "/Copy");
+                      return copyIt == setupStage.defMap.end() ? nullptr : copyIt->second;
+                    },
+                    [&](const std::string &path, StructSlotLayoutInfo &layoutOut) {
+                      return resolveStructSlotLayout(path, layoutOut);
+                    },
+                    [&]() { return allocTempLocal(); },
+                    function.instructions,
+                    callerLocals,
+                    stateOut.emitInlineDefinitionCall,
+                    error)) {
+              return false;
+            }
+            function.instructions.push_back(
+                {IrOpcode::LoadLocal, static_cast<uint64_t>(recordPtrLocal)});
+            function.instructions.push_back(
+                {IrOpcode::StoreLocal, static_cast<uint64_t>(vectorInfo.index)});
+          }
+          std::string destroyElementPath;
+          if (!elementStructPath.empty() &&
+              ir_lowerer::structNeedsDestroyHelpers(
+                  elementStructPath,
+                  [&](const std::string &path) {
+                    return ir_lowerer::findStackDestroyHelper(setupStage.defMap, path);
+                  },
+                  [&](const std::string &path, StructSlotLayoutInfo &layoutOut) {
+                    return resolveStructSlotLayout(path, layoutOut);
+                  })) {
+            destroyElementPath = elementStructPath;
+          }
+          vectorInfo.dropFlagLocal = allocTempLocal();
+          function.instructions.push_back({IrOpcode::PushI32, 1});
+          function.instructions.push_back(
+              {IrOpcode::StoreLocal, static_cast<uint64_t>(vectorInfo.dropFlagLocal)});
+          LowerSetupStageState::DropEntry entry{
+              vectorInfo.index, vectorInfo.dropFlagLocal, destroyElementPath};
+          entry.builtinVectorElementSlots =
+              std::max<int32_t>(1, vectorInfo.vectorStructElementSlotCount);
+          setupStage.dropEntries.push_back(std::move(entry));
+          fileScopeStack.back().push_back(-static_cast<int32_t>(setupStage.dropEntries.size()));
+          continue;
+        }
+      }
       const bool ownedParam = ir_lowerer::parameterHasTransform(param, "copy") ||
                               ir_lowerer::parameterHasTransform(param, "move");
       if (fileScopeStack.empty() || (!ownedParam && !temporaryArg)) {

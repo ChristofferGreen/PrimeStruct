@@ -117,33 +117,11 @@
     auto initializerMakesFreshBuiltinVector = [&](const LocalInfo &vectorInfo,
                                                   const Expr &initExpr) {
       if (fileScopeStack.empty() || vectorInfo.kind != LocalInfo::Kind::Vector ||
-          vectorInfo.isSoaVector || initExpr.kind != Expr::Kind::Call || initExpr.isFieldAccess ||
-          initExpr.isMethodCall) {
+          vectorInfo.isSoaVector) {
         return false;
       }
-      std::string collectionName;
-      if (getBuiltinCollectionName(initExpr, collectionName)) {
-        return collectionName == "vector";
-      }
-      const Definition *callee = resolveDefinitionCall(initExpr);
-      if (callee == nullptr) {
-        return false;
-      }
-      if (callee->fullPath.rfind("/std/", 0) == 0) {
-        std::string leaf = callee->fullPath.substr(callee->fullPath.find_last_of('/') + 1);
-        leaf.erase(std::min(leaf.find("__"), leaf.size()));
-        return callee->fullPath.rfind(vectorBackingMemberRoot(), 0) == 0 && leaf == "vector";
-      }
-      for (const auto &transform : callee->transforms) {
-        std::string base;
-        std::string argText;
-        if (transform.name == "return" && transform.templateArgs.size() == 1 &&
-            splitTemplateTypeName(
-                trimTemplateTypeText(transform.templateArgs.front()), base, argText)) {
-          return normalizeCollectionBindingTypeName(trimTemplateTypeText(base)) == "vector";
-        }
-      }
-      return false;
+      return ir_lowerer::isFreshBuiltinVectorExpr(
+          initExpr, [&](const Expr &candidate) { return resolveDefinitionCall(candidate); });
     };
     auto extractDeclaredSumReturnDefinition = [&]() -> const Definition * {
       const std::string &definitionPath =

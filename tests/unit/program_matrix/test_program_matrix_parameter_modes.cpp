@@ -312,4 +312,140 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+// A builtin `[vector<T> copy]` parameter owns a buffer of its own, which the callee frees: a named or field argument
+// is copied, a fresh vector or `move(x)` is handed over (docs/spec/value-lifecycle.md, Parameter Passing). Before
+// TODO-5829 the parameter aliased the caller's record, so the callee's pushes reached the caller.
+TEST_CASE("a builtin vector copy parameter gets its own buffer") {
+  program_matrix::ProgramCase program;
+  program.name = "builtin_vector_copy_parameter_owns_buffer";
+  program.source = R"(
+import /std/collections/*
+
+[struct]
+KeepV {
+  [vector<i32> mut] seen
+}
+
+[effects(heap_alloc) return<int>]
+grow([vector<i32> copy] v) {
+  v.push(9i32)
+  v.push(10i32)
+  v.push(11i32)
+  return(v.count())
+}
+
+[effects(heap_alloc) return<int>]
+total([vector<i32>] v) {
+  return(v.count())
+}
+
+[effects(heap_alloc) return<KeepV>]
+keep([vector<i32> copy] v) {
+  v.push(4i32)
+  return(KeepV{[seen] v})
+}
+
+[effects(heap_alloc) return<vector<i32>>]
+pass_on([vector<i32> copy] v) {
+  v.push(5i32)
+  return(v)
+}
+
+[effects(heap_alloc) return<int>]
+round() {
+  [vector<i32> mut] a{vector<i32>(1i32, 2i32)}
+  [KeepV mut] k{KeepV{[seen] vector<i32>(7i32)}}
+  [i32] g1{grow(a)}
+  [i32] g2{grow(k.seen)}
+  [i32] g3{grow(vector<i32>(1i32))}
+  [i32] t1{total(vector<i32>(1i32, 2i32, 3i32))}
+  [KeepV] kept{keep(a)}
+  [vector<i32> mut] passed{pass_on(a)}
+  passed.push(6i32)
+  [i32] after{a.count() * 10000000i32}
+  [i32] g4{grow(move(a))}
+  return(g1 + g2 * 10i32 + g3 * 100i32 + t1 * 1000i32 + kept.seen.count() * 10000i32 + passed.count() * 100000i32 +
+         k.seen.count() * 1000000i32 + after + g4 * 0i32)
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [i32 mut] last{0i32}
+  repeat(100i32) {
+    last = round()
+  }
+  return(last - 21433400i32)
+}
+)";
+  program.exitCode = 45;
+  program.onlyConfigs = {"vm-step-O0", "vm-O0", "vm-O2", "optexe-O2"};
+  if (program_matrix::nativeSupported()) {
+    program.onlyConfigs.push_back("native-O0");
+    program.onlyConfigs.push_back("native-O2");
+  }
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("builtin vector copy parameters free what they own") {
+  program_matrix::ProgramCase program;
+  program.name = "builtin_vector_copy_parameter_heap_flat";
+  program.source = R"(
+import /std/collections/*
+import /std/text/*
+
+[struct]
+Named {
+  [i32] code
+  [String] name
+}
+
+[effects(heap_alloc) return<int>]
+grow([vector<i32> copy] v) {
+  v.push(9i32)
+  return(v.count())
+}
+
+[effects(heap_alloc) return<int>]
+rename([vector<Named> copy] rows) {
+  rows.push(Named{[code] 9i32, [name] stringFrom("pushed into the copy, long enough for the heap")})
+  return(rows.count())
+}
+
+[effects(heap_alloc) return<vector<i32>>]
+pass_on([vector<i32> copy] v) {
+  v.push(5i32)
+  return(v)
+}
+
+[effects(heap_alloc) return<int>]
+round() {
+  [vector<i32> mut] a{vector<i32>(1i32, 2i32)}
+  [vector<Named> mut] rows{vector<Named>()}
+  rows.push(Named{[code] 1i32, [name] stringFrom("an original row long enough for the heap")})
+  [i32] g1{grow(a)}
+  [i32] g2{grow(vector<i32>(1i32))}
+  [i32] r1{rename(rows)}
+  [vector<i32> mut] passed{pass_on(a)}
+  [i32] g3{grow(move(a))}
+  return(g1 + g2 * 10i32 + r1 * 100i32 + rows.count() * 1000i32 + passed.count() * 10000i32 + g3 * 0i32)
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [i32] first{round()}
+  [i32] before{heapLiveBlocks()}
+  [u64] textBefore{stringHeapBytesInUse()}
+  repeat(300i32) {
+    round()
+  }
+  [i32] leakedBlocks{heapLiveBlocks() - before}
+  [i32] leakedText{convert<i32>(stringHeapBytesInUse() - textBefore)}
+  return(first - 31200i32 + leakedBlocks * 1000i32 + leakedText * 1000i32)
+}
+)";
+  program.exitCode = 23;
+  program.onlyConfigs = {"vm-step-O0", "vm-O0", "vm-O2", "optexe-O2"};
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();
