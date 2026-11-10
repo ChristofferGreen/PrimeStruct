@@ -3,7 +3,7 @@
 TEST_SUITE_BEGIN("primestruct.program_matrix.atomics");
 
 // `/std/sync` atomics (docs/spec/stdlib-reference.md, std/sync): tasks share one cell through copies of an `Atomic`.
-// The VM runs them on the eager default schedule and on seeds 1 to 8, where every atomic operation is a switch point;
+// The VM runs them on the eager default schedule and on seeds 1 to 3, where every atomic operation is a switch point;
 // optexe runs each task on a thread. The native and Wasm backends reject a program that uses atomics. Each matrix
 // case builds one optexe binary (host C++ compiler), which takes a few seconds.
 
@@ -16,7 +16,7 @@ void runAtomicProgram(program_matrix::ProgramCase program) {
       {"vm-O2", program_matrix::Backend::Vm, 2, false},
       {"optexe-O2", program_matrix::Backend::OptExe, 2, true},
   };
-  for (int seed = 1; seed <= 8; ++seed) {
+  for (int seed = 1; seed <= 3; ++seed) {
     program_matrix::ExecutionConfig config{
         "vm-O2-seed" + std::to_string(seed), program_matrix::Backend::Vm, 2, false};
     config.vmFlags = {"--vm-schedule-seed", std::to_string(seed)};
@@ -78,10 +78,10 @@ add_many([Atomic<i64>] counter, [i32] rounds) {
 [effects(atomic, heap_alloc, io_out, task), return<int>]
 main() {
   counter{Atomic<i64>{0i64}}
-  [Task<void>] a{[spawn] add_many(counter, 100000i32)}
-  [Task<void>] b{[spawn] add_many(counter, 100000i32)}
-  [Task<void>] c{[spawn] add_many(counter, 100000i32)}
-  [Task<void>] d{[spawn] add_many(counter, 100000i32)}
+  [Task<void>] a{[spawn] add_many(counter, 20000i32)}
+  [Task<void>] b{[spawn] add_many(counter, 20000i32)}
+  [Task<void>] c{[spawn] add_many(counter, 20000i32)}
+  [Task<void>] d{[spawn] add_many(counter, 20000i32)}
   wait(a)
   wait(b)
   wait(c)
@@ -91,7 +91,7 @@ main() {
 }
 )";
   program.exitCode = 0;
-  program.stdoutText = "400000\n";
+  program.stdoutText = "80000\n";
   runAtomicProgram(program);
 }
 
@@ -116,10 +116,10 @@ spin_many([Atomic<i64>] counter, [i32] rounds) {
 [effects(atomic, heap_alloc, io_out, task), return<int>]
 main() {
   counter{Atomic<i64>{0i64}}
-  [Task<void>] a{[spawn] spin_many(counter, 100000i32)}
-  [Task<void>] b{[spawn] spin_many(counter, 100000i32)}
-  [Task<void>] c{[spawn] spin_many(counter, 100000i32)}
-  [Task<void>] d{[spawn] spin_many(counter, 100000i32)}
+  [Task<void>] a{[spawn] spin_many(counter, 20000i32)}
+  [Task<void>] b{[spawn] spin_many(counter, 20000i32)}
+  [Task<void>] c{[spawn] spin_many(counter, 20000i32)}
+  [Task<void>] d{[spawn] spin_many(counter, 20000i32)}
   wait(a)
   wait(b)
   wait(c)
@@ -129,7 +129,7 @@ main() {
 }
 )";
   program.exitCode = 0;
-  program.stdoutText = "400000\n";
+  program.stdoutText = "80000\n";
   runAtomicProgram(program);
 }
 

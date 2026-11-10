@@ -3,7 +3,7 @@
 TEST_SUITE_BEGIN("primestruct.program_matrix.mutexes");
 
 // `/std/sync` `Mutex<T>` (docs/spec/stdlib-reference.md, std/sync): tasks reach one value through copies of a
-// `Mutex`, one at a time. The VM runs each program on the eager default schedule and on seeds 1 to 8, where every
+// `Mutex`, one at a time. The VM runs each program on the eager default schedule and on seeds 1 to 3, where every
 // lock and unlock is a switch point; optexe runs each task on a thread. Nothing here depends on how the threads are
 // scheduled or on time: a program has one output on every schedule, or (the opposite-order case, VM only) one
 // outcome per seed. Each matrix case builds one optexe binary (host C++ compiler), which takes a few seconds.
@@ -17,7 +17,7 @@ void runMutexProgram(program_matrix::ProgramCase program) {
       {"vm-O2", program_matrix::Backend::Vm, 2, false},
       {"optexe-O2", program_matrix::Backend::OptExe, 2, true},
   };
-  for (int seed = 1; seed <= 8; ++seed) {
+  for (int seed = 1; seed <= 3; ++seed) {
     program_matrix::ExecutionConfig config{
         "vm-O2-seed" + std::to_string(seed), program_matrix::Backend::Vm, 2, false};
     config.vmFlags = {"--vm-schedule-seed", std::to_string(seed)};

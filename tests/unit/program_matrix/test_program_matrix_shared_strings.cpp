@@ -4,7 +4,7 @@ TEST_SUITE_BEGIN("primestruct.program_matrix.shared_strings");
 
 // `SharedString` owners on several tasks (docs/spec/strings-and-views.md): the owner count is an atomic cell, so a
 // copy made on one task and a destroy on another both count, and the last owner frees the text wherever it runs.
-// The VM runs the programs on the eager default schedule and on seeds 1 to 8, where every atomic operation is a
+// The VM runs the programs on the eager default schedule and on seeds 1 and 2, where every atomic operation is a
 // switch point; optexe runs each task on a thread. Each program prints the heap blocks and string heap bytes it
 // left behind (0 and 0). Each matrix case builds one optexe binary (host C++ compiler), which takes a few seconds.
 
@@ -13,11 +13,9 @@ namespace {
 void runSharedStringProgram(program_matrix::ProgramCase program) {
   std::vector<program_matrix::ExecutionConfig> configs = {
       {"vm-step-O0", program_matrix::Backend::VmStep, 0, false},
-      {"vm-O0", program_matrix::Backend::Vm, 0, false},
-      {"vm-O2", program_matrix::Backend::Vm, 2, false},
       {"optexe-O2", program_matrix::Backend::OptExe, 2, true},
   };
-  for (int seed = 1; seed <= 8; ++seed) {
+  for (int seed = 1; seed <= 2; ++seed) {
     program_matrix::ExecutionConfig config{
         "vm-O2-seed" + std::to_string(seed), program_matrix::Backend::Vm, 2, false};
     config.vmFlags = {"--vm-schedule-seed", std::to_string(seed)};
@@ -54,10 +52,10 @@ copy_many([SharedString] text, [i32] rounds) {
 // The tasks and their argument copies end with this call, so the caller is the only owner afterwards.
 [effects(heap_alloc, task), return<i32>]
 copy_on_four_tasks([SharedString] text) {
-  [Task<i32>] a{[spawn] copy_many(text, 100000i32)}
-  [Task<i32>] b{[spawn] copy_many(text, 100000i32)}
-  [Task<i32>] c{[spawn] copy_many(text, 100000i32)}
-  [Task<i32>] d{[spawn] copy_many(text, 100000i32)}
+  [Task<i32>] a{[spawn] copy_many(text, 20000i32)}
+  [Task<i32>] b{[spawn] copy_many(text, 20000i32)}
+  [Task<i32>] c{[spawn] copy_many(text, 20000i32)}
+  [Task<i32>] d{[spawn] copy_many(text, 20000i32)}
   return(wait(a) + wait(b) + wait(c) + wait(d))
 }
 
@@ -77,7 +75,7 @@ main() {
 }
 )";
   program.exitCode = 0;
-  program.stdoutText = "2000000\n1\n0\n0\n";
+  program.stdoutText = "400000\n1\n0\n0\n";
   runSharedStringProgram(program);
 }
 

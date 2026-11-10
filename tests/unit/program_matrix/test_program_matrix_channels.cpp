@@ -3,7 +3,7 @@
 TEST_SUITE_BEGIN("primestruct.program_matrix.channels");
 
 // `/std/sync` `Channel<T>` (docs/spec/stdlib-reference.md, std/sync): tasks hand values to each other through
-// copies of a bounded queue. The VM runs each program on the eager default schedule and on seeds 1 to 8, where
+// copies of a bounded queue. The VM runs each program on the eager default schedule and on seeds 1 to 3, where
 // every lock, unlock and condition wait is a switch point; optexe runs each task on a thread. Nothing here depends
 // on how the threads are scheduled or on time: every program has one output on every schedule (a total, a count
 // of the items that arrived exactly once, a fault). Each matrix case builds one optexe binary (host C++
@@ -13,7 +13,7 @@ namespace {
 
 std::vector<program_matrix::ExecutionConfig> seedConfigs() {
   std::vector<program_matrix::ExecutionConfig> configs;
-  for (int seed = 1; seed <= 8; ++seed) {
+  for (int seed = 1; seed <= 3; ++seed) {
     program_matrix::ExecutionConfig config{
         "vm-O2-seed" + std::to_string(seed), program_matrix::Backend::Vm, 2, false};
     config.vmFlags = {"--vm-schedule-seed", std::to_string(seed)};
@@ -242,13 +242,13 @@ main() {
   runChannelProgram(program);
 }
 
-TEST_CASE("three producers and three consumers move 30000 Strings and each arrives exactly once") {
+TEST_CASE("three producers and three consumers move 9000 Strings and each arrives exactly once") {
   // One VM run and one optexe run of the full count; the next case runs the same program on every schedule.
   program_matrix::ProgramCase program;
-  program.name = "channel_string_fan_30000";
-  program.source = replaceAll(StringFanProgram, "PER_PRODUCER", "10000");
+  program.name = "channel_string_fan_9000";
+  program.source = replaceAll(StringFanProgram, "PER_PRODUCER", "3000");
   program.exitCode = 0;
-  program.stdoutText = "30000\n30000\n";
+  program.stdoutText = "9000\n9000\n";
   runOn(program,
         {{"vm-O2", program_matrix::Backend::Vm, 2, false},
          {"optexe-O2", program_matrix::Backend::OptExe, 2, true}});

@@ -8033,7 +8033,7 @@ Total: 10503 test cases across 592 files.
 ### test_program_matrix_channels.cpp
 
 - a producer sends 100 jobs through a channel of capacity 4 and a consumer sums them
-- three producers and three consumers move 30000 Strings and each arrives exactly once
+- three producers and three consumers move 9000 Strings and each arrives exactly once
 - three producers and three consumers move 1500 Strings exactly once on every VM seed
 - Strings sent, received and left in a channel are all freed
 - copies of a channel share one queue, which gives what was sent in order and then none

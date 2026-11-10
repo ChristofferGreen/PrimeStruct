@@ -3690,8 +3690,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
     if(suiteCases STREQUAL "")
       message(FATAL_ERROR "program matrix suite ${suite} has no case count in PrimeStructProgramMatrixCaseCounts")
     endif()
-    # A shared_strings case runs twelve configs of a program that compiles the text stdlib, about 11 s alone and
-    # 90 s in a loaded gate, so each case is a shard of its own.
+    # A shared_strings case runs four configs of a program that compiles the text stdlib (most of a second per
+    # config) and builds one optexe binary, about 5 s alone, so each case is a shard of its own.
     set(suiteShardCases 3)
     if(suiteShort STREQUAL "shared_strings")
       set(suiteShardCases 1)
