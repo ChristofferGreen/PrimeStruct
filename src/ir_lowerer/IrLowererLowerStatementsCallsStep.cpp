@@ -563,7 +563,40 @@ VectorMutationStatementEmitResult tryEmitCanonicalVectorMutationStatement(
   instructions.push_back({IrOpcode::AddI32, 0});
   instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(nextCapacityLocal)});
   instructions[afterNextCapacityJump].imm = static_cast<uint64_t>(instructions.size());
+  // A struct or vector payload is read through its address, which may lie in this vector's own
+  // buffer (`a.push(a[0i32])`): growing moves the buffer, so such an address is moved with it.
+  int32_t oldDataLocal = -1;
+  if (elemSlotCountForBuffer > 1) {
+    oldDataLocal = input.allocTempLocal();
+    emitFieldLoad(valuesPtrLocal, 3);
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(oldDataLocal)});
+  }
   emitReallocDataToCapacity(valuesPtrLocal, nextCapacityLocal);
+  if (oldDataLocal >= 0) {
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(payloadLocal)});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(oldDataLocal)});
+    instructions.push_back({IrOpcode::CmpGeU64, 0});
+    const size_t belowJump = instructions.size();
+    instructions.push_back({IrOpcode::JumpIfZero, 0});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(payloadLocal)});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(oldDataLocal)});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});
+    instructions.push_back(
+        {IrOpcode::PushI32, static_cast<uint64_t>(elemSlotCountForBuffer * IrSlotBytesI32)});
+    instructions.push_back({IrOpcode::MulI32, 0});
+    instructions.push_back({IrOpcode::AddI64, 0});
+    instructions.push_back({IrOpcode::CmpLtU64, 0});
+    const size_t aboveJump = instructions.size();
+    instructions.push_back({IrOpcode::JumpIfZero, 0});
+    emitFieldLoad(valuesPtrLocal, 3);
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(payloadLocal)});
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(oldDataLocal)});
+    instructions.push_back({IrOpcode::SubI64, 0});
+    instructions.push_back({IrOpcode::AddI64, 0});
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(payloadLocal)});
+    instructions[belowJump].imm = static_cast<uint64_t>(instructions.size());
+    instructions[aboveJump].imm = static_cast<uint64_t>(instructions.size());
+  }
   instructions[skipGrowJump].imm = static_cast<uint64_t>(instructions.size());
 
   if (elemSlotCountForBuffer > 1) {
@@ -586,6 +619,29 @@ VectorMutationStatementEmitResult tryEmitCanonicalVectorMutationStatement(
         splitTemplateTypeName(
             trimTemplateTypeText(targetInfo.elementTypeText), elementBase, elementArg) &&
         isBuiltinCollectionTypeName(trimTemplateTypeText(elementBase), "vector");
+    if (!nestedBuiltinVector && helperName == "push" && input.emitPushedStructCopy) {
+      // A struct pushed from a place (an element, a field, a borrowed parameter) is copied the way
+      // a binding initialized from it is, so the vector and the place each own their resources; a
+      // temporary or a named owner (moved above) is taken over.
+      std::string payloadStructPath;
+      if (input.inferStructExprPath) {
+        payloadStructPath = input.inferStructExprPath(*payloadArg, localsIn);
+      }
+      bool takesOver =
+          isSimpleCallName(*payloadArg, "move") ||
+          (input.isTemporaryStructSource && input.isTemporaryStructSource(*payloadArg, localsIn));
+      if (payloadArg->kind == Expr::Kind::Name) {
+        const auto payloadIt = localsIn.find(payloadArg->name);
+        takesOver = payloadIt != localsIn.end() && payloadIt->second.dropFlagLocal >= 0;
+      }
+      if (!takesOver && !payloadStructPath.empty() &&
+          !input.emitPushedStructCopy(targetAddrLocal, payloadLocal, payloadStructPath, localsIn)) {
+        if (errorOut.empty()) {
+          errorOut = "native backend cannot copy pushed struct element: " + payloadStructPath;
+        }
+        return VectorMutationStatementEmitResult::Error;
+      }
+    }
     if (nestedBuiltinVector) {
       bool takesOver = isSimpleCallName(*payloadArg, "move") ||
                        isFreshBuiltinVectorExpr(*payloadArg, input.resolveDefinitionCall);

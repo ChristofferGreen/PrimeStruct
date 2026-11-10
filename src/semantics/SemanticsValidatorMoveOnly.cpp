@@ -85,12 +85,12 @@ bool SemanticsValidator::movedAtOtherSite(const std::string &name, const Expr &s
   return moved == currentValidationState_.moveArgumentSites.end() || !moved->second.matches(site);
 }
 
-bool SemanticsValidator::markBuiltinVectorPushMove(
+bool SemanticsValidator::checkBuiltinVectorMutation(
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals,
     const Expr &expr) {
-  if (expr.kind != Expr::Kind::Call || expr.isBinding || expr.args.size() != 2 ||
-      currentValidationState_.context.definitionIsUnsafe) {
+  if (expr.kind != Expr::Kind::Call || expr.isBinding || expr.args.empty() ||
+      expr.args.size() > 2 || currentValidationState_.context.definitionIsUnsafe) {
     return true;
   }
   for (const auto &argName : expr.argNames) {
@@ -101,11 +101,9 @@ bool SemanticsValidator::markBuiltinVectorPushMove(
   const size_t leafStart = expr.name.rfind('/');
   const std::string leaf =
       leafStart == std::string::npos ? expr.name : expr.name.substr(leafStart + 1);
-  if (leaf != "push") {
-    return true;
-  }
-  const Expr &value = expr.args[1];
-  if (value.kind != Expr::Kind::Name) {
+  const bool storesArgument = leaf == "push" && expr.args.size() == 2;
+  if (!storesArgument && leaf != "pop" && leaf != "clear" && leaf != "reserve" &&
+      leaf != "remove_at" && leaf != "remove_swap") {
     return true;
   }
   std::string receiverTypeText;
@@ -119,7 +117,24 @@ bool SemanticsValidator::markBuiltinVectorPushMove(
       normalizeBindingTypeName(receiverBase) != "vector") {
     return true;
   }
-  // A borrowed parameter or a view is copied into the vector (it owns nothing to hand over).
+  // Changing the vector can move or free the storage a view of it (or of one of its elements)
+  // reads, so it waits until the view's last use (docs/spec/value-lifecycle.md, Copies).
+  if (const Expr *root = containerPlaceRoot(expr.args.front()); root->kind == Expr::Kind::Name) {
+    const std::string view = liveContainerViewOf(params, locals, root->name);
+    if (!view.empty()) {
+      return failExprDiagnostic(expr,
+                                "borrowed binding: " + root->name + " (root: " + root->name +
+                                    ", sink: " + view + "); " + root->name +
+                                    " cannot change while " + view + " still reads it: declare " +
+                                    view + " `mut` to give it its own copy");
+    }
+  }
+  if (!storesArgument || expr.args[1].kind != Expr::Kind::Name) {
+    return true;
+  }
+  // A named owner is moved into the vector, like a `move` argument; a borrowed parameter or a view
+  // is copied (it owns nothing to hand over).
+  const Expr &value = expr.args[1];
   const BindingInfo *binding = findParamBinding(params, value.name);
   if (binding != nullptr) {
     if (!binding->isCopy && !binding->isMove) {
@@ -128,8 +143,8 @@ bool SemanticsValidator::markBuiltinVectorPushMove(
   } else if (const auto it = locals.find(value.name); it != locals.end()) {
     binding = &it->second;
   }
-  if (binding == nullptr || binding->isContainerView || binding->isPlaceView ||
-      binding->typeName == "Reference" || !bindingOwnsResources(*binding, expr.namespacePrefix)) {
+  if (binding == nullptr || binding->isContainerView || binding->typeName == "Reference" ||
+      !bindingOwnsResources(*binding, expr.namespacePrefix)) {
     return true;
   }
   if (movedAtOtherSite(value.name, value)) {

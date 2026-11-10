@@ -434,6 +434,32 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
             .emitVectorReserveNegative = [&]() { emitVectorReserveNegative(); },
             .emitVectorReserveExceeded = [&]() { emitVectorReserveExceeded(); },
             .emitPushedVectorCopy = emitPushedVectorCopy,
+            .emitPushedStructCopy =
+                [&](int32_t destPtrLocal, int32_t srcPtrLocal, const std::string &structPath,
+                    const LocalMap &callLocals) {
+                  bool ranCopyHelper = false;
+                  return ir_lowerer::emitStructCopyHelpersFromPtrs(
+                      destPtrLocal,
+                      srcPtrLocal,
+                      structPath,
+                      [&](const std::string &path) -> const Definition * {
+                        auto copyIt = defMap.find(path + "/Copy");
+                        return copyIt == defMap.end() ? nullptr : copyIt->second;
+                      },
+                      [&](const std::string &path, StructSlotLayoutInfo &layoutOut) {
+                        return resolveStructSlotLayout(path, layoutOut);
+                      },
+                      [&]() { return allocTempLocal(); },
+                      function.instructions,
+                      callLocals,
+                      emitInlineDefinitionCall,
+                      ranCopyHelper,
+                      error);
+                },
+            .isTemporaryStructSource =
+                [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+                  return isTemporaryStructCopySource(valueExpr, valueLocals);
+                },
             .instructions = &function.instructions,
         },
         stmt,

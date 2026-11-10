@@ -599,4 +599,100 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+// A push whose argument lives in the vector's own buffer (`rows.push(rows[0i32])`) reads it
+// before the buffer moves, and a struct pushed from a place (an element, a borrowed parameter) is
+// copied, so its String is owned once by each side. Shared by the two cases below.
+const char *const SelfPushSource = R"(
+import /std/collections/*
+import /std/text/*
+
+[struct]
+Named {
+  [i32] code{0i32}
+  [String] name{String{}}
+}
+
+[struct]
+Grid {
+  [vector<vector<i32>> mut] rows
+}
+
+[effects(heap_alloc) return<int>]
+add_param([vector<Named> mut] names, [Named] item) {
+  names.push(item)
+  return(names.count())
+}
+
+[effects(heap_alloc) return<int>]
+self_pushes() {
+  [vector<vector<i32>> mut] rows{vector<vector<i32>>()}
+  rows.push(vector<i32>(1i32, 2i32))
+  repeat(40i32) {
+    rows.push(rows[0i32])
+  }
+  [vector<Named> mut] names{vector<Named>()}
+  names.push(Named{[code] 3i32, [name] stringFrom("a long heap string for the first element")})
+  repeat(20i32) {
+    names.push(names[0i32])
+  }
+  [Named] kept{Named{[code] 9i32, [name] stringFrom("a borrowed parameter with a heap string")}}
+  [i32] added{add_param(names, kept)}
+  [Grid mut] g{Grid{[rows] vector<vector<i32>>()}}
+  g.rows.push(vector<i32>(5i32, 6i32, 7i32))
+  repeat(9i32) {
+    g.rows.push(g.rows[0i32])
+  }
+  [vector<i32> mut] copied{rows[0i32]}
+  copied.push(8i32)
+  rows.push(copied)
+  return(rows.count() * 100000i32 + rows[40i32][1i32] * 10000i32 + rows[41i32].count() * 1000i32 +
+         names[20i32].code * 100i32 + names[21i32].code * 10i32 + g.rows[9i32][2i32] + added * 0i32 +
+         names[20i32].name.count() * 0i32 + g.rows.count() * 0i32)
+}
+)";
+
+TEST_CASE("a vector pushes its own elements") {
+  program_matrix::ProgramCase program;
+  program.name = "push_own_elements";
+  program.source = std::string(SelfPushSource) + R"(
+[return<int> effects(heap_alloc)]
+main() {
+  [i32 mut] total{0i32}
+  repeat(50i32) {
+    total = self_pushes() - 4223397i32
+  }
+  return(total + 7i32)
+}
+)";
+  program.exitCode = 7;
+  program.onlyConfigs = {"vm-step-O0", "vm-O0", "vm-O2", "optexe-O2"};
+  if (program_matrix::nativeSupported()) {
+    program.onlyConfigs.push_back("native-O0");
+    program.onlyConfigs.push_back("native-O2");
+  }
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("a vector pushing its own elements frees every copy") {
+  program_matrix::ProgramCase program;
+  program.name = "push_own_elements_heap_flat";
+  program.source = std::string(SelfPushSource) + R"(
+[return<int> effects(heap_alloc)]
+main() {
+  [i32] first{self_pushes()}
+  [i32] before{heapLiveBlocks()}
+  [u64] textBefore{stringHeapBytesInUse()}
+  repeat(100i32) {
+    self_pushes()
+  }
+  [i32] leakedBlocks{heapLiveBlocks() - before}
+  [i32] leakedText{convert<i32>(stringHeapBytesInUse() - textBefore)}
+  return(first - 4223397i32 + 23i32 + leakedBlocks * 1000i32 + leakedText * 1000i32)
+}
+)";
+  program.exitCode = 23;
+  program.onlyConfigs = {"vm-step-O0", "vm-O0", "vm-O2", "optexe-O2"};
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

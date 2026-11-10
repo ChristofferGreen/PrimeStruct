@@ -329,12 +329,16 @@
   // Whether `name` is moved-from by an argument other than `site`; the same argument validated
   // again (return inference revalidates calls) is not a second move.
   bool movedAtOtherSite(const std::string &name, const Expr &site) const;
-  // A builtin `vector<T>` `push` stores its argument like a `[T move]` parameter: a named owning
-  // binding (not a view or a borrowed parameter) is moved-from afterwards. Runs after the call is
-  // validated; false after a diagnostic.
-  bool markBuiltinVectorPushMove(const std::vector<ParameterInfo> &params,
-                                 const std::unordered_map<std::string, BindingInfo> &locals,
-                                 const Expr &expr);
+  // After a builtin `vector<T>` mutator (`push`, `pop`, `clear`, `reserve`, `remove_*`) validates:
+  // the receiver's root must have no live container view, and `push` stores its argument like a
+  // `[T move]` parameter, so a named owning binding (not a view or a borrowed parameter) is
+  // moved-from afterwards. False after a diagnostic.
+  bool checkBuiltinVectorMutation(const std::vector<ParameterInfo> &params,
+                                  const std::unordered_map<std::string, BindingInfo> &locals,
+                                  const Expr &expr);
+  // The binding a place is rooted at: field accesses and element accesses (`at`, `at_unsafe`)
+  // stripped (`g.rows[i]` -> `g`); the place itself when it has no such root.
+  static const Expr *containerPlaceRoot(const Expr &place);
   bool validateVectorIndexedRemovalHelperElementType(const BindingInfo &binding,
                                                      const std::string &helperName,
                                                      const std::string &namespacePrefix,

@@ -22,12 +22,9 @@ None.
 ## Current Failures
 
 <!-- compile.sh:failing-tests:start -->
-- Last updated: `2026-11-10T05:11:35Z`
+- Last updated: `2026-11-10T05:17:53Z`
 - Build type: `Release`
 - Build dir: `build-release`
 - Command: `ctest --test-dir build-release --output-on-failure --parallel 22`
-- Result: `ctest` failed with status `8`.
-- Failing CTest cases:
-  - `2039`: `PrimeStruct_source_file_sizes`
-  - `2040`: `PrimeStruct_source_file_sizes_self_test`
+- Result: no failing CTest cases.
 <!-- compile.sh:failing-tests:end -->

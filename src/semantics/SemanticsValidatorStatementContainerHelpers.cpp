@@ -307,6 +307,17 @@ bool SemanticsValidator::isOwningBorrowedParameter(const std::vector<ParameterIn
   return bindingOwnsResources(*paramBinding, namespacePrefix);
 }
 
+const Expr *SemanticsValidator::containerPlaceRoot(const Expr &place) {
+  const Expr *root = &place;
+  while (root->kind == Expr::Kind::Call &&
+         ((root->isFieldAccess && root->args.size() == 1) ||
+          (!root->isFieldAccess && root->args.size() == 2 &&
+           (isSimpleCallName(*root, "at") || isSimpleCallName(*root, "at_unsafe"))))) {
+    root = &root->args.front();
+  }
+  return root;
+}
+
 void SemanticsValidator::markContainerViewBinding(
     const std::vector<ParameterInfo> &params,
     std::unordered_map<std::string, BindingInfo> &locals,
@@ -346,20 +357,12 @@ void SemanticsValidator::markContainerViewBinding(
   if (!isBuiltinCollection && !isCollectionStruct) {
     return;
   }
-  const Expr *source = &bindingStmt.args.front();
-  while (source->kind == Expr::Kind::Call && source->isFieldAccess && source->args.size() == 1) {
-    source = &source->args.front();
-  }
-  if (source->kind == Expr::Kind::Call && !source->isFieldAccess && !source->args.empty() &&
-      (isSimpleCallName(*source, "at") || isSimpleCallName(*source, "at_unsafe") ||
-       isSimpleCallName(*source, "dereference"))) {
-    binding.isPlaceView = true;
-    return;
-  }
+  // A view of a field or an element (`g.rows`, `a[i]`, `g.rows[i]`) borrows the root binding: an
+  // element view reads the container's buffer, which a push may move.
+  const Expr *source = containerPlaceRoot(bindingStmt.args.front());
   if (source->kind != Expr::Kind::Name) {
     return;
   }
-  binding.isPlaceView = true;
   const BindingInfo *sourceBinding = findParamBinding(params, source->name);
   if (sourceBinding == nullptr) {
     const auto sourceIt = locals.find(source->name);

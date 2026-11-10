@@ -102,28 +102,28 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     st.statementIndex = statementIndex;
     st.expressionIsStatementContext = expressionIsStatementContext;
     if (validateExprCallPhase1(params, locals, expr, st) == PhaseStatus::Done) {
-      return st.result && markBuiltinVectorPushMove(params, locals, expr);
+      return st.result && checkBuiltinVectorMutation(params, locals, expr);
     }
     if (validateExprCallPhase2(params, locals, expr, st) == PhaseStatus::Done) {
-      return st.result && markBuiltinVectorPushMove(params, locals, expr);
+      return st.result && checkBuiltinVectorMutation(params, locals, expr);
     }
     if (validateExprCallPhase3(params, locals, expr, st) == PhaseStatus::Done) {
-      return st.result && markBuiltinVectorPushMove(params, locals, expr);
+      return st.result && checkBuiltinVectorMutation(params, locals, expr);
     }
     if (validateExprCallPhase4(params, locals, expr, st) == PhaseStatus::Done) {
-      return st.result && markBuiltinVectorPushMove(params, locals, expr);
+      return st.result && checkBuiltinVectorMutation(params, locals, expr);
     }
     if (validateExprCallPhase5(params, locals, expr, st) == PhaseStatus::Done) {
-      return st.result && markBuiltinVectorPushMove(params, locals, expr);
+      return st.result && checkBuiltinVectorMutation(params, locals, expr);
     }
     if (validateExprCallPhase6(params, locals, expr, st) == PhaseStatus::Done) {
-      return st.result && markBuiltinVectorPushMove(params, locals, expr);
+      return st.result && checkBuiltinVectorMutation(params, locals, expr);
     }
     if (validateExprCallPhase7(params, locals, expr, st) == PhaseStatus::Done) {
-      return st.result && markBuiltinVectorPushMove(params, locals, expr);
+      return st.result && checkBuiltinVectorMutation(params, locals, expr);
     }
     if (validateExprCallPhase8(params, locals, expr, st) == PhaseStatus::Done) {
-      return st.result && markBuiltinVectorPushMove(params, locals, expr);
+      return st.result && checkBuiltinVectorMutation(params, locals, expr);
     }
   }
   return false;

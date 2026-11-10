@@ -680,4 +680,81 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("a builtin vector cannot change while a view of it or of an element is used") {
+  std::string error;
+  CHECK_FALSE(validateWithPush(R"(
+[effects(heap_alloc) return<int>]
+main() {
+  [vector<vector<i32>> mut] rows{vector<vector<i32>>()}
+  rows.push(vector<i32>(1i32, 2i32))
+  [vector<i32>] view{rows[0i32]}
+  rows.push(vector<i32>(3i32))
+  return(view.count())
+}
+)",
+                               error));
+  CHECK(error.find("borrowed binding: rows (root: rows, sink: view); rows cannot change while view "
+                   "still reads it: declare view `mut` to give it its own copy") !=
+        std::string::npos);
+
+  // Pushing a view into the vector it reads.
+  error.clear();
+  CHECK_FALSE(validateWithPush(R"(
+[effects(heap_alloc) return<int>]
+main() {
+  [vector<vector<i32>> mut] rows{vector<vector<i32>>()}
+  rows.push(vector<i32>(1i32, 2i32))
+  [vector<i32>] view{rows[0i32]}
+  rows.push(view)
+  return(rows.count())
+}
+)",
+                               error));
+  CHECK(error.find("borrowed binding: rows (root: rows, sink: view)") != std::string::npos);
+
+  // A view of an element of a field borrows the struct.
+  error.clear();
+  CHECK_FALSE(validateWithPush(R"(
+[struct]
+Grid {
+  [vector<vector<i32>> mut] rows
+}
+
+[effects(heap_alloc) return<int>]
+main() {
+  [Grid mut] grid{Grid{[rows] vector<vector<i32>>()}}
+  grid.rows.push(vector<i32>(1i32))
+  [vector<i32>] view{grid.rows[0i32]}
+  grid.rows.push(vector<i32>(2i32))
+  return(view.count())
+}
+)",
+                               error));
+  CHECK(error.find("borrowed binding: grid (root: grid, sink: view)") != std::string::npos);
+}
+
+TEST_CASE("a builtin vector can push its own elements and views that ended") {
+  std::string error;
+  CHECK(validateWithPush(R"(
+[effects(heap_alloc) return<int>]
+main() {
+  [vector<vector<i32>> mut] rows{vector<vector<i32>>()}
+  rows.push(vector<i32>(1i32, 2i32))
+  rows.push(rows[0i32])
+  [vector<i32>] view{rows[0i32]}
+  [i32] seen{view.count()}
+  rows.push(vector<i32>(3i32))
+  [vector<i32> mut] copied{rows[0i32]}
+  rows.push(vector<i32>(4i32))
+  rows.push(copied)
+  [vector<Named> mut] names{vector<Named>()}
+  names.push(Named{[code] 4i32, [name] stringFrom("abc")})
+  names.push(names[0i32])
+  return(seen + rows.count() + names.count())
+}
+)",
+                         error));
+  CHECK(error.empty());
+}
+
 TEST_SUITE_END();

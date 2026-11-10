@@ -99,10 +99,16 @@
   `vector<vector<T>>` stores each inner vector inline: `a.push(v)` takes over a fresh vector, `move(v)` or an owning
   binding and copies any other place (a view, field or element), `a[i]` is the inner vector (a read-only view when
   bound without `mut`), and a copy of the outer vector gives every inner vector a buffer of its own; destroying it
-  frees every inner buffer. A non-`mut` collection binding (`vector`, `map`, `soa_vector`) initialized from a place is a read-only view of it
-  and does not copy; it borrows the place's root binding until its last use, so the root cannot be changed (passed to a
-  `mut` or `move` parameter, or assigned) while the view is still used: `borrowed binding: <root>`. A temporary (a
-  call result or constructor) or `move(x)` initializer is moved in without a copy.
+  frees every inner buffer. A non-`mut` collection binding (`vector`, `map`, `soa_vector`) initialized from a place (a
+  binding, field or element: `[vector<i32>] row{rows[0i32]}`) is a read-only view of it and does not copy; it borrows
+  the place's root binding until its last use, so the root cannot be changed (passed to a `mut` or `move` parameter,
+  assigned, or changed by a builtin vector `push`, `pop`, `clear`, `reserve` or `remove_*`, including pushing the view
+  into it) while the view is still used: `borrowed binding: rows (root: rows, sink: row); rows cannot change while row
+  still reads it: declare row `mut` to give it its own copy`. A temporary (a call result or constructor) or `move(x)`
+  initializer is moved in without a copy. A `push` whose argument is an element of the same vector
+  (`rows.push(rows[0i32])`) works: the element is read where the buffer moved to when the push grows it, and like any
+  struct or vector pushed from a place (an element, a field, a borrowed parameter) it is copied, so the vector and the
+  place each own their own String and vector buffers.
 - **Implementation status:** the IR lowering passes non-`mut` struct and collection arguments by alias and treats
   `mut` parameters as borrows whose writes reach the caller. Semantics checks that a `mut` argument is a mutable place
   (a non-`mut` binding is `mut parameter requires a mutable place`; literals and other temporaries, fields and elements

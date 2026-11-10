@@ -45,6 +45,12 @@ struct LowerStatementsCallsStepInput {
   // `srcPtrLocal`) a buffer of its own; `elementTypeText` is the pushed vector's type.
   std::function<bool(int32_t, int32_t, const std::string &, const std::string &, const LocalMap &)>
       emitPushedVectorCopy;
+  // Finishes copying a struct pushed from a place (its slots are already at `destPtrLocal`): runs
+  // its `Copy` helper or its fields' copies, so the element owns what it holds.
+  std::function<bool(int32_t, int32_t, const std::string &, const LocalMap &)> emitPushedStructCopy;
+  // Whether a struct-valued payload is a temporary the vector takes over (a constructor or a call
+  // result) rather than a place that keeps owning it.
+  std::function<bool(const Expr &, const LocalMap &)> isTemporaryStructSource;
 
   std::vector<IrInstruction> *instructions = nullptr;
 };
