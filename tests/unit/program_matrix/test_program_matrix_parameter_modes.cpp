@@ -308,7 +308,8 @@ main() {
 }
 )";
   program.exitCode = 116;
-  program.stdoutText = "7\n113\n7\n99\n";
+  // The noisy local and the copy in the table's slot (freed with the table's slots) each print 7.
+  program.stdoutText = "7\n113\n7\n7\n99\n";
   program_matrix::runProgramMatrix(program);
 }
 

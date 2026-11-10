@@ -480,7 +480,16 @@
         std::string elementStructPath;
         int32_t elementSlots = 1;
         if (!elementText.empty() &&
-            resolveStructTypeName(elementText, elementNamespace, elementStructPath)) {
+            ir_lowerer::resolveBuiltinVectorElementStructPath(
+                elementText,
+                elementNamespace,
+                [&](const std::string &typeName,
+                    const std::string &namespacePrefix,
+                    std::string &pathOut) {
+                  return resolveStructTypeName(typeName, namespacePrefix, pathOut);
+                },
+                elementStructPath) &&
+            !elementStructPath.empty()) {
           StructSlotLayoutInfo elementLayout;
           if (resolveStructSlotLayout(elementStructPath, elementLayout) &&
               elementLayout.totalSlots > 0) {

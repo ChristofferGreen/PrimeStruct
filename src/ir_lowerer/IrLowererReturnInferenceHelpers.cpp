@@ -172,9 +172,14 @@ void analyzeDeclaredReturnTransforms(const Definition &def,
         info.kind = valueKindFromTypeName(elementType);
         if (info.kind == LocalInfo::ValueKind::Unknown) {
           std::string structPath;
-          if (resolveStructTypeName(elementType, def.namespacePrefix, structPath)) {
-            // Collection-of-struct returns lower through the same opaque aggregate
-            // handle path as other array-like aggregate returns.
+          std::string elementBase;
+          std::string elementArg;
+          // Collection-of-struct returns (and a `vector<vector<T>>`, whose elements are inline
+          // vector records) lower through the same opaque aggregate handle path as other
+          // array-like aggregate returns.
+          if (resolveStructTypeName(elementType, def.namespacePrefix, structPath) ||
+              (splitTemplateTypeName(elementType, elementBase, elementArg) &&
+               normalizeDeclaredCollectionTypeBase(elementBase) == "vector")) {
             info.kind = LocalInfo::ValueKind::Int32;
           }
         }

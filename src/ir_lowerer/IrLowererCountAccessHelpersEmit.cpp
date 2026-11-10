@@ -13,6 +13,7 @@
 
 #include "primec/ir_lowerer/IrLowererBindingTypeHelpers.h"
 #include "primec/ir_lowerer/IrLowererBindingTransformHelpers.h"
+#include "primec/ir_lowerer/IrLowererCallHelpers.h"
 #include "primec/ir_lowerer/IrLowererHelpers.h"
 #include "primec/ir_lowerer/IrLowererSemanticProductTargetAdapters.h"
 #include "primec/ir_lowerer/IrLowererSetupTypeCollectionHelpers.h"
@@ -113,15 +114,26 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
       expr.args.size() == 1) {
     const Expr &guardedCountTarget = expr.args.front();
     std::string guardedAccessName;
-    if (guardedCountTarget.kind == Expr::Kind::Call &&
-        guardedCountTarget.args.size() == 2 &&
+    if (guardedCountTarget.kind == Expr::Kind::Call && guardedCountTarget.args.size() == 2 &&
         getBuiltinArrayAccessName(guardedCountTarget, guardedAccessName) &&
-        (guardedAccessName == "at" || guardedAccessName == "at_unsafe") &&
-        classifySemanticStringCountTarget(guardedCountTarget, semanticProgram,
-                                          semanticIndex) ==
-            SemanticStringCountTargetResolution::NonString) {
-      error = "count() argument resolves to a non-string value";
-      return CountAccessCallEmitResult::Error;
+        (guardedAccessName == "at" || guardedAccessName == "at_unsafe")) {
+      // An element of a builtin `vector<vector<T>>` is an inline vector record:
+      // its count is at slot 1.
+      if (isNestedBuiltinVectorElementAccess(
+              guardedCountTarget, localsIn, semanticProgram, semanticIndex)) {
+        if (!emitExpr(guardedCountTarget, localsIn)) {
+          return CountAccessCallEmitResult::Error;
+        }
+        emitInstruction(IrOpcode::PushI64, IrSlotBytes);
+        emitInstruction(IrOpcode::AddI64, 0);
+        emitInstruction(IrOpcode::LoadIndirect, 0);
+        return CountAccessCallEmitResult::Emitted;
+      }
+      if (classifySemanticStringCountTarget(guardedCountTarget, semanticProgram, semanticIndex) ==
+          SemanticStringCountTargetResolution::NonString) {
+        error = "count() argument resolves to a non-string value";
+        return CountAccessCallEmitResult::Error;
+      }
     }
   }
   const bool explicitPublishedVectorCountCall =

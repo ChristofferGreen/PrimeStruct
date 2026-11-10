@@ -243,6 +243,12 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
 ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
     const Expr &target, const LocalMap &localsIn);
 bool validateArrayVectorAccessTargetInfo(const ArrayVectorAccessTargetInfo &targetInfo, std::string &error);
+// Whether `accessExpr` (`at`/`at_unsafe` with a receiver and an index) reads an element of a
+// builtin `vector<vector<T>>`: an inline vector record whose address the access yields.
+bool isNestedBuiltinVectorElementAccess(const Expr &accessExpr,
+                                        const LocalMap &localsIn,
+                                        const SemanticProgram *semanticProgram,
+                                        const SemanticProductIndex *semanticIndex);
 StringTableAccessEmitResult tryEmitStringTableAccessLoad(
     const std::string &accessName,
     const Expr &targetExpr,

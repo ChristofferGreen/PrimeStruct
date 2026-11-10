@@ -601,16 +601,16 @@
               normalizeCollectionBindingTypeName(transform.name) != "vector") {
             continue;
           }
-          const std::string elementText = trimTemplateTypeText(transform.templateArgs.front());
-          std::string base;
-          std::string arg;
-          if (resolveStructTypeName(elementText, param.namespacePrefix, elementStructPath)) {
-            elementKnown = true;
-          } else if (valueKindFromTypeName(elementText) != LocalInfo::ValueKind::Unknown &&
-                     !splitTemplateTypeName(elementText, base, arg)) {
-            elementStructPath.clear();
-            elementKnown = true;
-          }
+          // A struct, a builtin vector ("/vector<E>") or a scalar element.
+          elementKnown = ir_lowerer::resolveBuiltinVectorElementStructPath(
+              transform.templateArgs.front(),
+              param.namespacePrefix,
+              [&](const std::string &typeName,
+                  const std::string &namespacePrefix,
+                  std::string &pathOut) {
+                return resolveStructTypeName(typeName, namespacePrefix, pathOut);
+              },
+              elementStructPath);
           break;
         }
         if (elementKnown && (copyParam || freshArg)) {

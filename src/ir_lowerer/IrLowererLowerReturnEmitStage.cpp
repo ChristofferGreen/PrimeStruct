@@ -310,6 +310,42 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
     return callee->fullPath;
   };
 
+  // Gives a builtin vector pushed onto a `vector<vector<T>>` from a place a buffer of its own.
+  auto emitPushedVectorCopy = [&](int32_t destPtrLocal,
+                                  int32_t srcPtrLocal,
+                                  const std::string &elementTypeText,
+                                  const std::string &namespacePrefix,
+                                  const LocalMap &locals) {
+    std::string vectorElementPath;
+    std::string innerElementPath;
+    if (!ir_lowerer::resolveBuiltinVectorElementStructPath(
+            elementTypeText,
+            namespacePrefix,
+            [&](const std::string &typeName, const std::string &prefix, std::string &pathOut) {
+              return resolveStructTypeName(typeName, prefix, pathOut);
+            },
+            vectorElementPath) ||
+        !ir_lowerer::isNestedBuiltinVectorElementPath(vectorElementPath, &innerElementPath)) {
+      return false;
+    }
+    return ir_lowerer::emitBuiltinVectorCopyFromPtrs(
+        destPtrLocal,
+        srcPtrLocal,
+        innerElementPath,
+        [&](const std::string &path) -> const Definition * {
+          auto copyIt = defMap.find(path + "/Copy");
+          return copyIt == defMap.end() ? nullptr : copyIt->second;
+        },
+        [&](const std::string &path, StructSlotLayoutInfo &layoutOut) {
+          return resolveStructSlotLayout(path, layoutOut);
+        },
+        [&]() { return allocTempLocal(); },
+        function.instructions,
+        locals,
+        emitInlineDefinitionCall,
+        error);
+  };
+
   // Whether a struct value copied out of `sourceExpr` is a temporary the copy takes over (and
   // disarms) rather than a place that keeps owning it (an element access, unless a user `at`).
   auto isTemporaryStructCopySource = [&](const Expr &sourceExpr, const LocalMap &locals) {
@@ -397,6 +433,7 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
             .emitVectorIndexOutOfBounds = [&]() { emitVectorIndexOutOfBounds(); },
             .emitVectorReserveNegative = [&]() { emitVectorReserveNegative(); },
             .emitVectorReserveExceeded = [&]() { emitVectorReserveExceeded(); },
+            .emitPushedVectorCopy = emitPushedVectorCopy,
             .instructions = &function.instructions,
         },
         stmt,

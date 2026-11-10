@@ -85,7 +85,11 @@
   dereference): `[Vector<i32> mut] b{a}` gives `b` its own elements, and `[Todo mut] t{todos[i]}` gives `t` its own
   `String` and `Function` fields, so changing or destroying either leaves the other intact. The builtin `vector<T>`
   spelling copies the same way: `[vector<i32> mut] b{a}`, a field built from a vector binding (`KeepV{[seen] start}`),
-  a copy of a struct holding one, and a by-value capture (`[mut values]`) each get a buffer of their own. A non-`mut` collection binding (`vector`, `map`, `soa_vector`) initialized from a place is a read-only view of it
+  a copy of a struct holding one, and a by-value capture (`[mut values]`) each get a buffer of their own. A builtin
+  `vector<vector<T>>` stores each inner vector inline: `a.push(v)` takes over a fresh vector, `move(v)` or an owning
+  binding and copies any other place (a view, field or element), `a[i]` is the inner vector (a read-only view when
+  bound without `mut`), and a copy of the outer vector gives every inner vector a buffer of its own; destroying it
+  frees every inner buffer. A non-`mut` collection binding (`vector`, `map`, `soa_vector`) initialized from a place is a read-only view of it
   and does not copy; it borrows the place's root binding until its last use, so the root cannot be changed (passed to a
   `mut` or `move` parameter, or assigned) while the view is still used: `borrowed binding: <root>`. A temporary (a
   call result or constructor) or `move(x)` initializer is moved in without a copy.

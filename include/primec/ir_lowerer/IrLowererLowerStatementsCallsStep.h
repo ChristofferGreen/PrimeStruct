@@ -41,6 +41,10 @@ struct LowerStatementsCallsStepInput {
   ActionFn emitVectorIndexOutOfBounds;
   ActionFn emitVectorReserveNegative;
   ActionFn emitVectorReserveExceeded;
+  // Gives the builtin vector record pushed at `destPtrLocal` (a slot copy of the one at
+  // `srcPtrLocal`) a buffer of its own; `elementTypeText` is the pushed vector's type.
+  std::function<bool(int32_t, int32_t, const std::string &, const std::string &, const LocalMap &)>
+      emitPushedVectorCopy;
 
   std::vector<IrInstruction> *instructions = nullptr;
 };

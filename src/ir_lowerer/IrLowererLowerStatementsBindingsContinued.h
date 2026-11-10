@@ -503,18 +503,17 @@
         for (const auto &transform : stmt.transforms) {
           if (transform.templateArgs.size() == 1 &&
               normalizeCollectionBindingTypeName(transform.name) == "vector") {
-            vectorElementTypeFound = true;
-            const std::string elementText = trimTemplateTypeText(transform.templateArgs.front());
-            if (!resolveStructTypeName(
-                    elementText, stmt.namespacePrefix, vectorElementStructPath)) {
-              vectorElementStructPath.clear();
-              std::string base;
-              std::string arg;
-              if (valueKindFromTypeName(elementText) == LocalInfo::ValueKind::Unknown ||
-                  splitTemplateTypeName(elementText, base, arg)) {
-                vectorElementTypeFound = false; // a nested collection: no element copy
-              }
-            }
+            // A struct, a builtin vector ("/vector<E>") or a scalar; another collection has no
+            // known element copy.
+            vectorElementTypeFound = ir_lowerer::resolveBuiltinVectorElementStructPath(
+                transform.templateArgs.front(),
+                stmt.namespacePrefix,
+                [&](const std::string &typeName,
+                    const std::string &namespacePrefix,
+                    std::string &pathOut) {
+                  return resolveStructTypeName(typeName, namespacePrefix, pathOut);
+                },
+                vectorElementStructPath);
             break;
           }
         }

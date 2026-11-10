@@ -448,6 +448,27 @@ bool resolveValidatedAccessIndexKind(
       indexExpr, localsIn, accessName, inferExprKind, indexKindOut, error, nullptr, nullptr);
 }
 
+bool isNestedBuiltinVectorElementAccess(const Expr &accessExpr,
+                                        const LocalMap &localsIn,
+                                        const SemanticProgram *semanticProgram,
+                                        const SemanticProductIndex *semanticIndex) {
+  std::string accessName;
+  if (accessExpr.kind != Expr::Kind::Call || accessExpr.args.size() != 2 ||
+      !getBuiltinArrayAccessName(accessExpr, accessName) ||
+      (accessName != "at" && accessName != "at_unsafe")) {
+    return false;
+  }
+  const ArrayVectorAccessTargetInfo receiverInfo = resolveArrayVectorAccessTargetInfo(
+      accessExpr.args.front(), localsIn, {}, semanticProgram, semanticIndex);
+  std::string elementBase;
+  std::string elementArg;
+  return receiverInfo.isVectorTarget && !receiverInfo.isSoaVector &&
+         receiverInfo.elemSlotCount == 5 &&
+         splitTemplateTypeName(
+             trimTemplateTypeText(receiverInfo.elementTypeText), elementBase, elementArg) &&
+         isBuiltinCollectionTypeName(trimTemplateTypeText(elementBase), "vector");
+}
+
 ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
     const Expr &target,
     const LocalMap &localsIn,

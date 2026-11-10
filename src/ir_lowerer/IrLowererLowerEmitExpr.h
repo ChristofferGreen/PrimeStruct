@@ -225,8 +225,15 @@
           }
           return false;
         };
+        // An element of a builtin `vector<vector<T>>` field is an inline vector record, not a
+        // struct a wrapper returned.
         if (expr.args.size() == 1 && !expr.isFieldAccess &&
-            isWrapperReturnedKeyValueAccessCall(expr.args.front())) {
+            isWrapperReturnedKeyValueAccessCall(expr.args.front()) &&
+            !ir_lowerer::isNestedBuiltinVectorElementAccess(
+                expr.args.front(),
+                localsIn,
+                semanticProgram,
+                &callResolutionAdapters.semanticProductTargets.semanticIndex)) {
           error = "struct parameter type mismatch";
           return false;
         }

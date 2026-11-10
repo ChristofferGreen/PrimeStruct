@@ -403,11 +403,19 @@
           } else {
             continue;
           }
+          // A struct element, or a builtin vector element stored as an inline record.
           std::string elementStructPath;
           StructSlotLayoutInfo elementLayout;
-          if (resolveStructTypeName(trimTemplateTypeText(elementTypeText),
-                                    bindingTypeExprRef.namespacePrefix,
-                                    elementStructPath) &&
+          if (ir_lowerer::resolveBuiltinVectorElementStructPath(
+                  elementTypeText,
+                  bindingTypeExprRef.namespacePrefix,
+                  [&](const std::string &typeName,
+                      const std::string &namespacePrefix,
+                      std::string &pathOut) {
+                    return resolveStructTypeName(typeName, namespacePrefix, pathOut);
+                  },
+                  elementStructPath) &&
+              !elementStructPath.empty() &&
               resolveStructSlotLayout(elementStructPath, elementLayout)) {
             info.vectorStructElementSlotCount = elementLayout.totalSlots;
           }

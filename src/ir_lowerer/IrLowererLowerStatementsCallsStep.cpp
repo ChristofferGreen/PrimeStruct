@@ -8,6 +8,7 @@
 #include "primec/ir_lowerer/IrLowererFlowHelpers.h"
 #include "primec/ir_lowerer/IrLowererHelpers.h"
 #include "primec/ir_lowerer/IrLowererSetupTypeCollectionHelpers.h"
+#include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
 
 namespace primec::ir_lowerer {
 
@@ -483,6 +484,12 @@ VectorMutationStatementEmitResult tryEmitCanonicalVectorMutationStatement(
     instructions.push_back({IrOpcode::StoreIndirect, 0});
     instructions.push_back({IrOpcode::Pop, 0});
     emitFieldStoreFromLocal(valuesPtrLocal, 2, capacityLocal);
+    // The record owns the buffer it grew into: an empty `vector<T>()` of struct or vector
+    // elements starts without one, and a struct field holding it frees it only when it owns it.
+    const int32_t ownsDataLocal = input.allocTempLocal();
+    instructions.push_back({IrOpcode::PushI32, 1});
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ownsDataLocal)});
+    emitFieldStoreFromLocal(valuesPtrLocal, 4, ownsDataLocal);
   };
 
   const int32_t valuesPtrLocal = input.allocTempLocal();
@@ -568,6 +575,37 @@ VectorMutationStatementEmitResult tryEmitCanonicalVectorMutationStatement(
     instructions.push_back({IrOpcode::AddI64, 0});
     instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(targetAddrLocal)});
     emitStructCopyFromPtrs(instructions, targetAddrLocal, payloadLocal, elemSlotCountForBuffer);
+    // A builtin vector element of a builtin vector takes over a fresh vector, `move(x)` or a
+    // named owner (moved above); from any other place (a view, a field, an element) it gets a
+    // buffer of its own.
+    std::string elementBase;
+    std::string elementArg;
+    const bool nestedBuiltinVector =
+        helperName == "push" && elemSlotCountForBuffer == 5 &&
+        !targetInfo.elementTypeText.empty() &&
+        splitTemplateTypeName(
+            trimTemplateTypeText(targetInfo.elementTypeText), elementBase, elementArg) &&
+        isBuiltinCollectionTypeName(trimTemplateTypeText(elementBase), "vector");
+    if (nestedBuiltinVector) {
+      bool takesOver = isSimpleCallName(*payloadArg, "move") ||
+                       isFreshBuiltinVectorExpr(*payloadArg, input.resolveDefinitionCall);
+      if (payloadArg->kind == Expr::Kind::Name) {
+        const auto payloadIt = localsIn.find(payloadArg->name);
+        takesOver = payloadIt != localsIn.end() && payloadIt->second.dropFlagLocal >= 0;
+      }
+      if (!takesOver &&
+          (!input.emitPushedVectorCopy || !input.emitPushedVectorCopy(targetAddrLocal,
+                                                                      payloadLocal,
+                                                                      targetInfo.elementTypeText,
+                                                                      stmt.namespacePrefix,
+                                                                      localsIn))) {
+        if (errorOut.empty()) {
+          errorOut =
+              "native backend cannot copy pushed vector element: " + targetInfo.elementTypeText;
+        }
+        return VectorMutationStatementEmitResult::Error;
+      }
+    }
   } else {
     emitFieldLoad(valuesPtrLocal, 3);
     instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal)});

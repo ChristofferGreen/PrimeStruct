@@ -103,6 +103,21 @@ using EnumerateStructLayoutFieldsFn =
 
 std::string joinTemplateArgsText(const std::vector<std::string> &args);
 
+// A builtin `vector<T>` stored as the element of another builtin vector is an inline five-slot
+// record. Its element struct path is the synthetic "/vector<E>", where E is the element struct
+// path of `T` (a struct path or another "/vector<...>") or the scalar type name.
+std::string nestedBuiltinVectorElementPath(const std::string &innerElementPath);
+// Whether `path` is such a synthetic element path; `innerElementStructPathOut` gets the struct
+// path of its own elements (empty for scalars).
+bool isNestedBuiltinVectorElementPath(const std::string &path,
+                                      std::string *innerElementStructPathOut = nullptr);
+// Resolves the element type text of a builtin `vector<T>`: true with the struct path of `T`, the
+// synthetic path of a builtin vector `T`, or an empty path for a scalar; false otherwise.
+bool resolveBuiltinVectorElementStructPath(const std::string &elementText,
+                                           const std::string &namespacePrefix,
+                                           const ResolveStructTypeNameFn &resolveStructTypeName,
+                                           std::string &elementStructPathOut);
+
 StructTypeResolutionAdapters makeStructTypeResolutionAdapters(
     const std::unordered_set<std::string> &structNames,
     const std::unordered_map<std::string, std::string> &importAliases);

@@ -161,6 +161,9 @@ bool structNeedsCopyHelpers(
   if (structPath.empty() || depth > 16) {
     return false;
   }
+  if (isNestedBuiltinVectorElementPath(structPath)) {
+    return withBuiltinVectors;
+  }
   if (findCopyHelper(structPath) != nullptr) {
     return true;
   }
@@ -354,6 +357,22 @@ bool emitStructCopyHelpersAtDepth(
     bool &ranHelper,
     std::string &error,
     int depth) {
+  // A builtin vector element of a builtin vector gets a buffer of its own.
+  if (std::string innerElementPath;
+      isNestedBuiltinVectorElementPath(structPath, &innerElementPath)) {
+    return emitBuiltinVectorCopyAtDepth(destPtrLocal,
+                                        srcPtrLocal,
+                                        innerElementPath,
+                                        findCopyHelper,
+                                        resolveStructSlotLayout,
+                                        allocTempLocal,
+                                        instructions,
+                                        localsIn,
+                                        emitInlineDefinitionCall,
+                                        ranHelper,
+                                        error,
+                                        depth + 1);
+  }
   // `dest` starts as a slot copy of `src`. Copy the fields that have helpers of their own first,
   // so a user `Copy` helper starts from a `this` that owns its fields instead of aliasing the
   // source's storage (docs/spec/value-lifecycle.md).
@@ -551,6 +570,20 @@ bool emitStructDestroyHelpersAtDepth(
         &emitInlineDefinitionCall,
     std::string &error,
     int depth) {
+  // A builtin vector element of a builtin vector frees its buffer.
+  if (std::string innerElementPath;
+      isNestedBuiltinVectorElementPath(structPath, &innerElementPath)) {
+    return depth > 16 || emitBuiltinVectorDestroyAtDepth(valuePtrLocal,
+                                                         innerElementPath,
+                                                         findDestroyHelper,
+                                                         resolveStructSlotLayout,
+                                                         allocTempLocal,
+                                                         instructions,
+                                                         localsIn,
+                                                         emitInlineDefinitionCall,
+                                                         error,
+                                                         depth + 1);
+  }
   // A user `Destroy` helper runs first; the fields it leaves are destroyed after it, last
   // declared first (docs/spec/value-lifecycle.md).
   if (const Definition *destroyHelper = findDestroyHelper(structPath);

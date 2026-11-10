@@ -184,6 +184,59 @@ StructArrayInfoAdapters makeStructArrayInfoAdapters(
   return adapters;
 }
 
+std::string nestedBuiltinVectorElementPath(const std::string &innerElementPath) {
+  return vectorBuiltinStructNormalizedPath() + "<" + innerElementPath + ">";
+}
+
+bool isNestedBuiltinVectorElementPath(const std::string &path,
+                                      std::string *innerElementStructPathOut) {
+  const std::string prefix = vectorBuiltinStructNormalizedPath() + "<";
+  if (path.size() <= prefix.size() + 1 || path.compare(0, prefix.size(), prefix) != 0 ||
+      path.back() != '>') {
+    return false;
+  }
+  if (innerElementStructPathOut != nullptr) {
+    std::string inner = path.substr(prefix.size(), path.size() - prefix.size() - 1);
+    if (inner.empty() || inner.front() != '/') {
+      inner.clear();
+    }
+    *innerElementStructPathOut = inner;
+  }
+  return true;
+}
+
+bool resolveBuiltinVectorElementStructPath(const std::string &elementText,
+                                           const std::string &namespacePrefix,
+                                           const ResolveStructTypeNameFn &resolveStructTypeName,
+                                           std::string &elementStructPathOut) {
+  elementStructPathOut.clear();
+  const std::string text = trimTemplateTypeText(elementText);
+  if (text.empty()) {
+    return false;
+  }
+  std::string base;
+  std::string arg;
+  if (splitTemplateTypeName(text, base, arg)) {
+    if (isBuiltinCollectionTypeName(trimTemplateTypeText(base), "vector")) {
+      std::string innerPath;
+      if (!resolveBuiltinVectorElementStructPath(
+              arg, namespacePrefix, resolveStructTypeName, innerPath)) {
+        return false;
+      }
+      elementStructPathOut =
+          nestedBuiltinVectorElementPath(innerPath.empty() ? trimTemplateTypeText(arg) : innerPath);
+      return true;
+    }
+  } else if (valueKindFromTypeName(text) != LocalInfo::ValueKind::Unknown) {
+    return true;
+  }
+  if (resolveStructTypeName && resolveStructTypeName(text, namespacePrefix, elementStructPathOut)) {
+    return true;
+  }
+  elementStructPathOut.clear();
+  return false;
+}
+
 ResolveStructTypeNameFn makeResolveStructTypePathFromScope(
     const std::unordered_set<std::string> &structNames,
     const std::unordered_map<std::string, std::string> &importAliases) {

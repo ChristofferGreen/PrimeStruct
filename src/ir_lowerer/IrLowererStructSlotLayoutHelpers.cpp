@@ -202,23 +202,16 @@ bool resolveNestedStructLayout(
   return true;
 }
 
-// Records the element type of a builtin `vector<T>` field: a scalar, or a struct by its path. Other
-// elements (a nested collection) stay unknown, and a copy keeps sharing their buffer.
+// Records the element type of a builtin `vector<T>` field: a scalar, a struct by its path, or a
+// builtin vector by its synthetic "/vector<E>" path. Other elements stay unknown, and a copy
+// keeps sharing their buffer.
 void resolveBuiltinVectorFieldElement(const std::string &elementTypeText,
                                       const std::string &namespacePrefix,
                                       const ResolveStructTypeNameFn &resolveStructTypeName,
                                       StructSlotFieldInfo &info) {
-  const std::string elementText = trimTemplateTypeText(elementTypeText);
-  if (valueKindFromTypeName(elementText) != LocalInfo::ValueKind::Unknown) {
-    std::string base;
-    std::string arg;
-    if (!splitTemplateTypeName(elementText, base, arg)) {
-      info.builtinVectorElementKnown = true;
-    }
-    return;
-  }
   std::string elementStruct;
-  if (resolveStructTypeName(elementText, namespacePrefix, elementStruct)) {
+  if (resolveBuiltinVectorElementStructPath(
+          elementTypeText, namespacePrefix, resolveStructTypeName, elementStruct)) {
     info.builtinVectorElementKnown = true;
     info.builtinVectorElementStructPath = elementStruct;
   }
@@ -327,9 +320,10 @@ bool resolveStructSlotLayoutFromDefinitionFields(
       const std::string canonicalVectorPath = vectorBackingTypePath();
       // A `vector<T>` struct field records the builtin `/vector` path (normalizeVectorStructPath);
       // it has the same five-slot layout as the backing Vector struct.
-      if (structPath == canonicalVectorPath ||
-          structPath == vectorBuiltinStructNormalizedPath() ||
-          structPath.rfind(canonicalVectorPath + "__", 0) == 0) {
+      // A builtin vector element of a builtin vector ("/vector<E>") is the same inline record.
+      if (structPath == canonicalVectorPath || structPath == vectorBuiltinStructNormalizedPath() ||
+          structPath.rfind(canonicalVectorPath + "__", 0) == 0 ||
+          isNestedBuiltinVectorElementPath(structPath)) {
         StructSlotLayoutInfo layout;
         layout.structPath = structPath;
         layout.totalSlots = 5;

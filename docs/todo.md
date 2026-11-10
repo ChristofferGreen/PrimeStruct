@@ -143,7 +143,7 @@ of sync with them.
 | TODO-5718 | All values of a repeated parameter and decoded path parameters | deferred | web-params |
 | TODO-5719 | `location(this.field)` passes directly as a `Function` call argument | ready | closures-arguments |
 | TODO-5721 | A string converts to a `StringView` at a field of a generic struct | ready | text-literal-views |
-| TODO-5828 | A builtin `vector<vector<T>>` lowers, copies and frees its inner vectors | ready | collections-fields |
+| TODO-5831 | An inner vector of a builtin `vector<vector<T>>` mutates in place | ready | collections-fields |
 | TODO-5726 | An indexed element of a stdlib `Vector<T>` of structs binds without a fault | ready | collections-access |
 | TODO-5728 | `slice` and `sliceMut` on a vector field of a struct resolve | ready | collections-access |
 | TODO-5730 | Elements of a `vector<String>` struct field read without a fault | ready | collections-access |
@@ -204,7 +204,7 @@ of sync with them.
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544, TODO-5745, TODO-5746
-- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719; collection fields found by closures and the todo example: TODO-5828, TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
+- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719; collection fields found by closures and the todo example: TODO-5831, TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
 - Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5738, TODO-5718
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732, TODO-5735, TODO-5736, TODO-5737
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe; real calls and struct copies TODO-5739, TODO-5741, TODO-5752; VM address checks TODO-5824
@@ -474,17 +474,17 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
     - full release gate green
   - stop_rule: fields of generic struct instances only.
 
-- [ ] TODO-5828: A builtin `vector<vector<T>>` lowers, copies and frees its inner vectors
+- [ ] TODO-5831: An inner vector of a builtin `vector<vector<T>>` mutates in place
   - owner: ai
   - status: ready
   - created_at: 2026-11-10
-  - phase: Collections (docs/spec/value-lifecycle.md, Copies; found by TODO-5827)
+  - phase: Collections (docs/spec/value-lifecycle.md, Copies; found by TODO-5828)
   - parallel_track: collections-fields
-  - scope: A builtin `vector<vector<i32>>` does not lower at all on the VM: `[vector<vector<i32>> mut] a{vector<vector<i32>>()}` then `a.push(vector<i32>(1i32, 2i32))` and `a[0i32].count()` stops with `VM lowering error: count() argument resolves to a non-string value`, and a struct field of that type with `vm backend cannot resolve struct layout: /vector<i32>`. So the inner vectors have no element layout (a vector record is 5 slots), and the copy and destroy of TODO-5681 / TODO-5827 skip such fields (`builtinVectorElementKnown` is false for a nested collection, IrLowererStructSlotLayoutHelpers.cpp and IrLowererLowerStatementsBindingsContinued.h). Vectors of structs with vector fields (`vector<Mid>`, `Mid{[vector<i32>] seen, [vector<Named>] names}`) already copy and free each level (matrix case nested_vector_struct_elements_destroy_loop).
+  - scope: Since TODO-5828 an inner vector of a builtin `vector<vector<i32>>` is an inline record that pushes, indexes, counts, copies and frees, but a mutating method on an element (`a[0i32].push(5i32)`, `g.rows[0i32].push(6i32)`) stops with `missing semantic-product method-call target: push`: semantics publishes no method target for a mutation through an element access. Today the only way to change an inner vector is to copy it out (`[vector<i32> mut] row{a[0i32]}`), change the copy and rebuild the outer vector.
   - acceptance:
-    - `vector<vector<i32>>` locals and struct fields push, index, count, copy (each inner vector its own buffer) and destroy (every inner buffer freed, `heapLiveBlocks()` flat over a loop) on the VM, native and optexe
+    - `push`, `pop` and `clear` on `a[i]` and `this.rows[i]` change that inner vector in place on the VM, native and optexe, and `heapLiveBlocks()` stays flat over a loop
     - full release gate green
-  - stop_rule: builtin vectors whose element is a builtin vector; the stdlib `Vector<Vector<T>>` spelling is out of scope.
+  - stop_rule: mutating methods on inner vectors of builtin vectors; assigning a whole inner vector (`assign(a[i], ...)`) is out of scope.
 
 - [ ] TODO-5726: An indexed element of a stdlib `Vector<T>` of structs binds without a fault
   - owner: ai
