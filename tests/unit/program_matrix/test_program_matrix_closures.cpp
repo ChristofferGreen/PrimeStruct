@@ -1027,6 +1027,66 @@ main() {
                     32);
 }
 
+// Vectors of structs that hold vectors copy and free every level (TODO-5827): `Outer` holds a `vector<Mid>`, and each
+// `Mid` a `vector<i32>` and a `vector<Named>` of Strings.
+TEST_CASE("vectors of structs with vector fields copy and free each level") {
+  runHeapFlatProgram("nested_vector_struct_elements_destroy_loop",
+                     R"(
+import /std/collections/*
+import /std/text/*
+
+[struct]
+Named {
+  [i32] code
+  [String] name
+}
+
+[struct]
+Mid {
+  [vector<i32> mut] seen
+  [vector<Named> mut] names
+}
+
+[struct]
+Outer {
+  [vector<Mid> mut] mids
+}
+
+[effects(heap_alloc) return<int>]
+round() {
+  [vector<Named> mut] names{vector<Named>()}
+  names.push(Named{[code] 1i32, [name] stringFrom("a name long enough to live on the string heap")})
+  [vector<Mid> mut] mids{vector<Mid>()}
+  mids.push(Mid{[seen] vector<i32>(1i32), [names] names})
+  [Outer mut] a{Outer{[mids] mids}}
+  [Outer mut] b{a}
+  b.mids[0i32].seen.push(2i32)
+  b.mids[0i32].seen.push(3i32)
+  b.mids[0i32].names.push(Named{[code] 2i32, [name] stringFrom("b")})
+  [vector<Mid> mut] copy{mids}
+  copy[0i32].seen.push(4i32)
+  [Outer] moved{move(b)}
+  return(a.mids[0i32].seen.count() + moved.mids[0i32].seen.count() * 10i32 +
+         moved.mids[0i32].names.count() * 100i32 + copy[0i32].seen.count() * 1000i32 +
+         mids[0i32].names.count() * 10000i32)
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [i32] first{round()}
+  [i32] before{heapLiveBlocks()}
+  [u64] textBefore{stringHeapBytesInUse()}
+  repeat(300i32) {
+    round()
+  }
+  [i32] leakedBlocks{heapLiveBlocks() - before}
+  [i32] leakedText{convert<i32>(stringHeapBytesInUse() - textBefore)}
+  return(first - 12200i32 + leakedBlocks * 1000i32 + leakedText * 1000i32)
+}
+)",
+                     31);
+}
+
 // Routers of `Function` handlers, `Result.map` lambdas and imported holders. (a suite and CTest entry of its own, so each entry stays short under a loaded gate).
 TEST_SUITE_END();
 TEST_SUITE_BEGIN("primestruct.program_matrix.closures_routers");
