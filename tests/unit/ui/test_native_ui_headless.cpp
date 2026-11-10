@@ -1,11 +1,14 @@
 #include "primec/testing/TestScratch.h"
 #include "primec/ui/NativeUi.h"
 #include "primec/ui/NativeUiHeadless.h"
+#include "primec/ui/ScriptRunner.h"
 
 #include "third_party/doctest.h"
 
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <future>
 #include <iterator>
 #include <string>
 #include <thread>
@@ -1375,4 +1378,33 @@ TEST_CASE("a script run has the native UI bound, as a program of its own") {
                            5));
   CHECK(ps_ui_wait_event() == PS_UI_EVENT_COMMAND);
   CHECK(headless::windowState(window).output == std::to_string(PS_UI_ABI_VERSION) + "\n[exit code 0]\n");
+}
+
+TEST_CASE("a runner that ends without reading its input does not end the program") {
+  // `true` exits without reading: the text is larger than a pipe holds, so the write cannot finish before the reader
+  // is gone and always fails. That failure used to be a SIGPIPE that ended the program (seen as a stop sent before
+  // the runner read its input).
+  const char *runner = std::filesystem::exists("/usr/bin/true") ? "/usr/bin/true" : "/bin/true";
+  const char *previous = std::getenv("PRIMESTRUCT_SCRIPT_RUNNER");
+  const std::string saved = previous != nullptr ? previous : "";
+  REQUIRE(setenv("PRIMESTRUCT_SCRIPT_RUNNER", runner, 1) == 0);
+  const std::string text(4u * 1024u * 1024u, ' ');
+  std::promise<int> finished;
+  PsScriptRun *run = ps_script_start(
+      "ignored.prime",
+      text.c_str(),
+      "",
+      nullptr,
+      [](int status, int, void *user) {
+        static_cast<std::promise<int> *>(user)->set_value(status);
+      },
+      &finished);
+  if (previous != nullptr) {
+    setenv("PRIMESTRUCT_SCRIPT_RUNNER", saved.c_str(), 1);
+  } else {
+    unsetenv("PRIMESTRUCT_SCRIPT_RUNNER");
+  }
+  REQUIRE(run != nullptr);
+  CHECK(finished.get_future().get() == 0); // `true` exits with 0 and nothing stopped it
+  ps_script_release(run);
 }

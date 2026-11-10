@@ -97,6 +97,14 @@ bool writeAll(int fd, const std::string &text) {
 }
 
 void execute(PsScriptRun &run) {
+  // A runner that ended before it read its input (stopped at once, or one that failed to start up) closes the pipe
+  // this thread writes; the write must then fail with EPIPE and not end the whole program with SIGPIPE. Where the
+  // signal of a write goes to the writing thread, blocking it here covers it and leaves the program's other threads
+  // alone; macOS sends it to the process, and switches it off per descriptor instead (F_SETNOSIGPIPE below).
+  sigset_t pipeSignal;
+  sigemptyset(&pipeSignal);
+  sigaddset(&pipeSignal, SIGPIPE);
+  pthread_sigmask(SIG_BLOCK, &pipeSignal, nullptr);
   int toChild[2] = {-1, -1};
   int fromChild[2] = {-1, -1};
   if (::pipe(toChild) != 0 || ::pipe(fromChild) != 0) {
@@ -107,6 +115,9 @@ void execute(PsScriptRun &run) {
   for (const int fd : {toChild[0], toChild[1], fromChild[0], fromChild[1]}) {
     ::fcntl(fd, F_SETFD, FD_CLOEXEC);
   }
+#ifdef F_SETNOSIGPIPE
+  ::fcntl(toChild[1], F_SETNOSIGPIPE, 1);
+#endif
   // The runner's stdin is the text, and its stdout and stderr are one pipe, so the output stays in program order. The
   // standard stdlib location is passed through the environment.
   std::vector<std::string> environment;
@@ -149,7 +160,8 @@ void execute(PsScriptRun &run) {
   if (run.stopRequested.load()) {
     ::kill(pid, SIGTERM); // stopped before it was running
   }
-  // The runner reads all of its input before it runs anything, so writing it first cannot block on its output.
+  // The runner reads all of its input before it runs anything, so writing it first cannot block on its output. A
+  // failed write means the runner is gone; how it ended is reported below.
   writeAll(toChild[1], run.text);
   ::close(toChild[1]);
 
