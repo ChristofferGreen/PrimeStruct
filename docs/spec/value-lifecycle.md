@@ -69,7 +69,17 @@
   call, and a borrowed parameter cannot escape the call (it cannot be returned, stored, or moved).
 - **Ownership:** a `move` parameter's value is destroyed when the callee's scope ends unless the callee moves it on
   (for example into a container); the caller does not destroy it. `move(...)` at the call site is optional for a `move`
-  parameter. Using the caller's binding afterwards is a `use-after-move` error until it is reassigned. A temporary
+  parameter. Using the caller's binding afterwards is a `use-after-move` error until it is reassigned, on every path:
+  a move in one `if` branch reaches the code after the join, and a loop body cannot move a binding from outside the
+  loop unless it assigns it again before the next iteration. The diagnostic names the binding, where it moved and what
+  to write instead: `use-after-move: row was moved at 9:13; assign row a new value before using it again, or keep a
+  copy before the move: [vector<i32> mut] kept{row}`. The builtin `vector<T>` `push` (method `a.push(b)` or
+  `push(a, b)`) is such an entry point: a named owner (an owning local or a `copy`/`move` parameter) is moved into the
+  vector, while a borrowed parameter or a read-only view (a non-`mut` collection bound from a binding, field or
+  element) owns nothing and is copied, so it stays usable. Why the move stays implicit rather than requiring
+  `a.push(move(b))`: the checker rejects every later use of `b` either way, so requiring `move(...)` would add a word to
+  the common, safe case (pushing a value that is not used again) without catching anything more; `move(b)` remains
+  accepted for readers who want the hand-over spelled out. A temporary
   argument may be passed to any mode. A temporary (a constructor or a call returning a value, not a reference) has no
   other owner, so it is destroyed exactly once at the end of its full expression: the callee owns and destroys it
   whatever the parameter mode (a `copy` parameter takes it over without running `Copy`), a discarded temporary is

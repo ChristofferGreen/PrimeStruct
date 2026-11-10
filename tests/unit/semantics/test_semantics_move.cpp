@@ -492,4 +492,192 @@ main() {
   CHECK(error.empty());
 }
 
+namespace {
+
+// Builtin vectors whose elements own resources: vector<vector<i32>> and a vector of a struct
+// holding a String.
+const char *const PushPrelude = R"(
+import /std/collections/*
+import /std/text/*
+
+[struct]
+Named {
+  [i32] code{0i32}
+  [String] name{String{}}
+}
+)";
+
+bool validateWithPush(const std::string &body, std::string &error) {
+  return validateProgram(std::string(PushPrelude) + body, "/main", error);
+}
+
+} // namespace
+
+TEST_CASE("pushing a named owner into a builtin vector moves it") {
+  std::string error;
+  CHECK_FALSE(validateWithPush(R"(
+[effects(heap_alloc) return<int>]
+main() {
+  [vector<vector<i32>> mut] rows{vector<vector<i32>>()}
+  [vector<i32> mut] row{vector<i32>(1i32, 2i32)}
+  rows.push(row)
+  row.push(3i32)
+  return(row.count())
+}
+)",
+                               error));
+  CHECK(error.find("use-after-move: row was moved at 15:13; assign row a new value before using it "
+                   "again, or "
+                   "keep a copy before the move: [vector<i32> mut] kept{row}") !=
+        std::string::npos);
+
+  error.clear();
+  CHECK_FALSE(validateWithPush(R"(
+[effects(heap_alloc) return<int>]
+main() {
+  [vector<Named> mut] names{vector<Named>()}
+  [Named mut] named{Named{[code] 4i32, [name] stringFrom("abc")}}
+  names.push(named)
+  return(named.code)
+}
+)",
+                               error));
+  CHECK(error.find("use-after-move: named was moved at 15:14") != std::string::npos);
+
+  // The direct-call spelling moves too.
+  error.clear();
+  CHECK_FALSE(validateWithPush(R"(
+[effects(heap_alloc) return<int>]
+main() {
+  [vector<vector<i32>> mut] rows{vector<vector<i32>>()}
+  [vector<i32> mut] row{vector<i32>(1i32)}
+  push(rows, row)
+  return(row.count())
+}
+)",
+                               error));
+  CHECK(error.find("use-after-move: row") != std::string::npos);
+}
+
+TEST_CASE("a pushed owner can be reassigned, and views and borrowed values are copied") {
+  std::string error;
+  CHECK(validateWithPush(R"(
+[effects(heap_alloc) return<int>]
+add_param([vector<vector<i32>> mut] rows, [vector<i32>] row) {
+  rows.push(row)
+  return(row.count())
+}
+
+[effects(heap_alloc) return<int>]
+main() {
+  [vector<vector<i32>> mut] rows{vector<vector<i32>>()}
+  [vector<i32> mut] row{vector<i32>(1i32, 2i32)}
+  rows.push(row)
+  row = vector<i32>(5i32)
+  row.push(6i32)
+  [vector<i32>] view{rows[0i32]}
+  [vector<vector<i32>> mut] other{vector<vector<i32>>()}
+  other.push(view)
+  [vector<Named> mut] names{vector<Named>()}
+  [Named mut] named{Named{[code] 4i32, [name] stringFrom("abc")}}
+  names.push(named)
+  assign(named, Named{[code] 5i32, [name] stringFrom("def")})
+  return(row.count() + view.count() + add_param(other, view) + named.code)
+}
+)",
+                         error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("a push moves on every control-flow path") {
+  std::string error;
+  // Moved in one branch, used after the join.
+  CHECK_FALSE(validateWithPush(R"(
+[effects(heap_alloc) return<int>]
+main() {
+  [vector<vector<i32>> mut] rows{vector<vector<i32>>()}
+  [vector<i32> mut] row{vector<i32>(1i32)}
+  if(rows.count() == 0i32) {
+    rows.push(row)
+  } else {
+  }
+  return(row.count())
+}
+)",
+                               error));
+  CHECK(error.find("use-after-move: row was moved at 16:15") != std::string::npos);
+
+  // Moved in an earlier loop iteration.
+  error.clear();
+  CHECK_FALSE(validateWithPush(R"(
+[effects(heap_alloc) return<int>]
+main() {
+  [vector<vector<i32>> mut] rows{vector<vector<i32>>()}
+  [vector<i32> mut] row{vector<i32>(1i32)}
+  repeat(3i32) {
+    rows.push(row)
+  }
+  return(rows.count())
+}
+)",
+                               error));
+  CHECK(error.find("use-after-move: row (moved in an earlier loop iteration) at 16:15; assign row "
+                   "a new value "
+                   "later in the loop body") != std::string::npos);
+
+  // Moved in both branches, or given a new value in the loop: accepted.
+  error.clear();
+  CHECK(validateWithPush(R"(
+[effects(heap_alloc) return<int>]
+main() {
+  [vector<vector<i32>> mut] rows{vector<vector<i32>>()}
+  [vector<i32> mut] row{vector<i32>(1i32)}
+  if(rows.count() == 0i32) {
+    rows.push(row)
+  } else {
+    rows.push(row)
+  }
+  repeat(3i32) {
+    row = vector<i32>(2i32)
+    rows.push(row)
+  }
+  return(rows.count())
+}
+)",
+                         error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("move of a moved binding names where it was moved") {
+  std::string error;
+  CHECK_FALSE(validateWithPush(R"(
+[effects(heap_alloc) return<int>]
+main() {
+  [vector<i32> mut] row{vector<i32>(1i32)}
+  [vector<i32> mut] first{move(row)}
+  [vector<i32> mut] second{move(row)}
+  return(first.count() + second.count())
+}
+)",
+                               error));
+  CHECK(error.find("use-after-move: row was moved at 14:32") != std::string::npos);
+
+  // A returned move(x) is validated twice (return inference) and is still one move.
+  error.clear();
+  CHECK(validateWithPush(R"(
+[effects(heap_alloc) return<vector<i32>>]
+pass_through() {
+  [vector<i32> mut] row{vector<i32>(1i32)}
+  return(move(row))
+}
+
+[effects(heap_alloc) return<int>]
+main() {
+  return(pass_through().count())
+}
+)",
+                         error));
+  CHECK(error.empty());
+}
+
 TEST_SUITE_END();

@@ -39,4 +39,103 @@ bool SemanticsValidator::failIfMoveOnlyCopy(const Expr &diagnosticExpr,
   return true;
 }
 
+std::string SemanticsValidator::useAfterMoveMessage(
+    const std::string &name,
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals) {
+  std::string message = "use-after-move: " + name;
+  const auto site = currentValidationState_.moveArgumentSites.find(name);
+  if (site != currentValidationState_.moveArgumentSites.end() && site->second.line > 0) {
+    message += " was moved at " + std::to_string(site->second.line) + ":" +
+               std::to_string(site->second.column);
+  } else {
+    message += " was moved";
+  }
+  message += "; assign " + name + " a new value before using it again";
+  const BindingInfo *binding = findParamBinding(params, name);
+  if (binding == nullptr) {
+    if (const auto it = locals.find(name); it != locals.end()) {
+      binding = &it->second;
+    }
+  }
+  Expr place;
+  place.kind = Expr::Kind::Name;
+  place.name = name;
+  if (binding != nullptr && moveOnlyPlaceType(place, params, locals).empty()) {
+    const std::string typeText = binding->typeTemplateArg.empty()
+                                     ? binding->typeName
+                                     : binding->typeName + "<" + binding->typeTemplateArg + ">";
+    message += ", or keep a copy before the move: [" + typeText + " mut] kept{" + name + "}";
+  }
+  return message;
+}
+
+bool SemanticsValidator::recordMovedBinding(const Expr &site, const std::string &name) {
+  auto &moveSites = currentValidationState_.moveArgumentSites;
+  currentValidationState_.movedBindings.insert(name);
+  moveSites[name] = {&site, site.sourceLine, site.sourceColumn};
+  return true;
+}
+
+bool SemanticsValidator::movedAtOtherSite(const std::string &name, const Expr &site) const {
+  if (currentValidationState_.movedBindings.count(name) == 0) {
+    return false;
+  }
+  const auto moved = currentValidationState_.moveArgumentSites.find(name);
+  return moved == currentValidationState_.moveArgumentSites.end() || !moved->second.matches(site);
+}
+
+bool SemanticsValidator::markBuiltinVectorPushMove(
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
+    const Expr &expr) {
+  if (expr.kind != Expr::Kind::Call || expr.isBinding || expr.args.size() != 2 ||
+      currentValidationState_.context.definitionIsUnsafe) {
+    return true;
+  }
+  for (const auto &argName : expr.argNames) {
+    if (argName.has_value()) {
+      return true;
+    }
+  }
+  const size_t leafStart = expr.name.rfind('/');
+  const std::string leaf =
+      leafStart == std::string::npos ? expr.name : expr.name.substr(leafStart + 1);
+  if (leaf != "push") {
+    return true;
+  }
+  const Expr &value = expr.args[1];
+  if (value.kind != Expr::Kind::Name) {
+    return true;
+  }
+  std::string receiverTypeText;
+  if (!inferQueryExprTypeText(expr.args.front(), params, locals, receiverTypeText)) {
+    return true;
+  }
+  std::string receiverBase;
+  std::string receiverArg;
+  if (!splitTemplateTypeName(
+          normalizeBindingTypeName(receiverTypeText), receiverBase, receiverArg) ||
+      normalizeBindingTypeName(receiverBase) != "vector") {
+    return true;
+  }
+  // A borrowed parameter or a view is copied into the vector (it owns nothing to hand over).
+  const BindingInfo *binding = findParamBinding(params, value.name);
+  if (binding != nullptr) {
+    if (!binding->isCopy && !binding->isMove) {
+      return true;
+    }
+  } else if (const auto it = locals.find(value.name); it != locals.end()) {
+    binding = &it->second;
+  }
+  if (binding == nullptr || binding->isContainerView || binding->isPlaceView ||
+      binding->typeName == "Reference" || !bindingOwnsResources(*binding, expr.namespacePrefix)) {
+    return true;
+  }
+  if (movedAtOtherSite(value.name, value)) {
+    return failExprDiagnostic(value, useAfterMoveMessage(value.name, params, locals));
+  }
+  return recordMovedBinding(value, value.name);
+}
+
 } // namespace primec::semantics

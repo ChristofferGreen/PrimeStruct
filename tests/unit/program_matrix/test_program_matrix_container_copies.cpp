@@ -502,4 +502,101 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+// `push` takes its argument as `move` (docs/spec/value-lifecycle.md, Ownership): a named owner is
+// moved into the vector and can be given a new value afterwards; a view or a borrowed parameter is
+// copied. Shared by the two cases below.
+const char *const PushMovesSource = R"(
+import /std/collections/*
+import /std/text/*
+
+[struct]
+Named {
+  [i32] code{0i32}
+  [String] name{String{}}
+}
+
+[effects(heap_alloc) return<int>]
+add_borrowed([vector<vector<i32>> mut] rows, [vector<i32>] row) {
+  rows.push(row)
+  return(row.count())
+}
+
+[effects(heap_alloc) return<int>]
+moves() {
+  [vector<vector<i32>> mut] rows{vector<vector<i32>>()}
+  [vector<i32> mut] row{vector<i32>(1i32, 2i32)}
+  rows.push(row)
+  row = vector<i32>(5i32)
+  row.push(6i32)
+  if(rows.count() == 1i32) {
+    rows.push(row)
+  } else {
+    rows.push(row)
+  }
+  [i32 mut] round{0i32}
+  while(round < 3i32) {
+    row = vector<i32>(round)
+    rows.push(row)
+    round = round + 1i32
+  }
+  [vector<i32> mut] last{vector<i32>(7i32, 8i32, 9i32)}
+  rows.push(move(last))
+  [vector<i32>] view{rows[0i32]}
+  [vector<vector<i32>> mut] other{vector<vector<i32>>()}
+  other.push(view)
+  [i32] borrowed{add_borrowed(other, view)}
+  [vector<Named> mut] names{vector<Named>()}
+  [Named mut] named{Named{[code] 4i32, [name] stringFrom("a pushed name with a heap string")}}
+  names.push(named)
+  assign(named, Named{[code] 5i32, [name] stringFrom("a second name with a heap string")})
+  names.push(named)
+  return(rows.count() * 10000i32 + rows[5i32][2i32] * 1000i32 + other.count() * 100i32 + view.count() * 10i32 +
+         borrowed + names[1i32].code * 0i32 + names.count() * 0i32)
+}
+)";
+
+TEST_CASE("push moves named owners and copies views") {
+  program_matrix::ProgramCase program;
+  program.name = "push_moves_named_owners";
+  program.source = std::string(PushMovesSource) + R"(
+[return<int> effects(heap_alloc)]
+main() {
+  [i32 mut] total{0i32}
+  repeat(200i32) {
+    total = moves() - 69222i32
+  }
+  return(total + 7i32)
+}
+)";
+  program.exitCode = 7;
+  program.onlyConfigs = {"vm-step-O0", "vm-O0", "vm-O2", "optexe-O2"};
+  if (program_matrix::nativeSupported()) {
+    program.onlyConfigs.push_back("native-O0");
+    program.onlyConfigs.push_back("native-O2");
+  }
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("push moves named owners without leaking") {
+  program_matrix::ProgramCase program;
+  program.name = "push_moves_heap_flat";
+  program.source = std::string(PushMovesSource) + R"(
+[return<int> effects(heap_alloc)]
+main() {
+  [i32] first{moves()}
+  [i32] before{heapLiveBlocks()}
+  [u64] textBefore{stringHeapBytesInUse()}
+  repeat(300i32) {
+    moves()
+  }
+  [i32] leakedBlocks{heapLiveBlocks() - before}
+  [i32] leakedText{convert<i32>(stringHeapBytesInUse() - textBefore)}
+  return(first - 69222i32 + 23i32 + leakedBlocks * 1000i32 + leakedText * 1000i32)
+}
+)";
+  program.exitCode = 23;
+  program.onlyConfigs = {"vm-step-O0", "vm-O0", "vm-O2", "optexe-O2"};
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

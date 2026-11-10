@@ -1,0 +1,12 @@
+// `push` takes its argument as `move`: a named vector pushed into a vector of vectors belongs to it afterwards, so
+// using the name again is rejected; the diagnostic says where it moved and what to write instead.
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<vector<i32>> mut] rows{vector<vector<i32>>()}
+  [vector<i32> mut] row{vector<i32>(1i32, 2i32)}
+  rows.push(row)
+  row.push(3i32)
+  return(rows.count())
+}

@@ -1,0 +1,4 @@
+"code":"PSC1005"
+"message":"use-after-move: row was moved at 9:13; assign row a new value before using it again, or keep a copy before the move: [vector<i32> mut] kept{row}"
+"line":10,"column":3
+"notes":["stage: semantic"]

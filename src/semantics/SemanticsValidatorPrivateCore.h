@@ -318,6 +318,23 @@
   std::string moveOnlyPlaceType(const Expr &value,
                                 const std::vector<ParameterInfo> &params,
                                 const std::unordered_map<std::string, BindingInfo> &locals);
+  // The `use-after-move` message for a use of the moved-from binding `name`: where it was moved and
+  // what to write instead (assign it again, or keep a copy before the move when the type can copy).
+  std::string useAfterMoveMessage(const std::string &name,
+                                  const std::vector<ParameterInfo> &params,
+                                  const std::unordered_map<std::string, BindingInfo> &locals);
+  // Records `name` as moved by the argument `site` (a `move(x)` or a `move` parameter argument);
+  // validating the same argument again does not count as a use. False after a diagnostic.
+  bool recordMovedBinding(const Expr &site, const std::string &name);
+  // Whether `name` is moved-from by an argument other than `site`; the same argument validated
+  // again (return inference revalidates calls) is not a second move.
+  bool movedAtOtherSite(const std::string &name, const Expr &site) const;
+  // A builtin `vector<T>` `push` stores its argument like a `[T move]` parameter: a named owning
+  // binding (not a view or a borrowed parameter) is moved-from afterwards. Runs after the call is
+  // validated; false after a diagnostic.
+  bool markBuiltinVectorPushMove(const std::vector<ParameterInfo> &params,
+                                 const std::unordered_map<std::string, BindingInfo> &locals,
+                                 const Expr &expr);
   bool validateVectorIndexedRemovalHelperElementType(const BindingInfo &binding,
                                                      const std::string &helperName,
                                                      const std::string &namespacePrefix,

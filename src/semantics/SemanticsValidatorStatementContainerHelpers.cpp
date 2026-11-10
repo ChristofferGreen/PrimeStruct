@@ -350,9 +350,16 @@ void SemanticsValidator::markContainerViewBinding(
   while (source->kind == Expr::Kind::Call && source->isFieldAccess && source->args.size() == 1) {
     source = &source->args.front();
   }
+  if (source->kind == Expr::Kind::Call && !source->isFieldAccess && !source->args.empty() &&
+      (isSimpleCallName(*source, "at") || isSimpleCallName(*source, "at_unsafe") ||
+       isSimpleCallName(*source, "dereference"))) {
+    binding.isPlaceView = true;
+    return;
+  }
   if (source->kind != Expr::Kind::Name) {
     return;
   }
+  binding.isPlaceView = true;
   const BindingInfo *sourceBinding = findParamBinding(params, source->name);
   if (sourceBinding == nullptr) {
     const auto sourceIt = locals.find(source->name);

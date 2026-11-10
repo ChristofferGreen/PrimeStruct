@@ -446,10 +446,9 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
       if (site != moveSites.end() && site->second.matches(*arg)) {
         continue;
       }
-      return failResolvedCallArgumentDiagnostic("use-after-move: " + arg->name);
+      return failResolvedCallArgumentDiagnostic(useAfterMoveMessage(arg->name, params, locals));
     }
-    currentValidationState_.movedBindings.insert(arg->name);
-    moveSites[arg->name] = {arg, arg->sourceLine, arg->sourceColumn};
+    recordMovedBinding(*arg, arg->name);
   }
 
   // A pointer to a local handed to a `move`/`copy` parameter can be stored into a place the same

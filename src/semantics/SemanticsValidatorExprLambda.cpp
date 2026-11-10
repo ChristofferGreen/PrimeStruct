@@ -25,7 +25,7 @@ bool SemanticsValidator::validateLambdaExpr(const std::vector<ParameterInfo> &pa
       return failLambdaDiagnostic(expr, "duplicate lambda capture: " + name);
     }
     if (currentValidationState_.movedBindings.count(name) > 0) {
-      return failLambdaDiagnostic(expr, "use-after-move: " + name);
+      return failLambdaDiagnostic(expr, useAfterMoveMessage(name, params, locals));
     }
     if (const BindingInfo *paramBinding = findParamBinding(params, name)) {
       BindingInfo captured = *paramBinding;

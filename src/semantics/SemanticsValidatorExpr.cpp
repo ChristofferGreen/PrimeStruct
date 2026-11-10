@@ -78,7 +78,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         const auto site = currentValidationState_.moveArgumentSites.find(expr.name);
         if (site == currentValidationState_.moveArgumentSites.end() ||
             !site->second.matches(expr)) {
-          return failExprRootDiagnostic("use-after-move: " + expr.name);
+          return failExprRootDiagnostic(useAfterMoveMessage(expr.name, params, locals));
         }
       }
       return true;
@@ -102,28 +102,28 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     st.statementIndex = statementIndex;
     st.expressionIsStatementContext = expressionIsStatementContext;
     if (validateExprCallPhase1(params, locals, expr, st) == PhaseStatus::Done) {
-      return st.result;
+      return st.result && markBuiltinVectorPushMove(params, locals, expr);
     }
     if (validateExprCallPhase2(params, locals, expr, st) == PhaseStatus::Done) {
-      return st.result;
+      return st.result && markBuiltinVectorPushMove(params, locals, expr);
     }
     if (validateExprCallPhase3(params, locals, expr, st) == PhaseStatus::Done) {
-      return st.result;
+      return st.result && markBuiltinVectorPushMove(params, locals, expr);
     }
     if (validateExprCallPhase4(params, locals, expr, st) == PhaseStatus::Done) {
-      return st.result;
+      return st.result && markBuiltinVectorPushMove(params, locals, expr);
     }
     if (validateExprCallPhase5(params, locals, expr, st) == PhaseStatus::Done) {
-      return st.result;
+      return st.result && markBuiltinVectorPushMove(params, locals, expr);
     }
     if (validateExprCallPhase6(params, locals, expr, st) == PhaseStatus::Done) {
-      return st.result;
+      return st.result && markBuiltinVectorPushMove(params, locals, expr);
     }
     if (validateExprCallPhase7(params, locals, expr, st) == PhaseStatus::Done) {
-      return st.result;
+      return st.result && markBuiltinVectorPushMove(params, locals, expr);
     }
     if (validateExprCallPhase8(params, locals, expr, st) == PhaseStatus::Done) {
-      return st.result;
+      return st.result && markBuiltinVectorPushMove(params, locals, expr);
     }
   }
   return false;

@@ -527,11 +527,10 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
     if (hasActiveBorrowForBinding(target.name)) {
       return failBorrowedBindingDiagnostic(target.name, target.name);
     }
-    if (currentValidationState_.movedBindings.count(target.name) > 0) {
-      return failMutationBorrowDiagnostic("use-after-move: " + target.name);
+    if (movedAtOtherSite(target.name, target)) {
+      return failMutationBorrowDiagnostic(useAfterMoveMessage(target.name, params, locals));
     }
-    currentValidationState_.movedBindings.insert(target.name);
-    return true;
+    return recordMovedBinding(target, target.name);
   }
 
   if (isAssignCall(expr)) {

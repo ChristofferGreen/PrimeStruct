@@ -232,8 +232,15 @@ bool SemanticsValidator::validateControlFlowStatement(const std::vector<Paramete
       for (const std::string &name : currentValidationState_.movedBindings) {
         if (movedBefore.count(name) == 0 &&
             (outerBindings.count(name) > 0 || findParamBinding(params, name) != nullptr)) {
-          return failStatementDiagnostic("use-after-move: " + name +
-                                         " (moved in an earlier loop iteration)");
+          std::string message = "use-after-move: " + name + " (moved in an earlier loop iteration)";
+          if (const auto site = currentValidationState_.moveArgumentSites.find(name);
+              site != currentValidationState_.moveArgumentSites.end() && site->second.line > 0) {
+            message += " at " + std::to_string(site->second.line) + ":" +
+                       std::to_string(site->second.column);
+          }
+          message += "; assign " + name +
+                     " a new value later in the loop body, or move a copy made inside the loop";
+          return failStatementDiagnostic(std::move(message));
         }
       }
     }

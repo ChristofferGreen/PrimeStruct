@@ -46,6 +46,10 @@ struct BindingInfo {
   // A non-`mut` collection binding initialized from an existing place: a read-only view sharing
   // that place's storage, borrowed from `referenceRoot` until its last use.
   bool isContainerView = false;
+  // A non-`mut` collection binding initialized from a binding, field or element: it owns nothing, so
+  // pushing it copies it instead of moving it (also when the place is an element, which sets no
+  // `isContainerView`).
+  bool isPlaceView = false;
   bool isEntryArgString = false;
   bool isUnsafeReference = false;
   std::string referenceRoot;
