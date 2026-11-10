@@ -204,7 +204,32 @@ EntryCallableExecutionResult emitEntryCallableExecutionWithCleanup(
       return EntryCallableExecutionResult::Error;
     }
   }
-  emitCurrentFileScopeCleanup();
+  // A body whose last statement is a `return` already ran the scope cleanup on that path; the cleanup at the end is
+  // only reachable when the body can fall off its end or a jump lands there (an unreachable second copy
+  // of every destructor doubled large bodies).
+  const bool endsWithReturn = [&]() {
+    if (entryDef.statements.empty()) {
+      return false;
+    }
+    const Expr &last = entryDef.statements.back();
+    if (last.kind != Expr::Kind::Call || last.isBinding || last.name != "return" ||
+        instructions.empty()) {
+      return false;
+    }
+    const IrOpcode lastOp = instructions.back().op;
+    if (lastOp != IrOpcode::ReturnVoid && lastOp != IrOpcode::ReturnI32 &&
+        lastOp != IrOpcode::ReturnI64 && lastOp != IrOpcode::ReturnF32 &&
+        lastOp != IrOpcode::ReturnF64) {
+      return false;
+    }
+    return std::none_of(instructions.begin(), instructions.end(), [&](const IrInstruction &inst) {
+      return (inst.op == IrOpcode::Jump || inst.op == IrOpcode::JumpIfZero) &&
+             inst.imm == instructions.size();
+    });
+  }();
+  if (!endsWithReturn) {
+    emitCurrentFileScopeCleanup();
+  }
   popFileScope();
 
   // A void body can also end by falling through after a return nested in a branch, or through a

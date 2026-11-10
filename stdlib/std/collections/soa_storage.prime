@@ -66,7 +66,7 @@ namespace std {
     [unsafe mut effects(heap_alloc)]
     Destroy() {
       if(this.ownsData) {
-        soaColumnCheckShape<T>(this)
+        // soaColumnDropRange checks the shape first.
         soaColumnDropRange<T>(this, this.count)
         bufferFreeUninitialized<T>(this.data)
         this.ownsData = false
@@ -509,7 +509,7 @@ namespace std {
     [Reference<SoaColumn<T1>>] second{values.second}
     soaColumnCheckShape<T0>(first)
     soaColumnCheckShape<T1>(second)
-    if(!(soaColumnCount<T0>(first) == soaColumnCount<T1>(second)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T1>(second))) {
+    if(!(first.field_count() == second.field_count()) || !(first.field_capacity() == second.field_capacity())) {
       panic(0i32)
     }
   }
@@ -522,7 +522,7 @@ namespace std {
     soaColumnCheckShape<T0>(first)
     soaColumnCheckShape<T1>(second)
     soaColumnCheckShape<T2>(third)
-    if(!(soaColumnCount<T0>(first) == soaColumnCount<T1>(second)) || !(soaColumnCount<T0>(first) == soaColumnCount<T2>(third)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T1>(second)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T2>(third))) {
+    if(!(first.field_count() == second.field_count()) || !(first.field_count() == third.field_count()) || !(first.field_capacity() == second.field_capacity()) || !(first.field_capacity() == third.field_capacity())) {
       panic(0i32)
     }
   }
@@ -537,7 +537,7 @@ namespace std {
     soaColumnCheckShape<T1>(second)
     soaColumnCheckShape<T2>(third)
     soaColumnCheckShape<T3>(fourth)
-    if(!(soaColumnCount<T0>(first) == soaColumnCount<T1>(second)) || !(soaColumnCount<T0>(first) == soaColumnCount<T2>(third)) || !(soaColumnCount<T0>(first) == soaColumnCount<T3>(fourth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T1>(second)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T2>(third)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T3>(fourth))) {
+    if(!(first.field_count() == second.field_count()) || !(first.field_count() == third.field_count()) || !(first.field_count() == fourth.field_count()) || !(first.field_capacity() == second.field_capacity()) || !(first.field_capacity() == third.field_capacity()) || !(first.field_capacity() == fourth.field_capacity())) {
       panic(0i32)
     }
   }
@@ -554,7 +554,7 @@ namespace std {
     soaColumnCheckShape<T2>(third)
     soaColumnCheckShape<T3>(fourth)
     soaColumnCheckShape<T4>(fifth)
-    if(!(soaColumnCount<T0>(first) == soaColumnCount<T1>(second)) || !(soaColumnCount<T0>(first) == soaColumnCount<T2>(third)) || !(soaColumnCount<T0>(first) == soaColumnCount<T3>(fourth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T4>(fifth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T1>(second)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T2>(third)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T3>(fourth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T4>(fifth))) {
+    if(!(first.field_count() == second.field_count()) || !(first.field_count() == third.field_count()) || !(first.field_count() == fourth.field_count()) || !(first.field_count() == fifth.field_count()) || !(first.field_capacity() == second.field_capacity()) || !(first.field_capacity() == third.field_capacity()) || !(first.field_capacity() == fourth.field_capacity()) || !(first.field_capacity() == fifth.field_capacity())) {
       panic(0i32)
     }
   }
@@ -573,7 +573,7 @@ namespace std {
     soaColumnCheckShape<T3>(fourth)
     soaColumnCheckShape<T4>(fifth)
     soaColumnCheckShape<T5>(sixth)
-    if(!(soaColumnCount<T0>(first) == soaColumnCount<T1>(second)) || !(soaColumnCount<T0>(first) == soaColumnCount<T2>(third)) || !(soaColumnCount<T0>(first) == soaColumnCount<T3>(fourth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T4>(fifth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T5>(sixth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T1>(second)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T2>(third)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T3>(fourth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T4>(fifth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T5>(sixth))) {
+    if(!(first.field_count() == second.field_count()) || !(first.field_count() == third.field_count()) || !(first.field_count() == fourth.field_count()) || !(first.field_count() == fifth.field_count()) || !(first.field_count() == sixth.field_count()) || !(first.field_capacity() == second.field_capacity()) || !(first.field_capacity() == third.field_capacity()) || !(first.field_capacity() == fourth.field_capacity()) || !(first.field_capacity() == fifth.field_capacity()) || !(first.field_capacity() == sixth.field_capacity())) {
       panic(0i32)
     }
   }
@@ -594,7 +594,7 @@ namespace std {
     soaColumnCheckShape<T4>(fifth)
     soaColumnCheckShape<T5>(sixth)
     soaColumnCheckShape<T6>(seventh)
-    if(!(soaColumnCount<T0>(first) == soaColumnCount<T1>(second)) || !(soaColumnCount<T0>(first) == soaColumnCount<T2>(third)) || !(soaColumnCount<T0>(first) == soaColumnCount<T3>(fourth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T4>(fifth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T5>(sixth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T6>(seventh)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T1>(second)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T2>(third)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T3>(fourth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T4>(fifth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T5>(sixth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T6>(seventh))) {
+    if(!(first.field_count() == second.field_count()) || !(first.field_count() == third.field_count()) || !(first.field_count() == fourth.field_count()) || !(first.field_count() == fifth.field_count()) || !(first.field_count() == sixth.field_count()) || !(first.field_count() == seventh.field_count()) || !(first.field_capacity() == second.field_capacity()) || !(first.field_capacity() == third.field_capacity()) || !(first.field_capacity() == fourth.field_capacity()) || !(first.field_capacity() == fifth.field_capacity()) || !(first.field_capacity() == sixth.field_capacity()) || !(first.field_capacity() == seventh.field_capacity())) {
       panic(0i32)
     }
   }
@@ -618,10 +618,10 @@ namespace std {
     soaColumnCheckShape<T6>(seventh)
     soaColumnCheckShape<T7>(eighth)
     [bool] countMismatch{
-      !(soaColumnCount<T0>(first) == soaColumnCount<T1>(second)) || !(soaColumnCount<T0>(first) == soaColumnCount<T2>(third)) || !(soaColumnCount<T0>(first) == soaColumnCount<T3>(fourth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T4>(fifth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T5>(sixth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T6>(seventh)) || !(soaColumnCount<T0>(first) == soaColumnCount<T7>(eighth))
+      !(first.field_count() == second.field_count()) || !(first.field_count() == third.field_count()) || !(first.field_count() == fourth.field_count()) || !(first.field_count() == fifth.field_count()) || !(first.field_count() == sixth.field_count()) || !(first.field_count() == seventh.field_count()) || !(first.field_count() == eighth.field_count())
     }
     [bool] capacityMismatch{
-      !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T1>(second)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T2>(third)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T3>(fourth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T4>(fifth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T5>(sixth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T6>(seventh)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T7>(eighth))
+      !(first.field_capacity() == second.field_capacity()) || !(first.field_capacity() == third.field_capacity()) || !(first.field_capacity() == fourth.field_capacity()) || !(first.field_capacity() == fifth.field_capacity()) || !(first.field_capacity() == sixth.field_capacity()) || !(first.field_capacity() == seventh.field_capacity()) || !(first.field_capacity() == eighth.field_capacity())
     }
     if(countMismatch || capacityMismatch) {
       panic(0i32)
@@ -649,10 +649,10 @@ namespace std {
     soaColumnCheckShape<T7>(eighth)
     soaColumnCheckShape<T8>(ninth)
     [bool] countMismatch{
-      !(soaColumnCount<T0>(first) == soaColumnCount<T1>(second)) || !(soaColumnCount<T0>(first) == soaColumnCount<T2>(third)) || !(soaColumnCount<T0>(first) == soaColumnCount<T3>(fourth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T4>(fifth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T5>(sixth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T6>(seventh)) || !(soaColumnCount<T0>(first) == soaColumnCount<T7>(eighth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T8>(ninth))
+      !(first.field_count() == second.field_count()) || !(first.field_count() == third.field_count()) || !(first.field_count() == fourth.field_count()) || !(first.field_count() == fifth.field_count()) || !(first.field_count() == sixth.field_count()) || !(first.field_count() == seventh.field_count()) || !(first.field_count() == eighth.field_count()) || !(first.field_count() == ninth.field_count())
     }
     [bool] capacityMismatch{
-      !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T1>(second)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T2>(third)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T3>(fourth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T4>(fifth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T5>(sixth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T6>(seventh)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T7>(eighth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T8>(ninth))
+      !(first.field_capacity() == second.field_capacity()) || !(first.field_capacity() == third.field_capacity()) || !(first.field_capacity() == fourth.field_capacity()) || !(first.field_capacity() == fifth.field_capacity()) || !(first.field_capacity() == sixth.field_capacity()) || !(first.field_capacity() == seventh.field_capacity()) || !(first.field_capacity() == eighth.field_capacity()) || !(first.field_capacity() == ninth.field_capacity())
     }
     if(countMismatch || capacityMismatch) {
       panic(0i32)
@@ -682,10 +682,10 @@ namespace std {
     soaColumnCheckShape<T8>(ninth)
     soaColumnCheckShape<T9>(tenth)
     [bool] countMismatch{
-      !(soaColumnCount<T0>(first) == soaColumnCount<T1>(second)) || !(soaColumnCount<T0>(first) == soaColumnCount<T2>(third)) || !(soaColumnCount<T0>(first) == soaColumnCount<T3>(fourth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T4>(fifth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T5>(sixth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T6>(seventh)) || !(soaColumnCount<T0>(first) == soaColumnCount<T7>(eighth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T8>(ninth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T9>(tenth))
+      !(first.field_count() == second.field_count()) || !(first.field_count() == third.field_count()) || !(first.field_count() == fourth.field_count()) || !(first.field_count() == fifth.field_count()) || !(first.field_count() == sixth.field_count()) || !(first.field_count() == seventh.field_count()) || !(first.field_count() == eighth.field_count()) || !(first.field_count() == ninth.field_count()) || !(first.field_count() == tenth.field_count())
     }
     [bool] capacityMismatch{
-      !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T1>(second)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T2>(third)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T3>(fourth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T4>(fifth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T5>(sixth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T6>(seventh)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T7>(eighth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T8>(ninth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T9>(tenth))
+      !(first.field_capacity() == second.field_capacity()) || !(first.field_capacity() == third.field_capacity()) || !(first.field_capacity() == fourth.field_capacity()) || !(first.field_capacity() == fifth.field_capacity()) || !(first.field_capacity() == sixth.field_capacity()) || !(first.field_capacity() == seventh.field_capacity()) || !(first.field_capacity() == eighth.field_capacity()) || !(first.field_capacity() == ninth.field_capacity()) || !(first.field_capacity() == tenth.field_capacity())
     }
     if(countMismatch || capacityMismatch) {
       panic(0i32)
@@ -717,10 +717,10 @@ namespace std {
     soaColumnCheckShape<T9>(tenth)
     soaColumnCheckShape<T10>(eleventh)
     [bool] countMismatch{
-      !(soaColumnCount<T0>(first) == soaColumnCount<T1>(second)) || !(soaColumnCount<T0>(first) == soaColumnCount<T2>(third)) || !(soaColumnCount<T0>(first) == soaColumnCount<T3>(fourth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T4>(fifth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T5>(sixth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T6>(seventh)) || !(soaColumnCount<T0>(first) == soaColumnCount<T7>(eighth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T8>(ninth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T9>(tenth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T10>(eleventh))
+      !(first.field_count() == second.field_count()) || !(first.field_count() == third.field_count()) || !(first.field_count() == fourth.field_count()) || !(first.field_count() == fifth.field_count()) || !(first.field_count() == sixth.field_count()) || !(first.field_count() == seventh.field_count()) || !(first.field_count() == eighth.field_count()) || !(first.field_count() == ninth.field_count()) || !(first.field_count() == tenth.field_count()) || !(first.field_count() == eleventh.field_count())
     }
     [bool] capacityMismatch{
-      !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T1>(second)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T2>(third)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T3>(fourth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T4>(fifth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T5>(sixth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T6>(seventh)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T7>(eighth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T8>(ninth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T9>(tenth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T10>(eleventh))
+      !(first.field_capacity() == second.field_capacity()) || !(first.field_capacity() == third.field_capacity()) || !(first.field_capacity() == fourth.field_capacity()) || !(first.field_capacity() == fifth.field_capacity()) || !(first.field_capacity() == sixth.field_capacity()) || !(first.field_capacity() == seventh.field_capacity()) || !(first.field_capacity() == eighth.field_capacity()) || !(first.field_capacity() == ninth.field_capacity()) || !(first.field_capacity() == tenth.field_capacity()) || !(first.field_capacity() == eleventh.field_capacity())
     }
     if(countMismatch || capacityMismatch) {
       panic(0i32)
@@ -754,10 +754,10 @@ namespace std {
     soaColumnCheckShape<T10>(eleventh)
     soaColumnCheckShape<T11>(twelfth)
     [bool] countMismatch{
-      !(soaColumnCount<T0>(first) == soaColumnCount<T1>(second)) || !(soaColumnCount<T0>(first) == soaColumnCount<T2>(third)) || !(soaColumnCount<T0>(first) == soaColumnCount<T3>(fourth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T4>(fifth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T5>(sixth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T6>(seventh)) || !(soaColumnCount<T0>(first) == soaColumnCount<T7>(eighth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T8>(ninth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T9>(tenth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T10>(eleventh)) || !(soaColumnCount<T0>(first) == soaColumnCount<T11>(twelfth))
+      !(first.field_count() == second.field_count()) || !(first.field_count() == third.field_count()) || !(first.field_count() == fourth.field_count()) || !(first.field_count() == fifth.field_count()) || !(first.field_count() == sixth.field_count()) || !(first.field_count() == seventh.field_count()) || !(first.field_count() == eighth.field_count()) || !(first.field_count() == ninth.field_count()) || !(first.field_count() == tenth.field_count()) || !(first.field_count() == eleventh.field_count()) || !(first.field_count() == twelfth.field_count())
     }
     [bool] capacityMismatch{
-      !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T1>(second)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T2>(third)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T3>(fourth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T4>(fifth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T5>(sixth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T6>(seventh)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T7>(eighth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T8>(ninth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T9>(tenth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T10>(eleventh)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T11>(twelfth))
+      !(first.field_capacity() == second.field_capacity()) || !(first.field_capacity() == third.field_capacity()) || !(first.field_capacity() == fourth.field_capacity()) || !(first.field_capacity() == fifth.field_capacity()) || !(first.field_capacity() == sixth.field_capacity()) || !(first.field_capacity() == seventh.field_capacity()) || !(first.field_capacity() == eighth.field_capacity()) || !(first.field_capacity() == ninth.field_capacity()) || !(first.field_capacity() == tenth.field_capacity()) || !(first.field_capacity() == eleventh.field_capacity()) || !(first.field_capacity() == twelfth.field_capacity())
     }
     if(countMismatch || capacityMismatch) {
       panic(0i32)
@@ -793,10 +793,10 @@ namespace std {
     soaColumnCheckShape<T11>(twelfth)
     soaColumnCheckShape<T12>(thirteenth)
     [bool] countMismatch{
-      !(soaColumnCount<T0>(first) == soaColumnCount<T1>(second)) || !(soaColumnCount<T0>(first) == soaColumnCount<T2>(third)) || !(soaColumnCount<T0>(first) == soaColumnCount<T3>(fourth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T4>(fifth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T5>(sixth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T6>(seventh)) || !(soaColumnCount<T0>(first) == soaColumnCount<T7>(eighth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T8>(ninth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T9>(tenth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T10>(eleventh)) || !(soaColumnCount<T0>(first) == soaColumnCount<T11>(twelfth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T12>(thirteenth))
+      !(first.field_count() == second.field_count()) || !(first.field_count() == third.field_count()) || !(first.field_count() == fourth.field_count()) || !(first.field_count() == fifth.field_count()) || !(first.field_count() == sixth.field_count()) || !(first.field_count() == seventh.field_count()) || !(first.field_count() == eighth.field_count()) || !(first.field_count() == ninth.field_count()) || !(first.field_count() == tenth.field_count()) || !(first.field_count() == eleventh.field_count()) || !(first.field_count() == twelfth.field_count()) || !(first.field_count() == thirteenth.field_count())
     }
     [bool] capacityMismatch{
-      !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T1>(second)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T2>(third)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T3>(fourth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T4>(fifth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T5>(sixth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T6>(seventh)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T7>(eighth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T8>(ninth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T9>(tenth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T10>(eleventh)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T11>(twelfth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T12>(thirteenth))
+      !(first.field_capacity() == second.field_capacity()) || !(first.field_capacity() == third.field_capacity()) || !(first.field_capacity() == fourth.field_capacity()) || !(first.field_capacity() == fifth.field_capacity()) || !(first.field_capacity() == sixth.field_capacity()) || !(first.field_capacity() == seventh.field_capacity()) || !(first.field_capacity() == eighth.field_capacity()) || !(first.field_capacity() == ninth.field_capacity()) || !(first.field_capacity() == tenth.field_capacity()) || !(first.field_capacity() == eleventh.field_capacity()) || !(first.field_capacity() == twelfth.field_capacity()) || !(first.field_capacity() == thirteenth.field_capacity())
     }
     if(countMismatch || capacityMismatch) {
       panic(0i32)
@@ -834,10 +834,10 @@ namespace std {
     soaColumnCheckShape<T12>(thirteenth)
     soaColumnCheckShape<T13>(fourteenth)
     [bool] countMismatch{
-      !(soaColumnCount<T0>(first) == soaColumnCount<T1>(second)) || !(soaColumnCount<T0>(first) == soaColumnCount<T2>(third)) || !(soaColumnCount<T0>(first) == soaColumnCount<T3>(fourth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T4>(fifth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T5>(sixth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T6>(seventh)) || !(soaColumnCount<T0>(first) == soaColumnCount<T7>(eighth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T8>(ninth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T9>(tenth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T10>(eleventh)) || !(soaColumnCount<T0>(first) == soaColumnCount<T11>(twelfth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T12>(thirteenth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T13>(fourteenth))
+      !(first.field_count() == second.field_count()) || !(first.field_count() == third.field_count()) || !(first.field_count() == fourth.field_count()) || !(first.field_count() == fifth.field_count()) || !(first.field_count() == sixth.field_count()) || !(first.field_count() == seventh.field_count()) || !(first.field_count() == eighth.field_count()) || !(first.field_count() == ninth.field_count()) || !(first.field_count() == tenth.field_count()) || !(first.field_count() == eleventh.field_count()) || !(first.field_count() == twelfth.field_count()) || !(first.field_count() == thirteenth.field_count()) || !(first.field_count() == fourteenth.field_count())
     }
     [bool] capacityMismatch{
-      !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T1>(second)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T2>(third)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T3>(fourth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T4>(fifth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T5>(sixth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T6>(seventh)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T7>(eighth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T8>(ninth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T9>(tenth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T10>(eleventh)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T11>(twelfth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T12>(thirteenth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T13>(fourteenth))
+      !(first.field_capacity() == second.field_capacity()) || !(first.field_capacity() == third.field_capacity()) || !(first.field_capacity() == fourth.field_capacity()) || !(first.field_capacity() == fifth.field_capacity()) || !(first.field_capacity() == sixth.field_capacity()) || !(first.field_capacity() == seventh.field_capacity()) || !(first.field_capacity() == eighth.field_capacity()) || !(first.field_capacity() == ninth.field_capacity()) || !(first.field_capacity() == tenth.field_capacity()) || !(first.field_capacity() == eleventh.field_capacity()) || !(first.field_capacity() == twelfth.field_capacity()) || !(first.field_capacity() == thirteenth.field_capacity()) || !(first.field_capacity() == fourteenth.field_capacity())
     }
     if(countMismatch || capacityMismatch) {
       panic(0i32)
@@ -877,10 +877,10 @@ namespace std {
     soaColumnCheckShape<T13>(fourteenth)
     soaColumnCheckShape<T14>(fifteenth)
     [bool] countMismatch{
-      !(soaColumnCount<T0>(first) == soaColumnCount<T1>(second)) || !(soaColumnCount<T0>(first) == soaColumnCount<T2>(third)) || !(soaColumnCount<T0>(first) == soaColumnCount<T3>(fourth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T4>(fifth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T5>(sixth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T6>(seventh)) || !(soaColumnCount<T0>(first) == soaColumnCount<T7>(eighth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T8>(ninth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T9>(tenth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T10>(eleventh)) || !(soaColumnCount<T0>(first) == soaColumnCount<T11>(twelfth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T12>(thirteenth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T13>(fourteenth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T14>(fifteenth))
+      !(first.field_count() == second.field_count()) || !(first.field_count() == third.field_count()) || !(first.field_count() == fourth.field_count()) || !(first.field_count() == fifth.field_count()) || !(first.field_count() == sixth.field_count()) || !(first.field_count() == seventh.field_count()) || !(first.field_count() == eighth.field_count()) || !(first.field_count() == ninth.field_count()) || !(first.field_count() == tenth.field_count()) || !(first.field_count() == eleventh.field_count()) || !(first.field_count() == twelfth.field_count()) || !(first.field_count() == thirteenth.field_count()) || !(first.field_count() == fourteenth.field_count()) || !(first.field_count() == fifteenth.field_count())
     }
     [bool] capacityMismatch{
-      !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T1>(second)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T2>(third)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T3>(fourth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T4>(fifth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T5>(sixth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T6>(seventh)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T7>(eighth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T8>(ninth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T9>(tenth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T10>(eleventh)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T11>(twelfth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T12>(thirteenth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T13>(fourteenth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T14>(fifteenth))
+      !(first.field_capacity() == second.field_capacity()) || !(first.field_capacity() == third.field_capacity()) || !(first.field_capacity() == fourth.field_capacity()) || !(first.field_capacity() == fifth.field_capacity()) || !(first.field_capacity() == sixth.field_capacity()) || !(first.field_capacity() == seventh.field_capacity()) || !(first.field_capacity() == eighth.field_capacity()) || !(first.field_capacity() == ninth.field_capacity()) || !(first.field_capacity() == tenth.field_capacity()) || !(first.field_capacity() == eleventh.field_capacity()) || !(first.field_capacity() == twelfth.field_capacity()) || !(first.field_capacity() == thirteenth.field_capacity()) || !(first.field_capacity() == fourteenth.field_capacity()) || !(first.field_capacity() == fifteenth.field_capacity())
     }
     if(countMismatch || capacityMismatch) {
       panic(0i32)
@@ -922,10 +922,10 @@ namespace std {
     soaColumnCheckShape<T14>(fifteenth)
     soaColumnCheckShape<T15>(sixteenth)
     [bool] countMismatch{
-      !(soaColumnCount<T0>(first) == soaColumnCount<T1>(second)) || !(soaColumnCount<T0>(first) == soaColumnCount<T2>(third)) || !(soaColumnCount<T0>(first) == soaColumnCount<T3>(fourth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T4>(fifth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T5>(sixth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T6>(seventh)) || !(soaColumnCount<T0>(first) == soaColumnCount<T7>(eighth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T8>(ninth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T9>(tenth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T10>(eleventh)) || !(soaColumnCount<T0>(first) == soaColumnCount<T11>(twelfth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T12>(thirteenth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T13>(fourteenth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T14>(fifteenth)) || !(soaColumnCount<T0>(first) == soaColumnCount<T15>(sixteenth))
+      !(first.field_count() == second.field_count()) || !(first.field_count() == third.field_count()) || !(first.field_count() == fourth.field_count()) || !(first.field_count() == fifth.field_count()) || !(first.field_count() == sixth.field_count()) || !(first.field_count() == seventh.field_count()) || !(first.field_count() == eighth.field_count()) || !(first.field_count() == ninth.field_count()) || !(first.field_count() == tenth.field_count()) || !(first.field_count() == eleventh.field_count()) || !(first.field_count() == twelfth.field_count()) || !(first.field_count() == thirteenth.field_count()) || !(first.field_count() == fourteenth.field_count()) || !(first.field_count() == fifteenth.field_count()) || !(first.field_count() == sixteenth.field_count())
     }
     [bool] capacityMismatch{
-      !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T1>(second)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T2>(third)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T3>(fourth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T4>(fifth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T5>(sixth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T6>(seventh)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T7>(eighth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T8>(ninth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T9>(tenth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T10>(eleventh)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T11>(twelfth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T12>(thirteenth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T13>(fourteenth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T14>(fifteenth)) || !(soaColumnCapacity<T0>(first) == soaColumnCapacity<T15>(sixteenth))
+      !(first.field_capacity() == second.field_capacity()) || !(first.field_capacity() == third.field_capacity()) || !(first.field_capacity() == fourth.field_capacity()) || !(first.field_capacity() == fifth.field_capacity()) || !(first.field_capacity() == sixth.field_capacity()) || !(first.field_capacity() == seventh.field_capacity()) || !(first.field_capacity() == eighth.field_capacity()) || !(first.field_capacity() == ninth.field_capacity()) || !(first.field_capacity() == tenth.field_capacity()) || !(first.field_capacity() == eleventh.field_capacity()) || !(first.field_capacity() == twelfth.field_capacity()) || !(first.field_capacity() == thirteenth.field_capacity()) || !(first.field_capacity() == fourteenth.field_capacity()) || !(first.field_capacity() == fifteenth.field_capacity()) || !(first.field_capacity() == sixteenth.field_capacity())
     }
     if(countMismatch || capacityMismatch) {
       panic(0i32)

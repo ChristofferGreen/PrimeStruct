@@ -111,7 +111,6 @@ of sync with them.
 | TODO-5745 | A labeled value that is a call parses in every position | ready | parser-labeled-values |
 | TODO-5746 | A parameterless `mut` method whose body is only bindings is a method | ready | diagnostics |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
-| TODO-5839 | A 17-field `SoaSchemaStorage` program builds as `exe` in under 5 s | deferred | exe-codegen-size |
 | TODO-5836 | A spawned definition without a `return` transform is a `Task<void>` | deferred | mt-vm-tasks |
 | TODO-5837 | VM debug sessions step programs that spawn tasks | deferred | vm-debugger |
 | TODO-5793 | Byte-region accesses check liveness without a map search or a write | ready | mt-heap-optexe |
@@ -168,7 +167,7 @@ of sync with them.
 | TODO-5515 | Native Result.ok(Buffer) reads as ok | deferred | native-result |
 | TODO-5516 | Integer narrowing and float-to-int conversion agree across backends | deferred | numeric-conversions |
 | TODO-5517 | Runtime faults exit the same way on every backend | deferred | runtime-faults |
-| TODO-5744 | A runtime error in a real call ends the program on exe, Wasm and GLSL | deferred | runtime-faults |
+| TODO-5744 | A runtime error in a real call ends the program on Wasm and GLSL | deferred | runtime-faults |
 | TODO-5518 | Valid programs the frontend rejects compile | deferred | frontend-accept |
 | TODO-5519 | Operator rewriting handles calls, nested `!` and `?` precedence | deferred | text-filter |
 | TODO-5520 | Diagnostics point at user code with readable names | deferred | diagnostics |
@@ -291,17 +290,17 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
     - full release gate green
   - stop_rule: copy-source classification at the listed sites only.
 
-- [ ] TODO-5744: A runtime error in a real call ends the program on exe, Wasm and GLSL
+- [ ] TODO-5744: A runtime error in a real call ends the program on Wasm and GLSL
   - owner: ai
   - status: deferred
   - created_at: 2026-11-08
   - phase: Backend parity (found while fixing TODO-5743)
   - parallel_track: runtime-faults
-  - scope: TODO-5743 made a runtime error (a bounds check, `panic`) inside a real-call body end the program with `Trap 3` on the VM, optcpp/optexe, `--emit=native` and the Linux JIT. The simple C++ emitters (`cpp`, `exe`), Wasm and GLSL have no `Trap` (IrValidation rejects it there), so `emitRuntimeError` (src/ir_lowerer/IrLowererRuntimeErrorHelpers.cpp) still returns 3 from the callee and the caller carries on: the program of "a runtime error inside a real call stops the program" (tests/unit/program_matrix/test_program_matrix_parameter_modes.cpp) prints `20 30`, the error, `3`, `99` and exits 0 on `--emit=exe` (the slow `exe` matrix config, not in the default gate). Lower `Trap` in the simple C++ emitter (`std::fflush(stdout); std::exit(code)` as optcpp does) and in Wasm (a WASI `proc_exit`, or keep such bodies inline), and decide GLSL (no calls that can fault, or inline).
+  - scope: TODO-5743 made a runtime error (a bounds check, `panic`) inside a real-call body end the program with `Trap 3` on the VM, optcpp/optexe, `--emit=native` and the Linux JIT. The simple C++ emitters (`cpp`, `exe`), Wasm and GLSL have no `Trap` (IrValidation rejects it there), so `emitRuntimeError` (src/ir_lowerer/IrLowererRuntimeErrorHelpers.cpp) still returns 3 from the callee and the caller carries on: the program of "a runtime error inside a real call stops the program" (tests/unit/program_matrix/test_program_matrix_parameter_modes.cpp) prints `20 30`, the error, `3`, `99` and exits 0 on `--emit=exe` (the slow `exe` matrix config, not in the default gate). Lower `Trap` in Wasm (a WASI `proc_exit`, or keep such bodies inline), and decide GLSL (no calls that can fault, or inline). The simple C++ emitters (`cpp`, `exe`) run `Trap` since TODO-5839.
   - acceptance:
-    - the matrix case passes with `PRIMESTRUCT_MATRIX_CONFIGS=all` (exe included); a Wasm runtime check of the same program exits 3 where wasmtime is available
+    - a Wasm runtime check of the matrix program exits 3 where wasmtime is available
     - full release gate green
-  - stop_rule: runtime errors in real calls on exe, Wasm and GLSL only.
+  - stop_rule: runtime errors in real calls on Wasm and GLSL only.
 
 - [ ] TODO-5707: `Function` types accept `mut` parameters
   - owner: ai
@@ -671,19 +670,6 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
     - full release gate green
   - stop_rule: receiver offset handling only.
   - notes: deferred: queued behind the Ready Now cap.
-
-- [ ] TODO-5839: A 17-field `SoaSchemaStorage` program builds as `exe` in under 5 s
-  - owner: ai
-  - status: deferred
-  - created_at: 2026-11-10
-  - phase: Test hygiene (found while doing TODO-5838)
-  - parallel_track: exe-codegen-size
-  - scope: The `--emit=exe` build of the SoaSchema storage program (tests/unit/compile_run/test_compile_run_reflection_codegen_runtime.cpp, case `... on exe`, CTest `reflection_codegen_24_24`) takes 19 s alone and 149 s in a loaded gate (300 s timeout); the VM and native builds of it take 1 s. The IR lowerer inlines the 17 column constructors of `/Wide/SoaSchemaStorageNew` into `/main` (84131 instructions, 9293 locals; a program that only constructs the storage is still 79k), and the exe emitter (src/backend/IrToCppEmitter.cpp, a `switch` case per instruction) turns that into 45 MB of C++ that clang++ -O0 compiles in ~18 s. Merging straight-line cases (fallthrough) and dropping the `psEnsureStack` checks cut the compile by only 25%. The test cannot be split: one build is the whole cost.
-  - acceptance:
-    - that build takes under 5 s alone (smaller IR for the storage helpers, or a more compact exe emission), and the case has no over-guardrail note
-    - full release gate green
-  - stop_rule: the SoaSchema storage exe build; other programs' exe size only as far as the same change shrinks them.
-  - notes: deferred: the case runs at a sixth of its timeout alone, with a guardrail note. Aside: a one-field `SoaSchemaStorage` program fails exe lowering with `native backend only supports arithmetic/... calls in expressions (call=/std/collections/soa_storage/soaColumnNew ...)`.
 
 - [ ] TODO-5836: A spawned definition without a `return` transform is a `Task<void>`
   - owner: ai

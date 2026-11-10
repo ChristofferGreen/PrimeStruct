@@ -171,9 +171,9 @@
   runtime faults (stack underflow, invalid addresses) surface as `VM error:` with exit code 3. Inside a function that
   lowering calls rather than inlines, a guard rail ends with `Trap 3` instead of a return, which ends the program with
   exit code 3 from that frame; `panic` traps the same way. `Trap` (PSIR v33) runs on the VM, serialized bytecode,
-  `optcpp`/`optexe` (`exit` after flushing stdout), `--emit=native` (the exit syscall: `exit` on macOS arm64,
-  `exit_group` on Linux x86_64; output is already written) and the Linux x86_64 JIT (which hands the code back to
-  `primevm` as the program's result). The simple C++ (`cpp`/`exe`), Wasm and GLSL targets never receive it; on `exe` a
+  the C++ emitters (`cpp`/`exe` and `optcpp`/`optexe`: `exit` after flushing the output), `--emit=native` (the exit
+  syscall: `exit` on macOS arm64, `exit_group` on Linux x86_64; output is already written) and the Linux x86_64 JIT
+  (which hands the code back to `primevm` as the program's result). The Wasm and GLSL targets never receive it; there a
   runtime error in a called function still returns 3 to its caller (TODO-5744).
 - **Deployment target:** the VM serves as the sandboxed runtime for user-supplied scripts (e.g., on iOS) where native
   code generation is unavailable. Effect masks and capabilities enforce per-platform restrictions.
@@ -202,6 +202,8 @@
   methods of their records; lifecycle helpers; and the `call` of a closure with a `[ref]` capture
   (docs/spec/value-lifecycle.md, Borrowing).
   The other targets keep the scalar ABI: a definition with scalar parameters and result and two or more call sites (or
-  a recursive one) is a real call, a read-only method passing its receiver as slots rebuilt in the callee's frame.
+  a recursive one) is a real call, a read-only method passing its receiver as slots rebuilt in the callee's frame. On
+  the scalar targets that run `Trap` (`cpp`/`exe`, x86_64 native) a `never` result counts as void, so `panic` is one
+  function there too instead of a copy of its body at every call site.
   Measured for the web examples under `--emit=optcpp` in docs/OptimizingBackendsPlan.md (section 9, Real calls for web
   apps): `examples/apps/todo_web` went from 12.7 MB of C++ to under 1.4 MB.

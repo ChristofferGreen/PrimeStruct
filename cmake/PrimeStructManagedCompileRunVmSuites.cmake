@@ -215,7 +215,7 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.outputs"
                                   SHARD_PREFIX "outputs_newly_exposed_2026_07_16_part2"
                                   SOURCE_FILE "*test_compile_run_vm_outputs_part2.cpp"
                                   RANGE_FIRST 52
-                                  RANGE_LAST 65
+                                  RANGE_LAST 66
                                   CASES_PER_SHARD 10)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.collections"
                                   TIMEOUT 300

@@ -603,7 +603,11 @@ bool isRealCallShapeEligible(const Definition &def, const RealCallShapeContext &
       }
     }
   }
-  if (!hasOnlyScalarParameters(def) || !hasScalarOrVoidReturn(def) || definitionUsesTry(def)) {
+  // A `never` result (panic) is a void call where a runtime error in the callee ends the program.
+  const bool scalarOrNeverReturn =
+      hasScalarOrVoidReturn(def) ||
+      (context.allowNeverResult && hasTransformReturnType(def, "never"));
+  if (!hasOnlyScalarParameters(def) || !scalarOrNeverReturn || definitionUsesTry(def)) {
     return false;
   }
   if (def.returnExpr.has_value() &&
@@ -651,7 +655,8 @@ bool isTinyInlineLeaf(const Definition &def) {
 
 std::unordered_set<std::string> computeRealCallEligibleDefinitionPaths(const Program &program,
                                                                        const std::string &entryPath,
-                                                                       bool allowMutReceivers) {
+                                                                       bool allowMutReceivers,
+                                                                       bool allowNeverResult) {
   const std::unordered_set<std::string> recursive = findRecursiveDefinitionPaths(program);
   const std::unordered_set<std::string> reachable =
       findReachableDefinitionPaths(program, entryPath);
@@ -667,7 +672,7 @@ std::unordered_set<std::string> computeRealCallEligibleDefinitionPaths(const Pro
       structNames.insert(def.fullPath);
     }
   }
-  const RealCallShapeContext context{&byPath, &structNames, allowMutReceivers};
+  const RealCallShapeContext context{&byPath, &structNames, allowMutReceivers, allowNeverResult};
 
   std::unordered_set<std::string> eligible;
   for (const std::string &path : reachable) {

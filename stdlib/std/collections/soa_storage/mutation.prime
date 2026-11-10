@@ -857,7 +857,7 @@ namespace std {
 
   [public effects(heap_alloc), return<void>]
   soaColumnClear<T>([SoaColumn<T> mut] values) {
-    soaColumnCheckShape<T>(values)
+    // soaColumnDropRange checks the shape first.
     soaColumnDropRange<T>(values, values.field_count())
     values.set_field_count(0i32)
   }

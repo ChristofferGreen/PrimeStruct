@@ -1520,4 +1520,53 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
+// A runtime error inside a function the exe backend calls (not inlined) ends the program with code 3, as
+// on the VM; it used to return 3 to the caller, which carried on. `panic` is such a call too.
+TEST_CASE("exe-ir emitter ends the program on a runtime error inside a called function") {
+  SKIP_IF_VM_IR_BACKEND_LIMITED();
+  const std::string source = R"(
+import /std/panic/*
+
+[return<i32>]
+pick([i32] index) {
+  [array<i32>] values{array<i32>(10i32, 20i32)}
+  [i32 mut] total{0i32}
+  total = total + 1i32
+  total = total + 2i32
+  return(values[index] + total)
+}
+
+[return<int> effects(io_out)]
+main() {
+  [i32] first{pick(1i32)}
+  if(first == 0i32) {
+    panic(1i32)
+  }
+  [i32] second{pick(5i32)}
+  print_line("after"utf8)
+  return(first + second)
+}
+)";
+  const std::string srcPath = writeTemp("compile_exe_ir_called_runtime_error.prime", source);
+  const std::string exePath = (testScratchPath("") / "primec_exe_ir_called_runtime_error").string();
+  const std::string outPath =
+      (testScratchPath("") / "primec_exe_ir_called_runtime_error_out.txt").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_exe_ir_called_runtime_error_err.txt").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + quoteShellArg(srcPath) + " -o " +
+                                 quoteShellArg(exePath) + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(quoteShellArg(exePath) + " > " + quoteShellArg(outPath) + " 2> " +
+                   quoteShellArg(errPath)) == 3);
+  CHECK(readFile(outPath).empty());
+  CHECK(readFile(errPath) == "array index out of bounds\n");
+
+  const std::string vmCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +
+                            quoteShellArg(outPath) + " 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(vmCmd) == 3);
+  CHECK(readFile(outPath).empty());
+  CHECK(readFile(errPath) == "array index out of bounds\n");
+}
+
 TEST_SUITE_END();

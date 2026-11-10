@@ -375,9 +375,6 @@ TEST_CASE("reflection SoaSchema storage helper runtime stays aligned across back
   CHECK(runCommand(vmCmd) == 127);
 }
 
-// Over the 5 s guardrail (19 s alone, 2026-11-10) and not splittable: one exe build is the whole cost. The IR lowerer
-// inlines the 17 column constructors into /main (84k instructions), the exe emitter turns that into 45 MB of C++, and
-// clang++ -O0 takes ~18 s on it. A program without the checks is still 20 MB. TODO-5839 makes that build smaller.
 TEST_CASE("reflection SoaSchema storage helper runtime stays aligned across backends on exe") {
   const std::string srcPath = writeSoaSchemaStorageSource("exe");
   const std::string exePath = (testScratchPath("") / "primec_reflection_soa_schema_storage_exe").string();
@@ -394,6 +391,96 @@ TEST_CASE("reflection SoaSchema storage helper runtime stays aligned across back
                                        quoteShellArg(nativePath) + " --entry /main";
   CHECK(runCommand(nativeCompileCmd) == 0);
   CHECK(runCommand(quoteShellArg(nativePath)) == 127);
+}
+
+// The size of the SoaSchema storage program, the guard for its exe build time (19 s before, about 3 s
+// after). Inlined struct-returning calls lowered each `return` twice (an unreachable copy, doubling at each level), a
+// body ending in `return` ran its destructors twice in the code, the stdlib re-checked shapes it had checked, `panic`
+// was inlined at every site on exe, and the exe emitter wrote nine to thirty lines per instruction. Before:
+// exe IR 172397 instructions, VM 101461, 44.9 MB of C++.
+static size_t loweredInstructionCount(const std::string &emitKind, const std::string &srcPath) {
+  const std::string dumpPath =
+      (testScratchPath("") / ("primec_reflection_soa_schema_storage_ir_" + emitKind + ".txt"))
+          .string();
+  const std::string dumpCmd = "./primec --emit=" + emitKind + " --dump-stage ir-lowered " +
+                              quoteShellArg(srcPath) + " --entry /main > " +
+                              quoteShellArg(dumpPath);
+  if (runCommand(dumpCmd) != 0) {
+    return 0;
+  }
+  std::istringstream lines(readFile(dumpPath));
+  std::string line;
+  size_t total = 0;
+  const std::string marker = " instructions=";
+  while (std::getline(lines, line)) {
+    if (line.rfind("function ", 0) != 0) {
+      continue;
+    }
+    const size_t at = line.find(marker);
+    if (at != std::string::npos) {
+      total += static_cast<size_t>(std::stoull(line.substr(at + marker.size())));
+    }
+  }
+  return total;
+}
+
+TEST_CASE("reflection SoaSchema storage program lowers and emits within a size budget") {
+  const std::string srcPath = writeSoaSchemaStorageSource("size");
+  const size_t exeInstructions = loweredInstructionCount("exe", srcPath);
+  CHECK(exeInstructions > 0u);
+  CHECK(exeInstructions < 60000u);
+  const size_t vmInstructions = loweredInstructionCount("vm", srcPath);
+  CHECK(vmInstructions > 0u);
+  CHECK(vmInstructions < 50000u);
+
+  const std::string cppPath =
+      (testScratchPath("") / "primec_reflection_soa_schema_storage_size.cpp").string();
+  const std::string cppCmd = "./primec --emit=cpp " + quoteShellArg(srcPath) + " -o " +
+                             quoteShellArg(cppPath) + " --entry /main";
+  CHECK(runCommand(cppCmd) == 0);
+  const size_t cppBytes = readFile(cppPath).size();
+  CHECK(cppBytes > 0u);
+  CHECK(cppBytes < 8000000u);
+}
+
+// A one-field storage (a single `SoaColumn<T>` chunk) failed to lower on every backend.
+TEST_CASE("reflection SoaSchema storage with one field runs on vm, native and exe") {
+  const std::string source = R"(
+import /std/collections/soa_storage/*
+
+[struct reflect generate(SoaSchema)]
+One() {
+  [i32] f0{0i32}
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [/One/SoaSchemaStorage mut] storage{/One/SoaSchemaStorageNew()}
+  [i32 mut] score{0i32}
+  if(equal(/One/SoaSchemaStorageCount(storage), 0i32), then() { assign(score, plus(score, 1i32)) }, else() { })
+  /One/SoaSchemaStorageReserve(storage, 5i32)
+  if(equal(/One/SoaSchemaStorageCapacity(storage), 5i32), then() { assign(score, plus(score, 2i32)) }, else() { })
+  if(equal(storage.chunk0.field_capacity(), 5i32), then() { assign(score, plus(score, 4i32)) }, else() { })
+  /One/SoaSchemaStorageClear(storage)
+  if(equal(/One/SoaSchemaStorageCount(storage), 0i32), then() { assign(score, plus(score, 8i32)) }, else() { })
+  return(score)
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_reflection_soa_schema_storage_one_field.prime", source);
+  CHECK(runCommand("./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main") == 15);
+
+  const std::string nativePath =
+      (testScratchPath("") / "primec_reflection_soa_schema_storage_one_native").string();
+  CHECK(runCommand("./primec --emit=native " + quoteShellArg(srcPath) + " -o " +
+                   quoteShellArg(nativePath) + " --entry /main") == 0);
+  CHECK(runCommand(quoteShellArg(nativePath)) == 15);
+
+  const std::string exePath =
+      (testScratchPath("") / "primec_reflection_soa_schema_storage_one_exe").string();
+  CHECK(runCommand("./primec --emit=exe " + quoteShellArg(srcPath) + " -o " +
+                   quoteShellArg(exePath) + " --entry /main") == 0);
+  CHECK(runCommand(quoteShellArg(exePath)) == 15);
 }
 
 TEST_SUITE_END();

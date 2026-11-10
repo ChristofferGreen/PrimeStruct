@@ -70,9 +70,11 @@ TEST_CASE("ir to cpp emitter writes indirect local pointer opcodes") {
   REQUIRE(emitter.emitSource(module, cpp, error));
   CHECK(error.empty());
   CHECK(cpp.find("stack[sp++] = static_cast<uint64_t>(0ull * 16ull);") != std::string::npos);
-  CHECK(cpp.find("loadIndirectAddress % 16ull") != std::string::npos);
-  CHECK(cpp.find("locals[loadIndirectIndex]") != std::string::npos);
-  CHECK(cpp.find("locals[storeIndirectIndex] = storeIndirectValue;") != std::string::npos);
+  CHECK(cpp.find("if ((address % 16ull) != 0ull)") != std::string::npos);
+  CHECK(cpp.find("stack[sp++] = locals[static_cast<std::size_t>(index)];") != std::string::npos);
+  CHECK(cpp.find("locals[static_cast<std::size_t>(index)] = value;") != std::string::npos);
+  CHECK(cpp.find("if (!psLoadIndirect(stack, sp, locals, heap))") != std::string::npos);
+  CHECK(cpp.find("if (!psStoreIndirect(stack, sp, locals, heap))") != std::string::npos);
 }
 
 TEST_CASE("ir to cpp emitter writes file io opcodes") {

@@ -12,6 +12,52 @@ std::string irFunctionSymbol(size_t functionIndex) {
 
 } // namespace
 
+void emitIntegerOpHelpers(std::ostringstream &out) {
+  for (const CppIntegerOpHelper &helper : CppIntegerOpHelpers) {
+    out << "static bool " << helper.name << "(PsStack &stack, std::size_t &sp) {\n";
+    out << "  if (!psEnsureStack(sp, 2ull, \"" << helper.operation << "\")) {\n";
+    out << "    return false;\n";
+    out << "  }\n";
+    const bool unsignedSlot = std::strcmp(helper.operandType, "uint64_t") == 0;
+    for (const char *operand : {"right", "left"}) {
+      out << "  " << helper.operandType << " " << operand << " = ";
+      if (unsignedSlot) {
+        out << "stack[--sp];\n";
+      } else {
+        out << "static_cast<" << helper.operandType << ">(stack[--sp]);\n";
+      }
+    }
+    if (helper.compare) {
+      out << "  stack[sp++] = (left " << helper.op << " right) ? 1u : 0u;\n";
+    } else if (std::strcmp(helper.operandType, "int32_t") == 0) {
+      out << "  stack[sp++] = left " << helper.op << " right;\n";
+    } else {
+      out << "  stack[sp++] = static_cast<uint64_t>(left " << helper.op << " right);\n";
+    }
+    out << "  return true;\n";
+    out << "}\n\n";
+  }
+}
+
+bool emitIntegerOpHelperCall(const char *operandType,
+                             const char *op,
+                             bool compare,
+                             size_t nextIndex,
+                             std::ostringstream &out) {
+  for (const CppIntegerOpHelper &helper : CppIntegerOpHelpers) {
+    if (std::strcmp(helper.operandType, operandType) == 0 && std::strcmp(helper.op, op) == 0 &&
+        helper.compare == compare) {
+      out << "        if (!" << helper.name << "(stack, sp)) {\n";
+      out << "          return 1;\n";
+      out << "        }\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
+    }
+  }
+  return false;
+}
+
 bool emitInstruction(const IrInstruction &instruction,
                      size_t index,
                      size_t nextIndex,
@@ -25,45 +71,30 @@ bool emitInstruction(const IrInstruction &instruction,
     out << "          return 1;\n";
     out << "        }\n";
   };
-  const auto emitBinaryI32 = [&](const char *op, const char *underflowOperation) {
-    emitStackUnderflowGuard(2, underflowOperation);
-    out << "        int32_t right = static_cast<int32_t>(stack[--sp]);\n";
-    out << "        int32_t left = static_cast<int32_t>(stack[--sp]);\n";
-    out << "        stack[sp++] = left " << op << " right;\n";
-    out << "        pc = " << nextIndex << ";\n";
-    out << "        break;\n";
+  const auto emitBinaryI32 = [&](const char *op, const char * /*underflowOperation*/) {
+    if (!emitIntegerOpHelperCall("int32_t", op, false, nextIndex, out)) {
+      error = "IrToCppEmitter has no integer helper for an instruction";
+    }
   };
   const auto emitCompareI32 = [&](const char *op) {
-    emitStackUnderflowGuard(2, "compare");
-    out << "        int32_t right = static_cast<int32_t>(stack[--sp]);\n";
-    out << "        int32_t left = static_cast<int32_t>(stack[--sp]);\n";
-    out << "        stack[sp++] = (left " << op << " right) ? 1u : 0u;\n";
-    out << "        pc = " << nextIndex << ";\n";
-    out << "        break;\n";
+    if (!emitIntegerOpHelperCall("int32_t", op, true, nextIndex, out)) {
+      error = "IrToCppEmitter has no integer helper for an instruction";
+    }
   };
-  const auto emitBinaryI64 = [&](const char *op, const char *underflowOperation) {
-    emitStackUnderflowGuard(2, underflowOperation);
-    out << "        int64_t right = static_cast<int64_t>(stack[--sp]);\n";
-    out << "        int64_t left = static_cast<int64_t>(stack[--sp]);\n";
-    out << "        stack[sp++] = static_cast<uint64_t>(left " << op << " right);\n";
-    out << "        pc = " << nextIndex << ";\n";
-    out << "        break;\n";
+  const auto emitBinaryI64 = [&](const char *op, const char * /*underflowOperation*/) {
+    if (!emitIntegerOpHelperCall("int64_t", op, false, nextIndex, out)) {
+      error = "IrToCppEmitter has no integer helper for an instruction";
+    }
   };
   const auto emitCompareI64 = [&](const char *op) {
-    emitStackUnderflowGuard(2, "compare");
-    out << "        int64_t right = static_cast<int64_t>(stack[--sp]);\n";
-    out << "        int64_t left = static_cast<int64_t>(stack[--sp]);\n";
-    out << "        stack[sp++] = (left " << op << " right) ? 1u : 0u;\n";
-    out << "        pc = " << nextIndex << ";\n";
-    out << "        break;\n";
+    if (!emitIntegerOpHelperCall("int64_t", op, true, nextIndex, out)) {
+      error = "IrToCppEmitter has no integer helper for an instruction";
+    }
   };
   const auto emitCompareU64 = [&](const char *op) {
-    emitStackUnderflowGuard(2, "compare");
-    out << "        uint64_t right = stack[--sp];\n";
-    out << "        uint64_t left = stack[--sp];\n";
-    out << "        stack[sp++] = (left " << op << " right) ? 1u : 0u;\n";
-    out << "        pc = " << nextIndex << ";\n";
-    out << "        break;\n";
+    if (!emitIntegerOpHelperCall("uint64_t", op, true, nextIndex, out)) {
+      error = "IrToCppEmitter has no integer helper for an instruction";
+    }
   };
   const auto emitBinaryF32 = [&](const char *op, const char *underflowOperation) {
     emitStackUnderflowGuard(2, underflowOperation);
@@ -154,54 +185,16 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        break;\n";
       return true;
     case IrOpcode::LoadIndirect:
-      emitStackUnderflowGuard(1, "load indirect");
-      out << "        uint64_t loadIndirectAddress = stack[--sp];\n";
-      out << "        if ((loadIndirectAddress % " << IrSlotBytes << "ull) != 0ull) {\n";
-      out << "          std::cerr << \"unaligned indirect address in IR\\n\";\n";
+      out << "        if (!psLoadIndirect(stack, sp, locals, heap)) {\n";
       out << "          return 1;\n";
-      out << "        }\n";
-      out << "        if ((loadIndirectAddress & ps_heap_address_tag) != 0ull) {\n";
-      out << "          std::size_t loadHeapIndex = 0;\n";
-      out << "          if (!psResolveHeapSlot(loadIndirectAddress, heap, loadHeapIndex)) {\n";
-      out << "            std::cerr << \"invalid indirect address in IR\\n\";\n";
-      out << "            return 1;\n";
-      out << "          }\n";
-      out << "          stack[sp++] = heap.slots[loadHeapIndex];\n";
-      out << "        } else {\n";
-      out << "          uint64_t loadIndirectIndex = loadIndirectAddress / " << IrSlotBytes << "ull;\n";
-      out << "          if (loadIndirectIndex >= " << localCount << "ull) {\n";
-      out << "            std::cerr << \"invalid indirect address in IR\\n\";\n";
-      out << "            return 1;\n";
-      out << "          }\n";
-      out << "          stack[sp++] = locals[loadIndirectIndex];\n";
       out << "        }\n";
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
     case IrOpcode::StoreIndirect:
-      emitStackUnderflowGuard(2, "store indirect");
-      out << "        uint64_t storeIndirectValue = stack[--sp];\n";
-      out << "        uint64_t storeIndirectAddress = stack[--sp];\n";
-      out << "        if ((storeIndirectAddress % " << IrSlotBytes << "ull) != 0ull) {\n";
-      out << "          std::cerr << \"unaligned indirect address in IR\\n\";\n";
+      out << "        if (!psStoreIndirect(stack, sp, locals, heap)) {\n";
       out << "          return 1;\n";
       out << "        }\n";
-      out << "        if ((storeIndirectAddress & ps_heap_address_tag) != 0ull) {\n";
-      out << "          std::size_t storeHeapIndex = 0;\n";
-      out << "          if (!psResolveHeapSlot(storeIndirectAddress, heap, storeHeapIndex)) {\n";
-      out << "            std::cerr << \"invalid indirect address in IR\\n\";\n";
-      out << "            return 1;\n";
-      out << "          }\n";
-      out << "          heap.slots[storeHeapIndex] = storeIndirectValue;\n";
-      out << "        } else {\n";
-      out << "          uint64_t storeIndirectIndex = storeIndirectAddress / " << IrSlotBytes << "ull;\n";
-      out << "          if (storeIndirectIndex >= " << localCount << "ull) {\n";
-      out << "            std::cerr << \"invalid indirect address in IR\\n\";\n";
-      out << "            return 1;\n";
-      out << "          }\n";
-      out << "          locals[storeIndirectIndex] = storeIndirectValue;\n";
-      out << "        }\n";
-      out << "        stack[sp++] = storeIndirectValue;\n";
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
@@ -701,6 +694,12 @@ bool emitInstruction(const IrInstruction &instruction,
     case IrOpcode::LoadStringByte:
     case IrOpcode::LoadStringLength:
       return emitPrintAndFileInstruction(instruction, index, nextIndex, localCount, context, out, error);
+    case IrOpcode::Trap:
+      // A runtime error inside a called function ends the program with the trap's code, as on the VM.
+      out << "        std::cout.flush();\n";
+      out << "        std::cerr.flush();\n";
+      out << "        std::exit(" << static_cast<int32_t>(instruction.imm) << ");\n";
+      return true;
     case IrOpcode::ReturnI32:
       emitStackUnderflowGuard(1, "return");
       out << "        return static_cast<int64_t>(static_cast<int32_t>(stack[--sp]));\n";

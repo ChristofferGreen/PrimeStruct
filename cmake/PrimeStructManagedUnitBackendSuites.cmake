@@ -52,7 +52,7 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.serialization"
   LABEL "parallel-safe"
   TIMEOUT 300
   RANGE_FIRST 111
-  RANGE_LAST 122
+  RANGE_LAST 124
   CASES_PER_SHARD 4
 )
 

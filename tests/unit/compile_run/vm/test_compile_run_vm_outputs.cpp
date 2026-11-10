@@ -1446,9 +1446,9 @@ main() {
   const std::string compileCmd = "./primec --emit=cpp-ir " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
-  CHECK(output.find("loadIndirectAddress % 16ull") != std::string::npos);
-  CHECK(output.find("storeIndirectAddress % 16ull") != std::string::npos);
-  CHECK(output.find("locals[storeIndirectIndex] = storeIndirectValue;") != std::string::npos);
+  CHECK(output.find("if (!psLoadIndirect(stack, sp, locals, heap))") != std::string::npos);
+  CHECK(output.find("if (!psStoreIndirect(stack, sp, locals, heap))") != std::string::npos);
+  CHECK(output.find("locals[static_cast<std::size_t>(index)] = value;") != std::string::npos);
 }
 
 TEST_CASE("cpp emitter uses ir backend for pointer indirect paths") {
@@ -1469,7 +1469,7 @@ main() {
   const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
-  CHECK(output.find("loadIndirectAddress % 16ull") != std::string::npos);
+  CHECK(output.find("if (!psLoadIndirect(stack, sp, locals, heap))") != std::string::npos);
   CHECK(output.find("ps_entry_0") != std::string::npos);
 }
 

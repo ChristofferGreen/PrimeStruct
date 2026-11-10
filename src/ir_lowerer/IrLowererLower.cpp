@@ -455,8 +455,7 @@ bool IrLowerer::lower(const Program &program,
                                       fileScopeStack,
                                       ownError);
                                 },
-                            .runtimeErrorsTrap = setupStage.realCallAllowStructs ||
-                                                 validationTarget == IrValidationTarget::Native,
+                            .runtimeErrorsTrap = setupStage.runtimeErrorsTrap,
                             .entryReturnsVoidStorage =
                                 &setupStage.setupLocalsOrchestration.entryReturnConfig.returnsVoid,
                             .realCallStructReturnStorage =

@@ -190,11 +190,11 @@ bool validateFunction(const IrModule &module,
     }
     if (inst.op == IrOpcode::Trap && target != IrValidationTarget::Vm &&
         target != IrValidationTarget::Serialized && target != IrValidationTarget::OptCpp &&
-        target != IrValidationTarget::Native) {
+        target != IrValidationTarget::Cpp && target != IrValidationTarget::Native) {
       return failInstruction(functionIndex,
                              function.name,
                              instructionIndex,
-                             "traps are only supported by the vm, native and optimized C++ targets "
+                             "traps are only supported by the vm, native and C++ targets "
                              "and serialized bytecode",
                              error);
     }

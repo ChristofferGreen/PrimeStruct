@@ -1037,4 +1037,119 @@ TEST_CASE("semantics rejects unresolved auto return_expr before lowerer entry su
   CHECK(reportsMissingSemanticProductFact(lowerError));
 }
 
+// An inlined call lowers its callee's `return(value)` once. It used to lower the value again after the
+// body (an unreachable copy), and inlined into an inlined callee that doubled the code at each level.
+TEST_CASE("ir inlines nested struct returns without an unreachable copy of each return") {
+  const std::string source = R"(
+[struct]
+Box() {
+  [i32] a{0i32}
+  [i32] b{0i32}
+}
+
+[return<Box>]
+make_box([i32] x) {
+  return(Box{x, plus(x, 1i32)})
+}
+
+[return<Box>]
+make_box2([i32] x) {
+  return(make_box(x))
+}
+
+[return<Box>]
+make_box3([i32] x) {
+  return(make_box2(x))
+}
+
+[return<Box>]
+make_box4([i32] x) {
+  return(make_box3(x))
+}
+
+[return<int>]
+main() {
+  [Box] b{make_box4(3i32)}
+  return(plus(b.a, b.b))
+}
+)";
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program,
+                        &semanticProgram,
+                        "/main",
+                        {},
+                        {},
+                        module,
+                        error,
+                        nullptr,
+                        primec::IrValidationTarget::Cpp));
+  CHECK(error.empty());
+  REQUIRE(module.functions.size() == 1);
+  // Each level adds one struct copy (about 40 instructions); doubling made it more than 1000 at this depth.
+  CHECK(module.functions[0].instructions.size() < 260u);
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 7);
+}
+
+// A body that ends in `return` runs its scope's destructors on the return path only; the cleanup after the
+// last statement was an unreachable second copy of every destructor.
+TEST_CASE("ir emits the scope cleanup of a body ending in return once") {
+  const std::string source = R"(
+[struct]
+Res() {
+  [i32 mut] a{0i32}
+
+  [mut effects(io_out)]
+  Destroy() {
+    print_line("destroy"utf8)
+  }
+}
+
+[return<int> effects(io_out)]
+main() {
+  [Res mut] r{Res{}}
+  return(4i32)
+}
+)";
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program,
+                        &semanticProgram,
+                        "/main",
+                        {},
+                        {},
+                        module,
+                        error,
+                        nullptr,
+                        primec::IrValidationTarget::Vm));
+  CHECK(error.empty());
+  REQUIRE(!module.functions.empty());
+  size_t prints = 0;
+  for (const auto &inst : module.functions[0].instructions) {
+    if (inst.op == primec::IrOpcode::PrintString) {
+      ++prints;
+    }
+  }
+  CHECK(prints == 1u);
+  REQUIRE(!module.functions[0].instructions.empty());
+  CHECK(module.functions[0].instructions.back().op == primec::IrOpcode::ReturnI32);
+}
+
 TEST_SUITE_END();

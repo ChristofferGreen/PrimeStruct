@@ -516,14 +516,10 @@ bool emitReflectionSoaSchemaStorageHelpers(ReflectionGeneratedHelperContext &con
     Expr chunkBinding =
         makeTypeBinding("chunk" + std::to_string(chunkIndex), chunkTypeNames[chunkIndex], storageStruct.namespacePrefix, true);
     appendPublicVisibility(chunkBinding);
-    if (chunkTemplateArgs[chunkIndex].size() == 1) {
-      chunkBinding.args.push_back(
-          makeHelperCallExpr(makeChunkHelperBasePath("New", chunkTemplateArgs[chunkIndex].size()),
-                             chunkTemplateArgs[chunkIndex],
-                             {}));
-    } else {
-      chunkBinding.args.push_back(makeConstructorCall(chunkTypeNames[chunkIndex]));
-    }
+    // A one-field chunk is a `SoaColumn<T>{}` like the wider chunks' `SoaColumnsN<...>{}` (the same empty column
+    // `soaColumnNew<T>()` returns): a generated `soaColumnNew<T>()` call was not instantiated when nothing else used
+    // it, and a one-field storage failed to lower.
+    chunkBinding.args.push_back(makeConstructorCall(chunkTypeNames[chunkIndex]));
     chunkBinding.argNames.push_back(std::nullopt);
     storageStruct.statements.push_back(std::move(chunkBinding));
   }

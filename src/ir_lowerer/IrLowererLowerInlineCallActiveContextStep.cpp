@@ -34,8 +34,21 @@ bool runLowerInlineCallActiveContextStep(const LowerInlineCallActiveContextStepI
         break;
       }
     }
+    // The parser keeps the value of a body's `return(value)` statement in `returnExpr` too. When the body has such a
+    // statement, control never falls off its end, and lowering `returnExpr` again would only append an unreachable
+    // copy of the value: inlined into an inlined callee, that copy doubled the code at each level.
+    // `returnExpr` alone (no return statement) is a generated tail value and is lowered here.
+    bool hasTopLevelReturn = false;
+    for (const auto &stmt : input.callee->statements) {
+      if (stmt.kind == Expr::Kind::Call && !stmt.isBinding && stmt.name == "return") {
+        hasTopLevelReturn = true;
+        break;
+      }
+    }
     const Expr *implicitReturnExpr = nullptr;
-    if (success && input.callee->returnExpr.has_value()) {
+    if (success && hasTopLevelReturn) {
+      implicitReturnExpr = nullptr;
+    } else if (success && input.callee->returnExpr.has_value()) {
       implicitReturnExpr = &*input.callee->returnExpr;
     } else if (success && !input.definitionReturnsVoid && !input.callee->hasReturnStatement) {
       for (const auto &stmt : input.callee->statements) {

@@ -62,10 +62,16 @@ bool runLowerSetupStage(const LowerSetupStageInput &input,
       input.validationTarget == IrValidationTarget::Vm ||
       input.validationTarget == IrValidationTarget::OptCpp ||
       (NativeHasFrameAddresses && input.validationTarget == IrValidationTarget::Native);
+  stateOut.runtimeErrorsTrap = stateOut.realCallAllowStructs ||
+                               input.validationTarget == IrValidationTarget::Native ||
+                               input.validationTarget == IrValidationTarget::Cpp;
   {
     std::vector<std::string> ordered;
-    for (const std::string &path : computeRealCallEligibleDefinitionPaths(
-             *input.program, *input.entryPath, stateOut.realCallAllowStructs)) {
+    for (const std::string &path :
+         computeRealCallEligibleDefinitionPaths(*input.program,
+                                                *input.entryPath,
+                                                stateOut.realCallAllowStructs,
+                                                stateOut.runtimeErrorsTrap)) {
       ordered.push_back(path);
     }
     std::sort(ordered.begin(), ordered.end());

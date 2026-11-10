@@ -61,9 +61,13 @@ std::unordered_set<std::string> findReachableDefinitionPaths(const Program &prog
 // mismatch rather than silently miscompile.
 // `allowMutReceivers` selects the address ABI shapes (isRealCallShapeEligible with allowStructs): the VM and the
 // optimizing C++ emitters, where a local address names the same slot in every frame.
-std::unordered_set<std::string> computeRealCallEligibleDefinitionPaths(const Program &program,
-                                                                       const std::string &entryPath,
-                                                                       bool allowMutReceivers = false);
+// `allowNeverResult` lets the scalar ABI call a `never` definition (panic): the targets where a runtime error in a
+// called function ends the program.
+std::unordered_set<std::string>
+computeRealCallEligibleDefinitionPaths(const Program &program,
+                                       const std::string &entryPath,
+                                       bool allowMutReceivers = false,
+                                       bool allowNeverResult = false);
 
 // What the real-call shape check needs to know about the program.
 struct RealCallShapeContext {
@@ -71,6 +75,8 @@ struct RealCallShapeContext {
   const std::unordered_set<std::string> *structNames = nullptr;
   // Struct parameters, struct results and `mut` receivers (the VM and the optimizing C++ emitters).
   bool allowStructs = false;
+  // A `never` result on the scalar ABI (the address ABI always takes it): the target traps on runtime errors.
+  bool allowNeverResult = false;
 };
 
 // Whether `def` can be lowered once as a function and called (the parameter, receiver and result shapes above),

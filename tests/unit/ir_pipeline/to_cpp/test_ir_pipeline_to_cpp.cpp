@@ -62,6 +62,8 @@ TEST_CASE("ir to cpp emitter writes i64 arithmetic and comparisons") {
   CHECK(cpp.find("int64_t right = static_cast<int64_t>(stack[--sp]);") != std::string::npos);
   CHECK(cpp.find("stack[sp++] = static_cast<uint64_t>(left - right);") != std::string::npos);
   CHECK(cpp.find("stack[sp++] = (left == right) ? 1u : 0u;") != std::string::npos);
+  CHECK(cpp.find("if (!psI64Sub(stack, sp)) {") != std::string::npos);
+  CHECK(cpp.find("if (!psI64Eq(stack, sp)) {") != std::string::npos);
   CHECK(cpp.find("return static_cast<int64_t>(stack[--sp]);") != std::string::npos);
 }
 
@@ -99,6 +101,8 @@ TEST_CASE("ir to cpp emitter writes u64 comparisons with canonical bool literals
   CHECK(cpp.find("stack[sp++] = (left <= right) ? 1u : 0u;") != std::string::npos);
   CHECK(cpp.find("stack[sp++] = (left > right) ? 1u : 0u;") != std::string::npos);
   CHECK(cpp.find("stack[sp++] = (left >= right) ? 1u : 0u;") != std::string::npos);
+  CHECK(cpp.find("if (!psU64Lt(stack, sp)) {") != std::string::npos);
+  CHECK(cpp.find("if (!psU64Ge(stack, sp)) {") != std::string::npos);
 }
 
 TEST_CASE("ir to cpp emitter writes f64 to i32 conversion") {

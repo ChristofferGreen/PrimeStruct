@@ -2215,6 +2215,7 @@ are left unarchived.
 | TODO-5834 | `pop`, `clear` and direct `push(v, x)` work on builtin vectors of structs and vectors | [2026-11.md](todo_archive/2026-11.md) | 2026-11-10 |
 | TODO-5835 | `[spawn]` lowers to `TaskSpawn`/`TaskWait` for the VM | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5838 | Three gate entries time out on a loaded machine | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5839 | A 17-field `SoaSchemaStorage` program builds as `exe` in under 5 s | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

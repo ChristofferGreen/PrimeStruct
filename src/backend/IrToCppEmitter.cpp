@@ -496,6 +496,67 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
   body << "  }\n";
   body << "  std::deque<uint64_t> slots;\n";
   body << "};\n\n";
+  // The indirect loads and stores are the most frequent large instructions of struct-heavy programs: one shared
+  // helper each keeps the emitted source small (inline, they were 46% of a 17 MB program).
+  body << "static bool psLoadIndirect(PsStack &stack, std::size_t &sp, std::vector<uint64_t> "
+          "&locals, "
+          "VmHeapCore &heap) {\n";
+  body << "  if (!psEnsureStack(sp, 1ull, \"load indirect\")) {\n";
+  body << "    return false;\n";
+  body << "  }\n";
+  body << "  uint64_t address = stack[--sp];\n";
+  body << "  if ((address % " << IrSlotBytes << "ull) != 0ull) {\n";
+  body << "    std::cerr << \"unaligned indirect address in IR\\n\";\n";
+  body << "    return false;\n";
+  body << "  }\n";
+  body << "  if ((address & ps_heap_address_tag) != 0ull) {\n";
+  body << "    std::size_t heapIndex = 0;\n";
+  body << "    if (!psResolveHeapSlot(address, heap, heapIndex)) {\n";
+  body << "      std::cerr << \"invalid indirect address in IR\\n\";\n";
+  body << "      return false;\n";
+  body << "    }\n";
+  body << "    stack[sp++] = heap.slots[heapIndex];\n";
+  body << "    return true;\n";
+  body << "  }\n";
+  body << "  uint64_t index = address / " << IrSlotBytes << "ull;\n";
+  body << "  if (index >= locals.size()) {\n";
+  body << "    std::cerr << \"invalid indirect address in IR\\n\";\n";
+  body << "    return false;\n";
+  body << "  }\n";
+  body << "  stack[sp++] = locals[static_cast<std::size_t>(index)];\n";
+  body << "  return true;\n";
+  body << "}\n\n";
+  body << "static bool psStoreIndirect(PsStack &stack, std::size_t &sp, std::vector<uint64_t> "
+          "&locals, "
+          "VmHeapCore &heap) {\n";
+  body << "  if (!psEnsureStack(sp, 2ull, \"store indirect\")) {\n";
+  body << "    return false;\n";
+  body << "  }\n";
+  body << "  uint64_t value = stack[--sp];\n";
+  body << "  uint64_t address = stack[--sp];\n";
+  body << "  if ((address % " << IrSlotBytes << "ull) != 0ull) {\n";
+  body << "    std::cerr << \"unaligned indirect address in IR\\n\";\n";
+  body << "    return false;\n";
+  body << "  }\n";
+  body << "  if ((address & ps_heap_address_tag) != 0ull) {\n";
+  body << "    std::size_t heapIndex = 0;\n";
+  body << "    if (!psResolveHeapSlot(address, heap, heapIndex)) {\n";
+  body << "      std::cerr << \"invalid indirect address in IR\\n\";\n";
+  body << "      return false;\n";
+  body << "    }\n";
+  body << "    heap.slots[heapIndex] = value;\n";
+  body << "  } else {\n";
+  body << "    uint64_t index = address / " << IrSlotBytes << "ull;\n";
+  body << "    if (index >= locals.size()) {\n";
+  body << "      std::cerr << \"invalid indirect address in IR\\n\";\n";
+  body << "      return false;\n";
+  body << "    }\n";
+  body << "    locals[static_cast<std::size_t>(index)] = value;\n";
+  body << "  }\n";
+  body << "  stack[sp++] = value;\n";
+  body << "  return true;\n";
+  body << "}\n\n";
+  emitIntegerOpHelpers(body);
 
   for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
     body << "static int64_t " << irFunctionSymbol(functionIndex)
