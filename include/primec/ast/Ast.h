@@ -202,6 +202,11 @@ struct Definition {
   int sourceLine = 0;
   int sourceColumn = 0;
   uint64_t semanticNodeId = 0;
+  // Set on a template instance by monomorphization, for diagnostics: the template it instantiates
+  // (`/consume`), the resolved template arguments, and the definition that first requested it.
+  std::string instanceOfTemplate;
+  std::vector<std::string> instanceTemplateArgs;
+  std::string instanceRequestedBy;
 };
 
 struct Execution {

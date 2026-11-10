@@ -729,6 +729,36 @@ struct Checker {
     return true;
   }
 
+  // A spawn argument is copied into a task that may outlive the arena, so a String made in an open arena cannot be one.
+  // The spawn marker is a transform (`[spawn] f(x)`) or, in a `Task<T>{[spawn] f(x)}` carrier, an argument label.
+  bool checkArenaSpawns(const Expr &expr, bool spawnedByLabel = false) {
+    if (arenaStrings.empty() || expr.kind != Expr::Kind::Call) {
+      return true;
+    }
+    const bool spawned = spawnedByLabel || std::any_of(expr.transforms.begin(), expr.transforms.end(),
+                                                       [](const Transform &transform) {
+      return transform.name == "spawn" || transform.name == "/spawn";
+    });
+    if (spawned) {
+      for (const Expr &arg : expr.args) {
+        if (arg.kind != Expr::Kind::Name) {
+          continue;
+        }
+        if (const auto it = arenaStrings.find(arg.name); it != arenaStrings.end()) {
+          return fail("string escapes its arena via spawn (arena: " + arenas[it->second].first + ")");
+        }
+      }
+    }
+    for (size_t i = 0; i < expr.args.size(); ++i) {
+      const bool labeled = i < expr.argNames.size() && expr.argNames[i].has_value() &&
+                           (*expr.argNames[i] == "spawn" || *expr.argNames[i] == "/spawn");
+      if (!checkArenaSpawns(expr.args[i], labeled)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   // `Function<R, A...>{closure}` moves the closure to the heap (`/__fn_box`): a closure that borrows cannot go there.
   bool checkFunctionBoxes(const Expr &expr) {
     if (expr.kind == Expr::Kind::Call && !expr.isBinding && !expr.isMethodCall && expr.args.size() == 1) {
@@ -762,6 +792,9 @@ struct Checker {
   // A view cannot be stored in a field, a container or an outer binding, and cannot be returned when it borrows a local.
   bool checkEscapes(const Expr &statement) {
     if (!checkFunctionBoxes(statement)) {
+      return false;
+    }
+    if (!checkArenaSpawns(statement)) {
       return false;
     }
     if (statement.kind != Expr::Kind::Call || statement.isBinding) {

@@ -534,4 +534,41 @@ main() {
   CHECK(readFile(outPath) == "7\n9\n7\n11\n");
 }
 
+TEST_CASE("runs vm with sendable spawn arguments copied into the task") {
+  const std::string source = R"(
+import /std/text/*
+
+[return<i32>]
+bump([i32 copy mut] value) {
+  value = value + 1i32
+  return(value)
+}
+
+[return<i32>]
+measure([String] text) {
+  return(text.count())
+}
+
+[effects(task, heap_alloc, io_out), return<int>]
+main() {
+  [i32 mut] counter{1i32}
+  counter = counter + 1i32
+  [Task<i32>] task{[spawn] bump(counter)};
+  [i32] bumped{wait(task)}
+  print_line(bumped)
+  print_line(counter)
+  [String mut] text{stringFrom("abc")}
+  [Task<i32>] measured{[spawn] measure(text)};
+  [i32] count{wait(measured)}
+  print_line(count)
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_sendable_spawn_arguments.prime", source);
+  const std::string outPath = testScratchPath("vm_sendable_spawn_arguments.out").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + quoteShellArg(outPath);
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "3\n2\n3\n");
+}
+
 TEST_SUITE_END();

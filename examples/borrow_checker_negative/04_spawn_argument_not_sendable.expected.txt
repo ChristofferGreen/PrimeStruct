@@ -1,0 +1,4 @@
+"code":"PSC1005"
+"message":"spawn argument `job` of /render is not sendable: field `rows` of Job, field `bytes` of PixelRows is Pointer<u8>; sharing between tasks needs Mutex, Atomic or Channel"
+"line":23,"column":35
+"notes":["stage: semantic"]

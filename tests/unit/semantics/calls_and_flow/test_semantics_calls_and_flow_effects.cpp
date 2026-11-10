@@ -409,49 +409,6 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("spawn rejects mutable captures") {
-  const std::string source = R"(
-[effects(task), return<i32>]
-echo([i32] value) {
-  return(value)
-}
-
-[effects(task), return<i32>]
-main() {
-  [i32 mut] value{1i32}
-  [Task<i32>] left{[spawn] echo(value)};
-  return(wait(left))
-}
-)";
-  std::string error;
-  INFO(error);
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("mutable binding cannot be captured by spawned task: value") !=
-        std::string::npos);
-}
-
-TEST_CASE("spawn rejects reference captures") {
-  const std::string source = R"(
-[effects(task), return<i32>]
-read([Reference<i32>] valueRef) {
-  return(dereference(valueRef))
-}
-
-[effects(task), return<i32>]
-main() {
-  [i32 mut] value{1i32}
-  [Reference<i32>] valueRef{location(value)}
-  [Task<i32>] left{[spawn] read(valueRef)};
-  return(wait(left))
-}
-)";
-  std::string error;
-  INFO(error);
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("reference binding cannot be captured by spawned task: valueRef") !=
-        std::string::npos);
-}
-
 TEST_CASE("if statement sugar validates") {
   const std::string source = R"(
 [return<int>]

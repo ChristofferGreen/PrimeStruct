@@ -5,7 +5,7 @@ import /std/panic/*
 namespace std {
   namespace collections {
   namespace soa_storage {
-  [public struct collection_type]
+  [public struct collection_type sendable]
   SoaColumn<T>() {
     [public i32] count
     [public i32] capacity

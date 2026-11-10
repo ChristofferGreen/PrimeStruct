@@ -505,7 +505,7 @@ TEST_CASE("generic soa substrate boundary stays source locked") {
         std::string::npos);
 
   // soa_storage.prime (renamed from soa_storage in TODO-4633): verify key content
-  CHECK(internalStorage.find("[public struct collection_type]\n  SoaColumn<T>()") !=
+  CHECK(internalStorage.find("[public struct collection_type sendable]\n  SoaColumn<T>()") !=
         std::string::npos);
   CHECK(internalStorage.find("[public struct]\n  SoaFieldView<T>()") !=
         std::string::npos);

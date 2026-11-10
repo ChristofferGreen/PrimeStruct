@@ -17,7 +17,7 @@ namespace std {
     bufferFreeUninitialized<T>(ptr)
   }
 
-  [public struct collection_type]
+  [public struct collection_type sendable]
   Vector<T>() {
     [public i32] fieldCount
     [public i32] fieldCapacity

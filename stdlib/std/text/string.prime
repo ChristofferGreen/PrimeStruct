@@ -162,7 +162,7 @@ namespace std {
     return(value)
   }
 
-  [public struct]
+  [public struct sendable]
   String() {
     [public i32 mut] fieldLength{0i32}
     [public i32 mut] fieldCapacity{0i32}

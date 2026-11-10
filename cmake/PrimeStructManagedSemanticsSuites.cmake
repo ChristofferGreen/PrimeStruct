@@ -23,6 +23,7 @@ list(APPEND PrimeStructManagedSemanticsSuites
   primestruct.semantics.calls_flow.numeric_builtins
   primestruct.semantics.calls_flow.comparisons_literals
   primestruct.semantics.calls_flow.effects
+  primestruct.semantics.calls_flow.sendable
   primestruct.semantics.imports
   primestruct.semantics.lambdas
   primestruct.semantics.text_views
@@ -260,8 +261,15 @@ addPrimeStructManagedDoctestSuite(
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.calls_flow.effects"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 134
+  TOTAL_CASES 132
   SHARD_PREFIX "calls_flow_effects"
+)
+
+addPrimeStructManagedDoctestSuite(
+  "primestruct.semantics.calls_flow.sendable"
+  ${PrimeStructManagedSemanticsCommon}
+  TOTAL_CASES 16
+  SHARD_PREFIX "calls_flow_sendable"
 )
 
 addPrimeStructManagedDoctestSuite(

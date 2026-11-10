@@ -116,6 +116,7 @@ bool SemanticsValidator::validateDefinitionBuildTransforms(
   bool sawSum = false;
   bool sawCollectionType = false;
   bool sawKeyValueType = false;
+  bool sawSendable = false;
   bool hasReturnTransform = false;
   const bool collectTransformDiagnostics =
       transformDiagnosticRecords != nullptr && shouldCollectStructuredDiagnostics();
@@ -556,6 +557,20 @@ bool SemanticsValidator::validateDefinitionBuildTransforms(
       if (definitionTransformError) {
         break;
       }
+    } else if (transform.name == "sendable") {
+      if (sawSendable) {
+        if (addTransformDiagnostic("duplicate sendable transform on " + def.fullPath)) {
+          return false;
+        }
+        break;
+      }
+      sawSendable = true;
+      if (!transform.templateArgs.empty() || !transform.arguments.empty()) {
+        if (addTransformDiagnostic("sendable transform does not accept arguments on " + def.fullPath)) {
+          return false;
+        }
+        break;
+      }
     } else if (transform.name == "collection_type" || transform.name == "key_value_type") {
       bool &seenCategory =
           transform.name == "collection_type" ? sawCollectionType : sawKeyValueType;
@@ -777,6 +792,20 @@ bool SemanticsValidator::validateDefinitionBuildTransforms(
   }
   if ((sawReflect || sawGenerate) && !isStruct && !isFieldOnlyStruct) {
     if (addTransformDiagnostic("reflection transforms are only valid on struct definitions: " + def.fullPath)) {
+      return false;
+    }
+    return true;
+  }
+  // `[sendable]` is an unchecked promise that a struct's pointers are owned (docs/MultithreadingPrototype.md, Sendable
+  // Values): outside the stdlib it needs `unsafe` on the same definition.
+  if (sawSendable && !isStruct && !isFieldOnlyStruct) {
+    if (addTransformDiagnostic("sendable transform is only valid on struct definitions: " + def.fullPath)) {
+      return false;
+    }
+    return true;
+  }
+  if (sawSendable && !sawUnsafe && def.fullPath.rfind("/std/", 0) != 0) {
+    if (addTransformDiagnostic("sendable transform outside the stdlib requires unsafe on " + def.fullPath)) {
       return false;
     }
     return true;

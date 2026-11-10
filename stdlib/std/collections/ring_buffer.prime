@@ -31,7 +31,7 @@ namespace std {
     return(value)
   }
 
-  [public struct collection_type]
+  [public struct collection_type sendable]
   RingBuffer<T>() {
     [i32 mut] fieldCapacity{0}
     [i32 mut] fieldHead{0}

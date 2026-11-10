@@ -49,6 +49,7 @@ bool specializeTemplateDefinitionFamily(const std::string &basePath,
                                         const std::string &specializedBasePath,
                                         const std::string &specializedName,
                                         const std::string &cacheKey,
+                                        const std::vector<std::string> &resolvedArgs,
                                         Context &ctx,
                                         std::string &error);
 

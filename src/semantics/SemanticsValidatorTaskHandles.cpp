@@ -1,7 +1,10 @@
 #include "SemanticsValidator.h"
 
+#include "SemanticsSendable.h"
+
 #include <algorithm>
 #include <string_view>
+#include <unordered_set>
 #include <utility>
 
 namespace primec::semantics {
@@ -333,42 +336,206 @@ bool SemanticsValidator::validateTaskSpawnCall(
   if (currentValidationState_.context.activeEffects.count("task") == 0) {
     return failExprDiagnostic(diagnosticExpr, "spawn requires task effect");
   }
+  // A spawn argument is copied into the task, as in any call, so a `mut` binding is an ordinary argument; what may
+  // cross is decided by type below. A task handle is rejected by name first: its state is tracked per spawning frame.
   for (const Expr &arg : spawnedCall.args) {
-    std::string rejectedName;
-    std::string resultType;
-    if (arg.kind == Expr::Kind::Name) {
-      const BindingInfo *binding = task_lookup_binding(params, locals, arg.name);
-      if (binding != nullptr) {
-        if (binding->isMutable) {
-          return failExprDiagnostic(
-              arg, "mutable binding cannot be captured by spawned task: " + arg.name);
-        }
-        if (binding->typeName == "Reference" ||
-            !binding->referenceRoot.empty()) {
-          return failExprDiagnostic(
-              arg, "reference binding cannot be captured by spawned task: " + arg.name);
-        }
-        if (isTaskBinding(*binding, &resultType)) {
-          return failExprDiagnostic(
-              arg, "task handles cannot be captured by spawned task: " + arg.name);
-        }
-      }
+    if (arg.kind != Expr::Kind::Name) {
+      continue;
     }
-    if (arg.kind == Expr::Kind::Call &&
-        (isSimpleCallName(arg, "location") ||
-         isSimpleCallName(arg, "borrow") ||
-         isSimpleCallName(arg, "dereference"))) {
+    const BindingInfo *binding = task_lookup_binding(params, locals, arg.name);
+    if (binding != nullptr && isTaskBinding(*binding)) {
       return failExprDiagnostic(
-          arg, "reference expression cannot be captured by spawned task");
+          arg, "task handles cannot be captured by spawned task: " + arg.name);
     }
   }
 
   if (!validateExpr(params, locals, spawnedCall, enclosingStatements, statementIndex)) {
     return false;
   }
+  if (!validateTaskSpawnArgumentsSendable(params, locals, spawnedCall)) {
+    return false;
+  }
   BindingInfo taskBinding;
   if (!inferTaskSpawnCallBinding(spawnedCall, params, locals, taskBinding)) {
     return failExprDiagnostic(diagnosticExpr, "spawn requires call target with inferred return type");
+  }
+  return true;
+}
+
+std::string SemanticsValidator::diagnosticTypeText(const std::string &typeText) {
+  const std::string normalized = normalizeBindingTypeName(typeText);
+  auto joinArgs = [&](const std::vector<std::string> &args) {
+    std::string text;
+    for (size_t i = 0; i < args.size(); ++i) {
+      text += (i == 0 ? "" : ", ") + diagnosticTypeText(args[i]);
+    }
+    return text;
+  };
+  std::string base;
+  std::string argText;
+  if (splitTemplateTypeName(normalized, base, argText)) {
+    std::vector<std::string> args;
+    if (splitTopLevelTemplateArgs(argText, args)) {
+      return diagnosticTypeText(base) + "<" + joinArgs(args) + ">";
+    }
+    return normalized;
+  }
+  std::string path = normalized;
+  if (defMap_.count(path) == 0) {
+    path = resolveStructTypePath(normalized, "", structNames_);
+  }
+  if (path.find("__lambda") != std::string::npos) {
+    return "closure";
+  }
+  if (const auto defIt = defMap_.find(path); defIt != defMap_.end() && defIt->second != nullptr &&
+                                              !defIt->second->instanceOfTemplate.empty()) {
+    const Definition &def = *defIt->second;
+    const size_t slash = def.instanceOfTemplate.find_last_of('/');
+    return def.instanceOfTemplate.substr(slash == std::string::npos ? 0 : slash + 1) + "<" +
+           joinArgs(def.instanceTemplateArgs) + ">";
+  }
+  if (!normalized.empty() && normalized.front() == '/') {
+    return normalized.substr(normalized.find_last_of('/') + 1);
+  }
+  return normalized;
+}
+
+std::string SemanticsValidator::diagnosticDefinitionText(const std::string &path) {
+  const auto defIt = defMap_.find(path);
+  if (defIt == defMap_.end() || defIt->second == nullptr || defIt->second->instanceOfTemplate.empty()) {
+    return path;
+  }
+  const Definition &def = *defIt->second;
+  std::string text = def.instanceOfTemplate + "<";
+  for (size_t i = 0; i < def.instanceTemplateArgs.size(); ++i) {
+    text += (i == 0 ? "" : ", ") + diagnosticTypeText(def.instanceTemplateArgs[i]);
+  }
+  return text + ">";
+}
+
+std::string SemanticsValidator::diagnosticInstantiationChain(const std::string &path) {
+  std::string chain;
+  std::unordered_set<std::string> seen;
+  std::string current = path;
+  while (seen.insert(current).second) {
+    const auto defIt = defMap_.find(current);
+    if (defIt == defMap_.end() || defIt->second == nullptr || defIt->second->instanceRequestedBy.empty()) {
+      break;
+    }
+    current = defIt->second->instanceRequestedBy;
+    chain += (chain.empty() ? "" : ", ") + std::string("instantiated from ") + diagnosticDefinitionText(current);
+  }
+  return chain.empty() ? chain : " (" + chain + ")";
+}
+
+bool SemanticsValidator::validateTaskSpawnArgumentsSendable(
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
+    const Expr &spawnedCall) {
+  std::string calleePath = resolveCalleePath(spawnedCall);
+  if (const std::string concretePath = resolveExprConcreteCallPath(params, locals, spawnedCall, calleePath);
+      !concretePath.empty()) {
+    calleePath = concretePath;
+  }
+  if (spawnedCall.isMethodCall && !spawnedCall.args.empty()) {
+    std::string methodPath;
+    bool isBuiltin = false;
+    if (resolveMethodTarget(params, locals, spawnedCall.namespacePrefix, spawnedCall.args.front(),
+                            spawnedCall.name, methodPath, isBuiltin) &&
+        !isBuiltin) {
+      calleePath = methodPath;
+    }
+  }
+  const auto paramsIt = paramsByDef_.find(calleePath);
+  if (paramsIt == paramsByDef_.end()) {
+    return true;
+  }
+  const std::vector<ParameterInfo> &calleeParams = paramsIt->second;
+
+  SendableTypeLookup lookup;
+  lookup.resolveDefinition = [&](const std::string &typeText,
+                                 const std::string &namespacePrefix) -> const Definition * {
+    std::string path = resolveStructTypePath(typeText, namespacePrefix, structNames_);
+    if (path.empty()) {
+      path = resolveStructTypePath(typeText, namespacePrefix, sumNames_);
+    }
+    if (path.empty()) {
+      return nullptr;
+    }
+    const auto defIt = defMap_.find(path);
+    return defIt == defMap_.end() ? nullptr : defIt->second;
+  };
+  lookup.fieldType = [&](const Definition &structDef, const Expr &fieldStmt, std::string &typeTextOut) {
+    if (isCompileTimeTypeBinding(fieldStmt)) {
+      return false;
+    }
+    BindingInfo fieldBinding;
+    if (!resolveStructFieldBinding(structDef, fieldStmt, fieldBinding)) {
+      return false;
+    }
+    typeTextOut = task_binding_type_text(fieldBinding);
+    return true;
+  };
+  lookup.display = [&](const std::string &typeText) { return diagnosticTypeText(typeText); };
+
+  const std::string calleeNamespace = [&]() -> std::string {
+    const auto defIt = defMap_.find(calleePath);
+    return defIt == defMap_.end() || defIt->second == nullptr ? std::string() : defIt->second->namespacePrefix;
+  }();
+  size_t positional = 0;
+  for (size_t argIndex = 0; argIndex < spawnedCall.args.size(); ++argIndex) {
+    const Expr &arg = spawnedCall.args[argIndex];
+    const ParameterInfo *param = nullptr;
+    if (argIndex < spawnedCall.argNames.size() && spawnedCall.argNames[argIndex].has_value()) {
+      for (const ParameterInfo &candidate : calleeParams) {
+        if (candidate.name == *spawnedCall.argNames[argIndex]) {
+          param = &candidate;
+          break;
+        }
+      }
+    } else if (positional < calleeParams.size()) {
+      param = &calleeParams[positional++];
+    } else if (!calleeParams.empty()) {
+      param = &calleeParams.back();  // further elements of a variadic pack
+    }
+    if (param == nullptr) {
+      continue;
+    }
+    const bool isPlace = arg.kind == Expr::Kind::Name || (arg.kind == Expr::Kind::Call && arg.isFieldAccess);
+    // A method's receiver is the struct itself: its `Reference<Self>` is how the method sees it, not a value the
+    // spawner hands over.
+    const bool isReceiver = param == &calleeParams.front() && param->name == "this";
+    // A borrowed `mut` parameter would write the spawner's place; a task works on copies (`[T copy mut]`).
+    if (param->binding.isMutable && !param->binding.isCopy && !param->binding.isMove && isPlace) {
+      if (isReceiver) {
+        return failExprDiagnostic(arg,
+                                  "spawn receiver of " + diagnosticDefinitionText(calleePath) +
+                                      " is a mutable borrow of the spawner's value: a task works on copies");
+      }
+      return failExprDiagnostic(arg,
+                                "spawn argument `" + param->name + "` of " + diagnosticDefinitionText(calleePath) +
+                                    " is a mutable borrow of the spawner's value: a task works on copies, take it as `[" +
+                                    diagnosticTypeText(task_binding_type_text(param->binding)) + " copy mut]`");
+    }
+    std::string typeText = isReceiver ? param->binding.typeTemplateArg : task_binding_type_text(param->binding);
+    std::string packBase;
+    std::string packArg;
+    if (splitTemplateTypeName(normalizeBindingTypeName(typeText), packBase, packArg) &&
+        normalizeBindingTypeName(packBase) == "args") {
+      typeText = packArg;
+    }
+    if (typeText.empty()) {
+      continue;
+    }
+    const std::string violation = sendableViolation(typeText, calleeNamespace, lookup);
+    if (violation.empty()) {
+      continue;
+    }
+    const std::string subject = isReceiver ? std::string("spawn receiver of ")
+                                           : "spawn argument `" + param->name + "` of ";
+    return failExprDiagnostic(arg,
+                              subject + diagnosticDefinitionText(calleePath) + " is not sendable: " + violation +
+                                  diagnosticInstantiationChain(calleePath) + "; " + SendableSharingNote);
   }
   return true;
 }

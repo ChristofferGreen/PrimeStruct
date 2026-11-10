@@ -331,7 +331,38 @@ module {
   source-visible task work. The parser accepts `[spawn] f(...)` as an execution transform on call envelopes and parses
   `wait(task)` as the first task-handle join expression. The semantic pass publishes `Task<T>` binding facts for
   `[spawn] f(...)`, infers `wait(Task<T>) -> T` and multi-task `wait(...) -> tuple<...>` (`[a b] wait(left, right)`
-  binds the results in task order), requires the `task` effect for both operations, and rejects live task handles on return, double waits, task-handle escapes, and mutable/reference
-  captures. VM/native lower the structured runtime slice by storing spawned call results in task handle bindings,
+  binds the results in task order), requires the `task` effect for both operations, and rejects live task handles on return, double waits, task-handle escapes, and
+  spawn arguments that are not sendable. VM/native lower the structured runtime slice by storing spawned call results in task handle bindings,
   lowering `wait(handle)` to return that stored result, and lowering multi-wait to ordinary stdlib tuple construction.
   Detached tasks, task groups, channels, scheduler controls, and true parallel scheduling remain future work.
+- **Sendable spawn arguments:** a value crosses to a task only when its type is sendable
+  (`docs/MultithreadingPrototype.md`, Sendable Values): scalars, `string`, enums, `Function`, `String`, `vector`,
+  `map`, tuples, sums and structs of sendable types are; `Reference`, `Pointer`, `StringView`, slices, `Task`,
+  `SharedString` and a closure with a `[ref]` capture are not. The check runs on the concrete parameter types of the
+  spawned callee instance and names the path to the value that is not sendable; a `mut` binding is an ordinary
+  argument, but a place passed to a borrowed `[T mut]` parameter is rejected (take it as `[T copy mut]`). A struct
+  whose pointers it owns asserts sendability with `[sendable]`, which outside `/std/` needs `unsafe` on the same
+  definition. The check adds no IR: a program that passes it lowers exactly as before.
+  ```prime
+  import /std/text/*
+
+  [return<i32>]
+  measure([String] text) {
+    return(text.count())
+  }
+
+  [return<i32>]
+  first_byte([Pointer<u8>] data) {
+    return(1i32)
+  }
+
+  [effects(task, heap_alloc), return<int>]
+  main() {
+    [String] text{stringFrom("abc")}
+    [Task<i32>] task{[spawn] measure(text)};
+    [i32] count{wait(task)}
+    return(count)
+  }
+  ```
+  Spawning `first_byte` with a `Pointer<u8>` argument instead is rejected with `spawn argument `data` of /first_byte is not
+  sendable: it is Pointer<u8>; sharing between tasks needs Mutex, Atomic or Channel`.

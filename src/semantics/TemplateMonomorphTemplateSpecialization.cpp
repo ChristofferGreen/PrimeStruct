@@ -184,8 +184,10 @@ bool specializeTemplateDefinitionFamily(const std::string &basePath,
                                         const std::string &specializedBasePath,
                                         const std::string &specializedName,
                                         const std::string &cacheKey,
+                                        const std::vector<std::string> &resolvedArgs,
                                         Context &ctx,
                                         std::string &error) {
+  const std::string requestedBy = ctx.currentDefinitionPath;
   std::vector<Definition> family = collectTemplateSpecializationFamily(basePath, ctx);
   // Rewrite the base definition first: its methods read field types of the instance through `this`
   // (`ident(this.base)` infers from the field), so the instance struct is registered before they are rewritten.
@@ -218,6 +220,9 @@ bool specializeTemplateDefinitionFamily(const std::string &basePath,
       clone.namespacePrefix = parentPathForDefinition(specializedBasePath);
       clone.templateArgs.clear();
       clone.templateArgIsPack.clear();
+      clone.instanceOfTemplate = basePath;
+      clone.instanceTemplateArgs = resolvedArgs;
+      clone.instanceRequestedBy = requestedBy;
     }
     if (!templateBinding.packBindings.empty() && shouldOutputClone) {
       clone.templatePackBindings = templateBinding.packBindings;

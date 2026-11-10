@@ -274,6 +274,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidateExperimentalSoaMethodRewritesBorrowedHelpers.cpp
   src/semantics/SemanticsValidateConvertConstructors.cpp
   src/semantics/SemanticsValidateSliceLoans.cpp
+  src/semantics/SemanticsSendable.cpp
   src/semantics/SemanticsValidateExperimentalGfxConstructors.cpp
   src/semantics/SemanticsValidateLambdaClosures.cpp
   src/semantics/SemanticsValidateFunctionForwarders.cpp
@@ -2180,6 +2181,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_effects.cpp
     tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_effects_part2.cpp
     tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_effects_part3.cpp
+    tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_sendable.cpp
     tests/unit/semantics/entry/test_semantics_entry_builtins_numeric.cpp
     tests/unit/semantics/entry/test_semantics_entry_entry.cpp
     tests/unit/semantics/entry/test_semantics_entry_executions.cpp
@@ -2386,6 +2388,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.semantics.calls_flow.numeric_builtins
     primestruct.semantics.calls_flow.comparisons_literals
     primestruct.semantics.calls_flow.effects
+    primestruct.semantics.calls_flow.sendable
     primestruct.semantics.enum
     primestruct.semantics.imports
     primestruct.semantics.lambdas

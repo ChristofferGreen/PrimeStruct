@@ -155,6 +155,17 @@
                              const Expr &spawnedCall,
                              const std::vector<Expr> *enclosingStatements,
                              size_t statementIndex);
+  // Every argument of a spawned call must be sendable (docs/MultithreadingPrototype.md, Sendable Values): checked on
+  // the concrete parameter types of the callee instance that receive the arguments.
+  bool validateTaskSpawnArgumentsSendable(const std::vector<ParameterInfo> &params,
+                                          const std::unordered_map<std::string, BindingInfo> &locals,
+                                          const Expr &spawnedCall);
+  // A readable type for diagnostics: template instances as `Name<Args>`, struct paths by their leaf.
+  std::string diagnosticTypeText(const std::string &typeText);
+  // `/consume<Slice<i32>>` for a template instance, else the definition path.
+  std::string diagnosticDefinitionText(const std::string &path);
+  // ` (instantiated from /relay<Slice<i32>>, instantiated from /main)` for a template instance, else empty.
+  std::string diagnosticInstantiationChain(const std::string &path);
   bool validateTaskWaitExpr(const std::vector<ParameterInfo> &params,
                             const std::unordered_map<std::string, BindingInfo> &locals,
                             const Expr &expr);

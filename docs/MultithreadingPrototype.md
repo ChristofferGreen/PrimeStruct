@@ -3,8 +3,9 @@
 Classification: **design direction**, not yet part of the canonical language
 spec. Implemented: the `[spawn]`, `Task<T>`, `wait` and `effects(task)` surface
 and its lifetime checks, with spawned calls run inline, one after another (no
-threads). Approved but not implemented: [Threads For Real](#threads-for-real)
-(parallel tasks, thread-safe heaps, sendable values, `Mutex`, `Atomic`,
+threads), and the sendable check of spawn arguments ([Sendable
+Values](#sendable-values)). Approved but not implemented: [Threads For
+Real](#threads-for-real) (parallel tasks, thread-safe heaps, `Mutex`, `Atomic`,
 `Channel`, a multi-core web server); its work is the Multithreading lane of
 `docs/todo.md`.
 
@@ -340,11 +341,24 @@ main() {
 }
 ```
 
-The check today rejects the `mut` argument with `mutable binding cannot be
-captured by spawned task: counter` (and checks argument names, not types);
-TODO-5790 drops that rule with the type-based check. A spawn diagnostic that
+The check is by type (TODO-5790): the arguments are checked against the
+parameter types of the spawned callee instance, so a `Reference`, a `Pointer`
+or a view is rejected whatever expression produced it. A spawn diagnostic that
 rejects a value says how to share instead: the message for a non-sendable
 argument ends with `sharing between tasks needs Mutex, Atomic or Channel`.
+
+Parameters borrow their arguments (`docs/spec/value-lifecycle.md`, Parameter
+Passing), and a borrowed `[T mut]` parameter writes the caller's place, so a
+spawned callee cannot take a binding or field through one: `spawn argument
+`value` of /bump is a mutable borrow of the spawner's value: a task works on
+copies, take it as `[i32 copy mut]``. A `[T copy mut]` parameter gets the task's
+own copy, and the spawner's binding keeps its value. A spawned method call
+checks its receiver the same way: by its struct type (`spawn receiver of
+/Holder/read is not sendable: field `entry` of Holder is Reference<i32>`), and a
+`mut` method on a binding is `spawn receiver of /Counter/bump is a mutable
+borrow of the spawner's value: a task works on copies`. (While tasks run inline, a
+read-only `[T]` parameter observes the same value as a copy would; giving every
+task its own copy of every argument is the task frame of TODO-5792.)
 
 Safe shared-state primitives make sharing explicit; their API is settled in
 [Threads For Real](#threads-for-real):
@@ -469,8 +483,8 @@ through `get<I>`, bracket indexing, or tuple destructuring.
 ## Threads For Real
 
 Classification: **design direction**, approved 2026-11-09 for a web server that
-uses several cores (`docs/WebAppsPlan.md`, Concurrency). None of it is
-implemented yet; the leaves are the Multithreading lane of `docs/todo.md`, which
+uses several cores (`docs/WebAppsPlan.md`, Concurrency). Only the sendable
+check of spawn arguments is implemented (TODO-5790); the leaves are the Multithreading lane of `docs/todo.md`, which
 comes after the PrimeScroll startup lane and the first two native optimization
 leaves (TODO-5770, TODO-5772).
 
@@ -582,16 +596,19 @@ user never writes it on a type. Decided 2026-11-09 after a review of what Rust's
 - **No `Sync`.** A `Reference` never crosses to another thread, so no value is ever read by two threads through
   references. Sharing happens only through `Mutex`, `Atomic` and `Channel`, which are sendable handles; copying one
   of them shares the cell. That is why one concept is enough.
-- **Checked only at the boundary:** every argument of a spawned call, by the type of the argument expression (today
-  only argument names are checked, see [Captures And Shared State](#captures-and-shared-state)); the element type of
+- **Checked only at the boundary:** every argument of a spawned call, by the concrete type of the callee parameter
+  that receives it (implemented, TODO-5790, `src/semantics/SemanticsSendable.{h,cpp}`); the element type of
   `Mutex<T>` and `Channel<T>`; and a closure converted to `Function`. There are no sendability bounds in generic
   signatures: templates are monomorphized, so the check runs on the concrete instance, and when the offending type
   came in through a template argument the diagnostic carries the instantiation chain.
-- **`mut` arguments are allowed.** A spawn argument is copied, as in any call; the task and the spawner each have
-  their own value. A diagnostic for a non-sendable argument carries the note `sharing between tasks needs Mutex,
+- **`mut` arguments are allowed.** A spawn argument is copied; the task and the spawner each have their own value
+  (a borrowed `[T mut]` parameter is rejected at a spawn, [Captures And Shared State](#captures-and-shared-state)).
+  A diagnostic for a non-sendable argument carries the note `sharing between tasks needs Mutex,
   Atomic or Channel`.
 - **`[sendable]`** on a struct asserts that it is sendable although it holds a `Pointer`: the stdlib uses it on
-  `String`, `vector`, `map`, `Mutex`, `Atomic` and `Channel`, whose pointers are owned by the value (or counted).
+  `String`, `Vector` (and through it `map`), `RingBuffer` and `SoaColumn` today, and on `Mutex`, `Atomic` and
+  `Channel` when they come, whose pointers are owned by the value (or counted). The check still looks through those
+  pointers at the element type, so `vector<StringView>` is not sendable.
   Outside the stdlib it needs `unsafe` on the definition, like every other unchecked promise. There is no opt-out
   marker (`[not_sendable]` or similar) until a real case needs one: a struct of sendable fields with a reason not to
   cross threads has not come up, and the native UI handles, the one candidate, are checked at run time instead.
@@ -606,22 +623,51 @@ user never writes it on a type. Decided 2026-11-09 after a review of what Rust's
 ```prime
 [unsafe sendable struct]
 PixelRows() {
-  [Pointer<u8>] bytes{Pointer<u8>{}}
-  [i32] stride{0i32}
+  [Pointer<u8>] bytes
+  [i32] stride{4i32}
+}
+
+[return<i32>]
+stride_of([PixelRows] rows) {
+  return(rows.stride)
+}
+
+[effects(task), return<int>]
+main() {
+  [u8 mut] byte{1u8}
+  [PixelRows] rows{PixelRows{[bytes] location(byte)}}
+  [Task<i32>] task{[spawn] stride_of(rows)};
+  [i32] stride{wait(task)}
+  return(stride)
 }
 ```
+
+Without `unsafe` the struct is `sendable transform outside the stdlib requires unsafe on /PixelRows`; without
+`sendable` the spawn is `spawn argument `rows` of /stride_of is not sendable: field `bytes` of PixelRows is
+Pointer<u8>; sharing between tasks needs Mutex, Atomic or Channel`.
 
 **Diagnostics name the path to the leaf.** Rust's `*mut u8 cannot be sent between threads safely` names the leaf
 type and leaves the search for which field, in which struct, to the reader; PrimeStruct's messages name the
 argument or element, then each field on the way to the offending type:
 
 ```text
-spawn argument `buffer` of /fill is not sendable: field `data` is Pointer<u8>
+spawn argument `buffer` of /fill is not sendable: field `data` of Buffer is Pointer<u8>
 spawn argument `job` of /render is not sendable: field `rows` of Job, field `bytes` of PixelRows is Pointer<u8>
+spawn argument `view` of /measure is not sendable: it is StringView
+spawn argument `step` of /run<closure> is not sendable: capture `total` is Reference<i32> (instantiated from /main)
+spawn argument `value` of /consume<ReadSlice<i32>> is not sendable: it is ReadSlice<i32> (instantiated from
+  /relay<ReadSlice<i32>>, instantiated from /main)
 closure cannot be a Function: capture `view` is a StringView
 Mutex element Record is not sendable: field `next` is Reference<Record>
-Channel<Slice<i32>>: Slice<i32> is not sendable (instantiated from /pump at main.prime:12)
+Channel<Slice<i32>>: Slice<i32> is not sendable (instantiated from /pump)
 ```
+
+The spawn lines are the messages of today's check (each ends with `; sharing between tasks needs Mutex, Atomic or
+Channel`); the `Function`, `Mutex` and `Channel` lines are the shape their leaves (TODO-5791, TODO-5797,
+TODO-5798) follow. Every field on the path names its struct; a closure's fields are its captures; an element of a
+builtin container is `element of vector<StringView>`. The instantiation chain names the definition that first
+requested each template instance; it carries no line yet, because the message text cannot map a position of the
+expanded source back to its file.
 
 ### Functions Are Sendable
 
@@ -864,6 +910,11 @@ entry points check the thread at run time.
    separately named registration such as `app.view(pattern, handler)`.
 6. **VM default schedule.** Recommended: eager (today's order) by default, seeds on request; the alternative is a
    fixed seed by default, which changes the output order of existing programs that print from tasks.
+7. **A borrowed `[T mut]` parameter at a spawn.** Parameters borrow (`docs/spec/value-lifecycle.md`), so "a spawn
+   argument is a copy" needs either a task frame that copies every argument, after which the callee's writes land
+   in the task's copy, or a rule against the borrow. Until decided (found 2026-11-10 with TODO-5790), the check
+   rejects a place passed to a borrowed `mut` parameter and points at `[T copy mut]`, which is the least committal:
+   lifting the rule later changes no accepted program.
 
 ## First Implementation Checklist
 
@@ -875,9 +926,9 @@ The first implementation slices now cover:
 - infer `wait(Task<T>) -> T`
 - track task handle states through statements and returns
 - reject double wait, escaped handles, and missing waits before return
-- reject reference captures, and `mut` bindings by name (the `mut` rejection
-  goes with TODO-5790: a spawn argument is a copy, [Captures And Shared
-  State](#captures-and-shared-state))
+- reject task-handle arguments by name, and every argument whose parameter
+  type is not sendable by type (TODO-5790, [Sendable Values](#sendable-values));
+  `mut` bindings are ordinary arguments
 - add positive and negative semantic tests
 - add semantic-product coverage for task facts
 - add first VM/native single-task runtime execution
@@ -885,7 +936,7 @@ The first implementation slices now cover:
 
 Remaining implementation work:
 
-- parallel tasks, thread-safe heaps, sendable values, `Mutex`, `Atomic`,
+- parallel tasks, thread-safe heaps, the `Function` capture check, `Mutex`, `Atomic`,
   `Channel` and the multi-core server: [Threads For Real](#threads-for-real),
   lane Multithreading in `docs/todo.md`
 - task groups, detached tasks and scheduler controls: not designed yet

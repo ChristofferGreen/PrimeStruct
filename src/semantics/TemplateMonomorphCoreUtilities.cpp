@@ -23,7 +23,7 @@ bool isNonTypeTransformName(const std::string &name) {
          name == "platform_independent_padding" || name == "public" || name == "private" ||
          name == "static" || name == "single_type_to_return" || name == "stack" || name == "heap" ||
          name == "buffer" || name == "spawn" || name == "Additive" || name == "Multiplicative" ||
-         name == "Comparable" || name == "Indexable";
+         name == "Comparable" || name == "Indexable" || name == "sendable";
 }
 
 

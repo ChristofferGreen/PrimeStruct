@@ -693,7 +693,7 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
         std::string::npos);
 
   // internal_vector.prime merged into vector.prime (TODO-4631): verify merged content
-  CHECK(vectorStdlib.find("[public struct collection_type]\n  Vector<T>()") != std::string::npos);
+  CHECK(vectorStdlib.find("[public struct collection_type sendable]\n  Vector<T>()") != std::string::npos);
   // internal_map.prime merged into map.prime (TODO-4632): verify merged content
   CHECK(mapStdlib.find("[Vector<K>] keys{this.keys}") != std::string::npos);
   CHECK(mapStdlib.find("return(vectorCount<K>(keys))") != std::string::npos);

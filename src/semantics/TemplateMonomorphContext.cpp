@@ -129,7 +129,7 @@ bool instantiateTemplate(const std::string &basePath,
   }
   ctx.specializationCache.emplace(key, specializedBasePath);
   if (!specializeTemplateDefinitionFamily(
-          basePath, templateBinding, specializedBasePath, specializedName, key, ctx, error)) {
+          basePath, templateBinding, specializedBasePath, specializedName, key, resolvedArgs, ctx, error)) {
     return false;
   }
 

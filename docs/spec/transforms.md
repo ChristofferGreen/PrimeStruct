@@ -27,7 +27,9 @@
   - **Executions only:** `spawn` is reserved for the first task surface and must prefix call syntax as
     `[spawn] f(...)`.
   - **Definitions only:** `compute`, `workgroup_size(x, y, z)`, `unsafe`, `ast`.
-  - **Struct/tag only (definitions):** `struct`, `pod`, `handle`, `gpu_lane`, `align_bytes(n)`, `align_kbytes(n)`.
+  - **Struct/tag only (definitions):** `struct`, `pod`, `handle`, `gpu_lane`, `align_bytes(n)`, `align_kbytes(n)`,
+    `sendable` (asserts that a struct holding a `Pointer` may cross to a task; outside `/std/` it needs `unsafe` on
+    the same definition, `[unsafe sendable struct]`; `docs/spec/language-core.md`, Sendable spawn arguments).
   - **Definitions/bindings:** access/visibility markers (`public`, `private`). `static` is valid on bindings and struct
     helpers (disables implicit `this` on helpers).
   - **Reserved/rejected in v1:** `stack`, `heap`, `buffer` placement transforms (diagnostic).
