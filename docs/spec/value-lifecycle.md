@@ -108,7 +108,11 @@
   callee), last declared first, unless its value was moved out (`move(x)`, a `move` parameter) or named in the returned
   value; a per-local drop flag tracks this at run time. A builtin `vector<T>` local initialized by a constructor or a
   call returning a vector owns it the same way: its elements are destroyed and its buffer freed when its scope ends,
-  while a binding initialized from another vector binding is a view and destroys nothing. A struct field initialized
+  a `mut` binding initialized from another vector binding owns its copy the same way, and a read-only one is a view
+  and destroys nothing. A builtin `vector<T>` field of a struct (including a closure's by-value capture and the
+  closure a `Function` box holds) owns its buffer too: destroying the struct destroys the field's elements and frees
+  the buffer. A move hands the buffer over without a second owner, and a record that does not own its buffer (a view,
+  a disarmed temporary) frees nothing. A struct field initialized
   from a place copies it, and
   `assign` of an owning value destroys the old value and copies the new one. A `copy` or `move` parameter is
   destroyed by the callee when its body ends (the caller does not destroy a binding it passed to a `move` parameter),

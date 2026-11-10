@@ -424,7 +424,7 @@
               return resolveStructSlotLayout(path, layoutOut);
             },
             [&]() { return allocTempLocal(); },
-            [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+            function.instructions,
             localsIn,
             emitInlineDefinitionCall,
             error);

@@ -337,16 +337,15 @@ namespace primec::ir_lowerer {
         function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(2) * IrSlotBytes});
         function.instructions.push_back({IrOpcode::AddI64, 0});
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(payloadPtrLocal)});
-        if (!ir_lowerer::emitStructDestroyHelpersFromPtr(
-                payloadPtrLocal,
-                payloadInfo.structPath,
-                findDestroyHelper,
-                resolveStructSlotLayout,
-                allocTempLocal,
-                [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
-                valueLocals,
-                emitInlineDefinitionCall,
-                error)) {
+        if (!ir_lowerer::emitStructDestroyHelpersFromPtr(payloadPtrLocal,
+                                                         payloadInfo.structPath,
+                                                         findDestroyHelper,
+                                                         resolveStructSlotLayout,
+                                                         allocTempLocal,
+                                                         function.instructions,
+                                                         valueLocals,
+                                                         emitInlineDefinitionCall,
+                                                         error)) {
           return false;
         }
         endJumps.push_back(function.instructions.size());

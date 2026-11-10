@@ -811,6 +811,13 @@ namespace std {
     return(__pstext_stat(4u64))
   }
 
+  // Live allocations of the slot heap (vector buffers, Function boxes): a copy-and-destroy loop that frees what it
+  // makes keeps this flat (VM and optexe).
+  [public return<i32>]
+  heapLiveBlocks() {
+    return(convert<i32>(__pstext_stat(8u64)))
+  }
+
   // Blocks handed out since the program started (a test of how many allocations an expression makes).
   [public return<u64>]
   stringHeapAllocations() {

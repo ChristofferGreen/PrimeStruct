@@ -496,6 +496,7 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ir_lowerer/IrLowererFileWriteHelpers.cpp
   src/ir_lowerer/IrLowererFlowBufferHelpers.cpp
   src/ir_lowerer/IrLowererFlowControlHelpers.cpp
+  src/ir_lowerer/IrLowererFlowLoopHelpers.cpp
   src/ir_lowerer/IrLowererFlowVectorHelpers.cpp
   src/ir_lowerer/IrLowererFlowHelpers.cpp
   src/ir_lowerer/IrLowererBuiltinNameHelpers.cpp
@@ -3630,7 +3631,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   # in loaded gates (load 40 to 140). Each suite is shards of three cases (primestructAddDoctestShards); the number
   # after the suite is its case count, which ctest PrimeStruct_test_registration checks.
   set(PrimeStructProgramMatrixCaseCounts
-    closures=8 closures_callables=8 closures_references=4 closures_fields=7 closures_routers=7 container_copies=8
+    closures=8 closures_callables=8 closures_references=4 closures_fields=11 closures_routers=7 container_copies=8
     control=37 element_copies=7 lifecycle=24 optimizer=16 parameter_modes=6 results=9 shared_programs=16
     text_views=2)
   foreach(suite IN LISTS PrimeStructProgramMatrixTestSuites)

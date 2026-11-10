@@ -164,6 +164,8 @@ public:
 
   // Live byte-region bytes, for tests and instrumentation.
   uint64_t liveByteCount() const { return liveBytes_; }
+  // Live slot allocations (vector buffers, boxes), for tests and instrumentation.
+  uint64_t liveSlotAllocationCount() const { return live_.size(); }
 
   // `count` zeroed bytes (address 0 for a count of 0).
   bool allocateBytes(uint64_t count, uint64_t & address, std::string & error) {

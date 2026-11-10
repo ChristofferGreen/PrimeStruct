@@ -62,7 +62,7 @@
                 return resolveStructSlotLayout(path, layoutOut);
               },
               [&]() { return allocTempLocal(); },
-              [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+              function.instructions,
               LocalMap{},
               emitInlineDefinitionCall,
               error)) {
@@ -107,7 +107,7 @@
           return resolveStructSlotLayout(path, layoutOut);
         },
         [&]() { return allocTempLocal(); },
-        [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+        function.instructions,
         LocalMap{},
         emitInlineDefinitionCall,
         error);

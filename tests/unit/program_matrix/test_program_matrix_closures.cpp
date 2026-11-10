@@ -835,6 +835,198 @@ main() {
                     186);
 }
 
+// A builtin `vector<T>` field is freed when its struct is destroyed (TODO-5827): `heapLiveBlocks()` counts the live
+// slot-heap blocks, so a loop that builds, copies, moves and destroys such structs must end where it started. These
+// read the heap statistics, which exist on the VM and optexe; the last case runs the same shapes on every config.
+namespace {
+
+void runHeapFlatProgram(const std::string &name, const std::string &source, int exitCode) {
+  program_matrix::ProgramCase program;
+  program.name = name;
+  program.source = source;
+  program.exitCode = exitCode;
+  program.onlyConfigs = {"vm-step-O0", "vm-O0", "vm-O2", "optexe-O2"};
+  program_matrix::runProgramMatrix(program);
+}
+
+} // namespace
+
+TEST_CASE("copies and moves of a struct with a vector field free every buffer") {
+  runHeapFlatProgram("vector_field_copy_destroy_loop",
+                     R"(
+import /std/collections/*
+import /std/text/*
+
+[struct]
+KeepV {
+  [vector<i32> mut] seen
+}
+
+[effects(heap_alloc) return<int>]
+round([i32] n) {
+  [vector<i32> mut] start{vector<i32>(5i32)}
+  start.push(n)
+  [KeepV mut] k{KeepV{[seen] start}}
+  k.seen.push(1i32)
+  [KeepV mut] copy{k}
+  copy.seen.push(4i32)
+  copy.seen.push(6i32)
+  [KeepV] moved{move(copy)}
+  [KeepV] fresh{KeepV{[seen] vector<i32>(8i32, 9i32)}}
+  return(start.count() + k.seen.count() * 10i32 + moved.seen.count() * 100i32 + fresh.seen[1i32])
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [i32] first{round(3i32)}
+  [i32] before{heapLiveBlocks()}
+  repeat(300i32) {
+    round(3i32)
+  }
+  return(first - 400i32 + (heapLiveBlocks() - before) * 1000i32)
+}
+)",
+                     141);
+}
+
+TEST_CASE("a vector of String structs in a field destroys its elements") {
+  runHeapFlatProgram("vector_field_of_strings_destroy_loop",
+                     R"(
+import /std/collections/*
+import /std/text/*
+
+[struct]
+Named {
+  [i32] code
+  [String] name
+}
+
+[struct]
+Table {
+  [vector<Named> mut] rows
+}
+
+[effects(heap_alloc) return<int>]
+round() {
+  [vector<Named> mut] start{vector<Named>()}
+  start.push(Named{[code] 1i32, [name] stringFrom("a name long enough to live on the string heap")})
+  [Table mut] t{Table{[rows] start}}
+  t.rows.push(Named{[code] 2i32, [name] stringFrom("another name long enough for the string heap")})
+  [Table mut] u{t}
+  u.rows.push(Named{[code] 3i32, [name] stringFrom("f")})
+  [Table] w{move(u)}
+  return(start.count() + t.rows.count() * 10i32 + w.rows.count() * 100i32 + w.rows[2i32].code)
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [i32] first{round()}
+  [i32] before{heapLiveBlocks()}
+  [u64] textBefore{stringHeapBytesInUse()}
+  repeat(300i32) {
+    round()
+  }
+  [i32] leakedBlocks{heapLiveBlocks() - before}
+  [i32] leakedText{convert<i32>(stringHeapBytesInUse() - textBefore)}
+  return(first - 300i32 + leakedBlocks * 1000i32 + leakedText * 1000i32)
+}
+)",
+                     24);
+}
+
+TEST_CASE("a Function box and closures free their vector captures") {
+  runHeapFlatProgram("closure_vector_capture_destroy_loop",
+                     R"(
+import /std/collections/*
+import /std/text/*
+
+[effects(heap_alloc) return<int>]
+round() {
+  [vector<i64> mut] values{vector<i64>(7i64)}
+  [Function<i32, i64> mut] boxed{Function<i32, i64>{[mut values]([i64] x) {
+    values.push(x)
+    return(values.count())
+  }}}
+  [mut] direct{[mut values]([i64] x) {
+    values.push(x)
+    values.push(x)
+    return(values.count())
+  }}
+  reader{[values]() { return(values.count()) }}
+  [Function<i32, i64> mut] boxCopy{boxed}
+  [String] name{stringFrom("a capture long enough to live on the string heap")}
+  [Function<i32, i64> mut] named{Function<i32, i64>{[name]([i64] x) { return(name.count()) }}}
+  boxed(1i64)
+  return(boxed(1i64) + boxCopy(1i64) * 10i32 + direct(2i64) * 100i32 + reader() + named(1i64) * 0i32)
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [i32] first{round()}
+  [i32] before{heapLiveBlocks()}
+  [u64] textBefore{stringHeapBytesInUse()}
+  repeat(300i32) {
+    round()
+  }
+  [i32] leakedBlocks{heapLiveBlocks() - before}
+  [i32] leakedText{convert<i32>(stringHeapBytesInUse() - textBefore)}
+  return(first - 200i32 + leakedBlocks * 1000i32 + leakedText * 1000i32)
+}
+)",
+                     124);
+}
+
+TEST_CASE("vector fields of copied, moved and boxed values are destroyed once") {
+  runClosureProgram("vector_field_destroy_once_loop",
+                    R"(
+import /std/collections/*
+
+[struct]
+KeepV {
+  [vector<i32> mut] seen
+}
+
+[struct]
+Holder {
+  [vector<KeepV> mut] items
+}
+
+[effects(heap_alloc) return<int>]
+round([i32] n) {
+  [vector<i32> mut] start{vector<i32>(5i32)}
+  start.push(n)
+  [KeepV mut] k{KeepV{[seen] start}}
+  [KeepV mut] copy{k}
+  copy.seen.push(4i32)
+  [KeepV] moved{move(copy)}
+  [vector<KeepV> mut] items{vector<KeepV>()}
+  items.push(KeepV{[seen] vector<i32>(1i32, 2i32)})
+  [Holder mut] h{Holder{[items] items}}
+  [Holder mut] c{h}
+  c.items[0i32].seen.push(3i32)
+  [vector<i64> mut] values{vector<i64>(7i64)}
+  [Function<i32, i64> mut] boxed{Function<i32, i64>{[mut values]([i64] x) {
+    values.push(x)
+    return(values.count())
+  }}}
+  [Function<i32, i64> mut] boxCopy{boxed}
+  boxed(1i64)
+  return(k.seen.count() + moved.seen.count() * 10i32 + h.items[0i32].seen.count() * 100i32 +
+         c.items[0i32].seen.count() * 1000i32 + boxed(2i64) * 10000i32 + boxCopy(1i64) * 100000i32)
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [i32 mut] total{0i32}
+  repeat(200i32) {
+    total = round(3i32)
+  }
+  return(total - 233200i32)
+}
+)",
+                    32);
+}
+
 // Routers of `Function` handlers, `Result.map` lambdas and imported holders. (a suite and CTest entry of its own, so each entry stays short under a loaded gate).
 TEST_SUITE_END();
 TEST_SUITE_BEGIN("primestruct.program_matrix.closures_routers");

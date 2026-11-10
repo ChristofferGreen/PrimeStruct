@@ -516,6 +516,9 @@ inline bool callTextHostFunction(VmTextHeap &heap,
     case 7:
       result = stats.arenaBytes;
       return true;
+    case 8:
+      result = core.liveSlotAllocationCount();
+      return true;
     default:
       error = "unknown string heap statistic: " + std::to_string(args[0]);
       return false;

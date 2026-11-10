@@ -150,7 +150,7 @@ bool isCopyableBuiltinVectorField(const StructSlotFieldInfo &field) {
 }
 
 // `withBuiltinVectors` also counts builtin `vector<T>` fields, which a copy gives their own
-// buffer; a destroy leaves them alone.
+// buffer and a destroy frees.
 bool structNeedsCopyHelpers(
     const std::string &structPath,
     const std::function<const Definition *(const std::string &)> &findCopyHelper,
@@ -427,7 +427,124 @@ bool emitStructDestroyHelpersAtDepth(
     const std::function<const Definition *(const std::string &)> &findDestroyHelper,
     const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
     const Int32ProviderFn &allocTempLocal,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    std::vector<IrInstruction> &instructions,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)>
+        &emitInlineDefinitionCall,
+    std::string &error,
+    int depth);
+
+// Destroys the builtin vector record at `recordPtrLocal` (count, data and ownsData in slots 1, 3
+// and 4) when it owns its buffer: destroys each element, frees the buffer and clears ownsData and
+// data, so a second destroy of the record is a no-op. A record that does not own its buffer (a
+// view, a disarmed temporary) is left alone (docs/spec/value-lifecycle.md).
+bool emitBuiltinVectorDestroyAtDepth(
+    int32_t recordPtrLocal,
+    const std::string &elementStructPath,
+    const std::function<const Definition *(const std::string &)> &findDestroyHelper,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
+    const Int32ProviderFn &allocTempLocal,
+    std::vector<IrInstruction> &instructions,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)>
+        &emitInlineDefinitionCall,
+    std::string &error,
+    int depth) {
+  int32_t elementSlots = 1;
+  bool elementNeedsDestroy = false;
+  if (!elementStructPath.empty()) {
+    StructSlotLayoutInfo elementLayout;
+    if (!resolveStructSlotLayout(elementStructPath, elementLayout) ||
+        elementLayout.totalSlots <= 0) {
+      error = "native backend cannot resolve vector element layout: " + elementStructPath;
+      return false;
+    }
+    elementSlots = elementLayout.totalSlots;
+    elementNeedsDestroy = structNeedsCopyHelpers(
+        elementStructPath, findDestroyHelper, resolveStructSlotLayout, depth + 1, true);
+  }
+  auto emit = [&](IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); };
+  auto pushFieldAddress = [&](uint64_t slot) {
+    emit(IrOpcode::LoadLocal, static_cast<uint64_t>(recordPtrLocal));
+    emit(IrOpcode::PushI64, slot * IrSlotBytes);
+    emit(IrOpcode::AddI64, 0);
+  };
+  auto storeZeroField = [&](uint64_t slot) {
+    pushFieldAddress(slot);
+    emit(IrOpcode::PushI64, 0);
+    emit(IrOpcode::StoreIndirect, 0);
+    emit(IrOpcode::Pop, 0);
+  };
+  const int32_t dataLocal = allocTempLocal();
+  // if (ownsData && data != 0) { destroy the elements; free(data) } then ownsData = data = 0
+  pushFieldAddress(4);
+  emit(IrOpcode::LoadIndirect, 0);
+  const size_t skipNotOwned = instructions.size();
+  emit(IrOpcode::JumpIfZero, 0);
+  pushFieldAddress(3);
+  emit(IrOpcode::LoadIndirect, 0);
+  emit(IrOpcode::StoreLocal, static_cast<uint64_t>(dataLocal));
+  emit(IrOpcode::LoadLocal, static_cast<uint64_t>(dataLocal));
+  emit(IrOpcode::PushI64, 0);
+  emit(IrOpcode::CmpNeI64, 0);
+  const size_t skipEmpty = instructions.size();
+  emit(IrOpcode::JumpIfZero, 0);
+  if (elementNeedsDestroy) {
+    const int32_t countLocal = allocTempLocal();
+    const int32_t indexLocal = allocTempLocal();
+    const int32_t elementPtrLocal = allocTempLocal();
+    pushFieldAddress(1);
+    emit(IrOpcode::LoadIndirect, 0);
+    emit(IrOpcode::StoreLocal, static_cast<uint64_t>(countLocal));
+    emit(IrOpcode::PushI32, 0);
+    emit(IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal));
+    const size_t loopStart = instructions.size();
+    emit(IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal));
+    emit(IrOpcode::LoadLocal, static_cast<uint64_t>(countLocal));
+    emit(IrOpcode::CmpLtI32, 0);
+    const size_t loopExit = instructions.size();
+    emit(IrOpcode::JumpIfZero, 0);
+    emit(IrOpcode::LoadLocal, static_cast<uint64_t>(dataLocal));
+    emit(IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal));
+    emit(IrOpcode::PushI32, static_cast<uint64_t>(elementSlots * IrSlotBytesI32));
+    emit(IrOpcode::MulI32, 0);
+    emit(IrOpcode::AddI64, 0);
+    emit(IrOpcode::StoreLocal, static_cast<uint64_t>(elementPtrLocal));
+    if (!emitStructDestroyHelpersAtDepth(elementPtrLocal,
+                                         elementStructPath,
+                                         findDestroyHelper,
+                                         resolveStructSlotLayout,
+                                         allocTempLocal,
+                                         instructions,
+                                         localsIn,
+                                         emitInlineDefinitionCall,
+                                         error,
+                                         depth + 1)) {
+      return false;
+    }
+    emit(IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal));
+    emit(IrOpcode::PushI32, 1);
+    emit(IrOpcode::AddI32, 0);
+    emit(IrOpcode::StoreLocal, static_cast<uint64_t>(indexLocal));
+    emit(IrOpcode::Jump, static_cast<uint64_t>(loopStart));
+    instructions[loopExit].imm = static_cast<uint64_t>(instructions.size());
+  }
+  emit(IrOpcode::LoadLocal, static_cast<uint64_t>(dataLocal));
+  emit(IrOpcode::HeapFree, 0);
+  instructions[skipEmpty].imm = static_cast<uint64_t>(instructions.size());
+  storeZeroField(4);
+  storeZeroField(3);
+  instructions[skipNotOwned].imm = static_cast<uint64_t>(instructions.size());
+  return true;
+}
+
+bool emitStructDestroyHelpersAtDepth(
+    int32_t valuePtrLocal,
+    const std::string &structPath,
+    const std::function<const Definition *(const std::string &)> &findDestroyHelper,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
+    const Int32ProviderFn &allocTempLocal,
+    std::vector<IrInstruction> &instructions,
     const LocalMap &localsIn,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)>
         &emitInlineDefinitionCall,
@@ -446,25 +563,40 @@ bool emitStructDestroyHelpersAtDepth(
     return true;
   }
   for (auto fieldIt = layout.fields.rbegin(); fieldIt != layout.fields.rend(); ++fieldIt) {
-    if (!structNeedsCopyHelpers(
-            fieldIt->structPath, findDestroyHelper, resolveStructSlotLayout, depth + 1, false)) {
+    const bool builtinVector = isCopyableBuiltinVectorField(*fieldIt);
+    if (!builtinVector &&
+        !structNeedsCopyHelpers(
+            fieldIt->structPath, findDestroyHelper, resolveStructSlotLayout, depth + 1, true)) {
       continue;
     }
     const int32_t fieldPtrLocal = allocTempLocal();
-    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(valuePtrLocal));
-    emitInstruction(IrOpcode::PushI64, static_cast<uint64_t>(fieldIt->slotOffset) * IrSlotBytes);
-    emitInstruction(IrOpcode::AddI64, 0);
-    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(fieldPtrLocal));
-    if (!emitStructDestroyHelpersAtDepth(fieldPtrLocal,
-                                         fieldIt->structPath,
-                                         findDestroyHelper,
-                                         resolveStructSlotLayout,
-                                         allocTempLocal,
-                                         emitInstruction,
-                                         localsIn,
-                                         emitInlineDefinitionCall,
-                                         error,
-                                         depth + 1)) {
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valuePtrLocal)});
+    instructions.push_back(
+        {IrOpcode::PushI64, static_cast<uint64_t>(fieldIt->slotOffset) * IrSlotBytes});
+    instructions.push_back({IrOpcode::AddI64, 0});
+    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(fieldPtrLocal)});
+    const bool destroyed =
+        builtinVector ? emitBuiltinVectorDestroyAtDepth(fieldPtrLocal,
+                                                        fieldIt->builtinVectorElementStructPath,
+                                                        findDestroyHelper,
+                                                        resolveStructSlotLayout,
+                                                        allocTempLocal,
+                                                        instructions,
+                                                        localsIn,
+                                                        emitInlineDefinitionCall,
+                                                        error,
+                                                        depth + 1)
+                      : emitStructDestroyHelpersAtDepth(fieldPtrLocal,
+                                                        fieldIt->structPath,
+                                                        findDestroyHelper,
+                                                        resolveStructSlotLayout,
+                                                        allocTempLocal,
+                                                        instructions,
+                                                        localsIn,
+                                                        emitInlineDefinitionCall,
+                                                        error,
+                                                        depth + 1);
+    if (!destroyed) {
       return false;
     }
   }
@@ -511,7 +643,7 @@ bool structNeedsDestroyHelpers(
     const std::function<const Definition *(const std::string &)> &findDestroyHelper,
     const std::function<bool(const std::string &, StructSlotLayoutInfo &)>
         &resolveStructSlotLayout) {
-  return structNeedsCopyHelpers(structPath, findDestroyHelper, resolveStructSlotLayout, 0, false);
+  return structNeedsCopyHelpers(structPath, findDestroyHelper, resolveStructSlotLayout, 0, true);
 }
 
 bool emitStructDestroyHelpersFromPtr(
@@ -520,7 +652,7 @@ bool emitStructDestroyHelpersFromPtr(
     const std::function<const Definition *(const std::string &)> &findDestroyHelper,
     const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
     const Int32ProviderFn &allocTempLocal,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    std::vector<IrInstruction> &instructions,
     const LocalMap &localsIn,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)>
         &emitInlineDefinitionCall,
@@ -530,7 +662,7 @@ bool emitStructDestroyHelpersFromPtr(
                                          findDestroyHelper,
                                          resolveStructSlotLayout,
                                          allocTempLocal,
-                                         emitInstruction,
+                                         instructions,
                                          localsIn,
                                          emitInlineDefinitionCall,
                                          error,
@@ -805,6 +937,11 @@ bool isElementAccessCopySourceExpr(const Expr &expr) {
 bool isOwnedTemporaryArgumentExpr(
     const Expr &expr,
     const std::function<const Definition *(const Expr &)> &resolveDefinitionCall) {
+  // `block() { temporary }` yields that temporary: a lambda converted to a `Function` boxes
+  // `block() { /closure_make(captures) }` (docs/spec/value-lifecycle.md, Lambdas).
+  if (isSimpleCallName(expr, "block") && expr.args.empty() && expr.bodyArguments.size() == 1) {
+    return isOwnedTemporaryArgumentExpr(expr.bodyArguments.front(), resolveDefinitionCall);
+  }
   if (!shouldDisarmStructCopySourceExpr(expr) || isSimpleCallName(expr, "move") ||
       isSimpleCallName(expr, "borrow") || isSimpleCallName(expr, "at") ||
       isSimpleCallName(expr, "at_unsafe")) {
@@ -830,259 +967,6 @@ bool isOwnedTemporaryArgumentExpr(
       return normalizedBase != "Reference" && normalizedBase != "Pointer";
     }
   }
-  return true;
-}
-
-const char *resolveGpuBuiltinLocalName(const std::string &gpuBuiltin) {
-  if (gpuBuiltin == "global_id_x") {
-    return kGpuGlobalIdXName;
-  }
-  if (gpuBuiltin == "global_id_y") {
-    return kGpuGlobalIdYName;
-  }
-  if (gpuBuiltin == "global_id_z") {
-    return kGpuGlobalIdZName;
-  }
-  return nullptr;
-}
-
-bool emitGpuBuiltinLoad(
-    const std::string &gpuBuiltin,
-    const std::function<std::optional<int32_t>(const char *)> &resolveLocalIndex,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    std::string &error) {
-  const char *localName = resolveGpuBuiltinLocalName(gpuBuiltin);
-  if (!localName) {
-    error = "native backend does not support gpu builtin: " + gpuBuiltin;
-    return false;
-  }
-
-  const std::optional<int32_t> localIndex = resolveLocalIndex(localName);
-  if (!localIndex.has_value()) {
-    error = "gpu builtin requires dispatch context: " + gpuBuiltin;
-    return false;
-  }
-
-  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(*localIndex));
-  return true;
-}
-
-bool resolveCountedLoopKind(LocalInfo::ValueKind inferredKind,
-                            bool allowBool,
-                            const char *errorMessage,
-                            LocalInfo::ValueKind &countKindOut,
-                            std::string &error) {
-  countKindOut = inferredKind;
-  if (allowBool && countKindOut == LocalInfo::ValueKind::Bool) {
-    countKindOut = LocalInfo::ValueKind::Int32;
-  }
-  if (countKindOut == LocalInfo::ValueKind::Int32 ||
-      countKindOut == LocalInfo::ValueKind::Int64 ||
-      (countKindOut == LocalInfo::ValueKind::UInt64 || countKindOut == LocalInfo::ValueKind::UInt8)) {
-    return true;
-  }
-  error = errorMessage;
-  return false;
-}
-
-bool emitCountedLoopPrologue(
-    LocalInfo::ValueKind countKind,
-    const std::function<int32_t()> &allocTempLocal,
-    const std::function<size_t()> &instructionCount,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    const std::function<void(size_t, int32_t)> &patchInstructionImm,
-    const std::function<void()> &emitLoopCountNegative,
-    CountedLoopControl &out,
-    std::string &error) {
-  if (countKind != LocalInfo::ValueKind::Int32 &&
-      countKind != LocalInfo::ValueKind::Int64 &&
-      (countKind != LocalInfo::ValueKind::UInt64 && countKind != LocalInfo::ValueKind::UInt8)) {
-    error = "counted loop requires integer count";
-    return false;
-  }
-
-  out = CountedLoopControl{};
-  out.counterLocal = allocTempLocal();
-  out.countKind = countKind;
-  emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(out.counterLocal));
-
-  if (emitLoopCountNegative) {
-    if (countKind == LocalInfo::ValueKind::Int32) {
-      emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(out.counterLocal));
-      emitInstruction(IrOpcode::PushI32, 0);
-      emitInstruction(IrOpcode::CmpLtI32, 0);
-      const size_t jumpNonNegative = instructionCount();
-      emitInstruction(IrOpcode::JumpIfZero, 0);
-      emitLoopCountNegative();
-      const size_t nonNegativeIndex = instructionCount();
-      patchInstructionImm(jumpNonNegative, static_cast<int32_t>(nonNegativeIndex));
-    } else if (countKind == LocalInfo::ValueKind::Int64) {
-      emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(out.counterLocal));
-      emitInstruction(IrOpcode::PushI64, 0);
-      emitInstruction(IrOpcode::CmpLtI64, 0);
-      const size_t jumpNonNegative = instructionCount();
-      emitInstruction(IrOpcode::JumpIfZero, 0);
-      emitLoopCountNegative();
-      const size_t nonNegativeIndex = instructionCount();
-      patchInstructionImm(jumpNonNegative, static_cast<int32_t>(nonNegativeIndex));
-    }
-  }
-
-  out.checkIndex = instructionCount();
-  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(out.counterLocal));
-  if (countKind == LocalInfo::ValueKind::Int32) {
-    emitInstruction(IrOpcode::PushI32, 0);
-    emitInstruction(IrOpcode::CmpGtI32, 0);
-  } else if (countKind == LocalInfo::ValueKind::Int64) {
-    emitInstruction(IrOpcode::PushI64, 0);
-    emitInstruction(IrOpcode::CmpGtI64, 0);
-  } else {
-    emitInstruction(IrOpcode::PushI64, 0);
-    emitInstruction(IrOpcode::CmpNeI64, 0);
-  }
-  out.jumpEndIndex = instructionCount();
-  emitInstruction(IrOpcode::JumpIfZero, 0);
-  return true;
-}
-
-void emitCountedLoopIterationStep(
-    const CountedLoopControl &control,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction) {
-  emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(control.counterLocal));
-  if (control.countKind == LocalInfo::ValueKind::Int32) {
-    emitInstruction(IrOpcode::PushI32, 1);
-    emitInstruction(IrOpcode::SubI32, 0);
-  } else {
-    emitInstruction(IrOpcode::PushI64, 1);
-    emitInstruction(IrOpcode::SubI64, 0);
-  }
-  emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(control.counterLocal));
-  emitInstruction(IrOpcode::Jump, static_cast<uint64_t>(control.checkIndex));
-}
-
-void patchCountedLoopEnd(
-    const CountedLoopControl &control,
-    const std::function<size_t()> &instructionCount,
-    const std::function<void(size_t, int32_t)> &patchInstructionImm) {
-  const size_t endIndex = instructionCount();
-  patchInstructionImm(control.jumpEndIndex, static_cast<int32_t>(endIndex));
-}
-
-bool emitBodyStatements(
-    const std::vector<Expr> &bodyStatements,
-    const LocalMap &localsIn,
-    const std::function<bool(const Expr &, LocalMap &)> &emitStatement) {
-  LocalMap bodyLocals = localsIn;
-  for (const auto &bodyStmt : bodyStatements) {
-    if (!emitStatement(bodyStmt, bodyLocals)) {
-      return false;
-    }
-  }
-  return true;
-}
-
-bool emitBodyStatementsWithFileScope(
-    const std::vector<Expr> &bodyStatements,
-    const LocalMap &localsIn,
-    const std::function<bool(const Expr &, LocalMap &)> &emitStatement,
-    const std::function<bool()> &emitAfterBody,
-    const std::function<void()> &pushFileScope,
-    const std::function<void()> &emitCurrentFileScopeCleanup,
-    const std::function<void()> &popFileScope) {
-  pushFileScope();
-  if (!emitBodyStatements(bodyStatements, localsIn, emitStatement)) {
-    return false;
-  }
-  if (emitAfterBody && !emitAfterBody()) {
-    return false;
-  }
-  emitCurrentFileScopeCleanup();
-  popFileScope();
-  return true;
-}
-
-bool declareForConditionBinding(
-    const Expr &binding,
-    LocalMap &locals,
-    int32_t &nextLocal,
-    const std::function<bool(const Expr &)> &isBindingMutable,
-    const std::function<LocalInfo::Kind(const Expr &)> &bindingKind,
-    const std::function<bool(const Expr &)> &hasExplicitBindingTypeTransform,
-    const std::function<LocalInfo::ValueKind(const Expr &, LocalInfo::Kind)> &bindingValueKind,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferExprKind,
-    const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath,
-    const std::function<void(const Expr &, LocalInfo &)> &applyStructArrayInfo,
-    const std::function<void(const Expr &, LocalInfo &)> &applyStructValueInfo,
-    std::string &error) {
-  if (binding.args.size() != 1) {
-    error = "binding requires exactly one argument";
-    return false;
-  }
-  if (locals.count(binding.name) > 0) {
-    error = "binding redefines existing name: " + binding.name;
-    return false;
-  }
-
-  LocalInfo info;
-  info.index = nextLocal++;
-  info.isMutable = isBindingMutable(binding);
-  info.kind = bindingKind(binding);
-  info.valueKind = LocalInfo::ValueKind::Unknown;
-  info.keyValueKeyKind = LocalInfo::ValueKind::Unknown;
-  info.keyValueValueKind = LocalInfo::ValueKind::Unknown;
-  if (hasExplicitBindingTypeTransform(binding)) {
-    info.valueKind = bindingValueKind(binding, info.kind);
-  } else if (info.kind == LocalInfo::Kind::Value) {
-    info.valueKind = inferExprKind(binding.args.front(), locals);
-    if (info.valueKind == LocalInfo::ValueKind::Unknown) {
-      std::string builtinComparison;
-      if (getBuiltinComparisonName(binding.args.front(), builtinComparison)) {
-        info.valueKind = LocalInfo::ValueKind::Bool;
-      }
-    }
-    if (info.valueKind == LocalInfo::ValueKind::Unknown) {
-      std::string inferredStruct = inferStructExprPath(binding.args.front(), locals);
-      if (!inferredStruct.empty()) {
-        info.structTypeName = inferredStruct;
-      } else {
-        info.valueKind = LocalInfo::ValueKind::Int32;
-      }
-    }
-  }
-  applyStructArrayInfo(binding, info);
-  applyStructValueInfo(binding, info);
-  if (info.structTypeName.empty() && info.kind == LocalInfo::Kind::Value) {
-    std::string inferredStruct = inferStructExprPath(binding.args.front(), locals);
-    if (!inferredStruct.empty()) {
-      info.structTypeName = inferredStruct;
-    }
-  }
-  if (info.kind == LocalInfo::Kind::Value && !info.structTypeName.empty()) {
-    info.valueKind = LocalInfo::ValueKind::Int64;
-  }
-  locals.emplace(binding.name, info);
-  return true;
-}
-
-bool emitForConditionBindingInit(
-    const Expr &binding,
-    const LocalMap &localsIn,
-    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    std::string &error) {
-  if (binding.args.size() != 1) {
-    error = "binding requires exactly one argument";
-    return false;
-  }
-  auto it = localsIn.find(binding.name);
-  if (it == localsIn.end()) {
-    error = "binding missing local: " + binding.name;
-    return false;
-  }
-  if (!emitExpr(binding.args.front(), localsIn)) {
-    return false;
-  }
-  emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(it->second.index));
   return true;
 }
 

@@ -143,7 +143,6 @@ of sync with them.
 | TODO-5718 | All values of a repeated parameter and decoded path parameters | deferred | web-params |
 | TODO-5719 | `location(this.field)` passes directly as a `Function` call argument | ready | closures-arguments |
 | TODO-5721 | A string converts to a `StringView` at a field of a generic struct | ready | text-literal-views |
-| TODO-5827 | A builtin `vector<T>` struct field frees its buffer when the struct is destroyed | ready | collections-fields |
 | TODO-5726 | An indexed element of a stdlib `Vector<T>` of structs binds without a fault | ready | collections-access |
 | TODO-5728 | `slice` and `sliceMut` on a vector field of a struct resolve | ready | collections-access |
 | TODO-5730 | Elements of a `vector<String>` struct field read without a fault | ready | collections-access |
@@ -204,7 +203,7 @@ of sync with them.
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544, TODO-5745, TODO-5746
-- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719; collection fields found by closures and the todo example: TODO-5827, TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
+- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719; collection fields found by closures and the todo example: TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
 - Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5738, TODO-5718
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732, TODO-5735, TODO-5736, TODO-5737
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe; real calls and struct copies TODO-5739, TODO-5741, TODO-5752; VM address checks TODO-5824
@@ -473,19 +472,6 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
     - a generic struct's StringView field takes a literal and a `string` value without `textOf` on the VM and optexe, and `AppRouter.route` drops its `textOf`
     - full release gate green
   - stop_rule: fields of generic struct instances only.
-
-- [ ] TODO-5827: A builtin `vector<T>` struct field frees its buffer when the struct is destroyed
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-10
-  - phase: Collections (docs/spec/value-lifecycle.md, Copies; found by TODO-5681)
-  - parallel_track: collections-fields
-  - scope: A builtin `vector<T>` local frees its buffer (and destroys its struct elements) at scope end, but a `vector<T>` field of a struct, including a closure's by-value capture and a `Function` box's closure, is never freed when its struct is destroyed: `structNeedsDestroyHelpers` (src/ir_lowerer/IrLowererFlowControlHelpers.cpp) sees the field's `/vector` path, which has no destroy helper. Since TODO-5681 every copy of such a field from a place has a buffer of its own, so each copy leaks one block (and the `String` elements of a `vector<Named>` field).
-  - implementation_notes: the field's element type is `StructSlotFieldInfo::builtinVectorElementStructPath` / `builtinVectorElementKnown` (set in IrLowererStructSlotLayoutHelpers.cpp); the local drop is `emitBuiltinVectorDrop` in src/ir_lowerer/IrLowererLowerReturnInfo.h. A destroy must skip records whose `ownsData` is 0 and must not run for moved-from or disarmed temporaries.
-  - acceptance:
-    - a struct with a `vector<i32>` field and one with a `vector<Named>` field (String inside), each built from a local, copied and destroyed in a loop, run on VM, native and optexe without a double free, and the VM heap block count returns to its start (a test that counts live blocks)
-    - full release gate green
-  - stop_rule: destroying builtin vector fields of structs and closures; no change to copies.
 
 - [ ] TODO-5726: An indexed element of a stdlib `Vector<T>` of structs binds without a fault
   - owner: ai

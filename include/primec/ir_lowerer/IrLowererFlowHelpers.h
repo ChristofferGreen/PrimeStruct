@@ -81,21 +81,22 @@ void emitReleaseDropFlag(const LocalMap &locals,
                          const std::string &name,
                          const std::function<void(IrOpcode, uint64_t)> &emitInstruction);
 // Whether destroying a `structPath` value runs any code: the type has a destroy helper, or one
-// of its fields (recursively) does.
+// of its fields (recursively) does or is a builtin `vector<T>` with a known element type.
 bool structNeedsDestroyHelpers(
     const std::string &structPath,
     const std::function<const Definition *(const std::string &)> &findDestroyHelper,
     const std::function<bool(const std::string &, StructSlotLayoutInfo &)>
         &resolveStructSlotLayout);
-// Destroys the struct value at `valuePtrLocal`: runs its destroy helper when it has one,
-// otherwise destroys its fields that need it, last field first.
+// Destroys the struct value at `valuePtrLocal`: runs its destroy helper when it has one, then
+// destroys its fields that need it, last field first. A builtin `vector<T>` field that owns its
+// buffer destroys its elements and frees the buffer.
 bool emitStructDestroyHelpersFromPtr(
     int32_t valuePtrLocal,
     const std::string &structPath,
     const std::function<const Definition *(const std::string &)> &findDestroyHelper,
     const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
     const Int32ProviderFn &allocTempLocal,
-    const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+    std::vector<IrInstruction> &instructions,
     const LocalMap &localsIn,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)>
         &emitInlineDefinitionCall,

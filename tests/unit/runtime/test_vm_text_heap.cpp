@@ -414,3 +414,23 @@ TEST_CASE("arena blocks are not freed one by one, survive nesting, and are inval
   f.free(outside);
   CHECK(f.heap.stats().bytesInUse == 0);
 }
+
+TEST_CASE("heap statistic 8 counts the live slot allocations") {
+  Fixture f;
+  uint64_t result = 0;
+  std::string error;
+  REQUIRE(bulk(f, "__pstext_stat", {8}, result, error));
+  CHECK(result == 0);
+  uint64_t first = 0;
+  uint64_t second = 0;
+  REQUIRE(f.core.allocate(3, first, error));
+  REQUIRE(f.core.allocate(5, second, error));
+  REQUIRE(bulk(f, "__pstext_stat", {8}, result, error));
+  CHECK(result == 2);
+  REQUIRE(f.core.release(first, error));
+  REQUIRE(bulk(f, "__pstext_stat", {8}, result, error));
+  CHECK(result == 1);
+  REQUIRE(f.core.release(second, error));
+  REQUIRE(bulk(f, "__pstext_stat", {8}, result, error));
+  CHECK(result == 0);
+}

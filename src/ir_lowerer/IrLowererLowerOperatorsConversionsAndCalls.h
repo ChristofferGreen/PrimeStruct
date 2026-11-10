@@ -132,7 +132,7 @@
                                                                      findDestroyHelper,
                                                                      resolveLayout,
                                                                      allocTempLocal,
-                                                                     emitInstruction,
+                                                                     function.instructions,
                                                                      localsIn,
                                                                      emitInlineDefinitionCall,
                                                                      error)) {

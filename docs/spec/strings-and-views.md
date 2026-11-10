@@ -241,7 +241,9 @@ is a valid `[host]` parameter and result type and crosses as the block's `u64` a
   `append(text)`, `appendString(other)`, `insert(at, text)`, `erase(start, end)`, `replace(start, end, text)`,
   `substr(start, end) -> String`.
 - Heap: `/std/text/stringHeapChunks()`, `stringHeapBytesInUse()`, `stringHeapBytesFree()`,
-  `stringHeapLargeBlocks()`, `stringHeapLargeBytes()` and `setStringMemoryLimit(bytes)`. `text` parameters are the
+  `stringHeapLargeBlocks()`, `stringHeapLargeBytes()` and `setStringMemoryLimit(bytes)`; `heapLiveBlocks()` counts
+  the live allocations of the slot heap (vector buffers, `Function` boxes) on the VM and optexe, so a test can check
+  that a copy-and-destroy loop frees what it makes. `text` parameters are the
   current literal-backed `string`, read byte by byte; they become real views with TODO-5540.
 - `pushCodePoint(point)` appends the UTF-8 encoding of a code point (a surrogate or a value past U+10FFFF stops the
   program); `+` and the comparisons are the operators described under the text view below.
