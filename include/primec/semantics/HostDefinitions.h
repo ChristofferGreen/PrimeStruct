@@ -30,6 +30,12 @@ inline bool isEngineArgumentHostName(std::string_view name) {
   return name.rfind("__psarg_", 0) == 0;
 }
 
+// The atomic operations of `/std/sync` (docs/spec/vm-design.md, Atomics) are declared like host functions, but each
+// lowers to one Atomic* IR opcode instead of a CallHost. Their first parameter is the cell, a `Pointer<i64>`.
+inline bool isAtomicIntrinsicHostPath(std::string_view fullPath) {
+  return fullPath.rfind("/std/sync/__psatomic_", 0) == 0;
+}
+
 // The stdlib `String` crosses the boundary as owned text (IrHostValueKind::Text).
 inline bool isHostStringTypeText(std::string_view typeText) {
   return typeText == "String" || typeText == "std/text/String" || typeText == "/std/text/String";

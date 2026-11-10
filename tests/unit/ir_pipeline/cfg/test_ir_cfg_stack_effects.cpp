@@ -223,6 +223,14 @@ std::vector<EffectCase> buildCases() {
   add(IrOpcode::StoreU8, 0, {pushI32(8), {IrOpcode::HeapAllocBytes, 0}, pushI32(5)});
   add(IrOpcode::ZextU8, 0, {pushI32(300)});
 
+  // Atomics, on a local's slot: imm is the width. Local 1 holds 0, which differs from its address, so the previous
+  // value an operation pushes is not mistaken for the address left in place.
+  add(IrOpcode::AtomicLoad, 64, {{IrOpcode::AddressOfLocal, 1}});
+  add(IrOpcode::AtomicStore, 64, {{IrOpcode::AddressOfLocal, 0}, pushI32(5)});
+  add(IrOpcode::AtomicAdd, 32, {{IrOpcode::AddressOfLocal, 1}, pushI32(5)});
+  add(IrOpcode::AtomicExchange, 64, {{IrOpcode::AddressOfLocal, 1}, pushI32(5)});
+  add(IrOpcode::AtomicCompareExchange, 32, {{IrOpcode::AddressOfLocal, 0}, pushI32(0), pushI32(5)});
+
   // Printing. imm 0 means stdout without a newline.
   add(IrOpcode::PrintI32, 0, {pushI32(5)});
   add(IrOpcode::PrintI64, 0, {pushI32(5)});

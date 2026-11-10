@@ -5,10 +5,11 @@ spec. Implemented: the `[spawn]`, `Task<T>`, `wait` and `effects(task)` surface
 and its lifetime checks, the sendable check of spawn arguments ([Sendable
 Values](#sendable-values)), tasks of scalar callees under the VM's scheduler,
 and the same tasks on one OS thread each on `optexe` (other spawned calls, and
-every other backend, run inline, one after another). Approved but not
+every other backend, run inline, one after another), and `Atomic<i32>` and
+`Atomic<i64>` of `/std/sync` on the VM and `optexe`. Approved but not
 implemented: the rest of [Threads For Real](#threads-for-real) (`Mutex`,
-`Atomic`, `Channel`, tasks on arm64 native, a multi-core web server); its work
-is the Multithreading lane of `docs/todo.md`.
+`Channel`, tasks and atomics on arm64 native, a multi-core web server); its
+work is the Multithreading lane of `docs/todo.md`.
 
 This document captures the language-level multithreading model.
 When the design is stable enough, fold the accepted parts into
@@ -496,7 +497,8 @@ VM lowering of `[spawn]` to them for scalar callees, `Task<void>` included
 (TODO-5835), and for callees with `String`, struct and closure parameters and
 results (TODO-5845), the per-thread heap arenas of `optexe` (TODO-5794), and `optexe`
 running those tasks on one OS thread each (TODO-5795, docs/spec/vm-design.md,
-Tasks on threads). The leaves are the Multithreading lane of `docs/todo.md`, which
+Tasks on threads), and `Atomic<i32>` and `Atomic<i64>` on the VM and `optexe`
+([Atomic](#atomic); docs/spec/vm-design.md, Atomics). The leaves are the Multithreading lane of `docs/todo.md`, which
 comes after the PrimeScroll startup lane and the first two native optimization
 leaves (TODO-5770, TODO-5772).
 
@@ -805,7 +807,9 @@ main() {
 `Atomic<i32>` and `Atomic<i64>` are shared integer cells:
 
 ```prime
-[effects(atomic)]
+import /std/sync/*
+
+[effects(atomic), return<void>]
 count_hits([Atomic<i64>] hits, [i32] times) {
   [i32 mut] i{0i32}
   while(i < times) {
@@ -813,14 +817,35 @@ count_hits([Atomic<i64>] hits, [i32] times) {
     i = i + 1i32
   }
 }
+
+[effects(atomic, heap_alloc, io_out, task), return<int>]
+main() {
+  hits{Atomic<i64>{0i64}}
+  [Task<void>] first{[spawn] count_hits(hits, 1000i32)}
+  [Task<void>] second{[spawn] count_hits(hits, 1000i32)}
+  wait(first)
+  wait(second)
+  print_line(hits.load())
+  return(0i32)
+}
 ```
 
+This prints `2000`. Implemented on the VM and `optexe` (`stdlib/std/sync/sync.prime`); the library reference is
+docs/spec/stdlib-reference.md, Shared state.
+
 - `load()`, `store(value)`, `add(delta)` and `exchange(value)` (both return the previous value) and
-  `compareExchange(expected, desired)` (returns whether it stored). Sequentially consistent only.
-- Copying shares the cell, as for `Mutex`. Effect `atomic`; making one needs `heap_alloc`.
+  `compareExchange(expected, desired)` (returns whether it stored). Sequentially consistent only. `add` wraps.
+- Copying shares the cell, as for `Mutex`: an `Atomic` is a handle of a heap cell that holds the integer and the
+  number of handles, itself counted atomically, and the last handle destroyed frees the cell. The type is
+  `[sendable]`, so it is a spawn argument, and a spawned call that takes one runs as a task. Effect `atomic`;
+  making one needs `heap_alloc`.
+- A method called in a definition without the effect is `atomic operation requires atomic effect: <method> in
+  <definition>`. Any other element type is `Atomic requires i32 or i64: Atomic<f32>`.
 - **IR:** `AtomicLoad`, `AtomicStore`, `AtomicAdd`, `AtomicExchange` and `AtomicCompareExchange` on a heap address,
-  32 or 64 bits wide. arm64 native uses LSE (`ldar`/`stlr`, `ldaddal`, `swpal`, `casal`; every Apple arm64 CPU has
-  it), `optexe` uses `std::atomic_ref`, and the VM does plain operations at a switch point.
+  32 or 64 bits wide (PSIR v35; docs/spec/vm-design.md, Atomics). `optexe` uses `std::atomic_ref`, and the VM does
+  plain operations, each a switch point under a schedule seed. arm64 native will use LSE (`ldar`/`stlr`,
+  `ldaddal`, `swpal`, `casal`; every Apple arm64 CPU has it); until then native, Wasm and GLSL reject a module
+  that has these opcodes: `atomic operations are not supported by the native backend`.
 - `docs/spec/type-system.md` calls the primitive types "Atomic"; that category is unrelated to this type.
 
 ### Channel

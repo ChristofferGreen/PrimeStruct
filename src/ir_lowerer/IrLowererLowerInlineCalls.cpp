@@ -125,6 +125,77 @@ bool emitInlineDefinitionCallImpl(
     // calling convention already used by every existing Call/CallVoid site.
     // Host definitions ([host] f(...) {}) lower to CallHost: arguments on the
     // stack, import index in imm. The import table lives on the module.
+    if (isHostDefinition(callee) && isAtomicIntrinsicHostPath(callee.fullPath)) {
+      // An atomic operation of /std/sync: the cell address and the values on the stack, then one Atomic* opcode
+      // whose imm is the width (docs/spec/vm-design.md, Atomics).
+      std::string_view operation = std::string_view(callee.fullPath)
+                                       .substr(std::string_view("/std/sync/__psatomic_").size());
+      uint64_t width = 0;
+      if (operation.ends_with("_i32")) {
+        width = 32;
+      } else if (operation.ends_with("_i64")) {
+        width = 64;
+      }
+      if (width != 0) {
+        operation.remove_suffix(4);
+      }
+      std::optional<IrOpcode> opcode;
+      size_t operandCount = 0;
+      if (operation == "load") {
+        opcode = IrOpcode::AtomicLoad;
+        operandCount = 1;
+      } else if (operation == "store") {
+        opcode = IrOpcode::AtomicStore;
+        operandCount = 2;
+      } else if (operation == "add") {
+        opcode = IrOpcode::AtomicAdd;
+        operandCount = 2;
+      } else if (operation == "exchange") {
+        opcode = IrOpcode::AtomicExchange;
+        operandCount = 2;
+      } else if (operation == "compare_exchange") {
+        opcode = IrOpcode::AtomicCompareExchange;
+        operandCount = 3;
+      }
+      if (width == 0 || !opcode.has_value()) {
+        error = "unknown atomic operation: " + callee.fullPath;
+        return false;
+      }
+      std::vector<Expr> atomicParams;
+      std::vector<const Expr *> atomicOrderedArgs;
+      std::vector<const Expr *> atomicPackedArgs;
+      size_t atomicPackedParamIndex = 0;
+      if (!ir_lowerer::buildInlineCallOrderedArguments(callExpr,
+                                                       callee,
+                                                       structNames,
+                                                       callerLocals,
+                                                       atomicParams,
+                                                       atomicOrderedArgs,
+                                                       atomicPackedArgs,
+                                                       atomicPackedParamIndex,
+                                                       error)) {
+        return false;
+      }
+      if (!atomicPackedArgs.empty() || atomicOrderedArgs.size() != operandCount ||
+          callee.parameters.size() != operandCount) {
+        error = "atomic operation argument mismatch for " + callee.fullPath;
+        return false;
+      }
+      for (const Expr *argExpr : atomicOrderedArgs) {
+        if (argExpr == nullptr) {
+          error = "internal error: missing argument for atomic operation " + callee.fullPath;
+          return false;
+        }
+        if (!emitExpr(*argExpr, callerLocals)) {
+          return false;
+        }
+      }
+      function.instructions.push_back({*opcode, width});
+      if (!requireValue && *opcode != IrOpcode::AtomicStore) {
+        function.instructions.push_back({IrOpcode::Pop, 0});
+      }
+      return true;
+    }
     if (isHostDefinition(callee)) {
       const auto hostKind = [](std::string_view typeName) -> std::optional<IrHostValueKind> {
         const auto canonical = canonicalHostTypeName(typeName);

@@ -109,6 +109,12 @@ bool instantiateTemplate(const std::string &basePath,
     error = out.str();
     return false;
   }
+  // The atomic operations exist for the two integer widths only (docs/spec/stdlib-reference.md, std/sync).
+  if (basePath == "/std/sync/Atomic" && resolvedArgs.size() == 1 && resolvedArgs.front() != "i32" &&
+      resolvedArgs.front() != "i64" && resolvedArgs.front() != "int") {
+    error = "Atomic requires i32 or i64: Atomic<" + resolvedArgs.front() + ">";
+    return false;
+  }
   const std::string key = basePath + "<" + joinMangledTemplateArgs(resolvedArgs, resolvedArgDetails) + ">";
   auto cacheIt = ctx.specializationCache.find(key);
   if (cacheIt != ctx.specializationCache.end()) {

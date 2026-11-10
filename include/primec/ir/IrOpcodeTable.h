@@ -137,7 +137,12 @@ namespace primec {
   X(ZextU8, 0, 0, 0)                                                                               \
   X(Trap, 0, 0, 0)                                                                                 \
   X(TaskSpawn, 0, 0, 0)                                                                            \
-  X(TaskWait, 0, 0, 0)
+  X(TaskWait, 0, 0, 0)                                                                             \
+  X(AtomicLoad, 0, 0, 0)                                                                           \
+  X(AtomicStore, 0, 0, 0)                                                                          \
+  X(AtomicAdd, 0, 0, 0)                                                                            \
+  X(AtomicExchange, 0, 0, 0)                                                                       \
+  X(AtomicCompareExchange, 0, 0, 0)
 
 struct IrOpcodeInfo {
   IrOpcode op;

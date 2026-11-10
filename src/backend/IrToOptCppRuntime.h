@@ -606,4 +606,59 @@ uint64_t ps_task_wait(uint64_t handle) {
 
 )CPP";
 
+// The atomic opcodes (docs/spec/vm-design.md, Atomics), written inside the program's unnamed namespace when the
+// module has one. Each works on one heap slot through std::atomic_ref (the compiler's atomic builtins where the
+// standard library has no atomic_ref yet), sequentially consistent. A 32-bit operation keeps the slot sign-extended,
+// as the VM does.
+inline constexpr const char *OptCppAtomicRuntime = R"CPP(
+#if defined(__cpp_lib_atomic_ref)
+using PsAtomicSlot = std::atomic_ref<uint64_t>;
+#else
+struct PsAtomicSlot {
+  uint64_t *slot;
+  explicit PsAtomicSlot(uint64_t &value) : slot(&value) {}
+  uint64_t load() const { return __atomic_load_n(slot, __ATOMIC_SEQ_CST); }
+  void store(uint64_t value) const { __atomic_store_n(slot, value, __ATOMIC_SEQ_CST); }
+  uint64_t exchange(uint64_t value) const { return __atomic_exchange_n(slot, value, __ATOMIC_SEQ_CST); }
+  uint64_t fetch_add(uint64_t delta) const { return __atomic_fetch_add(slot, delta, __ATOMIC_SEQ_CST); }
+  bool compare_exchange_strong(uint64_t &expected, uint64_t desired) const {
+    return __atomic_compare_exchange_n(slot, &expected, desired, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+  }
+};
+#endif
+
+inline uint64_t ps_atomic_value(uint64_t value, bool narrow) {
+  return narrow ? static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(value))) : value;
+}
+
+inline uint64_t ps_atomic_load(uint64_t *slot, bool narrow) {
+  return ps_atomic_value(PsAtomicSlot(*slot).load(), narrow);
+}
+
+inline void ps_atomic_store(uint64_t *slot, uint64_t value, bool narrow) {
+  PsAtomicSlot(*slot).store(ps_atomic_value(value, narrow));
+}
+
+inline uint64_t ps_atomic_add(uint64_t *slot, uint64_t delta, bool narrow) {
+  PsAtomicSlot atomic(*slot);
+  if (!narrow) {
+    return atomic.fetch_add(delta);
+  }
+  uint64_t before = atomic.load();
+  while (!atomic.compare_exchange_strong(before, ps_atomic_value(before + delta, true))) {
+  }
+  return ps_atomic_value(before, true);
+}
+
+inline uint64_t ps_atomic_exchange(uint64_t *slot, uint64_t value, bool narrow) {
+  return ps_atomic_value(PsAtomicSlot(*slot).exchange(ps_atomic_value(value, narrow)), narrow);
+}
+
+inline uint64_t ps_atomic_compare_exchange(uint64_t *slot, uint64_t expected, uint64_t desired, bool narrow) {
+  uint64_t held = ps_atomic_value(expected, narrow);
+  return PsAtomicSlot(*slot).compare_exchange_strong(held, ps_atomic_value(desired, narrow)) ? 1 : 0;
+}
+
+)CPP";
+
 } // namespace primec

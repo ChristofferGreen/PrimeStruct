@@ -18,10 +18,10 @@ constexpr uint8_t MinOpcode = IrOpcodeMin;
 constexpr uint8_t MaxOpcode = IrOpcodeMax;
 constexpr uint64_t MaxGlslLocalIndex = 1023;
 constexpr uint32_t MaxCallParameterCount = 4096;
-constexpr uint64_t KnownEffectMask = EffectIoOut | EffectIoErr | EffectHeapAlloc | EffectPathSpaceNotify |
-                                     EffectPathSpaceInsert | EffectPathSpaceTake | EffectFileWrite |
-                                     EffectGpuDispatch | EffectPathSpaceBind | EffectPathSpaceSchedule |
-                                     EffectFileRead | EffectTask | EffectNetIo;
+constexpr uint64_t KnownEffectMask =
+    EffectIoOut | EffectIoErr | EffectHeapAlloc | EffectPathSpaceNotify | EffectPathSpaceInsert |
+    EffectPathSpaceTake | EffectFileWrite | EffectGpuDispatch | EffectPathSpaceBind |
+    EffectPathSpaceSchedule | EffectFileRead | EffectTask | EffectNetIo | EffectAtomic;
 constexpr uint64_t KnownWasmWasiEffectMask =
     EffectIoOut | EffectIoErr | EffectHeapAlloc | EffectFileWrite | EffectFileRead;
 constexpr uint64_t KnownWasmBrowserEffectMask = 0ull;
@@ -41,6 +41,29 @@ const char *wasmTargetName(IrValidationTarget target) {
     return "wasm-browser";
   }
   return "wasm";
+}
+
+// The atomic opcodes (docs/spec/vm-design.md, Atomics): the VM, serialized bytecode and the C++ targets (a module
+// that uses them is emitted by the optimized emitter) run them.
+bool isAtomicOpcode(IrOpcode op) {
+  return op == IrOpcode::AtomicLoad || op == IrOpcode::AtomicStore || op == IrOpcode::AtomicAdd ||
+         op == IrOpcode::AtomicExchange || op == IrOpcode::AtomicCompareExchange;
+}
+
+// The backend a module with atomic opcodes is rejected for, or nullptr for a target that runs them.
+const char *atomicRejectingBackendName(IrValidationTarget target) {
+  switch (target) {
+  case IrValidationTarget::Native:
+    return "native";
+  case IrValidationTarget::Wasm:
+    return "wasm";
+  case IrValidationTarget::WasmBrowser:
+    return "wasm-browser";
+  case IrValidationTarget::Glsl:
+    return "glsl";
+  default:
+    return nullptr;
+  }
 }
 
 // The byte-memory opcodes and the u8 wrap step: the VM, the C++ emitters (a module that uses them is emitted by the
@@ -281,6 +304,19 @@ bool validateFunction(const IrModule &module,
         if (module.functions[static_cast<size_t>(inst.imm)].parameterCount > MaxCallParameterCount) {
           return failInstruction(
               functionIndex, function.name, instructionIndex, "call target parameter count exceeds supported limit", error);
+        }
+        break;
+      case IrOpcode::AtomicLoad:
+      case IrOpcode::AtomicStore:
+      case IrOpcode::AtomicAdd:
+      case IrOpcode::AtomicExchange:
+      case IrOpcode::AtomicCompareExchange:
+        if (inst.imm != 32u && inst.imm != 64u) {
+          return failInstruction(functionIndex,
+                                 function.name,
+                                 instructionIndex,
+                                 "atomic width must be 32 or 64",
+                                 error);
         }
         break;
       case IrOpcode::TaskSpawn:
@@ -687,6 +723,24 @@ bool validateIrModule(const IrModule &module, IrValidationTarget target, std::st
     if (!importNames.insert(import.name).second) {
       error = "duplicate IR host import name: " + import.name;
       return false;
+    }
+  }
+
+  // Checked before anything else about a function, so the message names the backend rather than an effect bit.
+  if (const char *backendName = atomicRejectingBackendName(target)) {
+    for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
+      const IrFunction &function = module.functions[functionIndex];
+      for (size_t instructionIndex = 0; instructionIndex < function.instructions.size();
+           ++instructionIndex) {
+        if (isAtomicOpcode(function.instructions[instructionIndex].op)) {
+          return failInstruction(functionIndex,
+                                 function.name,
+                                 instructionIndex,
+                                 "atomic operations are not supported by the " +
+                                     std::string(backendName) + " backend",
+                                 error);
+        }
+      }
     }
   }
 

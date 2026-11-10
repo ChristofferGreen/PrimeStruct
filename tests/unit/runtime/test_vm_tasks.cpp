@@ -353,7 +353,7 @@ TEST_CASE("task opcodes survive serialization and a v33 module still loads") {
       data[4 + i] = static_cast<uint8_t>((version >> (8 * i)) & 0xFF);
     }
   };
-  CHECK(IrSchemaVersion == 34u);
+  CHECK(IrSchemaVersion >= 34u);
   CHECK(IrSchemaMinimumSupportedVersion == 33u);
   const IrModule plain =
       moduleOf({functionOf("/main", 0, {{IrOpcode::PushI32, 12}, {IrOpcode::ReturnI32, 0}})});
@@ -375,7 +375,7 @@ TEST_CASE("task opcodes survive serialization and a v33 module still loads") {
   CHECK(error == "unsupported IR opcode");
   setVersion(bytes, 32u);
   CHECK_FALSE(deserializeIr(bytes, rejected, error));
-  CHECK(error == "unsupported IR schema version 32 (supported 33..34)");
+  CHECK(error == "unsupported IR schema version 32 (supported 33..35)");
 }
 
 TEST_SUITE_END();

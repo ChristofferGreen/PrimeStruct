@@ -1,0 +1,189 @@
+// Shared state for tasks (docs/MultithreadingPrototype.md, Threads For Real): `import /std/sync/*`.
+//
+// `Atomic<i32>` and `Atomic<i64>` are shared integer cells. An Atomic is a handle: copying one shares the cell, so a
+// task that gets a copy works on the same integer as its spawner, and the cell is freed when the last handle is
+// destroyed. Every operation is sequentially consistent and needs the `atomic` effect; making one needs `heap_alloc`.
+//
+// The cell is two heap slots: the integer and the number of handles. The `__psatomic_*` functions below are not host
+// calls: the compiler lowers each to one atomic IR opcode (docs/spec/vm-design.md, Atomics).
+
+namespace std {
+  namespace sync {
+  [host return<i32>]
+  __psatomic_load_i32([Pointer<i64>] cell) {
+  }
+
+  [host return<i64>]
+  __psatomic_load_i64([Pointer<i64>] cell) {
+  }
+
+  [host return<void>]
+  __psatomic_store_i32([Pointer<i64>] cell, [i32] value) {
+  }
+
+  [host return<void>]
+  __psatomic_store_i64([Pointer<i64>] cell, [i64] value) {
+  }
+
+  [host return<i32>]
+  __psatomic_add_i32([Pointer<i64>] cell, [i32] delta) {
+  }
+
+  [host return<i64>]
+  __psatomic_add_i64([Pointer<i64>] cell, [i64] delta) {
+  }
+
+  [host return<i32>]
+  __psatomic_exchange_i32([Pointer<i64>] cell, [i32] value) {
+  }
+
+  [host return<i64>]
+  __psatomic_exchange_i64([Pointer<i64>] cell, [i64] value) {
+  }
+
+  [host return<bool>]
+  __psatomic_compare_exchange_i32([Pointer<i64>] cell, [i32] expected, [i32] desired) {
+  }
+
+  [host return<bool>]
+  __psatomic_compare_exchange_i64([Pointer<i64>] cell, [i64] expected, [i64] desired) {
+  }
+
+  // The width of an operation follows the type of its value; `load` passes a value of the type only to choose.
+  [return<i32>]
+  atomicLoad([Pointer<i64>] cell, [i32] width) {
+    return(__psatomic_load_i32(cell))
+  }
+
+  [return<i64>]
+  atomicLoad([Pointer<i64>] cell, [i64] width) {
+    return(__psatomic_load_i64(cell))
+  }
+
+  [return<void>]
+  atomicStore([Pointer<i64>] cell, [i32] value) {
+    __psatomic_store_i32(cell, value)
+  }
+
+  [return<void>]
+  atomicStore([Pointer<i64>] cell, [i64] value) {
+    __psatomic_store_i64(cell, value)
+  }
+
+  [return<i32>]
+  atomicAdd([Pointer<i64>] cell, [i32] delta) {
+    return(__psatomic_add_i32(cell, delta))
+  }
+
+  [return<i64>]
+  atomicAdd([Pointer<i64>] cell, [i64] delta) {
+    return(__psatomic_add_i64(cell, delta))
+  }
+
+  [return<i32>]
+  atomicExchange([Pointer<i64>] cell, [i32] value) {
+    return(__psatomic_exchange_i32(cell, value))
+  }
+
+  [return<i64>]
+  atomicExchange([Pointer<i64>] cell, [i64] value) {
+    return(__psatomic_exchange_i64(cell, value))
+  }
+
+  [return<bool>]
+  atomicCompareExchange([Pointer<i64>] cell, [i32] expected, [i32] desired) {
+    return(__psatomic_compare_exchange_i32(cell, expected, desired))
+  }
+
+  [return<bool>]
+  atomicCompareExchange([Pointer<i64>] cell, [i64] expected, [i64] desired) {
+    return(__psatomic_compare_exchange_i64(cell, expected, desired))
+  }
+
+  // A new cell holding `initial`, with one handle.
+  [unsafe effects(heap_alloc), return<Pointer<i64>>]
+  atomicCellAlloc([i64] initial) {
+    [Pointer<i64>] cell{/std/intrinsics/memory/alloc<i64>(2i32)}
+    __psatomic_store_i64(cell, initial)
+    __psatomic_store_i64(/std/intrinsics/memory/at_unsafe(cell, 1i32), 1i64)
+    return(cell)
+  }
+
+  // One more handle shares the cell.
+  [unsafe return<void>]
+  atomicCellShare([Pointer<i64>] cell) {
+    __psatomic_add_i64(/std/intrinsics/memory/at_unsafe(cell, 1i32), 1i64)
+  }
+
+  // A handle is gone; the last one frees the cell.
+  [unsafe effects(heap_alloc), return<void>]
+  atomicCellRelease([Pointer<i64>] cell) {
+    if(__psatomic_add_i64(/std/intrinsics/memory/at_unsafe(cell, 1i32), -1i64) == 1i64) {
+      /std/intrinsics/memory/free(cell)
+    }
+  }
+
+  // `Atomic<i64>{0i64}` makes a cell holding 0. `T` is i32 or i64.
+  [public struct sendable]
+  Atomic<T>() {
+    [T mut] initial{convert<T>(0i32)}
+    [private Pointer<i64> mut] cell{atomicCellAlloc(convert<i64>(initial))}
+    [private bool mut] live{true}
+
+    [effects(atomic), return<T>]
+    load() {
+      [T] width{this.initial}
+      return(atomicLoad(this.cell, width))
+    }
+
+    [effects(atomic), return<void>]
+    store([T] value) {
+      atomicStore(this.cell, value)
+    }
+
+    // Adds `delta` and returns the value before the addition.
+    [effects(atomic), return<T>]
+    add([T] delta) {
+      return(atomicAdd(this.cell, delta))
+    }
+
+    // Stores `value` and returns the value before it.
+    [effects(atomic), return<T>]
+    exchange([T] value) {
+      return(atomicExchange(this.cell, value))
+    }
+
+    // Stores `desired` if the cell holds `expected`; returns whether it stored.
+    [effects(atomic), return<bool>]
+    compareExchange([T] expected, [T] desired) {
+      return(atomicCompareExchange(this.cell, expected, desired))
+    }
+
+    [mut]
+    Copy([Reference<Self>] other) {
+      this.initial = other.initial
+      this.cell = other.cell
+      this.live = other.live
+      if(other.live) {
+        atomicCellShare(other.cell)
+      }
+    }
+
+    [mut]
+    Move([Reference<Self>] other) {
+      this.initial = other.initial
+      this.cell = other.cell
+      this.live = other.live
+      other.live = false
+    }
+
+    [mut effects(heap_alloc)]
+    Destroy() {
+      if(this.live) {
+        atomicCellRelease(this.cell)
+        this.live = false
+      }
+    }
+  }
+  }
+}

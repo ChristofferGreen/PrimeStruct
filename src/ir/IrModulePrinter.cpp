@@ -120,6 +120,13 @@ std::string formatIrInstruction(const IrModule &module, const IrInstruction &ins
   case IrOpcode::JumpIfZero:
     text += " -> " + std::to_string(imm);
     break;
+  case IrOpcode::AtomicLoad:
+  case IrOpcode::AtomicStore:
+  case IrOpcode::AtomicAdd:
+  case IrOpcode::AtomicExchange:
+  case IrOpcode::AtomicCompareExchange:
+    text += " i" + std::to_string(imm);
+    break;
   case IrOpcode::Call:
   case IrOpcode::CallVoid:
   case IrOpcode::TaskSpawn:

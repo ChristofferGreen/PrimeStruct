@@ -410,6 +410,69 @@ template <bool TrackEvents>
     // executeVmKernel's scheduler runs these; a debug session steps one call stack.
     error = "tasks run only in a plain VM run, not in a debug session";
     return VmKernelStepOutcome::Fault;
+  case IrOpcode::AtomicLoad:
+  case IrOpcode::AtomicStore:
+  case IrOpcode::AtomicAdd:
+  case IrOpcode::AtomicExchange:
+  case IrOpcode::AtomicCompareExchange: {
+    // Every task of the VM runs on this thread, so the slot is read and written plainly; under a schedule seed the
+    // scheduler makes each of these a switch point (docs/spec/vm-design.md, Atomics).
+    const size_t operandCount = inst.op == IrOpcode::AtomicLoad              ? 1u
+                                : inst.op == IrOpcode::AtomicCompareExchange ? 3u
+                                                                             : 2u;
+    if (stack.size() < operandCount) {
+      error = "IR stack underflow on atomic operation";
+      return VmKernelStepOutcome::Fault;
+    }
+    if (inst.imm != 32u && inst.imm != 64u) {
+      error = "invalid atomic width in IR";
+      return VmKernelStepOutcome::Fault;
+    }
+    // A 32-bit value is kept sign-extended in its slot, like every i32.
+    const bool narrow = inst.imm == 32u;
+    const auto canonical = [narrow](uint64_t value) {
+      return narrow ? static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(value)))
+                    : value;
+    };
+    const uint64_t second = operandCount >= 2 ? canonical(stack[stack.size() - 1]) : 0;
+    const uint64_t first = operandCount == 3 ? canonical(stack[stack.size() - 2]) : second;
+    uint64_t address = stack[stack.size() - operandCount];
+    stack.resize(stack.size() - operandCount);
+    uint64_t *slot = nullptr;
+    std::vector<uint64_t> *addressLocals = nullptr;
+    localizeVmAddress(frames, host.slotBytes(), address, addressLocals);
+    if (!host.resolveIndirectAddress(address, *addressLocals, slot, error)) {
+      return VmKernelStepOutcome::Fault;
+    }
+    const uint64_t before = canonical(*slot);
+    switch (inst.op) {
+    case IrOpcode::AtomicLoad:
+      stack.push_back(before);
+      break;
+    case IrOpcode::AtomicStore:
+      *slot = second;
+      break;
+    case IrOpcode::AtomicAdd:
+      *slot = canonical(before + second);
+      stack.push_back(before);
+      break;
+    case IrOpcode::AtomicExchange:
+      *slot = second;
+      stack.push_back(before);
+      break;
+    default:
+      // first is the expected value and second the desired one.
+      if (before == first) {
+        *slot = second;
+        stack.push_back(1);
+      } else {
+        stack.push_back(0);
+      }
+      break;
+    }
+    ip += 1;
+    return VmKernelStepOutcome::Continue;
+  }
   case IrOpcode::LoadStringLength: {
     if (stack.empty()) {
       error = "IR stack underflow on string index";
@@ -492,6 +555,11 @@ VmKernelStepOutcome stepVmKernel(const IrModule &module,
 
 namespace {
 
+bool isAtomicOpcode(IrOpcode op) {
+  return op == IrOpcode::AtomicLoad || op == IrOpcode::AtomicStore || op == IrOpcode::AtomicAdd ||
+         op == IrOpcode::AtomicExchange || op == IrOpcode::AtomicCompareExchange;
+}
+
 bool moduleUsesTasks(const IrModule &module) {
   for (const IrFunction &function : module.functions) {
     for (const IrInstruction &inst : function.instructions) {
@@ -551,10 +619,16 @@ public:
           continue;
         }
       }
+      // An atomic operation is a switch point of a seeded schedule: any runnable task may run after it.
+      const bool atomicStep = seeded_ && top.ip < top.function->instructions.size() &&
+                              isAtomicOpcode(top.function->instructions[top.ip].op);
       uint64_t value = 0;
       switch (stepImpl<false>(
           module_, host_, task.stack, task.frames, localCounts_, value, event, error)) {
       case VmKernelStepOutcome::Continue:
+        if (atomicStep) {
+          pickSeeded();
+        }
         continue;
       case VmKernelStepOutcome::Fault:
         return false;

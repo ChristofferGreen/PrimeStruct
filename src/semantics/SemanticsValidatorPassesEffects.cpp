@@ -125,6 +125,13 @@ bool SemanticsValidator::validateCalleeEffects(const Expr &expr, const Definitio
     } else {
       caller = stripSpecializationSuffix(caller);
     }
+    if (effect == "atomic") {
+      // The operations of /std/sync/Atomic (docs/spec/stdlib-reference.md, std/sync).
+      return failExprDiagnostic(
+          expr,
+          "atomic operation requires atomic effect: " + stripSpecializationSuffix(callee.fullPath) +
+              " in " + callerKind + caller);
+    }
     return failExprDiagnostic(expr, stripSpecializationSuffix(callee.fullPath) + " requires " + effect +
                                         " effect in " + callerKind + caller);
   }

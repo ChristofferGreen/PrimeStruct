@@ -1099,6 +1099,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   # the native backend and (opt-in) the C++ emitters via the built primec/primevm.
   add_executable(PrimeStruct_program_matrix_tests
     tests/unit/test_main.cpp
+    tests/unit/program_matrix/test_program_matrix_atomics.cpp
     tests/unit/program_matrix/test_program_matrix_closures.cpp
     tests/unit/program_matrix/test_program_matrix_container_copies.cpp
     tests/unit/program_matrix/test_program_matrix_control.cpp
@@ -1341,6 +1342,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/runtime/test_vm_heap_arenas.cpp
     tests/unit/runtime/test_vm_text_heap.cpp
     tests/unit/runtime/test_vm_tasks.cpp
+    tests/unit/runtime/test_vm_atomics.cpp
   )
   target_include_directories(PrimeStruct_vm_byte_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
   target_link_libraries(PrimeStruct_vm_byte_tests PRIVATE primec_embed_lib)
@@ -1348,7 +1350,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   add_test(
     NAME PrimeStruct_vm_byte_regions
     COMMAND $<TARGET_FILE:PrimeStruct_vm_byte_tests>
-            "--test-suite=primestruct.runtime.byte_regions,primestruct.runtime.text_heap,primestruct.runtime.tasks"
+            "--test-suite=primestruct.runtime.byte_regions,primestruct.runtime.text_heap,primestruct.runtime.tasks,primestruct.runtime.atomics"
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_vm_byte_regions
@@ -2197,6 +2199,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_effects_part2.cpp
     tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_effects_part3.cpp
     tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_sendable.cpp
+    tests/unit/semantics/calls_and_flow/test_semantics_calls_and_flow_atomics.cpp
     tests/unit/semantics/entry/test_semantics_entry_builtins_numeric.cpp
     tests/unit/semantics/entry/test_semantics_entry_entry.cpp
     tests/unit/semantics/entry/test_semantics_entry_executions.cpp
@@ -2404,6 +2407,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.semantics.calls_flow.comparisons_literals
     primestruct.semantics.calls_flow.effects
     primestruct.semantics.calls_flow.sendable
+    primestruct.semantics.calls_flow.atomics
     primestruct.semantics.enum
     primestruct.semantics.imports
     primestruct.semantics.lambdas
@@ -3621,8 +3625,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
       continue()
     endif()
     if(suite STREQUAL "primestruct.ir.optexe_tasks")
-      # 9 cases, most of which build one or two optexe programs with the host compiler: shards of two as above.
-      primestructAddDoctestShards("${testName}" PrimeStruct_ir_optimizer_tests 9 2 300 "--test-suite=${suite}")
+      # 12 cases, most of which build one or two optexe programs with the host compiler: shards of two as above.
+      primestructAddDoctestShards("${testName}" PrimeStruct_ir_optimizer_tests 12 2 300 "--test-suite=${suite}")
       continue()
     endif()
     add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_ir_optimizer_tests> "--test-suite=${suite}")
@@ -3635,6 +3639,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     ${PrimeStructIrOptimizerTestSuites}
   )
   set(PrimeStructProgramMatrixTestSuites
+    primestruct.program_matrix.atomics
     primestruct.program_matrix.closures
     primestruct.program_matrix.closures_callables
     primestruct.program_matrix.closures_references
@@ -3655,7 +3660,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   # in loaded gates (load 40 to 140). Each suite is shards of three cases (primestructAddDoctestShards); the number
   # after the suite is its case count, which ctest PrimeStruct_test_registration checks.
   set(PrimeStructProgramMatrixCaseCounts
-    closures=8 closures_callables=8 closures_references=4 closures_fields=12 closures_routers=7 container_copies=19
+    atomics=5 closures=8 closures_callables=8 closures_references=4 closures_fields=12 closures_routers=7 container_copies=19
     control=37 element_copies=7 lifecycle=26 optimizer=16 parameter_modes=8 results=9 shared_programs=16
     tasks=9 text_views=2)
   foreach(suite IN LISTS PrimeStructProgramMatrixTestSuites)

@@ -849,4 +849,170 @@ main() {
   CHECK(actual.err.empty());
 }
 
+TEST_CASE("optexe runs the atomic opcodes like the vm") {
+  // One thread: every operation at both widths, on a heap slot kept in local 0.
+  std::vector<IrInstruction> body = {
+      {IrOpcode::PushI32, 1}, {IrOpcode::HeapAlloc, 0}, {IrOpcode::StoreLocal, 0}};
+  const auto operation = [&](IrOpcode op, uint64_t width, std::vector<int64_t> operands) {
+    body.push_back({IrOpcode::LoadLocal, 0});
+    for (const int64_t operand : operands) {
+      body.push_back({IrOpcode::PushI64, static_cast<uint64_t>(operand)});
+    }
+    body.push_back({op, width});
+    if (op != IrOpcode::AtomicStore) {
+      body.push_back({IrOpcode::PrintI64, Newline});
+    }
+  };
+  operation(IrOpcode::AtomicStore, 64, {int64_t{1} << 40});
+  operation(IrOpcode::AtomicAdd, 64, {-1});
+  operation(IrOpcode::AtomicExchange, 64, {20});
+  operation(IrOpcode::AtomicCompareExchange, 64, {20, 1});
+  operation(IrOpcode::AtomicCompareExchange, 64, {20, 2});
+  operation(IrOpcode::AtomicLoad, 64, {});
+  operation(IrOpcode::AtomicStore, 32, {2147483647});
+  operation(IrOpcode::AtomicAdd, 32, {1});
+  operation(IrOpcode::AtomicLoad, 32, {});
+  operation(IrOpcode::AtomicLoad, 64, {});
+  operation(IrOpcode::AtomicExchange, 32, {-5});
+  operation(IrOpcode::AtomicCompareExchange, 32, {-5, 9});
+  operation(IrOpcode::AtomicStore, 32, {(int64_t{1} << 32) + 3});
+  operation(IrOpcode::AtomicLoad, 64, {});
+  body.push_back({IrOpcode::PushI32, 0});
+  body.push_back({IrOpcode::ReturnI32, 0});
+  expectMatchesVm(moduleOf({functionOf("/main", 0, body)}), "atomic_operations");
+
+  // Four threads add 1 to one cell 20000 times each; no addition is lost. bump(cell): local 1 counts the turns.
+  const IrFunction bump = functionOf("/bump",
+                                     1,
+                                     {/* 0*/ {IrOpcode::StoreLocal, 0},
+                                      /* 1*/ {IrOpcode::PushI64, 0},
+                                      /* 2*/ {IrOpcode::StoreLocal, 1},
+                                      /* 3*/ {IrOpcode::LoadLocal, 1},
+                                      /* 4*/ {IrOpcode::PushI64, 20000},
+                                      /* 5*/ {IrOpcode::CmpLtI64, 0},
+                                      /* 6*/ {IrOpcode::JumpIfZero, 16},
+                                      /* 7*/ {IrOpcode::LoadLocal, 0},
+                                      /* 8*/ {IrOpcode::PushI64, 1},
+                                      /* 9*/ {IrOpcode::AtomicAdd, 64},
+                                      /*10*/ {IrOpcode::Pop, 0},
+                                      /*11*/ {IrOpcode::LoadLocal, 1},
+                                      /*12*/ {IrOpcode::PushI64, 1},
+                                      /*13*/ {IrOpcode::AddI64, 0},
+                                      /*14*/ {IrOpcode::StoreLocal, 1},
+                                      /*15*/ {IrOpcode::Jump, 3},
+                                      /*16*/ {IrOpcode::ReturnVoid, 0}});
+  std::vector<IrInstruction> shared = {
+      {IrOpcode::PushI32, 1}, {IrOpcode::HeapAlloc, 0}, {IrOpcode::StoreLocal, 0}};
+  for (uint64_t task = 1; task <= 4; ++task) {
+    shared.push_back({IrOpcode::LoadLocal, 0});
+    shared.push_back({IrOpcode::TaskSpawn, 1});
+    shared.push_back({IrOpcode::StoreLocal, task});
+  }
+  for (uint64_t task = 1; task <= 4; ++task) {
+    shared.push_back({IrOpcode::LoadLocal, task});
+    shared.push_back({IrOpcode::TaskWait, 0});
+    shared.push_back({IrOpcode::Pop, 0});
+  }
+  shared.push_back({IrOpcode::LoadLocal, 0});
+  shared.push_back({IrOpcode::AtomicLoad, 64});
+  shared.push_back({IrOpcode::PrintI64, Newline});
+  shared.push_back({IrOpcode::PushI32, 0});
+  shared.push_back({IrOpcode::ReturnI32, 0});
+  const IrModule sharedModule = moduleOf({functionOf("/main", 0, shared), bump});
+  CHECK(optimizer_test::run(sharedModule, {"program"}).output == "80000\n");
+  expectMatchesVm(sharedModule, "atomic_shared_add");
+}
+
+TEST_CASE("only an optexe module with atomic opcodes gets the atomic runtime") {
+  const auto emitted = [](const IrModule &module) {
+    std::string source;
+    std::string error;
+    REQUIRE_MESSAGE(primec::IrToOptCppEmitter().emitSource(module, source, error), error);
+    return source;
+  };
+  const std::string plain = emitted(moduleOf(
+      {functionOf(
+           "/main", 0, {{IrOpcode::PushI64, 4}, {IrOpcode::Call, 1}, {IrOpcode::ReturnI32, 0}}),
+       sumTo()}));
+  CHECK_FALSE(contains(plain, "PsAtomicSlot"));
+  CHECK_FALSE(contains(plain, "ps_atomic_"));
+
+  const std::string atomics = emitted(moduleOf({functionOf("/main",
+                                                           0,
+                                                           {{IrOpcode::PushI32, 1},
+                                                            {IrOpcode::HeapAlloc, 0},
+                                                            {IrOpcode::StoreLocal, 0},
+                                                            {IrOpcode::LoadLocal, 0},
+                                                            {IrOpcode::PushI64, 2},
+                                                            {IrOpcode::AtomicAdd, 32},
+                                                            {IrOpcode::Pop, 0},
+                                                            {IrOpcode::LoadLocal, 0},
+                                                            {IrOpcode::AtomicLoad, 64},
+                                                            {IrOpcode::ReturnI32, 0}})}));
+  CHECK(contains(atomics, "std::atomic_ref<uint64_t>"));
+  CHECK(contains(atomics, " = ps_atomic_add(ps_resolve(rt, "));
+  CHECK(contains(atomics, ", true);"));
+  CHECK(contains(atomics, " = ps_atomic_load(ps_resolve(rt, "));
+  // No task opcode, so no task runtime.
+  CHECK_FALSE(contains(atomics, "pthread_create"));
+}
+
+TEST_CASE("primec runs a spawned call with an Atomic argument as a task") {
+  const std::string source = R"(
+import /std/sync/*
+
+[effects(atomic), return<void>]
+add_many([Atomic<i64>] counter, [i32] rounds) {
+  [i32 mut] i{0i32}
+  while(i < rounds) {
+    counter.add(1i64)
+    i = i + 1i32
+  }
+}
+
+[effects(atomic), return<i32>]
+take([Atomic<i32>] flag) {
+  return(flag.exchange(1i32))
+}
+
+[effects(atomic, heap_alloc, io_out, task), return<int>]
+main() {
+  counter{Atomic<i64>{0i64}}
+  [Task<void>] a{[spawn] add_many(counter, 1000i32)}
+  [Task<void>] b{[spawn] add_many(counter, 1000i32)}
+  wait(a)
+  wait(b)
+  print_line(counter.load())
+  flag{Atomic<i32>{0i32}}
+  [Task<i32>] first{[spawn] take(flag)}
+  [Task<i32>] second{[spawn] take(flag)}
+  print_line(wait(first) + wait(second))
+  return(0i32)
+}
+)";
+  const std::filesystem::path sourcePath = scratch("spawn_atomic.prime");
+  std::ofstream(sourcePath) << source;
+  // Neither backend that runs tasks keeps the calls inline: the report has no note.
+  const std::filesystem::path cppPath = scratch("spawn_atomic.cpp");
+  const ProgramRun emit =
+      runCommand("./primec --emit=optcpp '" + sourcePath.string() +
+                     "' --entry /main --opt-report -o '" + cppPath.string() + "'",
+                 "spawn_atomic_emit");
+  REQUIRE_MESSAGE(emit.exitCode == 0, emit.err);
+  CHECK_FALSE(contains(emit.err, "runs inline"));
+  const std::string cpp = readText(cppPath);
+  CHECK(contains(cpp, "= ps_task_spawn(rt, ps_t"));
+  CHECK(contains(cpp, "ps_atomic_add("));
+  const ProgramRun vmEmit = runCommand("./primec --emit=vm '" + sourcePath.string() +
+                                           "' --entry /main --opt-report -o '" +
+                                           scratch("spawn_atomic.psir").string() + "'",
+                                       "spawn_atomic_vm_emit");
+  REQUIRE_MESSAGE(vmEmit.exitCode == 0, vmEmit.err);
+  CHECK_FALSE(contains(vmEmit.err, "runs inline"));
+  const ProgramRun vmRun =
+      runCommand("./primevm '" + sourcePath.string() + "' --entry /main", "spawn_atomic_vm");
+  CHECK(vmRun.exitCode == 0);
+  CHECK(vmRun.out == "2000\n1\n");
+}
+
 TEST_SUITE_END();

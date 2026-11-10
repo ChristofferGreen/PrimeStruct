@@ -453,8 +453,11 @@ bool deserializeIr(const std::vector<uint8_t> &data, IrModule &out, std::string 
       IrInstruction inst;
       const uint8_t opcodeValue = data[offset];
       const uint8_t minOpcode = IrOpcodeMin;
-      // A module of an older version can only hold the opcodes that version had: v34 appended the task opcodes.
-      const uint8_t maxOpcode = version < 34u ? static_cast<uint8_t>(IrOpcode::Trap) : IrOpcodeMax;
+      // A module of an older version can only hold the opcodes that version had: v34 appended the task opcodes and
+      // v35 the atomic ones.
+      const uint8_t maxOpcode = version < 34u   ? static_cast<uint8_t>(IrOpcode::Trap)
+                                : version < 35u ? static_cast<uint8_t>(IrOpcode::TaskWait)
+                                                : IrOpcodeMax;
       if (opcodeValue < minOpcode || opcodeValue > maxOpcode) {
         error = "unsupported IR opcode";
         return false;

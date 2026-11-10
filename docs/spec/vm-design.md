@@ -25,10 +25,13 @@
   (recursive and larger functions), including recursion up to the VM's call-depth limit.
 - **GLSL note:** GLSL/SPIR-V emission routes through canonical IR (`glsl-ir`/`spirv-ir`) and `IrValidationTarget::Glsl`;
   these modes emit backend output directly without requiring PSIR serialization.
-- **PSIR versioning:** current portable IR is PSIR v34 (v24 to v34 are listed in `include/primec/ir/Ir.h`'s opcode
-  comments and the finished TODO log; v34 appends `TaskSpawn` and `TaskWait` (see Tasks) and is the first version
+- **PSIR versioning:** current portable IR is PSIR v35 (v24 to v35 are listed in `include/primec/ir/Ir.h`'s opcode
+  comments and the finished TODO log; v35 appends the five atomic opcodes (see Atomics). Migration: the module
+  layout is unchanged, so a v33 or v34 module still loads and is written back as v35; the loader refuses an opcode
+  newer than the module's version, and a v35 module does not load in an older build. v34 appends `TaskSpawn` and
+  `TaskWait` (see Tasks) and is the first version
   that also loads the previous one: a v33 module has the same layout and cannot hold the task opcodes, which the
-  loader refuses in it, and it is written back as v34; v33 appends `Trap` and numbers local addresses across all live frames (see
+  loader refuses in it; v33 appends `Trap` and numbers local addresses across all live frames (see
   Frames & stack); v32 appends the `bytes` host value kind (`Pointer<u8>` host parameters); v31 retires run-time string indices (a host function can no longer return `string`; same module layout); v30 appends the `text` host value kind; v29 appends the `u8` host value kind; v28 adds `HeapAllocBytes`, `LoadU8`, `StoreU8` and `ZextU8`). Before that, PSIR v23 (adds a per-function `parameter_count` field on top of v22’s
   source-unit/file identity in source-map metadata, v21’s `HeapRealloc`, v20’s `FileReadByte` and
   `HeapFree`, v19’s per-instruction source-map metadata keyed by debug ID, v18’s instruction debug IDs, v17’s local
@@ -87,6 +90,36 @@
   `on_error`, `require` or `try`, a method) runs inline, which is a legal schedule, and `--opt-report` says so:
   `lowering: spawn of /f runs inline: <reason>`.
   Every other backend runs every spawned call inline; a `Task<void>` spawn there is the call as a statement.
+- **Atomics (PSIR v35):** five opcodes work on one slot through its address, all sequentially consistent. The
+  immediate is the width, 32 or 64 (anything else is invalid IR); the address is pushed first.
+
+  | Opcode | Pops | Pushes |
+  | --- | --- | --- |
+  | `AtomicLoad` | address | the value |
+  | `AtomicStore` | address, value | nothing |
+  | `AtomicAdd` | address, delta | the value before the addition, which wraps |
+  | `AtomicExchange` | address, value | the value before the store |
+  | `AtomicCompareExchange` | address, expected, desired | 1 when the slot held `expected` and now holds `desired`, else 0 |
+
+  A 32-bit operation works on the low half of the slot's value and leaves the slot sign-extended, like every `i32`.
+  The source of these opcodes is `/std/sync` (docs/spec/stdlib-reference.md, Shared state): its `[host]`
+  definitions named `/std/sync/__psatomic_*` are not host imports; the lowerer turns a call of one into its opcode,
+  so `hits.add(1i64)` on an `Atomic<i64>` is
+
+  ```
+  LoadLocal local 6
+  LoadLocal local 8
+  AtomicAdd i64
+  ```
+
+  with the cell's address in local 6. The VM's tasks share one thread, so it reads and writes the slot plainly,
+  with the address checks of `LoadIndirect`; under a schedule seed each atomic operation is a switch point, so a
+  load and a later store of one task can have another task's operation between them, and without a seed it is
+  none. `optexe` uses `std::atomic_ref<uint64_t>` on the slot (the compiler's `__atomic_*` builtins where the
+  library has no `atomic_ref`); that runtime is pasted into the program only when the module has an atomic opcode,
+  so other programs are unchanged. IR validation accepts the opcodes for the VM, serialized IR and the C++
+  emitters and rejects them for native, Wasm and GLSL: `atomic operations are not supported by the native
+  backend` (`wasm`, `wasm-browser`, `glsl`). The effect mask bit of `atomic` is `1 << 13`.
 - **Tasks on threads (`optexe`, `optcpp`):** the optimized C++ emitter runs each `TaskSpawn` on an OS thread of its
   own (`OptCppTaskRuntime` in `src/backend/IrToOptCppRuntime.h`, pasted into the program only when the module has
   task opcodes, so a program without tasks is unchanged). The spawner copies the arguments into a task block,

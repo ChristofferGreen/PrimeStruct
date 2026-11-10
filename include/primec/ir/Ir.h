@@ -7,8 +7,9 @@
 namespace primec {
 
 constexpr uint32_t IrSchemaMagic = 0x50534952u; // "PSIR"
-constexpr uint32_t IrSchemaVersion = 34u;
-// v34 only appends TaskSpawn and TaskWait, so a v33 module loads unchanged (it cannot hold them).
+constexpr uint32_t IrSchemaVersion = 35u;
+// v34 only appends TaskSpawn and TaskWait and v35 only appends the Atomic* opcodes, so a v33 or v34 module loads
+// unchanged (it cannot hold the opcodes added after it).
 constexpr uint32_t IrSchemaMinimumSupportedVersion = 33u;
 constexpr uint32_t IrSchemaMaximumSupportedVersion = IrSchemaVersion;
 
@@ -160,6 +161,22 @@ enum class IrOpcode : uint8_t {
   // Pops a task handle (the value of a TaskSpawn), waits until that task has ended, and pushes its result (0 for a
   // task whose function returns nothing). The handle is consumed: waiting it again faults. Added in PSIR v34.
   TaskWait,
+  // Atomic operations on one heap slot (docs/spec/vm-design.md, Atomics). imm is the width of the integer, 32 or 64;
+  // a 32-bit operation works on the low 32 bits and keeps the slot sign-extended, like every i32 value. Each one is
+  // sequentially consistent. The operands are pushed address first. The VM (a switch point under a schedule seed),
+  // serialized bytecode and the optimized C++ emitter run them; every other backend rejects a module that has one.
+  // Added in PSIR v35.
+  // Pops an address and pushes the value there.
+  AtomicLoad,
+  // Pops a value, then an address, and stores the value there. Pushes nothing.
+  AtomicStore,
+  // Pops a delta, then an address, adds the delta to the value there (wrapping) and pushes the value before.
+  AtomicAdd,
+  // Pops a value, then an address, stores the value there and pushes the value before.
+  AtomicExchange,
+  // Pops a desired value, an expected value, then an address. Stores the desired value if the slot holds the expected
+  // one and pushes 1; pushes 0 and stores nothing otherwise.
+  AtomicCompareExchange,
 };
 
 enum class IrStructFieldCategory : uint8_t {
@@ -196,6 +213,7 @@ constexpr uint64_t EffectPathSpaceSchedule = 1ull << 9;
 constexpr uint64_t EffectFileRead = 1ull << 10;
 constexpr uint64_t EffectTask = 1ull << 11;
 constexpr uint64_t EffectNetIo = 1ull << 12;
+constexpr uint64_t EffectAtomic = 1ull << 13;
 constexpr uint32_t FileReadEofCode = 65536u;
 
 struct IrStructField {

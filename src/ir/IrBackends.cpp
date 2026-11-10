@@ -437,8 +437,9 @@ public:
   }
 };
 
-// A module that runs bytes or text (the u8 byte opcodes, u8 and text host values) is emitted by the optimized C++
-// emitter even for the plain cpp and exe kinds: only that emitter has the byte regions and the string heap.
+// A module that runs bytes, text or atomics (the u8 byte opcodes, u8 and text host values, the atomic opcodes) is
+// emitted by the optimized C++ emitter even for the plain cpp and exe kinds: only that emitter has the byte regions,
+// the string heap and the atomic operations.
 bool moduleNeedsOptimizedCppEmitter(const IrModule &module) {
   for (const IrHostImport &hostImport : module.hostImports) {
     if (hostImport.returnKind == IrHostValueKind::U8 || hostImport.returnKind == IrHostValueKind::Text) {
@@ -454,7 +455,10 @@ bool moduleNeedsOptimizedCppEmitter(const IrModule &module) {
   for (const IrFunction &function : module.functions) {
     for (const IrInstruction &instruction : function.instructions) {
       if (instruction.op == IrOpcode::HeapAllocBytes || instruction.op == IrOpcode::LoadU8 ||
-          instruction.op == IrOpcode::StoreU8 || instruction.op == IrOpcode::ZextU8) {
+          instruction.op == IrOpcode::StoreU8 || instruction.op == IrOpcode::ZextU8 ||
+          instruction.op == IrOpcode::AtomicLoad || instruction.op == IrOpcode::AtomicStore ||
+          instruction.op == IrOpcode::AtomicAdd || instruction.op == IrOpcode::AtomicExchange ||
+          instruction.op == IrOpcode::AtomicCompareExchange) {
         return true;
       }
     }

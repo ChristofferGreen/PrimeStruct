@@ -290,6 +290,19 @@ bool moduleUsesTasks(const IrModule &module) {
   return false;
 }
 
+bool moduleUsesAtomics(const IrModule &module) {
+  for (const IrFunction &function : module.functions) {
+    for (const IrInstruction &instruction : function.instructions) {
+      if (instruction.op == IrOpcode::AtomicLoad || instruction.op == IrOpcode::AtomicStore ||
+          instruction.op == IrOpcode::AtomicAdd || instruction.op == IrOpcode::AtomicExchange ||
+          instruction.op == IrOpcode::AtomicCompareExchange) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 std::string parameterList(uint32_t count, bool withTypes) {
   std::string out = withTypes ? "Rt &rt" : "rt";
   for (uint32_t i = 0; i < count; ++i) {
@@ -349,6 +362,11 @@ public:
       case IrOpcode::StoreIndirect:
       case IrOpcode::LoadU8:
       case IrOpcode::StoreU8:
+      case IrOpcode::AtomicLoad:
+      case IrOpcode::AtomicStore:
+      case IrOpcode::AtomicAdd:
+      case IrOpcode::AtomicExchange:
+      case IrOpcode::AtomicCompareExchange:
         frameMode_ = true;
         break;
       default:
@@ -506,6 +524,41 @@ private:
     case IrOpcode::TaskWait:
       line(slot(depth - 1) + " = ps_task_wait(" + slot(depth - 1) + ");");
       return true;
+    case IrOpcode::AtomicLoad:
+    case IrOpcode::AtomicStore:
+    case IrOpcode::AtomicAdd:
+    case IrOpcode::AtomicExchange:
+    case IrOpcode::AtomicCompareExchange: {
+      if (instruction.imm != 32u && instruction.imm != 64u) {
+        line("ps_fault(\"invalid atomic width in IR\");");
+        return true;
+      }
+      const std::string narrow = instruction.imm == 32u ? "true" : "false";
+      const auto cell = [&](int64_t addressDepth) {
+        return "ps_resolve(rt, " + frameArgs() + ", " + slot(addressDepth) + ")";
+      };
+      switch (instruction.op) {
+      case IrOpcode::AtomicLoad:
+        line(slot(depth - 1) + " = ps_atomic_load(" + cell(depth - 1) + ", " + narrow + ");");
+        break;
+      case IrOpcode::AtomicStore:
+        line("ps_atomic_store(" + cell(depth - 2) + ", " + slot(depth - 1) + ", " + narrow + ");");
+        break;
+      case IrOpcode::AtomicAdd:
+        line(slot(depth - 2) + " = ps_atomic_add(" + cell(depth - 2) + ", " + slot(depth - 1) +
+             ", " + narrow + ");");
+        break;
+      case IrOpcode::AtomicExchange:
+        line(slot(depth - 2) + " = ps_atomic_exchange(" + cell(depth - 2) + ", " + slot(depth - 1) +
+             ", " + narrow + ");");
+        break;
+      default:
+        line(slot(depth - 3) + " = ps_atomic_compare_exchange(" + cell(depth - 3) + ", " +
+             slot(depth - 2) + ", " + slot(depth - 1) + ", " + narrow + ");");
+        break;
+      }
+      return true;
+    }
     case IrOpcode::ReturnVoid:
       emitReturn("0");
       return true;
@@ -870,6 +923,10 @@ bool IrToOptCppEmitter::emitSource(const IrModule &module,
            << parameterList(module.functions[i].parameterCount, true) << ");\n";
   }
   source << "\n";
+  // A module without atomic opcodes gets none of this either.
+  if (moduleUsesAtomics(module)) {
+    source << OptCppAtomicRuntime;
+  }
   // A module without task opcodes gets none of this, so a single-threaded program's source keeps its shape.
   const bool usesTasks = moduleUsesTasks(module);
   if (usesTasks) {

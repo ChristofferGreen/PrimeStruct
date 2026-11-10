@@ -87,6 +87,11 @@ bool verifyBarrierOrdering(const IrVirtualRegisterBlock &originalBlock,
       case IrOpcode::HeapRealloc:
       case IrOpcode::LoadIndirect:
       case IrOpcode::StoreIndirect:
+      case IrOpcode::AtomicLoad:
+      case IrOpcode::AtomicStore:
+      case IrOpcode::AtomicAdd:
+      case IrOpcode::AtomicExchange:
+      case IrOpcode::AtomicCompareExchange:
       case IrOpcode::FileOpenRead:
       case IrOpcode::FileOpenWrite:
       case IrOpcode::FileOpenAppend:

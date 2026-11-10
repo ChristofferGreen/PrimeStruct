@@ -188,7 +188,15 @@ bool computeIrStackEffect(const IrInstruction &instruction,
     return set(parameterCount, 1);
   }
   case IrOpcode::TaskWait:
+  case IrOpcode::AtomicLoad:
     return set(1, 1);
+  case IrOpcode::AtomicStore:
+    return set(2, 0);
+  case IrOpcode::AtomicAdd:
+  case IrOpcode::AtomicExchange:
+    return set(2, 1);
+  case IrOpcode::AtomicCompareExchange:
+    return set(3, 1);
   case IrOpcode::CallHost: {
     uint32_t parameterCount = 0;
     uint32_t pushes = 0;

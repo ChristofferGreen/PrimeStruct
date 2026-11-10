@@ -65,3 +65,7 @@ source_file = std/http/http.prime
 [module]
 root = /std/http/server
 source_file = std/http/server.prime
+
+[module]
+root = /std/sync
+source_file = std/sync/sync.prime

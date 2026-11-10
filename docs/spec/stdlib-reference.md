@@ -1040,6 +1040,52 @@ router.get("/static/*", []([Request] request, [Reference<Response>] response) {
 
 `examples/apps/web_app/main.prime` serves `$STATIC_DIR` this way.
 
+### Shared state (`/std/sync`)
+
+`import /std/sync/*` provides `Atomic<i32>` and `Atomic<i64>`, integer cells that several tasks read and change
+without losing an update (docs/MultithreadingPrototype.md, Atomic). An `Atomic` is a handle: a copy shares the cell,
+so a task that is given one works on the same integer as its spawner, and the cell is freed when its last handle is
+destroyed. The type is `[sendable]`.
+
+| Method | Result |
+| --- | --- |
+| `load()` | the value |
+| `store(value)` | nothing |
+| `add(delta)` | the value before the addition; the sum wraps |
+| `exchange(value)` | the value before the store |
+| `compareExchange(expected, desired)` | `true` when the cell held `expected` and now holds `desired` |
+
+Every operation is sequentially consistent and needs the `atomic` effect (`atomic operation requires atomic
+effect`); making an `Atomic` needs `heap_alloc`. `Atomic<T>` of any other type is `Atomic requires i32 or i64`.
+
+```prime
+import /std/sync/*
+
+[effects(atomic), return<void>]
+count_hits([Atomic<i64>] hits, [i32] times) {
+  [i32 mut] i{0i32}
+  while(i < times) {
+    hits.add(1i64)
+    i = i + 1i32
+  }
+}
+
+[effects(atomic, heap_alloc, io_out, task), return<int>]
+main() {
+  hits{Atomic<i64>{0i64}}
+  [Task<void>] first{[spawn] count_hits(hits, 1000i32)}
+  [Task<void>] second{[spawn] count_hits(hits, 1000i32)}
+  wait(first)
+  wait(second)
+  print_line(hits.load())
+  return(0i32)
+}
+```
+
+This prints `2000` on the VM, under every schedule seed, and on `optexe`, where the two tasks are threads. The
+operations are IR opcodes (docs/spec/vm-design.md, Atomics); native, Wasm and GLSL do not have them yet and reject
+the program with `atomic operations are not supported by the native backend`.
+
 ### JSON writer (`/std/json`)
 
 `import /std/json/*` provides `Writer`, which builds JSON text in its public `out` `String`. It puts the commas and
