@@ -98,8 +98,13 @@
   a copy of a struct holding one, and a by-value capture (`[mut values]`) each get a buffer of their own. A builtin
   `vector<vector<T>>` stores each inner vector inline: `a.push(v)` takes over a fresh vector, `move(v)` or an owning
   binding and copies any other place (a view, field or element), `a[i]` is the inner vector (a read-only view when
-  bound without `mut`), and a copy of the outer vector gives every inner vector a buffer of its own; destroying it
-  frees every inner buffer. A non-`mut` collection binding (`vector`, `map`, `soa_vector`) initialized from a place (a
+  bound without `mut`, a copy of its own when bound with `mut`: `[vector<i32> mut] row{a[0i32]}`, likewise a field
+  `[vector<i32> mut] items{bag.items}`), a mutating method on it changes it in place (`a[0i32].push(5i32)`,
+  `this.rows[i].pop()`, `clear()`), and a copy of the outer vector gives every inner vector a buffer of its own;
+  destroying it frees every inner buffer. A builtin vector mutator (`push`, `pop`, `clear`, `reserve`, `remove_*`)
+  needs a mutable root: the vector, or the binding holding it, is `mut` or a `copy`/`move` parameter, else `push
+  changes rows, which is not mutable: declare it [vector<vector<i32>> mut] rows` (a change through a `Reference` or
+  `Pointer` follows their rules; a user definition named like the mutator is an ordinary call). A non-`mut` collection binding (`vector`, `map`, `soa_vector`) initialized from a place (a
   binding, field or element: `[vector<i32>] row{rows[0i32]}`) is a read-only view of it and does not copy; it borrows
   the place's root binding until its last use, so the root cannot be changed (passed to a `mut` or `move` parameter,
   assigned, or changed by a builtin vector `push`, `pop`, `clear`, `reserve` or `remove_*`, including pushing the view

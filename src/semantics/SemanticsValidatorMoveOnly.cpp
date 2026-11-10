@@ -117,9 +117,54 @@ bool SemanticsValidator::checkBuiltinVectorMutation(
       normalizeBindingTypeName(receiverBase) != "vector") {
     return true;
   }
+  // A user definition of that name (a same-path soa or rooted vector `push` helper) is an
+  // ordinary call: its parameter modes say what it may change.
+  std::string target;
+  if (expr.isMethodCall) {
+    bool isBuiltinTarget = false;
+    runWithPreservedDiagnostic([&]() {
+      return resolveMethodTarget(params,
+                                 locals,
+                                 expr.namespacePrefix,
+                                 expr.args.front(),
+                                 expr.name,
+                                 target,
+                                 isBuiltinTarget);
+    });
+  } else {
+    target = resolveCalleePath(expr);
+  }
+  if (const size_t suffix = target.find("__"); suffix != std::string::npos) {
+    target.erase(suffix);
+  }
+  if (!target.empty() && target.rfind("/std/", 0) != 0 &&
+      (defMap_.count(target) > 0 || hasDefinitionFamilyPath(target))) {
+    return true;
+  }
   // Changing the vector can move or free the storage a view of it (or of one of its elements)
   // reads, so it waits until the view's last use (docs/spec/value-lifecycle.md, Copies).
   if (const Expr *root = containerPlaceRoot(expr.args.front()); root->kind == Expr::Kind::Name) {
+    // The vector, or the vector holding it, must be mutable: a read-only binding or a borrowed
+    // parameter is a value its owner relies on staying unchanged (a `copy` or `move` parameter
+    // owns its value).
+    const BindingInfo *rootBinding = findParamBinding(params, root->name);
+    if (rootBinding == nullptr) {
+      if (const auto it = locals.find(root->name); it != locals.end()) {
+        rootBinding = &it->second;
+      }
+    }
+    if (rootBinding != nullptr && !rootBinding->isMutable && !rootBinding->isCopy &&
+        !rootBinding->isMove && root->name != "this" && rootBinding->typeName != "args" &&
+        rootBinding->typeName != "Reference" && rootBinding->typeName != "Pointer") {
+      const std::string typeText =
+          rootBinding->typeTemplateArg.empty()
+              ? rootBinding->typeName
+              : rootBinding->typeName + "<" + rootBinding->typeTemplateArg + ">";
+      return failExprDiagnostic(expr,
+                                leaf + " changes " + root->name +
+                                    ", which is not mutable: declare it [" + typeText + " mut] " +
+                                    root->name);
+    }
     const std::string view = liveContainerViewOf(params, locals, root->name);
     if (!view.empty()) {
       return failExprDiagnostic(expr,

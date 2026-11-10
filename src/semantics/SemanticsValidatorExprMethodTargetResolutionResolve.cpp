@@ -907,7 +907,14 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
             case primec::ReceiverElementFamily::VectorLike:
             case primec::ReceiverElementFamily::Soa:
               // classified2.collectionBaseName is the already-normalized
-              // elemBase the pre-migration cascade used here.
+              // elemBase the pre-migration cascade used here. An inner builtin
+              // vector (`a[i].push(x)`) takes the canonical vector helper, as a
+              // named vector receiver does.
+              if (classified2.collectionBaseName == "vector" &&
+                  !hasDefinitionFamilyPath(collection_helpers::kRootedVectorPrefix +
+                                           normalizedMethodName)) {
+                return setCollectionMethodTarget(canonicalVectorHelperTarget(normalizedMethodName));
+              }
               return setCollectionMethodTarget("/" + classified2.collectionBaseName + "/" +
                                                 normalizedMethodName);
             case primec::ReceiverElementFamily::Buffer:

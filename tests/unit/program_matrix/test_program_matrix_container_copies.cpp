@@ -695,4 +695,125 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+// Mutating methods on an inner vector of a builtin vector of vectors (`a[i].push(x)`,
+// `this.rows[i].pop()`) change it in place, and a `mut` binding of an element or a field gets a
+// copy of its own (TODO-5831). Shared by the two cases below.
+const char *const InnerVectorMutationSource = R"(
+import /std/collections/*
+import /std/text/*
+
+[struct]
+Named {
+  [i32] code{0i32}
+  [String] name{String{}}
+}
+
+[struct]
+Bag {
+  [vector<i32> mut] items
+}
+
+[struct]
+Grid {
+  [vector<vector<i32>> mut] rows
+
+  [effects(heap_alloc)]
+  grow([i32] row, [i32] value) {
+    this.rows[row].push(value)
+  }
+
+  [effects(heap_alloc)]
+  shrink([i32] row) {
+    this.rows[row].pop()
+  }
+
+  [effects(heap_alloc)]
+  empty([i32] row) {
+    this.rows[row].clear()
+  }
+}
+
+[effects(heap_alloc) return<int>]
+inner_mutations() {
+  [vector<vector<i32>> mut] a{vector<vector<i32>>()}
+  a.push(vector<i32>(1i32, 2i32))
+  a.push(vector<i32>(3i32))
+  repeat(20i32) {
+    a[0i32].push(5i32)
+  }
+  a[1i32].pop()
+  a[1i32].push(9i32)
+  a[1i32].push(8i32)
+  a[1i32].pop()
+  [Grid mut] g{Grid{[rows] vector<vector<i32>>()}}
+  g.rows.push(vector<i32>(4i32))
+  g.rows.push(vector<i32>(6i32, 7i32))
+  repeat(10i32) {
+    g.grow(0i32, 7i32)
+  }
+  g.rows[0i32].push(3i32)
+  g.shrink(1i32)
+  g.empty(1i32)
+  g.grow(1i32, 2i32)
+  [vector<vector<Named>> mut] table{vector<vector<Named>>()}
+  table.push(vector<Named>())
+  repeat(5i32) {
+    table[0i32].push(Named{[code] 6i32, [name] stringFrom("an inner element with a heap string")})
+  }
+  [vector<i32> mut] copy{a[0i32]}
+  a[0i32].clear()
+  [Bag mut] bag{Bag{[items] vector<i32>(7i32)}}
+  [vector<i32> mut] items{bag.items}
+  items.push(8i32)
+  return(a[0i32].count() * 100000i32 + copy.count() * 1000i32 + a[1i32][0i32] * 100i32 + a[1i32].count() * 10i32 +
+         g.rows[0i32].count() + g.rows[0i32][11i32] * 1000000i32 + g.rows[1i32][0i32] * 10000000i32 +
+         table[0i32].count() * 100000000i32 + table[0i32][4i32].code - 6i32 +
+         items.count() - bag.items.count() - 1i32)
+}
+)";
+
+TEST_CASE("inner vectors of a vector of vectors change in place") {
+  program_matrix::ProgramCase program;
+  program.name = "inner_vector_mutations";
+  program.source = std::string(InnerVectorMutationSource) + R"(
+[return<int> effects(heap_alloc)]
+main() {
+  [i32 mut] total{0i32}
+  repeat(50i32) {
+    total = inner_mutations() - 523022922i32
+  }
+  return(total + 7i32)
+}
+)";
+  program.exitCode = 7;
+  program.onlyConfigs = {"vm-step-O0", "vm-O0", "vm-O2", "optexe-O2"};
+  if (program_matrix::nativeSupported()) {
+    program.onlyConfigs.push_back("native-O0");
+    program.onlyConfigs.push_back("native-O2");
+  }
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("inner vector mutations free every buffer") {
+  program_matrix::ProgramCase program;
+  program.name = "inner_vector_mutations_heap_flat";
+  program.source = std::string(InnerVectorMutationSource) + R"(
+[return<int> effects(heap_alloc)]
+main() {
+  [i32] first{inner_mutations()}
+  [i32] before{heapLiveBlocks()}
+  [u64] textBefore{stringHeapBytesInUse()}
+  repeat(100i32) {
+    inner_mutations()
+  }
+  [i32] leakedBlocks{heapLiveBlocks() - before}
+  [i32] leakedText{convert<i32>(stringHeapBytesInUse() - textBefore)}
+  return(first - 523022922i32 + 23i32 + leakedBlocks * 1000i32 + leakedText * 1000i32)
+}
+)";
+  program.exitCode = 23;
+  program.onlyConfigs = {"vm-step-O0", "vm-O0", "vm-O2", "optexe-O2"};
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

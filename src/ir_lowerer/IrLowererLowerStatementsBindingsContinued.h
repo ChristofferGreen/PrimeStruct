@@ -518,8 +518,9 @@
           }
         }
       }
-      // A mutable `vector<T>` binding initialized from another vector local owns a copy of its
-      // elements (docs/spec/value-lifecycle.md, Copies); a read-only one stays a view of it.
+      // A mutable `vector<T>` binding initialized from another vector local, a field or an element
+      // of a vector of vectors owns a copy of its elements (docs/spec/value-lifecycle.md, Copies);
+      // a read-only one stays a view of it.
       bool copiedNamedVector = false;
       if (vectorElementTypeFound && info.isMutable && !fileScopeStack.empty() &&
           init.kind == Expr::Kind::Name) {
@@ -527,6 +528,11 @@
         copiedNamedVector = sourceIt != localsIn.end() &&
                             sourceIt->second.kind == LocalInfo::Kind::Vector &&
                             !sourceIt->second.isSoaVector;
+      } else if (vectorElementTypeFound && info.isMutable && !fileScopeStack.empty() &&
+                 init.kind == Expr::Kind::Call &&
+                 (init.isFieldAccess || ir_lowerer::isElementAccessCopySourceExpr(init)) &&
+                 !isTemporaryStructCopySource(init, localsIn)) {
+        copiedNamedVector = true;
       }
       if (copiedNamedVector) {
         constexpr int32_t VectorRecordSlots = 5;

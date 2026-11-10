@@ -94,8 +94,34 @@ PhaseStatus SemanticsValidator::validateExprCallPhase6([[maybe_unused]] const st
       return st.done(false);
     }
     if (rewrittenDirectCollectionFallbackCall.has_value()) {
-      return st.done(validateExpr(params, locals,
-                          *rewrittenDirectCollectionFallbackCall));
+      // A rewritten mutator on an element of a builtin vector of vectors (`a[i].clear()`) stays a
+      // statement; elements of a variadic pack have no in-place mutation.
+      bool keepsStatementContext = false;
+      if (const Expr &receiver = rewrittenDirectCollectionFallbackCall->args.empty()
+                                     ? expr
+                                     : rewrittenDirectCollectionFallbackCall->args.front();
+          receiver.kind == Expr::Kind::Call && !receiver.isFieldAccess &&
+          receiver.args.size() == 2 &&
+          (isSimpleCallName(receiver, "at") || isSimpleCallName(receiver, "at_unsafe"))) {
+        const Expr *root = containerPlaceRoot(receiver);
+        const BindingInfo *rootBinding =
+            root->kind == Expr::Kind::Name ? findParamBinding(params, root->name) : nullptr;
+        if (rootBinding == nullptr && root->kind == Expr::Kind::Name) {
+          if (const auto it = locals.find(root->name); it != locals.end()) {
+            rootBinding = &it->second;
+          }
+        }
+        keepsStatementContext = rootBinding != nullptr && rootBinding->typeName != "args";
+      }
+      if (!keepsStatementContext) {
+        return st.done(validateExpr(params, locals, *rewrittenDirectCollectionFallbackCall));
+      }
+      return st.done(validateExpr(params,
+                                  locals,
+                                  *rewrittenDirectCollectionFallbackCall,
+                                  enclosingStatements,
+                                  statementIndex,
+                                  expressionIsStatementContext));
     }
     ExprCollectionAccessDispatchContext collectionAccessDispatchContext;
     prepareExprCollectionAccessDispatchContext(

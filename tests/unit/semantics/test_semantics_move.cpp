@@ -757,4 +757,70 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("an inner vector changes in place only through a mutable root") {
+  std::string error;
+  CHECK(validateWithPush(R"(
+[struct]
+Grid {
+  [vector<vector<i32>> mut] rows
+
+  [effects(heap_alloc)]
+  grow([i32] row) {
+    this.rows[row].push(1i32)
+    this.rows[row].pop()
+  }
+}
+
+[effects(heap_alloc) return<int>]
+main() {
+  [vector<vector<i32>> mut] rows{vector<vector<i32>>()}
+  rows.push(vector<i32>(1i32))
+  rows[0i32].push(2i32)
+  rows[0i32].pop()
+  rows[0i32].clear()
+  [Grid mut] grid{Grid{[rows] vector<vector<i32>>()}}
+  grid.rows.push(vector<i32>(1i32))
+  grid.rows[0i32].push(3i32)
+  grid.grow(0i32)
+  return(rows[0i32].count() + grid.rows[0i32].count())
+}
+)",
+                         error));
+  CHECK(error.empty());
+
+  error.clear();
+  CHECK_FALSE(validateWithPush(R"(
+[effects(heap_alloc) return<int>]
+peek([vector<vector<i32>>] rows) {
+  rows[0i32].push(1i32)
+  return(rows.count())
+}
+
+[effects(heap_alloc) return<int>]
+main() {
+  [vector<vector<i32>> mut] rows{vector<vector<i32>>()}
+  rows.push(vector<i32>(1i32))
+  return(peek(rows))
+}
+)",
+                               error));
+  CHECK(error.find(
+            "push changes rows, which is not mutable: declare it [vector<vector<i32>> mut] rows") !=
+        std::string::npos);
+
+  error.clear();
+  CHECK_FALSE(validateWithPush(R"(
+[effects(heap_alloc) return<int>]
+main() {
+  [vector<vector<i32>> mut] rows{vector<vector<i32>>()}
+  rows.push(vector<i32>(1i32))
+  [vector<i32>] view{rows[0i32]}
+  rows[0i32].push(2i32)
+  return(view.count())
+}
+)",
+                               error));
+  CHECK(error.find("borrowed binding: rows (root: rows, sink: view)") != std::string::npos);
+}
+
 TEST_SUITE_END();
