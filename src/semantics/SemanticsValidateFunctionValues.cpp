@@ -149,7 +149,8 @@ struct FunctionValueRewriter {
       if (instance != std::string::npos && instance > 0) {
         leaf.resize(instance);
       }
-      out += leaf;
+      // `__FunctionN` is the lowered `Function` box; closure structs keep their names, so two stay distinct.
+      out += userFacingLoweredTypeLeaf(leaf) == "Function" ? std::string("Function") : leaf;
       token.clear();
     };
     for (char ch : text) {

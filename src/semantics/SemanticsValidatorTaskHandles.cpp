@@ -1,6 +1,7 @@
 #include "SemanticsValidator.h"
 
 #include "SemanticsSendable.h"
+#include "SemanticsValidateLambdaClosures.h"
 
 #include <algorithm>
 #include <string_view>
@@ -384,20 +385,22 @@ std::string SemanticsValidator::diagnosticTypeText(const std::string &typeText) 
   if (defMap_.count(path) == 0) {
     path = resolveStructTypePath(normalized, "", structNames_);
   }
-  if (path.find("__lambda") != std::string::npos) {
+  if (path.find(LambdaClosureStructPrefix) != std::string::npos) {
     return "closure";
   }
+  // Generated types read as written: `/__Function1__t...` and `__Function1` are `Function`.
   if (const auto defIt = defMap_.find(path); defIt != defMap_.end() && defIt->second != nullptr &&
                                               !defIt->second->instanceOfTemplate.empty()) {
     const Definition &def = *defIt->second;
     const size_t slash = def.instanceOfTemplate.find_last_of('/');
-    return def.instanceOfTemplate.substr(slash == std::string::npos ? 0 : slash + 1) + "<" +
-           joinArgs(def.instanceTemplateArgs) + ">";
+    return userFacingLoweredTypeLeaf(
+               def.instanceOfTemplate.substr(slash == std::string::npos ? 0 : slash + 1)) +
+           "<" + joinArgs(def.instanceTemplateArgs) + ">";
   }
   if (!normalized.empty() && normalized.front() == '/') {
-    return normalized.substr(normalized.find_last_of('/') + 1);
+    return userFacingLoweredTypeLeaf(normalized.substr(normalized.find_last_of('/') + 1));
   }
-  return normalized;
+  return userFacingLoweredTypeLeaf(normalized);
 }
 
 std::string SemanticsValidator::diagnosticDefinitionText(const std::string &path) {

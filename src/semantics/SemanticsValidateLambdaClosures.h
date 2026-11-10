@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 
 #include "primec/semantics/Semantics.h"
 
@@ -18,5 +19,21 @@ inline constexpr const char *LambdaClosureStructPrefix = "__lambda";
 // Suffix of the closure struct the pass generates for a named definition used as a `Function` value
 // (`/double__fnref`): a struct without fields whose `call` forwards to the definition.
 inline constexpr const char *FunctionForwarderSuffix = "__fnref";
+
+// The user-facing spelling of a type-name leaf (no namespace, no `__t` instance suffix) that the pass generates, for
+// diagnostics: the `Function<R, A...>` box struct `__FunctionN` reads `Function`, a closure struct reads `closure`.
+// Any other leaf is returned unchanged.
+inline std::string userFacingLoweredTypeLeaf(const std::string &leaf) {
+  constexpr std::string_view FunctionBoxPrefix = "__Function";
+  if (leaf.size() > FunctionBoxPrefix.size() &&
+      leaf.compare(0, FunctionBoxPrefix.size(), FunctionBoxPrefix) == 0 &&
+      leaf.find_first_not_of("0123456789", FunctionBoxPrefix.size()) == std::string::npos) {
+    return "Function";
+  }
+  if (leaf.find(LambdaClosureStructPrefix) != std::string::npos) {
+    return "closure";
+  }
+  return leaf;
+}
 
 } // namespace primec::semantics

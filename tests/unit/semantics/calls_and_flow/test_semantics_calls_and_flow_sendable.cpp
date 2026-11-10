@@ -623,4 +623,59 @@ main() {
                 "closure cannot be a Function: capture `raw` is Pointer<u8>");
 }
 
+// Diagnostics spell the lowered `Function` box (`__FunctionN`) as the user wrote it.
+TEST_CASE("a borrowed mut Function spawn argument suggests a Function copy") {
+  checkRejected(R"(
+[return<i64>]
+step_twice([Function<i64, i64> mut] step, [i64] value) {
+  return(step(step(value)))
+}
+
+[effects(task, heap_alloc), return<int>]
+main() {
+  [Function<i64, i64> mut] f{Function<i64, i64>{[]([i64] x) { return(plus(x, 1i64)) }}}
+  [Task<i64>] t{[spawn] step_twice(f, 1i64)}
+  return(convert<i32>(wait(t)))
+}
+)",
+                "spawn argument `step` of /step_twice is a mutable borrow of the spawner's value: a task works on "
+                "copies, take it as `[Function<i64, i64> copy mut]`");
+}
+
+TEST_CASE("a Pointer to a Function reads as Function in spawn and capture diagnostics") {
+  const std::string hooks = R"(
+[struct]
+Hooks() {
+  [Pointer<Function<i64, i64>>] first
+}
+
+[return<i64>]
+run_hooks([Hooks] hooks) {
+  return(1i64)
+}
+)";
+  checkRejected(hooks + R"(
+[effects(task, heap_alloc), return<int>]
+main() {
+  [Function<i64, i64> mut] f{Function<i64, i64>{[]([i64] x) { return(plus(x, 1i64)) }}}
+  [Hooks] hooks{Hooks{[first] location(f)}}
+  [Task<i64>] t{[spawn] run_hooks(hooks)}
+  return(convert<i32>(wait(t)))
+}
+)",
+                "spawn argument `hooks` of /run_hooks is not sendable: field `first` of Hooks is "
+                "Pointer<Function<i64, i64>>" +
+                    SharingNote);
+  checkRejected(R"(
+[effects(heap_alloc), return<int>]
+main() {
+  [Function<i64, i64> mut] f{Function<i64, i64>{[]([i64] x) { return(plus(x, 1i64)) }}}
+  [Pointer<Function<i64, i64>>] raw{location(f)}
+  [Function<i32> mut] read{Function<i32>{[raw]() { return(7i32) }}}
+  return(read())
+}
+)",
+                "closure cannot be a Function: capture `raw` is Pointer<Function<i64, i64>>");
+}
+
 TEST_SUITE_END();
