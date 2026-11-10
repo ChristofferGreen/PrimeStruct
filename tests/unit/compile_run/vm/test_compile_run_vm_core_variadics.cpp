@@ -571,4 +571,38 @@ main() {
   CHECK(readFile(outPath) == "3\n2\n3\n");
 }
 
+TEST_CASE("runs vm returning a waited task result next to a struct local") {
+  const std::string source = R"(
+[struct]
+Rows() {
+  [i32] count{4i32}
+}
+
+[return<i32>]
+add([i32] a, [i32] b) {
+  return(plus(a, b))
+}
+
+[effects(task, io_out), return<i32>]
+sum_with_rows([i32] a) {
+  [Rows] rows{Rows{}}
+  print_line(rows.count)
+  [Task<i32>] task{[spawn] add(a, rows.count)};
+  return(wait(task))
+}
+
+[effects(task, io_out), return<int>]
+main() {
+  print_line(sum_with_rows(3i32))
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_return_wait_struct_local.prime", source);
+  const std::string outPath = testScratchPath("vm_return_wait_struct_local.out").string();
+  const std::string runCmd =
+      "./primec --emit=vm " + srcPath + " --entry /main > " + quoteShellArg(outPath);
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "4\n7\n");
+}
+
 TEST_SUITE_END();

@@ -362,8 +362,15 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
       }
     }
     OnErrorScope onErrorScope(*this, onErrorHandler);
+    // The parser keeps the last top-level `return(value)` both as a statement and as `returnExpr`, and both are
+    // validated. The task handles as they were before that statement let the second visit see the same handles, so a
+    // `wait` in the return value consumes its handle once.
+    std::optional<decltype(currentValidationState_.taskHandles)> taskHandlesBeforeReturn;
     for (size_t stmtIndex = 0; stmtIndex < def.statements.size(); ++stmtIndex) {
       const Expr &stmt = def.statements[stmtIndex];
+      if (isReturnCall(stmt)) {
+        taskHandlesBeforeReturn = currentValidationState_.taskHandles;
+      }
       if (!validateStatement(defParams,
                              definitionContext.locals,
                              stmt,
@@ -401,8 +408,18 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
                                              handledTargetTypedSumReturn)) {
         return false;
       }
-      if (!handledTargetTypedSumReturn &&
-          !validateExpr(defParams, definitionContext.locals, *def.returnExpr)) {
+      std::optional<decltype(currentValidationState_.taskHandles)> taskHandlesAfterReturn;
+      if (taskHandlesBeforeReturn.has_value()) {
+        taskHandlesAfterReturn = std::move(currentValidationState_.taskHandles);
+        currentValidationState_.taskHandles = std::move(*taskHandlesBeforeReturn);
+      }
+      const bool returnExprValid =
+          handledTargetTypedSumReturn ||
+          validateExpr(defParams, definitionContext.locals, *def.returnExpr);
+      if (taskHandlesAfterReturn.has_value()) {
+        currentValidationState_.taskHandles = std::move(*taskHandlesAfterReturn);
+      }
+      if (!returnExprValid) {
         if (error_.empty()) {
           return failPassesDefinitionsDiagnostic(
               &*def.returnExpr,

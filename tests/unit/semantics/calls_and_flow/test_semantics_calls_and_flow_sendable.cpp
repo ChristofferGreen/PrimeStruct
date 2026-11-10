@@ -437,4 +437,53 @@ main() {
                 "spawn receiver of /Holder/read is not sendable: field `entry` of Holder is Reference<i32>" + SharingNote);
 }
 
+TEST_CASE("return(wait(task)) waits once, with or without a struct local") {
+  // The return value is validated as a statement and again as the definition's return expression; its `wait`
+  // consumes the handle once.
+  checkAccepted(R"(
+[struct]
+Rows() {
+  [i32] count{0i32}
+}
+
+[return<i32>]
+add([i32] a, [i32] b) {
+  return(plus(a, b))
+}
+
+[effects(task), return<int>]
+main() {
+  [Rows] rows{Rows{}}
+  [Task<i32>] t{[spawn] add(2i32, 3i32)};
+  return(wait(t))
+}
+)");
+  checkAccepted(R"(
+[return<i32>]
+add([i32] a, [i32] b) {
+  return(plus(a, b))
+}
+
+[effects(task), return<int>]
+main() {
+  [Task<i32>] t{[spawn] add(2i32, 3i32)};
+  return(wait(t))
+}
+)");
+  checkRejected(R"(
+[return<i32>]
+add([i32] a, [i32] b) {
+  return(plus(a, b))
+}
+
+[effects(task), return<int>]
+main() {
+  [Task<i32>] t{[spawn] add(2i32, 3i32)};
+  [i32] first{wait(t)}
+  return(plus(first, wait(t)))
+}
+)",
+                "task handle already waited: t");
+}
+
 TEST_SUITE_END();

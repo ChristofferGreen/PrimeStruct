@@ -112,7 +112,6 @@ of sync with them.
 | TODO-5746 | A parameterless `mut` method whose body is only bindings is a method | ready | diagnostics |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
 | TODO-5791 | Every `Function` is sendable by construction: the conversion rejects non-sendable captures | ready | mt-closures |
-| TODO-5826 | `return(wait(task))` waits once in a definition with a struct local | deferred | mt-tasks |
 | TODO-5792 | The VM runs spawned tasks under a deterministic scheduler | ready | mt-vm-tasks |
 | TODO-5793 | Byte-region accesses check liveness without a map search or a write | ready | mt-heap-optexe |
 | TODO-5794 | `optexe` heaps are per-thread arenas with remote frees | blocked | mt-heap-optexe |
@@ -210,13 +209,13 @@ of sync with them.
 - Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5738, TODO-5718
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732, TODO-5735, TODO-5736, TODO-5737
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe; real calls and struct copies TODO-5739, TODO-5741, TODO-5752; VM address checks TODO-5824
-- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5791, TODO-5792, TODO-5793, TODO-5794, TODO-5795, TODO-5796, TODO-5797, TODO-5798, TODO-5656, TODO-5802, TODO-5803, TODO-5799, TODO-5800, TODO-5801; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5826
+- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5791, TODO-5792, TODO-5793, TODO-5794, TODO-5795, TODO-5796, TODO-5797, TODO-5798, TODO-5656, TODO-5802, TODO-5803, TODO-5799, TODO-5800, TODO-5801; deferred TODO-5804, TODO-5805, TODO-5806
 
 ### Execution Queue
 
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
-Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order: TODO-5791 (every `Function` sendable by construction), TODO-5792 (VM tasks under a deterministic scheduler; `TaskSpawn`/`TaskWait` IR), TODO-5793 (byte-region checks without a map search), TODO-5794 (`optexe` per-thread heap arenas), TODO-5795 (`optexe` threads for `[spawn]`), TODO-5796 (`Atomic`), TODO-5797 (`Mutex`), TODO-5798 (`Channel`), TODO-5656 (atomic `SharedString` count), TODO-5802 (`serveWorkers`), TODO-5803 (apps on workers, measured), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5791, TODO-5792 and TODO-5793 are ready and independent of each other (TODO-5807, destructured multi-wait, and TODO-5790, sendable spawn arguments, are done). Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions), TODO-5826 (`return(wait(task))` with a struct local).
+Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order: TODO-5791 (every `Function` sendable by construction), TODO-5792 (VM tasks under a deterministic scheduler; `TaskSpawn`/`TaskWait` IR), TODO-5793 (byte-region checks without a map search), TODO-5794 (`optexe` per-thread heap arenas), TODO-5795 (`optexe` threads for `[spawn]`), TODO-5796 (`Atomic`), TODO-5797 (`Mutex`), TODO-5798 (`Channel`), TODO-5656 (atomic `SharedString` count), TODO-5802 (`serveWorkers`), TODO-5803 (apps on workers, measured), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5791, TODO-5792 and TODO-5793 are ready and independent of each other (TODO-5807, destructured multi-wait, and TODO-5790, sendable spawn arguments, are done). Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions).
 
 ### Task Blocks
 
@@ -685,18 +684,6 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
     - full release gate green
   - stop_rule: receiver offset handling only.
   - notes: deferred: queued behind the Ready Now cap.
-
-- [ ] TODO-5826: `return(wait(task))` waits once in a definition with a struct local
-  - owner: ai
-  - status: deferred
-  - created_at: 2026-11-10
-  - phase: Multithreading (found while testing TODO-5790)
-  - parallel_track: mt-tasks
-  - scope: In a definition that has a struct-typed local (`[Rows] rows{Rows{}}`, or a `StringArena`), `return(wait(task))` is rejected with `task handle already waited: task` at the `wait`: the return expression is validated twice, and the second visit sees the handle consumed. `[i32] result{wait(task)}` then `return(result)` works. Validate the return's task-handle effects once. Deferred: the binding form is a workaround and no example needs the other.
-  - acceptance:
-    - a semantic test spawns with a struct local and `return(wait(task))`, and a VM compile-run test prints its result
-    - full release gate green
-  - stop_rule: the double validation of the return expression only.
 
 - [ ] TODO-5791: Every `Function` is sendable by construction: the conversion rejects non-sendable captures
   - owner: ai

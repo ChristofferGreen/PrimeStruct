@@ -119,7 +119,7 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.core"
                                   SHARD_PREFIX "core_newly_exposed_2026_07_16"
                                   SOURCE_FILE "*test_compile_run_vm_core_*.cpp"
                                   RANGE_FIRST 84
-                                  RANGE_LAST 100
+                                  RANGE_LAST 101
                                   CASES_PER_SHARD 5)
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.math"

@@ -2201,6 +2201,7 @@ are left unarchived.
 | TODO-5822 | The std/os SIGTERM test does not race the program's start | [2026-11.md](todo_archive/2026-11.md) | 2026-11-09 |
 | TODO-5823 | AppKit snapshot runs finish under an overloaded machine and never outlive their test | [2026-11.md](todo_archive/2026-11.md) | 2026-11-09 |
 | TODO-5825 | Definitions that stay inline get no standalone body | [2026-11.md](todo_archive/2026-11.md) | 2026-11-09 |
+| TODO-5826 | `return(wait(task))` waits once in a definition with a struct local | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 
