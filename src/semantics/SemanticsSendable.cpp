@@ -26,8 +26,7 @@ std::string typeLeafName(const std::string &name) {
 }
 
 bool isNonSendableLeafStruct(const std::string &leaf) {
-  return leaf == "StringView" || leaf == "Slice" || leaf == "ReadSlice" || leaf == "WriteSlice" ||
-         leaf == "SharedString";
+  return leaf == "StringView" || leaf == "Slice" || leaf == "ReadSlice" || leaf == "WriteSlice";
 }
 
 bool isClosureStruct(const Definition &def) {

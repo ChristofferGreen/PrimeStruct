@@ -128,7 +128,7 @@ of sync with them.
 | TODO-5858 | `some<Vector<i32>>(vector<i32>(1i32, 2i32))` frees the vector it copies from | ready | pick-payloads |
 | TODO-5859 | A `pick` expression yields a vector | ready | pick-payloads |
 | TODO-5860 | Moving a `pick` payload binding does not poison a later binding of the same name | ready | pick-payloads |
-| TODO-5656 | Thread-safe `SharedString`: an atomic owner count | ready | string-concurrency |
+| TODO-5861 | `SharedString` keeps its owner count inside the text block | ready | string-concurrency |
 | TODO-5802 | `serveWorkers`: one thread polls and accepts, N workers answer | ready | mt-server |
 | TODO-5803 | The web apps run on workers and their gain is measured | blocked | mt-server |
 | TODO-5799 | arm64 native runs spawned tasks on pthreads, its heap behind a lock | ready | mt-native |
@@ -223,13 +223,13 @@ of sync with them.
 - Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5738, TODO-5718
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732, TODO-5735, TODO-5736, TODO-5737
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5840, TODO-5844; real calls and struct copies TODO-5739, TODO-5741, TODO-5752; VM address checks TODO-5824
-- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5656, TODO-5802, TODO-5803, TODO-5799, TODO-5800, TODO-5801, TODO-5847, TODO-5848, TODO-5849, TODO-5852; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854
+- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5861, TODO-5802, TODO-5803, TODO-5799, TODO-5800, TODO-5801, TODO-5847, TODO-5848, TODO-5849, TODO-5852; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854
 
 ### Execution Queue
 
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
-Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order (TODO-5792 and TODO-5835, VM tasks and their lowering, are done, and so are TODO-5793, byte-region checks without a map search, TODO-5794, `optexe` per-thread heap arenas, TODO-5795, `optexe` threads for `[spawn]`, `Atomic<i32>` and `Atomic<i64>` in `/std/sync`, TODO-5797, `Mutex<T>` with `locked(body)`, TODO-5846, `optexe` faults when every task waits, and TODO-5798, bounded `Channel<T>`): TODO-5656 (atomic `SharedString` count), TODO-5802 (`serveWorkers`), TODO-5803 (apps on workers, measured), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5656, TODO-5802 and TODO-5799 are ready and independent of each other, and so are TODO-5848 (`return(wait(t))` of a `String` task result is rejected as a return type mismatch), TODO-5849 (a destructured multi-wait of tasks with different result types loses the later results' types) and TODO-5847 (spawned calls with collection or `copy` parameters or collection results run as tasks, which today run inline; TODO-5845, the same for `String`, struct and closure values, is done) (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, are done). Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions), TODO-5854 (a `Mutex` or `Atomic` handle keeps a copy of its first value). Found with `Mutex` and ready: TODO-5852 (`wait(a, b)` of two `Task<void>`), and in the closures lane TODO-5850 (a `Reference`-returning call as a closure argument) and TODO-5851 (a `[ref]` closure written in a generic call). Found with `Channel` and ready, in the Result and control flow lane: TODO-5855 (a method call on a `pick` payload of struct type); TODO-5856 (`pick` on a call result frees an owning payload) is done, and found with it and ready: TODO-5857 (a `vector<T>` payload reads its count in a `pick` arm), TODO-5858 (`some<Vector<i32>>` of a fresh vector frees it), TODO-5859 (a `pick` expression yields a vector) and TODO-5860 (moving a payload binding does not poison a later binding of the same name).
+Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order (TODO-5792 and TODO-5835, VM tasks and their lowering, are done, and so are TODO-5793, byte-region checks without a map search, TODO-5794, `optexe` per-thread heap arenas, TODO-5795, `optexe` threads for `[spawn]`, `Atomic<i32>` and `Atomic<i64>` in `/std/sync`, TODO-5797, `Mutex<T>` with `locked(body)`, TODO-5846, `optexe` faults when every task waits, TODO-5798, bounded `Channel<T>`, and TODO-5656, the atomic `SharedString` owner count): TODO-5861 (`SharedString` count inside the text block), TODO-5802 (`serveWorkers`), TODO-5803 (apps on workers, measured), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5861, TODO-5802 and TODO-5799 are ready and independent of each other, and so are TODO-5848 (`return(wait(t))` of a `String` task result is rejected as a return type mismatch), TODO-5849 (a destructured multi-wait of tasks with different result types loses the later results' types) and TODO-5847 (spawned calls with collection or `copy` parameters or collection results run as tasks, which today run inline; TODO-5845, the same for `String`, struct and closure values, is done) (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, are done). Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions), TODO-5854 (a `Mutex` or `Atomic` handle keeps a copy of its first value). Found with `Mutex` and ready: TODO-5852 (`wait(a, b)` of two `Task<void>`), and in the closures lane TODO-5850 (a `Reference`-returning call as a closure argument) and TODO-5851 (a `[ref]` closure written in a generic call). Found with `Channel` and ready, in the Result and control flow lane: TODO-5855 (a method call on a `pick` payload of struct type); TODO-5856 (`pick` on a call result frees an owning payload) is done, and found with it and ready: TODO-5857 (a `vector<T>` payload reads its count in a `pick` arm), TODO-5858 (`some<Vector<i32>>` of a fresh vector frees it), TODO-5859 (a `pick` expression yields a vector) and TODO-5860 (moving a payload binding does not poison a later binding of the same name).
 
 ### Task Blocks
 
@@ -922,18 +922,19 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
     - full release gate green
   - stop_rule: move state of `pick` payload bindings.
 
-- [ ] TODO-5656: Thread-safe `SharedString`: an atomic owner count
+- [ ] TODO-5861: `SharedString` keeps its owner count inside the text block
   - owner: ai
   - status: ready
-  - created_at: 2026-11-03
+  - created_at: 2026-11-10
   - phase: Multithreading (docs/MultithreadingPrototype.md, Heaps; docs/spec/strings-and-views.md, Beyond std::string)
   - parallel_track: string-concurrency
-  - scope: `SharedString` (stdlib/std/text/shared.prime, TODO-5638) keeps its owner count as a plain `i32` right after the text's 0 byte, at an unaligned offset, so it may be shared on one thread only. Move the count to an aligned place in the block, count with the atomic opcodes of `/std/sync` (stdlib/std/sync/sync.prime, `atomicAdd`; `add` on copy, `add(-1)` on destroy, the last owner frees), and mark the type `[sendable]`. Freeing on a thread other than the allocating one is the heaps' remote free (TODO-5794 on `optexe`, TODO-5800 on native). Update the strings-and-views status table.
+  - scope: The atomic owner count of a `SharedString` (stdlib/std/text/shared.prime) is one heap slot of its own beside the text block, because byte regions (`__pstext_alloc`) are not 8-byte aligned (large blocks, arena bumps) and the atomic opcodes (`__psatomic_*_i64`) take heap slot addresses only. So making a `SharedString` allocates and frees twice: an `optexe` loop of 1000000 `sharedFrom` plus destroy retires 4.67e9 instructions, against 3.01e9 with the old in-block plain count. Give the string heap an 8-aligned allocation (or align every block), let the atomic opcodes work on an aligned byte address on the VM and in the optimized C++ runtime, and put the count in the block again (before the text or after its padded 0 byte).
+  - implementation_notes: `resolveIndirectAddress` of the VM and `ps_resolve` of src/backend/IrToOptCppEmitter.cpp reject byte addresses today; byte-region liveness (TODO-5793) already finds a region from an address. Measure with `/usr/bin/time -l` (instructions retired) on the two loops in the result note of the atomic count TODO in docs/todo_archive/2026-11.md.
   - acceptance:
-    - positive: 4 tasks each copy and destroy one `SharedString` 100000 times and `owners()` is 1 at the end on the VM (all seeds) and `optexe`; a `SharedString` passes as a spawn argument and through a `Channel`; the single-threaded `SharedString` tests are unchanged
-    - negative: a `SharedString` made inside a `StringArena` still cannot be sent (`string escapes its arena via spawn`)
+    - positive: making a `SharedString` allocates one block (heap live blocks grow by 1 less than today); the create and destroy loop retires at most 3.2e9 instructions on `optexe` and the copy and destroy loop of 5000000 rounds no more than today's 4.5e9; the program-matrix `shared_strings` suite passes unchanged on the VM (all seeds) and `optexe`
+    - negative: an atomic opcode on an unaligned byte address faults by name on the VM and on `optexe`
     - full release gate green
-  - stop_rule: the owner count and sendability; native follows with TODO-5800.
+  - stop_rule: where the count lives; native follows with TODO-5800.
 
 - [ ] TODO-5802: `serveWorkers`: one thread polls and accepts, N workers answer
   - owner: ai
@@ -999,7 +1000,7 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
   - parallel_track: mt-native
   - scope: Emit the atomic opcodes with LSE (`ldar`/`stlr`, `ldaddal`, `swpal`, `casal`) and answer the lock and condition host functions with `pthread_mutex_*` and `pthread_cond_*` bound from libSystem, so the `/std/sync` types and `SharedString` run on arm64 native.
   - acceptance:
-    - positive: the `Atomic` program-matrix tests (tests/unit/program_matrix/test_program_matrix_atomics.cpp) and the `Mutex`, `Channel` and `SharedString` compile-run tests of TODO-5797, TODO-5798 and TODO-5656 pass on native with the `optexe` output
+    - positive: the `Atomic` program-matrix tests (tests/unit/program_matrix/test_program_matrix_atomics.cpp) and the `Mutex`, `Channel` and `SharedString` tests (tests/unit/program_matrix/test_program_matrix_shared_strings.cpp) of TODO-5797 and TODO-5798 pass on native with the `optexe` output
     - negative: a nested `locked` on one mutex and a send after close exit 3 with the VM's messages
     - full release gate green on macOS arm64
   - stop_rule: the primitives on arm64 native; x86_64 native stays inline.

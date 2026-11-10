@@ -1,19 +1,21 @@
 // An immutable, reference-counted text (docs/spec/strings-and-views.md): copying a SharedString shares the bytes and
 // adds one to the count, so a clone and a view cost nothing, and the bytes are freed when the last owner is destroyed.
-// The block is the text, a 0 byte and then the count as four bytes. This count is a plain integer, not atomic: a
-// SharedString may be shared between owners on one thread only. Sending one between threads needs atomics and
-// per-thread string heaps, which wait for the concurrency model.
+// The count is one heap slot of its own, beside the block of the text and its 0 byte, and is counted with the atomic
+// operations of `/std/sync`: a SharedString is sendable, its owners may live on different threads, and the last one
+// frees the text and the count on whichever thread it is (docs/MultithreadingPrototype.md, Heaps).
 // A module of its own: `import /std/text/shared/*`.
 
 import /std/text/*
 import /std/text/view/*
+import /std/sync/*
 
 namespace std {
   namespace text {
   namespace shared {
-  [public struct]
+  [public struct sendable]
   SharedString() {
     [private Pointer<u8> mut] bytes{__pstext_alloc(0u64)}
+    [private Pointer<i64> mut] ownerCount{/std/intrinsics/memory/alloc<i64>(0i32)}
     [private i32 mut] fieldLength{0i32}
     [private bool mut] live{false}
 
@@ -39,34 +41,36 @@ namespace std {
       if(!this.live) {
         return(0i32)
       }
-      return(readOwners(this.bytes, this.fieldLength))
+      return(sharedOwnersLoad(this.ownerCount))
     }
 
     // Takes `source` in as the first owner (used by sharedFrom).
     [mut effects(heap_alloc)]
     fill([/std/text/view/StringView] source) {
       [i32] size{source.fieldLength}
-      this.bytes = __pstext_alloc(convert<u64>(size) + 5u64)
+      this.bytes = __pstext_alloc(convert<u64>(size) + 1u64)
       moveBytes(this.bytes, source.data, size)
       textStore(this.bytes, size, 0u8)
       this.fieldLength = size
       this.live = true
-      writeOwners(this.bytes, size, 1i32)
+      this.ownerCount = sharedOwnersAlloc()
     }
 
-    [mut effects(heap_alloc)]
+    [mut]
     Copy([Reference<Self>] other) {
       this.bytes = other.bytes
+      this.ownerCount = other.ownerCount
       this.fieldLength = other.fieldLength
       this.live = other.live
       if(other.live) {
-        writeOwners(other.bytes, other.fieldLength, readOwners(other.bytes, other.fieldLength) + 1i32)
+        sharedOwnersAdd(other.ownerCount)
       }
     }
 
     [mut]
     Move([Reference<Self>] other) {
       this.bytes = other.bytes
+      this.ownerCount = other.ownerCount
       this.fieldLength = other.fieldLength
       this.live = other.live
       other.live = false
@@ -75,35 +79,41 @@ namespace std {
     [mut effects(heap_alloc)]
     Destroy() {
       if(this.live) {
-        [i32] remaining{readOwners(this.bytes, this.fieldLength) - 1i32}
-        if(remaining == 0i32) {
+        if(sharedOwnersRelease(this.ownerCount)) {
           __pstext_free(this.bytes)
-        } else {
-          writeOwners(this.bytes, this.fieldLength, remaining)
         }
         this.live = false
       }
     }
   }
 
-  // The count lives after the text and its 0 byte, so the bytes start at the block and need no offset pointer.
-  [return<i32>]
-  readOwners([Pointer<u8>] block, [i32] length) {
-    [i32] at{length + 1i32}
-    return(convert<i32>(textLoad(block, at)) + convert<i32>(textLoad(block, at + 1i32)) * 256i32 +
-           convert<i32>(textLoad(block, at + 2i32)) * 65536i32 + convert<i32>(textLoad(block, at + 3i32)) * 16777216i32)
+  // The count of a new SharedString: one heap slot holding 1.
+  [unsafe effects(heap_alloc), return<Pointer<i64>>]
+  sharedOwnersAlloc() {
+    [Pointer<i64>] count{/std/intrinsics/memory/alloc<i64>(1i32)}
+    /std/sync/__psatomic_store_i64(count, 1i64)
+    return(count)
   }
 
-  [return<void>]
-  writeOwners([Pointer<u8> mut] block, [i32] length, [i32] owners) {
-    [i32] at{length + 1i32}
-    [i32] high1{owners / 256i32}
-    [i32] high2{high1 / 256i32}
-    [i32] high3{high2 / 256i32}
-    textStore(block, at, convert<u8>(owners - high1 * 256i32))
-    textStore(block, at + 1i32, convert<u8>(high1 - high2 * 256i32))
-    textStore(block, at + 2i32, convert<u8>(high2 - high3 * 256i32))
-    textStore(block, at + 3i32, convert<u8>(high3))
+  [unsafe return<i32>]
+  sharedOwnersLoad([Pointer<i64>] count) {
+    return(convert<i32>(/std/sync/__psatomic_load_i64(count)))
+  }
+
+  // One more owner.
+  [unsafe return<void>]
+  sharedOwnersAdd([Pointer<i64>] count) {
+    /std/sync/__psatomic_add_i64(count, 1i64)
+  }
+
+  // An owner is gone; the last one frees the count and returns true, and then frees the text.
+  [unsafe effects(heap_alloc), return<bool>]
+  sharedOwnersRelease([Pointer<i64>] count) {
+    if(/std/sync/__psatomic_add_i64(count, -1i64) == 1i64) {
+      /std/intrinsics/memory/free(count)
+      return(true)
+    }
+    return(false)
   }
 
   // A SharedString holding a copy of `text`.

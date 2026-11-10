@@ -219,7 +219,7 @@ Every operation keeps the text valid UTF-8.
   limit counts their regions, `stringArenaDepth()` and `stringArenaBytes()` report them, and `stringHeapAllocations()`
   counts blocks. Text made in an arena must not outlive it: the checker rejects returning such a `String`, assigning it
   to a binding made before the arena and pushing it into a container made before it (`string escapes its arena via
-  return|outer binding|container`), and any other use of the text after the arena ended faults, because its addresses
+  return|outer binding|container`) (a `SharedString` made in an arena has its text there and is checked the same way), and any other use of the text after the arena ended faults, because its addresses
   are invalid (releasing it reports `invalid string heap free address`). A `String` that is grown while an arena is open
   takes its new block from the arena, so a `String` made before the arena should not be grown inside it and kept.
   Measured at the allocator (`test_vm_text_heap.cpp`): 400 blocks of five size classes, taken and returned, run about 13
@@ -316,7 +316,7 @@ Where the language's own rules let text be better than the C++ type, and the TOD
 | UTF-8 invariant, Unicode case, normalization, graphemes | correct text, loaded only when used | done (`/std/text/unicode`, `/std/text/unicode_norm`) |
 | `Secret<String>` | zeroed on destroy, never printed, constant-time compare | TODO-5635 |
 | Compile-time folding of literal operations | no run-time work for constants | done: `+`, `==`, `!=`, `at` on literals; `==`, `<`.., `count`, `startsWith`, `endsWith`, `contains`, `[i]` on `textOf("..")`; a literal index out of range is a compile error |
-| `SharedString` | cheap immutable sharing: copying adds one to a count, the last owner frees (`/std/text/shared`); not yet safe across threads | done (single-threaded); thread-safe version TODO-5656 |
+| `SharedString` | cheap immutable sharing: copying adds one to an atomic count, the last owner frees (`/std/text/shared`); sendable, so the owners may be on different threads (VM and `optexe`). The count is a heap slot of its own beside the text. Made in a `StringArena` it follows the arena rules of a `String` | done |
 
 Typed, context-escaped text (`Html`, `Url`, ...) was considered and left out for now.
 

@@ -599,8 +599,8 @@ The design is per-thread arenas, with a lock only on a shared slow path:
   reserves a 1 MiB value stack, so the thread trampoline asks for 8 MiB (`pthread_attr_setstacksize`), like the
   main thread.
 - **Strings:** `String` blocks come from these heaps, so `String` is sendable once a block can be freed on any
-  thread. `SharedString` also needs an atomic owner count (TODO-5656); its count sits right after the text's 0
-  byte today, at an unaligned offset, so it moves to an aligned place first.
+  thread. `SharedString` keeps its owner count in a heap slot of its own beside the text block and counts with
+  the atomic opcodes, so it is sendable too: the last owner frees the text and the count on whichever thread it is.
 
 ### Sendable Values
 
@@ -614,7 +614,7 @@ user never writes it on a type. Decided 2026-11-09 after a review of what Rust's
 | `String`, `vector<T>`, `map<K, V>`, `Maybe<T>`, `Result`, tuples of sendable types | views and carriers (`StringView`, slices) |
 | structs whose fields are all sendable | a closure, as a bare closure struct, with a `[ref]` capture |
 | every `Function<R, A...>` ([Functions Are Sendable](#functions-are-sendable)) | `Task<T>` |
-| `Mutex<T>`, `Atomic<T>`, `Channel<T>` | `SharedString` until TODO-5656 gives it an atomic owner count |
+| `Mutex<T>`, `Atomic<T>`, `Channel<T>`, `SharedString` (an atomic owner count) | |
 
 - **No `Sync`.** A `Reference` never crosses to another thread, so no value is ever read by two threads through
   references. Sharing happens only through `Mutex`, `Atomic` and `Channel`, which are sendable handles; copying one

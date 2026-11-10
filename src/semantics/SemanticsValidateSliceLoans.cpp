@@ -269,7 +269,8 @@ struct Checker {
   std::set<std::string> viewLocals;
   // Open string arenas: binding name and the scope depth that holds it; Strings made while one is open.
   std::vector<std::pair<std::string, size_t>> arenas;
-  std::map<std::string, size_t> arenaStrings;  // String binding -> index into `arenas`
+  std::map<std::string, size_t>
+      arenaStrings; // String or SharedString binding -> index into `arenas`
   std::map<std::string, size_t> declarationOrder;  // binding -> position in the order of declaration
   size_t declarationCount = 0;
   std::vector<size_t> arenaOrder;  // declaration position of each open arena
@@ -609,9 +610,11 @@ struct Checker {
         if (hasTypeLeaf(statement, "StringArena")) {
           arenas.emplace_back(statement.name, scopes.size());
           arenaOrder.push_back(declarationCount);
-        } else if (hasTypeLeaf(statement, "String") && !arenas.empty()) {
+        } else if ((hasTypeLeaf(statement, "String") || hasTypeLeaf(statement, "SharedString")) &&
+                   !arenas.empty()) {
           arenaStrings[statement.name] = arenas.size() - 1;
-        } else if (!arenas.empty() && statement.args.size() == 1 && isClosureFactory(statement.args.front())) {
+        } else if (!arenas.empty() && statement.args.size() == 1 &&
+                   isClosureFactory(statement.args.front())) {
           // A closure that captures a String made in an open arena carries that String: same escape rules.
           for (const Expr &arg : statement.args.front().args) {
             const Expr *base = placeBase(arg);

@@ -9,8 +9,8 @@ namespace primec::semantics {
 
 // Which values may be owned by another thread (docs/MultithreadingPrototype.md, Sendable Values). The rule is
 // structural and runs on monomorphized types: scalars, `string`, enums, `Function`, and containers, tuples, sums and
-// structs of sendable types are sendable; `Reference`, `Pointer`, views (`StringView`, slices), `Task` and
-// `SharedString` are not. A `[sendable]` struct owns what its pointers point to, so only the pointee types are
+// structs of sendable types are sendable; `Reference`, `Pointer`, views (`StringView`, slices) and `Task` are not.
+// A `[sendable]` struct owns what its pointers point to, so only the pointee types are
 // checked. Spawn arguments use it today; the `Function` conversion, `Mutex` and `Channel` sites call it too.
 struct SendableTypeLookup {
   // The struct or sum definition that a type text names (after resolving it from `namespacePrefix`), or nullptr.

@@ -678,4 +678,70 @@ main() {
                 "closure cannot be a Function: capture `raw` is Pointer<Function<i64, i64>>");
 }
 
+TEST_CASE("a SharedString is a spawn argument and a Channel element") {
+  checkAccepted(R"(
+import /std/sync/*
+import /std/text/*
+import /std/text/view/*
+import /std/text/shared/*
+
+[return<i32>]
+measure([SharedString] text) {
+  return(text.count())
+}
+
+[effects(channel, task, heap_alloc), return<int>]
+main() {
+  [String] owner{stringFrom("hello")}
+  [SharedString] kept{sharedFrom(owner.view())}
+  [Task<i32>] t{[spawn] measure(kept)}
+  texts{Channel<SharedString>{[capacity] 2i32}}
+  [SharedString] sent{kept}
+  texts.send(sent)
+  return(wait(t))
+}
+)");
+}
+
+TEST_CASE("a SharedString made in an open arena cannot be a spawn argument or be sent") {
+  checkRejected(R"(
+import /std/text/*
+import /std/text/view/*
+import /std/text/shared/*
+
+[return<i32>]
+measure([SharedString] text) {
+  return(text.count())
+}
+
+[effects(task, heap_alloc), return<int>]
+main() {
+  [String] owner{stringFrom("hello")}
+  [StringArena] arena{beginStringArena()}
+  [SharedString] made{sharedFrom(owner.view())}
+  [Task<i32>] t{[spawn] measure(made)};
+  [i32] count{wait(t)}
+  return(count)
+}
+)",
+                "string escapes its arena via spawn (arena: arena)");
+  checkRejected(R"(
+import /std/sync/*
+import /std/text/*
+import /std/text/view/*
+import /std/text/shared/*
+
+[effects(channel, heap_alloc), return<int>]
+main() {
+  texts{Channel<SharedString>{[capacity] 2i32}}
+  [String] owner{stringFrom("hello")}
+  [StringArena] arena{beginStringArena()}
+  [SharedString] made{sharedFrom(owner.view())}
+  texts.send(made)
+  return(0i32)
+}
+)",
+                "string escapes its arena via channel (arena: arena)");
+}
+
 TEST_SUITE_END();

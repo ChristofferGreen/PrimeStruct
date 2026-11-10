@@ -2122,6 +2122,7 @@ are left unarchived.
 | TODO-5653 | Cut the lowering time of inline-heavy library code | [2026-11.md](todo_archive/2026-11.md) | 2026-11-03 |
 | TODO-5654 | Retire the copying `slice(array, start, end)` builtin | [2026-11.md](todo_archive/2026-11.md) | 2026-11-03 |
 | TODO-5655 | Callee-reachable receiver addresses so `mut` methods can be real calls | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5656 | Thread-safe `SharedString`: an atomic owner count | [2026-11.md](todo_archive/2026-11.md) | 2026-11-10 |
 | TODO-5660 | Specify closures and callable values | [2026-11.md](todo_archive/2026-11.md) | 2026-11-06 |
 | TODO-5661 | Lambdas lower as closure structs | [2026-11.md](todo_archive/2026-11.md) | 2026-11-06 |
 | TODO-5662 | Closures and callable structs pass through generics | [2026-11.md](todo_archive/2026-11.md) | 2026-11-06 |
