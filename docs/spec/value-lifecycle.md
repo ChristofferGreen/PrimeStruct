@@ -142,7 +142,10 @@
   to the parameter and is destroyed when the callee's body ends, a named one given to a `move` parameter is moved-from
   and destroyed by the callee, and a read-only sum parameter cannot be returned (`borrowed parameter escapes via
   return`). Assigning to a `mut` sum local takes the new value over from a temporary or `move(other)` and copies it
-  from a place (the place keeps its payload), then destroys the payload the local held; `held = held` is valid. A
+  from a place (the place keeps its payload), then destroys the payload the local held; `held = held` is valid. The
+  same holds for a sum the definition borrows, a `[Maybe<String> mut]` parameter or a `Reference` to a sum: the
+  payload it held is destroyed and the caller sees the new value. A `copy` sum parameter given a named sum has a
+  payload of its own. A
   `pick` whose subject is a fresh value (`pick(get())`, a method
   call included, or a constructor) owns it for as long as the `pick` runs and destroys its active payload when the
   `pick` ends or a `return` in an arm leaves the function. The payload binding of an arm stands for what the sum owns:
@@ -176,7 +179,8 @@
   a disarmed temporary) frees nothing. A struct field initialized
   from a place copies it, and
   `assign` of an owning value destroys the old value and copies the new one. Assigning to a `mut` builtin
-  `vector<T>` local does the same: a fresh vector (a call, a constructor, a `pick` expression) is taken over, a
+  `vector<T>` local does the same: a fresh vector (a call, a constructor, a `pick` expression) is taken over, and so is
+  `move(other)` of a local that owns its vector (nothing is copied and `other` is moved-from); a
   place is copied with a buffer of its own and keeps its elements, and the vector the local held is destroyed
   (`kept = kept` is valid); a local whose `vector<T>` type is inferred (`[mut] names{make_names()}`) behaves like
   a declared one. Assigning to a `[vector<T> mut]` parameter that borrows the caller's vector destroys that vector

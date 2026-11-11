@@ -521,4 +521,34 @@ TEST_CASE("reading a named vector leaves it usable") {
                         "2\n5\n2\n2\n7\n55\n2\n");
 }
 
+TEST_CASE("assigning move(other) to a vector local takes the other vector over") {
+  // Nothing is copied: the target frees what it held, and the moved-from local frees nothing and can be
+  // assigned again. Moving a local into itself keeps it.
+  runVectorOwnerProgram("vector_assign_move_local",
+                        "",
+                        R"(
+    [vector<i32> mut] a{make_values(1i32)}
+    [vector<i32> mut] b{make_values(5i32)}
+    a = move(b)
+    print_line(a[0i32])
+    [vector<Named> mut] c{make_named(1i32)}
+    [vector<Named> mut] d{make_named(5i32)}
+    c = move(d)
+    print_line(c.count())
+    print_line(first_byte(c[1i32].text))
+    d = make_named(7i32)
+    print_line(first_byte(c[0i32].text) + first_byte(d[0i32].text))
+    c = move(c)
+    print_line(first_byte(c[1i32].text))
+    [i32 mut] round{0i32}
+    while(round < 3i32) {
+      [vector<Named> mut] next{make_named(round)}
+      c = move(next)
+      round = round + 1i32
+    }
+    print_line(first_byte(c[0i32].text))
+)",
+                        "5\n2\n54\n108\n54\n50\n");
+}
+
 TEST_SUITE_END();

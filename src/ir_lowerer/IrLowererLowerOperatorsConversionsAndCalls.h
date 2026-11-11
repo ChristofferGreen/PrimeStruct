@@ -103,6 +103,24 @@
                       emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal));
                       return true;
                     }
+                    // `move(other)` of a local that owns its vector hands the record over (the move released
+                    // the local's drop flag): nothing is copied. Moving the target into itself keeps it.
+                    bool takesOverMovedLocal = false;
+                    if (isSimpleCallName(rhsExpr, "move") && rhsExpr.args.size() == 1 &&
+                        rhsExpr.args.front().kind == Expr::Kind::Name) {
+                      const auto movedIt = localsIn.find(rhsExpr.args.front().name);
+                      if (movedIt != localsIn.end() &&
+                          movedIt->second.kind == LocalInfo::Kind::Vector &&
+                          movedIt->second.dropFlagLocal >= 0) {
+                        if (movedIt->second.index == destPtrLocal && destDropFlagLocal >= 0) {
+                          emitInstruction(IrOpcode::PushI32, 1);
+                          emitInstruction(IrOpcode::StoreLocal,
+                                          static_cast<uint64_t>(destDropFlagLocal));
+                          return true;
+                        }
+                        takesOverMovedLocal = movedIt->second.index != destPtrLocal;
+                      }
+                    }
                     LowerSetupStageState::DropEntry entry{
                         destPtrLocal, destDropFlagLocal, std::string{}};
                     entry.builtinVectorElementSlots =
@@ -122,7 +140,8 @@
                     const int32_t newPtrLocal = allocTempLocal();
                     emitInstruction(IrOpcode::AddressOfLocal, static_cast<uint64_t>(newBaseLocal));
                     emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(newPtrLocal));
-                    if (!ir_lowerer::isFreshBuiltinVectorExpr(rhsExpr,
+                    if (!takesOverMovedLocal &&
+                        !ir_lowerer::isFreshBuiltinVectorExpr(rhsExpr,
                                                               [&](const Expr &candidate) {
                                                                 return resolveDefinitionCall(
                                                                     candidate);
