@@ -41,6 +41,7 @@
 #include "primec/ui/NativeUi.h"
 #include "primec/ui/NativeUiRecentFiles.h"
 #include "primec/ui/NativeUiStandardItems.h"
+#include "primec/ui/PendingScriptCount.h"
 #include "primec/ui/ScriptRunner.h"
 #include "primec/ui/SyntaxHighlight.h"
 
@@ -787,7 +788,7 @@ void syncWebFromText(uint64_t window, bool force) {
   s.previewScriptsPending[window] += 1;
   NSString *script = linear ? webScrollScript(place) : webScrollToLineScript(place, textLineCount(scroll.documentView), 0);
   evaluateScript(web->second, script, ^(id) {
-    state().previewScriptsPending[window] -= 1;
+    primec::ui::finishPendingScript(state().previewScriptsPending, window);
   });
 }
 
@@ -807,7 +808,7 @@ void syncTextFromWeb(uint64_t window) {
   NSString *script = linear ? WebFractionScript : webLineScript(textLineCount(textScroll.documentView));
   evaluateScript(web->second, script, ^(id result) {
     State &now = state();
-    now.previewScriptsPending[window] -= 1;
+    primec::ui::finishPendingScript(now.previewScriptsPending, window);
     NSScrollView *scroll = previewTextScroll(window);
     if (scroll == nil || ![result respondsToSelector:@selector(doubleValue)]) {
       return;
@@ -838,7 +839,7 @@ void syncWebToCursor(NSTextView *view) {
   s.previewScriptsPending[window] += 1;
   evaluateScript(web->second, webScrollToLineScript(static_cast<double>(spot.line) + through, textLineCount(view), 0.33),
                  ^(id) {
-                   state().previewScriptsPending[window] -= 1;
+                   primec::ui::finishPendingScript(state().previewScriptsPending, window);
                  });
 }
 
@@ -863,7 +864,7 @@ void restorePreviewPosition(uint64_t window) {
     if (y > 0) {
       s.previewScriptsPending[window] += 1;
       evaluateScript(web->second, [NSString stringWithFormat:@"window.scrollTo(0,%f)", y], ^(id) {
-        state().previewScriptsPending[window] -= 1;
+        primec::ui::finishPendingScript(state().previewScriptsPending, window);
       });
     }
   }
@@ -915,7 +916,7 @@ void startSnapshotReport(uint64_t window) {
                                                   parts.count > 1 ? parts[1] : @"-1"];
       [body writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:nil];
       State &now = state();
-      now.previewScriptsPending[window] -= 1;
+      primec::ui::finishPendingScript(now.previewScriptsPending, window);
       now.snapshotReportDone = true;
     });
   });
@@ -1009,7 +1010,7 @@ void renderPreview(uint64_t window) {
     s.previewScriptsPending[window] += 1;
     evaluateScript(pageView, @"window.scrollY", ^(id y) {
       State &now = state();
-      now.previewScriptsPending[window] -= 1;
+      primec::ui::finishPendingScript(now.previewScriptsPending, window);
       now.previewKeepY[window] = [y respondsToSelector:@selector(doubleValue)] ? [y doubleValue] : 0;
       loadPage(pageView, page);
     });
@@ -1106,7 +1107,7 @@ void applySnapshotScroll(uint64_t window, const std::string &spec) {
     if (web != s.previewWebs.end()) {
       s.previewScriptsPending[window] += 1;
       evaluateScript(web->second, webScrollScript(fraction), ^(id) {
-        state().previewScriptsPending[window] -= 1;
+        primec::ui::finishPendingScript(state().previewScriptsPending, window);
         syncTextFromWeb(window);
       });
     }
@@ -4227,7 +4228,6 @@ bool ps_ui_window_set_preview(uint64_t window, bool on) {
   if (w == nil) {
     return false;
   }
-  hideOutputPane(window); // the preview lays the window's content out itself
   State &s = state();
   const auto content = s.windowContent.find(window);
   NSTextView *view = content != s.windowContent.end() ? textView(content->second) : nil;
@@ -4235,6 +4235,7 @@ bool ps_ui_window_set_preview(uint64_t window, bool on) {
   if (on == previewOn(window)) {
     return true; // already as asked
   }
+  hideOutputPane(window); // the preview lays the window's content out itself
   NSRect contentRect = [w contentRectForFrameRect:w.frame];
   contentRect.origin = NSZeroPoint;
   if (!on) {

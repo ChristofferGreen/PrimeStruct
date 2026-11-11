@@ -90,6 +90,15 @@ if(NOT rc EQUAL 127)
 endif()
 check_png("${WORK_DIR}/input.png" 2000)
 
+# A preview that is already on, asked for again, changes nothing: the output pane stays (exit 0; 1 when it was hidden).
+build_app("${SOURCE_DIR}/tests/fixtures/ui/preview_output_pane.prime" PreviewPaneNative)
+set(ENV{PRIMESTRUCT_UI_SNAPSHOT} "${WORK_DIR}/preview_pane.png")
+execute_process(COMMAND "${WORK_DIR}/PreviewPaneNative" RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err)
+if(NOT rc EQUAL 0)
+  message(FATAL_ERROR "the preview-twice program exited with '${rc}' instead of 0 (1: the output pane was hidden, 2: "
+                      "the preview did not turn on): ${out}${err}")
+endif()
+
 build_app("${SOURCE_DIR}/examples/apps/text_editor/main.prime" EditorNative)
 
 # WebKit is loaded when a preview turns on, never linked: neither the compiled editor nor the AppKit dylib

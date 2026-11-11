@@ -1,0 +1,54 @@
+// A window whose preview is already on keeps its output pane when the preview is asked for again: setPreview(true)
+// with the preview already on changes nothing. The exit code is 0 when the pane stayed, 1 when it was hidden and 2 when
+// the preview did not turn on. cmake/NativeUiCompiledAppTest.cmake runs it on AppKit.
+import /std/text/*
+import /std/ui/native/*
+
+[return<int> effects(heap_alloc)]
+main() {
+  [App] app{start_app("Preview")}
+  [Window] window{app.window("Untitled", 720i32, 480i32)}
+  [TextView] editor{app.textView()}
+  window.setContent(editor)
+  editor.setText(stringFrom("# Title"))
+  window.show()
+  [mut] result{0i32}
+  if(!window.setPreview(true)) {
+    result = 2i32
+  } else {
+    [bool] shown{window.setOutputVisible(true)}
+    [bool] again{window.setPreview(true)}
+    if(!shown) {
+      result = 3i32
+    } else {
+      if(!window.outputVisible()) {
+        result = 1i32
+      }
+    }
+  }
+  [mut] running{true}
+  while(running) {
+    pick(app.waitEvent()) {
+      command(id) {
+        [i32] ignoredCommand{id}
+      }
+      textChanged(w) {
+        [Window] ignoredWindow{w}
+      }
+      controlChanged(widget) {
+        [Widget] ignoredWidget{widget}
+      }
+      openFile(request) {
+        [bool] ignoredRequest{true}
+      }
+      windowCloseRequested(w) {
+        w.close()
+        running = false
+      }
+      quitRequested {
+        running = false
+      }
+    }
+  }
+  return(result)
+}

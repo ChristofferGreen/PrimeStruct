@@ -1,6 +1,7 @@
 #include "primec/testing/TestScratch.h"
 #include "primec/ui/NativeUi.h"
 #include "primec/ui/NativeUiHeadless.h"
+#include "primec/ui/PendingScriptCount.h"
 #include "primec/ui/ScriptRunner.h"
 
 #include "third_party/doctest.h"
@@ -11,6 +12,7 @@
 #include <future>
 #include <iterator>
 #include <string>
+#include <unordered_map>
 #include <thread>
 #include <vector>
 
@@ -1407,4 +1409,23 @@ TEST_CASE("a runner that ends without reading its input does not end the program
   REQUIRE(run != nullptr);
   CHECK(finished.get_future().get() == 0); // `true` exits with 0 and nothing stopped it
   ps_script_release(run);
+}
+
+TEST_CASE("a late script answer neither creates nor lowers a window's pending count below zero") {
+  std::unordered_map<uint64_t, int> pending;
+  pending[7] = 2;
+  primec::ui::finishPendingScript(pending, 7);
+  CHECK(pending[7] == 1);
+  primec::ui::finishPendingScript(pending, 7);
+  CHECK(pending[7] == 0);
+  primec::ui::finishPendingScript(pending, 7);
+  CHECK(pending[7] == 0);
+
+  // The window's preview was dropped (its entry erased) before the answer came: nothing is created, so the next
+  // preview of that window counts its first script as 1, not 0.
+  pending.erase(7);
+  primec::ui::finishPendingScript(pending, 7);
+  CHECK(pending.count(7) == 0);
+  pending[7] += 1;
+  CHECK(pending[7] == 1);
 }

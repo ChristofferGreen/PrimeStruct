@@ -2270,6 +2270,7 @@ are left unarchived.
 | TODO-5935 | A lambda parameter naming a struct of the enclosing namespace is resolved there | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5936 | A diagnostic in `main` of a program that imports `/std/http/server` reports a stdlib position | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5937 | A restored session keeps each tab's view mode and its active tab | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
+| TODO-5938 | The preview's pending-script count stays exact, and turning an open preview on keeps the output pane | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
 
 <!-- INDEX-END -->
 
