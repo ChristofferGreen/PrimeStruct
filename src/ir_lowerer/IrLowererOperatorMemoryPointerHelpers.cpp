@@ -5,11 +5,14 @@
 #include "primec/ir_lowerer/IrLowererBindingTypeHelpers.h"
 #include "primec/ir_lowerer/IrLowererHelpers.h"
 #include "primec/ir_lowerer/IrLowererIndexKindHelpers.h"
+#include "primec/ir_lowerer/IrLowererInlineParamHelpers.h"
+#include "primec/ir_lowerer/IrLowererReferenceCallAddress.h"
 #include "primec/ir_lowerer/IrLowererSemanticProductTargetAdapters.h"
 #include "primec/ir_lowerer/IrLowererStructFieldBindingHelpers.h"
 #include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
 
 #include <algorithm>
+#include <optional>
 #include <string_view>
 #include <vector>
 
@@ -1059,6 +1062,7 @@ bool emitConversionsAndCallsMemoryAndPointerExpr(
           return false;
         }
         if (referenceReturn) {
+          ReferenceCallAddressScope addressScope;
           return emitExpr(target, localsIn);
         }
       }
@@ -1147,6 +1151,20 @@ bool emitConversionsAndCallsMemoryAndPointerExpr(
       }
       instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
     } else {
+      // `dereference(call)` of a call that returns `Reference<T>` loads through the address the call yields.
+      bool referenceReturn = false;
+      if (builtin == "dereference" && !aggregatePointerLike &&
+          pointerExpr.kind == Expr::Kind::Call && !pointerExpr.isMethodCall &&
+          resolveDefinitionCall != nullptr) {
+        const Definition *pointerCallee = resolveDefinitionCall(pointerExpr);
+        std::string referentType;
+        referenceReturn =
+            pointerCallee != nullptr && definitionReturnsReference(*pointerCallee, referentType);
+      }
+      std::optional<ReferenceCallAddressScope> addressScope;
+      if (referenceReturn) {
+        addressScope.emplace();
+      }
       if (!emitExpr(pointerExpr, localsIn)) {
         return false;
       }

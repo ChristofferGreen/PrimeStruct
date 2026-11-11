@@ -35,6 +35,7 @@
 #include "primec/ir_lowerer/IrLowererOperatorConversionsAndCallsHelpers.h"
 #include "primec/ir_lowerer/IrLowererOperatorPowAbsSignHelpers.h"
 #include "primec/ir_lowerer/IrLowererOperatorSaturateRoundingRootsHelpers.h"
+#include "primec/ir_lowerer/IrLowererReferenceCallAddress.h"
 #include "primec/ir_lowerer/IrLowererReturnInferenceHelpers.h"
 #include "primec/ir_lowerer/IrLowererSemanticProductTargetAdapters.h"
 #include "primec/ir_lowerer/IrLowererSetupMathHelpers.h"
@@ -407,10 +408,29 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
                                  const Definition &callee,
                                  const LocalMap &callerLocals,
                                  bool requireValue) -> bool {
-    return ir_lowerer::emitInlineDefinitionCallImpl(
-        setupStage, stateOut, callResolutionAdapters,
-        input.diagnosticInfo, input.onErrorByDef,
-        callExpr, callee, callerLocals, requireValue, error);
+    // The first inline call emitted owns the "give me the address" request of a consumer of a `Reference` result.
+    const bool addressWanted = ir_lowerer::takeReferenceCallAddressWanted();
+    if (!ir_lowerer::emitInlineDefinitionCallImpl(setupStage,
+                                                  stateOut,
+                                                  callResolutionAdapters,
+                                                  input.diagnosticInfo,
+                                                  input.onErrorByDef,
+                                                  callExpr,
+                                                  callee,
+                                                  callerLocals,
+                                                  requireValue,
+                                                  error)) {
+      return false;
+    }
+    // A value read of a call that returns `Reference<T>` (T a scalar) loads the referent from the address the
+    // call leaves; a consumer that wants the address kept it (ReferenceCallAddressScope).
+    std::string referentType;
+    if (requireValue && !addressWanted &&
+        ir_lowerer::definitionReturnsReference(callee, referentType) &&
+        valueKindFromTypeName(referentType) != LocalInfo::ValueKind::Unknown) {
+      setupStage.function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+    }
+    return true;
   };
 
 #include "IrLowererLowerEmitExpr.h"

@@ -729,6 +729,69 @@ main() {
                     0);
 }
 
+// A call that returns `Reference<T>` read as a value loads through the address it yields (TODO-5934): a value binding,
+// an operand, an argument of a value parameter and a closure's `[i64]` parameter see 5, not the address. A `Reference`
+// binding, a returned `Reference` and the mutable forms still take the reference itself.
+TEST_CASE("a call that returns a Reference read as a value yields its referent") {
+  runClosureProgram("closure_reference_returning_call_value",
+                    R"(
+[return<Reference<i64>>]
+borrow_of([Pointer<uninitialized<i64>> mut] slot) {
+  return(borrow(dereference(slot)))
+}
+
+[return<Reference<i64>>]
+forward([Pointer<uninitialized<i64>> mut] slot) {
+  return(borrow_of(slot))
+}
+
+[return<i64>]
+plain([i64] value) {
+  return(value)
+}
+
+[return<void>]
+bump([Reference<i64> mut] value) {
+  value = value + 1i64
+}
+
+[effects(heap_alloc), return<i64>]
+apply_value<Body>([Body mut] body, [Pointer<uninitialized<i64>> mut] slot) {
+  return(body(borrow_of(slot)))
+}
+
+[effects(heap_alloc), return<void>]
+apply_ref<Body>([Body mut] body, [Pointer<uninitialized<i64>> mut] slot) {
+  body(borrow_of(slot))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Pointer<uninitialized<i64>> mut] slot{/std/intrinsics/memory/alloc<uninitialized<i64>>(1i32)}
+  init(dereference(slot), 5i64)
+  [i64] bound{borrow_of(slot)}
+  [i64] summed{plus(borrow_of(slot), 1i64)}
+  [i64] passed{plain(borrow_of(slot))}
+  [i64] loaded{dereference(borrow_of(slot))}
+  [i64] forwarded{forward(slot)}
+  [Reference<i64>] handle{forward(slot)}
+  [i64] through_closure{apply_value([]([i64] value) { return(value + 100i64) }, slot)}
+  apply_ref([]([Reference<i64> mut] value) { value = value + 10i64 }, slot)
+  bump(forward(slot))
+  [i64] after{borrow_of(slot)}
+  if(bound != 5i64) { return(1i32) }
+  if(summed != 6i64) { return(2i32) }
+  if(passed != 5i64) { return(3i32) }
+  if(loaded != 5i64) { return(4i32) }
+  if(forwarded != 5i64) { return(5i32) }
+  if(through_closure != 105i64) { return(6i32) }
+  if(after != 16i64) { return(7i32) }
+  return(convert<i32>(handle) - 16i32)
+}
+)",
+                    0);
+}
+
 TEST_CASE("ref-captured vector of Function routes passes to a parameter") {
   runClosureProgram("closure_ref_capture_struct_vector_parameter", R"(
 import /std/collections/*

@@ -491,8 +491,21 @@
         localsIn.emplace(stmt.name, info);
         return true;
       }
-      if (!emitExpr(init, localsIn)) {
-        return false;
+      {
+        // A `Reference` binding of a call that returns a `Reference<T>` is the address the call yields.
+        std::optional<ir_lowerer::ReferenceCallAddressScope> addressScope;
+        if (info.kind == LocalInfo::Kind::Reference && init.kind == Expr::Kind::Call &&
+            !init.isMethodCall && !init.isBinding) {
+          const Definition *initCallee = resolveDefinitionCall(init);
+          std::string referentType;
+          if (initCallee != nullptr &&
+              ir_lowerer::definitionReturnsReference(*initCallee, referentType)) {
+            addressScope.emplace();
+          }
+        }
+        if (!emitExpr(init, localsIn)) {
+          return false;
+        }
       }
       info.index = nextLocal++;
       function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(info.index)});
@@ -1035,6 +1048,18 @@
         returnsVoid,
         sawReturn,
         [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+          // `return(borrow_of(slot))` in a definition that returns a `Reference<T>` hands the reference on: the
+          // address the callee yields stays an address (ReferenceCallAddressScope).
+          std::optional<ir_lowerer::ReferenceCallAddressScope> addressScope;
+          if (declaredReturnIsReferenceHandle && valueExpr.kind == Expr::Kind::Call &&
+              !valueExpr.isMethodCall && !valueExpr.isBinding) {
+            const Definition *returnedCallee = resolveDefinitionCall(valueExpr);
+            std::string referentType;
+            if (returnedCallee != nullptr &&
+                ir_lowerer::definitionReturnsReference(*returnedCallee, referentType)) {
+              addressScope.emplace();
+            }
+          }
           return emitExpr(valueExpr, valueLocals);
         },
         [&](const Expr &valueExpr, const LocalMap &valueLocals) {

@@ -1,4 +1,5 @@
 #include "primec/ir_lowerer/IrLowererInlineParamHelpers.h"
+#include "primec/ir_lowerer/IrLowererReferenceCallAddress.h"
 #include "IrLowererInlinePackedArgs.h"
 #include "IrLowererInlineParamArgumentInfo.h"
 
@@ -16,6 +17,26 @@
 #include <string_view>
 
 namespace primec::ir_lowerer {
+
+// Whether `callee` is declared `return<Reference<T>>`; `referentTypeOut` is the text of T.
+bool definitionReturnsReference(const Definition &callee, std::string &referentTypeOut) {
+  for (const Transform &transform : callee.transforms) {
+    if (transform.name != "return" || transform.templateArgs.size() != 1) {
+      continue;
+    }
+    std::string base;
+    std::string argList;
+    if (splitTemplateTypeName(
+            trimTemplateTypeText(transform.templateArgs.front()), base, argList)) {
+      if (normalizeCollectionBindingTypeName(base) != "Reference") {
+        return false;
+      }
+      referentTypeOut = trimTemplateTypeText(argList);
+      return true;
+    }
+  }
+  return false;
+}
 
 namespace {
 
@@ -287,21 +308,8 @@ bool isReferenceReturningCallExpr(
     return false;
   }
   const Definition *callee = resolveDefinitionCall(arg);
-  if (callee == nullptr) {
-    return false;
-  }
-  for (const Transform &transform : callee->transforms) {
-    if (transform.name != "return" || transform.templateArgs.size() != 1) {
-      continue;
-    }
-    std::string base;
-    std::string argList;
-    if (splitTemplateTypeName(
-            trimTemplateTypeText(transform.templateArgs.front()), base, argList)) {
-      return normalizeCollectionBindingTypeName(base) == "Reference";
-    }
-  }
-  return false;
+  std::string referentType;
+  return callee != nullptr && definitionReturnsReference(*callee, referentType);
 }
 
 bool resolveIdentityReferenceForwardParamIndex(const Definition &callee, size_t &indexOut) {
@@ -752,6 +760,7 @@ bool emitInlineDefinitionCallParameters(
         }
 
         if (isReferenceReturningCallExpr(arg, resolveDefinitionCall)) {
+          ReferenceCallAddressScope addressScope;
           return emitExpr(arg, callerLocals);
         }
 
@@ -1051,6 +1060,7 @@ bool emitInlineDefinitionCallParameters(
 
         if ((isSimpleCallName(arg, "location") && arg.args.size() == 1) ||
             isReferenceReturningCallExpr(arg, resolveDefinitionCall)) {
+          ReferenceCallAddressScope addressScope;
           return emitExpr(arg, callerLocals);
         }
 

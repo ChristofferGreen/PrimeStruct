@@ -30,6 +30,9 @@ using TrackInlineParameterFileHandleFn = std::function<void(int32_t)>;
 using EmitInlineParameterStructCopyHelperFn = std::function<bool(
     int32_t destPtrLocal, int32_t srcPtrLocal, const std::string &structPath, bool &ranHelper)>;
 
+// Whether `callee` is declared `return<Reference<T>>`; `referentTypeOut` is the text of T.
+bool definitionReturnsReference(const Definition &callee, std::string &referentTypeOut);
+
 bool emitInlineDefinitionCallParameters(
     const std::vector<Expr> &callParams,
     const std::vector<const Expr *> &orderedArgs,
