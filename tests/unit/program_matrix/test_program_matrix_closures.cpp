@@ -634,6 +634,55 @@ main() {
                     22);
 }
 
+// A `[ref]` closure written as an argument is a brace constructor of a closure struct; the generic call infers its
+// own `Body` from it, so the closure's template arguments are inferred first (TODO-5851).
+TEST_CASE("a ref closure written in a generic call infers the closure type") {
+  runClosureProgram("closure_ref_capture_in_generic_call",
+                    R"(
+[return<i32>]
+apply<Handler>([Handler mut] handler, [i32] x) {
+  return(handler(x))
+}
+
+[struct]
+Counter() {
+  [i32 mut] total{0i32}
+
+  [mut return<i32>]
+  drive<Handler>([Handler mut] handler) {
+    return(handler(this.total))
+  }
+}
+
+[return<i32>]
+via_generic<T>([T] seed) {
+  [i32 mut] hits{0i32}
+  [i32] got{apply([ref hits]([i32] x) {
+    hits = hits + x
+    return(hits)
+  }, 4i32)}
+  return(got + hits + apply([ref hits]([i32] x) { return(x) }, 1i32))
+}
+
+[return<int>]
+main() {
+  [i32 mut] count{0i32}
+  [i32] first{apply([ref count]([i32] x) {
+    count = count + x
+    return(count)
+  }, 5i32)}
+  [Counter mut] counter{Counter{[total] 7i32}}
+  [i32 mut] seen{0i32}
+  counter.drive([ref seen]([i32] value) {
+    seen = value
+    return(value)
+  })
+  return(first + count + seen * 10i32 + via_generic<i64>(1i64) * 10i32)
+}
+)",
+                    170);
+}
+
 TEST_CASE("ref-captured vector of Function routes passes to a parameter") {
   runClosureProgram("closure_ref_capture_struct_vector_parameter", R"(
 import /std/collections/*

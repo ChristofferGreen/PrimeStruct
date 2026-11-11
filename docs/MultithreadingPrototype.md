@@ -854,9 +854,8 @@ This prints `7`. Implemented on the VM and `optexe` (`stdlib/std/sync/sync.prime
 docs/spec/stdlib-reference.md, Shared state.
 
 - `locked` is generic over the closure type (`locked<Body>([Body mut] body)`), so `body` may borrow the caller's
-  locals with `[ref name]`: it runs inline, on the calling thread. `locked` returns what `body` returns. Today
-  a `[ref]` closure is bound to a local and passed by name; written in the call it is not accepted yet
-  (TODO-5851).
+  locals with `[ref name]`: it runs inline, on the calling thread. `locked` returns what `body` returns. A `[ref]`
+  closure may be written in the call or bound to a local and passed by name.
 - The `Reference<T>` is a borrowed parameter of `body`, so the existing rules (`borrowed parameter escapes via
   return` / `via assignment`) keep it inside. As implemented: a body whose parameter is the value type borrowed
   (`[vector<i64>] values`) and returns it gets `borrowed parameter escapes via return: values`; a body that

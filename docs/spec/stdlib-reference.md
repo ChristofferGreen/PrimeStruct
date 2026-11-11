@@ -1212,9 +1212,9 @@ This prints `7` on the VM, under every schedule seed, and on `optexe`.
 
 - A body that assigns to a scalar value declares its parameter `[Reference<i64> mut] value`; fields of a struct
   are assigned through a plain `[Reference<Tally>] state`.
-- A body that captures by reference is bound to a local first and passed by name:
-  `[mut] look{[ref seen]([Reference<Tally>] state) { seen = state.total }}` then `tally.locked(look)`
-  (a `[ref]` closure written in the call is not accepted yet, TODO-5851).
+- A body may capture by reference. It is written in the call (`tally.locked([ref seen]([Reference<Tally>] state) { seen = state.total })`)
+  or bound to a local first and passed by name (`[mut] look{[ref seen]([Reference<Tally>] state) { ... }}` then
+  `tally.locked(look)`), which is how a body that runs more than once is written.
 - `T` must be sendable: `Mutex<StringView>` is `Mutex element StringView is not sendable`, and a struct names the
   field, ``Mutex element Record is not sendable: field `next` is Reference<Record>``.
 - The reference stays in the body. A body that takes the value as a borrowed parameter and returns it gets

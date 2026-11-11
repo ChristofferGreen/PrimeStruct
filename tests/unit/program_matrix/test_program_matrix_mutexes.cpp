@@ -210,7 +210,10 @@ noisy() {
     seen = state.value
   }}
   cell.locked(look)
-  cell.locked(look)
+  cell.locked([ref seen]([Reference<Noisy>] state) {
+    state.value = state.value + 5i64
+    seen = state.value
+  })
   print_line(seen)
   other{cell}
   print_line("copied"utf8)

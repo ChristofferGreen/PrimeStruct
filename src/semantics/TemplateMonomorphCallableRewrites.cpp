@@ -561,6 +561,17 @@ void rewriteCallableShapes(Expr &expr,
   rewriteCallableBindingCall(expr, namespacePrefix, ctx, locals, params);
   rewriteCallableFieldCall(expr, namespacePrefix, ctx, locals, params, allowMathBare);
   inferBraceConstructorTemplateArgs(expr, mapping, allowedParams, namespacePrefix, ctx, locals, params, allowMathBare);
+  // A `[ref]` closure written as an argument is a brace constructor whose template arguments the call needs to infer
+  // its own (`apply<Body>([Body mut] body)`), and the call is rewritten before its arguments: infer the closure's now.
+  if (expr.kind == Expr::Kind::Call && !expr.isBinding && !expr.isBraceConstructor) {
+    for (Expr &arg : expr.args) {
+      if (arg.kind == Expr::Kind::Call && arg.isBraceConstructor && !arg.isMethodCall &&
+          semantics::isLambdaClosureStructPath(arg.name)) {
+        inferBraceConstructorTemplateArgs(
+            arg, mapping, allowedParams, namespacePrefix, ctx, locals, params, allowMathBare);
+      }
+    }
+  }
 }
 
 } // namespace primec
