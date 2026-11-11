@@ -1,7 +1,7 @@
 # Build System: Plan
 
 Classification: **design direction**. Nothing here is implemented. The leaves are the Build system lane of
-`docs/todo.md` (TODO-5905 to TODO-5921). It is a companion to `docs/AiWorkflowPlan.md` (the project box view reads the
+`docs/todo.md` (TODO-5905 to TODO-5920; static libraries are TODO-5922 to TODO-5933). It is a companion to `docs/AiWorkflowPlan.md` (the project box view reads the
 same project folder) and to `docs/MultithreadingPrototype.md`, VM Threads (steps that are PrimeStruct functions run on
 VM threads).
 
@@ -121,16 +121,10 @@ are what bounds it, as with the embed API.
   graph under its own namespace. Inclusion is explicit, as `add_subdirectory` is, so every target has a visible
   origin. Only the root script may call `run`. A file included twice is evaluated once; a cycle is a diagnostic.
 - **Libraries (reserved).** The language is moving toward static libraries that link into an executable. The graph
-  has the node kinds now, so the shape of a build does not change when the compiler catches up. What the compiler
-  needs first is TODO-5921, a deferred leaf that must be split before it starts:
-  - a **library is an IR module plus an interface plus its generic definitions.** Generics cannot be compiled ahead,
-    because monomorphization needs the call sites; they ship as definitions and are instantiated in the consumer,
-    with identical instantiations merged by content hash (`docs/LibrarySymbolManifestLazyImports.md`);
-  - the **interface** is the outline of `docs/AiWorkflowPlan.md` section 3, and its hash lets a dependent skip a
-    rebuild when only a body changed;
-  - the **format** is proposed as serialized IR (PSIR): every backend consumes it, and the optimizer runs after
-    linking, so inlining crosses library boundaries. Merging modules means remapping string-table indices, host
-    imports and function names, which is the part not yet checked.
+  has the node kinds now, so the shape of a build does not change when the compiler catches up. The design is
+  `docs/ModulesAndLibrariesPlan.md`: a library is the interface of a module as PrimeStruct text plus its unoptimized
+  IR in one archive, linked at the IR level, with symbol-level hashes giving early cutoff. its leaves are TODO-5922 to
+  TODO-5933.
 
 ## 8. Caching
 
@@ -170,7 +164,7 @@ Leaves in the Build system lane; the VM threads lane has its own list.
 | TODO-5918 | staged builds with `run` |
 | TODO-5919 | PrimeStruct-function steps |
 | TODO-5920 | PrimeScroll builds with `make.prime` (replaces `scripts/build_native_app.sh` only after parity) |
-| TODO-5921 | static libraries (deferred, to be split) |
+| TODO-5922 to TODO-5933 | static libraries, split in `docs/ModulesAndLibrariesPlan.md` section 16 |
 
 ## 11. Open decisions
 

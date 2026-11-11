@@ -215,7 +215,18 @@ of sync with them.
 | TODO-5918 | A script can run its graph in stages | blocked | build-stages |
 | TODO-5919 | A build step can be a PrimeStruct function that runs on a VM thread | blocked | build-function-steps |
 | TODO-5920 | PrimeScroll builds with `make.prime` | blocked | build-dogfood |
-| TODO-5921 | Static libraries link into an executable | deferred | libraries |
+| TODO-5922 | `primevm --link` merges two serialized IR modules | ready | lib-ir-link |
+| TODO-5923 | `primec --emit=interface` prints a module's interface and symbol table | ready | lib-interface |
+| TODO-5924 | `--emit=lib` writes a library archive from every public definition of a module | blocked | lib-archive |
+| TODO-5925 | `--library` compiles a program against a library and links it | blocked | lib-consume |
+| TODO-5926 | Generic definitions and synthesized helpers cross the library boundary | blocked | lib-generics |
+| TODO-5927 | A library owns its namespace roots | blocked | lib-ownership |
+| TODO-5928 | `--emit-uses` writes the library symbols a compile resolved | blocked | lib-uses |
+| TODO-5929 | The runner rebuilds a dependent only when a symbol it used changed | blocked | lib-cutoff |
+| TODO-5930 | `primec build` builds libraries and links them | blocked | lib-build |
+| TODO-5931 | The stdlib builds as a library | deferred | lib-stdlib |
+| TODO-5932 | Libraries carry back-end code | deferred | lib-backend |
+| TODO-5933 | The embed API loads a library at run time | deferred | lib-embed |
 
 ### Ready Now
 
@@ -248,7 +259,8 @@ of sync with them.
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - AI workflow (docs/AiWorkflowPlan.md): TODO-5841, TODO-5843, TODO-5842
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5896, TODO-5897, TODO-5898, TODO-5899, TODO-5900, TODO-5901, TODO-5902, TODO-5903, TODO-5904
-- Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-5905, TODO-5906, TODO-5907, TODO-5908, TODO-5909, TODO-5910, TODO-5911, TODO-5912, TODO-5913, TODO-5914, TODO-5915, TODO-5916, TODO-5917, TODO-5918, TODO-5919, TODO-5920, TODO-5921
+- Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-5905, TODO-5906, TODO-5907, TODO-5908, TODO-5909, TODO-5910, TODO-5911, TODO-5912, TODO-5913, TODO-5914, TODO-5915, TODO-5916, TODO-5917, TODO-5918, TODO-5919, TODO-5920
+- Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5922, TODO-5923, TODO-5924, TODO-5925, TODO-5926, TODO-5927, TODO-5928, TODO-5929, TODO-5930, TODO-5931, TODO-5932, TODO-5933
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526, TODO-5868, TODO-5886, TODO-5891, TODO-5892
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
@@ -269,7 +281,7 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
 
 VM threads (docs/MultithreadingPrototype.md, VM Threads), after the startup lane: the VM gets a threads mode next to its deterministic scheduler. In this order: TODO-5896 (`--vm-threads`, a thread and a heap arena per task) is ready; then TODO-5897 (Atomic, Mutex and Channel on real primitives), TODO-5898 (host-call locking), TODO-5899 (fault and cancel without ending the process), TODO-5900 (the concurrent corpus repeated and under ThreadSanitizer), TODO-5901 (record and replay of synchronization order), TODO-5904 (threads by default); deferred TODO-5902 (the fast kernel per task). TODO-5903 (debug sessions run programs with tasks) is ready and independent; it is the first prerequisite of docs/VmInspectorPlan.md.
 
-Build system (docs/BuildSystemPlan.md), after the startup lane: ready and independent of each other are TODO-5905 (`/std/path`), TODO-5906 (directory listing and file metadata), TODO-5908 (`--allow-effects`), TODO-5909 (`--allow-import`), TODO-5911 (the graph value and its JSON export) and TODO-5914 (`--emit-deps`). Then TODO-5907 (glob), TODO-5910 (`--profile build`), TODO-5912 (`primec build --dry-run`), TODO-5913 (running the graph), TODO-5915 (incremental builds), TODO-5916 (subprojects), TODO-5917 (options), TODO-5918 (staged builds), TODO-5919 (function steps, after TODO-5896), TODO-5920 (PrimeScroll builds with `make.prime`); deferred TODO-5921 (static libraries, to be split).
+Build system (docs/BuildSystemPlan.md), after the startup lane: ready and independent of each other are TODO-5905 (`/std/path`), TODO-5906 (directory listing and file metadata), TODO-5908 (`--allow-effects`), TODO-5909 (`--allow-import`), TODO-5911 (the graph value and its JSON export) and TODO-5914 (`--emit-deps`). Then TODO-5907 (glob), TODO-5910 (`--profile build`), TODO-5912 (`primec build --dry-run`), TODO-5913 (running the graph), TODO-5915 (incremental builds), TODO-5916 (subprojects), TODO-5917 (options), TODO-5918 (staged builds), TODO-5919 (function steps, after TODO-5896), TODO-5920 (PrimeScroll builds with `make.prime`); and the modules and libraries lane, which splits static libraries (docs/ModulesAndLibrariesPlan.md): TODO-5922 (`primevm --link` merges two IR modules) and TODO-5923 (`--emit=interface`) are ready and independent; then TODO-5924 (`--emit=lib`), TODO-5925 (`--library` and the link in the pipeline), TODO-5926 (generics and synthesized helpers), TODO-5927 (namespace ownership), TODO-5928 (`--emit-uses`), TODO-5929 (symbol-level rebuilds), TODO-5930 (the graph builds libraries); deferred TODO-5931 (the stdlib as a library, measure first), TODO-5932 (libraries that carry back-end code), TODO-5933 (the embed API loads a library).
 
 ### Task Blocks
 
@@ -1745,7 +1757,7 @@ Build system (docs/BuildSystemPlan.md), after the startup lane: ready and indepe
     - touching an unrelated file re-runs nothing
     - a build with the cache deleted gives byte-identical outputs
     - full release gate green
-  - stop_rule: compile steps with file-hash keys; no interface-hash early cutoff (that comes with libraries, TODO-5921), no shared or remote cache.
+  - stop_rule: compile steps with file-hash keys; no interface-hash early cutoff (that comes with libraries, TODO-5929), no shared or remote cache.
 
 - [ ] TODO-5916: `b.subproject` merges the graph of a subfolder's `make.prime`
   - owner: ai
@@ -1825,17 +1837,189 @@ Build system (docs/BuildSystemPlan.md), after the startup lane: ready and indepe
     - the differences, if any, are listed in docs/todo_log.md
   - stop_rule: building only; the script is not deleted and the install recipe is not changed.
 
-- [ ] TODO-5921: Static libraries link into an executable
+- [ ] TODO-5922: `primevm --link` merges two serialized IR modules
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-11
+  - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, sections 9 and 16)
+  - parallel_track: lib-ir-link
+  - scope: `IrFunction` (include/primec/ir/Ir.h) can be an import: no instructions, a flag and the name of the library that defines it; this is a schema bump with a migration note (IR stability rule, AGENTS.md). A new table classifies the operand of every opcode (function index: `Call`, `CallVoid`, `TaskSpawn`; host-import index: `CallHost`; string index: the string-printing and string-byte opcodes and string immediates; none; other), next to include/primec/ir/IrOpcodeTable.h and checked by a script in the style of scripts/check_ir_opcode_table.py, so a new opcode cannot be added without saying how it links. A merge function combines a consumer module with library modules by name: functions (an import resolves to the definition; a name defined twice is an error), struct layouts (equal layouts merge, unequal are an error), host imports (by name and signature), string tables (concatenated, every string operand remapped), instruction source maps and local debug slots (debug ids shifted). The result goes through `IrValidation`. `primevm <a> --link <b>` runs the merged module. Which opcodes carry which operand was not classified yet; read src/ir/IrValidation.cpp and the VM kernels for the ground truth.
+  - acceptance:
+    - two hand-built serialized modules, one calling an import the other defines, link and run on the VM with the expected result
+    - one test per error: a name defined twice, unequal layouts of one name, an unresolved import (`undefined symbol <name> (library <lib>)`), a host import of one name with two signatures
+    - string operands of every string opcode point at the right text after the merge (a test that prints strings from both modules)
+    - the check script fails when an opcode has no operand class
+    - the schema version bump has a loader test for the previous version
+    - full release gate green
+  - stop_rule: the merge and the table only; no frontend, no archive, no optimizer or backend change beyond reading the merged module.
+  - notes: large; if the schema bump and the table need separate changes when it starts, split them with this id on the table.
+
+- [ ] TODO-5923: `primec --emit=interface` prints a module's interface and symbol table
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-11
+  - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, section 5)
+  - parallel_track: lib-interface
+  - scope: For a module root (a `[namespace]` or a file whose public definitions are the library, with no `main`), print the interface text in canonical PrimeStruct syntax and the symbol table as JSON. The text holds public structs and enums in full (fields with types and visibility, static fields), public non-generic functions as declarations with resolved parameter and return types, `[effects]` and `[summary]` and no body, and the `[namespace]` envelopes. The symbol table has one entry per symbol: path, kind, hash of the signature, hash of the content, hash of the closure of referenced symbols; hashes are SHA-256 (the stdlib manifest's FNV-1a 64 bit in include/primec/frontend/StdlibSymbolManifest.h only detects drift); the interface hash is the hash of the sorted table. A declaration printer is written for this; `--dump-stage ast` is a debug rendering and is not reused. Generic definitions are not included in this leaf (TODO-5926). Whether the repository has a SHA-256 to use was not checked. The pipeline may demand `/main`; emitting an interface needs no entry point.
+  - acceptance:
+    - golden tests of the text and the table for a module with a struct, an enum, a function, a nested namespace and a private function (absent from the output)
+    - the printed text parses and validates as a program of declarations (parse-back test); if it does not, the printer is wrong
+    - the same module printed twice gives byte-identical output; changing a function body changes its content hash and not its signature hash or the interface hash
+    - inferred return types appear resolved (a function written without `return<...>` prints with its inferred one)
+    - docs/spec/integration-and-tooling.md documents the emit kind
+    - full release gate green
+  - stop_rule: non-generic interface and the table; no archive, no library loading, no generics.
+
+- [ ] TODO-5924: `--emit=lib` writes a library archive from every public definition of a module
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5923
+  - depends_on: TODO-5922
+  - created_at: 2026-11-11
+  - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, sections 6 and 7)
+  - parallel_track: lib-archive
+  - scope: Lowering takes every public non-generic definition under the module's roots as a root (today it takes one `entryPath`; whether it lowers only what the entry reaches was not checked), and what those roots reach is lowered with them. The IR is stored unoptimized, with an entry index of -1, struct layouts, host imports, source map and debug slots. `primec --emit=lib <root.prime> -o <name>.psa` writes the archive of docs/ModulesAndLibrariesPlan.md section 6: `manifest` (name, owned namespace roots, compiler build id, IR schema version, hash scheme, interface hash, linked libraries), `interface`, `symbols`, `code`, and optionally `sources` (`--with-sources`). The output is deterministic: sorted sections, no timestamps, no absolute paths. A reader loads and verifies an archive (hashes, versions) and reports a mismatch with a message that says to rebuild.
+  - acceptance:
+    - building a library twice, and on two checkouts of the repository, gives byte-identical archives
+    - the reader rejects an archive with a changed section, another compiler build id, or another schema version, each with its own message
+    - a public function no other definition calls is present in the archive's code
+    - docs/spec/integration-and-tooling.md documents `--emit=lib` and the archive layout
+    - full release gate green
+  - stop_rule: writing and reading the archive; nothing consumes it yet.
+
+- [ ] TODO-5925: `--library` compiles a program against a library and links it
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5924
+  - created_at: 2026-11-11
+  - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, sections 8 and 9)
+  - parallel_track: lib-consume
+  - scope: `--library <name>.psa` (repeatable) registers a library: the import resolver (src/frontend/ImportResolver.cpp) finds its modules in the archive's interface and treats the text as source; a declaration marked `[imported(<library>)]` has no body and the marker is a diagnostic in any file that is not an interface. Lowering turns a call of an imported function into a `Call` to an import function (TODO-5922); the pipeline links before `prepareIrModule` and checks, before linking, that each interface hash the program was compiled against equals the library's (`library ui changed since this program was compiled; rebuild`) and that the library's own libraries are supplied (`library ui needs library base`). Every backend then sees one merged module. A program built from a library and one built as a whole must behave the same, and that is tested here against a corpus (the differential standard of docs/LibrarySymbolManifestLazyImports.md): the first version covers programs with structs, functions, effects, strings and a task.
+  - acceptance:
+    - a small program with a library of a struct, helper methods and functions runs on the VM and with `--emit=optexe`, with the same output as the whole-program build of the same sources
+    - a corpus of at least 20 programs gives identical output and exit code built whole and built as library plus consumer, in a ctest entry
+    - a stale library, a missing transitive library and `[imported]` in a program source each give their diagnostic
+    - a program that uses no `--library` compiles exactly as before (outputs byte-identical)
+    - docs/spec/source-pipeline.md and integration-and-tooling.md document the flag
+    - full release gate green
+  - stop_rule: non-generic code only; generics, namespace ownership and uses output are their own leaves.
+
+- [ ] TODO-5926: Generic definitions and synthesized helpers cross the library boundary
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5925
+  - created_at: 2026-11-11
+  - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, sections 5 and 10)
+  - parallel_track: lib-generics
+  - scope: A public generic definition is in the interface in full, with its body, and is instantiated in the consumer. A private definition a public generic reaches is in the interface too, marked private and in the same namespace, so the visibility check of the generic's body still passes. An instantiation that both the library and the consumer produce (`Vector<i32>`) is merged by the linker when the two are identical after remapping and an error when they differ. A struct's compiler-synthesized helpers (field-wise copy, destroy) are lowered in the library that owns the struct and declared in the interface; a struct defined in the consumer synthesizes its own. Not checked: whether instantiated names are deterministic and content-derived, and whether the synthesized helpers are functions or are expanded at each use; if names are not deterministic, that is fixed first and this leaf says so.
+  - acceptance:
+    - a library exports a generic `Box<T>` and a function using `Box<i32>` internally; a consumer instantiates `Box<i32>` and `Box<String>`; the program runs as its whole-program build does, with one copy of `Box<i32>` in the linked module
+    - a public generic that calls a private helper compiles in the consumer
+    - two instantiations of one name with different bodies are a link error
+    - a struct from a library, copied and destroyed in the consumer, behaves as in the whole-program build (no double free, no leak), checked on the VM and `--emit=optexe`
+    - the corpus of TODO-5925 passes with generics added
+    - full release gate green
+  - stop_rule: generics, their private reach and the synthesized helpers; no inference changes.
+
+- [ ] TODO-5927: A library owns its namespace roots
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5925
+  - created_at: 2026-11-11
+  - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, section 4)
+  - parallel_track: lib-ownership
+  - scope: The manifest lists the roots a library owns (section 6 of the plan). Linking two libraries whose roots overlap is an error naming both; a program that defines something under a root of a linked library is an error (`/ui/draw is owned by library ui`) and not a duplicate-definition error found late. `[namespace]` envelopes (TODO-5841) are how a module declares its root.
+  - acceptance:
+    - overlapping roots, and a program defining a function under a library's root, each give a diagnostic that names the root and the library
+    - a program that defines names next to a library's root (`/ui2`, `/app`) compiles
+    - without `--library` nothing changes
+    - full release gate green
+  - stop_rule: the two checks; no nested ownership, no private roots.
+
+- [ ] TODO-5928: `--emit-uses` writes the library symbols a compile resolved
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5925
+  - created_at: 2026-11-11
+  - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, sections 8 and 11)
+  - parallel_track: lib-uses
+  - scope: With `--emit-uses <file>` a compile writes, sorted, every library symbol the program resolved (path, library, signature hash and content hash from the library's symbol table), including the generic definitions it instantiated and the private declarations they reached. The output does not change any other output.
+  - acceptance:
+    - a program that calls two of a library's twenty functions lists exactly those and what they reach, identically on two runs
+    - a program that imports a library and uses nothing lists nothing
+    - outputs and dumps are byte-identical with and without the flag
+    - full release gate green
+  - stop_rule: the list only; no build-graph use (TODO-5929).
+
+- [ ] TODO-5929: The runner rebuilds a dependent only when a symbol it used changed
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5928
+  - depends_on: TODO-5915
+  - created_at: 2026-11-11
+  - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, section 11)
+  - parallel_track: lib-cutoff
+  - scope: A compile step that links libraries keys on the symbol hashes of its last `--emit-uses` list instead of on the whole interface hash. A library body change that leaves the signature and content hashes of the symbols the step used unchanged re-links but does not recompile the step; a change to a symbol the step used recompiles it; a change to a symbol it did not use does neither. Uses the cache of TODO-5915.
+  - acceptance:
+    - changing the body of a library function the program did not call does not re-run the program's compile step
+    - changing the signature of a function the program called re-runs it
+    - changing a body the program called re-runs the link (the output differs) and the result runs correctly
+    - full release gate green
+  - stop_rule: the rebuild decision for libraries; no remote cache.
+
+- [ ] TODO-5930: `primec build` builds libraries and links them
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5925
+  - depends_on: TODO-5913
+  - created_at: 2026-11-11
+  - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, section 11); Build system (docs/BuildSystemPlan.md)
+  - parallel_track: lib-build
+  - scope: The library and link nodes of the graph (TODO-5911) run: `b.library(name, cc, root)` produces a `.psa` through `--emit=lib`, `exe.link(lib)` becomes `--library` on the compile step, and a library that links with another records it in its manifest so the runner passes the whole closure. Libraries build in parallel with each other; a diamond (two libraries linking a third) builds the third once. The diagnostic of TODO-5913 for library nodes (`static libraries are not supported by this compiler yet`) is removed.
+  - acceptance:
+    - a `make.prime` with a library, a second library that links it, and an executable that links both builds and the executable runs
+    - a diamond builds the shared library once
+    - a library whose build fails stops its dependents and reports the library's name
+    - docs/BuildSystemPlan.md section 4 drops the "not runnable" note
+    - full release gate green
+  - stop_rule: building and linking through the graph; the symbol-level cutoff is TODO-5929.
+
+- [ ] TODO-5931: The stdlib builds as a library
   - owner: ai
   - status: deferred
   - created_at: 2026-11-11
-  - phase: Build system (docs/BuildSystemPlan.md, section 7)
-  - parallel_track: libraries
-  - scope: A static library is an IR module plus its interface plus its generic definitions, and links into an executable. The graph already has the node kinds (TODO-5911) and the runner rejects them (TODO-5913). The compiler needs: the interface (the outline of docs/AiWorkflowPlan.md section 3, with a hash), emission (`--emit=lib`, with the entry point optional), and linking that merges modules before the optimizer runs, remapping string-table indices, host imports and function names and rejecting collisions. Generic definitions ship as definitions and are instantiated in the consumer, with identical instantiations merged by content hash (docs/LibrarySymbolManifestLazyImports.md). Then the runner gains library and link steps and early cutoff on the interface hash. Whether the IR-module format can hold this was not checked against the loader.
+  - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, section 12)
+  - parallel_track: lib-stdlib
+  - depends_on: TODO-5925
+  - scope: Lazy import expansion already prunes the stdlib to what a program reaches, so most of the front-end cost is taken. A prebuilt `std.psa`, produced by the project's own build, would also skip parsing and validating the non-generic stdlib per compile. Measure first with the benchmark of docs/LibrarySymbolManifestLazyImports.md (an import-heavy program with a small main) and the startup lane; build it only if the measured gain is large.
   - acceptance:
-    - a library built from a folder links into an executable that runs, on the VM and with `--emit=optexe`
-    - a change to a library body that leaves its interface unchanged does not rebuild its dependents
-    - two libraries that both use a third give one copy of it
-    - full release gate green
-  - stop_rule: do not start before it is split into leaves for the interface, emission, linking and the runner steps, each with its own acceptance.
-  - notes: deferred: large; split before starting.
+    - the measured compile time of the benchmark program with and without `std.psa`, recorded in docs/todo_log.md
+    - if built: the corpus of TODO-5925 passes with the stdlib linked as a library, and startup of PrimeScroll is not slower
+  - stop_rule: do not build it unless the measurement shows a gain; archive this leaf as low-value otherwise.
+  - notes: deferred: measure first.
+
+- [ ] TODO-5932: Libraries carry back-end code
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-11
+  - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, section 13)
+  - parallel_track: lib-backend
+  - depends_on: TODO-5925
+  - scope: IR-level libraries save the front end only; `--emit=optexe` and `--emit=native` still generate code for the whole merged module at every link. Separate back-end compilation needs libraries that carry per-library C++ translation units or machine code that a linker joins, which would also give C callers an `.a` file. The native backend writes executables directly and has no object writer. Needs scoping against both back ends before it starts; split it then.
+  - acceptance:
+    - to be written when scoped: a library built once is not regenerated when only its consumer changes, and the link of the final executable is a real link
+  - stop_rule: do not start before it is split into leaves for `optexe` and for native.
+  - notes: deferred: needs scoping and an object writer.
+
+- [ ] TODO-5933: The embed API loads a library at run time
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-11
+  - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, section 14)
+  - parallel_track: lib-embed
+  - depends_on: TODO-5925
+  - scope: The VM runs IR, so `Script` (include/primec/embed/Script.h) could load a `.psa` and link it into a script it compiles, which would let a PrimeScroll script use a precompiled library. The embed library must stay free of process spawning (scripts/check_embed_no_process.sh) and the link runs in-process. Needs a decision on how a script names the libraries it wants and on the startup cost of loading one; scope it when TODO-5925 has landed.
+  - acceptance:
+    - to be written when scoped: a script that uses a library function runs through the embed API with the library loaded at run time, and a script without libraries starts exactly as before
+  - stop_rule: do not start before it is scoped.
+  - notes: deferred: not committed; follows if the archive proves out.
