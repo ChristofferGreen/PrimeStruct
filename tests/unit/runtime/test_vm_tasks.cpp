@@ -2,6 +2,7 @@
 #include "primec/ir/IrSerializer.h"
 #include "primec/ir/IrValidation.h"
 #include "primec/runtime/Vm.h"
+#include "primec/testing/VmKernelSelection.h"
 
 #include "third_party/doctest.h"
 
@@ -376,6 +377,122 @@ TEST_CASE("task opcodes survive serialization and a v33 module still loads") {
   setVersion(bytes, 32u);
   CHECK_FALSE(deserializeIr(bytes, rejected, error));
   CHECK(error == "unsupported IR schema version 32 (supported 33..37)");
+}
+
+namespace {
+
+// Turns the flat loop on or off for a scope and restores it.
+struct FlatLoopScope {
+  explicit FlatLoopScope(bool enabled) {
+    testing::setVmFastKernelEnabled(enabled);
+  }
+  ~FlatLoopScope() {
+    testing::setVmFastKernelEnabled(true);
+  }
+};
+
+// main spawns /outer, which calls /middle, which spawns double(7) and waits it two frames deep, with a local of
+// each frame holding a value across the switch points; /middle also writes through the address of /outer's local.
+IrModule nestedSwitchPoints() {
+  return moduleOf({functionOf("/main",
+                              0,
+                              {{IrOpcode::TaskSpawn, 1},
+                               {IrOpcode::TaskWait, 0},
+                               {IrOpcode::PushI32, 1},
+                               {IrOpcode::AddI32, 0},
+                               {IrOpcode::ReturnI32, 0}}),
+                   functionOf("/outer",
+                              0,
+                              {{IrOpcode::PushI32, 10},
+                               {IrOpcode::StoreLocal, 0},
+                               {IrOpcode::AddressOfLocal, 1},
+                               {IrOpcode::Call, 2},
+                               {IrOpcode::LoadLocal, 0},
+                               {IrOpcode::AddI32, 0},
+                               {IrOpcode::LoadLocal, 1},
+                               {IrOpcode::AddI32, 0},
+                               {IrOpcode::ReturnI32, 0}}),
+                   functionOf("/middle",
+                              1,
+                              {{IrOpcode::StoreLocal, 0},
+                               {IrOpcode::PushI32, 100},
+                               {IrOpcode::StoreLocal, 1},
+                               {IrOpcode::PushI32, 7},
+                               {IrOpcode::TaskSpawn, 3},
+                               {IrOpcode::StoreLocal, 2},
+                               {IrOpcode::LoadLocal, 2},
+                               {IrOpcode::TaskWait, 0},
+                               {IrOpcode::StoreLocal, 2},
+                               {IrOpcode::LoadLocal, 0},
+                               {IrOpcode::LoadLocal, 2},
+                               {IrOpcode::StoreIndirect, 0},
+                               {IrOpcode::Pop, 0},
+                               {IrOpcode::LoadLocal, 1},
+                               {IrOpcode::ReturnI32, 0}}),
+                   doublingTask()});
+}
+
+} // namespace
+
+TEST_CASE("tasks run on the flat loop and agree with the step kernel") {
+  const std::vector<IrModule> modules = {twoTasks(), nestedSwitchPoints()};
+  for (size_t index = 0; index < modules.size(); ++index) {
+    CAPTURE(index);
+    for (const std::optional<uint64_t> seed : {std::optional<uint64_t>{},
+                                               std::optional<uint64_t>{1},
+                                               std::optional<uint64_t>{2},
+                                               std::optional<uint64_t>{9}}) {
+      CAPTURE(seed.value_or(0));
+      Run step;
+      {
+        const FlatLoopScope off(false);
+        const uint64_t before = testing::vmFastTaskRunCount();
+        step = run(modules[index], seed);
+        CHECK(testing::vmFastTaskRunCount() == before);
+      }
+      const uint64_t before = testing::vmFastTaskRunCount();
+      const Run fast = run(modules[index], seed);
+      // The structural claim: the scheduler gave the whole run to the flat loop.
+      CHECK(testing::vmFastTaskRunCount() == before + 1);
+      REQUIRE_MESSAGE(step.ok, step.error);
+      REQUIRE_MESSAGE(fast.ok, fast.error);
+      CHECK(fast.value == step.value);
+      CHECK(fast.out == step.out);
+    }
+  }
+  const Run nested = run(nestedSwitchPoints());
+  REQUIRE_MESSAGE(nested.ok, nested.error);
+  // /middle stores double(7) = 14 into /outer's local 1 and returns 100; /outer returns 100 + 10 + 14 and /main
+  // adds 1.
+  CHECK(nested.value == 125);
+}
+
+TEST_CASE("a fault of a task on the flat loop reads as on the step kernel") {
+  const IrModule badWait = moduleOf({functionOf(
+      "/main", 0, {{IrOpcode::PushI32, 7}, {IrOpcode::TaskWait, 0}, {IrOpcode::ReturnI32, 0}})});
+  const IrModule badAddress = moduleOf({functionOf("/main",
+                                                   0,
+                                                   {{IrOpcode::PushI32, 1},
+                                                    {IrOpcode::TaskSpawn, 1},
+                                                    {IrOpcode::TaskWait, 0},
+                                                    {IrOpcode::ReturnI32, 0}}),
+                                        functionOf("/atomic",
+                                                   1,
+                                                   {{IrOpcode::StoreLocal, 0},
+                                                    {IrOpcode::PushI64, 4096},
+                                                    {IrOpcode::AtomicLoad, 32},
+                                                    {IrOpcode::ReturnI32, 0}})});
+  for (const IrModule &module : {badWait, badAddress}) {
+    Run step;
+    {
+      const FlatLoopScope off(false);
+      step = run(module);
+    }
+    const Run fast = run(module);
+    CHECK_FALSE(step.ok);
+    CHECK_FALSE(fast.ok);
+    CHECK(fast.error == step.error);
+  }
 }
 
 TEST_SUITE_END();

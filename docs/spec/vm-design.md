@@ -63,7 +63,7 @@
   nothing); the handle is consumed, so a second wait faults (`task handle already waited`), as does a value that is
   not a handle (`invalid task handle in IR`). Each call stack numbers its own locals from 0, so a local address does
   not cross to another task; all tasks share the heap. The VM runs every task on its one OS thread
-  (`VmTaskScheduler` in `src/runtime/VmExecutionKernel.cpp`) and switches only at a spawn, a wait and a task's end.
+  (`VmTaskScheduler` in `src/runtime/VmTaskScheduler.cpp`) and switches only at a spawn, a wait and a task's end.
   The default schedule is eager: a spawn runs the new task until it ends or blocks, then its spawner continues, so a
   program prints exactly what it prints with each spawned call run inline; a blocked task yields to the
   lowest-numbered runnable task (tasks are numbered in spawn order, the main task is 0). `--vm-schedule-seed <n>`
@@ -72,8 +72,8 @@
   the same output to show a program is free of races. When no task can run the VM faults with `deadlock: every task
   is waiting` (exit code 3); the main task's return ends the program, and a `Trap` in any task ends it with its code.
   The vm and optimized C++ targets and serialized bytecode accept the task opcodes; validation also rejects a
-  `TaskWait` whose operand is not a `TaskSpawn` result on every path (through locals and `Dup`). A module with task opcodes runs on the
-  step kernel (the flat loop and the native JIT decline it), and a debug session faults on them (`tasks run only in a
+  `TaskWait` whose operand is not a `TaskSpawn` result on every path (through locals and `Dup`). A module with task opcodes runs under that
+  scheduler with every task on the flat loop (Execution kernels), the native JIT declines it, and a debug session faults on them (`tasks run only in a
   plain VM run, not in a debug session`, TODO-5837). Lowering for the vm target, serialized bytecode and the
   optimized C++ emitter turns
   `[Task<T>] t{[spawn] f(args)}` into the arguments, evaluated in the spawner, and `TaskSpawn f` stored in `t`, when
@@ -152,8 +152,7 @@
   where the unlock is the `Destroy` of a local that holds the lock, so it runs on every way out of the body.
   On the VM the slot holds the holder's task number plus one. Both opcodes are switch points under a schedule
   seed; a task that finds the lock held is blocked on it and runs again when it is freed, and blocked tasks count
-  for `deadlock: every task is waiting`. The fast kernel leaves functions with mutex opcodes to the stepping
-  kernel. `optexe` stores the holder's thread state address in the slot: taking a free lock and freeing one that
+  for `deadlock: every task is waiting`. The flat loop hands a task to the scheduler at each mutex opcode (Tasks). `optexe` stores the holder's thread state address in the slot: taking a free lock and freeing one that
   nobody waits for is one atomic operation on the slot, and a thread that finds the lock held sleeps on a
   condition variable of the program that an unlock signals (`OptCppMutexRuntime` in
   `src/backend/IrToOptCppRuntime.h`, pasted only into a module with mutex opcodes, so other programs are
@@ -185,8 +184,8 @@
   out of bounds). On the VM a waiting task is blocked on the condition's address, and a notify makes the tasks
   blocked on it runnable; the slot's value is not used. A wait and a notify are switch points under a schedule
   seed, and a task that waits counts for `deadlock: every task is waiting`. Where one call stack runs (a module
-  without tasks) a notify does nothing and a wait is that deadlock. The fast kernel leaves functions with
-  condition opcodes to the stepping kernel. On `optexe` the slot counts the notifies: a wait reads the count and
+  without tasks) a notify does nothing and a wait is that deadlock. The flat loop hands a task to the scheduler at each
+  condition opcode (Tasks). On `optexe` the slot counts the notifies: a wait reads the count and
   frees the lock with the program's wait gate held, then sleeps on the program's condition variable until the
   count has changed, and a notify adds one and signals when a thread sleeps (`OptCppConditionRuntime` in
   `src/backend/IrToOptCppRuntime.h`, pasted only into a module with condition opcodes, so other programs are
@@ -291,7 +290,15 @@
   passes the shared CFG analysis (consistent stack depths, valid jump targets, balanced returns, an entry without
   parameters): it keeps the instruction pointer, operand-stack pointer and locals pointer in registers, fuses common
   sequences inside a basic block into single instructions (including three-address forms that store a result straight
-  into a local), and turns chains of three or more `local == constant` tests into one table lookup. Debug sessions, modules with tasks and any module the analysis rejects use
+  into a local), and turns chains of three or more `local == constant` tests into one table lookup. A module with tasks runs under the task scheduler with each task's call stack (operand stack, locals arena, frames) on the
+  flat loop: the loop runs a task until it ends or reaches a task, atomic, mutex or condition opcode, where it hands the
+  call stack back with the instruction pointer at that opcode; the scheduler runs the opcode (the schedule is the one
+  of the step kernel, so a seeded run prints what it printed) and resumes a task. The task opcodes are accepted only in
+  that mode; a run that stops the flat loop (`PRIMEVM_KERNEL=step`, a cancel flag, a module the analysis rejects) runs
+  every task on the step kernel. Measured on arm64 (instructions retired, 200000 `String`s of 77 bytes built and dropped
+  in one function): in a spawned task 87.8e9 on the step kernel, 8.22e9 on the flat loop, against 8.16e9 for the same
+  loop in a program without tasks (the compile step is about 2.0e9 of each). Debug sessions and any module the analysis
+  rejects use
   the checked step kernel; a `Trap` ends the flat loop with its code as it ends the step kernel. Both produce the same results, output and fault messages; `PRIMEVM_KERNEL=step` forces the step
   kernel for comparison (see `docs/OptimizingBackendsPlan.md`, Phase 4).
 - **Module layout:** `IrModule` bundles functions, string table, and struct layouts; lowering emits entry instructions

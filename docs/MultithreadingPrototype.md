@@ -605,9 +605,9 @@ has. The deterministic scheduler stays; it is not replaced.
 - **Faults and cancel:** a fault or `Trap` on any task sets a stop flag that every thread polls at calls and loop
   back-edges; the run ends with exit code 3 after flushing, and the process survives, so the embed API
   (`Script::run`, `RunOptions::cancel`) can use the mode.
-- **Speed:** a VM program that uses tasks runs on the step kernel today (TODO-5870). Threads multiply a slow base, so a
-  fast-kernel instance per task (TODO-5902) is what makes the mode worth having for compute; that leaf is deferred
-  until it is scoped.
+- **Speed:** a VM program that uses tasks runs each task on the flat loop between scheduler opcodes (TODO-5870), as
+  fast as a program without tasks. The flat loop's state is already per call stack (`VmFastTask`), so TODO-5902 is the
+  threads mode giving each task's `VmFastTask` an OS thread and the scheduler opcodes real primitives.
 - **Replay:** the language has no shared mutable state outside `Mutex`, `Atomic` and `Channel`, so the recorded order
   of synchronization events is enough to reproduce a threaded run, apart from host input and output. A threads run
   records that order and the deterministic scheduler replays it (TODO-5901). This is also what lets the inspector

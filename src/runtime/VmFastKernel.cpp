@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <atomic>
 #include <cstdlib>
+#include <mutex>
 #include <string_view>
 #include <vector>
 
@@ -17,15 +18,24 @@ namespace primec {
 namespace testing {
 namespace {
 std::atomic<bool> FastKernelEnabled{true};
+std::atomic<uint64_t> FastTaskRuns{0};
 } // namespace
 
 void setVmFastKernelEnabled(bool enabled) {
   FastKernelEnabled.store(enabled, std::memory_order_relaxed);
 }
 
+uint64_t vmFastTaskRunCount() {
+  return FastTaskRuns.load(std::memory_order_relaxed);
+}
+
 } // namespace testing
 
 namespace vm_detail {
+
+void noteVmFastTaskRun() {
+  testing::FastTaskRuns.fetch_add(1, std::memory_order_relaxed);
+}
 
 bool vmFastKernelEnabled() {
   if (!testing::FastKernelEnabled.load(std::memory_order_relaxed)) {
@@ -112,13 +122,6 @@ namespace {
   X(ConvertF64ToF32)
 // clang-format on
 
-struct FastFrame {
-  const FastFunction *function = nullptr;
-  const FastInst *returnIp = nullptr;
-  size_t localsBase = 0;
-  bool returnsValue = false;
-};
-
 constexpr size_t InitialStackSlots = 4096;
 
 #define OP(name) static_cast<uint16_t>(IrOpcode::name)
@@ -155,20 +158,18 @@ addressFault(std::string &error, const char *message, uint64_t address) {
 #pragma GCC diagnostic ignored "-Wpedantic"
 #endif
 
-bool executeVmFastKernel(const IrModule &module,
-                         VmKernelHost &host,
-                         uint64_t &result,
-                         std::string &error,
-                         bool &executed) {
-  executed = false;
-  std::vector<FastFunction> functions;
-  // The loop addresses locals with the constant slot size, so a shift and a mask replace the
-  // division a runtime size would need.
-  if (host.slotBytes() != IrSlotBytes || !prepareModule(module, functions)) {
-    return false;
-  }
-  executed = true;
-
+// Runs `task` until its root function returns, a trap, or (with `forTasks`) an opcode of the task scheduler. A
+// plain run is one task that never suspends. The loop keeps the stack, the arena and the frames in locals and
+// hands them back to `task` only when it suspends.
+VM_FAST_LOOP_ATTRIBUTES bool runVmFastTask(const IrModule &module,
+                                           VmKernelHost &host,
+                                           const std::vector<FastFunction> &functions,
+                                           VmFastTask &task,
+                                           bool forTasks,
+                                           uint64_t &result,
+                                           VmFastRunOutcome &outcome,
+                                           std::string &error) {
+  outcome = VmFastRunOutcome::Finished;
   const size_t maxCallDepth = host.maxCallDepth();
   constexpr uint64_t slotBytes = IrSlotBytes;
   static_assert((IrSlotBytes & (IrSlotBytes - 1)) == 0, "slot size must be a power of two");
@@ -178,23 +179,30 @@ bool executeVmFastKernel(const IrModule &module,
     return resolveVmString(module, index, text, error);
   };
 
-  std::vector<uint64_t> stack(InitialStackSlots +
-                              functions[static_cast<size_t>(module.entryIndex)].stackHeadroom);
-  uint64_t *sp = stack.data();
-  std::vector<uint64_t> localsArena(256, 0);
-  std::vector<FastFrame> frames;
-  frames.reserve(64);
+  const FastFunction *current = task.current;
+  std::vector<uint64_t> stack = std::move(task.stack);
+  const size_t usedSlots = stack.size();
+  // Room above the operands for the function's deepest use (a call checks the callee's the same way).
+  const size_t stackWanted = usedSlots + current->stackHeadroom +
+                             current->function->parameterCount +
+                             (forTasks ? size_t{64} : InitialStackSlots);
+  if (stack.size() < stackWanted) {
+    stack.resize(stackWanted, 0);
+  }
+  uint64_t *sp = stack.data() + usedSlots;
+  std::vector<uint64_t> localsArena = std::move(task.localsArena);
+  std::vector<FastFrame> frames = std::move(task.frames);
+  frames.reserve(forTasks ? size_t{8} : size_t{64});
   std::vector<uint64_t> scratch;
   std::vector<uint64_t> noLocals;
   std::vector<uint64_t> frameLocalsCopy;
 
-  const FastFunction *current = &functions[static_cast<size_t>(module.entryIndex)];
-  size_t localsBase = 0;
-  if (localsArena.size() < current->localCount) {
-    localsArena.resize(current->localCount, 0);
+  size_t localsBase = task.localsBase;
+  if (localsArena.size() < localsBase + std::max<size_t>(current->localCount, 4)) {
+    localsArena.resize(localsBase + std::max<size_t>(current->localCount, 4), 0);
   }
-  uint64_t *locals = localsArena.data();
-  const FastInst *ip = current->code.data();
+  uint64_t *locals = localsArena.data() + localsBase;
+  const FastInst *ip = task.ip;
 
   // The slot an indirect address names, or false with the fault in `error`.
   const auto indirectSlot = [&](uint64_t address, uint64_t *&slot) -> bool {
@@ -233,44 +241,51 @@ bool executeVmFastKernel(const IrModule &module,
   // handler through this table, which gives each opcode its own indirect branch for the
   // predictor instead of one shared by the whole switch. Opcodes without a case of their
   // own (pure arithmetic and host calls) go to the generic tail.
-  const void *table[VmFastDispatchSlots];
-  for (const void *&entry : table) {
-    entry = &&lbl_generic;
-  }
-  table[OP(PushI32)] = &&lbl_PushI32;
-  table[OP(PushI64)] = &&lbl_PushI64;
-  table[OP(PushF32)] = &&lbl_PushF32;
-  table[OP(PushF64)] = &&lbl_PushF64;
-  table[OP(PushArgc)] = &&lbl_PushArgc;
-  table[OP(LoadLocal)] = &&lbl_LoadLocal;
-  table[OP(StoreLocal)] = &&lbl_StoreLocal;
-  table[OP(AddressOfLocal)] = &&lbl_AddressOfLocal;
-  table[OP(Dup)] = &&lbl_Dup;
-  table[OP(Pop)] = &&lbl_Pop;
-  table[OP(Jump)] = &&lbl_Jump;
-  table[OP(JumpIfZero)] = &&lbl_JumpIfZero;
-  table[FastOpStoreLocalDupPop] = &&lbl_FastOpStoreLocalDupPop;
-  table[FastOpStoreLocalImm] = &&lbl_FastOpStoreLocalImm;
-  table[FastOpCopyLocal] = &&lbl_FastOpCopyLocal;
-  table[FastOpJmpLocalZero] = &&lbl_FastOpJmpLocalZero;
-  table[FastOpPushLocalAddImm] = &&lbl_FastOpPushLocalAddImm;
-  table[FastOpPushLocalSubImm] = &&lbl_FastOpPushLocalSubImm;
-  table[FastOpPushLocalMulImm] = &&lbl_FastOpPushLocalMulImm;
-  table[FastOpPushLocalAddLocal] = &&lbl_FastOpPushLocalAddLocal;
-  table[FastOpPushLocalSubLocal] = &&lbl_FastOpPushLocalSubLocal;
-  table[FastOpPushLocalMulLocal] = &&lbl_FastOpPushLocalMulLocal;
-  table[FastOpLocalAddImmStore] = &&lbl_FastOpLocalAddImmStore;
-  table[FastOpLocalSubImmStore] = &&lbl_FastOpLocalSubImmStore;
-  table[FastOpPushLocalAddImmSext] = &&lbl_FastOpPushLocalAddImmSext;
-  table[FastOpPushLocalSubImmSext] = &&lbl_FastOpPushLocalSubImmSext;
-  table[FastOpPushLocalMulImmSext] = &&lbl_FastOpPushLocalMulImmSext;
-  table[FastOpPushLocalAddLocalSext] = &&lbl_FastOpPushLocalAddLocalSext;
-  table[FastOpPushLocalSubLocalSext] = &&lbl_FastOpPushLocalSubLocalSext;
-  table[FastOpPushLocalMulLocalSext] = &&lbl_FastOpPushLocalMulLocalSext;
-  table[FastOpLocalAddImmStoreSext] = &&lbl_FastOpLocalAddImmStoreSext;
-  table[FastOpLocalSubImmStoreSext] = &&lbl_FastOpLocalSubImmStoreSext;
-  table[FastOpLocalStringByteStore] = &&lbl_FastOpLocalStringByteStore;
-  table[FastOpPushLocalStringByte] = &&lbl_FastOpPushLocalStringByte;
+  // The table is filled once per process (a run with tasks enters this function at every switch point), which
+  // is why the function must not be cloned or inlined: the label addresses belong to this one body.
+  static const void *table[VmFastDispatchSlots];
+  static std::atomic<bool> tableReady{false};
+  static std::mutex tableMutex;
+  if (!tableReady.load(std::memory_order_acquire)) {
+    const std::lock_guard<std::mutex> lock(tableMutex);
+    if (!tableReady.load(std::memory_order_relaxed)) {
+      for (const void *&entry : table) {
+        entry = &&lbl_generic;
+      }
+      table[OP(PushI32)] = &&lbl_PushI32;
+      table[OP(PushI64)] = &&lbl_PushI64;
+      table[OP(PushF32)] = &&lbl_PushF32;
+      table[OP(PushF64)] = &&lbl_PushF64;
+      table[OP(PushArgc)] = &&lbl_PushArgc;
+      table[OP(LoadLocal)] = &&lbl_LoadLocal;
+      table[OP(StoreLocal)] = &&lbl_StoreLocal;
+      table[OP(AddressOfLocal)] = &&lbl_AddressOfLocal;
+      table[OP(Dup)] = &&lbl_Dup;
+      table[OP(Pop)] = &&lbl_Pop;
+      table[OP(Jump)] = &&lbl_Jump;
+      table[OP(JumpIfZero)] = &&lbl_JumpIfZero;
+      table[FastOpStoreLocalDupPop] = &&lbl_FastOpStoreLocalDupPop;
+      table[FastOpStoreLocalImm] = &&lbl_FastOpStoreLocalImm;
+      table[FastOpCopyLocal] = &&lbl_FastOpCopyLocal;
+      table[FastOpJmpLocalZero] = &&lbl_FastOpJmpLocalZero;
+      table[FastOpPushLocalAddImm] = &&lbl_FastOpPushLocalAddImm;
+      table[FastOpPushLocalSubImm] = &&lbl_FastOpPushLocalSubImm;
+      table[FastOpPushLocalMulImm] = &&lbl_FastOpPushLocalMulImm;
+      table[FastOpPushLocalAddLocal] = &&lbl_FastOpPushLocalAddLocal;
+      table[FastOpPushLocalSubLocal] = &&lbl_FastOpPushLocalSubLocal;
+      table[FastOpPushLocalMulLocal] = &&lbl_FastOpPushLocalMulLocal;
+      table[FastOpLocalAddImmStore] = &&lbl_FastOpLocalAddImmStore;
+      table[FastOpLocalSubImmStore] = &&lbl_FastOpLocalSubImmStore;
+      table[FastOpPushLocalAddImmSext] = &&lbl_FastOpPushLocalAddImmSext;
+      table[FastOpPushLocalSubImmSext] = &&lbl_FastOpPushLocalSubImmSext;
+      table[FastOpPushLocalMulImmSext] = &&lbl_FastOpPushLocalMulImmSext;
+      table[FastOpPushLocalAddLocalSext] = &&lbl_FastOpPushLocalAddLocalSext;
+      table[FastOpPushLocalSubLocalSext] = &&lbl_FastOpPushLocalSubLocalSext;
+      table[FastOpPushLocalMulLocalSext] = &&lbl_FastOpPushLocalMulLocalSext;
+      table[FastOpLocalAddImmStoreSext] = &&lbl_FastOpLocalAddImmStoreSext;
+      table[FastOpLocalSubImmStoreSext] = &&lbl_FastOpLocalSubImmStoreSext;
+      table[FastOpLocalStringByteStore] = &&lbl_FastOpLocalStringByteStore;
+      table[FastOpPushLocalStringByte] = &&lbl_FastOpPushLocalStringByte;
 #define FAST_TABLE_ENTRY(N) table[N] = &&lbl_##N;
   FAST_STORE_FORMS(FAST_TABLE_ENTRY)
 #undef FAST_TABLE_ENTRY
@@ -342,6 +357,22 @@ bool executeVmFastKernel(const IrModule &module,
   table[FastOpJmpCmp##N] = &&lbl_FastOpJmpCmp##N;
   FAST_CMPS(FAST_TABLE_CMP)
 #undef FAST_TABLE_CMP
+  for (const IrOpcode switchOp : {IrOpcode::TaskSpawn,
+                                  IrOpcode::TaskWait,
+                                  IrOpcode::AtomicLoad,
+                                  IrOpcode::AtomicStore,
+                                  IrOpcode::AtomicAdd,
+                                  IrOpcode::AtomicExchange,
+                                  IrOpcode::AtomicCompareExchange,
+                                  IrOpcode::MutexLock,
+                                  IrOpcode::MutexUnlock,
+                                  IrOpcode::ConditionWait,
+                                  IrOpcode::ConditionNotify}) {
+    table[static_cast<uint16_t>(switchOp)] = &&lbl_switch_point;
+  }
+  tableReady.store(true, std::memory_order_release);
+    }
+  }
 #define DISPATCH()                                                                                 \
   do {                                                                                             \
     instp = ip;                                                                                    \
@@ -955,6 +986,7 @@ bool executeVmFastKernel(const IrModule &module,
     case OP(Trap):
     lbl_Trap:
       result = inst.imm;
+      outcome = VmFastRunOutcome::Trapped;
       return true;
     case OP(ReturnI32):
     lbl_ReturnI32:
@@ -1029,6 +1061,35 @@ bool executeVmFastKernel(const IrModule &module,
 #undef FAST_CASE_FLOAT_BINARY
 #undef FAST_CASE_FLOAT_UNARY
 
+    // The scheduler's opcodes (prepareModule accepts them only for a run with tasks): the call stack is handed back
+    // with `ip` at the opcode, and the scheduler runs it, moves `ip` past it and resumes the task or another one.
+    case OP(TaskSpawn):
+    case OP(TaskWait):
+    case OP(AtomicLoad):
+    case OP(AtomicStore):
+    case OP(AtomicAdd):
+    case OP(AtomicExchange):
+    case OP(AtomicCompareExchange):
+    case OP(MutexLock):
+    case OP(MutexUnlock):
+    case OP(ConditionWait):
+    case OP(ConditionNotify):
+    lbl_switch_point:
+      {
+        if (!forTasks) {
+          FAULT("unknown IR opcode");
+        }
+        stack.resize(static_cast<size_t>(sp - stack.data()));
+        task.stack = std::move(stack);
+        task.localsArena = std::move(localsArena);
+        task.frames = std::move(frames);
+        task.current = current;
+        task.localsBase = localsBase;
+        task.ip = ip;
+        outcome = VmFastRunOutcome::SwitchPoint;
+        return true;
+      }
+
     case FastOpMissingReturn:
     lbl_FastOpMissingReturn:
       FAULT(frames.empty() ? std::string("missing return in IR")
@@ -1100,6 +1161,26 @@ bool executeVmFastKernel(const IrModule &module,
 #endif
 
 #undef OP
+
+bool executeVmFastKernel(const IrModule &module,
+                         VmKernelHost &host,
+                         uint64_t &result,
+                         std::string &error,
+                         bool &executed) {
+  executed = false;
+  std::vector<FastFunction> functions;
+  // The loop addresses locals with the constant slot size, so a shift and a mask replace the
+  // division a runtime size would need.
+  if (host.slotBytes() != IrSlotBytes || !prepareModule(module, functions)) {
+    return false;
+  }
+  executed = true;
+  VmFastTask task;
+  initVmFastTask(functions, static_cast<size_t>(module.entryIndex), {}, task);
+  task.localsArena.resize(256, 0);
+  VmFastRunOutcome outcome = VmFastRunOutcome::Finished;
+  return runVmFastTask(module, host, functions, task, false, result, outcome, error);
+}
 
 } // namespace vm_detail
 

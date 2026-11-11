@@ -2245,6 +2245,7 @@ are left unarchived.
 | TODO-5866 | A closure captures a `pick` payload binding | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5867 | A string heap that alternates between block sizes keeps its chunks | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5869 | `serveWorkers` with 1 worker is within 10% of `serve` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
+| TODO-5870 | A VM program that uses tasks runs its string code on the fast kernel | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5873 | A sum temporary passed as an argument is destroyed after the call | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5874 | Assigning to a `mut` sum local destroys the payload it held | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5875 | `count()` on a local declared `Vector<T>` lowers | [2026-11.md](todo_archive/2026-11.md) | - |

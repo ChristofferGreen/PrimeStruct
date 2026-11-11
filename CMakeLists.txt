@@ -695,6 +695,7 @@ set(PRIMESTRUCT_RUNTIME_SOURCES
   src/runtime/VmControlFlowOpcodeShared.cpp
   src/runtime/VmExecution.cpp
   src/runtime/VmExecutionKernel.cpp
+  src/runtime/VmTaskScheduler.cpp
   src/runtime/VmFastKernel.cpp
   src/runtime/VmFastKernelPrepare.cpp
   src/runtime/VmHeapHelpers.cpp

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 #include "primec/ir/Ir.h"
 
 namespace primec::testing {
@@ -8,6 +10,11 @@ namespace primec::testing {
 // on). With it off, plain runs use the step kernel that debug sessions share, so
 // a test can run one module both ways and compare results and fault messages.
 void setVmFastKernelEnabled(bool enabled);
+
+// How many runs with tasks (a module with a TaskSpawn or TaskWait) the VM has given to the flat loop since the
+// process started: each task then runs on it between the scheduler's opcodes, where the step kernel would have
+// run every instruction of every task. A counting test reads it before and after a run.
+uint64_t vmFastTaskRunCount();
 
 // Whether the flat loop would run `module` (every function passes the shared CFG
 // analysis and returns leave the caller's stack balanced); otherwise plain runs

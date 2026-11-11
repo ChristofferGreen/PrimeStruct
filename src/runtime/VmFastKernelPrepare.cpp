@@ -374,7 +374,10 @@ void buildSwitchChains(FastFunction &out) {
 
 // Builds the flat form of `function`, or returns false when the loop's
 // assumptions do not hold for it.
-bool prepareFunction(const IrModule &module, const IrFunction &function, FastFunction &out) {
+bool prepareFunction(const IrModule &module,
+                     const IrFunction &function,
+                     FastFunction &out,
+                     bool forTasks) {
   IrCfg cfg;
   IrCfgError cfgError;
   if (!buildIrCfg(function, module, cfg, cfgError)) {
@@ -383,14 +386,17 @@ bool prepareFunction(const IrModule &module, const IrFunction &function, FastFun
   out.function = &function;
   out.code.reserve(function.instructions.size() + 1);
   for (const IrInstruction &instruction : function.instructions) {
-    // Tasks, which the scheduler runs, stay on the step kernel, and so do atomics (switch points under a seed) and
-    // mutexes and conditions (a task may have to wait).
-    if (instruction.op == IrOpcode::TaskSpawn || instruction.op == IrOpcode::TaskWait ||
-        instruction.op == IrOpcode::AtomicLoad || instruction.op == IrOpcode::AtomicStore ||
-        instruction.op == IrOpcode::AtomicAdd || instruction.op == IrOpcode::AtomicExchange ||
-        instruction.op == IrOpcode::AtomicCompareExchange ||
-        instruction.op == IrOpcode::MutexLock || instruction.op == IrOpcode::MutexUnlock ||
-        instruction.op == IrOpcode::ConditionWait || instruction.op == IrOpcode::ConditionNotify) {
+    // Tasks, atomics (switch points under a seed), mutexes and conditions (a task may have to wait) are the
+    // scheduler's: a run without tasks keeps them on the step kernel, and a run with tasks (`forTasks`) leaves the
+    // loop at each of them.
+    if (!forTasks &&
+        (instruction.op == IrOpcode::TaskSpawn || instruction.op == IrOpcode::TaskWait ||
+         instruction.op == IrOpcode::AtomicLoad || instruction.op == IrOpcode::AtomicStore ||
+         instruction.op == IrOpcode::AtomicAdd || instruction.op == IrOpcode::AtomicExchange ||
+         instruction.op == IrOpcode::AtomicCompareExchange ||
+         instruction.op == IrOpcode::MutexLock || instruction.op == IrOpcode::MutexUnlock ||
+         instruction.op == IrOpcode::ConditionWait ||
+         instruction.op == IrOpcode::ConditionNotify)) {
       return false;
     }
     // A call to a missing function is left to the step kernel, which faults on it when (and only
@@ -442,7 +448,7 @@ bool prepareFunction(const IrModule &module, const IrFunction &function, FastFun
 
 } // namespace
 
-bool prepareModule(const IrModule &module, std::vector<FastFunction> &functions) {
+bool prepareModule(const IrModule &module, std::vector<FastFunction> &functions, bool forTasks) {
   if (module.entryIndex < 0 || static_cast<size_t>(module.entryIndex) >= module.functions.size()) {
     return false;
   }
@@ -451,11 +457,28 @@ bool prepareModule(const IrModule &module, std::vector<FastFunction> &functions)
   }
   functions.assign(module.functions.size(), FastFunction{});
   for (size_t i = 0; i < module.functions.size(); ++i) {
-    if (!prepareFunction(module, module.functions[i], functions[i])) {
+    if (!prepareFunction(module, module.functions[i], functions[i], forTasks)) {
       return false;
     }
   }
   return true;
+}
+
+} // namespace primec::vm_detail
+
+namespace primec::vm_detail {
+
+void initVmFastTask(const std::vector<FastFunction> &functions,
+                    size_t functionIndex,
+                    std::vector<uint64_t> arguments,
+                    VmFastTask &task) {
+  const FastFunction &function = functions[functionIndex];
+  task.stack = std::move(arguments);
+  task.localsArena.assign(std::max<size_t>(function.localCount, 16), 0);
+  task.frames.clear();
+  task.current = &function;
+  task.localsBase = 0;
+  task.ip = function.code.data();
 }
 
 } // namespace primec::vm_detail

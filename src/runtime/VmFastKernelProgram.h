@@ -140,8 +140,46 @@ inline uint64_t sext32(uint64_t value) {
   return static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(value)));
 }
 
+struct FastFrame {
+  const FastFunction *function = nullptr;
+  const FastInst *returnIp = nullptr;
+  size_t localsBase = 0;
+  bool returnsValue = false;
+};
+
 // Prepares every function; false when any of them (or the entry) is not eligible for the fast
-// loop.
-bool prepareModule(const IrModule &module, std::vector<FastFunction> &functions);
+// loop. With `forTasks` the task, atomic, mutex and condition opcodes are accepted too (the loop
+// hands them to the task scheduler, VmFastKernelTask below) and the entry may take parameters.
+bool prepareModule(const IrModule &module,
+                   std::vector<FastFunction> &functions,
+                   bool forTasks = false);
+
+// One call stack of a run with tasks (docs/spec/vm-design.md, Tasks): its operand stack, its locals
+// arena and its frames, kept between the points where the loop hands control to the scheduler.
+// While it is suspended `stack` holds exactly the live operands, and `ip` is the instruction the
+// scheduler is to run (a task, atomic, mutex or condition opcode) or the task's first instruction.
+struct VmFastTask {
+  std::vector<uint64_t> stack;
+  std::vector<uint64_t> localsArena;
+  std::vector<FastFrame> frames;
+  const FastFunction *current = nullptr;
+  size_t localsBase = 0;
+  const FastInst *ip = nullptr;
+};
+
+enum class VmFastRunOutcome : uint8_t {
+  // The root function returned; `result` is its value.
+  Finished,
+  // A trap ended the program; `result` is its exit code.
+  Trapped,
+  // `task.ip` names an opcode the scheduler runs; the loop resumes after it.
+  SwitchPoint,
+};
+
+// Starts a task: `functionIndex` with `arguments` as its operand stack.
+void initVmFastTask(const std::vector<FastFunction> &functions,
+                    size_t functionIndex,
+                    std::vector<uint64_t> arguments,
+                    VmFastTask &task);
 
 } // namespace primec::vm_detail
