@@ -70,7 +70,9 @@
 - **Ownership:** a `move` parameter's value is destroyed when the callee's scope ends unless the callee moves it on
   (for example into a container); the caller does not destroy it. `move(...)` at the call site is optional for a `move`
   parameter. Using the caller's binding afterwards is a `use-after-move` error until it is reassigned, on every path:
-  a move in one `if` branch reaches the code after the join, and a loop body cannot move a binding from outside the
+  a move in one `if` branch or one `pick` arm reaches the code after the join (each branch or arm starts from the
+  state before it, and a `pick` payload binding's move ends with its arm, so a later arm or `pick` may bind the same
+  name), and a loop body cannot move a binding from outside the
   loop unless it assigns it again before the next iteration. The diagnostic names the binding, where it moved and what
   to write instead: `use-after-move: row was moved at 9:13; assign row a new value before using it again, or keep a
   copy before the move: [vector<i32> mut] kept{row}`. The builtin `vector<T>` `push` (method `a.push(b)` or

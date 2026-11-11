@@ -372,7 +372,15 @@ bool SemanticsValidator::validatePickExpr(
   std::optional<ReturnKind> combinedKind;
   bool sawString = false;
   bool sawNonString = false;
+  // Moves are tracked per arm: each arm starts from the state before the `pick`, a payload binding's move
+  // state ends with its arm, and after the `pick` a binding is moved when an arm moved it.
+  const std::unordered_set<std::string> movedBefore = currentValidationState_.movedBindings;
+  std::unordered_set<std::string> movedAfter;
   for (const PickArm &arm : arms) {
+    currentValidationState_.movedBindings = movedBefore;
+    if (arm.hasPayloadBinder) {
+      currentValidationState_.movedBindings.erase(arm.binderName);
+    }
     std::unordered_map<std::string, BindingInfo> branchLocals = locals;
     if (arm.hasPayloadBinder &&
         (isParam(params, arm.binderName) ||
@@ -442,6 +450,11 @@ bool SemanticsValidator::validatePickExpr(
                                 "pick arm must produce a value: " +
                                     arm.variant->name);
     }
+    if (arm.hasPayloadBinder) {
+      currentValidationState_.movedBindings.erase(arm.binderName);
+    }
+    movedAfter.insert(currentValidationState_.movedBindings.begin(),
+                      currentValidationState_.movedBindings.end());
     ReturnKind armKind = inferExprReturnKind(*valueExpr, params, branchLocals);
     if (armKind == ReturnKind::Void) {
       if (isStructConstructorValueExpr(*valueExpr)) {
@@ -876,11 +889,20 @@ bool SemanticsValidator::validatePickStatement(
       enclosingStatements == nullptr
           ? 0
           : std::min(statementIndex + 1, enclosingStatements->size());
+  // Moves are tracked per arm: each arm starts from the state before the `pick`, a payload binding's move
+  // state ends with its arm, and after the `pick` a binding is moved when an arm that falls through moved it.
+  const std::unordered_set<std::string> movedBefore = currentValidationState_.movedBindings;
+  std::unordered_set<std::string> movedAfter;
+  bool anyArmFallsThrough = false;
   for (const Expr &arm : stmt.bodyArguments) {
     const SumVariant *variant = findVariantByName(*sumDef, arm.name);
     const bool payloadArm = isPayloadPickArmEnvelope(arm);
     if (variant == nullptr || (variant->hasPayload && !payloadArm)) {
       continue;
+    }
+    currentValidationState_.movedBindings = movedBefore;
+    if (payloadArm) {
+      currentValidationState_.movedBindings.erase(arm.args.front().name);
     }
     std::unordered_map<std::string, BindingInfo> branchLocals = locals;
     if (payloadArm) {
@@ -920,7 +942,18 @@ bool SemanticsValidator::validatePickStatement(
       }
       expireReferenceBorrowsForRanges(params, branchLocals, livenessRanges);
     }
+    if (payloadArm) {
+      currentValidationState_.movedBindings.erase(arm.args.front().name);
+    }
+    const bool endsWithReturn = !bodyExprs.empty() && bodyExprs.back()->kind == Expr::Kind::Call &&
+                                !bodyExprs.back()->isBinding && bodyExprs.back()->name == "return";
+    if (!endsWithReturn) {
+      anyArmFallsThrough = true;
+      movedAfter.insert(currentValidationState_.movedBindings.begin(),
+                        currentValidationState_.movedBindings.end());
+    }
   }
+  currentValidationState_.movedBindings = anyArmFallsThrough ? std::move(movedAfter) : movedBefore;
   return true;
 }
 

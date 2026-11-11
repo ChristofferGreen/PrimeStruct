@@ -724,4 +724,108 @@ main() {
                 outcome.err);
 }
 
+TEST_CASE("a moved payload binding leaves a later binding of the same name alone") {
+  const std::string source = pickSubjectProgram(R"(
+[effects(heap_alloc), return<Result<String, String>>]
+get_either([i32] id) {
+  if(id < 0i32) {
+    return(error<String, String>(label(0i32 - id)))
+  }
+  return(ok<String, String>(label(id)))
+}
+
+[effects(heap_alloc, io_out), return<void>]
+show_either([i32] id) {
+  pick(get_either(id)) {
+    ok(line) {
+      [String] owned{move(line)}
+      print_line(first_byte(owned))
+    }
+    error(line) {
+      print_line(first_byte(line))
+    }
+  }
+}
+)",
+                                                R"(
+    pick(get(5i32)) {
+      none {
+      }
+      some(line) {
+        [String] owned{move(line)}
+        print_line(first_byte(owned))
+      }
+    }
+    pick(get(6i32)) {
+      none {
+      }
+      some(line) {
+        [String] copied{line}
+        print_line(first_byte(copied))
+      }
+    }
+    show_either(3i32)
+    show_either(-4i32)
+    [i32] moved{pick(get(7i32)) { none { 0i32 } some(line) { [String] owned{move(line)} first_byte(owned) } }}
+    [i32] read{pick(get(8i32)) { none { 0i32 } some(line) { first_byte(line) } }}
+    print_line(moved)
+    print_line(read)
+    [String mut] outer{label(9i32)}
+    pick(get(1i32)) {
+      none {
+        [String] gone{move(outer)}
+        print_line(first_byte(gone))
+      }
+      some(line) {
+        print_line(first_byte(outer))
+      }
+    })");
+  runPickSubjectProgram("pick_binder_move_scope", source, "53\n54\n51\n52\n55\n56\n57\n0\n0\n");
+}
+
+TEST_CASE("a payload binding used after its move in the same arm is rejected") {
+  const program_matrix::Outcome outcome =
+      compilePickProgram("pick_binder_use_after_move", PickSubjectPrelude + R"(
+[effects(heap_alloc, io_out), return<int>]
+main() {
+  pick(get(5i32)) {
+    none {
+    }
+    some(line) {
+      [String] owned{move(line)}
+      print_line(first_byte(owned))
+      print_line(first_byte(line))
+    }
+  }
+  return(0i32)
+}
+)");
+  CHECK(outcome.exitCode != 0);
+  CHECK_MESSAGE(outcome.err.find("use-after-move: line was moved") != std::string::npos,
+                outcome.err);
+}
+
+TEST_CASE("a binding a pick arm moved is moved after the pick") {
+  const program_matrix::Outcome outcome =
+      compilePickProgram("pick_arm_moves_outer", PickSubjectPrelude + R"(
+[effects(heap_alloc, io_out), return<int>]
+main() {
+  [String mut] outer{label(7i32)}
+  pick(get(8i32)) {
+    none {
+    }
+    some(line) {
+      [String] gone{move(outer)}
+      print_line(first_byte(gone))
+    }
+  }
+  print_line(first_byte(outer))
+  return(0i32)
+}
+)");
+  CHECK(outcome.exitCode != 0);
+  CHECK_MESSAGE(outcome.err.find("use-after-move: outer was moved") != std::string::npos,
+                outcome.err);
+}
+
 TEST_SUITE_END();
