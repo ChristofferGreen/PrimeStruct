@@ -404,7 +404,9 @@ namespace server {
     }
     [i32] total{job.received + convert<i32>(got)}
     // Parsed from a copy in this worker's own block: a byte of a block another thread allocated (the slots are the
-    // poller's) is checked on a slower path, which made parsing a 32 KB form cost twice what `serve` pays.
+    // poller's) is checked against the other arena's tables, about 1.17 times the instructions of a byte of the
+    // worker's own block since TODO-5872 (twice the cost of `serve` before). Dropping the copy was not measured on
+    // an idle machine, so it stays.
     own.clear()
     own.appendBytes(slot_bytes(buffers, job.slot, 0i32), total)
     [Request] request{parseRequestBytes(readSliceMake<u8>(own.data, total), capacity)}

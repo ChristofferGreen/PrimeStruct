@@ -524,4 +524,41 @@ TEST_CASE("threads past the last arena share it behind its locks") {
   CHECK(unbalanced == "string arena ended without one being open");
 }
 
+TEST_CASE("a thread reads the bytes of another thread's long block without the slow path") {
+  VmHeapArenas arenas(TestSlotCapacity, TestByteCapacity);
+  std::string error;
+  VmHeapArena *other = arenas.acquire(error);
+  REQUIRE(other != nullptr);
+  Owner main{arenas.main()};
+  constexpr uint64_t Bytes = 100000;
+  const uint64_t region = main.bytes(Bytes);
+  REQUIRE(main.ok);
+  uint64_t reads = 0;
+  uint64_t slow = 0;
+  bool allFound = true;
+  std::thread([&] {
+    VmHeapCore &core = other->core;
+    const uint64_t before = core.slowByteReads();
+    for (uint64_t i = 0; i < Bytes; ++i) {
+      allFound = core.byteAt(region + i) != nullptr && allFound;
+      ++reads;
+    }
+    slow = core.slowByteReads() - before;
+    allFound = core.byteAt(region + Bytes) == nullptr && allFound;
+  }).join();
+  CHECK(allFound);
+  CHECK(reads == Bytes);
+  // Only the bytes of the two granules the block shares with its neighbours (and the first read, which finds the
+  // arena) take the slow path: a count that does not grow with the length of the block.
+  CHECK(slow <= 2 * VmHeapCore::GranuleBytes + 1);
+  main.free(region);
+  REQUIRE(main.ok);
+  bool gone = false;
+  std::thread([&] {
+    gone =
+        other->core.byteAt(region) == nullptr && other->core.byteAt(region + Bytes - 1) == nullptr;
+  }).join();
+  CHECK(gone);
+}
+
 TEST_SUITE_END();

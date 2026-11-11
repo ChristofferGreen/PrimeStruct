@@ -633,8 +633,10 @@ The design is per-thread arenas, with a lock only on a shared slow path:
   of bytes and 2^32 slots by default, mapped without commit), so storage never moves again, and an arena that
   fills its reservation faults with `VM heap allocation overflow`. A liveness check reads only a state table,
   with relaxed atomic loads (slots have one state each, byte regions one per 64 bytes since TODO-5793), so no
-  read writes anything and there is no per-thread region cache; an address of another arena is answered by
-  that arena's tables, found through a table of 64 arena pointers. Allocation, free and the few map lookups
+  read writes anything and there is no per-thread region cache of this arena's own; an address of another arena is
+  answered by that arena's tables, found through a table of 64 arena pointers, and the last other arena a heap read
+  is remembered (one pointer, since an arena's storage never moves), so a granule of another thread's block that
+  its region fills is checked in line with one more compare (TODO-5872). Allocation, free and the few map lookups
   (a byte in a granule two regions share, a span over 128 bytes, a block's size) take the arena's lock, which
   only its owner and remote frees contend for. Each thread has its own `VmTextHeap`, so a `StringArena` opened
   on one thread never catches another thread's strings, and its own literal cache. At most 64 arenas; a 65th

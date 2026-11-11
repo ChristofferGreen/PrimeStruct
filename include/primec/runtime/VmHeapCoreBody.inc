@@ -142,6 +142,9 @@ public:
   }
 
   unsigned arena() const { return arena_; }
+  uint64_t slowByteReads() const {
+    return __atomic_load_n(&slowByteReads_, __ATOMIC_RELAXED);
+  }
   void *companion() const { return companion_; }
 
   // Whether a heap address belongs to another arena.
@@ -246,6 +249,14 @@ private:
   uint64_t byteBase_ = 0;
   uint64_t granuleBound_ = 0;
   uint64_t arenaBits_ = 0;
+  // The last other arena whose bytes this heap read, so a byte of another thread's block is answered in line like
+  // one of this arena's own. An arena's storage is reserved once and lives as long as the arenas do (VmHeapArenas),
+  // so its offsets, bounds and storage never change; one pointer is the whole cache, so threads that share this heap
+  // (the last arena) can overwrite it without a torn state.
+  VmHeapCore *remoteOwner_ = nullptr;
+  // Byte accesses that neither this arena's granule states nor the remote cache answered (a fault, a granule a block
+  // only partly fills in another arena, or the first read of an arena): a counting test reads it.
+  uint64_t slowByteReads_ = 0;
   unsigned arena_ = 0;
   bool pinned_ = false;
   bool hasRemoteFrees_ = false;
@@ -409,6 +420,18 @@ public:
         __builtin_unreachable();
       }
       return byte;
+    }
+    // A granule of the last other arena read that its region fills (the common case of a long block another thread
+    // allocated), answered like byteAt's own check.
+    if (VmHeapCore *remote = __atomic_load_n(&remoteOwner_, __ATOMIC_RELAXED); remote != nullptr) {
+      const uint64_t remoteOffset = (address & ByteOffsetMask) - remote->byteBase_;
+      const uint64_t remoteGranule = remoteOffset >> GranuleShift;
+      if (remoteGranule < remote->granuleBound_ &&
+          (__atomic_load_n(remote->byteStates.data() + remoteGranule, __ATOMIC_RELAXED) |
+           GranuleStartBit) ==
+              ((static_cast<uint32_t>(address >> 47) << 15) | FullGranule | GranuleStartBit)) {
+        return remote->bytes.data() + remoteOffset;
+      }
     }
     return byteAtEdge(address);
   }
@@ -779,10 +802,14 @@ private:
   }
 
   [[gnu::noinline]] uint8_t *byteAtSlow(uint64_t address) {
+    __atomic_fetch_add(&slowByteReads_, 1, __ATOMIC_RELAXED);
     if (arenas_ == nullptr) {
       return byteAtOwn(address);
     }
     VmHeapCore *owner = ownerOf(address);
+    if (owner != nullptr && owner != this && owner->pinned_) {
+      __atomic_store_n(&remoteOwner_, owner, __ATOMIC_RELAXED);
+    }
     return owner == nullptr ? nullptr : owner->byteAtOwn(address);
   }
 
