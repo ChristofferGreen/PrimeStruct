@@ -1478,7 +1478,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--test-case-exclude=*through optexe*,*over loopback*,*serveWorkers*"
             "--order-by=file"
   )
-  # (6 cases, 20 s alone. The two example cases take 5 s each: one whole-app optcpp compile, nothing to split.)
+  # (8 cases, 13 s alone. The fixture build takes 5 s and the two example cases 3 to 4 s each: one optexe build and
+  # one whole-app optcpp compile, nothing to split.)
   add_test(
     NAME PrimeStruct_http_workers
     COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>

@@ -441,7 +441,7 @@ namespace server {
              [SlotBuffers] buffers,
              [i32] wakeWriter,
              [ServerConfig] config) {
-    // The poller's thread takes SIGTERM and SIGINT, so the signal interrupts its `poll`.
+    // A stop signal does not interrupt this worker's reads and writes; the poller sees it through `stopSignalFd`.
     blockStopSignals()
     [bool mut] open{true}
     while(open) {
@@ -531,6 +531,8 @@ namespace server {
       slot = slot + 1i32
     }
     [vector<u8> mut] interest{vector<u8>()}
+    // Readable once SIGTERM or SIGINT has arrived, on whichever thread and however early.
+    [i32] stopSignal{stopSignalFd()}
     while(!stop()) {
       [i64] now{monotonicMs()}
       [i64 mut] wait{convert<i64>(config.acceptTimeoutMs)}
@@ -556,8 +558,17 @@ namespace server {
         watch_socket(interest, listener)
       }
       watch_socket(interest, wakeReader)
+      // Watched only until the signal has been seen, so a `stop` that ignores the signal does not spin. A signal
+      // that arrives after this check makes the descriptor readable, so the wait below returns at once.
+      [bool] watchStop{stopSignal >= 0i32 && !stopRequested()}
+      if(watchStop) {
+        watch_socket(interest, stopSignal)
+      }
       wait_ready(interest, wait)
       [i64] after{monotonicMs()}
+      if(watchStop) {
+        take_ready(interest, stopSignal)
+      }
       if(take_ready(interest, wakeReader)) {
         takeWakes(wakeReader)
       }

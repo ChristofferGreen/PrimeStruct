@@ -523,15 +523,20 @@ std::string bodyOf(const std::string &response) {
   return at == std::string::npos ? std::string("no body: ") + response : response.substr(at + 4);
 }
 
+// The worker server fixture, built once per process.
+const std::string &workerServerExe() {
+  static const std::string exe =
+      buildServer(Fixtures + "http_workers_server.prime", "http_workers_server");
+  return exe;
+}
+
 // Builds the worker server fixture (once per process) and starts it; false when sockets are not permitted here.
 bool startWorkerServer(PipedServer &server, std::vector<std::string> environment) {
   if (!socketsPermitted()) {
     MESSAGE("skipped: socket() is not permitted here (EPERM or EACCES)");
     return false;
   }
-  static const std::string exe =
-      buildServer(Fixtures + "http_workers_server.prime", "http_workers_server");
-  server.start(exe, std::move(environment));
+  server.start(workerServerExe(), std::move(environment));
   if (server.port < 0 && server.errors.find("not permitted") != std::string::npos) {
     MESSAGE("skipped: the server may not listen here: " << server.errors);
     return false;
@@ -567,6 +572,12 @@ int compileExampleWithWorkers(const std::string &name, std::string &log) {
   return status;
 }
 } // namespace
+
+// About 5 s alone, all of it one optexe build (2 s of frontend and lowering, 3 s of C++ compiler) that the cases
+// below share: a case of its own, so none of them carries it.
+TEST_CASE("the serveWorkers fixture server builds") {
+  CHECK(std::filesystem::exists(workerServerExe()));
+}
 
 // None of the serveWorkers cases below measures time: each waits for the server's own answers, in an order only a
 // correct server can produce.
@@ -690,6 +701,28 @@ TEST_CASE("SIGTERM stops serveWorkers from listening while its worker is busy") 
   CHECK_MESSAGE(answer.rfind("HTTP/1.1 200 OK\r\n", 0) == 0, answer);
   CHECK_MESSAGE(bodyOf(answer) == "held", answer);
   CHECK(server.waitForExit() == 0);
+}
+
+TEST_CASE("SIGTERM sent while the workers of serveWorkers start ends the server") {
+  // The loop of this server wakes up by itself once an hour, so it exits only if the signal itself ends its wait:
+  // whichever of the 17 threads takes it, and whether it arrives before or after the loop's first check. The line
+  // "listening on" is printed before the first worker is started.
+  for (int round = 0; round < 8; ++round) {
+    PipedServer server;
+    if (!startWorkerServer(server, {"WORKERS=16", "ACCEPT_TIMEOUT_MS=3600000"})) {
+      return;
+    }
+    CHECK(server.stop() == 0);
+  }
+  // The same once the workers wait for requests: the server has answered, so every worker has started.
+  PipedServer server;
+  if (!startWorkerServer(server, {"WORKERS=16", "ACCEPT_TIMEOUT_MS=3600000"})) {
+    return;
+  }
+  const std::string count =
+      exchangeAndWait(server.port, "GET /count HTTP/1.1\r\nHost: localhost\r\n\r\n");
+  CHECK_MESSAGE(bodyOf(count) == "0", count);
+  CHECK(server.stop() == 0);
 }
 
 TEST_CASE("serveWorkers rejects an app whose state is not sendable") {

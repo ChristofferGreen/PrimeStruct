@@ -1,6 +1,7 @@
 // A counter served by `serveWorkers`: WORKERS worker tasks answer, and every handler runs inside the app's mutex, so
 // the counter is a plain field. GET /hold keeps its worker (and the mutex) busy for as long as the test wants: it
-// connects to the test's own listener on HOLD_PORT and waits there for one byte.
+// connects to the test's own listener on HOLD_PORT and waits there for one byte. ACCEPT_TIMEOUT_MS is how long the
+// loop waits when nothing happens.
 import /std/http/*
 import /std/http/server/*
 import /std/net/*
@@ -44,12 +45,13 @@ hold_turn([Reference<Counter>] counter, [Request] request, [Reference<Response>]
 main() {
   [String] workers{envOr(stringFrom("WORKERS"), stringFrom("4"))}
   [String] hold{envOr(stringFrom("HOLD_PORT"), stringFrom("0"))}
+  [String] idle{envOr(stringFrom("ACCEPT_TIMEOUT_MS"), stringFrom("200"))}
   [AppRouter<Counter> mut] router{AppRouter<Counter>{Counter{[holdPort] hold.view().parseI32Or(0i32)}}}
   router.get("/count", show_count)
   router.post("/hit", count_hit)
   router.get("/hold", hold_turn)
-  [ServerConfig] config{ServerConfig{[port] 0i32, [readTimeoutMs] 60000i32, [acceptTimeoutMs] 200i32,
-                                     [maxConnections] 32i32, [loopbackOnly] true,
+  [ServerConfig] config{ServerConfig{[port] 0i32, [readTimeoutMs] 60000i32, [maxConnections] 32i32, [loopbackOnly] true,
+                                     [acceptTimeoutMs] idle.view().parseI32Or(200i32),
                                      [workers] workers.view().parseI32Or(4i32)}}
   serveWorkers(router, config)?
   return(0i32)

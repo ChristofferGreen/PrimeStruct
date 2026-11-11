@@ -570,9 +570,14 @@ primec --emit=optexe server.prime -o server --link-arg stdlib/std/os/os_posix.cp
 - `cpuCount() -> i32`: how many processors are online, at least 1 (`sysconf(_SC_NPROCESSORS_ONLN)`): how many
   threads can run at once.
 - `blockStopSignals() -> i32`: blocks SIGTERM and SIGINT on the calling thread and returns 0, or -100 - the error.
-  A worker task calls it first, so the signal goes to the thread that waits in `poll` and interrupts that call
-  (`serveWorkers` does this for its workers). A signal that arrives before a worker has called it can be delivered
-  to that worker; the flag is still set, and the waiting thread sees it when its wait next times out.
+  A worker task calls it first, so a signal does not interrupt the worker's own reads and writes (`serveWorkers`
+  does this for its workers). A signal that arrives before a worker has called it can be delivered to that worker;
+  the flag is still set, and a loop that must see it at once watches `stopSignalFd()`.
+- `stopSignalFd() -> i32`: a descriptor that is readable from the moment the process has received SIGTERM or
+  SIGINT, and stays readable; a negative code when it cannot be opened. The signal handler writes to a pipe, so it
+  does not matter which thread the signal was delivered to, or whether it arrived before the first call. A loop
+  that waits in `/std/net` `poll` watches it while `stopRequested()` is false: a signal that arrives between the
+  check and the wait then ends the wait at once. Do not read from it or close it.
 
 - `fileSize(path) -> i64` (`file_read`): the size of the regular file `path` (a `String`), -1 for a file that is not
   regular (a directory), or -100 - errno.
@@ -1061,9 +1066,9 @@ the loop; `serveWorkersUntil(handler, config, stop)` is its `serveUntil`. Both n
   Pointer<u8>``.
 - **Stopping:** when `stop()` is true the loop stops listening, closes the connections that wait for input and
   ends the workers; each worker finishes the request it is answering, and a connection still queued for a worker is
-  closed unanswered. Then the call returns `Result.ok()`. The workers block SIGTERM and SIGINT (`/std/os`
-  `blockStopSignals`), so the signal interrupts the loop's `poll` and `serveWorkers` sees it at once; a signal
-  that arrives while a worker is still starting is seen within `acceptTimeoutMs`.
+  closed unanswered. Then the call returns `Result.ok()`. The loop watches `/std/os` `stopSignalFd()` beside its
+  sockets, so `serveWorkers` sees SIGTERM or SIGINT at once: whichever thread takes the signal, also while the
+  workers are still starting, and also between the loop's check of `stop()` and its wait.
 - **Errors:** failing to listen or to open the wake pipe is the `ServeError`, returned before any worker starts.
 - **Memory:** the request buffers of all slots are one block of `maxConnections * maxRequestBytes` bytes,
   allocated when the server starts (`serve` allocates each slot's buffer on first use).

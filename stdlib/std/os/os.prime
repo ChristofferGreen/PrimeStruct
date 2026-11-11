@@ -19,6 +19,10 @@ ps_os_stop_requested() {
 }
 
 [host return<i32>]
+ps_os_stop_signal_fd() {
+}
+
+[host return<i32>]
 ps_os_cpu_count() {
 }
 
@@ -59,6 +63,15 @@ namespace os {
     return(ps_os_stop_requested())
   }
 
+  // A descriptor that is readable from the moment the process has received SIGTERM or SIGINT and stays readable,
+  // whichever thread the signal was delivered to: a loop that waits in /std/net `poll` watches it while
+  // `stopRequested()` is false, and then no signal can arrive unseen between its check and its wait. Do not read
+  // from it or close it. A negative code when it cannot be opened.
+  [public return<i32>]
+  stopSignalFd() {
+    return(ps_os_stop_signal_fd())
+  }
+
   // How many processors are online, at least 1: how many threads can run at once.
   [public return<i32>]
   cpuCount() {
@@ -66,8 +79,9 @@ namespace os {
   }
 
   // Blocks SIGTERM and SIGINT on the calling thread, for the worker tasks of a program whose main thread waits for
-  // the signal in a blocking call: the signal then interrupts that call instead of a worker's. Returns 0 or a
-  // negative code.
+  // the signal in a blocking call: the signal then interrupts that call instead of a worker's. A signal that arrives
+  // before the call may still be delivered to the worker; a loop that must not miss it watches `stopSignalFd()`.
+  // Returns 0 or a negative code.
   [public return<i32>]
   blockStopSignals() {
     return(ps_os_block_stop_signals())

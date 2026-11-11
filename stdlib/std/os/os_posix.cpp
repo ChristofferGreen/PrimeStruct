@@ -4,6 +4,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <atomic>
 #include <cerrno>
 #include <cstdint>
 #include <cstdlib>
@@ -14,7 +15,43 @@ namespace {
 
 volatile sig_atomic_t stopFlag = 0;
 
-void onStopSignal(int) { stopFlag = 1; }
+// The write end of the stop pipe (ps_os_stop_signal_fd), or -1 while nobody has asked for it.
+std::atomic<int> stopPipeWriter{-1};
+
+// Makes the stop pipe readable. Only async-signal-safe calls: the signal handler runs it.
+void writeStopByte(int writer) {
+  const int saved = errno;
+  const uint8_t byte = 1;
+  // A full pipe is already readable, so a failed write needs no retry.
+  (void)!write(writer, &byte, 1);
+  errno = saved;
+}
+
+void onStopSignal(int) {
+  stopFlag = 1;
+  const int writer = stopPipeWriter.load(std::memory_order_relaxed);
+  if (writer >= 0) {
+    writeStopByte(writer);
+  }
+}
+
+// Opens the stop pipe and returns its read end, or -100 - errno. A signal that arrived before the pipe existed has
+// set the flag, so the pipe is made readable here.
+int openStopPipe() {
+  int ends[2] = {-1, -1};
+  if (pipe(ends) != 0) {
+    return -100 - errno;
+  }
+  for (const int fd : ends) {
+    fcntl(fd, F_SETFD, FD_CLOEXEC);
+    fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | O_NONBLOCK);
+  }
+  stopPipeWriter.store(ends[1]);
+  if (stopFlag != 0) {
+    writeStopByte(ends[1]);
+  }
+  return ends[0];
+}
 
 // SIGTERM and SIGINT set the flag. Without SA_RESTART a blocking call (accept, recv, poll) returns EINTR, so a
 // server loop wakes up and sees stopRequested().
@@ -47,6 +84,13 @@ int64_t ps_os_monotonic_ms(void) {
 }
 
 bool ps_os_stop_requested(void) { return stopFlag != 0; }
+
+// A descriptor that is readable from the moment the process has received SIGTERM or SIGINT, whichever thread took
+// the signal: the handler writes to a pipe that is opened on the first call and never closed. Or -100 - errno.
+int32_t ps_os_stop_signal_fd(void) {
+  static const int reader = openStopPipe();
+  return reader;
+}
 
 // How many processors are online, at least 1.
 int32_t ps_os_cpu_count(void) {

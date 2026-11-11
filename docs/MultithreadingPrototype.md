@@ -969,9 +969,11 @@ main() {
   the handler does, including writing the page's HTML, which happens inside handlers. A handler that does heavy
   work therefore gains little until handlers that only read the state share a read lock (TODO-5804); the server
   leaves measure both cases.
-- Worker threads block `SIGINT` and `SIGTERM` (`/std/os` `blockStopSignals`), so the signal interrupts the poller's
-  `poll` and `stopRequested()` is seen at once. On stop the poller stops listening, closes the connections that wait
-  for input and closes the job channel; each worker finishes the request it is answering, and then the call returns.
+- The poller watches `/std/os` `stopSignalFd()`, a pipe the signal handler writes to, so `SIGINT` or `SIGTERM` ends
+  its `poll` at once on whichever thread the signal lands, at any moment from startup on. Worker threads also block
+  both signals (`blockStopSignals`), so their reads and writes are not interrupted. On stop the poller stops
+  listening, closes the connections that wait for input and closes the job channel; each worker finishes the
+  request it is answering, and then the call returns.
 - **The slots' bytes** are one block that the poller and the workers share through a `[sendable]` struct holding
   its pointer; a slot's bytes belong to whoever holds the slot. Both channels hold one entry per slot, so neither
   side ever waits in `send`.
