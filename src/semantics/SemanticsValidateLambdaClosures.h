@@ -16,6 +16,27 @@ bool rewriteLambdaClosures(Program &program, std::string &error);
 // Marker in the name of every closure struct the pass generates (`/ns/main__lambda3`, after its enclosing definition).
 inline constexpr const char *LambdaClosureStructPrefix = "__lambda";
 
+// Whether `path` is a closure struct the pass generates for a lambda (`/ns/main__lambda3`).
+inline bool isLambdaClosureStructPath(const std::string &path) {
+  const size_t slash = path.rfind('/');
+  return path.find(LambdaClosureStructPrefix, slash == std::string::npos ? 0 : slash) !=
+         std::string::npos;
+}
+
+// Whether `path` is the generated factory of a lambda (`/ns/main__lambda3_make`): its leading template parameters are
+// the enclosing definition's type parameters the lambda names, written explicitly at the call; the capture types after
+// them are inferred.
+inline bool isLambdaClosureFactoryPath(const std::string &path) {
+  constexpr std::string_view FactorySuffix = "_make";
+  const size_t slash = path.rfind('/');
+  const std::string_view leaf =
+      std::string_view(path).substr(slash == std::string::npos ? 0 : slash + 1);
+  return leaf.size() > FactorySuffix.size() &&
+         leaf.compare(leaf.size() - FactorySuffix.size(), FactorySuffix.size(), FactorySuffix) ==
+             0 &&
+         leaf.find(LambdaClosureStructPrefix) != std::string_view::npos;
+}
+
 // Suffix of the closure struct the pass generates for a named definition used as a `Function` value
 // (`/double__fnref`): a struct without fields whose `call` forwards to the definition.
 inline constexpr const char *FunctionForwarderSuffix = "__fnref";

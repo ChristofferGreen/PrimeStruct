@@ -180,8 +180,8 @@ void inferBraceConstructorTemplateArgs(Expr &expr,
                                        const LocalTypeMap &locals,
                                        const std::vector<semantics::ParameterInfo> &params,
                                        bool allowMathBare) {
-  if (expr.kind != Expr::Kind::Call || !expr.isBraceConstructor || expr.isMethodCall || expr.isBinding ||
-      !expr.templateArgs.empty() || expr.args.empty()) {
+  if (expr.kind != Expr::Kind::Call || !expr.isBraceConstructor || expr.isMethodCall ||
+      expr.isBinding || expr.args.empty()) {
     return;
   }
   const std::string path = resolveCalleePath(expr, namespacePrefix, ctx, &locals, &params);
@@ -190,6 +190,13 @@ void inferBraceConstructorTemplateArgs(Expr &expr,
     return;
   }
   const Definition &structDef = defIt->second;
+  // A closure struct written in place (`[ref name]` captures) states the enclosing definition's type parameters it
+  // names as leading template arguments; the capture types after them are inferred.
+  const size_t explicitCount = expr.templateArgs.size();
+  if (explicitCount > 0 && (!semantics::isLambdaClosureStructPath(structDef.fullPath) ||
+                            explicitCount >= structDef.templateArgs.size())) {
+    return;
+  }
   for (bool isPack : structDef.templateArgIsPack) {
     if (isPack) {
       return;
@@ -212,8 +219,10 @@ void inferBraceConstructorTemplateArgs(Expr &expr,
   shape.name = structDef.name;
   shape.fullPath = structDef.fullPath;
   shape.namespacePrefix = structDef.namespacePrefix;
-  shape.templateArgs = structDef.templateArgs;
-  shape.templateArgIsPack = structDef.templateArgIsPack;
+  shape.templateArgs.assign(structDef.templateArgs.begin() +
+                                static_cast<std::ptrdiff_t>(explicitCount),
+                            structDef.templateArgs.end());
+  shape.templateArgIsPack.assign(shape.templateArgs.size(), false);
   Expr callShape;
   callShape.kind = Expr::Kind::Call;
   callShape.name = structDef.fullPath;
@@ -256,10 +265,19 @@ void inferBraceConstructorTemplateArgs(Expr &expr,
   }
   std::vector<std::string> inferredArgs;
   std::string inferError;
-  if (inferImplicitTemplateArgs(shape, callShape, locals, params, mapping, allowedParams, namespacePrefix, ctx,
-                                allowMathBare, inferredArgs, inferError) &&
-      inferredArgs.size() == structDef.templateArgs.size()) {
-    expr.templateArgs = std::move(inferredArgs);
+  if (inferImplicitTemplateArgs(shape,
+                                callShape,
+                                locals,
+                                params,
+                                mapping,
+                                allowedParams,
+                                namespacePrefix,
+                                ctx,
+                                allowMathBare,
+                                inferredArgs,
+                                inferError) &&
+      inferredArgs.size() == shape.templateArgs.size()) {
+    expr.templateArgs.insert(expr.templateArgs.end(), inferredArgs.begin(), inferredArgs.end());
     expr.templateArgDetails.clear();
   }
 }

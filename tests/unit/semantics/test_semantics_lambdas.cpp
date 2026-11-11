@@ -490,4 +490,40 @@ main() {
   CHECK(error.find("use-after-move: plain") != std::string::npos);
 }
 
+TEST_CASE("a lambda names the type parameters of its definition") {
+  const std::string source = R"(
+[return<i32>]
+apply_value<T>([T] seed) {
+  [i32] base{10i32}
+  f{[base]([T] item) { return(base) }}
+  return(f(seed))
+}
+
+[return<int>]
+main() {
+  return(apply_value<i64>(5i64))
+}
+)";
+  std::string error;
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
+}
+
+TEST_CASE("a lambda cannot name a type parameter its definition does not have") {
+  const std::string source = R"(
+[return<i32>]
+apply_value<T>([T] seed) {
+  f{[]([U] item) { return(1i32) }}
+  return(f(seed))
+}
+
+[return<int>]
+main() {
+  return(apply_value<i32>(5i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unsupported binding type: U") != std::string::npos);
+}
+
 TEST_SUITE_END();

@@ -508,6 +508,106 @@ main() {
                     54);
 }
 
+// A lambda in a generic definition (or a method of a generic struct) can name the type parameters (TODO-5864): the
+// closure struct and its factory take the ones the lambda writes as leading template parameters.
+TEST_CASE("lambdas in generic definitions and generic struct methods name the type parameters") {
+  program_matrix::ProgramCase program;
+  program.name = "lambda_names_type_parameters";
+  program.source = R"(
+[effects(io_out), return<i32>]
+apply_value<T>([T] seed, [i32] extra) {
+  [T] kept{seed}
+  f{[kept, extra]([T] item) { return(extra) }}
+  return(f(kept))
+}
+
+[effects(io_out), return<i32>]
+apply_ref<T>([T mut] seed) {
+  [i32 mut] hits{0i32}
+  g{[ref hits]([T] item) {
+    hits = hits + 1i32
+    return(hits)
+  }}
+  g(seed)
+  return(hits)
+}
+
+[effects(io_out), return<i32>]
+apply_inner<T>([T] seed) {
+  [i32] base{10i32}
+  outer{[base]([T] item) {
+    inner{[base]([T] x) { return(base + 1i32) }}
+    return(inner(item))
+  }}
+  return(outer(seed))
+}
+
+[effects(io_out), return<i32>]
+apply_plain<T>([T] seed) {
+  [i32] base{10i32}
+  plain{[base]([i32] x) { return(base + x) }}
+  return(plain(1i32))
+}
+
+[struct]
+Holder<T>() {
+  [T] value
+
+  [effects(io_out), return<i32>]
+  run([i32] extra) {
+    [T] copy{this.value}
+    f{[copy, extra]([T] item) { return(extra) }}
+    return(f(copy))
+  }
+}
+
+[effects(io_out, heap_alloc), return<int>]
+main() {
+  print_line(apply_value<i32>(5i32, 4i32))
+  print_line(apply_ref<i32>(5i32))
+  print_line(apply_inner<i64>(5i64))
+  print_line(apply_plain<i64>(5i64))
+  [Holder<i32>] h{Holder<i32>{[value] 8i32}}
+  print_line(h.run(6i32))
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "4\n1\n11\n11\n6\n";
+  program.onlyConfigs = closureConfigs();
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("a lambda over a Mutex of a generic parameter runs on the VM and optexe") {
+  program_matrix::ProgramCase program;
+  program.name = "lambda_mutex_type_parameter";
+  program.source = R"(
+import /std/sync/*
+
+[struct]
+Box() {
+  [i32 mut] value{3i32}
+}
+
+[effects(io_out, heap_alloc, lock), return<void>]
+show<T>([Mutex<T>] cell) {
+  [i32] seven{7i32}
+  print_line(cell.locked([seven]([Reference<T>] item) { return(item.value + seven) }))
+}
+
+[effects(io_out, heap_alloc, lock), return<int>]
+main() {
+  cell{Mutex<Box>{Box{}}}
+  show<Box>(cell)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "10\n";
+  program.onlyConfigs = {"vm-step-O0", "vm-O0", "vm-O2", "optexe-O2"};
+  program_matrix::runProgramMatrix(program);
+}
+
 // `[ref]` captures and indexed elements. (a suite and CTest entry of its own, so each entry stays short under a loaded gate).
 TEST_SUITE_END();
 TEST_SUITE_BEGIN("primestruct.program_matrix.closures_references");

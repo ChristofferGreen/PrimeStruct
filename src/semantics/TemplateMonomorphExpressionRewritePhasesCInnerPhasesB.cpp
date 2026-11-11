@@ -1,3 +1,4 @@
+#include "SemanticsValidateLambdaClosures.h"
 #include "TemplateMonomorphAssignmentTargetResolution.h"
 #include "TemplateMonomorphBindingBlockInference.h"
 #include "TemplateMonomorphBindingCallInference.h"
@@ -429,9 +430,9 @@ PhaseStatus rewriteExprReferencePhase7([[maybe_unused]] Expr &expr, [[maybe_unus
     if (isTemplateDef) {
       auto defIt = ctx.sourceDefs.find(resolvedPath);
       const bool shouldInferImplicitTemplateTail =
-          defIt != ctx.sourceDefs.end() &&
-          !expr.templateArgs.empty() &&
-          ctx.implicitTemplateDefs.count(resolvedPath) > 0 &&
+          defIt != ctx.sourceDefs.end() && !expr.templateArgs.empty() &&
+          (ctx.implicitTemplateDefs.count(resolvedPath) > 0 ||
+           semantics::isLambdaClosureFactoryPath(resolvedPath)) &&
           expr.templateArgs.size() < defIt->second.templateArgs.size();
       if (expr.templateArgs.empty() || shouldInferImplicitTemplateTail) {
         if (defIt != ctx.sourceDefs.end()) {

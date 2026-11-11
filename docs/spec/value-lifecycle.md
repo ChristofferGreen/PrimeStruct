@@ -385,6 +385,13 @@ bad_set() {
   `StringArena` follows the String's arena rules. Its `call` always runs inline, in the frame that holds the borrowed
   locals. A sendable closure for tasks (`MultithreadingPrototype.md`) is one with no `ref` captures and no `mut`
   binding captured by reference.
+- **Generic definitions:** a lambda written in a generic definition, or in a method of a generic struct, can name
+  that definition's (or struct's) type parameters in its parameter, local and capture types: `show<T>([Mutex<T>] cell)`
+  may hold `[seven]([Reference<T>] item) { ... }`. The closure struct and its factory take the type parameters the
+  lambda writes as leading template parameters (`/show__lambda0<T, C0>`); the call of the factory (or the in-place
+  constructor of a `[ref]` closure) states them explicitly and the capture types after them are still inferred. A
+  lambda that names no type parameter is generated as before, and a name that is not a type parameter of the
+  definition is an unknown type.
 - **Type spelling:** a closure type has no source name. Pass closures through template parameters (`[F]`, `[F mut]`,
   `Holder<F>` fields), or erase the type with `Function<R, A...>` (below).
 

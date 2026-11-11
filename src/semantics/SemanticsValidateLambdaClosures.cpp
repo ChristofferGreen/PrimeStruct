@@ -1,17 +1,18 @@
 #include "SemanticsValidateLambdaClosures.h"
 
 #include "SemanticsValidateFunctionForwarders.h"
+#include "SemanticsValidateFunctionTypeRewrite.h"
 
 #include "SemanticsHelpers.h"
-#include "primec/frontend/Lexer.h"
-#include "primec/frontend/Parser.h"
 
+#include <algorithm>
 #include <cctype>
 #include <cstddef>
 #include <optional>
 #include <map>
 #include <set>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -129,6 +130,50 @@ void collectUsedNames(const Expr &expr, NameSet &out) {
   }
 }
 
+// Identifiers inside a type or template-argument text (`Reference<Pair<T, i32>>` yields Reference, Pair, T, i32).
+void collectTextIdentifiers(const std::string &text, NameSet &out) {
+  size_t start = std::string::npos;
+  for (size_t i = 0; i <= text.size(); ++i) {
+    const bool identChar =
+        i < text.size() && (std::isalnum(static_cast<unsigned char>(text[i])) || text[i] == '_');
+    if (identChar) {
+      if (start == std::string::npos) {
+        start = i;
+      }
+    } else if (start != std::string::npos) {
+      out.insert(text.substr(start, i - start));
+      start = std::string::npos;
+    }
+  }
+}
+
+// Every identifier a lambda writes in a type position: transforms (parameter, local and capture types), template
+// arguments of calls, and names. A lambda in a generic definition needs the definition's type parameters among its
+// own template parameters exactly when it writes one of them.
+void collectTypeIdentifiers(const Expr &expr, NameSet &out) {
+  for (const Transform &transform : expr.transforms) {
+    collectTextIdentifiers(transform.name, out);
+    for (const std::string &arg : transform.templateArgs) {
+      collectTextIdentifiers(arg, out);
+    }
+  }
+  for (const std::string &arg : expr.templateArgs) {
+    collectTextIdentifiers(arg, out);
+  }
+  if (expr.kind == Expr::Kind::Call || expr.kind == Expr::Kind::Name) {
+    collectTextIdentifiers(expr.name, out);
+  }
+  for (const Expr &arg : expr.args) {
+    collectTypeIdentifiers(arg, out);
+  }
+  for (const Expr &arg : expr.bodyArguments) {
+    collectTypeIdentifiers(arg, out);
+  }
+  for (const Expr &init : expr.lambdaInitCaptures) {
+    collectTypeIdentifiers(init, out);
+  }
+}
+
 void collectBoundNames(const Expr &expr, NameSet &out) {
   if (expr.isBinding) {
     out.insert(expr.name);
@@ -141,192 +186,6 @@ void collectBoundNames(const Expr &expr, NameSet &out) {
   }
 }
 
-// --- Function<R, A...> (type-erased closures) -------------------------------------------------------------------
-//
-// `Function<R, A0, ..., An>` is spelled as the arity-specific struct `/__Function<n+1>`; `Function<R, A...>{x}` becomes
-// `/__FunctionN<R, A...>{[tag] 0i32, [env] /__fn_box(x)}`. The function-values pass (after monomorphization) assigns
-// each converted closure type its tag and writes the dispatching `call`, `Copy` and `Destroy` bodies.
-
-bool isIdentifierChar(char ch) {
-  return std::isalnum(static_cast<unsigned char>(ch)) || ch == '_';
-}
-
-// Rewrites `Function<...>` spellings inside a type text; records the arities it saw.
-std::string rewriteFunctionTypeText(const std::string &text, std::set<size_t> &arities) {
-  static const std::string Keyword = "Function";
-  std::string out;
-  size_t i = 0;
-  while (i < text.size()) {
-    const bool atWord = text.compare(i, Keyword.size(), Keyword) == 0 &&
-                        (i == 0 || (!isIdentifierChar(text[i - 1]) && text[i - 1] != '/')) &&
-                        i + Keyword.size() < text.size() && text[i + Keyword.size()] == '<';
-    if (!atWord) {
-      out.push_back(text[i]);
-      ++i;
-      continue;
-    }
-    size_t depth = 0;
-    size_t commas = 0;
-    size_t j = i + Keyword.size();
-    for (; j < text.size(); ++j) {
-      if (text[j] == '<') {
-        ++depth;
-      } else if (text[j] == '>') {
-        if (--depth == 0) {
-          break;
-        }
-      } else if (text[j] == ',' && depth == 1) {
-        ++commas;
-      }
-    }
-    arities.insert(commas);
-    out += "/__Function" + std::to_string(commas);
-    i += Keyword.size();
-  }
-  return out;
-}
-
-void rewriteFunctionTransform(Transform &transform, std::set<size_t> &arities) {
-  if (transform.name == "Function" && !transform.templateArgs.empty()) {
-    const size_t arity = transform.templateArgs.size() - 1;
-    arities.insert(arity);
-    transform.name = "/__Function" + std::to_string(arity);
-  }
-  for (std::string &arg : transform.templateArgs) {
-    arg = rewriteFunctionTypeText(arg, arities);
-  }
-  for (TemplateArgument &detail : transform.templateArgDetails) {
-    detail.text = rewriteFunctionTypeText(detail.text, arities);
-  }
-}
-
-bool rewriteFunctionTypes(Expr &expr, std::set<size_t> &arities, std::string &error) {
-  for (Transform &transform : expr.transforms) {
-    rewriteFunctionTransform(transform, arities);
-  }
-  for (std::string &arg : expr.templateArgs) {
-    arg = rewriteFunctionTypeText(arg, arities);
-  }
-  for (TemplateArgument &detail : expr.templateArgDetails) {
-    detail.text = rewriteFunctionTypeText(detail.text, arities);
-  }
-  for (Expr &arg : expr.args) {
-    if (!rewriteFunctionTypes(arg, arities, error)) {
-      return false;
-    }
-  }
-  for (Expr &arg : expr.bodyArguments) {
-    if (!rewriteFunctionTypes(arg, arities, error)) {
-      return false;
-    }
-  }
-  for (Expr &init : expr.lambdaInitCaptures) {
-    if (!rewriteFunctionTypes(init, arities, error)) {
-      return false;
-    }
-  }
-  // `Function<R, A...>{closure}`: box the closure.
-  if (expr.kind == Expr::Kind::Call && expr.isBraceConstructor && expr.name == "Function" &&
-      !expr.templateArgs.empty() && expr.args.size() == 1 &&
-      (expr.argNames.empty() || !expr.argNames.front().has_value())) {
-    // `Function<R>{[captures](...) {...}}` parses as a value block holding the lambda.
-    const Expr *closurePtr = &expr.args.front();
-    if (closurePtr->kind == Expr::Kind::Call && closurePtr->name == "block" && closurePtr->bodyArguments.size() == 1) {
-      closurePtr = &closurePtr->bodyArguments.front();
-    }
-    const Expr &closure = *closurePtr;
-    if (closure.isLambda) {
-      for (const std::string &capture : closure.lambdaCaptures) {
-        if (capture == "&" || capture.rfind("ref ", 0) == 0) {
-          error = "closure escapes via Function (root: " +
-                  (capture == "&" ? std::string("[&]") : capture.substr(4)) + ")";
-          return false;
-        }
-      }
-    }
-    const size_t arity = expr.templateArgs.size() - 1;
-    arities.insert(arity);
-    expr.name = "/__Function" + std::to_string(arity);
-    Expr tag;
-    tag.kind = Expr::Kind::Literal;
-    tag.literalValue = 0;
-    tag.intWidth = 32;
-    tag.namespacePrefix = expr.namespacePrefix;
-    tag.sourceLine = expr.sourceLine;
-    tag.sourceColumn = expr.sourceColumn;
-    Expr box;
-    box.kind = Expr::Kind::Call;
-    box.name = "/__fn_box";
-    box.sourceName = "Function";
-    box.namespacePrefix = expr.namespacePrefix;
-    box.sourceLine = expr.sourceLine;
-    box.sourceColumn = expr.sourceColumn;
-    box.args.push_back(std::move(expr.args.front()));
-    box.argNames.push_back(std::nullopt);
-    expr.args.clear();
-    expr.argNames.clear();
-    expr.args.push_back(std::move(tag));
-    expr.argNames.push_back(std::string("tag"));
-    expr.args.push_back(std::move(box));
-    expr.argNames.push_back(std::string("env"));
-  }
-  return true;
-}
-
-bool parseGeneratedDefinitions(const std::string &text, std::vector<Definition> &out, std::string &error) {
-  Lexer lexer(text);
-  Parser parser(lexer.tokenize(), true);
-  Program parsed;
-  std::string parseError;
-  if (!parser.parse(parsed, parseError)) {
-    error = "internal error: generated definitions do not parse: " + parseError;
-    return false;
-  }
-  for (Definition &def : parsed.definitions) {
-    out.push_back(std::move(def));
-  }
-  return true;
-}
-
-std::string functionShellText(size_t arity) {
-  std::string typeParams = "R";
-  std::string params;
-  for (size_t i = 0; i < arity; ++i) {
-    typeParams += ", A" + std::to_string(i);
-    params += (i == 0 ? "" : ", ") + std::string("[A") + std::to_string(i) + "] a" + std::to_string(i);
-  }
-  const std::string name = "__Function" + std::to_string(arity);
-  // The bodies are placeholders: the function-values pass replaces them per instance once the closure types that
-  // are converted to it are known.
-  return "[struct]\n" + name + "<" + typeParams + "> {\n"
-         "  [i32 mut] tag{0i32}\n"
-         "  [Pointer<i32> mut] env\n"
-         "  [public mut unsafe return<R>]\n"
-         "  call(" + params + ") {\n"
-         "    [Pointer<i32>] raw{this.env}\n"
-         "    return(dereference(/std/intrinsics/memory/reinterpret<R>(raw)))\n"
-         "  }\n"
-         "  [unsafe effects(heap_alloc)]\n"
-         "  Copy([Reference<Self>] other) {\n"
-         "    assign(this.tag, other.tag)\n"
-         "    assign(this.env, other.env)\n"
-         "  }\n"
-         "  [unsafe effects(heap_alloc)]\n"
-         "  Destroy() {\n"
-         "  }\n"
-         "}\n";
-}
-
-// The box takes its own copy of the closure (a `copy` parameter) and hands it to the heap block, so the block owns
-// every capture: a borrowed closure would leave the caller and the block both destroying a `String` capture.
-const char *FunctionBoxText =
-    "[unsafe effects(heap_alloc) return<Pointer<i32>>]\n"
-    "__fn_box<C>([C copy] closure) {\n"
-    "  [Pointer<uninitialized<C>> mut] slot{/std/intrinsics/memory/alloc<uninitialized<C>>(1i32)}\n"
-    "  init(dereference(slot), closure)\n"
-    "  return(/std/intrinsics/memory/reinterpret<i32>(slot))\n"
-    "}\n";
-
 class LambdaClosureRewriter {
 public:
   LambdaClosureRewriter(Program &program, std::string &error) : program_(program), error_(error) {
@@ -337,6 +196,7 @@ public:
         }
         if (isStructTransformName(transform.name)) {
           structPaths_.insert(def.fullPath);
+          structTemplateParams_[def.fullPath] = def.templateArgs;
           break;
         }
       }
@@ -386,7 +246,7 @@ public:
     if (arities.empty()) {
       return true;
     }
-    std::string text = FunctionBoxText;
+    std::string text = functionBoxText();
     for (size_t arity : arities) {
       text += functionShellText(arity);
     }
@@ -864,6 +724,41 @@ private:
     return true;
   }
 
+  // The type parameters of the enclosing definition (and of the struct it is a method of) that `lambda` names. The
+  // closure struct and its factory take them as leading template parameters, which the factory call or the in-place
+  // constructor states explicitly, so the closure's parameter and body types can name them. The capture types
+  // after them are still inferred.
+  std::vector<std::string> enclosingTypeParamsNamedBy(const Expr &lambda) const {
+    std::vector<std::string> candidates;
+    std::vector<const std::vector<std::string> *> structLevels;
+    std::string owner = currentDef_->namespacePrefix;
+    while (!owner.empty() && structPaths_.count(owner) > 0) {
+      if (auto it = structTemplateParams_.find(owner); it != structTemplateParams_.end()) {
+        structLevels.push_back(&it->second);
+      }
+      const size_t slash = owner.rfind('/');
+      owner = slash == std::string::npos ? std::string() : owner.substr(0, slash);
+    }
+    for (auto level = structLevels.rbegin(); level != structLevels.rend(); ++level) {
+      candidates.insert(candidates.end(), (*level)->begin(), (*level)->end());
+    }
+    candidates.insert(
+        candidates.end(), currentDef_->templateArgs.begin(), currentDef_->templateArgs.end());
+    if (candidates.empty()) {
+      return {};
+    }
+    NameSet named;
+    collectTypeIdentifiers(lambda, named);
+    std::vector<std::string> outer;
+    for (const std::string &candidate : candidates) {
+      if (named.count(candidate) > 0 &&
+          std::find(outer.begin(), outer.end(), candidate) == outer.end()) {
+        outer.push_back(candidate);
+      }
+    }
+    return outer;
+  }
+
   bool desugarLambda(Expr &lambda, const NameSet &visible) {
     if (lambda.sourceLine <= 0) {
       // A lambda written as a statement has no position of its own: diagnostics in its body point at the body.
@@ -913,11 +808,15 @@ private:
     for (size_t i = 0; i < captures.size(); ++i) {
       typeParams.push_back("C" + std::to_string(i));
     }
+    // Enclosing type parameters the lambda names come first: `/show__lambda0<T, C0>`.
+    const std::vector<std::string> outerParams = enclosingTypeParamsNamedBy(lambda);
+    std::vector<std::string> templateParams = outerParams;
+    templateParams.insert(templateParams.end(), typeParams.begin(), typeParams.end());
     std::string structType = structPath;
-    if (!typeParams.empty()) {
+    if (!templateParams.empty()) {
       structType += "<";
-      for (size_t i = 0; i < typeParams.size(); ++i) {
-        structType += (i == 0 ? "" : ", ") + typeParams[i];
+      for (size_t i = 0; i < templateParams.size(); ++i) {
+        structType += (i == 0 ? "" : ", ") + templateParams[i];
       }
       structType += ">";
     }
@@ -1004,8 +903,8 @@ private:
     closure.sourceLine = lambda.sourceLine;
     closure.sourceColumn = lambda.sourceColumn;
     closure.transforms.push_back(namedTransform("struct"));
-    closure.templateArgs = typeParams;
-    closure.templateArgIsPack.assign(typeParams.size(), false);
+    closure.templateArgs = templateParams;
+    closure.templateArgIsPack.assign(templateParams.size(), false);
     for (size_t i = 0; i < captures.size(); ++i) {
       Expr field;
       field.kind = Expr::Kind::Call;
@@ -1034,8 +933,8 @@ private:
     factory.fullPath = factoryPath;
     factory.sourceLine = lambda.sourceLine;
     factory.sourceColumn = lambda.sourceColumn;
-    factory.templateArgs = typeParams;
-    factory.templateArgIsPack.assign(typeParams.size(), false);
+    factory.templateArgs = templateParams;
+    factory.templateArgIsPack.assign(templateParams.size(), false);
     Transform returnTransform = namedTransform("return");
     returnTransform.templateArgs.push_back(structType);
     factory.transforms.push_back(std::move(returnTransform));
@@ -1049,7 +948,7 @@ private:
     construct.name = structPath;
     construct.namespacePrefix = closureNamespace_;
     construct.isBraceConstructor = true;
-    construct.templateArgs = typeParams;
+    construct.templateArgs = templateParams;
     construct.sourceLine = lambda.sourceLine;
     construct.sourceColumn = lambda.sourceColumn;
     for (size_t i = 0; i < captures.size(); ++i) {
@@ -1096,6 +995,7 @@ private:
     call.kind = Expr::Kind::Call;
     call.name = factoryPath;
     call.sourceName = "lambda";
+    call.templateArgs = outerParams; // the capture types after them are inferred
     call.namespacePrefix = lambda.namespacePrefix;
     call.sourceLine = lambda.sourceLine;
     call.sourceColumn = lambda.sourceColumn;
@@ -1148,6 +1048,7 @@ private:
     inPlace.sourceName = "lambda";
     inPlace.namespacePrefix = lambda.namespacePrefix;
     inPlace.isBraceConstructor = true;
+    inPlace.templateArgs = outerParams;
     inPlace.sourceLine = lambda.sourceLine;
     inPlace.sourceColumn = lambda.sourceColumn;
     for (size_t i = 0; i < captures.size(); ++i) {
@@ -1161,6 +1062,7 @@ private:
   Program &program_;
   std::string &error_;
   std::unordered_set<std::string> structPaths_;
+  std::unordered_map<std::string, std::vector<std::string>> structTemplateParams_;
   std::vector<Definition> generated_;
   const Definition *currentDef_ = nullptr;
   std::string closureNamespace_;

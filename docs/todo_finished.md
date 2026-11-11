@@ -2236,6 +2236,7 @@ are left unarchived.
 | TODO-5858 | `some<Vector<i32>>(vector<i32>(1i32, 2i32))` frees the vector it copies from | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5859 | A `pick` expression yields a vector | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5860 | Moving a `pick` payload binding does not poison a later binding of the same name | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5864 | A lambda in a generic definition names the definition's type parameters | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
 | TODO-5865 | A `Function` local given positionally to a brace constructor is copied | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
 | TODO-5866 | A closure captures a `pick` payload binding | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5867 | A string heap that alternates between block sizes keeps its chunks | [2026-11.md](todo_archive/2026-11.md) | - |
