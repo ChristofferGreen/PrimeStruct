@@ -138,7 +138,9 @@
   struct with `Destroy`: a fresh one (a call result, a constructor, a `pick` expression) passed as an argument belongs
   to the parameter and is destroyed when the callee's body ends, a named one given to a `move` parameter is moved-from
   and destroyed by the callee, and a read-only sum parameter cannot be returned (`borrowed parameter escapes via
-  return`). A `pick` whose subject is a fresh value (`pick(get())`, a method
+  return`). Assigning to a `mut` sum local takes the new value over from a temporary or `move(other)` and copies it
+  from a place (the place keeps its payload), then destroys the payload the local held; `held = held` is valid. A
+  `pick` whose subject is a fresh value (`pick(get())`, a method
   call included, or a constructor) owns it for as long as the `pick` runs and destroys its active payload when the
   `pick` ends or a `return` in an arm leaves the function. The payload binding of an arm stands for what the sum owns:
   moving it out (`move(line)`, a `move` parameter, `return(line)`) leaves nothing for the sum to

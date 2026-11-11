@@ -977,4 +977,71 @@ SumHelpersContext::SumHelpersContext(LowerSetupStageState &setupStageIn,
       return true;
     }
 
+    bool SumHelpersContext::emitActiveSumPayloadCopyFromSumPtrs(const Definition &sumDef,
+                                                                int32_t destSumPtrLocal,
+                                                                int32_t sourceSumPtrLocal,
+                                                                const LocalMap &valueLocals) {
+      const auto findCopyHelper = [&](const std::string &path) -> const Definition * {
+        auto copyIt = defMap.find(path + "/Copy");
+        return copyIt == defMap.end() ? nullptr : copyIt->second;
+      };
+      std::vector<size_t> endJumps;
+      for (const auto &variant : sumDef.sumVariants) {
+        LoweredSumPayloadStorageInfo payloadInfo;
+        if (!resolveSemanticProductSumPayloadStorageInfo(
+                sumDef, variant, "sum payload copy", payloadInfo)) {
+          if (error.empty()) {
+            error = unsupportedSumPayloadError(sumDef, variant);
+          }
+          return false;
+        }
+        if (!payloadInfo.isAggregate ||
+            !ir_lowerer::structNeedsCopyHelpersOrVectorCopies(
+                payloadInfo.lifecyclePath, findCopyHelper, resolveStructSlotLayout)) {
+          continue;
+        }
+        int32_t tagValue = 0;
+        if (!resolveSemanticProductSumVariantTag(sumDef, variant, "sum payload copy", tagValue)) {
+          return false;
+        }
+        emitSumTagComparison(sourceSumPtrLocal, tagValue);
+        const size_t nextVariantJump = function.instructions.size();
+        function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+        const auto payloadPtr = [&](int32_t sumPtrLocal) {
+          const int32_t ptrLocal = allocTempLocal();
+          function.instructions.push_back(
+              {IrOpcode::LoadLocal, static_cast<uint64_t>(sumPtrLocal)});
+          function.instructions.push_back(
+              {IrOpcode::PushI64, static_cast<uint64_t>(2) * IrSlotBytes});
+          function.instructions.push_back({IrOpcode::AddI64, 0});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+          return ptrLocal;
+        };
+        const int32_t destPayloadPtrLocal = payloadPtr(destSumPtrLocal);
+        const int32_t sourcePayloadPtrLocal = payloadPtr(sourceSumPtrLocal);
+        bool ranCopyHelper = false;
+        if (!ir_lowerer::emitStructCopyHelpersFromPtrs(destPayloadPtrLocal,
+                                                       sourcePayloadPtrLocal,
+                                                       payloadInfo.lifecyclePath,
+                                                       findCopyHelper,
+                                                       resolveStructSlotLayout,
+                                                       allocTempLocal,
+                                                       function.instructions,
+                                                       valueLocals,
+                                                       emitInlineDefinitionCall,
+                                                       ranCopyHelper,
+                                                       error)) {
+          return false;
+        }
+        endJumps.push_back(function.instructions.size());
+        function.instructions.push_back({IrOpcode::Jump, 0});
+        function.instructions[nextVariantJump].imm =
+            static_cast<uint64_t>(function.instructions.size());
+      }
+      for (size_t jumpIndex : endJumps) {
+        function.instructions[jumpIndex].imm = static_cast<uint64_t>(function.instructions.size());
+      }
+      return true;
+    }
+
 } // namespace primec::ir_lowerer

@@ -527,4 +527,76 @@ hand_back([Maybe<String>] held) {
                 escaped);
 }
 
+namespace {
+
+const std::string BoxedSumDefinitions = R"(
+[struct]
+Box() {
+  [String] name{label(0i32)}
+  Destroy() { }
+}
+[effects(heap_alloc), return<Maybe<Box>>]
+get_box([i32] id) {
+  return(some<Box>(Box{label(id)}))
+}
+)";
+
+} // namespace
+
+TEST_CASE("assigning to a mut sum local destroys the payload it held") {
+  // A `String`, a builtin vector and a struct with `Destroy` as the payload; `held = held` keeps its payload.
+  runPickValueProgram("pick_value_sum_assignment",
+                      pickValueProgram(BoxedSumDefinitions,
+                                       R"(
+    [Maybe<String> mut] held{get(4i32)}
+    held = get(6i32)
+    pick(held) { none { print_line(0i32) } some(line) { print_line(first_byte(line)) } }
+    held = none<String>()
+    held = get(7i32)
+    held = held
+    pick(held) { none { print_line(0i32) } some(line) { print_line(first_byte(line)) } }
+    [Maybe<vector<i32>> mut] values_held{get_values(4i32)}
+    values_held = get_values(6i32)
+    values_held = none<vector<i32>>()
+    [Maybe<Box> mut] boxed{get_box(1i32)}
+    boxed = get_box(2i32)
+    pick(boxed) { none { print_line(0i32) } some(box) { print_line(first_byte(box.name)) } }
+)"),
+                      "54\n55\n50\n0\n0\n");
+}
+
+TEST_CASE("a sum local assigned from a place gets a payload of its own") {
+  // The place keeps its payload; a `mut` sum local built from a place owns nothing until it is assigned, and
+  // `move(first)` hands over what `first` owned.
+  runPickValueProgram("pick_value_sum_assignment_from_place",
+                      pickValueProgram(BoxedSumDefinitions,
+                                       R"(
+    [Maybe<vector<i32>>] source{get_values(4i32)}
+    [Maybe<vector<i32>> mut] values_held{get_values(6i32)}
+    values_held = source
+    values_held = values_held
+    pick(values_held) { none { print_line(0i32) } some(values) { print_line(values.count()) } }
+    pick(source) { none { print_line(0i32) } some(values) { print_line(values[0i32]) } }
+    [Maybe<Box>] box_source{get_box(3i32)}
+    [Maybe<Box> mut] boxed{get_box(1i32)}
+    boxed = box_source
+    pick(boxed) { none { print_line(0i32) } some(box) { print_line(first_byte(box.name)) } }
+    [Maybe<String> mut] held{none<String>()}
+    [i32 mut] index{0i32}
+    while(index < 3i32) {
+      held = get(index)
+      index = index + 1i32
+    }
+    pick(held) { none { print_line(0i32) } some(line) { print_line(first_byte(line)) } }
+    [Maybe<String>] first{get(8i32)}
+    [Maybe<String> mut] alias{first}
+    alias = get(9i32)
+    pick(alias) { none { print_line(0i32) } some(line) { print_line(first_byte(line)) } }
+    pick(first) { none { print_line(0i32) } some(line) { print_line(first_byte(line)) } }
+    [Maybe<String>] moved{move(first)}
+    pick(moved) { none { print_line(0i32) } some(line) { print_line(first_byte(line)) } }
+)"),
+                      "2\n4\n51\n50\n57\n56\n56\n0\n0\n");
+}
+
 TEST_SUITE_END();

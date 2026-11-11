@@ -107,6 +107,12 @@ public:
   const Definition * findSumPayloadDestroyHelper(const std::string &structPath);
   bool emitActiveSumPayloadDestroyFromSumPtr(const Definition &sumDef, int32_t sourceSumPtrLocal, const LocalMap &valueLocals);
   bool sumPayloadsNeedDestroy(const Definition &sumDef);
+  // After a slot copy of the sum at `sourceSumPtrLocal` to `destSumPtrLocal`: gives the copy an active payload of
+  // its own (the payload's `Copy` helpers, a vector's buffer).
+  bool emitActiveSumPayloadCopyFromSumPtrs(const Definition &sumDef,
+                                           int32_t destSumPtrLocal,
+                                           int32_t sourceSumPtrLocal,
+                                           const LocalMap &valueLocals);
   bool emitActiveSumPayloadMoveFromSumPtr(int32_t destBaseLocal, const Definition &sumDef, int32_t sourceSumPtrLocal, const LocalMap &valueLocals);
   bool tryEmitLoweredSumMoveIntoLocal(int32_t baseLocal, const Definition &sumDef, const Expr &initializer, const LocalMap &valueLocals, bool &emittedOut);
   bool isMutableLocalExpr(const Expr &candidate, const LocalMap &localsIn);

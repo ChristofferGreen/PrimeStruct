@@ -83,6 +83,42 @@
                   const auto emitInstruction = [&](IrOpcode op, uint64_t imm) {
                     function.instructions.push_back({op, imm});
                   };
+                  // A sum local that owns its payload: the new value is taken over from a temporary or
+                  // copied from a place first (so `held = held` stays valid), then the payload the local
+                  // held is destroyed. A target without a drop flag (a parameter, a reference) is not known
+                  // to own what it holds and is only overwritten.
+                  if (const Definition *sumDef = sumHelpers.resolveSumDefinitionByPath(structPath);
+                      sumDef != nullptr && destDropFlagLocal >= 0 &&
+                      sumHelpers.sumPayloadsNeedDestroy(*sumDef)) {
+                    const int32_t newBaseLocal = nextLocal;
+                    nextLocal += slotCount;
+                    if (!emitStructCopySlots(newBaseLocal, srcPtrLocal, slotCount)) {
+                      return false;
+                    }
+                    const int32_t newPtrLocal = allocTempLocal();
+                    emitInstruction(IrOpcode::AddressOfLocal, static_cast<uint64_t>(newBaseLocal));
+                    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(newPtrLocal));
+                    if (!isTemporaryStructCopySource(rhsExpr, localsIn) &&
+                        !sumHelpers.emitActiveSumPayloadCopyFromSumPtrs(
+                            *sumDef, newPtrLocal, srcPtrLocal, localsIn)) {
+                      return false;
+                    }
+                    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(destDropFlagLocal));
+                    const size_t skipJump = function.instructions.size();
+                    emitInstruction(IrOpcode::JumpIfZero, 0);
+                    if (!sumHelpers.emitActiveSumPayloadDestroyFromSumPtr(
+                            *sumDef, destPtrLocal, localsIn)) {
+                      return false;
+                    }
+                    function.instructions[skipJump].imm =
+                        static_cast<uint64_t>(function.instructions.size());
+                    if (!emitStructCopyFromPtrs(destPtrLocal, newPtrLocal, slotCount)) {
+                      return false;
+                    }
+                    emitInstruction(IrOpcode::PushI32, 1);
+                    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(destDropFlagLocal));
+                    return true;
+                  }
                   const bool needsDestroy = ir_lowerer::structNeedsDestroyHelpers(
                       structPath, findDestroyHelper, resolveLayout);
                   const bool needsCopy = ir_lowerer::structNeedsCopyHelpersOrVectorCopies(

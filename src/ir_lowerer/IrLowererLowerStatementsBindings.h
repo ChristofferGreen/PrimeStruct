@@ -958,12 +958,32 @@
         if (!emittedSumMove && !sumHelpers.emitLoweredSumConstructionIntoLocal(baseLocal, *sumDef, init, localsIn)) {
           return false;
         }
-        // A sum local built from a fresh value owns its payload and destroys it at scope end.
-        if (!fileScopeStack.empty() && !emittedSumMove && init.kind == Expr::Kind::Call &&
-            !init.isFieldAccess && isTemporaryStructCopySource(init, localsIn) &&
+        // A sum local built from a fresh value owns its payload and destroys it at scope end. A `mut` one
+        // built from a place only stands for that place's value until an assignment gives it one of its own.
+        const bool ownsFreshSum = !emittedSumMove && init.kind == Expr::Kind::Call &&
+                                  !init.isFieldAccess &&
+                                  isTemporaryStructCopySource(init, localsIn);
+        // `move(other)` hands over what `other` owned.
+        int32_t movedFromDropFlagLocal = -1;
+        if (emittedSumMove) {
+          if (const auto movedIt = localsIn.find(init.args.front().name);
+              movedIt != localsIn.end()) {
+            movedFromDropFlagLocal = movedIt->second.dropFlagLocal;
+          }
+        }
+        if (!fileScopeStack.empty() &&
+            (ownsFreshSum || info.isMutable || movedFromDropFlagLocal >= 0) &&
             sumHelpers.sumPayloadsNeedDestroy(*sumDef)) {
           info.dropFlagLocal = allocTempLocal();
-          function.instructions.push_back({IrOpcode::PushI32, 1});
+          if (movedFromDropFlagLocal >= 0) {
+            function.instructions.push_back(
+                {IrOpcode::LoadLocal, static_cast<uint64_t>(movedFromDropFlagLocal)});
+            function.instructions.push_back({IrOpcode::PushI32, 0});
+            function.instructions.push_back(
+                {IrOpcode::StoreLocal, static_cast<uint64_t>(movedFromDropFlagLocal)});
+          } else {
+            function.instructions.push_back({IrOpcode::PushI32, ownsFreshSum ? 1u : 0u});
+          }
           function.instructions.push_back(
               {IrOpcode::StoreLocal, static_cast<uint64_t>(info.dropFlagLocal)});
           LowerSetupStageState::DropEntry entry{info.index, info.dropFlagLocal, sumDef->fullPath};
