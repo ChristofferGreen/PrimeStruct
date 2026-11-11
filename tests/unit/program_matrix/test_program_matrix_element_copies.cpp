@@ -361,4 +361,49 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("an assignment to a plain int struct local is a copy") {
+  // `target = source` copies Point into target's own slots: a later write to source leaves it
+  // alone. `chosen` keeps the Handle of the iteration that assigned it, though `extra` is a new
+  // binding in the same slots on every iteration (the shape of PrimeScroll's restore_session).
+  program_matrix::ProgramCase program;
+  program.name = "assign_scalar_struct";
+  program.source = R"(
+[struct]
+Point() {
+  [i32 mut] x{0i32}
+  [i32 mut] y{0i32}
+}
+
+[struct]
+Handle() {
+  [u64 mut] id{0u64}
+}
+
+[return<int>]
+main() {
+  [Point mut] source{Point{[x] 1i32, [y] 2i32}}
+  [Point mut] target{Point{}}
+  target = source
+  source.x = 7i32
+  [Handle mut] chosen{Handle{[id] 1u64}}
+  [Handle mut] last{chosen}
+  [i32 mut] i{0i32}
+  while(i < 3i32) {
+    [Handle] extra{Handle{[id] last.id + 1u64}}
+    if(i == 1i32) {
+      if(extra.id > 0u64) {
+        chosen = extra
+      }
+    }
+    last = extra
+    i = i + 1i32
+  }
+  return(target.x + source.x * 2i32 + target.y * 100i32 + convert<i32>(chosen.id) * 10i32 + convert<i32>(last.id))
+}
+)";
+  program.exitCode = 249;
+  program.onlyConfigs = allBackendConfigs();
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

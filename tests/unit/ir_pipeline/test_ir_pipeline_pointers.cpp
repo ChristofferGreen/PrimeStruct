@@ -1,4 +1,5 @@
 #include <string>
+#include <vector>
 
 #include "third_party/doctest.h"
 
@@ -407,6 +408,59 @@ main() {
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
   CHECK(result == 8);
+}
+
+TEST_CASE("assign to a plain int struct local never rebinds its slots") {
+  // A struct of one scalar kind lives as an array local, a pointer to its slots. Assigning to it
+  // copies into those slots; it must not store the source's address into the local, which made
+  // the target an alias of the source.
+  const std::string source = R"(
+[struct]
+Pair() {
+  [i32 mut] left{0i32}
+  [i32 mut] right{0i32}
+}
+
+[return<int>]
+main() {
+  [Pair mut] source{Pair{[left] 1i32, [right] 2i32}}
+  [Pair mut] target{Pair{}}
+  assign(target, source)
+  assign(source.left, 7i32)
+  return(plus(target.left, multiply(source.left, 10i32)))
+}
+)";
+  std::string error;
+  primec::IrModule module;
+  INFO(error);
+  REQUIRE(parseValidateAndLower(source, module, error));
+  CHECK(error.empty());
+
+  // The locals that hold a struct's address are stored once, right after its AddressOfLocal.
+  const auto &instructions = module.functions[0].instructions;
+  std::vector<uint64_t> slotPointerLocals;
+  for (size_t i = 0; i + 1 < instructions.size(); ++i) {
+    if (instructions[i].op == primec::IrOpcode::AddressOfLocal &&
+        instructions[i + 1].op == primec::IrOpcode::StoreLocal) {
+      slotPointerLocals.push_back(instructions[i + 1].imm);
+    }
+  }
+  REQUIRE(slotPointerLocals.size() >= 2);
+  for (const uint64_t pointerLocal : slotPointerLocals) {
+    int stores = 0;
+    for (const auto &inst : instructions) {
+      if (inst.op == primec::IrOpcode::StoreLocal && inst.imm == pointerLocal) {
+        stores += 1;
+      }
+    }
+    CHECK_MESSAGE(stores == 1, "local " << pointerLocal << " holding struct slots is rebound");
+  }
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 71);
 }
 
 #include "test_ir_pipeline_pointers_numeric.h"

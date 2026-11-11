@@ -60,7 +60,7 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.pointers"
   TARGET PrimeStruct_backend_ir_tests
   LABEL "parallel-safe"
   TIMEOUT 300
-  TOTAL_CASES 29
+  TOTAL_CASES 30
   CASES_PER_SHARD 3
 )
 

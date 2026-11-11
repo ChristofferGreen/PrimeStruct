@@ -488,7 +488,14 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         instructions.push_back({IrOpcode::StoreIndirect, 0});
         return true;
       }
-      if (it->second.kind == LocalInfo::Kind::Value && !it->second.structTypeName.empty()) {
+      // A struct whose fields are all one scalar kind lives as an array local (a pointer to its slots); assigning
+      // to it copies the new value into those slots like any struct, so it never aliases the source's storage
+      // (docs/spec/value-lifecycle.md, Copies).
+      const bool isScalarStructArrayLocal = it->second.kind == LocalInfo::Kind::Array &&
+                                            it->second.structFieldCount > 0 &&
+                                            !it->second.isArgsPack;
+      if ((it->second.kind == LocalInfo::Kind::Value || isScalarStructArrayLocal) &&
+          !it->second.structTypeName.empty()) {
         const Expr &rhsExpr = expr.args[1];
         std::string rhsStruct = inferStructExprPath(rhsExpr, localsIn);
         if (rhsStruct.empty() || !areCompatibleStructPaths(rhsStruct, it->second.structTypeName)) {
