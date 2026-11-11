@@ -472,6 +472,25 @@ bool SemanticsValidator::bindingOwnsResources(const BindingInfo &binding,
                ownsResources(args.front(), typeNamespace, templateArgs);
       }
     }
+    // A sum owns what its payloads own.
+    if (const Definition *sumDef = resolveSumDefinitionForTypeText(normalizedType, typeNamespace)) {
+      if (!visitingStructs.insert(sumDef->fullPath).second) {
+        return false;
+      }
+      for (const SumVariant &variant : sumDef->sumVariants) {
+        if (!variant.hasPayload) {
+          continue;
+        }
+        std::string payloadText = variant.payloadType;
+        if (!variant.payloadTemplateArgs.empty()) {
+          payloadText += "<" + joinTemplateArgs(variant.payloadTemplateArgs) + ">";
+        }
+        if (ownsResources(payloadText, sumDef->namespacePrefix, &sumDef->templateArgs)) {
+          return true;
+        }
+      }
+      return false;
+    }
     std::string structPath = resolveStructTypePath(base, typeNamespace, structNames_);
     // A name the file imports (`String` of `import /std/text/*`) is a struct too.
     if (structPath.empty()) {

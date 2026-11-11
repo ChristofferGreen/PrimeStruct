@@ -1,6 +1,7 @@
 #include "IrLowererLowerInlineCalls.h"
 
 #include "IrLowererCountAccessClassifiers.h"
+#include "IrLowererLowerSumHelpers.h"
 #include "primec/ir_lowerer/IrLowererFlowHelpers.h"
 #include "primec/ir_lowerer/IrLowererHelpers.h"
 #include "primec/ir_lowerer/IrLowererInlineCallContextHelpers.h"

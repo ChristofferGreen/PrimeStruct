@@ -686,6 +686,27 @@
         continue;
       }
       auto ownedIt = calleeLocals.find(param.name);
+      // A sum nobody else owns (a call result or a constructor) or one handed to a `move` parameter is the
+      // callee's: its active payload is destroyed when the callee's body ends.
+      if ((temporaryArg || ir_lowerer::parameterHasTransform(param, "move")) &&
+          ownedIt != calleeLocals.end() && ownedIt->second.kind == LocalInfo::Kind::Value) {
+        SumHelpersContext sumHelpers(setupStage, stateOut, callResolutionAdapters, error);
+        if (const Definition *sumDef =
+                sumHelpers.resolveSumDefinitionByPath(ownedIt->second.structTypeName);
+            sumDef != nullptr && sumHelpers.sumPayloadsNeedDestroy(*sumDef)) {
+          LocalInfo &sumInfo = ownedIt->second;
+          sumInfo.dropFlagLocal = allocTempLocal();
+          function.instructions.push_back({IrOpcode::PushI32, 1});
+          function.instructions.push_back(
+              {IrOpcode::StoreLocal, static_cast<uint64_t>(sumInfo.dropFlagLocal)});
+          LowerSetupStageState::DropEntry entry{
+              sumInfo.index, sumInfo.dropFlagLocal, sumDef->fullPath};
+          entry.sumDef = sumDef;
+          setupStage.dropEntries.push_back(std::move(entry));
+          fileScopeStack.back().push_back(-static_cast<int32_t>(setupStage.dropEntries.size()));
+          continue;
+        }
+      }
       if (ownedIt == calleeLocals.end() || ownedIt->second.structTypeName.empty() ||
           (ownedIt->second.kind != LocalInfo::Kind::Value &&
            ownedIt->second.kind != LocalInfo::Kind::Reference) ||

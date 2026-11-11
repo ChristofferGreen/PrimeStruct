@@ -134,7 +134,11 @@
   (`Maybe<T>`, a user `[sum]`, the stdlib `Result`) initialized from a fresh value destroys its active payload the same
   way (`try(r)` on a named `Result` copies the ok payload out through its `Copy` helper, so `r` and the copy each destroy
   their own), and a payload
-  taken from a place is copied in like a struct field. A `pick` whose subject is a fresh value (`pick(get())`, a method
+  taken from a place is copied in like a struct field. A sum that holds such a payload is an owning value like a
+  struct with `Destroy`: a fresh one (a call result, a constructor, a `pick` expression) passed as an argument belongs
+  to the parameter and is destroyed when the callee's body ends, a named one given to a `move` parameter is moved-from
+  and destroyed by the callee, and a read-only sum parameter cannot be returned (`borrowed parameter escapes via
+  return`). A `pick` whose subject is a fresh value (`pick(get())`, a method
   call included, or a constructor) owns it for as long as the `pick` runs and destroys its active payload when the
   `pick` ends or a `return` in an arm leaves the function. The payload binding of an arm stands for what the sum owns:
   moving it out (`move(line)`, a `move` parameter, `return(line)`) leaves nothing for the sum to

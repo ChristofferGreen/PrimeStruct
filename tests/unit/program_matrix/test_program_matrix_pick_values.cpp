@@ -426,4 +426,105 @@ consume([String move] text) {
   CHECK_MESSAGE(moved.find("use-after-move: text") != std::string::npos, moved);
 }
 
+namespace {
+
+const std::string SumArgumentDefinitions = R"(
+[effects(heap_alloc), return<i32>]
+first_of([Maybe<String>] held) {
+  return(pick(held) { none { 0i32 } some(line) { first_byte(line) } })
+}
+
+[effects(heap_alloc), return<i32>]
+count_of([Maybe<vector<i32>>] held) {
+  return(pick(held) { none { 0i32 } some(values) { values.count() } })
+}
+
+[effects(heap_alloc), return<i32>]
+copied([Maybe<String> copy] held) {
+  return(pick(held) { none { 0i32 } some(line) { first_byte(line) } })
+}
+
+[effects(heap_alloc), return<i32>]
+taken([Maybe<String> move] held) {
+  return(pick(held) { none { 0i32 } some(line) { first_byte(line) } })
+}
+
+[effects(heap_alloc), return<Maybe<String>>]
+pass_on([Maybe<String> move] held) {
+  return(held)
+}
+
+[effects(heap_alloc), return<i32>]
+twice([Maybe<String>] held) {
+  return(first_of(held) + first_of(held))
+}
+)";
+
+} // namespace
+
+TEST_CASE("a sum temporary passed as an argument is destroyed by the callee") {
+  // A call result nobody names belongs to the parameter it is passed to, whatever the parameter's kind; a
+  // named sum local stays the caller's and is destroyed once, by its scope.
+  runPickValueProgram("pick_value_sum_temporary_argument",
+                      pickValueProgram(SumArgumentDefinitions,
+                                       R"(
+    print_line(first_of(get(8i32)))
+    print_line(first_of(get(0i32 - 1i32)))
+    print_line(count_of(get_values(8i32)))
+    print_line(copied(get(6i32)))
+    print_line(twice(get(1i32)))
+    print_line(first_of(pick(get(4i32)) { none { get(0i32) } some(line) { get(3i32) } }))
+    [Maybe<String>] named{get(5i32)}
+    print_line(first_of(named))
+    print_line(copied(named))
+    print_line(first_of(named))
+)"),
+                      "56\n0\n2\n54\n98\n51\n53\n53\n53\n0\n0\n");
+}
+
+TEST_CASE("a sum handed to a move parameter is destroyed by its new owner") {
+  runPickValueProgram("pick_value_sum_move_argument",
+                      pickValueProgram(SumArgumentDefinitions,
+                                       R"(
+    print_line(taken(get(7i32)))
+    print_line(first_of(pass_on(get(8i32))))
+    [Maybe<String>] named{get(5i32)}
+    print_line(taken(move(named)))
+    [Maybe<String>] other{get(4i32)}
+    print_line(taken(other))
+    [Maybe<String>] third{get(3i32)}
+    if(first_of(third) > 0i32) {
+      print_line(taken(third))
+    }
+    [Maybe<String>] last{get(2i32)}
+    print_line(first_of(pass_on(last)))
+)"),
+                      "55\n56\n53\n52\n51\n50\n0\n0\n");
+}
+
+TEST_CASE("a sum that owns a payload is moved-from and does not escape a borrow") {
+  const std::string moved = rejectedPickValueProgram("pick_value_sum_moved_argument",
+                                                     SumArgumentDefinitions,
+                                                     R"(
+    [Maybe<String>] held{get(3i32)}
+    print_line(taken(held))
+    print_line(first_of(held))
+)");
+  CHECK_MESSAGE(moved.find("use-after-move: held") != std::string::npos, moved);
+
+  const std::string escaped = rejectedPickValueProgram("pick_value_sum_escaping_parameter",
+                                                       R"(
+[effects(heap_alloc), return<Maybe<String>>]
+hand_back([Maybe<String>] held) {
+  return(held)
+}
+)",
+                                                       R"(
+    [Maybe<String>] held{get(3i32)}
+    [Maybe<String>] other{hand_back(held)}
+)");
+  CHECK_MESSAGE(escaped.find("borrowed parameter escapes via return: held") != std::string::npos,
+                escaped);
+}
+
 TEST_SUITE_END();
