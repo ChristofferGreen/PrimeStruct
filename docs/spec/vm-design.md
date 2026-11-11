@@ -403,3 +403,8 @@
   function there too instead of a copy of its body at every call site.
   Measured for the web examples under `--emit=optcpp` in docs/OptimizingBackendsPlan.md (section 9, Real calls for web
   apps): `examples/apps/todo_web` went from 12.7 MB of C++ to under 1.4 MB.
+- Struct copies: a struct of fewer than 16 slots is copied by one load/store sequence per slot. A struct of 16 slots
+  or more (a `Request` is about 23) is copied by a loop over chunks of 8 slots through advancing copies of the two
+  addresses, then the remaining slots in line (`emitStructCopyFromPtrs`, `StructCopyLoopMinSlots` and
+  `StructCopyLoopUnrollSlots` in `include/primec/ir_lowerer/IrLowererFlowHelpers.h`); the loop takes three
+  temporary locals per copy site. Every backend sees ordinary `Jump`/`JumpIfZero` IR.

@@ -427,6 +427,63 @@ TEST_CASE("ir lowerer flow helpers emit struct copy sequences") {
   CHECK(instructions.empty());
 }
 
+TEST_CASE("ir lowerer flow helpers copy a large struct with a slot loop") {
+  const auto countOps = [](const std::vector<primec::IrInstruction> &instructions,
+                           primec::IrOpcode op) {
+    size_t count = 0;
+    for (const primec::IrInstruction &instruction : instructions) {
+      count += instruction.op == op ? 1 : 0;
+    }
+    return count;
+  };
+  std::vector<primec::IrInstruction> instructions;
+  int tempAllocs = 0;
+  int nextTemp = 20;
+  const auto allocTemp = [&]() {
+    tempAllocs++;
+    return nextTemp++;
+  };
+
+  // 23 slots: a loop of 2 chunks of 8 slots, then 7 slots unrolled.
+  CHECK(primec::ir_lowerer::emitStructCopyFromPtrs(instructions, 2, 3, 23, allocTemp));
+  CHECK(tempAllocs == 3);
+  CHECK(countOps(instructions, primec::IrOpcode::StoreIndirect) == 8 + 7);
+  CHECK(countOps(instructions, primec::IrOpcode::JumpIfZero) == 1);
+  CHECK(countOps(instructions, primec::IrOpcode::Jump) == 1);
+  CHECK(instructions.size() < 23 * 9 - 40);
+  size_t loopStart = 0;
+  size_t exitJump = 0;
+  size_t backJump = 0;
+  for (size_t i = 0; i < instructions.size(); ++i) {
+    if (instructions[i].op == primec::IrOpcode::JumpIfZero) {
+      exitJump = i;
+    } else if (instructions[i].op == primec::IrOpcode::Jump) {
+      backJump = i;
+    }
+  }
+  loopStart = exitJump - 3;
+  CHECK(instructions[loopStart].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[exitJump - 1].op == primec::IrOpcode::CmpNeI64);
+  CHECK(instructions[backJump].imm == loopStart);
+  CHECK(instructions[exitJump].imm == backJump + 1);
+  // The unrolled remainder reads and writes through the advanced cursors, not the original pointers.
+  CHECK(instructions.back().op == primec::IrOpcode::Pop);
+  CHECK(instructions[backJump + 1].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[backJump + 1].imm == 20);
+
+  // Below the threshold, or without a temporary allocator, every slot is copied in line.
+  instructions.clear();
+  tempAllocs = 0;
+  CHECK(primec::ir_lowerer::emitStructCopyFromPtrs(instructions, 2, 3, 15, allocTemp));
+  CHECK(tempAllocs == 0);
+  CHECK(countOps(instructions, primec::IrOpcode::StoreIndirect) == 15);
+  CHECK(countOps(instructions, primec::IrOpcode::Jump) == 0);
+  instructions.clear();
+  CHECK(primec::ir_lowerer::emitStructCopyFromPtrs(instructions, 2, 3, 23));
+  CHECK(countOps(instructions, primec::IrOpcode::StoreIndirect) == 23);
+  CHECK(countOps(instructions, primec::IrOpcode::Jump) == 0);
+}
+
 TEST_CASE("ir lowerer flow helpers disarm soa storage temporaries after copy") {
   auto checkDisarmAt = [](const std::vector<primec::IrInstruction> &instructions,
                           size_t start,

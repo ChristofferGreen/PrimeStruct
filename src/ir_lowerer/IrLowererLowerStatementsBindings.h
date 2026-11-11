@@ -633,7 +633,9 @@
               function.instructions.push_back(
                   {IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
               if (!ir_lowerer::emitStructCopyFromPtrs(
-                      function.instructions, destPtrLocal, argument.local, argument.slots)) {
+                      function.instructions, destPtrLocal, argument.local, argument.slots, [&]() {
+                        return allocTempLocal();
+                      })) {
                 return false;
               }
             }

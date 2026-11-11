@@ -681,7 +681,8 @@ VectorMutationStatementEmitResult tryEmitCanonicalVectorMutationStatement(
     instructions.push_back({IrOpcode::MulI32, 0});
     instructions.push_back({IrOpcode::AddI64, 0});
     instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(targetAddrLocal)});
-    emitStructCopyFromPtrs(instructions, targetAddrLocal, payloadLocal, elemSlotCountForBuffer);
+    emitStructCopyFromPtrs(
+        instructions, targetAddrLocal, payloadLocal, elemSlotCountForBuffer, input.allocTempLocal);
     // A builtin vector element of a builtin vector takes over a fresh vector, `move(x)` or a
     // named owner (moved above); from any other place (a view, a field, an element) it gets a
     // buffer of its own.

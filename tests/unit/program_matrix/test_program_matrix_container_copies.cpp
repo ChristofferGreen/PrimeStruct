@@ -1111,4 +1111,57 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE(
+    "structs of 15 to 33 slots copy every slot by binding, parameter, result and vector element") {
+  // A struct of 16 slots or more is copied by a loop over chunks of 8 slots and an unrolled remainder
+  // (emitStructCopyFromPtrs); the sizes cover below, at and above the threshold and every remainder length.
+  std::string source = "import /std/collections/*\n\n";
+  std::string main = "[effects(heap_alloc), return<int>]\nmain() {\n";
+  int checkCode = 1;
+  for (const int slots : {15, 16, 17, 23, 24, 25, 33}) {
+    const std::string name = "Big" + std::to_string(slots);
+    std::string expected;
+    source += "[struct]\n" + name + " {\n";
+    for (int i = 0; i < slots; ++i) {
+      source += "  [i32 mut] f" + std::to_string(i) + "{0i32}\n";
+      expected += std::string(i == 0 ? "" : " + ") + "b.f" + std::to_string(i) + " * " +
+                  std::to_string(i + 1) + "i32";
+    }
+    source += "}\n\n";
+    source += "[return<i32>]\nweigh" + std::to_string(slots) + "([" + name +
+              " copy] b) {\n  return(" + expected + ")\n}\n\n";
+    source += "[return<" + name + ">]\nmake" + std::to_string(slots) + "([i32] base) {\n  [" +
+              name + " mut] b{" + name + "{}}\n";
+    for (int i = 0; i < slots; ++i) {
+      source += "  b.f" + std::to_string(i) + " = base + " + std::to_string(i) + "i32\n";
+    }
+    source += "  return(b)\n}\n\n";
+    int weighed = 0;
+    for (int i = 0; i < slots; ++i) {
+      weighed += (10 + i) * (i + 1);
+    }
+    const std::string n = std::to_string(slots);
+    const std::string last = std::to_string(slots - 1);
+    main += "  [" + name + " mut] a" + n + "{make" + n + "(10i32)}\n";
+    main += "  [" + name + "] copied" + n + "{a" + n + "}\n";
+    main += "  a" + n + ".f0 = 500i32\n  a" + n + ".f" + last + " = 600i32\n";
+    main += "  [vector<" + name + "> mut] vec" + n + "{vector<" + name + ">{}}\n";
+    main += "  vec" + n + ".push(copied" + n + ")\n  vec" + n + ".push(a" + n + ")\n";
+    main += "  if(copied" + n + ".f0 != 10i32 || copied" + n + ".f" + last +
+            " != " + std::to_string(10 + slots - 1) + "i32) {\n    return(" +
+            std::to_string(checkCode++) + ")\n  }\n";
+    main += "  if(vec" + n + "[0i32].f" + last + " != " + std::to_string(10 + slots - 1) +
+            "i32 || vec" + n + "[1i32].f0 != 500i32 || vec" + n + "[1i32].f" + last +
+            " != 600i32) {\n    return(" + std::to_string(checkCode++) + ")\n  }\n";
+    main += "  if(weigh" + n + "(copied" + n + ") != " + std::to_string(weighed) +
+            "i32) {\n    return(" + std::to_string(checkCode++) + ")\n  }\n";
+  }
+  main += "  return(0i32)\n}\n";
+  program_matrix::ProgramCase program;
+  program.name = "large_struct_slot_loop_copies";
+  program.source = source + main;
+  program.exitCode = 0;
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

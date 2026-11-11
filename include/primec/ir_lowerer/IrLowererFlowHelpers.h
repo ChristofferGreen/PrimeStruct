@@ -154,10 +154,16 @@ bool structNeedsCopyHelpersOrVectorCopies(
     const std::function<const Definition *(const std::string &)> &findCopyHelper,
     const std::function<bool(const std::string &, StructSlotLayoutInfo &)>
         &resolveStructSlotLayout);
+// A struct of at least StructCopyLoopMinSlots slots is copied by a loop over StructCopyLoopUnrollSlots slots at a
+// time (the remainder unrolled) when `allocTempLocal` is given, which takes three temporary locals; a smaller
+// struct, or no `allocTempLocal`, is copied slot by slot.
+inline constexpr int32_t StructCopyLoopMinSlots = 16;
+inline constexpr int32_t StructCopyLoopUnrollSlots = 8;
 bool emitStructCopyFromPtrs(std::vector<IrInstruction> &instructions,
                             int32_t destPtrLocal,
                             int32_t srcPtrLocal,
-                            int32_t slotCount);
+                            int32_t slotCount,
+                            const Int32ProviderFn &allocTempLocal = nullptr);
 bool emitStructCopySlots(std::vector<IrInstruction> &instructions,
                          int32_t destBaseLocal,
                          int32_t srcPtrLocal,

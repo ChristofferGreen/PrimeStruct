@@ -101,7 +101,6 @@ of sync with them.
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
 | TODO-5738 | Sum results return through the caller's block in real calls | ready | ir-real-calls |
-| TODO-5739 | Large struct copies lower to a slot loop | ready | ir-struct-copies |
 | TODO-5752 | x86_64 native and the Linux JIT take the address ABI of real calls | deferred | native-real-calls |
 | TODO-5824 | A null or stray local address faults on the VM | deferred | vm-addresses |
 | TODO-5727 | Every struct copy site tells a place from a temporary by resolution | deferred | lifecycle-copy-sources |
@@ -259,7 +258,7 @@ of sync with them.
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719, TODO-5853; collection fields found by closures and the todo example: TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
 - Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5738, TODO-5718
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732, TODO-5735, TODO-5736, TODO-5737
-- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5844, TODO-5938; real calls and struct copies TODO-5739, TODO-5752; VM address checks TODO-5824
+- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5844, TODO-5938; real calls TODO-5752; VM address checks TODO-5824
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5847, TODO-5893, TODO-5894, TODO-5872; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854, TODO-5862
 
 ### Execution Queue
@@ -285,18 +284,6 @@ Build system (docs/BuildSystemPlan.md), after the startup lane: ready and indepe
     - `serve`/`serveUntil` are real calls in todo_web; a matrix case returns `Result` and `Maybe` values (ok, error, a payload with a `Destroy`) from a real call on every backend
     - full release gate green
   - stop_rule: sum results of real calls only.
-
-- [ ] TODO-5739: Large struct copies lower to a slot loop
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-08
-  - phase: Optimizing backends (found while finishing TODO-5734)
-  - parallel_track: ir-struct-copies
-  - scope: `emitStructCopyFromPtrs` writes one load/store sequence per slot, which optcpp turns into about eight lines of C++ per slot: `/std/http` `parseRequest` alone has 873 slot copies (a `Request` is about 23 slots). Emit a loop over the slots above a size threshold, on the targets where that is cheaper, and measure size and VM speed.
-  - acceptance:
-    - todo_web's optcpp output shrinks measurably; VM benchmarks no slower; same results on every backend
-    - full release gate green
-  - stop_rule: struct slot copies only.
 
 - [ ] TODO-5752: x86_64 native and the Linux JIT take the address ABI of real calls
   - owner: ai

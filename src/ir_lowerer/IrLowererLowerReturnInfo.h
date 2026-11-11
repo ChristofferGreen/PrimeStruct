@@ -2,8 +2,12 @@
   allocTempLocal = [&]() -> int32_t {
     return nextLocal++;
   };
-  emitStructCopyFromPtrs = [&](int32_t destPtrLocal, int32_t srcPtrLocal, int32_t slotCount) -> bool {
-    return ir_lowerer::emitStructCopyFromPtrs(function.instructions, destPtrLocal, srcPtrLocal, slotCount);
+  emitStructCopyFromPtrs =
+      [&](int32_t destPtrLocal, int32_t srcPtrLocal, int32_t slotCount) -> bool {
+    return ir_lowerer::emitStructCopyFromPtrs(
+        function.instructions, destPtrLocal, srcPtrLocal, slotCount, [&]() {
+          return allocTempLocal();
+        });
   };
   emitStructCopySlots = [&](int32_t destBaseLocal, int32_t srcPtrLocal, int32_t slotCount) -> bool {
     return ir_lowerer::emitStructCopySlots(

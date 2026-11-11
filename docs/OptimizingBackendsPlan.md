@@ -1095,7 +1095,9 @@ VM is not slower: the run time of the benchmark programs (`primec --emit=vm` CPU
 before/after) is aggregate 36.3/25.4 ms, json_scan 33.2/31.0, json_parse 71.0/69.2, call_fib 54.4/54.1 and
 float_series 102.0/98.3, and the whole `--emit=vm` run of the HTTP fixtures takes 3.50 s/0.98 s (parse_matrix) and
 1.48 s/1.03 s (response_bytes), mostly from compiling less. What is left in todo_web's C++: `main` still inlines
-`serve` and `serveUntil` (a `Result` result, TODO-5738), and struct copies are unrolled per slot (TODO-5739).
+`serve` and `serveUntil` (a `Result` result, TODO-5738). `String.append` with a `string` argument became a real call on
+the VM and optcpp (TODO-5741, 2026-11-11: todo_web's `--emit=optcpp` source 1,849,712 to 1,668,906 bytes), and a
+struct of 16 slots or more is copied by a loop (TODO-5739, 2026-11-11: 1,668,906 to 1,563,197 bytes).
 
 `Function` parameters taken by `move` or `copy` (TODO-5748, 2026-11-09): the native UI handler registrations
 (`AppHandlers.command`, `commandRange`, `onClick`, ...) take their closure by `move`, which kept them inline, so each of
