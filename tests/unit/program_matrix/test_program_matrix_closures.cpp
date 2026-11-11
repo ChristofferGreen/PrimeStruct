@@ -792,6 +792,53 @@ main() {
                     0);
 }
 
+// A lambda, and a method of a struct, written in a namespace name its structs without the namespace
+// (`[Reference<Job>] j` in `namespace zed`); the `call` method of a closure is a member of the closure struct, which
+// is not a scope of names of its own (TODO-5935).
+TEST_CASE("a lambda parameter naming a struct of the enclosing namespace is resolved there") {
+  runClosureProgram("closure_namespace_struct_parameter",
+                    R"(
+namespace zed {
+  [public struct]
+  Job {
+    [i32] id{0i32}
+    [i32] weight{0i32}
+  }
+
+  [public struct]
+  Boss {
+    [i32] rank{1i32}
+
+    [return<i32>]
+    score([Reference<Job>] j, [Job] k) {
+      return(j.id + k.weight + this.rank)
+    }
+  }
+
+  [return<i32>]
+  run_job() {
+    [Job] job{Job{[id] 3i32, [weight] 4i32}}
+    [Job] other{Job{[id] 1i32, [weight] 1i32}}
+    by_reference{[]([Reference<Job>] j) {
+      [Job] local{Job{[id] j.id, [weight] 1i32}}
+      return(j.id + j.weight + local.weight)
+    }}
+    by_value{[]([Job] j) { return(j.id + j.weight) }}
+    captured{[other]() { return(other.id + other.weight) }}
+    [Boss] boss{Boss{}}
+    return(by_reference(job) * 1000i32 + by_value(job) * 100i32 + captured() * 10i32 + boss.score(job, other))
+  }
+}
+
+[return<int>]
+main() {
+  if(/zed/run_job() != 8725i32) { return(1i32) }
+  return(0i32)
+}
+)",
+                    0);
+}
+
 TEST_CASE("ref-captured vector of Function routes passes to a parameter") {
   runClosureProgram("closure_ref_capture_struct_vector_parameter", R"(
 import /std/collections/*

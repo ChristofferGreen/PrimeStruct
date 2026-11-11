@@ -399,6 +399,11 @@ bad_set() {
   constructor of a `[ref]` closure) states them explicitly and the capture types after them are still inferred. A
   lambda that names no type parameter is generated as before, and a name that is not a type parameter of the
   definition is an unknown type.
+- **Names in a namespace:** a lambda sees the names of the namespace it is written in, as the definition around it
+  does: in `namespace zed` with a struct `Job`, `[]([Reference<Job>] j) { ... }` names `/zed/Job`. The `call` method is a
+  member of the closure struct, which is not a scope of names of its own, and so is any method of a struct: a bare
+  struct name in its parameter types is looked up in the namespaces around the struct. A name that is in neither the
+  namespace nor the root is an unknown type.
 - **Type spelling:** a closure type has no source name. Pass closures through template parameters (`[F]`, `[F mut]`,
   `Holder<F>` fields), or erase the type with `Function<R, A...>` (below).
 

@@ -689,16 +689,26 @@ std::string importedStructPath(const std::string &name, const std::string &names
   if (!isBareTypeIdentifier(name)) {
     return {};
   }
-  const std::string path = resolveNameToPath(
-      name, namespacePrefix, scopedImportAliasesForNamespace(namespacePrefix, ctx), ctx.sourceDefs);
-  if (path.empty() || path.front() != '/' || path == "/" + name) {
-    return {};
+  // A method and the `call` method of a closure are written in a struct's namespace (`/zed/Boss/score`,
+  // `/zed/run_job__lambda0/call`) but see the names of the namespaces around that struct: a struct is not a scope of
+  // names of its own, so the search continues at the namespace that holds it.
+  std::string searchPrefix = namespacePrefix;
+  while (true) {
+    const std::string path = resolveNameToPath(
+        name, searchPrefix, scopedImportAliasesForNamespace(searchPrefix, ctx), ctx.sourceDefs);
+    if (path.empty() || path.front() != '/' || path == "/" + name) {
+      return {};
+    }
+    const auto found = ctx.sourceDefs.find(path);
+    if (found != ctx.sourceDefs.end() && isStructDefinition(found->second)) {
+      return path;
+    }
+    const auto owner = ctx.sourceDefs.find(searchPrefix);
+    if (owner == ctx.sourceDefs.end() || !isStructDefinition(owner->second)) {
+      return {};
+    }
+    searchPrefix.erase(searchPrefix.find_last_of('/'));
   }
-  const auto found = ctx.sourceDefs.find(path);
-  if (found == ctx.sourceDefs.end() || !isStructDefinition(found->second)) {
-    return {};
-  }
-  return path;
 }
 
 void qualifyImportedStructTypes(Expr &expr, const std::string &namespacePrefix, Context &ctx) {

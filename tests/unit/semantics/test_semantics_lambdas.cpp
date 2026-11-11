@@ -526,4 +526,50 @@ main() {
   CHECK(error.find("unsupported binding type: U") != std::string::npos);
 }
 
+TEST_CASE("a lambda parameter names a struct of its namespace") {
+  const std::string source = R"(
+namespace zed {
+  [public struct]
+  Job {
+    [i32] id{0i32}
+  }
+
+  [return<i32>]
+  run_job() {
+    [Job] job{Job{[id] 3i32}}
+    f{[]([Reference<Job>] j) { return(j.id) }}
+    return(f(job))
+  }
+}
+
+[return<int>]
+main() {
+  return(/zed/run_job())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("a lambda parameter naming no struct of its namespace or the root is rejected") {
+  const std::string source = R"(
+namespace zed {
+  [return<i32>]
+  run_job() {
+    f{[]([Reference<Nope>] j) { return(1i32) }}
+    return(0i32)
+  }
+}
+
+[return<int>]
+main() {
+  return(/zed/run_job())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unsupported reference target type: Nope") != std::string::npos);
+}
+
 TEST_SUITE_END();

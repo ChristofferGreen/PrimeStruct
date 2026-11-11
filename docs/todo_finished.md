@@ -2263,6 +2263,7 @@ are left unarchived.
 | TODO-5890 | The arms of an assigned `pick` may open on the next line | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
 | TODO-5895 | A spawned call with a `copy` or `move` scalar or struct parameter runs as a task | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
 | TODO-5934 | A call that returns a `Reference` and is used as a value yields its referent | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5935 | A lambda parameter naming a struct of the enclosing namespace is resolved there | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

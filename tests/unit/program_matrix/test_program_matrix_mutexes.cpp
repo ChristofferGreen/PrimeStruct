@@ -312,6 +312,40 @@ main() {
   CHECK(finished > 0);
 }
 
+// A body that names a struct of the namespace it is written in (`[Reference<Job>]` in `namespace zed`) resolves it
+// there (TODO-5935).
+TEST_CASE("a locked body names a struct of its namespace") {
+  program_matrix::ProgramCase program;
+  program.name = "mutex_namespace_struct_body";
+  program.source = R"(
+import /std/sync/*
+
+namespace zed {
+  [public struct]
+  Job {
+    [i32 mut] id{0i32}
+    [i32 mut] weight{0i32}
+  }
+
+  [effects(lock, heap_alloc, io_out), return<int>]
+  run_job() {
+    cell{Mutex<Job>{Job{[id] 3i32, [weight] 4i32}}}
+    cell.locked([]([Reference<Job>] job) { job.weight = job.weight + 1i32 })
+    print_line(cell.locked([]([Reference<Job>] job) { return(job.id + job.weight) }))
+    return(0i32)
+  }
+}
+
+[effects(lock, heap_alloc, io_out), return<int>]
+main() {
+  return(/zed/run_job())
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "8\n";
+  runMutexProgram(program);
+}
+
 TEST_CASE("the native and Wasm backends reject a program with a mutex by name") {
   // Making a mutex stores its lock and handle count with atomic opcodes, which these backends meet first; the
   // mutex opcodes' own message is checked on hand-built IR in tests/unit/runtime/test_vm_mutexes.cpp.
