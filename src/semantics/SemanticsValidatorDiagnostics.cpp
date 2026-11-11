@@ -102,6 +102,12 @@ bool SemanticsValidator::failExprDiagnostic(const Expr &expr,
                   ? "named arguments not supported for builtin calls"
                   : "argument count mismatch for builtin capacity";
   }
+  // A failure the validator already dropped (an inference that failed, cleared `error_` and went another way) leaves
+  // the spans its scopes captured. The primary span is only set when none is set, so a new failure, which starts
+  // with an empty `error_`, would report that old position: it starts from nothing.
+  if (error_.empty()) {
+    clearStructuredDiagnosticContext();
+  }
   captureExprContext(expr);
   return resultSink_.fail(std::move(message));
 }
@@ -109,12 +115,18 @@ bool SemanticsValidator::failExprDiagnostic(const Expr &expr,
 bool SemanticsValidator::failDefinitionDiagnostic(
     const Definition &def,
     std::string message) {
+  if (error_.empty()) {
+    clearStructuredDiagnosticContext();
+  }
   captureDefinitionContext(def);
   return resultSink_.fail(std::move(message));
 }
 
 bool SemanticsValidator::failExecutionDiagnostic(const Execution &exec,
                                                  std::string message) {
+  if (error_.empty()) {
+    clearStructuredDiagnosticContext();
+  }
   captureExecutionContext(exec);
   return resultSink_.fail(std::move(message));
 }

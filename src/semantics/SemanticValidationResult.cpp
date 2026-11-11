@@ -30,9 +30,6 @@ const std::string &SemanticValidationResultSink::message() const {
 }
 
 void SemanticValidationResultSink::clearContext() {
-  if (!shouldCollectStructuredDiagnostics()) {
-    return;
-  }
   diagnosticSink_.clearContext();
 }
 

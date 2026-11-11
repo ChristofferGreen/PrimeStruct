@@ -106,7 +106,7 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.text_filters"
                                   TIMEOUT 300
                                   SHARD_PREFIX "diagnostics"
                                   SOURCE_FILE "*test_compile_run_text_filters_diagnostics_*.cpp"
-                                  TOTAL_CASES 227
+                                  TOTAL_CASES 229
                                   CASES_PER_SHARD 25)
 
 # TODO-4711: reverted to the original 900s -

@@ -2035,6 +2035,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_diagnostics_exec_method_mixed_shape.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_diagnostics_exec_method_missing_arg.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_diagnostics_emit_structured_semantic.cpp
+    tests/unit/compile_run/text_filters/test_compile_run_text_filters_diagnostics_stdlib_span.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_dumps.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_dumps_part2.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_misc.cpp
