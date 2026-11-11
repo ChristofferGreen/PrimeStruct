@@ -545,32 +545,6 @@ bool startWorkerServer(PipedServer &server, std::vector<std::string> environment
   return true;
 }
 
-// Compiles a copy of the example app `name` whose `main` calls `serveWorkers` where the example calls `serve`; the
-// rest of the example, its handlers included, is unchanged. Returns primec's exit code; its output goes to `log`.
-int compileExampleWithWorkers(const std::string &name, std::string &log) {
-  std::string source =
-      readFile(std::string(PRIMESTRUCT_SOURCE_DIR) + "/examples/apps/" + name + "/main.prime");
-  const std::string call = "  serve(withRequestLog(";
-  const std::string effects =
-      "effects(heap_alloc, io_err, net_io) on_error<ServeError, log_serve_error>]\nmain()";
-  const size_t callAt = source.find(call);
-  REQUIRE(callAt != std::string::npos);
-  source.replace(callAt, call.size(), "  serveWorkers(withRequestLog(");
-  const size_t effectsAt = source.find(effects);
-  REQUIRE(effectsAt != std::string::npos);
-  source.replace(effectsAt,
-                 effects.size(),
-                 "effects(heap_alloc, io_err, net_io, task, lock, channel, atomic) "
-                 "on_error<ServeError, log_serve_error>]\nmain()");
-  const std::string copy = scratch(name + "_workers.prime");
-  std::ofstream(copy, std::ios::binary) << source;
-  const std::string logPath = copy + ".log";
-  // optcpp: the whole compiler up to the C++ text, without the C++ compiler's seconds.
-  const int status = run(shellQuote(Primec) + " --emit=optcpp " + shellQuote(copy) + " -o " +
-                         shellQuote(copy + ".cpp") + " > " + shellQuote(logPath) + " 2>&1");
-  log = readFile(logPath);
-  return status;
-}
 } // namespace
 
 // About 5 s alone, all of it one optexe build (2 s of frontend and lowering, 3 s of C++ compiler) that the cases
@@ -737,16 +711,6 @@ TEST_CASE("serveWorkers rejects an app whose state is not sendable") {
           "closure cannot be a Function: capture `inner`, field `state` of WebApp<Borrowed>, "
           "field `bytes` of Borrowed is Pointer<u8>") != std::string::npos,
       diagnostics);
-}
-
-TEST_CASE("the hello_button example compiles with serveWorkers and unchanged handlers") {
-  std::string log;
-  CHECK_MESSAGE(compileExampleWithWorkers("hello_button", log) == 0, log);
-}
-
-TEST_CASE("the todo_web example compiles with serveWorkers and unchanged handlers") {
-  std::string log;
-  CHECK_MESSAGE(compileExampleWithWorkers("todo_web", log) == 0, log);
 }
 
 TEST_SUITE_END();

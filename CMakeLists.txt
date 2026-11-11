@@ -1469,8 +1469,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
                        PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
   # /std/http: the request parser, responses and the router (tests/unit/backend_host/test_http.cpp). Its cases run on
   # the VM, build a fixture "through optexe", serve "over loopback" or are about "serveWorkers"; the last three build
-  # optexe programs or compile whole apps, so they are CTest entries of their own and PrimeStruct_http runs the VM
-  # cases.
+  # optexe programs, so they are CTest entries of their own and PrimeStruct_http runs the VM cases.
   add_test(
     NAME PrimeStruct_http
     COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
@@ -1478,8 +1477,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--test-case-exclude=*through optexe*,*over loopback*,*serveWorkers*"
             "--order-by=file"
   )
-  # (8 cases, 13 s alone. The fixture build takes 5 s and the two example cases 3 to 4 s each: one optexe build and
-  # one whole-app optcpp compile, nothing to split.)
+  # (6 cases, 8 s alone, 5 s of it the fixture's one optexe build, which is a case of its own.)
   add_test(
     NAME PrimeStruct_http_workers
     COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
@@ -2900,6 +2898,15 @@ if(PRIMESTRUCT_BUILD_TESTS)
             --repo-root ${CMAKE_SOURCE_DIR}
   )
   set_tests_properties(PrimeStruct_benchmark_report_self_test PROPERTIES TIMEOUT 120)
+
+  # The load generator of benchmarks/http: its exit codes and messages only. Nothing in the gate measures time or
+  # throughput; the measurements are made by hand (benchmarks/http/README.md).
+  add_test(
+    NAME PrimeStruct_http_load_self_test
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/scripts/test_http_load.py
+            --repo-root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_http_load_self_test PROPERTIES TIMEOUT 120)
 
   add_test(
     NAME PrimeStruct_graph_budget_self_test

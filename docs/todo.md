@@ -129,12 +129,14 @@ of sync with them.
 | TODO-5859 | A `pick` expression yields a vector | ready | pick-payloads |
 | TODO-5860 | Moving a `pick` payload binding does not poison a later binding of the same name | ready | pick-payloads |
 | TODO-5861 | `SharedString` keeps its owner count inside the text block | ready | string-concurrency |
-| TODO-5803 | The web apps run on workers and their gain is measured | ready | mt-server |
 | TODO-5862 | `serveWorkers` serves on the VM with 2 workers | deferred | mt-server |
 | TODO-5863 | A struct named without its namespace is a `Channel` element | ready | mt-primitives |
 | TODO-5864 | A lambda in a generic definition names the definition's type parameters | ready | closures-generics |
 | TODO-5865 | A `Function` local given positionally to a brace constructor is copied | ready | closures-lifecycle |
 | TODO-5866 | A closure captures a `pick` payload binding | ready | pick-payloads |
+| TODO-5867 | A string heap that alternates between block sizes keeps its chunks | ready | text-heap |
+| TODO-5868 | `serve(app)?` in an `if` block of `main` compiles | ready | result-question |
+| TODO-5869 | `serveWorkers` with 1 worker is within 10% of `serve` | blocked | mt-server |
 | TODO-5799 | arm64 native runs spawned tasks on pthreads, its heap behind a lock | ready | mt-native |
 | TODO-5800 | arm64 native heaps are per thread, with remote frees | blocked | mt-native |
 | TODO-5801 | arm64 native runs `Atomic`, `Mutex` and `Channel` | blocked | mt-native |
@@ -217,23 +219,23 @@ of sync with them.
 - Native UI (docs/NativeUiPlan.md): TODO-5808, TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - AI workflow (docs/AiWorkflowPlan.md): TODO-5841, TODO-5843, TODO-5842
-- Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526, TODO-5855, TODO-5857, TODO-5858, TODO-5859, TODO-5860, TODO-5866
+- Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526, TODO-5855, TODO-5857, TODO-5858, TODO-5859, TODO-5860, TODO-5866, TODO-5868
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544, TODO-5745, TODO-5746
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719, TODO-5850, TODO-5851, TODO-5853, TODO-5864, TODO-5865; collection fields found by closures and the todo example: TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
-- Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5738, TODO-5718
+- Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5738, TODO-5718
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732, TODO-5735, TODO-5736, TODO-5737
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5840, TODO-5844; real calls and struct copies TODO-5739, TODO-5741, TODO-5752; VM address checks TODO-5824
-- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5861, TODO-5803, TODO-5863, TODO-5799, TODO-5800, TODO-5801, TODO-5847, TODO-5848, TODO-5849, TODO-5852; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854, TODO-5862
+- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5861, TODO-5863, TODO-5799, TODO-5800, TODO-5801, TODO-5847, TODO-5848, TODO-5849, TODO-5852, TODO-5867, TODO-5869 (blocked on TODO-5867); deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854, TODO-5862
 
 ### Execution Queue
 
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
-Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order (TODO-5792 and TODO-5835, VM tasks and their lowering, are done, and so are TODO-5793, byte-region checks without a map search, TODO-5794, `optexe` per-thread heap arenas, TODO-5795, `optexe` threads for `[spawn]`, `Atomic<i32>` and `Atomic<i64>` in `/std/sync`, TODO-5797, `Mutex<T>` with `locked(body)`, TODO-5846, `optexe` faults when every task waits, TODO-5798, bounded `Channel<T>`, TODO-5656, the atomic `SharedString` owner count, and TODO-5802, `serveWorkers`): TODO-5861 (`SharedString` count inside the text block), TODO-5803 (apps on workers, measured), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5861, TODO-5803 and TODO-5799 are ready and independent of each other, and so are TODO-5848 (`return(wait(t))` of a `String` task result is rejected as a return type mismatch), TODO-5849 (a destructured multi-wait of tasks with different result types loses the later results' types) and TODO-5847 (spawned calls with collection or `copy` parameters or collection results run as tasks, which today run inline; TODO-5845, the same for `String`, struct and closure values, is done) (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, are done). Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions), TODO-5854 (a `Mutex` or `Atomic` handle keeps a copy of its first value). Found with `Mutex` and ready: TODO-5852 (`wait(a, b)` of two `Task<void>`), and in the closures lane TODO-5850 (a `Reference`-returning call as a closure argument) and TODO-5851 (a `[ref]` closure written in a generic call). Found with `Channel` and ready, in the Result and control flow lane: TODO-5855 (a method call on a `pick` payload of struct type); TODO-5856 (`pick` on a call result frees an owning payload) is done, and found with it and ready: TODO-5857 (a `vector<T>` payload reads its count in a `pick` arm), TODO-5858 (`some<Vector<i32>>` of a fresh vector frees it), TODO-5859 (a `pick` expression yields a vector) and TODO-5860 (moving a payload binding does not poison a later binding of the same name). Found with `serveWorkers`: TODO-5862 (deferred: `serveWorkers` on the VM, which has no `/std/net`), and ready: TODO-5863 (a struct named without its namespace as a `Channel` element), TODO-5864 (a lambda in a generic definition names its type parameters), TODO-5865 (a `Function` local given positionally to a brace constructor is copied) and TODO-5866 (a closure captures a `pick` payload binding).
+Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order (TODO-5792 and TODO-5835, VM tasks and their lowering, are done, and so are TODO-5793, byte-region checks without a map search, TODO-5794, `optexe` per-thread heap arenas, TODO-5795, `optexe` threads for `[spawn]`, `Atomic<i32>` and `Atomic<i64>` in `/std/sync`, TODO-5797, `Mutex<T>` with `locked(body)`, TODO-5846, `optexe` faults when every task waits, TODO-5798, bounded `Channel<T>`, TODO-5656, the atomic `SharedString` owner count, TODO-5802, `serveWorkers`, and TODO-5803, the apps on workers, measured): TODO-5861 (`SharedString` count inside the text block), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5861 and TODO-5799 are ready and independent of each other, and so are TODO-5848 (`return(wait(t))` of a `String` task result is rejected as a return type mismatch), TODO-5849 (a destructured multi-wait of tasks with different result types loses the later results' types) and TODO-5847 (spawned calls with collection or `copy` parameters or collection results run as tasks, which today run inline; TODO-5845, the same for `String`, struct and closure values, is done) (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, are done). Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions), TODO-5854 (a `Mutex` or `Atomic` handle keeps a copy of its first value). Found with `Mutex` and ready: TODO-5852 (`wait(a, b)` of two `Task<void>`), and in the closures lane TODO-5850 (a `Reference`-returning call as a closure argument) and TODO-5851 (a `[ref]` closure written in a generic call). Found with `Channel` and ready, in the Result and control flow lane: TODO-5855 (a method call on a `pick` payload of struct type); TODO-5856 (`pick` on a call result frees an owning payload) is done, and found with it and ready: TODO-5857 (a `vector<T>` payload reads its count in a `pick` arm), TODO-5858 (`some<Vector<i32>>` of a fresh vector frees it), TODO-5859 (a `pick` expression yields a vector) and TODO-5860 (moving a payload binding does not poison a later binding of the same name). Found with `serveWorkers`: TODO-5862 (deferred: `serveWorkers` on the VM, which has no `/std/net`), and ready: TODO-5863 (a struct named without its namespace as a `Channel` element), TODO-5864 (a lambda in a generic definition names its type parameters), TODO-5865 (a `Function` local given positionally to a brace constructor is copied) and TODO-5866 (a closure captures a `pick` payload binding). Found measuring the apps on workers (TODO-5803, done): TODO-5867 (a string heap that alternates between block sizes rebuilds a 256 KiB chunk per string; ready), TODO-5869 (1 worker within 10% of `serve` and the form 2.5x with 4; blocked on TODO-5867), and in the Result and control flow lane TODO-5868 (`serve(app)?` in an `if` block of `main` is rejected).
 
 ### Task Blocks
 
@@ -940,19 +942,6 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
     - full release gate green
   - stop_rule: where the count lives; native follows with TODO-5800.
 
-- [ ] TODO-5803: The web apps run on workers and their gain is measured
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-09
-  - phase: Multithreading and Web apps (docs/WebAppsPlan.md, Concurrency)
-  - parallel_track: mt-server
-  - scope: Add a load generator (`scripts/http_load.py`, Python standard library only: N concurrent connections for a fixed time, requests per second and p50/p99) and server benchmarks under benchmarks/http/; switch examples/apps/todo_web and hello_button to `serveWorkers` (their comments say the server is single-threaded today) and record the numbers in docs/WebAppsPlan.md.
-  - acceptance:
-    - with 16 concurrent clients on a machine with at least 4 cores, each measured against `serve` back to back with the load average recorded: todo_web's list page with 200 items at least 1.5x the requests per second with 4 workers; a POST of a 32 KB form whose handler does little at least 2.5x; a handler doing about 1 ms of CPU work under the lock recorded as the baseline for TODO-5804 (about 1x expected); 1 worker at least 0.9x `serve`
-    - negative: the load generator exits non-zero when any response is not 2xx or 3xx, and a run against a server that refuses connections fails with a message
-    - full release gate green
-  - stop_rule: the examples, the load generator and the numbers.
-
 - [ ] TODO-5862: `serveWorkers` serves on the VM with 2 workers
   - owner: ai
   - status: deferred
@@ -1023,6 +1012,49 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
     - full release gate green
   - stop_rule: captures of `pick` payload bindings.
 
+
+- [ ] TODO-5867: A string heap that alternates between block sizes keeps its chunks
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-11
+  - phase: Multithreading and Web apps (docs/WebAppsPlan.md, Concurrency; found measuring `serveWorkers`)
+  - parallel_track: text-heap
+  - scope: The string heap (`VmTextHeap`, include/primec/runtime/VmTextHeapBody.inc) keeps one chunk whose blocks are all free and returns any other at once. A thread that holds no other strings and builds one that grows through two block sizes (32 then 64 bytes: a `String` with four short `append`s) therefore empties two chunks per string, returns one and builds it again for the next string: a 256 KiB region, zeroed, with a free list of up to 8192 entries. Measured with `optexe` on arm64 (200000 strings, instructions retired): 279e9 on a spawned task against 2.2e9 on the main thread, where the program's other strings keep the chunks; with three strings of 20, 40 and 70 bytes alive in the task, 2.4e9. Every `serveWorkers` worker is such a thread: a small POST costs 157 us of user CPU per request with 1 worker against 37 us under `serve`, and 62 us when each worker keeps one string per block size alive (5751 against 12282 requests/s, `serve` 14224). Stop the rebuild without holding much more memory per thread: candidates are one free chunk kept per block size with small first chunks (as arenas have: 4 KiB, doubling), or a few free chunks kept regardless of size and re-cut for the size asked for.
+  - implementation_notes: `releaseOwn` (the `emptyChunks_ > 1` branch) and `allocateOwn`; tests/unit/runtime/test_vm_text_heap.cpp pins today's policy ("an emptied chunk is returned except one kept for reuse") and the memory limit (`heldBytes`). Not measured yet: whether `parseRequest` of a small request (550000 instructions on the main thread) and the todo_web list page (21 us per item) pay the same cost.
+  - acceptance:
+    - a unit test counts chunk regions taken from the heap core: a thread's heap that builds and drops 1000 strings growing through 32, 64 and 128 bytes takes no new region after the first string (today it takes one or more per string)
+    - the same loop as an `optexe` program on a spawned task retires at most 2x the instructions of the main-thread run (measured by hand, recorded in the result note)
+    - the memory limit still refuses what it refused, and the result note records the bytes a heap holds after freeing everything, before and after
+    - full release gate green
+  - stop_rule: the free-chunk policy of the string heap; the slot heap is unchanged.
+
+- [ ] TODO-5868: `serve(app)?` in an `if` block of `main` compiles
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-11
+  - phase: Result and control flow (docs/spec/errors-and-file-io.md; found with benchmarks/http/bench_server.prime)
+  - parallel_track: result-question
+  - scope: With `[return<int> effects(heap_alloc, io_err, net_io) on_error<ServeError, log_serve_error>] main()`, the body `if(flag) { serve(app_router(), config)? return(0i32) } serve(app_router(), config)? return(0i32)` (`app_router()` returns an `AppRouter<Bench>`) is rejected with `missing on_error for ? usage`, reported at stdlib/std/http/http.prime in `/std/http/AppRouter__t.../call`, a definition that has no `?`. The same two `serve(...)?` statements one after the other compile, and so does the `if` when each branch calls a helper that carries its own `on_error`. Not yet narrowed: whether any `?` in a block does this or only one whose call takes a generic struct. Make the `?` inside the block use the enclosing definition's `on_error`, and report a missing one at the `?`.
+  - implementation_notes: benchmarks/http/bench_server.prime works around it with `run_serve` and `run_workers`; inline them into `main` to reproduce.
+  - acceptance:
+    - positive: the program compiles and runs on the VM and `optexe`; bench_server.prime drops its two helpers
+    - negative: a `?` in an `if` block of a definition without `on_error` is reported at that `?`, naming that definition
+    - full release gate green
+  - stop_rule: `?` inside statement blocks with `on_error` on the enclosing definition.
+
+- [ ] TODO-5869: `serveWorkers` with 1 worker is within 10% of `serve`
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5867
+  - created_at: 2026-11-11
+  - phase: Multithreading and Web apps (docs/WebAppsPlan.md, Concurrency)
+  - parallel_track: mt-server
+  - scope: The measurements of benchmarks/http (docs/WebAppsPlan.md, Concurrency) missed two targets: a 32 KB form with a small handler reaches 0.50x of `serve` with 1 worker (target 0.9x) and 1.60x with 4 (target 2.5x). Most of the gap is the string heap rebuilding chunks on worker threads (TODO-5867). Measure again once that is fixed, then remove what is left: the worker makes a new `Response` per request where `serve` reuses one, and the polling thread wakes three times per request (accept, readable, slot handed back).
+  - acceptance:
+    - `python3 benchmarks/http/run_http_benchmarks.py` on an idle machine with at least 6 processors: the 32 KB form at least 0.9x `serve` with 1 worker and at least 2.5x with 4; the numbers replace the table in docs/WebAppsPlan.md
+    - no gate test measures time; full release gate green
+  - stop_rule: the two form targets; the list page waits for read-only handlers (TODO-5804).
+
 - [ ] TODO-5799: arm64 native runs spawned tasks on pthreads, its heap behind a lock
   - owner: ai
   - status: ready
@@ -1071,10 +1103,10 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
   - created_at: 2026-11-09
   - phase: Multithreading and Web apps (docs/MultithreadingPrototype.md, The Server)
   - parallel_track: mt-server
-  - depends_on: TODO-5803, TODO-5735
-  - scope: Under `serveWorkers` every handler holds the app's mutex, so page rendering runs one request at a time. Add `RwLock<T>` (`read(body)` with a read-only `T`, `write(body)` with a `Reference<T>`), let a handler say it only reads (its state parameter `[State] state` against `[Reference<State>] state`, which needs same-arity overloads by argument type, TODO-5735; or a named registration, open question 5 of the design), and run read-only handlers under the read lock. Deferred: decide the registration form first, and measure TODO-5803's baseline.
+  - depends_on: TODO-5735
+  - scope: Under `serveWorkers` every handler holds the app's mutex, so page rendering runs one request at a time. Add `RwLock<T>` (`read(body)` with a read-only `T`, `write(body)` with a `Reference<T>`), let a handler say it only reads (its state parameter `[State] state` against `[Reference<State>] state`, which needs same-arity overloads by argument type, TODO-5735; or a named registration, open question 5 of the design), and run read-only handlers under the read lock. Deferred: decide the registration form first.
   - acceptance:
-    - the TODO-5803 CPU-bound GET handler at least 2.5x `serve` with 4 workers; a read-only handler that writes its state is a compile error
+    - the CPU-bound GET handler of benchmarks/http (`GET /work`; 0.98x measured 2026-11-11, docs/WebAppsPlan.md, Measured) at least 2.5x `serve` with 4 workers, and todo_web's list page with 200 items (0.95x measured) at least 1.5x; a read-only handler that writes its state is a compile error
   - stop_rule: read-only handlers and `RwLock`.
 
 - [ ] TODO-5805: The server keeps connections alive between requests

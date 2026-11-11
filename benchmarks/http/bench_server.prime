@@ -1,0 +1,82 @@
+// The server of the HTTP benchmarks (benchmarks/http/README.md): two routes on one counter, served by `serve`
+// (SERVER=serve) or by `serveWorkers` with WORKERS worker tasks (SERVER=workers, the default). Build:
+//   primec --emit=optexe benchmarks/http/bench_server.prime -o bench_server \
+//     --link-arg stdlib/std/net/native/net_shim.cpp --link-arg stdlib/std/os/os_posix.cpp
+// Routes:
+//   POST /form   a handler that does little: it counts the request and answers the size of the posted body, so a
+//                large form costs receiving and parsing, which the workers do side by side
+//   GET  /work   a handler that computes for WORK_ROUNDS rounds (about 1 ms by default); under `serveWorkers` it
+//                holds the app's mutex for all of it
+import /std/http/*
+import /std/http/server/*
+import /std/os/*
+import /std/text/*
+import /std/text/view/*
+
+[struct]
+Bench() {
+  [i64 mut] requests{0i64}
+  [i32] workRounds{0i32}
+}
+
+[effects(io_err)]
+log_serve_error([ServeError] err) {
+  print_line_error(err.why())
+}
+
+[effects(heap_alloc)]
+take_form([Reference<Bench>] bench, [Request] request, [Reference<Response>] response) {
+  bench.requests = bench.requests + 1i64
+  response.body.appendI64(convert<i64>(request.body.count()))
+}
+
+// `rounds` steps of a sequence in which each value needs the one before.
+[return<i64>]
+churn([i32] rounds) {
+  [i64 mut] value{1i64}
+  for([i32 mut] round{0i32}; round < rounds; ++round) {
+    [i64] next{value * 31i64 + convert<i64>(round)}
+    value = next - (next / 1000003i64) * 1000003i64
+  }
+  return(value)
+}
+
+[effects(heap_alloc)]
+do_work([Reference<Bench>] bench, [Request] request, [Reference<Response>] response) {
+  bench.requests = bench.requests + 1i64
+  response.body.appendI64(churn(bench.workRounds))
+}
+
+[return<AppRouter<Bench>> effects(heap_alloc)]
+bench_router() {
+  [String] rounds{envOr(stringFrom("WORK_ROUNDS"), stringFrom("260000"))}
+  [AppRouter<Bench> mut] router{AppRouter<Bench>{Bench{[workRounds] rounds.view().parseI32Or(260000i32)}}}
+  router.post("/form", take_form)
+  router.get("/work", do_work)
+  return(router)
+}
+
+[return<int> effects(heap_alloc, io_err, net_io) on_error<ServeError, log_serve_error>]
+run_serve([ServerConfig] config) {
+  serve(bench_router(), config)?
+  return(0i32)
+}
+
+[return<int> effects(heap_alloc, io_err, net_io, task, lock, channel, atomic) on_error<ServeError, log_serve_error>]
+run_workers([ServerConfig] config) {
+  serveWorkers(bench_router(), config)?
+  return(0i32)
+}
+
+[return<int> effects(heap_alloc, io_err, net_io, task, lock, channel, atomic)]
+main() {
+  [String] portText{envOr(stringFrom("PORT"), stringFrom("8080"))}
+  [String] server{envOr(stringFrom("SERVER"), stringFrom("workers"))}
+  [String] workers{envOr(stringFrom("WORKERS"), stringFrom("0"))}
+  [ServerConfig] config{ServerConfig{[port] portText.view().parseI32Or(8080i32), [loopbackOnly] true,
+                                     [workers] workers.view().parseI32Or(0i32)}}
+  if(server.equalsText("serve")) {
+    return(run_serve(config))
+  }
+  return(run_workers(config))
+}

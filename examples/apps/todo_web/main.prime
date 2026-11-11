@@ -3,6 +3,7 @@
 //   primec --emit=optexe examples/apps/todo_web/main.prime -o todo_web \
 //     --link-arg stdlib/std/net/native/net_shim.cpp --link-arg stdlib/std/os/os_posix.cpp
 //   PORT=8080 ./todo_web     (PORT=0 picks a free port; BIND=loopback listens on 127.0.0.1 only)
+// The server answers on worker threads (`serveWorkers`): one per processor, or WORKERS of them.
 // Routes:
 //   GET  /                   the list, a form that adds a todo, and a Done and a Delete button per todo
 //   POST /todos              adds the form's `title`
@@ -11,7 +12,8 @@
 // Every POST answers 303 See Other to / (post/redirect/get), so reloading the page never submits a form twice. The
 // Done and Delete forms name the region "todos", the list: with the stdlib's fragment script, which the page loads,
 // they post with fetch and the app answers with the list alone, which replaces the old one in place. The todos live
-// in memory, in the app's state; the server is single-threaded, so the state needs no locking.
+// in memory, in the app's state; `serveWorkers` runs one handler at a time, so the state needs no locking of its
+// own.
 import /std/collections/*
 import /std/html/*
 import /std/http/*
@@ -186,11 +188,13 @@ log_serve_error([ServeError] err) {
   print_line_error(err.why())
 }
 
-[return<int> effects(heap_alloc, io_err, net_io) on_error<ServeError, log_serve_error>]
+[return<int> effects(heap_alloc, io_err, net_io, task, lock, channel, atomic) on_error<ServeError, log_serve_error>]
 main() {
   [String] portText{envOr(stringFrom("PORT"), stringFrom("8080"))}
   [String] bind{envOr(stringFrom("BIND"), stringFrom("all"))}
-  [ServerConfig] config{ServerConfig{[port] portText.view().parseI32Or(8080i32), [loopbackOnly] bind.equalsText("loopback")}}
-  serve(withRequestLog(todo_app()), config)?
+  [String] workers{envOr(stringFrom("WORKERS"), stringFrom("0"))}
+  [ServerConfig] config{ServerConfig{[port] portText.view().parseI32Or(8080i32), [loopbackOnly] bind.equalsText("loopback"),
+                                     [workers] workers.view().parseI32Or(0i32)}}
+  serveWorkers(withRequestLog(todo_app()), config)?
   return(0i32)
 }

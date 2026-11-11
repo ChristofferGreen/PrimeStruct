@@ -1062,14 +1062,16 @@ Why this is good:
 - The state is a parameter, never a capture: a stored handler cannot borrow an outer binding, and a value capture
   would give each route its own copy. The router owns the one `TodoList` and lends it to the handler for the call.
 - The state is a plain struct with methods (`add`, `toggle`, `remove`); handlers only read the request, call one of
-  them and answer. The server is single-threaded, so nothing needs locking.
+  them and answer. The server calls one handler at a time (`serveWorkers` holds the app in a `Mutex`), so the
+  state needs no locking of its own.
 - Every POST answers `redirect("/")`, so the browser shows the page again with a GET and a reload never repeats a
   click. The buttons work with no JavaScript.
 - One function, `write_todos`, writes the list for the page and for the fragment, so the two cannot drift apart.
   The handlers stay post/redirect/get: the app turns the redirect into the fragment when the script asks for one,
   and the page (which loads the script with `writeFragmentScript(page)`) needs no JavaScript of its own.
 - Todos keep stable ids, so `/todos/:id/toggle` names one todo even after others are deleted.
-- `serve(withRequestLog(todo_app()), config)` serves it: a `WebApp` is a handler like a `Router`.
+- `serveWorkers(withRequestLog(todo_app()), config)` serves it on worker threads: a `WebApp` is a handler like a
+  `Router`, and `serve` takes the same two arguments for a server on one thread.
 
 ### A Button That Takes Its Click Handler
 

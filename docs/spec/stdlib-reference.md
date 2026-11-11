@@ -789,8 +789,8 @@ one request per connection (`Connection: close`), and no chunked encoding, keep-
   The state is a parameter rather than a capture because a handler stored in a `Function` cannot hold a `[ref]`
   capture (docs/spec/value-lifecycle.md, Lambdas): a closure that borrowed an outer `TodoList` could outlive it. A
   value capture would give each route its own copy, so a todo added by one route would be invisible to another. The
-  router owns the one copy and lends it to the handler for the length of the call; the server is single-threaded, so
-  that needs no locking. Keeping the state in the router, rather than passing it to `serve` next to the router, keeps
+  router owns the one copy and lends it to the handler for the length of the call; the server calls one handler at
+  a time (`serve` has one thread, `serveWorkers` holds the handler in a `Mutex`), so that needs no locking. Keeping the state in the router, rather than passing it to `serve` next to the router, keeps
   `serve` and middleware unchanged: they see one handler. `Router` stays as it is for handlers without state.
 
   ```prime

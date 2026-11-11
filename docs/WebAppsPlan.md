@@ -7,7 +7,7 @@ Classification: **design direction**. The open work is in `docs/todo.md` (Web ap
 `/std/net`, `/std/os`, `/std/http` (request parser with decoded query and form parameters, `Response` with `html` and
 `redirect`, `Router` with `:name` path parameters, `AppRouter<State>` whose handlers get the app's state as a
 parameter, static files), `/std/http/server`, `/std/json` and `/std/html` (an escaping HTML writer with the form
-vocabulary) exist and run on the VM and `--emit=optexe` (docs/spec/stdlib-reference.md). Servers are single-threaded optexe binaries (a multi-core server is planned: Concurrency below); containers are out of scope. The server
+vocabulary) exist and run on the VM and `--emit=optexe` (docs/spec/stdlib-reference.md). Servers are optexe binaries, on one thread (`serve`) or with worker threads (`serveWorkers`: Concurrency below); containers are out of scope. The server
 waits on all of its open connections at once with `poll`, so an idle connection does not stall the others
 (TODO-5705). One file cannot import both `/std/html` and `/std/json` yet: both export `Writer`
 (TODO-5717). Repeated parameters give their first value and path parameters are not decoded (TODO-5718).
@@ -52,8 +52,8 @@ handlers see only the keys it does not keep.
    with no JavaScript at all.
 4. **Then fragments, still without user JavaScript.** The stdlib serves one small fixed script. Elements carry
    attributes that say which route to call and which element to replace; the route answers with an HTML fragment.
-   A button then has a PrimeStruct handler and nothing else. App state is plain struct fields with no locking: the
-   server is single-threaded, and the multi-core server takes the lock for the handler (Concurrency below).
+   A button then has a PrimeStruct handler and nothing else. App state is plain struct fields with no locking: `serve`
+   has one thread, and `serveWorkers` takes a lock for the handler (Concurrency below).
 5. **Escaping is the default.** The HTML writer escapes text and attribute values; raw HTML is a separately named
    call.
 6. **Client-side PrimeStruct in the browser is not on this path.** The wasm backends have no `String` and reject
@@ -124,7 +124,7 @@ handler that brings the menus, toolbars and session up to date after each event.
 7. Concurrency (docs/MultithreadingPrototype.md, Threads For Real; after the PrimeScroll startup lane and TODO-5770,
    TODO-5772): sendable values TODO-5790 and `Function` sendable by construction TODO-5791; VM tasks TODO-5792; `optexe` heaps and threads TODO-5793,
    TODO-5794, TODO-5795; `Atomic`, `Mutex`, `Channel` TODO-5796, TODO-5797, TODO-5798; then `serveWorkers`
-   TODO-5802 (done) and the apps on it, measured, TODO-5803. Deferred: read-only handlers under `RwLock` TODO-5804,
+   TODO-5802 (done) and the apps on it, measured (done; the numbers are under Concurrency). Deferred: read-only handlers under `RwLock` TODO-5804,
    keep-alive TODO-5805, sessions TODO-5806.
 8. Later: TODO-5707, TODO-5708 (type aliases), TODO-5717 (both writers in one file), TODO-5718 (repeated and decoded
    parameters).
@@ -138,5 +138,40 @@ one thread polling and accepting and hands each readable connection to `config.w
 the whole app, so `WebApp<State>` and `AppRouter<State>` apps keep plain struct state with no locking of their own
 (principle 2 still holds: the state comes in as the handler's parameter). Writing a page's HTML happens inside the
 handler, so it stays serialized until handlers that only read the state share a read lock (TODO-5804). Running
-several processes on one port was rejected: each would have its own copy of the state. The example apps still call
-`serve`; switching them and measuring the gain is TODO-5803.
+several processes on one port was rejected: each would have its own copy of the state. The example apps
+`todo_web` and `hello_button` call `serveWorkers` (`WORKERS` sets the number of workers; the default is one per
+processor).
+
+### Measured
+
+`python3 benchmarks/http/run_http_benchmarks.py` (benchmarks/http/README.md), 2026-11-11: an Apple arm64 machine
+with 11 processors (5 performance, 6 efficiency), 16 concurrent clients, 10 s per run, a new connection per
+request, `serve`, 1 worker and 4 workers back to back. The machine was not idle: other work kept the load average
+near 7 during the runs, so the absolute numbers are low and the ratios are the result.
+
+| Scenario | Load average before | Server | Requests/s | p50 ms | p99 ms | Against `serve` | Target |
+| --- | --- | --- | ---: | ---: | ---: | ---: | --- |
+| List page, 200 items (`todo_web` `GET /`) | 6.97 7.44 16.88 | `serve` | 220 | 72.84 | 77.00 | 1.00x | |
+| | | 1 worker | 204 | 78.67 | 83.09 | 0.93x | 0.9x: met |
+| | | 4 workers | 210 | 74.44 | 107.78 | 0.95x | 1.5x: missed |
+| 32 KB form, small handler (`POST /form`) | 7.26 7.45 16.51 | `serve` | 6200 | 2.52 | 3.73 | 1.00x | |
+| | | 1 worker | 3094 | 5.13 | 5.80 | 0.50x | 0.9x: missed |
+| | | 4 workers | 9916 | 1.53 | 2.31 | 1.60x | 2.5x: missed |
+| About 1 ms of work in the handler (`GET /work`) | 8.45 7.71 16.23 | `serve` | 1013 | 15.69 | 20.77 | 1.00x | |
+| | | 1 worker | 909 | 17.23 | 24.21 | 0.90x | 0.9x: met, barely |
+| | | 4 workers | 989 | 15.57 | 26.64 | 0.98x | about 1x expected |
+
+What the numbers say:
+
+- **The list page does not gain from workers.** One client alone gets the 200-item page (55,968 bytes) in 4.8 ms
+  and the empty page in 0.6 ms: about 21 us per item, all of it writing HTML inside the handler, which holds the
+  app's mutex. Receiving, parsing and sending, the part workers share, is about an eighth of the request. The 1.5x
+  target needs handlers that only read the state to run side by side (TODO-5804), or a cheaper page.
+- **The form gains 1.6x with 4 workers, not 2.5x, and 1 worker is half of `serve`.** A worker spends about 2.5
+  times the CPU of `serve` on the same request (323 against 130 us of user time for the form, 157 against 37 us
+  for a POST of 8 bytes). The measured cause is the string heap: it keeps one empty chunk and returns any other,
+  and a worker thread, which holds no other strings, empties two or more chunks per request and builds them again,
+  256 KiB each time (TODO-5867). With one string per block size kept alive in each worker, as an experiment, the
+  8-byte POST with 1 worker went from 5751 to 12282 requests per second (`serve` 14224) and the form from 2866 to
+  4271 (`serve` 6019). What is left after that fix is measured in TODO-5869.
+- **A handler that computes under the lock stays at 1x**, as expected: it is the baseline for TODO-5804.

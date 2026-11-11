@@ -3,6 +3,7 @@
 //   primec --emit=optexe examples/apps/hello_button/main.prime -o hello_button \
 //     --link-arg stdlib/std/net/native/net_shim.cpp --link-arg stdlib/std/os/os_posix.cpp
 //   PORT=8080 ./hello_button     (PORT=0 picks a free port; BIND=loopback listens on 127.0.0.1 only)
+// The server answers on worker threads (`serveWorkers`): one per processor, or WORKERS of them.
 // The button is registered once, at setup, with a closure. The app gives it the route POST /_on/hello/click, and the
 // page writes it as a form that posts there; each click calls the closure and redirects back to the page.
 import /std/html/*
@@ -83,11 +84,13 @@ log_serve_error([ServeError] err) {
   print_line_error(err.why())
 }
 
-[return<int> effects(heap_alloc, io_err, net_io) on_error<ServeError, log_serve_error>]
+[return<int> effects(heap_alloc, io_err, net_io, task, lock, channel, atomic) on_error<ServeError, log_serve_error>]
 main() {
   [String] portText{envOr(stringFrom("PORT"), stringFrom("8080"))}
   [String] bind{envOr(stringFrom("BIND"), stringFrom("all"))}
-  [ServerConfig] config{ServerConfig{[port] portText.view().parseI32Or(8080i32), [loopbackOnly] bind.equalsText("loopback")}}
-  serve(withRequestLog(hello_app()), config)?
+  [String] workers{envOr(stringFrom("WORKERS"), stringFrom("0"))}
+  [ServerConfig] config{ServerConfig{[port] portText.view().parseI32Or(8080i32), [loopbackOnly] bind.equalsText("loopback"),
+                                     [workers] workers.view().parseI32Or(0i32)}}
+  serveWorkers(withRequestLog(hello_app()), config)?
   return(0i32)
 }
