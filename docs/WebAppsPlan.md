@@ -201,6 +201,6 @@ What the numbers say:
   The generator costs about 200 us of CPU per request (71 us user, the rest system time in `connect`, `send` and
   `recv` of its 16 client processes) against 25 us for the C server. So the form's 2.41x is a measurement of the
   generator: a 2.5x target needs 13,900 requests per second from 4 workers, which is above what this generator
-  shows for any server, and measuring more needs a generator that costs less per connection (TODO-5937) or
+  shows for any server, and measuring more needs a generator that costs less per connection (TODO-5940) or
   connections that stay open (TODO-5805).
 - **A handler that computes under the lock stays at 1x**, as expected: it is the baseline for TODO-5804.
