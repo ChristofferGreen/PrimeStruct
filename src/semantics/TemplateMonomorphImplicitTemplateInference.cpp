@@ -61,6 +61,14 @@ bool inferBindingTypeForMonomorph(const Expr &initializer,
       }
     }
   }
+  // `move(x)` has x's type (a `[move x]` closure capture passes one to its factory).
+  if (initializer.kind == Expr::Kind::Call && !initializer.isMethodCall &&
+      initializer.name == "move" && initializer.args.size() == 1 &&
+      initializer.args.front().kind == Expr::Kind::Name &&
+      inferBindingTypeForMonomorph(
+          initializer.args.front(), params, locals, allowMathBare, ctx, infoOut)) {
+    return true;
+  }
   if (tryInferBindingTypeFromInitializer(initializer, params, locals, infoOut, allowMathBare)) {
     return true;
   }

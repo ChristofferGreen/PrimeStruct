@@ -2241,6 +2241,7 @@ are left unarchived.
 | TODO-5875 | `count()` on a local declared `Vector<T>` lowers | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5876 | `return(pick(...))` of a vector and assignment from a `pick` expression | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5877 | A field an arm of a `pick` expression yields is copied | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5878 | A `[move name]` lambda capture compiles | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5879 | A `pick` expression's result owns a value of its own | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5880 | A payload moved out of a sum local leaves the local moved-from | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5883 | Assigning to a `mut` builtin vector local destroys what it held and copies a place | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |

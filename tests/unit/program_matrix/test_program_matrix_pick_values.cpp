@@ -737,4 +737,54 @@ TEST_CASE("a method a Vector local does not have is an unknown call target") {
   CHECK_MESSAGE(missing.find("unknown call target: missing") != std::string::npos, missing);
 }
 
+TEST_CASE("a move capture hands the value to the closure") {
+  // An integer, a `String`, a builtin vector and the payload binding of a fresh and of a named sum.
+  runPickValueProgram("pick_value_move_capture",
+                      pickValueProgram("",
+                                       R"(
+    [i32 mut] n{4i32}
+    [mut] show{[move n]([i32] more) { return(n + more) }}
+    print_line(show(1i32))
+    [String] text{label(5i32)}
+    [mut] read{[move text]([i32] more) { return(first_byte(text) + more) }}
+    print_line(read(1i32))
+    [vector<i32>] values{make_values(7i32)}
+    [mut] sum{[move values]([i32] more) { return(values[0i32] + values.count() + more) }}
+    print_line(sum(1i32))
+    print_line(sum(2i32))
+    pick(get(6i32)) {
+      none { print_line(0i32) }
+      some(line) {
+        [mut] first{[move line]([i32] more) { return(first_byte(line) + more) }}
+        print_line(first(1i32))
+      }
+    }
+    [Maybe<String>] held{get(7i32)}
+    pick(held) {
+      none { print_line(0i32) }
+      some(line) {
+        [mut] first{[move line]([i32] more) { return(first_byte(line) + more) }}
+        print_line(first(1i32))
+      }
+    }
+)"),
+                      "5\n54\n10\n11\n55\n56\n0\n0\n");
+}
+
+TEST_CASE("a name captured by move is moved-from after the lambda") {
+  const std::string text = rejectedPickValueProgram("pick_value_move_capture_string", "", R"(
+    [String] text{label(5i32)}
+    [mut] read{[move text]([i32] more) { return(first_byte(text) + more) }}
+    print_line(read(1i32))
+    print_line(first_byte(text))
+)");
+  CHECK_MESSAGE(text.find("use-after-move: text") != std::string::npos, text);
+  const std::string values = rejectedPickValueProgram("pick_value_move_capture_vector", "", R"(
+    [vector<i32>] values{make_values(7i32)}
+    [mut] sum{[move values]([i32] more) { return(values[0i32] + more) }}
+    print_line(sum(1i32) + values.count())
+)");
+  CHECK_MESSAGE(values.find("use-after-move: values") != std::string::npos, values);
+}
+
 TEST_SUITE_END();
