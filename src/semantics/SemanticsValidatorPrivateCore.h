@@ -92,6 +92,13 @@
       const std::vector<ParameterInfo> &params,
       const std::unordered_map<std::string, BindingInfo> &locals,
       const std::string &namespacePrefix);
+  // The payload bindings the arms of the `pick` call `pickExpr` introduce, in arm order: one entry per arm, with
+  // an empty name for an arm that binds nothing (a unit variant, or a subject that is not a sum).
+  std::vector<std::pair<std::string, BindingInfo>>
+  pickArmPayloadBindings(const Expr &pickExpr,
+                         const std::vector<ParameterInfo> &params,
+                         const std::unordered_map<std::string, BindingInfo> &locals,
+                         const std::string &namespacePrefix);
   bool resolveStatusOnlyResultTypeTextForPickTarget(
       const Expr &expr,
       const std::vector<ParameterInfo> &params,

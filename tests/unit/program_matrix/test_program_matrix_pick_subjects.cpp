@@ -68,6 +68,41 @@ void runPickSubjectProgram(const std::string &name,
   program_matrix::runProgramMatrix(program);
 }
 
+// What the compiler says about `source`, which it must reject.
+program_matrix::Outcome compilePickProgram(const std::string &name, const std::string &source) {
+  const std::filesystem::path dir =
+      primec::testing::testScratchPath("program_matrix/" + name + "/x").parent_path();
+  std::filesystem::create_directories(dir);
+  const std::filesystem::path sourcePath = dir / (name + ".prime");
+  {
+    std::ofstream file(sourcePath, std::ios::binary);
+    file << source;
+  }
+  return program_matrix::runCaptured("./primec --emit=ir " +
+                                         program_matrix::quote(sourcePath.string()) + " -o " +
+                                         program_matrix::quote((dir / (name + ".psir")).string()),
+                                     dir / (name + ".ir"));
+}
+
+// A struct with a method, and a user sum with a variant of that struct.
+const std::string BoxDefinitions = R"(
+[struct]
+Box {
+  [i32] value{3i32}
+
+  [return<i32>]
+  twice() {
+    return(this.value * 2i32)
+  }
+}
+
+[sum]
+Shape {
+  [Box] boxed
+  [i32] plain
+}
+)";
+
 } // namespace
 
 TEST_CASE("pick on a call result frees a String payload") {
@@ -338,6 +373,87 @@ show_number([i32] id) {
     [String] kept{pick(get_text(6i32)) { ok(text) { text } error(code) { String{} } }}
     print_line(first_byte(kept)))");
   runPickSubjectProgram("pick_subject_result", source, "52\n-4\n5\n53\n54\n0\n0\n");
+}
+
+TEST_CASE("a method is called on a struct payload binding") {
+  // No heap and no String, so this one runs on every backend.
+  program_matrix::ProgramCase program;
+  program.name = "pick_payload_struct_method";
+  program.source = "import /std/maybe/*\n" + BoxDefinitions + R"(
+[return<i32>]
+measure([Shape] shape) {
+  return(pick(shape) { boxed(inner) { inner.twice() } plain(number) { number } })
+}
+
+[effects(io_out), return<int>]
+main() {
+  [Maybe<Box>] held{[some] Box{}}
+  pick(held) {
+    none {
+    }
+    some(box) {
+      print_line(box.twice())
+    }
+  }
+  [Shape] shape{[boxed] Box{[value] 7i32}}
+  print_line(measure(shape))
+  [Shape] other{[plain] 5i32}
+  print_line(measure(other))
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "6\n14\n5\n";
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("a method is called on a String payload binding and on a payload of a call result") {
+  const std::string source = pickSubjectProgram(BoxDefinitions + R"(
+[effects(heap_alloc), return<Maybe<Box>>]
+get_box([i32] value) {
+  return(some<Box>(Box{[value] value}))
+}
+)",
+                                                R"(
+    [Maybe<String>] text{get(5i32)}
+    pick(text) {
+      none {
+      }
+      some(line) {
+        print_line(convert<i32>(line.byteAt(0i32)))
+        print_line(line.count())
+      }
+    }
+    pick(get(6i32)) {
+      none {
+      }
+      some(line) {
+        print_line(convert<i32>(line.byteAt(0i32)))
+      }
+    }
+    [i32] doubled{pick(get_box(4i32)) { none { 0i32 } some(box) { box.twice() } }}
+    print_line(doubled))");
+  runPickSubjectProgram("pick_payload_string_method", source, "53\n1\n54\n8\n0\n0\n");
+}
+
+TEST_CASE("a method the payload's struct does not have is still unknown") {
+  const program_matrix::Outcome outcome = compilePickProgram(
+      "pick_payload_unknown_method", "import /std/maybe/*\n" + BoxDefinitions + R"(
+[effects(io_out), return<int>]
+main() {
+  [Maybe<Box>] held{[some] Box{}}
+  pick(held) {
+    none {
+    }
+    some(box) {
+      print_line(box.thrice())
+    }
+  }
+  return(0i32)
+}
+)");
+  CHECK(outcome.exitCode != 0);
+  CHECK_MESSAGE(outcome.err.find("unknown method: /Box/thrice") != std::string::npos, outcome.err);
 }
 
 TEST_SUITE_END();

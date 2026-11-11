@@ -460,13 +460,11 @@ main() {
       command(id) {
       }
       windowCloseRequested(w) {
-        [Window] target{w}
-        target.close()
+        w.close()
         running = false
       }
       textChanged(w) {
-        [Window] target{w}
-        target.setEdited(true)
+        w.setEdited(true)
       }
       quitRequested {
         running = false
@@ -476,9 +474,6 @@ main() {
   return(0i32)
 }
 ```
-
-Copy a `pick` payload into a local before calling methods on it (`[Window] target{w}`): method calls directly on a
-payload binding do not lower yet (TODO-5544).
 
 #### Handlers (`AppHandlers<State>`)
 

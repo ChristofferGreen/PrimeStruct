@@ -305,8 +305,7 @@ consume([Channel<String>] lines) {
         open = false
       }
       some(line) {
-        [String] owned{line}
-        total = total + convert<i32>(owned.byteAt(0i32)) - 47i32
+        total = total + convert<i32>(line.byteAt(0i32)) - 47i32
       }
     }
   }

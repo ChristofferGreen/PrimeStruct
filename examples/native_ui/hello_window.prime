@@ -20,13 +20,11 @@ main() {
         commands = commands + id
       }
       windowCloseRequested(w) {
-        [Window] target{w}
-        target.close()
+        w.close()
         running = false
       }
       textChanged(w) {
-        [Window] target{w}
-        target.setEdited(true)
+        w.setEdited(true)
       }
       controlChanged(widget) {
         [Widget] changed{widget}

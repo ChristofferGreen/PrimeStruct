@@ -82,8 +82,7 @@ main([array<string>] args) {
         write_report(window, view, sink, argc)
       }
       windowCloseRequested(w) {
-        [Window] closing{w}
-        closing.close()
+        w.close()
         running = false
       }
       textChanged(w) {

@@ -244,6 +244,37 @@ bool SemanticsValidator::isMutableBindingExpr(
   return localIt != locals.end() && localIt->second.isMutable;
 }
 
+std::vector<std::pair<std::string, BindingInfo>> SemanticsValidator::pickArmPayloadBindings(
+    const Expr &pickExpr,
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
+    const std::string &namespacePrefix) {
+  std::vector<std::pair<std::string, BindingInfo>> bindings(pickExpr.bodyArguments.size());
+  if (pickExpr.args.size() != 1) {
+    return bindings;
+  }
+  const Expr &target = pickExpr.args.front();
+  const Definition *sumDef =
+      resolvePickSumDefinitionForExpr(target, params, locals, namespacePrefix);
+  if (sumDef == nullptr) {
+    return bindings;
+  }
+  const bool targetIsMutable = isMutableBindingExpr(params, locals, target);
+  for (size_t armIndex = 0; armIndex < pickExpr.bodyArguments.size(); ++armIndex) {
+    const Expr &arm = pickExpr.bodyArguments[armIndex];
+    if (!isPayloadPickArmEnvelope(arm)) {
+      continue;
+    }
+    const SumVariant *variant = findVariantByName(*sumDef, arm.name);
+    if (variant == nullptr || !variant->hasPayload) {
+      continue;
+    }
+    bindings[armIndex] = {arm.args.front().name,
+                          payloadBindingForVariant(*variant, targetIsMutable)};
+  }
+  return bindings;
+}
+
 bool SemanticsValidator::validatePickExpr(
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals,

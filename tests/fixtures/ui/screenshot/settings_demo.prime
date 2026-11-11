@@ -45,8 +45,7 @@ main() {
         running = running
       }
       windowCloseRequested(w) {
-        [Window] closing{w}
-        closing.close()
+        w.close()
         running = false
       }
       textChanged(w) {
