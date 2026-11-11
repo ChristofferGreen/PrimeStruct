@@ -220,6 +220,9 @@ of sync with them.
 | TODO-5931 | The stdlib builds as a library | deferred | lib-stdlib |
 | TODO-5932 | Libraries carry back-end code | deferred | lib-backend |
 | TODO-5933 | The embed API loads a library at run time | deferred | lib-embed |
+| TODO-5937 | A restored session keeps each tab's view mode and its active tab | ready | native-ui-state |
+| TODO-5938 | The preview's pending-script count stays exact, and turning an open preview on keeps the output pane | ready | native-ui-state |
+| TODO-5939 | Stopping a script never signals a reaped pid and reports a stop as stopped | ready | native-ui-state |
 
 ### Ready Now
 
@@ -249,6 +252,7 @@ of sync with them.
 - Startup, first (docs/NativeUiPlan.md section 1, "Where a launch goes"): TODO-5603, TODO-5535, TODO-5821
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
 - Native UI (docs/NativeUiPlan.md): TODO-5808, TODO-5536, TODO-5533
+- PrimeScroll state bugs (found mapping its implicit state machines, 2026-11-11): TODO-5937, TODO-5938, TODO-5939
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - AI workflow (docs/AiWorkflowPlan.md): TODO-5841, TODO-5843, TODO-5842
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5896, TODO-5897, TODO-5898, TODO-5899, TODO-5900, TODO-5901, TODO-5902, TODO-5903, TODO-5904
@@ -1921,3 +1925,39 @@ Build system (docs/BuildSystemPlan.md), after the startup lane: ready and indepe
     - to be written when scoped: a script that uses a library function runs through the embed API with the library loaded at run time, and a script without libraries starts exactly as before
   - stop_rule: do not start before it is scoped.
   - notes: deferred: not committed; follows if the archive proves out.
+
+- [ ] TODO-5937: A restored session keeps each tab's view mode and its active tab
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-11
+  - parallel_track: native-ui-state
+  - scope: Two bugs in `restore_session` / `restore_preview` of examples/apps/text_editor/main.prime. (1) With the `previewMarkdown` preference on, a `.md` tab saved in `session.previews` as "0" (text alone) comes back with its preview shown: `preview_if_markdown` turns it on and `restore_preview` only handles "1" and "2". (2) `session.active` is the active tab's place among the saved files, but `restore_session` selects `first.tabAt(active)`; a saved file that no longer exists is skipped, so every later tab shifts and the wrong tab is selected.
+  - acceptance:
+    - a restored tab whose saved mode is "0" shows the text alone even when `previewMarkdown` is on; a tab with no saved mode still follows the preference
+    - with a missing file before the active one in the saved session, the tab that was active is selected after the restore
+    - a snapshot/compile-run test covers each case and fails without the fix
+  - stop_rule: stop after both fixes and their tests; do not restructure the file-loading paths.
+
+- [ ] TODO-5938: The preview's pending-script count stays exact, and turning an open preview on keeps the output pane
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-11
+  - parallel_track: native-ui-state
+  - scope: src/ui/appkit/NativeUiAppKit.mm. (1) The completion blocks of `evaluateScript` (around lines 790, 810, 841, 866, 918, 1012, 1109) do `previewScriptsPending[window] -= 1` with `operator[]`, so a block that runs after `dropPreviewState` erased the window's entry leaves -1, and `anyPreviewLoading` then reports "not loading" while a script is outstanding. (2) `ps_ui_window_set_preview` calls `hideOutputPane(window)` before its "already as asked" early return, so `set_preview(true)` on a window whose preview is already on hides a running script's output pane.
+  - acceptance:
+    - a completion that arrives after the window's preview state was dropped does not create or decrement an entry (the count never goes below 0)
+    - `ps_ui_window_set_preview(w, on)` with `on` equal to the current state changes nothing, the output pane included
+    - tests (headless or AppKit snapshot driver) cover both and fail without the fix
+  - stop_rule: stop after both fixes and their tests; do not replace the preview maps with a new state type in this change.
+
+- [ ] TODO-5939: Stopping a script never signals a reaped pid and reports a stop as stopped
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-11
+  - parallel_track: native-ui-state
+  - scope: src/ui/ScriptProcess.cpp. (1) The worker reaps the child with `waitpid` and only afterwards stores `pid = 0`, so `ps_script_stop` in between can `kill()` a pid the system has already reused. (2) When a stop was requested and the runner exits with a nonzero code instead of by a signal, the run is reported as an error (`finish(run, 1, code)`) rather than stopped.
+  - acceptance:
+    - no `kill()` can target a pid after it was reaped (for example: reap with `waitid(..., WNOWAIT)` or clear the pid under a lock shared with stop before reaping)
+    - a run whose stop was requested ends as stopped (`[stopped]`, result 2) whatever its exit status
+    - a deterministic test covers the stop-then-nonzero-exit case; no timing-based test
+  - stop_rule: stop after both fixes and their tests.
