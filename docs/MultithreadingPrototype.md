@@ -93,7 +93,9 @@ scheduled and what value it produces.
 For the first slice:
 
 - `[spawn] f(...)` returns `Task<T>` when `f(...)` returns `T`
-- `wait(task)` consumes `Task<T>` and returns `T`
+- `wait(task)` consumes `Task<T>` and returns `T`; the result is a value of type `T` wherever a `T` is
+  expected, so `return(wait(task))` returns a scalar, a `String` or a struct
+  result directly
 - `wait(left, right, ...)` consumes multiple task handles and returns an
   ordinary stdlib `tuple<...>` with one result per task in argument order
 

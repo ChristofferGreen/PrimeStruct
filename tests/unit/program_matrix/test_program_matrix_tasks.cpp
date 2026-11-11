@@ -393,6 +393,85 @@ main() {
   runTaskProgram(program);
 }
 
+TEST_CASE("a waited String, struct or i32 result is returned directly") {
+  program_matrix::ProgramCase program;
+  program.name = "task_return_wait";
+  program.source = R"(
+import /std/text/*
+
+[struct]
+Reply() {
+  [String] body{String{}}
+  [i32] code{0i32}
+}
+
+[return<String> effects(heap_alloc)]
+greet([String] name) {
+  [String mut] out{String{}}
+  out.append("hello ")
+  out.appendString(name)
+  return(out)
+}
+
+[return<Reply> effects(heap_alloc)]
+make_reply([String] text, [i32] code) {
+  [String mut] body{String{}}
+  body.append("body of ")
+  body.appendString(text)
+  return(Reply{body, code})
+}
+
+[return<i32>]
+twice([i32] value) {
+  [i32 mut] result{value}
+  result = result + value
+  return(result)
+}
+
+[return<String> effects(task, heap_alloc)]
+relay([String] name) {
+  [Task<String>] t{[spawn] greet(name)};
+  return(wait(t))
+}
+
+[return<Reply> effects(task, heap_alloc)]
+relay_reply([String] name) {
+  [Task<Reply>] t{[spawn] make_reply(name, 7i32)};
+  return(wait(t))
+}
+
+[return<i32> effects(task)]
+relay_twice([i32] value) {
+  [Task<i32>] t{[spawn] twice(value)};
+  return(wait(t))
+}
+
+[return<int> effects(task, io_out, heap_alloc)]
+main() {
+  [i32] blocks{heapLiveBlocks()}
+  [u64] bytes{stringHeapBytesInUse()}
+  if(true) {
+    [String mut] who{String{}}
+    who.append("world, a name long enough to live on the string heap")
+    [String] s{relay(who)}
+    [Reply] reply{relay_reply(who)}
+    print_line(s.count())
+    print_line(reply.body.count())
+    print_line(reply.code)
+    print_line(relay_twice(21i32))
+  }
+  print_line(heapLiveBlocks() - blocks)
+  print_line(stringHeapBytesInUse() - bytes)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "58\n60\n7\n42\n0\n0\n";
+  // The native backend has no heap statistics.
+  program.skipConfigs = {"native-O0", "native-O2"};
+  runTaskProgram(program);
+}
+
 TEST_CASE("struct results of tasks are waited together and in a loop") {
   // Two tasks of a pair run at once here, so only the spawner's heap is measured.
   program_matrix::ProgramCase program;

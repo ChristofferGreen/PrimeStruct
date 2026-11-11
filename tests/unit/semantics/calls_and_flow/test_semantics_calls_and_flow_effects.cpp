@@ -363,6 +363,41 @@ TEST_CASE("destructured multi wait consumes each task handle") {
   CHECK(error.find("task handle already waited: left") != std::string::npos);
 }
 
+TEST_CASE("return of a waited String task result matches a String return") {
+  const auto source = [](const std::string &resultType, const std::string &resultBody) {
+    return R"(
+import /std/text/*
+
+[effects(heap_alloc), return<)" +
+           resultType + R"(>]
+compute() {
+)" + resultBody +
+           R"(
+}
+
+[effects(task, heap_alloc), return<String>]
+relay() {
+  [Task<)" +
+           resultType + R"(>] task{[spawn] compute()};
+  return(wait(task))
+}
+
+[effects(task, heap_alloc), return<i32>]
+main() {
+  [String] text{relay()}
+  return(text.count())
+}
+)";
+  };
+  std::string error;
+  CHECK(validateProgram(
+      source("String", "  [String mut] out{String{}}\n  return(out)"), "/main", error));
+  CHECK(error.empty());
+  error.clear();
+  CHECK_FALSE(validateProgram(source("i32", "  return(7i32)"), "/main", error));
+  CHECK(error.find("return type mismatch: expected /std/text/String") != std::string::npos);
+}
+
 TEST_CASE("task handles cannot escape through return") {
   const std::string source = R"(
 [effects(task), return<i32>]

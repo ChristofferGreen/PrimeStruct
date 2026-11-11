@@ -1101,6 +1101,15 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
                                                         structNames_);
                   }
                   if (actualStruct.empty()) {
+                    // A struct the definition reaches through an import (`String`), as the result of a waited
+                    // task names it.
+                    if (const auto importIt = importAliases_.find(actualReturnBinding.typeName);
+                        importIt != importAliases_.end() &&
+                        structNames_.count(importIt->second) > 0) {
+                      actualStruct = importIt->second;
+                    }
+                  }
+                  if (actualStruct.empty()) {
                     if (const Definition *sumDef =
                             resolveSumDefinitionForTypeText(actualReturnBinding.typeName,
                                                             namespacePrefix)) {
