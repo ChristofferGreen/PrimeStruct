@@ -697,12 +697,34 @@ bump([i32 copy mut] value) {
   return(value)
 }
 
+[sum]
+Item {
+  [i32] small
+  [i64] large
+}
+
+[return<i32>]
+pick_item([Item move] item) {
+  [i32 mut] out{0i32}
+  pick(item) {
+    small(s) {
+      out = s
+    }
+    large(l) {
+      out = convert<i32>(l)
+    }
+  }
+  return(out)
+}
+
 [effects(task, io_out), return<int>]
 main() {
   [Task<i64>] doubled{[spawn] twice(21i64)};
   [Task<i32>] bumped{[spawn] bump(4i32)};
+  [Task<i32>] picked{[spawn] pick_item(Item{[large] 9i64})};
   print_line(wait(doubled))
   print_line(wait(bumped))
+  print_line(wait(picked))
   return(0i32)
 }
 )";
@@ -715,14 +737,16 @@ main() {
                  "spawn_scalar_emit");
   REQUIRE_MESSAGE(emit.exitCode == 0, emit.err);
   const std::string cpp = readText(cppPath);
-  // twice runs on a thread; `copy mut` keeps bump inline, and the report says so.
+  // twice and bump (`copy mut`, the task's own slot) run on threads; an owned sum keeps pick_item inline, and the
+  // report says so.
   CHECK(contains(cpp, "= ps_task_spawn(rt, ps_t"));
   CHECK(contains(cpp, "= ps_task_wait("));
-  CHECK(contains(
-      emit.err,
-      "lowering: spawn of /bump runs inline: parameter `value` is a `copy` or `move` scalar, which "
-      "no real call takes yet\n"));
+  CHECK(
+      contains(emit.err,
+               "lowering: spawn of /pick_item runs inline: parameter `item` is a `copy` or `move` "
+               "sum, which no real call takes yet\n"));
   CHECK_FALSE(contains(emit.err, "/twice"));
+  CHECK_FALSE(contains(emit.err, "/bump"));
 
   const std::filesystem::path binary = scratch("spawn_scalar.bin");
   const ProgramRun build = runCommand("./primec --emit=optexe '" + sourcePath.string() +
@@ -731,7 +755,7 @@ main() {
   REQUIRE_MESSAGE(build.exitCode == 0, build.err);
   const ProgramRun actual = runCommand("'" + binary.string() + "'", "spawn_scalar_run");
   CHECK(actual.exitCode == 0);
-  CHECK(actual.out == "42\n5\n");
+  CHECK(actual.out == "42\n5\n9\n");
   CHECK(actual.err.empty());
 }
 

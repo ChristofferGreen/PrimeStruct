@@ -424,21 +424,25 @@ bool isAddressAbiStruct(const std::string &path,
          path.rfind(collection_helpers::kCanonicalCollectionsRoot, 0) != 0;
 }
 
-// Whether `path` names the struct of a `Function` type (`/__FunctionN__t...`, docs/spec/value-lifecycle.md, Lambdas).
-bool isFunctionStructPath(const std::string &path) {
-  const size_t leafStart = path.find_last_of('/');
-  const std::string_view leaf = leafStart == std::string::npos
-                                    ? std::string_view(path)
-                                    : std::string_view(path).substr(leafStart + 1);
-  return leaf.rfind("__Function", 0) == 0;
+// Whether `path` names a sum definition (`[sum]`), whose owned parameters stay inline: the call site's inline
+// binding destroys a sum temporary itself, and the real-call body would destroy the payload again.
+bool isSumDefinitionPath(
+    const std::string &path,
+    const std::unordered_map<std::string, const Definition *> &definitionsByPath) {
+  const auto defIt = definitionsByPath.find(path);
+  return defIt != definitionsByPath.end() && defIt->second != nullptr &&
+         definitionHasTransform(*defIt->second, "sum");
 }
 
 // A parameter type the address ABI passes as one slot: a scalar, a struct (its address), or a Pointer or Reference to
-// a scalar or such a struct (the address). A `copy` or `move` parameter is taken only for a `Function`: the call site
-// binds it (copying or moving the argument) in its own frame, and the body owns and destroys it.
-bool isAddressAbiParameter(const Definition &def,
-                           const Expr &param,
-                           const std::unordered_set<std::string> &structNames) {
+// a scalar or such a struct (the address). A `copy` or `move` parameter of a scalar or of a struct that is not a sum
+// is taken too: the call site binds it (copying or moving the argument) in its own frame and passes the value or the
+// copy's address, and the body owns and destroys it.
+bool isAddressAbiParameter(
+    const Definition &def,
+    const Expr &param,
+    const std::unordered_set<std::string> &structNames,
+    const std::unordered_map<std::string, const Definition *> &definitionsByPath) {
   // A default (`[i32] limit{3i32}`) is fine: the call site binds the parameter, default included, as an inlined call
   // would, and the callee gets its value.
   if (isArgsPackBinding(param) || param.args.size() > 1) {
@@ -458,9 +462,12 @@ bool isAddressAbiParameter(const Definition &def,
       if (!transform.arguments.empty() || !transform.templateArgs.empty()) {
         return false;
       }
+      if (isSupportedScalarTypeName(transform.name)) {
+        return true;
+      }
       const std::string path =
           resolveStructTypeName(transform.name, def.namespacePrefix, structNames);
-      return isFunctionStructPath(path) && isAddressAbiStruct(path, structNames);
+      return isAddressAbiStruct(path, structNames) && !isSumDefinitionPath(path, definitionsByPath);
     }
     if (!transform.arguments.empty()) {
       return false;
@@ -533,7 +540,7 @@ bool isAddressAbiRealCallShape(const Definition &def, const RealCallShapeContext
     }
   }
   for (const Expr &param : def.parameters) {
-    if (!isAddressAbiParameter(def, param, structNames)) {
+    if (!isAddressAbiParameter(def, param, structNames, byPath)) {
       return false;
     }
   }
@@ -606,10 +613,7 @@ bool resolveTaskSpawnShape(const Definition &def,
     }
     TaskSpawnParameterShape parameter;
     if (isSupportedScalarTypeName(typeTransform->name)) {
-      if (ownedParam) {
-        reasonOut = subject + "is a `copy` or `move` scalar, which no real call takes yet";
-        return false;
-      }
+      // An owned scalar is the task's own slot: the spawner evaluates (copies) it.
     } else {
       parameter.structPath =
           resolveStructTypeName(typeTransform->name, def.namespacePrefix, structNames);
@@ -621,8 +625,8 @@ bool resolveTaskSpawnShape(const Definition &def,
         reasonOut = subject + "is a collection";
         return false;
       }
-      if (ownedParam && !isFunctionStructPath(parameter.structPath)) {
-        reasonOut = subject + "is a `copy` or `move` struct, which no real call takes yet";
+      if (ownedParam && isSumDefinitionPath(parameter.structPath, *context.definitionsByPath)) {
+        reasonOut = subject + "is a `copy` or `move` sum, which no real call takes yet";
         return false;
       }
       parameter.kind = ownedParam ? TaskSpawnParameterShape::Kind::OwnedStruct

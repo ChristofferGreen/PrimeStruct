@@ -90,10 +90,11 @@
   slots from the block into `t`, the drop flags of `t` and of the lent arguments turned on, and `HeapFree` of the
   block; `wait(t)` then reads that place, so a binding or call argument copies from it and `t` destroys its value
   when its scope ends. What the task allocated for the result (a `String`'s bytes) is freed by the spawner; on
-  `optexe` that free is queued to the task's arena. Any other spawned call (a `mut` parameter, a `copy` or `move`
-  parameter that is not a closure, a `string`, a collection parameter or result, a sum result, a callee with
-  `on_error`, `require` or `try`, a method) runs inline, which is a legal schedule, and `--opt-report` says so:
-  `lowering: spawn of /f runs inline: <reason>`.
+  `optexe` that free is queued to the task's arena. A `copy` or `move` parameter of a scalar is the task's own slot
+  (the spawner evaluates the argument), and one of a struct is the block's copy, which the task destroys. Any other
+  spawned call (a `mut` parameter, a `copy` or `move` sum, a `string`, a collection parameter or result, a sum
+  result, a callee with `on_error`, `require` or `try`, a method) runs inline, which is a legal schedule, and
+  `--opt-report` says so: `lowering: spawn of /f runs inline: <reason>`.
   Every other backend runs every spawned call inline; a `Task<void>` spawn there is the call as a statement.
 - **Atomics (PSIR v35):** five opcodes work on one slot through its address, all sequentially consistent. The
   immediate is the width, 32 or 64 (anything else is invalid IR); the address is pushed first.
@@ -333,11 +334,12 @@
   returns an address of its own frame, which is gone once it returns: what it returns came in as a parameter. IR
   validation rejects a function that a `Call` reaches and that returns an address derived from its own
   `AddressOfLocal`. A definition that stays inline at every call site has no function in the module: the module holds
-  the entry and the bodies of real calls only. A `Function` parameter taken by
-  `copy` or `move` is bound (copied or moved) by the call site too, but belongs to the callee: its body holds the drop
-  flag and destroys the closure on every exit unless it moves it on, as the inlined body does. Shapes that stay inline:
-  `copy` and `move` parameters of other types, args-pack, `string`, collection, `File` and template-typed parameters;
-  sum results (`Result`, `Maybe`);
+  the entry and the bodies of real calls only. A scalar or struct parameter taken by
+  `copy` or `move` is bound (copied or moved) by the call site too, but belongs to the callee: a scalar arrives as the
+  value of the call site's copy (a `copy mut` scalar is the body's own slot, not an address), a struct as the copy's
+  address, and the body holds the drop flag and destroys the struct on every exit unless it moves it on, as the
+  inlined body does. Shapes that stay inline: `copy` and `move` parameters of sums, args-pack, `string`, collection,
+  `File` and template-typed parameters; sum results (`Result`, `Maybe`);
   definitions with `on_error`, `require`, `try`/`?` or a generated tail value; `/std/collections/` definitions and
   methods of their records; lifecycle helpers; and the `call` of a closure with a `[ref]` capture
   (docs/spec/value-lifecycle.md, Borrowing).

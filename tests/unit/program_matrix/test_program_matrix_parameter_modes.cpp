@@ -313,6 +313,95 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+// A `copy`, `copy mut` or `move` parameter of a scalar or a struct is a real call on the VM and optexe (TODO-5847):
+// the call site binds the copy (the Copy helper runs there) and the body destroys it, in the order the inlined call
+// had. A temporary or `move(x)` argument is taken over, not copied.
+TEST_CASE("real calls own their copy and move parameters") {
+  program_matrix::ProgramCase program;
+  program.name = "real_call_owned_parameters";
+  program.source = R"(
+import /std/text/*
+
+[struct]
+Noisy() {
+  [i32] id{0i32}
+  [String] text{String{}}
+
+  [effects(io_out)]
+  Destroy() {
+    print_line(this.id)
+  }
+
+  [effects(io_out)]
+  Copy([Reference<Self>] other) {
+    this.id = other.id + 100i32
+    this.text = other.text
+    print_line(this.id)
+  }
+}
+
+[effects(heap_alloc, io_out) return<i32>]
+take([Noisy move] named) {
+  [i32 mut] extra{0i32}
+  extra = named.id * 2i32
+  return(extra + named.text.count())
+}
+
+[effects(heap_alloc, io_out) return<i32>]
+keep([Noisy copy] named) {
+  [i32 mut] extra{0i32}
+  extra = named.id * 3i32
+  return(extra)
+}
+
+[effects(heap_alloc, io_out) return<i32>]
+tweak([Noisy copy mut] named) {
+  named.id = named.id + 1i32
+  named.text.append("?")
+  return(named.id + named.text.count())
+}
+
+[return<i32>]
+bump([i32 copy mut] value) {
+  [i32 mut] extra{value}
+  extra = extra + value
+  value = value + 1i32
+  return(value + extra)
+}
+
+[effects(heap_alloc, io_out) return<int>]
+main() {
+  [i32] blocks{heapLiveBlocks()}
+  [u64] bytes{stringHeapBytesInUse()}
+  if(true) {
+    [String mut] s{String{}}
+    s.append("a long enough text to live on the heap, yes")
+    [Noisy] named{Noisy{7i32, s}}
+    [i32] n{4i32}
+    print_line(keep(named))
+    print_line(tweak(named))
+    print_line(named.id)
+    print_line(named.text.count())
+    print_line(bump(n))
+    print_line(n)
+    print_line(take(Noisy{2i32, s}))
+    print_line(keep(Noisy{3i32, s}))
+    print_line(take(move(named)))
+    print_line(8888i32)
+  }
+  print_line(heapLiveBlocks() - blocks)
+  print_line(stringHeapBytesInUse() - bytes)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText =
+      "107\n107\n321\n107\n108\n152\n7\n43\n13\n4\n2\n47\n3\n9\n7\n57\n8888\n0\n0\n";
+  // The native backend has no heap statistics.
+  program.skipConfigs = {"native-O0", "native-O2"};
+  program_matrix::runProgramMatrix(program);
+}
+
 // A builtin `[vector<T> copy]` parameter owns a buffer of its own, which the callee frees: a named or field argument
 // is copied, a fresh vector or `move(x)` is handed over (docs/spec/value-lifecycle.md, Parameter Passing). Before
 // TODO-5829 the parameter aliased the caller's record, so the callee's pushes reached the caller.

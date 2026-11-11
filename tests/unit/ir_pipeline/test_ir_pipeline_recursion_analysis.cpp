@@ -373,8 +373,11 @@ TEST_CASE("eligibility rejects a recursive definition using try") {
 }
 
 namespace {
-// A definition `register([<structPath> <mode>] handler)` and the address-ABI shape check (the VM and optexe).
-bool ownedParameterShapeEligible(const std::string &structPath, const std::string &mode) {
+// A definition `register([<structPath> <mode>] handler)` and the address-ABI shape check (the VM and optexe);
+// `structPath` is a `[struct]`, or a `[sum]` with `sum` set.
+bool ownedParameterShapeEligible(const std::string &structPath,
+                                 const std::string &mode,
+                                 bool sum = false) {
   primec::Definition registerDef = makeDef("/main/register");
   primec::Expr param = makeScalarParam("handler", structPath);
   primec::Transform modeTransform;
@@ -383,7 +386,7 @@ bool ownedParameterShapeEligible(const std::string &structPath, const std::strin
   registerDef.parameters.push_back(param);
   primec::Definition structDef = makeDef(structPath);
   primec::Transform structTransform;
-  structTransform.name = "struct";
+  structTransform.name = sum ? "sum" : "struct";
   structDef.transforms.push_back(structTransform);
   const std::unordered_map<std::string, const primec::Definition *> byPath = {
       {registerDef.fullPath, &registerDef},
@@ -400,10 +403,14 @@ TEST_CASE("address ABI accepts a Function parameter taken by move or copy") {
   CHECK(ownedParameterShapeEligible("/__Function2__t0123456789abcdef", "copy"));
 }
 
-TEST_CASE("address ABI keeps other structs taken by move or copy inline") {
-  CHECK_FALSE(ownedParameterShapeEligible("/main/Holder", "move"));
-  CHECK_FALSE(ownedParameterShapeEligible("/main/Holder", "copy"));
+TEST_CASE("address ABI takes any struct but a sum by move or copy") {
+  CHECK(ownedParameterShapeEligible("/main/Holder", "move"));
+  CHECK(ownedParameterShapeEligible("/main/Holder", "copy"));
   CHECK(ownedParameterShapeEligible("/main/Holder", "mut"));
+  // A sum temporary is destroyed by the call site's inline binding (TODO-5847, the collection shapes, lists it).
+  CHECK_FALSE(ownedParameterShapeEligible("/main/Item", "move", true));
+  CHECK_FALSE(ownedParameterShapeEligible("/main/Item", "copy", true));
+  CHECK(ownedParameterShapeEligible("/main/Item", "mut", true));
 }
 
 TEST_SUITE_END();

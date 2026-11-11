@@ -1,6 +1,7 @@
 #include "primec/ir_lowerer/IrLowererLowerStatementsCallsStage.h"
 
 #include "primec/ir_lowerer/IrLowererCallHelpers.h"
+#include "primec/ir_lowerer/IrLowererFlowHelpers.h"
 #include "primec/ir_lowerer/IrLowererLowerEffects.h"
 #include "primec/ir_lowerer/IrLowererLowerStatementsCallsStep.h"
 #include "primec/ir_lowerer/IrLowererLowerStatementsEntryExecutionStep.h"
@@ -279,7 +280,13 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
             return false;
           }
           LocalInfo &info = localIt->second;
+          // A `copy` or `move` scalar is the body's own slot (the call site bound a copy and passed its value), not
+          // the address of a caller's place; an owned struct still arrives as the address of the call site's copy.
+          const bool ownedScalar =
+              info.structTypeName.empty() &&
+              (parameterHasTransform(param, "copy") || parameterHasTransform(param, "move"));
           if (info.kind == LocalInfo::Kind::Value && info.isMutable && !info.isFileHandle &&
+              !ownedScalar &&
               (!info.structTypeName.empty() || (!info.isFileError && !info.isResult &&
                                                 info.valueKind != LocalInfo::ValueKind::Unknown &&
                                                 info.valueKind != LocalInfo::ValueKind::String))) {

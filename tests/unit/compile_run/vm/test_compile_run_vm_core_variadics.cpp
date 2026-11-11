@@ -631,12 +631,19 @@ twice([i64] value) {
   return(result)
 }
 
+[return<i32>]
+label_size([string] label) {
+  return(label.count())
+}
+
 [effects(task, io_out), return<int>]
 main() {
   [Task<i32>] bumped{[spawn] bump(4i32)};
   [Task<i64>] doubled{[spawn] twice(21i64)};
+  [Task<i32>] labeled{[spawn] label_size("four")};
   print_line(wait(bumped))
   print_line(wait(doubled))
+  print_line(wait(labeled))
   return(0i32)
 }
 )";
@@ -646,19 +653,21 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main --opt-report > " +
                              quoteShellArg(outPath) + " 2> " + quoteShellArg(errPath);
   CHECK(runCommand(runCmd) == 0);
-  CHECK(readFile(outPath) == "5\n42\n");
+  CHECK(readFile(outPath) == "5\n42\n4\n");
   const std::string report = readFile(errPath);
-  // `copy mut` keeps bump inline; twice runs as a task, so the report does not name it.
-  CHECK(report.find(
-            "lowering: spawn of /bump runs inline: parameter `value` is a `copy` or `move` scalar, "
-            "which no real call takes yet\n") != std::string::npos);
+  // A `string` parameter keeps label_size inline; bump (`copy mut`) and twice run as tasks, so the report does not
+  // name them.
+  CHECK(report.find("lowering: spawn of /label_size runs inline: parameter `label` is a `string`, "
+                    "which no real call takes yet\n") != std::string::npos);
   CHECK(report.find("/twice") == std::string::npos);
-  // The spawn of twice is a TaskSpawn in the lowered IR.
+  CHECK(report.find("/bump") == std::string::npos);
+  // The spawns of twice and bump are TaskSpawns in the lowered IR.
   const std::string dumpPath = testScratchPath("vm_spawn_opt_report.ir").string();
   CHECK(runCommand("./primec --emit=vm " + srcPath + " --entry /main --dump-stage ir-lowered > " +
                    quoteShellArg(dumpPath)) == 0);
   const std::string dump = readFile(dumpPath);
-  CHECK(dump.find("TaskSpawn 1 /twice") != std::string::npos);
+  CHECK(dump.find("/twice") != std::string::npos);
+  CHECK(dump.find("TaskSpawn 1 /bump") != std::string::npos);
   CHECK(dump.find("TaskWait") != std::string::npos);
 }
 

@@ -361,7 +361,10 @@ Passing), and a borrowed `[T mut]` parameter writes the caller's place, so a
 spawned callee cannot take a binding or field through one: `spawn argument
 `value` of /bump is a mutable borrow of the spawner's value: a task works on
 copies, take it as `[i32 copy mut]``. A `[T copy mut]` parameter gets the task's
-own copy, and the spawner's binding keeps its value. A spawned method call
+own copy, and the spawner's binding keeps its value; a spawned call with a
+`copy`, `copy mut` or `move` parameter of a scalar or a struct runs as a task
+on the VM and `optexe` (the spawner copies or hands over the value, the task
+destroys its struct copy). A spawned method call
 checks its receiver the same way: by its struct type (`spawn receiver of
 /Holder/read is not sendable: field `entry` of Holder is Reference<i32>`), and a
 `mut` method on a binding is `spawn receiver of /Counter/bump is a mutable

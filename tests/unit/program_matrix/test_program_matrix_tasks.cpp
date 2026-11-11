@@ -129,6 +129,97 @@ main() {
   runTaskProgram(program);
 }
 
+// A spawned call with a `copy`, `copy mut` or `move` parameter of a scalar or a struct runs as a task (TODO-5847):
+// the spawner evaluates the scalar and copies (or takes over) the struct into the task block, the task owns and
+// destroys its copy, and the spawner's binding keeps its value. `probe` makes the main arena free what the tasks
+// freed (optexe queues a free of another arena's block to that arena).
+TEST_CASE("a task owns its copy or move argument") {
+  program_matrix::ProgramCase program;
+  program.name = "task_owned_arguments";
+  program.source = R"(
+import /std/text/*
+
+[struct]
+Named() {
+  [i32] id{0i32}
+  [String] text{String{}}
+}
+
+[return<i32>]
+bump([i32 copy mut] value) {
+  [i32 mut] extra{value}
+  extra = extra + value
+  value = value + 1i32
+  return(value + extra)
+}
+
+[effects(heap_alloc) return<i32>]
+grow([String copy mut] text) {
+  text.append("!")
+  return(text.count())
+}
+
+[effects(heap_alloc) return<i32>]
+tweak([Named copy mut] named) {
+  named.id = named.id + 1i32
+  named.text.append("?")
+  return(named.id + named.text.count())
+}
+
+[effects(heap_alloc) return<i32>]
+take([Named move] named) {
+  [i32 mut] extra{0i32}
+  extra = named.id * 2i32
+  return(extra + named.text.count())
+}
+
+[return<i32> effects(heap_alloc)]
+probe() {
+  if(true) {
+    [String mut] scratch{String{}}
+    scratch.append("an allocation that makes this arena free what tasks freed")
+  }
+  return(heapLiveBlocks() * 1000i32 + convert<i32>(stringHeapBytesInUse()))
+}
+
+[effects(task, heap_alloc, io_out) return<i32>]
+round() {
+  [String mut] s{String{}}
+  s.append("a long enough text to live on the heap, yes")
+  [Named] named{Named{7i32, s}}
+  [i32] n{4i32}
+  [Task<i32>] b{[spawn] bump(n)}
+  [Task<i32>] g{[spawn] grow(s)}
+  [Task<i32>] t{[spawn] tweak(named)}
+  [Task<i32>] m{[spawn] take(Named{2i32, s})}
+  print_line(wait(b))
+  print_line(wait(g))
+  print_line(wait(t))
+  print_line(wait(m))
+  print_line(n)
+  print_line(s.count())
+  print_line(named.id)
+  print_line(named.text.count())
+  [Task<i32>] last{[spawn] take(move(named))}
+  return(wait(last))
+}
+
+[effects(task, heap_alloc, io_out) return<int>]
+main() {
+  [i32] before{probe()}
+  print_line(round())
+  [i32] after{probe()}
+  print_line(after - before)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "13\n44\n52\n47\n4\n43\n7\n43\n57\n0\n";
+  // The native backend has no heap statistics.
+  program.skipConfigs = {"native-O0", "native-O2"};
+  runTaskProgram(program);
+}
+
 TEST_CASE("a task spawned in a loop is waited in every iteration") {
   program_matrix::ProgramCase program;
   program.name = "task_spawn_in_loop";
