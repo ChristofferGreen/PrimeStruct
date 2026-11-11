@@ -21,7 +21,7 @@
 // x9 = the address of the sync state.
 inline void Arm64Emitter::emitSyncAddress() {
   emitHeapStateAddress();
-  emitAddRegImm(9, 9, static_cast<uint16_t>(HeapStateBytes + 16));
+  emitAddRegImm(9, 9, static_cast<uint16_t>(HeapStateBytes + arm64_theap::RuntimeBytes));
 }
 
 // The entry function's first instructions in a synchronized module: the gate and the condition variable as their

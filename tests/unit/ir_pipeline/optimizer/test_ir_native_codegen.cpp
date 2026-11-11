@@ -1578,3 +1578,118 @@ TEST_CASE("a Mach-O image imports libSystem functions and keeps writable state")
   CHECK_FALSE(primec::testing::buildMachOImportProbe("abs", image, error));
 #endif
 }
+
+#if defined(PRIMESTRUCT_NATIVE_CODEGEN_ARM64)
+
+namespace {
+
+primec::IrFunction nativeTaskFunction(const std::string &name,
+                                      uint32_t parameterCount,
+                                      std::vector<primec::IrInstruction> instructions) {
+  primec::IrFunction function;
+  function.name = name;
+  function.parameterCount = parameterCount;
+  function.instructions = std::move(instructions);
+  return function;
+}
+
+// What a native run of a module exits with and writes.
+struct NativeThreadRun {
+  bool built = false;
+  int exitCode = -1;
+  std::string out;
+  std::string err;
+  std::string buildError;
+};
+
+NativeThreadRun runNativeWithStderr(const primec::IrModule &module, const std::string &name) {
+  NativeThreadRun run;
+  const std::filesystem::path binary = primec::testing::testScratchPath("native_codegen/" + name);
+  if (!primec::NativeEmitter().emitExecutable(module, binary.string(), run.buildError)) {
+    return run;
+  }
+  run.built = true;
+  const std::filesystem::path outPath = binary.string() + ".stdout";
+  const std::filesystem::path errPath = binary.string() + ".stderr";
+  const int status = std::system(
+      ("'" + binary.string() + "' > '" + outPath.string() + "' 2> '" + errPath.string() + "'")
+          .c_str());
+  run.exitCode = WIFEXITED(status) ? WEXITSTATUS(status) : -1;
+  const auto slurp = [](const std::filesystem::path &path) {
+    std::ifstream file(path, std::ios::binary);
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    return buffer.str();
+  };
+  run.out = slurp(outPath);
+  run.err = slurp(errPath);
+  return run;
+}
+
+} // namespace
+
+// 40 tasks, one after the other: each allocates a block on its own thread and returns the address, and the waiter,
+// another thread, reads and frees it. The states of the ended threads go back to a pool and the next task takes one,
+// so a block outlives its thread and is freed to the allocator state that owns it.
+TEST_CASE("arm64 native frees blocks that tasks made on threads that have ended") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+  module.functions.push_back(nativeTaskFunction(
+      "/main",
+      0,
+      optimizer_test::assemble(
+          {"PushI64 0",   "StoreLocal 0", "PushI32 0",     "StoreLocal 1", "LoadLocal 1",
+           "PushI32 40",  "CmpLtI32",     "JumpIfZero 25", "TaskSpawn 1",  "StoreLocal 2",
+           "LoadLocal 2", "TaskWait",     "StoreLocal 3",  "LoadLocal 3",  "LoadIndirect",
+           "LoadLocal 0", "AddI64",       "StoreLocal 0",  "LoadLocal 3",  "HeapFree",
+           "LoadLocal 1", "PushI32 1",    "AddI32",        "StoreLocal 1", "Jump 4",
+           "LoadLocal 0", "PrintI64 1",   "PushI32 0",     "ReturnI32"})));
+  module.functions.push_back(nativeTaskFunction("/make",
+                                                0,
+                                                optimizer_test::assemble({"PushI32 1",
+                                                                          "HeapAlloc",
+                                                                          "StoreLocal 0",
+                                                                          "LoadLocal 0",
+                                                                          "PushI64 7",
+                                                                          "StoreIndirect",
+                                                                          "Pop",
+                                                                          "LoadLocal 0",
+                                                                          "ReturnI64"})));
+  const NativeThreadRun run = runNativeWithStderr(module, "task_blocks_outlive_threads");
+  REQUIRE_MESSAGE(run.built, run.buildError);
+  CHECK(run.exitCode == 0);
+  CHECK(run.out == "280\n");
+}
+
+// The block is the main thread's; a task frees it (onto the main thread's remote-free list), and the main thread
+// frees it again: the second free finds the block marked free and faults, as a double free on one thread does.
+TEST_CASE("arm64 native faults on a double free across threads") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+  module.functions.push_back(nativeTaskFunction("/main",
+                                                0,
+                                                optimizer_test::assemble({"PushI32 2",
+                                                                          "HeapAlloc",
+                                                                          "StoreLocal 0",
+                                                                          "LoadLocal 0",
+                                                                          "TaskSpawn 1",
+                                                                          "StoreLocal 1",
+                                                                          "LoadLocal 1",
+                                                                          "TaskWait",
+                                                                          "Pop",
+                                                                          "LoadLocal 0",
+                                                                          "HeapFree",
+                                                                          "PushI32 0",
+                                                                          "ReturnI32"})));
+  module.functions.push_back(nativeTaskFunction(
+      "/release",
+      1,
+      optimizer_test::assemble(
+          {"StoreLocal 0", "LoadLocal 0", "HeapFree", "PushI32 0", "ReturnI32"})));
+  const NativeThreadRun run = runNativeWithStderr(module, "task_double_free");
+  REQUIRE_MESSAGE(run.built, run.buildError);
+  CHECK(run.exitCode == 3);
+  CHECK(run.err == "invalid heap free address: the block is already free\n");
+}
+
+#endif

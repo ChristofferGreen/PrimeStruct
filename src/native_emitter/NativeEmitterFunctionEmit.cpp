@@ -246,6 +246,9 @@ bool emitNativeFunctions(const IrModule &module,
       // x17 addresses a far slot: x0-x7 may hold register arguments here.
       emitter.emitStoreLocalFromReg(layout.framePointerLocalIndex, 21, 17);
       emitter.emitStoreLocalFromReg(layout.linkLocalIndex, 30, 17);
+      if (isEntryFunction && emitter.threaded()) {
+        emitter.emitThreadHeapInit();
+      }
       if (isEntryFunction && emitter.synchronized()) {
         emitter.emitSyncInit();
       }

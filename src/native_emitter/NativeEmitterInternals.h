@@ -320,6 +320,9 @@ class Arm64Emitter {
   }
   bool emitTaskSpawn(uint32_t parameterCount, size_t targetFunction, std::string &error);
   void emitTaskWait();
+  // Per-thread allocator states (NativeEmitterInternalsArm64ThreadHeap.h).
+  void emitThreadHeapInit();
+  void emitThreadHeapRuntime(std::vector<std::pair<size_t, std::string>> &slotLoads);
   // One atomic, lock, condition or task opcode; `imm` is the opcode's immediate and `spawnedParameters` the parameter
   // count of the function a TaskSpawn starts.
   bool
@@ -345,7 +348,7 @@ class Arm64Emitter {
     if (!usesHeapRuntime() && !sync_) {
       return 0;
     }
-    return HeapStateBytes + ((threaded_ || sync_) ? 16 : 0) + (sync_ ? 144 : 0);
+    return HeapStateBytes + ((threaded_ || sync_) ? 48 : 0) + (sync_ ? 144 : 0);
   }
   void emitTaskRuntime(std::vector<std::pair<size_t, size_t>> &callFixups,
                        std::vector<std::pair<size_t, std::string>> &slotLoads);
@@ -590,6 +593,7 @@ class Arm64Emitter {
     size_t heapStateFixups = 0;
     size_t taskSpawnCalls = 0;
     size_t taskWaitCalls = 0;
+    size_t threadHeapInitCalls = 0;
     size_t syncCalls[4] = {0, 0, 0, 0};
     Arm64InstrumentationCounters counters;
   };
@@ -601,6 +605,7 @@ class Arm64Emitter {
             heapStateFixups_.size(),
             taskSpawnCalls_.size(),
             taskWaitCalls_.size(),
+            threadHeapInitCalls_.size(),
             {mutexLockCalls_.size(),
              mutexUnlockCalls_.size(),
              conditionWaitCalls_.size(),
@@ -615,6 +620,7 @@ class Arm64Emitter {
     heapStateFixups_.resize(point.heapStateFixups);
     taskSpawnCalls_.resize(point.taskSpawnCalls);
     taskWaitCalls_.resize(point.taskWaitCalls);
+    threadHeapInitCalls_.resize(point.threadHeapInitCalls);
     mutexLockCalls_.resize(point.syncCalls[0]);
     mutexUnlockCalls_.resize(point.syncCalls[1]);
     conditionWaitCalls_.resize(point.syncCalls[2]);
@@ -712,7 +718,7 @@ class Arm64Emitter {
   void emitHeapStateAddress();
   void emitHeapLockAddress();
   void emitSyncAddress();
-  size_t emitLockedHeapEntry(size_t inner);
+  void emitHeapResolveState();
 
   void emitStrbRegBase(uint8_t rt, uint8_t rn, uint16_t offsetBytes);
   void emitWriteSyscall(uint64_t fd, uint8_t bufferReg, uint8_t lengthReg);
@@ -830,6 +836,15 @@ class Arm64Emitter {
   std::vector<TaskSpawnCall> taskSpawnCalls_;
   std::vector<size_t> taskWaitCalls_;
   bool threaded_ = false;
+  // Per-thread allocator states: the BL sites of the state lookup, of the remote-free drain and of the entry's
+  // init, and the entries of the routines.
+  std::vector<size_t> heapCurStateCalls_;
+  std::vector<size_t> heapDrainCalls_;
+  std::vector<size_t> threadHeapInitCalls_;
+  size_t heapCurState_ = 0;
+  size_t heapDrain_ = 0;
+  size_t heapAcquire_ = 0;
+  size_t heapRelease_ = 0;
   // Locks and conditions: the BL sites of the four opcodes and the entries of the routines the task routines share.
   std::vector<size_t> mutexLockCalls_;
   std::vector<size_t> mutexUnlockCalls_;
@@ -848,9 +863,11 @@ class Arm64Emitter {
 #include "NativeEmitterInternalsArm64Core.h"
 #include "NativeEmitterInternalsArm64Io.h"
 #include "NativeEmitterInternalsArm64Host.h"
+#include "NativeEmitterInternalsArm64Encodings.h"
 #include "NativeEmitterInternalsArm64Heap.h"
 #include "NativeEmitterInternalsArm64Tasks.h"
 #include "NativeEmitterInternalsArm64Sync.h"
+#include "NativeEmitterInternalsArm64ThreadHeap.h"
 #include "NativeEmitterInternalsArm64FloatRegisters.h"
 #include "NativeEmitterInternalsArm64RegAlloc.h"
 

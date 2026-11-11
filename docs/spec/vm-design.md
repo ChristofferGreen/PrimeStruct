@@ -213,9 +213,23 @@
   the task a 1 MiB value stack below them, pushes the parameters as a caller would, calls the function and stores
   x0. A spawn target never takes register arguments. `TaskWait` checks the handle's block header (`task handle
   already waited` for a freed block, `invalid task handle in IR` otherwise; a freed block that was reused reads as a
-  handle), joins the thread, reads the result and frees the block. A module with `TaskSpawn` takes one spin lock
-  (CASAL, store-release) around the heap routines; a module without it emits the code it did before. A fault leaves
+  handle), joins the thread, reads the result and frees the block. A module with `TaskSpawn` allocates from
+  per-thread allocator states (below); a module without it emits the code it did before. A fault leaves
   through the exit system call, which ends every thread. Atomics, mutexes and conditions on native are described in their own entries (Atomics, Mutexes, Conditions).
+  **Heaps of native threads (TODO-5800):** each thread has an allocator state of its own (the chunk cursor and end,
+  one free-list head per size class, a remote-free head and a pool link). The main thread keeps the data segment's;
+  a spawned thread takes one from a pool (mmap'd pages that are never unmapped, since a block can outlive its
+  thread) when it starts, records it in a pthread key and gives it back when it ends, so a later thread continues
+  with the chunks and free lists of an earlier one. The running thread's state is the data segment's when
+  TPIDRRO_EL0 equals the main thread's (recorded by the entry function, which also creates the key) and the key's
+  value otherwise. A pooled chunk is mapped aligned to its 256 KiB (twice the size is mapped and the excess unmapped)
+  and starts with its owner's state, so the owner of a block is found by masking its address; `HeapFree` of a block
+  of another thread's chunk marks it free and pushes it onto the owner's remote-free list with `casal`, which the
+  owner takes back with one `swpal` and sorts into its size classes when the free list of the class it needs is
+  empty, so a double free across threads is `invalid heap free address: the block is already free` as on one thread.
+  Only taking a state from the pool and giving it back take the lock word. Large blocks (their own mapping) are
+  unmapped by whoever frees them. Four tasks that allocate and free 2,000,000 small blocks each ran 70 times faster
+  than with the one lock of TODO-5942 (0.022 s against 1.55 s), and one task takes the time it took (0.067 s).
 - **Tasks on threads (`optexe`, `optcpp`):** the optimized C++ emitter runs each `TaskSpawn` on an OS thread of its
   own (`OptCppTaskRuntime` in `src/backend/IrToOptCppRuntime.h`, pasted into the program only when the module has
   task opcodes, so a program without tasks is unchanged). The spawner copies the arguments into a task block,

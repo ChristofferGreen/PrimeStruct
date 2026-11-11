@@ -153,6 +153,14 @@ inline void Arm64Emitter::emitHeapRuntime() {
   const auto bindCbnz = [&](size_t at, uint8_t reg) {
     patchWord(at, cbnz(reg, static_cast<int32_t>(currentWordIndex() - at)));
   };
+  // The allocator state of the running thread: the data segment's, or in a threaded module the thread's own.
+  const auto resolveState = [&]() {
+    if (threaded_) {
+      emitHeapResolveState();
+    } else {
+      emitHeapStateAddress();
+    }
+  };
   const auto offsetTo = [&](size_t target) {
     return static_cast<int32_t>(target) - static_cast<int32_t>(currentWordIndex());
   };
@@ -184,11 +192,12 @@ inline void Arm64Emitter::emitHeapRuntime() {
   emitCompareReg(3, 4);
   const size_t allocLarge = branch(CondCode::Hi);
   emitHeapPoolClass();
-  emitHeapStateAddress();
+  resolveState();
   emitClassHead();
   emit(encodeLdrRegBase(7, 6, 0));
   const size_t allocBump = currentWordIndex();
   emit(encodeCbz(7, 0));
+  const size_t allocReuse = currentWordIndex();
   // Reuse the class's first free block: unlink it (the link is its first slot) and zero its slots.
   emit(encodeLdrRegBase(8, 7, 16));
   emit(encodeStrRegBase(8, 6, 0));
@@ -201,6 +210,15 @@ inline void Arm64Emitter::emitHeapRuntime() {
   const size_t allocReused = jump();
   // Carve the block from the current chunk, mapping a new chunk when it does not fit (and the first time).
   bindCbz(allocBump, 7);
+  if (threaded_) {
+    // The blocks other threads freed to this state go onto its free lists first.
+    emit(0xF81F0FFEu); // str x30, [sp, #-16]!
+    heapDrainCalls_.push_back(currentWordIndex());
+    emit(encodeBl(0));
+    emit(0xF84107FEu); // ldr x30, [sp], #16
+    emit(encodeLdrRegBase(7, 6, 0));
+    emit(cbnz(7, offsetTo(allocReuse)));
+  }
   emit(encodeLdrRegBase(7, 9, 0));
   emit(encodeLdrRegBase(8, 9, 8));
   emit(lslImm(3, 5, 4));
@@ -209,13 +227,42 @@ inline void Arm64Emitter::emitHeapRuntime() {
   const size_t allocFits = branch(CondCode::Ls);
   emitMovReg(10, 2);
   emitMovReg(11, 5);
-  emitMovImm64(7, HeapPoolChunkBytes);
+  emitMovImm64(7, threaded_ ? 2 * HeapPoolChunkBytes : HeapPoolChunkBytes);
   emitMmap(7);
   const size_t chunkFailed = branch(CondCode::Hs);
   emitMovReg(7, 0);
-  emitMovImm64(8, HeapPoolChunkBytes);
-  emitAddReg(8, 7, 8);
-  emit(encodeStrRegBase(8, 9, 8));
+  if (threaded_) {
+    // A chunk is aligned to its size and starts with its owner's state: map twice the size, keep the aligned half.
+    emitMovImm64(3, HeapPoolChunkBytes - 1);
+    emitAddReg(8, 7, 3);
+    emit(lsrImm(8, 8, arm64_theap::ChunkShift));
+    emit(lslImm(8, 8, arm64_theap::ChunkShift));
+    emitSubReg(1, 8, 7);
+    const size_t noHead = currentWordIndex();
+    emit(encodeCbz(1, 0));
+    emitMovReg(0, 7);
+    emitMovImm64(16, SysMunmap);
+    emit(encodeSvc());
+    bindCbz(noHead, 1);
+    emitMovImm64(3, HeapPoolChunkBytes);
+    emitAddReg(1, 7, 3);
+    emitSubReg(1, 1, 8);
+    const size_t noTail = currentWordIndex();
+    emit(encodeCbz(1, 0));
+    emitAddReg(0, 8, 3);
+    emitMovImm64(16, SysMunmap);
+    emit(encodeSvc());
+    bindCbz(noTail, 1);
+    emit(encodeStrRegBase(9, 8, 0));
+    emitMovImm64(3, HeapPoolChunkBytes);
+    emitAddRegImm(7, 8, 16);
+    emitAddReg(8, 8, 3);
+    emit(encodeStrRegBase(8, 9, 8));
+  } else {
+    emitMovImm64(8, HeapPoolChunkBytes);
+    emitAddReg(8, 7, 8);
+    emit(encodeStrRegBase(8, 9, 8));
+  }
   emitMovReg(2, 10);
   emitMovReg(5, 11);
   emit(lslImm(3, 5, 4));
@@ -283,7 +330,28 @@ inline void Arm64Emitter::emitHeapRuntime() {
   emit(encodeLdrRegBase(3, 10, 8));
   emit(lsrImm(3, 3, 4));
   emitHeapPoolClass();
-  emitHeapStateAddress();
+  size_t freeRemoteDone = SIZE_MAX;
+  resolveState();
+  if (threaded_) {
+    // A block of another thread's chunk goes onto its owner's remote-free list (compare-and-swap push).
+    emit(lsrImm(11, 10, arm64_theap::ChunkShift));
+    emit(lslImm(11, 11, arm64_theap::ChunkShift));
+    emit(encodeLdrRegBase(11, 11, 0));
+    emitCompareReg(11, 9);
+    const size_t isLocal = branch(CondCode::Eq);
+    emitMovImm64(2, HeapHeaderMagicFree);
+    emit(encodeStrRegBase(2, 10, 0));
+    emitAddRegImm(11, 11, static_cast<uint16_t>(arm64_theap::RemoteHeadOffset));
+    const size_t retry = currentWordIndex();
+    emit(encodeLdrRegBase(4, 11, 0));
+    emit(encodeStrRegBase(4, 10, 16));
+    emitMovReg(3, 4);
+    emit(arm64_atomics::casal(3, 10, 11));
+    emitCompareReg(3, 4);
+    emit(encodeBCond(offsetTo(retry), static_cast<uint8_t>(CondCode::Ne)));
+    freeRemoteDone = jump();
+    bind(isLocal, CondCode::Eq);
+  }
   emitClassHead();
   emit(encodeLdrRegBase(8, 6, 0));
   emit(encodeStrRegBase(8, 10, 16));
@@ -293,6 +361,9 @@ inline void Arm64Emitter::emitHeapRuntime() {
   bindCbz(freeNull, 0);
   bindJump(freeIgnored);
   bindJump(freeUnmapped);
+  if (freeRemoteDone != SIZE_MAX) {
+    bindJump(freeRemoteDone);
+  }
   emitMovImm64(0, 0);
   emit(encodeRet());
   static constexpr std::string_view FreeMessage =
@@ -409,23 +480,19 @@ inline void Arm64Emitter::emitHeapRuntime() {
   emitMessage(FreeMessage, freeMessage);
   emitMessage(ReallocMessage, reallocMessage);
 
-  // A threaded module calls the routines through entries that hold the heap lock (realloc's own calls of alloc and
-  // free go to the routines directly, under its lock).
-  size_t allocEntry = allocIndex;
-  size_t freeEntry = freeIndex;
-  size_t reallocEntry = reallocIndex;
-  if (threaded_) {
-    allocEntry = emitLockedHeapEntry(allocIndex);
-    freeEntry = emitLockedHeapEntry(freeIndex);
-    reallocEntry = emitLockedHeapEntry(reallocIndex);
-  }
   for (const size_t site : heapAllocCalls_) {
-    patchWord(site, encodeBl(static_cast<int32_t>(allocEntry) - static_cast<int32_t>(site)));
+    patchWord(site, encodeBl(static_cast<int32_t>(allocIndex) - static_cast<int32_t>(site)));
   }
   for (const size_t site : heapFreeCalls_) {
-    patchWord(site, encodeBl(static_cast<int32_t>(freeEntry) - static_cast<int32_t>(site)));
+    patchWord(site, encodeBl(static_cast<int32_t>(freeIndex) - static_cast<int32_t>(site)));
   }
   for (const size_t site : heapReallocCalls_) {
-    patchWord(site, encodeBl(static_cast<int32_t>(reallocEntry) - static_cast<int32_t>(site)));
+    patchWord(site, encodeBl(static_cast<int32_t>(reallocIndex) - static_cast<int32_t>(site)));
+  }
+  for (const size_t site : heapCurStateCalls_) {
+    patchWord(site, encodeBl(static_cast<int32_t>(heapCurState_) - static_cast<int32_t>(site)));
+  }
+  for (const size_t site : heapDrainCalls_) {
+    patchWord(site, encodeBl(static_cast<int32_t>(heapDrain_) - static_cast<int32_t>(site)));
   }
 }

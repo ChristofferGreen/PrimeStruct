@@ -317,6 +317,7 @@ bool buildNativeImage(const IrModule &module,
     std::vector<std::pair<size_t, size_t>> taskCallFixups;
     std::vector<std::pair<size_t, std::string>> taskSlotLoads;
     emitter.emitSyncRuntime(taskSlotLoads);
+    emitter.emitThreadHeapRuntime(taskSlotLoads);
     emitter.emitTaskRuntime(taskCallFixups, taskSlotLoads);
     for (const auto &[codeIndex, function] : taskCallFixups) {
       callFixups.push_back({codeIndex, function});
