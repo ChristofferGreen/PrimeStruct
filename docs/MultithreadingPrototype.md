@@ -936,13 +936,14 @@ block on another task; merging them is open question 1.
 
 ### The Server
 
-`/std/http/server` gets `serveWorkers(handler, config)` and `serveWorkersUntil(handler, config, stop)`, and
-`ServerConfig` gets `workers` (0 means one per core, from a new `/std/os` `cpuCount()`). The name mirrors
+Implemented on `optexe` (docs/spec/stdlib-reference.md, Workers): `/std/http/server` has
+`serveWorkers(handler, config)` and `serveWorkersUntil(handler, config, stop)`, and
+`ServerConfig` has `workers` (0 means one per core, from `/std/os` `cpuCount()`). The name mirrors
 `serve`/`serveUntil` and says what differs, and the thread count joins the other limits in `ServerConfig`
 instead of being a bare number argument.
 
 ```prime
-[return<int> effects(heap_alloc, io_err, net_io, task) on_error<ServeError, log_serve_error>]
+[return<int> effects(heap_alloc, io_err, net_io, task, lock, channel, atomic) on_error<ServeError, log_serve_error>]
 main() {
   [ServerConfig] config{ServerConfig{[port] 8080i32, [workers] 4i32}}
   serveWorkers(withRequestLog(todo_app()), config)?
@@ -958,15 +959,24 @@ main() {
   its own slot, never a worker (TODO-5705's guarantee).
 - **The handler runs under a mutex:** the handler value (for a `WebApp<State>` its state, its routes and their
   closures' own `mut` captures) moves into a `Mutex`, and every request calls it inside `locked`. Existing
-  `WebApp<State>`, `AppRouter<State>` and `Router` apps need no change beyond the call and `task` in `main`; their
-  route tables store plain `Function` handlers, which are sendable by construction, so the app is sendable when its
-  `State` is. A handler that captures a `Pointer` is already rejected where it is written, under `serve` too.
+  `WebApp<State>`, `AppRouter<State>` and `Router` apps need no change beyond the call and the effects `task`,
+  `lock`, `channel` and `atomic` in `main`; their
+  route tables store plain `Function` handlers, which are sendable by construction, and keep their literal names in
+  the sendable `LiteralText`, so the app is sendable when its `State` is. The workers are not generic: the server
+  erases the handler into a `Function` and locks a `Mutex` of that, so an app that is not sendable is rejected by
+  the `Function` rule (``closure cannot be a Function: capture `inner`, field `state` of ...``). A handler that captures a `Pointer` is already rejected where it is written, under `serve` too.
 - **What runs in parallel:** receiving, parsing, serializing the response and sending. What does not: everything
   the handler does, including writing the page's HTML, which happens inside handlers. A handler that does heavy
   work therefore gains little until handlers that only read the state share a read lock (TODO-5804); the server
   leaves measure both cases.
-- Worker threads block `SIGINT` and `SIGTERM`, so the signal interrupts the poller's `poll` and `stopRequested()`
-  is seen at once.
+- Worker threads block `SIGINT` and `SIGTERM` (`/std/os` `blockStopSignals`), so the signal interrupts the poller's
+  `poll` and `stopRequested()` is seen at once. On stop the poller stops listening, closes the connections that wait
+  for input and closes the job channel; each worker finishes the request it is answering, and then the call returns.
+- **The slots' bytes** are one block that the poller and the workers share through a `[sendable]` struct holding
+  its pointer; a slot's bytes belong to whoever holds the slot. Both channels hold one entry per slot, so neither
+  side ever waits in `send`.
+- **The VM** cannot run it: `/std/net` passes `Pointer<u8>` buffers to host functions, which the VM rejects
+  (TODO-5862).
 - **Rejected: several processes on one port** (`SO_REUSEPORT`, N copies of the binary). Each process would have its
   own state: a POST would change one copy of the todo list and the next GET could read another. It only fits
   stateless apps, and the stdlib's app model keeps state in the process (`docs/WebAppsPlan.md`, principle 2).

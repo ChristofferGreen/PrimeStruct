@@ -655,6 +655,26 @@ namespace std {
     return(StringView{[data] __pstext_literal(text), [fieldLength] text.count()})
   }
 
+  // The text of a `string` (a literal) as a value that may cross to another task: a view is not sendable, because
+  // the text it borrows may change or go away, but a literal's bytes are part of the program. Made with
+  // `literalTextOf("...")`; `view()` gives the StringView. Route and handler tables keep their names in it, so they
+  // can be shared through a `Mutex`.
+  [public struct sendable]
+  LiteralText() {
+    [public Pointer<u8>] data{__pstext_literal("")}
+    [public i32] fieldLength{0i32}
+
+    [return<StringView>]
+    view() {
+      return(StringView{[data] this.data, [fieldLength] this.fieldLength})
+    }
+  }
+
+  [public return<LiteralText>]
+  literalTextOf([string] text) {
+    return(LiteralText{[data] __pstext_literal(text), [fieldLength] text.count()})
+  }
+
   // The index of the first (or, backwards, the last) byte of the haystack that is in (or, `inSet` false, is not in) the
   // set, starting at `start` and moving toward the end (or toward the start when `backwards`); -1 when there is none.
   [return<i32>]

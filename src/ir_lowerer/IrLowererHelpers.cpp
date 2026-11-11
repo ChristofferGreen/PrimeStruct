@@ -220,18 +220,15 @@ static bool isSimpleCallNameUncached(const Expr &expr, const char *nameToMatch) 
     return name == "assign" || name == "if" || name == "while" || name == "take" ||
            name == "borrow" || name == "init" || name == "drop" || name == "increment" ||
            name == "decrement" || name == "return" || name == "then" || name == "else" ||
-           name == "do" || name == "block" || name == "loop" || name == "for" ||
-           name == "repeat" || name == "try" || name == "location" || name == "dereference" ||
-           collection_helpers::isCountHelperName(name) ||
-           name == "capacity" || collection_helpers::isToAosHelperName(name) ||
-           name == "push" || name == "reserve" ||
-           name == "move" || name == "negate" ||
-           name == "plus" || name == "minus" || name == "multiply" ||
-           name == "divide" || name == "greater_than" ||
+           name == "do" || name == "block" || name == "loop" || name == "for" || name == "repeat" ||
+           name == "try" || name == "pick" || name == "wait" || name == "location" ||
+           name == "dereference" || collection_helpers::isCountHelperName(name) ||
+           name == "capacity" || collection_helpers::isToAosHelperName(name) || name == "push" ||
+           name == "reserve" || name == "move" || name == "negate" || name == "plus" ||
+           name == "minus" || name == "multiply" || name == "divide" || name == "greater_than" ||
            name == "less_than" || name == "equal" || name == "not_equal" ||
-           name == "greater_equal" || name == "less_equal" ||
-           name == "and" || name == "or" || name == "not" ||
-           collection_helpers::isGetHelperName(name) ||
+           name == "greater_equal" || name == "less_equal" || name == "and" || name == "or" ||
+           name == "not" || collection_helpers::isGetHelperName(name) ||
            collection_helpers::isRefHelperName(name);
   };
   auto matchScopedBuiltinTail = [&](const std::string &candidate) {

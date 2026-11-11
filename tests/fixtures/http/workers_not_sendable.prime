@@ -1,0 +1,23 @@
+// `serveWorkers` shares the app between tasks, so its state must be sendable: a view of a buffer (a Pointer<u8>)
+// is not, and the program does not compile.
+import /std/http/*
+import /std/http/server/*
+import /std/web/*
+
+[struct]
+Borrowed() {
+  [Pointer<u8>] bytes
+  [i32] count{0i32}
+}
+
+[effects(io_err)]
+log_serve_error([ServeError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(heap_alloc, io_err, net_io, task, lock, channel, atomic) on_error<ServeError, log_serve_error>]
+main() {
+  [WebApp<Borrowed> mut] app{WebApp<Borrowed>{[state] Borrowed{}}}
+  serveWorkers(app, ServerConfig{})?
+  return(0i32)
+}

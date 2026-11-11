@@ -1,6 +1,8 @@
 // POSIX host side of /std/net (stdlib/std/net/net.prime), linked into an --emit=optexe program with --link-arg.
-// TCP over IPv4, one thread, no globals. It installs no signal handlers: /std/os (os_posix.cpp) installs SIGTERM and
-// SIGINT without SA_RESTART, so a blocking poll returns EINTR here and the caller sees interruptedCode().
+// TCP over IPv4, no globals, so threads may call it at once as long as each descriptor has one user at a time (the
+// wake pipe's write end is the exception: any thread may write it). It installs no signal handlers: /std/os
+// (os_posix.cpp) installs SIGTERM and SIGINT without SA_RESTART, so a blocking poll returns EINTR here and the
+// caller sees interruptedCode().
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <netinet/in.h>
@@ -190,6 +192,48 @@ int32_t net_poll(uint8_t *interest, uint64_t length, int32_t timeoutMs) {
 }
 
 int32_t net_close(int32_t fd) { return close(fd) == 0 ? 0 : codeOf(errno); }
+
+// A pipe that wakes the thread waiting in net_poll: it watches the read end, and another thread writes a byte to the
+// write end. Both ends do not block. Returns the read end in the high 32 bits and the write end in the low 32, or a
+// negative code.
+int64_t net_wake_open(void) {
+  int ends[2] = {-1, -1};
+  if (pipe(ends) != 0) {
+    return codeOf(errno);
+  }
+  for (const int fd : ends) {
+    fcntl(fd, F_SETFD, FD_CLOEXEC);
+    fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | O_NONBLOCK);
+  }
+  return (static_cast<int64_t>(ends[0]) << 32) | static_cast<int64_t>(ends[1]);
+}
+
+// Makes the read end of the pipe readable. A full pipe already holds a wake, so that is success too.
+int32_t net_wake(int32_t writer) {
+  const uint8_t byte = 1;
+  for (;;) {
+    if (write(writer, &byte, 1) == 1 || errno == EAGAIN || errno == EWOULDBLOCK) {
+      return 0;
+    }
+    if (errno != EINTR) {
+      return codeOf(errno);
+    }
+  }
+}
+
+// Empties the read end, so the next net_wake makes it readable again. Returns how many bytes it held.
+int32_t net_wake_drain(int32_t reader) {
+  uint8_t bytes[64];
+  int32_t total = 0;
+  for (;;) {
+    const ssize_t count = read(reader, bytes, sizeof(bytes));
+    if (count > 0) {
+      total += static_cast<int32_t>(count);
+    } else if (count == 0 || errno != EINTR) {
+      return total;
+    }
+  }
+}
 
 int32_t net_connect(int32_t port, int32_t timeoutMs) {
   if (port <= 0 || port > 65535) {

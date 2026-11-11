@@ -1,15 +1,18 @@
-// A single-threaded HTTP/1.1 server loop over /std/net (docs/spec/stdlib-reference.md, /std/http/server). Build an
-// app with both shims:
+// An HTTP/1.1 server loop over /std/net (docs/spec/stdlib-reference.md, /std/http/server). Build an app with both
+// shims:
 //   primec --emit=optexe app.prime -o app --link-arg <stdlib>/std/net/native/net_shim.cpp \
 //     --link-arg <stdlib>/std/os/os_posix.cpp
-// One thread waits on the listener and up to `maxConnections` open connections at once and serves whichever is
-// ready: accept, read what has arrived until the request is complete or rejected, call the handler, write the
+// `serve`: one thread waits on the listener and up to `maxConnections` open connections at once and serves whichever
+// is ready: accept, read what has arrived until the request is complete or rejected, call the handler, write the
 // response, close. A silent or slow client holds only its own slot, for at most `readTimeoutMs`; only writing a
 // response blocks the loop, for at most `writeTimeoutMs`.
+// `serveWorkers`: the same loop only accepts and watches; worker tasks read, call the handler one at a time inside a
+// `Mutex` and write, so a slow write holds one worker and not the loop.
 import /std/collections/*
 import /std/http/*
 import /std/net/*
 import /std/os/*
+import /std/sync/*
 import /std/text/*
 import /std/text/view/*
 
@@ -38,6 +41,8 @@ namespace server {
     [public bool] announce{true}
     // How many connections are read at once. While all are open, new connections wait in the listen backlog.
     [public i32] maxConnections{16i32}
+    // How many worker tasks `serveWorkers` starts; 0 starts one per processor. `serve` ignores it.
+    [public i32] workers{0i32}
   }
 
   // Why `serve` could not start: a /std/net code from listening.
@@ -314,6 +319,391 @@ namespace server {
   serve<Handler>([Handler mut] handler, [ServerConfig] config) {
     [mut] untilSignal{[]() { return(stopRequested()) }}
     return(serveUntil(handler, config, untilSignal))
+  }
+
+
+  // ---- serveWorkers: one thread polls and accepts, worker tasks answer ----
+
+  // Where the request bytes of the slots are: slot i owns [i * capacity, (i + 1) * capacity) of `base`. The poller
+  // and the workers share the block, and a slot's bytes belong to whichever of them holds the slot, which is what
+  // makes the pointer safe to send.
+  [struct sendable]
+  SlotBuffers() {
+    [Pointer<u8>] base
+    [i32] capacity{0i32}
+  }
+
+  // A readable connection on its way to a worker: its slot, its socket and how many bytes it has sent so far.
+  [public struct]
+  SlotJob() {
+    [i32] slot{0i32}
+    [i32] socket{-1i32}
+    [i32] received{0i32}
+  }
+
+  // A slot on its way back to the poller. `state` is 0 when the worker closed the connection (answered, or the
+  // client went away), 1 when the request is still incomplete and the connection is to be watched again, and 2 when
+  // the request was rejected and the connection is to be drained.
+  [public struct]
+  SlotDone() {
+    [i32] slot{0i32}
+    [i32] socket{-1i32}
+    [i32] received{0i32}
+    [i32] state{0i32}
+  }
+
+  // The most workers `serveWorkers` starts.
+  [return<i32>]
+  max_workers() {
+    return(64i32)
+  }
+
+  // The block that holds every slot's request bytes.
+  [effects(heap_alloc) return<String>]
+  slot_store([i32] bytes) {
+    [String mut] store{String{}}
+    store.reserve(bytes)
+    return(store)
+  }
+
+  [return<SlotBuffers>]
+  slot_buffers([Reference<String>] store, [i32] capacity) {
+    return(SlotBuffers{[base] store.data, [capacity] capacity})
+  }
+
+  [unsafe return<Pointer<u8>>]
+  slot_bytes([SlotBuffers] buffers, [i32] slot, [i32] offset) {
+    [Pointer<u8>] base{buffers.base}
+    return(/std/intrinsics/memory/at_unsafe(base, slot * buffers.capacity + offset))
+  }
+
+  // A worker's turn with a readable connection: reads what has arrived and, once the request is complete, calls the
+  // handler inside the app's mutex and answers. Only the handler call holds the mutex; reading, parsing, serializing
+  // and sending run beside the other workers.
+  [effects(net_io, heap_alloc, lock, atomic) return<SlotDone>]
+  work_slot([Mutex<Function<void, Request, Reference<Response>>>] app,
+            [SlotJob] job,
+            [Atomic<i32>] stopping,
+            [SlotBuffers] buffers,
+            [ServerConfig] config) {
+    [i32] capacity{buffers.capacity}
+    [i32] connection{job.socket}
+    if(stopping.load() != 0i32) {
+      close(connection)
+      return(SlotDone{[slot] job.slot, [socket] connection, [received] 0i32, [state] 0i32})
+    }
+    [i64] got{recv(connection, slot_bytes(buffers, job.slot, job.received), convert<u64>(capacity - job.received), 0i32)}
+    if(not_ready(got)) {
+      return(SlotDone{[slot] job.slot, [socket] connection, [received] job.received, [state] 1i32})
+    }
+    if(got <= 0i64) {
+      close(connection)
+      return(SlotDone{[slot] job.slot, [socket] connection, [received] 0i32, [state] 0i32})
+    }
+    [i32] total{job.received + convert<i32>(got)}
+    [Request] request{parseRequestBytes(readSliceMake<u8>(slot_bytes(buffers, job.slot, 0i32), total), capacity)}
+    [i32] outcome{request.outcome()}
+    if(outcome == 0i32) {
+      [Response mut] response{Response{}}
+      [mut] answer{[ref request, ref response]([Reference<Function<void, Request, Reference<Response>>>] handler) {
+        handler(request, location(response))
+      }}
+      app.locked(answer)
+      [String] bytes{response.serialize()}
+      send_text(connection, bytes, config.writeTimeoutMs)
+      close(connection)
+      return(SlotDone{[slot] job.slot, [socket] connection, [received] 0i32, [state] 0i32})
+    }
+    [i32] status{if(outcome >= 400i32, then() { outcome }, else() { if(total >= capacity, then() { 413i32 }, else() { 0i32 }) })}
+    if(status != 0i32) {
+      [String] bytes{statusResponse(status)}
+      send_text(connection, bytes, config.writeTimeoutMs)
+      return(SlotDone{[slot] job.slot, [socket] connection, [received] 0i32, [state] 2i32})
+    }
+    return(SlotDone{[slot] job.slot, [socket] connection, [received] total, [state] 1i32})
+  }
+
+  // Hands a finished slot back to the poller and wakes it.
+  [effects(net_io, channel, atomic)]
+  return_slot([Channel<SlotDone>] finished, [Atomic<i32>] ready, [i32] wakeWriter, [SlotDone] done) {
+    finished.send(done)
+    ready.add(1i32)
+    wake(wakeWriter)
+  }
+
+  // One worker task: takes readable connections from `jobs` until the channel is closed and empty.
+  [effects(net_io, heap_alloc, lock, channel, atomic) return<void>]
+  work_slots([Mutex<Function<void, Request, Reference<Response>>>] app,
+             [Channel<SlotJob>] jobs,
+             [Channel<SlotDone>] finished,
+             [Atomic<i32>] ready,
+             [Atomic<i32>] stopping,
+             [SlotBuffers] buffers,
+             [i32] wakeWriter,
+             [ServerConfig] config) {
+    // The poller's thread takes SIGTERM and SIGINT, so the signal interrupts its `poll`.
+    blockStopSignals()
+    [bool mut] open{true}
+    while(open) {
+      pick(jobs.receive()) {
+        none {
+          open = false
+        }
+        some(job) {
+          return_slot(finished, ready, wakeWriter, work_slot(app, job, stopping, buffers, config))
+        }
+      }
+    }
+  }
+
+  // Takes back one slot a worker has finished with.
+  [effects(net_io)]
+  take_slot([Connections mut] table, [SlotDone] done) {
+    [i32] slot{done.slot}
+    if(done.state == 0i32) {
+      table.sockets[slot] = -1i32
+      table.states[slot] = 0i32
+      return()
+    }
+    table.states[slot] = done.state
+    table.counts[slot] = done.received
+    if(done.state == 2i32) {
+      table.deadlines[slot] = monotonicMs() + drain_wait_ms()
+    }
+  }
+
+  // Takes back every slot the workers have finished with so far. `ready` counts what is in `finished`, so no
+  // `receive` waits.
+  [effects(net_io, channel, atomic)]
+  take_slots([Connections mut] table, [Channel<SlotDone>] finished, [Atomic<i32>] ready) {
+    [i32 mut] left{ready.exchange(0i32)}
+    while(left > 0i32) {
+      pick(finished.receive()) {
+        none {
+        }
+        some(done) {
+          take_slot(table, done)
+        }
+      }
+      left = left - 1i32
+    }
+  }
+
+  // Discards what has arrived on a ready draining slot, as `drain_slot` does, into the slot's own bytes.
+  [effects(net_io)]
+  drain_shared_slot([Connections mut] table, [SlotBuffers] buffers, [i32] slot) {
+    [i64] got{recv(table.sockets[slot], slot_bytes(buffers, slot, 0i32), convert<u64>(buffers.capacity), 0i32)}
+    if(not_ready(got)) {
+      return()
+    }
+    [i32] rounds{table.counts[slot] + 1i32}
+    if(got <= 0i64 || rounds >= drain_rounds()) {
+      close_slot(table, slot)
+      return()
+    }
+    table.counts[slot] = rounds
+    table.deadlines[slot] = monotonicMs() + drain_wait_ms()
+  }
+
+  // The poller of `serveWorkersUntil`: accepts, watches the open connections and the wake pipe, hands each readable
+  // connection to the workers (slot state 3: a worker has it, so it is neither watched nor timed out here) and takes
+  // back the slots they return. It never waits for a worker: both channels hold one entry per slot. When `stop()`
+  // is true it stops listening, closes the connections no worker holds and closes `jobs`, which ends the workers
+  // once each has finished the request it is answering.
+  [effects(net_io, heap_alloc, channel, atomic)]
+  poll_slots<Stop>([Channel<SlotJob>] jobs,
+                   [Channel<SlotDone>] finished,
+                   [Atomic<i32>] ready,
+                   [Atomic<i32>] stopping,
+                   [SlotBuffers] buffers,
+                   [ServerConfig] config,
+                   [i32] listener,
+                   [i32] wakeReader,
+                   [i32] slots,
+                   [Stop mut] stop) {
+    [Connections mut] table{Connections{}}
+    [i32 mut] slot{0i32}
+    while(slot < slots) {
+      table.sockets.push(-1i32)
+      table.states.push(0i32)
+      table.deadlines.push(0i64)
+      table.counts.push(0i32)
+      slot = slot + 1i32
+    }
+    [vector<u8> mut] interest{vector<u8>()}
+    while(!stop()) {
+      [i64] now{monotonicMs()}
+      [i64 mut] wait{convert<i64>(config.acceptTimeoutMs)}
+      [i32 mut] open{0i32}
+      slot = 0i32
+      while(slot < slots) {
+        [i32] state{table.states[slot]}
+        if(state != 0i32) {
+          open = open + 1i32
+        }
+        if(state == 1i32 || state == 2i32) {
+          watch_socket(interest, table.sockets[slot])
+          [i64] remaining{table.deadlines[slot] - now}
+          [i64] left{if(remaining > 0i64, then() { remaining }, else() { 0i64 })}
+          if(wait < 0i64 || left < wait) {
+            wait = left
+          }
+        }
+        slot = slot + 1i32
+      }
+      [bool] room{open < slots}
+      if(room) {
+        watch_socket(interest, listener)
+      }
+      watch_socket(interest, wakeReader)
+      wait_ready(interest, wait)
+      [i64] after{monotonicMs()}
+      if(take_ready(interest, wakeReader)) {
+        takeWakes(wakeReader)
+      }
+      slot = 0i32
+      while(slot < slots) {
+        [i32] state{table.states[slot]}
+        if(state == 1i32 || state == 2i32) {
+          [bool] readable{take_ready(interest, table.sockets[slot])}
+          if(readable && state == 1i32) {
+            table.states[slot] = 3i32
+            jobs.send(SlotJob{[slot] slot, [socket] table.sockets[slot], [received] table.counts[slot]})
+          } else {
+            if(readable) {
+              drain_shared_slot(table, buffers, slot)
+            }
+            // A reading slot gets `readTimeoutMs` for its whole request; a draining slot waits briefly for more.
+            if(table.states[slot] != 0i32 && after >= table.deadlines[slot]) {
+              close_slot(table, slot)
+            }
+          }
+        }
+        slot = slot + 1i32
+      }
+      // After the pass over the slots, so a slot that comes back is watched before it can time out.
+      take_slots(table, finished, ready)
+      if(room && take_ready(interest, listener)) {
+        [i32] connection{accept(listener, 0i32)}
+        if(connection >= 0i32) {
+          [i32 mut] free{0i32}
+          while(table.states[free] != 0i32) {
+            free = free + 1i32
+          }
+          table.sockets[free] = connection
+          table.states[free] = 1i32
+          table.counts[free] = 0i32
+          table.deadlines[free] = monotonicMs() + convert<i64>(config.readTimeoutMs)
+        }
+      }
+    }
+    close(listener)
+    stopping.store(1i32)
+    jobs.close()
+    slot = 0i32
+    while(slot < slots) {
+      if(table.states[slot] == 1i32 || table.states[slot] == 2i32) {
+        close_slot(table, slot)
+      }
+      slot = slot + 1i32
+    }
+  }
+
+  // Starts `remaining` more workers and then runs the poller on this task; each level waits for the worker it
+  // started, so every worker has ended when the first call returns.
+  [effects(net_io, heap_alloc, task, lock, channel, atomic)]
+  run_workers<Stop>([Mutex<Function<void, Request, Reference<Response>>>] app,
+                    [Channel<SlotJob>] jobs,
+                    [Channel<SlotDone>] finished,
+                    [Atomic<i32>] ready,
+                    [Atomic<i32>] stopping,
+                    [SlotBuffers] buffers,
+                    [ServerConfig] config,
+                    [i32] listener,
+                    [WakePipe] pipe,
+                    [i32] slots,
+                    [i32] remaining,
+                    [Stop mut] stop) {
+    if(remaining <= 0i32) {
+      poll_slots<Stop>(jobs, finished, ready, stopping, buffers, config, listener, pipe.reader, slots, stop)
+      return()
+    }
+    [Task<void>] worker{[spawn] work_slots(app, jobs, finished, ready, stopping, buffers, pipe.writer, config)}
+    run_workers<Stop>(app, jobs, finished, ready, stopping, buffers, config, listener, pipe, slots, remaining - 1i32, stop)
+    wait(worker)
+  }
+
+  // Closes the connection of a slot that a worker handed back after the poller had stopped.
+  [effects(net_io)]
+  close_returned([SlotDone] done) {
+    if(done.state != 0i32) {
+      close(done.socket)
+    }
+  }
+
+  // `serveUntil` with worker tasks (threads on optexe): this task polls and accepts, and `config.workers` workers
+  // read, parse, call the handler and answer. The handler moves into a `Mutex` and every request calls it inside
+  // `locked`, one at a time, so a `Router`, `AppRouter<State>` or `WebApp<State>` keeps plain state; receiving,
+  // parsing, serializing and sending run in parallel. The handler must be sendable. When `stop()` is true the
+  // server stops listening and closes the connections that wait for input at once, and returns when each worker
+  // has finished the request it is answering.
+  [public effects(net_io, heap_alloc, io_err, task, lock, channel, atomic) return<Result<ServeError>>]
+  serveWorkersUntil<Handler, Stop>([Handler move] handler, [ServerConfig] config, [Stop mut] stop) {
+    [i32] listener{if(config.loopbackOnly, then() { listenLoopback(config.port, config.backlog) }, else() { listen(config.port, config.backlog) })}
+    if(listener < 0i32) {
+      return(listener)
+    }
+    [WakePipe] pipe{wakePipe()}
+    if(pipe.reader < 0i32) {
+      close(listener)
+      return(pipe.reader)
+    }
+    if(config.announce) {
+      [i32] port{localPort(listener)}
+      print_error("listening on ")
+      print_line_error(port)
+    }
+    [i32] capacity{if(config.maxRequestBytes > 0i32, then() { config.maxRequestBytes }, else() { 1i32 })}
+    // The slots' bytes are one block of at most 1 GiB, so many slots of large requests are cut to what fits.
+    [i32] fitting{1073741824i32 / capacity}
+    [i32] wanted{if(config.maxConnections > 0i32, then() { config.maxConnections }, else() { 1i32 })}
+    [i32] slots{if(wanted < fitting, then() { wanted }, else() { fitting })}
+    [i32] asked{if(config.workers > 0i32, then() { config.workers }, else() { cpuCount() })}
+    [i32] workers{if(asked < max_workers(), then() { asked }, else() { max_workers() })}
+    [String mut] store{slot_store(slots * capacity)}
+    [SlotBuffers] buffers{slot_buffers(store, capacity)}
+    // Workers are not generic: the handler is called as a `Function`, which also requires it to be sendable.
+    [Function<void, Request, Reference<Response>> mut] erased{[mut inner{handler}]([Request] request, [Reference<Response>] response) {
+      inner(request, response)
+    }}
+    app{Mutex<Function<void, Request, Reference<Response>>>{move(erased)}}
+    jobs{Channel<SlotJob>{[capacity] slots}}
+    finished{Channel<SlotDone>{[capacity] slots}}
+    ready{Atomic<i32>{0i32}}
+    stopping{Atomic<i32>{0i32}}
+    run_workers<Stop>(app, jobs, finished, ready, stopping, buffers, config, listener, pipe, slots, workers, stop)
+    // Every worker has ended. What they handed back since the poller stopped is still open.
+    [i32 mut] left{ready.exchange(0i32)}
+    while(left > 0i32) {
+      pick(finished.receive()) {
+        none {
+        }
+        some(done) {
+          close_returned(done)
+        }
+      }
+      left = left - 1i32
+    }
+    close(pipe.reader)
+    close(pipe.writer)
+    return(Result.ok())
+  }
+
+  // `serveWorkersUntil` until the process receives SIGTERM or SIGINT (/std/os stopRequested()).
+  [public effects(net_io, heap_alloc, io_err, task, lock, channel, atomic) return<Result<ServeError>>]
+  serveWorkers<Handler>([Handler move] handler, [ServerConfig] config) {
+    [mut] untilSignal{[]() { return(stopRequested()) }}
+    return(serveWorkersUntil(handler, config, untilSignal))
   }
 
 

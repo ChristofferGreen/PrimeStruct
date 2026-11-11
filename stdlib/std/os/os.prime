@@ -19,6 +19,14 @@ ps_os_stop_requested() {
 }
 
 [host return<i32>]
+ps_os_cpu_count() {
+}
+
+[host return<i32>]
+ps_os_block_stop_signals() {
+}
+
+[host return<i32>]
 ps_os_log_line([String] line) {
 }
 
@@ -49,6 +57,20 @@ namespace os {
   [public return<bool>]
   stopRequested() {
     return(ps_os_stop_requested())
+  }
+
+  // How many processors are online, at least 1: how many threads can run at once.
+  [public return<i32>]
+  cpuCount() {
+    return(ps_os_cpu_count())
+  }
+
+  // Blocks SIGTERM and SIGINT on the calling thread, for the worker tasks of a program whose main thread waits for
+  // the signal in a blocking call: the signal then interrupts that call instead of a worker's. Returns 0 or a
+  // negative code.
+  [public return<i32>]
+  blockStopSignals() {
+    return(ps_os_block_stop_signals())
   }
 
   // Writes `line` and a line feed to stderr at once (stderr is not buffered), for logs a supervisor reads as they

@@ -402,6 +402,11 @@ to compile the view code. `TextView` is taken by the native-UI widget.
   ```
 
   The program exits with 18 on the VM and through `--emit=optexe` (the native backends have no `StringView` yet).
+- **A literal that tasks may share:** a `StringView` is not sendable, because it may point into a `String` that
+  another task frees. `literalTextOf("literal")` gives a `LiteralText`, a sendable struct that can only come from a
+  static `string` (whose bytes live for the whole run), and `view()` on it gives the `StringView`. The route tables
+  of `/std/http` and `/std/web` keep their methods, patterns and control ids in it, which is what lets a whole app
+  sit in a `Mutex` (`/std/http/server` `serveWorkers`).
 - **Access:** `count()`, `empty()`, `byteAt(i)` (faults outside the text), `bytes()` (a `ReadSlice<u8>`), `isBoundary(i)`.
   A slice cut inside a code point, or outside the text, stops the program.
 - **Compare and search** (byte order, which orders UTF-8 by code point): `equals`, `equalsText`, `compare`,

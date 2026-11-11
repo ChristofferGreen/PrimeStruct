@@ -567,6 +567,12 @@ primec --emit=optexe server.prime -o server --link-arg stdlib/std/os/os_posix.cp
   blocking socket call returns `EINTR` and the loop around it can check the flag and stop.
 - `logLine(line) -> i32`: writes the `String` `line` and a line feed to stderr in one go. stderr is not buffered,
   so a supervisor sees the line at once. Returns the bytes written, or -1.
+- `cpuCount() -> i32`: how many processors are online, at least 1 (`sysconf(_SC_NPROCESSORS_ONLN)`): how many
+  threads can run at once.
+- `blockStopSignals() -> i32`: blocks SIGTERM and SIGINT on the calling thread and returns 0, or -100 - the error.
+  A worker task calls it first, so the signal goes to the thread that waits in `poll` and interrupts that call
+  (`serveWorkers` does this for its workers). A signal that arrives before a worker has called it can be delivered
+  to that worker; the flag is still set, and the waiting thread sees it when its wait next times out.
 
 - `fileSize(path) -> i64` (`file_read`): the size of the regular file `path` (a `String`), -1 for a file that is not
   regular (a directory), or -100 - errno.
@@ -595,7 +601,7 @@ main() {
 
 ### Network (`/std/net`)
 
-`import /std/net/*` gives a single-threaded server TCP sockets over IPv4. The `std::net` functions call `[host]`
+`import /std/net/*` gives a server TCP sockets over IPv4 and a pipe to wake a thread that waits on them. The `std::net` functions call `[host]`
 functions answered by the POSIX shim `stdlib/std/net/native/net_shim.cpp`, linked into an `--emit=optexe` program
 (usually together with `/std/os`, whose stop flag ends the accept loop):
 
@@ -631,6 +637,13 @@ Linux and macOS:
   time, or `interruptedCode()` when a signal arrived.
 - `close(socket) -> i32`: 0 or a negative code.
 - `connectLoopback(port, timeoutMs) -> i32`: a client connection to 127.0.0.1, for tests and health checks.
+- `wakePipe() -> WakePipe`: a pipe with which one thread wakes another that waits in `poll`. `WakePipe` has two
+  descriptors, `reader` and `writer`, both non-blocking; when opening fails, `reader` is the negative code. The
+  waiting thread marks `reader` in its `poll` interest beside its sockets. Close both ends with `close`.
+- `wake(writer) -> i32`: makes `reader` readable, from any thread. It never blocks, and wakes that have not been
+  taken yet count as one. Returns 0 or a negative code.
+- `takeWakes(reader)`: takes the pending wakes, so `reader` is readable again only after the next `wake`. Take them
+  before looking at what the wake was about, so that a wake that arrives meanwhile is not lost.
 
 The wrappers carry `effects(net_io)` (docs/spec/language-core.md, Effects); wasm and GLSL reject that effect. The
 shim installs no signal handlers and keeps no state. The VM and `primevm` have no binding for the host functions and
@@ -962,10 +975,12 @@ primec --emit=optexe app.prime -o app --link-arg stdlib/std/net/native/net_shim.
 - `serve(handler, config) -> Result<ServeError>` serves until the process receives SIGTERM or SIGINT (`/std/os`
   `stopRequested()`), then returns `Result.ok()`.
 - `serveUntil(handler, config, stop)` serves until `stop()`, any callable returning `bool`, is true.
+- `serveWorkers(handler, config)` and `serveWorkersUntil(handler, config, stop)` are the same server on several
+  threads ([Workers](#workers-serveworkers) below).
 - **Handlers:** `handler` is any callable taking `(Request, Reference<Response>)`, such as a lambda, a struct with
   `call`, a `Router`, an `AppRouter` or a middleware closure. It is a generic parameter, so the call is direct and the
   handler keeps its state between requests.
-- **The loop** is single-threaded. It waits with `poll` on the listener and every open connection together and
+- **The loop** of `serve` is single-threaded. It waits with `poll` on the listener and every open connection together and
   serves whichever is ready, so a client that connects and sends nothing (a browser's spare connection) or sends
   slowly holds only its own slot:
   1. Wait until a socket is ready or the first deadline passes, at most `acceptTimeoutMs`. That bounds how long the
@@ -989,7 +1004,9 @@ primec --emit=optexe app.prime -o app --link-arg stdlib/std/net/native/net_shim.
   - `acceptTimeoutMs{500}`, `readTimeoutMs{5000}` and `writeTimeoutMs{5000}`;
   - `loopbackOnly{false}`, which listens on 127.0.0.1 only;
   - `announce{true}`, which prints `listening on <port>` to stderr once listening;
-  - `maxConnections{16}`, how many connections are open at once (a value below 1 means 1).
+  - `maxConnections{16}`, how many connections are open at once (a value below 1 means 1);
+  - `workers{0}`, how many worker tasks `serveWorkers` starts: 0 means one per processor (`/std/os` `cpuCount()`),
+    and at most 64 are started. `serve` ignores it.
 - **Middleware:** `withRequestLog(next)` wraps any handler and logs `METHOD target STATUS Nms` for each request
   through `logLine`. Middleware is a generic function that returns a closure capturing `next`, so wrapping is
   zero-cost and composes: `serve(withRequestLog(router), config)`. Do not erase a middleware chain into a `Function`
@@ -1020,6 +1037,68 @@ main() {
 }
 ```
 
+#### Workers (`serveWorkers`)
+
+`serveWorkers(handler, config) -> Result<ServeError>` serves like `serve`, with `config.workers` worker tasks beside
+the loop; `serveWorkersUntil(handler, config, stop)` is its `serveUntil`. Both need
+`effects(net_io, heap_alloc, io_err, task, lock, channel, atomic)`. A task is a thread on `optexe`; the VM has no
+`/std/net`, so these run on `optexe` only.
+
+- **The loop** only accepts and watches: it polls the listener, the open connections and a wake pipe (`/std/net`
+  `wakePipe`). A readable connection leaves the watched set and goes to the workers over a `Channel`. The loop never
+  waits for a worker, so a full set of busy workers does not stop it from accepting or from seeing the stop condition.
+- **A worker** reads what has arrived on the connection. An incomplete request goes back to the loop to be watched
+  again, so a client that stalls in the middle of a request holds its slot and never a worker. A complete request is
+  answered by that worker: it calls the handler, serializes the response, writes it (at most `writeTimeoutMs`) and
+  closes. Rejected requests get the same bare status as under `serve` and are drained by the loop.
+- **The handler runs inside a mutex.** The handler moves into a `Mutex` (`/std/sync`), and each request calls it
+  inside `locked`, one request at a time. A `Router`, `AppRouter<State>` or `WebApp<State>` therefore keeps plain
+  state with no locking of its own, and its handlers are written exactly as for `serve`. Receiving, parsing,
+  serializing and sending run in parallel; everything the handler does, building a page's HTML included, does not.
+- **The handler must be sendable**, because the tasks share it: an app whose state holds a `Pointer` or a
+  `StringView` is rejected when the server erases it into a `Function`, with the path to the field: ``closure
+  cannot be a Function: capture `inner`, field `state` of WebApp<Borrowed>, field `bytes` of Borrowed is
+  Pointer<u8>``.
+- **Stopping:** when `stop()` is true the loop stops listening, closes the connections that wait for input and
+  ends the workers; each worker finishes the request it is answering, and a connection still queued for a worker is
+  closed unanswered. Then the call returns `Result.ok()`. The workers block SIGTERM and SIGINT (`/std/os`
+  `blockStopSignals`), so the signal interrupts the loop's `poll` and `serveWorkers` sees it at once; a signal
+  that arrives while a worker is still starting is seen within `acceptTimeoutMs`.
+- **Errors:** failing to listen or to open the wake pipe is the `ServeError`, returned before any worker starts.
+- **Memory:** the request buffers of all slots are one block of `maxConnections * maxRequestBytes` bytes,
+  allocated when the server starts (`serve` allocates each slot's buffer on first use).
+
+```prime
+import /std/http/*
+import /std/http/server/*
+import /std/text/*
+import /std/text/view/*
+
+[struct]
+Counter() {
+  [i64 mut] hits{0i64}
+}
+
+[effects(io_err)]
+log_serve_error([ServeError] err) {
+  print_line_error(err.why())
+}
+
+[effects(heap_alloc)]
+count_hit([Reference<Counter>] counter, [Request] request, [Reference<Response>] response) {
+  counter.hits = counter.hits + 1i64
+  response.body.appendI64(counter.hits)
+}
+
+[return<int> effects(heap_alloc, io_err, net_io, task, lock, channel, atomic) on_error<ServeError, log_serve_error>]
+main() {
+  [AppRouter<Counter> mut] app{AppRouter<Counter>{[state] Counter{}}}
+  app.post("/hit", count_hit)
+  serveWorkers(withRequestLog(app), ServerConfig{[port] 8080i32, [workers] 4i32})?
+  return(0i32)
+}
+```
+
 ### Static files (`/std/http/files`)
 
 `import /std/http/files/*` answers a request from a directory, over `/std/os` `readFile` (link the `/std/os` shim).
@@ -1042,7 +1121,8 @@ router.get("/static/*", []([Request] request, [Reference<Response>] response) {
 
 ### Shared state (`/std/sync`)
 
-`import /std/sync/*` provides `Atomic<i32>` and `Atomic<i64>`, `Mutex<T>` and `Channel<T>` (below). The atomics
+`import /std/sync/*` provides `Atomic<i32>` and `Atomic<i64>`, `Mutex<T>` and `Channel<T>` (below); `/std/http/server`
+`serveWorkers` is built from all three. The atomics
 are integer cells that several tasks read and change without losing an update (docs/MultithreadingPrototype.md, Atomic). An `Atomic` is a handle: a copy shares the cell,
 so a task that is given one works on the same integer as its spawner, and the cell is freed when its last handle is
 destroyed. The type is `[sendable]`.

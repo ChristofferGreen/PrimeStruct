@@ -129,8 +129,12 @@ of sync with them.
 | TODO-5859 | A `pick` expression yields a vector | ready | pick-payloads |
 | TODO-5860 | Moving a `pick` payload binding does not poison a later binding of the same name | ready | pick-payloads |
 | TODO-5861 | `SharedString` keeps its owner count inside the text block | ready | string-concurrency |
-| TODO-5802 | `serveWorkers`: one thread polls and accepts, N workers answer | ready | mt-server |
-| TODO-5803 | The web apps run on workers and their gain is measured | blocked | mt-server |
+| TODO-5803 | The web apps run on workers and their gain is measured | ready | mt-server |
+| TODO-5862 | `serveWorkers` serves on the VM with 2 workers | deferred | mt-server |
+| TODO-5863 | A struct named without its namespace is a `Channel` element | ready | mt-primitives |
+| TODO-5864 | A lambda in a generic definition names the definition's type parameters | ready | closures-generics |
+| TODO-5865 | A `Function` local given positionally to a brace constructor is copied | ready | closures-lifecycle |
+| TODO-5866 | A closure captures a `pick` payload binding | ready | pick-payloads |
 | TODO-5799 | arm64 native runs spawned tasks on pthreads, its heap behind a lock | ready | mt-native |
 | TODO-5800 | arm64 native heaps are per thread, with remote frees | blocked | mt-native |
 | TODO-5801 | arm64 native runs `Atomic`, `Mutex` and `Channel` | blocked | mt-native |
@@ -213,23 +217,23 @@ of sync with them.
 - Native UI (docs/NativeUiPlan.md): TODO-5808, TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - AI workflow (docs/AiWorkflowPlan.md): TODO-5841, TODO-5843, TODO-5842
-- Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526, TODO-5855, TODO-5857, TODO-5858, TODO-5859, TODO-5860
+- Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526, TODO-5855, TODO-5857, TODO-5858, TODO-5859, TODO-5860, TODO-5866
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544, TODO-5745, TODO-5746
-- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719, TODO-5850, TODO-5851, TODO-5853; collection fields found by closures and the todo example: TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
+- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719, TODO-5850, TODO-5851, TODO-5853, TODO-5864, TODO-5865; collection fields found by closures and the todo example: TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
 - Web apps (docs/WebAppsPlan.md; single-threaded, built with `--emit=optexe`): TODO-5738, TODO-5718
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732, TODO-5735, TODO-5736, TODO-5737
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5840, TODO-5844; real calls and struct copies TODO-5739, TODO-5741, TODO-5752; VM address checks TODO-5824
-- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5861, TODO-5802, TODO-5803, TODO-5799, TODO-5800, TODO-5801, TODO-5847, TODO-5848, TODO-5849, TODO-5852; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854
+- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5861, TODO-5803, TODO-5863, TODO-5799, TODO-5800, TODO-5801, TODO-5847, TODO-5848, TODO-5849, TODO-5852; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854, TODO-5862
 
 ### Execution Queue
 
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
-Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order (TODO-5792 and TODO-5835, VM tasks and their lowering, are done, and so are TODO-5793, byte-region checks without a map search, TODO-5794, `optexe` per-thread heap arenas, TODO-5795, `optexe` threads for `[spawn]`, `Atomic<i32>` and `Atomic<i64>` in `/std/sync`, TODO-5797, `Mutex<T>` with `locked(body)`, TODO-5846, `optexe` faults when every task waits, TODO-5798, bounded `Channel<T>`, and TODO-5656, the atomic `SharedString` owner count): TODO-5861 (`SharedString` count inside the text block), TODO-5802 (`serveWorkers`), TODO-5803 (apps on workers, measured), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5861, TODO-5802 and TODO-5799 are ready and independent of each other, and so are TODO-5848 (`return(wait(t))` of a `String` task result is rejected as a return type mismatch), TODO-5849 (a destructured multi-wait of tasks with different result types loses the later results' types) and TODO-5847 (spawned calls with collection or `copy` parameters or collection results run as tasks, which today run inline; TODO-5845, the same for `String`, struct and closure values, is done) (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, are done). Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions), TODO-5854 (a `Mutex` or `Atomic` handle keeps a copy of its first value). Found with `Mutex` and ready: TODO-5852 (`wait(a, b)` of two `Task<void>`), and in the closures lane TODO-5850 (a `Reference`-returning call as a closure argument) and TODO-5851 (a `[ref]` closure written in a generic call). Found with `Channel` and ready, in the Result and control flow lane: TODO-5855 (a method call on a `pick` payload of struct type); TODO-5856 (`pick` on a call result frees an owning payload) is done, and found with it and ready: TODO-5857 (a `vector<T>` payload reads its count in a `pick` arm), TODO-5858 (`some<Vector<i32>>` of a fresh vector frees it), TODO-5859 (a `pick` expression yields a vector) and TODO-5860 (moving a payload binding does not poison a later binding of the same name).
+Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order (TODO-5792 and TODO-5835, VM tasks and their lowering, are done, and so are TODO-5793, byte-region checks without a map search, TODO-5794, `optexe` per-thread heap arenas, TODO-5795, `optexe` threads for `[spawn]`, `Atomic<i32>` and `Atomic<i64>` in `/std/sync`, TODO-5797, `Mutex<T>` with `locked(body)`, TODO-5846, `optexe` faults when every task waits, TODO-5798, bounded `Channel<T>`, TODO-5656, the atomic `SharedString` owner count, and TODO-5802, `serveWorkers`): TODO-5861 (`SharedString` count inside the text block), TODO-5803 (apps on workers, measured), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5861, TODO-5803 and TODO-5799 are ready and independent of each other, and so are TODO-5848 (`return(wait(t))` of a `String` task result is rejected as a return type mismatch), TODO-5849 (a destructured multi-wait of tasks with different result types loses the later results' types) and TODO-5847 (spawned calls with collection or `copy` parameters or collection results run as tasks, which today run inline; TODO-5845, the same for `String`, struct and closure values, is done) (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, are done). Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions), TODO-5854 (a `Mutex` or `Atomic` handle keeps a copy of its first value). Found with `Mutex` and ready: TODO-5852 (`wait(a, b)` of two `Task<void>`), and in the closures lane TODO-5850 (a `Reference`-returning call as a closure argument) and TODO-5851 (a `[ref]` closure written in a generic call). Found with `Channel` and ready, in the Result and control flow lane: TODO-5855 (a method call on a `pick` payload of struct type); TODO-5856 (`pick` on a call result frees an owning payload) is done, and found with it and ready: TODO-5857 (a `vector<T>` payload reads its count in a `pick` arm), TODO-5858 (`some<Vector<i32>>` of a fresh vector frees it), TODO-5859 (a `pick` expression yields a vector) and TODO-5860 (moving a payload binding does not poison a later binding of the same name). Found with `serveWorkers`: TODO-5862 (deferred: `serveWorkers` on the VM, which has no `/std/net`), and ready: TODO-5863 (a struct named without its namespace as a `Channel` element), TODO-5864 (a lambda in a generic definition names its type parameters), TODO-5865 (a `Function` local given positionally to a brace constructor is copied) and TODO-5866 (a closure captures a `pick` payload binding).
 
 ### Task Blocks
 
@@ -936,23 +940,9 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
     - full release gate green
   - stop_rule: where the count lives; native follows with TODO-5800.
 
-- [ ] TODO-5802: `serveWorkers`: one thread polls and accepts, N workers answer
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-09
-  - phase: Multithreading and Web apps (docs/MultithreadingPrototype.md, The Server; docs/WebAppsPlan.md, Concurrency)
-  - parallel_track: mt-server
-  - scope: In `/std/http/server` add `serveWorkers(handler, config)` and `serveWorkersUntil(handler, config, stop)` (effects `net_io`, `heap_alloc`, `io_err`, `task`) and `ServerConfig.workers` (0 = one per core); `/std/os` gets `cpuCount()` and a way for a worker thread to block `SIGINT`/`SIGTERM`; `/std/net` gets a wake pipe. The poller watches the listener, the open connections and the wake pipe, and hands a readable connection's slot to the workers over a `Channel`; a worker receives, parses, calls the handler inside a `Mutex` that holds the whole handler, serializes, sends and closes, and returns the slot (or returns an incomplete request to be watched again). `Router`, `AppRouter<State>` and `WebApp<State>` keep their plain `Function` handlers, sendable by construction (TODO-5791), so an app is sendable when its `State` is; the `Mutex<Handler>` element check (TODO-5797) is what rejects an app that is not. `serve` and `serveUntil` stay as they are.
-  - acceptance:
-    - positive: an `optexe` test with 4 workers answers 16 concurrent clients sending 50 requests each, and a counter app's count equals the number of POSTs; a client that sends half a request and stalls does not delay the others with 1 worker; a VM test serves 2 workers deterministically on the default schedule; examples/apps/todo_web and hello_button compile with `serveWorkers` without changing their handlers
-    - negative: a `WebApp<State>` whose `State` has a `Pointer<u8>` field passed to `serveWorkers` is `Mutex element WebApp<State> is not sendable: field `state` of WebApp<State>, field `bytes` is Pointer<u8>` (a handler capturing a `Pointer` never gets this far: TODO-5791 rejects it where it is written); SIGTERM stops the server within `acceptTimeoutMs` while all workers are busy
-    - full release gate green
-  - stop_rule: the library server; switching the examples and measuring is TODO-5803.
-
 - [ ] TODO-5803: The web apps run on workers and their gain is measured
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5802
+  - status: ready
   - created_at: 2026-11-09
   - phase: Multithreading and Web apps (docs/WebAppsPlan.md, Concurrency)
   - parallel_track: mt-server
@@ -962,6 +952,76 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
     - negative: the load generator exits non-zero when any response is not 2xx or 3xx, and a run against a server that refuses connections fails with a message
     - full release gate green
   - stop_rule: the examples, the load generator and the numbers.
+
+- [ ] TODO-5862: `serveWorkers` serves on the VM with 2 workers
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-11
+  - phase: Multithreading and Web apps (docs/MultithreadingPrototype.md, The Server)
+  - parallel_track: mt-server
+  - scope: `/std/http/server` runs only through `--emit=optexe`: the VM has no binding for the `/std/net` and `/std/os` host functions (`unbound host function: net_listen ...`) and rejects host calls that take `Pointer<u8>` buffers, so the acceptance bullet of `serveWorkers` that asked for a VM run with 2 workers on the default schedule is open. Give the VM a deterministic way to run the server loop: either `primec --emit=vm` binds the two POSIX shims, or a scripted in-memory `/std/net` (a fixed list of connections and their bytes) answers the calls, so the poller, the two channels and the mutex run on the VM scheduler.
+  - implementation_notes: deferred because the choice between real sockets on the VM and a scripted net needs scoping first; a scripted net keeps the test free of ports and time. The worker code is in stdlib/std/http/server.prime (`poll_slots`, `work_slots`); VM tasks, mutexes and channels already run it on seeds (tests/unit/program_matrix/test_program_matrix_channels.cpp).
+  - acceptance:
+    - positive: a VM test serves a fixed set of requests with 2 workers and gives the same responses and the same counter on the default schedule and on seeds 1 to 3
+    - negative: a program that calls a `/std/net` function the VM does not answer still reports the unbound host function by name
+    - full release gate green
+  - stop_rule: the server on the VM; no other backend.
+
+- [ ] TODO-5863: A struct named without its namespace is a `Channel` element
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-11
+  - phase: Multithreading (found with `serveWorkers`)
+  - parallel_track: mt-primitives
+  - scope: Inside `namespace zed`, a definition with the parameter `[Channel<Job>] jobs` (`Job` a public struct of `zed`) that is called from `main` with a `Channel</zed/Job>` stops with `unsupported return type on /std/sync/channelItemsAlloc__t...`, reported at `Channel`'s `Destroy` in stdlib/std/sync/sync.prime. A second specialization of `Channel` is made for the unqualified name, and its element type is not resolved in the namespace it was written in. Resolve the template argument where it is written, so `Channel<Job>` in `zed` and `Channel</zed/Job>` are one type. `/std/http/server` avoids it by using its job structs only inside its own namespace.
+  - implementation_notes: reproduce with a `[public struct] Job` holding two `i32` fields in `namespace zed`, `[public effects(channel, heap_alloc, io_out), return<void>] run([Channel<Job>] jobs)` that picks one `receive()`, and `main` doing `jobs{Channel</zed/Job>{[capacity] 2i32}}`, a `send` and `/zed/run(jobs)`. Check `Mutex<Job>` and `vector<Job>` the same way.
+  - acceptance:
+    - positive: the program prints the job's fields on the VM and `optexe`; the same with `Mutex<Job>`
+    - negative: a name that is in neither the namespace nor the root is still an unknown type
+    - full release gate green
+  - stop_rule: template arguments that name a struct of the enclosing namespace.
+
+- [ ] TODO-5864: A lambda in a generic definition names the definition's type parameters
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-11
+  - phase: Closures (docs/spec/value-lifecycle.md, Lambdas; found with `serveWorkers`)
+  - parallel_track: closures-generics
+  - scope: In `show<T>([Mutex<T>] cell)`, the lambda `[seven]([Reference<T>] item) { return(item.value + seven) }` is `unsupported reference target type: T`, also when the call names the argument (`show<Box>(cell)`): the lambda's parameter types are not substituted when the definition is specialized. Substitute the enclosing definition's template arguments in a lambda's parameter and capture types. `/std/http/server` works around it by erasing its handler into a `Function` and keeping its workers non-generic.
+  - implementation_notes: reproduce with `[struct] Box() { [i32 mut] value{3i32} }`, the `show<T>` above printing `cell.locked(body)`, and `main` making `cell{Mutex<Box>{Box{}}}`. The lambda is lifted to `/show__lambdaN` before monomorphization; see how a generic struct's method substitutes (src/semantics/TemplateMonomorph*.cpp).
+  - acceptance:
+    - positive: `show<Box>(cell)` prints 10 on the VM and `optexe`; a lambda with a `[T] item` parameter and one that captures a `T` value work the same way
+    - negative: a lambda naming a type parameter that the definition does not have is still an unknown type
+    - full release gate green
+  - stop_rule: type parameters of the enclosing definition in lambdas; inferring `T` through `Mutex<T>` is TODO-5737.
+
+- [ ] TODO-5865: A `Function` local given positionally to a brace constructor is copied
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-11
+  - phase: Closures (docs/spec/value-lifecycle.md, Lambdas; found with `serveWorkers`)
+  - parallel_track: closures-lifecycle
+  - scope: With `[Function<i32, i32> mut] plain{[seven]([i32] x) { return(x + seven) }}` and a struct `Wrap` whose only field is `[Function<i32, i32> mut] run`, `[Wrap mut] wrap{Wrap{plain}}` followed by `print_line(plain(1i32))` prints 8 and then ends with `VM error: invalid heap free address in IR`: the field and the local share one closure block and both free it. The labeled form `Wrap{[run] plain}` copies the closure and works, and so does `Wrap{move(plain)}`. `Mutex<Function<i32, i32>>{plain}` fails the same way. Make the positional argument take the same copy path as the labeled one.
+  - implementation_notes: compare the lowering of a labeled and a positional brace-constructor argument whose source is a named `Function` local (a place, not a temporary); TODO-5727 is the general rule for telling the two apart.
+  - acceptance:
+    - positive: the `Wrap{plain}` and `Mutex<Function<i32, i32>>{plain}` programs print 8 and exit 0 on the VM and `optexe`, with the heap balanced
+    - negative: using `plain` after `Wrap{move(plain)}` is still the use-after-move diagnostic
+    - full release gate green
+  - stop_rule: positional brace-constructor arguments of `Function` type.
+
+- [ ] TODO-5866: A closure captures a `pick` payload binding
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-11
+  - phase: Result and control flow (docs/spec/errors-and-file-io.md; found with `serveWorkers`)
+  - parallel_track: pick-payloads
+  - scope: In `pick(held) { some(job) { [mut] show{[job]([i32] more) { return(job + more) }} ... } }` with `held` a `Maybe<i32>`, the capture is `unknown capture: job`. Copying the payload to a local first (`[i32] amount{job}`, then `[amount]`) works. Let a capture list name a payload binding of the enclosing `pick` arm.
+  - implementation_notes: the capture lookup does not see payload bindings; TODO-5855 (method calls on a payload binding) is probably the same missing binding fact.
+  - acceptance:
+    - positive: the program prints 5 on the VM and `optexe`; a `String` payload captured by value and by `ref` works
+    - negative: a capture of a name that is bound in another arm is still `unknown capture`
+    - full release gate green
+  - stop_rule: captures of `pick` payload bindings.
 
 - [ ] TODO-5799: arm64 native runs spawned tasks on pthreads, its heap behind a lock
   - owner: ai
@@ -1012,7 +1072,7 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
   - phase: Multithreading and Web apps (docs/MultithreadingPrototype.md, The Server)
   - parallel_track: mt-server
   - depends_on: TODO-5803, TODO-5735
-  - scope: Under TODO-5802 every handler holds the app's mutex, so page rendering runs one request at a time. Add `RwLock<T>` (`read(body)` with a read-only `T`, `write(body)` with a `Reference<T>`), let a handler say it only reads (its state parameter `[State] state` against `[Reference<State>] state`, which needs same-arity overloads by argument type, TODO-5735; or a named registration, open question 5 of the design), and run read-only handlers under the read lock. Deferred: decide the registration form first, and measure TODO-5803's baseline.
+  - scope: Under `serveWorkers` every handler holds the app's mutex, so page rendering runs one request at a time. Add `RwLock<T>` (`read(body)` with a read-only `T`, `write(body)` with a `Reference<T>`), let a handler say it only reads (its state parameter `[State] state` against `[Reference<State>] state`, which needs same-arity overloads by argument type, TODO-5735; or a named registration, open question 5 of the design), and run read-only handlers under the read lock. Deferred: decide the registration form first, and measure TODO-5803's baseline.
   - acceptance:
     - the TODO-5803 CPU-bound GET handler at least 2.5x `serve` with 4 workers; a read-only handler that writes its state is a compile error
   - stop_rule: read-only handlers and `RwLock`.
@@ -1023,7 +1083,6 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
   - created_at: 2026-11-09
   - phase: Web apps (docs/WebAppsPlan.md, Concurrency)
   - parallel_track: web-keepalive
-  - depends_on: TODO-5802
   - scope: `serve` and `serveWorkers` close every connection after one response. Honor HTTP/1.1 persistent connections (`Connection: keep-alive` by default, `close` on request, an idle timeout and a request cap per connection), with an answered connection going back to the poller. Deferred until the worker server exists.
   - acceptance:
     - to be set when the leaf is un-deferred; at least: a client reusing one connection for 100 requests gets 100 answers, and an idle connection closes after its timeout
@@ -1035,7 +1094,6 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
   - created_at: 2026-11-09
   - phase: Web apps (docs/WebAppsPlan.md, Concurrency)
   - parallel_track: web-sessions
-  - depends_on: TODO-5802
   - scope: Give `WebApp<State>` sessions: a random session id in a cookie (HttpOnly, SameSite), a session store in the app state with expiry, and handlers that receive their session's data. Deferred: needs the cookie parsing and a random source, and the design of how a handler names its session type.
   - acceptance:
     - to be set when the leaf is un-deferred

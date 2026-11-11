@@ -663,8 +663,8 @@ namespace http {
   // One route of a Router: a method, a pattern and the handler it calls.
   [public struct]
   Route() {
-    [public StringView] method{StringView{}}
-    [public StringView] pattern{StringView{}}
+    [public LiteralText] method{LiteralText{}}
+    [public LiteralText] pattern{LiteralText{}}
     [public Function<void, Request, Reference<Response>> mut] handler
   }
 
@@ -757,7 +757,7 @@ namespace http {
     // (read them with `request.pathParam(name)`), or a literal prefix ending in "*".
     [mut effects(heap_alloc)]
     route([string] method, [string] pattern, [Function<void, Request, Reference<Response>> move] handler) {
-      this.routes.push(Route{[method] method, [pattern] pattern, [handler] handler})
+      this.routes.push(Route{[method] literalTextOf(method), [pattern] literalTextOf(pattern), [handler] handler})
     }
 
     [mut effects(heap_alloc)]
@@ -786,8 +786,8 @@ namespace http {
       [bool mut] pathMatched{false}
       [i32 mut] index{0i32}
       while(index < this.routes.count()) {
-        [StringView] pattern{this.routes[index].pattern}
-        [StringView] method{this.routes[index].method}
+        [StringView] pattern{this.routes[index].pattern.view()}
+        [StringView] method{this.routes[index].method.view()}
         if(pattern_matches(pattern, request.path)) {
           if(request.method.equals(method)) {
             [Request mut] routed{request}
@@ -806,8 +806,8 @@ namespace http {
   // One route of an AppRouter: a Route whose handler also takes the app's state.
   [public struct]
   AppRoute<State>() {
-    [public StringView] method{StringView{}}
-    [public StringView] pattern{StringView{}}
+    [public LiteralText] method{LiteralText{}}
+    [public LiteralText] pattern{LiteralText{}}
     [public Function<void, Reference<State>, Request, Reference<Response>> mut] handler
   }
 
@@ -824,8 +824,7 @@ namespace http {
     route([string] method,
           [string] pattern,
           [Function<void, Reference<State>, Request, Reference<Response>> move] handler) {
-      // `textOf` by hand: a string does not convert to a StringView at a field of a generic struct yet (TODO-5721).
-      this.routes.push(AppRoute<State>{[method] textOf(method), [pattern] textOf(pattern), [handler] handler})
+      this.routes.push(AppRoute<State>{[method] literalTextOf(method), [pattern] literalTextOf(pattern), [handler] handler})
     }
 
     [mut effects(heap_alloc)]
@@ -854,8 +853,8 @@ namespace http {
       [bool mut] pathMatched{false}
       [i32 mut] index{0i32}
       while(index < this.routes.count()) {
-        [StringView] pattern{this.routes[index].pattern}
-        [StringView] method{this.routes[index].method}
+        [StringView] pattern{this.routes[index].pattern.view()}
+        [StringView] method{this.routes[index].method.view()}
         if(pattern_matches(pattern, request.path)) {
           if(request.method.equals(method)) {
             [Request mut] routed{request}

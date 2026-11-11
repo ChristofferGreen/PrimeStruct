@@ -1,4 +1,4 @@
-// TCP sockets for single-threaded servers (docs/spec/stdlib-reference.md, /std/net). The host side is the POSIX shim
+// TCP sockets for servers (docs/spec/stdlib-reference.md, /std/net). The host side is the POSIX shim
 // next to this file: build with
 //   primec --emit=optexe app.prime -o app --link-arg <stdlib>/std/net/native/net_shim.cpp
 // Every call that can block takes a timeout in milliseconds and returns a neutral error code instead of an errno:
@@ -35,6 +35,18 @@ net_close([i32] socket) {
 
 [host return<i32>]
 net_connect([i32] port, [i32] timeoutMs) {
+}
+
+[host return<i64>]
+net_wake_open() {
+}
+
+[host return<i32>]
+net_wake([i32] writer) {
+}
+
+[host return<i32>]
+net_wake_drain([i32] reader) {
 }
 
 namespace std {
@@ -122,6 +134,38 @@ namespace net {
   [public return<i32> effects(net_io)]
   connectLoopback([i32] port, [i32] timeoutMs) {
     return(net_connect(port, timeoutMs))
+  }
+
+  // A pipe with which one thread wakes another that waits in `poll`: the waiting thread watches `reader` with its
+  // sockets, and any thread calls `wake(pipe.writer)`. When opening fails, `reader` is the negative code.
+  [public struct]
+  WakePipe() {
+    [public i32] reader{-1i32}
+    [public i32] writer{-1i32}
+  }
+
+  // Opens a wake pipe. Close both ends with `close`.
+  [public return<WakePipe> effects(net_io)]
+  wakePipe() {
+    [i64] ends{net_wake_open()}
+    if(ends < 0i64) {
+      return(WakePipe{[reader] convert<i32>(ends), [writer] -1i32})
+    }
+    [i64] reader{ends / 4294967296i64}
+    return(WakePipe{[reader] convert<i32>(reader), [writer] convert<i32>(ends - reader * 4294967296i64)})
+  }
+
+  // Makes the pipe's `reader` readable, so a `poll` that watches it returns. Any thread may call it; wakes that
+  // have not been taken yet count as one. Returns 0 or a negative code.
+  [public return<i32> effects(net_io)]
+  wake([i32] writer) {
+    return(net_wake(writer))
+  }
+
+  // Takes the pending wakes of the pipe's `reader`, so that it is readable again only after the next `wake`.
+  [public effects(net_io)]
+  takeWakes([i32] reader) {
+    net_wake_drain(reader)
   }
 
 }

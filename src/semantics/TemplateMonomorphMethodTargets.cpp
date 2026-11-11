@@ -635,6 +635,13 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     return true;
   }
   std::string resolvedType = semantics::resolveTypePath(typeName, receiver.namespacePrefix);
+  // The receiver's binding names its type by rooted path (`[/Box] cell`, or a specialization such as
+  // /std/sync/Mutex__t...). `typeName` has lost the leading slash by now, so inside a namespace the line above
+  // would look for the type under that namespace.
+  if (!receiver.namespacePrefix.empty() && wrappedReceiverTypeName == "/" + typeName &&
+      ctx.sourceDefs.count(wrappedReceiverTypeName) > 0) {
+    resolvedType = wrappedReceiverTypeName;
+  }
   // TODO-5294 Step 2, monomorphization stage: F13/F13b/F13c's collection-
   // family membership test (per
   // docs/ReceiverTargetResolutionConsolidation.md's Step 0 Row F table) now

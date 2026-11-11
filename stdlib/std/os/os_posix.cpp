@@ -48,6 +48,23 @@ int64_t ps_os_monotonic_ms(void) {
 
 bool ps_os_stop_requested(void) { return stopFlag != 0; }
 
+// How many processors are online, at least 1.
+int32_t ps_os_cpu_count(void) {
+  const long count = sysconf(_SC_NPROCESSORS_ONLN);
+  return count < 1 ? 1 : static_cast<int32_t>(count);
+}
+
+// Blocks SIGTERM and SIGINT on the calling thread, so the process delivers them to a thread that has not blocked
+// them. Returns 0 or -100 - error.
+int32_t ps_os_block_stop_signals(void) {
+  sigset_t signals;
+  sigemptyset(&signals);
+  sigaddset(&signals, SIGTERM);
+  sigaddset(&signals, SIGINT);
+  const int error = pthread_sigmask(SIG_BLOCK, &signals, nullptr);
+  return error == 0 ? 0 : -100 - error;
+}
+
 int32_t ps_os_log_line(const char *line) {
   std::string text(line);
   text.push_back('\n');

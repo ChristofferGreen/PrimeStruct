@@ -1468,15 +1468,26 @@ if(PRIMESTRUCT_BUILD_TESTS)
   set_tests_properties(PrimeStruct_net
                        PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
   # /std/http: the request parser, responses and the router (tests/unit/backend_host/test_http.cpp). Its cases run on
-  # the VM, build a fixture "through optexe" or serve "over loopback"; the last two build optexe programs, so they are
-  # CTest entries of their own and PrimeStruct_http runs the VM cases.
+  # the VM, build a fixture "through optexe", serve "over loopback" or are about "serveWorkers"; the last three build
+  # optexe programs or compile whole apps, so they are CTest entries of their own and PrimeStruct_http runs the VM
+  # cases.
   add_test(
     NAME PrimeStruct_http
     COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
             "--test-suite=primestruct.backend.http"
-            "--test-case-exclude=*through optexe*,*over loopback*"
+            "--test-case-exclude=*through optexe*,*over loopback*,*serveWorkers*"
             "--order-by=file"
   )
+  # (6 cases, 20 s alone. The two example cases take 5 s each: one whole-app optcpp compile, nothing to split.)
+  add_test(
+    NAME PrimeStruct_http_workers
+    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+            "--test-suite=primestruct.backend.http"
+            "--test-case=*serveWorkers*"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_http_workers
+                       PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
   set_tests_properties(PrimeStruct_http
                        PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
   # (7 cases, 135 s in a loaded gate: shards of two.)
@@ -3674,7 +3685,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   # in loaded gates (load 40 to 140). Each suite is shards of three cases (primestructAddDoctestShards); the number
   # after the suite is its case count, which ctest PrimeStruct_test_registration checks.
   set(PrimeStructProgramMatrixCaseCounts
-    atomics=5 channels=9 closures=8 closures_callables=8 closures_references=4 closures_fields=12 closures_routers=7 container_copies=19
+    atomics=5 channels=10 closures=8 closures_callables=8 closures_references=4 closures_fields=12 closures_routers=7 container_copies=19
     control=37 element_copies=7 lifecycle=26 mutexes=6 optimizer=16 parameter_modes=8 pick_subjects=5 results=9 shared_programs=16
     shared_strings=3 tasks=9 text_views=2)
   foreach(suite IN LISTS PrimeStructProgramMatrixTestSuites)

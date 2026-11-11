@@ -91,7 +91,7 @@ namespace web {
   // field of an element whose `Function` holds a capturing closure faults on the VM (TODO-5731).
   [public struct]
   ClickHandler<State>() {
-    [public StringView] id{StringView{}}
+    [public LiteralText] id{LiteralText{}}
     [public Function<void, Reference<State>, PointerEvent> mut] handler
   }
 
@@ -100,14 +100,14 @@ namespace web {
   // `i32` field of an element after the first faults on the VM (TODO-5733).
   [public struct]
   PointerHandler<State>() {
-    [public StringView] id{StringView{}}
+    [public LiteralText] id{LiteralText{}}
     [public Function<void, Reference<State>, PointerEvent> mut] handler
   }
 
   // The handler of a key down or up of the control `id`; its event lies in `WebApp.keyKinds` at the same index.
   [public struct]
   KeyHandler<State>() {
-    [public StringView] id{StringView{}}
+    [public LiteralText] id{LiteralText{}}
     [public Function<void, Reference<State>, KeyEvent> mut] handler
   }
 
@@ -213,7 +213,7 @@ namespace web {
   // A region of the app's pages: the id of the element that holds it and the function that writes its contents.
   [public struct]
   RegionRenderer<State>() {
-    [public StringView] id{StringView{}}
+    [public LiteralText] id{LiteralText{}}
     [public Function<void, Reference<Writer>, Reference<State>> mut] render
   }
 
@@ -277,14 +277,14 @@ namespace web {
     button([string] id, [string] title, [Function<void, Reference<State>, PointerEvent> move] handler) {
       [StringView] idView{textOf(id)}
       for([i32 mut] index{0i32}; index < this.clicks.count(); ++index) {
-        [StringView] existing{this.clicks[index].id}
+        [StringView] existing{this.clicks[index].id.view()}
         if(existing.equals(idView)) {
           print_error("duplicate control id: ")
           print_line_error(id)
           panic(1i32)
         }
       }
-      this.clicks.push(ClickHandler<State>{[id] idView, [handler] handler})
+      this.clicks.push(ClickHandler<State>{[id] literalTextOf(id), [handler] handler})
       return(Control{[id] id, [title] title})
     }
 
@@ -297,14 +297,14 @@ namespace web {
     region([string] id, [Function<void, Reference<Writer>, Reference<State>> move] render) {
       [StringView] idView{textOf(id)}
       for([i32 mut] index{0i32}; index < this.regions.count(); ++index) {
-        [StringView] existing{this.regions[index].id}
+        [StringView] existing{this.regions[index].id.view()}
         if(existing.equals(idView)) {
           print_error("duplicate region id: ")
           print_line_error(id)
           panic(1i32)
         }
       }
-      this.regions.push(RegionRenderer<State>{[id] idView, [render] render})
+      this.regions.push(RegionRenderer<State>{[id] literalTextOf(id), [render] render})
     }
 
     // Registers the handler of the pointer resting on `control` (`POST /_on/<id>/mouseover`). These events, and the
@@ -349,7 +349,7 @@ namespace web {
                       [Function<void, Reference<State>, PointerEvent> move] handler) {
       this.checkNewHandler(control.id, bit)
       control.events = control.events + bit
-      this.pointers.push(PointerHandler<State>{[id] textOf(control.id), [handler] handler})
+      this.pointers.push(PointerHandler<State>{[id] literalTextOf(control.id), [handler] handler})
       this.pointerKinds.push(bit)
     }
 
@@ -357,7 +357,7 @@ namespace web {
     addKeyHandler([Control mut] control, [i32] bit, [Function<void, Reference<State>, KeyEvent> move] handler) {
       this.checkNewHandler(control.id, bit)
       control.events = control.events + bit
-      this.keys.push(KeyHandler<State>{[id] textOf(control.id), [handler] handler})
+      this.keys.push(KeyHandler<State>{[id] literalTextOf(control.id), [handler] handler})
       this.keyKinds.push(bit)
     }
 
@@ -384,8 +384,7 @@ namespace web {
     route([string] method,
           [string] pattern,
           [Function<void, Reference<State>, Request, Reference<Response>> move] handler) {
-      // `textOf` by hand: a string does not convert to a StringView at a field of a generic struct yet (TODO-5721).
-      this.routes.push(AppRoute<State>{[method] textOf(method), [pattern] textOf(pattern), [handler] handler})
+      this.routes.push(AppRoute<State>{[method] literalTextOf(method), [pattern] literalTextOf(pattern), [handler] handler})
     }
 
     [mut effects(heap_alloc)]
@@ -425,8 +424,8 @@ namespace web {
       [bool mut] pathMatched{false}
       [i32 mut] index{0i32}
       while(index < this.routes.count()) {
-        [StringView] pattern{this.routes[index].pattern}
-        [StringView] method{this.routes[index].method}
+        [StringView] pattern{this.routes[index].pattern.view()}
+        [StringView] method{this.routes[index].method.view()}
         if(routeMatches(pattern, path)) {
           if(request.method.equals(method)) {
             [Request mut] routed{request}
@@ -501,7 +500,7 @@ namespace web {
     [return<i32>]
     clickIndex([StringView] id) {
       for([i32 mut] index{0i32}; index < this.clicks.count(); ++index) {
-        [StringView] existing{this.clicks[index].id}
+        [StringView] existing{this.clicks[index].id.view()}
         if(existing.equals(id)) {
           return(index)
         }
@@ -512,7 +511,7 @@ namespace web {
     [return<i32>]
     pointerIndex([StringView] id, [i32] bit) {
       for([i32 mut] index{0i32}; index < this.pointers.count(); ++index) {
-        [StringView] existing{this.pointers[index].id}
+        [StringView] existing{this.pointers[index].id.view()}
         [i32] kind{this.pointerKinds[index]}
         if(existing.equals(id) && kind == bit) {
           return(index)
@@ -524,7 +523,7 @@ namespace web {
     [return<i32>]
     keyIndex([StringView] id, [i32] bit) {
       for([i32 mut] index{0i32}; index < this.keys.count(); ++index) {
-        [StringView] existing{this.keys[index].id}
+        [StringView] existing{this.keys[index].id.view()}
         [i32] kind{this.keyKinds[index]}
         if(existing.equals(id) && kind == bit) {
           return(index)
@@ -543,7 +542,7 @@ namespace web {
         return()
       }
       for([i32 mut] index{0i32}; index < this.regions.count(); ++index) {
-        [StringView] id{this.regions[index].id}
+        [StringView] id{this.regions[index].id.view()}
         if(id.equals(target)) {
           [Writer mut] page{Writer{}}
           [Reference<Writer>] out{location(page)}

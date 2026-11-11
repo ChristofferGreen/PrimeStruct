@@ -394,6 +394,84 @@ main() {
   runChannelProgram(program);
 }
 
+// `pick`, `wait` and the templated `locked` are found from inside a namespace, where a bare name is first looked up
+// under that namespace. `first` takes job 1 before `adder` exists, so the total is 1 + (2 + ... + 10) everywhere.
+TEST_CASE("tasks in a namespace pick from a channel, wait for each other and lock a mutex") {
+  program_matrix::ProgramCase program;
+  program.name = "channel_namespace_tasks";
+  program.source = R"(
+import /std/maybe/*
+import /std/sync/*
+
+namespace shop {
+  [effects(channel), return<void>]
+  produce([Channel<i32>] jobs, [i32] count) {
+    [i32 mut] i{1i32}
+    while(i <= count) {
+      jobs.send(i)
+      i = i + 1i32
+    }
+    jobs.close()
+  }
+
+  [effects(channel), return<i32>]
+  first_or([Channel<i32>] jobs, [i32] fallback) {
+    [Maybe<i32>] next{jobs.receive()}
+    return(pick(next) {
+      none {
+        return(fallback)
+      }
+      some(job) {
+        return(job)
+      }
+    })
+  }
+
+  [effects(channel, lock), return<void>]
+  add_jobs([Channel<i32>] jobs, [Mutex<i32>] total) {
+    [bool mut] open{true}
+    while(open) {
+      pick(jobs.receive()) {
+        none {
+          open = false
+        }
+        some(job) {
+          [i32] amount{job}
+          total.locked([amount]([Reference<i32> mut] sum) {
+            sum = sum + amount
+          })
+        }
+      }
+    }
+  }
+
+  [public effects(task, channel, lock, heap_alloc), return<i32>]
+  run([i32] count) {
+    jobs{Channel<i32>{[capacity] 2i32}}
+    total{Mutex<i32>{0i32}}
+    [Task<void>] producer{[spawn] produce(jobs, count)}
+    [Task<i32>] first{[spawn] first_or(jobs, 0i32)}
+    [i32] head{wait(first)}
+    [Task<void>] adder{[spawn] add_jobs(jobs, total)}
+    wait(producer)
+    wait(adder)
+    return(head + total.locked([]([Reference<i32>] sum) {
+      return(sum + 0i32)
+    }))
+  }
+}
+
+[effects(task, channel, lock, heap_alloc, io_out), return<int>]
+main() {
+  print_line(/shop/run(10i32))
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "55\n";
+  runChannelProgram(program);
+}
+
 TEST_CASE("a send on a closed channel faults") {
   program_matrix::ProgramCase program;
   program.name = "channel_send_closed";

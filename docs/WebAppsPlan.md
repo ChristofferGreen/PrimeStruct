@@ -124,17 +124,19 @@ handler that brings the menus, toolbars and session up to date after each event.
 7. Concurrency (docs/MultithreadingPrototype.md, Threads For Real; after the PrimeScroll startup lane and TODO-5770,
    TODO-5772): sendable values TODO-5790 and `Function` sendable by construction TODO-5791; VM tasks TODO-5792; `optexe` heaps and threads TODO-5793,
    TODO-5794, TODO-5795; `Atomic`, `Mutex`, `Channel` TODO-5796, TODO-5797, TODO-5798; then `serveWorkers`
-   TODO-5802 and the apps on it, measured, TODO-5803. Deferred: read-only handlers under `RwLock` TODO-5804,
+   TODO-5802 (done) and the apps on it, measured, TODO-5803. Deferred: read-only handlers under `RwLock` TODO-5804,
    keep-alive TODO-5805, sessions TODO-5806.
 8. Later: TODO-5707, TODO-5708 (type aliases), TODO-5717 (both writers in one file), TODO-5718 (repeated and decoded
    parameters).
 
 ## Concurrency
 
-The server uses one core today. `serveWorkers(handler, config)` (docs/MultithreadingPrototype.md, The Server) keeps
+`serve` uses one core. `serveWorkers(handler, config)` (docs/spec/stdlib-reference.md, Workers;
+docs/MultithreadingPrototype.md, The Server) keeps
 one thread polling and accepting and hands each readable connection to `config.workers` worker threads over a
 `Channel`; workers receive, parse, serialize and send in parallel, and call the handler inside a `Mutex` that holds
 the whole app, so `WebApp<State>` and `AppRouter<State>` apps keep plain struct state with no locking of their own
 (principle 2 still holds: the state comes in as the handler's parameter). Writing a page's HTML happens inside the
 handler, so it stays serialized until handlers that only read the state share a read lock (TODO-5804). Running
-several processes on one port was rejected: each would have its own copy of the state.
+several processes on one port was rejected: each would have its own copy of the state. The example apps still call
+`serve`; switching them and measuring the gain is TODO-5803.

@@ -16,6 +16,7 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <atomic>
 #include <cerrno>
 #include <chrono>
 
@@ -24,6 +25,8 @@
 #include <fstream>
 #include <iterator>
 #include <string>
+#include <thread>
+#include <vector>
 
 using primec::embed::ScriptEngine;
 
@@ -405,6 +408,312 @@ TEST_CASE("an idle connection does not delay other clients over loopback") {
   close(second);
 
   CHECK(stopServer(server) == 0);
+}
+
+namespace {
+// A server whose "listening on <port>" line is read from a pipe: the wait for it ends when the line arrives or the
+// server exits, not after a time limit. A server that is still running when the test leaves is killed.
+struct PipedServer {
+  pid_t pid = -1;
+  int port = 0;
+  int errorFd = -1;
+  std::string errors;
+
+  PipedServer() = default;
+  PipedServer(const PipedServer &) = delete;
+  PipedServer &operator=(const PipedServer &) = delete;
+
+  ~PipedServer() {
+    if (pid > 0) {
+      kill(pid, SIGKILL);
+      int status = 0;
+      waitpid(pid, &status, 0);
+    }
+    if (errorFd >= 0) {
+      close(errorFd);
+    }
+  }
+
+  // Starts `exe` with `environment` ("NAME=value" entries) added to this process's.
+  void start(const std::string &exe, std::vector<std::string> environment) {
+    int ends[2] = {-1, -1};
+    REQUIRE(pipe(ends) == 0);
+    pid = fork();
+    REQUIRE(pid >= 0);
+    if (pid == 0) {
+      close(ends[0]);
+      dup2(ends[1], STDERR_FILENO);
+      close(ends[1]);
+      for (std::string &entry : environment) {
+        putenv(entry.data());
+      }
+      execl(exe.c_str(), exe.c_str(), static_cast<char *>(nullptr));
+      _exit(127);
+    }
+    close(ends[1]);
+    errorFd = ends[0];
+    char byte = 0;
+    while (errors.find('\n') == std::string::npos && read(errorFd, &byte, 1) == 1) {
+      errors.push_back(byte);
+    }
+    const size_t at = errors.find("listening on ");
+    port = at == std::string::npos ? -1 : std::atoi(errors.c_str() + at + 13);
+  }
+
+  // Whether the server has exited; it is reaped when it has.
+  bool exited() {
+    int status = 0;
+    if (pid > 0 && waitpid(pid, &status, WNOHANG) == pid) {
+      pid = -1;
+    }
+    return pid <= 0;
+  }
+
+  // Waits for the server to exit and returns its exit code (-1 if it did not exit normally).
+  int waitForExit() {
+    if (pid <= 0) {
+      return -1;
+    }
+    int status = 0;
+    REQUIRE(waitpid(pid, &status, 0) == pid);
+    pid = -1;
+    return WIFEXITED(status) ? WEXITSTATUS(status) : -1;
+  }
+
+  int stop() {
+    if (pid > 0) {
+      kill(pid, SIGTERM);
+    }
+    return waitForExit();
+  }
+};
+
+// A client socket to 127.0.0.1:`port` that waits as long as the server takes, or -1.
+int connectAndWait(int port) {
+  const int client = socket(AF_INET, SOCK_STREAM, 0);
+  if (client < 0) {
+    return -1;
+  }
+  sockaddr_in address = {};
+  address.sin_family = AF_INET;
+  address.sin_port = htons(static_cast<uint16_t>(port));
+  address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+  if (connect(client, reinterpret_cast<sockaddr *>(&address), sizeof(address)) != 0) {
+    close(client);
+    return -1;
+  }
+  return client;
+}
+
+// Sends `request` on a new connection and returns the whole response, however long the server takes.
+std::string exchangeAndWait(int port, const std::string &request) {
+  const int client = connectAndWait(port);
+  if (client < 0) {
+    return "connect failed";
+  }
+  send(client, request.data(), request.size(), 0);
+  std::string response = readAll(client);
+  close(client);
+  return response;
+}
+
+// The body of an HTTP response.
+std::string bodyOf(const std::string &response) {
+  const size_t at = response.find("\r\n\r\n");
+  return at == std::string::npos ? std::string("no body: ") + response : response.substr(at + 4);
+}
+
+// Builds the worker server fixture (once per process) and starts it; false when sockets are not permitted here.
+bool startWorkerServer(PipedServer &server, std::vector<std::string> environment) {
+  if (!socketsPermitted()) {
+    MESSAGE("skipped: socket() is not permitted here (EPERM or EACCES)");
+    return false;
+  }
+  static const std::string exe =
+      buildServer(Fixtures + "http_workers_server.prime", "http_workers_server");
+  server.start(exe, std::move(environment));
+  if (server.port < 0 && server.errors.find("not permitted") != std::string::npos) {
+    MESSAGE("skipped: the server may not listen here: " << server.errors);
+    return false;
+  }
+  REQUIRE_MESSAGE(server.port > 0, server.errors);
+  return true;
+}
+
+// Compiles a copy of the example app `name` whose `main` calls `serveWorkers` where the example calls `serve`; the
+// rest of the example, its handlers included, is unchanged. Returns primec's exit code; its output goes to `log`.
+int compileExampleWithWorkers(const std::string &name, std::string &log) {
+  std::string source =
+      readFile(std::string(PRIMESTRUCT_SOURCE_DIR) + "/examples/apps/" + name + "/main.prime");
+  const std::string call = "  serve(withRequestLog(";
+  const std::string effects =
+      "effects(heap_alloc, io_err, net_io) on_error<ServeError, log_serve_error>]\nmain()";
+  const size_t callAt = source.find(call);
+  REQUIRE(callAt != std::string::npos);
+  source.replace(callAt, call.size(), "  serveWorkers(withRequestLog(");
+  const size_t effectsAt = source.find(effects);
+  REQUIRE(effectsAt != std::string::npos);
+  source.replace(effectsAt,
+                 effects.size(),
+                 "effects(heap_alloc, io_err, net_io, task, lock, channel, atomic) "
+                 "on_error<ServeError, log_serve_error>]\nmain()");
+  const std::string copy = scratch(name + "_workers.prime");
+  std::ofstream(copy, std::ios::binary) << source;
+  const std::string logPath = copy + ".log";
+  // optcpp: the whole compiler up to the C++ text, without the C++ compiler's seconds.
+  const int status = run(shellQuote(Primec) + " --emit=optcpp " + shellQuote(copy) + " -o " +
+                         shellQuote(copy + ".cpp") + " > " + shellQuote(logPath) + " 2>&1");
+  log = readFile(logPath);
+  return status;
+}
+} // namespace
+
+// None of the serveWorkers cases below measures time: each waits for the server's own answers, in an order only a
+// correct server can produce.
+TEST_CASE("serveWorkers with 4 workers counts every POST of 16 concurrent clients") {
+  PipedServer server;
+  if (!startWorkerServer(server, {"WORKERS=4"})) {
+    return;
+  }
+  const std::string post = "POST /hit HTTP/1.1\r\nHost: localhost\r\nContent-Length: 0\r\n\r\n";
+  std::atomic<int> answered{0};
+  std::vector<std::thread> clients;
+  for (int client = 0; client < 16; ++client) {
+    clients.emplace_back([&] {
+      for (int request = 0; request < 50; ++request) {
+        const std::string response = exchangeAndWait(server.port, post);
+        if (response.rfind("HTTP/1.1 200 OK\r\n", 0) == 0 && bodyOf(response) == "ok") {
+          answered.fetch_add(1);
+        }
+      }
+    });
+  }
+  for (std::thread &client : clients) {
+    client.join();
+  }
+  CHECK(answered.load() == 800);
+  // The counter is a plain field that every handler changes inside the app's mutex.
+  const std::string count =
+      exchangeAndWait(server.port, "GET /count HTTP/1.1\r\nHost: localhost\r\n\r\n");
+  CHECK_MESSAGE(bodyOf(count) == "800", count);
+  CHECK(server.stop() == 0);
+}
+
+TEST_CASE("serveWorkers with 1 worker answers others while a client stalls in the middle of its "
+          "request") {
+  PipedServer server;
+  if (!startWorkerServer(server, {"WORKERS=1"})) {
+    return;
+  }
+  const std::string get = "GET /count HTTP/1.1\r\nHost: localhost\r\n\r\n";
+  const int stalled = connectAndWait(server.port);
+  REQUIRE(stalled >= 0);
+  const std::string half = "POST /hit HTTP/1.1\r\nHost: localhost\r\nContent-Le";
+  send(stalled, half.data(), half.size(), 0);
+  // These are answered while the stalled client is still connected (it is answered itself below): the one worker
+  // gives a connection back as soon as it has read what arrived.
+  CHECK_MESSAGE(bodyOf(exchangeAndWait(server.port, get)) == "0",
+                "first GET beside the stalled client");
+  const std::string hit =
+      exchangeAndWait(server.port, "POST /hit HTTP/1.1\r\nContent-Length: 0\r\n\r\n");
+  CHECK_MESSAGE(bodyOf(hit) == "ok", hit);
+  CHECK_MESSAGE(bodyOf(exchangeAndWait(server.port, get)) == "1",
+                "second GET beside the stalled client");
+  const std::string rest = "ngth: 0\r\n\r\n";
+  send(stalled, rest.data(), rest.size(), 0);
+  const std::string late = readAll(stalled);
+  close(stalled);
+  CHECK_MESSAGE(bodyOf(late) == "ok", late);
+  CHECK_MESSAGE(bodyOf(exchangeAndWait(server.port, get)) == "2",
+                "GET after the stalled client finished");
+  CHECK(server.stop() == 0);
+}
+
+TEST_CASE("SIGTERM stops serveWorkers from listening while its worker is busy") {
+  if (!socketsPermitted()) {
+    MESSAGE("skipped: socket() is not permitted here (EPERM or EACCES)");
+    return;
+  }
+  // The handler of GET /hold connects here and waits for a byte, so the test decides how long the worker is busy.
+  const int holdListener = socket(AF_INET, SOCK_STREAM, 0);
+  REQUIRE(holdListener >= 0);
+  sockaddr_in address = {};
+  address.sin_family = AF_INET;
+  address.sin_port = 0;
+  address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+  socklen_t length = sizeof(address);
+  const bool listening =
+      bind(holdListener, reinterpret_cast<sockaddr *>(&address), sizeof(address)) == 0 &&
+      listen(holdListener, 4) == 0 &&
+      getsockname(holdListener, reinterpret_cast<sockaddr *>(&address), &length) == 0;
+  if (!listening) {
+    MESSAGE("skipped: the test may not listen here");
+    close(holdListener);
+    return;
+  }
+  PipedServer server;
+  if (!startWorkerServer(server,
+                         {"WORKERS=1", "HOLD_PORT=" + std::to_string(ntohs(address.sin_port))})) {
+    close(holdListener);
+    return;
+  }
+  const int held = connectAndWait(server.port);
+  REQUIRE(held >= 0);
+  const std::string hold = "GET /hold HTTP/1.1\r\nHost: localhost\r\n\r\n";
+  send(held, hold.data(), hold.size(), 0);
+  // The handler has connected: the only worker is inside it from here on.
+  const int release = accept(holdListener, nullptr, nullptr);
+  REQUIRE(release >= 0);
+  const int idle = connectAndWait(server.port);
+  REQUIRE(idle >= 0);
+
+  kill(server.pid, SIGTERM);
+  // The poller closes the connections no worker holds: the idle one ends (or is reset, if it was still waiting to
+  // be accepted) although the worker has not finished.
+  char byte = 0;
+  CHECK(recv(idle, &byte, 1, 0) <= 0);
+  close(idle);
+  // It stopped listening before that, so nothing new connects, and it has not exited: it waits for its worker.
+  const int refused = connectAndWait(server.port);
+  CHECK(refused < 0);
+  if (refused >= 0) {
+    close(refused);
+  }
+  CHECK(!server.exited());
+
+  // The request the worker is answering is finished, not cut off.
+  CHECK(send(release, "x", 1, 0) == 1);
+  const std::string answer = readAll(held);
+  close(held);
+  close(release);
+  close(holdListener);
+  CHECK_MESSAGE(answer.rfind("HTTP/1.1 200 OK\r\n", 0) == 0, answer);
+  CHECK_MESSAGE(bodyOf(answer) == "held", answer);
+  CHECK(server.waitForExit() == 0);
+}
+
+TEST_CASE("serveWorkers rejects an app whose state is not sendable") {
+  const std::string log = scratch("workers_not_sendable.log");
+  const int status = run(
+      shellQuote(Primec) + " --emit=optcpp " + shellQuote(Fixtures + "workers_not_sendable.prime") +
+      " -o " + shellQuote(scratch("workers_not_sendable.cpp")) + " > " + shellQuote(log) + " 2>&1");
+  CHECK(status != 0);
+  const std::string diagnostics = readFile(log);
+  CHECK_MESSAGE(
+      diagnostics.find(
+          "closure cannot be a Function: capture `inner`, field `state` of WebApp<Borrowed>, "
+          "field `bytes` of Borrowed is Pointer<u8>") != std::string::npos,
+      diagnostics);
+}
+
+TEST_CASE("the hello_button example compiles with serveWorkers and unchanged handlers") {
+  std::string log;
+  CHECK_MESSAGE(compileExampleWithWorkers("hello_button", log) == 0, log);
+}
+
+TEST_CASE("the todo_web example compiles with serveWorkers and unchanged handlers") {
+  std::string log;
+  CHECK_MESSAGE(compileExampleWithWorkers("todo_web", log) == 0, log);
 }
 
 TEST_SUITE_END();
