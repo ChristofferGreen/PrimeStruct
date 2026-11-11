@@ -30,7 +30,10 @@ struct PsScriptRun {
   PsScriptFinished finished = nullptr;
   void *user = nullptr;
   std::atomic<bool> stopRequested{false};
-  std::atomic<pid_t> pid{0};
+  // The runner's pid, or 0 once it can no longer be signalled. Every kill holds pidMutex, and the worker clears the pid
+  // under it before it reaps the child, so a signal never reaches a pid the system may already have reused.
+  std::mutex pidMutex;
+  pid_t pid = 0;
   std::thread worker;
 };
 
@@ -156,9 +159,12 @@ void execute(PsScriptRun &run) {
     finish(run, 1, 0);
     return;
   }
-  run.pid.store(pid);
-  if (run.stopRequested.load()) {
-    ::kill(pid, SIGTERM); // stopped before it was running
+  {
+    std::lock_guard<std::mutex> lock(run.pidMutex);
+    run.pid = pid;
+    if (run.stopRequested.load()) {
+      ::kill(pid, SIGTERM); // stopped before it was running
+    }
   }
   // The runner reads all of its input before it runs anything, so writing it first cannot block on its output. A
   // failed write means the runner is gone; how it ended is reported below.
@@ -177,10 +183,18 @@ void execute(PsScriptRun &run) {
     }
   }
   ::close(fromChild[0]);
+  // Wait for the child to end without reaping it: it stays a zombie, so its pid is still its own. The pid is cleared
+  // under the lock that stop signals under, and only then reaped.
+  siginfo_t ended;
+  while (::waitid(P_PID, static_cast<id_t>(pid), &ended, WEXITED | WNOWAIT) < 0 && errno == EINTR) {
+  }
+  {
+    std::lock_guard<std::mutex> lock(run.pidMutex);
+    run.pid = 0;
+  }
   int waitStatus = 0;
   while (::waitpid(pid, &waitStatus, 0) < 0 && errno == EINTR) {
   }
-  run.pid.store(0);
   if (WIFSIGNALED(waitStatus)) {
     if (run.stopRequested.load()) {
       emit(run, "[stopped]\n");
@@ -192,6 +206,11 @@ void execute(PsScriptRun &run) {
     return;
   }
   const int code = WIFEXITED(waitStatus) ? WEXITSTATUS(waitStatus) : -1;
+  if (code != 0 && run.stopRequested.load()) {
+    emit(run, "[stopped]\n"); // a runner that answers the stop by exiting is stopped, whatever its code
+    finish(run, 2, 0);
+    return;
+  }
   if (code != 0) {
     emit(run, "[the script runner exited with code " + std::to_string(code) + "]\n");
     finish(run, 1, code);
@@ -228,8 +247,9 @@ void ps_script_stop(PsScriptRun *run) {
     return;
   }
   run->stopRequested.store(true);
-  if (const pid_t pid = run->pid.load(); pid > 0) {
-    ::kill(pid, SIGTERM);
+  std::lock_guard<std::mutex> lock(run->pidMutex);
+  if (run->pid > 0) {
+    ::kill(run->pid, SIGTERM);
   }
 }
 
@@ -240,11 +260,16 @@ void ps_script_release(PsScriptRun *run) {
   ps_script_stop(run);
   // A process that ignores SIGTERM is ended for good after a moment, so the join cannot hang.
   std::thread escalator([run] {
-    for (int i = 0; i < 30 && run->pid.load() > 0; ++i) {
+    const auto running = [run] {
+      std::lock_guard<std::mutex> lock(run->pidMutex);
+      return run->pid > 0;
+    };
+    for (int i = 0; i < 30 && running(); ++i) {
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
-    if (const pid_t pid = run->pid.load(); pid > 0) {
-      ::kill(pid, SIGKILL);
+    std::lock_guard<std::mutex> lock(run->pidMutex);
+    if (run->pid > 0) {
+      ::kill(run->pid, SIGKILL);
     }
   });
   run->worker.join();

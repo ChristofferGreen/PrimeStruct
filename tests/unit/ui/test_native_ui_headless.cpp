@@ -1411,6 +1411,57 @@ TEST_CASE("a runner that ends without reading its input does not end the program
   ps_script_release(run);
 }
 
+TEST_CASE("a stopped runner that exits with a code is reported as stopped") {
+  // The runner traps SIGTERM and exits with code 3 (not by the signal), and says "ready" once the trap is set, so the
+  // stop is sent only to a runner that will answer it with that exit.
+  const std::string runner = scratchFile("stop_exit_runner.sh",
+                                         "#!/bin/sh\ntrap 'exit 3' TERM\necho ready\nwhile :; do :; done\n");
+  std::filesystem::permissions(runner,
+                               std::filesystem::perms::owner_all,
+                               std::filesystem::perm_options::add);
+  struct Watch {
+    std::promise<void> ready;
+    std::promise<int> finished;
+    std::string output;
+    bool readySent = false;
+    int code = -1;
+  } watch;
+  const char *previous = std::getenv("PRIMESTRUCT_SCRIPT_RUNNER");
+  const std::string saved = previous != nullptr ? previous : "";
+  REQUIRE(setenv("PRIMESTRUCT_SCRIPT_RUNNER", runner.c_str(), 1) == 0);
+  PsScriptRun *run = ps_script_start(
+      "ignored.prime",
+      "",
+      "",
+      [](int, const char *chunk, size_t size, void *user) {
+        auto *w = static_cast<Watch *>(user);
+        w->output.append(chunk, size);
+        if (!w->readySent && w->output.find("ready\n") != std::string::npos) {
+          w->readySent = true;
+          w->ready.set_value();
+        }
+      },
+      [](int status, int code, void *user) {
+        auto *w = static_cast<Watch *>(user);
+        w->code = code;
+        w->finished.set_value(status);
+      },
+      &watch);
+  if (previous != nullptr) {
+    setenv("PRIMESTRUCT_SCRIPT_RUNNER", saved.c_str(), 1);
+  } else {
+    unsetenv("PRIMESTRUCT_SCRIPT_RUNNER");
+  }
+  REQUIRE(run != nullptr);
+  watch.ready.get_future().get();
+  ps_script_stop(run);
+  CHECK(watch.finished.get_future().get() == 2);
+  CHECK(watch.code == 0);
+  CHECK(watch.output.find("[stopped]\n") != std::string::npos);
+  CHECK(watch.output.find("exited with code") == std::string::npos);
+  ps_script_release(run);
+}
+
 TEST_CASE("a late script answer neither creates nor lowers a window's pending count below zero") {
   std::unordered_map<uint64_t, int> pending;
   pending[7] = 2;
