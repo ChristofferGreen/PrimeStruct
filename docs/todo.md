@@ -100,7 +100,7 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-5738 | Sum results return through the caller's block in real calls | ready | ir-real-calls |
+| TODO-5738 | Sum results return through the caller's block in real calls | deferred | ir-real-calls |
 | TODO-5752 | x86_64 native and the Linux JIT take the address ABI of real calls | deferred | native-real-calls |
 | TODO-5824 | A null or stray local address faults on the VM | deferred | vm-addresses |
 | TODO-5727 | Every struct copy site tells a place from a temporary by resolution | deferred | lifecycle-copy-sources |
@@ -256,7 +256,7 @@ of sync with them.
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544, TODO-5745, TODO-5746
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719, TODO-5853; collection fields found by closures and the todo example: TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
-- Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5738, TODO-5718
+- Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5718; deferred TODO-5738
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732, TODO-5735, TODO-5736, TODO-5737
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5844, TODO-5938; real calls TODO-5752; VM address checks TODO-5824
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5847, TODO-5893, TODO-5894, TODO-5872; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854, TODO-5862
@@ -275,7 +275,7 @@ Build system (docs/BuildSystemPlan.md), after the startup lane: ready and indepe
 
 - [ ] TODO-5738: Sum results return through the caller's block in real calls
   - owner: ai
-  - status: ready
+  - status: deferred
   - created_at: 2026-11-08
   - phase: Web apps (docs/WebAppsPlan.md; found while finishing TODO-5734)
   - parallel_track: ir-real-calls
@@ -284,6 +284,7 @@ Build system (docs/BuildSystemPlan.md), after the startup lane: ready and indepe
     - `serve`/`serveUntil` are real calls in todo_web; a matrix case returns `Result` and `Maybe` values (ok, error, a payload with a `Destroy`) from a real call on every backend
     - full release gate green
   - stop_rule: sum results of real calls only.
+  - findings: Measured 2026-11-12 (TODO-5741 and TODO-5739 landed first). Two facts change the case for this task. (1) `serve` and `serveUntil` are called once, from todo_web's `main`, so inlining them duplicates nothing: a prototype that made them real calls (`Result<ServeError>` is a packed scalar there, because todo_web does not import `/std/result`; the shape check rejects it only because `hasScalarOrVoidReturn` reads the text `Result<ServeError>` as non-scalar, and the callee body needs `entryHasResultInfo` set from its `ReturnInfo`) grew `--emit=optcpp` from 1,563,197 to 1,588,608 bytes, and clang++ -O2 took 3.3 s before and 3.5 s after, so the 260 KB sits in `main` either way. The task has no size outcome until a definition with a `Result` or `Maybe` result has two or more call sites. (2) With `/std/result` imported a `Result<...>` is sum storage, which a real call must return through a block of the caller's frame: `emitReturnSumStorage` (src/ir_lowerer/IrLowererLowerStatementsBindingsContinued.h) copies the sum into the block (`realCallStructReturnLocal`) and returns its address, the call site (src/ir_lowerer/IrLowererLowerInlineCalls.cpp) allocates the block from `SumHelpersContext::loweredSumSlotCount`, and the sum definition has to come from the semantic product's return fact when the declared text does not resolve; the aggregate return path (`return(other_call())`) already copies into the block. Pick this up when a program with a multi-call-site `Result` or `Maybe` function makes it pay; start from the packed case (no `/std/result`), then sums, then `Maybe` and user `[sum]`.
 
 - [ ] TODO-5752: x86_64 native and the Linux JIT take the address ABI of real calls
   - owner: ai
