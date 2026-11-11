@@ -3699,7 +3699,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   # in loaded gates (load 40 to 140). Each suite is shards of three cases (primestructAddDoctestShards); the number
   # after the suite is its case count, which ctest PrimeStruct_test_registration checks.
   set(PrimeStructProgramMatrixCaseCounts
-    atomics=5 channels=10 closures=8 closures_callables=8 closures_references=4 closures_fields=12 closures_routers=7 container_copies=21
+    atomics=5 channels=10 closures=8 closures_callables=8 closures_references=4 closures_fields=13 closures_routers=7 container_copies=21
     control=37 element_copies=7 lifecycle=26 mutexes=6 optimizer=16 parameter_modes=9 pick_subjects=20 pick_values=24 results=9 shared_programs=16
     shared_strings=3 sum_owners=6 tasks=13 text_views=2 vector_owners=18)
   foreach(suite IN LISTS PrimeStructProgramMatrixTestSuites)

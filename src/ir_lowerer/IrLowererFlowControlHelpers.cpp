@@ -1036,6 +1036,12 @@ bool shouldDisarmStructCopySourceExpr(const Expr &expr) {
   if (expr.isFieldAccess) {
     return false;
   }
+  // `Type{place}` parses its one positional argument as `block() { place }`; the block yields what its one
+  // expression yields, so a place inside is copied exactly as the labeled `Type{[field] place}` copies it.
+  if (isSimpleCallName(expr, "block") && expr.args.empty() && expr.bodyArguments.size() == 1 &&
+      !expr.bodyArguments.front().isBinding) {
+    return shouldDisarmStructCopySourceExpr(expr.bodyArguments.front());
+  }
   if (isSimpleCallName(expr, "dereference") || isSimpleCallName(expr, "location")) {
     return false;
   }

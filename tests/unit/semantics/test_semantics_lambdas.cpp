@@ -470,4 +470,24 @@ main() {
   CHECK(error.find("unknown method: /Route/missing") != std::string::npos);
 }
 
+TEST_CASE("a Function local moved into a brace constructor is used after the move") {
+  const std::string source = R"(
+[struct]
+Wrap {
+  [Function<i32, i32> mut] run
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [i32] seven{7i32}
+  [Function<i32, i32> mut] plain{[seven]([i32] x) { return(plus(x, seven)) }}
+  [Wrap mut] wrap{Wrap{move(plain)}}
+  return(plain(1i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("use-after-move: plain") != std::string::npos);
+}
+
 TEST_SUITE_END();

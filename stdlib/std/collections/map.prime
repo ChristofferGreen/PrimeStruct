@@ -378,7 +378,7 @@ namespace std {
   mapSingle<K, V>([K move] key, [V move] value) {
     [MapValue<K, V> mut] inner{mapNew<K, V>()}
     mapInsert<K, V>(inner, key, value)
-    return(Map<K, V>{inner})
+    return(Map<K, V>{move(inner)})
   }
 
   [public effects(heap_alloc), return<Map<K, V>> Comparable<K>]
@@ -386,7 +386,7 @@ namespace std {
     [MapValue<K, V> mut] inner{mapNew<K, V>()}
     mapInsert<K, V>(inner, firstKey, firstValue)
     mapInsert<K, V>(inner, secondKey, secondValue)
-    return(Map<K, V>{inner})
+    return(Map<K, V>{move(inner)})
   }
   }
   }

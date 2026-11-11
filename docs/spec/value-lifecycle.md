@@ -411,7 +411,8 @@ bad_set() {
   An explicit `return<T>` on `call` (a named definition, a hand-written struct) is checked against `R` the same way.
 - **Calling** `f(x)` dispatches to the stored closure; `call` is `mut` (the closure may change its state), so hold
   the `Function` in a `mut` binding, field or parameter.
-- **Copy** clones the stored closure into a new block (the copy has its own state); **Move** hands the block over;
+- **Copy** clones the stored closure into a new block (the copy has its own state), also where a `Function` local is
+  an argument of a brace constructor (`Wrap{plain}` and `Wrap{[run] plain}` alike); **Move** hands the block over;
   **Destroy** destroys the closure and frees the block.
 - **Lowering:** the closure pass spells `Function<R, A...>` as the struct `/__FunctionN<R, A...>` (a tag and the heap
   address) and a conversion as `/__FunctionN<R, A...>{[tag] 0i32, [env] /__fn_box(closure)}`. After

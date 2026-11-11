@@ -1087,6 +1087,48 @@ main() {
                      31);
 }
 
+// `Wrap{plain}` parses its one positional argument as `block() { plain }`; the place inside is copied like the
+// labeled `Wrap{[run] plain}` copies it (TODO-5865), so the struct and the local each own a closure block.
+TEST_CASE("a Function local given positionally to a brace constructor is copied") {
+  runHeapFlatProgram("function_local_positional_brace_copy",
+                     R"(
+import /std/sync/*
+import /std/text/*
+
+[struct]
+Wrap {
+  [Function<i32, i32> mut] handler
+
+  [mut return<i32>]
+  run([i32] x) {
+    return(this.handler(x))
+  }
+}
+
+[effects(heap_alloc, lock) return<int>]
+round() {
+  [i32] seven{7i32}
+  [Function<i32, i32> mut] plain{[mut seven]([i32] x) { return(x + seven) }}
+  [Wrap mut] wrap{Wrap{plain}}
+  [Wrap mut] labeled{Wrap{[handler] plain}}
+  cell{Mutex<Function<i32, i32>>{plain}}
+  return(plain(1i32) + wrap.run(2i32) * 10i32 + labeled.run(3i32) * 100i32)
+}
+
+[return<int> effects(heap_alloc, lock)]
+main() {
+  [i32] first{round()}
+  [i32] before{heapLiveBlocks()}
+  repeat(100i32) {
+    round()
+  }
+  [i32] leaked{heapLiveBlocks() - before}
+  return(first - 1098i32 + leaked * 1000i32)
+}
+)",
+                     0);
+}
+
 // Routers of `Function` handlers, `Result.map` lambdas and imported holders. (a suite and CTest entry of its own, so each entry stays short under a loaded gate).
 TEST_SUITE_END();
 TEST_SUITE_BEGIN("primestruct.program_matrix.closures_routers");
