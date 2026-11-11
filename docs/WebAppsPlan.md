@@ -171,7 +171,9 @@ What the numbers say:
   times the CPU of `serve` on the same request (323 against 130 us of user time for the form, 157 against 37 us
   for a POST of 8 bytes). The measured cause is the string heap: it keeps one empty chunk and returns any other,
   and a worker thread, which holds no other strings, empties two or more chunks per request and builds them again,
-  256 KiB each time (TODO-5867). With one string per block size kept alive in each worker, as an experiment, the
+  256 KiB each time. With one string per block size kept alive in each worker, as an experiment, the
   8-byte POST with 1 worker went from 5751 to 12282 requests per second (`serve` 14224) and the form from 2866 to
-  4271 (`serve` 6019). What is left after that fix is measured in TODO-5869.
+  4271 (`serve` 6019). The heap has since been changed to keep one free chunk per block size, with small first
+  chunks (docs/spec/strings-and-views.md, Memory), so the table above is from before that change; what is left is
+  measured in TODO-5869.
 - **A handler that computes under the lock stays at 1x**, as expected: it is the baseline for TODO-5804.

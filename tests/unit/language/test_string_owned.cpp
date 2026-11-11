@@ -208,12 +208,18 @@ TEST_CASE("text over 64 KiB gets its own allocation and returns it when freed") 
 }
 
 TEST_CASE("the string memory limit faults, and tryReserve reports it") {
-  CHECK(exitOf("  /std/text/setStringMemoryLimit(300000u64)\n"
+  // The 4 KiB chunk of the first reserve and the 100001 bytes of the second are over the limit together; the
+  // second alone is not.
+  CHECK(exitOf("  /std/text/setStringMemoryLimit(102000u64)\n"
                "  [String mut] s{String{}}\n"
                "  [bool] first{s.tryReserve(200i32)}\n"
                "  [bool] second{s.tryReserve(100000i32)}\n"
                "  return(if(first && !second, then() { 1i32 }, else() { 0i32 }))") == 1);
-  const Outcome faulting = runBody("  /std/text/setStringMemoryLimit(300000u64)\n"
+  CHECK(exitOf("  /std/text/setStringMemoryLimit(102000u64)\n"
+               "  [String mut] s{String{}}\n"
+               "  [bool] alone{s.tryReserve(100000i32)}\n"
+               "  return(if(alone, then() { 1i32 }, else() { 0i32 }))") == 1);
+  const Outcome faulting = runBody("  /std/text/setStringMemoryLimit(102000u64)\n"
                                    "  [String mut] a{String{}}\n"
                                    "  a.reserve(200i32)\n"
                                    "  [String mut] b{String{}}\n"

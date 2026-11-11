@@ -232,10 +232,12 @@
   call builds the `String` (length, capacity, data, owning) from it, using the VM-answered `__pstext_length` and
   `__pstext_usable`. `__pstext_argument(index)` returns the entry argument at `index` the same way, and `argumentText(index)` wraps it. The optimized C++ emitters pass a `String` argument as the NUL-terminated `const char *` of its data block and copy a `const char *` result into their own string heap, and answer the `__pstext_*` functions in the generated program; the simple C++ emitters and the native backend reject text host values until they implement the boundary.
 - **String heap (TODO-5539):** the VM answers the host functions named `__pstext_*` itself, so a program needs no binding for
-  them. They manage text blocks over byte regions: 256 KiB chunks of equal blocks in size classes (four per doubling from
-  32 bytes to 64 KiB), a byte region of its own for text over 64 KiB, an optional byte limit (the runtime fault
-  `string memory limit exceeded`) and statistics. A chunk whose blocks are all free is returned except one kept for
-  reuse. `Pointer<u8>` is a valid `[host]` parameter and result type (a `u64` byte address in the slot); outside the
+  them. They manage text blocks over byte regions: chunks of equal blocks in size classes (four per doubling from
+  32 bytes to 64 KiB; a class's first chunk is 4 KiB or one block, each further chunk as large as the class's chunks
+  together, up to 256 KiB), a byte region of its own for text over 64 KiB, an optional byte limit over the chunks and
+  large blocks held (the runtime fault `string memory limit exceeded`, after free chunks were returned) and
+  statistics. Of the chunks whose blocks are all free each size class keeps one, the smaller of two, and the heap
+  keeps at most 1 MiB of them, returning the largest first; the rest are returned at once. `Pointer<u8>` is a valid `[host]` parameter and result type (a `u64` byte address in the slot); outside the
   runtime's own `__pstext_*` functions a `Pointer<u8>` parameter is the `bytes` host value kind (PSIR v32, see
   docs/spec/host-and-core-library.md, Byte buffers).
 - **Byte regions (PSIR v28):** `HeapAllocBytes` pops a byte count and pushes the address of a zeroed region of that many

@@ -10,13 +10,22 @@ struct TextHeapStats {
   uint64_t largeBlocks = 0;
   uint64_t largeBytes = 0;
   uint64_t allocations = 0;  // blocks handed out since the heap was made (empty requests excluded)
+  uint64_t chunkBytes = 0;      // bytes of the chunk regions held, free blocks included
+  uint64_t freeChunkBytes = 0;  // of those, the bytes of chunks whose blocks are all free
+  uint64_t chunkRegions = 0;    // chunk regions taken from the VM heap since the heap was made (arenas excluded)
   uint64_t arenaDepth = 0;   // arenas begun and not yet ended
   uint64_t arenaBytes = 0;   // bytes of blocks handed out by the arenas that are still open
 };
 
 class VmTextHeap {
 public:
+  // A size class's first chunk is FirstChunkBytes (one block, for a class with larger blocks); each further chunk
+  // is as large as the chunks the class holds together, up to ChunkBytes.
   static constexpr uint64_t ChunkBytes = 256 * 1024;
+  static constexpr uint64_t FirstChunkBytes = 4096;
+  // The most bytes of chunks whose blocks are all free that the heap keeps. The first chunks of all 45 size
+  // classes together are 506 KiB, so a heap that never needed a second chunk of a class keeps them all.
+  static constexpr uint64_t FreeChunkLimit = 4 * ChunkBytes;
   static constexpr uint64_t MinBlockBytes = 32;
   static constexpr uint64_t LargeThreshold = 64 * 1024;
 
@@ -87,7 +96,7 @@ private:
     uint64_t blockCount = 0;
     std::vector<uint32_t> freeBlocks;  // block indices, most recently freed last
     std::vector<uint8_t> isFree;       // per block: 1 while it is on freeBlocks (frees check it in O(1))
-    uint64_t bytes = ChunkBytes;       // size of the region (arena chunks start small and double)
+    uint64_t bytes = ChunkBytes;       // size of the region (chunks start small and double)
     bool arena = false;                // a chunk of an arena: blocks are never reused or freed one by one
     uint64_t bump = 0;                 // arena chunks: offset of the next unused block (no free list)
   };
@@ -109,19 +118,35 @@ private:
   bool releaseShared(VmHeapCore &core, uint64_t address, std::string &error);
   bool allocateInArena(VmHeapCore &core, uint64_t size, uint64_t &address, std::string &error);
 
+  // One size class: its chunks with a free block, and the one chunk it may keep with every block free.
+  struct SizeClass {
+    std::set<uint64_t> withFree;  // byte offsets of the chunks that have a free block (lowest first, so
+                                  // allocation takes the lowest chunk as a scan of chunks_ would)
+    uint64_t heldBytes = 0;       // bytes of its chunk regions
+    uint64_t freeChunk = 0;       // byte offset of its chunk whose blocks are all free
+    bool hasFreeChunk = false;
+  };
+
   uint64_t heldBytes() const { return chunkBytesHeld_ + largeBytes_; }
-  Chunk *chunkWithFreeBlock(uint64_t blockBytes);
+  // False ("string memory limit exceeded") when `bytes` more would pass the limit even after the free chunks were
+  // returned to make room.
+  bool roomFor(VmHeapCore &core, uint64_t bytes, std::string &error);
+  // Returns a chunk's region; `returnFreeChunk` also takes it off the list of free chunks.
+  bool returnChunk(VmHeapCore &core, std::map<uint64_t, Chunk>::iterator chunk, std::string &error);
+  bool returnFreeChunk(VmHeapCore &core, std::map<uint64_t, Chunk>::iterator chunk, std::string &error);
+  // The largest of the classes' free chunks (the highest of those alike), or chunks_.end().
+  std::map<uint64_t, Chunk>::iterator largestFreeChunk();
   std::map<uint64_t, Chunk>::iterator chunkContaining(uint64_t address);
   std::map<uint64_t, Chunk>::const_iterator chunkContaining(uint64_t address) const;
   static uint64_t offsetOf(uint64_t address) { return address & VmHeapCore::ByteOffsetMask; }
 
   // Chunks by the byte offset of their region; the blocks of a chunk never straddle it.
   std::map<uint64_t, Chunk> chunks_;
-  // Per block size, the byte offsets of the chunks that have a free block (lowest first, so allocation takes the
-  // lowest chunk as a scan of chunks_ would).
-  std::map<uint64_t, std::set<uint64_t>> withFree_;
-  // Chunks whose blocks are all free; one is kept, any other is returned.
-  uint64_t emptyChunks_ = 0;
+  // The size classes by block size.
+  std::map<uint64_t, SizeClass> classes_;
+  // The bytes of the classes' free chunks: at most FreeChunkLimit, the largest chunk is returned first.
+  uint64_t freeChunkBytes_ = 0;
+  uint64_t chunkRegions_ = 0;
   // Large blocks by byte offset: size.
   std::map<uint64_t, uint64_t> large_;
   uint64_t largeBytes_ = 0;
@@ -178,12 +203,52 @@ inline std::map<uint64_t, VmTextHeap::Chunk>::const_iterator VmTextHeap::chunkCo
   return offset < it->first + it->second.bytes ? it : chunks_.end();
 }
 
-inline VmTextHeap::Chunk *VmTextHeap::chunkWithFreeBlock(uint64_t blockBytes) {
-  const auto candidates = withFree_.find(blockBytes);
-  if (candidates == withFree_.end() || candidates->second.empty()) {
-    return nullptr;
+inline bool VmTextHeap::returnChunk(VmHeapCore &core, std::map<uint64_t, Chunk>::iterator chunk, std::string &error) {
+  const uint64_t base = chunk->second.base;
+  SizeClass &sizeClass = classes_.find(chunk->second.blockBytes)->second;
+  sizeClass.withFree.erase(chunk->first);
+  sizeClass.heldBytes -= chunk->second.bytes;
+  chunkBytesHeld_ -= chunk->second.bytes;
+  chunks_.erase(chunk);
+  return core.releaseBytes(base, error);
+}
+
+inline bool VmTextHeap::returnFreeChunk(VmHeapCore &core, std::map<uint64_t, Chunk>::iterator chunk,
+                                        std::string &error) {
+  classes_.find(chunk->second.blockBytes)->second.hasFreeChunk = false;
+  freeChunkBytes_ -= chunk->second.bytes;
+  return returnChunk(core, chunk, error);
+}
+
+inline std::map<uint64_t, VmTextHeap::Chunk>::iterator VmTextHeap::largestFreeChunk() {
+  auto largest = chunks_.end();
+  for (const auto &entry : classes_) {
+    if (!entry.second.hasFreeChunk) {
+      continue;
+    }
+    const auto chunk = chunks_.find(entry.second.freeChunk);
+    if (largest == chunks_.end() || std::make_pair(largest->second.bytes, largest->first) <
+                                        std::make_pair(chunk->second.bytes, chunk->first)) {
+      largest = chunk;
+    }
   }
-  return &chunks_.find(*candidates->second.begin())->second;
+  return largest;
+}
+
+inline bool VmTextHeap::roomFor(VmHeapCore &core, uint64_t bytes, std::string &error) {
+  if (limit_ == 0 || heldBytes() + bytes <= limit_) {
+    return true;
+  }
+  while (freeChunkBytes_ != 0) {
+    if (!returnFreeChunk(core, largestFreeChunk(), error)) {
+      return false;
+    }
+    if (heldBytes() + bytes <= limit_) {
+      return true;
+    }
+  }
+  error = "string memory limit exceeded";
+  return false;
 }
 
 inline bool VmTextHeap::allocateOwn(VmHeapCore &core, uint64_t size, uint64_t &address, std::string &error) {
@@ -197,8 +262,7 @@ inline bool VmTextHeap::allocateOwn(VmHeapCore &core, uint64_t size, uint64_t &a
   }
   const uint64_t blockBytes = blockSizeFor(size);
   if (size > LargeThreshold) {
-    if (limit_ != 0 && heldBytes() + blockBytes > limit_) {
-      error = "string memory limit exceeded";
+    if (!roomFor(core, blockBytes, error)) {
       return false;
     }
     uint64_t region = 0;
@@ -211,38 +275,48 @@ inline bool VmTextHeap::allocateOwn(VmHeapCore &core, uint64_t size, uint64_t &a
     address = region;
     return true;
   }
-  Chunk *chunk = chunkWithFreeBlock(blockBytes);
-  if (chunk == nullptr) {
-    if (limit_ != 0 && heldBytes() + ChunkBytes > limit_) {
-      error = "string memory limit exceeded";
+  SizeClass &sizeClass = classes_[blockBytes];
+  Chunk *chunk = nullptr;
+  if (!sizeClass.withFree.empty()) {
+    chunk = &chunks_.find(*sizeClass.withFree.begin())->second;
+    if (chunk->freeBlocks.size() == chunk->blockCount) {
+      // The class's free chunk is about to hold a block.
+      sizeClass.hasFreeChunk = false;
+      freeChunkBytes_ -= chunk->bytes;
+    }
+  } else {
+    // The class's first chunk is small and each further one doubles what the class holds, so a class with a few
+    // strings costs little to set up and to keep.
+    const uint64_t wanted = std::max<uint64_t>(std::max<uint64_t>(FirstChunkBytes, blockBytes), sizeClass.heldBytes);
+    const uint64_t chunkBytes = std::min<uint64_t>(wanted, ChunkBytes);
+    if (!roomFor(core, chunkBytes, error)) {
       return false;
     }
     uint64_t region = 0;
-    if (!core.allocateBytes(ChunkBytes, region, error)) {
+    if (!core.allocateBytes(chunkBytes, region, error)) {
       return false;
     }
     Chunk fresh;
     fresh.base = region;
     fresh.blockBytes = blockBytes;
-    fresh.blockCount = ChunkBytes / blockBytes;
+    fresh.bytes = chunkBytes;
+    fresh.blockCount = chunkBytes / blockBytes;
     fresh.freeBlocks.reserve(static_cast<size_t>(fresh.blockCount));
     for (uint64_t i = fresh.blockCount; i > 0; --i) {
       fresh.freeBlocks.push_back(static_cast<uint32_t>(i - 1));
     }
     fresh.isFree.assign(static_cast<size_t>(fresh.blockCount), uint8_t{1});
     chunk = &(chunks_[offsetOf(region)] = std::move(fresh));
-    chunkBytesHeld_ += ChunkBytes;
-    withFree_[blockBytes].insert(offsetOf(region));
-    ++emptyChunks_;
-  }
-  if (chunk->freeBlocks.size() == chunk->blockCount) {
-    --emptyChunks_;  // it is about to hold a block
+    chunkBytesHeld_ += chunkBytes;
+    sizeClass.heldBytes += chunkBytes;
+    sizeClass.withFree.insert(offsetOf(region));
+    ++chunkRegions_;
   }
   const uint32_t index = chunk->freeBlocks.back();
   chunk->freeBlocks.pop_back();
   chunk->isFree[index] = 0;
   if (chunk->freeBlocks.empty()) {
-    withFree_[blockBytes].erase(offsetOf(chunk->base));
+    sizeClass.withFree.erase(offsetOf(chunk->base));
   }
   bytesInUse_ += blockBytes;
   address = chunk->base + index * blockBytes;
@@ -253,8 +327,7 @@ inline bool VmTextHeap::allocateInArena(VmHeapCore &core, uint64_t size, uint64_
   Arena &arena = arenas_.back();
   const uint64_t blockBytes = blockSizeFor(size);
   if (size > LargeThreshold) {
-    if (limit_ != 0 && heldBytes() + blockBytes > limit_) {
-      error = "string memory limit exceeded";
+    if (!roomFor(core, blockBytes, error)) {
       return false;
     }
     uint64_t region = 0;
@@ -289,8 +362,7 @@ inline bool VmTextHeap::allocateInArena(VmHeapCore &core, uint64_t size, uint64_
     }
     chunkBytes = std::min<uint64_t>(chunkBytes, ChunkBytes);
     arena.nextBytes[blockBytes] = std::min<uint64_t>(chunkBytes * 2, ChunkBytes);
-    if (limit_ != 0 && heldBytes() + chunkBytes > limit_) {
-      error = "string memory limit exceeded";
+    if (!roomFor(core, chunkBytes, error)) {
       return false;
     }
     uint64_t region = 0;
@@ -406,22 +478,35 @@ inline bool VmTextHeap::releaseOwn(VmHeapCore &core, uint64_t address, std::stri
     return false;
   }
   std::fill(first, first + chunk.blockBytes, uint8_t{0});
+  SizeClass &sizeClass = classes_.find(chunk.blockBytes)->second;
   if (chunk.freeBlocks.empty()) {
-    withFree_[chunk.blockBytes].insert(found->first);
+    sizeClass.withFree.insert(found->first);
   }
   chunk.freeBlocks.push_back(index);
   chunk.isFree[index] = 1;
   bytesInUse_ -= chunk.blockBytes;
-  if (chunk.freeBlocks.size() == chunk.blockCount) {
-    // Keep one fully free chunk; return any other.
-    ++emptyChunks_;
-    if (emptyChunks_ > 1) {
-      const uint64_t base = chunk.base;
-      withFree_[chunk.blockBytes].erase(found->first);
-      chunkBytesHeld_ -= chunk.bytes;
-      chunks_.erase(found);
-      --emptyChunks_;
-      return core.releaseBytes(base, error);
+  if (chunk.freeBlocks.size() != chunk.blockCount) {
+    return true;
+  }
+  // Every block of the chunk is free. A size class keeps one such chunk, the smaller of two (the lower on a tie),
+  // so neither a class that grows and shrinks across a chunk boundary nor a thread that builds and drops strings
+  // of several classes returns a chunk and sets it up again each time.
+  if (sizeClass.hasFreeChunk) {
+    const auto other = chunks_.find(sizeClass.freeChunk);
+    if (std::make_pair(other->second.bytes, other->first) < std::make_pair(chunk.bytes, found->first)) {
+      return returnChunk(core, found, error);
+    }
+    if (!returnFreeChunk(core, other, error)) {
+      return false;
+    }
+  }
+  sizeClass.freeChunk = found->first;
+  sizeClass.hasFreeChunk = true;
+  freeChunkBytes_ += chunk.bytes;
+  // The free chunks of all classes together stay within FreeChunkLimit: the largest goes first.
+  while (freeChunkBytes_ > FreeChunkLimit) {
+    if (!returnFreeChunk(core, largestFreeChunk(), error)) {
+      return false;
     }
   }
   return true;
@@ -483,6 +568,9 @@ inline TextHeapStats VmTextHeap::stats() const {
   out.largeBlocks = large_.size();
   out.largeBytes = largeBytes_;
   out.allocations = allocations_;
+  out.chunkBytes = chunkBytesHeld_;
+  out.freeChunkBytes = freeChunkBytes_;
+  out.chunkRegions = chunkRegions_;
   out.arenaDepth = arenas_.size();
   for (const Arena &arena : arenas_) {
     out.arenaBytes += arena.bytes;

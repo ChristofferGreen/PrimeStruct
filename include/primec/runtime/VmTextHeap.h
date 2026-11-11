@@ -17,14 +17,21 @@
 namespace primec {
 
 // The string heap that backs `String` (docs/spec/strings-and-views.md, Memory). Text up to
-// LargeThreshold bytes comes from 256 KiB chunks, each divided into equal blocks of one size class
-// (four classes per doubling from 32 bytes to 64 KiB, so at most about a quarter of a block is
-// unused); longer text gets a byte region of its own. Chunks and large blocks are byte regions of
-// the VM heap, so a block address works with LoadU8/StoreU8 and address + i is byte i.
+// LargeThreshold bytes comes from chunks, each divided into equal blocks of one size class (four
+// classes per doubling from 32 bytes to 64 KiB, so at most about a quarter of a block is unused);
+// longer text gets a byte region of its own. A class's first chunk is 4 KiB (one block, for a class
+// with larger blocks) and each further chunk is as large as the chunks the class holds together, up
+// to 256 KiB. Chunks and large blocks are byte regions of the VM heap, so a block address works with
+// LoadU8/StoreU8 and address + i is byte i.
 //
-// A freed block goes back on its chunk's free list. A chunk whose blocks are all free is returned to
-// the VM heap, except one kept for reuse; a large block is returned as soon as it is freed. The heap
-// has an optional byte limit over the chunks and large blocks it holds.
+// A freed block goes back on its chunk's free list. Of the chunks whose blocks are all free, each
+// size class keeps one (the smaller of two, so a class that shrinks ends with its first chunk) and
+// the heap keeps at most FreeChunkLimit bytes (1 MiB, more than the first chunks of all classes
+// together), returning the largest first; the others are returned to the VM heap. So text that
+// grows through several block sizes and is dropped, again and again, takes no new chunk, and a heap
+// whose blocks are all free holds at most 1 MiB (12 KiB after strings of up to 127 bytes). A large
+// block is returned as soon as it is freed. The heap has an optional byte limit over the chunks and
+// large blocks it holds; free chunks are returned before an allocation is refused for it.
 //
 // The class body lives in VmTextHeapBody.inc and is expanded twice: here as code (primec::TextHeapStats,
 // primec::VmTextHeap, primec::callTextHostFunction) and as the source text primec::VmTextHeapSource, which the

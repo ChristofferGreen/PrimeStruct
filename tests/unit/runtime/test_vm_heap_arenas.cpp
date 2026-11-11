@@ -264,10 +264,13 @@ TEST_CASE(
     CHECK(owner.error.empty());
     CHECK(owner.arena.core.liveSlotAllocationCount() == 0);
     CHECK(owner.arena.text.stats().bytesInUse == 0);
-    // What is left is the one chunk the string heap keeps for reuse.
-    CHECK(owner.arena.core.liveByteCount() ==
-          owner.arena.text.stats().chunks * primec::VmTextHeap::ChunkBytes);
-    CHECK(owner.arena.text.stats().chunks <= 1);
+    // What is left is the free chunks the string heap keeps for reuse: at most one for each of the nine size
+    // classes that text of 8 to 127 bytes uses.
+    const primec::TextHeapStats textStats = owner.arena.text.stats();
+    CHECK(owner.arena.core.liveByteCount() == textStats.chunkBytes);
+    CHECK(textStats.chunkBytes == textStats.freeChunkBytes);
+    CHECK(textStats.chunks <= 9);
+    CHECK(textStats.freeChunkBytes <= primec::VmTextHeap::FreeChunkLimit);
     // The freed blocks no longer answer, from any arena.
     CHECK(owner.arena.core.slotAt(kept[static_cast<size_t>(t)].slots[0]) == nullptr);
     CHECK(arenas.main().core.slotAt(kept[static_cast<size_t>(t)].slots[0]) == nullptr);

@@ -199,10 +199,18 @@ Every operation keeps the text valid UTF-8.
   block from the string heap (the smallest is 32 bytes, 31 for text). The first design stored up to 22 bytes inside the
   value, but a VM value is a run of 16-byte slots, and bytes inside slots cannot be addressed or borrowed as text, so
   inline text would break `string` views and `Slice<u8>` on the VM.
-- **String heap:** longer text comes from a heap of 256 KiB chunks divided into size classes, four per doubling from 32
-  bytes to 64 KiB, so at most about 25% of a block is unused. A freed block goes back on its class's free list and is
-  reused. A chunk whose blocks are all free is returned to the system, except one kept for reuse. The first chunk is
-  made on the first long string, so programs that never need one pay nothing.
+- **String heap:** longer text comes from a heap of chunks divided into size classes, four per doubling from 32
+  bytes to 64 KiB, so at most about 25% of a block is unused. A class's first chunk is 4 KiB (one block, for blocks
+  over 4 KiB) and each further chunk is as large as the class's chunks together, up to 256 KiB, so a program with a
+  few short strings holds a few KiB and one with many takes large chunks. A freed block goes back on its class's
+  free list and is reused. Of the chunks whose blocks are all free, each size class keeps one (the smaller of two)
+  and the heap keeps at most 1 MiB, returning the largest first; the others are returned to the system. That is the
+  bound on what a heap holds once every string is dropped: at most one chunk per size class used and at most 1 MiB
+  (12 KiB after strings that stayed under 128 bytes). A string that grows through several block sizes and is
+  dropped, in a loop, therefore takes no new chunk after the first round. The memory limit
+  (`/std/text/setStringMemoryLimit`) counts the chunks and large blocks held, and free chunks are returned before
+  an allocation is refused. The first chunk is made on the first long string, so programs that never need one pay
+  nothing.
 - **Large text:** text over 64 KiB gets its own allocation, returned to the system as soon as it is freed.
 - **Growth:** capacity doubles, rounded up to the size class; growing within a class does not move the text.
   `reserve(n)` gives exactly the class that holds `n`; `shrinkToFit()` moves the text to the smallest class that holds

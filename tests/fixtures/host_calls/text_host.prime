@@ -41,8 +41,10 @@ main() {
   host_note(nothing)
   [i32] emptyLength{host_measure(nothing)}
   [u64] before{stringHeapBytesInUse()}
-  [i32] total{churn(10000i32)}
-  [bool] steady{stringHeapBytesInUse() == before && stringHeapChunks() <= 2}
+  [i32] warmup{churn(1i32)}
+  [i32] chunks{stringHeapChunks()}
+  [i32] total{warmup + churn(9999i32)}
+  [bool] steady{stringHeapBytesInUse() == before && stringHeapChunks() == chunks && chunks <= 6}
   [bool] sized{total == 10000i32 * 40i32}
   return(if(steady && sized && emptyLength == 0i32, then() { 1i32 }, else() { 0i32 }))
 }

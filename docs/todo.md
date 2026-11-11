@@ -134,9 +134,9 @@ of sync with them.
 | TODO-5864 | A lambda in a generic definition names the definition's type parameters | ready | closures-generics |
 | TODO-5865 | A `Function` local given positionally to a brace constructor is copied | ready | closures-lifecycle |
 | TODO-5866 | A closure captures a `pick` payload binding | ready | pick-payloads |
-| TODO-5867 | A string heap that alternates between block sizes keeps its chunks | ready | text-heap |
 | TODO-5868 | `serve(app)?` in an `if` block of `main` compiles | ready | result-question |
-| TODO-5869 | `serveWorkers` with 1 worker is within 10% of `serve` | blocked | mt-server |
+| TODO-5869 | `serveWorkers` with 1 worker is within 10% of `serve` | ready | mt-server |
+| TODO-5870 | A VM program that uses tasks runs its string code on the fast kernel | ready | vm-tasks |
 | TODO-5799 | arm64 native runs spawned tasks on pthreads, its heap behind a lock | ready | mt-native |
 | TODO-5800 | arm64 native heaps are per thread, with remote frees | blocked | mt-native |
 | TODO-5801 | arm64 native runs `Atomic`, `Mutex` and `Channel` | blocked | mt-native |
@@ -229,13 +229,13 @@ of sync with them.
 - Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5738, TODO-5718
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732, TODO-5735, TODO-5736, TODO-5737
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5840, TODO-5844; real calls and struct copies TODO-5739, TODO-5741, TODO-5752; VM address checks TODO-5824
-- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5861, TODO-5863, TODO-5799, TODO-5800, TODO-5801, TODO-5847, TODO-5848, TODO-5849, TODO-5852, TODO-5867, TODO-5869 (blocked on TODO-5867); deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854, TODO-5862
+- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5861, TODO-5863, TODO-5799, TODO-5800, TODO-5801, TODO-5847, TODO-5848, TODO-5849, TODO-5852, TODO-5869, TODO-5870; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854, TODO-5862
 
 ### Execution Queue
 
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
-Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order (TODO-5792 and TODO-5835, VM tasks and their lowering, are done, and so are TODO-5793, byte-region checks without a map search, TODO-5794, `optexe` per-thread heap arenas, TODO-5795, `optexe` threads for `[spawn]`, `Atomic<i32>` and `Atomic<i64>` in `/std/sync`, TODO-5797, `Mutex<T>` with `locked(body)`, TODO-5846, `optexe` faults when every task waits, TODO-5798, bounded `Channel<T>`, TODO-5656, the atomic `SharedString` owner count, TODO-5802, `serveWorkers`, and TODO-5803, the apps on workers, measured): TODO-5861 (`SharedString` count inside the text block), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5861 and TODO-5799 are ready and independent of each other, and so are TODO-5848 (`return(wait(t))` of a `String` task result is rejected as a return type mismatch), TODO-5849 (a destructured multi-wait of tasks with different result types loses the later results' types) and TODO-5847 (spawned calls with collection or `copy` parameters or collection results run as tasks, which today run inline; TODO-5845, the same for `String`, struct and closure values, is done) (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, are done). Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions), TODO-5854 (a `Mutex` or `Atomic` handle keeps a copy of its first value). Found with `Mutex` and ready: TODO-5852 (`wait(a, b)` of two `Task<void>`), and in the closures lane TODO-5850 (a `Reference`-returning call as a closure argument) and TODO-5851 (a `[ref]` closure written in a generic call). Found with `Channel` and ready, in the Result and control flow lane: TODO-5855 (a method call on a `pick` payload of struct type); TODO-5856 (`pick` on a call result frees an owning payload) is done, and found with it and ready: TODO-5857 (a `vector<T>` payload reads its count in a `pick` arm), TODO-5858 (`some<Vector<i32>>` of a fresh vector frees it), TODO-5859 (a `pick` expression yields a vector) and TODO-5860 (moving a payload binding does not poison a later binding of the same name). Found with `serveWorkers`: TODO-5862 (deferred: `serveWorkers` on the VM, which has no `/std/net`), and ready: TODO-5863 (a struct named without its namespace as a `Channel` element), TODO-5864 (a lambda in a generic definition names its type parameters), TODO-5865 (a `Function` local given positionally to a brace constructor is copied) and TODO-5866 (a closure captures a `pick` payload binding). Found measuring the apps on workers (TODO-5803, done): TODO-5867 (a string heap that alternates between block sizes rebuilds a 256 KiB chunk per string; ready), TODO-5869 (1 worker within 10% of `serve` and the form 2.5x with 4; blocked on TODO-5867), and in the Result and control flow lane TODO-5868 (`serve(app)?` in an `if` block of `main` is rejected).
+Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order (TODO-5792 and TODO-5835, VM tasks and their lowering, are done, and so are TODO-5793, byte-region checks without a map search, TODO-5794, `optexe` per-thread heap arenas, TODO-5795, `optexe` threads for `[spawn]`, `Atomic<i32>` and `Atomic<i64>` in `/std/sync`, TODO-5797, `Mutex<T>` with `locked(body)`, TODO-5846, `optexe` faults when every task waits, TODO-5798, bounded `Channel<T>`, TODO-5656, the atomic `SharedString` owner count, TODO-5802, `serveWorkers`, and TODO-5803, the apps on workers, measured): TODO-5861 (`SharedString` count inside the text block), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5861 and TODO-5799 are ready and independent of each other, and so are TODO-5848 (`return(wait(t))` of a `String` task result is rejected as a return type mismatch), TODO-5849 (a destructured multi-wait of tasks with different result types loses the later results' types) and TODO-5847 (spawned calls with collection or `copy` parameters or collection results run as tasks, which today run inline; TODO-5845, the same for `String`, struct and closure values, is done) (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, are done). Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions), TODO-5854 (a `Mutex` or `Atomic` handle keeps a copy of its first value). Found with `Mutex` and ready: TODO-5852 (`wait(a, b)` of two `Task<void>`), and in the closures lane TODO-5850 (a `Reference`-returning call as a closure argument) and TODO-5851 (a `[ref]` closure written in a generic call). Found with `Channel` and ready, in the Result and control flow lane: TODO-5855 (a method call on a `pick` payload of struct type); TODO-5856 (`pick` on a call result frees an owning payload) is done, and found with it and ready: TODO-5857 (a `vector<T>` payload reads its count in a `pick` arm), TODO-5858 (`some<Vector<i32>>` of a fresh vector frees it), TODO-5859 (a `pick` expression yields a vector) and TODO-5860 (moving a payload binding does not poison a later binding of the same name). Found with `serveWorkers`: TODO-5862 (deferred: `serveWorkers` on the VM, which has no `/std/net`), and ready: TODO-5863 (a struct named without its namespace as a `Channel` element), TODO-5864 (a lambda in a generic definition names its type parameters), TODO-5865 (a `Function` local given positionally to a brace constructor is copied) and TODO-5866 (a closure captures a `pick` payload binding). Found measuring the apps on workers (TODO-5803, done): TODO-5867 (a string heap that alternates between block sizes keeps its chunks) is done; ready: TODO-5869 (1 worker within 10% of `serve` and the form 2.5x with 4) and, found with TODO-5867, TODO-5870 (a VM program that uses tasks runs all its code on the step kernel, 11 times the instructions for a string loop); and in the Result and control flow lane TODO-5868 (`serve(app)?` in an `if` block of `main` is rejected).
 
 ### Task Blocks
 
@@ -1013,21 +1013,6 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
   - stop_rule: captures of `pick` payload bindings.
 
 
-- [ ] TODO-5867: A string heap that alternates between block sizes keeps its chunks
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-11
-  - phase: Multithreading and Web apps (docs/WebAppsPlan.md, Concurrency; found measuring `serveWorkers`)
-  - parallel_track: text-heap
-  - scope: The string heap (`VmTextHeap`, include/primec/runtime/VmTextHeapBody.inc) keeps one chunk whose blocks are all free and returns any other at once. A thread that holds no other strings and builds one that grows through two block sizes (32 then 64 bytes: a `String` with four short `append`s) therefore empties two chunks per string, returns one and builds it again for the next string: a 256 KiB region, zeroed, with a free list of up to 8192 entries. Measured with `optexe` on arm64 (200000 strings, instructions retired): 279e9 on a spawned task against 2.2e9 on the main thread, where the program's other strings keep the chunks; with three strings of 20, 40 and 70 bytes alive in the task, 2.4e9. Every `serveWorkers` worker is such a thread: a small POST costs 157 us of user CPU per request with 1 worker against 37 us under `serve`, and 62 us when each worker keeps one string per block size alive (5751 against 12282 requests/s, `serve` 14224). Stop the rebuild without holding much more memory per thread: candidates are one free chunk kept per block size with small first chunks (as arenas have: 4 KiB, doubling), or a few free chunks kept regardless of size and re-cut for the size asked for.
-  - implementation_notes: `releaseOwn` (the `emptyChunks_ > 1` branch) and `allocateOwn`; tests/unit/runtime/test_vm_text_heap.cpp pins today's policy ("an emptied chunk is returned except one kept for reuse") and the memory limit (`heldBytes`). Not measured yet: whether `parseRequest` of a small request (550000 instructions on the main thread) and the todo_web list page (21 us per item) pay the same cost.
-  - acceptance:
-    - a unit test counts chunk regions taken from the heap core: a thread's heap that builds and drops 1000 strings growing through 32, 64 and 128 bytes takes no new region after the first string (today it takes one or more per string)
-    - the same loop as an `optexe` program on a spawned task retires at most 2x the instructions of the main-thread run (measured by hand, recorded in the result note)
-    - the memory limit still refuses what it refused, and the result note records the bytes a heap holds after freeing everything, before and after
-    - full release gate green
-  - stop_rule: the free-chunk policy of the string heap; the slot heap is unchanged.
-
 - [ ] TODO-5868: `serve(app)?` in an `if` block of `main` compiles
   - owner: ai
   - status: ready
@@ -1044,16 +1029,29 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
 
 - [ ] TODO-5869: `serveWorkers` with 1 worker is within 10% of `serve`
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5867
+  - status: ready
   - created_at: 2026-11-11
   - phase: Multithreading and Web apps (docs/WebAppsPlan.md, Concurrency)
   - parallel_track: mt-server
-  - scope: The measurements of benchmarks/http (docs/WebAppsPlan.md, Concurrency) missed two targets: a 32 KB form with a small handler reaches 0.50x of `serve` with 1 worker (target 0.9x) and 1.60x with 4 (target 2.5x). Most of the gap is the string heap rebuilding chunks on worker threads (TODO-5867). Measure again once that is fixed, then remove what is left: the worker makes a new `Response` per request where `serve` reuses one, and the polling thread wakes three times per request (accept, readable, slot handed back).
+  - scope: The measurements of benchmarks/http (docs/WebAppsPlan.md, Concurrency) missed two targets: a 32 KB form with a small handler reaches 0.50x of `serve` with 1 worker (target 0.9x) and 1.60x with 4 (target 2.5x). Most of the gap was the string heap rebuilding chunks on worker threads (TODO-5867, done). Measure again, then remove what is left: the worker makes a new `Response` per request where `serve` reuses one, and the polling thread wakes three times per request (accept, readable, slot handed back).
   - acceptance:
     - `python3 benchmarks/http/run_http_benchmarks.py` on an idle machine with at least 6 processors: the 32 KB form at least 0.9x `serve` with 1 worker and at least 2.5x with 4; the numbers replace the table in docs/WebAppsPlan.md
     - no gate test measures time; full release gate green
   - stop_rule: the two form targets; the list page waits for read-only handlers (TODO-5804).
+
+- [ ] TODO-5870: A VM program that uses tasks runs its string code on the fast kernel
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-11
+  - phase: Multithreading (docs/spec/vm-design.md, Tasks; found measuring the string heap, TODO-5867)
+  - parallel_track: vm-tasks
+  - scope: A module with a `TaskSpawn` or `TaskWait` anywhere runs every function on the VM's step kernel under the task scheduler (src/runtime/VmFastKernelPrepare.cpp keeps tasks, atomics, mutexes and conditions off the fast kernel; `moduleUsesTasks` in src/runtime/VmExecutionKernel.cpp). Measured on arm64 with `primevm` (instructions retired): a loop that builds and drops 200000 `String`s (a 3-byte text and four `append`s, 77 bytes) retires 13.4e9 in a program without tasks and 153.4e9 when the same loop runs in a spawned task, and the same 153.4e9 on the main task of a program that spawns one unrelated `seven()` first. A loop of integer arithmetic costs the same either way (55e6 for 200000 rounds), so the cost is in calls or in the host calls of `String`, not in the scheduler's loop. Find which instructions cost 700000 host instructions per string on the step kernel and either run the functions that contain no switch point on the fast kernel between switch points or make those instructions cheap.
+  - implementation_notes: the loop is the one in the result note of the string heap task (docs/todo_archive/); the heap itself takes no region per string any more, so the difference is all kernel. `optexe` runs the same loop in 3.2e9 (main) and 3.4e9 (task).
+  - acceptance:
+    - the string loop above on a spawned VM task retires at most 2x the instructions of the same loop in a program without tasks (measured by hand, recorded in the result note)
+    - the deterministic schedule is unchanged: the seeded task tests print what they print today
+    - full release gate green
+  - stop_rule: VM execution speed of programs that use tasks; no new language surface.
 
 - [ ] TODO-5799: arm64 native runs spawned tasks on pthreads, its heap behind a lock
   - owner: ai
