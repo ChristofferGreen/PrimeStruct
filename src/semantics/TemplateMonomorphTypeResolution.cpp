@@ -226,6 +226,27 @@ bool appendResolvedTemplateArg(const std::string &arg,
   }
   if (!resolved.concrete) {
     allConcrete = false;
+  } else if (!resolved.text.empty() && resolved.text.front() != '/' &&
+             resolved.text.find_first_of("<,/") == std::string::npos && mapping.count(arg) == 0 &&
+             allowedParams.count(arg) == 0) {
+    // A struct named without its namespace is a different spelling of the same type from another namespace: the
+    // template's instance is keyed by the argument text and its body resolves names in its own namespace, so the
+    // argument is written with the struct's path (`Channel<Job>` in `/zed` is `Channel</zed/Job>`).
+    const std::string path =
+        resolveNameToPath(resolved.text,
+                          namespacePrefix,
+                          scopedImportAliasesForNamespace(namespacePrefix, ctx),
+                          ctx.sourceDefs);
+    // A name the root namespace resolves to the same struct (a root struct, or one an import brings in) is already
+    // the same in every namespace and keeps its spelling; only a struct visible from its own namespace is written out.
+    const std::string rootPath =
+        resolveNameToPath(resolved.text,
+                          std::string(),
+                          scopedImportAliasesForNamespace(std::string(), ctx),
+                          ctx.sourceDefs);
+    if (path != rootPath && ctx.sourceDefs.count(path) > 0 && ctx.templateDefs.count(path) == 0) {
+      resolved.text = path;
+    }
   }
   resolvedArgs.push_back(resolved.text);
   return true;

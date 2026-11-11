@@ -293,7 +293,7 @@ addPrimeStructManagedDoctestSuite(
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.calls_flow.channels"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 6
+  TOTAL_CASES 8
   SHARD_PREFIX "calls_flow_channels"
 )
 

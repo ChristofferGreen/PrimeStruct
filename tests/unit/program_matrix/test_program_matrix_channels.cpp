@@ -559,6 +559,65 @@ main() {
   runChannelProgram(program);
 }
 
+// A struct named without its namespace as a template argument is the same type as its path (TODO-5863): `Channel<Job>`
+// in `namespace zed` and `Channel</zed/Job>` in `main` are one instantiation, and so are `Mutex<Job>` and
+// `vector<Job>`.
+TEST_CASE("a struct of a namespace is a Channel, Mutex and vector element without its path") {
+  program_matrix::ProgramCase program;
+  program.name = "channel_namespace_struct_element";
+  program.source = R"(
+import /std/sync/*
+import /std/collections/*
+
+namespace zed {
+  [public struct]
+  Job() {
+    [i32] id{0i32}
+    [i32] weight{0i32}
+  }
+
+  [public effects(channel, heap_alloc, io_out), return<void>]
+  run([Channel<Job>] jobs) {
+    pick(jobs.receive()) {
+      none {
+        print_line(0i32)
+      }
+      some(job) {
+        print_line(job.id + job.weight)
+      }
+    }
+  }
+
+  [public effects(lock, heap_alloc, io_out), return<void>]
+  show([Mutex<Job>] cell) {
+    print_line(cell.locked([]([Reference</zed/Job>] job) { return(job.id * job.weight) }))
+  }
+
+  [public effects(heap_alloc, io_out), return<void>]
+  total([vector<Job>] jobs) {
+    print_line(jobs[0i32].id + jobs[1i32].weight)
+  }
+}
+
+[effects(channel, lock, heap_alloc, io_out), return<int>]
+main() {
+  jobs{Channel</zed/Job>{[capacity] 2i32}}
+  jobs.send(/zed/Job{[id] 3i32, [weight] 4i32})
+  /zed/run(jobs)
+  cell{Mutex</zed/Job>{/zed/Job{[id] 5i32, [weight] 6i32}}}
+  /zed/show(cell)
+  [vector</zed/Job> mut] list{vector</zed/Job>()}
+  list.push(/zed/Job{[id] 7i32, [weight] 8i32})
+  list.push(/zed/Job{[id] 9i32, [weight] 10i32})
+  /zed/total(list)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "7\n30\n17\n";
+  runChannelProgram(program);
+}
+
 TEST_CASE("the native and Wasm backends reject a program with a channel by name") {
   const program_matrix::Outcome wasm =
       compileFor("channel_rejected_wasm", "wasm", SmallChannelProgram);

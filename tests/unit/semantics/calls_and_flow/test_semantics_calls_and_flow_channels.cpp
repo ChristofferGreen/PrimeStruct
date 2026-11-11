@@ -178,4 +178,55 @@ main() {
 )");
 }
 
+TEST_CASE("a struct of a namespace is a Channel element without its path") {
+  checkAccepted(R"(
+import /std/sync/*
+
+namespace zed {
+  [public struct]
+  Job() {
+    [i32] id{0i32}
+  }
+
+  [public effects(channel, heap_alloc), return<void>]
+  run([Channel<Job>] jobs) {
+    jobs.close()
+  }
+}
+
+[effects(channel, heap_alloc), return<int>]
+main() {
+  jobs{Channel</zed/Job>{[capacity] 2i32}}
+  /zed/run(jobs)
+  return(0i32)
+}
+)");
+}
+
+TEST_CASE("a Channel element that is neither in the namespace nor the root is rejected") {
+  checkRejected(R"(
+import /std/sync/*
+
+namespace zed {
+  [public struct]
+  Job() {
+    [i32] id{0i32}
+  }
+
+  [public effects(channel, heap_alloc), return<void>]
+  run([Channel<Other>] jobs) {
+    jobs.close()
+  }
+}
+
+[effects(channel, heap_alloc), return<int>]
+main() {
+  jobs{Channel</zed/Job>{[capacity] 2i32}}
+  /zed/run(jobs)
+  return(0i32)
+}
+)",
+                "unsupported return type on /std/sync/channelItemsAlloc");
+}
+
 TEST_SUITE_END();

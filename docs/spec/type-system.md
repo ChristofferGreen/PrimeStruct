@@ -654,6 +654,9 @@ helper over `value` (docs/spec/transforms.md).
 ### Type Semantics (draft)
 - **Nested generics:** template arguments may themselves be generic envelopes (`map<i32, array<i32>>`), and the parser
   preserves the nested envelope string for later lowering.
+- **Struct template arguments name the struct:** a struct written without its namespace as a template argument is
+  resolved where it is written, so `Channel<Job>` inside `namespace zed` and `Channel</zed/Job>` elsewhere are one
+  instantiation (likewise `Mutex<Job>`, `vector<Job>` and every other generic type).
 - **Heterogeneous type-pack storage:** a struct with a final type-pack
   parameter can expand that pack in stored-field position with `[Ts...] values`.
   Each specialization replaces the expansion with deterministic internal
