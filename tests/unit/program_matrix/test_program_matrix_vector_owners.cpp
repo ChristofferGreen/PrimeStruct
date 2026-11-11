@@ -521,6 +521,160 @@ TEST_CASE("reading a named vector leaves it usable") {
                         "2\n5\n2\n2\n7\n55\n2\n");
 }
 
+namespace {
+
+const std::string RowReaderDefinitions = RowDefinitions + R"(
+[struct]
+Holder() {
+  [i32] id{0i32}
+  [vector<i32>] values{vector<i32>{}}
+  [Row] row{Row{}}
+}
+
+[effects(heap_alloc), return<vector<Holder>>]
+make_holders() {
+  [vector<Holder> mut] out{vector<Holder>{}}
+  out.push(Holder{1i32, vector<i32>{4i32, 5i32}, Row{8i32, label(8i32)}})
+  out.push(Holder{2i32, vector<i32>{6i32, 7i32, 8i32}, Row{9i32, label(9i32)}})
+  return(out)
+}
+
+[effects(heap_alloc), return<vector<String>>]
+make_texts([i32] id) {
+  [vector<String> mut] out{vector<String>{}}
+  out.push(label(id))
+  out.push(label(id + 1i32))
+  out.push(label(id + 2i32))
+  return(out)
+}
+
+[effects(heap_alloc), return<vector<vector<i32>>>]
+make_nested() {
+  [vector<vector<i32>> mut] out{vector<vector<i32>>{}}
+  out.push(vector<i32>{1i32})
+  out.push(vector<i32>{1i32, 2i32, 3i32})
+  return(out)
+}
+
+[return<i32>]
+row_code([Row] row) {
+  return(row.id * 100i32 + first_byte(row.text))
+}
+
+[effects(heap_alloc), return<Row>]
+second_row([i32] id) {
+  return(make_rows(id)[1i32])
+}
+
+[effects(heap_alloc), return<String>]
+second_text([i32] id) {
+  return(make_rows(id)[1i32].text)
+}
+
+[effects(heap_alloc), return<Row>]
+first_row_or_empty([i32] id) {
+  if(id < 0i32) {
+    return(Row{})
+  }
+  return(make_rows(id)[0i32])
+}
+)";
+
+} // namespace
+
+TEST_CASE("an element of a vector temporary read as a struct or a String is copied out of it") {
+  // The vector is a hidden local that lives to the end of the statement: the element is a place every consumer
+  // copies from, at the stride of the element, and the vector is destroyed once the statement is done.
+  runVectorOwnerProgram("vector_temporary_element",
+                        RowReaderDefinitions,
+                        R"(
+    [Row] copy{make_rows(6i32)[1i32]}
+    print_line(copy.id)
+    print_line(first_byte(copy.text))
+    print_line(first_byte(make_rows(4i32)[1i32].text))
+    [String] text{make_rows(6i32)[0i32].text}
+    print_line(first_byte(text))
+    print_line(row_code(make_rows(1i32)[1i32]) + row_code(make_rows(5i32)[0i32]))
+    print_line(row_code(make_rows(1i32).at(1i32)))
+    print_line(row_code(make_rows(1i32).at_unsafe(0i32)))
+    [Row mut] row{Row{1i32, label(1i32)}}
+    row = make_rows(7i32)[1i32]
+    print_line(row_code(row))
+    [vector<Row> mut] rows{vector<Row>{}}
+    rows.push(make_rows(2i32)[0i32])
+    rows.push(make_rows(2i32)[1i32])
+    print_line(first_byte(rows[1i32].text))
+)",
+                        "7\n55\n53\n54\n803\n250\n149\n856\n51\n");
+}
+
+TEST_CASE(
+    "an element of a vector temporary read as a String, a vector or a field of those is copied") {
+  runVectorOwnerProgram("vector_temporary_element_kinds",
+                        RowReaderDefinitions,
+                        R"(
+    [String] text{make_texts(3i32)[2i32]}
+    print_line(first_byte(text))
+    print_line(first_byte(make_texts(1i32)[1i32]))
+    print_line(make_nested()[1i32].count())
+    [vector<i32>] inner{make_nested()[1i32]}
+    print_line(inner[2i32])
+    [vector<i32>] values{make_holders()[1i32].values}
+    print_line(values[2i32])
+    [Row] held{make_holders()[0i32].row}
+    print_line(row_code(held))
+    print_line(make_holders()[1i32].values[1i32])
+    print_line(make_holders()[1i32].values.count())
+)",
+                        "53\n50\n3\n3\n8\n856\n7\n3\n");
+}
+
+TEST_CASE("an element of a vector temporary read where code may not run or runs again is destroyed "
+          "each time") {
+  // A loop condition and the right side of `and`/`or` are scopes of their own; a returned element is copied
+  // out before the definition's scopes are cleaned.
+  runVectorOwnerProgram("vector_temporary_element_paths",
+                        RowReaderDefinitions,
+                        R"(
+    [i32 mut] i{0i32}
+    while(first_byte(make_rows(i)[1i32].text) < 53i32) {
+      i = i + 1i32
+    }
+    print_line(i)
+    for([i32 mut] k{0i32}, first_byte(make_rows(k)[0i32].text) < 51i32, k = k + 1i32) {
+      print_line(row_code(make_rows(k)[1i32]))
+    }
+    print_line(false && first_byte(make_rows(1i32)[1i32].text) == 50i32)
+    print_line(true && first_byte(make_rows(1i32)[1i32].text) == 50i32)
+    print_line(false || first_byte(make_rows(1i32)[0i32].text) == 49i32)
+    print_line(true || first_byte(make_rows(1i32)[0i32].text) == 49i32)
+    [i32] picked{if(i > 1i32) { first_byte(make_rows(4i32)[1i32].text) } else { 0i32 }}
+    print_line(picked)
+    [Row] returned{second_row(3i32)}
+    print_line(row_code(returned))
+    [String] returnedText{second_text(4i32)}
+    print_line(first_byte(returnedText))
+    print_line(first_row_or_empty(-1i32).id + first_row_or_empty(2i32).id)
+)",
+                        "4\n149\n250\n351\n0\n1\n1\n1\n53\n452\n53\n2\n");
+}
+
+TEST_CASE("an element read from a named vector is a copy and leaves the vector usable") {
+  runVectorOwnerProgram("vector_named_element",
+                        RowReaderDefinitions,
+                        R"(
+    [vector<Row>] rows{make_rows(6i32)}
+    [Row] copy{rows[1i32]}
+    [String] text{rows[0i32].text}
+    print_line(row_code(copy))
+    print_line(first_byte(text))
+    print_line(row_code(rows[1i32]))
+    print_line(first_byte(rows[0i32].text))
+    print_line(rows.count())
+)",
+                        "755\n54\n755\n54\n2\n");
+}
+
 TEST_CASE("assigning move(other) to a vector local takes the other vector over") {
   // Nothing is copied: the target frees what it held, and the moved-from local frees nothing and can be
   // assigned again. Moving a local into itself keeps it.

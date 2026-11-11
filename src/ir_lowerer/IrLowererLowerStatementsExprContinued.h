@@ -338,9 +338,9 @@
               isAccessHelperPath(statementsExprHelpers.resolveDirectHelperPath(candidate)) ||
               isAccessHelperPath(resolveExprPath(candidate));
             };
-            if (expr.args.size() == 1 &&
-              methodCalleeFirstParameterIsStruct() &&
-              isWrapperReturnedKeyValueAccessCall(expr.args.front())) {
+            if (expr.args.size() == 1 && methodCalleeFirstParameterIsStruct() &&
+                isWrapperReturnedKeyValueAccessCall(expr.args.front()) &&
+                !readsStatementVectorTemporary(expr.args.front())) {
               error = "struct parameter type mismatch";
               return false;
             }

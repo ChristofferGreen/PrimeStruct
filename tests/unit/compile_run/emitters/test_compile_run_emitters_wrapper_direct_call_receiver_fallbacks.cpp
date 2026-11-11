@@ -19,7 +19,7 @@ wrapValues() {
 
 [return<Marker>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
-  return(Marker(index))
+  return(Marker(plus(index, 40i32)))
 }
 
 [return<int>]
@@ -38,8 +38,9 @@ main() {
       srcPath + ".compile_cpp_wrapper_canonical_direct_struct_method_chain_forwarding.err";
   const std::string compileCmd =
       "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("struct parameter type mismatch") != std::string::npos);
+  // The vector temporary lives to the end of the statement, so the chain runs like one on a named vector.
+  CHECK(runCommand(compileCmd) == 42);
+  CHECK(readFile(errPath).empty());
 }
 
 TEST_CASE("rejects wrapper canonical direct-call method receiver fallback without helper in C++ emitter") {

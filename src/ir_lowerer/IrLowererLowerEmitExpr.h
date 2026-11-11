@@ -21,6 +21,51 @@
     return false;
   }
 
+  // Lowers a scalar expression that runs conditionally or repeatedly inside one statement (a loop condition,
+  // the right side of `and`/`or`) in a scope of its own, so the hidden locals it makes are destroyed each
+  // time it has run instead of at the end of the statement.
+  auto emitScopedValueExpr = [&](const Expr &valueExpr, const LocalMap &valueLocals) -> bool {
+    pushFileScope();
+    if (!emitExpr(valueExpr, valueLocals)) {
+      return false;
+    }
+    if (!fileScopeStack.back().empty()) {
+      const int32_t resultLocal = allocTempLocal();
+      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(resultLocal)});
+      emitFileScopeCleanup(fileScopeStack.back());
+      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal)});
+    }
+    popFileScope();
+    return true;
+  };
+
+  // An element read from a fresh builtin vector inside a statement: the vector becomes a hidden local that
+  // lives to the end of the statement (see `emitExpr`), so the element is a place like any other.
+  auto readsStatementVectorTemporary = [&](const Expr &candidate) {
+    return candidate.kind == Expr::Kind::Call && candidate.args.size() == 2 &&
+           !fileScopeStack.empty() && setupStage.statementNesting > 0 &&
+           ir_lowerer::isFreshBuiltinVectorExpr(candidate.args.front(), [&](const Expr &maker) {
+             return resolveDefinitionCall(maker);
+           });
+  };
+
+  // A place (a chain of field and element reads) inside such a statement temporary: it is gone when the
+  // statement ends, so a binding cannot stay a view of it.
+  auto isPlaceInStatementVectorTemporary = [&](const Expr &place) {
+    const Expr *current = &place;
+    while (current->kind == Expr::Kind::Call && !current->args.empty()) {
+      if (readsStatementVectorTemporary(*current)) {
+        return true;
+      }
+      if (!(current->isFieldAccess && current->args.size() == 1) &&
+          !ir_lowerer::isElementAccessCopySourceExpr(*current)) {
+        return false;
+      }
+      current = &current->args.front();
+    }
+    return false;
+  };
+
   emitExpr = [&, semanticProgram](const Expr &expr, const LocalMap &localsIn) -> bool {
     if (expr.isLambda) {
       error = "IR backends do not support lambdas";
@@ -54,7 +99,12 @@
         const bool scalarResult = resultKind != LocalInfo::ValueKind::Unknown &&
                                   resultKind != LocalInfo::ValueKind::String &&
                                   (countRead || inferStructExprPath(expr, localsIn).empty());
-        if ((reader == nullptr || reader->fullPath.rfind("/std/", 0) == 0) && scalarResult) {
+        // An element read as a struct, a `String` or a vector stays a place inside the hidden local, which
+        // then lives to the end of the statement: every consumer copies out of it like out of a named vector.
+        const bool statementLifetime =
+            !scalarResult && elementRead && fieldDepth == 0 && setupStage.statementNesting > 0;
+        if ((reader == nullptr || reader->fullPath.rfind("/std/", 0) == 0) &&
+            (scalarResult || statementLifetime)) {
           const Expr &receiver = read->args.front();
           Expr hiddenBinding;
           hiddenBinding.kind = Expr::Kind::Call;
@@ -96,6 +146,20 @@
           receiverName.kind = Expr::Kind::Name;
           receiverName.name = hiddenBinding.name;
           receiverName.namespacePrefix = receiver.namespacePrefix;
+          if (statementLifetime) {
+            const size_t scopeDepth = fileScopeStack.size() - 1;
+            const size_t entriesBefore = fileScopeStack[scopeDepth].size();
+            LocalMap readLocals = localsIn;
+            if (!emitStatement(hiddenBinding, readLocals)) {
+              return false;
+            }
+            for (size_t entry = entriesBefore; entry < fileScopeStack[scopeDepth].size(); ++entry) {
+              if (fileScopeStack[scopeDepth][entry] < 0) {
+                setupStage.statementTemporaryDrops.push_back(fileScopeStack[scopeDepth][entry]);
+              }
+            }
+            return emitExpr(readExpr, readLocals);
+          }
           pushFileScope();
           LocalMap readLocals = localsIn;
           if (!emitStatement(hiddenBinding, readLocals) || !emitExpr(readExpr, readLocals)) {
@@ -356,6 +420,7 @@
         // struct a wrapper returned.
         if (expr.args.size() == 1 && !expr.isFieldAccess &&
             isWrapperReturnedKeyValueAccessCall(expr.args.front()) &&
+            !readsStatementVectorTemporary(expr.args.front()) &&
             !ir_lowerer::isNestedBuiltinVectorElementAccess(
                 expr.args.front(),
                 localsIn,

@@ -65,6 +65,10 @@ struct LowerSetupStageState {
     const Definition *sumDef = nullptr;
   };
   std::vector<DropEntry> dropEntries;
+  // Drop entries (as stored in `fileScopeStack`) of hidden locals that live to the end of the statement
+  // being lowered, and how many statements are being lowered around the current expression.
+  std::vector<int32_t> statementTemporaryDrops;
+  int32_t statementNesting = 0;
   std::optional<OnErrorHandler> currentOnError;
   std::optional<ResultReturnInfo> currentReturnResult;
   bool hasMathImport = false;

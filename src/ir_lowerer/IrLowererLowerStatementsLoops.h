@@ -79,7 +79,7 @@
         return false;
       }
       const size_t checkIndex = function.instructions.size();
-      if (!emitExpr(cond, localsIn)) {
+      if (!emitScopedValueExpr(cond, localsIn)) {
         return false;
       }
       LocalInfo::ValueKind condKind = inferExprKind(cond, localsIn);
@@ -219,7 +219,7 @@
                 cond,
                 loopLocals,
                 [&](const Expr &valueExpr, const LocalMap &valueLocals) {
-                  return emitExpr(valueExpr, valueLocals);
+                  return emitScopedValueExpr(valueExpr, valueLocals);
                 },
                 [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
                 error)) {
@@ -234,7 +234,7 @@
         }
         condKind = inferExprKind(condName, loopLocals);
       } else {
-        if (!emitExpr(cond, loopLocals)) {
+        if (!emitScopedValueExpr(cond, loopLocals)) {
           return false;
         }
         condKind = inferExprKind(cond, loopLocals);

@@ -91,7 +91,11 @@
   field is read. A fresh builtin vector that is only read (`make_values().count()`, `capacity()`,
   `make_values()[0i32]`, `at`, `at_unsafe`, and a scalar field of an element such as `make_rows()[1i32].id`) is
   destroyed, elements and buffer, once the scalar result is loaded. An element of a vector temporary read as a
-  struct, a `String` or a vector is not supported yet (TODO-5888).
+  struct, a `String` or a vector (`[Row] copy{make_rows()[1i32]}`, `first_byte(make_rows()[1i32].text)`,
+  `use(make_rows()[0i32])`) is a place like an element of a named vector, so the reader copies it; the vector
+  lives to the end of the statement that reads it and is destroyed there, after a returned element is copied
+  out, and each time a loop condition or the right side of `and`/`or` has run. A read-only `vector<T>` binding
+  from such a place is a copy, not a view.
 - **Copies:** `copy` duplicates through the type's `Copy` helper when it has one (collections copy their elements),
   otherwise bitwise for `Copy` types; a struct without a `Copy` helper copies its fields, running the helpers of the
   fields that have one. A user `Copy` helper runs after that field-wise copy, so `this` already owns copies of its

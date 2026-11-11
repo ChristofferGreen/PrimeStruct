@@ -521,6 +521,36 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
     return lowered;
   };
 
+  // A statement destroys the hidden locals its expressions made (a vector temporary an element was read
+  // from) once it is lowered; a scope that ended inside the statement has destroyed its own already. A
+  // `return` leaves them to the scope: its exit path destroys them after the value is copied out.
+  emitStatement = [&, emitStatementBody = std::move(emitStatement)](const Expr &stmt,
+                                                                    LocalMap &localsIn) -> bool {
+    const size_t firstTemporary = setupStage.statementTemporaryDrops.size();
+    ++setupStage.statementNesting;
+    const bool lowered = emitStatementBody(stmt, localsIn);
+    --setupStage.statementNesting;
+    while (setupStage.statementTemporaryDrops.size() > firstTemporary) {
+      const int32_t scopeEntry = setupStage.statementTemporaryDrops.back();
+      setupStage.statementTemporaryDrops.pop_back();
+      if (!lowered || isReturnCall(stmt)) {
+        continue;
+      }
+      for (auto &scope : fileScopeStack) {
+        const auto found = std::find(scope.begin(), scope.end(), scopeEntry);
+        if (found == scope.end()) {
+          continue;
+        }
+        scope.erase(found);
+        const LowerSetupStageState::DropEntry entry =
+            setupStage.dropEntries[static_cast<size_t>(-scopeEntry - 1)];
+        (void)emitDropEntryCleanup(entry);
+        break;
+      }
+    }
+    return lowered;
+  };
+
   if (input.consumeStage) {
     return input.consumeStage(stateOut, error);
   }
